@@ -1,471 +1,262 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="utf-8" />
   <title>RubikVault – Decode the Markets</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta
-    name="description"
-    content="RubikVault – calm, data-driven macro & markets dashboard. Decode the macro regime in minutes – not hours."
-  />
+  <meta name="description" content="RubikVault is an independent research project focused on macro, crypto and cross-asset market structure. Clean data, no hype." />
   <link rel="stylesheet" href="style.css" />
-  <link rel="icon" type="image/png" href="rubikvault-logo.png" />
-  <!-- TradingView script for widgets -->
-  <script type="text/javascript" src="https://s3.tradingview.com/tv.js" defer></script>
-  <script src="script.js" defer></script>
+  <link rel="icon" href="/favicon.ico" />
+  <meta property="og:title" content="RubikVault – Decode the Markets" />
+  <meta property="og:description" content="Independent research on macro, crypto and cross-asset market structure." />
+  <meta property="og:image" content="/og-image.png" />
+  <meta property="og:type" content="website" />
 </head>
 <body>
-  <!-- HEADER -->
   <header class="rv-header">
-    <div class="rv-shell rv-header-inner">
-      <div class="rv-header-left">
-        <a href="#top" class="rv-logo">
-          <div class="rv-logo-icon">
-            <!-- Hintergrundbild kommt aus CSS (rubikvault-logo.png).
-                 Falls das Bild fehlt, bleibt ein neutraler Cube ohne Broken-Icon. -->
-          </div>
-          <div class="rv-logo-text">
-            <span class="rv-logo-title">RubikVault</span>
-            <span class="rv-logo-subtitle">Decode the Markets</span>
-          </div>
-        </a>
-      </div>
-
-      <nav class="rv-nav">
-        <a href="#daily-decode">Daily Decode</a>
-        <a href="#what-you-get">What you get</a>
-        <a href="#market-pulse">Market Pulse</a>
-        <a href="#macro">Macro</a>
-        <a href="#sentiment">Sentiment</a>
-        <a href="#how-to-use">How to use</a>
+    <div class="rv-container rv-header-inner">
+      <a href="/" class="rv-logo">
+        <span class="rv-logo-mark">RV</span>
+        <span class="rv-logo-text">RubikVault</span>
+      </a>
+      <nav class="rv-nav" aria-label="Main navigation">
+        <a href="#markets">Markets</a>
+        <a href="#insights">Insights</a>
+        <a href="#about">About</a>
+        <a href="#legal">Legal</a>
       </nav>
-
       <div class="rv-header-social">
-        <a href="https://www.youtube.com" target="_blank" rel="noopener" aria-label="YouTube">YT</a>
-        <a href="https://www.tiktok.com" target="_blank" rel="noopener" aria-label="TikTok">TT</a>
-        <a href="https://x.com" target="_blank" rel="noopener" aria-label="X">X</a>
-        <a href="https://www.instagram.com" target="_blank" rel="noopener" aria-label="Instagram">IG</a>
+        <a href="https://www.youtube.com/@RubikVault" target="_blank" rel="noopener noreferrer">YouTube</a>
+        <a href="https://x.com/RubikVault" target="_blank" rel="noopener noreferrer">X</a>
       </div>
     </div>
   </header>
 
-  <!-- TOP TICKER STRIP (laufende Zeile mit Indizes/Crypto) -->
-  <section class="rv-ticker-strip">
-    <div class="rv-shell">
-      <div class="rv-card rv-ticker-card">
-        <div class="tradingview-widget-container">
-          <div id="tv-ticker-tape-header" class="tradingview-widget-container__widget"></div>
+  <main>
+    <!-- Hero -->
+    <section class="rv-section rv-hero">
+      <div class="rv-container rv-hero-grid">
+        <div>
+          <h1>RubikVault – Klarheit im Lärm der Märkte</h1>
+          <p>
+            Independent research zu Makro, Krypto und Cross-Asset-Struktur. 
+            Keine Signals, kein Hype – nur sauber kuratierte Daten, Kontext und 
+            wöchentliche Deep Dives.
+          </p>
+          <div class="rv-hero-actions">
+            <a href="#markets" class="rv-btn rv-btn-primary">Open Market Dashboard</a>
+            <a href="#about" class="rv-btn rv-btn-secondary">What is RubikVault?</a>
+          </div>
+          <p class="rv-small-mute">
+            Educational only. No investment, tax or legal advice. Do your own research.
+          </p>
+        </div>
+        <div class="rv-hero-card">
+          <h2>Latest Video</h2>
+          <p>In-depth market breakdowns &amp; macro context.</p>
+          <!-- Du kannst hier einfach den neuesten Link austauschen -->
+          <a class="rv-hero-video" href="https://www.youtube.com/@RubikVault" target="_blank" rel="noopener noreferrer">
+            Go to YouTube Channel
+          </a>
         </div>
       </div>
-    </div>
-  </section>
+    </section>
 
-  <main id="top" class="rv-main">
-    <div class="rv-shell">
-      <!-- HERO -->
-      <section class="rv-hero rv-section">
-        <div class="rv-hero-grid">
-          <div class="rv-hero-content">
-            <p class="rv-kicker">Calm, data-driven market context</p>
-            <h1>Decode the macro regime in minutes – not hours.</h1>
-            <p class="rv-hero-lead">
-              One consolidated view on equities, crypto, macro liquidity, positioning and earnings.
-              No hype. No signals. Just context.
-            </p>
-            <div class="rv-hero-actions">
-              <a class="rv-btn primary" href="https://www.youtube.com" target="_blank" rel="noopener">
-                Latest YouTube breakdown
-              </a>
-              <a class="rv-btn ghost" href="#how-to-use">How to use this dashboard</a>
-            </div>
-            <ul class="rv-hero-bullets">
-              <li>Built for macro-driven crypto & equity investors</li>
-              <li>Focus on liquidity, regime shifts & positioning</li>
-              <li>One daily narrative instead of 50 open tabs</li>
-            </ul>
-          </div>
+    <!-- Ticker -->
+    <section id="markets" class="rv-section rv-section-alt">
+      <div class="rv-container">
+        <h2>Market Snapshot</h2>
+        <p class="rv-section-subtitle">
+          Live Ticker für wichtige Indizes, Krypto-Assets und FX – powered by TradingView (kostenloser Embed).
+        </p>
 
-          <aside class="rv-hero-sidecard rv-card">
-            <header class="rv-card-header">
-              <h2>Today’s Market Snapshot</h2>
-              <span class="rv-badge-live">live</span>
-            </header>
-            <div class="rv-mini-chart">
-              <div class="tradingview-widget-container">
-                <div id="tv-mini-chart" class="tradingview-widget-container__widget"></div>
-              </div>
-            </div>
-            <table class="rv-table rv-table-condensed">
-              <thead>
-                <tr>
-                  <th>Asset</th>
-                  <th>Last</th>
-                  <th>24h</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td>BTC</td>
-                  <td>–</td>
-                  <td class="rv-up">context via TradingView</td>
-                </tr>
-                <tr>
-                  <td>ETH</td>
-                  <td>–</td>
-                  <td class="rv-muted-text">macro-sensitive beta</td>
-                </tr>
-                <tr>
-                  <td>S&amp;P 500</td>
-                  <td>–</td>
-                  <td class="rv-muted-text">equity risk proxy</td>
-                </tr>
-              </tbody>
-            </table>
-            <p class="rv-footnote">
-              Prices are powered by TradingView widgets below. Use this box as a quick
-              cross-asset glance.
-            </p>
-          </aside>
-        </div>
-      </section>
-
-      <!-- DAILY DECODE -->
-      <section id="daily-decode" class="rv-section">
-        <header class="rv-section-header">
-          <h2>RubikVault Daily Decode</h2>
-          <p class="rv-section-kicker">Today’s market focus</p>
-        </header>
-        <div class="rv-grid rv-grid-two">
-          <article class="rv-card">
-            <p>
-              This is your daily mini-narrative: 3–4 sentences on why markets move today –
-              what central banks are doing, how global liquidity is shifting and whether we are
-              closer to risk-on or risk-off. Edit this text directly in
-              <code>index.html</code> once per day.
-            </p>
-            <p>
-              Short, clear, regime-focused – the reason to come back every morning.
-            </p>
-          </article>
-          <aside class="rv-card rv-links-stack">
-            <p class="rv-muted">Send users straight to the deep dives:</p>
-            <a class="rv-link-pill" href="https://x.com" target="_blank" rel="noopener">
-              Deep-dive thread on X
-            </a>
-            <a class="rv-link-pill" href="https://www.youtube.com" target="_blank" rel="noopener">
-              Full breakdown on YouTube
-            </a>
-          </aside>
-        </div>
-      </section>
-
-      <!-- WHAT YOU GET -->
-      <section id="what-you-get" class="rv-section">
-        <header class="rv-section-header">
-          <h2>What you get here every day</h2>
-        </header>
-        <div class="rv-grid rv-grid-three">
-          <article class="rv-card">
-            <h3>Market Pulse</h3>
-            <p>
-              Intraday snapshot of indices, sectors and volatility – plus one short narrative so you
-              see in 20 seconds whether we are in a risk-on or risk-off environment.
-            </p>
-          </article>
-          <article class="rv-card">
-            <h3>Macro &amp; Liquidity</h3>
-            <p>
-              US Treasury flows, real-time spending, global valuations, M2 growth and regime-style
-              liquidity signals – in a few clean cards instead of 50 noisy charts.
-            </p>
-          </article>
-          <article class="rv-card">
-            <h3>Sentiment &amp; Earnings</h3>
-            <p>
-              AAII bull-bear spread, regional risk-appetite sliders and AI-generated earnings-call
-              narratives, filterable by bullish, neutral or bearish tone.
-            </p>
-          </article>
-        </div>
-      </section>
-
-      <!-- MARKET PULSE -->
-      <section id="market-pulse" class="rv-section">
-        <header class="rv-section-header">
-          <h2>Market Pulse</h2>
-          <span class="rv-badge-live">live</span>
-        </header>
-
-        <div class="rv-grid rv-grid-two">
-          <article class="rv-card">
-            <h3>US indices</h3>
-            <p class="rv-muted">
-              Example snapshot – replace the narrative below with your latest view.
-            </p>
-            <table class="rv-table">
-              <thead>
-                <tr>
-                  <th>Name</th>
-                  <th>Last</th>
-                  <th>Change</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td>Russell 2000</td>
-                  <td>1,987</td>
-                  <td class="rv-up">+0.88%</td>
-                </tr>
-                <tr>
-                  <td>S&amp;P 500</td>
-                  <td>5,210</td>
-                  <td class="rv-up">+0.07%</td>
-                </tr>
-                <tr>
-                  <td>Dow Jones</td>
-                  <td>39,120</td>
-                  <td class="rv-down">-0.07%</td>
-                </tr>
-                <tr>
-                  <td>Nasdaq 100</td>
-                  <td>18,250</td>
-                  <td class="rv-down">-0.09%</td>
-                </tr>
-                <tr>
-                  <td>VIX</td>
-                  <td>15.3</td>
-                  <td class="rv-down">-1.66%</td>
-                </tr>
-              </tbody>
-            </table>
-            <p class="rv-footnote">
-              Numbers above are illustrative. For real-time prices use the TradingView widgets on
-              this page or your broker.
-            </p>
-          </article>
-
-          <article class="rv-card">
-            <h3>Daily narrative</h3>
-            <p>
-              US equity futures show a cautiously positive tone, while the focus is on upcoming
-              inflation and growth data. The slight rebound after recent pressure suggests a
-              wait-and-see stance rather than full-on risk appetite.
-            </p>
-            <p>
-              This card is your daily one-paragraph summary. Keep it short and regime-focused; the
-              deeper reasoning goes to YouTube or X.
-            </p>
-          </article>
-        </div>
-
-        <!-- Cross-asset dashboard TradingView widget -->
-        <div class="rv-card rv-tv-wrapper">
-          <header class="rv-card-header">
-            <h3>Cross-asset dashboard</h3>
-            <span class="rv-muted">Powered by TradingView · updates automatically</span>
-          </header>
+        <div class="rv-widget">
+          <!-- TradingView Ticker Tape -->
           <div class="tradingview-widget-container">
-            <div id="tv-market-overview" class="tradingview-widget-container__widget"></div>
+            <div class="tradingview-widget-container__widget"></div>
+            <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-ticker-tape.js" async>
+            {
+              "symbols": [
+                { "proName": "OANDA:SPX500USD", "title": "S&P 500" },
+                { "proName": "OANDA:NAS100USD", "title": "Nasdaq 100" },
+                { "proName": "TVC:DXY", "title": "DXY" },
+                { "proName": "BITSTAMP:BTCUSD", "title": "BTC/USD" },
+                { "proName": "BITSTAMP:ETHUSD", "title": "ETH/USD" },
+                { "proName": "FX_IDC:EURUSD", "title": "EUR/USD" }
+              ],
+              "showSymbolLogo": true,
+              "colorTheme": "dark",
+              "isTransparent": true,
+              "displayMode": "adaptive",
+              "locale": "en"
+            }
+            </script>
           </div>
         </div>
-      </section>
 
-      <!-- MACRO & LIQUIDITY -->
-      <section id="macro" class="rv-section">
-        <header class="rv-section-header">
-          <h2>Macro &amp; Liquidity Dashboard</h2>
-        </header>
+        <div class="rv-grid-2">
+          <!-- Mini Chart -->
+          <div class="rv-widget">
+            <h3>BTC/USD – 1Y Structure</h3>
+            <div class="tradingview-widget-container">
+              <div class="tradingview-widget-container__widget"></div>
+              <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-mini-chart.js" async>
+              {
+                "symbol": "BITSTAMP:BTCUSD",
+                "width": "100%",
+                "height": "320",
+                "locale": "en",
+                "dateRange": "12M",
+                "colorTheme": "dark",
+                "trendLineColor": "rgba(0, 255, 184, 1)",
+                "underLineColor": "rgba(0, 255, 184, 0.15)",
+                "isTransparent": true
+              }
+              </script>
+            </div>
+          </div>
 
-        <!-- Erste Zeile Macro-Kacheln -->
-        <div class="rv-grid rv-grid-two">
-          <article class="rv-card">
-            <h3>US real-time spending</h3>
-            <p class="rv-muted">Source: US Treasury (concept)</p>
-            <p>
-              Daily changes in US federal outlays, plus a cumulative trend line. When the cumulative
-              curve bends higher, fiscal support becomes a tailwind for risk assets.
-            </p>
-            <ul class="rv-metrics-list">
-              <li><span>Last daily change</span><span>54.8 bn USD</span></li>
-              <li><span>Cumulative since Jan 2025</span><span>2.43 tn USD</span></li>
-            </ul>
-          </article>
-
-          <article class="rv-card">
-            <h3>Interest injections</h3>
-            <p class="rv-muted">Source: US Treasury (concept)</p>
-            <p>
-              Tracks annualised interest payments flowing into the private sector. Rising interest
-              expense can act like a fiscal stimulus, even while policy is “tight”.
-            </p>
-            <ul class="rv-metrics-list">
-              <li><span>Annual pace vs last year</span><span class="rv-up">+11.8%</span></li>
-              <li><span>Estimated interest 2025</span><span>1.03 tn USD</span></li>
-            </ul>
-          </article>
-
-          <article class="rv-card">
-            <h3>M2 money growth</h3>
-            <p class="rv-muted">Source: Federal Reserve</p>
-            <p>
-              Year-over-year M2 growth vs 12-month average. Acceleration often precedes easier
-              liquidity regimes.
-            </p>
-            <ul class="rv-metrics-list">
-              <li><span>M2 YoY</span><span>4.6%</span></li>
-              <li><span>12-month average</span><span>4.0%</span></li>
-            </ul>
-          </article>
-
-          <article class="rv-card">
-            <h3>Global PE valuations</h3>
-            <p class="rv-muted">Source: Refinitiv (concept)</p>
-            <p>
-              Simple view on price-to-earnings ratios across major regions. High valuations with
-              deteriorating liquidity are usually the fragile parts of the market.
-            </p>
-            <ul class="rv-metrics-list">
-              <li><span>Emerging Markets</span><span>14.5×</span></li>
-              <li><span>Japan</span><span>18.0×</span></li>
-              <li><span>China</span><span>13.7×</span></li>
-              <li><span>USA</span><span>28.9×</span></li>
-              <li><span>Europe</span><span>18.1×</span></li>
-            </ul>
-          </article>
+          <!-- Crypto Market Overview -->
+          <div class="rv-widget">
+            <h3>Crypto Market Overview</h3>
+            <div class="tradingview-widget-container">
+              <div class="tradingview-widget-container__widget"></div>
+              <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-market-overview.js" async>
+              {
+                "colorTheme": "dark",
+                "dateRange": "12M",
+                "showChart": true,
+                "locale": "en",
+                "largeChartUrl": "",
+                "isTransparent": true,
+                "width": "100%",
+                "height": "320",
+                "plotLineColorGrowing": "rgba(0, 255, 184, 1)",
+                "plotLineColorFalling": "rgba(255, 77, 77, 1)",
+                "gridLineColor": "rgba(42, 46, 57, 0)",
+                "scaleFontColor": "rgba(199, 203, 211, 1)",
+                "belowLineFillColorGrowing": "rgba(0, 255, 184, 0.15)",
+                "belowLineFillColorFalling": "rgba(255, 77, 77, 0.15)",
+                "symbolActiveColor": "rgba(32, 34, 45, 1)",
+                "tabs": [
+                  {
+                    "title": "Crypto",
+                    "symbols": [
+                      { "s": "BITSTAMP:BTCUSD", "d": "Bitcoin" },
+                      { "s": "BITSTAMP:ETHUSD", "d": "Ethereum" },
+                      { "s": "BINANCE:SOLUSDT", "d": "Solana" },
+                      { "s": "BINANCE:AVAXUSDT", "d": "Avalanche" },
+                      { "s": "BINANCE:LINKUSDT", "d": "Chainlink" }
+                    ]
+                  }
+                ]
+              }
+              </script>
+            </div>
+          </div>
         </div>
 
-        <!-- Zweite Zeile Macro-Kacheln – gleicher Abstand wie oben -->
-        <div class="rv-grid rv-grid-two">
-          <article class="rv-card">
-            <h3>Macro visuals – weekly key charts</h3>
-            <p>
-              Each week you can drop 1–2 updated charts here as static images: global liquidity
-              index, yield curves, credit spreads or whatever best describes the current regime.
-            </p>
-            <div class="rv-macro-images">
-              <div class="rv-macro-img-placeholder">Global Liquidity Index</div>
-              <div class="rv-macro-img-placeholder">Risk Appetite Heatmap</div>
-            </div>
-          </article>
-          <article class="rv-card">
-            <h3>Key concepts explained</h3>
-            <h4>Global liquidity</h4>
-            <p>
-              In plain terms: how much central-bank money sits in the system. Rising balance sheets
-              are usually a tailwind for risk assets; falling ones are a headwind – especially for
-              expensive growth and crypto.
-            </p>
-            <h4>Risk appetite</h4>
-            <p>
-              When high-yield, tech and crypto all rally together, you are in pure risk-on. When
-              flows rotate into cash, bonds and defensives, the regime is getting tougher.
-            </p>
-            <h4>Liquidity vs rates</h4>
-            <p>
-              High policy rates drain liquidity; low rates push it in. The level matters, but the
-              direction of change and the interaction with fiscal flows matter even more.
-            </p>
-          </article>
+        <!-- Economic Calendar -->
+        <div class="rv-widget rv-widget-calendar">
+          <h3>Global Economic Calendar</h3>
+          <p class="rv-small-mute">
+            Für Makro-Kontext: FOMC, CPI, Payrolls, EZB-Meetings und mehr. Daten via TradingView (kostenloser Embed).
+          </p>
+          <div class="tradingview-widget-container">
+            <div class="tradingview-widget-container__widget"></div>
+            <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-events.js" async>
+            {
+              "width": "100%",
+              "height": "420",
+              "locale": "en",
+              "importanceFilter": "-1,0,1",
+              "countryFilter": "us,eu,cn,jp,de,gb"
+            }
+            </script>
+          </div>
         </div>
-      </section>
+      </div>
+    </section>
 
-      <!-- SENTIMENT & EARNINGS -->
-      <section id="sentiment" class="rv-section">
-        <header class="rv-section-header">
-          <h2>Sentiment &amp; Earnings</h2>
-        </header>
-        <div class="rv-grid rv-grid-two">
-          <article class="rv-card">
-            <h3>AAII investor sentiment</h3>
-            <p class="rv-muted">Source: AAII (weekly)</p>
-            <p>
-              Weekly bull-bear spread vs 90-day average. Extremes are useful for contrarian signals;
-              the 90-day line keeps you grounded.
-            </p>
-            <ul class="rv-metrics-list">
-              <li><span>Bull-bear spread</span><span class="rv-down">-0.1%</span></li>
-              <li><span>90-day average</span><span>0.0%</span></li>
-            </ul>
-          </article>
-
-          <article class="rv-card">
-            <h3>AI earnings-cycle read</h3>
-            <p class="rv-muted">Concept module – matches your app screenshots</p>
-            <p>
-              Idea: real-time transcript analysis of earnings calls, turned into a macro-cycle
-              dashboard with filters for bullish, neutral and bearish tone.
-            </p>
-            <div class="rv-chip-row">
-              <span class="rv-chip active">All</span>
-              <span class="rv-chip bull">Bullish</span>
-              <span class="rv-chip neutral">Neutral</span>
-              <span class="rv-chip bear">Bearish</span>
-            </div>
-            <div class="rv-earnings-list">
-              <div class="rv-earnings-item">
-                <div class="rv-earnings-header">
-                  <span class="rv-earnings-name">US Retail Basket</span>
-                  <span class="rv-chip bull">Bullish</span>
-                </div>
-                <p>
-                  Consumers remain active but clearly price-sensitive: they wait for discounts,
-                  delay big-ticket items, yet still spend on “small luxuries” and tech gadgets.
-                </p>
-              </div>
-              <div class="rv-earnings-item">
-                <div class="rv-earnings-header">
-                  <span class="rv-earnings-name">Quest Diagnostics</span>
-                  <span class="rv-chip neutral">Neutral</span>
-                </div>
-                <p>
-                  Healthcare demand is stable, but pricing and cost pressures cap margins.
-                  Management focuses on efficiency rather than aggressive growth.
-                </p>
-              </div>
-            </div>
-          </article>
+    <!-- Insights / Coming Soon, aber sauber -->
+    <section id="insights" class="rv-section">
+      <div class="rv-container rv-grid-2">
+        <div class="rv-card">
+          <h2>Macro & Cross-Asset Insights</h2>
+          <p>
+            RubikVault verbindet Makrodaten, Funding, Positionierung und On-Chain-Signale, 
+            um Marktphasen und Regimewechsel besser zu verstehen. 
+          </p>
+          <p>
+            Aktuell liegt der Schwerpunkt auf Bitcoin, ETH und großen US-Indizes. 
+            Weitere Dashboards (Liquidity, Credit Spreads, Vol-Surfaces) werden nach und nach ergänzt.
+          </p>
+          <p class="rv-small-mute">
+            Folge RubikVault auf X und YouTube, um neue Dashboards und Deep Dives früh zu sehen.
+          </p>
         </div>
-      </section>
+        <div class="rv-card">
+          <h2>Follow RubikVault</h2>
+          <ul class="rv-follow-list">
+            <li>
+              <strong>YouTube</strong><br />
+              Wöchentliche Macro-/Marktstruktur-Videos<br />
+              <a href="https://www.youtube.com/@RubikVault" target="_blank" rel="noopener noreferrer">
+                Open YouTube Channel
+              </a>
+            </li>
+            <li>
+              <strong>X (Twitter)</strong><br />
+              Daily Snippets, Charts, Threads<br />
+              <a href="https://x.com/RubikVault" target="_blank" rel="noopener noreferrer">
+                Follow on X
+              </a>
+            </li>
+            <li>
+              <strong>Contact</strong><br />
+              For feedback or collaboration:<br />
+              <a href="mailto:contact@rubikvault.com">contact@rubikvault.com</a>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </section>
 
-      <!-- HOW TO USE -->
-      <section id="how-to-use" class="rv-section">
-        <header class="rv-section-header">
-          <h2>How to use this dashboard</h2>
-        </header>
-        <ol class="rv-howto-list">
-          <li>
-            <strong>Check Market Pulse.</strong> Look at indices, sectors and VIX first. That gives
-            you the regime in seconds.
-          </li>
-          <li>
-            <strong>Scan Macro &amp; Liquidity.</strong> Combine spending, interest injections and
-            money growth to see whether price moves are liquidity-backed or just sentiment.
-          </li>
-          <li>
-            <strong>Read narratives, not noise.</strong> Use sentiment and earnings snippets to
-            understand how companies and investors describe the cycle – then map that back to your
-            own risk exposure.
-          </li>
-        </ol>
-      </section>
-    </div>
+    <!-- About -->
+    <section id="about" class="rv-section rv-section-alt">
+      <div class="rv-container rv-card">
+        <h2>About RubikVault</h2>
+        <p>
+          RubikVault ist ein unabhängiges Research-Projekt von Michael Puchowezki, 
+          mit Fokus auf Makro, Krypto und Cross-Asset-Marktstruktur.
+        </p>
+        <p>
+          Ziel ist es, Rauschen zu filtern und Anlegern ein klares Bild der 
+          aktuellen Marktregime zu geben – ohne bezahlte Shills, ohne „wen moon“-Content. 
+        </p>
+        <p>
+          Alle Inhalte sind rein informativ und ersetzen keine eigene Analyse 
+          oder professionelle Beratung. Du bist für deine Entscheidungen selbst verantwortlich.
+        </p>
+      </div>
+    </section>
   </main>
 
-  <footer class="rv-footer">
-    <div class="rv-shell rv-footer-inner">
-      <div class="rv-footer-main">
-        <span>© RubikVault. All rights reserved.</span>
-        <nav class="rv-footer-nav">
-          <a href="/imprint.html">Imprint</a>
-          <a href="/privacy.html">Privacy</a>
-          <a href="/disclaimer.html">Disclaimer</a>
-        </nav>
+  <footer id="legal" class="rv-footer">
+    <div class="rv-container rv-footer-grid">
+      <div>
+        <h3>RubikVault</h3>
+        <p class="rv-small-mute">
+          Independent research. No guarantees. No investment advice.
+        </p>
       </div>
-      <div class="rv-footer-social">
-        <a href="https://www.youtube.com" target="_blank" rel="noopener">YouTube</a>
-        <a href="https://www.tiktok.com" target="_blank" rel="noopener">TikTok</a>
-        <a href="https://x.com" target="_blank" rel="noopener">X</a>
-        <a href="https://www.instagram.com" target="_blank" rel="noopener">Instagram</a>
+      <div class="rv-footer-links">
+        <a href="/imprint.html">Imprint</a>
+        <a href="/privacy.html">Privacy</a>
+        <a href="/disclaimer.html">Disclaimer</a>
+      </div>
+      <div class="rv-footer-meta">
+        <span>© 2025 RubikVault</span>
       </div>
     </div>
   </footer>

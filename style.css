@@ -1,27 +1,19 @@
-/* =======================
-   RubikVault – Base Styles
-   ======================= */
-
 :root {
-  --rv-bg: #020617;
-  --rv-bg-elevated: #020617;
-  --rv-bg-card: #020617;
-  --rv-bg-card-grad: radial-gradient(circle at top left, rgba(34, 211, 238, 0.18), transparent 55%),
-    linear-gradient(145deg, rgba(15, 23, 42, 0.98), rgba(3, 7, 18, 0.98));
-  --rv-border-subtle: rgba(148, 163, 184, 0.22);
-  --rv-border-strong: rgba(30, 64, 175, 0.85);
-  --rv-text: #e5e7eb;
-  --rv-text-soft: #cbd5f5;
-  --rv-text-muted: #9ca3af;
-  --rv-accent: #22d3ee;
-  --rv-accent-soft: rgba(34, 211, 238, 0.12);
-  --rv-danger: #f97373;
-  --rv-success: #22c55e;
-  --rv-radius-lg: 18px;
-  --rv-radius-md: 12px;
+  --rv-bg: #050711;
+  --rv-bg-alt: #0b0f1d;
+  --rv-card: #101425;
+  --rv-border: #20263b;
+  --rv-text: #f5f7ff;
+  --rv-text-muted: #a4acc6;
+  --rv-accent: #00ffb8;
+  --rv-accent-soft: rgba(0, 255, 184, 0.16);
+  --rv-danger: #ff4d4d;
+  --rv-radius-lg: 16px;
+  --rv-radius-md: 10px;
   --rv-radius-pill: 999px;
-  --rv-shadow-soft: 0 18px 40px rgba(0, 0, 0, 0.75);
-  --rv-font-sans: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", sans-serif;
+  --rv-shadow-soft: 0 18px 45px rgba(0, 0, 0, 0.45);
+  --rv-font-main: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text",
+    "Segoe UI", sans-serif;
 }
 
 *,
@@ -34,112 +26,101 @@ html,
 body {
   margin: 0;
   padding: 0;
-  background: radial-gradient(circle at top, #020617 0, #020617 40%, #020617 100%);
+  font-family: var(--rv-font-main);
   color: var(--rv-text);
-  font-family: var(--rv-font-sans);
+  background: radial-gradient(circle at top, #181f3a 0, #050711 40%, #02030a 100%);
+  min-height: 100%;
+}
+
+body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* =======================
-   Layout Wrapper
-   ======================= */
+/* Layout */
 
-.rv-shell {
+.rv-container {
+  width: 100%;
   max-width: 1120px;
   margin: 0 auto;
-  padding: 0 18px;
+  padding: 0 1.4rem;
 }
 
-.rv-main {
-  padding: 32px 0 72px;
+.rv-section {
+  padding: 3.5rem 0;
 }
 
-/* =======================
-   Header + Logo
-   ======================= */
+.rv-section-alt {
+  padding: 3.5rem 0;
+  background: radial-gradient(circle at top, #171c36 0, #050711 55%);
+}
+
+.rv-section-subtitle {
+  margin-top: 0.35rem;
+  color: var(--rv-text-muted);
+  font-size: 0.95rem;
+}
+
+/* Header */
 
 .rv-header {
   position: sticky;
   top: 0;
-  z-index: 40;
-  backdrop-filter: blur(18px);
-  background: linear-gradient(to bottom, rgba(2, 6, 23, 0.96), rgba(2, 6, 23, 0.88));
-  border-bottom: 1px solid rgba(15, 23, 42, 0.9);
+  z-index: 20;
+  backdrop-filter: blur(16px);
+  background: linear-gradient(to bottom, rgba(5, 7, 17, 0.96), rgba(5, 7, 17, 0.72), transparent);
+  border-bottom: 1px solid rgba(48, 56, 93, 0.6);
 }
 
 .rv-header-inner {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 18px;
-  padding: 14px 18px;
-}
-
-.rv-header-left {
-  display: flex;
-  align-items: center;
-  gap: 12px;
+  height: 4.25rem;
 }
 
 .rv-logo {
   display: inline-flex;
   align-items: center;
-  gap: 10px;
+  gap: 0.55rem;
   text-decoration: none;
-  color: inherit;
+  color: var(--rv-text);
 }
 
-.rv-logo-icon {
-  width: 40px;
-  height: 40px;
-  border-radius: 16px;
-  background:
-    radial-gradient(circle at 10% 0, rgba(34, 211, 238, 0.6), transparent 60%),
-    radial-gradient(circle at 90% 100%, rgba(59, 130, 246, 0.7), transparent 55%),
-    #020617;
-  border: 1px solid rgba(34, 211, 238, 0.5);
-  box-shadow: 0 0 22px rgba(34, 211, 238, 0.55);
-  background-image: url("rubikvault-logo.png");
-  background-size: cover;
-  background-position: center;
-  background-repeat: no-repeat;
+.rv-logo-mark {
+  width: 28px;
+  height: 28px;
+  border-radius: 9px;
+  background: conic-gradient(
+    from 200deg,
+    #00ffb8,
+    #32a6ff,
+    #9b5cff,
+    #ff4d9d,
+    #00ffb8
+  );
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  font-weight: 700;
+  box-shadow: 0 0 18px rgba(0, 255, 184, 0.4);
 }
 
 .rv-logo-text {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  font-size: 0.98rem;
 }
-
-.rv-logo-title {
-  font-weight: 700;
-  letter-spacing: 0.03em;
-  font-size: 1.02rem;
-  color: #f9fafb;
-}
-
-.rv-logo-subtitle {
-  font-size: 0.8rem;
-  text-transform: uppercase;
-  letter-spacing: 0.17em;
-  color: var(--rv-accent);
-}
-
-/* =======================
-   Navigation
-   ======================= */
 
 .rv-nav {
   display: flex;
-  align-items: center;
-  gap: 16px;
-  font-size: 0.88rem;
+  gap: 1.3rem;
+  font-size: 0.9rem;
 }
 
 .rv-nav a {
-  text-decoration: none;
   color: var(--rv-text-muted);
-  padding: 6px 0;
+  text-decoration: none;
   position: relative;
 }
 
@@ -147,573 +128,291 @@ body {
   content: "";
   position: absolute;
   left: 0;
-  right: 0;
-  bottom: -4px;
+  bottom: -0.2rem;
+  width: 0;
   height: 2px;
   border-radius: 999px;
-  background: linear-gradient(90deg, #22d3ee, #38bdf8);
-  transform-origin: center;
-  transform: scaleX(0);
-  transition: transform 0.18s ease-out;
+  background: var(--rv-accent);
+  transition: width 0.18s ease-out;
 }
 
 .rv-nav a:hover {
-  color: var(--rv-text-soft);
+  color: var(--rv-text);
 }
 
 .rv-nav a:hover::after {
-  transform: scaleX(1);
+  width: 100%;
 }
 
 .rv-header-social {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 0.9rem;
+  font-size: 0.85rem;
 }
 
 .rv-header-social a {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 26px;
-  height: 26px;
-  border-radius: 999px;
-  border: 1px solid rgba(148, 163, 184, 0.45);
-  font-size: 0.72rem;
   color: var(--rv-text-muted);
   text-decoration: none;
 }
 
 .rv-header-social a:hover {
-  border-color: var(--rv-accent);
   color: var(--rv-accent);
 }
 
-/* =======================
-   Ticker Strip
-   ======================= */
-
-.rv-ticker-strip {
-  padding: 10px 0 0;
-}
-
-.rv-ticker-card {
-  padding: 10px 12px;
-}
-
-/* =======================
-   Sections & Cards
-   ======================= */
-
-.rv-section {
-  margin-top: 40px;
-}
-
-.rv-section:first-of-type {
-  margin-top: 32px;
-}
-
-.rv-section-header {
-  display: flex;
-  align-items: baseline;
-  gap: 10px;
-  margin-bottom: 18px;
-}
-
-.rv-section-header h2 {
-  margin: 0;
-  font-size: 1.35rem;
-}
-
-.rv-section-kicker {
-  margin: 0;
-  font-size: 0.86rem;
-  color: var(--rv-text-muted);
-}
-
-.rv-kicker {
-  text-transform: uppercase;
-  letter-spacing: 0.18em;
-  font-size: 0.78rem;
-  color: var(--rv-accent);
-  margin-bottom: 10px;
-}
-
-.rv-card {
-  padding: 18px 18px 20px;
-  border-radius: var(--rv-radius-lg);
-  background: var(--rv-bg-card-grad);
-  border: 1px solid var(--rv-border-subtle);
-  box-shadow: var(--rv-shadow-soft);
-}
-
-.rv-card-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 10px;
-}
-
-.rv-card-header h2,
-.rv-card-header h3 {
-  margin: 0;
-}
-
-/* Grids */
-
-.rv-grid {
-  display: grid;
-  gap: 22px;
-}
-
-.rv-grid-two {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-
-.rv-grid-three {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-}
-
-/* Einheitlicher vertikaler Abstand zwischen zwei Grids gleicher Section */
-.rv-section .rv-grid + .rv-grid {
-  margin-top: 22px;
-}
-
-/* =======================
-   Hero
-   ======================= */
+/* Hero */
 
 .rv-hero {
-  margin-top: 32px;
+  padding-top: 3.2rem;
 }
 
 .rv-hero-grid {
   display: grid;
-  grid-template-columns: minmax(0, 2.2fr) minmax(0, 1.5fr);
-  gap: 22px;
-  align-items: stretch;
-}
-
-.rv-hero-content {
-  padding: 24px 22px;
-  border-radius: var(--rv-radius-lg);
-  background:
-    radial-gradient(circle at top left, rgba(34, 211, 238, 0.16), transparent 60%),
-    linear-gradient(135deg, rgba(15, 23, 42, 0.97), rgba(2, 6, 23, 0.98));
-  border: 1px solid var(--rv-border-subtle);
-  box-shadow: var(--rv-shadow-soft);
+  grid-template-columns: minmax(0, 3fr) minmax(0, 2.4fr);
+  gap: 2.2rem;
+  align-items: flex-start;
 }
 
 .rv-hero h1 {
-  margin: 0 0 10px;
-  font-size: clamp(1.6rem, 2.6vw, 2.1rem);
+  font-size: clamp(1.9rem, 3vw, 2.4rem);
+  margin-bottom: 0.65rem;
 }
 
-.rv-hero-lead {
-  margin: 0 0 16px;
-  color: var(--rv-text-soft);
-  max-width: 560px;
+.rv-hero p {
+  max-width: 40rem;
+  line-height: 1.6;
+  color: var(--rv-text-muted);
 }
 
 .rv-hero-actions {
+  margin: 1.4rem 0 0.8rem;
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
-  margin-bottom: 12px;
+  gap: 0.75rem;
 }
 
 .rv-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 8px 14px;
-  border-radius: 999px;
+  padding: 0.55rem 1.25rem;
+  border-radius: var(--rv-radius-pill);
   font-size: 0.9rem;
-  cursor: pointer;
   border: 1px solid transparent;
+  cursor: pointer;
   text-decoration: none;
   white-space: nowrap;
 }
 
-.rv-btn.primary {
-  background: linear-gradient(135deg, #22d3ee, #38bdf8);
-  color: #0b1120;
+.rv-btn-primary {
+  background: linear-gradient(135deg, #00ffb8, #32a6ff);
+  color: #050711;
   font-weight: 600;
+  box-shadow: 0 12px 28px rgba(0, 255, 184, 0.28);
 }
 
-.rv-btn.primary:hover {
-  filter: brightness(1.05);
+.rv-btn-primary:hover {
+  box-shadow: 0 16px 38px rgba(0, 255, 184, 0.4);
 }
 
-.rv-btn.ghost {
-  border-color: rgba(148, 163, 184, 0.5);
-  color: var(--rv-text-soft);
-  background: rgba(15, 23, 42, 0.7);
+.rv-btn-secondary {
+  background: rgba(12, 17, 35, 0.9);
+  border-color: rgba(68, 82, 133, 0.9);
+  color: var(--rv-text-muted);
 }
 
-.rv-btn.ghost:hover {
+.rv-btn-secondary:hover {
   border-color: var(--rv-accent);
+  color: var(--rv-text);
 }
 
-.rv-hero-bullets {
-  list-style: none;
-  padding: 0;
-  margin: 10px 0 0;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  font-size: 0.88rem;
-  color: var(--rv-text-muted);
+.rv-hero-card {
+  background: radial-gradient(circle at top left, #20294a 0, #101425 40%, #050814 100%);
+  border-radius: var(--rv-radius-lg);
+  padding: 1.4rem 1.4rem 1.2rem;
+  box-shadow: var(--rv-shadow-soft);
+  border: 1px solid rgba(65, 76, 129, 0.7);
 }
 
-.rv-hero-sidecard {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
+.rv-hero-card h2 {
+  margin-top: 0;
+  margin-bottom: 0.4rem;
+  font-size: 1.1rem;
 }
 
-.rv-mini-chart {
-  height: 180px;
-  border-radius: var(--rv-radius-md);
-  overflow: hidden;
-  background: rgba(15, 23, 42, 0.9);
-  margin-bottom: 10px;
+.rv-hero-card p {
+  font-size: 0.9rem;
+  margin-bottom: 0.9rem;
 }
 
-/* =======================
-   Text utilities
-   ======================= */
-
-.rv-muted {
-  color: var(--rv-text-muted);
-  font-size: 0.86rem;
-}
-
-.rv-muted-text {
-  color: var(--rv-text-muted);
-}
-
-.rv-footnote {
-  margin-top: 10px;
-  font-size: 0.8rem;
-  color: var(--rv-text-muted);
-}
-
-/* =======================
-   Badges & Chips
-   ======================= */
-
-.rv-badge-live {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 3px 9px;
-  border-radius: var(--rv-radius-pill);
-  font-size: 0.78rem;
-  text-transform: uppercase;
-  letter-spacing: 0.14em;
-  color: #f97373;
-  background: rgba(248, 113, 113, 0.12);
-  border: 1px solid rgba(248, 113, 113, 0.5);
-}
-
-.rv-chip-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin: 8px 0 10px;
-}
-
-.rv-chip {
+.rv-hero-video {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 4px 9px;
+  padding: 0.6rem 1rem;
   border-radius: var(--rv-radius-pill);
-  font-size: 0.8rem;
-  border: 1px solid rgba(148, 163, 184, 0.5);
-  color: var(--rv-text-muted);
+  background: #141a31;
+  color: var(--rv-text);
+  text-decoration: none;
+  font-size: 0.9rem;
+  border: 1px solid rgba(80, 96, 151, 0.9);
 }
 
-.rv-chip.active {
-  background: rgba(37, 99, 235, 0.2);
-  border-color: #3b82f6;
-  color: #e5edff;
+.rv-hero-video:hover {
+  border-color: var(--rv-accent);
 }
 
-.rv-chip.bull {
-  border-color: #22c55e;
-  color: #22c55e;
-}
+/* Widgets & Cards */
 
-.rv-chip.neutral {
-  border-color: #eab308;
-  color: #eab308;
-}
-
-.rv-chip.bear {
-  border-color: #f97373;
-  color: #f97373;
-}
-
-/* =======================
-   Tables & Metrics
-   ======================= */
-
-.rv-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 0.86rem;
-}
-
-.rv-table th,
-.rv-table td {
-  padding: 6px 4px;
-  text-align: left;
-}
-
-.rv-table thead th {
-  font-weight: 500;
-  color: var(--rv-text-muted);
-  border-bottom: 1px solid rgba(51, 65, 85, 0.9);
-}
-
-.rv-table tbody tr:nth-child(odd) td {
-  background: rgba(15, 23, 42, 0.7);
-}
-
-.rv-table tbody tr:nth-child(even) td {
-  background: rgba(15, 23, 42, 0.4);
-}
-
-.rv-table-condensed th,
-.rv-table-condensed td {
-  padding: 4px 3px;
-}
-
-.rv-up {
-  color: var(--rv-success);
-}
-
-.rv-down {
-  color: var(--rv-danger);
-}
-
-.rv-metrics-list {
-  list-style: none;
-  margin: 10px 0 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  font-size: 0.86rem;
-}
-
-.rv-metrics-list li {
-  display: flex;
-  justify-content: space-between;
-  gap: 8px;
-}
-
-/* =======================
-   Macro visuals
-   ======================= */
-
-.rv-macro-images {
+.rv-grid-2 {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
-  margin-top: 10px;
+  gap: 1.6rem;
+  margin-top: 1.8rem;
 }
 
-.rv-macro-img-placeholder {
-  border-radius: var(--rv-radius-md);
-  border: 1px dashed rgba(148, 163, 184, 0.6);
-  background: radial-gradient(circle at top left, rgba(34, 211, 238, 0.08), transparent 65%);
-  padding: 22px 12px;
-  text-align: center;
-  font-size: 0.86rem;
+.rv-widget {
+  background: rgba(9, 13, 27, 0.98);
+  border-radius: var(--rv-radius-lg);
+  border: 1px solid rgba(45, 57, 101, 0.9);
+  padding: 1.2rem;
+  box-shadow: var(--rv-shadow-soft);
+}
+
+.rv-widget h3 {
+  margin-top: 0;
+  margin-bottom: 0.8rem;
+  font-size: 1rem;
+}
+
+.rv-widget-calendar {
+  margin-top: 2rem;
+}
+
+.tradingview-widget-container {
+  width: 100%;
+}
+
+.tradingview-widget-container__widget {
+  min-height: 280px;
+}
+
+/* Cards / About / Follow */
+
+.rv-card {
+  background: rgba(8, 12, 24, 0.98);
+  border-radius: var(--rv-radius-lg);
+  padding: 1.6rem 1.5rem;
+  border: 1px solid rgba(43, 54, 95, 0.9);
+  box-shadow: var(--rv-shadow-soft);
+}
+
+.rv-card h2 {
+  margin-top: 0;
+  margin-bottom: 0.75rem;
+}
+
+.rv-card p {
   color: var(--rv-text-muted);
+  line-height: 1.65;
 }
 
-/* =======================
-   Links / Pills
-   ======================= */
-
-.rv-links-stack {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
+.rv-follow-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
 }
 
-.rv-link-pill {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 8px 12px;
-  border-radius: var(--rv-radius-pill);
-  border: 1px solid rgba(148, 163, 184, 0.5);
-  text-decoration: none;
-  font-size: 0.86rem;
-  color: var(--rv-text-soft);
+.rv-follow-list li + li {
+  margin-top: 1rem;
 }
 
-.rv-link-pill:hover {
-  border-color: var(--rv-accent);
+.rv-follow-list a {
   color: var(--rv-accent);
+  text-decoration: none;
+  font-size: 0.9rem;
 }
 
-/* =======================
-   Earnings list
-   ======================= */
-
-.rv-earnings-list {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  margin-top: 6px;
+.rv-follow-list a:hover {
+  text-decoration: underline;
 }
 
-.rv-earnings-item {
-  padding: 8px 9px;
-  border-radius: var(--rv-radius-md);
-  background: rgba(15, 23, 42, 0.9);
-  border: 1px solid rgba(30, 64, 175, 0.8);
-}
-
-.rv-earnings-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  margin-bottom: 4px;
-}
-
-.rv-earnings-name {
-  font-weight: 500;
-}
-
-/* =======================
-   How-to list
-   ======================= */
-
-.rv-howto-list {
-  margin: 0;
-  padding-left: 20px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  font-size: 0.94rem;
-}
-
-.rv-howto-list li {
-  margin: 0;
-}
-
-/* =======================
-   Footer
-   ======================= */
+/* Footer */
 
 .rv-footer {
-  border-top: 1px solid rgba(15, 23, 42, 0.9);
-  background: #020617;
+  border-top: 1px solid rgba(45, 57, 101, 0.85);
+  padding: 1.6rem 0 2.1rem;
+  background: radial-gradient(circle at top, #11152a 0, #050711 55%);
 }
 
-.rv-footer-inner {
-  padding: 18px 18px 26px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  font-size: 0.82rem;
-  color: var(--rv-text-muted);
+.rv-footer-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 2fr) minmax(0, 1.6fr);
+  gap: 1.4rem;
+  align-items: flex-start;
 }
 
-.rv-footer-main {
+.rv-footer h3 {
+  margin-top: 0;
+  margin-bottom: 0.3rem;
+}
+
+.rv-footer-links {
   display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
+  gap: 1.2rem;
+  justify-content: center;
   align-items: center;
-  justify-content: space-between;
+  font-size: 0.9rem;
 }
 
-.rv-footer-nav {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-}
-
-.rv-footer-nav a {
+.rv-footer-links a {
   color: var(--rv-text-muted);
   text-decoration: none;
 }
 
-.rv-footer-nav a:hover {
+.rv-footer-links a:hover {
   color: var(--rv-accent);
 }
 
-.rv-footer-social {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-}
-
-.rv-footer-social a {
+.rv-footer-meta {
+  text-align: right;
+  font-size: 0.8rem;
   color: var(--rv-text-muted);
-  text-decoration: none;
 }
 
-.rv-footer-social a:hover {
-  color: var(--rv-accent);
+/* Helpers */
+
+.rv-small-mute {
+  font-size: 0.8rem;
+  color: var(--rv-text-muted);
+  margin-top: 0.4rem;
 }
 
-/* =======================
-   TradingView wrappers
-   ======================= */
+/* Responsiveness */
 
-.rv-tv-wrapper {
-  margin-top: 22px;
-  padding-top: 14px;
-}
-
-/* =======================
-   Responsive
-   ======================= */
-
-@media (max-width: 960px) {
+@media (max-width: 860px) {
   .rv-header-inner {
-    flex-wrap: wrap;
-    justify-content: center;
+    gap: 0.8rem;
   }
 
   .rv-nav {
-    flex-wrap: wrap;
-    justify-content: center;
+    display: none;
   }
 
   .rv-hero-grid {
-    grid-template-columns: minmax(0, 1fr);
+    grid-template-columns: 1fr;
   }
 
-  .rv-grid-two {
-    grid-template-columns: minmax(0, 1fr);
+  .rv-grid-2 {
+    grid-template-columns: 1fr;
   }
 
-  .rv-grid-three {
-    grid-template-columns: minmax(0, 1fr);
-  }
-}
-
-@media (max-width: 640px) {
-  .rv-header-inner {
-    padding-inline: 12px;
+  .rv-footer-grid {
+    grid-template-columns: 1fr;
+    text-align: left;
   }
 
-  .rv-shell {
-    padding-inline: 14px;
-  }
-
-  .rv-card {
-    padding: 16px 14px 18px;
+  .rv-footer-meta {
+    text-align: left;
   }
 }
