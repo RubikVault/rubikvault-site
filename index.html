@@ -4,20 +4,35 @@
   <meta charset="utf-8" />
   <title>RubikVault – Decode the Markets</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="description" content="RubikVault is an independent research project focused on macro, crypto and cross-asset market structure. Clean data, no hype." />
+  <meta
+    name="description"
+    content="RubikVault is an independent research project focused on macro, crypto and cross-asset market structure. Clean data, no hype."
+  />
+  <meta name="theme-color" content="#050711" />
+  <link rel="preload" href="style.css" as="style" />
   <link rel="stylesheet" href="style.css" />
   <link rel="icon" href="/favicon.ico" />
   <meta property="og:title" content="RubikVault – Decode the Markets" />
-  <meta property="og:description" content="Independent research on macro, crypto and cross-asset market structure." />
+  <meta
+    property="og:description"
+    content="Independent research on macro, crypto and cross-asset market structure."
+  />
   <meta property="og:image" content="/og-image.png" />
   <meta property="og:type" content="website" />
 </head>
 <body>
   <header class="rv-header">
     <div class="rv-container rv-header-inner">
-      <a href="/" class="rv-logo">
-        <span class="rv-logo-mark">RV</span>
-        <span class="rv-logo-text">RubikVault</span>
+      <a href="/" class="rv-logo" aria-label="RubikVault – home">
+        <img
+          src="/assets/logo.png"
+          alt="RubikVault logo"
+          class="rv-logo-img"
+        />
+        <div class="rv-logo-text-block">
+          <span class="rv-logo-text-main">RubikVault</span>
+          <span class="rv-logo-text-tagline">DECODE THE MARKETS</span>
+        </div>
       </a>
       <nav class="rv-nav" aria-label="Main navigation">
         <a href="#markets">Markets</a>
@@ -39,8 +54,8 @@
         <div>
           <h1>RubikVault – Klarheit im Lärm der Märkte</h1>
           <p>
-            Independent research zu Makro, Krypto und Cross-Asset-Struktur. 
-            Keine Signals, kein Hype – nur sauber kuratierte Daten, Kontext und 
+            Independent research zu Makro, Krypto und Cross-Asset-Struktur.
+            Keine Signals, kein Hype – nur sauber kuratierte Daten, Kontext und
             wöchentliche Deep Dives.
           </p>
           <div class="rv-hero-actions">
@@ -55,7 +70,12 @@
           <h2>Latest Video</h2>
           <p>In-depth market breakdowns &amp; macro context.</p>
           <!-- Du kannst hier einfach den neuesten Link austauschen -->
-          <a class="rv-hero-video" href="https://www.youtube.com/@RubikVault" target="_blank" rel="noopener noreferrer">
+          <a
+            class="rv-hero-video"
+            href="https://www.youtube.com/@RubikVault"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
             Go to YouTube Channel
           </a>
         </div>
@@ -74,7 +94,16 @@
           <!-- TradingView Ticker Tape -->
           <div class="tradingview-widget-container">
             <div class="tradingview-widget-container__widget"></div>
-            <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-ticker-tape.js" async>
+            <!--
+              Wichtig: Der Inhalt dieses Script-Tags ist absichtlich reines JSON,
+              genauso wie TradingView ihn vorgibt. VS Code kann hier Warnungen anzeigen,
+              aber im Browser ist das korrekt und lauffähig.
+            -->
+            <script
+              type="text/javascript"
+              src="https://s3.tradingview.com/external-embedding/embed-widget-ticker-tape.js"
+              async
+            >
             {
               "symbols": [
                 { "proName": "OANDA:SPX500USD", "title": "S&P 500" },
@@ -100,7 +129,11 @@
             <h3>BTC/USD – 1Y Structure</h3>
             <div class="tradingview-widget-container">
               <div class="tradingview-widget-container__widget"></div>
-              <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-mini-chart.js" async>
+              <script
+                type="text/javascript"
+                src="https://s3.tradingview.com/external-embedding/embed-widget-mini-chart.js"
+                async
+              >
               {
                 "symbol": "BITSTAMP:BTCUSD",
                 "width": "100%",
@@ -121,7 +154,11 @@
             <h3>Crypto Market Overview</h3>
             <div class="tradingview-widget-container">
               <div class="tradingview-widget-container__widget"></div>
-              <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-market-overview.js" async>
+              <script
+                type="text/javascript"
+                src="https://s3.tradingview.com/external-embedding/embed-widget-market-overview.js"
+                async
+              >
               {
                 "colorTheme": "dark",
                 "dateRange": "12M",
@@ -164,7 +201,11 @@
           </p>
           <div class="tradingview-widget-container">
             <div class="tradingview-widget-container__widget"></div>
-            <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-events.js" async>
+            <script
+              type="text/javascript"
+              src="https://s3.tradingview.com/external-embedding/embed-widget-events.js"
+              async
+            >
             {
               "width": "100%",
               "height": "420",
@@ -178,17 +219,17 @@
       </div>
     </section>
 
-    <!-- Insights / Coming Soon, aber sauber -->
+    <!-- Insights -->
     <section id="insights" class="rv-section">
       <div class="rv-container rv-grid-2">
         <div class="rv-card">
           <h2>Macro & Cross-Asset Insights</h2>
           <p>
-            RubikVault verbindet Makrodaten, Funding, Positionierung und On-Chain-Signale, 
-            um Marktphasen und Regimewechsel besser zu verstehen. 
+            RubikVault verbindet Makrodaten, Funding, Positionierung und On-Chain-Signale,
+            um Marktphasen und Regimewechsel besser zu verstehen.
           </p>
           <p>
-            Aktuell liegt der Schwerpunkt auf Bitcoin, ETH und großen US-Indizes. 
+            Aktuell liegt der Schwerpunkt auf Bitcoin, ETH und großen US-Indizes.
             Weitere Dashboards (Liquidity, Credit Spreads, Vol-Surfaces) werden nach und nach ergänzt.
           </p>
           <p class="rv-small-mute">
@@ -201,14 +242,22 @@
             <li>
               <strong>YouTube</strong><br />
               Wöchentliche Macro-/Marktstruktur-Videos<br />
-              <a href="https://www.youtube.com/@RubikVault" target="_blank" rel="noopener noreferrer">
+              <a
+                href="https://www.youtube.com/@RubikVault"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
                 Open YouTube Channel
               </a>
             </li>
             <li>
               <strong>X (Twitter)</strong><br />
               Daily Snippets, Charts, Threads<br />
-              <a href="https://x.com/RubikVault" target="_blank" rel="noopener noreferrer">
+              <a
+                href="https://x.com/RubikVault"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
                 Follow on X
               </a>
             </li>
@@ -227,15 +276,15 @@
       <div class="rv-container rv-card">
         <h2>About RubikVault</h2>
         <p>
-          RubikVault ist ein unabhängiges Research-Projekt von Michael Puchowezki, 
+          RubikVault ist ein unabhängiges Research-Projekt von Michael Puchowezki,
           mit Fokus auf Makro, Krypto und Cross-Asset-Marktstruktur.
         </p>
         <p>
-          Ziel ist es, Rauschen zu filtern und Anlegern ein klares Bild der 
-          aktuellen Marktregime zu geben – ohne bezahlte Shills, ohne „wen moon“-Content. 
+          Ziel ist es, Rauschen zu filtern und Anlegern ein klares Bild der
+          aktuellen Marktregime zu geben – ohne bezahlte Shills, ohne „wen moon“-Content.
         </p>
         <p>
-          Alle Inhalte sind rein informativ und ersetzen keine eigene Analyse 
+          Alle Inhalte sind rein informativ und ersetzen keine eigene Analyse
           oder professionelle Beratung. Du bist für deine Entscheidungen selbst verantwortlich.
         </p>
       </div>

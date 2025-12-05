@@ -14,6 +14,7 @@
   --rv-shadow-soft: 0 18px 45px rgba(0, 0, 0, 0.45);
   --rv-font-main: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text",
     "Segoe UI", sans-serif;
+  --rv-logo-glow: 0 0 18px rgba(0, 255, 184, 0.4);
 }
 
 *,
@@ -28,7 +29,12 @@ body {
   padding: 0;
   font-family: var(--rv-font-main);
   color: var(--rv-text);
-  background: radial-gradient(circle at top, #181f3a 0, #050711 40%, #02030a 100%);
+  background: radial-gradient(
+    circle at top,
+    #181f3a 0,
+    #050711 40%,
+    #02030a 100%
+  );
   min-height: 100%;
 }
 
@@ -67,7 +73,12 @@ body {
   top: 0;
   z-index: 20;
   backdrop-filter: blur(16px);
-  background: linear-gradient(to bottom, rgba(5, 7, 17, 0.96), rgba(5, 7, 17, 0.72), transparent);
+  background: linear-gradient(
+    to bottom,
+    rgba(5, 7, 17, 0.96),
+    rgba(5, 7, 17, 0.72),
+    transparent
+  );
   border-bottom: 1px solid rgba(48, 56, 93, 0.6);
 }
 
@@ -78,38 +89,63 @@ body {
   height: 4.25rem;
 }
 
+/* Logo */
+
 .rv-logo {
   display: inline-flex;
   align-items: center;
   gap: 0.55rem;
   text-decoration: none;
   color: var(--rv-text);
+  transition: transform 0.2s ease;
 }
 
+.rv-logo:hover {
+  transform: scale(1.03);
+}
+
+.rv-logo-img {
+  width: 150px;
+  height: auto;
+  filter: drop-shadow(var(--rv-logo-glow));
+  transition: filter 0.25s ease;
+}
+
+.rv-logo:hover .rv-logo-img {
+  filter: drop-shadow(0 0 24px rgba(0, 255, 184, 0.6));
+}
+
+/* falls du irgendwo noch .rv-logo-mark verwendest, bleibt das hier als Fallback */
 .rv-logo-mark {
-  width: 28px;
-  height: 28px;
-  border-radius: 9px;
-  background: conic-gradient(
-    from 200deg,
-    #00ffb8,
-    #32a6ff,
-    #9b5cff,
-    #ff4d9d,
-    #00ffb8
-  );
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 0.75rem;
-  font-weight: 700;
-  box-shadow: 0 0 18px rgba(0, 255, 184, 0.4);
+  width: 34px;
+  height: 34px;
+  border-radius: 12px;
+  background-color: #04101a;
+  background-size: contain;
+  background-position: center;
+  background-repeat: no-repeat;
+  box-shadow: 0 0 22px rgba(0, 255, 184, 0.65);
+  border: 1px solid rgba(0, 255, 184, 0.7);
 }
 
-.rv-logo-text {
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  font-size: 0.98rem;
+.rv-logo-text-block {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.1;
+}
+
+.rv-logo-text-main {
+  font-weight: 650;
+  letter-spacing: 0.03em;
+  font-size: 1.02rem;
+}
+
+.rv-logo-text-tagline {
+  font-size: 0.64rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--rv-accent);
+  opacity: 0.95;
 }
 
 .rv-nav {
@@ -164,6 +200,11 @@ body {
 
 .rv-hero {
   padding-top: 3.2rem;
+  /* optional Hero-Hintergrund, falls du ein breites Bild hast */
+  background-image: url("/assets/rubikvault-hero.png");
+  background-size: cover;
+  background-position: center top;
+  background-repeat: no-repeat;
 }
 
 .rv-hero-grid {
@@ -227,7 +268,12 @@ body {
 }
 
 .rv-hero-card {
-  background: radial-gradient(circle at top left, #20294a 0, #101425 40%, #050814 100%);
+  background: radial-gradient(
+    circle at top left,
+    #20294a 0,
+    #101425 40%,
+    #050814 100%
+  );
   border-radius: var(--rv-radius-lg);
   padding: 1.4rem 1.4rem 1.2rem;
   box-shadow: var(--rv-shadow-soft);
@@ -388,6 +434,66 @@ body {
   margin-top: 0.4rem;
 }
 
+/* Legal pages (Disclaimer / Privacy / Imprint) */
+
+.rv-legal-main {
+  margin: 0;
+  min-height: 100vh;
+  background: radial-gradient(
+    circle at top,
+    #181f3a 0,
+    #050711 40%,
+    #02030a 100%
+  );
+  color: var(--rv-text);
+  font-family: var(--rv-font-main);
+}
+
+.rv-legal-content {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 3rem 1.6rem 4rem;
+  background: rgba(8, 12, 24, 0.96);
+  border-radius: 18px;
+  border: 1px solid rgba(43, 54, 95, 0.9);
+  box-shadow: var(--rv-shadow-soft);
+}
+
+.rv-legal-content h1 {
+  margin-top: 0;
+  margin-bottom: 1.2rem;
+}
+
+.rv-legal-content h2 {
+  margin-top: 1.8rem;
+  margin-bottom: 0.6rem;
+}
+
+.rv-legal-content p,
+.rv-legal-content li {
+  font-size: 0.95rem;
+  line-height: 1.7;
+  color: var(--rv-text-muted);
+}
+
+.rv-legal-content ul {
+  padding-left: 1.2rem;
+}
+
+.rv-legal-back {
+  margin-top: 2rem;
+}
+
+.rv-legal-back a {
+  color: var(--rv-accent);
+  text-decoration: none;
+  font-size: 0.9rem;
+}
+
+.rv-legal-back a:hover {
+  text-decoration: underline;
+}
+
 /* Responsiveness */
 
 @media (max-width: 860px) {
@@ -414,5 +520,21 @@ body {
 
   .rv-footer-meta {
     text-align: left;
+  }
+
+  .rv-logo-img {
+    width: 120px;
+  }
+
+  .rv-logo-text-main {
+    font-size: 0.95rem;
+  }
+
+  .rv-logo-text-tagline {
+    font-size: 0.6rem;
+  }
+
+  .rv-hero {
+    background-position: center top;
   }
 }
