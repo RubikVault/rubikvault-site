@@ -165,3 +165,97 @@ body {
 .rv-footer-meta {
   color: #6f7688;
 }
+
+
+/* ===== RubikVault Header + Logo – FINAL FIX ===== */
+
+.rv-header {
+  width: 100%;
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  background: rgba(5, 7, 17, 0.9);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+/* Container für alles im Header */
+.rv-header-inner {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+/* Logo-Clickfläche */
+.rv-logo {
+  display: flex;
+  align-items: center;
+  height: 52px;          /* feste Header-Höhe */
+  overflow: hidden;      /* schneidet überschüssige Bildteile ab */
+}
+
+/* Logo-Bild selbst */
+.rv-logo-img {
+  height: 40px !important;   /* sichtbare Höhe des Logos */
+  width: auto !important;
+  object-fit: contain;
+  display: block;
+}
+
+/* Navigation */
+.rv-nav {
+  display: flex;
+  gap: 18px;
+  font-size: 0.95rem;
+}
+
+.rv-nav a {
+  color: #e2e6f2;
+  text-decoration: none;
+  font-weight: 500;
+  transition: color 0.15s ease, opacity 0.15s ease;
+}
+
+.rv-nav a:hover {
+  color: #00e2c0;
+}
+
+/* Social-Links rechts */
+.rv-header-social {
+  display: flex;
+  gap: 14px;
+  font-size: 0.9rem;
+}
+
+.rv-header-social a {
+  color: #9ca3ba;
+  text-decoration: none;
+}
+
+.rv-header-social a:hover {
+  color: #00e2c0;
+}
+
+/* Mobile: Logo mittig, Nav/Links umbrechen */
+@media (max-width: 768px) {
+  .rv-header-inner {
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 8px 16px;
+  }
+
+  .rv-nav {
+    order: 2;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .rv-header-social {
+    order: 3;
+    justify-content: center;
+  }
+}
