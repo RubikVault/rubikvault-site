@@ -4,106 +4,92 @@
   <meta charset="utf-8" />
   <title>RubikVault – Decode the Markets</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta
-    name="description"
-    content="RubikVault is an independent research project focused on macro, crypto and cross-asset market structure. Clean data, no hype."
-  />
+  <meta name="description"
+        content="RubikVault is an independent research project focused on macro, crypto and cross-asset market structure. Clean data, no hype." />
+
   <meta name="theme-color" content="#050711" />
+
   <link rel="preload" href="style.css" as="style" />
   <link rel="stylesheet" href="style.css" />
   <link rel="icon" href="/favicon.ico" />
+
   <meta property="og:title" content="RubikVault – Decode the Markets" />
-  <meta
-    property="og:description"
-    content="Independent research on macro, crypto and cross-asset market structure."
-  />
+  <meta property="og:description" content="Independent research on macro, crypto and cross-asset market structure." />
   <meta property="og:image" content="/og-image.png" />
   <meta property="og:type" content="website" />
 </head>
+
 <body>
   <header class="rv-header">
     <div class="rv-container rv-header-inner">
       <a href="/" class="rv-logo" aria-label="RubikVault – home">
-        <img
-          src="/assets/LogoC.png"
-          alt="RubikVault logo"
-          class="rv-logo-img"
-        />
-        <div class="rv-logo-text-block">
-          <span class="rv-logo-text-main">RubikVault</span>
-          <span class="rv-logo-text-tagline">DECODE THE MARKETS</span>
-        </div>
+        <img src="/assets/Logo.png"
+             alt="RubikVault Logo"
+             class="rv-logo-img" />
       </a>
+
       <nav class="rv-nav" aria-label="Main navigation">
         <a href="#markets">Markets</a>
         <a href="#insights">Insights</a>
         <a href="#about">About</a>
         <a href="#legal">Legal</a>
       </nav>
+
       <div class="rv-header-social">
-        <a href="https://www.youtube.com/@RubikVault" target="_blank" rel="noopener noreferrer">YouTube</a>
-        <a href="https://x.com/RubikVault" target="_blank" rel="noopener noreferrer">X</a>
+        <a href="https://www.youtube.com/@RubikVault" target="_blank">YouTube</a>
+        <a href="https://x.com/RubikVault" target="_blank">X</a>
       </div>
     </div>
   </header>
 
+
+  <!-- HERO -->
   <main>
-    <!-- Hero -->
     <section class="rv-section rv-hero">
       <div class="rv-container rv-hero-grid">
         <div>
           <h1>RubikVault – Klarheit im Lärm der Märkte</h1>
           <p>
             Independent research zu Makro, Krypto und Cross-Asset-Struktur.
-            Keine Signals, kein Hype – nur sauber kuratierte Daten, Kontext und
-            wöchentliche Deep Dives.
+            Keine Signals, kein Hype – nur sauber kuratierte Daten, Kontext und wöchentliche Deep Dives.
           </p>
+
           <div class="rv-hero-actions">
             <a href="#markets" class="rv-btn rv-btn-primary">Open Market Dashboard</a>
             <a href="#about" class="rv-btn rv-btn-secondary">What is RubikVault?</a>
           </div>
-          <p class="rv-small-mute">
-            Educational only. No investment, tax or legal advice. Do your own research.
-          </p>
+
+          <p class="rv-small-mute">Educational only. No investment, tax or legal advice. Do your own research.</p>
         </div>
+
         <div class="rv-hero-card">
           <h2>Latest Video</h2>
-          <p>In-depth market breakdowns &amp; macro context.</p>
-          <!-- Du kannst hier einfach den neuesten Link austauschen -->
-          <a
-            class="rv-hero-video"
-            href="https://www.youtube.com/@RubikVault"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
+          <p>In-depth market breakdowns & macro context.</p>
+
+          <a class="rv-hero-video"
+             href="https://www.youtube.com/@RubikVault"
+             target="_blank">
             Go to YouTube Channel
           </a>
         </div>
       </div>
     </section>
 
-    <!-- Ticker -->
+
+    <!-- MARKETS -->
     <section id="markets" class="rv-section rv-section-alt">
       <div class="rv-container">
         <h2>Market Snapshot</h2>
-        <p class="rv-section-subtitle">
-          Live Ticker für wichtige Indizes, Krypto-Assets und FX – powered by TradingView (kostenloser Embed).
-        </p>
+        <p class="rv-section-subtitle">Live Ticker für wichtige Indizes, Krypto-Assets und FX – powered by TradingView.</p>
 
+        <!-- Ticker Tape -->
         <div class="rv-widget">
-          <!-- TradingView Ticker Tape -->
           <div class="tradingview-widget-container">
             <div class="tradingview-widget-container__widget"></div>
-            <!--
-              Wichtig: Der Inhalt dieses Script-Tags ist absichtlich reines JSON,
-              genauso wie TradingView ihn vorgibt. VS Code kann hier Warnungen anzeigen,
-              aber im Browser ist das korrekt und lauffähig.
-            -->
-            <script
-              type="text/javascript"
-              src="https://s3.tradingview.com/external-embedding/embed-widget-ticker-tape.js"
-              async
-            >
+
+            <script type="text/javascript"
+                src="https://s3.tradingview.com/external-embedding/embed-widget-ticker-tape.js"
+                async>
             {
               "symbols": [
                 { "proName": "OANDA:SPX500USD", "title": "S&P 500" },
@@ -123,17 +109,19 @@
           </div>
         </div>
 
+
+        <!-- TWO PANEL GRID -->
         <div class="rv-grid-2">
+
           <!-- Mini Chart -->
           <div class="rv-widget">
             <h3>BTC/USD – 1Y Structure</h3>
             <div class="tradingview-widget-container">
               <div class="tradingview-widget-container__widget"></div>
-              <script
-                type="text/javascript"
-                src="https://s3.tradingview.com/external-embedding/embed-widget-mini-chart.js"
-                async
-              >
+
+              <script type="text/javascript"
+                  src="https://s3.tradingview.com/external-embedding/embed-widget-mini-chart.js"
+                  async>
               {
                 "symbol": "BITSTAMP:BTCUSD",
                 "width": "100%",
@@ -141,24 +129,24 @@
                 "locale": "en",
                 "dateRange": "12M",
                 "colorTheme": "dark",
-                "trendLineColor": "rgba(0, 255, 184, 1)",
-                "underLineColor": "rgba(0, 255, 184, 0.15)",
+                "trendLineColor": "rgba(0,255,184,1)",
+                "underLineColor": "rgba(0,255,184,0.15)",
                 "isTransparent": true
               }
               </script>
             </div>
           </div>
 
+
           <!-- Crypto Market Overview -->
           <div class="rv-widget">
             <h3>Crypto Market Overview</h3>
             <div class="tradingview-widget-container">
               <div class="tradingview-widget-container__widget"></div>
-              <script
-                type="text/javascript"
-                src="https://s3.tradingview.com/external-embedding/embed-widget-market-overview.js"
-                async
-              >
+
+              <script type="text/javascript"
+                  src="https://s3.tradingview.com/external-embedding/embed-widget-market-overview.js"
+                  async>
               {
                 "colorTheme": "dark",
                 "dateRange": "12M",
@@ -168,44 +156,41 @@
                 "isTransparent": true,
                 "width": "100%",
                 "height": "320",
-                "plotLineColorGrowing": "rgba(0, 255, 184, 1)",
-                "plotLineColorFalling": "rgba(255, 77, 77, 1)",
-                "gridLineColor": "rgba(42, 46, 57, 0)",
-                "scaleFontColor": "rgba(199, 203, 211, 1)",
-                "belowLineFillColorGrowing": "rgba(0, 255, 184, 0.15)",
-                "belowLineFillColorFalling": "rgba(255, 77, 77, 0.15)",
-                "symbolActiveColor": "rgba(32, 34, 45, 1)",
-                "tabs": [
-                  {
-                    "title": "Crypto",
-                    "symbols": [
-                      { "s": "BITSTAMP:BTCUSD", "d": "Bitcoin" },
-                      { "s": "BITSTAMP:ETHUSD", "d": "Ethereum" },
-                      { "s": "BINANCE:SOLUSDT", "d": "Solana" },
-                      { "s": "BINANCE:AVAXUSDT", "d": "Avalanche" },
-                      { "s": "BINANCE:LINKUSDT", "d": "Chainlink" }
-                    ]
-                  }
-                ]
+                "plotLineColorGrowing": "rgba(0,255,184,1)",
+                "plotLineColorFalling": "rgba(255,77,77,1)",
+                "belowLineFillColorGrowing": "rgba(0,255,184,0.15)",
+                "belowLineFillColorFalling": "rgba(255,77,77,0.15)",
+                "tabs": [{
+                  "title": "Crypto",
+                  "symbols": [
+                    { "s": "BITSTAMP:BTCUSD", "d": "Bitcoin" },
+                    { "s": "BITSTAMP:ETHUSD", "d": "Ethereum" },
+                    { "s": "BINANCE:SOLUSDT", "d": "Solana" },
+                    { "s": "BINANCE:AVAXUSDT", "d": "Avalanche" },
+                    { "s": "BINANCE:LINKUSDT", "d": "Chainlink" }
+                  ]
+                }]
               }
               </script>
+
             </div>
           </div>
+
         </div>
 
-        <!-- Economic Calendar -->
+
+        <!-- ECONOMIC CALENDAR -->
         <div class="rv-widget rv-widget-calendar">
           <h3>Global Economic Calendar</h3>
-          <p class="rv-small-mute">
-            Für Makro-Kontext: FOMC, CPI, Payrolls, EZB-Meetings und mehr. Daten via TradingView (kostenloser Embed).
-          </p>
+
+          <p class="rv-small-mute">Makro-Kontext: FOMC, CPI, Payrolls, EZB-Meetings & mehr.</p>
+
           <div class="tradingview-widget-container">
             <div class="tradingview-widget-container__widget"></div>
-            <script
-              type="text/javascript"
-              src="https://s3.tradingview.com/external-embedding/embed-widget-events.js"
-              async
-            >
+
+            <script type="text/javascript"
+                src="https://s3.tradingview.com/external-embedding/embed-widget-events.js"
+                async>
             {
               "width": "100%",
               "height": "420",
@@ -216,98 +201,100 @@
             </script>
           </div>
         </div>
+
       </div>
     </section>
 
-    <!-- Insights -->
+
+    <!-- INSIGHTS -->
     <section id="insights" class="rv-section">
       <div class="rv-container rv-grid-2">
+
         <div class="rv-card">
           <h2>Macro & Cross-Asset Insights</h2>
           <p>
-            RubikVault verbindet Makrodaten, Funding, Positionierung und On-Chain-Signale,
+            RubikVault verbindet Makrodaten, Funding, Positionierung & On-Chain-Signale,
             um Marktphasen und Regimewechsel besser zu verstehen.
           </p>
           <p>
-            Aktuell liegt der Schwerpunkt auf Bitcoin, ETH und großen US-Indizes.
-            Weitere Dashboards (Liquidity, Credit Spreads, Vol-Surfaces) werden nach und nach ergänzt.
-          </p>
-          <p class="rv-small-mute">
-            Folge RubikVault auf X und YouTube, um neue Dashboards und Deep Dives früh zu sehen.
+            Fokus aktuell: Bitcoin, ETH, große US-Indizes.
+            Weitere Dashboards folgen.
           </p>
         </div>
+
         <div class="rv-card">
           <h2>Follow RubikVault</h2>
+
           <ul class="rv-follow-list">
             <li>
               <strong>YouTube</strong><br />
               Wöchentliche Macro-/Marktstruktur-Videos<br />
-              <a
-                href="https://www.youtube.com/@RubikVault"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                Open YouTube Channel
-              </a>
+              <a href="https://www.youtube.com/@RubikVault" target="_blank">Open YouTube Channel</a>
             </li>
+
             <li>
               <strong>X (Twitter)</strong><br />
               Daily Snippets, Charts, Threads<br />
-              <a
-                href="https://x.com/RubikVault"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                Follow on X
-              </a>
+              <a href="https://x.com/RubikVault" target="_blank">Follow on X</a>
             </li>
+
             <li>
               <strong>Contact</strong><br />
-              For feedback or collaboration:<br />
+              Feedback / Collaboration:<br />
               <a href="mailto:contact@rubikvault.com">contact@rubikvault.com</a>
             </li>
           </ul>
+
         </div>
+
       </div>
     </section>
 
-    <!-- About -->
+
+    <!-- ABOUT -->
     <section id="about" class="rv-section rv-section-alt">
       <div class="rv-container rv-card">
         <h2>About RubikVault</h2>
+
+        <p>RubikVault ist ein unabhängiges Research-Projekt von Michael Puchowezki.</p>
+
         <p>
-          RubikVault ist ein unabhängiges Research-Projekt von Michael Puchowezki,
-          mit Fokus auf Makro, Krypto und Cross-Asset-Marktstruktur.
+          Ziel: Rauschen filtern, Marktregime sichtbar machen –
+          ohne Shills, ohne Hype, ohne Signaldienst.
         </p>
+
         <p>
-          Ziel ist es, Rauschen zu filtern und Anlegern ein klares Bild der
-          aktuellen Marktregime zu geben – ohne bezahlte Shills, ohne „wen moon“-Content.
-        </p>
-        <p>
-          Alle Inhalte sind rein informativ und ersetzen keine eigene Analyse
-          oder professionelle Beratung. Du bist für deine Entscheidungen selbst verantwortlich.
+          Inhalte ersetzen keine eigene Analyse oder professionelle Beratung.
         </p>
       </div>
     </section>
+
   </main>
 
+
+  <!-- FOOTER -->
   <footer id="legal" class="rv-footer">
     <div class="rv-container rv-footer-grid">
+
       <div>
         <h3>RubikVault</h3>
         <p class="rv-small-mute">
           Independent research. No guarantees. No investment advice.
         </p>
       </div>
+
       <div class="rv-footer-links">
         <a href="/imprint.html">Imprint</a>
         <a href="/privacy.html">Privacy</a>
         <a href="/disclaimer.html">Disclaimer</a>
       </div>
+
       <div class="rv-footer-meta">
         <span>© 2025 RubikVault</span>
       </div>
+
     </div>
   </footer>
+
 </body>
 </html>
