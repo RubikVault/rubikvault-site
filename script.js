@@ -1,90 +1,60 @@
-// Minimal JS: Jahr & "Updated"-Chips setzen + einfache Live-Krypto-Daten.
+// RubikVault front-end script
+// Initialises TradingView widgets once the DOM and tv.js are loaded.
 
-(function () {
-  const yearSpan = document.getElementById("year");
-  if (yearSpan) {
-    yearSpan.textContent = new Date().getFullYear();
+window.addEventListener("DOMContentLoaded", () => {
+  // Guard: tv.js not loaded or TradingView not available
+  if (typeof TradingView === "undefined") {
+    console.warn("TradingView library not loaded – widgets skipped.");
+    return;
   }
 
-  const pulseChip = document.getElementById("pulse-updated");
-  if (pulseChip) {
-    const now = new Date();
-    const pad = (n) => (n < 10 ? "0" + n : n);
-    pulseChip.textContent =
-      "Updated: " +
-      pad(now.getHours()) +
-      ":" +
-      pad(now.getMinutes()) +
-      ":" +
-      pad(now.getSeconds());
-  }
-
-  // --- Live Crypto Snapshot via CoinGecko ---
-  const cryptoIds = ["bitcoin", "ethereum", "solana", "avalanche-2"];
-  const apiUrl =
-    "https://api.coingecko.com/api/v3/simple/price?ids=" +
-    cryptoIds.join("%2C") +
-    "&vs_currencies=usd&include_24hr_change=true";
-
-  const map = {
-    bitcoin: { price: "c-btc-price", change: "c-btc-change" },
-    ethereum: { price: "c-eth-price", change: "c-eth-change" },
-    solana: { price: "c-sol-price", change: "c-sol-change" },
-    "avalanche-2": { price: "c-avax-price", change: "c-avax-change" },
-  };
-
-  const cryptoChip = document.getElementById("crypto-updated");
-
-  function formatPrice(value) {
-    if (value >= 1000) return value.toLocaleString("en-US", { maximumFractionDigits: 0 });
-    if (value >= 1) return value.toLocaleString("en-US", { maximumFractionDigits: 2 });
-    return value.toLocaleString("en-US", { maximumFractionDigits: 4 });
-  }
-
-  function formatChange(value) {
-    const fixed = value.toFixed(2) + "%";
-    return fixed;
-  }
-
-  fetch(apiUrl)
-    .then((res) => res.json())
-    .then((data) => {
-      Object.keys(map).forEach((id) => {
-        const cfg = map[id];
-        const row = data[id];
-        if (!row) return;
-
-        const priceEl = document.getElementById(cfg.price);
-        const changeEl = document.getElementById(cfg.change);
-
-        if (priceEl) {
-          priceEl.textContent = "$" + formatPrice(row.usd);
-        }
-        if (changeEl) {
-          const change = row.usd_24h_change || 0;
-          changeEl.textContent = formatChange(change);
-          changeEl.classList.remove("pos", "neg");
-          if (change > 0.05) {
-            changeEl.classList.add("pos");
-          } else if (change < -0.05) {
-            changeEl.classList.add("neg");
-          }
-        }
-      });
-
-      if (cryptoChip) {
-        const now = new Date();
-        const pad = (n) => (n < 10 ? "0" + n : n);
-        cryptoChip.textContent =
-          "Live · " +
-          pad(now.getHours()) +
-          ":" +
-          pad(now.getMinutes());
-      }
-    })
-    .catch(() => {
-      if (cryptoChip) {
-        cryptoChip.textContent = "API limit / offline – fallback";
-      }
+  // ----- Ticker tape (indices + crypto) -----
+  try {
+    new TradingView.widget({
+      container_id: "tv-ticker-tape",
+      width: "100%",
+      height: 44,
+      symbols: [
+        { proName: "FOREXCOM:SPXUSD", title: "S&P 500" },
+        { proName: "FOREXCOM:NSXUSD", title: "Nasdaq 100" },
+        { proName: "CME_MINI:ES1!", title: "S&P Futures" },
+        { proName: "BITSTAMP:BTCUSD", title: "Bitcoin" },
+        { proName: "BITSTAMP:ETHUSD", title: "Ethereum" },
+        { proName: "TVC:DXY", title: "US Dollar Index" }
+      ],
+      colorTheme: "dark",
+      isTransparent: true,
+      displayMode: "adaptive",
+      locale: "en"
     });
-})();
+  } catch (e) {
+    console.warn("Error initialising ticker tape widget:", e);
+  }
+
+  // ----- Main chart / cross-asset view -----
+  try {
+    new TradingView.widget({
+      container_id: "tv-market-overview",
+      width: "100%",
+      height: 420,
+      symbol: "FOREXCOM:SPXUSD",
+      interval: "60",
+      timezone: "Etc/UTC",
+      theme: "dark",
+      style: "1",
+      locale: "en",
+      toolbar_bg: "#050711",
+      hide_top_toolbar: false,
+      hide_legend: false,
+      save_image: false,
+      enable_publishing: false,
+      withdateranges: true,
+      allow_symbol_change: true,
+      details: true,
+      hotlist: true,
+      calendar: false
+    });
+  } catch (e) {
+    console.warn("Error initialising main TradingView widget:", e);
+  }
+});
