@@ -166,8 +166,7 @@ body {
   color: #6f7688;
 }
 
-
-/* ===== RubikVault Header + Logo – FINAL FIX ===== */
+/* ===== RubikVault Header + Logo – FINAL ===== */
 
 .rv-header {
   width: 100%;
@@ -179,34 +178,33 @@ body {
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 }
 
-/* Container für alles im Header */
 .rv-header-inner {
   max-width: 1120px;
   margin: 0 auto;
-  padding: 12px 16px;
+  padding: 10px 16px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 24px;
 }
 
-/* Logo-Clickfläche */
+/* Logo-Wrapper: begrenzt die sichtbare Höhe und schneidet den Rest ab */
 .rv-logo {
   display: flex;
   align-items: center;
-  height: 52px;          /* feste Header-Höhe */
-  overflow: hidden;      /* schneidet überschüssige Bildteile ab */
+  height: 48px;          /* fixe Header-Höhe */
+  overflow: hidden;      /* alles außerhalb wird abgeschnitten */
 }
 
-/* Logo-Bild selbst */
+/* Bild selbst */
 .rv-logo-img {
-  height: 40px !important;   /* sichtbare Höhe des Logos */
-  width: auto !important;
+  height: 36px;          /* sichtbare Logohöhe */
+  width: auto;
+  max-width: 220px;      /* falls das Bild sehr lang ist */
   object-fit: contain;
   display: block;
 }
 
-/* Navigation */
 .rv-nav {
   display: flex;
   gap: 18px;
@@ -224,7 +222,6 @@ body {
   color: #00e2c0;
 }
 
-/* Social-Links rechts */
 .rv-header-social {
   display: flex;
   gap: 14px;
@@ -240,7 +237,7 @@ body {
   color: #00e2c0;
 }
 
-/* Mobile: Logo mittig, Nav/Links umbrechen */
+/* Mobile */
 @media (max-width: 768px) {
   .rv-header-inner {
     flex-wrap: wrap;
