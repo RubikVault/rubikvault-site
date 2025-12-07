@@ -93,7 +93,7 @@ body {
   z-index: 1000;
 }
 
-/* NEUE LOGO-REGELN */
+/* NEUE LOGO-REGELN (PNG-Größen angepasst) */
 
 /* Verstecken der alten Text-Marke und -Wordmarke */
 .rv-logo-mark,
@@ -108,16 +108,16 @@ body {
     text-decoration: none;
 }
 
-/* Haupt-Logo im Header (500x150) */
+/* Haupt-Logo im Header: Festgelegte Höhe für saubere Ausrichtung */
 .rv-logo-img {
-    height: 32px; /* Standardhöhe für das Logo im Header */
+    height: 32px; /* Kritische Prüfung: Passt gut zur Header-Höhe */
     width: auto;
     transition: opacity 0.2s ease;
 }
 
-/* Logo im Footer (optional etwas kleiner) */
+/* Logo im Footer: Kleiner für dezente Darstellung */
 .rv-logo-img-footer {
-    height: 24px;
+    height: 24px; /* Kritische Prüfung: Passt gut in den Footer */
     width: auto;
     opacity: 0.8;
 }
@@ -148,7 +148,7 @@ body {
   background-color: var(--rv-accent-soft);
 }
 
-/* NEUER FUTURISTISCHER HERO BANNER */
+/* NEUER FUTURISTISCHER HERO BANNER (Pfad angepasst auf Pic_3) */
 .rv-hero {
   position: relative;
   padding: 80px 16px;
@@ -159,12 +159,12 @@ body {
   align-items: center;
   text-align: center;
   
-  /* HINTERGRUND: Desktop Banner 1920x500 */
-  background-image: url('assets/hero-banner-desktop.jpg'); 
+  /* HINTERGRUND: Desktop Banner 1920x500. */
+  background-image: url('assets/Pic_3.png'); /* NEUER PFAD */
   background-size: cover;
   background-position: center;
   overflow: hidden;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5); /* Tiefer, futuristischer Schatten */
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5); 
 }
 
 /* Dunkle Überlagerung für bessere Lesbarkeit und "Tech-Look" */
@@ -176,7 +176,7 @@ body {
     right: 0;
     bottom: 0;
     background: rgba(0, 0, 0, 0.4); 
-    backdrop-filter: blur(1px); /* Leichte Unschärfe auf dem Banner-Bild */
+    backdrop-filter: blur(1px); 
     z-index: 1;
 }
 
@@ -402,12 +402,12 @@ body {
     justify-content: center;
   }
   
-  /* MOBILE HERO BANNER */
+  /* MOBILE HERO BANNER (Pfad angepasst auf Pic_4) */
   .rv-hero {
     min-height: 350px;
     padding: 60px 16px;
     /* HINTERGRUND: Mobile Banner 1080x400 */
-    background-image: url('assets/hero-banner-mobile.jpg'); 
+    background-image: url('assets/Pic_4.png'); /* NEUER PFAD */
   }
 
   .rv-logo-img {
