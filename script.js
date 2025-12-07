@@ -3,7 +3,7 @@
 document.addEventListener("DOMContentLoaded", () => {
   const header = document.querySelector(".rv-header");
 
-  // Shadow beim Scrollen
+  // Shadow / Hintergrund beim Scrollen anpassen
   window.addEventListener("scroll", () => {
     if (window.scrollY > 10) {
       header.classList.add("rv-header-scrolled");
@@ -12,7 +12,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 
-  // Smooth Scroll für Anchor-Links
+  // Smooth Scroll für interne Anchor-Links
   const links = document.querySelectorAll('a[href^="#"]');
   links.forEach((link) => {
     link.addEventListener("click", (e) => {

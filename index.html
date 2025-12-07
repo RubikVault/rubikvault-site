@@ -5,10 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>RubikVault – Decode the Markets</title>
   <meta name="description" content="RubikVault – multi-asset market insights across stocks, crypto, macro & commodities. Educational only, no financial advice." />
-
   <link rel="canonical" href="https://rubikvault.com/" />
 
-  <!-- Open Graph / Social -->
+  <!-- Open Graph -->
   <meta property="og:title" content="RubikVault – Decode the Markets" />
   <meta property="og:description" content="Multi-Asset-Marktanalysen: Aktien, Krypto, Macro & Commodities. Klar, strukturiert, datengesteuert. Keine Anlageberatung." />
   <meta property="og:type" content="website" />
@@ -22,16 +21,35 @@
     <header class="rv-header" id="top">
       <div class="rv-container rv-header-inner">
         <a href="index.html" class="rv-logo">
-          <div class="rv-logo-cube">
-            <span class="rv-logo-tile rv-logo-tile-1"></span>
-            <span class="rv-logo-tile rv-logo-tile-2"></span>
-            <span class="rv-logo-tile rv-logo-tile-3"></span>
-            <span class="rv-logo-tile rv-logo-tile-4"></span>
-            <span class="rv-logo-tile rv-logo-tile-5"></span>
-            <span class="rv-logo-tile rv-logo-tile-6"></span>
-            <span class="rv-logo-tile rv-logo-tile-7"></span>
-            <span class="rv-logo-tile rv-logo-tile-8"></span>
-            <span class="rv-logo-tile rv-logo-tile-9"></span>
+          <div class="rv-logo-mark">
+            <!-- INLINE SVG LOGO -->
+            <svg viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+              <defs>
+                <radialGradient id="rv-glow" cx="50%" cy="50%" r="70%">
+                  <stop offset="0%" stop-color="#38bdf8" stop-opacity="1" />
+                  <stop offset="100%" stop-color="#1d4ed8" stop-opacity="0" />
+                </radialGradient>
+              </defs>
+
+              <!-- Outer Glow Ring -->
+              <circle cx="256" cy="256" r="230" fill="none" stroke="url(#rv-glow)" stroke-width="22" />
+
+              <!-- Cube -->
+              <g transform="translate(156,156)">
+                <!-- Top row -->
+                <rect x="0"   y="0"  width="64" height="64" rx="12" fill="#f97316"/>
+                <rect x="70"  y="0"  width="64" height="64" rx="12" fill="#0ea5e9"/>
+                <rect x="140" y="0"  width="64" height="64" rx="12" fill="#22c55e"/>
+                <!-- Middle row -->
+                <rect x="0"   y="70" width="64" height="64" rx="12" fill="#facc15"/>
+                <rect x="70"  y="70" width="64" height="64" rx="12" fill="#ef4444"/>
+                <rect x="140" y="70" width="64" height="64" rx="12" fill="#6366f1"/>
+                <!-- Bottom row -->
+                <rect x="0"   y="140" width="64" height="64" rx="12" fill="#22c55e"/>
+                <rect x="70"  y="140" width="64" height="64" rx="12" fill="#0ea5e9"/>
+                <rect x="140" y="140" width="64" height="64" rx="12" fill="#f97316"/>
+              </g>
+            </svg>
           </div>
           <div class="rv-logo-text">
             <span class="rv-logo-title">RubikVault</span>
@@ -106,7 +124,7 @@
                   </div>
                 </div>
                 <p class="rv-hero-card-text">
-                  Ein modulare Sicht auf globale Assets – wie ein Rubik-Cube für Märkte:
+                  Eine modulare Sicht auf globale Assets – wie ein Rubik-Cube für Märkte:
                   jede Seite ein anderer Blickwinkel, alles greift ineinander.
                 </p>
               </div>
@@ -158,7 +176,7 @@
         </div>
       </section>
 
-      <!-- ABOUT / APPROACH -->
+      <!-- ABOUT -->
       <section id="about" class="rv-section rv-section-contrast">
         <div class="rv-container rv-about-inner">
           <div class="rv-about-left">
@@ -221,7 +239,6 @@
           </header>
 
           <div class="rv-grid rv-grid-4 rv-follow-grid">
-            <!-- YouTube -->
             <a href="https://www.youtube.com/@RubikVault" class="rv-social-card" target="_blank" rel="noopener">
               <div class="rv-social-icon rv-social-youtube">YT</div>
               <div class="rv-social-body">
@@ -232,7 +249,6 @@
               </div>
             </a>
 
-            <!-- X -->
             <a href="https://x.com/RubikVault" class="rv-social-card" target="_blank" rel="noopener">
               <div class="rv-social-icon rv-social-x">X</div>
               <div class="rv-social-body">
@@ -243,7 +259,6 @@
               </div>
             </a>
 
-            <!-- TikTok -->
             <a href="https://www.tiktok.com/@rubikvault" class="rv-social-card" target="_blank" rel="noopener">
               <div class="rv-social-icon rv-social-tt">TT</div>
               <div class="rv-social-body">
@@ -254,7 +269,6 @@
               </div>
             </a>
 
-            <!-- Instagram -->
             <a href="https://www.instagram.com/rubikvault" class="rv-social-card" target="_blank" rel="noopener">
               <div class="rv-social-icon rv-social-ig">IG</div>
               <div class="rv-social-body">
