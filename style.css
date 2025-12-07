@@ -14,7 +14,7 @@
 }
 
 /* Basic reset */
-*,
+*
 *::before,
 *::after {
   box-sizing: border-box;
@@ -37,416 +37,280 @@ body {
   flex-direction: column;
 }
 
-.rv-header,
-.rv-main,
-.rv-footer,
-.rv-content-page {
-  width: 100%;
+.rv-main {
+  flex-grow: 1;
+}
+
+.rv-container {
   max-width: var(--rv-max-width);
   margin: 0 auto;
   padding: 0 16px;
 }
 
+.rv-section {
+  padding: 40px 16px;
+}
+
+.rv-content-page {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 40px 16px;
+}
+
+.rv-content-page h1 {
+  font-size: 28px;
+  margin-bottom: 30px;
+  color: var(--rv-accent);
+  text-align: center;
+}
+
+.rv-content-page h2 {
+  font-size: 20px;
+  margin-top: 30px;
+  margin-bottom: 15px;
+  color: var(--rv-text);
+  border-bottom: 1px solid var(--rv-border);
+  padding-bottom: 5px;
+}
+
+.rv-content-page p {
+  line-height: 1.6;
+  color: var(--rv-text-muted);
+  margin-bottom: 15px;
+}
+
 /* Header */
 
 .rv-header {
+  padding: 16px;
+  background-color: var(--rv-bg-alt);
+  border-bottom: 1px solid var(--rv-border);
   display: flex;
-  align-items: center;
   justify-content: space-between;
-  padding: 18px 16px 10px;
-}
-
-.rv-logo {
-  display: flex;
   align-items: center;
-  gap: 10px;
+  position: sticky;
+  top: 0;
+  z-index: 1000;
 }
 
-.rv-logo-mark {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  border-radius: 9px;
-  background: linear-gradient(135deg, #00e5ff, #4f46e5);
-  color: #0b1020;
-  font-weight: 800;
-  font-size: 14px;
-  letter-spacing: 0.06em;
-}
+/* NEUE LOGO-REGELN */
 
+/* Verstecken der alten Text-Marke und -Wordmarke */
+.rv-logo-mark,
 .rv-logo-text {
-  font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  font-size: 13px;
-  color: #f9fafb;
+  display: none !important; 
 }
+
+/* Container für das Logo */
+.rv-logo a, .rv-footer-brand a {
+    display: inline-flex;
+    align-items: center;
+    text-decoration: none;
+}
+
+/* Haupt-Logo im Header (500x150) */
+.rv-logo-img {
+    height: 32px; /* Standardhöhe für das Logo im Header */
+    width: auto;
+    transition: opacity 0.2s ease;
+}
+
+/* Logo im Footer (optional etwas kleiner) */
+.rv-logo-img-footer {
+    height: 24px;
+    width: auto;
+    opacity: 0.8;
+}
+
+.rv-logo-img-footer:hover {
+    opacity: 1;
+}
+
+/* Ende NEUE LOGO-REGELN */
+
 
 .rv-nav {
   display: flex;
-  gap: 12px;
-  font-size: 13px;
+  gap: 15px;
 }
 
 .rv-nav a {
   color: var(--rv-text-muted);
   text-decoration: none;
-  padding: 6px 10px;
-  border-radius: 999px;
-  border: 1px solid transparent;
-  transition: 0.15s ease;
+  font-size: 14px;
+  padding: 4px 8px;
+  border-radius: var(--rv-radius-sm);
+  transition: color 0.2s, background-color 0.2s;
 }
 
 .rv-nav a:hover {
-  border-color: var(--rv-accent-soft);
   color: var(--rv-accent);
-  background: rgba(15, 23, 42, 0.8);
+  background-color: var(--rv-accent-soft);
 }
 
-/* Main / Hero */
-
-.rv-main {
-  flex: 1;
-  padding-bottom: 40px;
-}
-
+/* NEUER FUTURISTISCHER HERO BANNER */
 .rv-hero {
-  margin-top: 16px;
-  display: grid;
-  grid-template-columns: minmax(0, 2.1fr) minmax(0, 1.5fr);
-  gap: 22px;
-  align-items: stretch;
+  position: relative;
+  padding: 80px 16px;
+  min-height: 400px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  
+  /* HINTERGRUND: Desktop Banner 1920x500 */
+  background-image: url('assets/hero-banner-desktop.jpg'); 
+  background-size: cover;
+  background-position: center;
+  overflow: hidden;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5); /* Tiefer, futuristischer Schatten */
+}
+
+/* Dunkle Überlagerung für bessere Lesbarkeit und "Tech-Look" */
+.rv-hero::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.4); 
+    backdrop-filter: blur(1px); /* Leichte Unschärfe auf dem Banner-Bild */
+    z-index: 1;
 }
 
 .rv-hero-content {
-  padding: 24px 22px;
-  border-radius: var(--rv-radius-lg);
-  background:
-    radial-gradient(circle at top left, rgba(0, 229, 255, 0.12), transparent 60%),
-    linear-gradient(135deg, rgba(15, 23, 42, 0.95), rgba(2, 6, 23, 0.98));
-  box-shadow: var(--rv-shadow-soft);
-  border: 1px solid rgba(148, 163, 184, 0.22);
+    position: relative;
+    z-index: 2;
+    max-width: 800px;
 }
 
+/* Futuristische Text-Schattierung/Glow für H1 */
 .rv-hero h1 {
-  margin: 0 0 10px;
-  font-size: 38px;
-  letter-spacing: -0.03em;
+  font-size: clamp(32px, 5vw, 56px);
+  margin-bottom: 16px;
+  line-height: 1.1;
+  color: #fff;
+  /* Simuliert den leuchtenden Effekt des elektrischen Blaus */
+  text-shadow: 0 0 10px var(--rv-accent-soft), 0 0 20px rgba(0, 229, 255, 0.2);
 }
 
 .rv-hero p {
-  margin: 0 0 16px;
-  font-size: 15px;
-  line-height: 1.6;
-  color: var(--rv-text-muted);
+  font-size: clamp(16px, 2.5vw, 22px);
+  margin-bottom: 30px;
+  color: var(--rv-text);
 }
+/* ENDE HERO BANNER */
 
-.rv-hero-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  margin-top: 4px;
-}
 
-.rv-btn-primary,
-.rv-btn-secondary {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 9px 16px;
-  border-radius: 999px;
-  font-size: 14px;
-  text-decoration: none;
-  cursor: pointer;
-  border: 1px solid transparent;
-  transition: 0.15s ease;
-}
+/* Insights Section */
 
-.rv-btn-primary {
-  background: linear-gradient(135deg, #00e5ff, #4f46e5);
-  color: #020617;
-  font-weight: 600;
-}
-
-.rv-btn-primary:hover {
-  filter: brightness(1.08);
-}
-
-.rv-btn-secondary {
-  background: transparent;
-  border-color: rgba(148, 163, 184, 0.5);
-  color: var(--rv-text-muted);
-}
-
-.rv-btn-secondary:hover {
-  border-color: var(--rv-accent);
-  color: var(--rv-accent);
-}
-
-.rv-hero-side {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.rv-tag {
-  align-self: flex-start;
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 0.14em;
-  padding: 5px 10px;
-  border-radius: 999px;
-  border: 1px solid rgba(148, 163, 184, 0.4);
-  color: var(--rv-text-muted);
-}
-
-.rv-card {
-  flex: 1;
-  padding: 18px 18px 20px;
-  border-radius: var(--rv-radius-lg);
-  background: linear-gradient(145deg, rgba(15, 23, 42, 0.96), rgba(3, 7, 18, 0.98));
-  border: 1px solid rgba(31, 41, 55, 0.9);
-  box-shadow: 0 16px 35px rgba(0, 0, 0, 0.65);
-}
-
-.rv-card h2 {
-  margin: 0 0 8px;
-  font-size: 18px;
-}
-
-.rv-card p {
-  margin: 0 0 8px;
-  font-size: 14px;
-  color: var(--rv-text-muted);
-}
-
-.rv-card-note {
-  font-size: 12px;
-  color: #6b7280;
-}
-
-/* Compact ticker inside hero card */
-
-.rv-compact-ticker {
-  margin-top: 10px;
-  padding: 10px 14px;
-  min-height: 40px;
-  border-radius: var(--rv-radius-sm);
-  background: rgba(0, 229, 255, 0.05);
-  border: 1px dashed rgba(0, 229, 255, 0.2);
-  color: var(--rv-accent);
-  font-size: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-/* Sections */
-
-.rv-section {
-  margin-top: 32px;
-  padding: 22px 20px;
-  border-radius: var(--rv-radius-lg);
-  background: rgba(7, 13, 29, 0.9);
-  border: 1px solid rgba(31, 41, 55, 0.9);
-  box-shadow: var(--rv-shadow-soft);
-}
-
-.rv-section h2 {
-  margin: 0 0 10px;
-  font-size: 20px;
-}
-
-.rv-section p {
-  margin: 0 0 10px;
-  font-size: 14px;
-  color: var(--rv-text-muted);
-}
-
-/* Content pages (imprint/privacy/disclaimer) */
-
-.rv-content-page {
-  flex: 1;
-  padding-top: 40px;
-  padding-bottom: 80px;
-}
-
-.rv-content-page h1 {
-  font-size: 32px;
-  margin-bottom: 20px;
-}
-
-.rv-content-page h2 {
+.rv-insights h2 {
   font-size: 24px;
-  margin-top: 30px;
-  margin-bottom: 10px;
+  text-align: center;
+  margin-bottom: 30px;
   color: var(--rv-accent);
+  text-transform: uppercase;
+  letter-spacing: 1px;
 }
 
-.rv-content-page p {
-  margin: 0 0 1em;
-  line-height: 1.6;
-}
-
-/* ** Wichtig: Semantische Korrektur ** */
-.rv-content-page strong {
-    font-weight: 700;
-    color: var(--rv-text);
-}
-
-
-/* Market grid */
-
-.rv-market-grid {
-  margin-top: 14px;
+.rv-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   gap: 20px;
 }
 
-.rv-market-box {
-  padding: 18px;
+.rv-card {
+  padding: 20px;
+  background-color: var(--rv-bg-alt);
+  border: 1px solid var(--rv-border);
   border-radius: var(--rv-radius-lg);
-  background: rgba(15, 23, 42, 0.9);
-  border: 1px solid rgba(31, 41, 55, 0.9);
+  box-shadow: var(--rv-shadow-soft);
+  transition: border-color 0.3s, transform 0.3s;
 }
 
-.rv-market-box h3 {
-  margin: 0 0 4px;
-  font-size: 16px;
-  color: var(--rv-accent);
+.rv-card:hover {
+  border-color: var(--rv-accent);
+  transform: translateY(-5px);
 }
 
-.rv-market-box p {
+.rv-card h3 {
   margin: 0 0 10px;
-  font-size: 13px;
-  color: var(--rv-text-muted);
-}
-
-/* Generic placeholders */
-
-.rv-placeholder {
-  margin-top: 14px;
-  padding: 18px;
-  min-height: 80px;
-  border-radius: var(--rv-radius-sm);
-  border: 1px dashed rgba(148, 163, 184, 0.6);
-  color: var(--rv-text-muted);
-  font-size: 13px;
+  font-size: 18px;
+  color: var(--rv-text);
   display: flex;
   align-items: center;
-  justify-content: center;
+  gap: 8px;
 }
 
-.rv-placeholder-large {
-  min-height: 250px;
-}
-
-.rv-placeholder-calendar {
-  min-height: 400px;
-}
-
-/* Macro metric grid */
-
-.rv-metric-grid {
-  margin-top: 14px;
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 12px;
-}
-
-.rv-metric-card {
-  display: block;
-  padding: 16px;
-  border-radius: var(--rv-radius-sm);
-  background: radial-gradient(circle at top left, rgba(79, 70, 229, 0.1), rgba(15, 23, 42, 0.9));
-  border: 1px solid rgba(79, 70, 229, 0.4);
-  color: var(--rv-text);
-  text-decoration: none;
-  transition: 0.15s ease;
-}
-
-.rv-metric-card h4 {
-  margin: 0 0 4px;
-  font-size: 14px;
-  color: #a5b4fc;
-}
-
-.rv-metric-card p {
-  margin: 0;
-  font-size: 12px;
-  color: var(--rv-text-muted);
-}
-
-.rv-metric-card:hover {
-  border-color: #4f46e5;
-  transform: translateY(-1px);
-}
-
-/* News grid */
-
-.rv-news-grid {
-  margin-top: 14px;
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 12px;
-}
-
-.rv-news-item {
-  padding: 16px;
-  border-radius: var(--rv-radius-sm);
-  border: 1px solid var(--rv-border);
-  background: rgba(15, 23, 42, 0.9);
-  cursor: default;
-}
-
-.rv-news-item h4 {
-  margin: 4px 0 0;
-  font-size: 15px;
-  line-height: 1.4;
-}
-
-.rv-news-source {
-  font-size: 11px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
+.rv-card-icon {
   color: var(--rv-accent);
-  margin: 0;
+  font-size: 20px;
 }
 
-/* Follow grid */
+.rv-card p {
+  margin: 0;
+  font-size: 14px;
+  color: var(--rv-text-muted);
+  line-height: 1.5;
+}
+
+/* Buttons (Tech-Gradient) */
+
+.rv-btn-primary {
+    display: inline-block;
+    padding: 12px 28px;
+    /* Passender Tech-Gradient zum Logo-Stil */
+    background: linear-gradient(90deg, #00e5ff 0%, #00b0ff 100%); 
+    color: var(--rv-bg);
+    font-weight: 600;
+    text-decoration: none;
+    border-radius: var(--rv-radius-sm);
+    transition: all 0.3s ease;
+    box-shadow: 0 0 15px var(--rv-accent-soft); /* Subtiler Glow */
+    border: none;
+    cursor: pointer;
+}
+
+.rv-btn-primary:hover {
+    box-shadow: 0 0 20px var(--rv-accent);
+    transform: translateY(-2px);
+}
+
+
+/* Follow Section */
 
 .rv-follow {
-  margin-bottom: 30px;
+  background-color: var(--rv-bg);
+  text-align: center;
+  border-top: 1px solid var(--rv-border);
 }
 
-.rv-follow-grid {
-  margin-top: 14px;
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 12px;
+.rv-follow h2 {
+  font-size: 24px;
+  margin-bottom: 30px;
+  color: var(--rv-accent);
+  text-transform: uppercase;
+  letter-spacing: 1px;
 }
 
 .rv-follow-card {
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  padding: 12px 12px 14px;
-  border-radius: var(--rv-radius-sm);
-  border: 1px solid rgba(31, 41, 55, 0.9);
-  background: radial-gradient(circle at top left, rgba(0, 229, 255, 0.07), rgba(15, 23, 42, 0.95));
-  color: var(--rv-text);
+  display: block;
+  padding: 20px;
+  background-color: var(--rv-bg-alt);
+  border: 1px solid var(--rv-border);
+  border-radius: var(--rv-radius-lg);
   text-decoration: none;
-  font-size: 13px;
-  transition: 0.15s ease;
+  color: var(--rv-text);
+  text-align: left;
+  transition: border-color 0.3s, transform 0.3s;
 }
 
 .rv-follow-card h3 {
   margin: 0 0 6px;
-  font-size: 14px;
+  font-size: 18px;
+  color: var(--rv-text);
 }
 
 .rv-follow-card p {
@@ -456,7 +320,7 @@ body {
 
 .rv-follow-card:hover {
   border-color: var(--rv-accent);
-  transform: translateY(-1px);
+  transform: translateY(-5px);
 }
 
 /* Footer */
@@ -476,6 +340,7 @@ body {
   margin-bottom: 10px;
 }
 
+/* Alte brand-Elemente werden durch Logo-Regeln oben unsichtbar */
 .rv-footer-brand {
   display: flex;
   align-items: center;
@@ -505,43 +370,47 @@ body {
   color: #4b5563;
 }
 
-/* Responsive */
 
-@media (max-width: 880px) {
-  .rv-hero {
-    grid-template-columns: minmax(0, 1fr);
-  }
+/* Responsive Anpassungen */
 
-  .rv-follow-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-
-@media (max-width: 600px) {
+@media (max-width: 768px) {
   .rv-header {
     flex-direction: column;
-    align-items: flex-start;
     gap: 10px;
   }
 
   .rv-nav {
+    justify-content: center;
     flex-wrap: wrap;
-    justify-content: flex-start;
   }
 
-  .rv-metric-grid {
-    grid-template-columns: minmax(0, 1fr);
+  .rv-section {
+    padding: 30px 16px;
   }
 
-  .rv-news-grid {
-    grid-template-columns: minmax(0, 1fr);
+  .rv-grid {
+    grid-template-columns: 1fr;
   }
 
-  .rv-follow-grid {
-    grid-template-columns: minmax(0, 1fr);
+  .rv-footer-top {
+    flex-direction: column;
+    text-align: center;
+    gap: 10px;
   }
 
-  .rv-market-grid {
-    grid-template-columns: minmax(0, 1fr);
+  .rv-footer-links {
+    justify-content: center;
+  }
+  
+  /* MOBILE HERO BANNER */
+  .rv-hero {
+    min-height: 350px;
+    padding: 60px 16px;
+    /* HINTERGRUND: Mobile Banner 1080x400 */
+    background-image: url('assets/hero-banner-mobile.jpg'); 
+  }
+
+  .rv-logo-img {
+    height: 28px; /* Etwas kleineres Logo auf Mobilgeräten */
   }
 }
