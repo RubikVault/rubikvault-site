@@ -1,19 +1,24 @@
+/* ===========================
+  RubikVault – Landing Page Styles
+  =========================== */
+
+/* Base layout */
+
 :root {
-  --rv-bg: #050814;
-  --rv-bg-alt: #0b1020;
-  --rv-accent: #00e5ff;
-  --rv-accent-soft: rgba(0, 229, 255, 0.1);
+  --rv-bg: #020617;
+  --rv-bg-elevated: #020617;
   --rv-text: #e5e7eb;
-  --rv-text-muted: #9ca3af;
+  --rv-text-muted: #94a3b8;
   --rv-border: #1f2937;
-  --rv-danger: #f97373;
+  --rv-accent: #38bdf8;
   --rv-radius-lg: 18px;
-  --rv-radius-sm: 10px;
-  --rv-shadow-soft: 0 18px 40px rgba(0, 0, 0, 0.45);
-  --rv-max-width: 1080px;
+  --rv-radius-sm: 12px;
+  --rv-shadow-soft: 0 18px 45px rgba(15, 23, 42, 0.9);
+  --rv-shadow-strong: 0 26px 70px rgba(15, 23, 42, 0.95);
+  --rv-max-width: 1040px;
+  --rv-header-height: 64px;
 }
 
-/* Basic reset */
 *,
 *::before,
 *::after {
@@ -24,12 +29,11 @@ html,
 body {
   margin: 0;
   padding: 0;
-  background: radial-gradient(circle at top, #101827 0, #050814 45%, #02030a 100%);
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text",
+    "Inter", sans-serif;
+  background: radial-gradient(circle at top, #020617, #000000);
   color: var(--rv-text);
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Inter", sans-serif;
 }
-
-/* Layout */
 
 body {
   min-height: 100vh;
@@ -37,51 +41,52 @@ body {
   flex-direction: column;
 }
 
-.rv-header,
-.rv-main,
-.rv-footer,
-.rv-content-page {
-  width: 100%;
-  max-width: var(--rv-max-width);
-  margin: 0 auto;
-  padding: 0 16px;
-}
-
 /* Header */
 
 .rv-header {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  height: var(--rv-header-height);
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 18px 16px 10px;
-}
-
-/* Zustand beim Scrollen (wird von script.js gesetzt) */
-.rv-header-scrolled {
-  background: rgba(5, 8, 20, 0.95);
+  padding: 8px 16px;
+  max-width: var(--rv-max-width);
+  margin: 0 auto;
+  backdrop-filter: blur(14px);
+  background: linear-gradient(
+    180deg,
+    rgba(15, 23, 42, 0.95),
+    rgba(15, 23, 42, 0.8),
+    transparent
+  );
   border-bottom: 1px solid rgba(15, 23, 42, 0.9);
-  border-radius: 0 0 16px 16px;
 }
 
 .rv-logo {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 10px;
 }
 
-/* Container für das Logo (PNG oder SVG) */
+/* Rundes Header-Logo – wir nutzen dein Hero-Bild als Background
+   und croppen auf die Mitte, so dass der Würfel sauber im Kreis sitzt. */
+
 .rv-logo-mark {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
   width: 40px;
   height: 40px;
   border-radius: 999px;
-  background: transparent;
-  overflow: hidden;
+  background-color: #020617;
+  background-image: url("assets/rubikvault-hero.png");
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  box-shadow: 0 10px 22px rgba(15, 23, 42, 0.9);
+  border: 1px solid rgba(148, 163, 184, 0.3);
 }
 
-/* Logo-Bild/SVG skaliert sauber in den Container */
+/* Falls irgendwann wieder ein <img> oder <svg> im Logo steckt, skaliert es sauber. */
 .rv-logo-mark img,
 .rv-logo-mark svg {
   width: 100%;
@@ -90,16 +95,16 @@ body {
 }
 
 .rv-logo-text {
-  font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  font-size: 13px;
-  color: #f9fafb;
+  font-size: 18px;
+  font-weight: 650;
+  letter-spacing: 0.04em;
 }
+
+/* Navigation */
 
 .rv-nav {
   display: flex;
-  gap: 12px;
+  gap: 14px;
   font-size: 13px;
 }
 
@@ -113,23 +118,31 @@ body {
 }
 
 .rv-nav a:hover {
-  border-color: var(--rv-accent-soft);
   color: var(--rv-accent);
-  background: rgba(15, 23, 42, 0.8);
+  border-color: rgba(148, 163, 184, 0.4);
+  background: radial-gradient(
+    circle at top left,
+    rgba(56, 189, 248, 0.12),
+    transparent 60%
+  );
 }
 
-/* Main / Hero */
+/* Main layout */
 
 .rv-main {
   flex: 1;
-  padding-bottom: 40px;
+  max-width: var(--rv-max-width);
+  margin: 0 auto;
+  padding: 18px 16px 32px;
 }
 
+/* HERO */
+
 .rv-hero {
-  margin-top: 16px;
   display: grid;
-  grid-template-columns: minmax(0, 2.1fr) minmax(0, 1.5fr);
-  gap: 22px;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1.1fr);
+  gap: 24px;
+  margin-bottom: 32px;
   align-items: stretch;
 }
 
@@ -204,6 +217,24 @@ body {
   gap: 10px;
 }
 
+/* Hero-Logo-Bild (das große mit Schrift) */
+
+.rv-hero-image-wrapper {
+  border-radius: var(--rv-radius-lg);
+  overflow: hidden;
+  box-shadow: var(--rv-shadow-strong);
+  border: 1px solid rgba(15, 23, 42, 0.95);
+  background: radial-gradient(circle at top, #020617, #000000);
+}
+
+.rv-hero-image {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+/* Tag + Card rechts */
+
 .rv-tag {
   align-self: flex-start;
   font-size: 11px;
@@ -219,7 +250,11 @@ body {
   flex: 1;
   padding: 18px 18px 20px;
   border-radius: var(--rv-radius-lg);
-  background: linear-gradient(145deg, rgba(15, 23, 42, 0.96), rgba(3, 7, 18, 0.98));
+  background: linear-gradient(
+    145deg,
+    rgba(15, 23, 42, 0.96),
+    rgba(3, 7, 18, 0.98)
+  );
   border: 1px solid rgba(31, 41, 55, 0.9);
   box-shadow: 0 16px 35px rgba(0, 0, 0, 0.65);
 }
@@ -240,132 +275,32 @@ body {
   color: #6b7280;
 }
 
-/* Compact ticker inside hero card */
-
-.rv-compact-ticker {
-  margin-top: 10px;
-  padding: 10px 14px;
-  min-height: 40px;
-  border-radius: var(--rv-radius-sm);
-  background: rgba(0, 229, 255, 0.05);
-  border: 1px dashed rgba(0, 229, 255, 0.2);
-  color: var(--rv-accent);
-  font-size: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
 /* Sections */
 
 .rv-section {
-  margin-top: 32px;
-  padding: 22px 20px;
-  border-radius: var(--rv-radius-lg);
-  background: rgba(7, 13, 29, 0.9);
-  border: 1px solid rgba(31, 41, 55, 0.9);
-  box-shadow: var(--rv-shadow-soft);
+  margin-bottom: 30px;
 }
 
-.rv-section h2 {
-  margin: 0 0 10px;
+.rv-section-header {
+  margin-bottom: 14px;
+}
+
+.rv-section-header h2 {
+  margin: 0 0 4px;
   font-size: 20px;
 }
 
-.rv-section p {
-  margin: 0 0 10px;
+.rv-section-header p {
+  margin: 0;
   font-size: 14px;
   color: var(--rv-text-muted);
 }
 
-/* Content pages (imprint/privacy/disclaimer) */
-
-.rv-content-page {
-  flex: 1;
-  padding-top: 40px;
-  padding-bottom: 80px;
-}
-
-.rv-content-page h1 {
-  font-size: 32px;
-  margin-bottom: 20px;
-}
-
-.rv-content-page h2 {
-  font-size: 24px;
-  margin-top: 30px;
-  margin-bottom: 10px;
-  color: var(--rv-accent);
-}
-
-.rv-content-page p {
-  margin: 0 0 1em;
-  line-height: 1.6;
-}
-
-/* Semantische Korrektur für <strong> in Content-Seiten */
-.rv-content-page strong {
-  font-weight: 700;
-  color: var(--rv-text);
-}
-
-/* Market grid */
-
-.rv-market-grid {
-  margin-top: 14px;
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 20px;
-}
-
-.rv-market-box {
-  padding: 18px;
-  border-radius: var(--rv-radius-lg);
-  background: rgba(15, 23, 42, 0.9);
-  border: 1px solid rgba(31, 41, 55, 0.9);
-}
-
-.rv-market-box h3 {
-  margin: 0 0 4px;
-  font-size: 16px;
-  color: var(--rv-accent);
-}
-
-.rv-market-box p {
-  margin: 0 0 10px;
-  font-size: 13px;
-  color: var(--rv-text-muted);
-}
-
-/* Generic placeholders */
-
-.rv-placeholder {
-  margin-top: 14px;
-  padding: 18px;
-  min-height: 80px;
-  border-radius: var(--rv-radius-sm);
-  border: 1px dashed rgba(148, 163, 184, 0.6);
-  color: var(--rv-text-muted);
-  font-size: 13px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.rv-placeholder-large {
-  min-height: 250px;
-}
-
-.rv-placeholder-calendar {
-  min-height: 400px;
-}
-
-/* Macro metric grid */
+/* Metric grid */
 
 .rv-metric-grid {
-  margin-top: 14px;
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 12px;
 }
 
@@ -373,7 +308,11 @@ body {
   display: block;
   padding: 16px;
   border-radius: var(--rv-radius-sm);
-  background: radial-gradient(circle at top left, rgba(79, 70, 229, 0.1), rgba(15, 23, 42, 0.9));
+  background: radial-gradient(
+    circle at top left,
+    rgba(79, 70, 229, 0.1),
+    rgba(15, 23, 42, 0.9)
+  );
   border: 1px solid rgba(79, 70, 229, 0.4);
   color: var(--rv-text);
   text-decoration: none;
@@ -449,7 +388,11 @@ body {
   padding: 12px 12px 14px;
   border-radius: var(--rv-radius-sm);
   border: 1px solid rgba(31, 41, 55, 0.9);
-  background: radial-gradient(circle at top left, rgba(0, 229, 255, 0.07), rgba(15, 23, 42, 0.95));
+  background: radial-gradient(
+    circle at top left,
+    rgba(0, 229, 255, 0.07),
+    rgba(15, 23, 42, 0.95)
+  );
   color: var(--rv-text);
   text-decoration: none;
   font-size: 13px;
@@ -478,82 +421,95 @@ body {
   font-size: 12px;
   color: var(--rv-text-muted);
   border-top: 1px solid rgba(15, 23, 42, 0.9);
+  max-width: var(--rv-max-width);
+  margin: 0 auto;
 }
 
 .rv-footer-top {
   display: flex;
-  align-items: center;
   justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
   gap: 16px;
-  margin-bottom: 10px;
 }
 
-.rv-footer-brand {
-  display: flex;
-  align-items: center;
-  gap: 8px;
+.rv-footer-logo .rv-logo-mark {
+  width: 28px;
+  height: 28px;
 }
 
 .rv-footer-links {
   display: flex;
   gap: 10px;
+  flex-wrap: wrap;
 }
 
 .rv-footer-links a {
   color: var(--rv-text-muted);
   text-decoration: none;
+  padding: 3px 8px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  transition: 0.15s ease;
 }
 
 .rv-footer-links a:hover {
   color: var(--rv-accent);
+  border-color: rgba(148, 163, 184, 0.4);
 }
 
-.rv-footer-disclaimer {
-  margin: 0 0 4px;
-}
-
-.rv-footer-copy {
+.rv-footer-note {
   margin: 0;
-  color: #4b5563;
 }
 
 /* Responsive */
 
-@media (max-width: 880px) {
+@media (max-width: 768px) {
+  .rv-header {
+    padding-inline: 12px;
+  }
+
+  .rv-nav {
+    gap: 8px;
+    font-size: 12px;
+  }
+
+  .rv-nav a {
+    padding-inline: 8px;
+  }
+
+  .rv-main {
+    padding-inline: 12px;
+  }
+
   .rv-hero {
     grid-template-columns: minmax(0, 1fr);
+  }
+
+  .rv-hero-image-wrapper {
+    order: -1; /* Bild über dem Text rechts, aber unter dem Haupttext */
   }
 
   .rv-follow-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
-}
 
-@media (max-width: 600px) {
-  .rv-header {
+  .rv-footer-top {
     flex-direction: column;
     align-items: flex-start;
-    gap: 10px;
+  }
+}
+
+@media (max-width: 480px) {
+  .rv-logo-text {
+    font-size: 16px;
   }
 
-  .rv-nav {
-    flex-wrap: wrap;
-    justify-content: flex-start;
-  }
-
-  .rv-metric-grid {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .rv-news-grid {
-    grid-template-columns: minmax(0, 1fr);
+  .rv-hero h1 {
+    font-size: 30px;
   }
 
   .rv-follow-grid {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .rv-market-grid {
     grid-template-columns: minmax(0, 1fr);
   }
 }
