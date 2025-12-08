@@ -1,6 +1,6 @@
 /* ===========================
    RubikVault – Landing Page Styles
-   ============================ */
+   =========================== */
 
 :root {
   --rv-bg: #020617;
@@ -9,12 +9,12 @@
   --rv-text-muted: #94a3b8;
   --rv-border: #1f2937;
   --rv-accent: #38bdf8;
-  --rv-accent-soft: rgba(56, 189, 248, 0.35);
   --rv-radius-lg: 18px;
   --rv-radius-sm: 12px;
   --rv-shadow-soft: 0 18px 45px rgba(15, 23, 42, 0.9);
   --rv-shadow-strong: 0 26px 70px rgba(15, 23, 42, 0.95);
   --rv-max-width: 1040px;
+  --rv-header-height: 64px;
 }
 
 *,
@@ -39,71 +39,61 @@ body {
   flex-direction: column;
 }
 
-/* HEADER ----------------------------------------------------------- */
+/* Header */
 
 .rv-header {
   position: sticky;
   top: 0;
   z-index: 20;
+  height: var(--rv-header-height);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 16px;
+  max-width: var(--rv-max-width);
+  margin: 0 auto;
   backdrop-filter: blur(14px);
   background: linear-gradient(
     180deg,
-    rgba(15, 23, 42, 0.96),
-    rgba(15, 23, 42, 0.88),
+    rgba(15, 23, 42, 0.95),
+    rgba(15, 23, 42, 0.8),
     transparent
   );
   border-bottom: 1px solid rgba(15, 23, 42, 0.9);
 }
 
-.rv-header-inner {
-  max-width: var(--rv-max-width);
-  margin: 0 auto;
-  padding: 8px 16px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
 .rv-logo {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 10px;
 }
 
-/* runder Container für PNG-Logo */
+/* Rundes Logo im Header – nutzt assets/Best_Logo.png */
+
 .rv-logo-mark {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
   width: 40px;
   height: 40px;
   border-radius: 999px;
-  overflow: hidden;
+  background-color: #020617;
+  background-image: url("assets/Best_Logo.png");
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
   box-shadow: 0 10px 22px rgba(15, 23, 42, 0.9);
   border: 1px solid rgba(148, 163, 184, 0.3);
-  background: #020617;
-}
-
-/* Bild/ SVG sauber skaliert */
-.rv-logo-mark img,
-.rv-logo-mark svg {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
 }
 
 .rv-logo-text {
+  font-size: 18px;
   font-weight: 650;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  font-size: 13px;
-  color: #f9fafb;
+  letter-spacing: 0.14em;
 }
+
+/* Navigation */
 
 .rv-nav {
   display: flex;
-  gap: 12px;
+  gap: 14px;
   font-size: 13px;
 }
 
@@ -117,12 +107,16 @@ body {
 }
 
 .rv-nav a:hover {
-  border-color: var(--rv-accent-soft);
   color: var(--rv-accent);
-  background: rgba(15, 23, 42, 0.9);
+  border-color: rgba(148, 163, 184, 0.4);
+  background: radial-gradient(
+    circle at top left,
+    rgba(56, 189, 248, 0.12),
+    transparent 60%
+  );
 }
 
-/* MAIN / HERO ------------------------------------------------------ */
+/* Main layout */
 
 .rv-main {
   flex: 1;
@@ -131,11 +125,13 @@ body {
   padding: 18px 16px 32px;
 }
 
+/* HERO */
+
 .rv-hero {
-  margin-top: 16px;
   display: grid;
-  grid-template-columns: minmax(0, 2.1fr) minmax(0, 1.5fr);
-  gap: 22px;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1.1fr);
+  gap: 24px;
+  margin-bottom: 32px;
   align-items: stretch;
 }
 
@@ -210,7 +206,8 @@ body {
   gap: 10px;
 }
 
-/* großes Logo rechts */
+/* HERO-Bild (dein großes Logo-Banner) */
+
 .rv-hero-image-wrapper {
   border-radius: var(--rv-radius-lg);
   overflow: hidden;
@@ -224,6 +221,8 @@ body {
   width: 100%;
   height: auto;
 }
+
+/* Tag + Card rechts */
 
 .rv-tag {
   align-self: flex-start;
@@ -265,10 +264,10 @@ body {
   color: #6b7280;
 }
 
-/* SECTIONS --------------------------------------------------------- */
+/* Sections */
 
 .rv-section {
-  margin-top: 28px;
+  margin-bottom: 30px;
 }
 
 .rv-section-header {
@@ -286,7 +285,8 @@ body {
   color: var(--rv-text-muted);
 }
 
-/* metric cards */
+/* Metric grid */
+
 .rv-metric-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
@@ -294,6 +294,7 @@ body {
 }
 
 .rv-metric-card {
+  display: block;
   padding: 16px;
   border-radius: var(--rv-radius-sm);
   background: radial-gradient(
@@ -302,6 +303,9 @@ body {
     rgba(15, 23, 42, 0.9)
   );
   border: 1px solid rgba(79, 70, 229, 0.4);
+  color: var(--rv-text);
+  text-decoration: none;
+  transition: 0.15s ease;
 }
 
 .rv-metric-card h4 {
@@ -316,7 +320,13 @@ body {
   color: var(--rv-text-muted);
 }
 
-/* news */
+.rv-metric-card:hover {
+  border-color: #4f46e5;
+  transform: translateY(-1px);
+}
+
+/* News grid */
+
 .rv-news-grid {
   margin-top: 14px;
   display: grid;
@@ -329,6 +339,7 @@ body {
   border-radius: var(--rv-radius-sm);
   border: 1px solid var(--rv-border);
   background: rgba(15, 23, 42, 0.9);
+  cursor: default;
 }
 
 .rv-news-item h4 {
@@ -346,7 +357,12 @@ body {
   margin: 0;
 }
 
-/* follow cards */
+/* Follow grid */
+
+.rv-follow {
+  margin-bottom: 30px;
+}
+
 .rv-follow-grid {
   margin-top: 14px;
   display: grid;
@@ -387,7 +403,7 @@ body {
   transform: translateY(-1px);
 }
 
-/* FOOTER ---------------------------------------------------------- */
+/* Footer */
 
 .rv-footer {
   padding: 18px 16px 24px;
@@ -435,10 +451,10 @@ body {
   margin: 0;
 }
 
-/* RESPONSIVE ------------------------------------------------------ */
+/* Responsive */
 
 @media (max-width: 768px) {
-  .rv-header-inner {
+  .rv-header {
     padding-inline: 12px;
   }
 
@@ -447,12 +463,20 @@ body {
     font-size: 12px;
   }
 
+  .rv-nav a {
+    padding-inline: 8px;
+  }
+
   .rv-main {
     padding-inline: 12px;
   }
 
   .rv-hero {
     grid-template-columns: minmax(0, 1fr);
+  }
+
+  .rv-hero-image-wrapper {
+    order: -1;
   }
 
   .rv-follow-grid {
