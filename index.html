@@ -20,19 +20,25 @@
 </head>
 <body>
   <header class="rv-header">
-    <div class="rv-logo">
-      <div class="rv-logo-mark" aria-hidden="true"></div>
-      <span class="rv-logo-text">RubikVault</span>
+    <div class="rv-header-inner">
+      <div class="rv-logo">
+        <div class="rv-logo-mark">
+          <!-- kleines rundes Logo: nutzt Best_Logo.png -->
+          <img src="assets/Best_Logo.png" alt="RubikVault logo" />
+        </div>
+        <span class="rv-logo-text">RubikVault</span>
+      </div>
+      <nav class="rv-nav">
+        <a href="https://www.youtube.com/@RubikVault" target="_blank" rel="noopener noreferrer">YouTube</a>
+        <a href="https://x.com/RubikVault" target="_blank" rel="noopener noreferrer">X</a>
+        <a href="https://www.tiktok.com/@rubikvault" target="_blank" rel="noopener noreferrer">TikTok</a>
+        <a href="https://www.instagram.com/rubikvault" target="_blank" rel="noopener noreferrer">Instagram</a>
+      </nav>
     </div>
-    <nav class="rv-nav">
-      <a href="https://www.youtube.com/@RubikVault" target="_blank" rel="noopener noreferrer">YouTube</a>
-      <a href="https://x.com/RubikVault" target="_blank" rel="noopener noreferrer">X</a>
-      <a href="https://www.tiktok.com/@rubikvault" target="_blank" rel="noopener noreferrer">TikTok</a>
-      <a href="https://www.instagram.com/rubikvault" target="_blank" rel="noopener noreferrer">Instagram</a>
-    </nav>
   </header>
 
   <main class="rv-main">
+    <!-- HERO -------------------------------------------------------------->
     <section class="rv-hero">
       <div class="rv-hero-content">
         <h1>Decode the Markets.</h1>
@@ -52,9 +58,10 @@
       </div>
 
       <div class="rv-hero-side">
+        <!-- großes Logo rechts im Hero -->
         <div class="rv-hero-image-wrapper">
           <img
-            src="assets/rubikvault-hero.png"
+            src="assets/Best_Logo.png"
             alt="RubikVault 3D cube vault logo"
             class="rv-hero-image"
           />
@@ -75,6 +82,7 @@
       </div>
     </section>
 
+    <!-- WHAT RUBIKVAULT WILL COVER ---------------------------------------->
     <section class="rv-section">
       <div class="rv-section-header">
         <h2>What RubikVault will cover</h2>
@@ -85,25 +93,26 @@
       </div>
 
       <div class="rv-metric-grid">
-        <a class="rv-metric-card" href="#" aria-disabled="true">
+        <div class="rv-metric-card">
           <h4>Equities &amp; Factors</h4>
           <p>US indices, global sectors, quality/value/momentum, breadth &amp; volatility.</p>
-        </a>
-        <a class="rv-metric-card" href="#" aria-disabled="true">
+        </div>
+        <div class="rv-metric-card">
           <h4>Crypto &amp; On-chain</h4>
           <p>BTC/ETH cycles, stablecoin flows, funding, ETF flows and liquidity.</p>
-        </a>
-        <a class="rv-metric-card" href="#" aria-disabled="true">
+        </div>
+        <div class="rv-metric-card">
           <h4>Macro &amp; Yields</h4>
           <p>Rates, inflation expectations, dollar, liquidity indicators and risk premia.</p>
-        </a>
-        <a class="rv-metric-card" href="#" aria-disabled="true">
+        </div>
+        <div class="rv-metric-card">
           <h4>Commodities</h4>
           <p>Energy, metals &amp; ags as the macro backdrop for risk assets.</p>
-        </a>
+        </div>
       </div>
     </section>
 
+    <!-- DAILY CONTEXT ------------------------------------------------------>
     <section class="rv-section">
       <div class="rv-section-header">
         <h2>Daily context over noise</h2>
@@ -128,12 +137,11 @@
       </div>
     </section>
 
+    <!-- FOLLOW ------------------------------------------------------------->
     <section class="rv-section rv-follow">
       <div class="rv-section-header">
         <h2>Follow the project</h2>
-        <p>
-          The project is just starting. Channels below will get experiments first.
-        </p>
+        <p>The project is just starting. Channels below will get experiments first.</p>
       </div>
 
       <div class="rv-follow-grid">
@@ -180,7 +188,9 @@
   <footer class="rv-footer">
     <div class="rv-footer-top">
       <div class="rv-logo rv-footer-logo">
-        <div class="rv-logo-mark" aria-hidden="true"></div>
+        <div class="rv-logo-mark">
+          <img src="assets/Best_Logo.png" alt="RubikVault logo small" />
+        </div>
         <span class="rv-logo-text">RubikVault</span>
       </div>
       <div class="rv-footer-links">
@@ -194,6 +204,5 @@
       investment recommendations or brokerage services.
     </p>
   </footer>
-  <script src="script.js"></script>
 </body>
 </html>
