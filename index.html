@@ -22,194 +22,257 @@
   <header class="rv-header">
     <div class="rv-logo">
       <div class="rv-logo-mark" aria-hidden="true">
-        <svg viewBox="0 0 50 50" xmlns="http://www.w3.org/2000/svg" class="rv-new-logo">
+        <svg viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg" class="rv-new-logo">
           <defs>
-            <filter id="rv-glow">
-              <feGaussianBlur in="SourceGraphic" stdDeviation="1.5" result="blur" />
-              <feFlood flood-color="var(--rv-accent)" flood-opacity="0.6" result="color"/>
-              <feComposite in="color" in2="blur" operator="in" result="glow1"/>
-              <feMerge>
-                <feMergeNode in="glow1"/>
-                <feMergeNode in="SourceGraphic"/>
-              </feMerge>
-            </filter>
+            <linearGradient id="rv-vault-door-mark" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="var(--rv-bg-elevated)" />
+              <stop offset="100%" stop-color="var(--rv-bg)" />
+            </linearGradient>
+
+            <radialGradient id="rv-vault-glow-mark" cx="50%" cy="50%" r="60%">
+              <stop offset="0%" stop-color="var(--rv-accent)" stop-opacity="0.9" />
+              <stop offset="100%" stop-color="#1d4ed8" stop-opacity="0" />
+            </radialGradient>
           </defs>
-        
-          <circle cx="25" cy="25" r="22" fill="#0c1122" stroke="#1f2937" stroke-width="1"/>
-        
-          <circle cx="25" cy="25" r="20" fill="none" stroke="var(--rv-accent)" stroke-width="0.5" filter="url(#rv-glow)" opacity="0.8"/>
-          
-          <g transform="translate(13, 13)">
-            <g transform="scale(0.8) translate(5, 5)">
-              <path d="M10 0 L20 5 L20 15 L10 10 Z" fill="#f97316" stroke="#fff" stroke-width="0.2" opacity="0.9"/>
-              <path d="M10 0 L0 5 L0 15 L10 10 Z" fill="#0ea5e9" stroke="#fff" stroke-width="0.2" opacity="0.9"/>
-              <path d="M0 15 L10 20 L20 15 L10 10 Z" fill="#22c55e" stroke="#fff" stroke-width="0.2" opacity="0.9"/>
-        
-              <path d="M10 10 L 15 12.5 L 10 15 L 5 12.5 Z" fill="#ffffff" opacity="0.4"/>
-            </g>
+
+          <rect x="80" y="80" width="352" height="352" rx="48"
+                fill="url(#rv-vault-door-mark)"
+                stroke="var(--rv-border)" stroke-width="10" />
+
+          <circle cx="120" cy="120" r="10" fill="var(--rv-text-muted)" />
+          <circle cx="392" cy="120" r="10" fill="var(--rv-text-muted)" />
+          <circle cx="120" cy="392" r="10" fill="var(--rv-text-muted)" />
+          <circle cx="392" cy="392" r="10" fill="var(--rv-text-muted)" />
+
+          <circle cx="256" cy="256" r="150"
+                  fill="none" stroke="url(#rv-vault-glow-mark)" stroke-width="18" />
+
+          <g transform="translate(176,176)">
+            <rect x="0" y="0" width="56" height="56" rx="10" fill="#f97316" />
+            <rect x="60" y="0" width="56" height="56" rx="10" fill="#0ea5e9" />
+            <rect x="120" y="0" width="56" height="56" rx="10" fill="#22c55e" />
+
+            <rect x="0" y="60" width="56" height="56" rx="10" fill="#facc15" />
+            <rect x="60" y="60" width="56" height="56" rx="10" fill="#ef4444" />
+            <rect x="120" y="60" width="56" height="56" rx="10" fill="#6366f1" />
+
+            <rect x="0" y="120" width="56" height="56" rx="10" fill="#22c55e" />
+            <rect x="60" y="120" width="56" height="56" rx="10" fill="#0ea5e9" />
+            <rect x="120" y="120" width="56" height="56" rx="10" fill="#f97316" />
           </g>
         </svg>
       </div>
-      <span class="rv-logo-text">RUBIKVAULT</span>
+      <span class="rv-logo-text">RUBIK<span class="rv-accent-text">VAULT</span></span>
     </div>
-    <nav class="rv-nav">
-      <a href="https://www.youtube.com/@RubikVault" target="_blank" rel="noopener noreferrer">YouTube</a>
-      <a href="https://x.com/RubikVault" target="_blank" rel="noopener noreferrer">X</a>
-      <a href="https://www.tiktok.com/@rubikvault" target="_blank" rel="noopener noreferrer">TikTok</a>
-      <a href="https://www.instagram.com/rubikvault" target="_blank" rel="noopener noreferrer">Instagram</a>
+
+    <nav class="rv-nav-menu">
+      <a href="#about" class="rv-nav-link">Über uns</a>
+      <a href="#assets" class="rv-nav-link">Assets</a>
+      <a href="#contact" class="rv-nav-link">Kontakt</a>
+      <a href="#subscribe" class="rv-button rv-button-primary">Newsletter abonnieren</a>
     </nav>
+
+    <a href="#subscribe" class="rv-button rv-button-primary rv-nav-mobile-button">
+      Abonnieren
+    </a>
   </header>
 
   <main>
-    <section class="rv-hero">
-      <h1>Decode the Markets.</h1>
-      <p class="rv-hero-cta">Clean, calm, data-driven insights on stocks, crypto, macro & commodities.</p>
-      <a href="#daily-decode" class="rv-hero-button">Start Decoding</a>
-      <p class="rv-hero-note">Educational Content Only. Not financial advice.</p>
-    </section>
-
-    <div class="rv-content-area">
-      <div class="rv-widgets-two-col">
-        <div class="rv-widget-half">
-          
-        </div>
-        <div class="rv-widget-half">
-          
+    <section id="hero" class="rv-section rv-hero">
+      <div class="rv-hero-content">
+        <h1 class="rv-hero-headline">
+          Entschlüsseln Sie die Märkte.
+          <span class="rv-accent-text">Ohne Hype.</span>
+        </h1>
+        <p class="rv-hero-subheadline">
+          Datengetriebene, ruhige Einblicke in Aktien, Kryptowährungen, Makroökonomie und Rohstoffe.
+          Bildungszwecke nur, keine Finanzberatung.
+        </p>
+        <div class="rv-hero-actions">
+          <a href="#subscribe" class="rv-button rv-button-xl rv-button-primary">
+            Kostenlos starten
+          </a>
+          <a href="#about" class="rv-button rv-button-xl rv-button-secondary">
+            Mehr erfahren
+          </a>
         </div>
       </div>
+      <div class="rv-hero-graphic">
+        <svg viewBox="0 0 300 150" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <defs>
+            <linearGradient id="line-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" stop-color="var(--rv-accent)" stop-opacity="0.1" />
+              <stop offset="50%" stop-color="var(--rv-accent)" stop-opacity="1" />
+              <stop offset="100%" stop-color="var(--rv-accent)" stop-opacity="0.1" />
+            </linearGradient>
+            <filter id="line-glow" x="-50%" y="-50%" width="200%" height="200%">
+              <feGaussianBlur in="SourceGraphic" stdDeviation="5" result="blur" />
+              <feMerge>
+                <feMergeNode in="blur" />
+                <feMergeNode in="SourceGraphic" />
+              </feMerge>
+            </filter>
+          </defs>
 
-      <section class="rv-daily-decode" id="daily-decode">
-        <h2>Daily Decode</h2>
-        <p class="rv-subtitle">Your daily snapshot of market movement and key technical developments.</p>
+          <polyline points="0,100 50,50 100,80 150,30 200,60 250,20 300,70"
+                    stroke="url(#line-gradient)" stroke-width="3" fill="none"
+                    filter="url(#line-glow)" />
+
+          <rect x="70" y="40" width="6" height="30" fill="#22c55e" rx="1" />
+          <rect x="130" y="60" width="6" height="40" fill="#ef4444" rx="1" />
+          <rect x="220" y="30" width="6" height="30" fill="#22c55e" rx="1" />
+        </svg>
+      </div>
+    </section>
+
+    <section id="about" class="rv-section rv-about">
+      <div class="rv-heading-group">
+        <h2 class="rv-section-title">Wer wir sind.</h2>
+        <p class="rv-section-subtitle">Ihr Tor zu klaren, unvoreingenommenen Marktanalysen.</p>
+      </div>
+      
+      <div class="rv-grid-3">
+        <div class="rv-card">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--rv-accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+          <h3>Datengetrieben</h3>
+          <p>Wir stützen uns auf quantitative Modelle, On-Chain-Metriken und globale Wirtschaftsdaten, nicht auf Gerüchte.</p>
+        </div>
+        <div class="rv-card">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--rv-accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a10 10 0 0 0-9.28 12.63l.3.26a8 8 0 0 1 11.83 0l.3-.26A10 10 0 0 0 12 2z"/><path d="M12 22a10 10 0 0 0 9.28-12.63l-.3-.26a8 8 0 0 1-11.83 0l-.3.26A10 10 0 0 0 12 22z"/><path d="M12 18a6 6 0 0 0 0-12"/></svg>
+          <h3>Multi-Asset-Fokus</h3>
+          <p>Unsere Analysen umfassen traditionelle Märkte, digitale Assets, Makro und Rohstoffe, um ein Gesamtbild zu schaffen.</p>
+        </div>
+        <div class="rv-card">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--rv-accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M15 9l-6 6"/><path d="M9 15l6-6"/></svg>
+          <h3>100% Bildung</h3>
+          <p>Wir bieten keine Anlageberatung. Unser Ziel ist es, Ihnen die Werkzeuge und das Wissen zur Verfügung zu stellen, um Ihre eigenen Entscheidungen zu treffen.</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="assets" class="rv-section rv-assets">
+      <div class="rv-heading-group">
+        <h2 class="rv-section-title">Was wir abdecken.</h2>
+        <p class="rv-section-subtitle">Umfassende Abdeckung der wichtigsten globalen Märkte.</p>
+      </div>
+      
+      <div class="rv-tabs">
+        <div class="rv-tab-item rv-tab-active">Krypto</div>
+        <div class="rv-tab-item">Aktien</div>
+        <div class="rv-tab-item">Makro/Forex</div>
+        <div class="rv-tab-item">Rohstoffe</div>
+      </div>
+
+      <div class="rv-content-area">
+        <div class="rv-content-crypto rv-content-active">
+          <div class="rv-asset-content">
+            <h3>Digitale Assets & On-Chain</h3>
+            <p>Tiefgehende Analyse der wichtigsten Kryptowährungen (Bitcoin, Ethereum und Altcoins), kombiniert mit On-Chain-Analysen zu Liquidität und Netzwerkaktivität.</p>
+            <ul class="rv-asset-list">
+              <li>Marktstruktur & Orderflow</li>
+              <li>Hashrate & Mining-Ökonomie</li>
+              <li>DeFi & Layer 2 Metriken</li>
+            </ul>
+          </div>
+          <div class="rv-asset-image">
+            <img src="assets/crypto-chart.svg" alt="Cryptocurrency Chart" />
+          </div>
+        </div>
+
+        <div class="rv-content-stocks">
+          <div class="rv-asset-content">
+            <h3>Globale Aktienmärkte</h3>
+            <p>Einblicke in die wichtigsten globalen Indizes (S&P 500, Nasdaq, DAX) und Sektorrotationen, um die breitere Marktstimmung zu verstehen.</p>
+            <ul class="rv-asset-list">
+              <li>Sektoranalyse & Rotation</li>
+              <li>Unternehmensgewinne & Bewertungen</li>
+              <li>Liquiditätsströme</li>
+            </ul>
+          </div>
+          <div class="rv-asset-image">
+            <img src="assets/stocks-chart.svg" alt="Stocks Chart" />
+          </div>
+        </div>
         
-        <div class="rv-decode-card">
-          <h3>Market Overview (US Session)</h3>
-          <ul>
-            <li>**S&P 500:** Consolidation near all-time highs (AH). Focus on tech earnings next week.</li>
-            <li>**DXY (Dollar Index):** Holding above critical support at 104. Bearish divergence building.</li>
-            <li>**Oil (WTI):** Range-bound trading between $75-$80. Inventory draw was less than anticipated.</li>
-            <li>**Gold:** Strong bullish momentum, targeting $2100. Key breakout confirmed.</li>
-          </ul>
-        </div>
-        
-        <div class="rv-decode-card">
-          <h3>Crypto Vault Check</h3>
-          <ul>
-            <li>**Bitcoin:** Healthy correction to $65k, holding 20W EMA support. Volume thinning slightly.</li>
-            <li>**Ethereum:** Outperforming BTC in the short term. Key level: $3800.</li>
-            <li>**DeFi:** Sector rotation visible. Emphasis shifting to Real-World Asset (RWA) protocols.</li>
-            <li>**Risk Signal:** Funding rates normalizing. Expect volatility around CPI data release.</li>
-          </ul>
-        </div>
-      </section>
+      </div>
+    </section>
+    
+    <section id="subscribe" class="rv-section rv-contact">
+      <div class="rv-contact-box">
+        <h2 class="rv-section-title">Bleiben Sie auf dem Laufenden.</h2>
+        <p class="rv-section-subtitle">Melden Sie sich für unseren kostenlosen wöchentlichen Newsletter an.</p>
 
-      <section class="rv-roadmap">
-        <h2>Our Core Features</h2>
-        <div class="rv-feature-grid">
-          <div class="rv-feature-card">
-            <h3>🧭 Macro & Forex Insights</h3>
-            <p>Data-driven analysis on central bank policies, inflation, and global currency pairs.</p>
-          </div>
-          <div class="rv-feature-card">
-            <h3>📈 Technical Decodes</h3>
-            <p>Clear, unbiased technical analysis (TA) for critical entry and exit points in all asset classes.</p>
-          </div>
-          <div class="rv-feature-card">
-            <h3>🔒 Crypto Security Focus</h3>
-            <p>Beyond trading—insights into blockchain security, DeFi risks, and institutional adoption.</p>
-          </div>
-        </div>
-      </section>
+        <form class="rv-form">
+          <input type="email" placeholder="Ihre E-Mail-Adresse" required />
+          <button type="submit" class="rv-button rv-button-primary">Jetzt abonnieren</button>
+        </form>
 
-      <section class="rv-roadmap">
-        <h2>Follow Our Content Vault</h2>
-        <div class="rv-follow-grid">
-          <a
-            class="rv-follow-card"
-            href="https://www.youtube.com/@RubikVault"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <h3>YouTube</h3>
-            <p>Deep-dive video analysis and weekly market reviews.</p>
-          </a>
-          <a
-            class="rv-follow-card"
-            href="https://x.com/RubikVault"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <h3>X / Twitter</h3>
-            <p>Short updates, charts and threads.</p>
-          </a>
-          <a
-            class="rv-follow-card"
-            href="https://www.tiktok.com/@rubikvault"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <h3>TikTok</h3>
-            <p>Bite-sized clips and summaries.</p>
-          </a>
-          <a
-            class="rv-follow-card"
-            href="https://www.instagram.com/rubikvault"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <h3>Instagram</h3>
-            <p>Carousels and visual explainers.</p>
-          </a>
-        </div>
-      </section>
-    </div>
+        <p class="rv-contact-note">
+          Wir respektieren Ihre Privatsphäre. Keine Werbung. Jederzeit abbestellbar.
+        </p>
+      </div>
+    </section>
   </main>
 
   <footer class="rv-footer">
-    <div class="rv-footer-top">
-      <div class="rv-logo rv-footer-logo">
-        <div class="rv-logo-mark" aria-hidden="true">
-          <svg viewBox="0 0 50 50" xmlns="http://www.w3.org/2000/svg" class="rv-new-logo">
-            <defs>
-              <filter id="rv-glow-footer">
-                <feGaussianBlur in="SourceGraphic" stdDeviation="1.5" result="blur" />
-                <feFlood flood-color="var(--rv-accent)" flood-opacity="0.6" result="color"/>
-                <feComposite in="color" in2="blur" operator="in" result="glow1"/>
-                <feMerge>
-                  <feMergeNode in="glow1"/>
-                  <feMergeNode in="SourceGraphic"/>
-                </feMerge>
-              </filter>
-            </defs>
-          
-            <circle cx="25" cy="25" r="22" fill="#0c1122" stroke="#1f2937" stroke-width="1"/>
-          
-            <circle cx="25" cy="25" r="20" fill="none" stroke="var(--rv-accent)" stroke-width="0.5" filter="url(#rv-glow-footer)" opacity="0.8"/>
-            
-            <g transform="translate(13, 13)">
-              <g transform="scale(0.8) translate(5, 5)">
-                <path d="M10 0 L20 5 L20 15 L10 10 Z" fill="#f97316" stroke="#fff" stroke-width="0.2" opacity="0.9"/>
-                <path d="M10 0 L0 5 L0 15 L10 10 Z" fill="#0ea5e9" stroke="#fff" stroke-width="0.2" opacity="0.9"/>
-                <path d="M0 15 L10 20 L20 15 L10 10 Z" fill="#22c55e" stroke="#fff" stroke-width="0.2" opacity="0.9"/>
-          
-                <path d="M10 10 L 15 12.5 L 10 15 L 5 12.5 Z" fill="#ffffff" opacity="0.4"/>
+    <div class="rv-footer-inner">
+      <div class="rv-footer-top">
+        <div class="rv-footer-logo">
+          <div class="rv-logo-mark" aria-hidden="true">
+            <svg viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg" class="rv-new-logo">
+              <defs>
+                <linearGradient id="rv-vault-door-footer" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stop-color="var(--rv-bg-elevated)" />
+                  <stop offset="100%" stop-color="var(--rv-bg)" />
+                </linearGradient>
+
+                <radialGradient id="rv-vault-glow-footer" cx="50%" cy="50%" r="60%">
+                  <stop offset="0%" stop-color="var(--rv-accent)" stop-opacity="0.9" />
+                  <stop offset="100%" stop-color="#1d4ed8" stop-opacity="0" />
+                </radialGradient>
+              </defs>
+
+              <rect x="80" y="80" width="352" height="352" rx="48"
+                    fill="url(#rv-vault-door-footer)"
+                    stroke="var(--rv-border)" stroke-width="10" />
+
+              <circle cx="120" cy="120" r="10" fill="var(--rv-text-muted)" />
+              <circle cx="392" cy="120" r="10" fill="var(--rv-text-muted)" />
+              <circle cx="120" cy="392" r="10" fill="var(--rv-text-muted)" />
+              <circle cx="392" cy="392" r="10" fill="var(--rv-text-muted)" />
+
+              <circle cx="256" cy="256" r="150"
+                      fill="none" stroke="url(#rv-vault-glow-footer)" stroke-width="18" />
+
+              <g transform="translate(176,176)">
+                <rect x="0" y="0" width="56" height="56" rx="10" fill="#f97316" />
+                <rect x="60" y="0" width="56" height="56" rx="10" fill="#0ea5e9" />
+                <rect x="120" y="0" width="56" height="56" rx="10" fill="#22c55e" />
+
+                <rect x="0" y="60" width="56" height="56" rx="10" fill="#facc15" />
+                <rect x="60" y="60" width="56" height="56" rx="10" fill="#ef4444" />
+                <rect x="120" y="60" width="56" height="56" rx="10" fill="#6366f1" />
+
+                <rect x="0" y="120" width="56" height="56" rx="10" fill="#22c55e" />
+                <rect x="60" y="120" width="56" height="56" rx="10" fill="#0ea5e9" />
+                <rect x="120" y="120" width="56" height="56" rx="10" fill="#f97316" />
               </g>
-            </g>
-          </svg>
+            </svg>
+          </div>
+          <span class="rv-logo-text">RUBIK<span class="rv-accent-text">VAULT</span></span>
         </div>
-        <span class="rv-logo-text">RUBIKVAULT</span>
+        <div class="rv-footer-links">
+          <a href="disclaimer.html">Disclaimer</a>
+          <a href="privacy.html">Datenschutzerklärung</a>
+          <a href="imprint.html">Impressum</a>
+        </div>
       </div>
-      <div class="rv-footer-links">
-        <a href="imprint.html">Imprint</a>
-        <a href="privacy.html">Privacy</a>
-        <a href="disclaimer.html">Disclaimer</a>
-      </div>
+      <p class="rv-footer-note">
+        &copy; 2024 RubikVault. Alle Rechte vorbehalten. | Analysen dienen nur zu Bildungszwecken und stellen keine Finanzberatung dar.
+      </p>
     </div>
-    <p class="rv-footer-note">
-      RubikVault provides educational content only and does not offer financial advice,
-      investment recommendations or brokerage services.
-    </p>
   </footer>
+
   <script src="script.js"></script>
 </body>
 </html>

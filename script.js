@@ -24,4 +24,33 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     });
   });
+
+  // Tab-Funktionalität für Assets Section
+  const tabs = document.querySelectorAll(".rv-tab-item");
+  const contents = document.querySelectorAll(".rv-content-area > div");
+
+  tabs.forEach((tab) => {
+    tab.addEventListener("click", () => {
+      // Entferne aktive Klassen von allen Tabs und Inhalten
+      tabs.forEach((t) => t.classList.remove("rv-tab-active"));
+      contents.forEach((c) => c.classList.remove("rv-content-active"));
+
+      // Füge die aktive Klasse zum geklickten Tab hinzu
+      tab.classList.add("rv-tab-active");
+
+      // Bestimme den Index des geklickten Tabs
+      const index = Array.from(tabs).indexOf(tab);
+
+      // Zeige den entsprechenden Inhalt an
+      if (contents[index]) {
+        contents[index].classList.add("rv-content-active");
+      }
+    });
+  });
+  
+  // Setze den ersten Tab als aktiv, falls keiner aktiv ist
+  if (tabs.length > 0 && !document.querySelector(".rv-tab-active")) {
+    tabs[0].classList.add("rv-tab-active");
+    contents[0].classList.add("rv-content-active");
+  }
 });

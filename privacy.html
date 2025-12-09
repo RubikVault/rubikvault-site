@@ -10,132 +10,143 @@
   <header class="rv-header rv-header-scrolled">
     <div class="rv-logo">
       <div class="rv-logo-mark" aria-hidden="true">
-        <svg viewBox="0 0 50 50" xmlns="http://www.w3.org/2000/svg" class="rv-new-logo">
+        <svg viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg" class="rv-new-logo">
           <defs>
-            <filter id="rv-glow">
-              <feGaussianBlur in="SourceGraphic" stdDeviation="1.5" result="blur" />
-              <feFlood flood-color="var(--rv-accent)" flood-opacity="0.6" result="color"/>
-              <feComposite in="color" in2="blur" operator="in" result="glow1"/>
-              <feMerge>
-                <feMergeNode in="glow1"/>
-                <feMergeNode in="SourceGraphic"/>
-              </feMerge>
-            </filter>
+            <linearGradient id="rv-vault-door-mark" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="var(--rv-bg-elevated)" />
+              <stop offset="100%" stop-color="var(--rv-bg)" />
+            </linearGradient>
+
+            <radialGradient id="rv-vault-glow-mark" cx="50%" cy="50%" r="60%">
+              <stop offset="0%" stop-color="var(--rv-accent)" stop-opacity="0.9" />
+              <stop offset="100%" stop-color="#1d4ed8" stop-opacity="0" />
+            </radialGradient>
           </defs>
-        
-          <circle cx="25" cy="25" r="22" fill="#0c1122" stroke="#1f2937" stroke-width="1"/>
-        
-          <circle cx="25" cy="25" r="20" fill="none" stroke="var(--rv-accent)" stroke-width="0.5" filter="url(#rv-glow)" opacity="0.8"/>
-          
-          <g transform="translate(13, 13)">
-            <g transform="scale(0.8) translate(5, 5)">
-              <path d="M10 0 L20 5 L20 15 L10 10 Z" fill="#f97316" stroke="#fff" stroke-width="0.2" opacity="0.9"/>
-              <path d="M10 0 L0 5 L0 15 L10 10 Z" fill="#0ea5e9" stroke="#fff" stroke-width="0.2" opacity="0.9"/>
-              <path d="M0 15 L10 20 L20 15 L10 10 Z" fill="#22c55e" stroke="#fff" stroke-width="0.2" opacity="0.9"/>
-        
-              <path d="M10 10 L 15 12.5 L 10 15 L 5 12.5 Z" fill="#ffffff" opacity="0.4"/>
-            </g>
+
+          <rect x="80" y="80" width="352" height="352" rx="48"
+                fill="url(#rv-vault-door-mark)"
+                stroke="var(--rv-border)" stroke-width="10" />
+
+          <circle cx="120" cy="120" r="10" fill="var(--rv-text-muted)" />
+          <circle cx="392" cy="120" r="10" fill="var(--rv-text-muted)" />
+          <circle cx="120" cy="392" r="10" fill="var(--rv-text-muted)" />
+          <circle cx="392" cy="392" r="10" fill="var(--rv-text-muted)" />
+
+          <circle cx="256" cy="256" r="150"
+                  fill="none" stroke="url(#rv-vault-glow-mark)" stroke-width="18" />
+
+          <g transform="translate(176,176)">
+            <rect x="0" y="0" width="56" height="56" rx="10" fill="#f97316" />
+            <rect x="60" y="0" width="56" height="56" rx="10" fill="#0ea5e9" />
+            <rect x="120" y="0" width="56" height="56" rx="10" fill="#22c55e" />
+
+            <rect x="0" y="60" width="56" height="56" rx="10" fill="#facc15" />
+            <rect x="60" y="60" width="56" height="56" rx="10" fill="#ef4444" />
+            <rect x="120" y="60" width="56" height="56" rx="10" fill="#6366f1" />
+
+            <rect x="0" y="120" width="56" height="56" rx="10" fill="#22c55e" />
+            <rect x="60" y="120" width="56" height="56" rx="10" fill="#0ea5e9" />
+            <rect x="120" y="120" width="56" height="56" rx="10" fill="#f97316" />
           </g>
         </svg>
       </div>
-      <span class="rv-logo-text">RUBIKVAULT</span>
+      <span class="rv-logo-text">RUBIK<span class="rv-accent-text">VAULT</span></span>
     </div>
-    <nav class="rv-nav">
-      <a href="https://www.youtube.com/@RubikVault" target="_blank" rel="noopener noreferrer">YouTube</a>
-      <a href="https://x.com/RubikVault" target="_blank" rel="noopener noreferrer">X</a>
-      <a href="https://www.tiktok.com/@rubikvault" target="_blank" rel="noopener noreferrer">TikTok</a>
-      <a href="https://www.instagram.com/rubikvault" target="_blank" rel="noopener noreferrer">Instagram</a>
+
+    <nav class="rv-nav-menu">
+      <a href="index.html" class="rv-nav-link">Zur Startseite</a>
     </nav>
   </header>
 
-  <div class="rv-content-page">
-    <section class="rv-section">
-      <h1>Privacy Policy</h1>
-      <p>
-        This policy outlines how your personal data is collected, used, and protected when you use our website.
-        Please replace this text with your legally compliant privacy statement.
-      </p>
+  <main class="rv-main-content">
+    <section class="rv-section rv-page-content">
+      <h1>Datenschutzerklärung</h1>
 
-      <h2>Data Controller</h2>
-      <p>
-        [Your Name / Company Name]<br />
-        [Your Address]<br />
-        E-mail: [Your E-mail Address]
-      </p>
+      <p>Der Schutz Ihrer persönlichen Daten ist uns sehr wichtig. Diese Datenschutzerklärung erklärt, wie RubikVault ("wir," "uns," "unser") Informationen von Ihnen erfasst, verwendet und schützt, wenn Sie unsere Website nutzen.</p>
 
-      <h2>Collection of General Information</h2>
-      <p>
-        When you access our website, information of a general nature is automatically collected (Server Log Files).
-        This information includes the type of web browser, the operating system used, the domain name of your internet service provider, and similar data.
-        This data is non-personal and is used solely to ensure the website is functioning correctly.
-      </p>
+      <h2>1. Erfasste Daten</h2>
+      <p>Wir erfassen und verarbeiten in der Regel nur Daten, die für den Betrieb und die Verbesserung unseres Dienstes unbedingt erforderlich sind:</p>
+      <ul>
+        <li>**Nutzungsdaten:** Informationen darüber, wie Sie die Website nutzen, z.B. die besuchten Seiten, Verweildauer, Zugriffszeiten. Diese Daten werden anonymisiert über Web-Analyse-Tools (z.B. Google Analytics) erfasst, wobei wir IP-Adressen kürzen oder anonymisieren.</li>
+        <li>**E-Mail-Adresse:** Wenn Sie unseren Newsletter abonnieren, erfassen wir Ihre E-Mail-Adresse. Diese wird ausschließlich für den Versand des Newsletters verwendet.</li>
+      </ul>
 
-      <h2>Handling of Personal Data</h2>
-      <p>
-        Personal data is only collected or processed if you voluntarily provide this information,
-        for example, when contacting us or using specific services (e.g., newsletter subscription, comment submission).
-        Please complete this section with your specific data processing activities (e.g., cookies, analytics, third-party tools).
-      </p>
+      <h2>2. Verwendung Ihrer Daten</h2>
+      <p>Ihre Daten werden verwendet, um:</p>
+      <ul>
+        <li>den Betrieb und die Funktionalität der Website zu gewährleisten.</li>
+        <li>die Website-Leistung und das Nutzererlebnis zu verbessern (basierend auf anonymisierten Nutzungsdaten).</li>
+        <li>Ihnen unseren Newsletter zuzusenden, wenn Sie diesen abonniert haben.</li>
+      </ul>
 
-      <h2>User Rights</h2>
-      <p>
-        As a user, you have the right to request information about the data we store about you,
-        as well as the right to correction, deletion, restriction of processing, and objection to the processing
-        of your personal data, and the right to data portability.
-      </p>
+      <h2>3. Cookies</h2>
+      <p>Wir verwenden Cookies (kleine Textdateien, die auf Ihrem Gerät gespeichert werden), um die Benutzererfahrung zu verbessern und Nutzungsdaten zu verfolgen. Sie können die Speicherung von Cookies in Ihren Browsereinstellungen jederzeit ablehnen, was jedoch die Funktionalität unserer Website beeinträchtigen kann.</p>
 
-      <p class="rv-card-note">
-        <strong>Disclaimer:</strong> This content is a general placeholder template and must be adapted and verified
-        by a legal professional to comply with local laws (e.g., GDPR, CCPA).
-      </p>
+      <h2>4. Ihre Rechte</h2>
+      <p>Sie haben das Recht, jederzeit Auskunft über die zu Ihrer Person gespeicherten Daten zu verlangen. Darüber hinaus haben Sie das Recht auf Berichtigung, Sperrung oder Löschung Ihrer Daten, sofern keine gesetzliche Aufbewahrungspflicht besteht. Wenn Sie unseren Newsletter abonniert haben, können Sie diesen jederzeit über den Abmeldelink im Newsletter abbestellen.</p>
+
+      <h2>5. Kontakt</h2>
+      <p>Bei Fragen zu dieser Datenschutzerklärung wenden Sie sich bitte an die im <a href="imprint.html">Impressum</a> genannte Kontaktadresse.</p>
     </section>
-  </div>
+  </main>
 
   <footer class="rv-footer">
-    <div class="rv-footer-top">
-      <div class="rv-logo rv-footer-logo">
-        <div class="rv-logo-mark" aria-hidden="true">
-          <svg viewBox="0 0 50 50" xmlns="http://www.w3.org/2000/svg" class="rv-new-logo">
-            <defs>
-              <filter id="rv-glow-footer">
-                <feGaussianBlur in="SourceGraphic" stdDeviation="1.5" result="blur" />
-                <feFlood flood-color="var(--rv-accent)" flood-opacity="0.6" result="color"/>
-                <feComposite in="color" in2="blur" operator="in" result="glow1"/>
-                <feMerge>
-                  <feMergeNode in="glow1"/>
-                  <feMergeNode in="SourceGraphic"/>
-                </feMerge>
-              </filter>
-            </defs>
-          
-            <circle cx="25" cy="25" r="22" fill="#0c1122" stroke="#1f2937" stroke-width="1"/>
-          
-            <circle cx="25" cy="25" r="20" fill="none" stroke="var(--rv-accent)" stroke-width="0.5" filter="url(#rv-glow-footer)" opacity="0.8"/>
-            
-            <g transform="translate(13, 13)">
-              <g transform="scale(0.8) translate(5, 5)">
-                <path d="M10 0 L20 5 L20 15 L10 10 Z" fill="#f97316" stroke="#fff" stroke-width="0.2" opacity="0.9"/>
-                <path d="M10 0 L0 5 L0 15 L10 10 Z" fill="#0ea5e9" stroke="#fff" stroke-width="0.2" opacity="0.9"/>
-                <path d="M0 15 L10 20 L20 15 L10 10 Z" fill="#22c55e" stroke="#fff" stroke-width="0.2" opacity="0.9"/>
-          
-                <path d="M10 10 L 15 12.5 L 10 15 L 5 12.5 Z" fill="#ffffff" opacity="0.4"/>
+    <div class="rv-footer-inner">
+      <div class="rv-footer-top">
+        <div class="rv-footer-logo">
+          <div class="rv-logo-mark" aria-hidden="true">
+            <svg viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg" class="rv-new-logo">
+              <defs>
+                <linearGradient id="rv-vault-door-footer" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stop-color="var(--rv-bg-elevated)" />
+                  <stop offset="100%" stop-color="var(--rv-bg)" />
+                </linearGradient>
+
+                <radialGradient id="rv-vault-glow-footer" cx="50%" cy="50%" r="60%">
+                  <stop offset="0%" stop-color="var(--rv-accent)" stop-opacity="0.9" />
+                  <stop offset="100%" stop-color="#1d4ed8" stop-opacity="0" />
+                </radialGradient>
+              </defs>
+
+              <rect x="80" y="80" width="352" height="352" rx="48"
+                    fill="url(#rv-vault-door-footer)"
+                    stroke="var(--rv-border)" stroke-width="10" />
+
+              <circle cx="120" cy="120" r="10" fill="var(--rv-text-muted)" />
+              <circle cx="392" cy="120" r="10" fill="var(--rv-text-muted)" />
+              <circle cx="120" cy="392" r="10" fill="var(--rv-text-muted)" />
+              <circle cx="392" cy="392" r="10" fill="var(--rv-text-muted)" />
+
+              <circle cx="256" cy="256" r="150"
+                      fill="none" stroke="url(#rv-vault-glow-footer)" stroke-width="18" />
+
+              <g transform="translate(176,176)">
+                <rect x="0" y="0" width="56" height="56" rx="10" fill="#f97316" />
+                <rect x="60" y="0" width="56" height="56" rx="10" fill="#0ea5e9" />
+                <rect x="120" y="0" width="56" height="56" rx="10" fill="#22c55e" />
+
+                <rect x="0" y="60" width="56" height="56" rx="10" fill="#facc15" />
+                <rect x="60" y="60" width="56" height="56" rx="10" fill="#ef4444" />
+                <rect x="120" y="60" width="56" height="56" rx="10" fill="#6366f1" />
+
+                <rect x="0" y="120" width="56" height="56" rx="10" fill="#22c55e" />
+                <rect x="60" y="120" width="56" height="56" rx="10" fill="#0ea5e9" />
+                <rect x="120" y="120" width="56" height="56" rx="10" fill="#f97316" />
               </g>
-            </g>
-          </svg>
+            </svg>
+          </div>
+          <span class="rv-logo-text">RUBIK<span class="rv-accent-text">VAULT</span></span>
         </div>
-        <span class="rv-logo-text">RUBIKVAULT</span>
+        <div class="rv-footer-links">
+          <a href="disclaimer.html">Disclaimer</a>
+          <a href="privacy.html">Datenschutzerklärung</a>
+          <a href="imprint.html">Impressum</a>
+        </div>
       </div>
-      <div class="rv-footer-links">
-        <a href="imprint.html">Imprint</a>
-        <a href="privacy.html">Privacy</a>
-        <a href="disclaimer.html">Disclaimer</a>
-      </div>
+      <p class="rv-footer-note">
+        &copy; 2024 RubikVault. Alle Rechte vorbehalten. | Analysen dienen nur zu Bildungszwecken und stellen keine Finanzberatung dar.
+      </p>
     </div>
-    <p class="rv-footer-note">
-      RubikVault provides educational content only and does not offer financial advice,
-      investment recommendations or brokerage services.
-    </p>
   </footer>
-  <script src="script.js"></script>
 </body>
 </html>

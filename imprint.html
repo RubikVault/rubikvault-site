@@ -10,126 +10,154 @@
   <header class="rv-header rv-header-scrolled">
     <div class="rv-logo">
       <div class="rv-logo-mark" aria-hidden="true">
-        <svg viewBox="0 0 50 50" xmlns="http://www.w3.org/2000/svg" class="rv-new-logo">
+        <svg viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg" class="rv-new-logo">
           <defs>
-            <filter id="rv-glow">
-              <feGaussianBlur in="SourceGraphic" stdDeviation="1.5" result="blur" />
-              <feFlood flood-color="var(--rv-accent)" flood-opacity="0.6" result="color"/>
-              <feComposite in="color" in2="blur" operator="in" result="glow1"/>
-              <feMerge>
-                <feMergeNode in="glow1"/>
-                <feMergeNode in="SourceGraphic"/>
-              </feMerge>
-            </filter>
+            <linearGradient id="rv-vault-door-mark" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="var(--rv-bg-elevated)" />
+              <stop offset="100%" stop-color="var(--rv-bg)" />
+            </linearGradient>
+
+            <radialGradient id="rv-vault-glow-mark" cx="50%" cy="50%" r="60%">
+              <stop offset="0%" stop-color="var(--rv-accent)" stop-opacity="0.9" />
+              <stop offset="100%" stop-color="#1d4ed8" stop-opacity="0" />
+            </radialGradient>
           </defs>
-        
-          <circle cx="25" cy="25" r="22" fill="#0c1122" stroke="#1f2937" stroke-width="1"/>
-        
-          <circle cx="25" cy="25" r="20" fill="none" stroke="var(--rv-accent)" stroke-width="0.5" filter="url(#rv-glow)" opacity="0.8"/>
-          
-          <g transform="translate(13, 13)">
-            <g transform="scale(0.8) translate(5, 5)">
-              <path d="M10 0 L20 5 L20 15 L10 10 Z" fill="#f97316" stroke="#fff" stroke-width="0.2" opacity="0.9"/>
-              <path d="M10 0 L0 5 L0 15 L10 10 Z" fill="#0ea5e9" stroke="#fff" stroke-width="0.2" opacity="0.9"/>
-              <path d="M0 15 L10 20 L20 15 L10 10 Z" fill="#22c55e" stroke="#fff" stroke-width="0.2" opacity="0.9"/>
-        
-              <path d="M10 10 L 15 12.5 L 10 15 L 5 12.5 Z" fill="#ffffff" opacity="0.4"/>
-            </g>
+
+          <rect x="80" y="80" width="352" height="352" rx="48"
+                fill="url(#rv-vault-door-mark)"
+                stroke="var(--rv-border)" stroke-width="10" />
+
+          <circle cx="120" cy="120" r="10" fill="var(--rv-text-muted)" />
+          <circle cx="392" cy="120" r="10" fill="var(--rv-text-muted)" />
+          <circle cx="120" cy="392" r="10" fill="var(--rv-text-muted)" />
+          <circle cx="392" cy="392" r="10" fill="var(--rv-text-muted)" />
+
+          <circle cx="256" cy="256" r="150"
+                  fill="none" stroke="url(#rv-vault-glow-mark)" stroke-width="18" />
+
+          <g transform="translate(176,176)">
+            <rect x="0" y="0" width="56" height="56" rx="10" fill="#f97316" />
+            <rect x="60" y="0" width="56" height="56" rx="10" fill="#0ea5e9" />
+            <rect x="120" y="0" width="56" height="56" rx="10" fill="#22c55e" />
+
+            <rect x="0" y="60" width="56" height="56" rx="10" fill="#facc15" />
+            <rect x="60" y="60" width="56" height="56" rx="10" fill="#ef4444" />
+            <rect x="120" y="60" width="56" height="56" rx="10" fill="#6366f1" />
+
+            <rect x="0" y="120" width="56" height="56" rx="10" fill="#22c55e" />
+            <rect x="60" y="120" width="56" height="56" rx="10" fill="#0ea5e9" />
+            <rect x="120" y="120" width="56" height="56" rx="10" fill="#f97316" />
           </g>
         </svg>
       </div>
-      <span class="rv-logo-text">RUBIKVAULT</span>
+      <span class="rv-logo-text">RUBIK<span class="rv-accent-text">VAULT</span></span>
     </div>
-    <nav class="rv-nav">
-      <a href="https://www.youtube.com/@RubikVault" target="_blank" rel="noopener noreferrer">YouTube</a>
-      <a href="https://x.com/RubikVault" target="_blank" rel="noopener noreferrer">X</a>
-      <a href="https://www.tiktok.com/@rubikvault" target="_blank" rel="noopener noreferrer">TikTok</a>
-      <a href="https://www.instagram.com/rubikvault" target="_blank" rel="noopener noreferrer">Instagram</a>
+
+    <nav class="rv-nav-menu">
+      <a href="index.html" class="rv-nav-link">Zur Startseite</a>
     </nav>
   </header>
 
-  <div class="rv-content-page">
-    <section class="rv-section">
-      <h1>Imprint / Legal Notice</h1>
-      <p>Information according to § 5 TMG (German Telemedia Act) or equivalent law.</p>
+  <main class="rv-main-content">
+    <section class="rv-section rv-page-content">
+      <h1>Impressum</h1>
 
-      <h2>Operator of the Website</h2>
+      <h2>Angaben gemäß § 5 TMG (Telemediengesetz)</h2>
       <p>
-        [Your Name / Company Name]<br />
-        [Your Street and House Number]<br />
-        [Your Postal Code and City]<br />
-        [Your Country]
+        <strong>RubikVault</strong><br />
+        [Ihr Name / Unternehmensname]<br />
+        [Ihre Straße und Hausnummer]<br />
+        [Ihre Postleitzahl und Ort]<br />
+        Deutschland
       </p>
 
-      <h2>Contact</h2>
+      <h2>Kontakt</h2>
       <p>
-        Phone: [Your Phone Number (Optional)]<br />
-        E-mail: [Your E-mail Address]
+        E-Mail: [Ihre E-Mail-Adresse]<br />
+        Telefon: [Ihre Telefonnummer (optional)]
       </p>
 
-      <h2>VAT Identification Number (if applicable)</h2>
+      <h2>Verantwortlich für den Inhalt nach § 55 Abs. 2 RStV (Rundfunkstaatsvertrag)</h2>
       <p>
-        VAT ID number according to § 27 a Value Added Tax Act:<br />
-        [Your VAT ID]
+        [Ihr Name]<br />
+        [Ihre Adresse]
       </p>
 
-      <h2>Responsible for Editorial Content</h2>
+      <h2>Online-Streitbeilegung (Art. 14 Abs. 1 ODR-Verordnung)</h2>
       <p>
-        [Your Name], [Your Address (if different from above)]
+        Die Europäische Kommission stellt eine Plattform zur Online-Streitbeilegung (OS) bereit, die Sie unter
+        <a href="https://ec.europa.eu/consumers/odr/" target="_blank">https://ec.europa.eu/consumers/odr/</a> finden.
+        Wir sind weder bereit noch verpflichtet, an Streitbeilegungsverfahren vor einer Verbraucherschlichtungsstelle teilzunehmen.
       </p>
-
-      <p class="rv-card-note">
-        <strong>Important Note:</strong> This information is a placeholder. You must fill in the bracketed fields and
-        have this text checked for legal compliance by a qualified legal professional, especially regarding country-specific laws.
+      
+      <h2>Haftung für Inhalte</h2>
+      <p>
+        Als Diensteanbieter sind wir gemäß § 7 Abs.1 TMG für eigene Inhalte auf diesen Seiten nach den allgemeinen Gesetzen verantwortlich. Nach §§ 8 bis 10 TMG sind wir als Diensteanbieter jedoch nicht verpflichtet, übermittelte oder gespeicherte fremde Informationen zu überwachen oder nach Umständen zu forschen, die auf eine rechtswidrige Tätigkeit hinweisen. Verpflichtungen zur Entfernung oder Sperrung der Nutzung von Informationen nach den allgemeinen Gesetzen bleiben hiervon unberührt.
+      </p>
+      
+      <p>
+        Hinweis: Dies ist eine Vorlage. Bitte füllen Sie die Platzhalter mit Ihren korrekten, vollständigen und aktuellen Daten aus.
       </p>
     </section>
-  </div>
+  </main>
 
   <footer class="rv-footer">
-    <div class="rv-footer-top">
-      <div class="rv-logo rv-footer-logo">
-        <div class="rv-logo-mark" aria-hidden="true">
-          <svg viewBox="0 0 50 50" xmlns="http://www.w3.org/2000/svg" class="rv-new-logo">
-            <defs>
-              <filter id="rv-glow-footer">
-                <feGaussianBlur in="SourceGraphic" stdDeviation="1.5" result="blur" />
-                <feFlood flood-color="var(--rv-accent)" flood-opacity="0.6" result="color"/>
-                <feComposite in="color" in2="blur" operator="in" result="glow1"/>
-                <feMerge>
-                  <feMergeNode in="glow1"/>
-                  <feMergeNode in="SourceGraphic"/>
-                </feMerge>
-              </filter>
-            </defs>
-          
-            <circle cx="25" cy="25" r="22" fill="#0c1122" stroke="#1f2937" stroke-width="1"/>
-          
-            <circle cx="25" cy="25" r="20" fill="none" stroke="var(--rv-accent)" stroke-width="0.5" filter="url(#rv-glow-footer)" opacity="0.8"/>
-            
-            <g transform="translate(13, 13)">
-              <g transform="scale(0.8) translate(5, 5)">
-                <path d="M10 0 L20 5 L20 15 L10 10 Z" fill="#f97316" stroke="#fff" stroke-width="0.2" opacity="0.9"/>
-                <path d="M10 0 L0 5 L0 15 L10 10 Z" fill="#0ea5e9" stroke="#fff" stroke-width="0.2" opacity="0.9"/>
-                <path d="M0 15 L10 20 L20 15 L10 10 Z" fill="#22c55e" stroke="#fff" stroke-width="0.2" opacity="0.9"/>
-          
-                <path d="M10 10 L 15 12.5 L 10 15 L 5 12.5 Z" fill="#ffffff" opacity="0.4"/>
+    <div class="rv-footer-inner">
+      <div class="rv-footer-top">
+        <div class="rv-footer-logo">
+          <div class="rv-logo-mark" aria-hidden="true">
+            <svg viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg" class="rv-new-logo">
+              <defs>
+                <linearGradient id="rv-vault-door-footer" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stop-color="var(--rv-bg-elevated)" />
+                  <stop offset="100%" stop-color="var(--rv-bg)" />
+                </linearGradient>
+
+                <radialGradient id="rv-vault-glow-footer" cx="50%" cy="50%" r="60%">
+                  <stop offset="0%" stop-color="var(--rv-accent)" stop-opacity="0.9" />
+                  <stop offset="100%" stop-color="#1d4ed8" stop-opacity="0" />
+                </radialGradient>
+              </defs>
+
+              <rect x="80" y="80" width="352" height="352" rx="48"
+                    fill="url(#rv-vault-door-footer)"
+                    stroke="var(--rv-border)" stroke-width="10" />
+
+              <circle cx="120" cy="120" r="10" fill="var(--rv-text-muted)" />
+              <circle cx="392" cy="120" r="10" fill="var(--rv-text-muted)" />
+              <circle cx="120" cy="392" r="10" fill="var(--rv-text-muted)" />
+              <circle cx="392" cy="392" r="10" fill="var(--rv-text-muted)" />
+
+              <circle cx="256" cy="256" r="150"
+                      fill="none" stroke="url(#rv-vault-glow-footer)" stroke-width="18" />
+
+              <g transform="translate(176,176)">
+                <rect x="0" y="0" width="56" height="56" rx="10" fill="#f97316" />
+                <rect x="60" y="0" width="56" height="56" rx="10" fill="#0ea5e9" />
+                <rect x="120" y="0" width="56" height="56" rx="10" fill="#22c55e" />
+
+                <rect x="0" y="60" width="56" height="56" rx="10" fill="#facc15" />
+                <rect x="60" y="60" width="56" height="56" rx="10" fill="#ef4444" />
+                <rect x="120" y="60" width="56" height="56" rx="10" fill="#6366f1" />
+
+                <rect x="0" y="120" width="56" height="56" rx="10" fill="#22c55e" />
+                <rect x="60" y="120" width="56" height="56" rx="10" fill="#0ea5e9" />
+                <rect x="120" y="120" width="56" height="56" rx="10" fill="#f97316" />
               </g>
-            </g>
-          </svg>
+            </svg>
+          </div>
+          <span class="rv-logo-text">RUBIK<span class="rv-accent-text">VAULT</span></span>
         </div>
-        <span class="rv-logo-text">RUBIKVAULT</span>
+        <div class="rv-footer-links">
+          <a href="disclaimer.html">Disclaimer</a>
+          <a href="privacy.html">Datenschutzerklärung</a>
+          <a href="imprint.html">Impressum</a>
+        </div>
       </div>
-      <div class="rv-footer-links">
-        <a href="imprint.html">Imprint</a>
-        <a href="privacy.html">Privacy</a>
-        <a href="disclaimer.html">Disclaimer</a>
-      </div>
+      <p class="rv-footer-note">
+        &copy; 2024 RubikVault. Alle Rechte vorbehalten. | Analysen dienen nur zu Bildungszwecken und stellen keine Finanzberatung dar.
+      </p>
     </div>
-    <p class="rv-footer-note">
-      RubikVault provides educational content only and does not offer financial advice,
-      investment recommendations or brokerage services.
-    </p>
   </footer>
-  <script src="script.js"></script>
 </body>
 </html>
