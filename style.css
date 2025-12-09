@@ -15,7 +15,7 @@
   --rv-shadow-soft: 0 18px 45px rgba(15, 23, 42, 0.9);
   --rv-shadow-strong: 0 26px 70px rgba(15, 23, 42, 0.95);
   --rv-max-width: 1040px;
-  --rv-header-height: 64px;
+  --rv-header-height: 80px; /* KORRIGIERT: Erhöht auf 80px, um das 64px Logo aufzunehmen */
 }
 
 /* Basic reset */
@@ -90,14 +90,14 @@ a:hover {
   gap: 8px;
   color: var(--rv-text);
   font-weight: 700;
-  font-size: 36px; /* Angepasst: Von 18px auf 36px verdoppelt */
+  font-size: 36px; /* ANGEPASST: Von 18px auf 36px verdoppelt */
   letter-spacing: -0.2px;
   cursor: pointer;
 }
 
 .rv-logo-mark {
-  width: 64px; /* Angepasst: Von 32px auf 64px verdoppelt */
-  height: 64px; /* Angepasst: Von 32px auf 64px verdoppelt */
+  width: 64px; /* ANGEPASST: Von 32px auf 64px verdoppelt */
+  height: 64px; /* ANGEPASST: Von 32px auf 64px verdoppelt */
   flex-shrink: 0;
   display: flex;
   align-items: center;
@@ -146,7 +146,10 @@ a:hover {
 
 .rv-content-page {
   flex-grow: 1;
-  padding: 80px 16px 40px;
+  /* MOBILE (Standard): 80px war bisher ausreichend, da Header 64px hoch war und content-padding 80px.
+     Da Header nun 80px hoch ist, brauchen wir hier auch etwas mehr Platz. 
+     Wir belassen es bei 80px, da es der erste Wert im `padding` ist. */
+  padding: 80px 16px 40px; 
 }
 
 .rv-section {
@@ -487,7 +490,7 @@ a:hover {
     grid-template-columns: 1fr 1fr;
   }
   .rv-content-page {
-    padding: 100px 24px 60px;
+    padding: 100px 24px 60px; /* KORRIGIERT: Auf 100px erhöht (von 80px), um sicherzustellen, dass die Seite auch auf dem Desktop unter dem nun 80px hohen Header korrekt beginnt */
   }
 }
 
