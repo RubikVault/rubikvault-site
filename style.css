@@ -1,4 +1,3 @@
-<DOCUMENT filename="style.css">
 :root {
   --rv-bg: #050814;
   --rv-bg-alt: #0b1020;
@@ -67,7 +66,7 @@ body {
 .rv-logo {
   display: flex;
   align-items: center;
-  gap: 14px;                /* etwas mehr Abstand bei größerer Schrift */
+  gap: 10px;
 }
 
 /* Container für das runde SVG-Logo */
@@ -75,12 +74,11 @@ body {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 46px;              /* Logo etwas größer gemacht (von 40 → 46px), passt besser zur großen Schrift */
-  height: 46px;
+  width: 40px;
+  height: 40px;
   border-radius: 999px;
   background: transparent;
   overflow: hidden;
-  flex-shrink: 0;
 }
 
 /* SVG skaliert sauber in den Container */
@@ -90,16 +88,13 @@ body {
   display: block;
 }
 
-/* === NEU: RubikVault-Schrift ca. 2× größer === */
 .rv-logo-text {
   font-weight: 600;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  font-size: 26px;          /* von 13px → 26px = doppelt so groß */
+  font-size: 13px;
   color: #f9fafb;
-  white-space: nowrap;
 }
-/* =========================================== */
 
 .rv-nav {
   display: flex;
@@ -560,15 +555,4 @@ body {
   .rv-market-grid {
     grid-template-columns: minmax(0, 1fr);
   }
-
-  /* Auf kleinen Screens das große Logo-Text etwas kleiner halten, falls gewünscht */
-  .rv-logo-text {
-    font-size: 22px;
-  }
-
-  .rv-logo-mark {
-    width: 42px;
-    height: 42px;
-  }
 }
-</DOCUMENT>
