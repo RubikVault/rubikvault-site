@@ -1,22 +1,44 @@
 <!DOCTYPE html>
-<html lang="de">
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Impressum – RubikVault</title>
+  <title>Imprint – RUBIKVAULT</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <header class="rv-header">
+  <header class="rv-header rv-header-scrolled">
     <div class="rv-logo">
       <div class="rv-logo-mark" aria-hidden="true">
-        <div class="rv-css-logo">
-          <div class="cube-face cube-face-a"></div>
-          <div class="cube-face cube-face-b"></div>
-          <div class="cube-lock">🗝️</div>
-        </div>
-        </div>
-      <span class="rv-logo-text">RubikVault</span>
+        <svg viewBox="0 0 50 50" xmlns="http://www.w3.org/2000/svg" class="rv-new-logo">
+          <defs>
+            <filter id="rv-glow">
+              <feGaussianBlur in="SourceGraphic" stdDeviation="1.5" result="blur" />
+              <feFlood flood-color="var(--rv-accent)" flood-opacity="0.6" result="color"/>
+              <feComposite in="color" in2="blur" operator="in" result="glow1"/>
+              <feMerge>
+                <feMergeNode in="glow1"/>
+                <feMergeNode in="SourceGraphic"/>
+              </feMerge>
+            </filter>
+          </defs>
+        
+          <circle cx="25" cy="25" r="22" fill="#0c1122" stroke="#1f2937" stroke-width="1"/>
+        
+          <circle cx="25" cy="25" r="20" fill="none" stroke="var(--rv-accent)" stroke-width="0.5" filter="url(#rv-glow)" opacity="0.8"/>
+          
+          <g transform="translate(13, 13)">
+            <g transform="scale(0.8) translate(5, 5)">
+              <path d="M10 0 L20 5 L20 15 L10 10 Z" fill="#f97316" stroke="#fff" stroke-width="0.2" opacity="0.9"/>
+              <path d="M10 0 L0 5 L0 15 L10 10 Z" fill="#0ea5e9" stroke="#fff" stroke-width="0.2" opacity="0.9"/>
+              <path d="M0 15 L10 20 L20 15 L10 10 Z" fill="#22c55e" stroke="#fff" stroke-width="0.2" opacity="0.9"/>
+        
+              <path d="M10 10 L 15 12.5 L 10 15 L 5 12.5 Z" fill="#ffffff" opacity="0.4"/>
+            </g>
+          </g>
+        </svg>
+      </div>
+      <span class="rv-logo-text">RUBIKVAULT</span>
     </div>
     <nav class="rv-nav">
       <a href="https://www.youtube.com/@RubikVault" target="_blank" rel="noopener noreferrer">YouTube</a>
@@ -28,36 +50,37 @@
 
   <div class="rv-content-page">
     <section class="rv-section">
-      <h1>Impressum</h1>
-      <p>Angaben gemäß § 5 TMG.</p>
+      <h1>Imprint / Legal Notice</h1>
+      <p>Information according to § 5 TMG (German Telemedia Act) or equivalent law.</p>
 
-      <h2>Verantwortlich für den Inhalt</h2>
+      <h2>Operator of the Website</h2>
       <p>
-        [Ihr Name oder Name des Unternehmens]<br />
-        [Ihre Straße und Hausnummer]<br />
-        [Ihre Postleitzahl und Ort]
+        [Your Name / Company Name]<br />
+        [Your Street and House Number]<br />
+        [Your Postal Code and City]<br />
+        [Your Country]
       </p>
 
-      <h2>Kontakt</h2>
+      <h2>Contact</h2>
       <p>
-        Telefon: [Ihre Telefonnummer]<br />
-        E-Mail: [Ihre E-Mail-Adresse]
+        Phone: [Your Phone Number (Optional)]<br />
+        E-mail: [Your E-mail Address]
       </p>
 
-      <h2>Umsatzsteuer-ID (falls zutreffend)</h2>
+      <h2>VAT Identification Number (if applicable)</h2>
       <p>
-        Umsatzsteuer-Identifikationsnummer gemäß § 27 a Umsatzsteuergesetz:<br />
-        [Ihre USt-ID]
+        VAT ID number according to § 27 a Value Added Tax Act:<br />
+        [Your VAT ID]
       </p>
 
-      <h2>Redaktionelle Verantwortung</h2>
+      <h2>Responsible for Editorial Content</h2>
       <p>
-        [Ihr Name], [Ihre Adresse]
+        [Your Name], [Your Address (if different from above)]
       </p>
 
       <p class="rv-card-note">
-        <strong>Wichtiger Hinweis:</strong> Diese Angaben müssen von Ihnen
-        vervollständigt und auf rechtliche Korrektheit geprüft werden.
+        <strong>Important Note:</strong> This information is a placeholder. You must fill in the bracketed fields and
+        have this text checked for legal compliance by a qualified legal professional, especially regarding country-specific laws.
       </p>
     </section>
   </div>
@@ -66,13 +89,35 @@
     <div class="rv-footer-top">
       <div class="rv-logo rv-footer-logo">
         <div class="rv-logo-mark" aria-hidden="true">
-          <div class="rv-css-logo">
-            <div class="cube-face cube-face-a"></div>
-            <div class="cube-face cube-face-b"></div>
-            <div class="cube-lock">🗝️</div>
-          </div>
-          </div>
-        <span class="rv-logo-text">RubikVault</span>
+          <svg viewBox="0 0 50 50" xmlns="http://www.w3.org/2000/svg" class="rv-new-logo">
+            <defs>
+              <filter id="rv-glow-footer">
+                <feGaussianBlur in="SourceGraphic" stdDeviation="1.5" result="blur" />
+                <feFlood flood-color="var(--rv-accent)" flood-opacity="0.6" result="color"/>
+                <feComposite in="color" in2="blur" operator="in" result="glow1"/>
+                <feMerge>
+                  <feMergeNode in="glow1"/>
+                  <feMergeNode in="SourceGraphic"/>
+                </feMerge>
+              </filter>
+            </defs>
+          
+            <circle cx="25" cy="25" r="22" fill="#0c1122" stroke="#1f2937" stroke-width="1"/>
+          
+            <circle cx="25" cy="25" r="20" fill="none" stroke="var(--rv-accent)" stroke-width="0.5" filter="url(#rv-glow-footer)" opacity="0.8"/>
+            
+            <g transform="translate(13, 13)">
+              <g transform="scale(0.8) translate(5, 5)">
+                <path d="M10 0 L20 5 L20 15 L10 10 Z" fill="#f97316" stroke="#fff" stroke-width="0.2" opacity="0.9"/>
+                <path d="M10 0 L0 5 L0 15 L10 10 Z" fill="#0ea5e9" stroke="#fff" stroke-width="0.2" opacity="0.9"/>
+                <path d="M0 15 L10 20 L20 15 L10 10 Z" fill="#22c55e" stroke="#fff" stroke-width="0.2" opacity="0.9"/>
+          
+                <path d="M10 10 L 15 12.5 L 10 15 L 5 12.5 Z" fill="#ffffff" opacity="0.4"/>
+              </g>
+            </g>
+          </svg>
+        </div>
+        <span class="rv-logo-text">RUBIKVAULT</span>
       </div>
       <div class="rv-footer-links">
         <a href="imprint.html">Imprint</a>

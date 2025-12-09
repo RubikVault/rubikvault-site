@@ -106,9 +106,23 @@ a:hover {
   overflow: hidden;
 }
 
+/* NEU: Styles für das Inline-SVG */
+.rv-logo-mark svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
 .rv-logo-text {
   /* Setzt den Text auf eine Linie */
   white-space: nowrap; 
+  /* NEU: Futuristische Text-Glow */
+  text-shadow: 0 0 4px var(--rv-accent-soft), 0 0 8px rgba(56, 189, 248, 0.1);
+  transition: text-shadow 0.3s ease;
+}
+
+.rv-logo:hover .rv-logo-text {
+    text-shadow: 0 0 6px var(--rv-accent), 0 0 12px rgba(56, 189, 248, 0.4);
 }
 
 .rv-nav {
@@ -490,61 +504,4 @@ a:hover {
   .rv-footer {
     padding: 24px 0 32px;
   }
-}
-
-
-/* ===========================
-   CSS Logo (Minimalistischer Neon-Würfel mit Schloss)
-   =========================== */
-
-.rv-css-logo {
-  position: relative;
-  width: 100%; /* Bezieht sich auf .rv-logo-mark Größe */
-  height: 100%;
-  /* Basis 3D-Drehung für Header und Footer */
-  transform: rotateX(30deg) rotateY(-30deg) scale(0.9);
-}
-
-/* Spezifische Skalierung für das kleine Header-Logo */
-.rv-logo-mark .rv-css-logo {
-  transform: rotateX(30deg) rotateY(-30deg) scale(0.75); 
-}
-
-/* Spezifische Skalierung für das noch kleinere Footer-Logo */
-.rv-footer-logo .rv-css-logo {
-  transform: rotateX(30deg) rotateY(-30deg) scale(0.65); 
-}
-
-.rv-css-logo .cube-face {
-  position: absolute;
-  width: 20px;
-  height: 20px;
-  border: 1.5px solid var(--rv-accent);
-  box-shadow: 0 0 5px var(--rv-accent);
-  background: rgba(56, 189, 248, 0.05);
-}
-
-.rv-css-logo .cube-face-a {
-  /* Vorderseite */
-  top: 6px;
-  left: 6px;
-}
-
-.rv-css-logo .cube-face-b {
-  /* Rechte Seite (verzerrt) */
-  background: rgba(79, 70, 229, 0.05); /* Leichte Farbvariation für Tiefe */
-  transform: skewY(30deg) translate(18px, 0);
-  top: 6px;
-  left: 6px;
-}
-
-.rv-css-logo .cube-lock {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  font-size: 16px;
-  color: #fff;
-  filter: drop-shadow(0 0 4px var(--rv-accent));
-  z-index: 10;
 }

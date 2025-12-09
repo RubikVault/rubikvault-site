@@ -1,22 +1,44 @@
 <!DOCTYPE html>
-<html lang="de">
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Datenschutzerklärung – RubikVault</title>
+  <title>Privacy Policy – RUBIKVAULT</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <header class="rv-header">
+  <header class="rv-header rv-header-scrolled">
     <div class="rv-logo">
       <div class="rv-logo-mark" aria-hidden="true">
-        <div class="rv-css-logo">
-          <div class="cube-face cube-face-a"></div>
-          <div class="cube-face cube-face-b"></div>
-          <div class="cube-lock">🗝️</div>
-        </div>
-        </div>
-      <span class="rv-logo-text">RubikVault</span>
+        <svg viewBox="0 0 50 50" xmlns="http://www.w3.org/2000/svg" class="rv-new-logo">
+          <defs>
+            <filter id="rv-glow">
+              <feGaussianBlur in="SourceGraphic" stdDeviation="1.5" result="blur" />
+              <feFlood flood-color="var(--rv-accent)" flood-opacity="0.6" result="color"/>
+              <feComposite in="color" in2="blur" operator="in" result="glow1"/>
+              <feMerge>
+                <feMergeNode in="glow1"/>
+                <feMergeNode in="SourceGraphic"/>
+              </feMerge>
+            </filter>
+          </defs>
+        
+          <circle cx="25" cy="25" r="22" fill="#0c1122" stroke="#1f2937" stroke-width="1"/>
+        
+          <circle cx="25" cy="25" r="20" fill="none" stroke="var(--rv-accent)" stroke-width="0.5" filter="url(#rv-glow)" opacity="0.8"/>
+          
+          <g transform="translate(13, 13)">
+            <g transform="scale(0.8) translate(5, 5)">
+              <path d="M10 0 L20 5 L20 15 L10 10 Z" fill="#f97316" stroke="#fff" stroke-width="0.2" opacity="0.9"/>
+              <path d="M10 0 L0 5 L0 15 L10 10 Z" fill="#0ea5e9" stroke="#fff" stroke-width="0.2" opacity="0.9"/>
+              <path d="M0 15 L10 20 L20 15 L10 10 Z" fill="#22c55e" stroke="#fff" stroke-width="0.2" opacity="0.9"/>
+        
+              <path d="M10 10 L 15 12.5 L 10 15 L 5 12.5 Z" fill="#ffffff" opacity="0.4"/>
+            </g>
+          </g>
+        </svg>
+      </div>
+      <span class="rv-logo-text">RUBIKVAULT</span>
     </div>
     <nav class="rv-nav">
       <a href="https://www.youtube.com/@RubikVault" target="_blank" rel="noopener noreferrer">YouTube</a>
@@ -28,38 +50,43 @@
 
   <div class="rv-content-page">
     <section class="rv-section">
-      <h1>Datenschutzerklärung</h1>
+      <h1>Privacy Policy</h1>
       <p>
-        Hier folgt Ihre individuelle Datenschutzerklärung. Diese Vorlage dient nur
-        als Platzhalter und muss von Ihnen oder einer fachkundigen Person
-        inhaltlich ergänzt und rechtlich geprüft werden.
+        This policy outlines how your personal data is collected, used, and protected when you use our website.
+        Please replace this text with your legally compliant privacy statement.
       </p>
 
-      <h2>Allgemeine Hinweise</h2>
+      <h2>Data Controller</h2>
       <p>
-        Die folgenden Hinweise geben einen einfachen Überblick darüber,
-        was mit Ihren personenbezogenen Daten passiert, wenn Sie diese Website
-        besuchen. Personenbezogene Daten sind alle Daten, mit denen Sie
-        persönlich identifiziert werden können.
+        [Your Name / Company Name]<br />
+        [Your Address]<br />
+        E-mail: [Your E-mail Address]
       </p>
 
-      <h2>Datenverarbeitung auf dieser Website</h2>
+      <h2>Collection of General Information</h2>
       <p>
-        Art, Umfang und Zweck der Verarbeitung personenbezogener Daten richten
-        sich nach Ihrer konkreten Nutzung dieser Website (z.&nbsp;B. Kontaktformular,
-        Kommentare, Newsletter). Ergänzen Sie hier bitte Ihre konkreten Prozesse.
+        When you access our website, information of a general nature is automatically collected (Server Log Files).
+        This information includes the type of web browser, the operating system used, the domain name of your internet service provider, and similar data.
+        This data is non-personal and is used solely to ensure the website is functioning correctly.
       </p>
 
-      <h2>Rechte der betroffenen Personen</h2>
+      <h2>Handling of Personal Data</h2>
       <p>
-        Sie haben insbesondere das Recht auf Auskunft, Berichtigung, Löschung,
-        Einschränkung der Verarbeitung sowie Widerspruch gegen die Verarbeitung
-        Ihrer personenbezogenen Daten und das Recht auf Datenübertragbarkeit.
+        Personal data is only collected or processed if you voluntarily provide this information,
+        for example, when contacting us or using specific services (e.g., newsletter subscription, comment submission).
+        Please complete this section with your specific data processing activities (e.g., cookies, analytics, third-party tools).
+      </p>
+
+      <h2>User Rights</h2>
+      <p>
+        As a user, you have the right to request information about the data we store about you,
+        as well as the right to correction, deletion, restriction of processing, and objection to the processing
+        of your personal data, and the right to data portability.
       </p>
 
       <p class="rv-card-note">
-        <strong>Hinweis:</strong> Diese Inhalte sind lediglich Platzhalter und
-        ersetzen keine individuelle, rechtsverbindliche Datenschutzerklärung.
+        <strong>Disclaimer:</strong> This content is a general placeholder template and must be adapted and verified
+        by a legal professional to comply with local laws (e.g., GDPR, CCPA).
       </p>
     </section>
   </div>
@@ -68,13 +95,35 @@
     <div class="rv-footer-top">
       <div class="rv-logo rv-footer-logo">
         <div class="rv-logo-mark" aria-hidden="true">
-          <div class="rv-css-logo">
-            <div class="cube-face cube-face-a"></div>
-            <div class="cube-face cube-face-b"></div>
-            <div class="cube-lock">🗝️</div>
-          </div>
-          </div>
-        <span class="rv-logo-text">RubikVault</span>
+          <svg viewBox="0 0 50 50" xmlns="http://www.w3.org/2000/svg" class="rv-new-logo">
+            <defs>
+              <filter id="rv-glow-footer">
+                <feGaussianBlur in="SourceGraphic" stdDeviation="1.5" result="blur" />
+                <feFlood flood-color="var(--rv-accent)" flood-opacity="0.6" result="color"/>
+                <feComposite in="color" in2="blur" operator="in" result="glow1"/>
+                <feMerge>
+                  <feMergeNode in="glow1"/>
+                  <feMergeNode in="SourceGraphic"/>
+                </feMerge>
+              </filter>
+            </defs>
+          
+            <circle cx="25" cy="25" r="22" fill="#0c1122" stroke="#1f2937" stroke-width="1"/>
+          
+            <circle cx="25" cy="25" r="20" fill="none" stroke="var(--rv-accent)" stroke-width="0.5" filter="url(#rv-glow-footer)" opacity="0.8"/>
+            
+            <g transform="translate(13, 13)">
+              <g transform="scale(0.8) translate(5, 5)">
+                <path d="M10 0 L20 5 L20 15 L10 10 Z" fill="#f97316" stroke="#fff" stroke-width="0.2" opacity="0.9"/>
+                <path d="M10 0 L0 5 L0 15 L10 10 Z" fill="#0ea5e9" stroke="#fff" stroke-width="0.2" opacity="0.9"/>
+                <path d="M0 15 L10 20 L20 15 L10 10 Z" fill="#22c55e" stroke="#fff" stroke-width="0.2" opacity="0.9"/>
+          
+                <path d="M10 10 L 15 12.5 L 10 15 L 5 12.5 Z" fill="#ffffff" opacity="0.4"/>
+              </g>
+            </g>
+          </svg>
+        </div>
+        <span class="rv-logo-text">RUBIKVAULT</span>
       </div>
       <div class="rv-footer-links">
         <a href="imprint.html">Imprint</a>

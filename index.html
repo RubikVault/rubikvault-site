@@ -22,240 +22,181 @@
   <header class="rv-header">
     <div class="rv-logo">
       <div class="rv-logo-mark" aria-hidden="true">
-        <div class="rv-css-logo">
-          <div class="cube-face cube-face-a"></div>
-          <div class="cube-face cube-face-b"></div>
-          <div class="cube-lock">🗝️</div>
-        </div>
-        </div>
+        <svg viewBox="0 0 50 50" xmlns="http://www.w3.org/2000/svg" class="rv-new-logo">
+          <defs>
+            <filter id="rv-glow">
+              <feGaussianBlur in="SourceGraphic" stdDeviation="1.5" result="blur" />
+              <feFlood flood-color="var(--rv-accent)" flood-opacity="0.6" result="color"/>
+              <feComposite in="color" in2="blur" operator="in" result="glow1"/>
+              <feMerge>
+                <feMergeNode in="glow1"/>
+                <feMergeNode in="SourceGraphic"/>
+              </feMerge>
+            </filter>
+          </defs>
+        
+          <circle cx="25" cy="25" r="22" fill="#0c1122" stroke="#1f2937" stroke-width="1"/>
+        
+          <circle cx="25" cy="25" r="20" fill="none" stroke="var(--rv-accent)" stroke-width="0.5" filter="url(#rv-glow)" opacity="0.8"/>
+          
+          <g transform="translate(13, 13)">
+            <g transform="scale(0.8) translate(5, 5)">
+              <path d="M10 0 L20 5 L20 15 L10 10 Z" fill="#f97316" stroke="#fff" stroke-width="0.2" opacity="0.9"/>
+              <path d="M10 0 L0 5 L0 15 L10 10 Z" fill="#0ea5e9" stroke="#fff" stroke-width="0.2" opacity="0.9"/>
+              <path d="M0 15 L10 20 L20 15 L10 10 Z" fill="#22c55e" stroke="#fff" stroke-width="0.2" opacity="0.9"/>
+        
+              <path d="M10 10 L 15 12.5 L 10 15 L 5 12.5 Z" fill="#ffffff" opacity="0.4"/>
+            </g>
+          </g>
+        </svg>
+      </div>
       <span class="rv-logo-text">RUBIKVAULT</span>
     </div>
     <nav class="rv-nav">
-      <a href="#market-decode">Decode</a>
-      <a href="#widgets">Widgets</a>
-      <a href="#roadmap">Features</a>
-      <a href="#follow">Social</a>
+      <a href="https://www.youtube.com/@RubikVault" target="_blank" rel="noopener noreferrer">YouTube</a>
+      <a href="https://x.com/RubikVault" target="_blank" rel="noopener noreferrer">X</a>
+      <a href="https://www.tiktok.com/@rubikvault" target="_blank" rel="noopener noreferrer">TikTok</a>
+      <a href="https://www.instagram.com/rubikvault" target="_blank" rel="noopener noreferrer">Instagram</a>
     </nav>
   </header>
 
   <main>
     <section class="rv-hero">
       <h1>Decode the Markets.</h1>
-      <p class="rv-hero-cta">Clean, calm, and data-driven market insights across all asset classes.</p>
-      <a href="#market-decode" class="rv-hero-button">Start Decoding Now</a>
-      <p class="rv-hero-note">Educational content only. No financial advice.</p>
+      <p class="rv-hero-cta">Clean, calm, data-driven insights on stocks, crypto, macro & commodities.</p>
+      <a href="#daily-decode" class="rv-hero-button">Start Decoding</a>
+      <p class="rv-hero-note">Educational Content Only. Not financial advice.</p>
     </section>
 
-    <section id="widgets" class="rv-content-area">
-      <div class="rv-widgets">
-        <div class="rv-widget-full">
-          <div class="tradingview-widget-container">
-            <div class="tradingview-widget-container__widget"></div>
-            <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-ticker-tape.js" async>
-            {
-            "symbols": [
-              {
-                "proName": "FOREXCOM:SPXUSD",
-                "title": "S&P 500"
-              },
-              {
-                "proName": "FX_IDC:EURUSD",
-                "title": "EUR/USD"
-              },
-              {
-                "description": "Bitcoin",
-                "proName": "BINANCE:BTCUSDT"
-              },
-              {
-                "description": "Ethereum",
-                "proName": "BINANCE:ETHUSDT"
-              },
-              {
-                "description": "Gold",
-                "proName": "COMEX:GC1!"
-              },
-              {
-                "description": "Crude Oil",
-                "proName": "NYMEX:CL1!"
-              }
-            ],
-            "showSymbolLogo": true,
-            "is4h": false,
-            "colorTheme": "dark",
-            "locale": "en"
-          }
-            </script>
-          </div>
+    <div class="rv-content-area">
+      <div class="rv-widgets-two-col">
+        <div class="rv-widget-half">
+          
         </div>
-
-        <div class="rv-widgets-two-col">
-          <div class="rv-widget-half">
-            <div class="tradingview-widget-container">
-              <div class="tradingview-widget-container__widget"></div>
-              <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-mini-chart.js" async>
-              {
-                "symbol": "BINANCE:BTCUSDT",
-                "width": "100%",
-                "height": "100%",
-                "locale": "en",
-                "dateRange": "12m",
-                "colorTheme": "dark",
-                "trendLineColor": "rgba(56, 189, 248, 1)",
-                "underLineColor": "rgba(56, 189, 248, 0.3)",
-                "underLineBottomColor": "rgba(41, 98, 255, 0)",
-                "is  4h": false,
-                "chartType": "area",
-                "fontColor": "#787B86",
-                "timeHours": true,
-                "scalePosition": "no",
-                "chartOnly": true
-              }
-              </script>
-            </div>
-          </div>
-
-          <div class="rv-widget-half">
-            <div class="tradingview-widget-container">
-              <div class="tradingview-widget-container__widget"></div>
-              <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-crypto-heatmap.js" async>
-              {
-                "dataSource": "Crypto",
-                "blockSize": "market_cap_us",
-                "color": "change",
-                "locale": "en",
-                "symbolUrl": "",
-                "is4h": false,
-                "colorTheme": "dark",
-                "has(colorTheme, 'dark')"
-              }
-              </script>
-            </div>
-          </div>
+        <div class="rv-widget-half">
+          
         </div>
       </div>
-    </section>
 
-    <section id="market-decode" class="rv-daily-decode">
-      <div class="rv-content-area">
-        <h2>RubikVault’s Daily Market Decode</h2>
-        <p class="rv-subtitle">Your daily structural overview of the most important market narratives.</p>
-
+      <section class="rv-daily-decode" id="daily-decode">
+        <h2>Daily Decode</h2>
+        <p class="rv-subtitle">Your daily snapshot of market movement and key technical developments.</p>
+        
         <div class="rv-decode-card">
-          <h3>Macro & Intermarket: The Bond Puzzle</h3>
+          <h3>Market Overview (US Session)</h3>
           <ul>
-            <li>**Summary:** Yields are consolidating near multi-year highs (4.7% on US10Y), signaling sustained rate hike fears. The Fed’s tightening stance is priced in, creating a drag on risk assets.</li>
-            <li>**Key Levels:** Watch for a breakout above 5.0% on the US10Y. A drop below 4.5% could signal a temporary risk-on rally.</li>
-            <li>**Narrative:** **Vault Lock:** The cost of capital remains the primary headwind for corporate earnings and valuations.</li>
+            <li>**S&P 500:** Consolidation near all-time highs (AH). Focus on tech earnings next week.</li>
+            <li>**DXY (Dollar Index):** Holding above critical support at 104. Bearish divergence building.</li>
+            <li>**Oil (WTI):** Range-bound trading between $75-$80. Inventory draw was less than anticipated.</li>
+            <li>**Gold:** Strong bullish momentum, targeting $2100. Key breakout confirmed.</li>
           </ul>
         </div>
-
+        
         <div class="rv-decode-card">
-          <h3>Crypto: BTC Consolidation & Altcoin Rotation</h3>
+          <h3>Crypto Vault Check</h3>
           <ul>
-            <li>**Summary:** Bitcoin is trading tightly between $28,000 and $30,000 after the recent ETF narrative hype faded. ETH is showing relative weakness. Capital is rotating into a select group of mid-cap assets.</li>
-            <li>**Key Levels:** BTC support at $27,800. Resistance at $30,500. A break above $31,000 is needed for next major leg up.</li>
-            <li>**Narrative:** **Rubik Cube:** The complexity of the current cycle requires precise analysis of on-chain data to identify rotation patterns.</li>
+            <li>**Bitcoin:** Healthy correction to $65k, holding 20W EMA support. Volume thinning slightly.</li>
+            <li>**Ethereum:** Outperforming BTC in the short term. Key level: $3800.</li>
+            <li>**DeFi:** Sector rotation visible. Emphasis shifting to Real-World Asset (RWA) protocols.</li>
+            <li>**Risk Signal:** Funding rates normalizing. Expect volatility around CPI data release.</li>
           </ul>
         </div>
+      </section>
 
-        <div class="rv-decode-card">
-          <h3>Stocks: Tech vs. Value</h3>
-          <ul>
-            <li>**Summary:** The Magnificent 7 stocks continue to outperform, masking weakness in broader market indices (e.g., small caps). Earnings reports show resilience in AI/Cloud, but caution in consumer discretionary.</li>
-            <li>**Key Levels:** S&P 500 must hold 4,200. Nasdaq 100 needs to defend 14,500.</li>
-            <li>**Narrative:** **Key Insight:** Divergence between sectors indicates a highly selective, risk-off market environment.</li>
-          </ul>
-        </section>
-
-        <div class="rv-decode-card">
-          <h3>Economic Calendar: Focus on FOMC Minutes</h3>
-          <div class="tradingview-widget-container">
-            <div class="tradingview-widget-container__widget"></div>
-            <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-events.js" async>
-            {
-              "colorTheme": "dark",
-              "is4h": false,
-              "is_transparent": true,
-              "width": "100%",
-              "height": "400",
-              "locale": "en",
-              "importanceFilter": "0,1",
-              "currencyFilter": "USD"
-            }
-            </script>
+      <section class="rv-roadmap">
+        <h2>Our Core Features</h2>
+        <div class="rv-feature-grid">
+          <div class="rv-feature-card">
+            <h3>🧭 Macro & Forex Insights</h3>
+            <p>Data-driven analysis on central bank policies, inflation, and global currency pairs.</p>
+          </div>
+          <div class="rv-feature-card">
+            <h3>📈 Technical Decodes</h3>
+            <p>Clear, unbiased technical analysis (TA) for critical entry and exit points in all asset classes.</p>
+          </div>
+          <div class="rv-feature-card">
+            <h3>🔒 Crypto Security Focus</h3>
+            <p>Beyond trading—insights into blockchain security, DeFi risks, and institutional adoption.</p>
           </div>
         </div>
-      </div>
-    </section>
+      </section>
 
-    <section id="roadmap" class="rv-roadmap">
-      <h2>How RubikVault Helps You Decode the Markets</h2>
-
-      <div class="rv-feature-grid">
-        <div class="rv-feature-card">
-          <h3>📊 Data Aggregation</h3>
-          <p>We combine key metrics from Macro, Crypto, Equities, and Commodities into one coherent daily narrative, saving you hours of research.</p>
+      <section class="rv-roadmap">
+        <h2>Follow Our Content Vault</h2>
+        <div class="rv-follow-grid">
+          <a
+            class="rv-follow-card"
+            href="https://www.youtube.com/@RubikVault"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <h3>YouTube</h3>
+            <p>Deep-dive video analysis and weekly market reviews.</p>
+          </a>
+          <a
+            class="rv-follow-card"
+            href="https://x.com/RubikVault"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <h3>X / Twitter</h3>
+            <p>Short updates, charts and threads.</p>
+          </a>
+          <a
+            class="rv-follow-card"
+            href="https://www.tiktok.com/@rubikvault"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <h3>TikTok</h3>
+            <p>Bite-sized clips and summaries.</p>
+          </a>
+          <a
+            class="rv-follow-card"
+            href="https://www.instagram.com/rubikvault"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <h3>Instagram</h3>
+            <p>Carousels and visual explainers.</p>
+          </a>
         </div>
-        <div class="rv-feature-card">
-          <h3>🔑 Key Levels Identification</h3>
-          <p>Highlighting critical price levels and technical zones (Rubik’s Edges) that define the short-term market bias and potential moves.</p>
-        </div>
-        <div class="rv-feature-card">
-          <h3>🛡️ Risk Mitigation Focus</h3>
-          <p>Emphasis on identifying major risk factors (Vault Locks) and structural shifts that could threaten portfolios.</p>
-        </div>
-      </div>
-    </section>
-
-    <section id="follow" class="rv-roadmap">
-      <h2>Follow RubikVault on Socials</h2>
-
-      <div class="rv-follow-grid">
-        <a class="rv-follow-card" href="https://www.youtube.com/@RubikVault" target="_blank" rel="noopener noreferrer">
-          <h3>YouTube</h3>
-          <p>Deep dives, dashboards and walkthroughs.</p>
-        </a>
-        <a
-          class="rv-follow-card"
-          href="https://x.com/RubikVault"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h3>X</h3>
-          <p>Short updates, charts and threads.</p>
-        </a>
-        <a
-          class="rv-follow-card"
-          href="https://www.tiktok.com/@rubikvault"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h3>TikTok</h3>
-          <p>Bite-sized clips and summaries.</p>
-        </a>
-        <a
-          class="rv-follow-card"
-          href="https://www.instagram.com/rubikvault"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h3>Instagram</h3>
-          <p>Carousels and visual explainers.</p>
-        </a>
-      </div>
-    </section>
+      </section>
+    </div>
   </main>
 
   <footer class="rv-footer">
     <div class="rv-footer-top">
       <div class="rv-logo rv-footer-logo">
         <div class="rv-logo-mark" aria-hidden="true">
-          <div class="rv-css-logo">
-            <div class="cube-face cube-face-a"></div>
-            <div class="cube-face cube-face-b"></div>
-            <div class="cube-lock">🗝️</div>
-          </div>
-          </div>
+          <svg viewBox="0 0 50 50" xmlns="http://www.w3.org/2000/svg" class="rv-new-logo">
+            <defs>
+              <filter id="rv-glow-footer">
+                <feGaussianBlur in="SourceGraphic" stdDeviation="1.5" result="blur" />
+                <feFlood flood-color="var(--rv-accent)" flood-opacity="0.6" result="color"/>
+                <feComposite in="color" in2="blur" operator="in" result="glow1"/>
+                <feMerge>
+                  <feMergeNode in="glow1"/>
+                  <feMergeNode in="SourceGraphic"/>
+                </feMerge>
+              </filter>
+            </defs>
+          
+            <circle cx="25" cy="25" r="22" fill="#0c1122" stroke="#1f2937" stroke-width="1"/>
+          
+            <circle cx="25" cy="25" r="20" fill="none" stroke="var(--rv-accent)" stroke-width="0.5" filter="url(#rv-glow-footer)" opacity="0.8"/>
+            
+            <g transform="translate(13, 13)">
+              <g transform="scale(0.8) translate(5, 5)">
+                <path d="M10 0 L20 5 L20 15 L10 10 Z" fill="#f97316" stroke="#fff" stroke-width="0.2" opacity="0.9"/>
+                <path d="M10 0 L0 5 L0 15 L10 10 Z" fill="#0ea5e9" stroke="#fff" stroke-width="0.2" opacity="0.9"/>
+                <path d="M0 15 L10 20 L20 15 L10 10 Z" fill="#22c55e" stroke="#fff" stroke-width="0.2" opacity="0.9"/>
+          
+                <path d="M10 10 L 15 12.5 L 10 15 L 5 12.5 Z" fill="#ffffff" opacity="0.4"/>
+              </g>
+            </g>
+          </svg>
+        </div>
         <span class="rv-logo-text">RUBIKVAULT</span>
       </div>
       <div class="rv-footer-links">
