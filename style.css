@@ -1,4 +1,7 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
 :root {
+  /* Hauptfarben */
   --rv-bg: #050814;
   --rv-bg-alt: #0b1020;
   --rv-accent: #00e5ff;
@@ -6,11 +9,35 @@
   --rv-text: #e5e7eb;
   --rv-text-muted: #9ca3af;
   --rv-border: #1f2937;
-  --rv-danger: #f97373;
+  --rv-danger: #ef4444;
+  --rv-success: #10b981;
+  
+  /* Ergänzte Variablen für Widgets & Konsistenz */
+  --color-text-light: #f3f4f6; 
+  --color-card-bg: rgba(15, 23, 42, 0.6);
+  --color-border: rgba(148, 163, 184, 0.15);
+
+  /* Layout */
   --rv-radius-lg: 18px;
   --rv-radius-sm: 10px;
   --rv-shadow-soft: 0 18px 40px rgba(0, 0, 0, 0.45);
   --rv-max-width: 1080px;
+}
+
+/* Custom Scrollbar für Webkit (Chrome, Safari, Edge) */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: var(--rv-bg);
+}
+::-webkit-scrollbar-thumb {
+  background: #374151;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #4b5563;
 }
 
 /* Basic reset */
@@ -26,7 +53,9 @@ body {
   padding: 0;
   background: radial-gradient(circle at top, #101827 0, #050814 45%, #02030a 100%);
   color: var(--rv-text);
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Inter", sans-serif;
+  font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  line-height: 1.5;
+  scroll-behavior: smooth;
 }
 
 body {
@@ -36,7 +65,7 @@ body {
 }
 
 /* =========================================================
-   HEADER LAYOUT (LOCKED - Tabu Zone)
+   HEADER
    ========================================================= */
 
 .rv-header {
@@ -45,9 +74,11 @@ body {
   left: 0;
   right: 0;
   z-index: 50;
-  background: rgba(5, 8, 20, 0.55);
-  backdrop-filter: blur(10px);
+  background: rgba(5, 8, 20, 0.7);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   border-bottom: 1px solid rgba(15, 23, 42, 0.65);
+  transition: background 0.3s ease;
 }
 
 .rv-header-inner {
@@ -61,12 +92,6 @@ body {
   gap: 14px;
 }
 
-/* Zustand beim Scrollen (wird von script.js gesetzt) */
-.rv-header-scrolled {
-  background: rgba(5, 8, 20, 0.95);
-  border-bottom: 1px solid rgba(15, 23, 42, 0.9);
-}
-
 .rv-logo {
   display: flex;
   align-items: center;
@@ -74,7 +99,6 @@ body {
   text-decoration: none;
 }
 
-/* Container für das runde SVG-Logo */
 .rv-logo-mark {
   display: inline-flex;
   align-items: center;
@@ -86,7 +110,6 @@ body {
   overflow: hidden;
 }
 
-/* SVG skaliert sauber in den Container */
 .rv-logo-mark svg {
   width: 100%;
   height: 100%;
@@ -94,39 +117,39 @@ body {
 }
 
 .rv-logo-text {
-  font-weight: 600;
-  letter-spacing: 0.06em;
+  font-weight: 700;
+  letter-spacing: 0.05em;
   text-transform: uppercase;
-  font-size: 13px;
+  font-size: 14px;
   color: #f9fafb;
 }
 
 .rv-nav {
   display: flex;
-  gap: 12px;
+  gap: 8px;
   font-size: 13px;
 }
 
-.rv-nav a {
+.rv-nav-link {
   color: var(--rv-text-muted);
   text-decoration: none;
-  padding: 6px 10px;
+  padding: 6px 12px;
   border-radius: 999px;
   border: 1px solid transparent;
-  transition: 0.15s ease;
+  transition: all 0.2s ease;
+  font-weight: 500;
 }
 
-.rv-nav a:hover {
+.rv-nav-link:hover {
   border-color: var(--rv-accent-soft);
   color: var(--rv-accent);
   background: rgba(15, 23, 42, 0.8);
 }
 
 /* =========================================================
-   LAYOUT & BASE COMPONENTS (LOCKED)
+   LAYOUT COMPONENTS
    ========================================================= */
 
-/* Layout containers */
 .rv-main,
 .rv-footer,
 .rv-content-page {
@@ -136,10 +159,9 @@ body {
   padding: 0 16px;
 }
 
-/* Make room for fixed header */
 .rv-main {
   flex: 1;
-  padding-top: 92px; /* critical: prevents header overlap */
+  padding-top: 92px;
   padding-bottom: 40px;
 }
 
@@ -156,29 +178,35 @@ body {
   padding: 24px 22px;
   border-radius: var(--rv-radius-lg);
   background:
-    radial-gradient(circle at top left, rgba(0, 229, 255, 0.12), transparent 60%),
+    radial-gradient(circle at top left, rgba(0, 229, 255, 0.08), transparent 60%),
     linear-gradient(135deg, rgba(15, 23, 42, 0.95), rgba(2, 6, 23, 0.98));
   box-shadow: var(--rv-shadow-soft);
-  border: 1px solid rgba(148, 163, 184, 0.22);
+  border: 1px solid rgba(148, 163, 184, 0.15);
+  position: relative;
 }
 
 .rv-hero h1 {
   margin: 0 0 10px;
   font-size: 38px;
-  letter-spacing: -0.03em;
+  letter-spacing: -0.02em;
+  font-weight: 700;
+  background: linear-gradient(to right, #fff, #94a3b8);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
 }
 
 .rv-hero p {
-  margin: 0 0 16px;
+  margin: 0 0 20px;
   font-size: 15px;
   line-height: 1.6;
   color: var(--rv-text-muted);
+  max-width: 90%;
 }
 
 .rv-hero-actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: 12px;
   margin-top: 4px;
 }
 
@@ -187,36 +215,58 @@ body {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 9px 16px;
+  padding: 10px 18px;
   border-radius: 999px;
   font-size: 14px;
   text-decoration: none;
   cursor: pointer;
   border: 1px solid transparent;
-  transition: 0.15s ease;
+  transition: all 0.2s ease;
+  font-weight: 500;
 }
 
 .rv-btn-primary {
   background: linear-gradient(135deg, #00e5ff, #4f46e5);
   color: #020617;
   font-weight: 600;
+  box-shadow: 0 4px 12px rgba(0, 229, 255, 0.2);
 }
 
 .rv-btn-primary:hover {
-  filter: brightness(1.08);
+  filter: brightness(1.1);
+  transform: translateY(-1px);
 }
 
 .rv-btn-secondary {
-  background: transparent;
-  border-color: rgba(148, 163, 184, 0.5);
+  background: rgba(255, 255, 255, 0.03);
+  border-color: rgba(148, 163, 184, 0.3);
   color: var(--rv-text-muted);
 }
 
 .rv-btn-secondary:hover {
   border-color: var(--rv-accent);
   color: var(--rv-accent);
+  background: rgba(0, 229, 255, 0.05);
 }
 
+/* Feature: Market Status Tag */
+.rv-status-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 4px 10px;
+  border-radius: 6px;
+  background: rgba(0,0,0,0.3);
+  border: 1px solid var(--rv-border);
+  margin-bottom: 12px;
+  color: var(--rv-text-muted);
+}
+
+/* Hero Side */
 .rv-hero-side {
   display: flex;
   flex-direction: column;
@@ -227,107 +277,109 @@ body {
   align-self: flex-start;
   font-size: 11px;
   text-transform: uppercase;
-  letter-spacing: 0.14em;
-  padding: 5px 10px;
+  letter-spacing: 0.1em;
+  padding: 4px 10px;
   border-radius: 999px;
   border: 1px solid rgba(148, 163, 184, 0.4);
   color: var(--rv-text-muted);
+  font-weight: 600;
 }
 
 /* Cards */
 .rv-card {
   flex: 1;
-  padding: 18px 18px 20px;
+  padding: 20px;
   border-radius: var(--rv-radius-lg);
   background: linear-gradient(145deg, rgba(15, 23, 42, 0.96), rgba(3, 7, 18, 0.98));
-  border: 1px solid rgba(31, 41, 55, 0.9);
-  box-shadow: 0 16px 35px rgba(0, 0, 0, 0.65);
+  border: 1px solid rgba(31, 41, 55, 0.8);
+  box-shadow: 0 16px 35px rgba(0, 0, 0, 0.5);
 }
 
 .rv-card h2 {
-  margin: 0 0 8px;
+  margin: 0 0 6px;
   font-size: 18px;
+  font-weight: 600;
 }
 
 .rv-card-note {
   font-size: 12px;
   color: #6b7280;
-  margin: 0 0 10px;
+  margin: 0 0 12px;
 }
 
-.rv-divider {
-  height: 1px;
-  background: rgba(148, 163, 184, 0.18);
-  margin: 14px 0;
-}
-
-/* Compact ticker (FEATURE styling) */
+/* Compact Ticker */
 .rv-compact-ticker {
-  margin-top: 16px;
-  padding: 10px 14px;
-  min-height: 40px;
+  margin-top: 20px;
+  padding: 12px 14px;
+  min-height: 44px;
   border-radius: var(--rv-radius-sm);
-  background: rgba(0, 229, 255, 0.05);
+  background: rgba(0, 229, 255, 0.03);
   border: 1px dashed rgba(0, 229, 255, 0.2);
   color: var(--rv-accent);
-  font-size: 12px;
+  font-size: 13px;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
-.rv-compact-ticker span {
-  font-weight: 600;
+.rv-ticker-item { margin: 0 8px; }
+.rv-ticker-change.success { color: var(--rv-success); margin-left: 4px; }
+.rv-ticker-change.danger { color: var(--rv-danger); margin-left: 4px; }
+.rv-ticker-category { color: var(--rv-text-muted); margin-right: 4px; font-size: 0.9em; }
+
+/* F&G Styles */
+.rv-fng-group {
+    display: grid;
+    gap: 20px;
+    margin-top: 24px;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
 }
 
-/* FEATURE 5: Fear & Greed Visualisierung Styles */
 .rv-fng {
-  margin-top: 10px;
-  padding: 12px 14px;
+  padding: 16px;
   border-radius: var(--rv-radius-sm);
-  border: 1px solid rgba(148, 163, 184, 0.22);
-  background: rgba(15, 23, 42, 0.55);
+  border: 1px solid var(--color-border);
+  background: var(--color-card-bg);
   color: var(--rv-text);
   font-size: 13px;
 }
 
+.rv-fng h3 {
+    margin: 0 0 12px;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--color-text-light);
+}
+
 .rv-fng-text {
-  font-size: 14px;
-  margin-bottom: 10px;
-  font-weight: 500;
+  font-size: 15px;
+  margin-bottom: 8px;
+  font-weight: 600;
 }
 
 .rv-fng-bar-container {
-  height: 10px;
-  /* Basis-Gradient von Rot (Extreme Fear) zu Grün (Extreme Greed) */
+  height: 8px;
   background: linear-gradient(to right, #ef4444, #f97316, #fbbf24, #34d399, #10b981);
   border-radius: 999px;
   position: relative;
   margin-bottom: 8px;
-  overflow: hidden; 
+  opacity: 0.9;
 }
 
-/* Die Bar, die die Farbe des aktuellen Wertes anzeigt. Wird primär per JS gefüllt. */
 .rv-fng-bar {
-  position: absolute;
-  top: 0;
-  left: 0;
-  height: 100%;
-  background-color: transparent; /* Farbe wird von JS gesetzt */
-  transition: width 0.5s ease-out;
+  /* Logic driven by JS width */
 }
 
-/* Der Pointer, der den Wert auf der Bar markiert */
 .rv-fng-pointer {
   position: absolute;
   top: 50%;
   transform: translateY(-50%);
-  width: 12px;
-  height: 12px;
+  width: 14px;
+  height: 14px;
   border-radius: 50%;
-  background-color: var(--rv-text); /* Weißer Pointer */
-  border: 2px solid var(--rv-bg); /* Dunkler Rand für Sichtbarkeit */
-  box-shadow: 0 0 8px rgba(0, 0, 0, 0.5);
+  background-color: #fff;
+  border: 3px solid var(--rv-bg-alt);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.5);
   transition: left 0.5s ease-out;
 }
 
@@ -336,126 +388,113 @@ body {
   justify-content: space-between;
   font-size: 10px;
   color: var(--rv-text-muted);
+  font-weight: 500;
 }
-
-.rv-fng-labels .danger { color: #ef4444; font-weight: 600; }
-.rv-fng-labels .success { color: #10b981; font-weight: 600; }
-
 
 /* Sections */
 .rv-section {
-  margin-top: 32px;
-  padding: 22px 20px;
+  margin-top: 40px;
+  padding: 24px;
   border-radius: var(--rv-radius-lg);
-  background: rgba(7, 13, 29, 0.9);
-  border: 1px solid rgba(31, 41, 55, 0.9);
+  background: rgba(7, 13, 29, 0.8);
+  border: 1px solid rgba(31, 41, 55, 0.8);
   box-shadow: var(--rv-shadow-soft);
 }
 
 .rv-section h2 {
-  margin: 0 0 10px;
-  font-size: 20px;
+  margin: 0 0 8px;
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--color-text-light);
 }
 
 .rv-section p {
-  margin: 0 0 10px;
+  margin: 0 0 16px;
   font-size: 14px;
   color: var(--rv-text-muted);
+}
+
+/* TradingView Boxen */
+.rv-tv-box {
+  border-radius: var(--rv-radius-sm);
+  border: 1px solid rgba(148, 163, 184, 0.1);
+  overflow: hidden;
+  background: #020617; 
 }
 
 /* Metric grid */
 .rv-metric-grid {
-  margin-top: 14px;
+  margin-top: 20px;
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
 }
 
 .rv-metric-card {
   display: block;
-  padding: 16px;
+  padding: 20px;
   border-radius: var(--rv-radius-sm);
-  background: radial-gradient(circle at top left, rgba(79, 70, 229, 0.1), rgba(15, 23, 42, 0.9));
-  border: 1px solid rgba(79, 70, 229, 0.4);
+  background: radial-gradient(circle at top left, rgba(79, 70, 229, 0.08), rgba(15, 23, 42, 0.8));
+  border: 1px solid rgba(79, 70, 229, 0.2);
   color: var(--rv-text);
   text-decoration: none;
-  transition: 0.15s ease;
-}
-
-.rv-metric-card h4 {
-  margin: 0 0 4px;
-  font-size: 14px;
-  color: #a5b4fc;
-}
-
-.rv-metric-card p {
-  margin: 0;
-  font-size: 12px;
-  color: var(--rv-text-muted);
+  transition: all 0.2s ease;
 }
 
 .rv-metric-card:hover {
   border-color: #4f46e5;
-  transform: translateY(-1px);
+  background: rgba(79, 70, 229, 0.15);
+  transform: translateY(-2px);
 }
 
-/* TradingView widget container styling (FEATURE styling) */
-.rv-tv-box {
-  margin-top: 14px;
-  border-radius: var(--rv-radius-lg);
-  border: 1px solid rgba(148, 163, 184, 0.18);
-  overflow: hidden;
-  /* TradingView Widgets nutzen oft iframes, daher benötigen wir einen definierten Hintergrund */
-  background: rgba(2, 6, 23, 0.95); 
+.rv-metric-card h4 {
+  margin: 0 0 6px;
+  font-size: 15px;
+  color: #a5b4fc;
 }
 
 /* Follow grid */
-.rv-follow {
-  margin-bottom: 30px;
-}
-
+.rv-follow { margin-bottom: 40px; }
 .rv-follow-grid {
-  margin-top: 14px;
+  margin-top: 20px;
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 12px;
+  gap: 16px;
 }
 
 .rv-follow-card {
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  padding: 12px 12px 14px;
+  padding: 16px;
   border-radius: var(--rv-radius-sm);
   border: 1px solid rgba(31, 41, 55, 0.9);
-  background: radial-gradient(circle at top left, rgba(0, 229, 255, 0.07), rgba(15, 23, 42, 0.95));
+  background: radial-gradient(circle at top left, rgba(0, 229, 255, 0.04), rgba(15, 23, 42, 0.95));
   color: var(--rv-text);
   text-decoration: none;
   font-size: 13px;
-  transition: 0.15s ease;
-}
-
-.rv-follow-card h3 {
-  margin: 0 0 6px;
-  font-size: 14px;
-}
-
-.rv-follow-card p {
-  margin: 0;
-  color: var(--rv-text-muted);
+  transition: all 0.2s ease;
 }
 
 .rv-follow-card:hover {
   border-color: var(--rv-accent);
-  transform: translateY(-1px);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
 }
 
-/* Footer (LOCKED) */
+.rv-follow-card h3 {
+  margin: 0 0 8px;
+  font-size: 15px;
+  color: var(--color-text-light);
+}
+
+/* Footer */
 .rv-footer {
-  padding: 18px 16px 24px;
+  padding: 30px 16px 40px;
   font-size: 12px;
   color: var(--rv-text-muted);
-  border-top: 1px solid rgba(15, 23, 42, 0.9);
+  border-top: 1px solid rgba(31, 41, 55, 0.8);
+  margin-top: auto;
 }
 
 .rv-footer-top {
@@ -463,135 +502,60 @@ body {
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  margin-bottom: 10px;
+  margin-bottom: 12px;
 }
 
-.rv-footer-brand {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.rv-footer-links {
-  display: flex;
-  gap: 10px;
-}
-
-.rv-footer-links a {
-  color: var(--rv-text-muted);
-  text-decoration: none;
-}
-
-.rv-footer-links a:hover {
-  color: var(--rv-accent);
-}
-
-.rv-footer-disclaimer {
-  margin: 0 0 4px;
-}
-
-.rv-footer-copy {
-  margin: 0;
-  color: #4b5563;
-}
-
-/* Content pages (imprint/privacy/disclaimer) - LOCKED */
-.rv-content-page {
-  flex: 1;
-  padding-top: 110px; /* header space */
-  padding-bottom: 80px;
-  width: 100%;
-  max-width: var(--rv-max-width);
-  margin: 0 auto;
-  padding-left: 16px;
-  padding-right: 16px;
-}
-
-.rv-content-page h1 {
-  font-size: 32px;
-  margin-bottom: 20px;
-}
-
-.rv-content-page h2 {
-  font-size: 24px;
-  margin-top: 30px;
-  margin-bottom: 10px;
-  color: var(--rv-accent);
-}
-
-.rv-content-page p {
-  margin: 0 0 1em;
-  line-height: 1.6;
-}
-
-.rv-content-page strong {
-  font-weight: 700;
+.rv-footer-brand span {
+  font-weight: 600;
   color: var(--rv-text);
 }
 
-/* Responsive (LOCKED) */
-@media (max-width: 880px) {
-  .rv-hero {
-    grid-template-columns: minmax(0, 1fr);
-  }
+.rv-footer-links { display: flex; gap: 16px; }
+.rv-footer-links a {
+  color: var(--rv-text-muted);
+  text-decoration: none;
+  transition: color 0.2s;
+}
+.rv-footer-links a:hover { color: var(--rv-accent); }
 
-  .rv-follow-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
+/* Content Pages */
+.rv-content-page {
+  flex: 1;
+  padding-top: 120px;
+  padding-bottom: 80px;
+}
+.rv-content-page h1 { font-size: 32px; font-weight: 700; margin-bottom: 24px; color: var(--color-text-light); }
+.rv-content-page h2 { font-size: 20px; margin-top: 32px; margin-bottom: 12px; color: var(--rv-accent); }
+.rv-content-page p { color: #d1d5db; }
+
+/* Responsive */
+@media (max-width: 880px) {
+  .rv-hero { grid-template-columns: 1fr; }
+  .rv-follow-grid { grid-template-columns: repeat(2, 1fr); }
 }
 
 @media (max-width: 600px) {
   .rv-header-inner {
     flex-direction: column;
     align-items: flex-start;
-    gap: 10px;
+    gap: 12px;
   }
 
+  /* Scrollbare Navigation auf Handys */
   .rv-nav {
-    flex-wrap: wrap;
-    justify-content: flex-start;
+    width: 100%;
+    overflow-x: auto;
+    padding-bottom: 4px;
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  .rv-nav-link {
+    flex-shrink: 0;
+    white-space: nowrap;
+    background: rgba(255,255,255,0.03);
   }
 
-  .rv-metric-grid {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .rv-follow-grid {
-    grid-template-columns: minmax(0, 1fr);
-  }
+  .rv-metric-grid, .rv-follow-grid { grid-template-columns: 1fr; }
+  
+  .rv-hero h1 { font-size: 30px; }
 }
-
-/* --- Feature 5: F&G Index Grouping --- */
-.rv-fng-group {
-    display: grid;
-    gap: 20px;
-    margin-top: 30px;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-}
-
-.rv-fng h3 {
-    font-size: 1.2rem;
-    font-weight: 600;
-    margin-bottom: 10px;
-    color: var(--color-text-light); /* Helle Textfarbe */
-}
-
-/* Anpassung des F&G Containers für Stock Widget */
-.rv-fng-stock {
-    background: var(--color-card-bg); /* Gleicher Hintergrund wie normale Karten */
-    border: 1px solid var(--color-border);
-    padding: 20px;
-    border-radius: 12px;
-}
-
-.rv-fng-stock .rv-tv-box {
-    margin: 10px 0 0 0;
-    padding: 0;
-    border: none; /* TradingView-Box-Stil entfernen, da es in der Karte ist */
-}
-
-/* Sicherstellen, dass der neue große Ticker-Abschnitt gut aussieht */
-.rv-large-ticker .rv-tv-box {
-    height: 120px !important;
-}
-
