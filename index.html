@@ -2,293 +2,232 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>RubikVault – Decode the Markets</title>
+  <title>RubikVault – Design Lab</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="description" content="RubikVault – calm, data-driven multi-asset market insights. Educational only." />
+  <meta name="description" content="Financial Dashboard Design Prototype" />
   <meta name="theme-color" content="#050814">
-  
-  <!-- Fonts Preloading -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
+
   <header class="rv-header" role="banner">
     <div class="rv-header-inner">
       <a href="index.html" class="rv-logo">
         <span class="rv-logo-mark">
           <svg viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
-            <defs>
-              <linearGradient id="rv-vault-door-5" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stop-color="#111827" />
-                <stop offset="100%" stop-color="#020617" />
-              </linearGradient>
-              <radialGradient id="rv-vault-glow-5" cx="50%" cy="50%" r="60%">
-                <stop offset="0%" stop-color="#38bdf8" stop-opacity="0.9" />
-                <stop offset="100%" stop-color="#1d4ed8" stop-opacity="0" />
-              </radialGradient>
-            </defs>
-            <rect x="80" y="80" width="352" height="352" rx="48" fill="url(#rv-vault-door-5)" stroke="#1f2937" stroke-width="8" />
-            <circle cx="120" cy="120" r="8" fill="#64748b" />
-            <circle cx="392" cy="120" r="8" fill="#64748b" />
-            <circle cx="120" cy="392" r="8" fill="#64748b" />
-            <circle cx="392" cy="392" r="8" fill="#64748b" />
-            <circle cx="256" cy="256" r="130" fill="none" stroke="url(#rv-vault-glow-5)" stroke-width="14" />
-            <g transform="translate(186,186)">
-              <rect x="0" y="0" width="40" height="40" rx="6" fill="#f97316" />
-              <rect x="44" y="0" width="40" height="40" rx="6" fill="#0ea5e9" />
-              <rect x="88" y="0" width="40" height="40" rx="6" fill="#22c55e" />
-              <rect x="0" y="44" width="40" height="40" rx="6" fill="#facc15" />
-              <rect x="44" y="44" width="40" height="40" rx="6" fill="#ef4444" />
-              <rect x="88" y="44" width="40" height="40" rx="6" fill="#6366f1" />
-              <rect x="0" y="88" width="40" height="40" rx="6" fill="#22c55e" />
-              <rect x="44" y="88" width="40" height="40" rx="6" fill="#0ea5e9" />
-              <rect x="88" y="88" width="40" height="40" rx="6" fill="#f97316" />
-            </g>
+             <rect x="80" y="80" width="352" height="352" rx="48" fill="#111827" stroke="#1f2937" stroke-width="8" />
+             <circle cx="256" cy="256" r="130" fill="none" stroke="#38bdf8" stroke-width="14" />
           </svg>
         </span>
         <span class="rv-logo-text">Rubik Vault</span>
       </a>
-
-      <nav class="rv-nav">
-        <a class="rv-nav-link" href="https://www.youtube.com/@RubikVault" target="_blank">YouTube</a>
-        <a class="rv-nav-link" href="https://x.com/RubikVault" target="_blank">X</a>
-        <a class="rv-nav-link" href="#" target="_blank">TikTok</a>
-        <a class="rv-nav-link" href="#" target="_blank">Insta</a>
-      </nav>
+      <div id="rv-ticker-btc" style="font-size:12px; font-weight:600;">Loading BTC...</div>
     </div>
   </header>
 
   <main class="rv-main">
+    
+    <!-- HEADER / STATUS -->
     <section class="rv-hero">
-      <div class="rv-hero-content">
-        <!-- NEW FEATURE: Market Status -->
         <div id="rv-market-status" class="rv-status-tag">
-            <span id="rv-market-status-dot" style="font-size:1.2em; line-height:0;">●</span>
-            <span id="rv-market-status-text">Loading...</span>
+            <span id="rv-market-status-dot">●</span>
+            <span id="rv-market-status-text">Checking Status...</span>
         </div>
+        <h1>Design Lab</h1>
+        <p>Alle Features aktiv. Performance optimiert durch Lazy Loading.</p>
+    </section>
 
-        <h1>Decode the Markets.</h1>
-        <p>
-          RubikVault is a one-person research project focusing on stocks, crypto, macro
-          and commodities – calm, data-driven and educational only.
-        </p>
-        <div class="rv-hero-actions">
-          <a class="rv-btn-primary" href="https://www.youtube.com/@RubikVault" target="_blank">
-            Watch on YouTube
-          </a>
-          <a class="rv-btn-secondary" href="https://x.com/RubikVault" target="_blank">
-            Follow on X
-          </a>
-        </div>
-        
-        <!-- Live JS Ticker (Crypto only) -->
-        <div class="rv-compact-ticker" id="rv-live-ticker">
-            Initializing market data...
-        </div>
-        
-        <!-- F&G Group -->
-        <div class="rv-fng-group">
-            <div class="rv-fng" id="rv-fng">
-                <h3>Crypto Fear & Greed</h3>
-                <div class="rv-fng-text" id="rv-fng-value-text">Loading...</div>
-                <div class="rv-fng-bar-container">
-                    <div class="rv-fng-bar" id="rv-fng-bar" style="width: 0%;"></div>
-                    <div class="rv-fng-pointer" id="rv-fng-pointer" style="left: 0%;"></div>
-                </div>
-                <div class="rv-fng-labels">
-                    <span class="danger">Fear (0)</span>
-                    <span class="success">Greed (100)</span>
+    <!-- OPTION A: SPARKLINES -->
+    <section class="rv-section">
+        <h2><span class="test-label">Option A</span> Market Glance</h2>
+        <div class="grid-4">
+            <!-- Widget 1: S&P -->
+            <div class="rv-tv-box" style="height: 110px;">
+                <div class="rv-lazy-wrapper">
+                    <div class="rv-lazy-placeholder">Loading S&P...</div>
+                    <template>
+                        <div class="tradingview-widget-container">
+                            <div class="tradingview-widget-container__widget"></div>
+                            <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-mini-symbol-overview.js" async>{"symbol": "FX:SPX500", "width": "100%", "height": "100%", "locale": "en", "dateRange": "12M", "colorTheme": "dark", "isTransparent": true, "autosize": true, "largeChartUrl": ""}</script>
+                        </div>
+                    </template>
                 </div>
             </div>
+            <!-- Widget 2: Nasdaq -->
+            <div class="rv-tv-box" style="height: 110px;">
+                <div class="rv-lazy-wrapper">
+                    <div class="rv-lazy-placeholder">Loading Nasdaq...</div>
+                    <template>
+                        <div class="tradingview-widget-container">
+                            <div class="tradingview-widget-container__widget"></div>
+                            <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-mini-symbol-overview.js" async>{"symbol": "FX:NAS100", "width": "100%", "height": "100%", "locale": "en", "dateRange": "12M", "colorTheme": "dark", "isTransparent": true, "autosize": true, "largeChartUrl": ""}</script>
+                        </div>
+                    </template>
+                </div>
+            </div>
+            <!-- Widget 3: Dow -->
+            <div class="rv-tv-box" style="height: 110px;">
+                <div class="rv-lazy-wrapper">
+                    <div class="rv-lazy-placeholder">Loading Dow...</div>
+                    <template>
+                        <div class="tradingview-widget-container">
+                            <div class="tradingview-widget-container__widget"></div>
+                            <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-mini-symbol-overview.js" async>{"symbol": "FOREXCOM:DJI", "width": "100%", "height": "100%", "locale": "en", "dateRange": "12M", "colorTheme": "dark", "isTransparent": true, "autosize": true, "largeChartUrl": ""}</script>
+                        </div>
+                    </template>
+                </div>
+            </div>
+            <!-- Widget 4: Bitcoin -->
+            <div class="rv-tv-box" style="height: 110px;">
+                <div class="rv-lazy-wrapper">
+                    <div class="rv-lazy-placeholder">Loading BTC...</div>
+                    <template>
+                        <div class="tradingview-widget-container">
+                            <div class="tradingview-widget-container__widget"></div>
+                            <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-mini-symbol-overview.js" async>{"symbol": "BINANCE:BTCUSDT", "width": "100%", "height": "100%", "locale": "en", "dateRange": "12M", "colorTheme": "dark", "isTransparent": true, "autosize": true, "largeChartUrl": ""}</script>
+                        </div>
+                    </template>
+                </div>
+            </div>
+        </div>
+    </section>
 
-            <div class="rv-fng rv-fng-stock">
-                <h3>US Stocks Sentiment</h3>
-                <!-- TradingView Sentiment Placeholder -->
-                <div class="rv-tv-box" style="height: 120px;">
+    <!-- OPTION B: TABS -->
+    <section class="rv-section">
+        <h2><span class="test-label">Option B</span> Overview Tabs</h2>
+        <div class="rv-tv-box" style="height: 400px;">
+            <div class="rv-lazy-wrapper">
+                <div class="rv-lazy-placeholder">Loading Interactive Chart...</div>
+                <template>
                     <div class="tradingview-widget-container">
                         <div class="tradingview-widget-container__widget"></div>
-                        <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-single-line-text.js" async>
-                        {
-                          "symbols": [
-                            {"title": "S&P 500", "proName": "INDEX:SPX"},
-                            {"title": "VIX Index", "proName": "INDEX:VIX"},
-                            {"title": "DXY Index", "proName": "CURRENCYCOM:DXD"}
-                          ],
-                          "isTransparent": true,
-                          "colorTheme": "dark",
-                          "locale": "en"
-                        }
+                        <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-market-overview.js" async>
+                        {"colorTheme": "dark", "dateRange": "12M", "showChart": true, "locale": "en", "width": "100%", "height": "100%", "largeChartUrl": "", "isTransparent": false, "showSymbolLogo": true, "plotLineColorGrowing": "rgba(16, 185, 129, 1)", "plotLineColorFalling": "rgba(239, 68, 68, 1)", "gridLineColor": "rgba(240, 243, 250, 0)", "scaleFontColor": "rgba(209, 212, 219, 1)", "belowLineFillColorGrowing": "rgba(16, 185, 129, 0.12)", "belowLineFillColorFalling": "rgba(239, 68, 68, 0.12)", "symbolActiveColor": "rgba(16, 185, 129, 0.12)", "tabs": [ { "title": "Indices", "symbols": [ { "s": "FOREXCOM:SPXUSD" }, { "s": "FOREXCOM:NSXUSD" }, { "s": "FOREXCOM:DJI" } ] }, { "title": "Commodities", "symbols": [ { "s": "COMEX:GC1!" }, { "s": "NYMEX:CL1!" } ] }, { "title": "Crypto", "symbols": [ { "s": "BINANCE:BTCUSDT" }, { "s": "BINANCE:ETHUSDT" } ] } ]}
                         </script>
                     </div>
+                </template>
+            </div>
+        </div>
+    </section>
+
+    <!-- OPTION C: MOVERS -->
+    <section class="rv-section">
+        <h2><span class="test-label">Option C</span> Top Gainers/Losers</h2>
+        <div class="grid-2">
+            <!-- Gainers -->
+            <div class="rv-tv-box" style="height: 400px;">
+                <div class="rv-lazy-wrapper">
+                    <div class="rv-lazy-placeholder">Loading Gainers...</div>
+                    <template>
+                        <div class="tradingview-widget-container">
+                            <div class="tradingview-widget-container__widget"></div>
+                            <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-hotlists.js" async>{"colorTheme": "dark", "dateRange": "12M", "exchange": "US", "showChart": false, "locale": "en", "width": "100%", "height": "100%", "isTransparent": false, "showSymbolLogo": true, "plotLineColorGrowing": "rgba(16, 185, 129, 1)"}</script>
+                        </div>
+                    </template>
                 </div>
-                <p class="rv-card-note" style="margin-top:10px;">* Proxies: VIX, DXY, SPX</p>
             </div>
-        </div>
-      </div>
-
-      <div class="rv-hero-side">
-        <div class="rv-tag">Live Feed</div>
-        <div class="rv-card">
-          <h2>Global Markets News</h2>
-          <p class="rv-card-note">Real-time headlines via TradingView.</p>
-          <div class="rv-tv-box" style="height: 480px;">
-            <div class="tradingview-widget-container">
-              <div class="tradingview-widget-container__widget"></div>
-              <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-timeline.js" async>
-              {
-                "feedMode": "all_symbols",
-                "isTransparent": false,
-                "colorTheme": "dark",
-                "locale": "en",
-                "width": "100%",
-                "height": "100%",
-                "importanceFilter": "-1,0,1"
-              }
-              </script>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <section class="rv-section rv-large-ticker">
-        <h2>Key Global Market Flows</h2>
-        <p>Indices, Commodities and Bonds at a glance.</p>
-        <div class="rv-tv-box" style="height: 100px; margin-bottom: 24px;">
-            <div class="tradingview-widget-container">
-                <div class="tradingview-widget-container__widget"></div>
-                <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-ticker-tape.js" async>
-                {
-                    "symbols": [
-                        {"proName": "INDEX:SPX", "title": "S&P 500"},
-                        {"proName": "INDEX:NDX", "title": "Nasdaq 100"},
-                        {"proName": "COMEX:GC1!", "title": "Gold"},
-                        {"proName": "NYMEX:CL1!", "title": "Oil (WTI)"},
-                        {"proName": "US10Y", "title": "US 10Y Yield"},
-                        {"proName": "INDEX:N225", "title": "Nikkei 225"}
-                    ],
-                    "showSymbolLogo": true,
-                    "isTransparent": false,
-                    "displayMode": "adaptive",
-                    "colorTheme": "dark",
-                    "locale": "en"
-                }
-                </script>
+            <!-- Losers -->
+            <div class="rv-tv-box" style="height: 400px;">
+                <div class="rv-lazy-wrapper">
+                    <div class="rv-lazy-placeholder">Loading List...</div>
+                    <template>
+                        <div class="tradingview-widget-container">
+                            <div class="tradingview-widget-container__widget"></div>
+                            <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-hotlists.js" async>{"colorTheme": "dark", "dateRange": "12M", "exchange": "US", "showChart": true, "locale": "en", "width": "100%", "height": "100%", "isTransparent": false, "showSymbolLogo": true}</script>
+                        </div>
+                    </template>
+                </div>
             </div>
         </div>
     </section>
 
-    <section class="rv-section rv-economic-calendar">
-      <h2>Global Economic Calendar</h2>
-      <p>Key economic data releases driving market volatility.</p>
-      <div class="rv-tv-box" style="height: 480px;">
-        <div class="tradingview-widget-container">
-          <div class="tradingview-widget-container__widget"></div>
-          <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-events.js" async>
-            {
-            "width": "100%",
-            "height": "100%",
-            "colorTheme": "dark",
-            "isTransparent": true,
-            "locale": "en",
-            "importance": "3",
-            "currencyInfo": "USD,EUR",
-            "border-color": "rgba(31, 41, 55, 0.9)"
-          }
-          </script>
-        </div>
-      </div>
-    </section>
-    
+    <!-- OPTION D: TERMINAL -->
     <section class="rv-section">
-      <h2>Sector Heatmap</h2>
-      <p>S&P 500 Performance</p>
-      <div class="rv-tv-box" style="height: 500px;">
-        <div class="tradingview-widget-container">
-          <div class="tradingview-widget-container__widget"></div>
-          <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-stock-heatmap.js" async>
-          {
-            "exchanges": ["NASDAQ", "NYSE"],
-            "type": "sector",
-            "width": "100%",
-            "height": "100%",
-            "range": "1M",
-            "plotGradient": { "color1": "#10b981", "color2": "#ef4444" },
-            "colorTheme": "dark",
-            "locale": "en",
-            "range_type": "change"
-          }
-          </script>
+        <h2><span class="test-label">Option D</span> Data Terminal</h2>
+        <div class="rv-tv-box" style="height: 500px;">
+            <div class="rv-lazy-wrapper">
+                <div class="rv-lazy-placeholder">Loading Data Terminal...</div>
+                <template>
+                    <div class="tradingview-widget-container">
+                        <div class="tradingview-widget-container__widget"></div>
+                        <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-market-quotes.js" async>
+                        {"width": "100%", "height": "100%", "symbolsGroups": [ { "name": "Global Indices", "symbols": [ { "name": "FOREXCOM:SPXUSD" }, { "name": "FOREXCOM:NSXUSD" }, { "name": "INDEX:DEU40" } ] }, { "name": "Commodities", "symbols": [ { "name": "COMEX:GC1!" }, { "name": "NYMEX:CL1!" } ] }, { "name": "Forex", "symbols": [ { "name": "FX:EURUSD" }, { "name": "FX_IDC:DXY" } ] } ], "showSymbolLogo": true, "isTransparent": false, "colorTheme": "dark", "locale": "en", "backgroundColor": "#131722"}
+                        </script>
+                    </div>
+                </template>
+            </div>
         </div>
-      </div>
     </section>
 
+    <!-- OPTION G: HEATMAP -->
     <section class="rv-section">
-      <h2>Project Scope</h2>
-      <div class="rv-metric-grid">
-        <a class="rv-metric-card" href="#">
-          <h4>Equities & Factors</h4>
-          <p>Indices, sectors, volatility & breadth.</p>
-        </a>
-        <a class="rv-metric-card" href="#">
-          <h4>Crypto & On-chain</h4>
-          <p>BTC/ETH cycles, liquidity & flows.</p>
-        </a>
-        <a class="rv-metric-card" href="#">
-          <h4>Macro & Rates</h4>
-          <p>Yields, inflation & USD liquidity.</p>
-        </a>
-        <a class="rv-metric-card" href="#">
-          <h4>Commodities</h4>
-          <p>Energy & metals as macro context.</p>
-        </a>
-      </div>
+        <h2><span class="test-label">Option G</span> Sector Heatmap</h2>
+        <div class="rv-tv-box" style="height: 600px;">
+            <div class="rv-lazy-wrapper">
+                <div class="rv-lazy-placeholder">Loading Heatmap...</div>
+                <template>
+                    <div class="tradingview-widget-container">
+                        <div class="tradingview-widget-container__widget"></div>
+                        <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-stock-heatmap.js" async>{"exchanges": ["NASDAQ", "NYSE"], "type": "sector", "width": "100%", "height": "100%", "range": "1M", "plotGradient": { "color1": "#10b981", "color2": "#ef4444" }, "colorTheme": "dark", "locale": "en", "range_type": "change"}</script>
+                    </div>
+                </template>
+            </div>
+        </div>
     </section>
 
-    <section class="rv-section rv-follow">
-      <h2>Follow RubikVault</h2>
-      <div class="rv-follow-grid">
-        <a class="rv-follow-card" href="https://www.youtube.com/@RubikVault" target="_blank">
-          <h3>YouTube</h3>
-          <p>Long form analysis.</p>
-        </a>
-        <a class="rv-follow-card" href="https://x.com/RubikVault" target="_blank">
-          <h3>X (Twitter)</h3>
-          <p>Short updates & charts.</p>
-        </a>
-        <a class="rv-follow-card" href="https://www.tiktok.com/@rubikvault" target="_blank">
-          <h3>TikTok</h3>
-          <p>Highlights.</p>
-        </a>
-        <a class="rv-follow-card" href="https://www.instagram.com/rubikvault" target="_blank">
-          <h3>Instagram</h3>
-          <p>Visuals.</p>
-        </a>
-      </div>
-    </section>
+    <!-- OPTION H: DASHBOARD SPLIT -->
+    <div class="rv-dashboard-grid">
+        <div class="rv-dash-main">
+            <section class="rv-section" style="margin-top:0;">
+                <h2><span class="test-label">Option H</span> Global News</h2>
+                <div class="rv-tv-box" style="height: 600px;">
+                    <div class="rv-lazy-wrapper">
+                        <div class="rv-lazy-placeholder">Loading News...</div>
+                        <template>
+                            <div class="tradingview-widget-container">
+                                <div class="tradingview-widget-container__widget"></div>
+                                <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-timeline.js" async>{"feedMode": "all_symbols", "isTransparent": false, "colorTheme": "dark", "locale": "en", "width": "100%", "height": "100%", "importanceFilter": "-1,0,1"}</script>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+            </section>
+        </div>
+        <div class="rv-dash-sidebar">
+            <section class="rv-section" style="margin-top:0;">
+                <h2>Calendar</h2>
+                <div class="rv-tv-box" style="height: 600px;">
+                    <div class="rv-lazy-wrapper">
+                        <div class="rv-lazy-placeholder">Loading Calendar...</div>
+                        <template>
+                            <div class="tradingview-widget-container">
+                                <div class="tradingview-widget-container__widget"></div>
+                                <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-events.js" async>{"width": "100%", "height": "100%", "colorTheme": "dark", "isTransparent": true, "locale": "en", "importance": "3", "currencyInfo": "USD,EUR"}</script>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </div>
+
   </main>
 
-  <footer class="rv-footer" role="contentinfo">
-    <div class="rv-footer-top">
-      <div class="rv-footer-brand">
-        <span>RubikVault</span>
-      </div>
-      <div class="rv-footer-links">
-        <a href="imprint.html">Imprint</a>
-        <a href="privacy.html">Privacy</a>
-        <a href="disclaimer.html">Disclaimer</a>
-      </div>
+  <footer class="rv-footer">
+    <div style="display:flex; justify-content:space-between; flex-wrap:wrap; gap:10px;">
+        <span>© <span id="rv-year"></span> RubikVault</span>
+        <div class="rv-footer-links">
+            <a href="imprint.html">Imprint</a>
+            <a href="privacy.html">Privacy</a>
+            <a href="disclaimer.html">Disclaimer</a>
+        </div>
     </div>
-    <p class="rv-footer-disclaimer">
-      RubikVault provides educational content only and does not offer financial advice.
-    </p>
-    <p class="rv-footer-copy">
-      &copy; <span id="rv-year">2025</span> RubikVault. All rights reserved.
-    </p>
+    <div style="margin-top:10px; opacity:0.6;">Educational content only. No financial advice.</div>
   </footer>
+
   <script src="script.js" defer></script>
 </body>
 </html>
