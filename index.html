@@ -84,18 +84,45 @@
         </div>
         
         <div class="rv-compact-ticker" id="rv-live-ticker">
-            Live ticker initializing...
+            Crypto Ticker initializing...
         </div>
         
-        <div class="rv-fng" id="rv-fng">
-            <div class="rv-fng-text">Fear & Greed Index: <span id="rv-fng-value-text">Initializing...</span></div>
-            <div class="rv-fng-bar-container">
-                <div class="rv-fng-bar" id="rv-fng-bar" style="width: 0%;"></div>
-                <div class="rv-fng-pointer" id="rv-fng-pointer" style="left: 0%;"></div>
+        <div class="rv-fng-group">
+            <div class="rv-fng" id="rv-fng">
+                <h3>Crypto Fear & Greed</h3>
+                <div class="rv-fng-text">Index: <span id="rv-fng-value-text">Initializing...</span></div>
+                <div class="rv-fng-bar-container">
+                    <div class="rv-fng-bar" id="rv-fng-bar" style="width: 0%;"></div>
+                    <div class="rv-fng-pointer" id="rv-fng-pointer" style="left: 0%;"></div>
+                </div>
+                <div class="rv-fng-labels">
+                    <span class="rv-fng-label danger">Extreme Fear (0)</span>
+                    <span class="rv-fng-label success">Extreme Greed (100)</span>
+                </div>
             </div>
-            <div class="rv-fng-labels">
-                <span class="rv-fng-label danger">Extreme Fear (0)</span>
-                <span class="rv-fng-label success">Extreme Greed (100)</span>
+
+            <div class="rv-fng rv-fng-stock">
+                <h3>US Stocks Fear & Greed</h3>
+                <div class="rv-tv-box" style="height: 120px;">
+                    <div class="tradingview-widget-container">
+                        <div class="tradingview-widget-container__widget"></div>
+                        <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-single-line-text.js" async>
+                        {
+                          "symbols": [
+                            {"title": "S&P 500", "proName": "INDEX:SPX"},
+                            {"title": "VIX Index", "proName": "INDEX:VIX"},
+                            {"title": "DXY Index", "proName": "CURRENCYCOM:DXD"}
+                          ],
+                          "isTransparent": true,
+                          "colorTheme": "dark",
+                          "locale": "en"
+                        }
+                        </script>
+                    </div>
+                </div>
+                <p class="rv-card-note">
+                    *Sentiment kann stark von VIX/DXY abweichen. Dies dient nur als Platzhalter.
+                </p>
             </div>
         </div>
 
@@ -104,11 +131,11 @@
       <div class="rv-hero-side">
         <div class="rv-tag">Live Data</div>
         <div class="rv-card">
-          <h2>Latest News & Analysis</h2>
+          <h2>Global Markets News & Analysis</h2>
           <p class="rv-card-note">
-            Real-time headlines from top financial media. Source: TradingView.
+            Real-time headlines from top financial media across stocks, crypto and macro. Source: TradingView.
           </p>
-          <div class="rv-tv-box" style="height: 380px;">
+          <div class="rv-tv-box" style="height: 480px;">
             <div class="tradingview-widget-container">
               <div class="tradingview-widget-container__widget"></div>
               <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-timeline.js" async>
@@ -126,6 +153,41 @@
           </div>
         </div>
       </div>
+    </section>
+
+    <section class="rv-section rv-large-ticker">
+        <h2>Key Global Market Flows</h2>
+        <p>Indices, Commodities and Bonds at a glance (Live Data via TradingView)</p>
+        <div class="rv-tv-box" style="height: 120px; margin-bottom: 24px;">
+            <div class="tradingview-widget-container">
+                <div class="tradingview-widget-container__widget"></div>
+                <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-ticker-tape.js" async>
+                {
+                    "symbols": [
+                        // USA Stocks
+                        {"proName": "INDEX:SPX", "title": "S&P 500"},
+                        {"proName": "INDEX:NDX", "title": "Nasdaq 100"},
+                        {"proName": "INDEX:DJI", "title": "Dow 30"},
+                        // Commodities
+                        {"proName": "COMEX:GC1!", "title": "Gold"},
+                        {"proName": "COMEX:SI1!", "title": "Silver"},
+                        {"proName": "NYMEX:CL1!", "title": "Crude Oil (WTI)"},
+                        {"proName": "NYMEX:NG1!", "title": "Natural Gas"},
+                        // Bonds & Global Indices
+                        {"proName": "US10Y", "title": "US 10YR Yield"},
+                        {"proName": "INDEX:FTSE", "title": "FTSE 100 (UK)"},
+                        {"proName": "INDEX:N225", "title": "Nikkei 225 (JP)"},
+                        {"proName": "INDEX:STOXX50E", "title": "Euro Stoxx 50"}
+                    ],
+                    "showSymbolLogo": true,
+                    "isTransparent": false,
+                    "displayMode": "adaptive",
+                    "colorTheme": "dark",
+                    "locale": "en"
+                }
+                </script>
+            </div>
+        </div>
     </section>
 
     <section class="rv-section rv-economic-calendar">
@@ -153,7 +215,7 @@
     </section>
     
     <section class="rv-section rv-market-heatmap">
-      <h2>Market Heatmap</h2>
+      <h2>US Market Heatmap</h2>
       <p>
         Visualize the performance of major S&P 500 sectors and key stocks at a glance.
       </p>

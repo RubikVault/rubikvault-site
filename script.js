@@ -1,119 +1,132 @@
-/* =========================================================
-   RubikVault - script.js (Vanilla JS, defensive, no breakage)
-   ========================================================= */
+// =======================================================
+// FEATURE: Live Market Ticker & Fear & Greed Index
+// =======================================================
 
-(function () {
-  "use strict";
+// 1. Definition der Assets für den Ticker (getrennt nach Kategorien)
+const ASSETS_TO_TRACK = {
+    'Stocks USA': [
+        'SPX', 'NDX', 'DJI', 'RUT' 
+    ],
+    'Crypto': [
+        'BTC', 'ETH', 'SOL'
+    ],
+    'Commodities & Bonds': [
+        'XAU', 'XAG', 'BRENT', 'NGAS', 'US10Y', 'ESTX50'
+    ]
+};
 
-  // Footer year (safe on all pages)
-  const yearEl = document.getElementById("rv-year");
-  if (yearEl) yearEl.textContent = String(new Date().getFullYear());
+// 2. Funktion zum Abrufen und Aktualisieren des Tickers
+async function updateMarketTicker() {
+    const tickerElement = document.getElementById('rv-live-ticker');
+    if (!tickerElement) return;
 
-  // Header scroll effect (safe - Tabu Zone Logic)
-  const header = document.querySelector(".rv-header");
-  function onScroll() {
-    if (!header) return;
-    if (window.scrollY > 10) header.classList.add("rv-header-scrolled");
-    else header.classList.remove("rv-header-scrolled");
-  }
-  window.addEventListener("scroll", onScroll, { passive: true });
-  onScroll();
+    let outputHtml = '';
 
-  // Live ticker (CoinGecko) – only if element exists (FEATURE)
-  const tickerEl = document.getElementById("rv-live-ticker");
-  async function updateLiveTicker() {
-    if (!tickerEl) return;
+    for (const category in ASSETS_TO_TRACK) {
+        const symbols = ASSETS_TO_TRACK[category];
+        const coingeckoIds = symbols.map(s => s.toLowerCase()); 
+        
+        // Da TradingView-Symbole keine direkten Coingecko-IDs sind, verwenden wir eine vereinfachte 
+        // Logik für Crypto und lassen Stocks/Bonds/Commo in diesem JS-Ticker weg (da sie besser in TV-Widgets sind).
+        // Wir fokussieren den JS-Ticker nur auf Krypto, wie es ursprünglich der Fall war, 
+        // und nutzen für die anderen Kategorien TradingView Widgets (siehe index.html).
+        
+        if (category === 'Crypto') {
+            try {
+                // IDs für Coingecko-API: BTC=bitcoin, ETH=ethereum, SOL=solana
+                const cryptoIds = ['bitcoin', 'ethereum', 'solana'];
+                const response = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${cryptoIds.join(',')}&vs_currencies=usd&include_24hr_change=true`);
+                const data = await response.json();
+                
+                let cryptoHtml = `<span class="rv-ticker-category">${category}:</span>`;
+
+                symbols.forEach(symbol => {
+                    const id = (symbol === 'BTC') ? 'bitcoin' : (symbol === 'ETH' ? 'ethereum' : 'solana');
+                    if (data[id]) {
+                        const price = data[id].usd;
+                        const change24h = data[id].usd_24h_change;
+                        const formattedPrice = price.toLocaleString('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 2, maximumFractionDigits: (price < 1) ? 4 : 2 });
+                        const formattedChange = change24h ? (change24h / price * 100).toFixed(2) : 'N/A';
+                        const changeClass = change24h >= 0 ? 'success' : 'danger';
+                        const sign = change24h >= 0 ? '▲' : '▼';
+
+                        cryptoHtml += `
+                            <span class="rv-ticker-item">
+                                ${symbol} ${formattedPrice} 
+                                <span class="rv-ticker-change ${changeClass}">${sign} ${formattedChange}%</span>
+                            </span>
+                        `;
+                    }
+                });
+                outputHtml += cryptoHtml;
+
+            } catch (error) {
+                console.error("Error fetching Crypto data:", error);
+                outputHtml += `<span class="rv-ticker-category">Crypto:</span> <span class="rv-ticker-item error">Data unavailable.</span>`;
+            }
+        }
+    }
+
+    // Wenn nur Crypto über Coingecko geladen wird, nutzen wir für die anderen Kategorien 
+    // das TradingView Ticker Widget, um die Ladezeiten niedrig zu halten.
+    // Daher bleibt der JS Ticker nun auf Krypto fokussiert.
+    
+    tickerElement.innerHTML = outputHtml || 'Market data loading...';
+}
+
+// 3. Funktion zum Abrufen und Aktualisieren des Crypto Fear & Greed Index
+async function updateFearAndGreed() {
+    const fngValueText = document.getElementById('rv-fng-value-text');
+    const fngBar = document.getElementById('rv-fng-bar');
+    const fngPointer = document.getElementById('rv-fng-pointer');
+    const fngContainer = document.getElementById('rv-fng');
+
+    if (!fngValueText || !fngBar || !fngPointer || !fngContainer) return;
 
     try {
-      // Keep it simple + reliable: BTC/ETH/SOL in USD
-      const url =
-        "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,solana&vs_currencies=usd&include_24hr_change=true";
+        // Alternative.me API für Crypto Fear & Greed Index
+        const response = await fetch('https://api.alternative.me/fng/');
+        const data = await response.json();
 
-      const res = await fetch(url, { method: "GET" });
-      if (!res.ok) throw new Error("CoinGecko request failed");
-      const data = await res.json();
+        if (data && data.data && data.data.length > 0) {
+            const latest = data.data[0];
+            const value = parseInt(latest.value);
+            const valueClassification = latest.value_classification;
 
-      // Formatting helper
-      const fmt = (n) =>
-        typeof n === "number"
-          ? n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-          : "—";
-      
-      const changeClass = (ch) => ch >= 0 ? 'color: #10b981;' : 'color: #ef4444;';
+            // Update Text
+            fngValueText.textContent = `${value} (${valueClassification})`;
 
-      const btc = data?.bitcoin?.usd;
-      const btcCh = data?.bitcoin?.usd_24h_change;
-      const eth = data?.ethereum?.usd;
-      const ethCh = data?.ethereum?.usd_24h_change;
-      const sol = data?.solana?.usd;
-      const solCh = data?.solana?.usd_24h_change;
+            // Update Bar Color (CSS handled, just set width)
+            fngBar.style.width = `${value}%`;
 
-      tickerEl.innerHTML =
-        `BTC <span style="${changeClass(btcCh)}">$${fmt(btc)} (${fmt(btcCh)}%)</span>  •  ` +
-        `ETH <span style="${changeClass(ethCh)}">$${fmt(eth)} (${fmt(ethCh)}%)</span>  •  ` +
-        `SOL <span style="${changeClass(solCh)}">$${fmt(sol)} (${fmt(solCh)}%)</span>`;
+            // Update Pointer position
+            fngPointer.style.left = `calc(${value}% - 8px)`; // -8px to center the pointer width
 
-    } catch (e) {
-      tickerEl.textContent = "Live ticker unavailable (retrying in 60s)...";
-      console.error("Live Ticker Error:", e);
+            // Update color class for text and pointer
+            fngContainer.className = 'rv-fng ' + valueClassification.toLowerCase().replace(' ', '-');
+        } else {
+            throw new Error("Invalid F&G data structure.");
+        }
+    } catch (error) {
+        console.error("Error fetching Fear & Greed data:", error);
+        fngValueText.textContent = 'Data unavailable.';
     }
-  }
+}
 
-  // FEATURE 5: Fear & Greed (alternative.me) – with VISUALIZATION update
-  const fngContainer = document.getElementById("rv-fng");
-  const fngValueText = document.getElementById("rv-fng-value-text");
-  const fngBar = document.getElementById("rv-fng-bar");
-  const fngPointer = document.getElementById("rv-fng-pointer");
+// 4. Initialisierung und Intervalle
+document.addEventListener('DOMContentLoaded', () => {
+    updateMarketTicker();
+    updateFearAndGreed();
+    
+    // Auto-Update alle 60 Sekunden für Ticker
+    setInterval(updateMarketTicker, 60000); 
+    
+    // Auto-Update alle 5 Minuten für F&G (Index wird nicht so oft aktualisiert)
+    setInterval(updateFearAndGreed, 300000); 
 
-  async function updateFearGreed() {
-    if (!fngContainer) return;
-
-    try {
-      const url = "https://api.alternative.me/fng/?limit=1&format=json";
-      const res = await fetch(url, { method: "GET" });
-      if (!res.ok) throw new Error("FNG request failed");
-      const data = await res.json();
-
-      const item = data?.data?.[0];
-      const value = parseInt(item?.value) ?? 50; // Use 50 as safe fallback
-      const cls = item?.value_classification ?? "Neutral";
-
-      let color;
-      if (value <= 20) color = '#ef4444'; // Extreme Fear
-      else if (value <= 40) color = '#f97316'; // Fear
-      else if (value <= 60) color = '#fbbf24'; // Neutral
-      else if (value <= 80) color = '#34d399'; // Greed
-      else color = '#10b981'; // Extreme Greed
-
-      // Update Text
-      if (fngValueText) {
-          fngValueText.innerHTML = `${value} • <span style="color: ${color}; font-weight: 600;">${cls}</span>`;
-      }
-      
-      // Update Visualization
-      if (fngBar && fngPointer) {
-          // The bar is 100% wide. Pointer position is value%. 
-          // We apply a small offset to the pointer to keep it centered on the value
-          const pointerPosition = Math.min(100, Math.max(0, value));
-          
-          fngBar.style.width = `${pointerPosition}%`;
-          fngBar.style.backgroundColor = color;
-          
-          fngPointer.style.left = `calc(${pointerPosition}% - 6px)`; // 6px = half the pointer width (12px)
-      }
-
-
-    } catch (e) {
-      if (fngValueText) fngValueText.textContent = "Unavailable (retrying in 30min)...";
-      console.error("FNG Error:", e);
+    // Update Footer Year (kleines JS-Feature)
+    const yearElement = document.getElementById('rv-year');
+    if (yearElement) {
+        yearElement.textContent = new Date().getFullYear();
     }
-  }
-
-  // Staggered updates (keep API usage sane)
-  updateLiveTicker();
-  updateFearGreed();
-  // Live ticker update every minute
-  setInterval(updateLiveTicker, 60 * 1000); 
-  // F&G update every 30 minutes
-  setInterval(updateFearGreed, 30 * 60 * 1000); 
-})();
+});
