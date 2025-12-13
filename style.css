@@ -560,3 +560,38 @@ body {
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+/* --- Feature 5: F&G Index Grouping --- */
+.rv-fng-group {
+    display: grid;
+    gap: 20px;
+    margin-top: 30px;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+}
+
+.rv-fng h3 {
+    font-size: 1.2rem;
+    font-weight: 600;
+    margin-bottom: 10px;
+    color: var(--color-text-light); /* Helle Textfarbe */
+}
+
+/* Anpassung des F&G Containers für Stock Widget */
+.rv-fng-stock {
+    background: var(--color-card-bg); /* Gleicher Hintergrund wie normale Karten */
+    border: 1px solid var(--color-border);
+    padding: 20px;
+    border-radius: 12px;
+}
+
+.rv-fng-stock .rv-tv-box {
+    margin: 10px 0 0 0;
+    padding: 0;
+    border: none; /* TradingView-Box-Stil entfernen, da es in der Karte ist */
+}
+
+/* Sicherstellen, dass der neue große Ticker-Abschnitt gut aussieht */
+.rv-large-ticker .rv-tv-box {
+    height: 120px !important;
+}
+
