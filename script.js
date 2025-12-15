@@ -1,12 +1,12 @@
 /* ==========================================================================
-   RUBIK VAULT - MAIN SCRIPT (MERGED VERSION)
+   RUBIK VAULT - MAIN SCRIPT (ROBUST VERSION)
    ========================================================================== */
 
 /**
- * 1. CONFIGURATION & STATE
+ * 1. CONFIGURATION
  */
 const CONFIG = {
-    rssApiKey: '0', // '0' ist der öffentliche Test-Key von rss2json
+    rssApiKey: '0', // Public Key (Oft überlastet -> Fallback greift ein)
     feeds: [
         { url: 'https://cointelegraph.com/rss', category: 'Crypto', cssClass: 'source-crypto' },
         { url: 'https://search.cnbc.com/rs/search/combined.xml?type=articles&id=10000664', category: 'Finance', cssClass: 'source-finance' },
@@ -15,9 +15,68 @@ const CONFIG = {
     ]
 };
 
+// FALLBACK DATEN (Werden gezeigt, wenn API fehlschlägt)
+const FALLBACK_NEWS = [
+    {
+        title: "Bitcoin breaks resistance levels as market sentiment turns bullish",
+        pubDate: new Date().toISOString(),
+        link: "https://cointelegraph.com",
+        sourceCategory: "Crypto",
+        sourceClass: "source-crypto"
+    },
+    {
+        title: "Fed Chair signals potential rate cuts in late 2025 amid inflation data",
+        pubDate: new Date().toISOString(),
+        link: "https://cnbc.com",
+        sourceCategory: "Finance",
+        sourceClass: "source-finance"
+    },
+    {
+        title: "Apple unveils revolutionary AI features in new iOS update",
+        pubDate: new Date().toISOString(),
+        link: "https://theverge.com",
+        sourceCategory: "Tech",
+        sourceClass: "source-tech"
+    },
+    {
+        title: "Global markets rally: S&P 500 reaches new all-time high",
+        pubDate: new Date(Date.now() - 3600000).toISOString(), // 1 Stunde alt
+        link: "https://reuters.com",
+        sourceCategory: "Business",
+        sourceClass: "source-general"
+    },
+    {
+        title: "Ethereum ETF approval drives massive institutional inflow",
+        pubDate: new Date(Date.now() - 7200000).toISOString(), // 2 Stunden alt
+        link: "https://cointelegraph.com",
+        sourceCategory: "Crypto",
+        sourceClass: "source-crypto"
+    },
+    {
+        title: "Oil prices fluctuate as geopolitical tensions rise in the Middle East",
+        pubDate: new Date(Date.now() - 10800000).toISOString(), 
+        link: "https://cnbc.com",
+        sourceCategory: "Finance",
+        sourceClass: "source-finance"
+    },
+    {
+        title: "NVIDIA announces next-gen chips for enterprise data centers",
+        pubDate: new Date(Date.now() - 86400000).toISOString(), // 1 Tag alt
+        link: "https://theverge.com",
+        sourceCategory: "Tech",
+        sourceClass: "source-tech"
+    },
+    {
+        title: "European Central Bank holds rates steady for the third consecutive month",
+        pubDate: new Date(Date.now() - 90000000).toISOString(),
+        link: "https://reuters.com",
+        sourceCategory: "Business",
+        sourceClass: "source-general"
+    }
+];
+
 /**
  * 2. MARKET STATUS INDICATOR
- * Prüft grob, ob US-Märkte (NYSE/NASDAQ) offen sind (9:30 - 16:00 ET, Mo-Fr)
  */
 function updateMarketStatus() {
     const statusText = document.getElementById('rv-market-status-text');
@@ -25,29 +84,27 @@ function updateMarketStatus() {
     if (!statusText || !statusDot) return;
 
     const now = new Date();
-    // Umrechnung in New York Zeit (UTC-5 bzw. UTC-4)
     const nyTime = new Date(now.toLocaleString("en-US", {timeZone: "America/New_York"}));
-    const day = nyTime.getDay(); // 0=Sun, 6=Sat
+    const day = nyTime.getDay(); 
     const hour = nyTime.getHours();
     const minute = nyTime.getMinutes();
     const timeDec = hour + minute / 60;
 
-    // Marktzeiten: Mo-Fr, 09:30 bis 16:00
     const isOpen = (day >= 1 && day <= 5) && (timeDec >= 9.5 && timeDec < 16);
 
     if (isOpen) {
         statusText.textContent = "US Market Open";
-        statusDot.style.color = "#10b981"; // Grün
+        statusDot.style.color = "#10b981";
         statusDot.style.textShadow = "0 0 8px #10b981";
     } else {
         statusText.textContent = "US Market Closed";
-        statusDot.style.color = "#ef4444"; // Rot
+        statusDot.style.color = "#ef4444";
         statusDot.style.textShadow = "none";
     }
 }
 
 /**
- * 3. CRYPTO FEAR & GREED INDEX (API)
+ * 3. CRYPTO FEAR & GREED INDEX
  */
 async function updateCryptoFNG() {
     const valueEl = document.getElementById('fng-value');
@@ -69,10 +126,9 @@ async function updateCryptoFNG() {
             valueEl.textContent = val;
             classEl.textContent = classification;
             
-            // Farbe setzen
-            let color = '#fbbf24'; // Neutral
-            if(val < 25) color = '#ef4444'; // Fear
-            else if(val > 75) color = '#10b981'; // Greed
+            let color = '#fbbf24'; 
+            if(val < 25) color = '#ef4444'; 
+            else if(val > 75) color = '#10b981'; 
             
             valueEl.style.color = color;
             classEl.style.color = color;
@@ -83,13 +139,13 @@ async function updateCryptoFNG() {
             if(contentEl) contentEl.style.display = 'block';
         }
     } catch (e) {
-        console.error("FNG API Error", e);
         if(loadingEl) loadingEl.textContent = "Data unavailable";
     }
 }
 
 /**
- * 4. NEWS FEED AGGREGATOR (Multi-Source)
+ * 4. NEWS FEED AGGREGATOR (ROBUST)
+ * Wechselt zu Fallback-Daten bei API-Fehler
  */
 async function fetchAndRenderNews() {
     const gridContainer = document.getElementById('rv-news-feed-grid');
@@ -97,17 +153,22 @@ async function fetchAndRenderNews() {
     
     if (!gridContainer && !listContainer) return;
 
-    // Loading State
+    // Loading Skeletons
     const skeletonHTML = '<div class="skeleton" style="height:160px; margin-bottom:10px;"></div>';
     if(gridContainer) gridContainer.innerHTML = skeletonHTML.repeat(4);
     if(listContainer) listContainer.innerHTML = skeletonHTML.repeat(4);
 
     let allArticles = [];
+    let usedFallback = false;
 
     try {
+        // Parallel Fetching
         const requests = CONFIG.feeds.map(feed => 
             fetch(`https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(feed.url)}&api_key=${CONFIG.rssApiKey}&count=5`)
-            .then(res => res.json())
+            .then(res => {
+                if(!res.ok) throw new Error('Network error');
+                return res.json();
+            })
             .then(data => {
                 if(data.status === 'ok') {
                     return data.items.map(item => ({
@@ -118,38 +179,52 @@ async function fetchAndRenderNews() {
                 }
                 return [];
             })
-            .catch(e => [])
+            .catch(() => []) // Einzelner Feed Fehler ignorieren
         );
 
         const results = await Promise.all(requests);
         results.forEach(arr => { allArticles = [...allArticles, ...arr]; });
 
-        // Deduplizieren und Sortieren
-        const uniqueArticles = Array.from(new Map(allArticles.map(item => [item.link, item])).values());
-        uniqueArticles.sort((a, b) => new Date(b.pubDate) - new Date(a.pubDate));
-
-        // Render GRID
-        if (gridContainer && uniqueArticles.length > 0) {
-            gridContainer.innerHTML = uniqueArticles.slice(0, 8).map(item => createNewsCardHTML(item)).join('');
-        }
-
-        // Render LIST
-        if (listContainer && uniqueArticles.length > 0) {
-            listContainer.innerHTML = uniqueArticles.slice(0, 15).map(item => createNewsListHTML(item)).join('');
+        // PRÜFUNG: Haben wir Daten bekommen?
+        if (allArticles.length === 0) {
+            throw new Error("API Limits or Empty Data");
         }
 
     } catch (error) {
-        console.error("News Error:", error);
-        const errMsg = '<div class="rv-news-error">News unavailable.</div>';
-        if(gridContainer) gridContainer.innerHTML = errMsg;
-        if(listContainer) listContainer.innerHTML = errMsg;
+        console.warn("News API Error (Using Fallback):", error);
+        allArticles = FALLBACK_NEWS; // Nutze Demo Daten
+        usedFallback = true;
+    }
+
+    // Deduplizieren und Sortieren
+    const uniqueArticles = Array.from(new Map(allArticles.map(item => [item.link, item])).values());
+    // Nur sortieren wenn es keine Fallback-Daten sind (die sind schon sortiert)
+    if(!usedFallback) {
+        uniqueArticles.sort((a, b) => new Date(b.pubDate) - new Date(a.pubDate));
+    }
+
+    // Render GRID
+    if (gridContainer) {
+        gridContainer.innerHTML = uniqueArticles.slice(0, 8).map(item => createNewsCardHTML(item)).join('');
+    }
+
+    // Render LIST
+    if (listContainer) {
+        let html = uniqueArticles.slice(0, 15).map(item => createNewsListHTML(item)).join('');
+        // Kleiner Hinweis im Sidebar Feed, wenn Demo-Daten laufen
+        if(usedFallback) {
+            html += '<div style="text-align:center; padding:10px; font-size:10px; color:#666;">(Demo Data Mode)</div>';
+        }
+        listContainer.innerHTML = html;
     }
 }
 
-// Helpers für News HTML
+// Helper: News Card HTML
 function createNewsCardHTML(item) {
     const timeStr = formatTimeAgo(item.pubDate);
-    const cleanTitle = item.title.replace(/&amp;/g, '&').replace(/&#039;/g, "'");
+    // Titel säubern
+    const cleanTitle = item.title ? item.title.replace(/&amp;/g, '&').replace(/&#039;/g, "'") : "No Title";
+    
     return `
     <a href="${item.link}" target="_blank" rel="noopener noreferrer" class="rv-news-card">
         <div>
@@ -163,9 +238,10 @@ function createNewsCardHTML(item) {
     </a>`;
 }
 
+// Helper: News List HTML
 function createNewsListHTML(item) {
     const timeStr = formatTimeAgo(item.pubDate);
-    const cleanTitle = item.title.replace(/&amp;/g, '&').replace(/&#039;/g, "'");
+    const cleanTitle = item.title ? item.title.replace(/&amp;/g, '&').replace(/&#039;/g, "'") : "No Title";
     return `
     <a href="${item.link}" target="_blank" rel="noopener noreferrer" class="rv-news-list-item">
         <div style="margin-top:3px;">
@@ -178,55 +254,48 @@ function createNewsListHTML(item) {
     </a>`;
 }
 
+// Helper: Time Ago
 function formatTimeAgo(dateString) {
-    const date = new Date(dateString.replace(/-/g, "/"));
-    const now = new Date();
-    const diff = Math.floor((now - date) / 1000);
-    if (diff < 3600) return Math.floor(diff/60) + 'm ago';
-    if (diff < 86400) return Math.floor(diff/3600) + 'h ago';
-    return Math.floor(diff/86400) + 'd ago';
+    try {
+        const date = new Date(dateString.replace(/-/g, "/"));
+        const now = new Date();
+        const diff = Math.floor((now - date) / 1000);
+        if (isNaN(diff)) return 'Recently';
+        if (diff < 3600) return Math.floor(diff/60) + 'm ago';
+        if (diff < 86400) return Math.floor(diff/3600) + 'h ago';
+        return Math.floor(diff/86400) + 'd ago';
+    } catch(e) {
+        return 'Recently';
+    }
 }
 
 /**
- * 5. LAZY LOADING FOR TRADINGVIEW WIDGETS
- * Performance Optimierung: Lädt Widgets erst, wenn sie sichtbar werden.
+ * 5. LAZY LOADING
  */
 function initLazyWidgets() {
     const observer = new IntersectionObserver((entries, obs) => {
         entries.forEach(entry => {
             if (entry.isIntersecting) {
-                // Das Skript im Container finden und "aktivieren" (falls nötig)
-                // Bei TradingView Embeds reicht oft das Einfügen des Scripts,
-                // aber da sie schon im HTML sind, lassen wir den Browser das meist regeln.
-                // Hier könnte man komplexe Nachlade-Logik einbauen.
-                // Für dieses Setup verlassen wir uns auf native Browser-Optimierung,
-                // oder fügen eine Klasse hinzu um Animationen zu starten.
                 entry.target.classList.add('is-loaded');
                 obs.unobserve(entry.target);
             }
         });
     });
-
-    document.querySelectorAll('.rv-tv-box').forEach(box => {
-        observer.observe(box);
-    });
+    document.querySelectorAll('.rv-tv-box').forEach(box => observer.observe(box));
 }
 
 /**
  * GLOBAL INIT
  */
 document.addEventListener('DOMContentLoaded', () => {
-    // 1. Footer Year
     const yearEl = document.getElementById('rv-year');
     if(yearEl) yearEl.textContent = new Date().getFullYear();
 
-    // 2. Start Functions
     updateMarketStatus();
     updateCryptoFNG();
-    fetchAndRenderNews();
+    fetchAndRenderNews(); // Startet den News Prozess (mit Fallback)
     initLazyWidgets();
 
-    // 3. Intervals
-    setInterval(updateMarketStatus, 60000); // 1 min
-    setInterval(fetchAndRenderNews, 300000); // 5 min
+    setInterval(updateMarketStatus, 60000);
+    setInterval(fetchAndRenderNews, 300000); // Alle 5 Min Refresh
 });
