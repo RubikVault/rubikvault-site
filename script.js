@@ -1,12 +1,11 @@
-/* ==========================================================================
-   RUBIK VAULT - MAIN SCRIPT (ROBUST VERSION)
-   ========================================================================== */
+// script.js
 
 /**
- * 1. CONFIGURATION
+ * CONFIGURATION
+ * HIER KEY EINFÜGEN FÜR ECHTE DATEN:
  */
 const CONFIG = {
-    rssApiKey: '0', // Public Key (Oft überlastet -> Fallback greift ein)
+    rssApiKey: '0', // Ersetze '0' durch Key von rss2json.com
     feeds: [
         { url: 'https://cointelegraph.com/rss', category: 'Crypto', cssClass: 'source-crypto' },
         { url: 'https://search.cnbc.com/rs/search/combined.xml?type=articles&id=10000664', category: 'Finance', cssClass: 'source-finance' },
@@ -15,160 +14,74 @@ const CONFIG = {
     ]
 };
 
-// FALLBACK DATEN (Werden gezeigt, wenn API fehlschlägt)
+// FALLBACK DATEN (wenn Key '0' limitiert ist)
 const FALLBACK_NEWS = [
-    {
-        title: "Bitcoin breaks resistance levels as market sentiment turns bullish",
-        pubDate: new Date().toISOString(),
-        link: "https://cointelegraph.com",
-        sourceCategory: "Crypto",
-        sourceClass: "source-crypto"
-    },
-    {
-        title: "Fed Chair signals potential rate cuts in late 2025 amid inflation data",
-        pubDate: new Date().toISOString(),
-        link: "https://cnbc.com",
-        sourceCategory: "Finance",
-        sourceClass: "source-finance"
-    },
-    {
-        title: "Apple unveils revolutionary AI features in new iOS update",
-        pubDate: new Date().toISOString(),
-        link: "https://theverge.com",
-        sourceCategory: "Tech",
-        sourceClass: "source-tech"
-    },
-    {
-        title: "Global markets rally: S&P 500 reaches new all-time high",
-        pubDate: new Date(Date.now() - 3600000).toISOString(), // 1 Stunde alt
-        link: "https://reuters.com",
-        sourceCategory: "Business",
-        sourceClass: "source-general"
-    },
-    {
-        title: "Ethereum ETF approval drives massive institutional inflow",
-        pubDate: new Date(Date.now() - 7200000).toISOString(), // 2 Stunden alt
-        link: "https://cointelegraph.com",
-        sourceCategory: "Crypto",
-        sourceClass: "source-crypto"
-    },
-    {
-        title: "Oil prices fluctuate as geopolitical tensions rise in the Middle East",
-        pubDate: new Date(Date.now() - 10800000).toISOString(), 
-        link: "https://cnbc.com",
-        sourceCategory: "Finance",
-        sourceClass: "source-finance"
-    },
-    {
-        title: "NVIDIA announces next-gen chips for enterprise data centers",
-        pubDate: new Date(Date.now() - 86400000).toISOString(), // 1 Tag alt
-        link: "https://theverge.com",
-        sourceCategory: "Tech",
-        sourceClass: "source-tech"
-    },
-    {
-        title: "European Central Bank holds rates steady for the third consecutive month",
-        pubDate: new Date(Date.now() - 90000000).toISOString(),
-        link: "https://reuters.com",
-        sourceCategory: "Business",
-        sourceClass: "source-general"
-    }
+    { title: "DEMO: Bitcoin hits new all-time high amid ETF inflows", pubDate: new Date().toISOString(), link: "#", sourceCategory: "Crypto", sourceClass: "source-crypto" },
+    { title: "DEMO: Fed signals rate cuts coming in Q4", pubDate: new Date().toISOString(), link: "#", sourceCategory: "Finance", sourceClass: "source-finance" },
+    { title: "DEMO: NVIDIA announces revolutionary AI chip", pubDate: new Date().toISOString(), link: "#", sourceCategory: "Tech", sourceClass: "source-tech" },
+    { title: "DEMO: Oil prices surge on geopolitical tensions", pubDate: new Date().toISOString(), link: "#", sourceCategory: "Business", sourceClass: "source-general" },
+    { title: "DEMO: Ethereum network upgrade successful", pubDate: new Date().toISOString(), link: "#", sourceCategory: "Crypto", sourceClass: "source-crypto" },
+    { title: "DEMO: S&P 500 closes at record level", pubDate: new Date().toISOString(), link: "#", sourceCategory: "Finance", sourceClass: "source-finance" },
+    { title: "DEMO: Apple reveals new mixed reality headset", pubDate: new Date().toISOString(), link: "#", sourceCategory: "Tech", sourceClass: "source-tech" },
+    { title: "DEMO: ECB keeps interest rates unchanged", pubDate: new Date().toISOString(), link: "#", sourceCategory: "Business", sourceClass: "source-general" },
+    { title: "DEMO: Gold prices stabilize after rally", pubDate: new Date().toISOString(), link: "#", sourceCategory: "Finance", sourceClass: "source-finance" },
+    { title: "DEMO: Microsoft integrates AI into Windows", pubDate: new Date().toISOString(), link: "#", sourceCategory: "Tech", sourceClass: "source-tech" }
 ];
 
-/**
- * 2. MARKET STATUS INDICATOR
- */
-function updateMarketStatus() {
-    const statusText = document.getElementById('rv-market-status-text');
-    const statusDot = document.getElementById('rv-market-status-dot');
-    if (!statusText || !statusDot) return;
-
-    const now = new Date();
-    const nyTime = new Date(now.toLocaleString("en-US", {timeZone: "America/New_York"}));
-    const day = nyTime.getDay(); 
-    const hour = nyTime.getHours();
-    const minute = nyTime.getMinutes();
-    const timeDec = hour + minute / 60;
-
-    const isOpen = (day >= 1 && day <= 5) && (timeDec >= 9.5 && timeDec < 16);
-
-    if (isOpen) {
-        statusText.textContent = "US Market Open";
-        statusDot.style.color = "#10b981";
-        statusDot.style.textShadow = "0 0 8px #10b981";
-    } else {
-        statusText.textContent = "US Market Closed";
-        statusDot.style.color = "#ef4444";
-        statusDot.style.textShadow = "none";
+document.addEventListener("DOMContentLoaded", () => {
+    // 1. UI LOGIC (Header Scroll & Smooth Scroll)
+    const header = document.querySelector(".rv-header");
+    if(header) {
+        window.addEventListener("scroll", () => {
+            if (window.scrollY > 10) header.classList.add("rv-header-scrolled");
+            else header.classList.remove("rv-header-scrolled");
+        });
     }
-}
 
-/**
- * 3. CRYPTO FEAR & GREED INDEX
- */
-async function updateCryptoFNG() {
-    const valueEl = document.getElementById('fng-value');
-    const classEl = document.getElementById('fng-class');
-    const markerEl = document.getElementById('fng-marker');
-    const loadingEl = document.getElementById('rv-crypto-fng-loading');
-    const contentEl = document.getElementById('rv-crypto-fng-content');
+    const links = document.querySelectorAll('a[href^="#"]');
+    links.forEach((link) => {
+        link.addEventListener("click", (e) => {
+            const targetId = link.getAttribute("href").substring(1);
+            const target = document.getElementById(targetId);
+            if (target) {
+                e.preventDefault();
+                target.scrollIntoView({ behavior: "smooth", block: "start" });
+            }
+        });
+    });
 
-    if(!valueEl) return;
+    const yearEl = document.getElementById('rv-year');
+    if(yearEl) yearEl.textContent = new Date().getFullYear();
 
-    try {
-        const response = await fetch('https://api.alternative.me/fng/');
-        const data = await response.json();
-        
-        if (data.data && data.data.length > 0) {
-            const val = parseInt(data.data[0].value);
-            const classification = data.data[0].value_classification;
+    // 2. MARKET STATUS
+    updateMarketStatus();
+    setInterval(updateMarketStatus, 60000);
 
-            valueEl.textContent = val;
-            classEl.textContent = classification;
-            
-            let color = '#fbbf24'; 
-            if(val < 25) color = '#ef4444'; 
-            else if(val > 75) color = '#10b981'; 
-            
-            valueEl.style.color = color;
-            classEl.style.color = color;
+    // 3. NEWS FEED LOGIC
+    fetchAndRenderNews();
+    setInterval(fetchAndRenderNews, 30000); // 30 Sek Update
+});
 
-            if(markerEl) markerEl.style.left = `${val}%`;
-
-            if(loadingEl) loadingEl.style.display = 'none';
-            if(contentEl) contentEl.style.display = 'block';
-        }
-    } catch (e) {
-        if(loadingEl) loadingEl.textContent = "Data unavailable";
-    }
-}
-
-/**
- * 4. NEWS FEED AGGREGATOR (ROBUST)
- * Wechselt zu Fallback-Daten bei API-Fehler
- */
+// NEWS FUNCTIONS
 async function fetchAndRenderNews() {
     const gridContainer = document.getElementById('rv-news-feed-grid');
     const listContainer = document.getElementById('rv-news-feed-list');
+    const heroList = document.getElementById('rv-hero-news-list');
     
     if (!gridContainer && !listContainer) return;
 
-    // Loading Skeletons
-    const skeletonHTML = '<div class="skeleton" style="height:160px; margin-bottom:10px;"></div>';
-    if(gridContainer) gridContainer.innerHTML = skeletonHTML.repeat(4);
-    if(listContainer) listContainer.innerHTML = skeletonHTML.repeat(4);
+    // First Load Skeletons
+    if(listContainer && listContainer.children.length === 0) {
+        listContainer.innerHTML = '<div class="skeleton" style="height:60px; margin-bottom:10px;"></div>'.repeat(5);
+    }
 
     let allArticles = [];
     let usedFallback = false;
 
     try {
-        // Parallel Fetching
         const requests = CONFIG.feeds.map(feed => 
             fetch(`https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(feed.url)}&api_key=${CONFIG.rssApiKey}&count=5`)
-            .then(res => {
-                if(!res.ok) throw new Error('Network error');
-                return res.json();
-            })
+            .then(res => res.json())
             .then(data => {
                 if(data.status === 'ok') {
                     return data.items.map(item => ({
@@ -179,52 +92,55 @@ async function fetchAndRenderNews() {
                 }
                 return [];
             })
-            .catch(() => []) // Einzelner Feed Fehler ignorieren
+            .catch(() => [])
         );
 
         const results = await Promise.all(requests);
         results.forEach(arr => { allArticles = [...allArticles, ...arr]; });
 
-        // PRÜFUNG: Haben wir Daten bekommen?
-        if (allArticles.length === 0) {
-            throw new Error("API Limits or Empty Data");
-        }
+        if (allArticles.length === 0) throw new Error("No Data");
 
     } catch (error) {
-        console.warn("News API Error (Using Fallback):", error);
-        allArticles = FALLBACK_NEWS; // Nutze Demo Daten
+        console.warn("API Error (Using Fallback)", error);
+        allArticles = FALLBACK_NEWS; 
         usedFallback = true;
     }
 
-    // Deduplizieren und Sortieren
-    const uniqueArticles = Array.from(new Map(allArticles.map(item => [item.link, item])).values());
-    // Nur sortieren wenn es keine Fallback-Daten sind (die sind schon sortiert)
     if(!usedFallback) {
-        uniqueArticles.sort((a, b) => new Date(b.pubDate) - new Date(a.pubDate));
+        allArticles.sort((a, b) => new Date(b.pubDate) - new Date(a.pubDate));
     }
 
-    // Render GRID
-    if (gridContainer) {
-        gridContainer.innerHTML = uniqueArticles.slice(0, 8).map(item => createNewsCardHTML(item)).join('');
-    }
-
-    // Render LIST
+    // A. Sidebar (10 Items)
     if (listContainer) {
-        let html = uniqueArticles.slice(0, 15).map(item => createNewsListHTML(item)).join('');
-        // Kleiner Hinweis im Sidebar Feed, wenn Demo-Daten laufen
-        if(usedFallback) {
-            html += '<div style="text-align:center; padding:10px; font-size:10px; color:#666;">(Demo Data Mode)</div>';
-        }
-        listContainer.innerHTML = html;
+        const listItems = allArticles.slice(0, 10);
+        listContainer.innerHTML = listItems.map(item => createNewsListHTML(item)).join('');
+        
+        // Update Time Indicator
+        const updateDiv = document.createElement('div');
+        updateDiv.innerHTML = `<small style="display:block; text-align:center; color:#444; margin-top:10px;">Updated: ${new Date().toLocaleTimeString()}</small>`;
+        listContainer.appendChild(updateDiv);
+    }
+
+    // B. Main Grid (8 Items)
+    if (gridContainer) {
+        gridContainer.innerHTML = allArticles.slice(0, 8).map(item => createNewsCardHTML(item)).join('');
+    }
+
+    // C. Hero List (3 Items compact)
+    if (heroList) {
+         const heroItems = allArticles.slice(0, 3);
+         heroList.innerHTML = heroItems.map(item => `
+            <div style="margin-bottom:8px; border-bottom:1px solid rgba(255,255,255,0.05); padding-bottom:5px;">
+                <span class="rv-news-source ${item.sourceClass}" style="font-size:9px;">${item.sourceCategory}</span>
+                <a href="${item.link}" target="_blank" style="color:#e5e7eb; text-decoration:none; display:block; margin-top:2px;">${item.title.substring(0,50)}...</a>
+            </div>
+         `).join('');
     }
 }
 
-// Helper: News Card HTML
 function createNewsCardHTML(item) {
     const timeStr = formatTimeAgo(item.pubDate);
-    // Titel säubern
-    const cleanTitle = item.title ? item.title.replace(/&amp;/g, '&').replace(/&#039;/g, "'") : "No Title";
-    
+    const cleanTitle = item.title ? item.title.replace(/&amp;/g, '&').replace(/&#039;/g, "'") : "News";
     return `
     <a href="${item.link}" target="_blank" rel="noopener noreferrer" class="rv-news-card">
         <div>
@@ -238,10 +154,9 @@ function createNewsCardHTML(item) {
     </a>`;
 }
 
-// Helper: News List HTML
 function createNewsListHTML(item) {
     const timeStr = formatTimeAgo(item.pubDate);
-    const cleanTitle = item.title ? item.title.replace(/&amp;/g, '&').replace(/&#039;/g, "'") : "No Title";
+    const cleanTitle = item.title ? item.title.replace(/&amp;/g, '&').replace(/&#039;/g, "'") : "News";
     return `
     <a href="${item.link}" target="_blank" rel="noopener noreferrer" class="rv-news-list-item">
         <div style="margin-top:3px;">
@@ -254,48 +169,38 @@ function createNewsListHTML(item) {
     </a>`;
 }
 
-// Helper: Time Ago
 function formatTimeAgo(dateString) {
     try {
         const date = new Date(dateString.replace(/-/g, "/"));
         const now = new Date();
         const diff = Math.floor((now - date) / 1000);
-        if (isNaN(diff)) return 'Recently';
-        if (diff < 3600) return Math.floor(diff/60) + 'm ago';
-        if (diff < 86400) return Math.floor(diff/3600) + 'h ago';
-        return Math.floor(diff/86400) + 'd ago';
-    } catch(e) {
-        return 'Recently';
+        if (isNaN(diff)) return '';
+        if (diff < 60) return 'Just now';
+        if (diff < 3600) return `${Math.floor(diff/60)}m ago`;
+        if (diff < 86400) return date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+        return date.toLocaleDateString();
+    } catch(e) { return ''; }
+}
+
+function updateMarketStatus() {
+    const statusText = document.getElementById('rv-market-status-text');
+    const statusDot = document.getElementById('rv-market-status-dot');
+    if (!statusText) return;
+    const now = new Date();
+    // Grobe US Marktzeit Schätzung (Mo-Fr, 15:30 - 22:00 MEZ ca.)
+    const day = now.getUTCDay();
+    const hour = now.getUTCHours();
+    // 13:30 UTC = 9:30 EST | 20:00 UTC = 16:00 EST
+    // Vereinfacht: 13 bis 20 Uhr UTC
+    const isOpen = (day >= 1 && day <= 5) && (hour >= 14 && hour < 21);
+    
+    if(isOpen) { 
+        statusText.textContent="US Market Open"; 
+        statusDot.style.color="#10b981"; 
+        statusDot.style.textShadow="0 0 5px #10b981";
+    } else { 
+        statusText.textContent="US Market Closed"; 
+        statusDot.style.color="#ef4444"; 
+        statusDot.style.textShadow="none";
     }
 }
-
-/**
- * 5. LAZY LOADING
- */
-function initLazyWidgets() {
-    const observer = new IntersectionObserver((entries, obs) => {
-        entries.forEach(entry => {
-            if (entry.isIntersecting) {
-                entry.target.classList.add('is-loaded');
-                obs.unobserve(entry.target);
-            }
-        });
-    });
-    document.querySelectorAll('.rv-tv-box').forEach(box => observer.observe(box));
-}
-
-/**
- * GLOBAL INIT
- */
-document.addEventListener('DOMContentLoaded', () => {
-    const yearEl = document.getElementById('rv-year');
-    if(yearEl) yearEl.textContent = new Date().getFullYear();
-
-    updateMarketStatus();
-    updateCryptoFNG();
-    fetchAndRenderNews(); // Startet den News Prozess (mit Fallback)
-    initLazyWidgets();
-
-    setInterval(updateMarketStatus, 60000);
-    setInterval(fetchAndRenderNews, 300000); // Alle 5 Min Refresh
-});
