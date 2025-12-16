@@ -1,242 +1,345 @@
-/* ==========================================================================
-   RUBIK VAULT - MASTER LOGIC
-   ========================================================================== */
+/**
+ * RubikVault Core Logic
+ * - Modular architecture (IIFE pattern)
+ * - No API keys in frontend
+ * - LocalStorage persistence
+ */
 
-document.addEventListener("DOMContentLoaded", () => {
-    initTheme();
-    initUSMarketTimer();
-    initNewsFeed();
-    
-    // Default load: Apple
-    loadStockList('nasdaq');
-    updateExplorer('NASDAQ:AAPL', 'Apple Inc');
-    
-    // Intervals
-    setInterval(initUSMarketTimer, 1000); 
-    setInterval(initNewsFeed, 30000); 
-});
+const App = (() => {
+    // --- STATE & STORE ---
+    const state = {
+        watchlist: JSON.parse(localStorage.getItem('rv_watchlist')) || ['AAPL', 'BTC-USD', 'NVDA'],
+        layout: JSON.parse(localStorage.getItem('rv_layout')) || ['section-mcs', 'section-watchlist', 'section-charts', 'section-news'],
+        theme: localStorage.getItem('rv_theme') || 'dark'
+    };
 
-/* --- 1. FULL STOCK DATA (Major US Indices) --- */
-const STOCK_LISTS = {
-    nasdaq: [
-        { s: "AAPL", n: "Apple" }, { s: "MSFT", n: "Microsoft" }, { s: "NVDA", n: "NVIDIA" }, { s: "AMZN", n: "Amazon" },
-        { s: "META", n: "Meta" }, { s: "GOOGL", n: "Alphabet" }, { s: "TSLA", n: "Tesla" }, { s: "AVGO", n: "Broadcom" },
-        { s: "COST", n: "Costco" }, { s: "PEP", n: "PepsiCo" }, { s: "NFLX", n: "Netflix" }, { s: "AMD", n: "AMD" },
-        { s: "ADBE", n: "Adobe" }, { s: "QCOM", n: "Qualcomm" }, { s: "TXN", n: "Texas Instr." }, { s: "INTC", n: "Intel" },
-        { s: "AMGN", n: "Amgen" }, { s: "HON", n: "Honeywell" }, { s: "INTU", n: "Intuit" }, { s: "SBUX", n: "Starbucks" }
-    ],
-    dow: [
-        { s: "MMM", n: "3M" }, { s: "AXP", n: "Am. Express" }, { s: "AMGN", n: "Amgen" }, { s: "AAPL", n: "Apple" },
-        { s: "BA", n: "Boeing" }, { s: "CAT", n: "Caterpillar" }, { s: "CVX", n: "Chevron" }, { s: "CSCO", n: "Cisco" },
-        { s: "KO", n: "Coca-Cola" }, { s: "DIS", n: "Disney" }, { s: "DOW", n: "Dow Inc" }, { s: "GS", n: "Goldman" },
-        { s: "HD", n: "Home Depot" }, { s: "HON", n: "Honeywell" }, { s: "IBM", n: "IBM" }, { s: "INTC", n: "Intel" },
-        { s: "JNJ", n: "J&J" }, { s: "JPM", n: "JPMorgan" }, { s: "MCD", n: "McDonalds" }, { s: "MRK", n: "Merck" },
-        { s: "MSFT", n: "Microsoft" }, { s: "NKE", n: "Nike" }, { s: "PG", n: "P&G" }, { s: "CRM", n: "Salesforce" },
-        { s: "TRV", n: "Travelers" }, { s: "UNH", n: "UnitedHealth" }, { s: "VZ", n: "Verizon" }, { s: "V", n: "Visa" },
-        { s: "WMT", n: "Walmart" }
-    ],
-    sp500: [
-        { s: "SPY", n: "S&P 500 ETF" }, { s: "JPM", n: "JPMorgan" }, { s: "V", n: "Visa" }, { s: "LLY", n: "Lilly" },
-        { s: "MA", n: "Mastercard" }, { s: "HD", n: "Home Depot" }, { s: "XOM", n: "Exxon" }, { s: "UNH", n: "UnitedHealth" },
-        { s: "JNJ", n: "J&J" }, { s: "PG", n: "P&G" }, { s: "COST", n: "Costco" }, { s: "ABBV", n: "AbbVie" },
-        { s: "BAC", n: "BofA" }, { s: "KO", n: "Coca-Cola" }, { s: "CRM", n: "Salesforce" }, { s: "ACN", n: "Accenture" },
-        { s: "MCD", n: "McDonalds" }, { s: "DIS", n: "Disney" }, { s: "CSCO", n: "Cisco" }, { s: "T", n: "AT&T" }
-    ]
-};
+    const saveState = (key, val) => {
+        state[key] = val;
+        localStorage.setItem(`rv_${key}`, JSON.stringify(val));
+    };
 
-/* --- 2. US MARKET TIMER --- */
-function initUSMarketTimer() {
-    const statusText = document.getElementById('mt-status');
-    const dot = document.getElementById('mt-dot');
-    const timeDisplay = document.getElementById('mt-time');
+    // --- UTILS ---
+    const sanitize = (str) => DOMPurify.sanitize(str);
+    const timeAgo = (date) => {
+        const seconds = Math.floor((new Date() - new Date(date)) / 1000);
+        if (seconds < 60) return "Just now";
+        if (seconds < 3600) return Math.floor(seconds/60) + "m ago";
+        if (seconds < 86400) return Math.floor(seconds/3600) + "h ago";
+        return Math.floor(seconds/86400) + "d ago";
+    };
 
-    const options = { timeZone: 'America/New_York', hour: '2-digit', minute: '2-digit', hour12: false };
-    const nyTimeStr = new Date().toLocaleTimeString('en-US', options);
-    
-    const nyDate = new Date().toLocaleString("en-US", {timeZone: "America/New_York"});
-    const nowNY = new Date(nyDate);
-    const day = nowNY.getDay(); 
-    const hours = nowNY.getHours();
-    const minutes = nowNY.getMinutes();
-    const timeVal = hours + minutes / 60;
+    // --- MODULES ---
 
-    timeDisplay.textContent = `NYC: ${nyTimeStr}`;
-
-    let status = "Closed";
-    let cssClass = "status-closed";
-
-    if (day === 0 || day === 6) {
-        status = "Weekend Closed";
-        cssClass = "status-closed";
-    } else {
-        if (timeVal >= 4.0 && timeVal < 9.5) {
-            status = "Pre-Market";
-            cssClass = "status-pre";
-        } else if (timeVal >= 9.5 && timeVal < 16.0) {
-            status = "Market Open";
-            cssClass = "status-open";
-        } else if (timeVal >= 16.0 && timeVal < 20.0) {
-            status = "After Hours";
-            cssClass = "status-pre";
-        } else {
-            status = "Market Closed";
-            cssClass = "status-closed";
-        }
-    }
-
-    if(statusText) statusText.textContent = status;
-    if(dot) dot.className = "status-dot " + cssClass;
-}
-
-/* --- 3. LIVE NEWS FEED (XML PARSER) --- */
-const PROXY = "https://api.allorigins.win/get?url=";
-const FEED_URL = "https://finance.yahoo.com/news/rssindex";
-
-async function initNewsFeed() {
-    const container = document.getElementById('rv-news-feed-list');
-    if(!container) return;
-
-    if(container.innerHTML.trim() === "") container.innerHTML = '<div style="padding:20px; text-align:center; color:#666;">Syncing...</div>';
-
-    // Add random param to prevent caching
-    const cacheBuster = `&t=${Date.now()}`;
-
-    try {
-        const response = await fetch(PROXY + encodeURIComponent(FEED_URL) + cacheBuster);
-        const data = await response.json();
-        
-        if (data.contents) {
-            const parser = new DOMParser();
-            const xml = parser.parseFromString(data.contents, "text/xml");
-            const items = xml.querySelectorAll("item");
+    // 1. THEME
+    const Theme = {
+        init: () => {
+            const body = document.body;
+            const btn = document.getElementById('theme-toggle');
             
-            let newsItems = [];
-            items.forEach((item, index) => {
-                if(index > 15) return; 
-                const title = item.querySelector("title")?.textContent;
-                const link = item.querySelector("link")?.textContent;
-                const pubDate = item.querySelector("pubDate")?.textContent;
-                
-                if(title && link) {
-                    newsItems.push({
-                        title: title,
-                        link: link,
-                        date: pubDate ? new Date(pubDate) : new Date()
-                    });
+            const apply = () => {
+                if(state.theme === 'light') {
+                    body.setAttribute('data-theme', 'light');
+                    btn.innerHTML = '🌙';
+                } else {
+                    body.removeAttribute('data-theme');
+                    btn.innerHTML = '☀️';
+                }
+            };
+            apply();
+
+            btn.addEventListener('click', () => {
+                state.theme = state.theme === 'light' ? 'dark' : 'light';
+                localStorage.setItem('rv_theme', state.theme); // Direct save for string
+                apply();
+            });
+        }
+    };
+
+    // 2. MARKET TIMER
+    const Timer = {
+        init: () => {
+            setInterval(Timer.update, 1000);
+            Timer.update();
+        },
+        update: () => {
+            const now = new Date();
+            // Simple UTC Logic for NYSE (14:30 - 21:00 UTC)
+            const h = now.getUTCHours();
+            const m = now.getUTCMinutes();
+            const time = h + m/60;
+            const day = now.getUTCDay();
+            const elStatus = document.getElementById('mt-status');
+            const elDot = document.getElementById('mt-dot');
+            const elTime = document.getElementById('mt-time');
+
+            // NYC Time Display
+            elTime.textContent = "NYC: " + new Date().toLocaleTimeString('en-US', {timeZone: 'America/New_York', hour:'2-digit', minute:'2-digit'});
+
+            let status = "Closed";
+            let cls = "status-closed";
+
+            if(day > 0 && day < 6) {
+                if(time >= 14.5 && time < 21) {
+                    status = "Open"; cls = "status-open";
+                } else if(time >= 9 && time < 14.5) {
+                    status = "Pre-Mkt"; cls = "status-pre";
+                }
+            }
+            elStatus.textContent = status;
+            elDot.className = `status-dot ${cls}`;
+        }
+    };
+
+    // 3. DAILY INSIGHT ("Overnight Pulse")
+    const Insight = {
+        init: () => {
+            // Mock Data - In real app, fetch from backend API
+            const msg = "Tech stocks are leading pre-market gains driven by AI chip demand. Bond yields stabilized overnight. Bitcoin holds $65k support level.";
+            document.getElementById('daily-insight-text').innerText = msg;
+            
+            // Read Aloud
+            const btn = document.getElementById('read-aloud-btn');
+            btn.addEventListener('click', () => {
+                const speech = new SpeechSynthesisUtterance(msg);
+                speech.lang = 'en-US';
+                window.speechSynthesis.speak(speech);
+            });
+        }
+    };
+
+    // 4. WATCHLIST
+    const Watchlist = {
+        init: () => {
+            Watchlist.render();
+            document.getElementById('wl-add-btn').addEventListener('click', () => {
+                const input = document.getElementById('wl-input');
+                const sym = input.value.toUpperCase().trim();
+                if(sym && !state.watchlist.includes(sym)) {
+                    if(state.watchlist.length >= 5) {
+                        alert("Free limit reached (5 items).");
+                        return;
+                    }
+                    state.watchlist.push(sym);
+                    saveState('watchlist', state.watchlist);
+                    Watchlist.render();
+                    input.value = '';
+                }
+            });
+        },
+        render: () => {
+            const container = document.getElementById('wl-container');
+            if(state.watchlist.length === 0) {
+                container.innerHTML = '<div class="rv-empty-state">List empty. Add a symbol.</div>';
+                return;
+            }
+            container.innerHTML = state.watchlist.map(sym => `
+                <div class="rv-wl-item">
+                    <div style="font-weight:bold">${sanitize(sym)}</div>
+                    <div style="font-size:12px; color:var(--text-muted)">$Loading...</div>
+                    <span class="rv-wl-remove" onclick="App.Watchlist.remove('${sym}')">&times;</span>
+                </div>
+            `).join('');
+            
+            // Simulating Quote Fetch (Mock)
+            setTimeout(() => {
+                document.querySelectorAll('.rv-wl-item').forEach(el => {
+                    const price = (Math.random() * 200 + 50).toFixed(2);
+                    el.children[1].innerText = `$${price} (+0.5%)`;
+                    el.children[1].style.color = '#10b981';
+                });
+            }, 500);
+        },
+        remove: (sym) => {
+            state.watchlist = state.watchlist.filter(s => s !== sym);
+            saveState('watchlist', state.watchlist);
+            Watchlist.render();
+        }
+    };
+
+    // 5. CHARTS (Chart.js)
+    const Charts = {
+        init: () => {
+            // Mock Data Generation
+            const generateData = () => Array.from({length: 30}, () => Math.random() * 100 + 400);
+            const labels = Array.from({length: 30}, (_, i) => `Day ${i+1}`);
+
+            new Chart(document.getElementById('chart-spy'), {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Price',
+                        data: generateData(),
+                        borderColor: '#00e5ff',
+                        tension: 0.4,
+                        borderWidth: 2,
+                        pointRadius: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: { x: { display: false }, y: { display: false } }
                 }
             });
 
-            if(newsItems.length > 0) {
-                renderNews(newsItems, container);
+            new Chart(document.getElementById('chart-btc'), {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Price',
+                        data: generateData(),
+                        borderColor: '#f59e0b',
+                        tension: 0.4,
+                        borderWidth: 2,
+                        pointRadius: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: { x: { display: false }, y: { display: false } }
+                }
+            });
+        }
+    };
+
+    // 6. MCS GAUGE
+    const MCS = {
+        init: () => {
+            const ctx = document.getElementById('mcs-chart').getContext('2d');
+            // Mock Score: 65 (Greed)
+            const score = 65; 
+            document.getElementById('mcs-value').innerText = score;
+            
+            new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Score', 'Remaining'],
+                    datasets: [{
+                        data: [score, 100-score],
+                        backgroundColor: [score > 50 ? '#10b981' : '#f97373', 'rgba(255,255,255,0.1)'],
+                        borderWidth: 0,
+                        cutout: '85%'
+                    }]
+                },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { enabled: false } } }
+            });
+
+            document.getElementById('vix-value').innerText = "14.2 (Low)";
+        }
+    };
+
+    // 7. NEWS FEED (RSS via Proxy)
+    const News = {
+        proxy: 'https://api.allorigins.win/get?url=',
+        feeds: [
+            'https://finance.yahoo.com/news/rssindex',
+            'https://cointelegraph.com/rss'
+        ],
+        init: () => {
+            News.fetch();
+            document.getElementById('news-refresh-btn').addEventListener('click', () => {
+                document.getElementById('rv-news-grid').innerHTML = '<div style="padding:20px">Reloading...</div>';
+                News.fetch();
+            });
+        },
+        filter: (cat) => {
+            // Simple DOM filtering for MVP
+            document.querySelectorAll('.rv-filter-btn').forEach(b => b.classList.remove('active'));
+            event.target.classList.add('active');
+            // Logic would go here to filter array
+            console.log("Filter:", cat);
+        },
+        fetch: async () => {
+            const container = document.getElementById('rv-news-grid');
+            let items = [];
+            
+            // Parallel Fetch
+            const promises = News.feeds.map(url => 
+                fetch(News.proxy + encodeURIComponent(url))
+                .then(r => r.json())
+                .then(d => {
+                    const parser = new DOMParser();
+                    const xml = parser.parseFromString(d.contents, "text/xml");
+                    return Array.from(xml.querySelectorAll("item")).map(i => ({
+                        title: i.querySelector("title").textContent,
+                        link: i.querySelector("link").textContent,
+                        pubDate: i.querySelector("pubDate").textContent,
+                        source: url.includes('yahoo') ? 'Finance' : 'Crypto'
+                    }));
+                })
+                .catch(e => [])
+            );
+
+            const results = await Promise.all(promises);
+            results.forEach(res => items = [...items, ...res]);
+            
+            // Sort & Dedup
+            items.sort((a,b) => new Date(b.pubDate) - new Date(a.pubDate));
+            items = items.slice(0, 9); // Limit 9
+
+            // Render
+            container.innerHTML = items.map(item => `
+                <a href="${sanitize(item.link)}" target="_blank" class="rv-news-card">
+                    <div class="rv-news-meta">
+                        <span class="rv-news-source">${item.source}</span>
+                        <span>${timeAgo(item.pubDate)}</span>
+                    </div>
+                    <div class="rv-news-title">${sanitize(item.title)}</div>
+                    <div class="rv-news-snippet">Click to read full story on source website.</div>
+                </a>
+            `).join('');
+            
+            document.getElementById('news-last-updated').innerText = "Updated: " + new Date().toLocaleTimeString();
+        }
+    };
+
+    // 8. LAYOUT (Sortable)
+    const Layout = {
+        init: () => {
+            const grid = document.getElementById('dashboard-grid');
+            // Re-order DOM based on saved layout
+            state.layout.forEach(id => {
+                const el = document.getElementById(id);
+                if(el) grid.appendChild(el);
+            });
+
+            // Init Sortable
+            new Sortable(grid, {
+                animation: 150,
+                handle: '.rv-drag-handle',
+                onEnd: () => {
+                    const order = Array.from(grid.children).map(el => el.id);
+                    saveState('layout', order);
+                }
+            });
+        }
+    };
+
+    // MAIN INIT
+    return {
+        init: () => {
+            try {
+                Theme.init();
+                Timer.init();
+                Insight.init();
+                Watchlist.init();
+                Charts.init();
+                MCS.init();
+                News.init();
+                Layout.init();
+            } catch(e) {
+                console.error("Critical Init Error", e);
             }
-        }
-    } catch (e) {
-        console.error("News Fetch Error", e);
-    }
-}
+        },
+        Watchlist, // Expose for HTML onclick
+        news: News
+    };
+})();
 
-function renderNews(items, container) {
-    const html = items.map(item => {
-        let timeStr = item.date.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
-        return `
-        <a href="${item.link}" target="_blank" class="rv-news-list-item">
-            <span class="rv-news-list-title">${item.title}</span>
-            <span class="rv-news-list-time">${timeStr}</span>
-        </a>
-        `;
-    }).join('');
-    container.innerHTML = html;
-}
-
-/* --- 4. STOCK EXPLORER --- */
-function loadStockList(category) {
-    document.querySelectorAll('.rv-list-tab').forEach(b => b.classList.remove('active'));
-    document.querySelector(`button[onclick="loadStockList('${category}')"]`).classList.add('active');
-
-    const listContainer = document.getElementById('rv-stock-list-container');
-    const data = STOCK_LISTS[category] || [];
-    
-    let exchange = "NASDAQ";
-    if(category === 'dow') exchange = "NYSE";
-
-    listContainer.innerHTML = data.map(stock => {
-        let fullSymbol = stock.s;
-        if(!stock.s.includes(":")) {
-            fullSymbol = `${exchange}:${stock.s}`;
-            if(stock.s === 'SPY') fullSymbol = 'AMEX:SPY';
-            if(['AAPL','MSFT','NVDA','AMZN','TSLA','NFLX','GOOGL','COST'].includes(stock.s)) fullSymbol = `NASDAQ:${stock.s}`;
-        }
-
-        return `
-        <div class="rv-stock-item" onclick="updateExplorer('${fullSymbol}', '${stock.n}')">
-            <div>
-                <div class="rv-stock-symbol">${stock.s}</div>
-                <div style="font-size:10px; color:#666;">${stock.n}</div>
-            </div>
-            <div style="font-size:18px; color:#444;">&rsaquo;</div>
-        </div>
-        `;
-    }).join('');
-}
-
-function updateExplorer(symbol, name) {
-    document.getElementById('rv-selected-stock-name').textContent = `${name} (${symbol})`;
-    
-    const fundContainer = document.getElementById('container-fundamentals');
-    const techContainer = document.getElementById('container-technicals');
-    
-    fundContainer.innerHTML = '';
-    techContainer.innerHTML = '';
-
-    // Technicals
-    const s1 = document.createElement('script');
-    s1.type = 'text/javascript';
-    s1.src = 'https://s3.tradingview.com/external-embedding/embed-widget-technical-analysis.js';
-    s1.async = true;
-    s1.innerHTML = JSON.stringify({
-        "interval": "1D", "width": "100%", "height": "100%", "symbol": symbol, 
-        "showIntervalTabs": true, "displayMode": "single", "locale": "en", "colorTheme": "dark", "isTransparent": true
-    });
-    const d1 = document.createElement('div'); d1.className = 'tradingview-widget-container__widget';
-    const c1 = document.createElement('div'); c1.className = 'tradingview-widget-container';
-    c1.appendChild(d1); c1.appendChild(s1);
-    techContainer.appendChild(c1);
-
-    // Fundamentals
-    const s2 = document.createElement('script');
-    s2.type = 'text/javascript';
-    s2.src = 'https://s3.tradingview.com/external-embedding/embed-widget-financials.js';
-    s2.async = true;
-    s2.innerHTML = JSON.stringify({
-        "colorTheme": "dark", "isTransparent": true, "displayMode": "regular", 
-        "width": "100%", "height": "100%", "symbol": symbol, "locale": "en"
-    });
-    const d2 = document.createElement('div'); d2.className = 'tradingview-widget-container__widget';
-    const c2 = document.createElement('div'); c2.className = 'tradingview-widget-container';
-    c2.appendChild(d2); c2.appendChild(s2);
-    fundContainer.appendChild(c2);
-}
-
-function filterStocks() {
-    const input = document.getElementById('stockSearch').value.toUpperCase();
-    const items = document.querySelectorAll('.rv-stock-item');
-    items.forEach(item => {
-        const text = item.innerText.toUpperCase();
-        item.style.display = text.includes(input) ? 'flex' : 'none';
-    });
-}
-
-/* --- 5. THEME SWITCHER --- */
-function initTheme() {
-    const btn = document.getElementById('theme-toggle');
-    const body = document.body;
-    btn.addEventListener('click', () => {
-        if(body.getAttribute('data-theme') === 'light') {
-            body.removeAttribute('data-theme');
-            btn.innerHTML = '☀️';
-        } else {
-            body.setAttribute('data-theme', 'light');
-            btn.innerHTML = '🌙';
-        }
-    });
-}
+// Start App
+document.addEventListener('DOMContentLoaded', App.init);
