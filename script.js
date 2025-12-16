@@ -1,591 +1,464 @@
 /* ==========================================================================
-   RUBIK VAULT - MASTER LOGIC (Modularized for Skalability B1)
+   RUBIK VAULT - SCRIPT (Modularisiert mit Namespaces, State, Error Boundaries)
    ========================================================================== */
 
-// B2. Globaler State (minimal, robust)
-const RV_STATE = {
-    theme: 'dark',
-    layout: [],
-    watchlist: [],
-    preferredTab: 'finance',
-    lastUpdated: {
-        quotes: null,
-        news: null,
-        mcs: null
-    },
-    currentExplorerSymbol: 'AAPL'
-};
-
-// D5. Watchlist Limit (Freemium-Vorbereitung)
-const WATCHLIST_LIMIT = 5;
-
-// J. Konkrete Code-Tricks (Utilities)
-
-/**
- * J. Sanitizing Utility (D11. Security)
- * @param {string} htmlString - Unsicheren HTML-String
- * @returns {string} - Bereinigter HTML-String
- */
-function sanitizeHTML(htmlString) {
-    if (typeof DOMPurify === 'undefined') {
-        console.error("DOMPurify not loaded. Skipping sanitization.");
-        return htmlString; 
-    }
-    return DOMPurify.sanitize(htmlString, { USE_PROFILES: { html: false } });
-}
-
-/**
- * J. Zeit-Utility (Relative Zeit)
- * @param {string} isoDate - ISO-Datumstring
- * @returns {string} - Relative Zeit (z.B. "vor 5 Minuten")
- */
-function timeAgo(isoDate) {
-    const seconds = Math.floor((new Date() - new Date(isoDate)) / 1000);
-    let interval = seconds / 31536000;
-    if (interval > 1) return Math.floor(interval) + " Jahren";
-    interval = seconds / 2592000;
-    if (interval > 1) return Math.floor(interval) + " Monaten";
-    interval = seconds / 86400;
-    if (interval > 1) return Math.floor(interval) + " Tagen";
-    interval = seconds / 3600;
-    if (interval > 1) return Math.floor(interval) + " Stunden";
-    interval = seconds / 60;
-    if (interval > 1) return Math.floor(interval) + " Minuten";
-    return Math.floor(seconds) + " Sekunden";
-}
-
-
-/* ==========================================================================
-   MODULES (B1. Modularisierung)
-   ========================================================================== */
-
+// Global Namespace
 const RV = {};
 
-// --- B3. ERROR BOUNDARY WRAPPER ---
-RV.ErrorBoundary = function(fn, moduleName, fallbackHtml = "Modul konnte nicht geladen werden. 💔") {
+// Global State (Minimal, Persistent)
+RV.state = {
+  theme: localStorage.getItem('rv_theme') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'),
+  layout: JSON.parse(localStorage.getItem('rv_layout')) || ['daily-insight', 'mcs', 'watchlist', 'stock-explorer', 'heatmap', 'timeline', 'dashboard'],
+  watchlist: JSON.parse(localStorage.getItem('rv_watchlist')) || ['AAPL', 'NVDA'],
+  preferredTab: localStorage.getItem('rv_preferredTab') || 'finance',
+  lastUpdated: { news: null, quotes: null },
+  cacheMeta: {}, // TTL Tracking
+  onboardingShown: localStorage.getItem('rv_onboardingShown') === 'true'
+};
+
+// Persist State Utility
+RV.persistState = (key) => {
+  try {
+    localStorage.setItem(`rv_${key}`, typeof RV.state[key] === 'object' ? JSON.stringify(RV.state[key]) : RV.state[key]);
+  } catch (e) { console.warn('LocalStorage full or error:', e); }
+};
+
+// State Migration (If Schema Changes)
+if (RV.state.watchlist.length > 5) { RV.state.watchlist = RV.state.watchlist.slice(0, 5); RV.persistState('watchlist'); } // Example Migration
+
+// Utils Namespace
+RV.utils = {
+  sanitizeHTML: (str) => DOMPurify.sanitize(str),
+  timeAgo: (date) => {
+    const seconds = Math.floor((new Date() - new Date(date)) / 1000);
+    let interval = seconds / 31536000;
+    if (interval > 1) return Math.floor(interval) + " years ago";
+    interval = seconds / 2592000;
+    if (interval > 1) return Math.floor(interval) + " months ago";
+    interval = seconds / 86400;
+    if (interval > 1) return Math.floor(interval) + " days ago";
+    interval = seconds / 3600;
+    if (interval > 1) return Math.floor(interval) + " hours ago";
+    interval = seconds / 60;
+    if (interval > 1) return Math.floor(interval) + " minutes ago";
+    return Math.floor(seconds) + " seconds ago";
+  },
+  estimateReadTime: (text) => Math.ceil(text.split(' ').length / 200 * 60) + ' Sekunden', // ~200 WPM
+  fetchWithTimeout: async (url, ms = 5000) => {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), ms);
     try {
-        fn();
+      const response = await fetch(url, { signal: controller.signal });
+      clearTimeout(timeoutId);
+      return response;
     } catch (e) {
-        console.error(`RV Error in ${moduleName}:`, e);
-        // D9. Friendly fallback UI (wird vom Wrapper gerendert)
-        const container = document.querySelector(`[data-module="${moduleName}"]`);
-        if (container) {
-            container.innerHTML = `<div class="rv-error-fallback"><h3>${moduleName}</h3><p>${fallbackHtml}</p><button onclick="window.location.reload()">Reload</button></div>`;
-        }
+      clearTimeout(timeoutId);
+      throw e;
     }
+  },
+  safeJson: async (response) => {
+    if (!response.ok) throw new Error('Network error');
+    return response.json();
+  }
 };
 
-// --- A2. Progressive Disclosure / Onboarding (D8) ---
-RV.Onboarding = {
-    init() {
-        if (localStorage.getItem('rv_onboarding_shown') === 'true') {
-            const onboarding = document.getElementById('rv-onboarding-tip');
-            if (onboarding) onboarding.removeAttribute('open');
+// Fetch Wrapper with Cache (Client-Side Meta, Server Caches Data)
+RV.fetchCached = async (endpoint, ttl) => {
+  const now = Date.now();
+  if (RV.state.cacheMeta[endpoint] && now - RV.state.cacheMeta[endpoint].timestamp < ttl) {
+    return RV.state.cacheMeta[endpoint].data;
+  }
+  try {
+    const response = await RV.utils.fetchWithTimeout(`https://api.rubikvault.com${endpoint}`);
+    const data = await RV.utils.safeJson(response);
+    RV.state.cacheMeta[endpoint] = { data, timestamp: now };
+    return data;
+  } catch (e) {
+    console.error(e);
+    if (RV.state.cacheMeta[endpoint]) return RV.state.cacheMeta[endpoint].data; // Fallback to Cache
+    throw e;
+  }
+};
+
+// Error Boundary Utility
+RV.errorBoundary = (fn, fallbackId) => {
+  return async (...args) => {
+    try {
+      return await fn(...args);
+    } catch (e) {
+      console.error(e);
+      const fallback = document.querySelector(`[data-module="${fallbackId}"] .error-fallback`);
+      if (fallback) fallback.style.display = 'block';
+      // Stub for Sentry: if (Sentry) Sentry.captureException(e);
+    }
+  };
+};
+
+// Modules Namespace (Each with Render/Fetch)
+RV.modules = {
+  theme: {
+    init: () => {
+      const body = document.body;
+      body.setAttribute('data-theme', RV.state.theme);
+      const btn = document.getElementById('theme-toggle');
+      btn.innerHTML = RV.state.theme === 'light' ? '🌙' : '☀️';
+      btn.addEventListener('click', () => {
+        RV.state.theme = RV.state.theme === 'light' ? 'dark' : 'light';
+        body.setAttribute('data-theme', RV.state.theme);
+        btn.innerHTML = RV.state.theme === 'light' ? '🌙' : '☀️';
+        RV.persistState('theme');
+      });
+    }
+  },
+  marketTimer: {
+    render: () => RV.errorBoundary(() => {
+      const statusText = document.getElementById('mt-status');
+      const dot = document.getElementById('mt-dot');
+      const timeDisplay = document.getElementById('mt-time');
+      const options = { timeZone: 'America/New_York', hour: '2-digit', minute: '2-digit', hour12: false };
+      const nyTimeStr = new Date().toLocaleTimeString('en-US', options);
+      timeDisplay.innerText = `NY: ${nyTimeStr}`;
+      const nyDate = new Date().toLocaleString("en-US", {timeZone: "America/New_York"});
+      const nowNY = new Date(nyDate);
+      const hours = nowNY.getHours();
+      const minutes = nowNY.getMinutes();
+      let status = 'CLOSED', dotClass = 'status-closed';
+      if (hours >= 9 && hours < 16 || (hours === 9 && minutes >= 30)) {
+        status = 'OPEN'; dotClass = 'status-open';
+      } else if (hours === 9 && minutes < 30) {
+        status = 'PRE'; dotClass = 'status-pre';
+      }
+      statusText.innerText = status;
+      dot.className = `status-dot ${dotClass}`;
+    }, 'market-timer')()
+  },
+  newsFeed: {
+    fetchAndRender: () => RV.errorBoundary(async () => {
+      const container = document.getElementById('rv-news-feed-list');
+      container.classList.add('skeleton');
+      const tab = RV.state.preferredTab;
+      const data = await RV.fetchCached(`/api/news?type=${tab}`, 300000); // 5 min TTL
+      RV.state.lastUpdated.news = new Date();
+      document.getElementById('news-last-update').innerText = `Last: ${RV.utils.timeAgo(RV.state.lastUpdated.news)}`;
+      document.getElementById('hero-last-update').innerText = `Last Update: News at ${RV.state.lastUpdated.news.toLocaleTimeString()}, Quotes at ${RV.state.lastUpdated.quotes?.toLocaleTimeString() || '--:--'}`;
+      const deduped = data.items.reduce((acc, item) => {
+        if (!acc.some(i => i.title === item.title)) acc.push(item);
+        return acc;
+      }, []);
+      const html = deduped.map(item => RV.utils.sanitizeHTML(`
+        <a href="${item.link}" target="_blank" class="rv-news-list-item">
+          <span class="rv-news-list-title">${item.title}</span>
+          <span class="rv-news-list-time">${RV.utils.timeAgo(item.pubDate)}</span>
+          <span class="rv-news-sentiment">${item.sentiment > 0.6 ? '📈' : item.sentiment < -0.6 ? '📉' : '⚖️'}</span>
+        </a>
+      `)).join('');
+      container.innerHTML = html;
+      container.classList.remove('skeleton');
+      plausible('News Tab View', { props: { tab } });
+    }, 'dashboard')(),
+    init: () => {
+      document.querySelectorAll('.rv-news-tab').forEach(tab => {
+        tab.addEventListener('click', (e) => {
+          document.querySelectorAll('.rv-news-tab').forEach(t => t.classList.remove('active'));
+          e.target.classList.add('active');
+          RV.state.preferredTab = e.target.dataset.tab;
+          RV.persistState('preferredTab');
+          RV.modules.newsFeed.fetchAndRender();
+        });
+      });
+      if (document.querySelector(`.rv-news-tab[data-tab="${RV.state.preferredTab}"]`)) {
+        document.querySelector(`.rv-news-tab[data-tab="${RV.state.preferredTab}"]`).classList.add('active');
+      }
+      RV.modules.newsFeed.fetchAndRender();
+      setInterval(RV.modules.newsFeed.fetchAndRender, 300000);
+      // Lazy Load Observer
+      const observer = new IntersectionObserver(entries => {
+        if (entries[0].isIntersecting) RV.modules.newsFeed.fetchAndRender();
+      });
+      observer.observe(document.getElementById('rv-news-feed-list'));
+    }
+  },
+  watchlist: {
+    render: () => RV.errorBoundary(() => {
+      const container = document.getElementById('wl-container');
+      container.innerHTML = RV.state.watchlist.map(sym => RV.utils.sanitizeHTML(`
+        <div class="rv-wl-item">
+          <div style="font-weight:bold">${sym}</div>
+          <div style="font-size:10px; color:#aaa;">Stock</div>
+          <span class="rv-wl-remove" onclick="RV.modules.watchlist.remove('${sym}')">&times;</span>
+        </div>
+      `)).join('');
+      plausible('Watchlist Render');
+    }, 'watchlist')(),
+    add: (sym) => {
+      sym = sym.toUpperCase();
+      if (RV.state.watchlist.includes(sym) || !SUGGESTIONS_DB.some(s => s.s === sym)) return;
+      if (RV.state.watchlist.length >= 5) {
+        alert('Watchlist Limit: 5 free. Upgrade for more.');
+        return;
+      }
+      RV.state.watchlist.push(sym);
+      RV.persistState('watchlist');
+      RV.modules.watchlist.render();
+      plausible('Watchlist Add', { props: { symbol: sym } });
+    },
+    remove: (sym) => {
+      RV.state.watchlist = RV.state.watchlist.filter(s => s !== sym);
+      RV.persistState('watchlist');
+      RV.modules.watchlist.render();
+      plausible('Watchlist Remove', { props: { symbol: sym } });
+    },
+    init: () => {
+      const input = document.getElementById('wl-input');
+      const suggestionsBox = document.getElementById('wl-suggestions');
+      const btn = document.getElementById('wl-add-btn');
+      const exportBtn = document.getElementById('wl-export');
+      input.addEventListener('input', (e) => {
+        const val = e.target.value.toUpperCase();
+        if (val.length < 1) { suggestionsBox.style.display = 'none'; return; }
+        const matches = SUGGESTIONS_DB.filter(x => x.s.startsWith(val) || x.n.toUpperCase().startsWith(val));
+        if (matches.length > 0) {
+          suggestionsBox.innerHTML = matches.map(m => RV.utils.sanitizeHTML(
+            `<div class="rv-suggestion-item" onclick="RV.modules.watchlist.add('${m.s}')">${m.s} <span style="color:#666">(${m.n})</span></div>`
+          )).join('');
+          suggestionsBox.style.display = 'block';
         } else {
-            const onboarding = document.getElementById('rv-onboarding-tip');
-            if (onboarding) {
-                onboarding.addEventListener('toggle', () => {
-                    // Speichert den Zustand, sobald der User es schließt
-                    if (!onboarding.open) {
-                        localStorage.setItem('rv_onboarding_shown', 'true');
-                    }
-                });
-            }
+          suggestionsBox.style.display = 'none';
         }
+      });
+      btn.addEventListener('click', () => { if (input.value) RV.modules.watchlist.add(input.value); input.value = ''; suggestionsBox.style.display = 'none'; });
+      exportBtn.addEventListener('click', () => {
+        const blob = new Blob([JSON.stringify(RV.state.watchlist)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'watchlist.json';
+        a.click();
+        URL.revokeObjectURL(url);
+      });
+      RV.modules.watchlist.render();
     }
+  },
+  mcs: {
+    fetchAndRender: () => RV.errorBoundary(async () => {
+      const data = await RV.fetchCached('/api/sentiment', 1800000); // 30 min TTL
+      let score = 50; // Neutral Default
+      let stdDev = 0;
+      if (data.sentiments.length > 0) {
+        const mean = data.sentiments.reduce((a, b) => a + b, 0) / data.sentiments.length;
+        stdDev = Math.sqrt(data.sentiments.map(x => (x - mean) ** 2).reduce((a, b) => a + b, 0) / data.sentiments.length);
+        score = Math.round((mean + 1) * 50); // Normalize -1 to 1 -> 0 to 100
+      }
+      const ctx = document.getElementById('mcs-chart').getContext('2d');
+      new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+          labels: ['Consensus', 'Neutral'],
+          datasets: [{
+            data: [score, 100 - score],
+            backgroundColor: [stdDev > 20 ? '#f59e0b' : '#10b981', 'rgba(255,255,255,0.1)'],
+            borderWidth: 0,
+            cutout: '85%'
+          }]
+        },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { enabled: false } } }
+      });
+      document.getElementById('mcs-value').innerText = score;
+      document.getElementById('mcs-label').innerText = stdDev > 20 ? 'High Uncertainty' : 'Sentiment Score';
+      if (data.sentiments.length < 10) document.getElementById('mcs-value').innerText = '--';
+    }, 'mcs')(),
+    init: () => {
+      RV.modules.mcs.fetchAndRender();
+      setInterval(RV.modules.mcs.fetchAndRender, 1800000);
+    }
+  },
+  dailyInsight: {
+    fetchAndRender: () => RV.errorBoundary(async () => {
+      const data = await RV.fetchCached('/api/daily-brief', 3600000); // 1 hour TTL
+      const brief = document.getElementById('daily-brief');
+      brief.innerText = `${data.brief} (Lesezeit: ${RV.utils.estimateReadTime(data.brief)})`;
+      document.getElementById('rubik-note').innerText = data.note;
+      const readBtn = document.getElementById('read-aloud');
+      readBtn.addEventListener('click', () => {
+        const utterance = new SpeechSynthesisUtterance(data.brief + '. ' + data.note);
+        speechSynthesis.speak(utterance);
+      });
+    }, 'daily-insight')(),
+    init: () => {
+      RV.modules.dailyInsight.fetchAndRender();
+    }
+  },
+  stockExplorer: {
+    render: () => RV.errorBoundary(() => {
+      // Erhaltene Funktionen: loadStockList, updateExplorer, filterStocks
+      loadStockList('nasdaq');
+      updateExplorer('NASDAQ:AAPL', 'Apple Inc');
+      // Custom Chart Integration
+      const ctx = document.getElementById('custom-chart').getContext('2d');
+      ctx.canvas.classList.add('skeleton');
+      RV.fetchCached('/api/quote/AAPL?period=30d', 60000).then(data => { // 1 min TTL
+        RV.state.lastUpdated.quotes = new Date();
+        document.getElementById('hero-last-update').innerText = `Last Update: News at ${RV.state.lastUpdated.news?.toLocaleTimeString() || '--:--'}, Quotes at ${RV.state.lastUpdated.quotes.toLocaleTimeString()}`;
+        new Chart(ctx, {
+          type: 'line',
+          data: {
+            labels: data.dates,
+            datasets: [{ label: 'Price', data: data.prices, borderColor: '#10b981', fill: false }]
+          },
+          options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: false } } }
+        });
+        ctx.canvas.classList.remove('skeleton');
+      });
+    }, 'stock-explorer')(),
+    init: () => {
+      RV.modules.stockExplorer.render();
+    }
+  },
+  layout: {
+    init: () => {
+      const main = document.querySelector('.rv-main');
+      Sortable.create(main, {
+        animation: 150,
+        handle: '::before', // Drag Handle
+        onEnd: () => {
+          RV.state.layout = Array.from(main.querySelectorAll('[data-module]')).map(el => el.dataset.module);
+          RV.persistState('layout');
+          plausible('Layout Change');
+        }
+      });
+      // Apply Saved Layout
+      RV.state.layout.forEach(mod => {
+        const el = document.querySelector(`[data-module="${mod}"]`);
+        if (el) main.appendChild(el);
+      });
+    }
+  },
+  onboarding: {
+    init: () => {
+      if (!RV.state.onboardingShown) {
+        document.getElementById('onboarding').open = true;
+        RV.state.onboardingShown = true;
+        RV.persistState('onboardingShown');
+      }
+    }
+  },
+  pwa: {
+    init: () => {
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('/service-worker.js').then(reg => console.log('SW Registered')).catch(err => console.error(err));
+      }
+      window.addEventListener('offline', () => document.getElementById('offline-fallback').style.display = 'block');
+      window.addEventListener('online', () => document.getElementById('offline-fallback').style.display = 'none');
+    }
+  }
 };
 
-// --- News Feed (D1) ---
-RV.NewsFeed = {
-    container: document.getElementById('rv-news-feed-list'),
-    tabButtons: document.querySelectorAll('.rv-tab-btn'),
-    init() {
-        this.tabButtons.forEach(btn => {
-            btn.addEventListener('click', () => this.switchTab(btn.dataset.tab));
-        });
-        this.switchTab(RV_STATE.preferredTab, false);
-        // Start-Fetch
-        this.fetchNews();
-        setInterval(() => this.fetchNews(), 300000); // C2. 5 Minuten (300000 ms)
-    },
-    switchTab(tab, save = true) {
-        if (save) {
-            RV_STATE.preferredTab = tab;
-            localStorage.setItem('rv_preferred_tab', tab);
-        }
-        this.tabButtons.forEach(btn => btn.classList.toggle('active', btn.dataset.tab === tab));
-        this.render(window.RV_CACHED_NEWS || []);
-    },
-    async fetchNews() {
-        document.getElementById('rv-update-news').textContent = `News: Fetching...`;
-        try {
-            // C1. Ruft Backend-Proxy auf
-            const response = await fetch('/api/news');
-            const data = await response.json();
-            window.RV_CACHED_NEWS = data.articles || [];
-            RV_STATE.lastUpdated.news = new Date();
-            this.render(window.RV_CACHED_NEWS);
-            document.getElementById('rv-update-news').textContent = `News: ${timeAgo(RV_STATE.lastUpdated.news)} ago`;
-
-            // D3. MCS muss nach News aktualisiert werden
-            RV.MCS.calculateAndRender(window.RV_CACHED_NEWS);
-
-        } catch (e) {
-            console.error("News fetch failed:", e);
-            this.container.innerHTML = `<p class="rv-error-fallback" style="padding: 15px;">Fehler beim Laden der News. Versuche es in 5 Min. erneut.</p>`;
-            document.getElementById('rv-update-news').textContent = `News: OFFLINE (${RV_STATE.lastUpdated.news ? timeAgo(RV_STATE.lastUpdated.news) + ' alt' : 'nie'})`;
-        }
-    },
-    render(articles) {
-        const filteredArticles = articles.filter(article => {
-            // Option J.2 Filter-Logik (vereinfacht: "Finance" vs "General" basiert auf Quelle/Sentiment)
-            // ANNAHME: Marketaux liefert "Finance", Alpha Vantage "General" oder nutze Sentiment-Filter.
-            if (RV_STATE.preferredTab === 'finance') {
-                return article.sentiment && article.sentiment !== 'neutral'; 
-            }
-            return true; // Zeige alles in General
-        }).slice(0, 50); // Limit auf 50, um DOM-Last zu reduzieren
-
-        this.container.innerHTML = filteredArticles.map(item => {
-            const sentiment = item.sentiment || 'neutral';
-            const sentimentClass = `sentiment-${sentiment.toLowerCase().replace('.', '')}`;
-            const sentimentIcon = sentiment === 'positive' ? '📈' : sentiment === 'negative' ? '📉' : '➖';
-            
-            // D1. Sanitizing & Deduplizieren (Deduplizieren erfolgt idealerweise im Backend/Caching)
-            const title = sanitizeHTML(item.title);
-            const snippet = sanitizeHTML(item.description || item.snippet || '');
-
-            // D1. Rendern als Cards
-            return `
-                <a href="${item.url}" target="_blank" class="rv-news-list-item">
-                    <span class="rv-news-list-title">${title}</span>
-                    <p style="font-size: 12px; color: var(--rv-text-muted); margin: 0;">${snippet}</p>
-                    <div class="rv-news-list-meta">
-                        <span style="display:flex; gap:5px;">
-                            Source: ${item.source}
-                        </span>
-                        <span>${timeAgo(item.published_at)} ago</span>
-                        <span class="rv-news-sentiment-badge ${sentimentClass}">${sentimentIcon} ${sentiment.toUpperCase()}</span>
-                    </div>
-                </a>
-            `;
-        }).join('');
-    }
-};
-
-// --- Market Consensus Score (D3, Option X.1) ---
-RV.MCS = {
-    ctx: document.getElementById('mcsGauge'),
-    gauge: null,
-    uncertaintyBadge: document.getElementById('rv-mcs-uncertainty-badge'),
-    valueEl: document.getElementById('mcsValue'),
-    labelEl: document.getElementById('mcsLabel'),
-    init() {
-        this.gauge = new Chart(this.ctx, {
-            type: 'doughnut',
-            data: { datasets: [{ data: [50, 50], backgroundColor: ['var(--rv-success)', 'var(--rv-danger)'], borderWidth: 0 }] },
-            options: {
-                responsive: true, maintainAspectRatio: false, cutout: '80%', circumference: 180, rotation: -90,
-                plugins: { legend: { display: false }, tooltip: { enabled: false } }
-            }
-        });
-        // Initialisierungs-Rendering
-        this.updateGauge(0.0, 0.0);
-    },
-    calculateAndRender(articles) {
-        if (!articles || articles.length === 0) {
-            this.valueEl.textContent = '--';
-            this.labelEl.textContent = 'No data';
-            return;
-        }
-
-        const sentiments = articles.map(a => {
-            // Normalisiere Sentiment: 'positive'=1, 'negative'=-1, 'neutral'=0
-            if (a.sentiment === 'positive') return 1;
-            if (a.sentiment === 'negative') return -1;
-            return 0;
-        }).filter(s => s !== 0); // Nur positive/negative für die Berechnung
-
-        if (sentiments.length === 0) {
-            this.updateGauge(0.0, 0.0);
-            return;
-        }
-
-        const mean = sentiments.reduce((a, b) => a + b, 0) / sentiments.length;
-        const stdDev = Math.sqrt(sentiments.map(x => Math.pow(x - mean, 2)).reduce((a, b) => a + b) / sentiments.length);
-
-        this.updateGauge(mean, stdDev);
-        RV_STATE.lastUpdated.mcs = new Date();
-        document.getElementById('rv-update-mcs').textContent = `MCS: ${timeAgo(RV_STATE.lastUpdated.mcs)} ago`;
-    },
-    updateGauge(mean, stdDev) {
-        // MCS Score (0 bis 100, umwandeln von -1 bis 1)
-        const score = Math.round((mean + 1) / 2 * 100);
-        const positive = score;
-        const negative = 100 - score;
-
-        // Visualisierung
-        this.gauge.data.datasets[0].data = [positive, negative];
-        this.gauge.data.datasets[0].backgroundColor = [positive >= 50 ? 'var(--rv-success)' : 'var(--rv-danger)', positive < 50 ? 'var(--rv-danger)' : 'var(--rv-success)'];
-        this.gauge.update();
-        
-        // D3. Interpretation
-        this.valueEl.textContent = `${score}%`;
-        
-        if (score >= 60) this.labelEl.textContent = 'Bullish Consensus';
-        else if (score <= 40) this.labelEl.textContent = 'Bearish Consensus';
-        else this.labelEl.textContent = 'Neutral/Mixed';
-
-        // D3. Uncertainty Badge (hohe Standardabweichung)
-        const isUncertain = stdDev >= 0.8; 
-        this.uncertaintyBadge.style.display = isUncertain ? 'inline-flex' : 'none';
-        
-        // D7. Daily Insight Box (Update based on MCS)
-        RV.Insight.updateContent(score, isUncertain);
-    }
-};
-
-// --- Daily Insight Box (D7, Option Y.2) ---
-RV.Insight = {
-    briefEl: document.getElementById('rv-insight-brief'),
-    takeEl: document.getElementById('rv-insight-take'),
-    readBtn: document.getElementById('rv-read-out-loud-btn'),
-    init() {
-        this.readBtn.addEventListener('click', () => this.readOutLoud());
-    },
-    updateContent(mcsScore, isUncertain) {
-        let briefText, takeText;
-
-        if (!mcsScore) {
-            briefText = "Warte auf die Marktkonsens-Daten...";
-            takeText = "Initialisiere Analyse...";
-        } else if (isUncertain) {
-            briefText = "Markt-Alarm: Hohe Divergenz im Sentiment. Der Konsens fehlt heute.";
-            takeText = "Vorsicht ist geboten. Setze enge Stop-Losses oder warte ab. Der MCS ist zu widersprüchlich.";
-        } else if (mcsScore >= 65) {
-            briefText = "Der Markt zeigt starke Kaufbereitschaft. Sentiment: " + mcsScore + "% Bullish.";
-            takeText = "Achte auf Sektor-Flows. Tech ist stark, aber das Momentum könnte sich schnell umkehren.";
-        } else if (mcsScore <= 35) {
-            briefText = "Überwiegend negative Stimmung in den News. Sentiment: " + (100 - mcsScore) + "% Bearish.";
-            takeText = "Bleibe defensiv. Ein Test des letzten Tiefs bei den Indizes ist wahrscheinlich.";
-        } else {
-            briefText = "Ausgewogenes Sentiment. Markt wartet auf den nächsten Makro-Trigger.";
-            takeText = "Heute ist Stock-Picking wichtiger als der Gesamtmarkt. Handle nur klare Setups.";
-        }
-
-        this.briefEl.textContent = briefText;
-        this.takeEl.innerHTML = `<span style="font-weight: 600;">Mein Take:</span> ${takeText}`;
-    },
-    readOutLoud() {
-        if ('speechSynthesis' in window) {
-            const textToRead = this.briefEl.textContent + ". " + this.takeEl.textContent.replace('Mein Take:', '');
-            const utterance = new SpeechSynthesisUtterance(textToRead);
-            utterance.lang = 'de-DE'; 
-            window.speechSynthesis.speak(utterance);
-        } else {
-            alert('Die Text-zu-Sprache-Funktion wird von deinem Browser nicht unterstützt.');
-        }
-    }
-};
-
-
-// --- Watchlist (D5) ---
-RV.Watchlist = {
-    starIcons: null,
-    listContainer: document.getElementById('rv-watchlist-list'),
-    limitBadge: document.getElementById('rv-watchlist-limit-badge'),
-    init() {
-        RV_STATE.watchlist = JSON.parse(localStorage.getItem('rv_watchlist') || '[]');
-        this.render();
-        // Event Delegation für dynamisch geladene Sterne
-        document.addEventListener('click', (e) => {
-            if (e.target.classList.contains('rv-stock-item-star')) {
-                const symbol = e.target.dataset.symbol;
-                this.toggle(symbol);
-            }
-        });
-    },
-    render() {
-        // D5. Watchlist-Sektion Rendern
-        if (RV_STATE.watchlist.length === 0) {
-            this.listContainer.innerHTML = '<p class="rv-text-muted" style="padding: 10px;">Füge Aktien über das Stern-Icon hinzu.</p>';
-        } else {
-            this.listContainer.innerHTML = RV_STATE.watchlist.map(symbol => {
-                // ANNAHME: Hier würde ein Mini-Widget für den Live-Kurs gerendert werden
-                const data = SUGGESTIONS_DB.find(s => s.s === symbol);
-                return `
-                    <div class="rv-stock-item" style="padding: 10px; border-bottom: 1px dashed var(--rv-border);">
-                        <strong>${symbol}</strong>: ${data ? data.n : 'N/A'} 
-                        <span class="rv-stock-item-star active" data-symbol="${symbol}">⭐</span>
-                    </div>
-                `;
-            }).join('');
-        }
-        this.limitBadge.textContent = `${RV_STATE.watchlist.length}/${WATCHLIST_LIMIT}`;
-        this.updateAllStarIcons(); // Stellt sicher, dass alle Sterne auf der Seite richtig markiert sind
-    },
-    toggle(symbol) {
-        const index = RV_STATE.watchlist.indexOf(symbol);
-        if (index > -1) {
-            RV_STATE.watchlist.splice(index, 1); // Entfernen
-        } else if (RV_STATE.watchlist.length < WATCHLIST_LIMIT) {
-            RV_STATE.watchlist.push(symbol); // Hinzufügen
-        } else {
-            alert(`Limit erreicht! Max. ${WATCHLIST_LIMIT} Aktien in der Watchlist (Premium-Vorbereitung).`);
-            return;
-        }
-        localStorage.setItem('rv_watchlist', JSON.stringify(RV_STATE.watchlist));
-        this.render();
-    },
-    updateAllStarIcons() {
-        // Aktualisiert alle Stern-Icons auf der Seite (z.B. im Stock Explorer)
-        document.querySelectorAll('.rv-stock-item-star').forEach(icon => {
-            const symbol = icon.dataset.symbol;
-            icon.classList.toggle('active', RV_STATE.watchlist.includes(symbol));
-            icon.textContent = RV_STATE.watchlist.includes(symbol) ? '⭐' : '☆';
-        });
-    }
-};
-
-// --- Layout Manager (D6) ---
-RV.LayoutManager = {
-    grid: document.getElementById('rv-dash-grid'),
-    init() {
-        RV_STATE.layout = JSON.parse(localStorage.getItem('rv_layout') || '[]');
-        if (RV_STATE.layout.length > 0) {
-            this.applyLayout(RV_STATE.layout);
-        }
-
-        // D6. SortableJS Initialisierung
-        new Sortable(this.grid, {
-            animation: 150,
-            handle: '.rv-box-title', // Titel als Drag-Handle
-            onEnd: () => this.saveLayout()
-        });
-    },
-    saveLayout() {
-        RV_STATE.layout = Array.from(this.grid.children).map(el => el.getAttribute('data-module'));
-        localStorage.setItem('rv_layout', JSON.stringify(RV_STATE.layout));
-    },
-    applyLayout(layout) {
-        layout.forEach(moduleName => {
-            const el = document.querySelector(`[data-module="${moduleName}"]`);
-            if (el) this.grid.appendChild(el);
-        });
-    }
-};
-
-// --- Explorer (Erweitert um Custom Charts D4) ---
-RV.Explorer = {
-    chartContainer: document.getElementById('rv-explorer-chart'),
-    currentChart: null,
-    update(symbol, name) {
-        RV_STATE.currentExplorerSymbol = symbol;
-        document.getElementById('rv-explorer-stock-name').textContent = name;
-        this.loadCustomChart(symbol);
-        
-        // TradingView Financials (Beibehalten, aber neu laden)
-        this.loadTradingViewWidgets(symbol);
-        
-        RV.Watchlist.updateAllStarIcons();
-    },
-    async loadCustomChart(symbol) {
-        this.chartContainer.innerHTML = '<div class="rv-skeleton-chart"></div>';
-        try {
-            // C1. Ruft Backend-Proxy auf (angenommen es liefert [date, close] Arrays)
-            const response = await fetch(`/api/quotes?symbol=${symbol}&timeframe=30d`);
-            const data = await response.json(); 
-
-            // Daten müssen für Chart.js vorbereitet werden
-            const labels = data.map(d => new Date(d.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
-            const prices = data.map(d => d.close);
-            const lastPrice = prices[prices.length - 1];
-            const firstPrice = prices[0];
-            const isPositive = lastPrice >= firstPrice;
-            const color = isPositive ? 'var(--rv-purple)' : 'var(--rv-danger)';
-
-            this.chartContainer.innerHTML = '<canvas id="customChart"></canvas>';
-
-            if (this.currentChart) this.currentChart.destroy();
-
-            this.currentChart = new Chart(document.getElementById('customChart'), {
-                type: 'line',
-                data: {
-                    labels: labels,
-                    datasets: [{
-                        label: `${symbol} Close Price`,
-                        data: prices,
-                        borderColor: color,
-                        backgroundColor: color.replace(')', ', 0.2)'), // Transparente Füllung
-                        borderWidth: 2,
-                        pointRadius: 0,
-                        tension: 0.2
-                    }]
-                },
-                // D4. Minimales Design
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: { legend: { display: false } },
-                    scales: {
-                        x: { display: false, grid: { color: 'var(--rv-border)' } },
-                        y: { 
-                            ticks: { color: 'var(--rv-text-muted)' },
-                            grid: { color: 'var(--rv-border)' } 
-                        }
-                    }
-                }
-            });
-
-        } catch (e) {
-            console.error("Custom Chart load failed:", e);
-            this.chartContainer.innerHTML = '<p class="rv-error-fallback">Chart-Daten konnten nicht geladen werden.</p>';
-        }
-    },
-    loadTradingViewWidgets(symbol) {
-        // Original-Logik zur Neuladung der TradingView Widgets (beibehalten)
-        const financialsContainer = document.getElementById('tv-financials-container');
-        financialsContainer.innerHTML = ''; // Leeren
-
-        const s2 = document.createElement('script');
-        s2.type = 'text/javascript';
-        s2.src = 'https://s3.tradingview.com/external-embedding/embed-widget-financials.js';
-        s2.async = true;
-        s2.innerHTML = JSON.stringify({
-            "colorTheme": RV_STATE.theme, // Theme-Integration
-            "isTransparent": true, "displayMode": "regular", 
-            "width": "100%", "height": "100%", "symbol": symbol, "locale": "en"
-        });
-        const c2 = document.createElement('div'); c2.className = 'tradingview-widget-container';
-        c2.appendChild(s2);
-        financialsContainer.appendChild(c2);
-    }
-};
-
-
-/* ==========================================================================
-   INITIALISIERUNG
-   ========================================================================== */
-
-document.addEventListener("DOMContentLoaded", () => {
-    // RV_STATE aus LocalStorage wiederherstellen (Thema/Tab)
-    RV_STATE.theme = localStorage.getItem('rv_theme') || 'dark';
-    RV_STATE.preferredTab = localStorage.getItem('rv_preferred_tab') || 'finance';
-    
-    // Initialisiere die Module in der richtigen Reihenfolge
-    
-    // Sicherheit und UX-Basis
-    RV.ErrorBoundary(() => RV.Theme.init(), 'ThemeToggle');
-    RV.ErrorBoundary(() => RV.Onboarding.init(), 'Onboarding');
-    
-    // Layout & Persistenz
-    RV.ErrorBoundary(() => RV.LayoutManager.init(), 'LayoutManager');
-    RV.ErrorBoundary(() => RV.Watchlist.init(), 'Watchlist');
-    
-    // Haupt-Daten-Feeds
-    RV.ErrorBoundary(() => RV.NewsFeed.init(), 'NewsFeed');
-    RV.ErrorBoundary(() => RV.MCS.init(), 'MCSGauge');
-    RV.ErrorBoundary(() => RV.Insight.init(), 'DailyInsightBox');
-
-    // Explorer und Timer (Beibehalten/Aktualisiert)
-    RV.ErrorBoundary(() => initUSMarketTimer(), 'MarketTimer');
-    RV.ErrorBoundary(() => {
-        loadStockList('nasdaq'); // Lädt die Liste der Ticker
-        RV.Explorer.update(RV_STATE.currentExplorerSymbol, SUGGESTIONS_DB.find(s => s.s === RV_STATE.currentExplorerSymbol)?.n || 'Stock Explorer');
-    }, 'StockExplorer');
-
-
-    // Intervals (Beibehalten)
-    setInterval(initUSMarketTimer, 1000); 
-});
-
-// --- ORIGINAL-FUNKTIONEN (ANGEPASST FÜR NEUE STRUKTUR/APIS) ---
-
+// Datasets (Erhalten)
 const SUGGESTIONS_DB = [
-    {s:'AAPL', n:'Apple Inc', t:'Stock'}, {s:'MSFT', n:'Microsoft', t:'Stock'}, {s:'NVDA', n:'NVIDIA', t:'Stock'},
-    {s:'AMZN', n:'Amazon', t:'Stock'}, {s:'GOOGL', n:'Alphabet', t:'Stock'}, {s:'TSLA', n:'Tesla', t:'Stock'},
-    {s:'META', n:'Meta Platforms', t:'Stock'}, {s:'BTCUSDT', n:'Bitcoin', t:'Crypto'}, {s:'ETHUSDT', n:'Ethereum', t:'Crypto'},
-    {s:'AMD', n:'AMD', t:'Stock'}, {s:'NFLX', n:'Netflix', t:'Stock'}, {s:'INTC', n:'Intel', t:'Stock'},
-    {s:'PYPL', n:'PayPal', t:'Stock'}, {s:'ADBE', n:'Adobe', t:'Stock'}, {s:'SOLUSDT', n:'Solana', t:'Crypto'}
+  {s:'AAPL', n:'Apple Inc', t:'Stock'}, {s:'MSFT', n:'Microsoft', t:'Stock'}, {s:'NVDA', n:'NVIDIA', t:'Stock'},
+  {s:'AMZN', n:'Amazon', t:'Stock'}, {s:'GOOGL', n:'Alphabet', t:'Stock'}, {s:'TSLA', n:'Tesla', t:'Stock'},
+  {s:'META', n:'Meta Platforms', t:'Stock'}, {s:'BTCUSDT', n:'Bitcoin', t:'Crypto'}, {s:'ETHUSDT', n:'Ethereum', t:'Crypto'},
+  {s:'AMD', n:'AMD', t:'Stock'}, {s:'NFLX', n:'Netflix', t:'Stock'}, {s:'INTC', n:'Intel', t:'Stock'},
+  {s:'PYPL', n:'PayPal', t:'Stock'}, {s:'ADBE', n:'Adobe', t:'Stock'}, {s:'SOLUSDT', n:'Solana', t:'Crypto'}
 ];
 
-function loadStockList(filter) {
-    const listContainer = document.getElementById('stock-list-container');
-    const filtered = SUGGESTIONS_DB.filter(s => filter === 'all' || s.t.toLowerCase() === filter);
-    
-    listContainer.innerHTML = filtered.map(stock => {
-        // D5. Stern-Icon für Watchlist hinzugefügt
-        const isActive = RV_STATE.watchlist.includes(stock.s);
-        const star = `<span class="rv-stock-item-star ${isActive ? 'active' : ''}" data-symbol="${stock.s}">${isActive ? '⭐' : '☆'}</span>`;
-        return `
-            <div class="rv-stock-item" onclick="RV.Explorer.update('${stock.s}', '${stock.n}')">
-                <span>${stock.s} - ${stock.n}</span>
-                ${star}
-            </div>
-        `;
-    }).join('');
+const STOCK_LISTS = {
+  nasdaq: [
+    { s: "AAPL", n: "Apple" }, { s: "MSFT", n: "Microsoft" }, { s: "NVDA", n: "NVIDIA" }, { s: "AMZN", n: "Amazon" },
+    { s: "META", n: "Meta" }, { s: "GOOGL", n: "Alphabet" }, { s: "TSLA", n: "Tesla" }, { s: "AVGO", n: "Broadcom" },
+    { s: "COST", n: "Costco" }, { s: "PEP", n: "PepsiCo" }, { s: "NFLX", n: "Netflix" }, { s: "AMD", n: "AMD" }
+  ],
+  dow: [
+    { s: "MMM", n: "3M" }, { s: "AXP", n: "Am. Express" }, { s: "AMGN", n: "Amgen" }, { s: "AAPL", n: "Apple" },
+    { s: "BA", n: "Boeing" }, { s: "CAT", n: "Caterpillar" }, { s: "CVX", n: "Chevron" }, { s: "CSCO", n: "Cisco" }
+  ],
+  sp500: [
+    { s: "SPY", n: "S&P 500 ETF" }, { s: "JPM", n: "JPMorgan" }, { s: "V", n: "Visa" }, { s: "LLY", n: "Lilly" },
+    { s: "MA", n: "Mastercard" }, { s: "HD", n: "Home Depot" }, { s: "XOM", n: "Exxon" }, { s: "UNH", n: "UnitedHealth" }
+  ]
+};
 
-    RV.Watchlist.updateAllStarIcons(); // Stellt sicher, dass das erste Rendern korrekt ist
+// Erhaltene Funktionen (Global für Kompatibilität)
+function loadStockList(category) {
+  document.querySelectorAll('.rv-list-tab').forEach(b => b.classList.remove('active'));
+  document.querySelector(`button[onclick="loadStockList('${category}')"]`).classList.add('active');
+  const listContainer = document.getElementById('rv-stock-list-container');
+  const data = STOCK_LISTS[category] || [];
+  let exchange = "NASDAQ";
+  if(category === 'dow') exchange = "NYSE";
+  listContainer.innerHTML = data.map(stock => {
+    let fullSymbol = stock.s;
+    if(!stock.s.includes(":")) {
+      fullSymbol = `${exchange}:${stock.s}`;
+      if(stock.s === 'SPY') fullSymbol = 'AMEX:SPY';
+      if(['AAPL','MSFT','NVDA','AMZN','TSLA','NFLX','GOOGL','COST'].includes(stock.s)) fullSymbol = `NASDAQ:${stock.s}`;
+    }
+    return RV.utils.sanitizeHTML(`
+    <div class="rv-stock-item" onclick="updateExplorer('${fullSymbol}', '${stock.n}')">
+      <div>
+        <div class="rv-stock-symbol">${stock.s}</div>
+        <div style="font-size:10px; color:#666;">${stock.n}</div>
+      </div>
+      <div style="font-size:18px; color:#444;">&rsaquo;</div>
+    </div>
+    `);
+  }).join('');
 }
 
 function updateExplorer(symbol, name) {
-    RV.Explorer.update(symbol, name);
+  document.getElementById('rv-selected-stock-name').textContent = `${name} (${symbol})`;
+  const fundContainer = document.getElementById('container-fundamentals');
+  const techContainer = document.getElementById('container-technicals');
+  fundContainer.innerHTML = '';
+  techContainer.innerHTML = '';
+  const s1 = document.createElement('script');
+  s1.type = 'text/javascript';
+  s1.src = 'https://s3.tradingview.com/external-embedding/embed-widget-technical-analysis.js';
+  s1.async = true;
+  s1.innerHTML = JSON.stringify({
+    "interval": "1D", "width": "100%", "height": "100%", "symbol": symbol, 
+    "showIntervalTabs": true, "displayMode": "single", "locale": "en", "colorTheme": "dark", "isTransparent": true
+  });
+  const c1 = document.createElement('div'); c1.className = 'tradingview-widget-container';
+  c1.appendChild(s1);
+  techContainer.appendChild(c1);
+  const s2 = document.createElement('script');
+  s2.type = 'text/javascript';
+  s2.src = 'https://s3.tradingview.com/external-embedding/embed-widget-financials.js';
+  s2.async = true;
+  s2.innerHTML = JSON.stringify({
+    "colorTheme": "dark", "isTransparent": true, "displayMode": "regular", 
+    "width": "100%", "height": "100%", "symbol": symbol, "locale": "en"
+  });
+  const c2 = document.createElement('div'); c2.className = 'tradingview-widget-container';
+  c2.appendChild(s2);
+  fundContainer.appendChild(c2);
+  // Trigger Custom Chart Update
+  RV.modules.stockExplorer.render();
 }
 
 function filterStocks() {
-    const input = document.getElementById('stockSearch').value.toUpperCase();
-    const items = document.querySelectorAll('.rv-stock-item');
-    items.forEach(item => {
-        const text = item.innerText.toUpperCase();
-        item.style.display = text.includes(input) ? 'flex' : 'none';
-    });
+  const input = document.getElementById('stockSearch').value.toUpperCase();
+  const items = document.querySelectorAll('.rv-stock-item');
+  items.forEach(item => {
+    const text = item.innerText.toUpperCase();
+    item.style.display = text.includes(input) ? 'flex' : 'none';
+  });
 }
 
-// --- ORIGINAL MARKET TIMER (Beibehalten, aber auf neue API vorbereitet) ---
-function initUSMarketTimer() {
-    // ANNAHME: Die Logik für den Timer bleibt (oder wird auf /api/status umgestellt)
-    const timerElement = document.getElementById('market-timer');
-    const now = new Date();
-    const hour = now.getHours();
-    const minutes = now.getMinutes();
-
-    // Simplifizierte US-Marktzeiten (9:30 AM - 4:00 PM EST)
-    const isTradingHours = (hour >= 15 && hour < 22) || (hour === 14 && minutes >= 30); // CET conversion
-    
-    if (isTradingHours) {
-        timerElement.textContent = "US Market Open";
-        timerElement.style.backgroundColor = 'var(--rv-success)';
-    } else {
-        timerElement.textContent = "US Market Closed";
-        timerElement.style.backgroundColor = 'var(--rv-danger)';
-    }
-
-    // ANNAHME: Hier würde ein Fetch an /api/quotes erfolgen, um die Basis-Indizes zu aktualisieren.
-    // ...
-}
-
-// --- ORIGINAL THEME SWITCHER (B2. Global State Integration) ---
-RV.Theme = {
-    init() {
-        const btn = document.getElementById('theme-toggle');
-        const body = document.body;
-        
-        // D2. Initial aus LocalStorage/Preference
-        const initialTheme = localStorage.getItem('rv_theme') || 
-                             (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
-        
-        this.setTheme(initialTheme);
-        
-        btn.addEventListener('click', () => {
-            const newTheme = body.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
-            this.setTheme(newTheme);
-        });
-    },
-    setTheme(theme) {
-        const body = document.body;
-        body.setAttribute('data-theme', theme);
-        localStorage.setItem('rv_theme', theme);
-        RV_STATE.theme = theme;
-        // ANNAHME: Hier müssten alle TradingView Widgets neu geladen werden (RV.Explorer.loadTradingViewWidgets)
-    }
-};
+// Init All
+document.addEventListener("DOMContentLoaded", () => {
+  RV.modules.theme.init();
+  RV.modules.marketTimer.render();
+  setInterval(RV.modules.marketTimer.render, 1000);
+  RV.modules.newsFeed.init();
+  RV.modules.watchlist.init();
+  RV.modules.mcs.init();
+  RV.modules.dailyInsight.init();
+  RV.modules.stockExplorer.init();
+  RV.modules.layout.init();
+  RV.modules.onboarding.init();
+  RV.modules.pwa.init();
+  // Heartbeat for Time-on-Site (Approx)
+  setInterval(() => plausible('Heartbeat'), 30000);
+});
