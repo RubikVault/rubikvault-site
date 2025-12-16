@@ -1,5 +1,4 @@
-// Service Worker for PWA (App Shell Cache-First, Data Network-First with Fallback)
-const CACHE_NAME = 'rubikvault-v2'; // Updated Version
+const CACHE_NAME = 'rubikvault-v3';
 const ASSETS = [
   '/',
   '/index.html',
@@ -7,7 +6,10 @@ const ASSETS = [
   '/script.js',
   '/imprint.html',
   '/privacy.html',
-  '/disclaimer.html'
+  '/disclaimer.html',
+  // WICHTIG: Externe Bibliotheken cachen, damit Charts offline/schnell laden
+  'https://cdn.jsdelivr.net/npm/chart.js',
+  'https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js'
 ];
 
 self.addEventListener('install', (e) => {
@@ -17,13 +19,16 @@ self.addEventListener('install', (e) => {
 });
 
 self.addEventListener('fetch', (e) => {
-  if (e.request.url.includes('/api/')) {
-    // Network-First for Data
+  const url = new URL(e.request.url);
+
+  // Strategie für APIs (News, RSS Proxy): Network First, Fallback to Cache (wenn möglich) oder Fail
+  if (url.hostname.includes('api.allorigins.win') || url.hostname.includes('rss2json')) {
     e.respondWith(
-      fetch(e.request).catch(() => caches.match(e.request)) // Fallback to Cache if Offline
+      fetch(e.request).catch(() => caches.match(e.request))
     );
-  } else {
-    // Cache-First for App Shell
+  } 
+  // Strategie für statische Assets & App Shell: Cache First
+  else {
     e.respondWith(
       caches.match(e.request).then((response) => response || fetch(e.request))
     );
