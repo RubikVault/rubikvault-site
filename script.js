@@ -1,16 +1,29 @@
 /* ==========================================================================
-   RUBIK VAULT - MASTER LOGIC (FINAL FIX)
+   RUBIK VAULT - MASTER LOGIC
    ========================================================================== */
 
-// --- 1. FULL STOCK DATA (EXPANDED LISTS) ---
+document.addEventListener("DOMContentLoaded", () => {
+    initTheme();
+    initUSMarketTimer();
+    initNewsFeed();
+    
+    // Default load: Apple
+    loadStockList('nasdaq');
+    updateExplorer('NASDAQ:AAPL', 'Apple Inc');
+    
+    // Intervals
+    setInterval(initUSMarketTimer, 1000); 
+    setInterval(initNewsFeed, 30000); 
+});
+
+/* --- 1. FULL STOCK DATA (Major US Indices) --- */
 const STOCK_LISTS = {
     nasdaq: [
         { s: "AAPL", n: "Apple" }, { s: "MSFT", n: "Microsoft" }, { s: "NVDA", n: "NVIDIA" }, { s: "AMZN", n: "Amazon" },
-        { s: "META", n: "Meta" }, { s: "AVGO", n: "Broadcom" }, { s: "GOOGL", n: "Alphabet" }, { s: "TSLA", n: "Tesla" },
+        { s: "META", n: "Meta" }, { s: "GOOGL", n: "Alphabet" }, { s: "TSLA", n: "Tesla" }, { s: "AVGO", n: "Broadcom" },
         { s: "COST", n: "Costco" }, { s: "PEP", n: "PepsiCo" }, { s: "NFLX", n: "Netflix" }, { s: "AMD", n: "AMD" },
-        { s: "ADBE", n: "Adobe" }, { s: "QCOM", n: "Qualcomm" }, { s: "TMUS", n: "T-Mobile" }, { s: "CSCO", n: "Cisco" },
-        { s: "TXN", n: "Texas Instr." }, { s: "INTC", n: "Intel" }, { s: "AMGN", n: "Amgen" }, { s: "HON", n: "Honeywell" },
-        { s: "INTU", n: "Intuit" }, { s: "BKNG", n: "Booking" }, { s: "SBUX", n: "Starbucks" }, { s: "GILD", n: "Gilead" }
+        { s: "ADBE", n: "Adobe" }, { s: "QCOM", n: "Qualcomm" }, { s: "TXN", n: "Texas Instr." }, { s: "INTC", n: "Intel" },
+        { s: "AMGN", n: "Amgen" }, { s: "HON", n: "Honeywell" }, { s: "INTU", n: "Intuit" }, { s: "SBUX", n: "Starbucks" }
     ],
     dow: [
         { s: "MMM", n: "3M" }, { s: "AXP", n: "Am. Express" }, { s: "AMGN", n: "Amgen" }, { s: "AAPL", n: "Apple" },
@@ -27,23 +40,9 @@ const STOCK_LISTS = {
         { s: "MA", n: "Mastercard" }, { s: "HD", n: "Home Depot" }, { s: "XOM", n: "Exxon" }, { s: "UNH", n: "UnitedHealth" },
         { s: "JNJ", n: "J&J" }, { s: "PG", n: "P&G" }, { s: "COST", n: "Costco" }, { s: "ABBV", n: "AbbVie" },
         { s: "BAC", n: "BofA" }, { s: "KO", n: "Coca-Cola" }, { s: "CRM", n: "Salesforce" }, { s: "ACN", n: "Accenture" },
-        { s: "LIN", n: "Linde" }, { s: "MCD", n: "McDonalds" }, { s: "DIS", n: "Disney" }, { s: "CSCO", n: "Cisco" }
+        { s: "MCD", n: "McDonalds" }, { s: "DIS", n: "Disney" }, { s: "CSCO", n: "Cisco" }, { s: "T", n: "AT&T" }
     ]
 };
-
-document.addEventListener("DOMContentLoaded", () => {
-    initTheme();
-    initUSMarketTimer();
-    initNewsFeed();
-    
-    // Start with Apple loaded (Option E/F)
-    loadStockList('nasdaq');
-    updateExplorer('NASDAQ:AAPL', 'Apple Inc');
-    
-    // Intervals
-    setInterval(initUSMarketTimer, 1000); 
-    setInterval(initNewsFeed, 30000); 
-});
 
 /* --- 2. US MARKET TIMER --- */
 function initUSMarketTimer() {
@@ -85,12 +84,11 @@ function initUSMarketTimer() {
         }
     }
 
-    statusText.textContent = status;
-    dot.className = "status-dot " + cssClass;
+    if(statusText) statusText.textContent = status;
+    if(dot) dot.className = "status-dot " + cssClass;
 }
 
-/* --- 3. LIVE NEWS FEED (YAHOO FINANCE RSS via PROXY) --- */
-// Wir nutzen "AllOrigins" Proxy, um XML von Yahoo Finance zu parsen. Das ist stabiler als JSON APIs.
+/* --- 3. LIVE NEWS FEED (XML PARSER) --- */
 const PROXY = "https://api.allorigins.win/get?url=";
 const FEED_URL = "https://finance.yahoo.com/news/rssindex";
 
@@ -98,10 +96,13 @@ async function initNewsFeed() {
     const container = document.getElementById('rv-news-feed-list');
     if(!container) return;
 
-    if(container.innerHTML.trim() === "") container.innerHTML = '<div style="padding:20px; text-align:center; color:#666;">Loading Live Feeds...</div>';
+    if(container.innerHTML.trim() === "") container.innerHTML = '<div style="padding:20px; text-align:center; color:#666;">Syncing...</div>';
+
+    // Add random param to prevent caching
+    const cacheBuster = `&t=${Date.now()}`;
 
     try {
-        const response = await fetch(PROXY + encodeURIComponent(FEED_URL));
+        const response = await fetch(PROXY + encodeURIComponent(FEED_URL) + cacheBuster);
         const data = await response.json();
         
         if (data.contents) {
@@ -111,7 +112,7 @@ async function initNewsFeed() {
             
             let newsItems = [];
             items.forEach((item, index) => {
-                if(index > 15) return; // Limit 15
+                if(index > 15) return; 
                 const title = item.querySelector("title")?.textContent;
                 const link = item.querySelector("link")?.textContent;
                 const pubDate = item.querySelector("pubDate")?.textContent;
@@ -127,14 +128,10 @@ async function initNewsFeed() {
 
             if(newsItems.length > 0) {
                 renderNews(newsItems, container);
-            } else {
-                throw new Error("No items found");
             }
         }
     } catch (e) {
-        console.error(e);
-        // Fallback Link anzeigen
-        container.innerHTML = '<div class="rv-news-error">Feed temporary unavailable. <br><a href="https://finance.yahoo.com" target="_blank" style="color:#00e5ff">Open Yahoo Finance</a></div>';
+        console.error("News Fetch Error", e);
     }
 }
 
@@ -166,9 +163,7 @@ function loadStockList(category) {
         let fullSymbol = stock.s;
         if(!stock.s.includes(":")) {
             fullSymbol = `${exchange}:${stock.s}`;
-            // ETF Fix
             if(stock.s === 'SPY') fullSymbol = 'AMEX:SPY';
-            // Tech Fix
             if(['AAPL','MSFT','NVDA','AMZN','TSLA','NFLX','GOOGL','COST'].includes(stock.s)) fullSymbol = `NASDAQ:${stock.s}`;
         }
 
