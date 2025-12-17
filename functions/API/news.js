@@ -1,73 +1,54 @@
-export async function onRequestGet() {
-  // Kostenlos & ohne Key: RSS (Yahoo Finance)
+import { XMLParser } from 'fast-xml-parser';
+
+export async function onRequestGet(context) {
+  // Quellen
   const feeds = [
-    "https://feeds.finance.yahoo.com/rss/2.0/headline?s=%5EGSPC&region=US&lang=en-US",
-    "https://feeds.finance.yahoo.com/rss/2.0/headline?s=BTC-USD&region=US&lang=en-US"
+    { id: 'yahoo', url: 'https://finance.yahoo.com/news/rssindex' },
+    { id: 'cnbc', url: 'https://search.cnbc.com/rs/search/combined.xml?type=articles&id=10000664' },
+    { id: 'coindesk', url: 'https://www.coindesk.com/arc/outboundfeeds/rss' }
   ];
 
   try {
-    const items = [];
+    const parser = new XMLParser({ ignoreAttributes: false });
+    let allItems = [];
 
-    for (const f of feeds) {
-      const res = await fetch(f, { headers: { "user-agent": "RubikVault/1.0" } });
-      if (!res.ok) continue;
-      const xml = await res.text();
-      items.push(...extractRssItems(xml));
-    }
+    // Parallel Fetching
+    const promises = feeds.map(async (feed) => {
+      try {
+        const res = await fetch(feed.url, { 
+          headers: { 'User-Agent': 'RubikVault/1.0' },
+          cf: { cacheTtl: 60, cacheEverything: true } 
+        });
+        if (!res.ok) return [];
+        const xmlText = await res.text();
+        const xmlObj = parser.parse(xmlText);
+        
+        let items = xmlObj.rss?.channel?.item || xmlObj.feed?.entry || [];
+        if (!Array.isArray(items)) items = [items];
 
-    // dedupe by title
-    const seen = new Set();
-    const unique = [];
-    for (const it of items) {
-      const key = (it.title || "").trim();
-      if (!key || seen.has(key)) continue;
-      seen.add(key);
-      unique.push(it);
-      if (unique.length >= 12) break;
-    }
+        return items.slice(0, 10).map(item => ({
+          title: item.title,
+          link: item.link,
+          pubDate: item.pubDate || item.updated,
+          source: feed.id
+        }));
+      } catch (e) { return []; }
+    });
 
-    return json({ items: unique, source: "Yahoo Finance RSS" });
+    const results = await Promise.all(promises);
+    results.forEach(r => allItems.push(...r));
+
+    // Dedupe & Sort
+    const unique = Array.from(new Map(allItems.map(item => [item.title, item])).values());
+    unique.sort((a, b) => new Date(b.pubDate) - new Date(a.pubDate));
+
+    return new Response(JSON.stringify({ items: unique.slice(0, 30) }), {
+      headers: { 
+        'Content-Type': 'application/json',
+        'Cache-Control': 'public, max-age=60' 
+      }
+    });
   } catch (e) {
-    return json({ items: [], error: e.message }, 502);
+    return new Response(JSON.stringify({ error: e.message }), { status: 500 });
   }
-}
-
-function json(obj, status = 200) {
-  return new Response(JSON.stringify(obj), {
-    status,
-    headers: {
-      "content-type": "application/json; charset=utf-8",
-      "cache-control": "no-store"
-    }
-  });
-}
-
-function extractRssItems(xml) {
-  // Minimal-Parser: <item> ... <title>... <link>...
-  const items = [];
-  const itemBlocks = xml.split("<item>").slice(1);
-
-  for (const block of itemBlocks) {
-    const title = pick(block, "title");
-    const link = pick(block, "link");
-    if (title) items.push({ title: decode(title), link: link ? decode(link) : "" });
-    if (items.length >= 12) break;
-  }
-  return items;
-}
-
-function pick(block, tag) {
-  const m = block.match(new RegExp(`<${tag}>([\\s\\S]*?)<\\/${tag}>`, "i"));
-  return m ? m[1].trim() : "";
-}
-
-function decode(s) {
-  return s
-    .replace(/<!\[CDATA\[/g, "")
-    .replace(/\]\]>/g, "")
-    .replace(/&amp;/g, "&")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'");
 }
