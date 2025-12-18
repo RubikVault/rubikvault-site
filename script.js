@@ -1,211 +1,584 @@
-(() => {
-  "use strict";
+/* RubikVault Frontend Script (Vanilla)
+   - Theme toggle + persistence
+   - Market timer (NYC, US cash session)
+   - Fear & Greed gauges (proxy-based/demo values)
+   - Watchlist (localStorage)
+   - Deep Dive explorer (static lists + TradingView widgets)
+   - Live News feed (RSS via public proxy)
+*/
 
-  // ---- RV_ADD namespace (additive) ----
-  const RV_ADD = {
-    cfg: {
-      newsPollMs: 90000,
-      filter: "all",
-      maxShow: 10,
-      dev: new URLSearchParams(location.search).get("dev") === "true"
-    },
-    state: {
-      isFetchingNews: false,
-      lastMeta: null,
-      lastItems: []
-    },
+(function () {
+  // ─────────────────────────────────────────────────────────────
+  // Helpers
+  // ─────────────────────────────────────────────────────────────
+  const $ = (sel, root = document) => root.querySelector(sel);
+  const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
 
-    els: {
-      status: null,
-      refreshBtn: null,
-      newsUpdated: null,
-      newsList: null,
-      cheatUpdated: null,
-      heat: null
-    },
+  function safeJSONParse(str, fallback) {
+    try { return JSON.parse(str); } catch { return fallback; }
+  }
 
-    init() {
-      this.els.status = document.getElementById("rv-add-status");
-      this.els.refreshBtn = document.getElementById("rv-add-refresh");
-      this.els.newsUpdated = document.getElementById("rv-add-news-updated");
-      this.els.newsList = document.getElementById("rv-add-news-list");
-      this.els.cheatUpdated = document.getElementById("rv-add-cheat-updated");
-      this.els.heat = document.getElementById("rv-add-heat");
+  function clamp(n, min, max) {
+    return Math.max(min, Math.min(max, n));
+  }
 
-      // If the add-zone isn't present, do nothing (keeps site safe)
-      if (!this.els.newsList || !this.els.status) return;
+  function formatTime(date, timeZone) {
+    return new Intl.DateTimeFormat('en-US', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+      timeZone
+    }).format(date);
+  }
 
-      this.els.refreshBtn?.addEventListener("click", () => {
-        this.fetchNews({ nocache: true }).catch(() => {});
+  // ─────────────────────────────────────────────────────────────
+  // Theme (dark/light)
+  // ─────────────────────────────────────────────────────────────
+  function initTheme() {
+    const btn = $('#theme-toggle');
+    if (!btn) return;
+
+    const stored = localStorage.getItem('rv_theme');
+    if (stored === 'light') document.documentElement.classList.add('light');
+
+    const syncIcon = () => {
+      const isLight = document.documentElement.classList.contains('light');
+      btn.textContent = isLight ? '🌙' : '☀️';
+    };
+
+    syncIcon();
+
+    btn.addEventListener('click', () => {
+      document.documentElement.classList.toggle('light');
+      localStorage.setItem('rv_theme', document.documentElement.classList.contains('light') ? 'light' : 'dark');
+      syncIcon();
+    });
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  // Market timer (NYC) + session status
+  // ─────────────────────────────────────────────────────────────
+  function initMarketTimer() {
+    const dot = $('#mt-dot');
+    const status = $('#mt-status');
+    const timeEl = $('#mt-time');
+    if (!dot || !status || !timeEl) return;
+
+    // US cash session approx: 09:30–16:00 ET (Mon–Fri)
+    function tick() {
+      const now = new Date();
+      const nyTime = new Date(now.toLocaleString('en-US', { timeZone: 'America/New_York' }));
+      const day = nyTime.getDay(); // 0 Sun ... 6 Sat
+      const hh = nyTime.getHours();
+      const mm = nyTime.getMinutes();
+      const minutes = hh * 60 + mm;
+
+      const isWeekday = day >= 1 && day <= 5;
+      const open = 9 * 60 + 30;
+      const close = 16 * 60;
+      const isOpen = isWeekday && minutes >= open && minutes < close;
+
+      timeEl.textContent = `NYC: ${formatTime(now, 'America/New_York')}`;
+      status.textContent = isOpen ? 'US Market Open' : (isWeekday ? 'US Market Closed' : 'Weekend');
+      dot.classList.toggle('open', !!isOpen);
+    }
+
+    tick();
+    setInterval(tick, 10_000);
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  // Fear & Greed Gauges (simple + deterministic demo)
+  // NOTE: Real CNN F&G is not easily scraped reliably for free from client-side.
+  // This is a proxy visualization to keep the UI alive.
+  // ─────────────────────────────────────────────────────────────
+  function makeGauge(canvas, valueEl, seed) {
+    if (!canvas || !valueEl || !window.Chart) return;
+
+    // deterministic-ish daily value
+    const d = new Date();
+    const daySeed = (d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate());
+    const raw = (Math.sin((daySeed + seed) * 0.0007) + 1) / 2; // 0..1
+    const v = Math.round(raw * 100);
+
+    valueEl.textContent = `${v}`;
+
+    const ctx = canvas.getContext('2d');
+    const data = {
+      labels: ['Score', ''],
+      datasets: [{
+        data: [v, 100 - v],
+        borderWidth: 0,
+        cutout: '78%'
+      }]
+    };
+
+    // Destroy previous if any
+    if (canvas.__chart) {
+      canvas.__chart.destroy();
+    }
+
+    canvas.__chart = new Chart(ctx, {
+      type: 'doughnut',
+      data,
+      options: {
+        responsive: true,
+        plugins: {
+          legend: { display: false },
+          tooltip: { enabled: false }
+        }
+      }
+    });
+  }
+
+  function initGauges() {
+    makeGauge($('#mcs-chart-stock'), $('#mcs-value-stock'), 1);
+    makeGauge($('#mcs-chart-crypto'), $('#mcs-value-crypto'), 2);
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  // Watchlist
+  // ─────────────────────────────────────────────────────────────
+  const WL_KEY = 'rv_watchlist_v1';
+
+  const SYMBOL_SUGGEST = [
+    { sym: 'AAPL', name: 'Apple' },
+    { sym: 'MSFT', name: 'Microsoft' },
+    { sym: 'NVDA', name: 'NVIDIA' },
+    { sym: 'AMZN', name: 'Amazon' },
+    { sym: 'GOOGL', name: 'Alphabet' },
+    { sym: 'META', name: 'Meta' },
+    { sym: 'TSLA', name: 'Tesla' },
+    { sym: 'SPY', name: 'S&P 500 ETF' },
+    { sym: 'QQQ', name: 'Nasdaq 100 ETF' },
+    { sym: 'BTCUSD', name: 'Bitcoin' },
+    { sym: 'ETHUSD', name: 'Ethereum' }
+  ];
+
+  function loadWatchlist() {
+    return safeJSONParse(localStorage.getItem(WL_KEY), ['AAPL', 'MSFT', 'NVDA', 'SPY', 'BTCUSD']);
+  }
+
+  function saveWatchlist(list) {
+    localStorage.setItem(WL_KEY, JSON.stringify(list));
+  }
+
+  function renderWatchlist(list) {
+    const container = $('#wl-container');
+    if (!container) return;
+
+    container.innerHTML = '';
+    list.forEach((sym) => {
+      const card = document.createElement('div');
+      card.className = 'rv-watch-card';
+
+      // TradingView mini symbol overview needs exchange prefix sometimes.
+      // We'll do a naive mapping:
+      const tvSym =
+        sym === 'BTCUSD' ? 'BINANCE:BTCUSDT' :
+        sym === 'ETHUSD' ? 'BINANCE:ETHUSDT' :
+        `NASDAQ:${sym}`;
+
+      card.innerHTML = `
+        <div class="rv-watch-top">
+          <div class="rv-watch-sym">${sym}</div>
+          <button class="rv-watch-remove" title="Remove">✕</button>
+        </div>
+        <div class="rv-watch-widget">
+          <div class="tradingview-widget-container">
+            <div class="tradingview-widget-container__widget"></div>
+          </div>
+        </div>
+      `;
+
+      const removeBtn = card.querySelector('.rv-watch-remove');
+      removeBtn.addEventListener('click', () => {
+        const updated = loadWatchlist().filter(s => s !== sym);
+        saveWatchlist(updated);
+        renderWatchlist(updated);
       });
 
-      // Pause polling in background tabs
-      document.addEventListener("visibilitychange", () => {
-        if (!document.hidden) {
-          this.fetchNews({ nocache: false }).catch(() => {});
+      // Inject widget script
+      const widgetContainer = card.querySelector('.tradingview-widget-container');
+      const s = document.createElement('script');
+      s.src = 'https://s3.tradingview.com/external-embedding/embed-widget-mini-symbol-overview.js';
+      s.async = true;
+      s.textContent = JSON.stringify({
+        symbol: tvSym,
+        width: '100%',
+        height: '100%',
+        locale: 'en',
+        dateRange: '1D',
+        colorTheme: 'dark',
+        isTransparent: true,
+        autosize: true
+      });
+      widgetContainer.appendChild(s);
+
+      container.appendChild(card);
+    });
+
+    // Sortable
+    if (window.Sortable) {
+      new Sortable(container, {
+        animation: 120,
+        onEnd: () => {
+          const newList = $$('.rv-watch-card .rv-watch-sym', container).map(el => el.textContent.trim());
+          saveWatchlist(newList);
         }
       });
+    }
+  }
 
-      // Initial load + polling
-      this.fetchNews({ nocache: false }).catch(() => {});
-      setInterval(() => {
-        if (!document.hidden) this.fetchNews({ nocache: false }).catch(() => {});
-      }, this.cfg.newsPollMs);
-    },
+  function initWatchlist() {
+    const input = $('#wl-input');
+    const btn = $('#wl-add-btn');
+    const sug = $('#wl-suggestions');
+    if (!input || !btn) return;
 
-    async fetchNews({ nocache }) {
-      if (this.state.isFetchingNews) return;
-      this.state.isFetchingNews = true;
+    const list = loadWatchlist();
+    renderWatchlist(list);
 
-      try {
-        const qs = new URLSearchParams();
-        qs.set("filter", this.cfg.filter);
-        if (nocache) qs.set("nocache", "1");
+    function showSuggestions(q) {
+      if (!sug) return;
+      const query = (q || '').trim().toUpperCase();
+      if (!query) { sug.innerHTML = ''; sug.style.display = 'none'; return; }
 
-        const res = await fetch(`/api/news?${qs.toString()}`, { method: "GET" });
-        if (!res.ok) throw new Error(`news_http_${res.status}`);
+      const hits = SYMBOL_SUGGEST
+        .filter(x => x.sym.includes(query) || x.name.toUpperCase().includes(query))
+        .slice(0, 6);
 
-        const data = await res.json();
-        this.state.lastMeta = data.meta || null;
-        this.state.lastItems = Array.isArray(data.items) ? data.items : [];
+      if (!hits.length) { sug.innerHTML = ''; sug.style.display = 'none'; return; }
 
-        this.renderNews();
-        this.renderCheatHeatmap();
-      } catch (e) {
-        this.setStatus("SOURCE DOWN", "down");
-        if (this.cfg.dev) console.error("RV_ADD news error:", e);
-        this.renderNewsError();
-      } finally {
-        this.state.isFetchingNews = false;
+      sug.style.display = 'block';
+      sug.innerHTML = hits.map(h => `<div class="rv-suggestion" data-sym="${h.sym}"><strong>${h.sym}</strong> <span>${h.name}</span></div>`).join('');
+
+      $$('.rv-suggestion', sug).forEach(el => {
+        el.addEventListener('click', () => {
+          input.value = el.getAttribute('data-sym') || '';
+          sug.innerHTML = '';
+          sug.style.display = 'none';
+          input.focus();
+        });
+      });
+    }
+
+    input.addEventListener('input', (e) => showSuggestions(e.target.value));
+    document.addEventListener('click', (e) => {
+      if (!sug) return;
+      if (!sug.contains(e.target) && e.target !== input) {
+        sug.innerHTML = '';
+        sug.style.display = 'none';
       }
-    },
+    });
 
-    setStatus(text, mode) {
-      const meta = this.state.lastMeta;
-      const cached = meta && meta.cached === true;
-
-      let dotClass = "live";
-      if (mode === "down") dotClass = "down";
-      else if (cached) dotClass = "cached";
-
-      const pill = `
-        <span class="rv-add-pill">
-          <span class="rv-add-pill-dot ${dotClass}"></span>
-          ${this.escape(text)}
-        </span>
-      `;
-
-      this.els.status.innerHTML = pill;
-    },
-
-    renderNews() {
-      const meta = this.state.lastMeta;
-      const items = this.state.lastItems.slice(0, this.cfg.maxShow);
-
-      const generatedAt = meta?.generatedAt ? new Date(meta.generatedAt) : null;
-      const timeStr = generatedAt ? generatedAt.toLocaleTimeString() : "—";
-
-      const cached = meta?.cached === true;
-      this.setStatus(cached ? "CACHED" : "LIVE", "ok");
-
-      if (this.els.newsUpdated) {
-        this.els.newsUpdated.textContent = `Updated: ${timeStr}`;
-      }
-      if (this.els.cheatUpdated) {
-        this.els.cheatUpdated.textContent = `Updated: ${timeStr}`;
-      }
-
-      this.els.newsList.innerHTML = items.map((it) => {
-        const title = this.escape(it.title || "");
-        const link = this.escape(it.url || "#");
-        const source = this.escape(it.source || "source");
-        const when = this.timeAgo(it.publishedAt);
-
-        return `
-          <li class="rv-add-item">
-            <a href="${link}" target="_blank" rel="noopener noreferrer">
-              <div class="rv-add-item-title">${title}</div>
-              <div class="rv-add-item-meta">
-                <span>${source}</span>
-                <span>•</span>
-                <span>${when}</span>
-              </div>
-            </a>
-          </li>
-        `;
-      }).join("");
-    },
-
-    renderNewsError() {
-      if (!this.els.newsList) return;
-      this.els.newsList.innerHTML = `
-        <li class="rv-add-item">
-          <div class="rv-add-item-title">No data right now.</div>
-          <div class="rv-add-item-meta">
-            <span>Either sources are down or blocked.</span>
-            <span>Try again later.</span>
-          </div>
-        </li>
-      `;
-    },
-
-    renderCheatHeatmap() {
-      if (!this.els.heat) return;
-
-      // Deterministic "narrative heatmap": keyword frequency in titles
-      const titles = this.state.lastItems.map((x) => String(x.title || "")).join(" ").toLowerCase();
-
-      const KEYWORDS = [
-        "inflation","cpi","ppi","rates","fed","ecb","boe","yield","bond","recession",
-        "earnings","guidance","revenue","profit","downgrade","upgrade","merger",
-        "bitcoin","ethereum","solana","etf","hack","regulation","sec","spot"
-      ];
-
-      const scored = KEYWORDS.map((k) => {
-        const re = new RegExp(`\\b${k.replace(/[-/\\^$*+?.()|[\]{}]/g, "\\$&")}\\b`, "g");
-        const count = (titles.match(re) || []).length;
-        return { k, count };
-      }).filter(x => x.count > 0);
-
-      scored.sort((a, b) => b.count - a.count);
-
-      const top = scored.slice(0, 18);
-      if (!top.length) {
-        this.els.heat.innerHTML = `<span class="rv-add-small">No strong narratives detected in the last batch.</span>`;
+    function addSymbol() {
+      const sym = input.value.trim().toUpperCase();
+      if (!sym) return;
+      const existing = loadWatchlist();
+      if (existing.includes(sym)) {
+        input.value = '';
         return;
       }
-
-      this.els.heat.innerHTML = top.map(x => {
-        return `<span class="rv-add-heat-tag">${this.escape(x.k)} • ${x.count}</span>`;
-      }).join("");
-    },
-
-    timeAgo(iso) {
-      const d = new Date(iso);
-      if (Number.isNaN(d.getTime())) return "—";
-      const s = Math.floor((Date.now() - d.getTime()) / 1000);
-      if (s < 60) return `${s}s ago`;
-      const m = Math.floor(s / 60);
-      if (m < 60) return `${m}m ago`;
-      const h = Math.floor(m / 60);
-      if (h < 48) return `${h}h ago`;
-      const days = Math.floor(h / 24);
-      return `${days}d ago`;
-    },
-
-    escape(s) {
-      return String(s)
-        .replaceAll("&", "&amp;")
-        .replaceAll("<", "&lt;")
-        .replaceAll(">", "&gt;")
-        .replaceAll('"', "&quot;")
-        .replaceAll("'", "&#039;");
+      existing.unshift(sym);
+      saveWatchlist(existing);
+      renderWatchlist(existing);
+      input.value = '';
     }
+
+    btn.addEventListener('click', addSymbol);
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') addSymbol();
+    });
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  // Deep Dive Explorer (lists)
+  // ─────────────────────────────────────────────────────────────
+  const LISTS = {
+    nasdaq: ['AAPL','MSFT','NVDA','AMZN','META','GOOGL','AVGO','COST','NFLX','AMD','INTC','TSLA'],
+    sp500:  ['AAPL','MSFT','NVDA','AMZN','META','GOOGL','BRK.B','JPM','V','LLY','UNH','XOM'],
+    dow:    ['AAPL','MSFT','JPM','V','JNJ','WMT','PG','KO','DIS','CSCO','CVX','IBM']
   };
 
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", () => RV_ADD.init());
-  } else {
-    RV_ADD.init();
+  let activeList = 'nasdaq';
+  let activeSymbol = 'AAPL';
+
+  function setActiveTab(key) {
+    activeList = key;
+    $$('.rv-list-tab').forEach(btn => btn.classList.remove('active'));
+    const btns = $$('.rv-list-tab');
+    if (key === 'nasdaq') btns[0]?.classList.add('active');
+    if (key === 'sp500') btns[1]?.classList.add('active');
+    if (key === 'dow') btns[2]?.classList.add('active');
   }
+
+  function renderStockList() {
+    const container = $('#rv-stock-list-container');
+    if (!container) return;
+    const search = ($('#stockSearch')?.value || '').trim().toUpperCase();
+
+    const items = (LISTS[activeList] || []).filter(sym => !search || sym.includes(search));
+    container.innerHTML = items.map(sym => `
+      <div class="rv-stock-item ${sym === activeSymbol ? 'active' : ''}" data-sym="${sym}">
+        <span>${sym}</span>
+      </div>
+    `).join('');
+
+    $$('.rv-stock-item', container).forEach(el => {
+      el.addEventListener('click', () => {
+        const sym = el.getAttribute('data-sym');
+        if (!sym) return;
+        activeSymbol = sym;
+        $('#rv-selected-stock-name').textContent = sym;
+        renderStockList();
+        updateExplorer(sym);
+      });
+    });
+  }
+
+  function loadStockList(key) {
+    setActiveTab(key);
+    renderStockList();
+  }
+
+  function filterStocks() {
+    renderStockList();
+  }
+
+  function updateExplorer(sym) {
+    // Inject TradingView widgets into the two containers
+    const fundamentals = $('#container-fundamentals');
+    const technicals = $('#container-technicals');
+    if (!fundamentals || !technicals) return;
+
+    fundamentals.innerHTML = '';
+    technicals.innerHTML = '';
+
+    const fWrap = document.createElement('div');
+    fWrap.className = 'tradingview-widget-container';
+    fWrap.innerHTML = `<div class="tradingview-widget-container__widget"></div>`;
+    const tWrap = document.createElement('div');
+    tWrap.className = 'tradingview-widget-container';
+    tWrap.innerHTML = `<div class="tradingview-widget-container__widget"></div>`;
+
+    fundamentals.appendChild(fWrap);
+    technicals.appendChild(tWrap);
+
+    const s1 = document.createElement('script');
+    s1.src = 'https://s3.tradingview.com/external-embedding/embed-widget-financials.js';
+    s1.async = true;
+    s1.textContent = JSON.stringify({
+      symbol: `NASDAQ:${sym}`,
+      colorTheme: 'dark',
+      isTransparent: true,
+      locale: 'en',
+      width: '100%',
+      height: '100%'
+    });
+
+    const s2 = document.createElement('script');
+    s2.src = 'https://s3.tradingview.com/external-embedding/embed-widget-technical-analysis.js';
+    s2.async = true;
+    s2.textContent = JSON.stringify({
+      symbol: `NASDAQ:${sym}`,
+      interval: '1D',
+      colorTheme: 'dark',
+      isTransparent: true,
+      locale: 'en',
+      width: '100%',
+      height: '100%'
+    });
+
+    fWrap.appendChild(s1);
+    tWrap.appendChild(s2);
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  // Live News Feed (RSS)
+  // Uses AllOrigins as a free proxy to fetch RSS XML. Then parses XML via DOMParser.
+  // ─────────────────────────────────────────────────────────────
+  function parseRss(xmlText, sourceName) {
+    const parser = new DOMParser();
+    const xml = parser.parseFromString(xmlText, 'text/xml');
+    const items = Array.from(xml.querySelectorAll('item')).slice(0, 25);
+
+    return items.map(it => {
+      const title = it.querySelector('title')?.textContent?.trim() || '';
+      const link = it.querySelector('link')?.textContent?.trim() || '';
+      const pubDate = it.querySelector('pubDate')?.textContent?.trim() || '';
+      return { title, link, pubDate, source: sourceName };
+    });
+  }
+
+  function renderNews(items, container) {
+    if (!container) return;
+
+    const clean = (s) => {
+      if (!window.DOMPurify) return s;
+      return DOMPurify.sanitize(s, { ALLOWED_TAGS: [], ALLOWED_ATTR: [] });
+    };
+
+    const html = items.map(n => `
+      <a class="rv-news-item" href="${clean(n.link)}" target="_blank" rel="noopener noreferrer">
+        <div class="rv-news-title">${clean(n.title)}</div>
+        <div class="rv-news-meta">${clean(n.source)} · <span>${clean(n.pubDate || '')}</span></div>
+      </a>
+    `).join('');
+
+    container.innerHTML = html || `<div style="padding:14px; opacity:.8;">No news items.</div>`;
+  }
+
+  async function fetchViaAllOrigins(url) {
+    const res = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(url)}`);
+    if (!res.ok) throw new Error('Proxy fetch failed');
+    const json = await res.json();
+    return json.contents;
+  }
+
+  async function initNewsFeed() {
+    const container = $('#rv-news-feed-list');
+    const btn = $('#news-refresh-btn');
+    if (!container) return;
+
+    const SOURCES = [
+      { name: 'Yahoo Finance', url: 'https://finance.yahoo.com/news/rssindex' },
+      { name: 'CNBC', url: 'https://www.cnbc.com/id/100003114/device/rss/rss.html' }
+    ];
+
+    async function refresh() {
+      if (btn) btn.disabled = true;
+      container.innerHTML = `<div style="padding:14px; opacity:.8;">Loading news…</div>`;
+
+      try {
+        const all = [];
+        for (const s of SOURCES) {
+          const xmlText = await fetchViaAllOrigins(s.url);
+          const parsed = parseRss(xmlText, s.name);
+          all.push(...parsed);
+        }
+
+        // Sort by pubDate string (best-effort)
+        const newsItems = all
+          .filter(x => x.title && x.link)
+          .slice(0, 40);
+
+        renderNews(newsItems, container);
+                if (window.RV_ADD && typeof window.RV_ADD.__updateCheatHeat === 'function') {
+                    window.RV_ADD.__updateCheatHeat(newsItems);
+                }
+      } catch (e) {
+        container.innerHTML = `<div style="padding:14px; opacity:.8;">Failed to load news. Try again.</div>`;
+        if (window.RV_ADD && typeof window.RV_ADD.__updateCheatHeat === 'function') {
+          window.RV_ADD.__updateCheatHeat([]);
+        }
+      } finally {
+        if (btn) btn.disabled = false;
+      }
+    }
+
+    if (btn) btn.addEventListener('click', refresh);
+
+    // initial load
+    refresh();
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  // Boot
+  // ─────────────────────────────────────────────────────────────
+  document.addEventListener('DOMContentLoaded', () => {
+    initTheme();
+    initMarketTimer();
+    initGauges();
+    initWatchlist();
+
+    // Deep dive default
+    loadStockList('nasdaq');
+    updateExplorer(activeSymbol);
+
+    // News feed
+    initNewsFeed();
+    if (window.RV_ADD && typeof window.RV_ADD.__updateCheatHeat === 'function') window.RV_ADD.__updateCheatHeat([]);
+  });
+
+})();
+
+
+// ─────────────────────────────────────────────────────────────
+// RV_ADD namespace bridge (additive; does not break existing code)
+// This fixes inline handlers in index.html like RV_ADD.Explorer.load()
+// and powers the small "Automated Insights (Beta)" box.
+// ─────────────────────────────────────────────────────────────
+(function () {
+  'use strict';
+
+  // Do not overwrite if something already defined
+  window.RV_ADD = window.RV_ADD || {};
+
+  // Bridge existing Deep Dive functions to the RV_ADD.Explorer namespace expected by index.html
+  window.RV_ADD.Explorer = window.RV_ADD.Explorer || {};
+  if (typeof window.RV_ADD.Explorer.load !== 'function' && typeof window.loadStockList === 'function') {
+    window.RV_ADD.Explorer.load = window.loadStockList;
+  }
+  if (typeof window.RV_ADD.Explorer.filter !== 'function' && typeof window.filterStocks === 'function') {
+    window.RV_ADD.Explorer.filter = window.filterStocks;
+  }
+
+  // Cheats: deterministic mini-insight from the already-fetched Yahoo RSS items
+  // Input shape expected: [{ title, link, pubDate, source }]
+  function computeKeywordHeat(items) {
+    const stop = new Set([
+      'the','a','an','and','or','to','of','in','on','for','with','as','at','by','from','is','are','was','were',
+      'after','before','over','under','into','about','amid','says','say','saying','new','live','update','updates',
+      'market','markets','stock','stocks','crypto','bitcoin','shares','price','prices','today','this','that'
+    ]);
+    const counts = new Map();
+    for (const it of items || []) {
+      const text = (it?.title || '').toLowerCase();
+      const words = text.split(/[^a-z0-9]+/).filter(Boolean);
+      for (const w of words) {
+        if (w.length < 3) continue;
+        if (stop.has(w)) continue;
+        counts.set(w, (counts.get(w) || 0) + 1);
+      }
+    }
+    return [...counts.entries()].sort((a,b)=>b[1]-a[1]).slice(0, 8);
+  }
+
+  function renderHeat(el, items) {
+    if (!el) return;
+    if (!items || !items.length) {
+      el.textContent = 'No data yet (waiting for news sync).';
+      return;
+    }
+    const top = computeKeywordHeat(items);
+    const uniqueSources = new Set(items.map(x => x.source).filter(Boolean));
+    const now = new Date();
+    const ts = now.toLocaleString(undefined, { hour: '2-digit', minute: '2-digit' });
+
+    const parts = [];
+    parts.push(`<div><strong>Updated:</strong> ${ts}</div>`);
+    parts.push(`<div><strong>Items:</strong> ${items.length} · <strong>Sources:</strong> ${uniqueSources.size}</div>`);
+    if (top.length) {
+      parts.push('<div style="margin-top:8px;"><strong>Top narratives (keyword heat):</strong></div>');
+      parts.push('<div style="display:flex; flex-wrap:wrap; gap:6px; margin-top:6px;">' +
+        top.map(([w,c]) => `<span style="padding:4px 8px; border:1px solid rgba(255,255,255,.15); border-radius:999px; font-size:12px;">${escapeHtml(w)} <span style="opacity:.7">(${c})</span></span>`).join('') +
+      '</div>');
+    } else {
+      parts.push('<div style="margin-top:8px; opacity:.8;">No strong keyword signal yet.</div>');
+    }
+    el.innerHTML = parts.join('');
+  }
+
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, (ch) => ({
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    }[ch]));
+  }
+
+  // Public hook for existing news fetch code:
+  window.RV_ADD.__updateCheatHeat = function (newsItems) {
+    const el = document.getElementById('cheat-heat');
+    renderHeat(el, newsItems);
+  };
 })();
