@@ -1,584 +1,318 @@
-/* RubikVault Frontend Script (Vanilla)
-   - Theme toggle + persistence
-   - Market timer (NYC, US cash session)
-   - Fear & Greed gauges (proxy-based/demo values)
-   - Watchlist (localStorage)
-   - Deep Dive explorer (static lists + TradingView widgets)
-   - Live News feed (RSS via public proxy)
-*/
+/* ==========================================================================
+   RUBIK VAULT - MASTER LOGIC
+   ========================================================================== */
 
-(function () {
-  // ─────────────────────────────────────────────────────────────
-  // Helpers
-  // ─────────────────────────────────────────────────────────────
-  const $ = (sel, root = document) => root.querySelector(sel);
-  const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
+document.addEventListener("DOMContentLoaded", () => {
+    initTheme();
+    initUSMarketTimer();
+    initNewsFeed();
+    initWatchlist();
+    initMCS();
+    
+    // Default load: Apple
+    loadStockList('nasdaq');
+    updateExplorer('NASDAQ:AAPL', 'Apple Inc');
+    
+    // Intervals
+    setInterval(initUSMarketTimer, 1000); 
+    setInterval(initNewsFeed, 30000); 
+});
 
-  function safeJSONParse(str, fallback) {
-    try { return JSON.parse(str); } catch { return fallback; }
-  }
+/* --- 1. DATASETS --- */
+const SUGGESTIONS_DB = [
+    {s:'AAPL', n:'Apple Inc', t:'Stock'}, {s:'MSFT', n:'Microsoft', t:'Stock'}, {s:'NVDA', n:'NVIDIA', t:'Stock'},
+    {s:'AMZN', n:'Amazon', t:'Stock'}, {s:'GOOGL', n:'Alphabet', t:'Stock'}, {s:'TSLA', n:'Tesla', t:'Stock'},
+    {s:'META', n:'Meta Platforms', t:'Stock'}, {s:'BTCUSDT', n:'Bitcoin', t:'Crypto'}, {s:'ETHUSDT', n:'Ethereum', t:'Crypto'},
+    {s:'AMD', n:'AMD', t:'Stock'}, {s:'NFLX', n:'Netflix', t:'Stock'}, {s:'INTC', n:'Intel', t:'Stock'},
+    {s:'PYPL', n:'PayPal', t:'Stock'}, {s:'ADBE', n:'Adobe', t:'Stock'}, {s:'SOLUSDT', n:'Solana', t:'Crypto'}
+];
 
-  function clamp(n, min, max) {
-    return Math.max(min, Math.min(max, n));
-  }
+const STOCK_LISTS = {
+    nasdaq: [
+        { s: "AAPL", n: "Apple" }, { s: "MSFT", n: "Microsoft" }, { s: "NVDA", n: "NVIDIA" }, { s: "AMZN", n: "Amazon" },
+        { s: "META", n: "Meta" }, { s: "GOOGL", n: "Alphabet" }, { s: "TSLA", n: "Tesla" }, { s: "AVGO", n: "Broadcom" },
+        { s: "COST", n: "Costco" }, { s: "PEP", n: "PepsiCo" }, { s: "NFLX", n: "Netflix" }, { s: "AMD", n: "AMD" }
+    ],
+    dow: [
+        { s: "MMM", n: "3M" }, { s: "AXP", n: "Am. Express" }, { s: "AMGN", n: "Amgen" }, { s: "AAPL", n: "Apple" },
+        { s: "BA", n: "Boeing" }, { s: "CAT", n: "Caterpillar" }, { s: "CVX", n: "Chevron" }, { s: "CSCO", n: "Cisco" },
+        { s: "KO", n: "Coca-Cola" }, { s: "DIS", n: "Disney" }, { s: "DOW", n: "Dow Inc" }, { s: "GS", n: "Goldman" }
+    ],
+    sp500: [
+        { s: "SPY", n: "S&P 500 ETF" }, { s: "JPM", n: "JPMorgan" }, { s: "V", n: "Visa" }, { s: "LLY", n: "Lilly" },
+        { s: "MA", n: "Mastercard" }, { s: "HD", n: "Home Depot" }, { s: "XOM", n: "Exxon" }, { s: "UNH", n: "UnitedHealth" }
+    ]
+};
 
-  function formatTime(date, timeZone) {
-    return new Intl.DateTimeFormat('en-US', {
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: false,
-      timeZone
-    }).format(date);
-  }
+/* --- 2. WATCHLIST (With Fallback Logic) --- */
+function initWatchlist() {
+    const input = document.getElementById('wl-input');
+    const suggestionsBox = document.getElementById('wl-suggestions');
+    const container = document.getElementById('wl-container');
+    const btn = document.getElementById('wl-add-btn');
+    
+    let watchlist = JSON.parse(localStorage.getItem('rv_watchlist')) || ['AAPL', 'NVDA'];
 
-  // ─────────────────────────────────────────────────────────────
-  // Theme (dark/light)
-  // ─────────────────────────────────────────────────────────────
-  function initTheme() {
-    const btn = $('#theme-toggle');
-    if (!btn) return;
-
-    const stored = localStorage.getItem('rv_theme');
-    if (stored === 'light') document.documentElement.classList.add('light');
-
-    const syncIcon = () => {
-      const isLight = document.documentElement.classList.contains('light');
-      btn.textContent = isLight ? '🌙' : '☀️';
+    const render = () => {
+        container.innerHTML = watchlist.map(sym => `
+            <div class="rv-wl-item" id="wl-item-${sym}">
+                <div style="font-weight:bold; font-size:14px;">${sym}</div>
+                <div class="rv-wl-price" style="font-size:12px; color:#888; margin-top:4px;">Loading...</div>
+                <span class="rv-wl-remove" onclick="removeWatchlist('${sym}')">&times;</span>
+            </div>
+        `).join('');
+        
+        // Mock Price Update (Fallback for Free Tier)
+        setTimeout(() => {
+            document.querySelectorAll('.rv-wl-item').forEach(item => {
+                const sym = item.id.replace('wl-item-', '');
+                const el = item.querySelector('.rv-wl-price');
+                
+                // Deterministic Mock Price
+                const seed = sym.split('').reduce((a,b) => a+b.charCodeAt(0), 0);
+                const price = (seed % 500) + 50 + (Math.random()*2);
+                const change = (Math.random() * 4) - 2; 
+                
+                const color = change >= 0 ? '#10b981' : '#ef4444';
+                const sign = change >= 0 ? '+' : '';
+                
+                el.innerHTML = `$${price.toFixed(2)} <br><span style="color:${color}">${sign}${change.toFixed(2)}%</span>`;
+            });
+        }, 800);
+    };
+    
+    window.removeWatchlist = (sym) => {
+        watchlist = watchlist.filter(s => s !== sym);
+        localStorage.setItem('rv_watchlist', JSON.stringify(watchlist));
+        render();
     };
 
-    syncIcon();
-
-    btn.addEventListener('click', () => {
-      document.documentElement.classList.toggle('light');
-      localStorage.setItem('rv_theme', document.documentElement.classList.contains('light') ? 'light' : 'dark');
-      syncIcon();
-    });
-  }
-
-  // ─────────────────────────────────────────────────────────────
-  // Market timer (NYC) + session status
-  // ─────────────────────────────────────────────────────────────
-  function initMarketTimer() {
-    const dot = $('#mt-dot');
-    const status = $('#mt-status');
-    const timeEl = $('#mt-time');
-    if (!dot || !status || !timeEl) return;
-
-    // US cash session approx: 09:30–16:00 ET (Mon–Fri)
-    function tick() {
-      const now = new Date();
-      const nyTime = new Date(now.toLocaleString('en-US', { timeZone: 'America/New_York' }));
-      const day = nyTime.getDay(); // 0 Sun ... 6 Sat
-      const hh = nyTime.getHours();
-      const mm = nyTime.getMinutes();
-      const minutes = hh * 60 + mm;
-
-      const isWeekday = day >= 1 && day <= 5;
-      const open = 9 * 60 + 30;
-      const close = 16 * 60;
-      const isOpen = isWeekday && minutes >= open && minutes < close;
-
-      timeEl.textContent = `NYC: ${formatTime(now, 'America/New_York')}`;
-      status.textContent = isOpen ? 'US Market Open' : (isWeekday ? 'US Market Closed' : 'Weekend');
-      dot.classList.toggle('open', !!isOpen);
-    }
-
-    tick();
-    setInterval(tick, 10_000);
-  }
-
-  // ─────────────────────────────────────────────────────────────
-  // Fear & Greed Gauges (simple + deterministic demo)
-  // NOTE: Real CNN F&G is not easily scraped reliably for free from client-side.
-  // This is a proxy visualization to keep the UI alive.
-  // ─────────────────────────────────────────────────────────────
-  function makeGauge(canvas, valueEl, seed) {
-    if (!canvas || !valueEl || !window.Chart) return;
-
-    // deterministic-ish daily value
-    const d = new Date();
-    const daySeed = (d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate());
-    const raw = (Math.sin((daySeed + seed) * 0.0007) + 1) / 2; // 0..1
-    const v = Math.round(raw * 100);
-
-    valueEl.textContent = `${v}`;
-
-    const ctx = canvas.getContext('2d');
-    const data = {
-      labels: ['Score', ''],
-      datasets: [{
-        data: [v, 100 - v],
-        borderWidth: 0,
-        cutout: '78%'
-      }]
-    };
-
-    // Destroy previous if any
-    if (canvas.__chart) {
-      canvas.__chart.destroy();
-    }
-
-    canvas.__chart = new Chart(ctx, {
-      type: 'doughnut',
-      data,
-      options: {
-        responsive: true,
-        plugins: {
-          legend: { display: false },
-          tooltip: { enabled: false }
+    input.addEventListener('input', (e) => {
+        const val = e.target.value.toUpperCase();
+        if(val.length < 1) { suggestionsBox.style.display = 'none'; return; }
+        const matches = SUGGESTIONS_DB.filter(x => x.s.startsWith(val) || x.n.toUpperCase().startsWith(val));
+        if(matches.length > 0) {
+            suggestionsBox.innerHTML = matches.map(m => 
+                `<div class="rv-suggestion-item" onclick="addWatchlist('${m.s}')">${m.s} <span style="color:#666">(${m.n})</span></div>`
+            ).join('');
+            suggestionsBox.style.display = 'block';
+        } else {
+            suggestionsBox.style.display = 'none';
         }
-      }
-    });
-  }
-
-  function initGauges() {
-    makeGauge($('#mcs-chart-stock'), $('#mcs-value-stock'), 1);
-    makeGauge($('#mcs-chart-crypto'), $('#mcs-value-crypto'), 2);
-  }
-
-  // ─────────────────────────────────────────────────────────────
-  // Watchlist
-  // ─────────────────────────────────────────────────────────────
-  const WL_KEY = 'rv_watchlist_v1';
-
-  const SYMBOL_SUGGEST = [
-    { sym: 'AAPL', name: 'Apple' },
-    { sym: 'MSFT', name: 'Microsoft' },
-    { sym: 'NVDA', name: 'NVIDIA' },
-    { sym: 'AMZN', name: 'Amazon' },
-    { sym: 'GOOGL', name: 'Alphabet' },
-    { sym: 'META', name: 'Meta' },
-    { sym: 'TSLA', name: 'Tesla' },
-    { sym: 'SPY', name: 'S&P 500 ETF' },
-    { sym: 'QQQ', name: 'Nasdaq 100 ETF' },
-    { sym: 'BTCUSD', name: 'Bitcoin' },
-    { sym: 'ETHUSD', name: 'Ethereum' }
-  ];
-
-  function loadWatchlist() {
-    return safeJSONParse(localStorage.getItem(WL_KEY), ['AAPL', 'MSFT', 'NVDA', 'SPY', 'BTCUSD']);
-  }
-
-  function saveWatchlist(list) {
-    localStorage.setItem(WL_KEY, JSON.stringify(list));
-  }
-
-  function renderWatchlist(list) {
-    const container = $('#wl-container');
-    if (!container) return;
-
-    container.innerHTML = '';
-    list.forEach((sym) => {
-      const card = document.createElement('div');
-      card.className = 'rv-watch-card';
-
-      // TradingView mini symbol overview needs exchange prefix sometimes.
-      // We'll do a naive mapping:
-      const tvSym =
-        sym === 'BTCUSD' ? 'BINANCE:BTCUSDT' :
-        sym === 'ETHUSD' ? 'BINANCE:ETHUSDT' :
-        `NASDAQ:${sym}`;
-
-      card.innerHTML = `
-        <div class="rv-watch-top">
-          <div class="rv-watch-sym">${sym}</div>
-          <button class="rv-watch-remove" title="Remove">✕</button>
-        </div>
-        <div class="rv-watch-widget">
-          <div class="tradingview-widget-container">
-            <div class="tradingview-widget-container__widget"></div>
-          </div>
-        </div>
-      `;
-
-      const removeBtn = card.querySelector('.rv-watch-remove');
-      removeBtn.addEventListener('click', () => {
-        const updated = loadWatchlist().filter(s => s !== sym);
-        saveWatchlist(updated);
-        renderWatchlist(updated);
-      });
-
-      // Inject widget script
-      const widgetContainer = card.querySelector('.tradingview-widget-container');
-      const s = document.createElement('script');
-      s.src = 'https://s3.tradingview.com/external-embedding/embed-widget-mini-symbol-overview.js';
-      s.async = true;
-      s.textContent = JSON.stringify({
-        symbol: tvSym,
-        width: '100%',
-        height: '100%',
-        locale: 'en',
-        dateRange: '1D',
-        colorTheme: 'dark',
-        isTransparent: true,
-        autosize: true
-      });
-      widgetContainer.appendChild(s);
-
-      container.appendChild(card);
     });
 
-    // Sortable
-    if (window.Sortable) {
-      new Sortable(container, {
-        animation: 120,
-        onEnd: () => {
-          const newList = $$('.rv-watch-card .rv-watch-sym', container).map(el => el.textContent.trim());
-          saveWatchlist(newList);
+    window.addWatchlist = (sym) => {
+        if(!watchlist.includes(sym)) {
+            watchlist.push(sym);
+            localStorage.setItem('rv_watchlist', JSON.stringify(watchlist));
+            render();
         }
-      });
-    }
-  }
-
-  function initWatchlist() {
-    const input = $('#wl-input');
-    const btn = $('#wl-add-btn');
-    const sug = $('#wl-suggestions');
-    if (!input || !btn) return;
-
-    const list = loadWatchlist();
-    renderWatchlist(list);
-
-    function showSuggestions(q) {
-      if (!sug) return;
-      const query = (q || '').trim().toUpperCase();
-      if (!query) { sug.innerHTML = ''; sug.style.display = 'none'; return; }
-
-      const hits = SYMBOL_SUGGEST
-        .filter(x => x.sym.includes(query) || x.name.toUpperCase().includes(query))
-        .slice(0, 6);
-
-      if (!hits.length) { sug.innerHTML = ''; sug.style.display = 'none'; return; }
-
-      sug.style.display = 'block';
-      sug.innerHTML = hits.map(h => `<div class="rv-suggestion" data-sym="${h.sym}"><strong>${h.sym}</strong> <span>${h.name}</span></div>`).join('');
-
-      $$('.rv-suggestion', sug).forEach(el => {
-        el.addEventListener('click', () => {
-          input.value = el.getAttribute('data-sym') || '';
-          sug.innerHTML = '';
-          sug.style.display = 'none';
-          input.focus();
-        });
-      });
-    }
-
-    input.addEventListener('input', (e) => showSuggestions(e.target.value));
-    document.addEventListener('click', (e) => {
-      if (!sug) return;
-      if (!sug.contains(e.target) && e.target !== input) {
-        sug.innerHTML = '';
-        sug.style.display = 'none';
-      }
-    });
-
-    function addSymbol() {
-      const sym = input.value.trim().toUpperCase();
-      if (!sym) return;
-      const existing = loadWatchlist();
-      if (existing.includes(sym)) {
         input.value = '';
-        return;
-      }
-      existing.unshift(sym);
-      saveWatchlist(existing);
-      renderWatchlist(existing);
-      input.value = '';
+        suggestionsBox.style.display = 'none';
+    };
+    
+    btn.addEventListener('click', () => { if(input.value) addWatchlist(input.value.toUpperCase()); });
+    render();
+}
+
+/* --- 3. DUAL FEAR & GREED (FIXED) --- */
+function initMCS() {
+    const commonOptions = { 
+        responsive: true, 
+        maintainAspectRatio: false, 
+        cutout: '80%', 
+        plugins: { legend: { display: false }, tooltip: { enabled: false } },
+        animation: { animateScale: true, animateRotate: true }
+    };
+
+    // Stock
+    const ctxS = document.getElementById('mcs-chart-stock').getContext('2d');
+    const scoreStock = 62; 
+    document.getElementById('mcs-value-stock').innerText = scoreStock;
+    new Chart(ctxS, {
+        type: 'doughnut',
+        data: { labels: ['Greed','Fear'], datasets: [{ data: [scoreStock, 100-scoreStock], backgroundColor: ['#10b981', 'rgba(255,255,255,0.05)'], borderWidth:0 }] },
+        options: commonOptions
+    });
+
+    // Crypto
+    const ctxC = document.getElementById('mcs-chart-crypto').getContext('2d');
+    const scoreCrypto = 74; 
+    document.getElementById('mcs-value-crypto').innerText = scoreCrypto;
+    new Chart(ctxC, {
+        type: 'doughnut',
+        data: { labels: ['Greed','Fear'], datasets: [{ data: [scoreCrypto, 100-scoreCrypto], backgroundColor: ['#00e5ff', 'rgba(255,255,255,0.05)'], borderWidth:0 }] },
+        options: commonOptions
+    });
+}
+
+/* --- 4. US MARKET TIMER --- */
+function initUSMarketTimer() {
+    const statusText = document.getElementById('mt-status');
+    const dot = document.getElementById('mt-dot');
+    const timeDisplay = document.getElementById('mt-time');
+
+    const options = { timeZone: 'America/New_York', hour: '2-digit', minute: '2-digit', hour12: false };
+    const nyTimeStr = new Date().toLocaleTimeString('en-US', options);
+    
+    const nyDate = new Date().toLocaleString("en-US", {timeZone: "America/New_York"});
+    const nowNY = new Date(nyDate);
+    const day = nowNY.getDay();
+    const hours = nowNY.getHours();
+    const minutes = nowNY.getMinutes();
+    const timeVal = hours + minutes / 60;
+
+    timeDisplay.textContent = `NYC: ${nyTimeStr}`;
+
+    let status = "Closed";
+    let cssClass = "status-closed";
+
+    if (day === 0 || day === 6) {
+        status = "Weekend Closed";
+    } else {
+        if (timeVal >= 4.0 && timeVal < 9.5) { status = "Pre-Market"; cssClass = "status-pre"; }
+        else if (timeVal >= 9.5 && timeVal < 16.0) { status = "Market Open"; cssClass = "status-open"; }
+        else if (timeVal >= 16.0 && timeVal < 20.0) { status = "After Hours"; cssClass = "status-pre"; }
     }
 
-    btn.addEventListener('click', addSymbol);
-    input.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') addSymbol();
-    });
-  }
+    if(statusText) statusText.textContent = status;
+    if(dot) dot.className = "status-dot " + cssClass;
+}
 
-  // ─────────────────────────────────────────────────────────────
-  // Deep Dive Explorer (lists)
-  // ─────────────────────────────────────────────────────────────
-  const LISTS = {
-    nasdaq: ['AAPL','MSFT','NVDA','AMZN','META','GOOGL','AVGO','COST','NFLX','AMD','INTC','TSLA'],
-    sp500:  ['AAPL','MSFT','NVDA','AMZN','META','GOOGL','BRK.B','JPM','V','LLY','UNH','XOM'],
-    dow:    ['AAPL','MSFT','JPM','V','JNJ','WMT','PG','KO','DIS','CSCO','CVX','IBM']
-  };
+/* --- 5. LIVE NEWS FEED --- */
+const PROXY = "https://api.allorigins.win/get?url=";
+const FEED_URL = "https://finance.yahoo.com/news/rssindex";
 
-  let activeList = 'nasdaq';
-  let activeSymbol = 'AAPL';
+async function initNewsFeed() {
+    const container = document.getElementById('rv-news-feed-list');
+    if(!container) return;
 
-  function setActiveTab(key) {
-    activeList = key;
-    $$('.rv-list-tab').forEach(btn => btn.classList.remove('active'));
-    const btns = $$('.rv-list-tab');
-    if (key === 'nasdaq') btns[0]?.classList.add('active');
-    if (key === 'sp500') btns[1]?.classList.add('active');
-    if (key === 'dow') btns[2]?.classList.add('active');
-  }
+    if(container.innerHTML.trim() === "") container.innerHTML = '<div style="padding:20px; text-align:center; color:#666;">Syncing News...</div>';
+    window.initNewsFeed = initNewsFeed;
 
-  function renderStockList() {
-    const container = $('#rv-stock-list-container');
-    if (!container) return;
-    const search = ($('#stockSearch')?.value || '').trim().toUpperCase();
+    const cacheBuster = `&t=${Date.now()}`;
 
-    const items = (LISTS[activeList] || []).filter(sym => !search || sym.includes(search));
-    container.innerHTML = items.map(sym => `
-      <div class="rv-stock-item ${sym === activeSymbol ? 'active' : ''}" data-sym="${sym}">
-        <span>${sym}</span>
-      </div>
-    `).join('');
+    try {
+        const response = await fetch(PROXY + encodeURIComponent(FEED_URL) + cacheBuster);
+        const data = await response.json();
+        
+        if (data.contents) {
+            const parser = new DOMParser();
+            const xml = parser.parseFromString(data.contents, "text/xml");
+            const items = xml.querySelectorAll("item");
+            
+            let newsItems = [];
+            items.forEach((item, index) => {
+                if(index > 15) return; 
+                const title = item.querySelector("title")?.textContent;
+                const link = item.querySelector("link")?.textContent;
+                const pubDate = item.querySelector("pubDate")?.textContent;
+                
+                if(title && link) {
+                    newsItems.push({ title: title, link: link, date: pubDate ? new Date(pubDate) : new Date() });
+                }
+            });
 
-    $$('.rv-stock-item', container).forEach(el => {
-      el.addEventListener('click', () => {
-        const sym = el.getAttribute('data-sym');
-        if (!sym) return;
-        activeSymbol = sym;
-        $('#rv-selected-stock-name').textContent = sym;
-        renderStockList();
-        updateExplorer(sym);
-      });
-    });
-  }
+            if(newsItems.length > 0) { renderNews(newsItems, container); }
+        }
+    } catch (e) { console.error(e); }
+}
 
-  function loadStockList(key) {
-    setActiveTab(key);
-    renderStockList();
-  }
+function renderNews(items, container) {
+    const html = items.map(item => {
+        let timeStr = item.date.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+        return `
+        <a href="${item.link}" target="_blank" class="rv-news-list-item">
+            <span class="rv-news-list-title">${item.title}</span>
+            <span class="rv-news-list-time">${timeStr}</span>
+        </a>
+        `;
+    }).join('');
+    container.innerHTML = html;
+}
 
-  function filterStocks() {
-    renderStockList();
-  }
+/* --- 6. STOCK EXPLORER --- */
+function loadStockList(category) {
+    document.querySelectorAll('.rv-list-tab').forEach(b => b.classList.remove('active'));
+    document.querySelector(`button[onclick="loadStockList('${category}')"]`).classList.add('active');
 
-  function updateExplorer(sym) {
-    // Inject TradingView widgets into the two containers
-    const fundamentals = $('#container-fundamentals');
-    const technicals = $('#container-technicals');
-    if (!fundamentals || !technicals) return;
+    const listContainer = document.getElementById('rv-stock-list-container');
+    const data = STOCK_LISTS[category] || [];
+    
+    let exchange = "NASDAQ";
+    if(category === 'dow') exchange = "NYSE";
 
-    fundamentals.innerHTML = '';
-    technicals.innerHTML = '';
+    listContainer.innerHTML = data.map(stock => {
+        let fullSymbol = stock.s;
+        if(!stock.s.includes(":")) {
+            fullSymbol = `${exchange}:${stock.s}`;
+            if(stock.s === 'SPY') fullSymbol = 'AMEX:SPY';
+            if(['AAPL','MSFT','NVDA','AMZN','TSLA','NFLX','GOOGL','COST'].includes(stock.s)) fullSymbol = `NASDAQ:${stock.s}`;
+        }
 
-    const fWrap = document.createElement('div');
-    fWrap.className = 'tradingview-widget-container';
-    fWrap.innerHTML = `<div class="tradingview-widget-container__widget"></div>`;
-    const tWrap = document.createElement('div');
-    tWrap.className = 'tradingview-widget-container';
-    tWrap.innerHTML = `<div class="tradingview-widget-container__widget"></div>`;
+        return `
+        <div class="rv-stock-item" onclick="updateExplorer('${fullSymbol}', '${stock.n}')">
+            <div>
+                <div class="rv-stock-symbol">${stock.s}</div>
+                <div style="font-size:10px; color:#666;">${stock.n}</div>
+            </div>
+            <div style="font-size:18px; color:#444;">&rsaquo;</div>
+        </div>
+        `;
+    }).join('');
+}
 
-    fundamentals.appendChild(fWrap);
-    technicals.appendChild(tWrap);
+function updateExplorer(symbol, name) {
+    document.getElementById('rv-selected-stock-name').textContent = `${name} (${symbol})`;
+    const fundContainer = document.getElementById('container-fundamentals');
+    const techContainer = document.getElementById('container-technicals');
+    fundContainer.innerHTML = ''; tech.innerHTML = '';
 
     const s1 = document.createElement('script');
-    s1.src = 'https://s3.tradingview.com/external-embedding/embed-widget-financials.js';
+    s1.type = 'text/javascript';
+    s1.src = 'https://s3.tradingview.com/external-embedding/embed-widget-technical-analysis.js';
     s1.async = true;
-    s1.textContent = JSON.stringify({
-      symbol: `NASDAQ:${sym}`,
-      colorTheme: 'dark',
-      isTransparent: true,
-      locale: 'en',
-      width: '100%',
-      height: '100%'
+    s1.innerHTML = JSON.stringify({
+        "interval": "1D", "width": "100%", "height": "100%", "symbol": symbol, 
+        "showIntervalTabs": true, "displayMode": "single", "locale": "en", "colorTheme": "dark", "isTransparent": true
     });
+    const c1 = document.createElement('div'); c1.className = 'tradingview-widget-container';
+    c1.appendChild(s1);
+    techContainer.appendChild(c1);
 
     const s2 = document.createElement('script');
-    s2.src = 'https://s3.tradingview.com/external-embedding/embed-widget-technical-analysis.js';
+    s2.type = 'text/javascript';
+    s2.src = 'https://s3.tradingview.com/external-embedding/embed-widget-financials.js';
     s2.async = true;
-    s2.textContent = JSON.stringify({
-      symbol: `NASDAQ:${sym}`,
-      interval: '1D',
-      colorTheme: 'dark',
-      isTransparent: true,
-      locale: 'en',
-      width: '100%',
-      height: '100%'
+    s2.innerHTML = JSON.stringify({
+        "colorTheme": "dark", "isTransparent": true, "displayMode": "regular", 
+        "width": "100%", "height": "100%", "symbol": symbol, "locale": "en"
     });
+    const c2 = document.createElement('div'); c2.className = 'tradingview-widget-container';
+    c2.appendChild(s2);
+    fundContainer.appendChild(c2);
+}
 
-    fWrap.appendChild(s1);
-    tWrap.appendChild(s2);
-  }
-
-  // ─────────────────────────────────────────────────────────────
-  // Live News Feed (RSS)
-  // Uses AllOrigins as a free proxy to fetch RSS XML. Then parses XML via DOMParser.
-  // ─────────────────────────────────────────────────────────────
-  function parseRss(xmlText, sourceName) {
-    const parser = new DOMParser();
-    const xml = parser.parseFromString(xmlText, 'text/xml');
-    const items = Array.from(xml.querySelectorAll('item')).slice(0, 25);
-
-    return items.map(it => {
-      const title = it.querySelector('title')?.textContent?.trim() || '';
-      const link = it.querySelector('link')?.textContent?.trim() || '';
-      const pubDate = it.querySelector('pubDate')?.textContent?.trim() || '';
-      return { title, link, pubDate, source: sourceName };
+function filterStocks() {
+    const input = document.getElementById('stockSearch').value.toUpperCase();
+    const items = document.querySelectorAll('.rv-stock-item');
+    items.forEach(item => {
+        const text = item.innerText.toUpperCase();
+        item.style.display = text.includes(input) ? 'flex' : 'none';
     });
-  }
+}
 
-  function renderNews(items, container) {
-    if (!container) return;
-
-    const clean = (s) => {
-      if (!window.DOMPurify) return s;
-      return DOMPurify.sanitize(s, { ALLOWED_TAGS: [], ALLOWED_ATTR: [] });
-    };
-
-    const html = items.map(n => `
-      <a class="rv-news-item" href="${clean(n.link)}" target="_blank" rel="noopener noreferrer">
-        <div class="rv-news-title">${clean(n.title)}</div>
-        <div class="rv-news-meta">${clean(n.source)} · <span>${clean(n.pubDate || '')}</span></div>
-      </a>
-    `).join('');
-
-    container.innerHTML = html || `<div style="padding:14px; opacity:.8;">No news items.</div>`;
-  }
-
-  async function fetchViaAllOrigins(url) {
-    const res = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(url)}`);
-    if (!res.ok) throw new Error('Proxy fetch failed');
-    const json = await res.json();
-    return json.contents;
-  }
-
-  async function initNewsFeed() {
-    const container = $('#rv-news-feed-list');
-    const btn = $('#news-refresh-btn');
-    if (!container) return;
-
-    const SOURCES = [
-      { name: 'Yahoo Finance', url: 'https://finance.yahoo.com/news/rssindex' },
-      { name: 'CNBC', url: 'https://www.cnbc.com/id/100003114/device/rss/rss.html' }
-    ];
-
-    async function refresh() {
-      if (btn) btn.disabled = true;
-      container.innerHTML = `<div style="padding:14px; opacity:.8;">Loading news…</div>`;
-
-      try {
-        const all = [];
-        for (const s of SOURCES) {
-          const xmlText = await fetchViaAllOrigins(s.url);
-          const parsed = parseRss(xmlText, s.name);
-          all.push(...parsed);
+/* --- 7. THEME SWITCHER --- */
+function initTheme() {
+    const btn = document.getElementById('theme-toggle');
+    const body = document.body;
+    btn.addEventListener('click', () => {
+        if(body.getAttribute('data-theme') === 'light') {
+            body.removeAttribute('data-theme');
+            btn.innerHTML = '☀️ Light';
+        } else {
+            body.setAttribute('data-theme', 'light');
+            btn.innerHTML = '🌙 Dark';
         }
-
-        // Sort by pubDate string (best-effort)
-        const newsItems = all
-          .filter(x => x.title && x.link)
-          .slice(0, 40);
-
-        renderNews(newsItems, container);
-                if (window.RV_ADD && typeof window.RV_ADD.__updateCheatHeat === 'function') {
-                    window.RV_ADD.__updateCheatHeat(newsItems);
-                }
-      } catch (e) {
-        container.innerHTML = `<div style="padding:14px; opacity:.8;">Failed to load news. Try again.</div>`;
-        if (window.RV_ADD && typeof window.RV_ADD.__updateCheatHeat === 'function') {
-          window.RV_ADD.__updateCheatHeat([]);
-        }
-      } finally {
-        if (btn) btn.disabled = false;
-      }
-    }
-
-    if (btn) btn.addEventListener('click', refresh);
-
-    // initial load
-    refresh();
-  }
-
-  // ─────────────────────────────────────────────────────────────
-  // Boot
-  // ─────────────────────────────────────────────────────────────
-  document.addEventListener('DOMContentLoaded', () => {
-    initTheme();
-    initMarketTimer();
-    initGauges();
-    initWatchlist();
-
-    // Deep dive default
-    loadStockList('nasdaq');
-    updateExplorer(activeSymbol);
-
-    // News feed
-    initNewsFeed();
-    if (window.RV_ADD && typeof window.RV_ADD.__updateCheatHeat === 'function') window.RV_ADD.__updateCheatHeat([]);
-  });
-
-})();
-
-
-// ─────────────────────────────────────────────────────────────
-// RV_ADD namespace bridge (additive; does not break existing code)
-// This fixes inline handlers in index.html like RV_ADD.Explorer.load()
-// and powers the small "Automated Insights (Beta)" box.
-// ─────────────────────────────────────────────────────────────
-(function () {
-  'use strict';
-
-  // Do not overwrite if something already defined
-  window.RV_ADD = window.RV_ADD || {};
-
-  // Bridge existing Deep Dive functions to the RV_ADD.Explorer namespace expected by index.html
-  window.RV_ADD.Explorer = window.RV_ADD.Explorer || {};
-  if (typeof window.RV_ADD.Explorer.load !== 'function' && typeof window.loadStockList === 'function') {
-    window.RV_ADD.Explorer.load = window.loadStockList;
-  }
-  if (typeof window.RV_ADD.Explorer.filter !== 'function' && typeof window.filterStocks === 'function') {
-    window.RV_ADD.Explorer.filter = window.filterStocks;
-  }
-
-  // Cheats: deterministic mini-insight from the already-fetched Yahoo RSS items
-  // Input shape expected: [{ title, link, pubDate, source }]
-  function computeKeywordHeat(items) {
-    const stop = new Set([
-      'the','a','an','and','or','to','of','in','on','for','with','as','at','by','from','is','are','was','were',
-      'after','before','over','under','into','about','amid','says','say','saying','new','live','update','updates',
-      'market','markets','stock','stocks','crypto','bitcoin','shares','price','prices','today','this','that'
-    ]);
-    const counts = new Map();
-    for (const it of items || []) {
-      const text = (it?.title || '').toLowerCase();
-      const words = text.split(/[^a-z0-9]+/).filter(Boolean);
-      for (const w of words) {
-        if (w.length < 3) continue;
-        if (stop.has(w)) continue;
-        counts.set(w, (counts.get(w) || 0) + 1);
-      }
-    }
-    return [...counts.entries()].sort((a,b)=>b[1]-a[1]).slice(0, 8);
-  }
-
-  function renderHeat(el, items) {
-    if (!el) return;
-    if (!items || !items.length) {
-      el.textContent = 'No data yet (waiting for news sync).';
-      return;
-    }
-    const top = computeKeywordHeat(items);
-    const uniqueSources = new Set(items.map(x => x.source).filter(Boolean));
-    const now = new Date();
-    const ts = now.toLocaleString(undefined, { hour: '2-digit', minute: '2-digit' });
-
-    const parts = [];
-    parts.push(`<div><strong>Updated:</strong> ${ts}</div>`);
-    parts.push(`<div><strong>Items:</strong> ${items.length} · <strong>Sources:</strong> ${uniqueSources.size}</div>`);
-    if (top.length) {
-      parts.push('<div style="margin-top:8px;"><strong>Top narratives (keyword heat):</strong></div>');
-      parts.push('<div style="display:flex; flex-wrap:wrap; gap:6px; margin-top:6px;">' +
-        top.map(([w,c]) => `<span style="padding:4px 8px; border:1px solid rgba(255,255,255,.15); border-radius:999px; font-size:12px;">${escapeHtml(w)} <span style="opacity:.7">(${c})</span></span>`).join('') +
-      '</div>');
-    } else {
-      parts.push('<div style="margin-top:8px; opacity:.8;">No strong keyword signal yet.</div>');
-    }
-    el.innerHTML = parts.join('');
-  }
-
-  function escapeHtml(s) {
-    return String(s).replace(/[&<>"']/g, (ch) => ({
-      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
-    }[ch]));
-  }
-
-  // Public hook for existing news fetch code:
-  window.RV_ADD.__updateCheatHeat = function (newsItems) {
-    const el = document.getElementById('cheat-heat');
-    renderHeat(el, newsItems);
-  };
-})();
+    });
+}
