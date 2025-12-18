@@ -1,12 +1,12 @@
 export async function onRequestGet({ request }) {
   const url = new URL(request.url);
-  const tickers = url.searchParams.get('tickers') || 'SPY';
+  const tickersParam = url.searchParams.get('tickers') || 'SPY';
   
-  // Mapping für Stooq
-  const stooqTickers = tickers.split(',').map(t => {
+  const stooqTickers = tickersParam.split(',').map(t => {
     t = t.trim().toUpperCase();
     if(t === 'BTC-USD') return 'BTC.V';
     if(t === 'ETH-USD') return 'ETH.V';
+    if(t === 'GOLD') return 'GC.F';
     if(t.includes('.')) return t; 
     return `${t}.US`;
   }).join('+');
@@ -14,39 +14,49 @@ export async function onRequestGet({ request }) {
   const apiUrl = `https://stooq.com/q/l/?s=${stooqTickers}&f=sd2t2ohlcv&h&e=csv`;
 
   try {
-    const res = await fetch(apiUrl);
+    const res = await fetch(apiUrl, {
+        headers: { 'User-Agent': 'RubikVault/1.0' }
+    });
+    
+    if(!res.ok) throw new Error("Source Down");
+
     const csv = await res.text();
     const lines = csv.trim().split('\n');
     const quotes = {};
 
     for (let i = 1; i < lines.length; i++) {
-      const parts = lines[i].split(',');
-      // Stooq CSV Format: Symbol,Date,Time,Open,High,Low,Close,Volume
-      // Manchmal fehlen Daten, wir brauchen min. Close
-      if (parts.length < 7) continue;
-      
-      const symbol = parts[0];
-      const close = parseFloat(parts[6]);
-      const open = parseFloat(parts[3]);
+        const parts = lines[i].split(',');
+        if(parts.length < 5) continue;
+        
+        const [symbol, date, time, open, high, low, close] = parts;
+        
+        if (close === 'N/A') continue;
 
-      if (isNaN(close)) continue;
+        let userSym = symbol.replace('.US', '').replace('.V', '-USD').replace('GC.F', 'GOLD');
+        
+        const pClose = parseFloat(close);
+        const pOpen = parseFloat(open);
+        
+        let changePct = 0;
+        if(!isNaN(pOpen) && pOpen !== 0) {
+            changePct = ((pClose - pOpen) / pOpen) * 100;
+        }
 
-      let sym = symbol.replace('.US', '').replace('.V', '-USD');
-      let changePct = 0;
-      
-      if(!isNaN(open) && open !== 0) {
-        changePct = ((close - open) / open) * 100;
-      }
-
-      quotes[sym] = {
-        price: close,
-        changePct: changePct
-      };
+        quotes[userSym] = {
+            price: pClose,
+            changePct: changePct
+        };
     }
 
-    return new Response(JSON.stringify({ quotes }), {
-      headers: { 'Content-Type': 'application/json' }
+    return new Response(JSON.stringify({ 
+        quotes 
+    }), {
+        headers: { 
+            'Content-Type': 'application/json',
+            'Cache-Control': 'public, max-age=60' 
+        }
     });
+
   } catch (e) {
     return new Response(JSON.stringify({ error: e.message }), { status: 500 });
   }

@@ -86,7 +86,7 @@ body { background: var(--rv-bg); color: var(--rv-text); font-family: system-ui, 
 .rv-stock-name { font-size: 11px; color: var(--rv-text-muted); text-align: right; }
 .rv-chart-header { margin-bottom: 10px; font-size: 18px; color: var(--rv-accent); font-weight: bold; }
 
-/* Watchlist */
+/* Watchlist Autocomplete */
 .rv-watchlist-box { background: var(--rv-bg-alt); border-radius: 12px; border: 1px solid var(--rv-border); padding: 20px; position: relative; }
 .rv-watchlist-input-group { display: flex; gap: 10px; margin-bottom: 20px; position: relative; }
 .rv-watchlist-input-group input { flex: 1; background: var(--rv-bg); border: 1px solid var(--rv-border); padding: 10px; border-radius: 6px; color: var(--rv-text); }
@@ -98,7 +98,7 @@ body { background: var(--rv-bg); color: var(--rv-text); font-family: system-ui, 
 .rv-wl-price { font-weight: bold; font-size:14px; margin-top:4px; }
 .rv-wl-remove { position: absolute; top: 5px; right: 5px; cursor: pointer; color: var(--rv-danger); }
 
-/* News List */
+/* News List & Controls */
 .rv-news-header { padding: 10px; border-bottom: 1px solid var(--rv-border); display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.1); }
 .rv-refresh-btn { background: transparent; border: 1px solid var(--rv-border); color: var(--rv-accent); border-radius: 4px; padding: 2px 8px; font-size: 10px; cursor: pointer; transition: all 0.2s; text-transform: uppercase; }
 .rv-refresh-btn:hover { background: var(--rv-accent); color: #000; }

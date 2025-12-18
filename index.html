@@ -74,21 +74,23 @@
     </div>
   </header>
 
-  <main class="rv-main">
+  <main class="rv-main" id="dashboard-grid">
     
     <!-- HERO SECTION -->
     <section class="rv-hero">
       <div class="rv-hero-content">
         <h1>Market Clarity in 3 Seconds.</h1>
         <p>Data-driven insights across Stocks, Crypto, and Macro. No noise, no hype.</p>
+        <div class="rv-hero-meta">
+            <span class="rv-badge">Live Beta</span>
+        </div>
       </div>
     </section>
 
-    <!-- OPTION A: MARKET OVERVIEW (LIVE INTRADAY) -->
+    <!-- OPTION A: MARKET OVERVIEW -->
     <section class="rv-section">
-        <div class="test-label">Option A: Intraday Performance</div>
+        <div class="test-label">Option A: Intraday Performance (Live)</div>
         <div class="grid-4">
-            <!-- DOW JONES -->
             <div class="rv-tv-box" style="height: 220px;">
                 <div class="tradingview-widget-container">
                   <div class="tradingview-widget-container__widget"></div>
@@ -97,7 +99,6 @@
                   </script>
                 </div>
             </div>
-            <!-- NASDAQ -->
             <div class="rv-tv-box" style="height: 220px;">
                 <div class="tradingview-widget-container">
                   <div class="tradingview-widget-container__widget"></div>
@@ -106,7 +107,6 @@
                   </script>
                 </div>
             </div>
-            <!-- S&P 500 -->
             <div class="rv-tv-box" style="height: 220px;">
                 <div class="tradingview-widget-container">
                   <div class="tradingview-widget-container__widget"></div>
@@ -115,7 +115,6 @@
                   </script>
                 </div>
             </div>
-            <!-- RUSSELL 2000 (TVC:RUT) -->
             <div class="rv-tv-box" style="height: 220px;">
                 <div class="tradingview-widget-container">
                   <div class="tradingview-widget-container__widget"></div>
@@ -127,45 +126,33 @@
         </div>
     </section>
 
-    <!-- PERSONAL DASHBOARD (Fixed Sentiment Layout) -->
+    <!-- NEW: WATCHLIST & MCS -->
     <div class="rv-dashboard-grid" style="margin-bottom:60px;">
-        
-        <!-- DUAL FEAR & GREED (FIXED) -->
         <div class="rv-dash-sidebar">
-            <div class="test-label">Sentiment Analysis (Stock & Crypto)</div>
-            <div class="grid-2" style="gap:15px;">
-                
-                <!-- Stock Gauge -->
+            <div class="test-label">Sentiment Analysis</div>
+            <div class="grid-2" style="gap:10px;">
                 <div class="rv-tv-box rv-gauge-box">
+                    <div class="rv-gauge-wrapper"><canvas id="mcs-chart-stock"></canvas></div>
                     <div class="rv-gauge-label">Stocks</div>
-                    <div class="rv-gauge-wrapper">
-                        <canvas id="mcs-chart-stock"></canvas>
-                        <div class="rv-gauge-value" id="mcs-value-stock">--</div>
-                    </div>
+                    <div class="rv-gauge-value" id="mcs-value-stock">--</div>
                 </div>
-
-                <!-- Crypto Gauge -->
                 <div class="rv-tv-box rv-gauge-box">
+                    <div class="rv-gauge-wrapper"><canvas id="mcs-chart-crypto"></canvas></div>
                     <div class="rv-gauge-label">Crypto</div>
-                    <div class="rv-gauge-wrapper">
-                        <canvas id="mcs-chart-crypto"></canvas>
-                        <div class="rv-gauge-value" id="mcs-value-crypto">--</div>
-                    </div>
+                    <div class="rv-gauge-value" id="mcs-value-crypto">--</div>
                 </div>
-
             </div>
         </div>
 
-        <!-- Watchlist -->
         <div class="rv-dash-main">
             <div class="test-label">My Watchlist (Live Quotes)</div>
             <div class="rv-tv-box rv-watchlist-box">
                 <div class="rv-watchlist-input-group">
-                    <input type="text" id="wl-input" placeholder="Type symbol (e.g. A for Apple)..." autocomplete="off" />
+                    <input type="text" id="wl-input" placeholder="Symbol (e.g. A for Apple)..." autocomplete="off" />
                     <div id="wl-suggestions" class="rv-suggestions"></div>
                     <button id="wl-add-btn">Add</button>
                 </div>
-                <div id="wl-container" class="rv-watchlist-grid" style="max-height: 200px; overflow-y: auto;"></div>
+                <div id="wl-container" class="rv-watchlist-grid"></div>
             </div>
         </div>
     </div>
@@ -343,7 +330,7 @@
         </div>
     </section>
 
-    <!-- OPTION K: VALUATION (FIXED) -->
+    <!-- OPTION K: VALUATION -->
     <section class="rv-section">
         <div class="test-label">Option K: S&P 500 Valuation (P/E, Dividends)</div>
         <div class="rv-tv-box" style="height: 600px;">
@@ -384,6 +371,20 @@
         </div>
     </div>
 
+    <!-- RV_ADD_ZONE_START -->
+    <section id="rv-add-zone" class="rv-section">
+        <div class="rv-add-header">
+            <h2>⚡ Automated Insights (Beta)</h2>
+        </div>
+        <div class="rv-add-cheats-grid">
+            <div class="rv-add-card">
+                <h3>Narrative Heatmap</h3>
+                <div id="cheat-heat" style="font-size:13px; padding:10px;">Analyzing news...</div>
+            </div>
+        </div>
+    </section>
+    <!-- RV_ADD_ZONE_END -->
+
   </main>
 
   <footer class="rv-footer">
@@ -392,9 +393,14 @@
         <a href="privacy.html">Privacy</a>
         <a href="disclaimer.html">Disclaimer</a>
     </div>
-    &copy; 2025 RubikVault.
+    &copy; 2025 RubikVault. US Market Data only.
   </footer>
 
   <script src="script.js" defer></script>
+  <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => navigator.serviceWorker.register('service-worker.js'));
+      }
+  </script>
 </body>
 </html>
