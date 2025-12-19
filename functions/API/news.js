@@ -14,6 +14,10 @@ const SOURCES = [
   { id: "cnbc_markets",    name: "CNBC – Markets",            url: "https://www.cnbc.com/id/15839135/device/rss/rss.html" },
   { id: "yahoo_finance",   name: "Yahoo Finance",             url: "https://finance.yahoo.com/rss/" },
   { id: "seekingalpha",    name: "Seeking Alpha – Market",    url: "https://seekingalpha.com/market_currents.xml" },
+  { id: "bloomberg-markets", name: "Bloomberg Markets", url: "https://www.bloomberg.com/feeds/markets.rss" },
+  { id: "ft-markets", name: "Financial Times Markets", url: "https://www.ft.com/rss/markets" },
+  { id: "cointelegraph", name: "Cointelegraph", url: "https://cointelegraph.com/rss" },
+  // Add more valide
 ];
 
 const DEFAULT_MAX = 25;
@@ -36,127 +40,92 @@ function stripTags(s) {
     .trim();
 }
 
-function safeUrl(u) {
-  try { return new URL(u).toString(); } catch { return ""; }
+function getPubDate(s) {
+  const pub = s.querySelector("pubDate") || s.querySelector("updated");
+  if (pub) return pub.textContent.trim();
+  return new Date().toISOString();
 }
 
-function pickText(el, selectors) {
-  for (const sel of selectors) {
-    const n = el.querySelector(sel);
-    if (!n) continue;
-    const txt = (n.getAttribute && n.getAttribute("href")) || n.textContent || "";
-    const cleaned = stripTags(txt);
-    if (cleaned) return cleaned;
-  }
+function getDesc(s) {
+  const desc = s.querySelector("description") || s.querySelector("content");
+  if (desc) return stripTags(desc.textContent);
   return "";
 }
 
-function parseDate(s) {
-  const d = new Date(s);
-  return Number.isNaN(d.getTime()) ? null : d;
+// --- Fetch ---
+async function fetchWithTimeout(url, ms = 8000) {
+  const controller = new AbortController();
+  const id = setTimeout(() => controller.abort(), ms);
+  const res = await fetch(url, { signal: controller.signal });
+  clearTimeout(id);
+  return res;
 }
 
-function normalizeItems(items) {
-  // de-dupe by link+title
-  const seen = new Set();
-  const out = [];
-  for (const it of items) {
-    const key = `${it.link}||${it.title}`;
-    if (!it.link || !it.title || seen.has(key)) continue;
-    seen.add(key);
-    out.push(it);
-  }
-  // sort desc by date if available
-  out.sort((a, b) => (b.ts ?? 0) - (a.ts ?? 0));
-  return out;
-}
-
-function parseFeedXml(xmlText, sourceName, sourceId) {
-  // Works for RSS 2.0 and Atom feeds.
+// --- Parsing ---
+function parseFeedXml(text, sourceName, sourceId) {
   const parser = new DOMParser();
-  const doc = parser.parseFromString(xmlText, "text/xml");
+  const xml = parser.parseFromString(text, "application/xml");
+  const isRss = xml.querySelector("rss");
+  const isAtom = xml.querySelector("feed");
 
-  // If XML parsing failed, the document contains <parsererror> in many impls.
-  if (doc.querySelector("parsererror")) return [];
+  if (!isRss && !isAtom) return [];
 
-  const rssItems = Array.from(doc.querySelectorAll("item"));
-  const atomEntries = Array.from(doc.querySelectorAll("entry"));
-
-  const items = [];
-  const nodes = rssItems.length ? rssItems : atomEntries;
-
-  for (const n of nodes) {
-    const title = stripTags(pickText(n, ["title"]));
-    let link = "";
-
-    if (rssItems.length) {
-      link = safeUrl(stripTags(pickText(n, ["link"])));
-    } else {
-      // Atom: prefer <link rel="alternate" href="...">
-      const alt = n.querySelector('link[rel="alternate"]');
-      link = safeUrl((alt && alt.getAttribute("href")) || "");
-      if (!link) {
-        const any = n.querySelector("link");
-        link = safeUrl((any && any.getAttribute("href")) || (any && any.textContent) || "");
-      }
-    }
-
-    const rawDate = pickText(n, rssItems.length ? ["pubDate", "dc\\:date", "date"] : ["updated", "published"]);
-    const d = parseDate(rawDate);
-    const summary = stripTags(pickText(n, rssItems.length ? ["description", "content\\:encoded"] : ["summary", "content"]));
-
-    if (!title || !link) continue;
-
-    items.push({
-      source: sourceName,
-      sourceId,
-      title,
-      link,
-      summary: summary || "",
-      published: d ? d.toISOString() : "",
-      ts: d ? d.getTime() : 0,
-    });
-  }
-
-  return items;
+  const items = xml.querySelectorAll(isRss ? "item" : "entry");
+  return Array.from(items).map(item => ({
+    title: (item.querySelector("title")?.textContent ?? "").trim(),
+    link: (item.querySelector("link")?.getAttribute("href") ?? item.querySelector("link")?.textContent ?? "").trim(),
+    pubDate: getPubDate(item),
+    description: getDesc(item),
+    source: sourceName,
+    sourceId,
+  }));
 }
 
-async function fetchWithTimeout(url, timeoutMs = 7000) {
-  const ctrl = new AbortController();
-  const t = setTimeout(() => ctrl.abort(), timeoutMs);
-  try {
-    const res = await fetch(url, {
-      method: "GET",
-      headers: {
-        "user-agent": "RubikVault/1.0 (+https://rubikvault.com)",
-        "accept": "application/rss+xml, application/atom+xml, application/xml, text/xml, */*",
-      },
-      signal: ctrl.signal,
-      cf: { cacheTtl: 0, cacheEverything: false }, // we do our own caching below
-    });
-    return res;
-  } finally {
-    clearTimeout(t);
-  }
+// --- Normalize & Sort ---
+function normalizeItems(items) {
+  return items
+    .filter(i => i.title && i.link && i.pubDate)
+    .sort((a, b) => new Date(b.pubDate) - new Date(a.pubDate));
 }
 
-function jsonResponse(obj, init = {}) {
-  const body = JSON.stringify(obj, null, 2);
-  return new Response(body, {
-    ...init,
-    headers: {
-      "content-type": "application/json; charset=utf-8",
-      "cache-control": "no-store",
-      "access-control-allow-origin": "*",
-      ...init.headers,
-    },
+// --- Response ---
+function jsonResponse(body, status = 200) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { "Content-Type": "application/json" },
   });
 }
 
-async function cachedResponse(request, ctx, handler, ttlSeconds) {
+// --- Handler ---
+async function handler(url, selected, maxItems) {
+  const tasks = selected.map(async (s) => {
+    try {
+      const r = await fetchWithTimeout(s.url, 8000);
+      if (!r.ok) return [];
+      const text = await r.text();
+      return parseFeedXml(text, s.name, s.id);
+    } catch {
+      return [];
+    }
+  });
+
+  const settled = await Promise.all(tasks);
+  const items = normalizeItems(settled.flat()).slice(0, maxItems);
+
+  return jsonResponse({
+    ok: true,
+    updatedAt: new Date().toISOString(),
+    sources: selected.map(s => ({ id: s.id, name: s.name, url: s.url })),
+    count: items.length,
+    items,
+  });
+}
+
+// --- Cache Wrapper ---
+async function cachedResponse(request, ctx, handlerFn, ttlSeconds) {
   const url = new URL(request.url);
   const nocache = url.searchParams.get("nocache") === "1";
-  if (nocache) return handler();
+  if (nocache) return handlerFn();
 
   const cache = caches.default;
   const key = new Request(url.toString(), { method: "GET" });
@@ -164,7 +133,7 @@ async function cachedResponse(request, ctx, handler, ttlSeconds) {
   const hit = await cache.match(key);
   if (hit) return hit;
 
-  const res = await handler();
+  const res = await handlerFn();
   // only cache successful json responses
   if (res.ok) {
     const toCache = new Response(res.body, res);
