@@ -32,7 +32,105 @@ document.addEventListener("DOMContentLoaded", () => {
     RV.modules.devPanel.init();
     // Heartbeat for Time-on-Site (Approx)
     setInterval(() => plausible('Heartbeat'), 30000);
+    
+    // Load all TradingView Widgets dynamically to fix syntax errors
+    loadTradingViewWidgets();
+    
+    // Ergänzung: Nach News-Load Narrative analysieren
+    const newsTitles = [] // Extrahiere aus newsFeed, z.B. nach initNewsFeed()
+    RV.modules.narrativeHeatmap.analyze(newsTitles);
 });
+
+function loadTradingViewWidgets() {
+    // OPTION A: Intraday Performance
+    const djiConfig = { "symbol": "FOREXCOM:DJI", "width": "100%", "height": "100%", "locale": "en", "dateRange": "1D", "colorTheme": "dark", "isTransparent": true, "autosize": true, "largeChartUrl": "" };
+    createTradingViewWidget('widget-dji', 'mini-symbol-overview', djiConfig);
+
+    const nsxConfig = { "symbol": "FOREXCOM:NSXUSD", "width": "100%", "height": "100%", "locale": "en", "dateRange": "1D", "colorTheme": "dark", "isTransparent": true, "autosize": true, "largeChartUrl": "" };
+    createTradingViewWidget('widget-nsx', 'mini-symbol-overview', nsxConfig);
+
+    const spxConfig = { "symbol": "FOREXCOM:SPXUSD", "width": "100%", "height": "100%", "locale": "en", "dateRange": "1D", "colorTheme": "dark", "isTransparent": true, "autosize": true, "largeChartUrl": "" };
+    createTradingViewWidget('widget-spx', 'mini-symbol-overview', spxConfig);
+
+    const rutConfig = { "symbol": "TVC:RUT", "width": "100%", "height": "100%", "locale": "en", "dateRange": "1D", "colorTheme": "dark", "isTransparent": true, "autosize": true, "largeChartUrl": "" };
+    createTradingViewWidget('widget-rut', 'mini-symbol-overview', rutConfig);
+
+    // Trend Analysis
+    const spyConfig = { "symbol": "AMEX:SPY", "width": "100%", "height": "100%", "locale": "en", "dateRange": "1M", "colorTheme": "dark", "isTransparent": true, "autosize": true, "largeChartUrl": "" };
+    createTradingViewWidget('widget-spy', 'mini-symbol-overview', spyConfig);
+
+    const goldConfig = { "symbol": "TVC:GOLD", "width": "100%", "height": "100%", "locale": "en", "dateRange": "1M", "colorTheme": "dark", "isTransparent": true, "autosize": true, "largeChartUrl": "" };
+    createTradingViewWidget('widget-gold', 'mini-symbol-overview', goldConfig);
+
+    const btcConfig = { "symbol": "BINANCE:BTCUSDT", "width": "100%", "height": "100%", "locale": "en", "dateRange": "1M", "colorTheme": "dark", "isTransparent": true, "autosize": true, "largeChartUrl": "" };
+    createTradingViewWidget('widget-btc', 'mini-symbol-overview', btcConfig);
+
+    // Market Overview
+    const marketOverviewConfig = {
+      "colorTheme": "dark", "dateRange": "12M", "showChart": true, "locale": "en", "width": "100%", "height": "100%", "isTransparent": true,
+      "tabs": [
+        { "title": "USA", "symbols": [ { "s": "FOREXCOM:SPXUSD" }, { "s": "FOREXCOM:NSXUSD" }, { "s": "FOREXCOM:DJI" }, { "s": "TVC:RUT" } ] },
+        { "title": "Europe", "symbols": [ { "s": "INDEX:DEU40", "d": "DAX 40" }, { "s": "INDEX:UK100", "d": "FTSE 100" }, { "s": "INDEX:FRA40", "d": "CAC 40" } ] },
+        { "title": "Asia", "symbols": [ { "s": "INDEX:N225", "d": "Nikkei 225" }, { "s": "HSI:HSI", "d": "Hang Seng" }, { "s": "TVC:SHCOMP", "d": "Shanghai Comp" } ] },
+        { "title": "Commodities", "symbols": [ { "s": "CME_MINI:ES1!" }, { "s": "TVC:USOIL" }, { "s": "TVC:GOLD" } ] }
+      ]
+    };
+    createTradingViewWidget('widget-market-overview', 'market-overview', marketOverviewConfig);
+
+    // US Bonds
+    const us02yConfig = { "symbol": "TVC:US02Y", "width": "100%", "height": "100%", "locale": "en", "dateRange": "12M", "colorTheme": "dark", "isTransparent": true, "autosize": true };
+    createTradingViewWidget('widget-us02y', 'mini-symbol-overview', us02yConfig);
+
+    const us05yConfig = { "symbol": "TVC:US05Y", "width": "100%", "height": "100%", "locale": "en", "dateRange": "12M", "colorTheme": "dark", "isTransparent": true, "autosize": true };
+    createTradingViewWidget('widget-us05y', 'mini-symbol-overview', us05yConfig);
+
+    const us10yConfig = { "symbol": "TVC:US10Y", "width": "100%", "height": "100%", "locale": "en", "dateRange": "12M", "colorTheme": "dark", "isTransparent": true, "autosize": true };
+    createTradingViewWidget('widget-us10y', 'mini-symbol-overview', us10yConfig);
+
+    const us30yConfig = { "symbol": "TVC:US30Y", "width": "100%", "height": "100%", "locale": "en", "dateRange": "12M", "colorTheme": "dark", "isTransparent": true, "autosize": true };
+    createTradingViewWidget('widget-us30y', 'mini-symbol-overview', us30yConfig);
+
+    // Gainers & Losers
+    const hotlistsConfig = {
+      "colorTheme": "dark", "dateRange": "12M", "exchange": "US", "showChart": true, "locale": "en", "largeChartUrl": "", "isTransparent": true, "showSymbolLogo": true, "width": "100%", "height": "100%",
+      "plotLineColorGrowing": "rgba(16, 185, 129, 1)", "plotLineColorFalling": "rgba(239, 68, 68, 1)",
+      "gridLineColor": "rgba(240, 243, 250, 0)", "scaleFontColor": "rgba(209, 212, 219, 1)",
+      "belowLineFillColorGrowing": "rgba(16, 185, 129, 0.12)", "belowLineFillColorFalling": "rgba(239, 68, 68, 0.12)",
+      "symbolActiveColor": "rgba(41, 98, 255, 0.12)"
+    };
+    createTradingViewWidget('widget-hotlists', 'hotlists', hotlistsConfig);
+
+    // Heatmap
+    const heatmapConfig = { "exchanges": ["NASDAQ", "NYSE"], "type": "sector", "width": "100%", "height": "100%", "range": "1M", "plotGradient": { "color1": "#10b981", "color2": "#ef4444" }, "colorTheme": "dark", "locale": "en", "range_type": "change" };
+    createTradingViewWidget('widget-heatmap', 'stock-heatmap', heatmapConfig);
+
+    // Timeline
+    const timelineConfig = { "feedMode": "market", "market": "stock", "isTransparent": true, "colorTheme": "dark", "locale": "en", "width": "100%", "height": "100%" };
+    createTradingViewWidget('widget-timeline', 'timeline', timelineConfig);
+
+    const eventsConfig = { "width": "100%", "height": "100%", "colorTheme": "dark", "isTransparent": true, "locale": "en", "importance": "3", "currencyInfo": "USD" };
+    createTradingViewWidget('widget-events', 'events', eventsConfig);
+
+    // Valuation Screener
+    const screenerConfig = { "width": "100%", "height": "100%", "defaultColumn": "valuation", "defaultScreen": "general", "market": "america", "showToolbar": true, "colorTheme": "dark", "locale": "en", "isTransparent": true };
+    createTradingViewWidget('widget-screener', 'screener', screenerConfig);
+
+    // Advanced Chart
+    const advancedChartConfig = { "width": "100%", "height": "100%", "symbol": "NASDAQ:QQQ", "interval": "D", "timezone": "America/New_York", "theme": "dark", "style": "1", "locale": "en", "enable_publishing": false, "allow_symbol_change": true, "calendar": false, "support_host": "https://www.tradingview.com" };
+    createTradingViewWidget('widget-advanced-chart', 'advanced-chart', advancedChartConfig);
+}
+
+function createTradingViewWidget(containerId, widgetType, config) {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+
+  const script = document.createElement('script');
+  script.type = 'text/javascript';
+  script.async = true;
+  script.src = `https://s3.tradingview.com/external-embedding/embed-widget-${widgetType}.js`;
+  script.innerHTML = JSON.stringify(config);
+  container.appendChild(script);
+}
 
 /* --- 1. DATASETS --- */
 const SUGGESTIONS_DB = [
@@ -154,8 +252,10 @@ function initNewsFeed() {
             const xml = parser.parseFromString(data.contents, 'text/xml');
             const items = xml.querySelectorAll('item');
             let html = '';
+            let titles = [];
             items.forEach(item => {
                 const title = item.querySelector('title').textContent;
+                titles.push(title);
                 const link = item.querySelector('link').textContent;
                 const pubDate = item.querySelector('pubDate').textContent;
                 const timeAgo = ((new Date() - new Date(pubDate)) / 60000 | 0) + ' min ago';
@@ -167,6 +267,9 @@ function initNewsFeed() {
                 `;
             });
             container.innerHTML = html;
+            
+            // Narrative Heatmap aufrufen
+            RV.modules.narrativeHeatmap.analyze(titles);
         })
         .catch(error => console.error(error));
 }
@@ -460,6 +563,10 @@ RV.modules = {
       }
       container.innerHTML = html;
       container.classList.remove('skeleton');
+      
+      // Ergänzung: Narrative Heatmap aufrufen
+      const titles = deduped.map(item => item.title);
+      RV.modules.narrativeHeatmap.analyze(titles);
     }, 'dashboard')(),
     init: () => {
       document.querySelectorAll('.rv-news-tab').forEach(tab => {
@@ -740,3 +847,11 @@ RV.modules = {
     }
   }
 };
+
+/* Ergänzung: News-Init mit Narrative */
+function initNewsFeed() {
+  // ... (dein originaler Code)
+  // Nach dem Parsen der items:
+  const titles = Array.from(items).map(item => item.querySelector('title').textContent);
+  RV.modules.narrativeHeatmap.analyze(titles);
+}

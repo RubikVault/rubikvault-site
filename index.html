@@ -3,11 +3,16 @@
 <head>
   <meta charset="UTF-8" />
   <title>RubikVault – US Market Intelligence</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="description" content="RubikVault: Data-driven market intelligence. No noise, just signal." />
+  
   <link rel="stylesheet" href="style.css" />
+  <link rel="manifest" href="manifest.json" />
+  
+  <!-- External Libs -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.6/dist/purify.min.js"></script> <!-- Ergänzt für Sicherheit (Tip 6) -->
+  <script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.6/dist/purify.min.js"></script>
 </head>
 <body>
 
@@ -48,214 +53,193 @@
           </div>
           <div class="rv-logo-text">RubikVault</div>
         </a>
+        
+        <nav class="rv-nav-socials">
+          <a href="https://www.youtube.com/@RubikVault" target="_blank" title="YouTube"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg></a>
+          <a href="https://x.com/RubikVault" target="_blank" title="X"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M18.901 1.153h3.68l-8.04 9.19L24 22.846h-7.406l-5.8-7.584-6.638 7.584H.474l8.6-9.83L0 1.154h7.594l5.243 6.932ZM17.61 20.644h2.039L6.486 3.24H4.298Z"/></svg></a>
+          <a href="https://www.tiktok.com/@rubikvault" target="_blank" title="TikTok"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12.525.02c1.31-.02 2.61-.01 3.918.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93v6.16c0 2.52-1.12 4.89-2.93 6.61-1.82 1.73-4.27 2.45-6.69 1.97-2.42-.48-4.64-1.92-5.85-4.06-1.21-2.15-1.21-4.79.02-6.93 1.23-2.14 3.45-3.57 5.87-4.04.71-.14 1.44-.2 2.16-.18v4.2c-.67.03-1.35.32-1.9.82-.55.5-1.04 1.2-1.32 1.96-.28.76-.28 1.6.02 2.36.29.76.78 1.45 1.33 1.95.56.5 1.24.79 1.91.82 1.05.04 2.06-.32 2.85-.96.79-.64 1.29-1.57 1.29-2.65V.02Z"/></svg></a>
+          <a href="https://www.instagram.com/rubikvault" target="_blank" title="Instagram"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M7.8,2H16.2C19.4,2 22,4.6 22,7.8V16.2A5.8,5.8 0 0,1 16.2,22H7.8C4.6,22 2,19.4 2,16.2V7.8A5.8,5.8 0 0,1 7.8,2M7.6,4A3.6,3.6 0 0,0 4,7.6V16.4C4,18.39 5.61,20 7.6,20H16.4A3.6,3.6 0 0,0 20,16.4V7.6C20,5.61 18.39,4 16.4,4H7.6M17.25,5.5A1.25,1.25 0 0,1 18.5,6.75A1.25,1.25 0 0,1 17.25,8A1.25,1.25 0 0,1 16,6.75A1.25,1.25 0 0,1 17.25,5.5M12,7A5,5 0 0,1 17,12A5,5 0 0,1 12,17A5,5 0 0,1 7,12A5,5 0 0,1 12,7M12,9A3,3 0 0,0 9,12A3,3 0 0,0 12,15A3,3 0 0,0 15,12A3,3 0 0,0 12,9Z"/></svg></a>
+        </nav>
     </div>
     <div class="rv-header-right">
-      <!-- Market Timer -->
-      <div class="market-timer">
-        <div class="market-timer-top">
-          <span id="mt-status">CLOSED</span>
-          <div id="mt-dot" class="status-dot status-closed"></div>
+        <div class="market-timer">
+            <div class="market-timer-top">
+                <span id="mt-dot" class="status-dot"></span>
+                <span id="mt-status">Loading...</span>
+            </div>
+            <div id="mt-time" class="market-timer-bottom">NYC: --:--</div>
         </div>
-        <div id="mt-time" class="market-timer-bottom">NY: 00:00</div>
-      </div>
-      <!-- Theme Switch -->
-      <button id="theme-toggle" class="theme-switch" aria-label="Toggle theme">🌙</button>
+        <button id="theme-toggle" class="theme-switch" aria-label="Toggle Theme">☀️</button>
     </div>
   </header>
-
   <main class="rv-main">
-    <!-- Hero Section with 3-Second Clarity -->
-    <section class="rv-hero rv-section">
-      <h1>Decode the Markets with RubikVault</h1>
-      <p>Get focused, data-driven insights without the noise. Better than scattered widgets: curated briefs, consensus scores, and personalized watchlists. Updated every 5 minutes for news, 1 minute for quotes.</p>
-      <p id="hero-last-update" aria-live="polite">Last Update: News at --:--, Quotes at --:--</p>
-      <!-- Onboarding (Shown only first visit) -->
-      <details id="onboarding" open>
-        <summary>How to Use RubikVault</summary>
-        <ul>
-          <li>Add stocks to your watchlist (up to 5 free) for quick tracking.</li>
-          <li>Drag & drop sections to customize your dashboard.</li>
-          <li>Check the Market Consensus Score (MCS) for sentiment at a glance.</li>
-        </ul>
-      </details>
-    </section>
-
-    <!-- Dev Panel (only if dev mode) -->
-    <div id="dev-panel" style="display:none; position:fixed; bottom:10px; right:10px; background:var(--rv-bg-alt); border:1px solid var(--rv-border); padding:10px; border-radius:8px; z-index:100;">
-      <h3>Dev Panel</h3>
-      <select id="news-variant">
-        <option value="cards">News: Cards</option>
-        <option value="compact">News: Compact</option>
-        <option value="ticker">News: Ticker</option>
-      </select>
-      <select id="watchlist-variant">
-        <option value="minimal">Watchlist: Minimal</option>
-        <option value="detailed">Watchlist: Detailed</option>
-        <option value="sparklines">Watchlist: Sparklines</option>
-      </select>
-      <select id="charts-variant">
-        <option value="minimal30d">Charts: Minimal 30d</option>
-        <option value="compact">Charts: Compact</option>
-      </select>
-      <select id="layout-mode">
-        <option value="fixed">Layout: Fixed</option>
-        <option value="sortable">Layout: Sortable</option>
-      </select>
-      <select id="insight-variant">
-        <option value="brief">Insight: Brief</option>
-        <option value="expanded">Insight: Expanded</option>
-      </select>
-      <button onclick="RV.saveVariants()">Save & Reload</button>
-    </div>
-
-    <!-- Daily Insight Box -->
-    <section class="rv-section" data-module="daily-insight">
-      <div class="test-label">Daily Insight</div>
-      <div class="rv-tv-box rv-daily-insight">
-        <p id="daily-brief" aria-live="polite">Loading daily brief... (Lesezeit: 90 Sekunden)</p>
-        <p id="rubik-note">RubikVault Notiz: Ignorieren Sie den Kerzen-Hype – fokussieren Sie auf langfristige Trends.</p>
-        <button id="read-aloud" aria-label="Read Daily Brief Aloud">🔊 Read Out Loud</button>
+   
+    <!-- HERO SECTION -->
+    <section class="rv-hero">
+      <div class="rv-hero-content">
+        <h1>Market Clarity in 3 Seconds.</h1>
+        <p>Data-driven insights across Stocks, Crypto, and Macro. No noise, no hype.</p>
       </div>
-      <div class="error-fallback" style="display:none;">Dieses Modul konnte nicht geladen werden. <button onclick="RV.modules.dailyInsight.render()">Reload</button></div>
     </section>
-
-    <!-- Market Consensus Score (MCS) Gauge -->
-    <section class="rv-section" data-module="mcs">
-      <div class="test-label">Market Consensus Score</div>
-      <div class="rv-gauge-box">
-        <canvas id="mcs-chart"></canvas>
-        <div id="mcs-value" class="rv-gauge-value">--</div>
-        <div id="mcs-label" class="rv-gauge-label">Sentiment Score</div>
-      </div>
-      <details>
-        <summary>Was bedeutet das?</summary>
-        <p>MCS ist der Mittelwert des News-Sentiments (0-100). Hohe Unsicherheit, wenn StdDev > 20. Basierend auf den letzten 50 News.</p>
-      </details>
-      <div class="error-fallback" style="display:none;">Dieses Modul konnte nicht geladen werden. <button onclick="RV.modules.mcs.render()">Reload</button></div>
+    <!-- OPTION A: MARKET OVERVIEW (LIVE INTRADAY) -->
+    <section class="rv-section">
+        <div class="test-label">Option A: Intraday Performance</div>
+        <div class="grid-4">
+            <!-- DOW JONES -->
+            <div class="rv-tv-box" style="height: 220px;" id="widget-dji"></div>
+            <!-- NASDAQ -->
+            <div class="rv-tv-box" style="height: 220px;" id="widget-nsx"></div>
+            <!-- S&P 500 -->
+            <div class="rv-tv-box" style="height: 220px;" id="widget-spx"></div>
+            <!-- RUSSELL 2000 -->
+            <div class="rv-tv-box" style="height: 220px;" id="widget-rut"></div>
+        </div>
     </section>
-
-    <!-- Watchlist with Autocomplete and Limit -->
-    <section class="rv-section" data-module="watchlist">
-      <div class="test-label">Watchlist (max 5 free)</div>
-      <div class="rv-watchlist-box">
-        <div class="rv-watchlist-input-group">
-          <input id="wl-input" type="text" placeholder="Add Symbol (e.g. AAPL)" />
-          <button id="wl-add-btn">Add</button>
-          <div id="wl-suggestions" class="rv-suggestions"></div>
-        </div>
-        <div id="wl-container" class="rv-watchlist-grid"></div>
-        <button id="wl-export" aria-label="Export Watchlist">Export JSON</button>
-      </div>
-      <div class="error-fallback" style="display:none;">Dieses Modul konnte nicht geladen werden. <button onclick="RV.modules.watchlist.render()">Reload</button></div>
-    </section>
-
-    <!-- Stock Explorer -->
-    <section class="rv-section rv-explorer" data-module="stock-explorer">
-      <div class="test-label">Stock Explorer</div>
-      <div class="rv-explorer-grid">
-        <div class="rv-stock-list-panel">
-          <div class="rv-list-tabs">
-            <button class="rv-list-tab active" onclick="loadStockList('nasdaq')">NASDAQ</button>
-            <button class="rv-list-tab" onclick="loadStockList('dow')">DOW</button>
-            <button class="rv-list-tab" onclick="loadStockList('sp500')">S&P500</button>
-          </div>
-          <div class="rv-stock-search">
-            <input id="stockSearch" type="text" placeholder="Filter List..." onkeyup="filterStocks()" />
-          </div>
-          <div id="rv-stock-list-container" class="rv-stock-list-items"></div>
-        </div>
-        <div class="rv-charts-panel">
-          <div class="rv-chart-header">
-            <span id="rv-selected-stock-name">Apple Inc (AAPL)</span>
-          </div>
-          <div class="grid-2">
-            <div class="rv-tv-box" style="height: 500px;" id="container-fundamentals"></div>
-            <div class="rv-tv-box" style="height: 500px;" id="container-technicals"></div>
-          </div>
-          <!-- Custom Chart -->
-          <div class="rv-tv-box" style="height: 300px; margin-top:20px;">
-            <canvas id="custom-chart"></canvas>
-          </div>
-        </div>
-      </div>
-      <div class="error-fallback" style="display:none;">Dieses Modul konnte nicht geladen werden. <button onclick="RV.modules.stockExplorer.render()">Reload</button></div>
-    </section>
-
-    <!-- Heatmap -->
-    <section class="rv-section" data-module="heatmap">
-      <div class="test-label">Option G: Heatmap</div>
-      <div class="rv-tv-box" style="height: 600px;">
-        <div class="tradingview-widget-container">
-          <div class="tradingview-widget-container__widget"></div>
-          <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-stock-heatmap.js" async>
-          { "exchanges": ["NASDAQ", "NYSE"], "type": "sector", "width": "100%", "height": "100%", "range": "1M", "plotGradient": { "color1": "#10b981", "color2": "#ef4444" }, "colorTheme": "dark", "locale": "en", "range_type": "change" }
-          </script>
-        </div>
-      </div>
-      <div class="error-fallback" style="display:none;">Dieses Modul konnte nicht geladen werden. <button onclick="RV.modules.heatmap.render()">Reload</button></div>
-    </section>
-
-    <!-- Timeline -->
-    <section class="rv-section" data-module="timeline">
-      <div class="test-label">Option H: Timeline</div>
-      <div class="grid-2">
-        <div class="rv-tv-box" style="height: 600px;">
-          <div class="tradingview-widget-container">
-            <div class="tradingview-widget-container__widget"></div>
-            <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-timeline.js" async>
-            { "feedMode": "market", "market": "stock", "isTransparent": true, "colorTheme": "dark", "locale": "en", "width": "100%", "height": "100%" }
-            </script>
-          </div>
-        </div>
-        <div class="rv-tv-box" style="height: 600px;">
-          <div class="tradingview-widget-container">
-            <div class="tradingview-widget-container__widget"></div>
-            <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-events.js" async>
-            { "width": "100%", "height": "100%", "colorTheme": "dark", "isTransparent": true, "locale": "en", "importance": "3", "currencyInfo": "USD" }
-            </script>
-          </div>
-        </div>
-      </div>
-      <div class="error-fallback" style="display:none;">Dieses Modul konnte nicht geladen werden. <button onclick="RV.modules.timeline.render()">Reload</button></div>
-    </section>
-
-    <!-- Dashboard Grid with News -->
-    <section class="rv-section rv-dashboard-grid" data-module="dashboard">
-      <div class="rv-dash-main">
-        <div class="test-label">Option J: Chart Context</div>
-        <div class="rv-tv-box" style="height: 600px;">
-          <div class="tradingview-widget-container">
-            <div class="tradingview-widget-container__widget"></div>
-            <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js" async>
-            { "width": "100%", "height": "100%", "symbol": "NASDAQ:QQQ", "interval": "D", "timezone": "America/New_York", "theme": "dark", "style": "1", "locale": "en", "enable_publishing": false, "allow_symbol_change": true, "calendar": false, "support_host": "https://www.tradingview.com" }
-            </script>
-          </div>
-        </div>
-      </div>
-    
-      <div class="rv-dash-sidebar">
-        <div class="test-label">Option J: Live Market News (Real-Time)</div>
-        <div class="rv-tv-box" style="height: 600px; padding:0; overflow-y: hidden; display:flex; flex-direction:column;">
-          <div class="rv-news-header">
-            <div class="rv-news-tabs">
-              <button class="rv-news-tab active" data-tab="finance">Finance</button>
-              <button class="rv-news-tab" data-tab="general">General</button>
+    <!-- PERSONAL DASHBOARD (Fixed Sentiment Layout) -->
+    <div class="rv-dashboard-grid" style="margin-bottom:60px;">
+       
+        <!-- DUAL FEAR & GREED (FIXED) -->
+        <div class="rv-dash-sidebar">
+            <div class="test-label">Sentiment Analysis (Stock & Crypto)</div>
+            <div class="grid-2" style="gap:15px;">
+               
+                <!-- Stock Gauge -->
+                <div class="rv-tv-box rv-gauge-box">
+                    <div class="rv-gauge-label">Stocks</div>
+                    <div class="rv-gauge-wrapper">
+                        <canvas id="mcs-chart-stock"></canvas>
+                        <div class="rv-gauge-value" id="mcs-value-stock">--</div>
+                    </div>
+                </div>
+                <!-- Crypto Gauge -->
+                <div class="rv-tv-box rv-gauge-box">
+                    <div class="rv-gauge-label">Crypto</div>
+                    <div class="rv-gauge-wrapper">
+                        <canvas id="mcs-chart-crypto"></canvas>
+                        <div class="rv-gauge-value" id="mcs-value-crypto">--</div>
+                    </div>
+                </div>
             </div>
-            <span id="news-last-update" style="font-size:11px; color:var(--rv-text-muted);">Last: --:--</span>
-            <button onclick="RV.modules.newsFeed.fetchAndRender()" class="rv-refresh-btn">↻ Refresh</button>
-          </div>
-          <div id="rv-news-feed-list" class="rv-news-list-container" style="overflow-y:auto; flex:1;">
-            <!-- JS fills this -->
-          </div>
         </div>
-      </div>
-      <div class="error-fallback" style="display:none;">Dieses Modul konnte nicht geladen werden. <button onclick="RV.modules.dashboard.render()">Reload</button></div>
-    </section>
-
-    <!-- Offline Fallback -->
-    <div id="offline-fallback" style="display:none; text-align:center; padding:20px; background:var(--rv-danger); color:#fff;">
-      Offline-Modus: Daten von letztem Cache. <button onclick="location.reload()">Versuchen Sie online zu gehen</button>
+        <!-- Watchlist -->
+        <div class="rv-dash-main">
+            <div class="test-label">My Watchlist (Live Quotes)</div>
+            <div class="rv-tv-box rv-watchlist-box">
+                <div class="rv-watchlist-input-group">
+                    <input type="text" id="wl-input" placeholder="Type symbol (e.g. A for Apple)..." autocomplete="off" />
+                    <div id="wl-suggestions" class="rv-suggestions"></div>
+                    <button id="wl-add-btn">Add</button>
+                </div>
+                <!-- Scrollbarer Container für Watchlist -->
+                <div id="wl-container" class="rv-watchlist-grid" style="max-height: 200px; overflow-y: auto;"></div>
+            </div>
+        </div>
     </div>
+    <!-- OPTION A (Charts): TREND ANALYSIS -->
+    <section class="rv-section">
+        <div class="test-label">Trend Analysis (Live Data)</div>
+        <div class="grid-3">
+            <div class="rv-tv-box" style="height: 300px;" id="widget-spy"></div>
+            <div class="rv-tv-box" style="height: 300px;" id="widget-gold"></div>
+            <div class="rv-tv-box" style="height: 300px;" id="widget-btc"></div>
+        </div>
+    </section>
+    <!-- OPTION B: MARKET OVERVIEW -->
+    <section class="rv-section">
+        <div class="test-label">Option B: Global Market Overview</div>
+        <div class="rv-tv-box" style="height: 500px;" id="widget-market-overview"></div>
+    </section>
+    <!-- NEW: US BONDS -->
+    <section class="rv-section">
+        <div class="test-label">US Treasury Bond Yields</div>
+        <div class="grid-4">
+             <div class="rv-tv-box" style="height: 120px;" id="widget-us02y"></div>
+             <div class="rv-tv-box" style="height: 120px;" id="widget-us05y"></div>
+             <div class="rv-tv-box" style="height: 120px;" id="widget-us10y"></div>
+             <div class="rv-tv-box" style="height: 120px;" id="widget-us30y"></div>
+        </div>
+    </section>
+    <!-- OPTION C: SCROLLABLE MOVERS -->
+    <section class="rv-section">
+        <div class="test-label">Option C: Gainers & Losers</div>
+        <div class="rv-tv-box" style="height: 600px;" id="widget-hotlists"></div>
+    </section>
+    <!-- OPTION E/F: DEEP DIVE -->
+    <section class="rv-section">
+        <div class="test-label">Option E & F: Deep Dive Analysis</div>
+        <div class="rv-explorer-grid">
+            <div class="rv-stock-list-panel">
+                <div class="rv-list-tabs">
+                    <button class="rv-list-tab active" onclick="RV_ADD.Explorer.load('nasdaq')">Nasdaq 100</button>
+                    <button class="rv-list-tab" onclick="RV_ADD.Explorer.load('sp500')">S&P 500</button>
+                    <button class="rv-list-tab" onclick="RV_ADD.Explorer.load('dow')">Dow 30</button>
+                </div>
+                <div class="rv-stock-search">
+                    <input type="text" id="stockSearch" placeholder="Filter List..." onkeyup="RV_ADD.Explorer.filter()" />
+                </div>
+                <div id="rv-stock-list-container" class="rv-stock-list-items"></div>
+            </div>
+            <div class="rv-charts-panel">
+                <div class="rv-chart-header">
+                    <span id="rv-selected-stock-name">Apple Inc (AAPL)</span>
+                </div>
+                <div class="grid-2">
+                    <div class="rv-tv-box" style="height: 500px;" id="container-fundamentals"></div>
+                    <div class="rv-tv-box" style="height: 500px;" id="container-technicals"></div>
+                </div>
+            </div>
+        </div>
+    </section>
+    <!-- OPTION G: HEATMAP -->
+    <section class="rv-section">
+        <div class="test-label">Option G: S&P 500 Heatmap</div>
+        <div class="rv-tv-box" style="height: 600px;" id="widget-heatmap"></div>
+    </section>
+    <!-- OPTION H: TIMELINE -->
+    <section class="rv-section">
+        <div class="test-label">Option H: Timeline</div>
+        <div class="grid-2">
+            <div class="rv-tv-box" style="height: 600px;" id="widget-timeline"></div>
+            <div class="rv-tv-box" style="height: 600px;" id="widget-events"></div>
+        </div>
+    </section>
+    <!-- OPTION K: VALUATION -->
+    <section class="rv-section">
+        <div class="test-label">Option K: S&P 500 Valuation (P/E, Dividends)</div>
+        <div class="rv-tv-box" style="height: 600px;" id="widget-screener"></div>
+    </section>
+    <!-- OPTION J: LIVE NEWS (AUTO REFRESH) -->
+    <div class="rv-dashboard-grid" id="section-news">
+        <div class="rv-dash-main">
+            <div class="test-label">Option J: Chart Context</div>
+            <div class="rv-tv-box" style="height: 600px;" id="widget-advanced-chart"></div>
+        </div>
+      
+        <div class="rv-dash-sidebar">
+            <div class="test-label">Option J: Live Market News (Auto-Refresh)</div>
+            <div class="rv-tv-box" style="height: 600px; padding:0; overflow-y: hidden; display:flex; flex-direction:column;">
+                <div class="rv-news-header">
+                    <span style="font-size:11px; color:var(--rv-text-muted);">Source: Yahoo/CNBC</span>
+                    <button id="news-refresh-btn" class="rv-refresh-btn">↻ Refresh</button>
+                </div>
+                <div id="rv-news-feed-list" class="rv-news-list-container" style="overflow-y:auto; flex:1;"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- RV_ADD_ZONE_START -->
+    <section id="rv-add-zone" class="rv-section">
+        <div class="rv-add-header">
+            <h2>⚡ Automated Insights (Beta)</h2>
+        </div>
+        <div class="rv-add-cheats-grid">
+            <div class="rv-add-card">
+                <h3>Narrative Heatmap</h3>
+                <div id="cheat-heat" style="font-size:13px; padding:10px;">Analyzing news...</div>
+            </div>
+        </div>
+    </section>
+    <!-- RV_ADD_ZONE_END -->
 
   </main>
 
@@ -265,9 +249,14 @@
         <a href="privacy.html">Privacy</a>
         <a href="disclaimer.html">Disclaimer</a>
     </div>
-    &copy; 2025 RubikVault.
+    &copy; 2025 RubikVault. US Market Data only.
   </footer>
 
   <script src="script.js" defer></script>
+  <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => navigator.serviceWorker.register('service-worker.js'));
+      }
+  </script>
 </body>
 </html>
