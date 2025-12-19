@@ -61,6 +61,7 @@
           <a href="https://www.instagram.com/rubikvault" target="_blank" title="Instagram"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M7.8,2H16.2C19.4,2 22,4.6 22,7.8V16.2A5.8,5.8 0 0,1 16.2,22H7.8C4.6,22 2,19.4 2,16.2V7.8A5.8,5.8 0 0,1 7.8,2M7.6,4A3.6,3.6 0 0,0 4,7.6V16.4C4,18.39 5.61,20 7.6,20H16.4A3.6,3.6 0 0,0 20,16.4V7.6C20,5.61 18.39,4 16.4,4H7.6M17.25,5.5A1.25,1.25 0 0,1 18.5,6.75A1.25,1.25 0 0,1 17.25,8A1.25,1.25 0 0,1 16,6.75A1.25,1.25 0 0,1 17.25,5.5M12,7A5,5 0 0,1 17,12A5,5 0 0,1 12,17A5,5 0 0,1 7,12A5,5 0 0,1 12,7M12,9A3,3 0 0,0 9,12A3,3 0 0,0 12,15A3,3 0 0,0 15,12A3,3 0 0,0 12,9Z"/></svg></a>
         </nav>
     </div>
+
     <div class="rv-header-right">
         <div class="market-timer">
             <div class="market-timer-top">
@@ -72,8 +73,9 @@
         <button id="theme-toggle" class="theme-switch" aria-label="Toggle Theme">☀️</button>
     </div>
   </header>
+
   <main class="rv-main">
-   
+    
     <!-- HERO SECTION -->
     <section class="rv-hero">
       <div class="rv-hero-content">
@@ -81,28 +83,58 @@
         <p>Data-driven insights across Stocks, Crypto, and Macro. No noise, no hype.</p>
       </div>
     </section>
+
     <!-- OPTION A: MARKET OVERVIEW (LIVE INTRADAY) -->
     <section class="rv-section">
         <div class="test-label">Option A: Intraday Performance</div>
         <div class="grid-4">
             <!-- DOW JONES -->
-            <div class="rv-tv-box" style="height: 220px;" id="widget-dji"></div>
+            <div class="rv-tv-box" style="height: 220px;">
+                <div class="tradingview-widget-container">
+                  <div class="tradingview-widget-container__widget"></div>
+                  <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-mini-symbol-overview.js" async>
+                  { "symbol": "FOREXCOM:DJI", "width": "100%", "height": "100%", "locale": "en", "dateRange": "1D", "colorTheme": "dark", "isTransparent": true, "autosize": true, "largeChartUrl": "" }
+                  </script>
+                </div>
+            </div>
             <!-- NASDAQ -->
-            <div class="rv-tv-box" style="height: 220px;" id="widget-nsx"></div>
+            <div class="rv-tv-box" style="height: 220px;">
+                <div class="tradingview-widget-container">
+                  <div class="tradingview-widget-container__widget"></div>
+                  <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-mini-symbol-overview.js" async>
+                  { "symbol": "FOREXCOM:NSXUSD", "width": "100%", "height": "100%", "locale": "en", "dateRange": "1D", "colorTheme": "dark", "isTransparent": true, "autosize": true, "largeChartUrl": "" }
+                  </script>
+                </div>
+            </div>
             <!-- S&P 500 -->
-            <div class="rv-tv-box" style="height: 220px;" id="widget-spx"></div>
-            <!-- RUSSELL 2000 -->
-            <div class="rv-tv-box" style="height: 220px;" id="widget-rut"></div>
+            <div class="rv-tv-box" style="height: 220px;">
+                <div class="tradingview-widget-container">
+                  <div class="tradingview-widget-container__widget"></div>
+                  <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-mini-symbol-overview.js" async>
+                  { "symbol": "FOREXCOM:SPXUSD", "width": "100%", "height": "100%", "locale": "en", "dateRange": "1D", "colorTheme": "dark", "isTransparent": true, "autosize": true, "largeChartUrl": "" }
+                  </script>
+                </div>
+            </div>
+            <!-- RUSSELL 2000 (TVC:RUT) -->
+            <div class="rv-tv-box" style="height: 220px;">
+                <div class="tradingview-widget-container">
+                  <div class="tradingview-widget-container__widget"></div>
+                  <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-mini-symbol-overview.js" async>
+                  { "symbol": "TVC:RUT", "width": "100%", "height": "100%", "locale": "en", "dateRange": "1D", "colorTheme": "dark", "isTransparent": true, "autosize": true, "largeChartUrl": "" }
+                  </script>
+                </div>
+            </div>
         </div>
     </section>
+
     <!-- PERSONAL DASHBOARD (Fixed Sentiment Layout) -->
     <div class="rv-dashboard-grid" style="margin-bottom:60px;">
-       
+        
         <!-- DUAL FEAR & GREED (FIXED) -->
         <div class="rv-dash-sidebar">
             <div class="test-label">Sentiment Analysis (Stock & Crypto)</div>
             <div class="grid-2" style="gap:15px;">
-               
+                
                 <!-- Stock Gauge -->
                 <div class="rv-tv-box rv-gauge-box">
                     <div class="rv-gauge-label">Stocks</div>
@@ -111,6 +143,7 @@
                         <div class="rv-gauge-value" id="mcs-value-stock">--</div>
                     </div>
                 </div>
+
                 <!-- Crypto Gauge -->
                 <div class="rv-tv-box rv-gauge-box">
                     <div class="rv-gauge-label">Crypto</div>
@@ -119,8 +152,10 @@
                         <div class="rv-gauge-value" id="mcs-value-crypto">--</div>
                     </div>
                 </div>
+
             </div>
         </div>
+
         <!-- Watchlist -->
         <div class="rv-dash-main">
             <div class="test-label">My Watchlist (Live Quotes)</div>
@@ -130,40 +165,121 @@
                     <div id="wl-suggestions" class="rv-suggestions"></div>
                     <button id="wl-add-btn">Add</button>
                 </div>
-                <!-- Scrollbarer Container für Watchlist -->
                 <div id="wl-container" class="rv-watchlist-grid" style="max-height: 200px; overflow-y: auto;"></div>
             </div>
         </div>
     </div>
+
     <!-- OPTION A (Charts): TREND ANALYSIS -->
     <section class="rv-section">
         <div class="test-label">Trend Analysis (Live Data)</div>
         <div class="grid-3">
-            <div class="rv-tv-box" style="height: 300px;" id="widget-spy"></div>
-            <div class="rv-tv-box" style="height: 300px;" id="widget-gold"></div>
-            <div class="rv-tv-box" style="height: 300px;" id="widget-btc"></div>
+            <div class="rv-tv-box" style="height: 300px;">
+                <div class="tradingview-widget-container">
+                    <div class="tradingview-widget-container__widget"></div>
+                    <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-mini-symbol-overview.js" async>
+                    { "symbol": "AMEX:SPY", "width": "100%", "height": "100%", "locale": "en", "dateRange": "1M", "colorTheme": "dark", "isTransparent": true, "autosize": true, "largeChartUrl": "" }
+                    </script>
+                </div>
+            </div>
+            <div class="rv-tv-box" style="height: 300px;">
+                <div class="tradingview-widget-container">
+                    <div class="tradingview-widget-container__widget"></div>
+                    <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-mini-symbol-overview.js" async>
+                    { "symbol": "TVC:GOLD", "width": "100%", "height": "100%", "locale": "en", "dateRange": "1M", "colorTheme": "dark", "isTransparent": true, "autosize": true, "largeChartUrl": "" }
+                    </script>
+                </div>
+            </div>
+            <div class="rv-tv-box" style="height: 300px;">
+                <div class="tradingview-widget-container">
+                    <div class="tradingview-widget-container__widget"></div>
+                    <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-mini-symbol-overview.js" async>
+                    { "symbol": "BINANCE:BTCUSDT", "width": "100%", "height": "100%", "locale": "en", "dateRange": "1M", "colorTheme": "dark", "isTransparent": true, "autosize": true, "largeChartUrl": "" }
+                    </script>
+                </div>
+            </div>
         </div>
     </section>
+
     <!-- OPTION B: MARKET OVERVIEW -->
     <section class="rv-section">
         <div class="test-label">Option B: Global Market Overview</div>
-        <div class="rv-tv-box" style="height: 500px;" id="widget-market-overview"></div>
+        <div class="rv-tv-box" style="height: 500px;">
+            <div class="tradingview-widget-container">
+                <div class="tradingview-widget-container__widget"></div>
+                <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-market-overview.js" async>
+                {
+                  "colorTheme": "dark", "dateRange": "12M", "showChart": true, "locale": "en", "width": "100%", "height": "100%", "isTransparent": true,
+                  "tabs": [
+                    { "title": "USA", "symbols": [ { "s": "FOREXCOM:SPXUSD" }, { "s": "FOREXCOM:NSXUSD" }, { "s": "FOREXCOM:DJI" }, { "s": "TVC:RUT" } ] },
+                    { "title": "Europe", "symbols": [ { "s": "INDEX:DEU40", "d": "DAX 40" }, { "s": "INDEX:UK100", "d": "FTSE 100" }, { "s": "INDEX:FRA40", "d": "CAC 40" } ] },
+                    { "title": "Asia", "symbols": [ { "s": "INDEX:N225", "d": "Nikkei 225" }, { "s": "HSI:HSI", "d": "Hang Seng" }, { "s": "TVC:SHCOMP", "d": "Shanghai Comp" } ] },
+                    { "title": "Commodities", "symbols": [ { "s": "CME_MINI:ES1!" }, { "s": "TVC:USOIL" }, { "s": "TVC:GOLD" } ] }
+                  ]
+                }
+                </script>
+            </div>
+        </div>
     </section>
+
     <!-- NEW: US BONDS -->
     <section class="rv-section">
         <div class="test-label">US Treasury Bond Yields</div>
         <div class="grid-4">
-             <div class="rv-tv-box" style="height: 120px;" id="widget-us02y"></div>
-             <div class="rv-tv-box" style="height: 120px;" id="widget-us05y"></div>
-             <div class="rv-tv-box" style="height: 120px;" id="widget-us10y"></div>
-             <div class="rv-tv-box" style="height: 120px;" id="widget-us30y"></div>
+             <div class="rv-tv-box" style="height: 120px;">
+                <div class="tradingview-widget-container">
+                    <div class="tradingview-widget-container__widget"></div>
+                    <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-mini-symbol-overview.js" async>
+                    { "symbol": "TVC:US02Y", "width": "100%", "height": "100%", "locale": "en", "dateRange": "12M", "colorTheme": "dark", "isTransparent": true, "autosize": true }
+                    </script>
+                </div>
+            </div>
+            <div class="rv-tv-box" style="height: 120px;">
+                <div class="tradingview-widget-container">
+                    <div class="tradingview-widget-container__widget"></div>
+                    <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-mini-symbol-overview.js" async>
+                    { "symbol": "TVC:US05Y", "width": "100%", "height": "100%", "locale": "en", "dateRange": "12M", "colorTheme": "dark", "isTransparent": true, "autosize": true }
+                    </script>
+                </div>
+            </div>
+            <div class="rv-tv-box" style="height: 120px;">
+                <div class="tradingview-widget-container">
+                    <div class="tradingview-widget-container__widget"></div>
+                    <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-mini-symbol-overview.js" async>
+                    { "symbol": "TVC:US10Y", "width": "100%", "height": "100%", "locale": "en", "dateRange": "12M", "colorTheme": "dark", "isTransparent": true, "autosize": true }
+                    </script>
+                </div>
+            </div>
+            <div class="rv-tv-box" style="height: 120px;">
+                <div class="tradingview-widget-container">
+                    <div class="tradingview-widget-container__widget"></div>
+                    <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-mini-symbol-overview.js" async>
+                    { "symbol": "TVC:US30Y", "width": "100%", "height": "100%", "locale": "en", "dateRange": "12M", "colorTheme": "dark", "isTransparent": true, "autosize": true }
+                    </script>
+                </div>
+            </div>
         </div>
     </section>
+
     <!-- OPTION C: SCROLLABLE MOVERS -->
     <section class="rv-section">
         <div class="test-label">Option C: Gainers & Losers</div>
-        <div class="rv-tv-box" style="height: 600px;" id="widget-hotlists"></div>
+        <div class="rv-tv-box" style="height: 600px;">
+            <div class="tradingview-widget-container">
+                <div class="tradingview-widget-container__widget"></div>
+                <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-hotlists.js" async>
+                {
+                  "colorTheme": "dark", "dateRange": "12M", "exchange": "US", "showChart": true, "locale": "en", "largeChartUrl": "", "isTransparent": true, "showSymbolLogo": true, "width": "100%", "height": "100%",
+                  "plotLineColorGrowing": "rgba(16, 185, 129, 1)", "plotLineColorFalling": "rgba(239, 68, 68, 1)",
+                  "gridLineColor": "rgba(240, 243, 250, 0)", "scaleFontColor": "rgba(209, 212, 219, 1)",
+                  "belowLineFillColorGrowing": "rgba(16, 185, 129, 0.12)", "belowLineFillColorFalling": "rgba(239, 68, 68, 0.12)",
+                  "symbolActiveColor": "rgba(41, 98, 255, 0.12)"
+                }
+                </script>
+            </div>
+        </div>
     </section>
+
     <!-- OPTION E/F: DEEP DIVE -->
     <section class="rv-section">
         <div class="test-label">Option E & F: Deep Dive Analysis</div>
@@ -190,29 +306,70 @@
             </div>
         </div>
     </section>
+
     <!-- OPTION G: HEATMAP -->
     <section class="rv-section">
         <div class="test-label">Option G: S&P 500 Heatmap</div>
-        <div class="rv-tv-box" style="height: 600px;" id="widget-heatmap"></div>
+        <div class="rv-tv-box" style="height: 600px;">
+            <div class="tradingview-widget-container">
+              <div class="tradingview-widget-container__widget"></div>
+              <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-stock-heatmap.js" async>
+              { "exchanges": ["NASDAQ", "NYSE"], "type": "sector", "width": "100%", "height": "100%", "range": "1M", "plotGradient": { "color1": "#10b981", "color2": "#ef4444" }, "colorTheme": "dark", "locale": "en", "range_type": "change" }
+              </script>
+            </div>
+        </div>
     </section>
+
     <!-- OPTION H: TIMELINE -->
     <section class="rv-section">
         <div class="test-label">Option H: Timeline</div>
         <div class="grid-2">
-            <div class="rv-tv-box" style="height: 600px;" id="widget-timeline"></div>
-            <div class="rv-tv-box" style="height: 600px;" id="widget-events"></div>
+            <div class="rv-tv-box" style="height: 600px;">
+                <div class="tradingview-widget-container">
+                    <div class="tradingview-widget-container__widget"></div>
+                    <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-timeline.js" async>
+                    { "feedMode": "market", "market": "stock", "isTransparent": true, "colorTheme": "dark", "locale": "en", "width": "100%", "height": "100%" }
+                    </script>
+                </div>
+            </div>
+             <div class="rv-tv-box" style="height: 600px;">
+                <div class="tradingview-widget-container">
+                    <div class="tradingview-widget-container__widget"></div>
+                    <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-events.js" async>
+                    { "width": "100%", "height": "100%", "colorTheme": "dark", "isTransparent": true, "locale": "en", "importance": "3", "currencyInfo": "USD" }
+                    </script>
+                </div>
+            </div>
         </div>
     </section>
-    <!-- OPTION K: VALUATION -->
+
+    <!-- OPTION K: VALUATION (FIXED) -->
     <section class="rv-section">
         <div class="test-label">Option K: S&P 500 Valuation (P/E, Dividends)</div>
-        <div class="rv-tv-box" style="height: 600px;" id="widget-screener"></div>
+        <div class="rv-tv-box" style="height: 600px;">
+            <div class="tradingview-widget-container">
+                <div class="tradingview-widget-container__widget"></div>
+                <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-screener.js" async>
+                {
+                  "width": "100%", "height": "100%", "defaultColumn": "valuation", "defaultScreen": "general", "market": "america", "showToolbar": true, "colorTheme": "dark", "locale": "en", "isTransparent": true
+                }
+                </script>
+            </div>
+        </div>
     </section>
+
     <!-- OPTION J: LIVE NEWS (AUTO REFRESH) -->
     <div class="rv-dashboard-grid" id="section-news">
         <div class="rv-dash-main">
             <div class="test-label">Option J: Chart Context</div>
-            <div class="rv-tv-box" style="height: 600px;" id="widget-advanced-chart"></div>
+            <div class="rv-tv-box" style="height: 600px;">
+                <div class="tradingview-widget-container">
+                    <div class="tradingview-widget-container__widget"></div>
+                    <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js" async>
+                    { "width": "100%", "height": "100%", "symbol": "NASDAQ:QQQ", "interval": "D", "timezone": "America/New_York", "theme": "dark", "style": "1", "locale": "en", "enable_publishing": false, "allow_symbol_change": true, "calendar": false, "support_host": "https://www.tradingview.com" }
+                    </script>
+                </div>
+            </div>
         </div>
       
         <div class="rv-dash-sidebar">
@@ -227,20 +384,6 @@
         </div>
     </div>
 
-    <!-- RV_ADD_ZONE_START -->
-    <section id="rv-add-zone" class="rv-section">
-        <div class="rv-add-header">
-            <h2>⚡ Automated Insights (Beta)</h2>
-        </div>
-        <div class="rv-add-cheats-grid">
-            <div class="rv-add-card">
-                <h3>Narrative Heatmap</h3>
-                <div id="cheat-heat" style="font-size:13px; padding:10px;">Analyzing news...</div>
-            </div>
-        </div>
-    </section>
-    <!-- RV_ADD_ZONE_END -->
-
   </main>
 
   <footer class="rv-footer">
@@ -249,14 +392,9 @@
         <a href="privacy.html">Privacy</a>
         <a href="disclaimer.html">Disclaimer</a>
     </div>
-    &copy; 2025 RubikVault. US Market Data only.
+    &copy; 2025 RubikVault.
   </footer>
 
   <script src="script.js" defer></script>
-  <script>
-      if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => navigator.serviceWorker.register('service-worker.js'));
-      }
-  </script>
 </body>
 </html>
