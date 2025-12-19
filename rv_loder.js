@@ -19,8 +19,16 @@ function renderError(section, featureName, error) {
     <div class="rv-native-error">
       <strong>Feature konnte nicht geladen werden:</strong> ${featureName}<br />
       <span>${escapeHtml(error.message || "Unbekannter Fehler")}</span>
+      <button class="rv-native-retry" type="button" data-rv-action="retry">Retry</button>
     </div>
   `;
+  const retryButton = root.querySelector('[data-rv-action="retry"]');
+  if (retryButton) {
+    retryButton.addEventListener("click", () => {
+      const refreshButton = section.querySelector('[data-rv-action="refresh"]');
+      if (refreshButton) refreshButton.click();
+    });
+  }
 }
 
 function escapeHtml(value) {

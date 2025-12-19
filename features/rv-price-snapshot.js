@@ -1,8 +1,6 @@
 import { fetchRV } from "../utils/api.js";
 import { getOrFetch } from "../utils/store.js";
 
-const SNAPSHOT_URL = "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,solana&vs_currencies=usd&include_24hr_change=true";
-
 function formatNumber(value, options = {}) {
   if (value === null || value === undefined || Number.isNaN(value)) return "–";
   return new Intl.NumberFormat("en-US", options).format(value);
@@ -31,21 +29,12 @@ function render(root, payload) {
 }
 
 async function loadData() {
-  const response = await fetchRV(SNAPSHOT_URL);
-  const assets = [
-    { key: "bitcoin", label: "Bitcoin" },
-    { key: "ethereum", label: "Ethereum" },
-    { key: "solana", label: "Solana" }
-  ].map((asset) => {
-    const data = response[asset.key] || {};
-    return {
-      label: asset.label,
-      price: data.usd ?? null,
-      change: data.usd_24h_change ?? 0
-    };
-  });
-
-  return { assets };
+  try {
+    return await fetchRV("/price-snapshot");
+  } catch (error) {
+    console.error("Price Snapshot API error:", error);
+    throw error;
+  }
 }
 
 export async function init(root) {

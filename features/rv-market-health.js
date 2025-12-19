@@ -1,69 +1,62 @@
-import { fetchRV } from "../utils/api.js";
-import { getOrFetch } from "../utils/store.js";
+export async function onRequestGet() {
+  try {
+    const [fng, btc] = await Promise.all([fetchFearGreed(), fetchBtc()]);
 
-const FNG_URL = "https://api.alternative.me/fng/?limit=1&format=json";
-const BTC_URL = "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd&include_24hr_change=true";
-
-function formatNumber(value, options = {}) {
-  if (value === null || value === undefined || Number.isNaN(value)) return "–";
-  return new Intl.NumberFormat("en-US", options).format(value);
+    return json(
+      {
+        fng,
+        btc,
+        updatedAt: new Date().toISOString()
+      },
+      {
+        "Cache-Control": "public, max-age=120, stale-while-revalidate=60"
+      }
+    );
+  } catch (error) {
+    return json(
+      { error: "market_health_failed", message: error?.message || "Request failed" },
+      { "Cache-Control": "no-store" },
+      502
+    );
+  }
 }
 
-function formatPercent(value) {
-  if (value === null || value === undefined || Number.isNaN(value)) return "–";
-  return `${value.toFixed(2)}%`;
-}
-
-function render(root, data) {
-  const sentiment = data.fng?.valueClassification || "Unknown";
-  const sentimentValue = data.fng?.value ?? null;
-  const btcPrice = data.btc?.usd ?? null;
-  const btcChange = data.btc?.usd_24h_change ?? null;
-  const bias = sentimentValue !== null && sentimentValue >= 60 ? "Risk-On" : sentimentValue !== null && sentimentValue <= 40 ? "Risk-Off" : "Neutral";
-
-  root.innerHTML = `
-    <div class="rv-native-grid">
-      <div class="rv-native-kpi">
-        <div class="label">Fear & Greed</div>
-        <div class="value">${formatNumber(sentimentValue)}</div>
-        <div class="rv-native-note">${sentiment}</div>
-      </div>
-      <div class="rv-native-kpi">
-        <div class="label">BTC Price</div>
-        <div class="value">$${formatNumber(btcPrice, { maximumFractionDigits: 0 })}</div>
-        <div class="rv-native-note">24h ${formatPercent(btcChange)}</div>
-      </div>
-      <div class="rv-native-kpi">
-        <div class="label">Bias</div>
-        <div class="value">${bias}</div>
-        <div class="rv-native-note">Based on free public feeds</div>
-      </div>
-    </div>
-    <div class="rv-native-note">Updated: ${new Date().toLocaleTimeString()}</div>
-  `;
-}
-
-async function loadData() {
-  const [fng, btc] = await Promise.all([
-    fetchRV(FNG_URL),
-    fetchRV(BTC_URL)
-  ]);
+async function fetchFearGreed() {
+  const response = await fetch("https://api.alternative.me/fng/?limit=1&format=json", {
+    cf: { cacheTtl: 120, cacheEverything: true }
+  });
+  if (!response.ok) {
+    throw new Error(`Fear & Greed upstream ${response.status}`);
+  }
+  const payload = await response.json();
+  const entry = payload?.data?.[0];
+  if (!entry) return null;
 
   return {
-    fng: fng?.data?.[0] ? {
-      value: Number(fng.data[0].value),
-      valueClassification: fng.data[0].value_classification
-    } : null,
-    btc: btc?.bitcoin || null
+    value: Number(entry.value),
+    valueClassification: entry.value_classification
   };
 }
 
-export async function init(root) {
-  const data = await getOrFetch("rv-market-health", loadData, { ttlMs: 60_000 });
-  render(root, data);
+async function fetchBtc() {
+  const response = await fetch(
+    "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd&include_24hr_change=true",
+    { cf: { cacheTtl: 120, cacheEverything: true } }
+  );
+  if (!response.ok) {
+    throw new Error(`BTC upstream ${response.status}`);
+  }
+  const payload = await response.json();
+  return payload?.bitcoin || null;
 }
 
-export async function refresh(root) {
-  const data = await loadData();
-  render(root, data);
+function json(body, headers = {}, status = 200) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: {
+      "Content-Type": "application/json; charset=utf-8",
+      "Access-Control-Allow-Origin": "*",
+      ...headers
+    }
+  });
 }
