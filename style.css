@@ -556,3 +556,165 @@ body {
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+/* =========================
+   RubikVault Native Blocks
+   ========================= */
+
+#rv-dashboard .rv-native-block {
+  margin-top: 24px;
+}
+
+#rv-dashboard .rv-native-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+#rv-dashboard .rv-native-header h2 {
+  margin: 0;
+  font-size: 18px;
+  letter-spacing: -0.01em;
+}
+
+#rv-dashboard .rv-native-refresh {
+  border: 1px solid rgba(148, 163, 184, 0.4);
+  background: transparent;
+  color: var(--rv-text-muted);
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: 0.2s ease;
+}
+
+#rv-dashboard .rv-native-refresh:hover {
+  border-color: var(--rv-accent);
+  color: var(--rv-accent);
+}
+
+#rv-dashboard .rv-native-body {
+  padding: 18px;
+  border-radius: var(--rv-radius-lg);
+  background: linear-gradient(135deg, rgba(15, 23, 42, 0.9), rgba(2, 6, 23, 0.98));
+  border: 1px solid rgba(148, 163, 184, 0.18);
+}
+
+#rv-dashboard .rv-native-skeleton {
+  display: grid;
+  gap: 10px;
+}
+
+#rv-dashboard .rv-native-line {
+  height: 12px;
+  border-radius: 999px;
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.05) 25%,
+    rgba(255, 255, 255, 0.12) 50%,
+    rgba(255, 255, 255, 0.05) 75%
+  );
+  background-size: 200% 100%;
+  animation: rv-native-wave 1.4s ease-in-out infinite;
+}
+
+#rv-dashboard .rv-native-line.short {
+  width: 60%;
+}
+
+#rv-dashboard [data-rv-loading="false"] .rv-native-skeleton {
+  display: none;
+}
+
+#rv-dashboard [data-rv-loading="true"] .rv-native-root {
+  display: none;
+}
+
+#rv-dashboard [data-rv-loading="false"] .rv-native-root {
+  display: block;
+}
+
+#rv-dashboard .rv-native-error {
+  border: 1px solid rgba(248, 113, 113, 0.4);
+  background: rgba(248, 113, 113, 0.08);
+  border-radius: var(--rv-radius-sm);
+  padding: 12px;
+  font-size: 13px;
+}
+
+#rv-dashboard .rv-native-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+}
+
+#rv-dashboard .rv-native-kpi {
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: var(--rv-radius-sm);
+  padding: 12px;
+  background: rgba(15, 23, 42, 0.6);
+}
+
+#rv-dashboard .rv-native-kpi .label {
+  font-size: 12px;
+  color: var(--rv-text-muted);
+}
+
+#rv-dashboard .rv-native-kpi .value {
+  font-size: 20px;
+  font-weight: 600;
+  margin-top: 6px;
+}
+
+#rv-dashboard .rv-native-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+#rv-dashboard .rv-native-table th,
+#rv-dashboard .rv-native-table td {
+  padding: 10px 6px;
+  text-align: left;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.15);
+}
+
+#rv-dashboard .rv-native-table tbody tr:hover {
+  background: rgba(15, 23, 42, 0.5);
+}
+
+#rv-dashboard .rv-native-note {
+  margin-top: 10px;
+  font-size: 12px;
+  color: var(--rv-text-muted);
+}
+
+#rv-dashboard .rv-native-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  font-size: 12px;
+  color: var(--rv-text-muted);
+}
+
+#rv-dashboard .rv-native-positive {
+  color: #4ade80;
+}
+
+#rv-dashboard .rv-native-negative {
+  color: #f87171;
+}
+
+@keyframes rv-native-wave {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}

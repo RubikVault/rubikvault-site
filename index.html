@@ -71,7 +71,7 @@
   </header>
 
   <!-- MAIN -->
-  <main class="rv-main">
+  <main class="rv-main" id="rv-dashboard">
     <section class="rv-hero">
       <div class="rv-hero-content">
         <h1>Decode the Markets.</h1>
@@ -178,6 +178,72 @@
         </a>
       </div>
     </section>
+
+    <!-- RV NATIVE BLOCK 01: Market Health -->
+    <section
+      class="rv-section rv-native-block"
+      data-rv-feature="rv-market-health"
+      data-rv-block-name="Block 01 – Market Health"
+      data-rv-priority="high"
+      data-rv-loading="true"
+    >
+      <div class="rv-native-header">
+        <h2>Block 01 – Market Health</h2>
+        <button class="rv-native-refresh" type="button" data-rv-action="refresh">Refresh</button>
+      </div>
+      <div class="rv-native-body rv-card">
+        <div class="rv-native-skeleton">
+          <div class="rv-native-line"></div>
+          <div class="rv-native-line short"></div>
+          <div class="rv-native-line"></div>
+        </div>
+        <div class="rv-native-root" data-rv-root hidden></div>
+      </div>
+    </section>
+
+    <!-- RV NATIVE BLOCK 02: Price Snapshot -->
+    <section
+      class="rv-section rv-native-block"
+      data-rv-feature="rv-price-snapshot"
+      data-rv-block-name="Block 02 – Price Snapshot"
+      data-rv-priority="high"
+      data-rv-loading="true"
+    >
+      <div class="rv-native-header">
+        <h2>Block 02 – Price Snapshot</h2>
+        <button class="rv-native-refresh" type="button" data-rv-action="refresh">Refresh</button>
+      </div>
+      <div class="rv-native-body rv-card">
+        <div class="rv-native-skeleton">
+          <div class="rv-native-line"></div>
+          <div class="rv-native-line short"></div>
+          <div class="rv-native-line"></div>
+        </div>
+        <div class="rv-native-root" data-rv-root hidden></div>
+      </div>
+    </section>
+
+    <!-- RV NATIVE BLOCK 03: Top Movers -->
+    <section
+      class="rv-section rv-native-block"
+      data-rv-feature="rv-top-movers"
+      data-rv-block-name="Block 03 – Top Movers"
+      data-rv-priority="medium"
+      data-rv-loading="true"
+    >
+      <div class="rv-native-header">
+        <h2>Block 03 – Top Movers</h2>
+        <button class="rv-native-refresh" type="button" data-rv-action="refresh">Refresh</button>
+      </div>
+      <div class="rv-native-body rv-card">
+        <div class="rv-native-skeleton">
+          <div class="rv-native-line"></div>
+          <div class="rv-native-line short"></div>
+          <div class="rv-native-line"></div>
+        </div>
+        <div class="rv-native-root" data-rv-root hidden></div>
+      </div>
+    </section>
   </main>
 
   <!-- FOOTER (ohne Bild, nur Text + Links) -->
@@ -203,5 +269,6 @@
       document.getElementById('rv-year').textContent = new Date().getFullYear();
     </script>
   </footer>
+  <script type="module" src="rv-loader.js"></script>
 </body>
 </html>
