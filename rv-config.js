@@ -1,0 +1,17 @@
+export const RV_CONFIG = {
+  version: "rv-2025-01-15",
+  apiBase: "https://api.coingecko.com/api/v3",
+  features: {
+    "rv-market-health": true,
+    "rv-price-snapshot": true,
+    "rv-top-movers": true
+  },
+  loader: {
+    rootMargin: "250px 0px 250px 0px",
+    threshold: 0.05
+  }
+};
+
+if (typeof window !== "undefined") {
+  window.RV_CONFIG = RV_CONFIG;
+}
