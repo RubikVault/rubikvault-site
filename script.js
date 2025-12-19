@@ -266,7 +266,8 @@ function updateExplorer(symbol, name) {
     document.getElementById('rv-selected-stock-name').textContent = `${name} (${symbol})`;
     const fundContainer = document.getElementById('container-fundamentals');
     const techContainer = document.getElementById('container-technicals');
-    fundContainer.innerHTML = ''; tech.innerHTML = '';
+    fundContainer.innerHTML = '';
+    techContainer.innerHTML = '';
 
     const s1 = document.createElement('script');
     s1.type = 'text/javascript';
