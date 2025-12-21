@@ -3,8 +3,7 @@ import { RV_CONFIG } from "./rv-config.js";
 const registry = {
   "rv-market-health": () => import("./features/rv-market-health.js"),
   "rv-price-snapshot": () => import("./features/rv-price-snapshot.js"),
-  "rv-top-movers": () => import("./features/rv-top-movers.js"),
-  "tradingview-widgets": () => import("./features/tradingview-widgets.js")
+  "rv-top-movers": () => import("./features/rv-top-movers.js")
 };
 
 function setLoading(section, isLoading) {
@@ -14,7 +13,6 @@ function setLoading(section, isLoading) {
 }
 
 function renderError(section, featureName, error) {
-  console.error(`Feature load failed: ${featureName}`, error);
   const root = section.querySelector("[data-rv-root]");
   if (!root) return;
   root.innerHTML = `
@@ -40,6 +38,44 @@ function escapeHtml(value) {
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#039;");
+}
+
+function initDebugPanel() {
+  if (typeof window === "undefined") return;
+  if (!window.RV_CONFIG?.debug) return;
+  if (document.getElementById("rv-debug-panel")) return;
+
+  const panel = document.createElement("div");
+  panel.id = "rv-debug-panel";
+  panel.innerHTML = `
+    <div class="rv-debug-header">
+      <strong>Debug</strong>
+      <button type="button" class="rv-debug-toggle">Hide</button>
+    </div>
+    <div class="rv-debug-body" aria-live="polite"></div>
+  `;
+
+  document.body.appendChild(panel);
+
+  const body = panel.querySelector(".rv-debug-body");
+  const toggle = panel.querySelector(".rv-debug-toggle");
+  if (toggle) {
+    toggle.addEventListener("click", () => {
+      panel.classList.toggle("is-collapsed");
+      toggle.textContent = panel.classList.contains("is-collapsed") ? "Show" : "Hide";
+    });
+  }
+
+  window.addEventListener("rv-debug", (event) => {
+    const detail = event.detail || {};
+    const time = new Date().toLocaleTimeString();
+    const line = document.createElement("div");
+    line.className = `rv-debug-line rv-debug-${detail.type || "info"}`;
+    line.textContent = `[${time}] ${detail.type || "info"} ${detail.method || ""} ${detail.url || ""} ${
+      detail.status ? `(${detail.status})` : ""
+    } ${detail.message || ""} ${detail.durationMs ? `(${Math.round(detail.durationMs)}ms)` : ""}`;
+    body?.prepend(line);
+  });
 }
 
 async function initFeature(section) {
@@ -95,6 +131,7 @@ async function initFeature(section) {
 }
 
 function boot() {
+  initDebugPanel();
   const sections = Array.from(document.querySelectorAll("[data-rv-feature]"));
   const eager = [];
   const lazy = [];

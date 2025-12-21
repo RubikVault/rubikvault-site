@@ -1,11 +1,12 @@
 export const RV_CONFIG = {
   version: "rv-2025-01-15",
-  apiBase: "https://api.coingecko.com/api/v3",
+  apiBase: "/api",
   features: {
     "rv-market-health": true,
     "rv-price-snapshot": true,
     "rv-top-movers": true
   },
+  debug: true,
   loader: {
     rootMargin: "250px 0px 250px 0px",
     threshold: 0.05
