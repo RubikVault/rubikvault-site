@@ -1,62 +1,60 @@
-export async function onRequestGet() {
-  try {
-    const [fng, btc] = await Promise.all([fetchFearGreed(), fetchBtc()]);
+import { fetchRV } from "./utils/api.js";
+import { getOrFetch } from "./utils/store.js";
 
-    return json(
-      {
-        fng,
-        btc,
-        updatedAt: new Date().toISOString()
-      },
-      {
-        "Cache-Control": "public, max-age=120, stale-while-revalidate=60"
-      }
-    );
-  } catch (error) {
-    return json(
-      { error: "market_health_failed", message: error?.message || "Request failed" },
-      { "Cache-Control": "no-store" },
-      502
-    );
-  }
+function formatNumber(value, options = {}) {
+  if (value === null || value === undefined || Number.isNaN(value)) return "–";
+  return new Intl.NumberFormat("en-US", options).format(value);
 }
 
-async function fetchFearGreed() {
-  const response = await fetch("https://api.alternative.me/fng/?limit=1&format=json", {
-    cf: { cacheTtl: 120, cacheEverything: true }
-  });
-  if (!response.ok) {
-    throw new Error(`Fear & Greed upstream ${response.status}`);
-  }
-  const payload = await response.json();
-  const entry = payload?.data?.[0];
-  if (!entry) return null;
+function render(root, payload) {
+  const fng = payload?.fng;
+  const btc = payload?.btc;
+  const fngValue = fng?.value ?? null;
+  const fngLabel = fng?.valueClassification ?? "–";
+  const btcPrice = btc?.usd ?? null;
+  const btcChange = btc?.usd_24h_change ?? null;
+  const btcChangeClass = btcChange >= 0 ? "rv-native-positive" : "rv-native-negative";
 
-  return {
-    value: Number(entry.value),
-    valueClassification: entry.value_classification
-  };
+  if (!fng && !btc) {
+    root.innerHTML = `
+      <div class="rv-native-empty">
+        Keine Marktdaten verfügbar. Bitte später erneut versuchen.
+      </div>
+    `;
+    return;
+  }
+
+  root.innerHTML = `
+    <div class="rv-native-grid">
+      <div class="rv-native-kpi">
+        <div class="label">Fear &amp; Greed</div>
+        <div class="value">${formatNumber(fngValue)}</div>
+        <div class="rv-native-note">${fngLabel}</div>
+      </div>
+      <div class="rv-native-kpi">
+        <div class="label">Bitcoin</div>
+        <div class="value">$${formatNumber(btcPrice, { maximumFractionDigits: 0 })}</div>
+        <div class="rv-native-note ${btcChangeClass}">
+          ${formatNumber(btcChange, { maximumFractionDigits: 2 })}% 24h
+        </div>
+      </div>
+    </div>
+    <div class="rv-native-note">
+      Updated: ${new Date(payload?.updatedAt || Date.now()).toLocaleTimeString()} · Sources: Alternative.me, CoinGecko
+    </div>
+  `;
 }
 
-async function fetchBtc() {
-  const response = await fetch(
-    "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd&include_24hr_change=true",
-    { cf: { cacheTtl: 120, cacheEverything: true } }
-  );
-  if (!response.ok) {
-    throw new Error(`BTC upstream ${response.status}`);
-  }
-  const payload = await response.json();
-  return payload?.bitcoin || null;
+async function loadData() {
+  return fetchRV("/market-health");
 }
 
-function json(body, headers = {}, status = 200) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: {
-      "Content-Type": "application/json; charset=utf-8",
-      "Access-Control-Allow-Origin": "*",
-      ...headers
-    }
-  });
+export async function init(root) {
+  const data = await getOrFetch("rv-market-health", loadData, { ttlMs: 60_000 });
+  render(root, data);
+}
+
+export async function refresh(root) {
+  const data = await loadData();
+  render(root, data);
 }

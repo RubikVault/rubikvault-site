@@ -14,6 +14,7 @@ function setLoading(section, isLoading) {
 }
 
 function renderError(section, featureName, error) {
+  console.error(`Feature load failed: ${featureName}`, error);
   const root = section.querySelector("[data-rv-root]");
   if (!root) return;
   root.innerHTML = `

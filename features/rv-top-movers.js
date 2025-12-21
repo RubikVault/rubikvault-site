@@ -1,41 +1,63 @@
-export async function onRequestGet() {
-  try {
-    const response = await fetch(
-      "https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=price_change_percentage_24h_desc&per_page=6&page=1&sparkline=false&price_change_percentage=24h",
-      { cf: { cacheTtl: 120, cacheEverything: true } }
-    );
-    if (!response.ok) {
-      throw new Error(`Top movers upstream ${response.status}`);
-    }
-    const payload = await response.json();
-    const items = Array.isArray(payload)
-      ? payload.map((item) => ({
-          name: item.name,
-          price: item.current_price,
-          change: item.price_change_percentage_24h
-        }))
-      : [];
+import { fetchRV } from "./utils/api.js";
+import { getOrFetch } from "./utils/store.js";
 
-    return json(
-      { items, updatedAt: new Date().toISOString(), source: "coingecko" },
-      { "Cache-Control": "public, max-age=120, stale-while-revalidate=60" }
-    );
-  } catch (error) {
-    return json(
-      { error: "top_movers_failed", message: error?.message || "Request failed" },
-      { "Cache-Control": "no-store" },
-      502
-    );
-  }
+function formatNumber(value, options = {}) {
+  if (value === null || value === undefined || Number.isNaN(value)) return "–";
+  return new Intl.NumberFormat("en-US", options).format(value);
 }
 
-function json(body, headers = {}, status = 200) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: {
-      "Content-Type": "application/json; charset=utf-8",
-      "Access-Control-Allow-Origin": "*",
-      ...headers
-    }
-  });
+function render(root, payload) {
+  const items = payload?.items || [];
+
+  if (!items.length) {
+    root.innerHTML = `
+      <div class="rv-native-empty">
+        Keine Movers-Daten verfügbar. Bitte später erneut versuchen.
+      </div>
+    `;
+    return;
+  }
+
+  root.innerHTML = `
+    <table class="rv-native-table">
+      <thead>
+        <tr>
+          <th>Asset</th>
+          <th>Price</th>
+          <th>24h</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${items
+          .map((item) => {
+            const changeClass = item.change >= 0 ? "rv-native-positive" : "rv-native-negative";
+            return `
+              <tr>
+                <td>${item.name}</td>
+                <td>$${formatNumber(item.price, { maximumFractionDigits: 2 })}</td>
+                <td class="${changeClass}">${formatNumber(item.change, { maximumFractionDigits: 2 })}%</td>
+              </tr>
+            `;
+          })
+          .join("")}
+      </tbody>
+    </table>
+    <div class="rv-native-note">
+      Updated: ${new Date(payload?.updatedAt || Date.now()).toLocaleTimeString()} · Source: CoinGecko
+    </div>
+  `;
+}
+
+async function loadData() {
+  return fetchRV("/top-movers");
+}
+
+export async function init(root) {
+  const data = await getOrFetch("rv-top-movers", loadData, { ttlMs: 60_000 });
+  render(root, data);
+}
+
+export async function refresh(root) {
+  const data = await loadData();
+  render(root, data);
 }

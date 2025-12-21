@@ -9,6 +9,15 @@ function formatNumber(value, options = {}) {
 function render(root, payload) {
   const rows = payload?.assets || [];
 
+  if (!rows.length) {
+    root.innerHTML = `
+      <div class="rv-native-empty">
+        Keine Snapshot-Daten verfügbar. Bitte später erneut versuchen.
+      </div>
+    `;
+    return;
+  }
+
   root.innerHTML = `
     <div class="rv-native-grid">
       ${rows
