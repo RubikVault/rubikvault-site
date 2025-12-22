@@ -13,7 +13,7 @@ export const RV_CONFIG = {
     "rv-price-snapshot": true,
     "rv-top-movers": true
   },
-  DEBUG_ENABLED: false,
+  DEBUG_ENABLED: true,
   debugAuthToken: "",
   loader: {
     rootMargin: "250px 0px 250px 0px",

@@ -17,6 +17,7 @@ const TABS = [
   { id: "imports", label: "Dynamic Imports" },
   { id: "apis", label: "APIs" },
   { id: "network", label: "Network" },
+  { id: "console", label: "Console" },
   { id: "errors", label: "Errors" },
   { id: "cache", label: "Cache / Cloudflare" },
   { id: "performance", label: "Performance" }
@@ -264,6 +265,8 @@ function render(tabId, snapshot) {
     renderApis(bodyEl, snapshot);
   } else if (tabId === "network") {
     renderNetwork(bodyEl, snapshot);
+  } else if (tabId === "console") {
+    renderConsole(bodyEl, snapshot);
   } else if (tabId === "errors") {
     renderErrors(bodyEl, snapshot);
   } else if (tabId === "cache") {
@@ -376,6 +379,23 @@ function renderNetwork(root, snapshot) {
       `
     )
     .join("");
+}
+
+function renderConsole(root, snapshot) {
+  const rows = snapshot.consoleLogs || [];
+  root.innerHTML = rows.length
+    ? rows
+        .map(
+          (item) => `
+            <div class="section">
+              <h4>${sanitizeString(item.type || "log")}</h4>
+              <div class="row"><span>Time</span><span>${sanitizeString(item.ts || "")}</span></div>
+              <pre>${sanitizeString(item.message || "")}</pre>
+            </div>
+          `
+        )
+        .join("")
+    : `<div class="section">No console logs captured.</div>`;
 }
 
 function renderErrors(root, snapshot) {

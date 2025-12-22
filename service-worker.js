@@ -20,12 +20,12 @@ self.addEventListener("activate", (event) => {
   event.waitUntil(self.clients.claim());
 });
 
-// Network-first for HTML, cache-first for css/js, always network for /api/*
+// Network-first for HTML, cache-first only for known static assets, always network for /api/*
 self.addEventListener("fetch", (event) => {
   const req = event.request;
   const url = new URL(req.url);
 
-  if (url.pathname.startsWith("/api/")) {
+  if (url.pathname.toLowerCase().startsWith("/api/")) {
     event.respondWith(fetch(req).catch(() => new Response(JSON.stringify({ error: "offline" }), { status: 503 })));
     return;
   }
@@ -41,12 +41,17 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // cache-first for static assets
-  event.respondWith(
-    caches.match(req).then((hit) => hit || fetch(req).then((res) => {
-      const copy = res.clone();
-      caches.open(STATIC_CACHE).then((c) => c.put(req, copy)).catch(() => {});
-      return res;
-    }))
-  );
+  const isStaticAsset = STATIC_ASSETS.includes(url.pathname);
+  if (isStaticAsset) {
+    event.respondWith(
+      caches.match(req).then((hit) => hit || fetch(req).then((res) => {
+        const copy = res.clone();
+        caches.open(STATIC_CACHE).then((c) => c.put(req, copy)).catch(() => {});
+        return res;
+      }))
+    );
+    return;
+  }
+
+  event.respondWith(fetch(req).catch(() => caches.match(req)));
 });

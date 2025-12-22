@@ -23,6 +23,7 @@ const state = {
   importChecks: [],
   apiChecks: [],
   networkLogs: createRingBuffer(100),
+  consoleLogs: createRingBuffer(200),
   errors: [],
   interactions: [],
   cacheInfo: null,
@@ -308,6 +309,43 @@ function setupGlobalListeners() {
   }, true);
 }
 
+function serializeConsoleArgs(args) {
+  return args.map((arg) => {
+    if (arg instanceof Error) {
+      return sanitizeString(arg.stack || arg.message || "Error");
+    }
+    if (typeof arg === "object") {
+      try {
+        return sanitizeString(JSON.stringify(arg));
+      } catch (error) {
+        return "[unserializable]";
+      }
+    }
+    return sanitizeString(String(arg));
+  }).join(" ");
+}
+
+function hookConsole() {
+  if (typeof window === "undefined") return;
+  if (window.__RV_CONSOLE_HOOKED__) return;
+  window.__RV_CONSOLE_HOOKED__ = true;
+
+  const methods = ["log", "warn", "error"];
+  methods.forEach((method) => {
+    const original = console[method];
+    if (typeof original !== "function") return;
+    console[method] = (...args) => {
+      state.consoleLogs.push({
+        type: method,
+        message: serializeConsoleArgs(args),
+        ts: nowIso()
+      });
+      notify();
+      original.apply(console, args);
+    };
+  });
+}
+
 export function initDiagnostics(options = {}) {
   if (!isDebugEnabled()) return false;
   state.enabled = true;
@@ -320,6 +358,7 @@ export function initDiagnostics(options = {}) {
   };
 
   setupGlobalListeners();
+  hookConsole();
   collectPerformance();
   Promise.all([
     loadBuildInfo(),
@@ -357,6 +396,7 @@ export function getSnapshot() {
     importChecks: state.importChecks,
     apiChecks: state.apiChecks,
     networkLogs: state.networkLogs.get(),
+    consoleLogs: state.consoleLogs.get(),
     errors: state.errors,
     interactions: state.interactions,
     cacheInfo: state.cacheInfo,
@@ -431,6 +471,7 @@ export function getDiagnosticsPayload() {
     dynamicImports: state.importChecks,
     apis: state.apiChecks,
     network: state.networkLogs.get(),
+    console: state.consoleLogs.get(),
     errors: state.errors,
     interactions: state.interactions,
     cache: state.cacheInfo,
@@ -470,6 +511,10 @@ export function toMarkdown(payload) {
     "## Network",
     "```json",
     safe(payload.network),
+    "```",
+    "## Console",
+    "```json",
+    safe(payload.console),
     "```",
     "## Errors",
     "```json",
