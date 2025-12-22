@@ -1,10 +1,10 @@
 import { RV_CONFIG } from "./rv-config.js";
 
 const registry = {
-  "rv-market-health": () => import("./features/rv-market-health.js"),
-  "rv-price-snapshot": () => import("./features/rv-price-snapshot.js"),
-  "rv-top-movers": () => import("./features/rv-top-movers.js"),
-  "tradingview-widgets": () => import("./features/tradingview-widgets.js")
+  "rv-market-health": () => import("/features/rv-market-health.js"),
+  "rv-price-snapshot": () => import("/features/rv-price-snapshot.js"),
+  "rv-top-movers": () => import("/features/rv-top-movers.js"),
+  "tradingview-widgets": () => import("/features/tradingview-widgets.js")
 };
 
 function setLoading(section, isLoading) {

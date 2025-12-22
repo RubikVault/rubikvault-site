@@ -1,5 +1,5 @@
-import { fetchRV } from "../utils/api.js";
-import { getOrFetch } from "../utils/store.js";
+import { fetchRV } from "./utils/api.js";
+import { getOrFetch } from "./utils/store.js";
 
 function formatNumber(value, options = {}) {
   if (value === null || value === undefined || Number.isNaN(value)) return "–";
