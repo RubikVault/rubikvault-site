@@ -563,7 +563,7 @@ a {
   right: 16px;
   bottom: 16px;
   width: min(420px, 90vw);
-  max-height: 45vh;
+  max-height: 60vh;
   background: rgba(2, 6, 23, 0.92);
   border: 1px solid rgba(148, 163, 184, 0.3);
   border-radius: 12px;
@@ -572,7 +572,7 @@ a {
   font-size: 12px;
   z-index: 999;
   display: grid;
-  grid-template-rows: auto 1fr;
+  grid-template-rows: auto auto 1fr;
   gap: 8px;
   padding: 10px;
 }
@@ -587,6 +587,12 @@ a {
   justify-content: space-between;
 }
 
+#rv-debug-panel .rv-debug-actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
 #rv-debug-panel .rv-debug-toggle {
   border: 1px solid rgba(148, 163, 184, 0.4);
   background: transparent;
@@ -595,6 +601,25 @@ a {
   border-radius: 999px;
   font-size: 11px;
   cursor: pointer;
+}
+
+#rv-debug-panel .rv-debug-refresh,
+#rv-debug-panel .rv-debug-clear,
+#rv-debug-panel .rv-debug-copy {
+  border: 1px solid rgba(148, 163, 184, 0.4);
+  background: rgba(15, 23, 42, 0.6);
+  color: var(--rv-text);
+  padding: 4px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+#rv-debug-panel .rv-debug-meta {
+  display: grid;
+  gap: 4px;
+  color: var(--rv-text-muted);
+  font-size: 11px;
 }
 
 #rv-debug-panel .rv-debug-body {

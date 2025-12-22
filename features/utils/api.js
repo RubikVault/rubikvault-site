@@ -11,6 +11,8 @@ function buildUrl(url) {
 function emitDebug(payload) {
   if (typeof window === "undefined") return;
   if (!window.RV_CONFIG?.debug) return;
+  window.RV_DEBUG_LOGS = window.RV_DEBUG_LOGS || [];
+  window.RV_DEBUG_LOGS.push({ ...payload, ts: Date.now() });
   window.dispatchEvent(new CustomEvent("rv-debug", { detail: payload }));
 }
 
