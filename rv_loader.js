@@ -86,9 +86,11 @@ function initDebugPanel() {
 
   if (meta) {
     const apiBase = window.RV_CONFIG?.apiBase || "(none)";
+    const buildId = window.RV_CONFIG?.buildId || "(unknown)";
     const origin = window.location.origin;
     const path = window.location.pathname;
     meta.innerHTML = `
+      <div><strong>build:</strong> <code>${escapeHtml(buildId)}</code></div>
       <div><strong>apiBase:</strong> ${escapeHtml(apiBase)}</div>
       <div><strong>origin:</strong> ${escapeHtml(origin)}</div>
       <div><strong>path:</strong> ${escapeHtml(path)}</div>
@@ -127,7 +129,8 @@ function initDebugPanel() {
       const endpoints = [
         "/api/market-health",
         "/api/price-snapshot",
-        "/api/top-movers"
+        "/api/top-movers",
+        "/api/health"
       ];
 
       await Promise.all(

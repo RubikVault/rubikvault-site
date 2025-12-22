@@ -1,6 +1,7 @@
 export const RV_CONFIG = {
   version: "rv-2025-01-15",
   apiBase: "/api",
+  buildId: "2025-01-15-local",
   features: {
     "rv-market-health": true,
     "rv-price-snapshot": true,
