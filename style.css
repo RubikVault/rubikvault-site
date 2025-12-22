@@ -80,12 +80,15 @@ a {
   border-radius: 10px;
   background: rgba(15, 23, 42, 0.6);
   box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.15);
+  overflow: hidden;
 }
 
 .rv-logo-mark svg {
   width: 26px;
   height: 26px;
   display: block;
+  max-width: 100%;
+  max-height: 100%;
 }
 
 .rv-nav {
@@ -576,96 +579,6 @@ a {
 
 #rv-dashboard .rv-native-negative {
   color: #f87171;
-}
-
-#rv-debug-panel {
-  position: fixed;
-  right: 16px;
-  bottom: 16px;
-  width: min(420px, 90vw);
-  max-height: 60vh;
-  background: rgba(2, 6, 23, 0.92);
-  border: 1px solid rgba(148, 163, 184, 0.3);
-  border-radius: 12px;
-  box-shadow: 0 12px 40px rgba(2, 6, 23, 0.6);
-  color: var(--rv-text);
-  font-size: 12px;
-  z-index: 999;
-  display: grid;
-  grid-template-rows: auto auto 1fr;
-  gap: 8px;
-  padding: 10px;
-}
-
-#rv-debug-panel.is-collapsed .rv-debug-body {
-  display: none;
-}
-
-#rv-debug-panel .rv-debug-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-#rv-debug-panel .rv-debug-actions {
-  display: flex;
-  gap: 6px;
-  flex-wrap: wrap;
-}
-
-#rv-debug-panel .rv-debug-toggle {
-  border: 1px solid rgba(148, 163, 184, 0.4);
-  background: transparent;
-  color: var(--rv-text-muted);
-  padding: 4px 8px;
-  border-radius: 999px;
-  font-size: 11px;
-  cursor: pointer;
-}
-
-#rv-debug-panel .rv-debug-refresh,
-#rv-debug-panel .rv-debug-clear,
-#rv-debug-panel .rv-debug-copy {
-  border: 1px solid rgba(148, 163, 184, 0.4);
-  background: rgba(15, 23, 42, 0.6);
-  color: var(--rv-text);
-  padding: 4px 8px;
-  border-radius: 999px;
-  font-size: 11px;
-  cursor: pointer;
-}
-
-#rv-debug-panel .rv-debug-meta {
-  display: grid;
-  gap: 4px;
-  color: var(--rv-text-muted);
-  font-size: 11px;
-}
-
-#rv-debug-panel .rv-debug-meta code {
-  color: var(--rv-text);
-}
-
-#rv-debug-panel .rv-debug-body {
-  overflow-y: auto;
-  display: grid;
-  gap: 6px;
-}
-
-#rv-debug-panel .rv-debug-line {
-  padding: 6px 8px;
-  border-radius: 8px;
-  background: rgba(15, 23, 42, 0.7);
-  border: 1px solid rgba(148, 163, 184, 0.15);
-}
-
-#rv-debug-panel .rv-debug-success {
-  border-color: rgba(74, 222, 128, 0.4);
-}
-
-#rv-debug-panel .rv-debug-error,
-#rv-debug-panel .rv-debug-exception {
-  border-color: rgba(248, 113, 113, 0.5);
 }
 
 @keyframes rv-native-wave {
