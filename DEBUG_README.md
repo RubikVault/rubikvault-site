@@ -33,3 +33,6 @@ Das Panel lädt `/build-info.json`. Wenn die Datei nicht existiert, nutzt es `RV
 - Neue APIs: In `rv-loader.js` die Liste `apiPaths` erweitern.
 - Neue Feature‑Module: In `rv-loader.js` den `registry` ergänzen.
 - Zusätzliche Checks: in `debug/diagnostics.js` hinzufügen.
+<!-- agent test -->
+<!-- agent test -->
+<!-- agent test -->
