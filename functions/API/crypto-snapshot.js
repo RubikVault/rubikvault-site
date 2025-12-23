@@ -5,22 +5,23 @@ import {
   kvPutJson,
   logServer,
   makeResponse,
-  normalizeSymbolsParam,
   safeSnippet
 } from "./_shared.js";
 
-const FEATURE_ID = "quotes";
-const KV_TTL = 60;
+const FEATURE_ID = "crypto-snapshot";
+const KV_TTL = 90;
 const RATE_WINDOW_MS = 60_000;
 const RATE_MAX = 60;
 const rateStore = new Map();
+const UPSTREAM_URL =
+  "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum&vs_currencies=usd&include_24hr_change=true";
 
-function parseChangePercent(value) {
-  if (value === null || value === undefined) return null;
-  if (typeof value === "number" && Number.isFinite(value)) return value;
-  const cleaned = String(value).replace(/[%()]/g, "").trim();
-  const parsed = Number.parseFloat(cleaned);
-  return Number.isNaN(parsed) ? null : parsed;
+function mapUpstreamCode(status) {
+  if (status === 429) return "RATE_LIMITED";
+  if (status === 403) return "UPSTREAM_403";
+  if (status >= 400 && status < 500) return "UPSTREAM_4XX";
+  if (status >= 500) return "UPSTREAM_5XX";
+  return "UPSTREAM_5XX";
 }
 
 function getRateState(key) {
@@ -38,33 +39,26 @@ function getRateState(key) {
   return { limited: false, remaining: Math.max(0, RATE_MAX - fresh.length), resetMs };
 }
 
-function mapUpstreamCode(status) {
-  if (status === 429) return "RATE_LIMITED";
-  if (status === 403) return "UPSTREAM_403";
-  if (status >= 400 && status < 500) return "UPSTREAM_4XX";
-  if (status >= 500) return "UPSTREAM_5XX";
-  return "UPSTREAM_5XX";
-}
-
-function normalize(payload, requestedSymbols) {
-  const list = Array.isArray(payload) ? payload : [];
-  const lookup = new Map(list.map((item) => [String(item.symbol || "").toUpperCase(), item]));
-  const now = new Date().toISOString();
-  const quotes = requestedSymbols.map((symbol) => {
-    const entry = lookup.get(symbol);
+function normalize(payload) {
+  const assets = [
+    { key: "bitcoin", label: "Bitcoin", symbol: "BTC" },
+    { key: "ethereum", label: "Ethereum", symbol: "ETH" }
+  ].map((asset) => {
+    const data = payload[asset.key] || {};
     return {
-      symbol,
-      price: entry?.price ?? null,
-      changePercent: parseChangePercent(entry?.changesPercentage),
-      ts: now,
-      source: "financialmodelingprep"
+      symbol: asset.symbol,
+      label: asset.label,
+      price: data.usd ?? null,
+      changePercent: data.usd_24h_change ?? null,
+      ts: new Date().toISOString(),
+      source: "coingecko"
     };
   });
 
   return {
-    updatedAt: now,
-    source: "financialmodelingprep",
-    quotes
+    updatedAt: new Date().toISOString(),
+    source: "coingecko",
+    assets
   };
 }
 
@@ -81,30 +75,9 @@ export async function onRequestGet({ request, env, data }) {
     return bindingResponse;
   }
 
-  const url = new URL(request.url);
-  const symbolsParam = url.searchParams.get("symbols") || url.searchParams.get("tickers") || "";
-  const { symbols, invalid, truncated } = normalizeSymbolsParam(symbolsParam);
-
-  if (!symbols.length || invalid.length || truncated) {
-    return makeResponse({
-      ok: false,
-      feature: FEATURE_ID,
-      traceId,
-      cache: { hit: false, ttl: KV_TTL, layer: "none" },
-      upstream: { url: "", status: null, snippet: "" },
-      error: {
-        code: "BAD_REQUEST",
-        message: "symbols parameter invalid",
-        details: { invalid, truncated }
-      },
-      status: 400
-    });
-  }
-
   const rateKey = request.headers.get("CF-Connecting-IP") || "global";
   const rateState = getRateState(rateKey);
   if (rateState.limited) {
-    const resetAt = new Date(Date.now() + rateState.resetMs).toISOString();
     return makeResponse({
       ok: false,
       feature: FEATURE_ID,
@@ -113,7 +86,7 @@ export async function onRequestGet({ request, env, data }) {
       upstream: { url: "", status: 429, snippet: "" },
       rateLimit: {
         remaining: "0",
-        reset: resetAt,
+        reset: new Date(Date.now() + rateState.resetMs).toISOString(),
         estimated: true
       },
       error: {
@@ -125,25 +98,7 @@ export async function onRequestGet({ request, env, data }) {
     });
   }
 
-  const apiKey = env.FMP_API_KEY || env.EARNINGS_API_KEY;
-  if (!apiKey) {
-    return makeResponse({
-      ok: false,
-      feature: FEATURE_ID,
-      traceId,
-      cache: { hit: false, ttl: KV_TTL, layer: "none" },
-      upstream: { url: "", status: null, snippet: "" },
-      error: {
-        code: "ENV_MISSING",
-        message: "Quotes provider key missing",
-        details: { missing: ["FMP_API_KEY", "EARNINGS_API_KEY"] }
-      },
-      status: 500
-    });
-  }
-
-  const cacheKey = `quotes:${symbols.join(",")}`;
-
+  const cacheKey = `${FEATURE_ID}:v1`;
   if (!panic) {
     const cached = await kvGetJson(env, cacheKey);
     if (cached?.data) {
@@ -153,7 +108,7 @@ export async function onRequestGet({ request, env, data }) {
         traceId,
         data: cached.data,
         cache: { hit: true, ttl: KV_TTL, layer: "kv" },
-        upstream: { url: "", status: null, snippet: "" }
+        upstream: { url: UPSTREAM_URL, status: null, snippet: "" }
       });
       logServer({
         feature: FEATURE_ID,
@@ -166,12 +121,11 @@ export async function onRequestGet({ request, env, data }) {
     }
   }
 
-  const upstreamUrl = `https://financialmodelingprep.com/api/v3/quote/${symbols.join(",")}?apikey=${apiKey}`;
   let upstreamStatus = null;
   let upstreamSnippet = "";
 
   try {
-    const res = await fetch(upstreamUrl);
+    const res = await fetch(UPSTREAM_URL);
     upstreamStatus = res.status;
     const text = await res.text();
     upstreamSnippet = safeSnippet(text);
@@ -179,7 +133,6 @@ export async function onRequestGet({ request, env, data }) {
     if (!res.ok) {
       const cached = !panic ? await kvGetJson(env, cacheKey) : null;
       const errorCode = mapUpstreamCode(res.status);
-
       if (cached?.data) {
         const response = makeResponse({
           ok: true,
@@ -187,7 +140,7 @@ export async function onRequestGet({ request, env, data }) {
           traceId,
           data: cached.data,
           cache: { hit: true, ttl: KV_TTL, layer: "kv" },
-          upstream: { url: upstreamUrl, status: res.status, snippet: upstreamSnippet },
+          upstream: { url: UPSTREAM_URL, status: res.status, snippet: upstreamSnippet },
           error: { code: errorCode, message: `Upstream ${res.status}`, details: {} },
           isStale: true
         });
@@ -206,7 +159,7 @@ export async function onRequestGet({ request, env, data }) {
         feature: FEATURE_ID,
         traceId,
         cache: { hit: false, ttl: KV_TTL, layer: panic ? "none" : "kv" },
-        upstream: { url: upstreamUrl, status: res.status, snippet: upstreamSnippet },
+        upstream: { url: UPSTREAM_URL, status: res.status, snippet: upstreamSnippet },
         error: { code: errorCode, message: `Upstream ${res.status}`, details: {} },
         status: res.status === 429 ? 429 : 502
       });
@@ -222,25 +175,25 @@ export async function onRequestGet({ request, env, data }) {
 
     let json;
     try {
-      json = text ? JSON.parse(text) : [];
+      json = text ? JSON.parse(text) : {};
     } catch (error) {
       return makeResponse({
         ok: false,
         feature: FEATURE_ID,
         traceId,
         cache: { hit: false, ttl: KV_TTL, layer: panic ? "none" : "kv" },
-        upstream: { url: upstreamUrl, status: res.status, snippet: upstreamSnippet },
+        upstream: { url: UPSTREAM_URL, status: res.status, snippet: upstreamSnippet },
         error: { code: "SCHEMA_INVALID", message: "Invalid JSON", details: {} },
         status: 502
       });
     }
 
-    const data = normalize(json, symbols);
+    const dataPayload = normalize(json);
     const kvPayload = {
       ts: new Date().toISOString(),
-      source: data.source,
+      source: dataPayload.source,
       schemaVersion: 1,
-      data
+      data: dataPayload
     };
 
     if (!panic) {
@@ -251,9 +204,9 @@ export async function onRequestGet({ request, env, data }) {
       ok: true,
       feature: FEATURE_ID,
       traceId,
-      data,
+      data: dataPayload,
       cache: { hit: false, ttl: KV_TTL, layer: panic ? "none" : "kv" },
-      upstream: { url: upstreamUrl, status: res.status, snippet: upstreamSnippet }
+      upstream: { url: UPSTREAM_URL, status: res.status, snippet: upstreamSnippet }
     });
     logServer({
       feature: FEATURE_ID,
@@ -270,7 +223,7 @@ export async function onRequestGet({ request, env, data }) {
       feature: FEATURE_ID,
       traceId,
       cache: { hit: false, ttl: KV_TTL, layer: panic ? "none" : "kv" },
-      upstream: { url: upstreamUrl, status: upstreamStatus, snippet: upstreamSnippet },
+      upstream: { url: UPSTREAM_URL, status: upstreamStatus, snippet: upstreamSnippet },
       error: { code: errorCode, message: error?.message || "Request failed", details: {} }
     });
     logServer({

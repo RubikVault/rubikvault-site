@@ -439,6 +439,10 @@ function bindRefresh(section, feature, logger, contentEl) {
 function startAutoRefresh(section, feature, logger, contentEl) {
   if (!feature?.refreshIntervalMs) return;
   setInterval(async () => {
+    if (typeof document !== "undefined" && document.visibilityState !== "visible") {
+      logger.info("auto_refresh_paused", { reason: "hidden" });
+      return;
+    }
     const traceId = createTraceId();
     logger.setTraceId(traceId);
     logger.info("auto_refresh", { intervalMs: feature.refreshIntervalMs });

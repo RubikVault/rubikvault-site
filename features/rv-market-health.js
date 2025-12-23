@@ -1,4 +1,4 @@
-import { fetchJSON } from "./utils/api.js";
+import { fetchJSON, getBindingHint } from "./utils/api.js";
 import { getOrFetch } from "./utils/store.js";
 
 function formatNumber(value, options = {}) {
@@ -21,23 +21,37 @@ function render(root, payload, logger) {
     const errorCode = payload?.error?.code || "";
     const upstreamStatus = payload?.upstream?.status;
     const upstreamSnippet = payload?.upstream?.snippet || "";
-    const detailLine = [errorCode, upstreamStatus ? `Upstream ${upstreamStatus}` : ""]
+    const cacheLayer = payload?.cache?.layer || "none";
+    const detailLine = [
+      errorCode,
+      upstreamStatus ? `Upstream ${upstreamStatus}` : "",
+      `Cache ${cacheLayer}`
+    ]
       .filter(Boolean)
       .join(" · ");
+    const fixHint = errorCode === "BINDING_MISSING" ? getBindingHint(payload) : "";
     root.innerHTML = `
       <div class="rv-native-error">
         Market Health konnte nicht geladen werden.<br />
         <span>${errorMessage}</span>
         ${detailLine ? `<div class="rv-native-note">${detailLine}</div>` : ""}
+        ${fixHint ? `<div class="rv-native-note">${fixHint}</div>` : ""}
         ${upstreamSnippet ? `<pre class="rv-native-stack">${upstreamSnippet}</pre>` : ""}
       </div>
     `;
-    logger?.setStatus("FAIL", "API error");
+    logger?.setStatus(
+      errorCode === "RATE_LIMITED" ? "PARTIAL" : "FAIL",
+      errorCode === "RATE_LIMITED" ? "RATE_LIMITED" : "API error"
+    );
     logger?.setMeta({
       updatedAt: payload?.ts,
       source: data?.source || "--",
       isStale: payload?.isStale,
       staleAgeMs: payload?.staleAgeMs
+    });
+    logger?.info("response_meta", {
+      cache: payload?.cache || {},
+      upstreamStatus: upstreamStatus ?? null
     });
     return;
   }
@@ -78,16 +92,31 @@ function render(root, payload, logger) {
     </div>
   `;
 
-  const hasWarning = payload?.ok && payload?.error?.code;
+  const warningCode = payload?.error?.code || "";
+  const hasWarning = payload?.ok && warningCode;
+  const isRateLimited = warningCode === "RATE_LIMITED";
+  const headline = payload?.isStale
+    ? isRateLimited
+      ? "RATE_LIMITED"
+      : "Stale data"
+    : isRateLimited
+      ? "RATE_LIMITED"
+      : hasWarning
+        ? "Partial data"
+        : "Live";
   logger?.setStatus(
     payload?.isStale || hasWarning ? "PARTIAL" : "OK",
-    payload?.isStale ? "Stale data" : hasWarning ? "Partial data" : "Live"
+    headline
   );
   logger?.setMeta({
     updatedAt: data.updatedAt || payload.ts,
     source: data.source || "Alternative.me, CoinGecko",
     isStale: payload?.isStale,
     staleAgeMs: payload?.staleAgeMs
+  });
+  logger?.info("response_meta", {
+    cache: payload?.cache || {},
+    upstreamStatus: payload?.upstream?.status ?? null
   });
 }
 

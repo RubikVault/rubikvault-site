@@ -40,10 +40,32 @@ Das Panel erscheint unten rechts und enthält Tabs:
 
 Das Panel lädt `/build-info.json`. Wenn die Datei nicht existiert, nutzt es `RV_CONFIG.buildInfo`.
 
+## KV Setup (Pflicht)
+
+1. Lege zwei KV Namespaces an:
+   - `rv-cache-kv` (prod)
+   - `rv-cache-kv-preview` (preview)
+2. Pages → Settings → Functions → KV bindings:
+   - Variable: `RV_KV`
+   - Production binding → `rv-cache-kv`
+   - Preview binding → `rv-cache-kv-preview`
+3. RV_KV muss in Preview + Production gebunden sein (keine Fallbacks).
+4. Deploy erneut, dann `/API/health` prüfen.
+
+## First 5 minutes checklist
+
+1. `/API/health` im Browser öffnen → `bindings.RV_KV` und `envHint` prüfen.
+2. DevTools → Network → filter `/API/` → Schema-Felder (`ok`, `feature`, `ts`, `traceId`, `schemaVersion`) prüfen.
+3. Console filter `RV:` → TraceIDs, `cache.layer`, `cache.ttl`, `upstream.status` sehen.
+4. Blocks 01–05 sollten OK oder PARTIAL sein (je nach Upstream).
+5. Falls FAIL: Fehlercode + Fix-Hint lesen (Binding/ENV).
+
 ## Server Logs (Cloudflare)
 
 - Dashboard → Pages → Functions → Real‑time logs.
-- Optional: Wrangler `wrangler tail <project>` für Live‑Logs.
+- Wrangler:
+  - `npx wrangler pages deployment list --project-name rubikvault-site`
+  - `npx wrangler pages deployment tail DEPLOYMENT_ID` (no `< >`)
 - Erwartetes Log‑Format: `{"feature":"top-movers","traceId":"abcd1234","kv":"hit|miss|bypass","upstreamStatus":200,"durationMs":123}`
 
 ## Erwartete Status‑Beispiele
@@ -51,12 +73,15 @@ Das Panel lädt `/build-info.json`. Wenn die Datei nicht existiert, nutzt es `RV
 - OK: `ok=true`, `isStale=false`, Daten werden normal gerendert.
 - FAIL: `ok=false`, Fehler‑UI erscheint mit `error.code` und `error.message`.
 - PARTIAL: `ok=true` + `isStale=true` (Fallback aus KV/Shadow) oder Teilfehler bei Feeds.
+- RATE_LIMITED: `error.code=RATE_LIMITED` + gelb markiert + Backoff/Countdown in UI.
 
 ## Bindings & ENV
 
 - `RV_KV` (required): KV Binding für Cache.
 - `EARNINGS_API_KEY` (required): Provider‑Key für Earnings‑Calendar.
 - `EARNINGS_API_BASE` (optional): Base URL (Default: FinancialModelingPrep).
+- `FRED_API_KEY` (required): API‑Key für Macro & Rates (FRED).
+- `FMP_API_KEY` (optional): API‑Key für Quotes (FinancialModelingPrep). Falls nicht gesetzt, wird `EARNINGS_API_KEY` verwendet.
 - `CROSS_ORIGIN` (optional): `true` aktiviert CORS via `functions/API/_middleware.js`.
 
 ## CSP / External Domains
@@ -75,6 +100,14 @@ Wenn CSP aktiviert wird, mindestens folgende Domains erlauben:
 
 - Neue APIs/Blocks: `FEATURES` in `rv-config.js` erweitern.
 - Neue Diagnostics: `debug/diagnostics.js` ergänzen.
-<!-- agent test -->
-<!-- agent test -->
-<!-- agent test -->
+## Testfälle (Erwartungen)
+
+1. KV fehlt:
+   - `/API/health` → `ok=false`, `error.code=BINDING_MISSING`.
+   - Blöcke 01–05 zeigen FAIL mit klarer Fix‑Hint.
+2. KV vorhanden:
+   - Blöcke 01–05 OK oder PARTIAL je nach Upstream.
+3. Quotes Rate Limit:
+   - `/API/quotes` liefert `RATE_LIMITED`, UI zeigt Backoff + Countdown.
+4. Shadow Cache:
+   - API failt, aber lokale Quotes jünger als 15 min → PARTIAL + stale.

@@ -1,9 +1,25 @@
-import { buildPayload, createTraceId, jsonResponse, logServer, truncate } from "./_shared.js";
+import {
+  assertBindings,
+  createTraceId,
+  kvGetJson,
+  kvPutJson,
+  logServer,
+  makeResponse,
+  safeSnippet
+} from "./_shared.js";
 
 const FEATURE_ID = "top-movers";
-const KV_TTL = 90;
+const KV_TTL = 240;
 const UPSTREAM_URL =
   "https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=price_change_percentage_24h_desc&per_page=6&page=1&sparkline=false&price_change_percentage=24h";
+
+function mapUpstreamCode(status) {
+  if (status === 429) return "RATE_LIMITED";
+  if (status === 403) return "UPSTREAM_403";
+  if (status >= 400 && status < 500) return "UPSTREAM_4XX";
+  if (status >= 500) return "UPSTREAM_5XX";
+  return "UPSTREAM_5XX";
+}
 
 function normalize(payload) {
   const items = Array.isArray(payload)
@@ -25,31 +41,25 @@ function normalize(payload) {
   };
 }
 
-export async function onRequestGet({ request, env }) {
-  const traceId = createTraceId(request);
+export async function onRequestGet({ request, env, data }) {
+  const traceId = data?.traceId || createTraceId(request);
   const started = Date.now();
   const panic =
     request.headers.get("x-rv-panic") === "1" ||
     new URL(request.url).searchParams.get("rv_panic") === "1";
 
-  if (!env?.RV_KV) {
-    const payload = buildPayload({
-      ok: false,
-      feature: FEATURE_ID,
-      traceId,
-      cache: { hit: false, ttl: 0, layer: "none" },
-      error: { code: "BINDING_MISSING", message: "RV_KV binding missing", details: {} }
-    });
+  const bindingResponse = assertBindings(env, FEATURE_ID, traceId);
+  if (bindingResponse) {
     logServer({ feature: FEATURE_ID, traceId, kv: "none", upstreamStatus: null, durationMs: 0 });
-    return jsonResponse(payload, 500);
+    return bindingResponse;
   }
 
   const cacheKey = `${FEATURE_ID}:v1`;
 
   if (!panic) {
-    const cached = await env.RV_KV.get(cacheKey, "json");
+    const cached = await kvGetJson(env, cacheKey);
     if (cached?.data) {
-      const payload = buildPayload({
+      const response = makeResponse({
         ok: true,
         feature: FEATURE_ID,
         traceId,
@@ -64,7 +74,7 @@ export async function onRequestGet({ request, env }) {
         upstreamStatus: null,
         durationMs: Date.now() - started
       });
-      return jsonResponse(payload);
+      return response;
     }
   }
 
@@ -75,19 +85,20 @@ export async function onRequestGet({ request, env }) {
     const res = await fetch(UPSTREAM_URL);
     upstreamStatus = res.status;
     const text = await res.text();
-    upstreamSnippet = truncate(text);
+    upstreamSnippet = safeSnippet(text);
 
     if (!res.ok) {
-      const cached = !panic ? await env.RV_KV.get(cacheKey, "json") : null;
+      const cached = !panic ? await kvGetJson(env, cacheKey) : null;
+      const errorCode = mapUpstreamCode(res.status);
       if (cached?.data) {
-        const payload = buildPayload({
+        const response = makeResponse({
           ok: true,
           feature: FEATURE_ID,
           traceId,
           data: cached.data,
           cache: { hit: true, ttl: KV_TTL, layer: "kv" },
           upstream: { url: UPSTREAM_URL, status: res.status, snippet: upstreamSnippet },
-          error: { code: "UPSTREAM_ERROR", message: `Upstream ${res.status}`, details: {} },
+          error: { code: errorCode, message: `Upstream ${res.status}`, details: {} },
           isStale: true
         });
         logServer({
@@ -97,16 +108,17 @@ export async function onRequestGet({ request, env }) {
           upstreamStatus: res.status,
           durationMs: Date.now() - started
         });
-        return jsonResponse(payload, 200);
+        return response;
       }
 
-      const payload = buildPayload({
+      const response = makeResponse({
         ok: false,
         feature: FEATURE_ID,
         traceId,
         cache: { hit: false, ttl: KV_TTL, layer: panic ? "none" : "kv" },
         upstream: { url: UPSTREAM_URL, status: res.status, snippet: upstreamSnippet },
-        error: { code: "UPSTREAM_ERROR", message: `Upstream ${res.status}`, details: {} }
+        error: { code: errorCode, message: `Upstream ${res.status}`, details: {} },
+        status: res.status === 429 ? 429 : 502
       });
       logServer({
         feature: FEATURE_ID,
@@ -115,29 +127,41 @@ export async function onRequestGet({ request, env }) {
         upstreamStatus: res.status,
         durationMs: Date.now() - started
       });
-      return jsonResponse(payload, 502);
+      return response;
     }
 
-    const json = text ? JSON.parse(text) : [];
-    const data = normalize(json);
-    const kvPayload = {
-      ts: new Date().toISOString(),
-      source: data.source,
-      schemaVersion: 1,
-      data
-    };
-
-    if (!panic) {
-      await env.RV_KV.put(cacheKey, JSON.stringify(kvPayload), {
-        expirationTtl: KV_TTL
+    let json;
+    try {
+      json = text ? JSON.parse(text) : [];
+    } catch (error) {
+      return makeResponse({
+        ok: false,
+        feature: FEATURE_ID,
+        traceId,
+        cache: { hit: false, ttl: KV_TTL, layer: panic ? "none" : "kv" },
+        upstream: { url: UPSTREAM_URL, status: res.status, snippet: upstreamSnippet },
+        error: { code: "SCHEMA_INVALID", message: "Invalid JSON", details: {} },
+        status: 502
       });
     }
 
-    const payload = buildPayload({
+    const dataPayload = normalize(json);
+    const kvPayload = {
+      ts: new Date().toISOString(),
+      source: dataPayload.source,
+      schemaVersion: 1,
+      data: dataPayload
+    };
+
+    if (!panic) {
+      await kvPutJson(env, cacheKey, kvPayload, KV_TTL);
+    }
+
+    const response = makeResponse({
       ok: true,
       feature: FEATURE_ID,
       traceId,
-      data,
+      data: dataPayload,
       cache: { hit: false, ttl: KV_TTL, layer: panic ? "none" : "kv" },
       upstream: { url: UPSTREAM_URL, status: res.status, snippet: upstreamSnippet }
     });
@@ -148,15 +172,16 @@ export async function onRequestGet({ request, env }) {
       upstreamStatus: res.status,
       durationMs: Date.now() - started
     });
-    return jsonResponse(payload);
+    return response;
   } catch (error) {
-    const payload = buildPayload({
+    const errorCode = error?.name === "AbortError" ? "UPSTREAM_TIMEOUT" : "UPSTREAM_5XX";
+    const response = makeResponse({
       ok: false,
       feature: FEATURE_ID,
       traceId,
       cache: { hit: false, ttl: KV_TTL, layer: panic ? "none" : "kv" },
       upstream: { url: UPSTREAM_URL, status: upstreamStatus, snippet: upstreamSnippet },
-      error: { code: "UPSTREAM_EXCEPTION", message: error?.message || "Request failed", details: {} }
+      error: { code: errorCode, message: error?.message || "Request failed", details: {} }
     });
     logServer({
       feature: FEATURE_ID,
@@ -165,6 +190,6 @@ export async function onRequestGet({ request, env }) {
       upstreamStatus,
       durationMs: Date.now() - started
     });
-    return jsonResponse(payload, 502);
+    return response;
   }
 }

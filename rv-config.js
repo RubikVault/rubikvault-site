@@ -56,6 +56,42 @@ export const FEATURES = [
     lazyLoad: true
   },
   {
+    id: "rv-macro-rates",
+    title: "Block 08 - Macro & Rates",
+    module: "./features/rv-macro-rates.js",
+    api: "macro-rates",
+    enabled: true,
+    lazyLoad: true,
+    refreshIntervalMs: 6 * 60 * 60 * 1000
+  },
+  {
+    id: "rv-crypto-snapshot",
+    title: "Block 09 - Crypto Snapshot",
+    module: "./features/rv-crypto-snapshot.js",
+    api: "crypto-snapshot",
+    enabled: true,
+    lazyLoad: true,
+    refreshIntervalMs: 120_000
+  },
+  {
+    id: "rv-sentiment-barometer",
+    title: "Block 10 - Sentiment Barometer",
+    module: "./features/rv-sentiment-barometer.js",
+    api: "sentiment",
+    enabled: true,
+    lazyLoad: true,
+    refreshIntervalMs: 15 * 60 * 1000
+  },
+  {
+    id: "rv-tech-signals",
+    title: "Block 11 - Tech Signals",
+    module: "./features/rv-tech-signals.js",
+    api: "tech-signals",
+    enabled: true,
+    lazyLoad: true,
+    refreshIntervalMs: 15 * 60 * 1000
+  },
+  {
     id: "tradingview-widgets",
     title: "TradingView Widgets",
     module: "./features/tradingview-widgets.js",

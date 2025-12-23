@@ -1,9 +1,14 @@
 import { fetchJSON, getBindingHint } from "./utils/api.js";
 import { getOrFetch } from "./utils/store.js";
 
+function formatNumber(value, options = {}) {
+  if (value === null || value === undefined || Number.isNaN(value)) return "–";
+  return new Intl.NumberFormat("en-US", options).format(value);
+}
+
 function render(root, payload, logger) {
   const data = payload?.data || {};
-  const items = data.items || [];
+  const series = data.series || [];
 
   if (!payload?.ok) {
     const errorMessage = payload?.error?.message || "API error";
@@ -22,11 +27,11 @@ function render(root, payload, logger) {
       errorCode === "BINDING_MISSING"
         ? getBindingHint(payload)
         : errorCode === "ENV_MISSING"
-          ? "Fix: Set EARNINGS_API_KEY in Cloudflare Pages environment variables"
+          ? "Fix: Set FRED_API_KEY in Cloudflare Pages environment variables"
           : "";
     root.innerHTML = `
       <div class="rv-native-error">
-        Earnings Calendar konnte nicht geladen werden.<br />
+        Macro & Rates konnten nicht geladen werden.<br />
         <span>${errorMessage}</span>
         ${detailLine ? `<div class="rv-native-note">${detailLine}</div>` : ""}
         ${fixHint ? `<div class="rv-native-note">${fixHint}</div>` : ""}
@@ -50,16 +55,16 @@ function render(root, payload, logger) {
     return;
   }
 
-  if (!items.length) {
+  if (!series.length) {
     root.innerHTML = `
       <div class="rv-native-empty">
-        Keine Earnings-Daten verfügbar. Bitte später erneut versuchen.
+        Keine Macro-Daten verfügbar. Bitte später erneut versuchen.
       </div>
     `;
     logger?.setStatus("PARTIAL", "No data");
     logger?.setMeta({
       updatedAt: data.updatedAt || payload?.ts,
-      source: data.source || "--",
+      source: data.source || "FRED",
       isStale: payload?.isStale,
       staleAgeMs: payload?.staleAgeMs
     });
@@ -67,25 +72,26 @@ function render(root, payload, logger) {
   }
 
   root.innerHTML = `
-    <div class="rv-earnings-list">
-      ${items
-        .map(
-          (item) => `
-            <div class="rv-earnings-card">
-              <div class="rv-earnings-head">
-                <strong>${item.symbol}</strong>
-                <span>${item.company || "Unknown"}</span>
-              </div>
-              <div class="rv-earnings-meta">
-                <span>Date: ${item.date || "--"}</span>
-                <span>EPS Est: ${item.epsEst ?? "--"}</span>
-                <span>EPS Actual: ${item.epsActual ?? "--"}</span>
-              </div>
+    <div class="rv-native-grid">
+      ${series
+        .map((item) => {
+          const changeValue = item.change ?? null;
+          const changeClass = changeValue >= 0 ? "rv-native-positive" : "rv-native-negative";
+          const changeLabel =
+            changeValue === null
+              ? ""
+              : `${formatNumber(changeValue, { maximumFractionDigits: 2 })} vs prior`;
+          return `
+            <div class="rv-native-kpi">
+              <div class="label">${item.label || item.seriesId}</div>
+              <div class="value">${formatNumber(item.value, { maximumFractionDigits: 2 })}</div>
+              <div class="rv-native-note ${changeClass}">${changeLabel}</div>
             </div>
-          `
-        )
+          `;
+        })
         .join("")}
     </div>
+    <div class="rv-native-note">Updated: ${new Date(data.updatedAt || payload.ts).toLocaleTimeString()} · Source: FRED</div>
   `;
 
   const warningCode = payload?.error?.code || "";
@@ -106,7 +112,7 @@ function render(root, payload, logger) {
   );
   logger?.setMeta({
     updatedAt: data.updatedAt || payload.ts,
-    source: data.source || "earnings",
+    source: data.source || "FRED",
     isStale: payload?.isStale,
     staleAgeMs: payload?.staleAgeMs
   });
@@ -117,21 +123,21 @@ function render(root, payload, logger) {
 }
 
 async function loadData({ featureId, traceId, logger }) {
-  return fetchJSON("/earnings-calendar", { feature: featureId, traceId, logger });
+  return fetchJSON("/macro-rates", { feature: featureId, traceId, logger });
 }
 
 export async function init(root, context = {}) {
-  const { featureId = "rv-earnings-calendar", traceId, logger } = context;
-  const data = await getOrFetch(
-    "rv-earnings-calendar",
-    () => loadData({ featureId, traceId, logger }),
-    { ttlMs: 300_000, featureId, logger }
-  );
+  const { featureId = "rv-macro-rates", traceId, logger } = context;
+  const data = await getOrFetch("rv-macro-rates", () => loadData({ featureId, traceId, logger }), {
+    ttlMs: 6 * 60 * 60 * 1000,
+    featureId,
+    logger
+  });
   render(root, data, logger);
 }
 
 export async function refresh(root, context = {}) {
-  const { featureId = "rv-earnings-calendar", traceId, logger } = context;
+  const { featureId = "rv-macro-rates", traceId, logger } = context;
   const data = await loadData({ featureId, traceId, logger });
   render(root, data, logger);
 }

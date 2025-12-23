@@ -132,18 +132,33 @@ function rateLimited(featureId, { maxRequests, windowMs }) {
 }
 
 function markStale(payload, reason = "STALE_FALLBACK") {
-  const tsMs = parseTs(payload?.ts);
+  const tsMs = parseTs(payload?.ts || payload?.data?.updatedAt);
   const staleAgeMs = tsMs ? nowMs() - tsMs : null;
+  const staleMinutes =
+    typeof staleAgeMs === "number" ? Math.max(1, Math.round(staleAgeMs / 60000)) : null;
   return {
     ...payload,
     ok: true,
     isStale: true,
     staleAgeMs,
-    error: payload?.error || {
-      code: reason,
-      message: "Serving cached fallback data",
-      details: {}
-    }
+    ...(payload?.error
+      ? {
+          error: {
+            ...payload.error,
+            details: {
+              ...(payload.error.details || {}),
+              staleAgeMs,
+              staleMinutes
+            }
+          }
+        }
+      : {
+          error: {
+            code: reason,
+            message: "Serving cached fallback data",
+            details: { staleAgeMs, staleMinutes }
+          }
+        })
   };
 }
 
@@ -197,7 +212,14 @@ export async function getOrFetch(
   try {
     const value = await fetcher();
     if (value?.ok === false) {
-      logger?.warn("api_response_not_ok", { featureId });
+      logger?.warn("api_response_not_ok", { featureId, code: value?.error?.code || "" });
+      if (value?.error?.code === "BINDING_MISSING") {
+        return value;
+      }
+      const shadow = readShadow(featureId, logger);
+      if (shadow?.payload) {
+        return markStale(shadow.payload, value?.error?.code || "STALE_FALLBACK");
+      }
       return value;
     }
 

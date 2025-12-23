@@ -1,10 +1,26 @@
-import { buildPayload, createTraceId, jsonResponse, logServer, truncate } from "./_shared.js";
+import {
+  assertBindings,
+  createTraceId,
+  kvGetJson,
+  kvPutJson,
+  logServer,
+  makeResponse,
+  safeSnippet
+} from "./_shared.js";
 
 const FEATURE_ID = "market-health";
-const KV_TTL = 90;
+const KV_TTL = 420;
 const FNG_URL = "https://api.alternative.me/fng/?limit=1&format=json";
 const BTC_URL =
   "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd&include_24hr_change=true";
+
+function mapUpstreamCode(status) {
+  if (status === 429) return "RATE_LIMITED";
+  if (status === 403) return "UPSTREAM_403";
+  if (status >= 400 && status < 500) return "UPSTREAM_4XX";
+  if (status >= 500) return "UPSTREAM_5XX";
+  return "UPSTREAM_5XX";
+}
 
 function normalize(fngPayload, btcPayload) {
   const fngItem = Array.isArray(fngPayload?.data) ? fngPayload.data[0] : null;
@@ -26,31 +42,25 @@ function normalize(fngPayload, btcPayload) {
   };
 }
 
-export async function onRequestGet({ request, env }) {
-  const traceId = createTraceId(request);
+export async function onRequestGet({ request, env, data }) {
+  const traceId = data?.traceId || createTraceId(request);
   const started = Date.now();
   const panic =
     request.headers.get("x-rv-panic") === "1" ||
     new URL(request.url).searchParams.get("rv_panic") === "1";
 
-  if (!env?.RV_KV) {
-    const payload = buildPayload({
-      ok: false,
-      feature: FEATURE_ID,
-      traceId,
-      cache: { hit: false, ttl: 0, layer: "none" },
-      error: { code: "BINDING_MISSING", message: "RV_KV binding missing", details: {} }
-    });
+  const bindingResponse = assertBindings(env, FEATURE_ID, traceId);
+  if (bindingResponse) {
     logServer({ feature: FEATURE_ID, traceId, kv: "none", upstreamStatus: null, durationMs: 0 });
-    return jsonResponse(payload, 500);
+    return bindingResponse;
   }
 
   const cacheKey = `${FEATURE_ID}:v1`;
 
   if (!panic) {
-    const cached = await env.RV_KV.get(cacheKey, "json");
+    const cached = await kvGetJson(env, cacheKey);
     if (cached?.data) {
-      const payload = buildPayload({
+      const response = makeResponse({
         ok: true,
         feature: FEATURE_ID,
         traceId,
@@ -65,7 +75,7 @@ export async function onRequestGet({ request, env }) {
         upstreamStatus: null,
         durationMs: Date.now() - started
       });
-      return jsonResponse(payload);
+      return response;
     }
   }
 
@@ -79,12 +89,14 @@ export async function onRequestGet({ request, env }) {
     btcStatus = btcRes.status;
     const fngText = await fngRes.text();
     const btcText = await btcRes.text();
-    upstreamSnippet = truncate(!fngRes.ok ? fngText : btcText);
+    upstreamSnippet = safeSnippet(!fngRes.ok ? fngText : btcText);
 
     if (!fngRes.ok || !btcRes.ok) {
-      const cached = !panic ? await env.RV_KV.get(cacheKey, "json") : null;
+      const cached = !panic ? await kvGetJson(env, cacheKey) : null;
+      const failingStatus = fngRes.ok ? btcStatus : fngStatus;
+      const errorCode = mapUpstreamCode(failingStatus);
       if (cached?.data) {
-        const payload = buildPayload({
+        const response = makeResponse({
           ok: true,
           feature: FEATURE_ID,
           traceId,
@@ -92,11 +104,11 @@ export async function onRequestGet({ request, env }) {
           cache: { hit: true, ttl: KV_TTL, layer: "kv" },
           upstream: {
             url: `${FNG_URL} | ${BTC_URL}`,
-            status: fngRes.ok ? btcStatus : fngStatus,
+            status: failingStatus,
             snippet: upstreamSnippet
           },
           error: {
-            code: "UPSTREAM_ERROR",
+            code: errorCode,
             message: "Upstream error",
             details: { fngStatus, btcStatus }
           },
@@ -106,64 +118,82 @@ export async function onRequestGet({ request, env }) {
           feature: FEATURE_ID,
           traceId,
           kv: "hit",
-          upstreamStatus: fngRes.ok ? btcStatus : fngStatus,
+          upstreamStatus: failingStatus,
           durationMs: Date.now() - started
         });
-        return jsonResponse(payload, 200);
+        return response;
       }
 
-      const payload = buildPayload({
+      const response = makeResponse({
         ok: false,
         feature: FEATURE_ID,
         traceId,
         cache: { hit: false, ttl: KV_TTL, layer: panic ? "none" : "kv" },
         upstream: {
           url: `${FNG_URL} | ${BTC_URL}`,
-          status: fngRes.ok ? btcStatus : fngStatus,
+          status: failingStatus,
           snippet: upstreamSnippet
         },
         error: {
-          code: "UPSTREAM_ERROR",
+          code: errorCode,
           message: "Upstream error",
           details: { fngStatus, btcStatus }
-        }
+        },
+        status: failingStatus === 429 ? 429 : 502
       });
       logServer({
         feature: FEATURE_ID,
         traceId,
         kv: panic ? "bypass" : "miss",
-        upstreamStatus: fngRes.ok ? btcStatus : fngStatus,
+        upstreamStatus: failingStatus,
         durationMs: Date.now() - started
       });
-      return jsonResponse(payload, 502);
+      return response;
     }
 
-    const fngJson = fngText ? JSON.parse(fngText) : {};
-    const btcJson = btcText ? JSON.parse(btcText) : {};
-    const data = normalize(fngJson, btcJson);
+    let fngJson;
+    let btcJson;
+    try {
+      fngJson = fngText ? JSON.parse(fngText) : {};
+      btcJson = btcText ? JSON.parse(btcText) : {};
+    } catch (error) {
+      return makeResponse({
+        ok: false,
+        feature: FEATURE_ID,
+        traceId,
+        cache: { hit: false, ttl: KV_TTL, layer: panic ? "none" : "kv" },
+        upstream: {
+          url: `${FNG_URL} | ${BTC_URL}`,
+          status: 200,
+          snippet: safeSnippet(`${fngText}${btcText}`)
+        },
+        error: { code: "SCHEMA_INVALID", message: "Invalid JSON", details: {} },
+        status: 502
+      });
+    }
+
+    const dataPayload = normalize(fngJson, btcJson);
     const kvPayload = {
       ts: new Date().toISOString(),
-      source: data.source,
+      source: dataPayload.source,
       schemaVersion: 1,
-      data
+      data: dataPayload
     };
 
     if (!panic) {
-      await env.RV_KV.put(cacheKey, JSON.stringify(kvPayload), {
-        expirationTtl: KV_TTL
-      });
+      await kvPutJson(env, cacheKey, kvPayload, KV_TTL);
     }
 
-    const payload = buildPayload({
+    const response = makeResponse({
       ok: true,
       feature: FEATURE_ID,
       traceId,
-      data,
+      data: dataPayload,
       cache: { hit: false, ttl: KV_TTL, layer: panic ? "none" : "kv" },
       upstream: {
         url: `${FNG_URL} | ${BTC_URL}`,
         status: 200,
-        snippet: truncate(`${fngText}${btcText}`)
+        snippet: safeSnippet(`${fngText}${btcText}`)
       }
     });
     logServer({
@@ -173,9 +203,10 @@ export async function onRequestGet({ request, env }) {
       upstreamStatus: 200,
       durationMs: Date.now() - started
     });
-    return jsonResponse(payload);
+    return response;
   } catch (error) {
-    const payload = buildPayload({
+    const errorCode = error?.name === "AbortError" ? "UPSTREAM_TIMEOUT" : "UPSTREAM_5XX";
+    const response = makeResponse({
       ok: false,
       feature: FEATURE_ID,
       traceId,
@@ -186,7 +217,7 @@ export async function onRequestGet({ request, env }) {
         snippet: upstreamSnippet
       },
       error: {
-        code: "UPSTREAM_EXCEPTION",
+        code: errorCode,
         message: error?.message || "Request failed",
         details: { fngStatus, btcStatus }
       }
@@ -198,6 +229,6 @@ export async function onRequestGet({ request, env }) {
       upstreamStatus: fngStatus || btcStatus,
       durationMs: Date.now() - started
     });
-    return jsonResponse(payload, 502);
+    return response;
   }
 }

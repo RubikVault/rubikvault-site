@@ -9,19 +9,56 @@ import {
   safeSnippet
 } from "./_shared.js";
 
-const FEATURE_ID = "news";
-const KV_TTL = 600;
+const FEATURE_ID = "sentiment";
+const KV_TTL = 1200;
+const RATE_WINDOW_MS = 60_000;
+const RATE_MAX = 30;
+const rateStore = new Map();
+
 const FEEDS = [
   { id: "yahoo", url: "https://finance.yahoo.com/news/rssindex" },
   { id: "cnbc", url: "https://search.cnbc.com/rs/search/combined.xml?type=articles&id=10000664" }
 ];
 
-function mapUpstreamCode(status) {
-  if (status === 429) return "RATE_LIMITED";
-  if (status === 403) return "UPSTREAM_403";
-  if (status >= 400 && status < 500) return "UPSTREAM_4XX";
-  if (status >= 500) return "UPSTREAM_5XX";
-  return "UPSTREAM_5XX";
+const POSITIVE = [
+  "beat",
+  "surge",
+  "growth",
+  "record",
+  "upgrade",
+  "profit",
+  "strong",
+  "rally",
+  "bull",
+  "optimism"
+];
+
+const NEGATIVE = [
+  "miss",
+  "slump",
+  "decline",
+  "warning",
+  "downgrade",
+  "loss",
+  "weak",
+  "selloff",
+  "bear",
+  "lawsuit"
+];
+
+function getRateState(key) {
+  const now = Date.now();
+  const entry = rateStore.get(key) || [];
+  const fresh = entry.filter((ts) => now - ts < RATE_WINDOW_MS);
+  if (fresh.length >= RATE_MAX) {
+    rateStore.set(key, fresh);
+    const resetMs = RATE_WINDOW_MS - (now - fresh[0]);
+    return { limited: true, remaining: 0, resetMs };
+  }
+  fresh.push(now);
+  rateStore.set(key, fresh);
+  const resetMs = RATE_WINDOW_MS - (now - fresh[0]);
+  return { limited: false, remaining: Math.max(0, RATE_MAX - fresh.length), resetMs };
 }
 
 function stripHtml(value) {
@@ -29,18 +66,28 @@ function stripHtml(value) {
   return String(value).replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
 }
 
-function summarize(value, max = 160) {
+function summarize(value, max = 140) {
   const text = stripHtml(value);
   if (!text) return "";
   return text.length > max ? `${text.slice(0, max - 1)}…` : text;
 }
 
-function normalize(items) {
-  return {
-    updatedAt: new Date().toISOString(),
-    source: FEEDS.map((feed) => feed.id).join(","),
-    items
-  };
+function scoreText(text) {
+  const lower = text.toLowerCase();
+  let score = 0;
+  POSITIVE.forEach((word) => {
+    if (lower.includes(word)) score += 1;
+  });
+  NEGATIVE.forEach((word) => {
+    if (lower.includes(word)) score -= 1;
+  });
+  return score;
+}
+
+function labelFor(score) {
+  if (score >= 20) return "Positive";
+  if (score <= -20) return "Negative";
+  return "Neutral";
 }
 
 export async function onRequestGet({ request, env, data }) {
@@ -56,8 +103,30 @@ export async function onRequestGet({ request, env, data }) {
     return bindingResponse;
   }
 
-  const cacheKey = `${FEATURE_ID}:v1`;
+  const rateKey = request.headers.get("CF-Connecting-IP") || "global";
+  const rateState = getRateState(rateKey);
+  if (rateState.limited) {
+    return makeResponse({
+      ok: false,
+      feature: FEATURE_ID,
+      traceId,
+      cache: { hit: false, ttl: KV_TTL, layer: "none" },
+      upstream: { url: "", status: 429, snippet: "" },
+      rateLimit: {
+        remaining: "0",
+        reset: new Date(Date.now() + rateState.resetMs).toISOString(),
+        estimated: true
+      },
+      error: {
+        code: "RATE_LIMITED",
+        message: "Server rate limit",
+        details: { retryAfterSeconds: Math.ceil(rateState.resetMs / 1000) }
+      },
+      status: 429
+    });
+  }
 
+  const cacheKey = `${FEATURE_ID}:v1`;
   if (!panic) {
     const cached = await kvGetJson(env, cacheKey);
     if (cached?.data) {
@@ -67,7 +136,7 @@ export async function onRequestGet({ request, env, data }) {
         traceId,
         data: cached.data,
         cache: { hit: true, ttl: KV_TTL, layer: "kv" },
-        upstream: { url: FEEDS.map((feed) => feed.url).join(" | "), status: null, snippet: "" }
+        upstream: { url: "", status: null, snippet: "" }
       });
       logServer({
         feature: FEATURE_ID,
@@ -100,13 +169,17 @@ export async function onRequestGet({ request, env, data }) {
         const xmlObj = parser.parse(text);
         let feedItems = xmlObj.rss?.channel?.item || xmlObj.feed?.entry || [];
         if (!Array.isArray(feedItems)) feedItems = [feedItems];
-        feedItems.slice(0, 15).forEach((item) => {
+        feedItems.slice(0, 12).forEach((item) => {
+          const headline = stripHtml(item.title || "");
+          const summary = summarize(item.description || item.summary || "");
+          const score = scoreText(`${headline} ${summary}`);
           items.push({
-            headline: stripHtml(item.title || ""),
-            summary: summarize(item.description || item.summary || ""),
+            headline,
+            summary,
             url: item.link?.href || item.link || "",
             source: feed.id,
-            publishedAt: item.pubDate || item.updated || new Date().toISOString()
+            publishedAt: item.pubDate || item.updated || new Date().toISOString(),
+            score
           });
         });
       } catch (error) {
@@ -116,9 +189,6 @@ export async function onRequestGet({ request, env, data }) {
   );
 
   const deduped = Array.from(new Map(items.map((item) => [item.headline, item])).values());
-  deduped.sort((a, b) => new Date(b.publishedAt) - new Date(a.publishedAt));
-  const dataPayload = normalize(deduped.slice(0, 40));
-
   if (!deduped.length) {
     const cached = !panic ? await kvGetJson(env, cacheKey) : null;
     const errorCode = errors.find((entry) => entry.status === 429)
@@ -128,7 +198,6 @@ export async function onRequestGet({ request, env, data }) {
         : errors.find((entry) => Number(entry.status) >= 500)
           ? "UPSTREAM_5XX"
           : "UPSTREAM_4XX";
-
     if (cached?.data) {
       const response = makeResponse({
         ok: true,
@@ -136,11 +205,7 @@ export async function onRequestGet({ request, env, data }) {
         traceId,
         data: cached.data,
         cache: { hit: true, ttl: KV_TTL, layer: "kv" },
-        upstream: {
-          url: FEEDS.map((feed) => feed.url).join(" | "),
-          status: null,
-          snippet: upstreamSnippet
-        },
+        upstream: { url: "feeds", status: null, snippet: upstreamSnippet },
         error: {
           code: errorCode,
           message: "No upstream data",
@@ -158,16 +223,12 @@ export async function onRequestGet({ request, env, data }) {
       return response;
     }
 
-    const response = makeResponse({
+    return makeResponse({
       ok: false,
       feature: FEATURE_ID,
       traceId,
       cache: { hit: false, ttl: KV_TTL, layer: panic ? "none" : "kv" },
-      upstream: {
-        url: FEEDS.map((feed) => feed.url).join(" | "),
-        status: null,
-        snippet: upstreamSnippet
-      },
+      upstream: { url: "feeds", status: null, snippet: upstreamSnippet },
       error: {
         code: errorCode,
         message: "No upstream data",
@@ -175,15 +236,30 @@ export async function onRequestGet({ request, env, data }) {
       },
       status: 502
     });
-    logServer({
-      feature: FEATURE_ID,
-      traceId,
-      kv: panic ? "bypass" : "miss",
-      upstreamStatus: null,
-      durationMs: Date.now() - started
-    });
-    return response;
   }
+
+  const totalScore = deduped.reduce((sum, item) => sum + item.score, 0);
+  const avgScore = totalScore / deduped.length;
+  const normalized = Math.max(-100, Math.min(100, Math.round(avgScore * 20)));
+  const drivers = [...deduped]
+    .sort((a, b) => Math.abs(b.score) - Math.abs(a.score))
+    .slice(0, 3)
+    .map((item) => ({
+      headline: item.headline,
+      summary: item.summary,
+      url: item.url,
+      source: item.source,
+      score: item.score
+    }));
+
+  const dataPayload = {
+    updatedAt: new Date().toISOString(),
+    source: FEEDS.map((feed) => feed.id).join(","),
+    heuristic: true,
+    score: normalized,
+    label: labelFor(normalized),
+    drivers
+  };
 
   const kvPayload = {
     ts: new Date().toISOString(),
@@ -212,11 +288,7 @@ export async function onRequestGet({ request, env, data }) {
     traceId,
     data: dataPayload,
     cache: { hit: false, ttl: KV_TTL, layer: panic ? "none" : "kv" },
-    upstream: {
-      url: FEEDS.map((feed) => feed.url).join(" | "),
-      status: errors.length ? null : 200,
-      snippet: upstreamSnippet
-    },
+    upstream: { url: "feeds", status: 200, snippet: upstreamSnippet },
     error: errors.length
       ? {
           code: errorCode,
@@ -230,7 +302,7 @@ export async function onRequestGet({ request, env, data }) {
     feature: FEATURE_ID,
     traceId,
     kv: panic ? "bypass" : "miss",
-    upstreamStatus: errors.length ? null : 200,
+    upstreamStatus: 200,
     durationMs: Date.now() - started
   });
   return response;
