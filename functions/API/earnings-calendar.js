@@ -1,28 +1,29 @@
 import { buildPayload, createTraceId, jsonResponse, logServer, truncate } from "./_shared.js";
 
-const FEATURE_ID = "market-health";
-const KV_TTL = 90;
-const FNG_URL = "https://api.alternative.me/fng/?limit=1&format=json";
-const BTC_URL =
-  "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd&include_24hr_change=true";
+const FEATURE_ID = "earnings-calendar";
+const KV_TTL = 300;
 
-function normalize(fngPayload, btcPayload) {
-  const fngItem = Array.isArray(fngPayload?.data) ? fngPayload.data[0] : null;
-  const btcData = btcPayload?.bitcoin || {};
+function formatDate(date) {
+  return date.toISOString().slice(0, 10);
+}
+
+function normalize(payload) {
+  const items = Array.isArray(payload)
+    ? payload.slice(0, 20).map((entry) => ({
+        symbol: entry.symbol || "",
+        company: entry.name || entry.company || "",
+        date: entry.date || "",
+        epsEst: entry.epsEstimated ?? entry.epsEst ?? null,
+        epsActual: entry.eps ?? entry.epsActual ?? null,
+        ts: new Date().toISOString(),
+        source: "earnings"
+      }))
+    : [];
 
   return {
     updatedAt: new Date().toISOString(),
-    source: "alternative.me, coingecko",
-    fng: fngItem
-      ? {
-          value: Number(fngItem.value),
-          valueClassification: fngItem.value_classification || fngItem.valueClassification || null
-        }
-      : null,
-    btc: {
-      usd: btcData.usd ?? null,
-      usd_24h_change: btcData.usd_24h_change ?? null
-    }
+    source: "earnings",
+    items
   };
 }
 
@@ -45,8 +46,19 @@ export async function onRequestGet({ request, env }) {
     return jsonResponse(payload, 500);
   }
 
-  const cacheKey = `${FEATURE_ID}:v1`;
+  if (!env.EARNINGS_API_KEY) {
+    const payload = buildPayload({
+      ok: false,
+      feature: FEATURE_ID,
+      traceId,
+      cache: { hit: false, ttl: KV_TTL, layer: "kv" },
+      error: { code: "ENV_MISSING", message: "EARNINGS_API_KEY missing", details: {} }
+    });
+    logServer({ feature: FEATURE_ID, traceId, kv: "miss", upstreamStatus: null, durationMs: 0 });
+    return jsonResponse(payload, 500);
+  }
 
+  const cacheKey = `${FEATURE_ID}:v1`;
   if (!panic) {
     const cached = await env.RV_KV.get(cacheKey, "json");
     if (cached?.data) {
@@ -56,7 +68,7 @@ export async function onRequestGet({ request, env }) {
         traceId,
         data: cached.data,
         cache: { hit: true, ttl: KV_TTL, layer: "kv" },
-        upstream: { url: `${FNG_URL} | ${BTC_URL}`, status: null, snippet: "" }
+        upstream: { url: "", status: null, snippet: "" }
       });
       logServer({
         feature: FEATURE_ID,
@@ -69,19 +81,20 @@ export async function onRequestGet({ request, env }) {
     }
   }
 
-  let fngStatus = null;
-  let btcStatus = null;
+  const base = env.EARNINGS_API_BASE || "https://financialmodelingprep.com/api/v3/earning_calendar";
+  const from = formatDate(new Date());
+  const to = formatDate(new Date(Date.now() + 7 * 24 * 60 * 60 * 1000));
+  const upstreamUrl = `${base}?from=${from}&to=${to}&apikey=${env.EARNINGS_API_KEY}`;
+  let upstreamStatus = null;
   let upstreamSnippet = "";
 
   try {
-    const [fngRes, btcRes] = await Promise.all([fetch(FNG_URL), fetch(BTC_URL)]);
-    fngStatus = fngRes.status;
-    btcStatus = btcRes.status;
-    const fngText = await fngRes.text();
-    const btcText = await btcRes.text();
-    upstreamSnippet = truncate(!fngRes.ok ? fngText : btcText);
+    const res = await fetch(upstreamUrl);
+    upstreamStatus = res.status;
+    const text = await res.text();
+    upstreamSnippet = truncate(text);
 
-    if (!fngRes.ok || !btcRes.ok) {
+    if (!res.ok) {
       const cached = !panic ? await env.RV_KV.get(cacheKey, "json") : null;
       if (cached?.data) {
         const payload = buildPayload({
@@ -90,23 +103,15 @@ export async function onRequestGet({ request, env }) {
           traceId,
           data: cached.data,
           cache: { hit: true, ttl: KV_TTL, layer: "kv" },
-          upstream: {
-            url: `${FNG_URL} | ${BTC_URL}`,
-            status: fngRes.ok ? btcStatus : fngStatus,
-            snippet: upstreamSnippet
-          },
-          error: {
-            code: "UPSTREAM_ERROR",
-            message: "Upstream error",
-            details: { fngStatus, btcStatus }
-          },
+          upstream: { url: upstreamUrl, status: res.status, snippet: upstreamSnippet },
+          error: { code: "UPSTREAM_ERROR", message: `Upstream ${res.status}`, details: {} },
           isStale: true
         });
         logServer({
           feature: FEATURE_ID,
           traceId,
           kv: "hit",
-          upstreamStatus: fngRes.ok ? btcStatus : fngStatus,
+          upstreamStatus: res.status,
           durationMs: Date.now() - started
         });
         return jsonResponse(payload, 200);
@@ -117,30 +122,21 @@ export async function onRequestGet({ request, env }) {
         feature: FEATURE_ID,
         traceId,
         cache: { hit: false, ttl: KV_TTL, layer: panic ? "none" : "kv" },
-        upstream: {
-          url: `${FNG_URL} | ${BTC_URL}`,
-          status: fngRes.ok ? btcStatus : fngStatus,
-          snippet: upstreamSnippet
-        },
-        error: {
-          code: "UPSTREAM_ERROR",
-          message: "Upstream error",
-          details: { fngStatus, btcStatus }
-        }
+        upstream: { url: upstreamUrl, status: res.status, snippet: upstreamSnippet },
+        error: { code: "UPSTREAM_ERROR", message: `Upstream ${res.status}`, details: {} }
       });
       logServer({
         feature: FEATURE_ID,
         traceId,
         kv: panic ? "bypass" : "miss",
-        upstreamStatus: fngRes.ok ? btcStatus : fngStatus,
+        upstreamStatus: res.status,
         durationMs: Date.now() - started
       });
       return jsonResponse(payload, 502);
     }
 
-    const fngJson = fngText ? JSON.parse(fngText) : {};
-    const btcJson = btcText ? JSON.parse(btcText) : {};
-    const data = normalize(fngJson, btcJson);
+    const json = text ? JSON.parse(text) : [];
+    const data = normalize(json);
     const kvPayload = {
       ts: new Date().toISOString(),
       source: data.source,
@@ -160,17 +156,13 @@ export async function onRequestGet({ request, env }) {
       traceId,
       data,
       cache: { hit: false, ttl: KV_TTL, layer: panic ? "none" : "kv" },
-      upstream: {
-        url: `${FNG_URL} | ${BTC_URL}`,
-        status: 200,
-        snippet: truncate(`${fngText}${btcText}`)
-      }
+      upstream: { url: upstreamUrl, status: res.status, snippet: upstreamSnippet }
     });
     logServer({
       feature: FEATURE_ID,
       traceId,
       kv: panic ? "bypass" : "miss",
-      upstreamStatus: 200,
+      upstreamStatus: res.status,
       durationMs: Date.now() - started
     });
     return jsonResponse(payload);
@@ -180,22 +172,14 @@ export async function onRequestGet({ request, env }) {
       feature: FEATURE_ID,
       traceId,
       cache: { hit: false, ttl: KV_TTL, layer: panic ? "none" : "kv" },
-      upstream: {
-        url: `${FNG_URL} | ${BTC_URL}`,
-        status: fngStatus || btcStatus,
-        snippet: upstreamSnippet
-      },
-      error: {
-        code: "UPSTREAM_EXCEPTION",
-        message: error?.message || "Request failed",
-        details: { fngStatus, btcStatus }
-      }
+      upstream: { url: upstreamUrl, status: upstreamStatus, snippet: upstreamSnippet },
+      error: { code: "UPSTREAM_EXCEPTION", message: error?.message || "Request failed", details: {} }
     });
     logServer({
       feature: FEATURE_ID,
       traceId,
       kv: panic ? "bypass" : "miss",
-      upstreamStatus: fngStatus || btcStatus,
+      upstreamStatus,
       durationMs: Date.now() - started
     });
     return jsonResponse(payload, 502);

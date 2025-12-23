@@ -199,13 +199,20 @@ function bindInteractions(root) {
   }
 }
 
-export async function init(root) {
+export async function init(root, context = {}) {
   buildMarkup(root);
   renderStockList(root, "nasdaq");
   bindInteractions(root);
   updateWidgets(root, DEFAULT_SYMBOL.symbol, DEFAULT_SYMBOL.name);
+
+  const logger = context?.logger;
+  logger?.setStatus("OK", "Widgets ready");
+  logger?.setMeta({ updatedAt: new Date().toISOString(), source: "TradingView" });
 }
 
-export async function refresh(root) {
+export async function refresh(root, context = {}) {
   updateWidgets(root, DEFAULT_SYMBOL.symbol, DEFAULT_SYMBOL.name);
+  const logger = context?.logger;
+  logger?.setStatus("OK", "Widgets refreshed");
+  logger?.setMeta({ updatedAt: new Date().toISOString(), source: "TradingView" });
 }

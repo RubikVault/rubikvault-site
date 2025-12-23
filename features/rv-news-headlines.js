@@ -1,14 +1,15 @@
 import { fetchJSON } from "./utils/api.js";
 import { getOrFetch } from "./utils/store.js";
 
-function formatNumber(value, options = {}) {
-  if (value === null || value === undefined || Number.isNaN(value)) return "–";
-  return new Intl.NumberFormat("en-US", options).format(value);
+function formatTime(value) {
+  if (!value) return "--";
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? "--" : date.toLocaleTimeString();
 }
 
 function render(root, payload, logger) {
   const data = payload?.data || {};
-  const items = data?.items || [];
+  const items = data.items || [];
 
   if (!payload?.ok) {
     const errorMessage = payload?.error?.message || "API error";
@@ -20,7 +21,7 @@ function render(root, payload, logger) {
       .join(" · ");
     root.innerHTML = `
       <div class="rv-native-error">
-        Movers konnten nicht geladen werden.<br />
+        News konnten nicht geladen werden.<br />
         <span>${errorMessage}</span>
         ${detailLine ? `<div class="rv-native-note">${detailLine}</div>` : ""}
         ${upstreamSnippet ? `<pre class="rv-native-stack">${upstreamSnippet}</pre>` : ""}
@@ -39,13 +40,13 @@ function render(root, payload, logger) {
   if (!items.length) {
     root.innerHTML = `
       <div class="rv-native-empty">
-        Keine Movers-Daten verfügbar. Bitte später erneut versuchen.
+        Keine News verfügbar. Bitte später erneut versuchen.
       </div>
     `;
     logger?.setStatus("PARTIAL", "No data");
     logger?.setMeta({
       updatedAt: data.updatedAt || payload?.ts,
-      source: data.source || "CoinGecko",
+      source: data.source || "--",
       isStale: payload?.isStale,
       staleAgeMs: payload?.staleAgeMs
     });
@@ -53,34 +54,18 @@ function render(root, payload, logger) {
   }
 
   root.innerHTML = `
-    <div class="rv-native-table-wrap">
-      <table class="rv-native-table">
-        <thead>
-          <tr>
-            <th>Asset</th>
-            <th>Price</th>
-            <th>24h</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${items
-            .map((item) => {
-            const changeValue = item.changePercent ?? item.change ?? 0;
-            const changeClass = changeValue >= 0 ? "rv-native-positive" : "rv-native-negative";
-            return `
-              <tr>
-                <td>${item.symbol || item.name}</td>
-                <td>$${formatNumber(item.price, { maximumFractionDigits: 2 })}</td>
-                <td class="${changeClass}">${formatNumber(changeValue, { maximumFractionDigits: 2 })}%</td>
-              </tr>
-            `;
-            })
-            .join("")}
-        </tbody>
-      </table>
-    </div>
-    <div class="rv-native-note">
-      Updated: ${new Date(data.updatedAt || payload.ts).toLocaleTimeString()} · Source: CoinGecko
+    <div class="rv-news-list">
+      ${items
+        .slice(0, 10)
+        .map(
+          (item) => `
+            <a class="rv-news-item" href="${item.link}" target="_blank" rel="noopener noreferrer">
+              <span class="rv-news-title">${item.title}</span>
+              <span class="rv-news-meta">${item.source || "news"} · ${formatTime(item.ts)}</span>
+            </a>
+          `
+        )
+        .join("")}
     </div>
   `;
 
@@ -91,20 +76,20 @@ function render(root, payload, logger) {
   );
   logger?.setMeta({
     updatedAt: data.updatedAt || payload.ts,
-    source: data.source || "CoinGecko",
+    source: data.source || "news",
     isStale: payload?.isStale,
     staleAgeMs: payload?.staleAgeMs
   });
 }
 
 async function loadData({ featureId, traceId, logger }) {
-  return fetchJSON("/top-movers", { feature: featureId, traceId, logger });
+  return fetchJSON("/news", { feature: featureId, traceId, logger });
 }
 
 export async function init(root, context = {}) {
-  const { featureId = "rv-top-movers", traceId, logger } = context;
-  const data = await getOrFetch("rv-top-movers", () => loadData({ featureId, traceId, logger }), {
-    ttlMs: 60_000,
+  const { featureId = "rv-news-headlines", traceId, logger } = context;
+  const data = await getOrFetch("rv-news-headlines", () => loadData({ featureId, traceId, logger }), {
+    ttlMs: 300_000,
     featureId,
     logger
   });
@@ -112,7 +97,7 @@ export async function init(root, context = {}) {
 }
 
 export async function refresh(root, context = {}) {
-  const { featureId = "rv-top-movers", traceId, logger } = context;
+  const { featureId = "rv-news-headlines", traceId, logger } = context;
   const data = await loadData({ featureId, traceId, logger });
   render(root, data, logger);
 }
