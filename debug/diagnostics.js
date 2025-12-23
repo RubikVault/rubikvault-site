@@ -74,7 +74,7 @@ async function loadBuildInfo() {
   const config = getConfig();
   let buildInfo = config.buildInfo || null;
   try {
-    const response = await fetch("/build-info.json", { cache: "no-store" });
+    const response = await fetch("build-info.json", { cache: "no-store" });
     if (response.ok) {
       const data = await response.json();
       buildInfo = data;

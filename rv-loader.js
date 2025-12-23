@@ -352,17 +352,17 @@ async function initFeature(section) {
 function boot() {
   if (isDebugEnabled()) {
     const assetPaths = [
-      "/rv-loader.js",
-      "/features/utils/api.js",
-      "/features/utils/store.js",
-      ...Object.keys(registry).map((name) => `/features/${name}.js`)
+      "./rv-loader.js",
+      "./features/utils/api.js",
+      "./features/utils/store.js",
+      ...Object.keys(registry).map((name) => `./features/${name}.js`)
     ];
     const importPaths = [
-      "/features/rv-price-snapshot.js",
-      "/features/rv-market-health.js",
-      "/features/rv-top-movers.js"
+      "./features/rv-price-snapshot.js",
+      "./features/rv-market-health.js",
+      "./features/rv-top-movers.js"
     ];
-    const apiBase = RV_CONFIG.apiBase || "/API";
+    const apiBase = RV_CONFIG.apiBase || "API";
     const apiPaths = [
       `${apiBase}/health`,
       `${apiBase}/market-health`,
