@@ -99,18 +99,17 @@ export async function onRequestGet({ request, env, data }) {
 
   const bindingResponse = assertBindings(env, FEATURE_ID, traceId);
   if (bindingResponse) {
-    logServer({ feature: FEATURE_ID, traceId, kv: "none", upstreamStatus: null, durationMs: 0 });
     return bindingResponse;
   }
 
   const rateKey = request.headers.get("CF-Connecting-IP") || "global";
   const rateState = getRateState(rateKey);
   if (rateState.limited) {
-    return makeResponse({
+    const response = makeResponse({
       ok: false,
       feature: FEATURE_ID,
       traceId,
-      cache: { hit: false, ttl: KV_TTL, layer: "none" },
+      cache: { hit: false, ttl: 0, layer: "none" },
       upstream: { url: "", status: 429, snippet: "" },
       rateLimit: {
         remaining: "0",
@@ -124,24 +123,32 @@ export async function onRequestGet({ request, env, data }) {
       },
       status: 429
     });
+    logServer({
+      feature: FEATURE_ID,
+      traceId,
+      cacheLayer: "none",
+      upstreamStatus: 429,
+      durationMs: Date.now() - started
+    });
+    return response;
   }
 
   const cacheKey = `${FEATURE_ID}:v1`;
   if (!panic) {
     const cached = await kvGetJson(env, cacheKey);
-    if (cached?.data) {
+    if (cached?.hit && cached.value?.data) {
       const response = makeResponse({
         ok: true,
         feature: FEATURE_ID,
         traceId,
-        data: cached.data,
+        data: cached.value.data,
         cache: { hit: true, ttl: KV_TTL, layer: "kv" },
         upstream: { url: "", status: null, snippet: "" }
       });
       logServer({
         feature: FEATURE_ID,
         traceId,
-        kv: "hit",
+        cacheLayer: "kv",
         upstreamStatus: null,
         durationMs: Date.now() - started
       });
@@ -198,12 +205,12 @@ export async function onRequestGet({ request, env, data }) {
         : errors.find((entry) => Number(entry.status) >= 500)
           ? "UPSTREAM_5XX"
           : "UPSTREAM_4XX";
-    if (cached?.data) {
+    if (cached?.hit && cached.value?.data) {
       const response = makeResponse({
         ok: true,
         feature: FEATURE_ID,
         traceId,
-        data: cached.data,
+        data: cached.value.data,
         cache: { hit: true, ttl: KV_TTL, layer: "kv" },
         upstream: { url: "feeds", status: null, snippet: upstreamSnippet },
         error: {
@@ -216,18 +223,18 @@ export async function onRequestGet({ request, env, data }) {
       logServer({
         feature: FEATURE_ID,
         traceId,
-        kv: "hit",
+        cacheLayer: "kv",
         upstreamStatus: null,
         durationMs: Date.now() - started
       });
       return response;
     }
 
-    return makeResponse({
+    const response = makeResponse({
       ok: false,
       feature: FEATURE_ID,
       traceId,
-      cache: { hit: false, ttl: KV_TTL, layer: panic ? "none" : "kv" },
+      cache: { hit: false, ttl: 0, layer: "none" },
       upstream: { url: "feeds", status: null, snippet: upstreamSnippet },
       error: {
         code: errorCode,
@@ -236,6 +243,14 @@ export async function onRequestGet({ request, env, data }) {
       },
       status: 502
     });
+    logServer({
+      feature: FEATURE_ID,
+      traceId,
+      cacheLayer: "none",
+      upstreamStatus: null,
+      durationMs: Date.now() - started
+    });
+    return response;
   }
 
   const totalScore = deduped.reduce((sum, item) => sum + item.score, 0);
@@ -287,7 +302,7 @@ export async function onRequestGet({ request, env, data }) {
     feature: FEATURE_ID,
     traceId,
     data: dataPayload,
-    cache: { hit: false, ttl: KV_TTL, layer: panic ? "none" : "kv" },
+    cache: { hit: false, ttl: panic ? 0 : KV_TTL, layer: "none" },
     upstream: { url: "feeds", status: 200, snippet: upstreamSnippet },
     error: errors.length
       ? {
@@ -301,7 +316,7 @@ export async function onRequestGet({ request, env, data }) {
   logServer({
     feature: FEATURE_ID,
     traceId,
-    kv: panic ? "bypass" : "miss",
+    cacheLayer: "none",
     upstreamStatus: 200,
     durationMs: Date.now() - started
   });

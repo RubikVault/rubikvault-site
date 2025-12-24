@@ -52,7 +52,6 @@ export async function onRequestGet({ request, env, data }) {
 
   const bindingResponse = assertBindings(env, FEATURE_ID, traceId);
   if (bindingResponse) {
-    logServer({ feature: FEATURE_ID, traceId, kv: "none", upstreamStatus: null, durationMs: 0 });
     return bindingResponse;
   }
 
@@ -60,19 +59,19 @@ export async function onRequestGet({ request, env, data }) {
 
   if (!panic) {
     const cached = await kvGetJson(env, cacheKey);
-    if (cached?.data) {
+    if (cached?.hit && cached.value?.data) {
       const response = makeResponse({
         ok: true,
         feature: FEATURE_ID,
         traceId,
-        data: cached.data,
+        data: cached.value.data,
         cache: { hit: true, ttl: KV_TTL, layer: "kv" },
         upstream: { url: FEEDS.map((feed) => feed.url).join(" | "), status: null, snippet: "" }
       });
       logServer({
         feature: FEATURE_ID,
         traceId,
-        kv: "hit",
+        cacheLayer: "kv",
         upstreamStatus: null,
         durationMs: Date.now() - started
       });
@@ -129,12 +128,12 @@ export async function onRequestGet({ request, env, data }) {
           ? "UPSTREAM_5XX"
           : "UPSTREAM_4XX";
 
-    if (cached?.data) {
+    if (cached?.hit && cached.value?.data) {
       const response = makeResponse({
         ok: true,
         feature: FEATURE_ID,
         traceId,
-        data: cached.data,
+        data: cached.value.data,
         cache: { hit: true, ttl: KV_TTL, layer: "kv" },
         upstream: {
           url: FEEDS.map((feed) => feed.url).join(" | "),
@@ -151,7 +150,7 @@ export async function onRequestGet({ request, env, data }) {
       logServer({
         feature: FEATURE_ID,
         traceId,
-        kv: "hit",
+        cacheLayer: "kv",
         upstreamStatus: null,
         durationMs: Date.now() - started
       });
@@ -162,7 +161,7 @@ export async function onRequestGet({ request, env, data }) {
       ok: false,
       feature: FEATURE_ID,
       traceId,
-      cache: { hit: false, ttl: KV_TTL, layer: panic ? "none" : "kv" },
+      cache: { hit: false, ttl: 0, layer: "none" },
       upstream: {
         url: FEEDS.map((feed) => feed.url).join(" | "),
         status: null,
@@ -178,7 +177,7 @@ export async function onRequestGet({ request, env, data }) {
     logServer({
       feature: FEATURE_ID,
       traceId,
-      kv: panic ? "bypass" : "miss",
+      cacheLayer: "none",
       upstreamStatus: null,
       durationMs: Date.now() - started
     });
@@ -211,7 +210,7 @@ export async function onRequestGet({ request, env, data }) {
     feature: FEATURE_ID,
     traceId,
     data: dataPayload,
-    cache: { hit: false, ttl: KV_TTL, layer: panic ? "none" : "kv" },
+    cache: { hit: false, ttl: panic ? 0 : KV_TTL, layer: "none" },
     upstream: {
       url: FEEDS.map((feed) => feed.url).join(" | "),
       status: errors.length ? null : 200,
@@ -229,7 +228,7 @@ export async function onRequestGet({ request, env, data }) {
   logServer({
     feature: FEATURE_ID,
     traceId,
-    kv: panic ? "bypass" : "miss",
+    cacheLayer: "none",
     upstreamStatus: errors.length ? null : 200,
     durationMs: Date.now() - started
   });

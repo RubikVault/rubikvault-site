@@ -51,22 +51,23 @@ Das Panel lädt `/build-info.json`. Wenn die Datei nicht existiert, nutzt es `RV
    - Preview binding → `rv-cache-kv-preview`
 3. RV_KV muss in Preview + Production gebunden sein (keine Fallbacks).
 4. Deploy erneut, dann `/API/health` prüfen.
+5. Preflight-Signatur (Logs): `kv:"none"`, `upstreamStatus:null`, `durationMs:0` ⇒ KV Binding fehlt, kein Upstream-Call.
 
 ## First 5 minutes checklist
 
-1. `/API/health` im Browser öffnen → `bindings.RV_KV` und `envHint` prüfen.
+1. Preview-URL öffnen, dann `/API/health` prüfen → `bindings.RV_KV` und `envHint`.
 2. DevTools → Network → filter `/API/` → Schema-Felder (`ok`, `feature`, `ts`, `traceId`, `schemaVersion`) prüfen.
 3. Console filter `RV:` → TraceIDs, `cache.layer`, `cache.ttl`, `upstream.status` sehen.
-4. Blocks 01–05 sollten OK oder PARTIAL sein (je nach Upstream).
-5. Falls FAIL: Fehlercode + Fix-Hint lesen (Binding/ENV).
+4. Falls BINDING_MISSING: Dashboard → Pages → Settings → Functions → KV bindings → RV_KV (Preview + Production).
+5. Blocks 01–05 sollten OK oder PARTIAL sein (je nach Upstream).
 
 ## Server Logs (Cloudflare)
 
 - Dashboard → Pages → Functions → Real‑time logs.
 - Wrangler:
   - `npx wrangler pages deployment list --project-name rubikvault-site`
-  - `npx wrangler pages deployment tail DEPLOYMENT_ID` (no `< >`)
-- Erwartetes Log‑Format: `{"feature":"top-movers","traceId":"abcd1234","kv":"hit|miss|bypass","upstreamStatus":200,"durationMs":123}`
+  - `npx wrangler pages deployment tail --project-name rubikvault-site DEPLOYMENT_ID`
+- Erwartetes Log‑Format: `{"feature":"top-movers","traceId":"abcd1234","kv":"kv|none","upstreamStatus":200,"durationMs":123}`
 
 ## Erwartete Status‑Beispiele
 

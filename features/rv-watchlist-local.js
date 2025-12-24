@@ -299,6 +299,9 @@ async function refreshQuotes(root, list, logger) {
     } else if (errorCode === "BINDING_MISSING") {
       logger?.setStatus("FAIL", "BINDING_MISSING");
       state.errorNote = getBindingHint(payload);
+    } else if (errorCode === "SCHEMA_INVALID") {
+      logger?.setStatus("FAIL", "SCHEMA_INVALID");
+      state.errorNote = "SCHEMA_INVALID: invalid response schema.";
     } else {
       logger?.setStatus("FAIL", `API error (${errorCode || "UNKNOWN"})`);
       state.errorNote = `API error: ${errorCode || "UNKNOWN"}`;
@@ -358,12 +361,21 @@ function bind(root, list, logger) {
       logger?.warn("watchlist_invalid_symbol", { symbol: value });
       return;
     }
+    if (!list.includes(value) && list.length >= 20) {
+      state.errorNote = "Watchlist limit reached (max 20 symbols).";
+      logger?.setStatus("PARTIAL", "Limit reached");
+      renderTable(root, list, logger);
+      bind(root, list, logger);
+      updateErrorNote(root);
+      return;
+    }
     if (!list.includes(value)) {
       list.push(value);
       saveList(list, logger);
       updateShared(list);
       logger?.info("watchlist_added", { symbol: value });
     }
+    state.errorNote = "";
     if (input) input.value = "";
     state.suggestions = [];
     state.activeIndex = -1;

@@ -34,10 +34,14 @@ function render(root, payload, logger) {
         ${upstreamSnippet ? `<pre class="rv-native-stack">${upstreamSnippet}</pre>` : ""}
       </div>
     `;
-    logger?.setStatus(
-      errorCode === "RATE_LIMITED" ? "PARTIAL" : "FAIL",
-      errorCode === "RATE_LIMITED" ? "RATE_LIMITED" : "API error"
-    );
+    const statusHeadline =
+      errorCode === "RATE_LIMITED"
+        ? "RATE_LIMITED"
+        : errorCode === "SCHEMA_INVALID"
+          ? "SCHEMA_INVALID"
+          : "API error";
+    const statusLevel = errorCode === "RATE_LIMITED" ? "PARTIAL" : "FAIL";
+    logger?.setStatus(statusLevel, statusHeadline);
     logger?.setMeta({
       updatedAt: payload?.ts,
       source: data?.source || "--",

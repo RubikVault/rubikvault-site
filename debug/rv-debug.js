@@ -36,6 +36,8 @@ function ensureShell(rootEl) {
       <span data-rv-updated>Updated: --</span>
       <span data-rv-source>Source: --</span>
       <span data-rv-trace>Trace: --</span>
+      <span data-rv-cache>Cache: --</span>
+      <span data-rv-upstream>Upstream: --</span>
     </div>
     <div class="rv-block-actions">
       <button class="rv-block-debug-toggle" type="button" data-rv-debug-toggle>Show debug</button>
@@ -69,6 +71,9 @@ export function createLogger({ featureId, blockName, rootEl, panicMode = false }
     source: null,
     isStale: false,
     staleAgeMs: null,
+    cacheLayer: null,
+    cacheTtl: null,
+    upstreamStatus: null,
     lines: []
   };
 
@@ -77,6 +82,8 @@ export function createLogger({ featureId, blockName, rootEl, panicMode = false }
   const updatedEl = shell.querySelector("[data-rv-updated]");
   const sourceEl = shell.querySelector("[data-rv-source]");
   const traceEl = shell.querySelector("[data-rv-trace]");
+  const cacheEl = shell.querySelector("[data-rv-cache]");
+  const upstreamEl = shell.querySelector("[data-rv-upstream]");
   const featureEl = shell.querySelector("[data-rv-feature-id]");
   const blockEl = shell.querySelector("[data-rv-block-name]");
   const debugEl = shell.querySelector("[data-rv-debug]");
@@ -111,6 +118,19 @@ export function createLogger({ featureId, blockName, rootEl, panicMode = false }
       sourceEl.textContent = `Source: ${sourceLabel}${staleNote}`;
     }
     if (traceEl) traceEl.textContent = `Trace: ${state.traceId || "--"}`;
+    if (cacheEl) {
+      const layer = state.cacheLayer || "--";
+      const ttl =
+        state.cacheTtl === null || state.cacheTtl === undefined ? "--" : `${state.cacheTtl}s`;
+      cacheEl.textContent = `Cache: ${layer} (ttl ${ttl})`;
+    }
+    if (upstreamEl) {
+      const status =
+        state.upstreamStatus === null || state.upstreamStatus === undefined
+          ? "--"
+          : state.upstreamStatus;
+      upstreamEl.textContent = `Upstream: ${status}`;
+    }
   };
 
   const renderDebug = () => {
@@ -182,11 +202,14 @@ export function createLogger({ featureId, blockName, rootEl, panicMode = false }
       state.headline = headline || "";
       renderStatus();
     },
-    setMeta({ updatedAt, source, isStale, staleAgeMs } = {}) {
+    setMeta({ updatedAt, source, isStale, staleAgeMs, cacheLayer, cacheTtl, upstreamStatus } = {}) {
       if (updatedAt) state.updatedAt = updatedAt;
       if (source !== undefined) state.source = source;
       if (typeof isStale === "boolean") state.isStale = isStale;
       if (typeof staleAgeMs === "number") state.staleAgeMs = staleAgeMs;
+      if (cacheLayer !== undefined) state.cacheLayer = cacheLayer;
+      if (cacheTtl !== undefined) state.cacheTtl = cacheTtl;
+      if (upstreamStatus !== undefined) state.upstreamStatus = upstreamStatus;
       renderMeta();
     },
     setTraceId(traceId) {

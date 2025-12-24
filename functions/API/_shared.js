@@ -118,12 +118,24 @@ export function assertBindings(env, feature, traceId) {
     typeof env.RV_KV.put === "function";
   if (hasKV) return null;
 
+  console.log(
+    JSON.stringify({
+      feature,
+      traceId,
+      kv: "none",
+      upstreamStatus: null,
+      durationMs: 0,
+      error: "BINDING_MISSING"
+    })
+  );
+
   return makeResponse({
     ok: false,
     feature,
     traceId,
     cache: { hit: false, ttl: 0, layer: "none" },
     upstream: { url: "", status: null, snippet: "" },
+    data: {},
     error: {
       code: "BINDING_MISSING",
       message: "RV_KV binding missing",
@@ -137,8 +149,13 @@ export function assertBindings(env, feature, traceId) {
 }
 
 export async function kvGetJson(env, key) {
-  if (!env?.RV_KV) return null;
-  return env.RV_KV.get(key, "json");
+  if (!env?.RV_KV) return { value: null, hit: false, ttlSecondsRemaining: null };
+  const value = await env.RV_KV.get(key, "json");
+  return {
+    value,
+    hit: value !== null,
+    ttlSecondsRemaining: null
+  };
 }
 
 export async function kvPutJson(env, key, value, ttlSeconds) {
@@ -148,19 +165,23 @@ export async function kvPutJson(env, key, value, ttlSeconds) {
   });
 }
 
-export function logServer({ feature, traceId, kv, upstreamStatus, durationMs }) {
+export function logServer({ feature, traceId, cacheLayer, kv, upstreamStatus, durationMs }) {
+  const layer = cacheLayer || kv;
+  const kvValue =
+    layer === "kv" ? "kv" : layer === "none" ? "none" : layer === "hit" ? "kv" : "none";
   console.log(
     JSON.stringify({
       feature,
       traceId,
-      kv,
-      upstreamStatus,
-      durationMs
+      kv: kvValue,
+      upstreamStatus: upstreamStatus ?? null,
+      durationMs: durationMs ?? 0
     })
   );
 }
 
-export function normalizeSymbolsParam(symbols) {
+export function normalizeSymbolsParam(symbols, options = {}) {
+  const { feature = "unknown", traceId = "unknown", ttl = 0 } = options;
   const raw = typeof symbols === "string" ? symbols : "";
   const parts = raw
     .split(",")
@@ -177,10 +198,30 @@ export function normalizeSymbolsParam(symbols) {
   });
   const deduped = Array.from(new Set(valid));
   deduped.sort();
+  const truncated = deduped.length > 20;
   const limited = deduped.slice(0, 20);
+  const ok = Boolean(limited.length) && !invalid.length && !truncated;
+  const errorResponse = ok
+    ? null
+    : makeResponse({
+        ok: false,
+        feature,
+        traceId,
+        cache: { hit: false, ttl, layer: "none" },
+        upstream: { url: "", status: null, snippet: "" },
+        data: {},
+        error: {
+          code: "BAD_REQUEST",
+          message: "symbols parameter invalid",
+          details: { invalid, truncated }
+        },
+        status: 400
+      });
   return {
     symbols: limited,
     invalid,
-    truncated: deduped.length > 20
+    truncated,
+    ok,
+    errorResponse
   };
 }

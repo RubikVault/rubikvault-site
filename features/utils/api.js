@@ -125,6 +125,13 @@ export async function fetchJSON(input, { feature, traceId, timeoutMs = 10000, lo
       });
     }
 
+    logger?.setTraceId(payload?.traceId || traceId || "unknown");
+    logger?.setMeta({
+      cacheLayer: payload?.cache?.layer || "none",
+      cacheTtl: payload?.cache?.ttl ?? 0,
+      upstreamStatus: payload?.upstream?.status ?? null
+    });
+
     const logPayload = {
       status: response.status,
       durationMs: Math.round(durationMs),

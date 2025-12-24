@@ -51,7 +51,6 @@ export async function onRequestGet({ request, env, data }) {
 
   const bindingResponse = assertBindings(env, FEATURE_ID, traceId);
   if (bindingResponse) {
-    logServer({ feature: FEATURE_ID, traceId, kv: "none", upstreamStatus: null, durationMs: 0 });
     return bindingResponse;
   }
 
@@ -59,19 +58,19 @@ export async function onRequestGet({ request, env, data }) {
 
   if (!panic) {
     const cached = await kvGetJson(env, cacheKey);
-    if (cached?.data) {
+    if (cached?.hit && cached.value?.data) {
       const response = makeResponse({
         ok: true,
         feature: FEATURE_ID,
         traceId,
-        data: cached.data,
+        data: cached.value.data,
         cache: { hit: true, ttl: KV_TTL, layer: "kv" },
         upstream: { url: `${FNG_URL} | ${BTC_URL}`, status: null, snippet: "" }
       });
       logServer({
         feature: FEATURE_ID,
         traceId,
-        kv: "hit",
+        cacheLayer: "kv",
         upstreamStatus: null,
         durationMs: Date.now() - started
       });
@@ -95,12 +94,12 @@ export async function onRequestGet({ request, env, data }) {
       const cached = !panic ? await kvGetJson(env, cacheKey) : null;
       const failingStatus = fngRes.ok ? btcStatus : fngStatus;
       const errorCode = mapUpstreamCode(failingStatus);
-      if (cached?.data) {
+      if (cached?.hit && cached.value?.data) {
         const response = makeResponse({
           ok: true,
           feature: FEATURE_ID,
           traceId,
-          data: cached.data,
+          data: cached.value.data,
           cache: { hit: true, ttl: KV_TTL, layer: "kv" },
           upstream: {
             url: `${FNG_URL} | ${BTC_URL}`,
@@ -117,7 +116,7 @@ export async function onRequestGet({ request, env, data }) {
         logServer({
           feature: FEATURE_ID,
           traceId,
-          kv: "hit",
+          cacheLayer: "kv",
           upstreamStatus: failingStatus,
           durationMs: Date.now() - started
         });
@@ -128,7 +127,7 @@ export async function onRequestGet({ request, env, data }) {
         ok: false,
         feature: FEATURE_ID,
         traceId,
-        cache: { hit: false, ttl: KV_TTL, layer: panic ? "none" : "kv" },
+        cache: { hit: false, ttl: 0, layer: "none" },
         upstream: {
           url: `${FNG_URL} | ${BTC_URL}`,
           status: failingStatus,
@@ -144,7 +143,7 @@ export async function onRequestGet({ request, env, data }) {
       logServer({
         feature: FEATURE_ID,
         traceId,
-        kv: panic ? "bypass" : "miss",
+        cacheLayer: "none",
         upstreamStatus: failingStatus,
         durationMs: Date.now() - started
       });
@@ -157,11 +156,11 @@ export async function onRequestGet({ request, env, data }) {
       fngJson = fngText ? JSON.parse(fngText) : {};
       btcJson = btcText ? JSON.parse(btcText) : {};
     } catch (error) {
-      return makeResponse({
+      const response = makeResponse({
         ok: false,
         feature: FEATURE_ID,
         traceId,
-        cache: { hit: false, ttl: KV_TTL, layer: panic ? "none" : "kv" },
+        cache: { hit: false, ttl: 0, layer: "none" },
         upstream: {
           url: `${FNG_URL} | ${BTC_URL}`,
           status: 200,
@@ -170,6 +169,14 @@ export async function onRequestGet({ request, env, data }) {
         error: { code: "SCHEMA_INVALID", message: "Invalid JSON", details: {} },
         status: 502
       });
+      logServer({
+        feature: FEATURE_ID,
+        traceId,
+        cacheLayer: "none",
+        upstreamStatus: 200,
+        durationMs: Date.now() - started
+      });
+      return response;
     }
 
     const dataPayload = normalize(fngJson, btcJson);
@@ -189,7 +196,7 @@ export async function onRequestGet({ request, env, data }) {
       feature: FEATURE_ID,
       traceId,
       data: dataPayload,
-      cache: { hit: false, ttl: KV_TTL, layer: panic ? "none" : "kv" },
+      cache: { hit: false, ttl: panic ? 0 : KV_TTL, layer: "none" },
       upstream: {
         url: `${FNG_URL} | ${BTC_URL}`,
         status: 200,
@@ -199,7 +206,7 @@ export async function onRequestGet({ request, env, data }) {
     logServer({
       feature: FEATURE_ID,
       traceId,
-      kv: panic ? "bypass" : "miss",
+      cacheLayer: "none",
       upstreamStatus: 200,
       durationMs: Date.now() - started
     });
@@ -210,7 +217,7 @@ export async function onRequestGet({ request, env, data }) {
       ok: false,
       feature: FEATURE_ID,
       traceId,
-      cache: { hit: false, ttl: KV_TTL, layer: panic ? "none" : "kv" },
+      cache: { hit: false, ttl: 0, layer: "none" },
       upstream: {
         url: `${FNG_URL} | ${BTC_URL}`,
         status: fngStatus || btcStatus,
@@ -225,7 +232,7 @@ export async function onRequestGet({ request, env, data }) {
     logServer({
       feature: FEATURE_ID,
       traceId,
-      kv: panic ? "bypass" : "miss",
+      cacheLayer: "none",
       upstreamStatus: fngStatus || btcStatus,
       durationMs: Date.now() - started
     });

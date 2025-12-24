@@ -90,37 +90,35 @@ export async function onRequestGet({ request, env, data }) {
 
   const bindingResponse = assertBindings(env, FEATURE_ID, traceId);
   if (bindingResponse) {
-    logServer({ feature: FEATURE_ID, traceId, kv: "none", upstreamStatus: null, durationMs: 0 });
     return bindingResponse;
   }
 
   const url = new URL(request.url);
   const symbolsParam = url.searchParams.get("symbols") || "";
-  const { symbols, invalid, truncated } = normalizeSymbolsParam(symbolsParam);
-  if (!symbols.length || invalid.length || truncated) {
-    return makeResponse({
-      ok: false,
+  const { symbols, errorResponse } = normalizeSymbolsParam(symbolsParam, {
+    feature: FEATURE_ID,
+    traceId,
+    ttl: 0
+  });
+  if (errorResponse) {
+    logServer({
       feature: FEATURE_ID,
       traceId,
-      cache: { hit: false, ttl: KV_TTL, layer: "none" },
-      upstream: { url: "", status: null, snippet: "" },
-      error: {
-        code: "BAD_REQUEST",
-        message: "symbols parameter invalid",
-        details: { invalid, truncated }
-      },
-      status: 400
+      cacheLayer: "none",
+      upstreamStatus: null,
+      durationMs: Date.now() - started
     });
+    return errorResponse;
   }
 
   const rateKey = request.headers.get("CF-Connecting-IP") || "global";
   const rateState = getRateState(rateKey);
   if (rateState.limited) {
-    return makeResponse({
+    const response = makeResponse({
       ok: false,
       feature: FEATURE_ID,
       traceId,
-      cache: { hit: false, ttl: KV_TTL, layer: "none" },
+      cache: { hit: false, ttl: 0, layer: "none" },
       upstream: { url: "", status: 429, snippet: "" },
       rateLimit: {
         remaining: "0",
@@ -134,24 +132,32 @@ export async function onRequestGet({ request, env, data }) {
       },
       status: 429
     });
+    logServer({
+      feature: FEATURE_ID,
+      traceId,
+      cacheLayer: "none",
+      upstreamStatus: 429,
+      durationMs: Date.now() - started
+    });
+    return response;
   }
 
   const cacheKey = `${FEATURE_ID}:${symbols.join(",")}:v1`;
   if (!panic) {
     const cached = await kvGetJson(env, cacheKey);
-    if (cached?.data) {
+    if (cached?.hit && cached.value?.data) {
       const response = makeResponse({
         ok: true,
         feature: FEATURE_ID,
         traceId,
-        data: cached.data,
+        data: cached.value.data,
         cache: { hit: true, ttl: KV_TTL, layer: "kv" },
         upstream: { url: "", status: null, snippet: "" }
       });
       logServer({
         feature: FEATURE_ID,
         traceId,
-        kv: "hit",
+        cacheLayer: "kv",
         upstreamStatus: null,
         durationMs: Date.now() - started
       });
@@ -212,19 +218,27 @@ export async function onRequestGet({ request, env, data }) {
   );
 
   if (!signals.length) {
-    return makeResponse({
+    const response = makeResponse({
       ok: false,
       feature: FEATURE_ID,
       traceId,
-      cache: { hit: false, ttl: KV_TTL, layer: panic ? "none" : "kv" },
+      cache: { hit: false, ttl: 0, layer: "none" },
       upstream: { url: "stooq", status: null, snippet: upstreamSnippet },
       error: {
-        code: "SCHEMA_VALID",
+        code: "SCHEMA_INVALID",
         message: "Insufficient history",
-        details: { skipped }
+        details: { reason: "insufficient history", skipped }
       },
       status: 200
     });
+    logServer({
+      feature: FEATURE_ID,
+      traceId,
+      cacheLayer: "none",
+      upstreamStatus: null,
+      durationMs: Date.now() - started
+    });
+    return response;
   }
 
   const dataPayload = {
@@ -250,13 +264,13 @@ export async function onRequestGet({ request, env, data }) {
     feature: FEATURE_ID,
     traceId,
     data: dataPayload,
-    cache: { hit: false, ttl: KV_TTL, layer: panic ? "none" : "kv" },
+    cache: { hit: false, ttl: panic ? 0 : KV_TTL, layer: "none" },
     upstream: { url: "stooq", status: 200, snippet: upstreamSnippet },
     error: skipped.length
       ? {
-          code: "SCHEMA_VALID",
+          code: "SCHEMA_INVALID",
           message: "Insufficient history for some symbols",
-          details: { skipped }
+          details: { reason: "insufficient history", skipped }
         }
       : {}
   });
@@ -264,7 +278,7 @@ export async function onRequestGet({ request, env, data }) {
   logServer({
     feature: FEATURE_ID,
     traceId,
-    kv: panic ? "bypass" : "miss",
+    cacheLayer: "none",
     upstreamStatus: 200,
     durationMs: Date.now() - started
   });

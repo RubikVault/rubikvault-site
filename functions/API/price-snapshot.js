@@ -54,7 +54,6 @@ export async function onRequestGet({ request, env, data }) {
 
   const bindingResponse = assertBindings(env, FEATURE_ID, traceId);
   if (bindingResponse) {
-    logServer({ feature: FEATURE_ID, traceId, kv: "none", upstreamStatus: null, durationMs: 0 });
     return bindingResponse;
   }
 
@@ -62,19 +61,19 @@ export async function onRequestGet({ request, env, data }) {
 
   if (!panic) {
     const cached = await kvGetJson(env, cacheKey);
-    if (cached?.data) {
+    if (cached?.hit && cached.value?.data) {
       const response = makeResponse({
         ok: true,
         feature: FEATURE_ID,
         traceId,
-        data: cached.data,
+        data: cached.value.data,
         cache: { hit: true, ttl: KV_TTL, layer: "kv" },
         upstream: { url: UPSTREAM_URL, status: null, snippet: "" }
       });
       logServer({
         feature: FEATURE_ID,
         traceId,
-        kv: "hit",
+        cacheLayer: "kv",
         upstreamStatus: null,
         durationMs: Date.now() - started
       });
@@ -94,12 +93,12 @@ export async function onRequestGet({ request, env, data }) {
     if (!res.ok) {
       const cached = !panic ? await kvGetJson(env, cacheKey) : null;
       const errorCode = mapUpstreamCode(res.status);
-      if (cached?.data) {
+      if (cached?.hit && cached.value?.data) {
         const response = makeResponse({
           ok: true,
           feature: FEATURE_ID,
           traceId,
-          data: cached.data,
+          data: cached.value.data,
           cache: { hit: true, ttl: KV_TTL, layer: "kv" },
           upstream: { url: UPSTREAM_URL, status: res.status, snippet: upstreamSnippet },
           error: { code: errorCode, message: `Upstream ${res.status}`, details: {} },
@@ -108,7 +107,7 @@ export async function onRequestGet({ request, env, data }) {
         logServer({
           feature: FEATURE_ID,
           traceId,
-          kv: "hit",
+          cacheLayer: "kv",
           upstreamStatus: res.status,
           durationMs: Date.now() - started
         });
@@ -119,7 +118,7 @@ export async function onRequestGet({ request, env, data }) {
         ok: false,
         feature: FEATURE_ID,
         traceId,
-        cache: { hit: false, ttl: KV_TTL, layer: panic ? "none" : "kv" },
+        cache: { hit: false, ttl: 0, layer: "none" },
         upstream: { url: UPSTREAM_URL, status: res.status, snippet: upstreamSnippet },
         error: { code: errorCode, message: `Upstream ${res.status}`, details: {} },
         status: res.status === 429 ? 429 : 502
@@ -127,7 +126,7 @@ export async function onRequestGet({ request, env, data }) {
       logServer({
         feature: FEATURE_ID,
         traceId,
-        kv: panic ? "bypass" : "miss",
+        cacheLayer: "none",
         upstreamStatus: res.status,
         durationMs: Date.now() - started
       });
@@ -138,15 +137,23 @@ export async function onRequestGet({ request, env, data }) {
     try {
       json = text ? JSON.parse(text) : {};
     } catch (error) {
-      return makeResponse({
+      const response = makeResponse({
         ok: false,
         feature: FEATURE_ID,
         traceId,
-        cache: { hit: false, ttl: KV_TTL, layer: panic ? "none" : "kv" },
+        cache: { hit: false, ttl: 0, layer: "none" },
         upstream: { url: UPSTREAM_URL, status: res.status, snippet: upstreamSnippet },
         error: { code: "SCHEMA_INVALID", message: "Invalid JSON", details: {} },
         status: 502
       });
+      logServer({
+        feature: FEATURE_ID,
+        traceId,
+        cacheLayer: "none",
+        upstreamStatus: res.status,
+        durationMs: Date.now() - started
+      });
+      return response;
     }
 
     const dataPayload = normalize(json);
@@ -166,13 +173,13 @@ export async function onRequestGet({ request, env, data }) {
       feature: FEATURE_ID,
       traceId,
       data: dataPayload,
-      cache: { hit: false, ttl: KV_TTL, layer: panic ? "none" : "kv" },
+      cache: { hit: false, ttl: panic ? 0 : KV_TTL, layer: "none" },
       upstream: { url: UPSTREAM_URL, status: res.status, snippet: upstreamSnippet }
     });
     logServer({
       feature: FEATURE_ID,
       traceId,
-      kv: panic ? "bypass" : "miss",
+      cacheLayer: "none",
       upstreamStatus: res.status,
       durationMs: Date.now() - started
     });
@@ -183,14 +190,14 @@ export async function onRequestGet({ request, env, data }) {
       ok: false,
       feature: FEATURE_ID,
       traceId,
-      cache: { hit: false, ttl: KV_TTL, layer: panic ? "none" : "kv" },
+      cache: { hit: false, ttl: 0, layer: "none" },
       upstream: { url: UPSTREAM_URL, status: upstreamStatus, snippet: upstreamSnippet },
       error: { code: errorCode, message: error?.message || "Request failed", details: {} }
     });
     logServer({
       feature: FEATURE_ID,
       traceId,
-      kv: panic ? "bypass" : "miss",
+      cacheLayer: "none",
       upstreamStatus,
       durationMs: Date.now() - started
     });
