@@ -6,7 +6,7 @@ function buildUrl(url) {
   const base =
     typeof window !== "undefined" && window.RV_CONFIG?.apiBase
       ? window.RV_CONFIG.apiBase
-      : "./API";
+      : "./api";
   const baseClean = base.endsWith("/") ? base.slice(0, -1) : base;
   const path = url.startsWith("/") ? url.slice(1) : url;
 

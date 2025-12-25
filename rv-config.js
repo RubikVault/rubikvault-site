@@ -102,7 +102,7 @@ export const FEATURES = [
 
 export const RV_CONFIG = {
   version: "rv-2025-01-15",
-  apiBase: "./API",
+  apiBase: "./api",
   buildId: "2025-01-15-local",
   buildInfo: {
     commit: "local",
