@@ -5,7 +5,8 @@ import {
   kvPutJson,
   logServer,
   makeResponse,
-  safeSnippet
+  safeSnippet,
+  withCoinGeckoKey
 } from "./_shared.js";
 
 const FEATURE_ID = "market-health";
@@ -83,7 +84,10 @@ export async function onRequestGet({ request, env, data }) {
   let upstreamSnippet = "";
 
   try {
-    const [fngRes, btcRes] = await Promise.all([fetch(FNG_URL), fetch(BTC_URL)]);
+    const [fngRes, btcRes] = await Promise.all([
+      fetch(FNG_URL),
+      fetch(withCoinGeckoKey(BTC_URL, env))
+    ]);
     fngStatus = fngRes.status;
     btcStatus = btcRes.status;
     const fngText = await fngRes.text();

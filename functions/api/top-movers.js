@@ -5,7 +5,8 @@ import {
   kvPutJson,
   logServer,
   makeResponse,
-  safeSnippet
+  safeSnippet,
+  withCoinGeckoKey
 } from "./_shared.js";
 
 const FEATURE_ID = "top-movers";
@@ -81,7 +82,7 @@ export async function onRequestGet({ request, env, data }) {
   let upstreamSnippet = "";
 
   try {
-    const res = await fetch(UPSTREAM_URL);
+    const res = await fetch(withCoinGeckoKey(UPSTREAM_URL, env));
     upstreamStatus = res.status;
     const text = await res.text();
     upstreamSnippet = safeSnippet(text);

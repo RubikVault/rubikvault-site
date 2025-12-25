@@ -29,6 +29,18 @@ export function truncate(text, limit = 300) {
   return safeSnippet(text, limit);
 }
 
+export function withCoinGeckoKey(url, env) {
+  const apiKey = env?.COINGECKO_DEMO_KEY;
+  if (!apiKey || !url) return url;
+  try {
+    const parsed = new URL(url);
+    parsed.searchParams.set("x_cg_demo_api_key", apiKey);
+    return parsed.toString();
+  } catch (error) {
+    return url;
+  }
+}
+
 export function makeJson({
   ok,
   feature,
