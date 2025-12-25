@@ -1,6 +1,7 @@
 import { RV_CONFIG, FEATURES, DEBUG_PANIC_MODE } from "./rv-config.js";
 import { createLogger, createTraceId } from "./debug/rv-debug.js";
 import { applyOverrides } from "./features/utils/flags.js";
+import { resolveApiBase } from "./features/utils/api.js";
 import { initFlagsPanel } from "./features/rv-flags-panel.js";
 
 function escapeHtml(value) {
@@ -52,6 +53,35 @@ function isDebugEnabled() {
 }
 
 const INLINE_DIAGNOSTICS_ID = "rv-inline-diagnostics";
+const apiState = {
+  disabled: false,
+  resolution: null
+};
+
+function getApiResolution() {
+  const resolution = resolveApiBase();
+  apiState.resolution = resolution;
+  apiState.disabled = !resolution.ok;
+  return resolution;
+}
+
+function applyApiMeta(logger) {
+  if (!logger) return getApiResolution();
+  const resolution = getApiResolution();
+  logger.setMeta({
+    configLoaded: resolution.configLoaded,
+    apiBase: resolution.apiBase || "",
+    apiPrefix: resolution.apiPrefix || "",
+    configErrors: resolution.errors || []
+  });
+  if (!resolution.ok) {
+    logger.warn("config_missing", {
+      configLoaded: resolution.configLoaded,
+      errors: resolution.errors || []
+    });
+  }
+  return resolution;
+}
 
 function isHtmlFallback(contentType, preview) {
   if (contentType && contentType.includes("text/html")) return true;
@@ -345,6 +375,7 @@ function getBlockName(section, feature) {
 async function runFeature(section, feature, logger, contentEl) {
   const traceId = createTraceId();
   logger.setTraceId(traceId);
+  applyApiMeta(logger);
   setLoading(section, true);
 
   try {
@@ -484,6 +515,7 @@ function initBlock(section, feature) {
     panicMode: DEBUG_PANIC_MODE
   });
   const contentEl = logger.getContentEl();
+  applyApiMeta(logger);
 
   if (!feature || feature.enabled === false || section.getAttribute("data-rv-disabled") === "true") {
     logger.setStatus("DISABLED", "Disabled");
@@ -524,12 +556,18 @@ function boot() {
       ...features.map((feature) => feature.module)
     ];
     const importPaths = features.map((feature) => feature.module);
-    const apiBase = RV_CONFIG.apiBase || "API";
-    const apiPrefix = apiBase.endsWith("/") ? apiBase.slice(0, -1) : apiBase;
-    const apiPaths = features
-      .filter((feature) => feature.api)
-      .map((feature) => `${apiPrefix}/${feature.api}`);
-    apiPaths.unshift(`${apiPrefix}/health`);
+    const apiResolution = getApiResolution();
+    const apiPrefix = apiResolution.ok ? apiResolution.apiPrefix : "";
+    const apiPaths = apiResolution.ok
+      ? features
+          .filter((feature) => feature.api)
+          .map((feature) => `${apiPrefix}/${feature.api}`)
+      : [];
+    if (apiResolution.ok) {
+      apiPaths.unshift(`${apiPrefix}/health`);
+    } else {
+      console.warn("[RV] Config missing - API diagnostics disabled", apiResolution);
+    }
 
     Promise.all([
       import("./debug/diagnostics.js"),
@@ -599,6 +637,21 @@ function boot() {
   );
 
   lazy.forEach(({ section }) => observer.observe(section));
+}
+
+if (typeof window !== "undefined") {
+  window.RV_SELFTEST = () => {
+    const resolution = getApiResolution();
+    const payload = {
+      configLoaded: resolution.configLoaded,
+      apiBase: resolution.apiBase || null,
+      apiPrefix: resolution.apiPrefix || null,
+      errors: resolution.errors || [],
+      fetchAllowed: resolution.ok
+    };
+    console.log("[RV_SELFTEST]", payload);
+    return payload;
+  };
 }
 
 if (document.readyState === "loading") {

@@ -38,6 +38,7 @@ function ensureShell(rootEl) {
       <span data-rv-trace>Trace: --</span>
       <span data-rv-cache>Cache: --</span>
       <span data-rv-upstream>Upstream: --</span>
+      <span data-rv-config>Config: --</span>
     </div>
     <div class="rv-block-actions">
       <button class="rv-block-debug-toggle" type="button" data-rv-debug-toggle>Show debug</button>
@@ -74,6 +75,10 @@ export function createLogger({ featureId, blockName, rootEl, panicMode = false }
     cacheLayer: null,
     cacheTtl: null,
     upstreamStatus: null,
+    configLoaded: null,
+    apiBase: null,
+    apiPrefix: null,
+    configErrors: [],
     lines: []
   };
 
@@ -84,6 +89,7 @@ export function createLogger({ featureId, blockName, rootEl, panicMode = false }
   const traceEl = shell.querySelector("[data-rv-trace]");
   const cacheEl = shell.querySelector("[data-rv-cache]");
   const upstreamEl = shell.querySelector("[data-rv-upstream]");
+  const configEl = shell.querySelector("[data-rv-config]");
   const featureEl = shell.querySelector("[data-rv-feature-id]");
   const blockEl = shell.querySelector("[data-rv-block-name]");
   const debugEl = shell.querySelector("[data-rv-debug]");
@@ -130,6 +136,18 @@ export function createLogger({ featureId, blockName, rootEl, panicMode = false }
           ? "--"
           : state.upstreamStatus;
       upstreamEl.textContent = `Upstream: ${status}`;
+    }
+    if (configEl) {
+      const baseLabel = state.apiPrefix || state.apiBase || "--";
+      const errorSuffix =
+        state.configErrors && state.configErrors.length
+          ? ` (${state.configErrors.join(", ")})`
+          : "";
+      if (state.configLoaded === false) {
+        configEl.textContent = `Config: missing${errorSuffix}`;
+      } else {
+        configEl.textContent = `Config: loaded ${baseLabel}${errorSuffix}`;
+      }
     }
   };
 
@@ -202,7 +220,19 @@ export function createLogger({ featureId, blockName, rootEl, panicMode = false }
       state.headline = headline || "";
       renderStatus();
     },
-    setMeta({ updatedAt, source, isStale, staleAgeMs, cacheLayer, cacheTtl, upstreamStatus } = {}) {
+    setMeta({
+      updatedAt,
+      source,
+      isStale,
+      staleAgeMs,
+      cacheLayer,
+      cacheTtl,
+      upstreamStatus,
+      configLoaded,
+      apiBase,
+      apiPrefix,
+      configErrors
+    } = {}) {
       if (updatedAt) state.updatedAt = updatedAt;
       if (source !== undefined) state.source = source;
       if (typeof isStale === "boolean") state.isStale = isStale;
@@ -210,6 +240,10 @@ export function createLogger({ featureId, blockName, rootEl, panicMode = false }
       if (cacheLayer !== undefined) state.cacheLayer = cacheLayer;
       if (cacheTtl !== undefined) state.cacheTtl = cacheTtl;
       if (upstreamStatus !== undefined) state.upstreamStatus = upstreamStatus;
+      if (typeof configLoaded === "boolean") state.configLoaded = configLoaded;
+      if (apiBase !== undefined) state.apiBase = apiBase;
+      if (apiPrefix !== undefined) state.apiPrefix = apiPrefix;
+      if (configErrors !== undefined) state.configErrors = configErrors;
       renderMeta();
     },
     setTraceId(traceId) {

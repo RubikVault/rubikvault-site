@@ -1,18 +1,58 @@
-function buildUrl(url) {
-  if (url.startsWith("http://") || url.startsWith("https://")) {
-    return url;
+function normalizeApiBase(value) {
+  if (typeof value !== "string") return "";
+  const trimmed = value.trim();
+  if (!trimmed) return "";
+  if (trimmed === "api" || trimmed === "./api") return "/api";
+  if (trimmed === "/api/" || trimmed === "/api") return "/api";
+  if (trimmed.startsWith("./")) {
+    const stripped = trimmed.replace(/^\.\/+/, "");
+    return `/${stripped}`.replace(/\/+$/, "");
   }
+  if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
+    return trimmed.replace(/\/+$/, "");
+  }
+  const normalized = trimmed.startsWith("/") ? trimmed : `/${trimmed}`;
+  return normalized.replace(/\/+$/, "");
+}
 
-  const base =
-    typeof window !== "undefined" && window.RV_CONFIG?.apiBase
-      ? window.RV_CONFIG.apiBase
-      : "./api";
-  const baseClean = base.endsWith("/") ? base.slice(0, -1) : base;
+export function resolveApiBase(explicitBase) {
+  const configLoaded = typeof window !== "undefined" && !!window.RV_CONFIG;
+  const candidate =
+    typeof explicitBase === "string"
+      ? explicitBase
+      : configLoaded
+        ? window.RV_CONFIG?.apiBase
+        : "";
+  const errors = [];
+  if (!configLoaded) errors.push("CONFIG_MISSING");
+  const normalized = normalizeApiBase(candidate);
+  if (!normalized) errors.push("API_BASE_MISSING");
+  const ok = errors.length === 0;
+  return {
+    ok,
+    configLoaded,
+    apiBase: ok ? normalized : "",
+    apiPrefix: ok ? normalized : "",
+    errors
+  };
+}
+
+function joinUrl(base, path) {
+  if (!base) return "";
+  const baseClean = base.replace(/\/+$/, "");
+  const pathClean = String(path || "").replace(/^\/+/, "");
+  return `${baseClean}/${pathClean}`;
+}
+
+function buildUrl(url) {
+  const isAbsolute = url.startsWith("http://") || url.startsWith("https://");
+  if (isAbsolute) {
+    return { url, resolution: resolveApiBase(), absolute: true };
+  }
+  const resolution = resolveApiBase();
+  if (!resolution.ok) return { url: "", resolution, absolute: false };
   const path = url.startsWith("/") ? url.slice(1) : url;
-
-  if (!baseClean) return `./${path}`;
-  if (baseClean.startsWith(".")) return `${baseClean}/${path}`;
-  return `${baseClean}/${path}`;
+  return { url: joinUrl(resolution.apiPrefix, path), resolution, absolute: false };
 }
 
 function addQuery(url, params = {}) {
@@ -67,7 +107,35 @@ export function getBindingHint(payload) {
 }
 
 export async function fetchJSON(input, { feature, traceId, timeoutMs = 10000, logger } = {}) {
-  const requestUrl = buildUrl(input);
+  const { url: requestUrl, resolution, absolute } = buildUrl(input);
+  if (resolution) {
+    logger?.setMeta({
+      configLoaded: resolution.configLoaded,
+      apiBase: resolution.apiBase || "",
+      apiPrefix: resolution.apiPrefix || "",
+      configErrors: resolution.errors || []
+    });
+  }
+  if (!resolution.ok) {
+    const payload = makeLocalError({
+      feature,
+      traceId,
+      status: null,
+      snippet: "",
+      code: "CONFIG_MISSING",
+      message: "Config missing - API disabled",
+      url: ""
+    });
+    payload.error.details = {
+      configLoaded: resolution.configLoaded,
+      apiBase: resolution.apiBase || null,
+      apiPrefix: resolution.apiPrefix || null,
+      errors: resolution.errors || []
+    };
+    logger?.setStatus("FAIL", "CONFIG_MISSING");
+    logger?.warn("config_missing", payload.error.details);
+    return payload;
+  }
   const isCrossOrigin =
     typeof window !== "undefined" &&
     (requestUrl.startsWith("http://") || requestUrl.startsWith("https://")) &&

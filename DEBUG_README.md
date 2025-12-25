@@ -35,10 +35,17 @@ Das Panel erscheint unten rechts und enthält Tabs:
 - Jeder Block rendert ein eigenes Debug‑Panel (Toggle „Show debug“).
 - Log‑Zeilen sind prefix‑basiert (`[RV:<featureId>]`) und enthalten Zeitstempel.
 - Trace IDs werden pro Block‑Load/Refresh gesetzt und erscheinen im Block‑Header.
+- Config‑Status wird im Block‑Header angezeigt (apiBase/apiPrefix, configLoaded, Fehlerliste).
 
 ## Build-Info
 
 Das Panel lädt `/build-info.json`. Wenn die Datei nicht existiert, nutzt es `RV_CONFIG.buildInfo`.
+
+## Config Missing (API guard)
+
+- Wenn `window.RV_CONFIG` oder `window.RV_CONFIG.apiBase` fehlt: UI zeigt `Config missing - API disabled`.
+- In diesem Zustand werden keine API‑Requests abgesetzt (keine Phantom `/API`‑Calls).
+- Selftest: `window.RV_SELFTEST()` loggt resolved `apiBase/apiPrefix`, `configLoaded`, `errors`, `fetchAllowed`.
 
 ## KV Setup (Pflicht)
 
@@ -79,23 +86,17 @@ Das Panel lädt `/build-info.json`. Wenn die Datei nicht existiert, nutzt es `RV
 ## Bindings & ENV
 
 - `RV_KV` (required): KV Binding für Cache.
-- `EARNINGS_API_KEY` (required): Provider‑Key für Earnings‑Calendar.
-- `EARNINGS_API_BASE` (optional): Base URL (Default: FinancialModelingPrep).
-- `FRED_API_KEY` (required): API‑Key für Macro & Rates (FRED).
-- `FMP_API_KEY` (optional): API‑Key für Quotes (FinancialModelingPrep). Falls nicht gesetzt, wird `EARNINGS_API_KEY` verwendet.
-- `CROSS_ORIGIN` (optional): `true` aktiviert CORS via `functions/api/_middleware.js`.
+- `EARNINGS_API_KEY` (optional - required only for Block 04 Earnings Calendar; fallback for Block 06 Quotes if `FMP_API_KEY` missing).
+- `EARNINGS_API_BASE` (optional - required only for Block 04 Earnings Calendar).
+- `FRED_API_KEY` (optional - required only for Block 08 Macro & Rates).
+- `FMP_API_KEY` (optional - required only for Block 06 Quotes; overrides `EARNINGS_API_KEY`).
+- `CROSS_ORIGIN` (optional - enables CORS via `functions/api/_middleware.js`).
 
 ## CSP / External Domains
 
-Wenn CSP aktiviert wird, mindestens folgende Domains erlauben:
-
-- `api.coingecko.com`
-- `api.alternative.me`
-- `search.cnbc.com`
-- `finance.yahoo.com`
-- `stooq.com`
-- `financialmodelingprep.com` (falls genutzt)
-- `s3.tradingview.com`
+- CSP nur für tatsächlich genutzte Domains pro aktivem Block setzen.
+- Debug-Panel → Network/APIs ist die Referenzliste.
+- Warnung: kein `unsafe-eval`, kein string-basiertes `setTimeout`/`setInterval`.
 
 ## Erweiterung
 
