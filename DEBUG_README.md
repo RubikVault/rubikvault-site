@@ -5,7 +5,7 @@ Dieses Debug-System sammelt Client‑seitige Informationen (Assets, API‑Checks
 ## Schnellstart (Browser)
 
 1. Öffne die Seite und filtere die Konsole auf `RV:` (z.B. `[RV:rv-price-snapshot]`).
-2. Öffne die DevTools → Network und filtere nach `/API/`.
+2. Öffne die DevTools → Network und filtere nach `/api/`.
 3. Prüfe, dass jede Antwort das Standard‑Schema enthält (`ok`, `feature`, `ts`, `traceId`, `schemaVersion`).
 
 ## Aktivierung
@@ -50,13 +50,13 @@ Das Panel lädt `/build-info.json`. Wenn die Datei nicht existiert, nutzt es `RV
    - Production binding → `rv-cache-kv`
    - Preview binding → `rv-cache-kv-preview`
 3. RV_KV muss in Preview + Production gebunden sein (keine Fallbacks).
-4. Deploy erneut, dann `/API/health` prüfen.
+4. Deploy erneut, dann `/api/health` prüfen.
 5. Preflight-Signatur (Logs): `kv:"none"`, `upstreamStatus:null`, `durationMs:0` ⇒ KV Binding fehlt, kein Upstream-Call.
 
 ## First 5 minutes checklist
 
-1. Preview-URL öffnen, dann `/API/health` prüfen → `bindings.RV_KV` und `envHint`.
-2. DevTools → Network → filter `/API/` → Schema-Felder (`ok`, `feature`, `ts`, `traceId`, `schemaVersion`) prüfen.
+1. Preview-URL öffnen, dann `/api/health` prüfen → `bindings.RV_KV` und `envHint`.
+2. DevTools → Network → filter `/api/` → Schema-Felder (`ok`, `feature`, `ts`, `traceId`, `schemaVersion`) prüfen.
 3. Console filter `RV:` → TraceIDs, `cache.layer`, `cache.ttl`, `upstream.status` sehen.
 4. Falls BINDING_MISSING: Dashboard → Pages → Settings → Functions → KV bindings → RV_KV (Preview + Production).
 5. Blocks 01–05 sollten OK oder PARTIAL sein (je nach Upstream).
@@ -83,7 +83,7 @@ Das Panel lädt `/build-info.json`. Wenn die Datei nicht existiert, nutzt es `RV
 - `EARNINGS_API_BASE` (optional): Base URL (Default: FinancialModelingPrep).
 - `FRED_API_KEY` (required): API‑Key für Macro & Rates (FRED).
 - `FMP_API_KEY` (optional): API‑Key für Quotes (FinancialModelingPrep). Falls nicht gesetzt, wird `EARNINGS_API_KEY` verwendet.
-- `CROSS_ORIGIN` (optional): `true` aktiviert CORS via `functions/API/_middleware.js`.
+- `CROSS_ORIGIN` (optional): `true` aktiviert CORS via `functions/api/_middleware.js`.
 
 ## CSP / External Domains
 
@@ -104,11 +104,11 @@ Wenn CSP aktiviert wird, mindestens folgende Domains erlauben:
 ## Testfälle (Erwartungen)
 
 1. KV fehlt:
-   - `/API/health` → `ok=false`, `error.code=BINDING_MISSING`.
+   - `/api/health` → `ok=false`, `error.code=BINDING_MISSING`.
    - Blöcke 01–05 zeigen FAIL mit klarer Fix‑Hint.
 2. KV vorhanden:
    - Blöcke 01–05 OK oder PARTIAL je nach Upstream.
 3. Quotes Rate Limit:
-   - `/API/quotes` liefert `RATE_LIMITED`, UI zeigt Backoff + Countdown.
+   - `/api/quotes` liefert `RATE_LIMITED`, UI zeigt Backoff + Countdown.
 4. Shadow Cache:
    - API failt, aber lokale Quotes jünger als 15 min → PARTIAL + stale.

@@ -4,7 +4,7 @@
 - Keep vanilla JS + ES Modules + Pages Functions (no framework migrations).
 - Every block must always show: Feature ID + Block Name + Status + Updated + Source + Debug panel.
 - No "magic fixes" for 403/429; surface provider diagnostics and fallbacks.
-- All `/API/*` responses must follow the standard JSON schema (below).
+- All `/api/*` responses must follow the standard JSON schema (below).
 
 ## Standard API JSON Schema
 

@@ -7,11 +7,11 @@ Goal: Make all blocks functional, Cloudflare Free Tier safe, and debuggable (no 
 Repo state: started from dirty state (git status shows modified files and untracked _pre_codex_dirty.diff).
 
 Chunk plan (max 6 files per chunk output):
-- Chunk 1: functions/API/_shared.js, functions/API/_middleware.js, functions/API/health.js, debug/CODEX_PROGRESS.md
-- Chunk 2: functions/API/quotes.js, features/utils/api.js, features/utils/store.js
+- Chunk 1: functions/api/_shared.js, functions/api/_middleware.js, functions/api/health.js, debug/CODEX_PROGRESS.md
+- Chunk 2: functions/api/quotes.js, features/utils/api.js, features/utils/store.js
 - Chunk 3: features/rv-watchlist-local.js, assets/nasdaq_symbols.min.json, DEBUG_README.md
-- Chunk 4: functions/API/market-health.js, functions/API/price-snapshot.js, functions/API/top-movers.js, functions/API/news.js, functions/API/earnings-calendar.js, functions/API/macro-rates.js
-- Chunk 5: functions/API/crypto-snapshot.js, functions/API/sentiment.js, functions/API/tech-signals.js
+- Chunk 4: functions/api/market-health.js, functions/api/price-snapshot.js, functions/api/top-movers.js, functions/api/news.js, functions/api/earnings-calendar.js, functions/api/macro-rates.js
+- Chunk 5: functions/api/crypto-snapshot.js, functions/api/sentiment.js, functions/api/tech-signals.js
 - Chunk 6: features/rv-market-health.js, features/rv-price-snapshot.js, features/rv-top-movers.js, features/rv-news-headlines.js, features/rv-earnings-calendar.js, features/rv-macro-rates.js
 - Chunk 7: features/rv-crypto-snapshot.js, features/rv-sentiment-barometer.js, features/rv-tech-signals.js, debug/rv-debug.js, rv-config.js
 
@@ -20,7 +20,7 @@ Checklist (sections 1-11):
 - [x] 2) Middleware CORS + trace (+ optional ETag)
 - [x] 3) Health endpoint diagnostics
 - [x] 4) Standard schema for all API endpoints
-- [x] 5) /API/quotes bulk endpoint
+- [x] 5) /api/quotes bulk endpoint
 - [x] 6) Watchlist upgrades + autocomplete + backoff
 - [x] 7) Client status UX classification + debug meta
 - [x] 8) New blocks (macro, crypto, sentiment, tech signals)
