@@ -92,6 +92,10 @@ Das Panel lädt `/build-info.json`. Wenn die Datei nicht existiert, nutzt es `RV
 - `FMP_API_KEY` (optional - required only for Block 06 Quotes; overrides `EARNINGS_API_KEY`).
 - `CROSS_ORIGIN` (optional - enables CORS via `functions/api/_middleware.js`).
 
+## Functions Dependencies
+
+- Functions dependencies may need to live in `functions/package.json` so Pages Functions bundling can resolve them.
+
 ## CSP / External Domains
 
 - CSP nur für tatsächlich genutzte Domains pro aktivem Block setzen.
