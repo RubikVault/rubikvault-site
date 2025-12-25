@@ -1,6 +1,6 @@
 # Codex Progress Ledger
 
-Last updated: 2025-12-24T07:08:10Z
+Last updated: 2025-12-25T08:52:09Z
 
 Goal: Make all blocks functional, Cloudflare Free Tier safe, and debuggable (no deletions; keep transfer artifacts untouched).
 
@@ -37,3 +37,10 @@ Progress notes:
 - 2025-12-24T07:03:02Z Risks/ambiguities: watchlist shadow cache schema still simple {ts, quotes}; will align to required schemaVersion/feature/key/storedAt/data in chunk 3.
 - 2025-12-24T07:03:22Z Chunk 2 output: exposing quotes endpoint + client API/store helpers for schema/trace/cache visibility.
 - 2025-12-24T07:03:22Z Risks/ambiguities: in-memory rate guards are advisory; watchlist shadow schema to be updated in chunk 3.
+- 2025-12-25T08:35:24Z Updated watchlist shadow cache to schemaVersion/feature/key/storedAt/data with backward compatibility for legacy {ts, quotes}.
+- 2025-12-25T08:35:24Z Assumption: legacy localStorage entries may exist; normalization preserves them without breaking current UI.
+- 2025-12-25T08:35:54Z Chunk 3 output: watchlist shadow cache schema aligned; symbols asset and DEBUG_README included.
+- 2025-12-25T08:41:12Z Chunk 4 output: core API endpoints for market health, price snapshot, top movers, news, earnings calendar, macro rates.
+- 2025-12-25T08:47:03Z Chunk 5 output: crypto snapshot, sentiment, and tech signals API endpoints.
+- 2025-12-25T08:49:40Z Chunk 6 output: block feature renderers for market health, price snapshot, top movers, news headlines, earnings calendar, macro rates.
+- 2025-12-25T08:52:15Z Chunk 7 output: crypto snapshot, sentiment barometer, tech signals blocks, debug meta panel, registry updates.

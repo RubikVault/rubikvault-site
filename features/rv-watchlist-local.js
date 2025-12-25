@@ -2,6 +2,9 @@ import { fetchJSON, getBindingHint } from "./utils/api.js";
 
 const STORAGE_KEY = "rv_watchlist_local";
 const QUOTES_CACHE_KEY = "rv_watchlist_quotes";
+const SHADOW_SCHEMA_VERSION = 1;
+const SHADOW_FEATURE = "rv-watchlist-local";
+const SHADOW_KEY = "quotes";
 const SYMBOLS_PATH = "./assets/nasdaq_symbols.min.json";
 const DEFAULT_LIST = ["AAPL", "NVDA"];
 const DEFAULT_REFRESH_MS = 120_000;
@@ -55,20 +58,52 @@ function updateShared(list) {
   window.RV_SHARED.watchlist = list;
 }
 
+function normalizeShadowEntry(entry) {
+  if (!entry || typeof entry !== "object") return null;
+  if (entry.schemaVersion && entry.feature && entry.key && entry.storedAt && entry.data) {
+    return entry;
+  }
+  if (entry.quotes || entry.ts || entry.updatedAt) {
+    const storedAt = entry.ts || entry.storedAt || entry.updatedAt || new Date().toISOString();
+    return {
+      schemaVersion: SHADOW_SCHEMA_VERSION,
+      feature: SHADOW_FEATURE,
+      key: SHADOW_KEY,
+      storedAt,
+      data: {
+        quotes: entry.quotes || [],
+        updatedAt: entry.updatedAt || entry.ts || null
+      }
+    };
+  }
+  return null;
+}
+
 function loadShadowQuotes() {
   try {
     const raw = window.localStorage?.getItem(QUOTES_CACHE_KEY);
-    return raw ? JSON.parse(raw) : null;
+    const parsed = raw ? JSON.parse(raw) : null;
+    return normalizeShadowEntry(parsed);
   } catch (error) {
     return null;
   }
 }
 
-function saveShadowQuotes(quotes) {
+function saveShadowQuotes(quotes, updatedAt) {
   try {
+    const storedAt = new Date().toISOString();
     window.localStorage?.setItem(
       QUOTES_CACHE_KEY,
-      JSON.stringify({ ts: new Date().toISOString(), quotes })
+      JSON.stringify({
+        schemaVersion: SHADOW_SCHEMA_VERSION,
+        feature: SHADOW_FEATURE,
+        key: SHADOW_KEY,
+        storedAt,
+        data: {
+          quotes,
+          updatedAt: updatedAt || storedAt
+        }
+      })
     );
   } catch (error) {
     // ignore
@@ -262,16 +297,18 @@ async function refreshQuotes(root, list, logger) {
   if (!payload?.ok) {
     state.errorNote = "";
     const shadow = loadShadowQuotes();
+    const shadowTs = shadow?.storedAt || shadow?.data?.updatedAt || null;
     const shadowAge =
-      shadow?.ts && !Number.isNaN(Date.parse(shadow.ts)) ? Date.now() - Date.parse(shadow.ts) : null;
-    if (shadow?.quotes && shadowAge !== null && shadowAge < STALE_MAX_MS) {
-      state.quotes = new Map(shadow.quotes.map((item) => [item.symbol, item]));
-      state.lastUpdatedAt = shadow.ts;
+      shadowTs && !Number.isNaN(Date.parse(shadowTs)) ? Date.now() - Date.parse(shadowTs) : null;
+    const shadowQuotes = shadow?.data?.quotes || null;
+    if (shadowQuotes && shadowAge !== null && shadowAge < STALE_MAX_MS) {
+      state.quotes = new Map(shadowQuotes.map((item) => [item.symbol, item]));
+      state.lastUpdatedAt = shadow?.data?.updatedAt || shadowTs;
       state.source = "shadow";
       const staleNote = formatStaleMinutes(shadowAge);
       logger?.setStatus("PARTIAL", staleNote ? `Stale ${staleNote}` : "Stale fallback");
       logger?.setMeta({
-        updatedAt: shadow.ts,
+        updatedAt: shadow?.data?.updatedAt || shadowTs,
         source: "shadow",
         isStale: true,
         staleAgeMs: shadowAge
@@ -326,7 +363,7 @@ async function refreshQuotes(root, list, logger) {
   state.quotes = new Map(quotes.map((item) => [item.symbol, item]));
   state.lastUpdatedAt = payload?.data?.updatedAt || payload?.ts;
   state.source = payload?.data?.source || "stooq";
-  saveShadowQuotes(quotes);
+  saveShadowQuotes(quotes, state.lastUpdatedAt);
   state.backoffLevel = 0;
   state.backoffUntil = 0;
 
