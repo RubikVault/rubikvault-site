@@ -9,6 +9,10 @@ function formatNumber(value, options = {}) {
 function render(root, payload, logger) {
   const data = payload?.data || {};
   const rows = data.assets || [];
+  const partialNote =
+    payload?.ok && (payload?.isStale || payload?.error?.code)
+      ? "Partial data — some sources unavailable."
+      : "";
 
   if (!payload?.ok) {
     const errorMessage = payload?.error?.message || "API error";
@@ -64,6 +68,8 @@ function render(root, payload, logger) {
   }
 
   root.innerHTML = `
+    <div class="rv-native-note rv-native-warning">WIP: consolidation planned with Market Health.</div>
+    ${partialNote ? `<div class="rv-native-note">${partialNote}</div>` : ""}
     <div class="rv-native-grid">
       ${rows
         .map((asset) => {

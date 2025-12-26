@@ -57,6 +57,38 @@ const apiState = {
   disabled: false,
   resolution: null
 };
+const statusState = new Map();
+const statusSummary = {
+  cacheSamples: 0,
+  cacheHits: 0,
+  lastError: null
+};
+const STATUS_LABELS = {
+  "rv-market-health": "MarketHealth",
+  "rv-price-snapshot": "Snapshot",
+  "rv-top-movers": "Movers",
+  "rv-earnings-calendar": "Earnings",
+  "rv-news-headlines": "News",
+  "rv-watchlist-local": "Watchlist",
+  "rv-macro-rates": "Macro",
+  "rv-crypto-snapshot": "Crypto",
+  "rv-sentiment-barometer": "Sentiment",
+  "rv-tech-signals": "Signals"
+};
+const STATUS_ORDER = [
+  "rv-market-health",
+  "rv-earnings-calendar",
+  "rv-news-headlines",
+  "rv-watchlist-local",
+  "rv-macro-rates",
+  "rv-crypto-snapshot",
+  "rv-sentiment-barometer",
+  "rv-tech-signals",
+  "rv-top-movers",
+  "rv-price-snapshot"
+];
+const COLLAPSE_KEY_PREFIX = "rv-collapse:";
+const DEFAULT_OPEN_COUNT = 3;
 
 function getApiResolution() {
   const resolution = resolveApiBase();
@@ -81,6 +113,200 @@ function applyApiMeta(logger) {
     });
   }
   return resolution;
+}
+
+function statusIcon(status) {
+  if (status === "OK") return "OK";
+  if (status === "PARTIAL") return "WARN";
+  if (status === "FAIL") return "FAIL";
+  if (status === "DISABLED") return "PAUSE";
+  return "LOAD";
+}
+
+function resolveStatusLabel(featureId, blockName) {
+  return STATUS_LABELS[featureId] || blockName || featureId || "Block";
+}
+
+function updateStatusStrip() {
+  if (typeof document === "undefined") return;
+  const strip = document.getElementById("rv-status-strip");
+  if (!strip) return;
+
+  const entries = STATUS_ORDER.map((featureId) => {
+    const entry = statusState.get(featureId);
+    return entry
+      ? { ...entry, featureId }
+      : {
+          featureId,
+          label: resolveStatusLabel(featureId),
+          status: "PARTIAL",
+          headline: "Loading"
+        };
+  });
+
+  const pills = entries
+    .map((entry) => {
+      const icon = statusIcon(entry.status);
+      const label = entry.label || resolveStatusLabel(entry.featureId);
+      const state = entry.status?.toLowerCase?.() || "partial";
+      return `<span class="rv-status-pill" data-rv-state="${state}">${label}: ${icon}</span>`;
+    })
+    .join("");
+
+  const cacheRate =
+    statusSummary.cacheSamples > 0
+      ? `${Math.round((statusSummary.cacheHits / statusSummary.cacheSamples) * 100)}%`
+      : "--";
+  const lastError = statusSummary.lastError || "--";
+
+  strip.innerHTML = `
+    ${pills}
+    <span class="rv-status-meta">Cache hit ${cacheRate}</span>
+    <span class="rv-status-meta">Last error: ${lastError}</span>
+  `;
+}
+
+function recordStatus(featureId, blockName, status, headline) {
+  const existing = statusState.get(featureId) || {};
+  const label = resolveStatusLabel(featureId, blockName || existing.label);
+  statusState.set(featureId, {
+    ...existing,
+    label,
+    status,
+    headline
+  });
+  if ((status === "FAIL" || status === "PARTIAL") && headline) {
+    statusSummary.lastError = headline;
+  }
+  updateStatusStrip();
+}
+
+function recordCache(featureId, cacheLayer) {
+  if (!cacheLayer) return;
+  const entry = statusState.get(featureId) || {};
+  statusState.set(featureId, { ...entry, cacheLayer });
+  statusSummary.cacheSamples += 1;
+  if (cacheLayer === "kv") {
+    statusSummary.cacheHits += 1;
+  }
+  updateStatusStrip();
+}
+
+function readCollapsed(featureId) {
+  try {
+    const raw = window.localStorage?.getItem(`${COLLAPSE_KEY_PREFIX}${featureId}`);
+    if (raw === null) return null;
+    return raw === "true";
+  } catch (error) {
+    return null;
+  }
+}
+
+function writeCollapsed(featureId, value) {
+  try {
+    window.localStorage?.setItem(`${COLLAPSE_KEY_PREFIX}${featureId}`, value ? "true" : "false");
+  } catch (error) {
+    // ignore
+  }
+}
+
+function setCollapsed(section, collapsed) {
+  if (!section) return;
+  section.classList.toggle("is-collapsed", collapsed);
+  section.setAttribute("data-rv-collapsed", collapsed ? "true" : "false");
+}
+
+function ensureToggle(section, featureId) {
+  const header = section.querySelector(".rv-native-header");
+  if (!header || header.querySelector("[data-rv-action=\"collapse\"]")) return;
+  const refreshButton = header.querySelector("[data-rv-action=\"refresh\"]");
+  let actions = header.querySelector(".rv-native-actions");
+  if (!actions) {
+    actions = document.createElement("div");
+    actions.className = "rv-native-actions";
+    if (refreshButton) {
+      header.removeChild(refreshButton);
+      actions.appendChild(refreshButton);
+    }
+    header.appendChild(actions);
+  }
+  const button = document.createElement("button");
+  button.className = "rv-native-toggle";
+  button.type = "button";
+  button.setAttribute("data-rv-action", "collapse");
+  button.textContent = "Collapse";
+  actions.appendChild(button);
+  button.addEventListener("click", () => {
+    const collapsed = section.classList.contains("is-collapsed");
+    const next = !collapsed;
+    setCollapsed(section, next);
+    writeCollapsed(featureId, next);
+    button.textContent = next ? "Expand" : "Collapse";
+  });
+}
+
+function initAccordion(sections) {
+  if (typeof window === "undefined") return;
+  const isMobile = window.matchMedia("(max-width: 768px)").matches;
+  sections.forEach((section, index) => {
+    if (section.getAttribute("data-rv-collapsible") !== "true") return;
+    const featureId = section.getAttribute("data-rv-feature") || `block-${index}`;
+    ensureToggle(section, featureId);
+    const saved = readCollapsed(featureId);
+    if (saved !== null) {
+      setCollapsed(section, saved);
+      const button = section.querySelector("[data-rv-action=\"collapse\"]");
+      if (button) button.textContent = saved ? "Expand" : "Collapse";
+      return;
+    }
+    const shouldCollapse = isMobile && index >= DEFAULT_OPEN_COUNT;
+    setCollapsed(section, shouldCollapse);
+    const button = section.querySelector("[data-rv-action=\"collapse\"]");
+    if (button) button.textContent = shouldCollapse ? "Expand" : "Collapse";
+  });
+}
+
+function expandSection(section) {
+  if (!section) return;
+  if (!section.classList.contains("is-collapsed")) return;
+  const featureId = section.getAttribute("data-rv-feature") || "";
+  setCollapsed(section, false);
+  if (featureId) writeCollapsed(featureId, false);
+  const button = section.querySelector("[data-rv-action=\"collapse\"]");
+  if (button) button.textContent = "Collapse";
+}
+
+function setupSubnav() {
+  if (typeof document === "undefined") return;
+  const links = Array.from(document.querySelectorAll(".rv-subnav a[href^=\"#\"]"));
+  links.forEach((link) => {
+    link.addEventListener("click", (event) => {
+      const targetId = link.getAttribute("href");
+      if (!targetId) return;
+      const target = document.querySelector(targetId);
+      if (!target) return;
+      event.preventDefault();
+      target.scrollIntoView({ behavior: "smooth", block: "start" });
+      expandSection(target.closest("[data-rv-feature]") || target);
+    });
+  });
+}
+
+function initVisibilityObserver(sections) {
+  if (typeof IntersectionObserver === "undefined") return;
+  const observer = new IntersectionObserver(
+    (entries) => {
+      entries.forEach((entry) => {
+        const section = entry.target;
+        section.setAttribute("data-rv-visible", entry.isIntersecting ? "true" : "false");
+      });
+    },
+    {
+      rootMargin: RV_CONFIG.loader?.rootMargin || "300px 0px 300px 0px",
+      threshold: RV_CONFIG.loader?.threshold ?? 0.05
+    }
+  );
+  sections.forEach((section) => observer.observe(section));
 }
 
 function isHtmlFallback(contentType, preview) {
@@ -474,6 +700,10 @@ function startAutoRefresh(section, feature, logger, contentEl) {
       logger.info("auto_refresh_paused", { reason: "hidden" });
       return;
     }
+    if (section.getAttribute("data-rv-visible") === "false") {
+      logger.info("auto_refresh_paused", { reason: "offscreen" });
+      return;
+    }
     const traceId = createTraceId();
     logger.setTraceId(traceId);
     logger.info("auto_refresh", { intervalMs: feature.refreshIntervalMs });
@@ -514,8 +744,23 @@ function initBlock(section, feature) {
     rootEl: root,
     panicMode: DEBUG_PANIC_MODE
   });
+  const originalSetStatus = logger.setStatus.bind(logger);
+  logger.setStatus = (status, headline = "") => {
+    originalSetStatus(status, headline);
+    recordStatus(featureId, blockName, status, headline);
+  };
+  const originalSetMeta = logger.setMeta.bind(logger);
+  logger.setMeta = (meta = {}) => {
+    originalSetMeta(meta);
+    if (meta.cacheLayer !== undefined) {
+      recordCache(featureId, meta.cacheLayer);
+    }
+  };
   const contentEl = logger.getContentEl();
   applyApiMeta(logger);
+  if (feature?.computation) {
+    logger.setMeta({ computation: feature.computation });
+  }
 
   if (!feature || feature.enabled === false || section.getAttribute("data-rv-disabled") === "true") {
     logger.setStatus("DISABLED", "Disabled");
@@ -583,32 +828,32 @@ function boot() {
   }
 
   const sections = Array.from(document.querySelectorAll("[data-rv-feature]"));
-  const eager = [];
-  const lazy = [];
+  initAccordion(sections);
+  setupSubnav();
+  initVisibilityObserver(sections);
+  updateStatusStrip();
 
-  sections.forEach((section) => {
+  const lazy = sections.map((section) => {
     const featureId = section.getAttribute("data-rv-feature");
     const feature = featureMap.get(featureId);
-    const entry = { section, feature };
-    if (feature?.lazyLoad) {
-      lazy.push(entry);
-    } else {
-      eager.push(entry);
-    }
-  });
-
-  eager.forEach(({ section, feature }) => {
-    const initState = initBlock(section, feature);
-    if (!initState) return;
-    const start = performance.now();
-    runFeature(section, feature, initState.logger, initState.contentEl).then((ok) => {
-      if (ok) {
-        initState.logger.info("loaded", { loadTimeMs: Math.round(performance.now() - start) });
-      }
-    });
+    return { section, feature };
   });
 
   if (!lazy.length) return;
+
+  if (typeof IntersectionObserver === "undefined") {
+    lazy.forEach(({ section, feature }) => {
+      const initState = initBlock(section, feature);
+      if (!initState) return;
+      const start = performance.now();
+      runFeature(section, feature, initState.logger, initState.contentEl).then((ok) => {
+        if (ok) {
+          initState.logger.info("loaded", { loadTimeMs: Math.round(performance.now() - start) });
+        }
+      });
+    });
+    return;
+  }
 
   const observer = new IntersectionObserver(
     (entries) => {

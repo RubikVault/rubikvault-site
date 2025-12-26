@@ -8,13 +8,15 @@ function formatNumber(value, options = {}) {
 
 function render(root, payload, logger) {
   const data = payload?.data || {};
-  const fng = data?.fng;
-  const btc = data?.btc;
-  const fngValue = fng?.value ?? null;
-  const fngLabel = fng?.valueClassification ?? "–";
-  const btcPrice = btc?.usd ?? null;
-  const btcChange = btc?.usd_24h_change ?? null;
-  const btcChangeClass = btcChange >= 0 ? "rv-native-positive" : "rv-native-negative";
+  const fngCrypto = data?.fng;
+  const fngStocks = data?.fngStocks;
+  const crypto = Array.isArray(data?.crypto) ? data.crypto : [];
+  const indices = Array.isArray(data?.indices) ? data.indices : [];
+  const commodities = Array.isArray(data?.commodities) ? data.commodities : [];
+  const partialNote =
+    payload?.ok && (payload?.isStale || payload?.error?.code)
+      ? "Partial data — some sources unavailable."
+      : "";
 
   if (!payload?.ok) {
     const errorMessage = payload?.error?.message || "API error";
@@ -60,7 +62,7 @@ function render(root, payload, logger) {
     return;
   }
 
-  if (!fng && !btc) {
+  if (!fngCrypto && !fngStocks && !crypto.length && !indices.length && !commodities.length) {
     root.innerHTML = `
       <div class="rv-native-empty">
         Keine Marktdaten verfügbar. Bitte später erneut versuchen.
@@ -76,23 +78,98 @@ function render(root, payload, logger) {
     return;
   }
 
-  root.innerHTML = `
-    <div class="rv-native-grid">
-      <div class="rv-native-kpi">
-        <div class="label">Fear &amp; Greed</div>
-        <div class="value">${formatNumber(fngValue)}</div>
-        <div class="rv-native-note">${fngLabel}</div>
-      </div>
-      <div class="rv-native-kpi">
-        <div class="label">Bitcoin</div>
-        <div class="value">$${formatNumber(btcPrice, { maximumFractionDigits: 0 })}</div>
-        <div class="rv-native-note ${btcChangeClass}">
-          ${formatNumber(btcChange, { maximumFractionDigits: 2 })}% 24h
+  const renderGauge = (label, value, classification) => {
+    const safeValue = Number.isFinite(value) ? Math.max(0, Math.min(100, value)) : null;
+    const width = safeValue === null ? 0 : safeValue;
+    return `
+      <div class="rv-health-gauge">
+        <div class="rv-health-gauge-head">
+          <span>${label}</span>
+          <strong>${safeValue === null ? "—" : formatNumber(safeValue)}</strong>
         </div>
+        <div class="rv-health-gauge-bar">
+          <div class="rv-health-gauge-fill" style="width: ${width}%;"></div>
+        </div>
+        <div class="rv-native-note">${classification || "—"}</div>
       </div>
+    `;
+  };
+
+  root.innerHTML = `
+    ${partialNote ? `<div class="rv-native-note">${partialNote}</div>` : ""}
+    <div class="rv-health-grid">
+      ${renderGauge("Fear &amp; Greed (Stocks)", fngStocks?.value, fngStocks?.valueClassification)}
+      ${renderGauge("Fear &amp; Greed (Crypto)", fngCrypto?.value, fngCrypto?.valueClassification)}
+    </div>
+    <div class="rv-health-tiles">
+      ${crypto
+        .map((asset) => {
+          const changeValue = asset.changePercent ?? null;
+          const changeClass = changeValue >= 0 ? "rv-native-positive" : "rv-native-negative";
+          return `
+            <div class="rv-health-tile">
+              <div class="label">${asset.label || asset.symbol}</div>
+              <div class="value">$${formatNumber(asset.price, { maximumFractionDigits: 2 })}</div>
+              <div class="rv-native-note ${changeClass}">${formatNumber(changeValue, { maximumFractionDigits: 2 })}% 24h</div>
+            </div>
+          `;
+        })
+        .join("")}
+    </div>
+    <div class="rv-health-table-wrap">
+      <h4>US Indices</h4>
+      <table class="rv-native-table">
+        <thead>
+          <tr>
+            <th>Index</th>
+            <th>Price</th>
+            <th>Daily %</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${indices
+            .map((item) => {
+              const changeClass = item.changePercent >= 0 ? "rv-native-positive" : "rv-native-negative";
+              return `
+                <tr>
+                  <td>${item.label || item.symbol}</td>
+                  <td>${formatNumber(item.price, { maximumFractionDigits: 2 })}</td>
+                  <td class="${changeClass}">${formatNumber(item.changePercent, { maximumFractionDigits: 2 })}%</td>
+                </tr>
+              `;
+            })
+            .join("")}
+        </tbody>
+      </table>
+    </div>
+    <div class="rv-health-table-wrap">
+      <h4>Commodities</h4>
+      <table class="rv-native-table">
+        <thead>
+          <tr>
+            <th>Asset</th>
+            <th>Price</th>
+            <th>Daily %</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${commodities
+            .map((item) => {
+              const changeClass = item.changePercent >= 0 ? "rv-native-positive" : "rv-native-negative";
+              return `
+                <tr>
+                  <td>${item.label || item.symbol}</td>
+                  <td>${formatNumber(item.price, { maximumFractionDigits: 2 })}</td>
+                  <td class="${changeClass}">${formatNumber(item.changePercent, { maximumFractionDigits: 2 })}%</td>
+                </tr>
+              `;
+            })
+            .join("")}
+        </tbody>
+      </table>
     </div>
     <div class="rv-native-note">
-      Updated: ${new Date(data.updatedAt || payload.ts).toLocaleTimeString()} · Sources: Alternative.me, CoinGecko
+      Updated: ${new Date(data.updatedAt || payload.ts).toLocaleTimeString()} · Sources: ${data.source || "multi"}
     </div>
   `;
 
@@ -114,7 +191,7 @@ function render(root, payload, logger) {
   );
   logger?.setMeta({
     updatedAt: data.updatedAt || payload.ts,
-    source: data.source || "Alternative.me, CoinGecko",
+    source: data.source || "multi",
     isStale: payload?.isStale,
     staleAgeMs: payload?.staleAgeMs
   });

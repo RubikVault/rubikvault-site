@@ -70,11 +70,22 @@
         <a href="https://www.instagram.com/rubikvault" target="_blank" rel="noopener noreferrer">Instagram</a>
       </nav>
     </div>
+    <div class="rv-status-strip" id="rv-status-strip" aria-live="polite">
+      <span>System status loading…</span>
+    </div>
   </header>
+
+  <nav class="rv-subnav" aria-label="Dashboard sections">
+    <a href="#rv-overview">Overview</a>
+    <a href="#rv-stocks">Stocks</a>
+    <a href="#rv-crypto">Crypto</a>
+    <a href="#rv-macro">Macro</a>
+    <a href="#rv-news">News</a>
+  </nav>
 
   <!-- MAIN -->
   <main class="rv-main" id="rv-dashboard">
-    <section class="rv-hero">
+    <section class="rv-hero" id="rv-overview">
       <div class="rv-hero-content">
         <h1>Decode the Markets.</h1>
         <p>
@@ -181,6 +192,7 @@
       </div>
     </section>
 
+    <div class="rv-block-grid">
     <!-- RV NATIVE BLOCK 01: Market Health -->
     <section
       class="rv-section rv-native-block"
@@ -188,6 +200,9 @@
       data-rv-block-name="Block 01 – Market Health"
       data-rv-priority="high"
       data-rv-loading="true"
+      data-rv-collapsible="true"
+      data-rv-span="wide"
+      id="rv-stocks"
     >
       <div class="rv-native-header">
         <h2>Block 01 – Market Health</h2>
@@ -210,6 +225,7 @@
       data-rv-block-name="Block 02 – Price Snapshot"
       data-rv-priority="high"
       data-rv-loading="true"
+      data-rv-collapsible="true"
     >
       <div class="rv-native-header">
         <h2>Block 02 – Price Snapshot</h2>
@@ -232,6 +248,7 @@
       data-rv-block-name="Block 03 – Top Movers"
       data-rv-priority="medium"
       data-rv-loading="true"
+      data-rv-collapsible="true"
     >
       <div class="rv-native-header">
         <h2>Block 03 – Top Movers</h2>
@@ -254,6 +271,7 @@
       data-rv-block-name="Block 04 – Earnings Calendar"
       data-rv-priority="low"
       data-rv-loading="true"
+      data-rv-collapsible="true"
     >
       <div class="rv-native-header">
         <h2>Block 04 – Earnings Calendar</h2>
@@ -276,6 +294,9 @@
       data-rv-block-name="Block 05 – News Headlines"
       data-rv-priority="low"
       data-rv-loading="true"
+      data-rv-collapsible="true"
+      data-rv-span="wide"
+      id="rv-news"
     >
       <div class="rv-native-header">
         <h2>Block 05 – News Headlines</h2>
@@ -298,6 +319,8 @@
       data-rv-block-name="Block 06 – Watchlist Local"
       data-rv-priority="low"
       data-rv-loading="true"
+      data-rv-collapsible="true"
+      data-rv-span="wide"
     >
       <div class="rv-native-header">
         <h2>Block 06 – Watchlist Local</h2>
@@ -320,6 +343,7 @@
       data-rv-block-name="Block 07 – Export CSV"
       data-rv-priority="low"
       data-rv-loading="true"
+      data-rv-collapsible="true"
     >
       <div class="rv-native-header">
         <h2>Block 07 – Export CSV</h2>
@@ -342,6 +366,9 @@
       data-rv-block-name="Block 08 – Macro & Rates"
       data-rv-priority="low"
       data-rv-loading="true"
+      data-rv-collapsible="true"
+      data-rv-span="wide"
+      id="rv-macro"
     >
       <div class="rv-native-header">
         <h2>Block 08 – Macro &amp; Rates</h2>
@@ -364,6 +391,8 @@
       data-rv-block-name="Block 09 – Crypto Snapshot"
       data-rv-priority="low"
       data-rv-loading="true"
+      data-rv-collapsible="true"
+      id="rv-crypto"
     >
       <div class="rv-native-header">
         <h2>Block 09 – Crypto Snapshot</h2>
@@ -386,6 +415,7 @@
       data-rv-block-name="Block 10 – Sentiment Barometer"
       data-rv-priority="low"
       data-rv-loading="true"
+      data-rv-collapsible="true"
     >
       <div class="rv-native-header">
         <h2>Block 10 – Sentiment Barometer</h2>
@@ -408,6 +438,8 @@
       data-rv-block-name="Block 11 – Tech Signals"
       data-rv-priority="low"
       data-rv-loading="true"
+      data-rv-collapsible="true"
+      data-rv-span="wide"
     >
       <div class="rv-native-header">
         <h2>Block 11 – Tech Signals</h2>
@@ -422,6 +454,7 @@
         <div class="rv-native-root" data-rv-root></div>
       </div>
     </section>
+    </div>
   </main>
 
   <!-- FOOTER (ohne Bild, nur Text + Links) -->

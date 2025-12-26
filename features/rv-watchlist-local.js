@@ -10,6 +10,8 @@ const DEFAULT_LIST = ["AAPL", "NVDA"];
 const DEFAULT_REFRESH_MS = 120_000;
 const BACKOFF_STEPS = [120_000, 300_000, 900_000];
 const STALE_MAX_MS = 15 * 60 * 1000;
+const METRICS_TTL_MS = 15 * 60 * 1000;
+const EARNINGS_TTL_MS = 6 * 60 * 60 * 1000;
 
 const state = {
   symbols: [],
@@ -19,11 +21,20 @@ const state = {
   quotes: new Map(),
   lastUpdatedAt: null,
   source: "stooq",
+  metrics: new Map(),
+  metricsUpdatedAt: 0,
+  metricsMissing: false,
+  earnings: new Map(),
+  earningsUpdatedAt: 0,
+  earningsMissing: false,
   refreshTimer: null,
   backoffLevel: 0,
   backoffUntil: 0,
   isVisible: true,
   errorNote: "",
+  infoNote: "",
+  sortKey: "symbol",
+  sortDir: "asc",
   countdownTimer: null
 };
 
@@ -115,6 +126,19 @@ function formatNumber(value, options = {}) {
   return new Intl.NumberFormat("en-US", options).format(value);
 }
 
+function formatCompact(value) {
+  if (value === null || value === undefined || Number.isNaN(value)) return "–";
+  return new Intl.NumberFormat("en-US", {
+    notation: "compact",
+    maximumFractionDigits: 1
+  }).format(value);
+}
+
+function formatPercent(value, digits = 2) {
+  if (value === null || value === undefined || Number.isNaN(value)) return "–";
+  return `${formatNumber(value, { maximumFractionDigits: digits })}%`;
+}
+
 function formatTime(value) {
   if (!value) return "–";
   const date = new Date(value);
@@ -173,24 +197,49 @@ function renderSuggestions(container, suggestions, activeIndex) {
     .join("");
 }
 
+function buildRows(list) {
+  return list.map((symbol) => {
+    const quote = state.quotes.get(symbol) || {};
+    const metrics = state.metrics.get(symbol) || {};
+    const earnings = state.earnings.get(symbol) || {};
+    return {
+      symbol,
+      price: quote.price ?? null,
+      changePercent: quote.changePercent ?? null,
+      updatedAt: quote.ts || state.lastUpdatedAt,
+      source: quote.source || state.source,
+      marketCap: metrics.marketCap ?? null,
+      perf1w: metrics.perf1w ?? null,
+      perf1m: metrics.perf1m ?? null,
+      perf1y: metrics.perf1y ?? null,
+      rsi: metrics.rsi ?? null,
+      rsiWeekly: metrics.rsiWeekly ?? null,
+      nextEarnings: earnings.date || null
+    };
+  });
+}
+
+function sortRows(rows) {
+  const key = state.sortKey;
+  const dir = state.sortDir === "desc" ? -1 : 1;
+  return rows.slice().sort((a, b) => {
+    const av = a[key];
+    const bv = b[key];
+    if (av === null || av === undefined) return 1;
+    if (bv === null || bv === undefined) return -1;
+    if (typeof av === "number" && typeof bv === "number") {
+      return (av - bv) * dir;
+    }
+    return String(av).localeCompare(String(bv)) * dir;
+  });
+}
+
 function renderTable(root, list, logger) {
-  const rows = list
-    .map((symbol) => {
-      const quote = state.quotes.get(symbol);
-      const changeValue = quote?.changePercent ?? null;
-      const changeClass = changeValue >= 0 ? "rv-native-positive" : "rv-native-negative";
-      return `
-        <tr>
-          <td>${symbol}</td>
-          <td>$${formatNumber(quote?.price, { maximumFractionDigits: 2 })}</td>
-          <td class="${changeClass}">${formatNumber(changeValue, { maximumFractionDigits: 2 })}%</td>
-          <td>${formatTime(quote?.ts || state.lastUpdatedAt)}</td>
-          <td>${quote?.source || state.source || "stooq"}</td>
-          <td><button type="button" data-rv-watchlist-remove="${symbol}">Remove</button></td>
-        </tr>
-      `;
-    })
-    .join("");
+  const rows = sortRows(buildRows(list));
+  const sortLabel = (label, key) => {
+    if (state.sortKey !== key) return label;
+    return `${label} ${state.sortDir === "asc" ? "^" : "v"}`;
+  };
 
   root.innerHTML = `
     <div class="rv-watchlist">
@@ -200,20 +249,67 @@ function renderTable(root, list, logger) {
       </div>
       <div class="rv-watchlist-suggestions" data-rv-watchlist-suggestions hidden style="border: 1px solid rgba(148, 163, 184, 0.2); border-radius: 8px; padding: 6px; display: grid; gap: 6px;"></div>
       <div class="rv-native-error" data-rv-watchlist-error style="${state.errorNote ? "" : "display:none;"}">${state.errorNote}</div>
+      <div class="rv-native-note" data-rv-watchlist-info style="${state.infoNote ? "" : "display:none;"}">${state.infoNote}</div>
       <div class="rv-native-table-wrap">
         <table class="rv-native-table">
           <thead>
             <tr>
-              <th>Symbol</th>
-              <th>Price</th>
-              <th>Change%</th>
-              <th>Updated</th>
-              <th>Source</th>
+              <th data-rv-sort="symbol">${sortLabel("Symbol", "symbol")}</th>
+              <th data-rv-sort="price">${sortLabel("Price", "price")}</th>
+              <th data-rv-sort="changePercent">${sortLabel("Change%", "changePercent")}</th>
+              <th data-rv-sort="marketCap">${sortLabel("Market Cap", "marketCap")}</th>
+              <th data-rv-sort="perf1w">${sortLabel("1W", "perf1w")}</th>
+              <th data-rv-sort="perf1m">${sortLabel("1M", "perf1m")}</th>
+              <th data-rv-sort="perf1y">${sortLabel("1Y", "perf1y")}</th>
+              <th data-rv-sort="rsi">${sortLabel("Daily RSI", "rsi")}</th>
+              <th data-rv-sort="rsiWeekly">${sortLabel("Weekly RSI", "rsiWeekly")}</th>
+              <th data-rv-sort="nextEarnings">${sortLabel("Next Earnings", "nextEarnings")}</th>
+              <th data-rv-sort="updatedAt">${sortLabel("Updated", "updatedAt")}</th>
+              <th data-rv-sort="source">${sortLabel("Source", "source")}</th>
               <th>Action</th>
             </tr>
           </thead>
           <tbody>
-            ${rows || ""}
+            ${rows
+              .map((row) => {
+                const changeClass = row.changePercent >= 0 ? "rv-native-positive" : "rv-native-negative";
+                const perfClass = (value) =>
+                  value === null ? "" : value >= 0 ? "rv-native-positive" : "rv-native-negative";
+                const rsiClass =
+                  row.rsi === null
+                    ? ""
+                    : row.rsi < 30
+                      ? "rv-native-negative"
+                      : row.rsi > 70
+                        ? "rv-native-positive"
+                        : "rv-native-warning";
+                const rsiWeeklyClass =
+                  row.rsiWeekly === null
+                    ? ""
+                    : row.rsiWeekly < 30
+                      ? "rv-native-negative"
+                      : row.rsiWeekly > 70
+                        ? "rv-native-positive"
+                        : "rv-native-warning";
+                return `
+                  <tr>
+                    <td>${row.symbol}</td>
+                    <td>$${formatNumber(row.price, { maximumFractionDigits: 2 })}</td>
+                    <td class="${changeClass}">${formatPercent(row.changePercent)}</td>
+                    <td>${formatCompact(row.marketCap)}</td>
+                    <td class="${perfClass(row.perf1w)}">${formatPercent(row.perf1w)}</td>
+                    <td class="${perfClass(row.perf1m)}">${formatPercent(row.perf1m)}</td>
+                    <td class="${perfClass(row.perf1y)}">${formatPercent(row.perf1y)}</td>
+                    <td class="${rsiClass}">${formatNumber(row.rsi, { maximumFractionDigits: 1 })}</td>
+                    <td class="${rsiWeeklyClass}">${formatNumber(row.rsiWeekly, { maximumFractionDigits: 1 })}</td>
+                    <td>${row.nextEarnings ? new Date(row.nextEarnings).toLocaleDateString() : "—"}</td>
+                    <td>${formatTime(row.updatedAt)}</td>
+                    <td>${row.source || state.source || "stooq"}</td>
+                    <td><button type="button" data-rv-watchlist-remove="${row.symbol}">Remove</button></td>
+                  </tr>
+                `;
+              })
+              .join("")}
           </tbody>
         </table>
       </div>
@@ -237,6 +333,29 @@ function updateErrorNote(root) {
   }
   errorEl.textContent = state.errorNote;
   errorEl.style.display = "block";
+}
+
+function updateInfoNote(root) {
+  const infoEl = root.querySelector("[data-rv-watchlist-info]");
+  if (!infoEl) return;
+  if (!state.infoNote) {
+    infoEl.textContent = "";
+    infoEl.style.display = "none";
+    return;
+  }
+  infoEl.textContent = state.infoNote;
+  infoEl.style.display = "block";
+}
+
+function refreshInfoNote() {
+  const notes = [];
+  if (state.metricsMissing) {
+    notes.push("Market cap requires FINNHUB_API_KEY.");
+  }
+  if (state.earningsMissing) {
+    notes.push("Next earnings requires FINNHUB_API_KEY.");
+  }
+  state.infoNote = notes.join(" ");
 }
 
 function startCountdown(root) {
@@ -317,6 +436,7 @@ async function refreshQuotes(root, list, logger) {
         ? `PARTIAL: stale ${staleNote}.`
         : "PARTIAL: stale cache fallback.";
       renderTable(root, list, logger);
+      updateInfoNote(root);
       scheduleRefresh(root, list, logger);
       return;
     }
@@ -350,6 +470,7 @@ async function refreshQuotes(root, list, logger) {
       isStale: false
     });
     renderTable(root, list, logger);
+    updateInfoNote(root);
     scheduleRefresh(root, list, logger);
     return;
   }
@@ -380,7 +501,72 @@ async function refreshQuotes(root, list, logger) {
   });
 
   renderTable(root, list, logger);
+  updateInfoNote(root);
+  await refreshMetrics(root, list, logger);
+  await refreshEarnings(root, list, logger);
   scheduleRefresh(root, list, logger);
+}
+
+async function refreshMetrics(root, list, logger) {
+  if (!list.length) return;
+  const now = Date.now();
+  if (state.metricsUpdatedAt && now - state.metricsUpdatedAt < METRICS_TTL_MS) return;
+  const symbols = list.slice(0, 20).join(",");
+  const payload = await fetchJSON(`/tech-signals?symbols=${encodeURIComponent(symbols)}`, {
+    feature: SHADOW_FEATURE,
+    traceId: createTraceId(),
+    logger
+  });
+
+  if (payload?.ok && payload?.data?.signals) {
+    state.metrics = new Map(payload.data.signals.map((item) => [item.symbol, item]));
+    state.metricsUpdatedAt = Date.now();
+    const hasMarketCap = payload.data.signals.some((item) => Number.isFinite(item.marketCap));
+    state.metricsMissing = !hasMarketCap;
+    refreshInfoNote();
+    renderTable(root, list, logger);
+    updateInfoNote(root);
+    return;
+  }
+
+  if (payload?.error?.code === "ENV_MISSING") {
+    state.metricsMissing = true;
+    refreshInfoNote();
+    updateInfoNote(root);
+  }
+}
+
+async function refreshEarnings(root, list, logger) {
+  if (!list.length) return;
+  const now = Date.now();
+  if (state.earningsUpdatedAt && now - state.earningsUpdatedAt < EARNINGS_TTL_MS) return;
+  const payload = await fetchJSON(`/earnings-calendar?days=30`, {
+    feature: SHADOW_FEATURE,
+    traceId: createTraceId(),
+    logger
+  });
+
+  if (payload?.ok && payload?.data?.items) {
+    const map = new Map();
+    payload.data.items.forEach((item) => {
+      if (!item.symbol) return;
+      if (!list.includes(item.symbol)) return;
+      const existing = map.get(item.symbol);
+      if (!existing || new Date(item.date) < new Date(existing.date)) {
+        map.set(item.symbol, { date: item.date, time: item.time || "" });
+      }
+    });
+    state.earnings = map;
+    state.earningsUpdatedAt = Date.now();
+    state.earningsMissing = false;
+    refreshInfoNote();
+    renderTable(root, list, logger);
+    updateInfoNote(root);
+  } else if (payload?.error?.code === "ENV_MISSING") {
+    state.earningsMissing = true;
+    refreshInfoNote();
+    updateInfoNote(root);
+  }
 }
 
 function bind(root, list, logger) {
@@ -388,6 +574,7 @@ function bind(root, list, logger) {
   const addButton = root.querySelector("[data-rv-watchlist-add]");
   const suggestionsBox = root.querySelector("[data-rv-watchlist-suggestions]");
   const tableBody = root.querySelector("tbody");
+  const tableHead = root.querySelector("thead");
 
   let debounceId = null;
 
@@ -484,6 +671,21 @@ function bind(root, list, logger) {
     bind(root, next, logger);
     refreshQuotes(root, next, logger);
   });
+
+  tableHead?.addEventListener("click", (event) => {
+    const th = event.target.closest("[data-rv-sort]");
+    if (!th) return;
+    const key = th.getAttribute("data-rv-sort");
+    if (!key) return;
+    if (state.sortKey === key) {
+      state.sortDir = state.sortDir === "asc" ? "desc" : "asc";
+    } else {
+      state.sortKey = key;
+      state.sortDir = "asc";
+    }
+    renderTable(root, list, logger);
+    bind(root, list, logger);
+  });
 }
 
 function setupVisibility(root, list, logger) {
@@ -502,6 +704,7 @@ export async function init(root, context = {}) {
   const logger = context?.logger;
   const list = loadList(logger);
   updateShared(list);
+  refreshInfoNote();
   renderTable(root, list, logger);
   bind(root, list, logger);
   setupVisibility(root, list, logger);
@@ -512,6 +715,7 @@ export async function refresh(root, context = {}) {
   const logger = context?.logger;
   const list = loadList(logger);
   updateShared(list);
+  refreshInfoNote();
   renderTable(root, list, logger);
   bind(root, list, logger);
   refreshQuotes(root, list, logger);

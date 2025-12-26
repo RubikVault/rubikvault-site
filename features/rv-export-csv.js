@@ -59,6 +59,7 @@ function render(root, logger) {
   root.innerHTML = `
     <div class="rv-export">
       <p>Exportiere aggregierte Cache-Daten aus Memory + Shadow.</p>
+      <p class="rv-native-note">What is this block for? Downloading debug snapshots for offline review.</p>
       <div class="rv-export-meta">
         <span>Rows: ${rows.length}</span>
       </div>

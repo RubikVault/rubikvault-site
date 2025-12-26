@@ -7,9 +7,21 @@ function formatTime(value) {
   return Number.isNaN(date.getTime()) ? "--" : date.toLocaleTimeString();
 }
 
+const CATEGORY_ICONS = {
+  stocks: "EQ",
+  commodities: "CM",
+  crypto: "CR",
+  etfs: "ETF",
+  bonds: "BD"
+};
+
 function render(root, payload, logger) {
   const data = payload?.data || {};
   const items = data.items || [];
+  const partialNote =
+    payload?.ok && (payload?.isStale || payload?.error?.code)
+      ? "Partial data — some sources unavailable."
+      : "";
 
   if (!payload?.ok) {
     const errorMessage = payload?.error?.message || "API error";
@@ -72,20 +84,24 @@ function render(root, payload, logger) {
   }
 
   root.innerHTML = `
+    ${partialNote ? `<div class="rv-native-note">${partialNote}</div>` : ""}
     <div class="rv-news-list">
       ${items
-        .slice(0, 10)
-        .map(
-          (item) => `
+        .slice(0, 12)
+        .map((item) => {
+          const category = item.category || "stocks";
+          const icon = CATEGORY_ICONS[category] || "EQ";
+          return `
             <a class="rv-news-item" href="${item.url}" target="_blank" rel="noopener noreferrer">
+              <span class="rv-news-icon" data-rv-cat="${category}">${icon}</span>
               <span class="rv-news-title">${item.headline}</span>
-              ${item.summary ? `<span class="rv-news-summary">${item.summary}</span>` : ""}
               <span class="rv-news-meta">${item.source || "news"} · ${formatTime(item.publishedAt)}</span>
             </a>
-          `
-        )
+          `;
+        })
         .join("")}
     </div>
+    <div class="rv-native-note">Data provided by ${data.source || "feeds"}</div>
   `;
 
   const warningCode = payload?.error?.code || "";

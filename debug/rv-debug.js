@@ -39,6 +39,7 @@ function ensureShell(rootEl) {
       <span data-rv-cache>Cache: --</span>
       <span data-rv-upstream>Upstream: --</span>
       <span data-rv-config>Config: --</span>
+      <span data-rv-computation>Computed: --</span>
     </div>
     <div class="rv-block-actions">
       <button class="rv-block-debug-toggle" type="button" data-rv-debug-toggle>Show debug</button>
@@ -79,6 +80,7 @@ export function createLogger({ featureId, blockName, rootEl, panicMode = false }
     apiBase: null,
     apiPrefix: null,
     configErrors: [],
+    computation: null,
     lines: []
   };
 
@@ -90,6 +92,7 @@ export function createLogger({ featureId, blockName, rootEl, panicMode = false }
   const cacheEl = shell.querySelector("[data-rv-cache]");
   const upstreamEl = shell.querySelector("[data-rv-upstream]");
   const configEl = shell.querySelector("[data-rv-config]");
+  const computationEl = shell.querySelector("[data-rv-computation]");
   const featureEl = shell.querySelector("[data-rv-feature-id]");
   const blockEl = shell.querySelector("[data-rv-block-name]");
   const debugEl = shell.querySelector("[data-rv-debug]");
@@ -147,6 +150,20 @@ export function createLogger({ featureId, blockName, rootEl, panicMode = false }
         configEl.textContent = `Config: missing${errorSuffix}`;
       } else {
         configEl.textContent = `Config: loaded ${baseLabel}${errorSuffix}`;
+      }
+    }
+    if (computationEl) {
+      const meta = state.computation;
+      if (!meta) {
+        computationEl.textContent = "Computed: --";
+      } else {
+        const parts = [
+          meta.where ? `Where: ${meta.where}` : null,
+          meta.update ? `Update: ${meta.update}` : null,
+          meta.cost ? `Cost: ${meta.cost}` : null,
+          meta.trust ? `Trust: ${meta.trust}` : null
+        ].filter(Boolean);
+        computationEl.textContent = parts.length ? parts.join(" | ") : "Computed: --";
       }
     }
   };
@@ -231,7 +248,8 @@ export function createLogger({ featureId, blockName, rootEl, panicMode = false }
       configLoaded,
       apiBase,
       apiPrefix,
-      configErrors
+      configErrors,
+      computation
     } = {}) {
       if (updatedAt) state.updatedAt = updatedAt;
       if (source !== undefined) state.source = source;
@@ -244,6 +262,7 @@ export function createLogger({ featureId, blockName, rootEl, panicMode = false }
       if (apiBase !== undefined) state.apiBase = apiBase;
       if (apiPrefix !== undefined) state.apiPrefix = apiPrefix;
       if (configErrors !== undefined) state.configErrors = configErrors;
+      if (computation !== undefined) state.computation = computation;
       renderMeta();
     },
     setTraceId(traceId) {

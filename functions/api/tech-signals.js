@@ -60,6 +60,87 @@ function computeRsi(values, period = 14) {
   return 100 - 100 / (1 + rs);
 }
 
+function computePerformance(values, offset) {
+  if (values.length <= offset) return null;
+  const latest = values[values.length - 1];
+  const prior = values[values.length - 1 - offset];
+  if (!Number.isFinite(latest) || !Number.isFinite(prior) || prior === 0) return null;
+  return ((latest / prior) - 1) * 100;
+}
+
+function sampleWeekly(values) {
+  const weekly = [];
+  for (let i = values.length - 1; i >= 0; i -= 5) {
+    weekly.unshift(values[i]);
+  }
+  return weekly;
+}
+
+function sampleSeries(values, step) {
+  if (step <= 1) return values.slice();
+  const sampled = [];
+  for (let i = values.length - 1; i >= 0; i -= step) {
+    sampled.unshift(values[i]);
+  }
+  return sampled;
+}
+
+function computeRsiSeries(values, period = 14) {
+  if (values.length <= period) return [];
+  const output = [];
+  let gains = 0;
+  let losses = 0;
+  for (let i = 1; i <= period; i += 1) {
+    const delta = values[i] - values[i - 1];
+    if (delta >= 0) gains += delta;
+    else losses -= delta;
+  }
+  let avgGain = gains / period;
+  let avgLoss = losses / period;
+  output.push(avgLoss === 0 ? 100 : 100 - 100 / (1 + avgGain / avgLoss));
+  for (let i = period + 1; i < values.length; i += 1) {
+    const delta = values[i] - values[i - 1];
+    const gain = delta > 0 ? delta : 0;
+    const loss = delta < 0 ? -delta : 0;
+    avgGain = (avgGain * (period - 1) + gain) / period;
+    avgLoss = (avgLoss * (period - 1) + loss) / period;
+    const rsi = avgLoss === 0 ? 100 : 100 - 100 / (1 + avgGain / avgLoss);
+    output.push(rsi);
+  }
+  return output;
+}
+
+function computeStochRsi(values, period = 14) {
+  const rsiSeries = computeRsiSeries(values, period);
+  if (rsiSeries.length < period) return null;
+  const slice = rsiSeries.slice(-period);
+  const min = Math.min(...slice);
+  const max = Math.max(...slice);
+  const latest = rsiSeries[rsiSeries.length - 1];
+  if (max === min) return 0;
+  return ((latest - min) / (max - min)) * 100;
+}
+
+function computeMacd(values, shortPeriod = 12, longPeriod = 26, signalPeriod = 9) {
+  if (values.length < longPeriod + signalPeriod) return { macd: null, signal: null, hist: null };
+  const kShort = 2 / (shortPeriod + 1);
+  const kLong = 2 / (longPeriod + 1);
+  const kSignal = 2 / (signalPeriod + 1);
+  let emaShort = values[0];
+  let emaLong = values[0];
+  let signal = 0;
+  values.forEach((value, index) => {
+    emaShort = value * kShort + emaShort * (1 - kShort);
+    emaLong = value * kLong + emaLong * (1 - kLong);
+    const macd = emaShort - emaLong;
+    if (index === 0) signal = macd;
+    else signal = macd * kSignal + signal * (1 - kSignal);
+  });
+  const macd = emaShort - emaLong;
+  const hist = macd - signal;
+  return { macd, signal, hist };
+}
+
 function movingAverage(values, period) {
   if (values.length < period) return null;
   const slice = values.slice(values.length - period);
@@ -95,6 +176,8 @@ export async function onRequestGet({ request, env, data }) {
 
   const url = new URL(request.url);
   const symbolsParam = url.searchParams.get("symbols") || "";
+  const timeframe = (url.searchParams.get("timeframe") || "daily").toLowerCase();
+  const step = timeframe === "weekly" ? 5 : timeframe === "monthly" ? 21 : 1;
   const { symbols, errorResponse } = normalizeSymbolsParam(symbolsParam, {
     feature: FEATURE_ID,
     traceId,
@@ -142,7 +225,7 @@ export async function onRequestGet({ request, env, data }) {
     return response;
   }
 
-  const cacheKey = `${FEATURE_ID}:${symbols.join(",")}:v1`;
+  const cacheKey = `${FEATURE_ID}:${symbols.join(",")}:${timeframe}:v1`;
   if (!panic) {
     const cached = await kvGetJson(env, cacheKey);
     if (cached?.hit && cached.value?.data) {
@@ -198,16 +281,34 @@ export async function onRequestGet({ request, env, data }) {
           return;
         }
 
-        const rsi = computeRsi(values, 14);
-        const ma20 = movingAverage(values, 20);
-        const ma50 = movingAverage(values, 50);
+        const valuesUsed = sampleSeries(values, step);
+        const rsi = computeRsi(valuesUsed, 14);
+        const weeklySeries = sampleSeries(values, 5);
+        const rsiWeekly = computeRsi(weeklySeries, 14);
+        const ma20 = movingAverage(valuesUsed, 20);
+        const ma50 = movingAverage(valuesUsed, 50);
+        const perf1w = computePerformance(values, 5);
+        const perf1m = computePerformance(values, 21);
+        const perf1y = computePerformance(values, 252);
+        const macd = computeMacd(valuesUsed);
+        const stochRsi = computeStochRsi(valuesUsed, 14);
         signals.push({
           symbol,
           rsi,
           rsiLabel: classifyRsi(rsi),
+          rsiWeekly,
+          rsiWeeklyLabel: classifyRsi(rsiWeekly),
           ma20,
           ma50,
           maRegime: classifyMa(ma20, ma50),
+          macd: macd.macd,
+          macdSignal: macd.signal,
+          macdHist: macd.hist,
+          stochRsi,
+          perf1w,
+          perf1m,
+          perf1y,
+          timeframe,
           ts: new Date().toISOString(),
           source: "stooq"
         });
@@ -244,6 +345,7 @@ export async function onRequestGet({ request, env, data }) {
   const dataPayload = {
     updatedAt: new Date().toISOString(),
     source: "stooq",
+    timeframe,
     signals,
     skipped
   };

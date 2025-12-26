@@ -8,7 +8,14 @@ function formatNumber(value, options = {}) {
 
 function render(root, payload, logger) {
   const data = payload?.data || {};
-  const items = data?.items || [];
+  const crypto = data?.crypto || [];
+  const stocks = data?.stocks || {};
+  const gainers = stocks.gainers || [];
+  const losers = stocks.losers || [];
+  const partialNote =
+    payload?.ok && (payload?.isStale || payload?.error?.code)
+      ? "Partial data — some sources unavailable."
+      : "";
 
   if (!payload?.ok) {
     const errorMessage = payload?.error?.message || "API error";
@@ -54,7 +61,7 @@ function render(root, payload, logger) {
     return;
   }
 
-  if (!items.length) {
+  if (!crypto.length && !gainers.length && !losers.length) {
     root.innerHTML = `
       <div class="rv-native-empty">
         Keine Movers-Daten verfügbar. Bitte später erneut versuchen.
@@ -71,7 +78,9 @@ function render(root, payload, logger) {
   }
 
   root.innerHTML = `
+    ${partialNote ? `<div class="rv-native-note">${partialNote}</div>` : ""}
     <div class="rv-native-table-wrap">
+      <h4>Crypto Movers</h4>
       <table class="rv-native-table">
         <thead>
           <tr>
@@ -81,25 +90,77 @@ function render(root, payload, logger) {
           </tr>
         </thead>
         <tbody>
-          ${items
+          ${crypto
             .map((item) => {
-            const changeValue = item.changePercent ?? item.change ?? 0;
-            const changeClass = changeValue >= 0 ? "rv-native-positive" : "rv-native-negative";
-            return `
-              <tr>
-                <td>${item.symbol || item.name}</td>
-                <td>$${formatNumber(item.price, { maximumFractionDigits: 2 })}</td>
-                <td class="${changeClass}">${formatNumber(changeValue, { maximumFractionDigits: 2 })}%</td>
-              </tr>
-            `;
+              const changeValue = item.changePercent ?? item.change ?? 0;
+              const changeClass = changeValue >= 0 ? "rv-native-positive" : "rv-native-negative";
+              return `
+                <tr>
+                  <td>${item.symbol || item.name}</td>
+                  <td>$${formatNumber(item.price, { maximumFractionDigits: 2 })}</td>
+                  <td class="${changeClass}">${formatNumber(changeValue, { maximumFractionDigits: 2 })}%</td>
+                </tr>
+              `;
             })
             .join("")}
         </tbody>
       </table>
     </div>
-    <div class="rv-native-note">
-      Updated: ${new Date(data.updatedAt || payload.ts).toLocaleTimeString()} · Source: CoinGecko
+    <div class="rv-native-table-wrap">
+      <h4>Stock Movers (Mega-cap universe)</h4>
+      <div class="rv-native-split">
+        <table class="rv-native-table">
+          <thead>
+            <tr>
+              <th>Gainers</th>
+              <th>Price</th>
+              <th>Daily %</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${gainers
+              .map((item) => {
+                const changeValue = item.changePercent ?? 0;
+                return `
+                  <tr>
+                    <td>${item.symbol}</td>
+                    <td>$${formatNumber(item.price, { maximumFractionDigits: 2 })}</td>
+                    <td class="rv-native-positive">${formatNumber(changeValue, { maximumFractionDigits: 2 })}%</td>
+                  </tr>
+                `;
+              })
+              .join("")}
+          </tbody>
+        </table>
+        <table class="rv-native-table">
+          <thead>
+            <tr>
+              <th>Losers</th>
+              <th>Price</th>
+              <th>Daily %</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${losers
+              .map((item) => {
+                const changeValue = item.changePercent ?? 0;
+                return `
+                  <tr>
+                    <td>${item.symbol}</td>
+                    <td>$${formatNumber(item.price, { maximumFractionDigits: 2 })}</td>
+                    <td class="rv-native-negative">${formatNumber(changeValue, { maximumFractionDigits: 2 })}%</td>
+                  </tr>
+                `;
+              })
+              .join("")}
+          </tbody>
+        </table>
+      </div>
     </div>
+    <div class="rv-native-note">
+      Updated: ${new Date(data.updatedAt || payload.ts).toLocaleTimeString()} · Source: ${data.source || "multi"}
+    </div>
+    ${data.method ? `<div class="rv-native-note">${data.method}</div>` : ""}
   `;
 
   const warningCode = payload?.error?.code || "";
@@ -120,7 +181,7 @@ function render(root, payload, logger) {
   );
   logger?.setMeta({
     updatedAt: data.updatedAt || payload.ts,
-    source: data.source || "CoinGecko",
+    source: data.source || "multi",
     isStale: payload?.isStale,
     staleAgeMs: payload?.staleAgeMs
   });

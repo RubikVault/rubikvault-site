@@ -1,6 +1,19 @@
 import { fetchJSON, getBindingHint } from "./utils/api.js";
 import { getOrFetch } from "./utils/store.js";
 
+function formatResult(result) {
+  if (!result) return "n/a";
+  return result;
+}
+
+function sentimentClass(label) {
+  if (!label) return "";
+  if (label.includes("positive")) return "rv-native-positive";
+  if (label.includes("negative")) return "rv-native-negative";
+  if (label === "mixed") return "rv-native-warning";
+  return "";
+}
+
 function render(root, payload, logger) {
   const data = payload?.data || {};
   const items = data.items || [];
@@ -22,7 +35,7 @@ function render(root, payload, logger) {
       errorCode === "BINDING_MISSING"
         ? getBindingHint(payload)
         : errorCode === "ENV_MISSING"
-          ? "Fix: Set EARNINGS_API_KEY in Cloudflare Pages environment variables"
+          ? "Fix: Set FINNHUB_API_KEY in Cloudflare Pages environment variables"
           : "";
     root.innerHTML = `
       <div class="rv-native-error">
@@ -70,11 +83,20 @@ function render(root, payload, logger) {
     return;
   }
 
+  const partialNote =
+    payload?.ok && (payload?.isStale || payload?.error?.code)
+      ? "Partial data — some entries unavailable."
+      : "";
+
   root.innerHTML = `
+    ${partialNote ? `<div class="rv-native-note">${partialNote}</div>` : ""}
     <div class="rv-earnings-list">
       ${items
-        .map(
-          (item) => `
+        .map((item) => {
+          const sentiment = item.sentiment || "unknown";
+          const sentimentLabel = sentiment.replace(/_/g, " ");
+          const sentimentCls = sentimentClass(sentiment);
+          return `
             <div class="rv-earnings-card">
               <div class="rv-earnings-head">
                 <strong>${item.symbol}</strong>
@@ -82,14 +104,21 @@ function render(root, payload, logger) {
               </div>
               <div class="rv-earnings-meta">
                 <span>Date: ${item.date || "--"}</span>
-                <span>EPS Est: ${item.epsEst ?? "--"}</span>
-                <span>EPS Actual: ${item.epsActual ?? "--"}</span>
+                <span>Time: ${item.time || "--"}</span>
+                <span>EPS: ${item.epsActual ?? "--"} / ${item.epsEst ?? "--"} (${formatResult(
+            item.epsResult
+          )})</span>
+                <span>Revenue: ${item.revenueActual ?? "--"} / ${item.revenueEst ?? "--"} (${formatResult(
+            item.revenueResult
+          )})</span>
+                <span class="${sentimentCls}">Sentiment: ${sentimentLabel}</span>
               </div>
             </div>
-          `
-        )
+          `;
+        })
         .join("")}
     </div>
+    <div class="rv-native-note">Data provided by ${data.source || "finnhub"}</div>
   `;
 
   const warningCode = payload?.error?.code || "";
@@ -129,7 +158,7 @@ export async function init(root, context = {}) {
   const data = await getOrFetch(
     "rv-earnings-calendar",
     () => loadData({ featureId, traceId, logger }),
-    { ttlMs: 300_000, featureId, logger }
+    { ttlMs: 60 * 60 * 1000, featureId, logger }
   );
   render(root, data, logger);
 }

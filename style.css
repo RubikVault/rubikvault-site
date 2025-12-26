@@ -62,6 +62,73 @@ a {
   justify-content: space-between;
 }
 
+.rv-status-strip {
+  max-width: 1200px;
+  margin: 0 auto 12px;
+  padding: 8px 16px;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.7);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  font-size: 12px;
+  color: var(--rv-text-muted);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.rv-status-pill {
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+}
+
+.rv-status-pill[data-rv-state="ok"] {
+  color: #4ade80;
+  border-color: rgba(74, 222, 128, 0.4);
+}
+
+.rv-status-pill[data-rv-state="partial"] {
+  color: #facc15;
+  border-color: rgba(250, 204, 21, 0.4);
+}
+
+.rv-status-pill[data-rv-state="fail"] {
+  color: #f87171;
+  border-color: rgba(248, 113, 113, 0.4);
+}
+
+.rv-status-meta {
+  color: var(--rv-text-muted);
+}
+
+.rv-subnav {
+  position: sticky;
+  top: 120px;
+  z-index: 90;
+  background: rgba(8, 13, 25, 0.9);
+  border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+  backdrop-filter: blur(6px);
+  display: flex;
+  gap: 8px;
+  padding: 0 20px;
+  overflow-x: auto;
+}
+
+.rv-subnav a {
+  display: inline-flex;
+  padding: 10px 12px;
+  font-size: 12px;
+  color: var(--rv-text-muted);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.rv-subnav a:hover {
+  color: var(--rv-accent);
+}
+
 .rv-logo {
   display: inline-flex;
   align-items: center;
@@ -72,8 +139,8 @@ a {
 }
 
 .rv-logo-mark {
-  width: 36px;
-  height: 36px;
+  width: 90px;
+  height: 90px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -84,8 +151,8 @@ a {
 }
 
 .rv-logo-mark svg {
-  width: 26px;
-  height: 26px;
+  width: 68px;
+  height: 68px;
   display: block;
   max-width: 100%;
   max-height: 100%;
@@ -385,6 +452,20 @@ a {
     gap: 12px;
   }
 
+  .rv-logo-mark {
+    width: 70px;
+    height: 70px;
+  }
+
+  .rv-logo-mark svg {
+    width: 52px;
+    height: 52px;
+  }
+
+  .rv-subnav {
+    top: 110px;
+  }
+
   .rv-hero {
     padding-top: 70px;
   }
@@ -409,14 +490,46 @@ a {
   .rv-market-grid {
     grid-template-columns: minmax(0, 1fr);
   }
+
+  #rv-dashboard .rv-block-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  #rv-dashboard .rv-native-block[data-rv-span="wide"] {
+    grid-column: span 1;
+  }
+
+  #rv-dashboard .rv-native-toggle {
+    display: inline-flex;
+  }
+
+  #rv-dashboard .rv-native-block {
+    scroll-margin-top: 150px;
+  }
 }
 
 /* =========================
    RubikVault Native Blocks
    ========================= */
 
+#rv-dashboard .rv-block-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 20px;
+  align-items: start;
+}
+
+#rv-dashboard .rv-block-grid .rv-native-block {
+  margin-top: 0;
+}
+
 #rv-dashboard .rv-native-block {
   margin-top: 24px;
+  scroll-margin-top: 160px;
+}
+
+#rv-dashboard .rv-native-block[data-rv-span="wide"] {
+  grid-column: span 2;
 }
 
 #rv-dashboard .rv-native-header {
@@ -431,6 +544,31 @@ a {
   margin: 0;
   font-size: 18px;
   letter-spacing: -0.01em;
+}
+
+#rv-dashboard .rv-native-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+#rv-dashboard .rv-native-toggle {
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  background: rgba(15, 23, 42, 0.6);
+  color: var(--rv-text-muted);
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  cursor: pointer;
+  display: none;
+}
+
+#rv-dashboard .rv-native-block.is-collapsed .rv-native-body {
+  display: none;
+}
+
+#rv-dashboard .rv-native-block.is-collapsed .rv-native-header {
+  margin-bottom: 0;
 }
 
 #rv-dashboard .rv-native-refresh {
@@ -650,6 +788,58 @@ a {
   grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
 }
 
+#rv-dashboard .rv-health-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  margin-bottom: 12px;
+}
+
+#rv-dashboard .rv-health-gauge {
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: var(--rv-radius-sm);
+  padding: 12px;
+  background: rgba(15, 23, 42, 0.6);
+  display: grid;
+  gap: 6px;
+}
+
+#rv-dashboard .rv-health-gauge-head {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+}
+
+#rv-dashboard .rv-health-gauge-bar {
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.2);
+  overflow: hidden;
+}
+
+#rv-dashboard .rv-health-gauge-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #22c55e 0%, #facc15 50%, #f97316 100%);
+}
+
+#rv-dashboard .rv-health-tiles {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  margin-bottom: 12px;
+}
+
+#rv-dashboard .rv-health-tile {
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: var(--rv-radius-sm);
+  padding: 10px;
+  background: rgba(15, 23, 42, 0.6);
+}
+
+#rv-dashboard .rv-health-table-wrap {
+  margin-top: 10px;
+}
+
 #rv-dashboard .rv-native-kpi {
   border: 1px solid rgba(148, 163, 184, 0.2);
   border-radius: var(--rv-radius-sm);
@@ -685,6 +875,10 @@ a {
   border-bottom: 1px solid rgba(148, 163, 184, 0.15);
 }
 
+#rv-dashboard .rv-native-table th[data-rv-sort] {
+  cursor: pointer;
+}
+
 #rv-dashboard .rv-native-table tbody tr:hover {
   background: rgba(15, 23, 42, 0.5);
 }
@@ -712,6 +906,16 @@ a {
 
 #rv-dashboard .rv-native-negative {
   color: #f87171;
+}
+
+#rv-dashboard .rv-native-warning {
+  color: #facc15;
+}
+
+#rv-dashboard .rv-native-split {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
 }
 
 #rv-dashboard .rv-earnings-list,
@@ -745,7 +949,9 @@ a {
 
 #rv-dashboard .rv-news-item {
   display: grid;
-  gap: 4px;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 8px;
   padding: 10px;
   border-radius: 10px;
   border: 1px solid rgba(148, 163, 184, 0.2);
@@ -754,19 +960,120 @@ a {
   text-decoration: none;
 }
 
+#rv-dashboard .rv-news-icon {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  color: var(--rv-text);
+  background: rgba(15, 23, 42, 0.5);
+}
+
+#rv-dashboard .rv-news-icon[data-rv-cat="crypto"] {
+  color: #60a5fa;
+  border-color: rgba(96, 165, 250, 0.5);
+}
+
+#rv-dashboard .rv-news-icon[data-rv-cat="commodities"] {
+  color: #facc15;
+  border-color: rgba(250, 204, 21, 0.5);
+}
+
+#rv-dashboard .rv-news-icon[data-rv-cat="bonds"] {
+  color: #a78bfa;
+  border-color: rgba(167, 139, 250, 0.5);
+}
+
+#rv-dashboard .rv-news-icon[data-rv-cat="etfs"] {
+  color: #34d399;
+  border-color: rgba(52, 211, 153, 0.5);
+}
+
 #rv-dashboard .rv-news-title {
   font-size: 13px;
   font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 #rv-dashboard .rv-news-meta {
   font-size: 11px;
   color: var(--rv-text-muted);
+  white-space: nowrap;
 }
 
 #rv-dashboard .rv-news-summary {
   font-size: 12px;
   color: var(--rv-text-muted);
+}
+
+#rv-dashboard .rv-macro-tabs {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+#rv-dashboard .rv-macro-tab {
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  background: rgba(15, 23, 42, 0.6);
+  color: var(--rv-text-muted);
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+#rv-dashboard .rv-macro-tab.is-active {
+  color: var(--rv-accent);
+  border-color: rgba(56, 189, 248, 0.5);
+}
+
+#rv-dashboard .rv-macro-panel {
+  display: none;
+}
+
+#rv-dashboard .rv-macro-section {
+  margin-bottom: 12px;
+}
+
+#rv-dashboard .rv-macro-section h4 {
+  margin: 0 0 8px;
+  font-size: 13px;
+  color: var(--rv-text-muted);
+}
+
+#rv-dashboard .rv-tech-section {
+  margin-bottom: 16px;
+}
+
+#rv-dashboard .rv-tech-section h3 {
+  margin: 0 0 10px;
+  font-size: 14px;
+}
+
+#rv-dashboard .rv-top30-controls {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+#rv-dashboard .rv-top30-tab {
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  background: rgba(15, 23, 42, 0.6);
+  color: var(--rv-text-muted);
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+#rv-dashboard .rv-top30-tab.is-active {
+  color: var(--rv-accent);
+  border-color: rgba(56, 189, 248, 0.5);
 }
 
 #rv-dashboard .rv-sentiment {

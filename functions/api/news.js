@@ -13,7 +13,32 @@ const FEATURE_ID = "news";
 const KV_TTL = 600;
 const FEEDS = [
   { id: "yahoo", url: "https://finance.yahoo.com/news/rssindex" },
-  { id: "cnbc", url: "https://search.cnbc.com/rs/search/combined.xml?type=articles&id=10000664" }
+  { id: "cnbc", url: "https://search.cnbc.com/rs/search/combined.xml?type=articles&id=10000664" },
+  { id: "reuters", url: "https://feeds.reuters.com/reuters/businessNews" },
+  { id: "reuters-markets", url: "https://feeds.reuters.com/reuters/marketsNews" }
+];
+
+const CATEGORY_RULES = [
+  {
+    id: "crypto",
+    label: "Crypto",
+    keywords: ["bitcoin", "btc", "ethereum", "eth", "crypto", "solana", "xrp", "blockchain"]
+  },
+  {
+    id: "commodities",
+    label: "Commodities",
+    keywords: ["oil", "crude", "gold", "silver", "copper", "gas", "wheat", "corn", "soy"]
+  },
+  {
+    id: "bonds",
+    label: "Bonds",
+    keywords: ["treasury", "yield", "bond", "rates", "fed", "inflation", "cpi"]
+  },
+  {
+    id: "etfs",
+    label: "ETFs",
+    keywords: ["etf", "fund", "spy", "qqq", "voo", "ivv", "ark"]
+  }
 ];
 
 function mapUpstreamCode(status) {
@@ -29,10 +54,20 @@ function stripHtml(value) {
   return String(value).replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
 }
 
-function summarize(value, max = 160) {
+function summarize(value, max = 120) {
   const text = stripHtml(value);
   if (!text) return "";
   return text.length > max ? `${text.slice(0, max - 1)}…` : text;
+}
+
+function classifyHeadline(headline) {
+  const text = String(headline || "").toLowerCase();
+  for (const rule of CATEGORY_RULES) {
+    if (rule.keywords.some((keyword) => text.includes(keyword))) {
+      return { category: rule.id, label: rule.label };
+    }
+  }
+  return { category: "stocks", label: "Stocks" };
 }
 
 function normalize(items) {
@@ -100,12 +135,16 @@ export async function onRequestGet({ request, env, data }) {
         let feedItems = xmlObj.rss?.channel?.item || xmlObj.feed?.entry || [];
         if (!Array.isArray(feedItems)) feedItems = [feedItems];
         feedItems.slice(0, 15).forEach((item) => {
+          const headline = stripHtml(item.title || "");
+          const category = classifyHeadline(headline);
           items.push({
-            headline: stripHtml(item.title || ""),
+            headline,
             summary: summarize(item.description || item.summary || ""),
             url: item.link?.href || item.link || "",
             source: feed.id,
-            publishedAt: item.pubDate || item.updated || new Date().toISOString()
+            publishedAt: item.pubDate || item.updated || new Date().toISOString(),
+            category: category.id,
+            categoryLabel: category.label
           });
         });
       } catch (error) {

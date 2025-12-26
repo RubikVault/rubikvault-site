@@ -24,17 +24,49 @@ function mapUpstreamCode(status) {
   return "UPSTREAM_5XX";
 }
 
+function classifySurprise(actual, estimate) {
+  const actualNum = Number(actual);
+  const estimateNum = Number(estimate);
+  if (!Number.isFinite(actualNum) || !Number.isFinite(estimateNum)) return null;
+  if (Math.abs(actualNum - estimateNum) < 1e-6) return "inline";
+  return actualNum > estimateNum ? "beat" : "miss";
+}
+
+function deriveSentiment(epsResult, revenueResult) {
+  const signals = [epsResult, revenueResult].filter(Boolean);
+  if (!signals.length) return "unknown";
+  if (signals.every((value) => value === "beat")) return "positive";
+  if (signals.every((value) => value === "miss")) return "negative";
+  if (signals.includes("beat") && signals.includes("miss")) return "mixed";
+  if (signals.includes("beat")) return "slightly_positive";
+  if (signals.includes("miss")) return "slightly_negative";
+  return "neutral";
+}
+
 function normalizeFinnhub(payload) {
   const list = Array.isArray(payload?.earningsCalendar) ? payload.earningsCalendar : [];
-  const items = list.slice(0, 20).map((entry) => ({
-    symbol: entry.symbol || "",
-    company: entry.company || "",
-    date: entry.date || "",
-    epsEst: entry.epsEstimate ?? null,
-    epsActual: entry.epsActual ?? null,
-    ts: new Date().toISOString(),
-    source: "finnhub"
-  }));
+  const items = list
+    .map((entry) => {
+      const epsResult = classifySurprise(entry.epsActual, entry.epsEstimate);
+      const revenueResult = classifySurprise(entry.revenueActual, entry.revenueEstimate);
+      return {
+        symbol: entry.symbol || "",
+        company: entry.company || "",
+        date: entry.date || "",
+        time: entry.hour || entry.time || "",
+        epsEst: entry.epsEstimate ?? null,
+        epsActual: entry.epsActual ?? null,
+        epsResult,
+        revenueEst: entry.revenueEstimate ?? null,
+        revenueActual: entry.revenueActual ?? null,
+        revenueResult,
+        sentiment: deriveSentiment(epsResult, revenueResult),
+        ts: new Date().toISOString(),
+        source: "finnhub"
+      };
+    })
+    .sort((a, b) => new Date(a.date) - new Date(b.date))
+    .slice(0, 30);
 
   return {
     updatedAt: new Date().toISOString(),
@@ -46,9 +78,9 @@ function normalizeFinnhub(payload) {
 export async function onRequestGet({ request, env, data }) {
   const traceId = data?.traceId || createTraceId(request);
   const started = Date.now();
+  const url = new URL(request.url);
   const panic =
-    request.headers.get("x-rv-panic") === "1" ||
-    new URL(request.url).searchParams.get("rv_panic") === "1";
+    request.headers.get("x-rv-panic") === "1" || url.searchParams.get("rv_panic") === "1";
 
   const bindingResponse = assertBindings(env, FEATURE_ID, traceId);
   if (bindingResponse) {
@@ -127,8 +159,10 @@ export async function onRequestGet({ request, env, data }) {
     }
   }
 
+  const daysParam = Number.parseInt(url.searchParams.get("days") || "7", 10);
+  const days = Number.isFinite(daysParam) ? Math.min(Math.max(daysParam, 1), 90) : 7;
   const from = formatDate(new Date());
-  const to = formatDate(new Date(Date.now() + 7 * 24 * 60 * 60 * 1000));
+  const to = formatDate(new Date(Date.now() + days * 24 * 60 * 60 * 1000));
   const upstreamUrl = `${FINNHUB_BASE}?from=${from}&to=${to}&token=${env.FINNHUB_API_KEY}`;
   let upstreamStatus = null;
   let upstreamSnippet = "";

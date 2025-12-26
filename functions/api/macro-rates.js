@@ -15,11 +15,26 @@ const RATE_MAX = 30;
 const rateStore = new Map();
 
 const SERIES = [
-  { id: "FEDFUNDS", label: "Fed Funds" },
-  { id: "CPIAUCSL", label: "CPI (All Urban)" },
-  { id: "DGS10", label: "US 10Y" },
-  { id: "DGS2", label: "US 2Y" }
+  { id: "FEDFUNDS", label: "Fed Funds", group: "rates", region: "US" },
+  { id: "DGS1", label: "US 1Y", group: "rates", region: "US" },
+  { id: "DGS2", label: "US 2Y", group: "rates", region: "US" },
+  { id: "DGS3", label: "US 3Y", group: "rates", region: "US" },
+  { id: "DGS5", label: "US 5Y", group: "rates", region: "US" },
+  { id: "DGS10", label: "US 10Y", group: "rates", region: "US" },
+  { id: "DGS20", label: "US 20Y", group: "rates", region: "US" },
+  { id: "DGS30", label: "US 30Y", group: "rates", region: "US" },
+  { id: "CPIAUCSL", label: "US CPI", group: "inflation", region: "US" }
 ];
+
+const FX_SYMBOLS = [
+  { symbol: "DX-Y.NYB", label: "DXY", region: "Global" },
+  { symbol: "EURUSD=X", label: "EURUSD", region: "Global" },
+  { symbol: "GBPUSD=X", label: "GBPUSD", region: "Global" },
+  { symbol: "JPY=X", label: "USDJPY", region: "Global" }
+];
+const FX_URL = `https://query1.finance.yahoo.com/v7/finance/quote?symbols=${encodeURIComponent(
+  FX_SYMBOLS.map((entry) => entry.symbol).join(",")
+)}`;
 
 function mapUpstreamCode(status) {
   if (status === 429) return "RATE_LIMITED";
@@ -65,6 +80,29 @@ function parseObservations(payload) {
     latest,
     prior
   };
+}
+
+function normalizeFx(payload) {
+  const results = payload?.quoteResponse?.result || [];
+  const map = new Map(results.map((quote) => [quote.symbol, quote]));
+  return FX_SYMBOLS.map((entry) => {
+    const quote = map.get(entry.symbol) || {};
+    return {
+      seriesId: entry.symbol,
+      label: entry.label,
+      value: quote.regularMarketPrice ?? null,
+      change: null,
+      changePercent: quote.regularMarketChangePercent ?? null,
+      date: new Date().toISOString().slice(0, 10),
+      source: "yahoo",
+      group: "fx",
+      region: entry.region
+    };
+  });
+}
+
+function groupBy(items, group) {
+  return items.filter((item) => item.group === group);
 }
 
 export async function onRequestGet({ request, env, data }) {
@@ -134,7 +172,7 @@ export async function onRequestGet({ request, env, data }) {
     return response;
   }
 
-  const cacheKey = `${FEATURE_ID}:v1`;
+  const cacheKey = `${FEATURE_ID}:v2`;
   if (!panic) {
     const cached = await kvGetJson(env, cacheKey);
     if (cached?.hit && cached.value?.data) {
@@ -208,12 +246,31 @@ export async function onRequestGet({ request, env, data }) {
         label: entry.series.label,
         value: parsed.latest.value,
         change,
+        changePercent: null,
         date: parsed.latest.date,
-        source: "fred"
+        source: "fred",
+        group: entry.series.group,
+        region: entry.series.region
       });
     });
 
-    if (!items.length) {
+    let fxItems = [];
+    try {
+      const fxRes = await fetch(FX_URL);
+      const fxText = await fxRes.text();
+      if (fxRes.ok) {
+        const fxJson = fxText ? JSON.parse(fxText) : {};
+        fxItems = normalizeFx(fxJson);
+      } else if (!upstreamSnippet) {
+        upstreamSnippet = safeSnippet(fxText);
+      }
+    } catch (error) {
+      // ignore FX errors
+    }
+
+    const combined = items.concat(fxItems);
+
+    if (!combined.length) {
       const cached = !panic ? await kvGetJson(env, cacheKey) : null;
       const errorCode = errors.find((entry) => entry.status === 429)
         ? "RATE_LIMITED"
@@ -273,8 +330,13 @@ export async function onRequestGet({ request, env, data }) {
 
     const dataPayload = {
       updatedAt: new Date().toISOString(),
-      source: "fred",
-      series: items
+      source: "fred, yahoo",
+      series: combined,
+      groups: {
+        rates: groupBy(combined, "rates"),
+        inflation: groupBy(combined, "inflation"),
+        fx: groupBy(combined, "fx")
+      }
     };
 
     const kvPayload = {
@@ -288,32 +350,21 @@ export async function onRequestGet({ request, env, data }) {
       await kvPutJson(env, cacheKey, kvPayload, KV_TTL);
     }
 
-    const errorCode = errors.length
-      ? errors.find((entry) => entry.status === 429)
-        ? "RATE_LIMITED"
-        : errors.find((entry) => entry.status === 403)
-          ? "UPSTREAM_403"
-          : errors.find((entry) => Number(entry.status) >= 500)
-            ? "UPSTREAM_5XX"
-            : "UPSTREAM_4XX"
-      : "";
-
     const response = makeResponse({
       ok: true,
       feature: FEATURE_ID,
       traceId,
       data: dataPayload,
       cache: { hit: false, ttl: panic ? 0 : KV_TTL, layer: "none" },
-      upstream: { url: "fred", status: 200, snippet: upstreamSnippet },
+      upstream: { url: "fred | yahoo", status: 200, snippet: upstreamSnippet },
       error: errors.length
         ? {
-            code: errorCode,
-            message: "Partial upstream data",
+            code: mapUpstreamCode(errors[0]?.status || 502),
+            message: "Some upstreams failed",
             details: { errors }
           }
         : {}
     });
-
     logServer({
       feature: FEATURE_ID,
       traceId,
@@ -329,8 +380,12 @@ export async function onRequestGet({ request, env, data }) {
       feature: FEATURE_ID,
       traceId,
       cache: { hit: false, ttl: 0, layer: "none" },
-      upstream: { url: "fred", status: null, snippet: upstreamSnippet },
-      error: { code: errorCode, message: error?.message || "Request failed", details: {} }
+      upstream: { url: "fred | yahoo", status: null, snippet: upstreamSnippet },
+      error: {
+        code: errorCode,
+        message: error?.message || "Request failed",
+        details: {}
+      }
     });
     logServer({
       feature: FEATURE_ID,

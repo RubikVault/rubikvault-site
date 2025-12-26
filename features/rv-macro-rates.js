@@ -6,9 +6,100 @@ function formatNumber(value, options = {}) {
   return new Intl.NumberFormat("en-US", options).format(value);
 }
 
+function renderPanel(region, items) {
+  const rates = items.filter((item) => item.group === "rates");
+  const inflation = items.filter((item) => item.group === "inflation");
+
+  if (!rates.length && !inflation.length) {
+    return `
+      <div class="rv-native-empty">
+        Keine Daten für ${region}. (${region} series not configured)
+      </div>
+    `;
+  }
+
+  return `
+    <div class="rv-macro-section">
+      <h4>Rates</h4>
+      <div class="rv-native-grid">
+        ${rates
+          .map((item) => {
+            const changeValue = item.change ?? null;
+            const changeClass = changeValue >= 0 ? "rv-native-positive" : "rv-native-negative";
+            return `
+              <div class="rv-native-kpi">
+                <div class="label">${item.label}</div>
+                <div class="value">${formatNumber(item.value, { maximumFractionDigits: 2 })}</div>
+                <div class="rv-native-note ${changeClass}">${
+                  changeValue === null ? "" : `${formatNumber(changeValue, { maximumFractionDigits: 2 })} vs prior`
+                }</div>
+              </div>
+            `;
+          })
+          .join("")}
+      </div>
+    </div>
+    <div class="rv-macro-section">
+      <h4>Inflation</h4>
+      <div class="rv-native-grid">
+        ${inflation
+          .map((item) => {
+            const changeValue = item.change ?? null;
+            const changeClass = changeValue >= 0 ? "rv-native-positive" : "rv-native-negative";
+            return `
+              <div class="rv-native-kpi">
+                <div class="label">${item.label}</div>
+                <div class="value">${formatNumber(item.value, { maximumFractionDigits: 2 })}</div>
+                <div class="rv-native-note ${changeClass}">${
+                  changeValue === null ? "" : `${formatNumber(changeValue, { maximumFractionDigits: 2 })} vs prior`
+                }</div>
+              </div>
+            `;
+          })
+          .join("")}
+      </div>
+    </div>
+  `;
+}
+
+function renderFx(items) {
+  if (!items.length) {
+    return `
+      <div class="rv-native-empty">
+        Keine FX-Daten verfügbar.
+      </div>
+    `;
+  }
+
+  return `
+    <div class="rv-native-grid">
+      ${items
+        .map((item) => {
+          const changeValue = item.changePercent ?? null;
+          const changeClass = changeValue >= 0 ? "rv-native-positive" : "rv-native-negative";
+          return `
+            <div class="rv-native-kpi">
+              <div class="label">${item.label}</div>
+              <div class="value">${formatNumber(item.value, { maximumFractionDigits: 4 })}</div>
+              <div class="rv-native-note ${changeClass}">${
+                changeValue === null ? "" : `${formatNumber(changeValue, { maximumFractionDigits: 2 })}%`
+              }</div>
+            </div>
+          `;
+        })
+        .join("")}
+    </div>
+  `;
+}
+
 function render(root, payload, logger) {
   const data = payload?.data || {};
-  const series = data.series || [];
+  const series = Array.isArray(data.series) ? data.series : [];
+  const fxSeries = (data.groups?.fx || []).slice();
+  const partialNote =
+    payload?.ok && (payload?.isStale || payload?.error?.code)
+      ? "Partial data — some sources unavailable."
+      : "";
 
   if (!payload?.ok) {
     const errorMessage = payload?.error?.message || "API error";
@@ -59,7 +150,7 @@ function render(root, payload, logger) {
     return;
   }
 
-  if (!series.length) {
+  if (!series.length && !fxSeries.length) {
     root.innerHTML = `
       <div class="rv-native-empty">
         Keine Macro-Daten verfügbar. Bitte später erneut versuchen.
@@ -75,28 +166,63 @@ function render(root, payload, logger) {
     return;
   }
 
+  const tabs = [
+    { id: "US", label: "US" },
+    { id: "EU", label: "EU" },
+    { id: "UK", label: "UK" },
+    { id: "JP", label: "JP" },
+    { id: "FX", label: "FX" }
+  ];
+
+  const panels = tabs
+    .map((tab) => {
+      if (tab.id === "FX") {
+        return `<div class="rv-macro-panel" data-rv-panel="FX">${renderFx(fxSeries)}</div>`;
+      }
+      const items = series.filter((item) => item.region === tab.id);
+      return `<div class="rv-macro-panel" data-rv-panel="${tab.id}">${renderPanel(
+        tab.label,
+        items
+      )}</div>`;
+    })
+    .join("");
+
   root.innerHTML = `
-    <div class="rv-native-grid">
-      ${series
-        .map((item) => {
-          const changeValue = item.change ?? null;
-          const changeClass = changeValue >= 0 ? "rv-native-positive" : "rv-native-negative";
-          const changeLabel =
-            changeValue === null
-              ? ""
-              : `${formatNumber(changeValue, { maximumFractionDigits: 2 })} vs prior`;
-          return `
-            <div class="rv-native-kpi">
-              <div class="label">${item.label || item.seriesId}</div>
-              <div class="value">${formatNumber(item.value, { maximumFractionDigits: 2 })}</div>
-              <div class="rv-native-note ${changeClass}">${changeLabel}</div>
-            </div>
-          `;
-        })
+    ${partialNote ? `<div class="rv-native-note">${partialNote}</div>` : ""}
+    <div class="rv-macro-tabs">
+      ${tabs
+        .map(
+          (tab, index) => `
+            <button type="button" class="rv-macro-tab${index === 0 ? " is-active" : ""}" data-rv-tab="${
+              tab.id
+            }">${tab.label}</button>
+          `
+        )
         .join("")}
     </div>
-    <div class="rv-native-note">Updated: ${new Date(data.updatedAt || payload.ts).toLocaleTimeString()} · Source: FRED</div>
+    ${panels}
+    <div class="rv-native-note">Updated: ${new Date(
+      data.updatedAt || payload.ts
+    ).toLocaleTimeString()} · Source: ${data.source || "multi"}</div>
   `;
+
+  const tabButtons = Array.from(root.querySelectorAll("[data-rv-tab]"));
+  const tabPanels = Array.from(root.querySelectorAll("[data-rv-panel]"));
+  const activateTab = (tabId) => {
+    tabButtons.forEach((btn) => {
+      btn.classList.toggle("is-active", btn.getAttribute("data-rv-tab") === tabId);
+    });
+    tabPanels.forEach((panel) => {
+      panel.style.display = panel.getAttribute("data-rv-panel") === tabId ? "block" : "none";
+    });
+  };
+
+  tabButtons.forEach((button) => {
+    button.addEventListener("click", () => {
+      activateTab(button.getAttribute("data-rv-tab"));
+    });
+  });
+  activateTab("US");
 
   const warningCode = payload?.error?.code || "";
   const hasWarning = payload?.ok && warningCode;
@@ -110,13 +236,10 @@ function render(root, payload, logger) {
       : hasWarning
         ? "Partial data"
         : "Live";
-  logger?.setStatus(
-    payload?.isStale || hasWarning ? "PARTIAL" : "OK",
-    headline
-  );
+  logger?.setStatus(payload?.isStale || hasWarning ? "PARTIAL" : "OK", headline);
   logger?.setMeta({
     updatedAt: data.updatedAt || payload.ts,
-    source: data.source || "FRED",
+    source: data.source || "multi",
     isStale: payload?.isStale,
     staleAgeMs: payload?.staleAgeMs
   });
