@@ -10,6 +10,7 @@ import {
 
 const FEATURE_ID = "earnings-calendar";
 const KV_TTL = 3600;
+const FINNHUB_BASE = "https://finnhub.io/api/v1/calendar/earnings";
 
 function formatDate(date) {
   return date.toISOString().slice(0, 10);
@@ -23,22 +24,21 @@ function mapUpstreamCode(status) {
   return "UPSTREAM_5XX";
 }
 
-function normalize(payload) {
-  const items = Array.isArray(payload)
-    ? payload.slice(0, 20).map((entry) => ({
-        symbol: entry.symbol || "",
-        company: entry.name || entry.company || "",
-        date: entry.date || "",
-        epsEst: entry.epsEstimated ?? entry.epsEst ?? null,
-        epsActual: entry.eps ?? entry.epsActual ?? null,
-        ts: new Date().toISOString(),
-        source: "earnings"
-      }))
-    : [];
+function normalizeFinnhub(payload) {
+  const list = Array.isArray(payload?.earningsCalendar) ? payload.earningsCalendar : [];
+  const items = list.slice(0, 20).map((entry) => ({
+    symbol: entry.symbol || "",
+    company: entry.company || "",
+    date: entry.date || "",
+    epsEst: entry.epsEstimate ?? null,
+    epsActual: entry.epsActual ?? null,
+    ts: new Date().toISOString(),
+    source: "finnhub"
+  }));
 
   return {
     updatedAt: new Date().toISOString(),
-    source: "earnings",
+    source: "finnhub",
     items
   };
 }
@@ -55,7 +55,32 @@ export async function onRequestGet({ request, env, data }) {
     return bindingResponse;
   }
 
-  if (!env.EARNINGS_API_KEY) {
+  const provider = (env.EARNINGS_PROVIDER || "finnhub").toLowerCase();
+  if (provider !== "finnhub") {
+    const response = makeResponse({
+      ok: false,
+      feature: FEATURE_ID,
+      traceId,
+      cache: { hit: false, ttl: 0, layer: "none" },
+      upstream: { url: "", status: null, snippet: "" },
+      error: {
+        code: "BAD_REQUEST",
+        message: "Earnings provider not supported",
+        details: { provider, supported: ["finnhub"] }
+      },
+      status: 400
+    });
+    logServer({
+      feature: FEATURE_ID,
+      traceId,
+      cacheLayer: "none",
+      upstreamStatus: null,
+      durationMs: Date.now() - started
+    });
+    return response;
+  }
+
+  if (!env.FINNHUB_API_KEY) {
     const response = makeResponse({
       ok: false,
       feature: FEATURE_ID,
@@ -64,8 +89,8 @@ export async function onRequestGet({ request, env, data }) {
       upstream: { url: "", status: null, snippet: "" },
       error: {
         code: "ENV_MISSING",
-        message: "EARNINGS_API_KEY missing",
-        details: { missing: ["EARNINGS_API_KEY"] }
+        message: "FINNHUB_API_KEY missing",
+        details: { missing: ["FINNHUB_API_KEY"] }
       },
       status: 500
     });
@@ -102,10 +127,9 @@ export async function onRequestGet({ request, env, data }) {
     }
   }
 
-  const base = env.EARNINGS_API_BASE || "https://financialmodelingprep.com/api/v3/earning_calendar";
   const from = formatDate(new Date());
   const to = formatDate(new Date(Date.now() + 7 * 24 * 60 * 60 * 1000));
-  const upstreamUrl = `${base}?from=${from}&to=${to}&apikey=${env.EARNINGS_API_KEY}`;
+  const upstreamUrl = `${FINNHUB_BASE}?from=${from}&to=${to}&token=${env.FINNHUB_API_KEY}`;
   let upstreamStatus = null;
   let upstreamSnippet = "";
 
@@ -125,7 +149,7 @@ export async function onRequestGet({ request, env, data }) {
           traceId,
           data: cached.value.data,
           cache: { hit: true, ttl: KV_TTL, layer: "kv" },
-          upstream: { url: upstreamUrl, status: res.status, snippet: upstreamSnippet },
+          upstream: { url: FINNHUB_BASE, status: res.status, snippet: upstreamSnippet },
           error: { code: errorCode, message: `Upstream ${res.status}`, details: {} },
           isStale: true
         });
@@ -144,7 +168,7 @@ export async function onRequestGet({ request, env, data }) {
         feature: FEATURE_ID,
         traceId,
         cache: { hit: false, ttl: 0, layer: "none" },
-        upstream: { url: upstreamUrl, status: res.status, snippet: upstreamSnippet },
+        upstream: { url: FINNHUB_BASE, status: res.status, snippet: upstreamSnippet },
         error: { code: errorCode, message: `Upstream ${res.status}`, details: {} },
         status: res.status === 429 ? 429 : 502
       });
@@ -160,14 +184,14 @@ export async function onRequestGet({ request, env, data }) {
 
     let json;
     try {
-      json = text ? JSON.parse(text) : [];
+      json = text ? JSON.parse(text) : {};
     } catch (error) {
       const response = makeResponse({
         ok: false,
         feature: FEATURE_ID,
         traceId,
         cache: { hit: false, ttl: 0, layer: "none" },
-        upstream: { url: upstreamUrl, status: res.status, snippet: upstreamSnippet },
+        upstream: { url: FINNHUB_BASE, status: res.status, snippet: upstreamSnippet },
         error: { code: "SCHEMA_INVALID", message: "Invalid JSON", details: {} },
         status: 502
       });
@@ -181,7 +205,7 @@ export async function onRequestGet({ request, env, data }) {
       return response;
     }
 
-    const dataPayload = normalize(json);
+    const dataPayload = normalizeFinnhub(json);
     const kvPayload = {
       ts: new Date().toISOString(),
       source: dataPayload.source,
@@ -199,7 +223,7 @@ export async function onRequestGet({ request, env, data }) {
       traceId,
       data: dataPayload,
       cache: { hit: false, ttl: panic ? 0 : KV_TTL, layer: "none" },
-      upstream: { url: upstreamUrl, status: res.status, snippet: upstreamSnippet }
+      upstream: { url: FINNHUB_BASE, status: res.status, snippet: upstreamSnippet }
     });
     logServer({
       feature: FEATURE_ID,
@@ -216,7 +240,7 @@ export async function onRequestGet({ request, env, data }) {
       feature: FEATURE_ID,
       traceId,
       cache: { hit: false, ttl: 0, layer: "none" },
-      upstream: { url: upstreamUrl, status: upstreamStatus, snippet: upstreamSnippet },
+      upstream: { url: FINNHUB_BASE, status: upstreamStatus, snippet: upstreamSnippet },
       error: { code: errorCode, message: error?.message || "Request failed", details: {} }
     });
     logServer({
