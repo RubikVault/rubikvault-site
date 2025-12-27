@@ -72,6 +72,21 @@ export const FEATURES = [
     lazyLoad: true
   },
   {
+    id: "rv-news-intelligence",
+    title: "Block 12 - News Intelligence",
+    module: "./features/rv-news-intelligence.js",
+    api: "news-intelligence",
+    computation: {
+      where: "Pages Function",
+      update: "1h",
+      cost: "free and automated",
+      trust: "derived"
+    },
+    enabled: true,
+    lazyLoad: true,
+    refreshIntervalMs: 60 * 60 * 1000
+  },
+  {
     id: "rv-watchlist-local",
     title: "Block 06 - Watchlist (Local)",
     module: "./features/rv-watchlist-local.js",
