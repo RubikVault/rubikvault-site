@@ -138,6 +138,25 @@ a {
   letter-spacing: -0.02em;
 }
 
+.rv-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  text-decoration: none;
+}
+
+.rv-brand-logo {
+  height: 44px;
+  width: auto;
+  display: block;
+}
+
+@media (max-width: 520px) {
+  .rv-brand-logo {
+    height: 36px;
+  }
+}
+
 .rv-logo-mark {
   width: 90px;
   height: 90px;
