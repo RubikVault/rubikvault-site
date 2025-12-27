@@ -1330,3 +1330,19 @@ a {
     background-position: -200% 0;
   }
 }
+
+
+/* RV BRAND (icon + wordmark) */
+.rv-brand { display:inline-flex; align-items:center; gap:12px; text-decoration:none; }
+.rv-brand-icon { height:36px; width:auto; display:block; }
+.rv-brand-text {
+  font-family: "Inter", system-ui, -apple-system, sans-serif;
+  font-weight: 600;
+  font-size: 1.1rem;
+  color: #d1d5db;
+  letter-spacing: 0.2px;
+}
+@media (max-width: 520px) {
+  .rv-brand-icon { height: 32px; }
+  .rv-brand-text { font-size: 1rem; }
+}
