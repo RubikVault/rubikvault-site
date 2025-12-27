@@ -9,7 +9,8 @@ function formatSentiment(value) {
 function render(root, payload, logger) {
   const data = payload?.data || {};
   const narratives = Array.isArray(data.narratives) ? data.narratives : [];
-  const isWarning = data.status === "WARN" || payload?.isStale || payload?.error?.code;
+  const isWarning =
+    data.status === "WARN" || data.partial || payload?.isStale || payload?.error?.code;
   const partialNote = isWarning
     ? "Partial data — using limited or cached intelligence."
     : "";

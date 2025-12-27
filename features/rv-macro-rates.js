@@ -21,7 +21,7 @@ function renderPanel(region, items) {
   return `
     <div class="rv-macro-section">
       <h4>Rates</h4>
-      <div class="rv-native-grid">
+      <div class="rv-native-grid rv-compact">
         ${rates
           .map((item) => {
             const changeValue = item.change ?? null;
@@ -41,7 +41,7 @@ function renderPanel(region, items) {
     </div>
     <div class="rv-macro-section">
       <h4>Inflation</h4>
-      <div class="rv-native-grid">
+      <div class="rv-native-grid rv-compact">
         ${inflation
           .map((item) => {
             const changeValue = item.change ?? null;
@@ -72,7 +72,7 @@ function renderFx(items) {
   }
 
   return `
-    <div class="rv-native-grid">
+    <div class="rv-native-grid rv-compact">
       ${items
         .map((item) => {
           const changeValue = item.changePercent ?? null;

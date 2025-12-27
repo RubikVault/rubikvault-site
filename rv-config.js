@@ -2,6 +2,66 @@ export const DEBUG_PANIC_MODE = false;
 
 export const FEATURES = [
   {
+    id: "rv-market-cockpit",
+    title: "Hero – Market Cockpit",
+    module: "./features/rv-market-cockpit.js",
+    api: "market-cockpit",
+    computation: {
+      where: "Pages Function",
+      update: "15m",
+      cost: "free and automated",
+      trust: "derived"
+    },
+    enabled: true,
+    lazyLoad: false,
+    refreshIntervalMs: 15 * 60 * 1000
+  },
+  {
+    id: "rv-yield-curve",
+    title: "Yield Curve",
+    module: "./features/rv-yield-curve.js",
+    api: "yield-curve",
+    computation: {
+      where: "Pages Function",
+      update: "6h",
+      cost: "free and automated",
+      trust: "raw"
+    },
+    enabled: true,
+    lazyLoad: false,
+    refreshIntervalMs: 6 * 60 * 60 * 1000
+  },
+  {
+    id: "rv-sector-rotation",
+    title: "Sector Rotation",
+    module: "./features/rv-sector-rotation.js",
+    api: "sector-rotation",
+    computation: {
+      where: "Pages Function",
+      update: "30m",
+      cost: "free and automated",
+      trust: "derived"
+    },
+    enabled: true,
+    lazyLoad: false,
+    refreshIntervalMs: 30 * 60 * 1000
+  },
+  {
+    id: "rv-central-bank-watch",
+    title: "Central Bank Watch",
+    module: "./features/rv-central-bank-watch.js",
+    api: "central-bank-watch",
+    computation: {
+      where: "Pages Function",
+      update: "30m",
+      cost: "free and automated",
+      trust: "raw"
+    },
+    enabled: true,
+    lazyLoad: false,
+    refreshIntervalMs: 30 * 60 * 1000
+  },
+  {
     id: "rv-market-health",
     title: "Block 01 - Market Health",
     module: "./features/rv-market-health.js",
@@ -122,6 +182,21 @@ export const FEATURES = [
       update: "6-24h",
       cost: "free and automated",
       trust: "raw and proxy"
+    },
+    enabled: true,
+    lazyLoad: true,
+    refreshIntervalMs: 6 * 60 * 60 * 1000
+  },
+  {
+    id: "rv-sp500-sectors",
+    title: "Block 13 - S&P 500 Sectors",
+    module: "./features/rv-sp500-sectors.js",
+    api: "sp500-sectors",
+    computation: {
+      where: "Pages Function",
+      update: "6h",
+      cost: "free and automated",
+      trust: "derived proxy"
     },
     enabled: true,
     lazyLoad: true,

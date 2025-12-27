@@ -1,3 +1,6 @@
+import { XMLParser } from "fast-xml-parser";
+import { parseJsonLenient, fetchTextWithTimeout } from "./_shared/parse.js";
+
 const SCHEMA_VERSION = 1;
 
 export function createTraceId(request) {
@@ -29,6 +32,14 @@ export function truncate(text, limit = 300) {
   return safeSnippet(text, limit);
 }
 
+export function errorObject(code, message, details = {}) {
+  return {
+    code: code || "",
+    message: message || "",
+    details: details || {}
+  };
+}
+
 export function withCoinGeckoKey(url, env) {
   const apiKey = env?.COINGECKO_DEMO_KEY;
   if (!apiKey || !url) return url;
@@ -51,7 +62,11 @@ export function makeJson({
   upstream = {},
   rateLimit = rateLimitFallback(),
   error = {},
-  isStale = false
+  isStale = false,
+  source,
+  freshness,
+  cacheStatus,
+  sourceMap
 } = {}) {
   return {
     ok: Boolean(ok),
@@ -76,7 +91,11 @@ export function makeJson({
       message: error.message || "",
       details: error.details || {}
     },
-    ...(isStale ? { isStale: true } : {})
+    ...(isStale ? { isStale: true } : {}),
+    ...(source ? { source } : {}),
+    ...(freshness ? { freshness } : {}),
+    ...(cacheStatus ? { cacheStatus } : {}),
+    ...(sourceMap ? { sourceMap } : {})
   };
 }
 
@@ -96,7 +115,11 @@ export function makeResponse({
   error,
   isStale,
   status = 200,
-  headers = {}
+  headers = {},
+  source,
+  freshness,
+  cacheStatus,
+  sourceMap
 } = {}) {
   const payload = makeJson({
     ok,
@@ -108,17 +131,40 @@ export function makeResponse({
     upstream,
     rateLimit,
     error,
-    isStale
+    isStale,
+    source,
+    freshness,
+    cacheStatus,
+    sourceMap
   });
-  return jsonResponse(payload, status, headers);
+  return jsonResponse(payload, { status, cacheStatus }, headers);
+}
+
+function resolveCacheStatus(payload, override) {
+  if (override) return override;
+  if (payload?.cacheStatus) return payload.cacheStatus;
+  if (payload?.isStale) return "STALE";
+  if (payload?.cache?.hit) return "HIT";
+  if (payload?.ok === false) return "ERROR";
+  return "MISS";
 }
 
 export function jsonResponse(payload, status = 200, extraHeaders = {}) {
+  let resolvedStatus = status;
+  let headers = extraHeaders || {};
+  let cacheStatus = "";
+  if (typeof status === "object" && status !== null) {
+    resolvedStatus = status.status ?? 200;
+    cacheStatus = status.cacheStatus || "";
+    headers = status.headers || extraHeaders || {};
+  }
+  const resolvedCache = resolveCacheStatus(payload, cacheStatus);
   return new Response(JSON.stringify(payload), {
-    status,
+    status: resolvedStatus,
     headers: {
       "Content-Type": "application/json; charset=utf-8",
-      ...extraHeaders
+      "X-Cache": resolvedCache,
+      ...headers
     }
   });
 }
@@ -160,7 +206,8 @@ export function assertBindings(env, feature, traceId) {
   });
 }
 
-export async function kvGetJson(env, key) {
+export async function kvGetJson(context, key) {
+  const env = context?.env || context;
   if (!env?.RV_KV) return { value: null, hit: false, ttlSecondsRemaining: null };
   const value = await env.RV_KV.get(key, "json");
   return {
@@ -170,10 +217,15 @@ export async function kvGetJson(env, key) {
   };
 }
 
-export async function kvPutJson(env, key, value, ttlSeconds) {
+export async function kvPutJson(context, key, value, ttlSeconds) {
+  const env = context?.env || context;
   if (!env?.RV_KV) return;
+  let expirationTtl = ttlSeconds;
+  if (typeof ttlSeconds === "object" && ttlSeconds !== null) {
+    expirationTtl = ttlSeconds.expirationTtlSeconds;
+  }
   await env.RV_KV.put(key, JSON.stringify(value), {
-    expirationTtl: ttlSeconds
+    expirationTtl
   });
 }
 
@@ -235,5 +287,233 @@ export function normalizeSymbolsParam(symbols, options = {}) {
     truncated,
     ok,
     errorResponse
+  };
+}
+
+export function isFresh(updatedAt, ttlSeconds) {
+  if (!updatedAt || !ttlSeconds) return false;
+  const ts = Date.parse(updatedAt);
+  if (Number.isNaN(ts)) return false;
+  return (Date.now() - ts) / 1000 <= ttlSeconds;
+}
+
+export function normalizeFreshness(ageSeconds) {
+  if (typeof ageSeconds !== "number") return "unknown";
+  if (ageSeconds <= 0) return "fresh";
+  if (ageSeconds <= 3600) return "recent";
+  if (ageSeconds <= 86400) return "stale";
+  return "stale";
+}
+
+function extractUpdatedAt(value) {
+  const candidate =
+    value?.updatedAt ||
+    value?.ts ||
+    value?.data?.updatedAt ||
+    value?.data?.ts ||
+    value?.data?.updated_at ||
+    value?.data?.updated ||
+    null;
+  if (!candidate) return null;
+  const parsed = Date.parse(candidate);
+  return Number.isNaN(parsed) ? null : new Date(parsed).toISOString();
+}
+
+export async function swrGetOrRefresh(
+  context,
+  { key, ttlSeconds, staleMaxSeconds, fetcher, featureName }
+) {
+  const env = context?.env || context;
+  const cached = await kvGetJson(env, key);
+  if (cached?.hit && cached.value) {
+    const updatedAt = extractUpdatedAt(cached.value);
+    const ageSeconds = updatedAt ? Math.max(0, (Date.now() - Date.parse(updatedAt)) / 1000) : null;
+    const fresh = updatedAt ? isFresh(updatedAt, ttlSeconds) : false;
+    const withinStale =
+      typeof ageSeconds === "number" && typeof staleMaxSeconds === "number"
+        ? ageSeconds <= staleMaxSeconds
+        : false;
+    if (fresh) {
+      return {
+        value: cached.value,
+        cacheStatus: "HIT",
+        isStale: false,
+        ageSeconds
+      };
+    }
+
+    if (withinStale) {
+      if (typeof context?.waitUntil === "function" && typeof fetcher === "function") {
+        context.waitUntil(
+          (async () => {
+            try {
+              const refreshed = await fetcher();
+              if (refreshed?.ok) {
+                await kvPutJson(env, key, refreshed.data, ttlSeconds);
+              }
+            } catch (error) {
+              console.warn("[swrGetOrRefresh] refresh_failed", {
+                feature: featureName || key,
+                message: error?.message || "Failed"
+              });
+            }
+          })()
+        );
+      }
+      return {
+        value: cached.value,
+        cacheStatus: "STALE",
+        isStale: true,
+        ageSeconds
+      };
+    }
+  }
+
+  if (typeof fetcher === "function") {
+    const freshValue = await fetcher();
+    if (freshValue?.ok) {
+      await kvPutJson(env, key, freshValue.data, ttlSeconds);
+      return {
+        value: freshValue.data,
+        cacheStatus: "MISS",
+        isStale: false,
+        ageSeconds: 0
+      };
+    }
+    return {
+      value: freshValue?.data || null,
+      cacheStatus: "ERROR",
+      isStale: false,
+      ageSeconds: null,
+      error: freshValue?.error || null
+    };
+  }
+
+  return { value: null, cacheStatus: "ERROR", isStale: false, ageSeconds: null };
+}
+
+export async function safeFetch(url, options = {}) {
+  const { timeoutMs = 6000, headers = {}, userAgent } = options;
+  const finalHeaders = {
+    Accept: "*/*",
+    ...headers,
+    ...(userAgent ? { "User-Agent": userAgent } : {})
+  };
+  return fetchTextWithTimeout(url, { headers: finalHeaders }, timeoutMs);
+}
+
+export function isHtmlLike(text) {
+  if (!text) return false;
+  const trimmed = String(text).trim().toLowerCase();
+  return trimmed.startsWith("<!doctype html") || trimmed.startsWith("<html");
+}
+
+export async function safeFetchText(url, options = {}) {
+  const response = await safeFetch(url, options);
+  return response;
+}
+
+export async function safeFetchJson(url, options = {}) {
+  const response = await safeFetch(url, options);
+  if (isHtmlLike(response.text)) {
+    return {
+      ok: false,
+      status: response.status,
+      json: null,
+      error: "HTML_RESPONSE",
+      snippet: safeSnippet(response.text)
+    };
+  }
+  try {
+    const json = parseJsonLenient(response.text || "", url);
+    return { ok: response.ok, status: response.status, json, error: "", snippet: "" };
+  } catch (error) {
+    return {
+      ok: false,
+      status: response.status,
+      json: null,
+      error: error?.code || "SCHEMA_INVALID",
+      snippet: safeSnippet(response.text)
+    };
+  }
+}
+
+export function parseRssAtom(xmlString, { sourceLabel } = {}) {
+  if (!xmlString || isHtmlLike(xmlString)) return [];
+  const parser = new XMLParser({ ignoreAttributes: false, attributeNamePrefix: "" });
+  let parsed;
+  try {
+    parsed = parser.parse(xmlString);
+  } catch (error) {
+    return [];
+  }
+  let items = parsed?.rss?.channel?.item || parsed?.feed?.entry || [];
+  if (!Array.isArray(items)) items = [items];
+  return items
+    .map((item) => {
+      const title = item?.title?.text || item?.title || "";
+      const link = item?.link?.href || item?.link || item?.guid?.text || item?.guid || "";
+      const publishedRaw = item?.pubDate || item?.updated || item?.published || "";
+      const publishedAt = publishedRaw ? new Date(publishedRaw).toISOString() : "";
+      return {
+        title: String(title || "").trim(),
+        link: String(link || "").trim(),
+        publishedAtISO: publishedAt,
+        source: sourceLabel || ""
+      };
+    })
+    .filter((item) => item.title && item.link);
+}
+
+function normalizeKey(item) {
+  const title = String(item?.title || "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+  let domain = "";
+  try {
+    domain = new URL(item?.link || "").hostname.replace(/^www\./, "");
+  } catch (error) {
+    domain = "";
+  }
+  return `${title}:${domain}`;
+}
+
+export function mergeAndDedupeItems(listOfItemArrays) {
+  const items = listOfItemArrays.flat().filter(Boolean);
+  const map = new Map();
+  items.forEach((item) => {
+    const key = normalizeKey(item);
+    if (!key) return;
+    if (!map.has(key)) {
+      map.set(key, item);
+    }
+  });
+  return Array.from(map.values()).sort(
+    (a, b) => new Date(b.publishedAtISO || 0) - new Date(a.publishedAtISO || 0)
+  );
+}
+
+export function buildMarketauxParams() {
+  const publishedAfter = new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString();
+  const params = new URLSearchParams();
+  params.set("published_after", publishedAfter);
+  return params;
+}
+
+export function computeReturnsFromDailyCloses(closes = []) {
+  const cleaned = closes.filter((value) => typeof value === "number");
+  if (cleaned.length < 2) {
+    return { r1d: null, r1w: null, r1m: null, r1y: null };
+  }
+  const lastIndex = cleaned.length - 1;
+  const current = cleaned[lastIndex];
+  const pick = (offset) => (lastIndex - offset >= 0 ? cleaned[lastIndex - offset] : null);
+  const calc = (past) => (past ? ((current / past - 1) * 100) : null);
+  return {
+    r1d: calc(pick(1)),
+    r1w: calc(pick(5)),
+    r1m: calc(pick(21)),
+    r1y: calc(pick(252))
   };
 }

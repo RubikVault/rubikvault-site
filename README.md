@@ -10,6 +10,7 @@ RubikVault is a calm, data-driven market dashboard that runs on Cloudflare Pages
 - `features/` – block UI modules + shared helpers
 - `functions/api/` – Pages Functions API endpoints
 - `assets/` – static JSON symbol lists
+- `data/symbols/` – offline symbol universe for watchlist autocomplete
 - `debug/` – debug panel and diagnostics
 - `DEBUG_README.md` – troubleshooting and binding setup
 
@@ -25,6 +26,10 @@ Example: Block 01 – Market Health
 ## Block Registry (current)
 | Block | Feature ID | UI Module | API Endpoint | TTL / Refresh | Provider(s) |
 | --- | --- | --- | --- | --- | --- |
+| Hero Market Cockpit | `rv-market-cockpit` | `features/rv-market-cockpit.js` | `/api/market-cockpit` | ~15m | CBOE, Alternative.me, Marketaux, FMP |
+| Yield Curve | `rv-yield-curve` | `features/rv-yield-curve.js` | `/api/yield-curve` | ~6h | US Treasury |
+| Sector Rotation | `rv-sector-rotation` | `features/rv-sector-rotation.js` | `/api/sector-rotation` | ~30m | FMP |
+| Central Bank Watch | `rv-central-bank-watch` | `features/rv-central-bank-watch.js` | `/api/central-bank-watch` | ~30m | Fed, ECB |
 | 01 Market Health | `rv-market-health` | `features/rv-market-health.js` | `/api/market-health` | ~420s | alternative.me, CNN, CoinGecko, Yahoo |
 | 02 Price Snapshot | `rv-price-snapshot` | `features/rv-price-snapshot.js` | `/api/price-snapshot` | ~180s | CoinGecko |
 | 03 Top Movers | `rv-top-movers` | `features/rv-top-movers.js` | `/api/top-movers` | ~240s | CoinGecko, Yahoo |
@@ -36,6 +41,8 @@ Example: Block 01 – Market Health
 | 09 Crypto Snapshot | `rv-crypto-snapshot` | `features/rv-crypto-snapshot.js` | `/api/crypto-snapshot` | ~90s | CoinGecko |
 | 10 Sentiment Barometer | `rv-sentiment-barometer` | `features/rv-sentiment-barometer.js` | `/api/sentiment` | ~15m | Provider or heuristic |
 | 11 Tech Signals | `rv-tech-signals` | `features/rv-tech-signals.js` | `/api/tech-signals` | ~15m | stooq |
+| 12 News Intelligence | `rv-news-intelligence` | `features/rv-news-intelligence.js` | `/api/news-intelligence` | ~1h | Marketaux |
+| 13 S&P 500 Sectors | `rv-sp500-sectors` | `features/rv-sp500-sectors.js` | `/api/sp500-sectors` | ~6h | stooq (proxy) |
 
 ## Current State (expected)
 | Block | OK / FAIL / PARTIAL | Reason |
@@ -54,11 +61,17 @@ Note: Trace IDs are generated per request. Use the Debug UI or `/api/health` res
 - `/api/top-movers`
 - `/api/earnings-calendar`
 - `/api/news`
+- `/api/news-intelligence`
 - `/api/quotes?symbols=AAPL,NVDA`
 - `/api/tech-signals?timeframe=daily`
 - `/api/macro-rates`
 - `/api/crypto-snapshot`
 - `/api/sentiment`
+- `/api/market-cockpit`
+- `/api/yield-curve`
+- `/api/sector-rotation`
+- `/api/central-bank-watch`
+- `/api/sp500-sectors`
 - `/api/snapshots/market_health`
 - `/api/snapshots/macro_rates`
 - `/api/social-daily-brief`
@@ -95,10 +108,12 @@ WON’T (for preview)
 ## Config Setup
 Required:
 - KV binding: `RV_KV` (Preview + Production)
+- `FMP_API_KEY` (Market cockpit proxies, sector rotation)
+- `MARKETAUX_KEY` (News Intelligence + Market cockpit sentiment)
+- `FINNHUB_API_KEY` (Earnings + VIX proxy fallback)
 
 Optional (per block):
 - `FRED_API_KEY` (Block 08 Macro & Rates)
-- `FINNHUB_API_KEY` (Block 04 Earnings + Watchlist next earnings)
 - `COINGECKO_DEMO_KEY` (CoinGecko rate-limit relief)
 - `QUOTES_PROVIDER` (optional routing for quotes)
 - `EARNINGS_PROVIDER` (Finnhub supported)

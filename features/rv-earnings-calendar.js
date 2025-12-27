@@ -1,6 +1,10 @@
 import { fetchJSON, getBindingHint } from "./utils/api.js";
 import { getOrFetch } from "./utils/store.js";
 
+const state = {
+  weekOffset: 0
+};
+
 function formatResult(result) {
   if (!result) return "n/a";
   return result;
@@ -12,6 +16,27 @@ function sentimentClass(label) {
   if (label.includes("negative")) return "rv-native-negative";
   if (label === "mixed") return "rv-native-warning";
   return "";
+}
+
+function getWeekRange(offset = 0) {
+  const now = new Date();
+  const dayIndex = (now.getDay() + 6) % 7;
+  const start = new Date(now);
+  start.setHours(0, 0, 0, 0);
+  start.setDate(start.getDate() - dayIndex + offset * 7);
+  const end = new Date(start);
+  end.setDate(end.getDate() + 6);
+  end.setHours(23, 59, 59, 999);
+  return { start, end };
+}
+
+function filterByWeek(items, offset) {
+  const { start, end } = getWeekRange(offset);
+  return items.filter((item) => {
+    const date = new Date(item.date || item.reportDate || "");
+    if (Number.isNaN(date.getTime())) return false;
+    return date >= start && date <= end;
+  });
 }
 
 function render(root, payload, logger) {
@@ -76,7 +101,8 @@ function render(root, payload, logger) {
     return;
   }
 
-  if (!items.length) {
+  const filteredItems = filterByWeek(items, state.weekOffset);
+  if (!filteredItems.length) {
     root.innerHTML = `
       <div class="rv-native-empty">
         Keine Earnings-Daten verfügbar. Bitte später erneut versuchen.
@@ -99,36 +125,61 @@ function render(root, payload, logger) {
 
   root.innerHTML = `
     ${partialNote ? `<div class="rv-native-note">${partialNote}</div>` : ""}
-    <div class="rv-earnings-list rv-earnings-compact">
-      ${items
-        .map((item) => {
-          const sentiment = item.sentiment || "unknown";
-          const sentimentLabel = sentiment.replace(/_/g, " ");
-          const sentimentCls = sentimentClass(sentiment);
-          return `
-            <div class="rv-earnings-card">
-              <div class="rv-earnings-head">
-                <strong>${formatValue(item.symbol)}</strong>
-                <span>${formatValue(item.company)}</span>
-              </div>
-              <div class="rv-earnings-meta">
-                <span>Date: ${formatValue(item.date)}</span>
-                <span>Time: ${formatTime(item.time)}</span>
-                <span>EPS: ${formatValue(item.epsActual)} / ${formatValue(item.epsEst)} (${formatResult(
-            item.epsResult
-          )})</span>
-                <span>Revenue: ${formatValue(item.revenueActual)} / ${formatValue(
-            item.revenueEst
-          )} (${formatResult(item.revenueResult)})</span>
-                <span class="${sentimentCls}">Sentiment: ${formatValue(sentimentLabel)}</span>
-              </div>
-            </div>
-          `;
-        })
-        .join("")}
+    <div class="rv-earnings-filters">
+      <button type="button" data-rv-week="0" class="${
+        state.weekOffset === 0 ? "is-active" : ""
+      }">This Week</button>
+      <button type="button" data-rv-week="1" class="${
+        state.weekOffset === 1 ? "is-active" : ""
+      }">Next Week</button>
+      <button type="button" data-rv-week="2" class="${
+        state.weekOffset === 2 ? "is-active" : ""
+      }">+2</button>
+      <button type="button" data-rv-week="3" class="${
+        state.weekOffset === 3 ? "is-active" : ""
+      }">+3</button>
     </div>
+    <table class="rv-native-table rv-table--compact rv-earnings-compact-table">
+      <thead>
+        <tr>
+          <th>Symbol</th>
+          <th>Date</th>
+          <th>Time</th>
+          <th>EPS</th>
+          <th>Revenue</th>
+          <th>Sentiment</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${filteredItems
+          .map((item) => {
+            const sentiment = item.sentiment || "unknown";
+            const sentimentLabel = sentiment.replace(/_/g, " ");
+            const sentimentCls = sentimentClass(sentiment);
+            return `
+              <tr>
+                <td>${formatValue(item.symbol)}</td>
+                <td>${formatValue(item.date)}</td>
+                <td>${formatTime(item.time)}</td>
+                <td>${formatValue(item.epsActual)} / ${formatValue(item.epsEst)}</td>
+                <td>${formatValue(item.revenueActual)} / ${formatValue(item.revenueEst)}</td>
+                <td class="${sentimentCls}">${formatValue(sentimentLabel)}</td>
+              </tr>
+            `;
+          })
+          .join("")}
+      </tbody>
+    </table>
     <div class="rv-native-note">Data provided by ${data.source || "finnhub"}</div>
   `;
+
+  root.querySelectorAll("[data-rv-week]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const value = Number(button.getAttribute("data-rv-week"));
+      state.weekOffset = Number.isFinite(value) ? value : 0;
+      render(root, payload, logger);
+    });
+  });
 
   const warningCode = payload?.error?.code || "";
   const hasWarning = payload?.ok && warningCode;

@@ -6,11 +6,14 @@ import {
   kvPutJson,
   logServer,
   makeResponse,
-  safeSnippet
+  safeSnippet,
+  safeFetchText,
+  isHtmlLike
 } from "./_shared.js";
 
 const FEATURE_ID = "sentiment";
 const KV_TTL = 1200;
+const STALE_MAX = 24 * 60 * 60;
 const RATE_WINDOW_MS = 60_000;
 const RATE_MAX = 30;
 const rateStore = new Map();
@@ -90,7 +93,94 @@ function labelFor(score) {
   return "Neutral";
 }
 
-export async function onRequestGet({ request, env, data }) {
+async function fetchSentimentData() {
+  const parser = new XMLParser({ ignoreAttributes: false });
+  const items = [];
+  const errors = [];
+  let upstreamSnippet = "";
+
+  await Promise.all(
+    FEEDS.map(async (feed) => {
+      try {
+        const res = await safeFetchText(feed.url, { userAgent: "RubikVault/1.0" });
+        const text = res.text || "";
+        if (!res.ok || isHtmlLike(text)) {
+          errors.push({
+            id: feed.id,
+            status: res.status,
+            reason: isHtmlLike(text) ? "html-error-page" : "upstream-error"
+          });
+          upstreamSnippet = upstreamSnippet || safeSnippet(text);
+          return;
+        }
+        const xmlObj = parser.parse(text);
+        let feedItems = xmlObj.rss?.channel?.item || xmlObj.feed?.entry || [];
+        if (!Array.isArray(feedItems)) feedItems = [feedItems];
+        feedItems.slice(0, 12).forEach((item) => {
+          const headline = stripHtml(item.title || "");
+          const summary = summarize(item.description || item.summary || "");
+          const score = scoreText(`${headline} ${summary}`);
+          items.push({
+            headline,
+            summary,
+            url: item.link?.href || item.link || "",
+            source: feed.id,
+            publishedAt: item.pubDate || item.updated || new Date().toISOString(),
+            score
+          });
+        });
+      } catch (error) {
+        errors.push({ id: feed.id, status: "error" });
+      }
+    })
+  );
+
+  const deduped = Array.from(new Map(items.map((item) => [item.headline, item])).values());
+  const errorCode = errors.find((entry) => entry.status === 429)
+    ? "RATE_LIMITED"
+    : errors.find((entry) => entry.status === 403)
+      ? "UPSTREAM_403"
+      : errors.find((entry) => Number(entry.status) >= 500)
+        ? "UPSTREAM_5XX"
+        : errors.length
+          ? "UPSTREAM_4XX"
+          : "";
+
+  if (!deduped.length) {
+    return { ok: false, data: null, errorCode, errors, upstreamSnippet };
+  }
+
+  const totalScore = deduped.reduce((sum, item) => sum + item.score, 0);
+  const avgScore = totalScore / deduped.length;
+  const normalized = Math.max(-100, Math.min(100, Math.round(avgScore * 20)));
+  const drivers = [...deduped]
+    .sort((a, b) => Math.abs(b.score) - Math.abs(a.score))
+    .slice(0, 3)
+    .map((item) => ({
+      headline: item.headline,
+      summary: item.summary,
+      url: item.url,
+      source: item.source,
+      score: item.score
+    }));
+
+  return {
+    ok: true,
+    data: {
+      updatedAt: new Date().toISOString(),
+      source: FEEDS.map((feed) => feed.id).join(","),
+      heuristic: true,
+      score: normalized,
+      label: labelFor(normalized),
+      drivers
+    },
+    errorCode,
+    errors,
+    upstreamSnippet
+  };
+}
+
+export async function onRequestGet({ request, env, data, waitUntil }) {
   const traceId = data?.traceId || createTraceId(request);
   const started = Date.now();
   const panic =
@@ -134,78 +224,92 @@ export async function onRequestGet({ request, env, data }) {
   }
 
   const cacheKey = `${FEATURE_ID}:v1`;
-  if (!panic) {
-    const cached = await kvGetJson(env, cacheKey);
-    if (cached?.hit && cached.value?.data) {
-      const response = makeResponse({
-        ok: true,
-        feature: FEATURE_ID,
-        traceId,
-        data: cached.value.data,
-        cache: { hit: true, ttl: KV_TTL, layer: "kv" },
-        upstream: { url: "", status: null, snippet: "" }
-      });
-      logServer({
-        feature: FEATURE_ID,
-        traceId,
-        cacheLayer: "kv",
-        upstreamStatus: null,
-        durationMs: Date.now() - started
-      });
-      return response;
-    }
+  const cached = !panic ? await kvGetJson(env, cacheKey) : null;
+  const cachedAgeSec = cached?.value?.ts
+    ? Math.max(0, Math.floor((Date.now() - Date.parse(cached.value.ts)) / 1000))
+    : null;
+  const cacheFresh = cached?.hit && cachedAgeSec !== null && cachedAgeSec <= KV_TTL;
+  const cacheUsable =
+    cached?.hit && cached.value?.data && (cachedAgeSec === null || cachedAgeSec <= STALE_MAX);
+
+  if (cacheFresh) {
+    const response = makeResponse({
+      ok: true,
+      feature: FEATURE_ID,
+      traceId,
+      data: cached.value.data,
+      cache: { hit: true, ttl: KV_TTL, layer: "kv" },
+      upstream: { url: "", status: null, snippet: "" },
+      isStale: false,
+      cacheStatus: "HIT"
+    });
+    logServer({
+      feature: FEATURE_ID,
+      traceId,
+      cacheLayer: "kv",
+      upstreamStatus: null,
+      durationMs: Date.now() - started
+    });
+    return response;
   }
 
-  const parser = new XMLParser({ ignoreAttributes: false });
-  const items = [];
-  const errors = [];
-  let upstreamSnippet = "";
+  if (cacheUsable && !panic) {
+    if (typeof waitUntil === "function") {
+      waitUntil(
+        (async () => {
+          try {
+            const fresh = await fetchSentimentData();
+            if (fresh.ok && fresh.data) {
+              await kvPutJson(
+                env,
+                cacheKey,
+                {
+                  ts: new Date().toISOString(),
+                  source: fresh.data.source,
+                  schemaVersion: 1,
+                  data: fresh.data
+                },
+                KV_TTL
+              );
+            }
+          } catch (error) {
+            // ignore refresh failure
+          }
+        })()
+      );
+    }
 
-  await Promise.all(
-    FEEDS.map(async (feed) => {
-      try {
-        const res = await fetch(feed.url, {
-          headers: { "User-Agent": "RubikVault/1.0" }
-        });
-        const text = await res.text();
-        if (!res.ok) {
-          errors.push({ id: feed.id, status: res.status });
-          upstreamSnippet = upstreamSnippet || safeSnippet(text);
-          return;
-        }
-        const xmlObj = parser.parse(text);
-        let feedItems = xmlObj.rss?.channel?.item || xmlObj.feed?.entry || [];
-        if (!Array.isArray(feedItems)) feedItems = [feedItems];
-        feedItems.slice(0, 12).forEach((item) => {
-          const headline = stripHtml(item.title || "");
-          const summary = summarize(item.description || item.summary || "");
-          const score = scoreText(`${headline} ${summary}`);
-          items.push({
-            headline,
-            summary,
-            url: item.link?.href || item.link || "",
-            source: feed.id,
-            publishedAt: item.pubDate || item.updated || new Date().toISOString(),
-            score
-          });
-        });
-      } catch (error) {
-        errors.push({ id: feed.id, status: "error" });
-      }
-    })
-  );
+    const response = makeResponse({
+      ok: true,
+      feature: FEATURE_ID,
+      traceId,
+      data: cached.value.data,
+      cache: { hit: true, ttl: KV_TTL, layer: "kv" },
+      upstream: { url: "feeds", status: null, snippet: "" },
+      error: {
+        code: "STALE_FALLBACK",
+        message: "Serving cached fallback data",
+        details: { staleAgeSec: cachedAgeSec }
+      },
+      isStale: true,
+      cacheStatus: "STALE"
+    });
+    logServer({
+      feature: FEATURE_ID,
+      traceId,
+      cacheLayer: "kv",
+      upstreamStatus: null,
+      durationMs: Date.now() - started
+    });
+    return response;
+  }
 
-  const deduped = Array.from(new Map(items.map((item) => [item.headline, item])).values());
-  if (!deduped.length) {
-    const cached = !panic ? await kvGetJson(env, cacheKey) : null;
-    const errorCode = errors.find((entry) => entry.status === 429)
-      ? "RATE_LIMITED"
-      : errors.find((entry) => entry.status === 403)
-        ? "UPSTREAM_403"
-        : errors.find((entry) => Number(entry.status) >= 500)
-          ? "UPSTREAM_5XX"
-          : "UPSTREAM_4XX";
-    if (cached?.hit && cached.value?.data) {
+  const fresh = await fetchSentimentData();
+  if (!fresh.ok || !fresh.data) {
+    const errorCode = fresh.errorCode || "UPSTREAM_5XX";
+    const upstreamSnippet = fresh.upstreamSnippet || "";
+    const errors = fresh.errors || [];
+    if (cacheUsable) {
       const response = makeResponse({
         ok: true,
         feature: FEATURE_ID,
@@ -218,7 +322,8 @@ export async function onRequestGet({ request, env, data }) {
           message: "No upstream data",
           details: { errors }
         },
-        isStale: true
+        isStale: true,
+        cacheStatus: "STALE"
       });
       logServer({
         feature: FEATURE_ID,
@@ -240,8 +345,7 @@ export async function onRequestGet({ request, env, data }) {
         code: errorCode,
         message: "No upstream data",
         details: { errors }
-      },
-      status: 502
+      }
     });
     logServer({
       feature: FEATURE_ID,
@@ -253,49 +357,25 @@ export async function onRequestGet({ request, env, data }) {
     return response;
   }
 
-  const totalScore = deduped.reduce((sum, item) => sum + item.score, 0);
-  const avgScore = totalScore / deduped.length;
-  const normalized = Math.max(-100, Math.min(100, Math.round(avgScore * 20)));
-  const drivers = [...deduped]
-    .sort((a, b) => Math.abs(b.score) - Math.abs(a.score))
-    .slice(0, 3)
-    .map((item) => ({
-      headline: item.headline,
-      summary: item.summary,
-      url: item.url,
-      source: item.source,
-      score: item.score
-    }));
-
-  const dataPayload = {
-    updatedAt: new Date().toISOString(),
-    source: FEEDS.map((feed) => feed.id).join(","),
-    heuristic: true,
-    score: normalized,
-    label: labelFor(normalized),
-    drivers
-  };
-
-  const kvPayload = {
-    ts: new Date().toISOString(),
-    source: dataPayload.source,
-    schemaVersion: 1,
-    data: dataPayload
-  };
+  const dataPayload = fresh.data;
 
   if (!panic) {
-    await kvPutJson(env, cacheKey, kvPayload, KV_TTL);
+    await kvPutJson(
+      env,
+      cacheKey,
+      {
+        ts: new Date().toISOString(),
+        source: dataPayload.source,
+        schemaVersion: 1,
+        data: dataPayload
+      },
+      KV_TTL
+    );
   }
 
-  const errorCode = errors.length
-    ? errors.find((entry) => entry.status === 429)
-      ? "RATE_LIMITED"
-      : errors.find((entry) => entry.status === 403)
-        ? "UPSTREAM_403"
-        : errors.find((entry) => Number(entry.status) >= 500)
-          ? "UPSTREAM_5XX"
-          : "UPSTREAM_4XX"
-    : "";
+  const errorCode = fresh.errorCode || "";
+  const upstreamSnippet = fresh.upstreamSnippet || "";
+  const errors = fresh.errors || [];
 
   const response = makeResponse({
     ok: true,

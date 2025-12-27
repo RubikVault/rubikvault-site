@@ -5,11 +5,15 @@ import {
   kvPutJson,
   logServer,
   makeResponse,
-  safeSnippet
+  safeFetchJson,
+  safeSnippet,
+  buildMarketauxParams,
+  normalizeFreshness
 } from "./_shared.js";
 
 const FEATURE_ID = "news-intelligence";
 const KV_TTL = 3600;
+const STALE_MAX = 48 * 60 * 60;
 const CACHE_KEY = "rv:news-intelligence:v1";
 const UPSTREAM_BASE = "https://api.marketaux.com/v1/news/all";
 
@@ -122,46 +126,41 @@ function mapUpstreamCode(status) {
   return "UPSTREAM_5XX";
 }
 
-function buildMarketauxUrl({ symbols, search }, apiKey, publishedAfter) {
-  const url = new URL(UPSTREAM_BASE);
-  url.searchParams.set("api_token", apiKey);
-  url.searchParams.set("languages", "en");
-  url.searchParams.set("filter_entities", "true");
-  url.searchParams.set("group_similar", "true");
-  url.searchParams.set("limit", "10");
-  url.searchParams.set("published_after", publishedAfter);
-  if (symbols) url.searchParams.set("symbols", symbols);
-  if (search) url.searchParams.set("search", search);
-  return url.toString();
+function buildMarketauxUrl({ symbols, search }, apiKey) {
+  const params = buildMarketauxParams();
+  params.set("api_token", apiKey);
+  params.set("languages", "en");
+  params.set("filter_entities", "true");
+  params.set("group_similar", "true");
+  params.set("limit", "10");
+  if (symbols) params.set("symbols", symbols);
+  if (search) params.set("search", search);
+  return `${UPSTREAM_BASE}?${params.toString()}`;
 }
 
-async function fetchNarrative(narrative, apiKey, publishedAfter) {
-  const url = buildMarketauxUrl(narrative, apiKey, publishedAfter);
+async function fetchNarrative(narrative, apiKey) {
+  const url = buildMarketauxUrl(narrative, apiKey);
   const started = Date.now();
-  const res = await fetch(url, { headers: { "User-Agent": "RubikVault/1.0" } });
-  const text = await res.text();
+  const res = await safeFetchJson(url, { userAgent: "RubikVault/1.0" });
   const durationMs = Date.now() - started;
-  let json;
-  try {
-    json = text ? JSON.parse(text) : {};
-  } catch (error) {
+  if (!res.ok || !res.json) {
     return {
       ok: false,
       status: res.status,
       items: [],
       durationMs,
-      snippet: safeSnippet(text),
-      error: "SCHEMA_INVALID"
+      snippet: res.snippet || "",
+      error: res.error || mapUpstreamCode(res.status || 502)
     };
   }
-  const items = parseArticles(json).map(normalizeItem).filter((item) => item.title && item.url);
+  const items = parseArticles(res.json).map(normalizeItem).filter((item) => item.title && item.url);
   return {
-    ok: res.ok,
-    status: res.status,
+    ok: true,
+    status: res.status || 200,
     items,
     durationMs,
-    snippet: res.ok ? "" : safeSnippet(text),
-    error: res.ok ? "" : mapUpstreamCode(res.status)
+    snippet: "",
+    error: ""
   };
 }
 
@@ -190,7 +189,7 @@ function buildNarrativePayload(narrative, items, prevMap) {
   };
 }
 
-export async function onRequestGet({ request, env, data }) {
+export async function onRequestGet({ request, env, data, waitUntil }) {
   const traceId = data?.traceId || createTraceId(request);
   const started = Date.now();
   const panic =
@@ -221,8 +220,7 @@ export async function onRequestGet({ request, env, data }) {
         code: "ENV_MISSING",
         message: "MARKETAUX_KEY missing",
         details: { missing: ["MARKETAUX_KEY"] }
-      },
-      status: 500
+      }
     });
     logServer({
       feature: FEATURE_ID,
@@ -235,12 +233,99 @@ export async function onRequestGet({ request, env, data }) {
   }
 
   const cached = !panic ? await kvGetJson(env, CACHE_KEY) : null;
-  const prevNarratives = cached?.value?.data?.narratives || [];
+  const cachedAgeSec = cached?.value?.ts
+    ? Math.max(0, Math.floor((Date.now() - Date.parse(cached.value.ts)) / 1000))
+    : null;
+  const cacheUsable =
+    cached?.hit && cached.value?.data && (cachedAgeSec === null || cachedAgeSec <= STALE_MAX);
+  const prevNarratives = cacheUsable ? cached.value.data.narratives || [] : [];
   const prevMap = new Map(prevNarratives.map((item) => [item.id, item]));
-  const publishedAfter = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+
+  const cacheFresh =
+    cached?.hit &&
+    cachedAgeSec !== null &&
+    cachedAgeSec <= KV_TTL &&
+    cached.value?.data;
+  if (cacheFresh) {
+    const response = makeResponse({
+      ok: true,
+      feature: FEATURE_ID,
+      traceId,
+      data: cached.value.data,
+      cache: { hit: true, ttl: KV_TTL, layer: "kv" },
+      upstream: { url: UPSTREAM_BASE, status: null, snippet: "" },
+      cacheStatus: "HIT"
+    });
+    logServer({
+      feature: FEATURE_ID,
+      traceId,
+      cacheLayer: "kv",
+      upstreamStatus: null,
+      durationMs: Date.now() - started
+    });
+    return response;
+  }
+
+  if (cacheUsable && cachedAgeSec !== null && cachedAgeSec > KV_TTL) {
+    if (typeof waitUntil === "function") {
+      waitUntil(
+        (async () => {
+          try {
+            const results = await Promise.all(
+              NARRATIVES.map((narrative) => fetchNarrative(narrative, env.MARKETAUX_KEY))
+            );
+            const narratives = NARRATIVES.map((narrative, index) => {
+              const result = results[index];
+              const items = result.ok ? result.items : [];
+              return buildNarrativePayload(narrative, items, prevMap);
+            });
+            const dataPayload = {
+              status: narratives.length >= 2 ? "OK" : "WARN",
+              updatedAt: new Date().toISOString(),
+              ttlSec: KV_TTL,
+              source: "marketaux",
+              trace: shortTrace(traceId),
+              narratives,
+              partial: narratives.length < NARRATIVES.length,
+              debug: {
+                cache: { hit: false, ageSec: null },
+                upstream: { status: 200, ms: 0 }
+              }
+            };
+            await kvPutJson(env, CACHE_KEY, { ts: new Date().toISOString(), data: dataPayload }, KV_TTL);
+          } catch (error) {
+            // ignore refresh failure
+          }
+        })()
+      );
+    }
+    const response = makeResponse({
+      ok: true,
+      feature: FEATURE_ID,
+      traceId,
+      data: cached.value.data,
+      cache: { hit: true, ttl: KV_TTL, layer: "kv" },
+      upstream: { url: UPSTREAM_BASE, status: null, snippet: "" },
+      error: {
+        code: "STALE_FALLBACK",
+        message: "Serving cached fallback data",
+        details: { staleAgeSec: cachedAgeSec }
+      },
+      isStale: true,
+      cacheStatus: "STALE"
+    });
+    logServer({
+      feature: FEATURE_ID,
+      traceId,
+      cacheLayer: "kv",
+      upstreamStatus: null,
+      durationMs: Date.now() - started
+    });
+    return response;
+  }
 
   const results = await Promise.all(
-    NARRATIVES.map((narrative) => fetchNarrative(narrative, env.MARKETAUX_KEY, publishedAfter))
+    NARRATIVES.map((narrative) => fetchNarrative(narrative, env.MARKETAUX_KEY))
   );
 
   const available = results.filter((result) => result.ok && result.items.length);
@@ -250,10 +335,8 @@ export async function onRequestGet({ request, env, data }) {
   const errorCode = results.find((result) => result.error)?.error || "";
 
   if (!available.length) {
-    if (cached?.hit && cached.value?.data) {
-      const ageSec = cached.value?.ts
-        ? Math.max(0, Math.floor((Date.now() - Date.parse(cached.value.ts)) / 1000))
-        : null;
+    if (cacheUsable) {
+      const ageSec = cachedAgeSec;
       const response = makeResponse({
         ok: true,
         feature: FEATURE_ID,
@@ -263,6 +346,7 @@ export async function onRequestGet({ request, env, data }) {
           status: "WARN",
           trace: shortTrace(traceId),
           ttlSec: KV_TTL,
+          freshness: normalizeFreshness(ageSec),
           debug: {
             cache: { hit: true, ageSec },
             upstream: { status: upstreamStatus ?? null, ms: upstreamMs }
@@ -271,11 +355,15 @@ export async function onRequestGet({ request, env, data }) {
         cache: { hit: true, ttl: KV_TTL, layer: "kv" },
         upstream: { url: UPSTREAM_BASE, status: upstreamStatus ?? null, snippet: upstreamSnippet },
         error: {
-          code: errorCode || "UPSTREAM_5XX",
+          code:
+            errorCode === "SCHEMA_INVALID" || errorCode === "HTML_RESPONSE"
+              ? "SCHEMA_INVALID"
+              : errorCode || mapUpstreamCode(upstreamStatus ?? 502),
           message: "Upstream unavailable; serving cached",
           details: {}
         },
-        isStale: true
+        isStale: true,
+        cacheStatus: "STALE"
       });
       logServer({
         feature: FEATURE_ID,
@@ -306,11 +394,13 @@ export async function onRequestGet({ request, env, data }) {
       cache: { hit: false, ttl: 0, layer: "none" },
       upstream: { url: UPSTREAM_BASE, status: upstreamStatus ?? null, snippet: upstreamSnippet },
       error: {
-        code: errorCode || "UPSTREAM_5XX",
+        code:
+          errorCode === "SCHEMA_INVALID" || errorCode === "HTML_RESPONSE"
+            ? "SCHEMA_INVALID"
+            : errorCode || mapUpstreamCode(upstreamStatus ?? 502),
         message: "No upstream data",
-        details: {}
-      },
-      status: 502
+        details: { upstreamStatus: upstreamStatus ?? null }
+      }
     });
     logServer({
       feature: FEATURE_ID,
@@ -335,6 +425,7 @@ export async function onRequestGet({ request, env, data }) {
     source: "marketaux",
     trace: shortTrace(traceId),
     narratives,
+    partial: available.length < NARRATIVES.length,
     debug: {
       cache: { hit: false, ageSec: null },
       upstream: { status: upstreamStatus ?? 200, ms: upstreamMs }
@@ -359,7 +450,10 @@ export async function onRequestGet({ request, env, data }) {
     upstream: { url: UPSTREAM_BASE, status: upstreamStatus ?? 200, snippet: upstreamSnippet },
     error: errorCode
       ? {
-          code: errorCode,
+          code:
+            errorCode === "SCHEMA_INVALID" || errorCode === "HTML_RESPONSE"
+              ? "SCHEMA_INVALID"
+              : mapUpstreamCode(upstreamStatus ?? 502),
           message: "Some narratives failed",
           details: {}
         }
