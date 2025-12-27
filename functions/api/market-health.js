@@ -8,6 +8,7 @@ import {
   safeSnippet,
   withCoinGeckoKey
 } from "./_shared.js";
+import { fetchJsonWithFallbacks } from "./_shared/parse.js";
 
 const FEATURE_ID = "market-health";
 const KV_TTL = 420;
@@ -40,9 +41,12 @@ function mapUpstreamCode(status) {
 function normalizeFng(payload) {
   const item = Array.isArray(payload?.data) ? payload.data[0] : null;
   if (!item) return null;
+  const value = Number(item.value);
+  const timestamp = Number(item.timestamp);
   return {
-    value: Number(item.value),
-    valueClassification: item.value_classification || item.valueClassification || null
+    value: Number.isFinite(value) ? value : null,
+    valueClassification: item.value_classification || item.valueClassification || null,
+    timestamp: Number.isFinite(timestamp) ? timestamp : Date.now()
   };
 }
 
@@ -52,9 +56,12 @@ function normalizeFngStocks(payload) {
   const value = Number.isFinite(Number(valueRaw)) ? Number(valueRaw) : null;
   const label = data.rating || data.value_classification || data.classification || data.text || null;
   if (value === null && !label) return null;
+  const timestampRaw = data.timestamp || data.lastUpdated || data.last_updated || null;
+  const timestamp = Number.isFinite(Number(timestampRaw)) ? Number(timestampRaw) : Date.now();
   return {
     value,
-    valueClassification: label
+    valueClassification: label,
+    timestamp
   };
 }
 
@@ -139,6 +146,7 @@ export async function onRequestGet({ request, env, data }) {
   }
 
   const cacheKey = `${FEATURE_ID}:v1`;
+  const lastOkKey = "market_health:last_ok";
 
   if (!panic) {
     const cached = await kvGetJson(env, cacheKey);
@@ -165,49 +173,70 @@ export async function onRequestGet({ request, env, data }) {
   let upstreamSnippet = "";
 
   try {
-    const [fngRes, stocksRes, cryptoRes, yahooRes] = await Promise.all([
-      fetch(FNG_URL),
-      fetch(FNG_STOCKS_URL),
-      fetch(withCoinGeckoKey(CRYPTO_URL, env)),
-      fetch(YAHOO_URL)
+    const fetchSafe = async (url, context) => {
+      try {
+        const result = await fetchJsonWithFallbacks([url], {}, context);
+        return { ok: true, ...result };
+      } catch (error) {
+        return { ok: false, error };
+      }
+    };
+
+    const [fngResult, stocksResult, cryptoResult, yahooResult] = await Promise.all([
+      fetchSafe(FNG_URL, "market-health:fng"),
+      fetchSafe(FNG_STOCKS_URL, "market-health:stocks"),
+      fetchSafe(withCoinGeckoKey(CRYPTO_URL, env), "market-health:crypto"),
+      fetchSafe(YAHOO_URL, "market-health:yahoo")
     ]);
 
-    const responses = [
-      { id: "fng", res: fngRes },
-      { id: "stocks", res: stocksRes },
-      { id: "crypto", res: cryptoRes },
-      { id: "yahoo", res: yahooRes }
-    ];
-    const texts = await Promise.all(responses.map((entry) => entry.res.text()));
     const errors = [];
-    responses.forEach((entry, index) => {
-      if (!entry.res.ok) {
-        errors.push({ id: entry.id, status: entry.res.status });
-        if (!upstreamSnippet) {
-          upstreamSnippet = safeSnippet(texts[index]);
+    const sources = [
+      { id: "fng", result: fngResult },
+      { id: "stocks", result: stocksResult },
+      { id: "crypto", result: cryptoResult },
+      { id: "yahoo", result: yahooResult }
+    ];
+
+    sources.forEach(({ id, result }) => {
+      if (!result.ok) {
+        errors.push({ id, status: null, code: result.error?.code || "SCHEMA_INVALID" });
+        if (!upstreamSnippet && result.error?.details?.head) {
+          upstreamSnippet = safeSnippet(result.error.details.head);
         }
+        return;
+      }
+      if (!result.upstreamOk) {
+        errors.push({ id, status: result.upstreamStatus || null });
       }
     });
 
-    if (errors.length && errors.length === responses.length) {
-      const cached = !panic ? await kvGetJson(env, cacheKey) : null;
-      const failingStatus = errors[0]?.status || 502;
-      const errorCode = mapUpstreamCode(failingStatus);
-      if (cached?.hit && cached.value?.data) {
+    const dataPayload = normalize(
+      fngResult.json || {},
+      stocksResult.json || {},
+      cryptoResult.json || {},
+      yahooResult.json || {}
+    );
+
+    const hasAnyData =
+      dataPayload.fng ||
+      dataPayload.fngStocks ||
+      (dataPayload.crypto || []).length ||
+      (dataPayload.indices || []).length ||
+      (dataPayload.commodities || []).length;
+
+    if (!hasAnyData) {
+      const lastOk = await kvGetJson(env, lastOkKey);
+      if (lastOk?.hit && lastOk.value?.data) {
         const response = makeResponse({
           ok: true,
           feature: FEATURE_ID,
           traceId,
-          data: cached.value.data,
+          data: { ...lastOk.value.data, asOf: lastOk.value.ts },
           cache: { hit: true, ttl: KV_TTL, layer: "kv" },
-          upstream: {
-            url: UPSTREAM_URL,
-            status: failingStatus,
-            snippet: upstreamSnippet
-          },
+          upstream: { url: UPSTREAM_URL, status: null, snippet: upstreamSnippet },
           error: {
-            code: errorCode,
-            message: "Upstream error",
+            code: "SCHEMA_INVALID",
+            message: "Upstream parse failed",
             details: { errors }
           },
           isStale: true
@@ -216,7 +245,7 @@ export async function onRequestGet({ request, env, data }) {
           feature: FEATURE_ID,
           traceId,
           cacheLayer: "kv",
-          upstreamStatus: failingStatus,
+          upstreamStatus: null,
           durationMs: Date.now() - started
         });
         return response;
@@ -227,62 +256,24 @@ export async function onRequestGet({ request, env, data }) {
         feature: FEATURE_ID,
         traceId,
         cache: { hit: false, ttl: 0, layer: "none" },
-        upstream: {
-          url: UPSTREAM_URL,
-          status: failingStatus,
-          snippet: upstreamSnippet
-        },
+        upstream: { url: UPSTREAM_URL, status: null, snippet: upstreamSnippet },
         error: {
-          code: errorCode,
-          message: "Upstream error",
+          code: "SCHEMA_INVALID",
+          message: "Upstream parse failed",
           details: { errors }
         },
-        status: failingStatus === 429 ? 429 : 502
-      });
-      logServer({
-        feature: FEATURE_ID,
-        traceId,
-        cacheLayer: "none",
-        upstreamStatus: failingStatus,
-        durationMs: Date.now() - started
-      });
-      return response;
-    }
-
-    let fngJson;
-    let stocksJson;
-    let cryptoJson;
-    let yahooJson;
-    try {
-      fngJson = texts[0] ? JSON.parse(texts[0]) : {};
-      stocksJson = texts[1] ? JSON.parse(texts[1]) : {};
-      cryptoJson = texts[2] ? JSON.parse(texts[2]) : {};
-      yahooJson = texts[3] ? JSON.parse(texts[3]) : {};
-    } catch (error) {
-      const response = makeResponse({
-        ok: false,
-        feature: FEATURE_ID,
-        traceId,
-        cache: { hit: false, ttl: 0, layer: "none" },
-        upstream: {
-          url: UPSTREAM_URL,
-          status: 200,
-          snippet: safeSnippet(texts.join(""))
-        },
-        error: { code: "SCHEMA_INVALID", message: "Invalid JSON", details: {} },
         status: 502
       });
       logServer({
         feature: FEATURE_ID,
         traceId,
         cacheLayer: "none",
-        upstreamStatus: 200,
+        upstreamStatus: null,
         durationMs: Date.now() - started
       });
       return response;
     }
 
-    const dataPayload = normalize(fngJson, stocksJson, cryptoJson, yahooJson);
     const kvPayload = {
       ts: new Date().toISOString(),
       source: dataPayload.source,
@@ -292,6 +283,7 @@ export async function onRequestGet({ request, env, data }) {
 
     if (!panic) {
       await kvPutJson(env, cacheKey, kvPayload, KV_TTL);
+      await kvPutJson(env, lastOkKey, kvPayload, 24 * 60 * 60);
     }
 
     const response = makeResponse({
@@ -300,11 +292,7 @@ export async function onRequestGet({ request, env, data }) {
       traceId,
       data: dataPayload,
       cache: { hit: false, ttl: panic ? 0 : KV_TTL, layer: "none" },
-      upstream: {
-        url: UPSTREAM_URL,
-        status: 200,
-        snippet: safeSnippet(texts.join(""))
-      },
+      upstream: { url: UPSTREAM_URL, status: 200, snippet: upstreamSnippet },
       error: errors.length
         ? {
             code: mapUpstreamCode(errors[0]?.status || 502),
@@ -322,6 +310,31 @@ export async function onRequestGet({ request, env, data }) {
     });
     return response;
   } catch (error) {
+    const lastOk = await kvGetJson(env, lastOkKey);
+    if (lastOk?.hit && lastOk.value?.data) {
+      const response = makeResponse({
+        ok: true,
+        feature: FEATURE_ID,
+        traceId,
+        data: { ...lastOk.value.data, asOf: lastOk.value.ts },
+        cache: { hit: true, ttl: KV_TTL, layer: "kv" },
+        upstream: { url: UPSTREAM_URL, status: null, snippet: upstreamSnippet },
+        error: {
+          code: error?.code || "SCHEMA_INVALID",
+          message: "Upstream parse failed",
+          details: error?.details || {}
+        },
+        isStale: true
+      });
+      logServer({
+        feature: FEATURE_ID,
+        traceId,
+        cacheLayer: "kv",
+        upstreamStatus: null,
+        durationMs: Date.now() - started
+      });
+      return response;
+    }
     const errorCode = error?.name === "AbortError" ? "UPSTREAM_TIMEOUT" : "UPSTREAM_5XX";
     const response = makeResponse({
       ok: false,
@@ -334,9 +347,9 @@ export async function onRequestGet({ request, env, data }) {
         snippet: upstreamSnippet
       },
       error: {
-        code: errorCode,
+        code: error?.code || errorCode,
         message: error?.message || "Request failed",
-        details: {}
+        details: error?.details || {}
       }
     });
     logServer({

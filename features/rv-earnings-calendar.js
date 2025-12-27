@@ -17,6 +17,15 @@ function sentimentClass(label) {
 function render(root, payload, logger) {
   const data = payload?.data || {};
   const items = data.items || [];
+  const formatValue = (value) => (value === null || value === undefined || value === "" ? "—" : value);
+  const formatTime = (value) => {
+    if (!value) return "—";
+    const normalized = String(value).toUpperCase();
+    if (normalized.includes("BMO")) return "BMO";
+    if (normalized.includes("AMC")) return "AMC";
+    if (normalized.includes("DMH")) return "DMH";
+    return normalized;
+  };
 
   if (!payload?.ok) {
     const errorMessage = payload?.error?.message || "API error";
@@ -90,7 +99,7 @@ function render(root, payload, logger) {
 
   root.innerHTML = `
     ${partialNote ? `<div class="rv-native-note">${partialNote}</div>` : ""}
-    <div class="rv-earnings-list">
+    <div class="rv-earnings-list rv-earnings-compact">
       ${items
         .map((item) => {
           const sentiment = item.sentiment || "unknown";
@@ -99,19 +108,19 @@ function render(root, payload, logger) {
           return `
             <div class="rv-earnings-card">
               <div class="rv-earnings-head">
-                <strong>${item.symbol}</strong>
-                <span>${item.company || "Unknown"}</span>
+                <strong>${formatValue(item.symbol)}</strong>
+                <span>${formatValue(item.company)}</span>
               </div>
               <div class="rv-earnings-meta">
-                <span>Date: ${item.date || "--"}</span>
-                <span>Time: ${item.time || "--"}</span>
-                <span>EPS: ${item.epsActual ?? "--"} / ${item.epsEst ?? "--"} (${formatResult(
+                <span>Date: ${formatValue(item.date)}</span>
+                <span>Time: ${formatTime(item.time)}</span>
+                <span>EPS: ${formatValue(item.epsActual)} / ${formatValue(item.epsEst)} (${formatResult(
             item.epsResult
           )})</span>
-                <span>Revenue: ${item.revenueActual ?? "--"} / ${item.revenueEst ?? "--"} (${formatResult(
-            item.revenueResult
-          )})</span>
-                <span class="${sentimentCls}">Sentiment: ${sentimentLabel}</span>
+                <span>Revenue: ${formatValue(item.revenueActual)} / ${formatValue(
+            item.revenueEst
+          )} (${formatResult(item.revenueResult)})</span>
+                <span class="${sentimentCls}">Sentiment: ${formatValue(sentimentLabel)}</span>
               </div>
             </div>
           `;

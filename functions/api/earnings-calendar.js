@@ -46,14 +46,15 @@ function deriveSentiment(epsResult, revenueResult) {
 function normalizeFinnhub(payload) {
   const list = Array.isArray(payload?.earningsCalendar) ? payload.earningsCalendar : [];
   const items = list
+    .filter((entry) => entry?.symbol && entry?.date)
     .map((entry) => {
       const epsResult = classifySurprise(entry.epsActual, entry.epsEstimate);
       const revenueResult = classifySurprise(entry.revenueActual, entry.revenueEstimate);
       return {
-        symbol: entry.symbol || "",
-        company: entry.company || "",
-        date: entry.date || "",
-        time: entry.hour || entry.time || "",
+        symbol: entry.symbol,
+        company: entry.company || null,
+        date: entry.date,
+        time: entry.hour || entry.time || null,
         epsEst: entry.epsEstimate ?? null,
         epsActual: entry.epsActual ?? null,
         epsResult,

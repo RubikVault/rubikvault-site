@@ -12,7 +12,7 @@ import {
 const FEATURE_ID = "price-snapshot";
 const KV_TTL = 180;
 const UPSTREAM_URL =
-  "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,solana&vs_currencies=usd&include_24hr_change=true";
+  "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,solana,ripple&vs_currencies=usd&include_24hr_change=true";
 
 function mapUpstreamCode(status) {
   if (status === 429) return "RATE_LIMITED";
@@ -26,7 +26,8 @@ function normalize(payload) {
   const assets = [
     { key: "bitcoin", label: "Bitcoin", symbol: "BTC" },
     { key: "ethereum", label: "Ethereum", symbol: "ETH" },
-    { key: "solana", label: "Solana", symbol: "SOL" }
+    { key: "solana", label: "Solana", symbol: "SOL" },
+    { key: "ripple", label: "XRP", symbol: "XRP" }
   ].map((asset) => {
     const data = payload[asset.key] || {};
     return {

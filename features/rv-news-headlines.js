@@ -15,6 +15,13 @@ const CATEGORY_ICONS = {
   bonds: "BD"
 };
 
+function resolveSource(item) {
+  const source = item?.source || {};
+  const code = source.code || item?.sourceCode || item?.sourceId || "NEWS";
+  const name = source.name || item?.sourceName || item?.source || "news";
+  return { code, name };
+}
+
 function render(root, payload, logger) {
   const data = payload?.data || {};
   const items = data.items || [];
@@ -91,11 +98,15 @@ function render(root, payload, logger) {
         .map((item) => {
           const category = item.category || "stocks";
           const icon = CATEGORY_ICONS[category] || "EQ";
+          const source = resolveSource(item);
           return `
             <a class="rv-news-item" href="${item.url}" target="_blank" rel="noopener noreferrer">
               <span class="rv-news-icon" data-rv-cat="${category}">${icon}</span>
               <span class="rv-news-title">${item.headline}</span>
-              <span class="rv-news-meta">${item.source || "news"} · ${formatTime(item.publishedAt)}</span>
+              <span class="rv-news-meta">
+                <span class="rv-news-source" data-rv-source="${source.code}">[${source.code}]</span>
+                <span>${source.name} · ${formatTime(item.publishedAt)}</span>
+              </span>
             </a>
           `;
         })

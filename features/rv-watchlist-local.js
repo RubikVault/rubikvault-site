@@ -151,6 +151,22 @@ function formatStaleMinutes(ageMs) {
   return `${minutes}m`;
 }
 
+function normalizeSymbolInput(value) {
+  if (!value) return "";
+  const cleaned = String(value).replace(/\s+/g, "").toUpperCase();
+  return cleaned.slice(0, 8);
+}
+
+function populateDatalist(root) {
+  if (!root || !state.symbolsLoaded) return;
+  const datalist = root.querySelector("#rv-watchlist-symbols");
+  if (!datalist) return;
+  datalist.innerHTML = state.symbols
+    .slice(0, 500)
+    .map((item) => `<option value="${item.s}">${item.n || ""}</option>`)
+    .join("");
+}
+
 async function loadSymbols(logger) {
   if (state.symbolsLoaded) return;
   try {
@@ -167,7 +183,7 @@ async function loadSymbols(logger) {
 }
 
 function findSuggestions(query) {
-  const input = query.trim().toUpperCase();
+  const input = normalizeSymbolInput(query);
   if (!input || !state.symbolsLoaded) return [];
   return state.symbols
     .filter((item) => String(item.s || "").startsWith(input))
@@ -244,7 +260,8 @@ function renderTable(root, list, logger) {
   root.innerHTML = `
     <div class="rv-watchlist">
       <div class="rv-watchlist-input">
-        <input type="text" placeholder="Symbol (z.B. AAPL)" data-rv-watchlist-input />
+        <input type="text" placeholder="Symbol (z.B. AAPL)" data-rv-watchlist-input list="rv-watchlist-symbols" />
+        <datalist id="rv-watchlist-symbols"></datalist>
         <button type="button" data-rv-watchlist-add>Add</button>
       </div>
       <div class="rv-watchlist-suggestions" data-rv-watchlist-suggestions hidden style="border: 1px solid rgba(148, 163, 184, 0.2); border-radius: 8px; padding: 6px; display: grid; gap: 6px;"></div>
@@ -305,7 +322,7 @@ function renderTable(root, list, logger) {
                     <td>${row.nextEarnings ? new Date(row.nextEarnings).toLocaleDateString() : "—"}</td>
                     <td>${formatTime(row.updatedAt)}</td>
                     <td>${row.source || state.source || "stooq"}</td>
-                    <td><button type="button" data-rv-watchlist-remove="${row.symbol}">Remove</button></td>
+                    <td><button type="button" data-symbol="${row.symbol}" data-rv-watchlist-remove="${row.symbol}">Remove</button></td>
                   </tr>
                 `;
               })
@@ -579,10 +596,12 @@ function bind(root, list, logger) {
   let debounceId = null;
 
   const addSymbol = (symbolValue) => {
-    const value = symbolValue || input?.value?.trim().toUpperCase();
+    const value = normalizeSymbolInput(symbolValue || input?.value);
     if (!value) return;
-    if (!/^[A-Z0-9.:-]+$/.test(value)) {
+    if (!/^[A-Z0-9.:-]{1,8}$/.test(value)) {
       logger?.warn("watchlist_invalid_symbol", { symbol: value });
+      state.errorNote = "Invalid symbol format.";
+      updateErrorNote(root);
       return;
     }
     if (!list.includes(value) && list.length >= 20) {
@@ -605,12 +624,17 @@ function bind(root, list, logger) {
     state.activeIndex = -1;
     renderTable(root, list, logger);
     bind(root, list, logger);
+    populateDatalist(root);
     refreshQuotes(root, list, logger);
   };
 
   addButton?.addEventListener("click", () => addSymbol());
-  input?.addEventListener("focus", () => loadSymbols(logger));
+  input?.addEventListener("focus", async () => {
+    await loadSymbols(logger);
+    populateDatalist(root);
+  });
   input?.addEventListener("input", (event) => {
+    event.target.value = normalizeSymbolInput(event.target.value);
     const query = event.target.value;
     if (debounceId) clearTimeout(debounceId);
     debounceId = setTimeout(() => {
@@ -661,7 +685,7 @@ function bind(root, list, logger) {
   tableBody?.addEventListener("click", (event) => {
     const button = event.target.closest("[data-rv-watchlist-remove]");
     if (!button) return;
-    const symbol = button.getAttribute("data-rv-watchlist-remove");
+    const symbol = button.getAttribute("data-symbol") || button.getAttribute("data-rv-watchlist-remove");
     if (!symbol) return;
     const next = list.filter((item) => item !== symbol);
     saveList(next, logger);
@@ -707,6 +731,7 @@ export async function init(root, context = {}) {
   refreshInfoNote();
   renderTable(root, list, logger);
   bind(root, list, logger);
+  populateDatalist(root);
   setupVisibility(root, list, logger);
   refreshQuotes(root, list, logger);
 }
@@ -718,5 +743,6 @@ export async function refresh(root, context = {}) {
   refreshInfoNote();
   renderTable(root, list, logger);
   bind(root, list, logger);
+  populateDatalist(root);
   refreshQuotes(root, list, logger);
 }

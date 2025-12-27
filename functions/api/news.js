@@ -12,10 +12,25 @@ import {
 const FEATURE_ID = "news";
 const KV_TTL = 600;
 const FEEDS = [
-  { id: "yahoo", url: "https://finance.yahoo.com/news/rssindex" },
-  { id: "cnbc", url: "https://search.cnbc.com/rs/search/combined.xml?type=articles&id=10000664" },
-  { id: "reuters", url: "https://feeds.reuters.com/reuters/businessNews" },
-  { id: "reuters-markets", url: "https://feeds.reuters.com/reuters/marketsNews" }
+  { id: "yahoo", code: "YH", name: "Yahoo", url: "https://finance.yahoo.com/news/rssindex" },
+  {
+    id: "cnbc",
+    code: "CNBC",
+    name: "CNBC",
+    url: "https://search.cnbc.com/rs/search/combined.xml?type=articles&id=10000664"
+  },
+  {
+    id: "reuters",
+    code: "RTRS",
+    name: "Reuters",
+    url: "https://feeds.reuters.com/reuters/businessNews"
+  },
+  {
+    id: "reuters-markets",
+    code: "RTRS",
+    name: "Reuters",
+    url: "https://feeds.reuters.com/reuters/marketsNews"
+  }
 ];
 
 const CATEGORY_RULES = [
@@ -58,6 +73,15 @@ function summarize(value, max = 120) {
   const text = stripHtml(value);
   if (!text) return "";
   return text.length > max ? `${text.slice(0, max - 1)}…` : text;
+}
+
+function normalizeKey(item) {
+  const link = item?.url ? String(item.url) : "";
+  if (link) return link;
+  return String(item?.headline || "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .slice(0, 140);
 }
 
 function classifyHeadline(headline) {
@@ -136,12 +160,14 @@ export async function onRequestGet({ request, env, data }) {
         if (!Array.isArray(feedItems)) feedItems = [feedItems];
         feedItems.slice(0, 15).forEach((item) => {
           const headline = stripHtml(item.title || "");
+          if (!headline) return;
           const category = classifyHeadline(headline);
           items.push({
             headline,
             summary: summarize(item.description || item.summary || ""),
             url: item.link?.href || item.link || "",
-            source: feed.id,
+            source: { code: feed.code, name: feed.name },
+            sourceId: feed.id,
             publishedAt: item.pubDate || item.updated || new Date().toISOString(),
             category: category.id,
             categoryLabel: category.label
@@ -153,19 +179,12 @@ export async function onRequestGet({ request, env, data }) {
     })
   );
 
-  const deduped = Array.from(new Map(items.map((item) => [item.headline, item])).values());
+  const deduped = Array.from(new Map(items.map((item) => [normalizeKey(item), item])).values());
   deduped.sort((a, b) => new Date(b.publishedAt) - new Date(a.publishedAt));
   const dataPayload = normalize(deduped.slice(0, 40));
 
   if (!deduped.length) {
     const cached = !panic ? await kvGetJson(env, cacheKey) : null;
-    const errorCode = errors.find((entry) => entry.status === 429)
-      ? "RATE_LIMITED"
-      : errors.find((entry) => entry.status === 403)
-        ? "UPSTREAM_403"
-        : errors.find((entry) => Number(entry.status) >= 500)
-          ? "UPSTREAM_5XX"
-          : "UPSTREAM_4XX";
 
     if (cached?.hit && cached.value?.data) {
       const response = makeResponse({

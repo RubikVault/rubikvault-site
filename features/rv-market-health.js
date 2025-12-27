@@ -17,6 +17,9 @@ function render(root, payload, logger) {
     payload?.ok && (payload?.isStale || payload?.error?.code)
       ? "Partial data — some sources unavailable."
       : "";
+  const missingFields =
+    !fngCrypto || !fngStocks || !crypto.length || !indices.length || !commodities.length;
+  const delayedNote = missingFields ? "Data delayed — some values are unavailable." : "";
 
   if (!payload?.ok) {
     const errorMessage = payload?.error?.message || "API error";
@@ -97,6 +100,7 @@ function render(root, payload, logger) {
 
   root.innerHTML = `
     ${partialNote ? `<div class="rv-native-note">${partialNote}</div>` : ""}
+    ${delayedNote ? `<div class="rv-native-note">${delayedNote}</div>` : ""}
     <div class="rv-health-grid">
       ${renderGauge("Fear &amp; Greed (Stocks)", fngStocks?.value, fngStocks?.valueClassification)}
       ${renderGauge("Fear &amp; Greed (Crypto)", fngCrypto?.value, fngCrypto?.valueClassification)}

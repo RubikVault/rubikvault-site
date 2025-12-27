@@ -866,6 +866,7 @@ a {
 
 #rv-dashboard .rv-native-table-wrap {
   overflow-x: auto;
+  max-width: 100%;
 }
 
 #rv-dashboard .rv-native-table th,
@@ -916,6 +917,8 @@ a {
   display: grid;
   gap: 12px;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  max-width: 100%;
+  min-width: 0;
 }
 
 #rv-dashboard .rv-earnings-list,
@@ -945,6 +948,19 @@ a {
   gap: 4px;
   font-size: 12px;
   color: var(--rv-text-muted);
+}
+
+#rv-dashboard .rv-earnings-compact .rv-earnings-card {
+  padding: 8px;
+}
+
+#rv-dashboard .rv-earnings-compact .rv-earnings-head {
+  font-size: 12px;
+}
+
+#rv-dashboard .rv-earnings-compact .rv-earnings-meta {
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 6px;
 }
 
 #rv-dashboard .rv-news-item {
@@ -1002,6 +1018,34 @@ a {
   font-size: 11px;
   color: var(--rv-text-muted);
   white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+#rv-dashboard .rv-news-source {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  color: var(--rv-text);
+  background: rgba(15, 23, 42, 0.6);
+}
+
+#rv-dashboard .rv-news-source[data-rv-source="YH"] {
+  color: #22c55e;
+  border-color: rgba(34, 197, 94, 0.5);
+}
+
+#rv-dashboard .rv-news-source[data-rv-source="CNBC"] {
+  color: #60a5fa;
+  border-color: rgba(96, 165, 250, 0.5);
+}
+
+#rv-dashboard .rv-news-source[data-rv-source="RTRS"] {
+  color: #f59e0b;
+  border-color: rgba(245, 158, 11, 0.5);
 }
 
 #rv-dashboard .rv-news-summary {

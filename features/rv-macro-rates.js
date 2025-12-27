@@ -100,6 +100,10 @@ function render(root, payload, logger) {
     payload?.ok && (payload?.isStale || payload?.error?.code)
       ? "Partial data — some sources unavailable."
       : "";
+  const envNote =
+    payload?.error?.code === "ENV_MISSING"
+      ? "FRED_API_KEY missing — CPI values unavailable."
+      : "";
 
   if (!payload?.ok) {
     const errorMessage = payload?.error?.message || "API error";
@@ -189,6 +193,7 @@ function render(root, payload, logger) {
 
   root.innerHTML = `
     ${partialNote ? `<div class="rv-native-note">${partialNote}</div>` : ""}
+    ${envNote ? `<div class="rv-native-note">${envNote}</div>` : ""}
     <div class="rv-macro-tabs">
       ${tabs
         .map(

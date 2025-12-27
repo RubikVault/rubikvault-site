@@ -5,9 +5,9 @@ import {
   kvPutJson,
   logServer,
   makeResponse,
-  normalizeSymbolsParam,
   safeSnippet
 } from "./_shared.js";
+import { TECH_SIGNALS_UNIVERSE } from "./_shared/universe.js";
 
 const FEATURE_ID = "tech-signals";
 const KV_TTL = 1800;
@@ -175,24 +175,9 @@ export async function onRequestGet({ request, env, data }) {
   }
 
   const url = new URL(request.url);
-  const symbolsParam = url.searchParams.get("symbols") || "";
   const timeframe = (url.searchParams.get("timeframe") || "daily").toLowerCase();
   const step = timeframe === "weekly" ? 5 : timeframe === "monthly" ? 21 : 1;
-  const { symbols, errorResponse } = normalizeSymbolsParam(symbolsParam, {
-    feature: FEATURE_ID,
-    traceId,
-    ttl: 0
-  });
-  if (errorResponse) {
-    logServer({
-      feature: FEATURE_ID,
-      traceId,
-      cacheLayer: "none",
-      upstreamStatus: null,
-      durationMs: Date.now() - started
-    });
-    return errorResponse;
-  }
+  const symbols = TECH_SIGNALS_UNIVERSE.slice();
 
   const rateKey = request.headers.get("CF-Connecting-IP") || "global";
   const rateState = getRateState(rateKey);
@@ -252,71 +237,88 @@ export async function onRequestGet({ request, env, data }) {
   const skipped = [];
   let upstreamSnippet = "";
 
-  await Promise.all(
-    symbols.map(async (symbol) => {
-      const stooqSymbol = mapToStooq(symbol);
-      const upstreamUrl = `https://stooq.com/q/d/l/?s=${encodeURIComponent(stooqSymbol)}&i=d`;
-      try {
-        const res = await fetch(upstreamUrl);
-        const text = await res.text();
-        if (!res.ok) {
-          upstreamSnippet = upstreamSnippet || safeSnippet(text);
-          skipped.push({ symbol, reason: `upstream ${res.status}` });
-          return;
-        }
-        const lines = text.trim().split("\n");
-        if (lines.length < 3) {
-          skipped.push({ symbol, reason: "insufficient history" });
-          return;
-        }
-        const values = lines
-          .slice(1)
-          .map((line) => line.split(","))
-          .filter((parts) => parts.length >= 5)
-          .map((parts) => Number.parseFloat(parts[4]))
-          .filter((value) => Number.isFinite(value));
+  const batches = [];
+  for (let i = 0; i < symbols.length; i += 10) {
+    batches.push(symbols.slice(i, i + 10));
+  }
 
-        if (values.length < 50) {
-          skipped.push({ symbol, reason: "insufficient history" });
-          return;
-        }
+  const fetchSignal = async (symbol) => {
+    const stooqSymbol = mapToStooq(symbol);
+    const upstreamUrl = `https://stooq.com/q/d/l/?s=${encodeURIComponent(stooqSymbol)}&i=d`;
+    const res = await fetch(upstreamUrl);
+    const text = await res.text();
+    if (!res.ok) {
+      upstreamSnippet = upstreamSnippet || safeSnippet(text);
+      const error = new Error(`upstream ${res.status}`);
+      error.reason = `upstream ${res.status}`;
+      throw error;
+    }
+    const lines = text.trim().split("\n");
+    if (lines.length < 3) {
+      const error = new Error("insufficient history");
+      error.reason = "insufficient history";
+      throw error;
+    }
+    const values = lines
+      .slice(1)
+      .map((line) => line.split(","))
+      .filter((parts) => parts.length >= 5)
+      .map((parts) => Number.parseFloat(parts[4]))
+      .filter((value) => Number.isFinite(value));
 
-        const valuesUsed = sampleSeries(values, step);
-        const rsi = computeRsi(valuesUsed, 14);
-        const weeklySeries = sampleSeries(values, 5);
-        const rsiWeekly = computeRsi(weeklySeries, 14);
-        const ma20 = movingAverage(valuesUsed, 20);
-        const ma50 = movingAverage(valuesUsed, 50);
-        const perf1w = computePerformance(values, 5);
-        const perf1m = computePerformance(values, 21);
-        const perf1y = computePerformance(values, 252);
-        const macd = computeMacd(valuesUsed);
-        const stochRsi = computeStochRsi(valuesUsed, 14);
-        signals.push({
+    if (values.length < 50) {
+      const error = new Error("insufficient history");
+      error.reason = "insufficient history";
+      throw error;
+    }
+
+    const valuesUsed = sampleSeries(values, step);
+    const rsi = computeRsi(valuesUsed, 14);
+    const weeklySeries = sampleSeries(values, 5);
+    const rsiWeekly = computeRsi(weeklySeries, 14);
+    const ma20 = movingAverage(valuesUsed, 20);
+    const ma50 = movingAverage(valuesUsed, 50);
+    const perf1w = computePerformance(values, 5);
+    const perf1m = computePerformance(values, 21);
+    const perf1y = computePerformance(values, 252);
+    const macd = computeMacd(valuesUsed);
+    const stochRsi = computeStochRsi(valuesUsed, 14);
+    return {
+      symbol,
+      rsi,
+      rsiLabel: classifyRsi(rsi),
+      rsiWeekly,
+      rsiWeeklyLabel: classifyRsi(rsiWeekly),
+      ma20,
+      ma50,
+      maRegime: classifyMa(ma20, ma50),
+      macd: macd.macd,
+      macdSignal: macd.signal,
+      macdHist: macd.hist,
+      stochRsi,
+      perf1w,
+      perf1m,
+      perf1y,
+      timeframe,
+      ts: new Date().toISOString(),
+      source: "stooq"
+    };
+  };
+
+  for (const batch of batches) {
+    const results = await Promise.allSettled(batch.map((symbol) => fetchSignal(symbol)));
+    results.forEach((result, index) => {
+      const symbol = batch[index];
+      if (result.status === "fulfilled") {
+        signals.push(result.value);
+      } else {
+        skipped.push({
           symbol,
-          rsi,
-          rsiLabel: classifyRsi(rsi),
-          rsiWeekly,
-          rsiWeeklyLabel: classifyRsi(rsiWeekly),
-          ma20,
-          ma50,
-          maRegime: classifyMa(ma20, ma50),
-          macd: macd.macd,
-          macdSignal: macd.signal,
-          macdHist: macd.hist,
-          stochRsi,
-          perf1w,
-          perf1m,
-          perf1y,
-          timeframe,
-          ts: new Date().toISOString(),
-          source: "stooq"
+          reason: result.reason?.reason || result.reason?.message || "upstream error"
         });
-      } catch (error) {
-        skipped.push({ symbol, reason: "upstream error" });
       }
-    })
-  );
+    });
+  }
 
   if (!signals.length) {
     const response = makeResponse({
@@ -328,7 +330,12 @@ export async function onRequestGet({ request, env, data }) {
       error: {
         code: "SCHEMA_INVALID",
         message: "Insufficient history",
-        details: { reason: "insufficient history", skipped }
+        details: {
+          reason: "insufficient history",
+          skipped,
+          missingSymbols: symbols.slice(),
+          availableCount: 0
+        }
       },
       status: 200
     });
@@ -347,7 +354,10 @@ export async function onRequestGet({ request, env, data }) {
     source: "stooq",
     timeframe,
     signals,
-    skipped
+    skipped,
+    availableCount: signals.length,
+    missingSymbols: symbols.filter((symbol) => !signals.find((entry) => entry.symbol === symbol)),
+    partial: signals.length !== symbols.length
   };
 
   const kvPayload = {
@@ -372,7 +382,12 @@ export async function onRequestGet({ request, env, data }) {
       ? {
           code: "SCHEMA_INVALID",
           message: "Insufficient history for some symbols",
-          details: { reason: "insufficient history", skipped }
+          details: {
+            reason: "insufficient history",
+            skipped,
+            missingSymbols: dataPayload.missingSymbols,
+            availableCount: dataPayload.availableCount
+          }
         }
       : {}
   });

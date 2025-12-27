@@ -55,10 +55,15 @@ Note: Trace IDs are generated per request. Use the Debug UI or `/api/health` res
 - `/api/earnings-calendar`
 - `/api/news`
 - `/api/quotes?symbols=AAPL,NVDA`
-- `/api/tech-signals?symbols=AAPL,NVDA`
+- `/api/tech-signals?timeframe=daily`
 - `/api/macro-rates`
 - `/api/crypto-snapshot`
 - `/api/sentiment`
+- `/api/snapshots/market_health`
+- `/api/snapshots/macro_rates`
+- `/api/social-daily-brief`
+- `/api/social-runner?secret=...`
+- `/api/og-image`
 
 ## Performance Budget (estimates)
 - Initial viewport load: 3–4 API calls (Market Health, Price Snapshot, Top Movers)
@@ -97,6 +102,9 @@ Optional (per block):
 - `COINGECKO_DEMO_KEY` (CoinGecko rate-limit relief)
 - `QUOTES_PROVIDER` (optional routing for quotes)
 - `EARNINGS_PROVIDER` (Finnhub supported)
+- `CRON_SECRET` (social runner auth)
+- `SOCIAL_WEBHOOK_URL` (optional autopost)
+- `SOCIAL_AUTOPUBLISH` (set to `true` to enable autopost)
 
 Preview vs Production:
 - Both environments must have `RV_KV` bound
@@ -107,6 +115,17 @@ Preview vs Production:
 - CORS is handled at Functions level; `/api/*` is canonical
 - CSP allowlist should only include domains used by active blocks
 - Avoid `unsafe-eval` and string-based timers
+
+## Healthcheck Script
+Run:
+
+```bash
+bash scripts/healthcheck.sh http://localhost:8788
+```
+
+Notes:
+- `ok:false` returns `PARTIAL` (exit code 2).
+- Invalid JSON or non-200 responses return `FAIL` (exit code 1).
 
 ## AI Master Context Prompt
 """

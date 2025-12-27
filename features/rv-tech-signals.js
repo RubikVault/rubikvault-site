@@ -8,32 +8,32 @@ const TOP30_SYMBOLS = [
   "MSFT",
   "NVDA",
   "AMZN",
-  "META",
   "GOOGL",
   "GOOG",
+  "META",
   "TSLA",
   "BRK.B",
   "JPM",
   "V",
   "MA",
-  "UNH",
   "XOM",
-  "LLY",
-  "AVGO",
-  "ORCL",
-  "COST",
+  "UNH",
+  "JNJ",
   "WMT",
   "PG",
   "HD",
-  "MRK",
-  "JNJ",
-  "KO",
+  "AVGO",
+  "COST",
   "PEP",
+  "KO",
+  "MRK",
   "ABBV",
+  "LLY",
+  "ORCL",
+  "CSCO",
   "CRM",
-  "ADBE",
   "NFLX",
-  "CSCO"
+  "AMD"
 ];
 
 const top30State = {
@@ -67,17 +67,10 @@ function loadSymbols() {
 }
 
 function renderWatchlist(signals, symbols) {
-  if (!signals.length) {
-    return `
-      <div class="rv-native-empty">
-        Keine Tech-Signals verfügbar. Bitte später erneut versuchen.
-      </div>
-    `;
-  }
-
-  const rows = symbols
-    .map((symbol) => signals.find((item) => item.symbol === symbol))
-    .filter(Boolean);
+  const rows = symbols.map((symbol) => ({
+    symbol,
+    data: signals.find((item) => item.symbol === symbol) || null
+  }));
 
   return `
     <div class="rv-native-table-wrap">
@@ -94,7 +87,20 @@ function renderWatchlist(signals, symbols) {
         </thead>
         <tbody>
           ${rows
-            .map((item) => {
+            .map((row) => {
+              const item = row.data;
+              if (!item) {
+                return `
+                  <tr>
+                    <td>${row.symbol}</td>
+                    <td>—</td>
+                    <td>—</td>
+                    <td>—</td>
+                    <td>—</td>
+                    <td>—</td>
+                  </tr>
+                `;
+              }
               const rsiClass =
                 item.rsiLabel === "Oversold"
                   ? "rv-native-negative"
@@ -192,7 +198,7 @@ function renderTop30Table(payload) {
                   <td class="${perfClass(item.perf1y)}">${formatPercent(item.perf1y)}</td>
                   <td>${item.maRegime}</td>
                 </tr>
-              `;
+            `;
             })
             .join("")}
         </tbody>
@@ -202,8 +208,7 @@ function renderTop30Table(payload) {
 }
 
 async function fetchSignals(symbols, timeframe, logger) {
-  const query = symbols.join(",");
-  return fetchJSON(`/tech-signals?symbols=${encodeURIComponent(query)}&timeframe=${timeframe}` , {
+  return fetchJSON(`/tech-signals?timeframe=${encodeURIComponent(timeframe)}` , {
     feature: "rv-tech-signals",
     traceId: Math.random().toString(36).slice(2, 10),
     logger
@@ -241,6 +246,12 @@ function bindTop30Controls(root, logger) {
 
 function renderTop30(root, logger) {
   const tableHtml = renderTop30Table(top30State.payload);
+  const availableCount = top30State.payload?.data?.availableCount;
+  const totalCount = TOP30_SYMBOLS.length;
+  const availabilityNote =
+    typeof availableCount === "number" && availableCount !== totalCount
+      ? `${availableCount}/${totalCount} verfügbar`
+      : "";
   root.innerHTML = `
     <div class="rv-native-note rv-native-warning">WIP: consolidation planned with other signal blocks.</div>
     <div class="rv-native-note">How computed? RSI/MACD/Stoch RSI are derived from OHLC (stooq) per timeframe.</div>
@@ -253,6 +264,7 @@ function renderTop30(root, logger) {
       ${tableHtml}
     </div>
     <div class="rv-native-note">Universe: fixed mega-cap list (approx top 30).</div>
+    ${availabilityNote ? `<div class="rv-native-note">${availabilityNote}</div>` : ""}
   `;
 
   bindTop30Controls(root, logger);

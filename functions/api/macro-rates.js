@@ -7,12 +7,15 @@ import {
   makeResponse,
   safeSnippet
 } from "./_shared.js";
+import { CPI_SERIES } from "./_shared/macroSeries.js";
 
 const FEATURE_ID = "macro-rates";
 const KV_TTL = 21600;
 const RATE_WINDOW_MS = 60_000;
 const RATE_MAX = 30;
 const rateStore = new Map();
+const CPI_TTL_SECONDS = 12 * 60 * 60;
+const CPI_TTL_MS = CPI_TTL_SECONDS * 1000;
 
 const SERIES = [
   { id: "FEDFUNDS", label: "Fed Funds", group: "rates", region: "US" },
@@ -22,8 +25,7 @@ const SERIES = [
   { id: "DGS5", label: "US 5Y", group: "rates", region: "US" },
   { id: "DGS10", label: "US 10Y", group: "rates", region: "US" },
   { id: "DGS20", label: "US 20Y", group: "rates", region: "US" },
-  { id: "DGS30", label: "US 30Y", group: "rates", region: "US" },
-  { id: "CPIAUCSL", label: "US CPI", group: "inflation", region: "US" }
+  { id: "DGS30", label: "US 30Y", group: "rates", region: "US" }
 ];
 
 const FX_SYMBOLS = [
@@ -82,6 +84,104 @@ function parseObservations(payload) {
   };
 }
 
+async function fetchCpiSeries(env, series, { panic, hasFred }) {
+  const cacheKey = `macro-cpi:${series.id}`;
+  const cached = await kvGetJson(env, cacheKey);
+  if (cached?.hit && cached.value?.data) {
+    const cachedTs = Date.parse(cached.value.ts || cached.value.data?.asOf || "");
+    const ageMs = Number.isFinite(cachedTs) ? Date.now() - cachedTs : null;
+    if (ageMs === null || ageMs < CPI_TTL_MS) {
+      return { ...cached.value.data, cached: true };
+    }
+  }
+
+  if (!hasFred) {
+    return {
+      seriesId: series.id,
+      label: series.label,
+      value: null,
+      change: null,
+      changePercent: null,
+      date: null,
+      asOf: null,
+      source: "fred",
+      group: "inflation",
+      region: series.region,
+      cached: false,
+      missing: true
+    };
+  }
+
+  const upstreamUrl = `https://api.stlouisfed.org/fred/series/observations?series_id=${series.id}&api_key=${env.FRED_API_KEY}&file_type=json&sort_order=desc&limit=2`;
+  const res = await fetch(upstreamUrl);
+  const text = await res.text();
+  if (!res.ok) {
+    return {
+      seriesId: series.id,
+      label: series.label,
+      value: null,
+      change: null,
+      changePercent: null,
+      date: null,
+      asOf: null,
+      source: "fred",
+      group: "inflation",
+      region: series.region,
+      cached: false,
+      error: `upstream ${res.status}`
+    };
+  }
+  let json = {};
+  try {
+    json = text ? JSON.parse(text) : {};
+  } catch (error) {
+    return {
+      seriesId: series.id,
+      label: series.label,
+      value: null,
+      change: null,
+      changePercent: null,
+      date: null,
+      asOf: null,
+      source: "fred",
+      group: "inflation",
+      region: series.region,
+      cached: false,
+      error: "parse"
+    };
+  }
+
+  const obs = parseObservations(json);
+  const latest = obs?.latest || null;
+  const prior = obs?.prior || null;
+  const change = latest && prior ? latest.value - prior.value : null;
+  const payload = {
+    seriesId: series.id,
+    label: series.label,
+    value: latest?.value ?? null,
+    change,
+    changePercent: null,
+    date: latest?.date || null,
+    asOf: latest?.date || null,
+    source: "fred",
+    group: "inflation",
+    region: series.region,
+    cached: false
+  };
+
+  if (!panic) {
+    const kvPayload = {
+      ts: new Date().toISOString(),
+      source: "fred",
+      schemaVersion: 1,
+      data: payload
+    };
+    await kvPutJson(env, cacheKey, kvPayload, CPI_TTL_SECONDS);
+  }
+
+  return payload;
+}
+
 function normalizeFx(payload) {
   const results = payload?.quoteResponse?.result || [];
   const map = new Map(results.map((quote) => [quote.symbol, quote]));
@@ -117,29 +217,7 @@ export async function onRequestGet({ request, env, data }) {
     return bindingResponse;
   }
 
-  if (!env.FRED_API_KEY) {
-    const response = makeResponse({
-      ok: false,
-      feature: FEATURE_ID,
-      traceId,
-      cache: { hit: false, ttl: 0, layer: "none" },
-      upstream: { url: "", status: null, snippet: "" },
-      error: {
-        code: "ENV_MISSING",
-        message: "FRED_API_KEY missing",
-        details: { missing: ["FRED_API_KEY"] }
-      },
-      status: 500
-    });
-    logServer({
-      feature: FEATURE_ID,
-      traceId,
-      cacheLayer: "none",
-      upstreamStatus: null,
-      durationMs: Date.now() - started
-    });
-    return response;
-  }
+  const hasFred = Boolean(env.FRED_API_KEY);
 
   const rateKey = request.headers.get("CF-Connecting-IP") || "global";
   const rateState = getRateState(rateKey);
@@ -197,61 +275,77 @@ export async function onRequestGet({ request, env, data }) {
 
   let upstreamSnippet = "";
   try {
-    const responses = await Promise.all(
-      SERIES.map(async (series) => {
-        const upstreamUrl = `https://api.stlouisfed.org/fred/series/observations?series_id=${series.id}&api_key=${env.FRED_API_KEY}&file_type=json&sort_order=desc&limit=2`;
-        const res = await fetch(upstreamUrl);
-        const text = await res.text();
-        if (!res.ok) {
-          upstreamSnippet = upstreamSnippet || safeSnippet(text);
-          return {
-            ok: false,
-            status: res.status,
-            series,
-            upstreamUrl
-          };
-        }
-        let json;
-        try {
-          json = text ? JSON.parse(text) : {};
-        } catch (error) {
-          upstreamSnippet = upstreamSnippet || safeSnippet(text);
-          return {
-            ok: false,
-            status: 502,
-            series,
-            upstreamUrl,
-            schemaInvalid: true
-          };
-        }
-        return { ok: true, series, upstreamUrl, payload: json, status: res.status };
-      })
-    );
-
     const items = [];
     const errors = [];
-    responses.forEach((entry) => {
-      if (!entry.ok) {
-        errors.push({ id: entry.series.id, status: entry.status });
-        return;
-      }
-      const parsed = parseObservations(entry.payload);
-      if (!parsed) {
-        errors.push({ id: entry.series.id, status: "no_data" });
-        return;
-      }
-      const change = parsed.prior ? parsed.latest.value - parsed.prior.value : null;
-      items.push({
-        seriesId: entry.series.id,
-        label: entry.series.label,
-        value: parsed.latest.value,
-        change,
-        changePercent: null,
-        date: parsed.latest.date,
-        source: "fred",
-        group: entry.series.group,
-        region: entry.series.region
+
+    if (hasFred) {
+      const responses = await Promise.all(
+        SERIES.map(async (series) => {
+          const upstreamUrl = `https://api.stlouisfed.org/fred/series/observations?series_id=${series.id}&api_key=${env.FRED_API_KEY}&file_type=json&sort_order=desc&limit=2`;
+          const res = await fetch(upstreamUrl);
+          const text = await res.text();
+          if (!res.ok) {
+            upstreamSnippet = upstreamSnippet || safeSnippet(text);
+            return {
+              ok: false,
+              status: res.status,
+              series,
+              upstreamUrl
+            };
+          }
+          let json;
+          try {
+            json = text ? JSON.parse(text) : {};
+          } catch (error) {
+            upstreamSnippet = upstreamSnippet || safeSnippet(text);
+            return {
+              ok: false,
+              status: 502,
+              series,
+              upstreamUrl,
+              schemaInvalid: true
+            };
+          }
+          return { ok: true, series, upstreamUrl, payload: json, status: res.status };
+        })
+      );
+
+      responses.forEach((entry) => {
+        if (!entry.ok) {
+          errors.push({ id: entry.series.id, status: entry.status });
+          return;
+        }
+        const parsed = parseObservations(entry.payload);
+        if (!parsed) {
+          errors.push({ id: entry.series.id, status: "no_data" });
+          return;
+        }
+        const change = parsed.prior ? parsed.latest.value - parsed.prior.value : null;
+        items.push({
+          seriesId: entry.series.id,
+          label: entry.series.label,
+          value: parsed.latest.value,
+          change,
+          changePercent: null,
+          date: parsed.latest.date,
+          source: "fred",
+          group: entry.series.group,
+          region: entry.series.region
+        });
       });
+    } else {
+      errors.push({ id: "FRED_API_KEY", status: "missing" });
+    }
+
+    const cpiSeries = await Promise.all(
+      CPI_SERIES.map((series) => fetchCpiSeries(env, series, { panic, hasFred }))
+    );
+    cpiSeries.forEach((entry) => {
+      if (!entry) return;
+      items.push(entry);
+      if (entry.missing || entry.error) {
+        errors.push({ id: entry.seriesId, status: entry.error || "missing" });
+      }
     });
 
     let fxItems = [];
@@ -269,16 +363,26 @@ export async function onRequestGet({ request, env, data }) {
     }
 
     const combined = items.concat(fxItems);
+    const cpiPayload = cpiSeries.map((entry) => ({
+      region: entry.region,
+      label: entry.label,
+      value: entry.value ?? null,
+      date: entry.date || null,
+      asOf: entry.asOf || entry.date || null,
+      source: entry.source || "fred"
+    }));
 
     if (!combined.length) {
       const cached = !panic ? await kvGetJson(env, cacheKey) : null;
-      const errorCode = errors.find((entry) => entry.status === 429)
-        ? "RATE_LIMITED"
-        : errors.find((entry) => entry.status === 403)
-          ? "UPSTREAM_403"
-          : errors.find((entry) => Number(entry.status) >= 500)
-            ? "UPSTREAM_5XX"
-            : "UPSTREAM_4XX";
+      const errorCode = !hasFred
+        ? "ENV_MISSING"
+        : errors.find((entry) => entry.status === 429)
+          ? "RATE_LIMITED"
+          : errors.find((entry) => entry.status === 403)
+            ? "UPSTREAM_403"
+            : errors.find((entry) => Number(entry.status) >= 500)
+              ? "UPSTREAM_5XX"
+              : "UPSTREAM_4XX";
 
       if (cached?.hit && cached.value?.data) {
         const response = makeResponse({
@@ -313,8 +417,8 @@ export async function onRequestGet({ request, env, data }) {
         upstream: { url: "fred", status: null, snippet: upstreamSnippet },
         error: {
           code: errorCode,
-          message: "No upstream data",
-          details: { errors }
+          message: !hasFred ? "FRED_API_KEY missing" : "No upstream data",
+          details: !hasFred ? { missing: ["FRED_API_KEY"] } : { errors }
         },
         status: 502
       });
@@ -330,8 +434,9 @@ export async function onRequestGet({ request, env, data }) {
 
     const dataPayload = {
       updatedAt: new Date().toISOString(),
-      source: "fred, yahoo",
+      source: hasFred ? "fred, yahoo" : "yahoo",
       series: combined,
+      cpi: cpiPayload,
       groups: {
         rates: groupBy(combined, "rates"),
         inflation: groupBy(combined, "inflation"),
@@ -357,13 +462,19 @@ export async function onRequestGet({ request, env, data }) {
       data: dataPayload,
       cache: { hit: false, ttl: panic ? 0 : KV_TTL, layer: "none" },
       upstream: { url: "fred | yahoo", status: 200, snippet: upstreamSnippet },
-      error: errors.length
+      error: !hasFred
         ? {
-            code: mapUpstreamCode(errors[0]?.status || 502),
-            message: "Some upstreams failed",
-            details: { errors }
+            code: "ENV_MISSING",
+            message: "FRED_API_KEY missing",
+            details: { missing: ["FRED_API_KEY"] }
           }
-        : {}
+        : errors.length
+          ? {
+              code: mapUpstreamCode(errors[0]?.status || 502),
+              message: "Some upstreams failed",
+              details: { errors }
+            }
+          : {}
     });
     logServer({
       feature: FEATURE_ID,
