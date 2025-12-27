@@ -1,2 +1,1 @@
-import { onRequest } from "./macro-rates.js";
-export { onRequest };
+export { onRequestGet as onRequest } from "./macro-rates.js";
