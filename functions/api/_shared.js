@@ -495,7 +495,9 @@ export function mergeAndDedupeItems(listOfItemArrays) {
 }
 
 export function buildMarketauxParams() {
-  const publishedAfter = new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString();
+  const publishedAfter = new Date(Date.now() - 48 * 60 * 60 * 1000)
+    .toISOString()
+    .replace(/\.\d{3}Z$/, "Z");
   const params = new URLSearchParams();
   params.set("published_after", publishedAfter);
   return params;

@@ -5,7 +5,14 @@ const QUOTES_CACHE_KEY = "rv_watchlist_quotes";
 const SHADOW_SCHEMA_VERSION = 1;
 const SHADOW_FEATURE = "rv-watchlist-local";
 const SHADOW_KEY = "quotes";
-const SYMBOLS_PATHS = ["./data/symbols/symbols.min.json", "./assets/nasdaq_symbols.min.json"];
+const SYMBOLS_PATHS = [
+  "./data/symbols/symbols.min.json",
+  "./data/symbols/sp500.json",
+  "./data/symbols/nasdaq.json",
+  "./data/symbols/dow.json",
+  "./data/symbols/russell.json",
+  "./assets/nasdaq_symbols.min.json"
+];
 const SYMBOLS_PATH = "./assets/nasdaq_symbols.min.json";
 const DEFAULT_LIST = ["AAPL", "NVDA"];
 const DEFAULT_REFRESH_MS = 120_000;
@@ -171,17 +178,27 @@ function populateDatalist(root) {
 async function loadSymbols(logger) {
   if (state.symbolsLoaded) return;
   try {
+    const collected = [];
     for (const path of SYMBOLS_PATHS) {
       const response = await fetch(path, { cache: "force-cache" });
       if (!response.ok) continue;
       const data = await response.json();
-      if (Array.isArray(data)) {
-        state.symbols = data;
-        state.symbolsLoaded = true;
-        logger?.info("symbols_loaded", { count: data.length, path });
-        return;
+      if (Array.isArray(data) && data.length) {
+        collected.push({ path, data });
       }
     }
+    if (!collected.length) return;
+    const map = new Map();
+    collected.forEach((entry) => {
+      entry.data.forEach((item) => {
+        const symbol = String(item?.s || "").toUpperCase();
+        if (!symbol || map.has(symbol)) return;
+        map.set(symbol, { s: symbol, n: item?.n || "" });
+      });
+      logger?.info("symbols_loaded", { count: entry.data.length, path: entry.path });
+    });
+    state.symbols = Array.from(map.values());
+    state.symbolsLoaded = true;
   } catch (error) {
     logger?.warn("symbols_load_failed", { message: error?.message || "Failed" });
   }
@@ -657,6 +674,9 @@ function bind(root, list, logger) {
   input?.addEventListener("input", (event) => {
     event.target.value = normalizeSymbolInput(event.target.value);
     const query = event.target.value;
+    if (!state.symbolsLoaded) {
+      loadSymbols(logger);
+    }
     if (debounceId) clearTimeout(debounceId);
     debounceId = setTimeout(() => {
       state.suggestions = findSuggestions(query);

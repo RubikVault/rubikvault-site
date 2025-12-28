@@ -119,6 +119,7 @@ function whyItMatters(id, sentimentAvg, intensity) {
 }
 
 function mapUpstreamCode(status) {
+  if (status === 0 || status === null) return "UPSTREAM_TIMEOUT";
   if (status === 429) return "RATE_LIMITED";
   if (status === 403) return "UPSTREAM_403";
   if (status >= 400 && status < 500) return "UPSTREAM_4XX";
@@ -141,27 +142,38 @@ function buildMarketauxUrl({ symbols, search }, apiKey) {
 async function fetchNarrative(narrative, apiKey) {
   const url = buildMarketauxUrl(narrative, apiKey);
   const started = Date.now();
-  const res = await safeFetchJson(url, { userAgent: "RubikVault/1.0" });
-  const durationMs = Date.now() - started;
-  if (!res.ok || !res.json) {
+  try {
+    const res = await safeFetchJson(url, { userAgent: "RubikVault/1.0" });
+    const durationMs = Date.now() - started;
+    if (!res.ok || !res.json) {
+      return {
+        ok: false,
+        status: res.status,
+        items: [],
+        durationMs,
+        snippet: res.snippet || "",
+        error: res.error || mapUpstreamCode(res.status ?? 502)
+      };
+    }
+    const items = parseArticles(res.json).map(normalizeItem).filter((item) => item.title && item.url);
+    return {
+      ok: true,
+      status: res.status || 200,
+      items,
+      durationMs,
+      snippet: "",
+      error: ""
+    };
+  } catch (error) {
     return {
       ok: false,
-      status: res.status,
+      status: 0,
       items: [],
-      durationMs,
-      snippet: res.snippet || "",
-      error: res.error || mapUpstreamCode(res.status || 502)
+      durationMs: Date.now() - started,
+      snippet: "",
+      error: "UPSTREAM_TIMEOUT"
     };
   }
-  const items = parseArticles(res.json).map(normalizeItem).filter((item) => item.title && item.url);
-  return {
-    ok: true,
-    status: res.status || 200,
-    items,
-    durationMs,
-    snippet: "",
-    error: ""
-  };
 }
 
 function buildNarrativePayload(narrative, items, prevMap) {

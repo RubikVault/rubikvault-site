@@ -37,6 +37,18 @@ const FEEDS = [
     code: "RTRS",
     name: "Reuters",
     url: "https://feeds.reuters.com/reuters/marketsNews"
+  },
+  {
+    id: "marketwatch",
+    code: "MW",
+    name: "MarketWatch",
+    url: "https://feeds.marketwatch.com/marketwatch/topstories/"
+  },
+  {
+    id: "nasdaq",
+    code: "NDAQ",
+    name: "Nasdaq",
+    url: "https://www.nasdaq.com/feed/rssoutbound?category=markets"
   }
 ];
 
