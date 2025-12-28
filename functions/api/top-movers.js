@@ -14,6 +14,7 @@ const FEATURE_ID = "top-movers";
 const KV_TTL = 240;
 const CRYPTO_URL =
   "https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=price_change_percentage_24h_desc&per_page=6&page=1&sparkline=false&price_change_percentage=24h";
+const VOLUME_LIMIT = 10;
 const STOCK_UNIVERSE = [
   { symbol: "AAPL", label: "Apple" },
   { symbol: "MSFT", label: "Microsoft" },
@@ -72,20 +73,24 @@ function normalizeStocks(payload) {
       symbol: entry.symbol,
       name: quote.shortName || quote.longName || entry.label || entry.symbol,
       price: quote.regularMarketPrice ?? null,
+      lastClose: quote.regularMarketPreviousClose ?? quote.regularMarketPrice ?? null,
       changePercent: quote.regularMarketChangePercent ?? null,
+      volume: quote.regularMarketVolume ?? null,
       ts: new Date().toISOString(),
       source: "yahoo"
     };
   });
 
-  const sortable = rows.filter((row) => typeof row.changePercent === "number");
-  const sorted = sortable.slice().sort((a, b) => b.changePercent - a.changePercent);
-  const gainers = sorted.slice(0, 10);
-  const losers = sorted.slice(-10).reverse();
+  const sortable = rows.filter((row) => typeof row.volume === "number");
+  const sorted = sortable.slice().sort((a, b) => b.volume - a.volume);
+  const volumeLeaders = sorted.slice(0, VOLUME_LIMIT);
+  const volumeLaggards = sorted.slice(-VOLUME_LIMIT).reverse();
 
   return {
-    gainers,
-    losers,
+    volumeLeaders,
+    volumeLaggards,
+    gainers: volumeLeaders,
+    losers: volumeLaggards,
     universe: STOCK_UNIVERSE.map((entry) => entry.symbol)
   };
 }
@@ -161,7 +166,7 @@ export async function onRequestGet({ request, env, data }) {
     const dataPayload = {
       updatedAt: new Date().toISOString(),
       source: "yahoo",
-      method: "Top movers are computed within a fixed mega-cap universe.",
+      method: "Top movers are computed by last trading day volume within a fixed mega-cap universe.",
       crypto: [],
       stocks: normalizeStocks(stocksResult.json || {})
     };

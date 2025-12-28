@@ -7,19 +7,25 @@ function formatNumber(value, options = {}) {
   return new Intl.NumberFormat("en-US", options).format(value);
 }
 
+function formatCompact(value) {
+  if (value === null || value === undefined || Number.isNaN(value)) return "N/A";
+  return new Intl.NumberFormat("en-US", { notation: "compact", maximumFractionDigits: 1 }).format(
+    value
+  );
+}
+
 function render(root, payload, logger, featureId) {
   const resolved = resolveWithShadow(featureId, payload, {
     logger,
     isMissing: (value) => {
       const stocks = value?.data?.stocks || {};
-      return !value?.ok || !(stocks.gainers || []).length || !(stocks.losers || []).length;
+      return !value?.ok || !(stocks.volumeLeaders || stocks.gainers || []).length;
     },
     reason: "STALE_FALLBACK"
   });
   const data = resolved?.data || {};
   const stocks = data?.stocks || {};
-  const gainers = stocks.gainers || [];
-  const losers = stocks.losers || [];
+  const leaders = stocks.volumeLeaders || stocks.gainers || [];
   const partialNote =
     resolved?.ok && (resolved?.isStale || resolved?.error?.code)
       ? "Partial data — some sources unavailable."
@@ -69,7 +75,7 @@ function render(root, payload, logger, featureId) {
     return;
   }
 
-  if (!gainers.length && !losers.length) {
+  if (!leaders.length) {
     root.innerHTML = `
       <div class="rv-native-empty">
         Keine Movers-Daten verfügbar. Bitte später erneut versuchen.
@@ -88,55 +94,40 @@ function render(root, payload, logger, featureId) {
   root.innerHTML = `
     ${partialNote ? `<div class="rv-native-note">${partialNote}</div>` : ""}
     <div class="rv-native-table-wrap">
-      <h4>Stock Movers (Last trading day)</h4>
-      <div class="rv-native-split">
-        <table class="rv-native-table">
-          <thead>
-            <tr>
-              <th>Gainers</th>
-              <th>Price</th>
-              <th>Daily %</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${gainers
-              .map((item) => {
-                const changeValue = item.changePercent ?? 0;
-                return `
-                  <tr>
-                    <td>${item.symbol}</td>
-                    <td>$${formatNumber(item.price, { maximumFractionDigits: 2 })}</td>
-                    <td class="rv-native-positive">${formatNumber(changeValue, { maximumFractionDigits: 2 })}%</td>
-                  </tr>
-                `;
-              })
-              .join("")}
-          </tbody>
-        </table>
-        <table class="rv-native-table">
-          <thead>
-            <tr>
-              <th>Losers</th>
-              <th>Price</th>
-              <th>Daily %</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${losers
-              .map((item) => {
-                const changeValue = item.changePercent ?? 0;
-                return `
-                  <tr>
-                    <td>${item.symbol}</td>
-                    <td>$${formatNumber(item.price, { maximumFractionDigits: 2 })}</td>
-                    <td class="rv-native-negative">${formatNumber(changeValue, { maximumFractionDigits: 2 })}%</td>
-                  </tr>
-                `;
-              })
-              .join("")}
-          </tbody>
-        </table>
-      </div>
+      <h4>Volume Top Movers (Last trading day)</h4>
+      <table class="rv-native-table">
+        <thead>
+          <tr>
+            <th>Company</th>
+            <th>Symbol</th>
+            <th>Volume</th>
+            <th>Last Close</th>
+            <th>Day %</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${leaders
+            .map((item) => {
+              const changeValue = item.changePercent ?? null;
+              const changeClass =
+                typeof changeValue === "number" && changeValue >= 0
+                  ? "rv-native-positive"
+                  : "rv-native-negative";
+              return `
+                <tr>
+                  <td>${item.name || item.symbol}</td>
+                  <td>${item.symbol}</td>
+                  <td>${formatCompact(item.volume)}</td>
+                  <td>$${formatNumber(item.lastClose ?? item.price, { maximumFractionDigits: 2 })}</td>
+                  <td class="${changeClass}">${formatNumber(changeValue, {
+                    maximumFractionDigits: 2
+                  })}%</td>
+                </tr>
+              `;
+            })
+            .join("")}
+        </tbody>
+      </table>
     </div>
     <div class="rv-native-note">
       Updated: ${new Date(data.updatedAt || resolved.ts).toLocaleTimeString()} · Source: ${data.source || "Yahoo"}

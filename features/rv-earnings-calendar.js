@@ -112,6 +112,7 @@ function render(root, payload, logger, featureId) {
   if (!filteredItems.length) {
     const placeholder = {
       symbol: "N/A",
+      company: "N/A",
       date: new Date().toISOString().slice(0, 10),
       time: "N/A",
       epsActual: null,
@@ -147,6 +148,7 @@ function render(root, payload, logger, featureId) {
     <table class="rv-native-table rv-table--compact rv-earnings-compact-table">
       <thead>
         <tr>
+          <th>Company</th>
           <th>Symbol</th>
           <th>Date</th>
           <th>Time</th>
@@ -163,6 +165,7 @@ function render(root, payload, logger, featureId) {
             const sentimentCls = sentimentClass(sentiment);
             return `
               <tr>
+                <td>${formatValue(item.company)}</td>
                 <td>${formatValue(item.symbol)}</td>
                 <td>${formatValue(item.date)}</td>
                 <td>${formatTime(item.time)}</td>

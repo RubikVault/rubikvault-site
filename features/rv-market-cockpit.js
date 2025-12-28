@@ -76,7 +76,8 @@ function render(root, payload, logger, featureId) {
   const macroRates = Array.isArray(macro.rates) ? macro.rates : [];
   const macroFx = Array.isArray(macro.fx) ? macro.fx : [];
   const macroCpi = Array.isArray(macro.cpi) ? macro.cpi : [];
-  const sectors = data.sectorPerformance?.sectors || [];
+  const sectorTop = data.sectorPerformance?.top || [];
+  const sectorBottom = data.sectorPerformance?.bottom || [];
 
   root.innerHTML = `
     ${partialNote ? `<div class="rv-native-note">${partialNote}</div>` : ""}
@@ -92,19 +93,35 @@ function render(root, payload, logger, featureId) {
     </div>
     <div class="rv-native-note">Why it matters: regime blends volatility, sentiment, and narrative risk.</div>
     ${
-      sectors.length
-        ? `<div class="rv-native-note">Sector performance (top movers)</div>
+      sectorTop.length || sectorBottom.length
+        ? `<div class="rv-native-note">Sector performance (1D/1W/1M)</div>
            <table class="rv-native-table rv-table--compact">
              <thead>
-               <tr><th>Sector</th><th>1D</th></tr>
+               <tr><th>Sector</th><th>1D</th><th>1W</th><th>1M</th><th>Rank</th></tr>
              </thead>
              <tbody>
-               ${sectors
+               ${sectorTop
                  .map(
                    (sector) => `
                  <tr>
                    <td>${sector.name || sector.symbol}</td>
                    <td>${formatPercent(sector.r1d)}</td>
+                   <td>${formatPercent(sector.r1w)}</td>
+                   <td>${formatPercent(sector.r1m)}</td>
+                   <td class="rv-native-positive">Top</td>
+                 </tr>
+               `
+                 )
+                 .join("")}
+               ${sectorBottom
+                 .map(
+                   (sector) => `
+                 <tr>
+                   <td>${sector.name || sector.symbol}</td>
+                   <td>${formatPercent(sector.r1d)}</td>
+                   <td>${formatPercent(sector.r1w)}</td>
+                   <td>${formatPercent(sector.r1m)}</td>
+                   <td class="rv-native-negative">Bottom</td>
                  </tr>
                `
                  )

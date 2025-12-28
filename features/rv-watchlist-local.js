@@ -6,6 +6,7 @@ const SHADOW_SCHEMA_VERSION = 1;
 const SHADOW_FEATURE = "rv-watchlist-local";
 const SHADOW_KEY = "quotes";
 const SYMBOLS_PATHS = [
+  "./data/universes/all_us.json",
   "./data/symbols/universe.min.json",
   "./data/symbols/symbols.min.json",
   "./data/symbols/sp500.json",
@@ -193,8 +194,10 @@ async function loadSymbols(logger) {
     collected.forEach((entry) => {
       entry.data.forEach((item) => {
         const symbol = String(item?.s || "").toUpperCase();
+        const name = String(item?.n || "").trim();
         if (!symbol || map.has(symbol)) return;
-        map.set(symbol, { s: symbol, n: item?.n || "" });
+        if (!name || /^Company /i.test(name)) return;
+        map.set(symbol, { s: symbol, n: name });
       });
       logger?.info("symbols_loaded", { count: entry.data.length, path: entry.path });
     });
@@ -212,7 +215,12 @@ async function loadSymbolsLegacy(logger) {
     const response = await fetch(SYMBOLS_PATH, { cache: "force-cache" });
     const data = await response.json();
     if (Array.isArray(data)) {
-      state.symbols = data;
+      state.symbols = data
+        .map((item) => ({
+          s: String(item?.s || "").toUpperCase(),
+          n: String(item?.n || "").trim()
+        }))
+        .filter((item) => item.s && item.n && !/^Company /i.test(item.n));
       state.symbolsLoaded = true;
       logger?.info("symbols_loaded", { count: data.length, path: SYMBOLS_PATH });
     }
@@ -406,10 +414,10 @@ function updateInfoNote(root) {
 function refreshInfoNote() {
   const notes = [];
   if (state.metricsMissing) {
-    notes.push("Market cap requires FINNHUB_API_KEY.");
+    notes.push("Market cap data unavailable.");
   }
   if (state.earningsMissing) {
-    notes.push("Next earnings requires FINNHUB_API_KEY.");
+    notes.push("Next earnings data unavailable.");
   }
   state.infoNote = notes.join(" ");
 }

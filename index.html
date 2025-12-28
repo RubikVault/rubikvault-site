@@ -25,6 +25,20 @@
         <a href="https://www.tiktok.com/@rubikvault" target="_blank" rel="noopener noreferrer">TikTok</a>
         <a href="https://www.instagram.com/rubikvault" target="_blank" rel="noopener noreferrer">Instagram</a>
       </nav>
+
+      <div class="rv-header-tools" aria-live="polite">
+        <div class="rv-market-clock">
+          <span class="rv-clock-time" id="rv-ny-time">NY: --:--:--</span>
+          <span class="rv-clock-status">
+            <span class="rv-led" data-rv-led="closed"></span>
+            <span class="rv-market-label" data-rv-market-label>Closed</span>
+            <span class="rv-market-countdown" id="rv-market-countdown">opens in --:--:--</span>
+          </span>
+        </div>
+        <button class="rv-theme-toggle" type="button" id="rv-theme-toggle" aria-label="Toggle theme">
+          Dark
+        </button>
+      </div>
     </div>
     <div class="rv-status-strip" id="rv-status-strip" aria-live="polite">
       <span>System status loading…</span>
@@ -33,10 +47,11 @@
 
   <nav class="rv-subnav" aria-label="Dashboard sections">
     <a href="#rv-overview">Overview</a>
-    <a href="#rv-stocks">Stocks</a>
-    <a href="#rv-crypto">Crypto</a>
     <a href="#rv-macro">Macro</a>
     <a href="#rv-news">News</a>
+    <a href="#rv-stocks">Stocks</a>
+    <a href="#rv-crypto">Crypto</a>
+    <a href="#rv-alpha">Alpha Radar</a>
   </nav>
 
   <!-- MAIN -->
@@ -97,7 +112,7 @@
       </div>
     </section>
 
-    <div class="rv-cockpit-grid">
+    <div class="rv-cockpit-grid" id="rv-macro">
       <section
         class="rv-section rv-native-block rv-cockpit-card"
         data-rv-feature="rv-yield-curve"
@@ -266,6 +281,8 @@
       data-rv-priority="high"
       data-rv-loading="true"
       data-rv-collapsible="true"
+      data-rv-deprecated="true"
+      aria-hidden="true"
     >
       <div class="rv-native-header">
         <h2>Block 02 – Price Snapshot</h2>
@@ -285,13 +302,13 @@
     <section
       class="rv-section rv-native-block"
       data-rv-feature="rv-top-movers"
-      data-rv-block-name="Block 03 – Top Movers"
+      data-rv-block-name="Block 03 – Volume Top Movers"
       data-rv-priority="medium"
       data-rv-loading="true"
       data-rv-collapsible="true"
     >
       <div class="rv-native-header">
-        <h2>Block 03 – Top Movers</h2>
+        <h2>Block 03 – Volume Top Movers</h2>
         <button class="rv-native-refresh" type="button" data-rv-action="refresh">Refresh</button>
       </div>
       <div class="rv-native-body rv-card">
@@ -432,7 +449,8 @@
       data-rv-loading="true"
       data-rv-collapsible="true"
       data-rv-span="wide"
-      id="rv-macro"
+      data-rv-deprecated="true"
+      aria-hidden="true"
     >
       <div class="rv-native-header">
         <h2>Block 08 – Macro &amp; Rates</h2>
@@ -542,6 +560,29 @@
         <div class="rv-native-root" data-rv-root></div>
       </div>
     </section>
+    <section
+      class="rv-section rv-native-block"
+      data-rv-feature="rv-alpha-radar"
+      data-rv-block-name="Alpha Radar"
+      data-rv-priority="low"
+      data-rv-loading="true"
+      data-rv-collapsible="true"
+      data-rv-span="wide"
+      id="rv-alpha"
+    >
+      <div class="rv-native-header">
+        <h2>Alpha Radar</h2>
+        <button class="rv-native-refresh" type="button" data-rv-action="refresh">Refresh</button>
+      </div>
+      <div class="rv-native-body rv-card">
+        <div class="rv-native-skeleton">
+          <div class="rv-native-line"></div>
+          <div class="rv-native-line short"></div>
+          <div class="rv-native-line"></div>
+        </div>
+        <div class="rv-native-root" data-rv-root></div>
+      </div>
+    </section>
     </div>
   </main>
 
@@ -563,11 +604,12 @@
     <p class="rv-footer-copy">
       &copy; <span id="rv-year">2025</span> RubikVault. All rights reserved.
     </p>
-    <script>
-      // kleines JS, falls du kein extra script.js nutzen willst
-      document.getElementById('rv-year').textContent = new Date().getFullYear();
-    </script>
+  <script>
+    // kleines JS, falls du kein extra script.js nutzen willst
+    document.getElementById('rv-year').textContent = new Date().getFullYear();
+  </script>
   </footer>
+  <script type="module" src="./market-clock.js"></script>
   <script type="module" src="./rv-loader.js"></script>
 </body>
 </html>

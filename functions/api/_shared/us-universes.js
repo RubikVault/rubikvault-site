@@ -1,0 +1,525 @@
+export const US_TOP_100 = [
+  {
+    "s": "AAPL",
+    "n": "Apple Inc."
+  },
+  {
+    "s": "MSFT",
+    "n": "Microsoft"
+  },
+  {
+    "s": "NVDA",
+    "n": "NVIDIA"
+  },
+  {
+    "s": "AMZN",
+    "n": "Amazon"
+  },
+  {
+    "s": "TSLA",
+    "n": "Tesla"
+  },
+  {
+    "s": "META",
+    "n": "Meta Platforms"
+  },
+  {
+    "s": "GOOGL",
+    "n": "Alphabet A"
+  },
+  {
+    "s": "GOOG",
+    "n": "Alphabet C"
+  },
+  {
+    "s": "NFLX",
+    "n": "Netflix"
+  },
+  {
+    "s": "AVGO",
+    "n": "Broadcom"
+  },
+  {
+    "s": "COST",
+    "n": "Costco"
+  },
+  {
+    "s": "AMD",
+    "n": "Advanced Micro Devices"
+  },
+  {
+    "s": "INTC",
+    "n": "Intel"
+  },
+  {
+    "s": "QCOM",
+    "n": "Qualcomm"
+  },
+  {
+    "s": "CSCO",
+    "n": "Cisco"
+  },
+  {
+    "s": "ADBE",
+    "n": "Adobe"
+  },
+  {
+    "s": "ORCL",
+    "n": "Oracle"
+  },
+  {
+    "s": "CRM",
+    "n": "Salesforce"
+  },
+  {
+    "s": "PYPL",
+    "n": "PayPal"
+  },
+  {
+    "s": "SHOP",
+    "n": "Shopify"
+  },
+  {
+    "s": "SNOW",
+    "n": "Snowflake"
+  },
+  {
+    "s": "UBER",
+    "n": "Uber"
+  },
+  {
+    "s": "LYFT",
+    "n": "Lyft"
+  },
+  {
+    "s": "SPOT",
+    "n": "Spotify"
+  },
+  {
+    "s": "ABNB",
+    "n": "Airbnb"
+  },
+  {
+    "s": "ZM",
+    "n": "Zoom"
+  },
+  {
+    "s": "DOCU",
+    "n": "DocuSign"
+  },
+  {
+    "s": "SQ",
+    "n": "Block"
+  },
+  {
+    "s": "ROKU",
+    "n": "Roku"
+  },
+  {
+    "s": "COIN",
+    "n": "Coinbase"
+  },
+  {
+    "s": "PLTR",
+    "n": "Palantir"
+  },
+  {
+    "s": "NET",
+    "n": "Cloudflare"
+  },
+  {
+    "s": "DDOG",
+    "n": "Datadog"
+  },
+  {
+    "s": "CRWD",
+    "n": "CrowdStrike"
+  },
+  {
+    "s": "ZS",
+    "n": "Zscaler"
+  },
+  {
+    "s": "OKTA",
+    "n": "Okta"
+  },
+  {
+    "s": "PANW",
+    "n": "Palo Alto Networks"
+  },
+  {
+    "s": "MDB",
+    "n": "MongoDB"
+  },
+  {
+    "s": "NOW",
+    "n": "ServiceNow"
+  },
+  {
+    "s": "WDAY",
+    "n": "Workday"
+  },
+  {
+    "s": "INTU",
+    "n": "Intuit"
+  },
+  {
+    "s": "ADSK",
+    "n": "Autodesk"
+  },
+  {
+    "s": "EA",
+    "n": "Electronic Arts"
+  },
+  {
+    "s": "ATVI",
+    "n": "Activision Blizzard"
+  },
+  {
+    "s": "TTWO",
+    "n": "Take-Two"
+  },
+  {
+    "s": "SBUX",
+    "n": "Starbucks"
+  },
+  {
+    "s": "PEP",
+    "n": "PepsiCo"
+  },
+  {
+    "s": "KO",
+    "n": "Coca-Cola"
+  },
+  {
+    "s": "WMT",
+    "n": "Walmart"
+  },
+  {
+    "s": "TGT",
+    "n": "Target"
+  },
+  {
+    "s": "HD",
+    "n": "Home Depot"
+  },
+  {
+    "s": "LOW",
+    "n": "Lowe's"
+  },
+  {
+    "s": "BKNG",
+    "n": "Booking Holdings"
+  },
+  {
+    "s": "MAR",
+    "n": "Marriott"
+  },
+  {
+    "s": "DAL",
+    "n": "Delta Air Lines"
+  },
+  {
+    "s": "UAL",
+    "n": "United Airlines"
+  },
+  {
+    "s": "AAL",
+    "n": "American Airlines"
+  },
+  {
+    "s": "NKE",
+    "n": "Nike"
+  },
+  {
+    "s": "LULU",
+    "n": "Lululemon"
+  },
+  {
+    "s": "CROX",
+    "n": "Crocs"
+  },
+  {
+    "s": "XOM",
+    "n": "Exxon Mobil"
+  },
+  {
+    "s": "CVX",
+    "n": "Chevron"
+  },
+  {
+    "s": "BP",
+    "n": "BP"
+  },
+  {
+    "s": "COP",
+    "n": "ConocoPhillips"
+  },
+  {
+    "s": "SLB",
+    "n": "Schlumberger"
+  },
+  {
+    "s": "JPM",
+    "n": "JPMorgan"
+  },
+  {
+    "s": "BAC",
+    "n": "Bank of America"
+  },
+  {
+    "s": "WFC",
+    "n": "Wells Fargo"
+  },
+  {
+    "s": "C",
+    "n": "Citigroup"
+  },
+  {
+    "s": "GS",
+    "n": "Goldman Sachs"
+  },
+  {
+    "s": "MS",
+    "n": "Morgan Stanley"
+  },
+  {
+    "s": "V",
+    "n": "Visa"
+  },
+  {
+    "s": "MA",
+    "n": "Mastercard"
+  },
+  {
+    "s": "AXP",
+    "n": "American Express"
+  },
+  {
+    "s": "UNH",
+    "n": "UnitedHealth"
+  },
+  {
+    "s": "JNJ",
+    "n": "Johnson & Johnson"
+  },
+  {
+    "s": "PFE",
+    "n": "Pfizer"
+  },
+  {
+    "s": "MRNA",
+    "n": "Moderna"
+  },
+  {
+    "s": "ABT",
+    "n": "Abbott"
+  },
+  {
+    "s": "TMO",
+    "n": "Thermo Fisher"
+  },
+  {
+    "s": "ISRG",
+    "n": "Intuitive Surgical"
+  },
+  {
+    "s": "GILD",
+    "n": "Gilead"
+  },
+  {
+    "s": "AMGN",
+    "n": "Amgen"
+  },
+  {
+    "s": "BIIB",
+    "n": "Biogen"
+  },
+  {
+    "s": "TSM",
+    "n": "TSMC"
+  },
+  {
+    "s": "ASML",
+    "n": "ASML"
+  },
+  {
+    "s": "LRCX",
+    "n": "Lam Research"
+  },
+  {
+    "s": "AMAT",
+    "n": "Applied Materials"
+  },
+  {
+    "s": "MU",
+    "n": "Micron"
+  },
+  {
+    "s": "KLAC",
+    "n": "KLA"
+  },
+  {
+    "s": "ADI",
+    "n": "Analog Devices"
+  },
+  {
+    "s": "TXN",
+    "n": "Texas Instruments"
+  },
+  {
+    "s": "MRVL",
+    "n": "Marvell"
+  },
+  {
+    "s": "NXPI",
+    "n": "NXP"
+  },
+  {
+    "s": "SONY",
+    "n": "Sony"
+  },
+  {
+    "s": "NTDOY",
+    "n": "Nintendo"
+  },
+  {
+    "s": "SAP",
+    "n": "SAP"
+  },
+  {
+    "s": "BABA",
+    "n": "Alibaba"
+  },
+  {
+    "s": "MCD",
+    "n": "McDonald's"
+  },
+  {
+    "s": "DIS",
+    "n": "Disney"
+  }
+];
+
+export const US_TOP_30 = [
+  {
+    "s": "AAPL",
+    "n": "Apple Inc."
+  },
+  {
+    "s": "MSFT",
+    "n": "Microsoft"
+  },
+  {
+    "s": "NVDA",
+    "n": "NVIDIA"
+  },
+  {
+    "s": "AMZN",
+    "n": "Amazon"
+  },
+  {
+    "s": "TSLA",
+    "n": "Tesla"
+  },
+  {
+    "s": "META",
+    "n": "Meta Platforms"
+  },
+  {
+    "s": "GOOGL",
+    "n": "Alphabet A"
+  },
+  {
+    "s": "GOOG",
+    "n": "Alphabet C"
+  },
+  {
+    "s": "NFLX",
+    "n": "Netflix"
+  },
+  {
+    "s": "AVGO",
+    "n": "Broadcom"
+  },
+  {
+    "s": "COST",
+    "n": "Costco"
+  },
+  {
+    "s": "AMD",
+    "n": "Advanced Micro Devices"
+  },
+  {
+    "s": "INTC",
+    "n": "Intel"
+  },
+  {
+    "s": "QCOM",
+    "n": "Qualcomm"
+  },
+  {
+    "s": "CSCO",
+    "n": "Cisco"
+  },
+  {
+    "s": "ADBE",
+    "n": "Adobe"
+  },
+  {
+    "s": "ORCL",
+    "n": "Oracle"
+  },
+  {
+    "s": "CRM",
+    "n": "Salesforce"
+  },
+  {
+    "s": "PYPL",
+    "n": "PayPal"
+  },
+  {
+    "s": "SHOP",
+    "n": "Shopify"
+  },
+  {
+    "s": "SNOW",
+    "n": "Snowflake"
+  },
+  {
+    "s": "UBER",
+    "n": "Uber"
+  },
+  {
+    "s": "LYFT",
+    "n": "Lyft"
+  },
+  {
+    "s": "SPOT",
+    "n": "Spotify"
+  },
+  {
+    "s": "ABNB",
+    "n": "Airbnb"
+  },
+  {
+    "s": "ZM",
+    "n": "Zoom"
+  },
+  {
+    "s": "DOCU",
+    "n": "DocuSign"
+  },
+  {
+    "s": "SQ",
+    "n": "Block"
+  },
+  {
+    "s": "ROKU",
+    "n": "Roku"
+  },
+  {
+    "s": "COIN",
+    "n": "Coinbase"
+  }
+];

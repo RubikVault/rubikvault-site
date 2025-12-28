@@ -8,11 +8,15 @@ import {
   safeSnippet,
   safeFetchJson
 } from "./_shared.js";
+import { US_TOP_100 } from "./_shared/us-universes.js";
 
 const FEATURE_ID = "earnings-calendar";
 const KV_TTL = 3600;
 const LAST_GOOD_KEY = "earnings-calendar:last_good";
 const FINNHUB_BASE = "https://finnhub.io/api/v1/calendar/earnings";
+const TOP100_MAP = new Map(
+  US_TOP_100.map((entry) => [String(entry.s || "").toUpperCase(), entry.n || entry.s])
+);
 
 function formatDate(date) {
   return date.toISOString().slice(0, 10);
@@ -49,12 +53,13 @@ function normalizeFinnhub(payload) {
   const list = Array.isArray(payload?.earningsCalendar) ? payload.earningsCalendar : [];
   const items = list
     .filter((entry) => entry?.symbol && entry?.date)
+    .filter((entry) => TOP100_MAP.has(entry.symbol))
     .map((entry) => {
       const epsResult = classifySurprise(entry.epsActual, entry.epsEstimate);
       const revenueResult = classifySurprise(entry.revenueActual, entry.revenueEstimate);
       return {
         symbol: entry.symbol,
-        company: entry.company || null,
+        company: TOP100_MAP.get(entry.symbol) || entry.company || null,
         date: entry.date,
         time: entry.hour || entry.time || null,
         epsEst: entry.epsEstimate ?? null,

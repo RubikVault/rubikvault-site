@@ -64,28 +64,30 @@ const statusSummary = {
   lastError: null
 };
 const STATUS_LABELS = {
+  "rv-market-cockpit": "Cockpit",
   "rv-market-health": "MarketHealth",
   "rv-price-snapshot": "Snapshot",
-  "rv-top-movers": "Movers",
+  "rv-top-movers": "Volume",
   "rv-earnings-calendar": "Earnings",
   "rv-news-headlines": "News",
   "rv-watchlist-local": "Watchlist",
   "rv-macro-rates": "Macro",
   "rv-crypto-snapshot": "Crypto",
   "rv-sentiment-barometer": "Sentiment",
-  "rv-tech-signals": "Signals"
+  "rv-tech-signals": "Signals",
+  "rv-alpha-radar": "Alpha"
 };
 const STATUS_ORDER = [
+  "rv-market-cockpit",
   "rv-market-health",
   "rv-earnings-calendar",
   "rv-news-headlines",
+  "rv-top-movers",
   "rv-watchlist-local",
-  "rv-macro-rates",
   "rv-crypto-snapshot",
   "rv-sentiment-barometer",
   "rv-tech-signals",
-  "rv-top-movers",
-  "rv-price-snapshot"
+  "rv-alpha-radar"
 ];
 const COLLAPSE_KEY_PREFIX = "rv-collapse:";
 const DEFAULT_OPEN_COUNT = 3;
@@ -279,6 +281,14 @@ function expandSection(section) {
 function setupSubnav() {
   if (typeof document === "undefined") return;
   const links = Array.from(document.querySelectorAll(".rv-subnav a[href^=\"#\"]"));
+  const setActive = (activeLink) => {
+    links.forEach((link) => link.classList.remove("is-active"));
+    if (activeLink) activeLink.classList.add("is-active");
+  };
+  if (links.length) {
+    const initial = links.find((link) => link.getAttribute("href") === window.location.hash);
+    setActive(initial || links[0]);
+  }
   links.forEach((link) => {
     link.addEventListener("click", (event) => {
       const targetId = link.getAttribute("href");
@@ -288,6 +298,7 @@ function setupSubnav() {
       event.preventDefault();
       target.scrollIntoView({ behavior: "smooth", block: "start" });
       expandSection(target.closest("[data-rv-feature]") || target);
+      setActive(link);
     });
   });
 }

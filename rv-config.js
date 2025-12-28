@@ -87,11 +87,12 @@ export const FEATURES = [
       trust: "raw and derived"
     },
     enabled: true,
+    deprecated: true,
     lazyLoad: false
   },
   {
     id: "rv-top-movers",
-    title: "Block 03 - Top Movers",
+    title: "Block 03 - Volume Top Movers",
     module: "./features/rv-top-movers.js",
     api: "top-movers",
     computation: {
@@ -184,6 +185,7 @@ export const FEATURES = [
       trust: "raw and proxy"
     },
     enabled: true,
+    deprecated: true,
     lazyLoad: true,
     refreshIntervalMs: 6 * 60 * 60 * 1000
   },
@@ -246,6 +248,21 @@ export const FEATURES = [
     enabled: true,
     lazyLoad: true,
     refreshIntervalMs: 15 * 60 * 1000
+  },
+  {
+    id: "rv-alpha-radar",
+    title: "Alpha Radar",
+    module: "./features/rv-alpha-radar.js",
+    api: "alpha-radar",
+    computation: {
+      where: "Pages Function",
+      update: "6h",
+      cost: "free and automated",
+      trust: "derived"
+    },
+    enabled: true,
+    lazyLoad: true,
+    refreshIntervalMs: 6 * 60 * 60 * 1000
   },
   {
     id: "tradingview-widgets",

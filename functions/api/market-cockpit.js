@@ -309,11 +309,14 @@ function buildMacroSummary(macro) {
 
 function buildSectorPerformance(sectorData) {
   if (!sectorData || !Array.isArray(sectorData.sectors)) {
-    return { sectors: [], updatedAt: null };
+    return { top: [], bottom: [], updatedAt: null };
   }
   const sorted = [...sectorData.sectors].sort((a, b) => (b.r1d ?? -999) - (a.r1d ?? -999));
+  const top = sorted.slice(0, 3);
+  const bottom = sorted.slice(-3).reverse();
   return {
-    sectors: sorted.slice(0, 5),
+    top,
+    bottom,
     updatedAt: sectorData.updatedAt || null
   };
 }
@@ -425,7 +428,7 @@ async function fetchMarketCockpit(env) {
     !dxy.ok ||
     !yields.ok ||
     (!macroSummary.rates.length && !macroSummary.fx.length && !macroSummary.cpi.length) ||
-    !sectorPerformance.sectors.length;
+    !sectorPerformance.top.length;
   const hasData =
     vix.value !== null ||
     fngCrypto.value !== null ||

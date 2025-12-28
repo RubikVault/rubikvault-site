@@ -29,6 +29,7 @@ function render(root, payload, logger, featureId) {
   const crypto = Array.isArray(data?.crypto) ? data.crypto : [];
   const indices = Array.isArray(data?.indices) ? data.indices : [];
   const commodities = Array.isArray(data?.commodities) ? data.commodities : [];
+  const showCryptoTiles = false;
   const partialNote =
     resolved?.ok && (resolved?.isStale || resolved?.error?.code)
       ? "Partial data — some sources unavailable."
@@ -121,28 +122,35 @@ function render(root, payload, logger, featureId) {
       ${renderGauge("Fear &amp; Greed (Stocks)", fngStocks?.value, fngStocks?.valueClassification)}
       ${renderGauge("Fear &amp; Greed (Crypto)", fngCrypto?.value, fngCrypto?.valueClassification)}
     </div>
-    <div class="rv-health-tiles">
-      ${crypto
-        .map((asset) => {
-          const changeValue = asset.changePercent ?? null;
-          const changeClass = changeValue >= 0 ? "rv-native-positive" : "rv-native-negative";
-          return `
-            <div class="rv-health-tile">
-              <div class="label">${asset.label || asset.symbol}</div>
-              <div class="value">$${formatNumber(asset.price, { maximumFractionDigits: 2 })}</div>
-              <div class="rv-native-note ${changeClass}">${formatNumber(changeValue, { maximumFractionDigits: 2 })}% 24h</div>
-            </div>
-          `;
-        })
-        .join("")}
-    </div>
+    ${
+      showCryptoTiles
+        ? `<div class="rv-health-tiles">
+          ${crypto
+            .map((asset) => {
+              const changeValue = asset.changePercent ?? null;
+              const changeClass = changeValue >= 0 ? "rv-native-positive" : "rv-native-negative";
+              return `
+                <div class="rv-health-tile">
+                  <div class="label">${asset.label || asset.symbol}</div>
+                  <div class="value">$${formatNumber(asset.price, { maximumFractionDigits: 2 })}</div>
+                  <div class="rv-native-note ${changeClass}">${formatNumber(
+                    changeValue,
+                    { maximumFractionDigits: 2 }
+                  )}% 24h</div>
+                </div>
+              `;
+            })
+            .join("")}
+        </div>`
+        : `<div class="rv-native-note">Crypto tiles are deprecated here; see Block 09.</div>`
+    }
     <div class="rv-health-table-wrap">
       <h4>US Indices</h4>
       <table class="rv-native-table">
         <thead>
           <tr>
             <th>Index</th>
-            <th>Price</th>
+            <th>Last Close</th>
             <th>Daily %</th>
           </tr>
         </thead>
@@ -168,7 +176,7 @@ function render(root, payload, logger, featureId) {
         <thead>
           <tr>
             <th>Asset</th>
-            <th>Price</th>
+            <th>Last Close</th>
             <th>Daily %</th>
           </tr>
         </thead>

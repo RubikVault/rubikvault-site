@@ -118,7 +118,7 @@ function render(root, payload, logger, featureId) {
         })
         .join("")}
     </div>
-    <div class="rv-native-note">Data provided by ${data.source || "feeds"}</div>
+    <div class="rv-native-note">Sources: ${data.source || "feeds"}</div>
   `;
 
   const warningCode = resolved?.error?.code || "";
