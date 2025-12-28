@@ -11,6 +11,7 @@ import {
 
 const FEATURE_ID = "earnings-calendar";
 const KV_TTL = 3600;
+const LAST_GOOD_KEY = "earnings-calendar:last_good";
 const FINNHUB_BASE = "https://finnhub.io/api/v1/calendar/earnings";
 
 function formatDate(date) {
@@ -115,6 +116,32 @@ export async function onRequestGet({ request, env, data }) {
   }
 
   if (!env.FINNHUB_API_KEY) {
+    const lastGood = await kvGetJson(env, LAST_GOOD_KEY);
+    if (lastGood?.hit && lastGood.value?.data) {
+      const response = makeResponse({
+        ok: true,
+        feature: FEATURE_ID,
+        traceId,
+        data: { ...lastGood.value.data, asOf: lastGood.value.ts },
+        cache: { hit: true, ttl: KV_TTL, layer: "kv" },
+        upstream: { url: "", status: null, snippet: "" },
+        error: {
+          code: "ENV_MISSING",
+          message: "FINNHUB_API_KEY missing",
+          details: { missing: ["FINNHUB_API_KEY"] }
+        },
+        isStale: true
+      });
+      logServer({
+        feature: FEATURE_ID,
+        traceId,
+        cacheLayer: "kv",
+        upstreamStatus: null,
+        durationMs: Date.now() - started
+      });
+      return response;
+    }
+
     const response = makeResponse({
       ok: false,
       feature: FEATURE_ID,
@@ -125,7 +152,8 @@ export async function onRequestGet({ request, env, data }) {
         code: "ENV_MISSING",
         message: "FINNHUB_API_KEY missing",
         details: { missing: ["FINNHUB_API_KEY"] }
-      }
+      },
+      data: { updatedAt: new Date().toISOString(), source: "finnhub", items: [] }
     });
     logServer({
       feature: FEATURE_ID,
@@ -216,6 +244,33 @@ export async function onRequestGet({ request, env, data }) {
     }
 
     const dataPayload = normalizeFinnhub(res.json);
+    if (!dataPayload.items.length) {
+      const lastGood = await kvGetJson(env, LAST_GOOD_KEY);
+      if (lastGood?.hit && lastGood.value?.data) {
+        const response = makeResponse({
+          ok: true,
+          feature: FEATURE_ID,
+          traceId,
+          data: { ...lastGood.value.data, asOf: lastGood.value.ts },
+          cache: { hit: true, ttl: KV_TTL, layer: "kv" },
+          upstream: { url: FINNHUB_BASE, status: res.status, snippet: upstreamSnippet },
+          error: {
+            code: "SCHEMA_INVALID",
+            message: "Upstream returned no items",
+            details: {}
+          },
+          isStale: true
+        });
+        logServer({
+          feature: FEATURE_ID,
+          traceId,
+          cacheLayer: "kv",
+          upstreamStatus: res.status,
+          durationMs: Date.now() - started
+        });
+        return response;
+      }
+    }
     const kvPayload = {
       ts: new Date().toISOString(),
       source: dataPayload.source,
@@ -225,6 +280,7 @@ export async function onRequestGet({ request, env, data }) {
 
     if (!panic) {
       await kvPutJson(env, cacheKey, kvPayload, KV_TTL);
+      await kvPutJson(env, LAST_GOOD_KEY, kvPayload, 24 * 60 * 60);
     }
 
     const response = makeResponse({
@@ -244,6 +300,31 @@ export async function onRequestGet({ request, env, data }) {
     });
     return response;
   } catch (error) {
+    const lastGood = await kvGetJson(env, LAST_GOOD_KEY);
+    if (lastGood?.hit && lastGood.value?.data) {
+      const response = makeResponse({
+        ok: true,
+        feature: FEATURE_ID,
+        traceId,
+        data: { ...lastGood.value.data, asOf: lastGood.value.ts },
+        cache: { hit: true, ttl: KV_TTL, layer: "kv" },
+        upstream: { url: FINNHUB_BASE, status: upstreamStatus, snippet: upstreamSnippet },
+        error: {
+          code: "UPSTREAM_TIMEOUT",
+          message: "Upstream unavailable; serving cached",
+          details: {}
+        },
+        isStale: true
+      });
+      logServer({
+        feature: FEATURE_ID,
+        traceId,
+        cacheLayer: "kv",
+        upstreamStatus,
+        durationMs: Date.now() - started
+      });
+      return response;
+    }
     const errorCode = error?.name === "AbortError" ? "UPSTREAM_TIMEOUT" : "UPSTREAM_5XX";
     const response = makeResponse({
       ok: false,

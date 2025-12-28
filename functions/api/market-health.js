@@ -133,6 +133,19 @@ function normalize(fngPayload, stocksPayload, cryptoPayload, yahooPayload) {
   };
 }
 
+function mergeLastGood(current, lastGood) {
+  if (!lastGood) return current;
+  return {
+    ...current,
+    fng: current.fng || lastGood.fng,
+    fngStocks: current.fngStocks || lastGood.fngStocks,
+    btc: current.btc?.usd ? current.btc : lastGood.btc,
+    crypto: current.crypto?.length ? current.crypto : lastGood.crypto || [],
+    indices: current.indices?.length ? current.indices : lastGood.indices || [],
+    commodities: current.commodities?.length ? current.commodities : lastGood.commodities || []
+  };
+}
+
 export async function onRequestGet({ request, env, data }) {
   const traceId = data?.traceId || createTraceId(request);
   const started = Date.now();
@@ -210,12 +223,18 @@ export async function onRequestGet({ request, env, data }) {
       }
     });
 
-    const dataPayload = normalize(
+    let dataPayload = normalize(
       fngResult.json || {},
       stocksResult.json || {},
       cryptoResult.json || {},
       yahooResult.json || {}
     );
+    if (!panic) {
+      const lastOk = await kvGetJson(env, lastOkKey);
+      if (lastOk?.hit && lastOk.value?.data) {
+        dataPayload = mergeLastGood(dataPayload, lastOk.value.data);
+      }
+    }
 
     const hasAnyData =
       dataPayload.fng ||

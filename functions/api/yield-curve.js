@@ -2,6 +2,7 @@ import { XMLParser } from "fast-xml-parser";
 import {
   assertBindings,
   createTraceId,
+  kvGetJson,
   makeResponse,
   logServer,
   safeFetchText,
@@ -76,7 +77,9 @@ function parseYieldCurve(xml) {
   const date = latest?.date || new Date().toISOString();
 
   const yields = {
+    "1m": parseNumber(entry.BC_1MONTH || entry.BC_1Month || entry.BC_1_Month),
     "3m": parseNumber(entry.BC_3MONTH || entry.BC_3Month || entry.BC_3_Month),
+    "6m": parseNumber(entry.BC_6MONTH || entry.BC_6Month || entry.BC_6_Month),
     "1y": parseNumber(entry.BC_1YEAR || entry.BC_1Year),
     "2y": parseNumber(entry.BC_2YEAR || entry.BC_2Year),
     "3y": parseNumber(entry.BC_3YEAR || entry.BC_3Year),
@@ -124,7 +127,9 @@ function parseYieldCurveCsv(csv) {
   const row = Object.fromEntries(headers.map((key, idx) => [key, values[idx]]));
   const date = row.date ? new Date(row.date).toISOString() : new Date().toISOString();
   const yields = {
+    "1m": parseNumber(row["1 mo"] || row["1 mo."] || row["1 month"]),
     "3m": parseNumber(row["3 mo"] || row["3 mo."] || row["3 month"]),
+    "6m": parseNumber(row["6 mo"] || row["6 mo."] || row["6 month"]),
     "1y": parseNumber(row["1 yr"] || row["1 year"]),
     "2y": parseNumber(row["2 yr"] || row["2 year"]),
     "3y": parseNumber(row["3 yr"] || row["3 year"]),
@@ -155,11 +160,25 @@ function parseYieldCurveCsv(csv) {
   };
 }
 
+function mergeYieldFallback(current, fallback) {
+  if (!fallback) return current;
+  const merged = { ...current };
+  Object.keys(fallback).forEach((key) => {
+    if (merged[key] === null || merged[key] === undefined) {
+      merged[key] = fallback[key];
+    }
+  });
+  return merged;
+}
+
 async function fetchYieldCurve(env) {
   const res = await safeFetchText(TREASURY_URL, { userAgent: env.USER_AGENT || "RubikVault/1.0" });
   if (res.ok) {
     const parsed = parseYieldCurve(res.text || "");
     if (parsed.ok) {
+      const cached = await kvGetJson(env, CACHE_KEY);
+      const lastYields = cached?.value?.data?.yields || null;
+      parsed.data.yields = mergeYieldFallback(parsed.data.yields, lastYields);
       return { ok: true, data: parsed.data, snippet: "" };
     }
   }
@@ -170,6 +189,9 @@ async function fetchYieldCurve(env) {
   if (csvRes.ok) {
     const parsedCsv = parseYieldCurveCsv(csvRes.text || "");
     if (parsedCsv.ok) {
+      const cached = await kvGetJson(env, CACHE_KEY);
+      const lastYields = cached?.value?.data?.yields || null;
+      parsedCsv.data.yields = mergeYieldFallback(parsedCsv.data.yields, lastYields);
       return { ok: true, data: parsedCsv.data, snippet: "" };
     }
   }

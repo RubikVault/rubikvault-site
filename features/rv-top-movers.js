@@ -1,28 +1,36 @@
 import { fetchJSON, getBindingHint } from "./utils/api.js";
 import { getOrFetch } from "./utils/store.js";
+import { resolveWithShadow } from "./utils/resilience.js";
 
 function formatNumber(value, options = {}) {
-  if (value === null || value === undefined || Number.isNaN(value)) return "–";
+  if (value === null || value === undefined || Number.isNaN(value)) return "N/A";
   return new Intl.NumberFormat("en-US", options).format(value);
 }
 
-function render(root, payload, logger) {
-  const data = payload?.data || {};
-  const crypto = data?.crypto || [];
+function render(root, payload, logger, featureId) {
+  const resolved = resolveWithShadow(featureId, payload, {
+    logger,
+    isMissing: (value) => {
+      const stocks = value?.data?.stocks || {};
+      return !value?.ok || !(stocks.gainers || []).length || !(stocks.losers || []).length;
+    },
+    reason: "STALE_FALLBACK"
+  });
+  const data = resolved?.data || {};
   const stocks = data?.stocks || {};
   const gainers = stocks.gainers || [];
   const losers = stocks.losers || [];
   const partialNote =
-    payload?.ok && (payload?.isStale || payload?.error?.code)
+    resolved?.ok && (resolved?.isStale || resolved?.error?.code)
       ? "Partial data — some sources unavailable."
       : "";
 
-  if (!payload?.ok) {
-    const errorMessage = payload?.error?.message || "API error";
-    const errorCode = payload?.error?.code || "";
-    const upstreamStatus = payload?.upstream?.status;
-    const upstreamSnippet = payload?.upstream?.snippet || "";
-    const cacheLayer = payload?.cache?.layer || "none";
+  if (!resolved?.ok) {
+    const errorMessage = resolved?.error?.message || "API error";
+    const errorCode = resolved?.error?.code || "";
+    const upstreamStatus = resolved?.upstream?.status;
+    const upstreamSnippet = resolved?.upstream?.snippet || "";
+    const cacheLayer = resolved?.cache?.layer || "none";
     const detailLine = [
       errorCode,
       upstreamStatus ? `Upstream ${upstreamStatus}` : "",
@@ -30,7 +38,7 @@ function render(root, payload, logger) {
     ]
       .filter(Boolean)
       .join(" · ");
-    const fixHint = errorCode === "BINDING_MISSING" ? getBindingHint(payload) : "";
+    const fixHint = errorCode === "BINDING_MISSING" ? getBindingHint(resolved) : "";
     root.innerHTML = `
       <div class="rv-native-error">
         Movers konnten nicht geladen werden.<br />
@@ -49,19 +57,19 @@ function render(root, payload, logger) {
     const statusLevel = errorCode === "RATE_LIMITED" ? "PARTIAL" : "FAIL";
     logger?.setStatus(statusLevel, statusHeadline);
     logger?.setMeta({
-      updatedAt: payload?.ts,
+      updatedAt: resolved?.ts,
       source: data?.source || "--",
-      isStale: payload?.isStale,
-      staleAgeMs: payload?.staleAgeMs
+      isStale: resolved?.isStale,
+      staleAgeMs: resolved?.staleAgeMs
     });
     logger?.info("response_meta", {
-      cache: payload?.cache || {},
+      cache: resolved?.cache || {},
       upstreamStatus: upstreamStatus ?? null
     });
     return;
   }
 
-  if (!crypto.length && !gainers.length && !losers.length) {
+  if (!gainers.length && !losers.length) {
     root.innerHTML = `
       <div class="rv-native-empty">
         Keine Movers-Daten verfügbar. Bitte später erneut versuchen.
@@ -69,10 +77,10 @@ function render(root, payload, logger) {
     `;
     logger?.setStatus("PARTIAL", "No data");
     logger?.setMeta({
-      updatedAt: data.updatedAt || payload?.ts,
-      source: data.source || "CoinGecko",
-      isStale: payload?.isStale,
-      staleAgeMs: payload?.staleAgeMs
+      updatedAt: data.updatedAt || resolved?.ts,
+      source: data.source || "Yahoo",
+      isStale: resolved?.isStale,
+      staleAgeMs: resolved?.staleAgeMs
     });
     return;
   }
@@ -80,34 +88,7 @@ function render(root, payload, logger) {
   root.innerHTML = `
     ${partialNote ? `<div class="rv-native-note">${partialNote}</div>` : ""}
     <div class="rv-native-table-wrap">
-      <h4>Crypto Movers</h4>
-      <table class="rv-native-table">
-        <thead>
-          <tr>
-            <th>Asset</th>
-            <th>Price</th>
-            <th>24h</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${crypto
-            .map((item) => {
-              const changeValue = item.changePercent ?? item.change ?? 0;
-              const changeClass = changeValue >= 0 ? "rv-native-positive" : "rv-native-negative";
-              return `
-                <tr>
-                  <td>${item.symbol || item.name}</td>
-                  <td>$${formatNumber(item.price, { maximumFractionDigits: 2 })}</td>
-                  <td class="${changeClass}">${formatNumber(changeValue, { maximumFractionDigits: 2 })}%</td>
-                </tr>
-              `;
-            })
-            .join("")}
-        </tbody>
-      </table>
-    </div>
-    <div class="rv-native-table-wrap">
-      <h4>Stock Movers (Mega-cap universe)</h4>
+      <h4>Stock Movers (Last trading day)</h4>
       <div class="rv-native-split">
         <table class="rv-native-table">
           <thead>
@@ -158,15 +139,15 @@ function render(root, payload, logger) {
       </div>
     </div>
     <div class="rv-native-note">
-      Updated: ${new Date(data.updatedAt || payload.ts).toLocaleTimeString()} · Source: ${data.source || "multi"}
+      Updated: ${new Date(data.updatedAt || resolved.ts).toLocaleTimeString()} · Source: ${data.source || "Yahoo"}
     </div>
     ${data.method ? `<div class="rv-native-note">${data.method}</div>` : ""}
   `;
 
-  const warningCode = payload?.error?.code || "";
-  const hasWarning = payload?.ok && warningCode;
+  const warningCode = resolved?.error?.code || "";
+  const hasWarning = resolved?.ok && warningCode;
   const isRateLimited = warningCode === "RATE_LIMITED";
-  const headline = payload?.isStale
+  const headline = resolved?.isStale
     ? isRateLimited
       ? "RATE_LIMITED"
       : "Stale data"
@@ -175,19 +156,16 @@ function render(root, payload, logger) {
       : hasWarning
         ? "Partial data"
         : "Live";
-  logger?.setStatus(
-    payload?.isStale || hasWarning ? "PARTIAL" : "OK",
-    headline
-  );
+  logger?.setStatus(resolved?.isStale || hasWarning ? "PARTIAL" : "OK", headline);
   logger?.setMeta({
-    updatedAt: data.updatedAt || payload.ts,
-    source: data.source || "multi",
-    isStale: payload?.isStale,
-    staleAgeMs: payload?.staleAgeMs
+    updatedAt: data.updatedAt || resolved.ts,
+    source: data.source || "Yahoo",
+    isStale: resolved?.isStale,
+    staleAgeMs: resolved?.staleAgeMs
   });
   logger?.info("response_meta", {
-    cache: payload?.cache || {},
-    upstreamStatus: payload?.upstream?.status ?? null
+    cache: resolved?.cache || {},
+    upstreamStatus: resolved?.upstream?.status ?? null
   });
 }
 
@@ -202,11 +180,11 @@ export async function init(root, context = {}) {
     featureId,
     logger
   });
-  render(root, data, logger);
+  render(root, data, logger, featureId);
 }
 
 export async function refresh(root, context = {}) {
   const { featureId = "rv-top-movers", traceId, logger } = context;
   const data = await loadData({ featureId, traceId, logger });
-  render(root, data, logger);
+  render(root, data, logger, featureId);
 }

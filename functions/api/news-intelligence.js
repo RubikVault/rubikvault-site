@@ -8,7 +8,10 @@ import {
   safeFetchJson,
   safeSnippet,
   buildMarketauxParams,
-  normalizeFreshness
+  normalizeFreshness,
+  safeFetchText,
+  isHtmlLike,
+  parseRssAtom
 } from "./_shared.js";
 
 const FEATURE_ID = "news-intelligence";
@@ -37,6 +40,71 @@ const NARRATIVES = [
     search: "ETF OR SEC OR regulation"
   }
 ];
+
+const RSS_FEEDS = [
+  { id: "yahoo", name: "Yahoo", url: "https://finance.yahoo.com/news/rssindex" },
+  {
+    id: "cnbc",
+    name: "CNBC",
+    url: "https://search.cnbc.com/rs/search/combined.xml?type=articles&id=10000664"
+  },
+  { id: "reuters", name: "Reuters", url: "https://feeds.reuters.com/reuters/marketsNews" }
+];
+
+const RSS_RULES = {
+  "ai-chips": ["ai", "chip", "chips", "semiconductor", "gpu", "nvidia", "amd", "tsm", "asml"],
+  rates: ["rates", "inflation", "fed", "cpi", "yields", "bond"],
+  "crypto-reg": ["crypto", "bitcoin", "ethereum", "sec", "etf", "regulation", "stablecoin"]
+};
+
+async function fetchRssFallback() {
+  const results = await Promise.allSettled(
+    RSS_FEEDS.map(async (feed) => {
+      const res = await safeFetchText(feed.url, { userAgent: "RubikVault/1.0" });
+      const text = res.text || "";
+      if (!res.ok || isHtmlLike(text)) {
+        return [];
+      }
+      return parseRssAtom(text, { sourceLabel: feed.name }).map((item) => ({
+        title: item.title,
+        url: item.link,
+        source: feed.name,
+        publishedAt: item.publishedAtISO
+      }));
+    })
+  );
+
+  return results.flatMap((result) => (result.status === "fulfilled" ? result.value : []));
+}
+
+function buildNarrativesFromRss(items) {
+  return NARRATIVES.map((narrative) => {
+    const keywords = RSS_RULES[narrative.id] || [];
+    const matched = items.filter((item) => {
+      const text = `${item.title}`.toLowerCase();
+      return keywords.some((keyword) => text.includes(keyword));
+    });
+    const topHeadline = matched[0]
+      ? {
+          title: matched[0].title,
+          url: matched[0].url,
+          source: matched[0].source,
+          publishedAt: matched[0].publishedAt
+        }
+      : null;
+    const sentimentAvg = 0;
+    return {
+      id: narrative.id,
+      title: narrative.title,
+      sentimentAvg,
+      sentimentLabel: bucketSentiment(sentimentAvg),
+      intensity: matched.length,
+      breakingRisk: false,
+      topHeadline,
+      whyItMatters: whyItMatters(narrative.id, sentimentAvg, matched.length)
+    };
+  });
+}
 
 function shortTrace(traceId) {
   return String(traceId || "").slice(0, 8) || "trace";
@@ -214,6 +282,46 @@ export async function onRequestGet({ request, env, data, waitUntil }) {
   }
 
   if (!env.MARKETAUX_KEY) {
+    const rssItems = await fetchRssFallback();
+    if (rssItems.length) {
+      const narratives = buildNarrativesFromRss(rssItems);
+      const dataPayload = {
+        status: narratives.length >= 2 ? "WARN" : "FAIL",
+        updatedAt: new Date().toISOString(),
+        ttlSec: KV_TTL,
+        source: "rss",
+        trace: shortTrace(traceId),
+        narratives,
+        partial: narratives.length < NARRATIVES.length,
+        debug: {
+          cache: { hit: false, ageSec: null },
+          upstream: { status: 200, ms: 0 }
+        }
+      };
+      const response = makeResponse({
+        ok: true,
+        feature: FEATURE_ID,
+        traceId,
+        data: dataPayload,
+        cache: { hit: false, ttl: 0, layer: "none" },
+        upstream: { url: "rss", status: 200, snippet: "" },
+        error: {
+          code: "ENV_MISSING",
+          message: "MARKETAUX_KEY missing; using RSS fallback",
+          details: { missing: ["MARKETAUX_KEY"] }
+        },
+        isStale: true
+      });
+      logServer({
+        feature: FEATURE_ID,
+        traceId,
+        cacheLayer: "none",
+        upstreamStatus: 200,
+        durationMs: Date.now() - started
+      });
+      return response;
+    }
+
     const response = makeResponse({
       ok: false,
       feature: FEATURE_ID,
@@ -382,6 +490,46 @@ export async function onRequestGet({ request, env, data, waitUntil }) {
         traceId,
         cacheLayer: "kv",
         upstreamStatus: upstreamStatus ?? null,
+        durationMs: Date.now() - started
+      });
+      return response;
+    }
+
+    const rssItems = await fetchRssFallback();
+    if (rssItems.length) {
+      const narratives = buildNarrativesFromRss(rssItems);
+      const dataPayload = {
+        status: narratives.length >= 2 ? "WARN" : "FAIL",
+        updatedAt: new Date().toISOString(),
+        ttlSec: KV_TTL,
+        source: "rss",
+        trace: shortTrace(traceId),
+        narratives,
+        partial: narratives.length < NARRATIVES.length,
+        debug: {
+          cache: { hit: false, ageSec: null },
+          upstream: { status: 200, ms: upstreamMs }
+        }
+      };
+      const response = makeResponse({
+        ok: true,
+        feature: FEATURE_ID,
+        traceId,
+        data: dataPayload,
+        cache: { hit: false, ttl: 0, layer: "none" },
+        upstream: { url: "rss", status: 200, snippet: "" },
+        error: {
+          code: errorCode || mapUpstreamCode(upstreamStatus ?? 502),
+          message: "Marketaux unavailable; using RSS fallback",
+          details: { upstreamStatus: upstreamStatus ?? null }
+        },
+        isStale: true
+      });
+      logServer({
+        feature: FEATURE_ID,
+        traceId,
+        cacheLayer: "none",
+        upstreamStatus: 200,
         durationMs: Date.now() - started
       });
       return response;

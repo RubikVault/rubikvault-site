@@ -1,8 +1,9 @@
 import { fetchJSON, getBindingHint } from "./utils/api.js";
 import { getOrFetch } from "./utils/store.js";
+import { resolveWithShadow } from "./utils/resilience.js";
 
 function formatSentiment(value) {
-  if (value === null || value === undefined || Number.isNaN(value)) return "—";
+  if (value === null || value === undefined || Number.isNaN(value)) return "N/A";
   return value.toFixed(2);
 }
 
@@ -11,21 +12,26 @@ function isWarningLegacy(payload, data) {
   return data?.status === "WARN" || payload?.isStale || payload?.error?.code;
 }
 
-function render(root, payload, logger) {
-  const data = payload?.data || {};
+function render(root, payload, logger, featureId) {
+  const resolved = resolveWithShadow(featureId, payload, {
+    logger,
+    isMissing: (value) => !value?.ok || !(value?.data?.narratives || []).length,
+    reason: "STALE_FALLBACK"
+  });
+  const data = resolved?.data || {};
   const narratives = Array.isArray(data.narratives) ? data.narratives : [];
   const isWarning =
-    data.status === "WARN" || data.partial || payload?.isStale || payload?.error?.code;
+    data.status === "WARN" || data.partial || resolved?.isStale || resolved?.error?.code;
   const partialNote = isWarning
     ? "Partial data — using limited or cached intelligence."
     : "";
 
-  if (!payload?.ok) {
-    const errorMessage = payload?.error?.message || "API error";
-    const errorCode = payload?.error?.code || "";
-    const upstreamStatus = payload?.upstream?.status;
-    const upstreamSnippet = payload?.upstream?.snippet || "";
-    const cacheLayer = payload?.cache?.layer || "none";
+  if (!resolved?.ok) {
+    const errorMessage = resolved?.error?.message || "API error";
+    const errorCode = resolved?.error?.code || "";
+    const upstreamStatus = resolved?.upstream?.status;
+    const upstreamSnippet = resolved?.upstream?.snippet || "";
+    const cacheLayer = resolved?.cache?.layer || "none";
     const detailLine = [
       errorCode,
       upstreamStatus ? `Upstream ${upstreamStatus}` : "",
@@ -33,7 +39,7 @@ function render(root, payload, logger) {
     ]
       .filter(Boolean)
       .join(" · ");
-    const fixHint = errorCode === "BINDING_MISSING" ? getBindingHint(payload) : "";
+    const fixHint = errorCode === "BINDING_MISSING" ? getBindingHint(resolved) : "";
     root.innerHTML = `
       <div class="rv-native-error">
         News Intelligence konnte nicht geladen werden.<br />
@@ -52,13 +58,13 @@ function render(root, payload, logger) {
     const statusLevel = errorCode === "RATE_LIMITED" ? "PARTIAL" : "FAIL";
     logger?.setStatus(statusLevel, statusHeadline);
     logger?.setMeta({
-      updatedAt: payload?.ts,
+      updatedAt: resolved?.ts,
       source: data?.source || "--",
-      isStale: payload?.isStale,
-      staleAgeMs: payload?.staleAgeMs
+      isStale: resolved?.isStale,
+      staleAgeMs: resolved?.staleAgeMs
     });
     logger?.info("response_meta", {
-      cache: payload?.cache || {},
+      cache: resolved?.cache || {},
       upstreamStatus: upstreamStatus ?? null
     });
     return;
@@ -72,10 +78,10 @@ function render(root, payload, logger) {
     `;
     logger?.setStatus("PARTIAL", "No data");
     logger?.setMeta({
-      updatedAt: data.updatedAt || payload?.ts,
+      updatedAt: data.updatedAt || resolved?.ts,
       source: data.source || "marketaux",
-      isStale: payload?.isStale,
-      staleAgeMs: payload?.staleAgeMs
+      isStale: resolved?.isStale,
+      staleAgeMs: resolved?.staleAgeMs
     });
     return;
   }
@@ -114,30 +120,33 @@ function render(root, payload, logger) {
         .join("")}
     </div>
     <div class="rv-native-note">
-      Updated: ${new Date(data.updatedAt || payload.ts).toLocaleTimeString()} · Source: ${
+      Updated: ${new Date(data.updatedAt || resolved.ts).toLocaleTimeString()} · Source: ${
         data.source || "marketaux"
       }
     </div>
   `;
 
-  const hasWarning = payload?.ok && payload?.error?.code;
-  const headline = payload?.isStale
+  const hasWarning = resolved?.ok && resolved?.error?.code;
+  const headline = resolved?.isStale
     ? "Stale data"
     : data.status === "WARN"
       ? "Partial data"
       : hasWarning
         ? "Partial data"
         : "Live";
-  logger?.setStatus(payload?.isStale || data.status === "WARN" || hasWarning ? "PARTIAL" : "OK", headline);
+  logger?.setStatus(
+    resolved?.isStale || data.status === "WARN" || hasWarning ? "PARTIAL" : "OK",
+    headline
+  );
   logger?.setMeta({
-    updatedAt: data.updatedAt || payload.ts,
+    updatedAt: data.updatedAt || resolved.ts,
     source: data.source || "marketaux",
-    isStale: payload?.isStale,
-    staleAgeMs: payload?.staleAgeMs
+    isStale: resolved?.isStale,
+    staleAgeMs: resolved?.staleAgeMs
   });
   logger?.info("response_meta", {
-    cache: payload?.cache || {},
-    upstreamStatus: payload?.upstream?.status ?? null
+    cache: resolved?.cache || {},
+    upstreamStatus: resolved?.upstream?.status ?? null
   });
 }
 
@@ -152,11 +161,11 @@ export async function init(root, context = {}) {
     () => loadData({ featureId, traceId, logger }),
     { ttlMs: 60 * 60 * 1000, featureId, logger }
   );
-  render(root, data, logger);
+  render(root, data, logger, featureId);
 }
 
 export async function refresh(root, context = {}) {
   const { featureId = "rv-news-intelligence", traceId, logger } = context;
   const data = await loadData({ featureId, traceId, logger });
-  render(root, data, logger);
+  render(root, data, logger, featureId);
 }

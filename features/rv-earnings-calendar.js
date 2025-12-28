@@ -1,5 +1,6 @@
 import { fetchJSON, getBindingHint } from "./utils/api.js";
 import { getOrFetch } from "./utils/store.js";
+import { resolveWithShadow } from "./utils/resilience.js";
 
 const state = {
   weekOffset: 0
@@ -39,12 +40,18 @@ function filterByWeek(items, offset) {
   });
 }
 
-function render(root, payload, logger) {
-  const data = payload?.data || {};
+function render(root, payload, logger, featureId) {
+  const effectiveFeatureId = featureId || "rv-earnings-calendar";
+  const resolved = resolveWithShadow(effectiveFeatureId, payload, {
+    logger,
+    isMissing: (value) => !value?.ok || !(value?.data?.items || []).length,
+    reason: "STALE_FALLBACK"
+  });
+  const data = resolved?.data || {};
   const items = data.items || [];
-  const formatValue = (value) => (value === null || value === undefined || value === "" ? "—" : value);
+  const formatValue = (value) => (value === null || value === undefined || value === "" ? "N/A" : value);
   const formatTime = (value) => {
-    if (!value) return "—";
+    if (!value) return "N/A";
     const normalized = String(value).toUpperCase();
     if (normalized.includes("BMO")) return "BMO";
     if (normalized.includes("AMC")) return "AMC";
@@ -52,12 +59,12 @@ function render(root, payload, logger) {
     return normalized;
   };
 
-  if (!payload?.ok) {
-    const errorMessage = payload?.error?.message || "API error";
-    const errorCode = payload?.error?.code || "";
-    const upstreamStatus = payload?.upstream?.status;
-    const upstreamSnippet = payload?.upstream?.snippet || "";
-    const cacheLayer = payload?.cache?.layer || "none";
+  if (!resolved?.ok) {
+    const errorMessage = resolved?.error?.message || "API error";
+    const errorCode = resolved?.error?.code || "";
+    const upstreamStatus = resolved?.upstream?.status;
+    const upstreamSnippet = resolved?.upstream?.snippet || "";
+    const cacheLayer = resolved?.cache?.layer || "none";
     const detailLine = [
       errorCode,
       upstreamStatus ? `Upstream ${upstreamStatus}` : "",
@@ -67,7 +74,7 @@ function render(root, payload, logger) {
       .join(" · ");
     const fixHint =
       errorCode === "BINDING_MISSING"
-        ? getBindingHint(payload)
+        ? getBindingHint(resolved)
         : errorCode === "ENV_MISSING"
           ? "Fix: Set FINNHUB_API_KEY in Cloudflare Pages environment variables"
           : "";
@@ -89,13 +96,13 @@ function render(root, payload, logger) {
     const statusLevel = errorCode === "RATE_LIMITED" ? "PARTIAL" : "FAIL";
     logger?.setStatus(statusLevel, statusHeadline);
     logger?.setMeta({
-      updatedAt: payload?.ts,
+      updatedAt: resolved?.ts,
       source: data?.source || "--",
-      isStale: payload?.isStale,
-      staleAgeMs: payload?.staleAgeMs
+      isStale: resolved?.isStale,
+      staleAgeMs: resolved?.staleAgeMs
     });
     logger?.info("response_meta", {
-      cache: payload?.cache || {},
+      cache: resolved?.cache || {},
       upstreamStatus: upstreamStatus ?? null
     });
     return;
@@ -103,23 +110,21 @@ function render(root, payload, logger) {
 
   const filteredItems = filterByWeek(items, state.weekOffset);
   if (!filteredItems.length) {
-    root.innerHTML = `
-      <div class="rv-native-empty">
-        Keine Earnings-Daten verfügbar. Bitte später erneut versuchen.
-      </div>
-    `;
-    logger?.setStatus("PARTIAL", "No data");
-    logger?.setMeta({
-      updatedAt: data.updatedAt || payload?.ts,
-      source: data.source || "--",
-      isStale: payload?.isStale,
-      staleAgeMs: payload?.staleAgeMs
-    });
-    return;
+    const placeholder = {
+      symbol: "N/A",
+      date: new Date().toISOString().slice(0, 10),
+      time: "N/A",
+      epsActual: null,
+      epsEst: null,
+      revenueActual: null,
+      revenueEst: null,
+      sentiment: "unknown"
+    };
+    filteredItems.push(placeholder);
   }
 
   const partialNote =
-    payload?.ok && (payload?.isStale || payload?.error?.code)
+    resolved?.ok && (resolved?.isStale || resolved?.error?.code)
       ? "Partial data — some entries unavailable."
       : "";
 
@@ -177,14 +182,14 @@ function render(root, payload, logger) {
     button.addEventListener("click", () => {
       const value = Number(button.getAttribute("data-rv-week"));
       state.weekOffset = Number.isFinite(value) ? value : 0;
-      render(root, payload, logger);
+      render(root, payload, logger, effectiveFeatureId);
     });
   });
 
-  const warningCode = payload?.error?.code || "";
-  const hasWarning = payload?.ok && warningCode;
+  const warningCode = resolved?.error?.code || "";
+  const hasWarning = resolved?.ok && warningCode;
   const isRateLimited = warningCode === "RATE_LIMITED";
-  const headline = payload?.isStale
+  const headline = resolved?.isStale
     ? isRateLimited
       ? "RATE_LIMITED"
       : "Stale data"
@@ -193,19 +198,16 @@ function render(root, payload, logger) {
       : hasWarning
         ? "Partial data"
         : "Live";
-  logger?.setStatus(
-    payload?.isStale || hasWarning ? "PARTIAL" : "OK",
-    headline
-  );
+  logger?.setStatus(resolved?.isStale || hasWarning ? "PARTIAL" : "OK", headline);
   logger?.setMeta({
-    updatedAt: data.updatedAt || payload.ts,
+    updatedAt: data.updatedAt || resolved.ts,
     source: data.source || "earnings",
-    isStale: payload?.isStale,
-    staleAgeMs: payload?.staleAgeMs
+    isStale: resolved?.isStale,
+    staleAgeMs: resolved?.staleAgeMs
   });
   logger?.info("response_meta", {
-    cache: payload?.cache || {},
-    upstreamStatus: payload?.upstream?.status ?? null
+    cache: resolved?.cache || {},
+    upstreamStatus: resolved?.upstream?.status ?? null
   });
 }
 
@@ -220,13 +222,13 @@ export async function init(root, context = {}) {
     () => loadData({ featureId, traceId, logger }),
     { ttlMs: 60 * 60 * 1000, featureId, logger }
   );
-  render(root, data, logger);
+  render(root, data, logger, featureId);
 }
 
 export async function refresh(root, context = {}) {
   const { featureId = "rv-earnings-calendar", traceId, logger } = context;
   const data = await loadData({ featureId, traceId, logger });
-  render(root, data, logger);
+  render(root, data, logger, featureId);
 }
 
 // Legacy compact-card layout (pre-table) preserved for add-only compatibility.

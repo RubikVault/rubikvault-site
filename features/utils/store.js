@@ -162,6 +162,15 @@ function markStale(payload, reason = "STALE_FALLBACK") {
   };
 }
 
+export function getShadowPayload(featureId, logger) {
+  const entry = readShadow(featureId, logger);
+  return entry?.payload || null;
+}
+
+export function markStalePayload(payload, reason = "STALE_FALLBACK") {
+  return markStale(payload, reason);
+}
+
 export function getMemorySnapshot() {
   const snapshot = {};
   memoryCache.forEach((value, key) => {

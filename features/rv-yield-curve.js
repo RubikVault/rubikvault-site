@@ -1,26 +1,35 @@
 import { fetchJSON, getBindingHint } from "./utils/api.js";
 import { getOrFetch } from "./utils/store.js";
+import { resolveWithShadow } from "./utils/resilience.js";
 
 function formatNumber(value, options = {}) {
-  if (value === null || value === undefined || Number.isNaN(value)) return "—";
+  if (value === null || value === undefined || Number.isNaN(value)) return "N/A";
   return new Intl.NumberFormat("en-US", options).format(value);
 }
 
-function render(root, payload, logger) {
-  const data = payload?.data || {};
+function render(root, payload, logger, featureId) {
+  const resolved = resolveWithShadow(featureId, payload, {
+    logger,
+    isMissing: (value) => {
+      const yields = value?.data?.yields || {};
+      return !value?.ok || !Object.values(yields).some((item) => item !== null);
+    },
+    reason: "STALE_FALLBACK"
+  });
+  const data = resolved?.data || {};
   const yields = data.yields || {};
   const spreads = data.spreads || {};
   const partialNote =
-    payload?.ok && (payload?.isStale || payload?.error?.code)
+    resolved?.ok && (resolved?.isStale || resolved?.error?.code)
       ? "Partial data — some yields unavailable."
       : "";
 
-  if (!payload?.ok) {
-    const errorMessage = payload?.error?.message || "API error";
-    const errorCode = payload?.error?.code || "";
-    const upstreamStatus = payload?.upstream?.status;
-    const upstreamSnippet = payload?.upstream?.snippet || "";
-    const cacheLayer = payload?.cache?.layer || "none";
+  if (!resolved?.ok) {
+    const errorMessage = resolved?.error?.message || "API error";
+    const errorCode = resolved?.error?.code || "";
+    const upstreamStatus = resolved?.upstream?.status;
+    const upstreamSnippet = resolved?.upstream?.snippet || "";
+    const cacheLayer = resolved?.cache?.layer || "none";
     const detailLine = [
       errorCode,
       upstreamStatus ? `Upstream ${upstreamStatus}` : "",
@@ -28,7 +37,7 @@ function render(root, payload, logger) {
     ]
       .filter(Boolean)
       .join(" · ");
-    const fixHint = errorCode === "BINDING_MISSING" ? getBindingHint(payload) : "";
+    const fixHint = errorCode === "BINDING_MISSING" ? getBindingHint(resolved) : "";
     root.innerHTML = `
       <div class="rv-native-error">
         Yield Curve konnte nicht geladen werden.<br />
@@ -40,13 +49,13 @@ function render(root, payload, logger) {
     `;
     logger?.setStatus("FAIL", errorCode || "API error");
     logger?.setMeta({
-      updatedAt: payload?.ts,
+      updatedAt: resolved?.ts,
       source: data?.source || "--",
-      isStale: payload?.isStale,
-      staleAgeMs: payload?.staleAgeMs
+      isStale: resolved?.isStale,
+      staleAgeMs: resolved?.staleAgeMs
     });
     logger?.info("response_meta", {
-      cache: payload?.cache || {},
+      cache: resolved?.cache || {},
       upstreamStatus: upstreamStatus ?? null
     });
     return;
@@ -62,8 +71,12 @@ function render(root, payload, logger) {
         </tr>
       </thead>
       <tbody>
+        <tr><td>1M</td><td>${formatNumber(yields["1m"], { maximumFractionDigits: 2 })}</td></tr>
         <tr><td>3M</td><td>${formatNumber(yields["3m"], { maximumFractionDigits: 2 })}</td></tr>
+        <tr><td>6M</td><td>${formatNumber(yields["6m"], { maximumFractionDigits: 2 })}</td></tr>
+        <tr><td>1Y</td><td>${formatNumber(yields["1y"], { maximumFractionDigits: 2 })}</td></tr>
         <tr><td>2Y</td><td>${formatNumber(yields["2y"], { maximumFractionDigits: 2 })}</td></tr>
+        <tr><td>5Y</td><td>${formatNumber(yields["5y"], { maximumFractionDigits: 2 })}</td></tr>
         <tr><td>10Y</td><td>${formatNumber(yields["10y"], { maximumFractionDigits: 2 })}</td></tr>
         <tr><td>30Y</td><td>${formatNumber(yields["30y"], { maximumFractionDigits: 2 })}</td></tr>
       </tbody>
@@ -73,21 +86,21 @@ function render(root, payload, logger) {
       10Y-3M: ${formatNumber(spreads.tenThreeMonth, { maximumFractionDigits: 2 })}
     </div>
     <div class="rv-native-note">
-      Updated: ${new Date(data.updatedAt || payload.ts).toLocaleTimeString()} · Source: ${data.source || "US Treasury"}
+      Updated: ${new Date(data.updatedAt || resolved.ts).toLocaleTimeString()} · Source: ${data.source || "US Treasury"}
     </div>
   `;
 
-  const status = payload?.isStale ? "PARTIAL" : "OK";
-  logger?.setStatus(status, payload?.isStale ? "Stale data" : "Live");
+  const status = resolved?.isStale ? "PARTIAL" : "OK";
+  logger?.setStatus(status, resolved?.isStale ? "Stale data" : "Live");
   logger?.setMeta({
-    updatedAt: data.updatedAt || payload.ts,
+    updatedAt: data.updatedAt || resolved.ts,
     source: data.source || "US Treasury",
-    isStale: payload?.isStale,
-    staleAgeMs: payload?.staleAgeMs
+    isStale: resolved?.isStale,
+    staleAgeMs: resolved?.staleAgeMs
   });
   logger?.info("response_meta", {
-    cache: payload?.cache || {},
-    upstreamStatus: payload?.upstream?.status ?? null
+    cache: resolved?.cache || {},
+    upstreamStatus: resolved?.upstream?.status ?? null
   });
 }
 
@@ -102,11 +115,11 @@ export async function init(root, context = {}) {
     () => loadData({ featureId, traceId, logger }),
     { ttlMs: 6 * 60 * 60 * 1000, featureId, logger }
   );
-  render(root, data, logger);
+  render(root, data, logger, featureId);
 }
 
 export async function refresh(root, context = {}) {
   const { featureId = "rv-yield-curve", traceId, logger } = context;
   const data = await loadData({ featureId, traceId, logger });
-  render(root, data, logger);
+  render(root, data, logger, featureId);
 }

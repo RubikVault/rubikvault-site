@@ -28,6 +28,8 @@ const TREASURY_CSV_URL =
   "https://home.treasury.gov/resource-center/data-chart-center/interest-rates/DailyTreasuryYieldCurveRateData.csv";
 const YAHOO_DXY_URL =
   "https://query1.finance.yahoo.com/v7/finance/quote?symbols=DX-Y.NYB";
+const MACRO_CACHE_KEY = "macro-rates:v2";
+const SECTOR_CACHE_KEY = "DASH:SP500_SECTORS";
 
 function bucketSentiment(value) {
   if (value <= -0.5) return "Angst";
@@ -277,6 +279,45 @@ function parseYieldCurveCsv(csv) {
   };
 }
 
+function pickByLabel(list, label) {
+  return list.find((item) => item.label === label) || null;
+}
+
+function buildMacroSummary(macro) {
+  if (!macro) return { rates: [], fx: [], cpi: [], updatedAt: null };
+  const series = Array.isArray(macro.series) ? macro.series : [];
+  const rates = [
+    pickByLabel(series, "Fed Funds"),
+    pickByLabel(series, "US 2Y"),
+    pickByLabel(series, "US 10Y"),
+    pickByLabel(series, "US 30Y")
+  ].filter(Boolean);
+  const fx = [
+    pickByLabel(series, "DXY"),
+    pickByLabel(series, "EURUSD"),
+    pickByLabel(series, "GBPUSD"),
+    pickByLabel(series, "USDJPY")
+  ].filter(Boolean);
+  const cpi = Array.isArray(macro.cpi) ? macro.cpi : [];
+  return {
+    rates,
+    fx,
+    cpi,
+    updatedAt: macro.updatedAt || null
+  };
+}
+
+function buildSectorPerformance(sectorData) {
+  if (!sectorData || !Array.isArray(sectorData.sectors)) {
+    return { sectors: [], updatedAt: null };
+  }
+  const sorted = [...sectorData.sectors].sort((a, b) => (b.r1d ?? -999) - (a.r1d ?? -999));
+  return {
+    sectors: sorted.slice(0, 5),
+    updatedAt: sectorData.updatedAt || null
+  };
+}
+
 async function fetchYields(env) {
   const cached = await kvGetJson(env, "DASH:YIELD_CURVE");
   if (cached?.hit && cached.value?.data?.yields) {
@@ -346,6 +387,11 @@ function buildRegime({ vix, fngCrypto, fngStocks, newsSentiment }) {
 }
 
 async function fetchMarketCockpit(env) {
+  const [macroCached, sectorCached] = await Promise.all([
+    kvGetJson(env, MACRO_CACHE_KEY),
+    kvGetJson(env, SECTOR_CACHE_KEY)
+  ]);
+
   const [vixResult, fngResult, fngStocksResult, newsResult, proxyResult, btcResult, dxyResult, yieldsResult] =
     await Promise.allSettled([
     fetchVix(env),
@@ -366,6 +412,8 @@ async function fetchMarketCockpit(env) {
   const btc = btcResult.status === "fulfilled" ? btcResult.value : { ok: false };
   const dxy = dxyResult.status === "fulfilled" ? dxyResult.value : { ok: false };
   const yields = yieldsResult.status === "fulfilled" ? yieldsResult.value : { ok: false };
+  const macroSummary = buildMacroSummary(macroCached?.value?.data);
+  const sectorPerformance = buildSectorPerformance(sectorCached?.value?.data);
 
   const partial =
     !vix.ok ||
@@ -375,7 +423,9 @@ async function fetchMarketCockpit(env) {
     !proxies.ok ||
     !btc.ok ||
     !dxy.ok ||
-    !yields.ok;
+    !yields.ok ||
+    (!macroSummary.rates.length && !macroSummary.fx.length && !macroSummary.cpi.length) ||
+    !sectorPerformance.sectors.length;
   const hasData =
     vix.value !== null ||
     fngCrypto.value !== null ||
@@ -440,6 +490,8 @@ async function fetchMarketCockpit(env) {
         source: yields.source || "US Treasury",
         values: yields.yields || {}
       },
+      macroSummary,
+      sectorPerformance,
       proxies: proxies.proxies || {},
       sourceMap: {
         vix: vix.source || "CBOE",
@@ -449,7 +501,9 @@ async function fetchMarketCockpit(env) {
         proxies: proxies.source || "FMP",
         btc: btc.source || "CoinGecko",
         dxy: dxy.source || "Yahoo",
-        yields: yields.source || "US Treasury"
+        yields: yields.source || "US Treasury",
+        macro: macroSummary.updatedAt ? "macro-rates" : "kv",
+        sectors: sectorPerformance.updatedAt ? "sp500-sectors" : "kv"
       }
     }
   };

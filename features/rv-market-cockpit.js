@@ -1,31 +1,37 @@
 import { fetchJSON, getBindingHint } from "./utils/api.js";
 import { getOrFetch } from "./utils/store.js";
+import { resolveWithShadow } from "./utils/resilience.js";
 
 function formatNumber(value, options = {}) {
-  if (value === null || value === undefined || Number.isNaN(value)) return "—";
+  if (value === null || value === undefined || Number.isNaN(value)) return "N/A";
   return new Intl.NumberFormat("en-US", options).format(value);
 }
 
 function formatPercent(value, digits = 2) {
-  if (value === null || value === undefined || Number.isNaN(value)) return "—";
+  if (value === null || value === undefined || Number.isNaN(value)) return "N/A";
   return `${formatNumber(value, { maximumFractionDigits: digits })}%`;
 }
 
-function render(root, payload, logger) {
-  const data = payload?.data || {};
+function render(root, payload, logger, featureId) {
+  const resolved = resolveWithShadow(featureId, payload, {
+    logger,
+    isMissing: (value) => !value?.ok || !value?.data,
+    reason: "STALE_FALLBACK"
+  });
+  const data = resolved?.data || {};
   const regime = data.regime || {};
   const drivers = Array.isArray(regime.drivers) ? regime.drivers : [];
   const partialNote =
-    payload?.ok && (payload?.isStale || data.partial || payload?.error?.code)
+    resolved?.ok && (resolved?.isStale || data.partial || resolved?.error?.code)
       ? "Partial data — some signals unavailable."
       : "";
 
-  if (!payload?.ok) {
-    const errorMessage = payload?.error?.message || "API error";
-    const errorCode = payload?.error?.code || "";
-    const upstreamStatus = payload?.upstream?.status;
-    const upstreamSnippet = payload?.upstream?.snippet || "";
-    const cacheLayer = payload?.cache?.layer || "none";
+  if (!resolved?.ok) {
+    const errorMessage = resolved?.error?.message || "API error";
+    const errorCode = resolved?.error?.code || "";
+    const upstreamStatus = resolved?.upstream?.status;
+    const upstreamSnippet = resolved?.upstream?.snippet || "";
+    const cacheLayer = resolved?.cache?.layer || "none";
     const detailLine = [
       errorCode,
       upstreamStatus ? `Upstream ${upstreamStatus}` : "",
@@ -33,7 +39,7 @@ function render(root, payload, logger) {
     ]
       .filter(Boolean)
       .join(" · ");
-    const fixHint = errorCode === "BINDING_MISSING" ? getBindingHint(payload) : "";
+    const fixHint = errorCode === "BINDING_MISSING" ? getBindingHint(resolved) : "";
     root.innerHTML = `
       <div class="rv-native-error">
         Market Cockpit konnte nicht geladen werden.<br />
@@ -45,13 +51,13 @@ function render(root, payload, logger) {
     `;
     logger?.setStatus("FAIL", errorCode || "API error");
     logger?.setMeta({
-      updatedAt: payload?.ts,
+      updatedAt: resolved?.ts,
       source: data?.source || "--",
-      isStale: payload?.isStale,
-      staleAgeMs: payload?.staleAgeMs
+      isStale: resolved?.isStale,
+      staleAgeMs: resolved?.staleAgeMs
     });
     logger?.info("response_meta", {
-      cache: payload?.cache || {},
+      cache: resolved?.cache || {},
       upstreamStatus: upstreamStatus ?? null
     });
     return;
@@ -66,6 +72,11 @@ function render(root, payload, logger) {
   const dxy = data.dxy || {};
   const yields = data.yields || {};
   const yieldValues = yields.values || {};
+  const macro = data.macroSummary || {};
+  const macroRates = Array.isArray(macro.rates) ? macro.rates : [];
+  const macroFx = Array.isArray(macro.fx) ? macro.fx : [];
+  const macroCpi = Array.isArray(macro.cpi) ? macro.cpi : [];
+  const sectors = data.sectorPerformance?.sectors || [];
 
   root.innerHTML = `
     ${partialNote ? `<div class="rv-native-note">${partialNote}</div>` : ""}
@@ -80,6 +91,28 @@ function render(root, payload, logger) {
       </div>
     </div>
     <div class="rv-native-note">Why it matters: regime blends volatility, sentiment, and narrative risk.</div>
+    ${
+      sectors.length
+        ? `<div class="rv-native-note">Sector performance (top movers)</div>
+           <table class="rv-native-table rv-table--compact">
+             <thead>
+               <tr><th>Sector</th><th>1D</th></tr>
+             </thead>
+             <tbody>
+               ${sectors
+                 .map(
+                   (sector) => `
+                 <tr>
+                   <td>${sector.name || sector.symbol}</td>
+                   <td>${formatPercent(sector.r1d)}</td>
+                 </tr>
+               `
+                 )
+                 .join("")}
+             </tbody>
+           </table>`
+        : `<div class="rv-native-note">Sector performance unavailable (see Block 13).</div>`
+    }
     <table class="rv-native-table rv-table--compact">
       <thead>
         <tr>
@@ -92,36 +125,36 @@ function render(root, payload, logger) {
         <tr>
           <td>VIX</td>
           <td>${formatNumber(vix.value, { maximumFractionDigits: 2 })}</td>
-          <td>${vix.note || vix.source || "—"}</td>
+          <td>${vix.note || vix.source || "N/A"}</td>
         </tr>
         <tr>
           <td>Crypto F&amp;G</td>
           <td>${formatNumber(fng.value)} ${fng.label ? `(${fng.label})` : ""}</td>
-          <td>${fng.source || "—"}</td>
+          <td>${fng.source || "N/A"}</td>
         </tr>
         <tr>
           <td>Stocks F&amp;G</td>
           <td>${formatNumber(fngStocks.value)} ${fngStocks.label ? `(${fngStocks.label})` : ""}</td>
-          <td>${fngStocks.source || "—"}</td>
+          <td>${fngStocks.source || "N/A"}</td>
         </tr>
         <tr>
           <td>News Sentiment</td>
           <td>${formatNumber(news.score, { maximumFractionDigits: 2 })} ${news.label || ""}</td>
-          <td>${news.source || "—"}</td>
+          <td>${news.source || "N/A"}</td>
         </tr>
         <tr>
           <td>BTC</td>
           <td>$${formatNumber(btc.price, { maximumFractionDigits: 0 })} (${formatPercent(
     btc.changePercent
   )})</td>
-          <td>${btc.source || "—"}</td>
+          <td>${btc.source || "N/A"}</td>
         </tr>
         <tr>
           <td>DXY</td>
           <td>${formatNumber(dxy.value, { maximumFractionDigits: 2 })} (${formatPercent(
     dxy.changePercent
   )})</td>
-          <td>${dxy.source || "—"}</td>
+          <td>${dxy.source || "N/A"}</td>
         </tr>
         <tr>
           <td>USD (UUP)</td>
@@ -163,27 +196,65 @@ function render(root, payload, logger) {
           <td>${formatNumber(yieldValues["30y"], { maximumFractionDigits: 2 })}</td>
           <td>${yields.source || "US Treasury"}</td>
         </tr>
+        ${
+          macroRates.length || macroFx.length || macroCpi.length
+            ? `${macroRates
+                .map(
+                  (item) => `
+          <tr>
+            <td>${item.label}</td>
+            <td>${formatNumber(item.value, { maximumFractionDigits: 2 })}</td>
+            <td>${item.source || "macro-rates"}</td>
+          </tr>`
+                )
+                .join("")}
+        ${macroFx
+          .map(
+            (item) => `
+          <tr>
+            <td>${item.label}</td>
+            <td>${formatNumber(item.value, { maximumFractionDigits: 4 })}</td>
+            <td>${item.source || "macro-rates"}</td>
+          </tr>`
+          )
+          .join("")}
+        ${macroCpi
+          .map(
+            (item) => `
+          <tr>
+            <td>${item.label}</td>
+            <td>${formatNumber(item.value, { maximumFractionDigits: 2 })}</td>
+            <td>${item.source || "macro-rates"}</td>
+          </tr>`
+          )
+          .join("")}`
+            : `<tr>
+            <td>Macro Snapshot</td>
+            <td>N/A</td>
+            <td>See Block 08</td>
+          </tr>`
+        }
       </tbody>
     </table>
     <div class="rv-native-note">Sentiment details live in Block 10 (Sentiment Barometer).</div>
     <div class="rv-native-note">
-      Updated: ${new Date(data.updatedAt || payload.ts).toLocaleTimeString()} · Freshness: ${
-        payload?.freshness || "unknown"
+      Updated: ${new Date(data.updatedAt || resolved.ts).toLocaleTimeString()} · Freshness: ${
+        resolved?.freshness || "unknown"
       }
     </div>
   `;
 
-  const status = payload?.isStale || data.partial ? "PARTIAL" : "OK";
-  logger?.setStatus(status, payload?.isStale ? "Stale data" : data.partial ? "Partial data" : "Live");
+  const status = resolved?.isStale || data.partial ? "PARTIAL" : "OK";
+  logger?.setStatus(status, resolved?.isStale ? "Stale data" : data.partial ? "Partial data" : "Live");
   logger?.setMeta({
-    updatedAt: data.updatedAt || payload.ts,
+    updatedAt: data.updatedAt || resolved.ts,
     source: data.source || "multi",
-    isStale: payload?.isStale,
-    staleAgeMs: payload?.staleAgeMs
+    isStale: resolved?.isStale,
+    staleAgeMs: resolved?.staleAgeMs
   });
   logger?.info("response_meta", {
-    cache: payload?.cache || {},
-    upstreamStatus: payload?.upstream?.status ?? null
+    cache: resolved?.cache || {},
+    upstreamStatus: resolved?.upstream?.status ?? null
   });
 }
 
@@ -198,11 +269,11 @@ export async function init(root, context = {}) {
     () => loadData({ featureId, traceId, logger }),
     { ttlMs: 15 * 60 * 1000, featureId, logger }
   );
-  render(root, data, logger);
+  render(root, data, logger, featureId);
 }
 
 export async function refresh(root, context = {}) {
   const { featureId = "rv-market-cockpit", traceId, logger } = context;
   const data = await loadData({ featureId, traceId, logger });
-  render(root, data, logger);
+  render(root, data, logger, featureId);
 }

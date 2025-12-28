@@ -39,7 +39,7 @@ const STOCK_UNIVERSE = [
 const YAHOO_URL = `https://query1.finance.yahoo.com/v7/finance/quote?symbols=${encodeURIComponent(
   STOCK_UNIVERSE.map((entry) => entry.symbol).join(",")
 )}`;
-const UPSTREAM_URL = `${CRYPTO_URL} | ${YAHOO_URL}`;
+const UPSTREAM_URL = `${YAHOO_URL}`;
 
 function mapUpstreamCode(status) {
   if (status === 429) return "RATE_LIMITED";
@@ -80,8 +80,8 @@ function normalizeStocks(payload) {
 
   const sortable = rows.filter((row) => typeof row.changePercent === "number");
   const sorted = sortable.slice().sort((a, b) => b.changePercent - a.changePercent);
-  const gainers = sorted.slice(0, 6);
-  const losers = sorted.slice(-6).reverse();
+  const gainers = sorted.slice(0, 10);
+  const losers = sorted.slice(-10).reverse();
 
   return {
     gainers,
@@ -139,14 +139,10 @@ export async function onRequestGet({ request, env, data }) {
       }
     };
 
-    const [cryptoResult, stocksResult] = await Promise.all([
-      fetchSafe(withCoinGeckoKey(CRYPTO_URL, env), "top-movers:crypto"),
-      fetchSafe(YAHOO_URL, "top-movers:stocks")
-    ]);
+    const stocksResult = await fetchSafe(YAHOO_URL, "top-movers:stocks");
 
     const errors = [];
     const sources = [
-      { id: "crypto", result: cryptoResult },
       { id: "stocks", result: stocksResult }
     ];
     sources.forEach(({ id, result }) => {
@@ -164,14 +160,13 @@ export async function onRequestGet({ request, env, data }) {
 
     const dataPayload = {
       updatedAt: new Date().toISOString(),
-      source: "coingecko, yahoo",
+      source: "yahoo",
       method: "Top movers are computed within a fixed mega-cap universe.",
-      crypto: normalizeCrypto(cryptoResult.json || []),
+      crypto: [],
       stocks: normalizeStocks(stocksResult.json || {})
     };
 
     const hasAnyData =
-      (dataPayload.crypto || []).length ||
       (dataPayload.stocks?.gainers || []).length ||
       (dataPayload.stocks?.losers || []).length;
 
