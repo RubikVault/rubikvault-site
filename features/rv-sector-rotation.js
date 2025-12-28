@@ -101,6 +101,7 @@ function render(root, payload, logger) {
       </tbody>
     </table>
     <div class="rv-native-note">Updated: ${new Date(data.updatedAt || payload.ts).toLocaleTimeString()}</div>
+    <div class="rv-native-note"><a href="#rv-sp500-sectors">Open Sector Performance Table (Block 13)</a></div>
   `;
 
   const status = payload?.isStale ? "PARTIAL" : "OK";

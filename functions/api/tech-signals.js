@@ -242,6 +242,7 @@ export async function onRequestGet({ request, env, data }) {
     batches.push(symbols.slice(i, i + 10));
   }
 
+  let spyPerf1w = null;
   const fetchSignal = async (symbol) => {
     const stooqSymbol = mapToStooq(symbol);
     const upstreamUrl = `https://stooq.com/q/d/l/?s=${encodeURIComponent(stooqSymbol)}&i=d`;
@@ -297,6 +298,10 @@ export async function onRequestGet({ request, env, data }) {
       macdHist: macd.hist,
       stochRsi,
       perf1w,
+      relPerf1w:
+        Number.isFinite(perf1w) && Number.isFinite(spyPerf1w)
+          ? perf1w - spyPerf1w
+          : null,
       perf1m,
       perf1y,
       timeframe,
@@ -304,6 +309,13 @@ export async function onRequestGet({ request, env, data }) {
       source: "stooq"
     };
   };
+
+  try {
+    const spySignal = await fetchSignal("SPY");
+    spyPerf1w = Number.isFinite(spySignal?.perf1w) ? spySignal.perf1w : null;
+  } catch (error) {
+    spyPerf1w = null;
+  }
 
   for (const batch of batches) {
     const results = await Promise.allSettled(batch.map((symbol) => fetchSignal(symbol)));

@@ -6,6 +6,11 @@ function formatNumber(value, options = {}) {
   return new Intl.NumberFormat("en-US", options).format(value);
 }
 
+function formatPercent(value, digits = 2) {
+  if (value === null || value === undefined || Number.isNaN(value)) return "—";
+  return `${formatNumber(value, { maximumFractionDigits: digits })}%`;
+}
+
 function render(root, payload, logger) {
   const data = payload?.data || {};
   const regime = data.regime || {};
@@ -54,8 +59,13 @@ function render(root, payload, logger) {
 
   const vix = data.vix || {};
   const fng = data.fngCrypto || {};
+  const fngStocks = data.fngStocks || {};
   const news = data.newsSentiment || {};
   const proxies = data.proxies || {};
+  const btc = data.btc || {};
+  const dxy = data.dxy || {};
+  const yields = data.yields || {};
+  const yieldValues = yields.values || {};
 
   root.innerHTML = `
     ${partialNote ? `<div class="rv-native-note">${partialNote}</div>` : ""}
@@ -75,7 +85,7 @@ function render(root, payload, logger) {
         <tr>
           <th>Signal</th>
           <th>Value</th>
-          <th>Notes</th>
+          <th>Source</th>
         </tr>
       </thead>
       <tbody>
@@ -90,27 +100,72 @@ function render(root, payload, logger) {
           <td>${fng.source || "—"}</td>
         </tr>
         <tr>
+          <td>Stocks F&amp;G</td>
+          <td>${formatNumber(fngStocks.value)} ${fngStocks.label ? `(${fngStocks.label})` : ""}</td>
+          <td>${fngStocks.source || "—"}</td>
+        </tr>
+        <tr>
           <td>News Sentiment</td>
           <td>${formatNumber(news.score, { maximumFractionDigits: 2 })} ${news.label || ""}</td>
           <td>${news.source || "—"}</td>
         </tr>
         <tr>
+          <td>BTC</td>
+          <td>$${formatNumber(btc.price, { maximumFractionDigits: 0 })} (${formatPercent(
+    btc.changePercent
+  )})</td>
+          <td>${btc.source || "—"}</td>
+        </tr>
+        <tr>
+          <td>DXY</td>
+          <td>${formatNumber(dxy.value, { maximumFractionDigits: 2 })} (${formatPercent(
+    dxy.changePercent
+  )})</td>
+          <td>${dxy.source || "—"}</td>
+        </tr>
+        <tr>
           <td>USD (UUP)</td>
           <td>${formatNumber(proxies.usd?.price, { maximumFractionDigits: 2 })}</td>
-          <td><span class="rv-pill-proxy">Proxy</span></td>
+          <td><span class="rv-pill-proxy">Proxy</span> ${proxies.usd?.symbol || "UUP"}</td>
         </tr>
         <tr>
           <td>Oil (USO)</td>
           <td>${formatNumber(proxies.oil?.price, { maximumFractionDigits: 2 })}</td>
-          <td><span class="rv-pill-proxy">Proxy</span></td>
+          <td><span class="rv-pill-proxy">Proxy</span> ${proxies.oil?.symbol || "USO"}</td>
         </tr>
         <tr>
           <td>Gold (GLD)</td>
           <td>${formatNumber(proxies.gold?.price, { maximumFractionDigits: 2 })}</td>
-          <td><span class="rv-pill-proxy">Proxy</span></td>
+          <td><span class="rv-pill-proxy">Proxy</span> ${proxies.gold?.symbol || "GLD"}</td>
+        </tr>
+        <tr>
+          <td>US Yields 1Y</td>
+          <td>${formatNumber(yieldValues["1y"], { maximumFractionDigits: 2 })}</td>
+          <td>${yields.source || "US Treasury"}</td>
+        </tr>
+        <tr>
+          <td>US Yields 2Y</td>
+          <td>${formatNumber(yieldValues["2y"], { maximumFractionDigits: 2 })}</td>
+          <td>${yields.source || "US Treasury"}</td>
+        </tr>
+        <tr>
+          <td>US Yields 5Y</td>
+          <td>${formatNumber(yieldValues["5y"], { maximumFractionDigits: 2 })}</td>
+          <td>${yields.source || "US Treasury"}</td>
+        </tr>
+        <tr>
+          <td>US Yields 10Y</td>
+          <td>${formatNumber(yieldValues["10y"], { maximumFractionDigits: 2 })}</td>
+          <td>${yields.source || "US Treasury"}</td>
+        </tr>
+        <tr>
+          <td>US Yields 30Y</td>
+          <td>${formatNumber(yieldValues["30y"], { maximumFractionDigits: 2 })}</td>
+          <td>${yields.source || "US Treasury"}</td>
         </tr>
       </tbody>
     </table>
+    <div class="rv-native-note">Sentiment details live in Block 10 (Sentiment Barometer).</div>
     <div class="rv-native-note">
       Updated: ${new Date(data.updatedAt || payload.ts).toLocaleTimeString()} · Freshness: ${
         payload?.freshness || "unknown"

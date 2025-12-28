@@ -6,6 +6,7 @@ const SHADOW_SCHEMA_VERSION = 1;
 const SHADOW_FEATURE = "rv-watchlist-local";
 const SHADOW_KEY = "quotes";
 const SYMBOLS_PATHS = [
+  "./data/symbols/universe.min.json",
   "./data/symbols/symbols.min.json",
   "./data/symbols/sp500.json",
   "./data/symbols/nasdaq.json",
@@ -311,7 +312,7 @@ function renderTable(root, list, logger) {
             <tr>
               <th data-rv-sort="symbol">${sortLabel("Symbol", "symbol")}</th>
               <th data-rv-sort="price">${sortLabel("Price", "price")}</th>
-              <th data-rv-sort="changePercent">${sortLabel("Change%", "changePercent")}</th>
+              <th data-rv-sort="changePercent">${sortLabel("1D", "changePercent")}</th>
               <th data-rv-sort="marketCap">${sortLabel("Market Cap", "marketCap")}</th>
               <th data-rv-sort="perf1w">${sortLabel("1W", "perf1w")}</th>
               <th data-rv-sort="perf1m">${sortLabel("1M", "perf1m")}</th>

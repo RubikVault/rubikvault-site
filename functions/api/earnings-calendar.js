@@ -5,7 +5,8 @@ import {
   kvPutJson,
   logServer,
   makeResponse,
-  safeSnippet
+  safeSnippet,
+  safeFetchJson
 } from "./_shared.js";
 
 const FEATURE_ID = "earnings-calendar";
@@ -124,8 +125,7 @@ export async function onRequestGet({ request, env, data }) {
         code: "ENV_MISSING",
         message: "FINNHUB_API_KEY missing",
         details: { missing: ["FINNHUB_API_KEY"] }
-      },
-      status: 500
+      }
     });
     logServer({
       feature: FEATURE_ID,
@@ -160,8 +160,8 @@ export async function onRequestGet({ request, env, data }) {
     }
   }
 
-  const daysParam = Number.parseInt(url.searchParams.get("days") || "7", 10);
-  const days = Number.isFinite(daysParam) ? Math.min(Math.max(daysParam, 1), 90) : 7;
+  const daysParam = Number.parseInt(url.searchParams.get("days") || "30", 10);
+  const days = Number.isFinite(daysParam) ? Math.min(Math.max(daysParam, 1), 90) : 30;
   const from = formatDate(new Date());
   const to = formatDate(new Date(Date.now() + days * 24 * 60 * 60 * 1000));
   const upstreamUrl = `${FINNHUB_BASE}?from=${from}&to=${to}&token=${env.FINNHUB_API_KEY}`;
@@ -169,14 +169,13 @@ export async function onRequestGet({ request, env, data }) {
   let upstreamSnippet = "";
 
   try {
-    const res = await fetch(upstreamUrl);
+    const res = await safeFetchJson(upstreamUrl, { userAgent: env.USER_AGENT || "RubikVault/1.0" });
     upstreamStatus = res.status;
-    const text = await res.text();
-    upstreamSnippet = safeSnippet(text);
+    upstreamSnippet = safeSnippet(res.snippet || "");
 
-    if (!res.ok) {
+    if (!res.ok || !res.json) {
       const cached = !panic ? await kvGetJson(env, cacheKey) : null;
-      const errorCode = mapUpstreamCode(res.status);
+      const errorCode = mapUpstreamCode(res.status || 502);
       if (cached?.hit && cached.value?.data) {
         const response = makeResponse({
           ok: true,
@@ -185,7 +184,7 @@ export async function onRequestGet({ request, env, data }) {
           data: cached.value.data,
           cache: { hit: true, ttl: KV_TTL, layer: "kv" },
           upstream: { url: FINNHUB_BASE, status: res.status, snippet: upstreamSnippet },
-          error: { code: errorCode, message: `Upstream ${res.status}`, details: {} },
+          error: { code: errorCode, message: `Upstream ${res.status || "error"}`, details: {} },
           isStale: true
         });
         logServer({
@@ -204,8 +203,7 @@ export async function onRequestGet({ request, env, data }) {
         traceId,
         cache: { hit: false, ttl: 0, layer: "none" },
         upstream: { url: FINNHUB_BASE, status: res.status, snippet: upstreamSnippet },
-        error: { code: errorCode, message: `Upstream ${res.status}`, details: {} },
-        status: res.status === 429 ? 429 : 502
+        error: { code: errorCode, message: `Upstream ${res.status || "error"}`, details: {} }
       });
       logServer({
         feature: FEATURE_ID,
@@ -217,30 +215,7 @@ export async function onRequestGet({ request, env, data }) {
       return response;
     }
 
-    let json;
-    try {
-      json = text ? JSON.parse(text) : {};
-    } catch (error) {
-      const response = makeResponse({
-        ok: false,
-        feature: FEATURE_ID,
-        traceId,
-        cache: { hit: false, ttl: 0, layer: "none" },
-        upstream: { url: FINNHUB_BASE, status: res.status, snippet: upstreamSnippet },
-        error: { code: "SCHEMA_INVALID", message: "Invalid JSON", details: {} },
-        status: 502
-      });
-      logServer({
-        feature: FEATURE_ID,
-        traceId,
-        cacheLayer: "none",
-        upstreamStatus: res.status,
-        durationMs: Date.now() - started
-      });
-      return response;
-    }
-
-    const dataPayload = normalizeFinnhub(json);
+    const dataPayload = normalizeFinnhub(res.json);
     const kvPayload = {
       ts: new Date().toISOString(),
       source: dataPayload.source,

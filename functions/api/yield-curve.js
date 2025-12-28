@@ -17,6 +17,8 @@ const STALE_MAX = 72 * 60 * 60;
 const CACHE_KEY = "DASH:YIELD_CURVE";
 const TREASURY_URL =
   "https://home.treasury.gov/resource-center/data-chart-center/interest-rates/DailyTreasuryYieldCurveRateData.xml";
+const TREASURY_CSV_URL =
+  "https://home.treasury.gov/resource-center/data-chart-center/interest-rates/DailyTreasuryYieldCurveRateData.csv";
 
 const parser = new XMLParser({ ignoreAttributes: false, attributeNamePrefix: "", removeNSPrefix: true });
 
@@ -75,8 +77,13 @@ function parseYieldCurve(xml) {
 
   const yields = {
     "3m": parseNumber(entry.BC_3MONTH || entry.BC_3Month || entry.BC_3_Month),
+    "1y": parseNumber(entry.BC_1YEAR || entry.BC_1Year),
     "2y": parseNumber(entry.BC_2YEAR || entry.BC_2Year),
+    "3y": parseNumber(entry.BC_3YEAR || entry.BC_3Year),
+    "5y": parseNumber(entry.BC_5YEAR || entry.BC_5Year),
+    "7y": parseNumber(entry.BC_7YEAR || entry.BC_7Year),
     "10y": parseNumber(entry.BC_10YEAR || entry.BC_10Year),
+    "20y": parseNumber(entry.BC_20YEAR || entry.BC_20Year),
     "30y": parseNumber(entry.BC_30YEAR || entry.BC_30Year)
   };
 
@@ -102,16 +109,77 @@ function parseYieldCurve(xml) {
   };
 }
 
+function parseCsvLine(line) {
+  return line.split(",").map((cell) => cell.replace(/^"|"$/g, "").trim());
+}
+
+function parseYieldCurveCsv(csv) {
+  if (!csv || isHtmlLike(csv)) return { ok: false, error: "HTML_RESPONSE" };
+  const lines = csv.trim().split("\n");
+  if (lines.length < 2) return { ok: false, error: "SCHEMA_INVALID" };
+  const headers = parseCsvLine(lines[0]).map((h) => h.toLowerCase());
+  const lastLine = lines[lines.length - 1];
+  const values = parseCsvLine(lastLine);
+  if (headers.length !== values.length) return { ok: false, error: "SCHEMA_INVALID" };
+  const row = Object.fromEntries(headers.map((key, idx) => [key, values[idx]]));
+  const date = row.date ? new Date(row.date).toISOString() : new Date().toISOString();
+  const yields = {
+    "3m": parseNumber(row["3 mo"] || row["3 mo."] || row["3 month"]),
+    "1y": parseNumber(row["1 yr"] || row["1 year"]),
+    "2y": parseNumber(row["2 yr"] || row["2 year"]),
+    "3y": parseNumber(row["3 yr"] || row["3 year"]),
+    "5y": parseNumber(row["5 yr"] || row["5 year"]),
+    "7y": parseNumber(row["7 yr"] || row["7 year"]),
+    "10y": parseNumber(row["10 yr"] || row["10 year"]),
+    "20y": parseNumber(row["20 yr"] || row["20 year"]),
+    "30y": parseNumber(row["30 yr"] || row["30 year"])
+  };
+  const spreads = {
+    tenTwo:
+      yields["10y"] !== null && yields["2y"] !== null ? yields["10y"] - yields["2y"] : null,
+    tenThreeMonth:
+      yields["10y"] !== null && yields["3m"] !== null ? yields["10y"] - yields["3m"] : null
+  };
+  return {
+    ok: true,
+    data: {
+      updatedAt: date,
+      yields,
+      spreads,
+      inversion: {
+        tenTwo: spreads.tenTwo !== null ? spreads.tenTwo < 0 : null,
+        tenThreeMonth: spreads.tenThreeMonth !== null ? spreads.tenThreeMonth < 0 : null
+      },
+      source: "US Treasury"
+    }
+  };
+}
+
 async function fetchYieldCurve(env) {
   const res = await safeFetchText(TREASURY_URL, { userAgent: env.USER_AGENT || "RubikVault/1.0" });
-  if (!res.ok) {
-    return { ok: false, error: "UPSTREAM_5XX", snippet: safeSnippet(res.text) };
+  if (res.ok) {
+    const parsed = parseYieldCurve(res.text || "");
+    if (parsed.ok) {
+      return { ok: true, data: parsed.data, snippet: "" };
+    }
   }
-  const parsed = parseYieldCurve(res.text || "");
-  if (!parsed.ok) {
-    return { ok: false, error: parsed.error || "SCHEMA_INVALID", snippet: safeSnippet(res.text) };
+
+  const csvRes = await safeFetchText(TREASURY_CSV_URL, {
+    userAgent: env.USER_AGENT || "RubikVault/1.0"
+  });
+  if (csvRes.ok) {
+    const parsedCsv = parseYieldCurveCsv(csvRes.text || "");
+    if (parsedCsv.ok) {
+      return { ok: true, data: parsedCsv.data, snippet: "" };
+    }
   }
-  return { ok: true, data: parsed.data, snippet: "" };
+
+  const snippet = safeSnippet(res.text || csvRes.text || "");
+  return {
+    ok: false,
+    error: res.ok ? "SCHEMA_INVALID" : "UPSTREAM_5XX",
+    snippet
+  };
 }
 
 export async function onRequestGet(context) {
@@ -137,7 +205,7 @@ export async function onRequestGet(context) {
       feature: FEATURE_ID,
       traceId,
       cache: { hit: false, ttl: 0, layer: "none" },
-      upstream: { url: TREASURY_URL, status: null, snippet: swr.error?.snippet || "" },
+      upstream: { url: `${TREASURY_URL} | ${TREASURY_CSV_URL}`, status: null, snippet: swr.error?.snippet || "" },
       error: {
         code: swr.error?.error || "UPSTREAM_5XX",
         message: "No upstream data",
@@ -161,7 +229,7 @@ export async function onRequestGet(context) {
     traceId,
     data: payload,
     cache: { hit: swr.cacheStatus !== "MISS", ttl: KV_TTL, layer: swr.cacheStatus === "MISS" ? "none" : "kv" },
-    upstream: { url: TREASURY_URL, status: 200, snippet: "" },
+    upstream: { url: `${TREASURY_URL} | ${TREASURY_CSV_URL}`, status: 200, snippet: "" },
     isStale: swr.isStale,
     freshness: normalizeFreshness(swr.ageSeconds),
     cacheStatus: swr.cacheStatus

@@ -170,6 +170,7 @@ function renderTop30Table(payload) {
             <th data-rv-sort="macdHist">${sortLabel("MACD Hist", "macdHist")}</th>
             <th data-rv-sort="stochRsi">${sortLabel("Stoch RSI", "stochRsi")}</th>
             <th data-rv-sort="perf1w">${sortLabel("1W", "perf1w")}</th>
+            <th data-rv-sort="relPerf1w">${sortLabel("Rel vs SP500", "relPerf1w")}</th>
             <th data-rv-sort="perf1m">${sortLabel("1M", "perf1m")}</th>
             <th data-rv-sort="perf1y">${sortLabel("1Y", "perf1y")}</th>
             <th data-rv-sort="maRegime">${sortLabel("MA Regime", "maRegime")}</th>
@@ -194,6 +195,7 @@ function renderTop30Table(payload) {
                   <td>${formatNumber(item.macdHist, { maximumFractionDigits: 2 })}</td>
                   <td>${formatNumber(item.stochRsi, { maximumFractionDigits: 1 })}</td>
                   <td class="${perfClass(item.perf1w)}">${formatPercent(item.perf1w)}</td>
+                  <td class="${perfClass(item.relPerf1w)}">${formatPercent(item.relPerf1w)}</td>
                   <td class="${perfClass(item.perf1m)}">${formatPercent(item.perf1m)}</td>
                   <td class="${perfClass(item.perf1y)}">${formatPercent(item.perf1y)}</td>
                   <td>${item.maRegime}</td>

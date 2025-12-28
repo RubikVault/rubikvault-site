@@ -100,6 +100,7 @@ function render(root, payload, logger) {
     payload?.ok && (payload?.isStale || payload?.error?.code)
       ? "Partial data — some sources unavailable."
       : "";
+  const cockpitNote = "Summary signals are in Market Cockpit above; this block provides the detail view.";
   const envNote =
     payload?.error?.code === "ENV_MISSING"
       ? "FRED_API_KEY missing — CPI values unavailable."
@@ -193,6 +194,7 @@ function render(root, payload, logger) {
 
   root.innerHTML = `
     ${partialNote ? `<div class="rv-native-note">${partialNote}</div>` : ""}
+    <div class="rv-native-note">${cockpitNote}</div>
     ${envNote ? `<div class="rv-native-note">${envNote}</div>` : ""}
     <div class="rv-macro-tabs">
       ${tabs

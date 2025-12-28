@@ -56,6 +56,7 @@ function render(root, payload, logger) {
   const barPercent = Math.max(0, Math.min(100, Math.round(((score + 100) / 200) * 100)));
 
   root.innerHTML = `
+    <div class="rv-native-note">Related to Market Cockpit context.</div>
     <div class="rv-native-note rv-native-warning">WIP: consolidation planned with other sentiment widgets.</div>
     <div class="rv-native-note">How computed? Provider sentiment if available, otherwise heuristic keyword scoring.</div>
     ${partialNote ? `<div class="rv-native-note">${partialNote}</div>` : ""}

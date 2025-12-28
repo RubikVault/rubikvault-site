@@ -1,12 +1,15 @@
 import {
   assertBindings,
   createTraceId,
+  kvGetJson,
   logServer,
   makeResponse,
   safeFetchJson,
+  safeFetchText,
   swrGetOrRefresh,
   normalizeFreshness,
-  buildMarketauxParams
+  buildMarketauxParams,
+  withCoinGeckoKey
 } from "./_shared.js";
 
 const FEATURE_ID = "market-cockpit";
@@ -15,9 +18,16 @@ const STALE_MAX = 48 * 60 * 60;
 const CACHE_KEY = "DASH:MARKET_COCKPIT";
 
 const VIX_URL = "https://cdn.cboe.com/api/global/us_indices/quotes/VIX.json";
+const FNG_STOCKS_URL = "https://production.dataviz.cnn.io/index/fearandgreed/graphdata";
 const FNG_CRYPTO_URL = "https://api.alternative.me/fng/?limit=1";
+const BTC_URL =
+  "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd&include_24hr_change=true";
 const FMP_BATCH = "https://financialmodelingprep.com/api/v3/quote";
 const MARKETAUX_URL = "https://api.marketaux.com/v1/news/all";
+const TREASURY_CSV_URL =
+  "https://home.treasury.gov/resource-center/data-chart-center/interest-rates/DailyTreasuryYieldCurveRateData.csv";
+const YAHOO_DXY_URL =
+  "https://query1.finance.yahoo.com/v7/finance/quote?symbols=DX-Y.NYB";
 
 function bucketSentiment(value) {
   if (value <= -0.5) return "Angst";
@@ -46,6 +56,17 @@ function extractVix(json) {
     if (parsed !== null) return parsed;
   }
   return null;
+}
+
+function normalizeFngStocks(payload) {
+  const data = payload?.fear_and_greed || payload?.fearAndGreed || payload || {};
+  const valueRaw = data.score ?? data.value ?? data?.now?.value ?? null;
+  const value = parseNumber(valueRaw);
+  const label = data.rating || data.value_classification || data.classification || data.text || "";
+  const timestampRaw = data.timestamp || data.lastUpdated || data.last_updated || null;
+  const timestamp = Number.isFinite(Number(timestampRaw)) ? Number(timestampRaw) : Date.now();
+  if (value === null && !label) return null;
+  return { value, label, timestamp };
 }
 
 async function fetchVix(env) {
@@ -107,6 +128,25 @@ async function fetchFngCrypto(env) {
   };
 }
 
+async function fetchFngStocks(env) {
+  const res = await safeFetchJson(FNG_STOCKS_URL, {
+    userAgent: env.USER_AGENT || "RubikVault/1.0"
+  });
+  if (!res.ok || !res.json) {
+    return { ok: false, value: null, label: "", source: "CNN" };
+  }
+  const normalized = normalizeFngStocks(res.json);
+  if (!normalized) {
+    return { ok: false, value: null, label: "", source: "CNN" };
+  }
+  return {
+    ok: normalized.value !== null || Boolean(normalized.label),
+    value: normalized.value,
+    label: normalized.label,
+    source: "CNN"
+  };
+}
+
 async function fetchMarketaux(env) {
   if (!env.MARKETAUX_KEY) {
     return { ok: false, score: null, label: "", source: "Marketaux", rateLimited: false };
@@ -135,6 +175,35 @@ async function fetchMarketaux(env) {
     label: bucketSentiment(rounded),
     source: "Marketaux",
     rateLimited: false
+  };
+}
+
+async function fetchBtc(env) {
+  const url = withCoinGeckoKey(BTC_URL, env);
+  const res = await safeFetchJson(url, { userAgent: env.USER_AGENT || "RubikVault/1.0" });
+  if (!res.ok || !res.json) {
+    return { ok: false, price: null, changePercent: null, source: "CoinGecko" };
+  }
+  const data = res.json?.bitcoin || {};
+  return {
+    ok: data.usd !== undefined,
+    price: parseNumber(data.usd),
+    changePercent: parseNumber(data.usd_24h_change),
+    source: "CoinGecko"
+  };
+}
+
+async function fetchDxy(env) {
+  const res = await safeFetchJson(YAHOO_DXY_URL, { userAgent: env.USER_AGENT || "RubikVault/1.0" });
+  if (!res.ok || !res.json) {
+    return { ok: false, value: null, changePercent: null, source: "Yahoo" };
+  }
+  const quote = res.json?.quoteResponse?.result?.[0] || {};
+  return {
+    ok: quote.regularMarketPrice !== undefined,
+    value: parseNumber(quote.regularMarketPrice),
+    changePercent: parseNumber(quote.regularMarketChangePercent),
+    source: "Yahoo"
   };
 }
 
@@ -178,7 +247,60 @@ async function fetchProxies(env) {
   };
 }
 
-function buildRegime({ vix, fngCrypto, newsSentiment }) {
+function parseCsvLine(line) {
+  return line.split(",").map((cell) => cell.replace(/^"|"$/g, "").trim());
+}
+
+function parseYieldCurveCsv(csv) {
+  if (!csv) return null;
+  const lines = csv.trim().split("\n");
+  if (lines.length < 2) return null;
+  const headers = parseCsvLine(lines[0]).map((h) => h.toLowerCase());
+  const lastLine = lines[lines.length - 1];
+  const values = parseCsvLine(lastLine);
+  if (headers.length !== values.length) return null;
+  const row = Object.fromEntries(headers.map((key, idx) => [key, values[idx]]));
+  const yields = {
+    "1y": parseNumber(row["1 yr"] || row["1 year"]),
+    "2y": parseNumber(row["2 yr"] || row["2 year"]),
+    "3y": parseNumber(row["3 yr"] || row["3 year"]),
+    "5y": parseNumber(row["5 yr"] || row["5 year"]),
+    "7y": parseNumber(row["7 yr"] || row["7 year"]),
+    "10y": parseNumber(row["10 yr"] || row["10 year"]),
+    "20y": parseNumber(row["20 yr"] || row["20 year"]),
+    "30y": parseNumber(row["30 yr"] || row["30 year"])
+  };
+  return {
+    updatedAt: row.date ? new Date(row.date).toISOString() : new Date().toISOString(),
+    yields,
+    source: "US Treasury"
+  };
+}
+
+async function fetchYields(env) {
+  const cached = await kvGetJson(env, "DASH:YIELD_CURVE");
+  if (cached?.hit && cached.value?.data?.yields) {
+    return {
+      ok: true,
+      yields: cached.value.data.yields || {},
+      updatedAt: cached.value.data.updatedAt || cached.value.ts,
+      source: cached.value.data.source || "US Treasury"
+    };
+  }
+  const res = await safeFetchText(TREASURY_CSV_URL, {
+    userAgent: env.USER_AGENT || "RubikVault/1.0"
+  });
+  if (!res.ok) {
+    return { ok: false, yields: {}, updatedAt: null, source: "US Treasury" };
+  }
+  const parsed = parseYieldCurveCsv(res.text || "");
+  if (!parsed) {
+    return { ok: false, yields: {}, updatedAt: null, source: "US Treasury" };
+  }
+  return { ok: true, ...parsed };
+}
+
+function buildRegime({ vix, fngCrypto, fngStocks, newsSentiment }) {
   let score = 50;
   const drivers = [];
   if (typeof vix?.value === "number") {
@@ -199,6 +321,15 @@ function buildRegime({ vix, fngCrypto, newsSentiment }) {
       drivers.push("Crypto risk-off");
     }
   }
+  if (typeof fngStocks?.value === "number") {
+    if (fngStocks.value >= 60) {
+      score += 6;
+      drivers.push("Stocks risk-on");
+    } else if (fngStocks.value <= 40) {
+      score -= 6;
+      drivers.push("Stocks risk-off");
+    }
+  }
   if (typeof newsSentiment?.score === "number") {
     if (newsSentiment.score >= 0.2) {
       score += 5;
@@ -215,24 +346,45 @@ function buildRegime({ vix, fngCrypto, newsSentiment }) {
 }
 
 async function fetchMarketCockpit(env) {
-  const [vixResult, fngResult, newsResult, proxyResult] = await Promise.allSettled([
+  const [vixResult, fngResult, fngStocksResult, newsResult, proxyResult, btcResult, dxyResult, yieldsResult] =
+    await Promise.allSettled([
     fetchVix(env),
     fetchFngCrypto(env),
+    fetchFngStocks(env),
     fetchMarketaux(env),
-    fetchProxies(env)
+    fetchProxies(env),
+    fetchBtc(env),
+    fetchDxy(env),
+    fetchYields(env)
   ]);
 
   const vix = vixResult.status === "fulfilled" ? vixResult.value : { ok: false };
   const fngCrypto = fngResult.status === "fulfilled" ? fngResult.value : { ok: false };
+  const fngStocks = fngStocksResult.status === "fulfilled" ? fngStocksResult.value : { ok: false };
   const newsSentiment = newsResult.status === "fulfilled" ? newsResult.value : { ok: false };
   const proxies = proxyResult.status === "fulfilled" ? proxyResult.value : { ok: false };
+  const btc = btcResult.status === "fulfilled" ? btcResult.value : { ok: false };
+  const dxy = dxyResult.status === "fulfilled" ? dxyResult.value : { ok: false };
+  const yields = yieldsResult.status === "fulfilled" ? yieldsResult.value : { ok: false };
 
-  const partial = !vix.ok || !fngCrypto.ok || !newsSentiment.ok || !proxies.ok;
+  const partial =
+    !vix.ok ||
+    !fngCrypto.ok ||
+    !fngStocks.ok ||
+    !newsSentiment.ok ||
+    !proxies.ok ||
+    !btc.ok ||
+    !dxy.ok ||
+    !yields.ok;
   const hasData =
     vix.value !== null ||
     fngCrypto.value !== null ||
+    fngStocks.value !== null ||
     newsSentiment.score !== null ||
-    Object.keys(proxies.proxies || {}).length > 0;
+    Object.keys(proxies.proxies || {}).length > 0 ||
+    btc.price !== null ||
+    dxy.value !== null ||
+    Object.keys(yields.yields || {}).length > 0;
   if (!hasData) {
     return {
       ok: false,
@@ -243,7 +395,7 @@ async function fetchMarketCockpit(env) {
       }
     };
   }
-  const regime = buildRegime({ vix, fngCrypto, newsSentiment });
+  const regime = buildRegime({ vix, fngCrypto, fngStocks, newsSentiment });
 
   return {
     ok: true,
@@ -262,18 +414,42 @@ async function fetchMarketCockpit(env) {
         label: fngCrypto.label || "",
         source: fngCrypto.source || "Alternative.me"
       },
+      fngStocks: {
+        value: fngStocks.value ?? null,
+        label: fngStocks.label || "",
+        source: fngStocks.source || "CNN"
+      },
       newsSentiment: {
         score: newsSentiment.score ?? null,
         label: newsSentiment.label || "",
         source: newsSentiment.source || "Marketaux",
         rateLimited: Boolean(newsSentiment.rateLimited)
       },
+      btc: {
+        price: btc.price ?? null,
+        changePercent: btc.changePercent ?? null,
+        source: btc.source || "CoinGecko"
+      },
+      dxy: {
+        value: dxy.value ?? null,
+        changePercent: dxy.changePercent ?? null,
+        source: dxy.source || "Yahoo"
+      },
+      yields: {
+        updatedAt: yields.updatedAt || null,
+        source: yields.source || "US Treasury",
+        values: yields.yields || {}
+      },
       proxies: proxies.proxies || {},
       sourceMap: {
         vix: vix.source || "CBOE",
         fngCrypto: fngCrypto.source || "Alternative.me",
+        fngStocks: fngStocks.source || "CNN",
         newsSentiment: newsSentiment.source || "Marketaux",
-        proxies: proxies.source || "FMP"
+        proxies: proxies.source || "FMP",
+        btc: btc.source || "CoinGecko",
+        dxy: dxy.source || "Yahoo",
+        yields: yields.source || "US Treasury"
       }
     }
   };
