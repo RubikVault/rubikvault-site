@@ -273,3 +273,90 @@ export async function refresh(root, context = {}) {
   const data = await loadData({ featureId, traceId, logger });
   render(root, data, logger);
 }
+
+// Legacy (non-compact) layout helpers preserved for add-only compatibility.
+function renderPanelLegacy(region, items) {
+  const rates = items.filter((item) => item.group === "rates");
+  const inflation = items.filter((item) => item.group === "inflation");
+
+  if (!rates.length && !inflation.length) {
+    return `
+      <div class="rv-native-empty">
+        Keine Daten für ${region}. (${region} series not configured)
+      </div>
+    `;
+  }
+
+  return `
+    <div class="rv-macro-section">
+      <h4>Rates</h4>
+      <div class="rv-native-grid">
+        ${rates
+          .map((item) => {
+            const changeValue = item.change ?? null;
+            const changeClass = changeValue >= 0 ? "rv-native-positive" : "rv-native-negative";
+            return `
+              <div class="rv-native-kpi">
+                <div class="label">${item.label}</div>
+                <div class="value">${formatNumber(item.value, { maximumFractionDigits: 2 })}</div>
+                <div class="rv-native-note ${changeClass}">${
+                  changeValue === null ? "" : `${formatNumber(changeValue, { maximumFractionDigits: 2 })} vs prior`
+                }</div>
+              </div>
+            `;
+          })
+          .join("")}
+      </div>
+    </div>
+    <div class="rv-macro-section">
+      <h4>Inflation</h4>
+      <div class="rv-native-grid">
+        ${inflation
+          .map((item) => {
+            const changeValue = item.change ?? null;
+            const changeClass = changeValue >= 0 ? "rv-native-positive" : "rv-native-negative";
+            return `
+              <div class="rv-native-kpi">
+                <div class="label">${item.label}</div>
+                <div class="value">${formatNumber(item.value, { maximumFractionDigits: 2 })}</div>
+                <div class="rv-native-note ${changeClass}">${
+                  changeValue === null ? "" : `${formatNumber(changeValue, { maximumFractionDigits: 2 })} vs prior`
+                }</div>
+              </div>
+            `;
+          })
+          .join("")}
+      </div>
+    </div>
+  `;
+}
+
+function renderFxLegacy(items) {
+  if (!items.length) {
+    return `
+      <div class="rv-native-empty">
+        Keine FX-Daten verfügbar.
+      </div>
+    `;
+  }
+
+  return `
+    <div class="rv-native-grid">
+      ${items
+        .map((item) => {
+          const changeValue = item.changePercent ?? null;
+          const changeClass = changeValue >= 0 ? "rv-native-positive" : "rv-native-negative";
+          return `
+            <div class="rv-native-kpi">
+              <div class="label">${item.label}</div>
+              <div class="value">${formatNumber(item.value, { maximumFractionDigits: 4 })}</div>
+              <div class="rv-native-note ${changeClass}">${
+                changeValue === null ? "" : `${formatNumber(changeValue, { maximumFractionDigits: 2 })}%`
+              }</div>
+            </div>
+          `;
+        })
+        .join("")}
+    </div>
+  `;
+}

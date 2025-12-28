@@ -6,6 +6,11 @@ function formatSentiment(value) {
   return value.toFixed(2);
 }
 
+// Legacy warning predicate (pre-partial flag).
+function isWarningLegacy(payload, data) {
+  return data?.status === "WARN" || payload?.isStale || payload?.error?.code;
+}
+
 function render(root, payload, logger) {
   const data = payload?.data || {};
   const narratives = Array.isArray(data.narratives) ? data.narratives : [];

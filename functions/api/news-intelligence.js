@@ -469,3 +469,234 @@ export async function onRequestGet({ request, env, data, waitUntil }) {
   });
   return response;
 }
+
+// Legacy helpers preserved for add-only compatibility.
+function buildMarketauxUrlLegacy({ symbols, search }, apiKey, publishedAfter) {
+  const url = new URL(UPSTREAM_BASE);
+  url.searchParams.set("api_token", apiKey);
+  url.searchParams.set("languages", "en");
+  url.searchParams.set("filter_entities", "true");
+  url.searchParams.set("group_similar", "true");
+  url.searchParams.set("limit", "10");
+  url.searchParams.set("published_after", publishedAfter);
+  if (symbols) url.searchParams.set("symbols", symbols);
+  if (search) url.searchParams.set("search", search);
+  return url.toString();
+}
+
+async function fetchNarrativeLegacy(narrative, apiKey, publishedAfter) {
+  const url = buildMarketauxUrlLegacy(narrative, apiKey, publishedAfter);
+  const started = Date.now();
+  const res = await fetch(url, { headers: { "User-Agent": "RubikVault/1.0" } });
+  const text = await res.text();
+  const durationMs = Date.now() - started;
+  let json;
+  try {
+    json = text ? JSON.parse(text) : {};
+  } catch (error) {
+    return {
+      ok: false,
+      status: res.status,
+      items: [],
+      durationMs,
+      snippet: safeSnippet(text),
+      error: "SCHEMA_INVALID"
+    };
+  }
+  const items = parseArticles(json).map(normalizeItem).filter((item) => item.title && item.url);
+  return {
+    ok: res.ok,
+    status: res.status,
+    items,
+    durationMs,
+    snippet: res.ok ? "" : safeSnippet(text),
+    error: res.ok ? "" : mapUpstreamCode(res.status)
+  };
+}
+
+// Legacy handler retained for add-only traceability (not exported).
+async function onRequestGetLegacy({ request, env, data }) {
+  const traceId = data?.traceId || createTraceId(request);
+  const started = Date.now();
+  const panic =
+    request.headers.get("x-rv-panic") === "1" ||
+    new URL(request.url).searchParams.get("rv_panic") === "1";
+
+  const bindingResponse = assertBindings(env, FEATURE_ID, traceId);
+  if (bindingResponse) {
+    return bindingResponse;
+  }
+
+  if (!env.MARKETAUX_KEY) {
+    const response = makeResponse({
+      ok: false,
+      feature: FEATURE_ID,
+      traceId,
+      data: {
+        status: "FAIL",
+        updatedAt: new Date().toISOString(),
+        ttlSec: KV_TTL,
+        source: "marketaux",
+        trace: shortTrace(traceId),
+        narratives: []
+      },
+      cache: { hit: false, ttl: 0, layer: "none" },
+      upstream: { url: UPSTREAM_BASE, status: null, snippet: "" },
+      error: {
+        code: "ENV_MISSING",
+        message: "MARKETAUX_KEY missing",
+        details: { missing: ["MARKETAUX_KEY"] }
+      },
+      status: 500
+    });
+    logServer({
+      feature: FEATURE_ID,
+      traceId,
+      cacheLayer: "none",
+      upstreamStatus: null,
+      durationMs: Date.now() - started
+    });
+    return response;
+  }
+
+  const cached = !panic ? await kvGetJson(env, CACHE_KEY) : null;
+  const prevNarratives = cached?.value?.data?.narratives || [];
+  const prevMap = new Map(prevNarratives.map((item) => [item.id, item]));
+  const publishedAfter = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+
+  const results = await Promise.all(
+    NARRATIVES.map((narrative) => fetchNarrativeLegacy(narrative, env.MARKETAUX_KEY, publishedAfter))
+  );
+
+  const available = results.filter((result) => result.ok && result.items.length);
+  const upstreamMs = results.reduce((sum, result) => sum + result.durationMs, 0);
+  const upstreamStatus = results.find((result) => !result.ok)?.status || 200;
+  const upstreamSnippet = results.find((result) => result.snippet)?.snippet || "";
+  const errorCode = results.find((result) => result.error)?.error || "";
+
+  if (!available.length) {
+    if (cached?.hit && cached.value?.data) {
+      const ageSec = cached.value?.ts
+        ? Math.max(0, Math.floor((Date.now() - Date.parse(cached.value.ts)) / 1000))
+        : null;
+      const response = makeResponse({
+        ok: true,
+        feature: FEATURE_ID,
+        traceId,
+        data: {
+          ...cached.value.data,
+          status: "WARN",
+          trace: shortTrace(traceId),
+          ttlSec: KV_TTL,
+          debug: {
+            cache: { hit: true, ageSec },
+            upstream: { status: upstreamStatus ?? null, ms: upstreamMs }
+          }
+        },
+        cache: { hit: true, ttl: KV_TTL, layer: "kv" },
+        upstream: { url: UPSTREAM_BASE, status: upstreamStatus ?? null, snippet: upstreamSnippet },
+        error: {
+          code: errorCode || "UPSTREAM_5XX",
+          message: "Upstream unavailable; serving cached",
+          details: {}
+        },
+        isStale: true
+      });
+      logServer({
+        feature: FEATURE_ID,
+        traceId,
+        cacheLayer: "kv",
+        upstreamStatus: upstreamStatus ?? null,
+        durationMs: Date.now() - started
+      });
+      return response;
+    }
+
+    const response = makeResponse({
+      ok: false,
+      feature: FEATURE_ID,
+      traceId,
+      data: {
+        status: "FAIL",
+        updatedAt: new Date().toISOString(),
+        ttlSec: KV_TTL,
+        source: "marketaux",
+        trace: shortTrace(traceId),
+        narratives: [],
+        debug: {
+          cache: { hit: false, ageSec: null },
+          upstream: { status: upstreamStatus ?? null, ms: upstreamMs }
+        }
+      },
+      cache: { hit: false, ttl: 0, layer: "none" },
+      upstream: { url: UPSTREAM_BASE, status: upstreamStatus ?? null, snippet: upstreamSnippet },
+      error: {
+        code: errorCode || "UPSTREAM_5XX",
+        message: "No upstream data",
+        details: {}
+      },
+      status: 502
+    });
+    logServer({
+      feature: FEATURE_ID,
+      traceId,
+      cacheLayer: "none",
+      upstreamStatus: upstreamStatus ?? null,
+      durationMs: Date.now() - started
+    });
+    return response;
+  }
+
+  const narratives = NARRATIVES.map((narrative, index) => {
+    const result = results[index];
+    const items = result.ok ? result.items : [];
+    return buildNarrativePayload(narrative, items, prevMap);
+  });
+
+  const dataPayload = {
+    status: available.length >= 2 ? "OK" : "WARN",
+    updatedAt: new Date().toISOString(),
+    ttlSec: KV_TTL,
+    source: "marketaux",
+    trace: shortTrace(traceId),
+    narratives,
+    debug: {
+      cache: { hit: false, ageSec: null },
+      upstream: { status: upstreamStatus ?? 200, ms: upstreamMs }
+    }
+  };
+
+  if (!panic) {
+    await kvPutJson(
+      env,
+      CACHE_KEY,
+      { ts: new Date().toISOString(), data: dataPayload },
+      KV_TTL
+    );
+  }
+
+  const response = makeResponse({
+    ok: true,
+    feature: FEATURE_ID,
+    traceId,
+    data: dataPayload,
+    cache: { hit: false, ttl: panic ? 0 : KV_TTL, layer: "none" },
+    upstream: { url: UPSTREAM_BASE, status: upstreamStatus ?? 200, snippet: upstreamSnippet },
+    error: errorCode
+      ? {
+          code: errorCode,
+          message: "Some narratives failed",
+          details: {}
+        }
+      : {}
+  });
+
+  logServer({
+    feature: FEATURE_ID,
+    traceId,
+    cacheLayer: "none",
+    upstreamStatus: upstreamStatus ?? 200,
+    durationMs: Date.now() - started
+  });
+  return response;
+}

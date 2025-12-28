@@ -517,3 +517,49 @@ export function computeReturnsFromDailyCloses(closes = []) {
     r1y: calc(pick(252))
   };
 }
+
+// Legacy helpers preserved for add-only compatibility.
+export function jsonResponseLegacy(payload, status = 200, extraHeaders = {}) {
+  return new Response(JSON.stringify(payload), {
+    status,
+    headers: {
+      "Content-Type": "application/json; charset=utf-8",
+      ...extraHeaders
+    }
+  });
+}
+
+export function makeResponseLegacy({
+  ok,
+  feature,
+  traceId,
+  cache = cacheFallback(),
+  upstream = {},
+  rateLimit = rateLimitFallback(),
+  data = {},
+  error = {},
+  isStale = false,
+  status = 200,
+  headers = {}
+} = {}) {
+  const payload = makeJson({
+    ok,
+    feature,
+    traceId,
+    cache,
+    upstream,
+    rateLimit,
+    data,
+    error,
+    isStale
+  });
+  return jsonResponseLegacy(payload, status, headers);
+}
+
+export async function kvGetJsonLegacy(env, key) {
+  return kvGetJson(env, key);
+}
+
+export async function kvPutJsonLegacy(env, key, value, ttlSeconds) {
+  return kvPutJson(env, key, value, ttlSeconds);
+}

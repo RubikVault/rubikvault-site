@@ -228,3 +228,53 @@ export async function refresh(root, context = {}) {
   const data = await loadData({ featureId, traceId, logger });
   render(root, data, logger);
 }
+
+// Legacy compact-card layout (pre-table) preserved for add-only compatibility.
+function renderLegacyCards(items, payload, data) {
+  const formatValue = (value) => (value === null || value === undefined || value === "" ? "—" : value);
+  const formatTime = (value) => {
+    if (!value) return "—";
+    const normalized = String(value).toUpperCase();
+    if (normalized.includes("BMO")) return "BMO";
+    if (normalized.includes("AMC")) return "AMC";
+    if (normalized.includes("DMH")) return "DMH";
+    return normalized;
+  };
+  const partialNote =
+    payload?.ok && (payload?.isStale || payload?.error?.code)
+      ? "Partial data — some entries unavailable."
+      : "";
+
+  return `
+    ${partialNote ? `<div class="rv-native-note">${partialNote}</div>` : ""}
+    <div class="rv-earnings-list rv-earnings-compact">
+      ${items
+        .map((item) => {
+          const sentiment = item.sentiment || "unknown";
+          const sentimentLabel = sentiment.replace(/_/g, " ");
+          const sentimentCls = sentimentClass(sentiment);
+          return `
+            <div class="rv-earnings-card">
+              <div class="rv-earnings-head">
+                <strong>${formatValue(item.symbol)}</strong>
+                <span>${formatValue(item.company)}</span>
+              </div>
+              <div class="rv-earnings-meta">
+                <span>Date: ${formatValue(item.date)}</span>
+                <span>Time: ${formatTime(item.time)}</span>
+                <span>EPS: ${formatValue(item.epsActual)} / ${formatValue(item.epsEst)} (${formatResult(
+            item.epsResult
+          )})</span>
+                <span>Revenue: ${formatValue(item.revenueActual)} / ${formatValue(
+            item.revenueEst
+          )} (${formatResult(item.revenueResult)})</span>
+                <span class="${sentimentCls}">Sentiment: ${formatValue(sentimentLabel)}</span>
+              </div>
+            </div>
+          `;
+        })
+        .join("")}
+    </div>
+    <div class="rv-native-note">Data provided by ${data?.source || "finnhub"}</div>
+  `;
+}

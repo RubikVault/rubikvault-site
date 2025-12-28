@@ -6,6 +6,7 @@ const SHADOW_SCHEMA_VERSION = 1;
 const SHADOW_FEATURE = "rv-watchlist-local";
 const SHADOW_KEY = "quotes";
 const SYMBOLS_PATHS = ["./data/symbols/symbols.min.json", "./assets/nasdaq_symbols.min.json"];
+const SYMBOLS_PATH = "./assets/nasdaq_symbols.min.json";
 const DEFAULT_LIST = ["AAPL", "NVDA"];
 const DEFAULT_REFRESH_MS = 120_000;
 const BACKOFF_STEPS = [120_000, 300_000, 900_000];
@@ -180,6 +181,22 @@ async function loadSymbols(logger) {
         logger?.info("symbols_loaded", { count: data.length, path });
         return;
       }
+    }
+  } catch (error) {
+    logger?.warn("symbols_load_failed", { message: error?.message || "Failed" });
+  }
+}
+
+// Legacy single-path loader preserved for add-only compatibility.
+async function loadSymbolsLegacy(logger) {
+  if (state.symbolsLoaded) return;
+  try {
+    const response = await fetch(SYMBOLS_PATH, { cache: "force-cache" });
+    const data = await response.json();
+    if (Array.isArray(data)) {
+      state.symbols = data;
+      state.symbolsLoaded = true;
+      logger?.info("symbols_loaded", { count: data.length, path: SYMBOLS_PATH });
     }
   } catch (error) {
     logger?.warn("symbols_load_failed", { message: error?.message || "Failed" });

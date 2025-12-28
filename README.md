@@ -114,6 +114,7 @@ Required:
 
 Optional (per block):
 - `FRED_API_KEY` (Block 08 Macro & Rates)
+- `FINNHUB_API_KEY` (Block 04 Earnings + Watchlist next earnings)
 - `COINGECKO_DEMO_KEY` (CoinGecko rate-limit relief)
 - `QUOTES_PROVIDER` (optional routing for quotes)
 - `EARNINGS_PROVIDER` (Finnhub supported)
