@@ -37,7 +37,13 @@ const DEFINITIONS = {
 };
 
 function buildRegex(symbol) {
-  return new RegExp(`(^|[^A-Z0-9])\$?${symbol}([^A-Z0-9]|$)`, "g");
+  if (!symbol) return /(?!)/g;
+  const safe = escapeRegExp(symbol);
+  return new RegExp(`(^|[^A-Z0-9])\\$?${safe}([^A-Z0-9]|$)`, "g");
+}
+
+function escapeRegExp(value) {
+  return String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 function extractTitles(feedJson) {

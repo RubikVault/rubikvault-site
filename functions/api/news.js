@@ -113,6 +113,13 @@ function classifyHeadline(headline) {
   return { category: "stocks", label: "Stocks" };
 }
 
+function resolveSource({ source, sourceCode, sourceId } = {}) {
+  return {
+    code: sourceCode || sourceId || "NEWS",
+    name: source || "News"
+  };
+}
+
 function normalize(items) {
   return {
     updatedAt: new Date().toISOString(),
@@ -166,7 +173,7 @@ async function fetchFeeds() {
       source,
       sourceId: item.sourceId || source.code,
       publishedAt: item.publishedAtISO || new Date().toISOString(),
-      category: category.id,
+      category: category.category,
       categoryLabel: category.label
     };
   });
@@ -394,7 +401,7 @@ async function onRequestGetLegacy({ request, env, data }) {
             source: { code: feed.code, name: feed.name },
             sourceId: feed.id,
             publishedAt: item.pubDate || item.updated || new Date().toISOString(),
-            category: category.id,
+            category: category.category,
             categoryLabel: category.label
           });
         });

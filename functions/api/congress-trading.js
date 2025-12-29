@@ -41,12 +41,14 @@ async function fetchCongress() {
   const res = await safeFetchJson(SOURCE_URL, { userAgent: "RubikVault/1.0" });
   if (!res.ok || !Array.isArray(res.json)) {
     const code =
-      res.error === "SCHEMA_INVALID" || res.error === "HTML_RESPONSE"
-        ? "SCHEMA_INVALID"
-        : "UPSTREAM_5XX";
+      res.status === 403
+        ? "UPSTREAM_403"
+        : res.error === "SCHEMA_INVALID" || res.error === "HTML_RESPONSE"
+          ? "SCHEMA_INVALID"
+          : "UPSTREAM_5XX";
     return {
       ok: false,
-      error: { code, message: "No upstream data", details: { status: res.status ?? null } }
+      error: { code, message: code === "UPSTREAM_403" ? "Upstream returned 403" : "No upstream data", details: { status: res.status ?? null } }
     };
   }
   const now = Date.now();
@@ -141,7 +143,7 @@ export async function onRequestGet(context) {
       traceId,
       data: emptyPayload,
       cache: { hit: false, ttl: 0, layer: "none" },
-      upstream: { url: SOURCE_URL, status: null, snippet: swr.error?.snippet || "" },
+      upstream: { url: SOURCE_URL, status: swr.error?.details?.status ?? null, snippet: swr.error?.snippet || "" },
       error: swr.error || { code: "UPSTREAM_5XX", message: "No data", details: {} },
       cacheStatus: "ERROR",
       status: 200
