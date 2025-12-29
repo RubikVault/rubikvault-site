@@ -11,7 +11,7 @@ Open: http://127.0.0.1:8788
 
 KV MODES
 
-Mode 1: Ephemeral local KV (fastest, cache resets every run)
+Mode 1: Ephemeral local KV (cache resets every run)
 npx wrangler pages dev public --ip 127.0.0.1 --port 8788 --kv RV_KV --compatibility-date=2025-12-29 --inspector-port 0
 
 Mode 2: Persistent local KV (recommended)
@@ -37,9 +37,10 @@ npx wrangler pages dev public --ip 127.0.0.1 --port 8790 --kv RV_KV --compatibil
 
 Stop stuck wrangler:
 pkill -SIGTERM wrangler || true
+pkill -f workerd || true
 
 TESTING ENDPOINTS
-curl --max-time 5 -i http://127.0.0.1:8788/api/news
+curl --max-time 12 -i http://127.0.0.1:8788/api/news
 
 With jq:
 curl -s http://127.0.0.1:8788/api/news | jq '{ok, feature, dataQuality, error}'
@@ -47,7 +48,8 @@ curl -s http://127.0.0.1:8788/api/news | jq '{ok, feature, dataQuality, error}'
 Batch test:
 for p in news hype-divergence congress-trading breakout-energy volume-anomaly market-regime; do
   echo "== /api/$p =="
-  curl -s --max-time 8 "http://127.0.0.1:8788/api/$p" | jq -r '.ok, (.error.code // "none"), (.dataQuality.status // .dataQuality // "n/a")'
+  RESP="$(curl -s --max-time 25 "http://127.0.0.1:8788/api/$p")"
+  echo "$RESP" | jq -r '.ok, (.error.code // "none"), (.data.dataQuality // .dataQuality // "n/a")' 2>/dev/null || echo "NON_JSON_OR_PARSE_FAIL"
 done
 
 EXPECTED:
@@ -57,9 +59,10 @@ EXPECTED:
 DASHBOARD BINDINGS (PREVIEW + PROD)
 Cloudflare Dashboard -> Pages -> rubikvault-site -> Settings -> Functions -> Bindings
 
-Add:
+Add binding:
 Variable name: RV_KV
-KV namespace: select existing namespace
+Type: KV namespace
+Select existing namespace
 Apply to Preview AND Production
 
 END OF FILE
