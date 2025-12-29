@@ -1,25 +1,4 @@
-export function calculateConfidence(availableSignals, totalSignals) {
-  if (!totalSignals) return 0;
-  const raw = availableSignals / totalSignals;
-  if (!Number.isFinite(raw)) return 0;
-  return Math.max(0, Math.min(1, raw));
-}
-
-export function normalizeReasons(reasons) {
-  if (!Array.isArray(reasons)) return [];
-  return reasons
-    .map((reason) => String(reason || "").trim())
-    .filter(Boolean);
-}
-
-export function resolveDataQuality({ ok, isStale, partial, hasData }) {
-  if (!ok || !hasData) return "NO_DATA";
-  if (isStale) return "STALE";
-  if (partial) return "PARTIAL";
-  return "LIVE";
-}
-
-function isEmptyPayloadData(value) {
+function isEmptyData(value) {
   if (value === null || value === undefined) return true;
   if (Array.isArray(value)) return value.length === 0;
   if (typeof value === "object") return Object.keys(value).length === 0;
@@ -34,7 +13,6 @@ function normalizeDataQuality(input, { ok, isStale, error, data, partial } = {})
       missingFields: input.missingFields || []
     };
   }
-
   if (typeof input === "string") {
     if (input === "LIVE") return { status: "LIVE", reason: "LIVE", missingFields: [] };
     if (input === "STALE") return { status: "PARTIAL", reason: "STALE", missingFields: [] };
@@ -42,19 +20,12 @@ function normalizeDataQuality(input, { ok, isStale, error, data, partial } = {})
     if (input === "NO_DATA") return { status: "PARTIAL", reason: "NO_DATA", missingFields: [] };
     return { status: ok ? "PARTIAL" : "FAIL", reason: input, missingFields: [] };
   }
-
   if (!ok) {
-    return {
-      status: "FAIL",
-      reason: error?.code || "FAIL",
-      missingFields: []
-    };
+    return { status: "FAIL", reason: error?.code || "FAIL", missingFields: [] };
   }
-
-  if (isEmptyPayloadData(data)) {
+  if (isEmptyData(data)) {
     return { status: "PARTIAL", reason: "NO_DATA", missingFields: [] };
   }
-
   if (isStale) return { status: "PARTIAL", reason: "STALE", missingFields: [] };
   if (partial) return { status: "PARTIAL", reason: "PARTIAL", missingFields: [] };
   return { status: "LIVE", reason: "LIVE", missingFields: [] };
@@ -104,36 +75,24 @@ export function normalizeResponse(raw, defaults = {}) {
     rateLimit,
     dataQuality,
     data,
-    error
+    error,
+    isStale: Boolean(payload.isStale)
   };
 }
 
-export function buildFeaturePayload({
-  feature,
-  traceId,
-  source,
-  updatedAt,
-  data,
-  definitions,
-  reasons,
-  confidence,
-  dataQuality
-}) {
-  return {
-    feature,
-    traceId,
-    updatedAt: updatedAt || new Date().toISOString(),
-    source: source || "unknown",
-    dataQuality: dataQuality || "NO_DATA",
-    confidence: Number.isFinite(confidence) ? confidence : 0,
-    definitions: definitions || {},
-    reasons: normalizeReasons(reasons),
-    data: data || {}
-  };
+export function unwrapFeatureData(envelope) {
+  const meta = envelope?.data || {};
+  const data = meta?.data && typeof meta.data === "object" ? meta.data : meta;
+  return { meta, data };
 }
 
-export function withReason(list, code) {
-  const next = Array.isArray(list) ? list.slice() : [];
-  if (code) next.push(code);
-  return next;
+export function formatMetaLines({ meta, envelope, where = "Pages Function" }) {
+  return `
+    <div class="rv-native-note">Updated: ${meta.updatedAt || envelope.ts || "N/A"}</div>
+    <div class="rv-native-note">Source: ${meta.source || "N/A"}</div>
+    <div class="rv-native-note">Trace: ${envelope.traceId || "N/A"}</div>
+    <div class="rv-native-note">Cache: ${(envelope.cache?.layer || "none").toUpperCase()} (${envelope.cache?.ttl ?? 0}s)</div>
+    <div class="rv-native-note">Upstream: ${envelope.upstream?.status ?? "—"}</div>
+    <div class="rv-native-note">Where: ${where}</div>
+  `;
 }

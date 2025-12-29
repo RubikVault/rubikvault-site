@@ -107,10 +107,23 @@ async function fetchVolumeAnomaly(env) {
   });
 
   if (!anomalies.length) {
-    return {
-      ok: false,
-      error: { code: "UPSTREAM_5XX", message: "No volume data", details: { missing } }
-    };
+    const payload = buildFeaturePayload({
+      feature: FEATURE_ID,
+      traceId: "",
+      source: "stooq",
+      updatedAt: new Date().toISOString(),
+      dataQuality: resolveDataQuality({
+        ok: true,
+        isStale: false,
+        partial: true,
+        hasData: false
+      }),
+      confidence: 0,
+      definitions: DEFINITIONS,
+      reasons: ["NO_DATA"],
+      data: { signals: [], missingSymbols: missing }
+    });
+    return { ok: true, data: payload };
   }
 
   const sorted = anomalies.sort((a, b) => (b.score ?? 0) - (a.score ?? 0)).slice(0, 5);
@@ -156,17 +169,27 @@ export async function onRequestGet(context) {
 
   const payload = swr.value?.data || swr.value || null;
   if (!payload) {
+    const emptyPayload = buildFeaturePayload({
+      feature: FEATURE_ID,
+      traceId: "",
+      source: "stooq",
+      updatedAt: new Date().toISOString(),
+      dataQuality: resolveDataQuality({
+        ok: true,
+        isStale: false,
+        partial: true,
+        hasData: false
+      }),
+      confidence: 0,
+      definitions: DEFINITIONS,
+      reasons: ["NO_DATA"],
+      data: { signals: [], missingSymbols: [] }
+    });
     const response = makeResponse({
-      ok: false,
+      ok: true,
       feature: FEATURE_ID,
       traceId,
-      data: {
-        dataQuality: "NO_DATA",
-        updatedAt: new Date().toISOString(),
-        source: "stooq",
-        traceId,
-        reasons: ["NO_DATA"]
-      },
+      data: emptyPayload,
       cache: { hit: false, ttl: 0, layer: "none" },
       upstream: { url: "stooq", status: null, snippet: swr.error?.snippet || "" },
       error: swr.error || { code: "UPSTREAM_5XX", message: "No data", details: {} },

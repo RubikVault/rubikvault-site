@@ -289,8 +289,9 @@ export async function onRequestGet({ request, env, data, waitUntil }) {
   }
 
   const noItems = dataPayload.items.length === 0;
+  dataPayload.dataQuality = noItems ? "NO_DATA" : errors.length ? "PARTIAL" : "LIVE";
   const response = makeResponse({
-    ok: !noItems,
+    ok: true,
     feature: FEATURE_ID,
     traceId,
     data: dataPayload,
@@ -308,7 +309,7 @@ export async function onRequestGet({ request, env, data, waitUntil }) {
         }
       : noItems
         ? {
-            code: "UPSTREAM_5XX",
+            code: "NO_DATA",
             message: "No upstream data",
             details: {}
           }

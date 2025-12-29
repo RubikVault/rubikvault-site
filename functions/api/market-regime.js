@@ -61,11 +61,32 @@ async function fetchMarketRegime(env) {
 
   const hasAnyData = Boolean(metrics.spy || metrics.qqq || metrics.iwm || metrics.vix);
   if (!hasAnyData) {
-    return {
-      ok: false,
-      error: { code: "UPSTREAM_5XX", message: "No upstream data", details: {} },
-      data: null
-    };
+    const payload = buildFeaturePayload({
+      feature: FEATURE_ID,
+      traceId: "",
+      source: "stooq",
+      updatedAt: new Date().toISOString(),
+      dataQuality: resolveDataQuality({
+        ok: true,
+        isStale: false,
+        partial: true,
+        hasData: false
+      }),
+      confidence: 0,
+      definitions: DEFINITIONS,
+      reasons: ["NO_DATA"],
+      data: {
+        riskOnScore: null,
+        label: "NEUTRAL",
+        vixProxy: false,
+        spy: { close: null, sma50: null, r1d: null, r5d: null },
+        qqq: { r5d: null },
+        iwm: { r5d: null },
+        vix: { value: null, change5d: null },
+        yields: { tenTwo: null, updatedAt: null }
+      }
+    });
+    return { ok: true, data: payload };
   }
 
   const reasons = [];
@@ -220,17 +241,36 @@ export async function onRequestGet(context) {
 
   const payload = swr.value?.data || swr.value || null;
   if (!payload) {
+    const emptyPayload = buildFeaturePayload({
+      feature: FEATURE_ID,
+      traceId: "",
+      source: "stooq",
+      updatedAt: new Date().toISOString(),
+      dataQuality: resolveDataQuality({
+        ok: true,
+        isStale: false,
+        partial: true,
+        hasData: false
+      }),
+      confidence: 0,
+      definitions: DEFINITIONS,
+      reasons: ["NO_DATA"],
+      data: {
+        riskOnScore: null,
+        label: "NEUTRAL",
+        vixProxy: false,
+        spy: { close: null, sma50: null, r1d: null, r5d: null },
+        qqq: { r5d: null },
+        iwm: { r5d: null },
+        vix: { value: null, change5d: null },
+        yields: { tenTwo: null, updatedAt: null }
+      }
+    });
     const response = makeResponse({
-      ok: false,
+      ok: true,
       feature: FEATURE_ID,
       traceId,
-      data: {
-        dataQuality: "NO_DATA",
-        updatedAt: new Date().toISOString(),
-        source: "stooq",
-        traceId,
-        reasons: ["NO_DATA"]
-      },
+      data: emptyPayload,
       cache: { hit: false, ttl: 0, layer: "none" },
       upstream: { url: "stooq", status: null, snippet: swr.error?.snippet || "" },
       error: swr.error || { code: "UPSTREAM_5XX", message: "No data", details: {} },

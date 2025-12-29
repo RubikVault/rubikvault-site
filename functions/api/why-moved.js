@@ -148,10 +148,28 @@ async function fetchWhyMoved(env) {
   });
 
   if (!movers.length) {
-    return {
-      ok: false,
-      error: { code: "UPSTREAM_5XX", message: "No movers data", details: { missing } }
-    };
+    const payload = buildFeaturePayload({
+      feature: FEATURE_ID,
+      traceId: "",
+      source: "stooq",
+      updatedAt: new Date().toISOString(),
+      dataQuality: resolveDataQuality({
+        ok: true,
+        isStale: false,
+        partial: true,
+        hasData: false
+      }),
+      confidence: 0,
+      definitions: DEFINITIONS,
+      reasons: ["NO_DATA"],
+      data: {
+        movers: [],
+        items: [],
+        spyMove,
+        missingSymbols: missing
+      }
+    });
+    return { ok: true, data: payload };
   }
 
   const sorted = [...movers].sort((a, b) => Math.abs(b.changePercent ?? 0) - Math.abs(a.changePercent ?? 0));
@@ -191,6 +209,7 @@ async function fetchWhyMoved(env) {
     reasons: [],
     data: {
       movers: top,
+      items: top,
       spyMove,
       missingSymbols: missing
     }
@@ -217,17 +236,27 @@ export async function onRequestGet(context) {
 
   const payload = swr.value?.data || swr.value || null;
   if (!payload) {
+    const emptyPayload = buildFeaturePayload({
+      feature: FEATURE_ID,
+      traceId: "",
+      source: "stooq",
+      updatedAt: new Date().toISOString(),
+      dataQuality: resolveDataQuality({
+        ok: true,
+        isStale: false,
+        partial: true,
+        hasData: false
+      }),
+      confidence: 0,
+      definitions: DEFINITIONS,
+      reasons: ["NO_DATA"],
+      data: { movers: [], items: [], spyMove: null, missingSymbols: [] }
+    });
     const response = makeResponse({
-      ok: false,
+      ok: true,
       feature: FEATURE_ID,
       traceId,
-      data: {
-        dataQuality: "NO_DATA",
-        updatedAt: new Date().toISOString(),
-        source: "stooq",
-        traceId,
-        reasons: ["NO_DATA"]
-      },
+      data: emptyPayload,
       cache: { hit: false, ttl: 0, layer: "none" },
       upstream: { url: "stooq", status: null, snippet: swr.error?.snippet || "" },
       error: swr.error || { code: "UPSTREAM_5XX", message: "No data", details: {} },

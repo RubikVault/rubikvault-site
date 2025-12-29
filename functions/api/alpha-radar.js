@@ -303,9 +303,9 @@ function daysToEarnings(dateStr) {
 function evaluateAlphaRadarSignal(input) {
   const reasonsSetup = [];
   const reasonsTrig = [];
+  const hardTriggers = [];
   let setupScore = 0;
   let triggerScore = 0;
-  let hardTrigCount = 0;
 
   const setupGate =
     (typeof input.rsi14 === "number" && input.rsi14 < 35) ||
@@ -373,7 +373,7 @@ function evaluateAlphaRadarSignal(input) {
   if (emaReclaim) {
     triggerScore += 15;
     reasonsTrig.push("EMA21_RECLAIM");
-    hardTrigCount += 1;
+    hardTriggers.push("EMA21_RECLAIM");
   }
 
   const higherLow =
@@ -386,7 +386,7 @@ function evaluateAlphaRadarSignal(input) {
   if (higherLow) {
     triggerScore += 25;
     reasonsTrig.push("HIGHER_LOW_FT");
-    hardTrigCount += 1;
+    hardTriggers.push("HIGHER_LOW_FT");
   }
 
   const bos =
@@ -396,7 +396,7 @@ function evaluateAlphaRadarSignal(input) {
   if (bos) {
     triggerScore += 20;
     reasonsTrig.push("BOS_BREAK");
-    hardTrigCount += 1;
+    hardTriggers.push("BOS_BREAK");
   }
 
   if (typeof input.vol === "number" && typeof input.vol20 === "number") {
@@ -443,6 +443,8 @@ function evaluateAlphaRadarSignal(input) {
     missingFields: input.missingFields || [],
     isPartial: input.barsUsed < 220 || (input.missingFields || []).length > 0
   };
+  dataQuality.status = dataQuality.isPartial ? "PARTIAL" : "LIVE";
+  dataQuality.reason = dataQuality.isPartial ? "PARTIAL_DATA" : "LIVE";
 
   if (typeof input.daysToEarnings === "number" && input.daysToEarnings <= 3) {
     totalScore = Math.min(totalScore, 69);
@@ -464,6 +466,7 @@ function evaluateAlphaRadarSignal(input) {
     reasonsTrig.push("WEAK_RECLAIM_NO_VOL");
   }
 
+  const hardTrigCount = hardTriggers.length;
   let label = "IGNORE";
   if (totalScore >= 70 && hardTrigCount >= 1 && !dataQuality.isPartial && !emaOnlyNeedsVol) {
     label = "BUY";
@@ -483,6 +486,7 @@ function evaluateAlphaRadarSignal(input) {
       close: input.close,
       closePrev: input.closePrev,
       open: input.open,
+      low: input.low,
       rsi14: input.rsi14,
       rsiPrev: input.rsiPrev,
       bbPctB: input.bbPctB,
@@ -507,12 +511,14 @@ function evaluateAlphaRadarSignal(input) {
       bos,
       setupGate,
       hardTrigCount,
+      hardTriggers,
       setupScore,
       triggerScore,
       totalScore,
       label,
       reasonsSetup,
-      reasonsTrig
+      reasonsTrig,
+      dataQuality
     }
   };
 }
@@ -522,6 +528,7 @@ function scorePick(symbol, name, series, earningsDate) {
   const close = closes[closes.length - 1];
   const closePrev = closes[closes.length - 2] ?? null;
   const open = opens?.[opens.length - 1] ?? null;
+  const low = lows?.[lows.length - 1] ?? null;
   const latestVolume = volumes[volumes.length - 1] ?? null;
   const barsUsed = closes.length;
 
@@ -553,6 +560,7 @@ function scorePick(symbol, name, series, earningsDate) {
     close,
     closePrev,
     open,
+    low,
     rsi14,
     rsiPrev,
     bbPctB: bb?.percentB ?? null,
@@ -582,6 +590,7 @@ function scorePick(symbol, name, series, earningsDate) {
     close,
     closePrev,
     open,
+    low,
     rsi14,
     rsiPrev,
     bbPctB: bb?.percentB ?? null,

@@ -1,6 +1,11 @@
 import { fetchJSON, getBindingHint } from "./utils/api.js";
 import { getOrFetch } from "./utils/store.js";
 import { resolveWithShadow } from "./utils/resilience.js";
+import {
+  normalizeResponse,
+  unwrapFeatureData,
+  formatMetaLines
+} from "./utils/feature-contract.js";
 
 function formatNumber(value, options = {}) {
   if (value === null || value === undefined || Number.isNaN(value)) return "N/A";
@@ -19,35 +24,29 @@ function render(root, payload, logger, featureId) {
       !value?.ok || typeof value?.data?.data?.riskOnScore !== "number",
     reason: "STALE_FALLBACK"
   });
-  const data = resolved?.data?.data || {};
-  const meta = resolved?.data || {};
+  const envelope = normalizeResponse(resolved, { feature: featureId });
+  const { meta, data } = unwrapFeatureData(envelope);
   const reasons = meta.reasons || [];
+  const quality = envelope.dataQuality || { status: "PARTIAL", reason: "NO_DATA" };
 
-  if (!resolved?.ok) {
-    const errorMessage = resolved?.error?.message || "API error";
-    const errorCode = resolved?.error?.code || "";
-    const fixHint = errorCode === "BINDING_MISSING" ? getBindingHint(resolved) : "";
+  if (!envelope?.ok) {
+    const errorMessage = envelope?.error?.message || "API error";
+    const errorCode = envelope?.error?.code || "";
+    const fixHint = errorCode === "BINDING_MISSING" ? getBindingHint(envelope) : "";
     root.innerHTML = `
       <div class="rv-native-error">
         Market Regime konnte nicht geladen werden.<br />
         <span>${errorMessage}</span>
         ${fixHint ? `<div class="rv-native-note">${fixHint}</div>` : ""}
       </div>
+      ${formatMetaLines({ meta, envelope })}
     `;
     logger?.setStatus("FAIL", errorCode || "API error");
     return;
   }
 
-  if (typeof data.riskOnScore !== "number" && !data.label) {
-    root.innerHTML = `
-      <div class="rv-native-empty">Keine Regime-Daten verfügbar.</div>
-    `;
-    logger?.setStatus("PARTIAL", "No data");
-    return;
-  }
-
   root.innerHTML = `
-    <div class="rv-native-note">Data Quality: ${meta.dataQuality || "N/A"}</div>
+    <div class="rv-native-note">Data Quality: ${quality.status} · ${quality.reason}</div>
     <div class="rv-native-grid rv-compact">
       <div class="rv-native-kpi">
         <div class="label">Risk-On Score</div>
@@ -79,14 +78,15 @@ function render(root, payload, logger, featureId) {
       </tbody>
     </table>
     ${reasons.length ? `<div class="rv-native-note">Reasons: ${reasons.join(", ")}</div>` : ""}
+    ${formatMetaLines({ meta, envelope })}
   `;
 
-  const status = resolved?.isStale || meta.dataQuality === "PARTIAL" ? "PARTIAL" : "OK";
-  logger?.setStatus(status, meta.dataQuality || "LIVE");
+  const status = envelope?.isStale || quality.status !== "LIVE" ? "PARTIAL" : "OK";
+  logger?.setStatus(status, quality.reason || quality.status);
   logger?.setMeta({
-    updatedAt: meta.updatedAt || resolved?.ts,
+    updatedAt: meta.updatedAt || envelope?.ts,
     source: meta.source || "stooq",
-    isStale: resolved?.isStale
+    isStale: envelope?.isStale
   });
 }
 

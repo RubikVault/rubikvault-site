@@ -47,7 +47,23 @@ async function fetchEarningsReality(env) {
     .slice(0, 8);
 
   if (!upcoming.length) {
-    return { ok: false, error: { code: "NO_DATA", message: "No upcoming earnings", details: {} } };
+    const payload = buildFeaturePayload({
+      feature: FEATURE_ID,
+      traceId: "",
+      source: "stooq",
+      updatedAt: new Date().toISOString(),
+      dataQuality: resolveDataQuality({
+        ok: true,
+        isStale: false,
+        partial: true,
+        hasData: false
+      }),
+      confidence: 0,
+      definitions: DEFINITIONS,
+      reasons: ["NO_DATA"],
+      data: { items: [], missingSymbols: [] }
+    });
+    return { ok: true, data: payload };
   }
 
   const results = await Promise.allSettled(
@@ -86,7 +102,23 @@ async function fetchEarningsReality(env) {
   });
 
   if (!rows.length) {
-    return { ok: false, error: { code: "NO_DATA", message: "No price history", details: { missing } } };
+    const payload = buildFeaturePayload({
+      feature: FEATURE_ID,
+      traceId: "",
+      source: "stooq",
+      updatedAt: new Date().toISOString(),
+      dataQuality: resolveDataQuality({
+        ok: true,
+        isStale: false,
+        partial: true,
+        hasData: false
+      }),
+      confidence: 0,
+      definitions: DEFINITIONS,
+      reasons: ["NO_DATA"],
+      data: { items: [], missingSymbols: missing }
+    });
+    return { ok: true, data: payload };
   }
 
   const payload = buildFeaturePayload({
@@ -130,11 +162,27 @@ export async function onRequestGet(context) {
 
   const payload = swr.value?.data || swr.value || null;
   if (!payload) {
+    const emptyPayload = buildFeaturePayload({
+      feature: FEATURE_ID,
+      traceId: "",
+      source: "stooq",
+      updatedAt: new Date().toISOString(),
+      dataQuality: resolveDataQuality({
+        ok: true,
+        isStale: false,
+        partial: true,
+        hasData: false
+      }),
+      confidence: 0,
+      definitions: DEFINITIONS,
+      reasons: ["NO_DATA"],
+      data: { items: [], missingSymbols: [] }
+    });
     const response = makeResponse({
-      ok: false,
+      ok: true,
       feature: FEATURE_ID,
       traceId,
-      data: { dataQuality: "NO_DATA", updatedAt: new Date().toISOString(), source: "stooq", traceId, reasons: ["NO_DATA"] },
+      data: emptyPayload,
       cache: { hit: false, ttl: 0, layer: "none" },
       upstream: { url: "stooq", status: null, snippet: swr.error?.snippet || "" },
       error: swr.error || { code: "NO_DATA", message: "No data", details: {} },

@@ -222,10 +222,31 @@ export async function onRequestGet(context) {
 
   const payload = swr.value?.data || swr.value || null;
   if (!payload) {
+    const emptyPayload = {
+      updatedAt: new Date().toISOString(),
+      yields: {
+        "1m": null,
+        "3m": null,
+        "6m": null,
+        "1y": null,
+        "2y": null,
+        "3y": null,
+        "5y": null,
+        "7y": null,
+        "10y": null,
+        "20y": null,
+        "30y": null
+      },
+      spreads: { tenTwo: null, tenThreeMonth: null },
+      inversion: { tenTwo: null, tenThreeMonth: null },
+      source: "US Treasury",
+      dataQuality: "NO_DATA"
+    };
     const response = makeResponse({
-      ok: false,
+      ok: true,
       feature: FEATURE_ID,
       traceId,
+      data: emptyPayload,
       cache: { hit: false, ttl: 0, layer: "none" },
       upstream: { url: `${TREASURY_URL} | ${TREASURY_CSV_URL}`, status: null, snippet: swr.error?.snippet || "" },
       error: {
@@ -233,7 +254,8 @@ export async function onRequestGet(context) {
         message: "No upstream data",
         details: {}
       },
-      cacheStatus: "ERROR"
+      cacheStatus: "ERROR",
+      status: 200
     });
     logServer({
       feature: FEATURE_ID,

@@ -55,19 +55,37 @@ function computeZScore(current, previous) {
 }
 
 async function fetchHypeData(env) {
-  const [feed1, feed2] = await Promise.allSettled(
+  const results = await Promise.allSettled(
     REDDIT_FEEDS.map((url) => safeFetchJson(url, { userAgent: "RubikVault/1.0" }))
   );
 
   const titles = [];
   const errors = [];
-  [feed1, feed2].forEach((result, idx) => {
+  let upstreamSnippet = "";
+  results.forEach((result, idx) => {
     if (result.status !== "fulfilled" || !result.value?.ok || !result.value?.json) {
-      errors.push({ source: REDDIT_FEEDS[idx], code: result.value?.error || "UPSTREAM_5XX" });
+      const errorCode = result.value?.error || "UPSTREAM_5XX";
+      if (!upstreamSnippet) upstreamSnippet = result.value?.snippet || "";
+      errors.push({ source: REDDIT_FEEDS[idx], code: errorCode, status: result.value?.status ?? null });
       return;
     }
     titles.push(...extractTitles(result.value.json));
   });
+
+  if (!titles.length) {
+    const hasSchemaIssue = errors.some(
+      (entry) => entry.code === "SCHEMA_INVALID" || entry.code === "HTML_RESPONSE"
+    );
+    return {
+      ok: false,
+      error: {
+        code: hasSchemaIssue ? "SCHEMA_INVALID" : "UPSTREAM_5XX",
+        message: "No upstream data",
+        details: { errors }
+      },
+      snippet: upstreamSnippet
+    };
+  }
 
   const previousCounts = (await kvGetJson(env, COUNTS_KEY))?.value?.counts || {};
   const signals = [];
@@ -153,17 +171,34 @@ export async function onRequestGet(context) {
 
   const payload = swr.value?.data || swr.value || null;
   if (!payload) {
+    const isSchemaInvalid = swr.error?.code === "SCHEMA_INVALID";
+    const emptyPayload = buildFeaturePayload({
+      feature: FEATURE_ID,
+      traceId: "",
+      source: "reddit",
+      updatedAt: new Date().toISOString(),
+      dataQuality: isSchemaInvalid
+        ? "SCHEMA_INVALID"
+        : resolveDataQuality({
+            ok: true,
+            isStale: false,
+            partial: true,
+            hasData: false
+          }),
+      confidence: 0,
+      definitions: DEFINITIONS,
+      reasons: [isSchemaInvalid ? "SCHEMA_INVALID" : "NO_DATA"],
+      data: {
+        signals: [],
+        errors: swr.error?.details?.errors || [],
+        missingSymbols: []
+      }
+    });
     const response = makeResponse({
-      ok: false,
+      ok: !isSchemaInvalid,
       feature: FEATURE_ID,
       traceId,
-      data: {
-        dataQuality: "NO_DATA",
-        updatedAt: new Date().toISOString(),
-        source: "reddit",
-        traceId,
-        reasons: ["NO_DATA"]
-      },
+      data: emptyPayload,
       cache: { hit: false, ttl: 0, layer: "none" },
       upstream: { url: "reddit", status: null, snippet: swr.error?.snippet || "" },
       error: swr.error || { code: "UPSTREAM_5XX", message: "No data", details: {} },

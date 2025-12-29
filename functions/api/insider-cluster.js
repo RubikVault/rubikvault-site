@@ -57,10 +57,17 @@ function parseFeed(xml) {
 }
 
 async function fetchInsider(env) {
-  const res = await safeFetchText(SEC_FEED, { userAgent: env.USER_AGENT || "RubikVault/1.0" });
+  const res = await safeFetchText(SEC_FEED, {
+    userAgent: env.USER_AGENT || "RubikVault/1.0",
+    headers: { Accept: "application/atom+xml, application/xml;q=0.9,*/*;q=0.8" }
+  });
   const text = res.text || "";
   if (!res.ok || isHtmlLike(text)) {
-    return { ok: false, error: { code: "UPSTREAM_5XX", message: "SEC feed unavailable", details: {} }, snippet: safeSnippet(text) };
+    return {
+      ok: false,
+      error: { code: "UPSTREAM_5XX", message: "SEC feed unavailable", details: { status: res.status ?? null } },
+      snippet: safeSnippet(text)
+    };
   }
   const entries = parseFeed(text);
   const now = Date.now();
@@ -108,7 +115,8 @@ async function fetchInsider(env) {
     definitions: DEFINITIONS,
     reasons: ["SEC_FEED_LIMITED"],
     data: {
-      clusters
+      clusters,
+      items: clusters
     }
   });
 
@@ -133,11 +141,27 @@ export async function onRequestGet(context) {
 
   const payload = swr.value?.data || swr.value || null;
   if (!payload) {
+    const emptyPayload = buildFeaturePayload({
+      feature: FEATURE_ID,
+      traceId: "",
+      source: "sec-edgar",
+      updatedAt: new Date().toISOString(),
+      dataQuality: resolveDataQuality({
+        ok: true,
+        isStale: false,
+        partial: true,
+        hasData: false
+      }),
+      confidence: 0,
+      definitions: DEFINITIONS,
+      reasons: ["NO_DATA"],
+      data: { clusters: [], items: [] }
+    });
     const response = makeResponse({
-      ok: false,
+      ok: true,
       feature: FEATURE_ID,
       traceId,
-      data: { dataQuality: "NO_DATA", updatedAt: new Date().toISOString(), source: "sec-edgar", traceId, reasons: ["NO_DATA"] },
+      data: emptyPayload,
       cache: { hit: false, ttl: 0, layer: "none" },
       upstream: { url: SEC_FEED, status: null, snippet: swr.error?.snippet || "" },
       error: swr.error || { code: "UPSTREAM_5XX", message: "No data", details: {} },

@@ -50,7 +50,29 @@ async function fetchAlphaPerformance(env) {
   const symbols = picks?.top?.map((pick) => pick.symbol).filter(Boolean) || [];
 
   if (!symbols.length) {
-    return { ok: false, error: { code: "NO_DATA", message: "No Alpha Radar picks", details: {} } };
+    const payload = buildFeaturePayload({
+      feature: FEATURE_ID,
+      traceId: "",
+      source: "stooq",
+      updatedAt: new Date().toISOString(),
+      dataQuality: resolveDataQuality({
+        ok: true,
+        isStale: false,
+        partial: true,
+        hasData: false
+      }),
+      confidence: 0,
+      definitions: DEFINITIONS,
+      reasons: ["NO_DATA"],
+      data: {
+        summary: null,
+        picks: [],
+        outcomes: [],
+        missingSymbols: [],
+        methodology: "Proxy using 20D return vs +5%/-3% thresholds"
+      }
+    });
+    return { ok: true, data: payload };
   }
 
   const results = await Promise.allSettled(
@@ -78,7 +100,29 @@ async function fetchAlphaPerformance(env) {
   });
 
   if (!outcomes.length) {
-    return { ok: false, error: { code: "NO_DATA", message: "No price history", details: { missing } } };
+    const payload = buildFeaturePayload({
+      feature: FEATURE_ID,
+      traceId: "",
+      source: "stooq",
+      updatedAt: new Date().toISOString(),
+      dataQuality: resolveDataQuality({
+        ok: true,
+        isStale: false,
+        partial: true,
+        hasData: false
+      }),
+      confidence: 0,
+      definitions: DEFINITIONS,
+      reasons: ["NO_DATA"],
+      data: {
+        summary: null,
+        picks: [],
+        outcomes: [],
+        missingSymbols: missing,
+        methodology: "Proxy using 20D return vs +5%/-3% thresholds"
+      }
+    });
+    return { ok: true, data: payload };
   }
 
   const stats = computeStats(outcomes);
@@ -131,11 +175,27 @@ export async function onRequestGet(context) {
 
   const payload = swr.value?.data || swr.value || null;
   if (!payload) {
+    const emptyPayload = buildFeaturePayload({
+      feature: FEATURE_ID,
+      traceId: "",
+      source: "stooq",
+      updatedAt: new Date().toISOString(),
+      dataQuality: resolveDataQuality({
+        ok: true,
+        isStale: false,
+        partial: true,
+        hasData: false
+      }),
+      confidence: 0,
+      definitions: DEFINITIONS,
+      reasons: ["NO_DATA"],
+      data: { summary: null, picks: [], outcomes: [], missingSymbols: [] }
+    });
     const response = makeResponse({
-      ok: false,
+      ok: true,
       feature: FEATURE_ID,
       traceId,
-      data: { dataQuality: "NO_DATA", updatedAt: new Date().toISOString(), source: "stooq", traceId, reasons: ["NO_DATA"] },
+      data: emptyPayload,
       cache: { hit: false, ttl: 0, layer: "none" },
       upstream: { url: "stooq", status: null, snippet: swr.error?.snippet || "" },
       error: swr.error || { code: "NO_DATA", message: "No data", details: {} },

@@ -1,6 +1,11 @@
 import { fetchJSON, getBindingHint } from "./utils/api.js";
 import { getOrFetch } from "./utils/store.js";
 import { resolveWithShadow } from "./utils/resilience.js";
+import {
+  normalizeResponse,
+  unwrapFeatureData,
+  formatMetaLines
+} from "./utils/feature-contract.js";
 
 function render(root, payload, logger, featureId) {
   const resolved = resolveWithShadow(featureId, payload, {
@@ -8,20 +13,22 @@ function render(root, payload, logger, featureId) {
     isMissing: (value) => !value?.ok || !(value?.data?.data?.signals || []).length,
     reason: "STALE_FALLBACK"
   });
-  const data = resolved?.data?.data || {};
-  const meta = resolved?.data || {};
-  const signals = data.signals || [];
+  const envelope = normalizeResponse(resolved, { feature: featureId });
+  const { meta, data } = unwrapFeatureData(envelope);
+  const signals = data.signals || data.items || [];
+  const quality = envelope.dataQuality || { status: "PARTIAL", reason: "NO_DATA" };
 
-  if (!resolved?.ok) {
-    const errorMessage = resolved?.error?.message || "API error";
-    const errorCode = resolved?.error?.code || "";
-    const fixHint = errorCode === "BINDING_MISSING" ? getBindingHint(resolved) : "";
+  if (!envelope?.ok) {
+    const errorMessage = envelope?.error?.message || "API error";
+    const errorCode = envelope?.error?.code || "";
+    const fixHint = errorCode === "BINDING_MISSING" ? getBindingHint(envelope) : "";
     root.innerHTML = `
       <div class="rv-native-error">
         Analyst Stampede konnte nicht geladen werden.<br />
         <span>${errorMessage}</span>
         ${fixHint ? `<div class="rv-native-note">${fixHint}</div>` : ""}
       </div>
+      ${formatMetaLines({ meta, envelope })}
     `;
     logger?.setStatus("FAIL", errorCode || "API error");
     return;
@@ -30,13 +37,14 @@ function render(root, payload, logger, featureId) {
   if (!signals.length) {
     root.innerHTML = `
       <div class="rv-native-empty">Keine Analysten-Signale verfügbar.</div>
+      ${formatMetaLines({ meta, envelope })}
     `;
-    logger?.setStatus("PARTIAL", "No data");
+    logger?.setStatus("PARTIAL", quality.reason || "NO_DATA");
     return;
   }
 
   root.innerHTML = `
-    <div class="rv-native-note">Data Quality: ${meta.dataQuality || "N/A"}</div>
+    <div class="rv-native-note">Data Quality: ${quality.status} · ${quality.reason}</div>
     <table class="rv-native-table rv-table--compact">
       <thead>
         <tr>
@@ -63,14 +71,15 @@ function render(root, payload, logger, featureId) {
           .join("")}
       </tbody>
     </table>
+    ${formatMetaLines({ meta, envelope })}
   `;
 
-  const status = resolved?.isStale || meta.dataQuality === "PARTIAL" ? "PARTIAL" : "OK";
-  logger?.setStatus(status, meta.dataQuality || "LIVE");
+  const status = envelope?.isStale || quality.status !== "LIVE" ? "PARTIAL" : "OK";
+  logger?.setStatus(status, quality.reason || quality.status);
   logger?.setMeta({
-    updatedAt: meta.updatedAt || resolved?.ts,
+    updatedAt: meta.updatedAt || envelope?.ts,
     source: meta.source || "finnhub",
-    isStale: resolved?.isStale
+    isStale: envelope?.isStale
   });
 }
 

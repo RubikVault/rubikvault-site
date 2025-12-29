@@ -40,7 +40,14 @@ function parseAmount(range) {
 async function fetchCongress() {
   const res = await safeFetchJson(SOURCE_URL, { userAgent: "RubikVault/1.0" });
   if (!res.ok || !Array.isArray(res.json)) {
-    return { ok: false, error: { code: res.error || "UPSTREAM_5XX", message: "No data", details: {} } };
+    const code =
+      res.error === "SCHEMA_INVALID" || res.error === "HTML_RESPONSE"
+        ? "SCHEMA_INVALID"
+        : "UPSTREAM_5XX";
+    return {
+      ok: false,
+      error: { code, message: "No upstream data", details: { status: res.status ?? null } }
+    };
   }
   const now = Date.now();
   const weekAgo = now - 7 * 24 * 60 * 60 * 1000;
@@ -82,7 +89,9 @@ async function fetchCongress() {
     definitions: DEFINITIONS,
     reasons: [],
     data: {
-      trades: filtered
+      trades: filtered,
+      items: filtered,
+      meta: { lastUpdated: new Date().toISOString() }
     }
   });
 
@@ -107,11 +116,30 @@ export async function onRequestGet(context) {
 
   const payload = swr.value?.data || swr.value || null;
   if (!payload) {
+    const isSchemaInvalid = swr.error?.code === "SCHEMA_INVALID";
+    const emptyPayload = buildFeaturePayload({
+      feature: FEATURE_ID,
+      traceId: "",
+      source: "house-stock-watcher",
+      updatedAt: new Date().toISOString(),
+      dataQuality: isSchemaInvalid
+        ? "SCHEMA_INVALID"
+        : resolveDataQuality({
+            ok: true,
+            isStale: false,
+            partial: true,
+            hasData: false
+          }),
+      confidence: 0,
+      definitions: DEFINITIONS,
+      reasons: [isSchemaInvalid ? "SCHEMA_INVALID" : "NO_DATA"],
+      data: { trades: [], items: [], meta: { lastUpdated: null } }
+    });
     const response = makeResponse({
-      ok: false,
+      ok: !isSchemaInvalid,
       feature: FEATURE_ID,
       traceId,
-      data: { dataQuality: "NO_DATA", updatedAt: new Date().toISOString(), source: "house-stock-watcher", traceId, reasons: ["NO_DATA"] },
+      data: emptyPayload,
       cache: { hit: false, ttl: 0, layer: "none" },
       upstream: { url: SOURCE_URL, status: null, snippet: swr.error?.snippet || "" },
       error: swr.error || { code: "UPSTREAM_5XX", message: "No data", details: {} },
