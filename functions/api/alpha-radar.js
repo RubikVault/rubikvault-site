@@ -26,7 +26,31 @@ const DEFINITIONS = {
   setupMax: 40,
   triggerMax: 60,
   buyThreshold: 70,
-  earningsRiskCutoffDays: 3
+  earningsRiskCutoffDays: 3,
+  setupReasons: [
+    "RSI_LT_25",
+    "RSI_LT_30",
+    "RSI_LT_35",
+    "BBPCTB_LT_005",
+    "BBPCTB_LT_015",
+    "NEAR_SMA200_1P",
+    "NEAR_SMA200_2P",
+    "NEAR_SMA200_3P",
+    "RVOL_GE_15",
+    "VOL_GE_12x",
+    "NO_EXTREME_FOUND"
+  ],
+  triggerReasons: [
+    "EMA21_RECLAIM",
+    "HIGHER_LOW_FT",
+    "BOS_BREAK",
+    "VOL_CONFIRM_12x",
+    "RSI_UPTURN",
+    "MACD_HIST_LESS_NEG",
+    "STOCHRSI_UPTURN",
+    "EARNINGS_RISK_CAP",
+    "WEAK_RECLAIM_NO_VOL"
+  ]
 };
 
 function parseNumber(value) {
@@ -39,23 +63,26 @@ function parseStooqCsv(text) {
   const lines = text.trim().split("\n");
   if (lines.length < 3) return null;
   const closes = [];
+  const opens = [];
   const highs = [];
   const lows = [];
   const volumes = [];
   for (let i = 1; i < lines.length; i += 1) {
     const parts = lines[i].split(",");
     if (parts.length < 6) continue;
+    const open = parseNumber(parts[1]);
     const high = parseNumber(parts[2]);
     const low = parseNumber(parts[3]);
     const close = parseNumber(parts[4]);
     const volume = parseNumber(parts[5]);
     if (close === null || high === null || low === null) continue;
+    opens.push(open);
     closes.push(close);
     highs.push(high);
     lows.push(low);
     volumes.push(volume ?? 0);
   }
-  return { closes, highs, lows, volumes };
+  return { opens, closes, highs, lows, volumes };
 }
 
 function sma(values, period) {
@@ -111,6 +138,57 @@ function rsi(values, period = 14) {
   return 100 - 100 / (1 + rs);
 }
 
+function rsiSeries(values, period = 14) {
+  if (values.length < period + 1) return [];
+  const output = new Array(values.length).fill(null);
+  let gains = 0;
+  let losses = 0;
+  for (let i = 1; i <= period; i += 1) {
+    const delta = values[i] - values[i - 1];
+    if (delta >= 0) gains += delta;
+    else losses -= delta;
+  }
+  let avgGain = gains / period;
+  let avgLoss = losses / period;
+  const firstRsi = avgLoss === 0 ? 100 : 100 - 100 / (1 + avgGain / avgLoss);
+  output[period] = firstRsi;
+  for (let i = period + 1; i < values.length; i += 1) {
+    const delta = values[i] - values[i - 1];
+    const gain = delta > 0 ? delta : 0;
+    const loss = delta < 0 ? -delta : 0;
+    avgGain = (avgGain * (period - 1) + gain) / period;
+    avgLoss = (avgLoss * (period - 1) + loss) / period;
+    if (avgLoss === 0) {
+      output[i] = 100;
+    } else {
+      const rs = avgGain / avgLoss;
+      output[i] = 100 - 100 / (1 + rs);
+    }
+  }
+  return output;
+}
+
+function stochRsiAt(series, index, period = 14) {
+  if (!Array.isArray(series) || index < 0) return null;
+  const start = Math.max(0, index - period + 1);
+  const window = series.slice(start, index + 1).filter((value) => typeof value === "number");
+  if (window.length < period) return null;
+  const min = Math.min(...window);
+  const max = Math.max(...window);
+  if (max === min) return 0;
+  const current = series[index];
+  if (typeof current !== "number") return null;
+  return ((current - min) / (max - min)) * 100;
+}
+
+function computeStochRsi(series, period = 14) {
+  const lastIndex = series.length - 1;
+  return {
+    value: stochRsiAt(series, lastIndex, period),
+    prev: stochRsiAt(series, lastIndex - 1, period)
+  };
+}
+
 function atr(highs, lows, closes, period = 14) {
   if (closes.length < period + 1) return null;
   const trs = [];
@@ -158,6 +236,52 @@ function macd(values) {
   return { macd: macdSeries[macdSeries.length - 1], signal: signalSeries[signalSeries.length - 1], hist, prevHist };
 }
 
+function pivotPoints(values, window = 2, lookback = 60, mode = "low") {
+  if (!Array.isArray(values) || values.length < window * 2 + 1) return [];
+  const points = [];
+  const start = Math.max(window, values.length - lookback);
+  const end = values.length - window;
+  for (let i = start; i < end; i += 1) {
+    const current = values[i];
+    if (typeof current !== "number") continue;
+    let isPivot = true;
+    for (let j = i - window; j <= i + window; j += 1) {
+      if (j === i) continue;
+      const compare = values[j];
+      if (typeof compare !== "number") continue;
+      if (mode === "low" && compare < current) {
+        isPivot = false;
+        break;
+      }
+      if (mode === "high" && compare > current) {
+        isPivot = false;
+        break;
+      }
+    }
+    if (isPivot) points.push({ index: i, value: current });
+  }
+  return points;
+}
+
+function findPivotLows(lows) {
+  const lowsList = pivotPoints(lows, 2, 80, "low");
+  const last = lowsList[lowsList.length - 1];
+  const prev = lowsList[lowsList.length - 2];
+  return {
+    pivotLow: last?.value ?? null,
+    pivotLowPrev: prev?.value ?? null
+  };
+}
+
+function findLastLowerHigh(highs) {
+  const highsList = pivotPoints(highs, 2, 80, "high");
+  if (highsList.length < 2) return null;
+  const last = highsList[highsList.length - 1];
+  const prev = highsList[highsList.length - 2];
+  if (last && prev && last.value < prev.value) return last.value;
+  return null;
+}
+
 function buildEarningsMap(cached) {
   const map = new Map();
   const items = cached?.value?.data?.items || [];
@@ -176,99 +300,345 @@ function daysToEarnings(dateStr) {
   return Math.ceil((target - now) / (24 * 60 * 60 * 1000));
 }
 
+function evaluateAlphaRadarSignal(input) {
+  const reasonsSetup = [];
+  const reasonsTrig = [];
+  let setupScore = 0;
+  let triggerScore = 0;
+  let hardTrigCount = 0;
+
+  const setupGate =
+    (typeof input.rsi14 === "number" && input.rsi14 < 35) ||
+    (typeof input.bbPctB === "number" && input.bbPctB < 0.15) ||
+    (typeof input.distSMA200 === "number" && input.distSMA200 <= 0.02);
+
+  if (!setupGate) {
+    reasonsSetup.push("NO_EXTREME_FOUND");
+    setupScore = 0;
+  } else {
+    if (typeof input.rsi14 === "number") {
+      if (input.rsi14 < 25) {
+        setupScore += 14;
+        reasonsSetup.push("RSI_LT_25");
+      } else if (input.rsi14 < 30) {
+        setupScore += 10;
+        reasonsSetup.push("RSI_LT_30");
+      } else if (input.rsi14 < 35) {
+        setupScore += 6;
+        reasonsSetup.push("RSI_LT_35");
+      }
+    }
+
+    if (typeof input.bbPctB === "number") {
+      if (input.bbPctB < 0.05) {
+        setupScore += 12;
+        reasonsSetup.push("BBPCTB_LT_005");
+      } else if (input.bbPctB < 0.15) {
+        setupScore += 8;
+        reasonsSetup.push("BBPCTB_LT_015");
+      }
+    }
+
+    if (typeof input.distSMA200 === "number") {
+      if (input.distSMA200 <= 0.01) {
+        setupScore += 11;
+        reasonsSetup.push("NEAR_SMA200_1P");
+      } else if (input.distSMA200 <= 0.02) {
+        setupScore += 9;
+        reasonsSetup.push("NEAR_SMA200_2P");
+      } else if (input.distSMA200 <= 0.03) {
+        setupScore += 5;
+        reasonsSetup.push("NEAR_SMA200_3P");
+      }
+    }
+
+    if (typeof input.rvol === "number" && input.rvol >= 1.5) {
+      setupScore += 8;
+      reasonsSetup.push("RVOL_GE_15");
+    } else if (typeof input.vol === "number" && typeof input.vol20 === "number") {
+      if (input.vol > input.vol20 * 1.2) {
+        setupScore += 5;
+        reasonsSetup.push("VOL_GE_12x");
+      }
+    }
+  }
+
+  const emaReclaim =
+    typeof input.close === "number" &&
+    typeof input.ema21 === "number" &&
+    typeof input.closePrev === "number" &&
+    typeof input.ema21Prev === "number" &&
+    input.close > input.ema21 &&
+    input.closePrev <= input.ema21Prev;
+  if (emaReclaim) {
+    triggerScore += 15;
+    reasonsTrig.push("EMA21_RECLAIM");
+    hardTrigCount += 1;
+  }
+
+  const higherLow =
+    typeof input.pivotLow === "number" &&
+    typeof input.pivotLowPrev === "number" &&
+    typeof input.close === "number" &&
+    typeof input.open === "number" &&
+    input.pivotLow > input.pivotLowPrev &&
+    input.close > input.open;
+  if (higherLow) {
+    triggerScore += 25;
+    reasonsTrig.push("HIGHER_LOW_FT");
+    hardTrigCount += 1;
+  }
+
+  const bos =
+    typeof input.lastLowerHigh === "number" &&
+    typeof input.close === "number" &&
+    input.close > input.lastLowerHigh;
+  if (bos) {
+    triggerScore += 20;
+    reasonsTrig.push("BOS_BREAK");
+    hardTrigCount += 1;
+  }
+
+  if (typeof input.vol === "number" && typeof input.vol20 === "number") {
+    if (input.vol > input.vol20 * 1.2) {
+      triggerScore += 10;
+      reasonsTrig.push("VOL_CONFIRM_12x");
+    }
+  }
+  if (typeof input.rvol === "number" && input.rvol >= 1.5) {
+    triggerScore += 5;
+    reasonsTrig.push("RVOL_GE_15");
+  }
+
+  if (typeof input.rsi14 === "number" && typeof input.rsiPrev === "number") {
+    if (input.rsi14 > input.rsiPrev) {
+      triggerScore += 8;
+      reasonsTrig.push("RSI_UPTURN");
+    }
+  }
+
+  if (typeof input.macdHist === "number" && typeof input.macdHistPrev === "number") {
+    if (input.macdHist < 0 && input.macdHist > input.macdHistPrev) {
+      triggerScore += 4;
+      reasonsTrig.push("MACD_HIST_LESS_NEG");
+    }
+  }
+
+  const stochRsiUpturn =
+    typeof input.stochRsi === "number" &&
+    typeof input.stochRsiPrev === "number" &&
+    (input.stochRsi < 20 || input.stochRsiPrev < 20) &&
+    input.stochRsi > input.stochRsiPrev;
+  if (stochRsiUpturn) {
+    triggerScore += 3;
+    reasonsTrig.push("STOCHRSI_UPTURN");
+  }
+
+  setupScore = Math.min(setupScore, 40);
+  triggerScore = Math.min(triggerScore, 60);
+  let totalScore = setupScore + triggerScore;
+
+  const dataQuality = {
+    barsUsed: input.barsUsed,
+    missingFields: input.missingFields || [],
+    isPartial: input.barsUsed < 220 || (input.missingFields || []).length > 0
+  };
+
+  if (typeof input.daysToEarnings === "number" && input.daysToEarnings <= 3) {
+    totalScore = Math.min(totalScore, 69);
+    reasonsTrig.push("EARNINGS_RISK_CAP");
+  }
+
+  if (dataQuality.isPartial) {
+    totalScore = Math.min(totalScore, 59);
+  }
+
+  const volConfirm =
+    typeof input.vol === "number" &&
+    typeof input.vol20 === "number" &&
+    input.vol > input.vol20 * 1.2;
+  const emaOnly = emaReclaim && !higherLow && !bos;
+  const emaOnlyNeedsVol = emaOnly && !volConfirm;
+  if (emaOnlyNeedsVol) {
+    totalScore = Math.min(totalScore, 69);
+    reasonsTrig.push("WEAK_RECLAIM_NO_VOL");
+  }
+
+  let label = "IGNORE";
+  if (totalScore >= 70 && hardTrigCount >= 1 && !dataQuality.isPartial && !emaOnlyNeedsVol) {
+    label = "BUY";
+  } else if (setupScore >= 25 || (totalScore >= 55 && totalScore <= 69) || dataQuality.isPartial) {
+    label = dataQuality.isPartial ? "DATA_ERROR" : "WATCHLIST";
+  }
+
+  return {
+    setupScore,
+    triggerScore,
+    totalScore,
+    label,
+    reasonsSetup,
+    reasonsTrig,
+    dataQuality,
+    debug: {
+      close: input.close,
+      closePrev: input.closePrev,
+      open: input.open,
+      rsi14: input.rsi14,
+      rsiPrev: input.rsiPrev,
+      bbPctB: input.bbPctB,
+      ema21: input.ema21,
+      ema21Prev: input.ema21Prev,
+      sma200: input.sma200,
+      distSMA200: input.distSMA200,
+      vol: input.vol,
+      vol20: input.vol20,
+      rvol: input.rvol,
+      macdHist: input.macdHist,
+      macdHistPrev: input.macdHistPrev,
+      stochRsi: input.stochRsi,
+      stochRsiPrev: input.stochRsiPrev,
+      pivotLow: input.pivotLow,
+      pivotLowPrev: input.pivotLowPrev,
+      lastLowerHigh: input.lastLowerHigh,
+      barsUsed: input.barsUsed,
+      missingFields: input.missingFields,
+      emaReclaim,
+      higherLow,
+      bos,
+      setupGate,
+      hardTrigCount,
+      setupScore,
+      triggerScore,
+      totalScore,
+      label,
+      reasonsSetup,
+      reasonsTrig
+    }
+  };
+}
+
 function scorePick(symbol, name, series, earningsDate) {
-  const { closes, highs, lows, volumes } = series;
+  const { opens, closes, highs, lows, volumes } = series;
   const close = closes[closes.length - 1];
-  const prevClose = closes[closes.length - 2] ?? close;
-  const latestLow = lows[lows.length - 1];
-  const prevLow = lows[lows.length - 2] ?? latestLow;
-  const latestVolume = volumes[volumes.length - 1] ?? 0;
+  const closePrev = closes[closes.length - 2] ?? null;
+  const open = opens?.[opens.length - 1] ?? null;
+  const latestVolume = volumes[volumes.length - 1] ?? null;
+  const barsUsed = closes.length;
 
   const sma200 = sma(closes, 200);
-  const ema21 = ema(closes, 21);
-  const rsi14 = rsi(closes, 14);
+  const ema21Series = emaSeries(closes, 21);
+  const ema21 = ema21Series.length ? ema21Series[ema21Series.length - 1] : null;
+  const ema21Prev = ema21Series.length > 1 ? ema21Series[ema21Series.length - 2] : null;
+  const rsiSeriesValues = rsiSeries(closes, 14);
+  const rsi14 = rsiSeriesValues.length ? rsiSeriesValues[rsiSeriesValues.length - 1] : null;
+  const rsiPrev = rsiSeriesValues.length > 1 ? rsiSeriesValues[rsiSeriesValues.length - 2] : null;
   const bb = bollinger(closes, 20, 2);
   const macdValues = macd(closes);
   const atr14 = atr(highs, lows, closes, 14);
-  const volSma20 = sma(volumes, 20);
+  const vol20 = sma(volumes, 20);
+  const rvol = typeof vol20 === "number" && vol20 !== 0 ? latestVolume / vol20 : null;
 
-  const aboveSma200 = sma200 !== null && close > sma200;
-  const emaAboveSma200 = ema21 !== null && sma200 !== null && ema21 > sma200;
-  const rsiHealthy = rsi14 !== null && rsi14 >= 45 && rsi14 <= 65;
-  const bbHealthy = bb?.percentB !== null && bb.percentB >= 0.2 && bb.percentB <= 0.8;
-  const macdPositive = macdValues?.hist !== null && macdValues.hist > 0;
+  const distSMA200 =
+    typeof sma200 === "number" && typeof close === "number" && close !== 0
+      ? Math.abs(close - sma200) / close
+      : null;
 
-  let setupScore = 0;
-  if (aboveSma200) setupScore += 15;
-  if (emaAboveSma200) setupScore += 8;
-  if (rsiHealthy) setupScore += 8;
-  if (bbHealthy) setupScore += 5;
-  if (macdPositive) setupScore += 4;
+  const pivotLows = findPivotLows(lows);
+  const lastLowerHigh = findLastLowerHigh(highs);
+  const stoch = computeStochRsi(rsiSeriesValues, 14);
 
-  const emaReclaim = ema21 !== null && close > ema21;
-  const higherLow = latestLow > prevLow;
-  const macdRising =
-    macdValues?.hist !== null && macdValues?.prevHist !== null
-      ? macdValues.hist > macdValues.prevHist
-      : false;
-  const volumeGate = volSma20 !== null && latestVolume > volSma20;
-  const bosWindow = highs.slice(-10);
-  const bosLevel = bosWindow.length ? Math.max(...bosWindow) : null;
-  const bos = bosLevel !== null && close > bosLevel;
-
-  let triggerScore = 0;
-  if (emaReclaim) triggerScore += 20;
-  if (higherLow) triggerScore += 12;
-  if (macdRising) triggerScore += 10;
-  if (volumeGate) triggerScore += 10;
-  if (bos) triggerScore += 8;
-
-  let totalScore = setupScore + triggerScore;
   const earningsDays = daysToEarnings(earningsDate);
-  const earningsRisk = earningsDays !== null && earningsDays <= 3;
-  if (earningsRisk && totalScore > 69) totalScore = 69;
+  const missingFields = [];
+  const fieldChecks = {
+    close,
+    closePrev,
+    open,
+    rsi14,
+    rsiPrev,
+    bbPctB: bb?.percentB ?? null,
+    ema21,
+    ema21Prev,
+    sma200,
+    distSMA200,
+    vol: latestVolume,
+    vol20,
+    rvol,
+    macdHist: macdValues?.hist ?? null,
+    macdHistPrev: macdValues?.prevHist ?? null,
+    stochRsi: stoch.value,
+    stochRsiPrev: stoch.prev,
+    pivotLow: pivotLows.pivotLow,
+    pivotLowPrev: pivotLows.pivotLowPrev,
+    lastLowerHigh
+  };
+  Object.entries(fieldChecks).forEach(([key, value]) => {
+    if (value === null || value === undefined || Number.isNaN(value)) {
+      missingFields.push(key);
+    }
+  });
 
-  const setupOk = setupScore >= 25;
-  const triggerOk = triggerScore >= 35;
-  const topPick = setupOk && triggerOk && totalScore >= 70;
+  const evaluation = evaluateAlphaRadarSignal({
+    symbol,
+    close,
+    closePrev,
+    open,
+    rsi14,
+    rsiPrev,
+    bbPctB: bb?.percentB ?? null,
+    ema21,
+    ema21Prev,
+    sma200,
+    distSMA200,
+    vol: latestVolume,
+    vol20,
+    rvol,
+    macdHist: macdValues?.hist ?? null,
+    macdHistPrev: macdValues?.prevHist ?? null,
+    stochRsi: stoch.value,
+    stochRsiPrev: stoch.prev,
+    pivotLow: pivotLows.pivotLow,
+    pivotLowPrev: pivotLows.pivotLowPrev,
+    lastLowerHigh,
+    barsUsed,
+    missingFields,
+    daysToEarnings: earningsDays
+  });
 
-  const reasons = [];
-  if (aboveSma200) reasons.push("Above SMA200");
-  if (emaReclaim) reasons.push("EMA21 reclaim");
-  if (higherLow) reasons.push("Higher low");
-  if (macdRising) reasons.push("MACD momentum rising");
-  if (volumeGate) reasons.push("Volume above 20D");
-  if (bos) reasons.push("Break of structure");
-  if (earningsRisk) reasons.push("Earnings within 3 days");
+  const setup = {
+    rsiExtreme: typeof rsi14 === "number" && rsi14 < 35,
+    bbExtreme: typeof bb?.percentB === "number" && bb.percentB < 0.15,
+    nearSma200: typeof distSMA200 === "number" && distSMA200 <= 0.02,
+    rvolBonus: typeof rvol === "number" && rvol >= 1.5,
+    setupGate: evaluation.debug?.setupGate ?? false
+  };
+
+  const trigger = {
+    emaReclaim: evaluation.debug?.emaReclaim ?? false,
+    higherLow: evaluation.debug?.higherLow ?? false,
+    bos: evaluation.debug?.bos ?? false,
+    volConfirm: typeof latestVolume === "number" && typeof vol20 === "number" && latestVolume > vol20 * 1.2,
+    rsiUpturn: typeof rsi14 === "number" && typeof rsiPrev === "number" && rsi14 > rsiPrev
+  };
 
   return {
     symbol,
     name,
-    setupScore,
-    triggerScore,
-    totalScore,
-    label: topPick ? "TOP PICK" : setupOk || triggerOk ? "WATCHLIST" : "WAIT",
-    setup: {
-      aboveSma200,
-      emaAboveSma200,
-      rsiHealthy,
-      bbHealthy,
-      macdPositive
-    },
-    trigger: {
-      emaReclaim,
-      higherLow,
-      macdRising,
-      volumeGate,
-      bos
-    },
-    reasons,
-    stop: atr14 !== null ? close - atr14 * 2 : null,
-    earningsRisk,
+    setupScore: evaluation.setupScore,
+    triggerScore: evaluation.triggerScore,
+    totalScore: evaluation.totalScore,
+    label: evaluation.label,
+    setup,
+    trigger,
+    reasonsSetup: evaluation.reasonsSetup,
+    reasonsTrig: evaluation.reasonsTrig,
+    reasons: [...evaluation.reasonsSetup, ...evaluation.reasonsTrig],
+    debug: evaluation.debug,
+    dataQuality: evaluation.dataQuality,
+    stop: atr14 !== null && typeof close === "number" ? close - atr14 * 2 : null,
+    earningsRisk: earningsDays !== null && earningsDays <= 3,
     earningsDays,
-    dataQuality: closes.length >= 200 ? "LIVE" : "PARTIAL",
     close,
-    changePercent: prevClose ? ((close / prevClose - 1) * 100) : null
+    changePercent: closePrev ? ((close / closePrev - 1) * 100) : null
   };
 }
 
@@ -287,12 +657,17 @@ async function fetchSeries(symbol, env) {
   return { ok: true, data: parsed, snippet: "" };
 }
 
-async function fetchAlphaRadar(env) {
+async function fetchAlphaRadar(env, options = {}) {
+  const symbolOverride = options.symbol ? String(options.symbol).toUpperCase() : null;
   const cachedEarnings = await kvGetJson(env, EARNINGS_LAST_GOOD);
   const earningsMap = buildEarningsMap(cachedEarnings);
 
+  const universe = symbolOverride
+    ? [{ s: symbolOverride, n: symbolOverride }]
+    : US_TOP_30;
+
   const results = await Promise.allSettled(
-    US_TOP_30.map(async (entry) => {
+    universe.map(async (entry) => {
       const symbol = String(entry.s || "").toUpperCase();
       const name = entry.n || symbol;
       const series = await fetchSeries(symbol, env);
@@ -331,31 +706,33 @@ async function fetchAlphaRadar(env) {
   const sortedByTotal = [...picks].sort((a, b) => b.totalScore - a.totalScore);
   const sortedByTrigger = [...picks].sort((a, b) => b.triggerScore - a.triggerScore);
   const sortedBySetup = [...picks].sort((a, b) => b.setupScore - a.setupScore);
+  const buyPicks = sortedByTotal.filter((pick) => pick.label === "BUY");
+  const hasPartialPick = picks.some((pick) => pick.dataQuality?.isPartial);
 
   return {
     ok: true,
     data: {
       updatedAt: new Date().toISOString(),
       source: "stooq",
-      partial: missingSymbols.length > 0,
+      partial: missingSymbols.length > 0 || hasPartialPick,
       missingSymbols,
-      universe: US_TOP_30.map((entry) => entry.s),
+      universe: universe.map((entry) => entry.s),
       picks: {
         shortterm: sortedByTrigger.slice(0, 3),
         longterm: sortedBySetup.slice(0, 3),
-        top: sortedByTotal.slice(0, 3)
+        top: (buyPicks.length ? buyPicks : sortedByTotal).slice(0, 3)
       },
-      method: "Alpha Radar v1 (RSI/EMA/SMA/Bollinger/ATR/MACD)",
+      method: "Alpha Radar Reversal v1 (extremes + structural reversals)",
       warnings: missingSymbols.length ? ["Some symbols unavailable"] : [],
       dataQuality: resolveDataQuality({
         ok: true,
         isStale: false,
-        partial: missingSymbols.length > 0,
+        partial: missingSymbols.length > 0 || hasPartialPick,
         hasData: sortedByTotal.length > 0
       }),
       confidence: calculateConfidence(
-        US_TOP_30.length - missingSymbols.length,
-        US_TOP_30.length
+        universe.length - missingSymbols.length,
+        universe.length
       ),
       definitions: DEFINITIONS,
       reasons: []
@@ -368,9 +745,55 @@ export async function onRequestGet(context) {
   const { request, env, data } = context;
   const traceId = data?.traceId || createTraceId(request);
   const started = Date.now();
+  const url = new URL(request.url);
+  const debugSymbol = url.searchParams.get("symbol");
+  const debugMode = url.searchParams.get("debug") === "1" || Boolean(debugSymbol);
 
   const bindingResponse = assertBindings(env, FEATURE_ID, traceId);
   if (bindingResponse) return bindingResponse;
+
+  if (debugMode) {
+    const result = await fetchAlphaRadar(env, { symbol: debugSymbol || "AAPL", debug: true });
+    if (!result?.ok || !result?.data) {
+      const response = makeResponse({
+        ok: false,
+        feature: FEATURE_ID,
+        traceId,
+        cache: { hit: false, ttl: 0, layer: "none" },
+        upstream: { url: "stooq", status: null, snippet: result?.snippet || "" },
+        error: result?.error || { code: "UPSTREAM_5XX", message: "No debug data", details: {} },
+        cacheStatus: "ERROR",
+        status: 200
+      });
+      logServer({
+        feature: FEATURE_ID,
+        traceId,
+        cacheLayer: "none",
+        upstreamStatus: null,
+        durationMs: Date.now() - started
+      });
+      return response;
+    }
+    result.data.traceId = traceId;
+    const response = makeResponse({
+      ok: true,
+      feature: FEATURE_ID,
+      traceId,
+      data: result.data,
+      cache: { hit: false, ttl: 0, layer: "none" },
+      upstream: { url: "stooq", status: 200, snippet: "" },
+      cacheStatus: "MISS",
+      status: 200
+    });
+    logServer({
+      feature: FEATURE_ID,
+      traceId,
+      cacheLayer: "none",
+      upstreamStatus: 200,
+      durationMs: Date.now() - started
+    });
+    return response;
+  }
 
   const swr = await swrGetOrRefresh(context, {
     key: CACHE_KEY,

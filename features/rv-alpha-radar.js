@@ -3,32 +3,32 @@ import { getOrFetch } from "./utils/store.js";
 import { resolveWithShadow } from "./utils/resilience.js";
 
 const SETUP_LABELS = {
-  aboveSma200: "Above SMA200",
-  emaAboveSma200: "EMA21 > SMA200",
-  rsiHealthy: "RSI 45-65",
-  bbHealthy: "Bollinger %B 0.2-0.8",
-  macdPositive: "MACD hist > 0"
+  rsiExtreme: "RSI < 35",
+  bbExtreme: "BB %B < 0.15",
+  nearSma200: "Near SMA200",
+  rvolBonus: "RVOL >= 1.5",
+  setupGate: "Extreme Gate"
 };
 
 const TRIGGER_LABELS = {
   emaReclaim: "EMA21 reclaim",
-  higherLow: "Higher low",
-  macdRising: "MACD hist rising",
-  volumeGate: "Volume > 20D",
-  bos: "Break of structure"
+  higherLow: "Higher low + FT",
+  bos: "Break of structure",
+  volConfirm: "Volume confirm",
+  rsiUpturn: "RSI upturn"
 };
 
 const INFO_TEXT = {
-  aboveSma200: "Price above 200-day simple moving average.",
-  emaAboveSma200: "EMA21 above SMA200 signals trend support.",
-  rsiHealthy: "RSI in a balanced zone (not overbought/oversold).",
-  bbHealthy: "Price within mid Bollinger range.",
-  macdPositive: "Momentum histogram positive.",
-  emaReclaim: "Price reclaimed EMA21.",
-  higherLow: "Higher low vs prior swing.",
-  macdRising: "MACD histogram rising vs prior day.",
-  volumeGate: "Volume above 20-day average.",
-  bos: "Break of recent structure highs."
+  rsiExtreme: "RSI below 35 indicates oversold pressure.",
+  bbExtreme: "Price near lower Bollinger band.",
+  nearSma200: "Close within 2% of SMA200.",
+  rvolBonus: "Relative volume >= 1.5.",
+  setupGate: "At least one extreme condition is required.",
+  emaReclaim: "Close reclaimed EMA21 after being below.",
+  higherLow: "New pivot low above prior pivot with follow-through.",
+  bos: "Break above last lower high.",
+  volConfirm: "Volume above 1.2x 20D average.",
+  rsiUpturn: "RSI rising vs prior day."
 };
 
 function formatNumber(value, options = {}) {
@@ -43,8 +43,10 @@ function formatPercent(value) {
 
 function badgeClass(label) {
   if (!label) return "";
-  if (label.toUpperCase() === "TOP PICK") return "rv-alpha-badge--top";
-  if (label.toUpperCase() === "WATCHLIST") return "rv-alpha-badge--watch";
+  const upper = label.toUpperCase();
+  if (upper === "BUY" || upper === "TOP PICK") return "rv-alpha-badge--top";
+  if (upper === "WATCHLIST") return "rv-alpha-badge--watch";
+  if (upper === "DATA_ERROR") return "rv-alpha-badge--data";
   return "rv-alpha-badge--wait";
 }
 
@@ -64,7 +66,10 @@ function renderChecklist(items = {}, labels = {}) {
 }
 
 function renderPickCard(pick = {}) {
-  const label = pick.label || "WAIT";
+  const dataQuality = pick.dataQuality || {};
+  const label = pick.label || "IGNORE";
+  const displayLabel =
+    label === "BUY" && !dataQuality.isPartial ? "TOP PICK" : label;
   const changeValue = typeof pick.changePercent === "number" ? pick.changePercent : null;
   const changeClass =
     changeValue === null ? "" : changeValue >= 0 ? "rv-native-positive" : "rv-native-negative";
@@ -75,7 +80,7 @@ function renderPickCard(pick = {}) {
           <div class="rv-alpha-symbol">${pick.symbol || "N/A"}</div>
           <div class="rv-alpha-name">${pick.name || ""}</div>
         </div>
-        <span class="rv-alpha-badge ${badgeClass(label)}">${label}</span>
+        <span class="rv-alpha-badge ${badgeClass(displayLabel)}">${displayLabel}</span>
       </div>
       <div class="rv-alpha-scores">
         <span>Setup ${formatNumber(pick.setupScore, { maximumFractionDigits: 0 })}</span>
@@ -95,6 +100,7 @@ function renderPickCard(pick = {}) {
         <span class="${changeClass}">${formatPercent(changeValue)}</span>
         <span>Stop $${formatNumber(pick.stop, { maximumFractionDigits: 2 })}</span>
       </div>
+      ${dataQuality.isPartial ? `<div class="rv-alpha-warn">PARTIAL DATA</div>` : ""}
       ${
         pick.earningsRisk
           ? `<div class="rv-alpha-warn">Earnings in ${pick.earningsDays ?? "?"} days</div>`
@@ -195,11 +201,12 @@ function render(root, payload, logger, featureId) {
       <strong>Top Picks</strong>
       <div class="rv-alpha-chips">
         ${top
-          .map(
-            (pick) => `
-            <span class="rv-alpha-chip ${badgeClass(pick.label)}">${pick.symbol}</span>
-          `
-          )
+          .map((pick) => {
+            const dq = pick.dataQuality || {};
+            const label = pick.label || "IGNORE";
+            const displayLabel = label === "BUY" && !dq.isPartial ? "TOP PICK" : label;
+            return `<span class="rv-alpha-chip ${badgeClass(displayLabel)}">${pick.symbol}</span>`;
+          })
           .join("")}
       </div>
     </div>
