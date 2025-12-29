@@ -1,4 +1,5 @@
 import { fetchJSON, getBindingHint } from "./utils/api.js";
+import { getUniverse, searchUniverse } from "../assets/js/us-universes.js";
 
 const STORAGE_KEY = "rv_watchlist_local";
 const QUOTES_CACHE_KEY = "rv_watchlist_quotes";
@@ -15,7 +16,6 @@ const SYMBOLS_PATHS = [
   "./data/symbols/russell.json",
   "./assets/nasdaq_symbols.min.json"
 ];
-const SYMBOLS_PATH = "./assets/nasdaq_symbols.min.json";
 const DEFAULT_LIST = ["AAPL", "NVDA"];
 const DEFAULT_REFRESH_MS = 120_000;
 const BACKOFF_STEPS = [120_000, 300_000, 900_000];
@@ -173,57 +173,18 @@ function populateDatalist(root) {
   if (!datalist) return;
   datalist.innerHTML = state.symbols
     .slice(0, 500)
-    .map((item) => `<option value="${item.s}">${item.n || ""}</option>`)
+    .map((item) => `<option value="${item.s}">${item.n || "N/A"}</option>`)
     .join("");
 }
 
 async function loadSymbols(logger) {
   if (state.symbolsLoaded) return;
   try {
-    const collected = [];
-    for (const path of SYMBOLS_PATHS) {
-      const response = await fetch(path, { cache: "force-cache" });
-      if (!response.ok) continue;
-      const data = await response.json();
-      if (Array.isArray(data) && data.length) {
-        collected.push({ path, data });
-      }
-    }
-    if (!collected.length) return;
-    const map = new Map();
-    collected.forEach((entry) => {
-      entry.data.forEach((item) => {
-        const symbol = String(item?.s || "").toUpperCase();
-        const name = String(item?.n || "").trim();
-        if (!symbol || map.has(symbol)) return;
-        if (!name || /^Company /i.test(name)) return;
-        map.set(symbol, { s: symbol, n: name });
-      });
-      logger?.info("symbols_loaded", { count: entry.data.length, path: entry.path });
-    });
-    state.symbols = Array.from(map.values());
+    const list = await getUniverse();
+    if (!Array.isArray(list) || !list.length) return;
+    state.symbols = list;
     state.symbolsLoaded = true;
-  } catch (error) {
-    logger?.warn("symbols_load_failed", { message: error?.message || "Failed" });
-  }
-}
-
-// Legacy single-path loader preserved for add-only compatibility.
-async function loadSymbolsLegacy(logger) {
-  if (state.symbolsLoaded) return;
-  try {
-    const response = await fetch(SYMBOLS_PATH, { cache: "force-cache" });
-    const data = await response.json();
-    if (Array.isArray(data)) {
-      state.symbols = data
-        .map((item) => ({
-          s: String(item?.s || "").toUpperCase(),
-          n: String(item?.n || "").trim()
-        }))
-        .filter((item) => item.s && item.n && !/^Company /i.test(item.n));
-      state.symbolsLoaded = true;
-      logger?.info("symbols_loaded", { count: data.length, path: SYMBOLS_PATH });
-    }
+    logger?.info("symbols_loaded", { count: list.length, sources: SYMBOLS_PATHS });
   } catch (error) {
     logger?.warn("symbols_load_failed", { message: error?.message || "Failed" });
   }
@@ -683,12 +644,13 @@ function bind(root, list, logger) {
   input?.addEventListener("input", (event) => {
     event.target.value = normalizeSymbolInput(event.target.value);
     const query = event.target.value;
-    if (!state.symbolsLoaded) {
-      loadSymbols(logger);
-    }
     if (debounceId) clearTimeout(debounceId);
-    debounceId = setTimeout(() => {
-      state.suggestions = findSuggestions(query);
+    debounceId = setTimeout(async () => {
+      if (!state.symbolsLoaded) {
+        await loadSymbols(logger);
+      }
+      const suggestions = await searchUniverse(query, 20);
+      state.suggestions = suggestions.length ? suggestions : findSuggestions(query);
       state.activeIndex = 0;
       renderSuggestions(suggestionsBox, state.suggestions, state.activeIndex);
     }, 120);

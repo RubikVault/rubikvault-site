@@ -8,9 +8,11 @@ import {
   safeSnippet,
   swrGetOrRefresh,
   normalizeFreshness,
-  kvGetJson
+  kvGetJson,
+  kvPutJson
 } from "./_shared.js";
 import { US_TOP_30 } from "./_shared/us-universes.js";
+import { calculateConfidence, resolveDataQuality } from "./_shared/feature-contract.js";
 
 const FEATURE_ID = "alpha-radar";
 const KV_TTL = 6 * 60 * 60;
@@ -18,6 +20,14 @@ const STALE_MAX = 48 * 60 * 60;
 const CACHE_KEY = "DASH:ALPHA_RADAR";
 const STOOQ_BASE = "https://stooq.com/q/d/l/?s=";
 const EARNINGS_LAST_GOOD = "earnings-calendar:last_good";
+const LAST_GOOD_KEY = "alpha-radar:last_good";
+
+const DEFINITIONS = {
+  setupMax: 40,
+  triggerMax: 60,
+  buyThreshold: 70,
+  earningsRiskCutoffDays: 3
+};
 
 function parseNumber(value) {
   const num = Number(value);
@@ -256,7 +266,7 @@ function scorePick(symbol, name, series, earningsDate) {
     stop: atr14 !== null ? close - atr14 * 2 : null,
     earningsRisk,
     earningsDays,
-    dataQuality: closes.length >= 200 ? "ok" : "thin",
+    dataQuality: closes.length >= 200 ? "LIVE" : "PARTIAL",
     close,
     changePercent: prevClose ? ((close / prevClose - 1) * 100) : null
   };
@@ -336,7 +346,19 @@ async function fetchAlphaRadar(env) {
         top: sortedByTotal.slice(0, 3)
       },
       method: "Alpha Radar v1 (RSI/EMA/SMA/Bollinger/ATR/MACD)",
-      warnings: missingSymbols.length ? ["Some symbols unavailable"] : []
+      warnings: missingSymbols.length ? ["Some symbols unavailable"] : [],
+      dataQuality: resolveDataQuality({
+        ok: true,
+        isStale: false,
+        partial: missingSymbols.length > 0,
+        hasData: sortedByTotal.length > 0
+      }),
+      confidence: calculateConfidence(
+        US_TOP_30.length - missingSymbols.length,
+        US_TOP_30.length
+      ),
+      definitions: DEFINITIONS,
+      reasons: []
     },
     upstreamSnippet
   };
@@ -379,6 +401,16 @@ export async function onRequestGet(context) {
     return response;
   }
 
+  payload.traceId = traceId;
+  payload.dataQuality =
+    payload.dataQuality ||
+    resolveDataQuality({
+      ok: true,
+      isStale: swr.isStale,
+      partial: payload.partial,
+      hasData: (payload.picks?.top || []).length > 0
+    });
+
   const response = makeResponse({
     ok: true,
     feature: FEATURE_ID,
@@ -390,6 +422,10 @@ export async function onRequestGet(context) {
     freshness: normalizeFreshness(swr.ageSeconds),
     cacheStatus: swr.cacheStatus
   });
+
+  if (!swr.isStale) {
+    await kvPutJson(env, LAST_GOOD_KEY, { ts: new Date().toISOString(), data: payload }, 24 * 60 * 60);
+  }
 
   logServer({
     feature: FEATURE_ID,

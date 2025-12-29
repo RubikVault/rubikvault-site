@@ -265,6 +265,156 @@ export const FEATURES = [
     refreshIntervalMs: 6 * 60 * 60 * 1000
   },
   {
+    id: "rv-market-regime",
+    title: "Block XX - Market Regime Radar",
+    module: "./features/rv-market-regime.js",
+    api: "market-regime",
+    computation: {
+      where: "Pages Function",
+      update: "30m",
+      cost: "free and automated",
+      trust: "derived"
+    },
+    enabled: true,
+    lazyLoad: true,
+    refreshIntervalMs: 30 * 60 * 1000
+  },
+  {
+    id: "rv-why-moved",
+    title: "Block XX - Why This Stock Moved",
+    module: "./features/rv-why-moved.js",
+    api: "why-moved",
+    computation: {
+      where: "Pages Function",
+      update: "1h",
+      cost: "free and automated",
+      trust: "derived"
+    },
+    enabled: true,
+    lazyLoad: true,
+    refreshIntervalMs: 60 * 60 * 1000
+  },
+  {
+    id: "rv-volume-anomaly",
+    title: "Block XX - Volume Anomaly",
+    module: "./features/rv-volume-anomaly.js",
+    api: "volume-anomaly",
+    computation: {
+      where: "Pages Function",
+      update: "1h",
+      cost: "free and automated",
+      trust: "derived"
+    },
+    enabled: true,
+    lazyLoad: true,
+    refreshIntervalMs: 60 * 60 * 1000
+  },
+  {
+    id: "rv-hype-divergence",
+    title: "Block XX - Inverse Hype Detector",
+    module: "./features/rv-hype-divergence.js",
+    api: "hype-divergence",
+    computation: {
+      where: "Pages Function",
+      update: "30m",
+      cost: "free and automated",
+      trust: "derived"
+    },
+    enabled: true,
+    lazyLoad: true,
+    refreshIntervalMs: 30 * 60 * 1000
+  },
+  {
+    id: "rv-congress-trading",
+    title: "Block XX - Congress Trading Tracker",
+    module: "./features/rv-congress-trading.js",
+    api: "congress-trading",
+    computation: {
+      where: "Pages Function",
+      update: "24h",
+      cost: "free and automated",
+      trust: "raw"
+    },
+    enabled: true,
+    lazyLoad: true,
+    refreshIntervalMs: 24 * 60 * 60 * 1000
+  },
+  {
+    id: "rv-insider-cluster",
+    title: "Block XX - Insider Cluster Buy Alarm",
+    module: "./features/rv-insider-cluster.js",
+    api: "insider-cluster",
+    computation: {
+      where: "Pages Function",
+      update: "24h",
+      cost: "free and automated",
+      trust: "raw and derived"
+    },
+    enabled: true,
+    lazyLoad: true,
+    refreshIntervalMs: 24 * 60 * 60 * 1000
+  },
+  {
+    id: "rv-analyst-stampede",
+    title: "Block XX - Analyst Stampede",
+    module: "./features/rv-analyst-stampede.js",
+    api: "analyst-stampede",
+    computation: {
+      where: "Pages Function",
+      update: "24h",
+      cost: "free and automated",
+      trust: "derived"
+    },
+    enabled: true,
+    lazyLoad: true,
+    refreshIntervalMs: 24 * 60 * 60 * 1000
+  },
+  {
+    id: "rv-smart-money",
+    title: "Block XX - Smart Money Score",
+    module: "./features/rv-smart-money.js",
+    api: "smart-money",
+    computation: {
+      where: "Pages Function",
+      update: "6h",
+      cost: "free and automated",
+      trust: "derived"
+    },
+    enabled: true,
+    lazyLoad: true,
+    refreshIntervalMs: 6 * 60 * 60 * 1000
+  },
+  {
+    id: "rv-alpha-performance",
+    title: "Block XX - Alpha Consistency Monitor",
+    module: "./features/rv-alpha-performance.js",
+    api: "alpha-performance",
+    computation: {
+      where: "Pages Function",
+      update: "6h",
+      cost: "free and automated",
+      trust: "derived"
+    },
+    enabled: true,
+    lazyLoad: true,
+    refreshIntervalMs: 6 * 60 * 60 * 1000
+  },
+  {
+    id: "rv-earnings-reality",
+    title: "Block XX - Earnings Reality Check",
+    module: "./features/rv-earnings-reality.js",
+    api: "earnings-reality",
+    computation: {
+      where: "Pages Function",
+      update: "6h",
+      cost: "free and automated",
+      trust: "derived"
+    },
+    enabled: true,
+    lazyLoad: true,
+    refreshIntervalMs: 6 * 60 * 60 * 1000
+  },
+  {
     id: "tradingview-widgets",
     title: "TradingView Widgets",
     module: "./features/tradingview-widgets.js",

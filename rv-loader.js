@@ -75,7 +75,17 @@ const STATUS_LABELS = {
   "rv-crypto-snapshot": "Crypto",
   "rv-sentiment-barometer": "Sentiment",
   "rv-tech-signals": "Signals",
-  "rv-alpha-radar": "Alpha"
+  "rv-alpha-radar": "Alpha",
+  "rv-market-regime": "Regime",
+  "rv-why-moved": "WhyMoved",
+  "rv-volume-anomaly": "VolumeAnom",
+  "rv-hype-divergence": "Hype",
+  "rv-congress-trading": "Congress",
+  "rv-insider-cluster": "Insiders",
+  "rv-analyst-stampede": "Analyst",
+  "rv-smart-money": "SmartMoney",
+  "rv-alpha-performance": "AlphaPerf",
+  "rv-earnings-reality": "EarningsRx"
 };
 const STATUS_ORDER = [
   "rv-market-cockpit",
@@ -87,7 +97,17 @@ const STATUS_ORDER = [
   "rv-crypto-snapshot",
   "rv-sentiment-barometer",
   "rv-tech-signals",
-  "rv-alpha-radar"
+  "rv-alpha-radar",
+  "rv-market-regime",
+  "rv-why-moved",
+  "rv-volume-anomaly",
+  "rv-hype-divergence",
+  "rv-congress-trading",
+  "rv-insider-cluster",
+  "rv-analyst-stampede",
+  "rv-smart-money",
+  "rv-alpha-performance",
+  "rv-earnings-reality"
 ];
 const COLLAPSE_KEY_PREFIX = "rv-collapse:";
 const DEFAULT_OPEN_COUNT = 3;
