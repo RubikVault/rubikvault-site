@@ -310,6 +310,21 @@ export const FEATURES = [
     refreshIntervalMs: 60 * 60 * 1000
   },
   {
+    id: "rv-breakout-energy",
+    title: "Block XX - Breakout Energy Radar",
+    module: "./features/rv-breakout-energy.js",
+    api: "breakout-energy",
+    computation: {
+      where: "Pages Function",
+      update: "1h",
+      cost: "free and automated",
+      trust: "derived"
+    },
+    enabled: true,
+    lazyLoad: true,
+    refreshIntervalMs: 60 * 60 * 1000
+  },
+  {
     id: "rv-hype-divergence",
     title: "Block XX - Inverse Hype Detector",
     module: "./features/rv-hype-divergence.js",
