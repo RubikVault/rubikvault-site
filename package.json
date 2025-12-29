@@ -4,6 +4,7 @@
     "dev:pages:persist": "wrangler pages dev public --ip 127.0.0.1 --port 8788 --kv RV_KV --persist-to .wrangler/state --compatibility-date=2025-12-29 --inspector-port 0",
     "dev:pages:port": "PORT=${PORT:-8788} wrangler pages dev public --ip 127.0.0.1 --port $PORT --kv RV_KV --compatibility-date=2025-12-29 --inspector-port 0",
     "test:endpoints:local": "curl -sf --max-time 12 http://127.0.0.1:8788/api/news && curl -sf --max-time 25 http://127.0.0.1:8788/api/hype-divergence && curl -sf --max-time 12 http://127.0.0.1:8788/api/congress-trading && curl -sf --max-time 12 http://127.0.0.1:8788/api/breakout-energy && echo OK",
+    "test:diag": "curl -s --max-time 12 http://127.0.0.1:8788/api/diag | jq '.summary // .data?.summary'",
     "dev:pages:std": "wrangler pages dev public --port 8788 --kv RV_KV --compatibility-date=2025-12-29",
     "dev:pages:persist:std": "wrangler pages dev public --port 8788 --kv RV_KV --persist-to .wrangler/state --compatibility-date=2025-12-29",
     "dev:pages:port:std": "PORT=${PORT:-8788} wrangler pages dev public --port $PORT --kv RV_KV --compatibility-date=2025-12-29"

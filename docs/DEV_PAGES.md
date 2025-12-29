@@ -27,6 +27,7 @@ TROUBLESHOOTING
 - Inspector conflicts: always use --inspector-port 0
 - Log permission errors: ensure $HOME/Library/Preferences/.wrangler/logs is writable
 - Port conflicts: check with lsof before starting
+- EMFILE (too many open files): ulimit -n 4096 (or higher) before starting
 
 PORT CONFLICTS (SAFE)
 Check port:
@@ -41,6 +42,8 @@ pkill -f workerd || true
 
 TESTING ENDPOINTS
 curl --max-time 12 -i http://127.0.0.1:8788/api/news
+curl --max-time 12 -i http://127.0.0.1:8788/api/health
+curl --max-time 12 -i http://127.0.0.1:8788/api/diag
 
 With jq:
 curl -s http://127.0.0.1:8788/api/news | jq '{ok, feature, dataQuality, error}'

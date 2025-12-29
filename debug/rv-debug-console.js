@@ -3,6 +3,7 @@ const MAX_EVENTS = 200;
 const MAX_FETCHES = 200;
 const MAX_ERRORS = 100;
 const MAX_SNIPPET = 2048;
+const MAX_COMPACT_BYTES = 25000;
 
 function nowIso() {
   return new Date().toISOString();
@@ -22,6 +23,23 @@ function safeParse(text) {
     return { ok: true, json: JSON.parse(text) };
   } catch (error) {
     return { ok: false, error: error?.message || String(error || "") };
+  }
+}
+
+function hash8(value) {
+  const text = String(value || "");
+  let hash = 0;
+  for (let i = 0; i < text.length; i += 1) {
+    hash = (hash * 31 + text.charCodeAt(i)) >>> 0;
+  }
+  return hash.toString(36).padStart(8, "0").slice(-8);
+}
+
+function getJSONSize(obj) {
+  try {
+    return new Blob([JSON.stringify(obj)]).size;
+  } catch (error) {
+    return 0;
   }
 }
 
@@ -73,6 +91,121 @@ function buildTextReport(state) {
   return lines.join("\n").trim();
 }
 
+function buildTopErrorCodes(blocks) {
+  const map = new Map();
+  blocks.forEach((block) => {
+    const code = block.lastResponse?.errorCode;
+    if (!code) return;
+    const ts = block.lastRun?.endTime || block.lastRun?.startTime || nowIso();
+    const entry = map.get(code) || { code, count: 0, firstSeen: ts, lastSeen: ts };
+    entry.count += 1;
+    entry.firstSeen = entry.firstSeen < ts ? entry.firstSeen : ts;
+    entry.lastSeen = entry.lastSeen > ts ? entry.lastSeen : ts;
+    map.set(code, entry);
+  });
+  return Array.from(map.values())
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 10)
+    .map((entry) => ({ ...entry, hash: hash8(entry.code) }));
+}
+
+function inferRootCauses(summary) {
+  const causes = [];
+  const top = summary.topErrorCodes?.[0];
+  if (top?.code === "BINDING_MISSING") {
+    causes.push({
+      cause: "BINDING_MISSING",
+      confidence: 0.9,
+      nextAction:
+        "Cloudflare Dashboard → Pages → rubikvault-site → Settings → Functions → KV namespace bindings → Add RV_KV for Preview + Production."
+    });
+  } else if (top?.code === "SCHEMA_INVALID") {
+    causes.push({
+      cause: "SCHEMA_INVALID",
+      confidence: 0.7,
+      nextAction: "Upstream returned HTML/invalid JSON; check /api/diag and upstream feeds."
+    });
+  } else if (top?.code?.startsWith("UPSTREAM")) {
+    causes.push({
+      cause: "UPSTREAM_ERRORS",
+      confidence: 0.6,
+      nextAction: "Upstream error detected; use /api/diag to identify failing endpoints."
+    });
+  }
+  if (causes.length === 0) {
+    causes.push({
+      cause: "NO_DOMINANT_ROOT",
+      confidence: 0.3,
+      nextAction: "No dominant root cause detected. Inspect worstEndpoints and error codes."
+    });
+  }
+  return causes.slice(0, 3);
+}
+
+function buildCompactReport(state) {
+  const blocks = Object.values(state.blocks || {});
+  const worstEndpoints = blocks
+    .map((block) => ({
+      p: block.endpoint || "--",
+      s: block.lastResponse?.status ?? null,
+      c: block.lastResponse?.errorCode || "",
+      t: block.lastRun?.durationMs ?? null,
+      up: block.lastResponse?.upstream?.status ?? null,
+      cache: block.lastResponse?.cache?.layer ?? null
+    }))
+    .sort((a, b) => (b.t || 0) - (a.t || 0))
+    .slice(0, 10);
+
+  const topErrorCodes = buildTopErrorCodes(blocks);
+  const summary = {
+    totalBlocks: blocks.length,
+    failBlocks: blocks.filter((block) => block.status === "FAIL").length,
+    topErrorCodes
+  };
+
+  const examples = [];
+  const seenCodes = new Set();
+  blocks.forEach((block) => {
+    if (!block.lastResponse?.errorCode || seenCodes.has(block.lastResponse.errorCode)) return;
+    if (examples.length >= 2) return;
+    const payload = block.lastResponse.json
+      ? JSON.stringify(block.lastResponse.json).slice(0, 600)
+      : (block.lastResponse.rawSnippet || "").slice(0, 600);
+    examples.push({
+      code: block.lastResponse.errorCode,
+      example: payload
+    });
+    seenCodes.add(block.lastResponse.errorCode);
+  });
+
+  let compact = {
+    meta: {
+      url: state.page.url,
+      ts: nowIso(),
+      userAgent: state.page.userAgent
+    },
+    summary,
+    rootCause: inferRootCauses(summary),
+    worstEndpoints,
+    examples
+  };
+
+  const originalSize = getJSONSize(compact);
+  if (originalSize > MAX_COMPACT_BYTES) {
+    compact = { ...compact, examples: [] };
+  }
+  if (getJSONSize(compact) > MAX_COMPACT_BYTES) {
+    compact = { ...compact, worstEndpoints: compact.worstEndpoints.slice(0, 5) };
+  }
+  if (getJSONSize(compact) > MAX_COMPACT_BYTES) {
+    compact = { ...compact, rootCause: compact.rootCause.slice(0, 1) };
+  }
+  if (getJSONSize(compact) > MAX_COMPACT_BYTES) {
+    compact.summary = { ...compact.summary, truncated: true, originalSize };
+  }
+  return compact;
+}
+
 function createState() {
   return {
     enabled: getDebugFlag(),
@@ -95,7 +228,9 @@ function createState() {
     consolePatched: false,
     errorPatched: false,
     fetchPatched: false,
-    togglePatched: false
+    togglePatched: false,
+    diag: { running: false, progress: 0, total: 0, message: "", aborters: [] },
+    serverDiag: null
   };
 }
 
@@ -271,6 +406,13 @@ function render(state) {
           ? '<div class="rvdbg-banner">ROOT CAUSE: Missing binding RV_KV in this environment (Preview/Prod).</div>'
           : ""
       }
+      ${
+        state.diag?.running
+          ? `<div class="rvdbg-progress">Checking ${state.diag.progress}/${state.diag.total}… ${escapeHtml(
+              state.diag.message || ""
+            )}</div>`
+          : ""
+      }
       <div class="rvdbg-controls">
         <label>
           Filter
@@ -287,10 +429,16 @@ function render(state) {
             <option value="duration" ${state.sort === "duration" ? "selected" : ""}>Duration</option>
           </select>
         </label>
-        <button class="rvdbg-btn" data-action="copy">Copy All</button>
-        <button class="rvdbg-btn" data-action="download">Download JSON</button>
+        <button class="rvdbg-btn" data-action="copy-compact">Copy Compact</button>
+        <button class="rvdbg-btn" data-action="copy">Copy Full</button>
+        <button class="rvdbg-btn" data-action="download">Download Full JSON</button>
         <button class="rvdbg-btn" data-action="clear">Clear</button>
         <button class="rvdbg-btn" data-action="diagnose">Run Diagnostics</button>
+        ${
+          state.diag?.running
+            ? '<button class="rvdbg-btn" data-action="cancel">Cancel</button>'
+            : ""
+        }
       </div>
       <div class="rvdbg-section">
         <h4>Blocks</h4>
@@ -322,6 +470,9 @@ function render(state) {
       if (action === "copy") {
         state.copyAll();
       }
+      if (action === "copy-compact") {
+        state.copyCompact();
+      }
       if (action === "download") {
         state.download();
       }
@@ -334,6 +485,14 @@ function render(state) {
       }
       if (action === "diagnose") {
         state.runDiagnostics();
+      }
+      if (action === "cancel") {
+        if (state.diag?.aborters?.length) {
+          state.diag.aborters.forEach((controller) => controller.abort());
+        }
+        state.diag.running = false;
+        state.diag.message = "Cancelled";
+        scheduleRender(state);
       }
     });
   });
@@ -568,6 +727,25 @@ function copyAll(state) {
   return Promise.resolve();
 }
 
+function copyCompact(state) {
+  const compact = buildCompactReport(state);
+  const text = JSON.stringify(compact, null, 2);
+  if (navigator?.clipboard?.writeText) {
+    return navigator.clipboard.writeText(text);
+  }
+  try {
+    const textarea = document.createElement("textarea");
+    textarea.value = text;
+    document.body.appendChild(textarea);
+    textarea.select();
+    document.execCommand("copy");
+    textarea.remove();
+  } catch (error) {
+    // ignore
+  }
+  return Promise.resolve();
+}
+
 function download(state) {
   const report = exportReport(state);
   const blob = new Blob([JSON.stringify(report, null, 2)], { type: "application/json" });
@@ -583,22 +761,92 @@ function download(state) {
 
 async function runDiagnostics(state) {
   if (!state.enabled) return;
+  if (state.diag?.running) return;
   const features = window.RV_CONFIG?.FEATURES || [];
   const apiBase = window.RV_CONFIG?.apiBase || "/api";
-  for (const feature of features) {
-    if (!feature?.api) continue;
-    const url = feature.api.startsWith("http") ? feature.api : `${apiBase}/${feature.api}`;
+  const endpoints = features
+    .filter((feature) => feature?.api)
+    .map((feature) => ({
+      id: feature.id,
+      url: feature.api.startsWith("http") ? feature.api : `${apiBase}/${feature.api}`
+    }));
+
+  state.diag = { running: true, progress: 0, total: endpoints.length, message: "Starting", aborters: [] };
+  scheduleRender(state);
+
+  const fetchJsonSafe = async (url, controller) => {
+    const started = performance.now();
     try {
-      await fetch(url, { headers: { Accept: "application/json" } });
+      const res = await fetch(url, { signal: controller.signal, headers: { Accept: "application/json" } });
+      const text = await res.text();
+      const parsed = safeParse(text);
+      return {
+        ok: parsed.ok,
+        status: res.status,
+        json: parsed.ok ? parsed.json : null,
+        rawSnippet: parsed.ok ? "" : text.slice(0, MAX_SNIPPET),
+        durationMs: Math.round(performance.now() - started),
+        error: parsed.ok ? null : parsed.error
+      };
+    } catch (error) {
+      return {
+        ok: false,
+        status: 0,
+        json: null,
+        rawSnippet: String(error?.message || error || "fetch failed").slice(0, MAX_SNIPPET),
+        durationMs: Math.round(performance.now() - started),
+        error: error?.message || "fetch failed"
+      };
+    }
+  };
+
+  const healthController = new AbortController();
+  const diagController = new AbortController();
+  state.diag.aborters.push(healthController, diagController);
+  const healthUrl = `${apiBase}/health`;
+  const diagUrl = `${apiBase}/diag`;
+  state.diag.message = "Checking /api/health";
+  scheduleRender(state);
+  const health = await fetchJsonSafe(healthUrl, healthController);
+  state.serverDiag = { health };
+  await new Promise((resolve) => requestAnimationFrame(resolve));
+  state.diag.message = "Checking /api/diag";
+  scheduleRender(state);
+  const diag = await fetchJsonSafe(diagUrl, diagController);
+  state.serverDiag.diag = diag;
+
+  const diagTop = diag.json?.data?.summary?.topErrorCodes?.[0];
+  const diagFail = diag.json?.data?.summary?.endpointsFail;
+  if (diagTop?.code === "BINDING_MISSING" && Number(diagFail) >= 5) {
+    state.diag.running = false;
+    state.diag.message = "Binding missing detected. Skipped client diagnostics.";
+    scheduleRender(state);
+    return;
+  }
+
+  let index = 0;
+  for (const endpoint of endpoints) {
+    if (!state.diag.running) break;
+    index += 1;
+    state.diag.progress = index;
+    state.diag.message = `Checking ${endpoint.id} (${index}/${endpoints.length})`;
+    scheduleRender(state);
+    const controller = new AbortController();
+    state.diag.aborters.push(controller);
+    try {
+      await fetchJsonSafe(endpoint.url, controller);
     } catch (error) {
       recordEvent(state, {
         ts: nowIso(),
         type: "diagnostic_error",
-        blockId: feature.id,
+        blockId: endpoint.id,
         message: error?.message || "Diagnostic failed"
       });
     }
+    await new Promise((resolve) => requestAnimationFrame(resolve));
   }
+  state.diag.running = false;
+  state.diag.message = "Done";
   scheduleRender(state);
 }
 
@@ -608,6 +856,7 @@ export function initDebugConsole() {
   const state = createState();
   state.exportReport = () => exportReport(state);
   state.copyAll = () => copyAll(state);
+  state.copyCompact = () => copyCompact(state);
   state.download = () => download(state);
   state.runDiagnostics = () => runDiagnostics(state);
   state.toggle = () => {

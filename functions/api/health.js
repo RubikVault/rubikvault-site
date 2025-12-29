@@ -8,6 +8,8 @@ export async function onRequestGet({ request, env, data }) {
   let bindingsOk = false;
   let envHint = "unknown";
   let version = null;
+  let colo = null;
+  let host = "";
 
   try {
     bindingsOk =
@@ -16,6 +18,8 @@ export async function onRequestGet({ request, env, data }) {
       env?.CF_PAGES_ENVIRONMENT ||
       (env?.CF_PAGES_BRANCH ? "preview" : env?.CF_PAGES_URL ? "production" : "unknown");
     version = env?.CF_PAGES_COMMIT_SHA || env?.GIT_SHA || null;
+    colo = env?.CF?.colo || null;
+    host = request?.headers?.get("host") || "";
   } catch (error) {
     bindingsOk = false;
   }
@@ -25,7 +29,10 @@ export async function onRequestGet({ request, env, data }) {
     service: "rubikvault",
     bindings: { RV_KV: bindingsOk },
     envHint,
-    version
+    version,
+    cf: { colo },
+    host,
+    env: { hasKV: bindingsOk }
   };
 
   if (!bindingsOk) {
@@ -43,8 +50,7 @@ export async function onRequestGet({ request, env, data }) {
           action:
             "Cloudflare Dashboard → Pages → Settings → Functions → KV bindings → RV_KV (Preview + Production)"
         }
-      },
-      status: 500
+      }
     });
     logServer({
       feature: FEATURE_ID,

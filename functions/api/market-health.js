@@ -1,14 +1,12 @@
 import {
-  assertBindings,
   createTraceId,
-  kvGetJson,
-  kvPutJson,
   logServer,
   makeResponse,
   safeSnippet,
   withCoinGeckoKey
 } from "./_shared.js";
 import { fetchJsonWithFallbacks } from "./_shared/parse.js";
+import { kvGetJson, kvPutJson } from "../_lib/kv-safe.js";
 
 const FEATURE_ID = "market-health";
 const KV_TTL = 420;
@@ -153,9 +151,32 @@ export async function onRequestGet({ request, env, data }) {
     request.headers.get("x-rv-panic") === "1" ||
     new URL(request.url).searchParams.get("rv_panic") === "1";
 
-  const bindingResponse = assertBindings(env, FEATURE_ID, traceId);
-  if (bindingResponse) {
-    return bindingResponse;
+  const hasKV =
+    env?.RV_KV && typeof env.RV_KV.get === "function" && typeof env.RV_KV.put === "function";
+  if (!hasKV) {
+    const response = makeResponse({
+      ok: false,
+      feature: FEATURE_ID,
+      traceId,
+      cache: { hit: false, ttl: 0, layer: "none" },
+      upstream: { url: UPSTREAM_URL, status: null, snippet: "" },
+      error: {
+        code: "BINDING_MISSING",
+        message: "RV_KV binding missing",
+        details: {
+          action:
+            "Cloudflare Dashboard → Pages → Settings → Functions → KV bindings → RV_KV (Preview + Production)"
+        }
+      }
+    });
+    logServer({
+      feature: FEATURE_ID,
+      traceId,
+      cacheLayer: "none",
+      upstreamStatus: null,
+      durationMs: Date.now() - started
+    });
+    return response;
   }
 
   const cacheKey = `${FEATURE_ID}:v1`;
