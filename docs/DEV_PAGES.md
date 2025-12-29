@@ -66,3 +66,9 @@ Select existing namespace
 Apply to Preview AND Production
 
 END OF FILE
+
+DEBUG COMMAND CENTER
+- Open: https://<site>/?debug=1
+- Toggle: Cmd/Ctrl+Shift+D
+- Copy report: Click "Copy All" in the debug drawer
+- BINDING_MISSING means RV_KV is not bound in the Pages Functions bindings for that environment.

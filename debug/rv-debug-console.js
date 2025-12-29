@@ -1,0 +1,688 @@
+const DEBUG_VERSION = "rv-debug-v1";
+const MAX_EVENTS = 200;
+const MAX_FETCHES = 200;
+const MAX_ERRORS = 100;
+const MAX_SNIPPET = 2048;
+
+function nowIso() {
+  return new Date().toISOString();
+}
+
+function escapeHtml(value) {
+  return String(value || "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+function safeParse(text) {
+  try {
+    return { ok: true, json: JSON.parse(text) };
+  } catch (error) {
+    return { ok: false, error: error?.message || String(error || "") };
+  }
+}
+
+function getDebugFlag() {
+  if (typeof window === "undefined") return false;
+  const params = new URLSearchParams(window.location.search);
+  return params.get("debug") === "1" || window.localStorage?.getItem("RV_DEBUG") === "1";
+}
+
+function ensureRoot() {
+  if (typeof document === "undefined") return null;
+  let root = document.getElementById("rv-debug-root");
+  if (!root) {
+    root = document.createElement("div");
+    root.id = "rv-debug-root";
+    root.hidden = true;
+    document.body.appendChild(root);
+  }
+  return root;
+}
+
+function buildTextReport(state) {
+  const lines = [];
+  const blocks = Object.values(state.blocks || {});
+  blocks.forEach((block) => {
+    lines.push(`[featureId=${block.id}]`);
+    lines.push(`endpoint: ${block.endpoint || "(unknown)"}`);
+    lines.push(`status: ${block.status || "UNKNOWN"}`);
+    lines.push(`http: ${block.lastResponse?.status ?? "--"}`);
+    lines.push(`error.code: ${block.lastResponse?.errorCode || "--"}`);
+    lines.push(`traceId: ${block.lastResponse?.traceId || "--"}`);
+    lines.push(`durationMs: ${block.lastRun?.durationMs ?? "--"}`);
+    if (block.lastResponse?.cache) {
+      lines.push(
+        `cache: ${block.lastResponse.cache.layer || "--"} ttl=${
+          block.lastResponse.cache.ttl ?? "--"
+        } hit=${block.lastResponse.cache.hit ?? "--"}`
+      );
+    }
+    if (block.lastResponse?.upstream) {
+      lines.push(
+        `upstream: status=${block.lastResponse.upstream.status ?? "--"} url=${
+          block.lastResponse.upstream.url || "--"
+        }`
+      );
+    }
+    lines.push("");
+  });
+  return lines.join("\n").trim();
+}
+
+function createState() {
+  return {
+    enabled: getDebugFlag(),
+    version: DEBUG_VERSION,
+    startedAt: nowIso(),
+    page: {
+      url: typeof window !== "undefined" ? window.location.href : "",
+      userAgent: typeof navigator !== "undefined" ? navigator.userAgent : ""
+    },
+    blocks: {},
+    events: [],
+    fetches: [],
+    console: { errors: [], warnings: [] },
+    jsErrors: [],
+    currentBlock: null,
+    expanded: false,
+    filter: "all",
+    sort: "status",
+    renderQueued: false,
+    consolePatched: false,
+    errorPatched: false,
+    fetchPatched: false,
+    togglePatched: false
+  };
+}
+
+function getBlock(state, blockId, blockName) {
+  if (!state.blocks[blockId]) {
+    state.blocks[blockId] = {
+      id: blockId,
+      name: blockName || blockId,
+      status: "UNKNOWN",
+      endpoint: "",
+      lastRun: null,
+      lastResponse: null
+    };
+  }
+  return state.blocks[blockId];
+}
+
+function recordEvent(state, event) {
+  state.events.push(event);
+  if (state.events.length > MAX_EVENTS) {
+    state.events.splice(0, state.events.length - MAX_EVENTS);
+  }
+}
+
+function recordFetch(state, entry) {
+  state.fetches.push(entry);
+  if (state.fetches.length > MAX_FETCHES) {
+    state.fetches.splice(0, state.fetches.length - MAX_FETCHES);
+  }
+}
+
+function scheduleRender(state) {
+  if (!state.enabled) return;
+  if (state.renderQueued) return;
+  state.renderQueued = true;
+  requestAnimationFrame(() => {
+    state.renderQueued = false;
+    render(state);
+  });
+}
+
+function buildSummary(state) {
+  const blocks = Object.values(state.blocks || {});
+  const failBlocks = blocks.filter((block) => block.status === "FAIL");
+  const okBlocks = blocks.filter((block) => block.status === "OK");
+  const errorCodes = {};
+  failBlocks.forEach((block) => {
+    const code = block.lastResponse?.errorCode || "UNKNOWN";
+    errorCodes[code] = (errorCodes[code] || 0) + 1;
+  });
+  const topErrors = Object.entries(errorCodes)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 3)
+    .map(([code, count]) => `${code}(${count})`)
+    .join(", ");
+  return {
+    total: blocks.length,
+    ok: okBlocks.length,
+    fail: failBlocks.length,
+    lastError:
+      failBlocks.find((block) => block.lastResponse?.errorCode)?.lastResponse?.errorCode || "--",
+    topErrors: topErrors || "--",
+    bindingMissing: blocks.some((block) => block.lastResponse?.errorCode === "BINDING_MISSING")
+  };
+}
+
+function render(state) {
+  const root = ensureRoot();
+  if (!root) return;
+  if (!state.enabled) {
+    root.hidden = true;
+    return;
+  }
+
+  const blocks = Object.values(state.blocks || {});
+  const summary = buildSummary(state);
+  const blockRows = blocks
+    .filter((block) => {
+      if (state.filter === "fail") return block.status === "FAIL";
+      if (state.filter === "ok") return block.status === "OK";
+      return true;
+    })
+    .sort((a, b) => {
+      if (state.sort === "duration") {
+        return (b.lastRun?.durationMs || 0) - (a.lastRun?.durationMs || 0);
+      }
+      if (state.sort === "status") {
+        return a.status.localeCompare(b.status);
+      }
+      return 0;
+    })
+    .map((block) => {
+      const response = block.lastResponse || {};
+      const status = response.status ?? "--";
+      const errorCode = response.errorCode || "--";
+      const traceId = response.traceId || "--";
+      const duration = block.lastRun?.durationMs ?? "--";
+      const payload = response.json ? escapeHtml(JSON.stringify(response.json, null, 2)) : "";
+      const raw = response.rawSnippet ? escapeHtml(response.rawSnippet) : "";
+      return `
+        <details class="rvdbg-item">
+          <summary>
+            <span class="rvdbg-name">${escapeHtml(block.name || block.id)}</span>
+            <span class="rvdbg-status rvdbg-${block.status.toLowerCase()}">${block.status}</span>
+            <span class="rvdbg-meta">HTTP ${status}</span>
+            <span class="rvdbg-meta">${errorCode}</span>
+            <span class="rvdbg-meta">${traceId}</span>
+            <span class="rvdbg-meta">${duration}ms</span>
+          </summary>
+          <div class="rvdbg-detail">
+            <div><strong>Feature:</strong> ${escapeHtml(block.id)}</div>
+            <div><strong>Endpoint:</strong> ${escapeHtml(block.endpoint || "--")}</div>
+            <div><strong>Upstream:</strong> ${escapeHtml(
+              response.upstream
+                ? `${response.upstream.status ?? "--"} ${response.upstream.url || ""}`
+                : "--"
+            )}</div>
+            <div><strong>Cache:</strong> ${escapeHtml(
+              response.cache
+                ? `${response.cache.layer || "--"} ttl=${response.cache.ttl ?? "--"}`
+                : "--"
+            )}</div>
+            ${payload ? `<pre class="rvdbg-pre">${payload}</pre>` : ""}
+            ${raw ? `<pre class="rvdbg-pre">${raw}</pre>` : ""}
+          </div>
+        </details>
+      `;
+    })
+    .join("");
+
+  const apiFetches = state.fetches.filter((entry) => entry.isApi);
+  const fetchRows = apiFetches
+    .slice(-50)
+    .map((entry) => {
+      return `
+        <div class="rvdbg-fetch">
+          <span>${escapeHtml(entry.method || "GET")} ${escapeHtml(entry.url)}</span>
+          <span>HTTP ${entry.status ?? "--"}</span>
+          <span>${entry.durationMs}ms</span>
+        </div>
+      `;
+    })
+    .join("");
+
+  const errorRows = state.jsErrors
+    .slice(-20)
+    .map((entry) => `<div class="rvdbg-log">${escapeHtml(entry.message)}</div>`)
+    .join("");
+  const consoleRows = state.console.errors
+    .slice(-20)
+    .map((entry) => `<div class="rvdbg-log">${escapeHtml(entry.message)}</div>`)
+    .join("");
+
+  root.hidden = false;
+  root.innerHTML = `
+    <div class="rvdbg-panel ${state.expanded ? "is-open" : ""}">
+      <div class="rvdbg-header">
+        <div class="rvdbg-title">RubikVault Debug</div>
+        <div class="rvdbg-meta">${escapeHtml(state.page.url)}</div>
+        <button class="rvdbg-btn" data-action="toggle">${
+          state.expanded ? "Hide" : "Show"
+        }</button>
+      </div>
+      <div class="rvdbg-summary">
+        <span>Total: ${summary.total}</span>
+        <span>OK: ${summary.ok}</span>
+        <span>Fail: ${summary.fail}</span>
+        <span>Top errors: ${escapeHtml(summary.topErrors)}</span>
+        <span>Last error: ${escapeHtml(summary.lastError)}</span>
+      </div>
+      ${
+        summary.bindingMissing
+          ? '<div class="rvdbg-banner">ROOT CAUSE: Missing binding RV_KV in this environment (Preview/Prod).</div>'
+          : ""
+      }
+      <div class="rvdbg-controls">
+        <label>
+          Filter
+          <select data-action="filter">
+            <option value="all" ${state.filter === "all" ? "selected" : ""}>ALL</option>
+            <option value="fail" ${state.filter === "fail" ? "selected" : ""}>FAIL only</option>
+            <option value="ok" ${state.filter === "ok" ? "selected" : ""}>OK only</option>
+          </select>
+        </label>
+        <label>
+          Sort
+          <select data-action="sort">
+            <option value="status" ${state.sort === "status" ? "selected" : ""}>Status</option>
+            <option value="duration" ${state.sort === "duration" ? "selected" : ""}>Duration</option>
+          </select>
+        </label>
+        <button class="rvdbg-btn" data-action="copy">Copy All</button>
+        <button class="rvdbg-btn" data-action="download">Download JSON</button>
+        <button class="rvdbg-btn" data-action="clear">Clear</button>
+        <button class="rvdbg-btn" data-action="diagnose">Run Diagnostics</button>
+      </div>
+      <div class="rvdbg-section">
+        <h4>Blocks</h4>
+        <div class="rvdbg-list">${blockRows || "<em>No blocks captured yet.</em>"}</div>
+      </div>
+      <div class="rvdbg-section">
+        <h4>Global JS Errors</h4>
+        ${errorRows || "<em>None</em>"}
+      </div>
+      <div class="rvdbg-section">
+        <h4>Console Errors</h4>
+        ${consoleRows || "<em>None</em>"}
+      </div>
+      <div class="rvdbg-section">
+        <h4>API Fetch Log</h4>
+        ${fetchRows || "<em>No API fetches captured.</em>"}
+      </div>
+    </div>
+    <button class="rvdbg-toggle" data-action="toggle">DBG</button>
+  `;
+
+  root.querySelectorAll("[data-action]").forEach((el) => {
+    el.addEventListener("click", (event) => {
+      const action = event.currentTarget.getAttribute("data-action");
+      if (action === "toggle") {
+        state.expanded = !state.expanded;
+        scheduleRender(state);
+      }
+      if (action === "copy") {
+        state.copyAll();
+      }
+      if (action === "download") {
+        state.download();
+      }
+      if (action === "clear") {
+        state.events = [];
+        state.fetches = [];
+        state.console = { errors: [], warnings: [] };
+        state.jsErrors = [];
+        scheduleRender(state);
+      }
+      if (action === "diagnose") {
+        state.runDiagnostics();
+      }
+    });
+  });
+
+  const filterEl = root.querySelector("select[data-action='filter']");
+  if (filterEl) {
+    filterEl.addEventListener("change", (event) => {
+      state.filter = event.target.value || "all";
+      scheduleRender(state);
+    });
+  }
+  const sortEl = root.querySelector("select[data-action='sort']");
+  if (sortEl) {
+    sortEl.addEventListener("change", (event) => {
+      state.sort = event.target.value || "status";
+      scheduleRender(state);
+    });
+  }
+}
+
+function patchConsole(state) {
+  if (state.consolePatched || typeof console === "undefined") return;
+  const wrap = (method, bucket) => {
+    const original = console[method];
+    console[method] = (...args) => {
+      if (state.enabled) {
+        const entry = {
+          ts: nowIso(),
+          message: args.map((arg) => (typeof arg === "string" ? arg : JSON.stringify(arg))).join(" ")
+        };
+        state.console[bucket].push(entry);
+        if (state.console[bucket].length > MAX_ERRORS) {
+          state.console[bucket].splice(0, state.console[bucket].length - MAX_ERRORS);
+        }
+      }
+      original.apply(console, args);
+    };
+  };
+  wrap("error", "errors");
+  wrap("warn", "warnings");
+  state.consolePatched = true;
+}
+
+function patchGlobalErrors(state) {
+  if (state.errorPatched || typeof window === "undefined") return;
+  window.addEventListener("error", (event) => {
+    state.jsErrors.push({ ts: nowIso(), message: event.message || "Error", stack: event.error?.stack });
+    if (state.jsErrors.length > MAX_ERRORS) state.jsErrors.shift();
+    if (state.enabled) scheduleRender(state);
+  });
+  window.addEventListener("unhandledrejection", (event) => {
+    state.jsErrors.push({ ts: nowIso(), message: event.reason?.message || String(event.reason || "Unhandled"), stack: event.reason?.stack });
+    if (state.jsErrors.length > MAX_ERRORS) state.jsErrors.shift();
+    if (state.enabled) scheduleRender(state);
+  });
+  state.errorPatched = true;
+}
+
+function getSafeHeaders(headers) {
+  if (!headers) return {};
+  try {
+    const result = {};
+    const read = (key) => headers.get?.(key) || headers[key];
+    ["accept", "content-type", "x-rv-feature", "x-rv-trace"].forEach((key) => {
+      const value = read(key);
+      if (value) result[key] = value;
+    });
+    return result;
+  } catch (error) {
+    return {};
+  }
+}
+
+function normalizeUrl(url) {
+  if (typeof window === "undefined") return url;
+  if (url.startsWith(window.location.origin)) {
+    return url.slice(window.location.origin.length) || "/";
+  }
+  return url;
+}
+
+function patchFetch(state) {
+  if (state.fetchPatched || typeof window === "undefined" || !window.fetch) return;
+  const original = window.fetch.bind(window);
+  window.fetch = async (...args) => {
+    const started = performance.now();
+    const request = args[0];
+    const options = args[1] || {};
+    const url = typeof request === "string" ? request : request?.url || "";
+    const method = options?.method || "GET";
+    const headers = getSafeHeaders(options?.headers || request?.headers);
+    try {
+      const response = await original(...args);
+      let text = "";
+      try {
+        text = await response.clone().text();
+      } catch (error) {
+        text = "";
+      }
+      const parsed = safeParse(text);
+      const entry = {
+        ts: nowIso(),
+        url: normalizeUrl(url),
+        method,
+        headers,
+        status: response.status,
+        durationMs: Math.round(performance.now() - started),
+        ok: parsed.ok ? parsed.json?.ok : null,
+        errorCode: parsed.ok ? parsed.json?.error?.code : "SCHEMA_INVALID",
+        traceId: parsed.ok ? parsed.json?.traceId : null,
+        cache: parsed.ok ? parsed.json?.cache : null,
+        upstream: parsed.ok ? parsed.json?.upstream : null,
+        json: parsed.ok ? parsed.json : null,
+        rawSnippet: parsed.ok ? "" : text.slice(0, MAX_SNIPPET),
+        isApi: url.includes("/api/")
+      };
+      recordFetch(state, entry);
+      const block = state.currentBlock;
+      if (block) {
+        recordBlockFetch(state, block.id, block.name, block.endpoint, entry);
+      }
+      return response;
+    } catch (error) {
+      const entry = {
+        ts: nowIso(),
+        url: normalizeUrl(url),
+        method,
+        headers,
+        status: null,
+        durationMs: Math.round(performance.now() - started),
+        ok: null,
+        errorCode: "FETCH_ERROR",
+        traceId: null,
+        cache: null,
+        upstream: null,
+        json: null,
+        rawSnippet: String(error?.message || error || "fetch failed").slice(0, MAX_SNIPPET),
+        isApi: url.includes("/api/")
+      };
+      recordFetch(state, entry);
+      if (state.currentBlock) {
+        recordBlockFetch(state, state.currentBlock.id, state.currentBlock.name, state.currentBlock.endpoint, entry);
+      }
+      throw error;
+    }
+  };
+  state.fetchPatched = true;
+}
+
+function recordBlockFetch(state, blockId, blockName, endpoint, entry) {
+  const block = getBlock(state, blockId, blockName);
+  block.endpoint = endpoint || block.endpoint;
+  block.lastResponse = {
+    url: entry.url,
+    status: entry.status,
+    ok: entry.ok,
+    errorCode: entry.errorCode,
+    traceId: entry.traceId,
+    cache: entry.cache,
+    upstream: entry.upstream,
+    json: entry.json,
+    rawSnippet: entry.rawSnippet
+  };
+  if (entry.ok === true) {
+    block.status = "OK";
+  } else if (entry.ok === false || entry.errorCode) {
+    block.status = "FAIL";
+  }
+  recordEvent(state, {
+    ts: nowIso(),
+    type: "fetch",
+    blockId,
+    url: entry.url,
+    status: entry.status,
+    durationMs: entry.durationMs
+  });
+  if (state.enabled && entry.errorCode && !state.expanded) {
+    state.expanded = true;
+  }
+  scheduleRender(state);
+}
+
+function attachKeyboardToggle(state) {
+  if (state.togglePatched || typeof window === "undefined") return;
+  window.addEventListener("keydown", (event) => {
+    const isToggle = (event.ctrlKey || event.metaKey) && event.shiftKey && event.key.toLowerCase() === "d";
+    if (!isToggle) return;
+    state.enabled = !state.enabled;
+    if (state.enabled) {
+      window.localStorage?.setItem("RV_DEBUG", "1");
+      patchConsole(state);
+      patchGlobalErrors(state);
+      patchFetch(state);
+    } else {
+      window.localStorage?.removeItem("RV_DEBUG");
+    }
+    state.expanded = state.enabled;
+    scheduleRender(state);
+  });
+  state.togglePatched = true;
+}
+
+function exportReport(state) {
+  return {
+    version: state.version,
+    startedAt: state.startedAt,
+    page: state.page,
+    blocks: state.blocks,
+    events: state.events,
+    fetches: state.fetches,
+    console: state.console,
+    jsErrors: state.jsErrors
+  };
+}
+
+function copyAll(state) {
+  const report = exportReport(state);
+  const text = JSON.stringify(report, null, 2) + "\n\n" + buildTextReport(state);
+  if (navigator?.clipboard?.writeText) {
+    return navigator.clipboard.writeText(text);
+  }
+  try {
+    const textarea = document.createElement("textarea");
+    textarea.value = text;
+    document.body.appendChild(textarea);
+    textarea.select();
+    document.execCommand("copy");
+    textarea.remove();
+  } catch (error) {
+    // ignore
+  }
+  return Promise.resolve();
+}
+
+function download(state) {
+  const report = exportReport(state);
+  const blob = new Blob([JSON.stringify(report, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `rv-debug-${Date.now()}.json`;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}
+
+async function runDiagnostics(state) {
+  if (!state.enabled) return;
+  const features = window.RV_CONFIG?.FEATURES || [];
+  const apiBase = window.RV_CONFIG?.apiBase || "/api";
+  for (const feature of features) {
+    if (!feature?.api) continue;
+    const url = feature.api.startsWith("http") ? feature.api : `${apiBase}/${feature.api}`;
+    try {
+      await fetch(url, { headers: { Accept: "application/json" } });
+    } catch (error) {
+      recordEvent(state, {
+        ts: nowIso(),
+        type: "diagnostic_error",
+        blockId: feature.id,
+        message: error?.message || "Diagnostic failed"
+      });
+    }
+  }
+  scheduleRender(state);
+}
+
+export function initDebugConsole() {
+  if (typeof window === "undefined") return null;
+  if (window.__RV_DEBUG__) return window.__RV_DEBUG__;
+  const state = createState();
+  state.exportReport = () => exportReport(state);
+  state.copyAll = () => copyAll(state);
+  state.download = () => download(state);
+  state.runDiagnostics = () => runDiagnostics(state);
+  state.toggle = () => {
+    state.enabled = !state.enabled;
+    if (state.enabled) {
+      window.localStorage?.setItem("RV_DEBUG", "1");
+      patchConsole(state);
+      patchGlobalErrors(state);
+      patchFetch(state);
+    } else {
+      window.localStorage?.removeItem("RV_DEBUG");
+    }
+    state.expanded = state.enabled;
+    scheduleRender(state);
+  };
+  attachKeyboardToggle(state);
+  if (state.enabled) {
+    patchConsole(state);
+    patchGlobalErrors(state);
+    patchFetch(state);
+    state.expanded = true;
+    render(state);
+  }
+  window.__RV_DEBUG__ = state;
+  return state;
+}
+
+export function registerBlock(block) {
+  const state = window.__RV_DEBUG__;
+  if (!state) return;
+  const entry = getBlock(state, block.id, block.name);
+  entry.endpoint = block.endpoint || entry.endpoint;
+  if (block.title) entry.title = block.title;
+  scheduleRender(state);
+}
+
+export function setDebugContext({ blockId, blockName, endpoint }) {
+  const state = window.__RV_DEBUG__;
+  if (!state || !state.enabled) return;
+  state.currentBlock = { id: blockId, name: blockName, endpoint };
+  const block = getBlock(state, blockId, blockName);
+  block.endpoint = endpoint || block.endpoint;
+  block.lastRun = { startTime: nowIso(), endTime: null, durationMs: null };
+  recordEvent(state, { ts: nowIso(), type: "block_start", blockId });
+  scheduleRender(state);
+}
+
+export function clearDebugContext() {
+  const state = window.__RV_DEBUG__;
+  if (!state || !state.enabled) return;
+  state.currentBlock = null;
+}
+
+export function recordBlockEnd({ blockId, blockName, ok, error }) {
+  const state = window.__RV_DEBUG__;
+  if (!state || !state.enabled) return;
+  const block = getBlock(state, blockId, blockName);
+  if (block.lastRun) {
+    block.lastRun.endTime = nowIso();
+    block.lastRun.durationMs = Math.round(
+      (new Date(block.lastRun.endTime).getTime() - new Date(block.lastRun.startTime).getTime())
+    );
+  }
+  if (ok === true) {
+    block.status = "OK";
+  } else if (ok === false || error) {
+    block.status = "FAIL";
+  }
+  if (error) {
+    recordEvent(state, {
+      ts: nowIso(),
+      type: "block_error",
+      blockId,
+      message: error?.message || String(error || "Unknown error")
+    });
+  }
+  scheduleRender(state);
+}

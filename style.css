@@ -1842,3 +1842,369 @@ section[data-rv-deprecated="true"] {
   .rv-brand-icon { height: 32px; }
   .rv-brand-text { font-size: 1rem; }
 }
+
+/* Debug console (rvdbg) */
+#rv-debug-root[hidden] {
+  display: none;
+}
+
+#rv-debug-root {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  z-index: 9999;
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+  color: #e5e7eb;
+}
+
+.rvdbg-panel {
+  width: min(420px, 92vw);
+  max-height: 72vh;
+  background: rgba(8, 10, 20, 0.96);
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  border-radius: 12px;
+  padding: 12px;
+  display: none;
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.45);
+  overflow: auto;
+}
+
+.rvdbg-panel.is-open {
+  display: block;
+}
+
+.rvdbg-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  font-weight: 600;
+}
+
+.rvdbg-title {
+  font-size: 13px;
+}
+
+.rvdbg-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-size: 11px;
+  color: #94a3b8;
+  margin-bottom: 8px;
+}
+
+.rvdbg-banner {
+  margin-bottom: 8px;
+  padding: 8px;
+  border-radius: 8px;
+  background: rgba(239, 68, 68, 0.15);
+  color: #fecaca;
+  font-size: 11px;
+}
+
+.rvdbg-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 8px;
+  font-size: 11px;
+}
+
+.rvdbg-controls select {
+  background: rgba(15, 23, 42, 0.8);
+  color: #e5e7eb;
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  border-radius: 6px;
+  padding: 3px 6px;
+}
+
+.rvdbg-btn {
+  background: rgba(15, 23, 42, 0.8);
+  color: #e5e7eb;
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  border-radius: 6px;
+  padding: 4px 8px;
+  cursor: pointer;
+  font-size: 11px;
+}
+
+.rvdbg-list {
+  display: grid;
+  gap: 6px;
+}
+
+.rvdbg-item {
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 8px;
+  padding: 6px;
+  background: rgba(15, 23, 42, 0.6);
+}
+
+.rvdbg-item summary {
+  display: grid;
+  grid-template-columns: 1.4fr repeat(5, auto);
+  gap: 6px;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.rvdbg-name {
+  font-weight: 600;
+}
+
+.rvdbg-meta {
+  color: #94a3b8;
+}
+
+.rvdbg-status {
+  padding: 2px 6px;
+  border-radius: 6px;
+  font-size: 10px;
+  text-transform: uppercase;
+  text-align: center;
+}
+
+.rvdbg-status.rvdbg-ok {
+  background: rgba(16, 185, 129, 0.2);
+  color: #6ee7b7;
+}
+
+.rvdbg-status.rvdbg-fail {
+  background: rgba(239, 68, 68, 0.2);
+  color: #fecaca;
+}
+
+.rvdbg-status.rvdbg-unknown {
+  background: rgba(148, 163, 184, 0.2);
+  color: #cbd5f5;
+}
+
+.rvdbg-detail {
+  margin-top: 8px;
+  font-size: 11px;
+  color: #e2e8f0;
+  display: grid;
+  gap: 4px;
+}
+
+.rvdbg-pre {
+  background: rgba(15, 23, 42, 0.8);
+  border-radius: 6px;
+  padding: 6px;
+  max-height: 220px;
+  overflow: auto;
+  font-size: 10px;
+  color: #e2e8f0;
+}
+
+.rvdbg-toggle {
+  margin-top: 8px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  background: rgba(8, 10, 20, 0.9);
+  color: #e5e7eb;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+@media (max-width: 600px) {
+  .rvdbg-item summary {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Debug command center (rvdbg) */
+#rv-debug-root[hidden] {
+  display: none;
+}
+
+#rv-debug-root {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  z-index: 9999;
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+  color: #e5e7eb;
+}
+
+.rvdbg-panel {
+  width: min(420px, 92vw);
+  max-height: 72vh;
+  background: rgba(8, 10, 20, 0.96);
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  border-radius: 12px;
+  padding: 12px;
+  display: none;
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.45);
+  overflow: auto;
+}
+
+.rvdbg-panel.is-open {
+  display: block;
+}
+
+.rvdbg-header {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 8px;
+  font-weight: 600;
+}
+
+.rvdbg-title {
+  font-size: 13px;
+}
+
+.rvdbg-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-size: 11px;
+  color: #94a3b8;
+  margin-bottom: 8px;
+}
+
+.rvdbg-banner {
+  margin-bottom: 8px;
+  padding: 8px;
+  border-radius: 8px;
+  background: rgba(239, 68, 68, 0.15);
+  color: #fecaca;
+  font-size: 11px;
+}
+
+.rvdbg-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 8px;
+  font-size: 11px;
+}
+
+.rvdbg-controls select {
+  background: rgba(15, 23, 42, 0.8);
+  color: #e5e7eb;
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  border-radius: 6px;
+  padding: 3px 6px;
+}
+
+.rvdbg-btn {
+  background: rgba(15, 23, 42, 0.8);
+  color: #e5e7eb;
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  border-radius: 6px;
+  padding: 4px 8px;
+  cursor: pointer;
+  font-size: 11px;
+}
+
+.rvdbg-section {
+  margin-top: 10px;
+  font-size: 11px;
+}
+
+.rvdbg-section h4 {
+  margin: 0 0 4px;
+  font-size: 11px;
+  color: #cbd5f5;
+}
+
+.rvdbg-list {
+  display: grid;
+  gap: 6px;
+}
+
+.rvdbg-item {
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 8px;
+  padding: 6px;
+  background: rgba(15, 23, 42, 0.6);
+}
+
+.rvdbg-item summary {
+  display: grid;
+  grid-template-columns: 1.4fr repeat(5, auto);
+  gap: 6px;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.rvdbg-name {
+  font-weight: 600;
+}
+
+.rvdbg-meta {
+  color: #94a3b8;
+}
+
+.rvdbg-status {
+  padding: 2px 6px;
+  border-radius: 6px;
+  font-size: 10px;
+  text-transform: uppercase;
+  text-align: center;
+}
+
+.rvdbg-status.rvdbg-ok {
+  background: rgba(16, 185, 129, 0.2);
+  color: #6ee7b7;
+}
+
+.rvdbg-status.rvdbg-fail {
+  background: rgba(239, 68, 68, 0.2);
+  color: #fecaca;
+}
+
+.rvdbg-status.rvdbg-unknown {
+  background: rgba(148, 163, 184, 0.2);
+  color: #cbd5f5;
+}
+
+.rvdbg-detail {
+  margin-top: 8px;
+  font-size: 11px;
+  color: #e2e8f0;
+  display: grid;
+  gap: 4px;
+}
+
+.rvdbg-pre {
+  background: rgba(15, 23, 42, 0.8);
+  border-radius: 6px;
+  padding: 6px;
+  max-height: 220px;
+  overflow: auto;
+  font-size: 10px;
+  color: #e2e8f0;
+}
+
+.rvdbg-fetch,
+.rvdbg-log {
+  padding: 4px 0;
+  border-bottom: 1px dashed rgba(148, 163, 184, 0.2);
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.rvdbg-toggle {
+  margin-top: 8px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  background: rgba(8, 10, 20, 0.9);
+  color: #e5e7eb;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+@media (max-width: 600px) {
+  .rvdbg-item summary {
+    grid-template-columns: 1fr;
+  }
+}

@@ -1,5 +1,12 @@
 import { RV_CONFIG, FEATURES, DEBUG_PANIC_MODE } from "./rv-config.js";
 import { createLogger, createTraceId } from "./debug/rv-debug.js";
+import {
+  initDebugConsole,
+  registerBlock,
+  setDebugContext,
+  clearDebugContext,
+  recordBlockEnd
+} from "./rv-debug-console.js";
 import { applyOverrides } from "./features/utils/flags.js";
 import { resolveApiBase } from "./features/utils/api.js";
 import { initFlagsPanel } from "./features/rv-flags-panel.js";
@@ -631,8 +638,19 @@ function getBlockName(section, feature) {
   );
 }
 
+function getFeatureEndpoint(feature) {
+  if (!feature?.api) return "";
+  const resolution = resolveApiBase();
+  if (!resolution.ok) return feature.api;
+  const prefix = resolution.apiPrefix || resolution.apiBase || "";
+  return prefix ? `${prefix}/${feature.api}` : feature.api;
+}
+
 async function runFeature(section, feature, logger, contentEl) {
   const traceId = createTraceId();
+  const blockName = getBlockName(section, feature);
+  const endpoint = getFeatureEndpoint(feature);
+  setDebugContext({ blockId: feature?.id || "unknown", blockName, endpoint });
   logger.setTraceId(traceId);
   applyApiMeta(logger);
   setLoading(section, true);
@@ -657,12 +675,21 @@ async function runFeature(section, feature, logger, contentEl) {
 
     await module.init(contentEl, context);
     setLoading(section, false);
+    recordBlockEnd({ blockId: feature?.id || "unknown", blockName, ok: true });
+    clearDebugContext();
     return true;
   } catch (error) {
     logger.setStatus("FAIL", "Init failed");
     logger.error("init_error", { message: error?.message || "Unknown error" });
     renderError(contentEl, error);
     setLoading(section, false);
+    recordBlockEnd({
+      blockId: feature?.id || "unknown",
+      blockName,
+      ok: false,
+      error
+    });
+    clearDebugContext();
     return false;
   }
 }
@@ -686,6 +713,9 @@ function bindRefresh(section, feature, logger, contentEl) {
     }, cooldownMs);
 
     const traceId = createTraceId();
+    const blockName = getBlockName(section, feature);
+    const endpoint = getFeatureEndpoint(feature);
+    setDebugContext({ blockId: feature?.id || "unknown", blockName, endpoint });
     logger.setTraceId(traceId);
     setLoading(section, true);
 
@@ -717,11 +747,20 @@ function bindRefresh(section, feature, logger, contentEl) {
         });
       }
       setLoading(section, false);
+      recordBlockEnd({ blockId: feature?.id || "unknown", blockName, ok: true });
+      clearDebugContext();
     } catch (error) {
       logger.setStatus("FAIL", "Refresh failed");
       logger.error("refresh_error", { message: error?.message || "Unknown error" });
       renderError(contentEl, error);
       setLoading(section, false);
+      recordBlockEnd({
+        blockId: feature?.id || "unknown",
+        blockName,
+        ok: false,
+        error
+      });
+      clearDebugContext();
     }
   });
 }
@@ -738,6 +777,9 @@ function startAutoRefresh(section, feature, logger, contentEl) {
       return;
     }
     const traceId = createTraceId();
+    const blockName = getBlockName(section, feature);
+    const endpoint = getFeatureEndpoint(feature);
+    setDebugContext({ blockId: feature?.id || "unknown", blockName, endpoint });
     logger.setTraceId(traceId);
     logger.info("auto_refresh", { intervalMs: feature.refreshIntervalMs });
     setLoading(section, true);
@@ -757,11 +799,20 @@ function startAutoRefresh(section, feature, logger, contentEl) {
         });
       }
       setLoading(section, false);
+      recordBlockEnd({ blockId: feature?.id || "unknown", blockName, ok: true });
+      clearDebugContext();
     } catch (error) {
       logger.setStatus("FAIL", "Auto refresh failed");
       logger.error("auto_refresh_error", { message: error?.message || "Unknown error" });
       renderError(contentEl, error);
       setLoading(section, false);
+      recordBlockEnd({
+        blockId: feature?.id || "unknown",
+        blockName,
+        ok: false,
+        error
+      });
+      clearDebugContext();
     }
   }, feature.refreshIntervalMs);
 }
@@ -771,6 +822,11 @@ function initBlock(section, feature) {
   if (!root) return;
   const featureId = section.getAttribute("data-rv-feature") || feature?.id || "unknown";
   const blockName = getBlockName(section, feature);
+  registerBlock({
+    id: featureId,
+    name: blockName,
+    endpoint: getFeatureEndpoint(feature)
+  });
   const logger = createLogger({
     featureId,
     blockName,
@@ -815,6 +871,7 @@ function initBlock(section, feature) {
 }
 
 function boot() {
+  initDebugConsole();
   const features = resolveFeatures();
   const featureMap = new Map(features.map((feature) => [feature.id, feature]));
 
