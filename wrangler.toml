@@ -1,3 +1,8 @@
 name = "rubikvault-site"
 compatibility_date = "2025-12-29"
 pages_build_output_dir = "."
+
+# KV binding (for local dev + pages config beta)
+kv_namespaces = [
+  { binding = "RV_KV", id = "323d53e7392e42ff9089daf8977dfde3", preview_id = "30c57392d8f04dfbaeb71fd8bedea15f" }
+]
