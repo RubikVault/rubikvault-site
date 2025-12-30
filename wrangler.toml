@@ -1,6 +1,28 @@
 name = "rubikvault-site"
+
+# Pages Functions Runtime
 compatibility_date = "2025-12-29"
+
+# Cloudflare Pages build output
+# (root project, da du kein separates dist/ hast)
 pages_build_output_dir = "."
 
-# Cloudflare Pages Functions KV bindings are configured in the Dashboard
-# (Preview + Production). This file only tracks build/dev metadata.
+# === KV BINDINGS ===
+# Diese Definition ist ABSICHTLICH hier drin,
+# damit Preview & Production stabil reproduzierbar sind
+# und NICHT vom Dashboard „wegmagiert“ werden.
+kv_namespaces = [
+  {
+    binding = "RV_KV",
+    id = "323d53e7392e42ff9089daf8977dfde3",
+    preview_id = "30c57392d8f04dfbaeb71fd8bedea15f"
+  }
+]
+
+# -----------------------------------------
+# WICHTIG:
+# - KEINE Secrets hier eintragen
+# - KEINE API-Keys hier eintragen
+# - Secrets bleiben IM Dashboard
+# - Diese Datei beschreibt NUR Infrastruktur-Bindings
+# -----------------------------------------
