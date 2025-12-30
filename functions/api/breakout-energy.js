@@ -945,5 +945,19 @@ export async function onRequestGet(context) {
   normalized.cacheStatus = cacheStatus;
   normalized.isStale = isStale;
   normalized.freshness = normalizeFreshness(swr.ageSeconds);
+  const itemsCount = normalized?.data?.data?.items?.length || 0;
+  if (itemsCount > 0 && normalized?.dataQuality) {
+    const reason = normalized.dataQuality.reason || "";
+    const status = normalized.dataQuality.status || "";
+    if (reason === "NO_DATA") {
+      normalized.dataQuality.reason = status === "PARTIAL" ? "PARTIAL_UNIVERSE" : "";
+    }
+    if (status === "PARTIAL" && !normalized.dataQuality.reason) {
+      const reasons = normalized?.data?.reasons || normalized?.data?.data?.reasons || [];
+      normalized.dataQuality.reason = Array.isArray(reasons) && reasons.includes("LIMIT_SUBREQUESTS")
+        ? "LIMIT_SUBREQUESTS"
+        : "PARTIAL_UNIVERSE";
+    }
+  }
   return jsonResponse(normalized, { status: 200, cacheStatus });
 }
