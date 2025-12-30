@@ -151,6 +151,20 @@ async function loadMirrorPayload(env, request) {
   try {
     const res = await fetch(new URL(MIRROR_FILE, request.url));
     if (!res.ok) return null;
+    const contentType = String(res.headers.get("content-type") || "").toLowerCase();
+    if (!contentType.includes("application/json")) {
+      const text = await res.text();
+      const snippet = text.slice(0, 80).trim().toLowerCase();
+      if (snippet.startsWith("<!doctype") || snippet.startsWith("<html")) return null;
+      try {
+        const json = JSON.parse(text);
+        const fromFile = extractMirrorPayload(json);
+        if (fromFile?.payload) return { source: "file", ...fromFile };
+      } catch {
+        return null;
+      }
+      return null;
+    }
     const json = await res.json();
     const fromFile = extractMirrorPayload(json);
     if (fromFile?.payload) return { source: "file", ...fromFile };
