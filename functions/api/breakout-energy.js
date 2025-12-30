@@ -17,13 +17,19 @@ import {
 } from "./_shared/feature-contract.js";
 import { fetchStooqDaily } from "./_shared/stooq.js";
 import { US_TOP_100 } from "./_shared/us-universes.js";
+import { RequestBudget } from "../_shared/budget.js";
+import { normalizeError } from "../_shared/errorCodes.js";
 
 const FEATURE_ID = "breakout-energy";
 const CACHE_KEY = "breakout-energy:v1";
 const LAST_GOOD_KEY = "breakout-energy:last_good";
+const LAST_GOOD_V1_KEY = "breakout-energy:v1:lastGood";
+const LAST_GOOD_MAX_AGE_MS = 6 * 60 * 60 * 1000;
 const KV_TTL = 60 * 60;
 const STALE_MAX = 24 * 60 * 60;
 const MAX_SYMBOLS = 100;
+const SAFE_LIMIT = 35;
+const REQUEST_BUDGET_MAX = 40;
 
 const STATES = {
   IGNORE: "IGNORE",
@@ -107,6 +113,35 @@ const DEFINITIONS = {
 
 function clamp(value, min, max) {
   return Math.max(min, Math.min(max, value));
+}
+
+function extractTimestamp(value) {
+  const candidate =
+    value?.ts ||
+    value?.updatedAt ||
+    value?.data?.updatedAt ||
+    value?.data?.ts ||
+    value?.data?.data?.updatedAt ||
+    value?.data?.data?.ts ||
+    null;
+  if (!candidate) return null;
+  const parsed = Date.parse(candidate);
+  return Number.isNaN(parsed) ? null : parsed;
+}
+
+function attachCacheMeta(payload, ageSec) {
+  if (!payload?.data) return;
+  const existing = payload.data.cache && typeof payload.data.cache === "object" ? payload.data.cache : {};
+  payload.data.cache = {
+    ...existing,
+    hit: true,
+    ageSec: typeof ageSec === "number" ? ageSec : null
+  };
+}
+
+function hasItems(payload) {
+  const items = payload?.data?.items || payload?.data?.data?.items || payload?.items || [];
+  return Array.isArray(items) && items.length > 0;
 }
 
 function safeNumber(value) {
@@ -560,11 +595,15 @@ function computeSymbol({
 }
 
 async function loadPrevStateMap(env) {
-  const cached = await kvGetJson(env, LAST_GOOD_KEY);
+  const cached = await kvGetJson(env, LAST_GOOD_V1_KEY);
+  const fallback = cached?.value ? null : await kvGetJson(env, LAST_GOOD_KEY);
   const items =
     cached?.value?.data?.data?.items ||
     cached?.value?.data?.items ||
     cached?.value?.items ||
+    fallback?.value?.data?.data?.items ||
+    fallback?.value?.data?.items ||
+    fallback?.value?.items ||
     [];
   const map = new Map();
   if (Array.isArray(items)) {
@@ -581,27 +620,54 @@ async function loadPrevStateMap(env) {
   return map;
 }
 
-async function fetchBreakoutEnergy(env, symbolParam) {
+async function fetchBreakoutEnergy(env, symbolParam, options = {}) {
+  const budget = options.budget || null;
+  const safeLimit = Number.isFinite(options.safeLimit) ? options.safeLimit : SAFE_LIMIT;
   const symbols = symbolParam
     ? [symbolParam]
     : US_TOP_100.map((item) => item.s).filter(Boolean);
-  const limited = symbols.slice(0, MAX_SYMBOLS);
-  const budgetLimited = symbols.length > MAX_SYMBOLS;
+  const limited = symbols.slice(0, safeLimit);
+  const budgetLimited = symbols.length > safeLimit;
   const prevStateMap = await loadPrevStateMap(env);
+  let budgetExceeded = false;
+  let budgetError = null;
 
-  const spyRes = await fetchStooqDaily("SPY", env);
+  const fetchDaily = async (symbol) => {
+    try {
+      return await fetchStooqDaily(
+        symbol,
+        env,
+        budget ? budget.fetch.bind(budget) : undefined
+      );
+    } catch (error) {
+      budgetExceeded = true;
+      budgetError = error;
+      return { ok: false, error: error?.code || "LIMIT_SUBREQUESTS", data: null, budgetError: error };
+    }
+  };
+
+  const spyRes = await fetchDaily("SPY");
+  if (spyRes?.budgetError) {
+    budgetExceeded = true;
+    budgetError = spyRes.budgetError;
+  }
   const regimeFactor = spyRes.ok ? computeRegimeFactor(spyRes.data) : 1;
 
   const items = [];
   let liveCount = 0;
   let missingCount = 0;
 
-  const batchSize = 10;
+  const batchSize = 5;
   for (let i = 0; i < limited.length; i += batchSize) {
+    if (budgetExceeded) break;
     const batch = limited.slice(i, i + batchSize);
-    const results = await Promise.all(batch.map((symbol) => fetchStooqDaily(symbol, env)));
+    const results = await Promise.all(batch.map((symbol) => fetchDaily(symbol)));
     results.forEach((result, index) => {
       const symbol = batch[index];
+      if (result?.budgetError) {
+        budgetExceeded = true;
+        budgetError = result.budgetError;
+      }
       if (!result?.ok || !result?.data) {
         missingCount += 1;
         items.push(
@@ -628,13 +694,19 @@ async function fetchBreakoutEnergy(env, symbolParam) {
   }
 
   const hasData = items.length > 0;
-  const partial = budgetLimited || missingCount > 0;
-  const dataQuality = resolveDataQuality({
-    ok: hasData,
-    isStale: false,
-    partial,
-    hasData
-  });
+  const partial = budgetLimited || missingCount > 0 || budgetExceeded;
+  const dataQuality = budgetExceeded
+    ? { status: "PARTIAL", reason: "LIMIT_SUBREQUESTS" }
+    : resolveDataQuality({
+        ok: hasData || budgetExceeded,
+        isStale: false,
+        partial,
+        hasData
+      });
+  const reasons = [];
+  if (budgetLimited) reasons.push("BUDGET_LIMIT");
+  if (budgetExceeded) reasons.push("LIMIT_SUBREQUESTS");
+  const budgetInfo = budget ? { used: budget.used, max: budget.max } : null;
 
   const payload = buildFeaturePayload({
     feature: FEATURE_ID,
@@ -644,19 +716,37 @@ async function fetchBreakoutEnergy(env, symbolParam) {
     dataQuality,
     confidence: calculateConfidence(liveCount, items.length || 1),
     definitions: DEFINITIONS,
-    reasons: budgetLimited ? ["BUDGET_LIMIT"] : [],
+    reasons,
     data: {
       items,
       universe: symbolParam ? "custom" : "sp500",
-      regime_factor: regimeFactor
+      regime_factor: regimeFactor,
+      universeSizeTotal: symbols.length,
+      universeSizeProcessed: items.length,
+      budget: budgetInfo
     }
   });
 
-  if (!hasData) {
+  if (!hasData && !budgetExceeded) {
     return {
       ok: false,
       data: payload,
       error: { code: "UPSTREAM_5XX", message: "No upstream data", details: {} }
+    };
+  }
+
+  if (budgetExceeded) {
+    const error = normalizeError(
+      budgetError || {
+        code: "LIMIT_SUBREQUESTS",
+        message: "Budget exceeded",
+        details: budgetInfo || {}
+      }
+    );
+    return {
+      ok: true,
+      data: payload,
+      error
     };
   }
 
@@ -705,16 +795,57 @@ export async function onRequestGet(context) {
     symbol = normalized;
   }
 
+  if (!symbol) {
+    const cached = await kvGetJson(env, LAST_GOOD_V1_KEY);
+    const cachedPayload = cached?.value?.data || cached?.value || null;
+    const ts = extractTimestamp(cached?.value || cachedPayload);
+    const ageMs = ts ? Date.now() - ts : null;
+    if (cachedPayload && typeof ageMs === "number" && ageMs <= LAST_GOOD_MAX_AGE_MS) {
+      cachedPayload.traceId = traceId;
+      cachedPayload.dataQuality =
+        cachedPayload.dataQuality ||
+        resolveDataQuality({
+          ok: true,
+          isStale: false,
+          partial: false,
+          hasData: hasItems(cachedPayload)
+        });
+      attachCacheMeta(cachedPayload, Math.round(ageMs / 1000));
+      logServer({
+        feature: FEATURE_ID,
+        traceId,
+        cacheLayer: "kv",
+        upstreamStatus: null,
+        durationMs: Date.now() - started
+      });
+      const normalized = normalizeResponse(
+        {
+          ok: true,
+          feature: FEATURE_ID,
+          traceId,
+          data: cachedPayload,
+          cache: { hit: true, ttl: KV_TTL, layer: "kv" },
+          upstream: { url: "stooq", status: null, snippet: "" }
+        },
+        { feature: FEATURE_ID }
+      );
+      normalized.cacheStatus = "HIT";
+      return jsonResponse(normalized, { status: 200, cacheStatus: "HIT" });
+    }
+  }
+
+  const budget = new RequestBudget(REQUEST_BUDGET_MAX);
   const swr = await swrGetOrRefresh(context, {
     key: symbol ? `${CACHE_KEY}:${symbol}` : CACHE_KEY,
     ttlSeconds: KV_TTL,
     staleMaxSeconds: STALE_MAX,
-    fetcher: () => fetchBreakoutEnergy(env, symbol),
+    fetcher: () => fetchBreakoutEnergy(env, symbol, { budget, safeLimit: SAFE_LIMIT }),
     featureName: FEATURE_ID
   });
 
-  const lastGood = await kvGetJson(env, LAST_GOOD_KEY);
-  const lastGoodPayload = lastGood?.value?.data || null;
+  const lastGood = await kvGetJson(env, LAST_GOOD_V1_KEY);
+  const lastGoodFallback = lastGood?.value ? null : await kvGetJson(env, LAST_GOOD_KEY);
+  const lastGoodPayload = lastGood?.value?.data || lastGoodFallback?.value?.data || null;
 
   let payload = swr.value?.data || swr.value || null;
   let cacheStatus = swr.cacheStatus;
@@ -778,8 +909,13 @@ export async function onRequestGet(context) {
     hasData: Boolean(payload?.data?.items?.length)
   });
 
-  if (!isStale) {
-    await kvPutJson(env, LAST_GOOD_KEY, { ts: new Date().toISOString(), data: payload }, 7 * 24 * 60 * 60);
+  if (!isStale && hasItems(payload)) {
+    await kvPutJson(
+      env,
+      LAST_GOOD_V1_KEY,
+      { ts: new Date().toISOString(), data: payload },
+      7 * 24 * 60 * 60
+    );
   }
 
   const cacheHit = cacheStatus === "HIT" || cacheStatus === "STALE";

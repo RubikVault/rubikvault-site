@@ -1,5 +1,6 @@
 import { createTraceId, makeResponse } from "./_shared.js";
 import { hash8 } from "../_lib/kv-safe.js";
+import { normalizeError } from "../_shared/errorCodes.js";
 
 const FEATURE_ID = "diag";
 const ENDPOINTS = [
@@ -105,7 +106,8 @@ function buildEndpointResult(path, res) {
   }
 
   const ok = json?.ok === true;
-  const errorCode = json?.error?.code || (parseError ? "SCHEMA_INVALID" : "");
+  const parsedError = parseError ? normalizeError({ message: res.text || parseError }, res.status) : null;
+  const errorCode = json?.error?.code || (parsedError ? parsedError.code : "");
   return {
     path,
     ok,

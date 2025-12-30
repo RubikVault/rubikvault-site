@@ -7,10 +7,10 @@ function parseNumber(value) {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
-export async function fetchStooqDaily(symbol, env) {
+export async function fetchStooqDaily(symbol, env, fetcher = safeFetchText) {
   const stooqSymbol = `${symbol}.US`;
   const url = `${STOOQ_BASE}${encodeURIComponent(stooqSymbol)}&i=d`;
-  const res = await safeFetchText(url, { userAgent: env.USER_AGENT || "RubikVault/1.0" });
+  const res = await fetcher(url, { userAgent: env.USER_AGENT || "RubikVault/1.0" });
   const text = res.text || "";
   if (!res.ok || isHtmlLike(text)) {
     return { ok: false, error: "UPSTREAM_5XX", snippet: safeSnippet(text), data: null };

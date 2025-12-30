@@ -109,6 +109,7 @@ export async function onRequest(context) {
             payload = null;
           }
 
+          const budget = payload?.data?.budget || payload?.budget || null;
           const event = {
             ts: new Date().toISOString(),
             feature: payload?.feature || url.pathname.split("/").slice(-1)[0],
@@ -117,7 +118,13 @@ export async function onRequest(context) {
             upstreamStatus: payload?.upstream?.status ?? null,
             durationMs: Date.now() - started,
             errorCode: payload?.error?.code || (payload ? "" : "SCHEMA_INVALID"),
-            httpStatus: response.status
+            httpStatus: response.status,
+            ...(budget && typeof budget === "object"
+              ? {
+                  subrequestUsed: budget.used ?? null,
+                  subrequestMax: budget.max ?? null
+                }
+              : {})
           };
 
           const hour = new Date().toISOString().slice(0, 13);
