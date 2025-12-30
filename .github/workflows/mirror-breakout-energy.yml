@@ -1,0 +1,100 @@
+name: Mirror Breakout Energy
+
+on:
+  schedule:
+    - cron: "15 5 * * *"
+  workflow_dispatch:
+
+jobs:
+  mirror:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Fetch breakout-energy mirror
+        env:
+          MIRROR_BASE_URL: ${{ secrets.MIRROR_BASE_URL }}
+          CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+          CF_KV_NAMESPACE_ID: ${{ secrets.CF_KV_NAMESPACE_ID }}
+          CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
+        run: |
+          node - <<'NODE'
+          const fs = require("fs");
+          const path = require("path");
+          const base = (process.env.MIRROR_BASE_URL || "https://rubikvault.com").replace(/\/$/, "");
+          const url = `${base}/api/breakout-energy?forceLive=1&limit=35`;
+          const now = new Date().toISOString();
+
+          const outDir = path.join("public", "mirrors");
+          const outFile = path.join(outDir, "breakout-energy.json");
+          fs.mkdirSync(outDir, { recursive: true });
+
+          let raw = null;
+          let payload = null;
+          let hasItems = false;
+          try {
+            const res = await fetch(url, { headers: { "User-Agent": "RubikVault-Mirror/1.0" } });
+            const text = await res.text();
+            raw = JSON.parse(text);
+            payload = raw?.data && typeof raw.data === "object" ? raw.data : raw;
+            const items = payload?.data?.items || payload?.items || [];
+            hasItems = Array.isArray(items) && items.length > 0;
+          } catch (err) {
+            payload = {
+              ok: false,
+              feature: "breakout-energy",
+              ts: now,
+              error: { code: "MIRROR_FETCH_FAILED", message: String(err), details: {} },
+              data: { items: [] }
+            };
+          }
+
+          const wrapper = { ts: now, source: "mirror", payload };
+          if (hasItems || !fs.existsSync(outFile)) {
+            fs.writeFileSync(outFile, JSON.stringify(wrapper, null, 2));
+          } else {
+            console.log("Mirror fetch returned no items; keeping existing file.");
+          }
+
+          const { CF_ACCOUNT_ID, CF_KV_NAMESPACE_ID, CF_API_TOKEN } = process.env;
+          if (CF_ACCOUNT_ID && CF_KV_NAMESPACE_ID && CF_API_TOKEN && hasItems) {
+            const kvUrl = `https://api.cloudflare.com/client/v4/accounts/${CF_ACCOUNT_ID}/storage/kv/namespaces/${CF_KV_NAMESPACE_ID}/values/mirror:breakout-energy:v1`;
+            const kvRes = await fetch(kvUrl, {
+              method: "PUT",
+              headers: {
+                Authorization: `Bearer ${CF_API_TOKEN}`,
+                "Content-Type": "application/json"
+              },
+              body: JSON.stringify(wrapper)
+            });
+            if (!kvRes.ok) {
+              const body = await kvRes.text();
+              console.error("KV write failed:", kvRes.status, body);
+              process.exit(1);
+            }
+            fs.writeFileSync(".mirror_commit_needed", "0");
+          } else {
+            if (CF_ACCOUNT_ID && CF_KV_NAMESPACE_ID && CF_API_TOKEN && !hasItems) {
+              console.log("Mirror fetch returned no items; skipping KV write.");
+            }
+            fs.writeFileSync(".mirror_commit_needed", "1");
+          }
+          NODE
+
+      - name: Commit mirror file if KV not configured
+        run: |
+          if [ -f .mirror_commit_needed ] && [ "$(cat .mirror_commit_needed)" = "1" ]; then
+            git add public/mirrors/breakout-energy.json
+            git commit -m "mirror: update breakout-energy snapshot [skip ci]" || true
+            git push
+          else
+            echo "KV mirror written; no commit needed."
+          fi

@@ -24,6 +24,8 @@ const FEATURE_ID = "breakout-energy";
 const CACHE_KEY = "breakout-energy:v1";
 const LAST_GOOD_KEY = "breakout-energy:last_good";
 const LAST_GOOD_V1_KEY = "breakout-energy:v1:lastGood";
+const MIRROR_KEY = "mirror:breakout-energy:v1";
+const MIRROR_FILE = "/mirrors/breakout-energy.json";
 const LAST_GOOD_MAX_AGE_MS = 6 * 60 * 60 * 1000;
 const KV_TTL = 60 * 60;
 const STALE_MAX = 24 * 60 * 60;
@@ -127,6 +129,35 @@ function extractTimestamp(value) {
   if (!candidate) return null;
   const parsed = Date.parse(candidate);
   return Number.isNaN(parsed) ? null : parsed;
+}
+
+function extractMirrorPayload(value) {
+  if (!value || typeof value !== "object") return null;
+  if (value.payload && typeof value.payload === "object") {
+    return { payload: value.payload, ts: value.ts || value.payload.ts || null };
+  }
+  if (value.feature && value.data) {
+    return { payload: value, ts: value.ts || value.updatedAt || value.data?.updatedAt || null };
+  }
+  return null;
+}
+
+async function loadMirrorPayload(env, request) {
+  if (env?.RV_KV) {
+    const mirror = await kvGetJson(env, MIRROR_KEY);
+    const fromKv = extractMirrorPayload(mirror?.value);
+    if (fromKv?.payload) return { source: "kv", ...fromKv };
+  }
+  try {
+    const res = await fetch(new URL(MIRROR_FILE, request.url));
+    if (!res.ok) return null;
+    const json = await res.json();
+    const fromFile = extractMirrorPayload(json);
+    if (fromFile?.payload) return { source: "file", ...fromFile };
+  } catch {
+    return null;
+  }
+  return null;
 }
 
 function attachCacheMeta(payload, ageSec) {
@@ -758,11 +789,9 @@ export async function onRequestGet(context) {
   const traceId = data?.traceId || createTraceId(request);
   const started = Date.now();
 
-  const bindingResponse = assertBindings(env, FEATURE_ID, traceId);
-  if (bindingResponse) return bindingResponse;
-
   const url = new URL(request.url);
   const symbolParam = url.searchParams.get("symbol");
+  const forceLive = url.searchParams.get("forceLive") === "1";
   let symbol = null;
   if (symbolParam) {
     const normalized = symbolParam.trim().toUpperCase();
@@ -795,12 +824,57 @@ export async function onRequestGet(context) {
     symbol = normalized;
   }
 
+  const allowLive = Boolean(symbol) || forceLive;
+
+  if (!allowLive) {
+    const mirror = await loadMirrorPayload(env, request);
+    if (mirror?.payload) {
+      const mirrorPayload = mirror.payload;
+      mirrorPayload.traceId = traceId;
+      const mirrorItems = mirrorPayload?.data?.items || mirrorPayload?.data?.data?.items || [];
+      const mirrorHasData = Array.isArray(mirrorItems) && mirrorItems.length > 0;
+      const mirrorStatus = mirrorHasData ? "OK" : "PARTIAL";
+      mirrorPayload.dataQuality = {
+        ...(mirrorPayload.dataQuality || {}),
+        status: mirrorStatus,
+        reason: "MIRROR"
+      };
+      logServer({
+        feature: FEATURE_ID,
+        traceId,
+        cacheLayer: "mirror",
+        upstreamStatus: null,
+        durationMs: Date.now() - started
+      });
+      const response = makeResponse({
+        ok: true,
+        feature: FEATURE_ID,
+        traceId,
+        data: mirrorPayload,
+        cache: { hit: true, ttl: KV_TTL, layer: "mirror" },
+        upstream: { url: "mirror", status: null, snippet: "" },
+        isStale: false,
+        freshness: "fresh",
+        cacheStatus: "HIT",
+        status: 200
+      });
+      const normalized = normalizeResponse(await response.clone().json(), { feature: FEATURE_ID });
+      normalized.cacheStatus = "HIT";
+      normalized.isStale = false;
+      normalized.freshness = "fresh";
+      return jsonResponse(normalized, { status: 200, cacheStatus: "HIT" });
+    }
+  }
+
+  const bindingResponse = assertBindings(env, FEATURE_ID, traceId);
+  if (bindingResponse) return bindingResponse;
+
   if (!symbol) {
     const cached = await kvGetJson(env, LAST_GOOD_V1_KEY);
     const cachedPayload = cached?.value?.data || cached?.value || null;
     const ts = extractTimestamp(cached?.value || cachedPayload);
     const ageMs = ts ? Date.now() - ts : null;
-    if (cachedPayload && typeof ageMs === "number" && ageMs <= LAST_GOOD_MAX_AGE_MS) {
+    if (!forceLive && cachedPayload && typeof ageMs === "number" && ageMs <= LAST_GOOD_MAX_AGE_MS) {
       cachedPayload.traceId = traceId;
       cachedPayload.dataQuality =
         cachedPayload.dataQuality ||
@@ -832,16 +906,102 @@ export async function onRequestGet(context) {
       normalized.cacheStatus = "HIT";
       return jsonResponse(normalized, { status: 200, cacheStatus: "HIT" });
     }
+    if (!allowLive) {
+      const lastGood = await kvGetJson(env, LAST_GOOD_V1_KEY);
+      const lastGoodFallback = lastGood?.value ? null : await kvGetJson(env, LAST_GOOD_KEY);
+      const lastGoodPayload = lastGood?.value?.data || lastGoodFallback?.value?.data || null;
+      if (lastGoodPayload) {
+        lastGoodPayload.traceId = traceId;
+        lastGoodPayload.dataQuality =
+          lastGoodPayload.dataQuality ||
+          resolveDataQuality({
+            ok: true,
+            isStale: true,
+            partial: false,
+            hasData: hasItems(lastGoodPayload)
+          });
+        logServer({
+          feature: FEATURE_ID,
+          traceId,
+          cacheLayer: "kv",
+          upstreamStatus: null,
+          durationMs: Date.now() - started
+        });
+        const normalized = normalizeResponse(
+          {
+            ok: true,
+            feature: FEATURE_ID,
+            traceId,
+            data: lastGoodPayload,
+            cache: { hit: true, ttl: KV_TTL, layer: "kv" },
+            upstream: { url: "stooq", status: null, snippet: "" }
+          },
+          { feature: FEATURE_ID }
+        );
+        normalized.cacheStatus = "STALE";
+        normalized.isStale = true;
+        normalized.freshness = "stale";
+        return jsonResponse(normalized, { status: 200, cacheStatus: "STALE" });
+      }
+    }
+  }
+
+  if (!allowLive) {
+    const emptyPayload = buildFeaturePayload({
+      feature: FEATURE_ID,
+      traceId: "",
+      source: "stooq",
+      updatedAt: new Date().toISOString(),
+      dataQuality: resolveDataQuality({
+        ok: true,
+        isStale: false,
+        partial: true,
+        hasData: false
+      }),
+      confidence: 0,
+      definitions: DEFINITIONS,
+      reasons: ["NO_DATA"],
+      data: { items: [], universe: symbol ? "custom" : "sp500", regime_factor: null }
+    });
+    logServer({
+      feature: FEATURE_ID,
+      traceId,
+      cacheLayer: "none",
+      upstreamStatus: null,
+      durationMs: Date.now() - started
+    });
+    const normalized = normalizeResponse(
+      {
+        ok: true,
+        feature: FEATURE_ID,
+        traceId,
+        data: emptyPayload,
+        cache: { hit: false, ttl: 0, layer: "none" },
+        upstream: { url: "mirror", status: null, snippet: "" }
+      },
+      { feature: FEATURE_ID }
+    );
+    normalized.cacheStatus = "ERROR";
+    return jsonResponse(normalized, { status: 200, cacheStatus: "ERROR" });
   }
 
   const budget = new RequestBudget(REQUEST_BUDGET_MAX);
-  const swr = await swrGetOrRefresh(context, {
-    key: symbol ? `${CACHE_KEY}:${symbol}` : CACHE_KEY,
-    ttlSeconds: KV_TTL,
-    staleMaxSeconds: STALE_MAX,
-    fetcher: () => fetchBreakoutEnergy(env, symbol, { budget, safeLimit: SAFE_LIMIT }),
-    featureName: FEATURE_ID
-  });
+  const swr = forceLive
+    ? (() => fetchBreakoutEnergy(env, symbol, { budget, safeLimit: SAFE_LIMIT })
+        .then((live) => ({
+          value: live?.data || live || null,
+          cacheStatus: live?.ok ? "MISS" : "ERROR",
+          isStale: false,
+          ageSeconds: 0,
+          error: live?.error || null
+        })))()
+    : await swrGetOrRefresh(context, {
+        key: symbol ? `${CACHE_KEY}:${symbol}` : CACHE_KEY,
+        ttlSeconds: KV_TTL,
+        staleMaxSeconds: STALE_MAX,
+        fetcher: () => fetchBreakoutEnergy(env, symbol, { budget, safeLimit: SAFE_LIMIT }),
+        featureName: FEATURE_ID
+      });
 
   const lastGood = await kvGetJson(env, LAST_GOOD_V1_KEY);
   const lastGoodFallback = lastGood?.value ? null : await kvGetJson(env, LAST_GOOD_KEY);
@@ -853,7 +1013,7 @@ export async function onRequestGet(context) {
   let upstreamStatus = swr.cacheStatus === "ERROR" ? null : 200;
   let error = swr.error || null;
 
-  if (!payload && lastGoodPayload) {
+  if (!forceLive && !payload && lastGoodPayload) {
     payload = lastGoodPayload;
     cacheStatus = "STALE";
     isStale = true;

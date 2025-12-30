@@ -126,6 +126,30 @@ Preview vs Production:
 - Both environments must have `RV_KV` bound
 - ENV keys can differ by environment
 
+## Mirrors
+To reduce reliance on live upstreams, the breakout-energy mirror can be written daily.
+
+Workflow:
+- `.github/workflows/mirror-breakout-energy.yml` fetches:
+  `https://rubikvault.com/api/breakout-energy?forceLive=1&limit=35`
+- Preferred: write to KV key `mirror:breakout-energy:v1`
+- Fallback: commit `public/mirrors/breakout-energy.json`
+
+Keys/paths:
+- KV: `mirror:breakout-energy:v1`
+- File: `public/mirrors/breakout-energy.json`
+
+Required secrets for KV writes:
+- `CF_ACCOUNT_ID`
+- `CF_KV_NAMESPACE_ID`
+- `CF_API_TOKEN`
+
+Optional:
+- `MIRROR_BASE_URL` (defaults to `https://rubikvault.com`)
+
+Verify:
+- `curl -sS https://rubikvault.com/api/breakout-energy | jq '.dataQuality,.cache.layer'`
+
 ## Security Notes
 - No API keys are exposed to the client
 - CORS is handled at Functions level; `/api/*` is canonical
