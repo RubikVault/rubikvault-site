@@ -15,6 +15,10 @@ function normalizeApiBase(value) {
   return normalized.replace(/\/+$/, "");
 }
 
+function createTraceId() {
+  return Math.random().toString(36).slice(2, 10);
+}
+
 export function resolveApiBase(explicitBase) {
   const configLoaded = typeof window !== "undefined" && !!window.RV_CONFIG;
   const candidate =
@@ -96,17 +100,18 @@ function makeLocalError({ feature, traceId, status, snippet, code, message, url 
   };
 }
 
-export const BINDING_HINT = "Dashboard → KV Binding (Preview + Prod)";
+export const BINDING_HINT = "Dashboard -> KV Binding (Preview + Prod)";
 
 export function getBindingHint(payload) {
   const action = payload?.error?.details?.action;
   if (action) {
-    return `${BINDING_HINT} · ${action}`;
+    return `${BINDING_HINT} - ${action}`;
   }
   return BINDING_HINT;
 }
 
 export async function fetchJSON(input, { feature, traceId, timeoutMs = 10000, logger } = {}) {
+  const effectiveTraceId = traceId || createTraceId();
   const { url: requestUrl, resolution, absolute } = buildUrl(input);
   if (resolution) {
     logger?.setMeta({
@@ -156,7 +161,8 @@ export async function fetchJSON(input, { feature, traceId, timeoutMs = 10000, lo
       headers: {
         Accept: "application/json",
         "x-rv-feature": feature || "unknown",
-        "x-rv-trace": traceId || "",
+        "x-rv-trace": effectiveTraceId,
+        "x-rv-trace-id": effectiveTraceId,
         ...(panic ? { "x-rv-panic": "1" } : {})
       },
       signal: controller.signal
@@ -193,7 +199,7 @@ export async function fetchJSON(input, { feature, traceId, timeoutMs = 10000, lo
       });
     }
 
-    logger?.setTraceId(payload?.traceId || traceId || "unknown");
+    logger?.setTraceId(payload?.traceId || effectiveTraceId || "unknown");
     logger?.setMeta({
       cacheLayer: payload?.cache?.layer || "none",
       cacheTtl: payload?.cache?.ttl ?? 0,
@@ -216,12 +222,12 @@ export async function fetchJSON(input, { feature, traceId, timeoutMs = 10000, lo
     }
 
     logger?.info("response_meta", {
-      traceId: payload?.traceId || traceId || "unknown",
-      cacheLayer: payload?.cache?.layer || "none",
-      cacheTtl: payload?.cache?.ttl ?? 0,
-      cache: payload.cache || {},
-      upstreamStatus: payload?.upstream?.status ?? null
-    });
+        traceId: payload?.traceId || effectiveTraceId || "unknown",
+        cacheLayer: payload?.cache?.layer || "none",
+        cacheTtl: payload?.cache?.ttl ?? 0,
+        cache: payload.cache || {},
+        upstreamStatus: payload?.upstream?.status ?? null
+      });
 
     return payload;
   } catch (error) {
@@ -233,7 +239,7 @@ export async function fetchJSON(input, { feature, traceId, timeoutMs = 10000, lo
     });
     return makeLocalError({
       feature,
-      traceId,
+      traceId: effectiveTraceId,
       status: null,
       snippet: "",
       code: "FETCH_FAILED",

@@ -19,7 +19,10 @@ const CACHE_KEY = "congress-trading:v1";
 const LAST_GOOD_KEY = "congress-trading:last_good";
 const KV_TTL = 6 * 60 * 60;
 const STALE_MAX = 7 * 24 * 60 * 60;
-const SOURCE_URL = "https://house-stock-watcher-data.s3-us-west-2.amazonaws.com/data/all_transactions.json";
+const LAST_GOOD_TTL = 7 * 24 * 60 * 60;
+
+const SOURCE_URL =
+  "https://house-stock-watcher-data.s3-us-west-2.amazonaws.com/data/all_transactions.json";
 
 const DEFINITIONS = {
   rules: {
@@ -33,7 +36,12 @@ function parseAmount(range) {
   if (!match) return 0;
   const value = Number(match[1]);
   if (!Number.isFinite(value)) return 0;
-  const mult = match[2]?.toUpperCase() === "M" ? 1_000_000 : match[2]?.toUpperCase() === "K" ? 1_000 : 1;
+  const mult =
+    match[2]?.toUpperCase() === "M"
+      ? 1_000_000
+      : match[2]?.toUpperCase() === "K"
+        ? 1_000
+        : 1;
   return value * mult;
 }
 
@@ -48,11 +56,18 @@ async function fetchCongress() {
           : "UPSTREAM_5XX";
     return {
       ok: false,
-      error: { code, message: code === "UPSTREAM_403" ? "Upstream returned 403" : "No upstream data", details: { status: res.status ?? null } }
+      error: {
+        code,
+        message: code === "UPSTREAM_403" ? "Upstream returned 403" : "No upstream data",
+        details: { status: res.status ?? null },
+        snippet: res.snippet || ""
+      }
     };
   }
+
   const now = Date.now();
   const weekAgo = now - 7 * 24 * 60 * 60 * 1000;
+
   const filtered = res.json
     .filter((item) => {
       const ts = Date.parse(item.transaction_date || item.notification_date || "");
@@ -62,7 +77,8 @@ async function fetchCongress() {
       const amount = item.amount || item.amount_range || "";
       const amountValue = parseAmount(amount);
       const action = (item.type || item.transaction_type || "").toUpperCase();
-      const conviction = action.includes("BUY") && amountValue >= 250_000 ? "BUY_CONVICTION" : "";
+      const conviction =
+        action.includes("BUY") && amountValue >= 250_000 ? "BUY_CONVICTION" : "";
       return {
         politician: item.representative || item.politician || "N/A",
         symbol: item.ticker || item.symbol || "N/A",
@@ -100,6 +116,17 @@ async function fetchCongress() {
   return { ok: true, data: payload };
 }
 
+async function readLastGood(env) {
+  try {
+    if (!env?.RV_KV?.get) return null;
+    const lastGood = await env.RV_KV.get(LAST_GOOD_KEY, "json");
+    if (!lastGood || !lastGood.data) return null;
+    return lastGood; // { ts, data }
+  } catch {
+    return null;
+  }
+}
+
 export async function onRequestGet(context) {
   const { request, env, data } = context;
   const traceId = data?.traceId || createTraceId(request);
@@ -116,7 +143,64 @@ export async function onRequestGet(context) {
     featureName: FEATURE_ID
   });
 
-  const payload = swr.value?.data || swr.value || null;
+  let payload = swr.value?.data || swr.value || null;
+
+  // ✅ Fallback: wenn Upstream scheitert (z.B. 403), liefere LAST_GOOD statt leeres NO_DATA
+  if (!payload && swr.error) {
+    const lastGood = await readLastGood(env);
+    if (lastGood?.data) {
+      payload = lastGood.data;
+
+      // Markiere bewusst als stale + fallback
+      payload.traceId = traceId;
+      payload.updatedAt = payload.updatedAt || lastGood.ts || new Date().toISOString();
+      payload.dataQuality = resolveDataQuality({
+        ok: true,
+        isStale: true,
+        partial: (payload?.data?.trades || []).length < 5,
+        hasData: (payload?.data?.trades || []).length > 0
+      });
+
+      // reasons erweitern, ohne vorhandene zu zerstören
+      payload.reasons = Array.isArray(payload.reasons) ? payload.reasons : [];
+      if (!payload.reasons.includes("FALLBACK_LAST_GOOD")) {
+        payload.reasons.push("FALLBACK_LAST_GOOD");
+      }
+      if (swr.error?.code && !payload.reasons.includes(swr.error.code)) {
+        payload.reasons.push(swr.error.code);
+      }
+
+      const response = makeResponse({
+        ok: true,
+        feature: FEATURE_ID,
+        traceId,
+        data: payload,
+        cache: { hit: true, ttl: LAST_GOOD_TTL, layer: "kv" },
+        upstream: {
+          url: SOURCE_URL,
+          status: swr.error?.details?.status ?? null,
+          snippet: swr.error?.snippet || ""
+        },
+        isStale: true,
+        freshness: "STALE",
+        cacheStatus: "FALLBACK_LAST_GOOD",
+        error: swr.error,
+        status: 200
+      });
+
+      logServer({
+        feature: FEATURE_ID,
+        traceId,
+        cacheLayer: "kv",
+        upstreamStatus: swr.error?.details?.status ?? null,
+        durationMs: Date.now() - started
+      });
+
+      return response;
+    }
+  }
+
+  // Kein Payload -> bisheriges Verhalten (NO_DATA / SCHEMA_INVALID)
   if (!payload) {
     const isSchemaInvalid = swr.error?.code === "SCHEMA_INVALID";
     const emptyPayload = buildFeaturePayload({
@@ -137,31 +221,53 @@ export async function onRequestGet(context) {
       reasons: [isSchemaInvalid ? "SCHEMA_INVALID" : "NO_DATA"],
       data: { trades: [], items: [], meta: { lastUpdated: null } }
     });
+
     const response = makeResponse({
       ok: !isSchemaInvalid,
       feature: FEATURE_ID,
       traceId,
       data: emptyPayload,
       cache: { hit: false, ttl: 0, layer: "none" },
-      upstream: { url: SOURCE_URL, status: swr.error?.details?.status ?? null, snippet: swr.error?.snippet || "" },
+      upstream: {
+        url: SOURCE_URL,
+        status: swr.error?.details?.status ?? null,
+        snippet: swr.error?.snippet || ""
+      },
       error: swr.error || { code: "UPSTREAM_5XX", message: "No data", details: {} },
       cacheStatus: "ERROR",
       status: 200
     });
-    logServer({ feature: FEATURE_ID, traceId, cacheLayer: "none", upstreamStatus: null, durationMs: Date.now() - started });
+
+    logServer({
+      feature: FEATURE_ID,
+      traceId,
+      cacheLayer: "none",
+      upstreamStatus: swr.error?.details?.status ?? null,
+      durationMs: Date.now() - started
+    });
+
     return response;
   }
 
+  // Normaler Erfolgspfad
   payload.traceId = traceId;
-  payload.dataQuality = payload.dataQuality || resolveDataQuality({
-    ok: true,
-    isStale: swr.isStale,
-    partial: (payload?.data?.trades || []).length < 5,
-    hasData: (payload?.data?.trades || []).length > 0
-  });
+  payload.dataQuality =
+    payload.dataQuality ||
+    resolveDataQuality({
+      ok: true,
+      isStale: swr.isStale,
+      partial: (payload?.data?.trades || []).length < 5,
+      hasData: (payload?.data?.trades || []).length > 0
+    });
 
+  // LAST_GOOD nur schreiben, wenn wir nicht stale sind
   if (!swr.isStale) {
-    await kvPutJson(env, LAST_GOOD_KEY, { ts: new Date().toISOString(), data: payload }, 7 * 24 * 60 * 60);
+    await kvPutJson(
+      env,
+      LAST_GOOD_KEY,
+      { ts: new Date().toISOString(), data: payload },
+      LAST_GOOD_TTL
+    );
   }
 
   const response = makeResponse({
@@ -169,13 +275,25 @@ export async function onRequestGet(context) {
     feature: FEATURE_ID,
     traceId,
     data: payload,
-    cache: { hit: swr.cacheStatus !== "MISS", ttl: KV_TTL, layer: swr.cacheStatus === "MISS" ? "none" : "kv" },
+    cache: {
+      hit: swr.cacheStatus !== "MISS",
+      ttl: KV_TTL,
+      layer: swr.cacheStatus === "MISS" ? "none" : "kv"
+    },
     upstream: { url: SOURCE_URL, status: 200, snippet: "" },
     isStale: swr.isStale,
     freshness: normalizeFreshness(swr.ageSeconds),
     cacheStatus: swr.cacheStatus,
     status: 200
   });
-  logServer({ feature: FEATURE_ID, traceId, cacheLayer: swr.cacheStatus === "MISS" ? "none" : "kv", upstreamStatus: 200, durationMs: Date.now() - started });
+
+  logServer({
+    feature: FEATURE_ID,
+    traceId,
+    cacheLayer: swr.cacheStatus === "MISS" ? "none" : "kv",
+    upstreamStatus: 200,
+    durationMs: Date.now() - started
+  });
+
   return response;
 }

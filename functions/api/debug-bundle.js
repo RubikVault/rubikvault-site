@@ -1,0 +1,183 @@
+import { createTraceId } from "./_shared.js";
+import { hash8, kvPutJson } from "../_lib/kv-safe.js";
+
+const SCHEMA = "RUBIKVAULT_DEBUG_BUNDLE_V1";
+const EVENT_TTL = 24 * 60 * 60;
+
+function redactKey(key) {
+  return /api_key|token|secret|authorization|bearer/i.test(String(key || ""));
+}
+
+function redactValue(value) {
+  if (typeof value !== "string") return value;
+  if (/api_key|token|secret|authorization|bearer/i.test(value)) return "[REDACTED]";
+  return value;
+}
+
+function sanitize(value) {
+  if (Array.isArray(value)) return value.map((item) => sanitize(item));
+  if (value && typeof value === "object") {
+    const result = {};
+    Object.entries(value).forEach(([key, val]) => {
+      if (redactKey(key)) {
+        result[key] = "[REDACTED]";
+      } else {
+        result[key] = sanitize(redactValue(val));
+      }
+    });
+    return result;
+  }
+  return redactValue(value);
+}
+
+function hourBucket(date) {
+  return new Date(date).toISOString().slice(0, 13);
+}
+
+async function listEvents(env, limit) {
+  const rv = env?.RV_KV;
+  if (!rv || typeof rv.list !== "function" || typeof rv.get !== "function") return [];
+  const now = new Date();
+  const currentHour = hourBucket(now);
+  const previousHour = hourBucket(new Date(now.getTime() - 60 * 60 * 1000));
+  const keys = [];
+  try {
+    const listed = await rv.list({ prefix: `log:event:${currentHour}:`, limit });
+    listed?.keys?.forEach((key) => keys.push(key.name));
+  } catch (error) {
+    // ignore list errors
+  }
+  if (keys.length < 20) {
+    try {
+      const listed = await rv.list({ prefix: `log:event:${previousHour}:`, limit });
+      listed?.keys?.forEach((key) => keys.push(key.name));
+    } catch (error) {
+      // ignore list errors
+    }
+  }
+
+  const events = [];
+  for (const key of keys.slice(0, limit)) {
+    try {
+      const value = await rv.get(key, "json");
+      if (value) events.push(value);
+    } catch (error) {
+      // ignore read errors
+    }
+  }
+
+  return events
+    .filter(Boolean)
+    .sort((a, b) => String(b.ts || "").localeCompare(String(a.ts || "")))
+    .slice(0, limit);
+}
+
+async function fetchJsonSafe(url, timeoutMs = 8000) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const response = await fetch(url, { signal: controller.signal, headers: { Accept: "application/json" } });
+    const text = await response.text();
+    clearTimeout(timer);
+    try {
+      return { ok: true, status: response.status, json: JSON.parse(text) };
+    } catch (error) {
+      return { ok: false, status: response.status, error: "SCHEMA_INVALID" };
+    }
+  } catch (error) {
+    clearTimeout(timer);
+    return { ok: false, status: 0, error: "FETCH_FAILED" };
+  }
+}
+
+function summarizeErrors(events) {
+  const counts = new Map();
+  events.forEach((event) => {
+    if (!event?.errorCode) return;
+    counts.set(event.errorCode, (counts.get(event.errorCode) || 0) + 1);
+  });
+  return Array.from(counts.entries())
+    .sort((a, b) => b[1] - a[1])
+    .map(([code, count]) => ({ code, count, hash: hash8(code) }))
+    .slice(0, 10);
+}
+
+export async function onRequestGet({ request, env, data }) {
+  const traceId = data?.traceId || createTraceId(request);
+  const url = new URL(request.url);
+  const host = request.headers.get("host") || "";
+  const envHint =
+    env?.CF_PAGES_ENVIRONMENT ||
+    (env?.CF_PAGES_BRANCH ? "preview" : env?.CF_PAGES_URL ? "production" : "unknown");
+  const version = env?.CF_PAGES_COMMIT_SHA || env?.GIT_SHA || null;
+
+  const hasKV = env?.RV_KV && typeof env.RV_KV.get === "function" && typeof env.RV_KV.put === "function";
+  const infra = {
+    kv: {
+      hasKV,
+      binding: "RV_KV",
+      errors: hasKV ? [] : ["BINDING_MISSING"]
+    },
+    notes: []
+  };
+
+  const origin = url.origin;
+  const health = await fetchJsonSafe(`${origin}/api/health`);
+  const diag = await fetchJsonSafe(`${origin}/api/diag`);
+
+  const limitParam = Number(url.searchParams.get("limit") || 200);
+  const limit = Math.max(20, Math.min(500, Number.isFinite(limitParam) ? limitParam : 200));
+  const recentEvents = await listEvents(env, limit);
+
+  const summary = {
+    status: hasKV ? "OK" : "FAIL",
+    topErrorCodes: summarizeErrors(recentEvents),
+    blocksDown: [],
+    endpointsDown: []
+  };
+
+  const diagSummary = diag.json?.data?.summary || null;
+  if (diagSummary?.endpointsFail > 0) summary.status = hasKV ? "DEGRADED" : "FAIL";
+  const diagEndpoints = diag.json?.data?.endpoints || diag.json?.endpoints || [];
+  summary.endpointsDown = Array.isArray(diagEndpoints)
+    ? diagEndpoints.filter((entry) => entry.severityRank < 6).map((entry) => entry.path)
+    : [];
+  summary.blocksDown = recentEvents
+    .filter((event) => event.errorCode)
+    .map((event) => event.feature)
+    .filter((value, index, self) => self.indexOf(value) === index);
+
+  const bundle = {
+    schema: SCHEMA,
+    meta: { ts: new Date().toISOString(), envHint, host, version, traceId },
+    infra,
+    health: sanitize(health.json || {}),
+    diag: sanitize(diag.json || {}),
+    recentEvents: sanitize(recentEvents),
+    client: {},
+    correlations: [],
+    summary
+  };
+
+  const response = new Response(JSON.stringify(bundle), {
+    status: 200,
+    headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" }
+  });
+
+  if (hasKV) {
+    const key = `log:event:${hourBucket(new Date())}:${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    const event = {
+      ts: new Date().toISOString(),
+      feature: "debug-bundle",
+      traceId,
+      cacheLayer: "none",
+      upstreamStatus: null,
+      durationMs: 0,
+      errorCode: "",
+      httpStatus: 200
+    };
+    kvPutJson(env, key, event, EVENT_TTL).catch(() => {});
+  }
+
+  return response;
+}

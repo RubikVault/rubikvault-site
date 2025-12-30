@@ -319,12 +319,52 @@ function extractUpdatedAt(value) {
   return Number.isNaN(parsed) ? null : new Date(parsed).toISOString();
 }
 
+// NEW: harden fetcher() so thrown errors never become 500s.
+function normalizeFetcherResult(result, err) {
+  if (result && typeof result === "object") return result;
+  const msg = err ? String(err?.message || err) : "Fetcher returned invalid value";
+  return {
+    ok: false,
+    data: null,
+    error: {
+      code: "SCHEMA_INVALID",
+      message: msg,
+      details: { thrown: Boolean(err), name: err?.name || null }
+    }
+  };
+}
+
+async function runFetcherSafely(fetcher, featureName, key) {
+  if (typeof fetcher !== "function") {
+    return {
+      ok: false,
+      data: null,
+      error: {
+        code: "SCHEMA_INVALID",
+        message: "Fetcher missing",
+        details: { feature: featureName || key }
+      }
+    };
+  }
+  try {
+    const res = await fetcher();
+    return normalizeFetcherResult(res, null);
+  } catch (err) {
+    console.warn("[swrGetOrRefresh] fetcher_threw", {
+      feature: featureName || key,
+      message: err?.message || String(err || "Fetcher threw")
+    });
+    return normalizeFetcherResult(null, err);
+  }
+}
+
 export async function swrGetOrRefresh(
   context,
   { key, ttlSeconds, staleMaxSeconds, fetcher, featureName }
 ) {
   const env = context?.env || context;
   const cached = await kvGetJson(env, key);
+
   if (cached?.hit && cached.value) {
     const updatedAt = extractUpdatedAt(cached.value);
     const ageSeconds = updatedAt ? Math.max(0, (Date.now() - Date.parse(updatedAt)) / 1000) : null;
@@ -333,6 +373,7 @@ export async function swrGetOrRefresh(
       typeof ageSeconds === "number" && typeof staleMaxSeconds === "number"
         ? ageSeconds <= staleMaxSeconds
         : false;
+
     if (fresh) {
       return {
         value: cached.value,
@@ -343,19 +384,13 @@ export async function swrGetOrRefresh(
     }
 
     if (withinStale) {
-      if (typeof context?.waitUntil === "function" && typeof fetcher === "function") {
+      // background refresh: never throw, never disturb the response body pipeline
+      if (typeof context?.waitUntil === "function") {
         context.waitUntil(
           (async () => {
-            try {
-              const refreshed = await fetcher();
-              if (refreshed?.ok) {
-                await kvPutJson(env, key, refreshed.data, ttlSeconds);
-              }
-            } catch (error) {
-              console.warn("[swrGetOrRefresh] refresh_failed", {
-                feature: featureName || key,
-                message: error?.message || "Failed"
-              });
+            const refreshed = await runFetcherSafely(fetcher, featureName, key);
+            if (refreshed?.ok) {
+              await kvPutJson(env, key, refreshed.data, ttlSeconds);
             }
           })()
         );
@@ -369,27 +404,26 @@ export async function swrGetOrRefresh(
     }
   }
 
-  if (typeof fetcher === "function") {
-    const freshValue = await fetcher();
-    if (freshValue?.ok) {
-      await kvPutJson(env, key, freshValue.data, ttlSeconds);
-      return {
-        value: freshValue.data,
-        cacheStatus: "MISS",
-        isStale: false,
-        ageSeconds: 0
-      };
-    }
+  // MISS or too-old stale: do a foreground fetch, but never throw.
+  const freshValue = await runFetcherSafely(fetcher, featureName, key);
+
+  if (freshValue?.ok) {
+    await kvPutJson(env, key, freshValue.data, ttlSeconds);
     return {
-      value: freshValue?.data || null,
-      cacheStatus: "ERROR",
+      value: freshValue.data,
+      cacheStatus: "MISS",
       isStale: false,
-      ageSeconds: null,
-      error: freshValue?.error || null
+      ageSeconds: 0
     };
   }
 
-  return { value: null, cacheStatus: "ERROR", isStale: false, ageSeconds: null };
+  return {
+    value: freshValue?.data || null,
+    cacheStatus: "ERROR",
+    isStale: false,
+    ageSeconds: null,
+    error: freshValue?.error || null
+  };
 }
 
 export async function safeFetch(url, options = {}) {

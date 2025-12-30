@@ -4,6 +4,7 @@ const MAX_FETCHES = 200;
 const MAX_ERRORS = 100;
 const MAX_SNIPPET = 2048;
 const MAX_COMPACT_BYTES = 25000;
+const MAX_CHAT_BYTES = 10000;
 
 function nowIso() {
   return new Date().toISOString();
@@ -41,6 +42,32 @@ function getJSONSize(obj) {
   } catch (error) {
     return 0;
   }
+}
+
+function shouldRedactKey(key) {
+  return /api_key|token|secret|authorization|bearer/i.test(String(key || ""));
+}
+
+function redactValue(value) {
+  if (typeof value !== "string") return value;
+  if (/api_key|token|secret|authorization|bearer/i.test(value)) return "[REDACTED]";
+  return value;
+}
+
+function redactObject(value) {
+  if (Array.isArray(value)) return value.map((item) => redactObject(item));
+  if (value && typeof value === "object") {
+    const result = {};
+    Object.entries(value).forEach(([key, val]) => {
+      if (shouldRedactKey(key)) {
+        result[key] = "[REDACTED]";
+      } else {
+        result[key] = redactObject(redactValue(val));
+      }
+    });
+    return result;
+  }
+  return redactValue(value);
 }
 
 function getDebugFlag() {
@@ -117,7 +144,7 @@ function inferRootCauses(summary) {
       cause: "BINDING_MISSING",
       confidence: 0.9,
       nextAction:
-        "Cloudflare Dashboard → Pages → rubikvault-site → Settings → Functions → KV namespace bindings → Add RV_KV for Preview + Production."
+        "Cloudflare Dashboard -> Pages -> rubikvault-site -> Settings -> Functions -> KV namespace bindings -> Add RV_KV for Preview + Production."
     });
   } else if (top?.code === "SCHEMA_INVALID") {
     causes.push({
@@ -206,6 +233,89 @@ function buildCompactReport(state) {
   return compact;
 }
 
+function buildClientSnapshot(state) {
+  return redactObject({
+    ts: nowIso(),
+    page: state.page,
+    blocks: state.blocks,
+    events: state.events.slice(-200),
+    fetches: state.fetches.slice(-100),
+    console: {
+      errors: state.console.errors.slice(-50),
+      warnings: state.console.warnings.slice(-50)
+    },
+    jsErrors: state.jsErrors.slice(-50)
+  });
+}
+
+function mergeBundle(serverBundle, state) {
+  const client = buildClientSnapshot(state);
+  const events = Array.isArray(serverBundle?.recentEvents) ? serverBundle.recentEvents : [];
+  const correlations = [];
+  Object.values(client.blocks || {}).forEach((block) => {
+    const traceId = block.lastResponse?.traceId;
+    if (!traceId) return;
+    const matched = events.find((event) => event.traceId === traceId);
+    if (matched) {
+      correlations.push({
+        blockId: block.id,
+        feature: matched.feature || block.id,
+        traceId,
+        reason: "traceId-match"
+      });
+      return;
+    }
+    correlations.push({
+      blockId: block.id,
+      feature: block.id,
+      traceId,
+      reason: "traceId-no-server-match"
+    });
+  });
+
+  return redactObject({
+    ...serverBundle,
+    client,
+    correlations
+  });
+}
+
+function buildBundleCompact(bundle) {
+  if (!bundle) return {};
+  let compact = {
+    schema: bundle.schema,
+    meta: bundle.meta,
+    summary: bundle.summary,
+    topErrorCodes: bundle.summary?.topErrorCodes || [],
+    blocksDown: bundle.summary?.blocksDown || [],
+    endpointsDown: bundle.summary?.endpointsDown || [],
+    lastFails: (bundle.recentEvents || [])
+      .filter((event) => event.errorCode)
+      .slice(0, 20)
+      .map((event) => ({
+        ts: event.ts,
+        feature: event.feature,
+        errorCode: event.errorCode,
+        httpStatus: event.httpStatus,
+        traceId: event.traceId
+      }))
+  };
+
+  const originalSize = getJSONSize(compact);
+  if (originalSize > MAX_CHAT_BYTES) {
+    compact.lastFails = compact.lastFails.slice(0, 10);
+  }
+  if (getJSONSize(compact) > MAX_CHAT_BYTES) {
+    compact.blocksDown = [];
+    compact.endpointsDown = [];
+  }
+  if (getJSONSize(compact) > MAX_CHAT_BYTES) {
+    compact.topErrorCodes = compact.topErrorCodes.slice(0, 3);
+    compact.summary = { ...compact.summary, truncated: true, originalSize };
+  }
+  return compact;
+}
+
 function createState() {
   return {
     enabled: getDebugFlag(),
@@ -230,7 +340,10 @@ function createState() {
     fetchPatched: false,
     togglePatched: false,
     diag: { running: false, progress: 0, total: 0, message: "", aborters: [] },
-    serverDiag: null
+    serverDiag: null,
+    aiReport: null,
+    aiReportCompact: null,
+    aiStatus: { running: false, message: "" }
   };
 }
 
@@ -408,9 +521,14 @@ function render(state) {
       }
       ${
         state.diag?.running
-          ? `<div class="rvdbg-progress">Checking ${state.diag.progress}/${state.diag.total}… ${escapeHtml(
+          ? `<div class="rvdbg-progress">Checking ${state.diag.progress}/${state.diag.total}... ${escapeHtml(
               state.diag.message || ""
             )}</div>`
+          : ""
+      }
+      ${
+        state.aiStatus?.running
+          ? `<div class="rvdbg-progress">AI Report: ${escapeHtml(state.aiStatus.message || "working...")}</div>`
           : ""
       }
       <div class="rvdbg-controls">
@@ -434,6 +552,7 @@ function render(state) {
         <button class="rvdbg-btn" data-action="download">Download Full JSON</button>
         <button class="rvdbg-btn" data-action="clear">Clear</button>
         <button class="rvdbg-btn" data-action="diagnose">Run Diagnostics</button>
+        <button class="rvdbg-btn" data-action="ai-report">Generate AI Report</button>
         ${
           state.diag?.running
             ? '<button class="rvdbg-btn" data-action="cancel">Cancel</button>'
@@ -486,6 +605,9 @@ function render(state) {
       if (action === "diagnose") {
         state.runDiagnostics();
       }
+      if (action === "ai-report") {
+        state.generateAIReport();
+      }
       if (action === "cancel") {
         if (state.diag?.aborters?.length) {
           state.diag.aborters.forEach((controller) => controller.abort());
@@ -515,9 +637,14 @@ function render(state) {
 
 function patchConsole(state) {
   if (state.consolePatched || typeof console === "undefined") return;
+  let inPatch = false;
   const wrap = (method, bucket) => {
     const original = console[method];
     console[method] = (...args) => {
+      if (inPatch) {
+        return original.apply(console, args);
+      }
+      inPatch = true;
       if (state.enabled) {
         const entry = {
           ts: nowIso(),
@@ -529,6 +656,7 @@ function patchConsole(state) {
         }
       }
       original.apply(console, args);
+      inPatch = false;
     };
   };
   wrap("error", "errors");
@@ -728,7 +856,7 @@ function copyAll(state) {
 }
 
 function copyCompact(state) {
-  const compact = buildCompactReport(state);
+  const compact = state.aiReportCompact || buildCompactReport(state);
   const text = JSON.stringify(compact, null, 2);
   if (navigator?.clipboard?.writeText) {
     return navigator.clipboard.writeText(text);
@@ -747,7 +875,7 @@ function copyCompact(state) {
 }
 
 function download(state) {
-  const report = exportReport(state);
+  const report = state.aiReport || exportReport(state);
   const blob = new Blob([JSON.stringify(report, null, 2)], { type: "application/json" });
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
@@ -850,6 +978,54 @@ async function runDiagnostics(state) {
   scheduleRender(state);
 }
 
+async function generateAIReport(state) {
+  if (!state.enabled) return;
+  if (state.aiStatus?.running) return;
+  const apiBase = window.RV_CONFIG?.apiBase || "/api";
+  const bundleUrl = `${apiBase}/debug-bundle?limit=200`;
+  state.aiStatus = { running: true, message: "Fetching server bundle" };
+  scheduleRender(state);
+  let serverBundle = null;
+  try {
+    const response = await fetch(bundleUrl, { headers: { Accept: "application/json" } });
+    const text = await response.text();
+    const parsed = safeParse(text);
+    serverBundle = parsed.ok ? parsed.json : null;
+  } catch (error) {
+    serverBundle = null;
+  }
+  state.aiStatus.message = "Merging client snapshot";
+  scheduleRender(state);
+  if (!serverBundle) {
+    state.aiReport = {
+      schema: "RUBIKVAULT_DEBUG_BUNDLE_V1",
+      meta: { ts: nowIso(), envHint: "unknown", host: window.location.host, version: null },
+      infra: { kv: { hasKV: false, binding: "RV_KV", errors: ["FETCH_FAILED"] }, notes: [] },
+      health: {},
+      diag: {},
+      recentEvents: [],
+      client: buildClientSnapshot(state),
+      correlations: [],
+      summary: { status: "FAIL", topErrorCodes: [], blocksDown: [], endpointsDown: [] }
+    };
+  } else {
+    state.aiReport = mergeBundle(serverBundle, state);
+  }
+  state.aiReportCompact = buildBundleCompact(state.aiReport);
+  state.aiStatus.running = false;
+  state.aiStatus.message = "Ready";
+  scheduleRender(state);
+  try {
+    await fetch(`${apiBase}/debug/ingest`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ client: buildClientSnapshot(state) })
+    });
+  } catch (error) {
+    // ignore ingest failures
+  }
+}
+
 export function initDebugConsole() {
   if (typeof window === "undefined") return null;
   if (window.__RV_DEBUG__) return window.__RV_DEBUG__;
@@ -859,6 +1035,7 @@ export function initDebugConsole() {
   state.copyCompact = () => copyCompact(state);
   state.download = () => download(state);
   state.runDiagnostics = () => runDiagnostics(state);
+  state.generateAIReport = () => generateAIReport(state);
   state.toggle = () => {
     state.enabled = !state.enabled;
     if (state.enabled) {
