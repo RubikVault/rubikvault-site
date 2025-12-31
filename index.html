@@ -8,6 +8,13 @@
     name="description"
     content="RubikVault – calm, data-driven multi-asset market insights across stocks, crypto, macro and commodities. Educational only."
   />
+  <script>
+    (function() {
+      var stored = window.localStorage && window.localStorage.getItem("rv-theme");
+      var theme = stored === "light" ? "light" : "dark";
+      document.documentElement.setAttribute("data-theme", theme);
+    })();
+  </script>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>

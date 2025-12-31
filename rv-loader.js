@@ -120,6 +120,88 @@ const STATUS_ORDER = [
 ];
 const COLLAPSE_KEY_PREFIX = "rv-collapse:";
 const DEFAULT_OPEN_COUNT = 3;
+const CRYPTO_FEATURES = new Set(["rv-crypto-snapshot"]);
+const STALE_OPEN_MS = 20 * 60 * 1000;
+const STALE_CRYPTO_MS = 20 * 60 * 1000;
+const NY_FORMATTER = new Intl.DateTimeFormat("en-US", {
+  timeZone: "America/New_York",
+  hour12: false,
+  weekday: "short",
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+  hour: "2-digit",
+  minute: "2-digit",
+  second: "2-digit"
+});
+const NY_WEEKDAY_INDEX = {
+  Sun: 0,
+  Mon: 1,
+  Tue: 2,
+  Wed: 3,
+  Thu: 4,
+  Fri: 5,
+  Sat: 6
+};
+
+function getNyParts(date = new Date()) {
+  const parts = NY_FORMATTER.formatToParts(date);
+  const map = {};
+  parts.forEach((part) => {
+    map[part.type] = part.value;
+  });
+  return {
+    weekday: map.weekday,
+    hour: Number(map.hour),
+    minute: Number(map.minute),
+    second: Number(map.second)
+  };
+}
+
+function isMarketOpenNY(date = new Date()) {
+  const parts = getNyParts(date);
+  const weekdayIndex = NY_WEEKDAY_INDEX[parts.weekday] ?? 0;
+  const secondsNow = parts.hour * 3600 + parts.minute * 60 + parts.second;
+  const openTime = 9 * 3600 + 30 * 60;
+  const closeTime = 16 * 3600;
+  const isWeekday = weekdayIndex >= 1 && weekdayIndex <= 5;
+  return isWeekday && secondsNow >= openTime && secondsNow < closeTime;
+}
+
+function normalizeStatus(featureId, status, headline = "") {
+  const entry = statusState.get(featureId) || {};
+  const updatedAt = entry.updatedAt ? new Date(entry.updatedAt).getTime() : null;
+  const now = Date.now();
+  const isCrypto = CRYPTO_FEATURES.has(featureId);
+  const marketOpen = isMarketOpenNY();
+  const headlineText = String(headline || "");
+  const emptyMatch = /no data|no symbols|empty|placeholder|no live/i.test(headlineText);
+
+  if (status === "FAIL" || /BINDING_MISSING|CONFIG_MISSING/i.test(headlineText)) {
+    return { status, headline: headlineText };
+  }
+
+  if (emptyMatch) {
+    return { status: "OK", headline: "EMPTY" };
+  }
+
+  if (!updatedAt || Number.isNaN(updatedAt)) {
+    return { status, headline: headlineText };
+  }
+
+  const ageMs = now - updatedAt;
+  if (isCrypto) {
+    if (ageMs > STALE_CRYPTO_MS) return { status: "PARTIAL", headline: "STALE" };
+    return { status: "OK", headline: headlineText || "OK" };
+  }
+
+  if (!marketOpen) {
+    return { status: "OK", headline: headlineText || "EOD" };
+  }
+
+  if (ageMs > STALE_OPEN_MS) return { status: "PARTIAL", headline: "STALE" };
+  return { status: "OK", headline: headlineText || "OK" };
+}
 
 function getApiResolution() {
   const resolution = resolveApiBase();
@@ -835,12 +917,17 @@ function initBlock(section, feature) {
   });
   const originalSetStatus = logger.setStatus.bind(logger);
   logger.setStatus = (status, headline = "") => {
-    originalSetStatus(status, headline);
-    recordStatus(featureId, blockName, status, headline);
+    const normalized = normalizeStatus(featureId, status, headline);
+    originalSetStatus(normalized.status, normalized.headline);
+    recordStatus(featureId, blockName, normalized.status, normalized.headline);
   };
   const originalSetMeta = logger.setMeta.bind(logger);
   logger.setMeta = (meta = {}) => {
     originalSetMeta(meta);
+    if (meta.updatedAt) {
+      const entry = statusState.get(featureId) || {};
+      statusState.set(featureId, { ...entry, updatedAt: meta.updatedAt });
+    }
     if (meta.cacheLayer !== undefined) {
       recordCache(featureId, meta.cacheLayer);
     }

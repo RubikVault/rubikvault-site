@@ -1,79 +1,111 @@
 {
-  "ts": "2025-01-01T00:00:00Z",
+  "ts": "2025-12-31T12:50:21.836Z",
   "source": "mirror",
   "payload": {
+    "ok": true,
     "feature": "breakout-energy",
-    "traceId": "",
-    "source": "mirror",
-    "updatedAt": "2025-01-01T00:00:00Z",
+    "ts": "2025-12-31T12:50:21.836Z",
+    "traceId": "mirror",
+    "schemaVersion": 1,
+    "cache": {
+      "hit": true,
+      "ttl": 0,
+      "layer": "mirror"
+    },
+    "upstream": {
+      "url": "mirror",
+      "status": null,
+      "snippet": ""
+    },
+    "rateLimit": {
+      "remaining": "unknown",
+      "reset": null,
+      "estimated": true
+    },
     "dataQuality": {
-      "status": "OK",
-      "reason": "MIRROR"
+      "status": "LIVE",
+      "reason": "EMPTY",
+      "missingFields": []
     },
-    "confidence": 0,
-    "definitions": {
-      "stateMachine": {
-        "states": ["IGNORE", "SETUP", "TRIGGER", "CONFIRMED", "COOLDOWN"],
-        "transitions": {
-          "IGNORE": ["IGNORE", "SETUP"],
-          "SETUP": ["IGNORE", "SETUP", "TRIGGER"],
-          "TRIGGER": ["IGNORE", "TRIGGER", "CONFIRMED", "COOLDOWN"],
-          "CONFIRMED": ["CONFIRMED", "COOLDOWN"],
-          "COOLDOWN": ["COOLDOWN", "SETUP", "IGNORE"]
-        }
-      },
-      "setupScore": {
-        "bbwCompression": 20,
-        "natrCompression": 15,
-        "volumeDry": 10,
-        "aboveSma200": 5
-      },
-      "triggerScore": {
-        "breakoutClose": 12,
-        "rvolHigh": 10,
-        "rvolMid": 5,
-        "trueRange": 8,
-        "bbUpperBonus": 5
-      },
-      "confirmScore": {
-        "pullbackAtr": 8,
-        "retestVolume": 6,
-        "timing": 6
-      }
-    },
-    "reasons": ["MIRROR"],
     "data": {
-      "items": [
-        {
-          "symbol": "AAPL",
-          "date": null,
-          "state": "IGNORE",
-          "score": 0,
-          "stageScores": { "setup": 0, "trigger": 0, "confirm": 0 },
-          "signals": ["MIRROR"],
-          "meta": {
-            "universe": "mirror",
-            "regime_factor": null,
-            "cooldown_days_left": null,
-            "data_quality": "PARTIAL"
-          },
-          "metrics": {
-            "bbw": null,
-            "bbw_q20": null,
-            "natr": null,
-            "rvol": null,
-            "vol_dry": null,
-            "dist_sma200": null,
-            "breakout_level": null
-          },
-          "debug": {
-            "barsUsed": 0,
-            "missingFields": ["MIRROR"]
+      "updatedAt": "2025-12-31T12:50:21.836Z",
+      "source": "mirror",
+      "dataQuality": {
+        "status": "LIVE",
+        "reason": "EMPTY",
+        "missingFields": []
+      },
+      "confidence": 0,
+      "definitions": {
+        "stateMachine": {
+          "states": [
+            "IGNORE",
+            "SETUP",
+            "TRIGGER",
+            "CONFIRMED",
+            "COOLDOWN"
+          ],
+          "transitions": {
+            "IGNORE": [
+              "IGNORE",
+              "SETUP"
+            ],
+            "SETUP": [
+              "IGNORE",
+              "SETUP",
+              "TRIGGER"
+            ],
+            "TRIGGER": [
+              "IGNORE",
+              "TRIGGER",
+              "CONFIRMED",
+              "COOLDOWN"
+            ],
+            "CONFIRMED": [
+              "CONFIRMED",
+              "COOLDOWN"
+            ],
+            "COOLDOWN": [
+              "COOLDOWN",
+              "SETUP",
+              "IGNORE"
+            ]
           }
+        },
+        "setupScore": {
+          "bbwCompression": 20,
+          "natrCompression": 15,
+          "volumeDry": 10,
+          "aboveSma200": 5
+        },
+        "triggerScore": {
+          "breakoutClose": 12,
+          "rvolHigh": 10,
+          "rvolMid": 5,
+          "trueRange": 8,
+          "bbUpperBonus": 5
+        },
+        "confirmScore": {
+          "pullbackAtr": 8,
+          "retestVolume": 6,
+          "timing": 6
         }
+      },
+      "reasons": [
+        "MIRROR",
+        "EMPTY"
       ],
-      "universe": "mirror",
-      "regime_factor": null
+      "data": {
+        "items": [],
+        "signals": [],
+        "trades": [],
+        "quotes": [],
+        "metrics": [],
+        "stocks": {
+          "volumeLeaders": [],
+          "gainers": []
+        }
+      }
     }
   }
 }

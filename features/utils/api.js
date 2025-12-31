@@ -59,6 +59,17 @@ function buildUrl(url) {
   return { url: joinUrl(resolution.apiPrefix, path), resolution, absolute: false };
 }
 
+function toMirrorPath(input) {
+  if (typeof input !== "string") return "";
+  if (input.startsWith("http://") || input.startsWith("https://")) return "";
+  if (input.startsWith("/mirrors/") || input.startsWith("mirrors/")) return input;
+  const raw = input.startsWith("/") ? input.slice(1) : input;
+  const pathOnly = raw.split("?")[0];
+  const normalized = pathOnly.startsWith("api/") ? pathOnly.slice(4) : pathOnly;
+  if (!normalized) return "";
+  return `/mirrors/${normalized}.json`;
+}
+
 function addQuery(url, params = {}) {
   const hasQuery = url.includes("?");
   const entries = Object.entries(params).filter(([, value]) => value !== undefined && value !== null);
@@ -112,7 +123,15 @@ export function getBindingHint(payload) {
 
 export async function fetchJSON(input, { feature, traceId, timeoutMs = 10000, logger } = {}) {
   const effectiveTraceId = traceId || createTraceId();
-  const { url: requestUrl, resolution, absolute } = buildUrl(input);
+  const mirrorPath = toMirrorPath(input);
+  const usingMirror = Boolean(mirrorPath);
+  const { url: requestUrl, resolution, absolute } = usingMirror
+    ? {
+        url: mirrorPath,
+        resolution: { ok: true, configLoaded: true, apiBase: "", apiPrefix: "", errors: [] },
+        absolute: false
+      }
+    : buildUrl(input);
   if (resolution) {
     logger?.setMeta({
       configLoaded: resolution.configLoaded,
@@ -150,7 +169,10 @@ export async function fetchJSON(input, { feature, traceId, timeoutMs = 10000, lo
   const baseUrl = shouldProxy ? proxyUrl : requestUrl;
 
   const panic = typeof window !== "undefined" && window.RV_CONFIG?.DEBUG_PANIC_MODE;
-  const finalUrl = addQuery(baseUrl, panic ? { rv_panic: "1" } : {});
+  const finalUrl = addQuery(baseUrl, {
+    ...(panic ? { rv_panic: "1" } : {}),
+    ...(usingMirror ? { t: Date.now() } : {})
+  });
 
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
@@ -185,6 +207,10 @@ export async function fetchJSON(input, { feature, traceId, timeoutMs = 10000, lo
         message: "Invalid JSON response",
         url: finalUrl
       });
+    }
+
+    if (payload && payload.payload && typeof payload.payload === "object") {
+      payload = payload.payload;
     }
 
     if (!isValidSchema(payload)) {
