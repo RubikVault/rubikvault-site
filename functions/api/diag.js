@@ -1,4 +1,5 @@
 import { createTraceId, makeResponse } from "./_shared.js";
+import { isProduction, requireDebugToken } from "./_env.js";
 import { hash8 } from "../_lib/kv-safe.js";
 import { normalizeError } from "../_shared/errorCodes.js";
 
@@ -13,6 +14,7 @@ const ENDPOINTS = [
   "market-regime"
 ];
 const BACKOFFS = [1000, 2000, 4000];
+
 
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -123,6 +125,32 @@ export async function onRequestGet({ request, env, data }) {
   const traceId = data?.traceId || createTraceId(request);
   const origin = new URL(request.url).origin;
   const hasKV = env?.RV_KV && typeof env.RV_KV.get === "function" && typeof env.RV_KV.put === "function";
+  const envHint =
+    env?.CF_PAGES_ENVIRONMENT ||
+    (env?.CF_PAGES_BRANCH ? "preview" : env?.CF_PAGES_URL ? "production" : "unknown");
+  const host = request?.headers?.get("host") || "";
+  const prod = isProduction(env, request);
+
+  if (!requireDebugToken(env, request)) {
+    return makeResponse({
+      ok: true,
+      feature: FEATURE_ID,
+      traceId,
+      data: {
+        status: "redacted",
+        reason: "missing_debug_token",
+        service: "rubikvault",
+        envHint,
+        host,
+        prod
+      },
+      error: {
+        code: "DEBUG_TOKEN_REQUIRED",
+        message: "Debug token required for diag in production",
+        details: {}
+      }
+    });
+  }
 
   const rootProbe = await fetchWithRetry(origin + "/", 8000, 1);
   const rootStatusProbe = {

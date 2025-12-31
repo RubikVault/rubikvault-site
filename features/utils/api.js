@@ -19,6 +19,10 @@ function createTraceId() {
   return Math.random().toString(36).slice(2, 10);
 }
 
+function getRunId() {
+  if (typeof window === "undefined") return "";
+  return window.__RV_RUN_ID || "";
+}
 export function resolveApiBase(explicitBase) {
   const configLoaded = typeof window !== "undefined" && !!window.RV_CONFIG;
   const candidate =
@@ -92,6 +96,51 @@ function isValidSchema(payload) {
   );
 }
 
+function isMirrorSchema(payload) {
+  return (
+    payload &&
+    typeof payload === "object" &&
+    payload.schemaVersion === "1.0" &&
+    typeof payload.mirrorId === "string"
+  );
+}
+
+function mirrorToApiPayload(mirror, traceId) {
+  const items = Array.isArray(mirror.items) ? mirror.items : [];
+  return {
+    ok: true,
+    feature: mirror.mirrorId || "mirror",
+    ts: mirror.updatedAt || new Date().toISOString(),
+    traceId: traceId || "mirror",
+    schemaVersion: 1,
+    cache: { hit: true, ttl: 0, layer: "mirror" },
+    upstream: { url: "mirror", status: null, snippet: "" },
+    rateLimit: { remaining: "unknown", reset: null, estimated: true },
+    dataQuality: {
+      status: mirror.dataQuality || "EMPTY",
+      reason: mirror.mode || "MIRROR"
+    },
+    data: {
+      items,
+      context: mirror.context || {},
+      mirrorMeta: {
+        mirrorId: mirror.mirrorId || "",
+        mode: mirror.mode || "",
+        cadence: mirror.cadence || "",
+        trust: mirror.trust || "",
+        sourceUpstream: mirror.sourceUpstream || "",
+        delayMinutes: mirror.delayMinutes ?? null,
+        asOf: mirror.asOf || null,
+        updatedAt: mirror.updatedAt || null,
+        whyUnique: mirror.whyUnique || "",
+        missingSymbols: mirror.missingSymbols || [],
+        errors: mirror.errors || [],
+        notes: mirror.notes || []
+      }
+    }
+  };
+}
+
 function makeLocalError({ feature, traceId, status, snippet, code, message, url }) {
   return {
     ok: false,
@@ -121,8 +170,13 @@ export function getBindingHint(payload) {
   return BINDING_HINT;
 }
 
-export async function fetchJSON(input, { feature, traceId, timeoutMs = 10000, logger } = {}) {
+export async function fetchJSON(
+  input,
+  { feature, traceId, timeoutMs = 10000, logger, parentTraceId } = {}
+) {
   const effectiveTraceId = traceId || createTraceId();
+  const requestId = createTraceId();
+  const runId = getRunId();
   const mirrorPath = toMirrorPath(input);
   const usingMirror = Boolean(mirrorPath);
   const { url: requestUrl, resolution, absolute } = usingMirror
@@ -185,6 +239,9 @@ export async function fetchJSON(input, { feature, traceId, timeoutMs = 10000, lo
         "x-rv-feature": feature || "unknown",
         "x-rv-trace": effectiveTraceId,
         "x-rv-trace-id": effectiveTraceId,
+        ...(runId ? { "x-rv-run-id": runId } : {}),
+        "x-rv-request-id": requestId,
+        ...(parentTraceId ? { "x-rv-parent-trace-id": parentTraceId } : {}),
         ...(panic ? { "x-rv-panic": "1" } : {})
       },
       signal: controller.signal
@@ -213,6 +270,10 @@ export async function fetchJSON(input, { feature, traceId, timeoutMs = 10000, lo
       payload = payload.payload;
     }
 
+    if (isMirrorSchema(payload)) {
+      payload = mirrorToApiPayload(payload, effectiveTraceId);
+    }
+
     if (!isValidSchema(payload)) {
       payload = makeLocalError({
         feature,
@@ -226,10 +287,24 @@ export async function fetchJSON(input, { feature, traceId, timeoutMs = 10000, lo
     }
 
     logger?.setTraceId(payload?.traceId || effectiveTraceId || "unknown");
+    const mirrorMeta = payload?.data?.mirrorMeta || {};
+    const itemsCount = Array.isArray(payload?.data?.items) ? payload.data.items.length : null;
+    const responseTrace = payload?.trace || {};
     logger?.setMeta({
       cacheLayer: payload?.cache?.layer || "none",
       cacheTtl: payload?.cache?.ttl ?? 0,
-      upstreamStatus: payload?.upstream?.status ?? null
+      upstreamStatus: payload?.upstream?.status ?? null,
+      updatedAt: mirrorMeta.updatedAt || payload?.ts || null,
+      itemsCount,
+      mode: mirrorMeta.mode || null,
+      cadence: mirrorMeta.cadence || null,
+      trust: mirrorMeta.trust || null,
+      sourceUpstream: mirrorMeta.sourceUpstream || null,
+      delayMinutes: mirrorMeta.delayMinutes ?? null,
+      dataQuality: payload?.dataQuality || null,
+      requestId: responseTrace.requestId || requestId,
+      runId: responseTrace.runId || runId,
+      parentTraceId: responseTrace.parentTraceId || parentTraceId || null
     });
 
     const logPayload = {

@@ -1,3 +1,5 @@
+import { BLOCK_REGISTRY } from "../features/blocks-registry.js";
+
 const DEBUG_VERSION = "rv-debug-v1";
 const MAX_EVENTS = 200;
 const MAX_FETCHES = 200;
@@ -74,6 +76,46 @@ function getDebugFlag() {
   if (typeof window === "undefined") return false;
   const params = new URLSearchParams(window.location.search);
   return params.get("debug") === "1" || window.localStorage?.getItem("RV_DEBUG") === "1";
+}
+
+function getDebugToken() {
+  if (typeof window === "undefined") return "";
+  const config = window.RV_CONFIG || {};
+  return (
+    window.localStorage?.getItem("RV_DEBUG_TOKEN") ||
+    window.localStorage?.getItem("debugToken") ||
+    (config.debugAuthToken ? window.localStorage?.getItem("debugAuth") : "")
+  );
+}
+
+function getDebugHeaders() {
+  const token = getDebugToken();
+  return token ? { "x-rv-debug-token": token } : {};
+}
+
+function getBlockLines(blockId) {
+  if (typeof window === "undefined") return [];
+  const store = window.__RV_BLOCK_LOGS__ || {};
+  return Array.isArray(store[blockId]) ? store[blockId].slice(-100) : [];
+}
+
+function getRegistryEntry(blockId) {
+  if (!BLOCK_REGISTRY) return null;
+  return BLOCK_REGISTRY[blockId] || null;
+}
+
+function normalizeSeverity({ blockId, errorCode, httpStatus, dataQuality, itemsCount, traceId }) {
+  if (!traceId) return "CRITICAL";
+  if (errorCode === "SCHEMA_INVALID") return "CRITICAL";
+  if (httpStatus >= 500) return "CRITICAL";
+  const registry = getRegistryEntry(blockId);
+  if (registry?.blockType === "CONTINUOUS") {
+    const expected = Number.isFinite(registry.expectedMinItems) ? registry.expectedMinItems : 0;
+    if (Number.isFinite(itemsCount) && itemsCount < expected) return "WARN";
+  }
+  const dqStatus = dataQuality?.status || dataQuality || "";
+  if (["PARTIAL", "STALE", "COVERAGE_LIMIT"].includes(String(dqStatus))) return "DEGRADED";
+  return "OK";
 }
 
 function ensureRoot() {
@@ -234,62 +276,136 @@ function buildCompactReport(state) {
 }
 
 function buildClientSnapshot(state) {
+  const blocks = Object.values(state.blocks || {}).map((block) => {
+    const lastResponse = block.lastResponse || {};
+    const dataQuality = lastResponse.json?.dataQuality || null;
+    const itemsCount = Array.isArray(lastResponse.json?.data?.items)
+      ? lastResponse.json.data.items.length
+      : null;
+    return {
+      blockId: block.id,
+      status: block.status,
+      meta: {
+        endpoint: block.endpoint || "",
+        traceId: lastResponse.traceId || "",
+        cache: lastResponse.cache || null,
+        upstream: lastResponse.upstream || null,
+        dataQuality,
+        itemsCount
+      },
+      lines: getBlockLines(block.id)
+    };
+  });
+
   return redactObject({
     ts: nowIso(),
     page: state.page,
-    blocks: state.blocks,
+    blocks,
     events: state.events.slice(-200),
-    fetches: state.fetches.slice(-100),
-    console: {
-      errors: state.console.errors.slice(-50),
-      warnings: state.console.warnings.slice(-50)
-    },
+    fetchLog: state.fetches.filter((entry) => entry.isApi).slice(-100),
+    consoleErrors: state.console.errors.slice(-50),
     jsErrors: state.jsErrors.slice(-50)
   });
 }
 
-function mergeBundle(serverBundle, state) {
-  const client = buildClientSnapshot(state);
-  const events = Array.isArray(serverBundle?.recentEvents) ? serverBundle.recentEvents : [];
-  const correlations = [];
-  Object.values(client.blocks || {}).forEach((block) => {
-    const traceId = block.lastResponse?.traceId;
+function buildCorrelationIndex(clientBlocks, serverEvents) {
+  const index = {};
+  clientBlocks.forEach((block) => {
+    const traceId = block.meta?.traceId;
     if (!traceId) return;
-    const matched = events.find((event) => event.traceId === traceId);
-    if (matched) {
-      correlations.push({
-        blockId: block.id,
-        feature: matched.feature || block.id,
-        traceId,
-        reason: "traceId-match"
-      });
-      return;
-    }
-    correlations.push({
-      blockId: block.id,
-      feature: block.id,
-      traceId,
-      reason: "traceId-no-server-match"
+    index[traceId] = index[traceId] || { client: [], server: [] };
+    index[traceId].client.push({
+      blockId: block.blockId,
+      status: block.status
     });
   });
-
-  return redactObject({
-    ...serverBundle,
-    client,
-    correlations
+  (serverEvents || []).forEach((event) => {
+    const traceId = event?.traceId;
+    if (!traceId) return;
+    index[traceId] = index[traceId] || { client: [], server: [] };
+    index[traceId].server.push({
+      feature: event.feature,
+      errorCode: event.errorCode,
+      httpStatus: event.httpStatus
+    });
   });
+  return index;
 }
 
-function buildBundleCompact(bundle) {
-  if (!bundle) return {};
+function buildSummaryFromBlocks(blocks) {
+  const countsBySeverity = { OK: 0, DEGRADED: 0, WARN: 0, CRITICAL: 0 };
+  const countsByFeature = {};
+  const errorCounts = {};
+  blocks.forEach((block) => {
+    const severity = normalizeSeverity({
+      blockId: block.blockId,
+      errorCode: block.meta?.dataQuality?.reason || block.meta?.dataQuality?.status || "",
+      httpStatus: block.meta?.upstream?.status || 0,
+      dataQuality: block.meta?.dataQuality,
+      itemsCount: block.meta?.itemsCount,
+      traceId: block.meta?.traceId
+    });
+    countsBySeverity[severity] = (countsBySeverity[severity] || 0) + 1;
+    countsByFeature[block.blockId] = severity;
+    const errorCode = block.meta?.dataQuality?.reason || block.meta?.dataQuality?.status || "";
+    if (errorCode) {
+      errorCounts[errorCode] = (errorCounts[errorCode] || 0) + 1;
+    }
+  });
+  const topErrors = Object.entries(errorCounts)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 8)
+    .map(([code, count]) => ({ code, count, hash: hash8(code) }));
+  let severity = "OK";
+  if (countsBySeverity.CRITICAL > 0) severity = "CRITICAL";
+  else if (countsBySeverity.WARN > 0) severity = "WARN";
+  else if (countsBySeverity.DEGRADED > 0) severity = "DEGRADED";
+  return { severity, countsBySeverity, countsByFeature, topErrors };
+}
+
+function buildUnifiedReport(state) {
+  const client = buildClientSnapshot(state);
+  const serverBundle = state.serverBundle || {};
+  const server = {
+    health: serverBundle?.health || state.serverDiag?.health?.json || {},
+    diag: serverBundle?.diag || state.serverDiag?.diag?.json || {},
+    debugBundle: serverBundle || {}
+  };
+  const correlation = {
+    byTraceId: buildCorrelationIndex(client.blocks || [], serverBundle?.recentEvents || [])
+  };
+  const summary = buildSummaryFromBlocks(client.blocks || []);
+  const report = {
+    schemaVersion: "1.0",
+    generatedAt: nowIso(),
+    runId: state.runId || "",
+    location: {
+      href: state.page.url,
+      userAgent: state.page.userAgent
+    },
+    client,
+    server,
+    correlation,
+    summary,
+    redaction: {
+      enabled: true,
+      snippetMaxBytes: MAX_SNIPPET
+    }
+  };
+  const redacted = redactObject(report);
+  redacted.sizeBytes = getJSONSize(redacted);
+  return redacted;
+}
+
+function buildUnifiedCompactReport(report) {
+  if (!report) return {};
   let compact = {
-    schema: bundle.schema,
-    meta: bundle.meta,
-    summary: bundle.summary,
-    topErrorCodes: bundle.summary?.topErrorCodes || [],
-    blocksDown: bundle.summary?.blocksDown || [],
-    endpointsDown: bundle.summary?.endpointsDown || [],
-    lastFails: (bundle.recentEvents || [])
+    schemaVersion: report.schemaVersion,
+    generatedAt: report.generatedAt,
+    runId: report.runId,
+    summary: report.summary,
+    topErrors: report.summary?.topErrors || [],
+    worstEndpoints: (report.server?.debugBundle?.recentEvents || [])
       .filter((event) => event.errorCode)
       .slice(0, 20)
       .map((event) => ({
@@ -300,17 +416,12 @@ function buildBundleCompact(bundle) {
         traceId: event.traceId
       }))
   };
-
   const originalSize = getJSONSize(compact);
   if (originalSize > MAX_CHAT_BYTES) {
-    compact.lastFails = compact.lastFails.slice(0, 10);
+    compact.worstEndpoints = compact.worstEndpoints.slice(0, 10);
   }
   if (getJSONSize(compact) > MAX_CHAT_BYTES) {
-    compact.blocksDown = [];
-    compact.endpointsDown = [];
-  }
-  if (getJSONSize(compact) > MAX_CHAT_BYTES) {
-    compact.topErrorCodes = compact.topErrorCodes.slice(0, 3);
+    compact.topErrors = compact.topErrors.slice(0, 3);
     compact.summary = { ...compact.summary, truncated: true, originalSize };
   }
   return compact;
@@ -321,6 +432,7 @@ function createState() {
     enabled: getDebugFlag(),
     version: DEBUG_VERSION,
     startedAt: nowIso(),
+    runId: typeof window !== "undefined" ? window.__RV_RUN_ID || "" : "",
     page: {
       url: typeof window !== "undefined" ? window.location.href : "",
       userAgent: typeof navigator !== "undefined" ? navigator.userAgent : ""
@@ -341,6 +453,7 @@ function createState() {
     togglePatched: false,
     diag: { running: false, progress: 0, total: 0, message: "", aborters: [] },
     serverDiag: null,
+    serverBundle: null,
     aiReport: null,
     aiReportCompact: null,
     aiStatus: { running: false, message: "" }
@@ -731,6 +844,7 @@ function patchFetch(state) {
         ok: parsed.ok ? parsed.json?.ok : null,
         errorCode: parsed.ok ? parsed.json?.error?.code : "SCHEMA_INVALID",
         traceId: parsed.ok ? parsed.json?.traceId : null,
+        requestId: parsed.ok ? parsed.json?.trace?.requestId : null,
         cache: parsed.ok ? parsed.json?.cache : null,
         upstream: parsed.ok ? parsed.json?.upstream : null,
         json: parsed.ok ? parsed.json : null,
@@ -779,6 +893,7 @@ function recordBlockFetch(state, blockId, blockName, endpoint, entry) {
     ok: entry.ok,
     errorCode: entry.errorCode,
     traceId: entry.traceId,
+    requestId: entry.requestId,
     cache: entry.cache,
     upstream: entry.upstream,
     json: entry.json,
@@ -824,21 +939,12 @@ function attachKeyboardToggle(state) {
 }
 
 function exportReport(state) {
-  return {
-    version: state.version,
-    startedAt: state.startedAt,
-    page: state.page,
-    blocks: state.blocks,
-    events: state.events,
-    fetches: state.fetches,
-    console: state.console,
-    jsErrors: state.jsErrors
-  };
+  return buildUnifiedReport(state);
 }
 
 function copyAll(state) {
   const report = exportReport(state);
-  const text = JSON.stringify(report, null, 2) + "\n\n" + buildTextReport(state);
+  const text = JSON.stringify(report, null, 2);
   if (navigator?.clipboard?.writeText) {
     return navigator.clipboard.writeText(text);
   }
@@ -856,7 +962,8 @@ function copyAll(state) {
 }
 
 function copyCompact(state) {
-  const compact = state.aiReportCompact || buildCompactReport(state);
+  const compact =
+    state.aiReportCompact || buildUnifiedCompactReport(state.aiReport || buildUnifiedReport(state));
   const text = JSON.stringify(compact, null, 2);
   if (navigator?.clipboard?.writeText) {
     return navigator.clipboard.writeText(text);
@@ -905,7 +1012,10 @@ async function runDiagnostics(state) {
   const fetchJsonSafe = async (url, controller) => {
     const started = performance.now();
     try {
-      const res = await fetch(url, { signal: controller.signal, headers: { Accept: "application/json" } });
+      const res = await fetch(url, {
+        signal: controller.signal,
+        headers: { Accept: "application/json", ...getDebugHeaders() }
+      });
       const text = await res.text();
       const parsed = safeParse(text);
       return {
@@ -987,7 +1097,9 @@ async function generateAIReport(state) {
   scheduleRender(state);
   let serverBundle = null;
   try {
-    const response = await fetch(bundleUrl, { headers: { Accept: "application/json" } });
+    const response = await fetch(bundleUrl, {
+      headers: { Accept: "application/json", ...getDebugHeaders() }
+    });
     const text = await response.text();
     const parsed = safeParse(text);
     serverBundle = parsed.ok ? parsed.json : null;
@@ -997,21 +1109,22 @@ async function generateAIReport(state) {
   state.aiStatus.message = "Merging client snapshot";
   scheduleRender(state);
   if (!serverBundle) {
-    state.aiReport = {
+    state.serverBundle = {
       schema: "RUBIKVAULT_DEBUG_BUNDLE_V1",
       meta: { ts: nowIso(), envHint: "unknown", host: window.location.host, version: null },
       infra: { kv: { hasKV: false, binding: "RV_KV", errors: ["FETCH_FAILED"] }, notes: [] },
       health: {},
       diag: {},
       recentEvents: [],
-      client: buildClientSnapshot(state),
+      client: {},
       correlations: [],
       summary: { status: "FAIL", topErrorCodes: [], blocksDown: [], endpointsDown: [] }
     };
   } else {
-    state.aiReport = mergeBundle(serverBundle, state);
+    state.serverBundle = serverBundle;
   }
-  state.aiReportCompact = buildBundleCompact(state.aiReport);
+  state.aiReport = buildUnifiedReport(state);
+  state.aiReportCompact = buildUnifiedCompactReport(state.aiReport);
   state.aiStatus.running = false;
   state.aiStatus.message = "Ready";
   scheduleRender(state);

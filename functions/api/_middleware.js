@@ -1,4 +1,5 @@
 import { kvPutJson } from "../_lib/kv-safe.js";
+import { isProduction, requireDebugToken } from "./_env.js";
 
 function buildCorsHeaders() {
   return {
@@ -12,6 +13,35 @@ function buildCorsHeaders() {
 
 function createTraceId() {
   return Math.random().toString(36).slice(2, 10);
+}
+
+function isDebugEndpoint(pathname) {
+  return (
+    pathname === "/api/health" ||
+    pathname === "/api/diag" ||
+    pathname === "/api/debug-bundle"
+  );
+}
+
+function shouldLogEvent({ status, dataQuality, debugActive, isWarn }) {
+  if (status >= 400) return true;
+  if (debugActive) return true;
+  if (isWarn) return true;
+  return Math.random() < 0.05;
+}
+
+function getEventBucket(feature) {
+  const minute = new Date().toISOString().slice(0, 16);
+  return `${feature}:${minute}`;
+}
+
+function canLogSample(feature, maxPerMinute = 5) {
+  const store = (globalThis.__RV_EVENT_COUNTS ||= new Map());
+  const bucket = getEventBucket(feature);
+  const current = store.get(bucket) || 0;
+  if (current >= maxPerMinute) return false;
+  store.set(bucket, current + 1);
+  return true;
 }
 
 async function computeEtag(text) {
@@ -36,13 +66,27 @@ export async function onRequest(context) {
   // Trace-Id
   const incomingTrace =
     request.headers.get("x-rv-trace-id") || request.headers.get("x-rv-trace");
+  const incomingRunId = request.headers.get("x-rv-run-id");
+  const incomingRequestId = request.headers.get("x-rv-request-id");
+  const parentTraceId =
+    request.headers.get("x-rv-parent-trace-id") || request.headers.get("x-rv-parent-trace");
   const traceId = incomingTrace || createTraceId();
+  const requestId = incomingRequestId || createTraceId();
 
   const reqHeaders = new Headers(request.headers);
   reqHeaders.set("x-rv-trace", traceId);
   reqHeaders.set("x-rv-trace-id", traceId);
+  if (incomingRunId) reqHeaders.set("x-rv-run-id", incomingRunId);
+  reqHeaders.set("x-rv-request-id", requestId);
+  if (parentTraceId) reqHeaders.set("x-rv-parent-trace-id", parentTraceId);
 
-  context.data = { ...(context.data || {}), traceId };
+  context.data = {
+    ...(context.data || {}),
+    traceId,
+    requestId,
+    runId: incomingRunId || null,
+    parentTraceId: parentTraceId || null
+  };
 
   const requestWithTrace = new Request(request, { headers: reqHeaders });
 
@@ -100,20 +144,52 @@ export async function onRequest(context) {
       }
 
       // KV Event Log (best effort)
+      let payload = null;
+      let parsedOk = false;
+      try {
+        payload = JSON.parse(text);
+        parsedOk = true;
+      } catch (e) {
+        payload = null;
+      }
+
+      if (payload && typeof payload === "object") {
+        const existingTrace = payload.trace || {};
+        payload.trace = {
+          traceId: payload.traceId || traceId,
+          requestId: existingTrace.requestId || requestId,
+          runId: existingTrace.runId || incomingRunId || "",
+          parentTraceId: existingTrace.parentTraceId || parentTraceId || ""
+        };
+      }
+
       const logEvent = async () => {
         try {
-          let payload = null;
-          try {
-            payload = JSON.parse(text);
-          } catch (e) {
-            payload = null;
-          }
-
+          
           const budget = payload?.data?.budget || payload?.budget || null;
+          const dataQualityStatus =
+            payload?.dataQuality?.status ||
+            payload?.data?.dataQuality?.status ||
+            payload?.dataQuality ||
+            "";
+          const warnStatus = ["STALE", "PARTIAL", "COVERAGE_LIMIT"].includes(
+            String(dataQualityStatus)
+          );
+          const debugActive = url.searchParams.get("debug") === "1";
+          const isDebugAllowed = requireDebugToken(env, request);
+          if (isDebugEndpoint(url.pathname) && !isDebugAllowed) return;
+          if (!shouldLogEvent({ status: response.status, dataQuality: dataQualityStatus, debugActive, isWarn: warnStatus })) {
+            return;
+          }
+          if (!warnStatus && response.status < 400 && !debugActive && !canLogSample(payload?.feature || url.pathname)) {
+            return;
+          }
           const event = {
             ts: new Date().toISOString(),
             feature: payload?.feature || url.pathname.split("/").slice(-1)[0],
             traceId: payload?.traceId || traceId,
+            requestId,
+            runId: incomingRunId || "",
             cacheLayer: payload?.cache?.layer || "none",
             upstreamStatus: payload?.upstream?.status ?? null,
             durationMs: Date.now() - started,
@@ -141,7 +217,9 @@ export async function onRequest(context) {
       if (typeof waitUntil === "function") waitUntil(logEvent());
       else await logEvent();
 
-      return new Response(text, {
+      const textPayload = parsedOk && payload ? JSON.stringify(payload) : text;
+
+      return new Response(textPayload, {
         status: response.status,
         statusText: response.statusText,
         headers

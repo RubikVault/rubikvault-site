@@ -20,13 +20,15 @@ jobs:
           node-version: "20"
 
       - name: Generate EOD mirrors
-        run: |
-          node scripts/generate-eod-mirrors.mjs
+        run: node scripts/generate-eod-market.mjs
+
+      - name: Validate mirrors
+        run: node scripts/validate-mirrors.mjs
 
       - name: Commit mirror updates
         run: |
           git config user.name "RubikVault Bot"
           git config user.email "bot@rubikvault.com"
           git add mirrors public/mirrors
-          git commit -m "chore: update EOD mirrors [skip ci]" || true
+          git commit -m "chore(mirrors): daily EOD market data" || true
           git push || true

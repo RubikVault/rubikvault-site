@@ -1,6 +1,8 @@
 import { createTraceId, makeResponse, logServer } from "./_shared.js";
+import { isProduction, requireDebugToken } from "./_env.js";
 
 const FEATURE_ID = "health";
+
 
 export async function onRequestGet({ request, env, data }) {
   const started = Date.now();
@@ -10,6 +12,7 @@ export async function onRequestGet({ request, env, data }) {
   let version = null;
   let colo = null;
   let host = "";
+  const prod = isProduction(env, request);
 
   try {
     bindingsOk =
@@ -32,8 +35,36 @@ export async function onRequestGet({ request, env, data }) {
     version,
     cf: { colo },
     host,
-    env: { hasKV: bindingsOk }
+    env: { hasKV: bindingsOk },
+    prod,
+    host
   };
+
+  if (!requireDebugToken(env, request)) {
+    const response = makeResponse({
+      ok: true,
+      feature: FEATURE_ID,
+      traceId,
+      data: {
+        status: "redacted",
+        reason: "missing_debug_token",
+        service: "rubikvault",
+        envHint,
+        host,
+        prod
+      },
+      cache: { hit: false, ttl: 0, layer: "none" },
+      upstream: { url: "", status: null, snippet: "" }
+    });
+    logServer({
+      feature: FEATURE_ID,
+      traceId,
+      cacheLayer: "none",
+      upstreamStatus: null,
+      durationMs: Date.now() - started
+    });
+    return response;
+  }
 
   if (!bindingsOk) {
     const response = makeResponse({

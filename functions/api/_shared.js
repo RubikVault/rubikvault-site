@@ -1,7 +1,25 @@
 import { XMLParser } from "fast-xml-parser";
 import { parseJsonLenient, fetchTextWithTimeout } from "./_shared/parse.js";
+import { BLOCK_REGISTRY } from "../../features/blocks-registry.js";
 
 const SCHEMA_VERSION = 1;
+
+function resolveExpectations(feature) {
+  if (!feature || !BLOCK_REGISTRY) return null;
+  const byFeature =
+    BLOCK_REGISTRY[feature] || BLOCK_REGISTRY[`rv-${feature}`] || BLOCK_REGISTRY[`${feature}`];
+  if (!byFeature) return null;
+  const freshness = byFeature.freshness || {};
+  const freshnessMaxAgeMinutes =
+    byFeature.blockType === "LIVE"
+      ? freshness.liveMaxMinutes ?? 20
+      : Math.round((freshness.okMaxHoursWeekday ?? 24) * 60);
+  return {
+    blockType: byFeature.blockType || "EVENT",
+    expectedMinItems: Number.isFinite(byFeature.expectedMinItems) ? byFeature.expectedMinItems : 0,
+    freshnessMaxAgeMinutes
+  };
+}
 
 export function createTraceId(request) {
   try {
@@ -56,23 +74,36 @@ export function makeJson({
   ok,
   feature,
   traceId,
+  requestId,
+  runId,
+  parentTraceId,
+  trace,
   ts,
   data = {},
   cache = {},
   upstream = {},
   rateLimit = rateLimitFallback(),
   error = {},
+  expectations,
   isStale = false,
   source,
   freshness,
   cacheStatus,
   sourceMap
 } = {}) {
+  const resolvedTrace = {
+    traceId: trace?.traceId || traceId || "unknown",
+    requestId: trace?.requestId || requestId || "",
+    runId: trace?.runId || runId || "",
+    parentTraceId: trace?.parentTraceId || parentTraceId || ""
+  };
+  const resolvedExpectations = expectations || resolveExpectations(feature);
   return {
     ok: Boolean(ok),
     feature: feature || "unknown",
     ts: ts || new Date().toISOString(),
     traceId: traceId || "unknown",
+    trace: resolvedTrace,
     schemaVersion: SCHEMA_VERSION,
     cache: {
       hit: Boolean(cache.hit),
@@ -95,7 +126,8 @@ export function makeJson({
     ...(source ? { source } : {}),
     ...(freshness ? { freshness } : {}),
     ...(cacheStatus ? { cacheStatus } : {}),
-    ...(sourceMap ? { sourceMap } : {})
+    ...(sourceMap ? { sourceMap } : {}),
+    ...(resolvedExpectations ? { expectations: resolvedExpectations } : {})
   };
 }
 
@@ -107,12 +139,17 @@ export function makeResponse({
   ok,
   feature,
   traceId,
+  requestId,
+  runId,
+  parentTraceId,
+  trace,
   ts,
   data,
   cache,
   upstream,
   rateLimit,
   error,
+  expectations,
   isStale,
   status = 200,
   headers = {},
@@ -125,12 +162,17 @@ export function makeResponse({
     ok,
     feature,
     traceId,
+    requestId,
+    runId,
+    parentTraceId,
+    trace,
     ts,
     data,
     cache,
     upstream,
     rateLimit,
     error,
+    expectations,
     isStale,
     source,
     freshness,
@@ -229,17 +271,38 @@ export async function kvPutJson(context, key, value, ttlSeconds) {
   });
 }
 
-export function logServer({ feature, traceId, cacheLayer, kv, upstreamStatus, durationMs }) {
+export function logServer({
+  feature,
+  traceId,
+  requestId,
+  cacheLayer,
+  kv,
+  upstream,
+  upstreamStatus,
+  durationMs,
+  httpStatus,
+  dataQuality,
+  errorCode
+}) {
   const layer = cacheLayer || kv;
   const kvValue =
     layer === "kv" ? "kv" : layer === "none" ? "none" : layer === "hit" ? "kv" : "none";
+  const upstreamValue = upstream || { status: upstreamStatus ?? null };
+  const quality =
+    typeof dataQuality === "string" ? dataQuality : dataQuality?.status || dataQuality?.reason || "";
   console.log(
     JSON.stringify({
-      feature,
-      traceId,
-      kv: kvValue,
-      upstreamStatus: upstreamStatus ?? null,
-      durationMs: durationMs ?? 0
+      feature: feature || "unknown",
+      traceId: traceId || "unknown",
+      requestId: requestId || "",
+      cacheLayer: layer || "none",
+      upstream: upstreamValue,
+      upstreamStatus: upstreamValue?.status ?? upstreamStatus ?? null,
+      durationMs: durationMs ?? 0,
+      httpStatus: httpStatus ?? null,
+      dataQuality: quality || "",
+      errorCode: errorCode || "",
+      kv: kvValue
     })
   );
 }

@@ -1,4 +1,11 @@
 const MAX_DEBUG_LINES = 300;
+const GLOBAL_LOG_KEY = "__RV_BLOCK_LOGS__";
+
+function getLogStore() {
+  if (typeof window === "undefined") return null;
+  if (!window[GLOBAL_LOG_KEY]) window[GLOBAL_LOG_KEY] = {};
+  return window[GLOBAL_LOG_KEY];
+}
 
 export function createTraceId() {
   return Math.random().toString(36).slice(2, 10);
@@ -67,10 +74,20 @@ export function createLogger({ featureId, blockName, rootEl, panicMode = false }
     featureId,
     blockName,
     traceId: null,
+    requestId: null,
+    runId: null,
+    parentTraceId: null,
     status: "PARTIAL",
     headline: "Loading",
     updatedAt: null,
     source: null,
+    mode: null,
+    cadence: null,
+    trust: null,
+    sourceUpstream: null,
+    delayMinutes: null,
+    dataQuality: null,
+    itemsCount: null,
     isStale: false,
     staleAgeMs: null,
     cacheLayer: null,
@@ -117,16 +134,31 @@ export function createLogger({ featureId, blockName, rootEl, panicMode = false }
       }`;
     }
     if (sourceEl) {
-      const sourceLabel = state.source || "--";
+      const sourceLabel = state.sourceUpstream || state.source || "--";
+      const parts = [
+        sourceLabel,
+        state.mode ? `mode ${state.mode}` : null,
+        state.cadence ? `cadence ${state.cadence}` : null,
+        state.trust ? `trust ${state.trust}` : null,
+        typeof state.delayMinutes === "number" ? `delay ${state.delayMinutes}m` : null,
+        state.dataQuality?.status ? `dq ${state.dataQuality.status}` : null
+      ].filter(Boolean);
       const staleNote =
         state.isStale && typeof state.staleAgeMs === "number"
           ? ` (stale ${Math.max(1, Math.round(state.staleAgeMs / 60000))}m)`
           : state.isStale
             ? " (stale)"
             : "";
-      sourceEl.textContent = `Source: ${sourceLabel}${staleNote}`;
+      sourceEl.textContent = `Source: ${parts.join(" | ")}${staleNote}`;
     }
-    if (traceEl) traceEl.textContent = `Trace: ${state.traceId || "--"}`;
+    if (traceEl) {
+      const traceParts = [
+        state.traceId || "--",
+        state.runId ? `run ${state.runId}` : null,
+        state.requestId ? `req ${state.requestId}` : null
+      ].filter(Boolean);
+      traceEl.textContent = `Trace: ${traceParts.join(" | ")}`;
+    }
     if (cacheEl) {
       const layer = state.cacheLayer || "--";
       const ttl =
@@ -181,6 +213,15 @@ export function createLogger({ featureId, blockName, rootEl, panicMode = false }
     state.lines.push(line);
     if (state.lines.length > MAX_DEBUG_LINES) {
       state.lines.splice(0, state.lines.length - MAX_DEBUG_LINES);
+    }
+    const store = getLogStore();
+    if (store && featureId) {
+      const lines = store[featureId] || [];
+      lines.push(line);
+      if (lines.length > MAX_DEBUG_LINES) {
+        lines.splice(0, lines.length - MAX_DEBUG_LINES);
+      }
+      store[featureId] = lines;
     }
     renderDebug();
   };
@@ -240,11 +281,21 @@ export function createLogger({ featureId, blockName, rootEl, panicMode = false }
     setMeta({
       updatedAt,
       source,
+      mode,
+      cadence,
+      trust,
+      sourceUpstream,
+      delayMinutes,
+      dataQuality,
+      itemsCount,
       isStale,
       staleAgeMs,
       cacheLayer,
       cacheTtl,
       upstreamStatus,
+      requestId,
+      runId,
+      parentTraceId,
       configLoaded,
       apiBase,
       apiPrefix,
@@ -253,11 +304,21 @@ export function createLogger({ featureId, blockName, rootEl, panicMode = false }
     } = {}) {
       if (updatedAt) state.updatedAt = updatedAt;
       if (source !== undefined) state.source = source;
+      if (mode !== undefined) state.mode = mode;
+      if (cadence !== undefined) state.cadence = cadence;
+      if (trust !== undefined) state.trust = trust;
+      if (sourceUpstream !== undefined) state.sourceUpstream = sourceUpstream;
+      if (delayMinutes !== undefined) state.delayMinutes = delayMinutes;
+      if (dataQuality !== undefined) state.dataQuality = dataQuality;
+      if (itemsCount !== undefined) state.itemsCount = itemsCount;
       if (typeof isStale === "boolean") state.isStale = isStale;
       if (typeof staleAgeMs === "number") state.staleAgeMs = staleAgeMs;
       if (cacheLayer !== undefined) state.cacheLayer = cacheLayer;
       if (cacheTtl !== undefined) state.cacheTtl = cacheTtl;
       if (upstreamStatus !== undefined) state.upstreamStatus = upstreamStatus;
+      if (requestId !== undefined) state.requestId = requestId;
+      if (runId !== undefined) state.runId = runId;
+      if (parentTraceId !== undefined) state.parentTraceId = parentTraceId;
       if (typeof configLoaded === "boolean") state.configLoaded = configLoaded;
       if (apiBase !== undefined) state.apiBase = apiBase;
       if (apiPrefix !== undefined) state.apiPrefix = apiPrefix;

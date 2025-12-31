@@ -10,6 +10,15 @@ import {
 import { applyOverrides } from "./features/utils/flags.js";
 import { resolveApiBase } from "./features/utils/api.js";
 import { initFlagsPanel } from "./features/rv-flags-panel.js";
+import { BLOCK_REGISTRY } from "./features/blocks-registry.js";
+
+const RUN_ID = (() => {
+  if (typeof window === "undefined") return "";
+  if (window.__RV_RUN_ID) return window.__RV_RUN_ID;
+  const id = createTraceId();
+  window.__RV_RUN_ID = id;
+  return id;
+})();
 
 function escapeHtml(value) {
   return String(value)
@@ -170,37 +179,54 @@ function isMarketOpenNY(date = new Date()) {
 
 function normalizeStatus(featureId, status, headline = "") {
   const entry = statusState.get(featureId) || {};
+  const registry = BLOCK_REGISTRY[featureId] || null;
   const updatedAt = entry.updatedAt ? new Date(entry.updatedAt).getTime() : null;
   const now = Date.now();
-  const isCrypto = CRYPTO_FEATURES.has(featureId);
   const marketOpen = isMarketOpenNY();
   const headlineText = String(headline || "");
   const emptyMatch = /no data|no symbols|empty|placeholder|no live/i.test(headlineText);
+  const dataQuality = entry.dataQuality || {};
+  const itemsCount = Number.isFinite(entry.itemsCount) ? entry.itemsCount : null;
+  const mode = entry.mode ? String(entry.mode).toUpperCase() : "";
 
   if (status === "FAIL" || /BINDING_MISSING|CONFIG_MISSING/i.test(headlineText)) {
     return { status, headline: headlineText };
   }
 
-  if (emptyMatch) {
+  if (registry) {
+    const expected = registry.expectedMinItems ?? 0;
+    if (itemsCount !== null && itemsCount < expected) {
+      if (registry.blockType === "EVENT") {
+        return { status: "OK", headline: "EMPTY" };
+      }
+      return { status: "PARTIAL", headline: "EMPTY" };
+    }
+  } else if (emptyMatch) {
     return { status: "OK", headline: "EMPTY" };
   }
 
+  if (dataQuality.status === "COVERAGE_LIMIT") {
+    return { status: "PARTIAL", headline: "COVERAGE" };
+  }
+
   if (!updatedAt || Number.isNaN(updatedAt)) {
-    return { status, headline: headlineText };
+    return { status, headline: headlineText || mode || "OK" };
   }
 
   const ageMs = now - updatedAt;
-  if (isCrypto) {
-    if (ageMs > STALE_CRYPTO_MS) return { status: "PARTIAL", headline: "STALE" };
-    return { status: "OK", headline: headlineText || "OK" };
+  if (registry?.blockType === "LIVE" || CRYPTO_FEATURES.has(featureId)) {
+    const maxMs = (registry?.freshness?.liveMaxMinutes || 20) * 60 * 1000;
+    if (ageMs > maxMs) return { status: "PARTIAL", headline: "STALE" };
+    return { status: "OK", headline: mode || "LIVE" };
   }
 
   if (!marketOpen) {
-    return { status: "OK", headline: headlineText || "EOD" };
+    return { status: "OK", headline: mode || "EOD" };
   }
 
-  if (ageMs > STALE_OPEN_MS) return { status: "PARTIAL", headline: "STALE" };
-  return { status: "OK", headline: headlineText || "OK" };
+  const maxOpenMs = (registry?.freshness?.okMaxHoursWeekday || 1) * 60 * 60 * 1000;
+  if (ageMs > maxOpenMs) return { status: "PARTIAL", headline: "STALE" };
+  return { status: "OK", headline: mode || headlineText || "OK" };
 }
 
 function getApiResolution() {
@@ -262,7 +288,8 @@ function updateStatusStrip() {
       const icon = statusIcon(entry.status);
       const label = entry.label || resolveStatusLabel(entry.featureId);
       const state = entry.status?.toLowerCase?.() || "partial";
-      return `<span class="rv-status-pill" data-rv-state="${state}">${label}: ${icon}</span>`;
+      const detail = entry.headline ? ` · ${entry.headline}` : "";
+      return `<span class="rv-status-pill" data-rv-state="${state}">${label}: ${icon}${detail}</span>`;
     })
     .join("");
 
@@ -931,6 +958,17 @@ function initBlock(section, feature) {
     if (meta.cacheLayer !== undefined) {
       recordCache(featureId, meta.cacheLayer);
     }
+    const entry = statusState.get(featureId) || {};
+    statusState.set(featureId, {
+      ...entry,
+      itemsCount: Number.isFinite(meta.itemsCount) ? meta.itemsCount : entry.itemsCount,
+      mode: meta.mode || entry.mode,
+      cadence: meta.cadence || entry.cadence,
+      trust: meta.trust || entry.trust,
+      sourceUpstream: meta.sourceUpstream || entry.sourceUpstream,
+      delayMinutes: meta.delayMinutes ?? entry.delayMinutes,
+      dataQuality: meta.dataQuality || entry.dataQuality
+    });
   };
   const contentEl = logger.getContentEl();
   applyApiMeta(logger);

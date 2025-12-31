@@ -1,8 +1,10 @@
 import { createTraceId } from "./_shared.js";
 import { hash8, kvPutJson } from "../_lib/kv-safe.js";
+import { isProduction, requireDebugToken } from "./_env.js";
 
 const SCHEMA = "RUBIKVAULT_DEBUG_BUNDLE_V1";
 const EVENT_TTL = 24 * 60 * 60;
+
 
 function redactKey(key) {
   return /api_key|token|secret|authorization|bearer/i.test(String(key || ""));
@@ -102,6 +104,25 @@ function summarizeErrors(events) {
     .slice(0, 10);
 }
 
+function summarizeSeverity(events) {
+  const counts = { OK: 0, DEGRADED: 0, WARN: 0, CRITICAL: 0 };
+  const byFeature = {};
+  events.forEach((event) => {
+    let severity = "OK";
+    if (!event?.traceId) severity = "CRITICAL";
+    else if (event?.errorCode === "SCHEMA_INVALID") severity = "CRITICAL";
+    else if (event?.httpStatus >= 500) severity = "CRITICAL";
+    else if (["STALE", "PARTIAL", "COVERAGE_LIMIT"].includes(String(event?.dataQuality || ""))) {
+      severity = "DEGRADED";
+    } else if (event?.httpStatus >= 400) {
+      severity = "WARN";
+    }
+    counts[severity] = (counts[severity] || 0) + 1;
+    if (event?.feature) byFeature[event.feature] = severity;
+  });
+  return { countsBySeverity: counts, countsByFeature: byFeature };
+}
+
 export async function onRequestGet({ request, env, data }) {
   const traceId = data?.traceId || createTraceId(request);
   const url = new URL(request.url);
@@ -112,6 +133,8 @@ export async function onRequestGet({ request, env, data }) {
   const version = env?.CF_PAGES_COMMIT_SHA || env?.GIT_SHA || null;
 
   const hasKV = env?.RV_KV && typeof env.RV_KV.get === "function" && typeof env.RV_KV.put === "function";
+  const debugAllowed = requireDebugToken(env, request);
+  const prod = isProduction(env, request);
   const infra = {
     kv: {
       hasKV,
@@ -121,6 +144,25 @@ export async function onRequestGet({ request, env, data }) {
     notes: []
   };
 
+  if (!debugAllowed) {
+    const bundle = {
+      schema: SCHEMA,
+      meta: { ts: new Date().toISOString(), envHint, host, version, traceId },
+      infra: { kv: { hasKV: false, binding: "RV_KV", errors: ["DEBUG_TOKEN_REQUIRED"] }, notes: [] },
+      health: { status: "ok", service: "rubikvault", envHint, host },
+      diag: {},
+      recentEvents: [],
+      data: { status: "redacted", reason: "missing_debug_token", prod, host },
+      client: {},
+      correlations: [],
+      summary: { status: "FAIL", topErrorCodes: [], blocksDown: [], endpointsDown: [] }
+    };
+    return new Response(JSON.stringify(bundle), {
+      status: 200,
+      headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" }
+    });
+  }
+
   const origin = url.origin;
   const health = await fetchJsonSafe(`${origin}/api/health`);
   const diag = await fetchJsonSafe(`${origin}/api/diag`);
@@ -129,7 +171,7 @@ export async function onRequestGet({ request, env, data }) {
   const limit = Math.max(20, Math.min(500, Number.isFinite(limitParam) ? limitParam : 200));
   const recentEvents = await listEvents(env, limit);
 
-  const summary = {
+  const summaryBase = {
     status: hasKV ? "OK" : "FAIL",
     topErrorCodes: summarizeErrors(recentEvents),
     blocksDown: [],
@@ -137,15 +179,24 @@ export async function onRequestGet({ request, env, data }) {
   };
 
   const diagSummary = diag.json?.data?.summary || null;
-  if (diagSummary?.endpointsFail > 0) summary.status = hasKV ? "DEGRADED" : "FAIL";
+  if (diagSummary?.endpointsFail > 0) summaryBase.status = hasKV ? "DEGRADED" : "FAIL";
   const diagEndpoints = diag.json?.data?.endpoints || diag.json?.endpoints || [];
-  summary.endpointsDown = Array.isArray(diagEndpoints)
+  summaryBase.endpointsDown = Array.isArray(diagEndpoints)
     ? diagEndpoints.filter((entry) => entry.severityRank < 6).map((entry) => entry.path)
     : [];
-  summary.blocksDown = recentEvents
+  summaryBase.blocksDown = recentEvents
     .filter((event) => event.errorCode)
     .map((event) => event.feature)
     .filter((value, index, self) => self.indexOf(value) === index);
+
+  const severitySummary = summarizeSeverity(recentEvents);
+  const bundleId = hash8(`${summaryBase.status}:${summaryBase.topErrorCodes?.[0]?.code || ""}`);
+  const summary = {
+    ...summaryBase,
+    bundleId,
+    generatedAt: new Date().toISOString(),
+    ...severitySummary
+  };
 
   const bundle = {
     schema: SCHEMA,
@@ -154,6 +205,7 @@ export async function onRequestGet({ request, env, data }) {
     health: sanitize(health.json || {}),
     diag: sanitize(diag.json || {}),
     recentEvents: sanitize(recentEvents),
+    data: { prod, host },
     client: {},
     correlations: [],
     summary
@@ -164,12 +216,13 @@ export async function onRequestGet({ request, env, data }) {
     headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" }
   });
 
-  if (hasKV) {
+  if (hasKV && debugAllowed) {
     const key = `log:event:${hourBucket(new Date())}:${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     const event = {
       ts: new Date().toISOString(),
       feature: "debug-bundle",
       traceId,
+      requestId: data?.requestId || "",
       cacheLayer: "none",
       upstreamStatus: null,
       durationMs: 0,
