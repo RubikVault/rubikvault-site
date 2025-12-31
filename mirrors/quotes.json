@@ -1,57 +1,89 @@
 {
-  "ts": "2025-12-31T12:50:21.836Z",
+  "schemaVersion": "1.0",
+  "mirrorId": "quotes",
+  "runId": "2025-12-31T16:29:52.964Z",
+  "updatedAt": "2025-12-31T16:29:52.964Z",
+  "asOf": "2025-12-31T16:29:52.962Z",
+  "mode": "EOD",
+  "cadence": "EOD",
+  "trust": "raw",
   "source": "mirror",
-  "payload": {
-    "ok": true,
-    "feature": "quotes",
-    "ts": "2025-12-31T12:50:21.836Z",
-    "traceId": "mirror",
-    "schemaVersion": 1,
-    "cache": {
-      "hit": true,
-      "ttl": 0,
-      "layer": "mirror"
+  "sourceUpstream": "stooq",
+  "dataQuality": "EMPTY",
+  "delayMinutes": 0,
+  "missingSymbols": [
+    "AAPL",
+    "MSFT",
+    "NVDA",
+    "AMZN",
+    "GOOGL",
+    "META",
+    "TSLA",
+    "SPY",
+    "QQQ",
+    "IWM"
+  ],
+  "errors": [
+    {
+      "symbol": "AAPL",
+      "error": "fetch failed"
     },
-    "upstream": {
-      "url": "mirror",
-      "status": null,
-      "snippet": ""
+    {
+      "symbol": "MSFT",
+      "error": "fetch failed"
     },
-    "rateLimit": {
-      "remaining": "unknown",
-      "reset": null,
-      "estimated": true
+    {
+      "symbol": "NVDA",
+      "error": "fetch failed"
     },
-    "dataQuality": {
-      "status": "LIVE",
-      "reason": "EMPTY",
-      "missingFields": []
+    {
+      "symbol": "AMZN",
+      "error": "fetch failed"
     },
-    "data": {
-      "updatedAt": "2025-12-31T12:50:21.836Z",
-      "source": "mirror",
-      "dataQuality": {
-        "status": "LIVE",
-        "reason": "EMPTY",
-        "missingFields": []
-      },
-      "confidence": 0,
-      "definitions": {},
-      "reasons": [
-        "MIRROR",
-        "EMPTY"
-      ],
-      "data": {
-        "items": [],
-        "signals": [],
-        "trades": [],
-        "quotes": [],
-        "metrics": [],
-        "stocks": {
-          "volumeLeaders": [],
-          "gainers": []
-        }
-      }
+    {
+      "symbol": "GOOGL",
+      "error": "fetch failed"
+    },
+    {
+      "symbol": "META",
+      "error": "fetch failed"
+    },
+    {
+      "symbol": "TSLA",
+      "error": "fetch failed"
+    },
+    {
+      "symbol": "SPY",
+      "error": "fetch failed"
+    },
+    {
+      "symbol": "QQQ",
+      "error": "fetch failed"
+    },
+    {
+      "symbol": "IWM",
+      "error": "fetch failed"
     }
-  }
+  ],
+  "notes": [
+    "selectedSymbols=AAPL,MSFT,NVDA,AMZN,GOOGL,META,TSLA,SPY,QQQ,IWM",
+    "skippedSymbols="
+  ],
+  "whyUnique": "EOD closing prices for tracked symbols.",
+  "context": {
+    "selectedSymbols": [
+      "AAPL",
+      "MSFT",
+      "NVDA",
+      "AMZN",
+      "GOOGL",
+      "META",
+      "TSLA",
+      "SPY",
+      "QQQ",
+      "IWM"
+    ],
+    "skippedSymbols": []
+  },
+  "items": []
 }
