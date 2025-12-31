@@ -1,4 +1,4 @@
-import { fetchJSON, getBindingHint } from "./utils/api.js";
+import { getBindingHint } from "./utils/api.js";
 import { getOrFetch } from "./utils/store.js";
 import { resolveWithShadow } from "./utils/resilience.js";
 import {
@@ -30,6 +30,28 @@ function scoreBar(score) {
   `;
 }
 
+function isPlaceholderItem(item) {
+  const barsUsed = Number(item?.debug?.barsUsed || 0);
+  const missing = Array.isArray(item?.debug?.missingFields) ? item.debug.missingFields : [];
+  const hasMirrorMissing = missing.some((value) => String(value).toUpperCase().startsWith("MIRROR"));
+  return barsUsed === 0 || hasMirrorMissing;
+}
+
+function renderDefinitions(definitions) {
+  const machine = definitions?.stateMachine;
+  if (!machine) return "";
+  const states = Array.isArray(machine.states) ? machine.states.join(" → ") : "";
+  const transitions = machine.transitions || {};
+  const transitionsList = Object.entries(transitions)
+    .map(([state, targets]) => `${state}: ${(targets || []).join(", ")}`)
+    .join("<br />");
+  return `
+    <div class="rv-native-note"><strong>State Machine</strong></div>
+    ${states ? `<div class="rv-native-note">${states}</div>` : ""}
+    ${transitionsList ? `<div class="rv-native-note">${transitionsList}</div>` : ""}
+  `;
+}
+
 function render(root, payload, logger, featureId) {
   const resolved = resolveWithShadow(featureId, payload, {
     logger,
@@ -40,6 +62,10 @@ function render(root, payload, logger, featureId) {
   const { meta, data } = unwrapFeatureData(envelope);
   const items = data.items || data.symbols || [];
   const quality = envelope.dataQuality || { status: "PARTIAL", reason: "NO_DATA" };
+  const placeholder = items.length
+    ? items.every((item) => isPlaceholderItem(item))
+    : true;
+  const definitions = meta.definitions || {};
 
   if (!envelope?.ok) {
     const errorMessage = envelope?.error?.message || "API error";
@@ -57,9 +83,11 @@ function render(root, payload, logger, featureId) {
     return;
   }
 
-  if (!items.length) {
+  if (!items.length || placeholder) {
     root.innerHTML = `
-      <div class="rv-native-empty">Keine Breakout-Signale verfügbar.</div>
+      <div class="rv-native-empty">Mirror placeholder / no live items yet.</div>
+      <div class="rv-native-note">Data Quality: ${quality.status} · ${quality.reason}</div>
+      ${renderDefinitions(definitions)}
       ${formatMetaLines({ meta, envelope })}
     `;
     logger?.setStatus("PARTIAL", quality.reason || "NO_DATA");
@@ -73,12 +101,14 @@ function render(root, payload, logger, featureId) {
 
   root.innerHTML = `
     <div class="rv-native-note">Data Quality: ${quality.status} · ${quality.reason}</div>
+    <div class="rv-native-note">Items: ${sorted.length} / ${items.length}</div>
     <table class="rv-native-table rv-table--compact">
       <thead>
         <tr>
           <th>Symbol</th>
           <th>Status</th>
           <th>Score</th>
+          <th>Stages</th>
           <th>Signals</th>
         </tr>
       </thead>
@@ -90,11 +120,15 @@ function render(root, payload, logger, featureId) {
             const signals = Array.isArray(item.signals) && item.signals.length
               ? item.signals.slice(0, 4).join(", ")
               : "N/A";
+            const stages = item.stageScores || {};
             return `
               <tr>
                 <td>${item.symbol || "N/A"}</td>
                 <td><span class="rv-native-pill">${stateLabel}</span></td>
                 <td>${scoreBar(item.score)}</td>
+                <td>${formatNumber(stages.setup)}/${formatNumber(stages.trigger)}/${formatNumber(
+                  stages.confirm
+                )}</td>
                 <td title="${signals}">${signals}</td>
               </tr>
             `;
@@ -102,6 +136,7 @@ function render(root, payload, logger, featureId) {
           .join("")}
       </tbody>
     </table>
+    ${renderDefinitions(definitions)}
     ${formatMetaLines({ meta, envelope })}
   `;
 
@@ -114,8 +149,47 @@ function render(root, payload, logger, featureId) {
   });
 }
 
+async function fetchMirror({ featureId, traceId, logger }) {
+  const url = `/mirrors/breakout-energy.json?t=${Date.now()}`;
+  try {
+    const res = await fetch(url, { cache: "no-store" });
+    if (!res.ok) {
+      throw new Error(`Mirror HTTP ${res.status}`);
+    }
+    const text = await res.text();
+    const trimmed = text.trim().toLowerCase();
+    if (trimmed.startsWith("<!doctype") || trimmed.startsWith("<html")) {
+      throw new Error("Mirror returned HTML");
+    }
+    const wrapper = JSON.parse(text);
+    const payload = wrapper?.payload && typeof wrapper.payload === "object" ? wrapper.payload : {};
+    return {
+      ok: true,
+      feature: featureId,
+      ts: wrapper?.ts || payload.updatedAt || new Date().toISOString(),
+      traceId: traceId || payload.traceId || "mirror",
+      cache: { hit: true, ttl: 0, layer: "mirror" },
+      upstream: { url: "mirror", status: null, snippet: "" },
+      dataQuality: payload.dataQuality || { status: "PARTIAL", reason: "MIRROR" },
+      data: payload
+    };
+  } catch (error) {
+    logger?.error("mirror_fetch_failed", { message: error?.message || "Mirror fetch failed" });
+    return {
+      ok: false,
+      feature: featureId,
+      ts: new Date().toISOString(),
+      traceId: traceId || "mirror",
+      cache: { hit: false, ttl: 0, layer: "none" },
+      upstream: { url: "mirror", status: null, snippet: "" },
+      error: { code: "MIRROR_FETCH_FAILED", message: error?.message || "Mirror fetch failed" },
+      data: {}
+    };
+  }
+}
+
 async function loadData({ featureId, traceId, logger }) {
-  return fetchJSON("/breakout-energy", { feature: featureId, traceId, logger });
+  return fetchMirror({ featureId, traceId, logger });
 }
 
 export async function init(root, context = {}) {
