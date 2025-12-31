@@ -13,6 +13,7 @@ import {
   buildFeaturePayload,
   resolveDataQuality
 } from "./_shared/feature-contract.js";
+import { shouldSkipUpstream, recordUpstreamResult } from "./_circuit.js";
 
 const FEATURE_ID = "congress-trading";
 const CACHE_KEY = "congress-trading:v1";
@@ -127,6 +128,43 @@ async function readLastGood(env) {
   }
 }
 
+function extractLastEventAt(lastGood) {
+  if (!lastGood?.data) return null;
+  return (
+    lastGood.data?.data?.meta?.lastUpdated ||
+    lastGood.data?.updatedAt ||
+    lastGood.ts ||
+    null
+  );
+}
+
+function buildCoveragePayload({ traceId, lastEventAt, upstreamBlocked }) {
+  return buildFeaturePayload({
+    feature: FEATURE_ID,
+    traceId: traceId || "",
+    source: "coverage-limit",
+    updatedAt: new Date().toISOString(),
+    dataQuality: "COVERAGE_LIMIT",
+    confidence: 0,
+    definitions: DEFINITIONS,
+    reasons: ["COVERAGE_LIMIT"],
+    data: {
+      trades: [],
+      items: [],
+      meta: { lastUpdated: lastEventAt || null },
+      context: {
+        lookbackWindowDays: 7,
+        explain:
+          "Free-tier coverage is limited; this block is empty by design when upstream access is blocked.",
+        lastEventAt: lastEventAt || null,
+        provider: "none",
+        upstreamBlocked: Boolean(upstreamBlocked)
+      },
+      mode: "EMPTY"
+    }
+  });
+}
+
 export async function onRequestGet(context) {
   const { request, env, data } = context;
   const traceId = data?.traceId || createTraceId(request);
@@ -134,6 +172,51 @@ export async function onRequestGet(context) {
 
   const bindingResponse = assertBindings(env, FEATURE_ID, traceId);
   if (bindingResponse) return bindingResponse;
+
+  const circuit = await shouldSkipUpstream(FEATURE_ID, env, env.RV_KV, Date.now());
+  if (circuit.skip) {
+    const lastGood = await readLastGood(env);
+    const lastEventAt = extractLastEventAt(lastGood);
+    const payload = buildCoveragePayload({
+      traceId,
+      lastEventAt,
+      upstreamBlocked: true
+    });
+
+    const response = makeResponse({
+      ok: true,
+      feature: FEATURE_ID,
+      traceId,
+      data: payload,
+      cache: {
+        hit: Boolean(lastGood),
+        ttl: LAST_GOOD_TTL,
+        layer: lastGood ? "kv" : "none"
+      },
+      upstream: {
+        url: SOURCE_URL,
+        status: 403,
+        snippet: ""
+      },
+      error: {
+        code: "UPSTREAM_403",
+        message: "Upstream access blocked (expected coverage limit).",
+        details: { status: 403, circuitUntil: circuit.untilTs }
+      },
+      cacheStatus: "COVERAGE_LIMIT",
+      status: 200
+    });
+
+    logServer({
+      feature: FEATURE_ID,
+      traceId,
+      cacheLayer: lastGood ? "kv" : "none",
+      upstreamStatus: 403,
+      durationMs: Date.now() - started
+    });
+
+    return response;
+  }
 
   const swr = await swrGetOrRefresh(context, {
     key: CACHE_KEY,
@@ -144,9 +227,59 @@ export async function onRequestGet(context) {
   });
 
   let payload = swr.value?.data || swr.value || null;
+  if (swr.error?.code) {
+    await recordUpstreamResult(FEATURE_ID, env, env.RV_KV, {
+      ok: false,
+      code: swr.error.code,
+      status: swr.error?.details?.status ?? null
+    });
+  }
 
   // ✅ Fallback: wenn Upstream scheitert (z.B. 403), liefere LAST_GOOD statt leeres NO_DATA
   if (!payload && swr.error) {
+    if (swr.error?.code === "UPSTREAM_403") {
+      const lastGood = await readLastGood(env);
+      const lastEventAt = extractLastEventAt(lastGood);
+      const coveragePayload = buildCoveragePayload({
+        traceId,
+        lastEventAt,
+        upstreamBlocked: true
+      });
+
+      const response = makeResponse({
+        ok: true,
+        feature: FEATURE_ID,
+        traceId,
+        data: coveragePayload,
+        cache: {
+          hit: Boolean(lastGood),
+          ttl: LAST_GOOD_TTL,
+          layer: lastGood ? "kv" : "none"
+        },
+        upstream: {
+          url: SOURCE_URL,
+          status: swr.error?.details?.status ?? 403,
+          snippet: swr.error?.snippet || ""
+        },
+        error: {
+          code: "UPSTREAM_403",
+          message: "Upstream access blocked (expected coverage limit).",
+          details: { status: swr.error?.details?.status ?? 403 }
+        },
+        cacheStatus: "COVERAGE_LIMIT",
+        status: 200
+      });
+
+      logServer({
+        feature: FEATURE_ID,
+        traceId,
+        cacheLayer: lastGood ? "kv" : "none",
+        upstreamStatus: swr.error?.details?.status ?? 403,
+        durationMs: Date.now() - started
+      });
+
+      return response;
+    }
     const lastGood = await readLastGood(env);
     if (lastGood?.data) {
       payload = lastGood.data;
@@ -259,6 +392,14 @@ export async function onRequestGet(context) {
       partial: (payload?.data?.trades || []).length < 5,
       hasData: (payload?.data?.trades || []).length > 0
     });
+
+  if (swr.cacheStatus === "MISS") {
+    await recordUpstreamResult(FEATURE_ID, env, env.RV_KV, {
+      ok: true,
+      code: "",
+      status: 200
+    });
+  }
 
   // LAST_GOOD nur schreiben, wenn wir nicht stale sind
   if (!swr.isStale) {

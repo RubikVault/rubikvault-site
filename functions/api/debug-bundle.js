@@ -123,6 +123,19 @@ function summarizeSeverity(events) {
   return { countsBySeverity: counts, countsByFeature: byFeature };
 }
 
+function isBlockDown(event) {
+  if (!event) return false;
+  const dq = String(event.dataQuality || "").toUpperCase();
+  const code = String(event.errorCode || "").toUpperCase();
+  if (dq === "COVERAGE_LIMIT" || code === "COVERAGE_LIMIT") return false;
+  if (dq === "STALE") return false;
+  if (event.feature === "congress-trading" && code === "UPSTREAM_403") return false;
+  if (event.feature === "market-health" && dq === "PARTIAL" && code === "UPSTREAM_5XX") {
+    return false;
+  }
+  return Boolean(event.errorCode);
+}
+
 export async function onRequestGet({ request, env, data }) {
   const traceId = data?.traceId || createTraceId(request);
   const url = new URL(request.url);
@@ -185,7 +198,7 @@ export async function onRequestGet({ request, env, data }) {
     ? diagEndpoints.filter((entry) => entry.severityRank < 6).map((entry) => entry.path)
     : [];
   summaryBase.blocksDown = recentEvents
-    .filter((event) => event.errorCode)
+    .filter((event) => isBlockDown(event))
     .map((event) => event.feature)
     .filter((value, index, self) => self.indexOf(value) === index);
 

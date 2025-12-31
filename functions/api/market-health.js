@@ -7,6 +7,7 @@ import {
 } from "./_shared.js";
 import { fetchJsonWithFallbacks } from "./_shared/parse.js";
 import { kvGetJson, kvPutJson } from "../_lib/kv-safe.js";
+import { shouldSkipUpstream, recordUpstreamResult } from "./_circuit.js";
 
 const FEATURE_ID = "market-health";
 const KV_TTL = 420;
@@ -144,6 +145,14 @@ function mergeLastGood(current, lastGood) {
   };
 }
 
+function minutesSince(ts) {
+  const parsed = Date.parse(ts || "");
+  if (!Number.isFinite(parsed)) return null;
+  const diffMs = Date.now() - parsed;
+  if (diffMs < 0) return 0;
+  return Math.round(diffMs / 60000);
+}
+
 export async function onRequestGet({ request, env, data }) {
   const traceId = data?.traceId || createTraceId(request);
   const started = Date.now();
@@ -202,6 +211,73 @@ export async function onRequestGet({ request, env, data }) {
       });
       return response;
     }
+  }
+
+  const circuit = await shouldSkipUpstream(FEATURE_ID, env, env.RV_KV, Date.now());
+  if (circuit.skip) {
+    const lastOk = await kvGetJson(env, lastOkKey);
+    if (lastOk?.hit && lastOk.value?.data) {
+      const delayMinutes = minutesSince(lastOk.value.ts);
+      const dataPayload = {
+        ...lastOk.value.data,
+        asOf: lastOk.value.ts,
+        dataQuality: { status: "STALE", reason: "STALE", missingFields: [] },
+        mode: "STALE",
+        delayMinutes,
+        reasons: ["CIRCUIT_OPEN", lastOk.value?.data?.source ? "LAST_GOOD" : ""].filter(Boolean)
+      };
+      const response = makeResponse({
+        ok: true,
+        feature: FEATURE_ID,
+        traceId,
+        data: dataPayload,
+        cache: { hit: true, ttl: KV_TTL, layer: "kv" },
+        upstream: { url: UPSTREAM_URL, status: null, snippet: "" },
+        error: {
+          code: "UPSTREAM_5XX",
+          message: "Upstream circuit open; serving last-good snapshot.",
+          details: { circuitUntil: circuit.untilTs }
+        },
+        isStale: true
+      });
+      logServer({
+        feature: FEATURE_ID,
+        traceId,
+        cacheLayer: "kv",
+        upstreamStatus: null,
+        durationMs: Date.now() - started
+      });
+      return response;
+    }
+
+    const response = makeResponse({
+      ok: true,
+      feature: FEATURE_ID,
+      traceId,
+      data: {
+        updatedAt: new Date().toISOString(),
+        source: "none",
+        dataQuality: { status: "PARTIAL", reason: "NO_DATA", missingFields: [] },
+        mode: "EMPTY",
+        reasons: ["CIRCUIT_OPEN"]
+      },
+      cache: { hit: false, ttl: 0, layer: "none" },
+      upstream: { url: UPSTREAM_URL, status: null, snippet: "" },
+      error: {
+        code: "UPSTREAM_5XX",
+        message: "Upstream circuit open; no last-good snapshot.",
+        details: { circuitUntil: circuit.untilTs }
+      },
+      status: 200
+    });
+    logServer({
+      feature: FEATURE_ID,
+      traceId,
+      cacheLayer: "none",
+      upstreamStatus: null,
+      durationMs: Date.now() - started
+    });
+    return response;
   }
 
   let upstreamSnippet = "";
@@ -265,13 +341,26 @@ export async function onRequestGet({ request, env, data }) {
       (dataPayload.commodities || []).length;
 
     if (!hasAnyData) {
+      await recordUpstreamResult(FEATURE_ID, env, env.RV_KV, {
+        ok: false,
+        code: "UPSTREAM_5XX",
+        status: errors[0]?.status ?? null
+      });
       const lastOk = await kvGetJson(env, lastOkKey);
       if (lastOk?.hit && lastOk.value?.data) {
+        const delayMinutes = minutesSince(lastOk.value.ts);
         const response = makeResponse({
           ok: true,
           feature: FEATURE_ID,
           traceId,
-          data: { ...lastOk.value.data, asOf: lastOk.value.ts },
+          data: {
+            ...lastOk.value.data,
+            asOf: lastOk.value.ts,
+            dataQuality: { status: "STALE", reason: "STALE", missingFields: [] },
+            mode: "STALE",
+            delayMinutes,
+            reasons: ["FALLBACK_LAST_GOOD"]
+          },
           cache: { hit: true, ttl: KV_TTL, layer: "kv" },
           upstream: { url: UPSTREAM_URL, status: null, snippet: upstreamSnippet },
           error: {
@@ -292,7 +381,7 @@ export async function onRequestGet({ request, env, data }) {
       }
 
       const response = makeResponse({
-        ok: false,
+        ok: true,
         feature: FEATURE_ID,
         traceId,
         cache: { hit: false, ttl: 0, layer: "none" },
@@ -302,7 +391,14 @@ export async function onRequestGet({ request, env, data }) {
           message: "Upstream parse failed",
           details: { errors }
         },
-        status: 502
+        status: 200,
+        data: {
+          updatedAt: new Date().toISOString(),
+          source: "none",
+          dataQuality: { status: "PARTIAL", reason: "NO_DATA", missingFields: [] },
+          mode: "EMPTY",
+          reasons: ["UPSTREAM_5XX"]
+        }
       });
       logServer({
         feature: FEATURE_ID,
@@ -325,6 +421,12 @@ export async function onRequestGet({ request, env, data }) {
       await kvPutJson(env, cacheKey, kvPayload, KV_TTL);
       await kvPutJson(env, lastOkKey, kvPayload, 24 * 60 * 60);
     }
+
+    await recordUpstreamResult(FEATURE_ID, env, env.RV_KV, {
+      ok: true,
+      code: "",
+      status: 200
+    });
 
     const response = makeResponse({
       ok: true,
@@ -350,13 +452,26 @@ export async function onRequestGet({ request, env, data }) {
     });
     return response;
   } catch (error) {
+    await recordUpstreamResult(FEATURE_ID, env, env.RV_KV, {
+      ok: false,
+      code: error?.name === "AbortError" ? "UPSTREAM_TIMEOUT" : "UPSTREAM_5XX",
+      status: error?.status ?? null
+    });
     const lastOk = await kvGetJson(env, lastOkKey);
     if (lastOk?.hit && lastOk.value?.data) {
+      const delayMinutes = minutesSince(lastOk.value.ts);
       const response = makeResponse({
         ok: true,
         feature: FEATURE_ID,
         traceId,
-        data: { ...lastOk.value.data, asOf: lastOk.value.ts },
+        data: {
+          ...lastOk.value.data,
+          asOf: lastOk.value.ts,
+          dataQuality: { status: "STALE", reason: "STALE", missingFields: [] },
+          mode: "STALE",
+          delayMinutes,
+          reasons: ["FALLBACK_LAST_GOOD"]
+        },
         cache: { hit: true, ttl: KV_TTL, layer: "kv" },
         upstream: { url: UPSTREAM_URL, status: null, snippet: upstreamSnippet },
         error: {
@@ -377,7 +492,7 @@ export async function onRequestGet({ request, env, data }) {
     }
     const errorCode = error?.name === "AbortError" ? "UPSTREAM_TIMEOUT" : "UPSTREAM_5XX";
     const response = makeResponse({
-      ok: false,
+      ok: true,
       feature: FEATURE_ID,
       traceId,
       cache: { hit: false, ttl: 0, layer: "none" },
@@ -390,6 +505,13 @@ export async function onRequestGet({ request, env, data }) {
         code: error?.code || errorCode,
         message: error?.message || "Request failed",
         details: error?.details || {}
+      },
+      data: {
+        updatedAt: new Date().toISOString(),
+        source: "none",
+        dataQuality: { status: "PARTIAL", reason: "NO_DATA", missingFields: [] },
+        mode: "EMPTY",
+        reasons: [error?.code || errorCode]
       }
     });
     logServer({
