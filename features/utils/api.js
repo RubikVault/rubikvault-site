@@ -23,6 +23,43 @@ function getRunId() {
   if (typeof window === "undefined") return "";
   return window.__RV_RUN_ID || "";
 }
+
+function getDashboardBlock(input) {
+  if (typeof window === "undefined") return null;
+  const dashboard = window.__RV_DASHBOARD__;
+  if (!dashboard || !dashboard.blocks) return null;
+  const raw = typeof input === "string" ? input : "";
+  if (!raw || raw.startsWith("http://") || raw.startsWith("https://")) return null;
+  const pathOnly = raw.startsWith("/") ? raw.slice(1) : raw;
+  const normalized = pathOnly.split("?")[0];
+  const slug = normalized.startsWith("api/") ? normalized.slice(4) : normalized;
+  if (!slug) return null;
+  return dashboard.blocks[slug] || null;
+}
+
+function applyPayloadMeta(logger, payload, { requestId, runId, parentTraceId } = {}) {
+  if (!logger || !payload) return;
+  const mirrorMeta = payload?.data?.mirrorMeta || {};
+  const itemsCount = Array.isArray(payload?.data?.items) ? payload.data.items.length : null;
+  const responseTrace = payload?.trace || {};
+  logger.setTraceId(payload?.traceId || "unknown");
+  logger.setMeta({
+    cacheLayer: payload?.cache?.layer || "none",
+    cacheTtl: payload?.cache?.ttl ?? 0,
+    upstreamStatus: payload?.upstream?.status ?? null,
+    updatedAt: mirrorMeta.updatedAt || payload?.ts || null,
+    itemsCount,
+    mode: mirrorMeta.mode || null,
+    cadence: mirrorMeta.cadence || null,
+    trust: mirrorMeta.trust || null,
+    sourceUpstream: mirrorMeta.sourceUpstream || null,
+    delayMinutes: mirrorMeta.delayMinutes ?? null,
+    dataQuality: payload?.dataQuality || null,
+    requestId: responseTrace.requestId || requestId || null,
+    runId: responseTrace.runId || runId || null,
+    parentTraceId: responseTrace.parentTraceId || parentTraceId || null
+  });
+}
 export function resolveApiBase(explicitBase) {
   const configLoaded = typeof window !== "undefined" && !!window.RV_CONFIG;
   const candidate =
@@ -177,6 +214,11 @@ export async function fetchJSON(
   const effectiveTraceId = traceId || createTraceId();
   const requestId = createTraceId();
   const runId = getRunId();
+  const dashboardPayload = getDashboardBlock(input);
+  if (dashboardPayload) {
+    applyPayloadMeta(logger, dashboardPayload, { requestId, runId, parentTraceId });
+    return dashboardPayload;
+  }
   const mirrorPath = toMirrorPath(input);
   const usingMirror = Boolean(mirrorPath);
   const { url: requestUrl, resolution, absolute } = usingMirror
@@ -286,26 +328,7 @@ export async function fetchJSON(
       });
     }
 
-    logger?.setTraceId(payload?.traceId || effectiveTraceId || "unknown");
-    const mirrorMeta = payload?.data?.mirrorMeta || {};
-    const itemsCount = Array.isArray(payload?.data?.items) ? payload.data.items.length : null;
-    const responseTrace = payload?.trace || {};
-    logger?.setMeta({
-      cacheLayer: payload?.cache?.layer || "none",
-      cacheTtl: payload?.cache?.ttl ?? 0,
-      upstreamStatus: payload?.upstream?.status ?? null,
-      updatedAt: mirrorMeta.updatedAt || payload?.ts || null,
-      itemsCount,
-      mode: mirrorMeta.mode || null,
-      cadence: mirrorMeta.cadence || null,
-      trust: mirrorMeta.trust || null,
-      sourceUpstream: mirrorMeta.sourceUpstream || null,
-      delayMinutes: mirrorMeta.delayMinutes ?? null,
-      dataQuality: payload?.dataQuality || null,
-      requestId: responseTrace.requestId || requestId,
-      runId: responseTrace.runId || runId,
-      parentTraceId: responseTrace.parentTraceId || parentTraceId || null
-    });
+    applyPayloadMeta(logger, payload, { requestId, runId, parentTraceId });
 
     const logPayload = {
       status: response.status,

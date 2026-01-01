@@ -79,6 +79,11 @@ const statusSummary = {
   cacheHits: 0,
   lastError: null
 };
+const DASHBOARD_STATE = {
+  fast: { inflight: null, blocks: {}, fetchedAt: null },
+  slow: { inflight: null, blocks: {}, fetchedAt: null }
+};
+const refreshState = new Map();
 const STATUS_LABELS = {
   "rv-market-cockpit": "Cockpit",
   "rv-market-health": "MarketHealth",
@@ -158,6 +163,9 @@ const NY_WEEKDAY_INDEX = {
   Fri: 5,
   Sat: 6
 };
+const DASHBOARD_MIN_REFRESH_MS = 60_000;
+const DASHBOARD_JITTER_PCT = 0.15;
+const REFRESH_BACKOFF_MAX_MS = 20 * 60 * 1000;
 
 function getNyParts(date = new Date()) {
   const parts = NY_FORMATTER.formatToParts(date);
@@ -181,6 +189,90 @@ function isMarketOpenNY(date = new Date()) {
   const closeTime = 16 * 3600;
   const isWeekday = weekdayIndex >= 1 && weekdayIndex <= 5;
   return isWeekday && secondsNow >= openTime && secondsNow < closeTime;
+}
+
+function classifySegment(entry) {
+  if (!entry) return "slow";
+  if (entry.featureId === "rv-market-cockpit") return "fast";
+  const cadence = String(entry.cadence || "").toLowerCase();
+  if (entry.blockType === "LIVE") return "fast";
+  if (cadence === "live" || cadence === "hourly" || cadence === "15m_delayed" || cadence === "best_effort") {
+    return "fast";
+  }
+  return "slow";
+}
+
+function ensureDashboardState() {
+  if (typeof window === "undefined") return null;
+  if (!window.__RV_DASHBOARD__) {
+    window.__RV_DASHBOARD__ = { blocks: {}, fetchedAt: null };
+  }
+  return window.__RV_DASHBOARD__;
+}
+
+function mergeDashboardBlocks(seg, payload) {
+  const state = DASHBOARD_STATE[seg] || DASHBOARD_STATE.fast;
+  const blocks = payload?.data?.blocks && typeof payload.data.blocks === "object"
+    ? payload.data.blocks
+    : {};
+  state.blocks = { ...state.blocks, ...blocks };
+  state.fetchedAt = payload?.meta?.ts || payload?.ts || new Date().toISOString();
+  const dashboard = ensureDashboardState();
+  if (dashboard) {
+    dashboard.blocks = { ...dashboard.blocks, ...blocks };
+    dashboard.fetchedAt = state.fetchedAt;
+  }
+}
+
+function computeJitter(ms) {
+  const delta = ms * DASHBOARD_JITTER_PCT;
+  return Math.round(ms + (Math.random() * 2 - 1) * delta);
+}
+
+async function fetchDashboardSegment(seg, { force = false } = {}) {
+  const state = DASHBOARD_STATE[seg] || DASHBOARD_STATE.fast;
+  if (state.inflight && !force) return state.inflight;
+  const resolution = resolveApiBase();
+  if (!resolution.ok) return null;
+  const url = `${resolution.apiPrefix}/dashboard?seg=${seg}`;
+  const started = performance.now();
+  const inflight = fetch(url, {
+    headers: { Accept: "application/json", "x-rv-trace": createTraceId(), "x-rv-run-id": RUN_ID }
+  })
+    .then((response) => response.json())
+    .then((payload) => {
+      if (payload && payload.data && payload.data.blocks) {
+        mergeDashboardBlocks(seg, payload);
+      }
+      return payload;
+    })
+    .catch(() => null)
+    .finally(() => {
+      state.inflight = null;
+      const elapsed = Math.round(performance.now() - started);
+      const dashboard = ensureDashboardState();
+      if (dashboard) dashboard.lastFetchMs = elapsed;
+    });
+  state.inflight = inflight;
+  return inflight;
+}
+
+async function prefetchDashboard(features) {
+  const entries = Array.isArray(features) ? features : [];
+  const needsSlow = entries.some((feature) => {
+    const reg = BLOCK_REGISTRY[feature?.id];
+    return classifySegment(reg) === "slow";
+  });
+  fetchDashboardSegment("fast");
+  if (needsSlow) {
+    window.setTimeout(() => fetchDashboardSegment("slow"), 1500);
+  }
+}
+
+async function refreshDashboardForFeature(featureId) {
+  const reg = BLOCK_REGISTRY[featureId];
+  const seg = classifySegment(reg);
+  return fetchDashboardSegment(seg, { force: true });
 }
 
 function normalizeStatus(featureId, status, headline = "") {
@@ -835,6 +927,7 @@ function bindRefresh(section, feature, logger, contentEl) {
     setLoading(section, true);
 
     try {
+      await refreshDashboardForFeature(feature?.id || section.getAttribute("data-rv-feature"));
       const module = await loadFeatureModule(feature);
       if (typeof module.refresh === "function") {
         await module.refresh(contentEl, {
@@ -882,23 +975,54 @@ function bindRefresh(section, feature, logger, contentEl) {
 
 function startAutoRefresh(section, feature, logger, contentEl) {
   if (!feature?.refreshIntervalMs) return;
-  setInterval(async () => {
+  const featureId = feature?.id || section.getAttribute("data-rv-feature") || "unknown";
+  const baseInterval = Math.max(feature.refreshIntervalMs, DASHBOARD_MIN_REFRESH_MS);
+  const state = refreshState.get(featureId) || {
+    inflight: false,
+    backoffMs: baseInterval,
+    timer: null
+  };
+  refreshState.set(featureId, state);
+
+  const scheduleNext = (ms) => {
+    if (state.timer) window.clearTimeout(state.timer);
+    state.timer = window.setTimeout(runRefresh, computeJitter(Math.max(ms, DASHBOARD_MIN_REFRESH_MS)));
+  };
+
+  const computeDelay = (status) => {
+    if (status === "FAIL" || status === "PARTIAL") {
+      state.backoffMs = Math.min((state.backoffMs || baseInterval) * 2, REFRESH_BACKOFF_MAX_MS);
+    } else {
+      state.backoffMs = baseInterval;
+    }
+    return state.backoffMs;
+  };
+
+  const runRefresh = async () => {
     if (typeof document !== "undefined" && document.visibilityState !== "visible") {
       logger.info("auto_refresh_paused", { reason: "hidden" });
+      scheduleNext(baseInterval);
       return;
     }
     if (section.getAttribute("data-rv-visible") === "false") {
       logger.info("auto_refresh_paused", { reason: "offscreen" });
+      scheduleNext(baseInterval);
       return;
     }
+    if (state.inflight) {
+      scheduleNext(baseInterval);
+      return;
+    }
+    state.inflight = true;
     const traceId = createTraceId();
     const blockName = getBlockName(section, feature);
     const endpoint = getFeatureEndpoint(feature);
-    setDebugContext({ blockId: feature?.id || "unknown", blockName, endpoint });
+    setDebugContext({ blockId: featureId, blockName, endpoint });
     logger.setTraceId(traceId);
-    logger.info("auto_refresh", { intervalMs: feature.refreshIntervalMs });
+    logger.info("auto_refresh", { intervalMs: baseInterval });
     setLoading(section, true);
     try {
+      await refreshDashboardForFeature(featureId);
       const module = await loadFeatureModule(feature);
       if (typeof module.refresh === "function") {
         await module.refresh(contentEl, {
@@ -914,7 +1038,7 @@ function startAutoRefresh(section, feature, logger, contentEl) {
         });
       }
       setLoading(section, false);
-      recordBlockEnd({ blockId: feature?.id || "unknown", blockName, ok: true });
+      recordBlockEnd({ blockId: featureId, blockName, ok: true });
       clearDebugContext();
     } catch (error) {
       logger.setStatus("FAIL", "Auto refresh failed");
@@ -922,14 +1046,21 @@ function startAutoRefresh(section, feature, logger, contentEl) {
       renderError(contentEl, error);
       setLoading(section, false);
       recordBlockEnd({
-        blockId: feature?.id || "unknown",
+        blockId: featureId,
         blockName,
         ok: false,
         error
       });
       clearDebugContext();
+    } finally {
+      state.inflight = false;
+      const entry = statusState.get(featureId) || {};
+      const nextDelay = computeDelay(entry.status || "OK");
+      scheduleNext(nextDelay);
     }
-  }, feature.refreshIntervalMs);
+  };
+
+  scheduleNext(baseInterval);
 }
 
 function initBlock(section, feature) {
@@ -1020,6 +1151,9 @@ function boot() {
   if (DEBUG_PANIC_MODE) {
     RV_CONFIG.DEBUG_PANIC_MODE = true;
   }
+
+  // Expected API calls per page load: 1-2 (dashboard fast/slow) with per-block fallback only when missing.
+  prefetchDashboard(features);
 
   initFlagsPanel({ features });
   initPanicButton();
