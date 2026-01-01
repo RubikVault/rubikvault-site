@@ -36,8 +36,7 @@ export async function onRequestGet({ request, env, data }) {
     cf: { colo },
     host,
     env: { hasKV: bindingsOk },
-    prod,
-    host
+    prod
   };
 
   if (!requireDebugToken(env, request)) {
