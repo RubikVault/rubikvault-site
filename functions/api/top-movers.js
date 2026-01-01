@@ -1,19 +1,11 @@
-import {
-  assertBindings,
-  createTraceId,
-  kvGetJson,
-  kvPutJson,
-  logServer,
-  makeResponse,
-  safeSnippet,
-  withCoinGeckoKey
-} from "./_shared.js";
+import { safeSnippet } from "./_shared.js";
 import { fetchJsonWithFallbacks } from "./_shared/parse.js";
+import { withResilience } from "./_shared/resilience.js";
 
 const FEATURE_ID = "top-movers";
-const KV_TTL = 240;
-const CRYPTO_URL =
-  "https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=price_change_percentage_24h_desc&per_page=6&page=1&sparkline=false&price_change_percentage=24h";
+const VERSION = "v1";
+const TTL_STALE = 24 * 60 * 60;
+const CIRCUIT_SEC = 1800;
 const VOLUME_LIMIT = 10;
 const STOCK_UNIVERSE = [
   { symbol: "AAPL", label: "Apple" },
@@ -40,29 +32,6 @@ const STOCK_UNIVERSE = [
 const YAHOO_URL = `https://query1.finance.yahoo.com/v7/finance/quote?symbols=${encodeURIComponent(
   STOCK_UNIVERSE.map((entry) => entry.symbol).join(",")
 )}`;
-const UPSTREAM_URL = `${YAHOO_URL}`;
-
-function mapUpstreamCode(status) {
-  if (status === 429) return "RATE_LIMITED";
-  if (status === 403) return "UPSTREAM_403";
-  if (status >= 400 && status < 500) return "UPSTREAM_4XX";
-  if (status >= 500) return "UPSTREAM_5XX";
-  return "UPSTREAM_5XX";
-}
-
-function normalizeCrypto(payload) {
-  return Array.isArray(payload)
-    ? payload.slice(0, 6).map((coin) => ({
-        symbol: coin.symbol?.toUpperCase() || "N/A",
-        name: coin.name || "Unknown",
-        price: coin.current_price ?? null,
-        changePercent: coin.price_change_percentage_24h ?? null,
-        volume: coin.total_volume ?? null,
-        ts: new Date().toISOString(),
-        source: "coingecko"
-      }))
-    : [];
-}
 
 function normalizeStocks(payload) {
   const results = payload?.quoteResponse?.result || [];
@@ -95,259 +64,58 @@ function normalizeStocks(payload) {
   };
 }
 
-export async function onRequestGet({ request, env, data }) {
-  const traceId = data?.traceId || createTraceId(request);
-  const started = Date.now();
-  const panic =
-    request.headers.get("x-rv-panic") === "1" ||
-    new URL(request.url).searchParams.get("rv_panic") === "1";
+function validateTopMovers(data) {
+  const movers = data?.movers || [];
+  const stocks = data?.stocks || {};
+  const count =
+    (stocks.volumeLeaders || []).length +
+    (stocks.volumeLaggards || []).length +
+    (stocks.gainers || []).length +
+    (stocks.losers || []).length +
+    movers.length;
+  if (count > 0) return { passed: true };
+  return { passed: false, failReason: "EMPTY_DATA" };
+}
 
-  const bindingResponse = assertBindings(env, FEATURE_ID, traceId);
-  if (bindingResponse) {
-    return bindingResponse;
-  }
-
-  const cacheKey = `${FEATURE_ID}:v2`;
-  const lastOkKey = "top_movers:last_ok";
-
-  if (!panic) {
-    const cached = await kvGetJson(env, cacheKey);
-    if (cached?.hit && cached.value?.data) {
-      const response = makeResponse({
-        ok: true,
-        feature: FEATURE_ID,
-        traceId,
-        data: cached.value.data,
-        cache: { hit: true, ttl: KV_TTL, layer: "kv" },
-        upstream: { url: UPSTREAM_URL, status: null, snippet: "" }
-      });
-      logServer({
-        feature: FEATURE_ID,
-        traceId,
-        cacheLayer: "kv",
-        upstreamStatus: null,
-        durationMs: Date.now() - started
-      });
-      return response;
-    }
-  }
-
-  let upstreamSnippet = "";
-
+async function fetchTopMovers({ signal }) {
   try {
-    const fetchSafe = async (url, context) => {
-      try {
-        const result = await fetchJsonWithFallbacks([url], { timeoutMs: 6000 }, context);
-        return { ok: true, ...result };
-      } catch (error) {
-        return { ok: false, error };
-      }
-    };
-
-    const stocksResult = await fetchSafe(YAHOO_URL, "top-movers:stocks");
-
-    const errors = [];
-    const sources = [
-      { id: "stocks", result: stocksResult }
-    ];
-    sources.forEach(({ id, result }) => {
-      if (!result.ok) {
-        errors.push({ id, status: null, code: result.error?.code || "SCHEMA_INVALID" });
-        if (!upstreamSnippet && result.error?.details?.head) {
-          upstreamSnippet = safeSnippet(result.error.details.head);
-        }
-        return;
-      }
-      if (!result.upstreamOk) {
-        errors.push({ id, status: result.upstreamStatus || null });
-      }
-    });
-
+    const result = await fetchJsonWithFallbacks(
+      [YAHOO_URL],
+      { timeoutMs: 6000, signal },
+      "top-movers:stocks"
+    );
     const dataPayload = {
       updatedAt: new Date().toISOString(),
       source: "yahoo",
       method: "Top movers are computed by last trading day volume within a fixed mega-cap universe.",
       crypto: [],
-      stocks: normalizeStocks(stocksResult.json || {})
+      stocks: normalizeStocks(result.json || {})
     };
-
-    const hasAnyData =
-      (dataPayload.stocks?.gainers || []).length ||
-      (dataPayload.stocks?.losers || []).length;
-
-    if (!hasAnyData) {
-      const lastOk = await kvGetJson(env, lastOkKey);
-      if (lastOk?.hit && lastOk.value?.data) {
-        const response = makeResponse({
-          ok: true,
-          feature: FEATURE_ID,
-          traceId,
-          data: { ...lastOk.value.data, asOf: lastOk.value.ts },
-          cache: { hit: true, ttl: KV_TTL, layer: "kv" },
-          upstream: { url: UPSTREAM_URL, status: null, snippet: upstreamSnippet },
-          error: {
-            code: "SCHEMA_INVALID",
-            message: "Upstream parse failed",
-            details: { errors }
-          },
-          isStale: true
-        });
-        logServer({
-          feature: FEATURE_ID,
-          traceId,
-          cacheLayer: "kv",
-          upstreamStatus: null,
-          durationMs: Date.now() - started
-        });
-        return response;
-      }
-
-      const emptyData = {
-        updatedAt: new Date().toISOString(),
-        source: "yahoo",
-        method: "Top movers are computed by last trading day volume within a fixed mega-cap universe.",
-        crypto: [],
-        stocks: {
-          volumeLeaders: [],
-          volumeLaggards: [],
-          gainers: [],
-          losers: [],
-          universe: STOCK_UNIVERSE.map((entry) => entry.symbol)
-        },
-        movers: [],
-        dataQuality: "UPSTREAM_MISSING"
-      };
-      const response = makeResponse({
-        ok: false,
-        feature: FEATURE_ID,
-        traceId,
-        data: emptyData,
-        cache: { hit: false, ttl: 0, layer: "none" },
-        upstream: {
-          url: UPSTREAM_URL,
-          status: errors[0]?.status || null,
-          snippet: upstreamSnippet
-        },
-        error: {
-          code: "UPSTREAM_MISSING",
-          message: "Upstream unavailable; no cached data",
-          details: {
-            errors,
-            upstreamStatus: errors[0]?.status || null
-          }
-        }
-      });
-      logServer({
-        feature: FEATURE_ID,
-        traceId,
-        cacheLayer: "none",
-        upstreamStatus: null,
-        durationMs: Date.now() - started
-      });
-      return response;
-    }
-
-    const kvPayload = {
-      ts: new Date().toISOString(),
-      source: dataPayload.source,
-      schemaVersion: 1,
-      data: dataPayload
-    };
-
-    if (!panic) {
-      await kvPutJson(env, cacheKey, kvPayload, KV_TTL);
-      await kvPutJson(env, lastOkKey, kvPayload, 24 * 60 * 60);
-    }
-
-    const response = makeResponse({
-      ok: true,
-      feature: FEATURE_ID,
-      traceId,
+    return {
       data: dataPayload,
-      cache: { hit: false, ttl: panic ? 0 : KV_TTL, layer: "none" },
-      upstream: { url: UPSTREAM_URL, status: 200, snippet: upstreamSnippet },
-      error: errors.length
-        ? {
-            code: mapUpstreamCode(errors[0]?.status || 502),
-            message: "Some upstreams failed",
-            details: { errors }
-          }
-        : {}
-    });
-    logServer({
-      feature: FEATURE_ID,
-      traceId,
-      cacheLayer: "none",
-      upstreamStatus: 200,
-      durationMs: Date.now() - started
-    });
-    return response;
-  } catch (error) {
-    const lastOk = await kvGetJson(env, lastOkKey);
-    if (lastOk?.hit && lastOk.value?.data) {
-      const response = makeResponse({
-        ok: true,
-        feature: FEATURE_ID,
-        traceId,
-        data: { ...lastOk.value.data, asOf: lastOk.value.ts },
-        cache: { hit: true, ttl: KV_TTL, layer: "kv" },
-        upstream: { url: UPSTREAM_URL, status: null, snippet: upstreamSnippet },
-        error: {
-          code: error?.code || "SCHEMA_INVALID",
-          message: "Upstream parse failed",
-          details: error?.details || {}
-        },
-        isStale: true
-      });
-      logServer({
-        feature: FEATURE_ID,
-        traceId,
-        cacheLayer: "kv",
-        upstreamStatus: null,
-        durationMs: Date.now() - started
-      });
-      return response;
-    }
-    const errorCode = error?.name === "AbortError" ? "UPSTREAM_TIMEOUT" : "UPSTREAM_5XX";
-    const emptyData = {
-      updatedAt: new Date().toISOString(),
-      source: "yahoo",
-      method: "Top movers are computed by last trading day volume within a fixed mega-cap universe.",
-      crypto: [],
-      stocks: {
-        volumeLeaders: [],
-        volumeLaggards: [],
-        gainers: [],
-        losers: [],
-        universe: STOCK_UNIVERSE.map((entry) => entry.symbol)
-      },
-      movers: [],
-      dataQuality: "UPSTREAM_ERROR"
+      upstreamStatus: result.upstreamStatus ?? null,
+      upstreamUrl: result.chosenUrl || YAHOO_URL,
+      snippet: ""
     };
-    const response = makeResponse({
-      ok: false,
-      feature: FEATURE_ID,
-      traceId,
-      data: emptyData,
-      cache: { hit: false, ttl: 0, layer: "none" },
-      upstream: { url: UPSTREAM_URL, status: null, snippet: upstreamSnippet },
-      error: {
-        code: error?.code || "UPSTREAM_ERROR",
-        message: error?.message || "Request failed",
-        details: {
-          ...(error?.details || {}),
-          upstreamStatus: null,
-          mappedCode: errorCode
-        }
-      }
-    });
-    logServer({
-      feature: FEATURE_ID,
-      traceId,
-      cacheLayer: "none",
-      upstreamStatus: null,
-      durationMs: Date.now() - started
-    });
-    return response;
+  } catch (error) {
+    error.message = error?.message || "Upstream error";
+    error.code = error?.code || "UPSTREAM_5XX";
+    error.details = error?.details || {};
+    if (error?.details?.head) {
+      error.details.head = safeSnippet(error.details.head);
+    }
+    throw error;
   }
+}
+
+export async function onRequestGet(context) {
+  return withResilience(context, {
+    featureId: FEATURE_ID,
+    version: VERSION,
+    fetcher: fetchTopMovers,
+    validator: validateTopMovers,
+    ttlStaleSec: TTL_STALE,
+    circuitSec: CIRCUIT_SEC,
+    upstreamUrl: YAHOO_URL
+  });
 }

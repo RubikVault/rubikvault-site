@@ -1,21 +1,11 @@
 import { XMLParser } from "fast-xml-parser";
-import {
-  assertBindings,
-  createTraceId,
-  kvGetJson,
-  makeResponse,
-  logServer,
-  safeFetchText,
-  isHtmlLike,
-  safeSnippet,
-  swrGetOrRefresh,
-  normalizeFreshness
-} from "./_shared.js";
+import { safeFetchText, isHtmlLike, safeSnippet } from "./_shared.js";
+import { withResilience } from "./_shared/resilience.js";
 
 const FEATURE_ID = "yield-curve";
-const KV_TTL = 6 * 60 * 60;
-const STALE_MAX = 72 * 60 * 60;
-const CACHE_KEY = "DASH:YIELD_CURVE";
+const VERSION = "v1";
+const TTL_STALE = 72 * 60 * 60;
+const CIRCUIT_SEC = 1800;
 const TREASURY_URL =
   "https://home.treasury.gov/resource-center/data-chart-center/interest-rates/DailyTreasuryYieldCurveRateData.xml";
 const TREASURY_CSV_URL =
@@ -171,119 +161,63 @@ function mergeYieldFallback(current, fallback) {
   return merged;
 }
 
-async function fetchYieldCurve(env) {
-  const res = await safeFetchText(TREASURY_URL, { userAgent: env.USER_AGENT || "RubikVault/1.0" });
-  if (res.ok) {
-    const parsed = parseYieldCurve(res.text || "");
+function validateYieldCurve(data) {
+  const yields = data?.yields || {};
+  const count = Object.values(yields).filter((value) => Number.isFinite(value)).length;
+  if (count >= 5) return { passed: true };
+  return { passed: false, failReason: "NOT_ENOUGH_POINTS" };
+}
+
+async function fetchYieldCurve({ env, signal, lastGood }) {
+  const ua = env.USER_AGENT || "RubikVault/1.0";
+  const xmlRes = await safeFetchText(TREASURY_URL, { userAgent: ua, signal });
+  if (xmlRes.ok) {
+    const parsed = parseYieldCurve(xmlRes.text || "");
     if (parsed.ok) {
-      const cached = await kvGetJson(env, CACHE_KEY);
-      const lastYields = cached?.value?.data?.yields || null;
-      parsed.data.yields = mergeYieldFallback(parsed.data.yields, lastYields);
-      return { ok: true, data: parsed.data, snippet: "" };
+      const fallbackYields = lastGood?.yields || null;
+      parsed.data.yields = mergeYieldFallback(parsed.data.yields, fallbackYields);
+      return {
+        data: parsed.data,
+        upstreamStatus: xmlRes.status ?? 200,
+        upstreamUrl: TREASURY_URL,
+        snippet: ""
+      };
     }
   }
 
-  const csvRes = await safeFetchText(TREASURY_CSV_URL, {
-    userAgent: env.USER_AGENT || "RubikVault/1.0"
-  });
+  const csvRes = await safeFetchText(TREASURY_CSV_URL, { userAgent: ua, signal });
   if (csvRes.ok) {
     const parsedCsv = parseYieldCurveCsv(csvRes.text || "");
     if (parsedCsv.ok) {
-      const cached = await kvGetJson(env, CACHE_KEY);
-      const lastYields = cached?.value?.data?.yields || null;
-      parsedCsv.data.yields = mergeYieldFallback(parsedCsv.data.yields, lastYields);
-      return { ok: true, data: parsedCsv.data, snippet: "" };
+      const fallbackYields = lastGood?.yields || null;
+      parsedCsv.data.yields = mergeYieldFallback(parsedCsv.data.yields, fallbackYields);
+      return {
+        data: parsedCsv.data,
+        upstreamStatus: csvRes.status ?? 200,
+        upstreamUrl: TREASURY_CSV_URL,
+        snippet: ""
+      };
     }
   }
 
-  const snippet = safeSnippet(res.text || csvRes.text || "");
-  return {
-    ok: false,
-    error: res.ok ? "SCHEMA_INVALID" : "UPSTREAM_5XX",
-    snippet
-  };
+  const snippet = safeSnippet(xmlRes.text || csvRes.text || "");
+  const status = xmlRes.status || csvRes.status || null;
+  const error = new Error("No upstream data");
+  error.code = xmlRes.ok || csvRes.ok ? "SCHEMA_INVALID" : "UPSTREAM_5XX";
+  error.status = status;
+  error.message = "No upstream data";
+  error.details = { snippet };
+  throw error;
 }
 
 export async function onRequestGet(context) {
-  const { request, env, data } = context;
-  const traceId = data?.traceId || createTraceId(request);
-  const started = Date.now();
-
-  const bindingResponse = assertBindings(env, FEATURE_ID, traceId);
-  if (bindingResponse) return bindingResponse;
-
-  const swr = await swrGetOrRefresh(context, {
-    key: CACHE_KEY,
-    ttlSeconds: KV_TTL,
-    staleMaxSeconds: STALE_MAX,
-    fetcher: () => fetchYieldCurve(env),
-    featureName: FEATURE_ID
+  return withResilience(context, {
+    featureId: FEATURE_ID,
+    version: VERSION,
+    fetcher: fetchYieldCurve,
+    validator: validateYieldCurve,
+    ttlStaleSec: TTL_STALE,
+    circuitSec: CIRCUIT_SEC,
+    upstreamUrl: `${TREASURY_URL} | ${TREASURY_CSV_URL}`
   });
-
-  const payload = swr.value?.data || swr.value || null;
-  if (!payload) {
-    const emptyPayload = {
-      updatedAt: new Date().toISOString(),
-      yields: {
-        "1m": null,
-        "3m": null,
-        "6m": null,
-        "1y": null,
-        "2y": null,
-        "3y": null,
-        "5y": null,
-        "7y": null,
-        "10y": null,
-        "20y": null,
-        "30y": null
-      },
-      spreads: { tenTwo: null, tenThreeMonth: null },
-      inversion: { tenTwo: null, tenThreeMonth: null },
-      source: "US Treasury",
-      dataQuality: "NO_DATA"
-    };
-    const response = makeResponse({
-      ok: true,
-      feature: FEATURE_ID,
-      traceId,
-      data: emptyPayload,
-      cache: { hit: false, ttl: 0, layer: "none" },
-      upstream: { url: `${TREASURY_URL} | ${TREASURY_CSV_URL}`, status: null, snippet: swr.error?.snippet || "" },
-      error: {
-        code: swr.error?.error || "UPSTREAM_5XX",
-        message: "No upstream data",
-        details: {}
-      },
-      cacheStatus: "ERROR",
-      status: 200
-    });
-    logServer({
-      feature: FEATURE_ID,
-      traceId,
-      cacheLayer: "none",
-      upstreamStatus: null,
-      durationMs: Date.now() - started
-    });
-    return response;
-  }
-
-  const response = makeResponse({
-    ok: true,
-    feature: FEATURE_ID,
-    traceId,
-    data: payload,
-    cache: { hit: swr.cacheStatus !== "MISS", ttl: KV_TTL, layer: swr.cacheStatus === "MISS" ? "none" : "kv" },
-    upstream: { url: `${TREASURY_URL} | ${TREASURY_CSV_URL}`, status: 200, snippet: "" },
-    isStale: swr.isStale,
-    freshness: normalizeFreshness(swr.ageSeconds),
-    cacheStatus: swr.cacheStatus
-  });
-  logServer({
-    feature: FEATURE_ID,
-    traceId,
-    cacheLayer: swr.cacheStatus === "MISS" ? "none" : "kv",
-    upstreamStatus: 200,
-    durationMs: Date.now() - started
-  });
-  return response;
 }

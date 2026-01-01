@@ -1,21 +1,16 @@
 import {
-  assertBindings,
-  createTraceId,
-  makeResponse,
-  logServer,
   safeFetchJson,
   safeFetchText,
   safeSnippet,
   isHtmlLike,
-  swrGetOrRefresh,
-  normalizeFreshness,
   computeReturnsFromDailyCloses
 } from "./_shared.js";
+import { withResilience } from "./_shared/resilience.js";
 
 const FEATURE_ID = "sector-rotation";
-const KV_TTL = 30 * 60;
-const STALE_MAX = 24 * 60 * 60;
-const CACHE_KEY = "DASH:SECTOR_ROTATION";
+const VERSION = "v1";
+const TTL_STALE = 24 * 60 * 60;
+const CIRCUIT_SEC = 1800;
 const FMP_BASE = "https://financialmodelingprep.com/api/v3/quote";
 const STOOQ_BASE = "https://stooq.com/q/d/l/?s=";
 
@@ -79,10 +74,10 @@ function parseStooqCsv(text) {
     .filter((value) => Number.isFinite(value));
 }
 
-async function fetchStooqHistory(symbol, env) {
+async function fetchStooqHistory(symbol, env, signal) {
   const stooqSymbol = `${symbol}.US`;
   const url = `${STOOQ_BASE}${encodeURIComponent(stooqSymbol)}&i=d`;
-  const res = await safeFetchText(url, { userAgent: env.USER_AGENT || "RubikVault/1.0" });
+  const res = await safeFetchText(url, { userAgent: env.USER_AGENT || "RubikVault/1.0", signal });
   const text = res.text || "";
   if (!res.ok || isHtmlLike(text)) {
     return { ok: false, closes: [], snippet: safeSnippet(text) };
@@ -91,14 +86,14 @@ async function fetchStooqHistory(symbol, env) {
   return { ok: closes.length > 1, closes, snippet: "" };
 }
 
-async function fetchSectorRotationStooq(env) {
-  const spyRes = await fetchStooqHistory("SPY", env);
+async function fetchSectorRotationStooq(env, signal) {
+  const spyRes = await fetchStooqHistory("SPY", env, signal);
   const spyReturns = spyRes.ok ? computeReturnsFromDailyCloses(spyRes.closes) : {};
   const spyChange = Number.isFinite(spyReturns?.r1d) ? spyReturns.r1d : null;
 
   const results = await Promise.allSettled(
     SECTOR_SYMBOLS.map(async (symbol) => {
-      const res = await fetchStooqHistory(symbol, env);
+      const res = await fetchStooqHistory(symbol, env, signal);
       return { symbol, res };
     })
   );
@@ -129,11 +124,10 @@ async function fetchSectorRotationStooq(env) {
   });
 
   if (!sectors.length) {
-    return {
-      ok: false,
-      error: { code: "UPSTREAM_5XX", message: "Upstream error", details: {} },
-      snippet: upstreamSnippet
-    };
+    const error = new Error("Upstream error");
+    error.code = "UPSTREAM_5XX";
+    error.details = { snippet: upstreamSnippet };
+    throw error;
   }
 
   const sorted = [...sectors].sort((a, b) => (b.changePercent ?? -999) - (a.changePercent ?? -999));
@@ -141,7 +135,6 @@ async function fetchSectorRotationStooq(env) {
   const defensiveAvg = averageChange(sectors, GROUPS.defensive);
   const cyclicalAvg = averageChange(sectors, GROUPS.cyclical);
   return {
-    ok: true,
     data: {
       updatedAt: new Date().toISOString(),
       rotationLabel: rotationLabel(offensiveAvg, defensiveAvg),
@@ -153,14 +146,17 @@ async function fetchSectorRotationStooq(env) {
       spyChangePercent: spyChange,
       sectors: sorted,
       source: "stooq"
-    }
+    },
+    upstreamStatus: spyRes.ok ? 200 : null,
+    upstreamUrl: "stooq",
+    snippet: upstreamSnippet
   };
 }
 
-async function fetchSectorRotation(env) {
+async function fetchSectorRotation(env, signal) {
   if (env.FMP_API_KEY) {
     const url = `${FMP_BASE}/${SECTOR_SYMBOLS.concat("SPY").join(",")}?apikey=${env.FMP_API_KEY}`;
-    const res = await safeFetchJson(url, { userAgent: env.USER_AGENT || "RubikVault/1.0" });
+    const res = await safeFetchJson(url, { userAgent: env.USER_AGENT || "RubikVault/1.0", signal });
     if (res.ok && Array.isArray(res.json)) {
       const sectors = res.json
         .map((item) => ({
@@ -184,7 +180,6 @@ async function fetchSectorRotation(env) {
       const defensiveAvg = averageChange(withRelative, GROUPS.defensive);
       const cyclicalAvg = averageChange(withRelative, GROUPS.cyclical);
       return {
-        ok: true,
         data: {
           updatedAt: new Date().toISOString(),
           rotationLabel: rotationLabel(offensiveAvg, defensiveAvg),
@@ -196,70 +191,47 @@ async function fetchSectorRotation(env) {
           spyChangePercent: spyChange,
           sectors: sorted,
           source: "fmp"
-        }
+        },
+        upstreamStatus: res.status ?? 200,
+        upstreamUrl: FMP_BASE,
+        snippet: ""
       };
     }
   }
 
-  return fetchSectorRotationStooq(env);
+  return fetchSectorRotationStooq(env, signal);
+}
+
+function validateSectorRotation(data) {
+  const rows = data?.sectors || [];
+  const validRows = rows.filter(
+    (row) =>
+      Number.isFinite(row?.changePercent) ||
+      Number.isFinite(row?.relativeToSpy)
+  );
+  if (validRows.length >= 3) return { passed: true };
+  return { passed: false, failReason: "NOT_ENOUGH_ROWS" };
+}
+
+async function fetchSectorRotationWrapper({ env, signal }) {
+  try {
+    return await fetchSectorRotation(env, signal);
+  } catch (error) {
+    error.message = error?.message || "Upstream error";
+    error.code = error?.code || "UPSTREAM_5XX";
+    error.details = error?.details || {};
+    throw error;
+  }
 }
 
 export async function onRequestGet(context) {
-  const { request, env, data } = context;
-  const traceId = data?.traceId || createTraceId(request);
-  const started = Date.now();
-
-  const bindingResponse = assertBindings(env, FEATURE_ID, traceId);
-  if (bindingResponse) return bindingResponse;
-
-  const swr = await swrGetOrRefresh(context, {
-    key: CACHE_KEY,
-    ttlSeconds: KV_TTL,
-    staleMaxSeconds: STALE_MAX,
-    fetcher: () => fetchSectorRotation(env),
-    featureName: FEATURE_ID
+  return withResilience(context, {
+    featureId: FEATURE_ID,
+    version: VERSION,
+    fetcher: ({ env, signal }) => fetchSectorRotationWrapper({ env, signal }),
+    validator: validateSectorRotation,
+    ttlStaleSec: TTL_STALE,
+    circuitSec: CIRCUIT_SEC,
+    upstreamUrl: "fmp | stooq"
   });
-
-  const payload = swr.value?.data || swr.value || null;
-  if (!payload) {
-    const response = makeResponse({
-      ok: false,
-      feature: FEATURE_ID,
-      traceId,
-      cache: { hit: false, ttl: 0, layer: "none" },
-      upstream: { url: "fmp | stooq", status: null, snippet: safeSnippet(swr.error?.snippet || "") },
-      error: swr.error || { code: "UPSTREAM_5XX", message: "No upstream data", details: {} },
-      cacheStatus: "ERROR"
-    });
-    logServer({
-      feature: FEATURE_ID,
-      traceId,
-      cacheLayer: "none",
-      upstreamStatus: null,
-      durationMs: Date.now() - started
-    });
-    return response;
-  }
-
-  const upstreamUrl = payload.source === "stooq" ? "stooq" : FMP_BASE;
-  const response = makeResponse({
-    ok: true,
-    feature: FEATURE_ID,
-    traceId,
-    data: payload,
-    cache: { hit: swr.cacheStatus !== "MISS", ttl: KV_TTL, layer: swr.cacheStatus === "MISS" ? "none" : "kv" },
-    upstream: { url: upstreamUrl, status: 200, snippet: "" },
-    isStale: swr.isStale,
-    freshness: normalizeFreshness(swr.ageSeconds),
-    cacheStatus: swr.cacheStatus
-  });
-
-  logServer({
-    feature: FEATURE_ID,
-    traceId,
-    cacheLayer: swr.cacheStatus === "MISS" ? "none" : "kv",
-    upstreamStatus: 200,
-    durationMs: Date.now() - started
-  });
-  return response;
 }

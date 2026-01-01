@@ -1,16 +1,11 @@
-import {
-  createTraceId,
-  logServer,
-  makeResponse,
-  safeSnippet,
-  withCoinGeckoKey
-} from "./_shared.js";
+import { safeSnippet, withCoinGeckoKey } from "./_shared.js";
 import { fetchJsonWithFallbacks } from "./_shared/parse.js";
-import { kvGetJson, kvPutJson } from "../_lib/kv-safe.js";
-import { shouldSkipUpstream, recordUpstreamResult } from "./_circuit.js";
+import { withResilience } from "./_shared/resilience.js";
 
 const FEATURE_ID = "market-health";
-const KV_TTL = 420;
+const VERSION = "v1";
+const TTL_STALE = 24 * 60 * 60;
+const CIRCUIT_SEC = 1800;
 const FNG_URL = "https://api.alternative.me/fng/?limit=1&format=json";
 const FNG_STOCKS_URL = "https://production.dataviz.cnn.io/index/fearandgreed/graphdata";
 const CRYPTO_URL =
@@ -28,14 +23,6 @@ const YAHOO_URL = `https://query1.finance.yahoo.com/v7/finance/quote?symbols=${e
   YAHOO_SYMBOLS.map((entry) => entry.symbol).join(",")
 )}`;
 const UPSTREAM_URL = `${FNG_URL} | ${FNG_STOCKS_URL} | ${CRYPTO_URL} | ${YAHOO_URL}`;
-
-function mapUpstreamCode(status) {
-  if (status === 429) return "RATE_LIMITED";
-  if (status === 403) return "UPSTREAM_403";
-  if (status >= 400 && status < 500) return "UPSTREAM_4XX";
-  if (status >= 500) return "UPSTREAM_5XX";
-  return "UPSTREAM_5XX";
-}
 
 function normalizeFng(payload) {
   const item = Array.isArray(payload?.data) ? payload.data[0] : null;
@@ -145,382 +132,99 @@ function mergeLastGood(current, lastGood) {
   };
 }
 
-function minutesSince(ts) {
-  const parsed = Date.parse(ts || "");
-  if (!Number.isFinite(parsed)) return null;
-  const diffMs = Date.now() - parsed;
-  if (diffMs < 0) return 0;
-  return Math.round(diffMs / 60000);
+function validateMarketHealth(data) {
+  const hasAnyData =
+    data?.fng ||
+    data?.fngStocks ||
+    (data?.crypto || []).length ||
+    (data?.indices || []).length ||
+    (data?.commodities || []).length;
+  if (hasAnyData) return { passed: true };
+  return { passed: false, failReason: "EMPTY_DATA" };
 }
 
-export async function onRequestGet({ request, env, data }) {
-  const traceId = data?.traceId || createTraceId(request);
-  const started = Date.now();
-  const panic =
-    request.headers.get("x-rv-panic") === "1" ||
-    new URL(request.url).searchParams.get("rv_panic") === "1";
-
-  const hasKV =
-    env?.RV_KV && typeof env.RV_KV.get === "function" && typeof env.RV_KV.put === "function";
-  if (!hasKV) {
-    const response = makeResponse({
-      ok: false,
-      feature: FEATURE_ID,
-      traceId,
-      cache: { hit: false, ttl: 0, layer: "none" },
-      upstream: { url: UPSTREAM_URL, status: null, snippet: "" },
-      error: {
-        code: "BINDING_MISSING",
-        message: "RV_KV binding missing",
-        details: {
-          action:
-            "Cloudflare Dashboard → Pages → Settings → Functions → KV bindings → RV_KV (Preview + Production)"
-        }
-      }
-    });
-    logServer({
-      feature: FEATURE_ID,
-      traceId,
-      cacheLayer: "none",
-      upstreamStatus: null,
-      durationMs: Date.now() - started
-    });
-    return response;
-  }
-
-  const cacheKey = `${FEATURE_ID}:v1`;
-  const lastOkKey = "market_health:last_ok";
-
-  if (!panic) {
-    const cached = await kvGetJson(env, cacheKey);
-    if (cached?.hit && cached.value?.data) {
-      const response = makeResponse({
-        ok: true,
-        feature: FEATURE_ID,
-        traceId,
-        data: cached.value.data,
-        cache: { hit: true, ttl: KV_TTL, layer: "kv" },
-        upstream: { url: UPSTREAM_URL, status: null, snippet: "" }
-      });
-      logServer({
-        feature: FEATURE_ID,
-        traceId,
-        cacheLayer: "kv",
-        upstreamStatus: null,
-        durationMs: Date.now() - started
-      });
-      return response;
+async function fetchMarketHealth({ env, signal, lastGood }) {
+  const fetchSafe = async (url, context) => {
+    try {
+      const result = await fetchJsonWithFallbacks([url], { timeoutMs: 6000, signal }, context);
+      return { ok: true, ...result };
+    } catch (error) {
+      return { ok: false, error };
     }
-  }
+  };
 
-  const circuit = await shouldSkipUpstream(FEATURE_ID, env, env.RV_KV, Date.now());
-  if (circuit.skip) {
-    const lastOk = await kvGetJson(env, lastOkKey);
-    if (lastOk?.hit && lastOk.value?.data) {
-      const delayMinutes = minutesSince(lastOk.value.ts);
-      const dataPayload = {
-        ...lastOk.value.data,
-        asOf: lastOk.value.ts,
-        dataQuality: { status: "STALE", reason: "STALE", missingFields: [] },
-        mode: "STALE",
-        delayMinutes,
-        reasons: ["CIRCUIT_OPEN", lastOk.value?.data?.source ? "LAST_GOOD" : ""].filter(Boolean)
-      };
-      const response = makeResponse({
-        ok: true,
-        feature: FEATURE_ID,
-        traceId,
-        data: dataPayload,
-        cache: { hit: true, ttl: KV_TTL, layer: "kv" },
-        upstream: { url: UPSTREAM_URL, status: null, snippet: "" },
-        error: {
-          code: "UPSTREAM_5XX",
-          message: "Upstream circuit open; serving last-good snapshot.",
-          details: { circuitUntil: circuit.untilTs }
-        },
-        isStale: true
-      });
-      logServer({
-        feature: FEATURE_ID,
-        traceId,
-        cacheLayer: "kv",
-        upstreamStatus: null,
-        durationMs: Date.now() - started
-      });
-      return response;
-    }
+  const [fngResult, stocksResult, cryptoResult, yahooResult] = await Promise.all([
+    fetchSafe(FNG_URL, "market-health:fng"),
+    fetchSafe(FNG_STOCKS_URL, "market-health:stocks"),
+    fetchSafe(withCoinGeckoKey(CRYPTO_URL, env), "market-health:crypto"),
+    fetchSafe(YAHOO_URL, "market-health:yahoo")
+  ]);
 
-    const response = makeResponse({
-      ok: true,
-      feature: FEATURE_ID,
-      traceId,
-      data: {
-        updatedAt: new Date().toISOString(),
-        source: "none",
-        dataQuality: { status: "PARTIAL", reason: "NO_DATA", missingFields: [] },
-        mode: "EMPTY",
-        reasons: ["CIRCUIT_OPEN"]
-      },
-      cache: { hit: false, ttl: 0, layer: "none" },
-      upstream: { url: UPSTREAM_URL, status: null, snippet: "" },
-      error: {
-        code: "UPSTREAM_5XX",
-        message: "Upstream circuit open; no last-good snapshot.",
-        details: { circuitUntil: circuit.untilTs }
-      },
-      status: 200
-    });
-    logServer({
-      feature: FEATURE_ID,
-      traceId,
-      cacheLayer: "none",
-      upstreamStatus: null,
-      durationMs: Date.now() - started
-    });
-    return response;
-  }
-
+  const errors = [];
   let upstreamSnippet = "";
+  const sources = [
+    { id: "fng", result: fngResult },
+    { id: "stocks", result: stocksResult },
+    { id: "crypto", result: cryptoResult },
+    { id: "yahoo", result: yahooResult }
+  ];
 
-  try {
-    const fetchSafe = async (url, context) => {
-      try {
-        const result = await fetchJsonWithFallbacks([url], {}, context);
-        return { ok: true, ...result };
-      } catch (error) {
-        return { ok: false, error };
+  sources.forEach(({ id, result }) => {
+    if (!result.ok) {
+      errors.push({ id, status: null, code: result.error?.code || "SCHEMA_INVALID" });
+      if (!upstreamSnippet && result.error?.details?.head) {
+        upstreamSnippet = safeSnippet(result.error.details.head);
       }
-    };
-
-    const [fngResult, stocksResult, cryptoResult, yahooResult] = await Promise.all([
-      fetchSafe(FNG_URL, "market-health:fng"),
-      fetchSafe(FNG_STOCKS_URL, "market-health:stocks"),
-      fetchSafe(withCoinGeckoKey(CRYPTO_URL, env), "market-health:crypto"),
-      fetchSafe(YAHOO_URL, "market-health:yahoo")
-    ]);
-
-    const errors = [];
-    const sources = [
-      { id: "fng", result: fngResult },
-      { id: "stocks", result: stocksResult },
-      { id: "crypto", result: cryptoResult },
-      { id: "yahoo", result: yahooResult }
-    ];
-
-    sources.forEach(({ id, result }) => {
-      if (!result.ok) {
-        errors.push({ id, status: null, code: result.error?.code || "SCHEMA_INVALID" });
-        if (!upstreamSnippet && result.error?.details?.head) {
-          upstreamSnippet = safeSnippet(result.error.details.head);
-        }
-        return;
-      }
-      if (!result.upstreamOk) {
-        errors.push({ id, status: result.upstreamStatus || null });
-      }
-    });
-
-    let dataPayload = normalize(
-      fngResult.json || {},
-      stocksResult.json || {},
-      cryptoResult.json || {},
-      yahooResult.json || {}
-    );
-    if (!panic) {
-      const lastOk = await kvGetJson(env, lastOkKey);
-      if (lastOk?.hit && lastOk.value?.data) {
-        dataPayload = mergeLastGood(dataPayload, lastOk.value.data);
-      }
+      return;
     }
-
-    const hasAnyData =
-      dataPayload.fng ||
-      dataPayload.fngStocks ||
-      (dataPayload.crypto || []).length ||
-      (dataPayload.indices || []).length ||
-      (dataPayload.commodities || []).length;
-
-    if (!hasAnyData) {
-      await recordUpstreamResult(FEATURE_ID, env, env.RV_KV, {
-        ok: false,
-        code: "UPSTREAM_5XX",
-        status: errors[0]?.status ?? null
-      });
-      const lastOk = await kvGetJson(env, lastOkKey);
-      if (lastOk?.hit && lastOk.value?.data) {
-        const delayMinutes = minutesSince(lastOk.value.ts);
-        const response = makeResponse({
-          ok: true,
-          feature: FEATURE_ID,
-          traceId,
-          data: {
-            ...lastOk.value.data,
-            asOf: lastOk.value.ts,
-            dataQuality: { status: "STALE", reason: "STALE", missingFields: [] },
-            mode: "STALE",
-            delayMinutes,
-            reasons: ["FALLBACK_LAST_GOOD"]
-          },
-          cache: { hit: true, ttl: KV_TTL, layer: "kv" },
-          upstream: { url: UPSTREAM_URL, status: null, snippet: upstreamSnippet },
-          error: {
-            code: "SCHEMA_INVALID",
-            message: "Upstream parse failed",
-            details: { errors }
-          },
-          isStale: true
-        });
-        logServer({
-          feature: FEATURE_ID,
-          traceId,
-          cacheLayer: "kv",
-          upstreamStatus: null,
-          durationMs: Date.now() - started
-        });
-        return response;
-      }
-
-      const response = makeResponse({
-        ok: true,
-        feature: FEATURE_ID,
-        traceId,
-        cache: { hit: false, ttl: 0, layer: "none" },
-        upstream: { url: UPSTREAM_URL, status: null, snippet: upstreamSnippet },
-        error: {
-          code: "SCHEMA_INVALID",
-          message: "Upstream parse failed",
-          details: { errors }
-        },
-        status: 200,
-        data: {
-          updatedAt: new Date().toISOString(),
-          source: "none",
-          dataQuality: { status: "PARTIAL", reason: "NO_DATA", missingFields: [] },
-          mode: "EMPTY",
-          reasons: ["UPSTREAM_5XX"]
-        }
-      });
-      logServer({
-        feature: FEATURE_ID,
-        traceId,
-        cacheLayer: "none",
-        upstreamStatus: null,
-        durationMs: Date.now() - started
-      });
-      return response;
+    if (!result.upstreamOk) {
+      errors.push({ id, status: result.upstreamStatus || null });
     }
+  });
 
-    const kvPayload = {
-      ts: new Date().toISOString(),
-      source: dataPayload.source,
-      schemaVersion: 1,
-      data: dataPayload
-    };
-
-    if (!panic) {
-      await kvPutJson(env, cacheKey, kvPayload, KV_TTL);
-      await kvPutJson(env, lastOkKey, kvPayload, 24 * 60 * 60);
-    }
-
-    await recordUpstreamResult(FEATURE_ID, env, env.RV_KV, {
-      ok: true,
-      code: "",
-      status: 200
-    });
-
-    const response = makeResponse({
-      ok: true,
-      feature: FEATURE_ID,
-      traceId,
-      data: dataPayload,
-      cache: { hit: false, ttl: panic ? 0 : KV_TTL, layer: "none" },
-      upstream: { url: UPSTREAM_URL, status: 200, snippet: upstreamSnippet },
-      error: errors.length
-        ? {
-            code: mapUpstreamCode(errors[0]?.status || 502),
-            message: "Some upstreams failed",
-            details: { errors }
-          }
-        : {}
-    });
-    logServer({
-      feature: FEATURE_ID,
-      traceId,
-      cacheLayer: "none",
-      upstreamStatus: 200,
-      durationMs: Date.now() - started
-    });
-    return response;
-  } catch (error) {
-    await recordUpstreamResult(FEATURE_ID, env, env.RV_KV, {
-      ok: false,
-      code: error?.name === "AbortError" ? "UPSTREAM_TIMEOUT" : "UPSTREAM_5XX",
-      status: error?.status ?? null
-    });
-    const lastOk = await kvGetJson(env, lastOkKey);
-    if (lastOk?.hit && lastOk.value?.data) {
-      const delayMinutes = minutesSince(lastOk.value.ts);
-      const response = makeResponse({
-        ok: true,
-        feature: FEATURE_ID,
-        traceId,
-        data: {
-          ...lastOk.value.data,
-          asOf: lastOk.value.ts,
-          dataQuality: { status: "STALE", reason: "STALE", missingFields: [] },
-          mode: "STALE",
-          delayMinutes,
-          reasons: ["FALLBACK_LAST_GOOD"]
-        },
-        cache: { hit: true, ttl: KV_TTL, layer: "kv" },
-        upstream: { url: UPSTREAM_URL, status: null, snippet: upstreamSnippet },
-        error: {
-          code: error?.code || "SCHEMA_INVALID",
-          message: "Upstream parse failed",
-          details: error?.details || {}
-        },
-        isStale: true
-      });
-      logServer({
-        feature: FEATURE_ID,
-        traceId,
-        cacheLayer: "kv",
-        upstreamStatus: null,
-        durationMs: Date.now() - started
-      });
-      return response;
-    }
-    const errorCode = error?.name === "AbortError" ? "UPSTREAM_TIMEOUT" : "UPSTREAM_5XX";
-    const response = makeResponse({
-      ok: true,
-      feature: FEATURE_ID,
-      traceId,
-      cache: { hit: false, ttl: 0, layer: "none" },
-      upstream: {
-        url: UPSTREAM_URL,
-        status: null,
-        snippet: upstreamSnippet
-      },
-      error: {
-        code: error?.code || errorCode,
-        message: error?.message || "Request failed",
-        details: error?.details || {}
-      },
-      data: {
-        updatedAt: new Date().toISOString(),
-        source: "none",
-        dataQuality: { status: "PARTIAL", reason: "NO_DATA", missingFields: [] },
-        mode: "EMPTY",
-        reasons: [error?.code || errorCode]
-      }
-    });
-    logServer({
-      feature: FEATURE_ID,
-      traceId,
-      cacheLayer: "none",
-      upstreamStatus: null,
-      durationMs: Date.now() - started
-    });
-    return response;
+  let dataPayload = normalize(
+    fngResult.json || {},
+    stocksResult.json || {},
+    cryptoResult.json || {},
+    yahooResult.json || {}
+  );
+  if (lastGood) {
+    dataPayload = mergeLastGood(dataPayload, lastGood);
   }
+
+  const hasAnyData =
+    dataPayload.fng ||
+    dataPayload.fngStocks ||
+    (dataPayload.crypto || []).length ||
+    (dataPayload.indices || []).length ||
+    (dataPayload.commodities || []).length;
+
+  if (!hasAnyData) {
+    const error = new Error("No upstream data");
+    const status = errors.find((entry) => entry.status)?.status ?? null;
+    error.status = status;
+    error.code = status === 429 ? "RATE_LIMITED" : status === 403 ? "UPSTREAM_403" : "UPSTREAM_5XX";
+    error.details = { errors };
+    error.message = "No upstream data";
+    throw error;
+  }
+
+  return {
+    data: dataPayload,
+    upstreamStatus: 200,
+    upstreamUrl: UPSTREAM_URL,
+    snippet: upstreamSnippet
+  };
+}
+
+export async function onRequestGet(context) {
+  return withResilience(context, {
+    featureId: FEATURE_ID,
+    version: VERSION,
+    fetcher: fetchMarketHealth,
+    validator: validateMarketHealth,
+    ttlStaleSec: TTL_STALE,
+    circuitSec: CIRCUIT_SEC,
+    upstreamUrl: UPSTREAM_URL
+  });
 }
