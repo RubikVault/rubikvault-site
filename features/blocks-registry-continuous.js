@@ -116,5 +116,57 @@ export const CONTINUOUS_BLOCKS = {
     emptyCopy: "Breakout energy mirror is empty.",
     warnCopy: "Breakout energy missing expected coverage.",
     whyUnique: "Compression-to-breakout state machine signals."
+  },
+  "rv-yield-curve": {
+    blockId: "rv-yield-curve",
+    blockType: "CONTINUOUS",
+    expectedMinItems: 1,
+    mirrorFiles: ["yield-curve"],
+    computeDependencies: [],
+    freshness: { liveMaxMinutes: 360, okMaxHoursWeekday: 24, okMaxHoursWeekend: 72 },
+    trustDefault: "raw",
+    cadence: "daily",
+    emptyCopy: "Yield curve mirror is empty.",
+    warnCopy: "Yield curve mirror is stale for an open session.",
+    whyUnique: "Rates curve context for risk-on/off regimes."
+  },
+  "rv-sector-rotation": {
+    blockId: "rv-sector-rotation",
+    blockType: "CONTINUOUS",
+    expectedMinItems: 1,
+    mirrorFiles: ["sector-rotation"],
+    computeDependencies: ["sp500-sectors"],
+    freshness: { liveMaxMinutes: 180, okMaxHoursWeekday: 24, okMaxHoursWeekend: 72 },
+    trustDefault: "derived",
+    cadence: "EOD",
+    emptyCopy: "Sector rotation mirror is empty.",
+    warnCopy: "Sector rotation mirror is stale for an open session.",
+    whyUnique: "Relative sector leadership from EOD data."
+  },
+  "rv-macro-rates": {
+    blockId: "rv-macro-rates",
+    blockType: "CONTINUOUS",
+    expectedMinItems: 1,
+    mirrorFiles: ["macro-rates"],
+    computeDependencies: [],
+    freshness: { liveMaxMinutes: 720, okMaxHoursWeekday: 48, okMaxHoursWeekend: 72 },
+    trustDefault: "raw",
+    cadence: "daily",
+    emptyCopy: "Macro rates mirror is empty.",
+    warnCopy: "Macro rates are stale for the current window.",
+    whyUnique: "Rates and macro context for cross-asset positioning."
+  },
+  "rv-sp500-sectors": {
+    blockId: "rv-sp500-sectors",
+    blockType: "CONTINUOUS",
+    expectedMinItems: 1,
+    mirrorFiles: ["sp500-sectors"],
+    computeDependencies: ["sector-rotation"],
+    freshness: { liveMaxMinutes: 360, okMaxHoursWeekday: 24, okMaxHoursWeekend: 72 },
+    trustDefault: "derived",
+    cadence: "EOD",
+    emptyCopy: "S&P 500 sectors mirror is empty.",
+    warnCopy: "S&P 500 sectors mirror is stale for an open session.",
+    whyUnique: "Sector performance table for breadth context."
   }
 };

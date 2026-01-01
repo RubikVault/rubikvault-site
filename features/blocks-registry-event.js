@@ -115,5 +115,44 @@ export const EVENT_BLOCKS = {
     emptyCopy: "No earnings reality checks available.",
     warnCopy: "Coverage limited in free mode.",
     whyUnique: "Earnings implied vs realized moves."
+  },
+  "rv-central-bank-watch": {
+    blockId: "rv-central-bank-watch",
+    blockType: "EVENT",
+    expectedMinItems: 0,
+    mirrorFiles: ["central-bank-watch"],
+    computeDependencies: [],
+    freshness: { liveMaxMinutes: 360, okMaxHoursWeekday: 24, okMaxHoursWeekend: 48 },
+    trustDefault: "raw",
+    cadence: "best_effort",
+    emptyCopy: "No central bank releases in the lookback window.",
+    warnCopy: "Central bank coverage is limited.",
+    whyUnique: "Policy release highlights from major central banks."
+  },
+  "rv-watchlist-local": {
+    blockId: "rv-watchlist-local",
+    blockType: "EVENT",
+    expectedMinItems: 0,
+    mirrorFiles: [],
+    computeDependencies: [],
+    freshness: { liveMaxMinutes: 60, okMaxHoursWeekday: 6, okMaxHoursWeekend: 12 },
+    trustDefault: "raw",
+    cadence: "client",
+    emptyCopy: "Watchlist is empty. Add symbols to populate.",
+    warnCopy: "Watchlist data is local-only.",
+    whyUnique: "User-managed watchlist with local persistence."
+  },
+  "rv-export-csv": {
+    blockId: "rv-export-csv",
+    blockType: "EVENT",
+    expectedMinItems: 0,
+    mirrorFiles: [],
+    computeDependencies: [],
+    freshness: { liveMaxMinutes: 1440, okMaxHoursWeekday: 24, okMaxHoursWeekend: 48 },
+    trustDefault: "raw",
+    cadence: "manual",
+    emptyCopy: "Export is generated on demand.",
+    warnCopy: "Export is client-side only.",
+    whyUnique: "Manual CSV export of local data."
   }
 };

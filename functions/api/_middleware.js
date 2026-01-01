@@ -1,5 +1,6 @@
 import { kvPutJson } from "../_lib/kv-safe.js";
 import { isProduction, requireDebugToken } from "./_env.js";
+import { makeResponse, safeSnippet } from "./_shared.js";
 
 function buildCorsHeaders() {
   return {
@@ -13,6 +14,29 @@ function buildCorsHeaders() {
 
 function createTraceId() {
   return Math.random().toString(36).slice(2, 10);
+}
+
+function isHtmlLikeText(text) {
+  const trimmed = String(text || "").trim().toLowerCase();
+  return trimmed.startsWith("<!doctype") || trimmed.startsWith("<html");
+}
+
+function buildApiErrorResponse({ feature, traceId, status, headers, text, contentType, code }) {
+  const headerObj = Object.fromEntries(headers.entries());
+  return makeResponse({
+    ok: false,
+    feature,
+    traceId,
+    cache: { hit: false, ttl: 0, layer: "none" },
+    upstream: { url: "", status: status ?? null, snippet: safeSnippet(text, 200) },
+    data: {},
+    error: {
+      code: code || "SCHEMA_INVALID",
+      message: "API returned non-JSON response",
+      details: { contentType: contentType || "" }
+    },
+    headers: headerObj
+  });
 }
 
 function isDebugEndpoint(pathname) {
@@ -57,6 +81,7 @@ export async function onRequest(context) {
   const { request, env, next, waitUntil } = context;
   const url = new URL(request.url);
   const started = Date.now();
+  const isApi = url.pathname.startsWith("/api/");
 
   // CORS (immer an – du kannst später tighten)
   if (request.method === "OPTIONS") {
@@ -104,12 +129,51 @@ export async function onRequest(context) {
   const corsHeaders = buildCorsHeaders();
   Object.entries(corsHeaders).forEach(([k, v]) => headers.set(k, v));
 
+  if (isApi && request.method === "HEAD") {
+    if (!headers.has("Content-Type")) {
+      headers.set("Content-Type", "application/json; charset=utf-8");
+    }
+    return new Response(null, {
+      status: response.status,
+      statusText: response.statusText,
+      headers
+    });
+  }
+
   // ETag nur für /quotes und /news (Body wird materialisiert)
   const isQuotes = url.pathname.endsWith("/quotes");
   const isNews = url.pathname.endsWith("/news");
   if (isQuotes || isNews) {
     const ifNoneMatch = request.headers.get("If-None-Match");
     const text = await response.text();
+    const trimmed = text.trim();
+    const contentType = response.headers.get("Content-Type") || "";
+    if (!trimmed.startsWith("{") || isHtmlLikeText(trimmed)) {
+      const feature = url.pathname.split("/").slice(-1)[0] || "api";
+      return buildApiErrorResponse({
+        feature,
+        traceId,
+        status: response.status,
+        headers,
+        text,
+        contentType,
+        code: isHtmlLikeText(trimmed) ? "ROUTING_HTML" : "SCHEMA_INVALID"
+      });
+    }
+    try {
+      JSON.parse(text);
+    } catch (error) {
+      const feature = url.pathname.split("/").slice(-1)[0] || "api";
+      return buildApiErrorResponse({
+        feature,
+        traceId,
+        status: response.status,
+        headers,
+        text,
+        contentType,
+        code: "SCHEMA_INVALID"
+      });
+    }
     const etag = await computeEtag(text);
 
     headers.set("ETag", etag);
@@ -128,15 +192,27 @@ export async function onRequest(context) {
     });
   }
 
-  const isApi = url.pathname.startsWith("/api/");
-
   // Für API JSON: Body EINMAL lesen → logging + Response aus String bauen (fix für "disturbed stream")
   if (isApi) {
+    const text = await response.text();
+    const trimmed = text.trim();
     const contentType = response.headers.get("Content-Type") || "";
-    const isJson = contentType.includes("application/json");
+    const isJson = contentType.includes("application/json") || trimmed.startsWith("{");
+
+    if (!isJson || isHtmlLikeText(trimmed)) {
+      const feature = url.pathname.split("/").slice(-1)[0] || "api";
+      return buildApiErrorResponse({
+        feature,
+        traceId,
+        status: response.status,
+        headers,
+        text,
+        contentType,
+        code: isHtmlLikeText(trimmed) ? "ROUTING_HTML" : "SCHEMA_INVALID"
+      });
+    }
 
     if (isJson) {
-      const text = await response.text();
 
       // Defaults (nicht erzwingen, wenn Content-Type schon da ist)
       if (!headers.has("Content-Type")) {
@@ -151,6 +227,18 @@ export async function onRequest(context) {
         parsedOk = true;
       } catch (e) {
         payload = null;
+      }
+      if (!parsedOk) {
+        const feature = url.pathname.split("/").slice(-1)[0] || "api";
+        return buildApiErrorResponse({
+          feature,
+          traceId,
+          status: response.status,
+          headers,
+          text,
+          contentType,
+          code: "SCHEMA_INVALID"
+        });
       }
 
       if (payload && typeof payload === "object") {
