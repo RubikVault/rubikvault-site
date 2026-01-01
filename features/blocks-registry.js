@@ -43,6 +43,42 @@ const BLOCK_ID_MAP = new Map(
   BLOCK_ORDER.map((featureId, index) => [featureId, String(index + 1).padStart(2, "0")])
 );
 
+function normalizeValidator(raw) {
+  if (!raw) return null;
+  if (typeof raw === "string") {
+    if (raw.startsWith("arrayMin:")) {
+      return { type: "arrayMin", min: Number(raw.split(":")[1] || 0) };
+    }
+    return { type: raw };
+  }
+  if (typeof raw === "object" && raw.type) return raw;
+  return null;
+}
+
+function makeDefaultFieldsContract(emptyPolicy, expectedMinItems) {
+  const allowPreview = true;
+  return [
+    {
+      key: "data",
+      path: "data",
+      required: emptyPolicy !== "CLIENT_ONLY",
+      allowInPreviewEmpty: allowPreview,
+      validator: { type: "nonEmpty" },
+      reasonOnFail: "EMPTY_DATA",
+      fixHint:
+        "Endpoint produced empty data. Check: endpoint status/reason, mapper output, validator strictness, upstream auth."
+    },
+    {
+      key: "status",
+      path: "meta.status",
+      required: true,
+      validator: { type: "oneOf", values: ["LIVE", "STALE", "EMPTY"] },
+      reasonOnFail: "NO_STATUS",
+      fixHint: "Envelope mismatch. Ensure resilience wrapper returns meta.status."
+    }
+  ];
+}
+
 function toTitle(featureId) {
   if (!featureId) return "Unknown";
   return featureId
@@ -93,18 +129,20 @@ Object.entries(mergedRegistry).forEach(([featureId, entry]) => {
   const meta = FEATURE_META.get(featureId) || {};
   const resolvedId = BLOCK_ID_MAP.get(featureId) || String(BLOCK_ORDER.length + ++fallbackIndex).padStart(2, "0");
   const expectedMinItems = Number.isFinite(entry.expectedMinItems) ? entry.expectedMinItems : 0;
-  const defaultFields = [
-    {
-      key: "data",
-      path: "data",
-      kind: "object",
-      validator: "nonEmpty",
-      reasonOnFail: "empty_data",
-      fixHint:
-        "Endpoint liefert EMPTY/QUALITY_FAIL → prüfe upstream/validator/mapper; in Preview erst seed in Prod erzeugen.",
-      required: expectedMinItems > 0
-    }
-  ];
+  const emptyPolicy =
+    entry.emptyPolicy ||
+    (entry.blockType === "CONTINUOUS"
+      ? "NEVER_EMPTY"
+      : entry.blockType === "LIVE"
+        ? "STALE_OK"
+        : "EMPTY_OK_WITH_CONTEXT");
+  const defaultFieldsContract = makeDefaultFieldsContract(emptyPolicy, expectedMinItems);
+  const fieldsContractSource =
+    Array.isArray(entry.fieldsContract) ? entry.fieldsContract : Array.isArray(entry.fields) ? entry.fields : defaultFieldsContract;
+  const fieldsContract = fieldsContractSource.map((field) => ({
+    ...field,
+    validator: normalizeValidator(field.validator)
+  }));
 
   const normalizedEntry = {
     ...entry,
@@ -113,18 +151,11 @@ Object.entries(mergedRegistry).forEach(([featureId, entry]) => {
     title: entry.title || meta.title || toTitle(featureId),
     api: entry.api ?? meta.api ?? null,
     apiPath: entry.api ? `/api/${entry.api}` : null,
-    fields: Array.isArray(entry.fields) ? entry.fields : defaultFields,
-    fixHints: entry.fixHints || {}
+    fieldsContract,
+    fields: fieldsContract,
+    fixHints: entry.fixHints || {},
+    emptyPolicy
   };
-
-  if (!normalizedEntry.emptyPolicy) {
-    normalizedEntry.emptyPolicy =
-      normalizedEntry.blockType === "CONTINUOUS"
-        ? "NEVER_EMPTY"
-        : normalizedEntry.blockType === "LIVE"
-          ? "STALE_OK"
-          : "EMPTY_OK_WITH_CONTEXT";
-  }
 
   normalizedRegistry[featureId] = normalizedEntry;
   registryList.push(normalizedEntry);
@@ -142,3 +173,20 @@ export function listBlockIds() {
 export { normalizeRegistry };
 
 export const MIRROR_IDS = Object.values(BLOCK_REGISTRY).flatMap((entry) => entry.mirrorFiles);
+
+function computeRegistryHash(list) {
+  const payload = JSON.stringify(
+    (list || []).map((entry) => ({
+      id: entry.id,
+      featureId: entry.featureId,
+      apiPath: entry.apiPath
+    }))
+  );
+  let hash = 0;
+  for (let i = 0; i < payload.length; i += 1) {
+    hash = (hash * 31 + payload.charCodeAt(i)) >>> 0;
+  }
+  return hash.toString(36).padStart(8, "0").slice(0, 8);
+}
+
+export const REGISTRY_HASH = computeRegistryHash(BLOCK_REGISTRY_LIST);

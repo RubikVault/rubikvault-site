@@ -1,4 +1,14 @@
-import { BLOCK_REGISTRY_LIST } from "../../features/blocks-registry.js";
+// Terminal helpers (copy/paste)
+// curl -sS "$PREVIEW/api/health-report" | jq -r '
+// (.blocks//[]) | sort_by(.id) | .[] |
+// "Block \(.id) — \(.title)\n  state=\(.blockState) status=\(.endpointStatus) reason=\(.reason//"-")\n" +
+// (
+//   (.fields//[]) | map(
+//     "  • \(.key) (\(.path)) required=\(.required) valid=\(.valid)\n    reason=\(.reason//"-")\n    fix=\(.fixHint//"-")\n"
+//   ) | join("")
+// ) + "\n"
+// '
+import { BLOCK_REGISTRY_LIST, REGISTRY_HASH } from "../../features/blocks-registry.js";
 import { normalizeResponse } from "./_shared/feature-contract.js";
 import { createTraceId, jsonResponse } from "./_shared.js";
 
@@ -52,18 +62,32 @@ function buildFixHint({
   dataQuality,
   cacheLayer,
   upstreamStatus,
-  httpStatus
+  httpStatus,
+  endpointStatus,
+  reason
 }) {
   const ct = String(contentType || "").toLowerCase();
   const snippet = String(bodySnippet || "").trim();
   if (ct.includes("text/html") || snippet.startsWith("<!doctype") || snippet.startsWith("<html")) {
     return "ROUTING_HTML (API returns HTML)";
   }
+  if (endpointStatus === "LIVE" && itemsCount === 0) {
+    return "Endpoint marks LIVE but data empty; check mapper/envelope.";
+  }
   if (upstreamStatus === 401 || httpStatus === 401) {
-    return "Upstream requires API key. Configure provider env var or switch source, then seed lastGood in PROD.";
+    return "Missing/invalid API key or blocked access; configure env var/provider, then seed lastGood in PROD.";
   }
   if (upstreamStatus === 403 || httpStatus === 403) {
     return "UPSTREAM_AUTH (key/plan missing or blocked)";
+  }
+  if (reason === "CACHE_MISSING") {
+    return "No lastGood yet. Hit PROD once to seed KV; Preview then returns STALE.";
+  }
+  if (reason === "NO_DATA") {
+    return "Data genuinely absent for current universe/threshold; lower threshold or expand universe; verify mapper outputs items.";
+  }
+  if (reason === "SCHEMA_INVALID") {
+    return "Mapper/validator mismatch; update mapper to produce required fields or relax validator.";
   }
   if (!cacheLayer || cacheLayer === "none") {
     return "CACHE_MISSING (KV binding or cache miss)";
@@ -82,7 +106,8 @@ function buildEmptyReason({
   upstreamStatus,
   httpStatus,
   cacheLayer,
-  emptyPolicy
+  emptyPolicy,
+  endpointStatus
 }) {
   const ct = String(contentType || "").toLowerCase();
   const snippet = String(bodySnippet || "").trim();
@@ -96,6 +121,7 @@ function buildEmptyReason({
     if (emptyPolicy === "EMPTY_OK_WITH_CONTEXT") return "EVENT_NO_EVENTS";
     if (!cacheLayer || cacheLayer === "none") return "CACHE_EMPTY";
     if (dataQuality?.reason === "NO_DATA") return "NO_DATA_YET";
+    if (endpointStatus === "LIVE") return "EMPTY_LIVE";
     return "EMPTY";
   }
   return dataQuality?.reason || null;
@@ -107,86 +133,119 @@ function isDataEmpty(data) {
   return Object.keys(data).length === 0;
 }
 
-function hashRegistry(entries) {
-  const payload = JSON.stringify(
-    (entries || []).map((entry) => ({
-      id: entry.id,
-      featureId: entry.featureId,
-      apiPath: entry.apiPath
-    }))
-  );
-  let hash = 0;
-  for (let i = 0; i < payload.length; i += 1) {
-    hash = (hash * 31 + payload.charCodeAt(i)) >>> 0;
-  }
-  return hash.toString(36).padStart(8, "0").slice(0, 8);
+function isPlaceholder(value) {
+  if (value === null || value === undefined) return false;
+  if (typeof value !== "string") return false;
+  const trimmed = value.trim().toLowerCase();
+  return trimmed === "" || trimmed === "n/a" || trimmed === "na" || trimmed === "-" || trimmed === "—";
 }
 
-function resolveFieldValidity(value, field, context = {}) {
-  if (!field) return { valid: true, reason: null };
-  const fieldType = field.type || field.kind || "auto";
+function resolveValidator(field) {
+  if (!field) return null;
+  const validator = field.validator;
+  if (validator && typeof validator === "object" && validator.type) return validator;
+  if (typeof validator === "string") {
+    if (validator.startsWith("arrayMin:")) {
+      return { type: "arrayMin", min: Number(validator.split(":")[1] || 0) };
+    }
+    return { type: validator };
+  }
+  return null;
+}
+
+function validateFieldValue(value, field) {
+  const validator = resolveValidator(field) || { type: "exists" };
   const required = Boolean(field.required);
-  if (fieldType === "auto") {
-    const itemsCount = Number.isFinite(context.itemsCount) ? context.itemsCount : 0;
-    const hasData = !isDataEmpty(context.data);
-    if (!required) return { valid: true, reason: null };
-    return itemsCount > 0 || hasData ? { valid: true, reason: null } : { valid: false, reason: "EMPTY" };
-  }
-  if (field.validator === "nonEmpty") {
-    if (!required && (value === undefined || value === null)) return { valid: true, reason: null };
-    if (Array.isArray(value)) {
-      return value.length > 0 ? { valid: true, reason: null } : { valid: false, reason: "EMPTY_ARRAY" };
-    }
-    if (typeof value === "string") {
-      return value.trim().length > 0 ? { valid: true, reason: null } : { valid: false, reason: "EMPTY_STRING" };
-    }
-    if (typeof value === "object") {
-      return value && Object.keys(value).length > 0 ? { valid: true, reason: null } : { valid: false, reason: "EMPTY_OBJECT" };
-    }
-    return value !== undefined && value !== null ? { valid: true, reason: null } : { valid: false, reason: "EMPTY" };
-  }
-  if (typeof field.validator === "string" && field.validator.startsWith("arrayMin:")) {
-    const min = Number(field.validator.split(":")[1] || 0);
-    return Array.isArray(value) && value.length >= min
-      ? { valid: true, reason: null }
-      : { valid: false, reason: "ARRAY_TOO_SMALL" };
-  }
-  if (field.validator === "numeric") {
-    return Number.isFinite(value)
-      ? { valid: true, reason: null }
-      : { valid: false, reason: "NOT_NUMBER" };
+
+  if ((value === undefined || value === null) && required) {
+    return { valid: false, reason: "MISSING" };
   }
   if (value === undefined || value === null) {
-    return required
-      ? { valid: false, reason: "MISSING" }
-      : { valid: true, reason: null };
+    return { valid: true, reason: null };
   }
-  if (fieldType === "number") {
-    return Number.isFinite(value)
-      ? { valid: true, reason: null }
-      : { valid: false, reason: "NOT_NUMBER" };
+
+  const type = validator.type || "exists";
+  if (type === "exists") {
+    return { valid: true, reason: null };
   }
-  if (fieldType === "string") {
-    return String(value).trim().length > 0
-      ? { valid: true, reason: null }
-      : { valid: false, reason: "EMPTY_STRING" };
+  if (type === "nonEmpty") {
+    if (typeof value === "string") {
+      if (isPlaceholder(value)) return { valid: false, reason: "PLACEHOLDER" };
+      return value.trim().length > 0 ? { valid: true, reason: null } : { valid: false, reason: "EMPTY" };
+    }
+    if (Array.isArray(value)) {
+      return value.length > 0 ? { valid: true, reason: null } : { valid: false, reason: "EMPTY" };
+    }
+    if (typeof value === "object") {
+      return Object.keys(value || {}).length > 0 ? { valid: true, reason: null } : { valid: false, reason: "EMPTY" };
+    }
+    if (typeof value === "number") {
+      return Number.isFinite(value) ? { valid: true, reason: null } : { valid: false, reason: "WRONG_TYPE" };
+    }
+    return { valid: false, reason: "WRONG_TYPE" };
   }
-  if (fieldType === "array") {
-    return Array.isArray(value) && (!required || value.length > 0)
-      ? { valid: true, reason: null }
-      : { valid: false, reason: "EMPTY_ARRAY" };
+  if (type === "stringNonEmpty") {
+    if (typeof value !== "string") return { valid: false, reason: "WRONG_TYPE" };
+    if (isPlaceholder(value)) return { valid: false, reason: "PLACEHOLDER" };
+    return value.trim().length > 0 ? { valid: true, reason: null } : { valid: false, reason: "EMPTY" };
   }
-  if (fieldType === "object") {
-    return typeof value === "object"
-      ? { valid: true, reason: null }
-      : { valid: false, reason: "NOT_OBJECT" };
+  if (type === "numeric") {
+    if (typeof value !== "number") return { valid: false, reason: "WRONG_TYPE" };
+    if (!Number.isFinite(value)) return { valid: false, reason: "WRONG_TYPE" };
+    return { valid: true, reason: null };
   }
-  if (fieldType === "boolean") {
-    return typeof value === "boolean"
-      ? { valid: true, reason: null }
-      : { valid: false, reason: "NOT_BOOLEAN" };
+  if (type === "arrayMin") {
+    if (!Array.isArray(value)) return { valid: false, reason: "WRONG_SHAPE" };
+    const min = Number.isFinite(validator.min) ? validator.min : 0;
+    return value.length >= min ? { valid: true, reason: null } : { valid: false, reason: "EMPTY" };
+  }
+  if (type === "oneOf") {
+    const values = Array.isArray(validator.values) ? validator.values : [];
+    return values.includes(value) ? { valid: true, reason: null } : { valid: false, reason: "OUT_OF_RANGE" };
+  }
+  if (type === "range") {
+    if (typeof value !== "number" || !Number.isFinite(value)) return { valid: false, reason: "WRONG_TYPE" };
+    if (Number.isFinite(validator.min) && value < validator.min) return { valid: false, reason: "OUT_OF_RANGE" };
+    if (Number.isFinite(validator.max) && value > validator.max) return { valid: false, reason: "OUT_OF_RANGE" };
+    return { valid: true, reason: null };
+  }
+  if (type === "regex") {
+    if (typeof value !== "string") return { valid: false, reason: "WRONG_TYPE" };
+    try {
+      const regex = new RegExp(validator.pattern || "");
+      return regex.test(value) ? { valid: true, reason: null } : { valid: false, reason: "FORMAT_INVALID" };
+    } catch (error) {
+      return { valid: false, reason: "FORMAT_INVALID" };
+    }
+  }
+  if (type === "objectNonEmpty") {
+    if (!value || typeof value !== "object" || Array.isArray(value)) return { valid: false, reason: "WRONG_SHAPE" };
+    return Object.keys(value).length > 0 ? { valid: true, reason: null } : { valid: false, reason: "EMPTY" };
   }
   return { valid: true, reason: null };
+}
+
+function fixHintForReason(reason, fallback) {
+  if (!reason) return fallback || null;
+  if (reason === "UPSTREAM_4XX") {
+    return "Missing/invalid API key or blocked access; configure env var / provider; then seed lastGood in PROD.";
+  }
+  if (reason === "CACHE_MISSING") {
+    return "No lastGood yet. Hit PROD once to seed KV; Preview then returns STALE.";
+  }
+  if (reason === "NO_DATA") {
+    return "Data genuinely absent for current universe/threshold; lower threshold or expand universe; verify mapper outputs items.";
+  }
+  if (reason === "SCHEMA_INVALID") {
+    return "Mapper/validator mismatch; update mapper to produce required fields or relax validator.";
+  }
+  if (reason === "EMPTY_LIVE") {
+    return "Endpoint marks LIVE but data empty; bug in endpoint envelope or mapper.";
+  }
+  if (reason === "PLACEHOLDER") {
+    return "Placeholder values detected; ensure mapper emits real values or null with notes.";
+  }
+  return fallback || null;
 }
 
 export async function onRequestGet(context) {
@@ -194,6 +253,16 @@ export async function onRequestGet(context) {
   const traceId = createTraceId(request);
   const origin = new URL(request.url).origin;
   const now = new Date().toISOString();
+  const debugEnabled = new URL(request.url).searchParams.get("debug") === "1";
+  const globalCandidates = [
+    "data.items",
+    "data.rows",
+    "data.points",
+    "data.series",
+    "data.value",
+    "data.score",
+    "data.updatedAt"
+  ];
   const registryEntries = (BLOCK_REGISTRY_LIST || []).slice();
 
   const results = [];
@@ -201,14 +270,21 @@ export async function onRequestGet(context) {
   for (const entry of registryEntries) {
     const featureId = entry.featureId || entry.blockId || "unknown";
     const endpoint = entry.apiPath || (entry.api ? `/api/${entry.api}` : null);
-    const fields = Array.isArray(entry.fields) ? entry.fields : [];
+    const fields = Array.isArray(entry.fieldsContract)
+      ? entry.fieldsContract
+      : Array.isArray(entry.fields)
+        ? entry.fields
+        : [];
     const block = {
       id: entry.id || "00",
       featureId,
       title: entry.title || featureId,
+      apiPath: endpoint,
       endpointStatus: "EMPTY",
       reason: null,
       error: null,
+      circuitOpen: null,
+      invalidFields: 0,
       fields: []
     };
 
@@ -217,10 +293,13 @@ export async function onRequestGet(context) {
       block.reason = "CLIENT_ONLY";
       block.fields = fields.map((field) => ({
         key: field.key,
+        path: field.path || field.key,
+        required: Boolean(field.required),
         valid: !field.required,
         reason: field.required ? "CLIENT_ONLY" : null,
-        fix: field.required ? "Client-only block has no API payload." : null
+        fixHint: field.required ? "Client-only block has no API payload." : null
       }));
+      block.invalidFields = block.fields.filter((field) => field.valid === false).length;
       results.push(block);
       continue;
     }
@@ -229,6 +308,7 @@ export async function onRequestGet(context) {
     let contentType = "";
     let bodySnippet = "";
     let raw = null;
+    let parseFailed = false;
     try {
       const res = await fetch(`${origin}${endpoint}?debug=1`, {
         headers: { "x-rv-trace-id": traceId }
@@ -237,7 +317,14 @@ export async function onRequestGet(context) {
       contentType = res.headers.get("content-type") || "";
       const text = await res.text();
       bodySnippet = text.slice(0, 200);
-      raw = text.trim().startsWith("{") ? JSON.parse(text) : null;
+      if (text.trim().startsWith("{")) {
+        try {
+          raw = JSON.parse(text);
+        } catch (error) {
+          parseFailed = true;
+          raw = null;
+        }
+      }
     } catch (error) {
       fetchFailures += 1;
       block.endpointStatus = "EMPTY";
@@ -245,10 +332,33 @@ export async function onRequestGet(context) {
       block.error = { code: "FETCH_ERROR", message: error?.message || "Fetch failed" };
       block.fields = fields.map((field) => ({
         key: field.key,
+        path: field.path || field.key,
+        required: Boolean(field.required),
         valid: false,
         reason: "FETCH_ERROR",
-        fix: "Check routing or upstream availability."
+        fixHint: "Check routing or upstream availability."
       }));
+      block.invalidFields = block.fields.filter((field) => field.valid === false).length;
+      results.push(block);
+      continue;
+    }
+
+    if (!raw) {
+      block.endpointStatus = "ERROR";
+      block.reason = "NON_JSON_RESPONSE";
+      block.error = {
+        code: "NON_JSON_RESPONSE",
+        message: parseFailed ? "JSON parse failed" : "Response was not JSON"
+      };
+      block.fields = fields.map((field) => ({
+        key: field.key,
+        path: field.path || field.key,
+        required: Boolean(field.required),
+        valid: false,
+        reason: "NON_JSON_RESPONSE",
+        fixHint: "Endpoint did not return JSON. Check routing and content-type."
+      }));
+      block.invalidFields = block.fields.filter((field) => field.valid === false).length;
       results.push(block);
       continue;
     }
@@ -267,7 +377,9 @@ export async function onRequestGet(context) {
       dataQuality,
       cacheLayer,
       upstreamStatus,
-      httpStatus: responseStatus
+      httpStatus: responseStatus,
+      endpointStatus,
+      reason: dataQuality?.reason
     });
 
     block.endpointStatus = endpointStatus;
@@ -280,29 +392,35 @@ export async function onRequestGet(context) {
       cacheLayer,
       upstreamStatus,
       httpStatus: responseStatus,
-      emptyPolicy: entry.emptyPolicy || ""
+      emptyPolicy: entry.emptyPolicy || "",
+      endpointStatus
     });
-    block.reason = baseReason || emptyReason || null;
+    if (endpointStatus === "LIVE" && itemsCount === 0) {
+      block.reason = "EMPTY_LIVE";
+    } else {
+      block.reason = baseReason || emptyReason || null;
+    }
     block.error = raw?.error ? { code: raw.error.code, message: raw.error.message } : null;
+    block.circuitOpen = raw?.meta?.circuitOpen ?? null;
 
     const isPreviewEmpty = endpointStatus === "EMPTY" && block.reason === "PREVIEW";
     const isClientOnly = block.reason === "CLIENT_ONLY";
     const isEndpointError = endpointStatus === "ERROR";
+    const isStale = endpointStatus === "STALE";
     const forceEmptyInvalid =
       endpointStatus === "EMPTY" && !isPreviewEmpty && !isClientOnly;
 
     block.fields = fields.map((field) => {
       const value = normalized ? resolveValue(normalized, field) : undefined;
-      let { valid, reason } = resolveFieldValidity(value, field, {
-        itemsCount,
-        data: normalized?.data
-      });
+      let { valid, reason } = validateFieldValue(value, field);
       let fix = null;
       const isOptional = field.required === false && field.optional === true;
       if (isEndpointError) {
         valid = false;
         reason = "ENDPOINT_ERROR";
-        fix = "Endpoint error. Check routing, schema, or upstream availability.";
+        fix = block.error?.code
+          ? `Endpoint error (${block.error.code}). Check routing, schema, or upstream availability.`
+          : "Endpoint error. Check routing, schema, or upstream availability.";
       } else if (forceEmptyInvalid && !isOptional) {
         valid = false;
         if (block.reason === "PREVIEW") {
@@ -313,36 +431,102 @@ export async function onRequestGet(context) {
           reason = "EMPTY_UPSTREAM";
           fix =
             "Missing/invalid API key; configure env var or switch provider; then seed lastGood in PROD.";
+        } else if (block.reason === "CACHE_EMPTY") {
+          reason = "CACHE_MISSING";
+          fix = "No lastGood yet. Hit PROD once to seed KV; Preview then returns STALE.";
         } else {
           reason = "EMPTY_UPSTREAM";
           fix = "Seed lastGood in PROD or validate upstream response.";
         }
-      } else if (isPreviewEmpty || isClientOnly) {
+      } else if (isPreviewEmpty) {
+        if (field.allowInPreviewEmpty) {
+          valid = true;
+          reason = null;
+          fix = null;
+        } else {
+          valid = false;
+          reason = "EXPECTED_PREVIEW_EMPTY";
+          fix =
+            "Preview blocks upstream. Seed lastGood by hitting PROD once; Preview shows STALE afterwards.";
+        }
+      } else if (isClientOnly) {
         valid = true;
         reason = null;
+        fix = null;
       } else if (!valid) {
-        fix = entry.fixHints?.[field.key] || fixHint || "Mapper/normalization may be missing.";
+        fix =
+          entry.fixHints?.[field.key] ||
+          fixHintForReason(reason, fixHint) ||
+          "Mapper/normalization may be missing.";
       }
       return {
         key: field.key,
         path: field.path || field.key,
+        required: Boolean(field.required),
         valid,
-        reason,
-        fix
+        reason: reason || field.reasonOnFail || null,
+        fixHint: fix || field.fixHint || null
       };
     });
+    block.invalidFields = block.fields.filter((field) => field.valid === false).length;
+    if (isPreviewEmpty || isClientOnly) {
+      block.blockState = "EXPECTED";
+    } else if (isEndpointError) {
+      block.blockState = "BAD";
+    } else if (isStale) {
+      block.blockState = "OK";
+    } else if (forceEmptyInvalid && block.invalidFields > 0) {
+      block.blockState = "BAD";
+    } else if (block.invalidFields > 0) {
+      block.blockState = "BAD";
+    } else {
+      block.blockState = "OK";
+    }
+
+    if (debugEnabled) {
+      const dataObj = normalized?.data || {};
+      const observedTopKeys = dataObj && typeof dataObj === "object" ? Object.keys(dataObj) : [];
+      const candidates = Array.from(
+        new Set([...(entry.schemaHints?.candidates || []), ...globalCandidates])
+      );
+      const observedCandidatePaths = candidates.map((path) => {
+        const value = resolvePath(normalized, path);
+        return {
+          path,
+          present: value !== undefined,
+          type: Array.isArray(value) ? "array" : typeof value,
+          count: Array.isArray(value) ? value.length : undefined
+        };
+      });
+      const suggestionFields = observedCandidatePaths
+        .filter((candidate) => candidate.present)
+        .slice(0, 4)
+        .map((candidate) => ({
+          key: candidate.path.split(".").slice(-1)[0],
+          path: candidate.path,
+          required: false,
+          validator: Array.isArray(resolvePath(normalized, candidate.path))
+            ? { type: "arrayMin", min: 1 }
+            : { type: "exists" },
+          reasonOnFail: "EMPTY_DATA",
+          fixHint: `Add fieldsContract for ${candidate.path}.`
+        }));
+      block.debug = {
+        observedTopKeys,
+        observedCandidatePaths,
+        suggestion: suggestionFields.length > 0 ? { addFieldsContractExample: suggestionFields } : null
+      };
+    }
 
     results.push(block);
   }
 
-  const okBlocks = results.filter((block) => {
-    const isPreviewEmpty = block.endpointStatus === "EMPTY" && block.reason === "PREVIEW";
-    const isClientOnly = block.reason === "CLIENT_ONLY";
-    if (block.endpointStatus === "ERROR") return false;
-    if (block.endpointStatus === "EMPTY" && !isPreviewEmpty && !isClientOnly) return false;
-    return (block.fields || []).every((field) => field.valid);
-  }).length;
-  const badBlocks = results.length - okBlocks;
+  const expectedPreview = results.filter(
+    (block) => block.endpointStatus === "EMPTY" && block.reason === "PREVIEW"
+  ).length;
+  const expectedClientOnly = results.filter((block) => block.reason === "CLIENT_ONLY").length;
+  const okBlocks = results.filter((block) => block.blockState === "OK").length;
+  const badBlocks = results.filter((block) => block.blockState === "BAD").length;
   const payload = {
     ok: fetchFailures < registryEntries.length,
     generatedAt: now,
@@ -353,12 +537,21 @@ export async function onRequestGet(context) {
         (env?.CF_PAGES_BRANCH && env?.CF_PAGES_BRANCH !== "main") ||
         String(request.headers.get("host") || "").includes("pages.dev")
     },
-    summary: { blocks: results.length, okBlocks, badBlocks },
+    summary: {
+      blocks: results.length,
+      okBlocks,
+      badBlocks,
+      expectedPreview,
+      expectedClientOnly
+    },
     blocks: results,
     meta: {
       generatedAt: now,
       traceId,
-      registryHash: hashRegistry(registryEntries)
+      registryHash: REGISTRY_HASH,
+      commands: [
+        "curl -sS \"$PREVIEW/api/health-report\" | jq -r '(.blocks//[]) | sort_by(.id) | .[] | \"Block \\(.id) — \\(.title)\"'"
+      ]
     }
   };
 
