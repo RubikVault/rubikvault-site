@@ -96,16 +96,6 @@ function measureSize(obj) {
 
 export async function onRequestGet(context) {
   const { request } = context;
-  if (request.method === "HEAD") {
-    return new Response(null, {
-      status: 204,
-      headers: {
-        "Content-Type": "application/json; charset=utf-8",
-        "Cache-Control": "no-store",
-        "x-rv-endpoint": "dashboard"
-      }
-    });
-  }
   const url = new URL(request.url);
   const seg = (url.searchParams.get("seg") || DEFAULT_SEG).toLowerCase();
   const origin = url.origin;
@@ -161,6 +151,17 @@ export async function onRequestGet(context) {
     headers: {
       "Cache-Control": "public, max-age=60",
       "CDN-Cache-Control": `max-age=${120 + jitter}`,
+      "x-rv-endpoint": "dashboard"
+    }
+  });
+}
+
+export async function onRequestHead() {
+  return new Response(null, {
+    status: 204,
+    headers: {
+      "Content-Type": "application/json; charset=utf-8",
+      "Cache-Control": "no-store",
       "x-rv-endpoint": "dashboard"
     }
   });

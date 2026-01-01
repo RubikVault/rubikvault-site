@@ -127,13 +127,10 @@ function mapCircuitStatus(error) {
 
 function computeAllowWrites(request, env) {
   if (env?.RV_ALLOW_WRITE_ON_VIEW === "1") return true;
-  const headerFlag = request?.headers?.get("x-rv-cron") === "1";
-  if (headerFlag) return true;
   const token = env?.RV_CRON_TOKEN || "";
   if (!token) return false;
   const auth = request?.headers?.get("authorization") || "";
-  if (!auth.startsWith("Bearer ")) return false;
-  return auth.slice(7) === token;
+  return auth === `Bearer ${token}`;
 }
 
 async function loadMirrorPayload(origin, featureId) {
