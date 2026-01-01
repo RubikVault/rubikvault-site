@@ -27,7 +27,15 @@ function parseObservations(payload) {
   return values;
 }
 
-function buildPayload({ latestValue, delta30dPct, source, updatedAt, partial, reasons }) {
+function buildPayload({
+  latestValue,
+  delta30dPct,
+  source,
+  updatedAt,
+  partial,
+  reasons,
+  dataQualityOverride
+}) {
   let label = "FLAT";
   if (Number.isFinite(delta30dPct)) {
     if (delta30dPct > 1) label = "UP";
@@ -57,19 +65,21 @@ function buildPayload({ latestValue, delta30dPct, source, updatedAt, partial, re
     updatedAt,
     data,
     reasons,
-    dataQuality: resolveDataQuality({
-      ok: true,
-      isStale: false,
-      partial,
-      hasData: true
-    })
+    dataQuality:
+      dataQualityOverride ||
+      resolveDataQuality({
+        ok: true,
+        isStale: false,
+        partial,
+        hasData: true
+      })
   });
 }
 
 async function fetchLiquidity(env) {
   if (!env?.FRED_API_KEY) {
     return {
-      ok: false,
+      ok: true,
       error: "ENV_MISSING",
       payload: buildPayload({
         latestValue: null,
@@ -77,7 +87,8 @@ async function fetchLiquidity(env) {
         source: "derived",
         updatedAt: new Date().toISOString(),
         partial: true,
-        reasons: ["FRED_KEY_MISSING"]
+        reasons: ["ENV_MISSING", "FRED_KEY_MISSING"],
+        dataQualityOverride: "ENV_MISSING"
       })
     };
   }

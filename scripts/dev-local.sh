@@ -30,6 +30,13 @@ export CHOKIDAR_INTERVAL=500
 
 ulimit -n 65536 >/dev/null 2>&1 || true
 
+if [[ -f "$ROOT/.dev.vars" ]]; then
+  set -a
+  # shellcheck disable=SC1090
+  source "$ROOT/.dev.vars"
+  set +a
+fi
+
 # Copy only what Pages dev needs to minimize file watching
 if command -v rsync >/dev/null 2>&1; then
   rsync -a --delete --prune-empty-dirs \

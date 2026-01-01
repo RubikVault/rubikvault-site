@@ -24,7 +24,15 @@ function computeBreadth(gainers, losers) {
   return { score, label: "NEUTRAL" };
 }
 
-function buildPayload({ gainers, losers, source, updatedAt, partial, reasons }) {
+function buildPayload({
+  gainers,
+  losers,
+  source,
+  updatedAt,
+  partial,
+  reasons,
+  dataQualityOverride
+}) {
   const breadth = computeBreadth(gainers, losers);
   const data = {
     items: [
@@ -48,12 +56,14 @@ function buildPayload({ gainers, losers, source, updatedAt, partial, reasons }) 
     updatedAt,
     data,
     reasons,
-    dataQuality: resolveDataQuality({
-      ok: true,
-      isStale: false,
-      partial,
-      hasData: true
-    })
+    dataQuality:
+      dataQualityOverride ||
+      resolveDataQuality({
+        ok: true,
+        isStale: false,
+        partial,
+        hasData: true
+      })
   });
 }
 
@@ -66,7 +76,7 @@ async function fetchBreadth(env) {
 
   if (!hasData) {
     return {
-      ok: false,
+      ok: true,
       error: "NO_SOURCE",
       payload: buildPayload({
         gainers: 0,
@@ -74,7 +84,8 @@ async function fetchBreadth(env) {
         source: "derived",
         updatedAt: new Date().toISOString(),
         partial: true,
-        reasons: ["NO_SOURCE_DATA"]
+        reasons: ["NO_SOURCE_DATA"],
+        dataQualityOverride: "NO_SOURCE"
       })
     };
   }
@@ -122,7 +133,7 @@ export async function onRequestGet({ request, env, data }) {
   const fetched = await fetchBreadth(env);
   let payload = fetched.payload;
 
-  if (fetched.ok) {
+  if (fetched.ok && payload?.data?.items?.length) {
     const kvPayload = {
       ts: new Date().toISOString(),
       source: payload.source,

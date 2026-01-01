@@ -137,7 +137,7 @@ export async function onRequestGet({ request, env, data }) {
   try {
     const fetchSafe = async (url, context) => {
       try {
-        const result = await fetchJsonWithFallbacks([url], {}, context);
+        const result = await fetchJsonWithFallbacks([url], { timeoutMs: 6000 }, context);
         return { ok: true, ...result };
       } catch (error) {
         return { ok: false, error };
@@ -202,18 +202,40 @@ export async function onRequestGet({ request, env, data }) {
         return response;
       }
 
+      const emptyData = {
+        updatedAt: new Date().toISOString(),
+        source: "yahoo",
+        method: "Top movers are computed by last trading day volume within a fixed mega-cap universe.",
+        crypto: [],
+        stocks: {
+          volumeLeaders: [],
+          volumeLaggards: [],
+          gainers: [],
+          losers: [],
+          universe: STOCK_UNIVERSE.map((entry) => entry.symbol)
+        },
+        movers: [],
+        dataQuality: "UPSTREAM_MISSING"
+      };
       const response = makeResponse({
         ok: false,
         feature: FEATURE_ID,
         traceId,
+        data: emptyData,
         cache: { hit: false, ttl: 0, layer: "none" },
-        upstream: { url: UPSTREAM_URL, status: null, snippet: upstreamSnippet },
-        error: {
-          code: "SCHEMA_INVALID",
-          message: "Upstream parse failed",
-          details: { errors }
+        upstream: {
+          url: UPSTREAM_URL,
+          status: errors[0]?.status || null,
+          snippet: upstreamSnippet
         },
-        status: 502
+        error: {
+          code: "UPSTREAM_MISSING",
+          message: "Upstream unavailable; no cached data",
+          details: {
+            errors,
+            upstreamStatus: errors[0]?.status || null
+          }
+        }
       });
       logServer({
         feature: FEATURE_ID,
@@ -287,16 +309,36 @@ export async function onRequestGet({ request, env, data }) {
       return response;
     }
     const errorCode = error?.name === "AbortError" ? "UPSTREAM_TIMEOUT" : "UPSTREAM_5XX";
+    const emptyData = {
+      updatedAt: new Date().toISOString(),
+      source: "yahoo",
+      method: "Top movers are computed by last trading day volume within a fixed mega-cap universe.",
+      crypto: [],
+      stocks: {
+        volumeLeaders: [],
+        volumeLaggards: [],
+        gainers: [],
+        losers: [],
+        universe: STOCK_UNIVERSE.map((entry) => entry.symbol)
+      },
+      movers: [],
+      dataQuality: "UPSTREAM_ERROR"
+    };
     const response = makeResponse({
       ok: false,
       feature: FEATURE_ID,
       traceId,
+      data: emptyData,
       cache: { hit: false, ttl: 0, layer: "none" },
       upstream: { url: UPSTREAM_URL, status: null, snippet: upstreamSnippet },
       error: {
-        code: error?.code || errorCode,
+        code: error?.code || "UPSTREAM_ERROR",
         message: error?.message || "Request failed",
-        details: error?.details || {}
+        details: {
+          ...(error?.details || {}),
+          upstreamStatus: null,
+          mappedCode: errorCode
+        }
       }
     });
     logServer({
