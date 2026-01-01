@@ -1,5 +1,6 @@
 import { fetchJSON, getBindingHint } from "./utils/api.js";
 import { getOrFetch } from "./utils/store.js";
+import { rvSetText } from "./rv-dom.js";
 
 function formatNumber(value, options = {}) {
   if (value === null || value === undefined || Number.isNaN(value)) return "–";
@@ -76,18 +77,30 @@ function render(root, payload, logger) {
           const changeValue = asset.changePercent ?? asset.change ?? 0;
           const changeClass = changeValue >= 0 ? "rv-native-positive" : "rv-native-negative";
           const label = asset.label || asset.symbol || "Asset";
+          const key = String(asset.symbol || label || "asset")
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, "-");
           return `
             <div class="rv-native-kpi">
               <div class="label">${label}</div>
-              <div class="value">$${formatNumber(asset.price, { maximumFractionDigits: 0 })}</div>
-              <div class="rv-native-note ${changeClass}">${formatNumber(changeValue, { maximumFractionDigits: 2 })}% 24h</div>
+              <div class="value" data-rv-field="price-${key}">$${formatNumber(asset.price, {
+                maximumFractionDigits: 0
+              })}</div>
+              <div class="rv-native-note ${changeClass}" data-rv-field="change-${key}">${formatNumber(changeValue, {
+                maximumFractionDigits: 2
+              })}% 24h</div>
             </div>
           `;
         })
         .join("")}
     </div>
-    <div class="rv-native-note">Updated: ${new Date(data.updatedAt || payload.ts).toLocaleTimeString()} · Source: CoinGecko</div>
+    <div class="rv-native-note" data-rv-field="updated-at">
+      Updated: ${new Date(data.updatedAt || payload.ts).toLocaleTimeString()} · Source: CoinGecko
+    </div>
   `;
+  root
+    .querySelectorAll("[data-rv-field]")
+    .forEach((node) => rvSetText(node, node.dataset.rvField, node.textContent));
 
   const warningCode = payload?.error?.code || "";
   const hasWarning = payload?.ok && warningCode;

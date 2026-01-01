@@ -1,9 +1,17 @@
 import { fetchJSON, getBindingHint } from "./utils/api.js";
 import { getOrFetch } from "./utils/store.js";
+import { rvSetText } from "./rv-dom.js";
 
 function formatNumber(value, options = {}) {
   if (value === null || value === undefined || Number.isNaN(value)) return "–";
   return new Intl.NumberFormat("en-US", options).format(value);
+}
+
+function toFieldKey(label, suffix = "") {
+  const base = String(label || "value")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-");
+  return suffix ? `${base}-${suffix}` : base;
 }
 
 function renderPanel(region, items) {
@@ -26,11 +34,15 @@ function renderPanel(region, items) {
           .map((item) => {
             const changeValue = item.change ?? null;
             const changeClass = changeValue >= 0 ? "rv-native-positive" : "rv-native-negative";
+            const key = toFieldKey(item.label || item.seriesId, "value");
+            const changeKey = toFieldKey(item.label || item.seriesId, "change");
             return `
               <div class="rv-native-kpi">
                 <div class="label">${item.label}</div>
-                <div class="value">${formatNumber(item.value, { maximumFractionDigits: 2 })}</div>
-                <div class="rv-native-note ${changeClass}">${
+                <div class="value" data-rv-field="${key}">${formatNumber(item.value, {
+                  maximumFractionDigits: 2
+                })}</div>
+                <div class="rv-native-note ${changeClass}" data-rv-field="${changeKey}">${
                   changeValue === null ? "" : `${formatNumber(changeValue, { maximumFractionDigits: 2 })} vs prior`
                 }</div>
               </div>
@@ -46,11 +58,15 @@ function renderPanel(region, items) {
           .map((item) => {
             const changeValue = item.change ?? null;
             const changeClass = changeValue >= 0 ? "rv-native-positive" : "rv-native-negative";
+            const key = toFieldKey(item.label || item.seriesId, "value");
+            const changeKey = toFieldKey(item.label || item.seriesId, "change");
             return `
               <div class="rv-native-kpi">
                 <div class="label">${item.label}</div>
-                <div class="value">${formatNumber(item.value, { maximumFractionDigits: 2 })}</div>
-                <div class="rv-native-note ${changeClass}">${
+                <div class="value" data-rv-field="${key}">${formatNumber(item.value, {
+                  maximumFractionDigits: 2
+                })}</div>
+                <div class="rv-native-note ${changeClass}" data-rv-field="${changeKey}">${
                   changeValue === null ? "" : `${formatNumber(changeValue, { maximumFractionDigits: 2 })} vs prior`
                 }</div>
               </div>
@@ -77,11 +93,15 @@ function renderFx(items) {
         .map((item) => {
           const changeValue = item.changePercent ?? null;
           const changeClass = changeValue >= 0 ? "rv-native-positive" : "rv-native-negative";
-          return `
+            const key = toFieldKey(item.label || item.seriesId, "value");
+            const changeKey = toFieldKey(item.label || item.seriesId, "change");
+            return `
             <div class="rv-native-kpi">
               <div class="label">${item.label}</div>
-              <div class="value">${formatNumber(item.value, { maximumFractionDigits: 4 })}</div>
-              <div class="rv-native-note ${changeClass}">${
+              <div class="value" data-rv-field="${key}">${formatNumber(item.value, {
+                maximumFractionDigits: 4
+              })}</div>
+              <div class="rv-native-note ${changeClass}" data-rv-field="${changeKey}">${
                 changeValue === null ? "" : `${formatNumber(changeValue, { maximumFractionDigits: 2 })}%`
               }</div>
             </div>
@@ -208,10 +228,15 @@ function render(root, payload, logger) {
         .join("")}
     </div>
     ${panels}
-    <div class="rv-native-note">Updated: ${new Date(
-      data.updatedAt || payload.ts
-    ).toLocaleTimeString()} · Source: ${data.source || "multi"}</div>
+    <div class="rv-native-note" data-rv-field="updated-at">
+      Updated: ${new Date(data.updatedAt || payload.ts).toLocaleTimeString()} · Source: ${
+        data.source || "multi"
+      }
+    </div>
   `;
+  root
+    .querySelectorAll("[data-rv-field]")
+    .forEach((node) => rvSetText(node, node.dataset.rvField, node.textContent));
 
   const tabButtons = Array.from(root.querySelectorAll("[data-rv-tab]"));
   const tabPanels = Array.from(root.querySelectorAll("[data-rv-panel]"));

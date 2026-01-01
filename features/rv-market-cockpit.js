@@ -1,6 +1,7 @@
 import { fetchJSON, getBindingHint } from "./utils/api.js";
 import { getOrFetch } from "./utils/store.js";
 import { resolveWithShadow } from "./utils/resilience.js";
+import { rvSetText } from "./rv-dom.js";
 
 function formatNumber(value, options = {}) {
   if (value === null || value === undefined || Number.isNaN(value)) return "N/A";
@@ -260,6 +261,9 @@ function render(root, payload, logger, featureId) {
       }
     </div>
   `;
+  root
+    .querySelectorAll("[data-rv-field]")
+    .forEach((node) => rvSetText(node, node.dataset.rvField, node.textContent));
 
   const status = resolved?.isStale || data.partial ? "PARTIAL" : "OK";
   logger?.setStatus(status, resolved?.isStale ? "Stale data" : data.partial ? "Partial data" : "Live");

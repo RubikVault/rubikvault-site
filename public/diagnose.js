@@ -114,6 +114,75 @@ function applyOverlay(block, summary) {
   createOverlayBadge(block, summary);
 }
 
+function createPanel() {
+  let panel = document.getElementById("rv-diag-panel");
+  if (panel) return panel;
+  panel = document.createElement("div");
+  panel.id = "rv-diag-panel";
+  panel.style.cssText =
+    "position:fixed;top:16px;right:16px;z-index:9999;width:360px;max-height:80vh;overflow:auto;background:#0b1222;color:#e5e7eb;border:1px solid rgba(255,255,255,0.15);border-radius:12px;padding:12px;box-shadow:0 10px 30px rgba(0,0,0,0.35);font:12px/1.4 system-ui, -apple-system, Segoe UI, sans-serif;";
+  document.body.appendChild(panel);
+  return panel;
+}
+
+function createButton(label, onClick) {
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.textContent = label;
+  btn.style.cssText =
+    "margin-right:6px;margin-top:6px;padding:4px 8px;border-radius:6px;border:1px solid rgba(255,255,255,0.2);background:#111827;color:#e5e7eb;font-size:11px;cursor:pointer;";
+  btn.addEventListener("click", onClick);
+  return btn;
+}
+
+function renderPanel(report) {
+  const panel = createPanel();
+  const summary = report.summary || {};
+  const issues = Array.isArray(report.issues) ? report.issues : [];
+  const issueList = issues
+    .slice(0, 10)
+    .map(
+      (issue) =>
+        `<div style="margin-bottom:4px;"><strong>${issue.blockId}</strong> ${issue.featureId} · ${issue.fieldKey} · ${issue.rootCause}</div>`
+    )
+    .join("");
+  panel.innerHTML = `
+    <div style="font-weight:600;margin-bottom:6px;">RubikVault Diagnostics</div>
+    <div style="margin-bottom:6px;">Blocks: ${summary.blocks || 0} · Invalid fields: ${
+    summary.invalidFields || 0
+  }</div>
+    <div style="margin-bottom:8px;color:#9ca3af;">Generated: ${report.generatedAt}</div>
+    <div style="margin-bottom:6px;font-weight:600;">Issues</div>
+    <div style="margin-bottom:8px;color:#cbd5f5;">${issueList || "No issues detected."}</div>
+    <pre style="white-space:pre-wrap;color:#9ca3af;background:#0f172a;padding:8px;border-radius:8px;max-height:160px;overflow:auto;">${report.compact}</pre>
+  `;
+  const copyBtn = createButton("Copy JSON", () => {
+    const text = JSON.stringify(report.full, null, 2);
+    navigator.clipboard?.writeText(text).catch(() => {
+      const textarea = document.createElement("textarea");
+      textarea.value = text;
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand("copy");
+      textarea.remove();
+    });
+  });
+  const downloadBtn = createButton("Download JSON", () => {
+    const blob = new Blob([JSON.stringify(report.full, null, 2)], {
+      type: "application/json"
+    });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "rv-diagnostics.json";
+    link.click();
+    URL.revokeObjectURL(url);
+  });
+  panel.appendChild(copyBtn);
+  panel.appendChild(downloadBtn);
+  return panel;
+}
+
 export async function runDiagnostics(opts = {}) {
   const options = { ...DEFAULT_OPTIONS, ...opts };
   const server = await fetch("/api/health-report?debug=1")
@@ -194,9 +263,27 @@ export async function runDiagnostics(opts = {}) {
   const totalInvalid = fieldRows.filter((row) => row.rootCause !== "OK").length;
   console.log("[RV_DIAG] blocks:", blockSummaries.length, "invalid fields:", totalInvalid);
 
-  return {
+  const issues = filteredRows.filter((row) => row.rootCause !== "OK");
+  const compact = JSON.stringify(
+    {
+      blocks: blockSummaries.length,
+      invalidFields: totalInvalid,
+      worst: issues.slice(0, 10)
+    },
+    null,
+    2
+  );
+  const report = {
     server,
     blocks: blockSummaries,
-    fields: filteredRows
+    fields: filteredRows,
+    issues,
+    summary: { blocks: blockSummaries.length, invalidFields: totalInvalid },
+    generatedAt: new Date().toISOString()
   };
+  report.compact = compact;
+  report.full = report;
+  window.__RV_DIAG_REPORT__ = report;
+  if (options.overlay) renderPanel(report);
+  return report;
 }

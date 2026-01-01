@@ -288,6 +288,9 @@ export async function onRequestGet(context) {
       fields: [],
       discovered: {
         serverKeys: [],
+        serverKeysTopLevel: [],
+        serverKeysMeta: [],
+        serverKeysDataTop: [],
         envelopeIssues: [],
         endpointMeta: {}
       }
@@ -419,6 +422,9 @@ export async function onRequestGet(context) {
       reason: block.reason,
       contentType
     };
+    block.discovered.serverKeysTopLevel = raw && typeof raw === "object" ? Object.keys(raw) : [];
+    block.discovered.serverKeysMeta =
+      raw?.meta && typeof raw.meta === "object" ? Object.keys(raw.meta) : [];
     if (!raw?.meta) block.discovered.envelopeIssues.push("MISSING_META");
     if (!raw?.meta?.status) block.discovered.envelopeIssues.push("MISSING_META_STATUS");
     if (raw?.ok === undefined) block.discovered.envelopeIssues.push("MISSING_OK");
@@ -426,10 +432,13 @@ export async function onRequestGet(context) {
     const dataObj = normalized?.data || null;
     if (Array.isArray(dataObj)) {
       block.discovered.serverKeys = dataObj.length ? Object.keys(dataObj[0] || {}) : [];
+      block.discovered.serverKeysDataTop = block.discovered.serverKeys;
     } else if (dataObj && typeof dataObj === "object") {
       block.discovered.serverKeys = Object.keys(dataObj);
+      block.discovered.serverKeysDataTop = block.discovered.serverKeys;
     } else {
       block.discovered.serverKeys = [];
+      block.discovered.serverKeysDataTop = [];
     }
 
     const isPreviewEmpty = endpointStatus === "EMPTY" && block.reason === "PREVIEW";

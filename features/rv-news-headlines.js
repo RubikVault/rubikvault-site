@@ -1,6 +1,7 @@
 import { fetchJSON, getBindingHint } from "./utils/api.js";
 import { getOrFetch } from "./utils/store.js";
 import { resolveWithShadow } from "./utils/resilience.js";
+import { rvSetText } from "./rv-dom.js";
 
 function formatTime(value) {
   if (!value) return "N/A";
@@ -108,18 +109,21 @@ function render(root, payload, logger, featureId) {
           return `
             <a class="rv-news-item" href="${item.url}" target="_blank" rel="noopener noreferrer">
               <span class="rv-news-icon" data-rv-cat="${category}">${icon}</span>
-              <span class="rv-news-title">${item.headline}</span>
+              <span class="rv-news-title" data-rv-field="news-title">${item.headline}</span>
               <span class="rv-news-meta">
-                <span class="rv-news-source" data-rv-source="${source.code}">[${source.code}]</span>
-                <span>${source.name} · ${formatTime(item.publishedAt)}</span>
+                <span class="rv-news-source" data-rv-source="${source.code}" data-rv-field="news-source">[${source.code}]</span>
+                <span data-rv-field="news-meta">${source.name} · ${formatTime(item.publishedAt)}</span>
               </span>
             </a>
           `;
         })
         .join("")}
     </div>
-    <div class="rv-native-note">Sources: ${data.source || "feeds"}</div>
+    <div class="rv-native-note" data-rv-field="news-sources">Sources: ${data.source || "feeds"}</div>
   `;
+  root
+    .querySelectorAll("[data-rv-field]")
+    .forEach((node) => rvSetText(node, node.dataset.rvField, node.textContent));
 
   const warningCode = resolved?.error?.code || "";
   const hasWarning = resolved?.ok && warningCode;

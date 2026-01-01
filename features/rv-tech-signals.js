@@ -1,5 +1,6 @@
 import { fetchJSON, getBindingHint } from "./utils/api.js";
 import { getOrFetch } from "./utils/store.js";
+import { rvSetText } from "./rv-dom.js";
 
 const STORAGE_KEY = "rv_watchlist_local";
 const DEFAULT_LIST = ["AAPL", "NVDA"];
@@ -88,16 +89,19 @@ function renderWatchlist(signals, symbols) {
         <tbody>
           ${rows
             .map((row) => {
+              const keyPrefix = String(row.symbol || "symbol")
+                .toLowerCase()
+                .replace(/[^a-z0-9]+/g, "-");
               const item = row.data;
               if (!item) {
                 return `
                   <tr>
-                    <td>${row.symbol}</td>
-                    <td>—</td>
-                    <td>—</td>
-                    <td>—</td>
-                    <td>—</td>
-                    <td>—</td>
+                    <td data-rv-field="watch-${keyPrefix}-symbol">${row.symbol}</td>
+                    <td data-rv-field="watch-${keyPrefix}-rsi">—</td>
+                    <td data-rv-field="watch-${keyPrefix}-rsi-weekly">—</td>
+                    <td data-rv-field="watch-${keyPrefix}-ma20">—</td>
+                    <td data-rv-field="watch-${keyPrefix}-ma50">—</td>
+                    <td data-rv-field="watch-${keyPrefix}-regime">—</td>
                   </tr>
                 `;
               }
@@ -115,12 +119,21 @@ function renderWatchlist(signals, symbols) {
                     : "rv-native-warning";
               return `
               <tr>
-                <td>${item.symbol}</td>
-                <td class="${rsiClass}">${formatNumber(item.rsi, { maximumFractionDigits: 1 })}</td>
-                <td class="${rsiWeeklyClass}">${formatNumber(item.rsiWeekly, { maximumFractionDigits: 1 })}</td>
-                <td>${formatNumber(item.ma20, { maximumFractionDigits: 2 })}</td>
-                <td>${formatNumber(item.ma50, { maximumFractionDigits: 2 })}</td>
-                <td>${item.maRegime}</td>
+                <td data-rv-field="watch-${keyPrefix}-symbol">${item.symbol}</td>
+                <td class="${rsiClass}" data-rv-field="watch-${keyPrefix}-rsi">${formatNumber(item.rsi, {
+                  maximumFractionDigits: 1
+                })}</td>
+                <td class="${rsiWeeklyClass}" data-rv-field="watch-${keyPrefix}-rsi-weekly">${formatNumber(
+                  item.rsiWeekly,
+                  { maximumFractionDigits: 1 }
+                )}</td>
+                <td data-rv-field="watch-${keyPrefix}-ma20">${formatNumber(item.ma20, {
+                  maximumFractionDigits: 2
+                })}</td>
+                <td data-rv-field="watch-${keyPrefix}-ma50">${formatNumber(item.ma50, {
+                  maximumFractionDigits: 2
+                })}</td>
+                <td data-rv-field="watch-${keyPrefix}-regime">${item.maRegime}</td>
               </tr>
             `;
             })
@@ -179,6 +192,9 @@ function renderTop30Table(payload) {
         <tbody>
           ${sorted
             .map((item) => {
+              const keyPrefix = String(item.symbol || "symbol")
+                .toLowerCase()
+                .replace(/[^a-z0-9]+/g, "-");
               const rsiClass =
                 item.rsiLabel === "Oversold"
                   ? "rv-native-negative"
@@ -189,16 +205,32 @@ function renderTop30Table(payload) {
                 value === null ? "" : value >= 0 ? "rv-native-positive" : "rv-native-negative";
               return `
                 <tr>
-                  <td>${item.symbol}</td>
-                  <td class="${rsiClass}">${formatNumber(item.rsi, { maximumFractionDigits: 1 })}</td>
-                  <td>${formatNumber(item.macd, { maximumFractionDigits: 2 })}</td>
-                  <td>${formatNumber(item.macdHist, { maximumFractionDigits: 2 })}</td>
-                  <td>${formatNumber(item.stochRsi, { maximumFractionDigits: 1 })}</td>
-                  <td class="${perfClass(item.perf1w)}">${formatPercent(item.perf1w)}</td>
-                  <td class="${perfClass(item.relPerf1w)}">${formatPercent(item.relPerf1w)}</td>
-                  <td class="${perfClass(item.perf1m)}">${formatPercent(item.perf1m)}</td>
-                  <td class="${perfClass(item.perf1y)}">${formatPercent(item.perf1y)}</td>
-                  <td>${item.maRegime}</td>
+                  <td data-rv-field="top30-${keyPrefix}-symbol">${item.symbol}</td>
+                  <td class="${rsiClass}" data-rv-field="top30-${keyPrefix}-rsi">${formatNumber(item.rsi, {
+                    maximumFractionDigits: 1
+                  })}</td>
+                  <td data-rv-field="top30-${keyPrefix}-macd">${formatNumber(item.macd, {
+                    maximumFractionDigits: 2
+                  })}</td>
+                  <td data-rv-field="top30-${keyPrefix}-macd-hist">${formatNumber(item.macdHist, {
+                    maximumFractionDigits: 2
+                  })}</td>
+                  <td data-rv-field="top30-${keyPrefix}-stoch-rsi">${formatNumber(item.stochRsi, {
+                    maximumFractionDigits: 1
+                  })}</td>
+                  <td class="${perfClass(item.perf1w)}" data-rv-field="top30-${keyPrefix}-perf-1w">${formatPercent(
+                    item.perf1w
+                  )}</td>
+                  <td class="${perfClass(item.relPerf1w)}" data-rv-field="top30-${keyPrefix}-rel-1w">${formatPercent(
+                    item.relPerf1w
+                  )}</td>
+                  <td class="${perfClass(item.perf1m)}" data-rv-field="top30-${keyPrefix}-perf-1m">${formatPercent(
+                    item.perf1m
+                  )}</td>
+                  <td class="${perfClass(item.perf1y)}" data-rv-field="top30-${keyPrefix}-perf-1y">${formatPercent(
+                    item.perf1y
+                  )}</td>
+                  <td data-rv-field="top30-${keyPrefix}-regime">${item.maRegime}</td>
                 </tr>
             `;
             })
@@ -270,6 +302,9 @@ function renderTop30(root, logger) {
   `;
 
   bindTop30Controls(root, logger);
+  root
+    .querySelectorAll("[data-rv-field]")
+    .forEach((node) => rvSetText(node, node.dataset.rvField, node.textContent));
 }
 
 function render(root, watchPayload, top30Payload, logger, symbols) {
@@ -306,6 +341,9 @@ function render(root, watchPayload, top30Payload, logger, symbols) {
     top30State.payload = top30Payload;
     renderTop30(topRoot, logger);
   }
+  root
+    .querySelectorAll("[data-rv-field]")
+    .forEach((node) => rvSetText(node, node.dataset.rvField, node.textContent));
 
   const okBoth = watchPayload?.ok && top30Payload?.ok;
   const okOne = watchPayload?.ok || top30Payload?.ok;

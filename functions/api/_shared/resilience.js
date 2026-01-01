@@ -29,6 +29,41 @@ function defaultValidator(data) {
   return { passed: false, failReason: "EMPTY_DATA" };
 }
 
+function isDataEmpty(data) {
+  if (!data || typeof data !== "object") return true;
+  if (Array.isArray(data)) return data.length === 0;
+  return Object.keys(data).length === 0;
+}
+
+function enforceEnvelope(response) {
+  const next = response || {};
+  const meta = next.meta || {};
+  if (!meta.status) {
+    meta.status = "EMPTY";
+    meta.reason = meta.reason || "MISSING_STATUS";
+    next.ok = false;
+  }
+  const dataEmpty = isDataEmpty(next.data);
+  if (meta.status === "LIVE" && dataEmpty) {
+    meta.status = "EMPTY";
+    meta.reason = "LIVE_WITHOUT_DATA";
+    next.ok = false;
+    if (!next.error || !next.error.code) {
+      next.error = { code: "LIVE_WITHOUT_DATA", message: "Live response without data" };
+    }
+  }
+  if (meta.status === "STALE" && dataEmpty) {
+    meta.status = "EMPTY";
+    meta.reason = "NO_LASTGOOD_AVAILABLE";
+    next.ok = false;
+    if (!next.error || !next.error.code) {
+      next.error = { code: "NO_LASTGOOD_AVAILABLE", message: "Stale response without data" };
+    }
+  }
+  next.meta = meta;
+  return next;
+}
+
 function parseSavedAt(value) {
   if (!value) return null;
   const ts = Date.parse(value);
@@ -148,7 +183,7 @@ export async function withResilience(context, cfg) {
         durationMs: Date.now() - nowMs,
         errorCode: meta.reason || ""
       });
-      return jsonResponse(response, { status: 200, cacheStatus: "STALE" });
+      return jsonResponse(enforceEnvelope(response), { status: 200, cacheStatus: "STALE" });
     }
 
     meta.status = "EMPTY";
@@ -182,7 +217,7 @@ export async function withResilience(context, cfg) {
       durationMs: Date.now() - nowMs,
       errorCode: error.code
     });
-    return jsonResponse(response, { status: 200, cacheStatus: "ERROR" });
+    return jsonResponse(enforceEnvelope(response), { status: 200, cacheStatus: "ERROR" });
   }
 
   let fetchResult = null;
@@ -276,7 +311,7 @@ export async function withResilience(context, cfg) {
         durationMs: Date.now() - nowMs,
         errorCode: fetchError?.code || "UPSTREAM_FAIL"
       });
-      return jsonResponse(response, { status: 200, cacheStatus: "STALE" });
+      return jsonResponse(enforceEnvelope(response), { status: 200, cacheStatus: "STALE" });
     }
 
     meta.status = "EMPTY";
@@ -309,7 +344,7 @@ export async function withResilience(context, cfg) {
       durationMs: Date.now() - nowMs,
       errorCode: fetchError?.code || "UPSTREAM_MISSING"
     });
-    return jsonResponse(response, { status: 200, cacheStatus: "ERROR" });
+    return jsonResponse(enforceEnvelope(response), { status: 200, cacheStatus: "ERROR" });
   }
 
   const validator = cfg.validator || defaultValidator;
@@ -347,7 +382,7 @@ export async function withResilience(context, cfg) {
         durationMs: Date.now() - nowMs,
         errorCode: "QUALITY_FAIL"
       });
-      return jsonResponse(response, { status: 200, cacheStatus: "STALE" });
+      return jsonResponse(enforceEnvelope(response), { status: 200, cacheStatus: "STALE" });
     }
 
     meta.status = "EMPTY";
@@ -380,7 +415,7 @@ export async function withResilience(context, cfg) {
       durationMs: Date.now() - nowMs,
       errorCode: "EMPTY_DATA"
     });
-    return jsonResponse(response, { status: 200, cacheStatus: "ERROR" });
+    return jsonResponse(enforceEnvelope(response), { status: 200, cacheStatus: "ERROR" });
   }
 
   let writeSavedAt = lastGood?.meta?.savedAt || null;
@@ -431,5 +466,5 @@ export async function withResilience(context, cfg) {
     durationMs: Date.now() - nowMs,
     errorCode: ""
   });
-  return jsonResponse(response, { status: 200, cacheStatus: "MISS" });
+  return jsonResponse(enforceEnvelope(response), { status: 200, cacheStatus: "MISS" });
 }
