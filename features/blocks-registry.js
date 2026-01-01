@@ -58,8 +58,17 @@ const mergedRegistry = {
   ...LIVE_BLOCKS
 };
 
+function normalizeRegistry(registryList) {
+  const list = Array.isArray(registryList) ? registryList.slice() : [];
+  return list.map((entry, index) => ({
+    ...entry,
+    id: String(entry.id || index + 1).padStart(2, "0")
+  }));
+}
+
 const normalizedRegistry = {};
 let fallbackIndex = 0;
+const registryList = [];
 
 Object.entries(mergedRegistry).forEach(([featureId, entry]) => {
   if (!entry) return;
@@ -68,8 +77,13 @@ Object.entries(mergedRegistry).forEach(([featureId, entry]) => {
   const expectedMinItems = Number.isFinite(entry.expectedMinItems) ? entry.expectedMinItems : 0;
   const defaultFields = [
     {
-      key: "__auto__",
-      type: "auto",
+      key: "data",
+      path: "data",
+      kind: "object",
+      validator: "nonEmpty",
+      reasonOnFail: "empty_data",
+      fixHint:
+        "Endpoint liefert EMPTY/QUALITY_FAIL → prüfe upstream/validator/mapper; in Preview erst seed in Prod erzeugen.",
       required: expectedMinItems > 0
     }
   ];
@@ -80,6 +94,7 @@ Object.entries(mergedRegistry).forEach(([featureId, entry]) => {
     featureId,
     title: entry.title || meta.title || toTitle(featureId),
     api: entry.api ?? meta.api ?? null,
+    apiPath: entry.api ? `/api/${entry.api}` : null,
     fields: Array.isArray(entry.fields) ? entry.fields : defaultFields,
     fixHints: entry.fixHints || {}
   };
@@ -94,8 +109,14 @@ Object.entries(mergedRegistry).forEach(([featureId, entry]) => {
   }
 
   normalizedRegistry[featureId] = normalizedEntry;
+  registryList.push(normalizedEntry);
 });
 
 export const BLOCK_REGISTRY = normalizedRegistry;
+export const BLOCK_REGISTRY_LIST = normalizeRegistry(registryList);
+export function listBlockIds() {
+  return BLOCK_REGISTRY_LIST.map((entry) => entry.id);
+}
+export { normalizeRegistry };
 
 export const MIRROR_IDS = Object.values(BLOCK_REGISTRY).flatMap((entry) => entry.mirrorFiles);
