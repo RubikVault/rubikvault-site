@@ -82,6 +82,12 @@ export async function onRequest(context) {
   const url = new URL(request.url);
   const started = Date.now();
   const isApi = url.pathname.startsWith("/api/");
+  const cronToken = env?.RV_CRON_TOKEN || "";
+  const authHeader = request.headers.get("authorization") || "";
+  const allowWrites =
+    env?.RV_ALLOW_WRITE_ON_VIEW === "1" ||
+    (cronToken && authHeader === `Bearer ${cronToken}`);
+  if (env) env.__RV_ALLOW_WRITE__ = allowWrites;
 
   // CORS (immer an – du kannst später tighten)
   if (request.method === "OPTIONS") {

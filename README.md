@@ -150,6 +150,17 @@ Optional:
 Verify:
 - `curl -sS https://rubikvault.com/api/breakout-energy | jq '.dataQuality,.cache.layer'`
 
+## Seeding Auth
+GitHub Actions secrets:
+- `PROD_URL` = `https://rubikvault.com`
+- `RV_CRON_TOKEN` = long random token
+
+Cloudflare Pages secrets (Preview + Production):
+- `RV_CRON_TOKEN` = same token value
+- `RV_ALLOW_WRITE_ON_VIEW` = do not set (default READONLY)
+
+Note: `x-rv-cron` alone is not trusted; writes require the bearer token.
+
 ## Security Notes
 - No API keys are exposed to the client
 - CORS is handled at Functions level; `/api/*` is canonical

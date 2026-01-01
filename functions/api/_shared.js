@@ -261,6 +261,7 @@ export async function kvGetJson(context, key) {
 
 export async function kvPutJson(context, key, value, ttlSeconds) {
   const env = context?.env || context;
+  if (!env?.RV_ALLOW_WRITE_ON_VIEW && !env?.__RV_ALLOW_WRITE__) return;
   if (!env?.RV_KV) return;
   let expirationTtl = ttlSeconds;
   if (typeof ttlSeconds === "object" && ttlSeconds !== null) {

@@ -1,5 +1,7 @@
 import { jsonResponse, makeJson, safeSnippet, logServer } from "../_shared.js";
 
+const ALLOW_EMPTY_FEATURES = new Set();
+
 function nowIso() {
   return new Date().toISOString();
 }
@@ -19,6 +21,11 @@ function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+function isHtmlLike(text) {
+  const trimmed = String(text || "").trim().toLowerCase();
+  return trimmed.startsWith("<!doctype") || trimmed.startsWith("<html");
+}
+
 function defaultValidator(data) {
   if (Array.isArray(data)) {
     return { passed: data.length > 0 };
@@ -35,29 +42,46 @@ function isDataEmpty(data) {
   return Object.keys(data).length === 0;
 }
 
-function enforceEnvelope(response) {
+function enforceEnvelope(response, { allowEmptyData = false, lastGoodData = null, hasLastGood = false } = {}) {
   const next = response || {};
   const meta = next.meta || {};
+  if (!meta.ts) meta.ts = nowIso();
+  if (!meta.schemaVersion) meta.schemaVersion = 1;
+  if (!Array.isArray(meta.warnings)) meta.warnings = [];
   if (!meta.status) {
     meta.status = "EMPTY";
     meta.reason = meta.reason || "MISSING_STATUS";
     next.ok = false;
   }
   const dataEmpty = isDataEmpty(next.data);
-  if (meta.status === "LIVE" && dataEmpty) {
-    meta.status = "EMPTY";
-    meta.reason = "LIVE_WITHOUT_DATA";
-    next.ok = false;
-    if (!next.error || !next.error.code) {
-      next.error = { code: "LIVE_WITHOUT_DATA", message: "Live response without data" };
+  if (meta.status === "LIVE" && dataEmpty && !allowEmptyData) {
+    meta.warnings.push("EMPTY_LIVE_GUARD");
+    if (hasLastGood && lastGoodData) {
+      meta.status = "STALE";
+      meta.reason = meta.reason || "EMPTY_LIVE_GUARD";
+      next.data = lastGoodData;
+      next.ok = true;
+    } else {
+      meta.status = "EMPTY";
+      meta.reason = meta.reason || "NO_DATA_YET";
+      next.ok = false;
+      if (!next.error || !next.error.code) {
+        next.error = { code: "LIVE_WITHOUT_DATA", message: "Live response without data" };
+      }
     }
   }
   if (meta.status === "STALE" && dataEmpty) {
-    meta.status = "EMPTY";
-    meta.reason = "NO_LASTGOOD_AVAILABLE";
-    next.ok = false;
-    if (!next.error || !next.error.code) {
-      next.error = { code: "NO_LASTGOOD_AVAILABLE", message: "Stale response without data" };
+    meta.warnings.push("STALE_WITHOUT_DATA");
+    if (hasLastGood && lastGoodData) {
+      next.data = lastGoodData;
+      next.ok = true;
+    } else {
+      meta.status = "EMPTY";
+      meta.reason = meta.reason || "NO_LASTGOOD_AVAILABLE";
+      next.ok = false;
+      if (!next.error || !next.error.code) {
+        next.error = { code: "NO_LASTGOOD_AVAILABLE", message: "Stale response without data" };
+      }
     }
   }
   next.meta = meta;
@@ -101,6 +125,41 @@ function mapCircuitStatus(error) {
   return null;
 }
 
+function computeAllowWrites(request, env) {
+  if (env?.RV_ALLOW_WRITE_ON_VIEW === "1") return true;
+  const headerFlag = request?.headers?.get("x-rv-cron") === "1";
+  if (headerFlag) return true;
+  const token = env?.RV_CRON_TOKEN || "";
+  if (!token) return false;
+  const auth = request?.headers?.get("authorization") || "";
+  if (!auth.startsWith("Bearer ")) return false;
+  return auth.slice(7) === token;
+}
+
+async function loadMirrorPayload(origin, featureId) {
+  if (!origin || !featureId) return null;
+  const url = `${origin}/mirrors/${featureId}.json`;
+  try {
+    const response = await fetch(url, { headers: { Accept: "application/json" } });
+    const text = await response.text();
+    if (!response.ok || isHtmlLike(text)) return null;
+    const payload = JSON.parse(text);
+    return payload && typeof payload === "object" ? payload : null;
+  } catch (error) {
+    return null;
+  }
+}
+
+function extractMirrorData(payload) {
+  if (!payload || typeof payload !== "object") return null;
+  const inner = payload.payload && typeof payload.payload === "object" ? payload.payload : payload;
+  if (inner && typeof inner === "object" && inner.data) return inner.data;
+  if (Array.isArray(inner?.items) || inner?.context) {
+    return { items: inner.items || [], context: inner.context || {} };
+  }
+  return inner;
+}
+
 export async function withResilience(context, cfg) {
   const { request, env } = context;
   const traceId = createTraceId();
@@ -111,9 +170,13 @@ export async function withResilience(context, cfg) {
     hostname.includes("pages.dev") ||
     (env?.CF_PAGES_BRANCH && env.CF_PAGES_BRANCH !== "main");
   const isDebug = url.searchParams.get("debug") === "1";
+  const allowWrites = computeAllowWrites(request, env);
+  const readOnly = !allowWrites;
   const KV = env?.RV_KV || null;
   const featureId = cfg.featureId || "unknown";
   const version = cfg.version || "v1";
+  const allowEmptyData =
+    cfg.allowEmptyData === true || ALLOW_EMPTY_FEATURES.has(featureId);
   const lastGoodKey = `rv:lastgood:${featureId}:${version}`;
   const circuitKey = `rv:circuit:${featureId}:${version}`;
   const nowMs = Date.now();
@@ -150,13 +213,62 @@ export async function withResilience(context, cfg) {
     ageMinutes: ageMinutes(savedAtMs),
     traceId,
     circuitOpen: Boolean(circuitOpen),
-    reason: null
+    reason: null,
+    writeMode: allowWrites ? "WRITE" : "READONLY"
   };
 
-  if (isPreview || circuitOpen) {
+  if (isPreview || circuitOpen || readOnly) {
+    const reason = isPreview ? "PREVIEW" : circuitOpen ? "CIRCUIT_OPEN" : "READONLY";
+    const mirrorPayload =
+      !lastGoodValid || isPreview || !KV || readOnly
+        ? await loadMirrorPayload(url.origin, featureId)
+        : null;
+    if (mirrorPayload) {
+      const mirrorData = extractMirrorData(mirrorPayload);
+      const mirrorQuality = (cfg.validator || defaultValidator)(mirrorData);
+      if (mirrorQuality?.passed) {
+        meta.status = "STALE";
+        meta.reason = "MIRROR_FALLBACK";
+        const payload = makeJson({
+          ok: true,
+          feature: featureId,
+          traceId,
+          data: mirrorData,
+          cache: { hit: true, ttl: cfg.ttlStaleSec, layer: "mirror" },
+          upstream: { url: "mirror", status: null, snippet: "" },
+          error: {},
+          isStale: true
+        });
+        const response = { ...payload, meta };
+        if (isDebug) {
+          response.debug = {
+            upstreamStatus: null,
+            quality: mirrorQuality,
+            timingsMs: { kv: timings.kv, fetch: 0, total: Date.now() - nowMs }
+          };
+        }
+        logServer({
+          feature: featureId,
+          traceId,
+          cacheLayer: "mirror",
+          upstreamStatus: null,
+          durationMs: Date.now() - nowMs,
+          errorCode: meta.reason || ""
+        });
+        return jsonResponse(
+          enforceEnvelope(response, {
+            allowEmptyData,
+            lastGoodData: lastGood?.data || null,
+            hasLastGood: lastGoodValid
+          }),
+          { status: 200, cacheStatus: "STALE" }
+        );
+      }
+    }
+
     if (lastGoodValid) {
       meta.status = "STALE";
-      meta.reason = isPreview ? "PREVIEW" : "CIRCUIT_OPEN";
+      meta.reason = reason;
       const payload = makeJson({
         ok: true,
         feature: featureId,
@@ -183,11 +295,18 @@ export async function withResilience(context, cfg) {
         durationMs: Date.now() - nowMs,
         errorCode: meta.reason || ""
       });
-      return jsonResponse(enforceEnvelope(response), { status: 200, cacheStatus: "STALE" });
+      return jsonResponse(
+        enforceEnvelope(response, {
+          allowEmptyData,
+          lastGoodData: lastGood?.data || null,
+          hasLastGood: lastGoodValid
+        }),
+        { status: 200, cacheStatus: "STALE" }
+      );
     }
 
     meta.status = "EMPTY";
-    meta.reason = isPreview ? "PREVIEW" : "CIRCUIT_OPEN";
+    meta.reason = reason;
     const error = {
       code: "NO_DATA_YET",
       message: "No cached data available"
@@ -217,7 +336,14 @@ export async function withResilience(context, cfg) {
       durationMs: Date.now() - nowMs,
       errorCode: error.code
     });
-    return jsonResponse(enforceEnvelope(response), { status: 200, cacheStatus: "ERROR" });
+    return jsonResponse(
+      enforceEnvelope(response, {
+        allowEmptyData,
+        lastGoodData: lastGood?.data || null,
+        hasLastGood: lastGoodValid
+      }),
+      { status: 200, cacheStatus: "ERROR" }
+    );
   }
 
   let fetchResult = null;
@@ -270,7 +396,7 @@ export async function withResilience(context, cfg) {
 
   if (fetchError) {
     const circuitStatus = mapCircuitStatus(fetchError);
-    if (KV && circuitStatus) {
+    if (KV && circuitStatus && allowWrites) {
       try {
         await KV.put(circuitKey, "1", { expirationTtl: cfg.circuitSec });
         meta.circuitOpen = true;
@@ -311,7 +437,14 @@ export async function withResilience(context, cfg) {
         durationMs: Date.now() - nowMs,
         errorCode: fetchError?.code || "UPSTREAM_FAIL"
       });
-      return jsonResponse(enforceEnvelope(response), { status: 200, cacheStatus: "STALE" });
+      return jsonResponse(
+        enforceEnvelope(response, {
+          allowEmptyData,
+          lastGoodData: lastGood?.data || null,
+          hasLastGood: lastGoodValid
+        }),
+        { status: 200, cacheStatus: "STALE" }
+      );
     }
 
     meta.status = "EMPTY";
@@ -344,7 +477,14 @@ export async function withResilience(context, cfg) {
       durationMs: Date.now() - nowMs,
       errorCode: fetchError?.code || "UPSTREAM_MISSING"
     });
-    return jsonResponse(enforceEnvelope(response), { status: 200, cacheStatus: "ERROR" });
+    return jsonResponse(
+      enforceEnvelope(response, {
+        allowEmptyData,
+        lastGoodData: lastGood?.data || null,
+        hasLastGood: lastGoodValid
+      }),
+      { status: 200, cacheStatus: "ERROR" }
+    );
   }
 
   const validator = cfg.validator || defaultValidator;
@@ -382,7 +522,14 @@ export async function withResilience(context, cfg) {
         durationMs: Date.now() - nowMs,
         errorCode: "QUALITY_FAIL"
       });
-      return jsonResponse(enforceEnvelope(response), { status: 200, cacheStatus: "STALE" });
+      return jsonResponse(
+        enforceEnvelope(response, {
+          allowEmptyData,
+          lastGoodData: lastGood?.data || null,
+          hasLastGood: lastGoodValid
+        }),
+        { status: 200, cacheStatus: "STALE" }
+      );
     }
 
     meta.status = "EMPTY";
@@ -415,7 +562,14 @@ export async function withResilience(context, cfg) {
       durationMs: Date.now() - nowMs,
       errorCode: "EMPTY_DATA"
     });
-    return jsonResponse(enforceEnvelope(response), { status: 200, cacheStatus: "ERROR" });
+    return jsonResponse(
+      enforceEnvelope(response, {
+        allowEmptyData,
+        lastGoodData: lastGood?.data || null,
+        hasLastGood: lastGoodValid
+      }),
+      { status: 200, cacheStatus: "ERROR" }
+    );
   }
 
   let writeSavedAt = lastGood?.meta?.savedAt || null;
@@ -423,7 +577,7 @@ export async function withResilience(context, cfg) {
   const shouldWrite =
     !Number.isFinite(lastSavedMs) || nowMs - lastSavedMs >= 60000;
 
-  if (KV && shouldWrite) {
+  if (KV && shouldWrite && allowWrites) {
     try {
       writeSavedAt = nowIso();
       await KV.put(
@@ -466,5 +620,12 @@ export async function withResilience(context, cfg) {
     durationMs: Date.now() - nowMs,
     errorCode: ""
   });
-  return jsonResponse(enforceEnvelope(response), { status: 200, cacheStatus: "MISS" });
+  return jsonResponse(
+    enforceEnvelope(response, {
+      allowEmptyData,
+      lastGoodData: lastGood?.data || null,
+      hasLastGood: lastGoodValid
+    }),
+    { status: 200, cacheStatus: "MISS" }
+  );
 }

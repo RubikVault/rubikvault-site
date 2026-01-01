@@ -84,6 +84,9 @@ export async function kvGetJson(env, key) {
 
 export async function kvPutJson(env, key, value, ttlSeconds) {
   const started = Date.now();
+  if (!env?.RV_ALLOW_WRITE_ON_VIEW && !env?.__RV_ALLOW_WRITE__) {
+    return { layer: "none", hit: false, durationMs: Date.now() - started };
+  }
   const missing = !env?.RV_KV || typeof env.RV_KV.put !== "function";
   if (missing) {
     memSet(key, value);

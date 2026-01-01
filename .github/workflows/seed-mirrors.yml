@@ -1,0 +1,36 @@
+name: Seed Mirrors
+
+on:
+  schedule:
+    - cron: "0 */6 * * *"
+  workflow_dispatch:
+
+jobs:
+  seed:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Seed mirrors
+        env:
+          PROD_URL: ${{ secrets.PROD_URL }}
+          RV_CRON_TOKEN: ${{ secrets.RV_CRON_TOKEN }}
+        run: node scripts/seed-mirrors.mjs
+
+      - name: Commit mirrors if changed
+        run: |
+          if git status --porcelain | grep -q "public/mirrors/"; then
+            git config user.name "RubikVault Bot"
+            git config user.email "bot@rubikvault.com"
+            git add public/mirrors/
+            git commit -m "chore: update mirrors"
+            git push
+          else
+            echo "No mirror changes."
+          fi
