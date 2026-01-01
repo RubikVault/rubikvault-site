@@ -107,6 +107,21 @@ function isDataEmpty(data) {
   return Object.keys(data).length === 0;
 }
 
+function hashRegistry(entries) {
+  const payload = JSON.stringify(
+    (entries || []).map((entry) => ({
+      id: entry.id,
+      featureId: entry.featureId,
+      apiPath: entry.apiPath
+    }))
+  );
+  let hash = 0;
+  for (let i = 0; i < payload.length; i += 1) {
+    hash = (hash * 31 + payload.charCodeAt(i)) >>> 0;
+  }
+  return hash.toString(36).padStart(8, "0").slice(0, 8);
+}
+
 function resolveFieldValidity(value, field, context = {}) {
   if (!field) return { valid: true, reason: null };
   const fieldType = field.type || field.kind || "auto";
@@ -283,11 +298,12 @@ export async function onRequestGet(context) {
         data: normalized?.data
       });
       let fix = null;
+      const isOptional = field.required === false && field.optional === true;
       if (isEndpointError) {
         valid = false;
         reason = "ENDPOINT_ERROR";
         fix = "Endpoint error. Check routing, schema, or upstream availability.";
-      } else if (forceEmptyInvalid && field.required) {
+      } else if (forceEmptyInvalid && !isOptional) {
         valid = false;
         if (block.reason === "PREVIEW") {
           reason = "EMPTY_PREVIEW";
@@ -301,7 +317,7 @@ export async function onRequestGet(context) {
           reason = "EMPTY_UPSTREAM";
           fix = "Seed lastGood in PROD or validate upstream response.";
         }
-      } else if ((isPreviewEmpty || isClientOnly) && value === undefined) {
+      } else if (isPreviewEmpty || isClientOnly) {
         valid = true;
         reason = null;
       } else if (!valid) {
@@ -339,7 +355,11 @@ export async function onRequestGet(context) {
     },
     summary: { blocks: results.length, okBlocks, badBlocks },
     blocks: results,
-    meta: { generatedAt: now, traceId }
+    meta: {
+      generatedAt: now,
+      traceId,
+      registryHash: hashRegistry(registryEntries)
+    }
   };
 
   return jsonResponse(payload, 200, { "X-RV-Trace": traceId });

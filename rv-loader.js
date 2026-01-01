@@ -10,7 +10,7 @@ import {
 import { applyOverrides } from "./features/utils/flags.js";
 import { resolveApiBase } from "./features/utils/api.js";
 import { initFlagsPanel } from "./features/rv-flags-panel.js";
-import { BLOCK_REGISTRY } from "./features/blocks-registry.js";
+import { BLOCK_REGISTRY, formatBlockTitle } from "./features/blocks-registry.js";
 
 const RUN_ID = (() => {
   if (typeof window === "undefined") return "";
@@ -938,8 +938,14 @@ function initBlock(section, feature) {
   const featureId = section.getAttribute("data-rv-feature") || feature?.id || "unknown";
   const registry = BLOCK_REGISTRY[featureId] || null;
   if (registry?.id) {
+    const formattedTitle = formatBlockTitle(registry);
     section.setAttribute("data-block-id", registry.id);
     section.setAttribute("data-feature-id", registry.featureId || featureId);
+    section.setAttribute("data-rv-block-name", formattedTitle);
+    const titleEl = section.querySelector("h2, h3, .block-title, .card-title");
+    if (titleEl) {
+      titleEl.textContent = formattedTitle;
+    }
   }
   const blockName = getBlockName(section, feature);
   registerBlock({

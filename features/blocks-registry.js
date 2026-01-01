@@ -52,6 +52,24 @@ function toTitle(featureId) {
     .join(" ");
 }
 
+function cleanTitle(rawTitle = "") {
+  const value = String(rawTitle || "").trim();
+  if (!value) return "Untitled";
+  return value
+    .replace(/^Block\s+[0-9]{1,2}\s*[-–—]\s*/i, "")
+    .replace(/^Block\s+XX\s*[-–—]\s*/i, "")
+    .replace(/^Hero\s*[-–—]\s*/i, "")
+    .replace(/^Block\s+[-–—]\s*/i, "")
+    .trim();
+}
+
+export function formatBlockTitle(block) {
+  if (!block) return "Block -- — Untitled";
+  const id = String(block.id || "00").padStart(2, "0");
+  const title = cleanTitle(block.title || block.featureId || "");
+  return `Block ${id} — ${title}`;
+}
+
 const mergedRegistry = {
   ...CONTINUOUS_BLOCKS,
   ...EVENT_BLOCKS,
@@ -113,7 +131,11 @@ Object.entries(mergedRegistry).forEach(([featureId, entry]) => {
 });
 
 export const BLOCK_REGISTRY = normalizedRegistry;
-export const BLOCK_REGISTRY_LIST = normalizeRegistry(registryList);
+const orderedRegistryList = [
+  ...BLOCK_ORDER.map((featureId) => normalizedRegistry[featureId]).filter(Boolean),
+  ...registryList.filter((entry) => !BLOCK_ID_MAP.has(entry.featureId))
+];
+export const BLOCK_REGISTRY_LIST = normalizeRegistry(orderedRegistryList);
 export function listBlockIds() {
   return BLOCK_REGISTRY_LIST.map((entry) => entry.id);
 }
