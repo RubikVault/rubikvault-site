@@ -1,6 +1,56 @@
+import { FEATURES } from "../rv-config.js";
 import { CONTINUOUS_BLOCKS } from "./blocks-registry-continuous.js";
 import { EVENT_BLOCKS } from "./blocks-registry-event.js";
 import { LIVE_BLOCKS } from "./blocks-registry-live.js";
+
+const BLOCK_ORDER = [
+  "rv-market-cockpit",
+  "rv-yield-curve",
+  "rv-sector-rotation",
+  "rv-central-bank-watch",
+  "rv-market-health",
+  "rv-price-snapshot",
+  "rv-top-movers",
+  "rv-earnings-calendar",
+  "rv-news-headlines",
+  "rv-news-intelligence",
+  "rv-watchlist-local",
+  "rv-export-csv",
+  "rv-macro-rates",
+  "rv-sp500-sectors",
+  "rv-market-regime",
+  "rv-arb-risk-regime",
+  "rv-arb-liquidity-pulse",
+  "rv-arb-breadth-lite",
+  "rv-why-moved",
+  "rv-volume-anomaly",
+  "rv-breakout-energy",
+  "rv-hype-divergence",
+  "rv-congress-trading",
+  "rv-insider-cluster",
+  "rv-analyst-stampede",
+  "rv-smart-money",
+  "rv-alpha-performance",
+  "rv-earnings-reality",
+  "rv-crypto-snapshot",
+  "rv-sentiment-barometer",
+  "rv-tech-signals",
+  "rv-alpha-radar"
+];
+
+const FEATURE_META = new Map((FEATURES || []).map((entry) => [entry.id, entry]));
+const BLOCK_ID_MAP = new Map(
+  BLOCK_ORDER.map((featureId, index) => [featureId, String(index + 1).padStart(2, "0")])
+);
+
+function toTitle(featureId) {
+  if (!featureId) return "Unknown";
+  return featureId
+    .replace(/^rv-/, "")
+    .split("-")
+    .map((chunk) => chunk.charAt(0).toUpperCase() + chunk.slice(1))
+    .join(" ");
+}
 
 const mergedRegistry = {
   ...CONTINUOUS_BLOCKS,
@@ -8,18 +58,44 @@ const mergedRegistry = {
   ...LIVE_BLOCKS
 };
 
-Object.values(mergedRegistry).forEach((entry) => {
+const normalizedRegistry = {};
+let fallbackIndex = 0;
+
+Object.entries(mergedRegistry).forEach(([featureId, entry]) => {
   if (!entry) return;
-  if (!entry.emptyPolicy) {
-    entry.emptyPolicy =
-      entry.blockType === "CONTINUOUS"
+  const meta = FEATURE_META.get(featureId) || {};
+  const resolvedId = BLOCK_ID_MAP.get(featureId) || String(BLOCK_ORDER.length + ++fallbackIndex).padStart(2, "0");
+  const expectedMinItems = Number.isFinite(entry.expectedMinItems) ? entry.expectedMinItems : 0;
+  const defaultFields = [
+    {
+      key: "__auto__",
+      type: "auto",
+      required: expectedMinItems > 0
+    }
+  ];
+
+  const normalizedEntry = {
+    ...entry,
+    id: entry.id || resolvedId,
+    featureId,
+    title: entry.title || meta.title || toTitle(featureId),
+    api: entry.api ?? meta.api ?? null,
+    fields: Array.isArray(entry.fields) ? entry.fields : defaultFields,
+    fixHints: entry.fixHints || {}
+  };
+
+  if (!normalizedEntry.emptyPolicy) {
+    normalizedEntry.emptyPolicy =
+      normalizedEntry.blockType === "CONTINUOUS"
         ? "NEVER_EMPTY"
-        : entry.blockType === "LIVE"
+        : normalizedEntry.blockType === "LIVE"
           ? "STALE_OK"
           : "EMPTY_OK_WITH_CONTEXT";
   }
+
+  normalizedRegistry[featureId] = normalizedEntry;
 });
 
-export const BLOCK_REGISTRY = mergedRegistry;
+export const BLOCK_REGISTRY = normalizedRegistry;
 
 export const MIRROR_IDS = Object.values(BLOCK_REGISTRY).flatMap((entry) => entry.mirrorFiles);

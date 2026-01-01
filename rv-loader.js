@@ -936,6 +936,11 @@ function initBlock(section, feature) {
   const root = section.querySelector("[data-rv-root]");
   if (!root) return;
   const featureId = section.getAttribute("data-rv-feature") || feature?.id || "unknown";
+  const registry = BLOCK_REGISTRY[featureId] || null;
+  if (registry?.id) {
+    section.setAttribute("data-block-id", registry.id);
+    section.setAttribute("data-feature-id", registry.featureId || featureId);
+  }
   const blockName = getBlockName(section, feature);
   registerBlock({
     id: featureId,
