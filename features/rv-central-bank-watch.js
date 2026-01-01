@@ -70,7 +70,7 @@ function render(root, payload, logger) {
 
   root.innerHTML = `
     ${partialNote ? `<div class="rv-native-note">${partialNote}</div>` : ""}
-    <div class="rv-bank-list">
+    <div class="rv-bank-list" data-rv-field="items">
       ${items
         .slice(0, 8)
         .map(

@@ -285,7 +285,12 @@ export async function onRequestGet(context) {
       error: null,
       circuitOpen: null,
       invalidFields: 0,
-      fields: []
+      fields: [],
+      discovered: {
+        serverKeys: [],
+        envelopeIssues: [],
+        endpointMeta: {}
+      }
     };
 
     if (!endpoint) {
@@ -350,6 +355,12 @@ export async function onRequestGet(context) {
         code: "NON_JSON_RESPONSE",
         message: parseFailed ? "JSON parse failed" : "Response was not JSON"
       };
+      block.discovered.envelopeIssues.push("NON_JSON_RESPONSE");
+      block.discovered.endpointMeta = {
+        httpStatus: responseStatus,
+        contentType,
+        reason: block.reason
+      };
       block.fields = fields.map((field) => ({
         key: field.key,
         path: field.path || field.key,
@@ -402,6 +413,24 @@ export async function onRequestGet(context) {
     }
     block.error = raw?.error ? { code: raw.error.code, message: raw.error.message } : null;
     block.circuitOpen = raw?.meta?.circuitOpen ?? null;
+    block.discovered.endpointMeta = {
+      httpStatus: responseStatus,
+      status: endpointStatus,
+      reason: block.reason,
+      contentType
+    };
+    if (!raw?.meta) block.discovered.envelopeIssues.push("MISSING_META");
+    if (!raw?.meta?.status) block.discovered.envelopeIssues.push("MISSING_META_STATUS");
+    if (raw?.ok === undefined) block.discovered.envelopeIssues.push("MISSING_OK");
+    if (!raw?.feature) block.discovered.envelopeIssues.push("MISSING_FEATURE");
+    const dataObj = normalized?.data || null;
+    if (Array.isArray(dataObj)) {
+      block.discovered.serverKeys = dataObj.length ? Object.keys(dataObj[0] || {}) : [];
+    } else if (dataObj && typeof dataObj === "object") {
+      block.discovered.serverKeys = Object.keys(dataObj);
+    } else {
+      block.discovered.serverKeys = [];
+    }
 
     const isPreviewEmpty = endpointStatus === "EMPTY" && block.reason === "PREVIEW";
     const isClientOnly = block.reason === "CLIENT_ONLY";

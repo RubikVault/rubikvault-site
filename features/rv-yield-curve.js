@@ -71,14 +71,14 @@ function render(root, payload, logger, featureId) {
         </tr>
       </thead>
       <tbody>
-        <tr><td>1M</td><td>${formatNumber(yields["1m"], { maximumFractionDigits: 2 })}</td></tr>
-        <tr><td>3M</td><td>${formatNumber(yields["3m"], { maximumFractionDigits: 2 })}</td></tr>
-        <tr><td>6M</td><td>${formatNumber(yields["6m"], { maximumFractionDigits: 2 })}</td></tr>
-        <tr><td>1Y</td><td>${formatNumber(yields["1y"], { maximumFractionDigits: 2 })}</td></tr>
-        <tr><td>2Y</td><td>${formatNumber(yields["2y"], { maximumFractionDigits: 2 })}</td></tr>
-        <tr><td>5Y</td><td>${formatNumber(yields["5y"], { maximumFractionDigits: 2 })}</td></tr>
-        <tr><td>10Y</td><td>${formatNumber(yields["10y"], { maximumFractionDigits: 2 })}</td></tr>
-        <tr><td>30Y</td><td>${formatNumber(yields["30y"], { maximumFractionDigits: 2 })}</td></tr>
+        <tr><td>1M</td><td data-rv-field="yield-1m">${formatNumber(yields["1m"], { maximumFractionDigits: 2 })}</td></tr>
+        <tr><td>3M</td><td data-rv-field="yield-3m">${formatNumber(yields["3m"], { maximumFractionDigits: 2 })}</td></tr>
+        <tr><td>6M</td><td data-rv-field="yield-6m">${formatNumber(yields["6m"], { maximumFractionDigits: 2 })}</td></tr>
+        <tr><td>1Y</td><td data-rv-field="yield-1y">${formatNumber(yields["1y"], { maximumFractionDigits: 2 })}</td></tr>
+        <tr><td>2Y</td><td data-rv-field="yield-2y">${formatNumber(yields["2y"], { maximumFractionDigits: 2 })}</td></tr>
+        <tr><td>5Y</td><td data-rv-field="yield-5y">${formatNumber(yields["5y"], { maximumFractionDigits: 2 })}</td></tr>
+        <tr><td>10Y</td><td data-rv-field="yield-10y">${formatNumber(yields["10y"], { maximumFractionDigits: 2 })}</td></tr>
+        <tr><td>30Y</td><td data-rv-field="yield-30y">${formatNumber(yields["30y"], { maximumFractionDigits: 2 })}</td></tr>
       </tbody>
     </table>
     <div class="rv-native-note">

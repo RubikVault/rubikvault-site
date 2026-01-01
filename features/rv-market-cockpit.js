@@ -84,8 +84,8 @@ function render(root, payload, logger, featureId) {
     <div class="rv-cockpit-summary">
       <div class="rv-cockpit-regime">
         <span class="rv-cockpit-label">Regime</span>
-        <strong>${regime.label || "Neutral"}</strong>
-        <span class="rv-native-note">Score ${formatNumber(regime.score, { maximumFractionDigits: 0 })}</span>
+        <strong data-rv-field="regime-label">${regime.label || "Neutral"}</strong>
+        <span class="rv-native-note" data-rv-field="regime-score">Score ${formatNumber(regime.score, { maximumFractionDigits: 0 })}</span>
       </div>
       <div class="rv-cockpit-drivers">
         ${drivers.length ? drivers.map((driver) => `<span>${driver}</span>`).join("") : "No drivers yet"}
@@ -141,76 +141,76 @@ function render(root, payload, logger, featureId) {
       <tbody>
         <tr>
           <td>VIX</td>
-          <td>${formatNumber(vix.value, { maximumFractionDigits: 2 })}</td>
+          <td data-rv-field="vix">${formatNumber(vix.value, { maximumFractionDigits: 2 })}</td>
           <td>${vix.note || vix.source || "N/A"}</td>
         </tr>
         <tr>
           <td>Crypto F&amp;G</td>
-          <td>${formatNumber(fng.value)} ${fng.label ? `(${fng.label})` : ""}</td>
+          <td data-rv-field="fng-crypto">${formatNumber(fng.value)} ${fng.label ? `(${fng.label})` : ""}</td>
           <td>${fng.source || "N/A"}</td>
         </tr>
         <tr>
           <td>Stocks F&amp;G</td>
-          <td>${formatNumber(fngStocks.value)} ${fngStocks.label ? `(${fngStocks.label})` : ""}</td>
+          <td data-rv-field="fng-stocks">${formatNumber(fngStocks.value)} ${fngStocks.label ? `(${fngStocks.label})` : ""}</td>
           <td>${fngStocks.source || "N/A"}</td>
         </tr>
         <tr>
           <td>News Sentiment</td>
-          <td>${formatNumber(news.score, { maximumFractionDigits: 2 })} ${news.label || ""}</td>
+          <td data-rv-field="news-sentiment">${formatNumber(news.score, { maximumFractionDigits: 2 })} ${news.label || ""}</td>
           <td>${news.source || "N/A"}</td>
         </tr>
         <tr>
           <td>BTC</td>
-          <td>$${formatNumber(btc.price, { maximumFractionDigits: 0 })} (${formatPercent(
+          <td data-rv-field="btc-price">$${formatNumber(btc.price, { maximumFractionDigits: 0 })} (${formatPercent(
     btc.changePercent
   )})</td>
           <td>${btc.source || "N/A"}</td>
         </tr>
         <tr>
           <td>DXY</td>
-          <td>${formatNumber(dxy.value, { maximumFractionDigits: 2 })} (${formatPercent(
+          <td data-rv-field="dxy">${formatNumber(dxy.value, { maximumFractionDigits: 2 })} (${formatPercent(
     dxy.changePercent
   )})</td>
           <td>${dxy.source || "N/A"}</td>
         </tr>
         <tr>
           <td>USD (UUP)</td>
-          <td>${formatNumber(proxies.usd?.price, { maximumFractionDigits: 2 })}</td>
+          <td data-rv-field="proxy-usd">${formatNumber(proxies.usd?.price, { maximumFractionDigits: 2 })}</td>
           <td><span class="rv-pill-proxy">Proxy</span> ${proxies.usd?.symbol || "UUP"}</td>
         </tr>
         <tr>
           <td>Oil (USO)</td>
-          <td>${formatNumber(proxies.oil?.price, { maximumFractionDigits: 2 })}</td>
+          <td data-rv-field="proxy-oil">${formatNumber(proxies.oil?.price, { maximumFractionDigits: 2 })}</td>
           <td><span class="rv-pill-proxy">Proxy</span> ${proxies.oil?.symbol || "USO"}</td>
         </tr>
         <tr>
           <td>Gold (GLD)</td>
-          <td>${formatNumber(proxies.gold?.price, { maximumFractionDigits: 2 })}</td>
+          <td data-rv-field="proxy-gold">${formatNumber(proxies.gold?.price, { maximumFractionDigits: 2 })}</td>
           <td><span class="rv-pill-proxy">Proxy</span> ${proxies.gold?.symbol || "GLD"}</td>
         </tr>
         <tr>
           <td>US Yields 1Y</td>
-          <td>${formatNumber(yieldValues["1y"], { maximumFractionDigits: 2 })}</td>
+          <td data-rv-field="yield-1y">${formatNumber(yieldValues["1y"], { maximumFractionDigits: 2 })}</td>
           <td>${yields.source || "US Treasury"}</td>
         </tr>
         <tr>
           <td>US Yields 2Y</td>
-          <td>${formatNumber(yieldValues["2y"], { maximumFractionDigits: 2 })}</td>
+          <td data-rv-field="yield-2y">${formatNumber(yieldValues["2y"], { maximumFractionDigits: 2 })}</td>
           <td>${yields.source || "US Treasury"}</td>
         </tr>
         <tr>
           <td>US Yields 5Y</td>
-          <td>${formatNumber(yieldValues["5y"], { maximumFractionDigits: 2 })}</td>
+          <td data-rv-field="yield-5y">${formatNumber(yieldValues["5y"], { maximumFractionDigits: 2 })}</td>
           <td>${yields.source || "US Treasury"}</td>
         </tr>
         <tr>
           <td>US Yields 10Y</td>
-          <td>${formatNumber(yieldValues["10y"], { maximumFractionDigits: 2 })}</td>
+          <td data-rv-field="yield-10y">${formatNumber(yieldValues["10y"], { maximumFractionDigits: 2 })}</td>
           <td>${yields.source || "US Treasury"}</td>
         </tr>
         <tr>
           <td>US Yields 30Y</td>
-          <td>${formatNumber(yieldValues["30y"], { maximumFractionDigits: 2 })}</td>
+          <td data-rv-field="yield-30y">${formatNumber(yieldValues["30y"], { maximumFractionDigits: 2 })}</td>
           <td>${yields.source || "US Treasury"}</td>
         </tr>
         ${

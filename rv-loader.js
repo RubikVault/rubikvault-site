@@ -1114,6 +1114,15 @@ function boot() {
   );
 
   lazy.forEach(({ section }) => observer.observe(section));
+
+  const params = new URLSearchParams(window.location.search);
+  if (params.get("diag") === "1") {
+    window.setTimeout(() => {
+      import("/diagnose.js")
+        .then((mod) => mod.runDiagnostics({ overlay: true, onlyBad: false, includeDiscovered: true }))
+        .catch((error) => console.warn("[RV_DIAG] failed to load diagnose.js", error));
+    }, 2500);
+  }
 }
 
 if (typeof window !== "undefined") {

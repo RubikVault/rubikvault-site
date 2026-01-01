@@ -98,14 +98,14 @@ function render(root, payload, logger, featureId) {
     return;
   }
 
-  const renderGauge = (label, value, classification) => {
+  const renderGauge = (label, value, classification, fieldKey) => {
     const safeValue = Number.isFinite(value) ? Math.max(0, Math.min(100, value)) : null;
     const width = safeValue === null ? 0 : safeValue;
     return `
       <div class="rv-health-gauge">
         <div class="rv-health-gauge-head">
           <span>${label}</span>
-          <strong>${safeValue === null ? "N/A" : formatNumber(safeValue)}</strong>
+          <strong${fieldKey ? ` data-rv-field="${fieldKey}"` : ""}>${safeValue === null ? "N/A" : formatNumber(safeValue)}</strong>
         </div>
         <div class="rv-health-gauge-bar">
           <div class="rv-health-gauge-fill" style="width: ${width}%;"></div>
@@ -119,8 +119,8 @@ function render(root, payload, logger, featureId) {
     ${partialNote ? `<div class="rv-native-note">${partialNote}</div>` : ""}
     ${delayedNote ? `<div class="rv-native-note">${delayedNote}</div>` : ""}
     <div class="rv-health-grid">
-      ${renderGauge("Fear &amp; Greed (Stocks)", fngStocks?.value, fngStocks?.valueClassification)}
-      ${renderGauge("Fear &amp; Greed (Crypto)", fngCrypto?.value, fngCrypto?.valueClassification)}
+      ${renderGauge("Fear &amp; Greed (Stocks)", fngStocks?.value, fngStocks?.valueClassification, "fng-stocks")}
+      ${renderGauge("Fear &amp; Greed (Crypto)", fngCrypto?.value, fngCrypto?.valueClassification, "fng-crypto")}
     </div>
     ${
       showCryptoTiles
@@ -146,7 +146,7 @@ function render(root, payload, logger, featureId) {
     }
     <div class="rv-health-table-wrap">
       <h4>US Indices</h4>
-      <table class="rv-native-table">
+      <table class="rv-native-table" data-rv-field="indices-table">
         <thead>
           <tr>
             <th>Index</th>
@@ -172,7 +172,7 @@ function render(root, payload, logger, featureId) {
     </div>
     <div class="rv-health-table-wrap">
       <h4>Commodities</h4>
-      <table class="rv-native-table">
+      <table class="rv-native-table" data-rv-field="commodities-table">
         <thead>
           <tr>
             <th>Asset</th>

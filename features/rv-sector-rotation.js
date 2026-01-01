@@ -68,19 +68,19 @@ function render(root, payload, logger, featureId) {
 
   root.innerHTML = `
     ${partialNote ? `<div class="rv-native-note">${partialNote}</div>` : ""}
-    <div class="rv-native-note">Rotation: <strong>${data.rotationLabel || "Neutral"}</strong></div>
+    <div class="rv-native-note">Rotation: <strong data-rv-field="rotation-label">${data.rotationLabel || "Neutral"}</strong></div>
     <div class="rv-native-grid rv-compact">
       <div class="rv-native-kpi">
         <div class="label">Offensive Avg</div>
-        <div class="value">${formatNumber(groups.offensive, { maximumFractionDigits: 2 })}%</div>
+        <div class="value" data-rv-field="offensive-avg">${formatNumber(groups.offensive, { maximumFractionDigits: 2 })}%</div>
       </div>
       <div class="rv-native-kpi">
         <div class="label">Defensive Avg</div>
-        <div class="value">${formatNumber(groups.defensive, { maximumFractionDigits: 2 })}%</div>
+        <div class="value" data-rv-field="defensive-avg">${formatNumber(groups.defensive, { maximumFractionDigits: 2 })}%</div>
       </div>
       <div class="rv-native-kpi">
         <div class="label">Cyclical Avg</div>
-        <div class="value">${formatNumber(groups.cyclical, { maximumFractionDigits: 2 })}%</div>
+        <div class="value" data-rv-field="cyclical-avg">${formatNumber(groups.cyclical, { maximumFractionDigits: 2 })}%</div>
       </div>
     </div>
     <table class="rv-native-table rv-table--compact">
