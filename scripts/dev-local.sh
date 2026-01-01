@@ -27,9 +27,6 @@ mkdir -p "$HOME"
 export NODE_OPTIONS=""
 export CHOKIDAR_USEPOLLING=1
 export CHOKIDAR_INTERVAL=500
-export WRANGLER_CI_DISABLE_CONFIG_WATCHING=true
-export WRANGLER_SEND_METRICS=false
-export CI=1
 
 ulimit -n 65536 >/dev/null 2>&1 || true
 
@@ -88,16 +85,26 @@ fi
 
 cd "$SLIM_DIR"
 
-PORT="${PORT:-8787}"
+PORT="${PORT:-8799}"
 IP="${IP:-127.0.0.1}"
 
-echo "Starting Wrangler Pages dev on http://${IP}:${PORT} (slim dir)"
+NODE_MAJOR=$(node -v | sed 's/^v//; s/\..*$//')
+if [[ "$NODE_MAJOR" -ge 25 ]]; then
+  echo "Warning: Node ${NODE_MAJOR} detected. Wrangler is most stable on Node 20/22 LTS."
+fi
 
-npx wrangler pages dev . \
+WRANGLER_BIN="$ROOT/node_modules/.bin/wrangler"
+if [[ ! -x "$WRANGLER_BIN" ]]; then
+  echo "Error: wrangler not found at $WRANGLER_BIN. Run: npm install"
+  exit 1
+fi
+
+echo "Ready on http://${IP}:${PORT}"
+
+exec "$WRANGLER_BIN" pages dev . \
   --ip "$IP" \
   --port "$PORT" \
   --kv RV_KV \
   --persist-to "$ROOT/.wrangler/state" \
   --compatibility-date=2025-12-29 \
-  --inspector-port 0 \
-  --log-level debug
+  --inspector-port 0

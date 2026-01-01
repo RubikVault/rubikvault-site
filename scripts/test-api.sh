@@ -29,6 +29,7 @@ for p in $ENDPOINTS; do
 
   body=$(curl -sS --max-time 12 "$url" | head -c 20)
   echo "$body" | grep -qi "<!doctype\\|<html" && fail "HTML body for $url"
+  echo "$body" | grep -q "^<" && fail "HTML-like body for $url"
   echo "$body" | grep -q "^{\\|^\\[" || fail "non-JSON body for $url"
 
   if [[ "$p" == "debug-bundle" ]]; then
