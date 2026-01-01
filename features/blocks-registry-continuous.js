@@ -117,6 +117,45 @@ export const CONTINUOUS_BLOCKS = {
     warnCopy: "Breakout energy missing expected coverage.",
     whyUnique: "Compression-to-breakout state machine signals."
   },
+  "rv-arb-risk-regime": {
+    blockId: "rv-arb-risk-regime",
+    blockType: "CONTINUOUS",
+    expectedMinItems: 1,
+    mirrorFiles: ["arb-risk-regime"],
+    computeDependencies: ["market-health"],
+    freshness: { liveMaxMinutes: 60, okMaxHoursWeekday: 24, okMaxHoursWeekend: 72 },
+    trustDefault: "derived",
+    cadence: "daily",
+    emptyCopy: "Risk regime mirror is empty.",
+    warnCopy: "Risk regime is stale for an open session.",
+    whyUnique: "Single-score risk regime from volatility proxy."
+  },
+  "rv-arb-liquidity-pulse": {
+    blockId: "rv-arb-liquidity-pulse",
+    blockType: "CONTINUOUS",
+    expectedMinItems: 1,
+    mirrorFiles: ["arb-liquidity-pulse"],
+    computeDependencies: [],
+    freshness: { liveMaxMinutes: 180, okMaxHoursWeekday: 24, okMaxHoursWeekend: 72 },
+    trustDefault: "derived",
+    cadence: "daily",
+    emptyCopy: "Liquidity pulse mirror is empty.",
+    warnCopy: "Liquidity pulse is stale for an open session.",
+    whyUnique: "Balance sheet delta proxy for liquidity trend."
+  },
+  "rv-arb-breadth-lite": {
+    blockId: "rv-arb-breadth-lite",
+    blockType: "CONTINUOUS",
+    expectedMinItems: 1,
+    mirrorFiles: ["arb-breadth-lite"],
+    computeDependencies: ["top-movers"],
+    freshness: { liveMaxMinutes: 60, okMaxHoursWeekday: 24, okMaxHoursWeekend: 72 },
+    trustDefault: "derived",
+    cadence: "daily",
+    emptyCopy: "Breadth lite mirror is empty.",
+    warnCopy: "Breadth lite is stale for an open session.",
+    whyUnique: "Gainers/losers proxy from internal universe."
+  },
   "rv-yield-curve": {
     blockId: "rv-yield-curve",
     blockType: "CONTINUOUS",

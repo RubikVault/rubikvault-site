@@ -280,6 +280,51 @@ export const FEATURES = [
     refreshIntervalMs: 30 * 60 * 1000
   },
   {
+    id: "rv-arb-risk-regime",
+    title: "Block XX - ARB Risk Regime",
+    module: "./features/rv-arb-risk-regime.js",
+    api: "arb-risk-regime",
+    computation: {
+      where: "Pages Function",
+      update: "1h",
+      cost: "free and automated",
+      trust: "derived"
+    },
+    enabled: true,
+    lazyLoad: true,
+    refreshIntervalMs: 60 * 60 * 1000
+  },
+  {
+    id: "rv-arb-liquidity-pulse",
+    title: "Block XX - ARB Liquidity Pulse",
+    module: "./features/rv-arb-liquidity-pulse.js",
+    api: "arb-liquidity-pulse",
+    computation: {
+      where: "Pages Function",
+      update: "6h",
+      cost: "free and automated",
+      trust: "derived"
+    },
+    enabled: true,
+    lazyLoad: true,
+    refreshIntervalMs: 6 * 60 * 60 * 1000
+  },
+  {
+    id: "rv-arb-breadth-lite",
+    title: "Block XX - ARB Breadth Lite",
+    module: "./features/rv-arb-breadth-lite.js",
+    api: "arb-breadth-lite",
+    computation: {
+      where: "Pages Function",
+      update: "30m",
+      cost: "free and automated",
+      trust: "derived"
+    },
+    enabled: true,
+    lazyLoad: true,
+    refreshIntervalMs: 30 * 60 * 1000
+  },
+  {
     id: "rv-why-moved",
     title: "Block XX - Why This Stock Moved",
     module: "./features/rv-why-moved.js",
