@@ -19,9 +19,16 @@ jobs:
 
       - name: Seed mirrors
         env:
-          PROD_URL: ${{ secrets.PROD_URL }}
-          RV_CRON_TOKEN: ${{ secrets.RV_CRON_TOKEN }}
-          MIRROR_BASE_URL: ${{ secrets.MIRROR_BASE_URL }}
+          ALPHAVANTAGE_API_KEY: ${{ secrets.ALPHAVANTAGE_API_KEY }}
+          FMP_API_KEY: ${{ secrets.FMP_API_KEY }}
+          FINNHUB_API_KEY: ${{ secrets.FINNHUB_API_KEY }}
+          FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
+          MARKETAUX_KEY: ${{ secrets.MARKETAUX_KEY }}
+          MIN_OK_FEATURES: ${{ secrets.MIN_OK_FEATURES }}
+          MAX_FAIL_FEATURES: ${{ secrets.MAX_FAIL_FEATURES }}
+          CRITICAL_FEATURES: ${{ secrets.CRITICAL_FEATURES }}
+          ALLOW_YAHOO: ${{ secrets.ALLOW_YAHOO }}
+          ALLOW_TREASURY: ${{ secrets.ALLOW_TREASURY }}
         run: node scripts/seed-mirrors.mjs
 
       - name: Commit mirrors if changed

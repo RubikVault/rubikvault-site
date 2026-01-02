@@ -1,6 +1,6 @@
 // Smoke (local):
-//   FINNHUB_API_KEY=... FMP_API_KEY=... QUOTES_PROVIDER=finnhub node scripts/seed-mirrors.mjs
-//   node scripts/seed-mirrors.mjs
+//   node scripts/seed-mirrors.mjs --dry-run
+//   node scripts/seed-mirrors.mjs --dry-run-live
 
 import path from "node:path";
 import { buildBaseMirror } from "./utils/mirror-builders.mjs";
@@ -9,17 +9,24 @@ import { fetchStooqDaily } from "./utils/stooq-fetch.mjs";
 
 const OUT_DIRS = ["public/mirrors", "mirrors"];
 const FEATURES = ["top-movers", "yield-curve", "sector-rotation", "market-health"];
-const CRITICAL_FEATURES = new Set(["market-health", "top-movers", "yield-curve", "sector-rotation"]);
-
-const PROD_URL = process.env.PROD_URL || "";
-const RV_CRON_TOKEN = process.env.RV_CRON_TOKEN || "";
-const MIRROR_BASE_URL = process.env.MIRROR_BASE_URL || "";
 
 const QUOTES_PROVIDER = String(process.env.QUOTES_PROVIDER || "").toLowerCase();
 const FINNHUB_API_KEY = process.env.FINNHUB_API_KEY || "";
 const FMP_API_KEY = process.env.FMP_API_KEY || "";
 const FRED_API_KEY = process.env.FRED_API_KEY || "";
+const ALPHAVANTAGE_API_KEY = process.env.ALPHAVANTAGE_API_KEY || "";
 const MARKETAUX_KEY = process.env.MARKETAUX_KEY || "";
+const ALLOW_YAHOO = process.env.ALLOW_YAHOO === "1";
+const ALLOW_TREASURY = process.env.ALLOW_TREASURY === "1";
+const MIN_OK_FEATURES = Number(process.env.MIN_OK_FEATURES || 2);
+const MAX_FAIL_FEATURES = Number(process.env.MAX_FAIL_FEATURES || 2);
+const CRITICAL_FEATURES = new Set(
+  String(process.env.CRITICAL_FEATURES || "")
+    .split(",")
+    .map((entry) => entry.trim())
+    .filter(Boolean)
+);
+const DRY_RUN_LIVE = process.argv.includes("--dry-run-live");
 const DRY_RUN = process.argv.includes("--dry-run") || process.argv.includes("--preflight-only");
 
 const STOCK_UNIVERSE = [
@@ -52,6 +59,17 @@ const FMP_QUOTE_URL = "https://financialmodelingprep.com/api/v3/quote";
 const FINNHUB_QUOTE_URL = "https://finnhub.io/api/v1/quote";
 const TREASURY_CSV_URL =
   "https://home.treasury.gov/resource-center/data-chart-center/interest-rates/DailyTreasuryYieldCurveRateData.csv";
+const FRED_YIELD_SERIES = {
+  "1m": "DGS1MO",
+  "3m": "DGS3MO",
+  "6m": "DGS6MO",
+  "1y": "DGS1",
+  "2y": "DGS2",
+  "5y": "DGS5",
+  "10y": "DGS10",
+  "20y": "DGS20",
+  "30y": "DGS30"
+};
 const COINGECKO_URL =
   "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,solana,ripple&vs_currencies=usd&include_24hr_change=true";
 const FNG_URL = "https://api.alternative.me/fng/?limit=1&format=json";
@@ -82,6 +100,42 @@ const YAHOO_MARKET_URL = `https://query1.finance.yahoo.com/v7/finance/quote?symb
   YAHOO_SYMBOLS.map((entry) => entry.symbol).join(",")
 )}`;
 
+const ALPHAVANTAGE_THROTTLE = { lastCall: 0, minIntervalMs: 12000 };
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function throttleAlphaVantage() {
+  const now = Date.now();
+  const waitFor = ALPHAVANTAGE_THROTTLE.minIntervalMs - (now - ALPHAVANTAGE_THROTTLE.lastCall);
+  if (waitFor > 0) {
+    await sleep(waitFor);
+  }
+  ALPHAVANTAGE_THROTTLE.lastCall = Date.now();
+}
+
+function shouldUseProvider(provider) {
+  if (provider.enabledEnv && process.env[provider.enabledEnv] !== "1") {
+    return { ok: false, reason: "CONFIG_MISSING", detail: provider.enabledEnv };
+  }
+  if (provider.keyEnv && !process.env[provider.keyEnv]) {
+    return { ok: false, reason: "CONFIG_MISSING", detail: provider.keyEnv };
+  }
+  if (provider.name === "yahoo" && !ALLOW_YAHOO) {
+    return { ok: false, reason: "CONFIG_MISSING", detail: "ALLOW_YAHOO" };
+  }
+  if (provider.name === "treasury" && !ALLOW_TREASURY) {
+    return { ok: false, reason: "CONFIG_MISSING", detail: "ALLOW_TREASURY" };
+  }
+  if (provider.feature === "top-movers" && QUOTES_PROVIDER) {
+    if (provider.name !== QUOTES_PROVIDER) {
+      return { ok: false, reason: "CONFIG_MISSING", detail: `QUOTES_PROVIDER=${QUOTES_PROVIDER}` };
+    }
+  }
+  return { ok: true, reason: "READY" };
+}
+
 function logEvent(payload) {
   console.log(JSON.stringify(payload));
 }
@@ -96,30 +150,24 @@ function getCfHeaders(headers) {
   };
 }
 
+function sanitizeUrl(value) {
+  if (!value || typeof value !== "string") return value;
+  return value.replace(/([?&](apikey|api_key|token|access_token)=)[^&]+/gi, "$1REDACTED");
+}
+
 function logHttpIssue({ op, feature, url, status, text, headers, error }) {
   const snippet = (text || "").slice(0, 200);
   logEvent({
     level: "error",
     op,
     feature,
-    url,
+    url: sanitizeUrl(url),
     http: status ?? null,
     contentType: headers?.get("content-type") || null,
     snippet,
     headers: getCfHeaders(headers),
     error: error || null
   });
-}
-
-function buildApiHeaders() {
-  return {
-    "x-rv-cron": "1",
-    "x-rv-cron-token": RV_CRON_TOKEN || "",
-    "authorization": RV_CRON_TOKEN ? `Bearer ${RV_CRON_TOKEN}` : "",
-    "user-agent": "RVSeeder/1.0 (github-actions)",
-    "accept": "application/json",
-    "cache-control": "no-cache"
-  };
 }
 
 function buildUpstreamHeaders() {
@@ -130,13 +178,36 @@ function buildUpstreamHeaders() {
   };
 }
 
-async function fetchText(url, { headers } = {}) {
-  return withRetries(async () => {
+async function fetchWithRetry(url, { headers } = {}, retries = 2, backoffMs = [1000, 3000]) {
+  let attempt = 0;
+  while (attempt <= retries) {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 10000);
-    const res = await fetch(url, { headers, signal: controller.signal });
-    const text = await res.text();
-    clearTimeout(timer);
+    try {
+      const res = await fetch(url, { headers, signal: controller.signal });
+      const text = await res.text();
+      clearTimeout(timer);
+      return { res, text };
+    } catch (err) {
+      clearTimeout(timer);
+      const isLast = attempt >= retries;
+      if (isLast) {
+        err.code = err.name === "AbortError" ? "TIMEOUT" : err.code || "FETCH_ERROR";
+        throw err;
+      }
+      const waitFor = backoffMs[Math.min(attempt, backoffMs.length - 1)] || 1000;
+      await sleep(waitFor);
+    }
+    attempt += 1;
+  }
+  const error = new Error("retry_exhausted");
+  error.code = "RETRY_EXHAUSTED";
+  throw error;
+}
+
+async function fetchText(url, { headers } = {}) {
+  return withRetries(async () => {
+    const { res, text } = await fetchWithRetry(url, { headers });
     if (!res.ok) {
       logHttpIssue({ op: "fetch_text", url, status: res.status, text, headers: res.headers, error: "HTTP_ERROR" });
     }
@@ -177,6 +248,26 @@ async function fetchJson(url, { headers } = {}) {
 function normalizeMetaStatus(payload) {
   return payload?.meta?.status || payload?.dataQuality?.status || "UNKNOWN";
 }
+
+const PROVIDERS = {
+  "top-movers": [
+    { name: "alphavantage", keyEnv: "ALPHAVANTAGE_API_KEY", fn: fetchTopMoversAlphaVantage },
+    { name: "fmp", keyEnv: "FMP_API_KEY", fn: fetchTopMoversFmp },
+    { name: "finnhub", keyEnv: "FINNHUB_API_KEY", fn: fetchTopMoversFinnhub },
+    { name: "yahoo", enabledEnv: "ALLOW_YAHOO", fn: fetchTopMoversYahoo }
+  ],
+  "yield-curve": [
+    { name: "fred", keyEnv: "FRED_API_KEY", fn: fetchYieldCurveFRED },
+    { name: "treasury", enabledEnv: "ALLOW_TREASURY", fn: fetchYieldCurveTreasury }
+  ],
+  "sector-rotation": [
+    { name: "fmp", keyEnv: "FMP_API_KEY", fn: fetchSectorRotationFmp },
+    { name: "stooq", fn: fetchSectorRotationStooq }
+  ],
+  "market-health": [
+    { name: "market-health", fn: fetchMarketHealthUpstream }
+  ]
+};
 
 function extractTopMoversItems(payload) {
   const stocks = payload?.data?.stocks || {};
@@ -258,6 +349,110 @@ function validateFeature(featureId, payload, items) {
   return { ok, reason: ok ? null : "empty_items" };
 }
 
+function classifyError(err) {
+  if (!err) return { reason: "UNKNOWN", httpCode: null };
+  if (err.code === "TIMEOUT" || err.name === "AbortError") return { reason: "TIMEOUT", httpCode: null };
+  const httpCode = err.httpStatus ?? err.status ?? null;
+  if (httpCode === 401) return { reason: "HTTP_401", httpCode };
+  if (httpCode === 403) return { reason: "HTTP_403", httpCode };
+  if (httpCode === 404) return { reason: "HTTP_404", httpCode };
+  if (httpCode === 429) return { reason: "HTTP_429", httpCode };
+  if (httpCode && httpCode >= 500) return { reason: "HTTP_5XX", httpCode };
+  if (err.message === "HTML response") return { reason: "HTML_RESPONSE", httpCode };
+  return { reason: "UNKNOWN", httpCode };
+}
+
+function checkTopMoversSanity(items) {
+  if (!Array.isArray(items) || items.length === 0) return { ok: false, reason: "empty_items" };
+  const hasValid = items.some((item) =>
+    item &&
+    typeof item.symbol === "string" &&
+    item.symbol.length > 0 &&
+    Number.isFinite(item.price ?? item.lastClose ?? null) &&
+    Number.isFinite(item.changePercent ?? null)
+  );
+  return { ok: hasValid, reason: hasValid ? null : "missing_fields" };
+}
+
+function checkYieldCurveSanity(items) {
+  if (!Array.isArray(items)) return { ok: false, reason: "no_points" };
+  const validPoints = items.filter((point) => Number.isFinite(point.value));
+  const ok = validPoints.length >= 5 && validPoints.every((point) => point.value > 0);
+  return { ok, reason: ok ? null : "not_enough_points" };
+}
+
+function buildResult(featureId, status, { providerUsed, reason, httpCode, wrote, timestamp }) {
+  return {
+    feature: featureId,
+    status,
+    providerUsed: providerUsed || null,
+    reason: reason || null,
+    httpCode: Number.isFinite(httpCode) ? httpCode : null,
+    wrote: Boolean(wrote),
+    timestamp: timestamp || new Date().toISOString()
+  };
+}
+
+async function runProviderWaterfall(featureId) {
+  const providers = PROVIDERS[featureId] || [];
+  const skipped = [];
+  const failures = [];
+  for (const provider of providers) {
+    const eligibility = shouldUseProvider({ ...provider, feature: featureId });
+    if (!eligibility.ok) {
+      skipped.push({ provider: provider.name, reason: eligibility.reason, detail: eligibility.detail || null });
+      continue;
+    }
+    try {
+      const result = await provider.fn();
+      const payload = buildPayload({
+        featureId,
+        data: result.data,
+        upstreamUrl: result.upstreamUrl,
+        upstreamStatus: result.upstreamStatus,
+        reason: result.reason || null,
+        provider: result.provider
+      });
+      const { items, context } = extractItems(featureId, payload);
+      const validation = validateFeature(featureId, payload, items);
+      if (!validation.ok) {
+        failures.push({ provider: provider.name, reason: "SANITY_FAIL", detail: validation.reason });
+        continue;
+      }
+      if (featureId === "top-movers") {
+        const moversCheck = checkTopMoversSanity(items);
+        if (!moversCheck.ok) {
+          failures.push({ provider: provider.name, reason: "SANITY_FAIL", detail: moversCheck.reason });
+          continue;
+        }
+      }
+      if (featureId === "yield-curve") {
+        const curveCheck = checkYieldCurveSanity(items);
+        if (!curveCheck.ok) {
+          failures.push({ provider: provider.name, reason: "SANITY_FAIL", detail: curveCheck.reason });
+          continue;
+        }
+      }
+      return {
+        ok: true,
+        providerUsed: provider.name,
+        payload,
+        items,
+        context,
+        httpStatus: result.upstreamStatus ?? null
+      };
+    } catch (err) {
+      const { reason, httpCode } = classifyError(err);
+      failures.push({ provider: provider.name, reason, detail: err.message || null, httpCode });
+    }
+  }
+  return {
+    ok: false,
+    skipped,
+    failures
+  };
+}
+
 function buildMirror(featureId, payload, items, context, sourceUpstreamOverride) {
   const metaStatus = normalizeMetaStatus(payload);
   const mode = metaStatus === "LIVE" ? "LIVE" : metaStatus === "STALE" ? "EOD" : "EMPTY";
@@ -277,6 +472,11 @@ function buildMirror(featureId, payload, items, context, sourceUpstreamOverride)
     dataQuality
   });
   mirror.savedAt = mirror.updatedAt;
+  mirror._meta = {
+    updated_at: mirror.updatedAt,
+    provider: sourceUpstream,
+    status: metaStatus === "LIVE" ? "fresh" : "stale"
+  };
   mirror.payload = payload;
   return mirror;
 }
@@ -285,6 +485,7 @@ function buildPayload({ featureId, data, upstreamUrl, upstreamStatus, reason, pr
   const ts = new Date().toISOString();
   const hasData = data && typeof data === "object" && Object.keys(data).length > 0;
   const metaStatus = hasData ? "LIVE" : "EMPTY";
+  const safeUpstreamUrl = sanitizeUrl(upstreamUrl || provider || "upstream");
   return {
     ok: hasData,
     feature: featureId,
@@ -292,7 +493,7 @@ function buildPayload({ featureId, data, upstreamUrl, upstreamStatus, reason, pr
     traceId: "seed",
     schemaVersion: 1,
     cache: { hit: false, ttl: 0, layer: "seed" },
-    upstream: { url: upstreamUrl || provider || "upstream", status: upstreamStatus ?? null, snippet: "" },
+    upstream: { url: safeUpstreamUrl, status: upstreamStatus ?? null, snippet: "" },
     rateLimit: { remaining: "unknown", reset: null, estimated: true },
     dataQuality: {
       status: metaStatus === "LIVE" ? "LIVE" : "NO_DATA",
@@ -353,62 +554,109 @@ function normalizeStocksFromQuotes(results, provider) {
   };
 }
 
-async function fetchTopMoversUpstream() {
-  if (QUOTES_PROVIDER === "finnhub" && FINNHUB_API_KEY) {
-    const quotes = [];
-    for (const entry of STOCK_UNIVERSE) {
-      const url = `${FINNHUB_QUOTE_URL}?symbol=${encodeURIComponent(entry.symbol)}&token=${FINNHUB_API_KEY}`;
-      const result = await fetchJson(url, { headers: buildUpstreamHeaders() });
-      const data = result.json || {};
-      quotes.push({
-        symbol: entry.symbol,
-        shortName: entry.label,
-        price: data.c ?? null,
-        previousClose: data.pc ?? null,
-        changePercent: Number.isFinite(data.dp) ? data.dp : null,
-        volume: null
-      });
+function buildTopMoversStocks({ gainers, losers, provider }) {
+  const gainersRows = Array.isArray(gainers) ? gainers : [];
+  const losersRows = Array.isArray(losers) ? losers : [];
+  const volumeLeaders = gainersRows.slice(0, 10);
+  const volumeLaggards = losersRows.slice(0, 10);
+  return {
+    volumeLeaders,
+    volumeLaggards,
+    gainers: volumeLeaders,
+    losers: volumeLaggards,
+    universe: Array.from(new Set([...gainersRows, ...losersRows].map((row) => row.symbol).filter(Boolean))),
+    provider
+  };
+}
+
+async function fetchTopMoversAlphaVantage() {
+  await throttleAlphaVantage();
+  const url = `https://www.alphavantage.co/query?function=TOP_GAINERS_LOSERS&apikey=${ALPHAVANTAGE_API_KEY}`;
+  const result = await fetchJson(url, { headers: buildUpstreamHeaders() });
+  const gainers = Array.isArray(result.json?.top_gainers) ? result.json.top_gainers : [];
+  const losers = Array.isArray(result.json?.top_losers) ? result.json.top_losers : [];
+  const toRow = (item) => ({
+    symbol: item.ticker || item.symbol || null,
+    name: item.company_name || item.name || item.ticker || item.symbol || null,
+    price: parseNumber(item.price),
+    lastClose: null,
+    changePercent: parseChangePercent(item.change_percentage || item.changePercent),
+    volume: parseNumber(item.volume),
+    ts: new Date().toISOString(),
+    source: "alphavantage"
+  });
+  const gainersRows = gainers.map(toRow).filter((row) => row.symbol);
+  const losersRows = losers.map(toRow).filter((row) => row.symbol);
+  return {
+    provider: "alphavantage",
+    upstreamStatus: result.httpStatus ?? 200,
+    upstreamUrl: url,
+    data: {
+      updatedAt: new Date().toISOString(),
+      source: "alphavantage",
+      method: "AlphaVantage TOP_GAINERS_LOSERS.",
+      crypto: [],
+      stocks: buildTopMoversStocks({ gainers: gainersRows, losers: losersRows, provider: "alphavantage" })
     }
-    return {
-      provider: "finnhub",
-      upstreamStatus: 200,
-      upstreamUrl: "finnhub",
-      data: {
-        updatedAt: new Date().toISOString(),
-        source: "finnhub",
-        method: "Top movers computed from fixed mega-cap universe.",
-        crypto: [],
-        stocks: normalizeStocksFromQuotes(quotes, "finnhub")
-      }
-    };
-  }
+  };
+}
 
-  if (QUOTES_PROVIDER === "fmp" && FMP_API_KEY) {
-    const url = `${FMP_QUOTE_URL}/${STOCK_UNIVERSE.map((entry) => entry.symbol).join(",")}?apikey=${FMP_API_KEY}`;
+async function fetchTopMoversFinnhub() {
+  const quotes = [];
+  for (const entry of STOCK_UNIVERSE) {
+    const url = `${FINNHUB_QUOTE_URL}?symbol=${encodeURIComponent(entry.symbol)}&token=${FINNHUB_API_KEY}`;
     const result = await fetchJson(url, { headers: buildUpstreamHeaders() });
-    const results = Array.isArray(result.json) ? result.json : [];
-    const quotes = results.map((item) => ({
-      symbol: item.symbol,
-      shortName: item.name,
-      price: parseNumber(item.price),
-      previousClose: parseNumber(item.previousClose),
-      changePercent: parseChangePercent(item.changesPercentage),
-      volume: parseNumber(item.volume)
-    }));
-    return {
-      provider: "fmp",
-      upstreamStatus: result.httpStatus ?? 200,
-      upstreamUrl: FMP_QUOTE_URL,
-      data: {
-        updatedAt: new Date().toISOString(),
-        source: "fmp",
-        method: "Top movers computed from fixed mega-cap universe.",
-        crypto: [],
-        stocks: normalizeStocksFromQuotes(quotes, "fmp")
-      }
-    };
+    const data = result.json || {};
+    quotes.push({
+      symbol: entry.symbol,
+      shortName: entry.label,
+      price: data.c ?? null,
+      previousClose: data.pc ?? null,
+      changePercent: Number.isFinite(data.dp) ? data.dp : null,
+      volume: null
+    });
   }
+  return {
+    provider: "finnhub",
+    upstreamStatus: 200,
+    upstreamUrl: "finnhub",
+    data: {
+      updatedAt: new Date().toISOString(),
+      source: "finnhub",
+      method: "Top movers computed from fixed mega-cap universe.",
+      crypto: [],
+      stocks: normalizeStocksFromQuotes(quotes, "finnhub")
+    }
+  };
+}
 
+async function fetchTopMoversFmp() {
+  const url = `${FMP_QUOTE_URL}/${STOCK_UNIVERSE.map((entry) => entry.symbol).join(",")}?apikey=${FMP_API_KEY}`;
+  const result = await fetchJson(url, { headers: buildUpstreamHeaders() });
+  const results = Array.isArray(result.json) ? result.json : [];
+  const quotes = results.map((item) => ({
+    symbol: item.symbol,
+    shortName: item.name,
+    price: parseNumber(item.price),
+    previousClose: parseNumber(item.previousClose),
+    changePercent: parseChangePercent(item.changesPercentage),
+    volume: parseNumber(item.volume)
+  }));
+  return {
+    provider: "fmp",
+    upstreamStatus: result.httpStatus ?? 200,
+    upstreamUrl: FMP_QUOTE_URL,
+    data: {
+      updatedAt: new Date().toISOString(),
+      source: "fmp",
+      method: "Top movers computed from fixed mega-cap universe.",
+      crypto: [],
+      stocks: normalizeStocksFromQuotes(quotes, "fmp")
+    }
+  };
+}
+
+async function fetchTopMoversYahoo() {
   const result = await fetchJson(YAHOO_URL, { headers: buildUpstreamHeaders() });
   const results = result.json?.quoteResponse?.result || [];
   return {
@@ -467,7 +715,44 @@ function parseYieldCurveCsv(csv) {
   };
 }
 
-async function fetchYieldCurveUpstream() {
+async function fetchYieldCurveFRED() {
+  const yields = {};
+  let observedAt = null;
+  for (const [tenor, seriesId] of Object.entries(FRED_YIELD_SERIES)) {
+    const url = `https://api.stlouisfed.org/fred/series/observations?series_id=${seriesId}&api_key=${FRED_API_KEY}&file_type=json&sort_order=desc&limit=1`;
+    const result = await fetchJson(url, { headers: buildUpstreamHeaders() });
+    const obs = Array.isArray(result.json?.observations) ? result.json.observations[0] : null;
+    const value = obs ? parseNumber(obs.value) : null;
+    if (obs?.date) {
+      observedAt = obs.date;
+    }
+    yields[tenor] = value;
+  }
+  const updatedAt = observedAt ? new Date(observedAt).toISOString() : new Date().toISOString();
+  const spreads = {
+    tenTwo:
+      yields["10y"] !== null && yields["2y"] !== null ? yields["10y"] - yields["2y"] : null,
+    tenThreeMonth:
+      yields["10y"] !== null && yields["3m"] !== null ? yields["10y"] - yields["3m"] : null
+  };
+  return {
+    provider: "fred",
+    upstreamStatus: 200,
+    upstreamUrl: "fred",
+    data: {
+      updatedAt,
+      yields,
+      spreads,
+      inversion: {
+        tenTwo: spreads.tenTwo !== null ? spreads.tenTwo < 0 : null,
+        tenThreeMonth: spreads.tenThreeMonth !== null ? spreads.tenThreeMonth < 0 : null
+      },
+      source: "FRED"
+    }
+  };
+}
+
+async function fetchYieldCurveTreasury() {
   const result = await fetchText(TREASURY_CSV_URL, { headers: { ...buildUpstreamHeaders(), Accept: "text/csv" } });
   const bytes = Buffer.byteLength(result.text || "", "utf8");
   if (!result.res.ok) {
@@ -499,41 +784,41 @@ function computeChangePercent(closes) {
   return ((last - prev) / prev) * 100;
 }
 
-async function fetchSectorRotationUpstream() {
-  if (FMP_API_KEY) {
-    const url = `${FMP_QUOTE_URL}/${SECTOR_SYMBOLS.concat("SPY").join(",")}?apikey=${FMP_API_KEY}`;
-    const result = await fetchJson(url, { headers: buildUpstreamHeaders() });
-    const list = Array.isArray(result.json) ? result.json : [];
-    const spy = list.find((item) => item.symbol === "SPY");
-    const spyChange = spy ? parseChangePercent(spy.changesPercentage) : null;
-    const sectors = list
-      .filter((item) => SECTOR_SYMBOLS.includes(item.symbol))
-      .map((item) => ({
-        symbol: item.symbol,
-        name: item.name || item.symbol,
-        price: parseNumber(item.price),
-        changePercent: parseChangePercent(item.changesPercentage),
-        relativeToSpy:
-          typeof spyChange === "number" && Number.isFinite(parseChangePercent(item.changesPercentage))
-            ? parseChangePercent(item.changesPercentage) - spyChange
-            : null
-      }))
-      .filter((item) => item.symbol);
-    return {
-      provider: "fmp",
-      upstreamStatus: result.httpStatus ?? 200,
-      upstreamUrl: FMP_QUOTE_URL,
-      data: {
-        updatedAt: new Date().toISOString(),
-        rotationLabel: "Neutral",
-        groups: {},
-        spyChangePercent: spyChange,
-        sectors,
-        source: "fmp"
-      }
-    };
-  }
+async function fetchSectorRotationFmp() {
+  const url = `${FMP_QUOTE_URL}/${SECTOR_SYMBOLS.concat("SPY").join(",")}?apikey=${FMP_API_KEY}`;
+  const result = await fetchJson(url, { headers: buildUpstreamHeaders() });
+  const list = Array.isArray(result.json) ? result.json : [];
+  const spy = list.find((item) => item.symbol === "SPY");
+  const spyChange = spy ? parseChangePercent(spy.changesPercentage) : null;
+  const sectors = list
+    .filter((item) => SECTOR_SYMBOLS.includes(item.symbol))
+    .map((item) => ({
+      symbol: item.symbol,
+      name: item.name || item.symbol,
+      price: parseNumber(item.price),
+      changePercent: parseChangePercent(item.changesPercentage),
+      relativeToSpy:
+        typeof spyChange === "number" && Number.isFinite(parseChangePercent(item.changesPercentage))
+          ? parseChangePercent(item.changesPercentage) - spyChange
+          : null
+    }))
+    .filter((item) => item.symbol);
+  return {
+    provider: "fmp",
+    upstreamStatus: result.httpStatus ?? 200,
+    upstreamUrl: FMP_QUOTE_URL,
+    data: {
+      updatedAt: new Date().toISOString(),
+      rotationLabel: "Neutral",
+      groups: {},
+      spyChangePercent: spyChange,
+      sectors,
+      source: "fmp"
+    }
+  };
+}
 
+async function fetchSectorRotationStooq() {
   const spy = await fetchStooqDaily("SPY");
   const spyChange = computeChangePercent(spy?.closes || []);
   const sectors = [];
@@ -652,28 +937,32 @@ async function fetchMarketHealthUpstream() {
     }
   };
 
+  const yahooPromise = ALLOW_YAHOO
+    ? fetchSafe(YAHOO_MARKET_URL)
+    : Promise.resolve({ ok: false, error: new Error("CONFIG_MISSING") });
+
   const [fng, stocks, crypto, yahoo] = await Promise.all([
     fetchSafe(FNG_URL),
     fetchSafe(FNG_STOCKS_URL),
     fetchSafe(COINGECKO_URL),
-    fetchSafe(YAHOO_MARKET_URL)
+    yahooPromise
   ]);
 
   const errors = [];
   if (!fng.ok) errors.push("fng_failed");
   if (!stocks.ok) errors.push("stocks_failed");
   if (!crypto.ok) errors.push("crypto_failed");
-  if (!yahoo.ok) errors.push("yahoo_failed");
+  if (!yahoo.ok) errors.push(ALLOW_YAHOO ? "yahoo_failed" : "yahoo_disabled");
 
   const fngData = normalizeFng(fng.json || {});
   const fngStocks = normalizeFngStocks(stocks.json || {});
   const cryptoData = normalizeCrypto(crypto.json || {});
-  const yahooData = normalizeYahoo(yahoo.json || {});
+  const yahooData = ALLOW_YAHOO ? normalizeYahoo(yahoo.json || {}) : { indices: [], commodities: [] };
   const btcEntry = cryptoData.find((entry) => entry.symbol === "BTC");
 
   const data = {
     updatedAt: new Date().toISOString(),
-    source: "alternative.me, cnn, coingecko, yahoo",
+    source: ALLOW_YAHOO ? "alternative.me, cnn, coingecko, yahoo" : "alternative.me, cnn, coingecko",
     fng: fngData,
     fngStocks,
     btc: btcEntry
@@ -710,102 +999,24 @@ async function fetchMarketHealthUpstream() {
 
 async function seed() {
   if (DRY_RUN) {
-    const preflightUrl = PROD_URL
-      ? `${PROD_URL.replace(/\/+$/, "")}/api/market-health?debug=1`
-      : null;
+    const dryDetails = FEATURES.map((featureId) => {
+      const providers = PROVIDERS[featureId] || [];
+      const eligible = providers
+        .map((provider) => ({ provider, eligibility: shouldUseProvider({ ...provider, feature: featureId }) }))
+        .filter((entry) => entry.eligibility.ok)
+        .map((entry) => entry.provider.name);
+      const status = eligible.length ? "READY" : "CONFIG_MISSING";
+      return { feature: featureId, status, eligibleProviders: eligible };
+    });
+    const readyCount = dryDetails.filter((entry) => entry.status === "READY").length;
     logEvent({
       level: "info",
       op: "dry-run",
-      preflightUrl,
-      hasToken: Boolean(RV_CRON_TOKEN)
+      readyCount,
+      total: dryDetails.length
     });
+    console.log(JSON.stringify({ summary: { readyCount, total: dryDetails.length }, details: dryDetails }));
     return;
-  }
-
-  if (PROD_URL) {
-    if (!RV_CRON_TOKEN) {
-      console.error('[seed-mirrors] RV_CRON_TOKEN missing; cannot run preflight');
-      process.exit(1);
-    }
-    const preflightUrl = `${PROD_URL.replace(/\/+$/, "")}/api/market-health?debug=1`;
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 10000);
-    try {
-      const res = await fetch(preflightUrl, { headers: buildApiHeaders(), signal: controller.signal });
-      const text = await res.text();
-      clearTimeout(timer);
-      const contentType = res.headers.get("content-type") || "";
-      if (res.status === 401) {
-        logHttpIssue({
-          op: "preflight",
-          feature: "market-health",
-          url: preflightUrl,
-          status: res.status,
-          text,
-          headers: res.headers,
-          error: "AUTH_FAILED"
-        });
-        logEvent({
-          level: "error",
-          op: "preflight_auth_headers",
-          feature: "market-health",
-          sent: {
-            "x-rv-cron": true,
-            "x-rv-cron-token": Boolean(RV_CRON_TOKEN),
-            authorization: Boolean(RV_CRON_TOKEN)
-          }
-        });
-        console.error(
-          "[seed-mirrors] preflight failed: auth failed (check RV_CRON_TOKEN header)"
-        );
-        process.exit(1);
-      }
-      if (res.status === 404) {
-        logHttpIssue({
-          op: "preflight",
-          feature: "market-health",
-          url: preflightUrl,
-          status: res.status,
-          text,
-          headers: res.headers,
-          error: "ROUTE_MISSING"
-        });
-        console.error(
-          `[seed-mirrors] preflight failed: route missing or base URL wrong (${preflightUrl})`
-        );
-        process.exit(1);
-      }
-      if (res.status === 403 || contentType.includes("text/html") || text.trim().startsWith("<")) {
-        logHttpIssue({
-          op: "preflight",
-          feature: "market-health",
-          url: preflightUrl,
-          status: res.status,
-          text,
-          headers: res.headers,
-          error: "WAF_BLOCK"
-        });
-        console.error("[seed-mirrors] preflight failed: Cloudflare WAF/Bot block (rule not matching)");
-        process.exit(1);
-      }
-      if (!res.ok) {
-        logHttpIssue({
-          op: "preflight",
-          feature: "market-health",
-          url: preflightUrl,
-          status: res.status,
-          text,
-          headers: res.headers,
-          error: "HTTP_ERROR"
-        });
-        console.error(`[seed-mirrors] preflight failed: HTTP ${res.status}`);
-        process.exit(1);
-      }
-    } catch (err) {
-      clearTimeout(timer);
-      console.error(`[seed-mirrors] preflight failed: ${err.message}`);
-      process.exit(1);
-    }
   }
 
   if (FRED_API_KEY && FRED_API_KEY.length) {
@@ -821,122 +1032,104 @@ async function seed() {
     summary: { ok: 0, bad: 0, total: FEATURES.length },
     blocks: {}
   };
+  const results = [];
 
   for (const featureId of FEATURES) {
-    let payload;
-    let httpStatus = null;
-    let bytes = 0;
-    let provider = "unknown";
-    let upstreamUrl = "unknown";
-    try {
-      let result;
-      if (featureId === "top-movers") {
-        result = await fetchTopMoversUpstream();
-      } else if (featureId === "yield-curve") {
-        result = await fetchYieldCurveUpstream();
-      } else if (featureId === "sector-rotation") {
-        result = await fetchSectorRotationUpstream();
-      } else if (featureId === "market-health") {
-        result = await fetchMarketHealthUpstream();
-      } else {
-        throw new Error("unsupported_feature");
-      }
-      provider = result.provider || "unknown";
-      upstreamUrl = result.upstreamUrl || provider;
-      httpStatus = result.upstreamStatus ?? 200;
-      payload = buildPayload({
-        featureId,
-        data: result.data,
-        upstreamUrl,
-        upstreamStatus: httpStatus,
-        reason: result.reason || null,
-        provider
-      });
-      bytes = Buffer.byteLength(JSON.stringify(payload), "utf8");
-    } catch (error) {
-      httpStatus = error.httpStatus ?? null;
-      bytes = error.bytes ?? 0;
-      logEvent({
-        level: "error",
-        op: "seed",
-        feature: featureId,
-        provider,
-        upstream: upstreamUrl,
-        http: httpStatus,
-        bytes,
-        error: error.message
-      });
-      summary.blocks[featureId] = {
-        ok: false,
-        http: httpStatus,
-        bytes,
-        metaStatus: null,
-        metaReason: null,
-        write: "SKIPPED",
-        error: error.message
-      };
-      summary.summary.bad += 1;
-      continue;
-    }
-
-    const metaStatus = normalizeMetaStatus(payload);
-    const metaReason = payload?.meta?.reason ?? null;
-    const { items, context } = extractItems(featureId, payload);
-    const validation = validateFeature(featureId, payload, items);
-    const dataKeys = payload?.data && typeof payload.data === "object" ? Object.keys(payload.data).length : 0;
-    logEvent({
-      level: "info",
-      op: "seed",
-      feature: featureId,
-      provider,
-      upstream: upstreamUrl,
-      http: httpStatus,
-      bytes,
-      metaStatus,
-      metaReason,
-      dataKeys,
-      valid: validation.ok
-    });
-
     const mirrorPath = path.resolve(process.cwd(), "public/mirrors", `${featureId}.json`);
     const existing = loadMirror(mirrorPath);
-
-    if (!validation.ok) {
+    const attempt = await runProviderWaterfall(featureId);
+    const timestamp = new Date().toISOString();
+    if (attempt.ok) {
+      const payload = attempt.payload;
+      const metaStatus = normalizeMetaStatus(payload);
+      const metaReason = payload?.meta?.reason ?? null;
+      const { items, context } = extractItems(featureId, payload);
+      const bytes = Buffer.byteLength(JSON.stringify(payload), "utf8");
       logEvent({
-        level: "error",
-        op: "skip_write",
+        level: "info",
+        op: "seed",
         feature: featureId,
-        reason: "POISON_GUARD",
-        detail: validation.reason
-      });
-      summary.blocks[featureId] = {
-        ok: false,
-        http: httpStatus,
+        provider: attempt.providerUsed,
+        upstream: sanitizeUrl(payload?.upstream?.url || attempt.providerUsed),
+        http: attempt.httpStatus,
         bytes,
         metaStatus,
         metaReason,
-        write: "SKIPPED",
-        error: `POISON_GUARD:${validation.reason}`
+        dataKeys: payload?.data && typeof payload.data === "object" ? Object.keys(payload.data).length : 0,
+        valid: true
+      });
+
+      const mirror = buildMirror(featureId, payload, items, context, attempt.providerUsed);
+      if (!DRY_RUN_LIVE) {
+        for (const dir of OUT_DIRS) {
+          const outPath = path.resolve(process.cwd(), dir, `${featureId}.json`);
+          saveMirror(outPath, mirror);
+        }
+      }
+      summary.blocks[featureId] = {
+        ok: true,
+        http: attempt.httpStatus,
+        bytes,
+        provider: attempt.providerUsed,
+        metaStatus,
+        metaReason,
+        write: DRY_RUN_LIVE ? "SKIPPED" : existing ? "UPDATED" : "CREATED",
+        error: null
       };
-      summary.summary.bad += 1;
+      summary.summary.ok += 1;
+      results.push(buildResult(featureId, "FRESH", {
+        providerUsed: attempt.providerUsed,
+        reason: "OK",
+        httpCode: attempt.httpStatus,
+        wrote: !DRY_RUN_LIVE,
+        timestamp
+      }));
       continue;
     }
 
-    const mirror = buildMirror(featureId, payload, items, context, provider);
-    for (const dir of OUT_DIRS) {
-      const outPath = path.resolve(process.cwd(), dir, `${featureId}.json`);
-      saveMirror(outPath, mirror);
+    const failedReason = attempt.failures?.[0]?.reason || (attempt.skipped?.length ? "CONFIG_MISSING" : "UNKNOWN");
+    const failureHttp = attempt.failures?.[0]?.httpCode ?? null;
+    if (attempt.skipped?.length) {
+      logEvent({
+        level: "warn",
+        op: "provider_skip",
+        feature: featureId,
+        skipped: attempt.skipped
+      });
     }
+    if (attempt.failures?.length) {
+      logEvent({
+        level: "error",
+        op: "provider_fail",
+        feature: featureId,
+        failures: attempt.failures
+      });
+    }
+
+    const status = existing ? "STALE" : "FAILED";
+    const okForSummary = status === "STALE";
     summary.blocks[featureId] = {
-      ok: true,
-      http: httpStatus,
-      bytes,
-      metaStatus,
-      metaReason,
-      write: existing ? "UPDATED" : "CREATED",
-      error: null
+      ok: okForSummary,
+      http: failureHttp,
+      bytes: 0,
+      provider: null,
+      metaStatus: null,
+      metaReason: failedReason,
+      write: "SKIPPED",
+      error: failedReason
     };
-    summary.summary.ok += 1;
+    if (okForSummary) {
+      summary.summary.ok += 1;
+    } else if (failedReason !== "CONFIG_MISSING") {
+      summary.summary.bad += 1;
+    }
+    results.push(buildResult(featureId, status, {
+      providerUsed: null,
+      reason: failedReason,
+      httpCode: failureHttp,
+      wrote: false,
+      timestamp
+    }));
   }
 
   const healthPath = path.resolve(process.cwd(), "public/mirrors/_health.json");
@@ -952,9 +1145,37 @@ async function seed() {
     context: summary
   });
 
-  const criticalBad = FEATURES.filter((id) => CRITICAL_FEATURES.has(id) && !summary.blocks[id]?.ok);
-  if (criticalBad.length) {
-    console.error(`[seed-mirrors] critical failures: ${criticalBad.join(", ")}`);
+  const okCount = results.filter((entry) => entry.status === "FRESH" || entry.status === "STALE").length;
+  const failCount = results.filter((entry) => entry.status === "FAILED" && entry.reason !== "CONFIG_MISSING").length;
+  const criticalFailed = results.filter(
+    (entry) => CRITICAL_FEATURES.has(entry.feature) && entry.status === "FAILED"
+  );
+
+  const summaryLine = {
+    summary: {
+      okCount,
+      failCount,
+      criticalFailed: criticalFailed.map((entry) => entry.feature),
+      minOk: MIN_OK_FEATURES,
+      maxFail: MAX_FAIL_FEATURES
+    },
+    details: results
+  };
+  console.log(JSON.stringify(summaryLine));
+  console.log(
+    `okCount=${okCount} failCount=${failCount} criticalFailed=[${criticalFailed.map((entry) => entry.feature).join(", ")}] exitCode=0`
+  );
+
+  if (okCount === 0) {
+    process.exit(1);
+  }
+  if (criticalFailed.length) {
+    process.exit(1);
+  }
+  if (okCount < MIN_OK_FEATURES) {
+    process.exit(1);
+  }
+  if (failCount > MAX_FAIL_FEATURES) {
     process.exit(1);
   }
 }
