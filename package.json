@@ -7,7 +7,11 @@
     "test:diag": "curl -s --max-time 12 http://127.0.0.1:8788/api/diag | jq '.summary // .data?.summary'",
     "dev:pages:std": "wrangler pages dev public --port 8788 --kv RV_KV --compatibility-date=2025-12-29",
     "dev:pages:persist:std": "wrangler pages dev public --port 8788 --kv RV_KV --persist-to .wrangler/state --compatibility-date=2025-12-29",
-    "dev:pages:port:std": "PORT=${PORT:-8788} wrangler pages dev public --port $PORT --kv RV_KV --compatibility-date=2025-12-29"
+    "dev:pages:port:std": "PORT=${PORT:-8788} wrangler pages dev public --port $PORT --kv RV_KV --compatibility-date=2025-12-29",
+    "audit:local": "node scripts/audit-site.mjs --mode local --base public --format table --fail-on none",
+    "audit:json": "node scripts/audit-site.mjs --mode local --base public --format json --fail-on none",
+    "audit:strict": "node scripts/audit-site.mjs --mode local --base public --format json --fail-on bad",
+    "audit:live": "node scripts/audit-site.mjs --mode live --base $PREVIEW --format table --fail-on bad"
   },
   "dependencies": {
     "fast-xml-parser": "^4.5.3"

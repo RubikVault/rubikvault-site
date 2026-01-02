@@ -58,6 +58,14 @@ jobs:
             echo '{"summary":{"note":"summary_line_missing"}}' > /tmp/seed-summary.json
           fi
 
+      - name: Build mirrors manifest
+        run: |
+          node scripts/build-mirrors-manifest.mjs
+
+      - name: Audit mirrors (local, informational)
+        run: |
+          node scripts/audit-site.mjs --mode local --base public --format json --fail-on none > /tmp/audit-report.json
+
       - name: Upload mirrors artifact
         uses: actions/upload-artifact@v4
         with:
@@ -65,6 +73,7 @@ jobs:
           path: |
             public/mirrors/**
             /tmp/seed-summary.json
+            /tmp/audit-report.json
 
       - name: Commit mirrors to PR branch if changed
         env:
@@ -87,6 +96,7 @@ jobs:
           PR_NUMBER=$(gh pr list --head mirrors-auto --base main --json number --jq '.[0].number')
           if [ -n "$PR_NUMBER" ]; then
             gh pr edit "$PR_NUMBER" --title "chore: update mirrors" --body-file /tmp/pr-body.txt
+            gh pr comment "$PR_NUMBER" --body-file /tmp/pr-body.txt
           else
             gh pr create --head mirrors-auto --base main --title "chore: update mirrors" --body-file /tmp/pr-body.txt
           fi
