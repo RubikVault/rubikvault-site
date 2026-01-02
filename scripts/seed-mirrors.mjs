@@ -11,6 +11,10 @@ const OUT_DIRS = ["public/mirrors", "mirrors"];
 const FEATURES = ["top-movers", "yield-curve", "sector-rotation", "market-health"];
 const CRITICAL_FEATURES = new Set(["market-health", "top-movers", "yield-curve", "sector-rotation"]);
 
+const PROD_URL = process.env.PROD_URL || "";
+const RV_CRON_TOKEN = process.env.RV_CRON_TOKEN || "";
+const MIRROR_BASE_URL = process.env.MIRROR_BASE_URL || "";
+
 const QUOTES_PROVIDER = String(process.env.QUOTES_PROVIDER || "").toLowerCase();
 const FINNHUB_API_KEY = process.env.FINNHUB_API_KEY || "";
 const FMP_API_KEY = process.env.FMP_API_KEY || "";
@@ -81,6 +85,49 @@ function logEvent(payload) {
   console.log(JSON.stringify(payload));
 }
 
+function getCfHeaders(headers) {
+  return {
+    "cf-ray": headers?.get("cf-ray") || null,
+    "server": headers?.get("server") || null,
+    "cf-cache-status": headers?.get("cf-cache-status") || null,
+    "location": headers?.get("location") || null,
+    "content-type": headers?.get("content-type") || null
+  };
+}
+
+function logHttpIssue({ op, feature, url, status, text, headers, error }) {
+  const snippet = (text || "").slice(0, 200);
+  logEvent({
+    level: "error",
+    op,
+    feature,
+    url,
+    http: status ?? null,
+    contentType: headers?.get("content-type") || null,
+    snippet,
+    headers: getCfHeaders(headers),
+    error: error || null
+  });
+}
+
+function buildApiHeaders() {
+  return {
+    "x-rv-cron": "1",
+    "authorization": RV_CRON_TOKEN ? `Bearer ${RV_CRON_TOKEN}` : "",
+    "user-agent": "RVSeeder/1.0 (github-actions)",
+    "accept": "application/json",
+    "cache-control": "no-cache"
+  };
+}
+
+function buildUpstreamHeaders() {
+  return {
+    "user-agent": "RVSeeder/1.0 (github-actions)",
+    "accept": "application/json",
+    "cache-control": "no-cache"
+  };
+}
+
 async function fetchText(url, { headers } = {}) {
   return withRetries(async () => {
     const controller = new AbortController();
@@ -88,6 +135,9 @@ async function fetchText(url, { headers } = {}) {
     const res = await fetch(url, { headers, signal: controller.signal });
     const text = await res.text();
     clearTimeout(timer);
+    if (!res.ok) {
+      logHttpIssue({ op: "fetch_text", url, status: res.status, text, headers: res.headers, error: "HTTP_ERROR" });
+    }
     return { res, text };
   }, { retries: 2, baseDelayMs: 600 });
 }
@@ -96,18 +146,29 @@ async function fetchJson(url, { headers } = {}) {
   const { res, text } = await fetchText(url, { headers });
   const bytes = Buffer.byteLength(text || "", "utf8");
   if (text.trim().startsWith("<")) {
+    logHttpIssue({ op: "fetch_json", url, status: res.status, text, headers: res.headers, error: "HTML_RESPONSE" });
     const error = new Error("HTML response");
     error.httpStatus = res.status;
     error.bytes = bytes;
     throw error;
   }
   if (!res.ok) {
+    logHttpIssue({ op: "fetch_json", url, status: res.status, text, headers: res.headers, error: "HTTP_ERROR" });
     const error = new Error(`HTTP ${res.status}`);
     error.httpStatus = res.status;
     error.bytes = bytes;
     throw error;
   }
-  const json = JSON.parse(text);
+  let json;
+  try {
+    json = JSON.parse(text);
+  } catch (err) {
+    logHttpIssue({ op: "fetch_json", url, status: res.status, text, headers: res.headers, error: "JSON_PARSE_ERROR" });
+    const error = new Error("JSON parse error");
+    error.httpStatus = res.status;
+    error.bytes = bytes;
+    throw error;
+  }
   return { json, bytes, httpStatus: res.status };
 }
 
@@ -295,7 +356,7 @@ async function fetchTopMoversUpstream() {
     const quotes = [];
     for (const entry of STOCK_UNIVERSE) {
       const url = `${FINNHUB_QUOTE_URL}?symbol=${encodeURIComponent(entry.symbol)}&token=${FINNHUB_API_KEY}`;
-      const result = await fetchJson(url, { headers: { Accept: "application/json" } });
+      const result = await fetchJson(url, { headers: buildUpstreamHeaders() });
       const data = result.json || {};
       quotes.push({
         symbol: entry.symbol,
@@ -322,7 +383,7 @@ async function fetchTopMoversUpstream() {
 
   if (QUOTES_PROVIDER === "fmp" && FMP_API_KEY) {
     const url = `${FMP_QUOTE_URL}/${STOCK_UNIVERSE.map((entry) => entry.symbol).join(",")}?apikey=${FMP_API_KEY}`;
-    const result = await fetchJson(url, { headers: { Accept: "application/json" } });
+    const result = await fetchJson(url, { headers: buildUpstreamHeaders() });
     const results = Array.isArray(result.json) ? result.json : [];
     const quotes = results.map((item) => ({
       symbol: item.symbol,
@@ -346,7 +407,7 @@ async function fetchTopMoversUpstream() {
     };
   }
 
-  const result = await fetchJson(YAHOO_URL, { headers: { Accept: "application/json" } });
+  const result = await fetchJson(YAHOO_URL, { headers: buildUpstreamHeaders() });
   const results = result.json?.quoteResponse?.result || [];
   return {
     provider: "yahoo",
@@ -405,7 +466,7 @@ function parseYieldCurveCsv(csv) {
 }
 
 async function fetchYieldCurveUpstream() {
-  const result = await fetchText(TREASURY_CSV_URL, { headers: { Accept: "text/csv" } });
+  const result = await fetchText(TREASURY_CSV_URL, { headers: { ...buildUpstreamHeaders(), Accept: "text/csv" } });
   const bytes = Buffer.byteLength(result.text || "", "utf8");
   if (!result.res.ok) {
     const error = new Error(`HTTP ${result.res.status}`);
@@ -439,7 +500,7 @@ function computeChangePercent(closes) {
 async function fetchSectorRotationUpstream() {
   if (FMP_API_KEY) {
     const url = `${FMP_QUOTE_URL}/${SECTOR_SYMBOLS.concat("SPY").join(",")}?apikey=${FMP_API_KEY}`;
-    const result = await fetchJson(url, { headers: { Accept: "application/json" } });
+    const result = await fetchJson(url, { headers: buildUpstreamHeaders() });
     const list = Array.isArray(result.json) ? result.json : [];
     const spy = list.find((item) => item.symbol === "SPY");
     const spyChange = spy ? parseChangePercent(spy.changesPercentage) : null;
@@ -582,7 +643,7 @@ function normalizeYahoo(payload) {
 async function fetchMarketHealthUpstream() {
   const fetchSafe = async (url) => {
     try {
-      const result = await fetchJson(url, { headers: { Accept: "application/json" } });
+      const result = await fetchJson(url, { headers: buildUpstreamHeaders() });
       return { ok: true, ...result };
     } catch (err) {
       return { ok: false, error: err };
@@ -646,6 +707,39 @@ async function fetchMarketHealthUpstream() {
 }
 
 async function seed() {
+  if (PROD_URL) {
+    if (!RV_CRON_TOKEN) {
+      console.error('[seed-mirrors] RV_CRON_TOKEN missing; cannot run preflight');
+      process.exit(1);
+    }
+    const preflightUrl = `${PROD_URL.replace(/\\/$/, "")}/api/market-health?debug=1`;
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 10000);
+    try {
+      const res = await fetch(preflightUrl, { headers: buildApiHeaders(), signal: controller.signal });
+      const text = await res.text();
+      clearTimeout(timer);
+      const contentType = res.headers.get("content-type") || "";
+      if (res.status === 403 || contentType.includes("text/html") || text.trim().startsWith("<")) {
+        logHttpIssue({
+          op: "preflight",
+          feature: "market-health",
+          url: preflightUrl,
+          status: res.status,
+          text,
+          headers: res.headers,
+          error: "WAF_BLOCK"
+        });
+        console.error("[seed-mirrors] preflight failed: Cloudflare WAF/Bot block (rule not matching)");
+        process.exit(1);
+      }
+    } catch (err) {
+      clearTimeout(timer);
+      console.error(`[seed-mirrors] preflight failed: ${err.message}`);
+      process.exit(1);
+    }
+  }
+
   if (FRED_API_KEY && FRED_API_KEY.length) {
     logEvent({ level: "info", op: "env", feature: "fred", configured: true });
   }

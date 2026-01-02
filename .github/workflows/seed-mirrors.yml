@@ -21,6 +21,7 @@ jobs:
         env:
           PROD_URL: ${{ secrets.PROD_URL }}
           RV_CRON_TOKEN: ${{ secrets.RV_CRON_TOKEN }}
+          MIRROR_BASE_URL: ${{ secrets.MIRROR_BASE_URL }}
         run: node scripts/seed-mirrors.mjs
 
       - name: Commit mirrors if changed
