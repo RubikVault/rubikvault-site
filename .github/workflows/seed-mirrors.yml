@@ -1,9 +1,21 @@
 name: Seed Mirrors
+# PR-based mirror updates:
+# - mirrors are committed to mirrors-auto branch
+# - PR is created/updated to main
+# - requires secret: RV_GH_PUSH_TOKEN
 
 on:
   schedule:
     - cron: "0 */6 * * *"
   workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: seed-mirrors
+  cancel-in-progress: true
 
 jobs:
   seed:
@@ -17,6 +29,15 @@ jobs:
         with:
           node-version: "20"
 
+      - name: Preflight secrets
+        env:
+          RV_GH_PUSH_TOKEN: ${{ secrets.RV_GH_PUSH_TOKEN }}
+        run: |
+          if [ -z "$RV_GH_PUSH_TOKEN" ]; then
+            echo "::error::Missing secret RV_GH_PUSH_TOKEN (PAT with contents + pull-requests write)."
+            exit 1
+          fi
+
       - name: Seed mirrors
         env:
           ALPHAVANTAGE_API_KEY: ${{ secrets.ALPHAVANTAGE_API_KEY }}
@@ -29,16 +50,43 @@ jobs:
           CRITICAL_FEATURES: ${{ secrets.CRITICAL_FEATURES }}
           ALLOW_YAHOO: ${{ secrets.ALLOW_YAHOO }}
           ALLOW_TREASURY: ${{ secrets.ALLOW_TREASURY }}
-        run: node scripts/seed-mirrors.mjs
-
-      - name: Commit mirrors if changed
         run: |
-          if git status --porcelain | grep -q "public/mirrors/"; then
-            git config user.name "RubikVault Bot"
-            git config user.email "bot@rubikvault.com"
-            git add public/mirrors/
-            git commit -m "chore: update mirrors"
-            git push
+          node scripts/seed-mirrors.mjs | tee /tmp/seed-mirrors.log
+          if grep -q '"summary"' /tmp/seed-mirrors.log; then
+            grep '"summary"' /tmp/seed-mirrors.log | tail -n 1 > /tmp/seed-summary.json
           else
+            echo '{"summary":{"note":"summary_line_missing"}}' > /tmp/seed-summary.json
+          fi
+
+      - name: Upload mirrors artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: mirrors-output
+          path: |
+            public/mirrors/**
+            /tmp/seed-summary.json
+
+      - name: Commit mirrors to PR branch if changed
+        env:
+          RV_GH_PUSH_TOKEN: ${{ secrets.RV_GH_PUSH_TOKEN }}
+          GH_TOKEN: ${{ secrets.RV_GH_PUSH_TOKEN }}
+        run: |
+          if ! git status --porcelain | grep -q "public/mirrors/"; then
             echo "No mirror changes."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout -B mirrors-auto
+          git add public/mirrors/
+          git commit -m "chore: update mirrors"
+          git remote set-url origin "https://x-access-token:${RV_GH_PUSH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          git push --force-with-lease origin mirrors-auto
+          printf "Seed Mirrors summary (%s)\n\n" "$(date -u +"%Y-%m-%dT%H:%M:%SZ")" > /tmp/pr-body.txt
+          cat /tmp/seed-summary.json >> /tmp/pr-body.txt
+          PR_NUMBER=$(gh pr list --head mirrors-auto --base main --json number --jq '.[0].number')
+          if [ -n "$PR_NUMBER" ]; then
+            gh pr edit "$PR_NUMBER" --title "chore: update mirrors" --body-file /tmp/pr-body.txt
+          else
+            gh pr create --head mirrors-auto --base main --title "chore: update mirrors" --body-file /tmp/pr-body.txt
           fi
