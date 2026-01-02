@@ -20,6 +20,7 @@ const FINNHUB_API_KEY = process.env.FINNHUB_API_KEY || "";
 const FMP_API_KEY = process.env.FMP_API_KEY || "";
 const FRED_API_KEY = process.env.FRED_API_KEY || "";
 const MARKETAUX_KEY = process.env.MARKETAUX_KEY || "";
+const DRY_RUN = process.argv.includes("--dry-run") || process.argv.includes("--preflight-only");
 
 const STOCK_UNIVERSE = [
   { symbol: "AAPL", label: "Apple" },
@@ -708,12 +709,25 @@ async function fetchMarketHealthUpstream() {
 }
 
 async function seed() {
+  if (DRY_RUN) {
+    const preflightUrl = PROD_URL
+      ? `${PROD_URL.replace(/\/+$/, "")}/api/market-health?debug=1`
+      : null;
+    logEvent({
+      level: "info",
+      op: "dry-run",
+      preflightUrl,
+      hasToken: Boolean(RV_CRON_TOKEN)
+    });
+    return;
+  }
+
   if (PROD_URL) {
     if (!RV_CRON_TOKEN) {
       console.error('[seed-mirrors] RV_CRON_TOKEN missing; cannot run preflight');
       process.exit(1);
     }
-    const preflightUrl = `${PROD_URL.replace(/\\/$/, "")}/api/market-health?debug=1`;
+    const preflightUrl = `${PROD_URL.replace(/\/+$/, "")}/api/market-health?debug=1`;
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 10000);
     try {
