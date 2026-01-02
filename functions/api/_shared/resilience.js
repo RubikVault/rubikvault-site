@@ -130,7 +130,12 @@ function computeAllowWrites(request, env) {
   const token = env?.RV_CRON_TOKEN || "";
   if (!token) return false;
   const auth = request?.headers?.get("authorization") || "";
-  return auth === `Bearer ${token}`;
+  const cronHeader = request?.headers?.get("x-rv-cron") || "";
+  const cronTokenHeader = request?.headers?.get("x-rv-cron-token") || "";
+  return (
+    auth === `Bearer ${token}` ||
+    (cronHeader === "1" && cronTokenHeader === token)
+  );
 }
 
 async function loadMirrorPayload(origin, featureId) {

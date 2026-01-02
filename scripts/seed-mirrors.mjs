@@ -113,6 +113,7 @@ function logHttpIssue({ op, feature, url, status, text, headers, error }) {
 function buildApiHeaders() {
   return {
     "x-rv-cron": "1",
+    "x-rv-cron-token": RV_CRON_TOKEN || "",
     "authorization": RV_CRON_TOKEN ? `Bearer ${RV_CRON_TOKEN}` : "",
     "user-agent": "RVSeeder/1.0 (github-actions)",
     "accept": "application/json",
@@ -720,6 +721,46 @@ async function seed() {
       const text = await res.text();
       clearTimeout(timer);
       const contentType = res.headers.get("content-type") || "";
+      if (res.status === 401) {
+        logHttpIssue({
+          op: "preflight",
+          feature: "market-health",
+          url: preflightUrl,
+          status: res.status,
+          text,
+          headers: res.headers,
+          error: "AUTH_FAILED"
+        });
+        logEvent({
+          level: "error",
+          op: "preflight_auth_headers",
+          feature: "market-health",
+          sent: {
+            "x-rv-cron": true,
+            "x-rv-cron-token": Boolean(RV_CRON_TOKEN),
+            authorization: Boolean(RV_CRON_TOKEN)
+          }
+        });
+        console.error(
+          "[seed-mirrors] preflight failed: auth failed (check RV_CRON_TOKEN header)"
+        );
+        process.exit(1);
+      }
+      if (res.status === 404) {
+        logHttpIssue({
+          op: "preflight",
+          feature: "market-health",
+          url: preflightUrl,
+          status: res.status,
+          text,
+          headers: res.headers,
+          error: "ROUTE_MISSING"
+        });
+        console.error(
+          `[seed-mirrors] preflight failed: route missing or base URL wrong (${preflightUrl})`
+        );
+        process.exit(1);
+      }
       if (res.status === 403 || contentType.includes("text/html") || text.trim().startsWith("<")) {
         logHttpIssue({
           op: "preflight",
@@ -731,6 +772,19 @@ async function seed() {
           error: "WAF_BLOCK"
         });
         console.error("[seed-mirrors] preflight failed: Cloudflare WAF/Bot block (rule not matching)");
+        process.exit(1);
+      }
+      if (!res.ok) {
+        logHttpIssue({
+          op: "preflight",
+          feature: "market-health",
+          url: preflightUrl,
+          status: res.status,
+          text,
+          headers: res.headers,
+          error: "HTTP_ERROR"
+        });
+        console.error(`[seed-mirrors] preflight failed: HTTP ${res.status}`);
         process.exit(1);
       }
     } catch (err) {
