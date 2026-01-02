@@ -1,26 +1,99 @@
+// Smoke (local):
+//   FINNHUB_API_KEY=... FMP_API_KEY=... QUOTES_PROVIDER=finnhub node scripts/seed-mirrors.mjs
+//   node scripts/seed-mirrors.mjs
+
 import path from "node:path";
 import { buildBaseMirror } from "./utils/mirror-builders.mjs";
-import { loadMirror, saveMirror } from "./utils/mirror-io.mjs";
+import { loadMirror, saveMirror, withRetries } from "./utils/mirror-io.mjs";
+import { fetchStooqDaily } from "./utils/stooq-fetch.mjs";
 
-const BASE_URL = process.env.PROD_URL || "https://rubikvault.com";
-const TOKEN = process.env.RV_CRON_TOKEN || "";
 const OUT_DIRS = ["public/mirrors", "mirrors"];
 const FEATURES = ["top-movers", "yield-curve", "sector-rotation", "market-health"];
 const CRITICAL_FEATURES = new Set(["market-health", "top-movers", "yield-curve", "sector-rotation"]);
+
+const QUOTES_PROVIDER = String(process.env.QUOTES_PROVIDER || "").toLowerCase();
+const FINNHUB_API_KEY = process.env.FINNHUB_API_KEY || "";
+const FMP_API_KEY = process.env.FMP_API_KEY || "";
+const FRED_API_KEY = process.env.FRED_API_KEY || "";
+const MARKETAUX_KEY = process.env.MARKETAUX_KEY || "";
+
+const STOCK_UNIVERSE = [
+  { symbol: "AAPL", label: "Apple" },
+  { symbol: "MSFT", label: "Microsoft" },
+  { symbol: "NVDA", label: "Nvidia" },
+  { symbol: "AMZN", label: "Amazon" },
+  { symbol: "META", label: "Meta" },
+  { symbol: "GOOGL", label: "Alphabet" },
+  { symbol: "GOOG", label: "Alphabet" },
+  { symbol: "TSLA", label: "Tesla" },
+  { symbol: "BRK-B", label: "Berkshire" },
+  { symbol: "JPM", label: "JPMorgan" },
+  { symbol: "V", label: "Visa" },
+  { symbol: "MA", label: "Mastercard" },
+  { symbol: "UNH", label: "UnitedHealth" },
+  { symbol: "XOM", label: "Exxon" },
+  { symbol: "LLY", label: "Eli Lilly" },
+  { symbol: "AVGO", label: "Broadcom" },
+  { symbol: "ORCL", label: "Oracle" },
+  { symbol: "COST", label: "Costco" },
+  { symbol: "WMT", label: "Walmart" },
+  { symbol: "PG", label: "Procter & Gamble" }
+];
+
+const YAHOO_URL = `https://query1.finance.yahoo.com/v7/finance/quote?symbols=${encodeURIComponent(
+  STOCK_UNIVERSE.map((entry) => entry.symbol).join(",")
+)}`;
+const FMP_QUOTE_URL = "https://financialmodelingprep.com/api/v3/quote";
+const FINNHUB_QUOTE_URL = "https://finnhub.io/api/v1/quote";
+const TREASURY_CSV_URL =
+  "https://home.treasury.gov/resource-center/data-chart-center/interest-rates/DailyTreasuryYieldCurveRateData.csv";
+const COINGECKO_URL =
+  "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,solana,ripple&vs_currencies=usd&include_24hr_change=true";
+const FNG_URL = "https://api.alternative.me/fng/?limit=1&format=json";
+const FNG_STOCKS_URL = "https://production.dataviz.cnn.io/index/fearandgreed/graphdata";
+const SECTOR_SYMBOLS = [
+  "XLK",
+  "XLF",
+  "XLV",
+  "XLE",
+  "XLI",
+  "XLP",
+  "XLU",
+  "XLRE",
+  "XLB",
+  "XLC",
+  "XLY"
+];
+const YAHOO_SYMBOLS = [
+  { symbol: "^DJI", label: "Dow Jones", type: "index" },
+  { symbol: "^GSPC", label: "S&P 500", type: "index" },
+  { symbol: "^IXIC", label: "Nasdaq", type: "index" },
+  { symbol: "^RUT", label: "Russell 2000", type: "index" },
+  { symbol: "GC=F", label: "Gold", type: "commodity" },
+  { symbol: "SI=F", label: "Silver", type: "commodity" },
+  { symbol: "CL=F", label: "Oil (WTI)", type: "commodity" }
+];
+const YAHOO_MARKET_URL = `https://query1.finance.yahoo.com/v7/finance/quote?symbols=${encodeURIComponent(
+  YAHOO_SYMBOLS.map((entry) => entry.symbol).join(",")
+)}`;
 
 function logEvent(payload) {
   console.log(JSON.stringify(payload));
 }
 
-async function fetchJson(url) {
-  const res = await fetch(url, {
-    headers: {
-      Accept: "application/json",
-      "x-rv-cron": "1",
-      Authorization: `Bearer ${TOKEN}`
-    }
-  });
-  const text = await res.text();
+async function fetchText(url, { headers } = {}) {
+  return withRetries(async () => {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 10000);
+    const res = await fetch(url, { headers, signal: controller.signal });
+    const text = await res.text();
+    clearTimeout(timer);
+    return { res, text };
+  }, { retries: 2, baseDelayMs: 600 });
+}
+
+async function fetchJson(url, { headers } = {}) {
+  const { res, text } = await fetchText(url, { headers });
   const bytes = Buffer.byteLength(text || "", "utf8");
   if (text.trim().startsWith("<")) {
     const error = new Error("HTML response");
@@ -122,18 +195,18 @@ function validateFeature(featureId, payload, items) {
   return { ok, reason: ok ? null : "empty_items" };
 }
 
-function buildMirror(featureId, payload, items, context) {
+function buildMirror(featureId, payload, items, context, sourceUpstreamOverride) {
   const metaStatus = normalizeMetaStatus(payload);
   const mode = metaStatus === "LIVE" ? "LIVE" : metaStatus === "STALE" ? "EOD" : "EMPTY";
   const dataQuality = metaStatus === "LIVE" ? "OK" : metaStatus === "STALE" ? "STALE" : "EMPTY";
-  const sourceUpstream = payload?.data?.source || "unknown";
+  const sourceUpstream = sourceUpstreamOverride || payload?.data?.source || "unknown";
   const mirror = buildBaseMirror({
     mirrorId: featureId,
     mode,
     cadence: "best_effort",
     trust: "derived",
     sourceUpstream,
-    whyUnique: `Seeded from ${featureId} endpoint`,
+    whyUnique: `Seeded from ${featureId} upstream`,
     items,
     context,
     errors: payload?.error ? [payload.error] : [],
@@ -145,10 +218,439 @@ function buildMirror(featureId, payload, items, context) {
   return mirror;
 }
 
+function buildPayload({ featureId, data, upstreamUrl, upstreamStatus, reason, provider }) {
+  const ts = new Date().toISOString();
+  const hasData = data && typeof data === "object" && Object.keys(data).length > 0;
+  const metaStatus = hasData ? "LIVE" : "EMPTY";
+  return {
+    ok: hasData,
+    feature: featureId,
+    ts,
+    traceId: "seed",
+    schemaVersion: 1,
+    cache: { hit: false, ttl: 0, layer: "seed" },
+    upstream: { url: upstreamUrl || provider || "upstream", status: upstreamStatus ?? null, snippet: "" },
+    rateLimit: { remaining: "unknown", reset: null, estimated: true },
+    dataQuality: {
+      status: metaStatus === "LIVE" ? "LIVE" : "NO_DATA",
+      reason: metaStatus === "LIVE" ? "LIVE" : reason || "NO_DATA",
+      missingFields: []
+    },
+    meta: {
+      status: metaStatus,
+      reason: metaStatus === "LIVE" ? null : reason || "NO_DATA"
+    },
+    data
+  };
+}
+
+function parseNumber(value) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function parseChangePercent(value) {
+  if (value === null || value === undefined) return null;
+  const raw = String(value).replace(/[()%]/g, "");
+  const parsed = Number(raw);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function normalizeStocksFromQuotes(results, provider) {
+  const map = new Map(results.map((item) => [item.symbol, item]));
+  const rows = STOCK_UNIVERSE.map((entry) => {
+    const quote = map.get(entry.symbol) || {};
+    return {
+      symbol: entry.symbol,
+      name: quote.shortName || quote.longName || entry.label || entry.symbol,
+      price: quote.price ?? quote.regularMarketPrice ?? null,
+      lastClose: quote.previousClose ?? quote.regularMarketPreviousClose ?? quote.price ?? quote.regularMarketPrice ?? null,
+      changePercent:
+        quote.changePercent ?? quote.regularMarketChangePercent ?? (Number.isFinite(quote.dp) ? quote.dp : null),
+      volume: quote.volume ?? quote.regularMarketVolume ?? null,
+      ts: new Date().toISOString(),
+      source: provider
+    };
+  });
+  const volumes = rows.filter((row) => typeof row.volume === "number");
+  const sortedByVolume = volumes.slice().sort((a, b) => b.volume - a.volume);
+  const fallbackSort = rows
+    .slice()
+    .sort((a, b) => (b.changePercent ?? -999) - (a.changePercent ?? -999));
+  const volumeLeaders = sortedByVolume.length ? sortedByVolume.slice(0, 10) : fallbackSort.slice(0, 10);
+  const volumeLaggards = sortedByVolume.length
+    ? sortedByVolume.slice(-10).reverse()
+    : fallbackSort.slice(-10).reverse();
+  return {
+    volumeLeaders,
+    volumeLaggards,
+    gainers: volumeLeaders,
+    losers: volumeLaggards,
+    universe: STOCK_UNIVERSE.map((entry) => entry.symbol)
+  };
+}
+
+async function fetchTopMoversUpstream() {
+  if (QUOTES_PROVIDER === "finnhub" && FINNHUB_API_KEY) {
+    const quotes = [];
+    for (const entry of STOCK_UNIVERSE) {
+      const url = `${FINNHUB_QUOTE_URL}?symbol=${encodeURIComponent(entry.symbol)}&token=${FINNHUB_API_KEY}`;
+      const result = await fetchJson(url, { headers: { Accept: "application/json" } });
+      const data = result.json || {};
+      quotes.push({
+        symbol: entry.symbol,
+        shortName: entry.label,
+        price: data.c ?? null,
+        previousClose: data.pc ?? null,
+        changePercent: Number.isFinite(data.dp) ? data.dp : null,
+        volume: null
+      });
+    }
+    return {
+      provider: "finnhub",
+      upstreamStatus: 200,
+      upstreamUrl: "finnhub",
+      data: {
+        updatedAt: new Date().toISOString(),
+        source: "finnhub",
+        method: "Top movers computed from fixed mega-cap universe.",
+        crypto: [],
+        stocks: normalizeStocksFromQuotes(quotes, "finnhub")
+      }
+    };
+  }
+
+  if (QUOTES_PROVIDER === "fmp" && FMP_API_KEY) {
+    const url = `${FMP_QUOTE_URL}/${STOCK_UNIVERSE.map((entry) => entry.symbol).join(",")}?apikey=${FMP_API_KEY}`;
+    const result = await fetchJson(url, { headers: { Accept: "application/json" } });
+    const results = Array.isArray(result.json) ? result.json : [];
+    const quotes = results.map((item) => ({
+      symbol: item.symbol,
+      shortName: item.name,
+      price: parseNumber(item.price),
+      previousClose: parseNumber(item.previousClose),
+      changePercent: parseChangePercent(item.changesPercentage),
+      volume: parseNumber(item.volume)
+    }));
+    return {
+      provider: "fmp",
+      upstreamStatus: result.httpStatus ?? 200,
+      upstreamUrl: FMP_QUOTE_URL,
+      data: {
+        updatedAt: new Date().toISOString(),
+        source: "fmp",
+        method: "Top movers computed from fixed mega-cap universe.",
+        crypto: [],
+        stocks: normalizeStocksFromQuotes(quotes, "fmp")
+      }
+    };
+  }
+
+  const result = await fetchJson(YAHOO_URL, { headers: { Accept: "application/json" } });
+  const results = result.json?.quoteResponse?.result || [];
+  return {
+    provider: "yahoo",
+    upstreamStatus: result.httpStatus ?? 200,
+    upstreamUrl: YAHOO_URL,
+    data: {
+      updatedAt: new Date().toISOString(),
+      source: "yahoo",
+      method: "Top movers computed by last trading day volume within a fixed mega-cap universe.",
+      crypto: [],
+      stocks: normalizeStocksFromQuotes(results, "yahoo")
+    }
+  };
+}
+
+function parseYieldCurveCsv(csv) {
+  const trimmed = csv.trim();
+  if (!trimmed || trimmed.startsWith("<")) return null;
+  const lines = trimmed.split("\n");
+  if (lines.length < 2 || !lines[0].toLowerCase().includes("date")) return null;
+  const headers = lines[0].split(",").map((h) => h.replace(/^"|"$/g, "").trim().toLowerCase());
+  const lastLine = lines[lines.length - 1];
+  const values = lastLine.split(",").map((v) => v.replace(/^"|"$/g, "").trim());
+  if (headers.length !== values.length) return null;
+  const row = Object.fromEntries(headers.map((key, idx) => [key, values[idx]]));
+  const date = row.date ? new Date(row.date).toISOString() : new Date().toISOString();
+  const yields = {
+    "1m": parseNumber(row["1 mo"] || row["1 month"]),
+    "3m": parseNumber(row["3 mo"] || row["3 month"]),
+    "6m": parseNumber(row["6 mo"] || row["6 month"]),
+    "1y": parseNumber(row["1 yr"] || row["1 year"]),
+    "2y": parseNumber(row["2 yr"] || row["2 year"]),
+    "3y": parseNumber(row["3 yr"] || row["3 year"]),
+    "5y": parseNumber(row["5 yr"] || row["5 year"]),
+    "7y": parseNumber(row["7 yr"] || row["7 year"]),
+    "10y": parseNumber(row["10 yr"] || row["10 year"]),
+    "20y": parseNumber(row["20 yr"] || row["20 year"]),
+    "30y": parseNumber(row["30 yr"] || row["30 year"])
+  };
+  const spreads = {
+    tenTwo:
+      yields["10y"] !== null && yields["2y"] !== null ? yields["10y"] - yields["2y"] : null,
+    tenThreeMonth:
+      yields["10y"] !== null && yields["3m"] !== null ? yields["10y"] - yields["3m"] : null
+  };
+  return {
+    updatedAt: date,
+    yields,
+    spreads,
+    inversion: {
+      tenTwo: spreads.tenTwo !== null ? spreads.tenTwo < 0 : null,
+      tenThreeMonth: spreads.tenThreeMonth !== null ? spreads.tenThreeMonth < 0 : null
+    },
+    source: "US Treasury"
+  };
+}
+
+async function fetchYieldCurveUpstream() {
+  const result = await fetchText(TREASURY_CSV_URL, { headers: { Accept: "text/csv" } });
+  const bytes = Buffer.byteLength(result.text || "", "utf8");
+  if (!result.res.ok) {
+    const error = new Error(`HTTP ${result.res.status}`);
+    error.httpStatus = result.res.status;
+    error.bytes = bytes;
+    throw error;
+  }
+  const data = parseYieldCurveCsv(result.text || "");
+  if (!data) {
+    const error = new Error("csv_parse_failed");
+    error.httpStatus = result.res.status;
+    error.bytes = bytes;
+    throw error;
+  }
+  return {
+    provider: "treasury",
+    upstreamStatus: result.res.status ?? 200,
+    upstreamUrl: TREASURY_CSV_URL,
+    data
+  };
+}
+
+function computeChangePercent(closes) {
+  if (!Array.isArray(closes) || closes.length < 2) return null;
+  const last = closes[closes.length - 1];
+  const prev = closes[closes.length - 2];
+  if (!Number.isFinite(last) || !Number.isFinite(prev) || prev === 0) return null;
+  return ((last - prev) / prev) * 100;
+}
+
+async function fetchSectorRotationUpstream() {
+  if (FMP_API_KEY) {
+    const url = `${FMP_QUOTE_URL}/${SECTOR_SYMBOLS.concat("SPY").join(",")}?apikey=${FMP_API_KEY}`;
+    const result = await fetchJson(url, { headers: { Accept: "application/json" } });
+    const list = Array.isArray(result.json) ? result.json : [];
+    const spy = list.find((item) => item.symbol === "SPY");
+    const spyChange = spy ? parseChangePercent(spy.changesPercentage) : null;
+    const sectors = list
+      .filter((item) => SECTOR_SYMBOLS.includes(item.symbol))
+      .map((item) => ({
+        symbol: item.symbol,
+        name: item.name || item.symbol,
+        price: parseNumber(item.price),
+        changePercent: parseChangePercent(item.changesPercentage),
+        relativeToSpy:
+          typeof spyChange === "number" && Number.isFinite(parseChangePercent(item.changesPercentage))
+            ? parseChangePercent(item.changesPercentage) - spyChange
+            : null
+      }))
+      .filter((item) => item.symbol);
+    return {
+      provider: "fmp",
+      upstreamStatus: result.httpStatus ?? 200,
+      upstreamUrl: FMP_QUOTE_URL,
+      data: {
+        updatedAt: new Date().toISOString(),
+        rotationLabel: "Neutral",
+        groups: {},
+        spyChangePercent: spyChange,
+        sectors,
+        source: "fmp"
+      }
+    };
+  }
+
+  const spy = await fetchStooqDaily("SPY");
+  const spyChange = computeChangePercent(spy?.closes || []);
+  const sectors = [];
+  for (const symbol of SECTOR_SYMBOLS) {
+    try {
+      const data = await fetchStooqDaily(symbol);
+      const latest = data.closes[data.closes.length - 1] ?? null;
+      const changePercent = computeChangePercent(data.closes);
+      sectors.push({
+        symbol,
+        name: symbol,
+        price: latest ?? null,
+        changePercent,
+        relativeToSpy:
+          typeof changePercent === "number" && typeof spyChange === "number"
+            ? changePercent - spyChange
+            : null
+      });
+    } catch (err) {
+      continue;
+    }
+  }
+  return {
+    provider: "stooq",
+    upstreamStatus: 200,
+    upstreamUrl: "stooq",
+    data: {
+      updatedAt: new Date().toISOString(),
+      rotationLabel: "Neutral",
+      groups: {},
+      spyChangePercent: spyChange ?? null,
+      sectors,
+      source: "stooq"
+    }
+  };
+}
+
+function normalizeFng(payload) {
+  const item = Array.isArray(payload?.data) ? payload.data[0] : null;
+  if (!item) return null;
+  const value = Number(item.value);
+  const timestamp = Number(item.timestamp);
+  return {
+    value: Number.isFinite(value) ? value : null,
+    valueClassification: item.value_classification || item.valueClassification || null,
+    timestamp: Number.isFinite(timestamp) ? timestamp : Date.now()
+  };
+}
+
+function normalizeFngStocks(payload) {
+  const data = payload?.fear_and_greed || payload?.fearAndGreed || payload || {};
+  const valueRaw = data.score ?? data.value ?? data?.now?.value ?? null;
+  const value = Number.isFinite(Number(valueRaw)) ? Number(valueRaw) : null;
+  const label = data.rating || data.value_classification || data.classification || data.text || null;
+  if (value === null && !label) return null;
+  const timestampRaw = data.timestamp || data.lastUpdated || data.last_updated || null;
+  const timestamp = Number.isFinite(Number(timestampRaw)) ? Number(timestampRaw) : Date.now();
+  return {
+    value,
+    valueClassification: label,
+    timestamp
+  };
+}
+
+function normalizeCrypto(payload) {
+  const assets = [
+    { key: "bitcoin", label: "Bitcoin", symbol: "BTC" },
+    { key: "ethereum", label: "Ethereum", symbol: "ETH" },
+    { key: "solana", label: "Solana", symbol: "SOL" },
+    { key: "ripple", label: "XRP", symbol: "XRP" }
+  ];
+  return assets.map((asset) => {
+    const data = payload?.[asset.key] || {};
+    return {
+      symbol: asset.symbol,
+      label: asset.label,
+      price: data.usd ?? null,
+      changePercent: data.usd_24h_change ?? null,
+      ts: new Date().toISOString(),
+      source: "coingecko"
+    };
+  });
+}
+
+function normalizeYahoo(payload) {
+  const results = payload?.quoteResponse?.result || [];
+  const map = new Map(results.map((quote) => [quote.symbol, quote]));
+  const indices = [];
+  const commodities = [];
+  YAHOO_SYMBOLS.forEach((entry) => {
+    const quote = map.get(entry.symbol) || {};
+    const item = {
+      symbol: entry.symbol,
+      label: entry.label,
+      price: quote.regularMarketPrice ?? null,
+      changePercent: quote.regularMarketChangePercent ?? null,
+      ts: new Date().toISOString(),
+      source: "yahoo"
+    };
+    if (entry.type === "index") {
+      indices.push(item);
+    } else {
+      commodities.push(item);
+    }
+  });
+  return { indices, commodities };
+}
+
+async function fetchMarketHealthUpstream() {
+  const fetchSafe = async (url) => {
+    try {
+      const result = await fetchJson(url, { headers: { Accept: "application/json" } });
+      return { ok: true, ...result };
+    } catch (err) {
+      return { ok: false, error: err };
+    }
+  };
+
+  const [fng, stocks, crypto, yahoo] = await Promise.all([
+    fetchSafe(FNG_URL),
+    fetchSafe(FNG_STOCKS_URL),
+    fetchSafe(COINGECKO_URL),
+    fetchSafe(YAHOO_MARKET_URL)
+  ]);
+
+  const errors = [];
+  if (!fng.ok) errors.push("fng_failed");
+  if (!stocks.ok) errors.push("stocks_failed");
+  if (!crypto.ok) errors.push("crypto_failed");
+  if (!yahoo.ok) errors.push("yahoo_failed");
+
+  const fngData = normalizeFng(fng.json || {});
+  const fngStocks = normalizeFngStocks(stocks.json || {});
+  const cryptoData = normalizeCrypto(crypto.json || {});
+  const yahooData = normalizeYahoo(yahoo.json || {});
+  const btcEntry = cryptoData.find((entry) => entry.symbol === "BTC");
+
+  const data = {
+    updatedAt: new Date().toISOString(),
+    source: "alternative.me, cnn, coingecko, yahoo",
+    fng: fngData,
+    fngStocks,
+    btc: btcEntry
+      ? {
+          usd: btcEntry.price ?? null,
+          usd_24h_change: btcEntry.changePercent ?? null
+        }
+      : { usd: null, usd_24h_change: null },
+    crypto: cryptoData,
+    indices: yahooData.indices,
+    commodities: yahooData.commodities
+  };
+
+  const hasData =
+    data.fng ||
+    data.fngStocks ||
+    (data.crypto || []).length ||
+    (data.indices || []).length ||
+    (data.commodities || []).length;
+  if (!hasData) {
+    const error = new Error("no_market_data");
+    error.httpStatus = null;
+    throw error;
+  }
+
+  return {
+    provider: "alternative.me/cnn/coingecko/yahoo",
+    upstreamStatus: 200,
+    upstreamUrl: `${FNG_URL} | ${FNG_STOCKS_URL} | ${COINGECKO_URL} | ${YAHOO_MARKET_URL}`,
+    data,
+    reason: errors.length ? "PARTIAL_UPSTREAM" : null
+  };
+}
+
 async function seed() {
-  if (!TOKEN) {
-    console.error("[seed-mirrors] missing RV_CRON_TOKEN; aborting");
-    process.exit(1);
+  if (FRED_API_KEY && FRED_API_KEY.length) {
+    logEvent({ level: "info", op: "env", feature: "fred", configured: true });
+  }
+  if (MARKETAUX_KEY && MARKETAUX_KEY.length) {
+    logEvent({ level: "info", op: "env", feature: "marketaux", configured: true });
   }
 
   const summary = {
@@ -159,15 +661,36 @@ async function seed() {
   };
 
   for (const featureId of FEATURES) {
-    const url = `${BASE_URL}/api/${featureId}?debug=1`;
     let payload;
     let httpStatus = null;
     let bytes = 0;
+    let provider = "unknown";
+    let upstreamUrl = "unknown";
     try {
-      const res = await fetchJson(url);
-      payload = res.json;
-      httpStatus = res.httpStatus;
-      bytes = res.bytes;
+      let result;
+      if (featureId === "top-movers") {
+        result = await fetchTopMoversUpstream();
+      } else if (featureId === "yield-curve") {
+        result = await fetchYieldCurveUpstream();
+      } else if (featureId === "sector-rotation") {
+        result = await fetchSectorRotationUpstream();
+      } else if (featureId === "market-health") {
+        result = await fetchMarketHealthUpstream();
+      } else {
+        throw new Error("unsupported_feature");
+      }
+      provider = result.provider || "unknown";
+      upstreamUrl = result.upstreamUrl || provider;
+      httpStatus = result.upstreamStatus ?? 200;
+      payload = buildPayload({
+        featureId,
+        data: result.data,
+        upstreamUrl,
+        upstreamStatus: httpStatus,
+        reason: result.reason || null,
+        provider
+      });
+      bytes = Buffer.byteLength(JSON.stringify(payload), "utf8");
     } catch (error) {
       httpStatus = error.httpStatus ?? null;
       bytes = error.bytes ?? 0;
@@ -175,7 +698,8 @@ async function seed() {
         level: "error",
         op: "seed",
         feature: featureId,
-        url,
+        provider,
+        upstream: upstreamUrl,
         http: httpStatus,
         bytes,
         error: error.message
@@ -202,7 +726,8 @@ async function seed() {
       level: "info",
       op: "seed",
       feature: featureId,
-      url,
+      provider,
+      upstream: upstreamUrl,
       http: httpStatus,
       bytes,
       metaStatus,
@@ -235,7 +760,7 @@ async function seed() {
       continue;
     }
 
-    const mirror = buildMirror(featureId, payload, items, context);
+    const mirror = buildMirror(featureId, payload, items, context, provider);
     for (const dir of OUT_DIRS) {
       const outPath = path.resolve(process.cwd(), dir, `${featureId}.json`);
       saveMirror(outPath, mirror);
