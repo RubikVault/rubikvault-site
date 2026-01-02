@@ -1,0 +1,60 @@
+{
+  "schemaVersion": "1.0",
+  "mirrorId": "_health",
+  "mode": "EOD",
+  "cadence": "best_effort",
+  "trust": "derived",
+  "sourceUpstream": "seed-mirrors",
+  "whyUnique": "Seeder health report",
+  "items": [],
+  "context": {
+    "savedAt": "2026-01-02T10:07:33.990Z",
+    "schemaVersion": "1.0",
+    "summary": {
+      "ok": 2,
+      "bad": 2,
+      "total": 4
+    },
+    "blocks": {
+      "top-movers": {
+        "ok": false,
+        "http": 200,
+        "bytes": 1169,
+        "metaStatus": "EMPTY",
+        "metaReason": "UPSTREAM_MISSING",
+        "write": "SKIPPED",
+        "error": "POISON_GUARD:empty_items"
+      },
+      "yield-curve": {
+        "ok": false,
+        "http": 200,
+        "bytes": 1199,
+        "metaStatus": "EMPTY",
+        "metaReason": "UPSTREAM_MISSING",
+        "write": "SKIPPED",
+        "error": "POISON_GUARD:not_enough_points"
+      },
+      "sector-rotation": {
+        "ok": true,
+        "http": 200,
+        "bytes": 2438,
+        "metaStatus": "LIVE",
+        "metaReason": null,
+        "write": "UPDATED",
+        "error": null
+      },
+      "market-health": {
+        "ok": true,
+        "http": 200,
+        "bytes": 3000,
+        "metaStatus": "LIVE",
+        "metaReason": null,
+        "write": "UPDATED",
+        "error": null
+      }
+    }
+  },
+  "runId": "2026-01-02T10:07:37.504Z",
+  "updatedAt": "2026-01-02T10:07:37.504Z",
+  "asOf": "2026-01-02T10:07:37.504Z"
+}
