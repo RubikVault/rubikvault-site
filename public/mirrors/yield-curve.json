@@ -1,20 +1,84 @@
 {
-  "ts": "2025-12-31T12:50:21.836Z",
+  "schemaVersion": "1.0",
+  "mirrorId": "yield-curve",
+  "runId": "2026-01-02T18:07:20.263Z",
+  "updatedAt": "2026-01-02T18:07:20.263Z",
+  "asOf": "2026-01-02T18:07:20.263Z",
+  "mode": "LIVE",
+  "cadence": "best_effort",
+  "trust": "derived",
   "source": "mirror",
+  "sourceUpstream": "fred",
+  "dataQuality": "OK",
+  "delayMinutes": 0,
+  "missingSymbols": [],
+  "errors": [],
+  "notes": [],
+  "whyUnique": "Seeded from yield-curve upstream",
+  "context": {
+    "spreads": {
+      "tenTwo": 0.6899999999999995,
+      "tenThreeMonth": 0.48999999999999977
+    }
+  },
+  "items": [
+    {
+      "tenor": "1m",
+      "value": 3.65
+    },
+    {
+      "tenor": "3m",
+      "value": 3.65
+    },
+    {
+      "tenor": "6m",
+      "value": 3.59
+    },
+    {
+      "tenor": "1y",
+      "value": 3.47
+    },
+    {
+      "tenor": "2y",
+      "value": 3.45
+    },
+    {
+      "tenor": "5y",
+      "value": 3.68
+    },
+    {
+      "tenor": "10y",
+      "value": 4.14
+    },
+    {
+      "tenor": "20y",
+      "value": 4.76
+    },
+    {
+      "tenor": "30y",
+      "value": 4.81
+    }
+  ],
+  "savedAt": "2026-01-02T18:07:20.263Z",
+  "_meta": {
+    "updated_at": "2026-01-02T18:07:20.263Z",
+    "provider": "fred",
+    "status": "fresh"
+  },
   "payload": {
     "ok": true,
     "feature": "yield-curve",
-    "ts": "2025-12-31T12:50:21.836Z",
-    "traceId": "mirror",
+    "ts": "2026-01-02T18:07:20.262Z",
+    "traceId": "seed",
     "schemaVersion": 1,
     "cache": {
-      "hit": true,
+      "hit": false,
       "ttl": 0,
-      "layer": "mirror"
+      "layer": "seed"
     },
     "upstream": {
-      "url": "mirror",
-      "status": null,
+      "url": "fred",
+      "status": 200,
       "snippet": ""
     },
     "rateLimit": {
@@ -24,34 +88,35 @@
     },
     "dataQuality": {
       "status": "LIVE",
-      "reason": "EMPTY",
+      "reason": "LIVE",
       "missingFields": []
     },
+    "meta": {
+      "status": "LIVE",
+      "reason": null
+    },
     "data": {
-      "updatedAt": "2025-12-31T12:50:21.836Z",
-      "source": "mirror",
-      "dataQuality": {
-        "status": "LIVE",
-        "reason": "EMPTY",
-        "missingFields": []
+      "updatedAt": "2025-12-30T00:00:00.000Z",
+      "yields": {
+        "1m": 3.65,
+        "3m": 3.65,
+        "6m": 3.59,
+        "1y": 3.47,
+        "2y": 3.45,
+        "5y": 3.68,
+        "10y": 4.14,
+        "20y": 4.76,
+        "30y": 4.81
       },
-      "confidence": 0,
-      "definitions": {},
-      "reasons": [
-        "MIRROR",
-        "EMPTY"
-      ],
-      "data": {
-        "items": [],
-        "signals": [],
-        "trades": [],
-        "quotes": [],
-        "metrics": [],
-        "stocks": {
-          "volumeLeaders": [],
-          "gainers": []
-        }
-      }
+      "spreads": {
+        "tenTwo": 0.6899999999999995,
+        "tenThreeMonth": 0.48999999999999977
+      },
+      "inversion": {
+        "tenTwo": false,
+        "tenThreeMonth": false
+      },
+      "source": "FRED"
     }
   }
 }
