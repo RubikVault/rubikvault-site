@@ -2,6 +2,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { execSync } from "node:child_process";
+import { normalizeMirrorMeta } from "../utils/mirror-io.mjs";
 
 const ROOT = process.cwd();
 const REGISTRY_PATH = path.join(ROOT, "features", "feature-registry.json");
@@ -63,6 +64,14 @@ registry.features.forEach((feature) => {
   } catch (error) {
     parseError = error;
   }
+  if (json && !parseError) {
+    const normalized = normalizeMirrorMeta(json);
+    if (normalized.changed) {
+      const normalizedText = JSON.stringify(normalized.payload, null, 2);
+      atomicWrite(fullPath, normalizedText);
+      json = normalized.payload;
+    }
+  }
 
   const fileRel = mirrorPath.replace(/^public\//, "");
   const schemaVersion = json?.meta?.schemaVersion || json?.schemaVersion || "v1";
@@ -120,6 +129,11 @@ const manifest = {
 };
 
 const health = {
+  meta: {
+    status: "OK",
+    updatedAt: generatedAt,
+    reason: null
+  },
   generatedAt,
   features: Object.fromEntries(
     Object.entries(healthFeatures).sort(([a], [b]) => String(a).localeCompare(String(b)))

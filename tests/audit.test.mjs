@@ -139,12 +139,39 @@ function testAuditJsonParseError() {
   assert.ok(codes.includes("JSON_PARSE_ERROR"));
 }
 
+function testMirrorMetaNormalization() {
+  const dir = tmpDir();
+  const featuresDir = path.join(dir, "features");
+  const mirrorsDir = path.join(dir, "public", "mirrors");
+  fs.mkdirSync(featuresDir, { recursive: true });
+  fs.mkdirSync(mirrorsDir, { recursive: true });
+  writeJson(path.join(featuresDir, "feature-registry.json"), {
+    registryVersion: "1.0",
+    generatedAt: new Date().toISOString(),
+    features: [{ id: "omega", mirrorPath: "public/mirrors/omega.json", schemaVersion: "v1" }]
+  });
+  writeJson(path.join(mirrorsDir, "omega.json"), {
+    schemaVersion: "1.0",
+    mirrorId: "omega",
+    updatedAt: new Date().toISOString(),
+    items: [],
+    meta: null
+  });
+  run(SCRIPTS.artifacts, [], dir);
+  const mirror = readJson(path.join(mirrorsDir, "omega.json"));
+  assert.ok(mirror.meta, "meta should be present");
+  assert.ok(typeof mirror.meta.status === "string" && mirror.meta.status.length > 0, "meta.status required");
+  assert.ok(mirror.meta.updatedAt, "meta.updatedAt required");
+  assert.notEqual(mirror.meta.status, "OK", "empty items must not be OK");
+}
+
 try {
   testRegistryBuild();
   testStubGeneration();
   testArtifactsBuild();
   testAuditMissingField();
   testAuditJsonParseError();
+  testMirrorMetaNormalization();
   process.stdout.write("audit tests: OK\n");
 } catch (error) {
   process.stderr.write(`audit tests: FAIL\n${error.stack}\n`);

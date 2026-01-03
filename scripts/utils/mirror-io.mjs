@@ -108,14 +108,55 @@ export function atomicWriteJson(finalPath, data) {
   fs.renameSync(tmpPath, finalPath);
 }
 
+export function normalizeMirrorMeta(payload) {
+  if (!payload || typeof payload !== "object") return { payload, changed: false };
+  const now = new Date().toISOString();
+  const items = Array.isArray(payload.items)
+    ? payload.items
+    : Array.isArray(payload?.data?.items)
+      ? payload.data.items
+      : [];
+  const updatedAt = payload?.meta?.updatedAt || payload?.updatedAt || now;
+  const existingStatus = payload?.meta?.status || null;
+  let status = existingStatus;
+  if (!status) {
+    if (items.length > 0) {
+      status = "OK";
+    } else if (payload?.dataQuality === "STUB") {
+      status = "STUB";
+    } else if (payload?.dataQuality === "ERROR") {
+      status = "ERROR";
+    } else {
+      status = "PARTIAL";
+    }
+  }
+  if (status === "OK" && items.length === 0) {
+    status = "PARTIAL";
+  }
+  const reason = payload?.meta?.reason || (status === "OK" ? null : payload?.dataQuality || "EMPTY_ITEMS");
+  const nextMeta = {
+    ...(payload.meta && typeof payload.meta === "object" ? payload.meta : {}),
+    status,
+    updatedAt,
+    reason
+  };
+  const changed =
+    !payload.meta ||
+    payload.meta.updatedAt !== nextMeta.updatedAt ||
+    payload.meta.status !== nextMeta.status ||
+    payload.meta.reason !== nextMeta.reason;
+  return { payload: { ...payload, meta: nextMeta }, changed };
+}
+
 export function saveMirror(finalPath, data) {
   const now = new Date().toISOString();
   const payload = { ...data };
   if (!payload.runId) payload.runId = now;
   if (!payload.updatedAt) payload.updatedAt = now;
   if (!payload.asOf) payload.asOf = payload.updatedAt;
-  atomicWriteJson(finalPath, payload);
-  return payload;
+  const normalized = normalizeMirrorMeta(payload);
+  atomicWriteJson(finalPath, normalized.payload);
+  return normalized.payload;
 }
 
 export function redactNotes(notes = []) {
