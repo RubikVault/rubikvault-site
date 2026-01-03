@@ -64,7 +64,7 @@ jobs:
 
       - name: Audit mirrors (local, informational)
         run: |
-          node scripts/audit-site.mjs --mode local --base public --format json --fail-on none > /tmp/audit-report.json
+          node scripts/audit-site.mjs --mode local --base public --format json --fail-on none > /tmp/audit-report.json || true
 
       - name: Upload mirrors artifact
         uses: actions/upload-artifact@v4

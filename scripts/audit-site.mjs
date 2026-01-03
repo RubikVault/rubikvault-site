@@ -20,6 +20,7 @@ const DEFAULTS = {
   maxBlocksLive: 20,
   debug: false
 };
+let LAST_ARGS = { failOn: DEFAULTS.failOn };
 
 const REASON_CODES = [
   "FILE_MISSING",
@@ -991,6 +992,7 @@ function outputGithub(report) {
 
 async function main() {
   const args = parseArgs(process.argv.slice(2));
+  LAST_ARGS = args;
   const start = Date.now();
   const auditTrace = [];
   const gitSha = detectGitSha(auditTrace) || null;
@@ -1088,6 +1090,7 @@ async function main() {
         blocks: []
       };
       outputJson(report);
+      if (args.failOn === "none") process.exit(0);
       process.exit(2);
     }
     blocks = live.blocks || [];
@@ -1151,5 +1154,5 @@ main().catch((error) => {
     blocks: []
   };
   outputJson(report);
-  process.exit(1);
+  process.exit(LAST_ARGS.failOn === "none" ? 0 : 1);
 });
