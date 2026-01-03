@@ -8,36 +8,39 @@
   "whyUnique": "Seeder health report",
   "items": [],
   "context": {
-    "savedAt": "2026-01-02T10:07:33.990Z",
+    "savedAt": "2026-01-02T18:07:18.769Z",
     "schemaVersion": "1.0",
     "summary": {
-      "ok": 2,
-      "bad": 2,
+      "ok": 4,
+      "bad": 0,
       "total": 4
     },
     "blocks": {
       "top-movers": {
-        "ok": false,
+        "ok": true,
         "http": 200,
-        "bytes": 1169,
-        "metaStatus": "EMPTY",
-        "metaReason": "UPSTREAM_MISSING",
-        "write": "SKIPPED",
-        "error": "POISON_GUARD:empty_items"
+        "bytes": 7394,
+        "provider": "alphavantage",
+        "metaStatus": "LIVE",
+        "metaReason": null,
+        "write": "UPDATED",
+        "error": null
       },
       "yield-curve": {
-        "ok": false,
+        "ok": true,
         "http": 200,
-        "bytes": 1199,
-        "metaStatus": "EMPTY",
-        "metaReason": "UPSTREAM_MISSING",
-        "write": "SKIPPED",
-        "error": "POISON_GUARD:not_enough_points"
+        "bytes": 666,
+        "provider": "fred",
+        "metaStatus": "LIVE",
+        "metaReason": null,
+        "write": "UPDATED",
+        "error": null
       },
       "sector-rotation": {
         "ok": true,
         "http": 200,
-        "bytes": 2438,
+        "bytes": 1816,
+        "provider": "stooq",
         "metaStatus": "LIVE",
         "metaReason": null,
         "write": "UPDATED",
@@ -46,7 +49,8 @@
       "market-health": {
         "ok": true,
         "http": 200,
-        "bytes": 3000,
+        "bytes": 1629,
+        "provider": "market-health",
         "metaStatus": "LIVE",
         "metaReason": null,
         "write": "UPDATED",
@@ -54,7 +58,7 @@
       }
     }
   },
-  "runId": "2026-01-02T10:07:37.504Z",
-  "updatedAt": "2026-01-02T10:07:37.504Z",
-  "asOf": "2026-01-02T10:07:37.504Z"
+  "runId": "2026-01-02T18:07:25.305Z",
+  "updatedAt": "2026-01-02T18:07:25.305Z",
+  "asOf": "2026-01-02T18:07:25.305Z"
 }
