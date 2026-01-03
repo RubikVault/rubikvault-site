@@ -22,6 +22,20 @@ const DEFAULTS = {
 };
 let LAST_ARGS = { failOn: DEFAULTS.failOn };
 
+function getByPath(obj, pathExpr) {
+  if (!obj || typeof obj !== "object") return undefined;
+  const parts = String(pathExpr).split(".").filter(Boolean);
+  let current = obj;
+  for (const part of parts) {
+    if (current && typeof current === "object" && part in current) {
+      current = current[part];
+    } else {
+      return undefined;
+    }
+  }
+  return current;
+}
+
 const REASON_CODES = [
   "FILE_MISSING",
   "JSON_PARSE_ERROR",
@@ -355,7 +369,17 @@ function gatherServerKeys(data) {
   return Object.keys(data).sort();
 }
 
-function auditBlockJson({ blockId, filePath, optional, limits, auditTrace, json, uiMappings, schemaRules }) {
+function auditBlockJson({
+  blockId,
+  filePath,
+  optional,
+  limits,
+  auditTrace,
+  json,
+  uiMappings,
+  schemaRules,
+  requiredFields
+}) {
   const block = {
     blockId,
     file: filePath,
@@ -395,6 +419,51 @@ function auditBlockJson({ blockId, filePath, optional, limits, auditTrace, json,
     };
     fields.push(field);
   }
+
+  const required = Array.isArray(requiredFields) ? requiredFields : [];
+  const fieldIndex = new Map(fields.map((field) => [field.path, field]));
+  required.forEach((reqPath) => {
+    if (!reqPath) return;
+    const value = getByPath(json, reqPath);
+    const pathKey = `/${String(reqPath).split(".").join("/")}`;
+    const issues = [];
+    if (value === undefined) {
+      issues.push(
+        makeReason(
+          "FIELD_MISSING",
+          "Required field missing",
+          [makeEvidence("schema_rule", "registry:required", reqPath, "required field missing")]
+        )
+      );
+    } else if (value === null) {
+      issues.push(
+        makeReason(
+          "FIELD_NULLISH",
+          "Required field is null",
+          [makeEvidence("schema_rule", "registry:required", reqPath, "required field null")]
+        )
+      );
+    }
+    const existing = fieldIndex.get(pathKey);
+    if (existing) {
+      const merged = sortReasons([...(existing.reasons || []), ...issues]);
+      existing.reasons = merged;
+      existing.valid = merged.length === 0;
+      existing.present = value !== undefined;
+      existing.severity = severityFromReasons(merged);
+      existing.valuePreview = valuePreview(value);
+    } else {
+      fields.push({
+        path: pathKey,
+        label: String(reqPath).split(".").pop(),
+        present: value !== undefined,
+        valid: issues.length === 0,
+        severity: severityFromReasons(issues),
+        valuePreview: valuePreview(value),
+        reasons: issues
+      });
+    }
+  });
 
   if (paths.length >= limits.maxFieldsPerBlock) {
     fields.push({
@@ -463,7 +532,16 @@ function auditBlockJson({ blockId, filePath, optional, limits, auditTrace, json,
   return block;
 }
 
-function auditBlockLocal({ filePath, blockId, optional, limits, auditTrace, uiMappings, schemaRules }) {
+function auditBlockLocal({
+  filePath,
+  blockId,
+  optional,
+  limits,
+  auditTrace,
+  uiMappings,
+  schemaRules,
+  requiredFields
+}) {
   let raw = null;
   try {
     raw = fs.readFileSync(filePath, "utf8");
@@ -504,7 +582,17 @@ function auditBlockLocal({ filePath, blockId, optional, limits, auditTrace, uiMa
       fields: []
     };
   }
-  return auditBlockJson({ blockId, filePath, optional, limits, auditTrace, json, uiMappings, schemaRules });
+  return auditBlockJson({
+    blockId,
+    filePath,
+    optional,
+    limits,
+    auditTrace,
+    json,
+    uiMappings,
+    schemaRules,
+    requiredFields
+  });
 }
 
 function pathExists(pathSet, target) {
@@ -645,6 +733,75 @@ async function loadSchemaRegistry(auditTrace) {
   }
 }
 
+function loadFeatureRegistry(auditTrace) {
+  const filePath = path.join(process.cwd(), "features", "feature-registry.json");
+  if (!fs.existsSync(filePath)) {
+    auditTrace.push({
+      step: "feature_registry",
+      outcome: "skipped",
+      details: "feature registry missing",
+      evidence: []
+    });
+    return null;
+  }
+  try {
+    const registry = JSON.parse(fs.readFileSync(filePath, "utf8"));
+    if (!registry || !Array.isArray(registry.features)) {
+      auditTrace.push({
+        step: "feature_registry",
+        outcome: "failed",
+        details: "feature registry invalid",
+        evidence: [makeEvidence("file_system", filePath, "invalid_registry", "missing features array")]
+      });
+      return null;
+    }
+    auditTrace.push({
+      step: "feature_registry",
+      outcome: "success",
+      details: `Loaded ${registry.features.length} features from registry`,
+      evidence: []
+    });
+    return registry;
+  } catch (error) {
+    auditTrace.push({
+      step: "feature_registry",
+      outcome: "failed",
+      details: "feature registry parse failed",
+      evidence: [makeEvidence("file_system", filePath, error.message, "registry parse")]
+    });
+    return null;
+  }
+}
+
+function resolveMirrorFile(basePath, id, mirrorPath) {
+  if (mirrorPath) {
+    if (path.isAbsolute(mirrorPath)) return mirrorPath;
+    return path.join(process.cwd(), mirrorPath);
+  }
+  return path.join(basePath, "mirrors", `${id}.json`);
+}
+
+function resolveMirrorUrl(baseUrl, id, mirrorPath) {
+  const rel = mirrorPath
+    ? mirrorPath.replace(/^public\//, "").replace(/^\/+/, "")
+    : `mirrors/${id}.json`;
+  return `${baseUrl.replace(/\/+$/, "")}/${rel}`;
+}
+
+function discoverBlocksFromRegistry(registry, basePath) {
+  return registry.features.map((feature) => {
+    const id = String(feature.id || "").toLowerCase();
+    return {
+      id,
+      file: resolveMirrorFile(basePath, id, feature.mirrorPath),
+      mirrorPath: feature.mirrorPath || `public/mirrors/${id}.json`,
+      optional: Boolean(feature.optional || feature._deprecated),
+      critical: Boolean(feature.critical),
+      requiredFields: Array.isArray(feature.requiredFields) ? feature.requiredFields : []
+    };
+  });
+}
+
 function discoverLocalBlocks(base, auditTrace) {
   const manifestPath = path.join(base, "mirrors", "manifest.json");
   if (fs.existsSync(manifestPath)) {
@@ -701,48 +858,70 @@ async function fetchWithTimeout(url, timeoutMs) {
   }
 }
 
-async function auditLive({ base, args, auditTrace, uiMappings, schemaRegistry }) {
-  const manifestUrl = `${base.replace(/\/+$/, "")}/mirrors/manifest.json`;
-  let manifestJson;
-  try {
-    const { response, text } = await fetchWithTimeout(manifestUrl, args.timeoutMs);
-    if (!response.ok) {
+async function auditLive({ base, args, auditTrace, uiMappings, schemaRegistry, featureRegistry }) {
+  let blocks = [];
+  if (featureRegistry && Array.isArray(featureRegistry.features)) {
+    blocks = featureRegistry.features.map((feature) => {
+      const id = String(feature.id || "").toLowerCase();
+      const mirrorPath = feature.mirrorPath
+        ? feature.mirrorPath.replace(/^public\//, "")
+        : `mirrors/${id}.json`;
+      return {
+        id,
+        file: mirrorPath.startsWith("/") ? mirrorPath.slice(1) : mirrorPath,
+        optional: Boolean(feature.optional || feature._deprecated),
+        requiredFields: Array.isArray(feature.requiredFields) ? feature.requiredFields : []
+      };
+    });
+    auditTrace.push({
+      step: "discovery",
+      outcome: "success",
+      details: `Found ${blocks.length} blocks via registry`,
+      evidence: []
+    });
+  } else {
+    const manifestUrl = `${base.replace(/\/+$/, "")}/mirrors/manifest.json`;
+    let manifestJson;
+    try {
+      const { response, text } = await fetchWithTimeout(manifestUrl, args.timeoutMs);
+      if (!response.ok) {
+        auditTrace.push({
+          step: "discovery",
+          outcome: "failed",
+          details: "Manifest fetch failed",
+          evidence: [makeEvidence("http_response", manifestUrl, response.status, "manifest fetch")]
+        });
+        return {
+          meta: { error: "BASE_URL_MISCONFIG" },
+          blocks: [],
+          fatalReason: makeReason(
+            "BASE_URL_MISCONFIG",
+            "Manifest missing or fetch failed",
+            [makeEvidence("http_response", manifestUrl, response.status, "manifest fetch")]
+          )
+        };
+      }
+      manifestJson = JSON.parse(text);
+    } catch (error) {
       auditTrace.push({
         step: "discovery",
         outcome: "failed",
-        details: "Manifest fetch failed",
-        evidence: [makeEvidence("http_response", manifestUrl, response.status, "manifest fetch")]
+        details: "Manifest fetch/parse failed",
+        evidence: [makeEvidence("http_response", manifestUrl, error.message, "manifest fetch")]
       });
       return {
         meta: { error: "BASE_URL_MISCONFIG" },
         blocks: [],
         fatalReason: makeReason(
           "BASE_URL_MISCONFIG",
-          "Manifest missing or fetch failed",
-          [makeEvidence("http_response", manifestUrl, response.status, "manifest fetch")]
+          "Manifest fetch/parse failed",
+          [makeEvidence("http_response", manifestUrl, error.message, "manifest fetch")]
         )
       };
     }
-    manifestJson = JSON.parse(text);
-  } catch (error) {
-    auditTrace.push({
-      step: "discovery",
-      outcome: "failed",
-      details: "Manifest fetch/parse failed",
-      evidence: [makeEvidence("http_response", manifestUrl, error.message, "manifest fetch")]
-    });
-    return {
-      meta: { error: "BASE_URL_MISCONFIG" },
-      blocks: [],
-      fatalReason: makeReason(
-        "BASE_URL_MISCONFIG",
-        "Manifest fetch/parse failed",
-        [makeEvidence("http_response", manifestUrl, error.message, "manifest fetch")]
-      )
-    };
+    blocks = Array.isArray(manifestJson.blocks) ? manifestJson.blocks : [];
   }
 
-  const blocks = Array.isArray(manifestJson.blocks) ? manifestJson.blocks : [];
   const maxBlocks = Math.min(blocks.length, args.maxBlocksLive);
   const limitedBlocks = blocks.slice(0, maxBlocks);
   let totalFailures = 0;
@@ -850,6 +1029,7 @@ async function auditLive({ base, args, auditTrace, uiMappings, schemaRegistry })
     const schemaRules =
       schemaRegistry?.blockSchemas?.[entry.id] ||
       schemaRegistry?.blockSchemas?.[String(entry.id).toLowerCase()] ||
+      schemaRegistry?.blockSchemas?.["*"] ||
       null;
     return auditBlockJson({
       blockId: entry.id,
@@ -863,7 +1043,8 @@ async function auditLive({ base, args, auditTrace, uiMappings, schemaRegistry })
       auditTrace,
       json,
       uiMappings,
-      schemaRules
+      schemaRules,
+      requiredFields: entry.requiredFields
     });
   }
 
@@ -992,6 +1173,9 @@ function outputGithub(report) {
 
 async function main() {
   const args = parseArgs(process.argv.slice(2));
+  if (args.mode === "live" && args.url) {
+    args.base = args.url;
+  }
   LAST_ARGS = args;
   const start = Date.now();
   const auditTrace = [];
@@ -1001,19 +1185,27 @@ async function main() {
     timestamp: nowIso(),
     runId,
     mode: args.mode,
-    base: args.base,
+    source: null,
+    base: args.mode === "local" ? args.base : null,
+    url: args.mode === "live" ? args.base : null,
     gitSha,
     durationMs: 0,
     toolVersion: TOOL_VERSION
   };
 
   const schemaRegistry = await loadSchemaRegistry(auditTrace);
+  const featureRegistry = loadFeatureRegistry(auditTrace);
   const uiMappings = scanFeatureFiles(path.join(process.cwd(), "features"), auditTrace);
 
   let blocks = [];
+  const source = featureRegistry ? "registry" : "discovery";
+  meta.source = source;
+
   if (args.mode === "local") {
     const basePath = path.isAbsolute(args.base) ? args.base : path.join(process.cwd(), args.base);
-    const discovered = discoverLocalBlocks(basePath, auditTrace);
+    const discovered = featureRegistry
+      ? discoverBlocksFromRegistry(featureRegistry, basePath)
+      : discoverLocalBlocks(basePath, auditTrace);
     const ordered = discovered.sort((a, b) => a.id.localeCompare(b.id));
     if (ordered.length > args.maxBlocks) {
       auditTrace.push({
@@ -1031,6 +1223,7 @@ async function main() {
     };
     const auditStart = Date.now();
     for (let i = 0; i < limited.length; i += 1) {
+      const entry = limited[i];
       if (Date.now() - auditStart > args.maxAuditTimeMs) {
         auditTrace.push({
           step: "timeout",
@@ -1061,6 +1254,7 @@ async function main() {
       const schemaRules =
         schemaRegistry.blockSchemas?.[entry.id] ||
         schemaRegistry.blockSchemas?.[String(entry.id).toLowerCase()] ||
+        schemaRegistry.blockSchemas?.["*"] ||
         null;
       blocks.push(
         auditBlockLocal({
@@ -1070,12 +1264,20 @@ async function main() {
           limits,
           auditTrace,
           uiMappings,
-          schemaRules
+          schemaRules,
+          requiredFields: entry.requiredFields
         })
       );
     }
   } else if (args.mode === "live") {
-    const live = await auditLive({ base: args.base, args, auditTrace, uiMappings, schemaRegistry });
+    const live = await auditLive({
+      base: args.base,
+      args,
+      auditTrace,
+      uiMappings,
+      schemaRegistry,
+      featureRegistry
+    });
     if (live.fatalReason) {
       const report = {
         meta: { ...meta, durationMs: Date.now() - start },
@@ -1103,7 +1305,7 @@ async function main() {
 
   const summary = summarize(blocks);
   const report = {
-    meta: { ...meta, durationMs: Date.now() - start },
+    meta: { ...meta, durationMs: Date.now() - start, source },
     summary,
     auditTrace,
     blocks

@@ -1,64 +1,461 @@
 {
-  "schemaVersion": "1.0",
-  "mirrorId": "_health",
-  "mode": "EOD",
-  "cadence": "best_effort",
-  "trust": "derived",
-  "sourceUpstream": "seed-mirrors",
-  "whyUnique": "Seeder health report",
-  "items": [],
-  "context": {
-    "savedAt": "2026-01-02T18:07:18.769Z",
-    "schemaVersion": "1.0",
-    "summary": {
-      "ok": 4,
-      "bad": 0,
-      "total": 4
+  "generatedAt": "2026-01-03T12:22:51.790Z",
+  "features": {
+    "alpha-performance": {
+      "status": "STALE",
+      "updatedAt": "2025-12-31T16:30:02.149Z",
+      "ageMinutes": 4073,
+      "reasonCode": "STALE_DATA",
+      "evidence": {
+        "file": "mirrors/alpha-performance.json",
+        "updatedAt": "2025-12-31T16:30:02.149Z",
+        "staleAfterMinutes": 1440,
+        "errorMessage": null
+      }
     },
-    "blocks": {
-      "top-movers": {
-        "ok": true,
-        "http": 200,
-        "bytes": 7394,
-        "provider": "alphavantage",
-        "metaStatus": "LIVE",
-        "metaReason": null,
-        "write": "UPDATED",
-        "error": null
-      },
-      "yield-curve": {
-        "ok": true,
-        "http": 200,
-        "bytes": 666,
-        "provider": "fred",
-        "metaStatus": "LIVE",
-        "metaReason": null,
-        "write": "UPDATED",
-        "error": null
-      },
-      "sector-rotation": {
-        "ok": true,
-        "http": 200,
-        "bytes": 1816,
-        "provider": "stooq",
-        "metaStatus": "LIVE",
-        "metaReason": null,
-        "write": "UPDATED",
-        "error": null
-      },
-      "market-health": {
-        "ok": true,
-        "http": 200,
-        "bytes": 1629,
-        "provider": "market-health",
-        "metaStatus": "LIVE",
-        "metaReason": null,
-        "write": "UPDATED",
-        "error": null
+    "alpha-radar": {
+      "status": "STALE",
+      "updatedAt": "2025-12-31T16:29:52.964Z",
+      "ageMinutes": 4073,
+      "reasonCode": "STALE_DATA",
+      "evidence": {
+        "file": "mirrors/alpha-radar.json",
+        "updatedAt": "2025-12-31T16:29:52.964Z",
+        "staleAfterMinutes": 1440,
+        "errorMessage": null
+      }
+    },
+    "analyst-stampede": {
+      "status": "STALE",
+      "updatedAt": "2025-12-31T16:30:02.149Z",
+      "ageMinutes": 4073,
+      "reasonCode": "STALE_DATA",
+      "evidence": {
+        "file": "mirrors/analyst-stampede.json",
+        "updatedAt": "2025-12-31T16:30:02.149Z",
+        "staleAfterMinutes": 1440,
+        "errorMessage": null
+      }
+    },
+    "arb-breadth-lite": {
+      "status": "STUB",
+      "updatedAt": "2026-01-03T12:17:23.925Z",
+      "ageMinutes": null,
+      "reasonCode": "MIRROR_MISSING",
+      "evidence": {
+        "file": "mirrors/arb-breadth-lite.json",
+        "updatedAt": "2026-01-03T12:17:23.925Z",
+        "staleAfterMinutes": 1440,
+        "errorMessage": null
+      }
+    },
+    "arb-liquidity-pulse": {
+      "status": "STUB",
+      "updatedAt": "2026-01-03T12:17:23.925Z",
+      "ageMinutes": null,
+      "reasonCode": "MIRROR_MISSING",
+      "evidence": {
+        "file": "mirrors/arb-liquidity-pulse.json",
+        "updatedAt": "2026-01-03T12:17:23.925Z",
+        "staleAfterMinutes": 1440,
+        "errorMessage": null
+      }
+    },
+    "arb-risk-regime": {
+      "status": "STUB",
+      "updatedAt": "2026-01-03T12:17:23.925Z",
+      "ageMinutes": null,
+      "reasonCode": "MIRROR_MISSING",
+      "evidence": {
+        "file": "mirrors/arb-risk-regime.json",
+        "updatedAt": "2026-01-03T12:17:23.925Z",
+        "staleAfterMinutes": 1440,
+        "errorMessage": null
+      }
+    },
+    "breakout-energy": {
+      "status": "STALE",
+      "updatedAt": "2025-12-31T16:29:52.964Z",
+      "ageMinutes": 4073,
+      "reasonCode": "STALE_DATA",
+      "evidence": {
+        "file": "mirrors/breakout-energy.json",
+        "updatedAt": "2025-12-31T16:29:52.964Z",
+        "staleAfterMinutes": 1440,
+        "errorMessage": null
+      }
+    },
+    "central-bank-watch": {
+      "status": "OK",
+      "updatedAt": null,
+      "ageMinutes": null,
+      "reasonCode": "OK",
+      "evidence": {
+        "file": "mirrors/central-bank-watch.json",
+        "updatedAt": null,
+        "staleAfterMinutes": 1440,
+        "errorMessage": null
+      }
+    },
+    "congress-trading": {
+      "status": "STALE",
+      "updatedAt": "2025-12-31T16:30:02.149Z",
+      "ageMinutes": 4073,
+      "reasonCode": "STALE_DATA",
+      "evidence": {
+        "file": "mirrors/congress-trading.json",
+        "updatedAt": "2025-12-31T16:30:02.149Z",
+        "staleAfterMinutes": 1440,
+        "errorMessage": null
+      }
+    },
+    "crypto-snapshot": {
+      "status": "STALE",
+      "updatedAt": "2025-12-31T16:30:10.010Z",
+      "ageMinutes": 4073,
+      "reasonCode": "STALE_DATA",
+      "evidence": {
+        "file": "mirrors/crypto-snapshot.json",
+        "updatedAt": "2025-12-31T16:30:10.010Z",
+        "staleAfterMinutes": 1440,
+        "errorMessage": null
+      }
+    },
+    "daily-digest": {
+      "status": "STALE",
+      "updatedAt": "2025-12-31T16:29:52.968Z",
+      "ageMinutes": 4073,
+      "reasonCode": "STALE_DATA",
+      "evidence": {
+        "file": "mirrors/daily-digest.json",
+        "updatedAt": "2025-12-31T16:29:52.968Z",
+        "staleAfterMinutes": 1440,
+        "errorMessage": null
+      }
+    },
+    "earnings": {
+      "status": "STALE",
+      "updatedAt": "2025-12-31T16:30:02.149Z",
+      "ageMinutes": 4073,
+      "reasonCode": "STALE_DATA",
+      "evidence": {
+        "file": "mirrors/earnings.json",
+        "updatedAt": "2025-12-31T16:30:02.149Z",
+        "staleAfterMinutes": 1440,
+        "errorMessage": null
+      }
+    },
+    "earnings-calendar": {
+      "status": "OK",
+      "updatedAt": null,
+      "ageMinutes": null,
+      "reasonCode": "OK",
+      "evidence": {
+        "file": "mirrors/earnings-calendar.json",
+        "updatedAt": null,
+        "staleAfterMinutes": 1440,
+        "errorMessage": null
+      }
+    },
+    "earnings-reality": {
+      "status": "STALE",
+      "updatedAt": "2025-12-31T16:30:02.150Z",
+      "ageMinutes": 4073,
+      "reasonCode": "STALE_DATA",
+      "evidence": {
+        "file": "mirrors/earnings-reality.json",
+        "updatedAt": "2025-12-31T16:30:02.150Z",
+        "staleAfterMinutes": 1440,
+        "errorMessage": null
+      }
+    },
+    "export-csv": {
+      "status": "STUB",
+      "updatedAt": "2026-01-03T12:17:23.926Z",
+      "ageMinutes": null,
+      "reasonCode": "MIRROR_MISSING",
+      "evidence": {
+        "file": "mirrors/export-csv.json",
+        "updatedAt": "2026-01-03T12:17:23.926Z",
+        "staleAfterMinutes": 1440,
+        "errorMessage": null
+      }
+    },
+    "hype-divergence": {
+      "status": "STALE",
+      "updatedAt": "2025-12-31T16:30:02.148Z",
+      "ageMinutes": 4073,
+      "reasonCode": "STALE_DATA",
+      "evidence": {
+        "file": "mirrors/hype-divergence.json",
+        "updatedAt": "2025-12-31T16:30:02.148Z",
+        "staleAfterMinutes": 1440,
+        "errorMessage": null
+      }
+    },
+    "insider-cluster": {
+      "status": "STALE",
+      "updatedAt": "2025-12-31T16:30:02.149Z",
+      "ageMinutes": 4073,
+      "reasonCode": "STALE_DATA",
+      "evidence": {
+        "file": "mirrors/insider-cluster.json",
+        "updatedAt": "2025-12-31T16:30:02.149Z",
+        "staleAfterMinutes": 1440,
+        "errorMessage": null
+      }
+    },
+    "macro-rates": {
+      "status": "OK",
+      "updatedAt": null,
+      "ageMinutes": null,
+      "reasonCode": "OK",
+      "evidence": {
+        "file": "mirrors/macro-rates.json",
+        "updatedAt": null,
+        "staleAfterMinutes": 1440,
+        "errorMessage": null
+      }
+    },
+    "market-cockpit": {
+      "status": "STALE",
+      "updatedAt": "2025-12-31T16:29:52.964Z",
+      "ageMinutes": 4073,
+      "reasonCode": "STALE_DATA",
+      "evidence": {
+        "file": "mirrors/market-cockpit.json",
+        "updatedAt": "2025-12-31T16:29:52.964Z",
+        "staleAfterMinutes": 1440,
+        "errorMessage": null
+      }
+    },
+    "market-health": {
+      "status": "OK",
+      "updatedAt": "2026-01-02T18:07:25.305Z",
+      "ageMinutes": 1095,
+      "reasonCode": "OK",
+      "evidence": {
+        "file": "mirrors/market-health.json",
+        "updatedAt": "2026-01-02T18:07:25.305Z",
+        "staleAfterMinutes": 1440,
+        "errorMessage": null
+      }
+    },
+    "market-regime": {
+      "status": "STALE",
+      "updatedAt": "2025-12-31T16:29:52.964Z",
+      "ageMinutes": 4073,
+      "reasonCode": "STALE_DATA",
+      "evidence": {
+        "file": "mirrors/market-regime.json",
+        "updatedAt": "2025-12-31T16:29:52.964Z",
+        "staleAfterMinutes": 1440,
+        "errorMessage": null
+      }
+    },
+    "news": {
+      "status": "STALE",
+      "updatedAt": "2025-12-31T16:30:02.147Z",
+      "ageMinutes": 4073,
+      "reasonCode": "STALE_DATA",
+      "evidence": {
+        "file": "mirrors/news.json",
+        "updatedAt": "2025-12-31T16:30:02.147Z",
+        "staleAfterMinutes": 1440,
+        "errorMessage": null
+      }
+    },
+    "news-headlines": {
+      "status": "STUB",
+      "updatedAt": "2026-01-03T12:17:23.926Z",
+      "ageMinutes": null,
+      "reasonCode": "MIRROR_MISSING",
+      "evidence": {
+        "file": "mirrors/news-headlines.json",
+        "updatedAt": "2026-01-03T12:17:23.926Z",
+        "staleAfterMinutes": 1440,
+        "errorMessage": null
+      }
+    },
+    "news-intelligence": {
+      "status": "OK",
+      "updatedAt": null,
+      "ageMinutes": null,
+      "reasonCode": "OK",
+      "evidence": {
+        "file": "mirrors/news-intelligence.json",
+        "updatedAt": null,
+        "staleAfterMinutes": 1440,
+        "errorMessage": null
+      }
+    },
+    "price-snapshot": {
+      "status": "STALE",
+      "updatedAt": "2025-12-31T16:29:52.964Z",
+      "ageMinutes": 4073,
+      "reasonCode": "STALE_DATA",
+      "evidence": {
+        "file": "mirrors/price-snapshot.json",
+        "updatedAt": "2025-12-31T16:29:52.964Z",
+        "staleAfterMinutes": 1440,
+        "errorMessage": null
+      }
+    },
+    "quotes": {
+      "status": "STALE",
+      "updatedAt": "2025-12-31T16:29:52.964Z",
+      "ageMinutes": 4073,
+      "reasonCode": "STALE_DATA",
+      "evidence": {
+        "file": "mirrors/quotes.json",
+        "updatedAt": "2025-12-31T16:29:52.964Z",
+        "staleAfterMinutes": 1440,
+        "errorMessage": null
+      }
+    },
+    "sector-rotation": {
+      "status": "OK",
+      "updatedAt": "2026-01-02T18:07:25.101Z",
+      "ageMinutes": 1095,
+      "reasonCode": "OK",
+      "evidence": {
+        "file": "mirrors/sector-rotation.json",
+        "updatedAt": "2026-01-02T18:07:25.101Z",
+        "staleAfterMinutes": 1440,
+        "errorMessage": null
+      }
+    },
+    "sentiment": {
+      "status": "OK",
+      "updatedAt": null,
+      "ageMinutes": null,
+      "reasonCode": "OK",
+      "evidence": {
+        "file": "mirrors/sentiment.json",
+        "updatedAt": null,
+        "staleAfterMinutes": 1440,
+        "errorMessage": null
+      }
+    },
+    "sentiment-barometer": {
+      "status": "STUB",
+      "updatedAt": "2026-01-03T12:17:23.926Z",
+      "ageMinutes": null,
+      "reasonCode": "MIRROR_MISSING",
+      "evidence": {
+        "file": "mirrors/sentiment-barometer.json",
+        "updatedAt": "2026-01-03T12:17:23.926Z",
+        "staleAfterMinutes": 1440,
+        "errorMessage": null
+      }
+    },
+    "smart-money": {
+      "status": "STALE",
+      "updatedAt": "2025-12-31T16:30:02.149Z",
+      "ageMinutes": 4073,
+      "reasonCode": "STALE_DATA",
+      "evidence": {
+        "file": "mirrors/smart-money.json",
+        "updatedAt": "2025-12-31T16:30:02.149Z",
+        "staleAfterMinutes": 1440,
+        "errorMessage": null
+      }
+    },
+    "sp500-sectors": {
+      "status": "OK",
+      "updatedAt": null,
+      "ageMinutes": null,
+      "reasonCode": "OK",
+      "evidence": {
+        "file": "mirrors/sp500-sectors.json",
+        "updatedAt": null,
+        "staleAfterMinutes": 1440,
+        "errorMessage": null
+      }
+    },
+    "system-health": {
+      "status": "STALE",
+      "updatedAt": "2025-12-31T16:29:52.968Z",
+      "ageMinutes": 4073,
+      "reasonCode": "STALE_DATA",
+      "evidence": {
+        "file": "mirrors/system-health.json",
+        "updatedAt": "2025-12-31T16:29:52.968Z",
+        "staleAfterMinutes": 1440,
+        "errorMessage": null
+      }
+    },
+    "tech-signals": {
+      "status": "STALE",
+      "updatedAt": "2025-12-31T16:29:52.964Z",
+      "ageMinutes": 4073,
+      "reasonCode": "STALE_DATA",
+      "evidence": {
+        "file": "mirrors/tech-signals.json",
+        "updatedAt": "2025-12-31T16:29:52.964Z",
+        "staleAfterMinutes": 1440,
+        "errorMessage": null
+      }
+    },
+    "top-movers": {
+      "status": "OK",
+      "updatedAt": "2026-01-02T18:07:19.068Z",
+      "ageMinutes": 1096,
+      "reasonCode": "OK",
+      "evidence": {
+        "file": "mirrors/top-movers.json",
+        "updatedAt": "2026-01-02T18:07:19.068Z",
+        "staleAfterMinutes": 1440,
+        "errorMessage": null
+      }
+    },
+    "volume-anomaly": {
+      "status": "STALE",
+      "updatedAt": "2025-12-31T16:29:52.964Z",
+      "ageMinutes": 4073,
+      "reasonCode": "STALE_DATA",
+      "evidence": {
+        "file": "mirrors/volume-anomaly.json",
+        "updatedAt": "2025-12-31T16:29:52.964Z",
+        "staleAfterMinutes": 1440,
+        "errorMessage": null
+      }
+    },
+    "watchlist-local": {
+      "status": "STUB",
+      "updatedAt": "2026-01-03T12:17:23.926Z",
+      "ageMinutes": null,
+      "reasonCode": "MIRROR_MISSING",
+      "evidence": {
+        "file": "mirrors/watchlist-local.json",
+        "updatedAt": "2026-01-03T12:17:23.926Z",
+        "staleAfterMinutes": 1440,
+        "errorMessage": null
+      }
+    },
+    "why-moved": {
+      "status": "STALE",
+      "updatedAt": "2025-12-31T16:30:02.148Z",
+      "ageMinutes": 4073,
+      "reasonCode": "STALE_DATA",
+      "evidence": {
+        "file": "mirrors/why-moved.json",
+        "updatedAt": "2025-12-31T16:30:02.148Z",
+        "staleAfterMinutes": 1440,
+        "errorMessage": null
+      }
+    },
+    "yield-curve": {
+      "status": "OK",
+      "updatedAt": "2026-01-02T18:07:20.263Z",
+      "ageMinutes": 1096,
+      "reasonCode": "OK",
+      "evidence": {
+        "file": "mirrors/yield-curve.json",
+        "updatedAt": "2026-01-02T18:07:20.263Z",
+        "staleAfterMinutes": 1440,
+        "errorMessage": null
       }
     }
-  },
-  "runId": "2026-01-02T18:07:25.305Z",
-  "updatedAt": "2026-01-02T18:07:25.305Z",
-  "asOf": "2026-01-02T18:07:25.305Z"
+  }
 }

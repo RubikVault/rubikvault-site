@@ -58,13 +58,46 @@ jobs:
             echo '{"summary":{"note":"summary_line_missing"}}' > /tmp/seed-summary.json
           fi
 
-      - name: Build mirrors manifest
+      - name: Audit reality snapshot
         run: |
-          node scripts/build-mirrors-manifest.mjs
+          node scripts/audit/generate-reality.mjs
+
+      - name: Build feature registry
+        run: |
+          node scripts/audit/build-feature-registry.mjs --mode discover
+
+      - name: Generate stub mirrors
+        run: |
+          node scripts/audit/generate-stub-mirrors.mjs
+
+      - name: Build mirrors artifacts
+        run: |
+          node scripts/audit/build-artifacts.mjs
 
       - name: Audit mirrors (local, informational)
         run: |
-          node scripts/audit-site.mjs --mode local --base public --format json --fail-on none > /tmp/audit-report.json || true
+          node scripts/audit-site.mjs --mode local --base public --format json --fail-on none > /tmp/audit-report.json
+          node scripts/audit-site.mjs --mode local --base public --format github --fail-on none
+
+      - name: Audit summary
+        run: |
+          if [ -f /tmp/audit-report.json ]; then
+            echo "Audit summary:" >> "$GITHUB_STEP_SUMMARY"
+            jq -r '
+              def countStatus(s): [.blocks[] | select(.status == s)] | length;
+              "featureCount=\(.blocks|length) ok=\(countStatus(\"OK\")) warn=\(countStatus(\"WARN\")) error=\(countStatus(\"ERROR\"))"
+            ' /tmp/audit-report.json >> "$GITHUB_STEP_SUMMARY" || true
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+            echo "Top reason codes:" >> "$GITHUB_STEP_SUMMARY"
+            jq -r '
+              (.summary.byReasonCode // {})
+              | to_entries
+              | sort_by(-.value, .key)
+              | .[0:5]
+              | map("\(.key): \(.value)")
+              | .[]
+            ' /tmp/audit-report.json >> "$GITHUB_STEP_SUMMARY" || true
+          fi
 
       - name: Upload mirrors artifact
         uses: actions/upload-artifact@v4
@@ -74,6 +107,8 @@ jobs:
             public/mirrors/**
             /tmp/seed-summary.json
             /tmp/audit-report.json
+            scripts/audit/REALITY.md
+          retention-days: 365
 
       - name: Commit mirrors to PR branch if changed
         env:
