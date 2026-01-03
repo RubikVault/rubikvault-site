@@ -165,13 +165,13 @@ function render(root, payload, logger, featureId) {
             const sentimentCls = sentimentClass(sentiment);
             return `
               <tr>
-                <td>${formatValue(item.company)}</td>
-                <td>${formatValue(item.symbol)}</td>
-                <td>${formatValue(item.date)}</td>
-                <td>${formatTime(item.time)}</td>
-                <td>${formatValue(item.epsActual)} / ${formatValue(item.epsEst)}</td>
-                <td>${formatValue(item.revenueActual)} / ${formatValue(item.revenueEst)}</td>
-                <td class="${sentimentCls}">${formatValue(sentimentLabel)}</td>
+                <td data-rv-field="earnings.company">${formatValue(item.company)}</td>
+                <td data-rv-field="earnings.symbol">${formatValue(item.symbol)}</td>
+                <td data-rv-field="earnings.date">${formatValue(item.date)}</td>
+                <td data-rv-field="earnings.time">${formatTime(item.time)}</td>
+                <td data-rv-field="earnings.eps">${formatValue(item.epsActual)} / ${formatValue(item.epsEst)}</td>
+                <td data-rv-field="earnings.revenue">${formatValue(item.revenueActual)} / ${formatValue(item.revenueEst)}</td>
+                <td data-rv-field="earnings.sentiment" class="${sentimentCls}">${formatValue(sentimentLabel)}</td>
               </tr>
             `;
           })

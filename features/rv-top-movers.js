@@ -115,11 +115,11 @@ function render(root, payload, logger, featureId) {
                   : "rv-native-negative";
               return `
                 <tr>
-                  <td>${item.name || item.symbol}</td>
-                  <td>${item.symbol}</td>
-                  <td>${formatCompact(item.volume)}</td>
-                  <td>$${formatNumber(item.lastClose ?? item.price, { maximumFractionDigits: 2 })}</td>
-                  <td class="${changeClass}">${formatNumber(changeValue, {
+                  <td data-rv-field="top-movers.company">${item.name || item.symbol}</td>
+                  <td data-rv-field="top-movers.symbol">${item.symbol}</td>
+                  <td data-rv-field="top-movers.volume">${formatCompact(item.volume)}</td>
+                  <td data-rv-field="top-movers.lastClose">$${formatNumber(item.lastClose ?? item.price, { maximumFractionDigits: 2 })}</td>
+                  <td data-rv-field="top-movers.changePercent" class="${changeClass}">${formatNumber(changeValue, {
                     maximumFractionDigits: 2
                   })}%</td>
                 </tr>
