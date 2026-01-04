@@ -143,6 +143,8 @@ export async function onRequestGet({ request }) {
     }
 
     const ok = payload?.ok ?? false;
+    const metaStatus = payload?.meta?.status || payload?.data?.meta?.status || "";
+    const metaReason = payload?.meta?.reason || payload?.data?.meta?.reason || "";
     const dataQuality = normalizeDataQuality(payload);
     const itemsCount = pickItemsCount(payload);
     const cacheLayer = payload?.cache?.layer || payload?.data?.cache?.layer || "";
@@ -176,6 +178,8 @@ export async function onRequestGet({ request }) {
       httpStatus,
       contentType,
       ok,
+      metaStatus,
+      metaReason,
       dataQuality: dataQuality || "",
       itemsCount,
       cache: { layer: cacheLayer || "none", ttl: cacheTtl ?? 0 },

@@ -145,14 +145,38 @@ export async function onRequestGet({ request, env, data }) {
     (env?.CF_PAGES_BRANCH ? "preview" : env?.CF_PAGES_URL ? "production" : "unknown");
   const version = env?.CF_PAGES_COMMIT_SHA || env?.GIT_SHA || null;
 
-  const hasKV = env?.RV_KV && typeof env.RV_KV.get === "function" && typeof env.RV_KV.put === "function";
+  const bindingPresent =
+    env?.RV_KV &&
+    typeof env.RV_KV.get === "function" &&
+    typeof env.RV_KV.put === "function";
   const debugAllowed = requireDebugToken(env, request);
   const prod = isProduction(env, request);
+  const kvErrors = [];
+  const kvWarnings = [];
+  let opsWorking = null;
+
+  if (!bindingPresent) kvWarnings.push("KV_BINDING_MISSING");
+  if (!debugAllowed) kvErrors.push("DEBUG_TOKEN_REQUIRED");
+
+  if (debugAllowed && bindingPresent) {
+    try {
+      await env.RV_KV.get("_health_check_key");
+      opsWorking = true;
+    } catch (error) {
+      opsWorking = false;
+      kvErrors.push("KV_OP_FAILED");
+    }
+  }
+
+  const hasKV = bindingPresent && opsWorking !== false;
   const infra = {
     kv: {
       hasKV,
+      bindingPresent,
+      opsWorking,
       binding: "RV_KV",
-      errors: hasKV ? [] : ["BINDING_MISSING"]
+      errors: kvErrors,
+      warnings: kvWarnings
     },
     notes: []
   };
@@ -161,7 +185,7 @@ export async function onRequestGet({ request, env, data }) {
     const bundle = {
       schema: SCHEMA,
       meta: { ts: new Date().toISOString(), envHint, host, version, traceId },
-      infra: { kv: { hasKV: false, binding: "RV_KV", errors: ["DEBUG_TOKEN_REQUIRED"] }, notes: [] },
+      infra,
       health: { status: "ok", service: "rubikvault", envHint, host },
       diag: {},
       recentEvents: [],

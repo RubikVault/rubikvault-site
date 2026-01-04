@@ -21,6 +21,35 @@ function isHtmlLikeText(text) {
   return trimmed.startsWith("<!doctype") || trimmed.startsWith("<html");
 }
 
+function ensureMeta(payload, fallbackTraceId) {
+  if (!payload || typeof payload !== "object" || Array.isArray(payload)) return payload;
+  const baseMeta = payload.meta && typeof payload.meta === "object" ? payload.meta : {};
+  const metaWarnings = Array.isArray(baseMeta.warnings) ? baseMeta.warnings : [];
+  const metaStatus = baseMeta.status || (payload.isStale ? "STALE" : payload.ok ? "LIVE" : "ERROR");
+  const metaReason =
+    baseMeta.reason !== undefined
+      ? baseMeta.reason
+      : payload.isStale
+        ? "STALE"
+        : payload.ok
+          ? null
+          : payload?.error?.code || "ERROR";
+  payload.meta = {
+    ...baseMeta,
+    status: metaStatus,
+    reason: metaReason || null,
+    ts: baseMeta.ts || payload.ts || new Date().toISOString(),
+    schemaVersion: baseMeta.schemaVersion || payload.schemaVersion || 1,
+    traceId: baseMeta.traceId || payload?.trace?.traceId || payload.traceId || fallbackTraceId || "unknown",
+    writeMode: baseMeta.writeMode || "NONE",
+    circuitOpen: Boolean(baseMeta.circuitOpen),
+    warnings: metaWarnings,
+    savedAt: baseMeta.savedAt ?? null,
+    ageMinutes: baseMeta.ageMinutes ?? null
+  };
+  return payload;
+}
+
 function buildApiErrorResponse({ feature, traceId, status, headers, text, contentType, code }) {
   const headerObj = Object.fromEntries(headers.entries());
   return makeResponse({
@@ -259,6 +288,12 @@ export async function onRequest(context) {
           runId: existingTrace.runId || incomingRunId || "",
           parentTraceId: existingTrace.parentTraceId || parentTraceId || ""
         };
+        const shouldEnsureMeta =
+          payload.meta == null || Object.prototype.hasOwnProperty.call(payload, "feature") ||
+          Object.prototype.hasOwnProperty.call(payload, "ok");
+        if (shouldEnsureMeta) {
+          payload = ensureMeta(payload, traceId);
+        }
       }
 
       const logEvent = async () => {

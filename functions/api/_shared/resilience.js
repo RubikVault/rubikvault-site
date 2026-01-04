@@ -140,16 +140,19 @@ function computeAllowWrites(request, env) {
 
 async function loadMirrorPayload(origin, featureId) {
   if (!origin || !featureId) return null;
-  const url = `${origin}/mirrors/${featureId}.json`;
-  try {
-    const response = await fetch(url, { headers: { Accept: "application/json" } });
-    const text = await response.text();
-    if (!response.ok || isHtmlLike(text)) return null;
-    const payload = JSON.parse(text);
-    return payload && typeof payload === "object" ? payload : null;
-  } catch (error) {
-    return null;
+  const urls = [`${origin}/mirror/${featureId}.json`, `${origin}/mirrors/${featureId}.json`];
+  for (const url of urls) {
+    try {
+      const response = await fetch(url, { headers: { Accept: "application/json" } });
+      const text = await response.text();
+      if (!response.ok || isHtmlLike(text)) continue;
+      const payload = JSON.parse(text);
+      if (payload && typeof payload === "object") return payload;
+    } catch (error) {
+      // try next
+    }
   }
+  return null;
 }
 
 function extractMirrorData(payload) {
@@ -175,6 +178,7 @@ export async function withResilience(context, cfg) {
   const allowWrites = computeAllowWrites(request, env);
   const readOnly = !allowWrites;
   const KV = env?.RV_KV || null;
+  const hasKV = KV && typeof KV.get === "function";
   const featureId = cfg.featureId || "unknown";
   const version = cfg.version || "v1";
   const allowEmptyData =
@@ -191,7 +195,7 @@ export async function withResilience(context, cfg) {
   let savedAtMs = null;
 
   const kvStart = Date.now();
-  if (KV) {
+  if (hasKV) {
     try {
       lastGood = await KV.get(lastGoodKey, { type: "json" });
       circuitOpen = (await KV.get(circuitKey)) != null;
@@ -220,9 +224,9 @@ export async function withResilience(context, cfg) {
   };
 
   if (isPreview || circuitOpen || readOnly) {
-    const reason = isPreview ? "PREVIEW" : circuitOpen ? "CIRCUIT_OPEN" : "READONLY";
+    const reason = !hasKV ? "KV_MISSING" : isPreview ? "PREVIEW" : circuitOpen ? "CIRCUIT_OPEN" : "READONLY";
     const mirrorPayload =
-      !lastGoodValid || isPreview || !KV || readOnly
+      !lastGoodValid || isPreview || !hasKV || readOnly
         ? await loadMirrorPayload(url.origin, featureId)
         : null;
     if (mirrorPayload) {
@@ -230,7 +234,7 @@ export async function withResilience(context, cfg) {
       const mirrorQuality = (cfg.validator || defaultValidator)(mirrorData);
       if (mirrorQuality?.passed) {
         meta.status = "STALE";
-        meta.reason = "MIRROR_FALLBACK";
+        meta.reason = !hasKV ? "KV_MISSING" : "MIRROR_FALLBACK";
         const payload = makeJson({
           ok: true,
           feature: featureId,
@@ -310,8 +314,10 @@ export async function withResilience(context, cfg) {
     meta.status = "EMPTY";
     meta.reason = reason;
     const error = {
-      code: "NO_DATA_YET",
-      message: "No cached data available"
+      code: !hasKV ? "KV_MISSING" : "NO_DATA_YET",
+      message: !hasKV
+        ? "KV binding missing and no mirror fallback available"
+        : "No cached data available"
     };
     const payload = makeJson({
       ok: false,

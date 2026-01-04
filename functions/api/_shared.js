@@ -84,6 +84,7 @@ export function makeJson({
   upstream = {},
   rateLimit = rateLimitFallback(),
   error = {},
+  meta = {},
   expectations,
   isStale = false,
   source,
@@ -98,6 +99,28 @@ export function makeJson({
     parentTraceId: trace?.parentTraceId || parentTraceId || ""
   };
   const resolvedExpectations = expectations || resolveExpectations(feature);
+  const metaWarnings = Array.isArray(meta?.warnings) ? meta.warnings : [];
+  const metaStatus = meta?.status || (isStale ? "STALE" : ok ? "LIVE" : "ERROR");
+  const metaReason =
+    meta?.reason !== undefined
+      ? meta.reason
+      : isStale
+        ? "STALE"
+        : ok
+          ? null
+          : error?.code || "ERROR";
+  const resolvedMeta = {
+    status: metaStatus,
+    reason: metaReason || null,
+    ts: meta?.ts || ts || new Date().toISOString(),
+    schemaVersion: meta?.schemaVersion || SCHEMA_VERSION,
+    traceId: meta?.traceId || resolvedTrace.traceId,
+    writeMode: meta?.writeMode || "NONE",
+    circuitOpen: Boolean(meta?.circuitOpen),
+    warnings: metaWarnings,
+    savedAt: meta?.savedAt ?? null,
+    ageMinutes: meta?.ageMinutes ?? null
+  };
   return {
     ok: Boolean(ok),
     feature: feature || "unknown",
@@ -122,6 +145,7 @@ export function makeJson({
       message: error.message || "",
       details: error.details || {}
     },
+    meta: resolvedMeta,
     ...(isStale ? { isStale: true } : {}),
     ...(source ? { source } : {}),
     ...(freshness ? { freshness } : {}),
@@ -201,13 +225,12 @@ export function jsonResponse(payload, status = 200, extraHeaders = {}) {
     headers = status.headers || extraHeaders || {};
   }
   const resolvedCache = resolveCacheStatus(payload, cacheStatus);
+  const responseHeaders = new Headers(headers || {});
+  responseHeaders.set("Content-Type", "application/json; charset=utf-8");
+  responseHeaders.set("X-Cache", resolvedCache);
   return new Response(JSON.stringify(payload), {
     status: resolvedStatus,
-    headers: {
-      "Content-Type": "application/json; charset=utf-8",
-      "X-Cache": resolvedCache,
-      ...headers
-    }
+    headers: responseHeaders
   });
 }
 

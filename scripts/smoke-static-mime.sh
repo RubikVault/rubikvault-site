@@ -12,7 +12,7 @@ check_asset() {
   local path="$1"
   echo "== $path =="
   local headers
-  headers=$(curl -fsSI "${BASE_URL}${path}" | tr -d '\r')
+  headers=$(curl -fsSL -D - -o /dev/null "${BASE_URL}${path}" | tr -d '\r')
   echo "$headers" | sed -n '1,10p'
   local ctype
   ctype=$(echo "$headers" | awk -F': ' 'tolower($1)=="content-type"{print tolower($2)}' | head -n 1)
@@ -25,7 +25,7 @@ check_asset() {
     exit 1
   fi
   local body
-  body=$(curl -fsS "${BASE_URL}${path}" | head -n 2)
+  body=$(curl -fsSL "${BASE_URL}${path}" 2>/dev/null | head -c 200)
   if echo "$body" | grep -qi "<!doctype\|<html"; then
     echo "FAIL: HTML body for ${path}"
     exit 1
@@ -46,3 +46,5 @@ check_asset "/features/rv-market-health.js"
 check_asset "/debug/rv-debug.js"
 check_asset "/debug/rv-debug-console.js"
 check_asset "/assets/rv-icon.png"
+check_asset "/assets/rv-logo.png"
+check_asset "/assets/logo.png"

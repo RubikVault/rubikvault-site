@@ -489,6 +489,24 @@ export const FEATURES = [
   }
 ];
 
+const BLOCK_TITLE_SKIP = new Set(["rv-market-cockpit", "tradingview-widgets"]);
+function stripBlockPrefix(rawTitle = "") {
+  return String(rawTitle || "")
+    .replace(/^Block\s+[0-9]{1,2}\s*[-–—]\s*/i, "")
+    .replace(/^Block\s+XX\s*[-–—]\s*/i, "")
+    .replace(/^Block\s*[-–—]\s*/i, "")
+    .trim();
+}
+
+let blockCounter = 1;
+FEATURES.forEach((feature) => {
+  if (!feature || BLOCK_TITLE_SKIP.has(feature.id)) return;
+  const cleanTitle = stripBlockPrefix(feature.title || feature.id);
+  const blockId = String(blockCounter).padStart(2, "0");
+  feature.title = `Block ${blockId} - ${cleanTitle}`;
+  blockCounter += 1;
+});
+
 export const RV_CONFIG = {
   version: "rv-2025-01-15",
   apiBase: "./api",
