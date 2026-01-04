@@ -1,0 +1,40 @@
+{
+  "ts": "2025-01-01T00:00:00Z",
+  "source": "mirror-demo",
+  "payload": {
+    "data": {
+      "updatedAt": "2025-01-01T00:00:00Z",
+      "rotationLabel": "Neutral",
+      "groups": {
+        "offensive": 0.3,
+        "defensive": 0.2,
+        "cyclical": 0.1
+      },
+      "spyChangePercent": 0.05,
+      "sectors": [
+        {
+          "symbol": "XLK",
+          "name": "Technology",
+          "price": 180.5,
+          "changePercent": 0.4,
+          "relativeToSpy": 0.35
+        },
+        {
+          "symbol": "XLF",
+          "name": "Financials",
+          "price": 41.2,
+          "changePercent": 0.1,
+          "relativeToSpy": 0.05
+        },
+        {
+          "symbol": "XLV",
+          "name": "Health Care",
+          "price": 132.7,
+          "changePercent": -0.2,
+          "relativeToSpy": -0.25
+        }
+      ],
+      "source": "mirror-demo"
+    }
+  }
+}
