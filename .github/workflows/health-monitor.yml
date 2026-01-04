@@ -1,0 +1,37 @@
+name: Health Monitor
+
+on:
+  schedule:
+    - cron: "0 */6 * * *"
+  workflow_dispatch:
+
+env:
+  PROD_URL: https://rubikvault.com
+  PREVIEW_URL: ${{ vars.PREVIEW_URL }}
+
+jobs:
+  monitor:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Fetch PROD health-report
+        run: |
+          set -euo pipefail
+          BUSTER=$(date +%s)
+          curl -fsSL -L "${PROD_URL}/api/health-report?_=${BUSTER}" -o health-prod.json || true
+      - name: Fetch PREVIEW health-report (if configured)
+        if: ${{ env.PREVIEW_URL != '' }}
+        run: |
+          set -euo pipefail
+          BUSTER=$(date +%s)
+          curl -fsSL -L "${PREVIEW_URL}/api/health-report?_=${BUSTER}" -o health-preview.json || true
+      - name: Upload artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: health-reports
+          path: |
+            health-prod.json
+            health-preview.json
+          if-no-files-found: ignore

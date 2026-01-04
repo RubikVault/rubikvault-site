@@ -140,15 +140,14 @@ export async function onRequestGet({ request, env, data }) {
   const traceId = data?.traceId || createTraceId(request);
   const url = new URL(request.url);
   const host = request.headers.get("host") || "";
-  const envHint =
-    env?.CF_PAGES_ENVIRONMENT ||
-    (env?.CF_PAGES_BRANCH ? "preview" : env?.CF_PAGES_URL ? "production" : "unknown");
+  const envHint = host.endsWith(".pages.dev")
+    ? "preview"
+    : host
+      ? "prod"
+      : env?.CF_PAGES_ENVIRONMENT || (env?.CF_PAGES_BRANCH ? "preview" : "prod");
   const version = env?.CF_PAGES_COMMIT_SHA || env?.GIT_SHA || null;
 
-  const bindingPresent =
-    env?.RV_KV &&
-    typeof env.RV_KV.get === "function" &&
-    typeof env.RV_KV.put === "function";
+  const bindingPresent = Boolean(env?.RV_KV && typeof env.RV_KV.get === "function");
   const debugAllowed = requireDebugToken(env, request);
   const prod = isProduction(env, request);
   const kvErrors = [];
@@ -156,6 +155,9 @@ export async function onRequestGet({ request, env, data }) {
   let opsWorking = null;
 
   if (!bindingPresent) kvWarnings.push("KV_BINDING_MISSING");
+  if (envHint === "preview" && !bindingPresent) {
+    kvWarnings.push("Preview env missing KV binding or wrong namespace");
+  }
   if (!debugAllowed) kvErrors.push("DEBUG_TOKEN_REQUIRED");
 
   if (debugAllowed && bindingPresent) {
@@ -168,7 +170,7 @@ export async function onRequestGet({ request, env, data }) {
     }
   }
 
-  const hasKV = bindingPresent && opsWorking !== false;
+  const hasKV = bindingPresent;
   const infra = {
     kv: {
       hasKV,
@@ -214,6 +216,9 @@ export async function onRequestGet({ request, env, data }) {
     blocksDown: [],
     endpointsDown: []
   };
+  if (opsWorking === false && summaryBase.status === "OK") {
+    summaryBase.status = "DEGRADED";
+  }
 
   const diagSummary = diag.json?.data?.summary || null;
   if (diagSummary?.endpointsFail > 0) summaryBase.status = hasKV ? "DEGRADED" : "FAIL";

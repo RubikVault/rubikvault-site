@@ -1,0 +1,62 @@
+name: Health Guard (Main)
+
+on:
+  push:
+    branches:
+      - main
+
+env:
+  PROD_URL: https://rubikvault.com
+
+jobs:
+  health-main:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Enforce PROD health thresholds
+        run: |
+          set -euo pipefail
+          BUSTER=$(date +%s)
+          health=$(curl -fsSL -L "${PROD_URL}/api/health-report?_=${BUSTER}")
+          echo "$health" > health-prod.json
+
+          blocks=$(echo "$health" | jq -r '.summary.blocks // 0')
+          okBlocks=$(echo "$health" | jq -r '.summary.okBlocks // 0')
+          coreScore=$(echo "$health" | jq -r '.summary.coreHealthScore // empty')
+          if [[ -z "$coreScore" ]]; then
+            if [[ "$blocks" -gt 0 ]]; then
+              coreScore=$(awk -v ok="$okBlocks" -v total="$blocks" 'BEGIN{ if (total==0) print 0; else print (ok/total)*100 }')
+            else
+              coreScore=0
+            fi
+          fi
+          missingMeta=$(echo "$health" | jq -r '.summary.missingMetaBlocks // 0')
+          badBlocks=$(echo "$health" | jq -r '.summary.badBlocks // 0')
+
+          fail=0
+          if ! awk -v score="$coreScore" 'BEGIN{ exit (score>=90)?0:1 }'; then
+            echo "FAIL: coreHealthScore below threshold (${coreScore})"
+            fail=1
+          fi
+          if [[ "${missingMeta}" -gt 0 ]]; then
+            echo "FAIL: missingMetaBlocks detected (${missingMeta})"
+            fail=1
+          fi
+          if [[ "${badBlocks}" -gt 0 ]]; then
+            echo "FAIL: badBlocks detected (${badBlocks})"
+            fail=1
+          fi
+
+          printf 'coreHealthScore=%.2f\nmissingMetaBlocks=%s\nbadBlocks=%s\n' "$coreScore" "$missingMeta" "$badBlocks"
+
+          if [[ "$fail" -eq 1 ]]; then
+            exit 1
+          fi
+      - name: Upload PROD health
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: prod-health
+          path: health-prod.json
+          if-no-files-found: ignore

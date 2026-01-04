@@ -1,0 +1,20 @@
+name: Registry Coverage Guard
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  registry-check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Verify registry coverage
+        env:
+          NODE_OPTIONS: --no-warnings
+        run: node scripts/check-registry-coverage.mjs

@@ -228,6 +228,9 @@ export function jsonResponse(payload, status = 200, extraHeaders = {}) {
   const responseHeaders = new Headers(headers || {});
   responseHeaders.set("Content-Type", "application/json; charset=utf-8");
   responseHeaders.set("X-Cache", resolvedCache);
+  if (!responseHeaders.has("Cache-Control")) {
+    responseHeaders.set("Cache-Control", "no-store");
+  }
   return new Response(JSON.stringify(payload), {
     status: resolvedStatus,
     headers: responseHeaders
