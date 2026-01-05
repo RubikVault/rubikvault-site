@@ -7,12 +7,33 @@ const KV_KEY = "bundle:latest";
 async function fetchStaticBundle(origin, diag) {
   try {
     const res = await fetch(`${origin}/data/bundle.json`);
+    const contentType = String(res.headers.get("content-type") || "").toLowerCase();
     if (!res.ok) {
       diag.issue("STATIC_BUNDLE_MISS", { status: res.status });
       return null;
     }
-    const json = await res.json();
-    return json;
+    const text = await res.text();
+    const trimmed = text.trim();
+    if (
+      contentType.includes("text/html") ||
+      trimmed.toLowerCase().startsWith("<!doctype") ||
+      trimmed.toLowerCase().startsWith("<html")
+    ) {
+      return {
+        html: true,
+        contentType,
+        snippet: trimmed.slice(0, 160)
+      };
+    }
+    try {
+      return { data: JSON.parse(text) };
+    } catch (error) {
+      diag.issue("STATIC_PARSE_ERROR", {
+        message: error?.message || "Invalid JSON",
+        snippet: trimmed.slice(0, 160)
+      });
+      return null;
+    }
   } catch (error) {
     diag.issue("STATIC_BUNDLE_ERROR", { message: error?.message || "static fetch failed" });
     return null;
@@ -26,14 +47,24 @@ export async function onRequestGet({ request, env }) {
   const url = new URL(request.url);
   const origin = url.origin;
 
-  const meta = {};
+  const meta = { warnings: [] };
   let data = null;
 
   const staticBundle = await fetchStaticBundle(origin, diag);
-  if (staticBundle) {
+  if (staticBundle && staticBundle.data) {
     meta.source = "static_asset";
-    data = staticBundle;
+    data = staticBundle.data;
   } else {
+    if (staticBundle && staticBundle.html) {
+      const warning = "STATIC_ASSET_REWRITE";
+      diag.issue(warning, {
+        contentType: staticBundle.contentType,
+        snippet: staticBundle.snippet
+      });
+      if (!meta.warnings.includes(warning)) {
+        meta.warnings.push(warning);
+      }
+    }
     const kvValue = await safeKvGet(env, KV_KEY, "json", diag);
     if (kvValue) {
       meta.source = "kv_mirror";
