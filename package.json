@@ -1,4 +1,5 @@
 {
+  "type": "module",
   "scripts": {
     "dev:pages": "wrangler pages dev public --ip 127.0.0.1 --port 8788 --kv RV_KV --compatibility-date=2025-12-29 --inspector-port 0",
     "dev:pages:persist": "wrangler pages dev public --ip 127.0.0.1 --port 8788 --kv RV_KV --persist-to .wrangler/state --compatibility-date=2025-12-29 --inspector-port 0",

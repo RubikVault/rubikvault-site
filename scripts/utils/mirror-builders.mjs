@@ -3,7 +3,7 @@ import { redactNotes } from "./mirror-io.mjs";
 export function buildBaseMirror({ mirrorId, mode, cadence, trust, sourceUpstream, whyUnique, items, context, missingSymbols, errors, notes, dataQuality, asOf }) {
   const now = new Date().toISOString();
   return {
-    schemaVersion: "1.0",
+    schemaVersion: "rv-mirror-v1",
     mirrorId,
     runId: now,
     updatedAt: now,

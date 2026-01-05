@@ -445,6 +445,22 @@ export async function onRequestGet(context) {
     const isClientOnly = block.reason === "CLIENT_ONLY";
     const isEndpointError = endpointStatus === "ERROR";
     const isStale = endpointStatus === "STALE";
+    const metaStatus = String(raw?.meta?.status || "").toUpperCase();
+    const dataQualityStatus = String(normalized?.dataQuality?.status || "").toUpperCase();
+    const dataQualityReason = normalized?.dataQuality?.reason || block.reason || null;
+    const isAllowedEmpty =
+      block.reason && ["EVENT_NO_EVENTS", "NO_DATA", "NO_DATA_YET"].includes(block.reason);
+    const isHardBad =
+      responseStatus !== 200 ||
+      raw?.ok !== true ||
+      metaStatus === "ERROR" ||
+      dataQualityStatus === "NO_SOURCE";
+    const isPartial =
+      dataQualityStatus === "PARTIAL" ||
+      dataQualityReason === "THRESHOLD_TOO_STRICT" ||
+      metaStatus === "DEGRADED" ||
+      block.reason === "THRESHOLD_TOO_STRICT" ||
+      (endpointStatus === "EMPTY" && isAllowedEmpty);
     const forceEmptyInvalid =
       endpointStatus === "EMPTY" && !isPreviewEmpty && !isClientOnly;
 
@@ -509,14 +525,18 @@ export async function onRequestGet(context) {
     block.invalidFields = block.fields.filter((field) => field.valid === false).length;
     if (isPreviewEmpty || isClientOnly) {
       block.blockState = "EXPECTED";
-    } else if (isEndpointError) {
+    } else if (isEndpointError || isHardBad) {
       block.blockState = "BAD";
-    } else if (isStale) {
-      block.blockState = "OK";
+    } else if (isPartial || isStale || (endpointStatus === "EMPTY" && isAllowedEmpty)) {
+      block.blockState = "PARTIAL";
     } else if (forceEmptyInvalid && block.invalidFields > 0) {
       block.blockState = "BAD";
     } else if (block.invalidFields > 0) {
       block.blockState = "BAD";
+    } else if (endpointStatus === "EMPTY") {
+      block.blockState = "PARTIAL";
+    } else if (dataQualityStatus === "PARTIAL") {
+      block.blockState = "PARTIAL";
     } else {
       block.blockState = "OK";
     }
@@ -564,7 +584,17 @@ export async function onRequestGet(context) {
   ).length;
   const expectedClientOnly = results.filter((block) => block.reason === "CLIENT_ONLY").length;
   const okBlocks = results.filter((block) => block.blockState === "OK").length;
+  const partialBlocks = results.filter((block) => block.blockState === "PARTIAL").length;
   const badBlocks = results.filter((block) => block.blockState === "BAD").length;
+  const missingMetaBlocks = results.filter((block) =>
+    (block.discovered?.envelopeIssues || []).includes("MISSING_META")
+  ).length;
+  const effectiveBlocks = results.filter((block) => block.blockState !== "EXPECTED").length;
+  const healthScore =
+    effectiveBlocks === 0
+      ? 100
+      : Math.round(((okBlocks + 0.5 * partialBlocks) / effectiveBlocks) * 10000) / 100;
+  const coreHealthScore = healthScore;
   const payload = {
     ok: fetchFailures < registryEntries.length,
     generatedAt: now,
@@ -579,8 +609,12 @@ export async function onRequestGet(context) {
       blocks: results.length,
       okBlocks,
       badBlocks,
+      partialBlocks,
       expectedPreview,
-      expectedClientOnly
+      expectedClientOnly,
+      missingMetaBlocks,
+      healthScore,
+      coreHealthScore
     },
     blocks: results,
     meta: {

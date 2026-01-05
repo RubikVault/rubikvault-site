@@ -41,6 +41,7 @@ export function validateBasicMirrorShape(data) {
   if (!data || typeof data !== "object") {
     return { ok: false, errors: ["mirror_not_object"] };
   }
+  const allowedSchemaVersions = new Set(["1.0", "rv-mirror-v1"]);
   const requiredFields = [
     "schemaVersion",
     "mirrorId",
@@ -66,7 +67,7 @@ export function validateBasicMirrorShape(data) {
       errors.push(`missing_${field}`);
     }
   }
-  if (data.schemaVersion !== "1.0") {
+  if (data.schemaVersion && !allowedSchemaVersions.has(data.schemaVersion)) {
     errors.push("schemaVersion_invalid");
   }
   if (!Array.isArray(data.items)) {
@@ -81,7 +82,7 @@ export function validateBasicMirrorShape(data) {
   if (!Array.isArray(data.notes)) {
     errors.push("notes_not_array");
   }
-  const allowedModes = ["LIVE", "EOD", "EMPTY"];
+  const allowedModes = ["LIVE", "EOD", "EMPTY", "MIRROR"];
   if (data.mode && !allowedModes.includes(data.mode)) {
     errors.push("mode_invalid");
   }

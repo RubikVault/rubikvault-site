@@ -140,16 +140,16 @@ export async function onRequestGet({ request, env, data }) {
   const traceId = data?.traceId || createTraceId(request);
   const url = new URL(request.url);
   const host = request.headers.get("host") || "";
+  const prod = isProduction(env, request);
   const envHint = host.endsWith(".pages.dev")
     ? "preview"
-    : host
+    : prod
       ? "prod"
-      : env?.CF_PAGES_ENVIRONMENT || (env?.CF_PAGES_BRANCH ? "preview" : "prod");
+      : env?.CF_PAGES_ENVIRONMENT || (env?.CF_PAGES_BRANCH ? "preview" : "dev");
   const version = env?.CF_PAGES_COMMIT_SHA || env?.GIT_SHA || null;
 
   const bindingPresent = Boolean(env?.RV_KV && typeof env.RV_KV.get === "function");
   const debugAllowed = requireDebugToken(env, request);
-  const prod = isProduction(env, request);
   const kvErrors = [];
   const kvWarnings = [];
   let opsWorking = null;
@@ -186,7 +186,16 @@ export async function onRequestGet({ request, env, data }) {
   if (!debugAllowed) {
     const bundle = {
       schema: SCHEMA,
-      meta: { ts: new Date().toISOString(), envHint, host, version, traceId },
+      meta: {
+        ts: new Date().toISOString(),
+        envHint,
+        host,
+        version,
+        traceId,
+        prod,
+        branch: env?.CF_PAGES_BRANCH || null,
+        pagesEnv: env?.CF_PAGES_ENVIRONMENT || null
+      },
       infra,
       health: { status: "ok", service: "rubikvault", envHint, host },
       diag: {},
