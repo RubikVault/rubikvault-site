@@ -9,24 +9,23 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 .package-lock.json
-
 # Cloudflare / Wrangler
 .wrangler/
 **/.cache/wrangler/
 **/.wrangler/
 .dev.vars
 .mf/
-
 # local env
 .env
 .env.*
 *.local
-
 # misc
 _pre_codex_dirty.diff
 .tmp/
 logs/
 coverage/
-
 # local audit output
 audit-live.json
+# RubikVault: local debug artifacts
+debug/
+functions/api/_debug-trace.js
