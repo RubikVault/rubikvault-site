@@ -149,6 +149,7 @@ export async function onRequestGet({ request, env, data }) {
   const version = env?.CF_PAGES_COMMIT_SHA || env?.GIT_SHA || null;
 
   const bindingPresent = Boolean(env?.RV_KV && typeof env.RV_KV.get === "function");
+  const hasKV = bindingPresent;
   const debugAllowed = requireDebugToken(env, request);
   const kvErrors = [];
   const kvWarnings = [];
@@ -170,7 +171,6 @@ export async function onRequestGet({ request, env, data }) {
     }
   }
 
-  const hasKV = bindingPresent;
   const infra = {
     kv: {
       hasKV,

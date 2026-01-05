@@ -1,205 +1,165 @@
-import { createTraceId, makeResponse } from "./_shared.js";
-import { BLOCK_REGISTRY } from "../../features/blocks-registry.js";
-import { FEATURES } from "../../rv-config.js";
+import { Diag, EMPTY_REASONS, STATUS_CODES } from "./_diag.js";
+import { createResponse, parseDebug, safeKvGet, sanitizeAny } from "./_shared.js";
 
-const FEATURE_ID = "debug-matrix";
-const TIMEOUT_MS = 8000;
-const CONCURRENCY = 3;
+const FEATURE = "debug-matrix";
+const MAX_KV_READS = 25;
 
-function isHtmlLike(text) {
-  const trimmed = String(text || "").trim().toLowerCase();
-  return trimmed.startsWith("<!doctype") || trimmed.startsWith("<html");
-}
-
-function pickItemsCount(payload) {
-  const candidates = [
-    payload?.data?.items,
-    payload?.items,
-    payload?.data?.rows,
-    payload?.rows,
-    payload?.data?.data?.items,
-    payload?.data?.data?.rows
-  ];
-  for (const entry of candidates) {
-    if (Array.isArray(entry)) return entry.length;
+async function loadRegistry(origin, diag) {
+  try {
+    const res = await fetch(`${origin}/data/feature-registry.json`);
+    if (res.ok) {
+      return await res.json();
+    }
+    diag.issue("REGISTRY_HTTP_ERROR", { status: res.status });
+  } catch (error) {
+    diag.issue("REGISTRY_LOAD_ERROR", { message: error?.message || "registry fetch failed" });
   }
-  return 0;
+  try {
+    const fallback = await import("../../data/feature-registry.json");
+    return fallback.default || fallback;
+  } catch (error) {
+    diag.issue("REGISTRY_IMPORT_ERROR", { message: error?.message || "registry import failed" });
+  }
+  return null;
 }
 
-function normalizeDataQuality(payload) {
+function deriveStatusFromMirror(mirror) {
+  const metaStatus = mirror?.meta?.status || mirror?.status || null;
+  if (metaStatus) return metaStatus;
+  if (mirror?.ok === false) return STATUS_CODES.ERROR;
+  return STATUS_CODES.OK;
+}
+
+function extractEmptyReason(mirror) {
+  return mirror?.meta?.emptyReason ?? mirror?.emptyReason ?? null;
+}
+
+function extractLastUpdate(mirror) {
   return (
-    payload?.dataQuality?.status ||
-    payload?.dataQuality ||
-    payload?.data?.dataQuality?.status ||
-    payload?.data?.dataQuality ||
-    ""
+    mirror?.meta?.generatedAt ||
+    mirror?.meta?.ts ||
+    mirror?.ts ||
+    mirror?.data?.ts ||
+    mirror?.data?.updatedAt ||
+    null
   );
 }
 
-function buildFixHint({ isHtml, itemsCount, dataQuality, upstreamStatus, httpStatus, cacheLayer, emptyPolicy }) {
-  if (isHtml) return "ROUTING_HTML (API returns HTML)";
-  if ([401, 403].includes(upstreamStatus) || [401, 403].includes(httpStatus)) {
-    return "UPSTREAM_AUTH (key/plan)";
-  }
-  if ((upstreamStatus && upstreamStatus >= 500) || (httpStatus && httpStatus >= 500)) {
-    return "UPSTREAM_DOWN (provider outage)";
-  }
-  if (!cacheLayer) return "CACHE_MISSING (KV binding?)";
-  if (itemsCount === 0) {
-    if (emptyPolicy === "CLIENT_ONLY") return "CLIENT_ONLY (local block)";
-    if (emptyPolicy === "EMPTY_OK_WITH_CONTEXT") return "EVENT_NO_EVENTS (legit empty)";
-    return "EMPTY_DATA (threshold/universe/cache)";
-  }
-  if (String(dataQuality || "").toUpperCase().includes("EMPTY")) {
-    return "EMPTY_DATA (threshold/universe/cache)";
-  }
-  return "";
-}
+function buildEntry(registryEntry, mirror, debugInfo) {
+  const base = {
+    feature: registryEntry.feature,
+    endpoint: registryEntry.endpoint,
+    kind: registryEntry.kind || "server",
+    endpointStatus: STATUS_CODES.UNKNOWN,
+    emptyReason: null,
+    lastUpdate: null
+  };
 
-function buildEmptyReason({ isHtml, itemsCount, dataQuality, upstreamStatus, httpStatus, cacheLayer, emptyPolicy }) {
-  if (isHtml) return "ROUTING_HTML";
-  if ([401, 403].includes(upstreamStatus) || [401, 403].includes(httpStatus)) return "UPSTREAM_AUTH";
-  if ((upstreamStatus && upstreamStatus >= 500) || (httpStatus && httpStatus >= 500)) return "UPSTREAM_DOWN";
-  if (itemsCount === 0) {
-    if (emptyPolicy === "CLIENT_ONLY") return "CLIENT_ONLY";
-    if (emptyPolicy === "EMPTY_OK_WITH_CONTEXT") return "EVENT_NO_EVENTS";
-    if (!cacheLayer || cacheLayer === "none") return "CACHE_EMPTY";
-    return "THRESHOLD_TOO_STRICT";
-  }
-  if (String(dataQuality || "").toUpperCase().includes("EMPTY")) return "EMPTY_DATA";
-  return "";
-}
-
-async function fetchWithTimeout(url) {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
-  try {
-    const response = await fetch(url, { signal: controller.signal, headers: { Accept: "application/json" } });
-    const text = await response.text();
-    clearTimeout(timer);
-    return { response, text };
-  } catch (error) {
-    clearTimeout(timer);
-    return { response: null, text: "" };
-  }
-}
-
-function getFeatureMap() {
-  const map = new Map();
-  (FEATURES || []).forEach((entry) => {
-    if (!entry?.id) return;
-    if (entry.api) map.set(entry.id, entry.api);
-  });
-  return map;
-}
-
-async function runWithLimit(tasks, limit) {
-  const results = [];
-  const queue = [...tasks];
-  const workers = new Array(Math.min(limit, tasks.length)).fill(null).map(async () => {
-    while (queue.length) {
-      const task = queue.shift();
-      if (!task) return;
-      results.push(await task());
+  if (mirror) {
+    base.endpointStatus = deriveStatusFromMirror(mirror);
+    base.emptyReason = extractEmptyReason(mirror);
+    base.lastUpdate = extractLastUpdate(mirror);
+    if (debugInfo?.deepAllowed) {
+      base.mirror = sanitizeAny({
+        meta: mirror.meta || null,
+        debug: mirror.debug || null
+      });
     }
-  });
-  await Promise.all(workers);
-  return results;
+  }
+
+  return base;
 }
 
-export async function onRequestGet({ request }) {
-  const traceId = createTraceId(request);
-  const origin = new URL(request.url).origin;
-  const apiMap = getFeatureMap();
+function toMarkdown(entries, summary) {
+  const header = "| feature | endpoint | status | emptyReason | lastUpdate |\n|---|---|---|---|---|";
+  const rows = entries
+    .map(
+      (e) =>
+        `| ${e.feature} | ${e.endpoint || "-"} | ${e.endpointStatus} | ${e.emptyReason || "-"} | ${e.lastUpdate || "-"} |`
+    )
+    .join("\n");
+  const summaryLine = `\n\nSummary: ${summary.failed}/${summary.total} failed (${summary.failedPct}%).`;
+  return `${header}\n${rows}${summaryLine}`;
+}
 
-  const tasks = Object.values(BLOCK_REGISTRY).map((entry) => async () => {
-    const endpoint = apiMap.get(entry.blockId);
-    if (!endpoint) {
-      return {
-        feature: entry.blockId,
-        endpoint: null,
-        httpStatus: null,
-        contentType: "",
-        ok: true,
-        dataQuality: "CLIENT_ONLY",
-        itemsCount: 0,
-        cache: { layer: "none", ttl: 0 },
-        upstreamStatus: null,
-        emptyReason: "CLIENT_ONLY",
-        fixHint: "CLIENT_ONLY (local block)"
-      };
-    }
+export async function onRequestGet({ request, env }) {
+  const diag = new Diag();
+  const debugInfo = parseDebug(request, env);
+  request.__debugInfo = debugInfo;
+  const url = new URL(request.url);
+  const origin = url.origin;
 
-    const url = `${origin}/api/${endpoint}`;
-    const { response, text } = await fetchWithTimeout(url);
-    const httpStatus = response?.status ?? 0;
-    const contentType = response?.headers?.get("Content-Type") || "";
-    const isHtml = isHtmlLike(text) || contentType.includes("text/html");
-    let payload = null;
-    try {
-      payload = text && text.trim().startsWith("{") ? JSON.parse(text) : null;
-    } catch (error) {
-      payload = null;
-    }
-
-    const ok = payload?.ok ?? false;
-    const metaStatus = payload?.meta?.status || payload?.data?.meta?.status || "";
-    const metaReason = payload?.meta?.reason || payload?.data?.meta?.reason || "";
-    const dataQuality = normalizeDataQuality(payload);
-    const itemsCount = pickItemsCount(payload);
-    const cacheLayer = payload?.cache?.layer || payload?.data?.cache?.layer || "";
-    const cacheTtl = payload?.cache?.ttl ?? payload?.data?.cache?.ttl ?? 0;
-    const upstreamStatus =
-      payload?.upstream?.status ?? payload?.data?.upstream?.status ?? null;
-
-    const emptyPolicy = entry.emptyPolicy || "";
-    const emptyReason = buildEmptyReason({
-      isHtml,
-      itemsCount,
-      dataQuality,
-      upstreamStatus,
-      httpStatus,
-      cacheLayer,
-      emptyPolicy
+  const registry = await loadRegistry(origin, diag);
+  if (!registry) {
+    diag.setEmptyReason(EMPTY_REASONS.NO_SOURCE);
+    const payload = createResponse({
+      feature: FEATURE,
+      data: { entries: [] },
+      meta: { emptyReason: diag.emptyReason, status: STATUS_CODES.ERROR },
+      diag,
+      request,
+      error: { code: "REGISTRY_MISSING", message: "feature registry unavailable" },
+      status: 500
     });
-    const fixHint = buildFixHint({
-      isHtml,
-      itemsCount,
-      dataQuality,
-      upstreamStatus,
-      httpStatus,
-      cacheLayer,
-      emptyPolicy
-    });
+    return payload;
+  }
 
-    return {
-      feature: entry.blockId,
-      endpoint: `/api/${endpoint}`,
-      httpStatus,
-      contentType,
-      ok,
-      metaStatus,
-      metaReason,
-      dataQuality: dataQuality || "",
-      itemsCount,
-      cache: { layer: cacheLayer || "none", ttl: cacheTtl ?? 0 },
-      upstreamStatus,
-      emptyReason,
-      fixHint
-    };
-  });
-
-  const entries = await runWithLimit(tasks, CONCURRENCY);
-  const sorted = entries.sort((a, b) => String(a.feature).localeCompare(String(b.feature)));
-
-  return makeResponse({
-    ok: true,
-    feature: FEATURE_ID,
-    traceId,
-    data: {
-      generatedAt: new Date().toISOString(),
-      entries: sorted,
-      blockCount: sorted.length
+  const entries = [];
+  let kvReads = 0;
+  for (const entry of registry) {
+    const mirrorKey = entry.mirrorKey || `mirror:${entry.feature}:latest`;
+    let mirror = null;
+    if (entry.kind === "server" && kvReads < MAX_KV_READS) {
+      mirror = await safeKvGet(env, mirrorKey, "json", diag);
+      kvReads += 1;
+    } else if (entry.kind === "server" && kvReads >= MAX_KV_READS) {
+      entries.push({
+        feature: entry.feature,
+        endpoint: entry.endpoint,
+        kind: entry.kind || "server",
+        endpointStatus: STATUS_CODES.UNKNOWN,
+        emptyReason: "BUDGET_CAP",
+        lastUpdate: null
+      });
+      continue;
     }
+    const built = buildEntry(entry, mirror, debugInfo);
+    if (entry.kind === "server" && kvReads > MAX_KV_READS) {
+      built.endpointStatus = STATUS_CODES.UNKNOWN;
+      built.emptyReason = "BUDGET_CAP";
+    }
+    entries.push(built);
+  }
+
+  const failed = entries.filter((e) =>
+    [STATUS_CODES.ERROR, STATUS_CODES.LOCKED, STATUS_CODES.PARTIAL].includes(e.endpointStatus)
+  ).length;
+  const summary = {
+    total: entries.length,
+    failed,
+    failedPct: entries.length ? Math.round((failed / entries.length) * 100) : 0
+  };
+
+  const meta = {
+    generatedAt: new Date().toISOString(),
+    summary
+  };
+
+  const format = url.searchParams.get("format");
+  if (format === "md") {
+    const md = toMarkdown(entries, summary);
+    const headers = new Headers();
+    headers.set("Content-Type", "text/markdown; charset=utf-8");
+    headers.set("Cache-Control", debugInfo?.debug ? "no-store" : "public, max-age=60");
+    headers.set("Access-Control-Allow-Origin", "*");
+    return new Response(md, { status: 200, headers });
+  }
+
+  return createResponse({
+    feature: FEATURE,
+    data: { entries },
+    meta,
+    diag,
+    request
   });
 }

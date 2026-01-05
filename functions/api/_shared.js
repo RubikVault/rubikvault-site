@@ -1,8 +1,168 @@
 import { XMLParser } from "fast-xml-parser";
+import { Diag, EMPTY_REASONS, STATUS_CODES, sanitizeAny as sanitizeDiagAny } from "./_diag.js";
 import { parseJsonLenient, fetchTextWithTimeout } from "./_shared/parse.js";
 import { BLOCK_REGISTRY } from "../../features/blocks-registry.js";
 
 const SCHEMA_VERSION = 1;
+
+export function getKv(env) {
+  if (env?.RV_KV) return env.RV_KV;
+  if (env?.KV) return env.KV;
+  return null;
+}
+
+export function isPreviewHost(hostname = "") {
+  const host = String(hostname || "").toLowerCase();
+  return (
+    host.endsWith(".pages.dev") ||
+    host.startsWith("preview.") ||
+    host === "localhost" ||
+    host === "127.0.0.1" ||
+    host === "0.0.0.0"
+  );
+}
+
+function inferStatus(meta = {}, diag, error) {
+  if (meta.status) return meta.status;
+  if (error) return STATUS_CODES.ERROR;
+  const reason = meta.emptyReason || diag?.emptyReason;
+  if (reason === EMPTY_REASONS.MISSING_ENV) return STATUS_CODES.LOCKED;
+  if (reason === EMPTY_REASONS.STALE) return STATUS_CODES.STALE_OK;
+  if (reason) return STATUS_CODES.PARTIAL;
+  return STATUS_CODES.OK;
+}
+
+export function parseDebug(request, env) {
+  const url = new URL(request.url);
+  const debug = url.searchParams.get("debug") === "1";
+  const token =
+    url.searchParams.get("token") || request.headers.get("x-rv-debug-token") || "";
+  const deepAllowed = Boolean(debug && token && env?.RV_DEBUG_TOKEN && token === env.RV_DEBUG_TOKEN);
+  const mode = debug ? (deepAllowed ? "deep" : "basic") : "off";
+  const info = { debug, mode, deepAllowed, token };
+  if (request && typeof request === "object") {
+    request.__debugInfo = info;
+  }
+  return info;
+}
+
+export function createResponse({
+  feature = "unknown",
+  data,
+  meta,
+  diag,
+  error,
+  request,
+  status
+} = {}) {
+  const resolvedMeta = meta && typeof meta === "object" ? { ...meta } : {};
+  const diagEmpty = diag?.emptyReason ?? resolvedMeta.emptyReason ?? null;
+  if (diagEmpty !== undefined && resolvedMeta.emptyReason === undefined) {
+    resolvedMeta.emptyReason = diagEmpty;
+  }
+  resolvedMeta.generatedAt = resolvedMeta.generatedAt || new Date().toISOString();
+  resolvedMeta.status = inferStatus(resolvedMeta, diag, error);
+  const resolvedData = data === undefined ? null : data;
+  const ok = error ? false : true;
+  const payload = {
+    ok,
+    feature,
+    meta: resolvedMeta || {},
+    data: resolvedData
+  };
+  if (error) {
+    payload.error = {
+      code: error.code || "ERROR",
+      message: error.message || "",
+      ...(error.details ? { details: error.details } : {})
+    };
+  }
+
+  const debugInfo = request && request.__debugInfo ? request.__debugInfo : null;
+  if (debugInfo?.debug) {
+    payload.debug = {
+      mode: debugInfo.mode,
+      diag: diag ? diag.serialize(debugInfo.mode) : new Diag().serialize(debugInfo.mode)
+    };
+  }
+
+  const headers = new Headers();
+  headers.set("Content-Type", "application/json");
+  headers.set("Access-Control-Allow-Origin", "*");
+  if (debugInfo?.debug) {
+    headers.set("Cache-Control", "no-store");
+  } else {
+    headers.set("Cache-Control", "public, max-age=60");
+  }
+
+  return new Response(JSON.stringify(sanitizeDiagAny(payload)), {
+    status: status || 200,
+    headers
+  });
+}
+
+export async function safeKvGet(env, key, type = "json", diag) {
+  const kv = getKv(env);
+  if (!kv) {
+    if (diag) diag.issue("KV_MISSING", { keyHint: String(key || "").slice(0, 4) });
+    return null;
+  }
+  if (diag) diag.incrementKv("reads");
+  try {
+    const value = await kv.get(key, type === "json" ? "json" : type);
+    return value;
+  } catch (error) {
+    if (diag) diag.issue("KV_READ_ERROR", { message: error?.message || "KV get failed" });
+    return null;
+  }
+}
+
+export async function safeKvPut(env, key, value, diag, options = {}) {
+  const kv = getKv(env);
+  const { allowWrite = false, disableOnDebug = false, debugInfo } = options;
+  if (!kv) {
+    if (diag) diag.issue("KV_MISSING", { keyHint: String(key || "").slice(0, 4) });
+    return null;
+  }
+  if (!allowWrite) {
+    if (diag) diag.issue("KV_WRITE_BLOCKED", { keyHint: String(key || "").slice(0, 4) });
+    return null;
+  }
+  if (disableOnDebug && debugInfo?.debug) {
+    if (diag) diag.issue("KV_WRITE_SKIPPED_DEBUG", { keyHint: String(key || "").slice(0, 4) });
+    return null;
+  }
+  if (diag) diag.incrementKv("writes");
+  try {
+    await kv.put(key, typeof value === "string" ? value : JSON.stringify(value));
+    return true;
+  } catch (error) {
+    if (diag) diag.issue("KV_WRITE_ERROR", { message: error?.message || "KV put failed" });
+    return false;
+  }
+}
+
+export async function safeKvList(env, prefix, diag) {
+  const kv = getKv(env);
+  if (!kv) {
+    if (diag) diag.issue("KV_MISSING", { keyHint: String(prefix || "").slice(0, 4) });
+    return [];
+  }
+  if (diag) diag.incrementKv("list");
+  try {
+    const list = [];
+    const iter = await kv.list({ prefix });
+    for await (const key of iter.keys || []) {
+      list.push(key);
+    }
+    return list;
+  } catch (error) {
+    if (diag) diag.issue("KV_LIST_ERROR", { message: error?.message || "KV list failed" });
+    return [];
+  }
+}
+
+export { sanitizeDiagAny as sanitizeAny };
 
 function resolveExpectations(feature) {
   if (!feature || !BLOCK_REGISTRY) return null;

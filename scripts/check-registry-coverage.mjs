@@ -52,7 +52,9 @@ console.log(
 );
 
 if (missing.length > 0) {
-  console.error("Missing registry entries:", missing.map((entry) => entry.id).join(", "));
+  const missingIds = missing.map((entry) => entry.id);
+  console.error("Add to FEATURE_CONFIG:", missingIds.join(", "));
+  process.exit(1);
 }
 
 if (coverageRaw < 95) {

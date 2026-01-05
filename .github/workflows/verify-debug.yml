@@ -1,0 +1,60 @@
+name: verify-debug
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Start Pages dev
+        run: |
+          npm run dev:pages >/tmp/devserver.log 2>&1 &
+          echo $! > /tmp/devserver.pid
+
+      - name: Wait for dev server
+        run: |
+          for i in {1..20}; do
+            if curl -sSf --max-time 2 http://127.0.0.1:8788/_headers >/dev/null 2>&1; then
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "::error::Dev server not ready" >&2
+          exit 1
+
+      - name: Verify envelope and secrets
+        env:
+          PREVIEW: http://127.0.0.1:8788
+        run: bash scripts/verify-api.sh
+
+      - name: Upload verify logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: verify-debug
+          path: |
+            debug/verify-report.md
+            debug/verify-report.json
+            /tmp/devserver.log
+          if-no-files-found: ignore
+
+      - name: Stop dev server
+        if: always()
+        run: |
+          if [ -f /tmp/devserver.pid ]; then
+            kill "$(cat /tmp/devserver.pid)" || true
+          fi

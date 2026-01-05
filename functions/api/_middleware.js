@@ -252,11 +252,8 @@ export async function onRequest(context) {
     }
 
     if (isJson) {
-
-      // Defaults (nicht erzwingen, wenn Content-Type schon da ist)
-      if (!headers.has("Content-Type")) {
-        headers.set("Content-Type", "application/json; charset=utf-8");
-      }
+      // Always enforce a single JSON content-type for API responses
+      headers.set("Content-Type", "application/json; charset=utf-8");
 
       // KV Event Log (best effort)
       let payload = null;
@@ -294,6 +291,15 @@ export async function onRequest(context) {
         if (shouldEnsureMeta) {
           payload = ensureMeta(payload, traceId);
         }
+        const baseError =
+          payload && typeof payload.error === "object" && payload.error !== null
+            ? payload.error
+            : {};
+        payload.error = {
+          code: baseError.code || "",
+          message: baseError.message || "",
+          details: baseError.details || {}
+        };
       }
 
       const logEvent = async () => {

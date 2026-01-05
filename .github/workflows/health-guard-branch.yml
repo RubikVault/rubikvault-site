@@ -4,7 +4,7 @@ on:
   pull_request:
 
 env:
-  PREVIEW_URL: ${{ vars.PREVIEW_URL || 'https://c13cbfaf.rubikvault-site.pages.dev' }}
+  PREVIEW_URL: ${{ vars.PREVIEW_URL }}
 
 jobs:
   health-branch:

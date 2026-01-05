@@ -12,7 +12,7 @@ check_asset() {
   local path="$1"
   echo "== $path =="
   local headers
-  headers=$(curl -fsSL -D - -o /dev/null "${BASE_URL}${path}" | tr -d '\r')
+  headers=$(curl -fsSI -L "${BASE_URL}${path}" | tr -d '\r')
   echo "$headers" | sed -n '1,10p'
   local ctype
   ctype=$(echo "$headers" | awk -F': ' 'tolower($1)=="content-type"{print tolower($2)}' | head -n 1)
@@ -24,8 +24,10 @@ check_asset() {
     echo "FAIL: HTML Content-Type for ${path}"
     exit 1
   fi
+  # Ensure a full fetch does not break stdout (avoid curl(56))
+  curl -fsSL -L "${BASE_URL}${path}" -o /dev/null
   local body
-  body=$(curl -fsSL "${BASE_URL}${path}" 2>/dev/null | head -c 200)
+  body=$(curl -fsSL -L "${BASE_URL}${path}" 2>/dev/null | head -c 120)
   if echo "$body" | grep -qi "<!doctype\|<html"; then
     echo "FAIL: HTML body for ${path}"
     exit 1
