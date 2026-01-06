@@ -1,9 +1,9 @@
 {
   "schemaVersion": "rv-mirror-v1",
   "mirrorId": "alpha-radar",
-  "runId": "2026-01-05T22:53:46.493Z",
-  "updatedAt": "2026-01-05T22:53:46.493Z",
-  "asOf": "2026-01-05T21:00:00.000Z",
+  "runId": "2026-01-06T21:32:47.255Z",
+  "updatedAt": "2026-01-06T21:32:47.255Z",
+  "asOf": "2026-01-06T21:00:00.000Z",
   "mode": "EOD",
   "cadence": "EOD",
   "trust": "derived",
@@ -32,14 +32,14 @@
   "items": [
     {
       "symbol": "AAPL",
-      "score": 50,
-      "state": "NEUTRAL",
+      "score": 55,
+      "state": "WATCH",
       "reasons": [
         "TREND_UP_200",
-        "RSI_RECOVERY",
+        "RSI_OVERSOLD",
         "MACD_NEGATIVE"
       ],
-      "barsUsed": 10412,
+      "barsUsed": 10413,
       "missingFields": []
     },
     {
@@ -51,7 +51,7 @@
         "RSI_RECOVERY",
         "MACD_NEGATIVE"
       ],
-      "barsUsed": 10029,
+      "barsUsed": 10030,
       "missingFields": []
     },
     {
@@ -63,7 +63,7 @@
         "RSI_NEUTRAL",
         "MACD_POSITIVE"
       ],
-      "barsUsed": 6779,
+      "barsUsed": 6780,
       "missingFields": []
     },
     {
@@ -75,7 +75,7 @@
         "RSI_NEUTRAL",
         "MACD_POSITIVE"
       ],
-      "barsUsed": 7199,
+      "barsUsed": 7200,
       "missingFields": []
     },
     {
@@ -87,7 +87,7 @@
         "RSI_NEUTRAL",
         "MACD_NEGATIVE"
       ],
-      "barsUsed": 5379,
+      "barsUsed": 5380,
       "missingFields": []
     },
     {
@@ -99,23 +99,35 @@
         "RSI_NEUTRAL",
         "MACD_NEGATIVE"
       ],
-      "barsUsed": 3427,
+      "barsUsed": 3428,
       "missingFields": []
     },
     {
       "symbol": "TSLA",
-      "score": 60,
-      "state": "WATCH",
+      "score": 50,
+      "state": "NEUTRAL",
       "reasons": [
-        "TREND_UP",
-        "RSI_NEUTRAL",
+        "TREND_UP_200",
+        "RSI_RECOVERY",
         "MACD_NEGATIVE"
       ],
-      "barsUsed": 3904,
+      "barsUsed": 3905,
       "missingFields": []
     },
     {
       "symbol": "SPY",
+      "score": 85,
+      "state": "STRONG",
+      "reasons": [
+        "TREND_STRONG",
+        "RSI_NEUTRAL",
+        "MACD_POSITIVE"
+      ],
+      "barsUsed": 5248,
+      "missingFields": []
+    },
+    {
+      "symbol": "QQQ",
       "score": 65,
       "state": "WATCH",
       "reasons": [
@@ -123,19 +135,7 @@
         "RSI_NEUTRAL",
         "MACD_NEGATIVE"
       ],
-      "barsUsed": 5247,
-      "missingFields": []
-    },
-    {
-      "symbol": "QQQ",
-      "score": 60,
-      "state": "WATCH",
-      "reasons": [
-        "TREND_UP",
-        "RSI_NEUTRAL",
-        "MACD_NEGATIVE"
-      ],
-      "barsUsed": 6747,
+      "barsUsed": 6748,
       "missingFields": []
     },
     {
@@ -147,13 +147,13 @@
         "RSI_NEUTRAL",
         "MACD_NEGATIVE"
       ],
-      "barsUsed": 5247,
+      "barsUsed": 5248,
       "missingFields": []
     }
   ],
   "meta": {
     "status": "OK",
-    "updatedAt": "2026-01-05T22:53:46.493Z",
+    "updatedAt": "2026-01-06T21:32:47.255Z",
     "reason": null
   }
 }
