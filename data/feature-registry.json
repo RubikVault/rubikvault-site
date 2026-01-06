@@ -1,62 +1,35 @@
 [
-  {
-    "feature": "top-movers",
-    "endpoint": "/api/top-movers",
-    "kind": "server",
-    "mirrorKey": "mirror:top-movers:latest"
-  },
-  {
-    "feature": "yield-curve",
-    "endpoint": "/api/yield-curve",
-    "kind": "server",
-    "mirrorKey": "mirror:yield-curve:latest"
-  },
-  {
-    "feature": "sector-rotation",
-    "endpoint": "/api/sector-rotation",
-    "kind": "server",
-    "mirrorKey": "mirror:sector-rotation:latest"
-  },
-  {
-    "feature": "market-health",
-    "endpoint": "/api/market-health",
-    "kind": "server",
-    "mirrorKey": "mirror:market-health:latest"
-  },
-  {
-    "feature": "price-snapshot",
-    "endpoint": "/api/price-snapshot",
-    "kind": "server",
-    "mirrorKey": "mirror:price-snapshot:latest"
-  },
-  {
-    "feature": "alpha-radar",
-    "endpoint": "/api/alpha-radar",
-    "kind": "server",
-    "mirrorKey": "mirror:alpha-radar:latest"
-  },
-  {
-    "feature": "macro-rates",
-    "endpoint": "/api/macro-rates",
-    "kind": "server",
-    "mirrorKey": "mirror:macro-rates:latest"
-  },
-  {
-    "feature": "sentiment",
-    "endpoint": "/api/sentiment",
-    "kind": "server",
-    "mirrorKey": "mirror:sentiment:latest"
-  },
-  {
-    "feature": "crypto-snapshot",
-    "endpoint": "/api/crypto-snapshot",
-    "kind": "server",
-    "mirrorKey": "mirror:crypto-snapshot:latest"
-  },
-  {
-    "feature": "news-intelligence",
-    "endpoint": "/api/news-intelligence",
-    "kind": "server",
-    "mirrorKey": "mirror:news-intelligence:latest"
-  }
+  { "idx": 0, "id": "rv-market-cockpit", "title": "Market Cockpit", "api": "/api/bundle", "kind": "cockpit", "enabled": true },
+  { "idx": 1, "id": "rv-yield-curve", "title": "Yield Curve", "api": "/api/yield-curve", "kind": "feature", "enabled": true },
+  { "idx": 2, "id": "rv-sector-rotation", "title": "Sector Rotation", "api": "/api/sector-rotation", "kind": "feature", "enabled": true },
+  { "idx": 3, "id": "rv-central-bank-watch", "title": "Central Bank Watch", "api": "/api/central-bank-watch", "kind": "feature", "enabled": true },
+  { "idx": 4, "id": "rv-market-health", "title": "Market Health", "api": "/api/market-health", "kind": "feature", "enabled": true },
+  { "idx": 5, "id": "rv-price-snapshot", "title": "Price Snapshot", "api": "/api/price-snapshot", "kind": "feature", "enabled": true },
+  { "idx": 6, "id": "rv-top-movers", "title": "Volume Top Movers", "api": "/api/top-movers", "kind": "feature", "enabled": true },
+  { "idx": 7, "id": "rv-earnings-calendar", "title": "Earnings Calendar", "api": "/api/earnings-calendar", "kind": "feature", "enabled": true },
+  { "idx": 8, "id": "rv-news-headlines", "title": "News Headlines", "api": "/api/news", "kind": "feature", "enabled": true },
+  { "idx": 9, "id": "rv-news-intelligence", "title": "News Intelligence", "api": "/api/news-intelligence", "kind": "feature", "enabled": true },
+  { "idx": 10, "id": "rv-watchlist-local", "title": "Watchlist (Local)", "api": null, "kind": "feature", "enabled": true },
+  { "idx": 11, "id": "rv-export-csv", "title": "Export CSV", "api": null, "kind": "feature", "enabled": true },
+  { "idx": 12, "id": "rv-macro-rates", "title": "Macro & Rates", "api": "/api/macro-rates", "kind": "feature", "enabled": true },
+  { "idx": 13, "id": "rv-sp500-sectors", "title": "S&P 500 Sectors", "api": "/api/sp500-sectors", "kind": "feature", "enabled": true },
+  { "idx": 14, "id": "rv-market-regime", "title": "Market Regime Radar", "api": "/api/market-regime", "kind": "feature", "enabled": true },
+  { "idx": 15, "id": "rv-arb-risk-regime", "title": "ARB Risk Regime", "api": "/api/arb-risk-regime", "kind": "feature", "enabled": true },
+  { "idx": 16, "id": "rv-arb-liquidity-pulse", "title": "ARB Liquidity Pulse", "api": "/api/arb-liquidity-pulse", "kind": "feature", "enabled": true },
+  { "idx": 17, "id": "rv-arb-breadth-lite", "title": "ARB Breadth Lite", "api": "/api/arb-breadth-lite", "kind": "feature", "enabled": true },
+  { "idx": 18, "id": "rv-why-moved", "title": "Why This Stock Moved", "api": "/api/why-moved", "kind": "feature", "enabled": true },
+  { "idx": 19, "id": "rv-volume-anomaly", "title": "Volume Anomaly", "api": "/api/volume-anomaly", "kind": "feature", "enabled": true },
+  { "idx": 20, "id": "rv-breakout-energy", "title": "Breakout Energy Radar", "api": "/api/breakout-energy", "kind": "feature", "enabled": true },
+  { "idx": 21, "id": "rv-hype-divergence", "title": "Inverse Hype Detector", "api": "/api/hype-divergence", "kind": "feature", "enabled": true },
+  { "idx": 22, "id": "rv-congress-trading", "title": "Congress Trading Tracker", "api": "/api/congress-trading", "kind": "feature", "enabled": true },
+  { "idx": 23, "id": "rv-insider-cluster", "title": "Insider Cluster Buy Alarm", "api": "/api/insider-cluster", "kind": "feature", "enabled": true },
+  { "idx": 24, "id": "rv-analyst-stampede", "title": "Analyst Stampede", "api": "/api/analyst-stampede", "kind": "feature", "enabled": true },
+  { "idx": 25, "id": "rv-smart-money", "title": "Smart Money Score", "api": "/api/smart-money", "kind": "feature", "enabled": true },
+  { "idx": 26, "id": "rv-alpha-performance", "title": "Alpha Consistency Monitor", "api": "/api/alpha-performance", "kind": "feature", "enabled": true },
+  { "idx": 27, "id": "rv-earnings-reality", "title": "Earnings Reality Check", "api": "/api/earnings-reality", "kind": "feature", "enabled": true },
+  { "idx": 28, "id": "rv-crypto-snapshot", "title": "Crypto Snapshot", "api": "/api/crypto-snapshot", "kind": "feature", "enabled": true },
+  { "idx": 29, "id": "rv-sentiment-barometer", "title": "Sentiment Barometer", "api": "/api/sentiment", "kind": "feature", "enabled": true },
+  { "idx": 30, "id": "rv-tech-signals", "title": "Tech Signals", "api": "/api/tech-signals", "kind": "feature", "enabled": true },
+  { "idx": 31, "id": "rv-alpha-radar", "title": "Alpha Radar", "api": "/api/alpha-radar", "kind": "feature", "enabled": true },
+  { "idx": 32, "id": "tradingview-widgets", "title": "TradingView Widgets", "api": null, "kind": "feature", "enabled": true }
 ]

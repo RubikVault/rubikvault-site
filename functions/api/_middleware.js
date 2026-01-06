@@ -24,7 +24,11 @@ function isHtmlLikeText(text) {
 function ensureMeta(payload, fallbackTraceId) {
   if (!payload || typeof payload !== "object" || Array.isArray(payload)) return payload;
   const baseMeta = payload.meta && typeof payload.meta === "object" ? payload.meta : {};
-  const metaWarnings = Array.isArray(baseMeta.warnings) ? baseMeta.warnings : [];
+  const metaWarnings = Array.isArray(baseMeta.warnings)
+    ? baseMeta.warnings
+    : baseMeta.warnings
+      ? [String(baseMeta.warnings)]
+      : [];
   const metaStatus = baseMeta.status || (payload.isStale ? "STALE" : payload.ok ? "LIVE" : "ERROR");
   const metaReason =
     baseMeta.reason !== undefined
@@ -32,12 +36,12 @@ function ensureMeta(payload, fallbackTraceId) {
       : payload.isStale
         ? "STALE"
         : payload.ok
-          ? null
+          ? ""
           : payload?.error?.code || "ERROR";
   payload.meta = {
     ...baseMeta,
     status: metaStatus,
-    reason: metaReason || null,
+    reason: metaReason ?? "",
     ts: baseMeta.ts || payload.ts || new Date().toISOString(),
     schemaVersion: baseMeta.schemaVersion || payload.schemaVersion || 1,
     traceId: baseMeta.traceId || payload?.trace?.traceId || payload.traceId || fallbackTraceId || "unknown",
@@ -45,7 +49,9 @@ function ensureMeta(payload, fallbackTraceId) {
     circuitOpen: Boolean(baseMeta.circuitOpen),
     warnings: metaWarnings,
     savedAt: baseMeta.savedAt ?? null,
-    ageMinutes: baseMeta.ageMinutes ?? null
+    ageMinutes: baseMeta.ageMinutes ?? null,
+    source: baseMeta.source ?? null,
+    emptyReason: baseMeta.emptyReason ?? null
   };
   return payload;
 }

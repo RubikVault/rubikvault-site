@@ -18,3 +18,7 @@ jobs:
         env:
           NODE_OPTIONS: --no-warnings
         run: node scripts/check-registry-coverage.mjs
+      - name: Validate feature registry indices
+        env:
+          NODE_OPTIONS: --no-warnings
+        run: node scripts/validate-feature-registry.mjs

@@ -46,18 +46,34 @@ function extractLastUpdate(mirror) {
 }
 
 function buildEntry(registryEntry, mirror, debugInfo) {
+  const featureId = registryEntry.id || registryEntry.feature || "unknown";
   const base = {
-    feature: registryEntry.feature,
-    endpoint: registryEntry.endpoint,
-    kind: registryEntry.kind || "server",
+    idx: registryEntry.idx ?? null,
+    feature: featureId,
+    title: registryEntry.title || featureId,
+    endpoint: registryEntry.api || registryEntry.endpoint || null,
+    kind: registryEntry.kind || "feature",
+    enabled: registryEntry.enabled !== false,
     endpointStatus: STATUS_CODES.UNKNOWN,
     emptyReason: null,
     lastUpdate: null
   };
 
+  if (!base.enabled) {
+    base.endpointStatus = STATUS_CODES.LOCKED;
+    base.emptyReason = "DISABLED";
+    return base;
+  }
+
+  if (!base.endpoint) {
+    base.endpointStatus = STATUS_CODES.OK;
+    base.emptyReason = EMPTY_REASONS.CLIENT_ONLY;
+    return base;
+  }
+
   if (mirror) {
     base.endpointStatus = deriveStatusFromMirror(mirror);
-    base.emptyReason = extractEmptyReason(mirror);
+    base.emptyReason = extractEmptyReason(mirror) || base.emptyReason;
     base.lastUpdate = extractLastUpdate(mirror);
     if (debugInfo?.deepAllowed) {
       base.mirror = sanitizeAny({
@@ -65,6 +81,9 @@ function buildEntry(registryEntry, mirror, debugInfo) {
         debug: mirror.debug || null
       });
     }
+  } else {
+    base.emptyReason = base.emptyReason || EMPTY_REASONS.CACHE_EMPTY;
+    base.endpointStatus = STATUS_CODES.PARTIAL;
   }
 
   return base;
@@ -107,16 +126,19 @@ export async function onRequestGet({ request, env }) {
   const entries = [];
   let kvReads = 0;
   for (const entry of registry) {
-    const mirrorKey = entry.mirrorKey || `mirror:${entry.feature}:latest`;
+    const mirrorKey = `mirror:${String(entry.id || entry.feature || "").replace(/^rv-/, "")}:latest`;
     let mirror = null;
-    if (entry.kind === "server" && kvReads < MAX_KV_READS) {
+    if (entry.api && kvReads < MAX_KV_READS) {
       mirror = await safeKvGet(env, mirrorKey, "json", diag);
       kvReads += 1;
-    } else if (entry.kind === "server" && kvReads >= MAX_KV_READS) {
+    } else if (entry.api && kvReads >= MAX_KV_READS) {
       entries.push({
-        feature: entry.feature,
-        endpoint: entry.endpoint,
-        kind: entry.kind || "server",
+        idx: entry.idx ?? null,
+        feature: entry.id || entry.feature,
+        title: entry.title || entry.id,
+        endpoint: entry.api,
+        kind: entry.kind || "feature",
+        enabled: entry.enabled !== false,
         endpointStatus: STATUS_CODES.UNKNOWN,
         emptyReason: "BUDGET_CAP",
         lastUpdate: null
@@ -124,7 +146,7 @@ export async function onRequestGet({ request, env }) {
       continue;
     }
     const built = buildEntry(entry, mirror, debugInfo);
-    if (entry.kind === "server" && kvReads > MAX_KV_READS) {
+    if (entry.api && kvReads > MAX_KV_READS) {
       built.endpointStatus = STATUS_CODES.UNKNOWN;
       built.emptyReason = "BUDGET_CAP";
     }
@@ -132,7 +154,7 @@ export async function onRequestGet({ request, env }) {
   }
 
   const failed = entries.filter((e) =>
-    [STATUS_CODES.ERROR, STATUS_CODES.LOCKED, STATUS_CODES.PARTIAL].includes(e.endpointStatus)
+    [STATUS_CODES.ERROR, STATUS_CODES.PARTIAL].includes(e.endpointStatus)
   ).length;
   const summary = {
     total: entries.length,

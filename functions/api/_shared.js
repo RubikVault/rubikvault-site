@@ -55,28 +55,52 @@ export function createResponse({
   request,
   status
 } = {}) {
+  const now = new Date().toISOString();
   const resolvedMeta = meta && typeof meta === "object" ? { ...meta } : {};
   const diagEmpty = diag?.emptyReason ?? resolvedMeta.emptyReason ?? null;
   if (diagEmpty !== undefined && resolvedMeta.emptyReason === undefined) {
     resolvedMeta.emptyReason = diagEmpty;
   }
-  resolvedMeta.generatedAt = resolvedMeta.generatedAt || new Date().toISOString();
+  const traceId =
+    resolvedMeta.traceId ||
+    request?.headers?.get("x-rv-trace-id") ||
+    request?.headers?.get("x-rv-trace") ||
+    createTraceId(request || { url: "http://local" });
+  resolvedMeta.generatedAt = resolvedMeta.generatedAt || now;
+  resolvedMeta.ts = resolvedMeta.ts || now;
+  resolvedMeta.schemaVersion = resolvedMeta.schemaVersion || SCHEMA_VERSION;
+  resolvedMeta.traceId = traceId;
+  resolvedMeta.writeMode = resolvedMeta.writeMode || "NONE";
+  resolvedMeta.circuitOpen = Boolean(resolvedMeta.circuitOpen);
+  resolvedMeta.source = resolvedMeta.source ?? null;
+  resolvedMeta.warnings = Array.isArray(resolvedMeta.warnings)
+    ? resolvedMeta.warnings
+    : resolvedMeta.warnings
+      ? [String(resolvedMeta.warnings)]
+      : [];
+  resolvedMeta.emptyReason = resolvedMeta.emptyReason ?? null;
+  resolvedMeta.ageMinutes = resolvedMeta.ageMinutes ?? null;
+  resolvedMeta.savedAt = resolvedMeta.savedAt ?? null;
+  resolvedMeta.reason =
+    resolvedMeta.reason !== undefined
+      ? resolvedMeta.reason
+      : diag?.emptyReason || (error ? error.code || "ERROR" : "") || "";
   resolvedMeta.status = inferStatus(resolvedMeta, diag, error);
   const resolvedData = data === undefined ? null : data;
-  const ok = error ? false : true;
+  const hasError = Boolean(error);
   const payload = {
-    ok,
+    ok: !hasError,
     feature,
     meta: resolvedMeta || {},
-    data: resolvedData
+    data: resolvedData,
+    error: hasError
+      ? {
+          code: error.code || "ERROR",
+          message: error.message || "",
+          details: error.details || {}
+        }
+      : { code: "", message: "", details: {} }
   };
-  if (error) {
-    payload.error = {
-      code: error.code || "ERROR",
-      message: error.message || "",
-      ...(error.details ? { details: error.details } : {})
-    };
-  }
 
   const debugInfo = request && request.__debugInfo ? request.__debugInfo : null;
   if (debugInfo?.debug) {
@@ -87,7 +111,7 @@ export function createResponse({
   }
 
   const headers = new Headers();
-  headers.set("Content-Type", "application/json");
+  headers.set("Content-Type", "application/json; charset=utf-8");
   headers.set("Access-Control-Allow-Origin", "*");
   if (debugInfo?.debug) {
     headers.set("Cache-Control", "no-store");

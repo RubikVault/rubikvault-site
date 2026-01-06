@@ -12,6 +12,7 @@ import { resolveApiBase } from "./features/utils/api.js";
 import { initFlagsPanel } from "./features/rv-flags-panel.js";
 import { BLOCK_REGISTRY, formatBlockTitle } from "./features/blocks-registry.js";
 
+const REGISTRY_URL = "./data/feature-registry.json";
 const RUN_ID = (() => {
   if (typeof window === "undefined") return "";
   if (window.__RV_RUN_ID) return window.__RV_RUN_ID;
@@ -166,6 +167,52 @@ const NY_WEEKDAY_INDEX = {
 const DASHBOARD_MIN_REFRESH_MS = 60_000;
 const DASHBOARD_JITTER_PCT = 0.15;
 const REFRESH_BACKOFF_MAX_MS = 20 * 60 * 1000;
+let FEATURE_REGISTRY_CACHE = null;
+
+function normalizeRegistry(list) {
+  return (Array.isArray(list) ? list : [])
+    .filter((entry) => entry && typeof entry.idx === "number" && entry.id)
+    .sort((a, b) => a.idx - b.idx);
+}
+
+async function loadFeatureRegistry() {
+  if (FEATURE_REGISTRY_CACHE) return FEATURE_REGISTRY_CACHE;
+  try {
+    const res = await fetch(REGISTRY_URL, { cache: "no-store" });
+    if (res.ok) {
+      const json = await res.json();
+      FEATURE_REGISTRY_CACHE = normalizeRegistry(json);
+      return FEATURE_REGISTRY_CACHE;
+    }
+    console.warn("[RV] registry fetch failed", res.status);
+  } catch (error) {
+    console.warn("[RV] registry fetch error", error);
+  }
+  FEATURE_REGISTRY_CACHE = null;
+  return FEATURE_REGISTRY_CACHE;
+}
+
+function applyRegistryToFeatures(features, registry) {
+  const normalized = normalizeRegistry(registry);
+  if (!normalized.length) return features;
+  const byId = new Map(features.map((feature) => [feature.id, feature]));
+  const seen = new Set();
+  const ordered = normalized.map((entry) => {
+    const base = byId.get(entry.id) || { id: entry.id };
+    seen.add(entry.id);
+    const api = entry.api ? entry.api.replace(/^\\/?api\\//i, "") : base.api || null;
+    return {
+      ...base,
+      id: entry.id,
+      title: entry.title || base.title || entry.id,
+      api,
+      enabled: entry.enabled ?? base.enabled ?? true,
+      registry: { idx: entry.idx, api: entry.api, kind: entry.kind, title: entry.title }
+    };
+  });
+  const extras = features.filter((feature) => !seen.has(feature.id));
+  return ordered.concat(extras);
+}
 
 function getNyParts(date = new Date()) {
   const parts = NY_FORMATTER.formatToParts(date);
@@ -825,9 +872,11 @@ function initPanicButton() {
   footer.appendChild(button);
 }
 
-function resolveFeatures() {
+async function resolveFeatures() {
   const list = Array.isArray(FEATURES) ? FEATURES : [];
-  return applyOverrides(list);
+  const overridden = applyOverrides(list);
+  const registry = await loadFeatureRegistry();
+  return applyRegistryToFeatures(overridden, registry);
 }
 
 async function loadFeatureModule(feature) {
@@ -1067,10 +1116,15 @@ function initBlock(section, feature) {
   const root = section.querySelector("[data-rv-root]");
   if (!root) return;
   const featureId = section.getAttribute("data-rv-feature") || feature?.id || "unknown";
-  const registry = BLOCK_REGISTRY[featureId] || null;
-  if (registry?.id) {
-    const formattedTitle = formatBlockTitle(registry);
-    section.setAttribute("data-block-id", registry.id);
+  const registry = feature?.registry || BLOCK_REGISTRY[featureId] || null;
+  if (registry) {
+    const idxLabel =
+      registry.idx !== undefined
+        ? String(registry.idx).padStart(2, "0")
+        : registry.id || String(featureId);
+    const title = feature?.title || registry.title || featureId;
+    const formattedTitle = `Block ${idxLabel} — ${title}`;
+    section.setAttribute("data-block-id", idxLabel);
     section.setAttribute("data-feature-id", registry.featureId || featureId);
     section.setAttribute("data-rv-block-name", formattedTitle);
     const titleEl = section.querySelector("h2, h3, .block-title, .card-title");
@@ -1143,9 +1197,9 @@ function initBlock(section, feature) {
   return { logger, contentEl };
 }
 
-function boot() {
+async function boot() {
   initDebugConsole();
-  const features = resolveFeatures();
+  const features = await resolveFeatures();
   const featureMap = new Map(features.map((feature) => [feature.id, feature]));
 
   if (DEBUG_PANIC_MODE) {

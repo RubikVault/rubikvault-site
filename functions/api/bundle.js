@@ -49,6 +49,7 @@ export async function onRequestGet({ request, env }) {
 
   const meta = { warnings: [] };
   let data = null;
+  let error = null;
 
   const staticBundle = await fetchStaticBundle(origin, diag);
   if (staticBundle && staticBundle.data) {
@@ -77,6 +78,11 @@ export async function onRequestGet({ request, env }) {
     meta.source = meta.source || "none";
     meta.emptyReason = diag.emptyReason;
     meta.status = STATUS_CODES.PARTIAL;
+    error = {
+      code: "CACHE_EMPTY",
+      message: "No bundle data from static asset or KV",
+      details: { source: meta.source }
+    };
     data = { blocks: [] };
   }
 
@@ -85,6 +91,7 @@ export async function onRequestGet({ request, env }) {
     data,
     meta,
     diag,
-    request
+    request,
+    error
   });
 }

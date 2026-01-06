@@ -1,8 +1,10 @@
 #!/usr/bin/env node
+import fs from "node:fs";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 
 const ROOT = process.cwd();
+const REGISTRY_PATH = path.join(ROOT, "data", "feature-registry.json");
 
 function toFileUrl(filePath) {
   return pathToFileURL(path.join(ROOT, filePath)).href;
@@ -24,10 +26,30 @@ async function loadModule(modulePath, label) {
   }
 }
 
-const { FEATURES = [] } = await loadModule("rv-config.js", "rv-config.js");
-const { BLOCK_REGISTRY = {} } = await loadModule("features/blocks-registry.js", "blocks-registry.js");
+function loadRegistry() {
+  if (!fs.existsSync(REGISTRY_PATH)) {
+    console.error("feature-registry.json missing under data/");
+    process.exit(1);
+  }
+  try {
+    const raw = fs.readFileSync(REGISTRY_PATH, "utf8");
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) {
+      console.error("feature-registry.json must be an array");
+      process.exit(1);
+    }
+    return parsed;
+  } catch (error) {
+    console.error("failed to parse feature-registry.json:", error?.message || error);
+    process.exit(1);
+  }
+}
 
-const registryIds = new Set(Object.keys(BLOCK_REGISTRY || {}).map(normalizeFeatureId));
+const { FEATURES = [] } = await loadModule("rv-config.js", "rv-config.js");
+const registryEntries = loadRegistry();
+const registryIds = new Set(
+  registryEntries.map((entry) => normalizeFeatureId(entry.id || entry.feature))
+);
 const serverSideFeatures = (FEATURES || []).filter((entry) => entry?.api);
 const total = serverSideFeatures.length;
 const missing = serverSideFeatures.filter(
@@ -53,7 +75,7 @@ console.log(
 
 if (missing.length > 0) {
   const missingIds = missing.map((entry) => entry.id);
-  console.error("Add to FEATURE_CONFIG:", missingIds.join(", "));
+  console.error("Add to feature-registry.json:", missingIds.join(", "));
   process.exit(1);
 }
 
