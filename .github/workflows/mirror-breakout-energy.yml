@@ -27,3 +27,7 @@ jobs:
           AV_API_KEY: ${{ secrets.AV_API_KEY }}
         run: |
           node scripts/mirror-breakout-energy.mjs
+
+
+      - name: Install dependencies
+        run: npm ci

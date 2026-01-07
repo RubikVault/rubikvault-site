@@ -52,3 +52,7 @@ jobs:
             } else {
               await github.rest.issues.create({ owner: context.repo.owner, repo: context.repo.repo, title, body });
             }
+
+
+      - name: Install dependencies
+        run: npm ci

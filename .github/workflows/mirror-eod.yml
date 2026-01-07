@@ -32,3 +32,7 @@ jobs:
           git add mirrors public/mirrors
           git commit -m "chore(mirrors): daily EOD market data" || true
           git push || true
+
+
+      - name: Install dependencies
+        run: npm ci

@@ -135,3 +135,7 @@ jobs:
           else
             gh pr create --head mirrors-auto --base main --title "chore: update mirrors" --body-file /tmp/pr-body.txt
           fi
+
+
+      - name: Install dependencies
+        run: npm ci
