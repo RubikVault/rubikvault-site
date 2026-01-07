@@ -125,7 +125,7 @@ jobs:
           git add public/mirrors/
           git commit -m "chore: update mirrors"
           git remote set-url origin "https://x-access-token:${RV_GH_PUSH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
-          git push --force-with-lease origin mirrors-auto
+          git push --force origin mirrors-auto
           printf "Seed Mirrors summary (%s)\n\n" "$(date -u +"%Y-%m-%dT%H:%M:%SZ")" > /tmp/pr-body.txt
           cat /tmp/seed-summary.json >> /tmp/pr-body.txt
           PR_NUMBER=$(gh pr list --head mirrors-auto --base main --json number --jq '.[0].number')
