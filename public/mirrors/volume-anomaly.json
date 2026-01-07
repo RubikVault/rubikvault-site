@@ -1,9 +1,9 @@
 {
   "schemaVersion": "rv-mirror-v1",
   "mirrorId": "volume-anomaly",
-  "runId": "2026-01-06T22:47:28.774Z",
-  "updatedAt": "2026-01-06T22:47:28.774Z",
-  "asOf": "2026-01-06T21:00:00.000Z",
+  "runId": "2026-01-07T21:32:28.054Z",
+  "updatedAt": "2026-01-07T21:32:28.054Z",
+  "asOf": "2026-01-07T21:00:00.000Z",
   "mode": "EOD",
   "cadence": "EOD",
   "trust": "derived",
@@ -31,11 +31,22 @@
   },
   "items": [
     {
-      "symbol": "AMZN",
-      "rvol20": 1.4489525269757786,
-      "rangeExp": 2.5301307804085833,
-      "changePct": 3.3682313567321653,
-      "barsUsed": 7200,
+      "symbol": "MSFT",
+      "rvol20": 0.8213507039749239,
+      "rangeExp": 1.715709179263134,
+      "changePct": 1.0720779085076515,
+      "barsUsed": 10031,
+      "missingFields": [],
+      "reasons": [
+        "RANGE_EXPANSION"
+      ]
+    },
+    {
+      "symbol": "GOOGL",
+      "rvol20": 0.7636785073478218,
+      "rangeExp": 1.7411660571614898,
+      "changePct": 2.446395622574271,
+      "barsUsed": 5381,
       "missingFields": [],
       "reasons": [
         "RANGE_EXPANSION"
@@ -44,7 +55,7 @@
   ],
   "meta": {
     "status": "OK",
-    "updatedAt": "2026-01-06T22:47:28.774Z",
+    "updatedAt": "2026-01-07T21:32:28.054Z",
     "reason": null
   }
 }
