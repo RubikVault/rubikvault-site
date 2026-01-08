@@ -34,6 +34,24 @@ function setLoading(section, isLoading) {
   section.setAttribute("data-rv-loading", isLoading ? "true" : "false");
 }
 
+function isEffectivelyEmpty(contentEl) {
+  if (!contentEl) return false;
+  const selector =
+    "table,canvas,svg,img,.rv-chart,.rv-data,.rv-content,[data-rendered=\"true\"]";
+  if (contentEl.querySelector(selector)) return false;
+  const text = contentEl.innerText ? contentEl.innerText.trim() : "";
+  if (text.length >= 20) return false;
+  const children = Array.from(contentEl.children || []);
+  if (!children.length) return true;
+  return children.every((child) => {
+    const className = String(child.className || "");
+    if (child.getAttribute("data-rv-loading") === "true") return true;
+    if (/loading|placeholder|skeleton/i.test(className)) return true;
+    if (child.tagName === "SCRIPT" || child.tagName === "STYLE") return true;
+    return false;
+  });
+}
+
 function renderError(contentEl, error) {
   if (!contentEl) return;
   const stack = error?.stack ? escapeHtml(error.stack) : "";
@@ -200,7 +218,7 @@ function applyRegistryToFeatures(features, registry) {
   const ordered = normalized.map((entry) => {
     const base = byId.get(entry.id) || { id: entry.id };
     seen.add(entry.id);
-    const api = entry.api ? entry.api.replace(/^\\/?api\\//i, "") : base.api || null;
+    const api = entry.api ? entry.api.replace(/^\/?api\//i, "") : base.api || null;
     return {
       ...base,
       id: entry.id,
@@ -906,7 +924,8 @@ async function runFeature(section, feature, logger, contentEl) {
   const traceId = createTraceId();
   const blockName = getBlockName(section, feature);
   const endpoint = getFeatureEndpoint(feature);
-  setDebugContext({ blockId: feature?.id || "unknown", blockName, endpoint });
+  const blockId = feature?.id || section.getAttribute("data-rv-feature") || "unknown";
+  setDebugContext({ blockId, blockName, endpoint });
   logger.setTraceId(traceId);
   applyApiMeta(logger);
   setLoading(section, true);
@@ -914,7 +933,7 @@ async function runFeature(section, feature, logger, contentEl) {
   try {
     const module = await loadFeatureModule(feature);
     const context = {
-      featureId: feature.id,
+      featureId: blockId,
       feature,
       config: RV_CONFIG,
       traceId,
@@ -930,23 +949,31 @@ async function runFeature(section, feature, logger, contentEl) {
     }
 
     await module.init(contentEl, context);
-    setLoading(section, false);
-    recordBlockEnd({ blockId: feature?.id || "unknown", blockName, ok: true });
+    if (isEffectivelyEmpty(contentEl)) {
+      contentEl.innerHTML = `
+        <div class="rv-empty-state">
+          <p style="color:#666;font-size:14px;padding:20px;">No data available</p>
+        </div>
+      `;
+      console.warn("[RV-Loader] EMPTY_RENDER", { blockId, endpoint });
+    }
+    recordBlockEnd({ blockId, blockName, ok: true });
     clearDebugContext();
     return true;
   } catch (error) {
     logger.setStatus("FAIL", "Init failed");
     logger.error("init_error", { message: error?.message || "Unknown error" });
     renderError(contentEl, error);
-    setLoading(section, false);
     recordBlockEnd({
-      blockId: feature?.id || "unknown",
+      blockId,
       blockName,
       ok: false,
       error
     });
     clearDebugContext();
     return false;
+  } finally {
+    setLoading(section, false);
   }
 }
 
