@@ -200,7 +200,7 @@ function applyRegistryToFeatures(features, registry) {
   const ordered = normalized.map((entry) => {
     const base = byId.get(entry.id) || { id: entry.id };
     seen.add(entry.id);
-    const api = entry.api ? entry.api.replace(/^\\/?api\\//i, "") : base.api || null;
+    const api = entry.api ? entry.api.replace(/^\/?api\//i, "") : base.api || null;
     return {
       ...base,
       id: entry.id,
