@@ -894,6 +894,14 @@ function getBlockName(section, feature) {
   );
 }
 
+function sanitizeBlockTitle(rawTitle = "") {
+  return String(rawTitle || "")
+    .replace(/^Block\s*\d+\s*[-–—]\s*/i, "")
+    .replace(/^Block\s*XX\s*[-–—]\s*/i, "")
+    .replace(/^Block\s*[-–—]\s*/i, "")
+    .trim();
+}
+
 function getFeatureEndpoint(feature) {
   if (!feature?.api) return "";
   const resolution = resolveApiBase();
@@ -1112,25 +1120,23 @@ function startAutoRefresh(section, feature, logger, contentEl) {
   scheduleNext(baseInterval);
 }
 
-function initBlock(section, feature) {
+function initBlock(section, feature, blockIndex) {
   const root = section.querySelector("[data-rv-root]");
   if (!root) return;
   const featureId = section.getAttribute("data-rv-feature") || feature?.id || "unknown";
   const registry = feature?.registry || BLOCK_REGISTRY[featureId] || null;
-  if (registry) {
-    const idxLabel =
-      registry.idx !== undefined
-        ? String(registry.idx).padStart(2, "0")
-        : registry.id || String(featureId);
-    const title = feature?.title || registry.title || featureId;
-    const formattedTitle = `Block ${idxLabel} — ${title}`;
-    section.setAttribute("data-block-id", idxLabel);
-    section.setAttribute("data-feature-id", registry.featureId || featureId);
-    section.setAttribute("data-rv-block-name", formattedTitle);
-    const titleEl = section.querySelector("h2, h3, .block-title, .card-title");
-    if (titleEl) {
-      titleEl.textContent = formattedTitle;
-    }
+  const blockNumber = Number.isFinite(blockIndex) ? blockIndex + 1 : 0;
+  const idxLabel = String(blockNumber || 0).padStart(2, "0");
+  const rawTitle =
+    feature?.title || registry?.title || section.getAttribute("data-rv-block-name") || featureId;
+  const title = sanitizeBlockTitle(rawTitle) || featureId;
+  const formattedTitle = `Block ${idxLabel} — ${title}`;
+  section.setAttribute("data-block-id", idxLabel);
+  section.setAttribute("data-feature-id", registry?.featureId || featureId);
+  section.setAttribute("data-rv-block-name", formattedTitle);
+  const titleEl = section.querySelector("h2, h3, .block-title, .card-title");
+  if (titleEl) {
+    titleEl.textContent = formattedTitle;
   }
   const blockName = getBlockName(section, feature);
   registerBlock({
@@ -1253,17 +1259,17 @@ async function boot() {
   initVisibilityObserver(sections);
   updateStatusStrip();
 
-  const lazy = sections.map((section) => {
+  const lazy = sections.map((section, index) => {
     const featureId = section.getAttribute("data-rv-feature");
     const feature = featureMap.get(featureId);
-    return { section, feature };
+    return { section, feature, index };
   });
 
   if (!lazy.length) return;
 
   if (typeof IntersectionObserver === "undefined") {
-    lazy.forEach(({ section, feature }) => {
-      const initState = initBlock(section, feature);
+    lazy.forEach(({ section, feature, index }) => {
+      const initState = initBlock(section, feature, index);
       if (!initState) return;
       const start = performance.now();
       runFeature(section, feature, initState.logger, initState.contentEl).then((ok) => {
@@ -1282,7 +1288,8 @@ async function boot() {
           observer.unobserve(entry.target);
           const featureId = entry.target.getAttribute("data-rv-feature");
           const feature = featureMap.get(featureId);
-          const initState = initBlock(entry.target, feature);
+          const blockIndex = Number(entry.target.dataset.rvBlockIndex);
+          const initState = initBlock(entry.target, feature, Number.isFinite(blockIndex) ? blockIndex : 0);
           if (!initState) return;
           const start = performance.now();
           runFeature(entry.target, feature, initState.logger, initState.contentEl).then((ok) => {
@@ -1301,7 +1308,10 @@ async function boot() {
     }
   );
 
-  lazy.forEach(({ section }) => observer.observe(section));
+  lazy.forEach(({ section, index }) => {
+    section.dataset.rvBlockIndex = String(index);
+    observer.observe(section);
+  });
 
   const params = new URLSearchParams(window.location.search);
   if (params.get("diag") === "1") {

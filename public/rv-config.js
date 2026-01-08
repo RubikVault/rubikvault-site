@@ -498,13 +498,12 @@ function stripBlockPrefix(rawTitle = "") {
     .trim();
 }
 
-let blockCounter = 1;
 FEATURES.forEach((feature) => {
   if (!feature || BLOCK_TITLE_SKIP.has(feature.id)) return;
   const cleanTitle = stripBlockPrefix(feature.title || feature.id);
-  const blockId = String(blockCounter).padStart(2, "0");
-  feature.title = `Block ${blockId} - ${cleanTitle}`;
-  blockCounter += 1;
+  if (cleanTitle) {
+    feature.title = cleanTitle;
+  }
 });
 
 export const RV_CONFIG = {
