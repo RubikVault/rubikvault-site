@@ -181,6 +181,65 @@ function mirrorToApiPayload(mirror, traceId) {
   };
 }
 
+const warnedMirrors = new Set();
+
+function mapMirrorToFeature(mirrorId) {
+  if (!mirrorId) return null;
+  if (typeof window !== "undefined") {
+    const blocks = window.__RV_DASHBOARD__?.blocks || null;
+    if (blocks) {
+      if (blocks[mirrorId]) return mirrorId;
+      const prefixed = `rv-${mirrorId}`;
+      if (blocks[prefixed]) return prefixed;
+    }
+    const features = window.RV_CONFIG?.features;
+    if (Array.isArray(features)) {
+      const match = features.find(
+        (item) => item?.id === mirrorId || item?.id === `rv-${mirrorId}`
+      );
+      if (match?.id) return match.id;
+    }
+  }
+  return null;
+}
+
+function normalizeResponse(raw) {
+  if (raw && raw.ok !== undefined) return raw;
+  if (raw && raw.schemaVersion === "rv-mirror-v1") {
+    const mirrorId = raw.mirrorId || "unknown";
+    const mapped = mapMirrorToFeature(mirrorId);
+    const featureId = mapped || `rv-${mirrorId}`;
+    if (!mapped && !warnedMirrors.has(mirrorId)) {
+      warnedMirrors.add(mirrorId);
+      console.warn("[rv-mirror-adapter] using fallback feature id", { mirrorId, featureId });
+    }
+    if (typeof window !== "undefined" && window.RV_CONFIG?.DEBUG_ENABLED) {
+      console.info("[rv-mirror-adapter] normalized mirror payload", { mirrorId, featureId });
+    }
+    const updatedAt = raw.updatedAt || new Date().toISOString();
+    return {
+      ok: true,
+      feature: featureId,
+      ts: updatedAt,
+      traceId: createTraceId(),
+      schemaVersion: 1,
+      meta: {
+        status: "STALE",
+        reason: "MIRROR_RAW_CLIENT_ADAPTER",
+        source: "mirror",
+        updatedAt,
+        schemaVersion: "v1"
+      },
+      data: {
+        items: Array.isArray(raw.items) ? raw.items : [],
+        payload: raw
+      },
+      error: null
+    };
+  }
+  return raw;
+}
+
 function makeLocalError({ feature, traceId, status, snippet, code, message, url }) {
   return {
     ok: false,
@@ -314,6 +373,8 @@ export async function fetchJSON(
     if (payload && payload.payload && typeof payload.payload === "object") {
       payload = payload.payload;
     }
+
+    payload = normalizeResponse(payload);
 
     if (isMirrorSchema(payload)) {
       payload = mirrorToApiPayload(payload, effectiveTraceId);
