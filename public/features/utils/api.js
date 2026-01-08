@@ -55,6 +55,9 @@ function applyPayloadMeta(logger, payload, { requestId, runId, parentTraceId } =
     sourceUpstream: mirrorMeta.sourceUpstream || null,
     delayMinutes: mirrorMeta.delayMinutes ?? null,
     dataQuality: payload?.dataQuality || null,
+    ok: typeof payload?.ok === "boolean" ? payload.ok : undefined,
+    metaStatus: payload?.meta?.status || null,
+    metaReason: payload?.meta?.reason || null,
     requestId: responseTrace.requestId || requestId || null,
     runId: responseTrace.runId || runId || null,
     parentTraceId: responseTrace.parentTraceId || parentTraceId || null
