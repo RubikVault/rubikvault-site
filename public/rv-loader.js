@@ -417,12 +417,56 @@ function applyApiMeta(logger) {
   return resolution;
 }
 
-function statusIcon(status) {
-  if (status === "OK") return "OK";
-  if (status === "PARTIAL") return "WARN";
-  if (status === "FAIL") return "FAIL";
-  if (status === "DISABLED") return "PAUSE";
+function normalizeMetaValue(value) {
+  return typeof value === "string" ? value.trim().toUpperCase() : "";
+}
+
+function statusToSeverity({ ok, metaStatus, reason } = {}) {
+  const normalizedStatus = normalizeMetaValue(metaStatus);
+  const normalizedReason = normalizeMetaValue(reason);
+  let severity = "info";
+  if (ok === false || normalizedStatus === "ERROR" || normalizedStatus === "FAIL") {
+    severity = "error";
+  } else if (
+    normalizedStatus === "STALE" ||
+    normalizedStatus === "PARTIAL" ||
+    normalizedReason === "MIRROR_FALLBACK"
+  ) {
+    severity = "warning";
+  } else if ((normalizedStatus === "LIVE" || normalizedStatus === "OK") && ok === true) {
+    severity = "success";
+  }
+  if (ok === true && severity === "error") {
+    console.warn("[RV-Loader] SEVERITY_DOWNGRADE", {
+      ok,
+      metaStatus: normalizedStatus || metaStatus || "",
+      reason: normalizedReason || reason || ""
+    });
+    severity = "warning";
+  }
+  return severity;
+}
+
+function severityToState(severity) {
+  if (severity === "success") return "ok";
+  if (severity === "warning") return "partial";
+  if (severity === "error") return "fail";
+  return "info";
+}
+
+function severityIcon(severity) {
+  if (severity === "success") return "OK";
+  if (severity === "warning") return "WARN";
+  if (severity === "error") return "FAIL";
   return "LOAD";
+}
+
+function getEntrySeverity(entry) {
+  return statusToSeverity({
+    ok: entry?.ok,
+    metaStatus: entry?.metaStatus || entry?.status,
+    reason: entry?.metaReason
+  });
 }
 
 function resolveStatusLabel(featureId, blockName) {
@@ -448,9 +492,10 @@ function updateStatusStrip() {
 
   const pills = entries
     .map((entry) => {
-      const icon = statusIcon(entry.status);
+      const severity = getEntrySeverity(entry);
+      const icon = severityIcon(severity);
       const label = entry.label || resolveStatusLabel(entry.featureId);
-      const state = entry.status?.toLowerCase?.() || "partial";
+      const state = severityToState(severity);
       const detail = entry.headline ? ` · ${entry.headline}` : "";
       return `<span class="rv-status-pill" data-rv-state="${state}">${label}: ${icon}${detail}</span>`;
     })
@@ -478,7 +523,12 @@ function recordStatus(featureId, blockName, status, headline) {
     status,
     headline
   });
-  if ((status === "FAIL" || status === "PARTIAL") && headline) {
+  const severity = statusToSeverity({
+    ok: existing.ok,
+    metaStatus: existing.metaStatus || status,
+    reason: existing.metaReason
+  });
+  if ((severity === "error" || severity === "warning") && headline) {
     statusSummary.lastError = headline;
   }
   updateStatusStrip();
@@ -1065,8 +1115,9 @@ function startAutoRefresh(section, feature, logger, contentEl) {
     state.timer = window.setTimeout(runRefresh, computeJitter(Math.max(ms, DASHBOARD_MIN_REFRESH_MS)));
   };
 
-  const computeDelay = (status) => {
-    if (status === "FAIL" || status === "PARTIAL") {
+  const computeDelay = (entry = {}) => {
+    const severity = getEntrySeverity(entry);
+    if (severity === "error" || severity === "warning") {
       state.backoffMs = Math.min((state.backoffMs || baseInterval) * 2, REFRESH_BACKOFF_MAX_MS);
     } else {
       state.backoffMs = baseInterval;
@@ -1131,7 +1182,7 @@ function startAutoRefresh(section, feature, logger, contentEl) {
     } finally {
       state.inflight = false;
       const entry = statusState.get(featureId) || {};
-      const nextDelay = computeDelay(entry.status || "OK");
+      const nextDelay = computeDelay(entry);
       scheduleNext(nextDelay);
     }
   };
@@ -1190,6 +1241,9 @@ function initBlock(section, feature) {
     const entry = statusState.get(featureId) || {};
     statusState.set(featureId, {
       ...entry,
+      ok: typeof meta.ok === "boolean" ? meta.ok : entry.ok,
+      metaStatus: typeof meta.metaStatus === "string" ? meta.metaStatus : entry.metaStatus,
+      metaReason: typeof meta.metaReason === "string" ? meta.metaReason : entry.metaReason,
       itemsCount: Number.isFinite(meta.itemsCount) ? meta.itemsCount : entry.itemsCount,
       mode: meta.mode || entry.mode,
       cadence: meta.cadence || entry.cadence,
