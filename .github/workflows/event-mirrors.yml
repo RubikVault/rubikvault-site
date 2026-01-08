@@ -20,6 +20,8 @@ jobs:
         with:
           node-version: "20"
 
+      - name: Install dependencies
+        run: npm ci
       - name: Generate event mirrors
         run: node scripts/generate-event-mirrors.mjs
 
@@ -54,5 +56,3 @@ jobs:
             }
 
 
-      - name: Install dependencies
-        run: npm ci
