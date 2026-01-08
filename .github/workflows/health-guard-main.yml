@@ -7,6 +7,7 @@ on:
 
 env:
   PROD_URL: https://rubikvault.com
+  PREVIEW_URL: ${{ vars.PREVIEW_URL }}
 
 jobs:
   health-main:
@@ -14,16 +15,48 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
       - name: Enforce PROD health thresholds
         run: |
           set -euo pipefail
           BUSTER=$(date +%s)
-          health=$(curl -fsSL -L "${PROD_URL}/api/health-report?_=${BUSTER}")
-          echo "$health" > health-prod.json
 
-          blocks=$(echo "$health" | jq -r '.summary.blocks // 0')
-          okBlocks=$(echo "$health" | jq -r '.summary.okBlocks // 0')
-          coreScore=$(echo "$health" | jq -r '.summary.coreHealthScore // empty')
+          # Fetch with forensic-friendly handling
+          tmp_body="$(mktemp)"
+          tmp_code="$(mktemp)"
+          curl -sSL -L --max-time 20 \
+            -H "User-Agent: RubikVaultHealthGuard/1.0 (+github-actions)" \
+            -o "$tmp_body" -w "%{http_code}" \
+            "${PROD_URL}/api/health-report?_=${BUSTER}" > "$tmp_code" || true
+
+          http_code="$(cat "$tmp_code" 2>/dev/null || echo "")"
+          body="$(cat "$tmp_body" 2>/dev/null || echo "")"
+          rm -f "$tmp_body" "$tmp_code" >/dev/null 2>&1 || true
+
+          # If Cloudflare/WAF blocks GitHub (403), degrade but do NOT fail.
+          if [[ "$http_code" == "403" ]]; then
+            cat > health-prod.json <<JSON
+{"ok":false,"feature":"health-guard-main","ts":"$(date -u +"%Y-%m-%dT%H:%M:%SZ")","error":{"code":"WAF_403_OR_BOT_BLOCK","message":"PROD health-report blocked from GitHub Actions (expected).","details":{"httpStatus":403,"prodUrl":"${PROD_URL}"}},"meta":{"status":"DEGRADED","reason":"WAF_403","writeMode":"NONE"},"summary":{"blocks":0,"okBlocks":0,"coreHealthScore":0,"missingMetaBlocks":0,"badBlocks":0}}
+JSON
+            echo "DEGRADED: PROD blocked with 403 (WAF/Bot). Wrote health-prod.json and exiting 0."
+            exit 0
+          fi
+
+          # If non-200 (and not 403), fail (strict).
+          if [[ "$http_code" != "200" ]]; then
+            echo "FAIL: PROD health-report http=$http_code"
+            echo "Body snippet:"
+            printf "%s" "$body" | head -c 240; echo
+            exit 1
+          fi
+
+          # Validate JSON
+          echo "$body" > health-prod.json
+          echo "$body" | jq -e . >/dev/null
+
+          blocks=$(echo "$body" | jq -r '.summary.blocks // 0')
+          okBlocks=$(echo "$body" | jq -r '.summary.okBlocks // 0')
+          coreScore=$(echo "$body" | jq -r '.summary.coreHealthScore // empty')
           if [[ -z "$coreScore" ]]; then
             if [[ "$blocks" -gt 0 ]]; then
               coreScore=$(awk -v ok="$okBlocks" -v total="$blocks" 'BEGIN{ if (total==0) print 0; else print (ok/total)*100 }')
@@ -31,8 +64,8 @@ jobs:
               coreScore=0
             fi
           fi
-          missingMeta=$(echo "$health" | jq -r '.summary.missingMetaBlocks // 0')
-          badBlocks=$(echo "$health" | jq -r '.summary.badBlocks // 0')
+          missingMeta=$(echo "$body" | jq -r '.summary.missingMetaBlocks // 0')
+          badBlocks=$(echo "$body" | jq -r '.summary.badBlocks // 0')
 
           fail=0
           if ! awk -v score="$coreScore" 'BEGIN{ exit (score>=90)?0:1 }'; then
@@ -53,6 +86,7 @@ jobs:
           if [[ "$fail" -eq 1 ]]; then
             exit 1
           fi
+
       - name: Upload PROD health
         if: always()
         uses: actions/upload-artifact@v4
