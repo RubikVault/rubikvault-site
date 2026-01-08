@@ -289,17 +289,19 @@ export function makeJson({
     parentTraceId: trace?.parentTraceId || parentTraceId || ""
   };
   const resolvedExpectations = expectations || resolveExpectations(feature);
-  const metaWarnings = Array.isArray(meta?.warnings) ? meta.warnings : [];
-  const metaStatus = meta?.status || (isStale ? "STALE" : resolvedOk ? "LIVE" : "ERROR");
+  const metaInput = meta && typeof meta === "object" ? { ...meta } : {};
+  const metaWarnings = Array.isArray(metaInput?.warnings) ? metaInput.warnings : [];
+  const metaStatus = metaInput?.status || (isStale ? "STALE" : resolvedOk ? "LIVE" : "ERROR");
   const metaReason =
-    meta?.reason !== undefined
-      ? meta.reason
+    metaInput?.reason !== undefined
+      ? metaInput.reason
       : isStale
         ? "STALE"
         : resolvedOk
           ? ""
           : error?.code || "ERROR";
   const resolvedMeta = {
+    ...metaInput,
     status: metaStatus,
     reason:
       typeof metaReason === "string"
@@ -307,14 +309,14 @@ export function makeJson({
         : metaReason == null
           ? ""
           : String(metaReason),
-    ts: meta?.ts || ts || new Date().toISOString(),
-    schemaVersion: meta?.schemaVersion || SCHEMA_VERSION,
-    traceId: meta?.traceId || resolvedTrace.traceId,
-    writeMode: meta?.writeMode || "NONE",
-    circuitOpen: Boolean(meta?.circuitOpen),
+    ts: metaInput?.ts || ts || new Date().toISOString(),
+    schemaVersion: metaInput?.schemaVersion || SCHEMA_VERSION,
+    traceId: metaInput?.traceId || resolvedTrace.traceId,
+    writeMode: metaInput?.writeMode || "NONE",
+    circuitOpen: Boolean(metaInput?.circuitOpen),
     warnings: metaWarnings,
-    savedAt: meta?.savedAt ?? null,
-    ageMinutes: meta?.ageMinutes ?? null
+    savedAt: metaInput?.savedAt ?? null,
+    ageMinutes: metaInput?.ageMinutes ?? null
   };
   return {
     ok: resolvedOk,
@@ -340,7 +342,8 @@ export function makeJson({
       : {
           code: error?.code || "ERROR",
           message: error?.message || "",
-          details: error?.details || {}
+          details: error?.details || {},
+          ...(error?.hint !== undefined ? { hint: error.hint } : {})
         },
     meta: resolvedMeta,
     ...(isStale ? { isStale: true } : {}),
