@@ -48,6 +48,9 @@ function enforceEnvelope(response, { allowEmptyData = false, lastGoodData = null
   if (!meta.ts) meta.ts = nowIso();
   if (!meta.schemaVersion) meta.schemaVersion = 1;
   if (!Array.isArray(meta.warnings)) meta.warnings = [];
+  if (typeof meta.reason !== "string") {
+    meta.reason = meta.reason == null ? "" : String(meta.reason);
+  }
   if (!meta.status) {
     meta.status = "EMPTY";
     meta.reason = meta.reason || "MISSING_STATUS";
@@ -138,6 +141,10 @@ function computeAllowWrites(request, env) {
   );
 }
 
+function resolveHttpStatus(payload) {
+  return payload?.ok === false ? 503 : 200;
+}
+
 async function loadMirrorPayload(origin, featureId) {
   if (!origin || !featureId) return null;
   const urls = [`${origin}/mirror/${featureId}.json`, `${origin}/mirrors/${featureId}.json`];
@@ -183,8 +190,8 @@ export async function withResilience(context, cfg) {
   const version = cfg.version || "v1";
   const allowEmptyData =
     cfg.allowEmptyData === true || ALLOW_EMPTY_FEATURES.has(featureId);
-  const lastGoodKey = `rv:lastgood:${featureId}:${version}`;
-  const circuitKey = `rv:circuit:${featureId}:${version}`;
+  const lastGoodKey = cfg.lastGoodKey || `rv:lastgood:${featureId}:${version}`;
+  const circuitKey = cfg.circuitKey || `rv:circuit:${featureId}:${version}`;
   const nowMs = Date.now();
   const timings = { kv: 0, fetch: 0, total: 0 };
 
@@ -222,9 +229,31 @@ export async function withResilience(context, cfg) {
     reason: null,
     writeMode: allowWrites ? "WRITE" : "READONLY"
   };
+  let retryOnce = false;
+  const buildDebugInfo = ({ upstreamStatus, quality, cacheLayer, cacheHit, fetchMs } = {}) => ({
+    upstreamStatus: upstreamStatus ?? null,
+    quality: quality || null,
+    timingsMs: {
+      kv: timings.kv,
+      fetch: fetchMs ?? 0,
+      total: Date.now() - nowMs
+    },
+    keyUsed: lastGoodKey,
+    hasKV: Boolean(hasKV),
+    readMode: readOnly ? "READONLY" : "WRITE",
+    cache: { layer: cacheLayer || "none", hit: Boolean(cacheHit) },
+    reason: meta.reason || "",
+    attempts: { retried: Boolean(retryOnce) }
+  });
 
   if (isPreview || circuitOpen || readOnly) {
-    const reason = !hasKV ? "KV_MISSING" : isPreview ? "PREVIEW" : circuitOpen ? "CIRCUIT_OPEN" : "READONLY";
+    const reason = !hasKV
+      ? "BINDING_MISSING"
+      : isPreview
+        ? "PREVIEW"
+        : circuitOpen
+          ? "CIRCUIT_OPEN"
+          : "READONLY";
     const mirrorPayload =
       !lastGoodValid || isPreview || !hasKV || readOnly
         ? await loadMirrorPayload(url.origin, featureId)
@@ -234,7 +263,7 @@ export async function withResilience(context, cfg) {
       const mirrorQuality = (cfg.validator || defaultValidator)(mirrorData);
       if (mirrorQuality?.passed) {
         meta.status = "STALE";
-        meta.reason = !hasKV ? "KV_MISSING" : "MIRROR_FALLBACK";
+        meta.reason = !hasKV ? "BINDING_MISSING" : "MIRROR_FALLBACK";
         const payload = makeJson({
           ok: true,
           feature: featureId,
@@ -247,11 +276,13 @@ export async function withResilience(context, cfg) {
         });
         const response = { ...payload, meta };
         if (isDebug) {
-          response.debug = {
+          response.debug = buildDebugInfo({
             upstreamStatus: null,
             quality: mirrorQuality,
-            timingsMs: { kv: timings.kv, fetch: 0, total: Date.now() - nowMs }
-          };
+            cacheLayer: "mirror",
+            cacheHit: true,
+            fetchMs: 0
+          });
         }
         logServer({
           feature: featureId,
@@ -261,20 +292,21 @@ export async function withResilience(context, cfg) {
           durationMs: Date.now() - nowMs,
           errorCode: meta.reason || ""
         });
+        const httpStatus = resolveHttpStatus(response);
         return jsonResponse(
           enforceEnvelope(response, {
             allowEmptyData,
             lastGoodData: lastGood?.data || null,
             hasLastGood: lastGoodValid
           }),
-          { status: 200, cacheStatus: "STALE" }
+          { status: httpStatus, cacheStatus: "STALE" }
         );
       }
     }
 
     if (lastGoodValid) {
       meta.status = "STALE";
-      meta.reason = reason;
+      meta.reason = "MIRROR_FALLBACK";
       const payload = makeJson({
         ok: true,
         feature: featureId,
@@ -287,11 +319,13 @@ export async function withResilience(context, cfg) {
       });
       const response = { ...payload, meta };
       if (isDebug) {
-        response.debug = {
+        response.debug = buildDebugInfo({
           upstreamStatus: null,
           quality: lastGoodQuality,
-          timingsMs: { kv: timings.kv, fetch: 0, total: Date.now() - nowMs }
-        };
+          cacheLayer: "kv",
+          cacheHit: true,
+          fetchMs: 0
+        });
       }
       logServer({
         feature: featureId,
@@ -301,20 +335,21 @@ export async function withResilience(context, cfg) {
         durationMs: Date.now() - nowMs,
         errorCode: meta.reason || ""
       });
+      const httpStatus = resolveHttpStatus(response);
       return jsonResponse(
         enforceEnvelope(response, {
           allowEmptyData,
           lastGoodData: lastGood?.data || null,
           hasLastGood: lastGoodValid
         }),
-        { status: 200, cacheStatus: "STALE" }
+        { status: httpStatus, cacheStatus: "STALE" }
       );
     }
 
-    meta.status = "EMPTY";
-    meta.reason = reason;
+    meta.status = "NO_DATA";
+    meta.reason = !hasKV ? "BINDING_MISSING" : "LASTGOOD_MISSING";
     const error = {
-      code: !hasKV ? "KV_MISSING" : "NO_DATA_YET",
+      code: meta.reason || "LASTGOOD_MISSING",
       message: !hasKV
         ? "KV binding missing and no mirror fallback available"
         : "No cached data available"
@@ -330,11 +365,13 @@ export async function withResilience(context, cfg) {
     });
     const response = { ...payload, meta };
     if (isDebug) {
-      response.debug = {
+      response.debug = buildDebugInfo({
         upstreamStatus: null,
         quality: lastGoodQuality,
-        timingsMs: { kv: timings.kv, fetch: 0, total: Date.now() - nowMs }
-      };
+        cacheLayer: "none",
+        cacheHit: false,
+        fetchMs: 0
+      });
     }
     logServer({
       feature: featureId,
@@ -344,13 +381,14 @@ export async function withResilience(context, cfg) {
       durationMs: Date.now() - nowMs,
       errorCode: error.code
     });
+    const httpStatus = resolveHttpStatus(response);
     return jsonResponse(
       enforceEnvelope(response, {
         allowEmptyData,
         lastGoodData: lastGood?.data || null,
         hasLastGood: lastGoodValid
       }),
-      { status: 200, cacheStatus: "ERROR" }
+      { status: httpStatus, cacheStatus: "ERROR" }
     );
   }
 
@@ -359,7 +397,7 @@ export async function withResilience(context, cfg) {
   let upstreamStatus = null;
   let upstreamUrl = cfg.upstreamUrl || "";
   let upstreamSnippet = "";
-  let retryOnce = false;
+  retryOnce = false;
 
   const runFetch = async () => {
     const controller = new AbortController();
@@ -415,7 +453,7 @@ export async function withResilience(context, cfg) {
 
     if (lastGoodValid) {
       meta.status = "STALE";
-      meta.reason = "UPSTREAM_FAIL";
+      meta.reason = "MIRROR_FALLBACK";
       const payload = makeJson({
         ok: true,
         feature: featureId,
@@ -431,11 +469,13 @@ export async function withResilience(context, cfg) {
       });
       const response = { ...payload, meta };
       if (isDebug) {
-        response.debug = {
+        response.debug = buildDebugInfo({
           upstreamStatus,
           quality: lastGoodQuality,
-          timingsMs: { kv: timings.kv, fetch: timings.fetch, total: Date.now() - nowMs }
-        };
+          cacheLayer: "kv",
+          cacheHit: true,
+          fetchMs: timings.fetch
+        });
       }
       logServer({
         feature: featureId,
@@ -445,18 +485,19 @@ export async function withResilience(context, cfg) {
         durationMs: Date.now() - nowMs,
         errorCode: fetchError?.code || "UPSTREAM_FAIL"
       });
+      const httpStatus = resolveHttpStatus(response);
       return jsonResponse(
         enforceEnvelope(response, {
           allowEmptyData,
           lastGoodData: lastGood?.data || null,
           hasLastGood: lastGoodValid
         }),
-        { status: 200, cacheStatus: "STALE" }
+        { status: httpStatus, cacheStatus: "STALE" }
       );
     }
 
-    meta.status = "EMPTY";
-    meta.reason = "UPSTREAM_MISSING";
+    meta.status = "NO_DATA";
+    meta.reason = !hasKV ? "BINDING_MISSING" : "LASTGOOD_MISSING";
     const payload = makeJson({
       ok: false,
       feature: featureId,
@@ -465,17 +506,19 @@ export async function withResilience(context, cfg) {
       cache: { hit: false, ttl: 0, layer: "none" },
       upstream: { url: upstreamUrl, status: upstreamStatus, snippet: safeSnippet(fetchError?.message || "") },
       error: {
-        code: fetchError?.code || "UPSTREAM_MISSING",
-        message: fetchError?.message || "Upstream missing"
+        code: meta.reason || "LASTGOOD_MISSING",
+        message: fetchError?.message || "No upstream data and no cached data"
       }
     });
     const response = { ...payload, meta };
     if (isDebug) {
-      response.debug = {
+      response.debug = buildDebugInfo({
         upstreamStatus,
         quality: lastGoodQuality,
-        timingsMs: { kv: timings.kv, fetch: timings.fetch, total: Date.now() - nowMs }
-      };
+        cacheLayer: "none",
+        cacheHit: false,
+        fetchMs: timings.fetch
+      });
     }
     logServer({
       feature: featureId,
@@ -483,15 +526,16 @@ export async function withResilience(context, cfg) {
       cacheLayer: "none",
       upstreamStatus,
       durationMs: Date.now() - nowMs,
-      errorCode: fetchError?.code || "UPSTREAM_MISSING"
+      errorCode: meta.reason || "LASTGOOD_MISSING"
     });
+    const httpStatus = resolveHttpStatus(response);
     return jsonResponse(
       enforceEnvelope(response, {
         allowEmptyData,
         lastGoodData: lastGood?.data || null,
         hasLastGood: lastGoodValid
       }),
-      { status: 200, cacheStatus: "ERROR" }
+      { status: httpStatus, cacheStatus: "ERROR" }
     );
   }
 
@@ -499,7 +543,7 @@ export async function withResilience(context, cfg) {
   const quality = validator(fetchResult?.data);
   if (!quality?.passed) {
     meta.status = "STALE";
-    meta.reason = "QUALITY_FAIL";
+    meta.reason = "MIRROR_FALLBACK";
     if (lastGoodValid) {
       const payload = makeJson({
         ok: true,
@@ -516,11 +560,13 @@ export async function withResilience(context, cfg) {
       });
       const response = { ...payload, meta };
       if (isDebug) {
-        response.debug = {
+        response.debug = buildDebugInfo({
           upstreamStatus,
           quality,
-          timingsMs: { kv: timings.kv, fetch: timings.fetch, total: Date.now() - nowMs }
-        };
+          cacheLayer: "kv",
+          cacheHit: true,
+          fetchMs: timings.fetch
+        });
       }
       logServer({
         feature: featureId,
@@ -530,18 +576,19 @@ export async function withResilience(context, cfg) {
         durationMs: Date.now() - nowMs,
         errorCode: "QUALITY_FAIL"
       });
+      const httpStatus = resolveHttpStatus(response);
       return jsonResponse(
         enforceEnvelope(response, {
           allowEmptyData,
           lastGoodData: lastGood?.data || null,
           hasLastGood: lastGoodValid
         }),
-        { status: 200, cacheStatus: "STALE" }
+        { status: httpStatus, cacheStatus: "STALE" }
       );
     }
 
-    meta.status = "EMPTY";
-    meta.reason = "EMPTY_DATA";
+    meta.status = "NO_DATA";
+    meta.reason = !hasKV ? "BINDING_MISSING" : "LASTGOOD_MISSING";
     const payload = makeJson({
       ok: false,
       feature: featureId,
@@ -550,17 +597,19 @@ export async function withResilience(context, cfg) {
       cache: { hit: false, ttl: 0, layer: "none" },
       upstream: { url: upstreamUrl, status: upstreamStatus, snippet: upstreamSnippet },
       error: {
-        code: "EMPTY_DATA",
-        message: quality?.failReason || "Validator failed"
+        code: meta.reason || "LASTGOOD_MISSING",
+        message: quality?.failReason || "No cached data available"
       }
     });
     const response = { ...payload, meta };
     if (isDebug) {
-      response.debug = {
+      response.debug = buildDebugInfo({
         upstreamStatus,
         quality,
-        timingsMs: { kv: timings.kv, fetch: timings.fetch, total: Date.now() - nowMs }
-      };
+        cacheLayer: "none",
+        cacheHit: false,
+        fetchMs: timings.fetch
+      });
     }
     logServer({
       feature: featureId,
@@ -568,15 +617,16 @@ export async function withResilience(context, cfg) {
       cacheLayer: "none",
       upstreamStatus,
       durationMs: Date.now() - nowMs,
-      errorCode: "EMPTY_DATA"
+      errorCode: meta.reason || "LASTGOOD_MISSING"
     });
+    const httpStatus = resolveHttpStatus(response);
     return jsonResponse(
       enforceEnvelope(response, {
         allowEmptyData,
         lastGoodData: lastGood?.data || null,
         hasLastGood: lastGoodValid
       }),
-      { status: 200, cacheStatus: "ERROR" }
+      { status: httpStatus, cacheStatus: "ERROR" }
     );
   }
 
@@ -614,11 +664,13 @@ export async function withResilience(context, cfg) {
   });
   const response = { ...payload, meta };
   if (isDebug) {
-    response.debug = {
+    response.debug = buildDebugInfo({
       upstreamStatus: upstreamStatus ?? null,
       quality,
-      timingsMs: { kv: timings.kv, fetch: timings.fetch, total: Date.now() - nowMs }
-    };
+      cacheLayer: "none",
+      cacheHit: false,
+      fetchMs: timings.fetch
+    });
   }
   logServer({
     feature: featureId,
@@ -628,12 +680,13 @@ export async function withResilience(context, cfg) {
     durationMs: Date.now() - nowMs,
     errorCode: ""
   });
+  const httpStatus = resolveHttpStatus(response);
   return jsonResponse(
     enforceEnvelope(response, {
       allowEmptyData,
       lastGoodData: lastGood?.data || null,
       hasLastGood: lastGoodValid
     }),
-    { status: 200, cacheStatus: "MISS" }
+    { status: httpStatus, cacheStatus: "MISS" }
   );
 }

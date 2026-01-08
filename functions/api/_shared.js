@@ -7,7 +7,6 @@ const SCHEMA_VERSION = 1;
 
 export function getKv(env) {
   if (env?.RV_KV) return env.RV_KV;
-  if (env?.KV) return env.KV;
   return null;
 }
 
@@ -85,6 +84,12 @@ export function createResponse({
     resolvedMeta.reason !== undefined
       ? resolvedMeta.reason
       : diag?.emptyReason || (error ? error.code || "ERROR" : "") || "";
+  resolvedMeta.reason =
+    typeof resolvedMeta.reason === "string"
+      ? resolvedMeta.reason
+      : resolvedMeta.reason == null
+        ? ""
+        : String(resolvedMeta.reason);
   resolvedMeta.status = inferStatus(resolvedMeta, diag, error);
   const resolvedData = data === undefined ? null : data;
   const hasError = Boolean(error);
@@ -99,7 +104,7 @@ export function createResponse({
           message: error.message || "",
           details: error.details || {}
         }
-      : { code: "", message: "", details: {} }
+      : null
   };
 
   const debugInfo = request && request.__debugInfo ? request.__debugInfo : null;
@@ -120,7 +125,7 @@ export function createResponse({
   }
 
   return new Response(JSON.stringify(sanitizeDiagAny(payload)), {
-    status: status || 200,
+    status: typeof status === "number" ? status : hasError ? 503 : 200,
     headers
   });
 }
@@ -276,6 +281,7 @@ export function makeJson({
   cacheStatus,
   sourceMap
 } = {}) {
+  const resolvedOk = ok !== undefined ? Boolean(ok) : false;
   const resolvedTrace = {
     traceId: trace?.traceId || traceId || "unknown",
     requestId: trace?.requestId || requestId || "",
@@ -284,18 +290,23 @@ export function makeJson({
   };
   const resolvedExpectations = expectations || resolveExpectations(feature);
   const metaWarnings = Array.isArray(meta?.warnings) ? meta.warnings : [];
-  const metaStatus = meta?.status || (isStale ? "STALE" : ok ? "LIVE" : "ERROR");
+  const metaStatus = meta?.status || (isStale ? "STALE" : resolvedOk ? "LIVE" : "ERROR");
   const metaReason =
     meta?.reason !== undefined
       ? meta.reason
       : isStale
         ? "STALE"
-        : ok
-          ? null
+        : resolvedOk
+          ? ""
           : error?.code || "ERROR";
   const resolvedMeta = {
     status: metaStatus,
-    reason: metaReason || null,
+    reason:
+      typeof metaReason === "string"
+        ? metaReason
+        : metaReason == null
+          ? ""
+          : String(metaReason),
     ts: meta?.ts || ts || new Date().toISOString(),
     schemaVersion: meta?.schemaVersion || SCHEMA_VERSION,
     traceId: meta?.traceId || resolvedTrace.traceId,
@@ -306,7 +317,7 @@ export function makeJson({
     ageMinutes: meta?.ageMinutes ?? null
   };
   return {
-    ok: Boolean(ok),
+    ok: resolvedOk,
     feature: feature || "unknown",
     ts: ts || new Date().toISOString(),
     traceId: traceId || "unknown",
@@ -324,11 +335,13 @@ export function makeJson({
     },
     rateLimit,
     data,
-    error: {
-      code: error.code || "",
-      message: error.message || "",
-      details: error.details || {}
-    },
+    error: resolvedOk
+      ? null
+      : {
+          code: error?.code || "ERROR",
+          message: error?.message || "",
+          details: error?.details || {}
+        },
     meta: resolvedMeta,
     ...(isStale ? { isStale: true } : {}),
     ...(source ? { source } : {}),
@@ -357,15 +370,17 @@ export function makeResponse({
   upstream,
   rateLimit,
   error,
+  meta,
   expectations,
   isStale,
-  status = 200,
+  status,
   headers = {},
   source,
   freshness,
   cacheStatus,
   sourceMap
 } = {}) {
+  const resolvedStatus = typeof status === "number" ? status : ok === false ? 503 : 200;
   const payload = makeJson({
     ok,
     feature,
@@ -380,6 +395,7 @@ export function makeResponse({
     upstream,
     rateLimit,
     error,
+    meta,
     expectations,
     isStale,
     source,
@@ -387,7 +403,7 @@ export function makeResponse({
     cacheStatus,
     sourceMap
   });
-  return jsonResponse(payload, { status, cacheStatus }, headers);
+  return jsonResponse(payload, { status: resolvedStatus, cacheStatus }, headers);
 }
 
 function resolveCacheStatus(payload, override) {
@@ -454,7 +470,7 @@ export function assertBindings(env, feature, traceId) {
           "Cloudflare Dashboard → Pages → Settings → Functions → KV bindings → RV_KV (Preview + Production)"
       }
     },
-    status: 500
+    status: 503
   });
 }
 

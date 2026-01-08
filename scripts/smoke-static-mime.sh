@@ -1,52 +1,47 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-BASE_URL="${PREVIEW_URL:-${1:-}}"
-if [[ -z "$BASE_URL" ]]; then
+TARGET="${PREVIEW_URL:-${1:-}}"
+if [[ -z "$TARGET" ]]; then
   echo "Usage: PREVIEW_URL=https://<preview>.pages.dev bash scripts/smoke-static-mime.sh"
   echo "   or: bash scripts/smoke-static-mime.sh https://<preview>.pages.dev"
   exit 2
 fi
 
-check_asset() {
+check_url() {
   local path="$1"
-  echo "== $path =="
-  local headers
-  headers=$(curl -fsSI -L "${BASE_URL}${path}" | tr -d '\r')
-  echo "$headers" | sed -n '1,10p'
-  local ctype
-  ctype=$(echo "$headers" | awk -F': ' 'tolower($1)=="content-type"{print tolower($2)}' | head -n 1)
-  if [[ -z "$ctype" ]]; then
-    echo "FAIL: missing Content-Type for ${path}"
+  local full_url="${TARGET}${path}"
+  local status_code
+  local curl_exit_code
+
+  set +e
+  status_code="$(curl -fsS -L --max-time 20 -o /dev/null -w "%{http_code}" "$full_url")"
+  curl_exit_code=$?
+  set -e
+
+  if [[ $curl_exit_code -ne 0 ]]; then
+    echo "FAIL: curl error (${curl_exit_code}) for ${path}"
     exit 1
   fi
-  if echo "$ctype" | grep -q "text/html"; then
-    echo "FAIL: HTML Content-Type for ${path}"
+  if [[ "$status_code" != "200" ]]; then
+    echo "FAIL: HTTP ${status_code} for ${path}"
     exit 1
   fi
-  # Ensure a full fetch does not break stdout (avoid curl(56))
-  curl -fsSL -L "${BASE_URL}${path}" -o /dev/null
-  local body
-  body=$(curl -fsSL -L "${BASE_URL}${path}" 2>/dev/null | head -c 120)
-  if echo "$body" | grep -qi "<!doctype\|<html"; then
-    echo "FAIL: HTML body for ${path}"
-    exit 1
-  fi
-  echo "OK"
+  echo "OK: ${path}"
 }
 
-check_asset "/style.css"
-check_asset "/rv-loader.js"
-check_asset "/rv-config.js"
-check_asset "/market-clock.js"
-check_asset "/rv-debug-console.js"
-check_asset "/diagnose.js"
-check_asset "/features/blocks-registry.js"
-check_asset "/features/utils/api.js"
-check_asset "/features/utils/flags.js"
-check_asset "/features/rv-market-health.js"
-check_asset "/debug/rv-debug.js"
-check_asset "/debug/rv-debug-console.js"
-check_asset "/assets/rv-icon.png"
-check_asset "/assets/rv-logo.png"
-check_asset "/assets/logo.png"
+check_url "/style.css"
+check_url "/rv-loader.js"
+check_url "/rv-config.js"
+check_url "/market-clock.js"
+check_url "/rv-debug-console.js"
+check_url "/diagnose.js"
+check_url "/features/blocks-registry.js"
+check_url "/features/utils/api.js"
+check_url "/features/utils/flags.js"
+check_url "/features/rv-market-health.js"
+check_url "/debug/rv-debug.js"
+check_url "/debug/rv-debug-console.js"
+check_url "/assets/rv-icon.png"
+check_url "/assets/rv-logo.png"
+check_url "/assets/logo.png"

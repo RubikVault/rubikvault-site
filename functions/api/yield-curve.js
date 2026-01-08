@@ -203,7 +203,7 @@ async function fetchYieldCurve({ env, signal, lastGood }) {
   const snippet = safeSnippet(xmlRes.text || csvRes.text || "");
   const status = xmlRes.status || csvRes.status || null;
   const error = new Error("No upstream data");
-  error.code = xmlRes.ok || csvRes.ok ? "SCHEMA_INVALID" : "UPSTREAM_5XX";
+  error.code = xmlRes.ok || csvRes.ok ? "SCHEMA_INVALID" : "UPSTREAM_FAIL";
   error.status = status;
   error.message = "No upstream data";
   error.details = { snippet };
@@ -218,6 +218,7 @@ export async function onRequestGet(context) {
     validator: validateYieldCurve,
     ttlStaleSec: TTL_STALE,
     circuitSec: CIRCUIT_SEC,
+    lastGoodKey: "lastgood:yield-curve",
     upstreamUrl: `${TREASURY_URL} | ${TREASURY_CSV_URL}`
   });
 }
