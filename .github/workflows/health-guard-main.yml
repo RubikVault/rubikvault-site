@@ -35,13 +35,23 @@ jobs:
 
           # If Cloudflare/WAF blocks GitHub (403), degrade but do NOT fail.
           if [[ "$http_code" == "403" ]]; then
-            ts="$(date -u +\"%Y-%m-%dT%H:%M:%SZ\")"
-            printf '%s
-' "{\"ok\":false,\"feature\":\"health-guard-main\",\"ts\":\"${ts}\",\"error\":{\"code\":\"WAF_403_OR_BOT_BLOCK\",\"message\":\"PROD health-report blocked from GitHub Actions (expected).\",\"details\":{\"httpStatus\":403,\"prodUrl\":\"${PROD_URL}\"}},\"meta\":{\"status\":\"DEGRADED\",\"reason\":\"WAF_403\",\"writeMode\":\"NONE\"},\"summary\":{\"blocks\":0,\"okBlocks\":0,\"coreHealthScore\":0,\"missingMetaBlocks\":0,\"badBlocks\":0}}" > health-prod.json
+\
+            ts=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+            jq -n --arg ts "$ts" --arg prod "$PROD_URL" '{
+              ok:false,
+              feature:"health-guard-main",
+              ts:$ts,
+              error:{
+                code:"WAF_403_OR_BOT_BLOCK",
+                message:"PROD health-report blocked from GitHub Actions (expected).",
+                details:{httpStatus:403, prodUrl:$prod}
+              },
+              meta:{status:"DEGRADED", reason:"WAF_403", writeMode:"NONE"},
+              summary:{blocks:0, okBlocks:0, coreHealthScore:0, missingMetaBlocks:0, badBlocks:0}
+            }' > health-prod.json
             echo "DEGRADED: PROD blocked with 403 (WAF/Bot). Wrote health-prod.json and exiting 0."
             exit 0
-            fi
-
+          fi
           # If non-200 (and not 403), fail (strict).
           if [[ "$http_code" != "200" ]]; then
             echo "FAIL: PROD health-report http=$http_code"
