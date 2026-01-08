@@ -1,9 +1,9 @@
 {
   "schemaVersion": "rv-mirror-v1",
   "mirrorId": "alpha-radar",
-  "runId": "2026-01-07T22:46:51.220Z",
-  "updatedAt": "2026-01-07T22:46:51.220Z",
-  "asOf": "2026-01-07T21:00:00.000Z",
+  "runId": "2026-01-08T21:33:32.770Z",
+  "updatedAt": "2026-01-08T21:33:32.770Z",
+  "asOf": "2026-01-08T21:00:00.000Z",
   "mode": "EOD",
   "cadence": "EOD",
   "trust": "derived",
@@ -39,11 +39,23 @@
         "RSI_OVERSOLD",
         "MACD_NEGATIVE"
       ],
-      "barsUsed": 10414,
+      "barsUsed": 10415,
       "missingFields": []
     },
     {
       "symbol": "MSFT",
+      "score": 55,
+      "state": "WATCH",
+      "reasons": [
+        "TREND_DOWN",
+        "RSI_RECOVERY",
+        "MACD_POSITIVE"
+      ],
+      "barsUsed": 10032,
+      "missingFields": []
+    },
+    {
+      "symbol": "NVDA",
       "score": 75,
       "state": "STRONG",
       "reasons": [
@@ -51,43 +63,31 @@
         "RSI_NEUTRAL",
         "MACD_POSITIVE"
       ],
-      "barsUsed": 10031,
-      "missingFields": []
-    },
-    {
-      "symbol": "NVDA",
-      "score": 85,
-      "state": "STRONG",
-      "reasons": [
-        "TREND_STRONG",
-        "RSI_NEUTRAL",
-        "MACD_POSITIVE"
-      ],
-      "barsUsed": 6781,
+      "barsUsed": 6782,
       "missingFields": []
     },
     {
       "symbol": "AMZN",
-      "score": 85,
+      "score": 70,
       "state": "STRONG",
       "reasons": [
         "TREND_STRONG",
-        "RSI_NEUTRAL",
+        "RSI_EXTENDED",
         "MACD_POSITIVE"
       ],
-      "barsUsed": 7201,
+      "barsUsed": 7202,
       "missingFields": []
     },
     {
       "symbol": "GOOGL",
-      "score": 65,
-      "state": "WATCH",
+      "score": 70,
+      "state": "STRONG",
       "reasons": [
         "TREND_STRONG",
-        "RSI_NEUTRAL",
-        "MACD_NEGATIVE"
+        "RSI_EXTENDED",
+        "MACD_POSITIVE"
       ],
-      "barsUsed": 5381,
+      "barsUsed": 5382,
       "missingFields": []
     },
     {
@@ -99,7 +99,7 @@
         "RSI_NEUTRAL",
         "MACD_NEGATIVE"
       ],
-      "barsUsed": 3429,
+      "barsUsed": 3430,
       "missingFields": []
     },
     {
@@ -111,7 +111,7 @@
         "RSI_RECOVERY",
         "MACD_NEGATIVE"
       ],
-      "barsUsed": 3906,
+      "barsUsed": 3907,
       "missingFields": []
     },
     {
@@ -123,7 +123,7 @@
         "RSI_NEUTRAL",
         "MACD_POSITIVE"
       ],
-      "barsUsed": 5249,
+      "barsUsed": 5250,
       "missingFields": []
     },
     {
@@ -135,7 +135,7 @@
         "RSI_NEUTRAL",
         "MACD_POSITIVE"
       ],
-      "barsUsed": 6749,
+      "barsUsed": 6750,
       "missingFields": []
     },
     {
@@ -147,13 +147,13 @@
         "RSI_NEUTRAL",
         "MACD_POSITIVE"
       ],
-      "barsUsed": 5249,
+      "barsUsed": 5250,
       "missingFields": []
     }
   ],
   "meta": {
     "status": "OK",
-    "updatedAt": "2026-01-07T22:46:51.220Z",
+    "updatedAt": "2026-01-08T21:33:32.770Z",
     "reason": null
   }
 }
