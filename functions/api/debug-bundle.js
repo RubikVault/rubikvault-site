@@ -1,4 +1,4 @@
-import { createTraceId } from "./_shared.js";
+import { createTraceId, makeResponse, safeSnippet } from "./_shared.js";
 import { hash8, kvPutJson } from "../_lib/kv-safe.js";
 import { isProduction, requireDebugToken } from "./_env.js";
 
@@ -78,17 +78,40 @@ async function fetchJsonSafe(url, timeoutMs = 8000) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
-    const response = await fetch(url, { signal: controller.signal, headers: { Accept: "application/json" } });
+    const response = await fetch(url, {
+      signal: controller.signal,
+      headers: { Accept: "application/json" }
+    });
     const text = await response.text();
     clearTimeout(timer);
     try {
-      return { ok: true, status: response.status, json: JSON.parse(text) };
+      const json = JSON.parse(text);
+      if (!response.ok) {
+        return {
+          ok: false,
+          status: response.status,
+          json,
+          reason: `HTTP_${response.status}`,
+          errorSnippet: safeSnippet(text)
+        };
+      }
+      return { ok: true, status: response.status, json };
     } catch (error) {
-      return { ok: false, status: response.status, error: "SCHEMA_INVALID" };
+      return {
+        ok: false,
+        status: response.status,
+        reason: "SCHEMA_INVALID",
+        errorSnippet: safeSnippet(text)
+      };
     }
   } catch (error) {
     clearTimeout(timer);
-    return { ok: false, status: 0, error: "FETCH_FAILED" };
+    return {
+      ok: false,
+      status: 0,
+      reason: "FETCH_FAILED",
+      errorSnippet: error?.message || "Fetch failed"
+    };
   }
 }
 
@@ -137,54 +160,134 @@ function isBlockDown(event) {
 }
 
 export async function onRequestGet({ request, env, data }) {
-  const traceId = data?.traceId || createTraceId(request);
-  const url = new URL(request.url);
-  const host = request.headers.get("host") || "";
-  const prod = isProduction(env, request);
-  const envHint = host.endsWith(".pages.dev")
-    ? "preview"
-    : prod
-      ? "prod"
-      : env?.CF_PAGES_ENVIRONMENT || (env?.CF_PAGES_BRANCH ? "preview" : "dev");
-  const version = env?.CF_PAGES_COMMIT_SHA || env?.GIT_SHA || null;
+  try {
+    const traceId = data?.traceId || createTraceId(request);
+    const url = new URL(request.url);
+    const host = request.headers.get("host") || "";
+    const prod = isProduction(env, request);
+    const envHint = host.endsWith(".pages.dev")
+      ? "preview"
+      : prod
+        ? "prod"
+        : env?.CF_PAGES_ENVIRONMENT || (env?.CF_PAGES_BRANCH ? "preview" : "dev");
+    const version = env?.CF_PAGES_COMMIT_SHA || env?.GIT_SHA || null;
 
-  const bindingPresent = Boolean(env?.RV_KV && typeof env.RV_KV.get === "function");
-  const hasKV = bindingPresent;
-  const debugAllowed = requireDebugToken(env, request);
-  const kvErrors = [];
-  const kvWarnings = [];
-  let opsWorking = null;
+    const bindingPresent = Boolean(env?.RV_KV && typeof env.RV_KV.get === "function");
+    const hasKV = bindingPresent;
+    const debugAllowed = requireDebugToken(env, request);
+    const kvErrors = [];
+    const kvWarnings = [];
+    let opsWorking = null;
 
-  if (!bindingPresent) kvWarnings.push("KV_BINDING_MISSING");
-  if (envHint === "preview" && !bindingPresent) {
-    kvWarnings.push("Preview env missing KV binding or wrong namespace");
-  }
-  if (!debugAllowed) kvErrors.push("DEBUG_TOKEN_REQUIRED");
-
-  if (debugAllowed && bindingPresent) {
-    try {
-      await env.RV_KV.get("_health_check_key");
-      opsWorking = true;
-    } catch (error) {
-      opsWorking = false;
-      kvErrors.push("KV_OP_FAILED");
+    if (!bindingPresent) kvWarnings.push("KV_BINDING_MISSING");
+    if (envHint === "preview" && !bindingPresent) {
+      kvWarnings.push("Preview env missing KV binding or wrong namespace");
     }
-  }
+    if (!debugAllowed) kvErrors.push("DEBUG_TOKEN_REQUIRED");
 
-  const infra = {
-    kv: {
-      hasKV,
-      bindingPresent,
-      opsWorking,
-      binding: "RV_KV",
-      errors: kvErrors,
-      warnings: kvWarnings
-    },
-    notes: []
-  };
+    if (debugAllowed && bindingPresent) {
+      try {
+        await env.RV_KV.get("_health_check_key");
+        opsWorking = true;
+      } catch (error) {
+        opsWorking = false;
+        kvErrors.push("KV_OP_FAILED");
+      }
+    }
 
-  if (!debugAllowed) {
-    const bundle = {
+    const infra = {
+      kv: {
+        hasKV,
+        bindingPresent,
+        opsWorking,
+        binding: "RV_KV",
+        errors: kvErrors,
+        warnings: kvWarnings
+      },
+      notes: []
+    };
+
+    const limitParam = Number(url.searchParams.get("limit") || 200);
+    const limit = Math.max(20, Math.min(500, Number.isFinite(limitParam) ? limitParam : 200));
+    const recentEvents = await listEvents(env, limit);
+
+    const summaryBase = {
+      status: hasKV ? "OK" : "FAIL",
+      topErrorCodes: summarizeErrors(recentEvents),
+      blocksDown: [],
+      endpointsDown: []
+    };
+    if (opsWorking === false && summaryBase.status === "OK") {
+      summaryBase.status = "DEGRADED";
+    }
+
+    let health = null;
+    let diag = null;
+    let attempts = [];
+
+    if (debugAllowed) {
+      const origin = url.origin;
+      const targets = [
+        { name: "health", url: `${origin}/api/health` },
+        { name: "diag", url: `${origin}/api/diag` }
+      ];
+      const settled = await Promise.allSettled(
+        targets.map((target) => fetchJsonSafe(target.url))
+      );
+      attempts = settled.map((result, index) => {
+        const target = targets[index];
+        if (result.status === "fulfilled") {
+          const value = result.value || {};
+          return {
+            name: target.name,
+            url: target.url,
+            ok: Boolean(value.ok),
+            status: value.status ?? 0,
+            reason: value.reason || "",
+            errorSnippet: value.errorSnippet || ""
+          };
+        }
+        const message = result.reason?.message || String(result.reason || "Fetch failed");
+        return {
+          name: target.name,
+          url: target.url,
+          ok: false,
+          status: 0,
+          reason: "FETCH_FAILED",
+          errorSnippet: message
+        };
+      });
+      const healthResult = settled[0]?.status === "fulfilled" ? settled[0].value : null;
+      const diagResult = settled[1]?.status === "fulfilled" ? settled[1].value : null;
+      health = healthResult?.json || null;
+      diag = diagResult?.json || null;
+    }
+
+    const diagSummary = diag?.data?.summary || null;
+    if (diagSummary?.endpointsFail > 0) summaryBase.status = hasKV ? "DEGRADED" : "FAIL";
+    const diagEndpoints = diag?.data?.endpoints || diag?.endpoints || [];
+    summaryBase.endpointsDown = Array.isArray(diagEndpoints)
+      ? diagEndpoints.filter((entry) => entry.severityRank < 6).map((entry) => entry.path)
+      : [];
+    summaryBase.blocksDown = recentEvents
+      .filter((event) => isBlockDown(event))
+      .map((event) => event.feature)
+      .filter((value, index, self) => self.indexOf(value) === index);
+
+    const severitySummary = summarizeSeverity(recentEvents);
+    const bundleId = hash8(`${summaryBase.status}:${summaryBase.topErrorCodes?.[0]?.code || ""}`);
+    const summary = {
+      ...summaryBase,
+      bundleId,
+      generatedAt: new Date().toISOString(),
+      ...severitySummary
+    };
+
+    const dataPayload = debugAllowed
+      ? { prod, host }
+      : { status: "redacted", reason: "missing_debug_token", prod, host };
+
+    const bundleData = {
       schema: SCHEMA,
       meta: {
         ts: new Date().toISOString(),
@@ -197,91 +300,57 @@ export async function onRequestGet({ request, env, data }) {
         pagesEnv: env?.CF_PAGES_ENVIRONMENT || null
       },
       infra,
-      health: { status: "ok", service: "rubikvault", envHint, host },
-      diag: {},
-      recentEvents: [],
-      data: { status: "redacted", reason: "missing_debug_token", prod, host },
+      health: sanitize(health || {}),
+      diag: sanitize(diag || {}),
+      recentEvents: sanitize(recentEvents),
+      data: dataPayload,
       client: {},
       correlations: [],
-      summary: { status: "FAIL", topErrorCodes: [], blocksDown: [], endpointsDown: [] }
+      summary,
+      attempts
     };
-    return new Response(JSON.stringify(bundle), {
-      status: 200,
-      headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" }
-    });
-  }
 
-  const origin = url.origin;
-  const health = await fetchJsonSafe(`${origin}/api/health`);
-  const diag = await fetchJsonSafe(`${origin}/api/diag`);
-
-  const limitParam = Number(url.searchParams.get("limit") || 200);
-  const limit = Math.max(20, Math.min(500, Number.isFinite(limitParam) ? limitParam : 200));
-  const recentEvents = await listEvents(env, limit);
-
-  const summaryBase = {
-    status: hasKV ? "OK" : "FAIL",
-    topErrorCodes: summarizeErrors(recentEvents),
-    blocksDown: [],
-    endpointsDown: []
-  };
-  if (opsWorking === false && summaryBase.status === "OK") {
-    summaryBase.status = "DEGRADED";
-  }
-
-  const diagSummary = diag.json?.data?.summary || null;
-  if (diagSummary?.endpointsFail > 0) summaryBase.status = hasKV ? "DEGRADED" : "FAIL";
-  const diagEndpoints = diag.json?.data?.endpoints || diag.json?.endpoints || [];
-  summaryBase.endpointsDown = Array.isArray(diagEndpoints)
-    ? diagEndpoints.filter((entry) => entry.severityRank < 6).map((entry) => entry.path)
-    : [];
-  summaryBase.blocksDown = recentEvents
-    .filter((event) => isBlockDown(event))
-    .map((event) => event.feature)
-    .filter((value, index, self) => self.indexOf(value) === index);
-
-  const severitySummary = summarizeSeverity(recentEvents);
-  const bundleId = hash8(`${summaryBase.status}:${summaryBase.topErrorCodes?.[0]?.code || ""}`);
-  const summary = {
-    ...summaryBase,
-    bundleId,
-    generatedAt: new Date().toISOString(),
-    ...severitySummary
-  };
-
-  const bundle = {
-    schema: SCHEMA,
-    meta: { ts: new Date().toISOString(), envHint, host, version, traceId },
-    infra,
-    health: sanitize(health.json || {}),
-    diag: sanitize(diag.json || {}),
-    recentEvents: sanitize(recentEvents),
-    data: { prod, host },
-    client: {},
-    correlations: [],
-    summary
-  };
-
-  const response = new Response(JSON.stringify(bundle), {
-    status: 200,
-    headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" }
-  });
-
-  if (hasKV && debugAllowed) {
-    const key = `log:event:${hourBucket(new Date())}:${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-    const event = {
-      ts: new Date().toISOString(),
+    const response = makeResponse({
+      ok: true,
       feature: "debug-bundle",
       traceId,
-      requestId: data?.requestId || "",
-      cacheLayer: "none",
-      upstreamStatus: null,
-      durationMs: 0,
-      errorCode: "",
-      httpStatus: 200
-    };
-    kvPutJson(env, key, event, EVENT_TTL).catch(() => {});
-  }
+      data: bundleData,
+      cache: { hit: false, ttl: 0, layer: "none" },
+      upstream: { url: "", status: null, snippet: "" },
+      meta: { envHint, host, version }
+    });
 
-  return response;
+    if (hasKV && debugAllowed) {
+      const key = `log:event:${hourBucket(new Date())}:${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+      const event = {
+        ts: new Date().toISOString(),
+        feature: "debug-bundle",
+        traceId,
+        requestId: data?.requestId || "",
+        cacheLayer: "none",
+        upstreamStatus: null,
+        durationMs: 0,
+        errorCode: "",
+        httpStatus: 200
+      };
+      kvPutJson(env, key, event, EVENT_TTL).catch(() => {});
+    }
+
+    return response;
+  } catch (error) {
+    return makeResponse({
+      ok: false,
+      feature: "debug-bundle",
+      traceId: createTraceId(request),
+      data: {},
+      cache: { hit: false, ttl: 0, layer: "none" },
+      upstream: { url: "", status: null, snippet: "" },
+      meta: { status: "ERROR", reason: "DEBUG_BUNDLE_FAILED" },
+      error: {
+        code: "DEBUG_BUNDLE_FAILED",
+        message: error?.message || "Debug bundle failed",
+        details: {}
+      }
+    });
+  }
 }

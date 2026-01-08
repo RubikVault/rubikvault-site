@@ -306,6 +306,35 @@ export async function onRequestGet({ request, env, data }) {
 
   const url = new URL(request.url);
   const symbolsParam = url.searchParams.get("symbols") || url.searchParams.get("tickers") || "";
+  const symbolsTrimmed = String(symbolsParam || "").replace(/[\s,]/g, "");
+  if (!symbolsTrimmed) {
+    console.warn("[quotes] missing symbols parameter", { traceId });
+    const response = makeResponse({
+      ok: true,
+      feature: FEATURE_ID,
+      traceId,
+      data: {
+        updatedAt: new Date().toISOString(),
+        source: "none",
+        quotes: []
+      },
+      cache: { hit: false, ttl: 0, layer: "none" },
+      upstream: { url: "", status: null, snippet: "" },
+      meta: {
+        status: "NO_DATA",
+        reason: "MISSING_SYMBOLS",
+        hint: "?symbols=AAPL,MSFT"
+      }
+    });
+    logServer({
+      feature: FEATURE_ID,
+      traceId,
+      cacheLayer: "none",
+      upstreamStatus: null,
+      durationMs: Date.now() - started
+    });
+    return response;
+  }
   const { symbols, errorResponse } = normalizeSymbolsParam(symbolsParam, {
     feature: FEATURE_ID,
     traceId,
