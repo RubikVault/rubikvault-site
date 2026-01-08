@@ -56,6 +56,29 @@ function ensureMeta(payload, fallbackTraceId) {
   return payload;
 }
 
+function normalizeMirrorPayload(payload, featureFallback) {
+  if (!payload || typeof payload !== "object" || Array.isArray(payload)) return payload;
+  if (payload.ok !== undefined) return payload;
+  if (payload.schemaVersion !== "rv-mirror-v1") return payload;
+  const mirrorId = String(payload.mirrorId || "").trim() || "unknown";
+  const feature = mirrorId ? `rv-${mirrorId}` : featureFallback || "mirror";
+  const items = Array.isArray(payload.items) ? payload.items : [];
+  const mode = payload.mode || payload.dataQuality || "";
+  const modeUpper = String(mode).toUpperCase();
+  const isEmpty = modeUpper === "EMPTY" || items.length === 0;
+  return {
+    ok: true,
+    feature,
+    data: { items, payload },
+    meta: {
+      status: isEmpty ? "PARTIAL" : "STALE",
+      reason: mode || (isEmpty ? "EMPTY" : "MIRROR_FALLBACK"),
+      source: "mirror"
+    },
+    error: null
+  };
+}
+
 function buildApiErrorResponse({ feature, traceId, status, headers, text, contentType, code }) {
   const headerObj = Object.fromEntries(headers.entries());
   return makeResponse({
@@ -284,6 +307,17 @@ export async function onRequest(context) {
       }
 
       if (payload && typeof payload === "object") {
+        const featureFallback = url.pathname.split("/").slice(-1)[0] || "api";
+        payload = normalizeMirrorPayload(payload, featureFallback);
+        if (payload.ok === undefined) {
+          payload.ok = response.ok;
+        }
+        if (!payload.feature) {
+          payload.feature = featureFallback;
+        }
+        if (!Object.prototype.hasOwnProperty.call(payload, "data")) {
+          payload.data = {};
+        }
         const existingTrace = payload.trace || {};
         payload.trace = {
           traceId: payload.traceId || traceId,
@@ -292,7 +326,8 @@ export async function onRequest(context) {
           parentTraceId: existingTrace.parentTraceId || parentTraceId || ""
         };
         const shouldEnsureMeta =
-          payload.meta == null || Object.prototype.hasOwnProperty.call(payload, "feature") ||
+          payload.meta == null ||
+          Object.prototype.hasOwnProperty.call(payload, "feature") ||
           Object.prototype.hasOwnProperty.call(payload, "ok");
         if (shouldEnsureMeta) {
           payload = ensureMeta(payload, traceId);
