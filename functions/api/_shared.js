@@ -488,6 +488,44 @@ export async function kvGetJson(context, key) {
   };
 }
 
+function stableStringify(value) {
+  if (value === null || value === undefined) return "null";
+  if (typeof value !== "object") return JSON.stringify(value);
+  if (Array.isArray(value)) {
+    return `[${value.map((entry) => stableStringify(entry)).join(",")}]`;
+  }
+  const keys = Object.keys(value).sort();
+  const entries = keys.map((key) => `${JSON.stringify(key)}:${stableStringify(value[key])}`);
+  return `{${entries.join(",")}}`;
+}
+
+async function computeKvEtag(value) {
+  const text = stableStringify(value);
+  const encoder = new TextEncoder();
+  const data = encoder.encode(text);
+  const digest = await crypto.subtle.digest("SHA-1", data);
+  const hashArray = Array.from(new Uint8Array(digest));
+  return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+function resolveEtagKey(rawKey) {
+  const key = String(rawKey || "");
+  if (key.startsWith("lastgood:")) {
+    const feature = key.slice("lastgood:".length).split(":")[0] || "unknown";
+    return `etag:${feature}`;
+  }
+  if (key.startsWith("rv:lastgood:")) {
+    const feature = key.slice("rv:lastgood:".length).split(":")[0] || "unknown";
+    return `etag:${feature}`;
+  }
+  const lastGoodIdx = key.indexOf(":last_good");
+  if (lastGoodIdx > 0) {
+    const feature = key.slice(0, lastGoodIdx) || "unknown";
+    return `etag:${feature}`;
+  }
+  return null;
+}
+
 export async function kvPutJson(context, key, value, ttlSeconds) {
   const env = context?.env || context;
   if (!env?.RV_ALLOW_WRITE_ON_VIEW && !env?.__RV_ALLOW_WRITE__) return;
@@ -495,6 +533,17 @@ export async function kvPutJson(context, key, value, ttlSeconds) {
   let expirationTtl = ttlSeconds;
   if (typeof ttlSeconds === "object" && ttlSeconds !== null) {
     expirationTtl = ttlSeconds.expirationTtlSeconds;
+  }
+  const etagKey = resolveEtagKey(key);
+  if (etagKey) {
+    try {
+      const nextEtag = await computeKvEtag(value);
+      const prevEtag = await env.RV_KV.get(etagKey);
+      if (prevEtag && prevEtag === nextEtag) return;
+      await env.RV_KV.put(etagKey, nextEtag, { expirationTtl });
+    } catch (error) {
+      // ignore etag throttling failures
+    }
   }
   await env.RV_KV.put(key, JSON.stringify(value), {
     expirationTtl
