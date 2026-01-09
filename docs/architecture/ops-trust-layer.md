@@ -35,7 +35,7 @@ Purpose: Make provider limits, missing keys, bad payloads, and circuit state dia
 - Homepage block order uses `/data/seed-manifest.json` as the authoritative list when registry JSON is invalid.
 - Registry fetch remains optional; if it fails, the UI stays in manifest-driven mode.
 - Sanity check (browser console):
-  - `document.body.textContent.includes("Block 43")`
+  - `document.querySelectorAll("[data-block-id]").length`
 
 ## Registry smoke checks
 - Registry content-type:
@@ -46,5 +46,5 @@ Purpose: Make provider limits, missing keys, bad payloads, and circuit state dia
   - `curl -sS "<PREVIEW>/data/seed-manifest.json" | jq '.blocks|length'`
 - Expectation:
   - Registry features count >= manifest blocks count
-- Homepage blocks:
-  - `curl -sS "<PREVIEW>/" | grep -Eo "Block [0-9]+" | sort -u | tail -n 40`
+- Render plan (server-derived, no HTML parsing):
+  - `curl -sS "<PREVIEW>/api/render-plan" | jq '.data'`
