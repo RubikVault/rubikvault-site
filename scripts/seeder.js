@@ -57,6 +57,29 @@ const SECTOR_SYMBOLS = [
   "XLY"
 ];
 
+const TREND_SYMBOLS = ["SPY", "QQQ", "DIA"];
+const HEATMAP_SYMBOLS = [
+  "AAPL",
+  "MSFT",
+  "NVDA",
+  "AMZN",
+  "META",
+  "GOOGL",
+  "TSLA",
+  "JPM",
+  "XOM",
+  "LLY",
+  "AVGO",
+  "COST",
+  "WMT",
+  "PG",
+  "UNH"
+];
+const BENCHMARK_SYMBOL = "SPY";
+const DRAWDOWN_LOOKBACK = 252;
+const REALIZED_VOL_DAYS = 20;
+const RSI_PERIOD = 14;
+
 const ECB_RATE_KEYS = [
   { id: "MRR", label: "Main Refinancing", key: "FM/M.U2.EUR.4F.KR.MRR_FR.LEV" },
   { id: "DFR", label: "Deposit Facility", key: "FM/M.U2.EUR.4F.KR.DFR.LEV" },
@@ -94,6 +117,70 @@ function latestByDate(entries) {
     .filter((entry) => entry && entry.date)
     .sort((a, b) => String(b.date).localeCompare(String(a.date)));
   return sorted[0] || null;
+}
+
+function maxDate(...dates) {
+  return dates.filter(Boolean).sort().slice(-1)[0] || null;
+}
+
+function average(values) {
+  if (!Array.isArray(values) || values.length === 0) return null;
+  const total = values.reduce((sum, value) => sum + value, 0);
+  return total / values.length;
+}
+
+function computeRsi(closes, period = RSI_PERIOD) {
+  if (!Array.isArray(closes) || closes.length < period + 1) return null;
+  const window = closes.slice(0, period + 1).reverse();
+  const deltas = [];
+  for (let i = 1; i < window.length; i += 1) {
+    deltas.push(window[i] - window[i - 1]);
+  }
+  const gains = deltas.filter((value) => value > 0);
+  const losses = deltas.filter((value) => value < 0).map((value) => Math.abs(value));
+  const avgGain = average(gains) ?? 0;
+  const avgLoss = average(losses) ?? 0;
+  if (avgLoss === 0) return 100;
+  const rs = avgGain / avgLoss;
+  return 100 - 100 / (1 + rs);
+}
+
+function computeRealizedVol(closes, period = REALIZED_VOL_DAYS) {
+  if (!Array.isArray(closes) || closes.length < period + 1) return null;
+  const window = closes.slice(0, period + 1).reverse();
+  const returns = [];
+  for (let i = 1; i < window.length; i += 1) {
+    const prev = window[i - 1];
+    const curr = window[i];
+    if (!Number.isFinite(prev) || !Number.isFinite(curr) || prev === 0) continue;
+    returns.push((curr - prev) / prev);
+  }
+  if (!returns.length) return null;
+  const mean = average(returns) ?? 0;
+  const variance = average(returns.map((value) => (value - mean) ** 2)) ?? 0;
+  return Math.sqrt(variance) * Math.sqrt(252) * 100;
+}
+
+function movingAverage(closes, period) {
+  if (!Array.isArray(closes) || closes.length < period) return null;
+  return average(closes.slice(0, period));
+}
+
+async function getStooqSeries(ctx, symbol, cache) {
+  if (!cache.stooqSeries) cache.stooqSeries = {};
+  if (cache.stooqSeries[symbol]) return cache.stooqSeries[symbol];
+  const seriesCtx = { ...ctx, providerId: ctx.providerId || "stooq" };
+  const result = await fetchStooqDaily(seriesCtx, symbol);
+  const rows = Array.isArray(result.data) ? sortByDateDesc(result.data) : [];
+  cache.stooqSeries[symbol] = rows;
+  return rows;
+}
+
+function getSnapshot(cache, blockId) {
+  if (cache.snapshots && cache.snapshots[blockId]) {
+    return cache.snapshots[blockId];
+  }
+  return readExistingSnapshot(blockId);
 }
 
 function loadJson(filePath) {
@@ -276,7 +363,7 @@ function buildErrorSnapshot(entry, reason, generatedAt) {
 function orderEntries(entries) {
   const registry = { features: entries };
   const graph = buildGraph(registry);
-  const order = topoSort(graph);
+  const order = topoSort(graph).reverse();
   const lookup = new Map(entries.map((entry) => [entry.id, entry]));
   const ordered = order.map((id) => lookup.get(id)).filter(Boolean);
   return ordered.length ? ordered : entries;
@@ -504,6 +591,417 @@ async function runLiquidityConditions(entry, ctx) {
   return { items, dataAt: point?.date || null };
 }
 
+async function runRiskRegimeLite(entry, ctx, cache) {
+  const volSnapshot = getSnapshot(cache, "vol-regime");
+  const breadthSnapshot = getSnapshot(cache, "market-breadth");
+  const volItem = volSnapshot?.data?.items?.[0];
+  const breadthSummary = breadthSnapshot?.data?.summary || {};
+  const breadthItems = Array.isArray(breadthSnapshot?.data?.items) ? breadthSnapshot.data.items : [];
+
+  const advancers = Number.isFinite(breadthSummary.advancers)
+    ? breadthSummary.advancers
+    : breadthItems.filter((row) => row.changePct > 0).length;
+  const decliners = Number.isFinite(breadthSummary.decliners)
+    ? breadthSummary.decliners
+    : breadthItems.filter((row) => row.changePct < 0).length;
+  const total = advancers + decliners;
+  const breadthRatio = total > 0 ? advancers / total : null;
+
+  if (!volItem || !Number.isFinite(volItem.value) || total === 0) {
+    const error = new Error("risk regime inputs missing");
+    error.reason = "NO_DATA";
+    throw error;
+  }
+
+  let regime = "neutral";
+  if (volItem.regime === "high" || (breadthRatio !== null && breadthRatio < 0.4)) {
+    regime = "risk-off";
+  } else if (volItem.regime === "low" && breadthRatio !== null && breadthRatio > 0.55) {
+    regime = "risk-on";
+  }
+
+  const dataAt = maxDate(volSnapshot?.dataAt, breadthSnapshot?.dataAt);
+  const items = [
+    {
+      regime,
+      volRegime: volItem.regime || null,
+      vix: volItem.value,
+      breadthRatio,
+      advancers,
+      decliners,
+      date: dataAt
+    }
+  ];
+  return { items, dataAt };
+}
+
+async function runDrawdownMonitor(entry, ctx, cache) {
+  const rows = await getStooqSeries({ ...ctx, providerId: entry.provider }, BENCHMARK_SYMBOL, cache);
+  const window = rows.slice(0, DRAWDOWN_LOOKBACK).filter((row) => Number.isFinite(row.close));
+  const latest = window[0];
+  if (!latest) {
+    const error = new Error("drawdown source missing");
+    error.reason = "NO_DATA";
+    throw error;
+  }
+  const maxClose = Math.max(...window.map((row) => row.close));
+  const drawdownPct = maxClose ? ((latest.close - maxClose) / maxClose) * 100 : null;
+  const items = [
+    {
+      symbol: BENCHMARK_SYMBOL,
+      close: latest.close,
+      maxClose,
+      drawdownPct,
+      date: latest.date
+    }
+  ];
+  return { items, dataAt: latest.date || null };
+}
+
+async function runTrendStrengthBoard(entry, ctx, cache) {
+  const items = [];
+  let dataAt = null;
+
+  for (const symbol of TREND_SYMBOLS) {
+    const rows = await getStooqSeries({ ...ctx, providerId: entry.provider }, symbol, cache);
+    const closes = rows.map((row) => row.close).filter(Number.isFinite);
+    const ma50 = movingAverage(closes, 50);
+    const ma200 = movingAverage(closes, 200);
+    const latest = rows[0];
+    if (!latest || !Number.isFinite(ma50) || !Number.isFinite(ma200)) continue;
+    const slopePct = ma200 ? ((ma50 - ma200) / ma200) * 100 : null;
+    items.push({ symbol, ma50, ma200, slopePct, date: latest.date });
+    if (!dataAt || latest.date > dataAt) dataAt = latest.date;
+  }
+
+  return { items, dataAt };
+}
+
+async function runMomentumHeatmapLite(entry, ctx, cache) {
+  const items = [];
+  let dataAt = null;
+
+  for (const symbol of HEATMAP_SYMBOLS) {
+    const rows = await getStooqSeries({ ...ctx, providerId: entry.provider }, symbol, cache);
+    const closes = rows.map((row) => row.close).filter(Number.isFinite);
+    const rsi = computeRsi(closes, RSI_PERIOD);
+    const latest = rows[0];
+    if (!latest || !Number.isFinite(rsi)) continue;
+    const bucket =
+      rsi >= 70 ? "hot" : rsi >= 55 ? "warm" : rsi >= 45 ? "neutral" : rsi >= 30 ? "cool" : "weak";
+    items.push({ symbol, rsi, bucket, date: latest.date });
+    if (!dataAt || latest.date > dataAt) dataAt = latest.date;
+  }
+
+  return { items, dataAt };
+}
+
+async function runVolatilityTermLite(entry, ctx, cache) {
+  const volSnapshot = getSnapshot(cache, "vol-regime");
+  const volItem = volSnapshot?.data?.items?.[0];
+  if (!volItem || !Number.isFinite(volItem.value)) {
+    const error = new Error("vol regime missing");
+    error.reason = "NO_DATA";
+    throw error;
+  }
+
+  const rows = await getStooqSeries({ ...ctx, providerId: entry.provider }, BENCHMARK_SYMBOL, cache);
+  const closes = rows.map((row) => row.close).filter(Number.isFinite);
+  const realized = computeRealizedVol(closes, REALIZED_VOL_DAYS);
+  const latest = rows[0];
+  if (!latest || !Number.isFinite(realized)) {
+    const error = new Error("realized vol missing");
+    error.reason = "NO_DATA";
+    throw error;
+  }
+
+  const dataAt = maxDate(volSnapshot?.dataAt, latest.date);
+  const items = [
+    {
+      symbol: BENCHMARK_SYMBOL,
+      vix: volItem.value,
+      realized,
+      spread: volItem.value - realized,
+      date: dataAt
+    }
+  ];
+  return { items, dataAt };
+}
+
+async function runSectorRelativeStrength(entry, ctx, cache) {
+  const sectorSnapshot = getSnapshot(cache, "sector-rotation");
+  const sectorItems = Array.isArray(sectorSnapshot?.data?.items) ? sectorSnapshot.data.items : [];
+  if (!sectorItems.length) {
+    const error = new Error("sector rotation missing");
+    error.reason = "NO_DATA";
+    throw error;
+  }
+
+  const rows = await getStooqSeries({ ...ctx, providerId: entry.provider }, BENCHMARK_SYMBOL, cache);
+  if (rows.length < 6 || !Number.isFinite(rows[0]?.close) || !Number.isFinite(rows[5]?.close)) {
+    const error = new Error("benchmark returns missing");
+    error.reason = "NO_DATA";
+    throw error;
+  }
+
+  const spyReturnPct = ((rows[0].close - rows[5].close) / rows[5].close) * 100;
+  const items = sectorItems
+    .filter((item) => Number.isFinite(item.returnPct))
+    .map((item) => ({
+      symbol: item.symbol,
+      sectorReturnPct: item.returnPct,
+      spyReturnPct,
+      relativeStrength: item.returnPct - spyReturnPct,
+      date: item.date || rows[0].date
+    }));
+
+  const dataAt = maxDate(sectorSnapshot?.dataAt, rows[0].date);
+  return { items, dataAt };
+}
+
+async function runCreditSpreadProxyLite(entry, ctx, cache) {
+  const creditSnapshot = getSnapshot(cache, "credit-stress-proxy");
+  const item = creditSnapshot?.data?.items?.[0];
+  if (!item || !Number.isFinite(item.value)) {
+    const error = new Error("credit proxy missing");
+    error.reason = "NO_DATA";
+    throw error;
+  }
+  const level = item.value >= 5 ? "stress" : item.value >= 3 ? "elevated" : "calm";
+  const items = [
+    {
+      series: item.series || "HY_OAS",
+      value: item.value,
+      level,
+      date: item.date || creditSnapshot.dataAt
+    }
+  ];
+  return { items, dataAt: creditSnapshot?.dataAt || null };
+}
+
+async function runLiquidityDelta(entry, ctx, cache) {
+  const liquiditySnapshot = getSnapshot(cache, "liquidity-conditions-proxy");
+  const item = liquiditySnapshot?.data?.items?.[0];
+  if (!item || !Number.isFinite(item.value)) {
+    const error = new Error("liquidity proxy missing");
+    error.reason = "NO_DATA";
+    throw error;
+  }
+  const previousSnapshot = readExistingSnapshot("liquidity-conditions-proxy");
+  const prevItem = !isPlaceholderSnapshot(previousSnapshot) ? previousSnapshot?.data?.items?.[0] : null;
+  const prevValue = Number.isFinite(prevItem?.value) ? prevItem.value : null;
+  const delta = prevValue === null ? null : item.value - prevValue;
+  const deltaPct = prevValue && prevValue !== 0 ? (delta / prevValue) * 100 : null;
+  const items = [
+    {
+      series: item.series || "RRPONTSYD",
+      value: item.value,
+      prevValue,
+      delta,
+      deltaPct,
+      date: item.date || liquiditySnapshot.dataAt
+    }
+  ];
+  return { items, dataAt: liquiditySnapshot?.dataAt || null };
+}
+
+async function runMacroSurpriseLite(entry, ctx, cache) {
+  const inflationSnapshot = getSnapshot(cache, "inflation-pulse");
+  const laborSnapshot = getSnapshot(cache, "labor-pulse");
+  const items = [];
+
+  if (inflationSnapshot?.data?.items?.length) {
+    const current = inflationSnapshot.data.items[0];
+    const prevSnapshot = readExistingSnapshot("inflation-pulse");
+    const prevItem = !isPlaceholderSnapshot(prevSnapshot) ? prevSnapshot?.data?.items?.[0] : null;
+    const delta = Number.isFinite(prevItem?.value) ? current.value - prevItem.value : null;
+    items.push({ series: current.series || "CPI", value: current.value, delta, date: current.date });
+  }
+
+  if (laborSnapshot?.data?.items?.length) {
+    const prevSnapshot = readExistingSnapshot("labor-pulse");
+    const prevItems = !isPlaceholderSnapshot(prevSnapshot) ? prevSnapshot?.data?.items || [] : [];
+    for (const current of laborSnapshot.data.items) {
+      const prevItem = prevItems.find((item) => item.series === current.series);
+      const delta = Number.isFinite(prevItem?.value) ? current.value - prevItem.value : null;
+      items.push({ series: current.series, value: current.value, delta, date: current.date });
+    }
+  }
+
+  if (!items.length) {
+    const error = new Error("macro snapshots missing");
+    error.reason = "NO_DATA";
+    throw error;
+  }
+
+  const dataAt = maxDate(inflationSnapshot?.dataAt, laborSnapshot?.dataAt);
+  return { items, dataAt };
+}
+
+async function runMarketStressComposite(entry, ctx, cache) {
+  const riskSnapshot = getSnapshot(cache, "risk-regime-lite");
+  const creditSnapshot = getSnapshot(cache, "credit-spread-proxy-lite");
+  const volSnapshot = getSnapshot(cache, "volatility-term-lite");
+
+  const riskItem = riskSnapshot?.data?.items?.[0];
+  const creditItem = creditSnapshot?.data?.items?.[0];
+  const volItem = volSnapshot?.data?.items?.[0];
+
+  if (!riskItem && !creditItem && !volItem) {
+    const error = new Error("stress inputs missing");
+    error.reason = "NO_DATA";
+    throw error;
+  }
+
+  let score = 50;
+  if (riskItem?.regime === "risk-off") score += 15;
+  if (riskItem?.regime === "risk-on") score -= 10;
+  if (Number.isFinite(creditItem?.value)) {
+    if (creditItem.value >= 5) score += 20;
+    else if (creditItem.value >= 3) score += 10;
+  }
+  if (Number.isFinite(volItem?.spread)) {
+    if (volItem.spread >= 10) score += 15;
+    else if (volItem.spread >= 5) score += 8;
+  }
+  score = Math.max(0, Math.min(100, Math.round(score)));
+
+  const dataAt = maxDate(riskSnapshot?.dataAt, creditSnapshot?.dataAt, volSnapshot?.dataAt);
+  const items = [
+    {
+      score,
+      regime: riskItem?.regime || null,
+      creditLevel: creditItem?.level || null,
+      volSpread: volItem?.spread ?? null,
+      date: dataAt
+    }
+  ];
+  return { items, dataAt };
+}
+
+async function runBreadthDelta(entry, ctx, cache) {
+  const breadthSnapshot = getSnapshot(cache, "market-breadth");
+  const summary = breadthSnapshot?.data?.summary || {};
+  const itemsList = Array.isArray(breadthSnapshot?.data?.items) ? breadthSnapshot.data.items : [];
+  const advancers = Number.isFinite(summary.advancers)
+    ? summary.advancers
+    : itemsList.filter((row) => row.changePct > 0).length;
+  const decliners = Number.isFinite(summary.decliners)
+    ? summary.decliners
+    : itemsList.filter((row) => row.changePct < 0).length;
+
+  if (!itemsList.length && advancers + decliners === 0) {
+    const error = new Error("breadth snapshot missing");
+    error.reason = "NO_DATA";
+    throw error;
+  }
+
+  const prevSnapshot = readExistingSnapshot("market-breadth");
+  const prevSummary = !isPlaceholderSnapshot(prevSnapshot) ? prevSnapshot?.data?.summary || {} : {};
+  const prevItems = !isPlaceholderSnapshot(prevSnapshot) ? prevSnapshot?.data?.items || [] : [];
+  const prevAdv = Number.isFinite(prevSummary.advancers)
+    ? prevSummary.advancers
+    : prevItems.filter((row) => row.changePct > 0).length;
+  const prevDec = Number.isFinite(prevSummary.decliners)
+    ? prevSummary.decliners
+    : prevItems.filter((row) => row.changePct < 0).length;
+
+  const items = [
+    {
+      advancers,
+      decliners,
+      advancersDelta: advancers - (prevAdv || 0),
+      declinersDelta: decliners - (prevDec || 0),
+      netDelta: advancers - decliners - ((prevAdv || 0) - (prevDec || 0)),
+      date: breadthSnapshot?.dataAt || null
+    }
+  ];
+  return { items, dataAt: breadthSnapshot?.dataAt || null };
+}
+
+async function runRegimeTransitionWatch(entry, ctx, cache) {
+  const currentSnapshot = getSnapshot(cache, "risk-regime-lite");
+  const currentItem = currentSnapshot?.data?.items?.[0];
+  if (!currentItem?.regime) {
+    const error = new Error("risk regime missing");
+    error.reason = "NO_DATA";
+    throw error;
+  }
+
+  const prevSnapshot = readExistingSnapshot("risk-regime-lite");
+  const prevItem = !isPlaceholderSnapshot(prevSnapshot) ? prevSnapshot?.data?.items?.[0] : null;
+  const prevRegime = prevItem?.regime || null;
+  const changed = prevRegime ? prevRegime !== currentItem.regime : false;
+  const dataAt = currentSnapshot?.dataAt || null;
+
+  const items = [
+    {
+      from: prevRegime,
+      to: currentItem.regime,
+      changed,
+      date: dataAt
+    }
+  ];
+  return { items, dataAt };
+}
+
+async function runMarketHealthSummary(entry, ctx, cache) {
+  const blockIds = [
+    "us-yield-curve",
+    "ecb-rates-board",
+    "inflation-pulse",
+    "labor-pulse",
+    "energy-macro",
+    "credit-stress-proxy",
+    "fx-board",
+    "market-breadth",
+    "highs-vs-lows",
+    "sector-rotation",
+    "vol-regime",
+    "liquidity-conditions-proxy",
+    "risk-regime-lite",
+    "drawdown-monitor",
+    "trend-strength-board",
+    "momentum-heatmap-lite",
+    "volatility-term-lite",
+    "sector-relative-strength",
+    "credit-spread-proxy-lite",
+    "liquidity-delta",
+    "macro-surprise-lite",
+    "market-stress-composite",
+    "breadth-delta",
+    "regime-transition-watch"
+  ];
+
+  const items = [];
+  let dataAt = null;
+  let live = 0;
+  let partial = 0;
+  let error = 0;
+
+  for (const blockId of blockIds) {
+    const snapshot = getSnapshot(cache, blockId);
+    const status = snapshot?.meta?.status || "ERROR";
+    const reason = snapshot?.meta?.reason || "NO_DATA";
+    if (status === "LIVE") live += 1;
+    else if (status === "PARTIAL") partial += 1;
+    else error += 1;
+    items.push({ blockId, status, reason });
+    if (snapshot?.dataAt && snapshot.dataAt > (dataAt || "")) dataAt = snapshot.dataAt;
+  }
+
+  const extraData = {
+    summary: {
+      live,
+      partial,
+      error,
+      total: blockIds.length
+    }
+  };
+
+  return { items, dataAt, extraData };
+}
+
 const RUNNERS = {
   "us-yield-curve": runUsYieldCurve,
   "ecb-rates-board": runEcbRatesBoard,
@@ -516,7 +1014,20 @@ const RUNNERS = {
   "highs-vs-lows": runHighsVsLows,
   "sector-rotation": runSectorRotation,
   "vol-regime": runVolRegime,
-  "liquidity-conditions-proxy": runLiquidityConditions
+  "liquidity-conditions-proxy": runLiquidityConditions,
+  "risk-regime-lite": runRiskRegimeLite,
+  "drawdown-monitor": runDrawdownMonitor,
+  "trend-strength-board": runTrendStrengthBoard,
+  "momentum-heatmap-lite": runMomentumHeatmapLite,
+  "volatility-term-lite": runVolatilityTermLite,
+  "sector-relative-strength": runSectorRelativeStrength,
+  "credit-spread-proxy-lite": runCreditSpreadProxyLite,
+  "liquidity-delta": runLiquidityDelta,
+  "macro-surprise-lite": runMacroSurpriseLite,
+  "market-stress-composite": runMarketStressComposite,
+  "breadth-delta": runBreadthDelta,
+  "regime-transition-watch": runRegimeTransitionWatch,
+  "market-health-summary": runMarketHealthSummary
 };
 
 async function runBlock(entry, ctx, cache) {
@@ -549,6 +1060,9 @@ async function runBlock(entry, ctx, cache) {
       evaluation.allowed = false;
     }
   }
+
+  if (!cache.snapshots) cache.snapshots = {};
+  cache.snapshots[entry.blockId] = snapshot;
 
   return { snapshot, evaluation, latencyMs };
 }

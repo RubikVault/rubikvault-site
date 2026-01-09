@@ -1,0 +1,147 @@
+{
+  "schemaVersion": "v1",
+  "blockId": "market-health-summary",
+  "title": "25 - Market Health Summary",
+  "generatedAt": "2026-01-09T12:05:01.053Z",
+  "dataAt": "2026-01-09T11:11:22.000Z",
+  "meta": {
+    "status": "LIVE",
+    "reason": "OK",
+    "stalenessSec": 3219,
+    "coveragePct": 100,
+    "timezoneAssumption": "UTC",
+    "dataAtDefinition": "Rollup of blocks 1-24",
+    "latencyMs": 1,
+    "itemsCount": 24
+  },
+  "data": {
+    "items": [
+      {
+        "blockId": "us-yield-curve",
+        "status": "LIVE",
+        "reason": "OK"
+      },
+      {
+        "blockId": "ecb-rates-board",
+        "status": "ERROR",
+        "reason": "PROVIDER_BAD_PAYLOAD"
+      },
+      {
+        "blockId": "inflation-pulse",
+        "status": "LIVE",
+        "reason": "OK"
+      },
+      {
+        "blockId": "labor-pulse",
+        "status": "LIVE",
+        "reason": "OK"
+      },
+      {
+        "blockId": "energy-macro",
+        "status": "LIVE",
+        "reason": "OK"
+      },
+      {
+        "blockId": "credit-stress-proxy",
+        "status": "LIVE",
+        "reason": "OK"
+      },
+      {
+        "blockId": "fx-board",
+        "status": "ERROR",
+        "reason": "PROVIDER_BAD_PAYLOAD"
+      },
+      {
+        "blockId": "market-breadth",
+        "status": "LIVE",
+        "reason": "OK"
+      },
+      {
+        "blockId": "highs-vs-lows",
+        "status": "ERROR",
+        "reason": "POISON_GUARD"
+      },
+      {
+        "blockId": "sector-rotation",
+        "status": "LIVE",
+        "reason": "OK"
+      },
+      {
+        "blockId": "vol-regime",
+        "status": "LIVE",
+        "reason": "OK"
+      },
+      {
+        "blockId": "liquidity-conditions-proxy",
+        "status": "LIVE",
+        "reason": "OK"
+      },
+      {
+        "blockId": "risk-regime-lite",
+        "status": "LIVE",
+        "reason": "OK"
+      },
+      {
+        "blockId": "drawdown-monitor",
+        "status": "LIVE",
+        "reason": "OK"
+      },
+      {
+        "blockId": "trend-strength-board",
+        "status": "LIVE",
+        "reason": "OK"
+      },
+      {
+        "blockId": "momentum-heatmap-lite",
+        "status": "LIVE",
+        "reason": "OK"
+      },
+      {
+        "blockId": "volatility-term-lite",
+        "status": "LIVE",
+        "reason": "OK"
+      },
+      {
+        "blockId": "sector-relative-strength",
+        "status": "LIVE",
+        "reason": "OK"
+      },
+      {
+        "blockId": "credit-spread-proxy-lite",
+        "status": "LIVE",
+        "reason": "OK"
+      },
+      {
+        "blockId": "liquidity-delta",
+        "status": "LIVE",
+        "reason": "OK"
+      },
+      {
+        "blockId": "macro-surprise-lite",
+        "status": "LIVE",
+        "reason": "OK"
+      },
+      {
+        "blockId": "market-stress-composite",
+        "status": "LIVE",
+        "reason": "OK"
+      },
+      {
+        "blockId": "breadth-delta",
+        "status": "LIVE",
+        "reason": "OK"
+      },
+      {
+        "blockId": "regime-transition-watch",
+        "status": "LIVE",
+        "reason": "OK"
+      }
+    ],
+    "summary": {
+      "live": 21,
+      "partial": 0,
+      "error": 3,
+      "total": 24
+    }
+  }
+}
