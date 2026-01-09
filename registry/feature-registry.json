@@ -1,0 +1,60 @@
+{
+  "schemaVersion": "v1",
+  "features": [
+    {
+      "id": "rv-market-health",
+      "title": "Market Health",
+      "tier": "CORE",
+      "provider": "internal",
+      "cadencePerDay": 24,
+      "maxFanout": 1,
+      "primaryKey": "items",
+      "dependencies": [],
+      "poisonGuard": { "minItems": 1, "allowEmpty": false }
+    },
+    {
+      "id": "rv-top-movers",
+      "title": "Top Movers",
+      "tier": "CORE",
+      "provider": "internal",
+      "cadencePerDay": 24,
+      "maxFanout": 1,
+      "primaryKey": "items",
+      "dependencies": [],
+      "poisonGuard": { "minItems": 1, "allowEmpty": false }
+    },
+    {
+      "id": "rv-yield-curve",
+      "title": "Yield Curve",
+      "tier": "CORE",
+      "provider": "treasury",
+      "cadencePerDay": 4,
+      "maxFanout": 1,
+      "primaryKey": "items",
+      "dependencies": [],
+      "poisonGuard": { "minItems": 1, "allowEmpty": false }
+    },
+    {
+      "id": "rv-news",
+      "title": "News",
+      "tier": "ENHANCED",
+      "provider": "internal",
+      "cadencePerDay": 48,
+      "maxFanout": 1,
+      "primaryKey": "items",
+      "dependencies": [],
+      "poisonGuard": { "minItems": 1, "allowEmpty": true }
+    },
+    {
+      "id": "rv-market-cockpit",
+      "title": "Market Cockpit",
+      "tier": "CORE",
+      "provider": "internal",
+      "cadencePerDay": 24,
+      "maxFanout": 1,
+      "primaryKey": "items",
+      "dependencies": ["rv-market-health", "rv-top-movers"],
+      "poisonGuard": { "minItems": 1, "allowEmpty": false }
+    }
+  ]
+}

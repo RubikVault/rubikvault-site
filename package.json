@@ -17,7 +17,11 @@
     "audit:json": "node scripts/audit-site.mjs --mode local --base public --format json --fail-on none",
     "audit:strict": "node scripts/audit-site.mjs --mode local --base public --format json --fail-on bad",
     "audit:live": "node scripts/audit-site.mjs --mode live --url https://rubikvault.com --format table --fail-on bad",
-    "audit": "npm run audit:reality && npm run audit:registry && npm run audit:stubs && npm run audit:artifacts && npm run audit:local"
+    "audit": "npm run audit:reality && npm run audit:registry && npm run audit:stubs && npm run audit:artifacts && npm run audit:local",
+    "build:registry": "node scripts/build-registry.js",
+    "validate:registry": "node scripts/validate-registry.js",
+    "simulate:cost": "node scripts/simulate-cost.js",
+    "test:contracts": "node scripts/contract-smoke.js"
   },
   "dependencies": {
     "fast-xml-parser": "^4.5.3"

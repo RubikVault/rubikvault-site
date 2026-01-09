@@ -1,0 +1,40 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "API Envelope",
+  "type": "object",
+  "required": ["ok", "feature", "meta", "data", "error"],
+  "properties": {
+    "ok": { "type": "boolean" },
+    "feature": { "type": "string" },
+    "meta": {
+      "type": "object",
+      "required": ["status"],
+      "properties": {
+        "status": { "type": "string" },
+        "reason": { "type": "string" },
+        "ts": { "type": "string" },
+        "traceId": { "type": "string" },
+        "schemaVersion": {},
+        "writeMode": { "type": "string" },
+        "circuitOpen": { "type": "boolean" },
+        "warnings": { "type": "array" },
+        "savedAt": {},
+        "ageMinutes": {}
+      }
+    },
+    "data": { "type": "object" },
+    "error": {
+      "anyOf": [
+        { "type": "null" },
+        {
+          "type": "object",
+          "properties": {
+            "code": { "type": "string" },
+            "message": { "type": "string" },
+            "details": { "type": "object" }
+          }
+        }
+      ]
+    }
+  }
+}

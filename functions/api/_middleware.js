@@ -1,6 +1,5 @@
 import { kvPutJson } from "../_lib/kv-safe.js";
 import { isProduction, requireDebugToken } from "./_env.js";
-import { makeJson, safeSnippet } from "./_shared.js";
 import { createKVGuard } from "./_shared/kv_guard.js";
 
 function buildCorsHeaders() {
@@ -15,11 +14,6 @@ function buildCorsHeaders() {
 
 function createTraceId() {
   return Math.random().toString(36).slice(2, 10);
-}
-
-function isHtmlLikeText(text) {
-  const trimmed = String(text || "").trim().toLowerCase();
-  return trimmed.startsWith("<!doctype") || trimmed.startsWith("<html");
 }
 
 function ensureMeta(payload, fallbackTraceId) {
@@ -78,49 +72,6 @@ function normalizeMirrorPayload(payload, featureFallback) {
     },
     error: null
   };
-}
-
-function buildApiErrorResponse({
-  feature,
-  traceId,
-  status,
-  headers,
-  text,
-  contentType,
-  code,
-  debugMode,
-  debugKind,
-  kvGuard
-}) {
-  const payload = makeJson({
-    ok: false,
-    feature,
-    traceId,
-    cache: { hit: false, ttl: 0, layer: "none" },
-    upstream: { url: "", status: status ?? null, snippet: safeSnippet(text, 200) },
-    data: {},
-    error: {
-      code: code || "SCHEMA_INVALID",
-      message: "API returned non-JSON response",
-      details: { contentType: contentType || "" }
-    }
-  });
-  if (debugKind === "kv") payload.meta.reason = "DEBUG_KV";
-  if (debugKind === "fresh") payload.meta.reason = "DEBUG_FRESH";
-  if (debugMode && kvGuard) {
-    payload.debug = {
-      ...(payload.debug && typeof payload.debug === "object" ? payload.debug : {}),
-      kv: kvGuard.toDebugJSON(),
-      warnings: kvGuard.metrics.warnings
-    };
-  }
-  const responseHeaders = new Headers(headers);
-  responseHeaders.set("Content-Type", "application/json; charset=utf-8");
-  if (kvGuard) responseHeaders.set("X-RV-KV", kvGuard.headerValue());
-  return new Response(JSON.stringify(payload), {
-    status: 503,
-    headers: responseHeaders
-  });
 }
 
 function isDebugEndpoint(pathname) {
