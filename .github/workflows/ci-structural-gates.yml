@@ -1,0 +1,37 @@
+name: ci-structural-gates
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  structural-gates:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Prepare public registry
+        run: npm run prepare:data
+      - name: Validate public registry
+        run: npm run validate:public-registry
+      - name: Build registry
+        run: npm run build:registry
+      - name: Validate registry
+        run: npm run validate:registry
+      - name: Simulate cost
+        run: npm run simulate:cost
+      - name: Contract smoke
+        run: npm run test:contracts
+      - name: Validate snapshots
+        run: npm run validate:snapshots
+      - name: Runtime source-registry guard
+        run: |
+          if grep -R --line-number "registry/feature-registry.json" \
+            functions public features rv-loader.js script.js 2>/dev/null; then
+            echo "Runtime must not import registry/feature-registry.json"
+            exit 1
+          fi

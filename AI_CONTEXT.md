@@ -2,6 +2,7 @@
 - Budget: 0€ (free-tier only).
 - Team: 1 person; AI writes code, user reviews and pushes (Git-native).
 - Stack: Cloudflare Pages + Pages Functions + KV; static output in `public/`.
+- Static-first: UI consumes `public/data/*.json` via CDN; `/api` is not required for initial page load.
 - Reliability: Misstrauens-Architektur, KV-first but never KV-only, Mirror Fallback required.
 
 ## Hard Constraints
@@ -21,6 +22,7 @@
 - KV truthiness: do not conflate missing debug token with missing KV binding.
 - Mirror Fallback required; Preview can be READONLY; do not fail hard if upstream missing.
 - Debugging must be deterministic and evidence-based; no hallucinated fixes.
+- Middleware is Content-Type gated only; never parse or wrap non-JSON responses.
 
 ## Standard Workflow
 1) Reality Snapshot first.
@@ -48,4 +50,18 @@ bash scripts/smoke-static-mime.sh "$PREVIEW"
 
 # Health summary check
 curl -fsS "$PREVIEW/api/health-report" | jq '{ok, feature, status:.data?.status, summary:.data?.summary}'
+
+# JSON envelope smoke
+curl -fsS "$PREVIEW/api/top-movers?debug=1" | jq '{ok, feature, metaStatus:.meta.status, hasItems:(.data.items|type)}'
+
+# og-image passthrough (must be 200 + image/svg+xml)
+curl -sS -D - "$PREVIEW/api/og-image?symbol=AAPL" -o /dev/null | sed -n '1,10p'
 ```
+
+## Middleware Rules (Non-Negotiable)
+
+- Middleware must NEVER parse or wrap non-JSON responses.
+- Binary endpoints (e.g. /api/og-image) are passthrough, even with ?debug=1.
+- Content-Type decides behavior, not heuristics.
+- Parse errors must degrade gracefully (return original response).
+- Smoke tests are authoritative over assumptions.

@@ -1,0 +1,25 @@
+{
+  "schemaVersion": "v1",
+  "hints": {
+    "MIRROR_FALLBACK": "Static mirror used; upstream unavailable or disabled.",
+    "NO_DATA": "No data available; check upstream source or mirror freshness.",
+    "BINDING_MISSING": "KV binding RV_KV missing in this environment.",
+    "ROUTING_HTML": "Route served HTML; verify Pages routing and middleware gating.",
+    "PROVIDER_TIMEOUT": "Upstream timed out; retry with backoff or reduce fanout.",
+    "PROVIDER_429_RATE_LIMIT": "Rate limited; reduce cadence or fanout.",
+    "RATE_LIMITED": "Rate limited; wait for cooldown or reduce cadence.",
+    "UNAUTHORIZED": "Provider rejected credentials; rotate key.",
+    "TIMEOUT": "Provider timed out; reduce fanout or retry later.",
+    "CIRCUIT_OPEN": "Circuit open; wait for cooldown window.",
+    "PROVIDER_BAD_PAYLOAD": "Provider response was not valid JSON or CSV.",
+    "PROVIDER_SCHEMA_MISMATCH": "Provider JSON schema changed; inspect payload.",
+    "PROVIDER_HTTP_ERROR": "Upstream returned non-retryable HTTP status.",
+    "BUDGET_EXCEEDED": "Daily budget exceeded; reduce requests or disable block.",
+    "BUDGET_EXHAUSTED": "Daily budget exhausted; reduce requests or fanout.",
+    "MISSING_SECRET": "Provider secret missing; set required key and rerun seeder.",
+    "DATAAT_OUTDATED": "dataAt is outdated; check source ordering or provider payload.",
+    "POISON_GUARD": "Write blocked to protect last-good snapshot.",
+    "DEGRADED_COVERAGE": "Partial snapshot written with reduced coverage.",
+    "PARTIAL": "Partial snapshot written; check coverage thresholds."
+  }
+}

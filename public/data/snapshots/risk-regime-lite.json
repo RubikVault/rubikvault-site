@@ -1,0 +1,30 @@
+{
+  "schemaVersion": "v1",
+  "blockId": "risk-regime-lite",
+  "title": "13 - Risk Regime Lite",
+  "generatedAt": "2026-01-09T19:53:52.260Z",
+  "dataAt": "2026-01-09",
+  "meta": {
+    "status": "LIVE",
+    "reason": "OK",
+    "stalenessSec": 71632,
+    "coveragePct": 100,
+    "timezoneAssumption": "UTC",
+    "dataAtDefinition": "Derived from vol-regime and market-breadth snapshots",
+    "latencyMs": 0,
+    "itemsCount": 1
+  },
+  "data": {
+    "items": [
+      {
+        "regime": "neutral",
+        "volRegime": "mid",
+        "vix": 15.38,
+        "breadthRatio": 0.8,
+        "advancers": 12,
+        "decliners": 3,
+        "date": "2026-01-09"
+      }
+    ]
+  }
+}

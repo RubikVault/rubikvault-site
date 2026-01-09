@@ -1,0 +1,40 @@
+name: seed-package1
+
+on:
+  schedule:
+    - cron: "0 */6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: seed-package1
+  cancel-in-progress: true
+
+jobs:
+  seed:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Seed package1 snapshots
+        run: node scripts/seeder.js --only blocks1-12
+      - name: Commit snapshots
+        run: |
+          git add public/data/snapshots public/data/seed-manifest.json public/data/usage-report.json
+          if git diff --staged --quiet; then
+            echo "No snapshot changes"
+            exit 0
+          fi
+          git config user.email "actions@github.com"
+          git config user.name "github-actions"
+          git commit -m "chore(data): seed snapshots package1 [skip ci]"
+          git push
