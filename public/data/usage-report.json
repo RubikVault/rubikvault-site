@@ -1,6 +1,34 @@
 {
-  "schemaVersion": "v1",
-  "feature": "usage-report",
-  "generatedAt": "1970-01-01T00:00:00Z",
-  "data": { "items": [] }
+  "day": "1970-01-01",
+  "providers": {
+    "fred": {
+      "requests": 0,
+      "credits": 0,
+      "limitRequests": 500,
+      "limitCredits": 0,
+      "remainingRequests": 500,
+      "remainingCredits": 0,
+      "errorsByReason": {}
+    },
+    "ecb": {
+      "requests": 0,
+      "credits": 0,
+      "limitRequests": 200,
+      "limitCredits": 0,
+      "remainingRequests": 200,
+      "remainingCredits": 0,
+      "errorsByReason": {}
+    },
+    "stooq": {
+      "requests": 0,
+      "credits": 0,
+      "limitRequests": 500,
+      "limitCredits": 0,
+      "remainingRequests": 500,
+      "remainingCredits": 0,
+      "errorsByReason": {}
+    }
+  },
+  "totals": { "requests": 0, "credits": 0 },
+  "notes": ["seed-not-run"]
 }

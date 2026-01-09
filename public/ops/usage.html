@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>RV Usage</title>
+    <style>
+      body { font-family: Arial, sans-serif; margin: 24px; color: #111; }
+      h1 { font-size: 20px; margin-bottom: 6px; }
+      p { margin: 4px 0 16px; color: #444; }
+      table { border-collapse: collapse; width: 100%; max-width: 900px; }
+      th, td { border: 1px solid #ddd; padding: 6px 8px; font-size: 13px; }
+      th { background: #f2f2f2; text-align: left; }
+      .muted { color: #666; }
+    </style>
+  </head>
+  <body>
+    <h1>Usage Report</h1>
+    <p class="muted" id="status">Loading...</p>
+
+    <table id="usage-table">
+      <thead>
+        <tr>
+          <th>Provider</th>
+          <th>Requests</th>
+          <th>Credits</th>
+          <th>Remaining</th>
+          <th>Errors</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+
+    <script>
+      const statusEl = document.getElementById("status");
+      const tbody = document.querySelector("#usage-table tbody");
+
+      function formatRemaining(entry) {
+        const req = `${entry.remainingRequests ?? "-"}/${entry.limitRequests ?? "-"}`;
+        const cred = `${entry.remainingCredits ?? "-"}/${entry.limitCredits ?? "-"}`;
+        return `${req} req, ${cred} credits`;
+      }
+
+      function formatErrors(errors) {
+        if (!errors || typeof errors !== "object") return "0";
+        const pairs = Object.entries(errors);
+        if (!pairs.length) return "0";
+        return pairs.map(([key, value]) => `${key}:${value}`).join(", ");
+      }
+
+      async function loadUsage() {
+        try {
+          const [usageRes, seedRes] = await Promise.all([
+            fetch("/data/usage-report.json", { cache: "no-store" }),
+            fetch("/data/seed-manifest.json", { cache: "no-store" })
+          ]);
+          const usage = usageRes.ok ? await usageRes.json() : null;
+          const seed = seedRes.ok ? await seedRes.json() : null;
+
+          if (!usage || !usage.providers) {
+            statusEl.textContent = "Usage report missing or invalid";
+            return;
+          }
+
+          const day = usage.day || "unknown";
+          const runId = seed?.runId || "unknown";
+          statusEl.textContent = `Day ${day} | Last run ${runId}`;
+
+          tbody.innerHTML = "";
+          Object.entries(usage.providers).forEach(([provider, entry]) => {
+            const row = document.createElement("tr");
+            row.innerHTML = `
+              <td>${provider}</td>
+              <td>${entry.requests ?? 0}</td>
+              <td>${entry.credits ?? 0}</td>
+              <td>${formatRemaining(entry)}</td>
+              <td>${formatErrors(entry.errorsByReason)}</td>
+            `;
+            tbody.appendChild(row);
+          });
+        } catch (error) {
+          statusEl.textContent = "Failed to load usage report";
+        }
+      }
+
+      loadUsage();
+    </script>
+  </body>
+</html>

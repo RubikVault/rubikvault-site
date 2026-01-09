@@ -21,7 +21,7 @@ function assertFeatureRegistry(registry) {
     throw new Error("feature-registry.json features must be an array");
   }
   for (const entry of registry.features) {
-    if (!entry.id || !entry.title || !entry.provider) {
+    if (!entry.id || !entry.blockId || !entry.title || !entry.provider) {
       throw new Error(`feature entry missing required fields: ${JSON.stringify(entry)}`);
     }
   }
@@ -31,23 +31,43 @@ function normalizeFeature(entry) {
   const deps = Array.isArray(entry.dependencies) ? entry.dependencies.slice().sort() : [];
   const base = {
     id: String(entry.id),
+    blockId: String(entry.blockId),
     title: String(entry.title),
     tier: String(entry.tier || "CORE"),
     provider: String(entry.provider || "internal"),
+    cadenceSec: Number(entry.cadenceSec || 0),
     cadencePerDay: Number(entry.cadencePerDay || 0),
     maxFanout: Number(entry.maxFanout || 1),
     primaryKey: String(entry.primaryKey || "items"),
     dependencies: deps
   };
+  if (entry.timezoneAssumption) base.timezoneAssumption = String(entry.timezoneAssumption);
+  if (entry.dataAtDefinition) base.dataAtDefinition = String(entry.dataAtDefinition);
+  if (entry.freshnessWindowSec !== undefined) {
+    base.freshnessWindowSec = Number(entry.freshnessWindowSec || 0);
+  }
+  if (entry.validators && typeof entry.validators === "object") {
+    base.validators = {
+      minItems: Number(entry.validators.minItems || 0),
+      minPoints: Number(entry.validators.minPoints || 0),
+      minCoveragePct: Number(entry.validators.minCoveragePct || 0),
+      finiteNumbers: Boolean(entry.validators.finiteNumbers)
+    };
+  }
   if (entry.poisonGuard && typeof entry.poisonGuard === "object") {
     base.poisonGuard = {
       minItems: Number(entry.poisonGuard.minItems || 0),
-      allowEmpty: Boolean(entry.poisonGuard.allowEmpty)
+      minCoveragePct: Number(entry.poisonGuard.minCoveragePct || 0),
+      allowDegradedWrite: Boolean(entry.poisonGuard.allowDegradedWrite)
     };
   }
-  if (entry.creditsPerRequest !== undefined) {
-    base.creditsPerRequest = Number(entry.creditsPerRequest || 0);
+  if (entry.costModel && typeof entry.costModel === "object") {
+    base.costModel = {
+      requestsPerRunEstimate: Number(entry.costModel.requestsPerRunEstimate || 0),
+      creditsPerRunEstimate: Number(entry.costModel.creditsPerRunEstimate || 0)
+    };
   }
+  if (entry.package) base.package = String(entry.package);
   return base;
 }
 

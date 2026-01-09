@@ -24,3 +24,15 @@ rv_smoke_og() {
 Expected:
 - `HTTP/2 200`
 - `Content-Type: image/svg+xml`
+
+## Snapshot Smoke
+```bash
+rv_smoke_snapshot() {
+  local base="${1:-https://rubikvault.com}"
+  curl -fsS "$base/data/snapshots/us-yield-curve.json" | jq '{blockId, metaStatus:.meta.status, items:(.data.items|length)}'
+  curl -fsS "$base/data/snapshots/sector-rotation.json" | jq '{blockId, metaStatus:.meta.status, items:(.data.items|length)}'
+}
+```
+
+## Ops Dashboard
+- `https://rubikvault.com/ops/usage.html`
