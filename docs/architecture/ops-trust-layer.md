@@ -30,3 +30,9 @@ Purpose: Make provider limits, missing keys, bad payloads, and circuit state dia
 ## Snapshot meta.details
 - meta.details includes safe fields: httpStatus, retryAfterSec, urlHost, snippet, at.
 - No secrets are stored.
+
+## UI manifest fallback
+- Homepage block order uses `/data/seed-manifest.json` as the authoritative list when registry JSON is invalid.
+- Registry fetch remains optional; if it fails, the UI stays in manifest-driven mode.
+- Sanity check (browser console):
+  - `document.body.textContent.includes("Block 43")`

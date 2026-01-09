@@ -13,6 +13,7 @@ import { initFlagsPanel } from "./features/rv-flags-panel.js";
 import { BLOCK_REGISTRY, formatBlockTitle } from "./features/blocks-registry.js";
 
 const REGISTRY_URL = "./data/feature-registry.json";
+const MANIFEST_URL = "./data/seed-manifest.json";
 const RUN_ID = (() => {
   if (typeof window === "undefined") return "";
   if (window.__RV_RUN_ID) return window.__RV_RUN_ID;
@@ -186,6 +187,9 @@ const DASHBOARD_MIN_REFRESH_MS = 60_000;
 const DASHBOARD_JITTER_PCT = 0.15;
 const REFRESH_BACKOFF_MAX_MS = 20 * 60 * 1000;
 let FEATURE_REGISTRY_CACHE = null;
+let MANIFEST_CACHE = null;
+let MANIFEST_LOAD_FAILED = false;
+let REGISTRY_LOAD_FAILED = false;
 
 function normalizeRegistry(list) {
   return (Array.isArray(list) ? list : [])
@@ -199,15 +203,170 @@ async function loadFeatureRegistry() {
     const res = await fetch(REGISTRY_URL, { cache: "no-store" });
     if (res.ok) {
       const json = await res.json();
+      REGISTRY_LOAD_FAILED = false;
       FEATURE_REGISTRY_CACHE = normalizeRegistry(json);
       return FEATURE_REGISTRY_CACHE;
     }
     console.warn("[RV] registry fetch failed", res.status);
+    REGISTRY_LOAD_FAILED = true;
   } catch (error) {
     console.warn("[RV] registry fetch error", error);
+    REGISTRY_LOAD_FAILED = true;
   }
   FEATURE_REGISTRY_CACHE = null;
   return FEATURE_REGISTRY_CACHE;
+}
+
+function normalizeManifestBlocks(list) {
+  return (Array.isArray(list) ? list : [])
+    .map((entry) => {
+      if (!entry || typeof entry !== "object") return null;
+      const blockId = entry.blockId || entry.id || null;
+      if (!blockId) return null;
+      return { ...entry, blockId };
+    })
+    .filter(Boolean);
+}
+
+async function loadSeedManifest() {
+  if (MANIFEST_CACHE) return MANIFEST_CACHE;
+  try {
+    const res = await fetch(MANIFEST_URL, { cache: "no-store" });
+    if (!res.ok) {
+      console.warn("[RV] manifest fetch failed", res.status);
+      MANIFEST_LOAD_FAILED = true;
+      return null;
+    }
+    const json = await res.json();
+    const blocks = normalizeManifestBlocks(json?.blocks);
+    if (!blocks.length) {
+      MANIFEST_LOAD_FAILED = true;
+      return null;
+    }
+    MANIFEST_LOAD_FAILED = false;
+    MANIFEST_CACHE = blocks;
+    return MANIFEST_CACHE;
+  } catch (error) {
+    console.warn("[RV] manifest fetch error", error);
+    MANIFEST_LOAD_FAILED = true;
+    return null;
+  }
+}
+
+function mapManifestBlocksToFeatures(blocks, features) {
+  const byId = new Map(features.map((feature) => [feature.id, feature]));
+  const byApi = new Map(features.filter((feature) => feature.api).map((feature) => [feature.api, feature]));
+  const mapped = [];
+  const seen = new Set();
+
+  blocks.forEach((block, index) => {
+    const blockId = block.blockId;
+    if (!blockId) return;
+    const candidateIds = [blockId, `rv-${blockId}`];
+    let feature = null;
+    for (const id of candidateIds) {
+      if (byId.has(id)) {
+        feature = byId.get(id);
+        break;
+      }
+    }
+    if (!feature && byApi.has(blockId)) {
+      feature = byApi.get(blockId);
+    }
+    const manifestMeta = { blockId, idx: index + 1, title: block.title || blockId };
+    if (feature) {
+      const next = { ...feature, manifest: manifestMeta };
+      if (!seen.has(next.id)) {
+        mapped.push(next);
+        seen.add(next.id);
+      }
+      return;
+    }
+    const fallbackId = `rv-${blockId}`;
+    if (seen.has(fallbackId)) return;
+    mapped.push({
+      id: fallbackId,
+      title: block.title || blockId,
+      module: null,
+      api: null,
+      enabled: true,
+      manifest: manifestMeta
+    });
+    seen.add(fallbackId);
+  });
+
+  return mapped;
+}
+
+function createManifestSection(title) {
+  const section = document.createElement("section");
+  section.className = "rv-section rv-native-block";
+  section.setAttribute("data-rv-loading", "true");
+  section.setAttribute("data-rv-collapsible", "true");
+  section.innerHTML = `
+    <div class="rv-native-header">
+      <h2 class="rv-native-title">${title}</h2>
+      <button class="rv-native-refresh" type="button" data-rv-action="refresh">Refresh</button>
+    </div>
+    <div class="rv-native-body rv-card">
+      <div class="rv-native-skeleton">
+        <div class="rv-native-line"></div>
+        <div class="rv-native-line short"></div>
+        <div class="rv-native-line"></div>
+      </div>
+      <div class="rv-native-root" data-rv-root></div>
+    </div>
+  `;
+  return section;
+}
+
+function syncManifestGrid(blocks, features) {
+  const grid = document.querySelector(".rv-block-grid");
+  if (!grid) return;
+  const normalized = normalizeManifestBlocks(blocks);
+  if (!normalized.length) return;
+  const featureByBlock = new Map(
+    features.map((feature) => [feature?.manifest?.blockId, feature]).filter(([key]) => key)
+  );
+  const existing = Array.from(grid.querySelectorAll(".rv-section[data-rv-feature]"));
+
+  normalized.forEach((block, index) => {
+    const feature = featureByBlock.get(block.blockId);
+    const featureId = feature?.id || `rv-${block.blockId}`;
+    const title = block.title || feature?.title || block.blockId;
+    let section = existing[index];
+    if (!section) {
+      section = createManifestSection(title);
+      grid.appendChild(section);
+    }
+    section.hidden = false;
+    section.setAttribute("data-rv-feature", featureId);
+    section.setAttribute("data-rv-block-name", title);
+    section.setAttribute("data-rv-manifest-id", block.blockId);
+    section.setAttribute("data-rv-loading", "true");
+    section.removeAttribute("data-rv-disabled");
+    section.removeAttribute("data-rv-deprecated");
+    section.dataset.rvBlockIndex = String(index);
+    const titleEl = section.querySelector("h2, h3, .block-title, .card-title");
+    if (titleEl) titleEl.textContent = title;
+  });
+
+  existing.slice(normalized.length).forEach((section) => {
+    section.hidden = true;
+    section.removeAttribute("data-rv-feature");
+  });
+}
+
+function showManifestBanner() {
+  if (!isDebugEnabled()) return;
+  if (document.getElementById("rv-manifest-banner")) return;
+  const host = document.querySelector("#rv-dashboard") || document.body;
+  const banner = document.createElement("div");
+  banner.id = "rv-manifest-banner";
+  banner.textContent = "Registry invalid. Using seed-manifest fallback.";
+  banner.style.cssText =
+    "margin:12px 0;padding:8px 12px;border:1px solid #f3c6a6;background:#fff4ea;color:#7a3e00;font-size:12px;border-radius:8px;";
+  host.prepend(banner);
 }
 
 function applyRegistryToFeatures(features, registry) {
@@ -943,6 +1102,11 @@ function initPanicButton() {
 async function resolveFeatures() {
   const list = Array.isArray(FEATURES) ? FEATURES : [];
   const overridden = applyOverrides(list);
+  const manifest = await loadSeedManifest();
+  if (manifest && manifest.length) {
+    await loadFeatureRegistry();
+    return mapManifestBlocksToFeatures(manifest, overridden);
+  }
   const registry = await loadFeatureRegistry();
   return applyRegistryToFeatures(overridden, registry);
 }
@@ -978,10 +1142,79 @@ function getFeatureEndpoint(feature) {
   return prefix ? `${prefix}/${feature.api}` : feature.api;
 }
 
+function getManifestBlockId(feature, section) {
+  if (feature?.manifest?.blockId) return feature.manifest.blockId;
+  if (section) {
+    const raw = section.getAttribute("data-rv-manifest-id");
+    if (raw) return raw;
+  }
+  const fallback = feature?.id ? feature.id.replace(/^rv-/, "") : "";
+  return fallback || null;
+}
+
+function getManifestEndpoint(feature, section) {
+  const blockId = getManifestBlockId(feature, section);
+  return blockId ? `./data/snapshots/${blockId}.json` : "";
+}
+
+function renderManifestSnapshot(contentEl, feature, logger, section) {
+  const blockId = getManifestBlockId(feature, section);
+  if (!blockId) {
+    throw new Error("Missing manifest blockId");
+  }
+  const snapshotUrl = getManifestEndpoint(feature, section);
+  return fetch(snapshotUrl, { cache: "no-store" })
+    .then((res) => {
+      if (!res.ok) {
+        throw new Error(`Snapshot ${blockId} ${res.status}`);
+      }
+      return res.json();
+    })
+    .then((snapshot) => {
+      const status = snapshot?.meta?.status || "PARTIAL";
+      const reason = snapshot?.meta?.reason || "MANIFEST_FALLBACK";
+      const itemsCount = Array.isArray(snapshot?.data?.items) ? snapshot.data.items.length : 0;
+      logger.setStatus(status, reason);
+      logger.setMeta({
+        ok: status !== "ERROR",
+        metaStatus: status,
+        metaReason: reason,
+        itemsCount,
+        dataAt: snapshot?.dataAt || null,
+        source: "snapshot"
+      });
+
+      if (!contentEl) return;
+      const wrapper = document.createElement("div");
+      wrapper.className = "rv-content";
+      wrapper.setAttribute("data-rendered", "true");
+
+      const metaLine = document.createElement("div");
+      metaLine.style.cssText = "font-size:12px;color:#666;margin-bottom:8px;";
+      metaLine.textContent = `Status: ${status} - ${reason}`;
+
+      const itemsLine = document.createElement("div");
+      itemsLine.style.cssText = "font-size:13px;color:#444;";
+      itemsLine.textContent = `Items: ${itemsCount}`;
+
+      const dataAt = snapshot?.dataAt || snapshot?.generatedAt || "";
+      wrapper.appendChild(metaLine);
+      wrapper.appendChild(itemsLine);
+      if (dataAt) {
+        const dataAtLine = document.createElement("div");
+        dataAtLine.style.cssText = "font-size:12px;color:#888;margin-top:6px;";
+        dataAtLine.textContent = `Data at: ${dataAt}`;
+        wrapper.appendChild(dataAtLine);
+      }
+      contentEl.innerHTML = "";
+      contentEl.appendChild(wrapper);
+    });
+}
+
 async function runFeature(section, feature, logger, contentEl) {
   const traceId = createTraceId();
   const blockName = getBlockName(section, feature);
-  const endpoint = getFeatureEndpoint(feature);
+  const endpoint = getFeatureEndpoint(feature) || getManifestEndpoint(feature, section);
   const blockId = feature?.id || section.getAttribute("data-rv-feature") || "unknown";
   setDebugContext({ blockId, blockName, endpoint });
   logger.setTraceId(traceId);
@@ -989,6 +1222,12 @@ async function runFeature(section, feature, logger, contentEl) {
   setLoading(section, true);
 
   try {
+    if (!feature?.module) {
+      await renderManifestSnapshot(contentEl, feature, logger, section);
+      recordBlockEnd({ blockId, blockName, ok: true });
+      clearDebugContext();
+      return true;
+    }
     const module = await loadFeatureModule(feature);
     const context = {
       featureId: blockId,
@@ -1061,32 +1300,36 @@ function bindRefresh(section, feature, logger, contentEl) {
     setLoading(section, true);
 
     try {
-      await refreshDashboardForFeature(feature?.id || section.getAttribute("data-rv-feature"));
-      const module = await loadFeatureModule(feature);
-      if (typeof module.refresh === "function") {
-        await module.refresh(contentEl, {
-          featureId: feature.id,
-          feature,
-          config: RV_CONFIG,
-          traceId,
-          createTraceId,
-          logger,
-          root: section.querySelector("[data-rv-root]"),
-          content: contentEl,
-          section
-        });
-      } else if (typeof module.init === "function") {
-        await module.init(contentEl, {
-          featureId: feature.id,
-          feature,
-          config: RV_CONFIG,
-          traceId,
-          createTraceId,
-          logger,
-          root: section.querySelector("[data-rv-root]"),
-          content: contentEl,
-          section
-        });
+      if (!feature?.module) {
+        await renderManifestSnapshot(contentEl, feature, logger, section);
+      } else {
+        await refreshDashboardForFeature(feature?.id || section.getAttribute("data-rv-feature"));
+        const module = await loadFeatureModule(feature);
+        if (typeof module.refresh === "function") {
+          await module.refresh(contentEl, {
+            featureId: feature.id,
+            feature,
+            config: RV_CONFIG,
+            traceId,
+            createTraceId,
+            logger,
+            root: section.querySelector("[data-rv-root]"),
+            content: contentEl,
+            section
+          });
+        } else if (typeof module.init === "function") {
+          await module.init(contentEl, {
+            featureId: feature.id,
+            feature,
+            config: RV_CONFIG,
+            traceId,
+            createTraceId,
+            logger,
+            root: section.querySelector("[data-rv-root]"),
+            content: contentEl,
+            section
+          });
+        }
       }
       setLoading(section, false);
       recordBlockEnd({ blockId: feature?.id || "unknown", blockName, ok: true });
@@ -1157,20 +1400,24 @@ function startAutoRefresh(section, feature, logger, contentEl) {
     logger.info("auto_refresh", { intervalMs: baseInterval });
     setLoading(section, true);
     try {
-      await refreshDashboardForFeature(featureId);
-      const module = await loadFeatureModule(feature);
-      if (typeof module.refresh === "function") {
-        await module.refresh(contentEl, {
-          featureId: feature.id,
-          feature,
-          config: RV_CONFIG,
-          traceId,
-          createTraceId,
-          logger,
-          root: section.querySelector("[data-rv-root]"),
-          content: contentEl,
-          section
-        });
+      if (!feature?.module) {
+        await renderManifestSnapshot(contentEl, feature, logger, section);
+      } else {
+        await refreshDashboardForFeature(featureId);
+        const module = await loadFeatureModule(feature);
+        if (typeof module.refresh === "function") {
+          await module.refresh(contentEl, {
+            featureId: feature.id,
+            feature,
+            config: RV_CONFIG,
+            traceId,
+            createTraceId,
+            logger,
+            root: section.querySelector("[data-rv-root]"),
+            content: contentEl,
+            section
+          });
+        }
       }
       setLoading(section, false);
       recordBlockEnd({ blockId: featureId, blockName, ok: true });
@@ -1217,10 +1464,11 @@ function initBlock(section, feature, blockIndex) {
     titleEl.textContent = formattedTitle;
   }
   const blockName = getBlockName(section, feature);
+  const manifestEndpoint = getManifestEndpoint(feature, section);
   registerBlock({
     id: featureId,
     name: blockName,
-    endpoint: getFeatureEndpoint(feature)
+    endpoint: getFeatureEndpoint(feature) || manifestEndpoint
   });
   const logger = createLogger({
     featureId,
@@ -1288,9 +1536,18 @@ async function boot() {
   initDebugConsole();
   const features = await resolveFeatures();
   const featureMap = new Map(features.map((feature) => [feature.id, feature]));
+  const manifestBlocks = MANIFEST_CACHE;
+  const manifestUsed = Array.isArray(manifestBlocks) && manifestBlocks.length > 0;
 
   if (DEBUG_PANIC_MODE) {
     RV_CONFIG.DEBUG_PANIC_MODE = true;
+  }
+
+  if (manifestUsed) {
+    syncManifestGrid(manifestBlocks, features);
+    if (REGISTRY_LOAD_FAILED) {
+      showManifestBanner();
+    }
   }
 
   // Expected API calls per page load: 1-2 (dashboard fast/slow) with per-block fallback only when missing.
