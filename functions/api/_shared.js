@@ -117,6 +117,7 @@ export function createResponse({
 
   const headers = new Headers();
   headers.set("Content-Type", "application/json; charset=utf-8");
+  headers.set("x-rv-from", "createResponse");
   headers.set("Access-Control-Allow-Origin", "*");
   if (debugInfo?.debug) {
     headers.set("Cache-Control", "no-store");
