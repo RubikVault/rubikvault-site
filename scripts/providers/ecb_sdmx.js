@@ -1,4 +1,4 @@
-import { buildProviderError, fetchWithRetry } from "./_shared.js";
+import { buildProviderError, fetchWithRetry, normalizeProviderDetails } from "./_shared.js";
 
 const ECB_BASE = "https://sdw-wsrest.ecb.europa.eu/service/data";
 
@@ -20,39 +20,41 @@ function parseLatestObservation(payload) {
 export async function fetchEcbSeries(ctx, seriesKey) {
   const url = `${ECB_BASE}/${seriesKey}?format=sdmx-json&lastNObservations=1`;
   const { text, res } = await fetchWithRetry(url, ctx, {
-    headers: { "User-Agent": "RVSeeder/1.0" }
+    headers: { "User-Agent": "RVSeeder/1.0" },
+    timeoutMs: 30000
   });
 
   const contentType = res?.headers?.get("content-type") || "";
   const trimmed = String(text || "").trim().toLowerCase();
-  if (contentType && !contentType.includes("application/json")) {
-    throw buildProviderError("PROVIDER_BAD_PAYLOAD", "ecb_non_json", {
-      seriesKey,
-      contentType,
-      snippet: text.slice(0, 200)
-    });
-  }
-  if (trimmed.startsWith("<!doctype") || trimmed.startsWith("<html")) {
-    throw buildProviderError("PROVIDER_BAD_PAYLOAD", "ecb_html_payload", {
-      seriesKey,
-      snippet: text.slice(0, 200)
-    });
-  }
-
   let payload;
   try {
     payload = JSON.parse(text);
   } catch (error) {
-    throw buildProviderError("PROVIDER_BAD_PAYLOAD", "ecb_json_parse_failed", {
-      seriesKey,
-      message: error?.message || "parse_failed",
-      snippet: text.slice(0, 200)
-    });
+    if (trimmed.startsWith("<!doctype") || trimmed.startsWith("<html")) {
+      throw buildProviderError(
+        "PROVIDER_BAD_PAYLOAD",
+        "ecb_html_payload",
+        normalizeProviderDetails(url, { snippet: text })
+      );
+    }
+    throw buildProviderError(
+      "PROVIDER_BAD_PAYLOAD",
+      "ecb_json_parse_failed",
+      normalizeProviderDetails(url, { snippet: text })
+    );
+  }
+
+  if (contentType && !contentType.includes("application/json")) {
+    console.warn("ecb content-type not json; parsed successfully", { seriesKey });
   }
 
   const latest = parseLatestObservation(payload);
   if (!latest) {
-    throw buildProviderError("PROVIDER_SCHEMA_MISMATCH", "ecb_schema_mismatch", { seriesKey });
+    throw buildProviderError(
+      "PROVIDER_SCHEMA_MISMATCH",
+      "ecb_schema_mismatch",
+      normalizeProviderDetails(url, { snippet: text })
+    );
   }
 
   return { data: latest, dataAt: latest.period };

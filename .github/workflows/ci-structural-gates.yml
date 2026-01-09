@@ -22,6 +22,8 @@ jobs:
         run: npm run simulate:cost
       - name: Contract smoke
         run: npm run test:contracts
+      - name: Validate snapshots
+        run: npm run validate:snapshots
       - name: Runtime source-registry guard
         run: |
           if grep -R --line-number "registry/feature-registry.json" \

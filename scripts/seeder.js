@@ -3,6 +3,7 @@ import path from "node:path";
 import { execSync } from "node:child_process";
 import { atomicWriteJson } from "./utils/mirror-io.mjs";
 import { buildGraph, topoSort } from "./_lib/util/dag.js";
+import { createProviderStateManager } from "./_lib/provider-state.js";
 import { fetchFredSeries } from "./providers/fred.js";
 import { fetchEcbSeries } from "./providers/ecb_sdmx.js";
 import { fetchStooqDaily } from "./providers/stooq.js";
@@ -11,6 +12,7 @@ import { PACKAGE3_RUNNERS } from "./runners/package3/index.js";
 const SNAPSHOT_DIR = path.join("public", "data", "snapshots");
 const MANIFEST_PATH = path.join("public", "data", "seed-manifest.json");
 const USAGE_PATH = path.join("public", "data", "usage-report.json");
+const PROVIDER_STATE_PATH = path.join("public", "data", "provider-state.json");
 
 const DEFAULT_PACKAGES = ["blocks1-12", "blocks13-25", "blocks26-43"];
 
@@ -57,6 +59,17 @@ const SECTOR_SYMBOLS = [
   "XLC",
   "XLY"
 ];
+
+const PROVIDER_HOSTS = {
+  fred: "api.stlouisfed.org",
+  ecb: "sdw-wsrest.ecb.europa.eu",
+  stooq: "stooq.com",
+  marketaux: "api.marketaux.com",
+  finnhub: "finnhub.io",
+  fmp: "financialmodelingprep.com",
+  sec: "data.sec.gov",
+  internal: "internal"
+};
 
 const TREND_SYMBOLS = ["SPY", "QQQ", "DIA"];
 const HEATMAP_SYMBOLS = [
@@ -267,7 +280,7 @@ function createBudgetState(limits, usage) {
       if (!entry || entry.dailyRequests === undefined) return true;
       const current = usage.getProvider(providerId).requests || 0;
       if (current >= entry.dailyRequests) {
-        usage.recordError(providerId, "BUDGET_EXCEEDED");
+        usage.recordError(providerId, "BUDGET_EXHAUSTED");
         return false;
       }
       return true;
@@ -290,31 +303,52 @@ function buildSnapshot(
   entry,
   { items, dataAt, status, reason, generatedAt, latencyMs, extraData, metaDetails }
 ) {
-  const itemsCount = items.length;
+  const safeItems = Array.isArray(items) ? items : [];
+  const itemsCount = safeItems.length;
   const coveragePct = computeCoverage(itemsCount, entry.maxFanout);
-  const effectiveDataAt = dataAt || generatedAt;
-  const stalenessSec = Math.max(0, Math.floor((Date.parse(generatedAt) - Date.parse(effectiveDataAt)) / 1000));
-  const details = metaDetails && typeof metaDetails === "object" ? metaDetails : undefined;
+  const safeGeneratedAt = generatedAt || new Date().toISOString();
+  const effectiveDataAt = dataAt || safeGeneratedAt;
+  const stalenessSec = Math.max(
+    0,
+    Math.floor((Date.parse(safeGeneratedAt) - Date.parse(effectiveDataAt)) / 1000)
+  );
+  const safeStatus = typeof status === "string" && status ? status : "ERROR";
+  const safeReason = typeof reason === "string" && reason ? reason : "UNKNOWN";
+  const safeLatencyMs = Number.isFinite(latencyMs) ? latencyMs : 0;
+  const safeCoveragePct = Number.isFinite(coveragePct) ? coveragePct : 0;
+  const safeStalenessSec = Number.isFinite(stalenessSec) ? stalenessSec : 0;
+  const safeTimezone = entry.timezoneAssumption || "UTC";
+  const safeDataAtDef = entry.dataAtDefinition || "unknown";
+  let details = metaDetails && typeof metaDetails === "object" ? metaDetails : undefined;
+  if (!details && safeStatus === "ERROR") {
+    details = {
+      httpStatus: null,
+      retryAfterSec: null,
+      urlHost: entry.provider || "",
+      snippet: safeReason.slice(0, 200),
+      at: safeGeneratedAt
+    };
+  }
 
   return {
     schemaVersion: "v1",
     blockId: entry.blockId,
     title: entry.title,
-    generatedAt,
+    generatedAt: safeGeneratedAt,
     dataAt: effectiveDataAt,
     meta: {
-      status,
-      reason,
-      stalenessSec,
-      coveragePct,
-      timezoneAssumption: entry.timezoneAssumption,
-      dataAtDefinition: entry.dataAtDefinition,
-      latencyMs,
+      status: safeStatus,
+      reason: safeReason,
+      stalenessSec: safeStalenessSec,
+      coveragePct: safeCoveragePct,
+      timezoneAssumption: safeTimezone,
+      dataAtDefinition: safeDataAtDef,
+      latencyMs: safeLatencyMs,
       itemsCount,
       ...(details ? { details } : {})
     },
     data: {
-      items,
+      items: safeItems,
       ...(extraData || {})
     }
   };
@@ -347,8 +381,16 @@ function readExistingSnapshot(blockId) {
 
 function isPlaceholderSnapshot(snapshot) {
   if (!snapshot || typeof snapshot !== "object") return true;
-  const reason = snapshot?.meta?.reason || "";
+  const meta = snapshot?.meta;
+  if (!meta || typeof meta !== "object") return true;
+  const status = meta.status;
+  const reason = meta.reason;
+  const itemsCount = meta.itemsCount;
   const dataAt = snapshot?.dataAt || "";
+  if (typeof status !== "string" || !status.trim()) return true;
+  if (typeof reason !== "string" || !reason.trim()) return true;
+  if (!Number.isFinite(itemsCount)) return true;
+  if (status === "ERROR" && (!meta.details || typeof meta.details !== "object")) return true;
   if (reason === "SEED_NOT_RUN") return true;
   if (String(dataAt).startsWith("1970-01-01")) return true;
   return false;
@@ -1098,6 +1140,20 @@ function getMaxRequests(entry) {
   return entry.provider === "internal" ? 0 : 1;
 }
 
+function buildMetaDetails(providerId, rawDetails = {}, extra = {}) {
+  const details = rawDetails && typeof rawDetails === "object" ? rawDetails : {};
+  const snippet = String(details.snippet || extra.snippet || "").slice(0, 200);
+  const urlHost = details.urlHost || PROVIDER_HOSTS[providerId] || providerId || "";
+  return {
+    httpStatus: details.httpStatus ?? null,
+    retryAfterSec: details.retryAfterSec ?? null,
+    urlHost,
+    snippet,
+    at: details.at || new Date().toISOString(),
+    ...extra
+  };
+}
+
 async function main() {
   const { only } = parseArgs();
   execSync("node scripts/build-registry.js", { stdio: "inherit" });
@@ -1117,6 +1173,8 @@ async function main() {
   const limits = loadJson(path.join("registry", "limits.json"));
   const usage = createUsageCollector(limits);
   const budget = createBudgetState(limits, usage);
+  const providerIds = Array.from(new Set(entries.map((entry) => entry.provider || "internal")));
+  const providerState = createProviderStateManager(PROVIDER_STATE_PATH, providerIds);
 
   const manifest = {
     schemaVersion: "v1",
@@ -1137,11 +1195,43 @@ async function main() {
           const reason = "MISSING_SECRET";
           usage.recordError(entry.provider, reason);
           const generatedAt = new Date().toISOString();
-          const details = {
-            httpStatus: null,
-            snippet: `missing ${missingSecrets.join(",")}`.slice(0, 200),
-            urlHost: entry.provider || ""
-          };
+          const details = buildMetaDetails(entry.provider, null, {
+            snippet: `missing ${missingSecrets.join(",")}`.slice(0, 200)
+          });
+          providerState.recordSkip(entry.provider, reason, details);
+          const existing = readExistingSnapshot(entry.blockId);
+          const placeholder = isPlaceholderSnapshot(existing);
+          let wroteSnapshot = false;
+          if (placeholder) {
+            const errorSnapshot = buildErrorSnapshot(entry, reason, generatedAt, details);
+            atomicWriteJson(path.join(SNAPSHOT_DIR, `${entry.blockId}.json`), errorSnapshot);
+            wroteSnapshot = true;
+          }
+          manifest.blocks.push({
+            blockId: entry.blockId,
+            title: entry.title,
+            status: "ERROR",
+            reason,
+            itemsCount: 0,
+            coveragePct: 0,
+            wroteSnapshot,
+            durationMs: Date.now() - started
+          });
+          continue;
+        }
+
+        const circuitCheck = providerState.shouldSkip(entry.provider);
+        if (circuitCheck.skip) {
+          const reason = circuitCheck.reason || "CIRCUIT_OPEN";
+          usage.recordError(entry.provider, reason);
+          const generatedAt = new Date().toISOString();
+          const details = buildMetaDetails(entry.provider, circuitCheck.details, {
+            snippet:
+              reason === "CIRCUIT_OPEN"
+                ? `circuit open until ${circuitCheck.details?.openUntil || "unknown"}`
+                : `cooldown until ${circuitCheck.details?.cooldownUntil || "unknown"}`
+          });
+          providerState.recordSkip(entry.provider, reason, details);
           const existing = readExistingSnapshot(entry.blockId);
           const placeholder = isPlaceholderSnapshot(existing);
           let wroteSnapshot = false;
@@ -1170,11 +1260,10 @@ async function main() {
             const reason = "BUDGET_EXHAUSTED";
             usage.recordError(entry.provider, reason);
             const generatedAt = new Date().toISOString();
-            const details = {
-              httpStatus: null,
-              snippet: `budget remaining ${remaining}`.slice(0, 200),
-              urlHost: entry.provider || ""
-            };
+            const details = buildMetaDetails(entry.provider, null, {
+              snippet: `budget remaining ${remaining}`.slice(0, 200)
+            });
+            providerState.recordSkip(entry.provider, reason, details);
             const existing = readExistingSnapshot(entry.blockId);
             const placeholder = isPlaceholderSnapshot(existing);
             let wroteSnapshot = false;
@@ -1203,12 +1292,25 @@ async function main() {
         const placeholder = isPlaceholderSnapshot(existing);
         let wroteSnapshot = false;
 
+        if (snapshot.meta.status === "ERROR") {
+          const errorDetails = buildMetaDetails(entry.provider, snapshot.meta.details, {
+            snippet: snapshot.meta.reason
+          });
+          snapshot.meta.details = errorDetails;
+          providerState.recordFailure(entry.provider, snapshot.meta.reason, errorDetails);
+        } else {
+          providerState.recordSuccess(entry.provider);
+        }
+
         if (evaluation.allowed) {
           atomicWriteJson(snapshotPath, snapshot);
           wroteSnapshot = true;
         } else {
           if (placeholder) {
-            const errorSnapshot = buildErrorSnapshot(entry, snapshot.meta.reason, snapshot.generatedAt);
+            const errorDetails = buildMetaDetails(entry.provider, snapshot.meta.details, {
+              snippet: snapshot.meta.reason
+            });
+            const errorSnapshot = buildErrorSnapshot(entry, snapshot.meta.reason, snapshot.generatedAt, errorDetails);
             atomicWriteJson(snapshotPath, errorSnapshot);
             wroteSnapshot = true;
           }
@@ -1232,14 +1334,10 @@ async function main() {
         const existing = readExistingSnapshot(entry.blockId);
         const placeholder = isPlaceholderSnapshot(existing);
         let wroteSnapshot = false;
-        const details =
-          error?.details && typeof error.details === "object"
-            ? {
-                httpStatus: error.details.httpStatus ?? error.details.status ?? null,
-                snippet: String(error.details.snippet || "").slice(0, 200),
-                urlHost: error.details.urlHost || ""
-              }
-            : null;
+        const details = buildMetaDetails(entry.provider, error?.details, {
+          snippet: reason
+        });
+        providerState.recordFailure(entry.provider, reason, details);
         if (placeholder) {
           const errorSnapshot = buildErrorSnapshot(entry, reason, generatedAt, details);
           atomicWriteJson(path.join(SNAPSHOT_DIR, `${entry.blockId}.json`), errorSnapshot);
@@ -1258,6 +1356,7 @@ async function main() {
       }
     }
   } finally {
+    providerState.save();
     writeSeedManifest(manifest);
     writeUsageReport(usage);
   }

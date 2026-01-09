@@ -2,15 +2,17 @@
   "day": "2026-01-09",
   "providers": {
     "stooq": {
-      "requests": 44,
+      "requests": 7,
       "credits": 0,
-      "bytesIn": 19366043,
-      "latencyMs": 10336,
+      "bytesIn": 203,
+      "latencyMs": 568,
       "limitRequests": 500,
       "limitCredits": 0,
-      "remainingRequests": 456,
+      "remainingRequests": 493,
       "remainingCredits": 0,
-      "errorsByReason": {}
+      "errorsByReason": {
+        "RATE_LIMITED": 7
+      }
     },
     "fred": {
       "requests": 0,
@@ -22,7 +24,7 @@
       "remainingRequests": 500,
       "remainingCredits": 0,
       "errorsByReason": {
-        "PROVIDER_HTTP_ERROR": 7
+        "MISSING_SECRET": 7
       }
     },
     "ecb": {
@@ -105,7 +107,7 @@
     }
   },
   "totals": {
-    "requests": 50,
+    "requests": 13,
     "credits": 0
   },
   "notes": []

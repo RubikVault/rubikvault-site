@@ -2,17 +2,17 @@
   "schemaVersion": "v1",
   "blockId": "master-market-dashboard",
   "title": "43 - Master Market Dashboard",
-  "generatedAt": "2026-01-09T12:50:03.616Z",
-  "dataAt": "2026-01-09T12:50:03.615Z",
+  "generatedAt": "2026-01-09T19:53:58.709Z",
+  "dataAt": "2026-01-09T19:53:58.695Z",
   "meta": {
-    "status": "PARTIAL",
-    "reason": "DEGRADED_COVERAGE",
+    "status": "LIVE",
+    "reason": "OK",
     "stalenessSec": 0,
-    "coveragePct": 76,
+    "coveragePct": 100,
     "timezoneAssumption": "UTC",
     "dataAtDefinition": "Rollup of blocks 1-42",
-    "latencyMs": 1,
-    "itemsCount": 32
+    "latencyMs": 3,
+    "itemsCount": 42
   },
   "data": {
     "items": [
@@ -58,8 +58,8 @@
       },
       {
         "blockId": "highs-vs-lows",
-        "status": "LIVE",
-        "reason": "OK"
+        "status": "ERROR",
+        "reason": "POISON_GUARD"
       },
       {
         "blockId": "sector-rotation",
@@ -142,9 +142,24 @@
         "reason": "MISSING_SECRET"
       },
       {
+        "blockId": "insider-activity-lite",
+        "status": "ERROR",
+        "reason": "MISSING_SECRET"
+      },
+      {
         "blockId": "options-skew-lite",
         "status": "ERROR",
         "reason": "MISSING_SECRET"
+      },
+      {
+        "blockId": "gamma-exposure-lite",
+        "status": "ERROR",
+        "reason": "NO_DATA"
+      },
+      {
+        "blockId": "flow-anomaly-lite",
+        "status": "LIVE",
+        "reason": "OK"
       },
       {
         "blockId": "sentiment-lite",
@@ -152,7 +167,42 @@
         "reason": "MISSING_SECRET"
       },
       {
+        "blockId": "social-velocity-lite",
+        "status": "ERROR",
+        "reason": "NO_DATA"
+      },
+      {
+        "blockId": "analyst-revision-lite",
+        "status": "ERROR",
+        "reason": "MISSING_SECRET"
+      },
+      {
         "blockId": "macro-risk-score",
+        "status": "LIVE",
+        "reason": "OK"
+      },
+      {
+        "blockId": "tail-risk-watch",
+        "status": "LIVE",
+        "reason": "OK"
+      },
+      {
+        "blockId": "liquidity-stress-watch",
+        "status": "LIVE",
+        "reason": "OK"
+      },
+      {
+        "blockId": "regime-fracture-alert",
+        "status": "LIVE",
+        "reason": "OK"
+      },
+      {
+        "blockId": "catalyst-calendar-lite",
+        "status": "PARTIAL",
+        "reason": "DEGRADED_COVERAGE"
+      },
+      {
+        "blockId": "cross-asset-divergence",
         "status": "LIVE",
         "reason": "OK"
       },
@@ -168,8 +218,8 @@
       },
       {
         "blockId": "alpha-radar-lite",
-        "status": "LIVE",
-        "reason": "OK"
+        "status": "PARTIAL",
+        "reason": "DEGRADED_COVERAGE"
       },
       {
         "blockId": "market-health-summary",

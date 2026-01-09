@@ -21,7 +21,8 @@ export async function fetchSecRecentFilings(ctx, { cik = "0000320193" } = {}) {
       headers: {
         "User-Agent": "RVSeeder/1.0",
         "Accept": "application/json"
-      }
+      },
+      timeoutMs: 20000
     }));
   } catch (error) {
     if (error?.reason) {
@@ -35,15 +36,6 @@ export async function fetchSecRecentFilings(ctx, { cik = "0000320193" } = {}) {
     });
   }
 
-  const contentType = res.headers.get("content-type") || "";
-  if (!contentType.includes("application/json")) {
-    throw buildProviderError("PROVIDER_BAD_PAYLOAD", "sec_non_json", {
-      httpStatus: res.status,
-      snippet: String(text || "").slice(0, 200),
-      urlHost: "data.sec.gov"
-    });
-  }
-
   let payload;
   try {
     payload = JSON.parse(text);
@@ -53,6 +45,11 @@ export async function fetchSecRecentFilings(ctx, { cik = "0000320193" } = {}) {
       snippet: String(text || "").slice(0, 200),
       urlHost: "data.sec.gov"
     });
+  }
+
+  const contentType = res.headers.get("content-type") || "";
+  if (contentType && !contentType.includes("application/json")) {
+    console.warn("sec content-type not json; parsed successfully");
   }
 
   const recent = payload?.filings?.recent;

@@ -1,4 +1,4 @@
-import { buildProviderError, fetchWithRetry } from "./_shared.js";
+import { buildProviderError, fetchWithRetry, normalizeProviderDetails } from "./_shared.js";
 
 const STOOQ_BASE = "https://stooq.com/q/d/l/?s=";
 
@@ -27,19 +27,28 @@ export async function fetchStooqDaily(ctx, symbol) {
   const stooqSymbol = `${symbol.toLowerCase()}.us`;
   const url = `${STOOQ_BASE}${encodeURIComponent(stooqSymbol)}&i=d`;
   const { text } = await fetchWithRetry(url, ctx, {
-    headers: { "User-Agent": "RVSeeder/1.0" }
+    headers: { "User-Agent": "RVSeeder/1.0" },
+    timeoutMs: 15000
   });
 
   if (/Exceeded the daily hits limit/i.test(text)) {
-    throw buildProviderError("PROVIDER_429_RATE_LIMIT", "stooq_rate_limited", { symbol });
+    throw buildProviderError(
+      "RATE_LIMITED",
+      "stooq_rate_limited",
+      normalizeProviderDetails(url, { snippet: text })
+    );
   }
   if (text.trim().startsWith("<!DOCTYPE") || text.trim().startsWith("<html")) {
-    throw buildProviderError("PROVIDER_BAD_PAYLOAD", "stooq_html", { symbol });
+    throw buildProviderError("PROVIDER_BAD_PAYLOAD", "stooq_html", normalizeProviderDetails(url, { snippet: text }));
   }
 
   const rows = parseCsv(text);
   if (!rows) {
-    throw buildProviderError("PROVIDER_SCHEMA_MISMATCH", "stooq_csv_parse_failed", { symbol });
+    throw buildProviderError(
+      "PROVIDER_SCHEMA_MISMATCH",
+      "stooq_csv_parse_failed",
+      normalizeProviderDetails(url, { snippet: text })
+    );
   }
 
   const dataAt =

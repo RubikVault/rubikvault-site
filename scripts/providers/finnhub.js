@@ -19,7 +19,8 @@ export async function fetchFinnhubOptionChain(ctx, { symbol = "SPY" } = {}) {
   let text;
   try {
     ({ res, text } = await fetchWithRetry(url, ctx, {
-      headers: { "User-Agent": "RVSeeder/1.0" }
+      headers: { "User-Agent": "RVSeeder/1.0" },
+      timeoutMs: 15000
     }));
   } catch (error) {
     if (error?.reason) {
@@ -33,15 +34,6 @@ export async function fetchFinnhubOptionChain(ctx, { symbol = "SPY" } = {}) {
     });
   }
 
-  const contentType = res.headers.get("content-type") || "";
-  if (!contentType.includes("application/json")) {
-    throw buildProviderError("PROVIDER_BAD_PAYLOAD", "finnhub_non_json", {
-      httpStatus: res.status,
-      snippet: String(text || "").slice(0, 200),
-      urlHost: "finnhub.io"
-    });
-  }
-
   let payload;
   try {
     payload = JSON.parse(text);
@@ -51,6 +43,11 @@ export async function fetchFinnhubOptionChain(ctx, { symbol = "SPY" } = {}) {
       snippet: String(text || "").slice(0, 200),
       urlHost: "finnhub.io"
     });
+  }
+
+  const contentType = res.headers.get("content-type") || "";
+  if (contentType && !contentType.includes("application/json")) {
+    console.warn("finnhub content-type not json; parsed successfully");
   }
 
   const chain = Array.isArray(payload?.data) ? payload.data : [];

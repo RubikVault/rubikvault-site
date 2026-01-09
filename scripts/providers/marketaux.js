@@ -5,7 +5,7 @@ const BASE_URL = "https://api.marketaux.com/v1/news/all";
 export async function fetchMarketauxNews(ctx, { symbols = "SPY", limit = 10 } = {}) {
   const apiKey = process.env.MARKETAUX_API_KEY || "";
   if (!apiKey) {
-    throw buildProviderError("MISSING_SECRET", "missing_markeaux_api_key", {
+    throw buildProviderError("MISSING_SECRET", "missing_marketaux_api_key", {
       httpStatus: null,
       snippet: "missing MARKETAUX_API_KEY",
       urlHost: "api.marketaux.com"
@@ -23,7 +23,8 @@ export async function fetchMarketauxNews(ctx, { symbols = "SPY", limit = 10 } = 
   let text;
   try {
     ({ res, text } = await fetchWithRetry(url, ctx, {
-      headers: { "User-Agent": "RVSeeder/1.0" }
+      headers: { "User-Agent": "RVSeeder/1.0" },
+      timeoutMs: 15000
     }));
   } catch (error) {
     if (error?.reason) {
@@ -37,15 +38,6 @@ export async function fetchMarketauxNews(ctx, { symbols = "SPY", limit = 10 } = 
     });
   }
 
-  const contentType = res.headers.get("content-type") || "";
-  if (!contentType.includes("application/json")) {
-    throw buildProviderError("PROVIDER_BAD_PAYLOAD", "marketaux_non_json", {
-      httpStatus: res.status,
-      snippet: String(text || "").slice(0, 200),
-      urlHost: "api.marketaux.com"
-    });
-  }
-
   let payload;
   try {
     payload = JSON.parse(text);
@@ -55,6 +47,11 @@ export async function fetchMarketauxNews(ctx, { symbols = "SPY", limit = 10 } = 
       snippet: String(text || "").slice(0, 200),
       urlHost: "api.marketaux.com"
     });
+  }
+
+  const contentType = res.headers.get("content-type") || "";
+  if (contentType && !contentType.includes("application/json")) {
+    console.warn("marketaux content-type not json; parsed successfully");
   }
 
   const rows = Array.isArray(payload?.data) ? payload.data : [];

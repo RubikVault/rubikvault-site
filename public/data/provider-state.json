@@ -1,0 +1,87 @@
+{
+  "schemaVersion": "v1",
+  "updatedAt": "2026-01-09T19:53:58.713Z",
+  "providers": {
+    "stooq": {
+      "cooldownUntil": null,
+      "circuitState": "closed",
+      "openUntil": null,
+      "failures": {
+        "RATE_LIMITED": 7,
+        "POISON_GUARD": 1
+      },
+      "lastReason": "POISON_GUARD",
+      "lastHttpStatus": null,
+      "lastSeen": "2026-01-09T19:53:52.644Z"
+    },
+    "fred": {
+      "cooldownUntil": null,
+      "circuitState": "closed",
+      "openUntil": null,
+      "failures": {
+        "MISSING_SECRET": 21
+      },
+      "lastReason": "MISSING_SECRET",
+      "lastHttpStatus": null,
+      "lastSeen": "2026-01-09T19:53:58.698Z"
+    },
+    "internal": {
+      "cooldownUntil": null,
+      "circuitState": "closed",
+      "openUntil": null,
+      "failures": {
+        "NO_DATA": 1
+      },
+      "lastReason": "NO_DATA",
+      "lastHttpStatus": null,
+      "lastSeen": "2026-01-09T19:53:58.713Z"
+    },
+    "ecb": {
+      "cooldownUntil": null,
+      "circuitState": "closed",
+      "openUntil": null,
+      "failures": {
+        "PROVIDER_BAD_PAYLOAD": 6
+      },
+      "lastReason": "PROVIDER_BAD_PAYLOAD",
+      "lastHttpStatus": null,
+      "lastSeen": "2026-01-09T19:53:58.696Z"
+    },
+    "fmp": {
+      "cooldownUntil": null,
+      "circuitState": "closed",
+      "openUntil": null,
+      "failures": {},
+      "lastReason": "MISSING_SECRET",
+      "lastHttpStatus": null,
+      "lastSeen": "2026-01-09T19:53:58.712Z"
+    },
+    "marketaux": {
+      "cooldownUntil": null,
+      "circuitState": "closed",
+      "openUntil": null,
+      "failures": {},
+      "lastReason": "MISSING_SECRET",
+      "lastHttpStatus": null,
+      "lastSeen": "2026-01-09T19:53:58.705Z"
+    },
+    "finnhub": {
+      "cooldownUntil": null,
+      "circuitState": "closed",
+      "openUntil": null,
+      "failures": {},
+      "lastReason": "MISSING_SECRET",
+      "lastHttpStatus": null,
+      "lastSeen": "2026-01-09T19:53:58.706Z"
+    },
+    "sec": {
+      "cooldownUntil": null,
+      "circuitState": "closed",
+      "openUntil": null,
+      "failures": {},
+      "lastReason": "MISSING_SECRET",
+      "lastHttpStatus": null,
+      "lastSeen": "2026-01-09T19:53:58.713Z"
+    }
+  }
+}

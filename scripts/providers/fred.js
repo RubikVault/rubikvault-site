@@ -1,4 +1,4 @@
-import { buildProviderError, fetchWithRetry } from "./_shared.js";
+import { buildProviderError, fetchWithRetry, normalizeProviderDetails } from "./_shared.js";
 
 const FRED_BASE = "https://api.stlouisfed.org/fred/series/observations";
 
@@ -17,7 +17,11 @@ function parseObservations(payload) {
 export async function fetchFredSeries(ctx, seriesId, { limit = 1 } = {}) {
   const apiKey = process.env.FRED_API_KEY || "";
   if (!apiKey) {
-    throw buildProviderError("PROVIDER_HTTP_ERROR", "missing_fred_api_key", { seriesId });
+    throw buildProviderError("MISSING_SECRET", "missing_fred_api_key", {
+      httpStatus: null,
+      snippet: "missing FRED_API_KEY",
+      urlHost: "api.stlouisfed.org"
+    });
   }
   const params = new URLSearchParams({
     series_id: seriesId,
@@ -28,31 +32,50 @@ export async function fetchFredSeries(ctx, seriesId, { limit = 1 } = {}) {
   });
   const url = `${FRED_BASE}?${params.toString()}`;
 
-  const { text } = await fetchWithRetry(url, ctx, {
-    headers: { "User-Agent": "RVSeeder/1.0" }
+  const { res, text } = await fetchWithRetry(url, ctx, {
+    headers: { "User-Agent": "RVSeeder/1.0" },
+    timeoutMs: 10000
   });
 
-  const trimmed = String(text || "").trim().toLowerCase();
-  if (trimmed.startsWith("<!doctype") || trimmed.startsWith("<html")) {
-    throw buildProviderError("PROVIDER_BAD_PAYLOAD", "fred_html_payload", {
-      seriesId,
-      snippet: text.slice(0, 200)
-    });
-  }
+  const contentType = res.headers.get("content-type") || "";
 
   let payload;
   try {
     payload = JSON.parse(text);
   } catch (error) {
-    throw buildProviderError("PROVIDER_BAD_PAYLOAD", "fred_json_parse_failed", {
-      seriesId,
-      message: error?.message || "parse_failed"
-    });
+    if (contentType.includes("application/json")) {
+      throw buildProviderError(
+        "PROVIDER_BAD_PAYLOAD",
+        "fred_json_parse_failed",
+        normalizeProviderDetails(url, { snippet: text })
+      );
+    }
+    const trimmed = String(text || "").trim().toLowerCase();
+    if (trimmed.startsWith("<!doctype") || trimmed.startsWith("<html")) {
+      throw buildProviderError(
+        "PROVIDER_BAD_PAYLOAD",
+        "fred_html_payload",
+        normalizeProviderDetails(url, { snippet: text })
+      );
+    }
+    throw buildProviderError(
+      "PROVIDER_BAD_PAYLOAD",
+      "fred_json_parse_failed",
+      normalizeProviderDetails(url, { snippet: text })
+    );
+  }
+
+  if (!contentType.includes("application/json")) {
+    console.warn("fred content-type not json; parsed successfully", { seriesId });
   }
 
   const observations = parseObservations(payload);
   if (!observations) {
-    throw buildProviderError("PROVIDER_SCHEMA_MISMATCH", "fred_schema_mismatch", { seriesId });
+    throw buildProviderError(
+      "PROVIDER_SCHEMA_MISMATCH",
+      "fred_schema_mismatch",
+      normalizeProviderDetails(url, { snippet: text })
+    );
   }
 
   const dataAt = observations

@@ -19,7 +19,8 @@ async function fetchFmpJson(ctx, path, params) {
   let text;
   try {
     ({ res, text } = await fetchWithRetry(url, ctx, {
-      headers: { "User-Agent": "RVSeeder/1.0" }
+      headers: { "User-Agent": "RVSeeder/1.0" },
+      timeoutMs: 15000
     }));
   } catch (error) {
     if (error?.reason) {
@@ -33,15 +34,6 @@ async function fetchFmpJson(ctx, path, params) {
     });
   }
 
-  const contentType = res.headers.get("content-type") || "";
-  if (!contentType.includes("application/json")) {
-    throw buildProviderError("PROVIDER_BAD_PAYLOAD", "fmp_non_json", {
-      httpStatus: res.status,
-      snippet: String(text || "").slice(0, 200),
-      urlHost: "financialmodelingprep.com"
-    });
-  }
-
   let payload;
   try {
     payload = JSON.parse(text);
@@ -51,6 +43,11 @@ async function fetchFmpJson(ctx, path, params) {
       snippet: String(text || "").slice(0, 200),
       urlHost: "financialmodelingprep.com"
     });
+  }
+
+  const contentType = res.headers.get("content-type") || "";
+  if (contentType && !contentType.includes("application/json")) {
+    console.warn("fmp content-type not json; parsed successfully");
   }
 
   return { payload, url };

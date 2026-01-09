@@ -21,7 +21,8 @@
     "build:registry": "node scripts/build-registry.js",
     "validate:registry": "node scripts/validate-registry.js",
     "simulate:cost": "node scripts/simulate-cost.js",
-    "test:contracts": "node scripts/contract-smoke.js"
+    "test:contracts": "node scripts/contract-smoke.js",
+    "validate:snapshots": "node scripts/validate-snapshots.js"
   },
   "dependencies": {
     "fast-xml-parser": "^4.5.3"

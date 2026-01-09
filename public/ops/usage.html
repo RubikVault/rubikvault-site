@@ -26,6 +26,9 @@
           <th>Credits</th>
           <th>Remaining</th>
           <th>Errors</th>
+          <th>Last Seen</th>
+          <th>Circuit</th>
+          <th>Cooldown</th>
         </tr>
       </thead>
       <tbody></tbody>
@@ -43,11 +46,27 @@
       <tbody></tbody>
     </table>
 
+    <h2>Top Recent Errors</h2>
+    <p class="muted" id="error-summary">Loading...</p>
+    <table id="error-table">
+      <thead>
+        <tr>
+          <th>Reason</th>
+          <th>Count</th>
+          <th>Last Seen</th>
+          <th>Providers</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+
     <script>
       const statusEl = document.getElementById("status");
       const tbody = document.querySelector("#usage-table tbody");
       const skipSummary = document.getElementById("skip-summary");
       const skipTbody = document.querySelector("#skip-table tbody");
+      const errorSummary = document.getElementById("error-summary");
+      const errorTbody = document.querySelector("#error-table tbody");
 
       function formatRemaining(entry) {
         const req = `${entry.remainingRequests ?? "-"}/${entry.limitRequests ?? "-"}`;
@@ -64,12 +83,14 @@
 
       async function loadUsage() {
         try {
-          const [usageRes, seedRes] = await Promise.all([
+          const [usageRes, seedRes, stateRes] = await Promise.all([
             fetch("/data/usage-report.json", { cache: "no-store" }),
-            fetch("/data/seed-manifest.json", { cache: "no-store" })
+            fetch("/data/seed-manifest.json", { cache: "no-store" }),
+            fetch("/data/provider-state.json", { cache: "no-store" })
           ]);
           const usage = usageRes.ok ? await usageRes.json() : null;
           const seed = seedRes.ok ? await seedRes.json() : null;
+          const providerState = stateRes.ok ? await stateRes.json() : null;
 
           if (!usage || !usage.providers) {
             statusEl.textContent = "Usage report missing or invalid";
@@ -81,7 +102,9 @@
           statusEl.textContent = `Day ${day} | Last run ${runId}`;
 
           tbody.innerHTML = "";
+          const providersState = providerState?.providers || {};
           Object.entries(usage.providers).forEach(([provider, entry]) => {
+            const state = providersState[provider] || {};
             const row = document.createElement("tr");
             row.innerHTML = `
               <td>${provider}</td>
@@ -89,6 +112,9 @@
               <td>${entry.credits ?? 0}</td>
               <td>${formatRemaining(entry)}</td>
               <td>${formatErrors(entry.errorsByReason)}</td>
+              <td>${state.lastSeen || "-"}</td>
+              <td>${state.circuitState || "closed"}</td>
+              <td>${state.cooldownUntil || "-"}</td>
             `;
             tbody.appendChild(row);
           });
@@ -96,9 +122,13 @@
           const blocks = Array.isArray(seed?.blocks) ? seed.blocks : [];
           const missingSecret = blocks.filter((block) => block.reason === "MISSING_SECRET");
           const budgetExhausted = blocks.filter((block) => block.reason === "BUDGET_EXHAUSTED");
+          const circuitOpen = blocks.filter((block) => block.reason === "CIRCUIT_OPEN");
+          const rateLimited = blocks.filter((block) => block.reason === "RATE_LIMITED");
           const rows = [
             { label: "MISSING_SECRET", blocks: missingSecret },
-            { label: "BUDGET_EXHAUSTED", blocks: budgetExhausted }
+            { label: "BUDGET_EXHAUSTED", blocks: budgetExhausted },
+            { label: "CIRCUIT_OPEN", blocks: circuitOpen },
+            { label: "RATE_LIMITED", blocks: rateLimited }
           ];
           skipTbody.innerHTML = "";
           rows.forEach((row) => {
@@ -110,10 +140,35 @@
             `;
             skipTbody.appendChild(tr);
           });
-          skipSummary.textContent = `Missing secrets: ${missingSecret.length}, Budget exhausted: ${budgetExhausted.length}`;
+          skipSummary.textContent = `Missing secrets: ${missingSecret.length}, Budget exhausted: ${budgetExhausted.length}, Circuit open: ${circuitOpen.length}, Rate limited: ${rateLimited.length}`;
+
+          const errorRows = [];
+          const providerErrors = providersState || {};
+          Object.entries(providerErrors).forEach(([provider, state]) => {
+            const failures = state.failures || {};
+            Object.entries(failures).forEach(([reason, count]) => {
+              if (!count) return;
+              errorRows.push({ reason, count, lastSeen: state.lastSeen, provider });
+            });
+          });
+          errorRows.sort((a, b) => (b.count || 0) - (a.count || 0));
+          errorTbody.innerHTML = "";
+          const top = errorRows.slice(0, 10);
+          top.forEach((row) => {
+            const tr = document.createElement("tr");
+            tr.innerHTML = `
+              <td>${row.reason}</td>
+              <td>${row.count}</td>
+              <td>${row.lastSeen || "-"}</td>
+              <td>${row.provider}</td>
+            `;
+            errorTbody.appendChild(tr);
+          });
+          errorSummary.textContent = top.length ? `Top ${top.length} errors` : "No errors recorded";
         } catch (error) {
           statusEl.textContent = "Failed to load usage report";
           skipSummary.textContent = "Failed to load seed manifest";
+          errorSummary.textContent = "Failed to load provider state";
         }
       }
 
