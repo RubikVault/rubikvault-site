@@ -14,6 +14,10 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: "20"
+      - name: Prepare public registry
+        run: npm run prepare:data
+      - name: Validate public registry
+        run: npm run validate:public-registry
       - name: Build registry
         run: npm run build:registry
       - name: Validate registry

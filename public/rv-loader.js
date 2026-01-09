@@ -188,73 +188,94 @@ const DASHBOARD_JITTER_PCT = 0.15;
 const REFRESH_BACKOFF_MAX_MS = 20 * 60 * 1000;
 let FEATURE_REGISTRY_CACHE = null;
 let MANIFEST_CACHE = null;
-let MANIFEST_LOAD_FAILED = false;
-let REGISTRY_LOAD_FAILED = false;
 
-function normalizeRegistry(list) {
+function normalizeBlockEntries(list) {
   return (Array.isArray(list) ? list : [])
-    .filter((entry) => entry && typeof entry.idx === "number" && entry.id)
-    .sort((a, b) => a.idx - b.idx);
-}
-
-async function loadFeatureRegistry() {
-  if (FEATURE_REGISTRY_CACHE) return FEATURE_REGISTRY_CACHE;
-  try {
-    const res = await fetch(REGISTRY_URL, { cache: "no-store" });
-    if (res.ok) {
-      const json = await res.json();
-      REGISTRY_LOAD_FAILED = false;
-      FEATURE_REGISTRY_CACHE = normalizeRegistry(json);
-      return FEATURE_REGISTRY_CACHE;
-    }
-    console.warn("[RV] registry fetch failed", res.status);
-    REGISTRY_LOAD_FAILED = true;
-  } catch (error) {
-    console.warn("[RV] registry fetch error", error);
-    REGISTRY_LOAD_FAILED = true;
-  }
-  FEATURE_REGISTRY_CACHE = null;
-  return FEATURE_REGISTRY_CACHE;
-}
-
-function normalizeManifestBlocks(list) {
-  return (Array.isArray(list) ? list : [])
-    .map((entry) => {
+    .map((entry, index) => {
       if (!entry || typeof entry !== "object") return null;
       const blockId = entry.blockId || entry.id || null;
       if (!blockId) return null;
-      return { ...entry, blockId };
+      const idx = Number.isFinite(entry.idx) ? entry.idx : index + 1;
+      const title = entry.title || entry.name || blockId;
+      return { ...entry, blockId, idx, title };
     })
     .filter(Boolean);
 }
 
+async function loadRegistryBlocks() {
+  if (FEATURE_REGISTRY_CACHE) {
+    return { ok: true, blocks: FEATURE_REGISTRY_CACHE, reason: "cache" };
+  }
+  try {
+    const res = await fetch(REGISTRY_URL, { cache: "no-store" });
+    if (!res.ok) {
+      console.warn("[RV] registry fetch failed", res.status);
+      return { ok: false, reason: `http_${res.status}` };
+    }
+    const contentType = (res.headers.get("content-type") || "").toLowerCase();
+    if (!contentType.includes("json")) {
+      console.warn("[RV] registry content-type not json", contentType);
+      return { ok: false, reason: "content_type" };
+    }
+    const text = await res.text();
+    let payload;
+    try {
+      payload = JSON.parse(text);
+    } catch (error) {
+      console.warn("[RV] registry parse failed", error);
+      return { ok: false, reason: "parse_error" };
+    }
+    if (!payload || !Array.isArray(payload.features)) {
+      console.warn("[RV] registry schema invalid");
+      return { ok: false, reason: "schema_invalid" };
+    }
+    const blocks = normalizeBlockEntries(payload.features);
+    if (!blocks.length) {
+      return { ok: false, reason: "empty_features" };
+    }
+    FEATURE_REGISTRY_CACHE = blocks;
+    return { ok: true, blocks, reason: "ok" };
+  } catch (error) {
+    console.warn("[RV] registry fetch error", error);
+    return { ok: false, reason: "fetch_error" };
+  }
+}
+
 async function loadSeedManifest() {
-  if (MANIFEST_CACHE) return MANIFEST_CACHE;
+  if (MANIFEST_CACHE) {
+    return { ok: true, blocks: MANIFEST_CACHE, reason: "cache" };
+  }
   try {
     const res = await fetch(MANIFEST_URL, { cache: "no-store" });
     if (!res.ok) {
       console.warn("[RV] manifest fetch failed", res.status);
-      MANIFEST_LOAD_FAILED = true;
-      return null;
+      return { ok: false, reason: `http_${res.status}` };
     }
-    const json = await res.json();
-    const blocks = normalizeManifestBlocks(json?.blocks);
+    const text = await res.text();
+    let payload;
+    try {
+      payload = JSON.parse(text);
+    } catch (error) {
+      console.warn("[RV] manifest parse failed", error);
+      return { ok: false, reason: "parse_error" };
+    }
+    const blocks = normalizeBlockEntries(payload?.blocks);
     if (!blocks.length) {
-      MANIFEST_LOAD_FAILED = true;
-      return null;
+      return { ok: false, reason: "empty_blocks" };
     }
-    MANIFEST_LOAD_FAILED = false;
     MANIFEST_CACHE = blocks;
-    return MANIFEST_CACHE;
+    return { ok: true, blocks, reason: "ok" };
   } catch (error) {
     console.warn("[RV] manifest fetch error", error);
-    MANIFEST_LOAD_FAILED = true;
-    return null;
+    return { ok: false, reason: "fetch_error" };
   }
 }
 
-function mapManifestBlocksToFeatures(blocks, features) {
+function mapBlocksToFeatures(blocks, features) {
   const byId = new Map(features.map((feature) => [feature.id, feature]));
+  const byShort = new Map(
+    features.map((feature) => [String(feature.id || "").replace(/^rv-/, ""), feature])
+  );
   const byApi = new Map(features.filter((feature) => feature.api).map((feature) => [feature.api, feature]));
   const mapped = [];
   const seen = new Set();
@@ -270,23 +291,34 @@ function mapManifestBlocksToFeatures(blocks, features) {
         break;
       }
     }
+    if (!feature && byShort.has(blockId)) {
+      feature = byShort.get(blockId);
+    }
     if (!feature && byApi.has(blockId)) {
       feature = byApi.get(blockId);
     }
-    const manifestMeta = { blockId, idx: index + 1, title: block.title || blockId };
+    const manifestMeta = {
+      blockId,
+      idx: Number.isFinite(block.idx) ? block.idx : index + 1,
+      title: block.title || blockId
+    };
     if (feature) {
-      const next = { ...feature, manifest: manifestMeta };
+      const next = {
+        ...feature,
+        title: feature.title || manifestMeta.title,
+        manifest: manifestMeta
+      };
       if (!seen.has(next.id)) {
         mapped.push(next);
         seen.add(next.id);
       }
       return;
     }
-    const fallbackId = `rv-${blockId}`;
+    const fallbackId = blockId;
     if (seen.has(fallbackId)) return;
     mapped.push({
       id: fallbackId,
-      title: block.title || blockId,
+      title: manifestMeta.title,
       module: null,
       api: null,
       enabled: true,
@@ -320,10 +352,10 @@ function createManifestSection(title) {
   return section;
 }
 
-function syncManifestGrid(blocks, features) {
+function syncBlockGrid(blocks, features) {
   const grid = document.querySelector(".rv-block-grid");
   if (!grid) return;
-  const normalized = normalizeManifestBlocks(blocks);
+  const normalized = normalizeBlockEntries(blocks);
   if (!normalized.length) return;
   const featureByBlock = new Map(
     features.map((feature) => [feature?.manifest?.blockId, feature]).filter(([key]) => key)
@@ -332,7 +364,7 @@ function syncManifestGrid(blocks, features) {
 
   normalized.forEach((block, index) => {
     const feature = featureByBlock.get(block.blockId);
-    const featureId = feature?.id || `rv-${block.blockId}`;
+    const featureId = feature?.id || block.blockId;
     const title = block.title || feature?.title || block.blockId;
     let section = existing[index];
     if (!section) {
@@ -357,38 +389,15 @@ function syncManifestGrid(blocks, features) {
   });
 }
 
-function showManifestBanner() {
+function showManifestBanner(count) {
   if (!isDebugEnabled()) return;
   if (document.getElementById("rv-manifest-banner")) return;
-  const host = document.querySelector("#rv-dashboard") || document.body;
   const banner = document.createElement("div");
   banner.id = "rv-manifest-banner";
-  banner.textContent = "Registry invalid. Using seed-manifest fallback.";
+  banner.textContent = `Registry unavailable -> using manifest (${count})`;
   banner.style.cssText =
-    "margin:12px 0;padding:8px 12px;border:1px solid #f3c6a6;background:#fff4ea;color:#7a3e00;font-size:12px;border-radius:8px;";
-  host.prepend(banner);
-}
-
-function applyRegistryToFeatures(features, registry) {
-  const normalized = normalizeRegistry(registry);
-  if (!normalized.length) return features;
-  const byId = new Map(features.map((feature) => [feature.id, feature]));
-  const seen = new Set();
-  const ordered = normalized.map((entry) => {
-    const base = byId.get(entry.id) || { id: entry.id };
-    seen.add(entry.id);
-    const api = entry.api ? entry.api.replace(/^\/?api\//i, "") : base.api || null;
-    return {
-      ...base,
-      id: entry.id,
-      title: entry.title || base.title || entry.id,
-      api,
-      enabled: entry.enabled ?? base.enabled ?? true,
-      registry: { idx: entry.idx, api: entry.api, kind: entry.kind, title: entry.title }
-    };
-  });
-  const extras = features.filter((feature) => !seen.has(feature.id));
-  return ordered.concat(extras);
+    "position:fixed;bottom:16px;right:16px;padding:8px 12px;border:1px solid #f3c6a6;background:#fff4ea;color:#7a3e00;font-size:12px;border-radius:8px;z-index:9999;max-width:280px;";
+  document.body.appendChild(banner);
 }
 
 function getNyParts(date = new Date()) {
@@ -1099,16 +1108,28 @@ function initPanicButton() {
   footer.appendChild(button);
 }
 
-async function resolveFeatures() {
+async function loadFeatures() {
   const list = Array.isArray(FEATURES) ? FEATURES : [];
   const overridden = applyOverrides(list);
-  const manifest = await loadSeedManifest();
-  if (manifest && manifest.length) {
-    await loadFeatureRegistry();
-    return mapManifestBlocksToFeatures(manifest, overridden);
+  const registry = await loadRegistryBlocks();
+  if (registry.ok) {
+    return {
+      source: "registry",
+      blocks: registry.blocks,
+      features: mapBlocksToFeatures(registry.blocks, overridden),
+      reason: registry.reason
+    };
   }
-  const registry = await loadFeatureRegistry();
-  return applyRegistryToFeatures(overridden, registry);
+  const manifest = await loadSeedManifest();
+  if (manifest.ok) {
+    return {
+      source: "manifest",
+      blocks: manifest.blocks,
+      features: mapBlocksToFeatures(manifest.blocks, overridden),
+      reason: registry.reason
+    };
+  }
+  return { source: "config", blocks: null, features: overridden, reason: registry.reason };
 }
 
 async function loadFeatureModule(feature) {
@@ -1534,19 +1555,19 @@ function initBlock(section, feature, blockIndex) {
 
 async function boot() {
   initDebugConsole();
-  const features = await resolveFeatures();
+  const loadResult = await loadFeatures();
+  const features = loadResult.features;
   const featureMap = new Map(features.map((feature) => [feature.id, feature]));
-  const manifestBlocks = MANIFEST_CACHE;
-  const manifestUsed = Array.isArray(manifestBlocks) && manifestBlocks.length > 0;
+  const blocksSource = Array.isArray(loadResult.blocks) ? loadResult.blocks : null;
 
   if (DEBUG_PANIC_MODE) {
     RV_CONFIG.DEBUG_PANIC_MODE = true;
   }
 
-  if (manifestUsed) {
-    syncManifestGrid(manifestBlocks, features);
-    if (REGISTRY_LOAD_FAILED) {
-      showManifestBanner();
+  if (blocksSource) {
+    syncBlockGrid(blocksSource, features);
+    if (loadResult.source === "manifest") {
+      showManifestBanner(blocksSource.length);
     }
   }
 

@@ -36,3 +36,15 @@ Purpose: Make provider limits, missing keys, bad payloads, and circuit state dia
 - Registry fetch remains optional; if it fails, the UI stays in manifest-driven mode.
 - Sanity check (browser console):
   - `document.body.textContent.includes("Block 43")`
+
+## Registry smoke checks
+- Registry content-type:
+  - `curl -I "<PREVIEW>/data/feature-registry.json" | grep -i content-type`
+- Registry count:
+  - `curl -sS "<PREVIEW>/data/feature-registry.json" | jq '.features|length'`
+- Manifest count:
+  - `curl -sS "<PREVIEW>/data/seed-manifest.json" | jq '.blocks|length'`
+- Expectation:
+  - Registry features count >= manifest blocks count
+- Homepage blocks:
+  - `curl -sS "<PREVIEW>/" | grep -Eo "Block [0-9]+" | sort -u | tail -n 40`
