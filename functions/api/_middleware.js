@@ -1,6 +1,7 @@
 import { kvPutJson } from "../_lib/kv-safe.js";
 import { isProduction, requireDebugToken } from "./_env.js";
-import { makeResponse, safeSnippet } from "./_shared.js";
+import { makeJson, safeSnippet } from "./_shared.js";
+import { createKVGuard } from "./_shared/kv_guard.js";
 
 function buildCorsHeaders() {
   return {
@@ -79,9 +80,19 @@ function normalizeMirrorPayload(payload, featureFallback) {
   };
 }
 
-function buildApiErrorResponse({ feature, traceId, status, headers, text, contentType, code }) {
-  const headerObj = Object.fromEntries(headers.entries());
-  return makeResponse({
+function buildApiErrorResponse({
+  feature,
+  traceId,
+  status,
+  headers,
+  text,
+  contentType,
+  code,
+  debugMode,
+  debugKind,
+  kvGuard
+}) {
+  const payload = makeJson({
     ok: false,
     feature,
     traceId,
@@ -92,8 +103,23 @@ function buildApiErrorResponse({ feature, traceId, status, headers, text, conten
       code: code || "SCHEMA_INVALID",
       message: "API returned non-JSON response",
       details: { contentType: contentType || "" }
-    },
-    headers: headerObj
+    }
+  });
+  if (debugKind === "kv") payload.meta.reason = "DEBUG_KV";
+  if (debugKind === "fresh") payload.meta.reason = "DEBUG_FRESH";
+  if (debugMode && kvGuard) {
+    payload.debug = {
+      ...(payload.debug && typeof payload.debug === "object" ? payload.debug : {}),
+      kv: kvGuard.toDebugJSON(),
+      warnings: kvGuard.metrics.warnings
+    };
+  }
+  const responseHeaders = new Headers(headers);
+  responseHeaders.set("Content-Type", "application/json; charset=utf-8");
+  if (kvGuard) responseHeaders.set("X-RV-KV", kvGuard.headerValue());
+  return new Response(JSON.stringify(payload), {
+    status: 503,
+    headers: responseHeaders
   });
 }
 
@@ -140,6 +166,18 @@ export async function onRequest(context) {
   const url = new URL(request.url);
   const started = Date.now();
   const isApi = url.pathname.startsWith("/api/");
+  const debugParam = url.searchParams.get("debug") || "";
+  const debugKind = ["1", "kv", "fresh"].includes(debugParam) ? debugParam : "";
+  const debugMode = Boolean(debugKind);
+  const allowPrefixes = [
+    ...(String(env?.RV_KV_ALLOW_PREFIXES || "")
+      .split(",")
+      .map((entry) => entry.trim())
+      .filter(Boolean)),
+    "rv:circuit:"
+  ];
+  const kvGuard = createKVGuard({ RV_KV: env?.RV_KV }, { debugMode, debugKind, allowPrefixes });
+  if (env) env.RV_KV = kvGuard;
   const cronToken = env?.RV_CRON_TOKEN || "";
   const authHeader = request.headers.get("authorization") || "";
   const cronHeader = request.headers.get("x-rv-cron") || "";
@@ -201,6 +239,7 @@ export async function onRequest(context) {
     if (!headers.has("Content-Type")) {
       headers.set("Content-Type", "application/json; charset=utf-8");
     }
+    if (kvGuard) headers.set("X-RV-KV", kvGuard.headerValue());
     return new Response(null, {
       status: response.status,
       statusText: response.statusText,
@@ -225,7 +264,10 @@ export async function onRequest(context) {
         headers,
         text,
         contentType,
-        code: isHtmlLikeText(trimmed) ? "ROUTING_HTML" : "SCHEMA_INVALID"
+        code: isHtmlLikeText(trimmed) ? "ROUTING_HTML" : "SCHEMA_INVALID",
+        debugMode,
+        debugKind,
+        kvGuard
       });
     }
     try {
@@ -253,6 +295,7 @@ export async function onRequest(context) {
     if (!headers.has("Content-Type")) {
       headers.set("Content-Type", "application/json; charset=utf-8");
     }
+    if (kvGuard) headers.set("X-RV-KV", kvGuard.headerValue());
     return new Response(text, {
       status: response.status,
       statusText: response.statusText,
@@ -302,7 +345,10 @@ export async function onRequest(context) {
           headers,
           text,
           contentType,
-          code: "SCHEMA_INVALID"
+          code: "SCHEMA_INVALID",
+          debugMode,
+          debugKind,
+          kvGuard
         });
       }
 
@@ -332,6 +378,15 @@ export async function onRequest(context) {
         if (shouldEnsureMeta) {
           payload = ensureMeta(payload, traceId);
         }
+        if (debugKind === "kv") payload.meta.reason = "DEBUG_KV";
+        if (debugKind === "fresh") payload.meta.reason = "DEBUG_FRESH";
+        if (debugMode && kvGuard) {
+          payload.debug = {
+            ...(payload.debug && typeof payload.debug === "object" ? payload.debug : {}),
+            kv: kvGuard.toDebugJSON(),
+            warnings: kvGuard.metrics.warnings
+          };
+        }
         const baseError =
           payload && typeof payload.error === "object" && payload.error !== null
             ? payload.error
@@ -355,7 +410,7 @@ export async function onRequest(context) {
           const warnStatus = ["STALE", "PARTIAL", "COVERAGE_LIMIT"].includes(
             String(dataQualityStatus)
           );
-          const debugActive = url.searchParams.get("debug") === "1";
+          const debugActive = ["1", "kv", "fresh"].includes(url.searchParams.get("debug") || "");
           const isDebugAllowed = requireDebugToken(env, request);
           if (isDebugEndpoint(url.pathname) && !isDebugAllowed) return;
           if (!shouldLogEvent({ status: response.status, dataQuality: dataQualityStatus, debugActive, isWarn: warnStatus })) {
@@ -398,6 +453,7 @@ export async function onRequest(context) {
       else await logEvent();
 
       const textPayload = parsedOk && payload ? JSON.stringify(payload) : text;
+      if (kvGuard) headers.set("X-RV-KV", kvGuard.headerValue());
 
       return new Response(textPayload, {
         status: response.status,
@@ -407,6 +463,7 @@ export async function onRequest(context) {
     }
 
     // API aber nicht JSON → stream-through
+    if (kvGuard) headers.set("X-RV-KV", kvGuard.headerValue());
     return new Response(response.body, {
       status: response.status,
       statusText: response.statusText,
