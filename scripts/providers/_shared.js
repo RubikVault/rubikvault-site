@@ -52,18 +52,20 @@ export async function fetchWithRetry(url, ctx, { headers = {}, timeoutMs = 10000
         return { res, text, latencyMs, bytesIn };
       }
 
+      const snippet = (text || "").slice(0, 200);
+      const errorDetails = {
+        status: res.status,
+        contentType: res.headers.get("content-type") || "",
+        retryAfter: res.headers.get("retry-after") || null,
+        snippet
+      };
+
       if (!shouldRetryStatus(res.status)) {
-        throw buildProviderError("PROVIDER_HTTP_ERROR", `http_${res.status}`, {
-          status: res.status,
-          contentType: res.headers.get("content-type") || ""
-        });
+        throw buildProviderError("PROVIDER_HTTP_ERROR", `http_${res.status}`, errorDetails);
       }
 
       if (attempt >= maxRetries) {
-        throw buildProviderError("PROVIDER_HTTP_ERROR", `http_${res.status}`, {
-          status: res.status,
-          contentType: res.headers.get("content-type") || ""
-        });
+        throw buildProviderError("PROVIDER_HTTP_ERROR", `http_${res.status}`, errorDetails);
       }
 
       const retryAfter = parseRetryAfter(res.headers.get("retry-after"));

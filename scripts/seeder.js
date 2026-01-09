@@ -75,6 +75,27 @@ function parseArgs() {
   return { only: process.argv[onlyIndex + 1] || null };
 }
 
+function sortByDateDesc(rows) {
+  return rows.slice().sort((a, b) => String(b.date || "").localeCompare(String(a.date || "")));
+}
+
+function latestDateFromRows(rows) {
+  return (
+    rows
+      .map((row) => row.date)
+      .filter(Boolean)
+      .sort()
+      .slice(-1)[0] || null
+  );
+}
+
+function latestByDate(entries) {
+  const sorted = entries
+    .filter((entry) => entry && entry.date)
+    .sort((a, b) => String(b.date).localeCompare(String(a.date)));
+  return sorted[0] || null;
+}
+
 function loadJson(filePath) {
   if (!fs.existsSync(filePath)) return null;
   const raw = fs.readFileSync(filePath, "utf8");
@@ -231,6 +252,27 @@ function readExistingSnapshot(blockId) {
   return JSON.parse(raw);
 }
 
+function isPlaceholderSnapshot(snapshot) {
+  if (!snapshot || typeof snapshot !== "object") return true;
+  const reason = snapshot?.meta?.reason || "";
+  const dataAt = snapshot?.dataAt || "";
+  if (reason === "SEED_NOT_RUN") return true;
+  if (String(dataAt).startsWith("1970-01-01")) return true;
+  return false;
+}
+
+function buildErrorSnapshot(entry, reason, generatedAt) {
+  return buildSnapshot(entry, {
+    items: [],
+    dataAt: generatedAt,
+    status: "ERROR",
+    reason,
+    generatedAt,
+    latencyMs: 0,
+    extraData: {}
+  });
+}
+
 function orderEntries(entries) {
   const registry = { features: entries };
   const graph = buildGraph(registry);
@@ -246,7 +288,7 @@ async function runUsYieldCurve(entry, ctx) {
   for (const [maturity, seriesId] of Object.entries(YIELD_SERIES)) {
     const seriesCtx = { ...ctx, providerId: entry.provider };
     const result = await fetchFredSeries(seriesCtx, seriesId, { limit: 1 });
-    const point = result.data[0];
+    const point = latestByDate(result.data) || result.data[0];
     if (!point || !Number.isFinite(point.value)) continue;
     items.push({ maturity, value: point.value, date: point.date });
     if (!dataAt || point.date > dataAt) dataAt = point.date;
@@ -270,8 +312,11 @@ async function runEcbRatesBoard(entry, ctx) {
 async function runInflationPulse(entry, ctx) {
   const seriesCtx = { ...ctx, providerId: entry.provider };
   const result = await fetchFredSeries(seriesCtx, "CPIAUCSL", { limit: 13 });
-  const latest = result.data[0];
-  const prior = result.data[12];
+  const sorted = result.data
+    .filter((entry) => entry && entry.date)
+    .sort((a, b) => String(b.date).localeCompare(String(a.date)));
+  const latest = sorted[0];
+  const prior = sorted[12];
   const yoy = latest && prior && Number.isFinite(latest.value) && Number.isFinite(prior.value)
     ? ((latest.value - prior.value) / prior.value) * 100
     : null;
@@ -288,12 +333,15 @@ async function runLaborPulse(entry, ctx) {
   const payroll = await fetchFredSeries(seriesCtx, "PAYEMS", { limit: 2 });
   const items = [];
 
-  const unratePoint = unrate.data[0];
+  const unratePoint = latestByDate(unrate.data) || unrate.data[0];
   if (unratePoint && Number.isFinite(unratePoint.value)) {
     items.push({ series: "UNRATE", value: unratePoint.value, date: unratePoint.date });
   }
-  const payrollLatest = payroll.data[0];
-  const payrollPrev = payroll.data[1];
+  const payrollSorted = payroll.data
+    .filter((entry) => entry && entry.date)
+    .sort((a, b) => String(b.date).localeCompare(String(a.date)));
+  const payrollLatest = payrollSorted[0];
+  const payrollPrev = payrollSorted[1];
   let payrollChange = null;
   if (payrollLatest && payrollPrev && Number.isFinite(payrollLatest.value) && Number.isFinite(payrollPrev.value)) {
     payrollChange = payrollLatest.value - payrollPrev.value;
@@ -309,7 +357,7 @@ async function runLaborPulse(entry, ctx) {
 async function runEnergyMacro(entry, ctx) {
   const seriesCtx = { ...ctx, providerId: entry.provider };
   const result = await fetchFredSeries(seriesCtx, "DCOILWTICO", { limit: 1 });
-  const point = result.data[0];
+  const point = latestByDate(result.data) || result.data[0];
   const items = [];
   if (point && Number.isFinite(point.value)) {
     items.push({ series: "WTI", value: point.value, date: point.date });
@@ -320,7 +368,7 @@ async function runEnergyMacro(entry, ctx) {
 async function runCreditStressProxy(entry, ctx) {
   const seriesCtx = { ...ctx, providerId: entry.provider };
   const result = await fetchFredSeries(seriesCtx, "BAMLH0A0HYM2", { limit: 1 });
-  const point = result.data[0];
+  const point = latestByDate(result.data) || result.data[0];
   const items = [];
   if (point && Number.isFinite(point.value)) {
     items.push({ series: "HY_OAS", value: point.value, date: point.date });
@@ -356,7 +404,7 @@ async function runMarketBreadth(entry, ctx, cache) {
   for (const symbol of universe) {
     const seriesCtx = { ...ctx, providerId: entry.provider };
     const result = await fetchStooqDaily(seriesCtx, symbol);
-    const rows = result.data;
+    const rows = Array.isArray(result.data) ? sortByDateDesc(result.data) : [];
     if (!Array.isArray(rows) || rows.length < 2) continue;
     const latest = rows[0];
     const prev = rows[1];
@@ -367,6 +415,9 @@ async function runMarketBreadth(entry, ctx, cache) {
     if (!dataAt || latest.date > dataAt) dataAt = latest.date;
   }
 
+  if (!dataAt) {
+    dataAt = latestDateFromRows(Object.values(seriesMap).flat());
+  }
   cache.seriesMap = seriesMap;
   const advancers = items.filter((row) => row.changePct > 0).length;
   const decliners = items.filter((row) => row.changePct < 0).length;
@@ -382,7 +433,7 @@ async function runHighsVsLows(entry, ctx, cache) {
 
   for (const [symbol, rows] of Object.entries(seriesMap)) {
     if (!Array.isArray(rows) || rows.length < 20) continue;
-    const recent = rows.slice(0, 20);
+    const recent = sortByDateDesc(rows).slice(0, 20);
     const highs = Math.max(...recent.map((row) => row.close));
     const lows = Math.min(...recent.map((row) => row.close));
     const latest = recent[0];
@@ -394,6 +445,9 @@ async function runHighsVsLows(entry, ctx, cache) {
 
   const highs = items.filter((row) => row.isHigh).length;
   const lows = items.filter((row) => row.isLow).length;
+  if (!dataAt) {
+    dataAt = latestDateFromRows(Object.values(seriesMap).flat());
+  }
   return { items, dataAt, extraData: { summary: { highs, lows } } };
 }
 
@@ -411,7 +465,7 @@ async function runSectorRotation(entry, ctx) {
   for (const symbol of symbols) {
     const seriesCtx = { ...ctx, providerId: entry.provider };
     const result = await fetchStooqDaily(seriesCtx, symbol);
-    const rows = result.data;
+    const rows = Array.isArray(result.data) ? sortByDateDesc(result.data) : [];
     if (!Array.isArray(rows) || rows.length < 6) continue;
     const latest = rows[0];
     const prior = rows[5];
@@ -421,13 +475,16 @@ async function runSectorRotation(entry, ctx) {
     if (!dataAt || latest.date > dataAt) dataAt = latest.date;
   }
 
+  if (!dataAt) {
+    dataAt = latestDateFromRows(items);
+  }
   return { items, dataAt };
 }
 
 async function runVolRegime(entry, ctx) {
   const seriesCtx = { ...ctx, providerId: entry.provider };
   const result = await fetchFredSeries(seriesCtx, "VIXCLS", { limit: 1 });
-  const point = result.data[0];
+  const point = latestByDate(result.data) || result.data[0];
   const items = [];
   if (point && Number.isFinite(point.value)) {
     const regime = point.value < 15 ? "low" : point.value < 25 ? "mid" : "high";
@@ -439,7 +496,7 @@ async function runVolRegime(entry, ctx) {
 async function runLiquidityConditions(entry, ctx) {
   const seriesCtx = { ...ctx, providerId: entry.provider };
   const result = await fetchFredSeries(seriesCtx, "RRPONTSYD", { limit: 1 });
-  const point = result.data[0];
+  const point = latestByDate(result.data) || result.data[0];
   const items = [];
   if (point && Number.isFinite(point.value)) {
     items.push({ series: "RRPONTSYD", value: point.value, date: point.date });
@@ -484,6 +541,15 @@ async function runBlock(entry, ctx, cache) {
     extraData: result.extraData
   });
 
+  const dataAtCheckBlocks = new Set(["market-breadth", "sector-rotation"]);
+  if (dataAtCheckBlocks.has(entry.blockId) && snapshot.meta.status === "LIVE") {
+    if (String(snapshot.dataAt || "") < "2020-01-01") {
+      snapshot.meta.status = "ERROR";
+      snapshot.meta.reason = "DATAAT_OUTDATED";
+      evaluation.allowed = false;
+    }
+  }
+
   return { snapshot, evaluation, latencyMs };
 }
 
@@ -506,9 +572,10 @@ async function main() {
     throw new Error("registry load failed");
   }
 
-  let entries = registry.features;
-  if (only === "blocks1-12") {
-    entries = entries.filter((entry) => entry.package === BLOCK_PACKAGE);
+  const effectiveOnly = only || "blocks1-12";
+  let entries = registry.features.filter((entry) => entry.package === BLOCK_PACKAGE);
+  if (effectiveOnly !== "blocks1-12") {
+    entries = registry.features.filter((entry) => entry.package === effectiveOnly);
   }
   entries = orderEntries(entries);
 
@@ -532,13 +599,18 @@ async function main() {
       try {
         const { snapshot, evaluation } = await runBlock(entry, ctx, cache);
         const snapshotPath = path.join(SNAPSHOT_DIR, `${entry.blockId}.json`);
+        const existing = readExistingSnapshot(entry.blockId);
+        const placeholder = isPlaceholderSnapshot(existing);
+        let wroteSnapshot = false;
 
         if (evaluation.allowed) {
           atomicWriteJson(snapshotPath, snapshot);
+          wroteSnapshot = true;
         } else {
-          const existing = readExistingSnapshot(entry.blockId);
-          if (!existing) {
-            atomicWriteJson(snapshotPath, snapshot);
+          if (placeholder) {
+            const errorSnapshot = buildErrorSnapshot(entry, snapshot.meta.reason, snapshot.generatedAt);
+            atomicWriteJson(snapshotPath, errorSnapshot);
+            wroteSnapshot = true;
           }
         }
 
@@ -549,12 +621,21 @@ async function main() {
           reason: snapshot.meta.reason,
           itemsCount: snapshot.meta.itemsCount,
           coveragePct: snapshot.meta.coveragePct,
-          wroteSnapshot: evaluation.allowed,
+          wroteSnapshot,
           durationMs: Date.now() - started
         });
       } catch (error) {
         const reason = error?.reason || "ERROR";
         usage.recordError(entry.provider, reason);
+        const generatedAt = new Date().toISOString();
+        const existing = readExistingSnapshot(entry.blockId);
+        const placeholder = isPlaceholderSnapshot(existing);
+        let wroteSnapshot = false;
+        if (placeholder) {
+          const errorSnapshot = buildErrorSnapshot(entry, reason, generatedAt);
+          atomicWriteJson(path.join(SNAPSHOT_DIR, `${entry.blockId}.json`), errorSnapshot);
+          wroteSnapshot = true;
+        }
         manifest.blocks.push({
           blockId: entry.blockId,
           title: entry.title,
@@ -562,7 +643,7 @@ async function main() {
           reason,
           itemsCount: 0,
           coveragePct: 0,
-          wroteSnapshot: false,
+          wroteSnapshot,
           durationMs: Date.now() - started
         });
       }

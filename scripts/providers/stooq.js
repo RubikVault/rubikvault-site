@@ -42,6 +42,11 @@ export async function fetchStooqDaily(ctx, symbol) {
     throw buildProviderError("PROVIDER_SCHEMA_MISMATCH", "stooq_csv_parse_failed", { symbol });
   }
 
-  const dataAt = rows[0]?.date || null;
+  const dataAt =
+    rows
+      .map((row) => row.date)
+      .filter(Boolean)
+      .sort()
+      .slice(-1)[0] || null;
   return { data: rows, dataAt };
 }

@@ -32,6 +32,14 @@ export async function fetchFredSeries(ctx, seriesId, { limit = 1 } = {}) {
     headers: { "User-Agent": "RVSeeder/1.0" }
   });
 
+  const trimmed = String(text || "").trim().toLowerCase();
+  if (trimmed.startsWith("<!doctype") || trimmed.startsWith("<html")) {
+    throw buildProviderError("PROVIDER_BAD_PAYLOAD", "fred_html_payload", {
+      seriesId,
+      snippet: text.slice(0, 200)
+    });
+  }
+
   let payload;
   try {
     payload = JSON.parse(text);
@@ -47,6 +55,10 @@ export async function fetchFredSeries(ctx, seriesId, { limit = 1 } = {}) {
     throw buildProviderError("PROVIDER_SCHEMA_MISMATCH", "fred_schema_mismatch", { seriesId });
   }
 
-  const dataAt = observations[0]?.date || null;
+  const dataAt = observations
+    .map((entry) => entry.date)
+    .filter(Boolean)
+    .sort()
+    .slice(-1)[0] || null;
   return { data: observations, dataAt };
 }

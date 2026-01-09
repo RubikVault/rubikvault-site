@@ -1,6 +1,127 @@
 {
   "schemaVersion": "v1",
-  "runId": "seed-not-run",
-  "generatedAt": "1970-01-01T00:00:00Z",
-  "blocks": []
+  "runId": "2026-01-09T11:14:44.216Z",
+  "generatedAt": "2026-01-09T11:14:44.216Z",
+  "blocks": [
+    {
+      "blockId": "us-yield-curve",
+      "title": "01 - US Yield Curve",
+      "status": "ERROR",
+      "reason": "PROVIDER_HTTP_ERROR",
+      "itemsCount": 0,
+      "coveragePct": 0,
+      "wroteSnapshot": false,
+      "durationMs": 1
+    },
+    {
+      "blockId": "ecb-rates-board",
+      "title": "02 - ECB Rates Board",
+      "status": "ERROR",
+      "reason": "PROVIDER_BAD_PAYLOAD",
+      "itemsCount": 0,
+      "coveragePct": 0,
+      "wroteSnapshot": false,
+      "durationMs": 3054
+    },
+    {
+      "blockId": "inflation-pulse",
+      "title": "03 - Inflation Pulse",
+      "status": "ERROR",
+      "reason": "PROVIDER_HTTP_ERROR",
+      "itemsCount": 0,
+      "coveragePct": 0,
+      "wroteSnapshot": false,
+      "durationMs": 1
+    },
+    {
+      "blockId": "labor-pulse",
+      "title": "04 - Labor Pulse",
+      "status": "ERROR",
+      "reason": "PROVIDER_HTTP_ERROR",
+      "itemsCount": 0,
+      "coveragePct": 0,
+      "wroteSnapshot": false,
+      "durationMs": 0
+    },
+    {
+      "blockId": "energy-macro",
+      "title": "05 - Energy Macro",
+      "status": "ERROR",
+      "reason": "PROVIDER_HTTP_ERROR",
+      "itemsCount": 0,
+      "coveragePct": 0,
+      "wroteSnapshot": false,
+      "durationMs": 0
+    },
+    {
+      "blockId": "credit-stress-proxy",
+      "title": "06 - Credit Stress Proxy",
+      "status": "ERROR",
+      "reason": "PROVIDER_HTTP_ERROR",
+      "itemsCount": 0,
+      "coveragePct": 0,
+      "wroteSnapshot": false,
+      "durationMs": 1
+    },
+    {
+      "blockId": "fx-board",
+      "title": "07 - FX Board",
+      "status": "ERROR",
+      "reason": "PROVIDER_BAD_PAYLOAD",
+      "itemsCount": 0,
+      "coveragePct": 0,
+      "wroteSnapshot": false,
+      "durationMs": 3014
+    },
+    {
+      "blockId": "highs-vs-lows",
+      "title": "09 - Highs vs Lows",
+      "status": "ERROR",
+      "reason": "POISON_GUARD",
+      "itemsCount": 0,
+      "coveragePct": 0,
+      "wroteSnapshot": false,
+      "durationMs": 1
+    },
+    {
+      "blockId": "sector-rotation",
+      "title": "10 - Sector Rotation",
+      "status": "LIVE",
+      "reason": "OK",
+      "itemsCount": 11,
+      "coveragePct": 100,
+      "wroteSnapshot": true,
+      "durationMs": 2988
+    },
+    {
+      "blockId": "vol-regime",
+      "title": "11 - Vol Regime",
+      "status": "ERROR",
+      "reason": "PROVIDER_HTTP_ERROR",
+      "itemsCount": 0,
+      "coveragePct": 0,
+      "wroteSnapshot": false,
+      "durationMs": 0
+    },
+    {
+      "blockId": "liquidity-conditions-proxy",
+      "title": "12 - Liquidity Conditions Proxy",
+      "status": "ERROR",
+      "reason": "PROVIDER_HTTP_ERROR",
+      "itemsCount": 0,
+      "coveragePct": 0,
+      "wroteSnapshot": false,
+      "durationMs": 1
+    },
+    {
+      "blockId": "market-breadth",
+      "title": "08 - Market Breadth",
+      "status": "LIVE",
+      "reason": "OK",
+      "itemsCount": 15,
+      "coveragePct": 100,
+      "wroteSnapshot": true,
+      "durationMs": 4092
+    }
+  ]
 }

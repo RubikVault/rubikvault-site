@@ -2,17 +2,115 @@
   "schemaVersion": "v1",
   "blockId": "market-breadth",
   "title": "08 - Market Breadth",
-  "generatedAt": "1970-01-01T00:00:00Z",
-  "dataAt": "1970-01-01T00:00:00Z",
+  "generatedAt": "2026-01-09T11:14:57.368Z",
+  "dataAt": "2026-01-08",
   "meta": {
-    "status": "NO_DATA",
-    "reason": "SEED_NOT_RUN",
-    "stalenessSec": 0,
-    "coveragePct": 0,
+    "status": "LIVE",
+    "reason": "OK",
+    "stalenessSec": 126897,
+    "coveragePct": 100,
     "timezoneAssumption": "UTC",
-    "dataAtDefinition": "seed not run",
-    "latencyMs": 0,
-    "itemsCount": 0
+    "dataAtDefinition": "Stooq EOD close for universe symbols",
+    "latencyMs": 4091,
+    "itemsCount": 15
   },
-  "data": { "items": [] }
+  "data": {
+    "items": [
+      {
+        "symbol": "AAPL",
+        "close": 259.04,
+        "changePct": -0.4955249106902638,
+        "date": "2026-01-08"
+      },
+      {
+        "symbol": "MSFT",
+        "close": 478.11,
+        "changePct": -1.1086520363207673,
+        "date": "2026-01-08"
+      },
+      {
+        "symbol": "NVDA",
+        "close": 185.04,
+        "changePct": -2.1521865580878967,
+        "date": "2026-01-08"
+      },
+      {
+        "symbol": "AMZN",
+        "close": 246.29,
+        "changePct": 1.9581056466302327,
+        "date": "2026-01-08"
+      },
+      {
+        "symbol": "META",
+        "close": 646.06,
+        "changePct": -0.40543248701230306,
+        "date": "2026-01-08"
+      },
+      {
+        "symbol": "GOOGL",
+        "close": 325.44,
+        "changePct": 1.0746009068886202,
+        "date": "2026-01-08"
+      },
+      {
+        "symbol": "TSLA",
+        "close": 435.8,
+        "changePct": 1.0175934725666966,
+        "date": "2026-01-08"
+      },
+      {
+        "symbol": "JPM",
+        "close": 329.79,
+        "changePct": 0.8562952995504485,
+        "date": "2026-01-08"
+      },
+      {
+        "symbol": "UNH",
+        "close": 346.85,
+        "changePct": 1.5071700321919912,
+        "date": "2026-01-08"
+      },
+      {
+        "symbol": "XOM",
+        "close": 122.91,
+        "changePct": 3.7302725968436174,
+        "date": "2026-01-08"
+      },
+      {
+        "symbol": "LLY",
+        "close": 1085.19,
+        "changePct": -2.0666191374346727,
+        "date": "2026-01-08"
+      },
+      {
+        "symbol": "AVGO",
+        "close": 332.48,
+        "changePct": -3.2081513828238664,
+        "date": "2026-01-08"
+      },
+      {
+        "symbol": "COST",
+        "close": 915.31,
+        "changePct": 3.708445693308245,
+        "date": "2026-01-08"
+      },
+      {
+        "symbol": "WMT",
+        "close": 113.07,
+        "changePct": 0.3105039034776387,
+        "date": "2026-01-08"
+      },
+      {
+        "symbol": "PG",
+        "close": 141.53,
+        "changePct": 2.5282526803825043,
+        "date": "2026-01-08"
+      }
+    ],
+    "summary": {
+      "advancers": 9,
+      "decliners": 6,
+      "unchanged": 0
+    }
+  }
 }

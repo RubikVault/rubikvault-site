@@ -1,34 +1,47 @@
 {
-  "day": "1970-01-01",
+  "day": "2026-01-09",
   "providers": {
     "fred": {
       "requests": 0,
       "credits": 0,
+      "bytesIn": 0,
+      "latencyMs": 0,
       "limitRequests": 500,
       "limitCredits": 0,
       "remainingRequests": 500,
       "remainingCredits": 0,
-      "errorsByReason": {}
+      "errorsByReason": {
+        "PROVIDER_HTTP_ERROR": 7
+      }
     },
     "ecb": {
-      "requests": 0,
+      "requests": 6,
       "credits": 0,
+      "bytesIn": 0,
+      "latencyMs": 0,
       "limitRequests": 200,
       "limitCredits": 0,
-      "remainingRequests": 200,
+      "remainingRequests": 194,
       "remainingCredits": 0,
-      "errorsByReason": {}
+      "errorsByReason": {
+        "PROVIDER_BAD_PAYLOAD": 2
+      }
     },
     "stooq": {
-      "requests": 0,
+      "requests": 26,
       "credits": 0,
+      "bytesIn": 10625905,
+      "latencyMs": 6905,
       "limitRequests": 500,
       "limitCredits": 0,
-      "remainingRequests": 500,
+      "remainingRequests": 474,
       "remainingCredits": 0,
       "errorsByReason": {}
     }
   },
-  "totals": { "requests": 0, "credits": 0 },
-  "notes": ["seed-not-run"]
+  "totals": {
+    "requests": 32,
+    "credits": 0
+  },
+  "notes": []
 }
