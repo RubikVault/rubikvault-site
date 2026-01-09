@@ -224,6 +224,25 @@ export async function onRequest(context) {
   // Downstream
   const response = await next(requestWithTrace);
 
+  if (isApi && url.pathname.startsWith("/api/og-image")) {
+    if (kvGuard) {
+      const passthroughHeaders = new Headers(response.headers);
+      passthroughHeaders.set("X-RV-KV", kvGuard.headerValue());
+      return new Response(response.body, {
+        status: response.status,
+        statusText: response.statusText,
+        headers: passthroughHeaders
+      });
+    }
+    return response;
+  }
+
+  const responseContentType = response.headers.get("Content-Type") || "";
+  const responseIsJson = responseContentType.includes("application/json");
+  if (isApi && !responseIsJson) {
+    return response;
+  }
+
   // Response-Header normalisieren
   const headers = new Headers(response.headers);
 
@@ -253,35 +272,17 @@ export async function onRequest(context) {
   if (isQuotes || isNews) {
     const ifNoneMatch = request.headers.get("If-None-Match");
     const text = await response.text();
-    const trimmed = text.trim();
-    const contentType = response.headers.get("Content-Type") || "";
-    if (!trimmed.startsWith("{") || isHtmlLikeText(trimmed)) {
-      const feature = url.pathname.split("/").slice(-1)[0] || "api";
-      return buildApiErrorResponse({
-        feature,
-        traceId,
-        status: response.status,
-        headers,
-        text,
-        contentType,
-        code: isHtmlLikeText(trimmed) ? "ROUTING_HTML" : "SCHEMA_INVALID",
-        debugMode,
-        debugKind,
-        kvGuard
-      });
-    }
     try {
       JSON.parse(text);
     } catch (error) {
-      const feature = url.pathname.split("/").slice(-1)[0] || "api";
-      return buildApiErrorResponse({
-        feature,
-        traceId,
+      console.warn("[RV] JSON parse failed", {
+        feature: url.pathname.split("/").slice(-1)[0] || "api",
+        message: error?.message || "parse_failed"
+      });
+      return new Response(text, {
         status: response.status,
-        headers,
-        text,
-        contentType,
-        code: "SCHEMA_INVALID"
+        statusText: response.statusText,
+        headers: response.headers
       });
     }
     const etag = await computeEtag(text);
@@ -304,167 +305,132 @@ export async function onRequest(context) {
   }
 
   // Für API JSON: Body EINMAL lesen → logging + Response aus String bauen (fix für "disturbed stream")
-  if (isApi) {
+  if (isApi && responseIsJson) {
     const text = await response.text();
-    const trimmed = text.trim();
-    const contentType = response.headers.get("Content-Type") || "";
-    const isJson = contentType.includes("application/json") || trimmed.startsWith("{");
 
-    if (!isJson || isHtmlLikeText(trimmed)) {
-      const feature = url.pathname.split("/").slice(-1)[0] || "api";
-      return buildApiErrorResponse({
-        feature,
-        traceId,
-        status: response.status,
-        headers,
-        text,
-        contentType,
-        code: isHtmlLikeText(trimmed) ? "ROUTING_HTML" : "SCHEMA_INVALID"
+    // Always enforce a single JSON content-type for API responses
+    headers.set("Content-Type", "application/json; charset=utf-8");
+
+    // KV Event Log (best effort)
+    let payload = null;
+    try {
+      payload = JSON.parse(text);
+    } catch (error) {
+      console.warn("[RV] JSON parse failed", {
+        feature: url.pathname.split("/").slice(-1)[0] || "api",
+        message: error?.message || "parse_failed"
       });
-    }
-
-    if (isJson) {
-      // Always enforce a single JSON content-type for API responses
-      headers.set("Content-Type", "application/json; charset=utf-8");
-
-      // KV Event Log (best effort)
-      let payload = null;
-      let parsedOk = false;
-      try {
-        payload = JSON.parse(text);
-        parsedOk = true;
-      } catch (e) {
-        payload = null;
-      }
-      if (!parsedOk) {
-        const feature = url.pathname.split("/").slice(-1)[0] || "api";
-        return buildApiErrorResponse({
-          feature,
-          traceId,
-          status: response.status,
-          headers,
-          text,
-          contentType,
-          code: "SCHEMA_INVALID",
-          debugMode,
-          debugKind,
-          kvGuard
-        });
-      }
-
-      if (payload && typeof payload === "object") {
-        const featureFallback = url.pathname.split("/").slice(-1)[0] || "api";
-        payload = normalizeMirrorPayload(payload, featureFallback);
-        if (payload.ok === undefined) {
-          payload.ok = response.ok;
-        }
-        if (!payload.feature) {
-          payload.feature = featureFallback;
-        }
-        if (!Object.prototype.hasOwnProperty.call(payload, "data")) {
-          payload.data = {};
-        }
-        const existingTrace = payload.trace || {};
-        payload.trace = {
-          traceId: payload.traceId || traceId,
-          requestId: existingTrace.requestId || requestId,
-          runId: existingTrace.runId || incomingRunId || "",
-          parentTraceId: existingTrace.parentTraceId || parentTraceId || ""
-        };
-        const shouldEnsureMeta =
-          payload.meta == null ||
-          Object.prototype.hasOwnProperty.call(payload, "feature") ||
-          Object.prototype.hasOwnProperty.call(payload, "ok");
-        if (shouldEnsureMeta) {
-          payload = ensureMeta(payload, traceId);
-        }
-        if (debugKind === "kv") payload.meta.reason = "DEBUG_KV";
-        if (debugKind === "fresh") payload.meta.reason = "DEBUG_FRESH";
-        if (debugMode && kvGuard) {
-          payload.debug = {
-            ...(payload.debug && typeof payload.debug === "object" ? payload.debug : {}),
-            kv: kvGuard.toDebugJSON(),
-            warnings: kvGuard.metrics.warnings
-          };
-        }
-        const baseError =
-          payload && typeof payload.error === "object" && payload.error !== null
-            ? payload.error
-            : {};
-        payload.error = {
-          code: baseError.code || "",
-          message: baseError.message || "",
-          details: baseError.details || {}
-        };
-      }
-
-      const logEvent = async () => {
-        try {
-          
-          const budget = payload?.data?.budget || payload?.budget || null;
-          const dataQualityStatus =
-            payload?.dataQuality?.status ||
-            payload?.data?.dataQuality?.status ||
-            payload?.dataQuality ||
-            "";
-          const warnStatus = ["STALE", "PARTIAL", "COVERAGE_LIMIT"].includes(
-            String(dataQualityStatus)
-          );
-          const debugActive = ["1", "kv", "fresh"].includes(url.searchParams.get("debug") || "");
-          const isDebugAllowed = requireDebugToken(env, request);
-          if (isDebugEndpoint(url.pathname) && !isDebugAllowed) return;
-          if (!shouldLogEvent({ status: response.status, dataQuality: dataQualityStatus, debugActive, isWarn: warnStatus })) {
-            return;
-          }
-          if (!warnStatus && response.status < 400 && !debugActive && !canLogSample(payload?.feature || url.pathname)) {
-            return;
-          }
-          const event = {
-            ts: new Date().toISOString(),
-            feature: payload?.feature || url.pathname.split("/").slice(-1)[0],
-            traceId: payload?.traceId || traceId,
-            requestId,
-            runId: incomingRunId || "",
-            cacheLayer: payload?.cache?.layer || "none",
-            upstreamStatus: payload?.upstream?.status ?? null,
-            durationMs: Date.now() - started,
-            errorCode: payload?.error?.code || (payload ? "" : "SCHEMA_INVALID"),
-            httpStatus: response.status,
-            ...(budget && typeof budget === "object"
-              ? {
-                  subrequestUsed: budget.used ?? null,
-                  subrequestMax: budget.max ?? null
-                }
-              : {})
-          };
-
-          const hour = new Date().toISOString().slice(0, 13);
-          const key = `log:event:${hour}:${Date.now()}-${Math.random()
-            .toString(36)
-            .slice(2, 8)}`;
-
-          await kvPutJson(env, key, event, 86400);
-        } catch (e) {
-          // ignore
-        }
-      };
-
-      if (typeof waitUntil === "function") waitUntil(logEvent());
-      else await logEvent();
-
-      const textPayload = parsedOk && payload ? JSON.stringify(payload) : text;
-      if (kvGuard) headers.set("X-RV-KV", kvGuard.headerValue());
-
-      return new Response(textPayload, {
+      return new Response(text, {
         status: response.status,
         statusText: response.statusText,
-        headers
+        headers: response.headers
       });
     }
 
-    // API aber nicht JSON → stream-through
+    if (payload && typeof payload === "object") {
+      const featureFallback = url.pathname.split("/").slice(-1)[0] || "api";
+      payload = normalizeMirrorPayload(payload, featureFallback);
+      if (payload.ok === undefined) {
+        payload.ok = response.ok;
+      }
+      if (!payload.feature) {
+        payload.feature = featureFallback;
+      }
+      if (!Object.prototype.hasOwnProperty.call(payload, "data")) {
+        payload.data = {};
+      }
+      const existingTrace = payload.trace || {};
+      payload.trace = {
+        traceId: payload.traceId || traceId,
+        requestId: existingTrace.requestId || requestId,
+        runId: existingTrace.runId || incomingRunId || "",
+        parentTraceId: existingTrace.parentTraceId || parentTraceId || ""
+      };
+      const shouldEnsureMeta =
+        payload.meta == null ||
+        Object.prototype.hasOwnProperty.call(payload, "feature") ||
+        Object.prototype.hasOwnProperty.call(payload, "ok");
+      if (shouldEnsureMeta) {
+        payload = ensureMeta(payload, traceId);
+      }
+      if (debugKind === "kv") payload.meta.reason = "DEBUG_KV";
+      if (debugKind === "fresh") payload.meta.reason = "DEBUG_FRESH";
+      if (debugMode && kvGuard) {
+        payload.debug = {
+          ...(payload.debug && typeof payload.debug === "object" ? payload.debug : {}),
+          kv: kvGuard.toDebugJSON(),
+          warnings: kvGuard.metrics.warnings
+        };
+      }
+      const baseError =
+        payload && typeof payload.error === "object" && payload.error !== null
+          ? payload.error
+          : {};
+      payload.error = {
+        code: baseError.code || "",
+        message: baseError.message || "",
+        details: baseError.details || {}
+      };
+    }
+
+    const logEvent = async () => {
+      try {
+        
+        const budget = payload?.data?.budget || payload?.budget || null;
+        const dataQualityStatus =
+          payload?.dataQuality?.status ||
+          payload?.data?.dataQuality?.status ||
+          payload?.dataQuality ||
+          "";
+        const warnStatus = ["STALE", "PARTIAL", "COVERAGE_LIMIT"].includes(
+          String(dataQualityStatus)
+        );
+        const debugActive = ["1", "kv", "fresh"].includes(url.searchParams.get("debug") || "");
+        const isDebugAllowed = requireDebugToken(env, request);
+        if (isDebugEndpoint(url.pathname) && !isDebugAllowed) return;
+        if (!shouldLogEvent({ status: response.status, dataQuality: dataQualityStatus, debugActive, isWarn: warnStatus })) {
+          return;
+        }
+        if (!warnStatus && response.status < 400 && !debugActive && !canLogSample(payload?.feature || url.pathname)) {
+          return;
+        }
+        const event = {
+          ts: new Date().toISOString(),
+          feature: payload?.feature || url.pathname.split("/").slice(-1)[0],
+          traceId: payload?.traceId || traceId,
+          requestId,
+          runId: incomingRunId || "",
+          cacheLayer: payload?.cache?.layer || "none",
+          upstreamStatus: payload?.upstream?.status ?? null,
+          durationMs: Date.now() - started,
+          errorCode: payload?.error?.code || (payload ? "" : "SCHEMA_INVALID"),
+          httpStatus: response.status,
+          ...(budget && typeof budget === "object"
+            ? {
+                subrequestUsed: budget.used ?? null,
+                subrequestMax: budget.max ?? null
+              }
+            : {})
+        };
+
+        const hour = new Date().toISOString().slice(0, 13);
+        const key = `log:event:${hour}:${Date.now()}-${Math.random()
+          .toString(36)
+          .slice(2, 8)}`;
+
+        await kvPutJson(env, key, event, 86400);
+      } catch (e) {
+        // ignore
+      }
+    };
+
+    if (typeof waitUntil === "function") waitUntil(logEvent());
+    else await logEvent();
+
+    const textPayload = payload ? JSON.stringify(payload) : text;
     if (kvGuard) headers.set("X-RV-KV", kvGuard.headerValue());
-    return new Response(response.body, {
+
+    return new Response(textPayload, {
       status: response.status,
       statusText: response.statusText,
       headers
