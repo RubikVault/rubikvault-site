@@ -31,9 +31,23 @@
       <tbody></tbody>
     </table>
 
+    <h2>Skipped Blocks</h2>
+    <p class="muted" id="skip-summary">Loading...</p>
+    <table id="skip-table">
+      <thead>
+        <tr>
+          <th>Reason</th>
+          <th>Blocks</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+
     <script>
       const statusEl = document.getElementById("status");
       const tbody = document.querySelector("#usage-table tbody");
+      const skipSummary = document.getElementById("skip-summary");
+      const skipTbody = document.querySelector("#skip-table tbody");
 
       function formatRemaining(entry) {
         const req = `${entry.remainingRequests ?? "-"}/${entry.limitRequests ?? "-"}`;
@@ -78,8 +92,28 @@
             `;
             tbody.appendChild(row);
           });
+
+          const blocks = Array.isArray(seed?.blocks) ? seed.blocks : [];
+          const missingSecret = blocks.filter((block) => block.reason === "MISSING_SECRET");
+          const budgetExhausted = blocks.filter((block) => block.reason === "BUDGET_EXHAUSTED");
+          const rows = [
+            { label: "MISSING_SECRET", blocks: missingSecret },
+            { label: "BUDGET_EXHAUSTED", blocks: budgetExhausted }
+          ];
+          skipTbody.innerHTML = "";
+          rows.forEach((row) => {
+            const tr = document.createElement("tr");
+            const list = row.blocks.map((block) => block.blockId).join(", ") || "-";
+            tr.innerHTML = `
+              <td>${row.label}</td>
+              <td>${list}</td>
+            `;
+            skipTbody.appendChild(tr);
+          });
+          skipSummary.textContent = `Missing secrets: ${missingSecret.length}, Budget exhausted: ${budgetExhausted.length}`;
         } catch (error) {
           statusEl.textContent = "Failed to load usage report";
+          skipSummary.textContent = "Failed to load seed manifest";
         }
       }
 

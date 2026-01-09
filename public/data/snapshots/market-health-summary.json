@@ -2,16 +2,16 @@
   "schemaVersion": "v1",
   "blockId": "market-health-summary",
   "title": "25 - Market Health Summary",
-  "generatedAt": "2026-01-09T12:05:01.053Z",
-  "dataAt": "2026-01-09T11:11:22.000Z",
+  "generatedAt": "2026-01-09T12:50:03.612Z",
+  "dataAt": "2026-01-09T11:11:21.999Z",
   "meta": {
     "status": "LIVE",
     "reason": "OK",
-    "stalenessSec": 3219,
+    "stalenessSec": 5921,
     "coveragePct": 100,
     "timezoneAssumption": "UTC",
     "dataAtDefinition": "Rollup of blocks 1-24",
-    "latencyMs": 1,
+    "latencyMs": 0,
     "itemsCount": 24
   },
   "data": {
@@ -58,8 +58,8 @@
       },
       {
         "blockId": "highs-vs-lows",
-        "status": "ERROR",
-        "reason": "POISON_GUARD"
+        "status": "LIVE",
+        "reason": "OK"
       },
       {
         "blockId": "sector-rotation",
@@ -138,9 +138,9 @@
       }
     ],
     "summary": {
-      "live": 21,
+      "live": 22,
       "partial": 0,
-      "error": 3,
+      "error": 2,
       "total": 24
     }
   }

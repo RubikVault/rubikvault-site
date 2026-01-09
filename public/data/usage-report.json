@@ -2,19 +2,110 @@
   "day": "2026-01-09",
   "providers": {
     "stooq": {
-      "requests": 18,
+      "requests": 44,
       "credits": 0,
-      "bytesIn": 8740138,
-      "latencyMs": 4901,
+      "bytesIn": 19366043,
+      "latencyMs": 10336,
       "limitRequests": 500,
       "limitCredits": 0,
-      "remainingRequests": 482,
+      "remainingRequests": 456,
       "remainingCredits": 0,
       "errorsByReason": {}
+    },
+    "fred": {
+      "requests": 0,
+      "credits": 0,
+      "bytesIn": 0,
+      "latencyMs": 0,
+      "limitRequests": 500,
+      "limitCredits": 0,
+      "remainingRequests": 500,
+      "remainingCredits": 0,
+      "errorsByReason": {
+        "PROVIDER_HTTP_ERROR": 7
+      }
+    },
+    "ecb": {
+      "requests": 6,
+      "credits": 0,
+      "bytesIn": 0,
+      "latencyMs": 0,
+      "limitRequests": 200,
+      "limitCredits": 0,
+      "remainingRequests": 194,
+      "remainingCredits": 0,
+      "errorsByReason": {
+        "PROVIDER_BAD_PAYLOAD": 2
+      }
+    },
+    "fmp": {
+      "requests": 0,
+      "credits": 0,
+      "bytesIn": 0,
+      "latencyMs": 0,
+      "limitRequests": 100,
+      "limitCredits": 0,
+      "remainingRequests": 100,
+      "remainingCredits": 0,
+      "errorsByReason": {
+        "MISSING_SECRET": 2
+      }
+    },
+    "marketaux": {
+      "requests": 0,
+      "credits": 0,
+      "bytesIn": 0,
+      "latencyMs": 0,
+      "limitRequests": 100,
+      "limitCredits": 0,
+      "remainingRequests": 100,
+      "remainingCredits": 0,
+      "errorsByReason": {
+        "MISSING_SECRET": 1
+      }
+    },
+    "finnhub": {
+      "requests": 0,
+      "credits": 0,
+      "bytesIn": 0,
+      "latencyMs": 0,
+      "limitRequests": 100,
+      "limitCredits": 0,
+      "remainingRequests": 100,
+      "remainingCredits": 0,
+      "errorsByReason": {
+        "MISSING_SECRET": 1
+      }
+    },
+    "internal": {
+      "requests": 0,
+      "credits": 0,
+      "bytesIn": 0,
+      "latencyMs": 0,
+      "limitRequests": 10000,
+      "limitCredits": 0,
+      "remainingRequests": 10000,
+      "remainingCredits": 0,
+      "errorsByReason": {
+        "NO_DATA": 2
+      }
+    },
+    "sec": {
+      "requests": 0,
+      "credits": 0,
+      "bytesIn": 0,
+      "latencyMs": 0,
+      "limitRequests": 100,
+      "limitCredits": 0,
+      "remainingRequests": 100,
+      "remainingCredits": 0,
+      "errorsByReason": {
+        "MISSING_SECRET": 1
+      }
     }
   },
   "totals": {
-    "requests": 18,
+    "requests": 50,
     "credits": 0
   },
   "notes": []

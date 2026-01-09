@@ -1,0 +1,58 @@
+import { buildProviderError, fetchWithRetry, normalizeProviderDetails } from "./_shared.js";
+
+const BASE_URL = "https://finnhub.io/api/v1";
+
+export async function fetchFinnhubOptionChain(ctx, { symbol = "SPY" } = {}) {
+  const apiKey = process.env.FINNHUB_API_KEY || "";
+  if (!apiKey) {
+    throw buildProviderError("MISSING_SECRET", "missing_finnhub_api_key", {
+      httpStatus: null,
+      snippet: "missing FINNHUB_API_KEY",
+      urlHost: "finnhub.io"
+    });
+  }
+
+  const params = new URLSearchParams({ symbol, token: apiKey });
+  const url = `${BASE_URL}/stock/option-chain?${params.toString()}`;
+
+  let res;
+  let text;
+  try {
+    ({ res, text } = await fetchWithRetry(url, ctx, {
+      headers: { "User-Agent": "RVSeeder/1.0" }
+    }));
+  } catch (error) {
+    if (error?.reason) {
+      error.details = normalizeProviderDetails(url, error.details || {});
+      throw error;
+    }
+    throw buildProviderError("PROVIDER_BAD_PAYLOAD", error?.message || "finnhub_fetch_failed", {
+      httpStatus: null,
+      snippet: "",
+      urlHost: "finnhub.io"
+    });
+  }
+
+  const contentType = res.headers.get("content-type") || "";
+  if (!contentType.includes("application/json")) {
+    throw buildProviderError("PROVIDER_BAD_PAYLOAD", "finnhub_non_json", {
+      httpStatus: res.status,
+      snippet: String(text || "").slice(0, 200),
+      urlHost: "finnhub.io"
+    });
+  }
+
+  let payload;
+  try {
+    payload = JSON.parse(text);
+  } catch (error) {
+    throw buildProviderError("PROVIDER_BAD_PAYLOAD", "finnhub_json_parse_failed", {
+      httpStatus: res.status,
+      snippet: String(text || "").slice(0, 200),
+      urlHost: "finnhub.io"
+    });
+  }
+
+  const chain = Array.isArray(payload?.data) ? payload.data : [];
+  return { data: chain, dataAt: payload?.date || null };
+}

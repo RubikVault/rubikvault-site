@@ -7,6 +7,18 @@ export function buildProviderError(code, message, details = {}) {
   return error;
 }
 
+export function normalizeProviderDetails(url, details = {}) {
+  let urlHost = "";
+  try {
+    urlHost = new URL(url).host;
+  } catch (error) {
+    urlHost = "";
+  }
+  const httpStatus = details.httpStatus ?? details.status ?? null;
+  const snippet = String(details.snippet || "").slice(0, 200);
+  return { httpStatus, snippet, urlHost };
+}
+
 function parseRetryAfter(value) {
   if (!value) return null;
   const seconds = Number(value);

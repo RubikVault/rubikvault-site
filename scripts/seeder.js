@@ -6,12 +6,13 @@ import { buildGraph, topoSort } from "./_lib/util/dag.js";
 import { fetchFredSeries } from "./providers/fred.js";
 import { fetchEcbSeries } from "./providers/ecb_sdmx.js";
 import { fetchStooqDaily } from "./providers/stooq.js";
+import { PACKAGE3_RUNNERS } from "./runners/package3/index.js";
 
 const SNAPSHOT_DIR = path.join("public", "data", "snapshots");
 const MANIFEST_PATH = path.join("public", "data", "seed-manifest.json");
 const USAGE_PATH = path.join("public", "data", "usage-report.json");
 
-const BLOCK_PACKAGE = "blocks1-12";
+const DEFAULT_PACKAGES = ["blocks1-12", "blocks13-25", "blocks26-43"];
 
 const YIELD_SERIES = {
   "1m": "DGS1MO",
@@ -285,11 +286,15 @@ function computeCoverage(itemsCount, maxFanout) {
   return Math.min(100, Math.round((itemsCount / maxFanout) * 100));
 }
 
-function buildSnapshot(entry, { items, dataAt, status, reason, generatedAt, latencyMs, extraData }) {
+function buildSnapshot(
+  entry,
+  { items, dataAt, status, reason, generatedAt, latencyMs, extraData, metaDetails }
+) {
   const itemsCount = items.length;
   const coveragePct = computeCoverage(itemsCount, entry.maxFanout);
   const effectiveDataAt = dataAt || generatedAt;
   const stalenessSec = Math.max(0, Math.floor((Date.parse(generatedAt) - Date.parse(effectiveDataAt)) / 1000));
+  const details = metaDetails && typeof metaDetails === "object" ? metaDetails : undefined;
 
   return {
     schemaVersion: "v1",
@@ -305,7 +310,8 @@ function buildSnapshot(entry, { items, dataAt, status, reason, generatedAt, late
       timezoneAssumption: entry.timezoneAssumption,
       dataAtDefinition: entry.dataAtDefinition,
       latencyMs,
-      itemsCount
+      itemsCount,
+      ...(details ? { details } : {})
     },
     data: {
       items,
@@ -348,7 +354,7 @@ function isPlaceholderSnapshot(snapshot) {
   return false;
 }
 
-function buildErrorSnapshot(entry, reason, generatedAt) {
+function buildErrorSnapshot(entry, reason, generatedAt, metaDetails) {
   return buildSnapshot(entry, {
     items: [],
     dataAt: generatedAt,
@@ -356,7 +362,8 @@ function buildErrorSnapshot(entry, reason, generatedAt) {
     reason,
     generatedAt,
     latencyMs: 0,
-    extraData: {}
+    extraData: {},
+    metaDetails
   });
 }
 
@@ -1032,11 +1039,15 @@ const RUNNERS = {
 
 async function runBlock(entry, ctx, cache) {
   const started = Date.now();
-  const runner = RUNNERS[entry.blockId];
+  const runner =
+    entry.package === "blocks26-43" ? PACKAGE3_RUNNERS[entry.blockId] : RUNNERS[entry.blockId];
   if (!runner) {
     throw new Error(`missing runner for ${entry.blockId}`);
   }
-  const result = await runner(entry, ctx, cache);
+  const result =
+    entry.package === "blocks26-43"
+      ? await runner({ ...ctx, cache }, entry)
+      : await runner(entry, ctx, cache);
   const latencyMs = Date.now() - started;
 
   const items = Array.isArray(result.items) ? result.items : [];
@@ -1077,6 +1088,16 @@ function writeSeedManifest(manifest) {
   atomicWriteJson(MANIFEST_PATH, manifest);
 }
 
+function listMissingSecrets(entry) {
+  const required = Array.isArray(entry.requiredSecrets) ? entry.requiredSecrets : [];
+  return required.filter((name) => !process.env[name]);
+}
+
+function getMaxRequests(entry) {
+  if (Number.isFinite(entry.maxRequestsPerRun)) return Number(entry.maxRequestsPerRun);
+  return entry.provider === "internal" ? 0 : 1;
+}
+
 async function main() {
   const { only } = parseArgs();
   execSync("node scripts/build-registry.js", { stdio: "inherit" });
@@ -1086,9 +1107,9 @@ async function main() {
     throw new Error("registry load failed");
   }
 
-  const effectiveOnly = only || "blocks1-12";
-  let entries = registry.features.filter((entry) => entry.package === BLOCK_PACKAGE);
-  if (effectiveOnly !== "blocks1-12") {
+  const effectiveOnly = only || null;
+  let entries = registry.features.filter((entry) => DEFAULT_PACKAGES.includes(entry.package));
+  if (effectiveOnly) {
     entries = registry.features.filter((entry) => entry.package === effectiveOnly);
   }
   entries = orderEntries(entries);
@@ -1111,6 +1132,71 @@ async function main() {
       const ctx = { usage, budget };
       const started = Date.now();
       try {
+        const missingSecrets = listMissingSecrets(entry);
+        if (missingSecrets.length) {
+          const reason = "MISSING_SECRET";
+          usage.recordError(entry.provider, reason);
+          const generatedAt = new Date().toISOString();
+          const details = {
+            httpStatus: null,
+            snippet: `missing ${missingSecrets.join(",")}`.slice(0, 200),
+            urlHost: entry.provider || ""
+          };
+          const existing = readExistingSnapshot(entry.blockId);
+          const placeholder = isPlaceholderSnapshot(existing);
+          let wroteSnapshot = false;
+          if (placeholder) {
+            const errorSnapshot = buildErrorSnapshot(entry, reason, generatedAt, details);
+            atomicWriteJson(path.join(SNAPSHOT_DIR, `${entry.blockId}.json`), errorSnapshot);
+            wroteSnapshot = true;
+          }
+          manifest.blocks.push({
+            blockId: entry.blockId,
+            title: entry.title,
+            status: "ERROR",
+            reason,
+            itemsCount: 0,
+            coveragePct: 0,
+            wroteSnapshot,
+            durationMs: Date.now() - started
+          });
+          continue;
+        }
+
+        const maxRequests = getMaxRequests(entry);
+        if (maxRequests > 0) {
+          const remaining = budget.remaining(entry.provider);
+          if (Number.isFinite(remaining) && remaining < maxRequests) {
+            const reason = "BUDGET_EXHAUSTED";
+            usage.recordError(entry.provider, reason);
+            const generatedAt = new Date().toISOString();
+            const details = {
+              httpStatus: null,
+              snippet: `budget remaining ${remaining}`.slice(0, 200),
+              urlHost: entry.provider || ""
+            };
+            const existing = readExistingSnapshot(entry.blockId);
+            const placeholder = isPlaceholderSnapshot(existing);
+            let wroteSnapshot = false;
+            if (placeholder) {
+              const errorSnapshot = buildErrorSnapshot(entry, reason, generatedAt, details);
+              atomicWriteJson(path.join(SNAPSHOT_DIR, `${entry.blockId}.json`), errorSnapshot);
+              wroteSnapshot = true;
+            }
+            manifest.blocks.push({
+              blockId: entry.blockId,
+              title: entry.title,
+              status: "ERROR",
+              reason,
+              itemsCount: 0,
+              coveragePct: 0,
+              wroteSnapshot,
+              durationMs: Date.now() - started
+            });
+            continue;
+          }
+        }
+
         const { snapshot, evaluation } = await runBlock(entry, ctx, cache);
         const snapshotPath = path.join(SNAPSHOT_DIR, `${entry.blockId}.json`);
         const existing = readExistingSnapshot(entry.blockId);
@@ -1139,14 +1225,23 @@ async function main() {
           durationMs: Date.now() - started
         });
       } catch (error) {
-        const reason = error?.reason || "ERROR";
+        const rawReason = error?.reason || "ERROR";
+        const reason = rawReason === "BUDGET_EXCEEDED" ? "BUDGET_EXHAUSTED" : rawReason;
         usage.recordError(entry.provider, reason);
         const generatedAt = new Date().toISOString();
         const existing = readExistingSnapshot(entry.blockId);
         const placeholder = isPlaceholderSnapshot(existing);
         let wroteSnapshot = false;
+        const details =
+          error?.details && typeof error.details === "object"
+            ? {
+                httpStatus: error.details.httpStatus ?? error.details.status ?? null,
+                snippet: String(error.details.snippet || "").slice(0, 200),
+                urlHost: error.details.urlHost || ""
+              }
+            : null;
         if (placeholder) {
-          const errorSnapshot = buildErrorSnapshot(entry, reason, generatedAt);
+          const errorSnapshot = buildErrorSnapshot(entry, reason, generatedAt, details);
           atomicWriteJson(path.join(SNAPSHOT_DIR, `${entry.blockId}.json`), errorSnapshot);
           wroteSnapshot = true;
         }

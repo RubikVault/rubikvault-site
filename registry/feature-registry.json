@@ -906,6 +906,761 @@
       "package": "blocks13-25"
     },
     {
+      "idx": 26,
+      "id": "earnings-pressure-lite",
+      "blockId": "earnings-pressure-lite",
+      "title": "26 - Earnings Pressure Lite",
+      "tier": "MED",
+      "provider": "fmp",
+      "providers": [
+        "fmp"
+      ],
+      "enabled": true,
+      "kind": "feature",
+      "cadenceSec": 21600,
+      "cadencePerDay": 4,
+      "maxFanout": 10,
+      "maxRequestsPerRun": 1,
+      "requiredSecrets": [
+        "FMP_API_KEY"
+      ],
+      "dependencies": [],
+      "timezoneAssumption": "UTC",
+      "dataAtDefinition": "Upcoming earnings dates from FMP calendar",
+      "freshnessWindowSec": 21600,
+      "validators": {
+        "minItems": 1,
+        "minPoints": 1,
+        "minCoveragePct": 10,
+        "finiteNumbers": false
+      },
+      "poisonGuard": {
+        "minItems": 1,
+        "minCoveragePct": 10,
+        "allowDegradedWrite": true
+      },
+      "costModel": {
+        "requestsPerRunEstimate": 1,
+        "creditsPerRunEstimate": 0
+      },
+      "primaryKey": "items",
+      "package": "blocks26-43"
+    },
+    {
+      "idx": 27,
+      "id": "insider-activity-lite",
+      "blockId": "insider-activity-lite",
+      "title": "27 - Insider Activity Lite",
+      "tier": "MED",
+      "provider": "sec",
+      "providers": [
+        "sec"
+      ],
+      "enabled": true,
+      "kind": "feature",
+      "cadenceSec": 21600,
+      "cadencePerDay": 4,
+      "maxFanout": 10,
+      "maxRequestsPerRun": 1,
+      "requiredSecrets": [
+        "SEC_API_KEY"
+      ],
+      "dependencies": [],
+      "timezoneAssumption": "UTC",
+      "dataAtDefinition": "Recent insider-related filings from SEC EDGAR",
+      "freshnessWindowSec": 21600,
+      "validators": {
+        "minItems": 1,
+        "minPoints": 1,
+        "minCoveragePct": 10,
+        "finiteNumbers": false
+      },
+      "poisonGuard": {
+        "minItems": 1,
+        "minCoveragePct": 10,
+        "allowDegradedWrite": true
+      },
+      "costModel": {
+        "requestsPerRunEstimate": 1,
+        "creditsPerRunEstimate": 0
+      },
+      "primaryKey": "items",
+      "package": "blocks26-43"
+    },
+    {
+      "idx": 28,
+      "id": "options-skew-lite",
+      "blockId": "options-skew-lite",
+      "title": "28 - Options Skew Lite",
+      "tier": "MED",
+      "provider": "finnhub",
+      "providers": [
+        "finnhub"
+      ],
+      "enabled": true,
+      "kind": "feature",
+      "cadenceSec": 21600,
+      "cadencePerDay": 4,
+      "maxFanout": 1,
+      "maxRequestsPerRun": 1,
+      "requiredSecrets": [
+        "FINNHUB_API_KEY"
+      ],
+      "dependencies": [],
+      "timezoneAssumption": "UTC",
+      "dataAtDefinition": "Options open interest skew from Finnhub",
+      "freshnessWindowSec": 21600,
+      "validators": {
+        "minItems": 1,
+        "minPoints": 1,
+        "minCoveragePct": 100,
+        "finiteNumbers": true
+      },
+      "poisonGuard": {
+        "minItems": 1,
+        "minCoveragePct": 100,
+        "allowDegradedWrite": true
+      },
+      "costModel": {
+        "requestsPerRunEstimate": 1,
+        "creditsPerRunEstimate": 0
+      },
+      "primaryKey": "items",
+      "package": "blocks26-43"
+    },
+    {
+      "idx": 29,
+      "id": "gamma-exposure-lite",
+      "blockId": "gamma-exposure-lite",
+      "title": "29 - Gamma Exposure Lite",
+      "tier": "MED",
+      "provider": "internal",
+      "providers": [
+        "internal"
+      ],
+      "enabled": true,
+      "kind": "feature",
+      "cadenceSec": 21600,
+      "cadencePerDay": 4,
+      "maxFanout": 1,
+      "maxRequestsPerRun": 0,
+      "requiredSecrets": [],
+      "dependencies": [
+        "options-skew-lite"
+      ],
+      "timezoneAssumption": "UTC",
+      "dataAtDefinition": "Derived from options-skew-lite snapshot",
+      "freshnessWindowSec": 21600,
+      "validators": {
+        "minItems": 1,
+        "minPoints": 1,
+        "minCoveragePct": 100,
+        "finiteNumbers": true
+      },
+      "poisonGuard": {
+        "minItems": 1,
+        "minCoveragePct": 100,
+        "allowDegradedWrite": true
+      },
+      "costModel": {
+        "requestsPerRunEstimate": 0,
+        "creditsPerRunEstimate": 0
+      },
+      "primaryKey": "items",
+      "package": "blocks26-43"
+    },
+    {
+      "idx": 30,
+      "id": "flow-anomaly-lite",
+      "blockId": "flow-anomaly-lite",
+      "title": "30 - Flow Anomaly Lite",
+      "tier": "MED",
+      "provider": "internal",
+      "providers": [
+        "internal"
+      ],
+      "enabled": true,
+      "kind": "feature",
+      "cadenceSec": 21600,
+      "cadencePerDay": 4,
+      "maxFanout": 1,
+      "maxRequestsPerRun": 0,
+      "requiredSecrets": [],
+      "dependencies": [
+        "market-breadth"
+      ],
+      "timezoneAssumption": "UTC",
+      "dataAtDefinition": "Derived from market-breadth advance/decline ratio",
+      "freshnessWindowSec": 21600,
+      "validators": {
+        "minItems": 1,
+        "minPoints": 1,
+        "minCoveragePct": 100,
+        "finiteNumbers": true
+      },
+      "poisonGuard": {
+        "minItems": 1,
+        "minCoveragePct": 100,
+        "allowDegradedWrite": true
+      },
+      "costModel": {
+        "requestsPerRunEstimate": 0,
+        "creditsPerRunEstimate": 0
+      },
+      "primaryKey": "items",
+      "package": "blocks26-43"
+    },
+    {
+      "idx": 31,
+      "id": "sentiment-lite",
+      "blockId": "sentiment-lite",
+      "title": "31 - Sentiment Lite",
+      "tier": "MED",
+      "provider": "marketaux",
+      "providers": [
+        "marketaux"
+      ],
+      "enabled": true,
+      "kind": "feature",
+      "cadenceSec": 21600,
+      "cadencePerDay": 4,
+      "maxFanout": 10,
+      "maxRequestsPerRun": 1,
+      "requiredSecrets": [
+        "MARKETAUX_API_KEY"
+      ],
+      "dependencies": [],
+      "timezoneAssumption": "UTC",
+      "dataAtDefinition": "Marketaux news sentiment summary",
+      "freshnessWindowSec": 21600,
+      "validators": {
+        "minItems": 1,
+        "minPoints": 1,
+        "minCoveragePct": 10,
+        "finiteNumbers": false
+      },
+      "poisonGuard": {
+        "minItems": 1,
+        "minCoveragePct": 10,
+        "allowDegradedWrite": true
+      },
+      "costModel": {
+        "requestsPerRunEstimate": 1,
+        "creditsPerRunEstimate": 0
+      },
+      "primaryKey": "items",
+      "package": "blocks26-43"
+    },
+    {
+      "idx": 32,
+      "id": "social-velocity-lite",
+      "blockId": "social-velocity-lite",
+      "title": "32 - Social Velocity Lite",
+      "tier": "MED",
+      "provider": "internal",
+      "providers": [
+        "internal"
+      ],
+      "enabled": true,
+      "kind": "feature",
+      "cadenceSec": 21600,
+      "cadencePerDay": 4,
+      "maxFanout": 1,
+      "maxRequestsPerRun": 0,
+      "requiredSecrets": [],
+      "dependencies": [
+        "sentiment-lite"
+      ],
+      "timezoneAssumption": "UTC",
+      "dataAtDefinition": "Derived from sentiment-lite volume",
+      "freshnessWindowSec": 21600,
+      "validators": {
+        "minItems": 1,
+        "minPoints": 1,
+        "minCoveragePct": 100,
+        "finiteNumbers": true
+      },
+      "poisonGuard": {
+        "minItems": 1,
+        "minCoveragePct": 100,
+        "allowDegradedWrite": true
+      },
+      "costModel": {
+        "requestsPerRunEstimate": 0,
+        "creditsPerRunEstimate": 0
+      },
+      "primaryKey": "items",
+      "package": "blocks26-43"
+    },
+    {
+      "idx": 33,
+      "id": "analyst-revision-lite",
+      "blockId": "analyst-revision-lite",
+      "title": "33 - Analyst Revision Lite",
+      "tier": "MED",
+      "provider": "fmp",
+      "providers": [
+        "fmp"
+      ],
+      "enabled": true,
+      "kind": "feature",
+      "cadenceSec": 21600,
+      "cadencePerDay": 4,
+      "maxFanout": 10,
+      "maxRequestsPerRun": 1,
+      "requiredSecrets": [
+        "FMP_API_KEY"
+      ],
+      "dependencies": [],
+      "timezoneAssumption": "UTC",
+      "dataAtDefinition": "Analyst recommendation changes from FMP",
+      "freshnessWindowSec": 21600,
+      "validators": {
+        "minItems": 1,
+        "minPoints": 1,
+        "minCoveragePct": 10,
+        "finiteNumbers": false
+      },
+      "poisonGuard": {
+        "minItems": 1,
+        "minCoveragePct": 10,
+        "allowDegradedWrite": true
+      },
+      "costModel": {
+        "requestsPerRunEstimate": 1,
+        "creditsPerRunEstimate": 0
+      },
+      "primaryKey": "items",
+      "package": "blocks26-43"
+    },
+    {
+      "idx": 34,
+      "id": "macro-risk-score",
+      "blockId": "macro-risk-score",
+      "title": "34 - Macro Risk Score",
+      "tier": "MED",
+      "provider": "internal",
+      "providers": [
+        "internal"
+      ],
+      "enabled": true,
+      "kind": "feature",
+      "cadenceSec": 86400,
+      "cadencePerDay": 1,
+      "maxFanout": 1,
+      "maxRequestsPerRun": 0,
+      "requiredSecrets": [],
+      "dependencies": [
+        "inflation-pulse",
+        "labor-pulse",
+        "credit-stress-proxy",
+        "energy-macro"
+      ],
+      "timezoneAssumption": "UTC",
+      "dataAtDefinition": "Composite of macro snapshots",
+      "freshnessWindowSec": 86400,
+      "validators": {
+        "minItems": 1,
+        "minPoints": 1,
+        "minCoveragePct": 100,
+        "finiteNumbers": true
+      },
+      "poisonGuard": {
+        "minItems": 1,
+        "minCoveragePct": 100,
+        "allowDegradedWrite": true
+      },
+      "costModel": {
+        "requestsPerRunEstimate": 0,
+        "creditsPerRunEstimate": 0
+      },
+      "primaryKey": "items",
+      "package": "blocks26-43"
+    },
+    {
+      "idx": 35,
+      "id": "tail-risk-watch",
+      "blockId": "tail-risk-watch",
+      "title": "35 - Tail Risk Watch",
+      "tier": "MED",
+      "provider": "internal",
+      "providers": [
+        "internal"
+      ],
+      "enabled": true,
+      "kind": "feature",
+      "cadenceSec": 86400,
+      "cadencePerDay": 1,
+      "maxFanout": 1,
+      "maxRequestsPerRun": 0,
+      "requiredSecrets": [],
+      "dependencies": [
+        "vol-regime",
+        "credit-stress-proxy"
+      ],
+      "timezoneAssumption": "UTC",
+      "dataAtDefinition": "Tail risk signals from volatility and credit",
+      "freshnessWindowSec": 86400,
+      "validators": {
+        "minItems": 1,
+        "minPoints": 1,
+        "minCoveragePct": 100,
+        "finiteNumbers": true
+      },
+      "poisonGuard": {
+        "minItems": 1,
+        "minCoveragePct": 100,
+        "allowDegradedWrite": true
+      },
+      "costModel": {
+        "requestsPerRunEstimate": 0,
+        "creditsPerRunEstimate": 0
+      },
+      "primaryKey": "items",
+      "package": "blocks26-43"
+    },
+    {
+      "idx": 36,
+      "id": "liquidity-stress-watch",
+      "blockId": "liquidity-stress-watch",
+      "title": "36 - Liquidity Stress Watch",
+      "tier": "MED",
+      "provider": "internal",
+      "providers": [
+        "internal"
+      ],
+      "enabled": true,
+      "kind": "feature",
+      "cadenceSec": 86400,
+      "cadencePerDay": 1,
+      "maxFanout": 1,
+      "maxRequestsPerRun": 0,
+      "requiredSecrets": [],
+      "dependencies": [
+        "liquidity-conditions-proxy",
+        "credit-stress-proxy"
+      ],
+      "timezoneAssumption": "UTC",
+      "dataAtDefinition": "Liquidity stress from RRP and credit",
+      "freshnessWindowSec": 86400,
+      "validators": {
+        "minItems": 1,
+        "minPoints": 1,
+        "minCoveragePct": 100,
+        "finiteNumbers": true
+      },
+      "poisonGuard": {
+        "minItems": 1,
+        "minCoveragePct": 100,
+        "allowDegradedWrite": true
+      },
+      "costModel": {
+        "requestsPerRunEstimate": 0,
+        "creditsPerRunEstimate": 0
+      },
+      "primaryKey": "items",
+      "package": "blocks26-43"
+    },
+    {
+      "idx": 37,
+      "id": "regime-fracture-alert",
+      "blockId": "regime-fracture-alert",
+      "title": "37 - Regime Fracture Alert",
+      "tier": "MED",
+      "provider": "internal",
+      "providers": [
+        "internal"
+      ],
+      "enabled": true,
+      "kind": "feature",
+      "cadenceSec": 86400,
+      "cadencePerDay": 1,
+      "maxFanout": 1,
+      "maxRequestsPerRun": 0,
+      "requiredSecrets": [],
+      "dependencies": [
+        "risk-regime-lite",
+        "breadth-delta",
+        "sector-relative-strength"
+      ],
+      "timezoneAssumption": "UTC",
+      "dataAtDefinition": "Detects regime mismatches",
+      "freshnessWindowSec": 86400,
+      "validators": {
+        "minItems": 1,
+        "minPoints": 1,
+        "minCoveragePct": 100,
+        "finiteNumbers": true
+      },
+      "poisonGuard": {
+        "minItems": 1,
+        "minCoveragePct": 100,
+        "allowDegradedWrite": true
+      },
+      "costModel": {
+        "requestsPerRunEstimate": 0,
+        "creditsPerRunEstimate": 0
+      },
+      "primaryKey": "items",
+      "package": "blocks26-43"
+    },
+    {
+      "idx": 38,
+      "id": "catalyst-calendar-lite",
+      "blockId": "catalyst-calendar-lite",
+      "title": "38 - Catalyst Calendar Lite",
+      "tier": "MED",
+      "provider": "internal",
+      "providers": [
+        "internal"
+      ],
+      "enabled": true,
+      "kind": "feature",
+      "cadenceSec": 86400,
+      "cadencePerDay": 1,
+      "maxFanout": 10,
+      "maxRequestsPerRun": 0,
+      "requiredSecrets": [],
+      "dependencies": [
+        "earnings-pressure-lite",
+        "macro-surprise-lite"
+      ],
+      "timezoneAssumption": "UTC",
+      "dataAtDefinition": "Calendar rollup from earnings and macro",
+      "freshnessWindowSec": 86400,
+      "validators": {
+        "minItems": 1,
+        "minPoints": 1,
+        "minCoveragePct": 10,
+        "finiteNumbers": false
+      },
+      "poisonGuard": {
+        "minItems": 1,
+        "minCoveragePct": 10,
+        "allowDegradedWrite": true
+      },
+      "costModel": {
+        "requestsPerRunEstimate": 0,
+        "creditsPerRunEstimate": 0
+      },
+      "primaryKey": "items",
+      "package": "blocks26-43"
+    },
+    {
+      "idx": 39,
+      "id": "cross-asset-divergence",
+      "blockId": "cross-asset-divergence",
+      "title": "39 - Cross Asset Divergence",
+      "tier": "MED",
+      "provider": "internal",
+      "providers": [
+        "internal"
+      ],
+      "enabled": true,
+      "kind": "feature",
+      "cadenceSec": 86400,
+      "cadencePerDay": 1,
+      "maxFanout": 1,
+      "maxRequestsPerRun": 0,
+      "requiredSecrets": [],
+      "dependencies": [
+        "fx-board",
+        "us-yield-curve",
+        "sector-rotation"
+      ],
+      "timezoneAssumption": "UTC",
+      "dataAtDefinition": "FX vs yields vs equities divergence",
+      "freshnessWindowSec": 86400,
+      "validators": {
+        "minItems": 1,
+        "minPoints": 1,
+        "minCoveragePct": 100,
+        "finiteNumbers": true
+      },
+      "poisonGuard": {
+        "minItems": 1,
+        "minCoveragePct": 100,
+        "allowDegradedWrite": true
+      },
+      "costModel": {
+        "requestsPerRunEstimate": 0,
+        "creditsPerRunEstimate": 0
+      },
+      "primaryKey": "items",
+      "package": "blocks26-43"
+    },
+    {
+      "idx": 40,
+      "id": "systemic-risk-lite",
+      "blockId": "systemic-risk-lite",
+      "title": "40 - Systemic Risk Lite",
+      "tier": "MED",
+      "provider": "internal",
+      "providers": [
+        "internal"
+      ],
+      "enabled": true,
+      "kind": "feature",
+      "cadenceSec": 86400,
+      "cadencePerDay": 1,
+      "maxFanout": 1,
+      "maxRequestsPerRun": 0,
+      "requiredSecrets": [],
+      "dependencies": [
+        "market-stress-composite",
+        "macro-risk-score"
+      ],
+      "timezoneAssumption": "UTC",
+      "dataAtDefinition": "Composite of macro risk and market stress",
+      "freshnessWindowSec": 86400,
+      "validators": {
+        "minItems": 1,
+        "minPoints": 1,
+        "minCoveragePct": 100,
+        "finiteNumbers": true
+      },
+      "poisonGuard": {
+        "minItems": 1,
+        "minCoveragePct": 100,
+        "allowDegradedWrite": true
+      },
+      "costModel": {
+        "requestsPerRunEstimate": 0,
+        "creditsPerRunEstimate": 0
+      },
+      "primaryKey": "items",
+      "package": "blocks26-43"
+    },
+    {
+      "idx": 41,
+      "id": "weekly-market-brief",
+      "blockId": "weekly-market-brief",
+      "title": "41 - Weekly Market Brief",
+      "tier": "MED",
+      "provider": "internal",
+      "providers": [
+        "internal"
+      ],
+      "enabled": true,
+      "kind": "feature",
+      "cadenceSec": 604800,
+      "cadencePerDay": 0,
+      "maxFanout": 6,
+      "maxRequestsPerRun": 0,
+      "requiredSecrets": [],
+      "dependencies": [
+        "market-health-summary",
+        "market-stress-composite",
+        "drawdown-monitor",
+        "macro-risk-score"
+      ],
+      "timezoneAssumption": "UTC",
+      "dataAtDefinition": "Weekly brief derived from core snapshots",
+      "freshnessWindowSec": 604800,
+      "validators": {
+        "minItems": 1,
+        "minPoints": 1,
+        "minCoveragePct": 16,
+        "finiteNumbers": false
+      },
+      "poisonGuard": {
+        "minItems": 1,
+        "minCoveragePct": 16,
+        "allowDegradedWrite": true
+      },
+      "costModel": {
+        "requestsPerRunEstimate": 0,
+        "creditsPerRunEstimate": 0
+      },
+      "primaryKey": "items",
+      "package": "blocks26-43"
+    },
+    {
+      "idx": 42,
+      "id": "alpha-radar-lite",
+      "blockId": "alpha-radar-lite",
+      "title": "42 - Alpha Radar Lite",
+      "tier": "MED",
+      "provider": "internal",
+      "providers": [
+        "internal"
+      ],
+      "enabled": true,
+      "kind": "feature",
+      "cadenceSec": 86400,
+      "cadencePerDay": 1,
+      "maxFanout": 6,
+      "maxRequestsPerRun": 0,
+      "requiredSecrets": [],
+      "dependencies": [
+        "momentum-heatmap-lite",
+        "trend-strength-board"
+      ],
+      "timezoneAssumption": "UTC",
+      "dataAtDefinition": "Derived signals from momentum and trend",
+      "freshnessWindowSec": 86400,
+      "validators": {
+        "minItems": 1,
+        "minPoints": 1,
+        "minCoveragePct": 16,
+        "finiteNumbers": false
+      },
+      "poisonGuard": {
+        "minItems": 1,
+        "minCoveragePct": 16,
+        "allowDegradedWrite": true
+      },
+      "costModel": {
+        "requestsPerRunEstimate": 0,
+        "creditsPerRunEstimate": 0
+      },
+      "primaryKey": "items",
+      "package": "blocks26-43"
+    },
+    {
+      "idx": 43,
+      "id": "master-market-dashboard",
+      "blockId": "master-market-dashboard",
+      "title": "43 - Master Market Dashboard",
+      "tier": "MED",
+      "provider": "internal",
+      "providers": [
+        "internal"
+      ],
+      "enabled": true,
+      "kind": "feature",
+      "cadenceSec": 86400,
+      "cadencePerDay": 1,
+      "maxFanout": 42,
+      "maxRequestsPerRun": 0,
+      "requiredSecrets": [],
+      "dependencies": [
+        "weekly-market-brief",
+        "alpha-radar-lite",
+        "systemic-risk-lite"
+      ],
+      "timezoneAssumption": "UTC",
+      "dataAtDefinition": "Rollup of blocks 1-42",
+      "freshnessWindowSec": 86400,
+      "validators": {
+        "minItems": 12,
+        "minPoints": 1,
+        "minCoveragePct": 28,
+        "finiteNumbers": false
+      },
+      "poisonGuard": {
+        "minItems": 12,
+        "minCoveragePct": 28,
+        "allowDegradedWrite": true
+      },
+      "costModel": {
+        "requestsPerRunEstimate": 0,
+        "creditsPerRunEstimate": 0
+      },
+      "primaryKey": "items",
+      "package": "blocks26-43"
+    },
+    {
       "id": "rv-market-health",
       "blockId": "rv-market-health",
       "title": "Market Health",

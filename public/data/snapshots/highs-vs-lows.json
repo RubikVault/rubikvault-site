@@ -2,19 +2,129 @@
   "schemaVersion": "v1",
   "blockId": "highs-vs-lows",
   "title": "09 - Highs vs Lows",
-  "generatedAt": "2026-01-09T11:11:22.000Z",
-  "dataAt": "2026-01-09T11:11:22.000Z",
+  "generatedAt": "2026-01-09T12:49:57.495Z",
+  "dataAt": "2026-01-08",
   "meta": {
-    "status": "ERROR",
-    "reason": "POISON_GUARD",
-    "stalenessSec": 0,
-    "coveragePct": 0,
+    "status": "LIVE",
+    "reason": "OK",
+    "stalenessSec": 132597,
+    "coveragePct": 100,
     "timezoneAssumption": "UTC",
     "dataAtDefinition": "Derived from market-breadth EOD history",
-    "latencyMs": 0,
-    "itemsCount": 0
+    "latencyMs": 8,
+    "itemsCount": 15
   },
   "data": {
-    "items": []
+    "items": [
+      {
+        "symbol": "AAPL",
+        "close": 259.04,
+        "isHigh": false,
+        "isLow": true,
+        "date": "2026-01-08"
+      },
+      {
+        "symbol": "MSFT",
+        "close": 478.11,
+        "isHigh": false,
+        "isLow": false,
+        "date": "2026-01-08"
+      },
+      {
+        "symbol": "NVDA",
+        "close": 185.04,
+        "isHigh": false,
+        "isLow": false,
+        "date": "2026-01-08"
+      },
+      {
+        "symbol": "AMZN",
+        "close": 246.29,
+        "isHigh": true,
+        "isLow": false,
+        "date": "2026-01-08"
+      },
+      {
+        "symbol": "META",
+        "close": 646.06,
+        "isHigh": false,
+        "isLow": false,
+        "date": "2026-01-08"
+      },
+      {
+        "symbol": "GOOGL",
+        "close": 325.44,
+        "isHigh": true,
+        "isLow": false,
+        "date": "2026-01-08"
+      },
+      {
+        "symbol": "TSLA",
+        "close": 435.8,
+        "isHigh": false,
+        "isLow": false,
+        "date": "2026-01-08"
+      },
+      {
+        "symbol": "JPM",
+        "close": 329.79,
+        "isHigh": false,
+        "isLow": false,
+        "date": "2026-01-08"
+      },
+      {
+        "symbol": "UNH",
+        "close": 346.85,
+        "isHigh": false,
+        "isLow": false,
+        "date": "2026-01-08"
+      },
+      {
+        "symbol": "XOM",
+        "close": 122.91,
+        "isHigh": false,
+        "isLow": false,
+        "date": "2026-01-08"
+      },
+      {
+        "symbol": "LLY",
+        "close": 1085.19,
+        "isHigh": false,
+        "isLow": false,
+        "date": "2026-01-08"
+      },
+      {
+        "symbol": "AVGO",
+        "close": 332.48,
+        "isHigh": false,
+        "isLow": false,
+        "date": "2026-01-08"
+      },
+      {
+        "symbol": "COST",
+        "close": 915.31,
+        "isHigh": true,
+        "isLow": false,
+        "date": "2026-01-08"
+      },
+      {
+        "symbol": "WMT",
+        "close": 113.07,
+        "isHigh": false,
+        "isLow": false,
+        "date": "2026-01-08"
+      },
+      {
+        "symbol": "PG",
+        "close": 141.53,
+        "isHigh": false,
+        "isLow": false,
+        "date": "2026-01-08"
+      }
+    ],
+    "summary": {
+      "highs": 3,
+      "lows": 1
+    }
   }
 }
