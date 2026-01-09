@@ -2,19 +2,25 @@
   "schemaVersion": "v1",
   "blockId": "credit-stress-proxy",
   "title": "06 - Credit Stress Proxy",
-  "generatedAt": "2026-01-09T11:11:18.982Z",
-  "dataAt": "2026-01-09T11:11:18.982Z",
+  "generatedAt": "2026-01-09T11:34:48.884Z",
+  "dataAt": "2026-01-07",
   "meta": {
-    "status": "ERROR",
-    "reason": "PROVIDER_HTTP_ERROR",
-    "stalenessSec": 0,
-    "coveragePct": 0,
+    "status": "LIVE",
+    "reason": "OK",
+    "stalenessSec": 214488,
+    "coveragePct": 100,
     "timezoneAssumption": "UTC",
     "dataAtDefinition": "FRED credit spread latest observation",
-    "latencyMs": 0,
-    "itemsCount": 0
+    "latencyMs": 164,
+    "itemsCount": 1
   },
   "data": {
-    "items": []
+    "items": [
+      {
+        "series": "HY_OAS",
+        "value": 2.79,
+        "date": "2026-01-07"
+      }
+    ]
   }
 }

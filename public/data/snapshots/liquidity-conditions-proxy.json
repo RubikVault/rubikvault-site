@@ -2,19 +2,25 @@
   "schemaVersion": "v1",
   "blockId": "liquidity-conditions-proxy",
   "title": "12 - Liquidity Conditions Proxy",
-  "generatedAt": "2026-01-09T11:11:23.601Z",
-  "dataAt": "2026-01-09T11:11:23.601Z",
+  "generatedAt": "2026-01-09T11:34:54.003Z",
+  "dataAt": "2026-01-08",
   "meta": {
-    "status": "ERROR",
-    "reason": "PROVIDER_HTTP_ERROR",
-    "stalenessSec": 0,
-    "coveragePct": 0,
+    "status": "LIVE",
+    "reason": "OK",
+    "stalenessSec": 128094,
+    "coveragePct": 100,
     "timezoneAssumption": "UTC",
     "dataAtDefinition": "FRED RRP overnight reverse repo balance",
-    "latencyMs": 0,
-    "itemsCount": 0
+    "latencyMs": 178,
+    "itemsCount": 1
   },
   "data": {
-    "items": []
+    "items": [
+      {
+        "series": "RRPONTSYD",
+        "value": 3.083,
+        "date": "2026-01-08"
+      }
+    ]
   }
 }

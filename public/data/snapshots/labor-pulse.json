@@ -2,19 +2,31 @@
   "schemaVersion": "v1",
   "blockId": "labor-pulse",
   "title": "04 - Labor Pulse",
-  "generatedAt": "2026-01-09T11:11:18.981Z",
-  "dataAt": "2026-01-09T11:11:18.981Z",
+  "generatedAt": "2026-01-09T11:34:48.559Z",
+  "dataAt": "2025-11-01",
   "meta": {
-    "status": "ERROR",
-    "reason": "PROVIDER_HTTP_ERROR",
-    "stalenessSec": 0,
-    "coveragePct": 0,
+    "status": "LIVE",
+    "reason": "OK",
+    "stalenessSec": 6003288,
+    "coveragePct": 100,
     "timezoneAssumption": "UTC",
     "dataAtDefinition": "FRED labor market series (unemployment, payrolls)",
-    "latencyMs": 0,
-    "itemsCount": 0
+    "latencyMs": 332,
+    "itemsCount": 2
   },
   "data": {
-    "items": []
+    "items": [
+      {
+        "series": "UNRATE",
+        "value": 4.6,
+        "date": "2025-11-01"
+      },
+      {
+        "series": "PAYEMS",
+        "value": 159552,
+        "change": 64,
+        "date": "2025-11-01"
+      }
+    ]
   }
 }

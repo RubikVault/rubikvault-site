@@ -1,17 +1,17 @@
 {
   "schemaVersion": "v1",
-  "runId": "2026-01-09T11:14:44.216Z",
-  "generatedAt": "2026-01-09T11:14:44.216Z",
+  "runId": "2026-01-09T11:34:43.275Z",
+  "generatedAt": "2026-01-09T11:34:43.275Z",
   "blocks": [
     {
       "blockId": "us-yield-curve",
       "title": "01 - US Yield Curve",
-      "status": "ERROR",
-      "reason": "PROVIDER_HTTP_ERROR",
-      "itemsCount": 0,
-      "coveragePct": 0,
-      "wroteSnapshot": false,
-      "durationMs": 1
+      "status": "LIVE",
+      "reason": "OK",
+      "itemsCount": 9,
+      "coveragePct": 100,
+      "wroteSnapshot": true,
+      "durationMs": 1751
     },
     {
       "blockId": "ecb-rates-board",
@@ -21,47 +21,47 @@
       "itemsCount": 0,
       "coveragePct": 0,
       "wroteSnapshot": false,
-      "durationMs": 3054
+      "durationMs": 3018
     },
     {
       "blockId": "inflation-pulse",
       "title": "03 - Inflation Pulse",
-      "status": "ERROR",
-      "reason": "PROVIDER_HTTP_ERROR",
-      "itemsCount": 0,
-      "coveragePct": 0,
-      "wroteSnapshot": false,
-      "durationMs": 1
+      "status": "LIVE",
+      "reason": "OK",
+      "itemsCount": 1,
+      "coveragePct": 100,
+      "wroteSnapshot": true,
+      "durationMs": 183
     },
     {
       "blockId": "labor-pulse",
       "title": "04 - Labor Pulse",
-      "status": "ERROR",
-      "reason": "PROVIDER_HTTP_ERROR",
-      "itemsCount": 0,
-      "coveragePct": 0,
-      "wroteSnapshot": false,
-      "durationMs": 0
+      "status": "LIVE",
+      "reason": "OK",
+      "itemsCount": 2,
+      "coveragePct": 100,
+      "wroteSnapshot": true,
+      "durationMs": 334
     },
     {
       "blockId": "energy-macro",
       "title": "05 - Energy Macro",
-      "status": "ERROR",
-      "reason": "PROVIDER_HTTP_ERROR",
-      "itemsCount": 0,
-      "coveragePct": 0,
-      "wroteSnapshot": false,
-      "durationMs": 0
+      "status": "LIVE",
+      "reason": "OK",
+      "itemsCount": 1,
+      "coveragePct": 100,
+      "wroteSnapshot": true,
+      "durationMs": 159
     },
     {
       "blockId": "credit-stress-proxy",
       "title": "06 - Credit Stress Proxy",
-      "status": "ERROR",
-      "reason": "PROVIDER_HTTP_ERROR",
-      "itemsCount": 0,
-      "coveragePct": 0,
-      "wroteSnapshot": false,
-      "durationMs": 1
+      "status": "LIVE",
+      "reason": "OK",
+      "itemsCount": 1,
+      "coveragePct": 100,
+      "wroteSnapshot": true,
+      "durationMs": 166
     },
     {
       "blockId": "fx-board",
@@ -71,7 +71,7 @@
       "itemsCount": 0,
       "coveragePct": 0,
       "wroteSnapshot": false,
-      "durationMs": 3014
+      "durationMs": 3012
     },
     {
       "blockId": "highs-vs-lows",
@@ -91,27 +91,27 @@
       "itemsCount": 11,
       "coveragePct": 100,
       "wroteSnapshot": true,
-      "durationMs": 2988
+      "durationMs": 1702
     },
     {
       "blockId": "vol-regime",
       "title": "11 - Vol Regime",
-      "status": "ERROR",
-      "reason": "PROVIDER_HTTP_ERROR",
-      "itemsCount": 0,
-      "coveragePct": 0,
-      "wroteSnapshot": false,
-      "durationMs": 0
+      "status": "LIVE",
+      "reason": "OK",
+      "itemsCount": 1,
+      "coveragePct": 100,
+      "wroteSnapshot": true,
+      "durationMs": 224
     },
     {
       "blockId": "liquidity-conditions-proxy",
       "title": "12 - Liquidity Conditions Proxy",
-      "status": "ERROR",
-      "reason": "PROVIDER_HTTP_ERROR",
-      "itemsCount": 0,
-      "coveragePct": 0,
-      "wroteSnapshot": false,
-      "durationMs": 1
+      "status": "LIVE",
+      "reason": "OK",
+      "itemsCount": 1,
+      "coveragePct": 100,
+      "wroteSnapshot": true,
+      "durationMs": 180
     },
     {
       "blockId": "market-breadth",
@@ -121,7 +121,7 @@
       "itemsCount": 15,
       "coveragePct": 100,
       "wroteSnapshot": true,
-      "durationMs": 4092
+      "durationMs": 3999
     }
   ]
 }

@@ -2,19 +2,26 @@
   "schemaVersion": "v1",
   "blockId": "inflation-pulse",
   "title": "03 - Inflation Pulse",
-  "generatedAt": "2026-01-09T11:11:18.980Z",
-  "dataAt": "2026-01-09T11:11:18.980Z",
+  "generatedAt": "2026-01-09T11:34:48.226Z",
+  "dataAt": "2025-11-01",
   "meta": {
-    "status": "ERROR",
-    "reason": "PROVIDER_HTTP_ERROR",
-    "stalenessSec": 0,
-    "coveragePct": 0,
+    "status": "LIVE",
+    "reason": "OK",
+    "stalenessSec": 6003288,
+    "coveragePct": 100,
     "timezoneAssumption": "UTC",
     "dataAtDefinition": "FRED CPI latest monthly observation",
-    "latencyMs": 0,
-    "itemsCount": 0
+    "latencyMs": 182,
+    "itemsCount": 1
   },
   "data": {
-    "items": []
+    "items": [
+      {
+        "series": "CPI",
+        "value": 325.031,
+        "yoyPct": 2.7119693852721904,
+        "date": "2025-11-01"
+      }
+    ]
   }
 }
