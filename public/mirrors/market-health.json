@@ -1,59 +1,165 @@
 {
   "schemaVersion": "rv-mirror-v1",
   "mirrorId": "market-health",
-  "runId": "2026-01-09T22:46:24.206Z",
-  "updatedAt": "2026-01-09T22:46:24.206Z",
-  "asOf": "2026-01-09T21:00:00.000Z",
-  "mode": "EOD",
-  "cadence": "EOD",
+  "runId": "2026-01-10T18:16:33.677Z",
+  "updatedAt": "2026-01-10T18:16:33.677Z",
+  "asOf": "2026-01-10T18:16:33.677Z",
+  "mode": "LIVE",
+  "cadence": "best_effort",
   "trust": "derived",
   "source": "mirror",
-  "sourceUpstream": "stooq",
+  "sourceUpstream": "market-health",
   "dataQuality": "OK",
   "delayMinutes": 0,
   "missingSymbols": [],
   "errors": [],
   "notes": [],
-  "whyUnique": "EOD benchmark health snapshot.",
+  "whyUnique": "Seeded from market-health upstream",
   "context": {
-    "benchmarks": [
-      "SPY",
-      "QQQ",
-      "IWM"
-    ]
+    "fng": {
+      "value": 25,
+      "valueClassification": "Extreme Fear",
+      "timestamp": 1768003200
+    },
+    "fngStocks": {
+      "value": 50.6285714285714,
+      "valueClassification": "neutral",
+      "timestamp": 1768068993677
+    },
+    "btc": {
+      "usd": 90422,
+      "usd_24h_change": -0.8684696667038792
+    },
+    "source": "alternative.me, cnn, coingecko"
   },
   "items": [
     {
-      "symbol": "SPY",
-      "close": 694.07,
-      "prevClose": 689.51,
-      "changePct": 0.6613392119041217,
-      "lastBarDate": "2026-01-09",
-      "barsUsed": 5251,
-      "missingFields": []
+      "symbol": "BTC",
+      "label": "Bitcoin",
+      "price": 90422,
+      "changePercent": -0.8684696667038792,
+      "ts": "2026-01-10T18:16:33.677Z",
+      "source": "coingecko"
     },
     {
-      "symbol": "QQQ",
-      "close": 626.695,
-      "prevClose": 620.47,
-      "changePct": 1.003271713378573,
-      "lastBarDate": "2026-01-09",
-      "barsUsed": 6751,
-      "missingFields": []
+      "symbol": "ETH",
+      "label": "Ethereum",
+      "price": 3088.26,
+      "changePercent": -0.5428279541975711,
+      "ts": "2026-01-10T18:16:33.677Z",
+      "source": "coingecko"
     },
     {
-      "symbol": "IWM",
-      "close": 260.22,
-      "prevClose": 258.27,
-      "changePct": 0.7550238122894903,
-      "lastBarDate": "2026-01-09",
-      "barsUsed": 5251,
-      "missingFields": []
+      "symbol": "SOL",
+      "label": "Solana",
+      "price": 135.86,
+      "changePercent": -1.3331567517346243,
+      "ts": "2026-01-10T18:16:33.677Z",
+      "source": "coingecko"
+    },
+    {
+      "symbol": "XRP",
+      "label": "XRP",
+      "price": 2.09,
+      "changePercent": -0.4183980549640715,
+      "ts": "2026-01-10T18:16:33.677Z",
+      "source": "coingecko"
     }
   ],
+  "savedAt": "2026-01-10T18:16:33.677Z",
+  "_meta": {
+    "updated_at": "2026-01-10T18:16:33.677Z",
+    "provider": "market-health",
+    "status": "fresh"
+  },
+  "payload": {
+    "ok": true,
+    "feature": "market-health",
+    "ts": "2026-01-10T18:16:33.677Z",
+    "traceId": "seed",
+    "schemaVersion": 1,
+    "cache": {
+      "hit": false,
+      "ttl": 0,
+      "layer": "seed"
+    },
+    "upstream": {
+      "url": "https://api.alternative.me/fng/?limit=1&format=json | https://production.dataviz.cnn.io/index/fearandgreed/graphdata | https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,solana,ripple&vs_currencies=usd&include_24hr_change=true | https://query1.finance.yahoo.com/v7/finance/quote?symbols=%5EDJI%2C%5EGSPC%2C%5EIXIC%2C%5ERUT%2CGC%3DF%2CSI%3DF%2CCL%3DF",
+      "status": 200,
+      "snippet": ""
+    },
+    "rateLimit": {
+      "remaining": "unknown",
+      "reset": null,
+      "estimated": true
+    },
+    "dataQuality": {
+      "status": "LIVE",
+      "reason": "LIVE",
+      "missingFields": []
+    },
+    "meta": {
+      "status": "LIVE",
+      "reason": null
+    },
+    "data": {
+      "updatedAt": "2026-01-10T18:16:33.677Z",
+      "source": "alternative.me, cnn, coingecko",
+      "fng": {
+        "value": 25,
+        "valueClassification": "Extreme Fear",
+        "timestamp": 1768003200
+      },
+      "fngStocks": {
+        "value": 50.6285714285714,
+        "valueClassification": "neutral",
+        "timestamp": 1768068993677
+      },
+      "btc": {
+        "usd": 90422,
+        "usd_24h_change": -0.8684696667038792
+      },
+      "crypto": [
+        {
+          "symbol": "BTC",
+          "label": "Bitcoin",
+          "price": 90422,
+          "changePercent": -0.8684696667038792,
+          "ts": "2026-01-10T18:16:33.677Z",
+          "source": "coingecko"
+        },
+        {
+          "symbol": "ETH",
+          "label": "Ethereum",
+          "price": 3088.26,
+          "changePercent": -0.5428279541975711,
+          "ts": "2026-01-10T18:16:33.677Z",
+          "source": "coingecko"
+        },
+        {
+          "symbol": "SOL",
+          "label": "Solana",
+          "price": 135.86,
+          "changePercent": -1.3331567517346243,
+          "ts": "2026-01-10T18:16:33.677Z",
+          "source": "coingecko"
+        },
+        {
+          "symbol": "XRP",
+          "label": "XRP",
+          "price": 2.09,
+          "changePercent": -0.4183980549640715,
+          "ts": "2026-01-10T18:16:33.677Z",
+          "source": "coingecko"
+        }
+      ],
+      "indices": [],
+      "commodities": []
+    }
+  },
   "meta": {
     "status": "OK",
-    "updatedAt": "2026-01-09T22:46:24.206Z",
+    "updatedAt": "2026-01-10T18:16:33.677Z",
     "reason": null
   }
 }

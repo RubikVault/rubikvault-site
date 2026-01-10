@@ -1,9 +1,9 @@
 {
-  "schemaVersion": "1.0",
+  "schemaVersion": "rv-mirror-v1",
   "mirrorId": "yield-curve",
-  "runId": "2026-01-02T18:07:20.263Z",
-  "updatedAt": "2026-01-02T18:07:20.263Z",
-  "asOf": "2026-01-02T18:07:20.263Z",
+  "runId": "2026-01-10T18:16:28.657Z",
+  "updatedAt": "2026-01-10T18:16:28.657Z",
+  "asOf": "2026-01-10T18:16:28.657Z",
   "mode": "LIVE",
   "cadence": "best_effort",
   "trust": "derived",
@@ -17,58 +17,58 @@
   "whyUnique": "Seeded from yield-curve upstream",
   "context": {
     "spreads": {
-      "tenTwo": 0.6899999999999995,
-      "tenThreeMonth": 0.48999999999999977
+      "tenTwo": 0.7000000000000002,
+      "tenThreeMonth": 0.5700000000000003
     }
   },
   "items": [
     {
       "tenor": "1m",
-      "value": 3.65
+      "value": 3.7
     },
     {
       "tenor": "3m",
-      "value": 3.65
+      "value": 3.62
     },
     {
       "tenor": "6m",
-      "value": 3.59
+      "value": 3.56
     },
     {
       "tenor": "1y",
-      "value": 3.47
+      "value": 3.48
     },
     {
       "tenor": "2y",
-      "value": 3.45
+      "value": 3.49
     },
     {
       "tenor": "5y",
-      "value": 3.68
+      "value": 3.74
     },
     {
       "tenor": "10y",
-      "value": 4.14
+      "value": 4.19
     },
     {
       "tenor": "20y",
-      "value": 4.76
+      "value": 4.79
     },
     {
       "tenor": "30y",
-      "value": 4.81
+      "value": 4.85
     }
   ],
-  "savedAt": "2026-01-02T18:07:20.263Z",
+  "savedAt": "2026-01-10T18:16:28.657Z",
   "_meta": {
-    "updated_at": "2026-01-02T18:07:20.263Z",
+    "updated_at": "2026-01-10T18:16:28.657Z",
     "provider": "fred",
     "status": "fresh"
   },
   "payload": {
     "ok": true,
     "feature": "yield-curve",
-    "ts": "2026-01-02T18:07:20.262Z",
+    "ts": "2026-01-10T18:16:28.657Z",
     "traceId": "seed",
     "schemaVersion": 1,
     "cache": {
@@ -96,21 +96,21 @@
       "reason": null
     },
     "data": {
-      "updatedAt": "2025-12-30T00:00:00.000Z",
+      "updatedAt": "2026-01-08T00:00:00.000Z",
       "yields": {
-        "1m": 3.65,
-        "3m": 3.65,
-        "6m": 3.59,
-        "1y": 3.47,
-        "2y": 3.45,
-        "5y": 3.68,
-        "10y": 4.14,
-        "20y": 4.76,
-        "30y": 4.81
+        "1m": 3.7,
+        "3m": 3.62,
+        "6m": 3.56,
+        "1y": 3.48,
+        "2y": 3.49,
+        "5y": 3.74,
+        "10y": 4.19,
+        "20y": 4.79,
+        "30y": 4.85
       },
       "spreads": {
-        "tenTwo": 0.6899999999999995,
-        "tenThreeMonth": 0.48999999999999977
+        "tenTwo": 0.7000000000000002,
+        "tenThreeMonth": 0.5700000000000003
       },
       "inversion": {
         "tenTwo": false,
@@ -121,7 +121,7 @@
   },
   "meta": {
     "status": "OK",
-    "updatedAt": "2026-01-02T18:07:20.263Z",
+    "updatedAt": "2026-01-10T18:16:28.657Z",
     "reason": null
   }
 }
