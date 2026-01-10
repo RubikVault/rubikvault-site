@@ -1,31 +1,27 @@
 {
-  "day": "2026-01-09",
+  "day": "2026-01-10",
   "providers": {
     "stooq": {
-      "requests": 7,
+      "requests": 26,
       "credits": 0,
-      "bytesIn": 203,
-      "latencyMs": 568,
+      "bytesIn": 10627177,
+      "latencyMs": 29723,
       "limitRequests": 500,
       "limitCredits": 0,
-      "remainingRequests": 493,
+      "remainingRequests": 474,
       "remainingCredits": 0,
-      "errorsByReason": {
-        "RATE_LIMITED": 7
-      }
+      "errorsByReason": {}
     },
     "fred": {
-      "requests": 0,
+      "requests": 16,
       "credits": 0,
-      "bytesIn": 0,
-      "latencyMs": 0,
+      "bytesIn": 7167,
+      "latencyMs": 3049,
       "limitRequests": 500,
       "limitCredits": 0,
-      "remainingRequests": 500,
+      "remainingRequests": 484,
       "remainingCredits": 0,
-      "errorsByReason": {
-        "MISSING_SECRET": 7
-      }
+      "errorsByReason": {}
     },
     "ecb": {
       "requests": 6,
@@ -39,75 +35,10 @@
       "errorsByReason": {
         "PROVIDER_BAD_PAYLOAD": 2
       }
-    },
-    "fmp": {
-      "requests": 0,
-      "credits": 0,
-      "bytesIn": 0,
-      "latencyMs": 0,
-      "limitRequests": 100,
-      "limitCredits": 0,
-      "remainingRequests": 100,
-      "remainingCredits": 0,
-      "errorsByReason": {
-        "MISSING_SECRET": 2
-      }
-    },
-    "marketaux": {
-      "requests": 0,
-      "credits": 0,
-      "bytesIn": 0,
-      "latencyMs": 0,
-      "limitRequests": 100,
-      "limitCredits": 0,
-      "remainingRequests": 100,
-      "remainingCredits": 0,
-      "errorsByReason": {
-        "MISSING_SECRET": 1
-      }
-    },
-    "finnhub": {
-      "requests": 0,
-      "credits": 0,
-      "bytesIn": 0,
-      "latencyMs": 0,
-      "limitRequests": 100,
-      "limitCredits": 0,
-      "remainingRequests": 100,
-      "remainingCredits": 0,
-      "errorsByReason": {
-        "MISSING_SECRET": 1
-      }
-    },
-    "internal": {
-      "requests": 0,
-      "credits": 0,
-      "bytesIn": 0,
-      "latencyMs": 0,
-      "limitRequests": 10000,
-      "limitCredits": 0,
-      "remainingRequests": 10000,
-      "remainingCredits": 0,
-      "errorsByReason": {
-        "NO_DATA": 2
-      }
-    },
-    "sec": {
-      "requests": 0,
-      "credits": 0,
-      "bytesIn": 0,
-      "latencyMs": 0,
-      "limitRequests": 100,
-      "limitCredits": 0,
-      "remainingRequests": 100,
-      "remainingCredits": 0,
-      "errorsByReason": {
-        "MISSING_SECRET": 1
-      }
     }
   },
   "totals": {
-    "requests": 13,
+    "requests": 48,
     "credits": 0
   },
   "notes": []

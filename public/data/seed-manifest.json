@@ -1,217 +1,57 @@
 {
   "schemaVersion": "v1",
-  "runId": "2026-01-09T19:53:52.007Z",
-  "generatedAt": "2026-01-09T19:53:52.007Z",
+  "runId": "2026-01-10T01:47:57.474Z",
+  "generatedAt": "2026-01-10T01:47:57.474Z",
   "blocks": [
     {
       "blockId": "market-breadth",
       "title": "08 - Market Breadth",
-      "status": "ERROR",
-      "reason": "RATE_LIMITED",
-      "itemsCount": 0,
-      "coveragePct": 0,
-      "wroteSnapshot": false,
-      "durationMs": 252
-    },
-    {
-      "blockId": "vol-regime",
-      "title": "11 - Vol Regime",
-      "status": "ERROR",
-      "reason": "MISSING_SECRET",
-      "itemsCount": 0,
-      "coveragePct": 0,
-      "wroteSnapshot": false,
-      "durationMs": 0
-    },
-    {
-      "blockId": "credit-stress-proxy",
-      "title": "06 - Credit Stress Proxy",
-      "status": "ERROR",
-      "reason": "MISSING_SECRET",
-      "itemsCount": 0,
-      "coveragePct": 0,
-      "wroteSnapshot": false,
-      "durationMs": 1
-    },
-    {
-      "blockId": "risk-regime-lite",
-      "title": "13 - Risk Regime Lite",
       "status": "LIVE",
       "reason": "OK",
-      "itemsCount": 1,
+      "itemsCount": 15,
       "coveragePct": 100,
       "wroteSnapshot": true,
-      "durationMs": 2
-    },
-    {
-      "blockId": "volatility-term-lite",
-      "title": "17 - Volatility Term Lite",
-      "status": "ERROR",
-      "reason": "RATE_LIMITED",
-      "itemsCount": 0,
-      "coveragePct": 0,
-      "wroteSnapshot": false,
-      "durationMs": 62
-    },
-    {
-      "blockId": "credit-spread-proxy-lite",
-      "title": "19 - Credit Spread Proxy Lite",
-      "status": "LIVE",
-      "reason": "OK",
-      "itemsCount": 1,
-      "coveragePct": 100,
-      "wroteSnapshot": true,
-      "durationMs": 7
-    },
-    {
-      "blockId": "labor-pulse",
-      "title": "04 - Labor Pulse",
-      "status": "ERROR",
-      "reason": "MISSING_SECRET",
-      "itemsCount": 0,
-      "coveragePct": 0,
-      "wroteSnapshot": false,
-      "durationMs": 1
-    },
-    {
-      "blockId": "inflation-pulse",
-      "title": "03 - Inflation Pulse",
-      "status": "ERROR",
-      "reason": "MISSING_SECRET",
-      "itemsCount": 0,
-      "coveragePct": 0,
-      "wroteSnapshot": false,
-      "durationMs": 3
+      "durationMs": 20311
     },
     {
       "blockId": "liquidity-conditions-proxy",
       "title": "12 - Liquidity Conditions Proxy",
-      "status": "ERROR",
-      "reason": "MISSING_SECRET",
-      "itemsCount": 0,
-      "coveragePct": 0,
-      "wroteSnapshot": false,
-      "durationMs": 1
+      "status": "LIVE",
+      "reason": "OK",
+      "itemsCount": 1,
+      "coveragePct": 100,
+      "wroteSnapshot": true,
+      "durationMs": 273
+    },
+    {
+      "blockId": "vol-regime",
+      "title": "11 - Vol Regime",
+      "status": "LIVE",
+      "reason": "OK",
+      "itemsCount": 1,
+      "coveragePct": 100,
+      "wroteSnapshot": true,
+      "durationMs": 238
     },
     {
       "blockId": "sector-rotation",
       "title": "10 - Sector Rotation",
-      "status": "ERROR",
-      "reason": "RATE_LIMITED",
-      "itemsCount": 0,
-      "coveragePct": 0,
-      "wroteSnapshot": false,
-      "durationMs": 22
-    },
-    {
-      "blockId": "energy-macro",
-      "title": "05 - Energy Macro",
-      "status": "ERROR",
-      "reason": "MISSING_SECRET",
-      "itemsCount": 0,
-      "coveragePct": 0,
-      "wroteSnapshot": false,
-      "durationMs": 1
-    },
-    {
-      "blockId": "regime-transition-watch",
-      "title": "24 - Regime Transition Watch",
       "status": "LIVE",
       "reason": "OK",
-      "itemsCount": 1,
+      "itemsCount": 11,
       "coveragePct": 100,
       "wroteSnapshot": true,
-      "durationMs": 2
-    },
-    {
-      "blockId": "breadth-delta",
-      "title": "23 - Breadth Delta",
-      "status": "LIVE",
-      "reason": "OK",
-      "itemsCount": 1,
-      "coveragePct": 100,
-      "wroteSnapshot": true,
-      "durationMs": 2
-    },
-    {
-      "blockId": "market-stress-composite",
-      "title": "22 - Market Stress Composite",
-      "status": "LIVE",
-      "reason": "OK",
-      "itemsCount": 1,
-      "coveragePct": 100,
-      "wroteSnapshot": true,
-      "durationMs": 4
-    },
-    {
-      "blockId": "macro-surprise-lite",
-      "title": "21 - Macro Surprise Lite",
-      "status": "LIVE",
-      "reason": "OK",
-      "itemsCount": 3,
-      "coveragePct": 100,
-      "wroteSnapshot": true,
-      "durationMs": 3
-    },
-    {
-      "blockId": "liquidity-delta",
-      "title": "20 - Liquidity Delta",
-      "status": "LIVE",
-      "reason": "OK",
-      "itemsCount": 1,
-      "coveragePct": 100,
-      "wroteSnapshot": true,
-      "durationMs": 2
-    },
-    {
-      "blockId": "sector-relative-strength",
-      "title": "18 - Sector Relative Strength",
-      "status": "ERROR",
-      "reason": "RATE_LIMITED",
-      "itemsCount": 0,
-      "coveragePct": 0,
-      "wroteSnapshot": false,
-      "durationMs": 120
-    },
-    {
-      "blockId": "momentum-heatmap-lite",
-      "title": "16 - Momentum Heatmap Lite",
-      "status": "ERROR",
-      "reason": "RATE_LIMITED",
-      "itemsCount": 0,
-      "coveragePct": 0,
-      "wroteSnapshot": false,
-      "durationMs": 22
-    },
-    {
-      "blockId": "trend-strength-board",
-      "title": "15 - Trend Strength Board",
-      "status": "ERROR",
-      "reason": "RATE_LIMITED",
-      "itemsCount": 0,
-      "coveragePct": 0,
-      "wroteSnapshot": false,
-      "durationMs": 85
-    },
-    {
-      "blockId": "drawdown-monitor",
-      "title": "14 - Drawdown Monitor",
-      "status": "ERROR",
-      "reason": "RATE_LIMITED",
-      "itemsCount": 0,
-      "coveragePct": 0,
-      "wroteSnapshot": false,
-      "durationMs": 43
+      "durationMs": 9651
     },
     {
       "blockId": "highs-vs-lows",
       "title": "09 - Highs vs Lows",
-      "status": "ERROR",
-      "reason": "POISON_GUARD",
-      "itemsCount": 0,
-      "coveragePct": 0,
-      "wroteSnapshot": false,
-      "durationMs": 2
+      "status": "LIVE",
+      "reason": "OK",
+      "itemsCount": 15,
+      "coveragePct": 100,
+      "wroteSnapshot": true,
+      "durationMs": 8
     },
     {
       "blockId": "fx-board",
@@ -220,8 +60,48 @@
       "reason": "PROVIDER_BAD_PAYLOAD",
       "itemsCount": 0,
       "coveragePct": 0,
+      "wroteSnapshot": false,
+      "durationMs": 3625
+    },
+    {
+      "blockId": "credit-stress-proxy",
+      "title": "06 - Credit Stress Proxy",
+      "status": "LIVE",
+      "reason": "OK",
+      "itemsCount": 1,
+      "coveragePct": 100,
       "wroteSnapshot": true,
-      "durationMs": 3036
+      "durationMs": 194
+    },
+    {
+      "blockId": "energy-macro",
+      "title": "05 - Energy Macro",
+      "status": "LIVE",
+      "reason": "OK",
+      "itemsCount": 1,
+      "coveragePct": 100,
+      "wroteSnapshot": true,
+      "durationMs": 157
+    },
+    {
+      "blockId": "labor-pulse",
+      "title": "04 - Labor Pulse",
+      "status": "LIVE",
+      "reason": "OK",
+      "itemsCount": 2,
+      "coveragePct": 100,
+      "wroteSnapshot": true,
+      "durationMs": 319
+    },
+    {
+      "blockId": "inflation-pulse",
+      "title": "03 - Inflation Pulse",
+      "status": "LIVE",
+      "reason": "OK",
+      "itemsCount": 1,
+      "coveragePct": 100,
+      "wroteSnapshot": true,
+      "durationMs": 147
     },
     {
       "blockId": "ecb-rates-board",
@@ -230,208 +110,18 @@
       "reason": "PROVIDER_BAD_PAYLOAD",
       "itemsCount": 0,
       "coveragePct": 0,
-      "wroteSnapshot": true,
-      "durationMs": 3017
+      "wroteSnapshot": false,
+      "durationMs": 3199
     },
     {
       "blockId": "us-yield-curve",
       "title": "01 - US Yield Curve",
-      "status": "ERROR",
-      "reason": "MISSING_SECRET",
-      "itemsCount": 0,
-      "coveragePct": 0,
-      "wroteSnapshot": false,
-      "durationMs": 1
-    },
-    {
-      "blockId": "macro-risk-score",
-      "title": "34 - Macro Risk Score",
       "status": "LIVE",
       "reason": "OK",
-      "itemsCount": 1,
+      "itemsCount": 9,
       "coveragePct": 100,
       "wroteSnapshot": true,
-      "durationMs": 2
-    },
-    {
-      "blockId": "market-health-summary",
-      "title": "25 - Market Health Summary",
-      "status": "LIVE",
-      "reason": "OK",
-      "itemsCount": 24,
-      "coveragePct": 100,
-      "wroteSnapshot": true,
-      "durationMs": 3
-    },
-    {
-      "blockId": "systemic-risk-lite",
-      "title": "40 - Systemic Risk Lite",
-      "status": "LIVE",
-      "reason": "OK",
-      "itemsCount": 1,
-      "coveragePct": 100,
-      "wroteSnapshot": true,
-      "durationMs": 0
-    },
-    {
-      "blockId": "alpha-radar-lite",
-      "title": "42 - Alpha Radar Lite",
-      "status": "PARTIAL",
-      "reason": "DEGRADED_COVERAGE",
-      "itemsCount": 5,
-      "coveragePct": 83,
-      "wroteSnapshot": true,
-      "durationMs": 1
-    },
-    {
-      "blockId": "weekly-market-brief",
-      "title": "41 - Weekly Market Brief",
-      "status": "PARTIAL",
-      "reason": "DEGRADED_COVERAGE",
-      "itemsCount": 4,
-      "coveragePct": 67,
-      "wroteSnapshot": true,
-      "durationMs": 1
-    },
-    {
-      "blockId": "earnings-pressure-lite",
-      "title": "26 - Earnings Pressure Lite",
-      "status": "ERROR",
-      "reason": "MISSING_SECRET",
-      "itemsCount": 0,
-      "coveragePct": 0,
-      "wroteSnapshot": false,
-      "durationMs": 0
-    },
-    {
-      "blockId": "sentiment-lite",
-      "title": "31 - Sentiment Lite",
-      "status": "ERROR",
-      "reason": "MISSING_SECRET",
-      "itemsCount": 0,
-      "coveragePct": 0,
-      "wroteSnapshot": false,
-      "durationMs": 1
-    },
-    {
-      "blockId": "options-skew-lite",
-      "title": "28 - Options Skew Lite",
-      "status": "ERROR",
-      "reason": "MISSING_SECRET",
-      "itemsCount": 0,
-      "coveragePct": 0,
-      "wroteSnapshot": false,
-      "durationMs": 0
-    },
-    {
-      "blockId": "master-market-dashboard",
-      "title": "43 - Master Market Dashboard",
-      "status": "LIVE",
-      "reason": "OK",
-      "itemsCount": 42,
-      "coveragePct": 100,
-      "wroteSnapshot": true,
-      "durationMs": 3
-    },
-    {
-      "blockId": "cross-asset-divergence",
-      "title": "39 - Cross Asset Divergence",
-      "status": "LIVE",
-      "reason": "OK",
-      "itemsCount": 1,
-      "coveragePct": 100,
-      "wroteSnapshot": true,
-      "durationMs": 1
-    },
-    {
-      "blockId": "catalyst-calendar-lite",
-      "title": "38 - Catalyst Calendar Lite",
-      "status": "PARTIAL",
-      "reason": "DEGRADED_COVERAGE",
-      "itemsCount": 3,
-      "coveragePct": 30,
-      "wroteSnapshot": true,
-      "durationMs": 0
-    },
-    {
-      "blockId": "regime-fracture-alert",
-      "title": "37 - Regime Fracture Alert",
-      "status": "LIVE",
-      "reason": "OK",
-      "itemsCount": 1,
-      "coveragePct": 100,
-      "wroteSnapshot": true,
-      "durationMs": 1
-    },
-    {
-      "blockId": "liquidity-stress-watch",
-      "title": "36 - Liquidity Stress Watch",
-      "status": "LIVE",
-      "reason": "OK",
-      "itemsCount": 1,
-      "coveragePct": 100,
-      "wroteSnapshot": true,
-      "durationMs": 0
-    },
-    {
-      "blockId": "tail-risk-watch",
-      "title": "35 - Tail Risk Watch",
-      "status": "LIVE",
-      "reason": "OK",
-      "itemsCount": 1,
-      "coveragePct": 100,
-      "wroteSnapshot": true,
-      "durationMs": 1
-    },
-    {
-      "blockId": "analyst-revision-lite",
-      "title": "33 - Analyst Revision Lite",
-      "status": "ERROR",
-      "reason": "MISSING_SECRET",
-      "itemsCount": 0,
-      "coveragePct": 0,
-      "wroteSnapshot": false,
-      "durationMs": 0
-    },
-    {
-      "blockId": "social-velocity-lite",
-      "title": "32 - Social Velocity Lite",
-      "status": "ERROR",
-      "reason": "NO_DATA",
-      "itemsCount": 0,
-      "coveragePct": 0,
-      "wroteSnapshot": true,
-      "durationMs": 1
-    },
-    {
-      "blockId": "flow-anomaly-lite",
-      "title": "30 - Flow Anomaly Lite",
-      "status": "LIVE",
-      "reason": "OK",
-      "itemsCount": 1,
-      "coveragePct": 100,
-      "wroteSnapshot": true,
-      "durationMs": 0
-    },
-    {
-      "blockId": "gamma-exposure-lite",
-      "title": "29 - Gamma Exposure Lite",
-      "status": "ERROR",
-      "reason": "NO_DATA",
-      "itemsCount": 0,
-      "coveragePct": 0,
-      "wroteSnapshot": true,
-      "durationMs": 0
-    },
-    {
-      "blockId": "insider-activity-lite",
-      "title": "27 - Insider Activity Lite",
-      "status": "ERROR",
-      "reason": "MISSING_SECRET",
-      "itemsCount": 0,
-      "coveragePct": 0,
-      "wroteSnapshot": false,
-      "durationMs": 0
+      "durationMs": 1724
     }
   ]
 }
