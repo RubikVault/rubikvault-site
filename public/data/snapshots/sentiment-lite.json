@@ -2,24 +2,38 @@
   "schemaVersion": "v1",
   "blockId": "sentiment-lite",
   "title": "31 - Sentiment Lite",
-  "generatedAt": "2026-01-09T12:50:03.614Z",
-  "dataAt": "2026-01-09T12:50:03.614Z",
+  "generatedAt": "2026-01-10T11:07:30.725Z",
+  "dataAt": "2026-01-09T21:41:13.000000Z",
   "meta": {
-    "status": "ERROR",
-    "reason": "MISSING_SECRET",
-    "stalenessSec": 0,
-    "coveragePct": 0,
+    "status": "PARTIAL",
+    "reason": "DEGRADED_COVERAGE",
+    "stalenessSec": 48377,
+    "coveragePct": 30,
     "timezoneAssumption": "UTC",
     "dataAtDefinition": "Marketaux news sentiment summary",
-    "latencyMs": 0,
-    "itemsCount": 0,
-    "details": {
-      "httpStatus": null,
-      "snippet": "missing MARKETAUX_API_KEY",
-      "urlHost": "marketaux"
-    }
+    "latencyMs": 530,
+    "itemsCount": 3
   },
   "data": {
-    "items": []
+    "items": [
+      {
+        "title": "S&P 500 Snapshot: Index Closes at Record High",
+        "source": "etftrends.com",
+        "sentiment": null,
+        "date": "2026-01-09T21:41:13.000000Z"
+      },
+      {
+        "title": "Jim Cramer Warns Against Chasing Stocks Already Up '30% Or 40%' For The Year, Says It's 'A License To Lose Money' - JPMorgan Chase (NYSE:JPM), Invesco QQQ Trust, Series 1 (NASDAQ:QQQ)",
+        "source": "benzinga.com",
+        "sentiment": null,
+        "date": "2026-01-09T11:37:44.000000Z"
+      },
+      {
+        "title": "Верховный суд VS Трамп: решающая точка в процессе уже сегодня",
+        "source": "ru.investing.com",
+        "sentiment": null,
+        "date": "2026-01-09T10:54:00.000000Z"
+      }
+    ]
   }
 }

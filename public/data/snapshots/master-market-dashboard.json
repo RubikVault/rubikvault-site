@@ -2,16 +2,16 @@
   "schemaVersion": "v1",
   "blockId": "master-market-dashboard",
   "title": "43 - Master Market Dashboard",
-  "generatedAt": "2026-01-09T19:53:58.709Z",
-  "dataAt": "2026-01-09T19:53:58.695Z",
+  "generatedAt": "2026-01-10T11:07:34.325Z",
+  "dataAt": "2026-01-09T21:41:13.000000Z",
   "meta": {
     "status": "LIVE",
     "reason": "OK",
-    "stalenessSec": 0,
+    "stalenessSec": 48381,
     "coveragePct": 100,
     "timezoneAssumption": "UTC",
     "dataAtDefinition": "Rollup of blocks 1-42",
-    "latencyMs": 3,
+    "latencyMs": 2,
     "itemsCount": 42
   },
   "data": {
@@ -58,8 +58,8 @@
       },
       {
         "blockId": "highs-vs-lows",
-        "status": "ERROR",
-        "reason": "POISON_GUARD"
+        "status": "LIVE",
+        "reason": "OK"
       },
       {
         "blockId": "sector-rotation",
@@ -163,8 +163,8 @@
       },
       {
         "blockId": "sentiment-lite",
-        "status": "ERROR",
-        "reason": "MISSING_SECRET"
+        "status": "PARTIAL",
+        "reason": "DEGRADED_COVERAGE"
       },
       {
         "blockId": "social-velocity-lite",

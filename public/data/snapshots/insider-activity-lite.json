@@ -2,24 +2,70 @@
   "schemaVersion": "v1",
   "blockId": "insider-activity-lite",
   "title": "27 - Insider Activity Lite",
-  "generatedAt": "2026-01-09T12:50:03.618Z",
-  "dataAt": "2026-01-09T12:50:03.618Z",
+  "generatedAt": "2026-01-10T11:07:34.946Z",
+  "dataAt": "2026-01-08",
   "meta": {
-    "status": "ERROR",
-    "reason": "MISSING_SECRET",
-    "stalenessSec": 0,
-    "coveragePct": 0,
+    "status": "LIVE",
+    "reason": "OK",
+    "stalenessSec": 212854,
+    "coveragePct": 100,
     "timezoneAssumption": "UTC",
     "dataAtDefinition": "Recent insider-related filings from SEC EDGAR",
-    "latencyMs": 0,
-    "itemsCount": 0,
-    "details": {
-      "httpStatus": null,
-      "snippet": "missing SEC_API_KEY",
-      "urlHost": "sec"
-    }
+    "latencyMs": 199,
+    "itemsCount": 10
   },
   "data": {
-    "items": []
+    "items": [
+      {
+        "accessionNumber": "0001308179-26-000009",
+        "form": "DEFA14A",
+        "filedAt": "2026-01-08"
+      },
+      {
+        "accessionNumber": "0001308179-26-000008",
+        "form": "DEF 14A",
+        "filedAt": "2026-01-08"
+      },
+      {
+        "accessionNumber": "0002100523-26-000002",
+        "form": "3",
+        "filedAt": "2026-01-02"
+      },
+      {
+        "accessionNumber": "0001140361-26-000199",
+        "form": "8-K",
+        "filedAt": "2026-01-02"
+      },
+      {
+        "accessionNumber": "0001140361-25-044561",
+        "form": "8-K",
+        "filedAt": "2025-12-05"
+      },
+      {
+        "accessionNumber": "0001462356-25-000012",
+        "form": "4",
+        "filedAt": "2025-11-14"
+      },
+      {
+        "accessionNumber": "0001354457-25-001138",
+        "form": "25-NSE",
+        "filedAt": "2025-11-14"
+      },
+      {
+        "accessionNumber": "0001631982-25-000011",
+        "form": "4",
+        "filedAt": "2025-11-12"
+      },
+      {
+        "accessionNumber": "0000320193-25-000079",
+        "form": "10-K",
+        "filedAt": "2025-10-31"
+      },
+      {
+        "accessionNumber": "0000320193-25-000077",
+        "form": "8-K",
+        "filedAt": "2025-10-30"
+      }
+    ]
   }
 }
