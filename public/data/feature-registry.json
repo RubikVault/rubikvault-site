@@ -1662,7 +1662,7 @@
     },
     {
       "id": "rv-market-health",
-      "blockId": "rv-market-health",
+      "blockId": "market-health-summary",
       "title": "Market Health",
       "tier": "CORE",
       "provider": "internal",
@@ -1720,11 +1720,12 @@
         "creditsPerRunEstimate": 0
       },
       "primaryKey": "items",
-      "package": "legacy"
+      "package": "legacy",
+      "enabled": false
     },
     {
       "id": "rv-yield-curve",
-      "blockId": "rv-yield-curve",
+      "blockId": "us-yield-curve",
       "title": "Yield Curve",
       "tier": "CORE",
       "provider": "internal",
@@ -1782,7 +1783,8 @@
         "creditsPerRunEstimate": 0
       },
       "primaryKey": "items",
-      "package": "legacy"
+      "package": "legacy",
+      "enabled": false
     },
     {
       "id": "rv-market-cockpit",
@@ -1816,7 +1818,8 @@
         "creditsPerRunEstimate": 0
       },
       "primaryKey": "items",
-      "package": "legacy"
+      "package": "legacy",
+      "enabled": false
     }
   ]
 }
