@@ -1185,9 +1185,24 @@ function getManifestBlockId(feature, section) {
   return fallback || null;
 }
 
+function normalizeSnapshotId(blockId) {
+  const raw = String(blockId || "");
+  const colonIndex = raw.indexOf(":");
+  if (colonIndex === -1) return raw;
+  return raw.slice(colonIndex + 1) || "";
+}
+
+if (isDebugEnabled()) {
+  const testId = normalizeSnapshotId("42:alpha-radar-lite");
+  if (testId !== "alpha-radar-lite") {
+    console.warn("[RV] snapshot id normalization failed", { testId });
+  }
+}
+
 function getManifestEndpoint(feature, section) {
   const blockId = getManifestBlockId(feature, section);
-  return blockId ? `./data/snapshots/${blockId}.json` : "";
+  const snapshotId = normalizeSnapshotId(blockId);
+  return snapshotId ? `./data/snapshots/${snapshotId}.json` : "";
 }
 
 function renderManifestSnapshot(contentEl, feature, logger, section) {
