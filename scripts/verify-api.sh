@@ -7,7 +7,7 @@ REPORT_DIR="debug"
 TMP_DIR="$(mktemp -d)"
 ENDPOINTS=(
   "/api/bundle?debug=1"
-  "/api/debug-matrix?debug=1"
+  "/api/render-plan?debug=1"
 )
 
 cleanup() {
