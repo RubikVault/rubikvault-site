@@ -88,6 +88,115 @@ function isDebugEnabled() {
   return true;
 }
 
+function normalizeId(rawId) {
+  const raw = String(rawId || "");
+  const match = raw.match(/^(\d+):(.*)$/);
+  if (!match) return raw;
+  return match[2] || "";
+}
+
+if (isDebugEnabled()) {
+  const testId = normalizeId("42:alpha-radar-lite");
+  if (testId !== "alpha-radar-lite") {
+    console.warn("[RV] normalizeId failed", { testId });
+  }
+}
+
+function buildFallbackEnvelope(featureId, reason, error) {
+  const ts = new Date().toISOString();
+  return {
+    ok: false,
+    feature: featureId || "unknown",
+    meta: {
+      status: "NO_DATA",
+      reason: reason || "NO_DATA",
+      generatedAt: ts,
+      stalenessSec: 0
+    },
+    data: { items: [] },
+    warnings: [],
+    error: error
+      ? { code: reason || "NO_DATA", message: error?.message || "Snapshot load failed" }
+      : null
+  };
+}
+
+function normalizeSnapshotEnvelope(rawSnapshot, rawId) {
+  if (
+    rawSnapshot &&
+    typeof rawSnapshot === "object" &&
+    typeof rawSnapshot.ok === "boolean" &&
+    rawSnapshot.meta &&
+    typeof rawSnapshot.meta.status === "string"
+  ) {
+    return rawSnapshot;
+  }
+
+  if (!rawSnapshot || typeof rawSnapshot !== "object") {
+    return buildFallbackEnvelope(rawId, "NO_DATA");
+  }
+
+  const meta = rawSnapshot.meta && typeof rawSnapshot.meta === "object" ? rawSnapshot.meta : {};
+  const status = typeof meta.status === "string" && meta.status ? meta.status : "NO_DATA";
+  const reason = meta.reason !== undefined && meta.reason !== null ? String(meta.reason) : "NO_DATA";
+  const generatedAt = meta.generatedAt || rawSnapshot.generatedAt || new Date().toISOString();
+  const dataAt = meta.dataAt || rawSnapshot.dataAt || generatedAt;
+  const parsedGenerated = Date.parse(generatedAt);
+  const parsedDataAt = Date.parse(dataAt);
+  const stalenessSec = Number.isFinite(meta.stalenessSec)
+    ? meta.stalenessSec
+    : Number.isFinite(parsedGenerated) && Number.isFinite(parsedDataAt)
+      ? Math.max(0, Math.floor((parsedGenerated - parsedDataAt) / 1000))
+      : 0;
+  const ok = status !== "ERROR" && status !== "NO_DATA";
+
+  return {
+    ok,
+    feature: rawSnapshot.feature || rawSnapshot.blockId || rawId || "unknown",
+    meta: {
+      status,
+      reason,
+      generatedAt,
+      stalenessSec
+    },
+    data: rawSnapshot.data && typeof rawSnapshot.data === "object" ? rawSnapshot.data : { items: [] },
+    warnings: rawSnapshot.warnings || [],
+    error: rawSnapshot.error || null
+  };
+}
+
+async function loadSnapshot(rawId, { force = false } = {}) {
+  const snapshotId = normalizeId(rawId);
+  if (!snapshotId) {
+    return buildFallbackEnvelope(rawId, "NO_DATA");
+  }
+  if (!force && SNAPSHOT_CACHE.has(snapshotId)) {
+    return SNAPSHOT_CACHE.get(snapshotId);
+  }
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), SNAPSHOT_TIMEOUT_MS);
+  const fetchPromise = fetch(`./data/snapshots/${snapshotId}.json`, {
+    cache: "no-store",
+    signal: controller.signal
+  })
+    .then((res) => {
+      if (!res.ok) {
+        return buildFallbackEnvelope(rawId, "NO_DATA", new Error(`Snapshot ${res.status}`));
+      }
+      return res
+        .json()
+        .then((payload) => normalizeSnapshotEnvelope(payload, rawId))
+        .catch((error) => buildFallbackEnvelope(rawId, "NO_DATA", error));
+    })
+    .catch((error) => buildFallbackEnvelope(rawId, "NO_DATA", error))
+    .finally(() => {
+      clearTimeout(timeout);
+    });
+
+  SNAPSHOT_CACHE.set(snapshotId, fetchPromise);
+  return fetchPromise;
+}
+
 const INLINE_DIAGNOSTICS_ID = "rv-inline-diagnostics";
 const apiState = {
   disabled: false,
@@ -188,6 +297,9 @@ const DASHBOARD_JITTER_PCT = 0.15;
 const REFRESH_BACKOFF_MAX_MS = 20 * 60 * 1000;
 let FEATURE_REGISTRY_CACHE = null;
 let MANIFEST_CACHE = null;
+const SNAPSHOT_ONLY = true;
+const SNAPSHOT_CACHE = new Map();
+const SNAPSHOT_TIMEOUT_MS = 5000;
 
 function normalizeBlockEntries(list) {
   return (Array.isArray(list) ? list : [])
@@ -465,6 +577,7 @@ function computeJitter(ms) {
 async function fetchDashboardSegment(seg, { force = false } = {}) {
   const state = DASHBOARD_STATE[seg] || DASHBOARD_STATE.fast;
   if (state.inflight && !force) return state.inflight;
+  if (SNAPSHOT_ONLY) return null;
   const resolution = resolveApiBase();
   if (!resolution.ok) return null;
   const url = `${resolution.apiPrefix}/dashboard?seg=${seg}`;
@@ -491,6 +604,7 @@ async function fetchDashboardSegment(seg, { force = false } = {}) {
 }
 
 async function prefetchDashboard(features) {
+  if (SNAPSHOT_ONLY) return;
   const entries = Array.isArray(features) ? features : [];
   const needsSlow = entries.some((feature) => {
     const reg = BLOCK_REGISTRY[feature?.id];
@@ -503,6 +617,7 @@ async function prefetchDashboard(features) {
 }
 
 async function refreshDashboardForFeature(featureId) {
+  if (SNAPSHOT_ONLY) return null;
   const reg = BLOCK_REGISTRY[featureId];
   const seg = classifySegment(reg);
   return fetchDashboardSegment(seg, { force: true });
@@ -1175,61 +1290,330 @@ function getManifestBlockId(feature, section) {
 
 function getManifestEndpoint(feature, section) {
   const blockId = getManifestBlockId(feature, section);
-  return blockId ? `./data/snapshots/${blockId}.json` : "";
+  const snapshotId = normalizeId(blockId);
+  return snapshotId ? `./data/snapshots/${snapshotId}.json` : "";
+}
+
+function formatNumber(value, options = {}) {
+  if (value === null || value === undefined || Number.isNaN(value)) return "N/A";
+  return new Intl.NumberFormat("en-US", options).format(value);
+}
+
+function renderDebugMeta(container, meta) {
+  if (!isDebugEnabled() || !container) return;
+  const debugLine = document.createElement("div");
+  debugLine.style.cssText = "font-size:11px;color:#888;margin-top:8px;";
+  debugLine.textContent = `Debug: ${meta.status || "NO_DATA"} · ${meta.reason || "NO_DATA"} · stalenessSec=${meta.stalenessSec ?? 0} · generatedAt=${meta.generatedAt || "N/A"}`;
+  container.appendChild(debugLine);
+}
+
+function renderNoData(contentEl, meta) {
+  if (!contentEl) return;
+  const reason = meta.reason || "NO_DATA";
+  contentEl.innerHTML = `
+    <div class="rv-native-empty">
+      No data available. Reason: ${reason}
+    </div>
+  `;
+  renderDebugMeta(contentEl, meta);
+}
+
+function renderSnapshotSummary(contentEl, snapshot) {
+  if (!contentEl) return;
+  const meta = snapshot.meta || {};
+  const itemsCount = Array.isArray(snapshot?.data?.items) ? snapshot.data.items.length : 0;
+  const wrapper = document.createElement("div");
+  wrapper.className = "rv-content";
+  wrapper.setAttribute("data-rendered", "true");
+
+  const metaLine = document.createElement("div");
+  metaLine.style.cssText = "font-size:12px;color:#666;margin-bottom:8px;";
+  metaLine.textContent = `Status: ${meta.status || "NO_DATA"} - ${meta.reason || "NO_DATA"}`;
+
+  const itemsLine = document.createElement("div");
+  itemsLine.style.cssText = "font-size:13px;color:#444;";
+  itemsLine.textContent = `Items: ${itemsCount}`;
+
+  wrapper.appendChild(metaLine);
+  wrapper.appendChild(itemsLine);
+  renderDebugMeta(wrapper, meta);
+  contentEl.innerHTML = "";
+  contentEl.appendChild(wrapper);
+}
+
+function renderTopMoversSnapshot(contentEl, snapshot) {
+  const items = Array.isArray(snapshot?.data?.items) ? snapshot.data.items : [];
+  if (!items.length) {
+    renderNoData(contentEl, snapshot.meta || {});
+    return;
+  }
+  const rows = items.slice(0, 5);
+  contentEl.innerHTML = `
+    <div class="rv-native-table-wrap">
+      <h4>Top Movers</h4>
+      <table class="rv-native-table">
+        <thead>
+          <tr>
+            <th>Symbol</th>
+            <th>Change %</th>
+            <th>Last Price</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rows
+            .map((item) => {
+              const changePct = item.changePct ?? item.changePercent ?? null;
+              const price = item.lastPrice ?? item.lastClose ?? item.price ?? null;
+              return `
+                <tr>
+                  <td>${item.symbol || "N/A"}</td>
+                  <td>${formatNumber(changePct, { maximumFractionDigits: 2 })}</td>
+                  <td>${formatNumber(price, { maximumFractionDigits: 2 })}</td>
+                </tr>
+              `;
+            })
+            .join("")}
+        </tbody>
+      </table>
+    </div>
+  `;
+  renderDebugMeta(contentEl, snapshot.meta || {});
+}
+
+function renderYieldCurveSnapshot(contentEl, snapshot) {
+  const items = Array.isArray(snapshot?.data?.items) ? snapshot.data.items : [];
+  if (!items.length) {
+    renderNoData(contentEl, snapshot.meta || {});
+    return;
+  }
+  const byMaturity = new Map(
+    items.map((item) => [String(item.maturity || "").toLowerCase(), item.value])
+  );
+  const twoY = byMaturity.get("2y");
+  const tenY = byMaturity.get("10y");
+  if (!Number.isFinite(twoY) || !Number.isFinite(tenY)) {
+    renderNoData(contentEl, snapshot.meta || {});
+    return;
+  }
+  const spread = tenY - twoY;
+  const label = spread < 0 ? "Inversion" : "Normal";
+  contentEl.innerHTML = `
+    <div class="rv-native-table-wrap">
+      <h4>Yield Curve</h4>
+      <table class="rv-native-table">
+        <tbody>
+          <tr><td>2Y</td><td>${formatNumber(twoY, { maximumFractionDigits: 2 })}%</td></tr>
+          <tr><td>10Y</td><td>${formatNumber(tenY, { maximumFractionDigits: 2 })}%</td></tr>
+          <tr><td>Spread</td><td>${formatNumber(spread, { maximumFractionDigits: 2 })}%</td></tr>
+          <tr><td>Signal</td><td>${label}</td></tr>
+        </tbody>
+      </table>
+    </div>
+  `;
+  renderDebugMeta(contentEl, snapshot.meta || {});
+}
+
+function renderWhyMovedSnapshot(contentEl, snapshot) {
+  const items = Array.isArray(snapshot?.data?.items) ? snapshot.data.items : [];
+  const reasons = items
+    .map((item) => item.title || item.headline || item.reason || item.summary || item.label)
+    .filter(Boolean)
+    .slice(0, 3);
+  if (!reasons.length) {
+    renderNoData(contentEl, snapshot.meta || {});
+    return;
+  }
+  contentEl.innerHTML = `
+    <div class="rv-native-list">
+      <h4>Why Moved</h4>
+      <ul>
+        ${reasons.map((text) => `<li>${text}</li>`).join("")}
+      </ul>
+    </div>
+  `;
+  renderDebugMeta(contentEl, snapshot.meta || {});
+}
+
+function renderSp500SectorsSnapshot(contentEl, snapshot) {
+  const items = Array.isArray(snapshot?.data?.sectors)
+    ? snapshot.data.sectors
+    : Array.isArray(snapshot?.data?.items)
+      ? snapshot.data.items
+      : [];
+  if (!items.length) {
+    renderNoData(contentEl, snapshot.meta || {});
+    return;
+  }
+  const rows = items.slice(0, 6);
+  contentEl.innerHTML = `
+    <div class="rv-native-table-wrap">
+      <h4>S&P 500 Sectors</h4>
+      <table class="rv-native-table">
+        <thead>
+          <tr>
+            <th>Sector</th>
+            <th>Change %</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rows
+            .map((item) => {
+              const sector = item.sector || item.name || item.label || "N/A";
+              const changePct =
+                item.changePct ??
+                item.pct ??
+                item.change ??
+                item.returnPct ??
+                item.performance ??
+                null;
+              return `
+                <tr>
+                  <td>${sector}</td>
+                  <td>${formatNumber(changePct, { maximumFractionDigits: 2 })}</td>
+                </tr>
+              `;
+            })
+            .join("")}
+        </tbody>
+      </table>
+    </div>
+  `;
+  renderDebugMeta(contentEl, snapshot.meta || {});
+}
+
+function renderTechSignalsSnapshot(contentEl, snapshot) {
+  const items = Array.isArray(snapshot?.data?.signals)
+    ? snapshot.data.signals
+    : Array.isArray(snapshot?.data?.items)
+      ? snapshot.data.items
+      : [];
+  if (!items.length) {
+    renderNoData(contentEl, snapshot.meta || {});
+    return;
+  }
+  const rows = items.slice(0, 5);
+  contentEl.innerHTML = `
+    <div class="rv-native-table-wrap">
+      <h4>Tech Signals</h4>
+      <table class="rv-native-table">
+        <thead>
+          <tr>
+            <th>Signal</th>
+            <th>State</th>
+            <th>Note</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rows
+            .map((item) => {
+              const label = item.label || item.name || item.signal || "N/A";
+              const state = item.state || item.status || item.value || "N/A";
+              const note = item.note || item.description || item.detail || "";
+              return `
+                <tr>
+                  <td>${label}</td>
+                  <td>${state}</td>
+                  <td>${note}</td>
+                </tr>
+              `;
+            })
+            .join("")}
+        </tbody>
+      </table>
+    </div>
+  `;
+  renderDebugMeta(contentEl, snapshot.meta || {});
+}
+
+function renderVolumeAnomalySnapshot(contentEl, snapshot) {
+  const items = Array.isArray(snapshot?.data?.items) ? snapshot.data.items : [];
+  if (!items.length) {
+    renderNoData(contentEl, snapshot.meta || {});
+    return;
+  }
+  const rows = items.slice(0, 5);
+  contentEl.innerHTML = `
+    <div class="rv-native-table-wrap">
+      <h4>Volume Anomaly</h4>
+      <table class="rv-native-table">
+        <thead>
+          <tr>
+            <th>Symbol</th>
+            <th>Spike</th>
+            <th>Change %</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rows
+            .map((item) => {
+              const symbol = item.symbol || item.ticker || "N/A";
+              const spike =
+                item.spike ??
+                item.volumeSpike ??
+                item.spikeMultiple ??
+                item.zscore ??
+                item.multiple ??
+                null;
+              const changePct = item.changePct ?? item.changePercent ?? item.pct ?? null;
+              return `
+                <tr>
+                  <td>${symbol}</td>
+                  <td>${formatNumber(spike, { maximumFractionDigits: 2 })}</td>
+                  <td>${formatNumber(changePct, { maximumFractionDigits: 2 })}</td>
+                </tr>
+              `;
+            })
+            .join("")}
+        </tbody>
+      </table>
+    </div>
+  `;
+  renderDebugMeta(contentEl, snapshot.meta || {});
+}
+
+async function renderSnapshotBlock(contentEl, feature, logger, section) {
+  const blockId =
+    getManifestBlockId(feature, section) ||
+    feature?.id ||
+    section?.getAttribute("data-rv-feature") ||
+    "unknown";
+  const snapshot = await loadSnapshot(blockId);
+  const meta = snapshot.meta || {};
+  const status = meta.status || "NO_DATA";
+  const reason = meta.reason || "NO_DATA";
+  const itemsCount = Array.isArray(snapshot?.data?.items) ? snapshot.data.items.length : 0;
+  const uiStatus = status === "ERROR" ? "FAIL" : status === "NO_DATA" ? "PARTIAL" : "OK";
+  logger?.setStatus(uiStatus, reason);
+  logger?.setMeta({
+    ok: snapshot.ok,
+    metaStatus: status,
+    metaReason: reason,
+    itemsCount,
+    dataAt: meta.generatedAt || null,
+    source: "snapshot"
+  });
+
+  const normalizedId = normalizeId(blockId);
+  if (normalizedId.endsWith("top-movers")) {
+    renderTopMoversSnapshot(contentEl, snapshot);
+  } else if (normalizedId.endsWith("yield-curve")) {
+    renderYieldCurveSnapshot(contentEl, snapshot);
+  } else if (normalizedId.endsWith("why-moved")) {
+    renderWhyMovedSnapshot(contentEl, snapshot);
+  } else if (normalizedId.endsWith("sp500-sectors")) {
+    renderSp500SectorsSnapshot(contentEl, snapshot);
+  } else if (normalizedId.endsWith("tech-signals")) {
+    renderTechSignalsSnapshot(contentEl, snapshot);
+  } else if (normalizedId.endsWith("volume-anomaly")) {
+    renderVolumeAnomalySnapshot(contentEl, snapshot);
+  } else {
+    renderSnapshotSummary(contentEl, snapshot);
+  }
+  return snapshot;
 }
 
 function renderManifestSnapshot(contentEl, feature, logger, section) {
-  const blockId = getManifestBlockId(feature, section);
-  if (!blockId) {
-    throw new Error("Missing manifest blockId");
-  }
-  const snapshotUrl = getManifestEndpoint(feature, section);
-  return fetch(snapshotUrl, { cache: "no-store" })
-    .then((res) => {
-      if (!res.ok) {
-        throw new Error(`Snapshot ${blockId} ${res.status}`);
-      }
-      return res.json();
-    })
-    .then((snapshot) => {
-      const status = snapshot?.meta?.status || "PARTIAL";
-      const reason = snapshot?.meta?.reason || "MANIFEST_FALLBACK";
-      const itemsCount = Array.isArray(snapshot?.data?.items) ? snapshot.data.items.length : 0;
-      logger.setStatus(status, reason);
-      logger.setMeta({
-        ok: status !== "ERROR",
-        metaStatus: status,
-        metaReason: reason,
-        itemsCount,
-        dataAt: snapshot?.dataAt || null,
-        source: "snapshot"
-      });
-
-      if (!contentEl) return;
-      const wrapper = document.createElement("div");
-      wrapper.className = "rv-content";
-      wrapper.setAttribute("data-rendered", "true");
-
-      const metaLine = document.createElement("div");
-      metaLine.style.cssText = "font-size:12px;color:#666;margin-bottom:8px;";
-      metaLine.textContent = `Status: ${status} - ${reason}`;
-
-      const itemsLine = document.createElement("div");
-      itemsLine.style.cssText = "font-size:13px;color:#444;";
-      itemsLine.textContent = `Items: ${itemsCount}`;
-
-      const dataAt = snapshot?.dataAt || snapshot?.generatedAt || "";
-      wrapper.appendChild(metaLine);
-      wrapper.appendChild(itemsLine);
-      if (dataAt) {
-        const dataAtLine = document.createElement("div");
-        dataAtLine.style.cssText = "font-size:12px;color:#888;margin-top:6px;";
-        dataAtLine.textContent = `Data at: ${dataAt}`;
-        wrapper.appendChild(dataAtLine);
-      }
-      contentEl.innerHTML = "";
-      contentEl.appendChild(wrapper);
-    });
+  return renderSnapshotBlock(contentEl, feature, logger, section);
 }
 
 async function runFeature(section, feature, logger, contentEl) {
@@ -1243,38 +1627,7 @@ async function runFeature(section, feature, logger, contentEl) {
   setLoading(section, true);
 
   try {
-    if (!feature?.module) {
-      await renderManifestSnapshot(contentEl, feature, logger, section);
-      recordBlockEnd({ blockId, blockName, ok: true });
-      clearDebugContext();
-      return true;
-    }
-    const module = await loadFeatureModule(feature);
-    const context = {
-      featureId: blockId,
-      feature,
-      config: RV_CONFIG,
-      traceId,
-      createTraceId,
-      logger,
-      root: section.querySelector("[data-rv-root]"),
-      content: contentEl,
-      section
-    };
-
-    if (typeof module.init !== "function") {
-      throw new Error("Feature export init() fehlt");
-    }
-
-    await module.init(contentEl, context);
-    if (isEffectivelyEmpty(contentEl)) {
-      contentEl.innerHTML = `
-        <div class="rv-empty-state">
-          <p style="color:#666;font-size:14px;padding:20px;">No data available</p>
-        </div>
-      `;
-      console.warn("[RV-Loader] EMPTY_RENDER", { blockId, endpoint });
-    }
+    await renderSnapshotBlock(contentEl, feature, logger, section);
     recordBlockEnd({ blockId, blockName, ok: true });
     clearDebugContext();
     return true;
@@ -1315,57 +1668,26 @@ function bindRefresh(section, feature, logger, contentEl) {
 
     const traceId = createTraceId();
     const blockName = getBlockName(section, feature);
-    const endpoint = getFeatureEndpoint(feature);
+    const endpoint = getFeatureEndpoint(feature) || getManifestEndpoint(feature, section);
     setDebugContext({ blockId: feature?.id || "unknown", blockName, endpoint });
     logger.setTraceId(traceId);
     setLoading(section, true);
 
     try {
-      if (!feature?.module) {
-        await renderManifestSnapshot(contentEl, feature, logger, section);
-      } else {
-        await refreshDashboardForFeature(feature?.id || section.getAttribute("data-rv-feature"));
-        const module = await loadFeatureModule(feature);
-        if (typeof module.refresh === "function") {
-          await module.refresh(contentEl, {
-            featureId: feature.id,
-            feature,
-            config: RV_CONFIG,
-            traceId,
-            createTraceId,
-            logger,
-            root: section.querySelector("[data-rv-root]"),
-            content: contentEl,
-            section
-          });
-        } else if (typeof module.init === "function") {
-          await module.init(contentEl, {
-            featureId: feature.id,
-            feature,
-            config: RV_CONFIG,
-            traceId,
-            createTraceId,
-            logger,
-            root: section.querySelector("[data-rv-root]"),
-            content: contentEl,
-            section
-          });
-        }
-      }
-      setLoading(section, false);
+      await renderSnapshotBlock(contentEl, feature, logger, section);
       recordBlockEnd({ blockId: feature?.id || "unknown", blockName, ok: true });
-      clearDebugContext();
     } catch (error) {
       logger.setStatus("FAIL", "Refresh failed");
       logger.error("refresh_error", { message: error?.message || "Unknown error" });
       renderError(contentEl, error);
-      setLoading(section, false);
       recordBlockEnd({
         blockId: feature?.id || "unknown",
         blockName,
         ok: false,
         error
       });
+    } finally {
+      setLoading(section, false);
       clearDebugContext();
     }
   });
@@ -1415,47 +1737,27 @@ function startAutoRefresh(section, feature, logger, contentEl) {
     state.inflight = true;
     const traceId = createTraceId();
     const blockName = getBlockName(section, feature);
-    const endpoint = getFeatureEndpoint(feature);
+    const endpoint = getFeatureEndpoint(feature) || getManifestEndpoint(feature, section);
     setDebugContext({ blockId: featureId, blockName, endpoint });
     logger.setTraceId(traceId);
     logger.info("auto_refresh", { intervalMs: baseInterval });
     setLoading(section, true);
     try {
-      if (!feature?.module) {
-        await renderManifestSnapshot(contentEl, feature, logger, section);
-      } else {
-        await refreshDashboardForFeature(featureId);
-        const module = await loadFeatureModule(feature);
-        if (typeof module.refresh === "function") {
-          await module.refresh(contentEl, {
-            featureId: feature.id,
-            feature,
-            config: RV_CONFIG,
-            traceId,
-            createTraceId,
-            logger,
-            root: section.querySelector("[data-rv-root]"),
-            content: contentEl,
-            section
-          });
-        }
-      }
-      setLoading(section, false);
+      await renderSnapshotBlock(contentEl, feature, logger, section);
       recordBlockEnd({ blockId: featureId, blockName, ok: true });
-      clearDebugContext();
     } catch (error) {
       logger.setStatus("FAIL", "Auto refresh failed");
       logger.error("auto_refresh_error", { message: error?.message || "Unknown error" });
       renderError(contentEl, error);
-      setLoading(section, false);
       recordBlockEnd({
         blockId: featureId,
         blockName,
         ok: false,
         error
       });
-      clearDebugContext();
     } finally {
+      setLoading(section, false);
+      clearDebugContext();
       state.inflight = false;
       const entry = statusState.get(featureId) || {};
       const nextDelay = computeDelay(entry);
@@ -1588,15 +1890,19 @@ async function boot() {
     const importPaths = features.map((feature) => feature.module);
     const apiResolution = getApiResolution();
     const apiPrefix = apiResolution.ok ? apiResolution.apiPrefix : "";
-    const apiPaths = apiResolution.ok
-      ? features
-          .filter((feature) => feature.api)
-          .map((feature) => `${apiPrefix}/${feature.api}`)
-      : [];
-    if (apiResolution.ok) {
-      apiPaths.unshift(`${apiPrefix}/health`);
-    } else {
-      console.warn("[RV] Config missing - API diagnostics disabled", apiResolution);
+    const apiPaths = SNAPSHOT_ONLY
+      ? []
+      : apiResolution.ok
+        ? features
+            .filter((feature) => feature.api)
+            .map((feature) => `${apiPrefix}/${feature.api}`)
+        : [];
+    if (!SNAPSHOT_ONLY) {
+      if (apiResolution.ok) {
+        apiPaths.unshift(`${apiPrefix}/health`);
+      } else {
+        console.warn("[RV] Config missing - API diagnostics disabled", apiResolution);
+      }
     }
 
     Promise.all([
