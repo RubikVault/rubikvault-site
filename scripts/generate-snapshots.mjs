@@ -71,9 +71,19 @@ async function readMirrorJson(mirrorId) {
 }
 
 function extractItems(payload) {
+  // mirror shapes vary across generators; accept multiple common paths
   if (Array.isArray(payload?.items)) return payload.items;
-  if (Array.isArray(payload?.payload?.data?.data?.items)) return payload.payload.data.data.items;
+
+  // "wrapped mirror" shapes
+  if (Array.isArray(payload?.payload?.items)) return payload.payload.items;
+
+  // common nested shapes
   if (Array.isArray(payload?.payload?.data?.items)) return payload.payload.data.items;
+  if (Array.isArray(payload?.payload?.data?.data?.items)) return payload.payload.data.data.items;
+
+  // IMPORTANT: some mirrors include an extra 'data' layer (payload.data.data.items)
+  if (Array.isArray(payload?.payload?.data?.data?.data?.items)) return payload.payload.data.data.data.items;
+
   return [];
 }
 
