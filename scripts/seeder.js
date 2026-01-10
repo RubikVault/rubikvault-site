@@ -511,16 +511,20 @@ async function runUsYieldCurve(entry, ctx) {
 }
 
 async function runEcbRatesBoard(entry, ctx) {
-  const items = [];
-  let dataAt = null;
-  for (const rate of ECB_RATE_KEYS) {
-    const seriesCtx = { ...ctx, providerId: entry.provider };
-    const result = await fetchEcbSeries(seriesCtx, rate.key);
-    if (!Number.isFinite(result.data.value)) continue;
-    items.push({ id: rate.id, label: rate.label, value: result.data.value, date: result.data.period });
-    if (!dataAt || result.data.period > dataAt) dataAt = result.data.period;
+  try {
+    const items = [];
+    let dataAt = null;
+    for (const rate of ECB_RATE_KEYS) {
+      const seriesCtx = { ...ctx, providerId: entry.provider };
+      const result = await fetchEcbSeries(seriesCtx, rate.key);
+      if (!Number.isFinite(result.data.value)) continue;
+      items.push({ id: rate.id, label: rate.label, value: result.data.value, date: result.data.period });
+      if (!dataAt || result.data.period > dataAt) dataAt = result.data.period;
+    }
+    return { items, dataAt };
+  } catch (error) {
+    return { items: [], dataAt: null, errorReason: "PROVIDER_BAD_PAYLOAD" };
   }
-  return { items, dataAt };
 }
 
 async function runInflationPulse(entry, ctx) {
@@ -591,16 +595,20 @@ async function runCreditStressProxy(entry, ctx) {
 }
 
 async function runFxBoard(entry, ctx) {
-  const items = [];
-  let dataAt = null;
-  for (const pair of ECB_FX_KEYS) {
-    const seriesCtx = { ...ctx, providerId: entry.provider };
-    const result = await fetchEcbSeries(seriesCtx, pair.key);
-    if (!Number.isFinite(result.data.value)) continue;
-    items.push({ pair: pair.pair, value: result.data.value, date: result.data.period });
-    if (!dataAt || result.data.period > dataAt) dataAt = result.data.period;
+  try {
+    const items = [];
+    let dataAt = null;
+    for (const pair of ECB_FX_KEYS) {
+      const seriesCtx = { ...ctx, providerId: entry.provider };
+      const result = await fetchEcbSeries(seriesCtx, pair.key);
+      if (!Number.isFinite(result.data.value)) continue;
+      items.push({ pair: pair.pair, value: result.data.value, date: result.data.period });
+      if (!dataAt || result.data.period > dataAt) dataAt = result.data.period;
+    }
+    return { items, dataAt };
+  } catch (error) {
+    return { items: [], dataAt: null, errorReason: "PROVIDER_BAD_PAYLOAD" };
   }
-  return { items, dataAt };
 }
 
 async function runMarketBreadth(entry, ctx, cache) {
@@ -1171,17 +1179,21 @@ async function runBlock(entry, ctx, cache) {
   const latencyMs = Date.now() - started;
 
   const items = Array.isArray(result.items) ? result.items : [];
+  const errorReason = typeof result.errorReason === "string" ? result.errorReason : "";
   const coveragePct = computeCoverage(items.length, entry.maxFanout);
   const evaluation = evaluateSnapshot(entry, items.length, coveragePct);
   const snapshot = buildSnapshot(entry, {
     items,
     dataAt: result.dataAt,
-    status: evaluation.status,
-    reason: evaluation.reason,
+    status: errorReason ? "ERROR" : evaluation.status,
+    reason: errorReason || evaluation.reason,
     generatedAt: new Date().toISOString(),
     latencyMs,
     extraData: result.extraData
   });
+  if (errorReason) {
+    evaluation.allowed = true;
+  }
 
   const dataAtCheckBlocks = new Set(["market-breadth", "sector-rotation"]);
   if (dataAtCheckBlocks.has(entry.blockId) && snapshot.meta.status === "LIVE") {
