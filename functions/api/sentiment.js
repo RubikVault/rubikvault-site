@@ -197,6 +197,8 @@ export async function onRequestGet({ request, env, data, waitUntil }) {
   if (rateState.limited) {
     const response = makeResponse({
       ok: false,
+      meta: { status: "NO_DATA", reason: "" },
+      meta: { status: "NO_DATA", reason: "RATE_LIMITED" },
       feature: FEATURE_ID,
       traceId,
       cache: { hit: false, ttl: 0, layer: "none" },
@@ -235,6 +237,7 @@ export async function onRequestGet({ request, env, data, waitUntil }) {
   if (cacheFresh) {
     const response = makeResponse({
       ok: true,
+      meta: { status: "LIVE", reason: "" },
       feature: FEATURE_ID,
       traceId,
       data: cached.value.data,
@@ -281,6 +284,7 @@ export async function onRequestGet({ request, env, data, waitUntil }) {
 
     const response = makeResponse({
       ok: true,
+      meta: { status: "LIVE", reason: "" },
       feature: FEATURE_ID,
       traceId,
       data: cached.value.data,
@@ -312,6 +316,7 @@ export async function onRequestGet({ request, env, data, waitUntil }) {
     if (cacheUsable) {
       const response = makeResponse({
         ok: true,
+      meta: { status: "LIVE", reason: "" },
         feature: FEATURE_ID,
         traceId,
         data: cached.value.data,
@@ -337,6 +342,7 @@ export async function onRequestGet({ request, env, data, waitUntil }) {
 
     const response = makeResponse({
       ok: false,
+      meta: { status: "NO_DATA", reason: "" },
       feature: FEATURE_ID,
       traceId,
       cache: { hit: false, ttl: 0, layer: "none" },
@@ -379,6 +385,7 @@ export async function onRequestGet({ request, env, data, waitUntil }) {
 
   const response = makeResponse({
     ok: true,
+      meta: { status: "LIVE", reason: "" },
     feature: FEATURE_ID,
     traceId,
     data: dataPayload,
@@ -421,6 +428,7 @@ async function onRequestGetLegacy({ request, env, data }) {
   if (rateState.limited) {
     const response = makeResponse({
       ok: false,
+      meta: { status: "NO_DATA", reason: "" },
       feature: FEATURE_ID,
       traceId,
       cache: { hit: false, ttl: 0, layer: "none" },
@@ -453,6 +461,7 @@ async function onRequestGetLegacy({ request, env, data }) {
     if (cached?.hit && cached.value?.data) {
       const response = makeResponse({
         ok: true,
+      meta: { status: "LIVE", reason: "" },
         feature: FEATURE_ID,
         traceId,
         data: cached.value.data,
@@ -522,6 +531,7 @@ async function onRequestGetLegacy({ request, env, data }) {
     if (cached?.hit && cached.value?.data) {
       const response = makeResponse({
         ok: true,
+      meta: { status: "LIVE", reason: "" },
         feature: FEATURE_ID,
         traceId,
         data: cached.value.data,
@@ -546,6 +556,7 @@ async function onRequestGetLegacy({ request, env, data }) {
 
     const response = makeResponse({
       ok: false,
+      meta: { status: "NO_DATA", reason: "" },
       feature: FEATURE_ID,
       traceId,
       cache: { hit: false, ttl: 0, layer: "none" },
@@ -613,6 +624,7 @@ async function onRequestGetLegacy({ request, env, data }) {
 
   const response = makeResponse({
     ok: true,
+      meta: { status: "LIVE", reason: "" },
     feature: FEATURE_ID,
     traceId,
     data: dataPayload,

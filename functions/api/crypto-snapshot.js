@@ -80,6 +80,7 @@ export async function onRequestGet({ request, env, data }) {
   if (rateState.limited) {
     const response = makeResponse({
       ok: false,
+      meta: { status: "NO_DATA", reason: "UPSTREAM_ERROR" },
       feature: FEATURE_ID,
       traceId,
       cache: { hit: false, ttl: 0, layer: "none" },
@@ -164,6 +165,7 @@ export async function onRequestGet({ request, env, data }) {
 
       const response = makeResponse({
         ok: false,
+        meta: { status: "NO_DATA", reason: errorCode || "UPSTREAM_ERROR" },
         feature: FEATURE_ID,
         traceId,
         cache: { hit: false, ttl: 0, layer: "none" },

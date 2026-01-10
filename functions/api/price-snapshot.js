@@ -118,6 +118,7 @@ export async function onRequestGet({ request, env, data }) {
 
       const response = makeResponse({
         ok: false,
+        meta: { status: "NO_DATA", reason: errorCode || "UPSTREAM_ERROR" },
         feature: FEATURE_ID,
         traceId,
         cache: { hit: false, ttl: 0, layer: "none" },
@@ -190,6 +191,7 @@ export async function onRequestGet({ request, env, data }) {
     const errorCode = error?.name === "AbortError" ? "UPSTREAM_TIMEOUT" : "UPSTREAM_5XX";
     const response = makeResponse({
       ok: false,
+      meta: { status: "NO_DATA", reason: "UPSTREAM_ERROR" },
       feature: FEATURE_ID,
       traceId,
       cache: { hit: false, ttl: 0, layer: "none" },
