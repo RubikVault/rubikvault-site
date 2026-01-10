@@ -77,14 +77,24 @@ function extractItems(payload) {
   return [];
 }
 
+function extractSectors(payload) {
+  if (Array.isArray(payload?.sectors)) return payload.sectors;
+  if (Array.isArray(payload?.payload?.data?.data?.sectors)) return payload.payload.data.data.sectors;
+  if (Array.isArray(payload?.payload?.data?.sectors)) return payload.payload.data.sectors;
+  if (Array.isArray(payload?.items) && payload.items.length && payload.items[0]?.sector) return payload.items;
+  return [];
+}
+
 function mapItemsOnly(raw) {
   const items = extractItems(raw);
   return { data: { items }, itemsCount: items.length };
 }
 
 function mapSectors(raw) {
+  const sectors = extractSectors(raw);
   const items = extractItems(raw);
-  return { data: { items, sectors: items }, itemsCount: items.length };
+  const itemsCount = sectors.length || items.length;
+  return { data: { items, sectors }, itemsCount };
 }
 
 function mapSignals(raw) {
@@ -135,6 +145,12 @@ async function generateSnapshot(entry) {
 
   try {
     mirrorPayload = await readMirrorJson(entry.mirrorId);
+    if (!mirrorPayload || (typeof mirrorPayload !== "object")) {
+      const schemaErr = new Error(`Mirror schema invalid for ${entry.mirrorId}`);
+      schemaErr.code = "MIRROR_SCHEMA_EMPTY";
+      throw schemaErr;
+    }
+
     const mapped = entry.mapData(mirrorPayload);
     data = mapped.data;
     itemsCount = mapped.itemsCount;
