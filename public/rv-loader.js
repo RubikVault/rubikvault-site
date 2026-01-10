@@ -193,6 +193,7 @@ function normalizeBlockEntries(list) {
   return (Array.isArray(list) ? list : [])
     .map((entry, index) => {
       if (!entry || typeof entry !== "object") return null;
+      if (entry.enabled === false) return null;
       const blockId = entry.blockId || entry.id || null;
       if (!blockId) return null;
       const idx = Number.isFinite(entry.idx) ? entry.idx : index + 1;
@@ -303,6 +304,9 @@ function mapBlocksToFeatures(blocks, features) {
       title: block.title || blockId
     };
     if (feature) {
+      if (feature.enabled === false) {
+        return;
+      }
       const next = {
         ...feature,
         title: feature.title || manifestMeta.title,
@@ -360,6 +364,7 @@ function syncBlockGrid(blocks, features) {
   const featureByBlock = new Map(
     features.map((feature) => [feature?.manifest?.blockId, feature]).filter(([key]) => key)
   );
+  const featureById = new Map(features.map((feature) => [feature?.id, feature]).filter(([key]) => key));
   const existing = Array.from(grid.querySelectorAll(".rv-section[data-rv-feature]"));
 
   normalized.forEach((block, index) => {
@@ -384,6 +389,12 @@ function syncBlockGrid(blocks, features) {
   });
 
   existing.slice(normalized.length).forEach((section) => {
+    const featureId = section.getAttribute("data-rv-feature");
+    const feature = featureId ? featureById.get(featureId) : null;
+    if (feature && feature.enabled !== false) {
+      section.hidden = false;
+      return;
+    }
     section.hidden = true;
     section.removeAttribute("data-rv-feature");
   });
@@ -466,7 +477,9 @@ async function fetchDashboardSegment(seg, { force = false } = {}) {
   const state = DASHBOARD_STATE[seg] || DASHBOARD_STATE.fast;
   if (state.inflight && !force) return state.inflight;
   const resolution = resolveApiBase();
-  if (!resolution.ok) return null;
+  if (!resolution.ok) {
+    return { ok: false, error: "CONFIG_MISSING" };
+  }
   const url = `${resolution.apiPrefix}/dashboard?seg=${seg}`;
   const started = performance.now();
   const inflight = fetch(url, {
@@ -1237,6 +1250,7 @@ async function runFeature(section, feature, logger, contentEl) {
   const blockName = getBlockName(section, feature);
   const endpoint = getFeatureEndpoint(feature) || getManifestEndpoint(feature, section);
   const blockId = feature?.id || section.getAttribute("data-rv-feature") || "unknown";
+  const resolution = getApiResolution();
   setDebugContext({ blockId, blockName, endpoint });
   logger.setTraceId(traceId);
   applyApiMeta(logger);
@@ -1244,6 +1258,12 @@ async function runFeature(section, feature, logger, contentEl) {
 
   try {
     if (!feature?.module) {
+      await renderManifestSnapshot(contentEl, feature, logger, section);
+      recordBlockEnd({ blockId, blockName, ok: true });
+      clearDebugContext();
+      return true;
+    }
+    if (!resolution.ok) {
       await renderManifestSnapshot(contentEl, feature, logger, section);
       recordBlockEnd({ blockId, blockName, ok: true });
       clearDebugContext();
@@ -1281,13 +1301,12 @@ async function runFeature(section, feature, logger, contentEl) {
   } catch (error) {
     logger.setStatus("FAIL", "Init failed");
     logger.error("init_error", { message: error?.message || "Unknown error" });
-    renderError(contentEl, error);
-    recordBlockEnd({
-      blockId,
-      blockName,
-      ok: false,
-      error
-    });
+    try {
+      await renderManifestSnapshot(contentEl, feature, logger, section);
+    } catch (fallbackError) {
+      renderError(contentEl, error);
+    }
+    recordBlockEnd({ blockId, blockName, ok: false, error });
     clearDebugContext();
     return false;
   } finally {
