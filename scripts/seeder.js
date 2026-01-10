@@ -13,6 +13,8 @@ const SNAPSHOT_DIR = path.join("public", "data", "snapshots");
 const MANIFEST_PATH = path.join("public", "data", "seed-manifest.json");
 const USAGE_PATH = path.join("public", "data", "usage-report.json");
 const PROVIDER_STATE_PATH = path.join("public", "data", "provider-state.json");
+const REGISTRY_SOURCE = path.join("public", "data", "feature-registry.json");
+const LEGACY_REGISTRY_PATH = path.join("data", "feature-registry.json");
 
 const DEFAULT_PACKAGES = ["blocks1-12", "blocks13-25", "blocks26-43"];
 
@@ -204,6 +206,76 @@ function loadJson(filePath) {
   return JSON.parse(raw);
 }
 
+function validateRegistrySchema(registry, label) {
+  if (!registry || typeof registry !== "object" || Array.isArray(registry)) {
+    throw new Error(`${label} invalid schema: expected object`);
+  }
+  if (!registry.schemaVersion) {
+    throw new Error(`${label} invalid schema: missing schemaVersion`);
+  }
+  if (!Array.isArray(registry.features)) {
+    throw new Error(`${label} invalid schema: missing features array`);
+  }
+  return registry;
+}
+
+function loadRegistryStrict(filePath) {
+  try {
+    const registry = loadJson(filePath);
+    if (!registry) {
+      throw new Error(`Missing ${filePath}`);
+    }
+    return validateRegistrySchema(registry, filePath);
+  } catch (error) {
+    const message = error?.message || error;
+    throw new Error(`${filePath} invalid JSON or schema: ${message}`);
+  }
+}
+
+function isDebugEnv() {
+  return process.env.SEED_DEBUG_ENV === "1";
+}
+
+function buildEntryKeys(entry) {
+  const keys = {};
+  if (entry?.id) keys.id = entry.id;
+  if (entry?.blockId) keys.blockId = entry.blockId;
+  if (entry?.featureId) keys.featureId = entry.featureId;
+  if (entry?.package) keys.package = entry.package;
+  return keys;
+}
+
+function buildEnvStatus(requiredSecrets = []) {
+  return requiredSecrets.map((name) => {
+    const value = process.env[name];
+    const text = value == null ? "" : String(value);
+    const trimmed = text.trim();
+    return {
+      name,
+      present: Boolean(text),
+      len: text.length,
+      trimmedLen: trimmed.length
+    };
+  });
+}
+
+function stampMeta(meta, dataAtValue, generatedAtValue) {
+  const ts = generatedAtValue || new Date().toISOString();
+  const next = meta && typeof meta === "object" ? { ...meta } : {};
+  next.ts = ts;
+  next.generatedAt = ts;
+  next.buildSha = process.env.GITHUB_SHA || undefined;
+  next.dataAt = next.dataAt || dataAtValue || ts;
+  return next;
+}
+
+function logSnapshotWrite(snapshotPath, snapshot) {
+  if (!isDebugEnv()) return;
+  const status = snapshot?.meta?.status || "UNKNOWN";
+  const reason = snapshot?.meta?.reason || "UNKNOWN";
+  console.log(`WROTE ${snapshotPath} status=${status} reason=${reason}`);
+}
+
 function createUsageCollector(limits) {
   const providers = {};
   const notes = [];
@@ -301,7 +373,7 @@ function computeCoverage(itemsCount, maxFanout) {
 
 function buildSnapshot(
   entry,
-  { items, dataAt, status, reason, generatedAt, latencyMs, extraData, metaDetails }
+  { items, dataAt, status, reason, generatedAt, latencyMs, extraData, metaDetails, metaExtra }
 ) {
   const safeItems = Array.isArray(items) ? items : [];
   const itemsCount = safeItems.length;
@@ -330,23 +402,28 @@ function buildSnapshot(
     };
   }
 
+  const baseMeta = {
+    status: safeStatus,
+    reason: safeReason,
+    stalenessSec: safeStalenessSec,
+    coveragePct: safeCoveragePct,
+    timezoneAssumption: safeTimezone,
+    dataAtDefinition: safeDataAtDef,
+    latencyMs: safeLatencyMs,
+    itemsCount,
+    ...(details ? { details } : {})
+  };
+  const mergedMeta =
+    metaExtra && typeof metaExtra === "object" ? { ...baseMeta, ...metaExtra } : baseMeta;
+  const stampedMeta = stampMeta(mergedMeta, effectiveDataAt, safeGeneratedAt);
+
   return {
     schemaVersion: "v1",
     blockId: entry.blockId,
     title: entry.title,
     generatedAt: safeGeneratedAt,
     dataAt: effectiveDataAt,
-    meta: {
-      status: safeStatus,
-      reason: safeReason,
-      stalenessSec: safeStalenessSec,
-      coveragePct: safeCoveragePct,
-      timezoneAssumption: safeTimezone,
-      dataAtDefinition: safeDataAtDef,
-      latencyMs: safeLatencyMs,
-      itemsCount,
-      ...(details ? { details } : {})
-    },
+    meta: stampedMeta,
     data: {
       items: safeItems,
       ...(extraData || {})
@@ -396,7 +473,7 @@ function isPlaceholderSnapshot(snapshot) {
   return false;
 }
 
-function buildErrorSnapshot(entry, reason, generatedAt, metaDetails) {
+function buildErrorSnapshot(entry, reason, generatedAt, metaDetails, metaExtra) {
   return buildSnapshot(entry, {
     items: [],
     dataAt: generatedAt,
@@ -405,7 +482,8 @@ function buildErrorSnapshot(entry, reason, generatedAt, metaDetails) {
     generatedAt,
     latencyMs: 0,
     extraData: {},
-    metaDetails
+    metaDetails,
+    metaExtra
   });
 }
 
@@ -1158,10 +1236,26 @@ async function main() {
   const { only } = parseArgs();
   execSync("node scripts/build-registry.js", { stdio: "inherit" });
 
-  const registry = loadJson(path.join("registry", "feature-registry.json"));
-  if (!registry || !Array.isArray(registry.features)) {
-    throw new Error("registry load failed");
+  let legacyRegistry = null;
+  try {
+    legacyRegistry = loadJson(LEGACY_REGISTRY_PATH);
+  } catch (error) {
+    throw new Error(
+      "FATAL: data/feature-registry.json invalid schema; remove or convert; refusing silent fallback."
+    );
   }
+  if (legacyRegistry) {
+    try {
+      validateRegistrySchema(legacyRegistry, LEGACY_REGISTRY_PATH);
+    } catch (error) {
+      throw new Error(
+        "FATAL: data/feature-registry.json invalid schema; remove or convert; refusing silent fallback."
+      );
+    }
+  }
+
+  const registrySource = REGISTRY_SOURCE;
+  const registry = loadRegistryStrict(registrySource);
 
   const effectiveOnly = only || null;
   let entries = registry.features.filter((entry) => DEFAULT_PACKAGES.includes(entry.package));
@@ -1169,6 +1263,22 @@ async function main() {
     entries = registry.features.filter((entry) => entry.package === effectiveOnly);
   }
   entries = orderEntries(entries);
+  if (isDebugEnv()) {
+    const selected = new Set(entries.map((entry) => entry.blockId || entry.id));
+    console.log(
+      JSON.stringify({
+        event: "SEED_SELECTION",
+        only: effectiveOnly,
+        total: entries.length,
+        targets: {
+          "earnings-pressure-lite": selected.has("earnings-pressure-lite"),
+          "options-skew-lite": selected.has("options-skew-lite"),
+          "analyst-revision-lite": selected.has("analyst-revision-lite")
+        },
+        at: new Date().toISOString()
+      })
+    );
+  }
 
   const limits = loadJson(path.join("registry", "limits.json"));
   const usage = createUsageCollector(limits);
@@ -1189,22 +1299,60 @@ async function main() {
     for (const entry of entries) {
       const ctx = { usage, budget };
       const started = Date.now();
+      if (isDebugEnv()) {
+        console.log(`RUN ${entry.blockId || entry.id || "unknown"}`);
+      }
       try {
         const missingSecrets = listMissingSecrets(entry);
         if (missingSecrets.length) {
           const reason = "MISSING_SECRET";
+          const entryKeys = buildEntryKeys(entry);
+          const requiredSecrets = Array.isArray(entry.requiredSecrets)
+            ? entry.requiredSecrets
+            : [];
+          const envStatus = buildEnvStatus(requiredSecrets);
+          const snippet = `missing ${missingSecrets.join(",")}`.slice(0, 200);
+          const fixHints = [
+            "Add required secrets to the seed-package3 workflow env.",
+            "Verify secret names match registry requiredSecrets.",
+            "Re-run the seed-package3 workflow after updating secrets."
+          ];
+          const metaExtra = {
+            missingSecrets,
+            snippet,
+            registrySource,
+            entryKeys,
+            envStatus,
+            fixHints
+          };
+          if (isDebugEnv()) {
+            console.log(
+              JSON.stringify({
+                event: "MISSING_SECRET_DEBUG",
+                registrySource,
+                entryKeys,
+                requiredSecrets,
+                envStatus,
+                missingSecrets,
+                at: new Date().toISOString()
+              })
+            );
+          }
           usage.recordError(entry.provider, reason);
           const generatedAt = new Date().toISOString();
           const details = buildMetaDetails(entry.provider, null, {
-            snippet: `missing ${missingSecrets.join(",")}`.slice(0, 200)
+            snippet
           });
           providerState.recordSkip(entry.provider, reason, details);
           const existing = readExistingSnapshot(entry.blockId);
-          const placeholder = isPlaceholderSnapshot(existing);
+          const placeholder =
+            isPlaceholderSnapshot(existing) || existing?.meta?.reason === "MISSING_SECRET";
           let wroteSnapshot = false;
           if (placeholder) {
-            const errorSnapshot = buildErrorSnapshot(entry, reason, generatedAt, details);
-            atomicWriteJson(path.join(SNAPSHOT_DIR, `${entry.blockId}.json`), errorSnapshot);
+            const errorSnapshot = buildErrorSnapshot(entry, reason, generatedAt, details, metaExtra);
+            const snapshotPath = path.join(SNAPSHOT_DIR, `${entry.blockId}.json`);
+            atomicWriteJson(snapshotPath, errorSnapshot);
+            logSnapshotWrite(snapshotPath, errorSnapshot);
             wroteSnapshot = true;
           }
           manifest.blocks.push({
@@ -1237,7 +1385,9 @@ async function main() {
           let wroteSnapshot = false;
           if (placeholder) {
             const errorSnapshot = buildErrorSnapshot(entry, reason, generatedAt, details);
-            atomicWriteJson(path.join(SNAPSHOT_DIR, `${entry.blockId}.json`), errorSnapshot);
+            const snapshotPath = path.join(SNAPSHOT_DIR, `${entry.blockId}.json`);
+            atomicWriteJson(snapshotPath, errorSnapshot);
+            logSnapshotWrite(snapshotPath, errorSnapshot);
             wroteSnapshot = true;
           }
           manifest.blocks.push({
@@ -1269,7 +1419,9 @@ async function main() {
             let wroteSnapshot = false;
             if (placeholder) {
               const errorSnapshot = buildErrorSnapshot(entry, reason, generatedAt, details);
-              atomicWriteJson(path.join(SNAPSHOT_DIR, `${entry.blockId}.json`), errorSnapshot);
+              const snapshotPath = path.join(SNAPSHOT_DIR, `${entry.blockId}.json`);
+              atomicWriteJson(snapshotPath, errorSnapshot);
+              logSnapshotWrite(snapshotPath, errorSnapshot);
               wroteSnapshot = true;
             }
             manifest.blocks.push({
@@ -1304,6 +1456,7 @@ async function main() {
 
         if (evaluation.allowed) {
           atomicWriteJson(snapshotPath, snapshot);
+          logSnapshotWrite(snapshotPath, snapshot);
           wroteSnapshot = true;
         } else {
           if (placeholder) {
@@ -1312,6 +1465,7 @@ async function main() {
             });
             const errorSnapshot = buildErrorSnapshot(entry, snapshot.meta.reason, snapshot.generatedAt, errorDetails);
             atomicWriteJson(snapshotPath, errorSnapshot);
+            logSnapshotWrite(snapshotPath, errorSnapshot);
             wroteSnapshot = true;
           }
         }
@@ -1340,7 +1494,9 @@ async function main() {
         providerState.recordFailure(entry.provider, reason, details);
         if (placeholder) {
           const errorSnapshot = buildErrorSnapshot(entry, reason, generatedAt, details);
-          atomicWriteJson(path.join(SNAPSHOT_DIR, `${entry.blockId}.json`), errorSnapshot);
+          const snapshotPath = path.join(SNAPSHOT_DIR, `${entry.blockId}.json`);
+          atomicWriteJson(snapshotPath, errorSnapshot);
+          logSnapshotWrite(snapshotPath, errorSnapshot);
           wroteSnapshot = true;
         }
         manifest.blocks.push({
