@@ -1600,9 +1600,7 @@ async function renderSnapshotBlock(contentEl, feature, logger, section) {
     renderYieldCurveSnapshot(contentEl, snapshot);
   } else if (normalizedId.endsWith("why-moved")) {
     renderWhyMovedSnapshot(contentEl, snapshot);
-  } else if (normalizedId.endsWith("sp500-sectors")) {
-    renderSp500SectorsSnapshot(contentEl, snapshot);
-  } else if (normalizedId.endsWith("tech-signals")) {
+else if (normalizedId.endsWith("tech-signals")) {
     renderTechSignalsSnapshot(contentEl, snapshot);
   } else if (normalizedId.endsWith("volume-anomaly")) {
     renderVolumeAnomalySnapshot(contentEl, snapshot);

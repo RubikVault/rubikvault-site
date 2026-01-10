@@ -14,7 +14,6 @@ const SNAPSHOTS = [
   { id: "top-movers", mirrorId: "top-movers", mapData: mapItemsOnly },
   { id: "yield-curve", mirrorId: "yield-curve", mapData: mapItemsOnly },
   { id: "why-moved", mirrorId: "why-moved", mapData: mapItemsOnly },
-  { id: "sp500-sectors", mirrorId: "sp500-sectors", mapData: mapSectors },
   { id: "tech-signals", mirrorId: "tech-signals", mapData: mapSignals },
   { id: "volume-anomaly", mirrorId: "volume-anomaly", mapData: mapItemsOnly }
 ];
@@ -87,7 +86,6 @@ function extractItems(payload) {
   return [];
 }
 
-
 function extractItemsFor(id, raw) {
   // Special-case: sp500-sectors mirror stores stock lists under payload.data.data.stocks.{gainers,volumeLeaders}.
   // We derive stable UI items from those lists to avoid NO_DATA.
@@ -106,7 +104,6 @@ function extractItemsFor(id, raw) {
   }
   return extractItems(raw);
 }
-
 
 function extractSectors(payload) {
   if (Array.isArray(payload?.sectors)) return payload.sectors;
