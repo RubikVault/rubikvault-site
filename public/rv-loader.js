@@ -395,7 +395,6 @@ function syncBlockGrid(blocks, features) {
       section.hidden = false;
       return;
     }
-    section.hidden = true;
     section.removeAttribute("data-rv-feature");
   });
 }
