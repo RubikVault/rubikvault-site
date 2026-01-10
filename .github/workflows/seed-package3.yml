@@ -1,0 +1,46 @@
+name: seed-package3
+
+on:
+  schedule:
+    - cron: "0 */6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: seed-package3
+  cancel-in-progress: true
+
+jobs:
+  seed:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      FINNHUB_API_KEY: ${{ secrets.FINNHUB_API_KEY }}
+      FMP_API_KEY: ${{ secrets.FMP_API_KEY }}
+      SEC_API_KEY: ${{ secrets.SEC_API_KEY }}
+      MARKETAUX_API_KEY: ${{ secrets.MARKETAUX_API_KEY }}
+      MARKETAUX_KEY: ${{ secrets.MARKETAUX_API_KEY }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Seed package3 snapshots
+        run: |
+          node -e 'console.log({FINNHUB:!!process.env.FINNHUB_API_KEY,FMP:!!process.env.FMP_API_KEY,SEC:!!process.env.SEC_API_KEY,MARKETAUX_API_KEY:!!process.env.MARKETAUX_API_KEY,MARKETAUX_KEY:!!process.env.MARKETAUX_KEY})'
+          node scripts/seeder.js --only blocks26-43
+      - name: Commit snapshots
+        run: |
+          git add public/data/snapshots public/data/seed-manifest.json public/data/usage-report.json
+          if git diff --staged --quiet; then
+            echo "No snapshot changes"
+            exit 0
+          fi
+          git config user.email "actions@github.com"
+          git config user.name "github-actions"
+          git commit -m "chore(data): seed snapshots package3 [skip ci]"
+          git push
