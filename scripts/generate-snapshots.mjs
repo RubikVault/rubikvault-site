@@ -87,6 +87,27 @@ function extractItems(payload) {
   return [];
 }
 
+
+function extractItemsFor(id, raw) {
+  // Special-case: sp500-sectors mirror stores stock lists under payload.data.data.stocks.{gainers,volumeLeaders}.
+  // We derive stable UI items from those lists to avoid NO_DATA.
+  if (id === "sp500-sectors") {
+    try {
+      const stocks = raw?.payload?.data?.data?.stocks;
+      if (stocks && typeof stocks === "object") {
+        const gainers = Array.isArray(stocks.gainers) ? stocks.gainers : [];
+        const volumeLeaders = Array.isArray(stocks.volumeLeaders) ? stocks.volumeLeaders : [];
+        const items = [];
+        for (const r of gainers) items.push({ list: "gainers", ...(r && typeof r === "object" ? r : { value: r }) });
+        for (const r of volumeLeaders) items.push({ list: "volumeLeaders", ...(r && typeof r === "object" ? r : { value: r }) });
+        return items;
+      }
+    } catch (e) {}
+  }
+  return extractItems(raw);
+}
+
+
 function extractSectors(payload) {
   if (Array.isArray(payload?.sectors)) return payload.sectors;
   if (Array.isArray(payload?.payload?.data?.data?.sectors)) return payload.payload.data.data.sectors;
@@ -161,7 +182,7 @@ async function generateSnapshot(entry) {
       throw schemaErr;
     }
 
-    const mapped = entry.mapData(mirrorPayload);
+    const mapped = entry.mapData(mirrorPayload, entry.id);
     data = mapped.data;
     itemsCount = mapped.itemsCount;
     if (itemsCount > 0) {
