@@ -1,129 +1,665 @@
 {
   "schemaVersion": "rv-mirror-v1",
   "mirrorId": "top-movers",
-  "runId": "2026-01-09T22:46:24.206Z",
-  "updatedAt": "2026-01-09T22:46:24.206Z",
-  "asOf": "2026-01-09T21:00:00.000Z",
-  "mode": "EOD",
-  "cadence": "EOD",
+  "runId": "2026-01-10T18:16:26.135Z",
+  "updatedAt": "2026-01-10T18:16:26.135Z",
+  "asOf": "2026-01-10T18:16:26.135Z",
+  "mode": "LIVE",
+  "cadence": "best_effort",
   "trust": "derived",
   "source": "mirror",
-  "sourceUpstream": "stooq",
+  "sourceUpstream": "alphavantage",
   "dataQuality": "OK",
   "delayMinutes": 0,
   "missingSymbols": [],
   "errors": [],
   "notes": [],
-  "whyUnique": "EOD top movers derived from quotes.",
+  "whyUnique": "Seeded from top-movers upstream",
   "context": {
-    "selectedSymbols": [
-      "AAPL",
-      "MSFT",
-      "NVDA",
-      "AMZN",
-      "GOOGL",
-      "META",
-      "TSLA",
-      "SPY",
-      "QQQ",
-      "IWM"
+    "universe": [
+      "ANPA",
+      "VLN+",
+      "NBY",
+      "VLN",
+      "GGROW",
+      "ATGL",
+      "GP",
+      "BIXIW",
+      "ATIIW",
+      "KPLTW",
+      "VWAVW",
+      "IVDAW",
+      "OPAD",
+      "VCIG",
+      "RVMDW",
+      "BAERW",
+      "THH",
+      "ADSEW",
+      "APLX",
+      "NVNIW",
+      "SXTC",
+      "MTEN",
+      "PASW",
+      "SEATW",
+      "ACONW",
+      "EONR+",
+      "ACON",
+      "MLECW",
+      "ATCX",
+      "VEEAW",
+      "LVROW",
+      "DAICW",
+      "BBNX",
+      "AQST",
+      "WLDSW",
+      "ICUCW",
+      "CAPTW",
+      "MSAIW",
+      "PAPL",
+      "BFLY+"
     ]
   },
   "items": [
     {
-      "symbol": "TSLA",
-      "close": 445,
-      "prevClose": 435.8,
-      "changePct": 2.1110601193207845,
-      "lastBarDate": "2026-01-09",
-      "barsUsed": 3908,
-      "missingFields": []
+      "symbol": "ANPA",
+      "name": "ANPA",
+      "price": 86.85,
+      "lastClose": null,
+      "changePercent": 258.8843,
+      "volume": 2817634,
+      "ts": "2026-01-10T18:16:26.134Z",
+      "source": "alphavantage"
     },
     {
-      "symbol": "META",
-      "close": 653.06,
-      "prevClose": 646.06,
-      "changePct": 1.0834906974584335,
-      "lastBarDate": "2026-01-09",
-      "barsUsed": 3431,
-      "missingFields": []
+      "symbol": "VLN+",
+      "name": "VLN+",
+      "price": 0.1125,
+      "lastClose": null,
+      "changePercent": 224.2075,
+      "volume": 525885,
+      "ts": "2026-01-10T18:16:26.134Z",
+      "source": "alphavantage"
     },
     {
-      "symbol": "QQQ",
-      "close": 626.695,
-      "prevClose": 620.47,
-      "changePct": 1.003271713378573,
-      "lastBarDate": "2026-01-09",
-      "barsUsed": 6751,
-      "missingFields": []
+      "symbol": "NBY",
+      "name": "NBY",
+      "price": 19.2,
+      "lastClose": null,
+      "changePercent": 102.9598,
+      "volume": 10000128,
+      "ts": "2026-01-10T18:16:26.134Z",
+      "source": "alphavantage"
     },
     {
-      "symbol": "GOOGL",
-      "close": 328.57,
-      "prevClose": 325.44,
-      "changePct": 0.9617748279252769,
-      "lastBarDate": "2026-01-09",
-      "barsUsed": 5383,
-      "missingFields": []
+      "symbol": "VLN",
+      "name": "VLN",
+      "price": 2.48,
+      "lastClose": null,
+      "changePercent": 58.9744,
+      "volume": 45077965,
+      "ts": "2026-01-10T18:16:26.134Z",
+      "source": "alphavantage"
     },
     {
-      "symbol": "IWM",
-      "close": 260.22,
-      "prevClose": 258.27,
-      "changePct": 0.7550238122894903,
-      "lastBarDate": "2026-01-09",
-      "barsUsed": 5251,
-      "missingFields": []
+      "symbol": "GGROW",
+      "name": "GGROW",
+      "price": 0.0113,
+      "lastClose": null,
+      "changePercent": 56.9444,
+      "volume": 931,
+      "ts": "2026-01-10T18:16:26.134Z",
+      "source": "alphavantage"
     },
     {
-      "symbol": "SPY",
-      "close": 694.07,
-      "prevClose": 689.51,
-      "changePct": 0.6613392119041217,
-      "lastBarDate": "2026-01-09",
-      "barsUsed": 5251,
-      "missingFields": []
+      "symbol": "ATGL",
+      "name": "ATGL",
+      "price": 30.61,
+      "lastClose": null,
+      "changePercent": 53.05,
+      "volume": 608882,
+      "ts": "2026-01-10T18:16:26.134Z",
+      "source": "alphavantage"
     },
     {
-      "symbol": "AMZN",
-      "close": 247.337,
-      "prevClose": 246.29,
-      "changePct": 0.42510861179909654,
-      "lastBarDate": "2026-01-09",
-      "barsUsed": 7203,
-      "missingFields": []
+      "symbol": "GP",
+      "name": "GP",
+      "price": 1.24,
+      "lastClose": null,
+      "changePercent": 51.0353,
+      "volume": 76440861,
+      "ts": "2026-01-10T18:16:26.134Z",
+      "source": "alphavantage"
     },
     {
-      "symbol": "MSFT",
-      "close": 479.28,
-      "prevClose": 478.11,
-      "changePct": 0.24471355964108543,
-      "lastBarDate": "2026-01-09",
-      "barsUsed": 10033,
-      "missingFields": []
+      "symbol": "BIXIW",
+      "name": "BIXIW",
+      "price": 0.416,
+      "lastClose": null,
+      "changePercent": 49.6403,
+      "volume": 2128,
+      "ts": "2026-01-10T18:16:26.134Z",
+      "source": "alphavantage"
     },
     {
-      "symbol": "AAPL",
-      "close": 259.31,
-      "prevClose": 259.04,
-      "changePct": 0.10423100679430863,
-      "lastBarDate": "2026-01-09",
-      "barsUsed": 10416,
-      "missingFields": []
+      "symbol": "ATIIW",
+      "name": "ATIIW",
+      "price": 0.7973,
+      "lastClose": null,
+      "changePercent": 46.2936,
+      "volume": 37144,
+      "ts": "2026-01-10T18:16:26.134Z",
+      "source": "alphavantage"
     },
     {
-      "symbol": "NVDA",
-      "close": 184.825,
-      "prevClose": 185.04,
-      "changePct": -0.11619109381755255,
-      "lastBarDate": "2026-01-09",
-      "barsUsed": 6783,
-      "missingFields": []
+      "symbol": "KPLTW",
+      "name": "KPLTW",
+      "price": 0.0049,
+      "lastClose": null,
+      "changePercent": 44.1176,
+      "volume": 43910,
+      "ts": "2026-01-10T18:16:26.134Z",
+      "source": "alphavantage"
     }
   ],
+  "savedAt": "2026-01-10T18:16:26.135Z",
+  "_meta": {
+    "updated_at": "2026-01-10T18:16:26.135Z",
+    "provider": "alphavantage",
+    "status": "fresh"
+  },
+  "payload": {
+    "ok": true,
+    "feature": "top-movers",
+    "ts": "2026-01-10T18:16:26.134Z",
+    "traceId": "seed",
+    "schemaVersion": 1,
+    "cache": {
+      "hit": false,
+      "ttl": 0,
+      "layer": "seed"
+    },
+    "upstream": {
+      "url": "https://www.alphavantage.co/query?function=TOP_GAINERS_LOSERS&apikey=REDACTED",
+      "status": 200,
+      "snippet": ""
+    },
+    "rateLimit": {
+      "remaining": "unknown",
+      "reset": null,
+      "estimated": true
+    },
+    "dataQuality": {
+      "status": "LIVE",
+      "reason": "LIVE",
+      "missingFields": []
+    },
+    "meta": {
+      "status": "LIVE",
+      "reason": null
+    },
+    "data": {
+      "updatedAt": "2026-01-10T18:16:26.134Z",
+      "source": "alphavantage",
+      "method": "AlphaVantage TOP_GAINERS_LOSERS.",
+      "crypto": [],
+      "stocks": {
+        "volumeLeaders": [
+          {
+            "symbol": "ANPA",
+            "name": "ANPA",
+            "price": 86.85,
+            "lastClose": null,
+            "changePercent": 258.8843,
+            "volume": 2817634,
+            "ts": "2026-01-10T18:16:26.134Z",
+            "source": "alphavantage"
+          },
+          {
+            "symbol": "VLN+",
+            "name": "VLN+",
+            "price": 0.1125,
+            "lastClose": null,
+            "changePercent": 224.2075,
+            "volume": 525885,
+            "ts": "2026-01-10T18:16:26.134Z",
+            "source": "alphavantage"
+          },
+          {
+            "symbol": "NBY",
+            "name": "NBY",
+            "price": 19.2,
+            "lastClose": null,
+            "changePercent": 102.9598,
+            "volume": 10000128,
+            "ts": "2026-01-10T18:16:26.134Z",
+            "source": "alphavantage"
+          },
+          {
+            "symbol": "VLN",
+            "name": "VLN",
+            "price": 2.48,
+            "lastClose": null,
+            "changePercent": 58.9744,
+            "volume": 45077965,
+            "ts": "2026-01-10T18:16:26.134Z",
+            "source": "alphavantage"
+          },
+          {
+            "symbol": "GGROW",
+            "name": "GGROW",
+            "price": 0.0113,
+            "lastClose": null,
+            "changePercent": 56.9444,
+            "volume": 931,
+            "ts": "2026-01-10T18:16:26.134Z",
+            "source": "alphavantage"
+          },
+          {
+            "symbol": "ATGL",
+            "name": "ATGL",
+            "price": 30.61,
+            "lastClose": null,
+            "changePercent": 53.05,
+            "volume": 608882,
+            "ts": "2026-01-10T18:16:26.134Z",
+            "source": "alphavantage"
+          },
+          {
+            "symbol": "GP",
+            "name": "GP",
+            "price": 1.24,
+            "lastClose": null,
+            "changePercent": 51.0353,
+            "volume": 76440861,
+            "ts": "2026-01-10T18:16:26.134Z",
+            "source": "alphavantage"
+          },
+          {
+            "symbol": "BIXIW",
+            "name": "BIXIW",
+            "price": 0.416,
+            "lastClose": null,
+            "changePercent": 49.6403,
+            "volume": 2128,
+            "ts": "2026-01-10T18:16:26.134Z",
+            "source": "alphavantage"
+          },
+          {
+            "symbol": "ATIIW",
+            "name": "ATIIW",
+            "price": 0.7973,
+            "lastClose": null,
+            "changePercent": 46.2936,
+            "volume": 37144,
+            "ts": "2026-01-10T18:16:26.134Z",
+            "source": "alphavantage"
+          },
+          {
+            "symbol": "KPLTW",
+            "name": "KPLTW",
+            "price": 0.0049,
+            "lastClose": null,
+            "changePercent": 44.1176,
+            "volume": 43910,
+            "ts": "2026-01-10T18:16:26.134Z",
+            "source": "alphavantage"
+          }
+        ],
+        "volumeLaggards": [
+          {
+            "symbol": "SXTC",
+            "name": "SXTC",
+            "price": 0.151,
+            "lastClose": null,
+            "changePercent": -87.92,
+            "volume": 103088621,
+            "ts": "2026-01-10T18:16:26.134Z",
+            "source": "alphavantage"
+          },
+          {
+            "symbol": "MTEN",
+            "name": "MTEN",
+            "price": 0.1319,
+            "lastClose": null,
+            "changePercent": -78.1115,
+            "volume": 302736319,
+            "ts": "2026-01-10T18:16:26.134Z",
+            "source": "alphavantage"
+          },
+          {
+            "symbol": "PASW",
+            "name": "PASW",
+            "price": 0.2,
+            "lastClose": null,
+            "changePercent": -67.6532,
+            "volume": 23220759,
+            "ts": "2026-01-10T18:16:26.134Z",
+            "source": "alphavantage"
+          },
+          {
+            "symbol": "SEATW",
+            "name": "SEATW",
+            "price": 0.0327,
+            "lastClose": null,
+            "changePercent": -45.3177,
+            "volume": 2494,
+            "ts": "2026-01-10T18:16:26.134Z",
+            "source": "alphavantage"
+          },
+          {
+            "symbol": "ACONW",
+            "name": "ACONW",
+            "price": 0.0411,
+            "lastClose": null,
+            "changePercent": -45.1268,
+            "volume": 28803,
+            "ts": "2026-01-10T18:16:26.134Z",
+            "source": "alphavantage"
+          },
+          {
+            "symbol": "EONR+",
+            "name": "EONR+",
+            "price": 0.0226,
+            "lastClose": null,
+            "changePercent": -43.3584,
+            "volume": 50288,
+            "ts": "2026-01-10T18:16:26.134Z",
+            "source": "alphavantage"
+          },
+          {
+            "symbol": "ACON",
+            "name": "ACON",
+            "price": 4.78,
+            "lastClose": null,
+            "changePercent": -41.4933,
+            "volume": 2389886,
+            "ts": "2026-01-10T18:16:26.134Z",
+            "source": "alphavantage"
+          },
+          {
+            "symbol": "MLECW",
+            "name": "MLECW",
+            "price": 0.0048,
+            "lastClose": null,
+            "changePercent": -41.4634,
+            "volume": 52747,
+            "ts": "2026-01-10T18:16:26.134Z",
+            "source": "alphavantage"
+          },
+          {
+            "symbol": "ATCX",
+            "name": "ATCX",
+            "price": 8.8,
+            "lastClose": null,
+            "changePercent": -41.3333,
+            "volume": 179175,
+            "ts": "2026-01-10T18:16:26.134Z",
+            "source": "alphavantage"
+          },
+          {
+            "symbol": "VEEAW",
+            "name": "VEEAW",
+            "price": 0.0502,
+            "lastClose": null,
+            "changePercent": -40.4508,
+            "volume": 3000,
+            "ts": "2026-01-10T18:16:26.134Z",
+            "source": "alphavantage"
+          }
+        ],
+        "gainers": [
+          {
+            "symbol": "ANPA",
+            "name": "ANPA",
+            "price": 86.85,
+            "lastClose": null,
+            "changePercent": 258.8843,
+            "volume": 2817634,
+            "ts": "2026-01-10T18:16:26.134Z",
+            "source": "alphavantage"
+          },
+          {
+            "symbol": "VLN+",
+            "name": "VLN+",
+            "price": 0.1125,
+            "lastClose": null,
+            "changePercent": 224.2075,
+            "volume": 525885,
+            "ts": "2026-01-10T18:16:26.134Z",
+            "source": "alphavantage"
+          },
+          {
+            "symbol": "NBY",
+            "name": "NBY",
+            "price": 19.2,
+            "lastClose": null,
+            "changePercent": 102.9598,
+            "volume": 10000128,
+            "ts": "2026-01-10T18:16:26.134Z",
+            "source": "alphavantage"
+          },
+          {
+            "symbol": "VLN",
+            "name": "VLN",
+            "price": 2.48,
+            "lastClose": null,
+            "changePercent": 58.9744,
+            "volume": 45077965,
+            "ts": "2026-01-10T18:16:26.134Z",
+            "source": "alphavantage"
+          },
+          {
+            "symbol": "GGROW",
+            "name": "GGROW",
+            "price": 0.0113,
+            "lastClose": null,
+            "changePercent": 56.9444,
+            "volume": 931,
+            "ts": "2026-01-10T18:16:26.134Z",
+            "source": "alphavantage"
+          },
+          {
+            "symbol": "ATGL",
+            "name": "ATGL",
+            "price": 30.61,
+            "lastClose": null,
+            "changePercent": 53.05,
+            "volume": 608882,
+            "ts": "2026-01-10T18:16:26.134Z",
+            "source": "alphavantage"
+          },
+          {
+            "symbol": "GP",
+            "name": "GP",
+            "price": 1.24,
+            "lastClose": null,
+            "changePercent": 51.0353,
+            "volume": 76440861,
+            "ts": "2026-01-10T18:16:26.134Z",
+            "source": "alphavantage"
+          },
+          {
+            "symbol": "BIXIW",
+            "name": "BIXIW",
+            "price": 0.416,
+            "lastClose": null,
+            "changePercent": 49.6403,
+            "volume": 2128,
+            "ts": "2026-01-10T18:16:26.134Z",
+            "source": "alphavantage"
+          },
+          {
+            "symbol": "ATIIW",
+            "name": "ATIIW",
+            "price": 0.7973,
+            "lastClose": null,
+            "changePercent": 46.2936,
+            "volume": 37144,
+            "ts": "2026-01-10T18:16:26.134Z",
+            "source": "alphavantage"
+          },
+          {
+            "symbol": "KPLTW",
+            "name": "KPLTW",
+            "price": 0.0049,
+            "lastClose": null,
+            "changePercent": 44.1176,
+            "volume": 43910,
+            "ts": "2026-01-10T18:16:26.134Z",
+            "source": "alphavantage"
+          }
+        ],
+        "losers": [
+          {
+            "symbol": "SXTC",
+            "name": "SXTC",
+            "price": 0.151,
+            "lastClose": null,
+            "changePercent": -87.92,
+            "volume": 103088621,
+            "ts": "2026-01-10T18:16:26.134Z",
+            "source": "alphavantage"
+          },
+          {
+            "symbol": "MTEN",
+            "name": "MTEN",
+            "price": 0.1319,
+            "lastClose": null,
+            "changePercent": -78.1115,
+            "volume": 302736319,
+            "ts": "2026-01-10T18:16:26.134Z",
+            "source": "alphavantage"
+          },
+          {
+            "symbol": "PASW",
+            "name": "PASW",
+            "price": 0.2,
+            "lastClose": null,
+            "changePercent": -67.6532,
+            "volume": 23220759,
+            "ts": "2026-01-10T18:16:26.134Z",
+            "source": "alphavantage"
+          },
+          {
+            "symbol": "SEATW",
+            "name": "SEATW",
+            "price": 0.0327,
+            "lastClose": null,
+            "changePercent": -45.3177,
+            "volume": 2494,
+            "ts": "2026-01-10T18:16:26.134Z",
+            "source": "alphavantage"
+          },
+          {
+            "symbol": "ACONW",
+            "name": "ACONW",
+            "price": 0.0411,
+            "lastClose": null,
+            "changePercent": -45.1268,
+            "volume": 28803,
+            "ts": "2026-01-10T18:16:26.134Z",
+            "source": "alphavantage"
+          },
+          {
+            "symbol": "EONR+",
+            "name": "EONR+",
+            "price": 0.0226,
+            "lastClose": null,
+            "changePercent": -43.3584,
+            "volume": 50288,
+            "ts": "2026-01-10T18:16:26.134Z",
+            "source": "alphavantage"
+          },
+          {
+            "symbol": "ACON",
+            "name": "ACON",
+            "price": 4.78,
+            "lastClose": null,
+            "changePercent": -41.4933,
+            "volume": 2389886,
+            "ts": "2026-01-10T18:16:26.134Z",
+            "source": "alphavantage"
+          },
+          {
+            "symbol": "MLECW",
+            "name": "MLECW",
+            "price": 0.0048,
+            "lastClose": null,
+            "changePercent": -41.4634,
+            "volume": 52747,
+            "ts": "2026-01-10T18:16:26.134Z",
+            "source": "alphavantage"
+          },
+          {
+            "symbol": "ATCX",
+            "name": "ATCX",
+            "price": 8.8,
+            "lastClose": null,
+            "changePercent": -41.3333,
+            "volume": 179175,
+            "ts": "2026-01-10T18:16:26.134Z",
+            "source": "alphavantage"
+          },
+          {
+            "symbol": "VEEAW",
+            "name": "VEEAW",
+            "price": 0.0502,
+            "lastClose": null,
+            "changePercent": -40.4508,
+            "volume": 3000,
+            "ts": "2026-01-10T18:16:26.134Z",
+            "source": "alphavantage"
+          }
+        ],
+        "universe": [
+          "ANPA",
+          "VLN+",
+          "NBY",
+          "VLN",
+          "GGROW",
+          "ATGL",
+          "GP",
+          "BIXIW",
+          "ATIIW",
+          "KPLTW",
+          "VWAVW",
+          "IVDAW",
+          "OPAD",
+          "VCIG",
+          "RVMDW",
+          "BAERW",
+          "THH",
+          "ADSEW",
+          "APLX",
+          "NVNIW",
+          "SXTC",
+          "MTEN",
+          "PASW",
+          "SEATW",
+          "ACONW",
+          "EONR+",
+          "ACON",
+          "MLECW",
+          "ATCX",
+          "VEEAW",
+          "LVROW",
+          "DAICW",
+          "BBNX",
+          "AQST",
+          "WLDSW",
+          "ICUCW",
+          "CAPTW",
+          "MSAIW",
+          "PAPL",
+          "BFLY+"
+        ],
+        "provider": "alphavantage"
+      }
+    }
+  },
   "meta": {
     "status": "OK",
-    "updatedAt": "2026-01-09T22:46:24.206Z",
+    "updatedAt": "2026-01-10T18:16:26.135Z",
     "reason": null
   }
 }
