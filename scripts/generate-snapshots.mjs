@@ -183,7 +183,7 @@ function mapSectors(raw) {
 
 function mapSignals(raw) {
   const items = extractItems(raw);
-  return { data: { items, signals: items }, itemsCount: items.length };
+  return { data: { items, signals: items, rows: items }, itemsCount: items.length };
 }
 
 function pickUpdatedAt(raw) {
@@ -324,6 +324,49 @@ async function main() {
     data: manifest
   });
 }
+
+
+// --- SNAPSHOT>=MIRROR (structural parity guard) ---
+// Goal: snapshots must not lose structural fields compared to mirrors, otherwise legacy UI drops indicators.
+// Policy: for selected mirror-backed features, merge snapshot.data with mirror.data for specific keys.
+
+function deepClone(x) { return x == null ? x : JSON.parse(JSON.stringify(x)); }
+
+function mergePreferSnapshot(snapshotData, mirrorData, keys) {
+  const out = deepClone(snapshotData) || {};
+  const m = mirrorData || {};
+  for (const k of keys) {
+    if (out[k] == null || (Array.isArray(out[k]) && out[k].length === 0)) {
+      if (m[k] != null) out[k] = deepClone(m[k]);
+    }
+  }
+  return out;
+}
+
+function enforceStructuralParity({ id, snapshot, mirror }) {
+  if (!snapshot || !mirror) return snapshot;
+  const snap = deepClone(snapshot);
+  const mir = mirror;
+
+  // Tech Signals: legacy UI needs signals[] and rows[] (watchlist/top tables).
+  if (id === "tech-signals") {
+    snap.data = mergePreferSnapshot(snap.data, mir.data, ["signals", "rows"]);
+    // If producer mapped to items, keep it, but do not drop rows.
+  }
+
+  // Alpha Radar: legacy UI needs picks.{top,shortterm,longterm} at minimum.
+  if (id === "alpha-radar" || id === "alpha-radar-lite") {
+    snap.data = mergePreferSnapshot(snap.data, mir.data, ["picks", "meta", "universe"]);
+    // If picks exists but is partial, also fill missing pick-buckets.
+    if (snap.data && mir.data && snap.data.picks && mir.data.picks) {
+      snap.data.picks = mergePreferSnapshot(snap.data.picks, mir.data.picks, ["top", "shortterm", "longterm"]);
+    }
+  }
+
+  return snap;
+}
+// --- end SNAPSHOT>=MIRROR ---
+
 
 main().catch((error) => {
   console.error("[snapshot] failed", error);
