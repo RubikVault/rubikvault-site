@@ -79,6 +79,38 @@ async function main() {
     fail("SNAPSHOT>=MIRROR guard: tech-signals snapshot missing signals/items while mirror has signals[]");
   }
 
+  if (alphaMirror) {
+    const picks = [];
+    const alphaPicks = alphaMirror?.data?.picks || {};
+    const buckets = [
+      alphaPicks.top,
+      alphaPicks.shortterm,
+      alphaPicks.shortTerm,
+      alphaPicks.swing,
+      alphaPicks.medium,
+      alphaPicks.longterm,
+      alphaPicks.longTerm,
+      alphaPicks.long
+    ].filter(Array.isArray);
+    buckets.forEach((bucket) => picks.push(...bucket));
+    if (!picks.length) {
+      fail("alpha-radar mirror missing picks buckets (top/short/long)");
+    }
+    const hasReasons = picks.some((pick) => Array.isArray(pick?.reasons) && pick.reasons.length > 0);
+    const hasIndicators = picks.some((pick) => Array.isArray(pick?.indicators) && pick.indicators.length > 0);
+    const hasChecklist =
+      picks.some((pick) => pick?.setup && Object.keys(pick.setup).length > 0) ||
+      picks.some((pick) => pick?.trigger && Object.keys(pick.trigger).length > 0);
+    const isPartial =
+      alphaMirror?.dataQuality === "PARTIAL" || alphaMirror?.meta?.status === "PARTIAL";
+    const hasNotes = Array.isArray(alphaMirror?.notes) && alphaMirror.notes.length > 0;
+    if (!hasReasons && !hasIndicators && !hasChecklist) {
+      if (!(isPartial && hasNotes)) {
+        fail("alpha-radar mirror missing indicators/reasons; no partial note present");
+      }
+    }
+  }
+
   if (alphaSnap) {
     const alpha_m_top = Array.isArray(alphaMirror?.data?.picks?.top) ? alphaMirror.data.picks.top.length : 0;
     const alpha_s_top = Array.isArray(alphaSnap?.data?.picks?.top) ? alphaSnap.data.picks.top.length : 0;
