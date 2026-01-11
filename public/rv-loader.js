@@ -165,6 +165,101 @@ function normalizeSnapshotEnvelope(rawSnapshot, rawId) {
   };
 }
 
+const MIRROR_PREFERRED_IDS = new Set(["tech-signals", "alpha-radar", "alpha-radar-lite"]);
+
+function computeStalenessSec(updatedAt, generatedAt) {
+  if (!updatedAt) return 0;
+  const updatedMs = Date.parse(updatedAt);
+  const generatedMs = Date.parse(generatedAt);
+  if (!Number.isFinite(updatedMs) || !Number.isFinite(generatedMs)) return 0;
+  return Math.max(0, Math.floor((generatedMs - updatedMs) / 1000));
+}
+
+function extractMirrorItems(raw) {
+  if (Array.isArray(raw?.items)) return raw.items;
+  return [];
+}
+
+function getMirrorUpdatedAt(raw) {
+  return (
+    raw?.updatedAt ||
+    raw?.asOf ||
+    raw?.ts ||
+    raw?.meta?.updatedAt ||
+    raw?.meta?.ts ||
+    null
+  );
+}
+
+async function loadMirrorSnapshot(featureId, mirrorId) {
+  try {
+    const res = await fetch(`./mirrors/${mirrorId}.json`, { cache: "no-store" });
+    if (!res.ok) return null;
+    const raw = await res.json();
+    const items = extractMirrorItems(raw);
+    const generatedAt = new Date().toISOString();
+    const updatedAt = getMirrorUpdatedAt(raw);
+    const stalenessSec = computeStalenessSec(updatedAt, generatedAt);
+    const reason = items.length ? "OK" : "EMPTY_VALID";
+    const data = { items };
+    if (mirrorId === "tech-signals") {
+      data.signals = items;
+    }
+    if (mirrorId === "alpha-radar") {
+      data.picks = items;
+    }
+    return {
+      ok: true,
+      feature: featureId,
+      meta: {
+        status: "LIVE",
+        reason,
+        generatedAt,
+        stalenessSec
+      },
+      data,
+      warnings: [],
+      error: null
+    };
+  } catch (error) {
+    return null;
+  }
+}
+
+async function loadApiFallbackSnapshot(featureId, apiId) {
+  const res = await fetch(`./api/${apiId}?debug=1`, {
+    cache: "no-store",
+    headers: { Accept: "application/json" }
+  });
+  if (!res.ok) {
+    return buildFallbackEnvelope(featureId, "NO_DATA", new Error(`API ${res.status}`));
+  }
+  const payload = await res.json();
+  return normalizeSnapshotEnvelope(payload, featureId);
+}
+
+async function loadPreferredSnapshot(rawId) {
+  const snapshotId = normalizeId(rawId);
+  if (!snapshotId) {
+    return buildFallbackEnvelope(rawId, "NO_DATA");
+  }
+  if (MIRROR_PREFERRED_IDS.has(snapshotId)) {
+    if (SNAPSHOT_CACHE.has(snapshotId)) {
+      return SNAPSHOT_CACHE.get(snapshotId);
+    }
+    const mirrorId = snapshotId === "alpha-radar-lite" ? "alpha-radar" : snapshotId;
+    const promise = loadMirrorSnapshot(rawId, mirrorId)
+      .then((mirrorSnapshot) => {
+        if (mirrorSnapshot) return mirrorSnapshot;
+        return loadApiFallbackSnapshot(rawId, mirrorId);
+      })
+      .catch((error) => buildFallbackEnvelope(rawId, "NO_DATA", error));
+    SNAPSHOT_CACHE.set(snapshotId, promise);
+    return promise;
+  }
+  return loadSnapshot(rawId);
+}
+
 async function loadSnapshot(rawId, { force = false } = {}) {
   const snapshotId = normalizeId(rawId);
   if (!snapshotId) {
@@ -442,6 +537,36 @@ function mapBlocksToFeatures(blocks, features) {
   return mapped;
 }
 
+function ensurePinnedBlocks(blocks, features) {
+  if (!Array.isArray(blocks)) return blocks;
+  const next = [...blocks];
+  const featureById = new Map(features.map((feature) => [feature.id, feature]));
+  const pinned = [
+    { featureId: "rv-tech-signals", blockId: "tech-signals" },
+    { featureId: "rv-alpha-radar", blockId: "alpha-radar", replaceFrom: "alpha-radar-lite" }
+  ];
+
+  pinned.forEach((pin) => {
+    const feature = featureById.get(pin.featureId);
+    if (!feature) return;
+    if (next.some((block) => block.blockId === pin.blockId)) return;
+    if (pin.replaceFrom) {
+      const replaceIndex = next.findIndex((block) => block.blockId === pin.replaceFrom);
+      if (replaceIndex !== -1) {
+        next[replaceIndex] = {
+          ...next[replaceIndex],
+          blockId: pin.blockId,
+          title: feature.title || pin.blockId
+        };
+        return;
+      }
+    }
+    next.push({ blockId: pin.blockId, idx: next.length + 1, title: feature.title || pin.blockId });
+  });
+
+  return next;
+}
+
 function createManifestSection(title) {
   const section = document.createElement("section");
   section.className = "rv-section rv-native-block";
@@ -637,6 +762,17 @@ function normalizeStatus(featureId, status, headline = "") {
 
   if (status === "FAIL" || /BINDING_MISSING|CONFIG_MISSING/i.test(headlineText)) {
     return { status, headline: headlineText };
+  }
+
+  const normalizedFeatureId = String(featureId || "").replace(/^rv-/, "");
+  if (
+    (normalizedFeatureId === "tech-signals" ||
+      normalizedFeatureId === "alpha-radar" ||
+      normalizedFeatureId === "alpha-radar-lite") &&
+    itemsCount === 0 &&
+    (entry.metaStatus === "LIVE" || entry.metaStatus === "STALE")
+  ) {
+    return { status: "OK", headline: "EMPTY_VALID" };
   }
 
   if (registry) {
@@ -1228,19 +1364,21 @@ async function loadFeatures() {
   const overridden = applyOverrides(list);
   const registry = await loadRegistryBlocks();
   if (registry.ok) {
+    const blocks = ensurePinnedBlocks(registry.blocks, overridden);
     return {
       source: "registry",
-      blocks: registry.blocks,
-      features: mapBlocksToFeatures(registry.blocks, overridden),
+      blocks,
+      features: mapBlocksToFeatures(blocks, overridden),
       reason: registry.reason
     };
   }
   const manifest = await loadSeedManifest();
   if (manifest.ok) {
+    const blocks = ensurePinnedBlocks(manifest.blocks, overridden);
     return {
       source: "manifest",
-      blocks: manifest.blocks,
-      features: mapBlocksToFeatures(manifest.blocks, overridden),
+      blocks,
+      features: mapBlocksToFeatures(blocks, overridden),
       reason: registry.reason
     };
   }
@@ -1539,11 +1677,17 @@ function renderTechSignalsSnapshot(contentEl, snapshot) {
 }
 
 function renderAlphaRadarSnapshot(contentEl, snapshot) {
-  const picks = Array.isArray(snapshot?.data?.picks) ? snapshot.data.picks : [];
+  const picksData = snapshot?.data?.picks;
+  const picksArray = Array.isArray(picksData) ? picksData : [];
+  const picksObject =
+    picksData && typeof picksData === "object" && !Array.isArray(picksData) ? picksData : {};
   const items = Array.isArray(snapshot?.data?.items) ? snapshot.data.items : [];
-  const rows = picks.length ? picks : items.length ? items : [];
+  const top = Array.isArray(picksObject.top) ? picksObject.top : picksArray;
+  const shortterm = Array.isArray(picksObject.shortterm) ? picksObject.shortterm : [];
+  const longterm = Array.isArray(picksObject.longterm) ? picksObject.longterm : [];
+  const rows = top.length ? top : items.length ? items : [];
   const meta = snapshot.meta || {};
-  if (!rows.length) {
+  if (!rows.length && !shortterm.length && !longterm.length) {
     if (meta.status === "LIVE" || meta.status === "STALE") {
       renderEmptySignals(contentEl, meta);
     } else {
@@ -1551,36 +1695,53 @@ function renderAlphaRadarSnapshot(contentEl, snapshot) {
     }
     return;
   }
-  const topRows = rows.slice(0, 5);
+
+  const renderAlphaPickCard = (pick = {}) => {
+    const symbol = pick.symbol || pick.ticker || pick.name || "N/A";
+    const score = pick.totalScore ?? pick.score ?? pick.rank ?? pick.signal ?? null;
+    const note = pick.note || pick.reason || pick.label || pick.name || "";
+    return `
+      <div class="rv-alpha-card">
+        <div class="rv-alpha-head">
+          <div>
+            <div class="rv-alpha-symbol">${symbol}</div>
+          </div>
+          ${score === null ? "" : `<span class="rv-alpha-badge">${formatNumber(score, { maximumFractionDigits: 2 })}</span>`}
+        </div>
+        ${note ? `<div class="rv-alpha-reasons">${note}</div>` : ""}
+      </div>
+    `;
+  };
+
+  const renderAlphaSection = (title, picks = []) => {
+    if (!picks.length) {
+      return `
+        <div class="rv-alpha-section">
+          <h4>${title}</h4>
+          <div class="rv-native-empty">No picks</div>
+        </div>
+      `;
+    }
+    return `
+      <div class="rv-alpha-section">
+        <h4>${title}</h4>
+        <div class="rv-alpha-grid">
+          ${picks.map((pick) => renderAlphaPickCard(pick)).join("")}
+        </div>
+      </div>
+    `;
+  };
+
+  const topRows = rows.slice(0, 6);
   contentEl.innerHTML = `
-    <div class="rv-native-table-wrap">
-      <h4>Alpha Radar</h4>
-      <table class="rv-native-table">
-        <thead>
-          <tr>
-            <th>Pick</th>
-            <th>Score</th>
-            <th>Note</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${topRows
-            .map((item) => {
-              const label = item.symbol || item.ticker || item.name || "N/A";
-              const score = item.score ?? item.rank ?? item.signal ?? item.confidence ?? null;
-              const note = item.note || item.reason || item.label || "";
-              return `
-                <tr>
-                  <td>${label}</td>
-                  <td>${formatNumber(score, { maximumFractionDigits: 2 })}</td>
-                  <td>${note}</td>
-                </tr>
-              `;
-            })
-            .join("")}
-        </tbody>
-      </table>
+    <div class="rv-alpha-top">
+      <strong>Top Picks</strong>
+      <div class="rv-alpha-grid">
+        ${topRows.map((pick) => renderAlphaPickCard(pick)).join("")}
+      </div>
     </div>
+    ${renderAlphaSection("Shortterm & Swing", shortterm)}
+    ${renderAlphaSection("Longterm", longterm)}
   `;
   renderDebugMeta(contentEl, snapshot.meta || {});
 }
@@ -1637,11 +1798,19 @@ async function renderSnapshotBlock(contentEl, feature, logger, section) {
     feature?.id ||
     section?.getAttribute("data-rv-feature") ||
     "unknown";
-  const snapshot = await loadSnapshot(blockId);
+  const snapshot = await loadPreferredSnapshot(blockId);
   const meta = snapshot.meta || {};
   const status = meta.status || "NO_DATA";
   const reason = meta.reason || "NO_DATA";
-  const itemsCount = Array.isArray(snapshot?.data?.items) ? snapshot.data.items.length : 0;
+  const normalizedId = normalizeId(blockId);
+  const defaultItems = Array.isArray(snapshot?.data?.items) ? snapshot.data.items : [];
+  const signals = Array.isArray(snapshot?.data?.signals) ? snapshot.data.signals : [];
+  const picks = Array.isArray(snapshot?.data?.picks) ? snapshot.data.picks : [];
+  const itemsCount = normalizedId.endsWith("tech-signals")
+    ? signals.length || defaultItems.length
+    : normalizedId.endsWith("alpha-radar") || normalizedId.endsWith("alpha-radar-lite")
+      ? picks.length || defaultItems.length
+      : defaultItems.length;
   const uiStatus = status === "ERROR" ? "FAIL" : status === "NO_DATA" ? "PARTIAL" : "OK";
   logger?.setStatus(uiStatus, reason);
   logger?.setMeta({
@@ -1653,7 +1822,6 @@ async function renderSnapshotBlock(contentEl, feature, logger, section) {
     source: "snapshot"
   });
 
-  const normalizedId = normalizeId(blockId);
   if (normalizedId.endsWith("top-movers")) {
     renderTopMoversSnapshot(contentEl, snapshot);
   } else if (normalizedId.endsWith("yield-curve")) {
