@@ -132,6 +132,46 @@ for (const entry of Object.values(BLOCK_REGISTRY)) {
       const payload = { mirrorId, warning: "continuous_empty", count: items.length };
       warnings.push(payload);
     }
+    if (mirrorId === "alpha-radar") {
+      if (typeof normalized.mirror.generatedAt !== "string" || !normalized.mirror.generatedAt.trim()) {
+        failures.push({ mirrorId, error: "generatedAt_missing" });
+      }
+      const picks = normalized.mirror?.data?.picks;
+      const top = Array.isArray(picks?.top) ? picks.top : [];
+      if (!top.length) {
+        failures.push({ mirrorId, error: "picks_top_missing" });
+      } else {
+        const sample = top[0] || {};
+        const required = [
+          "symbol",
+          "name",
+          "close",
+          "changePct",
+          "stop",
+          "setupScore",
+          "triggerScore",
+          "totalScore",
+          "setup",
+          "trigger",
+          "tags",
+          "notes"
+        ];
+        required.forEach((key) => {
+          if (!(key in sample)) {
+            failures.push({ mirrorId, error: `pick_missing_${key}` });
+          }
+        });
+        if (!sample.setup || typeof sample.setup !== "object") {
+          failures.push({ mirrorId, error: "pick_setup_missing" });
+        }
+        if (!sample.trigger || typeof sample.trigger !== "object") {
+          failures.push({ mirrorId, error: "pick_trigger_missing" });
+        }
+        if (!Array.isArray(sample.tags)) {
+          failures.push({ mirrorId, error: "pick_tags_invalid" });
+        }
+      }
+    }
     if (entry.blockType === "EVENT") {
       const ctx = normalized.mirror.context || {};
       if (!ctx.lookbackWindowDays || !ctx.explain) {

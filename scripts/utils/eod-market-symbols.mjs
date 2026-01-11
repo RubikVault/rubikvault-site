@@ -113,6 +113,8 @@ export async function processSymbols(universe) {
       score: alpha.score,
       state: alpha.score >= 70 ? "STRONG" : alpha.score >= 55 ? "WATCH" : "NEUTRAL",
       reasons: alpha.reasons,
+      close,
+      changePct,
       barsUsed,
       missingFields
     });

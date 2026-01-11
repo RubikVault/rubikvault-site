@@ -13,6 +13,7 @@ import {
 } from "./_shared.js";
 import { US_TOP_30 } from "./_shared/us-universes.js";
 import { calculateConfidence, resolveDataQuality } from "./_shared/feature-contract.js";
+import { computeAlphaRadarPicks } from "../../scripts/core/alpha-radar-core.mjs";
 
 const FEATURE_ID = "alpha-radar";
 const KV_TTL = 6 * 60 * 60;
@@ -717,6 +718,13 @@ async function fetchAlphaRadar(env, options = {}) {
   const sortedBySetup = [...picks].sort((a, b) => b.setupScore - a.setupScore);
   const buyPicks = sortedByTotal.filter((pick) => pick.label === "BUY");
   const hasPartialPick = picks.some((pick) => pick.dataQuality?.isPartial);
+  const groupedPicks = computeAlphaRadarPicks({
+    picks: {
+      shortterm: sortedByTrigger.slice(0, 3),
+      longterm: sortedBySetup.slice(0, 3),
+      top: (buyPicks.length ? buyPicks : sortedByTotal).slice(0, 3)
+    }
+  });
 
   return {
     ok: true,
@@ -726,11 +734,7 @@ async function fetchAlphaRadar(env, options = {}) {
       partial: missingSymbols.length > 0 || hasPartialPick,
       missingSymbols,
       universe: universe.map((entry) => entry.s),
-      picks: {
-        shortterm: sortedByTrigger.slice(0, 3),
-        longterm: sortedBySetup.slice(0, 3),
-        top: (buyPicks.length ? buyPicks : sortedByTotal).slice(0, 3)
-      },
+      picks: groupedPicks,
       method: "Alpha Radar Reversal v1 (extremes + structural reversals)",
       warnings: missingSymbols.length ? ["Some symbols unavailable"] : [],
       dataQuality: resolveDataQuality({

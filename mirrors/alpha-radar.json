@@ -1,8 +1,8 @@
 {
   "schemaVersion": "rv-mirror-v1",
   "mirrorId": "alpha-radar",
-  "runId": "2026-01-09T22:46:24.206Z",
-  "updatedAt": "2026-01-09T22:46:24.206Z",
+  "runId": "2026-01-11T16:47:09.115Z",
+  "updatedAt": "2026-01-11T16:47:09.115Z",
   "asOf": "2026-01-09T21:00:00.000Z",
   "mode": "EOD",
   "cadence": "EOD",
@@ -39,6 +39,8 @@
         "RSI_OVERSOLD",
         "MACD_NEGATIVE"
       ],
+      "close": 259.37,
+      "changePct": 0.12739345274861424,
       "barsUsed": 10416,
       "missingFields": []
     },
@@ -51,6 +53,8 @@
         "RSI_NEUTRAL",
         "MACD_POSITIVE"
       ],
+      "close": 479.28,
+      "changePct": 0.24471355964108543,
       "barsUsed": 10033,
       "missingFields": []
     },
@@ -63,6 +67,8 @@
         "RSI_NEUTRAL",
         "MACD_POSITIVE"
       ],
+      "close": 184.86,
+      "changePct": -0.09727626459142824,
       "barsUsed": 6783,
       "missingFields": []
     },
@@ -75,6 +81,8 @@
         "RSI_EXTENDED",
         "MACD_POSITIVE"
       ],
+      "close": 247.38,
+      "changePct": 0.44256770473831697,
       "barsUsed": 7203,
       "missingFields": []
     },
@@ -87,6 +95,8 @@
         "RSI_EXTENDED",
         "MACD_POSITIVE"
       ],
+      "close": 328.57,
+      "changePct": 0.9617748279252769,
       "barsUsed": 5383,
       "missingFields": []
     },
@@ -99,6 +109,8 @@
         "RSI_NEUTRAL",
         "MACD_NEGATIVE"
       ],
+      "close": 653.06,
+      "changePct": 1.0834906974584335,
       "barsUsed": 3431,
       "missingFields": []
     },
@@ -111,6 +123,8 @@
         "RSI_NEUTRAL",
         "MACD_NEGATIVE"
       ],
+      "close": 445.01,
+      "changePct": 2.1133547498852545,
       "barsUsed": 3908,
       "missingFields": []
     },
@@ -123,6 +137,8 @@
         "RSI_NEUTRAL",
         "MACD_POSITIVE"
       ],
+      "close": 694.07,
+      "changePct": 0.6613392119041217,
       "barsUsed": 5251,
       "missingFields": []
     },
@@ -135,6 +151,8 @@
         "RSI_NEUTRAL",
         "MACD_POSITIVE"
       ],
+      "close": 626.65,
+      "changePct": 0.9960191467758284,
       "barsUsed": 6751,
       "missingFields": []
     },
@@ -147,13 +165,278 @@
         "RSI_EXTENDED",
         "MACD_POSITIVE"
       ],
+      "close": 260.23,
+      "changePct": 0.7588957292755882,
       "barsUsed": 5251,
       "missingFields": []
     }
   ],
+  "generatedAt": "2026-01-11T16:47:09.115Z",
+  "data": {
+    "picks": {
+      "top": [
+        {
+          "symbol": "SPY",
+          "name": "SPY",
+          "close": 694.07,
+          "changePct": 0.6613392119041217,
+          "stop": null,
+          "setupScore": 34,
+          "triggerScore": 51,
+          "totalScore": 85,
+          "setup": {
+            "rsiExtreme": true,
+            "bbExtreme": false,
+            "nearSma200": false,
+            "rvolGte15": false,
+            "extremeGate": false
+          },
+          "trigger": {
+            "ema21Reclaim": false,
+            "higherLowFt": false,
+            "bosBreak": false,
+            "volumeConfirm": false,
+            "rsiUpturn": false
+          },
+          "tags": [
+            "STRONG"
+          ],
+          "notes": null
+        },
+        {
+          "symbol": "QQQ",
+          "name": "QQQ",
+          "close": 626.65,
+          "changePct": 0.9960191467758284,
+          "stop": null,
+          "setupScore": 34,
+          "triggerScore": 51,
+          "totalScore": 85,
+          "setup": {
+            "rsiExtreme": true,
+            "bbExtreme": false,
+            "nearSma200": false,
+            "rvolGte15": false,
+            "extremeGate": false
+          },
+          "trigger": {
+            "ema21Reclaim": false,
+            "higherLowFt": false,
+            "bosBreak": false,
+            "volumeConfirm": false,
+            "rsiUpturn": false
+          },
+          "tags": [
+            "STRONG"
+          ],
+          "notes": null
+        },
+        {
+          "symbol": "NVDA",
+          "name": "NVDA",
+          "close": 184.86,
+          "changePct": -0.09727626459142824,
+          "stop": null,
+          "setupScore": 30,
+          "triggerScore": 45,
+          "totalScore": 75,
+          "setup": {
+            "rsiExtreme": true,
+            "bbExtreme": false,
+            "nearSma200": false,
+            "rvolGte15": false,
+            "extremeGate": false
+          },
+          "trigger": {
+            "ema21Reclaim": false,
+            "higherLowFt": false,
+            "bosBreak": false,
+            "volumeConfirm": false,
+            "rsiUpturn": false
+          },
+          "tags": [
+            "STRONG"
+          ],
+          "notes": null
+        }
+      ],
+      "shortterm": [
+        {
+          "symbol": "SPY",
+          "name": "SPY",
+          "close": 694.07,
+          "changePct": 0.6613392119041217,
+          "stop": null,
+          "setupScore": 34,
+          "triggerScore": 51,
+          "totalScore": 85,
+          "setup": {
+            "rsiExtreme": true,
+            "bbExtreme": false,
+            "nearSma200": false,
+            "rvolGte15": false,
+            "extremeGate": false
+          },
+          "trigger": {
+            "ema21Reclaim": false,
+            "higherLowFt": false,
+            "bosBreak": false,
+            "volumeConfirm": false,
+            "rsiUpturn": false
+          },
+          "tags": [
+            "STRONG"
+          ],
+          "notes": null
+        },
+        {
+          "symbol": "QQQ",
+          "name": "QQQ",
+          "close": 626.65,
+          "changePct": 0.9960191467758284,
+          "stop": null,
+          "setupScore": 34,
+          "triggerScore": 51,
+          "totalScore": 85,
+          "setup": {
+            "rsiExtreme": true,
+            "bbExtreme": false,
+            "nearSma200": false,
+            "rvolGte15": false,
+            "extremeGate": false
+          },
+          "trigger": {
+            "ema21Reclaim": false,
+            "higherLowFt": false,
+            "bosBreak": false,
+            "volumeConfirm": false,
+            "rsiUpturn": false
+          },
+          "tags": [
+            "STRONG"
+          ],
+          "notes": null
+        },
+        {
+          "symbol": "NVDA",
+          "name": "NVDA",
+          "close": 184.86,
+          "changePct": -0.09727626459142824,
+          "stop": null,
+          "setupScore": 30,
+          "triggerScore": 45,
+          "totalScore": 75,
+          "setup": {
+            "rsiExtreme": true,
+            "bbExtreme": false,
+            "nearSma200": false,
+            "rvolGte15": false,
+            "extremeGate": false
+          },
+          "trigger": {
+            "ema21Reclaim": false,
+            "higherLowFt": false,
+            "bosBreak": false,
+            "volumeConfirm": false,
+            "rsiUpturn": false
+          },
+          "tags": [
+            "STRONG"
+          ],
+          "notes": null
+        }
+      ],
+      "longterm": [
+        {
+          "symbol": "AMZN",
+          "name": "AMZN",
+          "close": 247.38,
+          "changePct": 0.44256770473831697,
+          "stop": null,
+          "setupScore": 28,
+          "triggerScore": 42,
+          "totalScore": 70,
+          "setup": {
+            "rsiExtreme": true,
+            "bbExtreme": false,
+            "nearSma200": false,
+            "rvolGte15": false,
+            "extremeGate": false
+          },
+          "trigger": {
+            "ema21Reclaim": false,
+            "higherLowFt": false,
+            "bosBreak": false,
+            "volumeConfirm": false,
+            "rsiUpturn": false
+          },
+          "tags": [
+            "STRONG"
+          ],
+          "notes": null
+        },
+        {
+          "symbol": "GOOGL",
+          "name": "GOOGL",
+          "close": 328.57,
+          "changePct": 0.9617748279252769,
+          "stop": null,
+          "setupScore": 28,
+          "triggerScore": 42,
+          "totalScore": 70,
+          "setup": {
+            "rsiExtreme": true,
+            "bbExtreme": false,
+            "nearSma200": false,
+            "rvolGte15": false,
+            "extremeGate": false
+          },
+          "trigger": {
+            "ema21Reclaim": false,
+            "higherLowFt": false,
+            "bosBreak": false,
+            "volumeConfirm": false,
+            "rsiUpturn": false
+          },
+          "tags": [
+            "STRONG"
+          ],
+          "notes": null
+        },
+        {
+          "symbol": "IWM",
+          "name": "IWM",
+          "close": 260.23,
+          "changePct": 0.7588957292755882,
+          "stop": null,
+          "setupScore": 28,
+          "triggerScore": 42,
+          "totalScore": 70,
+          "setup": {
+            "rsiExtreme": true,
+            "bbExtreme": false,
+            "nearSma200": false,
+            "rvolGte15": false,
+            "extremeGate": false
+          },
+          "trigger": {
+            "ema21Reclaim": false,
+            "higherLowFt": false,
+            "bosBreak": false,
+            "volumeConfirm": false,
+            "rsiUpturn": false
+          },
+          "tags": [
+            "STRONG"
+          ],
+          "notes": null
+        }
+      ]
+    }
+  },
   "meta": {
     "status": "OK",
-    "updatedAt": "2026-01-09T22:46:24.206Z",
+    "updatedAt": "2026-01-11T16:47:09.115Z",
     "reason": null
   }
 }

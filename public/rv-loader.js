@@ -206,7 +206,13 @@ async function loadMirrorSnapshot(featureId, mirrorId) {
       data.signals = items;
     }
     if (mirrorId === "alpha-radar") {
-      data.picks = items;
+      const rawPicks = raw?.data?.picks;
+      if (rawPicks && typeof rawPicks === "object") {
+        data.picks = rawPicks;
+      } else {
+        data.picks = items;
+        data.lite = true;
+      }
     }
     return {
       ok: true,
@@ -1679,13 +1685,14 @@ function renderTechSignalsSnapshot(contentEl, snapshot) {
 function renderAlphaRadarSnapshot(contentEl, snapshot) {
   const picksData = snapshot?.data?.picks;
   const picksArray = Array.isArray(picksData) ? picksData : [];
-  const picksObject =
-    picksData && typeof picksData === "object" && !Array.isArray(picksData) ? picksData : {};
+  const hasFullPicks = picksData && typeof picksData === "object" && !Array.isArray(picksData);
+  const picksObject = hasFullPicks ? picksData : {};
   const items = Array.isArray(snapshot?.data?.items) ? snapshot.data.items : [];
   const top = Array.isArray(picksObject.top) ? picksObject.top : picksArray;
   const shortterm = Array.isArray(picksObject.shortterm) ? picksObject.shortterm : [];
   const longterm = Array.isArray(picksObject.longterm) ? picksObject.longterm : [];
   const rows = top.length ? top : items.length ? items : [];
+  const liteMode = !hasFullPicks && items.length > 0;
   const meta = snapshot.meta || {};
   if (!rows.length && !shortterm.length && !longterm.length) {
     if (meta.status === "LIVE" || meta.status === "STALE") {
@@ -1736,6 +1743,7 @@ function renderAlphaRadarSnapshot(contentEl, snapshot) {
   contentEl.innerHTML = `
     <div class="rv-alpha-top">
       <strong>Top Picks</strong>
+      ${liteMode ? '<div class="rv-alpha-note">Lite data (full picks unavailable)</div>' : ""}
       <div class="rv-alpha-grid">
         ${topRows.map((pick) => renderAlphaPickCard(pick)).join("")}
       </div>
