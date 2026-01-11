@@ -38,6 +38,62 @@ function ensureUniqueIds(entries) {
   });
 }
 
+function ensureNumber(value, fallback = 0) {
+  return Number.isFinite(value) ? value : fallback;
+}
+
+function ensureNonEmptyString(value, fallback = "") {
+  if (typeof value === "string" && value.trim().length > 0) return value;
+  if (fallback !== undefined && fallback !== null) return String(fallback);
+  return "";
+}
+
+function ensureIsoString(value, fallback) {
+  const candidate = ensureNonEmptyString(value);
+  if (candidate && Number.isFinite(Date.parse(candidate))) return candidate;
+  const fallbackCandidate = ensureNonEmptyString(fallback);
+  if (fallbackCandidate && Number.isFinite(Date.parse(fallbackCandidate))) return fallbackCandidate;
+  return new Date().toISOString();
+}
+
+function buildMeta({
+  status,
+  reason,
+  itemsCount,
+  updatedAt,
+  generatedAt,
+  stalenessSec,
+  durationMs,
+  coveragePct
+}) {
+  const safeGeneratedAt = ensureIsoString(generatedAt);
+  const safeUpdatedAt = ensureIsoString(updatedAt, safeGeneratedAt);
+  const safeItemsCount = ensureNumber(itemsCount, 0);
+  const safeStatus = ensureNonEmptyString(status, "NO_DATA");
+  const safeReason = ensureNonEmptyString(reason, safeStatus === "LIVE" ? "OK" : "NO_DATA");
+  const safeDurationMs = ensureNumber(durationMs, 0);
+  const safeStalenessSec = ensureNumber(stalenessSec, 0);
+  const safeCoveragePct = Number.isFinite(coveragePct)
+    ? coveragePct
+    : safeStatus === "LIVE" && safeItemsCount > 0
+      ? 100
+      : 0;
+
+  return {
+    status: safeStatus,
+    reason: safeReason,
+    generatedAt: safeGeneratedAt,
+    stalenessSec: safeStalenessSec,
+    durationMs: safeDurationMs,
+    latencyMs: safeDurationMs,
+    itemsCount: safeItemsCount,
+    coveragePct: ensureNumber(safeCoveragePct, 0),
+    timezoneAssumption: "UTC",
+    dataAtDefinition: ensureNonEmptyString(safeUpdatedAt, safeGeneratedAt),
+    bytes: 0
+  };
+}
+
 async function findMirrorPath(mirrorId) {
   const candidates = MIRROR_DIRS.map((dir) => path.join(dir, `${mirrorId}.json`));
   for (const candidate of candidates) {
@@ -204,14 +260,15 @@ async function generateSnapshot(entry) {
   const envelope = {
     ok,
     feature: entry.id,
-    meta: {
+    meta: buildMeta({
       status: metaStatus,
       reason: metaReason,
+      itemsCount,
+      updatedAt,
       generatedAt,
       stalenessSec,
-      durationMs,
-      bytes: 0
-    },
+      durationMs
+    }),
     data
   };
 
@@ -236,27 +293,34 @@ async function main() {
     generatedAt: new Date().toISOString(),
     snapshots: {}
   };
+  let liveCount = 0;
+  let totalDurationMs = 0;
 
   for (const entry of SNAPSHOTS) {
     const summary = await generateSnapshot(entry);
     manifest.snapshots[entry.id] = summary;
+    totalDurationMs += summary.durationMs;
+    if (summary.status === "LIVE") liveCount += 1;
     console.log(
       `[snapshot] ${entry.id} status=${summary.status} reason=${summary.reason} items=${summary.itemsCount} durationMs=${summary.durationMs}`
     );
   }
 
   const manifestPath = path.join(SNAPSHOT_DIR, "manifest.json");
+  const totalCount = Object.keys(manifest.snapshots).length;
   await atomicWriteJson(manifestPath, {
     ok: true,
     feature: "snapshots-manifest",
-    meta: {
+    meta: buildMeta({
       status: "LIVE",
       reason: "OK",
+      itemsCount: totalCount,
+      updatedAt: manifest.generatedAt,
       generatedAt: manifest.generatedAt,
       stalenessSec: 0,
-      durationMs: 0,
-      bytes: 0
-    },
+      durationMs: totalDurationMs,
+      coveragePct: totalCount ? Math.round((liveCount / totalCount) * 100) : 0
+    }),
     data: manifest
   });
 }
