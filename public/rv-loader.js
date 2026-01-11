@@ -203,7 +203,10 @@ async function loadMirrorSnapshot(featureId, mirrorId) {
     const reason = items.length ? "OK" : "EMPTY_VALID";
     const data = { items };
     if (mirrorId === "tech-signals") {
-      data.signals = items;
+      const rawSignals = raw?.data?.signals;
+      const rawRows = raw?.data?.rows;
+      data.signals = Array.isArray(rawSignals) ? rawSignals : items;
+      data.rows = Array.isArray(rawRows) ? rawRows : items;
     }
     if (mirrorId === "alpha-radar") {
       const rawPicks = raw?.data?.picks;
@@ -1636,50 +1639,330 @@ function renderSp500SectorsSnapshot(contentEl, snapshot) {
 }
 
 function renderTechSignalsSnapshot(contentEl, snapshot) {
-  const signals = Array.isArray(snapshot?.data?.signals) ? snapshot.data.signals : [];
-  const items = Array.isArray(snapshot?.data?.items) ? snapshot.data.items : [];
-  const rowsSource = signals.length ? signals : items.length ? items : [];
-  const meta = snapshot.meta || {};
-  if (!rowsSource.length) {
-    if (meta.status === "LIVE" || meta.status === "STALE") {
-      renderEmptySignals(contentEl, meta);
-    } else {
-      renderNoData(contentEl, meta);
+  const TECH_SIGNALS_DEFAULT_LIST = ["AAPL", "NVDA"];
+  const TECH_SIGNALS_TOP30 = [
+    "AAPL",
+    "MSFT",
+    "NVDA",
+    "AMZN",
+    "GOOGL",
+    "GOOG",
+    "META",
+    "TSLA",
+    "BRK.B",
+    "JPM",
+    "V",
+    "MA",
+    "XOM",
+    "UNH",
+    "JNJ",
+    "WMT",
+    "PG",
+    "HD",
+    "AVGO",
+    "COST",
+    "PEP",
+    "KO",
+    "MRK",
+    "ABBV",
+    "LLY",
+    "ORCL",
+    "CSCO",
+    "CRM",
+    "NFLX",
+    "AMD"
+  ];
+
+  const formatNumberDash = (value, options = {}) => {
+    if (value === null || value === undefined || Number.isNaN(value)) return "–";
+    return new Intl.NumberFormat("en-US", options).format(value);
+  };
+
+  const formatPercentDash = (value, digits = 2) => {
+    if (value === null || value === undefined || Number.isNaN(value)) return "–";
+    return `${formatNumberDash(value, { maximumFractionDigits: digits })}%`;
+  };
+
+  const loadSymbols = () => {
+    try {
+      const shared = typeof window !== "undefined" ? window.RV_SHARED?.watchlist : null;
+      if (Array.isArray(shared) && shared.length) return shared.map((item) => String(item).toUpperCase());
+      const raw = window.localStorage?.getItem("rv_watchlist_local");
+      const parsed = raw ? JSON.parse(raw) : TECH_SIGNALS_DEFAULT_LIST;
+      if (!Array.isArray(parsed)) return TECH_SIGNALS_DEFAULT_LIST;
+      return parsed.map((item) => String(item).toUpperCase());
+    } catch (error) {
+      return TECH_SIGNALS_DEFAULT_LIST;
     }
-    return;
-  }
-  const rows = rowsSource.slice(0, 5);
-  contentEl.innerHTML = `
-    <div class="rv-native-table-wrap">
-      <h4>Tech Signals</h4>
-      <table class="rv-native-table">
-        <thead>
-          <tr>
-            <th>Signal</th>
-            <th>State</th>
-            <th>Note</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${rows
-            .map((item) => {
-              const label = item.label || item.name || item.signal || "N/A";
-              const state = item.state || item.status || item.value || "N/A";
-              const note = item.note || item.description || item.detail || "";
-              return `
+  };
+
+  const normalizeTechSignals = (payload) => {
+    const meta = payload?.meta || {};
+    const data = payload?.data || {};
+    const warnings = Array.isArray(payload?.warnings)
+      ? payload.warnings
+      : Array.isArray(meta?.warnings)
+        ? meta.warnings
+        : [];
+    const signals = Array.isArray(data.signals)
+      ? data.signals
+      : Array.isArray(data.items)
+        ? data.items
+        : [];
+    const rows = Array.isArray(data.rows)
+      ? data.rows
+      : Array.isArray(data.items)
+        ? data.items
+        : [];
+    const timeframes = {};
+    if (data.timeframes && typeof data.timeframes === "object") {
+      Object.entries(data.timeframes).forEach(([key, tfData]) => {
+        if (!tfData || typeof tfData !== "object") return;
+        const tfSignals = Array.isArray(tfData.signals)
+          ? tfData.signals
+          : Array.isArray(tfData.items)
+            ? tfData.items
+            : [];
+        const tfRows = Array.isArray(tfData.rows)
+          ? tfData.rows
+          : Array.isArray(tfData.items)
+            ? tfData.items
+            : [];
+        timeframes[key] = { signals: tfSignals, rows: tfRows };
+      });
+    }
+    const missingKeys = [];
+    if (!Array.isArray(data.signals) && !Array.isArray(data.items)) missingKeys.push("signals missing");
+    if (!Array.isArray(data.rows) && !Array.isArray(data.items)) missingKeys.push("rows missing");
+    return {
+      watchlist: signals,
+      top30: rows,
+      timeframes,
+      timeframe: typeof data.timeframe === "string" ? data.timeframe : "daily",
+      meta,
+      warnings,
+      missingKeys
+    };
+  };
+
+  const renderWatchlist = (signals, symbols) => {
+    if (!signals.length) {
+      return `<div class="rv-native-empty">NO_DATA — signals missing</div>`;
+    }
+    const rows = symbols.map((symbol) => ({
+      symbol,
+      data: signals.find((item) => item.symbol === symbol) || null
+    }));
+    return `
+      <div class="rv-native-table-wrap">
+        <table class="rv-native-table">
+          <thead>
+            <tr>
+              <th>Symbol</th>
+              <th>RSI</th>
+              <th>Weekly RSI</th>
+              <th>MA20</th>
+              <th>MA50</th>
+              <th>Regime</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${rows
+              .map((row) => {
+                const item = row.data;
+                if (!item) {
+                  return `
+                    <tr>
+                      <td>${row.symbol}</td>
+                      <td>–</td>
+                      <td>–</td>
+                      <td>–</td>
+                      <td>–</td>
+                      <td>–</td>
+                    </tr>
+                  `;
+                }
+                const rsiValue = item.rsi ?? null;
+                const rsiWeeklyValue = item.rsiWeekly ?? null;
+                const rsiClass =
+                  item.rsiLabel === "Oversold" || rsiValue <= 30
+                    ? "rv-native-negative"
+                    : item.rsiLabel === "Overbought" || rsiValue >= 70
+                      ? "rv-native-positive"
+                      : "rv-native-warning";
+                const rsiWeeklyClass =
+                  item.rsiWeeklyLabel === "Oversold" || rsiWeeklyValue <= 30
+                    ? "rv-native-negative"
+                    : item.rsiWeeklyLabel === "Overbought" || rsiWeeklyValue >= 70
+                      ? "rv-native-positive"
+                      : "rv-native-warning";
+                return `
                 <tr>
-                  <td>${label}</td>
-                  <td>${state}</td>
-                  <td>${note}</td>
+                  <td>${item.symbol || row.symbol}</td>
+                  <td class="${rsiClass}">${formatNumberDash(rsiValue, { maximumFractionDigits: 1 })}</td>
+                  <td class="${rsiWeeklyClass}">${formatNumberDash(rsiWeeklyValue, { maximumFractionDigits: 1 })}</td>
+                  <td>${formatNumberDash(item.ma20, { maximumFractionDigits: 2 })}</td>
+                  <td>${formatNumberDash(item.ma50, { maximumFractionDigits: 2 })}</td>
+                  <td>${item.maRegime || "—"}</td>
                 </tr>
               `;
-            })
-            .join("")}
-        </tbody>
-      </table>
-    </div>
-  `;
-  renderDebugMeta(contentEl, snapshot.meta || {});
+              })
+              .join("")}
+          </tbody>
+        </table>
+      </div>
+    `;
+  };
+
+  const renderTop30Table = (signals, state) => {
+    if (!signals.length) {
+      return `<div class="rv-native-empty">NO_DATA — rows missing</div>`;
+    }
+    const sortKey = state.sortKey;
+    const dir = state.sortDir === "desc" ? -1 : 1;
+    const sorted = signals.slice().sort((a, b) => {
+      const av = a[sortKey];
+      const bv = b[sortKey];
+      if (av === null || av === undefined) return 1;
+      if (bv === null || bv === undefined) return -1;
+      if (typeof av === "number" && typeof bv === "number") return (av - bv) * dir;
+      return String(av).localeCompare(String(bv)) * dir;
+    });
+    const sortLabel = (label, key) => {
+      if (sortKey !== key) return label;
+      return `${label} ${state.sortDir === "asc" ? "^" : "v"}`;
+    };
+    const perfClass = (value) =>
+      value === null || value === undefined ? "" : value >= 0 ? "rv-native-positive" : "rv-native-negative";
+    return `
+      <div class="rv-native-table-wrap">
+        <table class="rv-native-table">
+          <thead>
+            <tr>
+              <th data-rv-sort="symbol">${sortLabel("Symbol", "symbol")}</th>
+              <th data-rv-sort="rsi">${sortLabel("RSI", "rsi")}</th>
+              <th data-rv-sort="macd">${sortLabel("MACD", "macd")}</th>
+              <th data-rv-sort="macdHist">${sortLabel("MACD Hist", "macdHist")}</th>
+              <th data-rv-sort="stochRsi">${sortLabel("Stoch RSI", "stochRsi")}</th>
+              <th data-rv-sort="perf1w">${sortLabel("1W", "perf1w")}</th>
+              <th data-rv-sort="relPerf1w">${sortLabel("Rel vs SP500", "relPerf1w")}</th>
+              <th data-rv-sort="perf1m">${sortLabel("1M", "perf1m")}</th>
+              <th data-rv-sort="perf1y">${sortLabel("1Y", "perf1y")}</th>
+              <th data-rv-sort="maRegime">${sortLabel("MA Regime", "maRegime")}</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${sorted
+              .map((item) => {
+                const rsiValue = item.rsi ?? null;
+                const rsiClass =
+                  item.rsiLabel === "Oversold" || rsiValue <= 30
+                    ? "rv-native-negative"
+                    : item.rsiLabel === "Overbought" || rsiValue >= 70
+                      ? "rv-native-positive"
+                      : "rv-native-warning";
+                const macdHist = item.macdHist ?? item.macd_hist ?? null;
+                return `
+                  <tr>
+                    <td>${item.symbol || "—"}</td>
+                    <td class="${rsiClass}">${formatNumberDash(rsiValue, { maximumFractionDigits: 1 })}</td>
+                    <td>${formatNumberDash(item.macd, { maximumFractionDigits: 2 })}</td>
+                    <td>${formatNumberDash(macdHist, { maximumFractionDigits: 2 })}</td>
+                    <td>${formatNumberDash(item.stochRsi, { maximumFractionDigits: 1 })}</td>
+                    <td class="${perfClass(item.perf1w)}">${formatPercentDash(item.perf1w)}</td>
+                    <td class="${perfClass(item.relPerf1w)}">${formatPercentDash(item.relPerf1w)}</td>
+                    <td class="${perfClass(item.perf1m)}">${formatPercentDash(item.perf1m)}</td>
+                    <td class="${perfClass(item.perf1y)}">${formatPercentDash(item.perf1y)}</td>
+                    <td>${item.maRegime || "—"}</td>
+                  </tr>
+              `;
+              })
+              .join("")}
+          </tbody>
+        </table>
+      </div>
+    `;
+  };
+
+  const model = normalizeTechSignals(snapshot);
+  const meta = model.meta || {};
+  const symbols = loadSymbols();
+  const timeframes = model.timeframes;
+  const availableTimeframes = ["daily", "weekly", "monthly"].filter((tf) => timeframes[tf]);
+  const state = {
+    timeframe: availableTimeframes.includes(model.timeframe)
+      ? model.timeframe
+      : availableTimeframes[0] || "daily",
+    sortKey: "symbol",
+    sortDir: "asc"
+  };
+
+  const renderBlock = () => {
+    const tfPayload = timeframes[state.timeframe] || {};
+    const watchlist = tfPayload.signals && tfPayload.signals.length ? tfPayload.signals : model.watchlist;
+    const top30 = tfPayload.rows && tfPayload.rows.length ? tfPayload.rows : model.top30;
+    const missingNote = model.missingKeys.length ? `Missing: ${model.missingKeys.join(", ")}` : "";
+    const partialNote =
+      meta.status === "PARTIAL" || model.warnings.length
+        ? "Partial data — some sources unavailable."
+        : "";
+    const statusNote =
+      meta.status && meta.status !== "LIVE"
+        ? `Status: ${meta.status} · ${meta.reason || "NO_DATA"}`
+        : "";
+
+    contentEl.innerHTML = `
+      ${statusNote ? `<div class="rv-native-note rv-native-warning">${statusNote}</div>` : ""}
+      ${partialNote ? `<div class="rv-native-note">${partialNote}</div>` : ""}
+      ${missingNote ? `<div class="rv-native-note">${missingNote}</div>` : ""}
+      <div class="rv-tech-section">
+        <h3>Watchlist Signals</h3>
+        ${renderWatchlist(watchlist, symbols)}
+      </div>
+      <div class="rv-tech-section">
+        <h3>Top 30 Market Cap Table</h3>
+        <div class="rv-native-note">How computed? RSI/MACD/Stoch RSI are derived from OHLC (stooq) per timeframe.</div>
+        <div class="rv-top30-controls">
+          <button type="button" class="rv-top30-tab${state.timeframe === "daily" ? " is-active" : ""}" data-rv-timeframe="daily" ${availableTimeframes.length ? "" : "disabled"}>Daily</button>
+          <button type="button" class="rv-top30-tab${state.timeframe === "weekly" ? " is-active" : ""}" data-rv-timeframe="weekly" ${availableTimeframes.length ? "" : "disabled"}>Weekly</button>
+          <button type="button" class="rv-top30-tab${state.timeframe === "monthly" ? " is-active" : ""}" data-rv-timeframe="monthly" ${availableTimeframes.length ? "" : "disabled"}>Monthly</button>
+        </div>
+        <div data-rv-top30-table>
+          ${renderTop30Table(top30, state)}
+        </div>
+        <div class="rv-native-note">Universe: fixed mega-cap list (approx top 30).</div>
+      </div>
+    `;
+
+    const tabButtons = Array.from(contentEl.querySelectorAll("[data-rv-timeframe]"));
+    tabButtons.forEach((button) => {
+      button.addEventListener("click", () => {
+        const next = button.getAttribute("data-rv-timeframe") || "daily";
+        if (state.timeframe === next) return;
+        if (availableTimeframes.length && !availableTimeframes.includes(next)) return;
+        state.timeframe = next;
+        renderBlock();
+      });
+    });
+    const tableHead = contentEl.querySelector("[data-rv-top30-table] thead");
+    tableHead?.addEventListener("click", (event) => {
+      const th = event.target.closest("[data-rv-sort]");
+      if (!th) return;
+      const key = th.getAttribute("data-rv-sort");
+      if (!key) return;
+      if (state.sortKey === key) {
+        state.sortDir = state.sortDir === "asc" ? "desc" : "asc";
+      } else {
+        state.sortKey = key;
+        state.sortDir = "asc";
+      }
+      renderBlock();
+    });
+
+    renderDebugMeta(contentEl, meta);
+  };
+
+  renderBlock();
 }
 
 function renderAlphaRadarSnapshot(contentEl, snapshot) {
