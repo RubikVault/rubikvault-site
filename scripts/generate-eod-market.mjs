@@ -1,6 +1,8 @@
 import path from "node:path";
+import fs from "node:fs";
+import { execSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
-import { saveMirror, validateBasicMirrorShape, loadMirror } from "./utils/mirror-io.mjs";
+import { saveMirror, validateBasicMirrorShape, loadMirror, atomicWriteJson } from "./utils/mirror-io.mjs";
 import { selectUniverse } from "./utils/universe.mjs";
 import { processSymbols } from "./utils/eod-market-symbols.mjs";
 import { buildEodMirrors } from "./utils/eod-market-mirrors.mjs";
@@ -14,6 +16,7 @@ const MIRROR_DIRS = [
 const SYSTEM_HEALTH_PATH = path.resolve(__dirname, "../public/mirrors/system-health.json");
 const DAILY_DIGEST_PATH = path.resolve(__dirname, "../public/mirrors/daily-digest.json");
 const PREV_REGIME_PATH = path.resolve(__dirname, "../public/mirrors/market-regime.json");
+const BUILD_INFO_PATH = path.resolve(__dirname, "../public/build-info.json");
 
 const CONTINUOUS_MIN_ITEMS = {
   quotes: 3,
@@ -101,5 +104,18 @@ saveMirror(DAILY_DIGEST_PATH, buildDigest({
   changes: [],
   sources: Object.keys(mirrors)
 }));
+
+let commitSha = process.env.GITHUB_SHA || process.env.COMMIT_SHA || process.env.BUILD_SHA || "";
+if (!commitSha) {
+  try {
+    commitSha = execSync("git rev-parse HEAD", { encoding: "utf8" }).trim();
+  } catch (err) {
+    commitSha = "unknown";
+  }
+}
+atomicWriteJson(BUILD_INFO_PATH, {
+  commitSha,
+  generatedAt: new Date().toISOString()
+});
 
 console.log("EOD_MARKET_MIRRORS_DONE", universe.length, "symbols");

@@ -136,6 +136,9 @@ for (const entry of Object.values(BLOCK_REGISTRY)) {
       if (typeof normalized.mirror.generatedAt !== "string" || !normalized.mirror.generatedAt.trim()) {
         failures.push({ mirrorId, error: "generatedAt_missing" });
       }
+      if (!normalized.mirror.data || typeof normalized.mirror.data !== "object") {
+        failures.push({ mirrorId, error: "data_missing" });
+      }
       const picks = normalized.mirror?.data?.picks;
       const top = Array.isArray(picks?.top) ? picks.top : [];
       if (!top.length) {
@@ -170,6 +173,19 @@ for (const entry of Object.values(BLOCK_REGISTRY)) {
         if (!Array.isArray(sample.tags)) {
           failures.push({ mirrorId, error: "pick_tags_invalid" });
         }
+      }
+    }
+    if (mirrorId === "tech-signals") {
+      if (typeof normalized.mirror.generatedAt !== "string" || !normalized.mirror.generatedAt.trim()) {
+        failures.push({ mirrorId, error: "generatedAt_missing" });
+      }
+      if (!normalized.mirror.data || typeof normalized.mirror.data !== "object") {
+        failures.push({ mirrorId, error: "data_missing" });
+      }
+      const signals = normalized.mirror?.data?.signals;
+      const rows = normalized.mirror?.data?.rows;
+      if (!Array.isArray(signals) && !Array.isArray(rows)) {
+        failures.push({ mirrorId, error: "signals_or_rows_missing" });
       }
     }
     if (entry.blockType === "EVENT") {

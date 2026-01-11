@@ -68,7 +68,7 @@ export function buildEodMirrors({
     asOf: asOfIso
   });
 
-  const techMirror = buildBaseMirror({
+  const techMirrorBase = buildBaseMirror({
     mirrorId: "tech-signals",
     mode: "EOD",
     cadence: "EOD",
@@ -83,6 +83,15 @@ export function buildEodMirrors({
     dataQuality: buildDQ(data.itemsTech, data.missingSymbols),
     asOf: asOfIso
   });
+  const techMirror = {
+    ...techMirrorBase,
+    generatedAt: techMirrorBase.updatedAt,
+    data: {
+      ...(techMirrorBase.data && typeof techMirrorBase.data === "object" ? techMirrorBase.data : {}),
+      signals: data.itemsTech,
+      rows: data.itemsTech
+    }
+  };
 
   const priceSnapshotMirror = buildBaseMirror({
     mirrorId: "price-snapshot",
