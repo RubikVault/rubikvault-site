@@ -14,6 +14,10 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: "20"
+      - name: Syntax check rv-loader
+        run: node --check public/rv-loader.js
+      - name: Contract smoke (tech/alpha)
+        run: node scripts/contract-smoke.mjs
       - name: Prepare public registry
         run: npm run prepare:data
       - name: Validate public registry

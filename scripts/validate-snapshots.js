@@ -28,6 +28,11 @@ function validateSnapshot(filePath) {
   assert(meta && typeof meta === "object", `${filePath}: meta missing`, errors);
   if (!meta || typeof meta !== "object") return errors;
 
+  // Snapshot contract (enforced by this validator):
+  // - meta.status/meta.reason: non-empty strings
+  // - meta.itemsCount/coveragePct/stalenessSec/latencyMs: finite numbers
+  // - meta.timezoneAssumption/meta.dataAtDefinition: non-empty strings
+  // - ERROR status requires meta.details with bounded snippet + urlHost
   assert(isNonEmptyString(meta.status), `${filePath}: meta.status invalid`, errors);
   assert(isNonEmptyString(meta.reason), `${filePath}: meta.reason invalid`, errors);
   assert(isNumber(meta.itemsCount), `${filePath}: meta.itemsCount invalid`, errors);

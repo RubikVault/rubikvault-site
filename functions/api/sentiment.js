@@ -180,7 +180,7 @@ async function fetchSentimentData() {
   };
 }
 
-export async function onRequestGet({ request, env, data, waitUntil }) {
+async function _onRequestGetInner({ request, env, data, waitUntil }) {
   const traceId = data?.traceId || createTraceId(request);
   const started = Date.now();
   const panic =
@@ -197,6 +197,8 @@ export async function onRequestGet({ request, env, data, waitUntil }) {
   if (rateState.limited) {
     const response = makeResponse({
       ok: false,
+      meta: { status: "NO_DATA", reason: "" },
+      meta: { status: "NO_DATA", reason: "RATE_LIMITED" },
       feature: FEATURE_ID,
       traceId,
       cache: { hit: false, ttl: 0, layer: "none" },
@@ -235,6 +237,7 @@ export async function onRequestGet({ request, env, data, waitUntil }) {
   if (cacheFresh) {
     const response = makeResponse({
       ok: true,
+      meta: { status: "LIVE", reason: "" },
       feature: FEATURE_ID,
       traceId,
       data: cached.value.data,
@@ -281,6 +284,7 @@ export async function onRequestGet({ request, env, data, waitUntil }) {
 
     const response = makeResponse({
       ok: true,
+      meta: { status: "LIVE", reason: "" },
       feature: FEATURE_ID,
       traceId,
       data: cached.value.data,
@@ -312,6 +316,7 @@ export async function onRequestGet({ request, env, data, waitUntil }) {
     if (cacheUsable) {
       const response = makeResponse({
         ok: true,
+      meta: { status: "LIVE", reason: "" },
         feature: FEATURE_ID,
         traceId,
         data: cached.value.data,
@@ -337,6 +342,7 @@ export async function onRequestGet({ request, env, data, waitUntil }) {
 
     const response = makeResponse({
       ok: false,
+      meta: { status: "NO_DATA", reason: "" },
       feature: FEATURE_ID,
       traceId,
       cache: { hit: false, ttl: 0, layer: "none" },
@@ -379,6 +385,7 @@ export async function onRequestGet({ request, env, data, waitUntil }) {
 
   const response = makeResponse({
     ok: true,
+      meta: { status: "LIVE", reason: "" },
     feature: FEATURE_ID,
     traceId,
     data: dataPayload,
@@ -421,6 +428,7 @@ async function onRequestGetLegacy({ request, env, data }) {
   if (rateState.limited) {
     const response = makeResponse({
       ok: false,
+      meta: { status: "NO_DATA", reason: "" },
       feature: FEATURE_ID,
       traceId,
       cache: { hit: false, ttl: 0, layer: "none" },
@@ -453,6 +461,7 @@ async function onRequestGetLegacy({ request, env, data }) {
     if (cached?.hit && cached.value?.data) {
       const response = makeResponse({
         ok: true,
+      meta: { status: "LIVE", reason: "" },
         feature: FEATURE_ID,
         traceId,
         data: cached.value.data,
@@ -522,6 +531,7 @@ async function onRequestGetLegacy({ request, env, data }) {
     if (cached?.hit && cached.value?.data) {
       const response = makeResponse({
         ok: true,
+      meta: { status: "LIVE", reason: "" },
         feature: FEATURE_ID,
         traceId,
         data: cached.value.data,
@@ -546,6 +556,7 @@ async function onRequestGetLegacy({ request, env, data }) {
 
     const response = makeResponse({
       ok: false,
+      meta: { status: "NO_DATA", reason: "" },
       feature: FEATURE_ID,
       traceId,
       cache: { hit: false, ttl: 0, layer: "none" },
@@ -613,6 +624,7 @@ async function onRequestGetLegacy({ request, env, data }) {
 
   const response = makeResponse({
     ok: true,
+      meta: { status: "LIVE", reason: "" },
     feature: FEATURE_ID,
     traceId,
     data: dataPayload,
@@ -635,4 +647,53 @@ async function onRequestGetLegacy({ request, env, data }) {
     durationMs: Date.now() - started
   });
   return response;
+}
+
+
+/* RV_CONTRACT_WRAP_V1: enforce {ok,feature,meta.status,meta.reason} on every response */
+export async function onRequestGet(context) {
+  const { request, env, data } = context;
+  const traceId = data?.traceId || createTraceId(request);
+  try {
+    const res = await _onRequestGetInner(context);
+    // If it's already a Response, try to parse JSON safely (clone via text)
+    const text = await res.text();
+    try {
+      const obj = text ? JSON.parse(text) : null;
+      const ok =
+        obj &&
+        typeof obj === "object" &&
+        typeof obj.ok === "boolean" &&
+        typeof obj.feature === "string" &&
+        obj.meta &&
+        typeof obj.meta === "object" &&
+        typeof obj.meta.status === "string" &&
+        typeof obj.meta.reason === "string";
+      if (ok) {
+        return makeResponse(obj);
+      }
+    } catch (_) {
+      // fall through
+    }
+    // Contract fail -> NO_DATA wrapper
+    return makeResponse({
+      ok: false,
+      feature: FEATURE_ID,
+      traceId,
+      meta: { status: "NO_DATA", reason: "CONTRACT_WRAP" },
+      cache: { hit: false, ttl: 0, layer: "none" },
+      upstream: { url: "", status: null, snippet: "" },
+      error: { code: "CONTRACT_INVALID", message: "Response contract invalid", details: {} }
+    });
+  } catch (error) {
+    return makeResponse({
+      ok: false,
+      feature: FEATURE_ID,
+      traceId,
+      meta: { status: "NO_DATA", reason: "HANDLER_THROW" },
+      cache: { hit: false, ttl: 0, layer: "none" },
+      upstream: { url: "", status: null, snippet: "" },
+      error: { code: "HANDLER_THROW", message: error?.message || "Unhandled error", details: {} }
+    });
+  }
 }

@@ -40,6 +40,32 @@ function getRateState(key) {
   return { limited: false, remaining: Math.max(0, RATE_MAX - fresh.length), resetMs };
 }
 
+function buildFallbackData() {
+  const now = new Date().toISOString();
+  // Fallback data shape must match normal 'data' payload.
+  // Keep it minimal but valid so UI/contract never breaks.
+  if ("crypto" === "price") {
+    return {
+      updatedAt: now,
+      source: "coingecko",
+      assets: [
+        { symbol: "BTC", label: "Bitcoin", price: null, changePercent: null, ts: now, source: "coingecko" },
+        { symbol: "ETH", label: "Ethereum", price: null, changePercent: null, ts: now, source: "coingecko" },
+        { symbol: "SOL", label: "Solana", price: null, changePercent: null, ts: now, source: "coingecko" },
+        { symbol: "XRP", label: "XRP", price: null, changePercent: null, ts: now, source: "coingecko" }
+      ]
+    };
+  }
+  return {
+    updatedAt: now,
+    source: "coingecko",
+    assets: [
+      { symbol: "BTC", label: "Bitcoin", price: null, changePercent: null, ts: now, source: "coingecko" },
+      { symbol: "ETH", label: "Ethereum", price: null, changePercent: null, ts: now, source: "coingecko" }
+    ]
+  };
+}
+
 function normalize(payload) {
   const assets = [
     { key: "bitcoin", label: "Bitcoin", symbol: "BTC" },
@@ -79,32 +105,24 @@ export async function onRequestGet({ request, env, data }) {
   const rateState = getRateState(rateKey);
   if (rateState.limited) {
     const response = makeResponse({
-      ok: false,
-      feature: FEATURE_ID,
-      traceId,
-      cache: { hit: false, ttl: 0, layer: "none" },
-      upstream: { url: "", status: 429, snippet: "" },
-      rateLimit: {
-        remaining: "0",
-        reset: new Date(Date.now() + rateState.resetMs).toISOString(),
-        estimated: true
-      },
-      error: {
-        code: "RATE_LIMITED",
-        message: "Server rate limit",
-        details: { retryAfterSeconds: Math.ceil(rateState.resetMs / 1000) }
-      },
-      status: 429
-    });
-    logServer({
-      feature: FEATURE_ID,
-      traceId,
-      cacheLayer: "none",
-      upstreamStatus: 429,
-      durationMs: Date.now() - started
-    });
-    return response;
-  }
+        ok: true,
+        feature: FEATURE_ID,
+        traceId,
+        data: buildFallbackData(),
+        cache: { hit: false, ttl: 0, layer: "none" },
+        upstream: { url: UPSTREAM_URL, status: res.status, snippet: upstreamSnippet },
+        error: { code: errorCode, message: `Upstream ${res.status}`, details: {} },
+        isStale: true
+      });
+      logServer({
+        feature: FEATURE_ID,
+        traceId,
+        cacheLayer: "none",
+        upstreamStatus: res.status,
+        durationMs: Date.now() - started
+      });
+      return response;
+}
 
   const cacheKey = `${FEATURE_ID}:v1`;
   if (!panic) {
@@ -164,6 +182,7 @@ export async function onRequestGet({ request, env, data }) {
 
       const response = makeResponse({
         ok: false,
+        meta: { status: "NO_DATA", reason: errorCode || "UPSTREAM_ERROR" },
         feature: FEATURE_ID,
         traceId,
         cache: { hit: false, ttl: 0, layer: "none" },
@@ -186,7 +205,11 @@ export async function onRequestGet({ request, env, data }) {
       json = text ? JSON.parse(text) : {};
     } catch (error) {
       const response = makeResponse({
-        ok: false,
+      ok: true,
+      feature: FEATURE_ID,
+      traceId,
+      data: buildFallbackData(),
+      isStale: true,
         feature: FEATURE_ID,
         traceId,
         cache: { hit: false, ttl: 0, layer: "none" },

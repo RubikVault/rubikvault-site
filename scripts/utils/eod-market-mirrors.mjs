@@ -1,4 +1,5 @@
 import { buildBaseMirror } from "./mirror-builders.mjs";
+import { computeAlphaRadarPicks } from "../core/alpha-radar-core.mjs";
 import { deriveRegime } from "./market-indicators.mjs";
 import { loadMirror } from "./mirror-io.mjs";
 
@@ -67,7 +68,7 @@ export function buildEodMirrors({
     asOf: asOfIso
   });
 
-  const techMirror = buildBaseMirror({
+  const techMirrorBase = buildBaseMirror({
     mirrorId: "tech-signals",
     mode: "EOD",
     cadence: "EOD",
@@ -82,6 +83,15 @@ export function buildEodMirrors({
     dataQuality: buildDQ(data.itemsTech, data.missingSymbols),
     asOf: asOfIso
   });
+  const techMirror = {
+    ...techMirrorBase,
+    generatedAt: techMirrorBase.updatedAt,
+    data: {
+      ...(techMirrorBase.data && typeof techMirrorBase.data === "object" ? techMirrorBase.data : {}),
+      signals: data.itemsTech,
+      rows: data.itemsTech
+    }
+  };
 
   const priceSnapshotMirror = buildBaseMirror({
     mirrorId: "price-snapshot",
@@ -140,7 +150,7 @@ export function buildEodMirrors({
     asOf: asOfIso
   });
 
-  const alphaMirror = buildBaseMirror({
+  const alphaMirrorBase = buildBaseMirror({
     mirrorId: "alpha-radar",
     mode: "EOD",
     cadence: "EOD",
@@ -155,6 +165,15 @@ export function buildEodMirrors({
     dataQuality: buildDQ(data.itemsAlpha, data.missingSymbols),
     asOf: asOfIso
   });
+  const alphaPicks = computeAlphaRadarPicks({ itemsAlpha: data.itemsAlpha });
+  const alphaMirror = {
+    ...alphaMirrorBase,
+    generatedAt: alphaMirrorBase.updatedAt,
+    data: {
+      ...(alphaMirrorBase.data && typeof alphaMirrorBase.data === "object" ? alphaMirrorBase.data : {}),
+      picks: alphaPicks
+    }
+  };
 
   const regimeMirror = buildBaseMirror({
     mirrorId: "market-regime",

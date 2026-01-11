@@ -22,6 +22,32 @@ function mapUpstreamCode(status) {
   return "UPSTREAM_5XX";
 }
 
+function buildFallbackData() {
+  const now = new Date().toISOString();
+  // Fallback data shape must match normal 'data' payload.
+  // Keep it minimal but valid so UI/contract never breaks.
+  if ("price" === "price") {
+    return {
+      updatedAt: now,
+      source: "coingecko",
+      assets: [
+        { symbol: "BTC", label: "Bitcoin", price: null, changePercent: null, ts: now, source: "coingecko" },
+        { symbol: "ETH", label: "Ethereum", price: null, changePercent: null, ts: now, source: "coingecko" },
+        { symbol: "SOL", label: "Solana", price: null, changePercent: null, ts: now, source: "coingecko" },
+        { symbol: "XRP", label: "XRP", price: null, changePercent: null, ts: now, source: "coingecko" }
+      ]
+    };
+  }
+  return {
+    updatedAt: now,
+    source: "coingecko",
+    assets: [
+      { symbol: "BTC", label: "Bitcoin", price: null, changePercent: null, ts: now, source: "coingecko" },
+      { symbol: "ETH", label: "Ethereum", price: null, changePercent: null, ts: now, source: "coingecko" }
+    ]
+  };
+}
+
 function normalize(payload) {
   const assets = [
     { key: "bitcoin", label: "Bitcoin", symbol: "BTC" },
@@ -117,13 +143,14 @@ export async function onRequestGet({ request, env, data }) {
       }
 
       const response = makeResponse({
-        ok: false,
+        ok: true,
         feature: FEATURE_ID,
         traceId,
+        data: buildFallbackData(),
         cache: { hit: false, ttl: 0, layer: "none" },
         upstream: { url: UPSTREAM_URL, status: res.status, snippet: upstreamSnippet },
         error: { code: errorCode, message: `Upstream ${res.status}`, details: {} },
-        status: res.status === 429 ? 429 : 502
+        isStale: true
       });
       logServer({
         feature: FEATURE_ID,
@@ -133,14 +160,18 @@ export async function onRequestGet({ request, env, data }) {
         durationMs: Date.now() - started
       });
       return response;
-    }
+}
 
     let json;
     try {
       json = text ? JSON.parse(text) : {};
     } catch (error) {
       const response = makeResponse({
-        ok: false,
+      ok: true,
+      feature: FEATURE_ID,
+      traceId,
+      data: buildFallbackData(),
+      isStale: true,
         feature: FEATURE_ID,
         traceId,
         cache: { hit: false, ttl: 0, layer: "none" },
@@ -190,6 +221,7 @@ export async function onRequestGet({ request, env, data }) {
     const errorCode = error?.name === "AbortError" ? "UPSTREAM_TIMEOUT" : "UPSTREAM_5XX";
     const response = makeResponse({
       ok: false,
+      meta: { status: "NO_DATA", reason: "UPSTREAM_ERROR" },
       feature: FEATURE_ID,
       traceId,
       cache: { hit: false, ttl: 0, layer: "none" },
