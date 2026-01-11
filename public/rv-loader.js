@@ -1434,6 +1434,16 @@ function renderWhyMovedSnapshot(contentEl, snapshot) {
   renderDebugMeta(contentEl, snapshot.meta || {});
 }
 
+function renderEmptySignals(contentEl, meta) {
+  if (!contentEl) return;
+  contentEl.innerHTML = `
+    <div class="rv-native-empty">
+      No active signals detected at EOD. <a href="?debug=1" style="color:#888;font-size:12px;">debug</a>
+    </div>
+  `;
+  renderDebugMeta(contentEl, meta);
+}
+
 function renderSp500SectorsSnapshot(contentEl, snapshot) {
   const items = Array.isArray(snapshot?.data?.sectors)
     ? snapshot.data.sectors
@@ -1487,8 +1497,13 @@ function renderTechSignalsSnapshot(contentEl, snapshot) {
     : Array.isArray(snapshot?.data?.items)
       ? snapshot.data.items
       : [];
+  const meta = snapshot.meta || {};
   if (!items.length) {
-    renderNoData(contentEl, snapshot.meta || {});
+    if (meta.status === "LIVE" || meta.status === "STALE") {
+      renderEmptySignals(contentEl, meta);
+    } else {
+      renderNoData(contentEl, meta);
+    }
     return;
   }
   const rows = items.slice(0, 5);
@@ -1600,10 +1615,18 @@ async function renderSnapshotBlock(contentEl, feature, logger, section) {
     renderYieldCurveSnapshot(contentEl, snapshot);
   } else if (normalizedId.endsWith("why-moved")) {
     renderWhyMovedSnapshot(contentEl, snapshot);
-else if (normalizedId.endsWith("tech-signals")) {
+  } else if (normalizedId.endsWith("sp500-sectors")) {
+    renderSp500SectorsSnapshot(contentEl, snapshot);
+  } else if (normalizedId.endsWith("tech-signals")) {
     renderTechSignalsSnapshot(contentEl, snapshot);
   } else if (normalizedId.endsWith("volume-anomaly")) {
     renderVolumeAnomalySnapshot(contentEl, snapshot);
+  } else if (
+    (normalizedId.endsWith("alpha-radar") || normalizedId.endsWith("alpha-radar-lite")) &&
+    (status === "LIVE" || status === "STALE") &&
+    itemsCount === 0
+  ) {
+    renderEmptySignals(contentEl, meta);
   } else {
     renderSnapshotSummary(contentEl, snapshot);
   }
