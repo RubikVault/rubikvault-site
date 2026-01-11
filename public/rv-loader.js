@@ -1492,13 +1492,11 @@ function renderSp500SectorsSnapshot(contentEl, snapshot) {
 }
 
 function renderTechSignalsSnapshot(contentEl, snapshot) {
-  const items = Array.isArray(snapshot?.data?.signals)
-    ? snapshot.data.signals
-    : Array.isArray(snapshot?.data?.items)
-      ? snapshot.data.items
-      : [];
+  const signals = Array.isArray(snapshot?.data?.signals) ? snapshot.data.signals : [];
+  const items = Array.isArray(snapshot?.data?.items) ? snapshot.data.items : [];
+  const rowsSource = signals.length ? signals : items.length ? items : [];
   const meta = snapshot.meta || {};
-  if (!items.length) {
+  if (!rowsSource.length) {
     if (meta.status === "LIVE" || meta.status === "STALE") {
       renderEmptySignals(contentEl, meta);
     } else {
@@ -1506,7 +1504,7 @@ function renderTechSignalsSnapshot(contentEl, snapshot) {
     }
     return;
   }
-  const rows = items.slice(0, 5);
+  const rows = rowsSource.slice(0, 5);
   contentEl.innerHTML = `
     <div class="rv-native-table-wrap">
       <h4>Tech Signals</h4>
@@ -1528,6 +1526,53 @@ function renderTechSignalsSnapshot(contentEl, snapshot) {
                 <tr>
                   <td>${label}</td>
                   <td>${state}</td>
+                  <td>${note}</td>
+                </tr>
+              `;
+            })
+            .join("")}
+        </tbody>
+      </table>
+    </div>
+  `;
+  renderDebugMeta(contentEl, snapshot.meta || {});
+}
+
+function renderAlphaRadarSnapshot(contentEl, snapshot) {
+  const picks = Array.isArray(snapshot?.data?.picks) ? snapshot.data.picks : [];
+  const items = Array.isArray(snapshot?.data?.items) ? snapshot.data.items : [];
+  const rows = picks.length ? picks : items.length ? items : [];
+  const meta = snapshot.meta || {};
+  if (!rows.length) {
+    if (meta.status === "LIVE" || meta.status === "STALE") {
+      renderEmptySignals(contentEl, meta);
+    } else {
+      renderNoData(contentEl, meta);
+    }
+    return;
+  }
+  const topRows = rows.slice(0, 5);
+  contentEl.innerHTML = `
+    <div class="rv-native-table-wrap">
+      <h4>Alpha Radar</h4>
+      <table class="rv-native-table">
+        <thead>
+          <tr>
+            <th>Pick</th>
+            <th>Score</th>
+            <th>Note</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${topRows
+            .map((item) => {
+              const label = item.symbol || item.ticker || item.name || "N/A";
+              const score = item.score ?? item.rank ?? item.signal ?? item.confidence ?? null;
+              const note = item.note || item.reason || item.label || "";
+              return `
+                <tr>
+                  <td>${label}</td>
+                  <td>${formatNumber(score, { maximumFractionDigits: 2 })}</td>
                   <td>${note}</td>
                 </tr>
               `;
@@ -1621,12 +1666,8 @@ async function renderSnapshotBlock(contentEl, feature, logger, section) {
     renderTechSignalsSnapshot(contentEl, snapshot);
   } else if (normalizedId.endsWith("volume-anomaly")) {
     renderVolumeAnomalySnapshot(contentEl, snapshot);
-  } else if (
-    (normalizedId.endsWith("alpha-radar") || normalizedId.endsWith("alpha-radar-lite")) &&
-    (status === "LIVE" || status === "STALE") &&
-    itemsCount === 0
-  ) {
-    renderEmptySignals(contentEl, meta);
+  } else if (normalizedId.endsWith("alpha-radar") || normalizedId.endsWith("alpha-radar-lite")) {
+    renderAlphaRadarSnapshot(contentEl, snapshot);
   } else {
     renderSnapshotSummary(contentEl, snapshot);
   }
