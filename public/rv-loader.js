@@ -260,7 +260,7 @@ async function loadPreferredSnapshot(rawId) {
     const promise = loadMirrorSnapshot(rawId, mirrorId)
       .then((mirrorSnapshot) => {
         if (mirrorSnapshot) return mirrorSnapshot;
-        return loadApiFallbackSnapshot(rawId, mirrorId);
+        return loadSnapshot(rawId);
       })
       .catch((error) => buildFallbackEnvelope(rawId, "NO_DATA", error));
     SNAPSHOT_CACHE.set(snapshotId, promise);
@@ -1965,19 +1965,143 @@ function renderTechSignalsSnapshot(contentEl, snapshot) {
   renderBlock();
 }
 
+function normalizeAlphaRadar(payload) {
+  const meta = payload?.meta || {};
+  const data = payload?.data || {};
+  const picksRaw = data.picks;
+  const picksArray = Array.isArray(picksRaw) ? picksRaw : [];
+  const picksObject =
+    picksRaw && typeof picksRaw === "object" && !Array.isArray(picksRaw) ? picksRaw : {};
+  const items = Array.isArray(data.items) ? data.items : [];
+
+  const shortCandidates = picksObject.shortterm || picksObject.shortTerm || picksObject.short || picksObject.swing;
+  const mediumCandidates = picksObject.top || picksObject.medium || picksObject.mid || picksObject.core;
+  const longCandidates = picksObject.longterm || picksObject.longTerm || picksObject.long;
+
+  const buckets = {
+    short: Array.isArray(shortCandidates) ? shortCandidates : [],
+    medium: Array.isArray(mediumCandidates) ? mediumCandidates : [],
+    long: Array.isArray(longCandidates) ? longCandidates : []
+  };
+
+  if (!buckets.short.length && !buckets.medium.length && !buckets.long.length && picksArray.length) {
+    buckets.medium = picksArray;
+  }
+  if (!buckets.short.length && !buckets.medium.length && !buckets.long.length && items.length) {
+    buckets.medium = items;
+  }
+
+  const statusHints = [];
+  if (!Array.isArray(data.picks) && !buckets.short.length && !buckets.medium.length && !buckets.long.length && items.length) {
+    statusHints.push("Partial data — picks missing");
+  }
+  const allPicks = [...buckets.short, ...buckets.medium, ...buckets.long];
+  const hasReasons = allPicks.some((pick) => Array.isArray(pick?.reasons) && pick.reasons.length > 0);
+  const hasIndicators = allPicks.some((pick) => Array.isArray(pick?.indicators) && pick.indicators.length > 0);
+  const hasChecklist =
+    allPicks.some((pick) => pick?.setup && Object.keys(pick.setup).length > 0) ||
+    allPicks.some((pick) => pick?.trigger && Object.keys(pick.trigger).length > 0);
+  if (allPicks.length && !hasReasons && !hasIndicators && !hasChecklist) {
+    statusHints.push("Partial data — indicators missing");
+  }
+
+  return {
+    meta,
+    data,
+    buckets,
+    statusHints
+  };
+}
+
 function renderAlphaRadarSnapshot(contentEl, snapshot) {
-  const picksData = snapshot?.data?.picks;
-  const picksArray = Array.isArray(picksData) ? picksData : [];
-  const hasFullPicks = picksData && typeof picksData === "object" && !Array.isArray(picksData);
-  const picksObject = hasFullPicks ? picksData : {};
-  const items = Array.isArray(snapshot?.data?.items) ? snapshot.data.items : [];
-  const top = Array.isArray(picksObject.top) ? picksObject.top : picksArray;
-  const shortterm = Array.isArray(picksObject.shortterm) ? picksObject.shortterm : [];
-  const longterm = Array.isArray(picksObject.longterm) ? picksObject.longterm : [];
-  const rows = top.length ? top : items.length ? items : [];
-  const liteMode = !hasFullPicks && items.length > 0;
-  const meta = snapshot.meta || {};
-  if (!rows.length && !shortterm.length && !longterm.length) {
+  const SETUP_LABELS = {
+    rsiExtreme: "RSI < 35",
+    bbExtreme: "BB %B < 0.15",
+    nearSma200: "Near SMA200",
+    rvolGte15: "RVOL >= 1.5",
+    extremeGate: "Extreme Gate"
+  };
+  const TRIGGER_LABELS = {
+    ema21Reclaim: "EMA21 reclaim",
+    higherLowFt: "Higher low + FT",
+    bosBreak: "Break of structure",
+    volumeConfirm: "Volume confirm",
+    rsiUpturn: "RSI upturn"
+  };
+  const INFO_TEXT = {
+    rsiExtreme: "RSI below 35 indicates oversold pressure.",
+    bbExtreme: "Price near lower Bollinger band.",
+    nearSma200: "Close within 2% of SMA200.",
+    rvolGte15: "Relative volume >= 1.5.",
+    extremeGate: "At least one extreme condition is required.",
+    ema21Reclaim: "Close reclaimed EMA21 after being below.",
+    higherLowFt: "New pivot low above prior pivot with follow-through.",
+    bosBreak: "Break above last lower high.",
+    volumeConfirm: "Volume above 1.2x 20D average.",
+    rsiUpturn: "RSI rising vs prior day."
+  };
+
+  const formatPercent = (value) => {
+    if (value === null || value === undefined || Number.isNaN(value)) return "N/A";
+    return `${formatNumber(value, { maximumFractionDigits: 2 })}%`;
+  };
+
+  const badgeClass = (label) => {
+    if (!label) return "";
+    const upper = String(label || "").toUpperCase();
+    if (upper === "BUY" || upper === "TOP PICK" || upper === "STRONG") return "rv-alpha-badge--top";
+    if (upper === "WATCHLIST" || upper === "WATCH") return "rv-alpha-badge--watch";
+    if (upper === "DATA_ERROR") return "rv-alpha-badge--data";
+    return "rv-alpha-badge--wait";
+  };
+
+  const renderChecklist = (items = {}, labels = {}) =>
+    Object.keys(labels)
+      .map((key) => {
+        const on = Boolean(items?.[key]);
+        return `
+          <div class="rv-alpha-check">
+            <span class="rv-alpha-dot ${on ? "is-on" : "is-off"}"></span>
+            <span>${labels[key]}</span>
+            <button type="button" class="rv-alpha-info" title="${INFO_TEXT[key] || ""}">i</button>
+          </div>
+        `;
+      })
+      .join("");
+
+  const normalizePick = (pick = {}) => {
+    const reasons = Array.isArray(pick.reasons) ? pick.reasons : [];
+    const indicators = Array.isArray(pick.indicators) ? pick.indicators : [];
+    const tags = Array.isArray(pick.tags) ? pick.tags : pick.tag ? [String(pick.tag)] : [];
+    return {
+      symbol: pick.symbol || pick.ticker || "N/A",
+      name: pick.name || "",
+      label: pick.label || tags[0] || "",
+      setupScore: pick.setupScore ?? null,
+      triggerScore: pick.triggerScore ?? null,
+      totalScore: pick.totalScore ?? pick.score ?? null,
+      setup: pick.setup || {},
+      trigger: pick.trigger || {},
+      reasons,
+      indicators,
+      close: pick.close ?? null,
+      stop: pick.stop ?? null,
+      changePercent: pick.changePercent ?? pick.changePct ?? null,
+      dataQuality: pick.dataQuality || {},
+      earningsRisk: pick.earningsRisk,
+      earningsDays: pick.earningsDays
+    };
+  };
+
+  const model = normalizeAlphaRadar(snapshot);
+  const meta = model.meta || {};
+  const buckets = model.buckets || {};
+
+  const shortPicks = buckets.short.map(normalizePick);
+  const mediumPicks = buckets.medium.map(normalizePick);
+  const longPicks = buckets.long.map(normalizePick);
+  const hasAny = shortPicks.length || mediumPicks.length || longPicks.length;
+  if (!hasAny) {
     if (meta.status === "LIVE" || meta.status === "STALE") {
       renderEmptySignals(contentEl, meta);
     } else {
@@ -1986,55 +2110,87 @@ function renderAlphaRadarSnapshot(contentEl, snapshot) {
     return;
   }
 
-  const renderAlphaPickCard = (pick = {}) => {
-    const symbol = pick.symbol || pick.ticker || pick.name || "N/A";
-    const score = pick.totalScore ?? pick.score ?? pick.rank ?? pick.signal ?? null;
-    const note = pick.note || pick.reason || pick.label || pick.name || "";
+  const renderPickCard = (pick = {}) => {
+    const displayLabel = pick.label || "PICK";
+    const changeClass =
+      pick.changePercent === null ? "" : pick.changePercent >= 0 ? "rv-native-positive" : "rv-native-negative";
+    const indicatorList =
+      pick.indicators && pick.indicators.length
+        ? `<div class="rv-alpha-reasons">${pick.indicators.map((ind) => ind.label || ind.key || ind).join(" · ")}</div>`
+        : pick.reasons.length
+          ? `<div class="rv-alpha-reasons">${pick.reasons.join(" · ")}</div>`
+          : "";
     return `
       <div class="rv-alpha-card">
         <div class="rv-alpha-head">
           <div>
-            <div class="rv-alpha-symbol">${symbol}</div>
+            <div class="rv-alpha-symbol">${pick.symbol}</div>
+            <div class="rv-alpha-name">${pick.name || ""}</div>
           </div>
-          ${score === null ? "" : `<span class="rv-alpha-badge">${formatNumber(score, { maximumFractionDigits: 2 })}</span>`}
+          <span class="rv-alpha-badge ${badgeClass(displayLabel)}">${displayLabel}</span>
         </div>
-        ${note ? `<div class="rv-alpha-reasons">${note}</div>` : ""}
+        <div class="rv-alpha-scores">
+          <span>Setup ${formatNumber(pick.setupScore, { maximumFractionDigits: 0 })}</span>
+          <span>Trigger ${formatNumber(pick.triggerScore, { maximumFractionDigits: 0 })}</span>
+          <span>Total ${formatNumber(pick.totalScore, { maximumFractionDigits: 0 })}</span>
+        </div>
+        <div class="rv-alpha-checklist">
+          <strong>Setup</strong>
+          ${renderChecklist(pick.setup, SETUP_LABELS)}
+        </div>
+        <div class="rv-alpha-checklist">
+          <strong>Trigger</strong>
+          ${renderChecklist(pick.trigger, TRIGGER_LABELS)}
+        </div>
+        <div class="rv-alpha-meta">
+          <span>Close $${formatNumber(pick.close, { maximumFractionDigits: 2 })}</span>
+          <span class="${changeClass}">${formatPercent(pick.changePercent)}</span>
+          <span>Stop $${formatNumber(pick.stop, { maximumFractionDigits: 2 })}</span>
+        </div>
+        ${indicatorList}
+        ${pick.dataQuality?.isPartial ? `<div class="rv-alpha-warn">PARTIAL DATA</div>` : ""}
+        ${pick.earningsRisk ? `<div class="rv-alpha-warn">Earnings in ${pick.earningsDays ?? "?"} days</div>` : ""}
       </div>
     `;
   };
 
-  const renderAlphaSection = (title, picks = []) => {
-    if (!picks.length) {
-      return `
-        <div class="rv-alpha-section">
-          <h4>${title}</h4>
-          <div class="rv-native-empty">No picks</div>
-        </div>
-      `;
-    }
-    return `
-      <div class="rv-alpha-section">
-        <h4>${title}</h4>
-        <div class="rv-alpha-grid">
-          ${picks.map((pick) => renderAlphaPickCard(pick)).join("")}
-        </div>
-      </div>
-    `;
-  };
-
-  const topRows = rows.slice(0, 6);
-  contentEl.innerHTML = `
-    <div class="rv-alpha-top">
-      <strong>Top Picks</strong>
-      ${liteMode ? '<div class="rv-alpha-note">Lite data (full picks unavailable)</div>' : ""}
-      <div class="rv-alpha-grid">
-        ${topRows.map((pick) => renderAlphaPickCard(pick)).join("")}
-      </div>
+  const renderSection = (title, picks = [], emptyText) => `
+    <div class="rv-alpha-section">
+      <h4>${title}</h4>
+      ${picks.length ? `<div class="rv-alpha-grid">${picks.map((pick) => renderPickCard(pick)).join("")}</div>` : `<div class="rv-native-empty">${emptyText}</div>`}
     </div>
-    ${renderAlphaSection("Shortterm & Swing", shortterm)}
-    ${renderAlphaSection("Longterm", longterm)}
   `;
-  renderDebugMeta(contentEl, snapshot.meta || {});
+
+  const partialNote =
+    meta.status === "PARTIAL" || model.statusHints.length
+      ? `Partial data — ${model.statusHints.join("; ") || "some indicators missing"}.`
+      : "";
+  const mediumChips = mediumPicks.slice(0, 6);
+  const renderChip = (pick) => {
+    const displayLabel = pick.label || "PICK";
+    return `<span class="rv-alpha-chip ${badgeClass(displayLabel)}">${pick.symbol}</span>`;
+  };
+
+  contentEl.innerHTML = `
+    ${partialNote ? `<div class="rv-native-note">${partialNote}</div>` : ""}
+    ${renderSection("Short-term", shortPicks, "No short-term picks")}
+    ${
+      mediumChips.length
+        ? `
+      <div class="rv-alpha-top">
+        <strong>Medium-term</strong>
+        <div class="rv-alpha-chips">
+          ${mediumChips.map((pick) => renderChip(pick)).join("")}
+        </div>
+      </div>
+    `
+        : ""
+    }
+    ${renderSection("Medium-term", mediumPicks, "No medium-term picks")}
+    ${renderSection("Long-term", longPicks, "No long-term picks")}
+  `;
+
+  renderDebugMeta(contentEl, meta);
 }
 
 function renderVolumeAnomalySnapshot(contentEl, snapshot) {
@@ -2096,11 +2252,20 @@ async function renderSnapshotBlock(contentEl, feature, logger, section) {
   const normalizedId = normalizeId(blockId);
   const defaultItems = Array.isArray(snapshot?.data?.items) ? snapshot.data.items : [];
   const signals = Array.isArray(snapshot?.data?.signals) ? snapshot.data.signals : [];
-  const picks = Array.isArray(snapshot?.data?.picks) ? snapshot.data.picks : [];
+  const picksRaw = snapshot?.data?.picks;
+  const picksArray = Array.isArray(picksRaw) ? picksRaw : [];
+  const picksObject = picksRaw && typeof picksRaw === "object" && !Array.isArray(picksRaw) ? picksRaw : null;
+  const picksCount = picksObject
+    ? (Array.isArray(picksObject.top) ? picksObject.top.length : 0) +
+      (Array.isArray(picksObject.shortterm) ? picksObject.shortterm.length : 0) +
+      (Array.isArray(picksObject.shortTerm) ? picksObject.shortTerm.length : 0) +
+      (Array.isArray(picksObject.longterm) ? picksObject.longterm.length : 0) +
+      (Array.isArray(picksObject.longTerm) ? picksObject.longTerm.length : 0)
+    : picksArray.length;
   const itemsCount = normalizedId.endsWith("tech-signals")
     ? signals.length || defaultItems.length
     : normalizedId.endsWith("alpha-radar") || normalizedId.endsWith("alpha-radar-lite")
-      ? picks.length || defaultItems.length
+      ? picksCount || defaultItems.length
       : defaultItems.length;
   const uiStatus = status === "ERROR" ? "FAIL" : status === "NO_DATA" ? "PARTIAL" : "OK";
   logger?.setStatus(uiStatus, reason);
