@@ -36,3 +36,14 @@ functions/api/_debug-trace.js
 # generated local backups
 scripts/generate-snapshots.mjs.bak
 scripts/generate-snapshots.mjs.bak.*
+
+# Local Python envs
+.venv/
+.venv-rvci*/
+
+# Python caches
+**/__pycache__/
+*.pyc
+
+# OS/editor noise
+.DS_Store
