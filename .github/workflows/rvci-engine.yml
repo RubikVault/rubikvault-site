@@ -24,6 +24,16 @@ jobs:
         run: |
           git config user.name "rvci-bot"
           git config user.email "rvci-bot@users.noreply.github.com"
+
+      - name: Publish RVCI mirrors assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p mirrors/rvci
+          # Sources produced by rvci workflow today
+          if [ -f public/data/rvci_latest.json ]; then cp -f public/data/rvci_latest.json mirrors/rvci_latest.json; fi
+          if [ -f public/data/rvci/health.json ]; then cp -f public/data/rvci/health.json mirrors/rvci/health.json; fi
+          ls -la mirrors/rvci_latest.json mirrors/rvci/health.json || true
           git add public/data/rvci || true
           test -f public/data/rvci_latest.json && git add public/data/rvci_latest.json || true
           if git diff --cached --quiet; then
