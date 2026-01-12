@@ -302,59 +302,167 @@ async function loadSnapshot(rawId, { force = false } = {}) {
   return fetchPromise;
 }
 
-function normalizeRvciPath(rawPath) {
+function normalizeRvciPath(rawPath, baseUrl = window.location.origin) {
   if (!rawPath) return null;
   const cleaned = String(rawPath).trim();
   if (!cleaned) return null;
   if (/^https?:\/\//i.test(cleaned)) return cleaned;
-  if (cleaned.startsWith("./")) return cleaned;
-  return `./${cleaned.replace(/^\/+/, "")}`;
+  if (cleaned.startsWith("/")) return new URL(cleaned, baseUrl).toString();
+  const normalized = cleaned.replace(/^\.\//, "");
+  return new URL(`/${normalized}`, baseUrl).toString();
 }
 
-async function loadRvciLatest() {
-  if (RVCI_CACHE.has("latest")) return RVCI_CACHE.get("latest");
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), SNAPSHOT_TIMEOUT_MS);
-  const promise = fetch(RVCI_LATEST_URL, { cache: "no-store", signal: controller.signal })
-    .then((res) => {
-      if (!res.ok) {
-        return buildFallbackEnvelope("rvci-engine", "NO_DATA", new Error(`RVCI ${res.status}`));
-      }
-      return res
-        .json()
-        .then((payload) => normalizeSnapshotEnvelope(payload, "rvci-engine"))
-        .catch((error) => buildFallbackEnvelope("rvci-engine", "NO_DATA", error));
-    })
-    .catch((error) => buildFallbackEnvelope("rvci-engine", "NO_DATA", error))
-    .finally(() => {
-      clearTimeout(timeout);
-    });
+function hasCompletePaths(paths) {
+  const required = ["short", "mid", "long", "triggers"];
+  const missing = required.filter((key) => !paths?.[key] || !String(paths[key]).trim());
+  return { ok: missing.length === 0, missing };
+}
 
-  RVCI_CACHE.set("latest", promise);
+async function fetchJsonStrict(url, { timeoutMs = SNAPSHOT_TIMEOUT_MS, debug = false } = {}) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const res = await fetch(url, {
+      cache: "no-store",
+      headers: { Accept: "application/json" },
+      signal: controller.signal
+    });
+    if (!res.ok) {
+      const error = new Error(`HTTP ${res.status}`);
+      error.code = "HTTP_ERROR";
+      error.status = res.status;
+      error.url = url;
+      throw error;
+    }
+    const contentType = (res.headers.get("content-type") || "").toLowerCase();
+    const text = await res.text();
+    const trimmed = text.trim();
+    if (!trimmed || (trimmed[0] !== "{" && trimmed[0] !== "[")) {
+      const error = new Error("NON_JSON");
+      error.code = "NON_JSON";
+      error.url = url;
+      error.contentType = contentType;
+      error.snippet = trimmed.slice(0, 120);
+      if (debug) {
+        console.warn("[RVCI] non-json response", {
+          url,
+          contentType,
+          snippet: error.snippet
+        });
+      }
+      throw error;
+    }
+    try {
+      return JSON.parse(trimmed);
+    } catch (err) {
+      const error = new Error("PARSE_ERROR");
+      error.code = "PARSE_ERROR";
+      error.url = url;
+      error.contentType = contentType;
+      error.snippet = trimmed.slice(0, 120);
+      if (debug) {
+        console.warn("[RVCI] parse error", { url, snippet: error.snippet });
+      }
+      throw error;
+    }
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+async function loadRvciLatest(debug = false) {
+  const cacheKey = `latest:${debug ? "debug" : "default"}`;
+  if (RVCI_CACHE.has(cacheKey)) return RVCI_CACHE.get(cacheKey);
+  const sources = [
+    { label: "api", url: `/api/rvci-engine${debug ? "?debug=1" : ""}` },
+    { label: "mirror", url: "/mirrors/rvci_latest.json" },
+    { label: "data", url: "/data/rvci_latest.json" }
+  ];
+  const errors = [];
+  let fallbackPayload = null;
+  let fallbackSource = null;
+  let fallbackMissing = [];
+  let fallbackPaths = {};
+
+  const promise = (async () => {
+    for (const source of sources) {
+      try {
+        const payload = await fetchJsonStrict(source.url, { debug });
+        const normalized = normalizeSnapshotEnvelope(payload, "rvci-engine");
+        const normalizedPaths = {};
+        const rawPaths = normalized?.data?.paths || {};
+        Object.entries(rawPaths || {}).forEach(([key, value]) => {
+          const resolved = normalizeRvciPath(value);
+          if (resolved) normalizedPaths[key] = resolved;
+        });
+        const pathCheck = hasCompletePaths(normalizedPaths);
+        if (pathCheck.ok) {
+          return {
+            ok: true,
+            payload: normalized,
+            source: source.url,
+            paths: normalizedPaths,
+            missing: [],
+            errors
+          };
+        }
+        if (!fallbackPayload) {
+          fallbackPayload = normalized;
+          fallbackSource = source.url;
+          fallbackMissing = pathCheck.missing;
+          fallbackPaths = normalizedPaths;
+        }
+        errors.push({
+          source: source.url,
+          code: "PATHS_INCOMPLETE",
+          missing: pathCheck.missing
+        });
+      } catch (error) {
+        errors.push({
+          source: source.url,
+          code: error?.code || "FETCH_ERROR",
+          status: error?.status || null
+        });
+      }
+    }
+    return {
+      ok: false,
+      payload: fallbackPayload || buildFallbackEnvelope("rvci-engine", "NO_DATA"),
+      source: fallbackSource,
+      paths: fallbackPaths,
+      missing: fallbackMissing,
+      errors
+    };
+  })();
+
+  RVCI_CACHE.set(cacheKey, promise);
   return promise;
 }
 
-async function loadRvciFile(rawPath) {
+async function loadRvciFile(rawPath, debug = false) {
   const resolved = normalizeRvciPath(rawPath);
-  if (!resolved) return buildFallbackEnvelope("rvci-engine", "NO_DATA");
+  if (!resolved) {
+    return {
+      payload: buildFallbackEnvelope("rvci-engine", "NO_DATA"),
+      error: { code: "MISSING_PATH" }
+    };
+  }
   const cacheKey = `file:${resolved}`;
   if (RVCI_CACHE.has(cacheKey)) return RVCI_CACHE.get(cacheKey);
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), SNAPSHOT_TIMEOUT_MS);
-  const promise = fetch(resolved, { cache: "no-store", signal: controller.signal })
-    .then((res) => {
-      if (!res.ok) {
-        return buildFallbackEnvelope("rvci-engine", "NO_DATA", new Error(`RVCI ${res.status}`));
-      }
-      return res
-        .json()
-        .then((payload) => normalizeSnapshotEnvelope(payload, "rvci-engine"))
-        .catch((error) => buildFallbackEnvelope("rvci-engine", "NO_DATA", error));
-    })
-    .catch((error) => buildFallbackEnvelope("rvci-engine", "NO_DATA", error))
-    .finally(() => {
-      clearTimeout(timeout);
-    });
+  const promise = (async () => {
+    try {
+      const payload = await fetchJsonStrict(resolved, { debug });
+      return { payload: normalizeSnapshotEnvelope(payload, "rvci-engine"), error: null };
+    } catch (error) {
+      return {
+        payload: buildFallbackEnvelope("rvci-engine", "NO_DATA", error),
+        error: {
+          code: error?.code || "FETCH_ERROR",
+          status: error?.status || null
+        }
+      };
+    }
+  })();
 
   RVCI_CACHE.set(cacheKey, promise);
   return promise;
@@ -2302,7 +2410,13 @@ function renderVolumeAnomalySnapshot(contentEl, snapshot) {
 }
 
 async function renderRvciEngineSnapshot(contentEl, feature, logger) {
-  const latest = await loadRvciLatest();
+  const debug = new URLSearchParams(window.location.search).get("debug") === "1";
+  const latestResult = await loadRvciLatest(debug);
+  const latest = latestResult.payload || buildFallbackEnvelope("rvci-engine", "NO_DATA");
+  const sourceUrl = latestResult.source || "unknown";
+  const normalizedPaths = latestResult.paths || {};
+  const pathCheck = hasCompletePaths(normalizedPaths);
+  const missingKeys = latestResult.missing || pathCheck.missing || [];
   const meta = latest.meta || {};
   const data = latest.data || {};
   const warnings = Array.isArray(latest.warnings) ? latest.warnings : [];
@@ -2319,20 +2433,75 @@ async function renderRvciEngineSnapshot(contentEl, feature, logger) {
     source: "rvci"
   });
 
+  const isSkipped = status === "SKIPPED_MARKET_CLOSED" || status === "MARKET_NOT_CLOSED";
+  if (debug) {
+    console.log("[RVCI] Source selected:", sourceUrl);
+    console.log(`[RVCI] Status: ${status} hasPaths=${Object.keys(normalizedPaths).length > 0} completePaths=${pathCheck.ok}`);
+  }
+
+  const baseDebugPayload = {
+    source: sourceUrl,
+    status,
+    reason,
+    missingKeys,
+    errors: latestResult.errors || []
+  };
+
   if (!contentEl) return latest;
+  if (!pathCheck.ok) {
+    renderNoData(contentEl, meta);
+    if (debug) {
+      const detail = document.createElement("details");
+      detail.className = "rv-block-debug";
+      detail.innerHTML = `<summary>Show debug</summary><pre>${escapeHtml(JSON.stringify(baseDebugPayload, null, 2))}</pre>`;
+      contentEl.appendChild(detail);
+    }
+    return latest;
+  }
   if (!latest.ok && status === "NO_DATA") {
     renderNoData(contentEl, meta);
     return latest;
   }
 
-  const paths = data.paths || {};
-  const [shortPayload, midPayload, longPayload, triggerPayload, healthPayload] = await Promise.all([
-    loadRvciFile(paths.short),
-    loadRvciFile(paths.mid),
-    loadRvciFile(paths.long),
-    loadRvciFile(paths.triggers),
-    loadRvciFile(paths.health)
-  ]);
+  const paths = normalizedPaths;
+  const tabRequests = {
+    short: paths.short,
+    mid: paths.mid,
+    long: paths.long,
+    triggers: paths.triggers,
+    health: paths.health
+  };
+  const settled = await Promise.allSettled(
+    Object.entries(tabRequests).map(([key, url]) =>
+      loadRvciFile(url, debug).then((res) => ({ key, ...res }))
+    )
+  );
+  const tabPayloads = {};
+  const tabErrors = {};
+  settled.forEach((result) => {
+    if (result.status === "fulfilled") {
+      const { key, payload, error } = result.value;
+      tabPayloads[key] = payload;
+      if (error) tabErrors[key] = error;
+      return;
+    }
+    const key = result.reason?.key || "unknown";
+    tabPayloads[key] = buildFallbackEnvelope("rvci-engine", "NO_DATA", result.reason);
+    tabErrors[key] = { code: "FETCH_ERROR" };
+  });
+
+  const shortPayload = tabPayloads.short;
+  const midPayload = tabPayloads.mid;
+  const longPayload = tabPayloads.long;
+  const triggerPayload = tabPayloads.triggers;
+  const healthPayload = tabPayloads.health;
+  if (debug) {
+    const count = (payload) => (Array.isArray(payload?.data?.items) ? payload.data.items.length : 0);
+    console.log(`[RVCI] Items loaded: short=${count(shortPayload)} mid=${count(midPayload)} long=${count(longPayload)} triggers=${count(triggerPayload)}`);
+    if (!pathCheck.ok) {
+      console.log(`[RVCI] paths incomplete missing=${missingKeys.join(", ")}`);
+    }
+  }
 
   const tabs = {
     short: { label: "Short-Term", payload: shortPayload },
@@ -2344,9 +2513,10 @@ async function renderRvciEngineSnapshot(contentEl, feature, logger) {
 
   const toItems = (payload) => (Array.isArray(payload?.data?.items) ? payload.data.items : []);
 
-  const renderSignalsTable = (items) => {
+  const renderSignalsTable = (items, tabError) => {
     if (!items.length) {
-      return `<div class="rv-native-empty">NO_DATA — ${reason}</div>`;
+      const errorNote = tabError ? `Data unavailable for this tab (${tabError.code || "ERROR"})` : `NO_DATA — ${reason}`;
+      return `<div class="rv-native-empty">${errorNote}</div>`;
     }
     return `
       <div class="rv-native-table-wrap">
@@ -2395,9 +2565,10 @@ async function renderRvciEngineSnapshot(contentEl, feature, logger) {
     `;
   };
 
-  const renderTriggerTable = (items) => {
+  const renderTriggerTable = (items, tabError) => {
     if (!items.length) {
-      return `<div class="rv-native-empty">NO_DATA — ${reason}</div>`;
+      const errorNote = tabError ? `Data unavailable for this tab (${tabError.code || "ERROR"})` : `NO_DATA — ${reason}`;
+      return `<div class="rv-native-empty">${errorNote}</div>`;
     }
     return `
       <div class="rv-native-table-wrap">
@@ -2432,6 +2603,7 @@ async function renderRvciEngineSnapshot(contentEl, feature, logger) {
   const renderBlock = () => {
     const tab = tabs[state.tab];
     const items = toItems(tab.payload);
+    const tabError = tabErrors[state.tab] || null;
     const statusNote =
       status && status !== "LIVE" ? `Status: ${status} · ${reason}` : "";
     const coverageNote =
@@ -2441,21 +2613,30 @@ async function renderRvciEngineSnapshot(contentEl, feature, logger) {
     const regimeNote = meta.regime ? `Regime: ${meta.regime}` : "";
     const generatedNote = meta.generatedAt ? `Generated: ${meta.generatedAt}` : "";
     const warningNote = warnings.length ? warnings.join(" · ") : "";
+    const generatedTs = Date.parse(meta.generatedAt || "");
+    const ageHours = Number.isFinite(generatedTs) ? (Date.now() - generatedTs) / 3600000 : null;
+    const ageNote = isSkipped && ageHours && ageHours > 48 ? ` (data is ${Math.round(ageHours / 24)} days old)` : "";
+    const lastGoodNote = isSkipped ? `Market closed — showing last complete trading day${ageNote}` : "";
     const missingSample = healthPayload?.data?.missingSample || {};
     const missingList = [
       ...(Array.isArray(missingSample.A) ? missingSample.A : []),
       ...(Array.isArray(missingSample.B) ? missingSample.B : [])
     ];
     const debugPayload = {
+      source: sourceUrl,
       meta,
       warnings,
       error: latest.error || null,
+      missingKeys,
+      tabErrors,
+      fetchErrors: latestResult.errors || [],
       missingSample: missingList.slice(0, 25)
     };
 
     contentEl.innerHTML = `
       ${statusNote ? `<div class="rv-native-note rv-native-warning">${statusNote}</div>` : ""}
       ${warningNote ? `<div class="rv-native-note">${warningNote}</div>` : ""}
+      ${lastGoodNote ? `<div class="rv-native-note">${lastGoodNote}</div>` : ""}
       <div class="rv-native-note">Composite Market Indicator (Daily)</div>
       <div class="rv-native-note">${[regimeNote, coverageNote, generatedNote].filter(Boolean).join(" · ")}</div>
       <div class="rv-tech-section">
@@ -2467,7 +2648,7 @@ async function renderRvciEngineSnapshot(contentEl, feature, logger) {
             )
             .join("")}
         </div>
-        ${state.tab === "triggers" ? renderTriggerTable(items) : renderSignalsTable(items)}
+        ${state.tab === "triggers" ? renderTriggerTable(items, tabError) : renderSignalsTable(items, tabError)}
       </div>
       ${
         isDebugEnabled()
