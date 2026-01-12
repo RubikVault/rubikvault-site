@@ -179,7 +179,7 @@ def main() -> int:
         payload = build_envelope(
             feature=FEATURE_ID,
             meta={"status": "SKIPPED_MARKET_CLOSED", "reason": "SKIPPED_MARKET_CLOSED", "generatedAt": _iso(now)},
-            data={"status": "SKIPPED_MARKET_CLOSED", "notes": "Market close not reached yet."},
+            data={"status": "SKIPPED_MARKET_CLOSED", "notes": "Market close not reached yet. FALLBACK_LAST_EOD: using last complete trading day."},
             ok=False,
             warnings=["MARKET_NOT_CLOSED"],
             error=None,
