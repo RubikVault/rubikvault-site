@@ -67,6 +67,25 @@ def write_universe_meta(base_dir: Path, payload: Dict[str, Any]) -> Path:
 
 
 def write_latest(base_dir: Path, payload: Dict[str, Any]) -> Path:
+    # Ensure rvci_latest.json always includes data.paths (UI requires it even when ok=false)
+    try:
+        if isinstance(payload, dict):
+            data = payload.get('data')
+            if not isinstance(data, dict):
+                data = {}
+                payload['data'] = data
+            paths = data.get('paths')
+            if not isinstance(paths, dict):
+                data['paths'] = {
+                    'short': 'data/rvci/rvci_top_short.json',
+                    'mid': 'data/rvci/rvci_top_mid.json',
+                    'long': 'data/rvci/rvci_top_long.json',
+                    'triggers': 'data/rvci/rvci_triggers.json',
+                    'health': 'data/rvci/health.json',
+                }
+    except Exception:
+        pass
+
     path = base_dir.parent / "rvci_latest.json"
     _write_json_atomic(path, payload)
     return path
