@@ -2326,17 +2326,18 @@ async function renderRvciEngineSnapshot(contentEl, feature, logger) {
   }
 
   const paths = data.paths || {};
-  const [shortPayload, midPayload, longPayload, triggerPayload] = await Promise.all([
+  const [shortPayload, midPayload, longPayload, triggerPayload, healthPayload] = await Promise.all([
     loadRvciFile(paths.short),
     loadRvciFile(paths.mid),
     loadRvciFile(paths.long),
-    loadRvciFile(paths.triggers)
+    loadRvciFile(paths.triggers),
+    loadRvciFile(paths.health)
   ]);
 
   const tabs = {
-    short: { label: "Short", payload: shortPayload },
-    mid: { label: "Mid", payload: midPayload },
-    long: { label: "Long", payload: longPayload },
+    short: { label: "Short-Term", payload: shortPayload },
+    mid: { label: "Mid-Term", payload: midPayload },
+    long: { label: "Long-Term", payload: longPayload },
     triggers: { label: "Triggers", payload: triggerPayload }
   };
   const state = { tab: "short" };
@@ -2363,7 +2364,7 @@ async function renderRvciEngineSnapshot(contentEl, feature, logger) {
           </thead>
           <tbody>
             ${items
-              .slice(0, 100)
+              .slice(0, 25)
               .map((item) => {
                 const signals = item.signals || {};
                 const trend =
@@ -2372,11 +2373,14 @@ async function renderRvciEngineSnapshot(contentEl, feature, logger) {
                     : signals.priceVsSma200 >= 0
                       ? "Above SMA200"
                       : "Below SMA200";
+                const triggerBadge = item.trigger
+                  ? `<span class="rv-alpha-badge rv-alpha-badge--top">Yes</span>`
+                  : `<span class="rv-alpha-badge rv-alpha-badge--wait">No</span>`;
                 return `
                   <tr>
                     <td>${item.symbol || "—"}</td>
                     <td>${formatNumber(item.score, { maximumFractionDigits: 2 })}</td>
-                    <td>${item.trigger ? "Yes" : "No"}</td>
+                    <td>${triggerBadge}</td>
                     <td>${formatNumber(signals.rsi14, { maximumFractionDigits: 1 })}</td>
                     <td>${formatNumber(signals.macdHist, { maximumFractionDigits: 2 })}</td>
                     <td>${formatNumber(signals.rvol20, { maximumFractionDigits: 2 })}</td>
@@ -2407,7 +2411,7 @@ async function renderRvciEngineSnapshot(contentEl, feature, logger) {
           </thead>
           <tbody>
             ${items
-              .slice(0, 100)
+              .slice(0, 25)
               .map((item) => {
                 const notes = Array.isArray(item.notes) ? item.notes.join(", ") : "—";
                 return `
@@ -2437,10 +2441,22 @@ async function renderRvciEngineSnapshot(contentEl, feature, logger) {
     const regimeNote = meta.regime ? `Regime: ${meta.regime}` : "";
     const generatedNote = meta.generatedAt ? `Generated: ${meta.generatedAt}` : "";
     const warningNote = warnings.length ? warnings.join(" · ") : "";
+    const missingSample = healthPayload?.data?.missingSample || {};
+    const missingList = [
+      ...(Array.isArray(missingSample.A) ? missingSample.A : []),
+      ...(Array.isArray(missingSample.B) ? missingSample.B : [])
+    ];
+    const debugPayload = {
+      meta,
+      warnings,
+      error: latest.error || null,
+      missingSample: missingList.slice(0, 25)
+    };
 
     contentEl.innerHTML = `
       ${statusNote ? `<div class="rv-native-note rv-native-warning">${statusNote}</div>` : ""}
       ${warningNote ? `<div class="rv-native-note">${warningNote}</div>` : ""}
+      <div class="rv-native-note">Composite Market Indicator (Daily)</div>
       <div class="rv-native-note">${[regimeNote, coverageNote, generatedNote].filter(Boolean).join(" · ")}</div>
       <div class="rv-tech-section">
         <div class="rv-top30-controls">
@@ -2453,6 +2469,16 @@ async function renderRvciEngineSnapshot(contentEl, feature, logger) {
         </div>
         ${state.tab === "triggers" ? renderTriggerTable(items) : renderSignalsTable(items)}
       </div>
+      ${
+        isDebugEnabled()
+          ? `
+            <details class="rv-block-debug">
+              <summary>Show debug</summary>
+              <pre>${escapeHtml(JSON.stringify(debugPayload, null, 2))}</pre>
+            </details>
+          `
+          : ""
+      }
     `;
 
     Array.from(contentEl.querySelectorAll("[data-rv-rvci-tab]")).forEach((button) => {
