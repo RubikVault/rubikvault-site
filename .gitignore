@@ -47,3 +47,24 @@ scripts/generate-snapshots.mjs.bak.*
 
 # OS/editor noise
 .DS_Store
+
+# --- rubikvault local noise (added by rv_fix_untracked_and_smoke) ---
+.venv*/
+.venv/
+venv/
+**/__pycache__/
+backend/**/__pycache__/
+public/data/rvci/
+.wrangler/
+.DS_Store
+
+# local noise (auto-added)
+nohup.out
+public/data/universe_spy50.json
+.venv*/
+backend/**/__pycache__/
+
+# Local/Generated noise
+nohup.out
+functions/api/_bak/
+functions/api/_bak/**

@@ -12,3 +12,10 @@ coverage/
 tmp/
 logs/
 .tmp/
+
+# Ignore local backups/noise inside functions (wrangler bundles them)
+functions/api/_bak/
+functions/api/_bak/**
+**/*.SOURCE.*
+**/*.bak.*
+nohup.out
