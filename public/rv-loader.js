@@ -14,6 +14,7 @@ import { BLOCK_REGISTRY, formatBlockTitle } from "./features/blocks-registry.js"
 
 const REGISTRY_URL = "./data/feature-registry.json";
 const MANIFEST_URL = "./data/seed-manifest.json";
+const RVCI_LATEST_URL = "./data/rvci_latest.json";
 const RUN_ID = (() => {
   if (typeof window === "undefined") return "";
   if (window.__RV_RUN_ID) return window.__RV_RUN_ID;
@@ -301,6 +302,64 @@ async function loadSnapshot(rawId, { force = false } = {}) {
   return fetchPromise;
 }
 
+function normalizeRvciPath(rawPath) {
+  if (!rawPath) return null;
+  const cleaned = String(rawPath).trim();
+  if (!cleaned) return null;
+  if (/^https?:\/\//i.test(cleaned)) return cleaned;
+  if (cleaned.startsWith("./")) return cleaned;
+  return `./${cleaned.replace(/^\/+/, "")}`;
+}
+
+async function loadRvciLatest() {
+  if (RVCI_CACHE.has("latest")) return RVCI_CACHE.get("latest");
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), SNAPSHOT_TIMEOUT_MS);
+  const promise = fetch(RVCI_LATEST_URL, { cache: "no-store", signal: controller.signal })
+    .then((res) => {
+      if (!res.ok) {
+        return buildFallbackEnvelope("rvci-engine", "NO_DATA", new Error(`RVCI ${res.status}`));
+      }
+      return res
+        .json()
+        .then((payload) => normalizeSnapshotEnvelope(payload, "rvci-engine"))
+        .catch((error) => buildFallbackEnvelope("rvci-engine", "NO_DATA", error));
+    })
+    .catch((error) => buildFallbackEnvelope("rvci-engine", "NO_DATA", error))
+    .finally(() => {
+      clearTimeout(timeout);
+    });
+
+  RVCI_CACHE.set("latest", promise);
+  return promise;
+}
+
+async function loadRvciFile(rawPath) {
+  const resolved = normalizeRvciPath(rawPath);
+  if (!resolved) return buildFallbackEnvelope("rvci-engine", "NO_DATA");
+  const cacheKey = `file:${resolved}`;
+  if (RVCI_CACHE.has(cacheKey)) return RVCI_CACHE.get(cacheKey);
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), SNAPSHOT_TIMEOUT_MS);
+  const promise = fetch(resolved, { cache: "no-store", signal: controller.signal })
+    .then((res) => {
+      if (!res.ok) {
+        return buildFallbackEnvelope("rvci-engine", "NO_DATA", new Error(`RVCI ${res.status}`));
+      }
+      return res
+        .json()
+        .then((payload) => normalizeSnapshotEnvelope(payload, "rvci-engine"))
+        .catch((error) => buildFallbackEnvelope("rvci-engine", "NO_DATA", error));
+    })
+    .catch((error) => buildFallbackEnvelope("rvci-engine", "NO_DATA", error))
+    .finally(() => {
+      clearTimeout(timeout);
+    });
+
+  RVCI_CACHE.set(cacheKey, promise);
+  return promise;
+}
+
 const INLINE_DIAGNOSTICS_ID = "rv-inline-diagnostics";
 const apiState = {
   disabled: false,
@@ -338,6 +397,7 @@ const STATUS_LABELS = {
   "rv-volume-anomaly": "VolumeAnom",
   "rv-breakout-energy": "Breakout",
   "rv-hype-divergence": "Hype",
+  "rvci-engine": "RVCI",
   "rv-congress-trading": "Congress",
   "rv-insider-cluster": "Insiders",
   "rv-analyst-stampede": "Analyst",
@@ -403,6 +463,7 @@ let FEATURE_REGISTRY_CACHE = null;
 let MANIFEST_CACHE = null;
 const SNAPSHOT_ONLY = true;
 const SNAPSHOT_CACHE = new Map();
+const RVCI_CACHE = new Map();
 const SNAPSHOT_TIMEOUT_MS = 5000;
 
 function normalizeBlockEntries(list) {
@@ -1437,6 +1498,7 @@ function getManifestBlockId(feature, section) {
 
 function getManifestEndpoint(feature, section) {
   const blockId = getManifestBlockId(feature, section);
+  if (blockId === "rvci-engine") return RVCI_LATEST_URL;
   const snapshotId = normalizeId(blockId);
   return snapshotId ? `./data/snapshots/${snapshotId}.json` : "";
 }
@@ -2239,17 +2301,216 @@ function renderVolumeAnomalySnapshot(contentEl, snapshot) {
   renderDebugMeta(contentEl, snapshot.meta || {});
 }
 
+async function renderRvciEngineSnapshot(contentEl, feature, logger) {
+  const latest = await loadRvciLatest();
+  const meta = latest.meta || {};
+  const data = latest.data || {};
+  const warnings = Array.isArray(latest.warnings) ? latest.warnings : [];
+  const status = meta.status || "NO_DATA";
+  const reason = meta.reason || "NO_DATA";
+  const uiStatus = status === "ERROR" ? "FAIL" : status === "NO_DATA" ? "PARTIAL" : "OK";
+  logger?.setStatus(uiStatus, reason);
+  logger?.setMeta({
+    ok: latest.ok,
+    metaStatus: status,
+    metaReason: reason,
+    itemsCount: 0,
+    dataAt: meta.generatedAt || null,
+    source: "rvci"
+  });
+
+  if (!contentEl) return latest;
+  if (!latest.ok && status === "NO_DATA") {
+    renderNoData(contentEl, meta);
+    return latest;
+  }
+
+  const paths = data.paths || {};
+  const [shortPayload, midPayload, longPayload, triggerPayload, healthPayload] = await Promise.all([
+    loadRvciFile(paths.short),
+    loadRvciFile(paths.mid),
+    loadRvciFile(paths.long),
+    loadRvciFile(paths.triggers),
+    loadRvciFile(paths.health)
+  ]);
+
+  const tabs = {
+    short: { label: "Short-Term", payload: shortPayload },
+    mid: { label: "Mid-Term", payload: midPayload },
+    long: { label: "Long-Term", payload: longPayload },
+    triggers: { label: "Triggers", payload: triggerPayload }
+  };
+  const state = { tab: "short" };
+
+  const toItems = (payload) => (Array.isArray(payload?.data?.items) ? payload.data.items : []);
+
+  const renderSignalsTable = (items) => {
+    if (!items.length) {
+      return `<div class="rv-native-empty">NO_DATA — ${reason}</div>`;
+    }
+    return `
+      <div class="rv-native-table-wrap">
+        <table class="rv-native-table rv-table--compact">
+          <thead>
+            <tr>
+              <th>Symbol</th>
+              <th>Score</th>
+              <th>Trigger</th>
+              <th>RSI</th>
+              <th>MACD Hist</th>
+              <th>RVOL</th>
+              <th>Trend</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${items
+              .slice(0, 25)
+              .map((item) => {
+                const signals = item.signals || {};
+                const trend =
+                  signals.priceVsSma200 === null || signals.priceVsSma200 === undefined
+                    ? "—"
+                    : signals.priceVsSma200 >= 0
+                      ? "Above SMA200"
+                      : "Below SMA200";
+                const triggerBadge = item.trigger
+                  ? `<span class="rv-alpha-badge rv-alpha-badge--top">Yes</span>`
+                  : `<span class="rv-alpha-badge rv-alpha-badge--wait">No</span>`;
+                return `
+                  <tr>
+                    <td>${item.symbol || "—"}</td>
+                    <td>${formatNumber(item.score, { maximumFractionDigits: 2 })}</td>
+                    <td>${triggerBadge}</td>
+                    <td>${formatNumber(signals.rsi14, { maximumFractionDigits: 1 })}</td>
+                    <td>${formatNumber(signals.macdHist, { maximumFractionDigits: 2 })}</td>
+                    <td>${formatNumber(signals.rvol20, { maximumFractionDigits: 2 })}</td>
+                    <td>${trend}</td>
+                  </tr>
+                `;
+              })
+              .join("")}
+          </tbody>
+        </table>
+      </div>
+    `;
+  };
+
+  const renderTriggerTable = (items) => {
+    if (!items.length) {
+      return `<div class="rv-native-empty">NO_DATA — ${reason}</div>`;
+    }
+    return `
+      <div class="rv-native-table-wrap">
+        <table class="rv-native-table rv-table--compact">
+          <thead>
+            <tr>
+              <th>Symbol</th>
+              <th>Trigger Score</th>
+              <th>Notes</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${items
+              .slice(0, 25)
+              .map((item) => {
+                const notes = Array.isArray(item.notes) ? item.notes.join(", ") : "—";
+                return `
+                  <tr>
+                    <td>${item.symbol || "—"}</td>
+                    <td>${formatNumber(item.triggerScore, { maximumFractionDigits: 0 })}</td>
+                    <td>${notes || "—"}</td>
+                  </tr>
+                `;
+              })
+              .join("")}
+          </tbody>
+        </table>
+      </div>
+    `;
+  };
+
+  const renderBlock = () => {
+    const tab = tabs[state.tab];
+    const items = toItems(tab.payload);
+    const statusNote =
+      status && status !== "LIVE" ? `Status: ${status} · ${reason}` : "";
+    const coverageNote =
+      typeof meta.coveragePct === "number"
+        ? `Coverage: ${formatNumber(meta.coveragePct, { maximumFractionDigits: 1 })}%`
+        : "";
+    const regimeNote = meta.regime ? `Regime: ${meta.regime}` : "";
+    const generatedNote = meta.generatedAt ? `Generated: ${meta.generatedAt}` : "";
+    const warningNote = warnings.length ? warnings.join(" · ") : "";
+    const missingSample = healthPayload?.data?.missingSample || {};
+    const missingList = [
+      ...(Array.isArray(missingSample.A) ? missingSample.A : []),
+      ...(Array.isArray(missingSample.B) ? missingSample.B : [])
+    ];
+    const debugPayload = {
+      meta,
+      warnings,
+      error: latest.error || null,
+      missingSample: missingList.slice(0, 25)
+    };
+
+    contentEl.innerHTML = `
+      ${statusNote ? `<div class="rv-native-note rv-native-warning">${statusNote}</div>` : ""}
+      ${warningNote ? `<div class="rv-native-note">${warningNote}</div>` : ""}
+      <div class="rv-native-note">Composite Market Indicator (Daily)</div>
+      <div class="rv-native-note">${[regimeNote, coverageNote, generatedNote].filter(Boolean).join(" · ")}</div>
+      <div class="rv-tech-section">
+        <div class="rv-top30-controls">
+          ${Object.entries(tabs)
+            .map(
+              ([key, entry]) =>
+                `<button type="button" class="rv-top30-tab${state.tab === key ? " is-active" : ""}" data-rv-rvci-tab="${key}">${entry.label}</button>`
+            )
+            .join("")}
+        </div>
+        ${state.tab === "triggers" ? renderTriggerTable(items) : renderSignalsTable(items)}
+      </div>
+      ${
+        isDebugEnabled()
+          ? `
+            <details class="rv-block-debug">
+              <summary>Show debug</summary>
+              <pre>${escapeHtml(JSON.stringify(debugPayload, null, 2))}</pre>
+            </details>
+          `
+          : ""
+      }
+    `;
+
+    Array.from(contentEl.querySelectorAll("[data-rv-rvci-tab]")).forEach((button) => {
+      button.addEventListener("click", () => {
+        const next = button.getAttribute("data-rv-rvci-tab");
+        if (!next || state.tab === next) return;
+        state.tab = next;
+        renderBlock();
+      });
+    });
+
+    renderDebugMeta(contentEl, meta);
+  };
+
+  renderBlock();
+  return latest;
+}
+
 async function renderSnapshotBlock(contentEl, feature, logger, section) {
   const blockId =
     getManifestBlockId(feature, section) ||
     feature?.id ||
     section?.getAttribute("data-rv-feature") ||
     "unknown";
+  const normalizedId = normalizeId(blockId);
+  if (normalizedId === "rvci-engine") {
+    return renderRvciEngineSnapshot(contentEl, feature, logger);
+  }
   const snapshot = await loadPreferredSnapshot(blockId);
   const meta = snapshot.meta || {};
   const status = meta.status || "NO_DATA";
   const reason = meta.reason || "NO_DATA";
-  const normalizedId = normalizeId(blockId);
   const defaultItems = Array.isArray(snapshot?.data?.items) ? snapshot.data.items : [];
   const signals = Array.isArray(snapshot?.data?.signals) ? snapshot.data.signals : [];
   const picksRaw = snapshot?.data?.picks;

@@ -1,7 +1,7 @@
 Audit Reality Snapshot
 
-REPO_ROOT: /Users/michaelpuchowezki/Documents/GitHub/rubikvault-site
-TOPLEVEL: /Users/michaelpuchowezki/Documents/GitHub/rubikvault-site
+REPO_ROOT: (captured at runtime; do not hardcode absolute paths)
+TOPLEVEL: (captured at runtime; do not hardcode absolute paths)
 BRANCH: main
 GIT_SHA: 0164b992abbbdcdd82df089945d50f360beb7c93
 GIT_STATUS_PORCELAIN:
@@ -14,7 +14,7 @@ NODE_VERSION: v25.2.1
 NPM_VERSION: 11.6.2
 
 MIRRORS_DIR_EXISTS: yes
-MIRRORS_DIR: /Users/michaelpuchowezki/Documents/GitHub/rubikvault-site/public/mirrors
+MIRRORS_DIR: (repo_root)/public/mirrors
 
 MIRROR_FILES:
 public/mirrors/_health.json

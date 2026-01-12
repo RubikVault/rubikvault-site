@@ -2,7 +2,7 @@
 set -euo pipefail
 
 REPO_NAME="rubikvault-site"
-SRC="$HOME/Documents/GitHub/$REPO_NAME"
+SRC="$HOME/<cloud-synced-folder>/$REPO_NAME"
 DEST="$HOME/Dev/$REPO_NAME"
 
 cat <<EOM

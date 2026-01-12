@@ -1,0 +1,28 @@
+name: Privacy Guard
+on:
+  push:
+  pull_request:
+
+jobs:
+  leak-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Scan tracked files for personal names and absolute paths
+        shell: bash
+        run: |
+          set -o pipefail
+          PATTERN='(michael|puchowezki|michaelpuchowezki)|/Users/|/Documents/GitHub/|/iCloud/'
+          echo "Scanning tracked file contents..."
+          if git grep -nI -E "$PATTERN" -- . ; then
+            echo "::error::Privacy leak detected in tracked files. Remove personal names/absolute paths."
+            exit 1
+          fi
+          echo "Scanning filenames..."
+          if git ls-files | grep -nE '(michael|puchowezki|michaelpuchowezki)|Users|Documents|iCloud' ; then
+            echo "::error::Suspicious filename/path detected."
+            exit 1
+          fi
+          echo "OK: No leaks found."
