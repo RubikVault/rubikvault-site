@@ -58,6 +58,14 @@ public/data/rvci/
 .wrangler/
 .DS_Store
 
+# Allow tracked RVCI outputs (keep other files ignored)
+!public/data/rvci/
+!public/data/rvci/rvci_top_short.json
+!public/data/rvci/rvci_top_mid.json
+!public/data/rvci/rvci_top_long.json
+!public/data/rvci/rvci_triggers.json
+!public/data/rvci/health.json
+
 # local noise (auto-added)
 nohup.out
 public/data/universe_spy50.json

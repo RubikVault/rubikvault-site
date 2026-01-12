@@ -22,10 +22,10 @@ jobs:
         run: python backend/rvci/run_daily.py
       - name: Commit outputs if changed
         run: |
+          set -euo pipefail
           git config user.name "rvci-bot"
           git config user.email "rvci-bot@users.noreply.github.com"
-          git add public/data/rvci || true
-test -f public/data/rvci_latest.json && git add public/data/rvci_latest.json || true
+          git add public/data/rvci/*.json public/data/rvci_latest.json
           if git diff --cached --quiet; then
             echo "No RVCI changes to commit."
             exit 0

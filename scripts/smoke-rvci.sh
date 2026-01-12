@@ -33,6 +33,12 @@ fetch_json_strict() {
   if ! body=$(curl -fsSL --max-time 20 "$url" 2>/dev/null); then
     return 10
   fi
+  local content_type
+  content_type=$(curl -fsSI --max-time 10 "$url" 2>/dev/null | tr -d '\r' | awk -F': ' 'tolower($1)=="content-type"{print tolower($2)}' | tail -n 1)
+  if [ -n "$content_type" ] && ! printf '%s' "$content_type" | grep -qi "json"; then
+    NON_JSON_SNIPPET="content-type=$content_type"
+    return 11
+  fi
   local trimmed
   trimmed="$(printf '%s' "$body" | sed -e 's/^[[:space:]]*//')"
   local first="${trimmed:0:1}"
