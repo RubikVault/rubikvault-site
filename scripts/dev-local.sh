@@ -2,8 +2,8 @@
 set -euo pipefail
 
 # Reality check outputs (2026-01-01)
-# pwd: /Users/michaelpuchowezki/Documents/GitHub/rubikvault-site
-# show-toplevel: /Users/michaelpuchowezki/Documents/GitHub/rubikvault-site
+# pwd: (captured at runtime; do not hardcode absolute paths)
+# show-toplevel: (captured at runtime; do not hardcode absolute paths)
 # git status --porcelain: M .gitignore | M functions/api/health.js | M scripts/test-api.sh | ?? .wranglerignore | ?? scripts/dev-local.sh | ?? scripts/move-repo-out-of-icloud.sh
 # node -v: v25.2.1
 # wrangler --version: 4.54.0
