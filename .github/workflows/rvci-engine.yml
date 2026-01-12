@@ -33,3 +33,11 @@ jobs:
           if [ -f public/data/rvci_latest.json ]; then cp -f public/data/rvci_latest.json public/mirrors/rvci_latest.json; fi
           if [ -f public/data/rvci/health.json ]; then cp -f public/data/rvci/health.json public/mirrors/rvci/health.json; fi
           ls -la public/mirrors/rvci_latest.json public/mirrors/rvci/health.json || true
+          git add public/mirrors || true
+          if git diff --cached --quiet; then
+            echo "No mirrors changes to commit."
+            exit 0
+          fi
+          git commit -m "chore(mirrors): publish rvci mirrors for Pages" || true
+          git push
+
