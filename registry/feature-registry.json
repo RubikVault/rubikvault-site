@@ -1817,6 +1817,37 @@
       },
       "primaryKey": "items",
       "package": "legacy"
+    },
+    {
+      "id": "rvci-engine",
+      "blockId": "rvci-engine",
+      "title": "RVCI Engine",
+      "tier": "HIGH",
+      "provider": "internal",
+      "cadenceSec": 86400,
+      "cadencePerDay": 1,
+      "maxFanout": 3000,
+      "dependencies": [],
+      "timezoneAssumption": "UTC",
+      "dataAtDefinition": "RVCI daily close snapshot (XNYS)",
+      "freshnessWindowSec": 86400,
+      "validators": {
+        "minItems": 10,
+        "minPoints": 1,
+        "minCoveragePct": 95,
+        "finiteNumbers": true
+      },
+      "poisonGuard": {
+        "minItems": 10,
+        "minCoveragePct": 95,
+        "allowDegradedWrite": true
+      },
+      "costModel": {
+        "requestsPerRunEstimate": 20,
+        "creditsPerRunEstimate": 0
+      },
+      "primaryKey": "items",
+      "package": "rvci"
     }
   ]
 }

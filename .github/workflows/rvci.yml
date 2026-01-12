@@ -1,0 +1,35 @@
+name: rvci-engine
+
+on:
+  schedule:
+    - cron: "30 23 * * 1-5"
+  workflow_dispatch:
+
+jobs:
+  rvci:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install dependencies
+        run: pip install -r backend/rvci/requirements.txt
+      - name: Run RVCI daily build
+        run: python backend/rvci/run_daily.py
+      - name: Commit outputs if changed
+        run: |
+          git config user.name "rvci-bot"
+          git config user.email "rvci-bot@users.noreply.github.com"
+          git add public/data/rvci public/data/rvci_latest.json
+          if git diff --cached --quiet; then
+            echo "No RVCI changes to commit."
+            exit 0
+          fi
+          git commit -m "chore(data): update rvci engine"
+          git push
