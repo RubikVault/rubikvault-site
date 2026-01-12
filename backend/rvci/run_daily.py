@@ -1,5 +1,28 @@
 from __future__ import annotations
 
+
+def _publish_to_mirrors(root, out_dir):
+    """
+    Publish RVCI outputs into /mirrors so Cloudflare Pages serves JSON reliably in preview/prod.
+    """
+    from pathlib import Path
+
+    root = Path(root)
+    out_dir = Path(out_dir)
+
+    # exporter.write_latest(out_dir, ...) => public/data/rvci_latest.json (out_dir.parent / rvci_latest.json)
+    src_latest = out_dir.parent / "rvci_latest.json"
+    src_health = out_dir / "health.json"
+
+    dst_latest = root / "mirrors" / "rvci_latest.json"
+    dst_health = root / "mirrors" / "rvci" / "health.json"
+    dst_health.parent.mkdir(parents=True, exist_ok=True)
+
+    if src_latest.exists():
+        dst_latest.write_text(src_latest.read_text(encoding="utf-8"), encoding="utf-8")
+    if src_health.exists():
+        dst_health.write_text(src_health.read_text(encoding="utf-8"), encoding="utf-8")
+
 import json
 import math
 import time
@@ -331,6 +354,8 @@ def main() -> int:
         error=None if meta_status != "ERROR" else {"code": meta_reason, "message": "RVCI error"},
     )
     write_latest(out_dir, latest_payload)
+
+    _publish_to_mirrors(root, out_dir)
     return 0
 
 
