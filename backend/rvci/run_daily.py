@@ -165,7 +165,7 @@ def main() -> int:
         payload = build_envelope(
             feature=FEATURE_ID,
             meta={"status": "SKIPPED_MARKET_CLOSED", "reason": "SKIPPED_MARKET_CLOSED", "generatedAt": _iso(now)},
-            data={"status": "SKIPPED_MARKET_CLOSED", "notes": "Market closed (non-trading day)."},
+            data={"status":"SKIPPED_MARKET_CLOSED","notes":"Market closed (non-trading day).", "paths": {"short":"data/rvci/rvci_top_short.json","mid":"data/rvci/rvci_top_mid.json","long":"data/rvci/rvci_top_long.json","triggers":"data/rvci/rvci_triggers.json","health":"data/rvci/health.json"}},
             ok=False,
             warnings=["MARKET_CLOSED"],
             error=None,
@@ -179,7 +179,7 @@ def main() -> int:
         payload = build_envelope(
             feature=FEATURE_ID,
             meta={"status": "SKIPPED_MARKET_CLOSED", "reason": "SKIPPED_MARKET_CLOSED", "generatedAt": _iso(now)},
-            data={"status": "SKIPPED_MARKET_CLOSED", "notes": "Market close not reached yet. FALLBACK_LAST_EOD: using last complete trading day."},
+            data={"status":"SKIPPED_MARKET_CLOSED","notes":"Market close not reached yet. FALLBACK_LAST_EOD: using last complete trading day.", "paths": {"short":"data/rvci/rvci_top_short.json","mid":"data/rvci/rvci_top_mid.json","long":"data/rvci/rvci_top_long.json","triggers":"data/rvci/rvci_triggers.json","health":"data/rvci/health.json"}},
             ok=False,
             warnings=["MARKET_NOT_CLOSED"],
             error=None,
