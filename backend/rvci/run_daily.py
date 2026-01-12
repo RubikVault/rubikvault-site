@@ -148,6 +148,7 @@ def main() -> int:
             error=None,
         )
         write_health(out_dir, payload)
+        write_latest(out_dir, payload)
         return 0
 
     close_time = schedule["market_close"].iloc[0]
@@ -161,6 +162,7 @@ def main() -> int:
             error=None,
         )
         write_health(out_dir, payload)
+        write_latest(out_dir, payload)
         return 0
 
     universe = build_universe(root)
