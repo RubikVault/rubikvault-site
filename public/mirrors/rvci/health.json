@@ -1,12 +1,19 @@
 {
   "data": {
     "notes": "Market close not reached yet. FALLBACK_LAST_EOD: using last complete trading day.",
+    "paths": {
+      "health": "data/rvci/health.json",
+      "long": "data/rvci/rvci_top_long.json",
+      "mid": "data/rvci/rvci_top_mid.json",
+      "short": "data/rvci/rvci_top_short.json",
+      "triggers": "data/rvci/rvci_triggers.json"
+    },
     "status": "SKIPPED_MARKET_CLOSED"
   },
   "error": null,
   "feature": "rvci-engine",
   "meta": {
-    "generatedAt": "2026-01-12T11:40:13.467319Z",
+    "generatedAt": "2026-01-12T14:56:22.989452Z",
     "reason": "SKIPPED_MARKET_CLOSED",
     "status": "SKIPPED_MARKET_CLOSED"
   },
