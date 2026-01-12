@@ -1,8 +1,8 @@
 name: rvci-engine-dispatchable
-"on":
+on:
+  workflow_dispatch:
   schedule:
     - cron: "30 23 * * 1-5"
-  workflow_dispatch: {}
 jobs:
   rvci:
     runs-on: ubuntu-latest
