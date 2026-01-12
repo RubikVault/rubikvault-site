@@ -1,21 +1,23 @@
 import { makeOk, makeNoData, makeError } from "./_shared/feature-contract.js";
 
 const FEATURE_ID = "rvci-engine";
+const VERSION = 1;
 
-// Option A: hardcoded Last-Good keys (try in order)
+// Try the resilience-style keys first (most likely), then legacy fallbacks.
 const LASTGOOD_KEYS = [
-  "lastgood:rvci-engine",
-  "lastgood:rvci:engine",
-  "lastgood:rvci-engine:daily",
+  `rv:lastgood:${FEATURE_ID}:${VERSION}`,
+  `rv:lastgood:${FEATURE_ID}:v${VERSION}`,
+  `lastgood:${FEATURE_ID}`,
+  `lastgood:${FEATURE_ID}:${VERSION}`,
 ];
 
 async function kvGet(env, key) {
   if (!env?.RV_KV?.get) return null;
-  try {
-    return await env.RV_KV.get(key);
-  } catch {
-    return null;
-  }
+  try { return await env.RV_KV.get(key); } catch { return null; }
+}
+
+function isEnvelope(x) {
+  return !!x && typeof x === "object" && x.ok === true && typeof x.feature === "string" && x.meta && x.error;
 }
 
 export async function onRequestGet({ request, env }) {
@@ -27,7 +29,6 @@ export async function onRequestGet({ request, env }) {
       return makeNoData(FEATURE_ID, "BINDING_MISSING", {
         message: "RV_KV binding missing (cannot read last-good).",
         keysTried: LASTGOOD_KEYS,
-        debug,
       });
     }
 
@@ -42,28 +43,43 @@ export async function onRequestGet({ request, env }) {
       return makeNoData(FEATURE_ID, "MISSING_LAST_GOOD", {
         message: "No last-good snapshot found in KV.",
         keysTried: LASTGOOD_KEYS,
-        debug,
       });
     }
 
-    let parsed = null;
-    try {
-      parsed = JSON.parse(raw);
-    } catch (e) {
+    let parsed;
+    try { parsed = JSON.parse(raw); }
+    catch {
       return makeError(FEATURE_ID, "VALIDATION_FAIL", {
         message: "Last-good value is not valid JSON.",
         usedKey,
-        debug,
       });
     }
 
-    // Expecting parsed to already be your engine payload (or at least { data: ... })
-    return makeOk(FEATURE_ID, {
-      source: "kv:lastgood",
-      usedKey,
-      payload: parsed,
-    }, { debug });
+    // If KV already stores a full envelope, return it directly (best case).
+    if (isEnvelope(parsed)) {
+      // ensure feature id is correct (defensive)
+      if (parsed.feature !== FEATURE_ID) parsed.feature = FEATURE_ID;
+      return new Response(JSON.stringify(parsed), {
+        status: 200,
+        headers: { "content-type": "application/json; charset=utf-8" },
+      });
+    }
 
+    // Otherwise, map common shapes into data.rows (what the UI expects).
+    const rows =
+      Array.isArray(parsed?.rows) ? parsed.rows :
+      Array.isArray(parsed?.data?.rows) ? parsed.data.rows :
+      [];
+
+    if (!rows.length) {
+      return makeNoData(FEATURE_ID, "NO_ITEMS", {
+        message: "Last-good JSON had no rows[] in expected locations.",
+        usedKey,
+        parsedKeys: parsed && typeof parsed === "object" ? Object.keys(parsed) : null,
+      });
+    }
+
+    return makeOk(FEATURE_ID, { rows }, { debug, usedKey, source: "kv:lastgood" });
   } catch (e) {
     return makeError(FEATURE_ID, "EXCEPTION", { message: String(e?.message || e) });
   }
