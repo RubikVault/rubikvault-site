@@ -1498,7 +1498,7 @@ function getManifestBlockId(feature, section) {
 
 function getManifestEndpoint(feature, section) {
   const blockId = getManifestBlockId(feature, section);
-  if (blockId === "rvci-engine") return RVCI_LATEST_URL;
+  if (blockId === "rvci-engine") return "/api/rvci-engine";
   const snapshotId = normalizeId(blockId);
   return snapshotId ? `./data/snapshots/${snapshotId}.json` : "";
 }
