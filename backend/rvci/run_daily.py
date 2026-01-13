@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 
 def _publish_to_mirrors(root, out_dir):
     """
@@ -14,8 +15,8 @@ def _publish_to_mirrors(root, out_dir):
     src_latest = out_dir.parent / "rvci_latest.json"
     src_health = out_dir / "health.json"
 
-    dst_latest = root / "mirrors" / "rvci_latest.json"
-    dst_health = root / "mirrors" / "rvci" / "health.json"
+    dst_latest = root / "public" / "mirrors" / "rvci_latest.json"
+    dst_health = root / "public" / "mirrors" / "rvci" / "health.json"
     dst_health.parent.mkdir(parents=True, exist_ok=True)
 
     if src_latest.exists():
@@ -71,7 +72,11 @@ FEATURE_ID = "rvci-engine"
 
 
 def _iso(dt: datetime) -> str:
+    # Robust against tz-naive pandas Timestamps / datetimes
+    if getattr(dt, "tzinfo", None) is None:
+        dt = dt.replace(tzinfo=timezone.utc)
     return dt.astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
+
 
 
 def _determine_regime(spy_indicators: Dict[str, float | None], vix_last: float | None) -> str:
@@ -157,11 +162,12 @@ def main() -> int:
     root = Path(__file__).resolve().parents[2]
     out_dir = root / "public" / "data" / "rvci"
     now = datetime.now(timezone.utc)
+    force = os.getenv("RVCI_FORCE", "").strip() == "1"
 
     cal = mcal.get_calendar("XNYS")
     today = now.date()
     schedule = cal.schedule(start_date=today, end_date=today)
-    if schedule.empty:
+    if (not force) and schedule.empty:
         payload = build_envelope(
             feature=FEATURE_ID,
             meta={"status": "SKIPPED_MARKET_CLOSED", "reason": "SKIPPED_MARKET_CLOSED", "generatedAt": _iso(now)},
@@ -175,7 +181,7 @@ def main() -> int:
         return 0
 
     close_time = schedule["market_close"].iloc[0]
-    if now < close_time.to_pydatetime().astimezone(timezone.utc):
+    if (not force) and (now < close_time.to_pydatetime().astimezone(timezone.utc)):
         payload = build_envelope(
             feature=FEATURE_ID,
             meta={"status": "SKIPPED_MARKET_CLOSED", "reason": "SKIPPED_MARKET_CLOSED", "generatedAt": _iso(now)},

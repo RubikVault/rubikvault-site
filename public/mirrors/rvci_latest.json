@@ -1,24 +1,49 @@
 {
   "data": {
-    "notes": "Market close not reached yet. FALLBACK_LAST_EOD: using last complete trading day.",
+    "counts": {
+      "long": 100,
+      "mid": 100,
+      "short": 100,
+      "triggers": 100
+    },
     "paths": {
       "health": "data/rvci/health.json",
-      "long": "mirrors/rvci/rvci_top_long.json",
-      "mid": "mirrors/rvci/rvci_top_mid.json",
-      "short": "mirrors/rvci/rvci_top_short.json",
-      "triggers": "mirrors/rvci/rvci_triggers.json"
-    },
-    "status": "SKIPPED_MARKET_CLOSED"
+      "long": "data/rvci/rvci_top_long.json",
+      "mid": "data/rvci/rvci_top_mid.json",
+      "short": "data/rvci/rvci_top_short.json",
+      "triggers": "data/rvci/rvci_triggers.json",
+      "universe": "data/rvci/universe_meta.json"
+    }
   },
   "error": null,
   "feature": "rvci-engine",
   "meta": {
-    "generatedAt": "2026-01-12T15:19:08.632780Z",
-    "reason": "SKIPPED_MARKET_CLOSED",
-    "status": "SKIPPED_MARKET_CLOSED"
+    "bias": {
+      "survivorship": "present"
+    },
+    "coveragePct": 43.75,
+    "dataAsOf": "2026-01-12T00:00:00Z",
+    "generatedAt": "2026-01-13T12:52:23.381842Z",
+    "marketDate": "2026-01-12",
+    "reason": "DEGRADED_COVERAGE",
+    "regime": "Bull",
+    "source": {
+      "prices": "yfinance",
+      "universe": "data/symbols"
+    },
+    "status": "DEGRADED_COVERAGE",
+    "tierStatus": {
+      "A": "degraded",
+      "B": "complete"
+    },
+    "universe": {
+      "expected": 512,
+      "missing": 288,
+      "received": 224
+    }
   },
-  "ok": false,
+  "ok": true,
   "warnings": [
-    "MARKET_NOT_CLOSED"
+    "FUNDAMENTALS_DISABLED_FREE_TIER"
   ]
 }
