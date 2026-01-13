@@ -1,44 +1,70 @@
 {
   "day": "2026-01-13",
   "providers": {
-    "stooq": {
-      "requests": 26,
+    "fmp": {
+      "requests": 4,
       "credits": 0,
-      "bytesIn": 10628425,
-      "latencyMs": 15843,
-      "limitRequests": 500,
+      "bytesIn": 660,
+      "latencyMs": 620,
+      "limitRequests": 100,
       "limitCredits": 0,
-      "remainingRequests": 474,
+      "remainingRequests": 96,
+      "remainingCredits": 0,
+      "errorsByReason": {
+        "UNAUTHORIZED": 2
+      }
+    },
+    "marketaux": {
+      "requests": 1,
+      "credits": 0,
+      "bytesIn": 8167,
+      "latencyMs": 526,
+      "limitRequests": 100,
+      "limitCredits": 0,
+      "remainingRequests": 99,
       "remainingCredits": 0,
       "errorsByReason": {}
     },
-    "fred": {
-      "requests": 16,
+    "finnhub": {
+      "requests": 1,
       "credits": 0,
-      "bytesIn": 7168,
-      "latencyMs": 1650,
-      "limitRequests": 500,
+      "bytesIn": 6067957,
+      "latencyMs": 3952,
+      "limitRequests": 100,
       "limitCredits": 0,
-      "remainingRequests": 484,
+      "remainingRequests": 99,
       "remainingCredits": 0,
-      "errorsByReason": {}
+      "errorsByReason": {
+        "NO_DATA": 1
+      }
     },
-    "ecb": {
-      "requests": 6,
+    "internal": {
+      "requests": 0,
       "credits": 0,
       "bytesIn": 0,
       "latencyMs": 0,
-      "limitRequests": 200,
+      "limitRequests": 10000,
       "limitCredits": 0,
-      "remainingRequests": 194,
+      "remainingRequests": 10000,
       "remainingCredits": 0,
       "errorsByReason": {
-        "PROVIDER_BAD_PAYLOAD": 2
+        "NO_DATA": 1
       }
+    },
+    "sec": {
+      "requests": 1,
+      "credits": 0,
+      "bytesIn": 160714,
+      "latencyMs": 316,
+      "limitRequests": 100,
+      "limitCredits": 0,
+      "remainingRequests": 99,
+      "remainingCredits": 0,
+      "errorsByReason": {}
     }
   },
   "totals": {
-    "requests": 48,
+    "requests": 7,
     "credits": 0
   },
   "notes": []
