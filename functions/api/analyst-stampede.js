@@ -118,7 +118,8 @@ export async function onRequestGet(context) {
   const traceId = data?.traceId || createTraceId(request);
   const started = Date.now();
 
-  const bindingResponse = assertBindings(env, FEATURE_ID, traceId);
+  const bind = assertBindings(env, FEATURE_ID, traceId, { kv: "optional" });
+  const bindingResponse = bind?.bindingResponse || null;
   if (bindingResponse) return bindingResponse;
 
   const swr = await swrGetOrRefresh(context, {

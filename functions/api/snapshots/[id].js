@@ -185,7 +185,8 @@ export async function onRequestGet({ request, env, data, params }) {
   const started = Date.now();
   const snapshotId = params?.id ? String(params.id) : "";
 
-  const bindingResponse = assertBindings(env, FEATURE_ID, traceId);
+  const bind = assertBindings(env, FEATURE_ID, traceId, { kv: "optional" });
+  const bindingResponse = bind?.bindingResponse || null;
   if (bindingResponse) {
     return bindingResponse;
   }

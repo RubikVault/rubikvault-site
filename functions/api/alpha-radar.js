@@ -762,7 +762,8 @@ export async function onRequestGet(context) {
   const debugSymbol = url.searchParams.get("symbol");
   const debugMode = url.searchParams.get("debug") === "1" || Boolean(debugSymbol);
 
-  const bindingResponse = assertBindings(env, FEATURE_ID, traceId);
+  const bind = assertBindings(env, FEATURE_ID, traceId, { kv: "optional" });
+  const bindingResponse = bind?.bindingResponse || null;
   if (bindingResponse) return bindingResponse;
 
   if (debugMode) {

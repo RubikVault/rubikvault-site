@@ -880,7 +880,8 @@ export async function onRequestGet(context) {
     }
   }
 
-  const bindingResponse = assertBindings(env, FEATURE_ID, traceId);
+  const bind = assertBindings(env, FEATURE_ID, traceId, { kv: "optional" });
+  const bindingResponse = bind?.bindingResponse || null;
   if (bindingResponse) return bindingResponse;
 
   if (!symbol) {

@@ -90,7 +90,8 @@ export async function onRequestGet({ request, env, data }) {
   const panic =
     request.headers.get("x-rv-panic") === "1" || url.searchParams.get("rv_panic") === "1";
 
-  const bindingResponse = assertBindings(env, FEATURE_ID, traceId);
+  const bind = assertBindings(env, FEATURE_ID, traceId, { kv: "optional" });
+  const bindingResponse = bind?.bindingResponse || null;
   if (bindingResponse) {
     return bindingResponse;
   }

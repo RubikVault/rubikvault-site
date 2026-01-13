@@ -363,7 +363,8 @@ async function onRequestGetLegacy({ request, env, data }) {
     request.headers.get("x-rv-panic") === "1" ||
     new URL(request.url).searchParams.get("rv_panic") === "1";
 
-  const bindingResponse = assertBindings(env, FEATURE_ID, traceId);
+  const bind = assertBindings(env, FEATURE_ID, traceId, { kv: "optional" });
+  const bindingResponse = bind?.bindingResponse || null;
   if (bindingResponse) {
     return bindingResponse;
   }

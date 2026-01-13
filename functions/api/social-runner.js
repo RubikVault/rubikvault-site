@@ -22,7 +22,8 @@ export async function onRequestGet({ request, env, data }) {
   const started = Date.now();
   const url = new URL(request.url);
 
-  const bindingResponse = assertBindings(env, FEATURE_ID, traceId);
+  const bind = assertBindings(env, FEATURE_ID, traceId, { kv: "required" });
+  const bindingResponse = bind?.bindingResponse || null;
   if (bindingResponse) {
     return bindingResponse;
   }

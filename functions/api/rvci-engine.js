@@ -145,7 +145,7 @@ export async function onRequestGet({ env, request }) {
   }
 
   // 3) Final fallback: explicit NO_DATA
- explicit NO_DATA
+  // 3) Final fallback: explicit NO_DATA
   return jsonResponse(
     makeEnvelope({
       traceId,

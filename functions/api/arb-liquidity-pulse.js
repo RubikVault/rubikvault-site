@@ -130,7 +130,8 @@ export async function onRequestGet({ request, env, data }) {
     typeof env.RV_KV.put === "function";
   const readMode = env?.__RV_ALLOW_WRITE__ ? "WRITE" : "READONLY";
 
-  const bindingResponse = assertBindings(env, FEATURE_ID, traceId);
+  const bind = assertBindings(env, FEATURE_ID, traceId, { kv: "optional" });
+  const bindingResponse = bind?.bindingResponse || null;
   if (bindingResponse) return bindingResponse;
 
   const cached = await kvGetJson(env, CACHE_KEY);
