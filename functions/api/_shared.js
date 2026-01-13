@@ -441,41 +441,44 @@ export function jsonResponse(payload, status = 200, extraHeaders = {}) {
   });
 }
 
-export function assertBindings(env, feature, traceId) {
-  const hasKV =
+export function assertBindings(env, feature, traceId, opts = {}) {
+  const kvMode = (opts && opts.kv) ? String(opts.kv) : "required";
+  const hasKV = Boolean(
     env?.RV_KV &&
-    typeof env.RV_KV.get === "function" &&
-    typeof env.RV_KV.put === "function";
-  if (hasKV) return null;
-
-  console.log(
-    JSON.stringify({
-      feature,
-      traceId,
-      kv: "none",
-      upstreamStatus: null,
-      durationMs: 0,
-      error: "BINDING_MISSING"
-    })
+      typeof env.RV_KV.get === "function" &&
+      typeof env.RV_KV.put === "function"
   );
 
-  return makeResponse({
-    ok: false,
-    feature,
-    traceId,
-    cache: { hit: false, ttl: 0, layer: "none" },
-    upstream: { url: "", status: null, snippet: "" },
-    data: {},
-    error: {
-      code: "BINDING_MISSING",
-      message: "RV_KV binding missing",
-      details: {
-        action:
-          "Cloudflare Dashboard → Pages → Settings → Functions → KV bindings → RV_KV (Preview + Production)"
+  // Optional mode: do not hard-fail the request when KV is missing.
+  if (kvMode === "optional") {
+    return { hasKV, kvMode, bindingResponse: null };
+  }
+
+  // Required mode: preserve previous behavior (hard fail).
+  if (!hasKV) {
+    const payload = {
+      ok: false,
+      feature,
+      ts: new Date().toISOString(),
+      traceId,
+      schemaVersion: 1,
+      data: null,
+      error: {
+        code: "BINDING_MISSING",
+        message: "RV_KV binding missing",
+        details: {
+          hint: "Cloudflare Dashboard → Pages → Settings → Functions → KV bindings → RV_KV (Preview + Production)"
+        }
+      },
+      meta: {
+        status: "FAIL",
+        reason: "BINDING_MISSING"
       }
-    },
-    status: 503
-  });
+    };
+    return { hasKV, kvMode, bindingResponse: jsonResponse(payload, 500) };
+  }
+
+  return { hasKV, kvMode, bindingResponse: null };
 }
 
 export async function kvGetJson(context, key) {

@@ -938,7 +938,7 @@ function normalizeStatus(featureId, status, headline = "") {
   const itemsCount = Number.isFinite(entry.itemsCount) ? entry.itemsCount : null;
   const mode = entry.mode ? String(entry.mode).toUpperCase() : "";
 
-  if (status === "FAIL" || /BINDING_MISSING|CONFIG_MISSING/i.test(headlineText)) {
+  if (status === "FAIL" || /CONFIG_MISSING/i.test(headlineText)) {
     return { status, headline: headlineText };
   }
 
