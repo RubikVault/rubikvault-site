@@ -1,31 +1,13 @@
 {
   "schemaVersion": "1.0",
   "mirrorId": "system-health",
-  "updatedAt": "2026-01-13T22:48:14.171Z",
+  "updatedAt": "2026-01-14T21:34:07.441Z",
   "overallStatus": "OK",
   "jobs": [
     {
       "id": "eod-market",
-      "lastRunAt": "2026-01-13T22:48:14.171Z",
-      "lastSuccessAt": "2026-01-13T22:48:14.171Z",
-      "status": "OK",
-      "durationMs": 0,
-      "errors": [],
-      "notes": []
-    },
-    {
-      "id": "event-mirrors",
-      "lastRunAt": "2026-01-14T18:50:09.341Z",
-      "lastSuccessAt": "2026-01-14T18:50:09.341Z",
-      "status": "OK",
-      "durationMs": 0,
-      "errors": [],
-      "notes": []
-    },
-    {
-      "id": "crypto-snapshot",
-      "lastRunAt": "2026-01-14T20:30:14.226Z",
-      "lastSuccessAt": "2026-01-14T20:30:14.226Z",
+      "lastRunAt": "2026-01-14T21:34:07.441Z",
+      "lastSuccessAt": "2026-01-14T21:34:07.441Z",
       "status": "OK",
       "durationMs": 0,
       "errors": [],
@@ -35,149 +17,72 @@
   "mirrors": [
     {
       "id": "quotes",
-      "updatedAt": "2026-01-13T22:48:14.165Z",
+      "updatedAt": "2026-01-14T21:34:07.435Z",
       "dataQuality": "OK",
       "itemCount": 10,
       "sizeKB": 0
     },
     {
       "id": "price-snapshot",
-      "updatedAt": "2026-01-13T22:48:14.165Z",
+      "updatedAt": "2026-01-14T21:34:07.435Z",
       "dataQuality": "OK",
       "itemCount": 10,
       "sizeKB": 0
     },
     {
       "id": "top-movers",
-      "updatedAt": "2026-01-13T22:48:14.165Z",
+      "updatedAt": "2026-01-14T21:34:07.435Z",
       "dataQuality": "OK",
       "itemCount": 10,
       "sizeKB": 0
     },
     {
       "id": "market-cockpit",
-      "updatedAt": "2026-01-13T22:48:14.165Z",
+      "updatedAt": "2026-01-14T21:34:07.435Z",
       "dataQuality": "OK",
       "itemCount": 1,
       "sizeKB": 0
     },
     {
       "id": "market-health",
-      "updatedAt": "2026-01-13T22:48:14.165Z",
+      "updatedAt": "2026-01-14T21:34:07.435Z",
       "dataQuality": "OK",
       "itemCount": 3,
       "sizeKB": 0
     },
     {
       "id": "tech-signals",
-      "updatedAt": "2026-01-13T22:48:14.165Z",
+      "updatedAt": "2026-01-14T21:34:07.435Z",
       "dataQuality": "OK",
       "itemCount": 10,
       "sizeKB": 0
     },
     {
       "id": "alpha-radar",
-      "updatedAt": "2026-01-13T22:48:14.165Z",
+      "updatedAt": "2026-01-14T21:34:07.435Z",
       "dataQuality": "OK",
       "itemCount": 10,
       "sizeKB": 0
     },
     {
       "id": "market-regime",
-      "updatedAt": "2026-01-13T22:48:14.166Z",
+      "updatedAt": "2026-01-14T21:34:07.436Z",
       "dataQuality": "OK",
       "itemCount": 1,
       "sizeKB": 0
     },
     {
       "id": "volume-anomaly",
-      "updatedAt": "2026-01-13T22:48:14.166Z",
+      "updatedAt": "2026-01-14T21:34:07.436Z",
       "dataQuality": "OK",
       "itemCount": 1,
       "sizeKB": 0
     },
     {
       "id": "breakout-energy",
-      "updatedAt": "2026-01-13T22:48:14.166Z",
+      "updatedAt": "2026-01-14T21:34:07.436Z",
       "dataQuality": "EMPTY",
       "itemCount": 0,
-      "sizeKB": 0
-    },
-    {
-      "id": "news",
-      "updatedAt": "2026-01-14T18:50:09.338Z",
-      "dataQuality": "OK",
-      "itemCount": 50,
-      "sizeKB": 0
-    },
-    {
-      "id": "why-moved",
-      "updatedAt": "2026-01-14T18:50:09.338Z",
-      "dataQuality": "COVERAGE_LIMIT",
-      "itemCount": 0,
-      "sizeKB": 0
-    },
-    {
-      "id": "hype-divergence",
-      "updatedAt": "2026-01-14T18:50:09.338Z",
-      "dataQuality": "COVERAGE_LIMIT",
-      "itemCount": 0,
-      "sizeKB": 0
-    },
-    {
-      "id": "earnings",
-      "updatedAt": "2026-01-14T18:50:09.338Z",
-      "dataQuality": "COVERAGE_LIMIT",
-      "itemCount": 0,
-      "sizeKB": 0
-    },
-    {
-      "id": "congress-trading",
-      "updatedAt": "2026-01-14T18:50:09.338Z",
-      "dataQuality": "COVERAGE_LIMIT",
-      "itemCount": 0,
-      "sizeKB": 0
-    },
-    {
-      "id": "insider-cluster",
-      "updatedAt": "2026-01-14T18:50:09.338Z",
-      "dataQuality": "COVERAGE_LIMIT",
-      "itemCount": 0,
-      "sizeKB": 0
-    },
-    {
-      "id": "analyst-stampede",
-      "updatedAt": "2026-01-14T18:50:09.338Z",
-      "dataQuality": "COVERAGE_LIMIT",
-      "itemCount": 0,
-      "sizeKB": 0
-    },
-    {
-      "id": "smart-money",
-      "updatedAt": "2026-01-14T18:50:09.338Z",
-      "dataQuality": "COVERAGE_LIMIT",
-      "itemCount": 0,
-      "sizeKB": 0
-    },
-    {
-      "id": "alpha-performance",
-      "updatedAt": "2026-01-14T18:50:09.338Z",
-      "dataQuality": "COVERAGE_LIMIT",
-      "itemCount": 0,
-      "sizeKB": 0
-    },
-    {
-      "id": "earnings-reality",
-      "updatedAt": "2026-01-14T18:50:09.338Z",
-      "dataQuality": "COVERAGE_LIMIT",
-      "itemCount": 0,
-      "sizeKB": 0
-    },
-    {
-      "id": "crypto-snapshot",
-      "updatedAt": "2026-01-14T20:30:14.225Z",
-      "dataQuality": "OK",
-      "itemCount": 3,
       "sizeKB": 0
     }
   ],
@@ -195,11 +100,11 @@
     "IWM"
   ],
   "skippedSymbols": [],
-  "runId": "2026-01-13T22:48:14.171Z",
-  "asOf": "2026-01-13T22:48:14.171Z",
+  "runId": "2026-01-14T21:34:07.441Z",
+  "asOf": "2026-01-14T21:34:07.441Z",
   "meta": {
     "status": "PARTIAL",
-    "updatedAt": "2026-01-13T22:48:14.171Z",
+    "updatedAt": "2026-01-14T21:34:07.441Z",
     "reason": "EMPTY_ITEMS"
   }
 }
