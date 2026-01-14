@@ -1067,7 +1067,9 @@ function getEntrySeverity(entry) {
 }
 
 function resolveStatusLabel(featureId, blockName) {
-  return STATUS_LABELS[featureId] || blockName || featureId || "Block";
+  // Clean block name (remove "Block XX — " prefix)
+  const cleanName = blockName ? blockName.replace(/^Block\s+[0-9X]{1,2}\s*[-–—]\s*/i, "").trim() : null;
+  return STATUS_LABELS[featureId] || cleanName || blockName || featureId || "Block";
 }
 
 function updateStatusStrip() {

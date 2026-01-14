@@ -749,21 +749,25 @@ section[data-rv-deprecated="true"] {
 }
 
 /* Fix for Block 53 (RVCI Engine) - ensure tables/content are fully visible */
-#rv-dashboard .rv-native-block[data-rv-feature="rvci-engine"] {
-  overflow: visible;
-  max-height: none;
+#rv-dashboard .rv-native-block[data-rv-feature="rvci-engine"],
+#rv-dashboard .rv-native-block[data-rv-feature="rvci-engine"] * {
+  overflow: visible !important;
+  max-height: none !important;
 }
 
-#rv-dashboard .rv-native-block[data-rv-feature="rvci-engine"] .rv-block-content {
-  overflow: visible;
-  max-height: none;
+#rv-dashboard .rv-native-block[data-rv-feature="rvci-engine"] .rv-block-content,
+#rv-dashboard .rv-native-block[data-rv-feature="rvci-engine"] .rv-native-body,
+#rv-dashboard .rv-native-block[data-rv-feature="rvci-engine"] .rv-card {
+  overflow: visible !important;
+  max-height: none !important;
 }
 
 /* Ensure tables in RVCI block can scroll horizontally if needed, but not clip vertically */
-#rv-dashboard .rv-native-block[data-rv-feature="rvci-engine"] .rv-native-table-wrap {
+#rv-dashboard .rv-native-block[data-rv-feature="rvci-engine"] .rv-native-table-wrap,
+#rv-dashboard .rv-native-block[data-rv-feature="rvci-engine"] table {
   overflow-x: auto;
-  overflow-y: visible;
-  max-height: none;
+  overflow-y: visible !important;
+  max-height: none !important;
 }
 
 #rv-dashboard .rv-native-header {

@@ -99,11 +99,15 @@ function cleanTitle(rawTitle = "") {
     .trim();
 }
 
-export function formatBlockTitle(block) {
-  if (!block) return "Block -- — Untitled";
-  const id = String(block.id || "00").padStart(2, "0");
+export function formatBlockTitle(block, includeDebug = false) {
+  if (!block) return "Untitled";
   const title = cleanTitle(block.title || block.featureId || "");
-  return `Block ${id} — ${title}`;
+  // Only include block number in debug mode
+  if (includeDebug) {
+    const id = String(block.id || "00").padStart(2, "0");
+    return `Block ${id} — ${title}`;
+  }
+  return title;
 }
 
 const mergedRegistry = {

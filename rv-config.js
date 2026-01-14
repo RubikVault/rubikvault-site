@@ -77,7 +77,7 @@ export const FEATURES = [
   },
   {
     id: "rv-price-snapshot",
-    title: "Block 02 - Price Snapshot",
+    title: "Price Snapshot",
     module: "./features/rv-price-snapshot.js",
     api: "price-snapshot",
     computation: {
@@ -92,7 +92,7 @@ export const FEATURES = [
   },
   {
     id: "rv-top-movers",
-    title: "Block 03 - Volume Top Movers",
+    title: "Volume Top Movers",
     module: "./features/rv-top-movers.js",
     api: "top-movers",
     computation: {
@@ -106,7 +106,7 @@ export const FEATURES = [
   },
   {
     id: "rv-earnings-calendar",
-    title: "Block 04 - Earnings Calendar",
+    title: "Earnings Calendar",
     module: "./features/rv-earnings-calendar.js",
     api: "earnings-calendar",
     computation: {
@@ -120,7 +120,7 @@ export const FEATURES = [
   },
   {
     id: "rv-news-headlines",
-    title: "Block 05 - News Headlines",
+    title: "News Headlines",
     module: "./features/rv-news-headlines.js",
     api: "news",
     computation: {
@@ -134,7 +134,7 @@ export const FEATURES = [
   },
   {
     id: "rv-news-intelligence",
-    title: "Block 12 - News Intelligence",
+    title: "News Intelligence",
     module: "./features/rv-news-intelligence.js",
     api: "news-intelligence",
     computation: {
@@ -143,13 +143,13 @@ export const FEATURES = [
       cost: "free and automated",
       trust: "derived"
     },
-    enabled: true,
+    enabled: false,
     lazyLoad: true,
     refreshIntervalMs: 60 * 60 * 1000
   },
   {
     id: "rv-watchlist-local",
-    title: "Block 06 - Watchlist (Local)",
+    title: "Watchlist (Local)",
     module: "./features/rv-watchlist-local.js",
     computation: {
       where: "Hybrid (Client + Pages Function)",
@@ -162,7 +162,7 @@ export const FEATURES = [
   },
   {
     id: "rv-export-csv",
-    title: "Block 07 - Export CSV",
+    title: "Export CSV",
     module: "./features/rv-export-csv.js",
     computation: {
       where: "Client",
@@ -175,7 +175,7 @@ export const FEATURES = [
   },
   {
     id: "rv-macro-rates",
-    title: "Block 08 - Macro & Rates",
+    title: "Macro & Rates",
     module: "./features/rv-macro-rates.js",
     api: "macro-rates",
     computation: {
@@ -191,7 +191,7 @@ export const FEATURES = [
   },
   {
     id: "rv-sp500-sectors",
-    title: "Block 13 - S&P 500 Sectors",
+    title: "S&P 500 Sectors",
     module: "./features/rv-sp500-sectors.js",
     api: "sp500-sectors",
     computation: {
@@ -206,7 +206,7 @@ export const FEATURES = [
   },
   {
     id: "rv-crypto-snapshot",
-    title: "Block 09 - Crypto Snapshot",
+    title: "Crypto Snapshot",
     module: "./features/rv-crypto-snapshot.js",
     api: "crypto-snapshot",
     computation: {
@@ -221,7 +221,7 @@ export const FEATURES = [
   },
   {
     id: "rv-sentiment-barometer",
-    title: "Block 10 - Sentiment Barometer",
+    title: "Sentiment Barometer",
     module: "./features/rv-sentiment-barometer.js",
     api: "sentiment",
     computation: {
@@ -236,7 +236,7 @@ export const FEATURES = [
   },
   {
     id: "rv-tech-signals",
-    title: "Block 11 - Tech Signals",
+    title: "Tech Signals",
     module: "./features/rv-tech-signals.js",
     api: "tech-signals",
     computation: {
@@ -266,7 +266,7 @@ export const FEATURES = [
   },
   {
     id: "rv-market-regime",
-    title: "Block XX - Market Regime Radar",
+    title: "Market Regime Radar",
     module: "./features/rv-market-regime.js",
     api: "market-regime",
     computation: {
@@ -281,7 +281,7 @@ export const FEATURES = [
   },
   {
     id: "rv-arb-risk-regime",
-    title: "Block XX - ARB Risk Regime",
+    title: "ARB Risk Regime",
     module: "./features/rv-arb-risk-regime.js",
     api: "arb-risk-regime",
     computation: {
@@ -296,7 +296,7 @@ export const FEATURES = [
   },
   {
     id: "rv-arb-liquidity-pulse",
-    title: "Block XX - ARB Liquidity Pulse",
+    title: "ARB Liquidity Pulse",
     module: "./features/rv-arb-liquidity-pulse.js",
     api: "arb-liquidity-pulse",
     computation: {
@@ -311,7 +311,7 @@ export const FEATURES = [
   },
   {
     id: "rv-arb-breadth-lite",
-    title: "Block XX - ARB Breadth Lite",
+    title: "ARB Breadth Lite",
     module: "./features/rv-arb-breadth-lite.js",
     api: "arb-breadth-lite",
     computation: {
@@ -326,7 +326,7 @@ export const FEATURES = [
   },
   {
     id: "rv-why-moved",
-    title: "Block XX - Why This Stock Moved",
+    title: "Why This Stock Moved",
     module: "./features/rv-why-moved.js",
     api: "why-moved",
     computation: {
@@ -341,7 +341,7 @@ export const FEATURES = [
   },
   {
     id: "rv-volume-anomaly",
-    title: "Block XX - Volume Anomaly",
+    title: "Volume Anomaly",
     module: "./features/rv-volume-anomaly.js",
     api: "volume-anomaly",
     computation: {
@@ -356,7 +356,7 @@ export const FEATURES = [
   },
   {
     id: "rv-breakout-energy",
-    title: "Block XX - Breakout Energy Radar",
+    title: "Breakout Energy Radar",
     module: "./features/rv-breakout-energy.js",
     api: "breakout-energy",
     computation: {
@@ -371,7 +371,7 @@ export const FEATURES = [
   },
   {
     id: "rv-hype-divergence",
-    title: "Block XX - Inverse Hype Detector",
+    title: "Inverse Hype Detector",
     module: "./features/rv-hype-divergence.js",
     api: "hype-divergence",
     computation: {
@@ -386,7 +386,7 @@ export const FEATURES = [
   },
   {
     id: "rv-congress-trading",
-    title: "Block XX - Congress Trading Tracker",
+    title: "Congress Trading Tracker",
     module: "./features/rv-congress-trading.js",
     api: "congress-trading",
     computation: {
@@ -401,7 +401,7 @@ export const FEATURES = [
   },
   {
     id: "rv-insider-cluster",
-    title: "Block XX - Insider Cluster Buy Alarm",
+    title: "Insider Cluster Buy Alarm",
     module: "./features/rv-insider-cluster.js",
     api: "insider-cluster",
     computation: {
@@ -416,7 +416,7 @@ export const FEATURES = [
   },
   {
     id: "rv-analyst-stampede",
-    title: "Block XX - Analyst Stampede",
+    title: "Analyst Stampede",
     module: "./features/rv-analyst-stampede.js",
     api: "analyst-stampede",
     computation: {
