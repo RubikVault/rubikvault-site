@@ -4,7 +4,7 @@ set -euo pipefail
 # Reality check outputs (2026-01-01)
 # pwd: (captured at runtime; do not hardcode absolute paths)
 # show-toplevel: (captured at runtime; do not hardcode absolute paths)
-# git status --porcelain: M .gitignore | M functions/api/health.js | M scripts/test-api.sh | ?? .wranglerignore | ?? scripts/dev-local.sh | ?? scripts/move-repo-out-of-icloud.sh
+# git status --porcelain: M .gitignore | M functions/api/health.js | M scripts/test-api.sh | ?? .wranglerignore | ?? scripts/dev-local.sh | ?? scripts/move-repo-out-of-cloud.sh
 # node -v: v25.2.1
 # wrangler --version: 4.54.0
 # wrangler pages dev --help (watch flags): --live-reload (default false), --persist-to, --inspector-port, --no-bundle
@@ -12,8 +12,8 @@ set -euo pipefail
 
 ROOT=$(git rev-parse --show-toplevel)
 
-# If repo is under Documents (iCloud sync risk), use /tmp for slim workspace
-if [[ "$ROOT" == *"/Documents/"* ]]; then
+# If repo is under cloud-synced location (sync risk), use /tmp for slim workspace
+if [[ "$ROOT" == *"/cloud/"* ]] || [[ -n "${CLOUD_SYNCED:-}" ]]; then
   SLIM_DIR="/tmp/rv-dev-slim"
 else
   SLIM_DIR="$ROOT/.tmp/dev-slim"

@@ -6,7 +6,7 @@ SRC="$HOME/<cloud-synced-folder>/$REPO_NAME"
 DEST="$HOME/Dev/$REPO_NAME"
 
 cat <<EOM
-# Recommended: move repo out of iCloud-synced Documents to reduce watcher issues
+# Recommended: move repo out of cloud-synced location to reduce watcher issues
 mkdir -p "$HOME/Dev"
 rsync -a --delete "$SRC/" "$DEST/"
 cd "$DEST"

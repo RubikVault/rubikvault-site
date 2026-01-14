@@ -24,16 +24,27 @@ jobs:
         run: |
           npm run dev:pages >/tmp/devserver.log 2>&1 &
           echo $! > /tmp/devserver.pid
+          echo "Dev server starting (PID: $(cat /tmp/devserver.pid))..."
 
       - name: Wait for dev server
         run: |
-          for i in {1..20}; do
-            if curl -sSf --max-time 2 http://127.0.0.1:8788/_headers >/dev/null 2>&1; then
+          echo "Waiting for dev server to be ready..."
+          for i in {1..30}; do
+            # Try root endpoint first, then API endpoint as fallback
+            if curl -sSf --max-time 2 http://127.0.0.1:8788/ >/dev/null 2>&1 || \
+               curl -sSf --max-time 2 http://127.0.0.1:8788/api/diag >/dev/null 2>&1; then
+              echo "Dev server ready after $((i * 2)) seconds"
               exit 0
+            fi
+            if [ $((i % 5)) -eq 0 ]; then
+              echo "Still waiting... ($((i * 2))s elapsed)"
+              tail -20 /tmp/devserver.log || true
             fi
             sleep 2
           done
-          echo "::error::Dev server not ready" >&2
+          echo "::error::Dev server not ready after 60 seconds" >&2
+          echo "Last 50 lines of dev server log:" >&2
+          tail -50 /tmp/devserver.log >&2 || true
           exit 1
 
       - name: Verify envelope and secrets

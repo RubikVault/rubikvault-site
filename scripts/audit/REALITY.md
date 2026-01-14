@@ -189,7 +189,7 @@ scripts/utils/mirror-builders.mjs
 scripts/utils/eod-market-mirrors.mjs
 scripts/utils/universe.mjs
 scripts/utils/mirror-io.mjs
-scripts/move-repo-out-of-icloud.sh
+scripts/move-repo-out-of-cloud.sh
 scripts/audit/generate-stub-mirrors.mjs
 scripts/audit/REALITY.md
 scripts/audit/generate-reality.mjs

@@ -9,20 +9,35 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 0
+          fetch-depth: 1
       - name: Scan tracked files for personal names and absolute paths
         shell: bash
         run: |
           set -o pipefail
           PATTERN='(michael|puchowezki|michaelpuchowezki)|/Users/|/Documents/GitHub/|/iCloud/'
-          echo "Scanning tracked file contents..."
-          if git grep -nI -E "$PATTERN" -- . ; then
+          echo "Scanning current tracked file contents (HEAD only, no history)..."
+          # Scan only tracked files in working tree, not git history
+          # Exclude this workflow file itself (it contains the patterns in the code)
+          TRACKED_FILES=$(git ls-files | grep -v '^\.github/workflows/privacy-guard\.yml$')
+          if [ -z "$TRACKED_FILES" ]; then
+            echo "No tracked files found."
+            exit 0
+          fi
+          LEAKS_FOUND=false
+          while IFS= read -r file; do
+            if [ -f "$file" ] && grep -qI -E "$PATTERN" "$file" 2>/dev/null; then
+              echo "::error file=$file::Privacy leak detected in $file"
+              LEAKS_FOUND=true
+            fi
+          done <<< "$TRACKED_FILES"
+          if [ "$LEAKS_FOUND" = "true" ]; then
             echo "::error::Privacy leak detected in tracked files. Remove personal names/absolute paths."
             exit 1
           fi
           echo "Scanning filenames..."
-          if git ls-files | grep -nE '(michael|puchowezki|michaelpuchowezki)|Users|Documents|iCloud' ; then
+          # Exclude this workflow file from filename check too
+          if echo "$TRACKED_FILES" | grep -v '^\.github/workflows/privacy-guard\.yml$' | grep -nE '(michael|puchowezki|michaelpuchowezki)|Users|Documents|iCloud' ; then
             echo "::error::Suspicious filename/path detected."
             exit 1
           fi
-          echo "OK: No leaks found."
+          echo "OK: No leaks found in current files."
