@@ -2826,20 +2826,10 @@ async function runFeature(section, feature, logger, contentEl) {
       const featureId = feature?.id || section.getAttribute("data-rv-feature") || "";
       const isMarketCockpit = featureId === "rv-market-cockpit";
       
-      // Market Cockpit has different data structure - check for any data presence
+      // Market Cockpit has different data structure - ALWAYS show it (even if NO_DATA)
+      // It should display a fallback/loading state, not be hidden
       if (isMarketCockpit) {
-        const hasData = result?.data && (
-          result.data.regime || 
-          result.data.vix || 
-          result.data.btc || 
-          result.data.eth || 
-          result.data.indices || 
-          result.data.yields ||
-          result.data.dxy ||
-          result.data.fngCrypto ||
-          result.data.fngStocks
-        );
-        section.hidden = !hasData && status === "NO_DATA";
+        section.hidden = false; // Always show Market Cockpit
       } else {
         // Hide if NO_DATA, PARTIAL with no items, or MISSING_SECRET
         const hasItems = (result?.data?.items?.length > 0) || (result?.data?.signals?.length > 0) || (result?.data?.picks) || (result?.data?.sectors?.length > 0);
@@ -3206,9 +3196,27 @@ async function boot() {
     }
   );
 
-  lazy.forEach(({ section, index }) => {
+  // Load non-lazy features immediately (e.g., Market Cockpit)
+  lazy.forEach(({ section, feature, index }) => {
     section.dataset.rvBlockIndex = String(index);
-    observer.observe(section);
+    const featureId = section.getAttribute("data-rv-feature");
+    const shouldLoadImmediately = feature && !feature.lazyLoad;
+    
+    if (shouldLoadImmediately) {
+      // Load immediately, don't wait for intersection
+      const initState = initBlock(section, feature, index);
+      if (initState) {
+        const start = performance.now();
+        runFeature(section, feature, initState.logger, initState.contentEl).then((ok) => {
+          if (ok) {
+            initState.logger.info("loaded_immediate", { loadTimeMs: Math.round(performance.now() - start) });
+          }
+        });
+      }
+    } else {
+      // Use IntersectionObserver for lazy-loaded features
+      observer.observe(section);
+    }
   });
 
   const params = new URLSearchParams(window.location.search);
