@@ -30,7 +30,9 @@ jobs:
         run: |
           echo "Waiting for dev server to be ready..."
           for i in {1..30}; do
-            if curl -sSf --max-time 2 http://127.0.0.1:8788/_headers >/dev/null 2>&1; then
+            # Try root endpoint first, then API endpoint as fallback
+            if curl -sSf --max-time 2 http://127.0.0.1:8788/ >/dev/null 2>&1 || \
+               curl -sSf --max-time 2 http://127.0.0.1:8788/api/diag >/dev/null 2>&1; then
               echo "Dev server ready after $((i * 2)) seconds"
               exit 0
             fi
