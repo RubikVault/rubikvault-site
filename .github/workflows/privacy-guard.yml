@@ -15,13 +15,26 @@ jobs:
         run: |
           set -o pipefail
           PATTERN='(michael|puchowezki|michaelpuchowezki)|/Users/|/Documents/GitHub/|/iCloud/'
-          echo "Scanning current tracked file contents (HEAD only)..."
-          if git grep -nI -E "$PATTERN" -- . ; then
+          echo "Scanning current tracked file contents (HEAD only, no history)..."
+          # Scan only tracked files in working tree, not git history
+          TRACKED_FILES=$(git ls-files)
+          if [ -z "$TRACKED_FILES" ]; then
+            echo "No tracked files found."
+            exit 0
+          fi
+          LEAKS_FOUND=false
+          while IFS= read -r file; do
+            if [ -f "$file" ] && grep -qI -E "$PATTERN" "$file" 2>/dev/null; then
+              echo "::error file=$file::Privacy leak detected in $file"
+              LEAKS_FOUND=true
+            fi
+          done <<< "$TRACKED_FILES"
+          if [ "$LEAKS_FOUND" = "true" ]; then
             echo "::error::Privacy leak detected in tracked files. Remove personal names/absolute paths."
             exit 1
           fi
           echo "Scanning filenames..."
-          if git ls-files | grep -nE '(michael|puchowezki|michaelpuchowezki)|Users|Documents|iCloud' ; then
+          if echo "$TRACKED_FILES" | grep -nE '(michael|puchowezki|michaelpuchowezki)|Users|Documents|iCloud' ; then
             echo "::error::Suspicious filename/path detected."
             exit 1
           fi
