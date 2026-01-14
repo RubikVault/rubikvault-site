@@ -92,11 +92,20 @@ export async function onRequestGet({ request, env, data }) {
     return response;
   }
 
+  // Enhanced data for Internal Dashboard
+  const enhancedData = {
+    ...dataPayload,
+    blocks_ok: 0, // Would need to be calculated from actual block status
+    blocks_total: 0, // Would need to be calculated from FEATURES
+    api_calls_24h: 0, // Would need to be tracked in KV
+    cache_hit_rate: 0 // Would need to be calculated from cache stats
+  };
+
   const response = makeResponse({
     ok: true,
     feature: FEATURE_ID,
     traceId,
-    data: dataPayload,
+    data: enhancedData,
     cache: { hit: false, ttl: 0, layer: "none" },
     upstream: { url: "", status: null, snippet: "" }
   });

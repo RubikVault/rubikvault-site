@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>RubikVault Internal Dashboard</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #0b1120;
+      color: #f8fafc;
+      line-height: 1.6;
+      padding: 20px;
+    }
+    .container { max-width: 1400px; margin: 0 auto; }
+    h1 { margin-bottom: 30px; color: #38bdf8; }
+    .section {
+      background: #111827;
+      border: 1px solid rgba(148, 163, 184, 0.2);
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+    .section h2 {
+      font-size: 18px;
+      margin-bottom: 15px;
+      color: #38bdf8;
+      border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+      padding-bottom: 10px;
+    }
+    .status-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 15px;
+      margin-bottom: 20px;
+    }
+    .status-card {
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px solid rgba(148, 163, 184, 0.2);
+      border-radius: 8px;
+      padding: 15px;
+    }
+    .status-card.ok { border-color: #10b981; }
+    .status-card.warn { border-color: #f59e0b; }
+    .status-card.fail { border-color: #ef4444; }
+    .status-card h3 {
+      font-size: 12px;
+      text-transform: uppercase;
+      color: #cbd5f5;
+      margin-bottom: 8px;
+    }
+    .status-card .value {
+      font-size: 24px;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+    .status-card .label {
+      font-size: 11px;
+      color: #94a3b8;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+    th, td {
+      padding: 10px;
+      text-align: left;
+      border-bottom: 1px solid rgba(148, 163, 184, 0.15);
+    }
+    th {
+      background: rgba(15, 23, 42, 0.6);
+      font-weight: 600;
+      color: #cbd5f5;
+      position: sticky;
+      top: 0;
+    }
+    tr:hover { background: rgba(15, 23, 42, 0.4); }
+    .badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+    .badge.ok { background: #10b981; color: white; }
+    .badge.warn { background: #f59e0b; color: white; }
+    .badge.fail { background: #ef4444; color: white; }
+    .badge.partial { background: #3b82f6; color: white; }
+    .badge.stale { background: #8b5cf6; color: white; }
+    .refresh-btn {
+      background: #38bdf8;
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 13px;
+      margin-bottom: 15px;
+    }
+    .refresh-btn:hover { background: #0ea5e9; }
+    .timestamp {
+      font-size: 11px;
+      color: #94a3b8;
+      margin-top: 10px;
+    }
+    .loading { opacity: 0.5; pointer-events: none; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🔍 RubikVault Internal Dashboard</h1>
+    
+    <div class="section">
+      <h2>System Health Overview</h2>
+      <button class="refresh-btn" onclick="refreshAll()">🔄 Refresh All</button>
+      <div class="status-grid" id="health-overview">
+        <div class="status-card">
+          <h3>Overall Status</h3>
+          <div class="value">—</div>
+          <div class="label">Loading...</div>
+        </div>
+      </div>
+      <div class="timestamp" id="health-timestamp"></div>
+    </div>
+
+    <div class="section">
+      <h2>Block × Field Matrix</h2>
+      <div style="overflow-x: auto;">
+        <table id="block-matrix">
+          <thead>
+            <tr>
+              <th>Block</th>
+              <th>Feature ID</th>
+              <th>Status</th>
+              <th>Data Present</th>
+              <th>Quality</th>
+              <th>As-of</th>
+              <th>Source</th>
+              <th>Cache</th>
+              <th>Last Error</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td colspan="9">Loading...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="section">
+      <h2>API Keys & Limits</h2>
+      <table id="api-keys">
+        <thead>
+          <tr>
+            <th>Provider</th>
+            <th>Key Alias</th>
+            <th>Status</th>
+            <th>Counts (Today)</th>
+            <th>Hard Limit</th>
+            <th>Remaining</th>
+            <th>Last Error</th>
+            <th>Last Used</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td colspan="8">Loading...</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="section">
+      <h2>Error & Events Timeline</h2>
+      <div style="max-height: 400px; overflow-y: auto;">
+        <table id="error-timeline">
+          <thead>
+            <tr>
+              <th>Time</th>
+              <th>Type</th>
+              <th>Feature</th>
+              <th>Error Code</th>
+              <th>Message</th>
+              <th>Details</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td colspan="6">Loading...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="section">
+      <h2>Field Drilldown</h2>
+      <select id="field-selector" style="width: 100%; padding: 8px; margin-bottom: 15px; background: #111827; color: #f8fafc; border: 1px solid rgba(148, 163, 184, 0.2); border-radius: 6px;">
+        <option>Select a field to inspect...</option>
+      </select>
+      <div id="field-details" style="background: rgba(15, 23, 42, 0.6); padding: 15px; border-radius: 8px; font-family: monospace; font-size: 12px; white-space: pre-wrap; max-height: 400px; overflow-y: auto;">
+        Select a field above to see details...
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    const API_BASE = '/api';
+    
+    async function fetchJSON(url) {
+      try {
+        const res = await fetch(url);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return await res.json();
+      } catch (err) {
+        console.error('Fetch error:', err);
+        return null;
+      }
+    }
+
+    async function refreshAll() {
+      document.body.classList.add('loading');
+      await Promise.all([
+        updateHealthOverview(),
+        updateBlockMatrix(),
+        updateApiKeys(),
+        updateErrorTimeline()
+      ]);
+      document.body.classList.remove('loading');
+    }
+
+    async function updateHealthOverview() {
+      const health = await fetchJSON(`${API_BASE}/health`);
+      const diag = await fetchJSON(`${API_BASE}/diag`);
+      
+      const container = document.getElementById('health-overview');
+      if (!health && !diag) {
+        container.innerHTML = '<div class="status-card fail"><h3>Error</h3><div class="value">Failed</div><div class="label">Cannot fetch health data</div></div>';
+        return;
+      }
+
+      const overallStatus = health?.status || diag?.overall_status || 'UNKNOWN';
+      const statusClass = overallStatus === 'OK' ? 'ok' : overallStatus === 'DEGRADED' ? 'warn' : 'fail';
+      
+      container.innerHTML = `
+        <div class="status-card ${statusClass}">
+          <h3>Overall Status</h3>
+          <div class="value">${overallStatus}</div>
+          <div class="label">System Health</div>
+        </div>
+        <div class="status-card">
+          <h3>Blocks Active</h3>
+          <div class="value">${health?.blocks_ok || 0}</div>
+          <div class="label">of ${health?.blocks_total || 0} total</div>
+        </div>
+        <div class="status-card">
+          <h3>API Calls (24h)</h3>
+          <div class="value">${health?.api_calls_24h || 0}</div>
+          <div class="label">Estimated</div>
+        </div>
+        <div class="status-card">
+          <h3>Cache Hit Rate</h3>
+          <div class="value">${health?.cache_hit_rate || 0}%</div>
+          <div class="label">Last 24h</div>
+        </div>
+      `;
+      
+      document.getElementById('health-timestamp').textContent = `Last updated: ${new Date().toLocaleString()}`;
+    }
+
+    async function updateBlockMatrix() {
+      const diag = await fetchJSON(`${API_BASE}/diag`);
+      const tbody = document.querySelector('#block-matrix tbody');
+      
+      if (!diag || !diag.blocks) {
+        tbody.innerHTML = '<tr><td colspan="9">No data available</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = diag.blocks.map(block => {
+        const statusClass = block.status === 'OK' ? 'ok' : block.status === 'PARTIAL' ? 'warn' : 'fail';
+        return `
+          <tr>
+            <td>${block.title || block.feature_id}</td>
+            <td><code>${block.feature_id}</code></td>
+            <td><span class="badge ${statusClass}">${block.status || 'UNKNOWN'}</span></td>
+            <td>${block.data_present ? '✅' : '❌'}</td>
+            <td><span class="badge ${block.quality === 'OK' ? 'ok' : block.quality === 'DEGRADED' ? 'warn' : 'fail'}">${block.quality || 'UNKNOWN'}</span></td>
+            <td>${block.as_of ? new Date(block.as_of).toLocaleString() : '—'}</td>
+            <td>${block.source || '—'}</td>
+            <td>${block.cache_layer || 'none'}</td>
+            <td><code style="font-size: 11px;">${block.last_error || '—'}</code></td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    async function updateApiKeys() {
+      const diag = await fetchJSON(`${API_BASE}/diag`);
+      const tbody = document.querySelector('#api-keys tbody');
+      
+      if (!diag || !diag.api_keys) {
+        tbody.innerHTML = '<tr><td colspan="8">No API key data available</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = diag.api_keys.map(key => {
+        const statusClass = key.status === 'present' ? 'ok' : key.status === 'missing' ? 'fail' : 'warn';
+        return `
+          <tr>
+            <td>${key.provider || '—'}</td>
+            <td><code>${key.alias || '—'}</code></td>
+            <td><span class="badge ${statusClass}">${key.status || 'UNKNOWN'}</span></td>
+            <td>${key.counts_today || 0}</td>
+            <td>${key.hard_limit || '—'}</td>
+            <td>${key.remaining || '—'}</td>
+            <td><code style="font-size: 11px;">${key.last_error || '—'}</code></td>
+            <td>${key.last_used ? new Date(key.last_used).toLocaleString() : '—'}</td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    async function updateErrorTimeline() {
+      const diag = await fetchJSON(`${API_BASE}/diag`);
+      const tbody = document.querySelector('#error-timeline tbody');
+      
+      if (!diag || !diag.events) {
+        tbody.innerHTML = '<tr><td colspan="6">No events available</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = diag.events.slice(0, 50).map(event => {
+        const typeClass = event.type === 'error' ? 'fail' : event.type === 'warn' ? 'warn' : 'ok';
+        return `
+          <tr>
+            <td>${new Date(event.timestamp).toLocaleString()}</td>
+            <td><span class="badge ${typeClass}">${event.type || 'info'}</span></td>
+            <td><code>${event.feature || '—'}</code></td>
+            <td><code>${event.error_code || '—'}</code></td>
+            <td>${event.message || '—'}</td>
+            <td><code style="font-size: 11px;">${event.details || '—'}</code></td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    // Auto-refresh every 30 seconds
+    refreshAll();
+    setInterval(refreshAll, 30000);
+  </script>
+</body>
+</html>

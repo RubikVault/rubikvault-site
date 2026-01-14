@@ -77,41 +77,60 @@ function render(root, payload, logger) {
     return;
   }
 
+  // Handle empty sectors gracefully
+  if (sectors.length === 0) {
+    root.innerHTML = `
+      <div class="rv-native-note">
+        No sector data available yet. Data updates at market close (EOD).
+      </div>
+    `;
+    logger?.setStatus("PARTIAL", "No data");
+    logger?.setMeta({
+      updatedAt: payload?.ts,
+      source: data?.source || "stooq",
+      isStale: payload?.isStale,
+      staleAgeMs: payload?.staleAgeMs
+    });
+    return;
+  }
+
   const sorted = sortRows(sectors);
 
   root.innerHTML = `
     ${partialNote ? `<div class="rv-native-note">${partialNote}</div>` : ""}
-    <table class="rv-native-table rv-table--compact">
-      <thead>
-        <tr>
-          <th data-rv-sort="symbol">${sortLabel("Sector", "symbol")}</th>
-          <th data-rv-sort="price">${sortLabel("Price", "price")}</th>
-          <th data-rv-sort="r1d">${sortLabel("1D", "r1d")}</th>
-          <th data-rv-sort="r1w">${sortLabel("1W", "r1w")}</th>
-          <th data-rv-sort="r1m">${sortLabel("1M", "r1m")}</th>
-          <th data-rv-sort="r1y">${sortLabel("1Y", "r1y")}</th>
-        </tr>
-      </thead>
-      <tbody>
-        ${sorted
-          .map((row) => {
-            const cls = (value) =>
-              typeof value === "number" ? (value >= 0 ? "rv-native-positive" : "rv-native-negative") : "";
-            return `
-              <tr>
-                <td>${row.symbol}</td>
-                <td>${formatNumber(row.price, { maximumFractionDigits: 2 })}</td>
-                <td class="${cls(row.r1d)}">${formatNumber(row.r1d, { maximumFractionDigits: 2 })}%</td>
-                <td class="${cls(row.r1w)}">${formatNumber(row.r1w, { maximumFractionDigits: 2 })}%</td>
-                <td class="${cls(row.r1m)}">${formatNumber(row.r1m, { maximumFractionDigits: 2 })}%</td>
-                <td class="${cls(row.r1y)}">${formatNumber(row.r1y, { maximumFractionDigits: 2 })}%</td>
-              </tr>
-            `;
-          })
-          .join("")}
-      </tbody>
-    </table>
-    <div class="rv-native-note">Updated: ${new Date(data.updatedAt || payload.ts).toLocaleTimeString()}</div>
+    <div class="rv-native-table-wrap">
+      <table class="rv-native-table rv-table--compact">
+        <thead>
+          <tr>
+            <th data-rv-sort="symbol">${sortLabel("Sector", "symbol")}</th>
+            <th data-rv-sort="price">${sortLabel("Price", "price")}</th>
+            <th data-rv-sort="r1d">${sortLabel("1D", "r1d")}</th>
+            <th data-rv-sort="r1w">${sortLabel("1W", "r1w")}</th>
+            <th data-rv-sort="r1m">${sortLabel("1M", "r1m")}</th>
+            <th data-rv-sort="r1y">${sortLabel("1Y", "r1y")}</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${sorted
+            .map((row) => {
+              const cls = (value) =>
+                typeof value === "number" ? (value >= 0 ? "rv-native-positive" : "rv-native-negative") : "";
+              return `
+                <tr>
+                  <td><strong>${row.symbol}</strong></td>
+                  <td>${formatNumber(row.price, { maximumFractionDigits: 2 })}</td>
+                  <td class="${cls(row.r1d)}">${formatNumber(row.r1d, { maximumFractionDigits: 2 })}%</td>
+                  <td class="${cls(row.r1w)}">${formatNumber(row.r1w, { maximumFractionDigits: 2 })}%</td>
+                  <td class="${cls(row.r1m)}">${formatNumber(row.r1m, { maximumFractionDigits: 2 })}%</td>
+                  <td class="${cls(row.r1y)}">${formatNumber(row.r1y, { maximumFractionDigits: 2 })}%</td>
+                </tr>
+              `;
+            })
+            .join("")}
+        </tbody>
+      </table>
+    </div>
+    <div class="rv-native-note">Updated: ${new Date(data.updatedAt || payload.ts).toLocaleString()}</div>
   `;
 
   root.querySelectorAll("[data-rv-sort]").forEach((th) => {

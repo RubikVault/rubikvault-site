@@ -106,24 +106,24 @@ export async function onRequestGet({ request, env, data }) {
   const rateState = getRateState(rateKey);
   if (rateState.limited) {
     const response = makeResponse({
-        ok: true,
-        feature: FEATURE_ID,
-        traceId,
-        data: buildFallbackData(),
-        cache: { hit: false, ttl: 0, layer: "none" },
-        upstream: { url: UPSTREAM_URL, status: res.status, snippet: upstreamSnippet },
-        error: { code: errorCode, message: `Upstream ${res.status}`, details: {} },
-        isStale: true
-      });
-      logServer({
-        feature: FEATURE_ID,
-        traceId,
-        cacheLayer: "none",
-        upstreamStatus: res.status,
-        durationMs: Date.now() - started
-      });
-      return response;
-}
+      ok: true,
+      feature: FEATURE_ID,
+      traceId,
+      data: buildFallbackData(),
+      cache: { hit: false, ttl: 0, layer: "none" },
+      upstream: { url: UPSTREAM_URL, status: null, snippet: "" },
+      error: { code: "RATE_LIMITED", message: "Rate limit reached", details: {} },
+      isStale: true
+    });
+    logServer({
+      feature: FEATURE_ID,
+      traceId,
+      cacheLayer: "none",
+      upstreamStatus: null,
+      durationMs: Date.now() - started
+    });
+    return response;
+  }
 
   const cacheKey = `${FEATURE_ID}:v1`;
   if (!panic) {

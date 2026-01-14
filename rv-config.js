@@ -86,7 +86,7 @@ export const FEATURES = [
       cost: "free and automated",
       trust: "raw and derived"
     },
-    enabled: true,
+    enabled: false,
     deprecated: true,
     lazyLoad: false
   },
@@ -184,7 +184,7 @@ export const FEATURES = [
       cost: "free and automated",
       trust: "raw and proxy"
     },
-    enabled: true,
+    enabled: false,
     deprecated: true,
     lazyLoad: true,
     refreshIntervalMs: 6 * 60 * 60 * 1000
@@ -395,7 +395,7 @@ export const FEATURES = [
       cost: "free and automated",
       trust: "raw"
     },
-    enabled: true,
+    enabled: false,
     lazyLoad: true,
     refreshIntervalMs: 24 * 60 * 60 * 1000
   },
@@ -410,7 +410,7 @@ export const FEATURES = [
       cost: "free and automated",
       trust: "raw and derived"
     },
-    enabled: true,
+    enabled: false,
     lazyLoad: true,
     refreshIntervalMs: 24 * 60 * 60 * 1000
   },
@@ -425,7 +425,7 @@ export const FEATURES = [
       cost: "free and automated",
       trust: "derived"
     },
-    enabled: true,
+    enabled: false,
     lazyLoad: true,
     refreshIntervalMs: 24 * 60 * 60 * 1000
   },
