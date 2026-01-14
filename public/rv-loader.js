@@ -1638,9 +1638,13 @@ function renderDebugMeta(container, meta) {
 function renderNoData(contentEl, meta) {
   if (!contentEl) return;
   const reason = meta.reason || "NO_DATA";
+  // In public view, show minimal message without reason
+  const message = isDebugEnabled() 
+    ? `No data available. Reason: ${reason}`
+    : "Temporarily unavailable";
   contentEl.innerHTML = `
     <div class="rv-native-empty">
-      No data available. Reason: ${reason}
+      ${message}
     </div>
   `;
   renderDebugMeta(contentEl, meta);
@@ -2814,16 +2818,36 @@ async function runFeature(section, feature, logger, contentEl) {
   try {
     const result = await renderSnapshotBlock(contentEl, feature, logger, section);
     // Hide block if it's empty (NO_DATA, PARTIAL, MISSING_SECRET) - but only in public view
+    // EXCEPTION: Market Cockpit should always be visible (it has different data structure)
     if (!isDebugEnabled()) {
       const meta = result?.meta || {};
       const status = meta.status || "";
       const reason = meta.reason || "";
-      // Hide if NO_DATA, PARTIAL with no items, or MISSING_SECRET
-      const hasItems = (result?.data?.items?.length > 0) || (result?.data?.signals?.length > 0) || (result?.data?.picks);
-      if ((status === "NO_DATA" || (status === "PARTIAL" && !hasItems) || reason === "MISSING_SECRET")) {
-        section.hidden = true;
+      const featureId = feature?.id || section.getAttribute("data-rv-feature") || "";
+      const isMarketCockpit = featureId === "rv-market-cockpit";
+      
+      // Market Cockpit has different data structure - check for any data presence
+      if (isMarketCockpit) {
+        const hasData = result?.data && (
+          result.data.regime || 
+          result.data.vix || 
+          result.data.btc || 
+          result.data.eth || 
+          result.data.indices || 
+          result.data.yields ||
+          result.data.dxy ||
+          result.data.fngCrypto ||
+          result.data.fngStocks
+        );
+        section.hidden = !hasData && status === "NO_DATA";
       } else {
-        section.hidden = false;
+        // Hide if NO_DATA, PARTIAL with no items, or MISSING_SECRET
+        const hasItems = (result?.data?.items?.length > 0) || (result?.data?.signals?.length > 0) || (result?.data?.picks) || (result?.data?.sectors?.length > 0);
+        if ((status === "NO_DATA" || (status === "PARTIAL" && !hasItems) || reason === "MISSING_SECRET")) {
+          section.hidden = true;
+        } else {
+          section.hidden = false;
+        }
       }
     } else {
       section.hidden = false; // Always show in debug mode
