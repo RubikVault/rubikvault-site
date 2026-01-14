@@ -9,13 +9,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 0
+          fetch-depth: 1
       - name: Scan tracked files for personal names and absolute paths
         shell: bash
         run: |
           set -o pipefail
           PATTERN='(michael|puchowezki|michaelpuchowezki)|/Users/|/Documents/GitHub/|/iCloud/'
-          echo "Scanning tracked file contents..."
+          echo "Scanning current tracked file contents (HEAD only)..."
           if git grep -nI -E "$PATTERN" -- . ; then
             echo "::error::Privacy leak detected in tracked files. Remove personal names/absolute paths."
             exit 1
@@ -25,4 +25,4 @@ jobs:
             echo "::error::Suspicious filename/path detected."
             exit 1
           fi
-          echo "OK: No leaks found."
+          echo "OK: No leaks found in current files."
