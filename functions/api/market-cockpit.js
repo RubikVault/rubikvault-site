@@ -22,6 +22,8 @@ const FNG_STOCKS_URL = "https://production.dataviz.cnn.io/index/fearandgreed/gra
 const FNG_CRYPTO_URL = "https://api.alternative.me/fng/?limit=1";
 const BTC_URL =
   "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd&include_24hr_change=true";
+const CRYPTO_URL =
+  "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,solana,ripple&vs_currencies=usd&include_24hr_change=true";
 const FMP_BATCH = "https://financialmodelingprep.com/api/v3/quote";
 const MARKETAUX_URL = "https://api.marketaux.com/v1/news/all";
 const TREASURY_CSV_URL =
@@ -191,6 +193,42 @@ async function fetchBtc(env) {
     ok: data.usd !== undefined,
     price: parseNumber(data.usd),
     changePercent: parseNumber(data.usd_24h_change),
+    source: "CoinGecko"
+  };
+}
+
+async function fetchCrypto(env) {
+  const url = withCoinGeckoKey(CRYPTO_URL, env);
+  const res = await safeFetchJson(url, { userAgent: env.USER_AGENT || "RubikVault/1.0" });
+  if (!res.ok || !res.json) {
+    return {
+      ok: false,
+      btc: { price: null, changePercent: null },
+      eth: { price: null, changePercent: null },
+      sol: { price: null, changePercent: null },
+      xrp: { price: null, changePercent: null },
+      source: "CoinGecko"
+    };
+  }
+  const data = res.json || {};
+  return {
+    ok: true,
+    btc: {
+      price: parseNumber(data.bitcoin?.usd),
+      changePercent: parseNumber(data.bitcoin?.usd_24h_change)
+    },
+    eth: {
+      price: parseNumber(data.ethereum?.usd),
+      changePercent: parseNumber(data.ethereum?.usd_24h_change)
+    },
+    sol: {
+      price: parseNumber(data.solana?.usd),
+      changePercent: parseNumber(data.solana?.usd_24h_change)
+    },
+    xrp: {
+      price: parseNumber(data.ripple?.usd),
+      changePercent: parseNumber(data.ripple?.usd_24h_change)
+    },
     source: "CoinGecko"
   };
 }
@@ -395,14 +433,14 @@ async function fetchMarketCockpit(env) {
     kvGetJson(env, SECTOR_CACHE_KEY)
   ]);
 
-  const [vixResult, fngResult, fngStocksResult, newsResult, proxyResult, btcResult, dxyResult, yieldsResult] =
+  const [vixResult, fngResult, fngStocksResult, newsResult, proxyResult, cryptoResult, dxyResult, yieldsResult] =
     await Promise.allSettled([
     fetchVix(env),
     fetchFngCrypto(env),
     fetchFngStocks(env),
     fetchMarketaux(env),
     fetchProxies(env),
-    fetchBtc(env),
+    fetchCrypto(env),
     fetchDxy(env),
     fetchYields(env)
   ]);
@@ -412,7 +450,7 @@ async function fetchMarketCockpit(env) {
   const fngStocks = fngStocksResult.status === "fulfilled" ? fngStocksResult.value : { ok: false };
   const newsSentiment = newsResult.status === "fulfilled" ? newsResult.value : { ok: false };
   const proxies = proxyResult.status === "fulfilled" ? proxyResult.value : { ok: false };
-  const btc = btcResult.status === "fulfilled" ? btcResult.value : { ok: false };
+  const crypto = cryptoResult.status === "fulfilled" ? cryptoResult.value : { ok: false, btc: {}, eth: {}, sol: {}, xrp: {}, source: "CoinGecko" };
   const dxy = dxyResult.status === "fulfilled" ? dxyResult.value : { ok: false };
   const yields = yieldsResult.status === "fulfilled" ? yieldsResult.value : { ok: false };
   const macroSummary = buildMacroSummary(macroCached?.value?.data);
@@ -424,7 +462,7 @@ async function fetchMarketCockpit(env) {
     !fngStocks.ok ||
     !newsSentiment.ok ||
     !proxies.ok ||
-    !btc.ok ||
+    !crypto.ok ||
     !dxy.ok ||
     !yields.ok ||
     (!macroSummary.rates.length && !macroSummary.fx.length && !macroSummary.cpi.length) ||
@@ -435,7 +473,10 @@ async function fetchMarketCockpit(env) {
     fngStocks.value !== null ||
     newsSentiment.score !== null ||
     Object.keys(proxies.proxies || {}).length > 0 ||
-    btc.price !== null ||
+    crypto.btc?.price !== null ||
+    crypto.eth?.price !== null ||
+    crypto.sol?.price !== null ||
+    crypto.xrp?.price !== null ||
     dxy.value !== null ||
     Object.keys(yields.yields || {}).length > 0;
   if (!hasData) {
@@ -479,9 +520,24 @@ async function fetchMarketCockpit(env) {
         rateLimited: Boolean(newsSentiment.rateLimited)
       },
       btc: {
-        price: btc.price ?? null,
-        changePercent: btc.changePercent ?? null,
-        source: btc.source || "CoinGecko"
+        price: crypto.btc?.price ?? null,
+        changePercent: crypto.btc?.changePercent ?? null,
+        source: crypto.source || "CoinGecko"
+      },
+      eth: {
+        price: crypto.eth?.price ?? null,
+        changePercent: crypto.eth?.changePercent ?? null,
+        source: crypto.source || "CoinGecko"
+      },
+      sol: {
+        price: crypto.sol?.price ?? null,
+        changePercent: crypto.sol?.changePercent ?? null,
+        source: crypto.source || "CoinGecko"
+      },
+      xrp: {
+        price: crypto.xrp?.price ?? null,
+        changePercent: crypto.xrp?.changePercent ?? null,
+        source: crypto.source || "CoinGecko"
       },
       dxy: {
         value: dxy.value ?? null,
@@ -502,7 +558,7 @@ async function fetchMarketCockpit(env) {
         fngStocks: fngStocks.source || "CNN",
         newsSentiment: newsSentiment.source || "Marketaux",
         proxies: proxies.source || "FMP",
-        btc: btc.source || "CoinGecko",
+        crypto: crypto.source || "CoinGecko",
         dxy: dxy.source || "Yahoo",
         yields: yields.source || "US Treasury",
         macro: macroSummary.updatedAt ? "macro-rates" : "kv",

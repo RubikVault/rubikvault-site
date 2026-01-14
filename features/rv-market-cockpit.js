@@ -70,6 +70,9 @@ function render(root, payload, logger, featureId) {
   const news = data.newsSentiment || {};
   const proxies = data.proxies || {};
   const btc = data.btc || {};
+  const eth = data.eth || {};
+  const sol = data.sol || {};
+  const xrp = data.xrp || {};
   const dxy = data.dxy || {};
   const yields = data.yields || {};
   const yieldValues = yields.values || {};
@@ -141,34 +144,55 @@ function render(root, payload, logger, featureId) {
       </thead>
       <tbody>
         <tr>
-          <td>VIX</td>
+          <td>VIX <span class="rv-tooltip-wrapper"><span class="rv-tooltip-icon" aria-label="Information">ⓘ</span><span class="rv-tooltip-content"><strong>VIX (Volatility Index)</strong><br>Source: CBOE<br>Update: EOD<br>Context: US market close</span></span></td>
           <td data-rv-field="vix">${formatNumber(vix.value, { maximumFractionDigits: 2 })}</td>
           <td>${vix.note || vix.source || "N/A"}</td>
         </tr>
         <tr>
-          <td>Crypto F&amp;G</td>
+          <td>Crypto F&amp;G <span class="rv-tooltip-wrapper"><span class="rv-tooltip-icon" aria-label="Information">ⓘ</span><span class="rv-tooltip-content"><strong>Fear & Greed Index (Crypto)</strong><br>Source: Alternative.me<br>Update: Daily<br>Context: Crypto market sentiment</span></span></td>
           <td data-rv-field="fng-crypto">${formatNumber(fng.value)} ${fng.label ? `(${fng.label})` : ""}</td>
           <td>${fng.source || "N/A"}</td>
         </tr>
         <tr>
-          <td>Stocks F&amp;G</td>
+          <td>Stocks F&amp;G <span class="rv-tooltip-wrapper"><span class="rv-tooltip-icon" aria-label="Information">ⓘ</span><span class="rv-tooltip-content"><strong>Fear & Greed Index (Stocks)</strong><br>Source: CNN<br>Update: Daily<br>Context: US equity market sentiment</span></span></td>
           <td data-rv-field="fng-stocks">${formatNumber(fngStocks.value)} ${fngStocks.label ? `(${fngStocks.label})` : ""}</td>
           <td>${fngStocks.source || "N/A"}</td>
         </tr>
         <tr>
-          <td>News Sentiment</td>
+          <td>News Sentiment <span class="rv-tooltip-wrapper"><span class="rv-tooltip-icon" aria-label="Information">ⓘ</span><span class="rv-tooltip-content"><strong>News Sentiment Score</strong><br>Source: Marketaux<br>Update: 15m<br>Context: Aggregated news tone</span></span></td>
           <td data-rv-field="news-sentiment">${formatNumber(news.score, { maximumFractionDigits: 2 })} ${news.label || ""}</td>
           <td>${news.source || "N/A"}</td>
         </tr>
         <tr>
-          <td>BTC</td>
+          <td>BTC <span class="rv-tooltip-wrapper"><span class="rv-tooltip-icon" aria-label="Information">ⓘ</span><span class="rv-tooltip-content"><strong>Bitcoin</strong><br>Source: CoinGecko<br>Update: 2m<br>Context: Crypto 24/7 snapshot</span></span></td>
           <td data-rv-field="btc-price">$${formatNumber(btc.price, { maximumFractionDigits: 0 })} (${formatPercent(
     btc.changePercent
   )})</td>
           <td>${btc.source || "N/A"}</td>
         </tr>
         <tr>
-          <td>DXY</td>
+          <td>ETH <span class="rv-tooltip-wrapper"><span class="rv-tooltip-icon" aria-label="Information">ⓘ</span><span class="rv-tooltip-content"><strong>Ethereum</strong><br>Source: CoinGecko<br>Update: 2m<br>Context: Crypto 24/7 snapshot</span></span></td>
+          <td data-rv-field="eth-price">$${formatNumber(eth.price, { maximumFractionDigits: 0 })} (${formatPercent(
+    eth.changePercent
+  )})</td>
+          <td>${eth.source || "N/A"}</td>
+        </tr>
+        <tr>
+          <td>SOL <span class="rv-tooltip-wrapper"><span class="rv-tooltip-icon" aria-label="Information">ⓘ</span><span class="rv-tooltip-content"><strong>Solana</strong><br>Source: CoinGecko<br>Update: 2m<br>Context: Crypto 24/7 snapshot</span></span></td>
+          <td data-rv-field="sol-price">$${formatNumber(sol.price, { maximumFractionDigits: 2 })} (${formatPercent(
+    sol.changePercent
+  )})</td>
+          <td>${sol.source || "N/A"}</td>
+        </tr>
+        <tr>
+          <td>XRP <span class="rv-tooltip-wrapper"><span class="rv-tooltip-icon" aria-label="Information">ⓘ</span><span class="rv-tooltip-content"><strong>XRP</strong><br>Source: CoinGecko<br>Update: 2m<br>Context: Crypto 24/7 snapshot</span></span></td>
+          <td data-rv-field="xrp-price">$${formatNumber(xrp.price, { maximumFractionDigits: 3 })} (${formatPercent(
+    xrp.changePercent
+  )})</td>
+          <td>${xrp.source || "N/A"}</td>
+        </tr>
+        <tr>
+          <td>DXY <span class="rv-tooltip-wrapper"><span class="rv-tooltip-icon" aria-label="Information">ⓘ</span><span class="rv-tooltip-content"><strong>US Dollar Index</strong><br>Source: Yahoo Finance<br>Update: EOD<br>Context: US market close</span></span></td>
           <td data-rv-field="dxy">${formatNumber(dxy.value, { maximumFractionDigits: 2 })} (${formatPercent(
     dxy.changePercent
   )})</td>
@@ -210,7 +234,7 @@ function render(root, payload, logger, featureId) {
           <td>${yields.source || "US Treasury"}</td>
         </tr>
         <tr>
-          <td>US Yields 30Y</td>
+          <td>US Yields 30Y <span class="rv-tooltip-wrapper"><span class="rv-tooltip-icon" aria-label="Information">ⓘ</span><span class="rv-tooltip-content"><strong>US Treasury 30-Year Yield</strong><br>Source: US Treasury<br>Update: EOD<br>Context: US market close</span></span></td>
           <td data-rv-field="yield-30y">${formatNumber(yieldValues["30y"], { maximumFractionDigits: 2 })}</td>
           <td>${yields.source || "US Treasury"}</td>
         </tr>
