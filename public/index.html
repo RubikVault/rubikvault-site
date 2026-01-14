@@ -47,9 +47,6 @@
         </button>
       </div>
     </div>
-    <div class="rv-status-strip" id="rv-status-strip" aria-live="polite" data-rv-debug-only="true" style="display: none;">
-      <span>System status loading…</span>
-    </div>
     <div class="rv-data-updated" id="rv-data-updated" style="text-align: center; padding: 8px; font-size: 12px; color: var(--rv-text-muted); border-bottom: 1px solid var(--rv-border);">
       Data updated: <span id="rv-data-updated-date">Loading...</span> (daily snapshots)
     </div>
@@ -75,13 +72,10 @@
 
   <nav class="rv-subnav" aria-label="Dashboard sections">
     <a href="#cockpit">Overview</a>
-    <a href="#macro">Macro</a>
     <a href="#stocks">Stocks</a>
-    <a href="#crypto">Crypto</a>
-    <a href="#news">News</a>
     <a href="#alpha-radar">Alpha Radar</a>
     <a href="#moats">Moats</a>
-    <a href="#watchlist">Watchlist</a>
+    <a href="#watchlist">My Watchlist</a>
   </nav>
 
   <!-- MAIN -->
@@ -140,370 +134,7 @@
       </div>
     </section>
 
-    <div class="rv-cockpit-grid" id="rv-macro">
-      <a id="macro" style="position: absolute; top: -140px;"></a>
-      <section
-        class="rv-section rv-native-block rv-cockpit-card"
-        data-rv-feature="rv-yield-curve"
-        data-rv-block-name="Yield Curve"
-        data-rv-priority="high"
-        data-rv-loading="true"
-      >
-        <div class="rv-native-header">
-          <h2>Yield Curve</h2>
-          <button class="rv-native-refresh" type="button" data-rv-action="refresh">Refresh</button>
-        </div>
-        <div class="rv-native-body rv-card">
-          <div class="rv-native-skeleton">
-            <div class="rv-native-line"></div>
-            <div class="rv-native-line short"></div>
-          </div>
-          <div class="rv-native-root" data-rv-root></div>
-        </div>
-      </section>
-
-      <section
-        class="rv-section rv-native-block rv-cockpit-card"
-        data-rv-feature="rv-sector-rotation"
-        data-rv-block-name="Sector Rotation"
-        data-rv-priority="high"
-        data-rv-loading="true"
-      >
-        <div class="rv-native-header">
-          <h2>Sector Rotation</h2>
-          <button class="rv-native-refresh" type="button" data-rv-action="refresh">Refresh</button>
-        </div>
-        <div class="rv-native-body rv-card">
-          <div class="rv-native-skeleton">
-            <div class="rv-native-line"></div>
-            <div class="rv-native-line short"></div>
-          </div>
-          <div class="rv-native-root" data-rv-root></div>
-        </div>
-      </section>
-
-      <section
-        class="rv-section rv-native-block rv-cockpit-card"
-        data-rv-feature="rv-central-bank-watch"
-        data-rv-block-name="Central Bank Watch"
-        data-rv-priority="high"
-        data-rv-loading="true"
-      >
-        <div class="rv-native-header">
-          <h2>Central Bank Watch</h2>
-          <button class="rv-native-refresh" type="button" data-rv-action="refresh">Refresh</button>
-        </div>
-        <div class="rv-native-body rv-card">
-          <div class="rv-native-skeleton">
-            <div class="rv-native-line"></div>
-            <div class="rv-native-line short"></div>
-          </div>
-          <div class="rv-native-root" data-rv-root></div>
-        </div>
-      </section>
-    </div>
-
-    <section class="rv-section">
-      <h2>What RubikVault will cover</h2>
-      <p>
-        The goal is a clear, multi-asset dashboard that connects macro, flows and cycles –
-        instead of chasing headlines or noise.
-      </p>
-
-      <div class="rv-metric-grid">
-        <a class="rv-metric-card" href="#">
-          <h4>Equities &amp; Factors</h4>
-          <p>Indices, sectors, volatility, breadth and factor regimes.</p>
-        </a>
-        <a class="rv-metric-card" href="#">
-          <h4>Crypto &amp; On-chain</h4>
-          <p>BTC/ETH cycles, liquidity, leverage and ETF flows.</p>
-        </a>
-        <a class="rv-metric-card" href="#">
-          <h4>Macro &amp; Rates</h4>
-          <p>Yields, inflation expectations, dollar &amp; liquidity backdrop.</p>
-        </a>
-        <a class="rv-metric-card" href="#">
-          <h4>Commodities</h4>
-          <p>Energy, metals and agricultural markets as macro context.</p>
-        </a>
-      </div>
-    </section>
-
-    <section class="rv-section rv-follow">
-      <h2>Follow the project</h2>
-      <p>
-        Channels are still in setup. Experiments and dashboards will appear step by step.
-      </p>
-
-      <div class="rv-follow-grid">
-        <a
-          class="rv-follow-card"
-          href="https://www.youtube.com/@RubikVault"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h3>YouTube</h3>
-          <p>Longer form breakdowns and dashboard walkthroughs.</p>
-        </a>
-        <a
-          class="rv-follow-card"
-          href="https://x.com/RubikVault"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h3>X</h3>
-          <p>Short updates, charts and market context.</p>
-        </a>
-        <a
-          class="rv-follow-card"
-          href="https://www.tiktok.com/@rubikvault"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h3>TikTok</h3>
-          <p>Clipped highlights and quick takes.</p>
-        </a>
-        <a
-          class="rv-follow-card"
-          href="https://www.instagram.com/rubikvault"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h3>Instagram</h3>
-          <p>Visual explainers and carousels.</p>
-        </a>
-      </div>
-    </section>
-
-    <div class="rv-block-grid">
-    <!-- RV NATIVE BLOCK 01: Market Health -->
-    <section
-      class="rv-section rv-native-block"
-      data-rv-feature="rv-market-health"
-      data-rv-block-name="Market Health"
-      data-rv-priority="high"
-      data-rv-loading="true"
-      data-rv-collapsible="true"
-      data-rv-span="wide"
-      id="rv-stocks"
-      data-rv-anchor="stocks"
-    >
-      <a id="stocks" style="position: absolute; top: -140px;"></a>
-      <div class="rv-native-header">
-        <h2>Market Health</h2>
-        <button class="rv-native-refresh" type="button" data-rv-action="refresh">Refresh</button>
-      </div>
-      <div class="rv-native-body rv-card">
-        <div class="rv-native-skeleton">
-          <div class="rv-native-line"></div>
-          <div class="rv-native-line short"></div>
-          <div class="rv-native-line"></div>
-        </div>
-        <div class="rv-native-root" data-rv-root></div>
-      </div>
-    </section>
-
-    <!-- RV NATIVE BLOCK 02: Price Snapshot (DEPRECATED - DISABLED) -->
-    <section
-      class="rv-section rv-native-block"
-      data-rv-feature="rv-price-snapshot"
-      data-rv-block-name="Price Snapshot"
-      style="display: none;"
-      data-rv-priority="high"
-      data-rv-loading="true"
-      data-rv-collapsible="true"
-      data-rv-deprecated="true"
-      aria-hidden="true"
-    >
-      <div class="rv-native-header">
-        <h2>Price Snapshot</h2>
-        <button class="rv-native-refresh" type="button" data-rv-action="refresh">Refresh</button>
-      </div>
-      <div class="rv-native-body rv-card">
-        <div class="rv-native-skeleton">
-          <div class="rv-native-line"></div>
-          <div class="rv-native-line short"></div>
-          <div class="rv-native-line"></div>
-        </div>
-        <div class="rv-native-root" data-rv-root></div>
-      </div>
-    </section>
-
-    <!-- RV NATIVE BLOCK 03: Top Movers -->
-    <section
-      class="rv-section rv-native-block"
-      data-rv-feature="rv-top-movers"
-      data-rv-block-name="Volume Top Movers"
-      data-rv-priority="medium"
-      data-rv-loading="true"
-      data-rv-collapsible="true"
-    >
-      <div class="rv-native-header">
-        <h2>Volume Top Movers</h2>
-        <button class="rv-native-refresh" type="button" data-rv-action="refresh">Refresh</button>
-      </div>
-      <div class="rv-native-body rv-card">
-        <div class="rv-native-skeleton">
-          <div class="rv-native-line"></div>
-          <div class="rv-native-line short"></div>
-          <div class="rv-native-line"></div>
-        </div>
-        <div class="rv-native-root" data-rv-root></div>
-      </div>
-    </section>
-
-    <!-- RV NATIVE BLOCK 04: Earnings Calendar -->
-    <section
-      class="rv-section rv-native-block"
-      data-rv-feature="rv-earnings-calendar"
-      data-rv-block-name="Earnings Calendar"
-      data-rv-priority="low"
-      data-rv-loading="true"
-      data-rv-collapsible="true"
-    >
-      <div class="rv-native-header">
-        <h2>Earnings Calendar</h2>
-        <button class="rv-native-refresh" type="button" data-rv-action="refresh">Refresh</button>
-      </div>
-      <div class="rv-native-body rv-card">
-        <div class="rv-native-skeleton">
-          <div class="rv-native-line"></div>
-          <div class="rv-native-line short"></div>
-          <div class="rv-native-line"></div>
-        </div>
-        <div class="rv-native-root" data-rv-root></div>
-      </div>
-    </section>
-
-    <!-- RV NATIVE BLOCK 05: News Headlines -->
-    <section
-      class="rv-section rv-native-block"
-      data-rv-feature="rv-news-headlines"
-      data-rv-block-name="News Headlines"
-      data-rv-priority="low"
-      data-rv-loading="true"
-      data-rv-collapsible="true"
-      data-rv-span="wide"
-      id="rv-news"
-      data-rv-anchor="news"
-    >
-      <div class="rv-native-header">
-        <h2>News Headlines</h2>
-        <button class="rv-native-refresh" type="button" data-rv-action="refresh">Refresh</button>
-      </div>
-      <div class="rv-native-body rv-card">
-        <div class="rv-native-skeleton">
-          <div class="rv-native-line"></div>
-          <div class="rv-native-line short"></div>
-          <div class="rv-native-line"></div>
-        </div>
-        <div class="rv-native-root" data-rv-root></div>
-      </div>
-    </section>
-
-    <!-- RV NATIVE BLOCK 12: News Intelligence (DISABLED) -->
-    <section
-      class="rv-section rv-native-block"
-      data-rv-feature="rv-news-intelligence"
-      data-rv-block-name="News Intelligence"
-      data-rv-priority="low"
-      data-rv-loading="true"
-      data-rv-collapsible="true"
-      data-rv-span="wide"
-      style="display: none;"
-      data-rv-disabled="true"
-      aria-hidden="true"
-    >
-      <div class="rv-native-header">
-        <h2>News Intelligence</h2>
-        <button class="rv-native-refresh" type="button" data-rv-action="refresh">Refresh</button>
-      </div>
-      <div class="rv-native-body rv-card">
-        <div class="rv-native-skeleton">
-          <div class="rv-native-line"></div>
-          <div class="rv-native-line short"></div>
-          <div class="rv-native-line"></div>
-        </div>
-        <div class="rv-native-root" data-rv-root></div>
-      </div>
-    </section>
-
-    <!-- RV NATIVE BLOCK 06: Watchlist Local -->
-    <section
-      class="rv-section rv-native-block"
-      data-rv-feature="rv-watchlist-local"
-      data-rv-block-name="Watchlist Local"
-      data-rv-priority="low"
-      data-rv-loading="true"
-      data-rv-collapsible="true"
-      data-rv-span="wide"
-    >
-      <div class="rv-native-header">
-        <h2>Watchlist Local</h2>
-        <button class="rv-native-refresh" type="button" data-rv-action="refresh">Refresh</button>
-      </div>
-      <div class="rv-native-body rv-card">
-        <div class="rv-native-skeleton">
-          <div class="rv-native-line"></div>
-          <div class="rv-native-line short"></div>
-          <div class="rv-native-line"></div>
-        </div>
-        <div class="rv-native-root" data-rv-root></div>
-      </div>
-    </section>
-
-    <!-- RV NATIVE BLOCK 07: Export CSV -->
-    <section
-      class="rv-section rv-native-block"
-      data-rv-feature="rv-export-csv"
-      data-rv-block-name="Export CSV"
-      data-rv-priority="low"
-      data-rv-loading="true"
-      data-rv-collapsible="true"
-    >
-      <div class="rv-native-header">
-        <h2>Export CSV</h2>
-        <button class="rv-native-refresh" type="button" data-rv-action="refresh">Refresh</button>
-      </div>
-      <div class="rv-native-body rv-card">
-        <div class="rv-native-skeleton">
-          <div class="rv-native-line"></div>
-          <div class="rv-native-line short"></div>
-          <div class="rv-native-line"></div>
-        </div>
-        <div class="rv-native-root" data-rv-root></div>
-      </div>
-    </section>
-
-    <!-- RV NATIVE BLOCK 08: Macro & Rates (DEPRECATED - DISABLED) -->
-    <section
-      class="rv-section rv-native-block"
-      data-rv-feature="rv-macro-rates"
-      data-rv-block-name="Macro & Rates"
-      style="display: none;"
-      data-rv-priority="low"
-      data-rv-loading="true"
-      data-rv-collapsible="true"
-      data-rv-span="wide"
-      data-rv-deprecated="true"
-      aria-hidden="true"
-    >
-      <div class="rv-native-header">
-        <h2>Macro &amp; Rates</h2>
-        <button class="rv-native-refresh" type="button" data-rv-action="refresh">Refresh</button>
-      </div>
-      <div class="rv-native-body rv-card">
-        <div class="rv-native-skeleton">
-          <div class="rv-native-line"></div>
-          <div class="rv-native-line short"></div>
-          <div class="rv-native-line"></div>
-        </div>
-        <div class="rv-native-root" data-rv-root></div>
-      </div>
-    </section>
-
-    <!-- RV NATIVE BLOCK 13: S&P 500 Sectors -->
+    <!-- S&P 500 Sectors (Public v1) -->
     <section
       class="rv-section rv-native-block"
       data-rv-feature="rv-sp500-sectors"
@@ -513,6 +144,7 @@
       data-rv-collapsible="true"
       data-rv-span="wide"
     >
+      <a id="stocks" style="position: absolute; top: -140px;"></a>
       <a id="sectors" style="position: absolute; top: -140px;"></a>
       <div class="rv-native-header">
         <h2>S&amp;P 500 Sectors <span class="rv-tooltip-wrapper"><span class="rv-tooltip-icon" aria-label="Information">ⓘ</span><span class="rv-tooltip-content"><strong>S&amp;P 500 Sectors</strong><br>Purpose: Daily performance of S&amp;P 500 sectors to identify relative strength/weakness.<br>Data source: Snapshot (Yahoo Finance sector data)<br>Update: Daily (EOD)<br>Limitations: No intraday data, no financial advice.</span></span></h2>
@@ -528,389 +160,7 @@
       </div>
     </section>
 
-    <!-- RV NATIVE BLOCK XX: Market Regime Radar -->
-    <section
-      class="rv-section rv-native-block"
-      data-rv-feature="rv-market-regime"
-      data-rv-block-name="Market Regime Radar"
-      data-rv-priority="low"
-      data-rv-loading="true"
-      data-rv-collapsible="true"
-    >
-      <div class="rv-native-header">
-        <h2>Market Regime Radar</h2>
-        <button class="rv-native-refresh" type="button" data-rv-action="refresh">Refresh</button>
-      </div>
-      <div class="rv-native-body rv-card">
-        <div class="rv-native-skeleton">
-          <div class="rv-native-line"></div>
-          <div class="rv-native-line short"></div>
-          <div class="rv-native-line"></div>
-        </div>
-        <div class="rv-native-root" data-rv-root></div>
-      </div>
-    </section>
-
-    <!-- RV NATIVE BLOCK XX: ARB Risk Regime -->
-    <section
-      class="rv-section rv-native-block"
-      data-rv-feature="rv-arb-risk-regime"
-      data-rv-block-name="ARB Risk Regime"
-      data-rv-priority="low"
-      data-rv-loading="true"
-      data-rv-collapsible="true"
-    >
-      <div class="rv-native-header">
-        <h2>ARB Risk Regime</h2>
-        <button class="rv-native-refresh" type="button" data-rv-action="refresh">Refresh</button>
-      </div>
-      <div class="rv-native-body rv-card">
-        <div class="rv-native-skeleton">
-          <div class="rv-native-line"></div>
-          <div class="rv-native-line short"></div>
-          <div class="rv-native-line"></div>
-        </div>
-        <div class="rv-native-root" data-rv-root></div>
-      </div>
-    </section>
-
-    <!-- RV NATIVE BLOCK XX: ARB Liquidity Pulse -->
-    <section
-      class="rv-section rv-native-block"
-      data-rv-feature="rv-arb-liquidity-pulse"
-      data-rv-block-name="ARB Liquidity Pulse"
-      data-rv-priority="low"
-      data-rv-loading="true"
-      data-rv-collapsible="true"
-    >
-      <div class="rv-native-header">
-        <h2>ARB Liquidity Pulse</h2>
-        <button class="rv-native-refresh" type="button" data-rv-action="refresh">Refresh</button>
-      </div>
-      <div class="rv-native-body rv-card">
-        <div class="rv-native-skeleton">
-          <div class="rv-native-line"></div>
-          <div class="rv-native-line short"></div>
-          <div class="rv-native-line"></div>
-        </div>
-        <div class="rv-native-root" data-rv-root></div>
-      </div>
-    </section>
-
-    <!-- RV NATIVE BLOCK XX: ARB Breadth Lite -->
-    <section
-      class="rv-section rv-native-block"
-      data-rv-feature="rv-arb-breadth-lite"
-      data-rv-block-name="ARB Breadth Lite"
-      data-rv-priority="low"
-      data-rv-loading="true"
-      data-rv-collapsible="true"
-    >
-      <div class="rv-native-header">
-        <h2>ARB Breadth Lite</h2>
-        <button class="rv-native-refresh" type="button" data-rv-action="refresh">Refresh</button>
-      </div>
-      <div class="rv-native-body rv-card">
-        <div class="rv-native-skeleton">
-          <div class="rv-native-line"></div>
-          <div class="rv-native-line short"></div>
-          <div class="rv-native-line"></div>
-        </div>
-        <div class="rv-native-root" data-rv-root></div>
-      </div>
-    </section>
-
-    <!-- RV NATIVE BLOCK XX: Why This Stock Moved -->
-    <section
-      class="rv-section rv-native-block"
-      data-rv-feature="rv-why-moved"
-      data-rv-block-name="Why This Stock Moved"
-      data-rv-priority="low"
-      data-rv-loading="true"
-      data-rv-collapsible="true"
-    >
-      <div class="rv-native-header">
-        <h2>Why This Stock Moved</h2>
-        <button class="rv-native-refresh" type="button" data-rv-action="refresh">Refresh</button>
-      </div>
-      <div class="rv-native-body rv-card">
-        <div class="rv-native-skeleton">
-          <div class="rv-native-line"></div>
-          <div class="rv-native-line short"></div>
-          <div class="rv-native-line"></div>
-        </div>
-        <div class="rv-native-root" data-rv-root></div>
-      </div>
-    </section>
-
-    <!-- RV NATIVE BLOCK XX: Volume Anomaly -->
-    <section
-      class="rv-section rv-native-block"
-      data-rv-feature="rv-volume-anomaly"
-      data-rv-block-name="Volume Anomaly"
-      data-rv-priority="low"
-      data-rv-loading="true"
-      data-rv-collapsible="true"
-    >
-      <div class="rv-native-header">
-        <h2>Volume Anomaly</h2>
-        <button class="rv-native-refresh" type="button" data-rv-action="refresh">Refresh</button>
-      </div>
-      <div class="rv-native-body rv-card">
-        <div class="rv-native-skeleton">
-          <div class="rv-native-line"></div>
-          <div class="rv-native-line short"></div>
-          <div class="rv-native-line"></div>
-        </div>
-        <div class="rv-native-root" data-rv-root></div>
-      </div>
-    </section>
-
-    <!-- RV NATIVE BLOCK XX: Breakout Energy Radar -->
-    <section
-      class="rv-section rv-native-block"
-      data-rv-feature="rv-breakout-energy"
-      data-rv-block-name="Breakout Energy Radar"
-      data-rv-priority="low"
-      data-rv-loading="true"
-      data-rv-collapsible="true"
-    >
-      <div class="rv-native-header">
-        <h2>Breakout Energy Radar</h2>
-        <button class="rv-native-refresh" type="button" data-rv-action="refresh">Refresh</button>
-      </div>
-      <div class="rv-native-body rv-card">
-        <div class="rv-native-skeleton">
-          <div class="rv-native-line"></div>
-          <div class="rv-native-line short"></div>
-          <div class="rv-native-line"></div>
-        </div>
-        <div class="rv-native-root" data-rv-root></div>
-      </div>
-    </section>
-
-    <!-- RV NATIVE BLOCK XX: Inverse Hype Detector -->
-    <section
-      class="rv-section rv-native-block"
-      data-rv-feature="rv-hype-divergence"
-      data-rv-block-name="Inverse Hype Detector"
-      data-rv-priority="low"
-      data-rv-loading="true"
-      data-rv-collapsible="true"
-    >
-      <div class="rv-native-header">
-        <h2>Inverse Hype Detector</h2>
-        <button class="rv-native-refresh" type="button" data-rv-action="refresh">Refresh</button>
-      </div>
-      <div class="rv-native-body rv-card">
-        <div class="rv-native-skeleton">
-          <div class="rv-native-line"></div>
-          <div class="rv-native-line short"></div>
-          <div class="rv-native-line"></div>
-        </div>
-        <div class="rv-native-root" data-rv-root></div>
-      </div>
-    </section>
-
-    <!-- RV NATIVE BLOCK XX: Congress Trading Tracker (DISABLED) -->
-    <section
-      class="rv-section rv-native-block"
-      data-rv-feature="rv-congress-trading"
-      data-rv-block-name="Congress Trading Tracker"
-      data-rv-priority="low"
-      data-rv-loading="true"
-      data-rv-collapsible="true"
-      style="display: none;"
-      data-rv-disabled="true"
-      aria-hidden="true"
-    >
-      <div class="rv-native-header">
-        <h2>Congress Trading Tracker</h2>
-        <button class="rv-native-refresh" type="button" data-rv-action="refresh">Refresh</button>
-      </div>
-      <div class="rv-native-body rv-card">
-        <div class="rv-native-skeleton">
-          <div class="rv-native-line"></div>
-          <div class="rv-native-line short"></div>
-          <div class="rv-native-line"></div>
-        </div>
-        <div class="rv-native-root" data-rv-root></div>
-      </div>
-    </section>
-
-    <!-- RV NATIVE BLOCK XX: Insider Cluster Buy Alarm (DISABLED) -->
-    <section
-      class="rv-section rv-native-block"
-      data-rv-feature="rv-insider-cluster"
-      data-rv-block-name="Insider Cluster Buy Alarm"
-      data-rv-priority="low"
-      data-rv-loading="true"
-      data-rv-collapsible="true"
-      style="display: none;"
-      data-rv-disabled="true"
-      aria-hidden="true"
-    >
-      <div class="rv-native-header">
-        <h2>Insider Cluster Buy Alarm</h2>
-        <button class="rv-native-refresh" type="button" data-rv-action="refresh">Refresh</button>
-      </div>
-      <div class="rv-native-body rv-card">
-        <div class="rv-native-skeleton">
-          <div class="rv-native-line"></div>
-          <div class="rv-native-line short"></div>
-          <div class="rv-native-line"></div>
-        </div>
-        <div class="rv-native-root" data-rv-root></div>
-      </div>
-    </section>
-
-    <!-- RV NATIVE BLOCK XX: Analyst Stampede (DISABLED) -->
-    <section
-      class="rv-section rv-native-block"
-      data-rv-feature="rv-analyst-stampede"
-      data-rv-block-name="Analyst Stampede"
-      data-rv-priority="low"
-      data-rv-loading="true"
-      data-rv-collapsible="true"
-      style="display: none;"
-      data-rv-disabled="true"
-      aria-hidden="true"
-    >
-      <div class="rv-native-header">
-        <h2>Analyst Stampede</h2>
-        <button class="rv-native-refresh" type="button" data-rv-action="refresh">Refresh</button>
-      </div>
-      <div class="rv-native-body rv-card">
-        <div class="rv-native-skeleton">
-          <div class="rv-native-line"></div>
-          <div class="rv-native-line short"></div>
-          <div class="rv-native-line"></div>
-        </div>
-        <div class="rv-native-root" data-rv-root></div>
-      </div>
-    </section>
-
-    <!-- RV NATIVE BLOCK XX: Smart Money Score -->
-    <section
-      class="rv-section rv-native-block"
-      data-rv-feature="rv-smart-money"
-      data-rv-block-name="Smart Money Score"
-      data-rv-priority="low"
-      data-rv-loading="true"
-      data-rv-collapsible="true"
-    >
-      <div class="rv-native-header">
-        <h2>Smart Money Score</h2>
-        <button class="rv-native-refresh" type="button" data-rv-action="refresh">Refresh</button>
-      </div>
-      <div class="rv-native-body rv-card">
-        <div class="rv-native-skeleton">
-          <div class="rv-native-line"></div>
-          <div class="rv-native-line short"></div>
-          <div class="rv-native-line"></div>
-        </div>
-        <div class="rv-native-root" data-rv-root></div>
-      </div>
-    </section>
-
-    <!-- RV NATIVE BLOCK XX: Alpha Consistency Monitor -->
-    <section
-      class="rv-section rv-native-block"
-      data-rv-feature="rv-alpha-performance"
-      data-rv-block-name="Alpha Consistency Monitor"
-      data-rv-priority="low"
-      data-rv-loading="true"
-      data-rv-collapsible="true"
-      data-rv-span="wide"
-    >
-      <div class="rv-native-header">
-        <h2>Alpha Consistency Monitor</h2>
-        <button class="rv-native-refresh" type="button" data-rv-action="refresh">Refresh</button>
-      </div>
-      <div class="rv-native-body rv-card">
-        <div class="rv-native-skeleton">
-          <div class="rv-native-line"></div>
-          <div class="rv-native-line short"></div>
-          <div class="rv-native-line"></div>
-        </div>
-        <div class="rv-native-root" data-rv-root></div>
-      </div>
-    </section>
-
-    <!-- RV NATIVE BLOCK XX: Earnings Reality Check -->
-    <section
-      class="rv-section rv-native-block"
-      data-rv-feature="rv-earnings-reality"
-      data-rv-block-name="Earnings Reality Check"
-      data-rv-priority="low"
-      data-rv-loading="true"
-      data-rv-collapsible="true"
-      data-rv-span="wide"
-    >
-      <div class="rv-native-header">
-        <h2>Earnings Reality Check</h2>
-        <button class="rv-native-refresh" type="button" data-rv-action="refresh">Refresh</button>
-      </div>
-      <div class="rv-native-body rv-card">
-        <div class="rv-native-skeleton">
-          <div class="rv-native-line"></div>
-          <div class="rv-native-line short"></div>
-          <div class="rv-native-line"></div>
-        </div>
-        <div class="rv-native-root" data-rv-root></div>
-      </div>
-    </section>
-
-    <!-- RV NATIVE BLOCK 09: Crypto Snapshot -->
-    <section
-      class="rv-section rv-native-block"
-      data-rv-feature="rv-crypto-snapshot"
-      data-rv-block-name="Crypto Snapshot"
-      data-rv-priority="low"
-      data-rv-loading="true"
-      data-rv-collapsible="true"
-      id="rv-crypto"
-      data-rv-anchor="crypto"
-    >
-      <a id="crypto" style="position: absolute; top: -140px;"></a>
-      <div class="rv-native-header">
-        <h2>Crypto Snapshot</h2>
-        <button class="rv-native-refresh" type="button" data-rv-action="refresh">Refresh</button>
-      </div>
-      <div class="rv-native-body rv-card">
-        <div class="rv-native-skeleton">
-          <div class="rv-native-line"></div>
-          <div class="rv-native-line short"></div>
-          <div class="rv-native-line"></div>
-        </div>
-        <div class="rv-native-root" data-rv-root></div>
-      </div>
-    </section>
-
-    <!-- RV NATIVE BLOCK 10: Sentiment Barometer -->
-    <section
-      class="rv-section rv-native-block"
-      data-rv-feature="rv-sentiment-barometer"
-      data-rv-block-name="Sentiment Barometer"
-      data-rv-priority="low"
-      data-rv-loading="true"
-      data-rv-collapsible="true"
-    >
-      <div class="rv-native-header">
-        <h2>Sentiment Barometer</h2>
-        <button class="rv-native-refresh" type="button" data-rv-action="refresh">Refresh</button>
-      </div>
-      <div class="rv-native-body rv-card">
-        <div class="rv-native-skeleton">
-          <div class="rv-native-line"></div>
-          <div class="rv-native-line short"></div>
-          <div class="rv-native-line"></div>
-        </div>
-        <div class="rv-native-root" data-rv-root></div>
-      </div>
-    </section>
-
-    <!-- RV NATIVE BLOCK 11: Tech Signals -->
+    <!-- Tech Signals (Public v1) -->
     <section
       class="rv-section rv-native-block"
       data-rv-feature="rv-tech-signals" data-block-id="tech-signals"
@@ -1098,11 +348,11 @@
             <button type="button" id="rv-watchlist-import" class="rv-btn-secondary">Import JSON</button>
             <input type="file" id="rv-watchlist-file" accept=".json" style="display: none;" />
           </div>
+          <div id="rv-watchlist-status" class="rv-native-note" style="display:none;"></div>
           <div id="rv-watchlist-list" class="rv-watchlist-list"></div>
         </div>
       </div>
     </section>
-    </div>
   </main>
 
   <!-- FOOTER (ohne Bild, nur Text + Links) -->
@@ -1128,9 +378,7 @@
     document.getElementById('rv-year').textContent = new Date().getFullYear();
   </script>
   </footer>
-  <div id="rv-debug-root" hidden></div>
   <script type="module" src="./market-clock.js"></script>
-  <script type="module" src="./rv-debug-console.js"></script>
   <script type="module" src="./rv-loader.js"></script>
   <script>
     // Watchlist v1 Functionality
@@ -1142,11 +390,39 @@
       const importBtn = document.getElementById("rv-watchlist-import");
       const fileInput = document.getElementById("rv-watchlist-file");
       const listEl = document.getElementById("rv-watchlist-list");
+      const statusEl = document.getElementById("rv-watchlist-status");
+      const MAX_SYMBOLS = 20;
+      const SYMBOL_RE = /^[A-Z0-9.:-]{1,8}$/;
+
+      function setStatus(message) {
+        if (!statusEl) return;
+        if (!message) {
+          statusEl.textContent = "";
+          statusEl.style.display = "none";
+          return;
+        }
+        statusEl.textContent = message;
+        statusEl.style.display = "block";
+      }
+
+      function normalizeSymbol(value) {
+        return String(value || "").trim().toUpperCase().replace(/\s+/g, "").slice(0, 8);
+      }
+
+      function normalizeList(input) {
+        const list = Array.isArray(input) ? input : [];
+        const cleaned = list
+          .map((s) => normalizeSymbol(s))
+          .filter((s) => SYMBOL_RE.test(s));
+        const deduped = Array.from(new Set(cleaned));
+        deduped.sort((a, b) => a.localeCompare(b));
+        return deduped.slice(0, MAX_SYMBOLS);
+      }
       
       function loadWatchlist() {
         try {
           const raw = localStorage.getItem(STORAGE_KEY);
-          return raw ? JSON.parse(raw) : [];
+          return normalizeList(raw ? JSON.parse(raw) : []);
         } catch (e) {
           return [];
         }
@@ -1154,9 +430,10 @@
       
       function saveWatchlist(symbols) {
         try {
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(symbols));
+          const normalized = normalizeList(symbols);
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(normalized));
           if (window.RV_SHARED) {
-            window.RV_SHARED.watchlist = symbols;
+            window.RV_SHARED.watchlist = normalized;
           }
         } catch (e) {
           console.error("Failed to save watchlist:", e);
@@ -1167,8 +444,10 @@
         const symbols = loadWatchlist();
         if (!symbols.length) {
           listEl.innerHTML = '<div class="rv-native-empty">No symbols in watchlist. Add symbols above.</div>';
+          setStatus('Tip: max 20 symbols. Format: AAPL, BRK.B, BTC-USD');
           return;
         }
+        setStatus(`Saved locally: ${symbols.length}/${MAX_SYMBOLS}`);
         listEl.innerHTML = symbols.map(symbol => `
           <div class="rv-watchlist-item">
             <span>${symbol.toUpperCase()}</span>
@@ -1189,15 +468,26 @@
       
       if (addBtn && inputEl) {
         addBtn.addEventListener("click", () => {
-          const symbol = inputEl.value.trim().toUpperCase();
+          const symbol = normalizeSymbol(inputEl.value);
           if (!symbol) return;
-          const symbols = loadWatchlist();
-          if (!symbols.includes(symbol)) {
-            symbols.push(symbol);
-            saveWatchlist(symbols);
-            renderWatchlist();
-            inputEl.value = "";
+          if (!SYMBOL_RE.test(symbol)) {
+            setStatus('Invalid symbol. Allowed: A-Z 0-9 . : - (max 8 chars)');
+            return;
           }
+          const symbols = loadWatchlist();
+          if (symbols.includes(symbol)) {
+            setStatus(`Already in watchlist: ${symbol}`);
+            inputEl.value = "";
+            return;
+          }
+          if (symbols.length >= MAX_SYMBOLS) {
+            setStatus(`Watchlist limit reached (max ${MAX_SYMBOLS}). Remove one first.`);
+            return;
+          }
+          symbols.push(symbol);
+          saveWatchlist(symbols);
+          inputEl.value = "";
+          renderWatchlist();
         });
         
         inputEl.addEventListener("keypress", (e) => {
@@ -1215,9 +505,11 @@
           const url = URL.createObjectURL(blob);
           const a = document.createElement("a");
           a.href = url;
-          a.download = "rubikvault-watchlist.json";
+          const day = new Date().toISOString().slice(0, 10);
+          a.download = `rubikvault-watchlist-${day}.json`;
           a.click();
           URL.revokeObjectURL(url);
+          setStatus(`Exported ${symbols.length} symbols.`);
         });
       }
       
@@ -1229,19 +521,25 @@
         fileInput.addEventListener("change", (e) => {
           const file = e.target.files[0];
           if (!file) return;
+          if (!/\.json$/i.test(file.name)) {
+            setStatus('Please select a .json file.');
+            fileInput.value = "";
+            return;
+          }
           const reader = new FileReader();
           reader.onload = (event) => {
             try {
-              const symbols = JSON.parse(event.target.result);
-              if (Array.isArray(symbols)) {
-                saveWatchlist(symbols);
-                renderWatchlist();
-                alert(`Imported ${symbols.length} symbols`);
-              } else {
-                alert("Invalid JSON format");
+              const parsed = JSON.parse(event.target.result);
+              const symbols = normalizeList(parsed);
+              if (!symbols.length) {
+                setStatus('Import failed: no valid symbols found.');
+                return;
               }
+              saveWatchlist(symbols);
+              renderWatchlist();
+              setStatus(`Imported ${symbols.length} symbols.`);
             } catch (e) {
-              alert("Failed to parse JSON: " + e.message);
+              setStatus("Failed to parse JSON: " + e.message);
             }
           };
           reader.readAsText(file);

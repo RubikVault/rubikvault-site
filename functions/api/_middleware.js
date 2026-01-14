@@ -82,6 +82,14 @@ function isDebugEndpoint(pathname) {
   );
 }
 
+function isInternalOnlyEndpoint(pathname) {
+  return (
+    pathname === "/api/diag" ||
+    pathname === "/api/system-health" ||
+    pathname === "/api/debug-bundle"
+  );
+}
+
 function shouldLogEvent({ status, dataQuality, debugActive, isWarn }) {
   if (status >= 400) return true;
   if (debugActive) return true;
@@ -125,7 +133,11 @@ export async function onRequest(context) {
       .split(",")
       .map((entry) => entry.trim())
       .filter(Boolean)),
-    "rv:circuit:"
+    "rv:circuit:",
+    "rv:lastgood:",
+    "rv:budget:",
+    "cb:",
+    "log:event:"
   ];
   const kvGuard = createKVGuard({ RV_KV: env?.RV_KV }, { debugMode, debugKind, allowPrefixes });
   if (env) env.RV_KV = kvGuard;
@@ -143,6 +155,17 @@ export async function onRequest(context) {
   // CORS (immer an – du kannst später tighten)
   if (request.method === "OPTIONS") {
     return new Response(null, { status: 204, headers: buildCorsHeaders() });
+  }
+
+  const internalToken = env?.RV_INTERNAL_TOKEN || "";
+  if (internalToken && isApi && isInternalOnlyEndpoint(url.pathname)) {
+    const provided =
+      request.headers.get("x-rv-internal-token") || url.searchParams.get("token") || "";
+    if (!provided || provided !== internalToken) {
+      const headers = new Headers(buildCorsHeaders());
+      headers.set("Content-Type", "text/plain; charset=utf-8");
+      return new Response("Not found", { status: 404, headers });
+    }
   }
 
   // Trace-Id

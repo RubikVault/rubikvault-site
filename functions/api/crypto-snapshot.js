@@ -8,6 +8,7 @@ import {
   safeSnippet,
   withCoinGeckoKey
 } from "./_shared.js";
+import { checkAndIncrementProviderBudget } from "../_shared/provider_budget.js";
 
 const FEATURE_ID = "crypto-snapshot";
 const KV_TTL = 90;
@@ -148,6 +149,32 @@ export async function onRequestGet({ request, env, data }) {
     }
   }
 
+  const budgetMax = Number(env?.RV_BUDGET_COINGECKO_PER_DAY || 0) || 0;
+  const budget = await checkAndIncrementProviderBudget(env, "coingecko", budgetMax);
+  if (budget.limited) {
+    const cached = !panic ? await kvGetJson(env, cacheKey) : null;
+    const response = makeResponse({
+      ok: true,
+      feature: FEATURE_ID,
+      traceId,
+      data: cached?.hit && cached.value?.data ? cached.value.data : buildFallbackData(),
+      cache: cached?.hit ? { hit: true, ttl: KV_TTL, layer: "kv" } : { hit: false, ttl: 0, layer: "none" },
+      upstream: { url: UPSTREAM_URL, status: null, snippet: "" },
+      error: { code: "COVERAGE_LIMIT", message: "Provider budget exceeded", details: budget },
+      meta: { status: "PARTIAL", reason: "COVERAGE_LIMIT", budget },
+      isStale: true
+    });
+    logServer({
+      feature: FEATURE_ID,
+      traceId,
+      cacheLayer: cached?.hit ? "kv" : "none",
+      upstreamStatus: 429,
+      durationMs: Date.now() - started,
+      errorCode: "COVERAGE_LIMIT"
+    });
+    return response;
+  }
+
   let upstreamStatus = null;
   let upstreamSnippet = "";
 
@@ -206,13 +233,11 @@ export async function onRequestGet({ request, env, data }) {
       json = text ? JSON.parse(text) : {};
     } catch (error) {
       const response = makeResponse({
-      ok: true,
-      feature: FEATURE_ID,
-      traceId,
-      data: buildFallbackData(),
-      isStale: true,
+        ok: true,
         feature: FEATURE_ID,
         traceId,
+        data: buildFallbackData(),
+        isStale: true,
         cache: { hit: false, ttl: 0, layer: "none" },
         upstream: { url: UPSTREAM_URL, status: res.status, snippet: upstreamSnippet },
         error: { code: "SCHEMA_INVALID", message: "Invalid JSON", details: {} },

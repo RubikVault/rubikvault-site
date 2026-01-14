@@ -10,6 +10,8 @@ import {
   safeFetchText,
   isHtmlLike
 } from "./_shared.js";
+import { checkAndIncrementProviderBudget } from "../_shared/provider_budget.js";
+import { RequestBudget } from "../_shared/budget.js";
 
 const FEATURE_ID = "sentiment";
 const KV_TTL = 1200;
@@ -94,6 +96,7 @@ function labelFor(score) {
 }
 
 async function fetchSentimentData() {
+  const budget = new RequestBudget(12);
   const parser = new XMLParser({ ignoreAttributes: false });
   const items = [];
   const errors = [];
@@ -102,7 +105,7 @@ async function fetchSentimentData() {
   await Promise.all(
     FEEDS.map(async (feed) => {
       try {
-        const res = await safeFetchText(feed.url, { userAgent: "RubikVault/1.0" });
+        const res = await safeFetchText(feed.url, { userAgent: "RubikVault/1.0", budget });
         const text = res.text || "";
         if (!res.ok || isHtmlLike(text)) {
           errors.push({
@@ -198,7 +201,6 @@ async function _onRequestGetInner({ request, env, data, waitUntil }) {
   if (rateState.limited) {
     const response = makeResponse({
       ok: false,
-      meta: { status: "NO_DATA", reason: "" },
       meta: { status: "NO_DATA", reason: "RATE_LIMITED" },
       feature: FEATURE_ID,
       traceId,
@@ -253,6 +255,36 @@ async function _onRequestGetInner({ request, env, data, waitUntil }) {
       cacheLayer: "kv",
       upstreamStatus: null,
       durationMs: Date.now() - started
+    });
+    return response;
+  }
+
+  const budgetMax = Number(env?.RV_BUDGET_RSS_PER_DAY || 0) || 0;
+  const budget = await checkAndIncrementProviderBudget(env, "rss", budgetMax);
+  if (budget.limited && cacheUsable) {
+    const response = makeResponse({
+      ok: true,
+      meta: { status: "LIVE", reason: "COVERAGE_LIMIT" },
+      feature: FEATURE_ID,
+      traceId,
+      data: cached.value.data,
+      cache: { hit: true, ttl: KV_TTL, layer: "kv" },
+      upstream: { url: "feeds", status: null, snippet: "" },
+      error: {
+        code: "COVERAGE_LIMIT",
+        message: "Provider budget exceeded",
+        details: budget
+      },
+      isStale: true,
+      cacheStatus: "STALE"
+    });
+    logServer({
+      feature: FEATURE_ID,
+      traceId,
+      cacheLayer: "kv",
+      upstreamStatus: 429,
+      durationMs: Date.now() - started,
+      errorCode: "COVERAGE_LIMIT"
     });
     return response;
   }

@@ -1074,17 +1074,44 @@ function resolveStatusLabel(featureId, blockName) {
   return STATUS_LABELS[featureId] || cleanName || blockName || featureId || "Block";
 }
 
+function ensureStatusStrip() {
+  if (typeof document === "undefined") return null;
+  let strip = document.getElementById("rv-status-strip");
+  if (strip) return strip;
+
+  const header = document.querySelector("header.rv-header");
+  if (!header) return null;
+
+  strip = document.createElement("div");
+  strip.className = "rv-status-strip";
+  strip.id = "rv-status-strip";
+  strip.setAttribute("aria-live", "polite");
+  strip.innerHTML = "<span>System status loading…</span>";
+
+  const anchor = header.querySelector("#rv-data-updated");
+  if (anchor && anchor.parentNode === header) {
+    header.insertBefore(strip, anchor);
+  } else {
+    header.appendChild(strip);
+  }
+
+  return strip;
+}
+
 function updateStatusStrip() {
   if (typeof document === "undefined") return;
-  const strip = document.getElementById("rv-status-strip");
-  if (!strip) return;
-  
   // Only show status strip in debug mode
   if (!isDebugEnabled()) {
-    strip.style.display = 'none';
+    const existing = document.getElementById("rv-status-strip");
+    if (existing) existing.remove();
     return;
   }
-  strip.style.display = '';
+
+  const ensured = ensureStatusStrip();
+  if (!ensured) return;
+  
+  // ensure we always write into the ensured element
+  // (if an older strip existed it has been removed above)
 
   const entries = STATUS_ORDER.map((featureId) => {
     const entry = statusState.get(featureId);
@@ -1115,7 +1142,7 @@ function updateStatusStrip() {
       : "--";
   const lastError = statusSummary.lastError || "--";
 
-  strip.innerHTML = `
+  ensured.innerHTML = `
     ${pills}
     <span class="rv-status-meta">Cache hit ${cacheRate}</span>
     <span class="rv-status-meta">Last error: ${lastError}</span>

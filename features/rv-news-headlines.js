@@ -24,6 +24,18 @@ function resolveSource(item) {
   return { code, name };
 }
 
+async function fetchStaticJson(pathname) {
+  const response = await fetch(pathname, {
+    headers: { Accept: "application/json" }
+  });
+  if (!response.ok) {
+    const error = new Error(`HTTP ${response.status}`);
+    error.status = response.status;
+    throw error;
+  }
+  return response.json();
+}
+
 function render(root, payload, logger, featureId) {
   const resolved = resolveWithShadow(featureId, payload, {
     logger,
@@ -32,6 +44,10 @@ function render(root, payload, logger, featureId) {
   });
   const data = resolved?.data || {};
   const items = data.items || [];
+  const meta = data.meta || null;
+  const metaLine = meta
+    ? `Status: ${meta.status || "--"}${meta.lastSuccess ? ` · lastSuccess: ${meta.lastSuccess}` : ""}`
+    : "";
   const partialNote =
     resolved?.ok && (resolved?.isStale || resolved?.error?.code)
       ? "Partial data — some sources unavailable."
@@ -99,6 +115,7 @@ function render(root, payload, logger, featureId) {
 
   root.innerHTML = `
     ${partialNote ? `<div class="rv-native-note">${partialNote}</div>` : ""}
+    ${metaLine ? `<div class="rv-native-note">${metaLine}</div>` : ""}
     <div class="rv-news-list">
       ${items
         .slice(0, 12)
@@ -151,7 +168,51 @@ function render(root, payload, logger, featureId) {
 }
 
 async function loadData({ featureId, traceId, logger }) {
-  return fetchJSON("/news", { feature: featureId, traceId, logger });
+  void featureId;
+  void traceId;
+  void logger;
+  try {
+    const [snapshot, meta] = await Promise.all([
+      fetchStaticJson("/data/news.json"),
+      fetchStaticJson("/data/news.meta.json").catch(() => null)
+    ]);
+
+    const items = Array.isArray(snapshot?.items) ? snapshot.items : [];
+    return {
+      ok: true,
+      ts: snapshot?.generatedAt || new Date().toISOString(),
+      cache: { hit: false, ttl: 0, layer: "cdn" },
+      upstream: { url: "/data/news.json", status: 200, snippet: "" },
+      data: {
+        updatedAt: snapshot?.generatedAt || new Date().toISOString(),
+        source: (meta?.sources || []).map((s) => s.id).filter(Boolean).join(","),
+        items: items.map((item) => ({
+          headline: item.title,
+          url: item.url,
+          publishedAt: item.publishedAt,
+          source: { code: item?.source?.domain || "NEWS", name: item?.source?.name || "news" },
+          sourceId: item?.source?.domain || "news",
+          category: item?.topic || "stocks",
+          categoryLabel: item?.topic || "Stocks"
+        })),
+        meta
+      },
+      error: {}
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      ts: new Date().toISOString(),
+      cache: { hit: false, ttl: 0, layer: "none" },
+      upstream: {
+        url: "/data/news.json",
+        status: error?.status ?? null,
+        snippet: error?.message || "Fetch failed"
+      },
+      error: { code: "STATIC_NEWS_FETCH_FAILED", message: error?.message || "Fetch failed", details: {} },
+      data: { items: [] }
+    };
+  }
 }
 
 export async function init(root, context = {}) {

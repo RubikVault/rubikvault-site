@@ -411,9 +411,39 @@ function resolveStatusLabel(featureId, blockName) {
   return STATUS_LABELS[featureId] || blockName || featureId || "Block";
 }
 
+function ensureStatusStrip() {
+  if (typeof document === "undefined") return null;
+  let strip = document.getElementById("rv-status-strip");
+  if (strip) return strip;
+
+  const header = document.querySelector("header.rv-header");
+  if (!header) return null;
+
+  strip = document.createElement("div");
+  strip.className = "rv-status-strip";
+  strip.id = "rv-status-strip";
+  strip.setAttribute("aria-live", "polite");
+  strip.innerHTML = "<span>System status loading…</span>";
+
+  const anchor = header.querySelector("#rv-data-updated");
+  if (anchor && anchor.parentNode === header) {
+    header.insertBefore(strip, anchor);
+  } else {
+    header.appendChild(strip);
+  }
+
+  return strip;
+}
+
 function updateStatusStrip() {
   if (typeof document === "undefined") return;
-  const strip = document.getElementById("rv-status-strip");
+  if (!isDebugEnabled()) {
+    const existing = document.getElementById("rv-status-strip");
+    if (existing) existing.remove();
+    return;
+  }
+
+  const strip = ensureStatusStrip();
   if (!strip) return;
 
   const entries = STATUS_ORDER.map((featureId) => {

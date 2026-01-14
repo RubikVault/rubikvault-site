@@ -2,6 +2,7 @@ import { createTraceId, makeResponse } from "./_shared.js";
 import { isProduction, requireDebugToken } from "./_env.js";
 import { hash8 } from "../_lib/kv-safe.js";
 import { normalizeError } from "../_shared/errorCodes.js";
+import { getProviderBudgetState } from "../_shared/provider_budget.js";
 
 const FEATURE_ID = "diag";
 const ENDPOINTS = [
@@ -213,7 +214,32 @@ export async function onRequestGet({ request, env, data }) {
     };
   });
 
-  const apiKeys = []; // Placeholder - would need to be populated from env checks
+  const budgetConfigs = [
+    { provider: "coingecko", envKey: "RV_BUDGET_COINGECKO_PER_DAY" },
+    { provider: "rss", envKey: "RV_BUDGET_RSS_PER_DAY" },
+    { provider: "stooq", envKey: "RV_BUDGET_STOOQ_PER_DAY" },
+    { provider: "finnhub", envKey: "RV_BUDGET_FINNHUB_PER_DAY" },
+    { provider: "fmp", envKey: "RV_BUDGET_FMP_PER_DAY" },
+    { provider: "fred", envKey: "RV_BUDGET_FRED_PER_DAY" },
+    { provider: "yahoo", envKey: "RV_BUDGET_YAHOO_PER_DAY" }
+  ];
+  const apiKeys = await Promise.all(
+    budgetConfigs.map(async (cfg) => {
+      const hardLimit = Number(env?.[cfg.envKey] || 0) || 0;
+      const state = await getProviderBudgetState(env, cfg.provider, hardLimit);
+      const status = hardLimit > 0 ? (state.limited ? "limited" : "present") : "unset";
+      return {
+        provider: cfg.provider,
+        alias: cfg.envKey,
+        status,
+        counts_today: state.used ?? 0,
+        hard_limit: hardLimit > 0 ? hardLimit : "—",
+        remaining: hardLimit > 0 ? state.remaining ?? 0 : "—",
+        last_error: state.limited ? "COVERAGE_LIMIT" : "—",
+        last_used: state.used !== null ? new Date().toISOString() : null
+      };
+    })
+  );
   const events = sorted
     .filter(entry => !entry.ok)
     .map(entry => ({

@@ -2,6 +2,7 @@ import { fetchJSON, getBindingHint } from "./utils/api.js";
 import { getOrFetch } from "./utils/store.js";
 import { resolveWithShadow } from "./utils/resilience.js";
 import { rvSetText } from "./rv-dom.js";
+import { createTooltip } from "./utils/tooltip.js";
 
 function formatNumber(value, options = {}) {
   if (value === null || value === undefined || Number.isNaN(value)) return "N/A";
@@ -108,6 +109,12 @@ function render(root, payload, logger, featureId) {
       <div class="rv-cockpit-timestamp">
         <span class="rv-cockpit-label">As of:</span>
         <span data-rv-field="updated-at">${timestamp}</span>
+        ${createTooltip("Market Cockpit snapshot", {
+          source: data.source || "multi",
+          asOf: timestamp,
+          cadence: "2×/Tag (Snapshot)",
+          marketContext: "Mix of EOD + daily signals"
+        })}
       </div>
     </div>
     <div class="rv-cockpit-drivers">

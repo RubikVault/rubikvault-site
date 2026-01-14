@@ -1150,6 +1150,19 @@ section[data-rv-deprecated="true"] {
   background: rgba(15, 23, 42, 0.5);
 }
 
+#rv-dashboard .rv-native-table .rv-cell-num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+#rv-dashboard .rv-native-table th.rv-cell-num {
+  text-align: right;
+}
+
+#rv-dashboard .rv-native-table .rv-cell-label {
+  white-space: nowrap;
+}
+
 #rv-dashboard .rv-native-note {
   margin-top: 10px;
   font-size: 12px;
@@ -1695,6 +1708,14 @@ section[data-rv-deprecated="true"] {
   align-items: center;
   gap: 6px;
 }
+
+ #rv-dashboard .rv-alpha-check .rv-tooltip-wrapper {
+   margin-left: auto;
+ }
+
+ #rv-dashboard .rv-alpha-check .rv-tooltip-icon {
+   margin-left: 0;
+ }
 
 #rv-dashboard .rv-alpha-dot {
   width: 8px;

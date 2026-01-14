@@ -1,6 +1,7 @@
 import { fetchJSON, getBindingHint } from "./utils/api.js";
 import { getOrFetch } from "./utils/store.js";
 import { resolveWithShadow } from "./utils/resilience.js";
+import { createTooltip } from "./utils/tooltip.js";
 
 const SETUP_LABELS = {
   rsiExtreme: "RSI < 35",
@@ -58,7 +59,7 @@ function renderChecklist(items = {}, labels = {}) {
         <div class="rv-alpha-check">
           <span class="rv-alpha-dot ${on ? "is-on" : "is-off"}"></span>
           <span>${labels[key]}</span>
-          <button type="button" class="rv-alpha-info" title="${INFO_TEXT[key] || ""}">i</button>
+          ${createTooltip(INFO_TEXT[key] || "", {})}
         </div>
       `;
     })
@@ -133,6 +134,14 @@ function render(root, payload, logger, featureId) {
     reason: "STALE_FALLBACK"
   });
   const data = resolved?.data || {};
+  const updatedAt = data.updatedAt || resolved?.ts;
+  const asOf = updatedAt
+    ? `${new Date(updatedAt).toISOString().split("T")[0]} ${new Date(updatedAt).toLocaleTimeString("en-US", {
+        hour: "2-digit",
+        minute: "2-digit",
+        timeZoneName: "short"
+      })}`
+    : "N/A";
   const picks = data.picks || {};
   const shortterm = Array.isArray(picks.shortterm) ? picks.shortterm : [];
   const longterm = Array.isArray(picks.longterm) ? picks.longterm : [];
@@ -213,7 +222,12 @@ function render(root, payload, logger, featureId) {
     ${renderSection("Shortterm & Swing", shortterm)}
     ${renderSection("Longterm", longterm)}
     <div class="rv-native-note">Method: ${data.method || "Alpha Radar v1"}</div>
-    <div class="rv-native-note">Updated: ${new Date(data.updatedAt || resolved.ts).toLocaleTimeString()}</div>
+    <div class="rv-native-note">As of: ${asOf} ${createTooltip("Alpha Radar snapshot", {
+      source: data.source || "stooq",
+      asOf,
+      cadence: "EOD (1×/Tag)",
+      marketContext: "US market close"
+    })}</div>
   `;
 
   const hasWarning = resolved?.error?.code || data.partial;

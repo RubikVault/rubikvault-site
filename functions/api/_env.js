@@ -9,9 +9,23 @@ export function isProduction(env, request) {
   return false;
 }
 
+function hasInternalToken(env, request) {
+  const internal = env?.RV_INTERNAL_TOKEN || "";
+  if (!internal) return false;
+  try {
+    const url = new URL(request?.url || "");
+    const provided =
+      request?.headers?.get("x-rv-internal-token") || url.searchParams.get("token") || "";
+    return Boolean(provided) && provided === internal;
+  } catch {
+    return false;
+  }
+}
+
 export function requireDebugToken(env, request) {
   const token = env?.RV_DEBUG_TOKEN || env?.DEBUG_TOKEN || env?.RV_DEBUG_BUNDLE_TOKEN;
   if (!isProduction(env, request)) return true;
+  if (hasInternalToken(env, request)) return true;
   if (!token) return false;
   const header = request?.headers?.get("x-rv-debug-token") || "";
   return header === token;
