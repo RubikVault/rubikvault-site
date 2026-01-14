@@ -182,3 +182,9 @@ Notes:
 """
 You are working in the `rubikvault-site` repo (Cloudflare Pages + Pages Functions). The site uses a block loader (`rv-loader.js`) and config registry (`rv-config.js`). Blocks 01–11 are rendered via `features/*.js` and call `/api/*` Functions for data. KV binding `RV_KV` is required; missing bindings must return BINDING_MISSING. Avoid new architectures or parallel loaders. No client-side secrets. Use free providers (CoinGecko, stooq, Yahoo, FRED, Finnhub optional). Keep Debug UI and block titles visible. Add-only changes only.
 """
+## Redirects Smoke Test
+Run the route/redirect smoke check against local dev:
+
+- `npm run smoke:redirects`
+- `BASE_URL=https://<preview>.pages.dev npm run smoke:redirects`
+

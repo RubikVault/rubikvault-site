@@ -1,11 +1,12 @@
-/rv-loader.js           /rv-loader.js           200
-/rv-config.js           /rv-config.js           200
-/diagnose.js            /diagnose.js            200
-/features/*             /features/:splat        200
-/debug/*                /debug/:splat           200
-/api/*.json             /api/:splat             200
-/api/*                  /api/:splat             200
-/mirror/*               /mirror/:splat          200
-/mirrors/*              /mirrors/:splat         200
-/index.html             /index.html             200
-/*                      /index.html             200
+# API/asset passthrough (before SPA)
+/api/*          /api/:splat      200
+/rv-loader.js   /rv-loader.js   200
+/rv-config.js   /rv-config.js   200
+/diagnose.js    /diagnose.js    200
+/features/*     /features/:splat 200
+/debug/*        /debug/:splat    200
+/mirror/*       /mirror/:splat   200
+/mirrors/*      /mirrors/:splat  200
+/index.html     /index.html      200
+# SPA fallback (last)
+/*              /index.html      200

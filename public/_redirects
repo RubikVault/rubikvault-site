@@ -1,16 +1,12 @@
-# API passthrough (Functions)
-/api/*.json             /api/:splat             200
-/api/*                  /api/:splat             200
-
-# If asset file is missing, return 404 (do NOT serve index.html)
-#/data, /mirrors, /scripts must never be SPA
-/data/*                 /404.html               404
-/mirrors/*              /404.html               404
-/scripts/*              /404.html               404
-
-# SPA routes (only these)
-/features/*             /features/:splat        200
-/debug/*                /index.html             200
-
-# SPA fallback LAST
-/*                      /index.html             200
+# API/asset passthrough (before SPA)
+/api/*          /api/:splat      200
+/rv-loader.js   /rv-loader.js   200
+/rv-config.js   /rv-config.js   200
+/diagnose.js    /diagnose.js    200
+/features/*     /features/:splat 200
+/debug/*        /debug/:splat    200
+/mirror/*       /mirror/:splat   200
+/mirrors/*      /mirrors/:splat  200
+/index.html     /index.html      200
+# SPA fallback (last)
+/*              /index.html      200
