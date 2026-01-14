@@ -1785,12 +1785,11 @@ function renderSp500SectorsSnapshot(contentEl, snapshot) {
   const rows = items.slice(0, 6);
   contentEl.innerHTML = `
     <div class="rv-native-table-wrap">
-      <h4>S&P 500 Sectors</h4>
-      <table class="rv-native-table">
+      <table class="rv-native-table rv-table-sticky">
         <thead>
           <tr>
-            <th>Sector</th>
-            <th>Change %</th>
+            <th>Sector <span class="rv-tooltip-wrapper"><span class="rv-tooltip-icon" aria-label="Information">ⓘ</span><span class="rv-tooltip-content"><strong>Sector</strong><br>Source: Yahoo Finance (Snapshot)<br>Update: EOD (1×/Tag)<br>Context: US market close</span></span></th>
+            <th>Change % <span class="rv-tooltip-wrapper"><span class="rv-tooltip-icon" aria-label="Information">ⓘ</span><span class="rv-tooltip-content"><strong>Change %</strong><br>Source: Yahoo Finance (Snapshot)<br>Update: EOD (1×/Tag)<br>Context: Daily percentage change</span></span></th>
           </tr>
         </thead>
         <tbody>
@@ -1804,10 +1803,13 @@ function renderSp500SectorsSnapshot(contentEl, snapshot) {
                 item.returnPct ??
                 item.performance ??
                 null;
+              const changeClass = changePct !== null && changePct !== undefined 
+                ? (changePct >= 0 ? "rv-native-positive" : "rv-native-negative")
+                : "";
               return `
                 <tr>
                   <td>${sector}</td>
-                  <td>${formatNumber(changePct, { maximumFractionDigits: 2 })}</td>
+                  <td class="${changeClass}">${formatNumber(changePct, { maximumFractionDigits: 2 })}</td>
                 </tr>
               `;
             })
@@ -2017,19 +2019,19 @@ function renderTechSignalsSnapshot(contentEl, snapshot) {
       value === null || value === undefined ? "" : value >= 0 ? "rv-native-positive" : "rv-native-negative";
     return `
       <div class="rv-native-table-wrap">
-        <table class="rv-native-table">
+        <table class="rv-native-table rv-table-sticky">
           <thead>
             <tr>
-              <th data-rv-sort="symbol">${sortLabel("Symbol", "symbol")}</th>
-              <th data-rv-sort="rsi">${sortLabel("RSI", "rsi")}</th>
-              <th data-rv-sort="macd">${sortLabel("MACD", "macd")}</th>
-              <th data-rv-sort="macdHist">${sortLabel("MACD Hist", "macdHist")}</th>
-              <th data-rv-sort="stochRsi">${sortLabel("Stoch RSI", "stochRsi")}</th>
-              <th data-rv-sort="perf1w">${sortLabel("1W", "perf1w")}</th>
-              <th data-rv-sort="relPerf1w">${sortLabel("Rel vs SP500", "relPerf1w")}</th>
-              <th data-rv-sort="perf1m">${sortLabel("1M", "perf1m")}</th>
-              <th data-rv-sort="perf1y">${sortLabel("1Y", "perf1y")}</th>
-              <th data-rv-sort="maRegime">${sortLabel("MA Regime", "maRegime")}</th>
+              <th data-rv-sort="symbol">${sortLabel("Symbol", "symbol")} <span class="rv-tooltip-wrapper"><span class="rv-tooltip-icon" aria-label="Information">ⓘ</span><span class="rv-tooltip-content"><strong>Symbol</strong><br>Source: Snapshot (stooq)<br>Update: EOD (1×/Tag)</span></span></th>
+              <th data-rv-sort="rsi">${sortLabel("RSI", "rsi")} <span class="rv-tooltip-wrapper"><span class="rv-tooltip-icon" aria-label="Information">ⓘ</span><span class="rv-tooltip-content"><strong>RSI (Relative Strength Index)</strong><br>Source: Calculated from OHLC (stooq)<br>Update: EOD (1×/Tag)<br>Context: 14-period RSI, oversold &lt;30, overbought &gt;70</span></span></th>
+              <th data-rv-sort="macd">${sortLabel("MACD", "macd")} <span class="rv-tooltip-wrapper"><span class="rv-tooltip-icon" aria-label="Information">ⓘ</span><span class="rv-tooltip-content"><strong>MACD</strong><br>Source: Calculated from OHLC (stooq)<br>Update: EOD (1×/Tag)<br>Context: Moving Average Convergence Divergence</span></span></th>
+              <th data-rv-sort="macdHist">${sortLabel("MACD Hist", "macdHist")} <span class="rv-tooltip-wrapper"><span class="rv-tooltip-icon" aria-label="Information">ⓘ</span><span class="rv-tooltip-content"><strong>MACD Histogram</strong><br>Source: Calculated from OHLC (stooq)<br>Update: EOD (1×/Tag)<br>Context: MACD line minus signal line</span></span></th>
+              <th data-rv-sort="stochRsi">${sortLabel("Stoch RSI", "stochRsi")} <span class="rv-tooltip-wrapper"><span class="rv-tooltip-icon" aria-label="Information">ⓘ</span><span class="rv-tooltip-content"><strong>Stochastic RSI</strong><br>Source: Calculated from OHLC (stooq)<br>Update: EOD (1×/Tag)<br>Context: Stochastic oscillator of RSI</span></span></th>
+              <th data-rv-sort="perf1w">${sortLabel("1W", "perf1w")} <span class="rv-tooltip-wrapper"><span class="rv-tooltip-icon" aria-label="Information">ⓘ</span><span class="rv-tooltip-content"><strong>1 Week Performance</strong><br>Source: Calculated from OHLC (stooq)<br>Update: EOD (1×/Tag)<br>Context: 7-day percentage change</span></span></th>
+              <th data-rv-sort="relPerf1w">${sortLabel("Rel vs SP500", "relPerf1w")} <span class="rv-tooltip-wrapper"><span class="rv-tooltip-icon" aria-label="Information">ⓘ</span><span class="rv-tooltip-content"><strong>Relative Performance vs S&amp;P 500</strong><br>Source: Calculated from OHLC (stooq)<br>Update: EOD (1×/Tag)<br>Context: 1-week performance relative to SPY</span></span></th>
+              <th data-rv-sort="perf1m">${sortLabel("1M", "perf1m")} <span class="rv-tooltip-wrapper"><span class="rv-tooltip-icon" aria-label="Information">ⓘ</span><span class="rv-tooltip-content"><strong>1 Month Performance</strong><br>Source: Calculated from OHLC (stooq)<br>Update: EOD (1×/Tag)<br>Context: 30-day percentage change</span></span></th>
+              <th data-rv-sort="perf1y">${sortLabel("1Y", "perf1y")} <span class="rv-tooltip-wrapper"><span class="rv-tooltip-icon" aria-label="Information">ⓘ</span><span class="rv-tooltip-content"><strong>1 Year Performance</strong><br>Source: Calculated from OHLC (stooq)<br>Update: EOD (1×/Tag)<br>Context: 365-day percentage change</span></span></th>
+              <th data-rv-sort="maRegime">${sortLabel("MA Regime", "maRegime")} <span class="rv-tooltip-wrapper"><span class="rv-tooltip-icon" aria-label="Information">ⓘ</span><span class="rv-tooltip-content"><strong>MA Regime</strong><br>Source: Calculated from OHLC (stooq)<br>Update: EOD (1×/Tag)<br>Context: Price position relative to moving averages</span></span></th>
             </tr>
           </thead>
           <tbody>
@@ -2346,30 +2348,70 @@ function renderAlphaRadarSnapshot(contentEl, snapshot) {
     meta.status === "PARTIAL" || model.statusHints.length
       ? `Partial data — ${model.statusHints.join("; ") || "some indicators missing"}.`
       : "";
-  const mediumChips = mediumPicks.slice(0, 6);
-  const renderChip = (pick) => {
-    const displayLabel = pick.label || "PICK";
-    return `<span class="rv-alpha-chip ${badgeClass(displayLabel)}">${pick.symbol}</span>`;
-  };
+  
+  // Calculate Market Bias
+  const allPicks = [...shortPicks, ...mediumPicks, ...longPicks];
+  const riskOnCount = allPicks.filter(p => p.label && (p.label.toUpperCase().includes("BUY") || p.label.toUpperCase().includes("TOP"))).length;
+  const riskOffCount = allPicks.filter(p => p.label && p.label.toUpperCase().includes("WATCH")).length;
+  const marketBias = riskOnCount > riskOffCount ? "Risk-on" : riskOffCount > riskOnCount ? "Risk-off" : "Neutral";
+  
+  // Top 3 Assets
+  const top3Assets = allPicks
+    .sort((a, b) => (b.totalScore || 0) - (a.totalScore || 0))
+    .slice(0, 3)
+    .map(p => p.symbol);
 
-  contentEl.innerHTML = `
-    ${partialNote ? `<div class="rv-native-note">${partialNote}</div>` : ""}
-    ${renderSection("Short-term", shortPicks, "No short-term picks")}
-    ${
-      mediumChips.length
-        ? `
-      <div class="rv-alpha-top">
-        <strong>Medium-term</strong>
-        <div class="rv-alpha-chips">
-          ${mediumChips.map((pick) => renderChip(pick)).join("")}
+  // Summary Card HTML
+  const summaryCardHTML = `
+    <div class="rv-alpha-summary-card">
+      <div class="rv-alpha-summary-header">
+        <h3>Alpha Radar Summary</h3>
+        <span class="rv-tooltip-wrapper">
+          <span class="rv-tooltip-icon" aria-label="Information">ⓘ</span>
+          <span class="rv-tooltip-content">
+            <strong>Alpha Radar Scoring Logic</strong><br>
+            Scoring combines setup conditions (RSI extremes, Bollinger bands, SMA200 proximity) with trigger signals (EMA21 reclaim, higher lows, volume confirmation). Higher scores indicate stronger setups. Market bias is derived from the distribution of buy/watch signals across all picks.
+          </span>
+        </span>
+      </div>
+      <div class="rv-alpha-summary-content">
+        <div class="rv-alpha-summary-item">
+          <span class="rv-alpha-summary-label">Market Bias:</span>
+          <span class="rv-alpha-summary-value rv-alpha-bias-${marketBias.toLowerCase().replace("-", "")}">${marketBias}</span>
+        </div>
+        <div class="rv-alpha-summary-item">
+          <span class="rv-alpha-summary-label">Top Assets:</span>
+          <span class="rv-alpha-summary-value">${top3Assets.length ? top3Assets.join(", ") : "None"}</span>
+        </div>
+        <div class="rv-alpha-summary-item">
+          <span class="rv-alpha-summary-label">Total Picks:</span>
+          <span class="rv-alpha-summary-value">${allPicks.length}</span>
         </div>
       </div>
-    `
-        : ""
-    }
-    ${renderSection("Medium-term", mediumPicks, "No medium-term picks")}
-    ${renderSection("Long-term", longPicks, "No long-term picks")}
+      <button type="button" class="rv-alpha-details-btn" data-rv-alpha-toggle="details">
+        Show Details
+      </button>
+    </div>
+    <div class="rv-alpha-details" data-rv-alpha-details style="display: none;">
+      ${partialNote ? `<div class="rv-native-note">${partialNote}</div>` : ""}
+      ${renderSection("Short-term", shortPicks, "No short-term picks")}
+      ${renderSection("Medium-term", mediumPicks, "No medium-term picks")}
+      ${renderSection("Long-term", longPicks, "No long-term picks")}
+    </div>
   `;
+
+  contentEl.innerHTML = summaryCardHTML;
+  
+  // Toggle Details Button
+  const detailsBtn = contentEl.querySelector("[data-rv-alpha-toggle]");
+  const detailsSection = contentEl.querySelector("[data-rv-alpha-details]");
+  if (detailsBtn && detailsSection) {
+    detailsBtn.addEventListener("click", () => {
+      const isHidden = detailsSection.style.display === "none";
+      detailsSection.style.display = isHidden ? "block" : "none";
+      detailsBtn.textContent = isHidden ? "Hide Details" : "Show Details";
+    });
+  }
 
   renderDebugMeta(contentEl, meta);
 }

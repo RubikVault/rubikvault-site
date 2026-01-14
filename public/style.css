@@ -1402,6 +1402,55 @@ section[data-rv-deprecated="true"] {
   color: var(--rv-text-muted);
 }
 
+/* Cockpit Header with Timestamp */
+#rv-dashboard .rv-cockpit-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--rv-border);
+}
+
+#rv-dashboard .rv-cockpit-timestamp {
+  font-size: 12px;
+  color: var(--rv-text-muted);
+}
+
+#rv-dashboard .rv-cockpit-timestamp .rv-cockpit-label {
+  margin-right: 8px;
+  font-weight: 500;
+}
+
+/* Cockpit Sections */
+#rv-dashboard .rv-cockpit-section {
+  margin-bottom: 24px;
+  padding: 16px;
+  background: rgba(15, 23, 42, 0.4);
+  border: 1px solid rgba(148, 163, 184, 0.1);
+  border-radius: var(--rv-radius);
+}
+
+#rv-dashboard .rv-cockpit-section-title {
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 12px;
+  color: var(--rv-accent);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+#rv-dashboard .rv-cockpit-driver {
+  padding: 4px 10px;
+  background: rgba(56, 189, 248, 0.12);
+  border-radius: 999px;
+  font-size: 11px;
+  color: var(--rv-accent);
+  margin-right: 8px;
+  margin-bottom: 4px;
+  display: inline-block;
+}
+
 #rv-dashboard .rv-table--compact th,
 #rv-dashboard .rv-table--compact td {
   padding: 6px 8px;
@@ -1675,6 +1724,245 @@ section[data-rv-deprecated="true"] {
   gap: 10px;
   font-size: 11px;
   color: var(--rv-text-muted);
+}
+
+/* Alpha Radar Summary Card */
+#rv-dashboard .rv-alpha-summary-card {
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: var(--rv-radius);
+  padding: 20px;
+  margin-bottom: 20px;
+}
+
+#rv-dashboard .rv-alpha-summary-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+#rv-dashboard .rv-alpha-summary-header h3 {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--rv-accent);
+  margin: 0;
+}
+
+#rv-dashboard .rv-alpha-summary-content {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+#rv-dashboard .rv-alpha-summary-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+#rv-dashboard .rv-alpha-summary-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--rv-text-muted);
+}
+
+#rv-dashboard .rv-alpha-summary-value {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--rv-text);
+}
+
+#rv-dashboard .rv-alpha-bias-riskon {
+  color: #10b981;
+}
+
+#rv-dashboard .rv-alpha-bias-riskoff {
+  color: #ef4444;
+}
+
+#rv-dashboard .rv-alpha-bias-neutral {
+  color: #f59e0b;
+}
+
+#rv-dashboard .rv-alpha-details-btn {
+  width: 100%;
+  padding: 10px 16px;
+  background: rgba(56, 189, 248, 0.1);
+  border: 1px solid rgba(56, 189, 248, 0.3);
+  border-radius: var(--rv-radius);
+  color: var(--rv-accent);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+#rv-dashboard .rv-alpha-details-btn:hover {
+  background: rgba(56, 189, 248, 0.2);
+  border-color: var(--rv-accent);
+}
+
+#rv-dashboard .rv-alpha-details {
+  margin-top: 20px;
+}
+
+/* Monopoles / Economic Moats */
+#rv-dashboard .rv-moats-content {
+  padding: 0;
+}
+
+#rv-dashboard .rv-moats-intro {
+  margin-bottom: 24px;
+  color: var(--rv-text-muted);
+  line-height: 1.7;
+}
+
+#rv-dashboard .rv-moats-category {
+  margin-bottom: 32px;
+  padding-bottom: 24px;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+}
+
+#rv-dashboard .rv-moats-category:last-child {
+  border-bottom: none;
+}
+
+#rv-dashboard .rv-moats-category h3 {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--rv-accent);
+  margin-bottom: 16px;
+}
+
+#rv-dashboard .rv-moats-examples {
+  display: grid;
+  gap: 20px;
+}
+
+#rv-dashboard .rv-moats-item {
+  background: rgba(15, 23, 42, 0.4);
+  border: 1px solid rgba(148, 163, 184, 0.1);
+  border-radius: var(--rv-radius);
+  padding: 16px;
+}
+
+#rv-dashboard .rv-moats-item strong {
+  display: block;
+  font-size: 16px;
+  color: var(--rv-text);
+  margin-bottom: 12px;
+}
+
+#rv-dashboard .rv-moats-item p {
+  margin-bottom: 10px;
+  color: var(--rv-text-muted);
+  line-height: 1.6;
+}
+
+#rv-dashboard .rv-moats-item p:last-child {
+  margin-bottom: 0;
+}
+
+/* Watchlist v1 */
+#rv-dashboard .rv-watchlist-content {
+  padding: 0;
+}
+
+#rv-dashboard .rv-watchlist-controls {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+
+#rv-dashboard .rv-watchlist-input {
+  flex: 1;
+  min-width: 200px;
+  padding: 10px 14px;
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: var(--rv-radius);
+  color: var(--rv-text);
+  font-size: 14px;
+}
+
+#rv-dashboard .rv-watchlist-input:focus {
+  outline: none;
+  border-color: var(--rv-accent);
+}
+
+#rv-dashboard .rv-watchlist-list {
+  display: grid;
+  gap: 10px;
+}
+
+#rv-dashboard .rv-watchlist-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  background: rgba(15, 23, 42, 0.4);
+  border: 1px solid rgba(148, 163, 184, 0.1);
+  border-radius: var(--rv-radius);
+}
+
+#rv-dashboard .rv-watchlist-item span {
+  font-weight: 600;
+  color: var(--rv-text);
+}
+
+#rv-dashboard .rv-watchlist-remove {
+  padding: 6px 12px;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: var(--rv-radius);
+  color: #ef4444;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+#rv-dashboard .rv-watchlist-remove:hover {
+  background: rgba(239, 68, 68, 0.2);
+  border-color: #ef4444;
+}
+
+/* Sticky Table Headers */
+#rv-dashboard .rv-table-sticky {
+  position: relative;
+}
+
+#rv-dashboard .rv-table-sticky thead {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: rgba(15, 23, 42, 0.95);
+  backdrop-filter: blur(10px);
+}
+
+#rv-dashboard .rv-table-sticky thead th {
+  background: rgba(15, 23, 42, 0.95);
+  border-bottom: 2px solid rgba(148, 163, 184, 0.2);
+}
+
+/* Mobile: Horizontal Scroll for Tables */
+@media (max-width: 768px) {
+  #rv-dashboard .rv-native-table-wrap {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  #rv-dashboard .rv-native-table {
+    min-width: 600px;
+  }
+  
+  #rv-dashboard .rv-cockpit-section {
+    overflow-x: auto;
+  }
 }
 
 #rv-dashboard .rv-alpha-warn {
