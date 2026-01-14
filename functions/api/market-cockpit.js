@@ -30,6 +30,8 @@ const TREASURY_CSV_URL =
   "https://home.treasury.gov/resource-center/data-chart-center/interest-rates/DailyTreasuryYieldCurveRateData.csv";
 const YAHOO_DXY_URL =
   "https://query1.finance.yahoo.com/v7/finance/quote?symbols=DX-Y.NYB";
+const YAHOO_INDICES_URL =
+  "https://query1.finance.yahoo.com/v7/finance/quote?symbols=^GSPC,^IXIC,^DJI,^RUT";
 const MACRO_CACHE_KEY = "macro-rates:v2";
 const SECTOR_CACHE_KEY = "DASH:SP500_SECTORS";
 
@@ -247,6 +249,40 @@ async function fetchDxy(env) {
   };
 }
 
+async function fetchIndices(env) {
+  const res = await safeFetchJson(YAHOO_INDICES_URL, { userAgent: env.USER_AGENT || "RubikVault/1.0" });
+  if (!res.ok || !res.json || !Array.isArray(res.json?.quoteResponse?.result)) {
+    return {
+      ok: false,
+      sp500: { value: null, changePercent: null },
+      nasdaq: { value: null, changePercent: null },
+      dow: { value: null, changePercent: null },
+      russell: { value: null, changePercent: null },
+      source: "Yahoo"
+    };
+  }
+  const quotes = res.json.quoteResponse.result;
+  const map = new Map(quotes.map((q) => [q.symbol, q]));
+  
+  const buildIndex = (symbol) => {
+    const quote = map.get(symbol);
+    if (!quote) return { value: null, changePercent: null };
+    return {
+      value: parseNumber(quote.regularMarketPrice),
+      changePercent: parseNumber(quote.regularMarketChangePercent)
+    };
+  };
+  
+  return {
+    ok: true,
+    sp500: buildIndex("^GSPC"),
+    nasdaq: buildIndex("^IXIC"),
+    dow: buildIndex("^DJI"),
+    russell: buildIndex("^RUT"),
+    source: "Yahoo"
+  };
+}
+
 function parseChangePercent(value) {
   if (value === null || value === undefined) return null;
   const raw = String(value).replace(/[()%]/g, "");
@@ -433,7 +469,7 @@ async function fetchMarketCockpit(env) {
     kvGetJson(env, SECTOR_CACHE_KEY)
   ]);
 
-  const [vixResult, fngResult, fngStocksResult, newsResult, proxyResult, cryptoResult, dxyResult, yieldsResult] =
+  const [vixResult, fngResult, fngStocksResult, newsResult, proxyResult, cryptoResult, dxyResult, yieldsResult, indicesResult] =
     await Promise.allSettled([
     fetchVix(env),
     fetchFngCrypto(env),
@@ -442,7 +478,8 @@ async function fetchMarketCockpit(env) {
     fetchProxies(env),
     fetchCrypto(env),
     fetchDxy(env),
-    fetchYields(env)
+    fetchYields(env),
+    fetchIndices(env)
   ]);
 
   const vix = vixResult.status === "fulfilled" ? vixResult.value : { ok: false };
@@ -453,6 +490,7 @@ async function fetchMarketCockpit(env) {
   const crypto = cryptoResult.status === "fulfilled" ? cryptoResult.value : { ok: false, btc: {}, eth: {}, sol: {}, xrp: {}, source: "CoinGecko" };
   const dxy = dxyResult.status === "fulfilled" ? dxyResult.value : { ok: false };
   const yields = yieldsResult.status === "fulfilled" ? yieldsResult.value : { ok: false };
+  const indices = indicesResult.status === "fulfilled" ? indicesResult.value : { ok: false, sp500: {}, nasdaq: {}, dow: {}, russell: {}, source: "Yahoo" };
   const macroSummary = buildMacroSummary(macroCached?.value?.data);
   const sectorPerformance = buildSectorPerformance(sectorCached?.value?.data);
 
@@ -465,6 +503,7 @@ async function fetchMarketCockpit(env) {
     !crypto.ok ||
     !dxy.ok ||
     !yields.ok ||
+    !indices.ok ||
     (!macroSummary.rates.length && !macroSummary.fx.length && !macroSummary.cpi.length) ||
     !sectorPerformance.top.length;
   const hasData =
@@ -478,6 +517,9 @@ async function fetchMarketCockpit(env) {
     crypto.sol?.price !== null ||
     crypto.xrp?.price !== null ||
     dxy.value !== null ||
+    indices.sp500?.value !== null ||
+    indices.nasdaq?.value !== null ||
+    indices.dow?.value !== null ||
     Object.keys(yields.yields || {}).length > 0;
   if (!hasData) {
     return {
@@ -544,6 +586,28 @@ async function fetchMarketCockpit(env) {
         changePercent: dxy.changePercent ?? null,
         source: dxy.source || "Yahoo"
       },
+      indices: {
+        sp500: {
+          value: indices.sp500?.value ?? null,
+          changePercent: indices.sp500?.changePercent ?? null,
+          source: indices.source || "Yahoo"
+        },
+        nasdaq: {
+          value: indices.nasdaq?.value ?? null,
+          changePercent: indices.nasdaq?.changePercent ?? null,
+          source: indices.source || "Yahoo"
+        },
+        dow: {
+          value: indices.dow?.value ?? null,
+          changePercent: indices.dow?.changePercent ?? null,
+          source: indices.source || "Yahoo"
+        },
+        russell: {
+          value: indices.russell?.value ?? null,
+          changePercent: indices.russell?.changePercent ?? null,
+          source: indices.source || "Yahoo"
+        }
+      },
       yields: {
         updatedAt: yields.updatedAt || null,
         source: yields.source || "US Treasury",
@@ -560,6 +624,7 @@ async function fetchMarketCockpit(env) {
         proxies: proxies.source || "FMP",
         crypto: crypto.source || "CoinGecko",
         dxy: dxy.source || "Yahoo",
+        indices: indices.source || "Yahoo",
         yields: yields.source || "US Treasury",
         macro: macroSummary.updatedAt ? "macro-rates" : "kv",
         sectors: sectorPerformance.updatedAt ? "sp500-sectors" : "kv"
