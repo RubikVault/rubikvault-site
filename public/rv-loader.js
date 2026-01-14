@@ -2993,6 +2993,14 @@ function initBlock(section, feature, blockIndex) {
 }
 
 async function boot() {
+  // Update "Data updated" date
+  const dataUpdatedEl = document.getElementById("rv-data-updated-date");
+  if (dataUpdatedEl) {
+    const today = new Date();
+    const dateStr = today.toISOString().split("T")[0];
+    dataUpdatedEl.textContent = dateStr;
+  }
+  
   initDebugConsole();
   const loadResult = await loadFeatures();
   const features = loadResult.features;

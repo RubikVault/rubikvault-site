@@ -74,6 +74,11 @@ function render(root, payload, logger, featureId) {
   const sol = data.sol || {};
   const xrp = data.xrp || {};
   const dxy = data.dxy || {};
+  const indices = data.indices || {};
+  const sp500 = indices.sp500 || {};
+  const nasdaq = indices.nasdaq || {};
+  const dow = indices.dow || {};
+  const russell = indices.russell || {};
   const yields = data.yields || {};
   const yieldValues = yields.values || {};
   const macro = data.macroSummary || {};
@@ -96,6 +101,47 @@ function render(root, payload, logger, featureId) {
       </div>
     </div>
     <div class="rv-native-note">Why it matters: regime blends volatility, sentiment, and narrative risk.</div>
+    <div class="rv-cockpit-section">
+      <h3>Equities (USA)</h3>
+      <table class="rv-native-table rv-table--compact">
+        <thead>
+          <tr>
+            <th>Index</th>
+            <th>Value</th>
+            <th>Change</th>
+            <th>Source</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>S&amp;P 500 <span class="rv-tooltip-wrapper"><span class="rv-tooltip-icon" aria-label="Information">ⓘ</span><span class="rv-tooltip-content"><strong>S&amp;P 500</strong><br>Source: Yahoo Finance<br>Update: EOD<br>Context: US market close</span></span></td>
+            <td data-rv-field="sp500-value">${formatNumber(sp500.value, { maximumFractionDigits: 0 })}</td>
+            <td data-rv-field="sp500-change" class="${sp500.changePercent >= 0 ? 'rv-native-positive' : 'rv-native-negative'}">${formatPercent(sp500.changePercent)}</td>
+            <td>${sp500.source || "Yahoo"}</td>
+          </tr>
+          <tr>
+            <td>Nasdaq 100 <span class="rv-tooltip-wrapper"><span class="rv-tooltip-icon" aria-label="Information">ⓘ</span><span class="rv-tooltip-content"><strong>Nasdaq 100</strong><br>Source: Yahoo Finance<br>Update: EOD<br>Context: US market close</span></span></td>
+            <td data-rv-field="nasdaq-value">${formatNumber(nasdaq.value, { maximumFractionDigits: 0 })}</td>
+            <td data-rv-field="nasdaq-change" class="${nasdaq.changePercent >= 0 ? 'rv-native-positive' : 'rv-native-negative'}">${formatPercent(nasdaq.changePercent)}</td>
+            <td>${nasdaq.source || "Yahoo"}</td>
+          </tr>
+          <tr>
+            <td>Dow Jones <span class="rv-tooltip-wrapper"><span class="rv-tooltip-icon" aria-label="Information">ⓘ</span><span class="rv-tooltip-content"><strong>Dow Jones</strong><br>Source: Yahoo Finance<br>Update: EOD<br>Context: US market close</span></span></td>
+            <td data-rv-field="dow-value">${formatNumber(dow.value, { maximumFractionDigits: 0 })}</td>
+            <td data-rv-field="dow-change" class="${dow.changePercent >= 0 ? 'rv-native-positive' : 'rv-native-negative'}">${formatPercent(dow.changePercent)}</td>
+            <td>${dow.source || "Yahoo"}</td>
+          </tr>
+          ${russell.value ? `
+          <tr>
+            <td>Russell 2000 <span class="rv-tooltip-wrapper"><span class="rv-tooltip-icon" aria-label="Information">ⓘ</span><span class="rv-tooltip-content"><strong>Russell 2000</strong><br>Source: Yahoo Finance<br>Update: EOD<br>Context: US market close</span></span></td>
+            <td data-rv-field="russell-value">${formatNumber(russell.value, { maximumFractionDigits: 0 })}</td>
+            <td data-rv-field="russell-change" class="${russell.changePercent >= 0 ? 'rv-native-positive' : 'rv-native-negative'}">${formatPercent(russell.changePercent)}</td>
+            <td>${russell.source || "Yahoo"}</td>
+          </tr>
+          ` : ''}
+        </tbody>
+      </table>
+    </div>
     ${
       sectorTop.length || sectorBottom.length
         ? `<div class="rv-native-note">Sector performance (1D/1W/1M)</div>
@@ -199,19 +245,14 @@ function render(root, payload, logger, featureId) {
           <td>${dxy.source || "N/A"}</td>
         </tr>
         <tr>
-          <td>USD (UUP)</td>
-          <td data-rv-field="proxy-usd">${formatNumber(proxies.usd?.price, { maximumFractionDigits: 2 })}</td>
-          <td><span class="rv-pill-proxy">Proxy</span> ${proxies.usd?.symbol || "UUP"}</td>
-        </tr>
-        <tr>
-          <td>Oil (USO)</td>
-          <td data-rv-field="proxy-oil">${formatNumber(proxies.oil?.price, { maximumFractionDigits: 2 })}</td>
-          <td><span class="rv-pill-proxy">Proxy</span> ${proxies.oil?.symbol || "USO"}</td>
-        </tr>
-        <tr>
-          <td>Gold (GLD)</td>
-          <td data-rv-field="proxy-gold">${formatNumber(proxies.gold?.price, { maximumFractionDigits: 2 })}</td>
+          <td>Gold (GLD) <span class="rv-tooltip-wrapper"><span class="rv-tooltip-icon" aria-label="Information">ⓘ</span><span class="rv-tooltip-content"><strong>Gold (GLD Proxy)</strong><br>Source: FMP<br>Update: EOD<br>Context: US market close</span></span></td>
+          <td data-rv-field="proxy-gold">${formatNumber(proxies.gold?.price, { maximumFractionDigits: 2 })} (${formatPercent(proxies.gold?.changePercent)})</td>
           <td><span class="rv-pill-proxy">Proxy</span> ${proxies.gold?.symbol || "GLD"}</td>
+        </tr>
+        <tr>
+          <td>Oil (USO) <span class="rv-tooltip-wrapper"><span class="rv-tooltip-icon" aria-label="Information">ⓘ</span><span class="rv-tooltip-content"><strong>Oil (USO Proxy)</strong><br>Source: FMP<br>Update: EOD<br>Context: US market close</span></span></td>
+          <td data-rv-field="proxy-oil">${formatNumber(proxies.oil?.price, { maximumFractionDigits: 2 })} (${formatPercent(proxies.oil?.changePercent)})</td>
+          <td><span class="rv-pill-proxy">Proxy</span> ${proxies.oil?.symbol || "USO"}</td>
         </tr>
         <tr>
           <td>US Yields 1Y</td>
