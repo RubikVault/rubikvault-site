@@ -51,8 +51,26 @@
       <span>System status loading…</span>
     </div>
     <div class="rv-data-updated" id="rv-data-updated" style="text-align: center; padding: 8px; font-size: 12px; color: var(--rv-text-muted); border-bottom: 1px solid var(--rv-border);">
-      Data updated: <span id="rv-data-updated-date">—</span> (daily snapshots)
+      Data updated: <span id="rv-data-updated-date">Loading...</span> (daily snapshots)
     </div>
+    <script>
+      // Update date immediately when DOM is ready
+      (function() {
+        const updateDate = () => {
+          const el = document.getElementById("rv-data-updated-date");
+          if (el) {
+            const today = new Date();
+            const dateStr = today.toISOString().split("T")[0];
+            el.textContent = dateStr;
+          }
+        };
+        if (document.readyState === "loading") {
+          document.addEventListener("DOMContentLoaded", updateDate);
+        } else {
+          updateDate();
+        }
+      })();
+    </script>
   </header>
 
   <nav class="rv-subnav" aria-label="Dashboard sections">
@@ -290,7 +308,7 @@
     <section
       class="rv-section rv-native-block"
       data-rv-feature="rv-price-snapshot"
-      data-rv-block-name="Block 02 – Price Snapshot"
+      data-rv-block-name="Price Snapshot"
       style="display: none;"
       data-rv-priority="high"
       data-rv-loading="true"
@@ -299,7 +317,7 @@
       aria-hidden="true"
     >
       <div class="rv-native-header">
-        <h2>Block 02 – Price Snapshot</h2>
+        <h2>Price Snapshot</h2>
         <button class="rv-native-refresh" type="button" data-rv-action="refresh">Refresh</button>
       </div>
       <div class="rv-native-body rv-card">
@@ -459,7 +477,7 @@
     <section
       class="rv-section rv-native-block"
       data-rv-feature="rv-macro-rates"
-      data-rv-block-name="Block 08 – Macro & Rates"
+      data-rv-block-name="Macro & Rates"
       style="display: none;"
       data-rv-priority="low"
       data-rv-loading="true"
@@ -469,7 +487,7 @@
       aria-hidden="true"
     >
       <div class="rv-native-header">
-        <h2>Block 08 – Macro &amp; Rates</h2>
+        <h2>Macro &amp; Rates</h2>
         <button class="rv-native-refresh" type="button" data-rv-action="refresh">Refresh</button>
       </div>
       <div class="rv-native-body rv-card">
@@ -486,14 +504,14 @@
     <section
       class="rv-section rv-native-block"
       data-rv-feature="rv-sp500-sectors"
-      data-rv-block-name="Block 13 – S&amp;P 500 Sectors"
+      data-rv-block-name="S&amp;P 500 Sectors"
       data-rv-priority="low"
       data-rv-loading="true"
       data-rv-collapsible="true"
       data-rv-span="wide"
     >
       <div class="rv-native-header">
-        <h2>Block 13 – S&amp;P 500 Sectors</h2>
+        <h2>S&amp;P 500 Sectors</h2>
         <button class="rv-native-refresh" type="button" data-rv-action="refresh">Refresh</button>
       </div>
       <div class="rv-native-body rv-card">
@@ -510,13 +528,13 @@
     <section
       class="rv-section rv-native-block"
       data-rv-feature="rv-market-regime"
-      data-rv-block-name="Block XX – Market Regime Radar"
+      data-rv-block-name="Market Regime Radar"
       data-rv-priority="low"
       data-rv-loading="true"
       data-rv-collapsible="true"
     >
       <div class="rv-native-header">
-        <h2>Block XX – Market Regime Radar</h2>
+        <h2>Market Regime Radar</h2>
         <button class="rv-native-refresh" type="button" data-rv-action="refresh">Refresh</button>
       </div>
       <div class="rv-native-body rv-card">
@@ -533,13 +551,13 @@
     <section
       class="rv-section rv-native-block"
       data-rv-feature="rv-arb-risk-regime"
-      data-rv-block-name="Block XX – ARB Risk Regime"
+      data-rv-block-name="ARB Risk Regime"
       data-rv-priority="low"
       data-rv-loading="true"
       data-rv-collapsible="true"
     >
       <div class="rv-native-header">
-        <h2>Block XX – ARB Risk Regime</h2>
+        <h2>ARB Risk Regime</h2>
         <button class="rv-native-refresh" type="button" data-rv-action="refresh">Refresh</button>
       </div>
       <div class="rv-native-body rv-card">
@@ -556,13 +574,13 @@
     <section
       class="rv-section rv-native-block"
       data-rv-feature="rv-arb-liquidity-pulse"
-      data-rv-block-name="Block XX – ARB Liquidity Pulse"
+      data-rv-block-name="ARB Liquidity Pulse"
       data-rv-priority="low"
       data-rv-loading="true"
       data-rv-collapsible="true"
     >
       <div class="rv-native-header">
-        <h2>Block XX – ARB Liquidity Pulse</h2>
+        <h2>ARB Liquidity Pulse</h2>
         <button class="rv-native-refresh" type="button" data-rv-action="refresh">Refresh</button>
       </div>
       <div class="rv-native-body rv-card">
@@ -579,13 +597,13 @@
     <section
       class="rv-section rv-native-block"
       data-rv-feature="rv-arb-breadth-lite"
-      data-rv-block-name="Block XX – ARB Breadth Lite"
+      data-rv-block-name="ARB Breadth Lite"
       data-rv-priority="low"
       data-rv-loading="true"
       data-rv-collapsible="true"
     >
       <div class="rv-native-header">
-        <h2>Block XX – ARB Breadth Lite</h2>
+        <h2>ARB Breadth Lite</h2>
         <button class="rv-native-refresh" type="button" data-rv-action="refresh">Refresh</button>
       </div>
       <div class="rv-native-body rv-card">
@@ -602,13 +620,13 @@
     <section
       class="rv-section rv-native-block"
       data-rv-feature="rv-why-moved"
-      data-rv-block-name="Block XX – Why This Stock Moved"
+      data-rv-block-name="Why This Stock Moved"
       data-rv-priority="low"
       data-rv-loading="true"
       data-rv-collapsible="true"
     >
       <div class="rv-native-header">
-        <h2>Block XX – Why This Stock Moved</h2>
+        <h2>Why This Stock Moved</h2>
         <button class="rv-native-refresh" type="button" data-rv-action="refresh">Refresh</button>
       </div>
       <div class="rv-native-body rv-card">
@@ -625,13 +643,13 @@
     <section
       class="rv-section rv-native-block"
       data-rv-feature="rv-volume-anomaly"
-      data-rv-block-name="Block XX – Volume Anomaly"
+      data-rv-block-name="Volume Anomaly"
       data-rv-priority="low"
       data-rv-loading="true"
       data-rv-collapsible="true"
     >
       <div class="rv-native-header">
-        <h2>Block XX – Volume Anomaly</h2>
+        <h2>Volume Anomaly</h2>
         <button class="rv-native-refresh" type="button" data-rv-action="refresh">Refresh</button>
       </div>
       <div class="rv-native-body rv-card">
@@ -648,13 +666,13 @@
     <section
       class="rv-section rv-native-block"
       data-rv-feature="rv-breakout-energy"
-      data-rv-block-name="Block XX – Breakout Energy Radar"
+      data-rv-block-name="Breakout Energy Radar"
       data-rv-priority="low"
       data-rv-loading="true"
       data-rv-collapsible="true"
     >
       <div class="rv-native-header">
-        <h2>Block XX – Breakout Energy Radar</h2>
+        <h2>Breakout Energy Radar</h2>
         <button class="rv-native-refresh" type="button" data-rv-action="refresh">Refresh</button>
       </div>
       <div class="rv-native-body rv-card">
@@ -671,13 +689,13 @@
     <section
       class="rv-section rv-native-block"
       data-rv-feature="rv-hype-divergence"
-      data-rv-block-name="Block XX – Inverse Hype Detector"
+      data-rv-block-name="Inverse Hype Detector"
       data-rv-priority="low"
       data-rv-loading="true"
       data-rv-collapsible="true"
     >
       <div class="rv-native-header">
-        <h2>Block XX – Inverse Hype Detector</h2>
+        <h2>Inverse Hype Detector</h2>
         <button class="rv-native-refresh" type="button" data-rv-action="refresh">Refresh</button>
       </div>
       <div class="rv-native-body rv-card">
@@ -694,13 +712,13 @@
     <section
       class="rv-section rv-native-block"
       data-rv-feature="rv-congress-trading"
-      data-rv-block-name="Block XX – Congress Trading Tracker"
+      data-rv-block-name="Congress Trading Tracker"
       data-rv-priority="low"
       data-rv-loading="true"
       data-rv-collapsible="true"
     >
       <div class="rv-native-header">
-        <h2>Block XX – Congress Trading Tracker</h2>
+        <h2>Congress Trading Tracker</h2>
         <button class="rv-native-refresh" type="button" data-rv-action="refresh">Refresh</button>
       </div>
       <div class="rv-native-body rv-card">
@@ -717,13 +735,13 @@
     <section
       class="rv-section rv-native-block"
       data-rv-feature="rv-insider-cluster"
-      data-rv-block-name="Block XX – Insider Cluster Buy Alarm"
+      data-rv-block-name="Insider Cluster Buy Alarm"
       data-rv-priority="low"
       data-rv-loading="true"
       data-rv-collapsible="true"
     >
       <div class="rv-native-header">
-        <h2>Block XX – Insider Cluster Buy Alarm</h2>
+        <h2>Insider Cluster Buy Alarm</h2>
         <button class="rv-native-refresh" type="button" data-rv-action="refresh">Refresh</button>
       </div>
       <div class="rv-native-body rv-card">
@@ -740,13 +758,13 @@
     <section
       class="rv-section rv-native-block"
       data-rv-feature="rv-analyst-stampede"
-      data-rv-block-name="Block XX – Analyst Stampede"
+      data-rv-block-name="Analyst Stampede"
       data-rv-priority="low"
       data-rv-loading="true"
       data-rv-collapsible="true"
     >
       <div class="rv-native-header">
-        <h2>Block XX – Analyst Stampede</h2>
+        <h2>Analyst Stampede</h2>
         <button class="rv-native-refresh" type="button" data-rv-action="refresh">Refresh</button>
       </div>
       <div class="rv-native-body rv-card">
@@ -763,13 +781,13 @@
     <section
       class="rv-section rv-native-block"
       data-rv-feature="rv-smart-money"
-      data-rv-block-name="Block XX – Smart Money Score"
+      data-rv-block-name="Smart Money Score"
       data-rv-priority="low"
       data-rv-loading="true"
       data-rv-collapsible="true"
     >
       <div class="rv-native-header">
-        <h2>Block XX – Smart Money Score</h2>
+        <h2>Smart Money Score</h2>
         <button class="rv-native-refresh" type="button" data-rv-action="refresh">Refresh</button>
       </div>
       <div class="rv-native-body rv-card">
@@ -786,14 +804,14 @@
     <section
       class="rv-section rv-native-block"
       data-rv-feature="rv-alpha-performance"
-      data-rv-block-name="Block XX – Alpha Consistency Monitor"
+      data-rv-block-name="Alpha Consistency Monitor"
       data-rv-priority="low"
       data-rv-loading="true"
       data-rv-collapsible="true"
       data-rv-span="wide"
     >
       <div class="rv-native-header">
-        <h2>Block XX – Alpha Consistency Monitor</h2>
+        <h2>Alpha Consistency Monitor</h2>
         <button class="rv-native-refresh" type="button" data-rv-action="refresh">Refresh</button>
       </div>
       <div class="rv-native-body rv-card">
@@ -810,14 +828,14 @@
     <section
       class="rv-section rv-native-block"
       data-rv-feature="rv-earnings-reality"
-      data-rv-block-name="Block XX – Earnings Reality Check"
+      data-rv-block-name="Earnings Reality Check"
       data-rv-priority="low"
       data-rv-loading="true"
       data-rv-collapsible="true"
       data-rv-span="wide"
     >
       <div class="rv-native-header">
-        <h2>Block XX – Earnings Reality Check</h2>
+        <h2>Earnings Reality Check</h2>
         <button class="rv-native-refresh" type="button" data-rv-action="refresh">Refresh</button>
       </div>
       <div class="rv-native-body rv-card">
@@ -834,7 +852,7 @@
     <section
       class="rv-section rv-native-block"
       data-rv-feature="rv-crypto-snapshot"
-      data-rv-block-name="Block 09 – Crypto Snapshot"
+      data-rv-block-name="Crypto Snapshot"
       data-rv-priority="low"
       data-rv-loading="true"
       data-rv-collapsible="true"
@@ -843,7 +861,7 @@
     >
       <a id="crypto" style="position: absolute; top: -140px;"></a>
       <div class="rv-native-header">
-        <h2>Block 09 – Crypto Snapshot</h2>
+        <h2>Crypto Snapshot</h2>
         <button class="rv-native-refresh" type="button" data-rv-action="refresh">Refresh</button>
       </div>
       <div class="rv-native-body rv-card">
@@ -860,13 +878,13 @@
     <section
       class="rv-section rv-native-block"
       data-rv-feature="rv-sentiment-barometer"
-      data-rv-block-name="Block 10 – Sentiment Barometer"
+      data-rv-block-name="Sentiment Barometer"
       data-rv-priority="low"
       data-rv-loading="true"
       data-rv-collapsible="true"
     >
       <div class="rv-native-header">
-        <h2>Block 10 – Sentiment Barometer</h2>
+        <h2>Sentiment Barometer</h2>
         <button class="rv-native-refresh" type="button" data-rv-action="refresh">Refresh</button>
       </div>
       <div class="rv-native-body rv-card">
@@ -883,14 +901,14 @@
     <section
       class="rv-section rv-native-block"
       data-rv-feature="rv-tech-signals" data-block-id="tech-signals"
-      data-rv-block-name="Block 11 – Tech Signals"
+      data-rv-block-name="Tech Signals"
       data-rv-priority="low"
       data-rv-loading="true"
       data-rv-collapsible="true"
       data-rv-span="wide"
     >
       <div class="rv-native-header">
-        <h2>Block 11 – Tech Signals</h2>
+        <h2>Tech Signals</h2>
         <button class="rv-native-refresh" type="button" data-rv-action="refresh">Refresh</button>
       </div>
       <div class="rv-native-body rv-card">
