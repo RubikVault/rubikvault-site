@@ -673,10 +673,30 @@ section[data-rv-deprecated="true"] {
 #rv-dashboard .rv-native-block {
   margin-top: 24px;
   scroll-margin-top: 160px;
+  min-height: 0; /* Allow content to determine height */
+  overflow: visible; /* Prevent clipping */
 }
 
 #rv-dashboard .rv-native-block[data-rv-span="wide"] {
   grid-column: span 2;
+}
+
+/* Fix for Block 53 (RVCI Engine) - ensure tables/content are fully visible */
+#rv-dashboard .rv-native-block[data-rv-feature="rvci-engine"] {
+  overflow: visible;
+  max-height: none;
+}
+
+#rv-dashboard .rv-native-block[data-rv-feature="rvci-engine"] .rv-block-content {
+  overflow: visible;
+  max-height: none;
+}
+
+/* Ensure tables in RVCI block can scroll horizontally if needed, but not clip vertically */
+#rv-dashboard .rv-native-block[data-rv-feature="rvci-engine"] .rv-native-table-wrap {
+  overflow-x: auto;
+  overflow-y: visible;
+  max-height: none;
 }
 
 #rv-dashboard .rv-native-header {

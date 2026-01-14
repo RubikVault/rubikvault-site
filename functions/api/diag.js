@@ -197,6 +197,35 @@ export async function onRequestGet({ request, env, data }) {
     topErrorCodes: topErrorList
   };
 
+  // Enhanced data for Internal Dashboard
+  const blocks = sorted.map(entry => {
+    const featureId = entry.path.replace('/api/', '').replace(/-/g, '-');
+    return {
+      feature_id: featureId,
+      title: featureId.split('-').map(s => s.charAt(0).toUpperCase() + s.slice(1)).join(' '),
+      status: entry.ok ? 'OK' : entry.httpStatus >= 500 ? 'FAIL' : 'PARTIAL',
+      data_present: entry.ok,
+      quality: entry.ok ? 'OK' : entry.httpStatus >= 500 ? 'FAIL' : 'DEGRADED',
+      as_of: new Date().toISOString(),
+      source: entry.cacheLayer || 'none',
+      cache_layer: entry.cacheLayer || 'none',
+      last_error: entry.errorCode || null
+    };
+  });
+
+  const apiKeys = []; // Placeholder - would need to be populated from env checks
+  const events = sorted
+    .filter(entry => !entry.ok)
+    .map(entry => ({
+      timestamp: new Date().toISOString(),
+      type: entry.httpStatus >= 500 ? 'error' : 'warn',
+      feature: entry.path.replace('/api/', ''),
+      error_code: entry.errorCode || 'UNKNOWN',
+      message: `HTTP ${entry.httpStatus}`,
+      details: JSON.stringify({ durationMs: entry.durationMs, upstreamStatus: entry.upstreamStatus })
+    }))
+    .slice(0, 50);
+
   return makeResponse({
     ok: true,
     feature: FEATURE_ID,
@@ -205,7 +234,12 @@ export async function onRequestGet({ request, env, data }) {
       ts: new Date().toISOString(),
       env: { hasKV },
       summary,
-      endpoints: sorted
+      endpoints: sorted,
+      // Dashboard-specific data
+      overall_status: summary.endpointsFail === 0 ? 'OK' : summary.endpointsFail < sorted.length / 2 ? 'DEGRADED' : 'FAIL',
+      blocks,
+      api_keys: apiKeys,
+      events
     }
   });
 }

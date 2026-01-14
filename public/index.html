@@ -47,7 +47,7 @@
         </button>
       </div>
     </div>
-    <div class="rv-status-strip" id="rv-status-strip" aria-live="polite">
+    <div class="rv-status-strip" id="rv-status-strip" aria-live="polite" data-rv-debug-only="true" style="display: none;">
       <span>System status loading…</span>
     </div>
   </header>
@@ -55,9 +55,9 @@
   <nav class="rv-subnav" aria-label="Dashboard sections">
     <a href="#rv-overview">Overview</a>
     <a href="#rv-macro">Macro</a>
-    <a href="#rv-news">News</a>
     <a href="#rv-stocks">Stocks</a>
     <a href="#rv-crypto">Crypto</a>
+    <a href="#rv-news">News</a>
     <a href="#rv-alpha">Alpha Radar</a>
   </nav>
 
@@ -280,11 +280,12 @@
       </div>
     </section>
 
-    <!-- RV NATIVE BLOCK 02: Price Snapshot -->
+    <!-- RV NATIVE BLOCK 02: Price Snapshot (DEPRECATED - DISABLED) -->
     <section
       class="rv-section rv-native-block"
       data-rv-feature="rv-price-snapshot"
       data-rv-block-name="Block 02 – Price Snapshot"
+      style="display: none;"
       data-rv-priority="high"
       data-rv-loading="true"
       data-rv-collapsible="true"
@@ -447,11 +448,12 @@
       </div>
     </section>
 
-    <!-- RV NATIVE BLOCK 08: Macro & Rates -->
+    <!-- RV NATIVE BLOCK 08: Macro & Rates (DEPRECATED - DISABLED) -->
     <section
       class="rv-section rv-native-block"
       data-rv-feature="rv-macro-rates"
       data-rv-block-name="Block 08 – Macro & Rates"
+      style="display: none;"
       data-rv-priority="low"
       data-rv-loading="true"
       data-rv-collapsible="true"

@@ -1074,6 +1074,13 @@ function updateStatusStrip() {
   if (typeof document === "undefined") return;
   const strip = document.getElementById("rv-status-strip");
   if (!strip) return;
+  
+  // Only show status strip in debug mode
+  if (!isDebugEnabled()) {
+    strip.style.display = 'none';
+    return;
+  }
+  strip.style.display = '';
 
   const entries = STATUS_ORDER.map((featureId) => {
     const entry = statusState.get(featureId);
