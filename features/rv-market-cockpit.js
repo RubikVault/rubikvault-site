@@ -88,22 +88,35 @@ function render(root, payload, logger, featureId) {
   const sectorTop = data.sectorPerformance?.top || [];
   const sectorBottom = data.sectorPerformance?.bottom || [];
 
+  // Calculate 2Y-10Y spread
+  const yield2y = yieldValues["2y"] || null;
+  const yield10y = yieldValues["10y"] || null;
+  const spread2y10y = (yield2y !== null && yield10y !== null) ? (yield10y - yield2y) * 100 : null; // Convert to basis points
+  
+  // Format timestamp
+  const updatedAt = data.updatedAt || resolved.ts;
+  const timestamp = updatedAt ? new Date(updatedAt).toISOString().split("T")[0] + " " + new Date(updatedAt).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", timeZoneName: "short" }) : "N/A";
+
   root.innerHTML = `
     ${partialNote ? `<div class="rv-native-note">${partialNote}</div>` : ""}
-    <div class="rv-cockpit-summary">
+    <div class="rv-cockpit-header">
       <div class="rv-cockpit-regime">
         <span class="rv-cockpit-label">Regime</span>
         <strong data-rv-field="regime-label">${regime.label || "Neutral"}</strong>
         <span class="rv-native-note" data-rv-field="regime-score">Score ${formatNumber(regime.score, { maximumFractionDigits: 0 })}</span>
       </div>
-      <div class="rv-cockpit-drivers">
-        ${drivers.length ? drivers.map((driver) => `<span>${driver}</span>`).join("") : "No drivers yet"}
+      <div class="rv-cockpit-timestamp">
+        <span class="rv-cockpit-label">As of:</span>
+        <span data-rv-field="updated-at">${timestamp}</span>
       </div>
     </div>
-    <div class="rv-native-note">Why it matters: regime blends volatility, sentiment, and narrative risk.</div>
+    <div class="rv-cockpit-drivers">
+      ${drivers.length ? drivers.map((driver) => `<span class="rv-cockpit-driver">${driver}</span>`).join("") : ""}
+    </div>
+    <!-- Segment A: Equities (USA) -->
     ${(sp500.value !== null && sp500.value !== undefined) || (nasdaq.value !== null && nasdaq.value !== undefined) || (dow.value !== null && dow.value !== undefined) ? `
     <div class="rv-cockpit-section">
-      <h3>Equities (USA)</h3>
+      <h3 class="rv-cockpit-section-title">A) Equities (USA)</h3>
       <table class="rv-native-table rv-table--compact">
         <thead>
           <tr>
@@ -116,7 +129,7 @@ function render(root, payload, logger, featureId) {
         <tbody>
           ${sp500.value !== null && sp500.value !== undefined ? `
           <tr>
-            <td>S&amp;P 500 <span class="rv-tooltip-wrapper"><span class="rv-tooltip-icon" aria-label="Information">ⓘ</span><span class="rv-tooltip-content"><strong>S&amp;P 500</strong><br>Source: Yahoo Finance<br>Update: EOD<br>Context: US market close</span></span></td>
+            <td>S&amp;P 500 <span class="rv-tooltip-wrapper"><span class="rv-tooltip-icon" aria-label="Information">ⓘ</span><span class="rv-tooltip-content"><strong>S&amp;P 500</strong><br>Source: Yahoo Finance (Snapshot)<br>Update: EOD (1×/Tag)<br>Context: US market close</span></span></td>
             <td data-rv-field="sp500-value">${formatNumber(sp500.value, { maximumFractionDigits: 0 })}</td>
             <td data-rv-field="sp500-change" class="${sp500.changePercent >= 0 ? 'rv-native-positive' : 'rv-native-negative'}">${formatPercent(sp500.changePercent)}</td>
             <td>${sp500.source || indices.source || "Yahoo"}</td>
@@ -124,7 +137,7 @@ function render(root, payload, logger, featureId) {
           ` : ''}
           ${nasdaq.value !== null && nasdaq.value !== undefined ? `
           <tr>
-            <td>Nasdaq 100 <span class="rv-tooltip-wrapper"><span class="rv-tooltip-icon" aria-label="Information">ⓘ</span><span class="rv-tooltip-content"><strong>Nasdaq 100</strong><br>Source: Yahoo Finance<br>Update: EOD<br>Context: US market close</span></span></td>
+            <td>Nasdaq 100 <span class="rv-tooltip-wrapper"><span class="rv-tooltip-icon" aria-label="Information">ⓘ</span><span class="rv-tooltip-content"><strong>Nasdaq 100</strong><br>Source: Yahoo Finance (Snapshot)<br>Update: EOD (1×/Tag)<br>Context: US market close</span></span></td>
             <td data-rv-field="nasdaq-value">${formatNumber(nasdaq.value, { maximumFractionDigits: 0 })}</td>
             <td data-rv-field="nasdaq-change" class="${nasdaq.changePercent >= 0 ? 'rv-native-positive' : 'rv-native-negative'}">${formatPercent(nasdaq.changePercent)}</td>
             <td>${nasdaq.source || indices.source || "Yahoo"}</td>
@@ -132,7 +145,7 @@ function render(root, payload, logger, featureId) {
           ` : ''}
           ${dow.value !== null && dow.value !== undefined ? `
           <tr>
-            <td>Dow Jones <span class="rv-tooltip-wrapper"><span class="rv-tooltip-icon" aria-label="Information">ⓘ</span><span class="rv-tooltip-content"><strong>Dow Jones</strong><br>Source: Yahoo Finance<br>Update: EOD<br>Context: US market close</span></span></td>
+            <td>Dow Jones <span class="rv-tooltip-wrapper"><span class="rv-tooltip-icon" aria-label="Information">ⓘ</span><span class="rv-tooltip-content"><strong>Dow Jones</strong><br>Source: Yahoo Finance (Snapshot)<br>Update: EOD (1×/Tag)<br>Context: US market close</span></span></td>
             <td data-rv-field="dow-value">${formatNumber(dow.value, { maximumFractionDigits: 0 })}</td>
             <td data-rv-field="dow-change" class="${dow.changePercent >= 0 ? 'rv-native-positive' : 'rv-native-negative'}">${formatPercent(dow.changePercent)}</td>
             <td>${dow.source || indices.source || "Yahoo"}</td>
@@ -140,7 +153,7 @@ function render(root, payload, logger, featureId) {
           ` : ''}
           ${russell.value !== null && russell.value !== undefined ? `
           <tr>
-            <td>Russell 2000 <span class="rv-tooltip-wrapper"><span class="rv-tooltip-icon" aria-label="Information">ⓘ</span><span class="rv-tooltip-content"><strong>Russell 2000</strong><br>Source: Yahoo Finance<br>Update: EOD<br>Context: US market close</span></span></td>
+            <td>Russell 2000 <span class="rv-tooltip-wrapper"><span class="rv-tooltip-icon" aria-label="Information">ⓘ</span><span class="rv-tooltip-content"><strong>Russell 2000</strong><br>Source: Yahoo Finance (Snapshot)<br>Update: EOD (1×/Tag)<br>Context: US market close</span></span></td>
             <td data-rv-field="russell-value">${formatNumber(russell.value, { maximumFractionDigits: 0 })}</td>
             <td data-rv-field="russell-change" class="${russell.changePercent >= 0 ? 'rv-native-positive' : 'rv-native-negative'}">${formatPercent(russell.changePercent)}</td>
             <td>${russell.source || indices.source || "Yahoo"}</td>
@@ -150,189 +163,194 @@ function render(root, payload, logger, featureId) {
       </table>
     </div>
     ` : ''}
-    ${
-      sectorTop.length || sectorBottom.length
-        ? `<div class="rv-native-note">Sector performance (1D/1W/1M)</div>
-           <table class="rv-native-table rv-table--compact">
-             <thead>
-               <tr><th>Sector</th><th>1D</th><th>1W</th><th>1M</th><th>Rank</th></tr>
-             </thead>
-             <tbody>
-               ${sectorTop
-                 .map(
-                   (sector) => `
-                 <tr>
-                   <td>${sector.name || sector.symbol}</td>
-                   <td>${formatPercent(sector.r1d)}</td>
-                   <td>${formatPercent(sector.r1w)}</td>
-                   <td>${formatPercent(sector.r1m)}</td>
-                   <td class="rv-native-positive">Top</td>
-                 </tr>
-               `
-                 )
-                 .join("")}
-               ${sectorBottom
-                 .map(
-                   (sector) => `
-                 <tr>
-                   <td>${sector.name || sector.symbol}</td>
-                   <td>${formatPercent(sector.r1d)}</td>
-                   <td>${formatPercent(sector.r1w)}</td>
-                   <td>${formatPercent(sector.r1m)}</td>
-                   <td class="rv-native-negative">Bottom</td>
-                 </tr>
-               `
-                 )
-                 .join("")}
-             </tbody>
-           </table>`
-        : `<div class="rv-native-note">Sector performance unavailable (see Block 13).</div>`
-    }
-    <table class="rv-native-table rv-table--compact">
-      <thead>
-        <tr>
-          <th>Signal</th>
-          <th>Value</th>
-          <th>Source</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td>VIX <span class="rv-tooltip-wrapper"><span class="rv-tooltip-icon" aria-label="Information">ⓘ</span><span class="rv-tooltip-content"><strong>VIX (Volatility Index)</strong><br>Source: CBOE<br>Update: EOD<br>Context: US market close</span></span></td>
-          <td data-rv-field="vix">${formatNumber(vix.value, { maximumFractionDigits: 2 })}</td>
-          <td>${vix.note || vix.source || "N/A"}</td>
-        </tr>
-        <tr>
-          <td>Crypto F&amp;G <span class="rv-tooltip-wrapper"><span class="rv-tooltip-icon" aria-label="Information">ⓘ</span><span class="rv-tooltip-content"><strong>Fear & Greed Index (Crypto)</strong><br>Source: Alternative.me<br>Update: Daily<br>Context: Crypto market sentiment</span></span></td>
-          <td data-rv-field="fng-crypto">${formatNumber(fng.value)} ${fng.label ? `(${fng.label})` : ""}</td>
-          <td>${fng.source || "N/A"}</td>
-        </tr>
-        <tr>
-          <td>Stocks F&amp;G <span class="rv-tooltip-wrapper"><span class="rv-tooltip-icon" aria-label="Information">ⓘ</span><span class="rv-tooltip-content"><strong>Fear & Greed Index (Stocks)</strong><br>Source: CNN<br>Update: Daily<br>Context: US equity market sentiment</span></span></td>
-          <td data-rv-field="fng-stocks">${formatNumber(fngStocks.value)} ${fngStocks.label ? `(${fngStocks.label})` : ""}</td>
-          <td>${fngStocks.source || "N/A"}</td>
-        </tr>
-        <tr>
-          <td>News Sentiment <span class="rv-tooltip-wrapper"><span class="rv-tooltip-icon" aria-label="Information">ⓘ</span><span class="rv-tooltip-content"><strong>News Sentiment Score</strong><br>Source: Marketaux<br>Update: 15m<br>Context: Aggregated news tone</span></span></td>
-          <td data-rv-field="news-sentiment">${formatNumber(news.score, { maximumFractionDigits: 2 })} ${news.label || ""}</td>
-          <td>${news.source || "N/A"}</td>
-        </tr>
-        <tr>
-          <td>BTC <span class="rv-tooltip-wrapper"><span class="rv-tooltip-icon" aria-label="Information">ⓘ</span><span class="rv-tooltip-content"><strong>Bitcoin</strong><br>Source: CoinGecko<br>Update: 2m<br>Context: Crypto 24/7 snapshot</span></span></td>
-          <td data-rv-field="btc-price">$${formatNumber(btc.price, { maximumFractionDigits: 0 })} (${formatPercent(
-    btc.changePercent
-  )})</td>
-          <td>${btc.source || "N/A"}</td>
-        </tr>
-        <tr>
-          <td>ETH <span class="rv-tooltip-wrapper"><span class="rv-tooltip-icon" aria-label="Information">ⓘ</span><span class="rv-tooltip-content"><strong>Ethereum</strong><br>Source: CoinGecko<br>Update: 2m<br>Context: Crypto 24/7 snapshot</span></span></td>
-          <td data-rv-field="eth-price">$${formatNumber(eth.price, { maximumFractionDigits: 0 })} (${formatPercent(
-    eth.changePercent
-  )})</td>
-          <td>${eth.source || "N/A"}</td>
-        </tr>
-        <tr>
-          <td>SOL <span class="rv-tooltip-wrapper"><span class="rv-tooltip-icon" aria-label="Information">ⓘ</span><span class="rv-tooltip-content"><strong>Solana</strong><br>Source: CoinGecko<br>Update: 2m<br>Context: Crypto 24/7 snapshot</span></span></td>
-          <td data-rv-field="sol-price">$${formatNumber(sol.price, { maximumFractionDigits: 2 })} (${formatPercent(
-    sol.changePercent
-  )})</td>
-          <td>${sol.source || "N/A"}</td>
-        </tr>
-        <tr>
-          <td>XRP <span class="rv-tooltip-wrapper"><span class="rv-tooltip-icon" aria-label="Information">ⓘ</span><span class="rv-tooltip-content"><strong>XRP</strong><br>Source: CoinGecko<br>Update: 2m<br>Context: Crypto 24/7 snapshot</span></span></td>
-          <td data-rv-field="xrp-price">$${formatNumber(xrp.price, { maximumFractionDigits: 3 })} (${formatPercent(
-    xrp.changePercent
-  )})</td>
-          <td>${xrp.source || "N/A"}</td>
-        </tr>
-        <tr>
-          <td>DXY <span class="rv-tooltip-wrapper"><span class="rv-tooltip-icon" aria-label="Information">ⓘ</span><span class="rv-tooltip-content"><strong>US Dollar Index</strong><br>Source: Yahoo Finance<br>Update: EOD<br>Context: US market close</span></span></td>
-          <td data-rv-field="dxy">${formatNumber(dxy.value, { maximumFractionDigits: 2 })} (${formatPercent(
-    dxy.changePercent
-  )})</td>
-          <td>${dxy.source || "N/A"}</td>
-        </tr>
-        <tr>
-          <td>Gold (GLD) <span class="rv-tooltip-wrapper"><span class="rv-tooltip-icon" aria-label="Information">ⓘ</span><span class="rv-tooltip-content"><strong>Gold (GLD Proxy)</strong><br>Source: FMP<br>Update: EOD<br>Context: US market close</span></span></td>
-          <td data-rv-field="proxy-gold">${formatNumber(proxies.gold?.price, { maximumFractionDigits: 2 })} (${formatPercent(proxies.gold?.changePercent)})</td>
-          <td><span class="rv-pill-proxy">Proxy</span> ${proxies.gold?.symbol || "GLD"}</td>
-        </tr>
-        <tr>
-          <td>Oil (USO) <span class="rv-tooltip-wrapper"><span class="rv-tooltip-icon" aria-label="Information">ⓘ</span><span class="rv-tooltip-content"><strong>Oil (USO Proxy)</strong><br>Source: FMP<br>Update: EOD<br>Context: US market close</span></span></td>
-          <td data-rv-field="proxy-oil">${formatNumber(proxies.oil?.price, { maximumFractionDigits: 2 })} (${formatPercent(proxies.oil?.changePercent)})</td>
-          <td><span class="rv-pill-proxy">Proxy</span> ${proxies.oil?.symbol || "USO"}</td>
-        </tr>
-        <tr>
-          <td>US Yields 1Y</td>
-          <td data-rv-field="yield-1y">${formatNumber(yieldValues["1y"], { maximumFractionDigits: 2 })}</td>
-          <td>${yields.source || "US Treasury"}</td>
-        </tr>
-        <tr>
-          <td>US Yields 2Y</td>
-          <td data-rv-field="yield-2y">${formatNumber(yieldValues["2y"], { maximumFractionDigits: 2 })}</td>
-          <td>${yields.source || "US Treasury"}</td>
-        </tr>
-        <tr>
-          <td>US Yields 5Y</td>
-          <td data-rv-field="yield-5y">${formatNumber(yieldValues["5y"], { maximumFractionDigits: 2 })}</td>
-          <td>${yields.source || "US Treasury"}</td>
-        </tr>
-        <tr>
-          <td>US Yields 10Y</td>
-          <td data-rv-field="yield-10y">${formatNumber(yieldValues["10y"], { maximumFractionDigits: 2 })}</td>
-          <td>${yields.source || "US Treasury"}</td>
-        </tr>
-        <tr>
-          <td>US Yields 30Y <span class="rv-tooltip-wrapper"><span class="rv-tooltip-icon" aria-label="Information">ⓘ</span><span class="rv-tooltip-content"><strong>US Treasury 30-Year Yield</strong><br>Source: US Treasury<br>Update: EOD<br>Context: US market close</span></span></td>
-          <td data-rv-field="yield-30y">${formatNumber(yieldValues["30y"], { maximumFractionDigits: 2 })}</td>
-          <td>${yields.source || "US Treasury"}</td>
-        </tr>
-        ${
-          macroRates.length || macroFx.length || macroCpi.length
-            ? `${macroRates
-                .map(
-                  (item) => `
+    
+    <!-- Segment B: Volatility & Sentiment -->
+    <div class="rv-cockpit-section">
+      <h3 class="rv-cockpit-section-title">B) Volatility & Sentiment</h3>
+      <table class="rv-native-table rv-table--compact">
+        <thead>
           <tr>
-            <td>${item.label}</td>
-            <td>${formatNumber(item.value, { maximumFractionDigits: 2 })}</td>
-            <td>${item.source || "macro-rates"}</td>
-          </tr>`
-                )
-                .join("")}
-        ${macroFx
-          .map(
-            (item) => `
+            <th>Signal</th>
+            <th>Value</th>
+            <th>Source</th>
+          </tr>
+        </thead>
+        <tbody>
           <tr>
-            <td>${item.label}</td>
-            <td>${formatNumber(item.value, { maximumFractionDigits: 4 })}</td>
-            <td>${item.source || "macro-rates"}</td>
-          </tr>`
-          )
-          .join("")}
-        ${macroCpi
-          .map(
-            (item) => `
+            <td>VIX <span class="rv-tooltip-wrapper"><span class="rv-tooltip-icon" aria-label="Information">ⓘ</span><span class="rv-tooltip-content"><strong>VIX (Volatility Index)</strong><br>Source: CBOE (Snapshot)<br>Update: EOD (1×/Tag)<br>Context: US market close</span></span></td>
+            <td data-rv-field="vix">${formatNumber(vix.value, { maximumFractionDigits: 2 })}</td>
+            <td>${vix.note || vix.source || "CBOE"}</td>
+          </tr>
           <tr>
-            <td>${item.label}</td>
-            <td>${formatNumber(item.value, { maximumFractionDigits: 2 })}</td>
-            <td>${item.source || "macro-rates"}</td>
-          </tr>`
-          )
-          .join("")}`
-            : `<tr>
-            <td>Macro Snapshot</td>
-            <td>N/A</td>
-            <td>See Block 08</td>
-          </tr>`
-        }
-      </tbody>
-    </table>
-    <div class="rv-native-note">Sentiment details live in Block 10 (Sentiment Barometer).</div>
-    <div class="rv-native-note">
-      Updated: ${new Date(data.updatedAt || resolved.ts).toLocaleTimeString()} · Freshness: ${
-        resolved?.freshness || "unknown"
-      }
+            <td>Fear & Greed – Stocks <span class="rv-tooltip-wrapper"><span class="rv-tooltip-icon" aria-label="Information">ⓘ</span><span class="rv-tooltip-content"><strong>Fear & Greed Index (Stocks)</strong><br>Source: CNN (Snapshot)<br>Update: Daily (1×/Tag)<br>Context: US equity market sentiment</span></span></td>
+            <td data-rv-field="fng-stocks">${formatNumber(fngStocks.value)} ${fngStocks.label ? `(${fngStocks.label})` : ""}</td>
+            <td>${fngStocks.source || "CNN"}</td>
+          </tr>
+        </tbody>
+      </table>
     </div>
+    
+    <!-- Segment C: Rates (USA) -->
+    ${(yield2y !== null || yield10y !== null || yieldValues["30y"] !== null) ? `
+    <div class="rv-cockpit-section">
+      <h3 class="rv-cockpit-section-title">C) Rates (USA)</h3>
+      <table class="rv-native-table rv-table--compact">
+        <thead>
+          <tr>
+            <th>Yield</th>
+            <th>Value</th>
+            <th>Source</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${yield2y !== null ? `
+          <tr>
+            <td>US 2Y <span class="rv-tooltip-wrapper"><span class="rv-tooltip-icon" aria-label="Information">ⓘ</span><span class="rv-tooltip-content"><strong>US Treasury 2-Year Yield</strong><br>Source: US Treasury (Snapshot)<br>Update: EOD (1×/Tag)<br>Context: US market close</span></span></td>
+            <td data-rv-field="yield-2y">${formatPercent(yield2y, 2)}</td>
+            <td>${yields.source || "US Treasury"}</td>
+          </tr>
+          ` : ''}
+          ${yield10y !== null ? `
+          <tr>
+            <td>US 10Y <span class="rv-tooltip-wrapper"><span class="rv-tooltip-icon" aria-label="Information">ⓘ</span><span class="rv-tooltip-content"><strong>US Treasury 10-Year Yield</strong><br>Source: US Treasury (Snapshot)<br>Update: EOD (1×/Tag)<br>Context: US market close</span></span></td>
+            <td data-rv-field="yield-10y">${formatPercent(yield10y, 2)}</td>
+            <td>${yields.source || "US Treasury"}</td>
+          </tr>
+          ` : ''}
+          ${yieldValues["30y"] !== null ? `
+          <tr>
+            <td>US 30Y <span class="rv-tooltip-wrapper"><span class="rv-tooltip-icon" aria-label="Information">ⓘ</span><span class="rv-tooltip-content"><strong>US Treasury 30-Year Yield</strong><br>Source: US Treasury (Snapshot)<br>Update: EOD (1×/Tag)<br>Context: US market close</span></span></td>
+            <td data-rv-field="yield-30y">${formatPercent(yieldValues["30y"], 2)}</td>
+            <td>${yields.source || "US Treasury"}</td>
+          </tr>
+          ` : ''}
+          ${spread2y10y !== null ? `
+          <tr>
+            <td>2Y–10Y Spread <span class="rv-tooltip-wrapper"><span class="rv-tooltip-icon" aria-label="Information">ⓘ</span><span class="rv-tooltip-content"><strong>2Y-10Y Yield Spread</strong><br>Source: Calculated (US Treasury)<br>Update: EOD (1×/Tag)<br>Context: US market close</span></span></td>
+            <td data-rv-field="spread-2y10y">${formatNumber(spread2y10y, { maximumFractionDigits: 0 })} bp</td>
+            <td>${yields.source || "US Treasury"}</td>
+          </tr>
+          ` : ''}
+        </tbody>
+      </table>
+    </div>
+    ` : ''}
+    
+    <!-- Segment D: FX / USD -->
+    ${dxy.value !== null && dxy.value !== undefined ? `
+    <div class="rv-cockpit-section">
+      <h3 class="rv-cockpit-section-title">D) FX / USD</h3>
+      <table class="rv-native-table rv-table--compact">
+        <thead>
+          <tr>
+            <th>Index</th>
+            <th>Value</th>
+            <th>Change</th>
+            <th>Source</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>DXY <span class="rv-tooltip-wrapper"><span class="rv-tooltip-icon" aria-label="Information">ⓘ</span><span class="rv-tooltip-content"><strong>US Dollar Index</strong><br>Source: Yahoo Finance (Snapshot)<br>Update: EOD (1×/Tag)<br>Context: US market close</span></span></td>
+            <td data-rv-field="dxy">${formatNumber(dxy.value, { maximumFractionDigits: 2 })}</td>
+            <td data-rv-field="dxy-change" class="${dxy.changePercent >= 0 ? 'rv-native-positive' : 'rv-native-negative'}">${formatPercent(dxy.changePercent)}</td>
+            <td>${dxy.source || "Yahoo"}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    ` : ''}
+    
+    <!-- Segment E: Commodities -->
+    ${(proxies.gold?.price !== null && proxies.gold?.price !== undefined) || (proxies.oil?.price !== null && proxies.oil?.price !== undefined) ? `
+    <div class="rv-cockpit-section">
+      <h3 class="rv-cockpit-section-title">E) Commodities</h3>
+      <table class="rv-native-table rv-table--compact">
+        <thead>
+          <tr>
+            <th>Commodity</th>
+            <th>Value</th>
+            <th>Change</th>
+            <th>Source</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${proxies.gold?.price !== null && proxies.gold?.price !== undefined ? `
+          <tr>
+            <td>Gold <span class="rv-tooltip-wrapper"><span class="rv-tooltip-icon" aria-label="Information">ⓘ</span><span class="rv-tooltip-content"><strong>Gold (GLD Proxy)</strong><br>Source: FMP (Snapshot)<br>Update: EOD (1×/Tag)<br>Context: US market close</span></span></td>
+            <td data-rv-field="proxy-gold">$${formatNumber(proxies.gold.price, { maximumFractionDigits: 2 })}</td>
+            <td data-rv-field="proxy-gold-change" class="${proxies.gold.changePercent >= 0 ? 'rv-native-positive' : 'rv-native-negative'}">${formatPercent(proxies.gold.changePercent)}</td>
+            <td><span class="rv-pill-proxy">Proxy</span> ${proxies.gold.symbol || "GLD"}</td>
+          </tr>
+          ` : ''}
+          ${proxies.oil?.price !== null && proxies.oil?.price !== undefined ? `
+          <tr>
+            <td>Oil (WTI) <span class="rv-tooltip-wrapper"><span class="rv-tooltip-icon" aria-label="Information">ⓘ</span><span class="rv-tooltip-content"><strong>Oil (USO Proxy)</strong><br>Source: FMP (Snapshot)<br>Update: EOD (1×/Tag)<br>Context: US market close</span></span></td>
+            <td data-rv-field="proxy-oil">$${formatNumber(proxies.oil.price, { maximumFractionDigits: 2 })}</td>
+            <td data-rv-field="proxy-oil-change" class="${proxies.oil.changePercent >= 0 ? 'rv-native-positive' : 'rv-native-negative'}">${formatPercent(proxies.oil.changePercent)}</td>
+            <td><span class="rv-pill-proxy">Proxy</span> ${proxies.oil.symbol || "USO"}</td>
+          </tr>
+          ` : ''}
+        </tbody>
+      </table>
+    </div>
+    ` : ''}
+    
+    <!-- Segment F: Crypto (Core Segment) -->
+    ${(btc.price !== null && btc.price !== undefined) || (eth.price !== null && eth.price !== undefined) || (sol.price !== null && sol.price !== undefined) || (xrp.price !== null && xrp.price !== undefined) ? `
+    <div class="rv-cockpit-section">
+      <h3 class="rv-cockpit-section-title">F) Crypto (Core Segment)</h3>
+      <table class="rv-native-table rv-table--compact">
+        <thead>
+          <tr>
+            <th>Asset</th>
+            <th>Price</th>
+            <th>Change</th>
+            <th>Source</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${btc.price !== null && btc.price !== undefined ? `
+          <tr>
+            <td>BTC <span class="rv-tooltip-wrapper"><span class="rv-tooltip-icon" aria-label="Information">ⓘ</span><span class="rv-tooltip-content"><strong>Bitcoin</strong><br>Source: CoinGecko (Snapshot)<br>Update: 2×/Tag (09:00/21:00 CET)<br>Context: Crypto 24/7 snapshot</span></span></td>
+            <td data-rv-field="btc-price">$${formatNumber(btc.price, { maximumFractionDigits: 0 })}</td>
+            <td data-rv-field="btc-change" class="${btc.changePercent >= 0 ? 'rv-native-positive' : 'rv-native-negative'}">${formatPercent(btc.changePercent)}</td>
+            <td>${btc.source || "CoinGecko"}</td>
+          </tr>
+          ` : ''}
+          ${eth.price !== null && eth.price !== undefined ? `
+          <tr>
+            <td>ETH <span class="rv-tooltip-wrapper"><span class="rv-tooltip-icon" aria-label="Information">ⓘ</span><span class="rv-tooltip-content"><strong>Ethereum</strong><br>Source: CoinGecko (Snapshot)<br>Update: 2×/Tag (09:00/21:00 CET)<br>Context: Crypto 24/7 snapshot</span></span></td>
+            <td data-rv-field="eth-price">$${formatNumber(eth.price, { maximumFractionDigits: 0 })}</td>
+            <td data-rv-field="eth-change" class="${eth.changePercent >= 0 ? 'rv-native-positive' : 'rv-native-negative'}">${formatPercent(eth.changePercent)}</td>
+            <td>${eth.source || "CoinGecko"}</td>
+          </tr>
+          ` : ''}
+          ${sol.price !== null && sol.price !== undefined ? `
+          <tr>
+            <td>SOL <span class="rv-tooltip-wrapper"><span class="rv-tooltip-icon" aria-label="Information">ⓘ</span><span class="rv-tooltip-content"><strong>Solana</strong><br>Source: CoinGecko (Snapshot)<br>Update: 2×/Tag (09:00/21:00 CET)<br>Context: Crypto 24/7 snapshot</span></span></td>
+            <td data-rv-field="sol-price">$${formatNumber(sol.price, { maximumFractionDigits: 2 })}</td>
+            <td data-rv-field="sol-change" class="${sol.changePercent >= 0 ? 'rv-native-positive' : 'rv-native-negative'}">${formatPercent(sol.changePercent)}</td>
+            <td>${sol.source || "CoinGecko"}</td>
+          </tr>
+          ` : ''}
+          ${xrp.price !== null && xrp.price !== undefined ? `
+          <tr>
+            <td>XRP <span class="rv-tooltip-wrapper"><span class="rv-tooltip-icon" aria-label="Information">ⓘ</span><span class="rv-tooltip-content"><strong>XRP</strong><br>Source: CoinGecko (Snapshot)<br>Update: 2×/Tag (09:00/21:00 CET)<br>Context: Crypto 24/7 snapshot</span></span></td>
+            <td data-rv-field="xrp-price">$${formatNumber(xrp.price, { maximumFractionDigits: 3 })}</td>
+            <td data-rv-field="xrp-change" class="${xrp.changePercent >= 0 ? 'rv-native-positive' : 'rv-native-negative'}">${formatPercent(xrp.changePercent)}</td>
+            <td>${xrp.source || "CoinGecko"}</td>
+          </tr>
+          ` : ''}
+          <tr>
+            <td>Fear & Greed – Crypto <span class="rv-tooltip-wrapper"><span class="rv-tooltip-icon" aria-label="Information">ⓘ</span><span class="rv-tooltip-content"><strong>Fear & Greed Index (Crypto)</strong><br>Source: Alternative.me (Snapshot)<br>Update: Daily (1×/Tag)<br>Context: Crypto market sentiment</span></span></td>
+            <td data-rv-field="fng-crypto">${formatNumber(fng.value)} ${fng.label ? `(${fng.label})` : ""}</td>
+            <td>${fng.source || "Alternative.me"}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    ` : ''}
   `;
   root
     .querySelectorAll("[data-rv-field]")

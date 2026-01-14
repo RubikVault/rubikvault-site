@@ -80,6 +80,8 @@
     <a href="#crypto">Crypto</a>
     <a href="#news">News</a>
     <a href="#alpha-radar">Alpha Radar</a>
+    <a href="#moats">Moats</a>
+    <a href="#watchlist">Watchlist</a>
   </nav>
 
   <!-- MAIN -->
@@ -90,7 +92,7 @@
         <h1>Decode the Markets.</h1>
         <p>
           RubikVault is a one-person research project focusing on stocks, crypto, macro
-          and commodities – calm, data-driven and educational only.
+          and commodities – calm, data-driven and educational only. Daily snapshots provide transparent indicators. No financial advice.
         </p>
         <div class="rv-hero-actions">
           <a class="rv-btn-primary" href="https://www.youtube.com/@RubikVault" target="_blank" rel="noopener noreferrer">
@@ -105,16 +107,13 @@
       <div class="rv-hero-side">
         <div class="rv-tag">Early Stage</div>
         <div class="rv-card">
-          <h2>Market snapshot (coming soon)</h2>
+          <h2>Market snapshot</h2>
           <p>
-            A compact overview across equities, crypto, macro and commodities on a single page.
+            A compact overview across equities, crypto, macro and commodities on a single page. Daily snapshots provide transparent indicators. No financial advice.
           </p>
           <p class="rv-card-note">
-            No signals, no paid groups, no financial advice – just transparent research.
+            All data is from daily snapshots (EOD for stocks/macro, 2×/day for crypto). No live aggregation per visitor.
           </p>
-          <div class="rv-compact-ticker">
-            Live market widgets will appear here in a next iteration.
-          </div>
         </div>
       </div>
     </section>
@@ -511,7 +510,7 @@
       data-rv-span="wide"
     >
       <div class="rv-native-header">
-        <h2>S&amp;P 500 Sectors</h2>
+        <h2>S&amp;P 500 Sectors <span class="rv-tooltip-wrapper"><span class="rv-tooltip-icon" aria-label="Information">ⓘ</span><span class="rv-tooltip-content"><strong>S&amp;P 500 Sectors</strong><br>Purpose: Daily performance of S&amp;P 500 sectors to identify relative strength/weakness.<br>Data source: Snapshot (Yahoo Finance sector data)<br>Update: Daily (EOD)<br>Limitations: No intraday data, no financial advice.</span></span></h2>
         <button class="rv-native-refresh" type="button" data-rv-action="refresh">Refresh</button>
       </div>
       <div class="rv-native-body rv-card">
@@ -908,7 +907,7 @@
       data-rv-span="wide"
     >
       <div class="rv-native-header">
-        <h2>Tech Signals</h2>
+        <h2>Tech Signals <span class="rv-tooltip-wrapper"><span class="rv-tooltip-icon" aria-label="Information">ⓘ</span><span class="rv-tooltip-content"><strong>Tech Signals</strong><br>Purpose: Technical indicators (RSI, MACD, Stoch RSI) for watchlist and top 30 market cap stocks.<br>Data source: Snapshot (stooq OHLC data)<br>Update: Daily (EOD)<br>Limitations: No intraday data, no financial advice.</span></span></h2>
         <button class="rv-native-refresh" type="button" data-rv-action="refresh">Refresh</button>
       </div>
       <div class="rv-native-body rv-card">
@@ -933,7 +932,7 @@
     >
       <a id="alpha-radar" style="position: absolute; top: -140px;"></a>
       <div class="rv-native-header">
-        <h2>Alpha Radar</h2>
+        <h2>Alpha Radar <span class="rv-tooltip-wrapper"><span class="rv-tooltip-icon" aria-label="Information">ⓘ</span><span class="rv-tooltip-content"><strong>Alpha Radar</strong><br>Purpose: Identifies potential trading setups based on technical conditions (RSI extremes, EMA21 reclaim, volume confirmation).<br>Data source: Snapshot (stooq OHLC data)<br>Update: Daily (EOD)<br>Limitations: No intraday data, no financial advice. Scoring combines setup and trigger conditions.</span></span></h2>
         <button class="rv-native-refresh" type="button" data-rv-action="refresh">Refresh</button>
       </div>
       <div class="rv-native-body rv-card">
@@ -943,6 +942,152 @@
           <div class="rv-native-line"></div>
         </div>
         <div class="rv-native-root" data-rv-root></div>
+      </div>
+    </section>
+    
+    <!-- Monopoles / Economic Moats -->
+    <section
+      class="rv-section rv-native-block"
+      data-rv-block-name="Monopoles / Economic Moats"
+      id="moats"
+    >
+      <a id="moats" style="position: absolute; top: -140px;"></a>
+      <div class="rv-native-header">
+        <h2>Monopoles / Economic Moats</h2>
+        <span class="rv-tooltip-wrapper">
+          <span class="rv-tooltip-icon" aria-label="Information">ⓘ</span>
+          <span class="rv-tooltip-content">
+            <strong>Economic Moats</strong><br>
+            This section highlights companies with durable competitive advantages (moats) that create barriers to entry. These are educational examples of structural market positions. No financial advice. Data source: Public company information. Update: Static educational content.
+          </span>
+        </span>
+      </div>
+      <div class="rv-native-body rv-card">
+        <div class="rv-moats-content">
+          <p class="rv-moats-intro">
+            Economic moats are structural advantages that protect a company's market position and profitability over time. 
+            This section highlights examples of durable competitive advantages in US-tradable markets. 
+            Understanding moats helps identify companies with sustainable business models, though disruption risks always exist.
+          </p>
+          
+          <div class="rv-moats-category">
+            <h3>Payment Rails</h3>
+            <div class="rv-moats-examples">
+              <div class="rv-moats-item">
+                <strong>Visa (V) / Mastercard (MA)</strong>
+                <p><strong>Warum Moat:</strong> Network effects create a two-sided marketplace where merchants and cardholders both benefit from more participants. High switching costs and regulatory barriers protect the duopoly.</p>
+                <p><strong>Disruption-Risiko:</strong> Digital wallets (Apple Pay, Google Pay) and blockchain-based payments could bypass traditional rails, though adoption remains limited.</p>
+              </div>
+            </div>
+          </div>
+          
+          <div class="rv-moats-category">
+            <h3>Semiconductor Chokepoints</h3>
+            <div class="rv-moats-examples">
+              <div class="rv-moats-item">
+                <strong>ASML (ASML)</strong>
+                <p><strong>Warum Moat:</strong> Monopoly on extreme ultraviolet (EUV) lithography equipment required for cutting-edge chip manufacturing. Decades of R&D and capital intensity create insurmountable barriers.</p>
+                <p><strong>Disruption-Risiko:</strong> Alternative lithography technologies or geopolitical restrictions could impact demand, though no viable competitor exists today.</p>
+              </div>
+            </div>
+          </div>
+          
+          <div class="rv-moats-category">
+            <h3>Foundry Dominance</h3>
+            <div class="rv-moats-examples">
+              <div class="rv-moats-item">
+                <strong>TSMC (TSM)</strong>
+                <p><strong>Warum Moat:</strong> Leading-edge semiconductor manufacturing requires massive capital investment ($20B+ per fab) and decades of process expertise. TSMC's scale and technology leadership create a near-monopoly on advanced nodes.</p>
+                <p><strong>Disruption-Risiko:</strong> Geopolitical tensions (Taiwan risk) and potential government subsidies for competitors (Intel, Samsung) could shift market share over time.</p>
+              </div>
+            </div>
+          </div>
+          
+          <div class="rv-moats-category">
+            <h3>GPU Compute</h3>
+            <div class="rv-moats-examples">
+              <div class="rv-moats-item">
+                <strong>NVIDIA (NVDA)</strong>
+                <p><strong>Warum Moat:</strong> Dominance in AI/ML training infrastructure (CUDA ecosystem) creates software lock-in. Hardware performance leadership in data center GPUs drives pricing power.</p>
+                <p><strong>Disruption-Risiko:</strong> AMD (AMD) and custom silicon (Google TPU, Amazon Trainium) are gaining traction, though CUDA's ecosystem remains the standard.</p>
+              </div>
+            </div>
+          </div>
+          
+          <div class="rv-moats-category">
+            <h3>Search & Advertising</h3>
+            <div class="rv-moats-examples">
+              <div class="rv-moats-item">
+                <strong>Google (GOOGL)</strong>
+                <p><strong>Warum Moat:</strong> Search engine market share (>90%) creates data network effects. Advertisers must be where users are, creating a self-reinforcing cycle.</p>
+                <p><strong>Disruption-Risiko:</strong> Regulatory pressure (antitrust), AI-powered search (ChatGPT, Perplexity), and privacy changes (cookie deprecation) could erode the moat.</p>
+              </div>
+            </div>
+          </div>
+          
+          <div class="rv-moats-category">
+            <h3>OS & Enterprise Software</h3>
+            <div class="rv-moats-examples">
+              <div class="rv-moats-item">
+                <strong>Microsoft (MSFT)</strong>
+                <p><strong>Warum Moat:</strong> Windows OS dominance in enterprise creates switching costs. Office 365 and Azure cloud services create recurring revenue and ecosystem lock-in.</p>
+                <p><strong>Disruption-Risiko:</strong> Open-source alternatives (Linux, LibreOffice) and cloud-native competitors (Google Workspace) exist, though enterprise inertia protects market share.</p>
+              </div>
+            </div>
+          </div>
+          
+          <div class="rv-moats-category">
+            <h3>Duopole / Tripole Examples</h3>
+            <div class="rv-moats-examples">
+              <div class="rv-moats-item">
+                <strong>Boeing (BA) / Airbus (EADSY)</strong>
+                <p><strong>Warum Moat:</strong> Commercial aircraft manufacturing requires massive capital, regulatory certification, and decades of expertise. The duopoly benefits from high barriers to entry.</p>
+                <p><strong>Disruption-Risiko:</strong> Chinese competitor (COMAC) and potential new entrants (SpaceX, Boom Supersonic) could challenge the duopoly over decades.</p>
+              </div>
+              <div class="rv-moats-item">
+                <strong>Moody's (MCO) / S&P Global (SPGI) / Fitch</strong>
+                <p><strong>Warum Moat:</strong> Credit rating agencies benefit from regulatory recognition and network effects. Issuers need ratings to access capital markets.</p>
+                <p><strong>Disruption-Risiko:</strong> Regulatory changes (Dodd-Frank) and alternative credit assessment methods (AI, blockchain) could reduce reliance on traditional ratings.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+    
+    <!-- Watchlist v1 -->
+    <section
+      class="rv-section rv-native-block"
+      data-rv-block-name="My Watchlist"
+      id="watchlist"
+    >
+      <a id="watchlist" style="position: absolute; top: -140px;"></a>
+      <div class="rv-native-header">
+        <h2>My Watchlist</h2>
+        <span class="rv-tooltip-wrapper">
+          <span class="rv-tooltip-icon" aria-label="Information">ⓘ</span>
+          <span class="rv-tooltip-content">
+            <strong>Watchlist v1</strong><br>
+            Add stocks to your personal watchlist. Data is stored locally in your browser (localStorage). Export/Import JSON to transfer between devices. No login required. Data source: Tech Signals snapshot. Update: Daily (EOD).
+          </span>
+        </span>
+      </div>
+      <div class="rv-native-body rv-card">
+        <div class="rv-watchlist-content">
+          <div class="rv-watchlist-controls">
+            <input
+              type="text"
+              id="rv-watchlist-input"
+              placeholder="Enter symbol (e.g., AAPL)"
+              class="rv-watchlist-input"
+            />
+            <button type="button" id="rv-watchlist-add" class="rv-btn-primary">Add</button>
+            <button type="button" id="rv-watchlist-export" class="rv-btn-secondary">Export JSON</button>
+            <button type="button" id="rv-watchlist-import" class="rv-btn-secondary">Import JSON</button>
+            <input type="file" id="rv-watchlist-file" accept=".json" style="display: none;" />
+          </div>
+          <div id="rv-watchlist-list" class="rv-watchlist-list"></div>
+        </div>
       </div>
     </section>
     </div>
@@ -975,5 +1120,128 @@
   <script type="module" src="./market-clock.js"></script>
   <script type="module" src="./rv-debug-console.js"></script>
   <script type="module" src="./rv-loader.js"></script>
-</body>
+  <script>
+    // Watchlist v1 Functionality
+    (function() {
+      const STORAGE_KEY = "rv_watchlist_local";
+      const inputEl = document.getElementById("rv-watchlist-input");
+      const addBtn = document.getElementById("rv-watchlist-add");
+      const exportBtn = document.getElementById("rv-watchlist-export");
+      const importBtn = document.getElementById("rv-watchlist-import");
+      const fileInput = document.getElementById("rv-watchlist-file");
+      const listEl = document.getElementById("rv-watchlist-list");
+      
+      function loadWatchlist() {
+        try {
+          const raw = localStorage.getItem(STORAGE_KEY);
+          return raw ? JSON.parse(raw) : [];
+        } catch (e) {
+          return [];
+        }
+      }
+      
+      function saveWatchlist(symbols) {
+        try {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(symbols));
+          if (window.RV_SHARED) {
+            window.RV_SHARED.watchlist = symbols;
+          }
+        } catch (e) {
+          console.error("Failed to save watchlist:", e);
+        }
+      }
+      
+      function renderWatchlist() {
+        const symbols = loadWatchlist();
+        if (!symbols.length) {
+          listEl.innerHTML = '<div class="rv-native-empty">No symbols in watchlist. Add symbols above.</div>';
+          return;
+        }
+        listEl.innerHTML = symbols.map(symbol => `
+          <div class="rv-watchlist-item">
+            <span>${symbol.toUpperCase()}</span>
+            <button type="button" class="rv-watchlist-remove" data-symbol="${symbol}">Remove</button>
+          </div>
+        `).join("");
+        
+        // Attach remove handlers
+        listEl.querySelectorAll(".rv-watchlist-remove").forEach(btn => {
+          btn.addEventListener("click", () => {
+            const symbol = btn.getAttribute("data-symbol");
+            const symbols = loadWatchlist().filter(s => s.toUpperCase() !== symbol.toUpperCase());
+            saveWatchlist(symbols);
+            renderWatchlist();
+          });
+        });
+      }
+      
+      if (addBtn && inputEl) {
+        addBtn.addEventListener("click", () => {
+          const symbol = inputEl.value.trim().toUpperCase();
+          if (!symbol) return;
+          const symbols = loadWatchlist();
+          if (!symbols.includes(symbol)) {
+            symbols.push(symbol);
+            saveWatchlist(symbols);
+            renderWatchlist();
+            inputEl.value = "";
+          }
+        });
+        
+        inputEl.addEventListener("keypress", (e) => {
+          if (e.key === "Enter") {
+            addBtn.click();
+          }
+        });
+      }
+      
+      if (exportBtn) {
+        exportBtn.addEventListener("click", () => {
+          const symbols = loadWatchlist();
+          const dataStr = JSON.stringify(symbols, null, 2);
+          const blob = new Blob([dataStr], { type: "application/json" });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = "rubikvault-watchlist.json";
+          a.click();
+          URL.revokeObjectURL(url);
+        });
+      }
+      
+      if (importBtn && fileInput) {
+        importBtn.addEventListener("click", () => {
+          fileInput.click();
+        });
+        
+        fileInput.addEventListener("change", (e) => {
+          const file = e.target.files[0];
+          if (!file) return;
+          const reader = new FileReader();
+          reader.onload = (event) => {
+            try {
+              const symbols = JSON.parse(event.target.result);
+              if (Array.isArray(symbols)) {
+                saveWatchlist(symbols);
+                renderWatchlist();
+                alert(`Imported ${symbols.length} symbols`);
+              } else {
+                alert("Invalid JSON format");
+              }
+            } catch (e) {
+              alert("Failed to parse JSON: " + e.message);
+            }
+          };
+          reader.readAsText(file);
+          fileInput.value = "";
+        });
+      }
+      
+      // Initial render
+      if (listEl) {
+        renderWatchlist();
+      }
+    })();
+  </script>
+  </body>
 </html>
