@@ -759,25 +759,43 @@ section[data-rv-deprecated="true"] {
 }
 
 /* Fix for Block 53 (RVCI Engine) - ensure tables/content are fully visible */
+/* HIGHEST PRIORITY - Must be at the end to override everything */
 #rv-dashboard .rv-native-block[data-rv-feature="rvci-engine"],
-#rv-dashboard .rv-native-block[data-rv-feature="rvci-engine"] * {
+#rv-dashboard .rv-native-block[data-rv-feature="rvci-engine"] *,
+#rv-dashboard .rv-native-block[data-rv-feature="rvci-engine"] *::before,
+#rv-dashboard .rv-native-block[data-rv-feature="rvci-engine"] *::after {
   overflow: visible !important;
   max-height: none !important;
+  height: auto !important;
 }
 
 #rv-dashboard .rv-native-block[data-rv-feature="rvci-engine"] .rv-block-content,
 #rv-dashboard .rv-native-block[data-rv-feature="rvci-engine"] .rv-native-body,
-#rv-dashboard .rv-native-block[data-rv-feature="rvci-engine"] .rv-card {
+#rv-dashboard .rv-native-block[data-rv-feature="rvci-engine"] .rv-card,
+#rv-dashboard .rv-native-block[data-rv-feature="rvci-engine"] .rv-native-root,
+#rv-dashboard .rv-native-block[data-rv-feature="rvci-engine"] [data-rv-root] {
   overflow: visible !important;
   max-height: none !important;
+  height: auto !important;
 }
 
 /* Ensure tables in RVCI block can scroll horizontally if needed, but not clip vertically */
 #rv-dashboard .rv-native-block[data-rv-feature="rvci-engine"] .rv-native-table-wrap,
-#rv-dashboard .rv-native-block[data-rv-feature="rvci-engine"] table {
-  overflow-x: auto;
+#rv-dashboard .rv-native-block[data-rv-feature="rvci-engine"] table,
+#rv-dashboard .rv-native-block[data-rv-feature="rvci-engine"] tbody,
+#rv-dashboard .rv-native-block[data-rv-feature="rvci-engine"] thead,
+#rv-dashboard .rv-native-block[data-rv-feature="rvci-engine"] tr {
+  overflow-x: auto !important;
   overflow-y: visible !important;
   max-height: none !important;
+  height: auto !important;
+}
+
+/* Override any collapsed state for RVCI */
+#rv-dashboard .rv-native-block[data-rv-feature="rvci-engine"].is-collapsed .rv-native-body {
+  overflow: visible !important;
+  max-height: none !important;
+  height: auto !important;
 }
 
 #rv-dashboard .rv-native-header {
@@ -2123,6 +2141,57 @@ section[data-rv-deprecated="true"] {
   }
 }
 
+/* ============================================
+   BLOCK 53 (RVCI ENGINE) FIX - HIGHEST PRIORITY
+   Must be at the end to override ALL other rules
+   ============================================ */
+#rv-dashboard .rv-native-block[data-rv-feature="rvci-engine"],
+#rv-dashboard .rv-native-block[data-rv-feature="rvci-engine"] *,
+#rv-dashboard .rv-native-block[data-rv-feature="rvci-engine"] *::before,
+#rv-dashboard .rv-native-block[data-rv-feature="rvci-engine"] *::after {
+  overflow: visible !important;
+  max-height: none !important;
+  height: auto !important;
+}
+
+#rv-dashboard .rv-native-block[data-rv-feature="rvci-engine"] .rv-block-content,
+#rv-dashboard .rv-native-block[data-rv-feature="rvci-engine"] .rv-native-body,
+#rv-dashboard .rv-native-block[data-rv-feature="rvci-engine"] .rv-card,
+#rv-dashboard .rv-native-block[data-rv-feature="rvci-engine"] .rv-native-root,
+#rv-dashboard .rv-native-block[data-rv-feature="rvci-engine"] [data-rv-root],
+#rv-dashboard .rv-native-block[data-rv-feature="rvci-engine"] .rv-native-skeleton {
+  overflow: visible !important;
+  max-height: none !important;
+  height: auto !important;
+}
+
+#rv-dashboard .rv-native-block[data-rv-feature="rvci-engine"] .rv-native-table-wrap,
+#rv-dashboard .rv-native-block[data-rv-feature="rvci-engine"] table,
+#rv-dashboard .rv-native-block[data-rv-feature="rvci-engine"] tbody,
+#rv-dashboard .rv-native-block[data-rv-feature="rvci-engine"] thead,
+#rv-dashboard .rv-native-block[data-rv-feature="rvci-engine"] tr,
+#rv-dashboard .rv-native-block[data-rv-feature="rvci-engine"] td,
+#rv-dashboard .rv-native-block[data-rv-feature="rvci-engine"] th {
+  overflow-x: auto !important;
+  overflow-y: visible !important;
+  max-height: none !important;
+  height: auto !important;
+}
+
+#rv-dashboard .rv-native-block[data-rv-feature="rvci-engine"].is-collapsed .rv-native-body,
+#rv-dashboard .rv-native-block[data-rv-feature="rvci-engine"][data-rv-collapsible="true"] .rv-native-body {
+  overflow: visible !important;
+  max-height: none !important;
+  height: auto !important;
+  display: block !important;
+}
+
+#rv-dashboard .rv-native-block[data-rv-feature="rvci-engine"] [style*="max-height"],
+#rv-dashboard .rv-native-block[data-rv-feature="rvci-engine"] [style*="overflow"] {
+  max-height: none !important;
+  overflow: visible !important;
+}
+
 /* Debug command center (rvdbg) */
 #rv-debug-root[hidden] {
   display: none;
@@ -2314,4 +2383,55 @@ section[data-rv-deprecated="true"] {
   .rvdbg-item summary {
     grid-template-columns: 1fr;
   }
+}
+
+/* ============================================
+   BLOCK 53 (RVCI ENGINE) FIX - HIGHEST PRIORITY
+   Must be at the end to override ALL other rules
+   ============================================ */
+#rv-dashboard .rv-native-block[data-rv-feature="rvci-engine"],
+#rv-dashboard .rv-native-block[data-rv-feature="rvci-engine"] *,
+#rv-dashboard .rv-native-block[data-rv-feature="rvci-engine"] *::before,
+#rv-dashboard .rv-native-block[data-rv-feature="rvci-engine"] *::after {
+  overflow: visible !important;
+  max-height: none !important;
+  height: auto !important;
+}
+
+#rv-dashboard .rv-native-block[data-rv-feature="rvci-engine"] .rv-block-content,
+#rv-dashboard .rv-native-block[data-rv-feature="rvci-engine"] .rv-native-body,
+#rv-dashboard .rv-native-block[data-rv-feature="rvci-engine"] .rv-card,
+#rv-dashboard .rv-native-block[data-rv-feature="rvci-engine"] .rv-native-root,
+#rv-dashboard .rv-native-block[data-rv-feature="rvci-engine"] [data-rv-root],
+#rv-dashboard .rv-native-block[data-rv-feature="rvci-engine"] .rv-native-skeleton {
+  overflow: visible !important;
+  max-height: none !important;
+  height: auto !important;
+}
+
+#rv-dashboard .rv-native-block[data-rv-feature="rvci-engine"] .rv-native-table-wrap,
+#rv-dashboard .rv-native-block[data-rv-feature="rvci-engine"] table,
+#rv-dashboard .rv-native-block[data-rv-feature="rvci-engine"] tbody,
+#rv-dashboard .rv-native-block[data-rv-feature="rvci-engine"] thead,
+#rv-dashboard .rv-native-block[data-rv-feature="rvci-engine"] tr,
+#rv-dashboard .rv-native-block[data-rv-feature="rvci-engine"] td,
+#rv-dashboard .rv-native-block[data-rv-feature="rvci-engine"] th {
+  overflow-x: auto !important;
+  overflow-y: visible !important;
+  max-height: none !important;
+  height: auto !important;
+}
+
+#rv-dashboard .rv-native-block[data-rv-feature="rvci-engine"].is-collapsed .rv-native-body,
+#rv-dashboard .rv-native-block[data-rv-feature="rvci-engine"][data-rv-collapsible="true"] .rv-native-body {
+  overflow: visible !important;
+  max-height: none !important;
+  height: auto !important;
+  display: block !important;
+}
+
+#rv-dashboard .rv-native-block[data-rv-feature="rvci-engine"] [style*="max-height"],
+#rv-dashboard .rv-native-block[data-rv-feature="rvci-engine"] [style*="overflow"] {
+  max-height: none !important;
+  overflow: visible !important;
 }
