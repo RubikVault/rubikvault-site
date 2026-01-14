@@ -2463,8 +2463,12 @@ async function renderRvciEngineSnapshot(contentEl, feature, logger) {
     renderNoData(contentEl, meta);
     if (debug) {
       const detail = document.createElement("details");
-      detail.className = "rv-block-debug";
-      detail.innerHTML = `<summary>Show debug</summary><pre>${escapeHtml(JSON.stringify(baseDebugPayload, null, 2))}</pre>`;
+      if (isDebugEnabled()) {
+        detail.className = "rv-block-debug";
+        detail.innerHTML = `<summary>Show debug</summary><pre>${escapeHtml(JSON.stringify(baseDebugPayload, null, 2))}</pre>`;
+      } else {
+        detail.style.display = "none";
+      }
       contentEl.appendChild(detail);
     }
     return latest;
@@ -2766,7 +2770,22 @@ async function runFeature(section, feature, logger, contentEl) {
   setLoading(section, true);
 
   try {
-    await renderSnapshotBlock(contentEl, feature, logger, section);
+    const result = await renderSnapshotBlock(contentEl, feature, logger, section);
+    // Hide block if it's empty (NO_DATA, PARTIAL, MISSING_SECRET) - but only in public view
+    if (!isDebugEnabled()) {
+      const meta = result?.meta || {};
+      const status = meta.status || "";
+      const reason = meta.reason || "";
+      // Hide if NO_DATA, PARTIAL with no items, or MISSING_SECRET
+      const hasItems = (result?.data?.items?.length > 0) || (result?.data?.signals?.length > 0) || (result?.data?.picks);
+      if ((status === "NO_DATA" || (status === "PARTIAL" && !hasItems) || reason === "MISSING_SECRET")) {
+        section.hidden = true;
+      } else {
+        section.hidden = false;
+      }
+    } else {
+      section.hidden = false; // Always show in debug mode
+    }
     recordBlockEnd({ blockId, blockName, ok: true });
     clearDebugContext();
     return true;
