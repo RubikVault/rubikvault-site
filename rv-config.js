@@ -63,7 +63,7 @@ export const FEATURES = [
   },
   {
     id: "rv-market-health",
-    title: "Block 01 - Market Health",
+    title: "Market Health",
     module: "./features/rv-market-health.js",
     api: "market-health",
     computation: {
@@ -431,7 +431,7 @@ export const FEATURES = [
   },
   {
     id: "rv-smart-money",
-    title: "Block XX - Smart Money Score",
+    title: "Smart Money Score",
     module: "./features/rv-smart-money.js",
     api: "smart-money",
     computation: {
@@ -446,7 +446,7 @@ export const FEATURES = [
   },
   {
     id: "rv-alpha-performance",
-    title: "Block XX - Alpha Consistency Monitor",
+    title: "Alpha Consistency Monitor",
     module: "./features/rv-alpha-performance.js",
     api: "alpha-performance",
     computation: {
@@ -461,7 +461,7 @@ export const FEATURES = [
   },
   {
     id: "rv-earnings-reality",
-    title: "Block XX - Earnings Reality Check",
+    title: "Earnings Reality Check",
     module: "./features/rv-earnings-reality.js",
     api: "earnings-reality",
     computation: {
