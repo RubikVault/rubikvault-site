@@ -788,14 +788,16 @@ function syncBlockGrid(blocks, features) {
     }
     section.hidden = false;
     section.setAttribute("data-rv-feature", featureId);
-    section.setAttribute("data-rv-block-name", title);
+    // Clean title: remove "Block XX — " prefix
+    const cleanTitle = title ? title.replace(/^Block\s+[0-9X]{1,2}\s*[-–—]\s*/i, "").trim() : title;
+    section.setAttribute("data-rv-block-name", cleanTitle || title);
     section.setAttribute("data-rv-manifest-id", block.blockId);
     section.setAttribute("data-rv-loading", "true");
     section.removeAttribute("data-rv-disabled");
     section.removeAttribute("data-rv-deprecated");
     section.dataset.rvBlockIndex = String(index);
     const titleEl = section.querySelector("h2, h3, .block-title, .card-title");
-    if (titleEl) titleEl.textContent = title;
+    if (titleEl) titleEl.textContent = cleanTitle || title;
   });
 
   existing.slice(normalized.length).forEach((section) => {
@@ -2915,13 +2917,14 @@ function initBlock(section, feature, blockIndex) {
   const rawTitle =
     feature?.title || registry?.title || section.getAttribute("data-rv-block-name") || featureId;
   const title = sanitizeBlockTitle(rawTitle) || featureId;
-  const formattedTitle = `Block ${idxLabel} — ${title}`;
+  // Only add "Block XX" prefix in debug mode
+  const formattedTitle = isDebugEnabled() ? `Block ${idxLabel} — ${title}` : title;
   section.setAttribute("data-block-id", idxLabel);
   section.setAttribute("data-feature-id", registry?.featureId || featureId);
-  section.setAttribute("data-rv-block-name", formattedTitle);
+  section.setAttribute("data-rv-block-name", title); // Use clean title, not formatted
   const titleEl = section.querySelector("h2, h3, .block-title, .card-title");
   if (titleEl) {
-    titleEl.textContent = formattedTitle;
+    titleEl.textContent = title; // Use clean title, not formatted
   }
   const blockName = getBlockName(section, feature);
   const manifestEndpoint = getManifestEndpoint(feature, section);

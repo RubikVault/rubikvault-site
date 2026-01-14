@@ -101,6 +101,7 @@ function render(root, payload, logger, featureId) {
       </div>
     </div>
     <div class="rv-native-note">Why it matters: regime blends volatility, sentiment, and narrative risk.</div>
+    ${(sp500.value !== null && sp500.value !== undefined) || (nasdaq.value !== null && nasdaq.value !== undefined) || (dow.value !== null && dow.value !== undefined) ? `
     <div class="rv-cockpit-section">
       <h3>Equities (USA)</h3>
       <table class="rv-native-table rv-table--compact">
@@ -113,35 +114,42 @@ function render(root, payload, logger, featureId) {
           </tr>
         </thead>
         <tbody>
+          ${sp500.value !== null && sp500.value !== undefined ? `
           <tr>
             <td>S&amp;P 500 <span class="rv-tooltip-wrapper"><span class="rv-tooltip-icon" aria-label="Information">ⓘ</span><span class="rv-tooltip-content"><strong>S&amp;P 500</strong><br>Source: Yahoo Finance<br>Update: EOD<br>Context: US market close</span></span></td>
             <td data-rv-field="sp500-value">${formatNumber(sp500.value, { maximumFractionDigits: 0 })}</td>
             <td data-rv-field="sp500-change" class="${sp500.changePercent >= 0 ? 'rv-native-positive' : 'rv-native-negative'}">${formatPercent(sp500.changePercent)}</td>
-            <td>${sp500.source || "Yahoo"}</td>
+            <td>${sp500.source || indices.source || "Yahoo"}</td>
           </tr>
+          ` : ''}
+          ${nasdaq.value !== null && nasdaq.value !== undefined ? `
           <tr>
             <td>Nasdaq 100 <span class="rv-tooltip-wrapper"><span class="rv-tooltip-icon" aria-label="Information">ⓘ</span><span class="rv-tooltip-content"><strong>Nasdaq 100</strong><br>Source: Yahoo Finance<br>Update: EOD<br>Context: US market close</span></span></td>
             <td data-rv-field="nasdaq-value">${formatNumber(nasdaq.value, { maximumFractionDigits: 0 })}</td>
             <td data-rv-field="nasdaq-change" class="${nasdaq.changePercent >= 0 ? 'rv-native-positive' : 'rv-native-negative'}">${formatPercent(nasdaq.changePercent)}</td>
-            <td>${nasdaq.source || "Yahoo"}</td>
+            <td>${nasdaq.source || indices.source || "Yahoo"}</td>
           </tr>
+          ` : ''}
+          ${dow.value !== null && dow.value !== undefined ? `
           <tr>
             <td>Dow Jones <span class="rv-tooltip-wrapper"><span class="rv-tooltip-icon" aria-label="Information">ⓘ</span><span class="rv-tooltip-content"><strong>Dow Jones</strong><br>Source: Yahoo Finance<br>Update: EOD<br>Context: US market close</span></span></td>
             <td data-rv-field="dow-value">${formatNumber(dow.value, { maximumFractionDigits: 0 })}</td>
             <td data-rv-field="dow-change" class="${dow.changePercent >= 0 ? 'rv-native-positive' : 'rv-native-negative'}">${formatPercent(dow.changePercent)}</td>
-            <td>${dow.source || "Yahoo"}</td>
+            <td>${dow.source || indices.source || "Yahoo"}</td>
           </tr>
-          ${russell.value ? `
+          ` : ''}
+          ${russell.value !== null && russell.value !== undefined ? `
           <tr>
             <td>Russell 2000 <span class="rv-tooltip-wrapper"><span class="rv-tooltip-icon" aria-label="Information">ⓘ</span><span class="rv-tooltip-content"><strong>Russell 2000</strong><br>Source: Yahoo Finance<br>Update: EOD<br>Context: US market close</span></span></td>
             <td data-rv-field="russell-value">${formatNumber(russell.value, { maximumFractionDigits: 0 })}</td>
             <td data-rv-field="russell-change" class="${russell.changePercent >= 0 ? 'rv-native-positive' : 'rv-native-negative'}">${formatPercent(russell.changePercent)}</td>
-            <td>${russell.source || "Yahoo"}</td>
+            <td>${russell.source || indices.source || "Yahoo"}</td>
           </tr>
           ` : ''}
         </tbody>
       </table>
     </div>
+    ` : ''}
     ${
       sectorTop.length || sectorBottom.length
         ? `<div class="rv-native-note">Sector performance (1D/1W/1M)</div>
