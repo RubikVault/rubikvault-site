@@ -92,8 +92,8 @@ function isDebugEnabled() {
 function normalizeId(rawId) {
   const raw = String(rawId || "");
   const match = raw.match(/^(\d+):(.*)$/);
-  if (!match) return raw;
-  return match[2] || "";
+  const normalized = match ? (match[2] || "") : raw;
+  return normalized.replace(/^rv-/, "");
 }
 
 if (isDebugEnabled()) {
