@@ -95,9 +95,9 @@ const REALIZED_VOL_DAYS = 20;
 const RSI_PERIOD = 14;
 
 const ECB_RATE_KEYS = [
-  { id: "MRR", label: "Main Refinancing", key: "FM/M.U2.EUR.4F.KR.MRR_FR.LEV" },
-  { id: "DFR", label: "Deposit Facility", key: "FM/M.U2.EUR.4F.KR.DFR.LEV" },
-  { id: "MLF", label: "Marginal Lending", key: "FM/M.U2.EUR.4F.KR.MLFR.LEV" }
+  { id: "MRR", label: "Main Refinancing", key: "FM/D.U2.EUR.4F.KR.MRR_FR.LEV" },
+  { id: "DFR", label: "Deposit Facility", key: "FM/D.U2.EUR.4F.KR.DFR.LEV" },
+  { id: "MLF", label: "Marginal Lending", key: "FM/D.U2.EUR.4F.KR.MLFR.LEV" }
 ];
 
 const ECB_FX_KEYS = [
@@ -1362,7 +1362,11 @@ async function main() {
   }
 }
 
-main().catch((error) => {
-  console.error(error.message || error);
-  process.exit(1);
-});
+main()
+  .then(() => {
+    process.exit(0);
+  })
+  .catch((error) => {
+    console.error(error.message || error);
+    process.exit(1);
+  });

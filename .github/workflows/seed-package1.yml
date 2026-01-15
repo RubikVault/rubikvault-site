@@ -34,9 +34,15 @@ jobs:
         run: |
           node -e 'console.log({FRED:!!process.env.FRED_API_KEY,FINNHUB:!!process.env.FINNHUB_API_KEY,FMP:!!process.env.FMP_API_KEY,SEC:!!process.env.SEC_API_KEY,MARKETAUX_API_KEY:!!process.env.MARKETAUX_API_KEY,MARKETAUX_KEY:!!process.env.MARKETAUX_KEY})'
           node scripts/seeder.js --only blocks1-12
+      - name: Export canonical blocks
+        run: |
+          node scripts/export-blocks-from-snapshots.mjs
+      - name: Generate health files
+        run: |
+          node scripts/generate-health.mjs
       - name: Commit snapshots
         run: |
-          git add public/data/snapshots public/data/seed-manifest.json public/data/usage-report.json
+          git add public/data/snapshots public/data/blocks public/data/seed-manifest.json public/data/usage-report.json public/data/health.json public/data/health_history.json
           if git diff --staged --quiet; then
             echo "No snapshot changes"
             exit 0
