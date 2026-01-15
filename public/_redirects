@@ -8,6 +8,8 @@
 /mirror/*       /mirror/:splat   200
 /mirrors/*      /mirrors/:splat  200
 /favicon.ico    /assets/rv-icon.png 200
+/data/snapshots/rv-:splat.json /data/snapshots/:splat.json 200
+/data/blocks/rv-:splat.latest.json /data/blocks/:splat.latest.json 200
 /internal-dashboard.html /internal-dashboard 301
 /internal-dashboard /internal-dashboard 200
 # Explicit index route to avoid rewrite loop warnings

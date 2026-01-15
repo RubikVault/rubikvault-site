@@ -360,12 +360,15 @@ export function initDiagnostics(options = {}) {
   setupGlobalListeners();
   hookConsole();
   collectPerformance();
+  const assetPaths = (options.assetPaths || []).filter(Boolean);
+  const importPaths = (options.importPaths || []).filter(Boolean);
+  const apiPaths = (options.apiPaths || []).filter(Boolean);
   Promise.all([
     loadBuildInfo(),
     collectCacheInfo(),
-    runAssetChecks(options.assetPaths || []),
-    runImportChecks(options.importPaths || []),
-    runApiChecks(options.apiPaths || [])
+    runAssetChecks(assetPaths),
+    runImportChecks(importPaths),
+    runApiChecks(apiPaths)
   ]).then(() => {
     evaluateBuildWarnings();
     notify();
