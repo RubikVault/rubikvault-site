@@ -61,8 +61,7 @@ function isDebugEnabled() {
   const config = getConfig();
   if (!config.DEBUG_ENABLED) return false;
   const params = new URLSearchParams(window.location.search);
-  const activated =
-    params.get("debug") === "1" || window.localStorage?.getItem("debug") === "true";
+  const activated = params.get("debug") === "1";
   if (!activated) return false;
   if (config.debugAuthToken) {
     return window.localStorage?.getItem("debugAuth") === config.debugAuthToken;

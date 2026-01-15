@@ -75,7 +75,7 @@ function redactObject(value) {
 function getDebugFlag() {
   if (typeof window === "undefined") return false;
   const params = new URLSearchParams(window.location.search);
-  return params.get("debug") === "1" || window.localStorage?.getItem("RV_DEBUG") === "1";
+  return params.get("debug") === "1";
 }
 
 function getDebugToken() {
