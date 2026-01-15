@@ -142,7 +142,7 @@ function render(root, payload, logger, featureId) {
             })
             .join("")}
         </div>`
-        : `<div class="rv-native-note">Crypto tiles are deprecated here; see Block 09.</div>`
+        : `<div class="rv-native-note">Crypto tiles are deprecated here.</div>`
     }
     <div class="rv-health-table-wrap">
       <h4>US Indices</h4>

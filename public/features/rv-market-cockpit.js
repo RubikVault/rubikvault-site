@@ -129,7 +129,7 @@ function render(root, payload, logger, featureId) {
                  .join("")}
              </tbody>
            </table>`
-        : `<div class="rv-native-note">Sector performance unavailable (see Block 13).</div>`
+        : `<div class="rv-native-note">Sector performance unavailable.</div>`
     }
     <table class="rv-native-table rv-table--compact">
       <thead>
@@ -249,12 +249,12 @@ function render(root, payload, logger, featureId) {
             : `<tr>
             <td>Macro Snapshot</td>
             <td>N/A</td>
-            <td>See Block 08</td>
+            <td>See macro table</td>
           </tr>`
         }
       </tbody>
     </table>
-    <div class="rv-native-note">Sentiment details live in Block 10 (Sentiment Barometer).</div>
+    <div class="rv-native-note">Sentiment details are available in the dedicated sentiment block.</div>
     <div class="rv-native-note">
       Updated: ${new Date(data.updatedAt || resolved.ts).toLocaleTimeString()} · Freshness: ${
         resolved?.freshness || "unknown"
