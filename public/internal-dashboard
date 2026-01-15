@@ -661,7 +661,11 @@
 
     async function probeEndpoint(path) {
       try {
-        const res = await fetch(withToken(path), { method: 'HEAD' });
+        const res = await fetch(withToken(path), {
+          method: 'GET',
+          headers: { Accept: 'application/json' },
+          cache: 'no-store'
+        });
         return { ok: res.ok, status: res.status };
       } catch (err) {
         return { ok: false, status: 0 };
