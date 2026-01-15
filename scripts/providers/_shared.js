@@ -117,7 +117,7 @@ export async function fetchWithRetry(url, ctx, { headers = {}, timeoutMs = 10000
         throw buildProviderError(
           "PROVIDER_BAD_PAYLOAD",
           error?.message || "fetch_failed",
-          normalizeProviderDetails(url)
+          normalizeProviderDetails(url, { snippet: error?.message || "fetch_failed" })
         );
       }
       const backoffMs = 1000 * Math.pow(2, attempt);
