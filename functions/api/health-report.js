@@ -252,6 +252,9 @@ export async function onRequestGet(context) {
   const { request, env } = context;
   const traceId = createTraceId(request);
   const origin = new URL(request.url).origin;
+  const url = new URL(request.url);
+  const internalToken =
+    request.headers.get("x-rv-internal-token") || url.searchParams.get("token") || "";
   const now = new Date().toISOString();
   const debugEnabled = new URL(request.url).searchParams.get("debug") === "1";
   const globalCandidates = [
@@ -318,7 +321,10 @@ export async function onRequestGet(context) {
     let raw = null;
     let parseFailed = false;
     try {
-      const res = await fetch(`${origin}${endpoint}?debug=1`, {
+      const targetUrl = new URL(`${origin}${endpoint}`);
+      targetUrl.searchParams.set("debug", "1");
+      if (internalToken) targetUrl.searchParams.set("token", internalToken);
+      const res = await fetch(targetUrl.toString(), {
         headers: { "x-rv-trace-id": traceId }
       });
       responseStatus = res.status;

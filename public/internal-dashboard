@@ -338,6 +338,88 @@
     </div>
 
     <div class="section">
+      <h2>Block Verification (Server)</h2>
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:10px;">
+        <span class="badge" style="background:rgba(56,189,248,0.15);color:#cbd5f5;border:1px solid rgba(56,189,248,0.25);">/api/health-report</span>
+        <span style="color:#94a3b8;font-size:12px;">Checks each block endpoint and validates required fields. Use this to find "fetched ok" but "render empty" cases.</span>
+      </div>
+      <div class="status-grid" id="health-report-summary">
+        <div class="status-card"><h3>Health Score</h3><div class="value">—</div><div class="label">Loading...</div></div>
+        <div class="status-card"><h3>OK</h3><div class="value">—</div><div class="label">Blocks</div></div>
+        <div class="status-card"><h3>PARTIAL</h3><div class="value">—</div><div class="label">Blocks</div></div>
+        <div class="status-card"><h3>BAD</h3><div class="value">—</div><div class="label">Blocks</div></div>
+      </div>
+      <div class="timestamp" id="health-report-timestamp"></div>
+      <div style="overflow-x:auto; margin-top: 12px;">
+        <table id="health-report-table">
+          <thead>
+            <tr>
+              <th>Block</th>
+              <th>Feature</th>
+              <th>State</th>
+              <th>Endpoint</th>
+              <th>Status</th>
+              <th>Reason</th>
+              <th>Invalid Fields</th>
+              <th>Circuit</th>
+              <th>Error</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td colspan="9">Loading...</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div style="margin-top: 12px;">
+        <select id="health-report-block" style="width: 100%; padding: 8px; margin-bottom: 10px; background: #111827; color: #f8fafc; border: 1px solid rgba(148, 163, 184, 0.2); border-radius: 6px;">
+          <option value="">Select a block for field details...</option>
+        </select>
+        <div style="overflow-x:auto;">
+          <table id="health-report-fields">
+            <thead>
+              <tr>
+                <th>Field</th>
+                <th>Path</th>
+                <th>Required</th>
+                <th>Valid</th>
+                <th>Reason</th>
+                <th>Fix</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td colspan="6">Select a block above...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <h2>Debug Matrix (KV / Mirrors)</h2>
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:10px;">
+        <span class="badge" style="background:rgba(16,185,129,0.15);color:#cbd5f5;border:1px solid rgba(16,185,129,0.25);">/api/debug-matrix</span>
+        <span style="color:#94a3b8;font-size:12px;">Reads mirror:*:latest keys (capped) to show which blocks have lastGood/mirror coverage.</span>
+      </div>
+      <div class="timestamp" id="debug-matrix-timestamp"></div>
+      <div style="overflow-x:auto;">
+        <table id="debug-matrix-table">
+          <thead>
+            <tr>
+              <th>Feature</th>
+              <th>Endpoint</th>
+              <th>Status</th>
+              <th>Empty Reason</th>
+              <th>Last Update</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td colspan="5">Loading...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="section">
       <h2>Block × Field Matrix</h2>
       <div style="overflow-x: auto;">
         <table id="block-matrix">
@@ -652,11 +734,137 @@
         loadDoc('/DEBUG_README.md', 'doc-debug-readme'),
         loadDoc('/RUNBOOK.md', 'doc-runbook'),
         loadDoc('/BLOCK_ANALYSIS.md', 'doc-block-analysis'),
+        updateHealthReport(),
+        updateDebugMatrix(),
         updateBlockMatrix(),
         updateApiKeys(),
         updateErrorTimeline()
       ]);
       document.body.classList.remove('loading');
+    }
+
+    function safeText(value) {
+      return String(value ?? '').replace(/[&<>"']/g, (c) => ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#039;'
+      }[c]));
+    }
+
+    function badgeFor(value) {
+      const text = String(value || '').toUpperCase();
+      const cls = text === 'OK' || text === 'LIVE'
+        ? 'ok'
+        : text === 'PARTIAL' || text === 'STALE'
+          ? 'warn'
+          : text === 'EXPECTED'
+            ? 'partial'
+            : 'fail';
+      return `<span class="badge ${cls}">${safeText(text || '—')}</span>`;
+    }
+
+    async function updateHealthReport() {
+      const tbody = document.querySelector('#health-report-table tbody');
+      const summaryEl = document.getElementById('health-report-summary');
+      const ts = document.getElementById('health-report-timestamp');
+      const selector = document.getElementById('health-report-block');
+      const fieldsBody = document.querySelector('#health-report-fields tbody');
+      if (!tbody || !summaryEl || !selector || !fieldsBody) return;
+
+      const report = await fetchJSON(`${API_BASE}/health-report?debug=1`);
+      if (!report || report.ok !== true) {
+        tbody.innerHTML = '<tr><td colspan="9">No data available</td></tr>';
+        if (ts) ts.textContent = `Last updated: ${new Date().toLocaleString()}`;
+        return;
+      }
+      const blocks = Array.isArray(report.blocks) ? report.blocks : [];
+      const summary = report.summary || {};
+
+      const score = Number.isFinite(summary.healthScore) ? summary.healthScore : '—';
+      const okBlocks = summary.okBlocks ?? 0;
+      const partialBlocks = summary.partialBlocks ?? 0;
+      const badBlocks = summary.badBlocks ?? 0;
+      summaryEl.innerHTML = `
+        <div class="status-card"><h3>Health Score</h3><div class="value">${safeText(score)}</div><div class="label">server contract + fetch</div></div>
+        <div class="status-card ok"><h3>OK</h3><div class="value">${safeText(okBlocks)}</div><div class="label">Blocks</div></div>
+        <div class="status-card warn"><h3>PARTIAL</h3><div class="value">${safeText(partialBlocks)}</div><div class="label">Blocks</div></div>
+        <div class="status-card fail"><h3>BAD</h3><div class="value">${safeText(badBlocks)}</div><div class="label">Blocks</div></div>
+      `;
+
+      tbody.innerHTML = blocks.map((b) => {
+        const state = String(b.blockState || '—');
+        const endpointStatus = String(b.endpointStatus || '—');
+        const err = b.error?.code ? `${b.error.code}` : '';
+        return `
+          <tr>
+            <td><code>${safeText(b.id || '')}</code></td>
+            <td><code>${safeText(b.featureId || '')}</code></td>
+            <td>${badgeFor(state)}</td>
+            <td><code>${safeText(b.apiPath || '—')}</code></td>
+            <td>${badgeFor(endpointStatus)}</td>
+            <td><code style="font-size: 11px;">${safeText(b.reason || '—')}</code></td>
+            <td>${safeText(b.invalidFields ?? 0)}</td>
+            <td>${b.circuitOpen === true ? '<span class="badge fail">open</span>' : b.circuitOpen === false ? '<span class="badge ok">closed</span>' : '—'}</td>
+            <td><code style="font-size: 11px;">${safeText(err || '—')}</code></td>
+          </tr>
+        `;
+      }).join('');
+
+      const sorted = blocks.slice().sort((a, b) => String(a.id || '').localeCompare(String(b.id || '')));
+      selector.innerHTML = '<option value="">Select a block for field details...</option>' +
+        sorted.map((b) => `<option value="${safeText(b.featureId || '')}">${safeText(b.id || '')} — ${safeText(b.title || b.featureId || '')}</option>`).join('');
+
+      const byFeature = new Map(sorted.map((b) => [String(b.featureId || ''), b]));
+      const renderFields = (featureId) => {
+        const block = byFeature.get(String(featureId || ''));
+        if (!block) {
+          fieldsBody.innerHTML = '<tr><td colspan="6">Select a block above...</td></tr>';
+          return;
+        }
+        const fields = Array.isArray(block.fields) ? block.fields : [];
+        fieldsBody.innerHTML = fields.length ? fields.map((f) => {
+          const ok = f.valid === true;
+          return `
+            <tr>
+              <td><code>${safeText(f.key || '')}</code></td>
+              <td><code>${safeText(f.path || '')}</code></td>
+              <td>${f.required ? '<span class="badge warn">true</span>' : 'false'}</td>
+              <td>${ok ? '<span class="badge ok">true</span>' : '<span class="badge fail">false</span>'}</td>
+              <td><code style="font-size: 11px;">${safeText(f.reason || '—')}</code></td>
+              <td style="max-width: 520px;">${safeText(f.fixHint || '—')}</td>
+            </tr>
+          `;
+        }).join('') : '<tr><td colspan="6">No fields contract defined for this block.</td></tr>';
+      };
+
+      selector.onchange = () => renderFields(selector.value);
+      if (ts) ts.textContent = `Last updated: ${new Date().toLocaleString()}`;
+    }
+
+    async function updateDebugMatrix() {
+      const tbody = document.querySelector('#debug-matrix-table tbody');
+      const ts = document.getElementById('debug-matrix-timestamp');
+      if (!tbody) return;
+
+      const res = await fetchJSON(`${API_BASE}/debug-matrix`);
+      const entries = res?.data?.entries || [];
+      if (!res || res.ok !== true || !Array.isArray(entries)) {
+        tbody.innerHTML = '<tr><td colspan="5">No data available</td></tr>';
+        if (ts) ts.textContent = `Last updated: ${new Date().toLocaleString()}`;
+        return;
+      }
+      tbody.innerHTML = entries.map((e) => `
+        <tr>
+          <td><code>${safeText(e.feature || '—')}</code></td>
+          <td><code>${safeText(e.endpoint || '—')}</code></td>
+          <td>${badgeFor(e.endpointStatus || 'UNKNOWN')}</td>
+          <td><code style="font-size:11px;">${safeText(e.emptyReason || '—')}</code></td>
+          <td>${safeText(e.lastUpdate || '—')}</td>
+        </tr>
+      `).join('');
+      if (ts) ts.textContent = `Last updated: ${new Date().toLocaleString()}`;
     }
 
     async function probeEndpoint(path) {
