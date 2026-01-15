@@ -773,12 +773,15 @@ export async function swrGetOrRefresh(
 }
 
 export async function safeFetch(url, options = {}) {
-  const { timeoutMs = 6000, headers = {}, userAgent } = options;
+  const { timeoutMs = 6000, headers = {}, userAgent, budget } = options;
   const finalHeaders = {
     Accept: "*/*",
     ...headers,
     ...(userAgent ? { "User-Agent": userAgent } : {})
   };
+  if (budget && typeof budget.fetch === "function") {
+    return budget.fetch(url, { ...options, timeoutMs, headers: finalHeaders, userAgent });
+  }
   return fetchTextWithTimeout(url, { headers: finalHeaders }, timeoutMs);
 }
 

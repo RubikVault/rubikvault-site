@@ -1,5 +1,6 @@
 import { fetchJSON, getBindingHint } from "./utils/api.js";
 import { getOrFetch } from "./utils/store.js";
+import { createTooltip } from "./utils/tooltip.js";
 
 const state = {
   sortKey: "r1d",
@@ -35,6 +36,14 @@ function render(root, payload, logger) {
   const sectors = Array.isArray(data.sectors) ? data.sectors : [];
   const missing = Array.isArray(data.missingSymbols) ? data.missingSymbols : [];
   state.lastPayload = payload;
+  const updatedAt = data.updatedAt || payload?.ts;
+  const asOf = updatedAt
+    ? `${new Date(updatedAt).toISOString().split("T")[0]} ${new Date(updatedAt).toLocaleTimeString("en-US", {
+        hour: "2-digit",
+        minute: "2-digit",
+        timeZoneName: "short"
+      })}`
+    : "N/A";
   const partialNote =
     payload?.ok && (payload?.isStale || payload?.error?.code || missing.length)
       ? "Partial data — some sectors unavailable."
@@ -103,11 +112,11 @@ function render(root, payload, logger) {
         <thead>
           <tr>
             <th data-rv-sort="symbol">${sortLabel("Sector", "symbol")}</th>
-            <th data-rv-sort="price">${sortLabel("Price", "price")}</th>
-            <th data-rv-sort="r1d">${sortLabel("1D", "r1d")}</th>
-            <th data-rv-sort="r1w">${sortLabel("1W", "r1w")}</th>
-            <th data-rv-sort="r1m">${sortLabel("1M", "r1m")}</th>
-            <th data-rv-sort="r1y">${sortLabel("1Y", "r1y")}</th>
+            <th class="rv-cell-num" data-rv-sort="price">${sortLabel("Price", "price")}</th>
+            <th class="rv-cell-num" data-rv-sort="r1d">${sortLabel("1D", "r1d")}</th>
+            <th class="rv-cell-num" data-rv-sort="r1w">${sortLabel("1W", "r1w")}</th>
+            <th class="rv-cell-num" data-rv-sort="r1m">${sortLabel("1M", "r1m")}</th>
+            <th class="rv-cell-num" data-rv-sort="r1y">${sortLabel("1Y", "r1y")}</th>
           </tr>
         </thead>
         <tbody>
@@ -117,12 +126,12 @@ function render(root, payload, logger) {
                 typeof value === "number" ? (value >= 0 ? "rv-native-positive" : "rv-native-negative") : "";
               return `
                 <tr>
-                  <td><strong>${row.symbol}</strong></td>
-                  <td>${formatNumber(row.price, { maximumFractionDigits: 2 })}</td>
-                  <td class="${cls(row.r1d)}">${formatNumber(row.r1d, { maximumFractionDigits: 2 })}%</td>
-                  <td class="${cls(row.r1w)}">${formatNumber(row.r1w, { maximumFractionDigits: 2 })}%</td>
-                  <td class="${cls(row.r1m)}">${formatNumber(row.r1m, { maximumFractionDigits: 2 })}%</td>
-                  <td class="${cls(row.r1y)}">${formatNumber(row.r1y, { maximumFractionDigits: 2 })}%</td>
+                  <td class="rv-cell-label"><strong>${row.symbol}</strong></td>
+                  <td class="rv-cell-num">${formatNumber(row.price, { maximumFractionDigits: 2 })}</td>
+                  <td class="rv-cell-num ${cls(row.r1d)}">${formatNumber(row.r1d, { maximumFractionDigits: 2 })}%</td>
+                  <td class="rv-cell-num ${cls(row.r1w)}">${formatNumber(row.r1w, { maximumFractionDigits: 2 })}%</td>
+                  <td class="rv-cell-num ${cls(row.r1m)}">${formatNumber(row.r1m, { maximumFractionDigits: 2 })}%</td>
+                  <td class="rv-cell-num ${cls(row.r1y)}">${formatNumber(row.r1y, { maximumFractionDigits: 2 })}%</td>
                 </tr>
               `;
             })
@@ -130,7 +139,12 @@ function render(root, payload, logger) {
         </tbody>
       </table>
     </div>
-    <div class="rv-native-note">Updated: ${new Date(data.updatedAt || payload.ts).toLocaleString()}</div>
+    <div class="rv-native-note">As of: ${asOf} ${createTooltip("Sectors snapshot", {
+      source: data.source || "stooq",
+      asOf,
+      cadence: "EOD (1×/Tag)",
+      marketContext: "US market close"
+    })}</div>
   `;
 
   root.querySelectorAll("[data-rv-sort]").forEach((th) => {

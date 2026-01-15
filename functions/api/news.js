@@ -13,6 +13,8 @@ import {
   normalizeFreshness
 } from "./_shared.js";
 import { kvGetJson, kvPutJson } from "../_lib/kv-safe.js";
+import { checkAndIncrementProviderBudget } from "../_shared/provider_budget.js";
+import { RequestBudget } from "../_shared/budget.js";
 
 const FEATURE_ID = "news";
 const KV_TTL = 600;
@@ -128,13 +130,14 @@ function normalize(items) {
 }
 
 async function fetchFeeds() {
+  const budget = new RequestBudget(20);
   const itemsByFeed = [];
   const errors = [];
   let upstreamSnippet = "";
 
   const results = await Promise.allSettled(
     FEEDS.map(async (feed) => {
-      const res = await safeFetchText(feed.url, { userAgent: "RubikVault/1.0" });
+      const res = await safeFetchText(feed.url, { userAgent: "RubikVault/1.0", budget });
       const text = res.text || "";
       if (!res.ok || isHtmlLike(text)) {
         errors.push({
@@ -241,6 +244,36 @@ export async function onRequestGet({ request, env, data, waitUntil }) {
       cacheLayer: "kv",
       upstreamStatus: null,
       durationMs: Date.now() - started
+    });
+    return response;
+  }
+
+  const budgetMax = Number(env?.RV_BUDGET_RSS_PER_DAY || 0) || 0;
+  const budget = await checkAndIncrementProviderBudget(env, "rss", budgetMax);
+  if (budget.limited && cacheUsable) {
+    const response = makeResponse({
+      ok: true,
+      feature: FEATURE_ID,
+      traceId,
+      data: cached.value.data,
+      cache: { hit: true, ttl: KV_TTL, layer: "kv" },
+      upstream: { url: FEEDS.map((feed) => feed.url).join(" | "), status: null, snippet: "" },
+      error: {
+        code: "COVERAGE_LIMIT",
+        message: "Provider budget exceeded",
+        details: budget
+      },
+      isStale: true,
+      freshness: normalizeFreshness(cachedAgeSec),
+      cacheStatus: "STALE"
+    });
+    logServer({
+      feature: FEATURE_ID,
+      traceId,
+      cacheLayer: "kv",
+      upstreamStatus: 429,
+      durationMs: Date.now() - started,
+      errorCode: "COVERAGE_LIMIT"
     });
     return response;
   }

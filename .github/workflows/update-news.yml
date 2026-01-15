@@ -1,0 +1,38 @@
+name: Update News Snapshot
+
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  update-news:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Update snapshot
+        run: node scripts/update-news.mjs
+
+      - name: Commit changes
+        run: |
+          git add public/data/news.json public/data/news.meta.json package.json package-lock.json
+          if git diff --cached --quiet; then
+            echo "No changes"
+            exit 0
+          fi
+          git commit -m "chore: update news snapshot [skip ci]"
+          git push

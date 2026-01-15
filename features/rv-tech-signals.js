@@ -1,6 +1,7 @@
 import { fetchJSON, getBindingHint } from "./utils/api.js";
 import { getOrFetch } from "./utils/store.js";
 import { rvSetText } from "./rv-dom.js";
+import { createTooltip } from "./utils/tooltip.js";
 
 const STORAGE_KEY = "rv_watchlist_local";
 const DEFAULT_LIST = ["AAPL", "NVDA"];
@@ -287,7 +288,6 @@ function renderTop30(root, logger) {
       ? `${availableCount}/${totalCount} verfügbar`
       : "";
   root.innerHTML = `
-    <div class="rv-native-note rv-native-warning">WIP: consolidation planned with other signal blocks.</div>
     <div class="rv-native-note">How computed? RSI/MACD/Stoch RSI are derived from OHLC (stooq) per timeframe.</div>
     <div class="rv-top30-controls">
       <button type="button" class="rv-top30-tab${top30State.timeframe === "daily" ? " is-active" : ""}" data-rv-timeframe="daily">Daily</button>
@@ -314,6 +314,16 @@ function render(root, watchPayload, top30Payload, logger, symbols) {
       ? "Partial data — some sources unavailable."
       : "";
 
+  const updatedAt =
+    watchPayload?.data?.updatedAt || top30Payload?.data?.updatedAt || watchPayload?.ts || top30Payload?.ts || null;
+  const asOf = updatedAt
+    ? `${new Date(updatedAt).toISOString().split("T")[0]} ${new Date(updatedAt).toLocaleTimeString("en-US", {
+        hour: "2-digit",
+        minute: "2-digit",
+        timeZoneName: "short"
+      })}`
+    : "N/A";
+
   const watchlistHtml = watchPayload?.ok
     ? renderWatchlist(watchSignals, symbols)
     : `
@@ -334,6 +344,12 @@ function render(root, watchPayload, top30Payload, logger, symbols) {
       <h3>Top 30 Market Cap Table</h3>
       <div data-rv-top30-root></div>
     </div>
+    <div class="rv-native-note">As of: ${asOf} ${createTooltip("Tech Signals snapshot", {
+      source: watchPayload?.data?.source || top30Payload?.data?.source || "stooq",
+      asOf,
+      cadence: "EOD (1×/Tag)",
+      marketContext: "US market close"
+    })}</div>
   `;
 
   const topRoot = root.querySelector("[data-rv-top30-root]");

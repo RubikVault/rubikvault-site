@@ -110,8 +110,26 @@
 </head>
 <body>
   <div class="container">
-    <h1>🔍 RubikVault Internal Dashboard</h1>
+    <h1>🔍 RubikVault Internal Dashboard <span id="rv-internal-auth" class="badge warn">auth: unknown</span></h1>
     
+    <div class="section">
+      <h2>Endpoint Reachability</h2>
+      <div style="overflow-x: auto;">
+        <table id="endpoint-probes">
+          <thead>
+            <tr>
+              <th>Endpoint</th>
+              <th>Status</th>
+              <th>Hint</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td colspan="3">Loading...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
     <div class="section">
       <h2>System Health Overview</h2>
       <button class="refresh-btn" onclick="refreshAll()">🔄 Refresh All</button>
@@ -204,10 +222,17 @@
 
   <script type="module">
     const API_BASE = '/api';
+    const INTERNAL_TOKEN = new URLSearchParams(window.location.search).get('token') || '';
+    const withToken = (url) => {
+      if (!INTERNAL_TOKEN) return url;
+      const u = new URL(url, window.location.origin);
+      u.searchParams.set('token', INTERNAL_TOKEN);
+      return u.pathname + u.search;
+    };
     
     async function fetchJSON(url) {
       try {
-        const res = await fetch(url);
+        const res = await fetch(withToken(url));
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         return await res.json();
       } catch (err) {
@@ -216,15 +241,66 @@
       }
     }
 
+    const authEl = document.getElementById('rv-internal-auth');
+    if (authEl) {
+      if (INTERNAL_TOKEN) {
+        authEl.textContent = 'auth: token';
+        authEl.className = 'badge ok';
+      } else {
+        authEl.textContent = 'auth: none';
+        authEl.className = 'badge warn';
+      }
+    }
+
     async function refreshAll() {
       document.body.classList.add('loading');
       await Promise.all([
+        updateEndpointProbes(),
         updateHealthOverview(),
         updateBlockMatrix(),
         updateApiKeys(),
         updateErrorTimeline()
       ]);
       document.body.classList.remove('loading');
+    }
+
+    async function probeEndpoint(path) {
+      try {
+        const res = await fetch(withToken(path), { method: 'HEAD' });
+        return { ok: res.ok, status: res.status };
+      } catch (err) {
+        return { ok: false, status: 0 };
+      }
+    }
+
+    async function updateEndpointProbes() {
+      const tbody = document.querySelector('#endpoint-probes tbody');
+      if (!tbody) return;
+
+      const targets = [
+        { path: `${API_BASE}/health`, hint: '200 expected (prod: internal token bypasses debug guard)' },
+        { path: `${API_BASE}/diag`, hint: 'Requires RV_INTERNAL_TOKEN (otherwise 404)' },
+        { path: `${API_BASE}/system-health`, hint: 'Requires RV_INTERNAL_TOKEN (otherwise 404)' },
+        { path: `${API_BASE}/debug-bundle`, hint: 'Requires RV_INTERNAL_TOKEN (otherwise 404)' }
+      ];
+
+      const results = await Promise.all(targets.map(async (t) => ({
+        ...t,
+        result: await probeEndpoint(t.path)
+      })));
+
+      tbody.innerHTML = results.map((row) => {
+        const status = row.result.status;
+        const statusClass = row.result.ok ? 'ok' : status === 404 ? 'warn' : 'fail';
+        const label = row.result.ok ? `OK (${status})` : status ? `FAIL (${status})` : 'FAIL (network)';
+        return `
+          <tr>
+            <td><code>${row.path}</code></td>
+            <td><span class="badge ${statusClass}">${label}</span></td>
+            <td>${row.hint}</td>
+          </tr>
+        `;
+      }).join('');
     }
 
     async function updateHealthOverview() {

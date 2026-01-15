@@ -8,6 +8,8 @@ import {
   normalizeSymbolsParam,
   safeSnippet
 } from "./_shared.js";
+import { checkAndIncrementProviderBudget } from "../_shared/provider_budget.js";
+import { RequestBudget } from "../_shared/budget.js";
 
 const FEATURE_ID = "quotes";
 const KV_TTL = 60;
@@ -17,6 +19,13 @@ const rateStore = new Map();
 const STOOQ_BASE = "https://stooq.com/q/l/";
 const FINNHUB_BASE = "https://finnhub.io/api/v1/quote";
 const FMP_BASE = "https://financialmodelingprep.com/api/v3/quote";
+
+function providerBudgetMax(provider, env) {
+  if (provider === "stooq") return Number(env?.RV_BUDGET_STOOQ_PER_DAY || 0) || 0;
+  if (provider === "finnhub") return Number(env?.RV_BUDGET_FINNHUB_PER_DAY || 0) || 0;
+  if (provider === "fmp") return Number(env?.RV_BUDGET_FMP_PER_DAY || 0) || 0;
+  return 0;
+}
 
 function parseChangePercent(value) {
   if (value === null || value === undefined) return null;
@@ -202,11 +211,12 @@ async function fetchStooqQuotes(symbols) {
 
 async function fetchFinnhubQuotes(symbols, env) {
   const token = env.FINNHUB_API_KEY;
+  const budget = new RequestBudget(Math.max(10, symbols.length + 5));
   const results = await Promise.all(
     symbols.map(async (symbol) => {
       const url = `${FINNHUB_BASE}?symbol=${encodeURIComponent(symbol)}&token=${token}`;
       try {
-        const res = await fetch(url);
+        const res = await budget.fetch(url);
         const text = await res.text();
         if (!res.ok) {
           return {
@@ -468,7 +478,15 @@ export async function onRequestGet({ request, env, data }) {
 
   let result = null;
 
+  const budgetSkips = [];
+
   for (const provider of availableProviders) {
+    const maxPerDay = providerBudgetMax(provider, env);
+    const budget = await checkAndIncrementProviderBudget(env, provider, maxPerDay);
+    if (budget.limited) {
+      budgetSkips.push({ provider, budget });
+      continue;
+    }
     if (provider === "stooq") {
       result = await fetchStooqQuotes(symbols);
     } else if (provider === "finnhub") {
@@ -526,6 +544,8 @@ export async function onRequestGet({ request, env, data }) {
 
   const cached = !panic ? await kvGetJson(env, cacheKey) : null;
   if (cached?.hit && cached.value?.data) {
+    const allBudgetLimited =
+      budgetSkips.length > 0 && budgetSkips.length === availableProviders.length && !result?.ok;
     const response = makeResponse({
       ok: true,
       feature: FEATURE_ID,
@@ -537,7 +557,9 @@ export async function onRequestGet({ request, env, data }) {
         status: result?.status ?? null,
         snippet: result?.snippet || ""
       },
-      error: { code: mapUpstreamCode(result?.status ?? 502), message: "Upstream error", details: {} },
+      error: allBudgetLimited
+        ? { code: "COVERAGE_LIMIT", message: "Provider budget exceeded", details: { skips: budgetSkips } }
+        : { code: mapUpstreamCode(result?.status ?? 502), message: "Upstream error", details: {} },
       isStale: true
     });
     logServer({

@@ -8,6 +8,7 @@ import {
   safeSnippet
 } from "./_shared.js";
 import { CPI_SERIES } from "./_shared/macroSeries.js";
+import { checkAndIncrementProviderBudget } from "../_shared/provider_budget.js";
 
 const FEATURE_ID = "macro-rates";
 const KV_TTL = 21600;
@@ -272,6 +273,64 @@ export async function onRequestGet({ request, env, data }) {
       });
       return response;
     }
+  }
+
+  const cacheSnapshot = !panic ? await kvGetJson(env, cacheKey) : null;
+  const hasCache = Boolean(cacheSnapshot?.hit && cacheSnapshot.value?.data);
+  const fredBudgetMax = Number(env?.RV_BUDGET_FRED_PER_DAY || 0) || 0;
+  const yahooBudgetMax = Number(env?.RV_BUDGET_YAHOO_PER_DAY || 0) || 0;
+  const fredBudget = await checkAndIncrementProviderBudget(env, "fred", fredBudgetMax);
+  const yahooBudget = await checkAndIncrementProviderBudget(env, "yahoo", yahooBudgetMax);
+  const limited = fredBudget.limited || yahooBudget.limited;
+  if (limited) {
+    if (hasCache) {
+      const response = makeResponse({
+        ok: true,
+        feature: FEATURE_ID,
+        traceId,
+        data: cacheSnapshot.value.data,
+        cache: { hit: true, ttl: KV_TTL, layer: "kv" },
+        upstream: { url: "fred | yahoo", status: 429, snippet: "" },
+        error: {
+          code: "COVERAGE_LIMIT",
+          message: "Provider budget exceeded",
+          details: { fred: fredBudget, yahoo: yahooBudget }
+        },
+        isStale: true
+      });
+      logServer({
+        feature: FEATURE_ID,
+        traceId,
+        cacheLayer: "kv",
+        upstreamStatus: 429,
+        durationMs: Date.now() - started,
+        errorCode: "COVERAGE_LIMIT"
+      });
+      return response;
+    }
+
+    const response = makeResponse({
+      ok: false,
+      feature: FEATURE_ID,
+      traceId,
+      cache: { hit: false, ttl: 0, layer: "none" },
+      upstream: { url: "fred | yahoo", status: 429, snippet: "" },
+      error: {
+        code: "COVERAGE_LIMIT",
+        message: "Provider budget exceeded",
+        details: { fred: fredBudget, yahoo: yahooBudget }
+      },
+      status: 429
+    });
+    logServer({
+      feature: FEATURE_ID,
+      traceId,
+      cacheLayer: "none",
+      upstreamStatus: 429,
+      durationMs: Date.now() - started,
+      errorCode: "COVERAGE_LIMIT"
+    });
+    return response;
   }
 
   let upstreamSnippet = "";
