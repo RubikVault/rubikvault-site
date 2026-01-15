@@ -154,11 +154,12 @@ async function fetchFngStocks(env) {
 }
 
 async function fetchMarketaux(env) {
-  if (!env.MARKETAUX_KEY) {
+  const token = env.MARKETAUX_API_KEY || env.MARKETAUX_KEY || "";
+  if (!token) {
     return { ok: false, score: null, label: "", source: "Marketaux", rateLimited: false };
   }
   const params = buildMarketauxParams();
-  params.set("api_token", env.MARKETAUX_KEY);
+  params.set("api_token", token);
   params.set("languages", "en");
   params.set("filter_entities", "true");
   params.set("group_similar", "true");

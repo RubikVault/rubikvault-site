@@ -129,15 +129,22 @@ export async function onRequest(context) {
   const debugKind = ["1", "kv", "fresh"].includes(debugParam) ? debugParam : "";
   const debugMode = Boolean(debugKind);
   const allowPrefixes = [
-    ...(String(env?.RV_KV_ALLOW_PREFIXES || "")
-      .split(",")
-      .map((entry) => entry.trim())
-      .filter(Boolean)),
-    "rv:circuit:",
+    "cache:",
+    "etag:",
+    "log:",
+    "diagnostics:",
     "rv:lastgood:",
+    "rv:circuit:",
     "rv:budget:",
+    "rv:budgetw:",
+    "rv:budgetm:",
     "cb:",
-    "log:event:"
+    "mirror:",
+    "DASH:",
+    "congress-trading:",
+    "breakout-energy:",
+    "market-regime:",
+    "volume-anomaly:"
   ];
   const kvGuard = createKVGuard({ RV_KV: env?.RV_KV }, { debugMode, debugKind, allowPrefixes });
   if (env) env.RV_KV = kvGuard;

@@ -35,6 +35,7 @@ const BLOCK_ORDER = [
   "rv-crypto-snapshot",
   "rv-sentiment-barometer",
   "rv-tech-signals",
+  "rv-rvci-engine",
   "rv-alpha-radar"
 ];
 

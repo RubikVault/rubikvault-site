@@ -250,6 +250,21 @@ export const FEATURES = [
     refreshIntervalMs: 15 * 60 * 1000
   },
   {
+    id: "rv-rvci-engine",
+    title: "Block 14 - RVCI Engine",
+    module: "./features/rv-rvci-engine.js",
+    api: "rvci-engine",
+    computation: {
+      where: "Pages Function",
+      update: "EOD",
+      cost: "free and automated",
+      trust: "derived"
+    },
+    enabled: true,
+    lazyLoad: true,
+    refreshIntervalMs: 6 * 60 * 60 * 1000
+  },
+  {
     id: "rv-alpha-radar",
     title: "Alpha Radar",
     module: "./features/rv-alpha-radar.js",
