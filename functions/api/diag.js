@@ -2,7 +2,7 @@ import { createTraceId, makeResponse } from "./_shared.js";
 import { isProduction, requireDebugToken } from "./_env.js";
 import { hash8 } from "../_lib/kv-safe.js";
 import { normalizeError } from "../_shared/errorCodes.js";
-import { getProviderBudgetState } from "../_shared/provider_budget.js";
+import { getProviderBudgetState, getProviderBudgetStateRollups } from "../_shared/provider_budget.js";
 
 const FEATURE_ID = "diag";
 const ENDPOINTS = [
@@ -227,16 +227,49 @@ export async function onRequestGet({ request, env, data }) {
     budgetConfigs.map(async (cfg) => {
       const hardLimit = Number(env?.[cfg.envKey] || 0) || 0;
       const state = await getProviderBudgetState(env, cfg.provider, hardLimit);
+      const rollups = await getProviderBudgetStateRollups(env, cfg.provider, hardLimit);
+
       const status = hardLimit > 0 ? (state.limited ? "limited" : "present") : "unset";
+      const countsToday = state.used ?? 0;
+      const countsWeek = rollups?.week?.used ?? 0;
+      const countsMonth = rollups?.month?.used ?? 0;
+
+      const weekLimit = hardLimit > 0 ? hardLimit * 7 : 0;
+      const monthLimit = hardLimit > 0 ? hardLimit * 30 : 0;
+      const remainingWeek = hardLimit > 0 ? Math.max(0, weekLimit - countsWeek) : null;
+      const remainingMonth = hardLimit > 0 ? Math.max(0, monthLimit - countsMonth) : null;
+
+      const burnRatePerHour = countsToday / Math.max(1, (new Date().getUTCHours() + 1));
+
+      let hint = "—";
+      let recommendedAction = "—";
+      if (!env?.RV_KV) {
+        hint = "KV missing: budgets are not enforced + counters may be null";
+        recommendedAction = "Bind RV_KV in Cloudflare Pages (Production + Preview)";
+      } else if (hardLimit <= 0) {
+        hint = "No hard limit set (unlimited / not tracked for limit enforcement)";
+        recommendedAction = `Set ${cfg.envKey} to enable daily budget + safe fallbacks`;
+      } else if (state.limited) {
+        hint = "Daily budget exceeded: endpoints should serve stale cache / fallback";
+        recommendedAction = "Increase budget or increase cache TTL / reduce refresh frequency";
+      }
+
       return {
         provider: cfg.provider,
         alias: cfg.envKey,
         status,
-        counts_today: state.used ?? 0,
+        counts_today: countsToday,
+        counts_week: countsWeek,
+        counts_month: countsMonth,
         hard_limit: hardLimit > 0 ? hardLimit : "—",
         remaining: hardLimit > 0 ? state.remaining ?? 0 : "—",
+        remaining_week: hardLimit > 0 ? remainingWeek : "—",
+        remaining_month: hardLimit > 0 ? remainingMonth : "—",
+        burn_rate_per_hour: hardLimit > 0 ? Number(burnRatePerHour.toFixed(2)) : "—",
         last_error: state.limited ? "COVERAGE_LIMIT" : "—",
-        last_used: state.used !== null ? new Date().toISOString() : null
+        last_used: state.used !== null ? new Date().toISOString() : null,
+        hint,
+        recommended_action: recommendedAction
       };
     })
   );

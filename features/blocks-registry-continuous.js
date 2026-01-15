@@ -65,6 +65,19 @@ export const CONTINUOUS_BLOCKS = {
     whyUnique: "EOD technical indicators per ticker.",
     nullableFields: { rsiWeekly: true, stochRsi: true, atr14: true }
   },
+  "rv-rvci-engine": {
+    blockId: "rvci-engine",
+    blockType: "CONTINUOUS",
+    expectedMinItems: 1,
+    mirrorFiles: ["rvci_latest"],
+    computeDependencies: [],
+    freshness: { liveMaxMinutes: 60, okMaxHoursWeekday: 72, okMaxHoursWeekend: 96 },
+    trustDefault: "derived",
+    cadence: "EOD",
+    emptyCopy: "RVCI snapshot not available yet.",
+    warnCopy: "RVCI snapshot is degraded.",
+    whyUnique: "EOD regime + breadth coverage summary."
+  },
   "rv-alpha-radar": {
     blockId: "rv-alpha-radar",
     blockType: "CONTINUOUS",
