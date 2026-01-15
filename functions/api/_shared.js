@@ -10,6 +10,50 @@ export function getKv(env) {
   return null;
 }
 
+const KV_WRITE_FUSE_KEY = "__RV_KV_WRITE_DISABLED_UNTIL";
+const KV_WRITE_COOLDOWN_MS = 12 * 60 * 60 * 1000;
+
+function envFlagOn(value) {
+  if (value === true) return true;
+  if (value === false || value === null || value === undefined) return false;
+  const raw = String(value).trim().toLowerCase();
+  if (!raw) return false;
+  if (raw === "0" || raw === "false" || raw === "no" || raw === "off") return false;
+  return true;
+}
+
+function isKvRateLimitError(error) {
+  const status = error?.status ?? error?.code;
+  if (status === 429) return true;
+  const name = String(error?.name || "").toLowerCase();
+  const message = String(error?.message || "").toLowerCase();
+  if (name.includes("rate") && name.includes("limit")) return true;
+  return (
+    message.includes("429") ||
+    message.includes("rate limit") ||
+    message.includes("too many") ||
+    message.includes("exceeded")
+  );
+}
+
+function isWriteDisabled(env) {
+  const until = Number.isFinite(globalThis[KV_WRITE_FUSE_KEY]) ? globalThis[KV_WRITE_FUSE_KEY] : 0;
+  if (Date.now() < until) return true;
+  if (env?.__RV_KV_WRITE_DISABLED__) return true;
+  return false;
+}
+
+function tripWriteFuse(env, error) {
+  const until = Date.now() + KV_WRITE_COOLDOWN_MS;
+  globalThis[KV_WRITE_FUSE_KEY] = until;
+  if (env && typeof env === "object") {
+    env.__RV_ALLOW_WRITE__ = false;
+    env.__RV_KV_WRITE_DISABLED__ = true;
+    env.__RV_KV_WRITE_DISABLED_UNTIL__ = until;
+    env.__RV_KV_WRITE_DISABLED_REASON__ = error?.message || "rate_limited";
+  }
+}
+
 export function isPreviewHost(hostname = "") {
   const host = String(hostname || "").toLowerCase();
   return (
@@ -532,8 +576,18 @@ function resolveEtagKey(rawKey) {
 
 export async function kvPutJson(context, key, value, ttlSeconds) {
   const env = context?.env || context;
-  if (!env?.RV_ALLOW_WRITE_ON_VIEW && !env?.__RV_ALLOW_WRITE__) return;
+  if (!envFlagOn(env?.RV_ALLOW_WRITE_ON_VIEW) && !env?.__RV_ALLOW_WRITE__) return;
   if (!env?.RV_KV) return;
+
+  if (isWriteDisabled(env)) return;
+
+  if (envFlagOn(env?.RV_SIMULATE_KV_429)) {
+    const err = new Error("SIMULATED_KV_429");
+    err.status = 429;
+    tripWriteFuse(env, err);
+    return;
+  }
+
   let expirationTtl = ttlSeconds;
   if (typeof ttlSeconds === "object" && ttlSeconds !== null) {
     expirationTtl = ttlSeconds.expirationTtlSeconds;
@@ -546,12 +600,25 @@ export async function kvPutJson(context, key, value, ttlSeconds) {
       if (prevEtag && prevEtag === nextEtag) return;
       await env.RV_KV.put(etagKey, nextEtag, { expirationTtl });
     } catch (error) {
+      if (isKvRateLimitError(error)) {
+        tripWriteFuse(env, error);
+        return;
+      }
       // ignore etag throttling failures
     }
   }
-  await env.RV_KV.put(key, JSON.stringify(value), {
-    expirationTtl
-  });
+
+  try {
+    await env.RV_KV.put(key, JSON.stringify(value), {
+      expirationTtl
+    });
+  } catch (error) {
+    if (isKvRateLimitError(error)) {
+      tripWriteFuse(env, error);
+      return;
+    }
+    throw error;
+  }
 }
 
 export function logServer({

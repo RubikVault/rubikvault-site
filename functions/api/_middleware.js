@@ -133,6 +133,7 @@ export async function onRequest(context) {
     "etag:",
     "log:",
     "diagnostics:",
+    "snapshot:",
     "rv:lastgood:",
     "rv:circuit:",
     "rv:budget:",
@@ -146,7 +147,7 @@ export async function onRequest(context) {
     "market-regime:",
     "volume-anomaly:"
   ];
-  const kvGuard = createKVGuard({ RV_KV: env?.RV_KV }, { debugMode, debugKind, allowPrefixes });
+  const kvGuard = createKVGuard(env, { debugMode, debugKind, allowPrefixes });
   if (env) env.RV_KV = kvGuard;
   const cronToken = env?.RV_CRON_TOKEN || "";
   const authHeader = request.headers.get("authorization") || "";

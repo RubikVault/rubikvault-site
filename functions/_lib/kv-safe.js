@@ -1,8 +1,47 @@
 export const ERR_BINDING_MISSING = "BINDING_MISSING";
 export const ERR_KV_READ = "KV_READ_ERROR";
 export const ERR_KV_WRITE = "KV_WRITE_ERROR";
+export const ERR_KV_WRITE_DISABLED = "KV_WRITE_DISABLED";
 
 const MAX_MEM = 200;
+
+const KV_WRITE_FUSE_KEY = "__RV_KV_WRITE_DISABLED_UNTIL";
+const DEFAULT_KV_WRITE_COOLDOWN_MS = 12 * 60 * 60 * 1000;
+const KV_SIMULATE_429_FLAG = "__RV_SIMULATE_KV_429_FIRED";
+
+function getWriteDisabledUntil() {
+  const value = globalThis[KV_WRITE_FUSE_KEY];
+  return Number.isFinite(value) ? value : 0;
+}
+
+function isWriteDisabledNow() {
+  return Date.now() < getWriteDisabledUntil();
+}
+
+function isKvRateLimitError(error) {
+  const status = error?.status ?? error?.code;
+  if (status === 429) return true;
+  const name = String(error?.name || "").toLowerCase();
+  const message = String(error?.message || "").toLowerCase();
+  if (name.includes("rate") && name.includes("limit")) return true;
+  return (
+    message.includes("429") ||
+    message.includes("rate limit") ||
+    message.includes("too many") ||
+    message.includes("exceeded")
+  );
+}
+
+function tripWriteFuse(env, error, cooldownMs = DEFAULT_KV_WRITE_COOLDOWN_MS) {
+  const until = Date.now() + cooldownMs;
+  globalThis[KV_WRITE_FUSE_KEY] = until;
+  if (env && typeof env === "object") {
+    env.__RV_ALLOW_WRITE__ = false;
+    env.__RV_KV_WRITE_DISABLED__ = true;
+    env.__RV_KV_WRITE_DISABLED_UNTIL__ = until;
+    env.__RV_KV_WRITE_DISABLED_REASON__ = error?.message || "rate_limited";
+  }
+}
 
 function getMemCache() {
   if (!globalThis.RV_MEMCACHE) {
@@ -87,6 +126,38 @@ export async function kvPutJson(env, key, value, ttlSeconds) {
   if (!env?.RV_ALLOW_WRITE_ON_VIEW && !env?.__RV_ALLOW_WRITE__) {
     return { layer: "none", hit: false, durationMs: Date.now() - started };
   }
+
+  if (env?.RV_SIMULATE_KV_429 === "1" && !globalThis[KV_SIMULATE_429_FLAG]) {
+    globalThis[KV_SIMULATE_429_FLAG] = true;
+    const err = new Error("SIMULATED_KV_429");
+    err.status = 429;
+    tripWriteFuse(env, err);
+    memSet(key, value);
+    return {
+      layer: "mem",
+      hit: false,
+      durationMs: Date.now() - started,
+      error: {
+        code: ERR_KV_WRITE_DISABLED,
+        message: "KV rate limit exceeded",
+        hash: hash8(key)
+      }
+    };
+  }
+
+  if (isWriteDisabledNow()) {
+    memSet(key, value);
+    return {
+      layer: "mem",
+      hit: false,
+      durationMs: Date.now() - started,
+      error: {
+        code: ERR_KV_WRITE_DISABLED,
+        message: "KV writes disabled",
+        hash: hash8(key)
+      }
+    };
+  }
   const missing = !env?.RV_KV || typeof env.RV_KV.put !== "function";
   if (missing) {
     memSet(key, value);
@@ -103,6 +174,20 @@ export async function kvPutJson(env, key, value, ttlSeconds) {
     });
     return { layer: "kv", hit: false, durationMs: Date.now() - started };
   } catch (error) {
+    if (isKvRateLimitError(error)) {
+      tripWriteFuse(env, error);
+      memSet(key, value);
+      return {
+        layer: "mem",
+        hit: false,
+        durationMs: Date.now() - started,
+        error: {
+          code: ERR_KV_WRITE_DISABLED,
+          message: "KV rate limit exceeded",
+          hash: hash8(key)
+        }
+      };
+    }
     memSet(key, value);
     return {
       layer: "mem",

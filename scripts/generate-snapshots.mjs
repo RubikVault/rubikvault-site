@@ -11,6 +11,8 @@ const MIRROR_DIRS = [
 ];
 
 const SNAPSHOTS = [
+  { id: "market-cockpit", mirrorId: "market-cockpit", mapData: mapItemsOnly },
+  { id: "sp500-sectors", mirrorId: "sp500-sectors", mapData: mapSectors },
   { id: "top-movers", mirrorId: "top-movers", mapData: mapItemsOnly },
   { id: "yield-curve", mirrorId: "yield-curve", mapData: mapItemsOnly },
   { id: "why-moved", mirrorId: "why-moved", mapData: mapItemsOnly },
@@ -169,8 +171,8 @@ function extractSectors(payload) {
   return [];
 }
 
-function mapItemsOnly(raw) {
-  const items = extractItems(raw);
+function mapItemsOnly(raw, id) {
+  const items = extractItemsFor(id, raw);
   return { data: { items }, itemsCount: items.length };
 }
 
