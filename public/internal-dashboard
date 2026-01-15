@@ -253,6 +253,10 @@
 
     <div class="section">
       <h2>Debug Bundle (Consolidated)</h2>
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:10px;">
+        <button class="secondary-btn" id="load-debug-bundle">Load Debug Bundle</button>
+        <span style="color:#94a3b8;font-size:12px;">KV-heavy. Load only when needed.</span>
+      </div>
       <div class="status-grid" id="debug-summary">
         <div class="status-card">
           <h3>Bundle Status</h3>
@@ -398,6 +402,7 @@
       <h2>Debug Matrix (KV / Mirrors)</h2>
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:10px;">
         <span class="badge" style="background:rgba(16,185,129,0.15);color:#cbd5f5;border:1px solid rgba(16,185,129,0.25);">/api/debug-matrix</span>
+        <button class="secondary-btn" id="load-debug-matrix">Load Debug Matrix</button>
         <span style="color:#94a3b8;font-size:12px;">Reads mirror:*:latest keys (capped) to show which blocks have lastGood/mirror coverage.</span>
       </div>
       <div class="timestamp" id="debug-matrix-timestamp"></div>
@@ -724,18 +729,29 @@
 
     updateAuthUI();
 
+    const loadBundleBtn = document.getElementById('load-debug-bundle');
+    if (loadBundleBtn) {
+      loadBundleBtn.addEventListener('click', async () => {
+        await updateDebugBundle();
+      });
+    }
+    const loadMatrixBtn = document.getElementById('load-debug-matrix');
+    if (loadMatrixBtn) {
+      loadMatrixBtn.addEventListener('click', async () => {
+        await updateDebugMatrix();
+      });
+    }
+
     async function refreshAll() {
       document.body.classList.add('loading');
       await Promise.all([
         updateEndpointProbes(),
         updateHealthOverview(),
         updateTargets(),
-        updateDebugBundle(),
         loadDoc('/DEBUG_README.md', 'doc-debug-readme'),
         loadDoc('/RUNBOOK.md', 'doc-runbook'),
         loadDoc('/BLOCK_ANALYSIS.md', 'doc-block-analysis'),
         updateHealthReport(),
-        updateDebugMatrix(),
         updateBlockMatrix(),
         updateApiKeys(),
         updateErrorTimeline()
@@ -1128,7 +1144,6 @@
     }
 
     refreshAll();
-    setInterval(refreshAll, 30000);
   </script>
 </body>
 </html>

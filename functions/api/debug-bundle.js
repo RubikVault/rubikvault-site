@@ -163,6 +163,8 @@ export async function onRequestGet({ request, env, data }) {
   try {
     const traceId = data?.traceId || createTraceId(request);
     const url = new URL(request.url);
+    const internalToken =
+      request.headers.get("x-rv-internal-token") || url.searchParams.get("token") || "";
     const host = request.headers.get("host") || "";
     const prod = isProduction(env, request);
     const envHint = host.endsWith(".pages.dev")
@@ -231,11 +233,21 @@ export async function onRequestGet({ request, env, data }) {
         { name: "health", url: `${origin}/api/health` },
         { name: "diag", url: `${origin}/api/diag` }
       ];
+      const targetsWithToken = targets.map((t) => {
+        if (!internalToken) return t;
+        try {
+          const u = new URL(t.url);
+          u.searchParams.set("token", internalToken);
+          return { ...t, url: u.toString() };
+        } catch {
+          return t;
+        }
+      });
       const settled = await Promise.allSettled(
-        targets.map((target) => fetchJsonSafe(target.url))
+        targetsWithToken.map((target) => fetchJsonSafe(target.url))
       );
       attempts = settled.map((result, index) => {
-        const target = targets[index];
+        const target = targetsWithToken[index];
         if (result.status === "fulfilled") {
           const value = result.value || {};
           return {
