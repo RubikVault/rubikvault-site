@@ -228,6 +228,8 @@
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:10px;">
         <span class="badge" style="background:rgba(56,189,248,0.15);color:#cbd5f5;border:1px solid rgba(56,189,248,0.25);">same-origin preferred</span>
         <span style="color:#94a3b8;font-size:12px;">Cross-origin fetch may be blocked unless CORS is enabled.</span>
+        <button class="secondary-btn" id="load-targets">Load Targets</button>
+        <span style="color:#94a3b8;font-size:12px;">Request-heavy. Load only when needed.</span>
       </div>
       <div class="split">
         <div>
@@ -729,6 +731,13 @@
 
     updateAuthUI();
 
+    const loadTargetsBtn = document.getElementById('load-targets');
+    if (loadTargetsBtn) {
+      loadTargetsBtn.addEventListener('click', async () => {
+        await updateTargets();
+      });
+    }
+
     const loadBundleBtn = document.getElementById('load-debug-bundle');
     if (loadBundleBtn) {
       loadBundleBtn.addEventListener('click', async () => {
@@ -747,7 +756,6 @@
       await Promise.all([
         updateEndpointProbes(),
         updateHealthOverview(),
-        updateTargets(),
         loadDoc('/DEBUG_README.md', 'doc-debug-readme'),
         loadDoc('/RUNBOOK.md', 'doc-runbook'),
         loadDoc('/BLOCK_ANALYSIS.md', 'doc-block-analysis'),
