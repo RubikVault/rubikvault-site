@@ -97,6 +97,13 @@ function buildUrl(url) {
   if (isAbsolute) {
     return { url, resolution: resolveApiBase(), absolute: true };
   }
+  if (url.startsWith("/data/") || url.startsWith("/mirrors/") || url.startsWith("mirrors/")) {
+    return {
+      url,
+      resolution: { ok: true, configLoaded: true, apiBase: "", apiPrefix: "", errors: [] },
+      absolute: false
+    };
+  }
   const resolution = resolveApiBase();
   if (!resolution.ok) return { url: "", resolution, absolute: false };
   const path = url.startsWith("/") ? url.slice(1) : url;
@@ -107,6 +114,10 @@ function toMirrorPath(input) {
   if (typeof input !== "string") return "";
   if (input.startsWith("http://") || input.startsWith("https://")) return "";
   if (input.startsWith("/mirrors/") || input.startsWith("mirrors/")) return input;
+  const allowMirrorRewrite =
+    typeof window !== "undefined" &&
+    (window.RV_CONFIG?.USE_MIRRORS === true || window.RV_CONFIG?.DEBUG_FORCE_MIRRORS === true);
+  if (!allowMirrorRewrite) return "";
   const raw = input.startsWith("/") ? input.slice(1) : input;
   const pathOnly = raw.split("?")[0];
   const normalized = pathOnly.startsWith("api/") ? pathOnly.slice(4) : pathOnly;
