@@ -116,7 +116,7 @@ function render(root, payload, logger, featureId) {
       </tbody>
     </table>
     <div class="rv-native-note">Updated: ${new Date(data.updatedAt || resolved.ts).toLocaleTimeString()}</div>
-    <div class="rv-native-note"><a href="#rv-sp500-sectors">Open Sector Performance Table (Block 13)</a></div>
+    <div class="rv-native-note"><a href="#rv-sp500-sectors">Open Sector Performance Table</a></div>
   `;
 
   const status = resolved?.isStale ? "PARTIAL" : "OK";

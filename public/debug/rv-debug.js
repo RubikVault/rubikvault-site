@@ -1,6 +1,24 @@
 const MAX_DEBUG_LINES = 300;
 const GLOBAL_LOG_KEY = "__RV_BLOCK_LOGS__";
 
+function isDebugEnabled() {
+  if (typeof window === "undefined") return false;
+  const config = window.RV_CONFIG || {};
+  if (config.DEBUG_ENABLED === false) return false;
+  let activated = false;
+  try {
+    const params = new URLSearchParams(window.location.search);
+    activated = params.get("debug") === "1" || window.localStorage?.getItem("debug") === "true";
+  } catch {
+    activated = false;
+  }
+  if (!activated) return false;
+  if (config.debugAuthToken) {
+    return window.localStorage?.getItem("debugAuth") === config.debugAuthToken;
+  }
+  return true;
+}
+
 function getLogStore() {
   if (typeof window === "undefined") return null;
   if (!window[GLOBAL_LOG_KEY]) window[GLOBAL_LOG_KEY] = {};
@@ -31,39 +49,43 @@ function ensureShell(rootEl) {
 
   shell = document.createElement("div");
   shell.setAttribute("data-rv-shell", "true");
-  shell.innerHTML = `
-    <div class="rv-block-meta">
-      <div class="rv-block-title">
-        <span class="rv-block-id" data-rv-feature-id></span>
-        <span class="rv-block-name" data-rv-block-name></span>
-      </div>
-      <div class="rv-block-status" data-rv-status>PARTIAL</div>
-    </div>
-    <div class="rv-block-submeta">
-      <span data-rv-updated>Updated: --</span>
-      <span data-rv-source>Source: --</span>
-      <span data-rv-trace>Trace: --</span>
-      <span data-rv-cache>Cache: --</span>
-      <span data-rv-upstream>Upstream: --</span>
-      <span data-rv-config>Config: --</span>
-      <span data-rv-computation>Computed: --</span>
-    </div>
-    <div class="rv-block-actions">
-      <button class="rv-block-debug-toggle" type="button" data-rv-debug-toggle>Show debug</button>
-    </div>
-    <div class="rv-block-debug is-collapsed" data-rv-debug>
-      <div class="rv-block-debug-header">
-        <strong>Debug</strong>
-        <div class="rv-block-debug-actions">
-          <button type="button" data-rv-debug-clear>Clear</button>
-          <button type="button" data-rv-debug-copy>Copy</button>
-          <button type="button" data-rv-debug-toggle>Hide</button>
+  if (isDebugEnabled()) {
+    shell.innerHTML = `
+      <div class="rv-block-meta">
+        <div class="rv-block-title">
+          <span class="rv-block-id" data-rv-feature-id></span>
+          <span class="rv-block-name" data-rv-block-name></span>
         </div>
+        <div class="rv-block-status" data-rv-status>PARTIAL</div>
       </div>
-      <pre class="rv-block-debug-body" data-rv-debug-body></pre>
-    </div>
-    <div class="rv-block-content" data-rv-content></div>
-  `;
+      <div class="rv-block-submeta">
+        <span data-rv-updated>Updated: --</span>
+        <span data-rv-source>Source: --</span>
+        <span data-rv-trace>Trace: --</span>
+        <span data-rv-cache>Cache: --</span>
+        <span data-rv-upstream>Upstream: --</span>
+        <span data-rv-config>Config: --</span>
+        <span data-rv-computation>Computed: --</span>
+      </div>
+      <div class="rv-block-actions">
+        <button class="rv-block-debug-toggle" type="button" data-rv-debug-toggle>Show debug</button>
+      </div>
+      <div class="rv-block-debug is-collapsed" data-rv-debug>
+        <div class="rv-block-debug-header">
+          <strong>Debug</strong>
+          <div class="rv-block-debug-actions">
+            <button type="button" data-rv-debug-clear>Clear</button>
+            <button type="button" data-rv-debug-copy>Copy</button>
+            <button type="button" data-rv-debug-toggle>Hide</button>
+          </div>
+        </div>
+        <pre class="rv-block-debug-body" data-rv-debug-body></pre>
+      </div>
+      <div class="rv-block-content" data-rv-content></div>
+    `;
+  } else {
+    shell.innerHTML = `<div class="rv-block-content" data-rv-content></div>`;
+  }
 
   rootEl.appendChild(shell);
   return shell;

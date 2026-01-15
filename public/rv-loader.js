@@ -539,6 +539,12 @@ const STATUS_ORDER = [
   "rv-alpha-performance",
   "rv-earnings-reality"
 ];
+const PUBLIC_FEATURE_ALLOWLIST = new Set([
+  "rv-market-cockpit",
+  "rv-tech-signals",
+  "rv-alpha-radar",
+  "rv-sp500-sectors"
+]);
 const COLLAPSE_KEY_PREFIX = "rv-collapse:";
 const DEFAULT_OPEN_COUNT = 3;
 const CRYPTO_FEATURES = new Set(["rv-crypto-snapshot"]);
@@ -1578,6 +1584,10 @@ function initPanicButton() {
 async function loadFeatures() {
   const list = Array.isArray(FEATURES) ? FEATURES : [];
   const overridden = applyOverrides(list);
+  if (!isDebugEnabled()) {
+    const filtered = overridden.filter((feature) => PUBLIC_FEATURE_ALLOWLIST.has(feature.id));
+    return { source: "config", blocks: null, features: filtered, reason: "public_filter" };
+  }
   const registry = await loadRegistryBlocks();
   if (registry.ok) {
     const blocks = ensurePinnedBlocks(registry.blocks, overridden);
@@ -3168,7 +3178,18 @@ async function boot() {
       });
   }
 
-  const sections = Array.from(document.querySelectorAll("[data-rv-feature]"));
+  const allSections = Array.from(document.querySelectorAll("[data-rv-feature]"));
+  let sections = allSections;
+  if (!isDebugEnabled()) {
+    sections = allSections.filter((section) => {
+      const featureId = section.getAttribute("data-rv-feature") || "";
+      const keep = PUBLIC_FEATURE_ALLOWLIST.has(featureId);
+      if (!keep) {
+        section.hidden = true;
+      }
+      return keep;
+    });
+  }
   initAccordion(sections);
   setupSubnav();
   initVisibilityObserver(sections);
