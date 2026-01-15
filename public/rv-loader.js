@@ -1807,7 +1807,7 @@ function renderEmptySignals(contentEl, meta) {
   if (!contentEl) return;
   contentEl.innerHTML = `
     <div class="rv-native-empty">
-      No active signals detected at EOD. <a href="?debug=1" style="color:#888;font-size:12px;">debug</a>
+      No active signals detected at EOD.
     </div>
   `;
   renderDebugMeta(contentEl, meta);
@@ -3170,8 +3170,10 @@ async function boot() {
   // Expected API calls per page load: 1-2 (dashboard fast/slow) with per-block fallback only when missing.
   prefetchDashboard(features);
 
-  initFlagsPanel({ features });
-  initPanicButton();
+  if (isDebugEnabled()) {
+    initFlagsPanel({ features });
+    initPanicButton();
+  }
 
   if (isDebugEnabled()) {
     const featureModules = features.map((feature) => feature.module).filter(Boolean);
