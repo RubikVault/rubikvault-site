@@ -575,6 +575,7 @@ const REFRESH_BACKOFF_MAX_MS = 20 * 60 * 1000;
 let FEATURE_REGISTRY_CACHE = null;
 let MANIFEST_CACHE = null;
 const SNAPSHOT_ONLY = true;
+const SNAPSHOT_ONLY_API_FEATURES = new Set(["rv-market-cockpit", "rv-sp500-sectors"]);
 const SNAPSHOT_CACHE = new Map();
 const RVCI_CACHE = new Map();
 const SNAPSHOT_TIMEOUT_MS = 5000;
@@ -2852,6 +2853,22 @@ async function runFeature(section, feature, logger, contentEl) {
   setLoading(section, true);
 
   try {
+    const shouldUseModule =
+      Boolean(feature?.module) &&
+      (SNAPSHOT_ONLY ? SNAPSHOT_ONLY_API_FEATURES.has(blockId) : true);
+
+    if (shouldUseModule) {
+      const mod = await loadFeatureModule(feature);
+      if (!mod || typeof mod.init !== "function") {
+        throw new Error(`Feature module missing init(): ${feature?.module || "unknown"}`);
+      }
+      await mod.init(contentEl, { featureId: blockId, traceId, logger });
+      section.hidden = false;
+      recordBlockEnd({ blockId, blockName, ok: true });
+      clearDebugContext();
+      return true;
+    }
+
     const result = await renderSnapshotBlock(contentEl, feature, logger, section);
     // Hide block if it's empty (NO_DATA, PARTIAL, MISSING_SECRET) - but only in public view
     // EXCEPTION: Market Cockpit should always be visible (it has different data structure)
@@ -2924,7 +2941,22 @@ function bindRefresh(section, feature, logger, contentEl) {
     setLoading(section, true);
 
     try {
-      await renderSnapshotBlock(contentEl, feature, logger, section);
+      const shouldUseModule =
+        Boolean(feature?.module) &&
+        (SNAPSHOT_ONLY ? SNAPSHOT_ONLY_API_FEATURES.has(feature?.id || "") : true);
+      if (shouldUseModule) {
+        const mod = await loadFeatureModule(feature);
+        if (mod && typeof mod.refresh === "function") {
+          await mod.refresh(contentEl, { featureId: feature?.id || "unknown", traceId, logger });
+        } else if (mod && typeof mod.init === "function") {
+          await mod.init(contentEl, { featureId: feature?.id || "unknown", traceId, logger });
+        } else {
+          throw new Error(`Feature module missing init/refresh(): ${feature?.module || "unknown"}`);
+        }
+        section.hidden = false;
+      } else {
+        await renderSnapshotBlock(contentEl, feature, logger, section);
+      }
       recordBlockEnd({ blockId: feature?.id || "unknown", blockName, ok: true });
     } catch (error) {
       logger.setStatus("FAIL", "Refresh failed");
@@ -2946,6 +2978,9 @@ function bindRefresh(section, feature, logger, contentEl) {
 function startAutoRefresh(section, feature, logger, contentEl) {
   if (!feature?.refreshIntervalMs) return;
   const featureId = feature?.id || section.getAttribute("data-rv-feature") || "unknown";
+  if (SNAPSHOT_ONLY && SNAPSHOT_ONLY_API_FEATURES.has(featureId)) {
+    return;
+  }
   const baseInterval = Math.max(feature.refreshIntervalMs, DASHBOARD_MIN_REFRESH_MS);
   const state = refreshState.get(featureId) || {
     inflight: false,
@@ -3139,14 +3174,15 @@ async function boot() {
   initPanicButton();
 
   if (isDebugEnabled()) {
+    const featureModules = features.map((feature) => feature.module).filter(Boolean);
     const assetPaths = [
       "./rv-loader.js",
       "./features/utils/api.js",
       "./features/utils/store.js",
       "./features/utils/flags.js",
-      ...features.map((feature) => feature.module)
+      ...featureModules
     ];
-    const importPaths = features.map((feature) => feature.module);
+    const importPaths = featureModules;
     const apiResolution = getApiResolution();
     const apiPrefix = apiResolution.ok ? apiResolution.apiPrefix : "";
     const apiPaths = SNAPSHOT_ONLY
