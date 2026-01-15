@@ -369,6 +369,13 @@ export async function onRequest(context) {
         const debugActive = ["1", "kv", "fresh"].includes(url.searchParams.get("debug") || "");
         const isDebugAllowed = requireDebugToken(env, request);
         if (isDebugEndpoint(url.pathname) && !isDebugAllowed) return;
+
+        // KV writes are expensive. Only allow routine event logging when explicitly enabled (cron/override).
+        // Always log server errors (>=500).
+        const allowEventWrite = Boolean(env?.__RV_ALLOW_WRITE__);
+        if (!allowEventWrite && response.status < 500) {
+          return;
+        }
         if (!shouldLogEvent({ status: response.status, dataQuality: dataQualityStatus, debugActive, isWarn: warnStatus })) {
           return;
         }

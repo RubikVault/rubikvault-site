@@ -332,22 +332,6 @@ export async function onRequestGet({ request, env, data }) {
       meta: { envHint, host, version }
     });
 
-    if (hasKV && debugAllowed) {
-      const key = `log:event:${hourBucket(new Date())}:${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-      const event = {
-        ts: new Date().toISOString(),
-        feature: "debug-bundle",
-        traceId,
-        requestId: data?.requestId || "",
-        cacheLayer: "none",
-        upstreamStatus: null,
-        durationMs: 0,
-        errorCode: "",
-        httpStatus: 200
-      };
-      kvPutJson(env, key, event, EVENT_TTL).catch(() => {});
-    }
-
     return response;
   } catch (error) {
     return makeResponse({
