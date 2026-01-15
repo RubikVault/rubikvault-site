@@ -12,8 +12,8 @@ import {
 } from "./_shared.js";
 
 const FEATURE_ID = "sp500-sectors";
-const KV_TTL = 6 * 60 * 60;
-const STALE_MAX = 7 * 24 * 60 * 60;
+const KV_TTL = 24 * 60 * 60;
+const STALE_MAX = 45 * 24 * 60 * 60;
 const CACHE_KEY = "DASH:SP500_SECTORS";
 
 const SECTORS = [

@@ -470,6 +470,9 @@ async function fetchMarketCockpit(env) {
     kvGetJson(env, SECTOR_CACHE_KEY)
   ]);
 
+  const macroPayload = macroCached?.value?.data || macroCached?.value || null;
+  const sectorPayload = sectorCached?.value?.data || sectorCached?.value || null;
+
   const [vixResult, fngResult, fngStocksResult, newsResult, proxyResult, cryptoResult, dxyResult, yieldsResult, indicesResult] =
     await Promise.allSettled([
     fetchVix(env),
@@ -492,8 +495,8 @@ async function fetchMarketCockpit(env) {
   const dxy = dxyResult.status === "fulfilled" ? dxyResult.value : { ok: false };
   const yields = yieldsResult.status === "fulfilled" ? yieldsResult.value : { ok: false };
   const indices = indicesResult.status === "fulfilled" ? indicesResult.value : { ok: false, sp500: {}, nasdaq: {}, dow: {}, russell: {}, source: "Yahoo" };
-  const macroSummary = buildMacroSummary(macroCached?.value?.data);
-  const sectorPerformance = buildSectorPerformance(sectorCached?.value?.data);
+  const macroSummary = buildMacroSummary(macroPayload);
+  const sectorPerformance = buildSectorPerformance(sectorPayload);
 
   const partial =
     !vix.ok ||
