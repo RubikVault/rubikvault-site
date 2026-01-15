@@ -80,8 +80,7 @@ function isDebugEnabled() {
   if (typeof window === "undefined") return false;
   if (!RV_CONFIG.DEBUG_ENABLED) return false;
   const params = new URLSearchParams(window.location.search);
-  const activated =
-    params.get("debug") === "1" || window.localStorage?.getItem("debug") === "true";
+  const activated = params.get("debug") === "1";
   if (!activated) return false;
   if (RV_CONFIG.debugAuthToken) {
     return window.localStorage?.getItem("debugAuth") === RV_CONFIG.debugAuthToken;
@@ -543,7 +542,8 @@ const PUBLIC_FEATURE_ALLOWLIST = new Set([
   "rv-market-cockpit",
   "rv-tech-signals",
   "rv-alpha-radar",
-  "rv-sp500-sectors"
+  "rv-sp500-sectors",
+  "rv-rvci-engine"
 ]);
 const COLLAPSE_KEY_PREFIX = "rv-collapse:";
 const DEFAULT_OPEN_COUNT = 3;

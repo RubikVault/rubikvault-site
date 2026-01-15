@@ -8,7 +8,7 @@ function isDebugEnabled() {
   let activated = false;
   try {
     const params = new URLSearchParams(window.location.search);
-    activated = params.get("debug") === "1" || window.localStorage?.getItem("debug") === "true";
+    activated = params.get("debug") === "1";
   } catch {
     activated = false;
   }
