@@ -15,6 +15,40 @@
     }
     .container { max-width: 1400px; margin: 0 auto; }
     h1 { margin-bottom: 30px; color: #38bdf8; }
+    .banner {
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px solid rgba(148, 163, 184, 0.2);
+      border-radius: 12px;
+      padding: 12px 14px;
+      margin-bottom: 20px;
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+    }
+    .banner-left {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    .banner-right {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    .token-input {
+      background: #111827;
+      color: #f8fafc;
+      border: 1px solid rgba(148, 163, 184, 0.2);
+      border-radius: 8px;
+      padding: 8px 10px;
+      min-width: 360px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-size: 12px;
+    }
     .section {
       background: #111827;
       border: 1px solid rgba(148, 163, 184, 0.2);
@@ -100,6 +134,40 @@
       margin-bottom: 15px;
     }
     .refresh-btn:hover { background: #0ea5e9; }
+    .secondary-btn {
+      background: rgba(15, 23, 42, 0.6);
+      color: #f8fafc;
+      border: 1px solid rgba(148, 163, 184, 0.2);
+      padding: 8px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 13px;
+    }
+    .secondary-btn:hover { border-color: rgba(56, 189, 248, 0.6); }
+    a { color: #38bdf8; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    code { color: #cbd5f5; }
+    pre {
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px solid rgba(148, 163, 184, 0.15);
+      border-radius: 10px;
+      padding: 12px;
+      white-space: pre-wrap;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-size: 12px;
+      color: #e2e8f0;
+      max-height: 360px;
+      overflow: auto;
+    }
+    .split {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+    @media (max-width: 980px) {
+      .split { grid-template-columns: 1fr; }
+      .token-input { min-width: 260px; }
+    }
     .timestamp {
       font-size: 11px;
       color: #94a3b8;
@@ -111,6 +179,18 @@
 <body>
   <div class="container">
     <h1>🔍 RubikVault Internal Dashboard <span id="rv-internal-auth" class="badge warn">auth: unknown</span></h1>
+
+    <div class="banner" id="auth-banner">
+      <div class="banner-left">
+        <span id="auth-banner-badge" class="badge warn">token missing</span>
+        <span style="color:#cbd5f5; font-size: 13px;">Internal endpoints need <code>RV_INTERNAL_TOKEN</code>. Without it, many calls intentionally return <code>404</code>.</span>
+      </div>
+      <div class="banner-right">
+        <input id="token-input" class="token-input" placeholder="Paste token here (stored in localStorage)" />
+        <button class="secondary-btn" id="apply-token">Apply</button>
+        <button class="secondary-btn" id="copy-link">Copy link</button>
+      </div>
+    </div>
     
     <div class="section">
       <h2>Endpoint Reachability</h2>
@@ -141,6 +221,120 @@
         </div>
       </div>
       <div class="timestamp" id="health-timestamp"></div>
+    </div>
+
+    <div class="section">
+      <h2>Targets (Preview + Prod)</h2>
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:10px;">
+        <span class="badge" style="background:rgba(56,189,248,0.15);color:#cbd5f5;border:1px solid rgba(56,189,248,0.25);">same-origin preferred</span>
+        <span style="color:#94a3b8;font-size:12px;">Cross-origin fetch may be blocked unless CORS is enabled.</span>
+      </div>
+      <div class="split">
+        <div>
+          <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+            <strong style="color:#cbd5f5;">This origin</strong>
+            <code id="origin-this">—</code>
+            <button class="secondary-btn" id="open-this">Open</button>
+          </div>
+          <div class="timestamp" id="targets-this-status">—</div>
+          <pre id="targets-this" style="max-height:240px;">Loading...</pre>
+        </div>
+        <div>
+          <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+            <strong style="color:#cbd5f5;">Prod origin</strong>
+            <input id="origin-prod" class="token-input" style="min-width:260px;" placeholder="https://rubikvault.com" />
+            <button class="secondary-btn" id="open-prod">Open</button>
+          </div>
+          <div class="timestamp" id="targets-prod-status">—</div>
+          <pre id="targets-prod" style="max-height:240px;">Set prod origin and refresh.</pre>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <h2>Debug Bundle (Consolidated)</h2>
+      <div class="status-grid" id="debug-summary">
+        <div class="status-card">
+          <h3>Bundle Status</h3>
+          <div class="value">—</div>
+          <div class="label">Loading...</div>
+        </div>
+      </div>
+      <div class="timestamp" id="debug-timestamp"></div>
+      <div style="overflow-x: auto; margin-top: 12px;">
+        <table id="debug-attempts">
+          <thead>
+            <tr>
+              <th>Target</th>
+              <th>OK</th>
+              <th>Status</th>
+              <th>Reason</th>
+              <th>Snippet</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td colspan="5">Loading...</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div style="max-height: 320px; overflow-y: auto; margin-top: 12px;">
+        <table id="recent-events">
+          <thead>
+            <tr>
+              <th>Time</th>
+              <th>Feature</th>
+              <th>HTTP</th>
+              <th>Quality</th>
+              <th>Error</th>
+              <th>Trace</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td colspan="6">Loading...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="section">
+      <h2>Client Debug Tools</h2>
+      <div style="display:grid;gap:10px;">
+        <div>
+          <span class="badge" style="background:rgba(16,185,129,0.15);color:#cbd5f5;border:1px solid rgba(16,185,129,0.25);">Enable</span>
+          <span style="color:#cbd5f5;font-size:13px;">Open any public page with <code>?debug=1</code> or set <code>localStorage.debug="true"</code>.</span>
+        </div>
+        <div>
+          <span style="color:#cbd5f5;font-size:13px;">Debug assets (static):</span>
+          <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:6px;">
+            <a href="/debug/rv-debug-console.js" target="_blank" rel="noreferrer">/debug/rv-debug-console.js</a>
+            <a href="/debug/panel.js" target="_blank" rel="noreferrer">/debug/panel.js</a>
+            <a href="/debug/diagnostics.js" target="_blank" rel="noreferrer">/debug/diagnostics.js</a>
+            <a href="/debug/rv-debug.js" target="_blank" rel="noreferrer">/debug/rv-debug.js</a>
+            <a href="/diagnose.js" target="_blank" rel="noreferrer">/diagnose.js</a>
+          </div>
+        </div>
+        <div>
+          <span style="color:#94a3b8;font-size:12px;">If you see <code>Config missing - API disabled</code>, check <code>window.RV_CONFIG.apiBase</code> and the config loader.</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <h2>Docs (Runbook + Debug + Block Analysis)</h2>
+      <div style="display:grid;gap:10px;">
+        <details open>
+          <summary style="cursor:pointer;color:#cbd5f5;">DEBUG_README.md</summary>
+          <pre id="doc-debug-readme">Loading...</pre>
+        </details>
+        <details>
+          <summary style="cursor:pointer;color:#cbd5f5;">RUNBOOK.md</summary>
+          <pre id="doc-runbook">Loading...</pre>
+        </details>
+        <details>
+          <summary style="cursor:pointer;color:#cbd5f5;">BLOCK_ANALYSIS.md</summary>
+          <pre id="doc-block-analysis">Loading...</pre>
+        </details>
+      </div>
     </div>
 
     <div class="section">
@@ -229,41 +423,235 @@
 
   <script type="module">
     const API_BASE = '/api';
-    const INTERNAL_TOKEN = new URLSearchParams(window.location.search).get('token') || '';
+    const TOKEN_STORAGE_KEY = 'rv_internal_token';
+    const PROD_ORIGIN_KEY = 'rv_internal_prod_origin';
+    const urlParams = new URLSearchParams(window.location.search);
+    const urlToken = urlParams.get('token') || '';
+    const storedToken = (() => {
+      try { return window.localStorage.getItem(TOKEN_STORAGE_KEY) || ''; } catch { return ''; }
+    })();
+    let INTERNAL_TOKEN = urlToken || storedToken || '';
+
     const withToken = (url) => {
       if (!INTERNAL_TOKEN) return url;
       const u = new URL(url, window.location.origin);
       u.searchParams.set('token', INTERNAL_TOKEN);
       return u.pathname + u.search;
     };
-    
-    async function fetchJSON(url) {
+
+    function setToken(nextToken) {
+      INTERNAL_TOKEN = String(nextToken || '').trim();
       try {
-        const res = await fetch(withToken(url));
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        return await res.json();
-      } catch (err) {
-        console.error('Fetch error:', err);
-        return null;
+        if (INTERNAL_TOKEN) window.localStorage.setItem(TOKEN_STORAGE_KEY, INTERNAL_TOKEN);
+        else window.localStorage.removeItem(TOKEN_STORAGE_KEY);
+      } catch {}
+    }
+
+    function updateAuthUI() {
+      const authEl = document.getElementById('rv-internal-auth');
+      if (authEl) {
+        if (INTERNAL_TOKEN) {
+          authEl.textContent = 'auth: token';
+          authEl.className = 'badge ok';
+        } else {
+          authEl.textContent = 'auth: none';
+          authEl.className = 'badge warn';
+        }
+      }
+
+      const bannerBadge = document.getElementById('auth-banner-badge');
+      if (bannerBadge) {
+        if (INTERNAL_TOKEN) {
+          bannerBadge.textContent = 'token set';
+          bannerBadge.className = 'badge ok';
+        } else {
+          bannerBadge.textContent = 'token missing';
+          bannerBadge.className = 'badge warn';
+        }
       }
     }
 
-    const authEl = document.getElementById('rv-internal-auth');
-    if (authEl) {
-      if (INTERNAL_TOKEN) {
-        authEl.textContent = 'auth: token';
-        authEl.className = 'badge ok';
-      } else {
-        authEl.textContent = 'auth: none';
-        authEl.className = 'badge warn';
+    function getProdOrigin() {
+      const input = document.getElementById('origin-prod');
+      const fromInput = input ? String(input.value || '').trim() : '';
+      if (fromInput) return fromInput.replace(/\/$/, '');
+      try {
+        const stored = window.localStorage.getItem(PROD_ORIGIN_KEY) || '';
+        return String(stored || '').trim().replace(/\/$/, '');
+      } catch {
+        return '';
       }
     }
+
+    function setProdOrigin(origin) {
+      const clean = String(origin || '').trim().replace(/\/$/, '');
+      try {
+        if (clean) window.localStorage.setItem(PROD_ORIGIN_KEY, clean);
+        else window.localStorage.removeItem(PROD_ORIGIN_KEY);
+      } catch {}
+    }
+
+    function withTokenTo(origin, path) {
+      const u = new URL(path, origin);
+      if (INTERNAL_TOKEN) u.searchParams.set('token', INTERNAL_TOKEN);
+      return u.toString();
+    }
+
+    async function fetchJSONFromOrigin(origin, path) {
+      try {
+        const res = await fetch(withTokenTo(origin, path), { headers: { Accept: 'application/json' } });
+        const text = await res.text();
+        if (!res.ok) return { ok: false, status: res.status, text };
+        try { return JSON.parse(text); } catch { return { ok: false, status: res.status, text }; }
+      } catch (err) {
+        return { ok: false, status: 0, text: String(err?.message || err || '') };
+      }
+    }
+
+    async function updateTargets() {
+      const originThisEl = document.getElementById('origin-this');
+      const preThis = document.getElementById('targets-this');
+      const preProd = document.getElementById('targets-prod');
+      const stThis = document.getElementById('targets-this-status');
+      const stProd = document.getElementById('targets-prod-status');
+
+      const originThis = window.location.origin;
+      if (originThisEl) originThisEl.textContent = originThis;
+
+      const thisHealth = await fetchJSONFromOrigin(originThis, '/api/health');
+      const thisDiag = await fetchJSONFromOrigin(originThis, '/api/diag');
+      const thisBundle = await fetchJSONFromOrigin(originThis, '/api/debug-bundle');
+      const thisSummary = {
+        origin: originThis,
+        health: thisHealth?.ok ? (thisHealth.data || {}) : { error: thisHealth },
+        diag: thisDiag?.ok ? (thisDiag.data || {}) : { error: thisDiag },
+        debugBundle: thisBundle?.ok ? (thisBundle.data?.summary || {}) : { error: thisBundle }
+      };
+      if (preThis) preThis.textContent = JSON.stringify(thisSummary, null, 2);
+      if (stThis) stThis.textContent = `Updated: ${new Date().toLocaleString()}`;
+
+      const prodOrigin = getProdOrigin();
+      if (!prodOrigin) {
+        if (preProd) preProd.textContent = 'Set prod origin and refresh.';
+        if (stProd) stProd.textContent = '—';
+        return;
+      }
+      setProdOrigin(prodOrigin);
+
+      const prodHealth = await fetchJSONFromOrigin(prodOrigin, '/api/health');
+      const prodDiag = await fetchJSONFromOrigin(prodOrigin, '/api/diag');
+      const prodBundle = await fetchJSONFromOrigin(prodOrigin, '/api/debug-bundle');
+      const prodSummary = {
+        origin: prodOrigin,
+        health: prodHealth?.ok ? (prodHealth.data || {}) : { error: prodHealth },
+        diag: prodDiag?.ok ? (prodDiag.data || {}) : { error: prodDiag },
+        debugBundle: prodBundle?.ok ? (prodBundle.data?.summary || {}) : { error: prodBundle }
+      };
+      if (preProd) preProd.textContent = JSON.stringify(prodSummary, null, 2);
+      if (stProd) {
+        const maybeCors = prodHealth?.status === 0 || prodDiag?.status === 0 || prodBundle?.status === 0;
+        stProd.textContent = maybeCors
+          ? `Updated: ${new Date().toLocaleString()} (note: status 0 may indicate CORS blocked)`
+          : `Updated: ${new Date().toLocaleString()}`;
+      }
+    }
+
+    async function loadDoc(path, targetId) {
+      const el = document.getElementById(targetId);
+      if (!el) return;
+      try {
+        const res = await fetch(path, { cache: 'no-store' });
+        if (!res.ok) {
+          el.textContent = `Failed to load ${path} (HTTP ${res.status})`;
+          return;
+        }
+        const text = await res.text();
+        el.textContent = text;
+      } catch (err) {
+        el.textContent = `Failed to load ${path}: ${String(err?.message || err || '')}`;
+      }
+    }
+
+    async function fetchJSON(url) {
+      try {
+        const res = await fetch(withToken(url), { headers: { Accept: 'application/json' } });
+        const text = await res.text();
+        if (!res.ok) {
+          return { ok: false, status: res.status, text };
+        }
+        try {
+          return JSON.parse(text);
+        } catch {
+          return { ok: false, status: res.status, text };
+        }
+      } catch (err) {
+        console.error('Fetch error:', err);
+        return { ok: false, status: 0, text: String(err?.message || err || '') };
+      }
+    }
+
+    const tokenInput = document.getElementById('token-input');
+    if (tokenInput) tokenInput.value = INTERNAL_TOKEN || '';
+    const applyBtn = document.getElementById('apply-token');
+    if (applyBtn && tokenInput) {
+      applyBtn.addEventListener('click', async () => {
+        setToken(tokenInput.value);
+        updateAuthUI();
+        await refreshAll();
+      });
+    }
+    const copyBtn = document.getElementById('copy-link');
+    if (copyBtn) {
+      copyBtn.addEventListener('click', async () => {
+        const u = new URL(window.location.href);
+        if (INTERNAL_TOKEN) u.searchParams.set('token', INTERNAL_TOKEN);
+        else u.searchParams.delete('token');
+        try { await navigator.clipboard.writeText(u.toString()); } catch {}
+      });
+    }
+
+    const originProdInput = document.getElementById('origin-prod');
+    if (originProdInput) {
+      const stored = (() => {
+        try { return window.localStorage.getItem(PROD_ORIGIN_KEY) || ''; } catch { return ''; }
+      })();
+      originProdInput.value = String(stored || '').trim();
+      originProdInput.addEventListener('change', () => {
+        setProdOrigin(originProdInput.value);
+      });
+    }
+
+    const openThis = document.getElementById('open-this');
+    if (openThis) {
+      openThis.addEventListener('click', () => {
+        const u = new URL('/internal-dashboard', window.location.origin);
+        if (INTERNAL_TOKEN) u.searchParams.set('token', INTERNAL_TOKEN);
+        window.open(u.toString(), '_blank', 'noreferrer');
+      });
+    }
+    const openProd = document.getElementById('open-prod');
+    if (openProd) {
+      openProd.addEventListener('click', () => {
+        const origin = getProdOrigin();
+        if (!origin) return;
+        const u = new URL('/internal-dashboard', origin);
+        if (INTERNAL_TOKEN) u.searchParams.set('token', INTERNAL_TOKEN);
+        window.open(u.toString(), '_blank', 'noreferrer');
+      });
+    }
+
+    updateAuthUI();
 
     async function refreshAll() {
       document.body.classList.add('loading');
       await Promise.all([
         updateEndpointProbes(),
         updateHealthOverview(),
+        updateTargets(),
+        updateDebugBundle(),
+        loadDoc('/DEBUG_README.md', 'doc-debug-readme'),
+        loadDoc('/RUNBOOK.md', 'doc-runbook'),
+        loadDoc('/BLOCK_ANALYSIS.md', 'doc-block-analysis'),
         updateBlockMatrix(),
         updateApiKeys(),
         updateErrorTimeline()
@@ -315,12 +703,15 @@
       const diag = await fetchJSON(`${API_BASE}/diag`);
       
       const container = document.getElementById('health-overview');
-      if (!health && !diag) {
+      if (!health || (health.ok === false && (!diag || diag.ok === false))) {
         container.innerHTML = '<div class="status-card fail"><h3>Error</h3><div class="value">Failed</div><div class="label">Cannot fetch health data</div></div>';
         return;
       }
 
-      const overallStatus = health?.status || diag?.overall_status || 'UNKNOWN';
+      const healthData = health?.data || {};
+      const diagData = diag?.data || {};
+
+      const overallStatus = healthData?.status || diagData?.overall_status || 'UNKNOWN';
       const statusClass = overallStatus === 'OK' ? 'ok' : overallStatus === 'DEGRADED' ? 'warn' : 'fail';
       
       container.innerHTML = `
@@ -331,17 +722,17 @@
         </div>
         <div class="status-card">
           <h3>Blocks Active</h3>
-          <div class="value">${health?.blocks_ok || 0}</div>
-          <div class="label">of ${health?.blocks_total || 0} total</div>
+          <div class="value">${healthData?.blocks_ok || 0}</div>
+          <div class="label">of ${healthData?.blocks_total || 0} total</div>
         </div>
         <div class="status-card">
           <h3>API Calls (24h)</h3>
-          <div class="value">${health?.api_calls_24h || 0}</div>
+          <div class="value">${healthData?.api_calls_24h || 0}</div>
           <div class="label">Estimated</div>
         </div>
         <div class="status-card">
           <h3>Cache Hit Rate</h3>
-          <div class="value">${health?.cache_hit_rate || 0}%</div>
+          <div class="value">${healthData?.cache_hit_rate || 0}%</div>
           <div class="label">Last 24h</div>
         </div>
       `;
@@ -349,16 +740,103 @@
       document.getElementById('health-timestamp').textContent = `Last updated: ${new Date().toLocaleString()}`;
     }
 
+    async function updateDebugBundle() {
+      const bundle = await fetchJSON(`${API_BASE}/debug-bundle`);
+      const container = document.getElementById('debug-summary');
+      const ts = document.getElementById('debug-timestamp');
+      const attemptsBody = document.querySelector('#debug-attempts tbody');
+      const eventsBody = document.querySelector('#recent-events tbody');
+
+      if (!container || !attemptsBody || !eventsBody) return;
+
+      if (!bundle || bundle.ok !== true) {
+        container.innerHTML = '<div class="status-card fail"><h3>Bundle Status</h3><div class="value">ERROR</div><div class="label">/api/debug-bundle not accessible</div></div>';
+        attemptsBody.innerHTML = '<tr><td colspan="5">No data available</td></tr>';
+        eventsBody.innerHTML = '<tr><td colspan="6">No data available</td></tr>';
+        if (ts) ts.textContent = `Last updated: ${new Date().toLocaleString()}`;
+        return;
+      }
+
+      const data = bundle.data || {};
+      const summary = data.summary || {};
+      const infra = data.infra || {};
+      const kv = infra.kv || {};
+      const counts = summary.countsBySeverity || {};
+      const status = summary.status || 'OK';
+      const statusClass = status === 'OK' ? 'ok' : status === 'DEGRADED' ? 'warn' : 'fail';
+
+      container.innerHTML = `
+        <div class="status-card ${statusClass}">
+          <h3>Bundle Status</h3>
+          <div class="value">${status}</div>
+          <div class="label">bundleId: ${summary.bundleId || '—'}</div>
+        </div>
+        <div class="status-card ${kv.opsWorking === false ? 'fail' : kv.opsWorking === true ? 'ok' : ''}">
+          <h3>KV</h3>
+          <div class="value">${kv.hasKV ? 'present' : 'missing'}</div>
+          <div class="label">opsWorking: ${kv.opsWorking === null ? 'unknown' : kv.opsWorking}</div>
+        </div>
+        <div class="status-card">
+          <h3>Severity</h3>
+          <div class="value">${(counts.CRITICAL || 0) + (counts.WARN || 0)}</div>
+          <div class="label">critical: ${counts.CRITICAL || 0} / warn: ${counts.WARN || 0}</div>
+        </div>
+        <div class="status-card">
+          <h3>Top Error Codes</h3>
+          <div class="value">${Array.isArray(summary.topErrorCodes) ? summary.topErrorCodes.length : 0}</div>
+          <div class="label">recent KV events</div>
+        </div>
+      `;
+
+      const attempts = Array.isArray(data.attempts) ? data.attempts : [];
+      attemptsBody.innerHTML = attempts.length
+        ? attempts.map((a) => {
+            const ok = Boolean(a.ok);
+            const okBadge = ok ? '<span class="badge ok">true</span>' : '<span class="badge fail">false</span>';
+            return `
+              <tr>
+                <td><code>${a.name || '—'}</code></td>
+                <td>${okBadge}</td>
+                <td>${a.status ?? '—'}</td>
+                <td><code style="font-size: 11px;">${a.reason || '—'}</code></td>
+                <td><code style="font-size: 11px;">${(a.errorSnippet || '').slice(0, 180) || '—'}</code></td>
+              </tr>
+            `;
+          }).join('')
+        : '<tr><td colspan="5">No attempts recorded</td></tr>';
+
+      const recent = Array.isArray(data.recentEvents) ? data.recentEvents : [];
+      eventsBody.innerHTML = recent.length
+        ? recent.slice(0, 120).map((e) => {
+            const dq = String(e.dataQuality || '').toUpperCase();
+            const dqClass = dq === 'OK' ? 'ok' : dq === 'STALE' ? 'stale' : dq === 'PARTIAL' ? 'partial' : dq ? 'warn' : '';
+            return `
+              <tr>
+                <td>${e.ts ? new Date(e.ts).toLocaleString() : '—'}</td>
+                <td><code>${e.feature || '—'}</code></td>
+                <td>${e.httpStatus ?? '—'}</td>
+                <td>${dq ? `<span class="badge ${dqClass}">${dq}</span>` : '—'}</td>
+                <td><code style="font-size: 11px;">${e.errorCode || '—'}</code></td>
+                <td><code style="font-size: 11px;">${e.traceId || '—'}</code></td>
+              </tr>
+            `;
+          }).join('')
+        : '<tr><td colspan="6">No recent events in KV</td></tr>';
+
+      if (ts) ts.textContent = `Last updated: ${new Date().toLocaleString()}`;
+    }
+
     async function updateBlockMatrix() {
       const diag = await fetchJSON(`${API_BASE}/diag`);
       const tbody = document.querySelector('#block-matrix tbody');
       
-      if (!diag || !diag.blocks) {
+      const blocks = diag?.data?.blocks || diag?.blocks;
+      if (!diag || diag.ok !== true || !blocks) {
         tbody.innerHTML = '<tr><td colspan="9">No data available</td></tr>';
         return;
       }
 
-      tbody.innerHTML = diag.blocks.map(block => {
+      tbody.innerHTML = blocks.map(block => {
         const statusClass = block.status === 'OK' ? 'ok' : block.status === 'PARTIAL' ? 'warn' : 'fail';
         return `
           <tr>
@@ -379,13 +857,15 @@
     async function updateApiKeys() {
       const diag = await fetchJSON(`${API_BASE}/diag`);
       const tbody = document.querySelector('#api-keys tbody');
+
+      const keys = diag?.data?.api_keys || diag?.api_keys;
       
-      if (!diag || !diag.api_keys) {
+      if (!diag || diag.ok !== true || !keys) {
         tbody.innerHTML = '<tr><td colspan="14">No API key data available</td></tr>';
         return;
       }
 
-      tbody.innerHTML = diag.api_keys.map(key => {
+      tbody.innerHTML = keys.map(key => {
         const statusClass = key.status === 'present' ? 'ok' : key.status === 'missing' ? 'fail' : 'warn';
         return `
           <tr>
@@ -412,13 +892,15 @@
     async function updateErrorTimeline() {
       const diag = await fetchJSON(`${API_BASE}/diag`);
       const tbody = document.querySelector('#error-timeline tbody');
+
+      const events = diag?.data?.events || diag?.events;
       
-      if (!diag || !diag.events) {
+      if (!diag || diag.ok !== true || !events) {
         tbody.innerHTML = '<tr><td colspan="6">No events available</td></tr>';
         return;
       }
 
-      tbody.innerHTML = diag.events.slice(0, 50).map(event => {
+      tbody.innerHTML = events.slice(0, 50).map(event => {
         const typeClass = event.type === 'error' ? 'fail' : event.type === 'warn' ? 'warn' : 'ok';
         return `
           <tr>
