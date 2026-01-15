@@ -133,6 +133,31 @@
       font-size: 13px;
       margin-bottom: 15px;
     }
+    .usage-panel {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px 14px;
+      align-items: center;
+      margin-bottom: 12px;
+      color: #cbd5f5;
+      font-size: 12px;
+    }
+    .usage-panel label {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      color: #94a3b8;
+    }
+    .usage-panel input {
+      background: #0f172a;
+      color: #f8fafc;
+      border: 1px solid rgba(148, 163, 184, 0.2);
+      border-radius: 6px;
+      padding: 6px 8px;
+      width: 140px;
+      font-size: 12px;
+    }
+    .usage-metric strong { color: #f8fafc; }
     .refresh-btn:hover { background: #0ea5e9; }
     .secondary-btn {
       background: rgba(15, 23, 42, 0.6);
@@ -212,7 +237,21 @@
 
     <div class="section">
       <h2>System Health Overview</h2>
-      <button class="refresh-btn" onclick="refreshAll()">🔄 Refresh All</button>
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:8px;">
+        <button class="refresh-btn" id="refresh-all">🔄 Refresh All</button>
+        <span class="usage-metric">Workers left today: <strong id="workers-remaining">—</strong></span>
+        <span class="usage-metric">One refresh uses: <strong id="workers-refresh-cost">—</strong> (<span id="workers-refresh-pct">—</span>)</span>
+        <span class="usage-metric">Last refresh calls: <strong id="workers-last-calls">—</strong></span>
+      </div>
+      <div class="usage-panel">
+        <label>Daily budget
+          <input id="workers-daily-budget" type="number" min="0" step="1" placeholder="e.g. 100000" />
+        </label>
+        <label>Used today
+          <input id="workers-used-today" type="number" min="0" step="1" placeholder="e.g. 1200" />
+        </label>
+        <span style="color:#94a3b8;">Manual estimate. Stored locally.</span>
+      </div>
       <div class="status-grid" id="health-overview">
         <div class="status-card">
           <h3>Overall Status</h3>
@@ -588,6 +627,7 @@
 
     async function fetchJSONFromOrigin(origin, path) {
       try {
+        recordRequest();
         const res = await fetch(withTokenTo(origin, path), { headers: { Accept: 'application/json' } });
         const text = await res.text();
         if (!res.ok) return { ok: false, status: res.status, text };
@@ -649,6 +689,7 @@
       const el = document.getElementById(targetId);
       if (!el) return;
       try {
+        recordRequest();
         const res = await fetch(path, { cache: 'no-store' });
         if (!res.ok) {
           el.textContent = `Failed to load ${path} (HTTP ${res.status})`;
@@ -663,6 +704,7 @@
 
     async function fetchJSON(url) {
       try {
+        recordRequest();
         const res = await fetch(withToken(url), { headers: { Accept: 'application/json' } });
         const text = await res.text();
         if (!res.ok) {
@@ -679,6 +721,60 @@
       }
     }
 
+    const WORKER_BUDGET_KEY = 'rv_internal_workers_daily_budget';
+    const WORKER_USED_KEY = 'rv_internal_workers_used_today';
+    const WORKER_LAST_CALLS_KEY = 'rv_internal_workers_last_calls';
+    const refreshMetrics = { counting: false, requestCount: 0 };
+
+    function toNumber(value) {
+      const num = Number(String(value || '').replace(/[^0-9.]/g, ''));
+      return Number.isFinite(num) ? num : 0;
+    }
+
+    function getStoredNumber(key) {
+      try {
+        const raw = window.localStorage.getItem(key);
+        return toNumber(raw);
+      } catch {
+        return 0;
+      }
+    }
+
+    function setStoredNumber(key, value) {
+      try {
+        window.localStorage.setItem(key, String(value));
+      } catch {}
+    }
+
+    function recordRequest() {
+      if (!refreshMetrics.counting) return;
+      refreshMetrics.requestCount += 1;
+    }
+
+    function updateUsageUI() {
+      const dailyBudget = getStoredNumber(WORKER_BUDGET_KEY);
+      const usedToday = getStoredNumber(WORKER_USED_KEY);
+      const remaining = Math.max(dailyBudget - usedToday, 0);
+      const lastCalls = getStoredNumber(WORKER_LAST_CALLS_KEY);
+      const refreshCalls = lastCalls || refreshMetrics.requestCount || 0;
+      const pct = dailyBudget > 0 ? ((refreshCalls / dailyBudget) * 100) : 0;
+
+      const remainingEl = document.getElementById('workers-remaining');
+      const costEl = document.getElementById('workers-refresh-cost');
+      const pctEl = document.getElementById('workers-refresh-pct');
+      const lastCallsEl = document.getElementById('workers-last-calls');
+      const dailyInput = document.getElementById('workers-daily-budget');
+      const usedInput = document.getElementById('workers-used-today');
+
+      if (remainingEl) remainingEl.textContent = dailyBudget ? `${remaining.toLocaleString()} req` : '—';
+      if (costEl) costEl.textContent = refreshCalls ? `${refreshCalls.toLocaleString()} req` : '—';
+      if (pctEl) pctEl.textContent = dailyBudget ? `${pct.toFixed(2)}%` : '—';
+      if (lastCallsEl) lastCallsEl.textContent = refreshCalls ? refreshCalls.toLocaleString() : '—';
+
+      if (dailyInput && !dailyInput.value) dailyInput.value = dailyBudget ? String(dailyBudget) : '';
+      if (usedInput && !usedInput.value) usedInput.value = usedToday ? String(usedToday) : '';
+    }
+
     const tokenInput = document.getElementById('token-input');
     if (tokenInput) tokenInput.value = INTERNAL_TOKEN || '';
     const applyBtn = document.getElementById('apply-token');
@@ -686,7 +782,6 @@
       applyBtn.addEventListener('click', async () => {
         setToken(tokenInput.value);
         updateAuthUI();
-        await refreshAll();
       });
     }
     const copyBtn = document.getElementById('copy-link');
@@ -753,6 +848,8 @@
 
     async function refreshAll() {
       document.body.classList.add('loading');
+      refreshMetrics.counting = true;
+      refreshMetrics.requestCount = 0;
       await Promise.all([
         updateEndpointProbes(),
         updateHealthOverview(),
@@ -764,7 +861,30 @@
         updateApiKeys(),
         updateErrorTimeline()
       ]);
+      refreshMetrics.counting = false;
+      setStoredNumber(WORKER_LAST_CALLS_KEY, refreshMetrics.requestCount);
+      updateUsageUI();
       document.body.classList.remove('loading');
+    }
+
+    const refreshBtn = document.getElementById('refresh-all');
+    if (refreshBtn) {
+      refreshBtn.addEventListener('click', refreshAll);
+    }
+
+    const dailyInput = document.getElementById('workers-daily-budget');
+    if (dailyInput) {
+      dailyInput.addEventListener('change', () => {
+        setStoredNumber(WORKER_BUDGET_KEY, toNumber(dailyInput.value));
+        updateUsageUI();
+      });
+    }
+    const usedInput = document.getElementById('workers-used-today');
+    if (usedInput) {
+      usedInput.addEventListener('change', () => {
+        setStoredNumber(WORKER_USED_KEY, toNumber(usedInput.value));
+        updateUsageUI();
+      });
     }
 
     function safeText(value) {
@@ -1151,7 +1271,7 @@
       }).join('');
     }
 
-    refreshAll();
+    updateUsageUI();
   </script>
 </body>
 </html>
