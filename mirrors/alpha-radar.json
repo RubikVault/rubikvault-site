@@ -1,9 +1,9 @@
 {
   "schemaVersion": "rv-mirror-v1",
   "mirrorId": "alpha-radar",
-  "runId": "2026-01-12T22:44:25.005Z",
-  "updatedAt": "2026-01-12T22:44:25.005Z",
-  "asOf": "2026-01-12T21:00:00.000Z",
+  "runId": "2026-01-14T22:48:30.655Z",
+  "updatedAt": "2026-01-14T22:48:30.655Z",
+  "asOf": "2026-01-14T21:00:00.000Z",
   "mode": "EOD",
   "cadence": "EOD",
   "trust": "derived",
@@ -32,58 +32,58 @@
   "items": [
     {
       "symbol": "AAPL",
-      "score": 55,
-      "state": "WATCH",
+      "score": 50,
+      "state": "NEUTRAL",
       "reasons": [
         "TREND_UP_200",
-        "RSI_OVERSOLD",
+        "RSI_RECOVERY",
         "MACD_NEGATIVE"
       ],
-      "close": 260.25,
-      "changePct": 0.33928364884141526,
-      "barsUsed": 10417,
+      "close": 259.96,
+      "changePct": -0.41754453169892125,
+      "barsUsed": 10419,
       "missingFields": []
     },
     {
       "symbol": "MSFT",
-      "score": 55,
-      "state": "WATCH",
+      "score": 35,
+      "state": "NEUTRAL",
       "reasons": [
         "TREND_DOWN",
         "RSI_RECOVERY",
-        "MACD_POSITIVE"
+        "MACD_NEGATIVE"
       ],
-      "close": 477.18,
-      "changePct": -0.43815723585377553,
-      "barsUsed": 10034,
+      "close": 459.534,
+      "changePct": -2.365988909426997,
+      "barsUsed": 10036,
       "missingFields": []
     },
     {
       "symbol": "NVDA",
-      "score": 75,
-      "state": "STRONG",
+      "score": 55,
+      "state": "WATCH",
       "reasons": [
         "TREND_UP_200",
         "RSI_NEUTRAL",
-        "MACD_POSITIVE"
+        "MACD_NEGATIVE"
       ],
-      "close": 184.912,
-      "changePct": 0.028129395217990627,
-      "barsUsed": 6784,
+      "close": 183.13,
+      "changePct": -1.442333566546472,
+      "barsUsed": 6786,
       "missingFields": []
     },
     {
       "symbol": "AMZN",
-      "score": 70,
+      "score": 85,
       "state": "STRONG",
       "reasons": [
         "TREND_STRONG",
-        "RSI_EXTENDED",
+        "RSI_NEUTRAL",
         "MACD_POSITIVE"
       ],
-      "close": 246.47,
-      "changePct": -0.36785512167515355,
-      "barsUsed": 7204,
+      "close": 236.65,
+      "changePct": -2.4525968672712284,
+      "barsUsed": 7206,
       "missingFields": []
     },
     {
@@ -95,9 +95,9 @@
         "RSI_EXTENDED",
         "MACD_POSITIVE"
       ],
-      "close": 331.86,
-      "changePct": 1.001308701342185,
-      "barsUsed": 5384,
+      "close": 335.84,
+      "changePct": -0.03869393100576213,
+      "barsUsed": 5386,
       "missingFields": []
     },
     {
@@ -109,23 +109,23 @@
         "RSI_RECOVERY",
         "MACD_NEGATIVE"
       ],
-      "close": 641.97,
-      "changePct": -1.6981594340489292,
-      "barsUsed": 3432,
+      "close": 615.58,
+      "changePct": -2.457652632746521,
+      "barsUsed": 3434,
       "missingFields": []
     },
     {
       "symbol": "TSLA",
-      "score": 60,
+      "score": 55,
       "state": "WATCH",
       "reasons": [
-        "TREND_UP",
+        "TREND_UP_200",
         "RSI_NEUTRAL",
         "MACD_NEGATIVE"
       ],
-      "close": 448.96,
-      "changePct": 0.887620502910047,
-      "barsUsed": 3909,
+      "close": 439.2,
+      "changePct": -1.7889087656529523,
+      "barsUsed": 3911,
       "missingFields": []
     },
     {
@@ -137,9 +137,9 @@
         "RSI_NEUTRAL",
         "MACD_POSITIVE"
       ],
-      "close": 695.235,
-      "changePct": 0.16785050499228404,
-      "barsUsed": 5252,
+      "close": 690.36,
+      "changePct": -0.49151736166164195,
+      "barsUsed": 5254,
       "missingFields": []
     },
     {
@@ -151,9 +151,9 @@
         "RSI_NEUTRAL",
         "MACD_POSITIVE"
       ],
-      "close": 627.17,
-      "changePct": 0.08298093034388998,
-      "barsUsed": 6752,
+      "close": 619.55,
+      "changePct": -1.0682805314256583,
+      "barsUsed": 6754,
       "missingFields": []
     },
     {
@@ -165,21 +165,49 @@
         "RSI_EXTENDED",
         "MACD_POSITIVE"
       ],
-      "close": 261.5,
-      "changePct": 0.48802981977480453,
-      "barsUsed": 5252,
+      "close": 263.21,
+      "changePct": 0.7116893055289619,
+      "barsUsed": 5254,
       "missingFields": []
     }
   ],
-  "generatedAt": "2026-01-12T22:44:25.005Z",
+  "generatedAt": "2026-01-14T22:48:30.655Z",
   "data": {
     "picks": {
       "top": [
         {
+          "symbol": "AMZN",
+          "name": "AMZN",
+          "close": 236.65,
+          "changePct": -2.4525968672712284,
+          "stop": null,
+          "setupScore": 34,
+          "triggerScore": 51,
+          "totalScore": 85,
+          "setup": {
+            "rsiExtreme": true,
+            "bbExtreme": false,
+            "nearSma200": false,
+            "rvolGte15": false,
+            "extremeGate": false
+          },
+          "trigger": {
+            "ema21Reclaim": false,
+            "higherLowFt": false,
+            "bosBreak": false,
+            "volumeConfirm": false,
+            "rsiUpturn": false
+          },
+          "tags": [
+            "STRONG"
+          ],
+          "notes": null
+        },
+        {
           "symbol": "SPY",
           "name": "SPY",
-          "close": 695.235,
-          "changePct": 0.16785050499228404,
+          "close": 690.36,
+          "changePct": -0.49151736166164195,
           "stop": null,
           "setupScore": 34,
           "triggerScore": 51,
@@ -206,40 +234,12 @@
         {
           "symbol": "QQQ",
           "name": "QQQ",
-          "close": 627.17,
-          "changePct": 0.08298093034388998,
+          "close": 619.55,
+          "changePct": -1.0682805314256583,
           "stop": null,
           "setupScore": 34,
           "triggerScore": 51,
           "totalScore": 85,
-          "setup": {
-            "rsiExtreme": true,
-            "bbExtreme": false,
-            "nearSma200": false,
-            "rvolGte15": false,
-            "extremeGate": false
-          },
-          "trigger": {
-            "ema21Reclaim": false,
-            "higherLowFt": false,
-            "bosBreak": false,
-            "volumeConfirm": false,
-            "rsiUpturn": false
-          },
-          "tags": [
-            "STRONG"
-          ],
-          "notes": null
-        },
-        {
-          "symbol": "NVDA",
-          "name": "NVDA",
-          "close": 184.912,
-          "changePct": 0.028129395217990627,
-          "stop": null,
-          "setupScore": 30,
-          "triggerScore": 45,
-          "totalScore": 75,
           "setup": {
             "rsiExtreme": true,
             "bbExtreme": false,
@@ -262,10 +262,38 @@
       ],
       "shortterm": [
         {
+          "symbol": "AMZN",
+          "name": "AMZN",
+          "close": 236.65,
+          "changePct": -2.4525968672712284,
+          "stop": null,
+          "setupScore": 34,
+          "triggerScore": 51,
+          "totalScore": 85,
+          "setup": {
+            "rsiExtreme": true,
+            "bbExtreme": false,
+            "nearSma200": false,
+            "rvolGte15": false,
+            "extremeGate": false
+          },
+          "trigger": {
+            "ema21Reclaim": false,
+            "higherLowFt": false,
+            "bosBreak": false,
+            "volumeConfirm": false,
+            "rsiUpturn": false
+          },
+          "tags": [
+            "STRONG"
+          ],
+          "notes": null
+        },
+        {
           "symbol": "SPY",
           "name": "SPY",
-          "close": 695.235,
-          "changePct": 0.16785050499228404,
+          "close": 690.36,
+          "changePct": -0.49151736166164195,
           "stop": null,
           "setupScore": 34,
           "triggerScore": 51,
@@ -292,8 +320,8 @@
         {
           "symbol": "QQQ",
           "name": "QQQ",
-          "close": 627.17,
-          "changePct": 0.08298093034388998,
+          "close": 619.55,
+          "changePct": -1.0682805314256583,
           "stop": null,
           "setupScore": 34,
           "triggerScore": 51,
@@ -316,70 +344,14 @@
             "STRONG"
           ],
           "notes": null
-        },
-        {
-          "symbol": "NVDA",
-          "name": "NVDA",
-          "close": 184.912,
-          "changePct": 0.028129395217990627,
-          "stop": null,
-          "setupScore": 30,
-          "triggerScore": 45,
-          "totalScore": 75,
-          "setup": {
-            "rsiExtreme": true,
-            "bbExtreme": false,
-            "nearSma200": false,
-            "rvolGte15": false,
-            "extremeGate": false
-          },
-          "trigger": {
-            "ema21Reclaim": false,
-            "higherLowFt": false,
-            "bosBreak": false,
-            "volumeConfirm": false,
-            "rsiUpturn": false
-          },
-          "tags": [
-            "STRONG"
-          ],
-          "notes": null
         }
       ],
       "longterm": [
         {
-          "symbol": "AMZN",
-          "name": "AMZN",
-          "close": 246.47,
-          "changePct": -0.36785512167515355,
-          "stop": null,
-          "setupScore": 28,
-          "triggerScore": 42,
-          "totalScore": 70,
-          "setup": {
-            "rsiExtreme": true,
-            "bbExtreme": false,
-            "nearSma200": false,
-            "rvolGte15": false,
-            "extremeGate": false
-          },
-          "trigger": {
-            "ema21Reclaim": false,
-            "higherLowFt": false,
-            "bosBreak": false,
-            "volumeConfirm": false,
-            "rsiUpturn": false
-          },
-          "tags": [
-            "STRONG"
-          ],
-          "notes": null
-        },
-        {
           "symbol": "GOOGL",
           "name": "GOOGL",
-          "close": 331.86,
-          "changePct": 1.001308701342185,
+          "close": 335.84,
+          "changePct": -0.03869393100576213,
           "stop": null,
           "setupScore": 28,
           "triggerScore": 42,
@@ -406,8 +378,8 @@
         {
           "symbol": "IWM",
           "name": "IWM",
-          "close": 261.5,
-          "changePct": 0.48802981977480453,
+          "close": 263.21,
+          "changePct": 0.7116893055289619,
           "stop": null,
           "setupScore": 28,
           "triggerScore": 42,
@@ -430,13 +402,41 @@
             "STRONG"
           ],
           "notes": null
+        },
+        {
+          "symbol": "NVDA",
+          "name": "NVDA",
+          "close": 183.13,
+          "changePct": -1.442333566546472,
+          "stop": null,
+          "setupScore": 22,
+          "triggerScore": 33,
+          "totalScore": 55,
+          "setup": {
+            "rsiExtreme": true,
+            "bbExtreme": false,
+            "nearSma200": false,
+            "rvolGte15": false,
+            "extremeGate": false
+          },
+          "trigger": {
+            "ema21Reclaim": false,
+            "higherLowFt": false,
+            "bosBreak": false,
+            "volumeConfirm": false,
+            "rsiUpturn": false
+          },
+          "tags": [
+            "WATCH"
+          ],
+          "notes": null
         }
       ]
     }
   },
   "meta": {
     "status": "OK",
-    "updatedAt": "2026-01-12T22:44:25.005Z",
+    "updatedAt": "2026-01-14T22:48:30.655Z",
     "reason": null
   }
 }
