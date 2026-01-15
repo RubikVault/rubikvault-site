@@ -1,0 +1,948 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>RubikVault – Decode the Markets</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta
+    name="description"
+    content="RubikVault – calm, data-driven multi-asset market insights across stocks, crypto, macro and commodities. Educational only."
+  />
+  <script>
+    (function() {
+      var stored = window.localStorage && window.localStorage.getItem("rv-theme");
+      var theme = stored === "light" ? "light" : "dark";
+      document.documentElement.setAttribute("data-theme", theme);
+    })();
+  </script>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <!-- HEADER MIT INLINE-LOGO -->
+  <header class="rv-header">
+    <div class="rv-header-inner">
+      <a class="rv-brand" href="/" aria-label="RubikVault">
+        <img class="rv-brand-icon" src="/assets/rv-icon.png" alt="" />
+        <span class="rv-brand-text">RubikVault</span>
+      </a>
+
+      <nav class="rv-nav">
+        <a href="https://www.youtube.com/@RubikVault" target="_blank" rel="noopener noreferrer">YouTube</a>
+        <a href="https://x.com/RubikVault" target="_blank" rel="noopener noreferrer">X</a>
+        <a href="https://www.tiktok.com/@rubikvault" target="_blank" rel="noopener noreferrer">TikTok</a>
+        <a href="https://www.instagram.com/rubikvault" target="_blank" rel="noopener noreferrer">Instagram</a>
+      </nav>
+
+      <div class="rv-header-tools" aria-live="polite">
+        <div class="rv-market-clock">
+          <span class="rv-clock-time" id="rv-ny-time">NY: --:--:--</span>
+          <span class="rv-clock-status">
+            <span class="rv-led" data-rv-led="closed"></span>
+            <span class="rv-market-label" data-rv-market-label>Closed</span>
+            <span class="rv-market-countdown" id="rv-market-countdown">opens in --:--:--</span>
+          </span>
+        </div>
+        <button class="rv-theme-toggle" type="button" id="rv-theme-toggle" aria-label="Toggle theme">
+          Dark
+        </button>
+      </div>
+    </div>
+    <div class="rv-status-strip" id="rv-status-strip" aria-live="polite">
+      <span>System status loading…</span>
+    </div>
+  </header>
+
+  <nav class="rv-subnav" aria-label="Dashboard sections">
+    <a href="#rv-overview">Overview</a>
+    <a href="#rv-macro">Macro</a>
+    <a href="#rv-news">News</a>
+    <a href="#rv-stocks">Stocks</a>
+    <a href="#rv-crypto">Crypto</a>
+    <a href="#rv-alpha">Alpha Radar</a>
+  </nav>
+
+  <!-- MAIN -->
+  <main class="rv-main" id="rv-dashboard">
+    <section class="rv-hero" id="rv-overview">
+      <div class="rv-hero-content">
+        <h1>Decode the Markets.</h1>
+        <p>
+          RubikVault is a one-person research project focusing on stocks, crypto, macro
+          and commodities – calm, data-driven and educational only.
+        </p>
+        <div class="rv-hero-actions">
+          <a class="rv-btn-primary" href="https://www.youtube.com/@RubikVault" target="_blank" rel="noopener noreferrer">
+            Watch on YouTube
+          </a>
+          <a class="rv-btn-secondary" href="https://x.com/RubikVault" target="_blank" rel="noopener noreferrer">
+            Follow on X
+          </a>
+        </div>
+      </div>
+
+      <div class="rv-hero-side">
+        <div class="rv-tag">Early Stage</div>
+        <div class="rv-card">
+          <h2>Market snapshot (coming soon)</h2>
+          <p>
+            A compact overview across equities, crypto, macro and commodities on a single page.
+          </p>
+          <p class="rv-card-note">
+            No signals, no paid groups, no financial advice – just transparent research.
+          </p>
+          <div class="rv-compact-ticker">
+            Live market widgets will appear here in a next iteration.
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section
+      class="rv-section rv-native-block rv-cockpit-hero"
+      data-rv-feature="rv-market-cockpit"
+      data-rv-block-name="Hero – Market Cockpit"
+      data-rv-priority="high"
+      data-rv-loading="true"
+      data-rv-collapsible="false"
+    >
+      <div class="rv-native-header">
+        <h2>Market Cockpit</h2>
+        <button class="rv-native-refresh" type="button" data-rv-action="refresh">Refresh</button>
+      </div>
+      <div class="rv-native-body rv-card">
+        <div class="rv-native-skeleton">
+          <div class="rv-native-line"></div>
+          <div class="rv-native-line short"></div>
+          <div class="rv-native-line"></div>
+        </div>
+        <div class="rv-native-root" data-rv-root></div>
+      </div>
+    </section>
+
+    <div class="rv-cockpit-grid" id="rv-macro">
+      <section
+        class="rv-section rv-native-block rv-cockpit-card"
+        data-rv-feature="rv-yield-curve"
+        data-rv-block-name="Yield Curve"
+        data-rv-priority="high"
+        data-rv-loading="true"
+      >
+        <div class="rv-native-header">
+          <h2>Yield Curve</h2>
+          <button class="rv-native-refresh" type="button" data-rv-action="refresh">Refresh</button>
+        </div>
+        <div class="rv-native-body rv-card">
+          <div class="rv-native-skeleton">
+            <div class="rv-native-line"></div>
+            <div class="rv-native-line short"></div>
+          </div>
+          <div class="rv-native-root" data-rv-root></div>
+        </div>
+      </section>
+
+      <section
+        class="rv-section rv-native-block rv-cockpit-card"
+        data-rv-feature="rv-sector-rotation"
+        data-rv-block-name="Sector Rotation"
+        data-rv-priority="high"
+        data-rv-loading="true"
+      >
+        <div class="rv-native-header">
+          <h2>Sector Rotation</h2>
+          <button class="rv-native-refresh" type="button" data-rv-action="refresh">Refresh</button>
+        </div>
+        <div class="rv-native-body rv-card">
+          <div class="rv-native-skeleton">
+            <div class="rv-native-line"></div>
+            <div class="rv-native-line short"></div>
+          </div>
+          <div class="rv-native-root" data-rv-root></div>
+        </div>
+      </section>
+
+      <section
+        class="rv-section rv-native-block rv-cockpit-card"
+        data-rv-feature="rv-central-bank-watch"
+        data-rv-block-name="Central Bank Watch"
+        data-rv-priority="high"
+        data-rv-loading="true"
+      >
+        <div class="rv-native-header">
+          <h2>Central Bank Watch</h2>
+          <button class="rv-native-refresh" type="button" data-rv-action="refresh">Refresh</button>
+        </div>
+        <div class="rv-native-body rv-card">
+          <div class="rv-native-skeleton">
+            <div class="rv-native-line"></div>
+            <div class="rv-native-line short"></div>
+          </div>
+          <div class="rv-native-root" data-rv-root></div>
+        </div>
+      </section>
+    </div>
+
+    <section class="rv-section">
+      <h2>What RubikVault will cover</h2>
+      <p>
+        The goal is a clear, multi-asset dashboard that connects macro, flows and cycles –
+        instead of chasing headlines or noise.
+      </p>
+
+      <div class="rv-metric-grid">
+        <a class="rv-metric-card" href="#">
+          <h4>Equities &amp; Factors</h4>
+          <p>Indices, sectors, volatility, breadth and factor regimes.</p>
+        </a>
+        <a class="rv-metric-card" href="#">
+          <h4>Crypto &amp; On-chain</h4>
+          <p>BTC/ETH cycles, liquidity, leverage and ETF flows.</p>
+        </a>
+        <a class="rv-metric-card" href="#">
+          <h4>Macro &amp; Rates</h4>
+          <p>Yields, inflation expectations, dollar &amp; liquidity backdrop.</p>
+        </a>
+        <a class="rv-metric-card" href="#">
+          <h4>Commodities</h4>
+          <p>Energy, metals and agricultural markets as macro context.</p>
+        </a>
+      </div>
+    </section>
+
+    <section class="rv-section rv-follow">
+      <h2>Follow the project</h2>
+      <p>
+        Channels are still in setup. Experiments and dashboards will appear step by step.
+      </p>
+
+      <div class="rv-follow-grid">
+        <a
+          class="rv-follow-card"
+          href="https://www.youtube.com/@RubikVault"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          <h3>YouTube</h3>
+          <p>Longer form breakdowns and dashboard walkthroughs.</p>
+        </a>
+        <a
+          class="rv-follow-card"
+          href="https://x.com/RubikVault"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          <h3>X</h3>
+          <p>Short updates, charts and market context.</p>
+        </a>
+        <a
+          class="rv-follow-card"
+          href="https://www.tiktok.com/@rubikvault"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          <h3>TikTok</h3>
+          <p>Clipped highlights and quick takes.</p>
+        </a>
+        <a
+          class="rv-follow-card"
+          href="https://www.instagram.com/rubikvault"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          <h3>Instagram</h3>
+          <p>Visual explainers and carousels.</p>
+        </a>
+      </div>
+    </section>
+
+    <div class="rv-block-grid">
+    <!-- RV NATIVE BLOCK 01: Market Health -->
+    <section
+      class="rv-section rv-native-block"
+      data-rv-feature="rv-market-health"
+      data-rv-block-name="Block 01 – Market Health"
+      data-rv-priority="high"
+      data-rv-loading="true"
+      data-rv-collapsible="true"
+      data-rv-span="wide"
+      id="rv-stocks"
+    >
+      <div class="rv-native-header">
+        <h2>Block 01 – Market Health</h2>
+        <button class="rv-native-refresh" type="button" data-rv-action="refresh">Refresh</button>
+      </div>
+      <div class="rv-native-body rv-card">
+        <div class="rv-native-skeleton">
+          <div class="rv-native-line"></div>
+          <div class="rv-native-line short"></div>
+          <div class="rv-native-line"></div>
+        </div>
+        <div class="rv-native-root" data-rv-root></div>
+      </div>
+    </section>
+
+    <!-- RV NATIVE BLOCK 02: Price Snapshot -->
+    <section
+      class="rv-section rv-native-block"
+      data-rv-feature="rv-price-snapshot"
+      data-rv-block-name="Block 02 – Price Snapshot"
+      data-rv-priority="high"
+      data-rv-loading="true"
+      data-rv-collapsible="true"
+      data-rv-deprecated="true"
+      aria-hidden="true"
+    >
+      <div class="rv-native-header">
+        <h2>Block 02 – Price Snapshot</h2>
+        <button class="rv-native-refresh" type="button" data-rv-action="refresh">Refresh</button>
+      </div>
+      <div class="rv-native-body rv-card">
+        <div class="rv-native-skeleton">
+          <div class="rv-native-line"></div>
+          <div class="rv-native-line short"></div>
+          <div class="rv-native-line"></div>
+        </div>
+        <div class="rv-native-root" data-rv-root></div>
+      </div>
+    </section>
+
+    <!-- RV NATIVE BLOCK 03: Top Movers -->
+    <section
+      class="rv-section rv-native-block"
+      data-rv-feature="rv-top-movers"
+      data-rv-block-name="Block 03 – Volume Top Movers"
+      data-rv-priority="medium"
+      data-rv-loading="true"
+      data-rv-collapsible="true"
+    >
+      <div class="rv-native-header">
+        <h2>Block 03 – Volume Top Movers</h2>
+        <button class="rv-native-refresh" type="button" data-rv-action="refresh">Refresh</button>
+      </div>
+      <div class="rv-native-body rv-card">
+        <div class="rv-native-skeleton">
+          <div class="rv-native-line"></div>
+          <div class="rv-native-line short"></div>
+          <div class="rv-native-line"></div>
+        </div>
+        <div class="rv-native-root" data-rv-root></div>
+      </div>
+    </section>
+
+    <!-- RV NATIVE BLOCK 04: Earnings Calendar -->
+    <section
+      class="rv-section rv-native-block"
+      data-rv-feature="rv-earnings-calendar"
+      data-rv-block-name="Block 04 – Earnings Calendar"
+      data-rv-priority="low"
+      data-rv-loading="true"
+      data-rv-collapsible="true"
+    >
+      <div class="rv-native-header">
+        <h2>Block 04 – Earnings Calendar</h2>
+        <button class="rv-native-refresh" type="button" data-rv-action="refresh">Refresh</button>
+      </div>
+      <div class="rv-native-body rv-card">
+        <div class="rv-native-skeleton">
+          <div class="rv-native-line"></div>
+          <div class="rv-native-line short"></div>
+          <div class="rv-native-line"></div>
+        </div>
+        <div class="rv-native-root" data-rv-root></div>
+      </div>
+    </section>
+
+    <!-- RV NATIVE BLOCK 05: News Headlines -->
+    <section
+      class="rv-section rv-native-block"
+      data-rv-feature="rv-news-headlines"
+      data-rv-block-name="Block 05 – News Headlines"
+      data-rv-priority="low"
+      data-rv-loading="true"
+      data-rv-collapsible="true"
+      data-rv-span="wide"
+      id="rv-news"
+    >
+      <div class="rv-native-header">
+        <h2>Block 05 – News Headlines</h2>
+        <button class="rv-native-refresh" type="button" data-rv-action="refresh">Refresh</button>
+      </div>
+      <div class="rv-native-body rv-card">
+        <div class="rv-native-skeleton">
+          <div class="rv-native-line"></div>
+          <div class="rv-native-line short"></div>
+          <div class="rv-native-line"></div>
+        </div>
+        <div class="rv-native-root" data-rv-root></div>
+      </div>
+    </section>
+
+    <!-- RV NATIVE BLOCK 12: News Intelligence -->
+    <section
+      class="rv-section rv-native-block"
+      data-rv-feature="rv-news-intelligence"
+      data-rv-block-name="Block 12 – News Intelligence"
+      data-rv-priority="low"
+      data-rv-loading="true"
+      data-rv-collapsible="true"
+      data-rv-span="wide"
+    >
+      <div class="rv-native-header">
+        <h2>Block 12 – News Intelligence</h2>
+        <button class="rv-native-refresh" type="button" data-rv-action="refresh">Refresh</button>
+      </div>
+      <div class="rv-native-body rv-card">
+        <div class="rv-native-skeleton">
+          <div class="rv-native-line"></div>
+          <div class="rv-native-line short"></div>
+          <div class="rv-native-line"></div>
+        </div>
+        <div class="rv-native-root" data-rv-root></div>
+      </div>
+    </section>
+
+    <!-- RV NATIVE BLOCK 06: Watchlist Local -->
+    <section
+      class="rv-section rv-native-block"
+      data-rv-feature="rv-watchlist-local"
+      data-rv-block-name="Block 06 – Watchlist Local"
+      data-rv-priority="low"
+      data-rv-loading="true"
+      data-rv-collapsible="true"
+      data-rv-span="wide"
+    >
+      <div class="rv-native-header">
+        <h2>Block 06 – Watchlist Local</h2>
+        <button class="rv-native-refresh" type="button" data-rv-action="refresh">Refresh</button>
+      </div>
+      <div class="rv-native-body rv-card">
+        <div class="rv-native-skeleton">
+          <div class="rv-native-line"></div>
+          <div class="rv-native-line short"></div>
+          <div class="rv-native-line"></div>
+        </div>
+        <div class="rv-native-root" data-rv-root></div>
+      </div>
+    </section>
+
+    <!-- RV NATIVE BLOCK 07: Export CSV -->
+    <section
+      class="rv-section rv-native-block"
+      data-rv-feature="rv-export-csv"
+      data-rv-block-name="Block 07 – Export CSV"
+      data-rv-priority="low"
+      data-rv-loading="true"
+      data-rv-collapsible="true"
+    >
+      <div class="rv-native-header">
+        <h2>Block 07 – Export CSV</h2>
+        <button class="rv-native-refresh" type="button" data-rv-action="refresh">Refresh</button>
+      </div>
+      <div class="rv-native-body rv-card">
+        <div class="rv-native-skeleton">
+          <div class="rv-native-line"></div>
+          <div class="rv-native-line short"></div>
+          <div class="rv-native-line"></div>
+        </div>
+        <div class="rv-native-root" data-rv-root></div>
+      </div>
+    </section>
+
+    <!-- RV NATIVE BLOCK 08: Macro & Rates -->
+    <section
+      class="rv-section rv-native-block"
+      data-rv-feature="rv-macro-rates"
+      data-rv-block-name="Block 08 – Macro & Rates"
+      data-rv-priority="low"
+      data-rv-loading="true"
+      data-rv-collapsible="true"
+      data-rv-span="wide"
+      data-rv-deprecated="true"
+      aria-hidden="true"
+    >
+      <div class="rv-native-header">
+        <h2>Block 08 – Macro &amp; Rates</h2>
+        <button class="rv-native-refresh" type="button" data-rv-action="refresh">Refresh</button>
+      </div>
+      <div class="rv-native-body rv-card">
+        <div class="rv-native-skeleton">
+          <div class="rv-native-line"></div>
+          <div class="rv-native-line short"></div>
+          <div class="rv-native-line"></div>
+        </div>
+        <div class="rv-native-root" data-rv-root></div>
+      </div>
+    </section>
+
+    <!-- RV NATIVE BLOCK 13: S&P 500 Sectors -->
+    <section
+      class="rv-section rv-native-block"
+      data-rv-feature="rv-sp500-sectors"
+      data-rv-block-name="Block 13 – S&amp;P 500 Sectors"
+      data-rv-priority="low"
+      data-rv-loading="true"
+      data-rv-collapsible="true"
+      data-rv-span="wide"
+    >
+      <div class="rv-native-header">
+        <h2>Block 13 – S&amp;P 500 Sectors</h2>
+        <button class="rv-native-refresh" type="button" data-rv-action="refresh">Refresh</button>
+      </div>
+      <div class="rv-native-body rv-card">
+        <div class="rv-native-skeleton">
+          <div class="rv-native-line"></div>
+          <div class="rv-native-line short"></div>
+          <div class="rv-native-line"></div>
+        </div>
+        <div class="rv-native-root" data-rv-root></div>
+      </div>
+    </section>
+
+    <!-- RV NATIVE BLOCK XX: Market Regime Radar -->
+    <section
+      class="rv-section rv-native-block"
+      data-rv-feature="rv-market-regime"
+      data-rv-block-name="Block XX – Market Regime Radar"
+      data-rv-priority="low"
+      data-rv-loading="true"
+      data-rv-collapsible="true"
+    >
+      <div class="rv-native-header">
+        <h2>Block XX – Market Regime Radar</h2>
+        <button class="rv-native-refresh" type="button" data-rv-action="refresh">Refresh</button>
+      </div>
+      <div class="rv-native-body rv-card">
+        <div class="rv-native-skeleton">
+          <div class="rv-native-line"></div>
+          <div class="rv-native-line short"></div>
+          <div class="rv-native-line"></div>
+        </div>
+        <div class="rv-native-root" data-rv-root></div>
+      </div>
+    </section>
+
+    <!-- RV NATIVE BLOCK XX: ARB Risk Regime -->
+    <section
+      class="rv-section rv-native-block"
+      data-rv-feature="rv-arb-risk-regime"
+      data-rv-block-name="Block XX – ARB Risk Regime"
+      data-rv-priority="low"
+      data-rv-loading="true"
+      data-rv-collapsible="true"
+    >
+      <div class="rv-native-header">
+        <h2>Block XX – ARB Risk Regime</h2>
+        <button class="rv-native-refresh" type="button" data-rv-action="refresh">Refresh</button>
+      </div>
+      <div class="rv-native-body rv-card">
+        <div class="rv-native-skeleton">
+          <div class="rv-native-line"></div>
+          <div class="rv-native-line short"></div>
+          <div class="rv-native-line"></div>
+        </div>
+        <div class="rv-native-root" data-rv-root></div>
+      </div>
+    </section>
+
+    <!-- RV NATIVE BLOCK XX: ARB Liquidity Pulse -->
+    <section
+      class="rv-section rv-native-block"
+      data-rv-feature="rv-arb-liquidity-pulse"
+      data-rv-block-name="Block XX – ARB Liquidity Pulse"
+      data-rv-priority="low"
+      data-rv-loading="true"
+      data-rv-collapsible="true"
+    >
+      <div class="rv-native-header">
+        <h2>Block XX – ARB Liquidity Pulse</h2>
+        <button class="rv-native-refresh" type="button" data-rv-action="refresh">Refresh</button>
+      </div>
+      <div class="rv-native-body rv-card">
+        <div class="rv-native-skeleton">
+          <div class="rv-native-line"></div>
+          <div class="rv-native-line short"></div>
+          <div class="rv-native-line"></div>
+        </div>
+        <div class="rv-native-root" data-rv-root></div>
+      </div>
+    </section>
+
+    <!-- RV NATIVE BLOCK XX: ARB Breadth Lite -->
+    <section
+      class="rv-section rv-native-block"
+      data-rv-feature="rv-arb-breadth-lite"
+      data-rv-block-name="Block XX – ARB Breadth Lite"
+      data-rv-priority="low"
+      data-rv-loading="true"
+      data-rv-collapsible="true"
+    >
+      <div class="rv-native-header">
+        <h2>Block XX – ARB Breadth Lite</h2>
+        <button class="rv-native-refresh" type="button" data-rv-action="refresh">Refresh</button>
+      </div>
+      <div class="rv-native-body rv-card">
+        <div class="rv-native-skeleton">
+          <div class="rv-native-line"></div>
+          <div class="rv-native-line short"></div>
+          <div class="rv-native-line"></div>
+        </div>
+        <div class="rv-native-root" data-rv-root></div>
+      </div>
+    </section>
+
+    <!-- RV NATIVE BLOCK XX: Why This Stock Moved -->
+    <section
+      class="rv-section rv-native-block"
+      data-rv-feature="rv-why-moved"
+      data-rv-block-name="Block XX – Why This Stock Moved"
+      data-rv-priority="low"
+      data-rv-loading="true"
+      data-rv-collapsible="true"
+    >
+      <div class="rv-native-header">
+        <h2>Block XX – Why This Stock Moved</h2>
+        <button class="rv-native-refresh" type="button" data-rv-action="refresh">Refresh</button>
+      </div>
+      <div class="rv-native-body rv-card">
+        <div class="rv-native-skeleton">
+          <div class="rv-native-line"></div>
+          <div class="rv-native-line short"></div>
+          <div class="rv-native-line"></div>
+        </div>
+        <div class="rv-native-root" data-rv-root></div>
+      </div>
+    </section>
+
+    <!-- RV NATIVE BLOCK XX: Volume Anomaly -->
+    <section
+      class="rv-section rv-native-block"
+      data-rv-feature="rv-volume-anomaly"
+      data-rv-block-name="Block XX – Volume Anomaly"
+      data-rv-priority="low"
+      data-rv-loading="true"
+      data-rv-collapsible="true"
+    >
+      <div class="rv-native-header">
+        <h2>Block XX – Volume Anomaly</h2>
+        <button class="rv-native-refresh" type="button" data-rv-action="refresh">Refresh</button>
+      </div>
+      <div class="rv-native-body rv-card">
+        <div class="rv-native-skeleton">
+          <div class="rv-native-line"></div>
+          <div class="rv-native-line short"></div>
+          <div class="rv-native-line"></div>
+        </div>
+        <div class="rv-native-root" data-rv-root></div>
+      </div>
+    </section>
+
+    <!-- RV NATIVE BLOCK XX: Breakout Energy Radar -->
+    <section
+      class="rv-section rv-native-block"
+      data-rv-feature="rv-breakout-energy"
+      data-rv-block-name="Block XX – Breakout Energy Radar"
+      data-rv-priority="low"
+      data-rv-loading="true"
+      data-rv-collapsible="true"
+    >
+      <div class="rv-native-header">
+        <h2>Block XX – Breakout Energy Radar</h2>
+        <button class="rv-native-refresh" type="button" data-rv-action="refresh">Refresh</button>
+      </div>
+      <div class="rv-native-body rv-card">
+        <div class="rv-native-skeleton">
+          <div class="rv-native-line"></div>
+          <div class="rv-native-line short"></div>
+          <div class="rv-native-line"></div>
+        </div>
+        <div class="rv-native-root" data-rv-root></div>
+      </div>
+    </section>
+
+    <!-- RV NATIVE BLOCK XX: Inverse Hype Detector -->
+    <section
+      class="rv-section rv-native-block"
+      data-rv-feature="rv-hype-divergence"
+      data-rv-block-name="Block XX – Inverse Hype Detector"
+      data-rv-priority="low"
+      data-rv-loading="true"
+      data-rv-collapsible="true"
+    >
+      <div class="rv-native-header">
+        <h2>Block XX – Inverse Hype Detector</h2>
+        <button class="rv-native-refresh" type="button" data-rv-action="refresh">Refresh</button>
+      </div>
+      <div class="rv-native-body rv-card">
+        <div class="rv-native-skeleton">
+          <div class="rv-native-line"></div>
+          <div class="rv-native-line short"></div>
+          <div class="rv-native-line"></div>
+        </div>
+        <div class="rv-native-root" data-rv-root></div>
+      </div>
+    </section>
+
+    <!-- RV NATIVE BLOCK XX: Congress Trading Tracker -->
+    <section
+      class="rv-section rv-native-block"
+      data-rv-feature="rv-congress-trading"
+      data-rv-block-name="Block XX – Congress Trading Tracker"
+      data-rv-priority="low"
+      data-rv-loading="true"
+      data-rv-collapsible="true"
+    >
+      <div class="rv-native-header">
+        <h2>Block XX – Congress Trading Tracker</h2>
+        <button class="rv-native-refresh" type="button" data-rv-action="refresh">Refresh</button>
+      </div>
+      <div class="rv-native-body rv-card">
+        <div class="rv-native-skeleton">
+          <div class="rv-native-line"></div>
+          <div class="rv-native-line short"></div>
+          <div class="rv-native-line"></div>
+        </div>
+        <div class="rv-native-root" data-rv-root></div>
+      </div>
+    </section>
+
+    <!-- RV NATIVE BLOCK XX: Insider Cluster Buy Alarm -->
+    <section
+      class="rv-section rv-native-block"
+      data-rv-feature="rv-insider-cluster"
+      data-rv-block-name="Block XX – Insider Cluster Buy Alarm"
+      data-rv-priority="low"
+      data-rv-loading="true"
+      data-rv-collapsible="true"
+    >
+      <div class="rv-native-header">
+        <h2>Block XX – Insider Cluster Buy Alarm</h2>
+        <button class="rv-native-refresh" type="button" data-rv-action="refresh">Refresh</button>
+      </div>
+      <div class="rv-native-body rv-card">
+        <div class="rv-native-skeleton">
+          <div class="rv-native-line"></div>
+          <div class="rv-native-line short"></div>
+          <div class="rv-native-line"></div>
+        </div>
+        <div class="rv-native-root" data-rv-root></div>
+      </div>
+    </section>
+
+    <!-- RV NATIVE BLOCK XX: Analyst Stampede -->
+    <section
+      class="rv-section rv-native-block"
+      data-rv-feature="rv-analyst-stampede"
+      data-rv-block-name="Block XX – Analyst Stampede"
+      data-rv-priority="low"
+      data-rv-loading="true"
+      data-rv-collapsible="true"
+    >
+      <div class="rv-native-header">
+        <h2>Block XX – Analyst Stampede</h2>
+        <button class="rv-native-refresh" type="button" data-rv-action="refresh">Refresh</button>
+      </div>
+      <div class="rv-native-body rv-card">
+        <div class="rv-native-skeleton">
+          <div class="rv-native-line"></div>
+          <div class="rv-native-line short"></div>
+          <div class="rv-native-line"></div>
+        </div>
+        <div class="rv-native-root" data-rv-root></div>
+      </div>
+    </section>
+
+    <!-- RV NATIVE BLOCK XX: Smart Money Score -->
+    <section
+      class="rv-section rv-native-block"
+      data-rv-feature="rv-smart-money"
+      data-rv-block-name="Block XX – Smart Money Score"
+      data-rv-priority="low"
+      data-rv-loading="true"
+      data-rv-collapsible="true"
+    >
+      <div class="rv-native-header">
+        <h2>Block XX – Smart Money Score</h2>
+        <button class="rv-native-refresh" type="button" data-rv-action="refresh">Refresh</button>
+      </div>
+      <div class="rv-native-body rv-card">
+        <div class="rv-native-skeleton">
+          <div class="rv-native-line"></div>
+          <div class="rv-native-line short"></div>
+          <div class="rv-native-line"></div>
+        </div>
+        <div class="rv-native-root" data-rv-root></div>
+      </div>
+    </section>
+
+    <!-- RV NATIVE BLOCK XX: Alpha Consistency Monitor -->
+    <section
+      class="rv-section rv-native-block"
+      data-rv-feature="rv-alpha-performance"
+      data-rv-block-name="Block XX – Alpha Consistency Monitor"
+      data-rv-priority="low"
+      data-rv-loading="true"
+      data-rv-collapsible="true"
+      data-rv-span="wide"
+    >
+      <div class="rv-native-header">
+        <h2>Block XX – Alpha Consistency Monitor</h2>
+        <button class="rv-native-refresh" type="button" data-rv-action="refresh">Refresh</button>
+      </div>
+      <div class="rv-native-body rv-card">
+        <div class="rv-native-skeleton">
+          <div class="rv-native-line"></div>
+          <div class="rv-native-line short"></div>
+          <div class="rv-native-line"></div>
+        </div>
+        <div class="rv-native-root" data-rv-root></div>
+      </div>
+    </section>
+
+    <!-- RV NATIVE BLOCK XX: Earnings Reality Check -->
+    <section
+      class="rv-section rv-native-block"
+      data-rv-feature="rv-earnings-reality"
+      data-rv-block-name="Block XX – Earnings Reality Check"
+      data-rv-priority="low"
+      data-rv-loading="true"
+      data-rv-collapsible="true"
+      data-rv-span="wide"
+    >
+      <div class="rv-native-header">
+        <h2>Block XX – Earnings Reality Check</h2>
+        <button class="rv-native-refresh" type="button" data-rv-action="refresh">Refresh</button>
+      </div>
+      <div class="rv-native-body rv-card">
+        <div class="rv-native-skeleton">
+          <div class="rv-native-line"></div>
+          <div class="rv-native-line short"></div>
+          <div class="rv-native-line"></div>
+        </div>
+        <div class="rv-native-root" data-rv-root></div>
+      </div>
+    </section>
+
+    <!-- RV NATIVE BLOCK 09: Crypto Snapshot -->
+    <section
+      class="rv-section rv-native-block"
+      data-rv-feature="rv-crypto-snapshot"
+      data-rv-block-name="Block 09 – Crypto Snapshot"
+      data-rv-priority="low"
+      data-rv-loading="true"
+      data-rv-collapsible="true"
+      id="rv-crypto"
+    >
+      <div class="rv-native-header">
+        <h2>Block 09 – Crypto Snapshot</h2>
+        <button class="rv-native-refresh" type="button" data-rv-action="refresh">Refresh</button>
+      </div>
+      <div class="rv-native-body rv-card">
+        <div class="rv-native-skeleton">
+          <div class="rv-native-line"></div>
+          <div class="rv-native-line short"></div>
+          <div class="rv-native-line"></div>
+        </div>
+        <div class="rv-native-root" data-rv-root></div>
+      </div>
+    </section>
+
+    <!-- RV NATIVE BLOCK 10: Sentiment Barometer -->
+    <section
+      class="rv-section rv-native-block"
+      data-rv-feature="rv-sentiment-barometer"
+      data-rv-block-name="Block 10 – Sentiment Barometer"
+      data-rv-priority="low"
+      data-rv-loading="true"
+      data-rv-collapsible="true"
+    >
+      <div class="rv-native-header">
+        <h2>Block 10 – Sentiment Barometer</h2>
+        <button class="rv-native-refresh" type="button" data-rv-action="refresh">Refresh</button>
+      </div>
+      <div class="rv-native-body rv-card">
+        <div class="rv-native-skeleton">
+          <div class="rv-native-line"></div>
+          <div class="rv-native-line short"></div>
+          <div class="rv-native-line"></div>
+        </div>
+        <div class="rv-native-root" data-rv-root></div>
+      </div>
+    </section>
+
+    <!-- RV NATIVE BLOCK 11: Tech Signals -->
+    <section
+      class="rv-section rv-native-block"
+      data-rv-feature="rv-tech-signals"
+      data-rv-block-name="Block 11 – Tech Signals"
+      data-rv-priority="low"
+      data-rv-loading="true"
+      data-rv-collapsible="true"
+      data-rv-span="wide"
+    >
+      <div class="rv-native-header">
+        <h2>Block 11 – Tech Signals</h2>
+        <button class="rv-native-refresh" type="button" data-rv-action="refresh">Refresh</button>
+      </div>
+      <div class="rv-native-body rv-card">
+        <div class="rv-native-skeleton">
+          <div class="rv-native-line"></div>
+          <div class="rv-native-line short"></div>
+          <div class="rv-native-line"></div>
+        </div>
+        <div class="rv-native-root" data-rv-root></div>
+      </div>
+    </section>
+    <section
+      class="rv-section rv-native-block"
+      data-rv-feature="rv-alpha-radar"
+      data-rv-block-name="Alpha Radar"
+      data-rv-priority="low"
+      data-rv-loading="true"
+      data-rv-collapsible="true"
+      data-rv-span="wide"
+      id="rv-alpha"
+    >
+      <div class="rv-native-header">
+        <h2>Alpha Radar</h2>
+        <button class="rv-native-refresh" type="button" data-rv-action="refresh">Refresh</button>
+      </div>
+      <div class="rv-native-body rv-card">
+        <div class="rv-native-skeleton">
+          <div class="rv-native-line"></div>
+          <div class="rv-native-line short"></div>
+          <div class="rv-native-line"></div>
+        </div>
+        <div class="rv-native-root" data-rv-root></div>
+      </div>
+    </section>
+    </div>
+  </main>
+
+  <!-- FOOTER (ohne Bild, nur Text + Links) -->
+  <footer class="rv-footer">
+    <div class="rv-footer-top">
+      <div class="rv-footer-brand">
+        <span>RubikVault</span>
+      </div>
+      <div class="rv-footer-links">
+        <a href="imprint.html">Imprint</a>
+        <a href="privacy.html">Privacy</a>
+        <a href="disclaimer.html">Disclaimer</a>
+      </div>
+    </div>
+    <p class="rv-footer-disclaimer">
+      RubikVault provides educational content only and does not offer financial advice or brokerage services.
+    </p>
+    <p class="rv-footer-copy">
+      &copy; <span id="rv-year">2025</span> RubikVault. All rights reserved.
+    </p>
+  <script>
+    // kleines JS, falls du kein extra script.js nutzen willst
+    document.getElementById('rv-year').textContent = new Date().getFullYear();
+  </script>
+  </footer>
+  <div id="rv-debug-root" hidden></div>
+  <script type="module" src="./market-clock.js"></script>
+  <script type="module" src="./rv-debug-console.js"></script>
+  <script type="module" src="./rv-loader.js"></script>
+</body>
+</html>

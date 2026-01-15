@@ -27,7 +27,16 @@ coverage/
 # local audit output
 audit-live.json
 # RubikVault: local debug artifacts
-debug/
+ /debug/**
+ !/debug/*.js
+ !/debug/*.mjs
+ !/debug/*.md
+ !/debug/*.json
+ !/debug/*.jsonl
+ !/debug/*.css
+ !/debug/*.html
+ !/public/debug/
+ !/public/debug/**
 functions/api/_debug-trace.js
 
 # local workflow backups
