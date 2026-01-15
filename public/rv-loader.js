@@ -542,8 +542,7 @@ const PUBLIC_FEATURE_ALLOWLIST = new Set([
   "rv-market-cockpit",
   "rv-tech-signals",
   "rv-alpha-radar",
-  "rv-sp500-sectors",
-  "rv-rvci-engine"
+  "rv-sp500-sectors"
 ]);
 const COLLAPSE_KEY_PREFIX = "rv-collapse:";
 const DEFAULT_OPEN_COUNT = 3;
