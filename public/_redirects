@@ -8,7 +8,9 @@
 /mirror/*       /mirror/:splat   200
 /mirrors/*      /mirrors/:splat  200
 /favicon.ico    /assets/rv-icon.png 200
- /internal-dashboard.html /internal-dashboard 301
- /internal-dashboard /internal-dashboard 200
+/internal-dashboard.html /internal-dashboard 301
+/internal-dashboard /internal-dashboard 200
+# Explicit index route to avoid rewrite loop warnings
+/index.html     /index.html     200
 # SPA fallback (last)
 /*              /index.html      200
