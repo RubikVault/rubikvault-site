@@ -12,6 +12,9 @@
 /data/blocks/rv-:splat.latest.json /data/blocks/:splat.latest.json 200
 /internal-dashboard.html /internal-dashboard 301
 /internal-dashboard /internal-dashboard 200
+# common typo + ops alias
+/internal-dahboard /internal-dashboard 301
+/ops /internal-dashboard 301
 # Explicit index route to avoid rewrite loop warnings
 /index.html     /index.html     200
 # SPA fallback (last)
