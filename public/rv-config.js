@@ -3,7 +3,7 @@ export const DEBUG_PANIC_MODE = false;
 export const FEATURES = [
   {
     id: "rv-market-cockpit",
-    title: "Hero – Market Cockpit",
+    title: "Hero – Market Snapshot",
     module: "./features/rv-market-cockpit.js",
     api: "market-cockpit",
     computation: {
@@ -125,12 +125,13 @@ export const FEATURES = [
     api: "news",
     computation: {
       where: "Pages Function",
-      update: "5-10m",
+      update: "5m",
       cost: "free and automated",
       trust: "raw and tagged"
     },
     enabled: true,
-    lazyLoad: true
+    lazyLoad: true,
+    refreshIntervalMs: 5 * 60 * 1000
   },
   {
     id: "rv-news-intelligence",
@@ -143,7 +144,7 @@ export const FEATURES = [
       cost: "free and automated",
       trust: "derived"
     },
-    enabled: true,
+    enabled: false,
     lazyLoad: true,
     refreshIntervalMs: 60 * 60 * 1000
   },

@@ -3,6 +3,26 @@ import { getOrFetch } from "./utils/store.js";
 import { resolveWithShadow } from "./utils/resilience.js";
 import { rvSetText } from "./rv-dom.js";
 
+const LAYOUT_STORAGE_KEY = "rv-market-snapshot-layout";
+const DEFAULT_LAYOUT = "A";
+
+function getLayout() {
+  try {
+    const value = window?.localStorage?.getItem(LAYOUT_STORAGE_KEY) || "";
+    return value === "A" || value === "B" || value === "C" ? value : DEFAULT_LAYOUT;
+  } catch {
+    return DEFAULT_LAYOUT;
+  }
+}
+
+function setLayout(value) {
+  try {
+    window?.localStorage?.setItem(LAYOUT_STORAGE_KEY, value);
+  } catch {
+    // ignore
+  }
+}
+
 function formatNumber(value, options = {}) {
   if (value === null || value === undefined || Number.isNaN(value)) return "N/A";
   return new Intl.NumberFormat("en-US", options).format(value);
@@ -11,6 +31,144 @@ function formatNumber(value, options = {}) {
 function formatPercent(value, digits = 2) {
   if (value === null || value === undefined || Number.isNaN(value)) return "N/A";
   return `${formatNumber(value, { maximumFractionDigits: digits })}%`;
+}
+
+function formatSignedPercent(value, digits = 2) {
+  if (value === null || value === undefined || Number.isNaN(value)) return "N/A";
+  const sign = value > 0 ? "+" : "";
+  return `${sign}${formatNumber(value, { maximumFractionDigits: digits })}%`;
+}
+
+function metricCard(label, value, sub = "") {
+  return `
+    <div class="rv-ms-card">
+      <div class="label">${label}</div>
+      <div class="value">${value}</div>
+      ${sub ? `<div class="sub">${sub}</div>` : ""}
+    </div>
+  `;
+}
+
+function renderLayoutControls(active) {
+  const options = [
+    { id: "A", label: "Option A" },
+    { id: "B", label: "Option B" },
+    { id: "C", label: "Option C" }
+  ];
+  return `
+    <div class="rv-ms-controls" role="group" aria-label="Market Snapshot layout">
+      ${options
+        .map(
+          (opt) =>
+            `<button type="button" data-rv-ms-layout="${opt.id}" class="${opt.id === active ? "is-active" : ""}">${opt.label}</button>`
+        )
+        .join("")}
+    </div>
+  `;
+}
+
+function renderLayoutA({ regime, drivers, vix, fng, fngStocks, btc, dxy, yields }) {
+  const yield10y = yields?.values?.["10y"];
+  const cards = [
+    metricCard("Regime", `${regime.label || "Neutral"}`, `Score ${formatNumber(regime.score, { maximumFractionDigits: 0 })}`),
+    metricCard("Volatility", `${formatNumber(vix.value, { maximumFractionDigits: 2 })}`, vix.note || vix.source || "N/A"),
+    metricCard(
+      "Sentiment",
+      `${formatNumber(fngStocks.value)} / ${formatNumber(fng.value)}`,
+      `Stocks F&G / Crypto F&G`
+    ),
+    metricCard("BTC", `$${formatNumber(btc.price, { maximumFractionDigits: 0 })}`, formatSignedPercent(btc.changePercent))
+  ];
+
+  const driversHtml = drivers.length ? drivers.map((d) => `<span>${d}</span>`).join("") : "No drivers yet";
+  return `
+    <div class="rv-native-note">Choose a layout to compare: cards vs tables vs dashboard.</div>
+    <div class="rv-ms-grid">${cards.join("")}</div>
+    <div class="rv-cockpit-summary">
+      <div class="rv-cockpit-regime">
+        <span class="rv-cockpit-label">Macro</span>
+        <strong>DXY ${formatNumber(dxy.value, { maximumFractionDigits: 2 })}</strong>
+        <span class="rv-native-note">10Y ${formatNumber(yield10y, { maximumFractionDigits: 2 })}</span>
+      </div>
+      <div class="rv-cockpit-drivers">${driversHtml}</div>
+    </div>
+  `;
+}
+
+function renderLayoutB({ regime, drivers, vix, fng, fngStocks, news, btc, dxy, yields, proxies }) {
+  const yieldValues = yields?.values || {};
+  const driversHtml = drivers.length ? drivers.map((d) => `<span>${d}</span>`).join("") : "No drivers yet";
+
+  const rows = [
+    ["Regime", `${regime.label || "Neutral"} (Score ${formatNumber(regime.score, { maximumFractionDigits: 0 })})`, "derived"],
+    ["VIX", formatNumber(vix.value, { maximumFractionDigits: 2 }), vix.note || vix.source || "N/A"],
+    ["Stocks F&G", `${formatNumber(fngStocks.value)} ${fngStocks.label ? `(${fngStocks.label})` : ""}`, fngStocks.source || "N/A"],
+    ["Crypto F&G", `${formatNumber(fng.value)} ${fng.label ? `(${fng.label})` : ""}`, fng.source || "N/A"],
+    ["News Sentiment", `${formatNumber(news.score, { maximumFractionDigits: 2 })} ${news.label || ""}`, news.source || "N/A"],
+    ["BTC", `$${formatNumber(btc.price, { maximumFractionDigits: 0 })} (${formatSignedPercent(btc.changePercent)})`, btc.source || "N/A"],
+    ["DXY", `${formatNumber(dxy.value, { maximumFractionDigits: 2 })} (${formatSignedPercent(dxy.changePercent)})`, dxy.source || "N/A"],
+    ["Gold (proxy)", formatNumber(proxies.gold?.price, { maximumFractionDigits: 2 }), proxies.gold?.symbol || "GLD"],
+    ["Oil (proxy)", formatNumber(proxies.oil?.price, { maximumFractionDigits: 2 }), proxies.oil?.symbol || "USO"],
+    ["USD (proxy)", formatNumber(proxies.usd?.price, { maximumFractionDigits: 2 }), proxies.usd?.symbol || "UUP"],
+    ["US 2Y", formatNumber(yieldValues["2y"], { maximumFractionDigits: 2 }), yields.source || "US Treasury"],
+    ["US 10Y", formatNumber(yieldValues["10y"], { maximumFractionDigits: 2 }), yields.source || "US Treasury"],
+    ["US 30Y", formatNumber(yieldValues["30y"], { maximumFractionDigits: 2 }), yields.source || "US Treasury"]
+  ];
+
+  return `
+    <div class="rv-cockpit-summary">
+      <div class="rv-cockpit-regime">
+        <span class="rv-cockpit-label">Drivers</span>
+        <strong>${regime.label || "Neutral"}</strong>
+        <span class="rv-native-note">Score ${formatNumber(regime.score, { maximumFractionDigits: 0 })}</span>
+      </div>
+      <div class="rv-cockpit-drivers">${driversHtml}</div>
+    </div>
+    <table class="rv-native-table rv-table--compact">
+      <thead>
+        <tr>
+          <th>Signal</th>
+          <th>Value</th>
+          <th>Source</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${rows
+          .map(
+            ([signal, value, source]) => `
+          <tr>
+            <td>${signal}</td>
+            <td>${value}</td>
+            <td>${source}</td>
+          </tr>`
+          )
+          .join("")}
+      </tbody>
+    </table>
+  `;
+}
+
+function renderLayoutC({ regime, drivers, vix, fng, fngStocks, btc, dxy, yields }) {
+  const yieldValues = yields?.values || {};
+  const driversHtml = drivers.length ? drivers.map((d) => `<span>${d}</span>`).join("") : "No drivers yet";
+  return `
+    <div class="rv-cockpit-summary">
+      <div class="rv-cockpit-regime">
+        <span class="rv-cockpit-label">Regime</span>
+        <strong>${regime.label || "Neutral"}</strong>
+        <span class="rv-native-note">Score ${formatNumber(regime.score, { maximumFractionDigits: 0 })}</span>
+      </div>
+      <div class="rv-cockpit-drivers">${driversHtml}</div>
+    </div>
+    <div class="rv-ms-grid">
+      ${metricCard("VIX", formatNumber(vix.value, { maximumFractionDigits: 2 }), vix.note || vix.source || "N/A")}
+      ${metricCard("Stocks F&G", formatNumber(fngStocks.value), fngStocks.label || "")}
+      ${metricCard("Crypto F&G", formatNumber(fng.value), fng.label || "")}
+      ${metricCard("BTC", `$${formatNumber(btc.price, { maximumFractionDigits: 0 })}`, formatSignedPercent(btc.changePercent))}
+      ${metricCard("DXY", formatNumber(dxy.value, { maximumFractionDigits: 2 }), formatSignedPercent(dxy.changePercent))}
+      ${metricCard("US 10Y", formatNumber(yieldValues["10y"], { maximumFractionDigits: 2 }), yields.source || "US Treasury")}
+    </div>
+  `;
 }
 
 function render(root, payload, logger, featureId) {
@@ -77,184 +235,19 @@ function render(root, payload, logger, featureId) {
   const macroRates = Array.isArray(macro.rates) ? macro.rates : [];
   const macroFx = Array.isArray(macro.fx) ? macro.fx : [];
   const macroCpi = Array.isArray(macro.cpi) ? macro.cpi : [];
-  const sectorTop = data.sectorPerformance?.top || [];
-  const sectorBottom = data.sectorPerformance?.bottom || [];
+  const layout = getLayout();
 
   root.innerHTML = `
     ${partialNote ? `<div class="rv-native-note">${partialNote}</div>` : ""}
-    <div class="rv-cockpit-summary">
-      <div class="rv-cockpit-regime">
-        <span class="rv-cockpit-label">Regime</span>
-        <strong data-rv-field="regime-label">${regime.label || "Neutral"}</strong>
-        <span class="rv-native-note" data-rv-field="regime-score">Score ${formatNumber(regime.score, { maximumFractionDigits: 0 })}</span>
-      </div>
-      <div class="rv-cockpit-drivers">
-        ${drivers.length ? drivers.map((driver) => `<span>${driver}</span>`).join("") : "No drivers yet"}
-      </div>
-    </div>
-    <div class="rv-native-note">Why it matters: regime blends volatility, sentiment, and narrative risk.</div>
+    ${renderLayoutControls(layout)}
     ${
-      sectorTop.length || sectorBottom.length
-        ? `<div class="rv-native-note">Sector performance (1D/1W/1M)</div>
-           <table class="rv-native-table rv-table--compact">
-             <thead>
-               <tr><th>Sector</th><th>1D</th><th>1W</th><th>1M</th><th>Rank</th></tr>
-             </thead>
-             <tbody>
-               ${sectorTop
-                 .map(
-                   (sector) => `
-                 <tr>
-                   <td>${sector.name || sector.symbol}</td>
-                   <td>${formatPercent(sector.r1d)}</td>
-                   <td>${formatPercent(sector.r1w)}</td>
-                   <td>${formatPercent(sector.r1m)}</td>
-                   <td class="rv-native-positive">Top</td>
-                 </tr>
-               `
-                 )
-                 .join("")}
-               ${sectorBottom
-                 .map(
-                   (sector) => `
-                 <tr>
-                   <td>${sector.name || sector.symbol}</td>
-                   <td>${formatPercent(sector.r1d)}</td>
-                   <td>${formatPercent(sector.r1w)}</td>
-                   <td>${formatPercent(sector.r1m)}</td>
-                   <td class="rv-native-negative">Bottom</td>
-                 </tr>
-               `
-                 )
-                 .join("")}
-             </tbody>
-           </table>`
-        : `<div class="rv-native-note">Sector performance unavailable.</div>`
+      layout === "B"
+        ? renderLayoutB({ regime, drivers, vix, fng, fngStocks, news, btc, dxy, yields, proxies })
+        : layout === "C"
+          ? renderLayoutC({ regime, drivers, vix, fng, fngStocks, btc, dxy, yields })
+          : renderLayoutA({ regime, drivers, vix, fng, fngStocks, btc, dxy, yields })
     }
-    <table class="rv-native-table rv-table--compact">
-      <thead>
-        <tr>
-          <th>Signal</th>
-          <th>Value</th>
-          <th>Source</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td>VIX</td>
-          <td data-rv-field="vix">${formatNumber(vix.value, { maximumFractionDigits: 2 })}</td>
-          <td>${vix.note || vix.source || "N/A"}</td>
-        </tr>
-        <tr>
-          <td>Crypto F&amp;G</td>
-          <td data-rv-field="fng-crypto">${formatNumber(fng.value)} ${fng.label ? `(${fng.label})` : ""}</td>
-          <td>${fng.source || "N/A"}</td>
-        </tr>
-        <tr>
-          <td>Stocks F&amp;G</td>
-          <td data-rv-field="fng-stocks">${formatNumber(fngStocks.value)} ${fngStocks.label ? `(${fngStocks.label})` : ""}</td>
-          <td>${fngStocks.source || "N/A"}</td>
-        </tr>
-        <tr>
-          <td>News Sentiment</td>
-          <td data-rv-field="news-sentiment">${formatNumber(news.score, { maximumFractionDigits: 2 })} ${news.label || ""}</td>
-          <td>${news.source || "N/A"}</td>
-        </tr>
-        <tr>
-          <td>BTC</td>
-          <td data-rv-field="btc-price">$${formatNumber(btc.price, { maximumFractionDigits: 0 })} (${formatPercent(
-    btc.changePercent
-  )})</td>
-          <td>${btc.source || "N/A"}</td>
-        </tr>
-        <tr>
-          <td>DXY</td>
-          <td data-rv-field="dxy">${formatNumber(dxy.value, { maximumFractionDigits: 2 })} (${formatPercent(
-    dxy.changePercent
-  )})</td>
-          <td>${dxy.source || "N/A"}</td>
-        </tr>
-        <tr>
-          <td>USD (UUP)</td>
-          <td data-rv-field="proxy-usd">${formatNumber(proxies.usd?.price, { maximumFractionDigits: 2 })}</td>
-          <td><span class="rv-pill-proxy">Proxy</span> ${proxies.usd?.symbol || "UUP"}</td>
-        </tr>
-        <tr>
-          <td>Oil (USO)</td>
-          <td data-rv-field="proxy-oil">${formatNumber(proxies.oil?.price, { maximumFractionDigits: 2 })}</td>
-          <td><span class="rv-pill-proxy">Proxy</span> ${proxies.oil?.symbol || "USO"}</td>
-        </tr>
-        <tr>
-          <td>Gold (GLD)</td>
-          <td data-rv-field="proxy-gold">${formatNumber(proxies.gold?.price, { maximumFractionDigits: 2 })}</td>
-          <td><span class="rv-pill-proxy">Proxy</span> ${proxies.gold?.symbol || "GLD"}</td>
-        </tr>
-        <tr>
-          <td>US Yields 1Y</td>
-          <td data-rv-field="yield-1y">${formatNumber(yieldValues["1y"], { maximumFractionDigits: 2 })}</td>
-          <td>${yields.source || "US Treasury"}</td>
-        </tr>
-        <tr>
-          <td>US Yields 2Y</td>
-          <td data-rv-field="yield-2y">${formatNumber(yieldValues["2y"], { maximumFractionDigits: 2 })}</td>
-          <td>${yields.source || "US Treasury"}</td>
-        </tr>
-        <tr>
-          <td>US Yields 5Y</td>
-          <td data-rv-field="yield-5y">${formatNumber(yieldValues["5y"], { maximumFractionDigits: 2 })}</td>
-          <td>${yields.source || "US Treasury"}</td>
-        </tr>
-        <tr>
-          <td>US Yields 10Y</td>
-          <td data-rv-field="yield-10y">${formatNumber(yieldValues["10y"], { maximumFractionDigits: 2 })}</td>
-          <td>${yields.source || "US Treasury"}</td>
-        </tr>
-        <tr>
-          <td>US Yields 30Y</td>
-          <td data-rv-field="yield-30y">${formatNumber(yieldValues["30y"], { maximumFractionDigits: 2 })}</td>
-          <td>${yields.source || "US Treasury"}</td>
-        </tr>
-        ${
-          macroRates.length || macroFx.length || macroCpi.length
-            ? `${macroRates
-                .map(
-                  (item) => `
-          <tr>
-            <td>${item.label}</td>
-            <td>${formatNumber(item.value, { maximumFractionDigits: 2 })}</td>
-            <td>${item.source || "macro-rates"}</td>
-          </tr>`
-                )
-                .join("")}
-        ${macroFx
-          .map(
-            (item) => `
-          <tr>
-            <td>${item.label}</td>
-            <td>${formatNumber(item.value, { maximumFractionDigits: 4 })}</td>
-            <td>${item.source || "macro-rates"}</td>
-          </tr>`
-          )
-          .join("")}
-        ${macroCpi
-          .map(
-            (item) => `
-          <tr>
-            <td>${item.label}</td>
-            <td>${formatNumber(item.value, { maximumFractionDigits: 2 })}</td>
-            <td>${item.source || "macro-rates"}</td>
-          </tr>`
-          )
-          .join("")}`
-            : `<tr>
-            <td>Macro Snapshot</td>
-            <td>N/A</td>
-            <td>See macro table</td>
-          </tr>`
-        }
-      </tbody>
-    </table>
-    <div class="rv-native-note">Sentiment details are available in the dedicated sentiment block.</div>
+    <div class="rv-native-note">Sector rotation details are in the S&amp;P 500 Sectors block below.</div>
     <div class="rv-native-note">
       Updated: ${new Date(data.updatedAt || resolved.ts).toLocaleTimeString()} · Freshness: ${
         resolved?.freshness || "unknown"
@@ -276,6 +269,15 @@ function render(root, payload, logger, featureId) {
   logger?.info("response_meta", {
     cache: resolved?.cache || {},
     upstreamStatus: resolved?.upstream?.status ?? null
+  });
+
+  root.querySelectorAll("[data-rv-ms-layout]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const next = btn.getAttribute("data-rv-ms-layout") || "";
+      if (next !== "A" && next !== "B" && next !== "C") return;
+      setLayout(next);
+      render(root, payload, logger, featureId);
+    });
   });
 }
 

@@ -24,14 +24,65 @@ function resolveSource(item) {
   return { code, name };
 }
 
+function normalizePayload(raw) {
+  if (!raw || typeof raw !== "object") return raw;
+  if (typeof raw.ok === "boolean") return raw;
+  if (Array.isArray(raw.items)) {
+    return {
+      ok: true,
+      data: {
+        items: raw.items,
+        updatedAt: raw.updatedAt || raw.asOf || null,
+        source: raw.sourceUpstream || raw.source || "rss"
+      },
+      meta: { status: "OK", reason: "MIRROR" },
+      cache: { layer: "static", ttl: 0 },
+      upstream: { status: 200, snippet: "" }
+    };
+  }
+  return raw;
+}
+
+function normalizeItems(items = []) {
+  const mapped = items
+    .map((item) => {
+      const headline = item?.headline || item?.title || "";
+      const publishedAt = item?.publishedAt || item?.published || item?.pubDate || item?.date || "";
+      return {
+        ...item,
+        headline,
+        publishedAt
+      };
+    })
+    .filter((item) => item.headline && item.url);
+
+  const seen = new Set();
+  const deduped = [];
+  mapped.forEach((item) => {
+    const key = `${item.headline}::${item.url}`;
+    if (seen.has(key)) return;
+    seen.add(key);
+    deduped.push(item);
+  });
+
+  deduped.sort((a, b) => {
+    const ta = Date.parse(a.publishedAt || "") || 0;
+    const tb = Date.parse(b.publishedAt || "") || 0;
+    return tb - ta;
+  });
+
+  return deduped;
+}
+
 function render(root, payload, logger, featureId) {
-  const resolved = resolveWithShadow(featureId, payload, {
+  const normalized = normalizePayload(payload);
+  const resolved = resolveWithShadow(featureId, normalized, {
     logger,
     isMissing: (value) => !value?.ok || !(value?.data?.items || []).length,
     reason: "STALE_FALLBACK"
   });
   const data = resolved?.data || {};
-  const items = data.items || [];
+  const items = normalizeItems(data.items || []);
   const partialNote =
     resolved?.ok && (resolved?.isStale || resolved?.error?.code)
       ? "Partial data — some sources unavailable."
@@ -101,7 +152,7 @@ function render(root, payload, logger, featureId) {
     ${partialNote ? `<div class="rv-native-note">${partialNote}</div>` : ""}
     <div class="rv-news-list">
       ${items
-        .slice(0, 12)
+        .slice(0, 20)
         .map((item) => {
           const category = item.category || "stocks";
           const icon = CATEGORY_ICONS[category] || "EQ";
@@ -151,7 +202,7 @@ function render(root, payload, logger, featureId) {
 }
 
 async function loadData({ featureId, traceId, logger }) {
-  return fetchJSON("/news", { feature: featureId, traceId, logger });
+  return fetchJSON("/mirrors/news.json", { feature: featureId, traceId, logger });
 }
 
 export async function init(root, context = {}) {
