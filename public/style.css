@@ -2575,6 +2575,144 @@ section[data-rv-deprecated="true"] {
 }
 
 /* ============================================
+   METRICS DASHBOARD (V5)
+   ============================================ */
+.rv-metrics-dashboard {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.rv-metrics-card {
+  padding: 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  background: #fff;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.rv-metrics-card.is-compact {
+  padding: 10px;
+}
+.rv-metrics-card .rv-metrics-label {
+  font-size: 12px;
+  color: #64748b;
+}
+.rv-metrics-card .rv-metrics-value {
+  font-size: 20px;
+  font-weight: 600;
+}
+.rv-metrics-card .rv-metrics-meta {
+  font-size: 11px;
+  color: #94a3b8;
+}
+.rv-metrics-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.rv-metrics-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 12px;
+}
+.rv-metrics-summary-item {
+  padding: 12px;
+  border-radius: 10px;
+  background: rgba(15, 23, 42, 0.04);
+}
+.rv-metrics-summary-label {
+  font-size: 12px;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.rv-metrics-summary-value {
+  font-size: 18px;
+  font-weight: 600;
+}
+.rv-metrics-groups.bento .rv-metrics-bento-grid,
+.rv-metrics-groups.tiles .rv-metrics-tiles,
+.rv-metrics-grid {
+  display: grid;
+  gap: 12px;
+}
+.rv-metrics-groups.bento .rv-metrics-bento-grid {
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}
+.rv-metrics-two-col {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 16px;
+}
+.rv-metrics-tiles {
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+.rv-metrics-kpi-strip {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 10px;
+}
+.rv-metrics-kpi {
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: rgba(15, 23, 42, 0.04);
+}
+.rv-metrics-kpi-value {
+  font-size: 18px;
+  font-weight: 600;
+}
+.rv-metrics-signals-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 10px;
+}
+.rv-metrics-report-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 8px;
+}
+.rv-metrics-report-list li {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+  padding-bottom: 6px;
+}
+.rv-metrics-table-wrap {
+  overflow-x: auto;
+}
+.rv-metrics-table thead th {
+  position: sticky;
+  top: 0;
+  background: #fff;
+}
+.rv-metrics-card.is-tile {
+  padding: 18px;
+}
+.rv-metrics-switcher {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.rv-metrics-switcher button {
+  border: 1px solid rgba(15, 23, 42, 0.12);
+  background: #fff;
+  border-radius: 999px;
+  padding: 6px 12px;
+  font-size: 12px;
+}
+.rv-metrics-switcher button.is-active {
+  background: #0f172a;
+  color: #fff;
+}
+
+/* ============================================
    BLOCK 53 (RVCI ENGINE) FIX - HIGHEST PRIORITY
    Must be at the end to override ALL other rules
    ============================================ */
