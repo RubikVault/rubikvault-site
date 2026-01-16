@@ -44,6 +44,16 @@ function normalizePayload(raw) {
 }
 
 function normalizeItems(items = []) {
+  const germanWordPattern =
+    /\b(der|die|das|und|nicht|ueber|uber|für|fuer|mit|nach|von|aus|heute|boerse|börse|aktie|gesellschaft|stand|wirtschaft|muench|münch|rueck|rück)\b/i;
+  const hasGermanChars = (text) => /[äöüß]/i.test(text || "");
+  const looksEnglish = (text, item) => {
+    if (item?.language === "en") return true;
+    if (!text) return false;
+    if (hasGermanChars(text)) return false;
+    if (germanWordPattern.test(text)) return false;
+    return /[a-z]/i.test(text);
+  };
   const mapped = items
     .map((item) => {
       const headline = item?.headline || item?.title || "";
@@ -54,7 +64,7 @@ function normalizeItems(items = []) {
         publishedAt
       };
     })
-    .filter((item) => item.headline && item.url);
+    .filter((item) => item.headline && item.url && looksEnglish(item.headline, item));
 
   const seen = new Set();
   const deduped = [];

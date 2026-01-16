@@ -3,16 +3,64 @@ const UI_LAYOUTS_URL = "/config/ui-layouts.json";
 const UI_STORAGE_KEY = "rv.ui";
 const VALID_UIS = ["A", "B", "C", "D", "E", "F", "G", "H"];
 const FALLBACK_LAYOUTS = {
-  layouts: VALID_UIS.reduce((acc, ui) => {
-    acc[ui] = {
-      name: "Default Layout",
+  layouts: {
+    A: {
+      name: "Executive Bento",
+      sectionsOrder: ["Header", "Signals", "Groups"],
+      groupsRender: "bento",
+      metricRender: "card",
+      groupStyle: "bentoGrid"
+    },
+    B: {
+      name: "Classic Cards",
       sectionsOrder: ["Header", "Groups", "Signals"],
       groupsRender: "cards",
       metricRender: "card",
       groupStyle: "section"
-    };
-    return acc;
-  }, {})
+    },
+    C: {
+      name: "Dense Table",
+      sectionsOrder: ["Header", "Groups", "Signals"],
+      groupsRender: "table",
+      metricRender: "row",
+      groupStyle: "tableSection"
+    },
+    D: {
+      name: "Two-Column Analyst",
+      sectionsOrder: ["Header", "Signals", "Groups"],
+      groupsRender: "twoColumn",
+      metricRender: "card",
+      groupStyle: "twoCol"
+    },
+    E: {
+      name: "Signals-First Inbox",
+      sectionsOrder: ["Header", "Signals", "Groups"],
+      groupsRender: "compact",
+      metricRender: "cardCompact",
+      groupStyle: "accordion"
+    },
+    F: {
+      name: "Minimal KPI Strip",
+      sectionsOrder: ["Header", "Groups", "Signals"],
+      groupsRender: "kpiStrip",
+      metricRender: "kpi",
+      groupStyle: "strip"
+    },
+    G: {
+      name: "Dashboard Tiles",
+      sectionsOrder: ["Header", "Groups", "Signals"],
+      groupsRender: "tiles",
+      metricRender: "tile",
+      groupStyle: "tileGrid"
+    },
+    H: {
+      name: "Print-Friendly Report",
+      sectionsOrder: ["Header", "Signals", "Groups"],
+      groupsRender: "report",
+      metricRender: "row",
+      groupStyle: "reportSection"
+    }
+  }
 };
 
 let cachedEnvelope = null;
@@ -108,13 +156,15 @@ async function loadLayouts() {
 function getQueryUi() {
   const params = new URLSearchParams(window.location.search);
   const value = params.get("ui");
-  return VALID_UIS.includes(value) ? value : null;
+  const normalized = value ? String(value).toUpperCase() : "";
+  return VALID_UIS.includes(normalized) ? normalized : null;
 }
 
 function getStoredUi() {
   try {
     const value = window.localStorage?.getItem(UI_STORAGE_KEY);
-    return VALID_UIS.includes(value) ? value : null;
+    const normalized = value ? String(value).toUpperCase() : "";
+    return VALID_UIS.includes(normalized) ? normalized : null;
   } catch (error) {
     return null;
   }
@@ -122,7 +172,8 @@ function getStoredUi() {
 
 function setStoredUi(value) {
   try {
-    window.localStorage?.setItem(UI_STORAGE_KEY, value);
+    const normalized = value ? String(value).toUpperCase() : "";
+    window.localStorage?.setItem(UI_STORAGE_KEY, normalized);
   } catch (error) {
     // ignore
   }
