@@ -453,6 +453,7 @@ function renderGroups(envelope, layout) {
   if (!groups.length) {
     return `<div class="rv-metrics-empty">No groups available.</div>`;
   }
+  const wrapperClass = layout.groupsRender ? `rv-metrics-groups ${layout.groupsRender}` : "rv-metrics-groups";
 
   if (layout.groupsRender === "twoColumn") {
     const left = [];
@@ -461,7 +462,7 @@ function renderGroups(envelope, layout) {
       (idx % 2 === 0 ? left : right).push(renderGroupSection(group, data.metricsById || {}, layout));
     });
     return `
-      <div class="rv-metrics-two-col">
+      <div class="rv-metrics-two-col ${wrapperClass}">
         <div>${left.join("")}</div>
         <div>${right.join("")}</div>
       </div>
@@ -469,21 +470,29 @@ function renderGroups(envelope, layout) {
   }
 
   if (layout.groupsRender === "compact") {
-    return groups
-      .map(
-        (group) => `
-        <details class="rv-metrics-accordion">
-          <summary>${group.title}</summary>
-          ${renderGroupSection(group, data.metricsById || {}, layout)}
-        </details>
-      `
-      )
-      .join("");
+    return `
+      <div class="${wrapperClass}">
+        ${groups
+          .map(
+            (group) => `
+            <details class="rv-metrics-accordion">
+              <summary>${group.title}</summary>
+              ${renderGroupSection(group, data.metricsById || {}, layout)}
+            </details>
+          `
+          )
+          .join("")}
+      </div>
+    `;
   }
 
-  return groups
-    .map((group) => renderGroupSection(group, data.metricsById || {}, layout))
-    .join("");
+  return `
+    <div class="${wrapperClass}">
+      ${groups
+        .map((group) => renderGroupSection(group, data.metricsById || {}, layout))
+        .join("")}
+    </div>
+  `;
 }
 
 function renderDashboard(root, envelope, ui, layouts) {
@@ -501,8 +510,9 @@ function renderDashboard(root, envelope, ui, layouts) {
     Groups: groups
   };
 
+  const layoutKey = uiLayout.groupsRender || "default";
   root.innerHTML = `
-    <div class="rv-metrics-dashboard ui-${ui}">
+    <div class="rv-metrics-dashboard ui-${ui} layout-${layoutKey}">
       ${switcher}
       ${sections.map((section) => sectionMap[section] || "").join("")}
       ${renderDebugOverlay(envelope, ui)}

@@ -43,17 +43,38 @@ function normalizePayload(raw) {
   return raw;
 }
 
+const ENGLISH_SOURCE_DOMAINS = [
+  "reuters.com",
+  "cnbc.com",
+  "marketwatch.com",
+  "nasdaq.com",
+  "yahoo.com",
+  "finance.yahoo.com",
+  "bloomberg.com",
+  "wsj.com",
+  "ft.com",
+  "investing.com",
+  "seekingalpha.com"
+];
+
+function resolveDomain(item) {
+  const source = item?.source || {};
+  const domain =
+    source.domain ||
+    item?.sourceDomain ||
+    item?.domain ||
+    (item?.url ? new URL(item.url).hostname : "");
+  return String(domain || "").toLowerCase();
+}
+
+function isEnglishSource(item) {
+  if (item?.language === "en") return true;
+  const domain = resolveDomain(item);
+  if (!domain) return false;
+  return ENGLISH_SOURCE_DOMAINS.some((allowed) => domain === allowed || domain.endsWith(`.${allowed}`));
+}
+
 function normalizeItems(items = []) {
-  const germanWordPattern =
-    /\b(der|die|das|und|nicht|ueber|uber|für|fuer|mit|nach|von|aus|heute|boerse|börse|aktie|gesellschaft|stand|wirtschaft|muench|münch|rueck|rück)\b/i;
-  const hasGermanChars = (text) => /[äöüß]/i.test(text || "");
-  const looksEnglish = (text, item) => {
-    if (item?.language === "en") return true;
-    if (!text) return false;
-    if (hasGermanChars(text)) return false;
-    if (germanWordPattern.test(text)) return false;
-    return /[a-z]/i.test(text);
-  };
   const mapped = items
     .map((item) => {
       const headline = item?.headline || item?.title || "";
@@ -64,7 +85,7 @@ function normalizeItems(items = []) {
         publishedAt
       };
     })
-    .filter((item) => item.headline && item.url && looksEnglish(item.headline, item));
+    .filter((item) => item.headline && item.url && isEnglishSource(item));
 
   const seen = new Set();
   const deduped = [];
@@ -145,7 +166,7 @@ function render(root, payload, logger, featureId) {
   if (!items.length) {
     root.innerHTML = `
       <div class="rv-native-empty">
-        Keine News verfügbar. Bitte später erneut versuchen.
+        No English headlines available yet.
       </div>
     `;
     logger?.setStatus("PARTIAL", "No data");

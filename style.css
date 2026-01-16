@@ -2117,6 +2117,27 @@ section[data-rv-deprecated="true"] {
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
 }
 
+.rv-metrics-dashboard.ui-A .rv-metrics-group.bentoGrid .rv-metrics-card:nth-child(1),
+.rv-metrics-dashboard.ui-A .rv-metrics-group.bentoGrid .rv-metrics-card:nth-child(2) {
+  grid-column: span 2;
+}
+
+.rv-metrics-dashboard.ui-A .rv-metrics-card {
+  border-color: rgba(56, 189, 248, 0.35);
+}
+
+.rv-metrics-dashboard.ui-B .rv-metrics-grid {
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+}
+
+.rv-metrics-dashboard.ui-D .rv-metrics-two-col {
+  grid-template-columns: repeat(2, minmax(240px, 1fr));
+}
+
+.rv-metrics-dashboard.ui-E .rv-metrics-accordion summary {
+  font-size: 14px;
+}
+
 .rv-metrics-group.tileGrid .rv-metrics-grid {
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
 }
@@ -2125,6 +2146,27 @@ section[data-rv-deprecated="true"] {
   grid-auto-flow: column;
   grid-auto-columns: minmax(140px, 1fr);
   overflow-x: auto;
+}
+
+.rv-metrics-dashboard.ui-F .rv-metrics-card.is-kpi {
+  min-height: 70px;
+  font-size: 16px;
+  justify-content: center;
+}
+
+.rv-metrics-dashboard.ui-G .rv-metrics-card.is-tile {
+  min-height: 170px;
+  font-size: 18px;
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.18);
+}
+
+.rv-metrics-dashboard.ui-H .rv-metrics-group.reportSection {
+  border-top: 1px solid var(--rv-border);
+  padding-top: 12px;
+}
+
+.rv-metrics-dashboard.ui-H .rv-metrics-table {
+  font-size: 13px;
 }
 
 .rv-metrics-card {
