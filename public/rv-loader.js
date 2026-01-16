@@ -577,7 +577,11 @@ const REFRESH_BACKOFF_MAX_MS = 20 * 60 * 1000;
 let FEATURE_REGISTRY_CACHE = null;
 let MANIFEST_CACHE = null;
 const SNAPSHOT_ONLY = true;
-const SNAPSHOT_ONLY_API_FEATURES = new Set(["rv-market-cockpit", "rv-sp500-sectors"]);
+const SNAPSHOT_ONLY_API_FEATURES = new Set([
+  "rv-market-cockpit",
+  "rv-sp500-sectors",
+  "rv-news-headlines"
+]);
 const SNAPSHOT_CACHE = new Map();
 const RVCI_CACHE = new Map();
 const SNAPSHOT_TIMEOUT_MS = 5000;

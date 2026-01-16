@@ -12,6 +12,19 @@ export const CONTINUOUS_BLOCKS = {
     warnCopy: "Cockpit data is stale for current market phase.",
     whyUnique: "Aggregated EOD snapshot for the overall market context."
   },
+  "rv-metrics-dashboard": {
+    blockId: "rv-metrics-dashboard",
+    blockType: "CONTINUOUS",
+    expectedMinItems: 1,
+    mirrorFiles: [],
+    computeDependencies: [],
+    freshness: { liveMaxMinutes: 20, okMaxHoursWeekday: 24, okMaxHoursWeekend: 72 },
+    trustDefault: "snapshot + derived",
+    cadence: "EOD",
+    emptyCopy: "Metrics dashboard has no data yet.",
+    warnCopy: "Metrics dashboard is partially populated.",
+    whyUnique: "Single-fetch dashboard with multiple UI layouts (A-H)."
+  },
   "rv-market-health": {
     blockId: "rv-market-health",
     blockType: "CONTINUOUS",

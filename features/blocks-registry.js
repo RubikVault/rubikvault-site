@@ -5,6 +5,7 @@ import { LIVE_BLOCKS } from "./blocks-registry-live.js";
 
 const BLOCK_ORDER = [
   "rv-market-cockpit",
+  "rv-metrics-dashboard",
   "rv-yield-curve",
   "rv-sector-rotation",
   "rv-central-bank-watch",

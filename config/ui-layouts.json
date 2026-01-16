@@ -1,0 +1,48 @@
+{
+  "version": "5.0",
+  "availableUis": ["A","B","C","D","E","F","G","H"],
+  "defaultUi": "A",
+  "layouts": {
+    "A": { "name":"Executive Bento","sectionsOrder":["Header","Signals","Groups"],
+      "groupsRender":"bento","metricRender":"card","groupStyle":"bentoGrid",
+      "mobile":{"stack":true,"columns":1},"desktop":{"columns":3},
+      "notes":"Bento cards, compact executive overview."
+    },
+    "B": { "name":"Classic Cards","sectionsOrder":["Header","Groups","Signals"],
+      "groupsRender":"cards","metricRender":"card","groupStyle":"section",
+      "mobile":{"stack":true,"columns":1},"desktop":{"columns":4},
+      "notes":"Standard card grid."
+    },
+    "C": { "name":"Dense Table","sectionsOrder":["Header","Groups","Signals"],
+      "groupsRender":"table","metricRender":"row","groupStyle":"tableSection",
+      "mobile":{"stack":true,"columns":1,"tableMode":"scrollX"},
+      "desktop":{"columns":1,"tableMode":"full"},
+      "notes":"One table per group, dense, readable."
+    },
+    "D": { "name":"Two-Column Analyst","sectionsOrder":["Header","Signals","Groups"],
+      "groupsRender":"twoColumn","metricRender":"card","groupStyle":"twoCol",
+      "mobile":{"stack":true,"columns":1},"desktop":{"columns":2},
+      "notes":"Split groups across 2 columns."
+    },
+    "E": { "name":"Signals-First Inbox","sectionsOrder":["Header","Signals","Groups"],
+      "groupsRender":"compact","metricRender":"cardCompact","groupStyle":"accordion",
+      "mobile":{"stack":true,"columns":1},"desktop":{"columns":2},
+      "notes":"Signals prominent; groups collapsible."
+    },
+    "F": { "name":"Minimal KPI Strip","sectionsOrder":["Header","Groups","Signals"],
+      "groupsRender":"kpiStrip","metricRender":"kpi","groupStyle":"strip",
+      "mobile":{"stack":true,"columns":1},"desktop":{"columns":1},
+      "notes":"Horizontal KPI strips per group."
+    },
+    "G": { "name":"Dashboard Tiles","sectionsOrder":["Header","Groups","Signals"],
+      "groupsRender":"tiles","metricRender":"tile","groupStyle":"tileGrid",
+      "mobile":{"stack":true,"columns":1},"desktop":{"columns":3},
+      "notes":"Large tiles for readability."
+    },
+    "H": { "name":"Print-Friendly Report","sectionsOrder":["Header","Signals","Groups"],
+      "groupsRender":"report","metricRender":"row","groupStyle":"reportSection",
+      "mobile":{"stack":true,"columns":1},"desktop":{"columns":1},
+      "notes":"Print/export friendly report style."
+    }
+  }
+}

@@ -309,6 +309,25 @@ export async function onRequest(context) {
       });
     }
 
+    const isMetricsV5 =
+      url.pathname === "/api/metrics" &&
+      payload &&
+      typeof payload === "object" &&
+      payload.meta &&
+      Object.prototype.hasOwnProperty.call(payload, "data") &&
+      Object.prototype.hasOwnProperty.call(payload, "error");
+    if (isMetricsV5) {
+      const nextHeaders = new Headers(response.headers);
+      nextHeaders.set("Content-Type", "application/json; charset=utf-8");
+      const cors = buildCorsHeaders();
+      Object.keys(cors).forEach((key) => nextHeaders.set(key, cors[key]));
+      return new Response(JSON.stringify(payload), {
+        status: response.status,
+        statusText: response.statusText,
+        headers: nextHeaders
+      });
+    }
+
     if (payload && typeof payload === "object") {
       const featureFallback = url.pathname.split("/").slice(-1)[0] || "api";
       payload = normalizeMirrorPayload(payload, featureFallback);

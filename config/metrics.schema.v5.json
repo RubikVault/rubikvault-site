@@ -1,0 +1,233 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "RubikVault Metrics Envelope v5.0",
+  "type": "object",
+  "required": ["meta", "data", "error"],
+  "additionalProperties": false,
+  "properties": {
+    "meta": { "$ref": "#/$defs/meta" },
+    "data": {
+      "anyOf": [
+        { "$ref": "#/$defs/data" },
+        { "type": "null" }
+      ]
+    },
+    "error": {
+      "anyOf": [
+        { "$ref": "#/$defs/error" },
+        { "type": "null" }
+      ]
+    }
+  },
+  "$defs": {
+    "meta": {
+      "type": "object",
+      "required": [
+        "status",
+        "requestId",
+        "asOf",
+        "generatedAt",
+        "ageSeconds",
+        "version",
+        "source",
+        "cache",
+        "circuitOpen",
+        "missingMetricIds",
+        "metricsCount",
+        "groupsCount"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "status": { "enum": ["OK", "PARTIAL", "ERROR"] },
+        "requestId": { "type": "string" },
+        "asOf": { "type": "string" },
+        "generatedAt": { "type": "string" },
+        "ageSeconds": { "type": "number" },
+        "version": { "const": "5.0" },
+        "source": {
+          "type": "object",
+          "required": ["primary", "fallbackUsed"],
+          "additionalProperties": false,
+          "properties": {
+            "primary": { "type": "string" },
+            "fallbackUsed": { "type": "boolean" }
+          }
+        },
+        "cache": {
+          "type": "object",
+          "required": ["hit", "ttlSeconds", "kvAvailable"],
+          "additionalProperties": false,
+          "properties": {
+            "hit": { "type": "boolean" },
+            "ttlSeconds": { "type": "number" },
+            "kvAvailable": { "type": "boolean" }
+          }
+        },
+        "circuitOpen": { "type": "boolean" },
+        "missingMetricIds": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "metricsCount": { "type": "number" },
+        "groupsCount": { "type": "number" }
+      }
+    },
+    "data": {
+      "type": "object",
+      "required": ["groups", "metricsById", "signals", "uiDefaults"],
+      "additionalProperties": false,
+      "properties": {
+        "groups": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/group" }
+        },
+        "metricsById": {
+          "type": "object",
+          "additionalProperties": { "$ref": "#/$defs/metric" }
+        },
+        "signals": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/signal" }
+        },
+        "uiDefaults": {
+          "type": "object",
+          "required": ["defaultUi", "availableUis"],
+          "additionalProperties": false,
+          "properties": {
+            "defaultUi": { "type": "string" },
+            "availableUis": {
+              "type": "array",
+              "items": { "type": "string" }
+            }
+          }
+        }
+      }
+    },
+    "group": {
+      "type": "object",
+      "required": ["id", "title", "order", "metricIds"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "order": { "type": "number" },
+        "metricIds": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    },
+    "metric": {
+      "type": "object",
+      "required": [
+        "id",
+        "groupId",
+        "label",
+        "value",
+        "valueType",
+        "unit",
+        "asOf",
+        "cadence",
+        "change",
+        "spark",
+        "quality",
+        "display",
+        "source"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string" },
+        "groupId": { "type": "string" },
+        "label": { "type": "string" },
+        "value": {
+          "anyOf": [
+            { "type": "number" },
+            { "type": "string" }
+          ]
+        },
+        "valueType": { "enum": ["number", "label", "dataset"] },
+        "unit": {
+          "enum": ["%", "bp", "index", "count", "ratio", "usd", "usd/oz", "usd/bbl", "usd/mt", "gwei", "label"]
+        },
+        "asOf": { "type": "string" },
+        "cadence": { "enum": ["daily", "weekly", "monthly", "quarterly"] },
+        "change": {
+          "type": "object",
+          "required": ["d1", "w1", "m1"],
+          "additionalProperties": false,
+          "properties": {
+            "d1": { "type": ["number", "null"] },
+            "w1": { "type": ["number", "null"] },
+            "m1": { "type": ["number", "null"] }
+          }
+        },
+        "spark": {
+          "type": "array",
+          "items": { "type": "number" }
+        },
+        "quality": {
+          "type": "object",
+          "required": ["isFresh", "isStale", "marketClosed", "consecutiveFails", "validation"],
+          "additionalProperties": false,
+          "properties": {
+            "isFresh": { "type": "boolean" },
+            "isStale": { "type": "boolean" },
+            "marketClosed": { "type": "boolean" },
+            "consecutiveFails": { "type": "number" },
+            "validation": { "enum": ["OK", "FAIL_RANGE", "FAIL_NULL", "FAIL_SPIKE"] }
+          }
+        },
+        "display": {
+          "type": "object",
+          "required": ["trend", "severity", "badgeText", "tooltip"],
+          "additionalProperties": false,
+          "properties": {
+            "trend": { "enum": ["up", "down", "flat"] },
+            "severity": { "enum": ["ok", "warn", "alert", "neutral"] },
+            "badgeText": { "type": ["string", "null"] },
+            "tooltip": { "type": "string" }
+          }
+        },
+        "source": {
+          "type": "object",
+          "required": ["primary", "fallbackUsed"],
+          "additionalProperties": false,
+          "properties": {
+            "primary": { "type": "string" },
+            "fallbackUsed": { "type": "boolean" }
+          }
+        }
+      }
+    },
+    "signal": {
+      "type": "object",
+      "required": ["id", "severity", "title", "message", "metricId", "groupId", "actionText", "priority"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string" },
+        "severity": { "enum": ["info", "warning", "alert"] },
+        "title": { "type": "string" },
+        "message": { "type": "string" },
+        "metricId": { "type": "string" },
+        "groupId": { "type": "string" },
+        "actionText": { "type": ["string", "null"] },
+        "priority": { "type": "number" }
+      }
+    },
+    "error": {
+      "type": "object",
+      "required": ["code", "message"],
+      "additionalProperties": false,
+      "properties": {
+        "code": { "type": "string" },
+        "message": { "type": "string" },
+        "details": {
+          "anyOf": [
+            { "type": "object" },
+            { "type": "null" }
+          ]
+        }
+      }
+    }
+  }
+}
