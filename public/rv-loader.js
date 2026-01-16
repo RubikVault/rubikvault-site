@@ -2880,11 +2880,12 @@ async function runFeature(section, feature, logger, contentEl) {
       const reason = meta.reason || "";
       const featureId = feature?.id || section.getAttribute("data-rv-feature") || "";
       const isMarketCockpit = featureId === "rv-market-cockpit";
+      const isNewsHeadlines = featureId === "rv-news-headlines";
       
       // Market Cockpit has different data structure - ALWAYS show it (even if NO_DATA)
       // It should display a fallback/loading state, not be hidden
-      if (isMarketCockpit) {
-        section.hidden = false; // Always show Market Cockpit
+      if (isMarketCockpit || isNewsHeadlines) {
+        section.hidden = false; // Always show Market Cockpit + News Headlines
       } else {
         // Hide if NO_DATA, PARTIAL with no items, or MISSING_SECRET
         const hasItems = (result?.data?.items?.length > 0) || (result?.data?.signals?.length > 0) || (result?.data?.picks) || (result?.data?.sectors?.length > 0);
