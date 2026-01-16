@@ -6,7 +6,7 @@ const FALLBACK_LAYOUTS = {
   layouts: {
     A: {
       name: "Executive Bento",
-      sectionsOrder: ["Header", "Signals", "Groups"],
+      sectionsOrder: ["Header", "Summary", "Signals", "Groups"],
       groupsRender: "bento",
       metricRender: "card",
       groupStyle: "bentoGrid"
@@ -179,13 +179,14 @@ function setStoredUi(value) {
   }
 }
 
-function resolveUi(envelope) {
+function resolveUi(envelope, layouts) {
+  const available = layouts?.availableUis || VALID_UIS;
   const queryUi = getQueryUi();
-  if (queryUi) return queryUi;
+  if (queryUi && available.includes(queryUi)) return queryUi;
   const stored = getStoredUi();
-  if (stored) return stored;
+  if (stored && available.includes(stored)) return stored;
   const defaultUi = envelope?.data?.uiDefaults?.defaultUi;
-  return VALID_UIS.includes(defaultUi) ? defaultUi : "A";
+  return available.includes(defaultUi) ? defaultUi : "A";
 }
 
 function updateQueryUi(value) {
@@ -329,6 +330,26 @@ function renderMetricRow(metric) {
   `;
 }
 
+function renderMetricKpi(metric) {
+  if (!metric) {
+    return `
+      <div class="rv-metrics-kpi is-missing">
+        <span>-- (unavailable)</span>
+      </div>
+    `;
+  }
+  const formatted = formatValue(metric);
+  const change = metric.valueType === "number" ? formatChange(metric.change?.d1) : "--";
+  return `
+    <div class="rv-metrics-kpi" aria-label="${metricAriaLabel(metric, formatted)}">
+      <div class="rv-metrics-kpi-label">${metric.label}</div>
+      <div class="rv-metrics-kpi-value">${formatted}</div>
+      <div class="rv-metrics-kpi-change">${change}</div>
+      <div class="rv-metrics-kpi-meta">${metric.asOf || "--"}</div>
+    </div>
+  `;
+}
+
 function renderGroupSection(group, metricsById, layout) {
   const metrics = group.metricIds.map((id) => metricsById[id] || null);
   const groupClass = layout.groupStyle ? ` ${layout.groupStyle}` : "";
@@ -407,6 +428,30 @@ function renderHeader(envelope, layout, ui) {
   `;
 }
 
+function renderSummaryRow(envelope) {
+  const meta = envelope?.meta || {};
+  return `
+    <div class="rv-metrics-summary">
+      <div class="rv-metrics-summary-item">
+        <div class="rv-metrics-summary-label">Status</div>
+        <div class="rv-metrics-summary-value">${meta.status || "--"}</div>
+      </div>
+      <div class="rv-metrics-summary-item">
+        <div class="rv-metrics-summary-label">Metrics</div>
+        <div class="rv-metrics-summary-value">${meta.metricsCount || 0}/43</div>
+      </div>
+      <div class="rv-metrics-summary-item">
+        <div class="rv-metrics-summary-label">As of</div>
+        <div class="rv-metrics-summary-value">${meta.asOf || "--"}</div>
+      </div>
+      <div class="rv-metrics-summary-item">
+        <div class="rv-metrics-summary-label">Age</div>
+        <div class="rv-metrics-summary-value">${meta.ageSeconds ?? "--"}s</div>
+      </div>
+    </div>
+  `;
+}
+
 function renderUiSwitcher(active, available = VALID_UIS) {
   return `
     <div class="rv-metrics-switcher" role="tablist" aria-label="UI variations">
@@ -437,10 +482,12 @@ function renderDebugOverlay(envelope, ui) {
         <div><strong>ageSeconds:</strong> ${meta.ageSeconds ?? "--"}</div>
         <div><strong>requestId:</strong> ${meta.requestId || "--"}</div>
         <div><strong>metricsCount:</strong> ${meta.metricsCount ?? "--"}</div>
+        <div><strong>groupsCount:</strong> ${meta.groupsCount ?? "--"}</div>
         <div><strong>missingCount:</strong> ${missingCount}</div>
         <div><strong>kvAvailable:</strong> ${meta.cache?.kvAvailable ? "true" : "false"}</div>
         <div><strong>circuitOpen:</strong> ${meta.circuitOpen ? "true" : "false"}</div>
         <div><strong>cache.hit:</strong> ${meta.cache?.hit ? "true" : "false"}</div>
+        <div><strong>cache.ttlSeconds:</strong> ${meta.cache?.ttlSeconds ?? "--"}</div>
       </div>
     </div>
   `;
@@ -495,17 +542,149 @@ function renderGroups(envelope, layout) {
   `;
 }
 
+function renderGroupsKpiStrip(envelope) {
+  const data = envelope?.data || {};
+  const groups = Array.isArray(data.groups) ? data.groups.slice() : [];
+  groups.sort((a, b) => (a.order || 0) - (b.order || 0));
+  if (!groups.length) return `<div class="rv-metrics-empty">No groups available.</div>`;
+  return `
+    <div class="rv-metrics-groups kpi-strip">
+      ${groups
+        .map((group) => {
+          const metrics = group.metricIds.map((id) => data.metricsById?.[id] || null);
+          return `
+            <section class="rv-metrics-group strip">
+              <h3>${group.title}</h3>
+              <div class="rv-metrics-kpi-strip">
+                ${metrics.map(renderMetricKpi).join("")}
+              </div>
+            </section>
+          `;
+        })
+        .join("")}
+    </div>
+  `;
+}
+
+function renderGroupsTiles(envelope) {
+  const data = envelope?.data || {};
+  const groups = Array.isArray(data.groups) ? data.groups.slice() : [];
+  groups.sort((a, b) => (a.order || 0) - (b.order || 0));
+  if (!groups.length) return `<div class="rv-metrics-empty">No groups available.</div>`;
+  return `
+    <div class="rv-metrics-groups tiles">
+      ${groups
+        .map((group) => {
+          const metrics = group.metricIds.map((id) => data.metricsById?.[id] || null);
+          return `
+            <section class="rv-metrics-group tiles">
+              <h3>${group.title}</h3>
+              <div class="rv-metrics-tiles">
+                ${metrics.map((metric) => renderMetricCard(metric, { variant: "is-tile" })).join("")}
+              </div>
+            </section>
+          `;
+        })
+        .join("")}
+    </div>
+  `;
+}
+
+function renderGroupsReport(envelope) {
+  const data = envelope?.data || {};
+  const groups = Array.isArray(data.groups) ? data.groups.slice() : [];
+  groups.sort((a, b) => (a.order || 0) - (b.order || 0));
+  if (!groups.length) return `<div class="rv-metrics-empty">No groups available.</div>`;
+  return `
+    <div class="rv-metrics-groups report">
+      ${groups
+        .map((group) => {
+          const metrics = group.metricIds.map((id) => data.metricsById?.[id] || null);
+          return `
+            <section class="rv-metrics-group report">
+              <h3>${group.title}</h3>
+              <ul class="rv-metrics-report-list">
+                ${metrics
+                  .map((metric) => {
+                    if (!metric) {
+                      return `<li class="is-missing">-- (unavailable)</li>`;
+                    }
+                    return `<li><span>${metric.label}</span><strong>${formatValue(metric)}</strong><em>${metric.asOf || "--"}</em></li>`;
+                  })
+                  .join("")}
+              </ul>
+            </section>
+          `;
+        })
+        .join("")}
+    </div>
+  `;
+}
+
+function renderGroupsBento(envelope) {
+  const data = envelope?.data || {};
+  const groups = Array.isArray(data.groups) ? data.groups.slice() : [];
+  groups.sort((a, b) => (a.order || 0) - (b.order || 0));
+  if (!groups.length) return `<div class="rv-metrics-empty">No groups available.</div>`;
+  return `
+    <div class="rv-metrics-groups bento">
+      ${groups
+        .map((group) => {
+          const metrics = group.metricIds.map((id) => data.metricsById?.[id] || null);
+          return `
+            <section class="rv-metrics-group bento">
+              <h3>${group.title}</h3>
+              <div class="rv-metrics-bento-grid">
+                ${metrics.map((metric) => renderMetricCard(metric, { variant: "is-bento" })).join("")}
+              </div>
+            </section>
+          `;
+        })
+        .join("")}
+    </div>
+  `;
+}
+
+function renderSignalsList(signals = []) {
+  if (!signals.length) return `<div class="rv-metrics-empty">No active signals.</div>`;
+  return `
+    <ul class="rv-metrics-signals-list">
+      ${signals
+        .map(
+          (signal) => `
+        <li class="rv-metrics-signal ${signal.severity}">
+          <div>${signal.title}</div>
+          <small>${signal.message}</small>
+        </li>
+      `
+        )
+        .join("")}
+    </ul>
+  `;
+}
+
 function renderDashboard(root, envelope, ui, layouts) {
   const uiLayout = layouts?.layouts?.[ui] || FALLBACK_LAYOUTS.layouts[ui] || {};
   const sections = uiLayout.sectionsOrder || ["Header", "Groups", "Signals"];
   const data = envelope?.data || {};
   const header = renderHeader(envelope, uiLayout, ui);
-  const signals = renderSignals(data.signals || []);
-  const groups = renderGroups(envelope, uiLayout);
+  const signals = ui === "E" ? renderSignalsList(data.signals || []) : renderSignals(data.signals || []);
+  const groups =
+    uiLayout.groupsRender === "kpiStrip"
+      ? renderGroupsKpiStrip(envelope)
+      : uiLayout.groupsRender === "tiles"
+        ? renderGroupsTiles(envelope)
+        : uiLayout.groupsRender === "report"
+          ? renderGroupsReport(envelope)
+          : uiLayout.groupsRender === "bento"
+            ? renderGroupsBento(envelope)
+            : renderGroups(envelope, uiLayout);
   const switcher = renderUiSwitcher(ui, data.uiDefaults?.availableUis || VALID_UIS);
+  const summary = renderSummaryRow(envelope);
 
   const sectionMap = {
     Header: header,
+    Summary: summary,
     Signals: signals,
     Groups: groups
   };
@@ -560,7 +739,7 @@ async function renderFeature(root, { force = false } = {}) {
     renderError(root, envelope);
     return;
   }
-  const ui = resolveUi(envelope);
+  const ui = resolveUi(envelope, layouts);
   renderDashboard(root, envelope, ui, layouts);
   bindInteractions(root, envelope, (nextUi) => {
     renderDashboard(root, envelope, nextUi, layouts);

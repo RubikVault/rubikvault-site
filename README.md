@@ -188,3 +188,7 @@ Run the route/redirect smoke check against local dev:
 - `npm run smoke:redirects`
 - `BASE_URL=https://<preview>.pages.dev npm run smoke:redirects`
 
+## Metrics Dashboard (V5) UI Sanity
+Run the selection check to ensure ?ui=H resolves correctly:
+
+- `node scripts/metrics-ui-selection.mjs`
