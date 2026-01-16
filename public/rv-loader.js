@@ -485,6 +485,7 @@ const DASHBOARD_STATE = {
 const refreshState = new Map();
 const STATUS_LABELS = {
   "rv-market-cockpit": "Cockpit",
+  "rv-metrics-dashboard": "Metrics",
   "rv-market-health": "MarketHealth",
   "rv-price-snapshot": "Snapshot",
   "rv-top-movers": "Volume",
@@ -514,6 +515,7 @@ const STATUS_LABELS = {
 };
 const STATUS_ORDER = [
   "rv-market-cockpit",
+  "rv-metrics-dashboard",
   "rv-market-health",
   "rv-earnings-calendar",
   "rv-news-headlines",
@@ -540,6 +542,7 @@ const STATUS_ORDER = [
 ];
 const PUBLIC_FEATURE_ALLOWLIST = new Set([
   "rv-market-cockpit",
+  "rv-metrics-dashboard",
   "rv-news-headlines",
   "rv-tech-signals",
   "rv-alpha-radar",
@@ -579,6 +582,7 @@ let MANIFEST_CACHE = null;
 const SNAPSHOT_ONLY = true;
 const SNAPSHOT_ONLY_API_FEATURES = new Set([
   "rv-market-cockpit",
+  "rv-metrics-dashboard",
   "rv-sp500-sectors",
   "rv-news-headlines"
 ]);
