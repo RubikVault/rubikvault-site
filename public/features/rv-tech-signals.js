@@ -2,42 +2,57 @@ import { fetchJSON, getBindingHint } from "./utils/api.js";
 import { getOrFetch } from "./utils/store.js";
 import { rvSetText } from "./rv-dom.js";
 
-const STORAGE_KEY = "rv_watchlist_local";
-const DEFAULT_LIST = ["AAPL", "NVDA"];
-const TOP30_SYMBOLS = [
+const TOP20_SYMBOLS = [
   "AAPL",
   "MSFT",
   "NVDA",
   "AMZN",
   "GOOGL",
-  "GOOG",
   "META",
   "TSLA",
   "BRK.B",
   "JPM",
   "V",
-  "MA",
+  "LLY",
+  "AVGO",
+  "WMT",
   "XOM",
   "UNH",
-  "JNJ",
-  "WMT",
-  "PG",
-  "HD",
-  "AVGO",
   "COST",
-  "PEP",
-  "KO",
-  "MRK",
-  "ABBV",
-  "LLY",
-  "ORCL",
-  "CSCO",
-  "CRM",
+  "MA",
   "NFLX",
-  "AMD"
+  "HD",
+  "PG"
 ];
 
-const top30State = {
+const TOP20_NAMES = {
+  AAPL: "Apple Inc.",
+  MSFT: "Microsoft",
+  NVDA: "NVIDIA",
+  AMZN: "Amazon",
+  GOOGL: "Alphabet",
+  META: "Meta Platforms",
+  TSLA: "Tesla",
+  "BRK.B": "Berkshire Hathaway",
+  JPM: "JPMorgan Chase",
+  V: "Visa",
+  LLY: "Eli Lilly",
+  AVGO: "Broadcom",
+  WMT: "Walmart",
+  XOM: "Exxon Mobil",
+  UNH: "UnitedHealth",
+  COST: "Costco",
+  MA: "Mastercard",
+  NFLX: "Netflix",
+  HD: "Home Depot",
+  PG: "Procter & Gamble",
+  JNJ: "Johnson & Johnson",
+  ABBV: "AbbVie",
+  ORCL: "Oracle",
+  MRK: "Merck"
+};
+
+const top20State = {
   timeframe: "daily",
   sortKey: "symbol",
   sortDir: "asc",
@@ -54,110 +69,20 @@ function formatPercent(value, digits = 2) {
   return `${formatNumber(value, { maximumFractionDigits: digits })}%`;
 }
 
-function loadSymbols() {
-  try {
-    const shared = typeof window !== "undefined" ? window.RV_SHARED?.watchlist : null;
-    if (Array.isArray(shared) && shared.length) return shared;
-    const raw = window.localStorage?.getItem(STORAGE_KEY);
-    const parsed = raw ? JSON.parse(raw) : DEFAULT_LIST;
-    if (!Array.isArray(parsed)) return DEFAULT_LIST;
-    return parsed.map((item) => String(item).toUpperCase());
-  } catch (error) {
-    return DEFAULT_LIST;
-  }
-}
-
-function renderWatchlist(signals, symbols) {
-  const rows = symbols.map((symbol) => ({
-    symbol,
-    data: signals.find((item) => item.symbol === symbol) || null
-  }));
-
-  return `
-    <div class="rv-native-table-wrap">
-      <table class="rv-native-table">
-        <thead>
-          <tr>
-            <th>Symbol</th>
-            <th>RSI</th>
-            <th>Weekly RSI</th>
-            <th>MA20</th>
-            <th>MA50</th>
-            <th>Regime</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${rows
-            .map((row) => {
-              const keyPrefix = String(row.symbol || "symbol")
-                .toLowerCase()
-                .replace(/[^a-z0-9]+/g, "-");
-              const item = row.data;
-              if (!item) {
-                return `
-                  <tr>
-                    <td data-rv-field="watch-${keyPrefix}-symbol">${row.symbol}</td>
-                    <td data-rv-field="watch-${keyPrefix}-rsi">—</td>
-                    <td data-rv-field="watch-${keyPrefix}-rsi-weekly">—</td>
-                    <td data-rv-field="watch-${keyPrefix}-ma20">—</td>
-                    <td data-rv-field="watch-${keyPrefix}-ma50">—</td>
-                    <td data-rv-field="watch-${keyPrefix}-regime">—</td>
-                  </tr>
-                `;
-              }
-              const rsiClass =
-                item.rsiLabel === "Oversold"
-                  ? "rv-native-negative"
-                  : item.rsiLabel === "Overbought"
-                    ? "rv-native-positive"
-                    : "rv-native-warning";
-              const rsiWeeklyClass =
-                item.rsiWeeklyLabel === "Oversold"
-                  ? "rv-native-negative"
-                  : item.rsiWeeklyLabel === "Overbought"
-                    ? "rv-native-positive"
-                    : "rv-native-warning";
-              return `
-              <tr>
-                <td data-rv-field="watch-${keyPrefix}-symbol">${item.symbol}</td>
-                <td class="${rsiClass}" data-rv-field="watch-${keyPrefix}-rsi">${formatNumber(item.rsi, {
-                  maximumFractionDigits: 1
-                })}</td>
-                <td class="${rsiWeeklyClass}" data-rv-field="watch-${keyPrefix}-rsi-weekly">${formatNumber(
-                  item.rsiWeekly,
-                  { maximumFractionDigits: 1 }
-                )}</td>
-                <td data-rv-field="watch-${keyPrefix}-ma20">${formatNumber(item.ma20, {
-                  maximumFractionDigits: 2
-                })}</td>
-                <td data-rv-field="watch-${keyPrefix}-ma50">${formatNumber(item.ma50, {
-                  maximumFractionDigits: 2
-                })}</td>
-                <td data-rv-field="watch-${keyPrefix}-regime">${item.maRegime}</td>
-              </tr>
-            `;
-            })
-            .join("")}
-        </tbody>
-      </table>
-    </div>
-  `;
-}
-
-function renderTop30Table(payload) {
+function renderTop20Table(payload) {
   if (!payload?.ok) {
     const errorMessage = payload?.error?.message || "API error";
     return `
       <div class="rv-native-error">
-        Top 30 Table konnte nicht geladen werden.<br />
+        Top 20 Table konnte nicht geladen werden.<br />
         <span>${errorMessage}</span>
       </div>
     `;
   }
 
   const signals = payload?.data?.signals || [];
-  const sortKey = top30State.sortKey;
-  const dir = top30State.sortDir === "desc" ? -1 : 1;
+  const sortKey = top20State.sortKey;
+  const dir = top20State.sortDir === "desc" ? -1 : 1;
   const sorted = signals.slice().sort((a, b) => {
     const av = a[sortKey];
     const bv = b[sortKey];
@@ -169,7 +94,7 @@ function renderTop30Table(payload) {
 
   const sortLabel = (label, key) => {
     if (sortKey !== key) return label;
-    return `${label} ${top30State.sortDir === "asc" ? "^" : "v"}`;
+    return `${label} ${top20State.sortDir === "asc" ? "^" : "v"}`;
   };
 
   return `
@@ -177,7 +102,7 @@ function renderTop30Table(payload) {
       <table class="rv-native-table">
         <thead>
           <tr>
-            <th data-rv-sort="symbol">${sortLabel("Symbol", "symbol")}</th>
+            <th data-rv-sort="symbol">${sortLabel("Stock", "symbol")}</th>
             <th data-rv-sort="rsi">${sortLabel("RSI", "rsi")}</th>
             <th data-rv-sort="macd">${sortLabel("MACD", "macd")}</th>
             <th data-rv-sort="macdHist">${sortLabel("MACD Hist", "macdHist")}</th>
@@ -195,6 +120,7 @@ function renderTop30Table(payload) {
               const keyPrefix = String(item.symbol || "symbol")
                 .toLowerCase()
                 .replace(/[^a-z0-9]+/g, "-");
+              const companyName = TOP20_NAMES[item.symbol] || "";
               const rsiClass =
                 item.rsiLabel === "Oversold"
                   ? "rv-native-negative"
@@ -205,32 +131,32 @@ function renderTop30Table(payload) {
                 value === null ? "" : value >= 0 ? "rv-native-positive" : "rv-native-negative";
               return `
                 <tr>
-                  <td data-rv-field="top30-${keyPrefix}-symbol">${item.symbol}</td>
-                  <td class="${rsiClass}" data-rv-field="top30-${keyPrefix}-rsi">${formatNumber(item.rsi, {
+                  <td data-rv-field="top20-${keyPrefix}-symbol">${item.symbol}${companyName ? ` — ${companyName}` : ""}</td>
+                  <td class="${rsiClass}" data-rv-field="top20-${keyPrefix}-rsi">${formatNumber(item.rsi, {
                     maximumFractionDigits: 1
                   })}</td>
-                  <td data-rv-field="top30-${keyPrefix}-macd">${formatNumber(item.macd, {
+                  <td data-rv-field="top20-${keyPrefix}-macd">${formatNumber(item.macd, {
                     maximumFractionDigits: 2
                   })}</td>
-                  <td data-rv-field="top30-${keyPrefix}-macd-hist">${formatNumber(item.macdHist, {
+                  <td data-rv-field="top20-${keyPrefix}-macd-hist">${formatNumber(item.macdHist, {
                     maximumFractionDigits: 2
                   })}</td>
-                  <td data-rv-field="top30-${keyPrefix}-stoch-rsi">${formatNumber(item.stochRsi, {
+                  <td data-rv-field="top20-${keyPrefix}-stoch-rsi">${formatNumber(item.stochRsi, {
                     maximumFractionDigits: 1
                   })}</td>
-                  <td class="${perfClass(item.perf1w)}" data-rv-field="top30-${keyPrefix}-perf-1w">${formatPercent(
+                  <td class="${perfClass(item.perf1w)}" data-rv-field="top20-${keyPrefix}-perf-1w">${formatPercent(
                     item.perf1w
                   )}</td>
-                  <td class="${perfClass(item.relPerf1w)}" data-rv-field="top30-${keyPrefix}-rel-1w">${formatPercent(
+                  <td class="${perfClass(item.relPerf1w)}" data-rv-field="top20-${keyPrefix}-rel-1w">${formatPercent(
                     item.relPerf1w
                   )}</td>
-                  <td class="${perfClass(item.perf1m)}" data-rv-field="top30-${keyPrefix}-perf-1m">${formatPercent(
+                  <td class="${perfClass(item.perf1m)}" data-rv-field="top20-${keyPrefix}-perf-1m">${formatPercent(
                     item.perf1m
                   )}</td>
-                  <td class="${perfClass(item.perf1y)}" data-rv-field="top30-${keyPrefix}-perf-1y">${formatPercent(
+                  <td class="${perfClass(item.perf1y)}" data-rv-field="top20-${keyPrefix}-perf-1y">${formatPercent(
                     item.perf1y
                   )}</td>
-                  <td data-rv-field="top30-${keyPrefix}-regime">${item.maRegime}</td>
+                  <td data-rv-field="top20-${keyPrefix}-regime">${item.maRegime}</td>
                 </tr>
             `;
             })
@@ -249,17 +175,17 @@ async function fetchSignals(symbols, timeframe, logger) {
   });
 }
 
-function bindTop30Controls(root, logger) {
+function bindTop20Controls(root, logger) {
   const tabButtons = Array.from(root.querySelectorAll("[data-rv-timeframe]"));
   const tableHead = root.querySelector("[data-rv-top30-table] thead");
 
   tabButtons.forEach((button) => {
     button.addEventListener("click", async () => {
       const next = button.getAttribute("data-rv-timeframe") || "daily";
-      if (top30State.timeframe === next) return;
-      top30State.timeframe = next;
-      top30State.payload = await fetchSignals(TOP30_SYMBOLS, top30State.timeframe, logger);
-      renderTop30(root, logger);
+      if (top20State.timeframe === next) return;
+      top20State.timeframe = next;
+      top20State.payload = await fetchSignals(TOP20_SYMBOLS, top20State.timeframe, logger);
+      renderTop20(root, logger);
     });
   });
 
@@ -268,118 +194,92 @@ function bindTop30Controls(root, logger) {
     if (!th) return;
     const key = th.getAttribute("data-rv-sort");
     if (!key) return;
-    if (top30State.sortKey === key) {
-      top30State.sortDir = top30State.sortDir === "asc" ? "desc" : "asc";
+    if (top20State.sortKey === key) {
+      top20State.sortDir = top20State.sortDir === "asc" ? "desc" : "asc";
     } else {
-      top30State.sortKey = key;
-      top30State.sortDir = "asc";
+      top20State.sortKey = key;
+      top20State.sortDir = "asc";
     }
-    renderTop30(root, logger);
+    renderTop20(root, logger);
   });
 }
 
-function renderTop30(root, logger) {
-  const tableHtml = renderTop30Table(top30State.payload);
-  const availableCount = top30State.payload?.data?.availableCount;
-  const totalCount = TOP30_SYMBOLS.length;
+function renderTop20(root, logger) {
+  const tableHtml = renderTop20Table(top20State.payload);
+  const availableCount = top20State.payload?.data?.availableCount;
+  const totalCount = TOP20_SYMBOLS.length;
   const availabilityNote =
     typeof availableCount === "number" && availableCount !== totalCount
       ? `${availableCount}/${totalCount} verfügbar`
       : "";
   root.innerHTML = `
-    <div class="rv-native-note rv-native-warning">WIP: consolidation planned with other signal blocks.</div>
     <div class="rv-native-note">How computed? RSI/MACD/Stoch RSI are derived from OHLC (stooq) per timeframe.</div>
     <div class="rv-top30-controls">
-      <button type="button" class="rv-top30-tab${top30State.timeframe === "daily" ? " is-active" : ""}" data-rv-timeframe="daily">Daily</button>
-      <button type="button" class="rv-top30-tab${top30State.timeframe === "weekly" ? " is-active" : ""}" data-rv-timeframe="weekly">Weekly</button>
-      <button type="button" class="rv-top30-tab${top30State.timeframe === "monthly" ? " is-active" : ""}" data-rv-timeframe="monthly">Monthly</button>
+      <button type="button" class="rv-top30-tab${top20State.timeframe === "daily" ? " is-active" : ""}" data-rv-timeframe="daily">Daily</button>
+      <button type="button" class="rv-top30-tab${top20State.timeframe === "weekly" ? " is-active" : ""}" data-rv-timeframe="weekly">Weekly</button>
+      <button type="button" class="rv-top30-tab${top20State.timeframe === "monthly" ? " is-active" : ""}" data-rv-timeframe="monthly">Monthly</button>
     </div>
     <div data-rv-top30-table>
       ${tableHtml}
     </div>
-    <div class="rv-native-note">Universe: fixed mega-cap list (approx top 30).</div>
+    <div class="rv-native-note">Universe: fixed Top 20 US market cap snapshot (EOD).</div>
     ${availabilityNote ? `<div class="rv-native-note">${availabilityNote}</div>` : ""}
   `;
 
-  bindTop30Controls(root, logger);
+  bindTop20Controls(root, logger);
   root
     .querySelectorAll("[data-rv-field]")
     .forEach((node) => rvSetText(node, node.dataset.rvField, node.textContent));
 }
 
-function render(root, watchPayload, top30Payload, logger, symbols) {
-  const watchSignals = watchPayload?.data?.signals || [];
+function render(root, topPayload, logger) {
   const partialNote =
-    watchPayload?.ok && (watchPayload?.isStale || watchPayload?.error?.code)
+    topPayload?.ok && (topPayload?.isStale || topPayload?.error?.code)
       ? "Partial data — some sources unavailable."
       : "";
-
-  const watchlistHtml = watchPayload?.ok
-    ? renderWatchlist(watchSignals, symbols)
-    : `
-      <div class="rv-native-error">
-        Tech Signals konnten nicht geladen werden.<br />
-        <span>${watchPayload?.error?.message || "API error"}</span>
-        ${watchPayload?.error?.code === "BINDING_MISSING" ? `<div class=\"rv-native-note\">${getBindingHint(watchPayload)}</div>` : ""}
-      </div>
-    `;
 
   root.innerHTML = `
     ${partialNote ? `<div class=\"rv-native-note\">${partialNote}</div>` : ""}
     <div class="rv-tech-section">
-      <h3>Watchlist Signals</h3>
-      ${watchlistHtml}
-    </div>
-    <div class="rv-tech-section">
-      <h3>Top 30 Market Cap Table</h3>
+      <h3>Top 20 Marketcap US</h3>
       <div data-rv-top30-root></div>
     </div>
   `;
 
   const topRoot = root.querySelector("[data-rv-top30-root]");
   if (topRoot) {
-    top30State.payload = top30Payload;
-    renderTop30(topRoot, logger);
+    top20State.payload = topPayload;
+    renderTop20(topRoot, logger);
   }
   root
     .querySelectorAll("[data-rv-field]")
     .forEach((node) => rvSetText(node, node.dataset.rvField, node.textContent));
 
-  const okBoth = watchPayload?.ok && top30Payload?.ok;
-  const okOne = watchPayload?.ok || top30Payload?.ok;
-  logger?.setStatus(okBoth ? "OK" : okOne ? "PARTIAL" : "FAIL", okBoth ? "Live" : "Partial data");
+  logger?.setStatus(topPayload?.ok ? "OK" : "FAIL", topPayload?.ok ? "Live" : "Partial data");
   logger?.setMeta({
-    updatedAt: watchPayload?.data?.updatedAt || top30Payload?.data?.updatedAt || watchPayload?.ts || "",
-    source: watchPayload?.data?.source || top30Payload?.data?.source || "stooq",
-    isStale: watchPayload?.isStale || top30Payload?.isStale,
-    staleAgeMs: watchPayload?.staleAgeMs || top30Payload?.staleAgeMs
+    updatedAt: topPayload?.data?.updatedAt || topPayload?.ts || "",
+    source: topPayload?.data?.source || "stooq",
+    isStale: topPayload?.isStale,
+    staleAgeMs: topPayload?.staleAgeMs
   });
   logger?.info("response_meta", {
-    cache: watchPayload?.cache || {},
-    upstreamStatus: watchPayload?.upstream?.status ?? null
+    cache: topPayload?.cache || {},
+    upstreamStatus: topPayload?.upstream?.status ?? null
   });
 }
 
 export async function init(root, context = {}) {
   const { logger } = context;
-  const symbols = loadSymbols();
-  const watchPayload = await getOrFetch(
-    "rv-tech-signals",
-    () => fetchSignals(symbols, "daily", logger),
-    { ttlMs: 15 * 60 * 1000, featureId: "rv-tech-signals", logger }
-  );
   const topPayload = await getOrFetch(
-    `rv-tech-signals-top30:${top30State.timeframe}`,
-    () => fetchSignals(TOP30_SYMBOLS, top30State.timeframe, logger),
-    { ttlMs: 15 * 60 * 1000, featureId: "rv-tech-signals", logger }
+    `rv-tech-signals-top20:${top20State.timeframe}`,
+    () => fetchSignals(TOP20_SYMBOLS, top20State.timeframe, logger),
+    { ttlMs: 24 * 60 * 60 * 1000, featureId: "rv-tech-signals", logger }
   );
-  render(root, watchPayload, topPayload, logger, symbols);
+  render(root, topPayload, logger);
 }
 
 export async function refresh(root, context = {}) {
   const { logger } = context;
-  const symbols = loadSymbols();
-  const watchPayload = await fetchSignals(symbols, "daily", logger);
-  const topPayload = await fetchSignals(TOP30_SYMBOLS, top30State.timeframe, logger);
-  render(root, watchPayload, topPayload, logger, symbols);
+  const topPayload = await fetchSignals(TOP20_SYMBOLS, top20State.timeframe, logger);
+  render(root, topPayload, logger);
 }
