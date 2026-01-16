@@ -260,6 +260,30 @@
         </div>
       </div>
       <div class="timestamp" id="health-timestamp"></div>
+      <div class="timestamp" id="health-report-note">Block status: not refreshed yet.</div>
+    </div>
+
+    <div class="section">
+      <h2>Snapshot Freshness (Static)</h2>
+      <div style="color:#94a3b8;font-size:12px;margin-bottom:10px;">
+        Static files only. No API calls. Uses simple freshness budgets (EOD ≤ 36h, Crypto ≤ 12h, News ≤ 6h).
+      </div>
+      <div style="overflow-x:auto;">
+        <table id="snapshot-freshness">
+          <thead>
+            <tr>
+              <th>Snapshot</th>
+              <th>Path</th>
+              <th>Updated</th>
+              <th>Age</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td colspan="5">Loading...</td></tr>
+          </tbody>
+        </table>
+      </div>
     </div>
 
     <div class="section">
@@ -856,6 +880,7 @@
         loadDoc('/DEBUG_README.md', 'doc-debug-readme'),
         loadDoc('/RUNBOOK.md', 'doc-runbook'),
         loadDoc('/BLOCK_ANALYSIS.md', 'doc-block-analysis'),
+        updateSnapshotFreshness(),
         updateHealthReport(),
         updateBlockMatrix(),
         updateApiKeys(),
@@ -909,10 +934,84 @@
       return `<span class="badge ${cls}">${safeText(text || '—')}</span>`;
     }
 
+    function ageToLabel(ageMs) {
+      if (!Number.isFinite(ageMs) || ageMs < 0) return '—';
+      const minutes = Math.floor(ageMs / 60000);
+      if (minutes < 90) return `${minutes}m`;
+      const hours = Math.floor(minutes / 60);
+      if (hours < 48) return `${hours}h`;
+      const days = Math.floor(hours / 24);
+      return `${days}d`;
+    }
+
+    function freshnessStatus(ageMs, maxHours) {
+      if (!Number.isFinite(ageMs) || ageMs < 0) return 'UNKNOWN';
+      const hours = ageMs / 3600000;
+      if (hours <= maxHours) return 'OK';
+      if (hours <= maxHours * 1.5) return 'STALE';
+      return 'MISSING';
+    }
+
+    async function fetchStaticJson(path) {
+      try {
+        recordRequest();
+        const res = await fetch(path, { cache: 'no-store' });
+        if (!res.ok) return { ok: false, status: res.status };
+        const json = await res.json();
+        return { ok: true, json };
+      } catch (err) {
+        return { ok: false, status: 0, error: String(err?.message || err || '') };
+      }
+    }
+
+    async function updateSnapshotFreshness() {
+      const tbody = document.querySelector('#snapshot-freshness tbody');
+      if (!tbody) return;
+      const now = Date.now();
+      const snapshots = [
+        { label: 'Market Cockpit', path: '/data/snapshots/market-cockpit.json', maxHours: 36 },
+        { label: 'S&P 500 Sectors', path: '/data/snapshots/sp500-sectors.json', maxHours: 36 },
+        { label: 'Tech Signals (Mirror)', path: '/mirrors/tech-signals.json', maxHours: 36 },
+        { label: 'Alpha Radar (Mirror)', path: '/mirrors/alpha-radar.json', maxHours: 36 },
+        { label: 'News Headlines', path: '/data/news.json', maxHours: 6 },
+        { label: 'RVCI Latest', path: '/data/rvci_latest.json', maxHours: 36 }
+      ];
+
+      const rows = await Promise.all(
+        snapshots.map(async (snap) => {
+          const res = await fetchStaticJson(snap.path);
+          const payload = res.ok ? res.json : {};
+          const updatedAt =
+            payload.updatedAt ||
+            payload.generatedAt ||
+            payload.asOf ||
+            payload.meta?.generatedAt ||
+            payload.meta?.dataAsOf ||
+            null;
+          const updatedMs = updatedAt ? Date.parse(updatedAt) : NaN;
+          const ageMs = Number.isFinite(updatedMs) ? now - updatedMs : NaN;
+          const status = freshnessStatus(ageMs, snap.maxHours);
+          const statusClass = status === 'OK' ? 'ok' : status === 'STALE' ? 'warn' : 'fail';
+          return `
+            <tr>
+              <td>${safeText(snap.label)}</td>
+              <td><code>${safeText(snap.path)}</code></td>
+              <td>${updatedAt ? new Date(updatedAt).toLocaleString() : '—'}</td>
+              <td>${ageToLabel(ageMs)}</td>
+              <td><span class="badge ${statusClass}">${status}</span></td>
+            </tr>
+          `;
+        })
+      );
+
+      tbody.innerHTML = rows.join('') || '<tr><td colspan="5">No snapshots found</td></tr>';
+    }
+
     async function updateHealthReport() {
       const tbody = document.querySelector('#health-report-table tbody');
       const summaryEl = document.getElementById('health-report-summary');
       const ts = document.getElementById('health-report-timestamp');
+      const noteEl = document.getElementById('health-report-note');
       const selector = document.getElementById('health-report-block');
       const fieldsBody = document.querySelector('#health-report-fields tbody');
       if (!tbody || !summaryEl || !selector || !fieldsBody) return;
@@ -921,6 +1020,7 @@
       if (!report || report.ok !== true) {
         tbody.innerHTML = '<tr><td colspan="9">No data available</td></tr>';
         if (ts) ts.textContent = `Last updated: ${new Date().toLocaleString()}`;
+        if (noteEl) noteEl.textContent = 'Block status: unavailable (token missing or API error).';
         return;
       }
       const blocks = Array.isArray(report.blocks) ? report.blocks : [];
@@ -930,6 +1030,9 @@
       const okBlocks = summary.okBlocks ?? 0;
       const partialBlocks = summary.partialBlocks ?? 0;
       const badBlocks = summary.badBlocks ?? 0;
+      if (noteEl) {
+        noteEl.textContent = `Block status: OK ${okBlocks} · PARTIAL ${partialBlocks} · BAD ${badBlocks}`;
+      }
       summaryEl.innerHTML = `
         <div class="status-card"><h3>Health Score</h3><div class="value">${safeText(score)}</div><div class="label">server contract + fetch</div></div>
         <div class="status-card ok"><h3>OK</h3><div class="value">${safeText(okBlocks)}</div><div class="label">Blocks</div></div>
