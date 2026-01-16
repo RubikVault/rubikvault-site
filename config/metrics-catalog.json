@@ -1,0 +1,238 @@
+{
+  "version": "5.0",
+  "groups": [
+    { "id": "todays_regime", "title": "Today's Regime", "order": 1,
+      "metricIds": ["risk.vix","risk.move","rates.us10y","risk.regime"]
+    },
+    { "id": "rates_credit", "title": "Rates & Credit", "order": 2,
+      "metricIds": ["rates.us10y","rates.us2y","rates.us30y","rates.yield_curve","rates.sofr","rates.effr","credit.hy_oas","credit.baa","credit.stress_spread"]
+    },
+    { "id": "fx_dollar", "title": "Major FX & Dollar", "order": 3,
+      "metricIds": ["fx.dxy","fx.eurusd","fx.usdjpy","fx.gbpusd"]
+    },
+    { "id": "commodities", "title": "Commodities Snapshot", "order": 4,
+      "metricIds": ["comm.gold","comm.wti","comm.brent","comm.copper"]
+    },
+    { "id": "market_closes", "title": "Market Closes", "order": 5,
+      "metricIds": ["eq.sp500","eq.nasdaq","eq.dax","eq.nikkei","eq.russell2000"]
+    },
+    { "id": "breadth", "title": "Breadth / Internals", "order": 6,
+      "metricIds": ["breadth.above_200dma","breadth.ad_ratio","breadth.high_low_52w","sectors.rotation"]
+    },
+    { "id": "crypto", "title": "Crypto Market Structure", "order": 7,
+      "metricIds": ["crypto.market_cap","crypto.btc_dominance","crypto.stablecoin_cap","crypto.defi_tvl","crypto.eth_gas"]
+    },
+    { "id": "macro", "title": "Latest Macro Prints", "order": 8,
+      "metricIds": ["macro.us_cpi","macro.ea_cpi","macro.uk_cpi","macro.jp_cpi","macro.us_unemployment","macro.ea_unemployment"]
+    },
+    { "id": "valuation", "title": "Valuation & Long-Term", "order": 9,
+      "metricIds": ["val.cape","val.buffett_indicator","val.erp"]
+    }
+  ],
+  "metricsCatalog": {
+    "risk.vix": { "label":"VIX (Close)","unit":"index","cadence":"daily","valueType":"number",
+      "display":{"tooltip":"Equity implied volatility index (close)."},
+      "thresholds":{"warnAbove":25,"alertAbove":35},
+      "sourceHint":{"primary":"FRED:VIXCLS"}
+    },
+    "risk.move": { "label":"MOVE Index (Bond Volatility)","unit":"index","cadence":"daily","valueType":"number",
+      "display":{"tooltip":"Bond market volatility proxy."},
+      "thresholds":{"warnAbove":120,"alertAbove":150},
+      "sourceHint":{"primary":"ALT:MOVE (provider-specific)"}
+    },
+    "risk.regime": { "label":"Risk Regime","unit":"label","cadence":"daily","valueType":"label",
+      "display":{"tooltip":"Derived label: RISK_ON / NEUTRAL / RISK_OFF."},
+      "sourceHint":{"primary":"Derived"}
+    },
+
+    "rates.us10y": { "label":"US 10Y Treasury Yield","unit":"%","cadence":"daily","valueType":"number",
+      "display":{"tooltip":"10-year Treasury yield."},
+      "thresholds":{"warnAbove":5.0,"alertAbove":6.0},
+      "sourceHint":{"primary":"FRED:DGS10"}
+    },
+    "rates.us2y": { "label":"US 2Y Treasury Yield","unit":"%","cadence":"daily","valueType":"number",
+      "display":{"tooltip":"2-year Treasury yield."},
+      "thresholds":{"warnAbove":5.5,"alertAbove":6.5},
+      "sourceHint":{"primary":"FRED:DGS2"}
+    },
+    "rates.us30y": { "label":"US 30Y Treasury Yield","unit":"%","cadence":"daily","valueType":"number",
+      "display":{"tooltip":"30-year Treasury yield."},
+      "thresholds":{"warnAbove":6.0,"alertAbove":7.0},
+      "sourceHint":{"primary":"FRED:DGS30"}
+    },
+    "rates.yield_curve": { "label":"Yield Curve (10Y-2Y)","unit":"bp","cadence":"daily","valueType":"number",
+      "display":{"tooltip":"10Y minus 2Y spread. Negative = inversion."},
+      "thresholds":{"warnBelow":-50,"alertBelow":-100},
+      "sourceHint":{"primary":"Derived from DGS10-DGS2"}
+    },
+    "rates.sofr": { "label":"SOFR","unit":"%","cadence":"daily","valueType":"number",
+      "display":{"tooltip":"Secured Overnight Financing Rate."},
+      "sourceHint":{"primary":"FRED:SOFR"}
+    },
+    "rates.effr": { "label":"EFFR","unit":"%","cadence":"daily","valueType":"number",
+      "display":{"tooltip":"Effective Federal Funds Rate."},
+      "sourceHint":{"primary":"FRED:EFFR"}
+    },
+
+    "credit.hy_oas": { "label":"High Yield OAS","unit":"bp","cadence":"daily","valueType":"number",
+      "display":{"tooltip":"High Yield option-adjusted spread. Higher = stress."},
+      "thresholds":{"warnAbove":500,"alertAbove":700},
+      "sourceHint":{"primary":"FRED:BAMLH0A0HYM2"}
+    },
+    "credit.baa": { "label":"Moody's BAA Yield","unit":"%","cadence":"daily","valueType":"number",
+      "display":{"tooltip":"BAA corporate bond yield."},
+      "sourceHint":{"primary":"FRED:BAA"}
+    },
+    "credit.stress_spread": { "label":"Credit Stress (BAA-10Y)","unit":"bp","cadence":"daily","valueType":"number",
+      "display":{"tooltip":"BAA yield minus 10Y yield. Higher = widening stress."},
+      "thresholds":{"warnAbove":250,"alertAbove":350},
+      "sourceHint":{"primary":"Derived from BAA and DGS10"}
+    },
+
+    "fx.dxy": { "label":"US Dollar Index (DXY)","unit":"index","cadence":"daily","valueType":"number",
+      "display":{"tooltip":"US Dollar index level."},
+      "sourceHint":{"primary":"ALT:DXY (provider-specific)"}
+    },
+    "fx.eurusd": { "label":"EUR/USD","unit":"ratio","cadence":"daily","valueType":"number",
+      "display":{"tooltip":"EUR to USD exchange rate."},
+      "sourceHint":{"primary":"ALT:EURUSD (provider-specific)"}
+    },
+    "fx.usdjpy": { "label":"USD/JPY","unit":"ratio","cadence":"daily","valueType":"number",
+      "display":{"tooltip":"USD to JPY exchange rate."},
+      "sourceHint":{"primary":"ALT:USDJPY (provider-specific)"}
+    },
+    "fx.gbpusd": { "label":"GBP/USD","unit":"ratio","cadence":"daily","valueType":"number",
+      "display":{"tooltip":"GBP to USD exchange rate."},
+      "sourceHint":{"primary":"ALT:GBPUSD (provider-specific)"}
+    },
+
+    "comm.gold": { "label":"Gold","unit":"usd/oz","cadence":"daily","valueType":"number",
+      "display":{"tooltip":"Gold price per ounce."},
+      "sourceHint":{"primary":"FRED:GOLDAMGBD228NLBM (or provider)"}
+    },
+    "comm.wti": { "label":"WTI Crude","unit":"usd/bbl","cadence":"daily","valueType":"number",
+      "display":{"tooltip":"WTI crude oil per barrel."},
+      "sourceHint":{"primary":"FRED:DCOILWTICO (or provider)"}
+    },
+    "comm.brent": { "label":"Brent Crude","unit":"usd/bbl","cadence":"daily","valueType":"number",
+      "display":{"tooltip":"Brent crude per barrel."},
+      "sourceHint":{"primary":"FRED:DCOILBRENTEU (or provider)"}
+    },
+    "comm.copper": { "label":"Copper","unit":"usd/mt","cadence":"monthly","valueType":"number",
+      "display":{"tooltip":"Copper per metric ton (growth proxy)."},
+      "sourceHint":{"primary":"WorldBank/IMF/FRED proxy (provider-specific)"}
+    },
+
+    "eq.sp500": { "label":"S&P 500","unit":"index","cadence":"daily","valueType":"number",
+      "display":{"tooltip":"S&P 500 close."},
+      "sourceHint":{"primary":"Stooq/^SPX or provider"}
+    },
+    "eq.nasdaq": { "label":"NASDAQ Composite","unit":"index","cadence":"daily","valueType":"number",
+      "display":{"tooltip":"NASDAQ composite close."},
+      "sourceHint":{"primary":"Stooq/^NDQ or provider"}
+    },
+    "eq.dax": { "label":"DAX","unit":"index","cadence":"daily","valueType":"number",
+      "display":{"tooltip":"DAX close."},
+      "sourceHint":{"primary":"Stooq/^DAX or provider"}
+    },
+    "eq.nikkei": { "label":"Nikkei 225","unit":"index","cadence":"daily","valueType":"number",
+      "display":{"tooltip":"Nikkei 225 close."},
+      "sourceHint":{"primary":"Stooq/^N225 or provider"}
+    },
+    "eq.russell2000": { "label":"Russell 2000","unit":"index","cadence":"daily","valueType":"number",
+      "display":{"tooltip":"Russell 2000 close."},
+      "sourceHint":{"primary":"Stooq/^RUT or provider"}
+    },
+
+    "breadth.above_200dma": { "label":"% Above 200DMA","unit":"%","cadence":"daily","valueType":"number",
+      "display":{"tooltip":"Share above 200-day moving average."},
+      "thresholds":{"warnBelow":35,"alertBelow":25,"warnAbove":75,"alertAbove":85},
+      "sourceHint":{"primary":"Derived (universe breadth)"}
+    },
+    "breadth.ad_ratio": { "label":"Advance/Decline Ratio","unit":"ratio","cadence":"daily","valueType":"number",
+      "display":{"tooltip":"Advancers / decliners."},
+      "thresholds":{"warnBelow":0.7,"alertBelow":0.5,"warnAbove":1.3,"alertAbove":1.6},
+      "sourceHint":{"primary":"Derived (breadth feed)"}
+    },
+    "breadth.high_low_52w": { "label":"52W Highs minus Lows","unit":"count","cadence":"daily","valueType":"number",
+      "display":{"tooltip":"Net 52-week highs minus lows."},
+      "sourceHint":{"primary":"Derived (breadth feed)"}
+    },
+
+    "sectors.rotation": { "label":"Sector Rotation (5D)","unit":"label","cadence":"daily","valueType":"dataset",
+      "display":{"tooltip":"Top 2 / Flop 2 sectors by 5-day return. ETFs: XLK,XLF,XLE,XLV,XLI,XLY,XLP,XLU,XLC,XLRE,XLB."},
+      "datasetSpec":{
+        "encoding":"TOP|FLOP CSV",
+        "format":"TOP:XLK:+5.2,XLF:+3.8|FLOP:XLE:-2.1,XLU:-1.7",
+        "requiredEtfs":["XLK","XLF","XLE","XLV","XLI","XLY","XLP","XLU","XLC","XLRE","XLB"],
+        "rankWindow":"5d_return_percent",
+        "topN":2,
+        "flopN":2
+      },
+      "sourceHint":{"primary":"Derived from sector ETF returns"}
+    },
+
+    "crypto.market_cap": { "label":"Total Crypto Market Cap","unit":"usd","cadence":"daily","valueType":"number",
+      "display":{"tooltip":"Total crypto market capitalization."},
+      "sourceHint":{"primary":"CoinGecko/CMC (provider-specific)"}
+    },
+    "crypto.btc_dominance": { "label":"BTC Dominance","unit":"%","cadence":"daily","valueType":"number",
+      "display":{"tooltip":"Bitcoin dominance percentage."},
+      "thresholds":{"warnAbove":60,"alertAbove":70},
+      "sourceHint":{"primary":"CoinGecko/CMC (provider-specific)"}
+    },
+    "crypto.stablecoin_cap": { "label":"Stablecoin Market Cap","unit":"usd","cadence":"daily","valueType":"number",
+      "display":{"tooltip":"Total stablecoin market cap."},
+      "sourceHint":{"primary":"DeFiLlama/CG (provider-specific)"}
+    },
+    "crypto.defi_tvl": { "label":"DeFi TVL","unit":"usd","cadence":"daily","valueType":"number",
+      "display":{"tooltip":"Total value locked in DeFi."},
+      "sourceHint":{"primary":"DeFiLlama (provider-specific)"}
+    },
+    "crypto.eth_gas": { "label":"ETH Gas (24h avg)","unit":"gwei","cadence":"daily","valueType":"number",
+      "display":{"tooltip":"Ethereum average gas price (24h)."},
+      "thresholds":{"warnAbove":60,"alertAbove":120},
+      "sourceHint":{"primary":"Etherscan/CG (provider-specific)"}
+    },
+
+    "macro.us_cpi": { "label":"US CPI (YoY)","unit":"%","cadence":"monthly","valueType":"number",
+      "display":{"tooltip":"US CPI year-over-year."},
+      "sourceHint":{"primary":"FRED:CPIAUCSL (derived YoY)"}
+    },
+    "macro.ea_cpi": { "label":"Euro Area CPI (YoY)","unit":"%","cadence":"monthly","valueType":"number",
+      "display":{"tooltip":"Euro Area CPI year-over-year."},
+      "sourceHint":{"primary":"Eurostat/ECB (provider-specific)"}
+    },
+    "macro.uk_cpi": { "label":"UK CPI (YoY)","unit":"%","cadence":"monthly","valueType":"number",
+      "display":{"tooltip":"UK CPI year-over-year."},
+      "sourceHint":{"primary":"ONS (provider-specific)"}
+    },
+    "macro.jp_cpi": { "label":"Japan CPI (YoY)","unit":"%","cadence":"monthly","valueType":"number",
+      "display":{"tooltip":"Japan CPI year-over-year."},
+      "sourceHint":{"primary":"Stats JP (provider-specific)"}
+    },
+    "macro.us_unemployment": { "label":"US Unemployment Rate","unit":"%","cadence":"monthly","valueType":"number",
+      "display":{"tooltip":"US unemployment rate."},
+      "sourceHint":{"primary":"FRED:UNRATE"}
+    },
+    "macro.ea_unemployment": { "label":"Euro Area Unemployment Rate","unit":"%","cadence":"monthly","valueType":"number",
+      "display":{"tooltip":"Euro Area unemployment rate."},
+      "sourceHint":{"primary":"Eurostat/ECB (provider-specific)"}
+    },
+
+    "val.cape": { "label":"Shiller CAPE","unit":"ratio","cadence":"monthly","valueType":"number",
+      "display":{"tooltip":"Cyclically-adjusted P/E (CAPE)."},
+      "thresholds":{"warnAbove":30,"alertAbove":38},
+      "sourceHint":{"primary":"Multpl/FRED proxy (provider-specific)"}
+    },
+    "val.buffett_indicator": { "label":"Buffett Indicator (MktCap/GDP)","unit":"%","cadence":"quarterly","valueType":"number",
+      "display":{"tooltip":"Total market cap relative to GDP (approx.)."},
+      "thresholds":{"warnAbove":150,"alertAbove":200},
+      "sourceHint":{"primary":"Derived (market cap + GDP)"}
+    },
+    "val.erp": { "label":"Equity Risk Premium (ERP)","unit":"%","cadence":"monthly","valueType":"number",
+      "display":{"tooltip":"Estimated equity risk premium."},
+      "sourceHint":{"primary":"Derived (earnings yield - rates)"}
+    }
+  }
+}

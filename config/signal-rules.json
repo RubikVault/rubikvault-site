@@ -1,0 +1,32 @@
+{
+  "version": "5.0",
+  "maxSignals": 8,
+  "sort": { "by": "priorityAscThenSeverity", "severityOrder": ["alert","warning","info"] },
+  "rules": [
+    { "id":"sig_yield_curve_inversion","priority":10,"severity":"warning",
+      "when":{"metricId":"rates.yield_curve","op":"<","value":0},
+      "title":"Yield Curve Inverted","message":"10Y-2Y spread is negative (inversion).",
+      "actionText":"Review risk positioning / duration exposure."
+    },
+    { "id":"sig_hy_stress","priority":20,"severity":"alert",
+      "when":{"metricId":"credit.hy_oas","op":">=","value":700},
+      "title":"High Yield Stress","message":"High Yield OAS elevated (risk-off credit conditions).",
+      "actionText":"Consider reducing credit beta / adding hedges."
+    },
+    { "id":"sig_vix_spike","priority":30,"severity":"warning",
+      "when":{"metricId":"risk.vix","op":">=","value":25},
+      "title":"Volatility Elevated","message":"VIX above 25 suggests elevated implied volatility.",
+      "actionText":"Expect wider ranges; tighten risk controls."
+    },
+    { "id":"sig_breadth_weak","priority":40,"severity":"warning",
+      "when":{"metricId":"breadth.above_200dma","op":"<=","value":25},
+      "title":"Breadth Weak","message":"Low share above 200DMA (weak internal trend).",
+      "actionText":"Prefer defensive setups; avoid chasing."
+    },
+    { "id":"sig_eth_gas_high","priority":50,"severity":"info",
+      "when":{"metricId":"crypto.eth_gas","op":">=","value":60},
+      "title":"ETH Gas Elevated","message":"Higher gas can signal network congestion / activity.",
+      "actionText":null
+    }
+  ]
+}

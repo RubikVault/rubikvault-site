@@ -44,7 +44,7 @@ function validateEntry(entry, index) {
 
 function main() {
   const registry = loadRegistry();
-  const expectedLength = 33;
+  const expectedLength = 34;
   if (registry.length !== expectedLength) {
     fail(`registry length ${registry.length} !== ${expectedLength}`);
   }
@@ -61,7 +61,7 @@ function main() {
     }
   });
 
-  console.log("feature-registry valid (33 entries, contiguous idx 0..32)");
+  console.log("feature-registry valid (34 entries, contiguous idx 0..33)");
 }
 
 main();

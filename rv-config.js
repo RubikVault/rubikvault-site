@@ -17,6 +17,20 @@ export const FEATURES = [
     refreshIntervalMs: 15 * 60 * 1000
   },
   {
+    id: "rv-metrics-dashboard",
+    title: "Metrics Dashboard (V5)",
+    module: "./features/rv-metrics-dashboard.js",
+    api: "metrics",
+    computation: {
+      where: "Pages Function",
+      update: "60-300s",
+      cost: "free and cached",
+      trust: "snapshot + derived"
+    },
+    enabled: true,
+    lazyLoad: false
+  },
+  {
     id: "rv-yield-curve",
     title: "Yield Curve",
     module: "./features/rv-yield-curve.js",
