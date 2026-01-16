@@ -202,7 +202,67 @@ function render(root, payload, logger, featureId) {
 }
 
 async function loadData({ featureId, traceId, logger }) {
-  return fetchJSON("/data/news.json", { feature: featureId, traceId, logger });
+  const url = "/data/news.json";
+  try {
+    const response = await fetch(url, { cache: "no-store" });
+    const text = await response.text();
+    let raw = null;
+    try {
+      raw = text ? JSON.parse(text) : null;
+    } catch (error) {
+      raw = null;
+    }
+    if (!response.ok || !raw || !Array.isArray(raw.items)) {
+      return {
+        ok: false,
+        feature: featureId,
+        ts: new Date().toISOString(),
+        traceId: traceId || "news",
+        schemaVersion: 1,
+        cache: { hit: false, ttl: 0, layer: "none" },
+        upstream: { url, status: response.status, snippet: text.slice(0, 300) },
+        data: {},
+        error: {
+          code: "SCHEMA_INVALID",
+          message: "Invalid API response schema",
+          details: {}
+        }
+      };
+    }
+    return {
+      ok: true,
+      feature: featureId,
+      ts: raw.generatedAt || new Date().toISOString(),
+      traceId: traceId || "news",
+      schemaVersion: 1,
+      meta: { status: "OK", reason: "STATIC" },
+      cache: { hit: true, ttl: 0, layer: "static" },
+      upstream: { url, status: response.status, snippet: "" },
+      data: {
+        items: raw.items,
+        updatedAt: raw.updatedAt || raw.generatedAt || raw.asOf || null,
+        source: raw.sourceUpstream || raw.source || "snapshot"
+      },
+      error: null
+    };
+  } catch (error) {
+    logger?.warn("news_snapshot_fetch_failed", { message: error?.message || "fetch failed" });
+    return {
+      ok: false,
+      feature: featureId,
+      ts: new Date().toISOString(),
+      traceId: traceId || "news",
+      schemaVersion: 1,
+      cache: { hit: false, ttl: 0, layer: "none" },
+      upstream: { url, status: null, snippet: "" },
+      data: {},
+      error: {
+        code: "FETCH_FAILED",
+        message: error?.message || "Request failed",
+        details: {}
+      }
+    };
+  }
 }
 
 export async function init(root, context = {}) {
