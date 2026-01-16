@@ -32,7 +32,7 @@ function normalizePayload(raw) {
       ok: true,
       data: {
         items: raw.items,
-        updatedAt: raw.updatedAt || raw.asOf || null,
+        updatedAt: raw.updatedAt || raw.generatedAt || raw.asOf || null,
         source: raw.sourceUpstream || raw.source || "rss"
       },
       meta: { status: "OK", reason: "MIRROR" },
@@ -154,7 +154,7 @@ function render(root, payload, logger, featureId) {
       ${items
         .slice(0, 20)
         .map((item) => {
-          const category = item.category || "stocks";
+          const category = item.category || item.topic || "stocks";
           const icon = CATEGORY_ICONS[category] || "EQ";
           const source = resolveSource(item);
           return `
@@ -202,7 +202,7 @@ function render(root, payload, logger, featureId) {
 }
 
 async function loadData({ featureId, traceId, logger }) {
-  return fetchJSON("/mirrors/news.json", { feature: featureId, traceId, logger });
+  return fetchJSON("/data/news.json", { feature: featureId, traceId, logger });
 }
 
 export async function init(root, context = {}) {
