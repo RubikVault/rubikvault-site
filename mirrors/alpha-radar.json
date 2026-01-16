@@ -1,9 +1,9 @@
 {
   "schemaVersion": "rv-mirror-v1",
   "mirrorId": "alpha-radar",
-  "runId": "2026-01-15T22:47:10.589Z",
-  "updatedAt": "2026-01-15T22:47:10.589Z",
-  "asOf": "2026-01-15T21:00:00.000Z",
+  "runId": "2026-01-16T21:32:29.691Z",
+  "updatedAt": "2026-01-16T21:32:29.691Z",
+  "asOf": "2026-01-16T21:00:00.000Z",
   "mode": "EOD",
   "cadence": "EOD",
   "trust": "derived",
@@ -39,9 +39,9 @@
         "RSI_OVERSOLD",
         "MACD_NEGATIVE"
       ],
-      "close": 258.21,
-      "changePct": -0.6731804893060467,
-      "barsUsed": 10420,
+      "close": 255.517,
+      "changePct": -1.042949537198401,
+      "barsUsed": 10421,
       "missingFields": []
     },
     {
@@ -53,9 +53,9 @@
         "RSI_RECOVERY",
         "MACD_NEGATIVE"
       ],
-      "close": 456.66,
-      "changePct": -0.5921023988854524,
-      "barsUsed": 10037,
+      "close": 459.86,
+      "changePct": 0.7007401567906024,
+      "barsUsed": 10038,
       "missingFields": []
     },
     {
@@ -67,9 +67,9 @@
         "RSI_NEUTRAL",
         "MACD_NEGATIVE"
       ],
-      "close": 186.99,
-      "changePct": 2.102216883258712,
-      "barsUsed": 6787,
+      "close": 186.105,
+      "changePct": -0.5052125100240668,
+      "barsUsed": 6788,
       "missingFields": []
     },
     {
@@ -81,23 +81,23 @@
         "RSI_NEUTRAL",
         "MACD_POSITIVE"
       ],
-      "close": 238.207,
-      "changePct": 0.6579336572998029,
-      "barsUsed": 7207,
+      "close": 239.09,
+      "changePct": 0.3820639852212704,
+      "barsUsed": 7208,
       "missingFields": []
     },
     {
       "symbol": "GOOGL",
-      "score": 70,
+      "score": 85,
       "state": "STRONG",
       "reasons": [
         "TREND_STRONG",
-        "RSI_EXTENDED",
+        "RSI_NEUTRAL",
         "MACD_POSITIVE"
       ],
-      "close": 332.78,
-      "changePct": -0.9111481657932408,
-      "barsUsed": 5387,
+      "close": 330,
+      "changePct": -0.8353867419916949,
+      "barsUsed": 5388,
       "missingFields": []
     },
     {
@@ -109,9 +109,9 @@
         "RSI_RECOVERY",
         "MACD_NEGATIVE"
       ],
-      "close": 620.8,
-      "changePct": 0.8578112815180505,
-      "barsUsed": 3435,
+      "close": 620.25,
+      "changePct": -0.08859536082473918,
+      "barsUsed": 3436,
       "missingFields": []
     },
     {
@@ -123,9 +123,9 @@
         "RSI_RECOVERY",
         "MACD_NEGATIVE"
       ],
-      "close": 438.57,
-      "changePct": -0.1434426229508179,
-      "barsUsed": 3912,
+      "close": 437.52,
+      "changePct": -0.23941446063342475,
+      "barsUsed": 3913,
       "missingFields": []
     },
     {
@@ -137,23 +137,23 @@
         "RSI_NEUTRAL",
         "MACD_POSITIVE"
       ],
-      "close": 692.015,
-      "changePct": 0.239729995944149,
-      "barsUsed": 5255,
+      "close": 691.72,
+      "changePct": -0.07511845602681255,
+      "barsUsed": 5256,
       "missingFields": []
     },
     {
       "symbol": "QQQ",
-      "score": 85,
-      "state": "STRONG",
+      "score": 65,
+      "state": "WATCH",
       "reasons": [
         "TREND_STRONG",
         "RSI_NEUTRAL",
-        "MACD_POSITIVE"
+        "MACD_NEGATIVE"
       ],
-      "close": 621.78,
-      "changePct": 0.3599386651601977,
-      "barsUsed": 6755,
+      "close": 621.055,
+      "changePct": -0.11660072694522627,
+      "barsUsed": 6756,
       "missingFields": []
     },
     {
@@ -165,21 +165,49 @@
         "RSI_EXTENDED",
         "MACD_POSITIVE"
       ],
-      "close": 265.54,
-      "changePct": 0.8928910672898027,
-      "barsUsed": 5255,
+      "close": 265.74,
+      "changePct": 0.086625739143531,
+      "barsUsed": 5256,
       "missingFields": []
     }
   ],
-  "generatedAt": "2026-01-15T22:47:10.589Z",
+  "generatedAt": "2026-01-16T21:32:29.691Z",
   "data": {
     "picks": {
       "top": [
         {
           "symbol": "AMZN",
           "name": "AMZN",
-          "close": 238.207,
-          "changePct": 0.6579336572998029,
+          "close": 239.09,
+          "changePct": 0.3820639852212704,
+          "stop": null,
+          "setupScore": 34,
+          "triggerScore": 51,
+          "totalScore": 85,
+          "setup": {
+            "rsiExtreme": true,
+            "bbExtreme": false,
+            "nearSma200": false,
+            "rvolGte15": false,
+            "extremeGate": false
+          },
+          "trigger": {
+            "ema21Reclaim": false,
+            "higherLowFt": false,
+            "bosBreak": false,
+            "volumeConfirm": false,
+            "rsiUpturn": false
+          },
+          "tags": [
+            "STRONG"
+          ],
+          "notes": null
+        },
+        {
+          "symbol": "GOOGL",
+          "name": "GOOGL",
+          "close": 330,
+          "changePct": -0.8353867419916949,
           "stop": null,
           "setupScore": 34,
           "triggerScore": 51,
@@ -206,36 +234,8 @@
         {
           "symbol": "SPY",
           "name": "SPY",
-          "close": 692.015,
-          "changePct": 0.239729995944149,
-          "stop": null,
-          "setupScore": 34,
-          "triggerScore": 51,
-          "totalScore": 85,
-          "setup": {
-            "rsiExtreme": true,
-            "bbExtreme": false,
-            "nearSma200": false,
-            "rvolGte15": false,
-            "extremeGate": false
-          },
-          "trigger": {
-            "ema21Reclaim": false,
-            "higherLowFt": false,
-            "bosBreak": false,
-            "volumeConfirm": false,
-            "rsiUpturn": false
-          },
-          "tags": [
-            "STRONG"
-          ],
-          "notes": null
-        },
-        {
-          "symbol": "QQQ",
-          "name": "QQQ",
-          "close": 621.78,
-          "changePct": 0.3599386651601977,
+          "close": 691.72,
+          "changePct": -0.07511845602681255,
           "stop": null,
           "setupScore": 34,
           "triggerScore": 51,
@@ -264,8 +264,36 @@
         {
           "symbol": "AMZN",
           "name": "AMZN",
-          "close": 238.207,
-          "changePct": 0.6579336572998029,
+          "close": 239.09,
+          "changePct": 0.3820639852212704,
+          "stop": null,
+          "setupScore": 34,
+          "triggerScore": 51,
+          "totalScore": 85,
+          "setup": {
+            "rsiExtreme": true,
+            "bbExtreme": false,
+            "nearSma200": false,
+            "rvolGte15": false,
+            "extremeGate": false
+          },
+          "trigger": {
+            "ema21Reclaim": false,
+            "higherLowFt": false,
+            "bosBreak": false,
+            "volumeConfirm": false,
+            "rsiUpturn": false
+          },
+          "tags": [
+            "STRONG"
+          ],
+          "notes": null
+        },
+        {
+          "symbol": "GOOGL",
+          "name": "GOOGL",
+          "close": 330,
+          "changePct": -0.8353867419916949,
           "stop": null,
           "setupScore": 34,
           "triggerScore": 51,
@@ -292,36 +320,8 @@
         {
           "symbol": "SPY",
           "name": "SPY",
-          "close": 692.015,
-          "changePct": 0.239729995944149,
-          "stop": null,
-          "setupScore": 34,
-          "triggerScore": 51,
-          "totalScore": 85,
-          "setup": {
-            "rsiExtreme": true,
-            "bbExtreme": false,
-            "nearSma200": false,
-            "rvolGte15": false,
-            "extremeGate": false
-          },
-          "trigger": {
-            "ema21Reclaim": false,
-            "higherLowFt": false,
-            "bosBreak": false,
-            "volumeConfirm": false,
-            "rsiUpturn": false
-          },
-          "tags": [
-            "STRONG"
-          ],
-          "notes": null
-        },
-        {
-          "symbol": "QQQ",
-          "name": "QQQ",
-          "close": 621.78,
-          "changePct": 0.3599386651601977,
+          "close": 691.72,
+          "changePct": -0.07511845602681255,
           "stop": null,
           "setupScore": 34,
           "triggerScore": 51,
@@ -348,38 +348,10 @@
       ],
       "longterm": [
         {
-          "symbol": "GOOGL",
-          "name": "GOOGL",
-          "close": 332.78,
-          "changePct": -0.9111481657932408,
-          "stop": null,
-          "setupScore": 28,
-          "triggerScore": 42,
-          "totalScore": 70,
-          "setup": {
-            "rsiExtreme": true,
-            "bbExtreme": false,
-            "nearSma200": false,
-            "rvolGte15": false,
-            "extremeGate": false
-          },
-          "trigger": {
-            "ema21Reclaim": false,
-            "higherLowFt": false,
-            "bosBreak": false,
-            "volumeConfirm": false,
-            "rsiUpturn": false
-          },
-          "tags": [
-            "STRONG"
-          ],
-          "notes": null
-        },
-        {
           "symbol": "IWM",
           "name": "IWM",
-          "close": 265.54,
-          "changePct": 0.8928910672898027,
+          "close": 265.74,
+          "changePct": 0.086625739143531,
           "stop": null,
           "setupScore": 28,
           "triggerScore": 42,
@@ -406,8 +378,36 @@
         {
           "symbol": "NVDA",
           "name": "NVDA",
-          "close": 186.99,
-          "changePct": 2.102216883258712,
+          "close": 186.105,
+          "changePct": -0.5052125100240668,
+          "stop": null,
+          "setupScore": 26,
+          "triggerScore": 39,
+          "totalScore": 65,
+          "setup": {
+            "rsiExtreme": true,
+            "bbExtreme": false,
+            "nearSma200": false,
+            "rvolGte15": false,
+            "extremeGate": false
+          },
+          "trigger": {
+            "ema21Reclaim": false,
+            "higherLowFt": false,
+            "bosBreak": false,
+            "volumeConfirm": false,
+            "rsiUpturn": false
+          },
+          "tags": [
+            "WATCH"
+          ],
+          "notes": null
+        },
+        {
+          "symbol": "QQQ",
+          "name": "QQQ",
+          "close": 621.055,
+          "changePct": -0.11660072694522627,
           "stop": null,
           "setupScore": 26,
           "triggerScore": 39,
@@ -436,7 +436,7 @@
   },
   "meta": {
     "status": "OK",
-    "updatedAt": "2026-01-15T22:47:10.589Z",
+    "updatedAt": "2026-01-16T21:32:29.691Z",
     "reason": null
   }
 }
