@@ -241,51 +241,60 @@ function renderHeroAudit(model, fetchCount) {
 }
 
 function renderHeroSections(model, mode) {
-  const sections = model.groups
-    .map((group) => {
-      const rows = group.metrics
-        .map(
-          (metric) => `
+  const rowGroups = [model.groups.slice(0, 4), model.groups.slice(4, 8), model.groups.slice(8)];
+  const rowsHtml = rowGroups
+    .map((row) => {
+      const sections = row
+        .map((group) => {
+          const rows = group.metrics
+            .map(
+              (metric) => `
           <tr>
-            <td>${metric.label}</td>
-            <td>${metric.value}</td>
-            <td>${metric.sub}</td>
+            <td class="rv-cell-label" style="word-break: break-word;">${metric.label}</td>
+            <td class="rv-cell-num" style="word-break: break-word;">${metric.value}</td>
           </tr>`
-        )
-        .join("");
-      const cards = group.metrics
-        .map((metric) => metricCard(metric.label, metric.value, metric.sub))
-        .join("");
-      const content = mode === "table"
-        ? `
-        <table class="rv-native-table rv-table--compact">
-          <thead>
-            <tr>
-              <th>Metric</th>
-              <th>Value</th>
-              <th>Source</th>
-            </tr>
-          </thead>
+            )
+            .join("");
+          const cards = group.metrics
+            .map((metric) => metricCard(metric.label, metric.value, metric.sub))
+            .join("");
+          const content = mode === "table"
+            ? `
+        <table class="rv-native-table rv-table--compact" style="width:100%;table-layout:fixed;">
           <tbody>
             ${rows}
           </tbody>
         </table>
         `
-        : `
+            : `
         <div class="rv-ms-grid">
           ${cards}
         </div>
         `;
-      return `
-        <section class="rv-cockpit-section">
+          return `
+        <section class="rv-cockpit-section" style="max-width:100%;overflow:hidden;">
           <div class="rv-cockpit-section-title">${group.title}</div>
           ${content}
         </section>
       `;
+        })
+        .join("");
+      return `<div class="rv-cockpit-grid" style="gap:12px;margin:12px 0 16px;">${sections}</div>`;
     })
     .join("");
-  return `<div class="rv-cockpit-grid">${sections}</div>`;
+  return rowsHtml;
 }
+
+function setHeroTitle(root) {
+  const block = root?.closest?.('[data-rv-feature="rv-market-cockpit"]');
+  const title = block?.querySelector?.('.rv-native-header h2');
+  if (!title) return;
+  const textNode = Array.from(title.childNodes || []).find((node) => node.nodeType === Node.TEXT_NODE);
+  if (textNode) {
+    textNode.textContent = "Global Macro Hub ";
+  }
+}
+
 
 
 
@@ -376,6 +385,7 @@ function render(root, payload, logger, featureId) {
   });
   const data = resolved?.data || {};
   const regime = data.regime || {};
+  setHeroTitle(root);
   const drivers = Array.isArray(regime.drivers) ? regime.drivers : [];
   const partialNote =
     resolved?.ok && (resolved?.isStale || data.partial || resolved?.error?.code)
