@@ -6,136 +6,81 @@ import { rvSetText } from "./rv-dom.js";
 const LAYOUT_STORAGE_KEY = "rv-market-snapshot-layout";
 const DEFAULT_LAYOUT = "A";
 
-const HERO_METRIC_IDS = [
-  "risk.regime",
-  "risk.vix",
-  "risk.vix3m",
-  "risk.vix_ratio",
-  "risk.move",
-  "rates.us2y",
-  "rates.us10y",
-  "rates.us30y",
-  "rates.yield_curve",
-  "rates.sofr",
-  "rates.effr",
-  "credit.hy_oas",
-  "credit.ig_oas",
-  "credit.bbb_oas",
-  "credit.baa",
-  "credit.stress_spread",
-  "fx.dxy",
-  "fx.eurusd",
-  "fx.usdjpy",
-  "fx.gbpusd",
-  "fx.usdcny",
-  "comm.wti",
-  "comm.gold",
-  "comm.brent",
-  "comm.copper",
-  "comm.natgas",
-  "eq.sp500",
-  "eq.nasdaq",
-  "eq.dax",
-  "eq.nikkei",
-  "eq.russell2000",
-  "crypto.market_cap",
-  "crypto.btc_dominance",
-  "crypto.stablecoin_cap",
-  "crypto.defi_tvl",
-  "crypto.eth_gas",
-  "crypto.btc_price",
-  "crypto.eth_price",
-  "macro.us_cpi",
-  "macro.ea_cpi",
-  "macro.uk_cpi",
-  "macro.jp_cpi",
-  "macro.us_unemployment",
-  "macro.ea_unemployment",
-  "macro.us_gdp",
-  "val.cape",
-  "val.buffett_indicator"
-];
+const HERO_LABEL_TO_ID = {
+  "RiskRegime": "risk.regime",
+  "VIX Close": "risk.vix",
+  "VIX3M Close": "risk.vix3m",
+  "VIX/VIX3M": "risk.vix_ratio",
+  "Curve10-2": "rates.yield_curve",
+  "US2Y Yield": "rates.us2y",
+  "US10Y Yield": "rates.us10y",
+  "US30Y Yield": "rates.us30y",
+  "SOFR": "rates.sofr",
+  "EFFR": "rates.effr",
+  "HY OAS": "credit.hy_oas",
+  "IG OAS": "credit.ig_oas",
+  "BBB OAS": "credit.bbb_oas",
+  "BAA Yield": "credit.baa",
+  "StressSprd": "credit.stress_spread",
+  "USD Broad": "fx.dxy",
+  "EURUSD": "fx.eurusd",
+  "USDJPY": "fx.usdjpy",
+  "GBPUSD": "fx.gbpusd",
+  "USDCNY": "fx.usdcny",
+  "Gold USD": "comm.gold",
+  "WTI Oil": "comm.wti",
+  "Brent Oil": "comm.brent",
+  "Copper": "comm.copper",
+  "NatGas": "comm.natgas",
+  "SPX Close": "eq.sp500",
+  "NDX Close": "eq.nasdaq",
+  "DAX Close": "eq.dax",
+  "NikkeiCls": "eq.nikkei",
+  "R2K Close": "eq.russell2000",
+  "BTC Price": "crypto.btc_price",
+  "ETH Price": "crypto.eth_price",
+  "Crypto MC": "crypto.market_cap",
+  "BTC Dom": "crypto.btc_dominance",
+  "DeFi TVL": "crypto.defi_tvl",
+  "US CPI YoY": "macro.us_cpi",
+  "US Unemp": "macro.us_unemployment",
+  "US GDP": "macro.us_gdp",
+  "BuffettInd": "val.buffett_indicator",
+  "CAPE": "val.cape"
+};
 
 const HERO_GROUPS = [
   {
     title: "RISK & VOL",
-    items: [
-      { label: "RiskRegime", id: "risk.regime" },
-      { label: "VIX Close", id: "risk.vix" },
-      { label: "VIX3M Close", id: "risk.vix3m" },
-      { label: "VIX/VIX3M", id: "risk.vix_ratio" },
-      { label: "Curve10-2", id: "rates.yield_curve" }
-    ]
+    labels: ["RiskRegime", "VIX Close", "VIX3M Close", "VIX/VIX3M", "Curve10-2"]
   },
   {
     title: "RATES",
-    items: [
-      { label: "US2Y Yield", id: "rates.us2y" },
-      { label: "US10Y Yield", id: "rates.us10y" },
-      { label: "US30Y Yield", id: "rates.us30y" },
-      { label: "SOFR", id: "rates.sofr" },
-      { label: "EFFR", id: "rates.effr" }
-    ]
+    labels: ["US2Y Yield", "US10Y Yield", "US30Y Yield", "SOFR", "EFFR"]
   },
   {
     title: "CREDIT",
-    items: [
-      { label: "HY OAS", id: "credit.hy_oas" },
-      { label: "IG OAS", id: "credit.ig_oas" },
-      { label: "BBB OAS", id: "credit.bbb_oas" },
-      { label: "BAA Yield", id: "credit.baa" },
-      { label: "StressSprd", id: "credit.stress_spread" }
-    ]
+    labels: ["HY OAS", "IG OAS", "BBB OAS", "BAA Yield", "StressSprd"]
   },
   {
     title: "USD & FX",
-    items: [
-      { label: "USD Broad", id: "fx.dxy" },
-      { label: "EURUSD", id: "fx.eurusd" },
-      { label: "USDJPY", id: "fx.usdjpy" },
-      { label: "GBPUSD", id: "fx.gbpusd" },
-      { label: "USDCNY", id: "fx.usdcny" }
-    ]
+    labels: ["USD Broad", "EURUSD", "USDJPY", "GBPUSD", "USDCNY"]
   },
   {
     title: "COMMOD",
-    items: [
-      { label: "WTI Oil", id: "comm.wti" },
-      { label: "Gold USD", id: "comm.gold" },
-      { label: "Brent Oil", id: "comm.brent" },
-      { label: "Copper", id: "comm.copper" },
-      { label: "NatGas", id: "comm.natgas" }
-    ]
+    labels: ["Gold USD", "WTI Oil", "Brent Oil", "Copper", "NatGas"]
   },
   {
     title: "EQUITIES",
-    items: [
-      { label: "SPX Close", id: "eq.sp500" },
-      { label: "NDX Close", id: "eq.nasdaq" },
-      { label: "DAX Close", id: "eq.dax" },
-      { label: "NikkeiCls", id: "eq.nikkei" },
-      { label: "R2K Close", id: "eq.russell2000" }
-    ]
+    labels: ["SPX Close", "NDX Close", "DAX Close", "NikkeiCls", "R2K Close"]
   },
   {
     title: "CRYPTO",
-    items: [
-      { label: "BTC Price", id: "crypto.btc_price" },
-      { label: "ETH Price", id: "crypto.eth_price" },
-      { label: "Crypto MC", id: "crypto.market_cap" },
-      { label: "BTC Dom", id: "crypto.btc_dominance" },
-      { label: "DeFi TVL", id: "crypto.defi_tvl" }
-    ]
+    labels: ["BTC Price", "ETH Price", "Crypto MC", "BTC Dom", "DeFi TVL"]
   },
   {
     title: "MACRO & VAL",
-    items: [
-      { label: "US CPI YoY", id: "macro.us_cpi" },
-      { label: "US Unemp", id: "macro.us_unemployment" },
-      { label: "US GDP", id: "macro.us_gdp" },
-      { label: "BuffettInd", id: "val.buffett_indicator" },
-      { label: "CAPE", id: "val.cape" }
-    ]
+    labels: ["US CPI YoY", "US Unemp", "US GDP", "BuffettInd", "CAPE"]
   }
 ];
 
@@ -206,42 +151,25 @@ function getMetricsEnvelope() {
   return window.__RV_METRICS_ENVELOPE || null;
 }
 
-function buildMetricsMap(envelope) {
-  const data = envelope?.data || {};
-  const metricsById = data.metricsById || {};
-  const map = {};
-  const groups = Array.isArray(data.groups) ? data.groups : [];
-  groups.forEach((group) => {
-    const ids = Array.isArray(group.metricIds) ? group.metricIds : [];
-    ids.forEach((id) => {
-      if (!(id in map)) map[id] = metricsById[id] || null;
-    });
-  });
-  HERO_METRIC_IDS.forEach((id) => {
-    if (!(id in map)) map[id] = metricsById[id] || null;
-  });
-  return map;
-}
-
 function buildHeroMetricsModel(envelope) {
-  const metricsById = buildMetricsMap(envelope);
+  const metricsById = envelope?.data?.metricsById || {};
   const missingIds = [];
   const groups = HERO_GROUPS.map((group) => {
-    const metrics = group.items.map((item) => {
-      const metric = metricsById[item.id] || null;
-      const label = item.label;
+    const metrics = group.labels.map((label) => {
+      const id = HERO_LABEL_TO_ID[label];
+      const metric = id ? metricsById[id] || null : null;
       const value = formatMetricValue(metric);
       const sub = metric?.source || metric?.provider || metric?.asOf || "N/A";
       const missing = !metric || value === "N/A";
-      if (missing) missingIds.push(item.id);
-      return { id: item.id, label, value, sub, missing, group: group.title };
+      if (missing) missingIds.push(id || label);
+      return { id: id || label, label, value, sub, missing, group: group.title };
     });
     return { title: group.title, metrics };
   });
   const metaMissingIds = Array.isArray(envelope?.meta?.missingMetricIds)
     ? envelope.meta.missingMetricIds
     : [];
-  const totalCount = groups.reduce((acc, group) => acc + group.metrics.length, 0);
+  const totalCount = 40;
   return {
     groups,
     flat: groups.flatMap((group) => group.metrics),
@@ -337,23 +265,25 @@ function renderHeroSectionsB(model) {
           const rows = group.metrics
             .map(
               (metric) => `
-          <div class="rv-gh-row" style="display:grid;grid-template-columns:1fr auto;column-gap:10px;align-items:center;">
-            <div class="rv-gh-label" title="${metric.label}" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${metric.label}</div>
-            <div class="rv-gh-value" title="${metric.value}" style="text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${metric.value}</div>
-          </div>`
+          <tr class="rv-gh-row">
+            <td class="rv-gh-label" title="${metric.label}" style="width:65%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:2px 8px 2px 0;">${metric.label}</td>
+            <td class="rv-gh-value" title="${metric.value}" style="width:35%;text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:2px 0;">${metric.value}</td>
+          </tr>`
             )
             .join("");
           return `
         <section class="rv-cockpit-section" style="max-width:100%;overflow:hidden;">
           <div class="rv-cockpit-section-title">${group.title}</div>
-          <div class="rv-gh-table" style="display:grid;row-gap:6px;max-width:100%;overflow:hidden;">
-            ${rows}
-          </div>
+          <table class="rv-gh-table rv-native-table rv-table--compact" style="width:100%;table-layout:fixed;border-collapse:collapse;max-width:100%;overflow:hidden;">
+            <tbody>
+              ${rows}
+            </tbody>
+          </table>
         </section>
       `;
         })
         .join("");
-      return `<div class="rv-cockpit-grid" style="gap:12px;margin:12px 0 16px;">${sections}</div>`;
+      return `<div class="rv-cockpit-grid" style="gap:8px;margin:8px 0 12px;">${sections}</div>`;
     })
     .join("");
   return rowsHtml;
@@ -399,24 +329,6 @@ function metricCard(label, value, sub = "") {
       <div class="label">${label}</div>
       <div class="value">${value}</div>
       ${sub ? `<div class="sub">${sub}</div>` : ""}
-    </div>
-  `;
-}
-
-function renderLayoutControls(active) {
-  const options = [
-    { id: "A", label: "Option A" },
-    { id: "B", label: "Option B" },
-    { id: "C", label: "Option C" }
-  ];
-  return `
-    <div class="rv-ms-controls" role="group" aria-label="Market Snapshot layout">
-      ${options
-        .map(
-          (opt) =>
-            `<button type="button" data-rv-ms-layout="${opt.id}" class="${opt.id === active ? "is-active" : ""}">${opt.label}</button>`
-        )
-        .join("")}
     </div>
   `;
 }
@@ -482,10 +394,6 @@ function render(root, payload, logger, featureId) {
   const regime = data.regime || {};
   setHeroTitle(root, { regime, vix: data.vix || {}, fngStocks: data.fngStocks || {} });
   const drivers = Array.isArray(regime.drivers) ? regime.drivers : [];
-  const partialNote =
-    resolved?.ok && (resolved?.isStale || data.partial || resolved?.error?.code)
-      ? "Partial data — some signals unavailable."
-      : "";
 
   if (!resolved?.ok) {
     const errorMessage = resolved?.error?.message || "API error";
@@ -540,9 +448,6 @@ function render(root, payload, logger, featureId) {
   const layout = "B";
   const metricsEnvelope = getMetricsEnvelope();
   const heroMetrics = buildHeroMetricsModel(metricsEnvelope);
-  const missingNote = heroMetrics.missingIds.length
-    ? `<div class="rv-native-note">Missing metrics: ${heroMetrics.missingIds.join(", ")}</div>`
-    : "";
   const auditEnabled = typeof window !== "undefined" && new URLSearchParams(window.location.search).get("heroAudit") === "1";
   const auditHtml = auditEnabled
     ? renderHeroAudit(heroMetrics, window.__RV_METRICS_FETCH_COUNT || 0)
@@ -561,7 +466,7 @@ function render(root, payload, logger, featureId) {
       });
   }
 
-  root.innerHTML = `
+    root.innerHTML = `
         ${
       layout === "B"
         ? renderLayoutB({ regime, drivers, vix, fng, fngStocks, news, btc, dxy, yields, proxies, heroMetrics })
@@ -576,6 +481,10 @@ function render(root, payload, logger, featureId) {
       } · Metrics: ${heroMetrics.missingIds.length ? `PARTIAL (${heroMetrics.totalCount - heroMetrics.missingIds.length}/${heroMetrics.totalCount})` : "OK"}
     </div>
   `;
+  if (layout === "B") {
+    root.style.border = "none";
+    root.style.boxShadow = "none";
+  }
   if (auditEnabled && layout === "B") {
     const holder = root.querySelector("[data-hero-audit-values]");
     if (holder) {
@@ -590,7 +499,7 @@ function render(root, payload, logger, featureId) {
     .forEach((node) => rvSetText(node, node.dataset.rvField, node.textContent));
 
   const status = resolved?.isStale || data.partial || heroMetrics.missingIds.length ? "PARTIAL" : "OK";
-  logger?.setStatus(status, resolved?.isStale ? "Stale data" : data.partial ? "Partial data" : "Live");
+  logger?.setStatus(status, resolved?.isStale ? "Stale data" : data.partial ? "Partial" : "Live");
   logger?.setMeta({
     updatedAt: data.updatedAt || resolved.ts,
     source: data.source || "multi",
