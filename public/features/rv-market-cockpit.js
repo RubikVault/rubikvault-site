@@ -6,97 +6,82 @@ import { rvSetText } from "./rv-dom.js";
 const LAYOUT_STORAGE_KEY = "rv-market-snapshot-layout";
 const DEFAULT_LAYOUT = "A";
 
-const HERO_METRIC_IDS = [
-  "risk.vix",
-  "risk.move",
-  "rates.us10y",
-  "risk.regime",
-  "rates.us2y",
-  "rates.us30y",
-  "rates.yield_curve",
-  "rates.sofr",
-  "rates.effr",
-  "credit.hy_oas",
-  "credit.baa",
-  "credit.stress_spread",
-  "fx.dxy",
-  "fx.eurusd",
-  "fx.usdjpy",
-  "fx.gbpusd",
-  "comm.gold",
-  "comm.wti",
-  "comm.brent",
-  "comm.copper",
-  "eq.sp500",
-  "eq.nasdaq",
-  "eq.dax",
-  "eq.nikkei",
-  "eq.russell2000",
-  "breadth.above_200dma",
-  "breadth.ad_ratio",
-  "breadth.high_low_52w",
-  "sectors.rotation",
-  "crypto.market_cap",
-  "crypto.btc_dominance",
-  "crypto.stablecoin_cap",
-  "crypto.defi_tvl",
-  "crypto.eth_gas",
-  "macro.us_cpi",
-  "macro.ea_cpi",
-  "macro.uk_cpi",
-  "macro.jp_cpi",
-  "macro.us_unemployment",
-  "macro.ea_unemployment",
-  "val.cape",
-  "val.buffett_indicator",
-  "val.erp"
-];
+const HERO_LABEL_TO_ID = {
+  "RiskRegime": "risk.regime",
+  "VIX Close": "risk.vix",
+  "VIX3M Close": "risk.vix3m",
+  "VIX/VIX3M": "risk.vix_ratio",
+  "Curve10-2": "rates.yield_curve",
+  "US2Y Yield": "rates.us2y",
+  "US10Y Yield": "rates.us10y",
+  "US30Y Yield": "rates.us30y",
+  "SOFR": "rates.sofr",
+  "EFFR": "rates.effr",
+  "HY OAS": "credit.hy_oas",
+  "IG OAS": "credit.ig_oas",
+  "BBB OAS": "credit.bbb_oas",
+  "BAA Yield": "credit.baa",
+  "StressSprd": "credit.stress_spread",
+  "USD Broad": "fx.dxy",
+  "EURUSD": "fx.eurusd",
+  "USDJPY": "fx.usdjpy",
+  "GBPUSD": "fx.gbpusd",
+  "USDCNY": "fx.usdcny",
+  "Gold USD": "comm.gold",
+  "WTI Oil": "comm.wti",
+  "Brent Oil": "comm.brent",
+  "Copper": "comm.copper",
+  "NatGas": "comm.natgas",
+  "SPX Close": "eq.sp500",
+  "NDX Close": "eq.nasdaq",
+  "DAX Close": "eq.dax",
+  "NikkeiCls": "eq.nikkei",
+  "R2K Close": "eq.russell2000",
+  "BTC Price": "crypto.btc_price",
+  "ETH Price": "crypto.eth_price",
+  "Crypto MC": "crypto.market_cap",
+  "BTC Dom": "crypto.btc_dominance",
+  "DeFi TVL": "crypto.defi_tvl",
+  "US CPI YoY": "macro.us_cpi",
+  "US Unemp": "macro.us_unemployment",
+  "US GDP": "macro.us_gdp",
+  "BuffettInd": "val.buffett_indicator",
+  "CAPE": "val.cape"
+};
 
 const HERO_GROUPS = [
-  { title: "Today’s Regime", ids: ["risk.regime", "risk.vix", "risk.move", "rates.us10y"] },
   {
-    title: "Rates & Credit",
-    ids: [
-      "rates.us2y",
-      "rates.us10y",
-      "rates.us30y",
-      "rates.yield_curve",
-      "rates.sofr",
-      "rates.effr",
-      "credit.hy_oas",
-      "credit.baa",
-      "credit.stress_spread"
-    ]
-  },
-  { title: "Major FX & Dollar", ids: ["fx.dxy", "fx.eurusd", "fx.usdjpy", "fx.gbpusd"] },
-  { title: "Commodities", ids: ["comm.gold", "comm.wti", "comm.brent", "comm.copper"] },
-  { title: "Market Closes", ids: ["eq.sp500", "eq.nasdaq", "eq.dax", "eq.nikkei", "eq.russell2000"] },
-  {
-    title: "Breadth / Internals",
-    ids: ["breadth.above_200dma", "breadth.ad_ratio", "breadth.high_low_52w", "sectors.rotation"]
+    title: "RISK & VOL",
+    labels: ["RiskRegime", "VIX Close", "VIX3M Close", "VIX/VIX3M", "Curve10-2"]
   },
   {
-    title: "Crypto",
-    ids: [
-      "crypto.market_cap",
-      "crypto.btc_dominance",
-      "crypto.stablecoin_cap",
-      "crypto.defi_tvl",
-      "crypto.eth_gas"
-    ]
+    title: "RATES",
+    labels: ["US2Y Yield", "US10Y Yield", "US30Y Yield", "SOFR", "EFFR"]
   },
   {
-    title: "Macro",
-    ids: [
-      "macro.us_cpi",
-      "macro.ea_cpi",
-      "macro.uk_cpi",
-      "macro.jp_cpi",
-      "macro.us_unemployment",
-      "macro.ea_unemployment"
-    ]
+    title: "CREDIT",
+    labels: ["HY OAS", "IG OAS", "BBB OAS", "BAA Yield", "StressSprd"]
   },
-  { title: "Valuation", ids: ["val.cape", "val.buffett_indicator", "val.erp"] }
+  {
+    title: "USD & FX",
+    labels: ["USD Broad", "EURUSD", "USDJPY", "GBPUSD", "USDCNY"]
+  },
+  {
+    title: "COMMOD",
+    labels: ["Gold USD", "WTI Oil", "Brent Oil", "Copper", "NatGas"]
+  },
+  {
+    title: "EQUITIES",
+    labels: ["SPX Close", "NDX Close", "DAX Close", "NikkeiCls", "R2K Close"]
+  },
+  {
+    title: "CRYPTO",
+    labels: ["BTC Price", "ETH Price", "Crypto MC", "BTC Dom", "DeFi TVL"]
+  },
+  {
+    title: "MACRO & VAL",
+    labels: ["US CPI YoY", "US Unemp", "US GDP", "BuffettInd", "CAPE"]
+  }
 ];
 
 let heroMetricsAwait = false;
@@ -166,46 +151,31 @@ function getMetricsEnvelope() {
   return window.__RV_METRICS_ENVELOPE || null;
 }
 
-function buildMetricsMap(envelope) {
-  const data = envelope?.data || {};
-  const metricsById = data.metricsById || {};
-  const map = {};
-  const groups = Array.isArray(data.groups) ? data.groups : [];
-  groups.forEach((group) => {
-    const ids = Array.isArray(group.metricIds) ? group.metricIds : [];
-    ids.forEach((id) => {
-      if (!(id in map)) map[id] = metricsById[id] || null;
-    });
-  });
-  HERO_METRIC_IDS.forEach((id) => {
-    if (!(id in map)) map[id] = metricsById[id] || null;
-  });
-  return map;
-}
-
 function buildHeroMetricsModel(envelope) {
-  const metricsById = buildMetricsMap(envelope);
+  const metricsById = envelope?.data?.metricsById || {};
   const missingIds = [];
   const groups = HERO_GROUPS.map((group) => {
-    const metrics = group.ids.map((id) => {
-      const metric = metricsById[id] || null;
-      const label = metric?.label || metric?.id || id;
+    const metrics = group.labels.map((label) => {
+      const id = HERO_LABEL_TO_ID[label];
+      const metric = id ? metricsById[id] || null : null;
       const value = formatMetricValue(metric);
       const sub = metric?.source || metric?.provider || metric?.asOf || "N/A";
       const missing = !metric || value === "N/A";
-      if (missing) missingIds.push(id);
-      return { id, label, value, sub, missing, group: group.title };
+      if (missing) missingIds.push(id || label);
+      return { id: id || label, label, value, sub, missing, group: group.title };
     });
     return { title: group.title, metrics };
   });
   const metaMissingIds = Array.isArray(envelope?.meta?.missingMetricIds)
     ? envelope.meta.missingMetricIds
     : [];
+  const totalCount = 40;
   return {
     groups,
     flat: groups.flatMap((group) => group.metrics),
     missingIds,
-    metaMissingIds
+    metaMissingIds,
+    totalCount
   };
 }
 
@@ -295,30 +265,32 @@ function renderHeroSectionsB(model) {
           const rows = group.metrics
             .map(
               (metric) => `
-          <div class="rv-gh-row" style="display:grid;grid-template-columns:1fr auto;column-gap:10px;align-items:center;">
-            <div class="rv-gh-label" title="${metric.label}" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${metric.label}</div>
-            <div class="rv-gh-value" title="${metric.value}" style="text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${metric.value}</div>
-          </div>`
+          <tr class="rv-gh-row">
+            <td class="rv-gh-label" title="${metric.label}" style="width:65%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:2px 8px 2px 0;">${metric.label}</td>
+            <td class="rv-gh-value" title="${metric.value}" style="width:35%;text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:2px 0;">${metric.value}</td>
+          </tr>`
             )
             .join("");
           return `
         <section class="rv-cockpit-section" style="max-width:100%;overflow:hidden;">
           <div class="rv-cockpit-section-title">${group.title}</div>
-          <div class="rv-gh-table" style="display:grid;row-gap:6px;max-width:100%;overflow:hidden;">
-            ${rows}
-          </div>
+          <table class="rv-gh-table rv-native-table rv-table--compact" style="width:100%;table-layout:fixed;border-collapse:collapse;max-width:100%;overflow:hidden;">
+            <tbody>
+              ${rows}
+            </tbody>
+          </table>
         </section>
       `;
         })
         .join("");
-      return `<div class="rv-cockpit-grid" style="gap:12px;margin:12px 0 16px;">${sections}</div>`;
+      return `<div class="rv-cockpit-grid" style="gap:8px;margin:8px 0 12px;">${sections}</div>`;
     })
     .join("");
   return rowsHtml;
 }
 
 
-function setHeroTitle(root) {
+function setHeroTitle(root, { regime, vix, fngStocks } = {}) {
   const block = root?.closest?.('[data-rv-feature="rv-market-cockpit"]');
   const title = block?.querySelector?.('.rv-native-header h2');
   if (!title) return;
@@ -326,6 +298,26 @@ function setHeroTitle(root) {
   if (textNode) {
     textNode.textContent = "Global Macro Hub ";
   }
+  const driversLabel = regime?.label || "Neutral";
+  const score = Number.isFinite(regime?.score) ? formatNumber(regime.score, { maximumFractionDigits: 0 }) : "N/A";
+  const vixState = vix?.note || (Number.isFinite(vix?.value) ? `VIX ${formatNumber(vix.value, { maximumFractionDigits: 2 })}` : "VIX N/A");
+  const stocksState = fngStocks?.label || (Number.isFinite(fngStocks?.value) ? `Stocks ${formatNumber(fngStocks.value)}` : "Stocks N/A");
+  let strip = title.querySelector('.rv-cockpit-status-strip');
+  if (!strip) {
+    strip = document.createElement('span');
+    strip.className = 'rv-cockpit-status-strip';
+    strip.style.fontSize = '12px';
+    strip.style.fontWeight = '400';
+    strip.style.color = 'var(--rv-text-muted)';
+    strip.style.marginLeft = '8px';
+    const tooltip = title.querySelector('.rv-tooltip-wrapper');
+    if (tooltip) {
+      title.insertBefore(strip, tooltip);
+    } else {
+      title.appendChild(strip);
+    }
+  }
+  strip.textContent = `Drivers: ${driversLabel} | Score: ${score} | VIX: ${vixState} | Stocks: ${stocksState}`;
 }
 
 
@@ -337,24 +329,6 @@ function metricCard(label, value, sub = "") {
       <div class="label">${label}</div>
       <div class="value">${value}</div>
       ${sub ? `<div class="sub">${sub}</div>` : ""}
-    </div>
-  `;
-}
-
-function renderLayoutControls(active) {
-  const options = [
-    { id: "A", label: "Option A" },
-    { id: "B", label: "Option B" },
-    { id: "C", label: "Option C" }
-  ];
-  return `
-    <div class="rv-ms-controls" role="group" aria-label="Market Snapshot layout">
-      ${options
-        .map(
-          (opt) =>
-            `<button type="button" data-rv-ms-layout="${opt.id}" class="${opt.id === active ? "is-active" : ""}">${opt.label}</button>`
-        )
-        .join("")}
     </div>
   `;
 }
@@ -418,12 +392,8 @@ function render(root, payload, logger, featureId) {
   });
   const data = resolved?.data || {};
   const regime = data.regime || {};
-  setHeroTitle(root);
+  setHeroTitle(root, { regime, vix: data.vix || {}, fngStocks: data.fngStocks || {} });
   const drivers = Array.isArray(regime.drivers) ? regime.drivers : [];
-  const partialNote =
-    resolved?.ok && (resolved?.isStale || data.partial || resolved?.error?.code)
-      ? "Partial data — some signals unavailable."
-      : "";
 
   if (!resolved?.ok) {
     const errorMessage = resolved?.error?.message || "API error";
@@ -475,12 +445,9 @@ function render(root, payload, logger, featureId) {
   const macroRates = Array.isArray(macro.rates) ? macro.rates : [];
   const macroFx = Array.isArray(macro.fx) ? macro.fx : [];
   const macroCpi = Array.isArray(macro.cpi) ? macro.cpi : [];
-  const layout = getLayout();
+  const layout = "B";
   const metricsEnvelope = getMetricsEnvelope();
   const heroMetrics = buildHeroMetricsModel(metricsEnvelope);
-  const missingNote = heroMetrics.missingIds.length
-    ? `<div class="rv-native-note">Missing metrics: ${heroMetrics.missingIds.join(", ")}</div>`
-    : "";
   const auditEnabled = typeof window !== "undefined" && new URLSearchParams(window.location.search).get("heroAudit") === "1";
   const auditHtml = auditEnabled
     ? renderHeroAudit(heroMetrics, window.__RV_METRICS_FETCH_COUNT || 0)
@@ -499,25 +466,25 @@ function render(root, payload, logger, featureId) {
       });
   }
 
-  root.innerHTML = `
-    ${partialNote ? `<div class="rv-native-note">${partialNote}</div>` : ""}
-    ${missingNote}
-    ${renderLayoutControls(layout)}
-    ${
+    root.innerHTML = `
+        ${
       layout === "B"
         ? renderLayoutB({ regime, drivers, vix, fng, fngStocks, news, btc, dxy, yields, proxies, heroMetrics })
         : layout === "C"
           ? renderLayoutC({ regime, drivers, vix, fng, fngStocks, btc, dxy, yields, heroMetrics })
           : renderLayoutA({ regime, drivers, vix, fng, fngStocks, btc, dxy, yields, heroMetrics })
     }
-    <div class="rv-native-note">Sector rotation details are in the S&amp;P 500 Sectors block below.</div>
-    ${auditHtml}
+        ${auditHtml}
     <div class="rv-native-note">
       Updated: ${new Date(data.updatedAt || resolved.ts).toLocaleTimeString()} · Freshness: ${
         resolved?.freshness || "unknown"
-      } · Metrics: ${heroMetrics.missingIds.length ? `PARTIAL (${43 - heroMetrics.missingIds.length}/43)` : "OK"}
+      } · Metrics: ${heroMetrics.missingIds.length ? `PARTIAL (${heroMetrics.totalCount - heroMetrics.missingIds.length}/${heroMetrics.totalCount})` : "OK"}
     </div>
   `;
+  if (layout === "B") {
+    root.style.border = "none";
+    root.style.boxShadow = "none";
+  }
   if (auditEnabled && layout === "B") {
     const holder = root.querySelector("[data-hero-audit-values]");
     if (holder) {
@@ -532,7 +499,7 @@ function render(root, payload, logger, featureId) {
     .forEach((node) => rvSetText(node, node.dataset.rvField, node.textContent));
 
   const status = resolved?.isStale || data.partial || heroMetrics.missingIds.length ? "PARTIAL" : "OK";
-  logger?.setStatus(status, resolved?.isStale ? "Stale data" : data.partial ? "Partial data" : "Live");
+  logger?.setStatus(status, resolved?.isStale ? "Stale data" : data.partial ? "Partial" : "Live");
   logger?.setMeta({
     updatedAt: data.updatedAt || resolved.ts,
     source: data.source || "multi",
