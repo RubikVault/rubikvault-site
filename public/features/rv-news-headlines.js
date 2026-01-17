@@ -113,7 +113,8 @@ function render(root, payload, logger, featureId) {
     reason: "STALE_FALLBACK"
   });
   const data = resolved?.data || {};
-  const items = normalizeItems(data.items || []);
+  const rawItems = Array.isArray(data.items) ? data.items : [];
+  const items = normalizeItems(rawItems);
   const partialNote =
     resolved?.ok && (resolved?.isStale || resolved?.error?.code)
       ? "Partial data — some sources unavailable."
@@ -164,10 +165,13 @@ function render(root, payload, logger, featureId) {
   }
 
   if (!items.length) {
+    const reason = !Array.isArray(data.items)
+      ? "Snapshot missing: data.items not found."
+      : rawItems.length === 0
+        ? "Snapshot missing: data.items is empty."
+        : "Snapshot missing: no English headlines in data.items.";
     root.innerHTML = `
-      <div class="rv-native-empty">
-        No English headlines available yet.
-      </div>
+      <div class="rv-native-empty">${reason}</div>
     `;
     logger?.setStatus("PARTIAL", "No data");
     logger?.setMeta({

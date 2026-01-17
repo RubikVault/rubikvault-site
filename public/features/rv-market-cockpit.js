@@ -182,12 +182,21 @@ function formatMetricValue(metric) {
   if (!metric) return "N/A";
   const display = metric.display ?? metric.valueFormatted;
   if (display !== null && display !== undefined && display !== "") {
-    return String(display);
+    if (typeof display === "string" || typeof display === "number") {
+      return String(display);
+    }
+    if (typeof display === "boolean") return display ? "Yes" : "No";
+    return "N/A";
   }
   if (metric.valueType === "label" || metric.valueType === "dataset") {
-    return metric.value || "N/A";
+    if (metric.value === null || metric.value === undefined) return "N/A";
+    if (typeof metric.value === "string" || typeof metric.value === "number") {
+      return metric.value || "N/A";
+    }
+    return "N/A";
   }
   if (metric.value === null || metric.value === undefined || metric.value === "") return "N/A";
+  if (typeof metric.value === "object") return "N/A";
   if (metric.value !== null && metric.value !== undefined && metric.value !== "") {
     if (typeof metric.value === "string" && Number.isNaN(Number(metric.value))) {
       return metric.value;
@@ -241,7 +250,7 @@ function findDeltaPercent(metric) {
 function formatDeltaPercent(metric) {
   const delta = findDeltaPercent(metric);
   if (!Number.isFinite(delta)) {
-    return { text: "—", color: "var(--rv-text-muted, #64748b)" };
+    return { text: "N/A", color: "var(--rv-text-muted, #64748b)" };
   }
   const rounded = Math.round(delta * 10) / 10;
   const sign = rounded >= 0 ? "+" : "";
@@ -400,9 +409,9 @@ function renderHeroSectionsB(model) {
         .map((group) => {
           const rows = group.metrics.map((metric) => renderMetricRow(metric)).join("");
           return `
-        <section class="rv-cockpit-section" style="max-width:100%;overflow:hidden;">
+        <section class="rv-cockpit-section" style="max-width:100%;overflow:visible;">
           <div class="rv-cockpit-section-title">${group.title}</div>
-          <div class="rv-gh-table" style="display:grid;row-gap:6px;max-width:100%;overflow:hidden;">
+          <div class="rv-gh-table" style="display:grid;row-gap:6px;max-width:100%;overflow:visible;">
             ${rows}
           </div>
         </section>
@@ -695,6 +704,7 @@ function render(root, payload, logger, featureId) {
       body.style.border = "none";
       body.style.boxShadow = "none";
       body.style.background = "transparent";
+      body.style.padding = "0";
       body.classList.remove("rv-card");
     }
     root.style.border = "none";

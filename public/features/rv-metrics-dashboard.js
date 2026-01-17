@@ -705,7 +705,7 @@ function renderDashboard(root, envelope, ui, layouts) {
 
   const layoutKey = uiLayout.groupsRender || "default";
   root.innerHTML = `
-    <div class="rv-metrics-dashboard ui-${ui} layout-${layoutKey}">
+    <div class="rv-metrics-board ui-${ui} layout-${layoutKey}">
       ${switcher}
       ${sections.map((section) => sectionMap[section] || "").join("")}
       ${renderDebugOverlay(envelope, ui)}

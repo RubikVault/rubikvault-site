@@ -90,45 +90,14 @@
     <a href="#cockpit">Overview</a>
     <a href="#news">News</a>
     <a href="#stocks">Stocks</a>
+    <a href="#tech-signals">Tech Signals</a>
+    <a href="#rvci-engine">RVCI Engine</a>
     <a href="#alpha-radar">Alpha Radar</a>
     <a href="#moats">Moats</a>
-    <a href="#watchlist">My Watchlist</a>
   </nav>
 
   <!-- MAIN -->
   <main class="rv-main" id="rv-dashboard">
-    <section class="rv-hero" id="rv-overview">
-      <a id="cockpit" style="position: absolute; top: -110px;"></a>
-      <div class="rv-hero-content">
-        <h1>Decode the Markets.</h1>
-        <p>
-          RubikVault is a one-person research project focusing on stocks, crypto, macro
-          and commodities – calm, data-driven and educational only. Daily snapshots provide transparent indicators. No financial advice.
-        </p>
-        <div class="rv-hero-actions">
-          <a class="rv-btn-primary" href="https://www.youtube.com/@RubikVault" target="_blank" rel="noopener noreferrer">
-            Watch on YouTube
-          </a>
-          <a class="rv-btn-secondary" href="https://x.com/RubikVault" target="_blank" rel="noopener noreferrer">
-            Follow on X
-          </a>
-        </div>
-      </div>
-
-      <div class="rv-hero-side">
-        <div class="rv-tag">Early Stage</div>
-        <div class="rv-card">
-          <h2>Market snapshot</h2>
-          <p>
-            A compact overview across equities, crypto, macro and commodities on a single page. Daily snapshots provide transparent indicators. No financial advice.
-          </p>
-          <p class="rv-card-note">
-            All data is from daily snapshots (EOD for stocks/macro, 2×/day for crypto). No live aggregation per visitor.
-          </p>
-        </div>
-      </div>
-    </section>
-
     <section
       class="rv-section rv-native-block rv-cockpit-hero"
       data-rv-feature="rv-market-cockpit"
@@ -137,31 +106,9 @@
       data-rv-loading="true"
       data-rv-collapsible="false"
     >
+      <a id="cockpit" style="position: absolute; top: -110px;"></a>
       <div class="rv-native-header">
         <h2>Market Snapshot <span class="rv-tooltip-wrapper"><span class="rv-tooltip-icon" aria-label="Information">ⓘ</span><span class="rv-tooltip-content"><strong>Market Snapshot</strong><br>Purpose: Quick market overview across equities, crypto, macro<br>Update: 15m<br>Limitations: EOD snapshots, no intraday</span></span></h2>
-        <button class="rv-native-refresh" type="button" data-rv-action="refresh">Refresh</button>
-      </div>
-      <div class="rv-native-body rv-card">
-        <div class="rv-native-skeleton">
-          <div class="rv-native-line"></div>
-          <div class="rv-native-line short"></div>
-          <div class="rv-native-line"></div>
-        </div>
-        <div class="rv-native-root" data-rv-root></div>
-      </div>
-    </section>
-
-    <section
-      class="rv-section rv-native-block rv-metrics-dashboard"
-      data-rv-feature="rv-metrics-dashboard"
-      data-rv-block-name="Metrics Dashboard (V5)"
-      data-rv-priority="high"
-      data-rv-loading="true"
-      data-rv-collapsible="false"
-      data-rv-span="wide"
-    >
-      <div class="rv-native-header">
-        <h2>Metrics Dashboard (V5) <span class="rv-tooltip-wrapper"><span class="rv-tooltip-icon" aria-label="Information">ⓘ</span><span class="rv-tooltip-content"><strong>Metrics Dashboard</strong><br>Purpose: Multi-layout preview (A-H) using a single SSOT fetch.<br>Update: 60–300s cache<br>Limitations: Snapshot-based, partial metrics allowed.</span></span></h2>
         <button class="rv-native-refresh" type="button" data-rv-action="refresh">Refresh</button>
       </div>
       <div class="rv-native-body rv-card">
@@ -235,6 +182,7 @@
       data-rv-collapsible="true"
       data-rv-span="wide"
     >
+      <a id="tech-signals" style="position: absolute; top: -110px;"></a>
       <div class="rv-native-header">
         <h2>Top 20 Marketcap US <span class="rv-tooltip-wrapper"><span class="rv-tooltip-icon" aria-label="Information">ⓘ</span><span class="rv-tooltip-content"><strong>Top 20 Marketcap US</strong><br>Purpose: Technical indicators (RSI, MACD, Stoch RSI) for the largest US stocks by market cap.<br>Data source: Snapshot (stooq OHLC data)<br>Update: Daily (EOD)<br>Limitations: No intraday data, no financial advice.</span></span></h2>
         <button class="rv-native-refresh" type="button" data-rv-action="refresh">Refresh</button>
@@ -259,6 +207,7 @@
       data-rv-collapsible="true"
       data-rv-span="wide"
     >
+      <a id="rvci-engine" style="position: absolute; top: -110px;"></a>
       <div class="rv-native-header">
         <h2>RVCI Engine <span class="rv-tooltip-wrapper"><span class="rv-tooltip-icon" aria-label="Information">ⓘ</span><span class="rv-tooltip-content"><strong>RVCI Engine</strong><br>Purpose: Regime + breadth snapshot from the RVCI pipeline.<br>Data source: Static snapshot (EOD)<br>Update: Daily (EOD)<br>Limitations: Coverage may be degraded on free tier.</span></span></h2>
         <button class="rv-native-refresh" type="button" data-rv-action="refresh">Refresh</button>
@@ -408,41 +357,6 @@
       </div>
     </section>
     
-    <!-- Watchlist v1 -->
-    <section
-      class="rv-section rv-native-block"
-      data-rv-block-name="My Watchlist"
-    >
-      <a id="watchlist" style="position: absolute; top: -110px;"></a>
-      <div class="rv-native-header">
-        <h2>My Watchlist</h2>
-        <span class="rv-tooltip-wrapper">
-          <span class="rv-tooltip-icon" aria-label="Information">ⓘ</span>
-          <span class="rv-tooltip-content">
-            <strong>Watchlist v1</strong><br>
-            Add stocks to your personal watchlist. Data is stored locally in your browser (localStorage). Export/Import JSON to transfer between devices. No login required. Data source: Tech Signals snapshot. Update: Daily (EOD).
-          </span>
-        </span>
-      </div>
-      <div class="rv-native-body rv-card">
-        <div class="rv-watchlist-content">
-          <div class="rv-watchlist-controls">
-            <input
-              type="text"
-              id="rv-watchlist-input"
-              placeholder="Enter symbol (e.g., AAPL)"
-              class="rv-watchlist-input"
-            />
-            <button type="button" id="rv-watchlist-add" class="rv-btn-primary">Add</button>
-            <button type="button" id="rv-watchlist-export" class="rv-btn-secondary">Export JSON</button>
-            <button type="button" id="rv-watchlist-import" class="rv-btn-secondary">Import JSON</button>
-            <input type="file" id="rv-watchlist-file" accept=".json" style="display: none;" />
-          </div>
-          <div id="rv-watchlist-status" class="rv-native-note" style="display:none;"></div>
-          <div id="rv-watchlist-list" class="rv-watchlist-list"></div>
-        </div>
-      </div>
-    </section>
   </main>
 
   <!-- FOOTER (ohne Bild, nur Text + Links) -->
@@ -470,178 +384,5 @@
   </footer>
   <script type="module" src="./market-clock.js"></script>
   <script type="module" src="./rv-loader.js"></script>
-  <script>
-    // Watchlist v1 Functionality
-    (function() {
-      const STORAGE_KEY = "rv_watchlist_local";
-      const inputEl = document.getElementById("rv-watchlist-input");
-      const addBtn = document.getElementById("rv-watchlist-add");
-      const exportBtn = document.getElementById("rv-watchlist-export");
-      const importBtn = document.getElementById("rv-watchlist-import");
-      const fileInput = document.getElementById("rv-watchlist-file");
-      const listEl = document.getElementById("rv-watchlist-list");
-      const statusEl = document.getElementById("rv-watchlist-status");
-      const MAX_SYMBOLS = 20;
-      const SYMBOL_RE = /^[A-Z0-9.:-]{1,8}$/;
-
-      function setStatus(message) {
-        if (!statusEl) return;
-        if (!message) {
-          statusEl.textContent = "";
-          statusEl.style.display = "none";
-          return;
-        }
-        statusEl.textContent = message;
-        statusEl.style.display = "block";
-      }
-
-      function normalizeSymbol(value) {
-        return String(value || "").trim().toUpperCase().replace(/\s+/g, "").slice(0, 8);
-      }
-
-      function normalizeList(input) {
-        const list = Array.isArray(input) ? input : [];
-        const cleaned = list
-          .map((s) => normalizeSymbol(s))
-          .filter((s) => SYMBOL_RE.test(s));
-        const deduped = Array.from(new Set(cleaned));
-        deduped.sort((a, b) => a.localeCompare(b));
-        return deduped.slice(0, MAX_SYMBOLS);
-      }
-      
-      function loadWatchlist() {
-        try {
-          const raw = localStorage.getItem(STORAGE_KEY);
-          return normalizeList(raw ? JSON.parse(raw) : []);
-        } catch (e) {
-          return [];
-        }
-      }
-      
-      function saveWatchlist(symbols) {
-        try {
-          const normalized = normalizeList(symbols);
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(normalized));
-          if (window.RV_SHARED) {
-            window.RV_SHARED.watchlist = normalized;
-          }
-        } catch (e) {
-          console.error("Failed to save watchlist:", e);
-        }
-      }
-      
-      function renderWatchlist() {
-        const symbols = loadWatchlist();
-        if (!symbols.length) {
-          listEl.innerHTML = '<div class="rv-native-empty">No symbols in watchlist. Add symbols above.</div>';
-          setStatus('Tip: max 20 symbols. Format: AAPL, BRK.B, BTC-USD');
-          return;
-        }
-        setStatus(`Saved locally: ${symbols.length}/${MAX_SYMBOLS}`);
-        listEl.innerHTML = symbols.map(symbol => `
-          <div class="rv-watchlist-item">
-            <span>${symbol.toUpperCase()}</span>
-            <button type="button" class="rv-watchlist-remove" data-symbol="${symbol}">Remove</button>
-          </div>
-        `).join("");
-        
-        // Attach remove handlers
-        listEl.querySelectorAll(".rv-watchlist-remove").forEach(btn => {
-          btn.addEventListener("click", () => {
-            const symbol = btn.getAttribute("data-symbol");
-            const symbols = loadWatchlist().filter(s => s.toUpperCase() !== symbol.toUpperCase());
-            saveWatchlist(symbols);
-            renderWatchlist();
-          });
-        });
-      }
-      
-      if (addBtn && inputEl) {
-        addBtn.addEventListener("click", () => {
-          const symbol = normalizeSymbol(inputEl.value);
-          if (!symbol) return;
-          if (!SYMBOL_RE.test(symbol)) {
-            setStatus('Invalid symbol. Allowed: A-Z 0-9 . : - (max 8 chars)');
-            return;
-          }
-          const symbols = loadWatchlist();
-          if (symbols.includes(symbol)) {
-            setStatus(`Already in watchlist: ${symbol}`);
-            inputEl.value = "";
-            return;
-          }
-          if (symbols.length >= MAX_SYMBOLS) {
-            setStatus(`Watchlist limit reached (max ${MAX_SYMBOLS}). Remove one first.`);
-            return;
-          }
-          symbols.push(symbol);
-          saveWatchlist(symbols);
-          inputEl.value = "";
-          renderWatchlist();
-        });
-        
-        inputEl.addEventListener("keypress", (e) => {
-          if (e.key === "Enter") {
-            addBtn.click();
-          }
-        });
-      }
-      
-      if (exportBtn) {
-        exportBtn.addEventListener("click", () => {
-          const symbols = loadWatchlist();
-          const dataStr = JSON.stringify(symbols, null, 2);
-          const blob = new Blob([dataStr], { type: "application/json" });
-          const url = URL.createObjectURL(blob);
-          const a = document.createElement("a");
-          a.href = url;
-          const day = new Date().toISOString().slice(0, 10);
-          a.download = `rubikvault-watchlist-${day}.json`;
-          a.click();
-          URL.revokeObjectURL(url);
-          setStatus(`Exported ${symbols.length} symbols.`);
-        });
-      }
-      
-      if (importBtn && fileInput) {
-        importBtn.addEventListener("click", () => {
-          fileInput.click();
-        });
-        
-        fileInput.addEventListener("change", (e) => {
-          const file = e.target.files[0];
-          if (!file) return;
-          if (!/\.json$/i.test(file.name)) {
-            setStatus('Please select a .json file.');
-            fileInput.value = "";
-            return;
-          }
-          const reader = new FileReader();
-          reader.onload = (event) => {
-            try {
-              const parsed = JSON.parse(event.target.result);
-              const symbols = normalizeList(parsed);
-              if (!symbols.length) {
-                setStatus('Import failed: no valid symbols found.');
-                return;
-              }
-              saveWatchlist(symbols);
-              renderWatchlist();
-              setStatus(`Imported ${symbols.length} symbols.`);
-            } catch (e) {
-              setStatus("Failed to parse JSON: " + e.message);
-            }
-          };
-          reader.readAsText(file);
-          fileInput.value = "";
-        });
-      }
-      
-      // Initial render
-      if (listEl) {
-        renderWatchlist();
-      }
-    })();
-  </script>
   </body>
 </html>
