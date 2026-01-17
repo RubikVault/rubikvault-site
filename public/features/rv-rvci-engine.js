@@ -1,6 +1,8 @@
 import { fetchJSON, getBindingHint } from "./utils/api.js";
 import { getOrFetch } from "./utils/store.js";
 
+const rvciSortState = new Map();
+
 function escapeHtml(value) {
   return String(value ?? "")
     .replace(/&/g, "&amp;")
@@ -8,6 +10,63 @@ function escapeHtml(value) {
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#039;");
+}
+
+function setRvciHeader(root, meta) {
+  const block = root?.closest?.('[data-rv-feature="rv-rvci-engine"]');
+  const title = block?.querySelector?.(".rv-native-header h2");
+  if (!title) return;
+  const textNode = Array.from(title.childNodes || []).find((node) => node.nodeType === Node.TEXT_NODE);
+  const status = meta.status || "OK";
+  const regime = meta.regime || "—";
+  const coverage =
+    typeof meta.coveragePct === "number"
+      ? `${meta.coveragePct.toFixed(1)}%`
+      : meta.coveragePct
+        ? `${meta.coveragePct}%`
+        : "—";
+  const headerText = `RVCI Engine | Status: ${status} | Composite: Daily | Regime: ${regime} | Coverage: ${coverage} `;
+  if (textNode) {
+    textNode.textContent = headerText;
+  } else {
+    title.prepend(document.createTextNode(headerText));
+  }
+}
+
+function toSortable(value) {
+  const raw = String(value ?? "").trim();
+  const cleaned = raw.replace(/[%,$]/g, "");
+  const numeric = Number(cleaned);
+  if (!Number.isNaN(numeric) && cleaned !== "") return { type: "number", value: numeric };
+  return { type: "string", value: raw.toLowerCase() };
+}
+
+function bindSortableTable(table) {
+  const tbody = table.querySelector("tbody");
+  if (!tbody) return;
+  const headers = table.querySelectorAll("th");
+  if (!headers.length) return;
+  table.addEventListener("click", (event) => {
+    const th = event.target.closest("th");
+    if (!th || !table.contains(th)) return;
+    const index = Array.from(th.parentNode.children).indexOf(th);
+    if (index < 0) return;
+    const key = table.getAttribute("data-rv-sortable") || "default";
+    const current = rvciSortState.get(key) || { index: -1, dir: "asc" };
+    const dir = current.index === index && current.dir === "asc" ? "desc" : "asc";
+    rvciSortState.set(key, { index, dir });
+    const rows = Array.from(tbody.querySelectorAll("tr"));
+    rows.sort((a, b) => {
+      const av = toSortable(a.children[index]?.textContent || "");
+      const bv = toSortable(b.children[index]?.textContent || "");
+      if (av.type === "number" && bv.type === "number") {
+        return dir === "asc" ? av.value - bv.value : bv.value - av.value;
+      }
+      if (av.value === bv.value) return 0;
+      return dir === "asc" ? av.value.localeCompare(bv.value) : bv.value.localeCompare(av.value);
+    });
+    rows.forEach((row) => tbody.appendChild(row));
+  });
 }
 
 function render(root, payload, logger, featureId) {
@@ -49,13 +108,12 @@ function render(root, payload, logger, featureId) {
 
   root.innerHTML = `
     <div class="rv-native-table-wrap">
-      <table class="rv-native-table">
+      <table class="rv-native-table" data-rv-sortable="rvci-meta">
+        <thead>
+          <tr><th>Field</th><th>Value</th></tr>
+        </thead>
         <tbody>
-          <tr><th>Status</th><td>${escapeHtml(meta.status || "OK")}</td></tr>
-          <tr><th>Regime</th><td>${escapeHtml(meta.regime || "—")}</td></tr>
-          <tr><th>Coverage</th><td>${meta.coveragePct ?? "—"}%</td></tr>
           <tr><th>Data As Of</th><td>${escapeHtml(meta.dataAsOf || "—")}</td></tr>
-          <tr><th>Generated</th><td>${escapeHtml(meta.generatedAt || "—")}</td></tr>
           <tr><th>Counts (short/mid/long/trigger)</th><td>${escapeHtml(
             `${counts.short ?? "—"} / ${counts.mid ?? "—"} / ${counts.long ?? "—"} / ${counts.triggers ?? "—"}`
           )}</td></tr>
@@ -67,7 +125,7 @@ function render(root, payload, logger, featureId) {
         ? `
         <div class="rv-native-table-wrap">
           <h4>Data paths</h4>
-          <table class="rv-native-table">
+          <table class="rv-native-table" data-rv-sortable="rvci-paths">
             <thead>
               <tr><th>Key</th><th>Path</th></tr>
             </thead>
@@ -78,6 +136,8 @@ function render(root, payload, logger, featureId) {
         : ""
     }
   `;
+  setRvciHeader(root, meta);
+  root.querySelectorAll("table[data-rv-sortable]").forEach((table) => bindSortableTable(table));
 
   logger?.setStatus(meta.status === "DEGRADED_COVERAGE" ? "PARTIAL" : "OK", meta.status || "OK");
   logger?.setMeta({

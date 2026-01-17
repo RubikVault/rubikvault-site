@@ -213,7 +213,6 @@ function renderTop20(root, logger) {
       ? `${availableCount}/${totalCount} verfügbar`
       : "";
   root.innerHTML = `
-    <div class="rv-native-note">How computed? RSI/MACD/Stoch RSI are derived from OHLC (stooq) per timeframe.</div>
     <div class="rv-top30-controls">
       <button type="button" class="rv-top30-tab${top20State.timeframe === "daily" ? " is-active" : ""}" data-rv-timeframe="daily">Daily</button>
       <button type="button" class="rv-top30-tab${top20State.timeframe === "weekly" ? " is-active" : ""}" data-rv-timeframe="weekly">Weekly</button>
@@ -222,7 +221,6 @@ function renderTop20(root, logger) {
     <div data-rv-top30-table>
       ${tableHtml}
     </div>
-    <div class="rv-native-note">Universe: fixed Top 20 US market cap snapshot (EOD).</div>
     ${availabilityNote ? `<div class="rv-native-note">${availabilityNote}</div>` : ""}
   `;
 
@@ -240,10 +238,7 @@ function render(root, topPayload, logger) {
 
   root.innerHTML = `
     ${partialNote ? `<div class=\"rv-native-note\">${partialNote}</div>` : ""}
-    <div class="rv-tech-section">
-      <h3>Top 20 Marketcap US</h3>
-      <div data-rv-top30-root></div>
-    </div>
+    <div data-rv-top30-root></div>
   `;
 
   const topRoot = root.querySelector("[data-rv-top30-root]");

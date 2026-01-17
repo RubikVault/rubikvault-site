@@ -485,7 +485,6 @@ const DASHBOARD_STATE = {
 const refreshState = new Map();
 const STATUS_LABELS = {
   "rv-market-cockpit": "Cockpit",
-  "rv-metrics-dashboard": "Metrics",
   "rv-market-health": "MarketHealth",
   "rv-price-snapshot": "Snapshot",
   "rv-top-movers": "Volume",
@@ -515,7 +514,6 @@ const STATUS_LABELS = {
 };
 const STATUS_ORDER = [
   "rv-market-cockpit",
-  "rv-metrics-dashboard",
   "rv-market-health",
   "rv-earnings-calendar",
   "rv-news-headlines",
@@ -542,7 +540,6 @@ const STATUS_ORDER = [
 ];
 const PUBLIC_FEATURE_ALLOWLIST = new Set([
   "rv-market-cockpit",
-  "rv-metrics-dashboard",
   "rv-news-headlines",
   "rv-tech-signals",
   "rv-alpha-radar",
@@ -582,7 +579,6 @@ let MANIFEST_CACHE = null;
 const SNAPSHOT_ONLY = true;
 const SNAPSHOT_ONLY_API_FEATURES = new Set([
   "rv-market-cockpit",
-  "rv-metrics-dashboard",
   "rv-sp500-sectors",
   "rv-news-headlines"
 ]);
@@ -2439,11 +2435,8 @@ function renderAlphaRadarSnapshot(contentEl, snapshot) {
           <span class="rv-alpha-summary-value">${allPicks.length}</span>
         </div>
       </div>
-      <button type="button" class="rv-alpha-details-btn" data-rv-alpha-toggle="details">
-        Show Details
-      </button>
     </div>
-    <div class="rv-alpha-details" data-rv-alpha-details style="display: none;">
+    <div class="rv-alpha-details" data-rv-alpha-details style="display: block;">
       ${partialNote ? `<div class="rv-native-note">${partialNote}</div>` : ""}
       ${renderSection("Short-term", shortPicks, "No short-term picks")}
       ${renderSection("Medium-term", mediumPicks, "No medium-term picks")}
@@ -2452,17 +2445,6 @@ function renderAlphaRadarSnapshot(contentEl, snapshot) {
   `;
 
   contentEl.innerHTML = summaryCardHTML;
-  
-  // Toggle Details Button
-  const detailsBtn = contentEl.querySelector("[data-rv-alpha-toggle]");
-  const detailsSection = contentEl.querySelector("[data-rv-alpha-details]");
-  if (detailsBtn && detailsSection) {
-    detailsBtn.addEventListener("click", () => {
-      const isHidden = detailsSection.style.display === "none";
-      detailsSection.style.display = isHidden ? "block" : "none";
-      detailsBtn.textContent = isHidden ? "Hide Details" : "Show Details";
-    });
-  }
 
   renderDebugMeta(contentEl, meta);
 }
