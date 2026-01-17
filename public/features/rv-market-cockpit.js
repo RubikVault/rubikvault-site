@@ -7,96 +7,136 @@ const LAYOUT_STORAGE_KEY = "rv-market-snapshot-layout";
 const DEFAULT_LAYOUT = "A";
 
 const HERO_METRIC_IDS = [
-  "risk.vix",
-  "risk.move",
-  "rates.us10y",
   "risk.regime",
+  "risk.vix",
+  "risk.vix3m",
+  "risk.vix_ratio",
+  "risk.move",
   "rates.us2y",
+  "rates.us10y",
   "rates.us30y",
   "rates.yield_curve",
   "rates.sofr",
   "rates.effr",
   "credit.hy_oas",
+  "credit.ig_oas",
+  "credit.bbb_oas",
   "credit.baa",
   "credit.stress_spread",
   "fx.dxy",
   "fx.eurusd",
   "fx.usdjpy",
   "fx.gbpusd",
-  "comm.gold",
+  "fx.usdcny",
   "comm.wti",
+  "comm.gold",
   "comm.brent",
   "comm.copper",
+  "comm.natgas",
   "eq.sp500",
   "eq.nasdaq",
   "eq.dax",
   "eq.nikkei",
   "eq.russell2000",
-  "breadth.above_200dma",
-  "breadth.ad_ratio",
-  "breadth.high_low_52w",
-  "sectors.rotation",
   "crypto.market_cap",
   "crypto.btc_dominance",
   "crypto.stablecoin_cap",
   "crypto.defi_tvl",
   "crypto.eth_gas",
+  "crypto.btc_price",
+  "crypto.eth_price",
   "macro.us_cpi",
   "macro.ea_cpi",
   "macro.uk_cpi",
   "macro.jp_cpi",
   "macro.us_unemployment",
   "macro.ea_unemployment",
+  "macro.us_gdp",
   "val.cape",
-  "val.buffett_indicator",
-  "val.erp"
+  "val.buffett_indicator"
 ];
 
 const HERO_GROUPS = [
-  { title: "Today’s Regime", ids: ["risk.regime", "risk.vix", "risk.move", "rates.us10y"] },
   {
-    title: "Rates & Credit",
-    ids: [
-      "rates.us2y",
-      "rates.us10y",
-      "rates.us30y",
-      "rates.yield_curve",
-      "rates.sofr",
-      "rates.effr",
-      "credit.hy_oas",
-      "credit.baa",
-      "credit.stress_spread"
-    ]
-  },
-  { title: "Major FX & Dollar", ids: ["fx.dxy", "fx.eurusd", "fx.usdjpy", "fx.gbpusd"] },
-  { title: "Commodities", ids: ["comm.gold", "comm.wti", "comm.brent", "comm.copper"] },
-  { title: "Market Closes", ids: ["eq.sp500", "eq.nasdaq", "eq.dax", "eq.nikkei", "eq.russell2000"] },
-  {
-    title: "Breadth / Internals",
-    ids: ["breadth.above_200dma", "breadth.ad_ratio", "breadth.high_low_52w", "sectors.rotation"]
-  },
-  {
-    title: "Crypto",
-    ids: [
-      "crypto.market_cap",
-      "crypto.btc_dominance",
-      "crypto.stablecoin_cap",
-      "crypto.defi_tvl",
-      "crypto.eth_gas"
+    title: "RISK & VOL",
+    items: [
+      { label: "RiskRegime", id: "risk.regime" },
+      { label: "VIX Close", id: "risk.vix" },
+      { label: "VIX3M Close", id: "risk.vix3m" },
+      { label: "VIX/VIX3M", id: "risk.vix_ratio" },
+      { label: "Curve10-2", id: "rates.yield_curve" }
     ]
   },
   {
-    title: "Macro",
-    ids: [
-      "macro.us_cpi",
-      "macro.ea_cpi",
-      "macro.uk_cpi",
-      "macro.jp_cpi",
-      "macro.us_unemployment",
-      "macro.ea_unemployment"
+    title: "RATES",
+    items: [
+      { label: "US2Y Yield", id: "rates.us2y" },
+      { label: "US10Y Yield", id: "rates.us10y" },
+      { label: "US30Y Yield", id: "rates.us30y" },
+      { label: "SOFR", id: "rates.sofr" },
+      { label: "EFFR", id: "rates.effr" }
     ]
   },
-  { title: "Valuation", ids: ["val.cape", "val.buffett_indicator", "val.erp"] }
+  {
+    title: "CREDIT",
+    items: [
+      { label: "HY OAS", id: "credit.hy_oas" },
+      { label: "IG OAS", id: "credit.ig_oas" },
+      { label: "BBB OAS", id: "credit.bbb_oas" },
+      { label: "BAA Yield", id: "credit.baa" },
+      { label: "StressSprd", id: "credit.stress_spread" }
+    ]
+  },
+  {
+    title: "USD & FX",
+    items: [
+      { label: "USD Broad", id: "fx.dxy" },
+      { label: "EURUSD", id: "fx.eurusd" },
+      { label: "USDJPY", id: "fx.usdjpy" },
+      { label: "GBPUSD", id: "fx.gbpusd" },
+      { label: "USDCNY", id: "fx.usdcny" }
+    ]
+  },
+  {
+    title: "COMMOD",
+    items: [
+      { label: "WTI Oil", id: "comm.wti" },
+      { label: "Gold USD", id: "comm.gold" },
+      { label: "Brent Oil", id: "comm.brent" },
+      { label: "Copper", id: "comm.copper" },
+      { label: "NatGas", id: "comm.natgas" }
+    ]
+  },
+  {
+    title: "EQUITIES",
+    items: [
+      { label: "SPX Close", id: "eq.sp500" },
+      { label: "NDX Close", id: "eq.nasdaq" },
+      { label: "DAX Close", id: "eq.dax" },
+      { label: "NikkeiCls", id: "eq.nikkei" },
+      { label: "R2K Close", id: "eq.russell2000" }
+    ]
+  },
+  {
+    title: "CRYPTO",
+    items: [
+      { label: "BTC Price", id: "crypto.btc_price" },
+      { label: "ETH Price", id: "crypto.eth_price" },
+      { label: "Crypto MC", id: "crypto.market_cap" },
+      { label: "BTC Dom", id: "crypto.btc_dominance" },
+      { label: "DeFi TVL", id: "crypto.defi_tvl" }
+    ]
+  },
+  {
+    title: "MACRO & VAL",
+    items: [
+      { label: "US CPI YoY", id: "macro.us_cpi" },
+      { label: "US Unemp", id: "macro.us_unemployment" },
+      { label: "US GDP", id: "macro.us_gdp" },
+      { label: "BuffettInd", id: "val.buffett_indicator" },
+      { label: "CAPE", id: "val.cape" }
+    ]
+  }
 ];
 
 let heroMetricsAwait = false;
@@ -187,25 +227,27 @@ function buildHeroMetricsModel(envelope) {
   const metricsById = buildMetricsMap(envelope);
   const missingIds = [];
   const groups = HERO_GROUPS.map((group) => {
-    const metrics = group.ids.map((id) => {
-      const metric = metricsById[id] || null;
-      const label = metric?.label || metric?.id || id;
+    const metrics = group.items.map((item) => {
+      const metric = metricsById[item.id] || null;
+      const label = item.label;
       const value = formatMetricValue(metric);
       const sub = metric?.source || metric?.provider || metric?.asOf || "N/A";
       const missing = !metric || value === "N/A";
-      if (missing) missingIds.push(id);
-      return { id, label, value, sub, missing, group: group.title };
+      if (missing) missingIds.push(item.id);
+      return { id: item.id, label, value, sub, missing, group: group.title };
     });
     return { title: group.title, metrics };
   });
   const metaMissingIds = Array.isArray(envelope?.meta?.missingMetricIds)
     ? envelope.meta.missingMetricIds
     : [];
+  const totalCount = groups.reduce((acc, group) => acc + group.metrics.length, 0);
   return {
     groups,
     flat: groups.flatMap((group) => group.metrics),
     missingIds,
-    metaMissingIds
+    metaMissingIds,
+    totalCount
   };
 }
 
@@ -318,7 +360,7 @@ function renderHeroSectionsB(model) {
 }
 
 
-function setHeroTitle(root) {
+function setHeroTitle(root, { regime, vix, fngStocks } = {}) {
   const block = root?.closest?.('[data-rv-feature="rv-market-cockpit"]');
   const title = block?.querySelector?.('.rv-native-header h2');
   if (!title) return;
@@ -326,6 +368,26 @@ function setHeroTitle(root) {
   if (textNode) {
     textNode.textContent = "Global Macro Hub ";
   }
+  const driversLabel = regime?.label || "Neutral";
+  const score = Number.isFinite(regime?.score) ? formatNumber(regime.score, { maximumFractionDigits: 0 }) : "N/A";
+  const vixState = vix?.note || (Number.isFinite(vix?.value) ? `VIX ${formatNumber(vix.value, { maximumFractionDigits: 2 })}` : "VIX N/A");
+  const stocksState = fngStocks?.label || (Number.isFinite(fngStocks?.value) ? `Stocks ${formatNumber(fngStocks.value)}` : "Stocks N/A");
+  let strip = title.querySelector('.rv-cockpit-status-strip');
+  if (!strip) {
+    strip = document.createElement('span');
+    strip.className = 'rv-cockpit-status-strip';
+    strip.style.fontSize = '12px';
+    strip.style.fontWeight = '400';
+    strip.style.color = 'var(--rv-text-muted)';
+    strip.style.marginLeft = '8px';
+    const tooltip = title.querySelector('.rv-tooltip-wrapper');
+    if (tooltip) {
+      title.insertBefore(strip, tooltip);
+    } else {
+      title.appendChild(strip);
+    }
+  }
+  strip.textContent = `Drivers: ${driversLabel} | Score: ${score} | VIX: ${vixState} | Stocks: ${stocksState}`;
 }
 
 
@@ -418,7 +480,7 @@ function render(root, payload, logger, featureId) {
   });
   const data = resolved?.data || {};
   const regime = data.regime || {};
-  setHeroTitle(root);
+  setHeroTitle(root, { regime, vix: data.vix || {}, fngStocks: data.fngStocks || {} });
   const drivers = Array.isArray(regime.drivers) ? regime.drivers : [];
   const partialNote =
     resolved?.ok && (resolved?.isStale || data.partial || resolved?.error?.code)
@@ -475,7 +537,7 @@ function render(root, payload, logger, featureId) {
   const macroRates = Array.isArray(macro.rates) ? macro.rates : [];
   const macroFx = Array.isArray(macro.fx) ? macro.fx : [];
   const macroCpi = Array.isArray(macro.cpi) ? macro.cpi : [];
-  const layout = getLayout();
+  const layout = "B";
   const metricsEnvelope = getMetricsEnvelope();
   const heroMetrics = buildHeroMetricsModel(metricsEnvelope);
   const missingNote = heroMetrics.missingIds.length
@@ -500,22 +562,18 @@ function render(root, payload, logger, featureId) {
   }
 
   root.innerHTML = `
-    ${partialNote ? `<div class="rv-native-note">${partialNote}</div>` : ""}
-    ${missingNote}
-    ${renderLayoutControls(layout)}
-    ${
+        ${
       layout === "B"
         ? renderLayoutB({ regime, drivers, vix, fng, fngStocks, news, btc, dxy, yields, proxies, heroMetrics })
         : layout === "C"
           ? renderLayoutC({ regime, drivers, vix, fng, fngStocks, btc, dxy, yields, heroMetrics })
           : renderLayoutA({ regime, drivers, vix, fng, fngStocks, btc, dxy, yields, heroMetrics })
     }
-    <div class="rv-native-note">Sector rotation details are in the S&amp;P 500 Sectors block below.</div>
-    ${auditHtml}
+        ${auditHtml}
     <div class="rv-native-note">
       Updated: ${new Date(data.updatedAt || resolved.ts).toLocaleTimeString()} · Freshness: ${
         resolved?.freshness || "unknown"
-      } · Metrics: ${heroMetrics.missingIds.length ? `PARTIAL (${43 - heroMetrics.missingIds.length}/43)` : "OK"}
+      } · Metrics: ${heroMetrics.missingIds.length ? `PARTIAL (${heroMetrics.totalCount - heroMetrics.missingIds.length}/${heroMetrics.totalCount})` : "OK"}
     </div>
   `;
   if (auditEnabled && layout === "B") {
