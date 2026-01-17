@@ -231,6 +231,7 @@ function renderHeroAudit(model, fetchCount) {
       missingMetricIds (hero): ${missingLine}<br/>
       metricsFetchCount: ${fetchCount}
     </div>
+    <div data-hero-audit-values class="rv-native-note"></div>
     <table class="rv-native-table rv-table--compact">
       <thead>
         <tr><th>metricId</th><th>Status</th><th>Group</th><th>Label</th></tr>
@@ -294,20 +295,18 @@ function renderHeroSectionsB(model) {
           const rows = group.metrics
             .map(
               (metric) => `
-          <tr>
-            <td class="rv-gh-label" style="width:70%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${metric.label}</td>
-            <td class="rv-gh-value" style="width:30%;text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${metric.value}</td>
-          </tr>`
+          <div class="rv-gh-row" style="display:grid;grid-template-columns:1fr auto;column-gap:10px;align-items:center;">
+            <div class="rv-gh-label" title="${metric.label}" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${metric.label}</div>
+            <div class="rv-gh-value" title="${metric.value}" style="text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${metric.value}</div>
+          </div>`
             )
             .join("");
           return `
         <section class="rv-cockpit-section" style="max-width:100%;overflow:hidden;">
           <div class="rv-cockpit-section-title">${group.title}</div>
-          <table class="rv-native-table rv-table--compact" style="width:100%;table-layout:fixed;">
-            <tbody>
-              ${rows}
-            </tbody>
-          </table>
+          <div class="rv-gh-table" style="display:grid;row-gap:6px;max-width:100%;overflow:hidden;">
+            ${rows}
+          </div>
         </section>
       `;
         })
@@ -519,6 +518,15 @@ function render(root, payload, logger, featureId) {
       } · Metrics: ${heroMetrics.missingIds.length ? `PARTIAL (${43 - heroMetrics.missingIds.length}/43)` : "OK"}
     </div>
   `;
+  if (auditEnabled && layout === "B") {
+    const holder = root.querySelector("[data-hero-audit-values]");
+    if (holder) {
+      const values = Array.from(root.querySelectorAll(".rv-gh-value"));
+      const samples = values.slice(0, 5).map((node) => node.textContent.trim()).join(" | ");
+      holder.textContent = `valueCells=${values.length} sample=${samples || "(none)"}`;
+    }
+  }
+
   root
     .querySelectorAll("[data-rv-field]")
     .forEach((node) => rvSetText(node, node.dataset.rvField, node.textContent));
