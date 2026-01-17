@@ -285,6 +285,40 @@ function renderHeroSections(model, mode) {
   return rowsHtml;
 }
 
+function renderHeroSectionsB(model) {
+  const rowGroups = [model.groups.slice(0, 4), model.groups.slice(4, 8), model.groups.slice(8)];
+  const rowsHtml = rowGroups
+    .map((row) => {
+      const sections = row
+        .map((group) => {
+          const rows = group.metrics
+            .map(
+              (metric) => `
+          <tr>
+            <td class="rv-gh-label" style="width:70%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${metric.label}</td>
+            <td class="rv-gh-value" style="width:30%;text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${metric.value}</td>
+          </tr>`
+            )
+            .join("");
+          return `
+        <section class="rv-cockpit-section" style="max-width:100%;overflow:hidden;">
+          <div class="rv-cockpit-section-title">${group.title}</div>
+          <table class="rv-native-table rv-table--compact" style="width:100%;table-layout:fixed;">
+            <tbody>
+              ${rows}
+            </tbody>
+          </table>
+        </section>
+      `;
+        })
+        .join("");
+      return `<div class="rv-cockpit-grid" style="gap:12px;margin:12px 0 16px;">${sections}</div>`;
+    })
+    .join("");
+  return rowsHtml;
+}
+
+
 function setHeroTitle(root) {
   const block = root?.closest?.('[data-rv-feature="rv-market-cockpit"]');
   const title = block?.querySelector?.('.rv-native-header h2');
@@ -346,7 +380,7 @@ function renderLayoutA({ regime, drivers, vix, fng, fngStocks, btc, dxy, yields,
 
 function renderLayoutB({ regime, drivers, vix, fng, fngStocks, news, btc, dxy, yields, proxies, heroMetrics }) {
   const driversHtml = drivers.length ? drivers.map((d) => `<span>${d}</span>`).join("") : "No drivers yet";
-  const sections = renderHeroSections(heroMetrics, "table");
+  const sections = renderHeroSectionsB(heroMetrics);
 
   return `
     <div class="rv-cockpit-summary">
