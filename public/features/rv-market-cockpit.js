@@ -250,8 +250,8 @@ function renderHeroSections(model, mode) {
             .map(
               (metric) => `
           <tr>
-            <td class="rv-cell-label" style="word-break: break-word;">${metric.label}</td>
-            <td class="rv-cell-num" style="word-break: break-word;">${metric.value}</td>
+            <td class="rv-cell-label" style="word-break: break-word;overflow:hidden;text-overflow:ellipsis;">${metric.label}</td>
+            <td class="rv-cell-num" style="text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${metric.value}</td>
           </tr>`
             )
             .join("");
