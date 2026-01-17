@@ -240,19 +240,54 @@ function renderHeroAudit(model, fetchCount) {
   `;
 }
 
-function buildHeroMetricItems(heroMetrics) {
-  const items = [];
-  heroMetrics.groups.forEach((group) => {
-    group.metrics.forEach((metric) => {
-      items.push({
-        label: `${group.title}: ${metric.label}`,
-        value: metric.value,
-        sub: metric.sub
-      });
-    });
-  });
-  return items;
+function renderHeroSections(model, mode) {
+  const sections = model.groups
+    .map((group) => {
+      const rows = group.metrics
+        .map(
+          (metric) => `
+          <tr>
+            <td>${metric.label}</td>
+            <td>${metric.value}</td>
+            <td>${metric.sub}</td>
+          </tr>`
+        )
+        .join("");
+      const cards = group.metrics
+        .map((metric) => metricCard(metric.label, metric.value, metric.sub))
+        .join("");
+      const content = mode === "table"
+        ? `
+        <table class="rv-native-table rv-table--compact">
+          <thead>
+            <tr>
+              <th>Metric</th>
+              <th>Value</th>
+              <th>Source</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${rows}
+          </tbody>
+        </table>
+        `
+        : `
+        <div class="rv-ms-grid">
+          ${cards}
+        </div>
+        `;
+      return `
+        <section class="rv-cockpit-section">
+          <div class="rv-cockpit-section-title">${group.title}</div>
+          ${content}
+        </section>
+      `;
+    })
+    .join("");
+  return `<div class="rv-cockpit-grid">${sections}</div>`;
 }
+
+
 
 function metricCard(label, value, sub = "") {
   return `
@@ -284,18 +319,11 @@ function renderLayoutControls(active) {
 
 function renderLayoutA({ regime, drivers, vix, fng, fngStocks, btc, dxy, yields, heroMetrics }) {
   const yield10y = yields?.values?.["10y"];
-  const cards = buildHeroMetricItems(heroMetrics).map((metric) =>
-    metricCard(metric.label, metric.value, metric.sub)
-  );
-
   const driversHtml = drivers.length ? drivers.map((d) => `<span>${d}</span>`).join("") : "No drivers yet";
+  const sections = renderHeroSections(heroMetrics, "cards");
   return `
     <div class="rv-native-note">Choose a layout to compare: cards vs tables vs dashboard.</div>
-    <div class="rv-ms-grid">
-      ${buildHeroMetricItems(heroMetrics)
-        .map((metric) => metricCard(metric.label, metric.value, metric.sub))
-        .join("")}
-    </div>
+    ${sections}
     <div class="rv-cockpit-summary">
       <div class="rv-cockpit-regime">
         <span class="rv-cockpit-label">Macro</span>
@@ -308,14 +336,8 @@ function renderLayoutA({ regime, drivers, vix, fng, fngStocks, btc, dxy, yields,
 }
 
 function renderLayoutB({ regime, drivers, vix, fng, fngStocks, news, btc, dxy, yields, proxies, heroMetrics }) {
-  const yieldValues = yields?.values || {};
   const driversHtml = drivers.length ? drivers.map((d) => `<span>${d}</span>`).join("") : "No drivers yet";
-
-  const rows = buildHeroMetricItems(heroMetrics).map((metric) => [
-    metric.label,
-    metric.value,
-    metric.sub
-  ]);
+  const sections = renderHeroSections(heroMetrics, "table");
 
   return `
     <div class="rv-cockpit-summary">
@@ -326,33 +348,13 @@ function renderLayoutB({ regime, drivers, vix, fng, fngStocks, news, btc, dxy, y
       </div>
       <div class="rv-cockpit-drivers">${driversHtml}</div>
     </div>
-    <table class="rv-native-table rv-table--compact">
-      <thead>
-        <tr>
-          <th>Signal</th>
-          <th>Value</th>
-          <th>Source</th>
-        </tr>
-      </thead>
-      <tbody>
-        ${rows
-          .map(
-            ([signal, value, source]) => `
-          <tr>
-            <td>${signal}</td>
-            <td>${value}</td>
-            <td>${source}</td>
-          </tr>`
-          )
-          .join("")}
-      </tbody>
-    </table>
+    ${sections}
   `;
 }
 
 function renderLayoutC({ regime, drivers, vix, fng, fngStocks, btc, dxy, yields, heroMetrics }) {
-  const yieldValues = yields?.values || {};
   const driversHtml = drivers.length ? drivers.map((d) => `<span>${d}</span>`).join("") : "No drivers yet";
+  const sections = renderHeroSections(heroMetrics, "cards");
   return `
     <div class="rv-cockpit-summary">
       <div class="rv-cockpit-regime">
@@ -362,14 +364,7 @@ function renderLayoutC({ regime, drivers, vix, fng, fngStocks, btc, dxy, yields,
       </div>
       <div class="rv-cockpit-drivers">${driversHtml}</div>
     </div>
-    <div class="rv-ms-grid">
-      ${metricCard("VIX", formatNumber(vix.value, { maximumFractionDigits: 2 }), vix.note || vix.source || "N/A")}
-      ${metricCard("Stocks F&G", formatNumber(fngStocks.value), fngStocks.label || "")}
-      ${metricCard("Crypto F&G", formatNumber(fng.value), fng.label || "")}
-      ${metricCard("BTC", `$${formatNumber(btc.price, { maximumFractionDigits: 0 })}`, formatSignedPercent(btc.changePercent))}
-      ${metricCard("DXY", formatNumber(dxy.value, { maximumFractionDigits: 2 }), formatSignedPercent(dxy.changePercent))}
-      ${metricCard("US 10Y", formatNumber(yieldValues["10y"], { maximumFractionDigits: 2 }), yields.source || "US Treasury")}
-    </div>
+    ${sections}
   `;
 }
 
