@@ -85,92 +85,64 @@ const HERO_GROUPS = [
 ];
 
 const HERO_LABEL_INFO = {
-  "RiskRegime": "RiskRegime: Composite risk-on/off regime signal — helps gauge overall market stress.",
-  "VIX Close": "VIX Close: The S&P 500 implied volatility index — spikes often signal risk-off stress.",
-  "VIX3M Close": "VIX3M Close: 3-month implied volatility for the S&P 500 — captures medium-term fear.",
-  "VIX/VIX3M": "VIX/VIX3M: Ratio of front vs 3-month vol — above 1 can flag short-term stress.",
-  "Curve10-2": "Curve10-2: 10Y minus 2Y yield spread — inversions often precede slowdowns.",
-  "US2Y Yield": "US2Y Yield: 2-year Treasury yield — sensitive to Fed policy expectations.",
-  "US10Y Yield": "US10Y Yield: 10-year Treasury yield — benchmark for growth and inflation outlook.",
-  "US30Y Yield": "US30Y Yield: 30-year Treasury yield — reflects long-term inflation and term premium.",
-  "SOFR": "SOFR: Secured Overnight Financing Rate — key U.S. overnight funding benchmark.",
-  "EFFR": "EFFR: Effective Fed Funds Rate — actual policy rate anchor for money markets.",
-  "HY OAS": "HY OAS: High-yield option-adjusted spread — widening signals credit stress.",
-  "IG OAS": "IG OAS: Investment-grade option-adjusted spread — gauges corporate credit risk.",
-  "BBB OAS": "BBB OAS: BBB-rated spread — watch for pressure in lowest IG tier.",
-  "BAA Yield": "BAA Yield: Moody's Baa corporate yield — tracks broad corporate borrowing costs.",
-  "StressSprd": "StressSprd: Composite credit stress spread — higher levels flag tightening conditions.",
-  "USD Broad": "USD Broad: Broad dollar index — strength tightens global financial conditions.",
-  "EURUSD": "EURUSD: Euro vs dollar — key global risk and rate differential signal.",
-  "USDJPY": "USDJPY: Dollar vs yen — risk sentiment and yield differential gauge.",
-  "GBPUSD": "GBPUSD: Pound vs dollar — reflects UK growth and policy divergence.",
-  "USDCNY": "USDCNY: Dollar vs offshore yuan — China growth and capital flow barometer.",
-  "Gold USD": "Gold USD: Gold price in dollars — hedge for real yields and risk.",
-  "WTI Oil": "WTI Oil: U.S. crude benchmark — reflects growth and supply balance.",
-  "Brent Oil": "Brent Oil: Global crude benchmark — captures international energy demand.",
-  "Copper": "Copper: Industrial metal price — proxy for global growth momentum.",
-  "NatGas": "NatGas: U.S. natural gas price — sensitive to weather and supply dynamics.",
-  "SPX Close": "SPX Close: S&P 500 level — core U.S. equity risk appetite.",
-  "NDX Close": "NDX Close: Nasdaq 100 level — growth and tech risk barometer.",
-  "DAX Close": "DAX Close: German equity index — European growth pulse.",
-  "NikkeiCls": "NikkeiCls: Nikkei 225 level — Japan equity and global cycle signal.",
-  "R2K Close": "R2K Close: Russell 2000 level — U.S. small-cap risk appetite.",
-  "BTC Price": "BTC Price: Bitcoin spot price — crypto risk sentiment anchor.",
-  "ETH Price": "ETH Price: Ethereum spot price — smart-contract ecosystem health gauge.",
-  "Crypto MC": "Crypto MC: Total crypto market cap — overall crypto risk appetite.",
-  "BTC Dom": "BTC Dom: Bitcoin dominance — shifts between BTC and altcoin risk.",
-  "DeFi TVL": "DeFi TVL: Total value locked in DeFi — gauges crypto activity and leverage.",
-  "US CPI YoY": "US CPI YoY: U.S. inflation rate — drives real yields and policy.",
-  "US Unemp": "US Unemp: U.S. unemployment rate — labor slack and recession risk.",
-  "US GDP": "US GDP: U.S. growth rate — baseline for earnings and rates.",
-  "BuffettInd": "BuffettInd: Market cap to GDP — valuation vs economic size.",
-  "CAPE": "CAPE: Cyclically adjusted P/E — long-run equity valuation signal."
+  "RiskRegime": "A simplified risk-on/risk-off classification from multiple markets. It helps you quickly judge whether the tape supports adding or reducing risk.",
+  "VIX Close": "The S&P 500 implied volatility index level. Spikes often signal stress and can precede de-risking and wider price swings.",
+  "VIX3M Close": "3-month implied volatility for the S&P 500. It shows medium-term risk expectations beyond the near-term VIX.",
+  "VIX/VIX3M": "Ratio of near-term to 3-month volatility. A high ratio signals short-term fear relative to the medium-term baseline.",
+  "Curve10-2": "10Y minus 2Y Treasury yield slope. Inversions can signal tighter financial conditions and higher recession risk.",
+  "US2Y Yield": "2-year Treasury yield, highly sensitive to Fed policy expectations. It’s a key read on near-term rate pressure.",
+  "US10Y Yield": "10-year Treasury yield, a core long-rate benchmark. It impacts valuations, mortgages, and broader financial conditions.",
+  "US30Y Yield": "30-year Treasury yield, the long end of the curve. It reflects long-run inflation and growth expectations.",
+  "SOFR": "Secured Overnight Financing Rate, a key USD funding benchmark. It’s used across derivatives and reflects short-term money-market conditions.",
+  "EFFR": "Effective Fed Funds Rate, the Fed’s policy operating rate. It anchors short-term rates across USD markets.",
+  "HY OAS": "High-yield option-adjusted spread over Treasuries. Widening often signals rising default risk and risk-off behavior.",
+  "IG OAS": "Investment-grade option-adjusted spread over Treasuries. It tracks corporate funding stress for higher-quality issuers.",
+  "BBB OAS": "BBB corporate spread (lowest IG tier) over Treasuries. It’s a sensitive early-warning gauge for credit deterioration.",
+  "BAA Yield": "Moody’s Baa corporate yield level. It captures borrowing cost pressure for mid-grade corporates.",
+  "StressSprd": "A composite stress spread proxy across credit conditions. Rising levels often coincide with tightening liquidity and risk aversion.",
+  "USD Broad": "A broad USD strength proxy (here via DXY). A stronger USD can tighten global financial conditions and pressure risk assets.",
+  "EURUSD": "EUR/USD exchange rate. It matters for global risk sentiment and relative growth/inflation expectations.",
+  "USDJPY": "USD/JPY exchange rate. It’s a key barometer for risk sentiment and rate differentials.",
+  "GBPUSD": "GBP/USD exchange rate. Sensitive to UK macro shocks and global dollar strength.",
+  "USDCNY": "USD/CNY exchange rate. It’s important for global trade expectations and China-related risk signals.",
+  "Gold USD": "Gold price in USD. Often acts as a hedge vs. inflation shocks and financial stress.",
+  "WTI Oil": "WTI crude oil price. A key input for inflation expectations and global growth sentiment.",
+  "Brent Oil": "Brent crude oil price, global benchmark. Useful for tracking energy-driven macro pressure outside the US.",
+  "Copper": "Copper price, often called 'Dr. Copper'. It’s a proxy for industrial demand and global growth.",
+  "NatGas": "Natural gas price. Impacts energy costs and can influence inflation and industrial activity.",
+  "SPX Close": "S&P 500 index level. Core proxy for US equity risk appetite.",
+  "NDX Close": "Nasdaq 100 index level. High-duration growth proxy, very rate-sensitive.",
+  "DAX Close": "Germany’s DAX index level. Proxy for European cyclicals and global trade sensitivity.",
+  "NikkeiCls": "Japan’s Nikkei index level. Tracks Japan equity risk and global manufacturing sensitivity.",
+  "R2K Close": "Russell 2000 index level. Small-caps are sensitive to domestic growth and credit conditions.",
+  "BTC Price": "Bitcoin price level. Often trades as a high-beta liquidity/risk proxy.",
+  "ETH Price": "Ethereum price level. Important for broader crypto risk and DeFi activity.",
+  "Crypto MC": "Total crypto market capitalization. A broad measure of crypto risk appetite and liquidity.",
+  "BTC Dom": "Bitcoin dominance share of total crypto market cap. Rising dominance often signals flight-to-quality within crypto.",
+  "DeFi TVL": "Total value locked in DeFi protocols. A rough gauge of on-chain activity and risk-taking.",
+  "US CPI YoY": "US consumer inflation rate year-over-year. It drives rate expectations and valuation pressure.",
+  "US Unemp": "US unemployment rate. A key recession-risk and policy reaction function input.",
+  "US GDP": "US GDP growth proxy. Signals the growth backdrop that supports or undermines risk assets.",
+  "BuffettInd": "Market cap-to-GDP valuation proxy ('Buffett Indicator'). Useful for spotting stretched equity valuations versus the economy.",
+  "CAPE": "Cyclically adjusted P/E ratio. A long-horizon valuation metric that helps frame return expectations."
 };
 
 const DELTA_FIELD_CANDIDATES = [
   "changePct",
+  "pctChange",
   "pct_change",
   "deltaPct",
   "dayChangePct",
-  "change_percent",
   "change_1d_pct",
-  "change1dPct",
-  "pctChange",
-  "pctChange1d",
-  "pctChange1D",
-  "changePct1d",
-  "changePct1D",
   "changePercent",
-  "changePercent1d",
-  "changePercent1D",
-  "percentChange",
-  "delta_percent",
-  "delta_pct",
-  "dailyChangePct",
-  "changePctDaily",
-  "chgPct"
+  "change_percent"
 ];
 
-const PREV_VALUE_FIELDS = [
-  "prevValue",
-  "prev",
-  "previous",
-  "prior",
-  "last",
-  "value_prev",
-  "valuePrev",
-  "prev_value",
-  "previousValue",
-  "priorValue",
-  "lastValue",
-  "valueLast",
-  "closePrev",
-  "prevClose",
-  "lastClose"
-];
+const PREV_VALUE_FIELDS = ["prev", "prevValue", "previous", "prior", "last"];
 
 let heroMetricsAwait = false;
-let heroTooltipOpen = null;
+let heroTooltipKey = null;
+let heroTooltipRoot = null;
 let heroTooltipHandlersBound = false;
 
 function getLayout() {
@@ -208,8 +180,18 @@ function formatSignedPercent(value, digits = 2) {
 
 function formatMetricValue(metric) {
   if (!metric) return "N/A";
+  const display = metric.display ?? metric.valueFormatted;
+  if (display !== null && display !== undefined && display !== "") {
+    return String(display);
+  }
   if (metric.valueType === "label" || metric.valueType === "dataset") {
     return metric.value || "N/A";
+  }
+  if (metric.value === null || metric.value === undefined || metric.value === "") return "N/A";
+  if (metric.value !== null && metric.value !== undefined && metric.value !== "") {
+    if (typeof metric.value === "string" && Number.isNaN(Number(metric.value))) {
+      return metric.value;
+    }
   }
   const raw = Number(metric.value);
   if (Number.isNaN(raw)) return "N/A";
@@ -245,17 +227,12 @@ function findDeltaPercent(metric) {
     const candidate = readNumber(metric[key]);
     if (candidate !== null) return candidate;
   }
-  const nestedCandidate = readNumber(metric?.change?.pct ?? metric?.change?.pctChange ?? metric?.change?.percent);
-  if (nestedCandidate !== null) return nestedCandidate;
   const current = readNumber(metric.value);
   if (current === null) return null;
   let prev = null;
   for (const key of PREV_VALUE_FIELDS) {
     prev = readNumber(metric[key]);
     if (prev !== null) break;
-  }
-  if (prev === null) {
-    prev = readNumber(metric?.prev?.value ?? metric?.prev?.close ?? metric?.prev?.last);
   }
   if (prev === null || prev === 0) return null;
   return ((current - prev) / prev) * 100;
@@ -267,7 +244,7 @@ function formatDeltaPercent(metric) {
     return { text: "—", color: "var(--rv-text-muted, #64748b)" };
   }
   const rounded = Math.round(delta * 10) / 10;
-  const sign = rounded > 0 ? "+" : "";
+  const sign = rounded >= 0 ? "+" : "";
   const text = `${sign}${rounded.toFixed(1)}%`;
   const color =
     rounded > 0
@@ -293,7 +270,7 @@ function buildHeroMetricsModel(envelope) {
       const value = formatMetricValue(metric);
       const sub = metric?.source || metric?.provider || metric?.asOf || "N/A";
       const delta = formatDeltaPercent(metric);
-      const info = HERO_LABEL_INFO[label] || `${label}: Metric detail unavailable — review data sources.`;
+      const info = HERO_LABEL_INFO[label] || "Explanation unavailable.";
       const missing = !metric || value === "N/A";
       if (missing) missingIds.push(id || label);
       return {
@@ -402,25 +379,17 @@ function renderHeroSections(model, mode) {
 
 function renderMetricRow(metric) {
   const labelText = metric.label;
-  const infoText = metric.info;
-  const tooltip = infoText
-    ? `<span class="rv-gh-tooltip" role="tooltip" style="position:absolute;z-index:20;min-width:180px;max-width:240px;background:#111;color:#fff;padding:6px 8px;border-radius:6px;font-size:11px;line-height:1.3;box-shadow:0 6px 16px rgba(0,0,0,0.2);top:100%;left:0;margin-top:6px;display:none;">${infoText}</span>`
-    : "";
-  const infoButton = infoText
-    ? `<button type="button" class="rv-gh-info" aria-label="Info: ${labelText}" style="display:inline-flex;align-items:center;justify-content:center;width:14px;height:14px;border-radius:50%;border:1px solid rgba(148,163,184,0.5);background:transparent;color:var(--rv-text-muted);font-size:10px;line-height:1;padding:0;cursor:pointer;flex:0 0 auto;">i</button>`
-    : "";
+  const infoText = metric.info || "Explanation unavailable.";
   return `
-          <tr class="rv-gh-row">
-            <td class="rv-gh-label" title="${labelText}" style="width:56%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:2px 8px 2px 0;">
-              <div class="rv-gh-label-wrap" style="display:inline-flex;align-items:center;gap:6px;max-width:100%;position:relative;">
-                <span class="rv-gh-label-text" style="min-width:0;flex:1 1 auto;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${labelText}</span>
-                ${infoButton}
-                ${tooltip}
-              </div>
-            </td>
-            <td class="rv-gh-value" title="${metric.value}" style="width:26%;text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:2px 8px 2px 0;">${metric.value}</td>
-            <td class="rv-gh-delta" title="${metric.deltaText}" style="width:18%;text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:2px 0;color:${metric.deltaColor};">${metric.deltaText}</td>
-          </tr>`;
+          <div class="rv-gh-row" data-label="${labelText}" style="display:grid;grid-template-columns:1fr auto auto;column-gap:10px;align-items:center;position:relative;">
+            <div class="rv-gh-label" title="${labelText}" style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:flex;align-items:center;gap:6px;">
+              <span class="rv-gh-label-text" style="min-width:0;flex:1 1 auto;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${labelText}</span>
+              <button type="button" class="rv-gh-info" aria-label="Info: ${labelText}" style="display:inline-flex;align-items:center;justify-content:center;width:14px;height:14px;border-radius:50%;border:1px solid rgba(148,163,184,0.5);background:transparent;color:var(--rv-text-muted);font-size:10px;line-height:1;padding:0;cursor:pointer;flex:0 0 auto;">i</button>
+              <span class="rv-gh-tooltip" role="tooltip" style="position:absolute;z-index:20;min-width:220px;max-width:260px;background:#111;color:#fff;padding:8px 10px;border-radius:8px;font-size:11px;line-height:1.35;box-shadow:0 8px 20px rgba(0,0,0,0.2);top:100%;left:0;margin-top:6px;display:none;">${infoText}</span>
+            </div>
+            <div class="rv-gh-value" title="${metric.value}" style="text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${metric.value}</div>
+            <div class="rv-gh-delta" title="${metric.deltaText}" style="text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:${metric.deltaColor};">${metric.deltaText}</div>
+          </div>`;
 }
 
 function renderHeroSectionsB(model) {
@@ -433,16 +402,9 @@ function renderHeroSectionsB(model) {
           return `
         <section class="rv-cockpit-section" style="max-width:100%;overflow:hidden;">
           <div class="rv-cockpit-section-title">${group.title}</div>
-          <table class="rv-gh-table rv-native-table rv-table--compact" style="width:100%;table-layout:fixed;border-collapse:collapse;max-width:100%;overflow:hidden;">
-            <colgroup>
-              <col style="width:56%;">
-              <col style="width:26%;">
-              <col style="width:18%;">
-            </colgroup>
-            <tbody>
-              ${rows}
-            </tbody>
-          </table>
+          <div class="rv-gh-table" style="display:grid;row-gap:6px;max-width:100%;overflow:hidden;">
+            ${rows}
+          </div>
         </section>
       `;
         })
@@ -524,56 +486,47 @@ function setHeroHeaderMeta(root, text) {
 }
 
 function closeHeroTooltip() {
-  if (heroTooltipOpen) {
-    heroTooltipOpen.style.display = "none";
-    heroTooltipOpen = null;
-  }
+  if (!heroTooltipRoot) return;
+  heroTooltipRoot.querySelectorAll(".rv-gh-tooltip").forEach((tooltip) => {
+    tooltip.style.display = "none";
+  });
+  heroTooltipKey = null;
 }
 
 function attachHeroTooltips(root) {
-  const wraps = root.querySelectorAll(".rv-gh-label-wrap");
-  wraps.forEach((wrap) => {
-    const button = wrap.querySelector(".rv-gh-info");
-    const tooltip = wrap.querySelector(".rv-gh-tooltip");
+  heroTooltipRoot = root;
+  const rows = root.querySelectorAll(".rv-gh-row");
+  rows.forEach((row) => {
+    const label = row.getAttribute("data-label") || "";
+    const button = row.querySelector(".rv-gh-info");
+    const tooltip = row.querySelector(".rv-gh-tooltip");
     if (!button || !tooltip) return;
-    const show = () => {
-      if (heroTooltipOpen && heroTooltipOpen !== tooltip) {
-        heroTooltipOpen.style.display = "none";
+    const toggle = () => {
+      const isOpen = tooltip.style.display === "block";
+      if (isOpen) {
+        closeHeroTooltip();
+        return;
       }
+      closeHeroTooltip();
       tooltip.style.display = "block";
-      heroTooltipOpen = tooltip;
-    };
-    const hide = () => {
-      if (heroTooltipOpen === tooltip) {
-        tooltip.style.display = "none";
-        heroTooltipOpen = null;
-      }
+      heroTooltipKey = label;
     };
     button.addEventListener("click", (event) => {
       event.stopPropagation();
-      if (tooltip.style.display === "block") {
-        hide();
-      } else {
-        show();
-      }
+      toggle();
     });
     button.addEventListener("keydown", (event) => {
       if (event.key === "Enter" || event.key === " ") {
         event.preventDefault();
-        if (tooltip.style.display === "block") {
-          hide();
-        } else {
-          show();
-        }
+        toggle();
       }
     });
-    wrap.addEventListener("mouseenter", show);
-    wrap.addEventListener("mouseleave", hide);
-    button.addEventListener("focus", show);
-    button.addEventListener("blur", hide);
   });
   if (!heroTooltipHandlersBound) {
-    document.addEventListener("click", closeHeroTooltip);
+    document.addEventListener("click", (event) => {
+      if (event.target.closest(".rv-gh-info") || event.target.closest(".rv-gh-tooltip")) return;
+      closeHeroTooltip();
+    });
     document.addEventListener("keydown", (event) => {
       if (event.key === "Escape") {
         closeHeroTooltip();
@@ -742,6 +695,7 @@ function render(root, payload, logger, featureId) {
       body.style.border = "none";
       body.style.boxShadow = "none";
       body.style.background = "transparent";
+      body.classList.remove("rv-card");
     }
     root.style.border = "none";
     root.style.boxShadow = "none";
