@@ -6,6 +6,101 @@ import { rvSetText } from "./rv-dom.js";
 const LAYOUT_STORAGE_KEY = "rv-market-snapshot-layout";
 const DEFAULT_LAYOUT = "A";
 
+const HERO_METRIC_IDS = [
+  "risk.vix",
+  "risk.move",
+  "rates.us10y",
+  "risk.regime",
+  "rates.us2y",
+  "rates.us30y",
+  "rates.yield_curve",
+  "rates.sofr",
+  "rates.effr",
+  "credit.hy_oas",
+  "credit.baa",
+  "credit.stress_spread",
+  "fx.dxy",
+  "fx.eurusd",
+  "fx.usdjpy",
+  "fx.gbpusd",
+  "comm.gold",
+  "comm.wti",
+  "comm.brent",
+  "comm.copper",
+  "eq.sp500",
+  "eq.nasdaq",
+  "eq.dax",
+  "eq.nikkei",
+  "eq.russell2000",
+  "breadth.above_200dma",
+  "breadth.ad_ratio",
+  "breadth.high_low_52w",
+  "sectors.rotation",
+  "crypto.market_cap",
+  "crypto.btc_dominance",
+  "crypto.stablecoin_cap",
+  "crypto.defi_tvl",
+  "crypto.eth_gas",
+  "macro.us_cpi",
+  "macro.ea_cpi",
+  "macro.uk_cpi",
+  "macro.jp_cpi",
+  "macro.us_unemployment",
+  "macro.ea_unemployment",
+  "val.cape",
+  "val.buffett_indicator",
+  "val.erp"
+];
+
+const HERO_GROUPS = [
+  { title: "Today’s Regime", ids: ["risk.regime", "risk.vix", "risk.move", "rates.us10y"] },
+  {
+    title: "Rates & Credit",
+    ids: [
+      "rates.us2y",
+      "rates.us10y",
+      "rates.us30y",
+      "rates.yield_curve",
+      "rates.sofr",
+      "rates.effr",
+      "credit.hy_oas",
+      "credit.baa",
+      "credit.stress_spread"
+    ]
+  },
+  { title: "Major FX & Dollar", ids: ["fx.dxy", "fx.eurusd", "fx.usdjpy", "fx.gbpusd"] },
+  { title: "Commodities", ids: ["comm.gold", "comm.wti", "comm.brent", "comm.copper"] },
+  { title: "Market Closes", ids: ["eq.sp500", "eq.nasdaq", "eq.dax", "eq.nikkei", "eq.russell2000"] },
+  {
+    title: "Breadth / Internals",
+    ids: ["breadth.above_200dma", "breadth.ad_ratio", "breadth.high_low_52w", "sectors.rotation"]
+  },
+  {
+    title: "Crypto",
+    ids: [
+      "crypto.market_cap",
+      "crypto.btc_dominance",
+      "crypto.stablecoin_cap",
+      "crypto.defi_tvl",
+      "crypto.eth_gas"
+    ]
+  },
+  {
+    title: "Macro",
+    ids: [
+      "macro.us_cpi",
+      "macro.ea_cpi",
+      "macro.uk_cpi",
+      "macro.jp_cpi",
+      "macro.us_unemployment",
+      "macro.ea_unemployment"
+    ]
+  },
+  { title: "Valuation", ids: ["val.cape", "val.buffett_indicator", "val.erp"] }
+];
+
+let heroMetricsAwait = false;
+
 function getLayout() {
   try {
     const value = window?.localStorage?.getItem(LAYOUT_STORAGE_KEY) || "";
@@ -39,6 +134,126 @@ function formatSignedPercent(value, digits = 2) {
   return `${sign}${formatNumber(value, { maximumFractionDigits: digits })}%`;
 }
 
+function formatMetricValue(metric) {
+  if (!metric) return "N/A";
+  if (metric.valueType === "label" || metric.valueType === "dataset") {
+    return metric.value || "N/A";
+  }
+  const raw = Number(metric.value);
+  if (Number.isNaN(raw)) return "N/A";
+  const unit = metric.unit;
+  if (unit === "%") return formatPercent(raw, 2);
+  if (unit === "bp") return `${Math.round(raw)} bp`;
+  if (unit === "index") return formatNumber(raw, { maximumFractionDigits: 2 });
+  if (unit === "count") return formatNumber(raw, { maximumFractionDigits: 0 });
+  if (unit === "ratio") return raw.toFixed(2);
+  if (unit === "usd") {
+    const abs = Math.abs(raw);
+    if (abs >= 1_000_000_000) return `$${(raw / 1_000_000_000).toFixed(2)}B`;
+    if (abs >= 1_000_000) return `$${(raw / 1_000_000).toFixed(2)}M`;
+    if (abs >= 1_000) return `$${(raw / 1_000).toFixed(2)}K`;
+    return `$${raw.toFixed(2)}`;
+  }
+  if (unit === "usd/oz" || unit === "usd/bbl" || unit === "usd/mt") {
+    return `$${raw.toFixed(2)}`;
+  }
+  if (unit === "gwei") return `${raw.toFixed(1)} gwei`;
+  return `${raw}`;
+}
+
+function getMetricsEnvelope() {
+  if (typeof window === "undefined") return null;
+  return window.__RV_METRICS_ENVELOPE || null;
+}
+
+function buildMetricsMap(envelope) {
+  const data = envelope?.data || {};
+  const metricsById = data.metricsById || {};
+  const map = {};
+  const groups = Array.isArray(data.groups) ? data.groups : [];
+  groups.forEach((group) => {
+    const ids = Array.isArray(group.metricIds) ? group.metricIds : [];
+    ids.forEach((id) => {
+      if (!(id in map)) map[id] = metricsById[id] || null;
+    });
+  });
+  HERO_METRIC_IDS.forEach((id) => {
+    if (!(id in map)) map[id] = metricsById[id] || null;
+  });
+  return map;
+}
+
+function buildHeroMetricsModel(envelope) {
+  const metricsById = buildMetricsMap(envelope);
+  const missingIds = [];
+  const groups = HERO_GROUPS.map((group) => {
+    const metrics = group.ids.map((id) => {
+      const metric = metricsById[id] || null;
+      const label = metric?.label || metric?.id || id;
+      const value = formatMetricValue(metric);
+      const sub = metric?.source || metric?.provider || metric?.asOf || "N/A";
+      const missing = !metric || value === "N/A";
+      if (missing) missingIds.push(id);
+      return { id, label, value, sub, missing, group: group.title };
+    });
+    return { title: group.title, metrics };
+  });
+  const metaMissingIds = Array.isArray(envelope?.meta?.missingMetricIds)
+    ? envelope.meta.missingMetricIds
+    : [];
+  return {
+    groups,
+    flat: groups.flatMap((group) => group.metrics),
+    missingIds,
+    metaMissingIds
+  };
+}
+
+
+function renderHeroAudit(model, fetchCount) {
+  const missingLine = model.missingIds.length ? model.missingIds.join(", ") : "none";
+  const metaMissing = model.metaMissingIds.length ? model.metaMissingIds.join(", ") : "none";
+  const rows = model.flat
+    .map(
+      (metric) => `
+      <tr>
+        <td>${metric.id}</td>
+        <td>${metric.missing ? "MISSING" : "OK"}</td>
+        <td>${metric.group}</td>
+        <td>${metric.label}</td>
+      </tr>`
+    )
+    .join("");
+  return `
+    <div class="rv-native-note">
+      <strong>Hero Audit</strong><br/>
+      missingMetricIds (meta): ${metaMissing}<br/>
+      missingMetricIds (hero): ${missingLine}<br/>
+      metricsFetchCount: ${fetchCount}
+    </div>
+    <table class="rv-native-table rv-table--compact">
+      <thead>
+        <tr><th>metricId</th><th>Status</th><th>Group</th><th>Label</th></tr>
+      </thead>
+      <tbody>${rows}</tbody>
+    </table>
+  `;
+}
+
+function buildHeroMetricItems(heroMetrics) {
+  const items = [];
+  heroMetrics.groups.forEach((group) => {
+    group.metrics.forEach((metric) => {
+      items.push({
+        label: `${group.title}: ${metric.label}`,
+        value: metric.value,
+        sub: metric.sub
+      });
+    });
+  });
+  return items;
+}
+
 function metricCard(label, value, sub = "") {
   return `
     <div class="rv-ms-card">
@@ -67,23 +282,20 @@ function renderLayoutControls(active) {
   `;
 }
 
-function renderLayoutA({ regime, drivers, vix, fng, fngStocks, btc, dxy, yields }) {
+function renderLayoutA({ regime, drivers, vix, fng, fngStocks, btc, dxy, yields, heroMetrics }) {
   const yield10y = yields?.values?.["10y"];
-  const cards = [
-    metricCard("Regime", `${regime.label || "Neutral"}`, `Score ${formatNumber(regime.score, { maximumFractionDigits: 0 })}`),
-    metricCard("Volatility", `${formatNumber(vix.value, { maximumFractionDigits: 2 })}`, vix.note || vix.source || "N/A"),
-    metricCard(
-      "Sentiment",
-      `${formatNumber(fngStocks.value)} / ${formatNumber(fng.value)}`,
-      `Stocks F&G / Crypto F&G`
-    ),
-    metricCard("BTC", `$${formatNumber(btc.price, { maximumFractionDigits: 0 })}`, formatSignedPercent(btc.changePercent))
-  ];
+  const cards = buildHeroMetricItems(heroMetrics).map((metric) =>
+    metricCard(metric.label, metric.value, metric.sub)
+  );
 
   const driversHtml = drivers.length ? drivers.map((d) => `<span>${d}</span>`).join("") : "No drivers yet";
   return `
     <div class="rv-native-note">Choose a layout to compare: cards vs tables vs dashboard.</div>
-    <div class="rv-ms-grid">${cards.join("")}</div>
+    <div class="rv-ms-grid">
+      ${buildHeroMetricItems(heroMetrics)
+        .map((metric) => metricCard(metric.label, metric.value, metric.sub))
+        .join("")}
+    </div>
     <div class="rv-cockpit-summary">
       <div class="rv-cockpit-regime">
         <span class="rv-cockpit-label">Macro</span>
@@ -95,25 +307,15 @@ function renderLayoutA({ regime, drivers, vix, fng, fngStocks, btc, dxy, yields 
   `;
 }
 
-function renderLayoutB({ regime, drivers, vix, fng, fngStocks, news, btc, dxy, yields, proxies }) {
+function renderLayoutB({ regime, drivers, vix, fng, fngStocks, news, btc, dxy, yields, proxies, heroMetrics }) {
   const yieldValues = yields?.values || {};
   const driversHtml = drivers.length ? drivers.map((d) => `<span>${d}</span>`).join("") : "No drivers yet";
 
-  const rows = [
-    ["Regime", `${regime.label || "Neutral"} (Score ${formatNumber(regime.score, { maximumFractionDigits: 0 })})`, "derived"],
-    ["VIX", formatNumber(vix.value, { maximumFractionDigits: 2 }), vix.note || vix.source || "N/A"],
-    ["Stocks F&G", `${formatNumber(fngStocks.value)} ${fngStocks.label ? `(${fngStocks.label})` : ""}`, fngStocks.source || "N/A"],
-    ["Crypto F&G", `${formatNumber(fng.value)} ${fng.label ? `(${fng.label})` : ""}`, fng.source || "N/A"],
-    ["News Sentiment", `${formatNumber(news.score, { maximumFractionDigits: 2 })} ${news.label || ""}`, news.source || "N/A"],
-    ["BTC", `$${formatNumber(btc.price, { maximumFractionDigits: 0 })} (${formatSignedPercent(btc.changePercent)})`, btc.source || "N/A"],
-    ["DXY", `${formatNumber(dxy.value, { maximumFractionDigits: 2 })} (${formatSignedPercent(dxy.changePercent)})`, dxy.source || "N/A"],
-    ["Gold (proxy)", formatNumber(proxies.gold?.price, { maximumFractionDigits: 2 }), proxies.gold?.symbol || "GLD"],
-    ["Oil (proxy)", formatNumber(proxies.oil?.price, { maximumFractionDigits: 2 }), proxies.oil?.symbol || "USO"],
-    ["USD (proxy)", formatNumber(proxies.usd?.price, { maximumFractionDigits: 2 }), proxies.usd?.symbol || "UUP"],
-    ["US 2Y", formatNumber(yieldValues["2y"], { maximumFractionDigits: 2 }), yields.source || "US Treasury"],
-    ["US 10Y", formatNumber(yieldValues["10y"], { maximumFractionDigits: 2 }), yields.source || "US Treasury"],
-    ["US 30Y", formatNumber(yieldValues["30y"], { maximumFractionDigits: 2 }), yields.source || "US Treasury"]
-  ];
+  const rows = buildHeroMetricItems(heroMetrics).map((metric) => [
+    metric.label,
+    metric.value,
+    metric.sub
+  ]);
 
   return `
     <div class="rv-cockpit-summary">
@@ -148,7 +350,7 @@ function renderLayoutB({ regime, drivers, vix, fng, fngStocks, news, btc, dxy, y
   `;
 }
 
-function renderLayoutC({ regime, drivers, vix, fng, fngStocks, btc, dxy, yields }) {
+function renderLayoutC({ regime, drivers, vix, fng, fngStocks, btc, dxy, yields, heroMetrics }) {
   const yieldValues = yields?.values || {};
   const driversHtml = drivers.length ? drivers.map((d) => `<span>${d}</span>`).join("") : "No drivers yet";
   return `
@@ -236,29 +438,53 @@ function render(root, payload, logger, featureId) {
   const macroFx = Array.isArray(macro.fx) ? macro.fx : [];
   const macroCpi = Array.isArray(macro.cpi) ? macro.cpi : [];
   const layout = getLayout();
+  const metricsEnvelope = getMetricsEnvelope();
+  const heroMetrics = buildHeroMetricsModel(metricsEnvelope);
+  const missingNote = heroMetrics.missingIds.length
+    ? `<div class="rv-native-note">Missing metrics: ${heroMetrics.missingIds.join(", ")}</div>`
+    : "";
+  const auditEnabled = typeof window !== "undefined" && new URLSearchParams(window.location.search).get("heroAudit") === "1";
+  const auditHtml = auditEnabled
+    ? renderHeroAudit(heroMetrics, window.__RV_METRICS_FETCH_COUNT || 0)
+    : "";
+
+  if (!metricsEnvelope && typeof window !== "undefined" && window.__RV_METRICS_PROMISE && !heroMetricsAwait) {
+    heroMetricsAwait = true;
+    window.__RV_METRICS_PROMISE
+      .then((env) => {
+        window.__RV_METRICS_ENVELOPE = env;
+        heroMetricsAwait = false;
+        render(root, payload, logger, featureId);
+      })
+      .catch(() => {
+        heroMetricsAwait = false;
+      });
+  }
 
   root.innerHTML = `
     ${partialNote ? `<div class="rv-native-note">${partialNote}</div>` : ""}
+    ${missingNote}
     ${renderLayoutControls(layout)}
     ${
       layout === "B"
-        ? renderLayoutB({ regime, drivers, vix, fng, fngStocks, news, btc, dxy, yields, proxies })
+        ? renderLayoutB({ regime, drivers, vix, fng, fngStocks, news, btc, dxy, yields, proxies, heroMetrics })
         : layout === "C"
-          ? renderLayoutC({ regime, drivers, vix, fng, fngStocks, btc, dxy, yields })
-          : renderLayoutA({ regime, drivers, vix, fng, fngStocks, btc, dxy, yields })
+          ? renderLayoutC({ regime, drivers, vix, fng, fngStocks, btc, dxy, yields, heroMetrics })
+          : renderLayoutA({ regime, drivers, vix, fng, fngStocks, btc, dxy, yields, heroMetrics })
     }
     <div class="rv-native-note">Sector rotation details are in the S&amp;P 500 Sectors block below.</div>
+    ${auditHtml}
     <div class="rv-native-note">
       Updated: ${new Date(data.updatedAt || resolved.ts).toLocaleTimeString()} · Freshness: ${
         resolved?.freshness || "unknown"
-      }
+      } · Metrics: ${heroMetrics.missingIds.length ? `PARTIAL (${43 - heroMetrics.missingIds.length}/43)` : "OK"}
     </div>
   `;
   root
     .querySelectorAll("[data-rv-field]")
     .forEach((node) => rvSetText(node, node.dataset.rvField, node.textContent));
 
-  const status = resolved?.isStale || data.partial ? "PARTIAL" : "OK";
+  const status = resolved?.isStale || data.partial || heroMetrics.missingIds.length ? "PARTIAL" : "OK";
   logger?.setStatus(status, resolved?.isStale ? "Stale data" : data.partial ? "Partial data" : "Live");
   logger?.setMeta({
     updatedAt: data.updatedAt || resolved.ts,

@@ -126,16 +126,30 @@ async function fetchLayouts() {
 }
 
 async function loadEnvelope(force = false) {
-  if (!force && cachedEnvelope) return cachedEnvelope;
+  if (!force && cachedEnvelope) {
+    if (typeof window !== "undefined") {
+      window.__RV_METRICS_ENVELOPE = cachedEnvelope;
+    }
+    return cachedEnvelope;
+  }
   if (!force && cachedPromise) return cachedPromise;
   cachedPromise = fetchEnvelope()
     .then((payload) => {
       cachedEnvelope = payload;
+      if (typeof window !== "undefined") {
+        window.__RV_METRICS_ENVELOPE = payload;
+      }
       return payload;
     })
     .finally(() => {
       cachedPromise = null;
+      if (typeof window !== "undefined") {
+        window.__RV_METRICS_PROMISE = null;
+      }
     });
+  if (typeof window !== "undefined") {
+    window.__RV_METRICS_PROMISE = cachedPromise;
+  }
   return cachedPromise;
 }
 
