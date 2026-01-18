@@ -1,64 +1,79 @@
 {
-  "schemaVersion": "rv-mirror-v1",
-  "mirrorId": "market-cockpit",
-  "runId": "2026-01-16T22:46:32.677Z",
-  "updatedAt": "2026-01-16T22:46:32.677Z",
-  "asOf": "2026-01-16T21:00:00.000Z",
-  "mode": "EOD",
-  "cadence": "EOD",
-  "trust": "derived",
-  "source": "mirror",
-  "sourceUpstream": "stooq",
-  "dataQuality": "OK",
-  "delayMinutes": 0,
-  "missingSymbols": [],
-  "errors": [],
-  "notes": [],
-  "whyUnique": "Summary cockpit for benchmarks and signals.",
-  "context": {
-    "benchmarks": [
-      "SPY",
-      "QQQ",
-      "IWM"
-    ]
-  },
-  "items": [
-    {
-      "section": "benchmarks",
-      "items": [
-        {
-          "symbol": "SPY",
-          "close": 691.72,
-          "prevClose": 692.24,
-          "changePct": -0.07511845602681255,
-          "lastBarDate": "2026-01-16",
-          "barsUsed": 5256,
-          "missingFields": []
-        },
-        {
-          "symbol": "QQQ",
-          "close": 621.055,
-          "prevClose": 621.78,
-          "changePct": -0.11660072694522627,
-          "lastBarDate": "2026-01-16",
-          "barsUsed": 6756,
-          "missingFields": []
-        },
-        {
-          "symbol": "IWM",
-          "close": 265.74,
-          "prevClose": 265.51,
-          "changePct": 0.086625739143531,
-          "lastBarDate": "2026-01-16",
-          "barsUsed": 5256,
-          "missingFields": []
-        }
-      ]
-    }
-  ],
   "meta": {
-    "status": "OK",
-    "updatedAt": "2026-01-16T22:46:32.677Z",
-    "reason": null
+    "provider": "stooq",
+    "dataset": "market-cockpit",
+    "fetchedAt": "2026-01-18T21:11:52.836Z",
+    "ttlSeconds": 3600,
+    "source": "mirror",
+    "runId": "2026-01-18T21:11:52.836Z",
+    "cost": null
+  },
+  "raw": {
+    "schemaVersion": "rv-mirror-v1",
+    "mirrorId": "market-cockpit",
+    "provider": "stooq",
+    "dataset": "market-cockpit",
+    "runId": "2026-01-18T21:11:52.836Z",
+    "fetchedAt": "2026-01-18T21:11:52.836Z",
+    "updatedAt": "2026-01-18T21:11:52.836Z",
+    "asOf": "2026-01-16T21:00:00.000Z",
+    "mode": "EOD",
+    "cadence": "EOD",
+    "trust": "derived",
+    "source": "mirror",
+    "sourceUpstream": "stooq",
+    "ttlSeconds": null,
+    "dataQuality": "OK",
+    "delayMinutes": 0,
+    "missingSymbols": [],
+    "errors": [],
+    "notes": [],
+    "whyUnique": "Summary cockpit for benchmarks and signals.",
+    "context": {
+      "benchmarks": [
+        "SPY",
+        "QQQ",
+        "IWM"
+      ]
+    },
+    "items": [
+      {
+        "section": "benchmarks",
+        "items": [
+          {
+            "symbol": "SPY",
+            "close": 691.66,
+            "prevClose": 692.24,
+            "changePct": -0.08378597018375844,
+            "lastBarDate": "2026-01-16",
+            "barsUsed": 5256,
+            "missingFields": []
+          },
+          {
+            "symbol": "QQQ",
+            "close": 621.26,
+            "prevClose": 621.78,
+            "changePct": -0.08363086622277249,
+            "lastBarDate": "2026-01-16",
+            "barsUsed": 6756,
+            "missingFields": []
+          },
+          {
+            "symbol": "IWM",
+            "close": 265.76,
+            "prevClose": 265.51,
+            "changePct": 0.09415841211253273,
+            "lastBarDate": "2026-01-16",
+            "barsUsed": 5256,
+            "missingFields": []
+          }
+        ]
+      }
+    ],
+    "meta": {
+      "status": "OK",
+      "updatedAt": "2026-01-18T21:11:52.836Z",
+      "reason": null
+    }
   }
 }

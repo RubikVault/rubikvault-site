@@ -1,39 +1,54 @@
 {
-  "schemaVersion": "rv-mirror-v1",
-  "mirrorId": "market-regime",
-  "runId": "2026-01-16T22:46:32.678Z",
-  "updatedAt": "2026-01-16T22:46:32.678Z",
-  "asOf": "2026-01-16T21:00:00.000Z",
-  "mode": "EOD",
-  "cadence": "EOD",
-  "trust": "derived",
-  "source": "mirror",
-  "sourceUpstream": "stooq",
-  "dataQuality": "OK",
-  "delayMinutes": 0,
-  "missingSymbols": [],
-  "errors": [],
-  "notes": [],
-  "whyUnique": "Breadth-based regime with hysteresis.",
-  "context": {
-    "currentRegime": "bull",
-    "pendingRegime": null,
-    "pendingCount": 0,
-    "confidence": "confirmed",
-    "daysSinceChange": 17
-  },
-  "items": [
-    {
-      "regime": "bull",
-      "confidence": "confirmed",
-      "breadth50": 0.6,
-      "breadth200": 0.8,
-      "daysSinceChange": 17
-    }
-  ],
   "meta": {
-    "status": "OK",
-    "updatedAt": "2026-01-16T22:46:32.678Z",
-    "reason": null
+    "provider": "stooq",
+    "dataset": "market-regime",
+    "fetchedAt": "2026-01-18T21:11:52.837Z",
+    "ttlSeconds": 3600,
+    "source": "mirror",
+    "runId": "2026-01-18T21:11:52.837Z",
+    "cost": null
+  },
+  "raw": {
+    "schemaVersion": "rv-mirror-v1",
+    "mirrorId": "market-regime",
+    "provider": "stooq",
+    "dataset": "market-regime",
+    "runId": "2026-01-18T21:11:52.837Z",
+    "fetchedAt": "2026-01-18T21:11:52.837Z",
+    "updatedAt": "2026-01-18T21:11:52.837Z",
+    "asOf": "2026-01-16T21:00:00.000Z",
+    "mode": "EOD",
+    "cadence": "EOD",
+    "trust": "derived",
+    "source": "mirror",
+    "sourceUpstream": "stooq",
+    "ttlSeconds": null,
+    "dataQuality": "OK",
+    "delayMinutes": 0,
+    "missingSymbols": [],
+    "errors": [],
+    "notes": [],
+    "whyUnique": "Breadth-based regime with hysteresis.",
+    "context": {
+      "currentRegime": "bull",
+      "pendingRegime": null,
+      "pendingCount": 0,
+      "confidence": "confirmed",
+      "daysSinceChange": 18
+    },
+    "items": [
+      {
+        "regime": "bull",
+        "confidence": "confirmed",
+        "breadth50": 0.6,
+        "breadth200": 0.8,
+        "daysSinceChange": 18
+      }
+    ],
+    "meta": {
+      "status": "OK",
+      "updatedAt": "2026-01-18T21:11:52.837Z",
+      "reason": null
+    }
   }
 }

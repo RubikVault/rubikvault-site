@@ -2,22 +2,22 @@
   "meta": {
     "provider": "system-health",
     "dataset": "system-health",
-    "fetchedAt": "2026-01-18T21:09:10.192Z",
+    "fetchedAt": "2026-01-18T21:11:52.841Z",
     "ttlSeconds": 3600,
     "source": "mirror",
-    "runId": "2026-01-18T21:09:10.192Z",
+    "runId": "2026-01-18T21:11:52.841Z",
     "cost": null
   },
   "raw": {
     "schemaVersion": "1.0",
     "mirrorId": "system-health",
-    "updatedAt": "2026-01-18T21:09:10.192Z",
+    "updatedAt": "2026-01-18T21:11:52.841Z",
     "overallStatus": "OK",
     "jobs": [
       {
-        "id": "crypto-snapshot",
-        "lastRunAt": "2026-01-18T21:09:10.192Z",
-        "lastSuccessAt": "2026-01-18T21:09:10.192Z",
+        "id": "eod-market",
+        "lastRunAt": "2026-01-18T21:11:52.841Z",
+        "lastSuccessAt": "2026-01-18T21:11:52.841Z",
         "status": "OK",
         "durationMs": 0,
         "errors": [],
@@ -26,21 +26,95 @@
     ],
     "mirrors": [
       {
-        "id": "crypto-snapshot",
-        "updatedAt": "2026-01-18T21:09:10.192Z",
+        "id": "quotes",
+        "updatedAt": "2026-01-18T21:11:52.836Z",
+        "dataQuality": "OK",
+        "itemCount": 10,
+        "sizeKB": 0
+      },
+      {
+        "id": "price-snapshot",
+        "updatedAt": "2026-01-18T21:11:52.836Z",
+        "dataQuality": "OK",
+        "itemCount": 10,
+        "sizeKB": 0
+      },
+      {
+        "id": "top-movers",
+        "updatedAt": "2026-01-18T21:11:52.836Z",
+        "dataQuality": "OK",
+        "itemCount": 10,
+        "sizeKB": 0
+      },
+      {
+        "id": "market-cockpit",
+        "updatedAt": "2026-01-18T21:11:52.836Z",
+        "dataQuality": "OK",
+        "itemCount": 1,
+        "sizeKB": 0
+      },
+      {
+        "id": "market-health",
+        "updatedAt": "2026-01-18T21:11:52.836Z",
         "dataQuality": "OK",
         "itemCount": 3,
+        "sizeKB": 0
+      },
+      {
+        "id": "tech-signals",
+        "updatedAt": "2026-01-18T21:11:52.836Z",
+        "dataQuality": "OK",
+        "itemCount": 10,
+        "sizeKB": 0
+      },
+      {
+        "id": "alpha-radar",
+        "updatedAt": "2026-01-18T21:11:52.836Z",
+        "dataQuality": "OK",
+        "itemCount": 10,
+        "sizeKB": 0
+      },
+      {
+        "id": "market-regime",
+        "updatedAt": "2026-01-18T21:11:52.837Z",
+        "dataQuality": "OK",
+        "itemCount": 1,
+        "sizeKB": 0
+      },
+      {
+        "id": "volume-anomaly",
+        "updatedAt": "2026-01-18T21:11:52.837Z",
+        "dataQuality": "STALE",
+        "itemCount": 1,
+        "sizeKB": 0
+      },
+      {
+        "id": "breakout-energy",
+        "updatedAt": "2026-01-18T21:11:52.837Z",
+        "dataQuality": "EMPTY",
+        "itemCount": 0,
         "sizeKB": 0
       }
     ],
     "alerts": [],
-    "selectedSymbols": [],
+    "selectedSymbols": [
+      "AAPL",
+      "MSFT",
+      "NVDA",
+      "AMZN",
+      "GOOGL",
+      "META",
+      "TSLA",
+      "SPY",
+      "QQQ",
+      "IWM"
+    ],
     "skippedSymbols": [],
-    "runId": "2026-01-18T21:09:10.192Z",
-    "asOf": "2026-01-18T21:09:10.192Z",
+    "runId": "2026-01-18T21:11:52.841Z",
+    "asOf": "2026-01-18T21:11:52.841Z",
     "meta": {
       "status": "PARTIAL",
-      "updatedAt": "2026-01-18T21:09:10.192Z",
+      "updatedAt": "2026-01-18T21:11:52.841Z",
       "reason": "EMPTY_ITEMS"
     }
   }

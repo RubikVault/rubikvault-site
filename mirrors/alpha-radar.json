@@ -1,442 +1,457 @@
 {
-  "schemaVersion": "rv-mirror-v1",
-  "mirrorId": "alpha-radar",
-  "runId": "2026-01-16T22:46:32.677Z",
-  "updatedAt": "2026-01-16T22:46:32.677Z",
-  "asOf": "2026-01-16T21:00:00.000Z",
-  "mode": "EOD",
-  "cadence": "EOD",
-  "trust": "derived",
-  "source": "mirror",
-  "sourceUpstream": "stooq",
-  "dataQuality": "OK",
-  "delayMinutes": 0,
-  "missingSymbols": [],
-  "errors": [],
-  "notes": [],
-  "whyUnique": "EOD scoring based on technicals.",
-  "context": {
-    "selectedSymbols": [
-      "AAPL",
-      "MSFT",
-      "NVDA",
-      "AMZN",
-      "GOOGL",
-      "META",
-      "TSLA",
-      "SPY",
-      "QQQ",
-      "IWM"
-    ]
-  },
-  "items": [
-    {
-      "symbol": "AAPL",
-      "score": 55,
-      "state": "WATCH",
-      "reasons": [
-        "TREND_UP_200",
-        "RSI_OVERSOLD",
-        "MACD_NEGATIVE"
-      ],
-      "close": 255.517,
-      "changePct": -1.042949537198401,
-      "barsUsed": 10421,
-      "missingFields": []
-    },
-    {
-      "symbol": "MSFT",
-      "score": 35,
-      "state": "NEUTRAL",
-      "reasons": [
-        "TREND_DOWN",
-        "RSI_RECOVERY",
-        "MACD_NEGATIVE"
-      ],
-      "close": 459.86,
-      "changePct": 0.7007401567906024,
-      "barsUsed": 10038,
-      "missingFields": []
-    },
-    {
-      "symbol": "NVDA",
-      "score": 65,
-      "state": "WATCH",
-      "reasons": [
-        "TREND_STRONG",
-        "RSI_NEUTRAL",
-        "MACD_NEGATIVE"
-      ],
-      "close": 186.105,
-      "changePct": -0.5052125100240668,
-      "barsUsed": 6788,
-      "missingFields": []
-    },
-    {
-      "symbol": "AMZN",
-      "score": 85,
-      "state": "STRONG",
-      "reasons": [
-        "TREND_STRONG",
-        "RSI_NEUTRAL",
-        "MACD_POSITIVE"
-      ],
-      "close": 239.09,
-      "changePct": 0.3820639852212704,
-      "barsUsed": 7208,
-      "missingFields": []
-    },
-    {
-      "symbol": "GOOGL",
-      "score": 85,
-      "state": "STRONG",
-      "reasons": [
-        "TREND_STRONG",
-        "RSI_NEUTRAL",
-        "MACD_POSITIVE"
-      ],
-      "close": 330,
-      "changePct": -0.8353867419916949,
-      "barsUsed": 5388,
-      "missingFields": []
-    },
-    {
-      "symbol": "META",
-      "score": 35,
-      "state": "NEUTRAL",
-      "reasons": [
-        "TREND_DOWN",
-        "RSI_RECOVERY",
-        "MACD_NEGATIVE"
-      ],
-      "close": 620.25,
-      "changePct": -0.08859536082473918,
-      "barsUsed": 3436,
-      "missingFields": []
-    },
-    {
-      "symbol": "TSLA",
-      "score": 50,
-      "state": "NEUTRAL",
-      "reasons": [
-        "TREND_UP_200",
-        "RSI_RECOVERY",
-        "MACD_NEGATIVE"
-      ],
-      "close": 437.52,
-      "changePct": -0.23941446063342475,
-      "barsUsed": 3913,
-      "missingFields": []
-    },
-    {
-      "symbol": "SPY",
-      "score": 85,
-      "state": "STRONG",
-      "reasons": [
-        "TREND_STRONG",
-        "RSI_NEUTRAL",
-        "MACD_POSITIVE"
-      ],
-      "close": 691.72,
-      "changePct": -0.07511845602681255,
-      "barsUsed": 5256,
-      "missingFields": []
-    },
-    {
-      "symbol": "QQQ",
-      "score": 65,
-      "state": "WATCH",
-      "reasons": [
-        "TREND_STRONG",
-        "RSI_NEUTRAL",
-        "MACD_NEGATIVE"
-      ],
-      "close": 621.055,
-      "changePct": -0.11660072694522627,
-      "barsUsed": 6756,
-      "missingFields": []
-    },
-    {
-      "symbol": "IWM",
-      "score": 70,
-      "state": "STRONG",
-      "reasons": [
-        "TREND_STRONG",
-        "RSI_EXTENDED",
-        "MACD_POSITIVE"
-      ],
-      "close": 265.74,
-      "changePct": 0.086625739143531,
-      "barsUsed": 5256,
-      "missingFields": []
-    }
-  ],
-  "generatedAt": "2026-01-16T22:46:32.677Z",
-  "data": {
-    "picks": {
-      "top": [
-        {
-          "symbol": "AMZN",
-          "name": "AMZN",
-          "close": 239.09,
-          "changePct": 0.3820639852212704,
-          "stop": null,
-          "setupScore": 34,
-          "triggerScore": 51,
-          "totalScore": 85,
-          "setup": {
-            "rsiExtreme": true,
-            "bbExtreme": false,
-            "nearSma200": false,
-            "rvolGte15": false,
-            "extremeGate": false
-          },
-          "trigger": {
-            "ema21Reclaim": false,
-            "higherLowFt": false,
-            "bosBreak": false,
-            "volumeConfirm": false,
-            "rsiUpturn": false
-          },
-          "tags": [
-            "STRONG"
-          ],
-          "notes": null
-        },
-        {
-          "symbol": "GOOGL",
-          "name": "GOOGL",
-          "close": 330,
-          "changePct": -0.8353867419916949,
-          "stop": null,
-          "setupScore": 34,
-          "triggerScore": 51,
-          "totalScore": 85,
-          "setup": {
-            "rsiExtreme": true,
-            "bbExtreme": false,
-            "nearSma200": false,
-            "rvolGte15": false,
-            "extremeGate": false
-          },
-          "trigger": {
-            "ema21Reclaim": false,
-            "higherLowFt": false,
-            "bosBreak": false,
-            "volumeConfirm": false,
-            "rsiUpturn": false
-          },
-          "tags": [
-            "STRONG"
-          ],
-          "notes": null
-        },
-        {
-          "symbol": "SPY",
-          "name": "SPY",
-          "close": 691.72,
-          "changePct": -0.07511845602681255,
-          "stop": null,
-          "setupScore": 34,
-          "triggerScore": 51,
-          "totalScore": 85,
-          "setup": {
-            "rsiExtreme": true,
-            "bbExtreme": false,
-            "nearSma200": false,
-            "rvolGte15": false,
-            "extremeGate": false
-          },
-          "trigger": {
-            "ema21Reclaim": false,
-            "higherLowFt": false,
-            "bosBreak": false,
-            "volumeConfirm": false,
-            "rsiUpturn": false
-          },
-          "tags": [
-            "STRONG"
-          ],
-          "notes": null
-        }
-      ],
-      "shortterm": [
-        {
-          "symbol": "AMZN",
-          "name": "AMZN",
-          "close": 239.09,
-          "changePct": 0.3820639852212704,
-          "stop": null,
-          "setupScore": 34,
-          "triggerScore": 51,
-          "totalScore": 85,
-          "setup": {
-            "rsiExtreme": true,
-            "bbExtreme": false,
-            "nearSma200": false,
-            "rvolGte15": false,
-            "extremeGate": false
-          },
-          "trigger": {
-            "ema21Reclaim": false,
-            "higherLowFt": false,
-            "bosBreak": false,
-            "volumeConfirm": false,
-            "rsiUpturn": false
-          },
-          "tags": [
-            "STRONG"
-          ],
-          "notes": null
-        },
-        {
-          "symbol": "GOOGL",
-          "name": "GOOGL",
-          "close": 330,
-          "changePct": -0.8353867419916949,
-          "stop": null,
-          "setupScore": 34,
-          "triggerScore": 51,
-          "totalScore": 85,
-          "setup": {
-            "rsiExtreme": true,
-            "bbExtreme": false,
-            "nearSma200": false,
-            "rvolGte15": false,
-            "extremeGate": false
-          },
-          "trigger": {
-            "ema21Reclaim": false,
-            "higherLowFt": false,
-            "bosBreak": false,
-            "volumeConfirm": false,
-            "rsiUpturn": false
-          },
-          "tags": [
-            "STRONG"
-          ],
-          "notes": null
-        },
-        {
-          "symbol": "SPY",
-          "name": "SPY",
-          "close": 691.72,
-          "changePct": -0.07511845602681255,
-          "stop": null,
-          "setupScore": 34,
-          "triggerScore": 51,
-          "totalScore": 85,
-          "setup": {
-            "rsiExtreme": true,
-            "bbExtreme": false,
-            "nearSma200": false,
-            "rvolGte15": false,
-            "extremeGate": false
-          },
-          "trigger": {
-            "ema21Reclaim": false,
-            "higherLowFt": false,
-            "bosBreak": false,
-            "volumeConfirm": false,
-            "rsiUpturn": false
-          },
-          "tags": [
-            "STRONG"
-          ],
-          "notes": null
-        }
-      ],
-      "longterm": [
-        {
-          "symbol": "IWM",
-          "name": "IWM",
-          "close": 265.74,
-          "changePct": 0.086625739143531,
-          "stop": null,
-          "setupScore": 28,
-          "triggerScore": 42,
-          "totalScore": 70,
-          "setup": {
-            "rsiExtreme": true,
-            "bbExtreme": false,
-            "nearSma200": false,
-            "rvolGte15": false,
-            "extremeGate": false
-          },
-          "trigger": {
-            "ema21Reclaim": false,
-            "higherLowFt": false,
-            "bosBreak": false,
-            "volumeConfirm": false,
-            "rsiUpturn": false
-          },
-          "tags": [
-            "STRONG"
-          ],
-          "notes": null
-        },
-        {
-          "symbol": "NVDA",
-          "name": "NVDA",
-          "close": 186.105,
-          "changePct": -0.5052125100240668,
-          "stop": null,
-          "setupScore": 26,
-          "triggerScore": 39,
-          "totalScore": 65,
-          "setup": {
-            "rsiExtreme": true,
-            "bbExtreme": false,
-            "nearSma200": false,
-            "rvolGte15": false,
-            "extremeGate": false
-          },
-          "trigger": {
-            "ema21Reclaim": false,
-            "higherLowFt": false,
-            "bosBreak": false,
-            "volumeConfirm": false,
-            "rsiUpturn": false
-          },
-          "tags": [
-            "WATCH"
-          ],
-          "notes": null
-        },
-        {
-          "symbol": "QQQ",
-          "name": "QQQ",
-          "close": 621.055,
-          "changePct": -0.11660072694522627,
-          "stop": null,
-          "setupScore": 26,
-          "triggerScore": 39,
-          "totalScore": 65,
-          "setup": {
-            "rsiExtreme": true,
-            "bbExtreme": false,
-            "nearSma200": false,
-            "rvolGte15": false,
-            "extremeGate": false
-          },
-          "trigger": {
-            "ema21Reclaim": false,
-            "higherLowFt": false,
-            "bosBreak": false,
-            "volumeConfirm": false,
-            "rsiUpturn": false
-          },
-          "tags": [
-            "WATCH"
-          ],
-          "notes": null
-        }
-      ]
-    }
-  },
   "meta": {
-    "status": "OK",
-    "updatedAt": "2026-01-16T22:46:32.677Z",
-    "reason": null
+    "provider": "stooq",
+    "dataset": "alpha-radar",
+    "fetchedAt": "2026-01-18T21:11:52.836Z",
+    "ttlSeconds": 3600,
+    "source": "mirror",
+    "runId": "2026-01-18T21:11:52.836Z",
+    "cost": null
+  },
+  "raw": {
+    "schemaVersion": "rv-mirror-v1",
+    "mirrorId": "alpha-radar",
+    "provider": "stooq",
+    "dataset": "alpha-radar",
+    "runId": "2026-01-18T21:11:52.836Z",
+    "fetchedAt": "2026-01-18T21:11:52.836Z",
+    "updatedAt": "2026-01-18T21:11:52.836Z",
+    "asOf": "2026-01-16T21:00:00.000Z",
+    "mode": "EOD",
+    "cadence": "EOD",
+    "trust": "derived",
+    "source": "mirror",
+    "sourceUpstream": "stooq",
+    "ttlSeconds": null,
+    "dataQuality": "OK",
+    "delayMinutes": 0,
+    "missingSymbols": [],
+    "errors": [],
+    "notes": [],
+    "whyUnique": "EOD scoring based on technicals.",
+    "context": {
+      "selectedSymbols": [
+        "AAPL",
+        "MSFT",
+        "NVDA",
+        "AMZN",
+        "GOOGL",
+        "META",
+        "TSLA",
+        "SPY",
+        "QQQ",
+        "IWM"
+      ]
+    },
+    "items": [
+      {
+        "symbol": "AAPL",
+        "score": 55,
+        "state": "WATCH",
+        "reasons": [
+          "TREND_UP_200",
+          "RSI_OVERSOLD",
+          "MACD_NEGATIVE"
+        ],
+        "close": 255.53,
+        "changePct": -1.0379148754889322,
+        "barsUsed": 10421,
+        "missingFields": []
+      },
+      {
+        "symbol": "MSFT",
+        "score": 35,
+        "state": "NEUTRAL",
+        "reasons": [
+          "TREND_DOWN",
+          "RSI_RECOVERY",
+          "MACD_NEGATIVE"
+        ],
+        "close": 459.86,
+        "changePct": 0.7007401567906024,
+        "barsUsed": 10038,
+        "missingFields": []
+      },
+      {
+        "symbol": "NVDA",
+        "score": 65,
+        "state": "WATCH",
+        "reasons": [
+          "TREND_STRONG",
+          "RSI_NEUTRAL",
+          "MACD_NEGATIVE"
+        ],
+        "close": 186.23,
+        "changePct": -0.4383854584335878,
+        "barsUsed": 6788,
+        "missingFields": []
+      },
+      {
+        "symbol": "AMZN",
+        "score": 85,
+        "state": "STRONG",
+        "reasons": [
+          "TREND_STRONG",
+          "RSI_NEUTRAL",
+          "MACD_POSITIVE"
+        ],
+        "close": 239.12,
+        "changePct": 0.39465950121757576,
+        "barsUsed": 7208,
+        "missingFields": []
+      },
+      {
+        "symbol": "GOOGL",
+        "score": 85,
+        "state": "STRONG",
+        "reasons": [
+          "TREND_STRONG",
+          "RSI_NEUTRAL",
+          "MACD_POSITIVE"
+        ],
+        "close": 330,
+        "changePct": -0.8353867419916949,
+        "barsUsed": 5388,
+        "missingFields": []
+      },
+      {
+        "symbol": "META",
+        "score": 35,
+        "state": "NEUTRAL",
+        "reasons": [
+          "TREND_DOWN",
+          "RSI_RECOVERY",
+          "MACD_NEGATIVE"
+        ],
+        "close": 620.25,
+        "changePct": -0.08859536082473918,
+        "barsUsed": 3436,
+        "missingFields": []
+      },
+      {
+        "symbol": "TSLA",
+        "score": 50,
+        "state": "NEUTRAL",
+        "reasons": [
+          "TREND_UP_200",
+          "RSI_RECOVERY",
+          "MACD_NEGATIVE"
+        ],
+        "close": 437.5,
+        "changePct": -0.24397473607405962,
+        "barsUsed": 3913,
+        "missingFields": []
+      },
+      {
+        "symbol": "SPY",
+        "score": 85,
+        "state": "STRONG",
+        "reasons": [
+          "TREND_STRONG",
+          "RSI_NEUTRAL",
+          "MACD_POSITIVE"
+        ],
+        "close": 691.66,
+        "changePct": -0.08378597018375844,
+        "barsUsed": 5256,
+        "missingFields": []
+      },
+      {
+        "symbol": "QQQ",
+        "score": 65,
+        "state": "WATCH",
+        "reasons": [
+          "TREND_STRONG",
+          "RSI_NEUTRAL",
+          "MACD_NEGATIVE"
+        ],
+        "close": 621.26,
+        "changePct": -0.08363086622277249,
+        "barsUsed": 6756,
+        "missingFields": []
+      },
+      {
+        "symbol": "IWM",
+        "score": 70,
+        "state": "STRONG",
+        "reasons": [
+          "TREND_STRONG",
+          "RSI_EXTENDED",
+          "MACD_POSITIVE"
+        ],
+        "close": 265.76,
+        "changePct": 0.09415841211253273,
+        "barsUsed": 5256,
+        "missingFields": []
+      }
+    ],
+    "generatedAt": "2026-01-18T21:11:52.836Z",
+    "data": {
+      "picks": {
+        "top": [
+          {
+            "symbol": "AMZN",
+            "name": "AMZN",
+            "close": 239.12,
+            "changePct": 0.39465950121757576,
+            "stop": null,
+            "setupScore": 34,
+            "triggerScore": 51,
+            "totalScore": 85,
+            "setup": {
+              "rsiExtreme": true,
+              "bbExtreme": false,
+              "nearSma200": false,
+              "rvolGte15": false,
+              "extremeGate": false
+            },
+            "trigger": {
+              "ema21Reclaim": false,
+              "higherLowFt": false,
+              "bosBreak": false,
+              "volumeConfirm": false,
+              "rsiUpturn": false
+            },
+            "tags": [
+              "STRONG"
+            ],
+            "notes": null
+          },
+          {
+            "symbol": "GOOGL",
+            "name": "GOOGL",
+            "close": 330,
+            "changePct": -0.8353867419916949,
+            "stop": null,
+            "setupScore": 34,
+            "triggerScore": 51,
+            "totalScore": 85,
+            "setup": {
+              "rsiExtreme": true,
+              "bbExtreme": false,
+              "nearSma200": false,
+              "rvolGte15": false,
+              "extremeGate": false
+            },
+            "trigger": {
+              "ema21Reclaim": false,
+              "higherLowFt": false,
+              "bosBreak": false,
+              "volumeConfirm": false,
+              "rsiUpturn": false
+            },
+            "tags": [
+              "STRONG"
+            ],
+            "notes": null
+          },
+          {
+            "symbol": "SPY",
+            "name": "SPY",
+            "close": 691.66,
+            "changePct": -0.08378597018375844,
+            "stop": null,
+            "setupScore": 34,
+            "triggerScore": 51,
+            "totalScore": 85,
+            "setup": {
+              "rsiExtreme": true,
+              "bbExtreme": false,
+              "nearSma200": false,
+              "rvolGte15": false,
+              "extremeGate": false
+            },
+            "trigger": {
+              "ema21Reclaim": false,
+              "higherLowFt": false,
+              "bosBreak": false,
+              "volumeConfirm": false,
+              "rsiUpturn": false
+            },
+            "tags": [
+              "STRONG"
+            ],
+            "notes": null
+          }
+        ],
+        "shortterm": [
+          {
+            "symbol": "AMZN",
+            "name": "AMZN",
+            "close": 239.12,
+            "changePct": 0.39465950121757576,
+            "stop": null,
+            "setupScore": 34,
+            "triggerScore": 51,
+            "totalScore": 85,
+            "setup": {
+              "rsiExtreme": true,
+              "bbExtreme": false,
+              "nearSma200": false,
+              "rvolGte15": false,
+              "extremeGate": false
+            },
+            "trigger": {
+              "ema21Reclaim": false,
+              "higherLowFt": false,
+              "bosBreak": false,
+              "volumeConfirm": false,
+              "rsiUpturn": false
+            },
+            "tags": [
+              "STRONG"
+            ],
+            "notes": null
+          },
+          {
+            "symbol": "GOOGL",
+            "name": "GOOGL",
+            "close": 330,
+            "changePct": -0.8353867419916949,
+            "stop": null,
+            "setupScore": 34,
+            "triggerScore": 51,
+            "totalScore": 85,
+            "setup": {
+              "rsiExtreme": true,
+              "bbExtreme": false,
+              "nearSma200": false,
+              "rvolGte15": false,
+              "extremeGate": false
+            },
+            "trigger": {
+              "ema21Reclaim": false,
+              "higherLowFt": false,
+              "bosBreak": false,
+              "volumeConfirm": false,
+              "rsiUpturn": false
+            },
+            "tags": [
+              "STRONG"
+            ],
+            "notes": null
+          },
+          {
+            "symbol": "SPY",
+            "name": "SPY",
+            "close": 691.66,
+            "changePct": -0.08378597018375844,
+            "stop": null,
+            "setupScore": 34,
+            "triggerScore": 51,
+            "totalScore": 85,
+            "setup": {
+              "rsiExtreme": true,
+              "bbExtreme": false,
+              "nearSma200": false,
+              "rvolGte15": false,
+              "extremeGate": false
+            },
+            "trigger": {
+              "ema21Reclaim": false,
+              "higherLowFt": false,
+              "bosBreak": false,
+              "volumeConfirm": false,
+              "rsiUpturn": false
+            },
+            "tags": [
+              "STRONG"
+            ],
+            "notes": null
+          }
+        ],
+        "longterm": [
+          {
+            "symbol": "IWM",
+            "name": "IWM",
+            "close": 265.76,
+            "changePct": 0.09415841211253273,
+            "stop": null,
+            "setupScore": 28,
+            "triggerScore": 42,
+            "totalScore": 70,
+            "setup": {
+              "rsiExtreme": true,
+              "bbExtreme": false,
+              "nearSma200": false,
+              "rvolGte15": false,
+              "extremeGate": false
+            },
+            "trigger": {
+              "ema21Reclaim": false,
+              "higherLowFt": false,
+              "bosBreak": false,
+              "volumeConfirm": false,
+              "rsiUpturn": false
+            },
+            "tags": [
+              "STRONG"
+            ],
+            "notes": null
+          },
+          {
+            "symbol": "NVDA",
+            "name": "NVDA",
+            "close": 186.23,
+            "changePct": -0.4383854584335878,
+            "stop": null,
+            "setupScore": 26,
+            "triggerScore": 39,
+            "totalScore": 65,
+            "setup": {
+              "rsiExtreme": true,
+              "bbExtreme": false,
+              "nearSma200": false,
+              "rvolGte15": false,
+              "extremeGate": false
+            },
+            "trigger": {
+              "ema21Reclaim": false,
+              "higherLowFt": false,
+              "bosBreak": false,
+              "volumeConfirm": false,
+              "rsiUpturn": false
+            },
+            "tags": [
+              "WATCH"
+            ],
+            "notes": null
+          },
+          {
+            "symbol": "QQQ",
+            "name": "QQQ",
+            "close": 621.26,
+            "changePct": -0.08363086622277249,
+            "stop": null,
+            "setupScore": 26,
+            "triggerScore": 39,
+            "totalScore": 65,
+            "setup": {
+              "rsiExtreme": true,
+              "bbExtreme": false,
+              "nearSma200": false,
+              "rvolGte15": false,
+              "extremeGate": false
+            },
+            "trigger": {
+              "ema21Reclaim": false,
+              "higherLowFt": false,
+              "bosBreak": false,
+              "volumeConfirm": false,
+              "rsiUpturn": false
+            },
+            "tags": [
+              "WATCH"
+            ],
+            "notes": null
+          }
+        ]
+      }
+    },
+    "meta": {
+      "status": "OK",
+      "updatedAt": "2026-01-18T21:11:52.836Z",
+      "reason": null
+    }
   }
 }
