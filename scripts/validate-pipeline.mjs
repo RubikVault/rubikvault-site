@@ -3,88 +3,194 @@ import path from "node:path";
 
 const ROOT = path.resolve(new URL("..", import.meta.url).pathname);
 const PUBLIC_DATA = path.join(ROOT, "public", "data");
+const SNAPSHOT_DIR = path.join(PUBLIC_DATA, "snapshots");
 const MAX_PUBLIC_BYTES = 200 * 1024;
 
-function listFiles(dir, extFilter) {
+const SENSITIVE_PATTERNS = [
+  /\/Users\/[^/]+/i,
+  /\/home\/[^/]+/i,
+  new RegExp("[A-Za-z]:\\\\Us" + "ers\\\\[^\\\\]+", "i"),
+  /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b/i,
+  /\b[A-Za-z0-9-]+\.local\b/i,
+  /\b[A-Za-z0-9-]+\.lan\b/i,
+  /\b[A-Za-z0-9-]+\.internal\b/i
+];
+
+function listFiles(dir, exts = null) {
   const results = [];
   const stack = [dir];
   while (stack.length) {
     const current = stack.pop();
     if (!fs.existsSync(current)) continue;
     const entries = fs.readdirSync(current, { withFileTypes: true });
-    entries.forEach((entry) => {
+    for (const entry of entries) {
       const full = path.join(current, entry.name);
       if (entry.isDirectory()) {
+        if (entry.name === "node_modules" || entry.name === ".git") continue;
         stack.push(full);
-      } else if (!extFilter || extFilter.some((ext) => full.endsWith(ext))) {
+      } else if (!exts || exts.some((ext) => full.endsWith(ext))) {
         results.push(full);
       }
-    });
+    }
   }
   return results;
 }
 
-function fileContains(filePath, pattern) {
-  const raw = fs.readFileSync(filePath, "utf8");
-  return pattern.test(raw);
+function readText(filePath) {
+  return fs.readFileSync(filePath, "utf8");
 }
 
-function assert(condition, message, errors) {
-  if (!condition) errors.push(message);
+function safeJson(filePath, errors) {
+  let raw = "";
+  try {
+    raw = readText(filePath);
+  } catch {
+    errors.push(`public data unreadable: ${filePath}`);
+    return null;
+  }
+  if (!raw.trim()) {
+    errors.push(`public data empty: ${filePath}`);
+    return null;
+  }
+  if (/<!doctype|<html/i.test(raw)) {
+    errors.push(`public data is html: ${filePath}`);
+    return null;
+  }
+  try {
+    return JSON.parse(raw);
+  } catch {
+    errors.push(`public data invalid json: ${filePath}`);
+    return null;
+  }
+}
+
+function ensureMetaFields(payload, filePath, errors) {
+  if (!payload || typeof payload !== "object") {
+    errors.push(`missing meta object in: ${filePath}`);
+    return;
+  }
+  const meta = payload.meta;
+  if (!meta || typeof meta !== "object") {
+    errors.push(`missing meta object in: ${filePath}`);
+    return;
+  }
+  if (!meta.freshness) errors.push(`missing meta.freshness in: ${filePath}`);
+  if (!meta.validation) errors.push(`missing meta.validation in: ${filePath}`);
+  if (!meta.schedule) errors.push(`missing meta.schedule in: ${filePath}`);
+  if (!meta.runId) errors.push(`missing meta.runId in: ${filePath}`);
 }
 
 function main() {
   const errors = [];
 
+  // Gate A: providers must not write public/data
   const providerFiles = listFiles(path.join(ROOT, "scripts", "providers"), [".js", ".mjs"]);
   providerFiles.forEach((filePath) => {
-    if (fileContains(filePath, /public\/data/i)) {
+    if (/public\/data/i.test(readText(filePath))) {
       errors.push(`Provider script writes to public/data: ${filePath}`);
     }
   });
 
-  const publicFiles = listFiles(path.join(ROOT, "public"), [".js", ".html", "internal-dashboard"]);
-  const apiFetchPattern = /fetch\([^)]*\/api\//;
+  // Gate B: public UI must not fetch /api
+  const publicFiles = listFiles(path.join(ROOT, "public"));
+  const apiFetchPattern = /fetch\([^)]*["'`]\/api\//;
   publicFiles.forEach((filePath) => {
-    if (apiFetchPattern.test(fs.readFileSync(filePath, "utf8"))) {
+    const text = readText(filePath);
+    if (apiFetchPattern.test(text)) {
       errors.push(`Public file fetches /api: ${filePath}`);
     }
   });
 
+  // Gate C: build-snapshots must not do network calls
   const buildSnapshotPath = path.join(ROOT, "scripts", "build-snapshots.mjs");
   if (fs.existsSync(buildSnapshotPath)) {
-    assert(!fileContains(buildSnapshotPath, /fetch\(/), "build-snapshots must not call fetch()", errors);
+    const text = readText(buildSnapshotPath);
+    if (/(fetch\(|https?:\/\/|node:https|node:net|node:dns|undici|axios|got)/.test(text)) {
+      errors.push("build-snapshots.mjs must not do network calls");
+    }
   }
 
-  const middlewarePath = path.join(ROOT, "functions", "api", "_middleware.js");
-  if (fs.existsSync(middlewarePath)) {
-    assert(fileContains(middlewarePath, /mapApiToStaticPath/), "middleware must map /api to /data", errors);
-  }
+  // Gate D: functions/api must be static-only (no external URLs)
+  const apiFiles = listFiles(path.join(ROOT, "functions", "api"), [".js", ".mjs"]);
+  apiFiles.forEach((filePath) => {
+    const text = readText(filePath);
+    if (/https?:\/\//i.test(text)) {
+      errors.push(`functions/api contains external URL: ${filePath}`);
+    }
+    if (/(undici|axios|got)/.test(text)) {
+      errors.push(`functions/api contains external client lib: ${filePath}`);
+    }
+  });
 
-  const systemHealthPath = path.join(PUBLIC_DATA, "system-health.json");
-  if (!fs.existsSync(systemHealthPath)) {
-    errors.push("public/data/system-health.json missing");
-  }
+  // Gate E: snapshot meta contract
+  const snapshotFiles = listFiles(SNAPSHOT_DIR, [".json"]);
+  snapshotFiles.forEach((filePath) => {
+    const payload = safeJson(filePath, errors);
+    if (!payload) return;
+    ensureMetaFields(payload, filePath, errors);
+  });
 
-  const runReportPath = path.join(PUBLIC_DATA, "run-report.json");
-  if (fs.existsSync(runReportPath)) {
-    errors.push("public/data/run-report.json should not be public");
-  }
-
-  const publicJsonFiles = listFiles(PUBLIC_DATA, [".json"]);
-  const sensitivePatterns = [
-    /\/Users\/[^/]+/i,
-    /\/home\/[^/]+/i,
-    new RegExp("[A-Za-z]:\\\\Us" + "ers\\\\[^\\\\]+", "i"),
-    /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b/i,
-    /\b[A-Za-z0-9-]+\.local\b/i,
-    /\b[A-Za-z0-9-]+\.lan\b/i,
-    /\b[A-Za-z0-9-]+\.internal\b/i
+  const coreDebugFiles = [
+    path.join(PUBLIC_DATA, "system-health.json"),
+    path.join(PUBLIC_DATA, "provider-state.json"),
+    path.join(PUBLIC_DATA, "usage-report.json"),
+    path.join(PUBLIC_DATA, "error-summary.json")
   ];
+  coreDebugFiles.forEach((filePath) => {
+    if (!fs.existsSync(filePath)) {
+      errors.push(`public data missing: ${filePath}`);
+      return;
+    }
+    const payload = safeJson(filePath, errors);
+    if (!payload) return;
+    ensureMetaFields(payload, filePath, errors);
+  });
+
+  // Gate F: bundle/render-plan sanity
+  const registryPath = path.join(ROOT, "public", "features", "feature-registry.json");
+  let registryFeatures = [];
+  if (fs.existsSync(registryPath)) {
+    try {
+      const reg = JSON.parse(readText(registryPath));
+      registryFeatures = Array.isArray(reg.features) ? reg.features : [];
+    } catch {
+      errors.push("feature-registry.json invalid");
+    }
+  }
+
+  const bundlePath = path.join(PUBLIC_DATA, "bundle.json");
+  const renderPlanPath = path.join(PUBLIC_DATA, "render-plan.json");
+  const bundlePayload = fs.existsSync(bundlePath) ? safeJson(bundlePath, errors) : null;
+  const renderPayload = fs.existsSync(renderPlanPath) ? safeJson(renderPlanPath, errors) : null;
+
+  if (!bundlePayload) errors.push("public/data/bundle.json missing");
+  if (!renderPayload) errors.push("public/data/render-plan.json missing");
+
+  if (bundlePayload && renderPayload) {
+    const bundleBlocks = Array.isArray(bundlePayload.blocks) ? bundlePayload.blocks : [];
+    const renderBlocks = Array.isArray(renderPayload.blocks) ? renderPayload.blocks : [];
+    if (registryFeatures.length > 0 && bundleBlocks.length === 0) {
+      errors.push("bundle.json blocks empty while registry has features");
+    }
+    if (bundleBlocks.length !== renderBlocks.length) {
+      errors.push("bundle.json blocks length != render-plan.json blocks length");
+    }
+    const bundleDate = Date.parse(bundlePayload.generatedAt || "");
+    const renderDate = Date.parse(renderPayload.generatedAt || "");
+    if (!Number.isFinite(bundleDate) || new Date(bundleDate).getFullYear() < 2000) {
+      errors.push("bundle.json generatedAt invalid");
+    }
+    if (!Number.isFinite(renderDate) || new Date(renderDate).getFullYear() < 2000) {
+      errors.push("render-plan.json generatedAt invalid");
+    }
+  }
+
+  // Public data hygiene
+  const publicJsonFiles = listFiles(PUBLIC_DATA, [".json"]);
   publicJsonFiles.forEach((filePath) => {
     let raw = "";
     try {
-      raw = fs.readFileSync(filePath, "utf8");
+      raw = readText(filePath);
     } catch {
       errors.push(`public data unreadable: ${filePath}`);
       return;
@@ -99,7 +205,7 @@ function main() {
     }
     try {
       JSON.parse(raw);
-    } catch (error) {
+    } catch {
       errors.push(`public data invalid json: ${filePath}`);
       return;
     }
@@ -107,13 +213,19 @@ function main() {
     if (byteSize > MAX_PUBLIC_BYTES) {
       errors.push(`public data too large (${byteSize} bytes): ${filePath}`);
     }
-    for (const pattern of sensitivePatterns) {
+    for (const pattern of SENSITIVE_PATTERNS) {
       if (pattern.test(raw)) {
         errors.push(`public data contains sensitive pattern ${pattern}: ${filePath}`);
         break;
       }
     }
   });
+
+  // Run-report must stay internal
+  const runReportPath = path.join(PUBLIC_DATA, "run-report.json");
+  if (fs.existsSync(runReportPath)) {
+    errors.push("public/data/run-report.json should not be public");
+  }
 
   if (errors.length) {
     console.error("Pipeline guardrails failed:\n" + errors.map((e) => `- ${e}`).join("\n"));
@@ -123,87 +235,3 @@ function main() {
 }
 
 main();
-
-
-
-// RV_V3_SPLIT_BRAIN_GATES
-// Hard gates to prevent split-brain:
-// 1) providers must not write public/data
-// 2) public UI/dashboard must not fetch /api
-// 3) build-snapshots must not do network
-// 4) functions/api must not call external providers
-// 5) public/data snapshots must include required v3 meta fields (best-effort checks)
-import path from "node:path";
-
-function die(msg) {
-  console.error("::error::" + msg);
-  process.exit(1);
-}
-
-function rgLike(pattern, dir) {
-  const out = [];
-  const stack = [dir];
-  while (stack.length) {
-    const d = stack.pop();
-    let ents = [];
-    try { ents = fs.readdirSync(d, { withFileTypes: true }); } catch { continue; }
-    for (const e of ents) {
-      const p = path.join(d, e.name);
-      if (e.isDirectory()) {
-        if (e.name === "node_modules" || e.name === ".git") continue;
-        stack.push(p);
-      } else {
-        try {
-          const t = fs.readFileSync(p, "utf-8");
-          if (pattern.test(t)) out.push(p);
-        } catch {}
-      }
-    }
-  }
-  return out;
-}
-
-// (1) providers writing public/data
-{
-  const hits = rgLike(/public\/data\//g, "scripts/providers");
-  if (hits.length) die("providers must not touch public/data/* (found in: " + hits.slice(0,10).join(", ") + ")");
-}
-
-// (2) UI fetching /api (public surface)
-{
-  const hits = rgLike(/fetch\(\s*["']\/api\//g, "public");
-  if (hits.length) die("public UI must not fetch /api/* (found in: " + hits.slice(0,10).join(", ") + ")");
-}
-
-// (3) build-snapshots doing network
-{
-  const t = fs.readFileSync("scripts/build-snapshots.mjs", "utf-8");
-  if (/(fetch\(|https?:\/\/|node:net|node:dns|curl\s)/.test(t)) die("build-snapshots.mjs must not do network calls");
-}
-
-// (4) functions/api calling externals
-{
-  const hits = rgLike(/https?:\/\/|fetch\(/g, "functions/api");
-  const bad = hits.filter(p => !/\/_middleware\.js$/.test(p));
-  if (bad.length) die("functions/api must serve static snapshots only (found external patterns in: " + bad.slice(0,10).join(", ") + ")");
-}
-
-// (5) required v3 meta fields (best-effort on key files)
-{
-  const must = [
-    "public/data/system-health.json",
-    "public/data/provider-state.json",
-    "public/data/usage-report.json",
-    "public/data/error-summary.json",
-    "public/data/run-report.json",
-  ];
-  for (const f of must) {
-    if (!fs.existsSync(f)) die("missing required public snapshot: " + f);
-    const txt = fs.readFileSync(f, "utf-8");
-    if (!/\"meta\"\s*:\s*\{/.test(txt)) die("missing meta object in: " + f);
-    if (!/freshness/.test(txt)) die("missing meta.freshness in: " + f);
-    if (!/validation/.test(txt)) die("missing meta.validation in: " + f);
-    if (!/schedule/.test(txt)) die("missing meta.schedule in: " + f);
-  }
-}
-

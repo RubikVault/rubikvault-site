@@ -12,7 +12,7 @@ import { resolveApiBase } from "./features/utils/api.js";
 import { initFlagsPanel } from "./features/rv-flags-panel.js";
 import { BLOCK_REGISTRY, formatBlockTitle } from "./features/blocks-registry.js";
 
-const REGISTRY_URL = "./data/feature-registry.json";
+const RENDER_PLAN_URL = "./data/render-plan.json";
 const MANIFEST_URL = "./data/seed-manifest.json";
 const RVCI_LATEST_URL = "./data/rvci_latest.json";
 const RUN_ID = (() => {
@@ -564,7 +564,7 @@ const NY_WEEKDAY_INDEX = {
 const DASHBOARD_MIN_REFRESH_MS = 60_000;
 const DASHBOARD_JITTER_PCT = 0.15;
 const REFRESH_BACKOFF_MAX_MS = 20 * 60 * 1000;
-let FEATURE_REGISTRY_CACHE = null;
+let RENDER_PLAN_CACHE = null;
 let MANIFEST_CACHE = null;
 const SNAPSHOT_ONLY = true;
 const SNAPSHOT_ONLY_API_FEATURES = new Set([
@@ -590,19 +590,19 @@ function normalizeBlockEntries(list) {
     .filter(Boolean);
 }
 
-async function loadRegistryBlocks() {
-  if (FEATURE_REGISTRY_CACHE) {
-    return { ok: true, blocks: FEATURE_REGISTRY_CACHE, reason: "cache" };
+async function loadRenderPlanBlocks() {
+  if (RENDER_PLAN_CACHE) {
+    return { ok: true, blocks: RENDER_PLAN_CACHE, reason: "cache" };
   }
   try {
-    const res = await fetch(REGISTRY_URL, { cache: "no-store" });
+    const res = await fetch(RENDER_PLAN_URL, { cache: "no-store" });
     if (!res.ok) {
-      console.warn("[RV] registry fetch failed", res.status);
+      console.warn("[RV] render-plan fetch failed", res.status);
       return { ok: false, reason: `http_${res.status}` };
     }
     const contentType = (res.headers.get("content-type") || "").toLowerCase();
     if (!contentType.includes("json")) {
-      console.warn("[RV] registry content-type not json", contentType);
+      console.warn("[RV] render-plan content-type not json", contentType);
       return { ok: false, reason: "content_type" };
     }
     const text = await res.text();
@@ -610,21 +610,21 @@ async function loadRegistryBlocks() {
     try {
       payload = JSON.parse(text);
     } catch (error) {
-      console.warn("[RV] registry parse failed", error);
+      console.warn("[RV] render-plan parse failed", error);
       return { ok: false, reason: "parse_error" };
     }
-    if (!payload || !Array.isArray(payload.features)) {
-      console.warn("[RV] registry schema invalid");
+    if (!payload || !Array.isArray(payload.blocks)) {
+      console.warn("[RV] render-plan schema invalid");
       return { ok: false, reason: "schema_invalid" };
     }
-    const blocks = normalizeBlockEntries(payload.features);
+    const blocks = normalizeBlockEntries(payload.blocks);
     if (!blocks.length) {
-      return { ok: false, reason: "empty_features" };
+      return { ok: false, reason: "empty_blocks" };
     }
-    FEATURE_REGISTRY_CACHE = blocks;
+    RENDER_PLAN_CACHE = blocks;
     return { ok: true, blocks, reason: "ok" };
   } catch (error) {
-    console.warn("[RV] registry fetch error", error);
+    console.warn("[RV] render-plan fetch error", error);
     return { ok: false, reason: "fetch_error" };
   }
 }
@@ -688,7 +688,10 @@ function mapBlocksToFeatures(blocks, features) {
     const manifestMeta = {
       blockId,
       idx: Number.isFinite(block.idx) ? block.idx : index + 1,
-      title: block.title || blockId
+      title: block.title || blockId,
+      snapshot: block.snapshot || null,
+      module: block.module || null,
+      mirror: block.mirror || null
     };
     if (feature) {
       const next = {
@@ -707,7 +710,7 @@ function mapBlocksToFeatures(blocks, features) {
     mapped.push({
       id: fallbackId,
       title: manifestMeta.title,
-      module: null,
+      module: block.module || null,
       api: null,
       enabled: true,
       manifest: manifestMeta
@@ -1581,31 +1584,46 @@ function initPanicButton() {
 async function loadFeatures() {
   const list = Array.isArray(FEATURES) ? FEATURES : [];
   const overridden = applyOverrides(list);
-  if (!isDebugEnabled()) {
-    const filtered = overridden.filter((feature) => PUBLIC_FEATURE_ALLOWLIST.has(feature.id));
-    return { source: "config", blocks: null, features: filtered, reason: "public_filter" };
-  }
-  const registry = await loadRegistryBlocks();
-  if (registry.ok) {
-    const blocks = ensurePinnedBlocks(registry.blocks, overridden);
+  const renderPlan = await loadRenderPlanBlocks();
+  if (renderPlan.ok) {
+    let blocks = ensurePinnedBlocks(renderPlan.blocks, overridden);
+    let features = mapBlocksToFeatures(blocks, overridden);
+    if (!isDebugEnabled()) {
+      features = features.filter((feature) => PUBLIC_FEATURE_ALLOWLIST.has(feature.id));
+      const allowed = new Set(
+        features.map((feature) => feature?.manifest?.blockId || normalizeId(feature?.id))
+      );
+      blocks = blocks.filter((block) => allowed.has(block.blockId));
+    }
     return {
-      source: "registry",
+      source: "render-plan",
       blocks,
-      features: mapBlocksToFeatures(blocks, overridden),
-      reason: registry.reason
+      features,
+      reason: renderPlan.reason
     };
   }
   const manifest = await loadSeedManifest();
   if (manifest.ok) {
-    const blocks = ensurePinnedBlocks(manifest.blocks, overridden);
+    let blocks = ensurePinnedBlocks(manifest.blocks, overridden);
+    let features = mapBlocksToFeatures(blocks, overridden);
+    if (!isDebugEnabled()) {
+      features = features.filter((feature) => PUBLIC_FEATURE_ALLOWLIST.has(feature.id));
+      const allowed = new Set(
+        features.map((feature) => feature?.manifest?.blockId || normalizeId(feature?.id))
+      );
+      blocks = blocks.filter((block) => allowed.has(block.blockId));
+    }
     return {
       source: "manifest",
       blocks,
-      features: mapBlocksToFeatures(blocks, overridden),
-      reason: registry.reason
+      features,
+      reason: manifest.reason
     };
   }
-  return { source: "config", blocks: null, features: overridden, reason: registry.reason };
+  const filtered = isDebugEnabled()
+    ? overridden
+    : overridden.filter((feature) => PUBLIC_FEATURE_ALLOWLIST.has(feature.id));
+  return { source: "config", blocks: null, features: filtered, reason: "render_plan_unavailable" };
 }
 
 async function loadFeatureModule(feature) {
@@ -1632,11 +1650,14 @@ function sanitizeBlockTitle(rawTitle = "") {
 }
 
 function getFeatureEndpoint(feature) {
-  if (!feature?.api) return "";
-  const resolution = resolveApiBase();
-  if (!resolution.ok) return feature.api;
-  const prefix = resolution.apiPrefix || resolution.apiBase || "";
-  return prefix ? `${prefix}/${feature.api}` : feature.api;
+  if (feature?.manifest?.snapshot) return feature.manifest.snapshot;
+  const api = feature?.api ? String(feature.api) : "";
+  if (api) {
+    const cleaned = api.replace(/^\/+/, "").replace(/^api\//, "");
+    return cleaned ? `./data/snapshots/${cleaned}.json` : "";
+  }
+  const fallback = normalizeId(feature?.id);
+  return fallback ? `./data/snapshots/${fallback}.json` : "";
 }
 
 function getManifestBlockId(feature, section) {
@@ -1650,6 +1671,8 @@ function getManifestBlockId(feature, section) {
 }
 
 function getManifestEndpoint(feature, section) {
+  const manifestSnapshot = feature?.manifest?.snapshot;
+  if (manifestSnapshot) return manifestSnapshot;
   const blockId = getManifestBlockId(feature, section);
   if (blockId === "rvci-engine") return "/data/snapshots/rvci-engine.json";
   const snapshotId = normalizeId(blockId);

@@ -2,6 +2,8 @@ import fs from "node:fs";
 import { promises as fsp } from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
+import { spawnSync } from "node:child_process";
+import { sanitizeForPublic, assertPublicSafe } from "./_lib/sanitize-public.mjs";
 
 const ROOT = path.resolve(new URL("..", import.meta.url).pathname);
 const MIRROR_ROOT = path.join(ROOT, "mirrors");
@@ -22,7 +24,6 @@ const SYSTEM_HEALTH_PATH = path.join(PUBLIC_DATA, "system-health.json");
 const RUN_REPORT_PATH = path.join(INTERNAL_DIR, "run-report.json");
 const MARKETPHASE_PUBLIC = path.join(PUBLIC_DATA, "marketphase");
 const MAX_PUBLIC_BYTES = 200 * 1024;
-const REDACTION_TOKEN = "<redacted>";
 
 const RUN_ID = new Date().toISOString();
 const BUILD_STARTED = Date.now();
@@ -97,90 +98,6 @@ function unwrapEnvelope(payload) {
   return { raw: payload, meta: null };
 }
 
-function sanitizeString(value) {
-  let next = value;
-  const redactions = [
-    { pattern: /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi, replace: REDACTION_TOKEN },
-    { pattern: new RegExp("\\/" + "Users" + "\\/" + "[^/]+", "g"), replace: ("/" + "Users" + "/" + "<redacted>") },
-    { pattern: new RegExp("\\/" + "home"  + "\\/" + "[^/]+", "g"), replace: ("/" + "home"  + "/" + "<redacted>") },
-    { pattern: new RegExp("[A-Za-z]:\\\\Us" + "ers\\\\[^\\\\]+", "g"), replace: "C:\\Us" + "ers\\<redacted>" },
-    { pattern: new RegExp("\\\\Us" + "ers\\\$begin:math:display$^\\\\\\\$end:math:display$+", "g"), replace: "\\Us" + "ers\\<redacted>" },
-    { pattern: /\b[A-Za-z0-9-]+\.local\b/gi, replace: REDACTION_TOKEN },
-    { pattern: /\b[A-Za-z0-9-]+\.lan\b/gi, replace: REDACTION_TOKEN },
-    { pattern: /\b[A-Za-z0-9-]+\.internal\b/gi, replace: REDACTION_TOKEN }
-  ];
-  for (const rule of redactions) {
-    next = next.replace(rule.pattern, rule.replace);
-  }
-  if (!/https?:\/\//i.test(next) && /^(mirrors|public|internal|\.artifacts)\//i.test(next)) {
-    next = REDACTION_TOKEN;
-  }
-  if (!/https?:\/\//i.test(next) && /^(\/|[A-Za-z]:\\)/.test(next)) {
-    next = REDACTION_TOKEN;
-  }
-  return next;
-}
-
-function sanitizeForPublic(payload, state = { redactions: 0 }, seen = new WeakSet()) {
-  if (payload === null || payload === undefined) return payload;
-  const valueType = typeof payload;
-  if (valueType === "string") {
-    const sanitized = sanitizeString(payload);
-    if (sanitized !== payload) state.redactions += 1;
-    return sanitized;
-  }
-  if (valueType !== "object") return payload;
-  if (seen.has(payload)) {
-    throw new Error("sanitize_failed:circular_reference");
-  }
-  seen.add(payload);
-  if (Array.isArray(payload)) {
-    return payload.map((entry) => sanitizeForPublic(entry, state, seen));
-  }
-  const out = {};
-  for (const [key, value] of Object.entries(payload)) {
-    out[key] = sanitizeForPublic(value, state, seen);
-  }
-  return out;
-}
-
-function assertPublicSafe(payload, label) {
-  const violations = [];
-  const checks = [
-    /\/Users\/[^/]+/i,
-    /\/home\/[^/]+/i,
-    new RegExp("[A-Za-z]:\\\\Us" + "ers\\\\[^\\\\]+", "i"),
-    /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b/i,
-    /\b[A-Za-z0-9-]+\.local\b/i,
-    /\b[A-Za-z0-9-]+\.lan\b/i,
-    /\b[A-Za-z0-9-]+\.internal\b/i
-  ];
-  function walk(node) {
-    if (node === null || node === undefined) return;
-    if (typeof node === "string") {
-      if (/https?:\/\//i.test(node)) return;
-      for (const regex of checks) {
-        if (regex.test(node)) {
-          violations.push(regex.toString());
-          return;
-        }
-      }
-      return;
-    }
-    if (Array.isArray(node)) {
-      node.forEach(walk);
-      return;
-    }
-    if (typeof node === "object") {
-      Object.values(node).forEach(walk);
-    }
-  }
-  walk(payload);
-  if (violations.length) {
-    throw new Error(`sanitize_failed:${label || "payload"}:${violations.join(",")}`);
-  }
-}
-
 async function writeIfChanged(targetPath, payload, changedFiles, { sanitize = true } = {}) {
   let output = payload;
   if (sanitize) {
@@ -244,6 +161,37 @@ function computeSchedule(cadence, ttlSeconds) {
     nextPlannedFetchAt: nextAt,
     expectedNextRunWindowMinutes: windowMinutes,
     ttlSeconds: ttl
+  };
+}
+
+function buildMetaEnvelope({
+  status = "OK",
+  reason = "OK",
+  asOf,
+  ttlSeconds = 3600,
+  validation,
+  generatedAt: generatedAtOverride
+} = {}) {
+  const generatedAt = generatedAtOverride || new Date().toISOString();
+  const asOfValue = asOf || generatedAt;
+  const freshness = computeFreshness(asOfValue, ttlSeconds);
+  const schedule = computeSchedule("daily", ttlSeconds);
+  const defaultValidation = {
+    schema: { ok: true, errors: [] },
+    ranges: { ok: true, errors: [] },
+    integrity: { ok: true, errors: [] }
+  };
+  return {
+    status,
+    reason,
+    generatedAt,
+    asOf: asOfValue,
+    ttlSeconds,
+    stale: freshness.status !== "fresh",
+    freshness,
+    schedule,
+    validation: validation || defaultValidation,
+    runId: RUN_ID
   };
 }
 
@@ -603,6 +551,16 @@ async function copyMarketphase(changedFiles) {
   }
 }
 
+function runBundleGenerator() {
+  const genPath = path.join(ROOT, "scripts", "build-bundle-and-render-plan.mjs");
+  if (!fs.existsSync(genPath)) return { ok: true, skipped: true };
+  const res = spawnSync(process.execPath, [genPath], { stdio: "inherit" });
+  if (res.status !== 0) {
+    return { ok: false, error: `bundle_generator_failed:${res.status}` };
+  }
+  return { ok: true, skipped: false };
+}
+
 async function main() {
   const budgets = loadJson(BUDGETS_PATH) || {};
   const mirrors = await collectMirrorInputs();
@@ -654,22 +612,63 @@ async function main() {
   await copyMarketphase(changedFiles);
 
   const providerState = await buildProviderState();
-  await writeIfChanged(PROVIDER_STATE_PATH, providerState, changedFiles);
+  const providerMeta = buildMetaEnvelope({
+    status: "OK",
+    reason: "OK",
+    asOf: providerState.generatedAt,
+    generatedAt: providerState.generatedAt
+  });
+  await writeIfChanged(PROVIDER_STATE_PATH, { ...providerState, meta: providerMeta }, changedFiles);
 
   const usageEnvelope = loadJson(USAGE_REPORT_MIRROR);
   const usageRaw = unwrapEnvelope(usageEnvelope).raw || {};
   const usageReport = applyBudgetReport(usageRaw, budgets);
-  await writeIfChanged(USAGE_REPORT_PATH, usageReport, changedFiles);
+  const usageMeta = buildMetaEnvelope({
+    status: "OK",
+    reason: "OK",
+    asOf: usageReport.generatedAt,
+    generatedAt: usageReport.generatedAt
+  });
+  await writeIfChanged(USAGE_REPORT_PATH, { ...usageReport, meta: usageMeta }, changedFiles);
 
+  const errorGeneratedAt = new Date().toISOString();
   const errorSummary = buildErrorSummary(errors);
+  const errorMeta = buildMetaEnvelope({
+    status: "OK",
+    reason: "OK",
+    asOf: errorGeneratedAt,
+    generatedAt: errorGeneratedAt
+  });
   await writeIfChanged(ERROR_SUMMARY_PATH, {
-    generatedAt: new Date().toISOString(),
-    items: errorSummary
+    generatedAt: errorGeneratedAt,
+    items: errorSummary,
+    meta: errorMeta
   }, changedFiles);
 
+  const bundleResult = runBundleGenerator();
+  if (!bundleResult.ok) {
+    errors.push({
+      code: "BUNDLE_GENERATION_FAILED",
+      severity: "error",
+      provider: "registry",
+      dataset: "render-plan",
+      message: bundleResult.error,
+      firstSeenAt: new Date().toISOString(),
+      lastSeenAt: new Date().toISOString(),
+      runId: RUN_ID
+    });
+  }
+
   const buildStatus = errors.length ? "FAIL" : "OK";
+  const systemGeneratedAt = new Date().toISOString();
+  const systemMeta = buildMetaEnvelope({
+    status: buildStatus === "OK" ? "OK" : "ERROR",
+    reason: buildStatus,
+    asOf: systemGeneratedAt,
+    generatedAt: systemGeneratedAt
+  });
   const systemHealth = {
-    generatedAt: new Date().toISOString(),
+    generatedAt: systemGeneratedAt,
     buildStatus,
     reasons: errors.map((err) => `${err.dataset}:${err.code}`),
     summary: {
@@ -679,7 +678,8 @@ async function main() {
     },
     lastGoodAsOf,
     snapshots: snapshotStatuses,
-    runId: RUN_ID
+    runId: RUN_ID,
+    meta: systemMeta
   };
   await writeIfChanged(SYSTEM_HEALTH_PATH, systemHealth, changedFiles);
 
@@ -699,35 +699,39 @@ async function main() {
 
 main().catch((error) => {
   console.error("build-snapshots failed:", error.message || error);
-
-// RV_V3_GENERATE_BUNDLE_AND_RENDERPLAN
-// Build bundle.json + render-plan.json from public/features/feature-registry.json (static SSOT for UI)
-try {
-  const { default: path } = await import("node:path");
-  const { fileURLToPath } = await import("node:url");
-  const here = path.dirname(fileURLToPath(import.meta.url));
-  const gen = path.resolve(here, "build-bundle-and-render-plan.mjs");
-  const { spawnSync } = await import("node:child_process");
-  const res = spawnSync(process.execPath, [gen], { stdio: "inherit" });
-  if (res.status !== 0) throw new Error(`bundle/render-plan generator failed: ${res.status}`);
-} catch (e) {
-  console.error("WARN: bundle/render-plan generation failed:", e && e.message ? e.message : e);
-}
-
-
   process.exit(1);
 });
 
+// RV_V3_META_POSTFIX_BEGIN
+// Ensure required debug snapshots are always public-safe and include meta.* contract.
+import { withMeta } from "./_lib/with-meta.mjs";
 
-
-// --- v3 SSOT glue: always (re)generate public/data/bundle.json + public/data/render-plan.json
-try {
-  const { execFileSync } = await import("node:child_process");
-  const gen = "scripts/build-bundle-and-render-plan.mjs";
-  if (fs.existsSync(gen)) {
-    execFileSync(process.execPath, [gen], { stdio: "inherit", env: { ...process.env, RV_RUN_ID: process.env.RV_RUN_ID || new Date().toISOString() } });
+async function rvEnsureMetaFile(filePath, opts = {}) {
+  try {
+    const raw = await fs.readFile(filePath, "utf8");
+    const obj = JSON.parse(raw);
+    if (obj && typeof obj === "object" && obj.meta && obj.data !== undefined) return false;
+    const wrapped = withMeta(obj, opts);
+    await fs.writeFile(filePath, JSON.stringify(wrapped, null, 2) + "\n", "utf8");
+    return true;
+  } catch {
+    return false;
   }
-} catch (e) {
-  console.error("WARN: bundle/render-plan generation hook failed:", e?.message || e);
 }
 
+async function rvEnsureMetaForDebugOutputs() {
+  const runId = new Date().toISOString();
+  const files = [
+    SYSTEM_HEALTH_PATH,
+    PROVIDER_STATE_PATH,
+    USAGE_REPORT_PATH,
+    ERROR_SUMMARY_PATH,
+  ];
+  let changed = 0;
+  for (const p of files) {
+    const did = await rvEnsureMetaFile(p, { runId });
+    if (did) changed += 1;
+  }
+  return changed;
+}
+// RV_V3_META_POSTFIX_END

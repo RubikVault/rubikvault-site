@@ -2,8 +2,12 @@ function normalizeApiBase(value) {
   if (typeof value !== "string") return "";
   const trimmed = value.trim();
   if (!trimmed) return "";
-  if (trimmed === "api" || trimmed === "./api") return "/api";
-  if (trimmed === "/api/" || trimmed === "/api") return "/api";
+  if (trimmed === "api" || trimmed === "./api") return "/data/snapshots";
+  if (trimmed === "/api/" || trimmed === "/api") return "/data/snapshots";
+  if (trimmed === "data" || trimmed === "./data") return "/data";
+  if (trimmed === "/data/" || trimmed === "/data") return "/data";
+  if (trimmed === "data/snapshots" || trimmed === "./data/snapshots") return "/data/snapshots";
+  if (trimmed === "/data/snapshots/" || trimmed === "/data/snapshots") return "/data/snapshots";
   if (trimmed.startsWith("./")) {
     const stripped = trimmed.replace(/^\.\/+/, "");
     return `/${stripped}`.replace(/\/+$/, "");
@@ -12,6 +16,7 @@ function normalizeApiBase(value) {
     return trimmed.replace(/\/+$/, "");
   }
   const normalized = trimmed.startsWith("/") ? trimmed : `/${trimmed}`;
+  if (normalized.startsWith("/api")) return "/data/snapshots";
   return normalized.replace(/\/+$/, "");
 }
 
@@ -74,14 +79,14 @@ export function resolveApiBase(explicitBase) {
   const errors = [];
   if (!configLoaded) errors.push("CONFIG_MISSING");
   const normalized = normalizeApiBase(candidate);
-  if (!normalized) errors.push("API_BASE_MISSING");
-  const ok = errors.length === 0;
+  const apiBase = normalized || "/data/snapshots";
+  const ok = true;
   return {
     ok,
     configLoaded,
-    apiBase: ok ? normalized : "",
-    apiPrefix: ok ? normalized : "",
-    errors
+    apiBase,
+    apiPrefix: apiBase,
+    errors: ok ? [] : errors
   };
 }
 

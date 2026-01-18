@@ -1,11 +1,13 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { sanitizeForPublic, assertPublicSafe } from "./_lib/sanitize-public.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const SNAPSHOT_DIR = path.join(ROOT, "public", "data", "snapshots");
 const BLOCKS_DIR = path.join(ROOT, "public", "data", "blocks");
 const TMP_DIR = path.join(BLOCKS_DIR, ".tmp");
+const MAX_PUBLIC_BYTES = 200 * 1024;
 
 const NON_FREE_PROVIDERS = new Set(["marketaux", "finnhub", "fmp", "sec"]);
 
@@ -73,23 +75,17 @@ async function atomicWrite(targetPath, payload) {
   await fs.rename(tmpPath, targetPath);
 }
 
-async function exportSnapshotFile(fileName) {
-  const sourcePath = path.join(SNAPSHOT_DIR, fileName);
-  const raw = await fs.readFile(sourcePath, "utf8");
-
-  let blockId = fileName.replace(/\.json$/i, "");
-  try {
-    const parsed = JSON.parse(raw);
-    if (parsed && typeof parsed === "object" && typeof parsed.blockId === "string" && parsed.blockId.trim()) {
-      blockId = parsed.blockId.trim();
-    }
-  } catch {
-    return { fileName, ok: false, reason: "SNAPSHOT_JSON_PARSE_ERROR" };
-  }
-
+async function exportSnapshotPayload(blockId, payload) {
   const targetPath = path.join(BLOCKS_DIR, `${blockId}.latest.json`);
-  await atomicWrite(targetPath, raw);
-  return { fileName, ok: true, blockId };
+  const sanitized = sanitizeForPublic(payload);
+  assertPublicSafe(sanitized, path.basename(targetPath));
+  const output = JSON.stringify(sanitized, null, 2);
+  const bytes = Buffer.byteLength(output, "utf8");
+  if (bytes > MAX_PUBLIC_BYTES) {
+    return { ok: false, reason: "PUBLIC_SNAPSHOT_TOO_LARGE", blockId };
+  }
+  await atomicWrite(targetPath, output);
+  return { ok: true, blockId };
 }
 
 async function removeStaleOutputs(blockIds) {
@@ -119,15 +115,16 @@ async function main() {
   for (const fileName of files) {
     try {
       const raw = await fs.readFile(path.join(SNAPSHOT_DIR, fileName), "utf8");
-      let blockId = fileName.replace(/\.json$/i, "");
+      let parsed;
       try {
-        const parsed = JSON.parse(raw);
-        if (parsed && typeof parsed === "object" && typeof parsed.blockId === "string" && parsed.blockId.trim()) {
-          blockId = parsed.blockId.trim();
-        }
+        parsed = JSON.parse(raw);
       } catch {
         failed += 1;
         continue;
+      }
+      let blockId = fileName.replace(/\.json$/i, "");
+      if (parsed && typeof parsed === "object" && typeof parsed.blockId === "string" && parsed.blockId.trim()) {
+        blockId = parsed.blockId.trim();
       }
 
       if (!policy.isAllowed(blockId)) {
@@ -136,7 +133,7 @@ async function main() {
         continue;
       }
 
-      const result = await exportSnapshotFile(fileName);
+      const result = await exportSnapshotPayload(blockId, parsed);
       if (result.ok) exported += 1;
       else failed += 1;
     } catch {

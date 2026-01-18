@@ -1,1 +1,2 @@
-export { onRequestGet as onRequest } from "./macro-rates.js";
+import { serveStaticJson } from "../_shared/static-only.js";
+export default { fetch: serveStaticJson };
