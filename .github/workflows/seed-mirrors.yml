@@ -38,6 +38,12 @@ jobs:
             exit 1
           fi
 
+      - name: Prepare clean state
+        run: |
+          git fetch origin main
+          git reset --hard origin/main
+          git clean -fd || true
+
       - name: Seed mirrors
         env:
           ALPHAVANTAGE_API_KEY: ${{ secrets.ALPHAVANTAGE_API_KEY }}
@@ -130,11 +136,6 @@ jobs:
           fi
           git config user.name "RubikVault Bot"
           git config user.email "bot@rubikvault.com"
-          git fetch origin main
-          git reset --hard origin/main
-          git clean -fd || true
-          # Re-run seed-mirrors after reset to get fresh mirrors
-          node scripts/seed-mirrors.mjs | tee /tmp/seed-mirrors.log || true
           git add mirrors public/data
           if git diff --cached --quiet; then
             echo "No mirror changes to commit."
