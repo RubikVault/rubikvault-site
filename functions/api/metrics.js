@@ -224,18 +224,6 @@ async function fetchSnapshot(context, name) {
   }
 }
 
-async function fetchMirror(context, name) {
-  const url = new URL(`/mirrors/${name}.json`, context.request.url);
-  try {
-    const res = await fetch(url.toString(), { cf: { cacheTtl: 60 } });
-    if (!res.ok) return null;
-    const text = await res.text();
-    return text ? JSON.parse(text) : null;
-  } catch (error) {
-    return null;
-  }
-}
-
 async function loadSnapshots(context) {
   const names = [
     "us-yield-curve",
@@ -250,17 +238,14 @@ async function loadSnapshots(context) {
     "highs-vs-lows",
     "sector-rotation",
     "inflation-pulse",
-    "labor-pulse"
+    "labor-pulse",
+    "crypto-snapshot",
+    "price-snapshot"
   ];
-  const mirrorNames = ["crypto-snapshot", "price-snapshot"];
   const results = await Promise.all(names.map((name) => fetchSnapshot(context, name)));
-  const mirrorResults = await Promise.all(mirrorNames.map((name) => fetchMirror(context, name)));
   const snapshots = {};
   names.forEach((name, idx) => {
     snapshots[name] = results[idx];
-  });
-  mirrorNames.forEach((name, idx) => {
-    snapshots[name] = mirrorResults[idx];
   });
   return snapshots;
 }

@@ -28,6 +28,12 @@ jobs:
       - name: Validate mirrors
         run: node scripts/validate-mirrors.mjs
 
+      - name: Build snapshots
+        run: node scripts/build-snapshots.mjs
+
+      - name: Validate snapshots
+        run: node scripts/validate-snapshots.js
+
       - name: Commit mirrors
         run: |
           git config user.name "RubikVault Bot"
@@ -36,8 +42,8 @@ jobs:
             echo "No mirror changes to commit."
             exit 0
           fi
-          git add mirrors public/mirrors
-          git commit -m "chore(mirrors): event snapshots" || true
+          git add mirrors public/data
+          git commit -m "data: auto-update [skip ci]" || true
           git push || true
 
       - name: Open issue on failure
@@ -54,5 +60,4 @@ jobs:
             } else {
               await github.rest.issues.create({ owner: context.repo.owner, repo: context.repo.repo, title, body });
             }
-
 

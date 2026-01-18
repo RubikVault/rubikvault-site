@@ -1,7 +1,7 @@
 import { createTraceId, makeResponse, safeSnippet } from "./_shared.js";
 
 const FEATURE_ID = "system-health";
-const MIRROR_PATH = "/mirrors/system-health.json";
+const MIRROR_PATH = "/data/system-health.json";
 
 function isHtmlFallback(contentType, bodyText) {
   const ct = String(contentType || "").toLowerCase();

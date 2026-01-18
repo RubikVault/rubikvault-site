@@ -1,8 +1,11 @@
 import fs from "node:fs";
 import path from "node:path";
 import { US_TOP_100 } from "../functions/api/_shared/us-universes.js";
+import { createBudgetState, createUsageCollector, loadBudgetsConfig } from "./_lib/usage.js";
+import { fetchStooqDaily } from "./providers/stooq.js";
+import { fetchAlphaVantageDaily } from "./providers/alphavantage.js";
+import { acquireLock, releaseLock } from "./_lib/lock.js";
 
-const AV_API_KEY = process.env.AV_API_KEY || "";
 const CF_ACCOUNT_ID = process.env.CF_ACCOUNT_ID || "";
 const CF_KV_NAMESPACE_ID = process.env.CF_KV_NAMESPACE_ID || "";
 const CF_API_TOKEN = process.env.CF_API_TOKEN || "";
@@ -10,10 +13,16 @@ const IS_CI = process.env.GITHUB_ACTIONS === "true";
 const KV_KEY = "breakout-energy";
 const LIMIT = Number.parseInt(process.env.MIRROR_LIMIT || "35", 10);
 const MAX_SYMBOLS = Number.isFinite(LIMIT) && LIMIT > 0 ? LIMIT : 35;
-const OUT_DIRS = ["public/mirrors", "mirrors"];
+const OUT_DIRS = ["mirrors"];
 const OUT_FILE = "breakout-energy.json";
 
 const MIRROR_REASON = "MIRROR";
+const ROOT = process.cwd();
+const limits = loadBudgetsConfig(ROOT);
+const usage = createUsageCollector(limits);
+const budget = createBudgetState(limits, usage);
+const stooqCtx = { providerId: "stooq", endpoint: "daily", usage, budget };
+const avCtx = { providerId: "alphavantage", endpoint: "daily", usage, budget };
 
 function isHtmlLike(text) {
   const trimmed = String(text || "").trim().toLowerCase();
@@ -42,45 +51,20 @@ function parseStooqCsv(text) {
   };
 }
 
-async function fetchStooqDaily(symbol) {
-  const url = `https://stooq.com/q/d/l/?s=${symbol.toLowerCase()}.us&i=d`;
-  const res = await fetch(url, { headers: { "User-Agent": "RubikVault-Mirror/1.0" } });
-  const text = await res.text();
-  if (isStooqLimit(text) || isHtmlLike(text)) {
-    const err = new Error("Stooq limit or HTML response");
-    err.code = "UPSTREAM_LIMIT";
-    throw err;
-  }
-  const parsed = parseStooqCsv(text);
-  if (!parsed) {
-    const err = new Error("Stooq parse failed");
-    err.code = "UPSTREAM_LIMIT";
-    throw err;
-  }
-  return parsed;
-}
-
-async function fetchAlphaVantageDaily(symbol) {
-  if (!AV_API_KEY) return null;
-  const url = `https://www.alphavantage.co/query?function=TIME_SERIES_DAILY_ADJUSTED&symbol=${encodeURIComponent(
-    symbol
-  )}&outputsize=compact&apikey=${encodeURIComponent(AV_API_KEY)}`;
-  const res = await fetch(url, { headers: { "User-Agent": "RubikVault-Mirror/1.0" } });
-  const json = await res.json();
-  const series = json["Time Series (Daily)"];
-  if (!series || typeof series !== "object") return null;
-  const dates = Object.keys(series).sort().reverse();
-  const latest = dates[0];
-  const bar = series[latest];
-  if (!latest || !bar) return null;
+async function fetchStooqBar(ctx, symbol) {
+  const result = await fetchStooqDaily(ctx, symbol);
+  const rows = Array.isArray(result.data) ? result.data.slice() : [];
+  rows.sort((a, b) => String(b.date || "").localeCompare(String(a.date || "")));
+  const bar = rows[0];
+  if (!bar) return null;
   return {
-    date: latest,
-    open: Number.parseFloat(bar["1. open"] || "nan"),
-    high: Number.parseFloat(bar["2. high"] || "nan"),
-    low: Number.parseFloat(bar["3. low"] || "nan"),
-    close: Number.parseFloat(bar["4. close"] || "nan"),
-    volume: Number.parseInt(bar["6. volume"] || "0", 10) || 0,
-    barsUsed: dates.length
+    date: bar.date || null,
+    open: bar.open,
+    high: bar.high,
+    low: bar.low,
+    close: bar.close,
+    volume: bar.volume,
+    barsUsed: rows.length
   };
 }
 
@@ -122,7 +106,8 @@ async function buildPayload() {
 
   for (const symbol of symbols) {
     try {
-      const bar = await fetchStooqDaily(symbol);
+      const bar = await fetchStooqBar(stooqCtx, symbol);
+      if (!bar) throw new Error("Stooq empty");
       items.push(buildItem(symbol, bar, provider));
     } catch (err) {
       stooqFailed = true;
@@ -133,11 +118,14 @@ async function buildPayload() {
   if (stooqFailed) {
     items.length = 0;
     provider = "MIRROR_AV";
-    if (!AV_API_KEY) {
-      return { items: [], provider, symbolsTotal: symbols.length, symbolsProcessed: 0 };
-    }
     for (const symbol of symbols) {
-      const bar = await fetchAlphaVantageDaily(symbol);
+      let bar = null;
+      try {
+        const result = await fetchAlphaVantageDaily(avCtx, symbol);
+        bar = result?.data || null;
+      } catch {
+        bar = null;
+      }
       if (!bar) continue;
       items.push(buildItem(symbol, bar, provider));
       await new Promise((r) => setTimeout(r, 15000));
@@ -211,32 +199,42 @@ async function writeKvMirror(wrapper, hasItems) {
   return true;
 }
 
-const now = new Date().toISOString();
-const result = await buildPayload();
-const hasItems = Array.isArray(result.items) && result.items.length > 0;
-const payload = {
-  feature: "breakout-energy",
-  traceId: "",
-  source: result.provider,
-  updatedAt: now,
-  dataQuality: {
-    status: hasItems ? "OK" : "PARTIAL",
-    reason: MIRROR_REASON
-  },
-  confidence: 0,
-  definitions: {},
-  reasons: [MIRROR_REASON, result.provider],
-  data: {
-    items: result.items,
-    universe: "sp500",
-    regime_factor: null,
-    universeSizeTotal: result.symbolsTotal,
-    universeSizeProcessed: result.symbolsProcessed
-  }
-};
+const lock = acquireLock({ providerId: "stooq", datasetId: "breakout-energy", ttlSeconds: 900 });
+if (!lock.ok) {
+  console.log("LOCK_HELD", lock.details?.expiresAt || "active");
+  process.exit(0);
+}
 
-const wrapper = { ts: now, source: "mirror", payload };
-writeMirror(wrapper, hasItems);
-await writeKvMirror(wrapper, hasItems);
+try {
+  const now = new Date().toISOString();
+  const result = await buildPayload();
+  const hasItems = Array.isArray(result.items) && result.items.length > 0;
+  const payload = {
+    feature: "breakout-energy",
+    traceId: "",
+    source: result.provider,
+    updatedAt: now,
+    dataQuality: {
+      status: hasItems ? "OK" : "PARTIAL",
+      reason: MIRROR_REASON
+    },
+    confidence: 0,
+    definitions: {},
+    reasons: [MIRROR_REASON, result.provider],
+    data: {
+      items: result.items,
+      universe: "sp500",
+      regime_factor: null,
+      universeSizeTotal: result.symbolsTotal,
+      universeSizeProcessed: result.symbolsProcessed
+    }
+  };
 
-console.log(`MIRROR_HAS_ITEMS=${hasItems ? "1" : "0"}`);
+  const wrapper = { ts: now, source: "mirror", payload };
+  writeMirror(wrapper, hasItems);
+  await writeKvMirror(wrapper, hasItems);
+
+  console.log(`MIRROR_HAS_ITEMS=${hasItems ? "1" : "0"}`);
+} finally {
+  releaseLock(lock.path);
+}

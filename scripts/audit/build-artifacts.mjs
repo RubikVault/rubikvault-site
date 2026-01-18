@@ -2,13 +2,12 @@
 import fs from "node:fs";
 import path from "node:path";
 import { execSync } from "node:child_process";
-import { normalizeMirrorMeta } from "../utils/mirror-io.mjs";
 
 const ROOT = process.cwd();
 const REGISTRY_PATH = path.join(ROOT, "features", "feature-registry.json");
-const MIRRORS_DIR = path.join(ROOT, "public", "mirrors");
-const MANIFEST_PATH = path.join(MIRRORS_DIR, "manifest.json");
-const HEALTH_PATH = path.join(MIRRORS_DIR, "_health.json");
+const OUTPUT_DIR = path.join(ROOT, "internal", "mirror-artifacts");
+const MANIFEST_PATH = path.join(OUTPUT_DIR, "manifest.json");
+const HEALTH_PATH = path.join(OUTPUT_DIR, "_health.json");
 
 function nowIso() {
   return new Date().toISOString();
@@ -55,7 +54,7 @@ const manifestBlocks = [];
 const healthFeatures = {};
 
 registry.features.forEach((feature) => {
-  const mirrorPath = feature.mirrorPath || `public/mirrors/${feature.id}.json`;
+  const mirrorPath = feature.mirrorPath || `mirrors/${feature.id}.json`;
   const fullPath = path.isAbsolute(mirrorPath) ? mirrorPath : path.join(ROOT, mirrorPath);
   let json = null;
   let parseError = null;
@@ -64,18 +63,12 @@ registry.features.forEach((feature) => {
   } catch (error) {
     parseError = error;
   }
-  if (json && !parseError) {
-    const normalized = normalizeMirrorMeta(json);
-    if (normalized.changed) {
-      const normalizedText = JSON.stringify(normalized.payload, null, 2);
-      atomicWrite(fullPath, normalizedText);
-      json = normalized.payload;
-    }
-  }
+  const raw = json && json.meta && json.raw ? json.raw : json;
 
   const fileRel = mirrorPath.replace(/^public\//, "");
-  const schemaVersion = json?.meta?.schemaVersion || json?.schemaVersion || "v1";
-  const updatedAt = json?.meta?.updatedAt || json?.meta?.savedAt || json?.updatedAt || null;
+  const schemaVersion = raw?.meta?.schemaVersion || raw?.schemaVersion || "v1";
+  const updatedAt =
+    raw?.meta?.asOf || raw?.meta?.generatedAt || raw?.meta?.updatedAt || raw?.meta?.savedAt || raw?.updatedAt || null;
   const staleAfter = Number(feature.staleAfterMinutes || 1440);
   let status = "OK";
   let reasonCode = "OK";
@@ -84,10 +77,10 @@ registry.features.forEach((feature) => {
   if (parseError) {
     status = "ERROR";
     reasonCode = "JSON_PARSE_ERROR";
-  } else if (!json) {
+  } else if (!raw) {
     status = "ERROR";
     reasonCode = "MIRROR_MISSING";
-  } else if (json?.meta?.status === "STUB") {
+  } else if (raw?.meta?.status === "STUB") {
     status = "STUB";
     reasonCode = "MIRROR_MISSING";
   } else if (updatedAt) {

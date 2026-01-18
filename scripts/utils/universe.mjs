@@ -3,7 +3,7 @@ import { fileURLToPath } from "node:url";
 import { loadMirror } from "./mirror-io.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const WATCHLIST_PATH = path.resolve(__dirname, "../../public/mirrors/watchlist.json");
+const WATCHLIST_PATH = path.resolve(__dirname, "../../mirrors/watchlist.json");
 
 const DEFAULT_UNIVERSE = ["AAPL", "MSFT", "NVDA", "AMZN", "GOOGL", "META", "TSLA", "SPY", "QQQ"]; 
 const REQUIRED_BENCHMARKS = ["SPY", "QQQ", "IWM"];

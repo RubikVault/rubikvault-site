@@ -12,9 +12,9 @@ function safeExec(cmd) {
 }
 
 const root = process.cwd();
-const mirrorsDir = path.join(root, "public", "mirrors");
+const mirrorsDir = path.join(root, "mirrors");
 if (!fs.existsSync(mirrorsDir)) {
-  console.warn("public/mirrors not found; nothing to build");
+  console.warn("mirrors not found; nothing to build");
   process.exit(0);
 }
 
@@ -32,25 +32,26 @@ files.forEach((file) => {
     console.warn(`Skipping invalid mirror ${file}: ${error.message}`);
     return;
   }
+  const raw = json && json.meta && json.raw ? json.raw : json;
   const id =
-    json?.meta?.blockId ||
-    json?.meta?.feature ||
-    json?.meta?.id ||
-    json?.mirrorId ||
-    json?.feature ||
+    raw?.meta?.blockId ||
+    raw?.meta?.feature ||
+    raw?.meta?.id ||
+    raw?.mirrorId ||
+    raw?.feature ||
     file.replace(/\.json$/, "");
   const generatedAt =
-    json?.generated_at ||
-    json?.generatedAt ||
-    json?.meta?.updatedAt ||
-    json?.meta?.ts ||
-    json?.updatedAt ||
+    raw?.generated_at ||
+    raw?.generatedAt ||
+    raw?.meta?.updatedAt ||
+    raw?.meta?.ts ||
+    raw?.updatedAt ||
     null;
   blocks.push({
     id,
     file: `mirrors/${file}`,
-    schemaVersion: json?.schemaVersion || json?.schema || "unknown",
-    optional: Boolean(json?.optional) || false,
+    schemaVersion: raw?.schemaVersion || raw?.schema || "unknown",
+    optional: Boolean(raw?.optional) || false,
     generatedAt: generatedAt && typeof generatedAt === "string" ? generatedAt : null
   });
 });
@@ -65,4 +66,4 @@ const manifest = {
 };
 
 fs.writeFileSync(path.join(mirrorsDir, "manifest.json"), JSON.stringify(manifest, null, 2));
-console.log("Wrote public/mirrors/manifest.json");
+console.log("Wrote mirrors/manifest.json");

@@ -3,6 +3,7 @@ import { buildProviderError, fetchWithRetry, normalizeProviderDetails } from "./
 const BASE_URL = "https://api.marketaux.com/v1/news/all";
 
 export async function fetchMarketauxNews(ctx, { symbols = "SPY", limit = 10 } = {}) {
+  const requestCtx = ctx ? (ctx.endpoint ? ctx : { ...ctx, endpoint: "news" }) : { endpoint: "news" };
   const apiKey = process.env.MARKETAUX_API_KEY || "";
   if (!apiKey) {
     throw buildProviderError("MISSING_SECRET", "missing_marketaux_api_key", {
@@ -22,7 +23,7 @@ export async function fetchMarketauxNews(ctx, { symbols = "SPY", limit = 10 } = 
   let res;
   let text;
   try {
-    ({ res, text } = await fetchWithRetry(url, ctx, {
+    ({ res, text } = await fetchWithRetry(url, requestCtx, {
       headers: { "User-Agent": "RVSeeder/1.0" },
       timeoutMs: 15000
     }));

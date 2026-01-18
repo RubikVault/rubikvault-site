@@ -1,65 +1,52 @@
-import { createResponse, parseDebug } from "./_shared.js";
+export async function onRequest(ctx) {
+  const { request } = ctx;
+  const url = new URL(request.url);
+  const debug = url.searchParams.get("debug") === "1" || url.searchParams.get("debug") === "true";
 
-const FEATURE = "render-plan";
+  const assetUrl = new URL("/data/render-plan.json", url.origin);
 
-async function fetchJsonAsset(url) {
+  let raw = null;
+  let meta = { status: "OK" };
+  let ok = true;
+  let error = null;
+
   try {
-    const res = await fetch(url, { headers: { Accept: "application/json" } });
-    if (!res.ok) {
-      return { ok: false, reason: `HTTP_${res.status}` };
+    const r = await fetch(assetUrl.toString(), { headers: { "accept": "application/json" } });
+    if (!r.ok) {
+      ok = false;
+      meta = { status: "ERROR", reason: `asset_fetch_${r.status}` };
+    } else {
+      raw = await r.json();
     }
-    const contentType = res.headers.get("content-type") || "";
-    if (!contentType.toLowerCase().includes("json")) {
-      return { ok: false, reason: "BAD_CONTENT_TYPE" };
-    }
-    const data = await res.json();
-    return { ok: true, data };
-  } catch (error) {
-    return { ok: false, reason: "PARSE_ERROR", error };
+  } catch (e) {
+    ok = false;
+    meta = { status: "ERROR", reason: "asset_fetch_exception" };
+    error = { code: "ASSET_FETCH_FAILED", message: String(e && e.message ? e.message : e) };
   }
-}
-
-export async function onRequestGet({ request, env }) {
-  parseDebug(request, env);
-  const origin = new URL(request.url).origin;
-  const registryRes = await fetchJsonAsset(`${origin}/data/feature-registry.json`);
-  const manifestRes = await fetchJsonAsset(`${origin}/data/seed-manifest.json`);
-
-  const registryFeatures = Array.isArray(registryRes.data?.features)
-    ? registryRes.data.features
-    : null;
-  const manifestBlocks = Array.isArray(manifestRes.data?.blocks)
-    ? manifestRes.data.blocks
-    : null;
-
-  const registryValid = Boolean(registryRes.ok && registryFeatures);
-  const manifestValid = Boolean(manifestRes.ok && manifestBlocks);
-
-  let source = "none";
-  if (registryValid) source = "registry";
-  else if (manifestValid) source = "manifest";
 
   const payload = {
-    source,
-    featuresCount: registryValid ? registryFeatures.length : null,
-    manifestBlocksCount: manifestValid ? manifestBlocks.length : null,
-    capped: false,
-    onlyFilter: null,
-    timestamp: new Date().toISOString(),
-    registryStatus: registryValid ? "OK" : registryRes.reason || "INVALID",
-    manifestStatus: manifestValid ? "OK" : manifestRes.reason || "INVALID"
+    ok,
+    feature: "render-plan",
+    meta,
+    data: raw,
+    error,
   };
 
-  const error =
-    source === "none"
-      ? { code: "RENDER_PLAN_UNAVAILABLE", message: "registry and manifest unavailable" }
-      : null;
+  if (debug) {
+    payload.meta = {
+      ...payload.meta,
+      debug: {
+        assetPath: "/data/render-plan.json",
+        hasData: raw !== null,
+      },
+    };
+  }
 
-  return createResponse({
-    feature: FEATURE,
-    data: payload,
-    meta: { status: error ? "ERROR" : "OK", reason: error ? error.code : "" },
-    error,
-    request
+  return new Response(JSON.stringify(payload), {
+    status: ok ? 200 : 200,
+    headers: {
+      "content-type": "application/json; charset=utf-8",
+      "cache-control": "no-store",
+    },
   });
 }

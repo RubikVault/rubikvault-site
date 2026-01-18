@@ -1,18 +1,21 @@
 import fs from "node:fs";
 import path from "node:path";
 import { execSync } from "node:child_process";
-import { atomicWriteJson } from "./utils/mirror-io.mjs";
+import { atomicWriteJson, saveMirror } from "./utils/mirror-io.mjs";
 import { buildGraph, topoSort } from "./_lib/util/dag.js";
 import { createProviderStateManager } from "./_lib/provider-state.js";
+import { acquireLock, releaseLock } from "./_lib/lock.js";
+import { createBudgetState, createUsageCollector } from "./_lib/usage.js";
 import { fetchFredSeries } from "./providers/fred.js";
 import { fetchEcbSeries } from "./providers/ecb_sdmx.js";
 import { fetchStooqDaily } from "./providers/stooq.js";
 import { PACKAGE3_RUNNERS } from "./runners/package3/index.js";
 
-const SNAPSHOT_DIR = path.join("public", "data", "snapshots");
-const MANIFEST_PATH = path.join("public", "data", "seed-manifest.json");
-const USAGE_PATH = path.join("public", "data", "usage-report.json");
-const PROVIDER_STATE_PATH = path.join("public", "data", "provider-state.json");
+const PUBLIC_SNAPSHOT_DIR = path.join("public", "data", "snapshots");
+const MIRROR_SNAPSHOT_DIR = path.join("mirrors", "snapshots");
+const MANIFEST_PATH = path.join("mirrors", "seed-manifest.json");
+const USAGE_PATH = path.join("mirrors", "usage-report.json");
+const PROVIDER_STATE_PATH = path.join("mirrors", "provider-state.json");
 
 const DEFAULT_PACKAGES = ["blocks1-12", "blocks13-25", "blocks26-43"];
 
@@ -204,96 +207,6 @@ function loadJson(filePath) {
   return JSON.parse(raw);
 }
 
-function createUsageCollector(limits) {
-  const providers = {};
-  const notes = [];
-
-  function ensure(providerId) {
-    if (!providers[providerId]) {
-      const limit = limits?.providers?.[providerId] || {};
-      providers[providerId] = {
-        requests: 0,
-        credits: 0,
-        bytesIn: 0,
-        latencyMs: 0,
-        limitRequests: limit.dailyRequests ?? null,
-        limitCredits: limit.dailyCredits ?? null,
-        remainingRequests: limit.dailyRequests ?? null,
-        remainingCredits: limit.dailyCredits ?? null,
-        errorsByReason: {}
-      };
-    }
-    return providers[providerId];
-  }
-
-  function record(providerId, { requests = 0, credits = 0, bytesIn = 0, latencyMs = 0 }) {
-    const entry = ensure(providerId);
-    entry.requests += requests;
-    entry.credits += credits;
-    entry.bytesIn += bytesIn;
-    entry.latencyMs += latencyMs;
-    if (entry.limitRequests !== null) {
-      entry.remainingRequests = Math.max(0, entry.limitRequests - entry.requests);
-    }
-    if (entry.limitCredits !== null) {
-      entry.remainingCredits = Math.max(0, entry.limitCredits - entry.credits);
-    }
-  }
-
-  function recordError(providerId, reason) {
-    const entry = ensure(providerId);
-    entry.errorsByReason[reason] = (entry.errorsByReason[reason] || 0) + 1;
-  }
-
-  function getProvider(providerId) {
-    return ensure(providerId);
-  }
-
-  function addNote(note) {
-    notes.push(note);
-  }
-
-  function snapshot(day) {
-    const totals = Object.values(providers).reduce(
-      (acc, entry) => {
-        acc.requests += entry.requests;
-        acc.credits += entry.credits;
-        return acc;
-      },
-      { requests: 0, credits: 0 }
-    );
-    return {
-      day,
-      providers,
-      totals,
-      notes
-    };
-  }
-
-  return { record, recordError, getProvider, addNote, snapshot };
-}
-
-function createBudgetState(limits, usage) {
-  return {
-    reserve(providerId) {
-      const entry = limits?.providers?.[providerId];
-      if (!entry || entry.dailyRequests === undefined) return true;
-      const current = usage.getProvider(providerId).requests || 0;
-      if (current >= entry.dailyRequests) {
-        usage.recordError(providerId, "BUDGET_EXHAUSTED");
-        return false;
-      }
-      return true;
-    },
-    remaining(providerId) {
-      const entry = limits?.providers?.[providerId];
-      if (!entry || entry.dailyRequests === undefined) return null;
-      const current = usage.getProvider(providerId).requests || 0;
-      return Math.max(0, entry.dailyRequests - current);
-    }
-  };
-}
-
 function computeCoverage(itemsCount, maxFanout) {
   if (!maxFanout) return 0;
   return Math.min(100, Math.round((itemsCount / maxFanout) * 100));
@@ -372,7 +285,7 @@ function evaluateSnapshot(entry, itemsCount, coveragePct) {
 }
 
 function readExistingSnapshot(blockId) {
-  const filePath = path.join(SNAPSHOT_DIR, `${blockId}.json`);
+  const filePath = path.join(PUBLIC_SNAPSHOT_DIR, `${blockId}.json`);
   if (!fs.existsSync(filePath)) return null;
   const raw = fs.readFileSync(filePath, "utf8");
   if (!raw.trim()) return null;
@@ -1123,11 +1036,11 @@ async function runBlock(entry, ctx, cache) {
 function writeUsageReport(usage) {
   const day = new Date().toISOString().slice(0, 10);
   const report = usage.snapshot(day);
-  atomicWriteJson(USAGE_PATH, report);
+  saveMirror(USAGE_PATH, report);
 }
 
 function writeSeedManifest(manifest) {
-  atomicWriteJson(MANIFEST_PATH, manifest);
+  saveMirror(MANIFEST_PATH, manifest);
 }
 
 function listMissingSecrets(entry) {
@@ -1170,7 +1083,7 @@ async function main() {
   }
   entries = orderEntries(entries);
 
-  const limits = loadJson(path.join("registry", "limits.json"));
+  const limits = loadJson(path.join("config", "rv-budgets.json"));
   const usage = createUsageCollector(limits);
   const budget = createBudgetState(limits, usage);
   const providerIds = Array.from(new Set(entries.map((entry) => entry.provider || "internal")));
@@ -1204,7 +1117,7 @@ async function main() {
           let wroteSnapshot = false;
           if (placeholder) {
             const errorSnapshot = buildErrorSnapshot(entry, reason, generatedAt, details);
-            atomicWriteJson(path.join(SNAPSHOT_DIR, `${entry.blockId}.json`), errorSnapshot);
+            atomicWriteJson(path.join(MIRROR_SNAPSHOT_DIR, `${entry.blockId}.json`), errorSnapshot);
             wroteSnapshot = true;
           }
           manifest.blocks.push({
@@ -1237,7 +1150,7 @@ async function main() {
           let wroteSnapshot = false;
           if (placeholder) {
             const errorSnapshot = buildErrorSnapshot(entry, reason, generatedAt, details);
-            atomicWriteJson(path.join(SNAPSHOT_DIR, `${entry.blockId}.json`), errorSnapshot);
+            atomicWriteJson(path.join(MIRROR_SNAPSHOT_DIR, `${entry.blockId}.json`), errorSnapshot);
             wroteSnapshot = true;
           }
           manifest.blocks.push({
@@ -1269,7 +1182,7 @@ async function main() {
             let wroteSnapshot = false;
             if (placeholder) {
               const errorSnapshot = buildErrorSnapshot(entry, reason, generatedAt, details);
-              atomicWriteJson(path.join(SNAPSHOT_DIR, `${entry.blockId}.json`), errorSnapshot);
+              atomicWriteJson(path.join(MIRROR_SNAPSHOT_DIR, `${entry.blockId}.json`), errorSnapshot);
               wroteSnapshot = true;
             }
             manifest.blocks.push({
@@ -1286,46 +1199,74 @@ async function main() {
           }
         }
 
-        const { snapshot, evaluation } = await runBlock(entry, ctx, cache);
-        const snapshotPath = path.join(SNAPSHOT_DIR, `${entry.blockId}.json`);
-        const existing = readExistingSnapshot(entry.blockId);
-        const placeholder = isPlaceholderSnapshot(existing);
-        let wroteSnapshot = false;
-
-        if (snapshot.meta.status === "ERROR") {
-          const errorDetails = buildMetaDetails(entry.provider, snapshot.meta.details, {
-            snippet: snapshot.meta.reason
+        const lock = acquireLock({
+          providerId: entry.provider || "internal",
+          datasetId: entry.blockId,
+          ttlSeconds: entry.lockTtlSeconds || 600
+        });
+        if (!lock.ok) {
+          const reason = "LOCK_HELD";
+          usage.recordError(entry.provider, reason);
+          providerState.recordSkip(entry.provider, reason, {
+            snippet: `lock ${lock.details?.expiresAt || "active"}`.slice(0, 200)
           });
-          snapshot.meta.details = errorDetails;
-          providerState.recordFailure(entry.provider, snapshot.meta.reason, errorDetails);
-        } else {
-          providerState.recordSuccess(entry.provider);
+          manifest.blocks.push({
+            blockId: entry.blockId,
+            title: entry.title,
+            status: "ERROR",
+            reason,
+            itemsCount: 0,
+            coveragePct: 0,
+            wroteSnapshot: false,
+            durationMs: Date.now() - started
+          });
+          continue;
         }
 
-        if (evaluation.allowed) {
-          atomicWriteJson(snapshotPath, snapshot);
-          wroteSnapshot = true;
-        } else {
-          if (placeholder) {
+        try {
+          const { snapshot, evaluation } = await runBlock(entry, ctx, cache);
+          const snapshotPath = path.join(MIRROR_SNAPSHOT_DIR, `${entry.blockId}.json`);
+          const existing = readExistingSnapshot(entry.blockId);
+          const placeholder = isPlaceholderSnapshot(existing);
+          let wroteSnapshot = false;
+
+          if (snapshot.meta.status === "ERROR") {
             const errorDetails = buildMetaDetails(entry.provider, snapshot.meta.details, {
               snippet: snapshot.meta.reason
             });
-            const errorSnapshot = buildErrorSnapshot(entry, snapshot.meta.reason, snapshot.generatedAt, errorDetails);
-            atomicWriteJson(snapshotPath, errorSnapshot);
-            wroteSnapshot = true;
+            snapshot.meta.details = errorDetails;
+            providerState.recordFailure(entry.provider, snapshot.meta.reason, errorDetails);
+          } else {
+            providerState.recordSuccess(entry.provider);
           }
-        }
 
-        manifest.blocks.push({
-          blockId: entry.blockId,
-          title: entry.title,
-          status: snapshot.meta.status,
-          reason: snapshot.meta.reason,
-          itemsCount: snapshot.meta.itemsCount,
-          coveragePct: snapshot.meta.coveragePct,
-          wroteSnapshot,
-          durationMs: Date.now() - started
-        });
+          if (evaluation.allowed) {
+            atomicWriteJson(snapshotPath, snapshot);
+            wroteSnapshot = true;
+          } else {
+            if (placeholder) {
+              const errorDetails = buildMetaDetails(entry.provider, snapshot.meta.details, {
+                snippet: snapshot.meta.reason
+              });
+              const errorSnapshot = buildErrorSnapshot(entry, snapshot.meta.reason, snapshot.generatedAt, errorDetails);
+              atomicWriteJson(snapshotPath, errorSnapshot);
+              wroteSnapshot = true;
+            }
+          }
+
+          manifest.blocks.push({
+            blockId: entry.blockId,
+            title: entry.title,
+            status: snapshot.meta.status,
+            reason: snapshot.meta.reason,
+            itemsCount: snapshot.meta.itemsCount,
+            coveragePct: snapshot.meta.coveragePct,
+            wroteSnapshot,
+            durationMs: Date.now() - started
+          });
+        } finally {
+          releaseLock(lock.path);
+        }
       } catch (error) {
         const rawReason = error?.reason || "ERROR";
         const reason = rawReason === "BUDGET_EXCEEDED" ? "BUDGET_EXHAUSTED" : rawReason;
@@ -1340,7 +1281,7 @@ async function main() {
         providerState.recordFailure(entry.provider, reason, details);
         if (placeholder) {
           const errorSnapshot = buildErrorSnapshot(entry, reason, generatedAt, details);
-          atomicWriteJson(path.join(SNAPSHOT_DIR, `${entry.blockId}.json`), errorSnapshot);
+          atomicWriteJson(path.join(MIRROR_SNAPSHOT_DIR, `${entry.blockId}.json`), errorSnapshot);
           wroteSnapshot = true;
         }
         manifest.blocks.push({

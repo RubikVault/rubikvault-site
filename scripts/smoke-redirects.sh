@@ -77,9 +77,9 @@ else
   fi
 fi
 
-# Mirror path
-if [ -f public/mirrors/top-movers.json ] || [ -f mirrors/top-movers.json ]; then
-  check_head_200 "/mirror/top-movers.json"
+# Snapshot path
+if [ -f public/data/snapshots/top-movers.json ] || [ -f mirrors/top-movers.json ]; then
+  check_head_200 "/data/snapshots/top-movers.json"
 fi
 
 echo "OK: redirect smoke passed for $BASE"

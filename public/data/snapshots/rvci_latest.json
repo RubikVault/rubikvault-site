@@ -1,0 +1,59 @@
+{
+  "schemaVersion": "v3",
+  "blockId": "rvci_latest",
+  "generatedAt": "2026-01-18T11:11:16.546Z",
+  "dataAt": "2026-01-18T11:11:16.546Z",
+  "meta": {
+    "status": "DEGRADED_COVERAGE",
+    "reason": "DEGRADED_COVERAGE",
+    "generatedAt": "2026-01-18T11:11:16.546Z",
+    "asOf": "2026-01-18T11:11:16.546Z",
+    "source": "mirror",
+    "ttlSeconds": 3600,
+    "stale": false,
+    "itemsCount": 0,
+    "stalenessSec": 0,
+    "freshness": {
+      "status": "fresh",
+      "ageMinutes": 0
+    },
+    "schedule": {
+      "rule": "daily",
+      "nextPlannedFetchAt": "2026-01-19T11:11:16.546Z",
+      "expectedNextRunWindowMinutes": 1440,
+      "ttlSeconds": 3600
+    },
+    "runId": "2026-01-18T11:11:16.534Z",
+    "validation": {
+      "schema": {
+        "ok": true,
+        "errors": []
+      },
+      "ranges": {
+        "ok": true,
+        "errors": []
+      },
+      "integrity": {
+        "ok": true,
+        "errors": []
+      }
+    }
+  },
+  "data": {
+    "items": [],
+    "counts": {
+      "long": 100,
+      "mid": 100,
+      "short": 100,
+      "triggers": 100
+    },
+    "paths": {
+      "health": "data/rvci/health.json",
+      "long": "data/rvci/rvci_top_long.json",
+      "mid": "data/rvci/rvci_top_mid.json",
+      "short": "data/rvci/rvci_top_short.json",
+      "triggers": "data/rvci/rvci_triggers.json",
+      "universe": "data/rvci/universe_meta.json"
+    }
+  }
+}

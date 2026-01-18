@@ -24,20 +24,10 @@ jobs:
         run: |
           git config user.name "rvci-bot"
           git config user.email "rvci-bot@users.noreply.github.com"
-      - name: Publish RVCI mirrors assets
-        shell: bash
-        run: |
-          set -euo pipefail
-          mkdir -p public/mirrors/rvci
-          # Copy snapshot outputs into deployed mirrors path (Pages serves from public/)
-          if [ -f public/data/rvci_latest.json ]; then cp -f public/data/rvci_latest.json public/mirrors/rvci_latest.json; fi
-          if [ -f public/data/rvci/health.json ]; then cp -f public/data/rvci/health.json public/mirrors/rvci/health.json; fi
-          ls -la public/mirrors/rvci_latest.json public/mirrors/rvci/health.json || true
-          git add public/mirrors || true
+          git add public/data/rvci_latest.json public/data/rvci/health.json public/data/rvci/*.json || true
           if git diff --cached --quiet; then
-            echo "No mirrors changes to commit."
+            echo "No data changes to commit."
             exit 0
           fi
-          git commit -m "chore(mirrors): publish rvci mirrors for Pages" || true
+          git commit -m "data: auto-update [skip ci]" || true
           git push
-

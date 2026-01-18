@@ -1,10 +1,10 @@
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { loadMirror, validateBasicMirrorShape, isFiniteNumber } from "./utils/mirror-io.mjs";
+import { loadMirrorEnvelope, validateBasicMirrorShape, isFiniteNumber } from "./utils/mirror-io.mjs";
 import { BLOCK_REGISTRY } from "../features/blocks-registry.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const MIRROR_ROOT = path.resolve(__dirname, "../public/mirrors");
+const MIRROR_ROOT = path.resolve(__dirname, "../mirrors");
 const now = Date.now();
 const warnings = [];
 const continuousEmptySoftAllow = new Set(["alpha-radar", "volume-anomaly", "breakout-energy"]);
@@ -51,10 +51,23 @@ function normalizeDataQuality(rawStatus) {
   return "EMPTY";
 }
 
-function normalizeMirrorPayload(mirrorId, raw) {
+function normalizeMirrorPayload(mirrorId, envelope) {
+  const raw = envelope?.raw ?? envelope;
+  const envelopeMeta = envelope?.meta ?? null;
   if (!raw) return { mirror: null, errors: ["mirror_missing"] };
+  const errors = [];
+  if (!envelopeMeta || typeof envelopeMeta !== "object") {
+    errors.push("envelope_missing");
+  } else {
+    ["provider", "dataset", "fetchedAt", "source", "runId", "ttlSeconds"].forEach((field) => {
+      if (envelopeMeta[field] === undefined || envelopeMeta[field] === null || envelopeMeta[field] === "") {
+        errors.push(`envelope_meta_missing_${field}`);
+      }
+    });
+  }
+
   if (raw && typeof raw === "object" && raw.schemaVersion && raw.mirrorId && raw.items) {
-    return { mirror: raw, errors: [] };
+    return { mirror: raw, errors };
   }
 
   const legacy = raw && typeof raw === "object" ? raw : { items: Array.isArray(raw) ? raw : [] };
@@ -70,7 +83,7 @@ function normalizeMirrorPayload(mirrorId, raw) {
   const updatedAt = meta.updatedAt || meta.ts || legacy.updatedAt || nowIso;
   const asOf = legacy.asOf || meta.asOf || updatedAt;
   const dataQuality = normalizeDataQuality(meta.status || legacy.dataQuality || (legacy.ok === false ? "ERROR" : null));
-  const errors = Array.isArray(legacy.errors)
+  const legacyErrors = Array.isArray(legacy.errors)
     ? legacy.errors
     : legacy.error
       ? [legacy.error.code || "ERROR"]
@@ -93,14 +106,14 @@ function normalizeMirrorPayload(mirrorId, raw) {
     dataQuality,
     delayMinutes: meta.ageMinutes ?? 0,
     missingSymbols,
-    errors,
+    errors: legacyErrors,
     notes,
     whyUnique: legacy.whyUnique || "",
     context,
     items
   };
 
-  return { mirror: coerced, errors: ["coerced_legacy_shape"] };
+  return { mirror: coerced, errors: [...errors, "coerced_legacy_shape"] };
 }
 
 const failures = [];
@@ -108,15 +121,19 @@ const failures = [];
 for (const entry of Object.values(BLOCK_REGISTRY)) {
   for (const mirrorId of entry.mirrorFiles) {
     const filePath = path.join(MIRROR_ROOT, `${mirrorId}.json`);
-    const mirror = loadMirror(filePath);
-    if (!mirror) {
+    const envelope = loadMirrorEnvelope(filePath);
+    if (!envelope) {
       failures.push({ mirrorId, error: "mirror_missing", filePath });
       continue;
     }
-    const normalized = normalizeMirrorPayload(mirrorId, mirror);
+    const normalized = normalizeMirrorPayload(mirrorId, envelope);
     if (normalized.errors.length && normalized.errors.includes("mirror_missing")) {
       failures.push({ mirrorId, error: "mirror_missing", filePath });
       continue;
+    }
+    const envelopeErrors = normalized.errors.filter((err) => err.startsWith("envelope_"));
+    if (envelopeErrors.length) {
+      failures.push({ mirrorId, error: "envelope_invalid", details: envelopeErrors });
     }
     if (normalized.errors.length && !normalized.errors.includes("mirror_missing")) {
       warnings.push({ mirrorId, warning: "shape_coerced", details: normalized.errors });

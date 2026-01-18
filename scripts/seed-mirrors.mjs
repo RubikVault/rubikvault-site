@@ -7,7 +7,7 @@ import { buildBaseMirror } from "./utils/mirror-builders.mjs";
 import { loadMirror, saveMirror, withRetries } from "./utils/mirror-io.mjs";
 import { fetchStooqDaily } from "./utils/stooq-fetch.mjs";
 
-const OUT_DIRS = ["public/mirrors", "mirrors"];
+const OUT_DIRS = ["mirrors"];
 const FEATURES = ["top-movers", "yield-curve", "sector-rotation", "market-health"];
 
 const QUOTES_PROVIDER = String(process.env.QUOTES_PROVIDER || "").toLowerCase();
@@ -1035,7 +1035,7 @@ async function seed() {
   const results = [];
 
   for (const featureId of FEATURES) {
-    const mirrorPath = path.resolve(process.cwd(), "public/mirrors", `${featureId}.json`);
+    const mirrorPath = path.resolve(process.cwd(), "mirrors", `${featureId}.json`);
     const existing = loadMirror(mirrorPath);
     const attempt = await runProviderWaterfall(featureId);
     const timestamp = new Date().toISOString();
@@ -1132,7 +1132,7 @@ async function seed() {
     }));
   }
 
-  const healthPath = path.resolve(process.cwd(), "public/mirrors/_health.json");
+  const healthPath = path.resolve(process.cwd(), "mirrors/_health.json");
   saveMirror(healthPath, {
     schemaVersion: "1.0",
     mirrorId: "_health",

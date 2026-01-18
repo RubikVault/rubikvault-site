@@ -1,18 +1,43 @@
 {
-  "schemaVersion": "v1",
+  "schemaVersion": "v3",
   "blockId": "credit-spread-proxy-lite",
-  "title": "19 - Credit Spread Proxy Lite",
-  "generatedAt": "2026-01-09T19:53:52.325Z",
+  "generatedAt": "2026-01-18T10:52:12.934Z",
   "dataAt": "2026-01-07",
   "meta": {
     "status": "LIVE",
     "reason": "OK",
-    "stalenessSec": 244432,
-    "coveragePct": 100,
-    "timezoneAssumption": "UTC",
-    "dataAtDefinition": "Derived from credit-stress-proxy snapshot",
-    "latencyMs": 1,
-    "itemsCount": 1
+    "generatedAt": "2026-01-18T10:52:12.934Z",
+    "asOf": "2026-01-07",
+    "source": "mirror",
+    "ttlSeconds": 3600,
+    "stale": true,
+    "itemsCount": 1,
+    "stalenessSec": 989520,
+    "freshness": {
+      "status": "expired",
+      "ageMinutes": 16492
+    },
+    "schedule": {
+      "rule": "daily",
+      "nextPlannedFetchAt": "2026-01-19T10:52:12.934Z",
+      "expectedNextRunWindowMinutes": 1440,
+      "ttlSeconds": 3600
+    },
+    "runId": "2026-01-18T10:52:12.904Z",
+    "validation": {
+      "schema": {
+        "ok": true,
+        "errors": []
+      },
+      "ranges": {
+        "ok": true,
+        "errors": []
+      },
+      "integrity": {
+        "ok": true,
+        "errors": []
+      }
+    }
   },
   "data": {
     "items": [

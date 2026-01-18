@@ -58,6 +58,14 @@ jobs:
             echo '{"summary":{"note":"summary_line_missing"}}' > /tmp/seed-summary.json
           fi
 
+      - name: Build snapshots
+        run: |
+          node scripts/build-snapshots.mjs
+
+      - name: Validate snapshots
+        run: |
+          node scripts/validate-snapshots.js
+
       - name: Audit reality snapshot
         run: |
           node scripts/audit/generate-reality.mjs
@@ -104,7 +112,9 @@ jobs:
         with:
           name: mirrors-output
           path: |
-            public/mirrors/**
+            mirrors/**
+            public/data/**
+            internal/mirror-artifacts/**
             /tmp/seed-summary.json
             /tmp/audit-report.json
             scripts/audit/REALITY.md
@@ -115,25 +125,25 @@ jobs:
           RV_GH_PUSH_TOKEN: ${{ secrets.RV_GH_PUSH_TOKEN }}
           GH_TOKEN: ${{ secrets.RV_GH_PUSH_TOKEN }}
         run: |
-          if ! git status --porcelain | grep -q "public/mirrors/"; then
-            echo "No mirror changes."
+          if ! git status --porcelain | grep -qE "mirrors/|public/data/"; then
+            echo "No data changes."
             exit 0
           fi
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git checkout -B mirrors-auto
-          git add public/mirrors/
-          git commit -m "chore: update mirrors"
+          git add mirrors public/data
+          git commit -m "data: auto-update [skip ci]"
           git remote set-url origin "https://x-access-token:${RV_GH_PUSH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
           git push --force origin mirrors-auto
           printf "Seed Mirrors summary (%s)\n\n" "$(date -u +"%Y-%m-%dT%H:%M:%SZ")" > /tmp/pr-body.txt
           cat /tmp/seed-summary.json >> /tmp/pr-body.txt
           PR_NUMBER=$(gh pr list --head mirrors-auto --base main --json number --jq '.[0].number')
           if [ -n "$PR_NUMBER" ]; then
-            gh pr edit "$PR_NUMBER" --title "chore: update mirrors" --body-file /tmp/pr-body.txt
+            gh pr edit "$PR_NUMBER" --title "data: auto-update" --body-file /tmp/pr-body.txt
             gh pr comment "$PR_NUMBER" --body-file /tmp/pr-body.txt
           else
-            gh pr create --head mirrors-auto --base main --title "chore: update mirrors" --body-file /tmp/pr-body.txt
+            gh pr create --head mirrors-auto --base main --title "data: auto-update" --body-file /tmp/pr-body.txt
           fi
 
 

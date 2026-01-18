@@ -61,14 +61,14 @@ export async function fetchWithRetry(url, ctx, { headers = {}, timeoutMs = 10000
   let totalBackoff = 0;
 
   while (true) {
-    if (ctx?.budget?.reserve && !ctx.budget.reserve(ctx.providerId)) {
+    if (ctx?.budget?.reserve && !ctx.budget.reserve(ctx.providerId, ctx.endpoint)) {
       throw buildProviderError("BUDGET_EXHAUSTED", "budget exhausted", { provider: ctx.providerId });
     }
 
     try {
       const { res, text, latencyMs, bytesIn } = await fetchWithTimeout(url, { headers, timeoutMs });
       if (ctx?.usage?.record) {
-        ctx.usage.record(ctx.providerId, { requests: 1, credits: 0, bytesIn, latencyMs });
+        ctx.usage.record(ctx.providerId, { requests: 1, credits: 0, bytesIn, latencyMs, endpoint: ctx.endpoint });
       }
 
       if (res.ok) {
@@ -105,7 +105,7 @@ export async function fetchWithRetry(url, ctx, { headers = {}, timeoutMs = 10000
     } catch (error) {
       const isAbort = error?.name === "AbortError";
       if (ctx?.usage?.record) {
-        ctx.usage.record(ctx.providerId, { requests: 1, credits: 0, bytesIn: 0, latencyMs: 0 });
+        ctx.usage.record(ctx.providerId, { requests: 1, credits: 0, bytesIn: 0, latencyMs: 0, endpoint: ctx.endpoint });
       }
       if (isAbort) {
         if (attempt >= maxRetries) {

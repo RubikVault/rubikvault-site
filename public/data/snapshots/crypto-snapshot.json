@@ -1,0 +1,64 @@
+{
+  "schemaVersion": "v3",
+  "blockId": "crypto-snapshot",
+  "generatedAt": "2026-01-18T11:11:16.541Z",
+  "dataAt": "2026-01-17T16:32:03.186Z",
+  "meta": {
+    "status": "OK",
+    "reason": "OK",
+    "generatedAt": "2026-01-18T11:11:16.541Z",
+    "asOf": "2026-01-17T16:32:03.186Z",
+    "source": "coingecko",
+    "ttlSeconds": 3600,
+    "stale": true,
+    "itemsCount": 3,
+    "stalenessSec": 67140,
+    "freshness": {
+      "status": "expired",
+      "ageMinutes": 1119
+    },
+    "schedule": {
+      "rule": "hourly",
+      "nextPlannedFetchAt": "2026-01-18T12:11:16.541Z",
+      "expectedNextRunWindowMinutes": 60,
+      "ttlSeconds": 3600
+    },
+    "runId": "2026-01-18T11:11:16.534Z",
+    "validation": {
+      "schema": {
+        "ok": true,
+        "errors": []
+      },
+      "ranges": {
+        "ok": true,
+        "errors": []
+      },
+      "integrity": {
+        "ok": true,
+        "errors": []
+      }
+    }
+  },
+  "data": {
+    "items": [
+      {
+        "symbol": "BTC",
+        "price": 95416,
+        "change24h": 0.5989246194006901,
+        "marketCap": 1903321106780.066
+      },
+      {
+        "symbol": "ETH",
+        "price": 3317.8,
+        "change24h": 1.1836616489872083,
+        "marketCap": 400094495049.86597
+      },
+      {
+        "symbol": "SOL",
+        "price": 143.9,
+        "change24h": 1.5648355764148068,
+        "marketCap": 81354380851.48305
+      }
+    ]
+  }
+}

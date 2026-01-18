@@ -30,7 +30,26 @@ export function loadMirror(filePath) {
     if (!fs.existsSync(filePath)) return null;
     const raw = fs.readFileSync(filePath, "utf8");
     if (!raw.trim()) return null;
-    return JSON.parse(raw);
+    const parsed = JSON.parse(raw);
+    if (isMirrorEnvelope(parsed)) {
+      return parsed.raw;
+    }
+    return parsed;
+  } catch (err) {
+    return null;
+  }
+}
+
+export function loadMirrorEnvelope(filePath) {
+  try {
+    if (!fs.existsSync(filePath)) return null;
+    const raw = fs.readFileSync(filePath, "utf8");
+    if (!raw.trim()) return null;
+    const parsed = JSON.parse(raw);
+    if (isMirrorEnvelope(parsed)) {
+      return { meta: parsed.meta, raw: parsed.raw, envelope: parsed };
+    }
+    return { meta: null, raw: parsed, envelope: null };
   } catch (err) {
     return null;
   }
@@ -149,15 +168,71 @@ export function normalizeMirrorMeta(payload) {
   return { payload: { ...payload, meta: nextMeta }, changed };
 }
 
+export function isMirrorEnvelope(payload) {
+  if (!payload || typeof payload !== "object") return false;
+  if (!payload.meta || !payload.raw) return false;
+  const meta = payload.meta || {};
+  return Boolean(
+    Object.prototype.hasOwnProperty.call(meta, "provider") ||
+      Object.prototype.hasOwnProperty.call(meta, "dataset") ||
+      Object.prototype.hasOwnProperty.call(meta, "fetchedAt") ||
+      Object.prototype.hasOwnProperty.call(meta, "source") ||
+      Object.prototype.hasOwnProperty.call(meta, "runId")
+  );
+}
+
+function normalizeEnvelopeMeta(rawPayload, meta, finalPath) {
+  const now = new Date().toISOString();
+  const metaInput = meta && typeof meta === "object" ? meta : {};
+  const raw = rawPayload && typeof rawPayload === "object" ? rawPayload : {};
+  const dataset =
+    metaInput.dataset ||
+    raw.dataset ||
+    raw.mirrorId ||
+    raw.feature ||
+    raw?.meta?.feature ||
+    (finalPath ? path.basename(finalPath, ".json") : "unknown");
+  const provider =
+    metaInput.provider ||
+    raw.provider ||
+    raw.sourceUpstream ||
+    raw.source ||
+    raw?.meta?.source ||
+    dataset ||
+    "unknown";
+  const fetchedAt =
+    metaInput.fetchedAt ||
+    raw.fetchedAt ||
+    raw.updatedAt ||
+    raw?.meta?.updatedAt ||
+    now;
+  const ttlSeconds = Number.isFinite(metaInput.ttlSeconds)
+    ? metaInput.ttlSeconds
+    : Number.isFinite(raw.ttlSeconds)
+      ? raw.ttlSeconds
+      : Number.isFinite(raw?.meta?.ttlSeconds)
+        ? raw.meta.ttlSeconds
+        : 3600;
+  const source = metaInput.source || raw?.meta?.source || raw.source || "mirror";
+  const runId = metaInput.runId || raw.runId || raw?.meta?.runId || now;
+  const cost = metaInput.cost ?? raw?.meta?.cost ?? null;
+  return { provider, dataset, fetchedAt, ttlSeconds, source, runId, cost };
+}
+
 export function saveMirror(finalPath, data) {
   const now = new Date().toISOString();
-  const payload = { ...data };
-  if (!payload.runId) payload.runId = now;
-  if (!payload.updatedAt) payload.updatedAt = now;
-  if (!payload.asOf) payload.asOf = payload.updatedAt;
-  const normalized = normalizeMirrorMeta(payload);
-  atomicWriteJson(finalPath, normalized.payload);
-  return normalized.payload;
+  const envelopeInput = isMirrorEnvelope(data) ? data : { meta: {}, raw: data };
+  const rawPayload = envelopeInput.raw && typeof envelopeInput.raw === "object" ? { ...envelopeInput.raw } : envelopeInput.raw;
+  if (rawPayload && typeof rawPayload === "object" && !Array.isArray(rawPayload)) {
+    if (!rawPayload.runId) rawPayload.runId = now;
+    if (!rawPayload.updatedAt) rawPayload.updatedAt = now;
+    if (!rawPayload.asOf) rawPayload.asOf = rawPayload.updatedAt;
+  }
+  const normalized = normalizeMirrorMeta(rawPayload);
+  const meta = normalizeEnvelopeMeta(normalized.payload, envelopeInput.meta, finalPath);
+  const envelope = { meta, raw: normalized.payload };
+  atomicWriteJson(finalPath, envelope);
+  return envelope;
 }
 
 export function redactNotes(notes = []) {

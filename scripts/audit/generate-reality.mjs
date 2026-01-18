@@ -125,14 +125,14 @@ ensureRepo(gitTop);
 ensureNodeVersion();
 
 const root = gitTop || pwd;
-const mirrorsDir = path.join(root, "public", "mirrors");
-ensureExists(mirrorsDir, "Repo has no public/mirrors; audit can't run");
+const mirrorsDir = path.join(root, "public", "data", "snapshots");
+ensureExists(mirrorsDir, "Repo has no public/data/snapshots; audit can't run");
 ensureExists(path.join(root, "package.json"), "STOP: package.json missing");
 
 const mirrorFilesAll = fs
   .readdirSync(mirrorsDir)
   .filter((f) => f.endsWith(".json"))
-  .map((f) => `public/mirrors/${f}`);
+  .map((f) => `public/data/snapshots/${f}`);
 const mirrorFiles = mirrorFilesAll.slice(0, 10);
 const htmlFeatures = extractHtmlFeatures(root);
 const mirrorFeatures = extractMirrorFeatures(mirrorsDir);
@@ -147,7 +147,7 @@ if (htmlMissing.length) {
   issues.push(
     formatIssue(
       "WARN",
-      `HTML features missing mirrors: count=${htmlMissing.length} sample=${htmlMissing.slice(0, 10).join(", ")}`
+      `HTML features missing snapshots: count=${htmlMissing.length} sample=${htmlMissing.slice(0, 10).join(", ")}`
     )
   );
 }
@@ -155,7 +155,7 @@ if (mirrorMissing.length) {
   issues.push(
     formatIssue(
       "WARN",
-      `Mirrors not in HTML: count=${mirrorMissing.length} sample=${mirrorMissing.slice(0, 10).join(", ")}`
+      `Snapshots not in HTML: count=${mirrorMissing.length} sample=${mirrorMissing.slice(0, 10).join(", ")}`
     )
   );
 }

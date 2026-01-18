@@ -38,6 +38,8 @@ audit-live.json
  !/public/debug/
  !/public/debug/**
 functions/api/_debug-trace.js
+internal/
+.artifacts/
 
 # local workflow backups
 .github/workflows/*.bak.*
@@ -86,3 +88,9 @@ nohup.out
 functions/api/_bak/
 functions/api/_bak/**
 src/
+
+# local/CI debug reports
+debug/
+
+# local backups (never commit)
+functions/api/_middleware.js.bak.*

@@ -33,6 +33,12 @@ jobs:
         run: |
           node -e 'console.log({FINNHUB:!!process.env.FINNHUB_API_KEY,FMP:!!process.env.FMP_API_KEY,SEC:!!process.env.SEC_API_KEY,MARKETAUX_API_KEY:!!process.env.MARKETAUX_API_KEY,MARKETAUX_KEY:!!process.env.MARKETAUX_KEY})'
           node scripts/seeder.js --only blocks26-43
+      - name: Build snapshots
+        run: |
+          node scripts/build-snapshots.mjs
+      - name: Validate snapshots
+        run: |
+          node scripts/validate-snapshots.js
       - name: Export canonical blocks
         run: |
           node scripts/export-blocks-from-snapshots.mjs
@@ -41,12 +47,12 @@ jobs:
           node scripts/generate-health.mjs
       - name: Commit snapshots
         run: |
-          git add public/data/snapshots public/data/blocks public/data/seed-manifest.json public/data/usage-report.json public/data/health.json public/data/health_history.json
+          git add mirrors public/data
           if git diff --staged --quiet; then
             echo "No snapshot changes"
             exit 0
           fi
           git config user.email "actions@github.com"
           git config user.name "github-actions"
-          git commit -m "chore(data): seed snapshots package3 [skip ci]"
+          git commit -m "data: auto-update [skip ci]"
           git push

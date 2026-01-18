@@ -193,15 +193,15 @@ function getMirrorUpdatedAt(raw) {
 
 async function loadMirrorSnapshot(featureId, mirrorId) {
   try {
-    const res = await fetch(`./mirrors/${mirrorId}.json`, { cache: "no-store" });
+    const res = await fetch(`./data/snapshots/${mirrorId}.json`, { cache: "no-store" });
     if (!res.ok) return null;
     const raw = await res.json();
-    const items = extractMirrorItems(raw);
-    const generatedAt = new Date().toISOString();
-    const updatedAt = getMirrorUpdatedAt(raw);
-    const stalenessSec = computeStalenessSec(updatedAt, generatedAt);
-    const reason = items.length ? "OK" : "EMPTY_VALID";
-    const data = { items };
+    const normalized = normalizeSnapshotEnvelope(raw, featureId);
+    const items = extractMirrorItems(raw?.data || raw);
+    const data = {
+      ...(normalized.data && typeof normalized.data === "object" ? normalized.data : {}),
+      items
+    };
     if (mirrorId === "tech-signals") {
       const rawSignals = raw?.data?.signals;
       const rawRows = raw?.data?.rows;
@@ -212,31 +212,19 @@ async function loadMirrorSnapshot(featureId, mirrorId) {
       const rawPicks = raw?.data?.picks;
       if (rawPicks && typeof rawPicks === "object") {
         data.picks = rawPicks;
-      } else {
+      } else if (!data.picks) {
         data.picks = items;
         data.lite = true;
       }
     }
-    return {
-      ok: true,
-      feature: featureId,
-      meta: {
-        status: "LIVE",
-        reason,
-        generatedAt,
-        stalenessSec
-      },
-      data,
-      warnings: [],
-      error: null
-    };
+    return { ...normalized, data, feature: featureId };
   } catch (error) {
     return null;
   }
 }
 
 async function loadApiFallbackSnapshot(featureId, apiId) {
-  const res = await fetch(`./api/${apiId}?debug=1`, {
+  const res = await fetch(`./data/snapshots/${apiId}.json`, {
     cache: "no-store",
     headers: { Accept: "application/json" }
   });
@@ -373,8 +361,7 @@ async function loadRvciLatest(debug = false) {
   const cacheKey = `latest:${debug ? "debug" : "default"}`;
   if (RVCI_CACHE.has(cacheKey)) return RVCI_CACHE.get(cacheKey);
   const sources = [
-    { label: "api", url: `/api/rvci-engine${debug ? "?debug=1" : ""}` },
-    { label: "mirror", url: "/mirrors/rvci_latest.json" },
+    { label: "snapshot", url: `/data/snapshots/rvci-engine.json${debug ? "?debug=1" : ""}` },
     { label: "data", url: "/data/rvci_latest.json" }
   ];
   const errors = [];
@@ -1664,7 +1651,7 @@ function getManifestBlockId(feature, section) {
 
 function getManifestEndpoint(feature, section) {
   const blockId = getManifestBlockId(feature, section);
-  if (blockId === "rvci-engine") return "/api/rvci-engine";
+  if (blockId === "rvci-engine") return "/data/snapshots/rvci-engine.json";
   const snapshotId = normalizeId(blockId);
   return snapshotId ? `./data/snapshots/${snapshotId}.json` : "";
 }

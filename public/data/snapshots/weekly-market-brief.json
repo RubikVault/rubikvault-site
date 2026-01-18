@@ -1,18 +1,43 @@
 {
-  "schemaVersion": "v1",
+  "schemaVersion": "v3",
   "blockId": "weekly-market-brief",
-  "title": "41 - Weekly Market Brief",
-  "generatedAt": "2026-01-15T12:40:15.243Z",
+  "generatedAt": "2026-01-18T10:52:12.940Z",
   "dataAt": "2026-01-13",
   "meta": {
     "status": "PARTIAL",
     "reason": "DEGRADED_COVERAGE",
-    "stalenessSec": 218415,
-    "coveragePct": 67,
-    "timezoneAssumption": "UTC",
-    "dataAtDefinition": "Weekly brief derived from core snapshots",
-    "latencyMs": 0,
-    "itemsCount": 4
+    "generatedAt": "2026-01-18T10:52:12.940Z",
+    "asOf": "2026-01-13",
+    "source": "mirror",
+    "ttlSeconds": 3600,
+    "stale": true,
+    "itemsCount": 4,
+    "stalenessSec": 471120,
+    "freshness": {
+      "status": "expired",
+      "ageMinutes": 7852
+    },
+    "schedule": {
+      "rule": "daily",
+      "nextPlannedFetchAt": "2026-01-19T10:52:12.940Z",
+      "expectedNextRunWindowMinutes": 1440,
+      "ttlSeconds": 3600
+    },
+    "runId": "2026-01-18T10:52:12.904Z",
+    "validation": {
+      "schema": {
+        "ok": true,
+        "errors": []
+      },
+      "ranges": {
+        "ok": true,
+        "errors": []
+      },
+      "integrity": {
+        "ok": true,
+        "errors": []
+      }
+    }
   },
   "data": {
     "items": [

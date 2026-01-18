@@ -69,8 +69,9 @@ function parseLatestObservationXml(xmlText) {
 }
 
 export async function fetchEcbSeries(ctx, seriesKey) {
+  const requestCtx = ctx ? (ctx.endpoint ? ctx : { ...ctx, endpoint: "sdmx" }) : { endpoint: "sdmx" };
   const url = `${ECB_BASE}/${seriesKey}?format=sdmx-json&lastNObservations=1`;
-  const { text, res } = await fetchWithRetry(url, ctx, {
+  const { text, res } = await fetchWithRetry(url, requestCtx, {
     headers: {
       "User-Agent": "RVSeeder/1.0",
       Accept: "application/vnd.sdmx.genericdata+xml;version=2.1,application/json"

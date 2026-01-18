@@ -1,35 +1,22 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { loadMirror, saveMirror } from "./utils/mirror-io.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const DATA_DIR = path.join(ROOT, "public", "data");
+const DATA_DIR = path.join(ROOT, "mirrors");
 const SEED_MANIFEST_PATH = path.join(DATA_DIR, "seed-manifest.json");
 const USAGE_REPORT_PATH = path.join(DATA_DIR, "usage-report.json");
 const HEALTH_PATH = path.join(DATA_DIR, "health.json");
 const HEALTH_HISTORY_PATH = path.join(DATA_DIR, "health_history.json");
-const TMP_DIR = path.join(DATA_DIR, ".tmp");
 
 function todayUtc() {
   return new Date().toISOString().slice(0, 10);
 }
 
 async function readJsonIfExists(filePath) {
-  try {
-    const raw = await fs.readFile(filePath, "utf8");
-    if (!raw.trim()) return null;
-    return JSON.parse(raw);
-  } catch {
-    return null;
-  }
-}
-
-async function atomicWriteJson(targetPath, payload) {
-  await fs.mkdir(TMP_DIR, { recursive: true });
-  const tmpPath = path.join(TMP_DIR, `${path.basename(targetPath)}.tmp`);
-  const serialized = JSON.stringify(payload, null, 2) + "\n";
-  await fs.writeFile(tmpPath, serialized, "utf8");
-  await fs.rename(tmpPath, targetPath);
+  const payload = loadMirror(filePath);
+  return payload || null;
 }
 
 function summarizeBlocks(seedManifest) {
@@ -66,8 +53,8 @@ function buildHealth(seedManifest, usageReport) {
   const usageSummary = summarizeUsage(usageReport);
 
   const inputs = [];
-  if (Array.isArray(seedManifest?.blocks)) inputs.push("public/data/seed-manifest.json");
-  if (usageReport) inputs.push("public/data/usage-report.json");
+  if (Array.isArray(seedManifest?.blocks)) inputs.push("mirrors/seed-manifest.json");
+  if (usageReport) inputs.push("mirrors/usage-report.json");
 
   let status = "LIVE";
   let reason = null;
@@ -127,12 +114,12 @@ async function main() {
   const usageReport = await readJsonIfExists(USAGE_REPORT_PATH);
 
   const health = buildHealth(seedManifest, usageReport);
-  await atomicWriteJson(HEALTH_PATH, health);
+  saveMirror(HEALTH_PATH, health);
 
   const historyRaw = await readJsonIfExists(HEALTH_HISTORY_PATH);
   const history = normalizeHistory(historyRaw);
   const updated = upsertHistory(history, health);
-  await atomicWriteJson(HEALTH_HISTORY_PATH, updated);
+  saveMirror(HEALTH_HISTORY_PATH, updated);
 
   console.log(`[health] wrote health.json + health_history.json for ${health.meta.marketDate}`);
 }

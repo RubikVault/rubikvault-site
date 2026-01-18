@@ -97,7 +97,23 @@ function buildUrl(url) {
   if (isAbsolute) {
     return { url, resolution: resolveApiBase(), absolute: true };
   }
-  if (url.startsWith("/data/") || url.startsWith("/mirrors/") || url.startsWith("mirrors/")) {
+  if (url.startsWith("/api/")) {
+    const slug = url.replace(/^\/api\//, "").split("?")[0];
+    return {
+      url: `/data/snapshots/${slug}.json`,
+      resolution: { ok: true, configLoaded: true, apiBase: "", apiPrefix: "", errors: [] },
+      absolute: false
+    };
+  }
+  if (url.startsWith("/mirrors/") || url.startsWith("mirrors/")) {
+    const slug = url.replace(/^\/?mirrors\//, "").replace(/\.json$/, "");
+    return {
+      url: `/data/snapshots/${slug}.json`,
+      resolution: { ok: true, configLoaded: true, apiBase: "", apiPrefix: "", errors: [] },
+      absolute: false
+    };
+  }
+  if (url.startsWith("/data/")) {
     return {
       url,
       resolution: { ok: true, configLoaded: true, apiBase: "", apiPrefix: "", errors: [] },
@@ -107,22 +123,15 @@ function buildUrl(url) {
   const resolution = resolveApiBase();
   if (!resolution.ok) return { url: "", resolution, absolute: false };
   const path = url.startsWith("/") ? url.slice(1) : url;
-  return { url: joinUrl(resolution.apiPrefix, path), resolution, absolute: false };
+  const baseUrl = joinUrl(resolution.apiPrefix, path);
+  if (resolution.apiPrefix.includes("/data/snapshots") && !baseUrl.endsWith(".json")) {
+    return { url: `${baseUrl}.json`, resolution, absolute: false };
+  }
+  return { url: baseUrl, resolution, absolute: false };
 }
 
 function toMirrorPath(input) {
-  if (typeof input !== "string") return "";
-  if (input.startsWith("http://") || input.startsWith("https://")) return "";
-  if (input.startsWith("/mirrors/") || input.startsWith("mirrors/")) return input;
-  const allowMirrorRewrite =
-    typeof window !== "undefined" &&
-    (window.RV_CONFIG?.USE_MIRRORS === true || window.RV_CONFIG?.DEBUG_FORCE_MIRRORS === true);
-  if (!allowMirrorRewrite) return "";
-  const raw = input.startsWith("/") ? input.slice(1) : input;
-  const pathOnly = raw.split("?")[0];
-  const normalized = pathOnly.startsWith("api/") ? pathOnly.slice(4) : pathOnly;
-  if (!normalized) return "";
-  return `/mirrors/${normalized}.json`;
+  return "";
 }
 
 function addQuery(url, params = {}) {
@@ -151,7 +160,7 @@ function isMirrorSchema(payload) {
   return (
     payload &&
     typeof payload === "object" &&
-    payload.schemaVersion === "1.0" &&
+    (payload.schemaVersion === "rv-mirror-v1" || payload.schemaVersion === "1.0") &&
     typeof payload.mirrorId === "string"
   );
 }
@@ -189,6 +198,55 @@ function mirrorToApiPayload(mirror, traceId) {
         notes: mirror.notes || []
       }
     }
+  };
+}
+
+function isSnapshotSchema(payload) {
+  return (
+    payload &&
+    typeof payload === "object" &&
+    typeof payload.blockId === "string" &&
+    payload.meta &&
+    typeof payload.meta === "object"
+  );
+}
+
+function snapshotToApiPayload(snapshot, traceId) {
+  const now = new Date().toISOString();
+  const meta = snapshot.meta || {};
+  const status = meta.status || "PARTIAL";
+  const reason = meta.reason || status;
+  const ok = status !== "ERROR" && status !== "NO_DATA";
+  const updatedAt = meta.asOf || meta.generatedAt || snapshot.generatedAt || now;
+  const dataQuality = {
+    status,
+    reason,
+    missingFields: Array.isArray(meta.missingFields) ? meta.missingFields : []
+  };
+  const payloadData = {
+    feature: snapshot.blockId,
+    traceId: traceId || meta.traceId || "snapshot",
+    updatedAt,
+    source: meta.source || "snapshot",
+    dataQuality,
+    confidence: Number.isFinite(meta.confidence) ? meta.confidence : 0,
+    definitions: meta.definitions || {},
+    reasons: Array.isArray(meta.reasons) ? meta.reasons : [],
+    data: snapshot.data && typeof snapshot.data === "object" ? snapshot.data : {}
+  };
+  return {
+    ok,
+    feature: snapshot.blockId,
+    ts: meta.generatedAt || snapshot.generatedAt || now,
+    traceId: traceId || meta.traceId || "snapshot",
+    schemaVersion: 3,
+    cache: { hit: true, ttl: 0, layer: "snapshot" },
+    upstream: { url: "snapshot", status: null, snippet: "" },
+    rateLimit: { remaining: "unknown", reset: null, estimated: true },
+    dataQuality,
+    data: payloadData,
+    error: ok ? null : { code: reason || "ERROR", message: reason || "ERROR" },
+    isStale: Boolean(meta.stale)
   };
 }
 
@@ -385,11 +443,13 @@ export async function fetchJSON(
       payload = payload.payload;
     }
 
-    payload = normalizeResponse(payload);
-
-    if (isMirrorSchema(payload)) {
+    if (isSnapshotSchema(payload)) {
+      payload = snapshotToApiPayload(payload, effectiveTraceId);
+    } else if (isMirrorSchema(payload)) {
       payload = mirrorToApiPayload(payload, effectiveTraceId);
     }
+
+    payload = normalizeResponse(payload);
 
     if (!isValidSchema(payload)) {
       payload = makeLocalError({

@@ -1,18 +1,43 @@
 {
-  "schemaVersion": "v1",
+  "schemaVersion": "v3",
   "blockId": "insider-activity-lite",
-  "title": "27 - Insider Activity Lite",
-  "generatedAt": "2026-01-15T12:40:23.689Z",
+  "generatedAt": "2026-01-18T10:52:12.935Z",
   "dataAt": "2026-01-08",
   "meta": {
     "status": "LIVE",
     "reason": "OK",
-    "stalenessSec": 650423,
-    "coveragePct": 100,
-    "timezoneAssumption": "UTC",
-    "dataAtDefinition": "Recent insider-related filings from SEC EDGAR",
-    "latencyMs": 300,
-    "itemsCount": 10
+    "generatedAt": "2026-01-18T10:52:12.935Z",
+    "asOf": "2026-01-08",
+    "source": "mirror",
+    "ttlSeconds": 3600,
+    "stale": true,
+    "itemsCount": 10,
+    "stalenessSec": 903120,
+    "freshness": {
+      "status": "expired",
+      "ageMinutes": 15052
+    },
+    "schedule": {
+      "rule": "daily",
+      "nextPlannedFetchAt": "2026-01-19T10:52:12.935Z",
+      "expectedNextRunWindowMinutes": 1440,
+      "ttlSeconds": 3600
+    },
+    "runId": "2026-01-18T10:52:12.904Z",
+    "validation": {
+      "schema": {
+        "ok": true,
+        "errors": []
+      },
+      "ranges": {
+        "ok": true,
+        "errors": []
+      },
+      "integrity": {
+        "ok": true,
+        "errors": []
+      }
+    }
   },
   "data": {
     "items": [

@@ -147,17 +147,15 @@ function resolveHttpStatus(payload) {
 
 async function loadMirrorPayload(origin, featureId) {
   if (!origin || !featureId) return null;
-  const urls = [`${origin}/mirror/${featureId}.json`, `${origin}/mirrors/${featureId}.json`];
-  for (const url of urls) {
-    try {
-      const response = await fetch(url, { headers: { Accept: "application/json" } });
-      const text = await response.text();
-      if (!response.ok || isHtmlLike(text)) continue;
-      const payload = JSON.parse(text);
-      if (payload && typeof payload === "object") return payload;
-    } catch (error) {
-      // try next
-    }
+  const url = `${origin}/data/snapshots/${featureId}.json`;
+  try {
+    const response = await fetch(url, { headers: { Accept: "application/json" } });
+    const text = await response.text();
+    if (!response.ok || isHtmlLike(text)) return null;
+    const payload = JSON.parse(text);
+    if (payload && typeof payload === "object") return payload;
+  } catch (error) {
+    return null;
   }
   return null;
 }

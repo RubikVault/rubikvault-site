@@ -1,18 +1,43 @@
 {
-  "schemaVersion": "v1",
+  "schemaVersion": "v3",
   "blockId": "ecb-rates-board",
-  "title": "02 - ECB Rates Board",
-  "generatedAt": "2026-01-15T13:01:39.975Z",
+  "generatedAt": "2026-01-18T10:52:12.934Z",
   "dataAt": "2026-01-15",
   "meta": {
     "status": "LIVE",
     "reason": "OK",
-    "stalenessSec": 46899,
-    "coveragePct": 100,
-    "timezoneAssumption": "UTC",
-    "dataAtDefinition": "ECB SDMX key rates last published observation",
-    "latencyMs": 482,
-    "itemsCount": 3
+    "generatedAt": "2026-01-18T10:52:12.934Z",
+    "asOf": "2026-01-15",
+    "source": "mirror",
+    "ttlSeconds": 3600,
+    "stale": true,
+    "itemsCount": 3,
+    "stalenessSec": 298320,
+    "freshness": {
+      "status": "expired",
+      "ageMinutes": 4972
+    },
+    "schedule": {
+      "rule": "daily",
+      "nextPlannedFetchAt": "2026-01-19T10:52:12.934Z",
+      "expectedNextRunWindowMinutes": 1440,
+      "ttlSeconds": 3600
+    },
+    "runId": "2026-01-18T10:52:12.904Z",
+    "validation": {
+      "schema": {
+        "ok": true,
+        "errors": []
+      },
+      "ranges": {
+        "ok": true,
+        "errors": []
+      },
+      "integrity": {
+        "ok": true,
+        "errors": []
+      }
+    }
   },
   "data": {
     "items": [
