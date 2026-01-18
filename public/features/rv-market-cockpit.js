@@ -214,7 +214,9 @@ function buildHeroMetricsModel(snapshot) {
       const valueText = formatMetricValue(metric);
       const change = formatMetricChange(metric?.change, metric?.changeUnit);
       const info = HERO_LABEL_INFO[label] || "Explanation unavailable.";
-      const missing = !metric || metric.value === null || metric.value === undefined;
+      // Consider metric "present" even if value is null (for display purposes)
+      // Missing means the metric object itself doesn't exist
+      const missing = !metric;
       if (missing) missingIds.push(id || label);
       return {
         id: id || label,
@@ -567,9 +569,14 @@ function render(root, payload, logger, featureId) {
   const auditHtml = auditEnabled ? renderHeroAudit(heroMetrics, 0) : "";
 
   const counts = heroMetrics.counts || {};
+  // Count metrics with actual values (not null)
+  const metricsWithValues = heroMetrics.flat.filter(m => {
+    const metric = metricsById[m.id];
+    return metric && metric.value !== null && metric.value !== undefined;
+  }).length;
   const freshCount = Number.isFinite(counts.freshOrDerivedOk)
     ? counts.freshOrDerivedOk
-    : heroMetrics.totalCount - heroMetrics.missingIds.length;
+    : metricsWithValues;
   const metricsStatus =
     freshCount >= heroMetrics.totalCount
       ? "OK"

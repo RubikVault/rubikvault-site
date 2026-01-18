@@ -511,8 +511,33 @@ function buildFreshness(asOfDate, ttlHours) {
 }
 
 async function main() {
-  // --- Load lastGood from SSOT (same path as snapshot) ---
-  const lastGood = readJson(LASTGOOD_SNAPSHOT_PATH) || readJson(LASTGOOD_PATH);
+  // --- Load lastGood from SSOT (same path as snapshot) OR from previous run ---
+  let lastGood = readJson(LASTGOOD_SNAPSHOT_PATH);
+  
+  // If current snapshot is empty/null, try historical git version as lastGood
+  if (!lastGood || !lastGood.data || Object.keys(lastGood.data).length === 0) {
+    // Try to find last good snapshot from git history (if available)
+    try {
+      const { execSync } = await import("node:child_process");
+      const gitCmd = `git log --all --oneline -- "public/data/snapshots/macro-hub.json" | head -5 | tail -1 | awk '{print $1}'`;
+      const lastCommit = execSync(gitCmd, { encoding: "utf8", cwd: ROOT, stdio: ["pipe", "pipe", "ignore"] }).trim();
+      if (lastCommit && lastCommit.length === 40) {
+        const histContent = execSync(`git show ${lastCommit}:public/data/snapshots/macro-hub.json`, { encoding: "utf8", cwd: ROOT, stdio: ["pipe", "pipe", "ignore"] });
+        const histSnapshot = JSON.parse(histContent);
+        // Only use if it has meaningful data
+        if (histSnapshot?.data && Object.keys(histSnapshot.data).filter(k => histSnapshot.data[k]?.value != null).length > 10) {
+          lastGood = histSnapshot;
+        }
+      }
+    } catch (_) {
+      // Git history not available, continue with current
+    }
+  }
+  
+  // Fallback to lastGood file if exists
+  if (!lastGood || !lastGood.data || Object.keys(lastGood.data).length === 0) {
+    lastGood = readJson(LASTGOOD_PATH);
+  }
   
   const catalog = readJson(CATALOG_PATH);
   if (!catalog) {
