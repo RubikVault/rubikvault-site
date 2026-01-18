@@ -699,6 +699,22 @@ async function main() {
 
 main().catch((error) => {
   console.error("build-snapshots failed:", error.message || error);
+
+// RV_V3_GENERATE_BUNDLE_AND_RENDERPLAN
+// Build bundle.json + render-plan.json from public/features/feature-registry.json (static SSOT for UI)
+try {
+  const { default: path } = await import("node:path");
+  const { fileURLToPath } = await import("node:url");
+  const here = path.dirname(fileURLToPath(import.meta.url));
+  const gen = path.resolve(here, "build-bundle-and-render-plan.mjs");
+  const { spawnSync } = await import("node:child_process");
+  const res = spawnSync(process.execPath, [gen], { stdio: "inherit" });
+  if (res.status !== 0) throw new Error(`bundle/render-plan generator failed: ${res.status}`);
+} catch (e) {
+  console.error("WARN: bundle/render-plan generation failed:", e && e.message ? e.message : e);
+}
+
+
   process.exit(1);
 });
 

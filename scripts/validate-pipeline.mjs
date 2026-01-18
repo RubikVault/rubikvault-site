@@ -133,7 +133,6 @@ main();
 // 3) build-snapshots must not do network
 // 4) functions/api must not call external providers
 // 5) public/data snapshots must include required v3 meta fields (best-effort checks)
-import fs from "node:fs";
 import path from "node:path";
 
 function die(msg) {

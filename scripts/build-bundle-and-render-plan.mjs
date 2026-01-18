@@ -2,148 +2,101 @@ import fs from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
 
+const ROOT = process.cwd();
+const REGISTRY = path.join(ROOT, "public", "features", "feature-registry.json");
+const OUT_BUNDLE = path.join(ROOT, "public", "data", "bundle.json");
+const OUT_RENDER = path.join(ROOT, "public", "data", "render-plan.json");
+
 function sha256(s) {
   return crypto.createHash("sha256").update(s).digest("hex");
 }
 
 function readJson(p) {
-  return JSON.parse(fs.readFileSync(p, "utf-8"));
+  return JSON.parse(fs.readFileSync(p, "utf8"));
 }
 
 function writeIfChanged(filePath, obj) {
   const next = JSON.stringify(obj, null, 2) + "\n";
-  if (fs.existsSync(filePath)) {
-    const prev = fs.readFileSync(filePath, "utf-8");
-    if (sha256(prev) === sha256(next)) return { changed: false, bytes: Buffer.byteLength(next, "utf-8") };
+  const nextHash = sha256(next);
+  let prevHash = null;
+  try {
+    const prev = fs.readFileSync(filePath, "utf8");
+    prevHash = sha256(prev);
+  } catch {}
+  if (prevHash === nextHash) {
+    return { changed: false, bytes: Buffer.byteLength(next) };
   }
   fs.mkdirSync(path.dirname(filePath), { recursive: true });
-  fs.writeFileSync(filePath, next, "utf-8");
-  return { changed: true, bytes: Buffer.byteLength(next, "utf-8") };
+  fs.writeFileSync(filePath, next, "utf8");
+  return { changed: true, bytes: Buffer.byteLength(next) };
 }
 
 function nowIso() {
   return new Date().toISOString();
 }
 
-function pickRegistryPath() {
-  const cands = [
-    "public/features/feature-registry.json",
-    "features/feature-registry.json",
-    "public/feature-registry.json",
-  ];
-  for (const p of cands) if (fs.existsSync(p)) return p;
-  return null;
-}
-
-function safeArray(x) {
-  if (Array.isArray(x)) return x;
-  if (x && Array.isArray(x.items)) return x.items;
-  if (x && Array.isArray(x.blocks)) return x.blocks;
-  return [];
-}
-
-function loadRegistry(regPath) {
-  const reg = readJson(regPath);
-  const blocks = safeArray(reg);
-  // normalize minimal shape
-  return blocks.map((b, idx) => ({
-    id: String(b.id ?? b.blockId ?? b.key ?? `block-${idx + 1}`),
-    title: String(b.title ?? b.name ?? b.id ?? `Block ${idx + 1}`),
-    category: String(b.category ?? b.group ?? "misc"),
-    enabled: (b.enabled === undefined ? true : !!b.enabled),
-    snapshotPath: String(b.snapshotPath ?? `/data/snapshots/${String(b.id ?? b.blockId ?? b.key ?? `block-${idx + 1}`)}.json`),
-  })).filter(b => b.id && b.enabled);
-}
-
-function baseMeta({ runId }) {
-  const ts = nowIso();
-  return {
-    status: "OK",
-    reason: "OK",
-    generatedAt: ts,
-    asOf: ts,
-    source: "static",
-    ttlSeconds: 3600,
-    stale: false,
-    freshness: { status: "fresh", ageMinutes: 0 },
-    validation: {
-      schema: { ok: true, errors: [] },
-      ranges: { ok: true, errors: [] },
-      integrity: { ok: true, errors: [] },
-    },
-    schedule: {
-      rule: "ci",
-      nextPlannedFetchAt: ts,
-      expectedNextRunWindowMinutes: 1440,
-      ttlSeconds: 3600,
-    },
-    runId: runId || ts,
-  };
-}
-
 function main() {
-  const regPath = pickRegistryPath();
-  if (!regPath) {
-    console.error("ERR: feature registry not found (expected public/features/feature-registry.json or features/feature-registry.json)");
-    process.exit(2);
+  if (!fs.existsSync(REGISTRY)) {
+    console.error(JSON.stringify({
+      ok: false,
+      error: `Missing registry at ${REGISTRY}`,
+    }));
+    process.exit(1);
   }
 
-  const runId = process.env.RV_RUN_ID || nowIso();
-  const blocks = loadRegistry(regPath);
+  const reg = readJson(REGISTRY);
+  const features = Array.isArray(reg.features) ? reg.features : [];
+
+  // Deterministic order: by id
+  const blocks = features
+    .filter(f => f && typeof f.id === "string" && f.id.trim().length > 0)
+    .map(f => ({
+      id: f.id,
+      name: f.name ?? f.id,
+      critical: Boolean(f.critical),
+      deprecated: Boolean(f._deprecated),
+      schemaVersion: f.schemaVersion ?? "v1",
+      staleAfterMinutes: Number.isFinite(f.staleAfterMinutes) ? f.staleAfterMinutes : 1440,
+      mirrorPath: f.mirrorPath ?? null,
+      requiredFields: Array.isArray(f.requiredFields) ? f.requiredFields : [],
+    }))
+    .sort((a, b) => a.id.localeCompare(b.id));
+
+  const generatedAt = nowIso();
 
   const bundle = {
     schemaVersion: 1,
-    generatedAt: nowIso(),
-    source: "static",
-    blocks: blocks.map(b => ({
-      id: b.id,
-      title: b.title,
-      category: b.category,
-      snapshotPath: b.snapshotPath,
-    })),
+    generatedAt,
+    source: "registry",
+    blocks,
   };
 
+  // Render-plan: keep minimal + stable; UI can decide layout.
   const renderPlan = {
     schemaVersion: 1,
-    generatedAt: nowIso(),
-    source: "static",
-    blocks: blocks.map((b, i) => ({
-      order: i + 1,
+    generatedAt,
+    source: "registry",
+    blocks: blocks.map(b => ({
       id: b.id,
-      title: b.title,
-      snapshotPath: b.snapshotPath,
+      name: b.name,
+      // Convention: feature module file name (does NOT force usage; just a hint)
+      module: `/features/rv-${b.id}.js`,
+      snapshot: `/data/snapshots/${b.id}.json`,
+      mirror: b.mirrorPath,
+      critical: b.critical,
     })),
   };
 
-  // v3-style wrappers (public-safe)
-  const bundleOut = {
-    schemaVersion: "v3",
-    blockId: "bundle",
-    generatedAt: nowIso(),
-    dataAt: nowIso(),
-    meta: baseMeta({ runId }),
-    data: bundle,
-  };
-
-  const planOut = {
-    schemaVersion: "v3",
-    blockId: "render-plan",
-    generatedAt: nowIso(),
-    dataAt: nowIso(),
-    meta: baseMeta({ runId }),
-    data: renderPlan,
-  };
-
-  const r1 = writeIfChanged("public/data/bundle.json", bundleOut.data);
-  const r2 = writeIfChanged("public/data/render-plan.json", planOut.data);
+  const wb = writeIfChanged(OUT_BUNDLE, bundle);
+  const wr = writeIfChanged(OUT_RENDER, renderPlan);
 
   console.log(JSON.stringify({
     ok: true,
-    registry: regPath,
+    registry: path.relative(ROOT, REGISTRY),
     blocks: blocks.length,
     wrote: {
-      "public/data/bundle.json": r1,
-      "public/data/render-plan.json": r2,
+      [path.relative(ROOT, OUT_BUNDLE)]: wb,
+      [path.relative(ROOT, OUT_RENDER)]: wr,
     }
   }, null, 2));
 }
