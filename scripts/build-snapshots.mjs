@@ -232,7 +232,7 @@ function extractSectors(payload) {
   return [];
 }
 
-function mapMirrorData(mirrorId, raw) {
+async function mapMirrorData(mirrorId, raw) {
   // Handle both sp500-sectors and sector-rotation mirrors (both map to sp500-sectors snapshot)
   if (mirrorId === "sp500-sectors" || mirrorId === "sector-rotation") {
     const sectors = extractSectors(raw);
@@ -244,9 +244,15 @@ function mapMirrorData(mirrorId, raw) {
     return { items, extraData: { ...extractExtraData(raw), signals: items, rows: items } };
   }
   if (mirrorId === "alpha-radar") {
-    const items = extractItems(raw);
+    // Import normalizePick dynamically to normalize items
+    const { normalizePick, computeAlphaRadarPicks } = await import("./core/alpha-radar-core.mjs");
+    const rawItems = extractItems(raw);
+    // Normalize items to include setupScore/triggerScore/totalScore
+    const items = Array.isArray(rawItems) ? rawItems.map(normalizePick) : [];
     const picks = raw?.data?.picks || raw?.picks || null;
-    const extraData = picks && typeof picks === "object" ? { ...extractExtraData(raw), picks } : extractExtraData(raw);
+    // If picks exist, normalize them too
+    const normalizedPicks = picks && typeof picks === "object" ? computeAlphaRadarPicks({ picks }) : null;
+    const extraData = normalizedPicks ? { ...extractExtraData(raw), picks: normalizedPicks } : extractExtraData(raw);
     return { items, extraData };
   }
   const items = extractItems(raw);
@@ -302,13 +308,13 @@ function validateSchema(snapshot) {
   return { ok: errors.length === 0, errors };
 }
 
-function buildSnapshot({ blockId, raw, mirrorMeta, lastGoodSnapshot = null }) {
+async function buildSnapshot({ blockId, raw, mirrorMeta, lastGoodSnapshot = null }) {
   const generatedAt = new Date().toISOString();
   const asOf = mirrorMeta.asOf || mirrorMeta.updatedAt || generatedAt;
   const ttlSeconds = Number.isFinite(mirrorMeta.ttlSeconds) ? mirrorMeta.ttlSeconds : 3600;
   const freshness = computeFreshness(asOf, ttlSeconds);
   const schedule = computeSchedule(mirrorMeta.cadence || mirrorMeta.mode || "daily", ttlSeconds);
-  let { items, extraData } = mapMirrorData(blockId, raw);
+  let { items, extraData } = await mapMirrorData(blockId, raw);
   
   // --- LASTGOOD fallback: if items empty, fill from lastGood ---
   let lastGoodUsed = 0;
@@ -709,7 +715,7 @@ async function main() {
     const snapshotPath = path.join(SNAPSHOT_DIR, `${blockId}.json`);
     const lastGoodSnapshot = loadJson(snapshotPath);
     
-    const snapshot = buildSnapshot({ blockId, raw: unwrapped.raw, mirrorMeta, lastGoodSnapshot });
+    const snapshot = await buildSnapshot({ blockId, raw: unwrapped.raw, mirrorMeta, lastGoodSnapshot });
     const valid = snapshot.meta.validation.schema.ok &&
       snapshot.meta.validation.ranges.ok &&
       snapshot.meta.validation.integrity.ok;
