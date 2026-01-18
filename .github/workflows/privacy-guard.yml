@@ -10,39 +10,85 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 1
-      - name: Scan tracked files for personal names and absolute paths
+
+      - name: Scan tracked files for absolute user paths (content + filenames)
         shell: bash
         run: |
           set -o pipefail
-          PATTERN="/""Us""ers/|/""ho""me/|/""Do""cuments/""Gi""tHub/|/""iC""loud/|\\\\Us""ers\\\\|[A-Za-z]:\\\\Us""ers\\\\"
           echo "Scanning current tracked file contents (HEAD only, no history)..."
-          # Scan only tracked files in working tree, not git history
-          # Exclude this workflow file itself (it contains the patterns in the code)
-          TRACKED_FILES=$(git ls-files | grep -v '^\.github/workflows/privacy-guard\.yml$')
-          if [ -z "$TRACKED_FILES" ]; then
-            echo "No tracked files found."
-            exit 0
-          fi
-          LEAKS_FOUND=false
-          while IFS= read -r file; do
-            if [ -f "$file" ] && grep -qI -E "$PATTERN" "$file" 2>/dev/null; then
-              echo "::error file=$file::Privacy leak detected in $file"
-              LEAKS_FOUND=true
-            fi
-          done <<< "$TRACKED_FILES"
-          if [ "$LEAKS_FOUND" = "true" ]; then
-            echo "::error::Privacy leak detected in tracked files. Remove personal names/absolute paths."
-            exit 1
-          fi
-          echo "Scanning filenames..."
-          # Exclude this workflow file from filename check too
-          if echo "$TRACKED_FILES" | grep -v '^\.github/workflows/privacy-guard\.yml
-            echo "::error::Suspicious filename/path detected."
-            exit 1
-          fi
-          echo "OK: No leaks found in current files."
- | grep -nE "$PATTERN" ; then
-            echo "::error::Suspicious filename/path detected."
-            exit 1
-          fi
-          echo "OK: No leaks found in current files."
+
+          python3 - <<'PY'
+import os, re, subprocess, sys
+
+workflow = ".github/workflows/privacy-guard.yml"
+
+def git_ls_files():
+  out = subprocess.check_output(["git", "ls-files"], text=True).splitlines()
+  return [p for p in out if p and p != workflow]
+
+files = git_ls_files()
+if not files:
+  print("No tracked files found.")
+  sys.exit(0)
+
+# Build patterns WITHOUT embedding obvious literals in a single token (avoid naive scanners)
+p_users = "/" + "Us" + "ers" + "/"
+p_home = "/" + "ho" + "me" + "/"
+p_docs = "/" + "Do" + "cuments" + "/" + "Gi" + "tHub" + "/"
+p_icloud = "/" + "iC" + "loud" + "/"
+p_win = "C:" + "\\" + "Us" + "ers" + "\\"
+p_unc = "\\" + "\\" + "Us" + "ers" + "\\"
+
+rx_content = re.compile("|".join([
+  re.escape(p_users),
+  re.escape(p_home),
+  re.escape(p_docs),
+  re.escape(p_icloud),
+  re.escape(p_win),
+  re.escape(p_unc),
+]), re.IGNORECASE)
+
+leaks = 0
+
+# Content scan
+for f in files:
+  if not os.path.isfile(f):
+    continue
+  try:
+    with open(f, "rb") as fh:
+      data = fh.read()
+    # heuristic: skip binary-ish
+    if b"\x00" in data:
+      continue
+    text = data.decode("utf-8", errors="ignore")
+  except Exception:
+    continue
+  if rx_content.search(text):
+    print(f"::error file={f}::Privacy leak detected in {f}")
+    leaks += 1
+
+if leaks:
+  print("::error::Privacy leak detected in tracked files. Remove absolute user paths.")
+  sys.exit(1)
+
+print("Scanning filenames...")
+# Filename/path scan (same signals)
+rx_name = re.compile("|".join([
+  re.escape("Us" + "ers"),
+  re.escape("Do" + "cuments"),
+  re.escape("iC" + "loud"),
+  re.escape("/ho" + "me/"),
+  re.escape("/Us" + "ers/"),
+  re.escape("\\" + "\\" + "Us" + "ers" + "\\"),
+  re.escape("C:" + "\\" + "Us" + "ers" + "\\"),
+]), re.IGNORECASE)
+
+bad = [p for p in files if rx_name.search(p)]
+if bad:
+  for p in bad[:50]:
+    print(p)
+  print("::error::Suspicious filename/path detected.")
+  sys.exit(1)
+
+print("OK: No leaks found in current files.")
+PY
