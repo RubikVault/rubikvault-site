@@ -1,10 +1,10 @@
 {
-  "generatedAt": "2026-01-18T19:50:11.240Z",
+  "generatedAt": "2026-01-18T20:14:43.043Z",
   "buildStatus": "OK",
   "reasons": [],
   "summary": {
-    "total": 24,
-    "ok": 24,
+    "total": 25,
+    "ok": 25,
     "fail": 0
   },
   "lastGoodAsOf": {},
@@ -105,6 +105,11 @@
       "reason": "COVERAGE_LIMIT"
     },
     {
+      "blockId": "sp500-sectors",
+      "status": "OK",
+      "reason": "EMPTY_ITEMS"
+    },
+    {
       "blockId": "tech-signals",
       "status": "OK",
       "reason": "OK"
@@ -130,12 +135,12 @@
       "reason": "DEGRADED_COVERAGE"
     }
   ],
-  "runId": "2026-01-18T19:50:11.158Z",
+  "runId": "2026-01-18T20:14:42.964Z",
   "meta": {
     "status": "OK",
     "reason": "OK",
-    "generatedAt": "2026-01-18T19:50:11.240Z",
-    "asOf": "2026-01-18T19:50:11.240Z",
+    "generatedAt": "2026-01-18T20:14:43.043Z",
+    "asOf": "2026-01-18T20:14:43.043Z",
     "ttlSeconds": 3600,
     "stale": false,
     "freshness": {
@@ -144,7 +149,7 @@
     },
     "schedule": {
       "rule": "daily",
-      "nextPlannedFetchAt": "2026-01-19T19:50:11.240Z",
+      "nextPlannedFetchAt": "2026-01-19T20:14:43.043Z",
       "expectedNextRunWindowMinutes": 1440,
       "ttlSeconds": 3600
     },
@@ -162,6 +167,6 @@
         "errors": []
       }
     },
-    "runId": "2026-01-18T19:50:11.158Z"
+    "runId": "2026-01-18T20:14:42.964Z"
   }
 }
