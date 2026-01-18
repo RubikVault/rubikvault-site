@@ -43,7 +43,18 @@ jobs:
           fi
           git add mirrors public/data
           git commit -m "data: auto-update" || true
-          git push || true
+          for i in 1 2 3; do
+            if git push origin HEAD:main; then
+              echo "Push succeeded"
+              exit 0
+            fi
+            echo "Push failed (attempt $i), retrying..."
+            git fetch origin main
+            if git merge origin/main --no-edit || git merge --abort || true; then
+              git push origin HEAD:main || true
+            fi
+            sleep $((i * 3))
+          done
 
       - name: Open issue on failure
         if: failure()
