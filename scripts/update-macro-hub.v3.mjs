@@ -996,11 +996,25 @@ async function main() {
 
   const providerCalls = fetchJson.budget.toProviderCalls();
 
+  // Determine status based on data quality
+  const status = freshOrDerivedOk >= 30 ? "LIVE" : (freshOrDerivedOk >= 10 ? "PARTIAL" : "STALE");
+  const reason = freshOrDerivedOk >= 30 ? "OK" : (freshOrDerivedOk >= 10 ? "PARTIAL" : "INSUFFICIENT_DATA");
+  const generatedAt = new Date().toISOString();
+  const ttlSeconds = 24 * 60 * 60; // 24h
+
   const meta = {
+    // v3 snapshot contract (required by validate-snapshots.js)
+    status,
+    reason,
+    generatedAt,
+    asOf: asOfDate,
+    source: "multi",
+    ttlSeconds,
+    runId: RUN_ID,
+    // Additional meta fields
     version: "3.0",
     asOfDate,
-    updatedAt: new Date().toISOString(),
-    runId: RUN_ID,
+    updatedAt: generatedAt,
     counts,
     providerCalls,
     errors,
@@ -1016,7 +1030,7 @@ async function main() {
     rule: "daily",
     nextPlannedFetchAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
     expectedNextRunWindowMinutes: 1440,
-    ttlSeconds: 24 * 60 * 60
+    ttlSeconds
   };
   meta.freshness = buildFreshness(asOfDate, 24);
 
