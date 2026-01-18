@@ -207,5 +207,18 @@ export const CONTINUOUS_BLOCKS = {
     emptyCopy: "S&P 500 sectors mirror is empty.",
     warnCopy: "S&P 500 sectors mirror is stale for an open session.",
     whyUnique: "Sector performance table for breadth context."
+  },
+  "rv-marketphase": {
+    blockId: "rv-marketphase",
+    blockType: "CONTINUOUS",
+    expectedMinItems: 1,
+    mirrorFiles: ["marketphase"],
+    computeDependencies: [],
+    freshness: { liveMaxMinutes: 1440, okMaxHoursWeekday: 72, okMaxHoursWeekend: 96 },
+    trustDefault: "derived",
+    cadence: "EOD",
+    emptyCopy: "MarketPhase snapshot is empty.",
+    warnCopy: "MarketPhase snapshot is stale.",
+    whyUnique: "Deterministic Elliott Wave structure research snapshot."
   }
 };

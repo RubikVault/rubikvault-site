@@ -496,6 +496,7 @@ const STATUS_LABELS = {
   "rv-sentiment-barometer": "Sentiment",
   "rv-tech-signals": "Signals",
   "rv-alpha-radar": "Alpha",
+  "rv-marketphase": "MarketPhase",
   "rv-market-regime": "Regime",
   "rv-arb-risk-regime": "ARB Risk",
   "rv-arb-liquidity-pulse": "ARB Liquidity",
@@ -523,6 +524,7 @@ const STATUS_ORDER = [
   "rv-sentiment-barometer",
   "rv-tech-signals",
   "rv-alpha-radar",
+  "rv-marketphase",
   "rv-market-regime",
   "rv-arb-risk-regime",
   "rv-arb-liquidity-pulse",
@@ -543,6 +545,7 @@ const PUBLIC_FEATURE_ALLOWLIST = new Set([
   "rv-news-headlines",
   "rv-tech-signals",
   "rv-alpha-radar",
+  "rv-marketphase",
   "rv-sp500-sectors",
   "rv-rvci-engine"
 ]);
@@ -580,7 +583,8 @@ const SNAPSHOT_ONLY = true;
 const SNAPSHOT_ONLY_API_FEATURES = new Set([
   "rv-market-cockpit",
   "rv-sp500-sectors",
-  "rv-news-headlines"
+  "rv-news-headlines",
+  "rv-marketphase"
 ]);
 const SNAPSHOT_CACHE = new Map();
 const RVCI_CACHE = new Map();

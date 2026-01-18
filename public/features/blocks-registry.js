@@ -35,7 +35,8 @@ const BLOCK_ORDER = [
   "rv-crypto-snapshot",
   "rv-sentiment-barometer",
   "rv-tech-signals",
-  "rv-alpha-radar"
+  "rv-alpha-radar",
+  "rv-marketphase"
 ];
 
 const FEATURE_META = new Map((FEATURES || []).map((entry) => [entry.id, entry]));
