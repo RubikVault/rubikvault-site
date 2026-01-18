@@ -281,6 +281,20 @@ export const FEATURES = [
     refreshIntervalMs: 6 * 60 * 60 * 1000
   },
   {
+    id: "rv-marketphase",
+    title: "MarketPhase AI — Elliott Research",
+    module: "./features/rv-marketphase.js",
+    computation: {
+      where: "Static (Client)",
+      update: "EOD",
+      cost: "free and automated",
+      trust: "derived"
+    },
+    enabled: true,
+    lazyLoad: true,
+    refreshIntervalMs: 24 * 60 * 60 * 1000
+  },
+  {
     id: "rv-market-regime",
     title: "Market Regime Radar",
     module: "./features/rv-market-regime.js",

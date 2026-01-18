@@ -44,6 +44,17 @@ Example: Block 01 – Market Health
 | 12 News Intelligence | `rv-news-intelligence` | `features/rv-news-intelligence.js` | `/api/news-intelligence` | ~1h | Marketaux |
 | 13 S&P 500 Sectors | `rv-sp500-sectors` | `features/rv-sp500-sectors.js` | `/api/sp500-sectors` | ~6h | stooq (proxy) |
 
+## MarketPhase AI (research-only)
+This block provides deterministic Elliott Wave structure analysis for research and education only. It does not predict or recommend future trading actions.
+
+Legal text (must appear in JSON + UI):
+```
+MarketPhase AI — Scientific Elliott Research (v4.0)
+provides deterministic, rule-based historical analysis only.
+It does not forecast future prices or offer financial advice.
+Use solely for educational and research purposes.
+```
+
 ## Current State (expected)
 | Block | OK / FAIL / PARTIAL | Reason |
 | --- | --- | --- |
