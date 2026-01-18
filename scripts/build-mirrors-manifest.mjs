@@ -12,9 +12,9 @@ function safeExec(cmd) {
 }
 
 const root = process.cwd();
-const mirrorsDir = path.join(root, "public", "mirrors");
+const mirrorsDir = path.join(root, "mirrors");
 if (!fs.existsSync(mirrorsDir)) {
-  console.warn("public/mirrors not found; nothing to build");
+  console.warn("mirrors not found; nothing to build");
   process.exit(0);
 }
 
@@ -65,4 +65,4 @@ const manifest = {
 };
 
 fs.writeFileSync(path.join(mirrorsDir, "manifest.json"), JSON.stringify(manifest, null, 2));
-console.log("Wrote public/mirrors/manifest.json");
+console.log("Wrote mirrors/manifest.json");

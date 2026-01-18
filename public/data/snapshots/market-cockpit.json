@@ -1,18 +1,43 @@
 {
-  "ok": true,
-  "feature": "market-cockpit",
+  "schemaVersion": "v3",
+  "blockId": "market-cockpit",
+  "generatedAt": "2026-01-18T11:11:16.542Z",
+  "dataAt": "2026-01-16T21:00:00.000Z",
   "meta": {
-    "status": "LIVE",
+    "status": "OK",
     "reason": "OK",
-    "generatedAt": "2026-01-18T04:01:19.670Z",
-    "stalenessSec": 105286,
-    "durationMs": 1,
-    "latencyMs": 1,
+    "generatedAt": "2026-01-18T11:11:16.542Z",
+    "asOf": "2026-01-16T21:00:00.000Z",
+    "source": "stooq",
+    "ttlSeconds": 3600,
+    "stale": true,
     "itemsCount": 1,
-    "coveragePct": 100,
-    "timezoneAssumption": "UTC",
-    "dataAtDefinition": "2026-01-16T22:46:32.677Z",
-    "bytes": 1278
+    "stalenessSec": 137460,
+    "freshness": {
+      "status": "expired",
+      "ageMinutes": 2291
+    },
+    "schedule": {
+      "rule": "eod",
+      "nextPlannedFetchAt": "2026-01-19T11:11:16.542Z",
+      "expectedNextRunWindowMinutes": 1440,
+      "ttlSeconds": 3600
+    },
+    "runId": "2026-01-18T11:11:16.534Z",
+    "validation": {
+      "schema": {
+        "ok": true,
+        "errors": []
+      },
+      "ranges": {
+        "ok": true,
+        "errors": []
+      },
+      "integrity": {
+        "ok": true,
+        "errors": []
+      }
+    }
   },
   "data": {
     "items": [

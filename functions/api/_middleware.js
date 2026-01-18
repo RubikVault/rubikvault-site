@@ -90,6 +90,26 @@ function isInternalOnlyEndpoint(pathname) {
   );
 }
 
+function mapApiToStaticPath(pathname) {
+  if (!pathname.startsWith("/api/")) return null;
+  const slug = pathname.slice(5);
+  const staticMap = {
+    "health": "/data/system-health.json",
+    "system-health": "/data/system-health.json",
+    "health-report": "/data/system-health.json",
+    "debug-matrix": "/data/provider-state.json",
+    "diag": "/data/error-summary.json",
+    "debug-bundle": "/data/run-report.json",
+    "usage-report": "/data/usage-report.json",
+    "provider-state": "/data/provider-state.json",
+    "error-summary": "/data/error-summary.json",
+    "run-report": "/data/run-report.json"
+  };
+  if (staticMap[slug]) return staticMap[slug];
+  if (!slug) return null;
+  return `/data/snapshots/${slug}.json`;
+}
+
 function shouldLogEvent({ status, dataQuality, debugActive, isWarn }) {
   if (status >= 400) return true;
   if (debugActive) return true;
@@ -125,6 +145,14 @@ export async function onRequest(context) {
   const url = new URL(request.url);
   const started = Date.now();
   const isApi = url.pathname.startsWith("/api/");
+  if (isApi) {
+    const staticPath = mapApiToStaticPath(url.pathname);
+    if (staticPath) {
+      return fetch(new URL(staticPath, request.url), {
+        headers: { Accept: "application/json" }
+      });
+    }
+  }
   const debugParam = url.searchParams.get("debug") || "";
   const debugKind = ["1", "kv", "fresh"].includes(debugParam) ? debugParam : "";
   const debugMode = Boolean(debugKind);

@@ -1,4 +1,4 @@
-const API_URL = "/api/metrics?v=5";
+const API_URL = "/data/metrics.json";
 const UI_LAYOUTS_URL = "/config/ui-layouts.json";
 const UI_STORAGE_KEY = "rv.ui";
 const VALID_UIS = ["A", "B", "C", "D", "E", "F", "G", "H"];

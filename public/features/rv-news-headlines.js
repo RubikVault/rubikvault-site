@@ -237,7 +237,7 @@ function render(root, payload, logger, featureId) {
 }
 
 async function loadData({ featureId, traceId, logger }) {
-  const url = "/data/news.json";
+  const url = "/data/snapshots/news-headlines.json";
   try {
     const response = await fetch(url, { cache: "no-store" });
     const text = await response.text();
@@ -247,7 +247,8 @@ async function loadData({ featureId, traceId, logger }) {
     } catch (error) {
       raw = null;
     }
-    if (!response.ok || !raw || !Array.isArray(raw.items)) {
+    const items = raw?.data?.items || raw?.items || [];
+    if (!response.ok || !raw || !Array.isArray(items)) {
       return {
         ok: false,
         feature: featureId,
@@ -274,9 +275,9 @@ async function loadData({ featureId, traceId, logger }) {
       cache: { hit: true, ttl: 0, layer: "static" },
       upstream: { url, status: response.status, snippet: "" },
       data: {
-        items: raw.items,
-        updatedAt: raw.updatedAt || raw.generatedAt || raw.asOf || null,
-        source: raw.sourceUpstream || raw.source || "snapshot"
+        items,
+        updatedAt: raw?.meta?.generatedAt || raw?.generatedAt || raw?.dataAt || null,
+        source: raw?.meta?.source || raw?.sourceUpstream || raw?.source || "snapshot"
       },
       error: null
     };

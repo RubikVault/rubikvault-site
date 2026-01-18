@@ -2,7 +2,7 @@ import fs from "fs/promises";
 import path from "path";
 import { LEGAL_TEXT } from "./marketphase-core.mjs";
 
-const DATA_DIR = path.join("public", "data", "marketphase");
+const DATA_DIR = path.join("mirrors", "marketphase");
 
 function isNumber(value) {
   return typeof value === "number" && !Number.isNaN(value);

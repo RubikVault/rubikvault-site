@@ -1,18 +1,43 @@
 {
-  "schemaVersion": "v1",
+  "schemaVersion": "v3",
   "blockId": "systemic-risk-lite",
-  "title": "40 - Systemic Risk Lite",
-  "generatedAt": "2026-01-15T12:40:15.242Z",
+  "generatedAt": "2026-01-18T10:52:12.939Z",
   "dataAt": "2026-01-13",
   "meta": {
     "status": "LIVE",
     "reason": "OK",
-    "stalenessSec": 218415,
-    "coveragePct": 100,
-    "timezoneAssumption": "UTC",
-    "dataAtDefinition": "Composite of macro risk and market stress",
-    "latencyMs": 0,
-    "itemsCount": 1
+    "generatedAt": "2026-01-18T10:52:12.939Z",
+    "asOf": "2026-01-13",
+    "source": "mirror",
+    "ttlSeconds": 3600,
+    "stale": true,
+    "itemsCount": 1,
+    "stalenessSec": 471120,
+    "freshness": {
+      "status": "expired",
+      "ageMinutes": 7852
+    },
+    "schedule": {
+      "rule": "daily",
+      "nextPlannedFetchAt": "2026-01-19T10:52:12.939Z",
+      "expectedNextRunWindowMinutes": 1440,
+      "ttlSeconds": 3600
+    },
+    "runId": "2026-01-18T10:52:12.904Z",
+    "validation": {
+      "schema": {
+        "ok": true,
+        "errors": []
+      },
+      "ranges": {
+        "ok": true,
+        "errors": []
+      },
+      "integrity": {
+        "ok": true,
+        "errors": []
+      }
+    }
   },
   "data": {
     "items": [

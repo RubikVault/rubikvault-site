@@ -54,7 +54,8 @@ async function fetchFmpJson(ctx, path, params) {
 }
 
 export async function fetchFmpEarningsCalendar(ctx, { limit = 10 } = {}) {
-  const { payload, url } = await fetchFmpJson(ctx, "/v3/earning_calendar", { limit });
+  const requestCtx = ctx ? (ctx.endpoint ? ctx : { ...ctx, endpoint: "earnings-calendar" }) : { endpoint: "earnings-calendar" };
+  const { payload, url } = await fetchFmpJson(requestCtx, "/v3/earning_calendar", { limit });
   const rows = Array.isArray(payload) ? payload : [];
   const dataAt = rows
     .map((row) => row.date)
@@ -65,7 +66,8 @@ export async function fetchFmpEarningsCalendar(ctx, { limit = 10 } = {}) {
 }
 
 export async function fetchFmpInsiderTrades(ctx, { limit = 10 } = {}) {
-  const { payload, url } = await fetchFmpJson(ctx, "/v4/insider-trading", { limit });
+  const requestCtx = ctx ? (ctx.endpoint ? ctx : { ...ctx, endpoint: "insider-trading" }) : { endpoint: "insider-trading" };
+  const { payload, url } = await fetchFmpJson(requestCtx, "/v4/insider-trading", { limit });
   const rows = Array.isArray(payload) ? payload : [];
   const dataAt = rows
     .map((row) => row.transactionDate || row.date)
@@ -76,7 +78,8 @@ export async function fetchFmpInsiderTrades(ctx, { limit = 10 } = {}) {
 }
 
 export async function fetchFmpAnalystRevisions(ctx, { symbol = "SPY" } = {}) {
-  const { payload, url } = await fetchFmpJson(ctx, "/v3/analyst-stock-recommendations", { symbol });
+  const requestCtx = ctx ? (ctx.endpoint ? ctx : { ...ctx, endpoint: "analyst-revisions" }) : { endpoint: "analyst-revisions" };
+  const { payload, url } = await fetchFmpJson(requestCtx, "/v3/analyst-stock-recommendations", { symbol });
   const rows = Array.isArray(payload) ? payload : [];
   const dataAt = rows
     .map((row) => row.date)

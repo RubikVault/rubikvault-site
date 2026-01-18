@@ -3,6 +3,7 @@ import { buildProviderError, fetchWithRetry, normalizeProviderDetails } from "./
 const BASE_URL = "https://finnhub.io/api/v1";
 
 export async function fetchFinnhubOptionChain(ctx, { symbol = "SPY" } = {}) {
+  const requestCtx = ctx ? (ctx.endpoint ? ctx : { ...ctx, endpoint: "option-chain" }) : { endpoint: "option-chain" };
   const apiKey = process.env.FINNHUB_API_KEY || "";
   if (!apiKey) {
     throw buildProviderError("MISSING_SECRET", "missing_finnhub_api_key", {
@@ -18,7 +19,7 @@ export async function fetchFinnhubOptionChain(ctx, { symbol = "SPY" } = {}) {
   let res;
   let text;
   try {
-    ({ res, text } = await fetchWithRetry(url, ctx, {
+    ({ res, text } = await fetchWithRetry(url, requestCtx, {
       headers: { "User-Agent": "RVSeeder/1.0" },
       timeoutMs: 15000
     }));

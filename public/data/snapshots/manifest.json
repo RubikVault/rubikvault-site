@@ -1,92 +1,45 @@
 {
-  "ok": true,
-  "feature": "snapshots-manifest",
+  "schemaVersion": "v3",
+  "blockId": "manifest",
+  "generatedAt": "2026-01-18T11:11:16.545Z",
+  "dataAt": "2026-01-18T11:11:16.545Z",
   "meta": {
-    "status": "LIVE",
+    "status": "PARTIAL",
     "reason": "OK",
-    "generatedAt": "2026-01-18T04:01:19.669Z",
+    "generatedAt": "2026-01-18T11:11:16.545Z",
+    "asOf": "2026-01-18T11:11:16.545Z",
+    "source": "mirror",
+    "ttlSeconds": 3600,
+    "stale": false,
+    "itemsCount": 0,
     "stalenessSec": 0,
-    "durationMs": 6,
-    "latencyMs": 6,
-    "itemsCount": 7,
-    "coveragePct": 71,
-    "timezoneAssumption": "UTC",
-    "dataAtDefinition": "2026-01-18T04:01:19.669Z",
-    "bytes": 2469
-  },
-  "data": {
-    "generatedAt": "2026-01-18T04:01:19.669Z",
-    "snapshots": {
-      "market-cockpit": {
-        "id": "market-cockpit",
-        "status": "LIVE",
-        "reason": "OK",
-        "generatedAt": "2026-01-18T04:01:19.670Z",
-        "durationMs": 1,
-        "bytes": 1281,
-        "itemsCount": 1,
-        "updatedAt": "2026-01-16T22:46:32.677Z"
+    "freshness": {
+      "status": "fresh",
+      "ageMinutes": 0
+    },
+    "schedule": {
+      "rule": "daily",
+      "nextPlannedFetchAt": "2026-01-19T11:11:16.545Z",
+      "expectedNextRunWindowMinutes": 1440,
+      "ttlSeconds": 3600
+    },
+    "runId": "2026-01-18T11:11:16.534Z",
+    "validation": {
+      "schema": {
+        "ok": true,
+        "errors": []
       },
-      "sp500-sectors": {
-        "id": "sp500-sectors",
-        "status": "NO_DATA",
-        "reason": "EMPTY_ITEMS",
-        "generatedAt": "2026-01-18T04:01:19.675Z",
-        "durationMs": 1,
-        "bytes": 432,
-        "itemsCount": 0,
-        "updatedAt": "2025-12-31T12:50:21.836Z"
+      "ranges": {
+        "ok": true,
+        "errors": []
       },
-      "top-movers": {
-        "id": "top-movers",
-        "status": "LIVE",
-        "reason": "OK",
-        "generatedAt": "2026-01-18T04:01:19.676Z",
-        "durationMs": 1,
-        "bytes": 2702,
-        "itemsCount": 10,
-        "updatedAt": "2026-01-16T22:46:32.677Z"
-      },
-      "yield-curve": {
-        "id": "yield-curve",
-        "status": "LIVE",
-        "reason": "OK",
-        "generatedAt": "2026-01-18T04:01:19.677Z",
-        "durationMs": 1,
-        "bytes": 965,
-        "itemsCount": 9,
-        "updatedAt": "2026-01-02T18:07:20.263Z"
-      },
-      "why-moved": {
-        "id": "why-moved",
-        "status": "NO_DATA",
-        "reason": "EMPTY_ITEMS",
-        "generatedAt": "2026-01-18T04:01:19.678Z",
-        "durationMs": 1,
-        "bytes": 406,
-        "itemsCount": 0,
-        "updatedAt": "2026-01-18T02:36:43.697Z"
-      },
-      "tech-signals": {
-        "id": "tech-signals",
-        "status": "LIVE",
-        "reason": "OK",
-        "generatedAt": "2026-01-18T04:01:19.679Z",
-        "durationMs": 1,
-        "bytes": 17532,
-        "itemsCount": 10,
-        "updatedAt": "2026-01-16T22:46:32.677Z"
-      },
-      "volume-anomaly": {
-        "id": "volume-anomaly",
-        "status": "LIVE",
-        "reason": "OK",
-        "generatedAt": "2026-01-18T04:01:19.681Z",
-        "durationMs": 0,
-        "bytes": 683,
-        "itemsCount": 1,
-        "updatedAt": "2026-01-16T22:46:32.678Z"
+      "integrity": {
+        "ok": true,
+        "errors": []
       }
     }
+  },
+  "data": {
+    "items": []
   }
 }

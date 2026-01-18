@@ -1,18 +1,43 @@
 {
-  "schemaVersion": "v1",
+  "schemaVersion": "v3",
   "blockId": "energy-macro",
-  "title": "05 - Energy Macro",
-  "generatedAt": "2026-01-15T13:01:39.181Z",
+  "generatedAt": "2026-01-18T10:52:12.935Z",
   "dataAt": "2026-01-12",
   "meta": {
     "status": "LIVE",
     "reason": "OK",
-    "stalenessSec": 306099,
-    "coveragePct": 100,
-    "timezoneAssumption": "UTC",
-    "dataAtDefinition": "FRED WTI spot price latest observation",
-    "latencyMs": 121,
-    "itemsCount": 1
+    "generatedAt": "2026-01-18T10:52:12.935Z",
+    "asOf": "2026-01-12",
+    "source": "mirror",
+    "ttlSeconds": 3600,
+    "stale": true,
+    "itemsCount": 1,
+    "stalenessSec": 557520,
+    "freshness": {
+      "status": "expired",
+      "ageMinutes": 9292
+    },
+    "schedule": {
+      "rule": "daily",
+      "nextPlannedFetchAt": "2026-01-19T10:52:12.935Z",
+      "expectedNextRunWindowMinutes": 1440,
+      "ttlSeconds": 3600
+    },
+    "runId": "2026-01-18T10:52:12.904Z",
+    "validation": {
+      "schema": {
+        "ok": true,
+        "errors": []
+      },
+      "ranges": {
+        "ok": true,
+        "errors": []
+      },
+      "integrity": {
+        "ok": true,
+        "errors": []
+      }
+    }
   },
   "data": {
     "items": [

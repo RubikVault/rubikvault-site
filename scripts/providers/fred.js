@@ -40,6 +40,7 @@ function parseFredGraphCsv(text) {
 
 export async function fetchFredSeries(ctx, seriesId, { limit = 1 } = {}) {
   const apiKey = process.env.FRED_API_KEY || "";
+  const requestCtx = ctx ? (ctx.endpoint ? ctx : { ...ctx, endpoint: "series" }) : { endpoint: "series" };
 
   if (apiKey) {
     const params = new URLSearchParams({
@@ -51,7 +52,7 @@ export async function fetchFredSeries(ctx, seriesId, { limit = 1 } = {}) {
     });
     const url = `${FRED_BASE}?${params.toString()}`;
 
-    const { res, text } = await fetchWithRetry(url, ctx, {
+    const { res, text } = await fetchWithRetry(url, requestCtx, {
       headers: { "User-Agent": "RVSeeder/1.0" },
       timeoutMs: 10000
     });
@@ -107,7 +108,7 @@ export async function fetchFredSeries(ctx, seriesId, { limit = 1 } = {}) {
 
   const csvParams = new URLSearchParams({ id: seriesId });
   const url = `${FRED_GRAPH_BASE}?${csvParams.toString()}`;
-  const { res, text } = await fetchWithRetry(url, ctx, {
+  const { res, text } = await fetchWithRetry(url, requestCtx, {
     headers: { "User-Agent": "RVSeeder/1.0" },
     timeoutMs: 10000
   });

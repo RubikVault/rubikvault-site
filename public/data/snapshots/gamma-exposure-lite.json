@@ -1,24 +1,42 @@
 {
-  "schemaVersion": "v1",
+  "schemaVersion": "v3",
   "blockId": "gamma-exposure-lite",
-  "title": "29 - Gamma Exposure Lite",
-  "generatedAt": "2026-01-09T19:53:58.713Z",
+  "generatedAt": "2026-01-18T10:52:12.935Z",
   "dataAt": "2026-01-09T19:53:58.713Z",
   "meta": {
     "status": "ERROR",
     "reason": "NO_DATA",
-    "stalenessSec": 0,
-    "coveragePct": 0,
-    "timezoneAssumption": "UTC",
-    "dataAtDefinition": "Derived from options-skew-lite snapshot",
-    "latencyMs": 0,
+    "generatedAt": "2026-01-18T10:52:12.935Z",
+    "asOf": "2026-01-09T19:53:58.713Z",
+    "source": "mirror",
+    "ttlSeconds": 3600,
+    "stale": true,
     "itemsCount": 0,
-    "details": {
-      "httpStatus": null,
-      "retryAfterSec": null,
-      "urlHost": "internal",
-      "snippet": "NO_DATA",
-      "at": "2026-01-09T19:53:58.713Z"
+    "stalenessSec": 745080,
+    "freshness": {
+      "status": "expired",
+      "ageMinutes": 12418
+    },
+    "schedule": {
+      "rule": "daily",
+      "nextPlannedFetchAt": "2026-01-19T10:52:12.935Z",
+      "expectedNextRunWindowMinutes": 1440,
+      "ttlSeconds": 3600
+    },
+    "runId": "2026-01-18T10:52:12.904Z",
+    "validation": {
+      "schema": {
+        "ok": true,
+        "errors": []
+      },
+      "ranges": {
+        "ok": true,
+        "errors": []
+      },
+      "integrity": {
+        "ok": true,
+        "errors": []
+      }
     }
   },
   "data": {

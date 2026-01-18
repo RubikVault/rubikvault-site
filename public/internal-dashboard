@@ -409,8 +409,8 @@
     <div class="section">
       <h2>Block Verification (Server)</h2>
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:10px;">
-        <span class="badge" style="background:rgba(56,189,248,0.15);color:#cbd5f5;border:1px solid rgba(56,189,248,0.25);">/api/health-report</span>
-        <span style="color:#94a3b8;font-size:12px;">Checks each block endpoint and validates required fields. Use this to find "fetched ok" but "render empty" cases.</span>
+        <span class="badge" style="background:rgba(56,189,248,0.15);color:#cbd5f5;border:1px solid rgba(56,189,248,0.25);">/data/system-health.json</span>
+        <span style="color:#94a3b8;font-size:12px;">Static snapshot overview derived from mirrors and validation gates.</span>
       </div>
       <div class="status-grid" id="health-report-summary">
         <div class="status-card"><h3>Health Score</h3><div class="value">—</div><div class="label">Loading...</div></div>
@@ -466,9 +466,9 @@
     <div class="section">
       <h2>Debug Matrix (KV / Mirrors)</h2>
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:10px;">
-        <span class="badge" style="background:rgba(16,185,129,0.15);color:#cbd5f5;border:1px solid rgba(16,185,129,0.25);">/api/debug-matrix</span>
+        <span class="badge" style="background:rgba(16,185,129,0.15);color:#cbd5f5;border:1px solid rgba(16,185,129,0.25);">/data/provider-state.json</span>
         <button class="secondary-btn" id="load-debug-matrix">Load Debug Matrix</button>
-        <span style="color:#94a3b8;font-size:12px;">Reads mirror:*:latest keys (capped) to show which blocks have lastGood/mirror coverage.</span>
+        <span style="color:#94a3b8;font-size:12px;">Reads provider/circuit state + lock status from static snapshots.</span>
       </div>
       <div class="timestamp" id="debug-matrix-timestamp"></div>
       <div style="overflow-x:auto;">
@@ -574,7 +574,7 @@
   </div>
 
   <script type="module">
-    const API_BASE = '/api';
+    const API_BASE = '/data';
     const TOKEN_STORAGE_KEY = 'rv_internal_token';
     const PROD_ORIGIN_KEY = 'rv_internal_prod_origin';
     const urlParams = new URLSearchParams(window.location.search);
@@ -671,14 +671,14 @@
       const originThis = window.location.origin;
       if (originThisEl) originThisEl.textContent = originThis;
 
-      const thisHealth = await fetchJSONFromOrigin(originThis, '/api/health');
-      const thisDiag = await fetchJSONFromOrigin(originThis, '/api/diag');
-      const thisBundle = await fetchJSONFromOrigin(originThis, '/api/debug-bundle');
+      const thisHealth = await fetchJSONFromOrigin(originThis, '/data/system-health.json');
+      const thisDiag = await fetchJSONFromOrigin(originThis, '/data/error-summary.json');
+      const thisBundle = await fetchJSONFromOrigin(originThis, '/data/run-report.json');
       const thisSummary = {
         origin: originThis,
-        health: thisHealth?.ok ? (thisHealth.data || {}) : { error: thisHealth },
-        diag: thisDiag?.ok ? (thisDiag.data || {}) : { error: thisDiag },
-        debugBundle: thisBundle?.ok ? (thisBundle.data?.summary || {}) : { error: thisBundle }
+        health: thisHealth?.ok ? (thisHealth || {}) : { error: thisHealth },
+        diag: thisDiag?.ok ? (thisDiag || {}) : { error: thisDiag },
+        debugBundle: thisBundle?.ok ? (thisBundle || {}) : { error: thisBundle }
       };
       if (preThis) preThis.textContent = JSON.stringify(thisSummary, null, 2);
       if (stThis) stThis.textContent = `Updated: ${new Date().toLocaleString()}`;
@@ -691,14 +691,14 @@
       }
       setProdOrigin(prodOrigin);
 
-      const prodHealth = await fetchJSONFromOrigin(prodOrigin, '/api/health');
-      const prodDiag = await fetchJSONFromOrigin(prodOrigin, '/api/diag');
-      const prodBundle = await fetchJSONFromOrigin(prodOrigin, '/api/debug-bundle');
+      const prodHealth = await fetchJSONFromOrigin(prodOrigin, '/data/system-health.json');
+      const prodDiag = await fetchJSONFromOrigin(prodOrigin, '/data/error-summary.json');
+      const prodBundle = await fetchJSONFromOrigin(prodOrigin, '/data/run-report.json');
       const prodSummary = {
         origin: prodOrigin,
-        health: prodHealth?.ok ? (prodHealth.data || {}) : { error: prodHealth },
-        diag: prodDiag?.ok ? (prodDiag.data || {}) : { error: prodDiag },
-        debugBundle: prodBundle?.ok ? (prodBundle.data?.summary || {}) : { error: prodBundle }
+        health: prodHealth?.ok ? (prodHealth || {}) : { error: prodHealth },
+        diag: prodDiag?.ok ? (prodDiag || {}) : { error: prodDiag },
+        debugBundle: prodBundle?.ok ? (prodBundle || {}) : { error: prodBundle }
       };
       if (preProd) preProd.textContent = JSON.stringify(prodSummary, null, 2);
       if (stProd) {
@@ -971,9 +971,9 @@
       const snapshots = [
         { label: 'Market Cockpit', path: '/data/snapshots/market-cockpit.json', maxHours: 36 },
         { label: 'S&P 500 Sectors', path: '/data/snapshots/sp500-sectors.json', maxHours: 36 },
-        { label: 'Tech Signals (Mirror)', path: '/mirrors/tech-signals.json', maxHours: 36 },
-        { label: 'Alpha Radar (Mirror)', path: '/mirrors/alpha-radar.json', maxHours: 36 },
-        { label: 'News Headlines', path: '/data/news.json', maxHours: 6 },
+        { label: 'Tech Signals', path: '/data/snapshots/tech-signals.json', maxHours: 36 },
+        { label: 'Alpha Radar', path: '/data/snapshots/alpha-radar.json', maxHours: 36 },
+        { label: 'News Headlines', path: '/data/snapshots/news-headlines.json', maxHours: 6 },
         { label: 'RVCI Latest', path: '/data/rvci_latest.json', maxHours: 36 }
       ];
 
@@ -1016,77 +1016,52 @@
       const fieldsBody = document.querySelector('#health-report-fields tbody');
       if (!tbody || !summaryEl || !selector || !fieldsBody) return;
 
-      const report = await fetchJSON(`${API_BASE}/health-report?debug=1`);
-      if (!report || report.ok !== true) {
+      const report = await fetchJSON('/data/system-health.json');
+      if (!report || report.ok === false) {
         tbody.innerHTML = '<tr><td colspan="9">No data available</td></tr>';
         if (ts) ts.textContent = `Last updated: ${new Date().toLocaleString()}`;
-        if (noteEl) noteEl.textContent = 'Block status: unavailable (token missing or API error).';
+        if (noteEl) noteEl.textContent = 'Block status: unavailable (static snapshot missing).';
         return;
       }
-      const blocks = Array.isArray(report.blocks) ? report.blocks : [];
-      const summary = report.summary || {};
 
-      const score = Number.isFinite(summary.healthScore) ? summary.healthScore : '—';
-      const okBlocks = summary.okBlocks ?? 0;
-      const partialBlocks = summary.partialBlocks ?? 0;
-      const badBlocks = summary.badBlocks ?? 0;
+      const blocks = Array.isArray(report.snapshots) ? report.snapshots : [];
+      const summary = report.summary || {};
+      const okBlocks = summary.ok ?? 0;
+      const badBlocks = summary.fail ?? 0;
+      const totalBlocks = summary.total ?? blocks.length;
+      const score = report.buildStatus || '—';
+
       if (noteEl) {
-        noteEl.textContent = `Block status: OK ${okBlocks} · PARTIAL ${partialBlocks} · BAD ${badBlocks}`;
+        noteEl.textContent = `Block status: OK ${okBlocks} · BAD ${badBlocks} · TOTAL ${totalBlocks}`;
       }
       summaryEl.innerHTML = `
-        <div class="status-card"><h3>Health Score</h3><div class="value">${safeText(score)}</div><div class="label">server contract + fetch</div></div>
+        <div class="status-card"><h3>Build Status</h3><div class="value">${safeText(score)}</div><div class="label">static pipeline</div></div>
         <div class="status-card ok"><h3>OK</h3><div class="value">${safeText(okBlocks)}</div><div class="label">Blocks</div></div>
-        <div class="status-card warn"><h3>PARTIAL</h3><div class="value">${safeText(partialBlocks)}</div><div class="label">Blocks</div></div>
         <div class="status-card fail"><h3>BAD</h3><div class="value">${safeText(badBlocks)}</div><div class="label">Blocks</div></div>
+        <div class="status-card"><h3>Total</h3><div class="value">${safeText(totalBlocks)}</div><div class="label">Blocks</div></div>
       `;
 
       tbody.innerHTML = blocks.map((b) => {
-        const state = String(b.blockState || '—');
-        const endpointStatus = String(b.endpointStatus || '—');
-        const err = b.error?.code ? `${b.error.code}` : '';
+        const blockId = b.blockId || b.block || '—';
         return `
           <tr>
-            <td><code>${safeText(b.id || '')}</code></td>
-            <td><code>${safeText(b.featureId || '')}</code></td>
-            <td>${badgeFor(state)}</td>
-            <td><code>${safeText(b.apiPath || '—')}</code></td>
-            <td>${badgeFor(endpointStatus)}</td>
+            <td><code>${safeText(blockId)}</code></td>
+            <td><code>${safeText(blockId)}</code></td>
+            <td>${badgeFor(b.status || '—')}</td>
+            <td><code>${safeText(`/data/snapshots/${blockId}.json`)}</code></td>
+            <td>${badgeFor(b.status || '—')}</td>
             <td><code style="font-size: 11px;">${safeText(b.reason || '—')}</code></td>
-            <td>${safeText(b.invalidFields ?? 0)}</td>
-            <td>${b.circuitOpen === true ? '<span class="badge fail">open</span>' : b.circuitOpen === false ? '<span class="badge ok">closed</span>' : '—'}</td>
-            <td><code style="font-size: 11px;">${safeText(err || '—')}</code></td>
+            <td>0</td>
+            <td>—</td>
+            <td>—</td>
           </tr>
         `;
       }).join('');
 
-      const sorted = blocks.slice().sort((a, b) => String(a.id || '').localeCompare(String(b.id || '')));
-      selector.innerHTML = '<option value="">Select a block for field details...</option>' +
-        sorted.map((b) => `<option value="${safeText(b.featureId || '')}">${safeText(b.id || '')} — ${safeText(b.title || b.featureId || '')}</option>`).join('');
-
-      const byFeature = new Map(sorted.map((b) => [String(b.featureId || ''), b]));
-      const renderFields = (featureId) => {
-        const block = byFeature.get(String(featureId || ''));
-        if (!block) {
-          fieldsBody.innerHTML = '<tr><td colspan="6">Select a block above...</td></tr>';
-          return;
-        }
-        const fields = Array.isArray(block.fields) ? block.fields : [];
-        fieldsBody.innerHTML = fields.length ? fields.map((f) => {
-          const ok = f.valid === true;
-          return `
-            <tr>
-              <td><code>${safeText(f.key || '')}</code></td>
-              <td><code>${safeText(f.path || '')}</code></td>
-              <td>${f.required ? '<span class="badge warn">true</span>' : 'false'}</td>
-              <td>${ok ? '<span class="badge ok">true</span>' : '<span class="badge fail">false</span>'}</td>
-              <td><code style="font-size: 11px;">${safeText(f.reason || '—')}</code></td>
-              <td style="max-width: 520px;">${safeText(f.fixHint || '—')}</td>
-            </tr>
-          `;
-        }).join('') : '<tr><td colspan="6">No fields contract defined for this block.</td></tr>';
+      selector.innerHTML = '<option value="">Field details not available in static mode.</option>';
+      selector.onchange = () => {
+        fieldsBody.innerHTML = '<tr><td colspan="6">Field contract is not stored in static snapshots.</td></tr>';
       };
-
-      selector.onchange = () => renderFields(selector.value);
       if (ts) ts.textContent = `Last updated: ${new Date().toLocaleString()}`;
     }
 
@@ -1095,22 +1070,24 @@
       const ts = document.getElementById('debug-matrix-timestamp');
       if (!tbody) return;
 
-      const res = await fetchJSON(`${API_BASE}/debug-matrix`);
-      const entries = res?.data?.entries || [];
-      if (!res || res.ok !== true || !Array.isArray(entries)) {
-        tbody.innerHTML = '<tr><td colspan="5">No data available</td></tr>';
-        if (ts) ts.textContent = `Last updated: ${new Date().toLocaleString()}`;
-        return;
-      }
-      tbody.innerHTML = entries.map((e) => `
-        <tr>
-          <td><code>${safeText(e.feature || '—')}</code></td>
-          <td><code>${safeText(e.endpoint || '—')}</code></td>
-          <td>${badgeFor(e.endpointStatus || 'UNKNOWN')}</td>
-          <td><code style="font-size:11px;">${safeText(e.emptyReason || '—')}</code></td>
-          <td>${safeText(e.lastUpdate || '—')}</td>
-        </tr>
-      `).join('');
+      const res = await fetchJSON('/data/provider-state.json');
+      const providers = res?.providers || {};
+      const rows = Object.entries(providers).map(([providerId, entry]) => {
+        const status = entry.circuitState || 'unknown';
+        const statusClass = status === 'closed' ? 'ok' : status === 'half_open' ? 'warn' : 'fail';
+        const locks = Array.isArray(entry.locks) ? entry.locks.length : 0;
+        const lastSeen = entry.lastSeen || entry.updatedAt || '—';
+        return `
+          <tr>
+            <td><code>${safeText(providerId)}</code></td>
+            <td><code>${safeText(`${locks} locks`)}</code></td>
+            <td><span class="badge ${statusClass}">${safeText(status)}</span></td>
+            <td><code style="font-size:11px;">${safeText(entry.lastReason || '—')}</code></td>
+            <td>${safeText(lastSeen)}</td>
+          </tr>
+        `;
+      });
+      tbody.innerHTML = rows.length ? rows.join('') : '<tr><td colspan="5">No data available</td></tr>';
       if (ts) ts.textContent = `Last updated: ${new Date().toLocaleString()}`;
     }
 
@@ -1132,10 +1109,10 @@
       if (!tbody) return;
 
       const targets = [
-        { path: `${API_BASE}/health`, hint: '200 expected (prod: internal token bypasses debug guard)' },
-        { path: `${API_BASE}/diag`, hint: 'Requires RV_INTERNAL_TOKEN (otherwise 404)' },
-        { path: `${API_BASE}/system-health`, hint: 'Requires RV_INTERNAL_TOKEN (otherwise 404)' },
-        { path: `${API_BASE}/debug-bundle`, hint: 'Requires RV_INTERNAL_TOKEN (otherwise 404)' }
+        { path: '/data/system-health.json', hint: 'Static build health snapshot' },
+        { path: '/data/provider-state.json', hint: 'Circuit + lock state' },
+        { path: '/data/usage-report.json', hint: 'Budget usage and remaining' },
+        { path: '/data/run-report.json', hint: 'Latest build run report' }
       ];
 
       const results = await Promise.all(targets.map(async (t) => ({
@@ -1158,49 +1135,56 @@
     }
 
     async function updateHealthOverview() {
-      const health = await fetchJSON(`${API_BASE}/health`);
-      const diag = await fetchJSON(`${API_BASE}/diag`);
-      
+      const health = await fetchJSON('/data/system-health.json');
+      const usage = await fetchJSON('/data/usage-report.json');
+      const run = await fetchJSON('/data/run-report.json');
+
       const container = document.getElementById('health-overview');
-      if (!health || (health.ok === false && (!diag || diag.ok === false))) {
+      if (!health || health.ok === false) {
         container.innerHTML = '<div class="status-card fail"><h3>Error</h3><div class="value">Failed</div><div class="label">Cannot fetch health data</div></div>';
         return;
       }
 
-      const healthData = health?.data || {};
-      const diagData = diag?.data || {};
+      const summary = health.summary || {};
+      const providers = usage?.providers || {};
+      const remainingPcts = Object.values(providers)
+        .map((entry) => entry?.daily?.pctRemaining)
+        .filter((value) => typeof value === 'number');
+      const worstPct = remainingPcts.length ? Math.min(...remainingPcts) : null;
+      const budgetLabel = worstPct === null ? '—' : `${(worstPct * 100).toFixed(1)}%`;
 
-      const overallStatus = healthData?.status || diagData?.overall_status || 'UNKNOWN';
-      const statusClass = overallStatus === 'OK' ? 'ok' : overallStatus === 'DEGRADED' ? 'warn' : 'fail';
-      
+      const overallStatus = health.buildStatus || 'UNKNOWN';
+      const statusClass = overallStatus === 'OK' ? 'ok' : overallStatus === 'WARN' ? 'warn' : 'fail';
+
       container.innerHTML = `
         <div class="status-card ${statusClass}">
           <h3>Overall Status</h3>
           <div class="value">${overallStatus}</div>
-          <div class="label">System Health</div>
+          <div class="label">Static snapshot pipeline</div>
         </div>
         <div class="status-card">
           <h3>Blocks Active</h3>
-          <div class="value">${healthData?.blocks_ok || 0}</div>
-          <div class="label">of ${healthData?.blocks_total || 0} total</div>
+          <div class="value">${summary.ok || 0}</div>
+          <div class="label">of ${summary.total || 0} total</div>
         </div>
         <div class="status-card">
-          <h3>API Calls (24h)</h3>
-          <div class="value">${healthData?.api_calls_24h || 0}</div>
-          <div class="label">Estimated</div>
+          <h3>Budget Remaining</h3>
+          <div class="value">${budgetLabel}</div>
+          <div class="label">Worst daily provider</div>
         </div>
         <div class="status-card">
-          <h3>Cache Hit Rate</h3>
-          <div class="value">${healthData?.cache_hit_rate || 0}%</div>
-          <div class="label">Last 24h</div>
+          <h3>Last Build</h3>
+          <div class="value">${Number.isFinite(run?.durationMs) ? `${Math.round(run.durationMs / 1000)}s` : '—'}</div>
+          <div class="label">run-report</div>
         </div>
       `;
-      
+
       document.getElementById('health-timestamp').textContent = `Last updated: ${new Date().toLocaleString()}`;
     }
 
     async function updateDebugBundle() {
-      const bundle = await fetchJSON(`${API_BASE}/debug-bundle`);
+      const bundle = await fetchJSON('/data/run-report.json');
+      const errors = await fetchJSON('/data/error-summary.json');
       const container = document.getElementById('debug-summary');
       const ts = document.getElementById('debug-timestamp');
       const attemptsBody = document.querySelector('#debug-attempts tbody');
@@ -1208,167 +1192,181 @@
 
       if (!container || !attemptsBody || !eventsBody) return;
 
-      if (!bundle || bundle.ok !== true) {
-        container.innerHTML = '<div class="status-card fail"><h3>Bundle Status</h3><div class="value">ERROR</div><div class="label">/api/debug-bundle not accessible</div></div>';
+      if (!bundle || bundle.ok === false) {
+        container.innerHTML = '<div class="status-card fail"><h3>Bundle Status</h3><div class="value">ERROR</div><div class="label">run-report unavailable</div></div>';
         attemptsBody.innerHTML = '<tr><td colspan="5">No data available</td></tr>';
         eventsBody.innerHTML = '<tr><td colspan="6">No data available</td></tr>';
         if (ts) ts.textContent = `Last updated: ${new Date().toLocaleString()}`;
         return;
       }
 
-      const data = bundle.data || {};
-      const summary = data.summary || {};
-      const infra = data.infra || {};
-      const kv = infra.kv || {};
-      const counts = summary.countsBySeverity || {};
-      const status = summary.status || 'OK';
-      const statusClass = status === 'OK' ? 'ok' : status === 'DEGRADED' ? 'warn' : 'fail';
-
       container.innerHTML = `
-        <div class="status-card ${statusClass}">
-          <h3>Bundle Status</h3>
-          <div class="value">${status}</div>
-          <div class="label">bundleId: ${summary.bundleId || '—'}</div>
-        </div>
-        <div class="status-card ${kv.opsWorking === false ? 'fail' : kv.opsWorking === true ? 'ok' : ''}">
-          <h3>KV</h3>
-          <div class="value">${kv.hasKV ? 'present' : 'missing'}</div>
-          <div class="label">opsWorking: ${kv.opsWorking === null ? 'unknown' : kv.opsWorking}</div>
+        <div class="status-card">
+          <h3>Build Run</h3>
+          <div class="value">${safeText(bundle.runId || '—')}</div>
+          <div class="label">run-report</div>
         </div>
         <div class="status-card">
-          <h3>Severity</h3>
-          <div class="value">${(counts.CRITICAL || 0) + (counts.WARN || 0)}</div>
-          <div class="label">critical: ${counts.CRITICAL || 0} / warn: ${counts.WARN || 0}</div>
+          <h3>Duration</h3>
+          <div class="value">${safeText(bundle.durationMs ?? '—')}</div>
+          <div class="label">ms</div>
         </div>
         <div class="status-card">
-          <h3>Top Error Codes</h3>
-          <div class="value">${Array.isArray(summary.topErrorCodes) ? summary.topErrorCodes.length : 0}</div>
-          <div class="label">recent KV events</div>
+          <h3>Changed Files</h3>
+          <div class="value">${safeText(bundle.changedFiles?.length ?? 0)}</div>
+          <div class="label">writes</div>
+        </div>
+        <div class="status-card">
+          <h3>Errors</h3>
+          <div class="value">${safeText(bundle.counts?.errors ?? 0)}</div>
+          <div class="label">validation</div>
         </div>
       `;
 
-      const attempts = Array.isArray(data.attempts) ? data.attempts : [];
-      attemptsBody.innerHTML = attempts.length
-        ? attempts.map((a) => {
-            const ok = Boolean(a.ok);
-            const okBadge = ok ? '<span class="badge ok">true</span>' : '<span class="badge fail">false</span>';
-            return `
-              <tr>
-                <td><code>${a.name || '—'}</code></td>
-                <td>${okBadge}</td>
-                <td>${a.status ?? '—'}</td>
-                <td><code style="font-size: 11px;">${a.reason || '—'}</code></td>
-                <td><code style="font-size: 11px;">${(a.errorSnippet || '').slice(0, 180) || '—'}</code></td>
-              </tr>
-            `;
-          }).join('')
-        : '<tr><td colspan="5">No attempts recorded</td></tr>';
+      const errorItems = Array.isArray(errors?.items) ? errors.items : [];
+      attemptsBody.innerHTML = errorItems.length
+        ? errorItems.slice(0, 50).map((e) => `
+            <tr>
+              <td>${e.lastSeenAt ? new Date(e.lastSeenAt).toLocaleString() : '—'}</td>
+              <td><code>${safeText(e.dataset || '—')}</code></td>
+              <td>${badgeFor(e.severity || 'UNKNOWN')}</td>
+              <td><code style="font-size: 11px;">${safeText(e.code || '—')}</code></td>
+              <td><code style="font-size: 11px;">${safeText(e.message || '—')}</code></td>
+            </tr>
+          `).join('')
+        : '<tr><td colspan="5">No errors recorded</td></tr>';
 
-      const recent = Array.isArray(data.recentEvents) ? data.recentEvents : [];
-      eventsBody.innerHTML = recent.length
-        ? recent.slice(0, 120).map((e) => {
-            const dq = String(e.dataQuality || '').toUpperCase();
-            const dqClass = dq === 'OK' ? 'ok' : dq === 'STALE' ? 'stale' : dq === 'PARTIAL' ? 'partial' : dq ? 'warn' : '';
-            return `
-              <tr>
-                <td>${e.ts ? new Date(e.ts).toLocaleString() : '—'}</td>
-                <td><code>${e.feature || '—'}</code></td>
-                <td>${e.httpStatus ?? '—'}</td>
-                <td>${dq ? `<span class="badge ${dqClass}">${dq}</span>` : '—'}</td>
-                <td><code style="font-size: 11px;">${e.errorCode || '—'}</code></td>
-                <td><code style="font-size: 11px;">${e.traceId || '—'}</code></td>
-              </tr>
-            `;
-          }).join('')
-        : '<tr><td colspan="6">No recent events in KV</td></tr>';
+      eventsBody.innerHTML = errorItems.length
+        ? errorItems.slice(0, 120).map((e) => `
+            <tr>
+              <td>${e.lastSeenAt ? new Date(e.lastSeenAt).toLocaleString() : '—'}</td>
+              <td><code>${safeText(e.provider || '—')}</code></td>
+              <td>—</td>
+              <td>${badgeFor(e.severity || 'UNKNOWN')}</td>
+              <td><code style="font-size: 11px;">${safeText(e.code || '—')}</code></td>
+              <td><code style="font-size: 11px;">${safeText(e.runId || '—')}</code></td>
+            </tr>
+          `).join('')
+        : '<tr><td colspan="6">No recent errors</td></tr>';
 
       if (ts) ts.textContent = `Last updated: ${new Date().toLocaleString()}`;
     }
 
     async function updateBlockMatrix() {
-      const diag = await fetchJSON(`${API_BASE}/diag`);
+      const diag = await fetchJSON('/data/system-health.json');
       const tbody = document.querySelector('#block-matrix tbody');
       
-      const blocks = diag?.data?.blocks || diag?.blocks;
-      if (!diag || diag.ok !== true || !blocks) {
+      const blocks = Array.isArray(diag?.snapshots) ? diag.snapshots : [];
+      if (!diag || diag.ok === false || !blocks.length) {
         tbody.innerHTML = '<tr><td colspan="9">No data available</td></tr>';
         return;
       }
 
       tbody.innerHTML = blocks.map(block => {
-        const statusClass = block.status === 'OK' ? 'ok' : block.status === 'PARTIAL' ? 'warn' : 'fail';
+        const statusClass = block.status === 'OK' ? 'ok' : block.status === 'WARN' ? 'warn' : 'fail';
+        const blockId = block.blockId || block.block || '—';
+        const asOf = diag?.lastGoodAsOf?.[blockId] || '—';
         return `
           <tr>
-            <td>${block.title || block.feature_id}</td>
-            <td><code>${block.feature_id}</code></td>
+            <td>${blockId}</td>
+            <td><code>${blockId}</code></td>
             <td><span class="badge ${statusClass}">${block.status || 'UNKNOWN'}</span></td>
-            <td>${block.data_present ? '✅' : '❌'}</td>
-            <td><span class="badge ${block.quality === 'OK' ? 'ok' : block.quality === 'DEGRADED' ? 'warn' : 'fail'}">${block.quality || 'UNKNOWN'}</span></td>
-            <td>${block.as_of ? new Date(block.as_of).toLocaleString() : '—'}</td>
-            <td>${block.source || '—'}</td>
-            <td>${block.cache_layer || 'none'}</td>
-            <td><code style="font-size: 11px;">${block.last_error || '—'}</code></td>
+            <td>${block.status === 'OK' ? '✅' : '❌'}</td>
+            <td><span class="badge ${statusClass}">${block.status || 'UNKNOWN'}</span></td>
+            <td>${asOf !== '—' ? new Date(asOf).toLocaleString() : '—'}</td>
+            <td>${block.source || 'mirror'}</td>
+            <td>static</td>
+            <td><code style="font-size: 11px;">${block.reason || '—'}</code></td>
           </tr>
         `;
       }).join('');
     }
 
     async function updateApiKeys() {
-      const diag = await fetchJSON(`${API_BASE}/diag`);
+      const diag = await fetchJSON('/data/usage-report.json');
       const tbody = document.querySelector('#api-keys tbody');
 
-      const keys = diag?.data?.api_keys || diag?.api_keys;
+      const keys = diag?.providers || {};
+      const cloudflare = diag?.cloudflare || {};
       
-      if (!diag || diag.ok !== true || !keys) {
+      if (!diag || diag.ok === false || !keys || !Object.keys(keys).length) {
         tbody.innerHTML = '<tr><td colspan="14">No API key data available</td></tr>';
         return;
       }
 
-      tbody.innerHTML = keys.map(key => {
-        const statusClass = key.status === 'present' ? 'ok' : key.status === 'missing' ? 'fail' : 'warn';
+      const rows = Object.entries(keys).map(([providerId, key]) => {
+        const statusClass = key.status === 'red' ? 'fail' : key.status === 'yellow' ? 'warn' : 'ok';
+        const dailyPct = typeof key.daily?.pctRemaining === 'number' ? ` (${(key.daily.pctRemaining * 100).toFixed(1)}%)` : '';
+        const monthlyPct = typeof key.monthly?.pctRemaining === 'number' ? ` (${(key.monthly.pctRemaining * 100).toFixed(1)}%)` : '';
         return `
           <tr>
-            <td>${key.provider || '—'}</td>
-            <td><code>${key.alias || '—'}</code></td>
+            <td>${providerId}</td>
+            <td><code>—</code></td>
             <td><span class="badge ${statusClass}">${key.status || 'UNKNOWN'}</span></td>
-            <td>${key.counts_today || 0}</td>
-            <td>${key.counts_week ?? '—'}</td>
-            <td>${key.counts_month ?? '—'}</td>
-            <td>${key.hard_limit || '—'}</td>
-            <td>${key.remaining || '—'}</td>
-            <td>${key.remaining_week ?? '—'}</td>
-            <td>${key.remaining_month ?? '—'}</td>
-            <td>${key.burn_rate_per_hour ?? '—'}</td>
-            <td><code style="font-size: 11px;">${key.last_error || '—'}</code></td>
-            <td>${key.last_used ? new Date(key.last_used).toLocaleString() : '—'}</td>
-            <td style="max-width: 260px;">${key.hint || '—'}</td>
-            <td style="max-width: 260px;">${key.recommended_action || '—'}</td>
+            <td>${key.daily?.used ?? 0}</td>
+            <td>—</td>
+            <td>${key.monthly?.used ?? '—'}</td>
+            <td>${key.daily?.limit ?? '—'}</td>
+            <td>${key.daily?.remaining ?? '—'}${dailyPct}</td>
+            <td>—</td>
+            <td>${key.monthly?.remaining ?? '—'}${monthlyPct}</td>
+            <td>—</td>
+            <td><code style="font-size: 11px;">—</code></td>
+            <td>—</td>
+            <td style="max-width: 260px;">Static budget snapshot</td>
+            <td style="max-width: 260px;">Reduce ingestion if near red.</td>
           </tr>
         `;
-      }).join('');
+      });
+
+      if (cloudflare?.daily || cloudflare?.monthly) {
+        const cfDailyPct = typeof cloudflare.daily?.pctRemaining === 'number' ? ` (${(cloudflare.daily.pctRemaining * 100).toFixed(1)}%)` : '';
+        const cfMonthlyPct = typeof cloudflare.monthly?.pctRemaining === 'number' ? ` (${(cloudflare.monthly.pctRemaining * 100).toFixed(1)}%)` : '';
+        rows.unshift(`
+          <tr>
+            <td>cloudflare</td>
+            <td><code>—</code></td>
+            <td><span class="badge ok">STATIC</span></td>
+            <td>${cloudflare.daily?.used ?? 0}</td>
+            <td>—</td>
+            <td>${cloudflare.monthly?.used ?? '—'}</td>
+            <td>${cloudflare.daily?.limit ?? '—'}</td>
+            <td>${cloudflare.daily?.remaining ?? '—'}${cfDailyPct}</td>
+            <td>—</td>
+            <td>${cloudflare.monthly?.remaining ?? '—'}${cfMonthlyPct}</td>
+            <td>—</td>
+            <td><code style="font-size: 11px;">—</code></td>
+            <td>—</td>
+            <td style="max-width: 260px;">Cloudflare free tier budget</td>
+            <td style="max-width: 260px;">Reduce refresh if near limit.</td>
+          </tr>
+        `);
+      }
+
+      tbody.innerHTML = rows.join('');
     }
 
     async function updateErrorTimeline() {
-      const diag = await fetchJSON(`${API_BASE}/diag`);
+      const diag = await fetchJSON('/data/error-summary.json');
       const tbody = document.querySelector('#error-timeline tbody');
 
-      const events = diag?.data?.events || diag?.events;
+      const events = Array.isArray(diag?.items) ? diag.items : [];
       
-      if (!diag || diag.ok !== true || !events) {
+      if (!diag || diag.ok === false || !events.length) {
         tbody.innerHTML = '<tr><td colspan="6">No events available</td></tr>';
         return;
       }
 
       tbody.innerHTML = events.slice(0, 50).map(event => {
-        const typeClass = event.type === 'error' ? 'fail' : event.type === 'warn' ? 'warn' : 'ok';
+        const typeClass = event.severity === 'error' ? 'fail' : event.severity === 'warn' ? 'warn' : 'ok';
         return `
           <tr>
-            <td>${new Date(event.timestamp).toLocaleString()}</td>
-            <td><span class="badge ${typeClass}">${event.type || 'info'}</span></td>
-            <td><code>${event.feature || '—'}</code></td>
-            <td><code>${event.error_code || '—'}</code></td>
+            <td>${event.lastSeenAt ? new Date(event.lastSeenAt).toLocaleString() : '—'}</td>
+            <td><span class="badge ${typeClass}">${event.severity || 'info'}</span></td>
+            <td><code>${event.dataset || '—'}</code></td>
+            <td><code>${event.code || '—'}</code></td>
             <td>${event.message || '—'}</td>
-            <td><code style="font-size: 11px;">${event.details || '—'}</code></td>
+            <td><code style="font-size: 11px;">${safeText(event.provider || '—')}</code></td>
           </tr>
         `;
       }).join('');

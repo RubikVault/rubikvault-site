@@ -1,18 +1,43 @@
 {
-  "schemaVersion": "v1",
+  "schemaVersion": "v3",
   "blockId": "inflation-pulse",
-  "title": "03 - Inflation Pulse",
-  "generatedAt": "2026-01-15T13:01:39.493Z",
+  "generatedAt": "2026-01-18T10:52:12.935Z",
   "dataAt": "2025-12-01",
   "meta": {
     "status": "LIVE",
     "reason": "OK",
-    "stalenessSec": 3934899,
-    "coveragePct": 100,
-    "timezoneAssumption": "UTC",
-    "dataAtDefinition": "FRED CPI latest monthly observation",
-    "latencyMs": 104,
-    "itemsCount": 1
+    "generatedAt": "2026-01-18T10:52:12.935Z",
+    "asOf": "2025-12-01",
+    "source": "mirror",
+    "ttlSeconds": 3600,
+    "stale": true,
+    "itemsCount": 1,
+    "stalenessSec": 4186320,
+    "freshness": {
+      "status": "expired",
+      "ageMinutes": 69772
+    },
+    "schedule": {
+      "rule": "daily",
+      "nextPlannedFetchAt": "2026-01-19T10:52:12.935Z",
+      "expectedNextRunWindowMinutes": 1440,
+      "ttlSeconds": 3600
+    },
+    "runId": "2026-01-18T10:52:12.904Z",
+    "validation": {
+      "schema": {
+        "ok": true,
+        "errors": []
+      },
+      "ranges": {
+        "ok": true,
+        "errors": []
+      },
+      "integrity": {
+        "ok": true,
+        "errors": []
+      }
+    }
   },
   "data": {
     "items": [

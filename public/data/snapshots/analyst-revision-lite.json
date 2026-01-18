@@ -1,22 +1,42 @@
 {
-  "schemaVersion": "v1",
+  "schemaVersion": "v3",
   "blockId": "analyst-revision-lite",
-  "title": "33 - Analyst Revision Lite",
-  "generatedAt": "2026-01-09T12:50:03.617Z",
+  "generatedAt": "2026-01-18T10:52:12.933Z",
   "dataAt": "2026-01-09T12:50:03.617Z",
   "meta": {
     "status": "ERROR",
     "reason": "MISSING_SECRET",
-    "stalenessSec": 0,
-    "coveragePct": 0,
-    "timezoneAssumption": "UTC",
-    "dataAtDefinition": "Analyst recommendation changes from FMP",
-    "latencyMs": 0,
+    "generatedAt": "2026-01-18T10:52:12.933Z",
+    "asOf": "2026-01-09T12:50:03.617Z",
+    "source": "mirror",
+    "ttlSeconds": 3600,
+    "stale": true,
     "itemsCount": 0,
-    "details": {
-      "httpStatus": null,
-      "snippet": "missing FMP_API_KEY",
-      "urlHost": "fmp"
+    "stalenessSec": 770520,
+    "freshness": {
+      "status": "expired",
+      "ageMinutes": 12842
+    },
+    "schedule": {
+      "rule": "daily",
+      "nextPlannedFetchAt": "2026-01-19T10:52:12.933Z",
+      "expectedNextRunWindowMinutes": 1440,
+      "ttlSeconds": 3600
+    },
+    "runId": "2026-01-18T10:52:12.904Z",
+    "validation": {
+      "schema": {
+        "ok": true,
+        "errors": []
+      },
+      "ranges": {
+        "ok": true,
+        "errors": []
+      },
+      "integrity": {
+        "ok": true,
+        "errors": []
+      }
     }
   },
   "data": {

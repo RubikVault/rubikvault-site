@@ -1,18 +1,43 @@
 {
-  "schemaVersion": "v1",
+  "schemaVersion": "v3",
   "blockId": "alpha-radar-lite",
-  "title": "42 - Alpha Radar Lite",
-  "generatedAt": "2026-01-15T12:40:15.243Z",
+  "generatedAt": "2026-01-18T10:52:12.933Z",
   "dataAt": "2026-01-09",
   "meta": {
     "status": "PARTIAL",
     "reason": "DEGRADED_COVERAGE",
-    "stalenessSec": 564015,
-    "coveragePct": 83,
-    "timezoneAssumption": "UTC",
-    "dataAtDefinition": "Derived signals from momentum and trend",
-    "latencyMs": 0,
-    "itemsCount": 5
+    "generatedAt": "2026-01-18T10:52:12.933Z",
+    "asOf": "2026-01-09",
+    "source": "mirror",
+    "ttlSeconds": 3600,
+    "stale": true,
+    "itemsCount": 5,
+    "stalenessSec": 816720,
+    "freshness": {
+      "status": "expired",
+      "ageMinutes": 13612
+    },
+    "schedule": {
+      "rule": "daily",
+      "nextPlannedFetchAt": "2026-01-19T10:52:12.933Z",
+      "expectedNextRunWindowMinutes": 1440,
+      "ttlSeconds": 3600
+    },
+    "runId": "2026-01-18T10:52:12.904Z",
+    "validation": {
+      "schema": {
+        "ok": true,
+        "errors": []
+      },
+      "ranges": {
+        "ok": true,
+        "errors": []
+      },
+      "integrity": {
+        "ok": true,
+        "errors": []
+      }
+    }
   },
   "data": {
     "items": [

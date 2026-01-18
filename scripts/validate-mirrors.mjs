@@ -4,7 +4,7 @@ import { loadMirror, validateBasicMirrorShape, isFiniteNumber } from "./utils/mi
 import { BLOCK_REGISTRY } from "../features/blocks-registry.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const MIRROR_ROOT = path.resolve(__dirname, "../public/mirrors");
+const MIRROR_ROOT = path.resolve(__dirname, "../mirrors");
 const now = Date.now();
 const warnings = [];
 const continuousEmptySoftAllow = new Set(["alpha-radar", "volume-anomaly", "breakout-energy"]);

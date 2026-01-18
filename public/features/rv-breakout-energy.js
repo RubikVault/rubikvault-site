@@ -1,4 +1,4 @@
-import { getBindingHint } from "./utils/api.js";
+import { fetchJSON, getBindingHint } from "./utils/api.js";
 import { getOrFetch } from "./utils/store.js";
 import { resolveWithShadow } from "./utils/resilience.js";
 import {
@@ -149,47 +149,8 @@ function render(root, payload, logger, featureId) {
   });
 }
 
-async function fetchMirror({ featureId, traceId, logger }) {
-  const url = `/mirrors/breakout-energy.json?t=${Date.now()}`;
-  try {
-    const res = await fetch(url, { cache: "no-store" });
-    if (!res.ok) {
-      throw new Error(`Mirror HTTP ${res.status}`);
-    }
-    const text = await res.text();
-    const trimmed = text.trim().toLowerCase();
-    if (trimmed.startsWith("<!doctype") || trimmed.startsWith("<html")) {
-      throw new Error("Mirror returned HTML");
-    }
-    const wrapper = JSON.parse(text);
-    const payload = wrapper?.payload && typeof wrapper.payload === "object" ? wrapper.payload : {};
-    return {
-      ok: true,
-      feature: featureId,
-      ts: wrapper?.ts || payload.updatedAt || new Date().toISOString(),
-      traceId: traceId || payload.traceId || "mirror",
-      cache: { hit: true, ttl: 0, layer: "mirror" },
-      upstream: { url: "mirror", status: null, snippet: "" },
-      dataQuality: payload.dataQuality || { status: "PARTIAL", reason: "MIRROR" },
-      data: payload
-    };
-  } catch (error) {
-    logger?.error("mirror_fetch_failed", { message: error?.message || "Mirror fetch failed" });
-    return {
-      ok: false,
-      feature: featureId,
-      ts: new Date().toISOString(),
-      traceId: traceId || "mirror",
-      cache: { hit: false, ttl: 0, layer: "none" },
-      upstream: { url: "mirror", status: null, snippet: "" },
-      error: { code: "MIRROR_FETCH_FAILED", message: error?.message || "Mirror fetch failed" },
-      data: {}
-    };
-  }
-}
-
 async function loadData({ featureId, traceId, logger }) {
-  return fetchMirror({ featureId, traceId, logger });
+  return fetchJSON("breakout-energy", { feature: featureId, traceId, logger });
 }
 
 export async function init(root, context = {}) {

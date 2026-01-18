@@ -3,6 +3,9 @@ import path from "node:path";
 import crypto from "node:crypto";
 import { fileURLToPath } from "node:url";
 import Parser from "rss-parser";
+import { createBudgetState, createUsageCollector, loadBudgetsConfig } from "./_lib/usage.js";
+import { fetchRssFeed } from "./providers/rss.js";
+import { acquireLock, releaseLock } from "./_lib/lock.js";
 
 const MAX_SOURCES = 8;
 const MAX_ITEMS_TOTAL = 60;
@@ -129,20 +132,13 @@ function classifyTopic(title) {
   return null;
 }
 
-async function fetchWithTimeout(url, timeoutMs) {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeoutMs);
+async function fetchFeed(url, ctx) {
   try {
-    const res = await fetch(url, {
-      signal: controller.signal,
-      headers: {
-        Accept: "application/rss+xml, application/atom+xml, application/xml, text/xml, */*"
-      }
-    });
-    const text = await res.text();
-    return { ok: res.ok, status: res.status, text };
-  } finally {
-    clearTimeout(timer);
+    const result = await fetchRssFeed(ctx, url);
+    return { ok: true, status: 200, text: result.data };
+  } catch (error) {
+    const status = error?.details?.httpStatus ?? 0;
+    return { ok: false, status, text: "", error };
   }
 }
 
@@ -206,17 +202,46 @@ function buildMeta({ status, lastSuccess, itemsCount, dedupedCount, sources, com
 }
 
 function buildSnapshot(items) {
+  const now = nowIso();
   return {
-    schemaVersion: 1,
-    generatedAt: nowIso(),
+    schemaVersion: "rv-mirror-v1",
+    mirrorId: "news",
+    provider: "rss",
+    dataset: "news",
+    fetchedAt: now,
+    ttlSeconds: 3600,
+    source: "rss",
+    runId: now,
+    updatedAt: now,
+    asOf: now,
+    mode: items.length ? "LIVE" : "EMPTY",
+    cadence: "best_effort",
+    trust: "raw",
+    sourceUpstream: "rss",
+    dataQuality: items.length ? "OK" : "EMPTY",
+    delayMinutes: 0,
+    missingSymbols: [],
+    errors: [],
+    notes: [],
+    whyUnique: "Aggregated RSS headlines (English-only filter).",
+    context: {},
     items
   };
 }
 
 async function main() {
   const root = getRepoRoot();
-  const outNews = path.join(root, "public", "data", "news.json");
-  const outMeta = path.join(root, "public", "data", "news.meta.json");
+  const lock = acquireLock({ providerId: "rss", datasetId: "news", ttlSeconds: 900 });
+  if (!lock.ok) {
+    console.log("LOCK_HELD", lock.details?.expiresAt || "active");
+    return;
+  }
+  const limits = loadBudgetsConfig(root);
+  const usage = createUsageCollector(limits);
+  const budget = createBudgetState(limits, usage);
+  const ctx = { providerId: "rss", endpoint: "rss", usage, budget };
+  const outNews = path.join(root, "mirrors", "news.json");
+  const outMeta = path.join(root, "mirrors", "news.meta.json");
 
   const existingSnapshot = readJsonIfExists(outNews);
   const hasExisting = Boolean(existingSnapshot && Array.isArray(existingSnapshot.items));
@@ -228,90 +253,94 @@ async function main() {
   let dedupedCount = 0;
   let lastSuccess = null;
 
-  for (const src of SOURCES) {
-    const started = Date.now();
-    let ok = false;
-    let items = [];
-    let error = null;
-    let status = 0;
-    let backoffUntil = null;
+  try {
+    for (const src of SOURCES) {
+      const started = Date.now();
+      let ok = false;
+      let items = [];
+      let error = null;
+      let status = 0;
+      let backoffUntil = null;
 
-    try {
-      let attempt = 0;
-      let lastErr = null;
-      let lastStatus = 0;
-      while (attempt <= RETRIES) {
-        attempt += 1;
-        try {
-          const res = await fetchWithTimeout(src.url, TIMEOUT_MS);
-          status = res.status;
-          lastStatus = res.status;
-          if (!res.ok) {
-            lastErr = new Error(`HTTP ${res.status}`);
-            if (attempt <= RETRIES && isRetryable({ status: res.status })) {
+      try {
+        let attempt = 0;
+        let lastErr = null;
+        let lastStatus = 0;
+        while (attempt <= RETRIES) {
+          attempt += 1;
+          try {
+            const res = await fetchFeed(src.url, ctx);
+            status = res.status;
+            lastStatus = res.status;
+            if (!res.ok) {
+              lastErr = new Error(`HTTP ${res.status}`);
+              if (attempt <= RETRIES && isRetryable({ status: res.status })) {
+                continue;
+              }
+              break;
+            }
+            const feed = await parser.parseString(res.text);
+            const rawItems = Array.isArray(feed?.items) ? feed.items : [];
+            items = rawItems
+              .slice(0, 20)
+              .map((entry) => {
+                const title = decodeHtmlEntities(normalizeWhitespace(entry?.title || ""));
+                const url = canonicalizeUrl(entry?.link || "");
+                const publishedAt = parsePublishedAt(entry) || nowIso();
+                const domain = hostnameFromUrl(url);
+                return {
+                  title,
+                  url,
+                  publishedAt,
+                  source: {
+                    name: src.name,
+                    domain
+                  },
+                  topic: parsePublishedAt(entry) ? classifyTopic(title) : null,
+                  __sourceId: src.id
+                };
+              })
+              .filter((it) => it.title && it.url);
+            ok = true;
+            break;
+          } catch (e) {
+            lastErr = e;
+            lastStatus = 0;
+            if (attempt <= RETRIES && isRetryable({ error: e })) {
               continue;
             }
             break;
           }
-          const feed = await parser.parseString(res.text);
-          const rawItems = Array.isArray(feed?.items) ? feed.items : [];
-          items = rawItems
-            .slice(0, 20)
-            .map((entry) => {
-              const title = decodeHtmlEntities(normalizeWhitespace(entry?.title || ""));
-              const url = canonicalizeUrl(entry?.link || "");
-              const publishedAt = parsePublishedAt(entry) || nowIso();
-              const domain = hostnameFromUrl(url);
-              return {
-                title,
-                url,
-                publishedAt,
-                source: {
-                  name: src.name,
-                  domain
-                },
-                topic: parsePublishedAt(entry) ? classifyTopic(title) : null,
-                __sourceId: src.id
-              };
-            })
-            .filter((it) => it.title && it.url);
-          ok = true;
-          break;
-        } catch (e) {
-          lastErr = e;
-          lastStatus = 0;
-          if (attempt <= RETRIES && isRetryable({ error: e })) {
-            continue;
+        }
+
+        if (!ok) {
+          error = lastErr ? String(lastErr?.message || lastErr) : "unknown";
+          const backoffSec = computeBackoffSeconds(lastStatus || 0);
+          if (backoffSec > 0) {
+            backoffUntil = new Date(Date.now() + backoffSec * 1000).toISOString();
           }
-          break;
         }
+
+        if (ok) {
+          allItems.push(...items);
+        }
+      } catch (e) {
+        error = String(e?.message || e);
       }
 
-      if (!ok) {
-        error = lastErr ? String(lastErr?.message || lastErr) : "unknown";
-        const backoffSec = computeBackoffSeconds(lastStatus || 0);
-        if (backoffSec > 0) {
-          backoffUntil = new Date(Date.now() + backoffSec * 1000).toISOString();
-        }
-      }
-
-      if (ok) {
-        allItems.push(...items);
-      }
-    } catch (e) {
-      error = String(e?.message || e);
+      sourceStates.push({
+        id: src.id,
+        name: src.name,
+        url: src.url,
+        ok,
+        items: ok ? items.length : 0,
+        latMs: Date.now() - started,
+        error: ok ? null : error,
+        backoffUntil
+      });
     }
-
-    sourceStates.push({
-      id: src.id,
-      name: src.name,
-      url: src.url,
-      ok,
-      items: ok ? items.length : 0,
-      latMs: Date.now() - started,
-      error: ok ? null : error,
-      backoffUntil
-    });
+  } finally {
+    releaseLock(lock.path);
   }
 
   const byUrl = new Map();

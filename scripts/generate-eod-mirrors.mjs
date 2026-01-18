@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { FEATURES } from "../rv-config.js";
 
-const OUT_DIRS = ["mirrors", "public/mirrors"];
+const OUT_DIRS = ["mirrors"];
 const NOW = new Date().toISOString();
 const EXTRA_ENDPOINTS = ["quotes", "tech-signals"];
 

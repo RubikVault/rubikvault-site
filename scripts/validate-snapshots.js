@@ -28,37 +28,19 @@ function validateSnapshot(filePath) {
   assert(meta && typeof meta === "object", `${filePath}: meta missing`, errors);
   if (!meta || typeof meta !== "object") return errors;
 
-  // Snapshot contract (enforced by this validator):
-  // - meta.status/meta.reason: non-empty strings
-  // - meta.itemsCount/coveragePct/stalenessSec/latencyMs: finite numbers
-  // - meta.timezoneAssumption/meta.dataAtDefinition: non-empty strings
-  // - ERROR status requires meta.details with bounded snippet + urlHost
+  // Snapshot contract (v3):
+  // - meta.status/meta.reason/meta.generatedAt/meta.asOf/meta.source/meta.ttlSeconds/meta.runId
+  // - meta.freshness/meta.validation/meta.schedule present
   assert(isNonEmptyString(meta.status), `${filePath}: meta.status invalid`, errors);
   assert(isNonEmptyString(meta.reason), `${filePath}: meta.reason invalid`, errors);
-  assert(isNumber(meta.itemsCount), `${filePath}: meta.itemsCount invalid`, errors);
-  assert(isNumber(meta.coveragePct), `${filePath}: meta.coveragePct invalid`, errors);
-  assert(isNumber(meta.stalenessSec), `${filePath}: meta.stalenessSec invalid`, errors);
-  assert(isNumber(meta.latencyMs), `${filePath}: meta.latencyMs invalid`, errors);
-  assert(isNonEmptyString(meta.timezoneAssumption), `${filePath}: meta.timezoneAssumption invalid`, errors);
-  assert(isNonEmptyString(meta.dataAtDefinition), `${filePath}: meta.dataAtDefinition invalid`, errors);
-
-  if (meta.status === "ERROR") {
-    const details = meta.details;
-    assert(details && typeof details === "object", `${filePath}: meta.details missing`, errors);
-    if (details && typeof details === "object") {
-      const snippet = String(details.snippet || "");
-      assert(snippet.length <= 200, `${filePath}: meta.details.snippet too long`, errors);
-      assert(typeof details.urlHost === "string", `${filePath}: meta.details.urlHost invalid`, errors);
-      const httpStatus = details.httpStatus;
-      assert(httpStatus === null || isNumber(httpStatus), `${filePath}: meta.details.httpStatus invalid`, errors);
-    }
-  }
-
-  const details = meta.details;
-  if (details && typeof details === "object") {
-    const snippet = String(details.snippet || "");
-    assert(snippet.length <= 200, `${filePath}: meta.details.snippet too long`, errors);
-  }
+  assert(isNonEmptyString(meta.generatedAt), `${filePath}: meta.generatedAt invalid`, errors);
+  assert(isNonEmptyString(meta.asOf), `${filePath}: meta.asOf invalid`, errors);
+  assert(isNonEmptyString(meta.source), `${filePath}: meta.source invalid`, errors);
+  assert(isNumber(meta.ttlSeconds), `${filePath}: meta.ttlSeconds invalid`, errors);
+  assert(isNonEmptyString(meta.runId), `${filePath}: meta.runId invalid`, errors);
+  assert(meta.freshness && typeof meta.freshness === "object", `${filePath}: meta.freshness missing`, errors);
+  assert(meta.validation && typeof meta.validation === "object", `${filePath}: meta.validation missing`, errors);
+  assert(meta.schedule && typeof meta.schedule === "object", `${filePath}: meta.schedule missing`, errors);
 
   return errors;
 }

@@ -1,11 +1,14 @@
 import { redactNotes } from "./mirror-io.mjs";
 
-export function buildBaseMirror({ mirrorId, mode, cadence, trust, sourceUpstream, whyUnique, items, context, missingSymbols, errors, notes, dataQuality, asOf }) {
+export function buildBaseMirror({ mirrorId, mode, cadence, trust, sourceUpstream, whyUnique, items, context, missingSymbols, errors, notes, dataQuality, asOf, provider, dataset, ttlSeconds, fetchedAt }) {
   const now = new Date().toISOString();
   return {
     schemaVersion: "rv-mirror-v1",
     mirrorId,
+    provider: provider || sourceUpstream || mirrorId,
+    dataset: dataset || mirrorId,
     runId: now,
+    fetchedAt: fetchedAt || now,
     updatedAt: now,
     asOf: asOf || now,
     mode,
@@ -13,6 +16,7 @@ export function buildBaseMirror({ mirrorId, mode, cadence, trust, sourceUpstream
     trust,
     source: "mirror",
     sourceUpstream: sourceUpstream || "unknown",
+    ttlSeconds: Number.isFinite(ttlSeconds) ? ttlSeconds : null,
     dataQuality,
     delayMinutes: 0,
     missingSymbols: missingSymbols || [],

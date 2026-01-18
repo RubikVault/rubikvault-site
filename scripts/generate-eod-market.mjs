@@ -10,12 +10,11 @@ import { buildDigest, buildSystemHealth } from "./utils/mirror-builders.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const MIRROR_DIRS = [
-  path.resolve(__dirname, "../mirrors"),
-  path.resolve(__dirname, "../public/mirrors")
+  path.resolve(__dirname, "../mirrors")
 ];
-const SYSTEM_HEALTH_PATH = path.resolve(__dirname, "../public/mirrors/system-health.json");
-const DAILY_DIGEST_PATH = path.resolve(__dirname, "../public/mirrors/daily-digest.json");
-const PREV_REGIME_PATH = path.resolve(__dirname, "../public/mirrors/market-regime.json");
+const SYSTEM_HEALTH_PATH = path.resolve(__dirname, "../mirrors/system-health.json");
+const DAILY_DIGEST_PATH = path.resolve(__dirname, "../mirrors/daily-digest.json");
+const PREV_REGIME_PATH = path.resolve(__dirname, "../mirrors/market-regime.json");
 const BUILD_INFO_PATH = path.resolve(__dirname, "../public/build-info.json");
 
 const CONTINUOUS_MIN_ITEMS = {
@@ -34,7 +33,7 @@ const CONTINUOUS_MIN_ITEMS = {
 function fallbackToLastGood(mirrorId, mirror) {
   const expected = CONTINUOUS_MIN_ITEMS[mirrorId] || 0;
   if (mirror.items.length >= expected) return mirror;
-  const prevPath = path.resolve(__dirname, `../public/mirrors/${mirrorId}.json`);
+  const prevPath = path.resolve(__dirname, `../mirrors/${mirrorId}.json`);
   const prev = loadMirror(prevPath);
   if (prev && Array.isArray(prev.items) && prev.items.length >= expected) {
     return {

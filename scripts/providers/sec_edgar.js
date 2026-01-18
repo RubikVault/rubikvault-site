@@ -3,6 +3,7 @@ import { buildProviderError, fetchWithRetry, normalizeProviderDetails } from "./
 const BASE_URL = "https://data.sec.gov";
 
 export async function fetchSecRecentFilings(ctx, { cik = "0000320193" } = {}) {
+  const requestCtx = ctx ? (ctx.endpoint ? ctx : { ...ctx, endpoint: "edgar" }) : { endpoint: "edgar" };
   const apiKey = process.env.SEC_API_KEY || "";
   if (!apiKey) {
     throw buildProviderError("MISSING_SECRET", "missing_sec_api_key", {
@@ -17,7 +18,7 @@ export async function fetchSecRecentFilings(ctx, { cik = "0000320193" } = {}) {
   let res;
   let text;
   try {
-    ({ res, text } = await fetchWithRetry(url, ctx, {
+    ({ res, text } = await fetchWithRetry(url, requestCtx, {
       headers: {
         "User-Agent": "RVSeeder/1.0",
         "Accept": "application/json"

@@ -3,7 +3,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const DATA_DIR = path.join(ROOT, "public", "data");
+const DATA_DIR = path.join(ROOT, "mirrors");
 const SEED_MANIFEST_PATH = path.join(DATA_DIR, "seed-manifest.json");
 const USAGE_REPORT_PATH = path.join(DATA_DIR, "usage-report.json");
 const HEALTH_PATH = path.join(DATA_DIR, "health.json");
@@ -66,8 +66,8 @@ function buildHealth(seedManifest, usageReport) {
   const usageSummary = summarizeUsage(usageReport);
 
   const inputs = [];
-  if (Array.isArray(seedManifest?.blocks)) inputs.push("public/data/seed-manifest.json");
-  if (usageReport) inputs.push("public/data/usage-report.json");
+  if (Array.isArray(seedManifest?.blocks)) inputs.push("mirrors/seed-manifest.json");
+  if (usageReport) inputs.push("mirrors/usage-report.json");
 
   let status = "LIVE";
   let reason = null;

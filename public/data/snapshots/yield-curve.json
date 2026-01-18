@@ -1,18 +1,43 @@
 {
-  "ok": true,
-  "feature": "yield-curve",
+  "schemaVersion": "v3",
+  "blockId": "yield-curve",
+  "generatedAt": "2026-01-18T11:11:16.546Z",
+  "dataAt": "2026-01-02T18:07:20.263Z",
   "meta": {
-    "status": "LIVE",
+    "status": "OK",
     "reason": "OK",
-    "generatedAt": "2026-01-18T04:01:19.677Z",
-    "stalenessSec": 1331639,
-    "durationMs": 1,
-    "latencyMs": 1,
+    "generatedAt": "2026-01-18T11:11:16.546Z",
+    "asOf": "2026-01-02T18:07:20.263Z",
+    "source": "fred",
+    "ttlSeconds": 3600,
+    "stale": true,
     "itemsCount": 9,
-    "coveragePct": 100,
-    "timezoneAssumption": "UTC",
-    "dataAtDefinition": "2026-01-02T18:07:20.263Z",
-    "bytes": 963
+    "stalenessSec": 1357380,
+    "freshness": {
+      "status": "expired",
+      "ageMinutes": 22623
+    },
+    "schedule": {
+      "rule": "best_effort",
+      "nextPlannedFetchAt": "2026-01-18T14:11:16.546Z",
+      "expectedNextRunWindowMinutes": 180,
+      "ttlSeconds": 3600
+    },
+    "runId": "2026-01-18T11:11:16.534Z",
+    "validation": {
+      "schema": {
+        "ok": true,
+        "errors": []
+      },
+      "ranges": {
+        "ok": true,
+        "errors": []
+      },
+      "integrity": {
+        "ok": true,
+        "errors": []
+      }
+    }
   },
   "data": {
     "items": [

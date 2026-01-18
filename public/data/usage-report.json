@@ -1,43 +1,360 @@
 {
-  "day": "2026-01-15",
+  "generatedAt": "2026-01-18T11:11:16.547Z",
+  "thresholds": {
+    "warnPct": 0.2,
+    "criticalPct": 0.05
+  },
   "providers": {
     "stooq": {
-      "requests": 26,
-      "credits": 0,
-      "bytesIn": 10630928,
-      "latencyMs": 6155,
-      "limitRequests": 500,
-      "limitCredits": 0,
-      "remainingRequests": 474,
-      "remainingCredits": 0,
-      "errorsByReason": {}
+      "daily": {
+        "used": 0,
+        "limit": 800,
+        "remaining": 800,
+        "pctRemaining": 1
+      },
+      "monthly": {
+        "used": 0,
+        "limit": 16000,
+        "remaining": 16000,
+        "pctRemaining": 1
+      },
+      "status": "green",
+      "endpoints": {
+        "daily": {
+          "daily": {
+            "used": 0,
+            "limit": 800,
+            "remaining": 800,
+            "pctRemaining": 1
+          },
+          "monthly": {
+            "used": 0,
+            "limit": 16000,
+            "remaining": 16000,
+            "pctRemaining": 1
+          },
+          "status": "green"
+        }
+      }
     },
     "fred": {
-      "requests": 16,
-      "credits": 0,
-      "bytesIn": 2534009,
-      "latencyMs": 1801,
-      "limitRequests": 500,
-      "limitCredits": 0,
-      "remainingRequests": 484,
-      "remainingCredits": 0,
-      "errorsByReason": {}
+      "daily": {
+        "used": 0,
+        "limit": 200,
+        "remaining": 200,
+        "pctRemaining": 1
+      },
+      "monthly": {
+        "used": 0,
+        "limit": 4000,
+        "remaining": 4000,
+        "pctRemaining": 1
+      },
+      "status": "green",
+      "endpoints": {
+        "series": {
+          "daily": {
+            "used": 0,
+            "limit": 200,
+            "remaining": 200,
+            "pctRemaining": 1
+          },
+          "monthly": {
+            "used": 0,
+            "limit": 4000,
+            "remaining": 4000,
+            "pctRemaining": 1
+          },
+          "status": "green"
+        }
+      }
     },
     "ecb": {
-      "requests": 6,
-      "credits": 0,
-      "bytesIn": 14838,
-      "latencyMs": 929,
-      "limitRequests": 200,
-      "limitCredits": 0,
-      "remainingRequests": 194,
-      "remainingCredits": 0,
-      "errorsByReason": {}
+      "daily": {
+        "used": 0,
+        "limit": 200,
+        "remaining": 200,
+        "pctRemaining": 1
+      },
+      "monthly": {
+        "used": 0,
+        "limit": 4000,
+        "remaining": 4000,
+        "pctRemaining": 1
+      },
+      "status": "green",
+      "endpoints": {
+        "sdmx": {
+          "daily": {
+            "used": 0,
+            "limit": 200,
+            "remaining": 200,
+            "pctRemaining": 1
+          },
+          "monthly": {
+            "used": 0,
+            "limit": 4000,
+            "remaining": 4000,
+            "pctRemaining": 1
+          },
+          "status": "green"
+        }
+      }
+    },
+    "marketaux": {
+      "daily": {
+        "used": 0,
+        "limit": 120,
+        "remaining": 120,
+        "pctRemaining": 1
+      },
+      "monthly": {
+        "used": 0,
+        "limit": 2500,
+        "remaining": 2500,
+        "pctRemaining": 1
+      },
+      "status": "green",
+      "endpoints": {
+        "news": {
+          "daily": {
+            "used": 0,
+            "limit": 120,
+            "remaining": 120,
+            "pctRemaining": 1
+          },
+          "monthly": {
+            "used": 0,
+            "limit": 2500,
+            "remaining": 2500,
+            "pctRemaining": 1
+          },
+          "status": "green"
+        }
+      }
+    },
+    "finnhub": {
+      "daily": {
+        "used": 0,
+        "limit": 200,
+        "remaining": 200,
+        "pctRemaining": 1
+      },
+      "monthly": {
+        "used": 0,
+        "limit": 5000,
+        "remaining": 5000,
+        "pctRemaining": 1
+      },
+      "status": "green",
+      "endpoints": {
+        "calendar": {
+          "daily": {
+            "used": 0,
+            "limit": 200,
+            "remaining": 200,
+            "pctRemaining": 1
+          },
+          "monthly": {
+            "used": 0,
+            "limit": 5000,
+            "remaining": 5000,
+            "pctRemaining": 1
+          },
+          "status": "green"
+        }
+      }
+    },
+    "fmp": {
+      "daily": {
+        "used": 0,
+        "limit": 300,
+        "remaining": 300,
+        "pctRemaining": 1
+      },
+      "monthly": {
+        "used": 0,
+        "limit": 6000,
+        "remaining": 6000,
+        "pctRemaining": 1
+      },
+      "status": "green",
+      "endpoints": {
+        "quotes": {
+          "daily": {
+            "used": 0,
+            "limit": 300,
+            "remaining": 300,
+            "pctRemaining": 1
+          },
+          "monthly": {
+            "used": 0,
+            "limit": 6000,
+            "remaining": 6000,
+            "pctRemaining": 1
+          },
+          "status": "green"
+        }
+      }
+    },
+    "sec": {
+      "daily": {
+        "used": 0,
+        "limit": 80,
+        "remaining": 80,
+        "pctRemaining": 1
+      },
+      "monthly": {
+        "used": 0,
+        "limit": 1600,
+        "remaining": 1600,
+        "pctRemaining": 1
+      },
+      "status": "green",
+      "endpoints": {
+        "edgar": {
+          "daily": {
+            "used": 0,
+            "limit": 80,
+            "remaining": 80,
+            "pctRemaining": 1
+          },
+          "monthly": {
+            "used": 0,
+            "limit": 1600,
+            "remaining": 1600,
+            "pctRemaining": 1
+          },
+          "status": "green"
+        }
+      }
+    },
+    "rss": {
+      "daily": {
+        "used": 0,
+        "limit": 300,
+        "remaining": 300,
+        "pctRemaining": 1
+      },
+      "monthly": {
+        "used": 0,
+        "limit": 6000,
+        "remaining": 6000,
+        "pctRemaining": 1
+      },
+      "status": "green",
+      "endpoints": {
+        "rss": {
+          "daily": {
+            "used": 0,
+            "limit": 300,
+            "remaining": 300,
+            "pctRemaining": 1
+          },
+          "monthly": {
+            "used": 0,
+            "limit": 6000,
+            "remaining": 6000,
+            "pctRemaining": 1
+          },
+          "status": "green"
+        }
+      }
+    },
+    "alphavantage": {
+      "daily": {
+        "used": 0,
+        "limit": 50,
+        "remaining": 50,
+        "pctRemaining": 1
+      },
+      "monthly": {
+        "used": 0,
+        "limit": 1000,
+        "remaining": 1000,
+        "pctRemaining": 1
+      },
+      "status": "green",
+      "endpoints": {
+        "daily": {
+          "daily": {
+            "used": 0,
+            "limit": 50,
+            "remaining": 50,
+            "pctRemaining": 1
+          },
+          "monthly": {
+            "used": 0,
+            "limit": 1000,
+            "remaining": 1000,
+            "pctRemaining": 1
+          },
+          "status": "green"
+        }
+      }
+    },
+    "coingecko": {
+      "daily": {
+        "used": 0,
+        "limit": 200,
+        "remaining": 200,
+        "pctRemaining": 1
+      },
+      "monthly": {
+        "used": 0,
+        "limit": 4000,
+        "remaining": 4000,
+        "pctRemaining": 1
+      },
+      "status": "green",
+      "endpoints": {
+        "simple": {
+          "daily": {
+            "used": 0,
+            "limit": 200,
+            "remaining": 200,
+            "pctRemaining": 1
+          },
+          "monthly": {
+            "used": 0,
+            "limit": 4000,
+            "remaining": 4000,
+            "pctRemaining": 1
+          },
+          "status": "green"
+        }
+      }
+    },
+    "internal": {
+      "daily": {
+        "used": 0,
+        "limit": 1000,
+        "remaining": 1000,
+        "pctRemaining": 1
+      },
+      "monthly": {
+        "used": 0,
+        "limit": 20000,
+        "remaining": 20000,
+        "pctRemaining": 1
+      },
+      "status": "green",
+      "endpoints": {}
     }
   },
-  "totals": {
-    "requests": 48,
-    "credits": 0
+  "cloudflare": {
+    "daily": {
+      "used": 0,
+      "limit": 100000,
+      "remaining": 100000,
+      "pctRemaining": 1
+    },
+    "monthly": {
+      "used": 0,
+      "limit": 2000000,
+      "remaining": 2000000,
+      "pctRemaining": 1
+    }
   },
   "notes": []
 }

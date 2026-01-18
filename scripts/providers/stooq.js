@@ -24,9 +24,10 @@ function parseCsv(text) {
 }
 
 export async function fetchStooqDaily(ctx, symbol) {
+  const requestCtx = ctx ? (ctx.endpoint ? ctx : { ...ctx, endpoint: "daily" }) : { endpoint: "daily" };
   const stooqSymbol = `${symbol.toLowerCase()}.us`;
   const url = `${STOOQ_BASE}${encodeURIComponent(stooqSymbol)}&i=d`;
-  const { text } = await fetchWithRetry(url, ctx, {
+  const { text } = await fetchWithRetry(url, requestCtx, {
     headers: { "User-Agent": "RVSeeder/1.0" },
     timeoutMs: 15000
   });

@@ -7,7 +7,7 @@ import {
   formatDate
 } from "./marketphase-core.mjs";
 
-const OUTPUT_ROOT = "public/data/marketphase";
+const OUTPUT_ROOT = "mirrors/marketphase";
 const MIRROR_ROOT = "mirrors/marketphase";
 
 function parseSymbols() {
@@ -67,6 +67,11 @@ function buildEnvelope(symbol, analysis, metaOverrides = {}) {
     meta: {
       symbol,
       generatedAt,
+      fetchedAt: generatedAt,
+      ttlSeconds: 86400,
+      provider: "internal",
+      dataset: symbol,
+      source: "marketphase",
       status: "OK",
       version: "4.0",
       legal: LEGAL_TEXT,
@@ -124,9 +129,7 @@ async function generateSymbol(symbol, dummyMode) {
     "Reference levels only — no prediction";
 
   const mirrorPath = path.join(MIRROR_ROOT, `${symbol}.json`);
-  const publicPath = path.join(OUTPUT_ROOT, `${symbol}.json`);
   await writeJson(mirrorPath, envelope);
-  await writeJson(publicPath, envelope);
   return envelope;
 }
 
