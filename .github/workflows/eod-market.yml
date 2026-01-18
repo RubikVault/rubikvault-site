@@ -42,7 +42,7 @@ jobs:
             exit 0
           fi
           git add mirrors public/data
-          git commit -m "data: auto-update [skip ci]" || true
+          git commit -m "data: auto-update" || true
           git push || true
 
       - name: Open issue on failure
