@@ -1,320 +1,29 @@
 {
   "schemaVersion": "v3",
   "blockId": "macro-hub",
-  "generatedAt": "2026-01-18T18:57:32.651Z",
+  "generatedAt": "2026-01-18T19:50:11.170Z",
   "dataAt": "2026-01-18",
   "meta": {
-    "version": "3.0",
     "status": "PARTIAL",
-    "reason": "INSUFFICIENT_DATA",
-    "generatedAt": "2026-01-18T17:44:43.000Z",
+    "reason": "PARTIAL",
+    "generatedAt": "2026-01-18T19:50:11.170Z",
     "asOf": "2026-01-18",
     "source": "multi",
-    "ttlSeconds": 86400,
-    "asOfDate": "2026-01-18",
-    "updatedAt": "2026-01-18T17:44:43.000Z",
-    "runId": "2026-01-18T17:44:40.354Z",
-    "counts": {
-      "total": 40,
-      "freshOrDerivedOk": 2,
-      "stale": 38,
-      "null": 38
+    "ttlSeconds": 3600,
+    "stale": true,
+    "itemsCount": 0,
+    "stalenessSec": 71400,
+    "freshness": {
+      "status": "expired",
+      "ageMinutes": 1190
     },
-    "providerCalls": {
-      "COINGECKO": 5,
-      "DEFILLAMA": 1
+    "schedule": {
+      "rule": "daily",
+      "nextPlannedFetchAt": "2026-01-19T19:50:11.170Z",
+      "expectedNextRunWindowMinutes": 1440,
+      "ttlSeconds": 3600
     },
-    "errors": [
-      {
-        "provider": "FRED",
-        "metric": "VIXCLS",
-        "message": "missing_api_key"
-      },
-      {
-        "provider": "FRED",
-        "metric": "VIX3M",
-        "message": "missing_api_key"
-      },
-      {
-        "provider": "FRED",
-        "metric": "T10Y2Y",
-        "message": "missing_api_key"
-      },
-      {
-        "provider": "FRED",
-        "metric": "DGS2",
-        "message": "missing_api_key"
-      },
-      {
-        "provider": "FRED",
-        "metric": "DGS10",
-        "message": "missing_api_key"
-      },
-      {
-        "provider": "FRED",
-        "metric": "DGS30",
-        "message": "missing_api_key"
-      },
-      {
-        "provider": "FRED",
-        "metric": "SOFR",
-        "message": "missing_api_key"
-      },
-      {
-        "provider": "FRED",
-        "metric": "EFFR",
-        "message": "missing_api_key"
-      },
-      {
-        "provider": "FRED",
-        "metric": "BAMLH0A0HYM2",
-        "message": "missing_api_key"
-      },
-      {
-        "provider": "FRED",
-        "metric": "BAMLC0A0CM",
-        "message": "missing_api_key"
-      },
-      {
-        "provider": "FRED",
-        "metric": "BAMLC0A4CBBB",
-        "message": "missing_api_key"
-      },
-      {
-        "provider": "FRED",
-        "metric": "BAA",
-        "message": "missing_api_key"
-      },
-      {
-        "provider": "FRED",
-        "metric": "DTWEXBGS",
-        "message": "missing_api_key"
-      },
-      {
-        "provider": "FRED",
-        "metric": "DEXUSEU",
-        "message": "missing_api_key"
-      },
-      {
-        "provider": "FRED",
-        "metric": "DEXJPUS",
-        "message": "missing_api_key"
-      },
-      {
-        "provider": "FRED",
-        "metric": "GOLDAMGBD228NLBM",
-        "message": "missing_api_key"
-      },
-      {
-        "provider": "FRED",
-        "metric": "DCOILWTICO",
-        "message": "missing_api_key"
-      },
-      {
-        "provider": "FRED",
-        "metric": "CPIAUCSL",
-        "message": "missing_api_key"
-      },
-      {
-        "provider": "FRED",
-        "metric": "UNRATE",
-        "message": "missing_api_key"
-      },
-      {
-        "provider": "FRED",
-        "metric": "GDP",
-        "message": "missing_api_key"
-      },
-      {
-        "provider": "FRED",
-        "metric": "WILSHIRE5000IND",
-        "message": "missing_api_key"
-      },
-      {
-        "provider": "FMP",
-        "metric": "quotes",
-        "message": "missing_api_key"
-      },
-      {
-        "provider": "FMP",
-        "metric": "SPY_history",
-        "message": "missing_api_key"
-      },
-      {
-        "provider": "ALPHAVANTAGE",
-        "metric": "SPY_history",
-        "message": "missing_api_key"
-      },
-      {
-        "provider": "COINGECKO",
-        "metric": "global",
-        "message": "HTTP_429"
-      }
-    ],
-    "staleMetrics": [
-      {
-        "id": "RISKREG",
-        "reason": "missing"
-      },
-      {
-        "id": "VIXRATIO",
-        "reason": "missing"
-      },
-      {
-        "id": "STRESS",
-        "reason": "missing"
-      },
-      {
-        "id": "HY_OAS_1M",
-        "reason": "missing"
-      },
-      {
-        "id": "CURVE_1M",
-        "reason": "missing"
-      },
-      {
-        "id": "VOL_TERM",
-        "reason": "missing"
-      },
-      {
-        "id": "CAPE",
-        "reason": "missing"
-      },
-      {
-        "id": "BUFFETT",
-        "reason": "missing"
-      },
-      {
-        "id": "VIXCLS",
-        "reason": "missing"
-      },
-      {
-        "id": "VIX3M",
-        "reason": "missing"
-      },
-      {
-        "id": "CURVE10_2",
-        "reason": "missing"
-      },
-      {
-        "id": "US2Y",
-        "reason": "missing"
-      },
-      {
-        "id": "US10Y",
-        "reason": "missing"
-      },
-      {
-        "id": "US30Y",
-        "reason": "missing"
-      },
-      {
-        "id": "SOFR",
-        "reason": "missing"
-      },
-      {
-        "id": "EFFR",
-        "reason": "missing"
-      },
-      {
-        "id": "HY_OAS",
-        "reason": "missing"
-      },
-      {
-        "id": "IG_OAS",
-        "reason": "missing"
-      },
-      {
-        "id": "BBB_OAS",
-        "reason": "missing"
-      },
-      {
-        "id": "BAA_YLD",
-        "reason": "missing"
-      },
-      {
-        "id": "USD_BRD",
-        "reason": "missing"
-      },
-      {
-        "id": "EURUSD",
-        "reason": "missing"
-      },
-      {
-        "id": "USDJPY",
-        "reason": "missing"
-      },
-      {
-        "id": "GOLD",
-        "reason": "missing"
-      },
-      {
-        "id": "WTI",
-        "reason": "missing"
-      },
-      {
-        "id": "SPY",
-        "reason": "missing"
-      },
-      {
-        "id": "QQQ",
-        "reason": "missing"
-      },
-      {
-        "id": "IWM",
-        "reason": "missing"
-      },
-      {
-        "id": "EWG",
-        "reason": "missing"
-      },
-      {
-        "id": "EWJ",
-        "reason": "missing"
-      },
-      {
-        "id": "SPY_20D",
-        "reason": "missing"
-      },
-      {
-        "id": "SPY_200D",
-        "reason": "missing"
-      },
-      {
-        "id": "CRY_MCAP",
-        "reason": "missing"
-      },
-      {
-        "id": "BTC_DOM",
-        "reason": "missing"
-      },
-      {
-        "id": "STBL_MCAP",
-        "reason": "missing"
-      },
-      {
-        "id": "CPI_YOY",
-        "reason": "missing"
-      },
-      {
-        "id": "UNRATE",
-        "reason": "missing"
-      },
-      {
-        "id": "GDP_QOQ",
-        "reason": "missing"
-      }
-    ],
-    "notes": {
-      "equitiesAreProxies": true,
-      "proxyMap": {
-        "SPY": "S&P 500",
-        "QQQ": "Nasdaq 100",
-        "IWM": "Russell 2000",
-        "EWG": "Germany",
-        "EWJ": "Japan"
-      }
-    },
+    "runId": "2026-01-18T19:50:11.158Z",
     "validation": {
       "schema": {
         "ok": true,
@@ -328,19 +37,10 @@
         "ok": true,
         "errors": []
       }
-    },
-    "schedule": {
-      "rule": "daily",
-      "nextPlannedFetchAt": "2026-01-19T17:44:43.000Z",
-      "expectedNextRunWindowMinutes": 1440,
-      "ttlSeconds": 86400
-    },
-    "freshness": {
-      "status": "fresh",
-      "ageMinutes": 1064
     }
   },
   "data": {
+    "items": [],
     "RISKREG": {
       "value": null,
       "change": null,
@@ -349,97 +49,9 @@
       "observedAt": null,
       "source": "DERIVED:RISKREG",
       "stale": true,
-      "staleReason": "missing"
-    },
-    "VIXRATIO": {
-      "value": null,
-      "change": null,
-      "changeUnit": "",
-      "unit": "ratio",
-      "observedAt": null,
-      "source": "DERIVED:VIXCLS/VIX3M",
-      "stale": true,
-      "staleReason": "missing"
-    },
-    "STRESS": {
-      "value": null,
-      "change": null,
-      "changeUnit": "",
-      "unit": "bp",
-      "observedAt": null,
-      "source": "DERIVED:BAA_YLD-US10Y",
-      "stale": true,
-      "staleReason": "missing"
-    },
-    "HY_OAS_1M": {
-      "value": null,
-      "change": null,
-      "changeUnit": "",
-      "unit": "bp",
-      "observedAt": null,
-      "source": "DERIVED:HY_OAS_1M",
-      "stale": true,
-      "staleReason": "missing"
-    },
-    "CURVE_1M": {
-      "value": null,
-      "change": null,
-      "changeUnit": "",
-      "unit": "bp",
-      "observedAt": null,
-      "source": "DERIVED:CURVE_1M",
-      "stale": true,
-      "staleReason": "missing"
-    },
-    "VOL_TERM": {
-      "value": null,
-      "change": null,
-      "changeUnit": "",
-      "unit": "pts",
-      "observedAt": null,
-      "source": "DERIVED:VIX3M-VIXCLS",
-      "stale": true,
-      "staleReason": "missing"
-    },
-    "BTCUSD": {
-      "value": 95158,
-      "change": -0.2463654590961361,
-      "changeUnit": "%",
-      "unit": "USD",
-      "observedAt": "2026-01-18",
-      "source": "COINGECKO:bitcoin",
-      "stale": false,
-      "staleReason": null
-    },
-    "ETHUSD": {
-      "value": 3334.2,
-      "change": 0.3797614640120343,
-      "changeUnit": "%",
-      "unit": "USD",
-      "observedAt": "2026-01-18",
-      "source": "COINGECKO:ethereum",
-      "stale": false,
-      "staleReason": null
-    },
-    "CAPE": {
-      "value": null,
-      "change": null,
-      "changeUnit": "pts",
-      "unit": "ratio",
-      "observedAt": null,
-      "source": "LASTGOOD",
-      "stale": true,
-      "staleReason": "missing"
-    },
-    "BUFFETT": {
-      "value": null,
-      "change": null,
-      "changeUnit": "",
-      "unit": "%",
-      "observedAt": null,
-      "source": "DERIVED:WILSHIRE/GDP",
-      "stale": true,
-      "staleReason": "missing"
+      "staleReason": "lastgood",
+      "derivedFromLastGood": true,
+      "derivationReason": "LASTGOOD_FALLBACK"
     },
     "VIXCLS": {
       "value": null,
@@ -449,7 +61,9 @@
       "observedAt": null,
       "source": "MISSING",
       "stale": true,
-      "staleReason": "missing"
+      "staleReason": "lastgood",
+      "derivedFromLastGood": true,
+      "derivationReason": "LASTGOOD_FALLBACK"
     },
     "VIX3M": {
       "value": null,
@@ -459,7 +73,21 @@
       "observedAt": null,
       "source": "MISSING",
       "stale": true,
-      "staleReason": "missing"
+      "staleReason": "lastgood",
+      "derivedFromLastGood": true,
+      "derivationReason": "LASTGOOD_FALLBACK"
+    },
+    "VIXRATIO": {
+      "value": null,
+      "change": null,
+      "changeUnit": "",
+      "unit": "ratio",
+      "observedAt": null,
+      "source": "DERIVED:VIXCLS/VIX3M",
+      "stale": true,
+      "staleReason": "lastgood",
+      "derivedFromLastGood": true,
+      "derivationReason": "LASTGOOD_FALLBACK"
     },
     "CURVE10_2": {
       "value": null,
@@ -469,7 +97,9 @@
       "observedAt": null,
       "source": "MISSING",
       "stale": true,
-      "staleReason": "missing"
+      "staleReason": "lastgood",
+      "derivedFromLastGood": true,
+      "derivationReason": "LASTGOOD_FALLBACK"
     },
     "US2Y": {
       "value": null,
@@ -479,7 +109,9 @@
       "observedAt": null,
       "source": "MISSING",
       "stale": true,
-      "staleReason": "missing"
+      "staleReason": "lastgood",
+      "derivedFromLastGood": true,
+      "derivationReason": "LASTGOOD_FALLBACK"
     },
     "US10Y": {
       "value": null,
@@ -489,7 +121,9 @@
       "observedAt": null,
       "source": "MISSING",
       "stale": true,
-      "staleReason": "missing"
+      "staleReason": "lastgood",
+      "derivedFromLastGood": true,
+      "derivationReason": "LASTGOOD_FALLBACK"
     },
     "US30Y": {
       "value": null,
@@ -499,7 +133,9 @@
       "observedAt": null,
       "source": "MISSING",
       "stale": true,
-      "staleReason": "missing"
+      "staleReason": "lastgood",
+      "derivedFromLastGood": true,
+      "derivationReason": "LASTGOOD_FALLBACK"
     },
     "SOFR": {
       "value": null,
@@ -509,7 +145,9 @@
       "observedAt": null,
       "source": "MISSING",
       "stale": true,
-      "staleReason": "missing"
+      "staleReason": "lastgood",
+      "derivedFromLastGood": true,
+      "derivationReason": "LASTGOOD_FALLBACK"
     },
     "EFFR": {
       "value": null,
@@ -519,7 +157,9 @@
       "observedAt": null,
       "source": "MISSING",
       "stale": true,
-      "staleReason": "missing"
+      "staleReason": "lastgood",
+      "derivedFromLastGood": true,
+      "derivationReason": "LASTGOOD_FALLBACK"
     },
     "HY_OAS": {
       "value": null,
@@ -529,7 +169,9 @@
       "observedAt": null,
       "source": "MISSING",
       "stale": true,
-      "staleReason": "missing"
+      "staleReason": "lastgood",
+      "derivedFromLastGood": true,
+      "derivationReason": "LASTGOOD_FALLBACK"
     },
     "IG_OAS": {
       "value": null,
@@ -539,7 +181,9 @@
       "observedAt": null,
       "source": "MISSING",
       "stale": true,
-      "staleReason": "missing"
+      "staleReason": "lastgood",
+      "derivedFromLastGood": true,
+      "derivationReason": "LASTGOOD_FALLBACK"
     },
     "BBB_OAS": {
       "value": null,
@@ -549,7 +193,9 @@
       "observedAt": null,
       "source": "MISSING",
       "stale": true,
-      "staleReason": "missing"
+      "staleReason": "lastgood",
+      "derivedFromLastGood": true,
+      "derivationReason": "LASTGOOD_FALLBACK"
     },
     "BAA_YLD": {
       "value": null,
@@ -559,7 +205,21 @@
       "observedAt": null,
       "source": "MISSING",
       "stale": true,
-      "staleReason": "missing"
+      "staleReason": "lastgood",
+      "derivedFromLastGood": true,
+      "derivationReason": "LASTGOOD_FALLBACK"
+    },
+    "STRESS": {
+      "value": null,
+      "change": null,
+      "changeUnit": "",
+      "unit": "bp",
+      "observedAt": null,
+      "source": "DERIVED:BAA_YLD-US10Y",
+      "stale": true,
+      "staleReason": "lastgood",
+      "derivedFromLastGood": true,
+      "derivationReason": "LASTGOOD_FALLBACK"
     },
     "USD_BRD": {
       "value": null,
@@ -569,7 +229,9 @@
       "observedAt": null,
       "source": "MISSING",
       "stale": true,
-      "staleReason": "missing"
+      "staleReason": "lastgood",
+      "derivedFromLastGood": true,
+      "derivationReason": "LASTGOOD_FALLBACK"
     },
     "EURUSD": {
       "value": null,
@@ -579,7 +241,9 @@
       "observedAt": null,
       "source": "MISSING",
       "stale": true,
-      "staleReason": "missing"
+      "staleReason": "lastgood",
+      "derivedFromLastGood": true,
+      "derivationReason": "LASTGOOD_FALLBACK"
     },
     "USDJPY": {
       "value": null,
@@ -589,7 +253,9 @@
       "observedAt": null,
       "source": "MISSING",
       "stale": true,
-      "staleReason": "missing"
+      "staleReason": "lastgood",
+      "derivedFromLastGood": true,
+      "derivationReason": "LASTGOOD_FALLBACK"
     },
     "GOLD": {
       "value": null,
@@ -599,7 +265,9 @@
       "observedAt": null,
       "source": "MISSING",
       "stale": true,
-      "staleReason": "missing"
+      "staleReason": "lastgood",
+      "derivedFromLastGood": true,
+      "derivationReason": "LASTGOOD_FALLBACK"
     },
     "WTI": {
       "value": null,
@@ -609,7 +277,9 @@
       "observedAt": null,
       "source": "MISSING",
       "stale": true,
-      "staleReason": "missing"
+      "staleReason": "lastgood",
+      "derivedFromLastGood": true,
+      "derivationReason": "LASTGOOD_FALLBACK"
     },
     "SPY": {
       "value": null,
@@ -619,7 +289,9 @@
       "observedAt": null,
       "source": "MISSING",
       "stale": true,
-      "staleReason": "missing"
+      "staleReason": "lastgood",
+      "derivedFromLastGood": true,
+      "derivationReason": "LASTGOOD_FALLBACK"
     },
     "QQQ": {
       "value": null,
@@ -629,7 +301,9 @@
       "observedAt": null,
       "source": "MISSING",
       "stale": true,
-      "staleReason": "missing"
+      "staleReason": "lastgood",
+      "derivedFromLastGood": true,
+      "derivationReason": "LASTGOOD_FALLBACK"
     },
     "IWM": {
       "value": null,
@@ -639,7 +313,9 @@
       "observedAt": null,
       "source": "MISSING",
       "stale": true,
-      "staleReason": "missing"
+      "staleReason": "lastgood",
+      "derivedFromLastGood": true,
+      "derivationReason": "LASTGOOD_FALLBACK"
     },
     "EWG": {
       "value": null,
@@ -649,7 +325,9 @@
       "observedAt": null,
       "source": "MISSING",
       "stale": true,
-      "staleReason": "missing"
+      "staleReason": "lastgood",
+      "derivedFromLastGood": true,
+      "derivationReason": "LASTGOOD_FALLBACK"
     },
     "EWJ": {
       "value": null,
@@ -659,7 +337,33 @@
       "observedAt": null,
       "source": "MISSING",
       "stale": true,
-      "staleReason": "missing"
+      "staleReason": "lastgood",
+      "derivedFromLastGood": true,
+      "derivationReason": "LASTGOOD_FALLBACK"
+    },
+    "HY_OAS_1M": {
+      "value": null,
+      "change": null,
+      "changeUnit": "",
+      "unit": "bp",
+      "observedAt": null,
+      "source": "DERIVED:HY_OAS_1M",
+      "stale": true,
+      "staleReason": "lastgood",
+      "derivedFromLastGood": true,
+      "derivationReason": "LASTGOOD_FALLBACK"
+    },
+    "CURVE_1M": {
+      "value": null,
+      "change": null,
+      "changeUnit": "",
+      "unit": "bp",
+      "observedAt": null,
+      "source": "DERIVED:CURVE_1M",
+      "stale": true,
+      "staleReason": "lastgood",
+      "derivedFromLastGood": true,
+      "derivationReason": "LASTGOOD_FALLBACK"
     },
     "SPY_20D": {
       "value": null,
@@ -669,7 +373,9 @@
       "observedAt": null,
       "source": "MISSING",
       "stale": true,
-      "staleReason": "missing"
+      "staleReason": "lastgood",
+      "derivedFromLastGood": true,
+      "derivationReason": "LASTGOOD_FALLBACK"
     },
     "SPY_200D": {
       "value": null,
@@ -679,27 +385,61 @@
       "observedAt": null,
       "source": "MISSING",
       "stale": true,
-      "staleReason": "missing"
+      "staleReason": "lastgood",
+      "derivedFromLastGood": true,
+      "derivationReason": "LASTGOOD_FALLBACK"
     },
-    "CRY_MCAP": {
+    "VOL_TERM": {
       "value": null,
       "change": null,
+      "changeUnit": "",
+      "unit": "pts",
+      "observedAt": null,
+      "source": "DERIVED:VIX3M-VIXCLS",
+      "stale": true,
+      "staleReason": "lastgood",
+      "derivedFromLastGood": true,
+      "derivationReason": "LASTGOOD_FALLBACK"
+    },
+    "BTCUSD": {
+      "value": 95419,
+      "change": 0.1033321920170543,
       "changeUnit": "%",
       "unit": "USD",
-      "observedAt": null,
-      "source": "MISSING",
-      "stale": true,
-      "staleReason": "missing"
+      "observedAt": "2026-01-18",
+      "source": "COINGECKO:bitcoin",
+      "stale": false,
+      "staleReason": null
+    },
+    "ETHUSD": {
+      "value": 3351.69,
+      "change": 1.0679138917325242,
+      "changeUnit": "%",
+      "unit": "USD",
+      "observedAt": "2026-01-18",
+      "source": "COINGECKO:ethereum",
+      "stale": false,
+      "staleReason": null
+    },
+    "CRY_MCAP": {
+      "value": 3324844924606.5825,
+      "change": 0.06911467275504693,
+      "changeUnit": "%",
+      "unit": "USD",
+      "observedAt": "2026-01-18",
+      "source": "COINGECKO:GLOBAL",
+      "stale": false,
+      "staleReason": null
     },
     "BTC_DOM": {
-      "value": null,
+      "value": 57.33446000137954,
       "change": null,
       "changeUnit": "pts",
       "unit": "%",
-      "observedAt": null,
-      "source": "MISSING",
-      "stale": true,
-      "staleReason": "missing"
+      "observedAt": "2026-01-18",
+      "source": "COINGECKO:GLOBAL",
+      "stale": false,
+      "staleReason": null
     },
     "STBL_MCAP": {
       "value": null,
@@ -709,7 +449,9 @@
       "observedAt": null,
       "source": "MISSING",
       "stale": true,
-      "staleReason": "missing"
+      "staleReason": "lastgood",
+      "derivedFromLastGood": true,
+      "derivationReason": "LASTGOOD_FALLBACK"
     },
     "CPI_YOY": {
       "value": null,
@@ -719,7 +461,9 @@
       "observedAt": null,
       "source": "MISSING",
       "stale": true,
-      "staleReason": "missing"
+      "staleReason": "lastgood",
+      "derivedFromLastGood": true,
+      "derivationReason": "LASTGOOD_FALLBACK"
     },
     "UNRATE": {
       "value": null,
@@ -729,7 +473,9 @@
       "observedAt": null,
       "source": "MISSING",
       "stale": true,
-      "staleReason": "missing"
+      "staleReason": "lastgood",
+      "derivedFromLastGood": true,
+      "derivationReason": "LASTGOOD_FALLBACK"
     },
     "GDP_QOQ": {
       "value": null,
@@ -739,65 +485,42 @@
       "observedAt": null,
       "source": "MISSING",
       "stale": true,
-      "staleReason": "missing"
+      "staleReason": "lastgood",
+      "derivedFromLastGood": true,
+      "derivationReason": "LASTGOOD_FALLBACK"
+    },
+    "CAPE": {
+      "value": null,
+      "change": null,
+      "changeUnit": "pts",
+      "unit": "ratio",
+      "observedAt": null,
+      "source": "LASTGOOD",
+      "stale": true,
+      "staleReason": "lastgood",
+      "derivedFromLastGood": true,
+      "derivationReason": "LASTGOOD_FALLBACK"
+    },
+    "BUFFETT": {
+      "value": null,
+      "change": null,
+      "changeUnit": "",
+      "unit": "%",
+      "observedAt": null,
+      "source": "DERIVED:WILSHIRE/GDP",
+      "stale": true,
+      "staleReason": "lastgood",
+      "derivedFromLastGood": true,
+      "derivationReason": "LASTGOOD_FALLBACK"
+    },
+    "debug": {
+      "lastGood": {
+        "available": 41,
+        "used": 36,
+        "filledFields": 0,
+        "beforeMetrics": 41,
+        "afterMetrics": 41
+      }
     }
-  },
-  "categories": {
-    "RISK_VOL": [
-      "RISKREG",
-      "VIXCLS",
-      "VIX3M",
-      "VIXRATIO",
-      "CURVE10_2"
-    ],
-    "RATES": [
-      "US2Y",
-      "US10Y",
-      "US30Y",
-      "SOFR",
-      "EFFR"
-    ],
-    "CREDIT": [
-      "HY_OAS",
-      "IG_OAS",
-      "BBB_OAS",
-      "BAA_YLD",
-      "STRESS"
-    ],
-    "FX_CMDS": [
-      "USD_BRD",
-      "EURUSD",
-      "USDJPY",
-      "GOLD",
-      "WTI"
-    ],
-    "EQUITIES": [
-      "SPY",
-      "QQQ",
-      "IWM",
-      "EWG",
-      "EWJ"
-    ],
-    "BREADTH": [
-      "HY_OAS_1M",
-      "CURVE_1M",
-      "SPY_20D",
-      "SPY_200D",
-      "VOL_TERM"
-    ],
-    "CRYPTO": [
-      "BTCUSD",
-      "ETHUSD",
-      "CRY_MCAP",
-      "BTC_DOM",
-      "STBL_MCAP"
-    ],
-    "MACRO_VAL": [
-      "CPI_YOY",
-      "UNRATE",
-      "GDP_QOQ",
-      "CAPE",
-      "BUFFETT"
-    ]
   }
 }
