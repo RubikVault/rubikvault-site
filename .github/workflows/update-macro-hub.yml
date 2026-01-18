@@ -55,15 +55,18 @@ jobs:
             exit 0
           fi
           git commit -m "chore(snapshot): macro-hub $(date -u +%F) [skip ci]"
-          # Push with rebase retry
+          # Push directly (we're already on origin/main, no rebase needed)
           for i in 1 2 3; do
-            if git fetch origin main && git rebase origin/main && git push origin HEAD:main; then
+            if git push origin HEAD:main; then
               echo "Push succeeded"
               exit 0
             fi
             echo "Push failed (attempt $i), retrying..."
+            # If push fails, fetch and merge (not rebase) to avoid unstaged changes conflict
             git fetch origin main
-            git rebase origin/main || git rebase --abort || true
+            if git merge origin/main --no-edit || git merge --abort || true; then
+              git push origin HEAD:main || true
+            fi
             sleep $((i * 3))
           done
           echo "Push failed after all retries"
