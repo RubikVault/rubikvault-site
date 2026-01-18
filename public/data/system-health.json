@@ -1,10 +1,10 @@
 {
-  "generatedAt": "2026-01-18T15:26:35.662Z",
+  "generatedAt": "2026-01-18T15:43:50.138Z",
   "buildStatus": "OK",
   "reasons": [],
   "summary": {
-    "total": 21,
-    "ok": 21,
+    "total": 22,
+    "ok": 22,
     "fail": 0
   },
   "lastGoodAsOf": {},
@@ -113,14 +113,19 @@
       "blockId": "why-moved",
       "status": "OK",
       "reason": "COVERAGE_LIMIT"
+    },
+    {
+      "blockId": "rvci-engine",
+      "status": "OK",
+      "reason": "DEGRADED_COVERAGE"
     }
   ],
-  "runId": "2026-01-18T15:26:35.582Z",
+  "runId": "2026-01-18T15:43:50.054Z",
   "meta": {
     "status": "OK",
     "reason": "OK",
-    "generatedAt": "2026-01-18T15:26:35.662Z",
-    "asOf": "2026-01-18T15:26:35.662Z",
+    "generatedAt": "2026-01-18T15:43:50.138Z",
+    "asOf": "2026-01-18T15:43:50.138Z",
     "ttlSeconds": 3600,
     "stale": false,
     "freshness": {
@@ -129,7 +134,7 @@
     },
     "schedule": {
       "rule": "daily",
-      "nextPlannedFetchAt": "2026-01-19T15:26:35.662Z",
+      "nextPlannedFetchAt": "2026-01-19T15:43:50.138Z",
       "expectedNextRunWindowMinutes": 1440,
       "ttlSeconds": 3600
     },
@@ -147,6 +152,6 @@
         "errors": []
       }
     },
-    "runId": "2026-01-18T15:26:35.582Z"
+    "runId": "2026-01-18T15:43:50.054Z"
   }
 }
