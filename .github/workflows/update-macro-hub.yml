@@ -19,7 +19,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: "20"
-      - name: Run macro hub snapshot
+      - name: Commit snapshots if changed
         env:
           FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
           EIA_API_KEY: ${{ secrets.EIA_API_KEY }}
@@ -28,6 +28,14 @@ jobs:
           ALPHAVANTAGE_API_KEY: ${{ secrets.ALPHAVANTAGE_API_KEY }}
           COINGECKO_DEMO_KEY: ${{ secrets.COINGECKO_DEMO_KEY }}
         run: |
+          git config user.name "macro-hub-bot"
+          git config user.email "macro-hub-bot@users.noreply.github.com"
+          # Fetch latest from main first
+          git fetch origin main
+          # Reset to origin/main to ensure clean state
+          git reset --hard origin/main
+          git clean -fd || true
+          # NOW generate snapshots (after reset, so they're in clean state)
           echo "FRED_API_KEY: $([[ -n \"$FRED_API_KEY\" ]] && echo 'SET' || echo 'EMPTY')"
           echo "EIA_API_KEY: $([[ -n \"$EIA_API_KEY\" ]] && echo 'SET' || echo 'EMPTY')"
           echo "FINNHUB_API_KEY: $([[ -n \"$FINNHUB_API_KEY\" ]] && echo 'SET' || echo 'EMPTY')"
@@ -40,17 +48,6 @@ jobs:
             fi
           fi
           node scripts/update-macro-hub.v3.mjs
-      - name: Commit snapshots if changed
-        run: |
-          git config user.name "macro-hub-bot"
-          git config user.email "macro-hub-bot@users.noreply.github.com"
-          # Clean working tree first
-          git reset --hard HEAD || true
-          git clean -fd || true
-          # Fetch latest from main
-          git fetch origin main
-          # Reset to origin/main to ensure clean state
-          git reset --hard origin/main
           # Add only the snapshot files
           git add public/data/snapshots/macro-hub.json public/data/snapshots/macro-hub.lastgood.json mirrors/macro-hub-runlog.json || true
           if git diff --cached --quiet; then
