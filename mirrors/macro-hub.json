@@ -2,17 +2,17 @@
   "meta": {
     "provider": "multi",
     "dataset": "macro-hub",
-    "fetchedAt": "2026-01-18T17:44:43.000Z",
+    "fetchedAt": "2026-01-18T19:40:39.908Z",
     "ttlSeconds": 3600,
     "source": "macro-hub",
-    "runId": "2026-01-18T17:44:40.354Z",
+    "runId": "2026-01-18T19:40:39.618Z",
     "cost": null
   },
   "raw": {
     "schemaVersion": "rv-mirror-v1",
     "mirrorId": "macro-hub",
-    "runId": "2026-01-18T17:44:40.354Z",
-    "updatedAt": "2026-01-18T17:44:43.000Z",
+    "runId": "2026-01-18T19:40:39.618Z",
+    "updatedAt": "2026-01-18T19:40:39.908Z",
     "asOf": "2026-01-18",
     "mode": "EOD",
     "cadence": "daily",
@@ -142,21 +142,16 @@
         "provider": "ALPHAVANTAGE",
         "metric": "SPY_history",
         "message": "missing_api_key"
-      },
-      {
-        "provider": "COINGECKO",
-        "metric": "global",
-        "message": "HTTP_429"
       }
     ],
     "notes": [],
     "whyUnique": "macro-hub raw provider payloads",
     "context": {
       "providerCalls": {
-        "COINGECKO": 5,
+        "COINGECKO": 2,
         "DEFILLAMA": 1
       },
-      "runId": "2026-01-18T17:44:40.354Z",
+      "runId": "2026-01-18T19:40:39.618Z",
       "rawSources": {
         "fred": [],
         "equities": {
@@ -165,7 +160,7 @@
         },
         "crypto": {
           "coingeckoSimple": true,
-          "coingeckoGlobal": false,
+          "coingeckoGlobal": true,
           "defillamaStable": true
         }
       }
@@ -173,7 +168,7 @@
     "items": [],
     "meta": {
       "status": "PARTIAL",
-      "updatedAt": "2026-01-18T17:44:43.000Z",
+      "updatedAt": "2026-01-18T19:40:39.908Z",
       "reason": "PARTIAL"
     }
   }

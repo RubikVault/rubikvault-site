@@ -57,6 +57,9 @@ export async function processSymbols(universe) {
     const rvol20 = Number.isFinite(avgVol20) && avgVol20 > 0 ? volumes[lastIdx] / avgVol20 : null;
     const changePct = pctChange(close, prevClose);
     const perf1w = pctChange(close, closes[lastIdx - 5]);
+    // Calculate 1M and 1Y performance (~21 and ~252 trading days)
+    const perf1m = lastIdx >= 21 ? pctChange(close, closes[lastIdx - 21]) : null;
+    const perf1y = lastIdx >= 252 ? pctChange(close, closes[lastIdx - 252]) : null;
     const missingFields = [];
     if (!Number.isFinite(sma20)) missingFields.push("sma20");
     if (!Number.isFinite(sma50)) missingFields.push("sma50");
@@ -91,6 +94,8 @@ export async function processSymbols(universe) {
       macd_hist: macdVal ? macdVal.histogram : null,
       stochRsi: stochRsiVal,
       perf1w,
+      perf1m,
+      perf1y,
       atr14,
       barsUsed,
       missingFields
