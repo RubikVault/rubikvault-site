@@ -1,57 +1,124 @@
 #!/usr/bin/env bash
-set -o pipefail
 
-BASE="${BASE:-${1:-}}"
-if [[ -z "${BASE}" ]]; then
-  echo "ERR: BASE is required. Usage: BASE=https://example.com ./scripts/verify-api.sh"
-  exit 1
-fi
+set -euo pipefail
 
-need() { command -v "$1" >/dev/null 2>&1 || { echo "ERR: missing dep: $1"; exit 1; }; }
-need curl
-need python3
+BASE_URL="${PREVIEW:-http://localhost:8788}"
+REPORT_DIR="debug"
+TMP_DIR="$(mktemp -d)"
+ENDPOINTS=(
+  "/api/bundle?debug=1"
+  "/api/render-plan?debug=1"
+)
 
-fetch_json() {
-  local url="$1"
-  local tmp
-  tmp="$(mktemp)"
-  # Follow redirects; capture headers + body
-  local code ctype
-  code="$(curl -sS -L -o "$tmp" -w "%{http_code}" -H 'accept: application/json' "$url" || true)"
-  ctype="$(curl -sSI -L -H 'accept: application/json' "$url" | tr -d 'fetch_json "fetch_json "# (now checked above)/data/render-plan.json" || exit 1/data/bundle.json" || exit 1r' | awk -F': ' 'tolower($1)=="content-type"{print $2}' | tail -n1)"
-  echo "FETCH $url"
-  echo "HTTP $code ctype=${ctype:-unknown}"
+cleanup() {
+  rm -rf "$TMP_DIR"
+}
+trap cleanup EXIT
 
-  python3 - <<PY 2>/dev/null || {
-import json,sys
-p=sys.argv[1]
-try:
-  with open(p,'rb') as f: b=f.read()
-  # allow UTF-8 BOM / weird whitespace
-  s=b.decode('utf-8','replace').lstrip("fetch_json "fetch_json "# (now checked above)/data/render-plan.json" || exit 1/data/bundle.json" || exit 1ufeff").strip()
-  json.loads(s)
-  print("OK JSON")
-except Exception as e:
-  print("ERR non-JSON:", str(e))
-  print("SNIP:", (s[:240].replace("fetch_json "fetch_json "# (now checked above)/data/render-plan.json" || exit 1/data/bundle.json" || exit 1n"," ") if 's' in locals() else "<no body>"))
-  sys.exit(2)
-PY
-"$tmp" || { rm -f "$tmp"; return 1; }
-
-  rm -f "$tmp"
-  return 0
+maybe_make_report_dir() {
+  if [ ! -d "$REPORT_DIR" ]; then
+    mkdir -p "$REPORT_DIR" || true
+  fi
 }
 
-echo "# Verify API Report"
-echo ""
+fetch_endpoint() {
+  local endpoint="$1"
+  local outfile="$2"
+  curl -sS -L "${BASE_URL}${endpoint}" -o "$outfile"
+}
 
-# Prefer API endpoints (debug), but tolerate redirects/non-JSON with useful diagnostics.
-fetch_json "${BASE}/api/bundle?debug=1" || exit 1
-fetch_json "${BASE}/api/render-plan?debug=1" || exit 1
+ensure_json() {
+  local file="$1"
+  jq . >/dev/null <"$file"
+}
 
-# Optional static-first confirmations (won't fail build if absent; comment in if you want strict)
-# fetch_json "${BASE}/data/bundle.json" || exit 1
-# fetch_json "${BASE}/data/render-plan.json" || exit 1
+ensure_envelope() {
+  local file="$1"
+  local has_keys
+  has_keys=$(jq 'has("ok") and has("feature") and has("meta") and has("data")' <"$file")
+  if [ "$has_keys" != "true" ]; then
+    echo "Envelope missing required keys" >&2
+    return 1
+  fi
+  local meta_null
+  meta_null=$(jq '.meta == null' <"$file")
+  if [ "$meta_null" = "true" ]; then
+    echo "meta is null" >&2
+    return 1
+  fi
+  local data_undefined
+  data_undefined=$(jq 'has("data")' <"$file")
+  if [ "$data_undefined" != "true" ]; then
+    echo "data undefined" >&2
+    return 1
+  fi
+}
 
-echo ""
-echo "OK: verify-api passed."
+secrets_scan() {
+  local file="$1"
+  if grep -Eqi "(sk-[a-z0-9]{8,}|bearer[[:space:]]+[a-z0-9._\\-]{8,}|token=\\s*[a-z0-9._\\-]{8,}|api[_-]?key=\\s*[a-z0-9._\\-]{8,}|authorization\\s*:\\s*[a-z0-9+\\/.=:_\\-]{8,})" "$file"; then
+    echo "Secret-like pattern detected" >&2
+    return 1
+  fi
+}
+
+build_report_entry() {
+  local file="$1"
+  jq -c '{ok, feature, meta, error}' <"$file"
+}
+
+main() {
+  maybe_make_report_dir
+
+  local markdown_report="# Verify API Report\n\n"
+  local json_report="[]"
+  local blocking_fail=0
+
+  for ep in "${ENDPOINTS[@]}"; do
+    local outfile="${TMP_DIR}/$(echo "$ep" | tr '/?&=' '_').json"
+    if ! fetch_endpoint "$ep" "$outfile"; then
+      echo "Failed to fetch $ep" >&2
+      blocking_fail=1
+      continue
+    fi
+
+    if ! ensure_json "$outfile"; then
+      echo "Invalid JSON for $ep" >&2
+      blocking_fail=1
+      continue
+    fi
+
+    if ! ensure_envelope "$outfile"; then
+      echo "Envelope check failed for $ep" >&2
+      blocking_fail=1
+    fi
+
+    if ! secrets_scan "$outfile"; then
+      echo "Secrets detected in $ep" >&2
+      blocking_fail=1
+    fi
+
+    local entry
+    entry=$(build_report_entry "$outfile")
+    json_report=$(echo "$json_report" | jq --argjson e "$entry" '. + [$e]')
+    markdown_report+="- ${ep}: \`$(echo "$entry" | jq -r '.feature')\` ok=$(echo "$entry" | jq -r '.ok') status=$(echo "$entry" | jq -r '.meta.status // "UNKNOWN"') emptyReason=$(echo "$entry" | jq -r '.meta.emptyReason // "none"')\n"
+  done
+
+  markdown_report+="\n"
+
+  echo -e "$markdown_report"
+  echo "$json_report" | jq '.' >"${TMP_DIR}/verify-report.json"
+  echo -e "$markdown_report" >"${TMP_DIR}/verify-report.md"
+
+  cp "${TMP_DIR}/verify-report.json" "${REPORT_DIR}/verify-report.json" 2>/dev/null || true
+  cp "${TMP_DIR}/verify-report.md" "${REPORT_DIR}/verify-report.md" 2>/dev/null || true
+
+  if [ "$blocking_fail" -ne 0 ]; then
+    echo "Blocking issues detected" >&2
+    exit 1
+  fi
+
+  exit 0
+}
+
+main "$@"
