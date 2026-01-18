@@ -570,6 +570,7 @@ function render(root, payload, logger, featureId) {
 
   const counts = heroMetrics.counts || {};
   // Count metrics with actual values (not null)
+  const metricsById = snapshot?.data || {};
   const metricsWithValues = heroMetrics.flat.filter(m => {
     const metric = metricsById[m.id];
     return metric && metric.value !== null && metric.value !== undefined;
