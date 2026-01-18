@@ -18,7 +18,7 @@ fetch_json() {
   # Follow redirects; capture headers + body
   local code ctype
   code="$(curl -sS -L -o "$tmp" -w "%{http_code}" -H 'accept: application/json' "$url" || true)"
-  ctype="$(curl -sSI -L -H 'accept: application/json' "$url" | tr -d '\r' | awk -F': ' 'tolower($1)=="content-type"{print $2}' | tail -n1)"
+  ctype="$(curl -sSI -L -H 'accept: application/json' "$url" | tr -d 'fetch_json "fetch_json "# (now checked above)/data/render-plan.json" || exit 1/data/bundle.json" || exit 1r' | awk -F': ' 'tolower($1)=="content-type"{print $2}' | tail -n1)"
   echo "FETCH $url"
   echo "HTTP $code ctype=${ctype:-unknown}"
 
@@ -28,12 +28,12 @@ p=sys.argv[1]
 try:
   with open(p,'rb') as f: b=f.read()
   # allow UTF-8 BOM / weird whitespace
-  s=b.decode('utf-8','replace').lstrip("\ufeff").strip()
+  s=b.decode('utf-8','replace').lstrip("fetch_json "fetch_json "# (now checked above)/data/render-plan.json" || exit 1/data/bundle.json" || exit 1ufeff").strip()
   json.loads(s)
   print("OK JSON")
 except Exception as e:
   print("ERR non-JSON:", str(e))
-  print("SNIP:", (s[:240].replace("\n"," ") if 's' in locals() else "<no body>"))
+  print("SNIP:", (s[:240].replace("fetch_json "fetch_json "# (now checked above)/data/render-plan.json" || exit 1/data/bundle.json" || exit 1n"," ") if 's' in locals() else "<no body>"))
   sys.exit(2)
 PY
 "$tmp" || { rm -f "$tmp"; return 1; }

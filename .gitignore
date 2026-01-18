@@ -40,35 +40,23 @@ audit-live.json
 functions/api/_debug-trace.js
 internal/
 .artifacts/
-
 # local workflow backups
 .github/workflows/*.bak.*
-
 # generated local backups
 scripts/generate-snapshots.mjs.bak
 scripts/generate-snapshots.mjs.bak.*
-
 # Local Python envs
 .venv/
 .venv-rvci*/
-
 # Python caches
 **/__pycache__/
 *.pyc
-
 # OS/editor noise
-.DS_Store
-
 # --- rubikvault local noise (added by rv_fix_untracked_and_smoke) ---
 .venv*/
-.venv/
 venv/
-**/__pycache__/
 backend/**/__pycache__/
 public/data/rvci/
-.wrangler/
-.DS_Store
-
 # Allow tracked RVCI outputs (keep other files ignored)
 !public/data/rvci/
 !public/data/rvci/rvci_top_short.json
@@ -76,32 +64,22 @@ public/data/rvci/
 !public/data/rvci/rvci_top_long.json
 !public/data/rvci/rvci_triggers.json
 !public/data/rvci/health.json
-
 # local noise (auto-added)
 nohup.out
 public/data/universe_spy50.json
-.venv*/
-backend/**/__pycache__/
-
 # Local/Generated noise
-nohup.out
 functions/api/_bak/
 functions/api/_bak/**
 src/
-
 # local/CI debug reports
 debug/
-
 # local backups (never commit)
 functions/api/_middleware.js.bak.*
-
 # generated / local-only
-.wrangler/
 .wrangler/**
 .venv-rvci/
 .venv-rvci/**
-.venv/
-.DS_Store
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
+# rubikvault: generated dirs (avoid privacy-guard false positives)
+mirrors/.locks/
+*.log
+*.tmp
