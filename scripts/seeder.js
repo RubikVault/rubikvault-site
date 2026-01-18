@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { execSync } from "node:child_process";
-import { atomicWriteJson } from "./utils/mirror-io.mjs";
+import { atomicWriteJson, saveMirror } from "./utils/mirror-io.mjs";
 import { buildGraph, topoSort } from "./_lib/util/dag.js";
 import { createProviderStateManager } from "./_lib/provider-state.js";
 import { acquireLock, releaseLock } from "./_lib/lock.js";
@@ -1036,11 +1036,11 @@ async function runBlock(entry, ctx, cache) {
 function writeUsageReport(usage) {
   const day = new Date().toISOString().slice(0, 10);
   const report = usage.snapshot(day);
-  atomicWriteJson(USAGE_PATH, report);
+  saveMirror(USAGE_PATH, report);
 }
 
 function writeSeedManifest(manifest) {
-  atomicWriteJson(MANIFEST_PATH, manifest);
+  saveMirror(MANIFEST_PATH, manifest);
 }
 
 function listMissingSecrets(entry) {

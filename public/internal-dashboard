@@ -673,12 +673,10 @@
 
       const thisHealth = await fetchJSONFromOrigin(originThis, '/data/system-health.json');
       const thisDiag = await fetchJSONFromOrigin(originThis, '/data/error-summary.json');
-      const thisBundle = await fetchJSONFromOrigin(originThis, '/data/run-report.json');
       const thisSummary = {
         origin: originThis,
         health: thisHealth?.ok ? (thisHealth || {}) : { error: thisHealth },
-        diag: thisDiag?.ok ? (thisDiag || {}) : { error: thisDiag },
-        debugBundle: thisBundle?.ok ? (thisBundle || {}) : { error: thisBundle }
+        diag: thisDiag?.ok ? (thisDiag || {}) : { error: thisDiag }
       };
       if (preThis) preThis.textContent = JSON.stringify(thisSummary, null, 2);
       if (stThis) stThis.textContent = `Updated: ${new Date().toLocaleString()}`;
@@ -693,16 +691,14 @@
 
       const prodHealth = await fetchJSONFromOrigin(prodOrigin, '/data/system-health.json');
       const prodDiag = await fetchJSONFromOrigin(prodOrigin, '/data/error-summary.json');
-      const prodBundle = await fetchJSONFromOrigin(prodOrigin, '/data/run-report.json');
       const prodSummary = {
         origin: prodOrigin,
         health: prodHealth?.ok ? (prodHealth || {}) : { error: prodHealth },
-        diag: prodDiag?.ok ? (prodDiag || {}) : { error: prodDiag },
-        debugBundle: prodBundle?.ok ? (prodBundle || {}) : { error: prodBundle }
+        diag: prodDiag?.ok ? (prodDiag || {}) : { error: prodDiag }
       };
       if (preProd) preProd.textContent = JSON.stringify(prodSummary, null, 2);
       if (stProd) {
-        const maybeCors = prodHealth?.status === 0 || prodDiag?.status === 0 || prodBundle?.status === 0;
+        const maybeCors = prodHealth?.status === 0 || prodDiag?.status === 0;
         stProd.textContent = maybeCors
           ? `Updated: ${new Date().toLocaleString()} (note: status 0 may indicate CORS blocked)`
           : `Updated: ${new Date().toLocaleString()}`;
@@ -1111,8 +1107,7 @@
       const targets = [
         { path: '/data/system-health.json', hint: 'Static build health snapshot' },
         { path: '/data/provider-state.json', hint: 'Circuit + lock state' },
-        { path: '/data/usage-report.json', hint: 'Budget usage and remaining' },
-        { path: '/data/run-report.json', hint: 'Latest build run report' }
+        { path: '/data/usage-report.json', hint: 'Budget usage and remaining' }
       ];
 
       const results = await Promise.all(targets.map(async (t) => ({
@@ -1137,7 +1132,6 @@
     async function updateHealthOverview() {
       const health = await fetchJSON('/data/system-health.json');
       const usage = await fetchJSON('/data/usage-report.json');
-      const run = await fetchJSON('/data/run-report.json');
 
       const container = document.getElementById('health-overview');
       if (!health || health.ok === false) {
@@ -1155,6 +1149,8 @@
 
       const overallStatus = health.buildStatus || 'UNKNOWN';
       const statusClass = overallStatus === 'OK' ? 'ok' : overallStatus === 'WARN' ? 'warn' : 'fail';
+
+      const lastBuildAt = health.generatedAt ? new Date(health.generatedAt).toLocaleString() : '—';
 
       container.innerHTML = `
         <div class="status-card ${statusClass}">
@@ -1174,8 +1170,8 @@
         </div>
         <div class="status-card">
           <h3>Last Build</h3>
-          <div class="value">${Number.isFinite(run?.durationMs) ? `${Math.round(run.durationMs / 1000)}s` : '—'}</div>
-          <div class="label">run-report</div>
+          <div class="value">${lastBuildAt}</div>
+          <div class="label">system-health</div>
         </div>
       `;
 
@@ -1183,7 +1179,7 @@
     }
 
     async function updateDebugBundle() {
-      const bundle = await fetchJSON('/data/run-report.json');
+      const health = await fetchJSON('/data/system-health.json');
       const errors = await fetchJSON('/data/error-summary.json');
       const container = document.getElementById('debug-summary');
       const ts = document.getElementById('debug-timestamp');
@@ -1192,34 +1188,36 @@
 
       if (!container || !attemptsBody || !eventsBody) return;
 
-      if (!bundle || bundle.ok === false) {
-        container.innerHTML = '<div class="status-card fail"><h3>Bundle Status</h3><div class="value">ERROR</div><div class="label">run-report unavailable</div></div>';
+      if (!health || health.ok === false) {
+        container.innerHTML = '<div class="status-card fail"><h3>Bundle Status</h3><div class="value">ERROR</div><div class="label">system-health unavailable</div></div>';
         attemptsBody.innerHTML = '<tr><td colspan="5">No data available</td></tr>';
         eventsBody.innerHTML = '<tr><td colspan="6">No data available</td></tr>';
         if (ts) ts.textContent = `Last updated: ${new Date().toLocaleString()}`;
         return;
       }
 
+      const summary = health.summary || {};
+
       container.innerHTML = `
         <div class="status-card">
           <h3>Build Run</h3>
-          <div class="value">${safeText(bundle.runId || '—')}</div>
-          <div class="label">run-report</div>
+          <div class="value">${safeText(health.runId || '—')}</div>
+          <div class="label">system-health</div>
         </div>
         <div class="status-card">
-          <h3>Duration</h3>
-          <div class="value">${safeText(bundle.durationMs ?? '—')}</div>
-          <div class="label">ms</div>
+          <h3>Status</h3>
+          <div class="value">${safeText(health.buildStatus || '—')}</div>
+          <div class="label">build status</div>
         </div>
         <div class="status-card">
-          <h3>Changed Files</h3>
-          <div class="value">${safeText(bundle.changedFiles?.length ?? 0)}</div>
-          <div class="label">writes</div>
+          <h3>Snapshots OK</h3>
+          <div class="value">${safeText(summary.ok ?? 0)}</div>
+          <div class="label">of ${safeText(summary.total ?? 0)}</div>
         </div>
         <div class="status-card">
           <h3>Errors</h3>
-          <div class="value">${safeText(bundle.counts?.errors ?? 0)}</div>
-          <div class="label">validation</div>
+          <div class="value">${safeText(summary.fail ?? 0)}</div>
+          <div class="label">snapshot failures</div>
         </div>
       `;
 

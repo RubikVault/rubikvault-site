@@ -1,65 +1,81 @@
-import { createResponse, parseDebug } from "./_shared.js";
+function nowIso() { return new Date().toISOString(); }
+function isHtmlLike(text) { return /<!doctype|<html/i.test(text || ""); }
 
-const FEATURE = "render-plan";
-
-async function fetchJsonAsset(url) {
-  try {
-    const res = await fetch(url, { headers: { Accept: "application/json" } });
-    if (!res.ok) {
-      return { ok: false, reason: `HTTP_${res.status}` };
+function mkEnvelope({ ok, feature, data, error, staticPath, traceId }) {
+  const st = ok ? "OK" : "ERROR";
+  const err = ok ? null : (error || { code: "ERROR", message: "unknown error" });
+  return {
+    ok: Boolean(ok),
+    feature: String(feature || "unknown"),
+    data: data ?? null,
+    error: err,
+    meta: {
+      status: st,
+      reason: ok ? "" : (err?.code || "ERROR"),
+      ts: nowIso(),
+      schemaVersion: 1,
+      traceId: traceId || "api",
+      writeMode: "NONE",
+      circuitOpen: false,
+      warnings: [],
+      savedAt: null,
+      ageMinutes: null,
+      source: "static-first",
+      emptyReason: null,
+      staticPath: staticPath || null
     }
-    const contentType = res.headers.get("content-type") || "";
-    if (!contentType.toLowerCase().includes("json")) {
-      return { ok: false, reason: "BAD_CONTENT_TYPE" };
-    }
-    const data = await res.json();
-    return { ok: true, data };
-  } catch (error) {
-    return { ok: false, reason: "PARSE_ERROR", error };
-  }
+  };
 }
 
-export async function onRequestGet({ request, env }) {
-  parseDebug(request, env);
-  const origin = new URL(request.url).origin;
-  const registryRes = await fetchJsonAsset(`${origin}/data/feature-registry.json`);
-  const manifestRes = await fetchJsonAsset(`${origin}/data/seed-manifest.json`);
-
-  const registryFeatures = Array.isArray(registryRes.data?.features)
-    ? registryRes.data.features
-    : null;
-  const manifestBlocks = Array.isArray(manifestRes.data?.blocks)
-    ? manifestRes.data.blocks
-    : null;
-
-  const registryValid = Boolean(registryRes.ok && registryFeatures);
-  const manifestValid = Boolean(manifestRes.ok && manifestBlocks);
-
-  let source = "none";
-  if (registryValid) source = "registry";
-  else if (manifestValid) source = "manifest";
-
-  const payload = {
-    source,
-    featuresCount: registryValid ? registryFeatures.length : null,
-    manifestBlocksCount: manifestValid ? manifestBlocks.length : null,
-    capped: false,
-    onlyFilter: null,
-    timestamp: new Date().toISOString(),
-    registryStatus: registryValid ? "OK" : registryRes.reason || "INVALID",
-    manifestStatus: manifestValid ? "OK" : manifestRes.reason || "INVALID"
-  };
-
-  const error =
-    source === "none"
-      ? { code: "RENDER_PLAN_UNAVAILABLE", message: "registry and manifest unavailable" }
-      : null;
-
-  return createResponse({
-    feature: FEATURE,
-    data: payload,
-    meta: { status: error ? "ERROR" : "OK", reason: error ? error.code : "" },
-    error,
-    request
+function json(payload) {
+  return new Response(JSON.stringify(payload), {
+    status: 200,
+    headers: { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" }
   });
+}
+
+export async function onRequest(context) {
+  const { request } = context;
+  const url = new URL(request.url);
+  const traceId = request.headers.get("x-rv-trace-id") || request.headers.get("x-rv-trace") || "api";
+  const staticPath = "/data/render-plan.json";
+  const target = new URL(staticPath, url.origin);
+
+  try {
+    const res = await fetch(target.toString(), { headers: { "Accept": "application/json" } });
+    const text = await res.text();
+
+    if (!res.ok) {
+      return json(mkEnvelope({
+        ok: false, feature: "render-plan", data: null,
+        error: { code: "STATIC_MISSING", message: `${staticPath} unavailable (HTTP ${res.status})` },
+        staticPath, traceId
+      }));
+    }
+    if (!text || isHtmlLike(text)) {
+      return json(mkEnvelope({
+        ok: false, feature: "render-plan", data: null,
+        error: { code: "STATIC_NOT_JSON", message: `${staticPath} did not return JSON` },
+        staticPath, traceId
+      }));
+    }
+
+    let parsed;
+    try { parsed = JSON.parse(text); }
+    catch {
+      return json(mkEnvelope({
+        ok: false, feature: "render-plan", data: null,
+        error: { code: "STATIC_INVALID_JSON", message: `${staticPath} returned invalid JSON` },
+        staticPath, traceId
+      }));
+    }
+
+    return json(mkEnvelope({ ok: true, feature: "render-plan", data: parsed, error: null, staticPath, traceId }));
+  } catch (e) {
+    return json(mkEnvelope({
+      ok: false, feature: "render-plan", data: null,
+      error: { code: "STATIC_FETCH_FAILED", message: String(e && e.message ? e.message : e) },
+      staticPath, traceId
+    }));
+  }
 }

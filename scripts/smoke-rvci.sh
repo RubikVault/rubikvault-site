@@ -115,7 +115,7 @@ LATEST_JSON=""
 SOURCE_URL=""
 SOURCE_ERRORS=()
 
-for url in "$BASE/api/rvci-engine?debug=1" "$BASE/mirrors/rvci_latest.json" "$BASE/data/rvci_latest.json"; do
+for url in "$BASE/api/rvci-engine?debug=1" "$BASE/data/rvci_latest.json"; do
   if LATEST_JSON=$(fetch_json_strict "$url"); then
     SOURCE_URL="$url"
     break

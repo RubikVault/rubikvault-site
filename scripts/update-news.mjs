@@ -6,6 +6,7 @@ import Parser from "rss-parser";
 import { createBudgetState, createUsageCollector, loadBudgetsConfig } from "./_lib/usage.js";
 import { fetchRssFeed } from "./providers/rss.js";
 import { acquireLock, releaseLock } from "./_lib/lock.js";
+import { loadMirror, saveMirror } from "./utils/mirror-io.mjs";
 
 const MAX_SOURCES = 8;
 const MAX_ITEMS_TOTAL = 60;
@@ -243,7 +244,7 @@ async function main() {
   const outNews = path.join(root, "mirrors", "news.json");
   const outMeta = path.join(root, "mirrors", "news.meta.json");
 
-  const existingSnapshot = readJsonIfExists(outNews);
+  const existingSnapshot = loadMirror(outNews);
   const hasExisting = Boolean(existingSnapshot && Array.isArray(existingSnapshot.items));
 
   const parser = new Parser({ timeout: TIMEOUT_MS });
@@ -389,7 +390,7 @@ async function main() {
       runId
     });
 
-    atomicWriteJson(outNews, snapshot);
+    saveMirror(outNews, snapshot);
     atomicWriteJson(outMeta, meta);
     process.exitCode = 0;
     return;

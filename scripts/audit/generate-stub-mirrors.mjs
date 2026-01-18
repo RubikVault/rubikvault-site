@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import fs from "node:fs";
 import path from "node:path";
+import { saveMirror } from "../utils/mirror-io.mjs";
 
 const ROOT = process.cwd();
 const REGISTRY_PATH = path.join(ROOT, "features", "feature-registry.json");
@@ -17,13 +18,6 @@ function readJson(filePath) {
   }
 }
 
-function atomicWriteJson(filePath, data) {
-  const tmpPath = `${filePath}.tmp`;
-  fs.mkdirSync(path.dirname(filePath), { recursive: true });
-  fs.writeFileSync(tmpPath, JSON.stringify(data, null, 2));
-  fs.renameSync(tmpPath, filePath);
-}
-
 const registry = readJson(REGISTRY_PATH);
 if (!registry || !Array.isArray(registry.features)) {
   process.stderr.write("Missing or invalid registry. Run build-feature-registry first.\n");
@@ -32,7 +26,7 @@ if (!registry || !Array.isArray(registry.features)) {
 
 let created = 0;
 registry.features.forEach((feature) => {
-  const mirrorPath = feature.mirrorPath || `public/mirrors/${feature.id}.json`;
+  const mirrorPath = feature.mirrorPath || `mirrors/${feature.id}.json`;
   const fullPath = path.isAbsolute(mirrorPath) ? mirrorPath : path.join(ROOT, mirrorPath);
   if (fs.existsSync(fullPath)) return;
   const stub = {
@@ -45,7 +39,7 @@ registry.features.forEach((feature) => {
     },
     data: {}
   };
-  atomicWriteJson(fullPath, stub);
+  saveMirror(fullPath, stub);
   created += 1;
 });
 

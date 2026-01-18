@@ -35,33 +35,40 @@ function classifySegment(entry) {
 }
 
 function mirrorToEnvelope(mirror, featureId) {
-  const items = Array.isArray(mirror?.items) ? mirror.items : [];
-  const ts = mirror?.updatedAt || mirror?.runId || nowIso();
+  const isSnapshot = mirror?.schemaVersion === "v3" && mirror?.meta && mirror?.data;
+  const items = isSnapshot
+    ? Array.isArray(mirror?.data?.items) ? mirror.data.items : []
+    : Array.isArray(mirror?.items) ? mirror.items : [];
+  const context = isSnapshot ? mirror?.data?.context || {} : mirror?.context || {};
+  const meta = isSnapshot ? mirror.meta || {} : mirror || {};
+  const ts = isSnapshot
+    ? meta.generatedAt || mirror?.dataAt || nowIso()
+    : mirror?.updatedAt || mirror?.runId || nowIso();
   return {
     ok: true,
-    feature: featureId || mirror?.mirrorId || "mirror",
+    feature: featureId || mirror?.blockId || mirror?.mirrorId || "mirror",
     ts,
-    traceId: mirror?.runId || "mirror",
+    traceId: meta.runId || mirror?.runId || "mirror",
     schemaVersion: 1,
     cache: { hit: true, ttl: 0, layer: "mirror" },
     upstream: { url: "mirror", status: null, snippet: "" },
     rateLimit: { remaining: "unknown", reset: null, estimated: true },
     dataQuality: {
-      status: mirror?.dataQuality || mirror?.mode || "EMPTY",
-      reason: mirror?.mode || "MIRROR"
+      status: meta.status || mirror?.dataQuality || mirror?.mode || "EMPTY",
+      reason: meta.reason || mirror?.mode || "MIRROR"
     },
     data: {
       items,
-      context: mirror?.context || {},
+      context,
       mirrorMeta: {
-        mirrorId: mirror?.mirrorId || "",
-        mode: mirror?.mode || "",
-        cadence: mirror?.cadence || "",
+        mirrorId: mirror?.blockId || mirror?.mirrorId || "",
+        mode: meta.status || mirror?.mode || "",
+        cadence: meta.schedule?.rule || mirror?.cadence || "",
         trust: mirror?.trust || "",
-        sourceUpstream: mirror?.sourceUpstream || "",
-        delayMinutes: mirror?.delayMinutes ?? null,
-        asOf: mirror?.asOf || null,
-        updatedAt: mirror?.updatedAt || null,
+        sourceUpstream: meta.source || mirror?.sourceUpstream || "",
+        delayMinutes: Number.isFinite(meta.stalenessSec) ? Math.round(meta.stalenessSec / 60) : null,
+        asOf: meta.asOf || mirror?.asOf || null,
+        updatedAt: meta.generatedAt || mirror?.updatedAt || null,
         whyUnique: mirror?.whyUnique || "",
         missingSymbols: mirror?.missingSymbols || [],
         errors: mirror?.errors || [],
@@ -71,9 +78,9 @@ function mirrorToEnvelope(mirror, featureId) {
   };
 }
 
-async function fetchMirror(origin, mirrorId) {
+async function fetchSnapshot(origin, mirrorId) {
   if (!mirrorId) return null;
-  const url = `${origin}/mirrors/${mirrorId}.json`;
+  const url = `${origin}/data/snapshots/${mirrorId}.json`;
   const response = await fetch(url, { cf: { cacheTtl: 60 }, headers: { Accept: "application/json" } });
   const text = await response.text();
   if (!response.ok || isHtmlLike(text)) return null;
@@ -110,7 +117,7 @@ export async function onRequestGet(context) {
   const trimmed = [];
   for (const entry of selected) {
     const mirrorId = pickMirrorId(entry);
-    const mirror = await fetchMirror(origin, mirrorId);
+    const mirror = await fetchSnapshot(origin, mirrorId);
     if (!mirror) continue;
     blocks[entry.api] = mirrorToEnvelope(mirror, entry.api);
   }

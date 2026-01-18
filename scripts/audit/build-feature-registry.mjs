@@ -4,7 +4,7 @@ import path from "node:path";
 
 const ROOT = process.cwd();
 const REGISTRY_PATH = path.join(ROOT, "features", "feature-registry.json");
-const MIRRORS_DIR = path.join(ROOT, "public", "mirrors");
+const MIRRORS_DIR = path.join(ROOT, "mirrors");
 
 function nowIso() {
   return new Date().toISOString();
@@ -84,7 +84,7 @@ function defaultEntry(id) {
   return {
     id,
     name: titleCase(id),
-    mirrorPath: `public/mirrors/${id}.json`,
+    mirrorPath: `mirrors/${id}.json`,
     schemaVersion: "v1",
     staleAfterMinutes: 1440,
     critical: false,

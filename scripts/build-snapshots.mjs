@@ -5,13 +5,12 @@ import crypto from "node:crypto";
 
 const ROOT = path.resolve(new URL("..", import.meta.url).pathname);
 const MIRROR_ROOT = path.join(ROOT, "mirrors");
-const PUBLIC_MIRROR_ROOT = path.join(ROOT, "public", "mirrors");
 const MIRROR_SNAPSHOT_DIR = path.join(MIRROR_ROOT, "snapshots");
 const MIRROR_MARKETPHASE_DIR = path.join(MIRROR_ROOT, "marketphase");
 const MIRROR_LOCK_DIR = path.join(MIRROR_ROOT, ".locks");
 const PUBLIC_DATA = path.join(ROOT, "public", "data");
 const SNAPSHOT_DIR = path.join(PUBLIC_DATA, "snapshots");
-const LEGACY_SNAPSHOT_DIR = path.join(PUBLIC_DATA, "snapshots");
+const INTERNAL_DIR = path.join(ROOT, "internal");
 const BUDGETS_PATH = path.join(ROOT, "config", "rv-budgets.json");
 const PROVIDER_STATE_MIRROR = path.join(MIRROR_ROOT, "provider-state.json");
 const USAGE_REPORT_MIRROR = path.join(MIRROR_ROOT, "usage-report.json");
@@ -20,8 +19,10 @@ const ERROR_SUMMARY_PATH = path.join(PUBLIC_DATA, "error-summary.json");
 const PROVIDER_STATE_PATH = path.join(PUBLIC_DATA, "provider-state.json");
 const USAGE_REPORT_PATH = path.join(PUBLIC_DATA, "usage-report.json");
 const SYSTEM_HEALTH_PATH = path.join(PUBLIC_DATA, "system-health.json");
-const RUN_REPORT_PATH = path.join(PUBLIC_DATA, "run-report.json");
+const RUN_REPORT_PATH = path.join(INTERNAL_DIR, "run-report.json");
 const MARKETPHASE_PUBLIC = path.join(PUBLIC_DATA, "marketphase");
+const MAX_PUBLIC_BYTES = 200 * 1024;
+const REDACTION_TOKEN = "<redacted>";
 
 const RUN_ID = new Date().toISOString();
 const BUILD_STARTED = Date.now();
@@ -62,12 +63,137 @@ async function listJsonFiles(dir) {
   }
 }
 
+function shouldSkipMirrorId(mirrorId) {
+  if (!mirrorId) return true;
+  if (mirrorId.endsWith(".meta")) return true;
+  if (mirrorId.endsWith("_history")) return true;
+  if (mirrorId === "provider-state" || mirrorId === "usage-report" || mirrorId === "seed-manifest") {
+    return true;
+  }
+  return false;
+}
+
 function sha256(text) {
   return crypto.createHash("sha256").update(text).digest("hex");
 }
 
-async function writeIfChanged(targetPath, payload, changedFiles) {
-  const next = JSON.stringify(payload, null, 2);
+function isMirrorEnvelope(payload) {
+  if (!payload || typeof payload !== "object") return false;
+  if (!payload.meta || !payload.raw) return false;
+  const meta = payload.meta || {};
+  return Boolean(
+    Object.prototype.hasOwnProperty.call(meta, "provider") ||
+      Object.prototype.hasOwnProperty.call(meta, "dataset") ||
+      Object.prototype.hasOwnProperty.call(meta, "fetchedAt") ||
+      Object.prototype.hasOwnProperty.call(meta, "source") ||
+      Object.prototype.hasOwnProperty.call(meta, "runId")
+  );
+}
+
+function unwrapEnvelope(payload) {
+  if (isMirrorEnvelope(payload)) {
+    return { raw: payload.raw, meta: payload.meta };
+  }
+  return { raw: payload, meta: null };
+}
+
+function sanitizeString(value) {
+  let next = value;
+  const redactions = [
+    { pattern: /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi, replace: REDACTION_TOKEN },
+    { pattern: /\/Users\/[^/]+/g, replace: "/Users/<redacted>" },
+    { pattern: /\/home\/[^/]+/g, replace: "/home/<redacted>" },
+    { pattern: /[A-Za-z]:\\Users\\[^\\]+/g, replace: "C:\\Users\\<redacted>" },
+    { pattern: /\\Users\\[^\\]+/g, replace: "\\Users\\<redacted>" },
+    { pattern: /\b[A-Za-z0-9-]+\.local\b/gi, replace: REDACTION_TOKEN },
+    { pattern: /\b[A-Za-z0-9-]+\.lan\b/gi, replace: REDACTION_TOKEN },
+    { pattern: /\b[A-Za-z0-9-]+\.internal\b/gi, replace: REDACTION_TOKEN }
+  ];
+  for (const rule of redactions) {
+    next = next.replace(rule.pattern, rule.replace);
+  }
+  if (!/https?:\/\//i.test(next) && /^(mirrors|public|internal|\.artifacts)\//i.test(next)) {
+    next = REDACTION_TOKEN;
+  }
+  if (!/https?:\/\//i.test(next) && /^(\/|[A-Za-z]:\\)/.test(next)) {
+    next = REDACTION_TOKEN;
+  }
+  return next;
+}
+
+function sanitizeForPublic(payload, state = { redactions: 0 }, seen = new WeakSet()) {
+  if (payload === null || payload === undefined) return payload;
+  const valueType = typeof payload;
+  if (valueType === "string") {
+    const sanitized = sanitizeString(payload);
+    if (sanitized !== payload) state.redactions += 1;
+    return sanitized;
+  }
+  if (valueType !== "object") return payload;
+  if (seen.has(payload)) {
+    throw new Error("sanitize_failed:circular_reference");
+  }
+  seen.add(payload);
+  if (Array.isArray(payload)) {
+    return payload.map((entry) => sanitizeForPublic(entry, state, seen));
+  }
+  const out = {};
+  for (const [key, value] of Object.entries(payload)) {
+    out[key] = sanitizeForPublic(value, state, seen);
+  }
+  return out;
+}
+
+function assertPublicSafe(payload, label) {
+  const violations = [];
+  const checks = [
+    /\/Users\/[^/]+/i,
+    /\/home\/[^/]+/i,
+    /[A-Za-z]:\\Users\\[^\\]+/i,
+    /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b/i,
+    /\b[A-Za-z0-9-]+\.local\b/i,
+    /\b[A-Za-z0-9-]+\.lan\b/i,
+    /\b[A-Za-z0-9-]+\.internal\b/i
+  ];
+  function walk(node) {
+    if (node === null || node === undefined) return;
+    if (typeof node === "string") {
+      if (/https?:\/\//i.test(node)) return;
+      for (const regex of checks) {
+        if (regex.test(node)) {
+          violations.push(regex.toString());
+          return;
+        }
+      }
+      return;
+    }
+    if (Array.isArray(node)) {
+      node.forEach(walk);
+      return;
+    }
+    if (typeof node === "object") {
+      Object.values(node).forEach(walk);
+    }
+  }
+  walk(payload);
+  if (violations.length) {
+    throw new Error(`sanitize_failed:${label || "payload"}:${violations.join(",")}`);
+  }
+}
+
+async function writeIfChanged(targetPath, payload, changedFiles, { sanitize = true } = {}) {
+  let output = payload;
+  if (sanitize) {
+    output = sanitizeForPublic(payload);
+  }
+  const next = JSON.stringify(output, null, 2);
+  if (sanitize) {
+    assertPublicSafe(output, path.basename(targetPath));
+    const byteSize = Buffer.byteLength(next, "utf8");
+    if (byteSize > MAX_PUBLIC_BYTES) {
+      throw new Error(`public_snapshot_too_large:${path.basename(targetPath)}:${byteSize}`);
+    }
+  }
   const nextHash = sha256(next);
   let prevHash = null;
   if (fs.existsSync(targetPath)) {
@@ -275,59 +401,53 @@ async function collectMirrorInputs() {
   const mirrorFiles = await listJsonFiles(MIRROR_ROOT);
   mirrorFiles.forEach((filePath) => {
     const base = path.basename(filePath, ".json");
+    if (shouldSkipMirrorId(base)) return;
     mirrors[base] = loadJson(filePath);
-  });
-  const publicMirrorFiles = await listJsonFiles(PUBLIC_MIRROR_ROOT);
-  publicMirrorFiles.forEach((filePath) => {
-    const base = path.basename(filePath, ".json");
-    if (!mirrors[base]) {
-      mirrors[base] = loadJson(filePath);
-    }
   });
   const snapshotFiles = await listJsonFiles(MIRROR_SNAPSHOT_DIR);
   snapshotFiles.forEach((filePath) => {
     const base = path.basename(filePath, ".json");
+    if (shouldSkipMirrorId(base)) return;
     mirrors[base] = loadJson(filePath);
-  });
-  const legacySnapshotFiles = await listJsonFiles(LEGACY_SNAPSHOT_DIR);
-  legacySnapshotFiles.forEach((filePath) => {
-    const base = path.basename(filePath, ".json");
-    if (base === "manifest") return;
-    if (mirrors[base]) return;
-    const payload = loadJson(filePath);
-    if (!payload || typeof payload !== "object") return;
-    const isV3 = payload.schemaVersion === "v3" && payload.meta?.freshness && payload.meta?.validation && payload.meta?.schedule;
-    if (isV3) return;
-    mirrors[base] = payload;
   });
   return mirrors;
 }
 
-function normalizeMirrorMeta(raw, blockId) {
+function normalizeMirrorMeta(raw, envelopeMeta, blockId) {
+  const envelope = envelopeMeta && typeof envelopeMeta === "object" ? envelopeMeta : {};
   if (!raw || typeof raw !== "object") {
-    return { status: "ERROR", reason: "MIRROR_MISSING", source: "mirror" };
+    return {
+      status: "ERROR",
+      reason: "MIRROR_MISSING",
+      sourceUpstream: envelope.provider || envelope.source || "mirror",
+      updatedAt: envelope.fetchedAt || null,
+      asOf: envelope.fetchedAt || null,
+      ttlSeconds: envelope.ttlSeconds || null,
+      cadence: envelope.cadence || "daily",
+      source: envelope.source || "mirror"
+    };
   }
   if (raw.meta && typeof raw.meta === "object" && raw.meta.status) {
     return {
       status: raw.meta.status,
       reason: raw.meta.reason || raw.meta.status,
-      sourceUpstream: raw.meta.source || raw.sourceUpstream || raw.source,
-      updatedAt: raw.meta.updatedAt || raw.updatedAt || raw.generatedAt,
-      asOf: raw.asOf || raw.meta.asOf || raw.dataAt || raw.updatedAt || raw.generatedAt,
-      ttlSeconds: raw.meta.ttlSeconds || raw.ttlSeconds || null,
+      sourceUpstream: envelope.provider || raw.meta.source || raw.sourceUpstream || raw.source,
+      updatedAt: raw.meta.updatedAt || raw.updatedAt || raw.generatedAt || envelope.fetchedAt,
+      asOf: raw.asOf || raw.meta.asOf || raw.dataAt || raw.updatedAt || raw.generatedAt || envelope.fetchedAt,
+      ttlSeconds: raw.meta.ttlSeconds || raw.ttlSeconds || envelope.ttlSeconds || null,
       cadence: raw.cadence || raw.meta.cadence || raw.mode,
-      source: raw.source || "mirror"
+      source: raw.source || envelope.source || "mirror"
     };
   }
   return {
     status: raw.mode || (Array.isArray(raw.items) && raw.items.length ? "LIVE" : "PARTIAL"),
     reason: raw.dataQuality || "OK",
-    sourceUpstream: raw.sourceUpstream || raw.source,
-    updatedAt: raw.updatedAt,
-    asOf: raw.asOf || raw.updatedAt,
-    ttlSeconds: raw.ttlSeconds || null,
+    sourceUpstream: envelope.provider || raw.sourceUpstream || raw.source,
+    updatedAt: raw.updatedAt || envelope.fetchedAt,
+    asOf: raw.asOf || raw.updatedAt || envelope.fetchedAt,
+    ttlSeconds: raw.ttlSeconds || envelope.ttlSeconds || null,
     cadence: raw.cadence || raw.mode,
-    source: raw.source || "mirror"
+    source: raw.source || envelope.source || "mirror"
   };
 }
 
@@ -347,7 +467,9 @@ function buildErrorSummary(errorEntries) {
 }
 
 async function buildProviderState() {
-  const state = loadJson(PROVIDER_STATE_MIRROR) || { schemaVersion: "v1", providers: {} };
+  const stateEnvelope = loadJson(PROVIDER_STATE_MIRROR);
+  const statePayload = unwrapEnvelope(stateEnvelope).raw;
+  const state = statePayload || { schemaVersion: "v1", providers: {} };
   const locks = await listJsonFiles(MIRROR_LOCK_DIR);
   const lockEntries = locks.map((filePath) => {
     const payload = loadJson(filePath) || {};
@@ -475,7 +597,9 @@ async function copyMarketphase(changedFiles) {
     const filename = path.basename(filePath);
     const payload = loadJson(filePath);
     if (!payload) continue;
-    await writeIfChanged(path.join(MARKETPHASE_PUBLIC, filename), payload, changedFiles);
+    const { raw } = unwrapEnvelope(payload);
+    if (!raw) continue;
+    await writeIfChanged(path.join(MARKETPHASE_PUBLIC, filename), raw, changedFiles);
   }
 }
 
@@ -491,11 +615,9 @@ async function main() {
   for (const [mirrorId, raw] of entries) {
     const blockId = MIRROR_MAP.get(mirrorId) || mirrorId;
     if (!blockId) continue;
-    if (mirrorId === "provider-state" || mirrorId === "usage-report" || mirrorId === "seed-manifest") {
-      continue;
-    }
-    const mirrorMeta = normalizeMirrorMeta(raw, blockId);
-    const snapshot = buildSnapshot({ blockId, raw, mirrorMeta });
+    const unwrapped = unwrapEnvelope(raw);
+    const mirrorMeta = normalizeMirrorMeta(unwrapped.raw, unwrapped.meta, blockId);
+    const snapshot = buildSnapshot({ blockId, raw: unwrapped.raw, mirrorMeta });
     const valid = snapshot.meta.validation.schema.ok &&
       snapshot.meta.validation.ranges.ok &&
       snapshot.meta.validation.integrity.ok;
@@ -522,7 +644,8 @@ async function main() {
   }
 
   if (fs.existsSync(MANIFEST_MIRROR)) {
-    const manifest = loadJson(MANIFEST_MIRROR);
+    const manifestEnvelope = loadJson(MANIFEST_MIRROR);
+    const manifest = unwrapEnvelope(manifestEnvelope).raw;
     if (manifest) {
       await writeIfChanged(path.join(PUBLIC_DATA, "seed-manifest.json"), manifest, changedFiles);
     }
@@ -533,7 +656,8 @@ async function main() {
   const providerState = await buildProviderState();
   await writeIfChanged(PROVIDER_STATE_PATH, providerState, changedFiles);
 
-  const usageRaw = loadJson(USAGE_REPORT_MIRROR) || {};
+  const usageEnvelope = loadJson(USAGE_REPORT_MIRROR);
+  const usageRaw = unwrapEnvelope(usageEnvelope).raw || {};
   const usageReport = applyBudgetReport(usageRaw, budgets);
   await writeIfChanged(USAGE_REPORT_PATH, usageReport, changedFiles);
 
@@ -568,7 +692,7 @@ async function main() {
       errors: errors.length
     }
   };
-  await writeIfChanged(RUN_REPORT_PATH, runReport, changedFiles);
+  await writeIfChanged(RUN_REPORT_PATH, runReport, changedFiles, { sanitize: false });
 
   console.log(`build-snapshots complete: ${snapshotStatuses.length} snapshots (${changedFiles.length} changed)`);
 }

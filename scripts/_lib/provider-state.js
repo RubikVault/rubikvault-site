@@ -1,5 +1,5 @@
 import fs from "node:fs";
-import { atomicWriteJson } from "../utils/mirror-io.mjs";
+import { loadMirror, saveMirror } from "../utils/mirror-io.mjs";
 
 const DEFAULT_ENTRY = {
   cooldownUntil: null,
@@ -27,23 +27,12 @@ export function loadProviderState(filePath, providerIds = []) {
   };
 
   if (fs.existsSync(filePath)) {
-    try {
-      const raw = fs.readFileSync(filePath, "utf8");
-      if (raw.trim()) {
-        const parsed = JSON.parse(raw);
-        if (parsed && typeof parsed === "object") {
-          state = {
-            schemaVersion: parsed.schemaVersion || "v1",
-            updatedAt: parsed.updatedAt || nowIso(),
-            providers: parsed.providers || {}
-          };
-        }
-      }
-    } catch (error) {
+    const parsed = loadMirror(filePath);
+    if (parsed && typeof parsed === "object") {
       state = {
-        schemaVersion: "v1",
-        updatedAt: nowIso(),
-        providers: {}
+        schemaVersion: parsed.schemaVersion || "v1",
+        updatedAt: parsed.updatedAt || nowIso(),
+        providers: parsed.providers || {}
       };
     }
   }
@@ -180,7 +169,7 @@ export function createProviderStateManager(filePath, providerIds = []) {
 
   function save() {
     state.updatedAt = nowIso();
-    atomicWriteJson(filePath, state);
+    saveMirror(filePath, state);
   }
 
   return {

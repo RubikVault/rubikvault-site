@@ -734,8 +734,13 @@ async function loadSchemaRegistry(auditTrace) {
 }
 
 function loadFeatureRegistry(auditTrace) {
-  const filePath = path.join(process.cwd(), "features", "feature-registry.json");
-  if (!fs.existsSync(filePath)) {
+  const candidates = [
+    path.join(process.cwd(), "public", "data", "feature-registry.json"),
+    path.join(process.cwd(), "registry", "feature-registry.json"),
+    path.join(process.cwd(), "features", "feature-registry.json")
+  ];
+  const filePath = candidates.find((candidate) => fs.existsSync(candidate));
+  if (!filePath) {
     auditTrace.push({
       step: "feature_registry",
       outcome: "skipped",
@@ -773,28 +778,37 @@ function loadFeatureRegistry(auditTrace) {
   }
 }
 
+function normalizeSnapshotPath(inputPath) {
+  if (!inputPath) return "";
+  return inputPath
+    .replace(/^public\/mirrors\//, "public/data/snapshots/")
+    .replace(/^mirrors\//, "data/snapshots/");
+}
+
 function resolveMirrorFile(basePath, id, mirrorPath) {
-  if (mirrorPath) {
-    if (path.isAbsolute(mirrorPath)) return mirrorPath;
-    return path.join(process.cwd(), mirrorPath);
+  const resolved = mirrorPath ? normalizeSnapshotPath(mirrorPath) : "";
+  if (resolved) {
+    if (path.isAbsolute(resolved)) return resolved;
+    return path.join(process.cwd(), resolved);
   }
-  return path.join(basePath, "mirrors", `${id}.json`);
+  return path.join(basePath, "data", "snapshots", `${id}.json`);
 }
 
 function resolveMirrorUrl(baseUrl, id, mirrorPath) {
   const rel = mirrorPath
-    ? mirrorPath.replace(/^public\//, "").replace(/^\/+/, "")
-    : `mirrors/${id}.json`;
+    ? normalizeSnapshotPath(mirrorPath).replace(/^public\//, "").replace(/^\/+/, "")
+    : `data/snapshots/${id}.json`;
   return `${baseUrl.replace(/\/+$/, "")}/${rel}`;
 }
 
 function discoverBlocksFromRegistry(registry, basePath) {
   return registry.features.map((feature) => {
-    const id = String(feature.id || "").toLowerCase();
+    const id = String(feature.blockId || feature.id || "").toLowerCase();
+    const mirrorPath = feature.mirrorPath || `public/data/snapshots/${id}.json`;
     return {
       id,
-      file: resolveMirrorFile(basePath, id, feature.mirrorPath),
-      mirrorPath: feature.mirrorPath || `public/mirrors/${id}.json`,
+      file: resolveMirrorFile(basePath, id, mirrorPath),
+      mirrorPath,
       optional: Boolean(feature.optional || feature._deprecated),
       critical: Boolean(feature.critical),
       requiredFields: Array.isArray(feature.requiredFields) ? feature.requiredFields : []
@@ -803,7 +817,7 @@ function discoverBlocksFromRegistry(registry, basePath) {
 }
 
 function discoverLocalBlocks(base, auditTrace) {
-  const manifestPath = path.join(base, "mirrors", "manifest.json");
+  const manifestPath = path.join(base, "data", "snapshots", "manifest.json");
   if (fs.existsSync(manifestPath)) {
     try {
       const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
@@ -815,7 +829,7 @@ function discoverLocalBlocks(base, auditTrace) {
         evidence: []
       });
       return blocks.map((entry) => ({
-        id: entry.id || entry.file?.replace(/^mirrors\//, "").replace(/\.json$/, "") || "unknown",
+        id: entry.id || entry.file?.replace(/^data\/snapshots\//, "").replace(/\.json$/, "") || "unknown",
         file: path.join(base, entry.file || ""),
         optional: Boolean(entry.optional)
       }));
@@ -828,7 +842,7 @@ function discoverLocalBlocks(base, auditTrace) {
       });
     }
   }
-  const dir = path.join(base, "mirrors");
+  const dir = path.join(base, "data", "snapshots");
   const files = fs.existsSync(dir)
     ? fs.readdirSync(dir).filter((f) => f.endsWith(".json") && f !== "manifest.json")
     : [];
@@ -862,10 +876,10 @@ async function auditLive({ base, args, auditTrace, uiMappings, schemaRegistry, f
   let blocks = [];
   if (featureRegistry && Array.isArray(featureRegistry.features)) {
     blocks = featureRegistry.features.map((feature) => {
-      const id = String(feature.id || "").toLowerCase();
+      const id = String(feature.blockId || feature.id || "").toLowerCase();
       const mirrorPath = feature.mirrorPath
-        ? feature.mirrorPath.replace(/^public\//, "")
-        : `mirrors/${id}.json`;
+        ? normalizeSnapshotPath(feature.mirrorPath).replace(/^public\//, "")
+        : `data/snapshots/${id}.json`;
       return {
         id,
         file: mirrorPath.startsWith("/") ? mirrorPath.slice(1) : mirrorPath,
@@ -880,46 +894,72 @@ async function auditLive({ base, args, auditTrace, uiMappings, schemaRegistry, f
       evidence: []
     });
   } else {
-    const manifestUrl = `${base.replace(/\/+$/, "")}/mirrors/manifest.json`;
-    let manifestJson;
+    const registryUrl = `${base.replace(/\/+$/, "")}/data/feature-registry.json`;
+    let registryJson;
     try {
-      const { response, text } = await fetchWithTimeout(manifestUrl, args.timeoutMs);
+      const { response, text } = await fetchWithTimeout(registryUrl, args.timeoutMs);
       if (!response.ok) {
         auditTrace.push({
           step: "discovery",
           outcome: "failed",
-          details: "Manifest fetch failed",
-          evidence: [makeEvidence("http_response", manifestUrl, response.status, "manifest fetch")]
+          details: "Registry fetch failed",
+          evidence: [makeEvidence("http_response", registryUrl, response.status, "registry fetch")]
         });
         return {
           meta: { error: "BASE_URL_MISCONFIG" },
           blocks: [],
           fatalReason: makeReason(
             "BASE_URL_MISCONFIG",
-            "Manifest missing or fetch failed",
-            [makeEvidence("http_response", manifestUrl, response.status, "manifest fetch")]
+            "Registry missing or fetch failed",
+            [makeEvidence("http_response", registryUrl, response.status, "registry fetch")]
           )
         };
       }
-      manifestJson = JSON.parse(text);
+      registryJson = JSON.parse(text);
     } catch (error) {
       auditTrace.push({
         step: "discovery",
         outcome: "failed",
-        details: "Manifest fetch/parse failed",
-        evidence: [makeEvidence("http_response", manifestUrl, error.message, "manifest fetch")]
+        details: "Registry fetch/parse failed",
+        evidence: [makeEvidence("http_response", registryUrl, error.message, "registry fetch")]
       });
       return {
         meta: { error: "BASE_URL_MISCONFIG" },
         blocks: [],
         fatalReason: makeReason(
           "BASE_URL_MISCONFIG",
-          "Manifest fetch/parse failed",
-          [makeEvidence("http_response", manifestUrl, error.message, "manifest fetch")]
+          "Registry fetch/parse failed",
+          [makeEvidence("http_response", registryUrl, error.message, "registry fetch")]
         )
       };
     }
-    blocks = Array.isArray(manifestJson.blocks) ? manifestJson.blocks : [];
+    const features = Array.isArray(registryJson?.features) ? registryJson.features : [];
+    if (!features.length) {
+      auditTrace.push({
+        step: "discovery",
+        outcome: "failed",
+        details: "Registry empty or invalid",
+        evidence: [makeEvidence("http_response", registryUrl, "empty", "registry parse")]
+      });
+      return {
+        meta: { error: "BASE_URL_MISCONFIG" },
+        blocks: [],
+        fatalReason: makeReason(
+          "BASE_URL_MISCONFIG",
+          "Registry empty",
+          [makeEvidence("http_response", registryUrl, "empty", "registry parse")]
+        )
+      };
+    }
+    blocks = features.map((entry) => {
+      const id = String(entry.blockId || entry.id || "unknown").toLowerCase();
+      return {
+        id,
+        file: `data/snapshots/${id}.json`,
+        optional: Boolean(entry.optional || entry._deprecated),
+        requiredFields: Array.isArray(entry.requiredFields) ? entry.requiredFields : []
+      };
+    });
   }
 
   const maxBlocks = Math.min(blocks.length, args.maxBlocksLive);

@@ -30,7 +30,7 @@ jobs:
             echo "No RVCI changes to commit."
             exit 0
           fi
-          git commit -m "chore(data): update rvci engine"
+          git commit -m "data: auto-update [skip ci]"
           git push
 
 # rvci-reindex-touch: 2026-01-12T10:07:11Z
