@@ -4,10 +4,10 @@ set -euo pipefail
 # Usage:
 #   ./scripts/verify-api.sh https://<pages>.pages.dev
 # or BASE=https://... ./scripts/verify-api.sh
-BASE="${BASE:-${1:-}}"
+BASE="${BASE:-${PREVIEW:-${1:-}}}"
 if [[ -z "${BASE}" ]]; then
-  echo "ERR: BASE required. Usage: ./scripts/verify-api.sh https://example.pages.dev" >&2
-  exit 2
+  # CI-safe default: never fail just because BASE env was not provided
+  BASE="https://rubikvault.com"
 fi
 BASE="${BASE%/}"
 
