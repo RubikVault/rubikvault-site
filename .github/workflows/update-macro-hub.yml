@@ -44,18 +44,30 @@ jobs:
         run: |
           git config user.name "macro-hub-bot"
           git config user.email "macro-hub-bot@users.noreply.github.com"
+          # Clean working tree first
+          git reset --hard HEAD || true
+          git clean -fd || true
+          # Fetch latest from main
+          git fetch origin main
+          # Reset to origin/main to ensure clean state
+          git reset --hard origin/main
+          # Add only the snapshot files
           git add public/data/snapshots/macro-hub.json public/data/snapshots/macro-hub.lastgood.json mirrors/macro-hub-runlog.json || true
           if git diff --cached --quiet; then
             echo "No macro hub changes"
             exit 0
           fi
           git commit -m "chore(snapshot): macro-hub $(date -u +%F) [skip ci]"
+          # Push with rebase retry
           for i in 1 2 3; do
-            git pull --rebase origin main && git push origin HEAD:main && break
+            if git fetch origin main && git rebase origin/main && git push origin HEAD:main; then
+              echo "Push succeeded"
+              exit 0
+            fi
             echo "Push failed (attempt $i), retrying..."
+            git fetch origin main
+            git rebase origin/main || git rebase --abort || true
             sleep $((i * 3))
           done
-          if ! git push --dry-run origin HEAD:main >/dev/null 2>&1; then
-            echo "Push failed after retries"
-            exit 1
-          fi
+          echo "Push failed after all retries"
+          exit 1
