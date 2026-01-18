@@ -1,0 +1,589 @@
+{
+  "version": "3.0",
+  "generatedBy": "macro-hub.catalog.v3",
+  "categories": {
+    "RISK_VOL": ["RISKREG", "VIXCLS", "VIX3M", "VIXRATIO", "CURVE10_2"],
+    "RATES": ["US2Y", "US10Y", "US30Y", "SOFR", "EFFR"],
+    "CREDIT": ["HY_OAS", "IG_OAS", "BBB_OAS", "BAA_YLD", "STRESS"],
+    "FX_CMDS": ["USD_BRD", "EURUSD", "USDJPY", "GOLD", "WTI"],
+    "EQUITIES": ["SPY", "QQQ", "IWM", "EWG", "EWJ"],
+    "BREADTH": ["HY_OAS_1M", "CURVE_1M", "SPY_20D", "SPY_200D", "VOL_TERM"],
+    "CRYPTO": ["BTCUSD", "ETHUSD", "CRY_MCAP", "BTC_DOM", "STBL_MCAP"],
+    "MACRO_VAL": ["CPI_YOY", "UNRATE", "GDP_QOQ", "CAPE", "BUFFETT"]
+  },
+  "metrics": [
+    {
+      "id": "RISKREG",
+      "label": "RiskReg",
+      "category": "RISK_VOL",
+      "unit": "score",
+      "ttlHours": 72,
+      "weekendRule": "forwardFill",
+      "value": { "type": "derived" },
+      "change": { "type": "delta", "window": "1D", "unit": "pts" },
+      "sources": [
+        { "provider": "DERIVED", "inputs": ["VIXCLS", "CURVE10_2", "HY_OAS"] }
+      ],
+      "history": { "lookbackDays": 10 }
+    },
+    {
+      "id": "VIXCLS",
+      "label": "VIX",
+      "category": "RISK_VOL",
+      "unit": "pts",
+      "ttlHours": 72,
+      "weekendRule": "forwardFill",
+      "value": { "type": "latest" },
+      "change": { "type": "pct", "window": "1D", "unit": "%" },
+      "sources": [
+        { "provider": "FRED", "symbol": "VIXCLS", "parse": "fred.series" }
+      ],
+      "history": { "lookbackDays": 10 }
+    },
+    {
+      "id": "VIX3M",
+      "label": "VIX3M",
+      "category": "RISK_VOL",
+      "unit": "pts",
+      "ttlHours": 72,
+      "weekendRule": "forwardFill",
+      "value": { "type": "latest" },
+      "change": { "type": "pct", "window": "1D", "unit": "%" },
+      "sources": [
+        { "provider": "FRED", "symbol": "VIX3M", "parse": "fred.series" }
+      ],
+      "history": { "lookbackDays": 10 }
+    },
+    {
+      "id": "VIXRATIO",
+      "label": "VIXRatio",
+      "category": "RISK_VOL",
+      "unit": "ratio",
+      "ttlHours": 72,
+      "weekendRule": "forwardFill",
+      "value": { "type": "derived" },
+      "change": { "type": "delta", "window": "1D", "unit": "pts" },
+      "sources": [
+        { "provider": "DERIVED", "inputs": ["VIXCLS", "VIX3M"] }
+      ],
+      "history": { "lookbackDays": 10 }
+    },
+    {
+      "id": "CURVE10_2",
+      "label": "Curve10-2",
+      "category": "RISK_VOL",
+      "unit": "bp",
+      "ttlHours": 72,
+      "weekendRule": "forwardFill",
+      "value": { "type": "latest" },
+      "change": { "type": "delta", "window": "1D", "unit": "bp" },
+      "sources": [
+        { "provider": "FRED", "symbol": "T10Y2Y", "parse": "fred.series" }
+      ],
+      "history": { "lookbackDays": 10 }
+    },
+    {
+      "id": "US2Y",
+      "label": "US2Y",
+      "category": "RATES",
+      "unit": "%",
+      "ttlHours": 72,
+      "weekendRule": "forwardFill",
+      "value": { "type": "latest" },
+      "change": { "type": "delta", "window": "1D", "unit": "bp" },
+      "sources": [
+        { "provider": "FRED", "symbol": "DGS2", "parse": "fred.series" }
+      ],
+      "history": { "lookbackDays": 10 }
+    },
+    {
+      "id": "US10Y",
+      "label": "US10Y",
+      "category": "RATES",
+      "unit": "%",
+      "ttlHours": 72,
+      "weekendRule": "forwardFill",
+      "value": { "type": "latest" },
+      "change": { "type": "delta", "window": "1D", "unit": "bp" },
+      "sources": [
+        { "provider": "FRED", "symbol": "DGS10", "parse": "fred.series" }
+      ],
+      "history": { "lookbackDays": 10 }
+    },
+    {
+      "id": "US30Y",
+      "label": "US30Y",
+      "category": "RATES",
+      "unit": "%",
+      "ttlHours": 72,
+      "weekendRule": "forwardFill",
+      "value": { "type": "latest" },
+      "change": { "type": "delta", "window": "1D", "unit": "bp" },
+      "sources": [
+        { "provider": "FRED", "symbol": "DGS30", "parse": "fred.series" }
+      ],
+      "history": { "lookbackDays": 10 }
+    },
+    {
+      "id": "SOFR",
+      "label": "SOFR",
+      "category": "RATES",
+      "unit": "%",
+      "ttlHours": 48,
+      "weekendRule": "forwardFill",
+      "value": { "type": "latest" },
+      "change": { "type": "delta", "window": "1D", "unit": "bp" },
+      "sources": [
+        { "provider": "FRED", "symbol": "SOFR", "parse": "fred.series" }
+      ],
+      "history": { "lookbackDays": 10 }
+    },
+    {
+      "id": "EFFR",
+      "label": "EFFR",
+      "category": "RATES",
+      "unit": "%",
+      "ttlHours": 48,
+      "weekendRule": "forwardFill",
+      "value": { "type": "latest" },
+      "change": { "type": "delta", "window": "1D", "unit": "bp" },
+      "sources": [
+        { "provider": "FRED", "symbol": "EFFR", "parse": "fred.series" }
+      ],
+      "history": { "lookbackDays": 10 }
+    },
+    {
+      "id": "HY_OAS",
+      "label": "HY OAS",
+      "category": "CREDIT",
+      "unit": "bp",
+      "ttlHours": 72,
+      "weekendRule": "forwardFill",
+      "value": { "type": "latest" },
+      "change": { "type": "delta", "window": "1D", "unit": "bp" },
+      "sources": [
+        { "provider": "FRED", "symbol": "BAMLH0A0HYM2", "parse": "fred.series" }
+      ],
+      "history": { "lookbackDays": 40 }
+    },
+    {
+      "id": "IG_OAS",
+      "label": "IG OAS",
+      "category": "CREDIT",
+      "unit": "bp",
+      "ttlHours": 72,
+      "weekendRule": "forwardFill",
+      "value": { "type": "latest" },
+      "change": { "type": "delta", "window": "1D", "unit": "bp" },
+      "sources": [
+        { "provider": "FRED", "symbol": "BAMLC0A0CM", "parse": "fred.series" }
+      ],
+      "history": { "lookbackDays": 40 }
+    },
+    {
+      "id": "BBB_OAS",
+      "label": "BBB OAS",
+      "category": "CREDIT",
+      "unit": "bp",
+      "ttlHours": 72,
+      "weekendRule": "forwardFill",
+      "value": { "type": "latest" },
+      "change": { "type": "delta", "window": "1D", "unit": "bp" },
+      "sources": [
+        { "provider": "FRED", "symbol": "BAMLC0A4CBBB", "parse": "fred.series" }
+      ],
+      "history": { "lookbackDays": 40 }
+    },
+    {
+      "id": "BAA_YLD",
+      "label": "BAA",
+      "category": "CREDIT",
+      "unit": "%",
+      "ttlHours": 96,
+      "weekendRule": "forwardFill",
+      "value": { "type": "latest" },
+      "change": { "type": "delta", "window": "1D", "unit": "bp" },
+      "sources": [
+        { "provider": "FRED", "symbol": "BAA", "parse": "fred.series" }
+      ],
+      "history": { "lookbackDays": 40 }
+    },
+    {
+      "id": "STRESS",
+      "label": "Stress",
+      "category": "CREDIT",
+      "unit": "bp",
+      "ttlHours": 96,
+      "weekendRule": "forwardFill",
+      "value": { "type": "derived" },
+      "change": { "type": "delta", "window": "1D", "unit": "bp" },
+      "sources": [
+        { "provider": "DERIVED", "inputs": ["BAA_YLD", "US10Y"] }
+      ],
+      "history": { "lookbackDays": 40 }
+    },
+    {
+      "id": "USD_BRD",
+      "label": "USD Broad",
+      "category": "FX_CMDS",
+      "unit": "index",
+      "ttlHours": 96,
+      "weekendRule": "forwardFill",
+      "value": { "type": "latest" },
+      "change": { "type": "pct", "window": "1D", "unit": "%" },
+      "sources": [
+        { "provider": "FRED", "symbol": "DTWEXBGS", "parse": "fred.series" }
+      ],
+      "history": { "lookbackDays": 10 }
+    },
+    {
+      "id": "EURUSD",
+      "label": "EURUSD",
+      "category": "FX_CMDS",
+      "unit": "ratio",
+      "ttlHours": 96,
+      "weekendRule": "forwardFill",
+      "value": { "type": "latest" },
+      "change": { "type": "pct", "window": "1D", "unit": "%" },
+      "sources": [
+        { "provider": "FRED", "symbol": "DEXUSEU", "parse": "fred.series" }
+      ],
+      "history": { "lookbackDays": 10 }
+    },
+    {
+      "id": "USDJPY",
+      "label": "USDJPY",
+      "category": "FX_CMDS",
+      "unit": "ratio",
+      "ttlHours": 96,
+      "weekendRule": "forwardFill",
+      "value": { "type": "latest" },
+      "change": { "type": "pct", "window": "1D", "unit": "%" },
+      "sources": [
+        { "provider": "FRED", "symbol": "DEXJPUS", "parse": "fred.series" }
+      ],
+      "history": { "lookbackDays": 10 }
+    },
+    {
+      "id": "GOLD",
+      "label": "Gold",
+      "category": "FX_CMDS",
+      "unit": "USD",
+      "ttlHours": 96,
+      "weekendRule": "forwardFill",
+      "value": { "type": "latest" },
+      "change": { "type": "pct", "window": "1D", "unit": "%" },
+      "sources": [
+        { "provider": "FRED", "symbol": "GOLDAMGBD228NLBM", "parse": "fred.series" }
+      ],
+      "history": { "lookbackDays": 10 }
+    },
+    {
+      "id": "WTI",
+      "label": "WTI",
+      "category": "FX_CMDS",
+      "unit": "USD",
+      "ttlHours": 48,
+      "weekendRule": "forwardFill",
+      "value": { "type": "latest" },
+      "change": { "type": "pct", "window": "1D", "unit": "%" },
+      "sources": [
+        { "provider": "FRED", "symbol": "DCOILWTICO", "parse": "fred.series" }
+      ],
+      "history": { "lookbackDays": 10 }
+    },
+    {
+      "id": "SPY",
+      "label": "SPY",
+      "category": "EQUITIES",
+      "unit": "USD",
+      "ttlHours": 48,
+      "weekendRule": "forwardFill",
+      "value": { "type": "latest" },
+      "change": { "type": "pct", "window": "1D", "unit": "%" },
+      "sources": [
+        { "provider": "FINNHUB", "symbol": "SPY", "parse": "finnhub.quote" },
+        { "provider": "FMP", "symbol": "SPY", "parse": "fmp.quote" },
+        { "provider": "ALPHAVANTAGE", "symbol": "SPY", "parse": "alphavantage.quote" }
+      ],
+      "history": { "lookbackDays": 210 }
+    },
+    {
+      "id": "QQQ",
+      "label": "QQQ",
+      "category": "EQUITIES",
+      "unit": "USD",
+      "ttlHours": 48,
+      "weekendRule": "forwardFill",
+      "value": { "type": "latest" },
+      "change": { "type": "pct", "window": "1D", "unit": "%" },
+      "sources": [
+        { "provider": "FINNHUB", "symbol": "QQQ", "parse": "finnhub.quote" },
+        { "provider": "FMP", "symbol": "QQQ", "parse": "fmp.quote" },
+        { "provider": "ALPHAVANTAGE", "symbol": "QQQ", "parse": "alphavantage.quote" }
+      ],
+      "history": { "lookbackDays": 20 }
+    },
+    {
+      "id": "IWM",
+      "label": "IWM",
+      "category": "EQUITIES",
+      "unit": "USD",
+      "ttlHours": 48,
+      "weekendRule": "forwardFill",
+      "value": { "type": "latest" },
+      "change": { "type": "pct", "window": "1D", "unit": "%" },
+      "sources": [
+        { "provider": "FINNHUB", "symbol": "IWM", "parse": "finnhub.quote" },
+        { "provider": "FMP", "symbol": "IWM", "parse": "fmp.quote" },
+        { "provider": "ALPHAVANTAGE", "symbol": "IWM", "parse": "alphavantage.quote" }
+      ],
+      "history": { "lookbackDays": 20 }
+    },
+    {
+      "id": "EWG",
+      "label": "EWG",
+      "category": "EQUITIES",
+      "unit": "USD",
+      "ttlHours": 48,
+      "weekendRule": "forwardFill",
+      "value": { "type": "latest" },
+      "change": { "type": "pct", "window": "1D", "unit": "%" },
+      "sources": [
+        { "provider": "FINNHUB", "symbol": "EWG", "parse": "finnhub.quote" },
+        { "provider": "FMP", "symbol": "EWG", "parse": "fmp.quote" },
+        { "provider": "ALPHAVANTAGE", "symbol": "EWG", "parse": "alphavantage.quote" }
+      ],
+      "history": { "lookbackDays": 20 }
+    },
+    {
+      "id": "EWJ",
+      "label": "EWJ",
+      "category": "EQUITIES",
+      "unit": "USD",
+      "ttlHours": 48,
+      "weekendRule": "forwardFill",
+      "value": { "type": "latest" },
+      "change": { "type": "pct", "window": "1D", "unit": "%" },
+      "sources": [
+        { "provider": "FINNHUB", "symbol": "EWJ", "parse": "finnhub.quote" },
+        { "provider": "FMP", "symbol": "EWJ", "parse": "fmp.quote" },
+        { "provider": "ALPHAVANTAGE", "symbol": "EWJ", "parse": "alphavantage.quote" }
+      ],
+      "history": { "lookbackDays": 20 }
+    },
+    {
+      "id": "HY_OAS_1M",
+      "label": "HY OAS 1M",
+      "category": "BREADTH",
+      "unit": "bp",
+      "ttlHours": 96,
+      "weekendRule": "forwardFill",
+      "value": { "type": "delta", "window": "30D" },
+      "change": { "type": "delta", "window": "1D", "unit": "bp" },
+      "sources": [
+        { "provider": "DERIVED", "inputs": ["HY_OAS"] }
+      ],
+      "history": { "lookbackDays": 40 }
+    },
+    {
+      "id": "CURVE_1M",
+      "label": "Curve 1M",
+      "category": "BREADTH",
+      "unit": "bp",
+      "ttlHours": 96,
+      "weekendRule": "forwardFill",
+      "value": { "type": "delta", "window": "30D" },
+      "change": { "type": "delta", "window": "1D", "unit": "bp" },
+      "sources": [
+        { "provider": "DERIVED", "inputs": ["CURVE10_2"] }
+      ],
+      "history": { "lookbackDays": 40 }
+    },
+    {
+      "id": "SPY_20D",
+      "label": "SPY 20D",
+      "category": "BREADTH",
+      "unit": "%",
+      "ttlHours": 48,
+      "weekendRule": "forwardFill",
+      "value": { "type": "return", "window": "20D" },
+      "change": { "type": "delta", "window": "1D", "unit": "%" },
+      "sources": [
+        { "provider": "FMP", "symbol": "SPY", "parse": "fmp.history" },
+        { "provider": "ALPHAVANTAGE", "symbol": "SPY", "parse": "alphavantage.history" }
+      ],
+      "history": { "lookbackDays": 210 }
+    },
+    {
+      "id": "SPY_200D",
+      "label": "SPY 200D",
+      "category": "BREADTH",
+      "unit": "%",
+      "ttlHours": 48,
+      "weekendRule": "forwardFill",
+      "value": { "type": "return", "window": "200D" },
+      "change": { "type": "delta", "window": "1D", "unit": "%" },
+      "sources": [
+        { "provider": "FMP", "symbol": "SPY", "parse": "fmp.history" },
+        { "provider": "ALPHAVANTAGE", "symbol": "SPY", "parse": "alphavantage.history" }
+      ],
+      "history": { "lookbackDays": 260 }
+    },
+    {
+      "id": "VOL_TERM",
+      "label": "Vol Term",
+      "category": "BREADTH",
+      "unit": "pts",
+      "ttlHours": 72,
+      "weekendRule": "forwardFill",
+      "value": { "type": "derived" },
+      "change": { "type": "delta", "window": "1D", "unit": "pts" },
+      "sources": [
+        { "provider": "DERIVED", "inputs": ["VIX3M", "VIXCLS"] }
+      ],
+      "history": { "lookbackDays": 10 }
+    },
+    {
+      "id": "BTCUSD",
+      "label": "BTC",
+      "category": "CRYPTO",
+      "unit": "USD",
+      "ttlHours": 12,
+      "weekendRule": "forwardFill",
+      "value": { "type": "latest" },
+      "change": { "type": "pct", "window": "1D", "unit": "%" },
+      "sources": [
+        { "provider": "COINGECKO", "symbol": "bitcoin", "parse": "coingecko.price" }
+      ],
+      "history": { "lookbackDays": 2 }
+    },
+    {
+      "id": "ETHUSD",
+      "label": "ETH",
+      "category": "CRYPTO",
+      "unit": "USD",
+      "ttlHours": 12,
+      "weekendRule": "forwardFill",
+      "value": { "type": "latest" },
+      "change": { "type": "pct", "window": "1D", "unit": "%" },
+      "sources": [
+        { "provider": "COINGECKO", "symbol": "ethereum", "parse": "coingecko.price" }
+      ],
+      "history": { "lookbackDays": 2 }
+    },
+    {
+      "id": "CRY_MCAP",
+      "label": "Crypto MC",
+      "category": "CRYPTO",
+      "unit": "USD",
+      "ttlHours": 12,
+      "weekendRule": "forwardFill",
+      "value": { "type": "latest" },
+      "change": { "type": "pct", "window": "1D", "unit": "%" },
+      "sources": [
+        { "provider": "COINGECKO", "symbol": "global", "parse": "coingecko.global" }
+      ],
+      "history": { "lookbackDays": 2 }
+    },
+    {
+      "id": "BTC_DOM",
+      "label": "BTC Dom",
+      "category": "CRYPTO",
+      "unit": "%",
+      "ttlHours": 12,
+      "weekendRule": "forwardFill",
+      "value": { "type": "latest" },
+      "change": { "type": "delta", "window": "1D", "unit": "pts" },
+      "sources": [
+        { "provider": "COINGECKO", "symbol": "global", "parse": "coingecko.global" }
+      ],
+      "history": { "lookbackDays": 2 }
+    },
+    {
+      "id": "STBL_MCAP",
+      "label": "Stbl MC",
+      "category": "CRYPTO",
+      "unit": "USD",
+      "ttlHours": 12,
+      "weekendRule": "forwardFill",
+      "value": { "type": "latest" },
+      "change": { "type": "pct", "window": "1D", "unit": "%" },
+      "sources": [
+        { "provider": "DEFILLAMA", "symbol": "stablecoins", "parse": "defillama.stable" }
+      ],
+      "history": { "lookbackDays": 2 }
+    },
+    {
+      "id": "CPI_YOY",
+      "label": "CPI YoY",
+      "category": "MACRO_VAL",
+      "unit": "%",
+      "ttlHours": 720,
+      "weekendRule": "forwardFill",
+      "value": { "type": "yoy", "window": "12M" },
+      "change": { "type": "delta", "window": "1M", "unit": "pts" },
+      "sources": [
+        { "provider": "FRED", "symbol": "CPIAUCSL", "parse": "fred.series" }
+      ],
+      "history": { "lookbackDays": 420 }
+    },
+    {
+      "id": "UNRATE",
+      "label": "Unrate",
+      "category": "MACRO_VAL",
+      "unit": "%",
+      "ttlHours": 720,
+      "weekendRule": "forwardFill",
+      "value": { "type": "latest" },
+      "change": { "type": "delta", "window": "1M", "unit": "pts" },
+      "sources": [
+        { "provider": "FRED", "symbol": "UNRATE", "parse": "fred.series" }
+      ],
+      "history": { "lookbackDays": 420 }
+    },
+    {
+      "id": "GDP_QOQ",
+      "label": "GDP QoQ",
+      "category": "MACRO_VAL",
+      "unit": "%",
+      "ttlHours": 720,
+      "weekendRule": "forwardFill",
+      "value": { "type": "qoq", "window": "1Q" },
+      "change": { "type": "delta", "window": "1Q", "unit": "pts" },
+      "sources": [
+        { "provider": "FRED", "symbol": "GDP", "parse": "fred.series" }
+      ],
+      "history": { "lookbackDays": 800 }
+    },
+    {
+      "id": "CAPE",
+      "label": "CAPE",
+      "category": "MACRO_VAL",
+      "unit": "ratio",
+      "ttlHours": 720,
+      "weekendRule": "forwardFill",
+      "value": { "type": "latest" },
+      "change": { "type": "delta", "window": "1M", "unit": "pts" },
+      "sources": [
+        { "provider": "LASTGOOD" }
+      ],
+      "history": { "lookbackDays": 800 }
+    },
+    {
+      "id": "BUFFETT",
+      "label": "Buffett",
+      "category": "MACRO_VAL",
+      "unit": "%",
+      "ttlHours": 720,
+      "weekendRule": "forwardFill",
+      "value": { "type": "derived" },
+      "change": { "type": "delta", "window": "1Q", "unit": "pts" },
+      "sources": [
+        { "provider": "FRED", "symbol": "WILSHIRE5000IND", "parse": "fred.series" },
+        { "provider": "FRED", "symbol": "GDP", "parse": "fred.series" }
+      ],
+      "history": { "lookbackDays": 800 }
+    }
+  ]
+}

@@ -1,0 +1,41 @@
+name: update-macro-hub
+
+on:
+  schedule:
+    - cron: "45 23 * * 1-5"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  macro-hub:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Run macro hub snapshot
+        env:
+          FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
+          EIA_API_KEY: ${{ secrets.EIA_API_KEY }}
+          FINNHUB_API_KEY: ${{ secrets.FINNHUB_API_KEY }}
+          FMP_API_KEY: ${{ secrets.FMP_API_KEY }}
+          ALPHAVANTAGE_API_KEY: ${{ secrets.ALPHAVANTAGE_API_KEY }}
+          COINGECKO_DEMO_KEY: ${{ secrets.COINGECKO_DEMO_KEY }}
+        run: node scripts/update-macro-hub.v3.mjs
+      - name: Commit snapshots if changed
+        run: |
+          git config user.name "macro-hub-bot"
+          git config user.email "macro-hub-bot@users.noreply.github.com"
+          git add public/data/snapshots/macro-hub.json public/data/snapshots/macro-hub.lastgood.json mirrors/macro-hub-runlog.json || true
+          if git diff --cached --quiet; then
+            echo "No macro hub changes"
+            exit 0
+          fi
+          git commit -m "chore(snapshot): macro-hub $(date -u +%F) [skip ci]"
+          git push

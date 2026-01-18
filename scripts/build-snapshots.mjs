@@ -344,6 +344,47 @@ function buildSnapshot({ blockId, raw, mirrorMeta }) {
   };
 }
 
+function buildRvciSnapshot(latest) {
+  const generatedAt = latest?.meta?.generatedAt || new Date().toISOString();
+  const asOf = latest?.meta?.dataAsOf || latest?.meta?.marketDate || generatedAt;
+  const ttlSeconds = 24 * 60 * 60;
+  const freshness = computeFreshness(asOf, ttlSeconds);
+  const schedule = computeSchedule("daily", ttlSeconds);
+  const meta = {
+    status: latest?.meta?.status || "OK",
+    reason: latest?.meta?.reason || latest?.meta?.status || "OK",
+    generatedAt,
+    asOf,
+    source: "rvci",
+    ttlSeconds,
+    stale: freshness.status !== "fresh",
+    freshness,
+    schedule,
+    runId: RUN_ID
+  };
+  const data = {
+    counts: latest?.data?.counts || {},
+    paths: latest?.data?.paths || {},
+    meta: latest?.meta || {},
+    error: latest?.error || null
+  };
+  const schema = validateSchema({ blockId: "rvci-engine", meta, data });
+  const integrity = validateIntegrity(meta);
+  meta.validation = {
+    schema: { ok: schema.ok, errors: schema.errors },
+    ranges: { ok: true, errors: [] },
+    integrity: { ok: integrity.ok, errors: integrity.errors }
+  };
+  return {
+    schemaVersion: "v3",
+    blockId: "rvci-engine",
+    generatedAt,
+    dataAt: asOf,
+    meta,
+    data
+  };
+}
+
 async function collectMirrorInputs() {
   const mirrors = {};
   const mirrorFiles = await listJsonFiles(MIRROR_ROOT);
@@ -599,6 +640,60 @@ async function main() {
     }
     await writeIfChanged(snapshotPath, snapshot, changedFiles);
     snapshotStatuses.push({ blockId, status: "OK", reason: snapshot.meta.reason || "OK" });
+  }
+
+  if (!mirrors["rvci-engine"]) {
+    const rvciLatestPath = path.join(PUBLIC_DATA, "rvci_latest.json");
+    if (fs.existsSync(rvciLatestPath)) {
+      const latest = loadJson(rvciLatestPath);
+      if (latest) {
+        const snapshot = buildRvciSnapshot(latest);
+        const valid = snapshot.meta.validation.schema.ok && snapshot.meta.validation.integrity.ok;
+        const snapshotPath = path.join(SNAPSHOT_DIR, "rvci-engine.json");
+        if (!valid) {
+          const existing = loadJson(snapshotPath);
+          if (existing?.dataAt) lastGoodAsOf["rvci-engine"] = existing.dataAt;
+          errors.push({
+            code: "VALIDATION_FAILED",
+            severity: "error",
+            provider: "rvci",
+            dataset: "rvci-engine",
+            message: snapshot.meta.validation,
+            firstSeenAt: snapshot.generatedAt,
+            lastSeenAt: snapshot.generatedAt,
+            runId: RUN_ID
+          });
+          snapshotStatuses.push({ blockId: "rvci-engine", status: "FAIL", reason: "VALIDATION_FAILED" });
+        } else {
+          await writeIfChanged(snapshotPath, snapshot, changedFiles);
+          snapshotStatuses.push({ blockId: "rvci-engine", status: "OK", reason: snapshot.meta.reason || "OK" });
+        }
+      } else {
+        errors.push({
+          code: "RVCI_LATEST_INVALID",
+          severity: "error",
+          provider: "rvci",
+          dataset: "rvci-engine",
+          message: "rvci_latest.json invalid",
+          firstSeenAt: RUN_ID,
+          lastSeenAt: RUN_ID,
+          runId: RUN_ID
+        });
+        snapshotStatuses.push({ blockId: "rvci-engine", status: "FAIL", reason: "INVALID_INPUT" });
+      }
+    } else {
+      errors.push({
+        code: "RVCI_LATEST_MISSING",
+        severity: "error",
+        provider: "rvci",
+        dataset: "rvci-engine",
+        message: "rvci_latest.json missing",
+        firstSeenAt: RUN_ID,
+        lastSeenAt: RUN_ID,
+        runId: RUN_ID
+      });
+      snapshotStatuses.push({ blockId: "rvci-engine", status: "FAIL", reason: "MISSING_INPUT" });
+    }
   }
 
   if (fs.existsSync(MANIFEST_MIRROR)) {

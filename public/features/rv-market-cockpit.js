@@ -1,52 +1,47 @@
-import { fetchJSON, getBindingHint } from "./utils/api.js";
 import { getOrFetch } from "./utils/store.js";
-import { resolveWithShadow } from "./utils/resilience.js";
 import { rvSetText } from "./rv-dom.js";
 
-const LAYOUT_STORAGE_KEY = "rv-market-snapshot-layout";
-const DEFAULT_LAYOUT = "A";
-
 const HERO_LABEL_TO_ID = {
-  "RiskRegime": "risk.regime",
-  "VIX Close": "risk.vix",
-  "VIX3M Close": "risk.vix3m",
-  "VIX/VIX3M": "risk.vix_ratio",
-  "Curve10-2": "rates.yield_curve",
-  "US2Y Yield": "rates.us2y",
-  "US10Y Yield": "rates.us10y",
-  "US30Y Yield": "rates.us30y",
-  "SOFR": "rates.sofr",
-  "EFFR": "rates.effr",
-  "HY OAS": "credit.hy_oas",
-  "IG OAS": "credit.ig_oas",
-  "BBB OAS": "credit.bbb_oas",
-  "BAA Yield": "credit.baa",
-  "StressSprd": "credit.stress_spread",
-  "USD Broad": "fx.dxy",
-  "EURUSD": "fx.eurusd",
-  "USDJPY": "fx.usdjpy",
-  "GBPUSD": "fx.gbpusd",
-  "USDCNY": "fx.usdcny",
-  "Gold USD": "comm.gold",
-  "WTI Oil": "comm.wti",
-  "Brent Oil": "comm.brent",
-  "Copper": "comm.copper",
-  "NatGas": "comm.natgas",
-  "SPX Close": "eq.sp500",
-  "NDX Close": "eq.nasdaq",
-  "DAX Close": "eq.dax",
-  "NikkeiCls": "eq.nikkei",
-  "R2K Close": "eq.russell2000",
-  "BTC Price": "crypto.btc_price",
-  "ETH Price": "crypto.eth_price",
-  "Crypto MC": "crypto.market_cap",
-  "BTC Dom": "crypto.btc_dominance",
-  "DeFi TVL": "crypto.defi_tvl",
-  "US CPI YoY": "macro.us_cpi",
-  "US Unemp": "macro.us_unemployment",
-  "US GDP": "macro.us_gdp",
-  "BuffettInd": "val.buffett_indicator",
-  "CAPE": "val.cape"
+  "RiskRegime": "RISKREG",
+  "VIX Close": "VIXCLS",
+  "VIX3M Close": "VIX3M",
+  "VIX/VIX3M": "VIXRATIO",
+  "Curve10-2": "CURVE10_2",
+  "US2Y Yield": "US2Y",
+  "US10Y Yield": "US10Y",
+  "US30Y Yield": "US30Y",
+  "SOFR": "SOFR",
+  "EFFR": "EFFR",
+  "HY OAS": "HY_OAS",
+  "IG OAS": "IG_OAS",
+  "BBB OAS": "BBB_OAS",
+  "BAA Yield": "BAA_YLD",
+  "StressSprd": "STRESS",
+  "USD Broad": "USD_BRD",
+  "EURUSD": "EURUSD",
+  "USDJPY": "USDJPY",
+  "Gold USD": "GOLD",
+  "WTI Oil": "WTI",
+  "SPY": "SPY",
+  "QQQ": "QQQ",
+  "IWM": "IWM",
+  "EWG": "EWG",
+  "EWJ": "EWJ",
+  "HY OAS 1M": "HY_OAS_1M",
+  "Curve 1M": "CURVE_1M",
+  "SPY 20D": "SPY_20D",
+  "SPY 200D": "SPY_200D",
+  "Vol Term": "VOL_TERM",
+  "BTC Price": "BTCUSD",
+  "ETH Price": "ETHUSD",
+  "Crypto MC": "CRY_MCAP",
+  "BTC Dom": "BTC_DOM",
+  "Stbl MC": "STBL_MCAP",
+  "US CPI YoY": "CPI_YOY",
+  "US Unemp": "UNRATE",
+  "GDP QoQ": "GDP_QOQ",
+  "BuffettInd": "BUFFETT",
+  "CAPE": "CAPE"
 };
 
 const HERO_GROUPS = [
@@ -63,24 +58,24 @@ const HERO_GROUPS = [
     labels: ["HY OAS", "IG OAS", "BBB OAS", "BAA Yield", "StressSprd"]
   },
   {
-    title: "USD & FX",
-    labels: ["USD Broad", "EURUSD", "USDJPY", "GBPUSD", "USDCNY"]
-  },
-  {
-    title: "COMMOD",
-    labels: ["Gold USD", "WTI Oil", "Brent Oil", "Copper", "NatGas"]
+    title: "FX & CMDS",
+    labels: ["USD Broad", "EURUSD", "USDJPY", "Gold USD", "WTI Oil"]
   },
   {
     title: "EQUITIES",
-    labels: ["SPX Close", "NDX Close", "DAX Close", "NikkeiCls", "R2K Close"]
+    labels: ["SPY", "QQQ", "IWM", "EWG", "EWJ"]
+  },
+  {
+    title: "BREADTH",
+    labels: ["HY OAS 1M", "Curve 1M", "SPY 20D", "SPY 200D", "Vol Term"]
   },
   {
     title: "CRYPTO",
-    labels: ["BTC Price", "ETH Price", "Crypto MC", "BTC Dom", "DeFi TVL"]
+    labels: ["BTC Price", "ETH Price", "Crypto MC", "BTC Dom", "Stbl MC"]
   },
   {
     title: "MACRO & VAL",
-    labels: ["US CPI YoY", "US Unemp", "US GDP", "BuffettInd", "CAPE"]
+    labels: ["US CPI YoY", "US Unemp", "GDP QoQ", "BuffettInd", "CAPE"]
   }
 ];
 
@@ -103,218 +98,153 @@ const HERO_LABEL_INFO = {
   "USD Broad": "Broad trade-weighted USD index. Strong USD tightens global financial conditions.",
   "EURUSD": "Euro vs USD exchange rate. Impacts global liquidity and risk sentiment.",
   "USDJPY": "USD vs JPY rate. Often reflects risk appetite and relative rate differentials.",
-  "GBPUSD": "Pound vs USD rate. Sensitive to UK macro and global risk trends.",
-  "USDCNY": "USD vs China yuan. Signals China policy stance and global trade/slowdown concerns.",
+  "SPY": "SPY ETF price. Proxy for the S&P 500 equity benchmark.",
+  "QQQ": "QQQ ETF price. Proxy for the Nasdaq 100 growth index.",
+  "IWM": "IWM ETF price. Proxy for US small-cap equities.",
+  "EWG": "EWG ETF price. Proxy for German equities.",
+  "EWJ": "EWJ ETF price. Proxy for Japanese equities.",
+  "HY OAS 1M": "30-day change in HY OAS. Rising values signal widening credit stress.",
+  "Curve 1M": "30-day change in the 10Y-2Y curve. Big moves flag shifts in rate expectations.",
+  "SPY 20D": "20-day SPY return. Short-term trend proxy for equity momentum.",
+  "SPY 200D": "200-day SPY return. Long-horizon trend proxy for equities.",
+  "Vol Term": "VIX3M minus VIX. Positive values imply calmer near-term volatility.",
   "Gold USD": "Gold price in USD. Hedge vs real-rate drops, stress, and USD debasement narratives.",
   "WTI Oil": "WTI crude price. Key input for inflation and growth expectations.",
-  "Brent Oil": "Brent crude benchmark. Global oil pricing; useful vs WTI for international conditions.",
-  "Copper": "Industrial copper price. Often used as a growth proxy ('Dr. Copper').",
-  "NatGas": "US natural gas price. Energy and industrial cycle signal; can affect inflation locally.",
-  "SPX Close": "S&P 500 close level. Core risk asset benchmark and sentiment proxy.",
-  "NDX Close": "Nasdaq 100 close level. Growth/tech beta; sensitive to rates and liquidity.",
-  "DAX Close": "German DAX close level. EU equity sentiment proxy and global cyclical exposure.",
-  "NikkeiCls": "Nikkei 225 close level. Japan equity proxy; sensitive to yen and global cycle.",
-  "R2K Close": "Russell 2000 close level. Small-cap risk and domestic growth sensitivity.",
   "BTC Price": "Bitcoin spot price. High-beta liquidity proxy; often leads risk appetite shifts.",
   "ETH Price": "Ethereum spot price. Crypto risk-on proxy with ecosystem/activity sensitivity.",
   "Crypto MC": "Total crypto market cap. Broad measure of crypto risk appetite.",
   "BTC Dom": "Bitcoin dominance share. Rising dominance can signal flight to quality within crypto.",
-  "DeFi TVL": "Total value locked in DeFi. Activity/liquidity gauge for on-chain risk appetite.",
+  "Stbl MC": "Stablecoin market cap proxy. Tracks on-chain liquidity availability.",
   "US CPI YoY": "Year-over-year consumer inflation. Drives rate expectations and real yield regime.",
   "US Unemp": "US unemployment rate. Key recession/risk signal and consumer health proxy.",
-  "US GDP": "US GDP growth/level series. Macro baseline for earnings and policy.",
+  "GDP QoQ": "Quarterly US GDP growth. Signals the macro backdrop for earnings and policy.",
   "BuffettInd": "Market cap to GDP proxy. Rough valuation regime gauge versus economic size.",
   "CAPE": "Cyclically adjusted P/E. Long-horizon valuation indicator; high CAPE implies lower forward returns on average."
 };
 
-const DELTA_FIELD_CANDIDATES = [
-  "changePct",
-  "pctChange",
-  "deltaPct",
-  "change_percent",
-  "dayChangePct",
-  "changePercent"
-];
+const EMPTY_VALUE = "—";
+const COLOR_MUTED = "var(--rv-text-muted, #64748b)";
+const COLOR_POSITIVE = "var(--rv-success, #16a34a)";
+const COLOR_NEGATIVE = "var(--rv-danger, #dc2626)";
 
-const PREV_VALUE_FIELDS = ["prevClose", "prev", "prevValue", "previous", "prior", "last"];
-
-let heroMetricsAwait = false;
 let heroTooltipKey = null;
 let heroTooltipRoot = null;
 let heroTooltipHandlersBound = false;
 let heroDebugLogged = false;
 
-function getLayout() {
-  try {
-    const value = window?.localStorage?.getItem(LAYOUT_STORAGE_KEY) || "";
-    return value === "A" || value === "B" || value === "C" ? value : DEFAULT_LAYOUT;
-  } catch {
-    return DEFAULT_LAYOUT;
-  }
-}
-
-function setLayout(value) {
-  try {
-    window?.localStorage?.setItem(LAYOUT_STORAGE_KEY, value);
-  } catch {
-    // ignore
-  }
-}
-
 function formatNumber(value, options = {}) {
-  if (value === null || value === undefined || Number.isNaN(value)) return "N/A";
+  if (!Number.isFinite(value)) return EMPTY_VALUE;
   return new Intl.NumberFormat("en-US", options).format(value);
 }
 
-function formatPercent(value, digits = 2) {
-  if (value === null || value === undefined || Number.isNaN(value)) return "N/A";
-  return `${formatNumber(value, { maximumFractionDigits: digits })}%`;
-}
-
-function formatSignedPercent(value, digits = 2) {
-  if (value === null || value === undefined || Number.isNaN(value)) return "N/A";
-  const sign = value > 0 ? "+" : "";
-  return `${sign}${formatNumber(value, { maximumFractionDigits: digits })}%`;
-}
-
-function formatMetricValue(metric) {
-  if (!metric) return "N/A";
-  const display = metric.display ?? metric.valueFormatted;
-  if (display !== null && display !== undefined && display !== "") {
-    if (typeof display === "string" || typeof display === "number") {
-      return String(display);
-    }
-    if (typeof display === "boolean") return display ? "Yes" : "No";
-    return "N/A";
-  }
-  if (metric.valueType === "label" || metric.valueType === "dataset") {
-    if (metric.value === null || metric.value === undefined) return "N/A";
-    if (typeof metric.value === "string" || typeof metric.value === "number") {
-      return metric.value || "N/A";
-    }
-    return "N/A";
-  }
-  if (metric.value === null || metric.value === undefined || metric.value === "") return "N/A";
-  if (typeof metric.value === "object") return "N/A";
-  if (metric.value !== null && metric.value !== undefined && metric.value !== "") {
-    if (typeof metric.value === "string" && Number.isNaN(Number(metric.value))) {
-      return metric.value;
-    }
-  }
-  const raw = Number(metric.value);
-  if (Number.isNaN(raw)) return "N/A";
-  const unit = metric.unit;
-  if (unit === "%") return formatPercent(raw, 2);
-  if (unit === "bp") return `${Math.round(raw)} bp`;
-  if (unit === "index") return formatNumber(raw, { maximumFractionDigits: 2 });
-  if (unit === "count") return formatNumber(raw, { maximumFractionDigits: 0 });
-  if (unit === "ratio") return raw.toFixed(2);
-  if (unit === "usd") {
-    const abs = Math.abs(raw);
-    if (abs >= 1_000_000_000) return `$${(raw / 1_000_000_000).toFixed(2)}B`;
-    if (abs >= 1_000_000) return `$${(raw / 1_000_000).toFixed(2)}M`;
-    if (abs >= 1_000) return `$${(raw / 1_000).toFixed(2)}K`;
-    return `$${raw.toFixed(2)}`;
-  }
-  if (unit === "usd/oz" || unit === "usd/bbl" || unit === "usd/mt") {
-    return `$${raw.toFixed(2)}`;
-  }
-  if (unit === "gwei") return `${raw.toFixed(1)} gwei`;
-  return `${raw}`;
-}
-
-function readNumber(value) {
+function toNumber(value) {
   if (value === null || value === undefined) return null;
   const num = typeof value === "string" ? Number(value) : value;
   return Number.isFinite(num) ? num : null;
 }
 
-function findDeltaPercent(metric) {
-  if (!metric) return null;
-  for (const key of DELTA_FIELD_CANDIDATES) {
-    const candidate = readNumber(metric[key]);
-    if (candidate !== null) return candidate;
+function formatMetricValue(metric) {
+  if (!metric) return EMPTY_VALUE;
+  const rawValue = metric.value;
+  if (rawValue === null || rawValue === undefined) return EMPTY_VALUE;
+  if (typeof rawValue === "string") {
+    const trimmed = rawValue.trim();
+    return trimmed ? trimmed : EMPTY_VALUE;
   }
-  const current =
-    readNumber(metric.value) ??
-    readNumber(metric.currentClose) ??
-    readNumber(metric.close);
-  if (current === null) return null;
-  let prev = null;
-  for (const key of PREV_VALUE_FIELDS) {
-    prev = readNumber(metric[key]);
-    if (prev !== null) break;
+  if (typeof rawValue !== "number" || !Number.isFinite(rawValue)) return EMPTY_VALUE;
+  const unit = String(metric.unit || "").toLowerCase();
+  if (unit === "%") return `${formatNumber(rawValue, { maximumFractionDigits: 2 })}%`;
+  if (unit === "bp") return `${Math.round(rawValue)} bp`;
+  if (unit === "score") return formatNumber(rawValue, { maximumFractionDigits: 0 });
+  if (unit === "ratio") return formatNumber(rawValue, { maximumFractionDigits: 2 });
+  if (unit === "index") return formatNumber(rawValue, { maximumFractionDigits: 2 });
+  if (unit === "pts") return formatNumber(rawValue, { maximumFractionDigits: 2 });
+  if (unit === "usd") {
+    const abs = Math.abs(rawValue);
+    if (abs >= 1_000_000_000_000) return `$${(rawValue / 1_000_000_000_000).toFixed(2)}T`;
+    if (abs >= 1_000_000_000) return `$${(rawValue / 1_000_000_000).toFixed(2)}B`;
+    if (abs >= 1_000_000) return `$${(rawValue / 1_000_000).toFixed(2)}M`;
+    if (abs >= 1_000) return `$${(rawValue / 1_000).toFixed(2)}K`;
+    return `$${rawValue.toFixed(2)}`;
   }
-  if (prev === null || prev === 0) return null;
-  return ((current - prev) / prev) * 100;
+  return formatNumber(rawValue, { maximumFractionDigits: 2 });
 }
 
-function formatDeltaPercent(metric) {
-  const delta = findDeltaPercent(metric);
-  if (!Number.isFinite(delta)) {
-    return { text: "N/A", color: "var(--rv-text-muted, #64748b)" };
+function formatMetricChange(change, changeUnit) {
+  if (!Number.isFinite(change)) {
+    return { text: EMPTY_VALUE, color: COLOR_MUTED };
   }
-  const rounded = Math.round(delta * 10) / 10;
-  const sign = rounded >= 0 ? "+" : "";
-  const text = `${sign}${rounded.toFixed(1)}%`;
-  const color =
-    rounded > 0
-      ? "var(--rv-success, #16a34a)"
-      : rounded < 0
-        ? "var(--rv-danger, #dc2626)"
-        : "var(--rv-text-muted, #64748b)";
+  const unit = String(changeUnit || "").toLowerCase();
+  let digits = 2;
+  if (unit === "bp") digits = 0;
+  else if (unit === "%") digits = 1;
+  else if (unit === "pts") digits = 2;
+  const rounded =
+    digits === 0 ? Math.round(change) : Math.round(change * Math.pow(10, digits)) / Math.pow(10, digits);
+  const sign = rounded > 0 ? "+" : "";
+  const formatted = formatNumber(rounded, {
+    maximumFractionDigits: digits,
+    minimumFractionDigits: digits
+  });
+  if (formatted === EMPTY_VALUE) return { text: EMPTY_VALUE, color: COLOR_MUTED };
+  let suffix = "";
+  if (unit === "%") suffix = "%";
+  else if (unit === "bp") suffix = " bp";
+  else if (unit === "pts") suffix = " pts";
+  else if (unit) suffix = ` ${unit}`;
+  const text = `${sign}${formatted}${suffix}`;
+  const color = rounded > 0 ? COLOR_POSITIVE : rounded < 0 ? COLOR_NEGATIVE : COLOR_MUTED;
   return { text, color };
 }
 
-function getMetricsEnvelope() {
-  if (typeof window === "undefined") return null;
-  return window.__RV_METRICS_ENVELOPE || null;
+function classifyRiskRegime(score) {
+  if (!Number.isFinite(score)) return EMPTY_VALUE;
+  if (score >= 65) return "Risk-off";
+  if (score <= 35) return "Risk-on";
+  return "Neutral";
 }
 
-function buildHeroMetricsModel(envelope) {
-  const metricsById = envelope?.data?.metricsById || {};
+function buildHeroMetricsModel(snapshot) {
+  const metricsById = snapshot?.data || {};
   const missingIds = [];
   const groups = HERO_GROUPS.map((group) => {
     const metrics = group.labels.map((label) => {
       const id = HERO_LABEL_TO_ID[label];
       const metric = id ? metricsById[id] || null : null;
-      const value = formatMetricValue(metric);
-      const sub = metric?.source || metric?.provider || metric?.asOf || "N/A";
-      const delta = formatDeltaPercent(metric);
+      const valueText = formatMetricValue(metric);
+      const change = formatMetricChange(metric?.change, metric?.changeUnit);
       const info = HERO_LABEL_INFO[label] || "Explanation unavailable.";
-      const missing = !metric || value === "N/A";
+      const missing = !metric || metric.value === null || metric.value === undefined;
       if (missing) missingIds.push(id || label);
       return {
         id: id || label,
         label,
-        value,
-        sub,
-        deltaText: delta.text,
-        deltaColor: delta.color,
+        valueText,
+        changeText: change.text,
+        changeColor: change.color,
         info,
         missing,
+        stale: Boolean(metric?.stale),
+        staleReason: metric?.staleReason || null,
         group: group.title
       };
     });
     return { title: group.title, metrics };
   });
-  const metaMissingIds = Array.isArray(envelope?.meta?.missingMetricIds)
-    ? envelope.meta.missingMetricIds
-    : [];
   const totalCount = 40;
+  const counts = snapshot?.meta?.counts || {};
   return {
     groups,
     flat: groups.flatMap((group) => group.metrics),
     missingIds,
-    metaMissingIds,
-    totalCount
+    totalCount,
+    counts
   };
 }
 
 
 function renderHeroAudit(model, fetchCount) {
   const missingLine = model.missingIds.length ? model.missingIds.join(", ") : "none";
-  const metaMissing = model.metaMissingIds.length ? model.metaMissingIds.join(", ") : "none";
   const rows = model.flat
     .map(
       (metric) => `
@@ -329,7 +259,6 @@ function renderHeroAudit(model, fetchCount) {
   return `
     <div class="rv-native-note">
       <strong>Hero Audit</strong><br/>
-      missingMetricIds (meta): ${metaMissing}<br/>
       missingMetricIds (hero): ${missingLine}<br/>
       metricsFetchCount: ${fetchCount}
     </div>
@@ -354,12 +283,12 @@ function renderHeroSections(model, mode) {
               (metric) => `
           <tr>
             <td class="rv-cell-label" style="word-break: break-word;overflow:hidden;text-overflow:ellipsis;">${metric.label}</td>
-            <td class="rv-cell-num" style="text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${metric.value}</td>
+            <td class="rv-cell-num" style="text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${metric.valueText}</td>
           </tr>`
             )
             .join("");
           const cards = group.metrics
-            .map((metric) => metricCard(metric.label, metric.value, metric.sub))
+            .map((metric) => metricCard(metric.label, metric.valueText, ""))
             .join("");
           const content = mode === "table"
             ? `
@@ -391,15 +320,19 @@ function renderHeroSections(model, mode) {
 function renderMetricRow(metric) {
   const labelText = metric.label;
   const infoText = metric.info || "Explanation unavailable.";
+  const staleDot = metric.stale
+    ? `<span class="rv-gh-stale" title="${metric.staleReason || "stale"}" style="display:inline-block;width:6px;height:6px;border-radius:999px;background:var(--rv-warning, #f59e0b);"></span>`
+    : "";
   return `
           <div class="rv-gh-row" data-label="${labelText}" style="display:grid;grid-template-columns:1fr auto auto;column-gap:10px;align-items:center;position:relative;">
             <div class="rv-gh-label" title="${labelText}" style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:flex;align-items:center;gap:6px;">
               <span class="rv-gh-label-text" style="min-width:0;flex:1 1 auto;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${labelText}</span>
+              ${staleDot}
               <button type="button" class="rv-gh-info" aria-label="Info: ${labelText}" style="display:inline-flex;align-items:center;justify-content:center;width:14px;height:14px;border-radius:50%;border:1px solid rgba(148,163,184,0.5);background:transparent;color:var(--rv-text-muted);font-size:10px;line-height:1;padding:0;cursor:pointer;flex:0 0 auto;">i</button>
               <span class="rv-gh-tooltip" role="tooltip" style="position:absolute;z-index:20;min-width:220px;max-width:260px;background:#000;color:#f8fafc;padding:8px 10px;border-radius:8px;font-size:11px;line-height:1.35;box-shadow:0 8px 20px rgba(0,0,0,0.35);top:100%;left:0;margin-top:6px;display:none;">${infoText}</span>
             </div>
-            <div class="rv-gh-value" title="${metric.value}" style="text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${metric.value}</div>
-            <div class="rv-gh-delta" title="${metric.deltaText}" style="text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:${metric.deltaColor};">${metric.deltaText}</div>
+            <div class="rv-gh-value" title="${metric.valueText}" style="text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${metric.valueText}</div>
+            <div class="rv-gh-delta" title="${metric.changeText}" style="text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:${metric.changeColor};">${metric.changeText}</div>
           </div>`;
 }
 
@@ -427,7 +360,7 @@ function renderHeroSectionsB(model) {
 }
 
 
-function setHeroTitle(root, { regime, vix, fngStocks } = {}) {
+function setHeroTitle(root, { driversLabel, scoreText, vixText, stocksText } = {}) {
   const block = root?.closest?.('[data-rv-feature="rv-market-cockpit"]');
   const title = block?.querySelector?.('.rv-native-header h2');
   if (!title) return;
@@ -435,10 +368,6 @@ function setHeroTitle(root, { regime, vix, fngStocks } = {}) {
   if (textNode) {
     textNode.textContent = "Global Macro Hub ";
   }
-  const driversLabel = regime?.label || "Neutral";
-  const score = Number.isFinite(regime?.score) ? formatNumber(regime.score, { maximumFractionDigits: 0 }) : "N/A";
-  const vixState = vix?.note || (Number.isFinite(vix?.value) ? `VIX ${formatNumber(vix.value, { maximumFractionDigits: 2 })}` : "VIX N/A");
-  const stocksState = fngStocks?.label || (Number.isFinite(fngStocks?.value) ? `Stocks ${formatNumber(fngStocks.value)}` : "Stocks N/A");
   let strip = title.querySelector('.rv-cockpit-status-strip');
   if (!strip) {
     strip = document.createElement('span');
@@ -454,7 +383,11 @@ function setHeroTitle(root, { regime, vix, fngStocks } = {}) {
       title.appendChild(strip);
     }
   }
-  strip.textContent = `Drivers: ${driversLabel} | Score: ${score} | VIX: ${vixState} | Stocks: ${stocksState}`;
+  const drivers = driversLabel || EMPTY_VALUE;
+  const score = scoreText || EMPTY_VALUE;
+  const vix = vixText || EMPTY_VALUE;
+  const stocks = stocksText || EMPTY_VALUE;
+  strip.textContent = `Drivers: ${drivers} | Score: ${score} | VIX: ${vix} | Stocks: ${stocks}`;
 }
 
 function setHeroHeaderMeta(root, text) {
@@ -578,7 +511,7 @@ function renderLayoutA({ regime, drivers, vix, fng, fngStocks, btc, dxy, yields,
   `;
 }
 
-function renderLayoutB({ regime, drivers, vix, fng, fngStocks, news, btc, dxy, yields, proxies, heroMetrics }) {
+function renderLayoutB({ heroMetrics }) {
   const sections = renderHeroSectionsB(heroMetrics);
 
   return `
@@ -603,123 +536,94 @@ function renderLayoutC({ regime, drivers, vix, fng, fngStocks, btc, dxy, yields,
 }
 
 function render(root, payload, logger, featureId) {
-  const resolved = resolveWithShadow(featureId, payload, {
-    logger,
-    isMissing: (value) => !value?.ok || !value?.data,
-    reason: "STALE_FALLBACK"
-  });
-  const data = resolved?.data || {};
-  const regime = data.regime || {};
-  setHeroTitle(root, { regime, vix: data.vix || {}, fngStocks: data.fngStocks || {} });
-  const drivers = Array.isArray(regime.drivers) ? regime.drivers : [];
-
-  if (!resolved?.ok) {
-    const errorMessage = resolved?.error?.message || "API error";
-    const errorCode = resolved?.error?.code || "";
-    const upstreamStatus = resolved?.upstream?.status;
-    const upstreamSnippet = resolved?.upstream?.snippet || "";
-    const cacheLayer = resolved?.cache?.layer || "none";
-    const detailLine = [
-      errorCode,
-      upstreamStatus ? `Upstream ${upstreamStatus}` : "",
-      `Cache ${cacheLayer}`
-    ]
-      .filter(Boolean)
-      .join(" · ");
-    const fixHint = errorCode === "BINDING_MISSING" ? getBindingHint(resolved) : "";
+  const snapshot = payload?.snapshot || payload?.data || null;
+  if (!payload?.ok || !snapshot || !snapshot.data) {
+    const errorMessage = payload?.error?.message || "Snapshot unavailable";
+    const errorCode = payload?.error?.code || "NO_DATA";
     root.innerHTML = `
       <div class="rv-native-error">
-        Market Cockpit konnte nicht geladen werden.<br />
+        Global Macro Hub konnte nicht geladen werden.<br />
         <span>${errorMessage}</span>
-        ${detailLine ? `<div class="rv-native-note">${detailLine}</div>` : ""}
-        ${fixHint ? `<div class="rv-native-note">${fixHint}</div>` : ""}
-        ${upstreamSnippet ? `<pre class="rv-native-stack">${upstreamSnippet}</pre>` : ""}
       </div>
     `;
-    logger?.setStatus("FAIL", errorCode || "API error");
+    logger?.setStatus("FAIL", errorCode);
     logger?.setMeta({
-      updatedAt: resolved?.ts,
-      source: data?.source || "--",
-      isStale: resolved?.isStale,
-      staleAgeMs: resolved?.staleAgeMs
-    });
-    logger?.info("response_meta", {
-      cache: resolved?.cache || {},
-      upstreamStatus: upstreamStatus ?? null
+      updatedAt: payload?.ts || null,
+      source: "macro-hub",
+      isStale: true,
+      staleAgeMs: null
     });
     return;
   }
 
-  const vix = data.vix || {};
-  const fng = data.fngCrypto || {};
-  const fngStocks = data.fngStocks || {};
-  const news = data.newsSentiment || {};
-  const proxies = data.proxies || {};
-  const btc = data.btc || {};
-  const dxy = data.dxy || {};
-  const yields = data.yields || {};
-  const yieldValues = yields.values || {};
-  const macro = data.macroSummary || {};
-  const macroRates = Array.isArray(macro.rates) ? macro.rates : [];
-  const macroFx = Array.isArray(macro.fx) ? macro.fx : [];
-  const macroCpi = Array.isArray(macro.cpi) ? macro.cpi : [];
-  const layout = "B";
-  const metricsEnvelope = getMetricsEnvelope();
-  const heroMetrics = buildHeroMetricsModel(metricsEnvelope);
-  const auditEnabled = typeof window !== "undefined" && new URLSearchParams(window.location.search).get("heroAudit") === "1";
-  const debugEnabled = auditEnabled || (typeof window !== "undefined" && new URLSearchParams(window.location.search).get("debug") === "1");
-  const auditHtml = auditEnabled
-    ? renderHeroAudit(heroMetrics, window.__RV_METRICS_FETCH_COUNT || 0)
-    : "";
-  const metricsStatus = heroMetrics.missingIds.length
-    ? `PARTIAL (${heroMetrics.totalCount - heroMetrics.missingIds.length}/${heroMetrics.totalCount})`
-    : "OK";
-  const headerStatus = `Updated: ${new Date(data.updatedAt || resolved.ts).toLocaleTimeString()} · Freshness: ${
-    resolved?.freshness || "unknown"
-  } · Metrics: ${metricsStatus}`;
+  const heroMetrics = buildHeroMetricsModel(snapshot);
+  const auditEnabled =
+    typeof window !== "undefined" &&
+    new URLSearchParams(window.location.search).get("heroAudit") === "1";
+  const debugEnabled =
+    auditEnabled ||
+    (typeof window !== "undefined" &&
+      new URLSearchParams(window.location.search).get("debug") === "1");
+  const auditHtml = auditEnabled ? renderHeroAudit(heroMetrics, 0) : "";
 
-  if (!metricsEnvelope && typeof window !== "undefined" && window.__RV_METRICS_PROMISE && !heroMetricsAwait) {
-    heroMetricsAwait = true;
-    window.__RV_METRICS_PROMISE
-      .then((env) => {
-        window.__RV_METRICS_ENVELOPE = env;
-        heroMetricsAwait = false;
-        render(root, payload, logger, featureId);
-      })
-      .catch(() => {
-        heroMetricsAwait = false;
-      });
-  }
+  const counts = heroMetrics.counts || {};
+  const freshCount = Number.isFinite(counts.freshOrDerivedOk)
+    ? counts.freshOrDerivedOk
+    : heroMetrics.totalCount - heroMetrics.missingIds.length;
+  const metricsStatus =
+    freshCount >= heroMetrics.totalCount
+      ? "OK"
+      : `PARTIAL (${freshCount}/${heroMetrics.totalCount})`;
+  const asOfDate = snapshot?.meta?.asOfDate || snapshot?.meta?.asOf || EMPTY_VALUE;
+  const freshness = snapshot?.meta?.freshness?.status || "unknown";
+  const headerStatus = `Data as of ${asOfDate} · Freshness: ${freshness} · Metrics: ${metricsStatus}`;
+
+  const riskScore = toNumber(snapshot?.data?.RISKREG?.value);
+  const driversLabel = classifyRiskRegime(riskScore);
+  const scoreText = Number.isFinite(riskScore)
+    ? formatNumber(riskScore, { maximumFractionDigits: 0 })
+    : EMPTY_VALUE;
+  const vixValue = toNumber(snapshot?.data?.VIXCLS?.value);
+  const vixText = Number.isFinite(vixValue)
+    ? formatNumber(vixValue, { maximumFractionDigits: 2 })
+    : EMPTY_VALUE;
+  const spyMetric = snapshot?.data?.SPY || null;
+  const stocksChange = toNumber(spyMetric?.change);
+  const stocksChangeText = formatMetricChange(stocksChange, spyMetric?.changeUnit || "%").text;
+  const stocksValueText = formatMetricValue(spyMetric);
+  const stocksText =
+    stocksChangeText !== EMPTY_VALUE
+      ? `SPY ${stocksChangeText}`
+      : stocksValueText !== EMPTY_VALUE
+        ? `SPY ${stocksValueText}`
+        : EMPTY_VALUE;
+
+  setHeroTitle(root, { driversLabel, scoreText, vixText, stocksText });
 
   root.innerHTML = `
-        ${
-      layout === "B"
-        ? renderLayoutB({ regime, drivers, vix, fng, fngStocks, news, btc, dxy, yields, proxies, heroMetrics })
-        : layout === "C"
-          ? renderLayoutC({ regime, drivers, vix, fng, fngStocks, btc, dxy, yields, heroMetrics })
-          : renderLayoutA({ regime, drivers, vix, fng, fngStocks, btc, dxy, yields, heroMetrics })
-    }
-        ${auditHtml}
+    ${renderLayoutB({ heroMetrics })}
+    ${auditHtml}
   `;
-  if (layout === "B") {
-    const body = root?.closest?.('[data-rv-feature="rv-market-cockpit"]')?.querySelector?.(".rv-native-body");
-    if (body) {
-      body.style.border = "none";
-      body.style.boxShadow = "none";
-      body.style.background = "transparent";
-      body.style.padding = "0";
-      body.classList.remove("rv-card");
-    }
-    root.style.border = "none";
-    root.style.boxShadow = "none";
-    setHeroHeaderMeta(root, headerStatus);
-    attachHeroTooltips(root);
-    if (debugEnabled && !heroDebugLogged) {
-      heroDebugLogged = true;
-      console.info("[Global Macro Hub] render path: public/features/rv-market-cockpit.js");
-    }
+
+  const body = root?.closest?.('[data-rv-feature="rv-market-cockpit"]')?.querySelector?.(".rv-native-body");
+  if (body) {
+    body.style.border = "none";
+    body.style.boxShadow = "none";
+    body.style.background = "transparent";
+    body.style.padding = "0";
+    body.classList.remove("rv-card");
   }
-  if (auditEnabled && layout === "B") {
+  root.style.border = "none";
+  root.style.boxShadow = "none";
+  setHeroHeaderMeta(root, headerStatus);
+  attachHeroTooltips(root);
+
+  if (debugEnabled && !heroDebugLogged) {
+    heroDebugLogged = true;
+    console.info("[Global Macro Hub] render path: public/features/rv-market-cockpit.js");
+  }
+
+  if (auditEnabled) {
     const holder = root.querySelector("[data-hero-audit-values]");
     if (holder) {
       const values = Array.from(root.querySelectorAll(".rv-gh-value"));
@@ -732,45 +636,58 @@ function render(root, payload, logger, featureId) {
     .querySelectorAll("[data-rv-field]")
     .forEach((node) => rvSetText(node, node.dataset.rvField, node.textContent));
 
-  const status = resolved?.isStale || data.partial || heroMetrics.missingIds.length ? "PARTIAL" : "OK";
-  logger?.setStatus(status, resolved?.isStale ? "Stale data" : data.partial ? "Partial" : "Live");
+  const status = freshCount >= heroMetrics.totalCount ? "OK" : "PARTIAL";
+  logger?.setStatus(status, status === "OK" ? "Live" : "Partial");
   logger?.setMeta({
-    updatedAt: data.updatedAt || resolved.ts,
-    source: data.source || "multi",
-    isStale: resolved?.isStale,
-    staleAgeMs: resolved?.staleAgeMs
-  });
-  logger?.info("response_meta", {
-    cache: resolved?.cache || {},
-    upstreamStatus: resolved?.upstream?.status ?? null
-  });
-
-  root.querySelectorAll("[data-rv-ms-layout]").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      const next = btn.getAttribute("data-rv-ms-layout") || "";
-      if (next !== "A" && next !== "B" && next !== "C") return;
-      setLayout(next);
-      render(root, payload, logger, featureId);
-    });
+    updatedAt: snapshot?.meta?.updatedAt || snapshot?.meta?.asOfDate || null,
+    source: "macro-hub",
+    isStale: freshness !== "fresh",
+    staleAgeMs: null
   });
 }
 
-async function loadData({ featureId, traceId, logger }) {
-  return fetchJSON("/market-cockpit", { feature: featureId, traceId, logger });
+async function loadData() {
+  const url = "/data/snapshots/macro-hub.json";
+  try {
+    const response = await fetch(url, { cache: "no-store" });
+    const text = await response.text();
+    if (!response.ok) {
+      return {
+        ok: false,
+        ts: new Date().toISOString(),
+        error: { code: `HTTP_${response.status}`, message: `HTTP ${response.status}` }
+      };
+    }
+    const snapshot = text ? JSON.parse(text) : null;
+    if (!snapshot || typeof snapshot !== "object") {
+      return {
+        ok: false,
+        ts: new Date().toISOString(),
+        error: { code: "INVALID_JSON", message: "Invalid snapshot payload" }
+      };
+    }
+    return { ok: true, snapshot, ts: snapshot?.meta?.updatedAt || new Date().toISOString() };
+  } catch (error) {
+    return {
+      ok: false,
+      ts: new Date().toISOString(),
+      error: { code: "FETCH_FAILED", message: error?.message || "Snapshot fetch failed" }
+    };
+  }
 }
 
 export async function init(root, context = {}) {
-  const { featureId = "rv-market-cockpit", traceId, logger } = context;
+  const { featureId = "rv-market-cockpit", logger } = context;
   const data = await getOrFetch(
     "rv-market-cockpit",
-    () => loadData({ featureId, traceId, logger }),
+    () => loadData(),
     { ttlMs: 15 * 60 * 1000, featureId, logger }
   );
   render(root, data, logger, featureId);
 }
 
 export async function refresh(root, context = {}) {
-  const { featureId = "rv-market-cockpit", traceId, logger } = context;
-  const data = await loadData({ featureId, traceId, logger });
+  const { featureId = "rv-market-cockpit", logger } = context;
+  const data = await loadData();
   render(root, data, logger, featureId);
 }

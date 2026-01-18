@@ -89,9 +89,11 @@ function render(root, payload, logger, featureId) {
     return;
   }
 
-  const meta = payload.meta || {};
-  const counts = payload.data?.counts || {};
-  const paths = payload.data?.paths || {};
+  const snapshotData =
+    payload.data?.data && typeof payload.data.data === "object" ? payload.data.data : payload.data || {};
+  const meta = payload.meta || snapshotData.meta || {};
+  const counts = snapshotData.counts || {};
+  const paths = snapshotData.paths || {};
   const updatedAt = meta.generatedAt || meta.dataAsOf || payload.ts || null;
 
   const pathRows = Object.entries(paths)

@@ -185,6 +185,20 @@ function main() {
     }
   }
 
+  const registryHasRvci = registryFeatures.some((feature) => feature?.id === "rvci-engine");
+  const renderHasRvci = renderPayload
+    ? Array.isArray(renderPayload.blocks) && renderPayload.blocks.some((block) => block?.id === "rvci-engine")
+    : false;
+  if (registryHasRvci || renderHasRvci) {
+    const rvciPath = path.join(SNAPSHOT_DIR, "rvci-engine.json");
+    if (!fs.existsSync(rvciPath)) {
+      errors.push("rvci-engine snapshot missing");
+    } else {
+      const payload = safeJson(rvciPath, errors);
+      if (payload) ensureMetaFields(payload, rvciPath, errors);
+    }
+  }
+
   // Public data hygiene
   const publicJsonFiles = listFiles(PUBLIC_DATA, [".json"]);
   publicJsonFiles.forEach((filePath) => {
