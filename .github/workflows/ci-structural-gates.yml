@@ -32,6 +32,8 @@ jobs:
         run: npm run test:contracts
       - name: Validate snapshots
         run: npm run validate:snapshots
+      - name: SSOT guard
+        run: node scripts/ci/ssot-guard.mjs
       - name: Runtime source-registry guard
         run: |
           if grep -R --line-number "registry/feature-registry.json" \

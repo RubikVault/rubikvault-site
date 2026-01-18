@@ -515,6 +515,9 @@ async function main() {
   }
   const metricsList = Array.isArray(catalog.metrics) ? catalog.metrics : [];
   const categories = catalog.categories || {};
+  const labelMap = Object.fromEntries(
+    metricsList.map((metric) => [metric.id, metric.label || metric.id])
+  );
 
   const previous = readJson(SNAPSHOT_PATH);
   const lastGood = readJson(LASTGOOD_PATH);
@@ -602,7 +605,8 @@ async function main() {
   const freshnessFlags = {};
 
   function setMetric(id, payload, { fresh = false, derived = false } = {}) {
-    metricData[id] = payload;
+    const label = payload?.label || labelMap[id] || id;
+    metricData[id] = { ...payload, label };
     freshnessFlags[id] = fresh || derived;
   }
 
@@ -1023,6 +1027,14 @@ async function main() {
     data: metricData,
     categories: catalog.categories
   };
+
+  const requiredId = metricData.SPY ? "SPY" : metricsList[0]?.id;
+  if (!requiredId || !snapshot.data?.[requiredId] || !("value" in snapshot.data[requiredId])) {
+    throw new Error(`macro_hub_schema_invalid:missing_value:${requiredId || "unknown"}`);
+  }
+  if (!snapshot.categories || Object.keys(snapshot.categories).length !== 8) {
+    throw new Error("macro_hub_schema_invalid:categories_missing");
+  }
 
   saveMirror(MIRROR_PATH, {
     schemaVersion: "rv-mirror-v1",

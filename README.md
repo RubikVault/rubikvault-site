@@ -14,6 +14,9 @@ RubikVault is a calm, data-driven market dashboard that runs on Cloudflare Pages
 - `debug/` – debug panel and diagnostics
 - `DEBUG_README.md` – troubleshooting and binding setup
 
+## SSOT (Single Source of Truth)
+Data path rules are enforced in `docs/SSOT.md`. UI reads snapshots only from `public/data/snapshots/*`, mirrors live in `mirrors/*`, and `public/mirrors/*` is forbidden.
+
 ## How Blocks Work (example)
 Each block is registered in `rv-config.js` with an `id`, `module`, and optional `api`. The loader (`rv-loader.js`) lazy-loads the module when the block scrolls into view, then the block calls `fetchJSON("/api/<endpoint>")`. The response schema is standard and the debug UI shows trace IDs, cache layer, TTL, and upstream status.
 
@@ -144,11 +147,11 @@ Workflow:
 - `.github/workflows/mirror-breakout-energy.yml` fetches:
   `https://rubikvault.com/api/breakout-energy?forceLive=1&limit=35`
 - Preferred: write to KV key `mirror:breakout-energy:v1`
-- Fallback: commit `public/mirrors/breakout-energy.json`
+- Fallback: commit `mirrors/breakout-energy.json`
 
 Keys/paths:
 - KV: `mirror:breakout-energy:v1`
-- File: `public/mirrors/breakout-energy.json`
+- File: `mirrors/breakout-energy.json`
 
 Required secrets for KV writes:
 - `CF_ACCOUNT_ID`

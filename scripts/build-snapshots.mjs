@@ -231,6 +231,87 @@ function extractSectors(payload) {
   return [];
 }
 
+const SECTOR_NAME_MAP = {
+  XLC: "Communication Services",
+  XLY: "Consumer Discretionary",
+  XLP: "Consumer Staples",
+  XLE: "Energy",
+  XLF: "Financials",
+  XLV: "Health Care",
+  XLI: "Industrials",
+  XLB: "Materials",
+  XLK: "Technology",
+  XLU: "Utilities",
+  XLRE: "Real Estate"
+};
+
+function deriveSp500SectorsFromRotation(sectorSnapshot) {
+  const items = Array.isArray(sectorSnapshot?.data?.items) ? sectorSnapshot.data.items : [];
+  const rows = items
+    .map((item) => {
+      const symbol = item?.symbol || item?.ticker || "";
+      if (!symbol) return null;
+      const name = SECTOR_NAME_MAP[symbol] || item?.sector || symbol;
+      const returnPct = typeof item?.returnPct === "number" ? item.returnPct : null;
+      return {
+        symbol,
+        name,
+        sector: name,
+        close: typeof item?.close === "number" ? item.close : null,
+        date: item?.date || sectorSnapshot?.dataAt || sectorSnapshot?.meta?.asOf || null,
+        rel: { r1d: returnPct, r1w: null, r1m: null },
+        relTech: {}
+      };
+    })
+    .filter(Boolean);
+  return rows;
+}
+
+function buildDerivedSp500Snapshot(sectorSnapshot, { reason, status } = {}) {
+  const generatedAt = new Date().toISOString();
+  const asOf = sectorSnapshot?.meta?.asOf || sectorSnapshot?.dataAt || generatedAt;
+  const ttlSeconds = 3600;
+  const freshness = computeFreshness(asOf, ttlSeconds);
+  const schedule = computeSchedule("daily", ttlSeconds);
+  const sectors = deriveSp500SectorsFromRotation(sectorSnapshot);
+  const data = {
+    items: sectors,
+    sectors,
+    spy: { ok: false },
+    updatedAt: asOf
+  };
+  const meta = {
+    status: status || (sectors.length ? "DEGRADED_COVERAGE" : "FAILED"),
+    reason: reason || (sectors.length ? "DERIVED_FROM_SECTOR_ROTATION" : "DERIVE_FAILED"),
+    generatedAt,
+    asOf,
+    source: "derived",
+    ttlSeconds,
+    stale: freshness.status !== "fresh",
+    itemsCount: sectors.length,
+    stalenessSec: Number.isFinite(freshness.ageMinutes) ? freshness.ageMinutes * 60 : null,
+    freshness,
+    schedule,
+    runId: RUN_ID
+  };
+  const schema = validateSchema({ blockId: "sp500-sectors", meta, data });
+  const ranges = validateRanges(sectors);
+  const integrity = validateIntegrity(meta);
+  meta.validation = {
+    schema: { ok: schema.ok, errors: schema.errors },
+    ranges: { ok: ranges.ok, errors: ranges.errors },
+    integrity: { ok: integrity.ok, errors: integrity.errors }
+  };
+  return {
+    schemaVersion: "v3",
+    blockId: "sp500-sectors",
+    generatedAt,
+    dataAt: asOf,
+    meta,
+    data
+  };
+}
+
 function mapMirrorData(mirrorId, raw) {
   if (mirrorId === "sp500-sectors") {
     const sectors = extractSectors(raw);
@@ -610,6 +691,13 @@ async function main() {
   const snapshotStatuses = [];
   const lastGoodAsOf = {};
 
+  function upsertSnapshotStatus(blockId, status, reason) {
+    const idx = snapshotStatuses.findIndex((entry) => entry.blockId === blockId);
+    const next = { blockId, status, reason };
+    if (idx >= 0) snapshotStatuses[idx] = next;
+    else snapshotStatuses.push(next);
+  }
+
   const entries = Object.entries(mirrors);
   for (const [mirrorId, raw] of entries) {
     const blockId = MIRROR_MAP.get(mirrorId) || mirrorId;
@@ -640,6 +728,46 @@ async function main() {
     }
     await writeIfChanged(snapshotPath, snapshot, changedFiles);
     snapshotStatuses.push({ blockId, status: "OK", reason: snapshot.meta.reason || "OK" });
+  }
+
+  const sp500Path = path.join(SNAPSHOT_DIR, "sp500-sectors.json");
+  const sp500Snapshot = loadJson(sp500Path);
+  const sp500Items = Array.isArray(sp500Snapshot?.data?.items) ? sp500Snapshot.data.items : [];
+  if (!sp500Snapshot || sp500Items.length === 0) {
+    const sectorRotation = loadJson(path.join(SNAPSHOT_DIR, "sector-rotation.json"));
+    const rotationItems = Array.isArray(sectorRotation?.data?.items) ? sectorRotation.data.items : [];
+    if (sectorRotation && rotationItems.length) {
+      const derived = buildDerivedSp500Snapshot(sectorRotation, {
+        status: "DEGRADED_COVERAGE",
+        reason: "DERIVED_FROM_SECTOR_ROTATION"
+      });
+      await writeIfChanged(sp500Path, derived, changedFiles);
+      upsertSnapshotStatus("sp500-sectors", "OK", derived.meta.reason || "DERIVED");
+    } else {
+      const failed = sp500Snapshot || buildDerivedSp500Snapshot({ data: { items: [] } }, {
+        status: "FAILED",
+        reason: "DERIVE_FAILED"
+      });
+      if (failed?.meta) {
+        failed.meta.status = "FAILED";
+        failed.meta.reason = "DERIVE_FAILED";
+        const integrity = validateIntegrity(failed.meta);
+        failed.meta.validation = failed.meta.validation || {};
+        failed.meta.validation.integrity = { ok: integrity.ok, errors: integrity.errors };
+      }
+      await writeIfChanged(sp500Path, failed, changedFiles);
+      errors.push({
+        code: "SP500_DERIVE_FAILED",
+        severity: "error",
+        provider: "derived",
+        dataset: "sp500-sectors",
+        message: "sector-rotation snapshot missing or empty",
+        firstSeenAt: RUN_ID,
+        lastSeenAt: RUN_ID,
+        runId: RUN_ID
+      });
+      upsertSnapshotStatus("sp500-sectors", "FAIL", "DERIVE_FAILED");
+    }
   }
 
   if (!mirrors["rvci-engine"]) {

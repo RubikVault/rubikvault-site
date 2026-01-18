@@ -59,7 +59,7 @@ function testStubGeneration() {
   writeJson(path.join(featuresDir, "feature-registry.json"), {
     registryVersion: "1.0",
     generatedAt: new Date().toISOString(),
-    features: [{ id: "alpha", mirrorPath: "public/mirrors/alpha.json", schemaVersion: "v1" }]
+    features: [{ id: "alpha", mirrorPath: "mirrors/alpha.json", schemaVersion: "v1" }]
   });
   run(SCRIPTS.stubs, [], dir);
   const stub = readJson(path.join(dir, "public", "mirrors", "alpha.json"));
@@ -75,7 +75,7 @@ function testArtifactsBuild() {
   writeJson(path.join(featuresDir, "feature-registry.json"), {
     registryVersion: "1.0",
     generatedAt: new Date().toISOString(),
-    features: [{ id: "beta", mirrorPath: "public/mirrors/beta.json", schemaVersion: "v1" }]
+    features: [{ id: "beta", mirrorPath: "mirrors/beta.json", schemaVersion: "v1" }]
   });
   writeJson(path.join(mirrorsDir, "beta.json"), {
     meta: { status: "OK", updatedAt: new Date().toISOString(), schemaVersion: "v1" },
@@ -100,7 +100,7 @@ function testAuditMissingField() {
     features: [
       {
         id: "gamma",
-        mirrorPath: "public/mirrors/gamma.json",
+        mirrorPath: "mirrors/gamma.json",
         requiredFields: ["meta.status", "meta.updatedAt"]
       }
     ]
@@ -128,7 +128,7 @@ function testAuditJsonParseError() {
   writeJson(path.join(featuresDir, "feature-registry.json"), {
     registryVersion: "1.0",
     generatedAt: new Date().toISOString(),
-    features: [{ id: "delta", mirrorPath: "public/mirrors/delta.json" }]
+    features: [{ id: "delta", mirrorPath: "mirrors/delta.json" }]
   });
   fs.writeFileSync(path.join(mirrorsDir, "delta.json"), "{ invalid json");
   const output = run(SCRIPTS.audit, ["--mode", "local", "--base", "public", "--format", "json", "--fail-on", "none"], dir);
@@ -148,7 +148,7 @@ function testMirrorMetaNormalization() {
   writeJson(path.join(featuresDir, "feature-registry.json"), {
     registryVersion: "1.0",
     generatedAt: new Date().toISOString(),
-    features: [{ id: "omega", mirrorPath: "public/mirrors/omega.json", schemaVersion: "v1" }]
+    features: [{ id: "omega", mirrorPath: "mirrors/omega.json", schemaVersion: "v1" }]
   });
   writeJson(path.join(mirrorsDir, "omega.json"), {
     schemaVersion: "1.0",

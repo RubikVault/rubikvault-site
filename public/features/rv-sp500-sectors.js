@@ -152,6 +152,7 @@ function render(root, payload, logger) {
   const data = payload?.data || {};
   const sectors = Array.isArray(data.sectors) ? data.sectors : [];
   const missing = Array.isArray(data.missingSymbols) ? data.missingSymbols : [];
+  const derived = payload?.dataQuality?.reason === "DERIVED_FROM_SECTOR_ROTATION";
   state.lastPayload = payload;
   const partialNote =
     payload?.ok && (payload?.isStale || payload?.error?.code || missing.length)
@@ -208,6 +209,7 @@ function render(root, payload, logger) {
 
   root.innerHTML = `
     ${partialNote ? `<div class="rv-native-note">${partialNote}</div>` : ""}
+    ${derived ? `<div class="rv-native-note"><span class="rv-native-pill">derived</span> From sector-rotation snapshot.</div>` : ""}
     <div class="rv-native-note"><strong>Rotation readout:</strong> ${narrative}</div>
     <div class="rv-native-note">${spyNote}</div>
     ${

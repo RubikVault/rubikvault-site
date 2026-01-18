@@ -191,8 +191,11 @@ function main() {
     : false;
   if (registryHasRvci || renderHasRvci) {
     const rvciPath = path.join(SNAPSHOT_DIR, "rvci-engine.json");
+    const rvciLatestPath = path.join(PUBLIC_DATA, "rvci_latest.json");
     if (!fs.existsSync(rvciPath)) {
-      errors.push("rvci-engine snapshot missing");
+      if (!fs.existsSync(rvciLatestPath)) {
+        errors.push("rvci-engine snapshot missing and rvci_latest.json missing");
+      }
     } else {
       const payload = safeJson(rvciPath, errors);
       if (payload) ensureMetaFields(payload, rvciPath, errors);

@@ -6,27 +6,27 @@ BRANCH: main
 GIT_SHA: 0164b992abbbdcdd82df089945d50f360beb7c93
 GIT_STATUS_PORCELAIN:
 M features/feature-registry.json
- M public/mirrors/_health.json
- M public/mirrors/manifest.json
+ M mirrors/_health.json
+ M mirrors/manifest.json
  M scripts/audit/REALITY.md
 
 NODE_VERSION: v25.2.1
 NPM_VERSION: 11.6.2
 
 MIRRORS_DIR_EXISTS: yes
-MIRRORS_DIR: (repo_root)/public/mirrors
+MIRRORS_DIR: (repo_root)/mirrors
 
 MIRROR_FILES:
-public/mirrors/_health.json
-public/mirrors/alpha-performance.json
-public/mirrors/alpha-radar.json
-public/mirrors/analyst-stampede.json
-public/mirrors/arb-breadth-lite.json
-public/mirrors/arb-liquidity-pulse.json
-public/mirrors/arb-risk-regime.json
-public/mirrors/breakout-energy.json
-public/mirrors/central-bank-watch.json
-public/mirrors/congress-trading.json
+mirrors/_health.json
+mirrors/alpha-performance.json
+mirrors/alpha-radar.json
+mirrors/analyst-stampede.json
+mirrors/arb-breadth-lite.json
+mirrors/arb-liquidity-pulse.json
+mirrors/arb-risk-regime.json
+mirrors/breakout-energy.json
+mirrors/central-bank-watch.json
+mirrors/congress-trading.json
 
 FEATURES_DIR_EXISTS: yes
 SCRIPTS_DIR_EXISTS: yes
@@ -129,46 +129,46 @@ public/posts/.gitkeep
 public/.DS_Store
 public/_redirects
 public/_headers
-public/mirrors/smart-money.json
-public/mirrors/alpha-performance.json
-public/mirrors/sector-rotation.json
-public/mirrors/export-csv.json
-public/mirrors/sentiment.json
-public/mirrors/breakout-energy.json
-public/mirrors/news-headlines.json
-public/mirrors/arb-risk-regime.json
-public/mirrors/macro-rates.json
-public/mirrors/market-health.json
-public/mirrors/analyst-stampede.json
-public/mirrors/volume-anomaly.json
-public/mirrors/daily-digest.json
-public/mirrors/market-cockpit.json
-public/mirrors/price-snapshot.json
-public/mirrors/earnings.json
-public/mirrors/quotes.json
-public/mirrors/arb-liquidity-pulse.json
-public/mirrors/_health.json
-public/mirrors/why-moved.json
-public/mirrors/news.json
-public/mirrors/tech-signals.json
-public/mirrors/yield-curve.json
-public/mirrors/hype-divergence.json
-public/mirrors/news-intelligence.json
-public/mirrors/top-movers.json
-public/mirrors/sentiment-barometer.json
-public/mirrors/manifest.json
-public/mirrors/insider-cluster.json
-public/mirrors/sp500-sectors.json
-public/mirrors/market-regime.json
-public/mirrors/earnings-reality.json
-public/mirrors/earnings-calendar.json
-public/mirrors/alpha-radar.json
-public/mirrors/crypto-snapshot.json
-public/mirrors/watchlist-local.json
-public/mirrors/arb-breadth-lite.json
-public/mirrors/system-health.json
-public/mirrors/central-bank-watch.json
-public/mirrors/congress-trading.json
+mirrors/smart-money.json
+mirrors/alpha-performance.json
+mirrors/sector-rotation.json
+mirrors/export-csv.json
+mirrors/sentiment.json
+mirrors/breakout-energy.json
+mirrors/news-headlines.json
+mirrors/arb-risk-regime.json
+mirrors/macro-rates.json
+mirrors/market-health.json
+mirrors/analyst-stampede.json
+mirrors/volume-anomaly.json
+mirrors/daily-digest.json
+mirrors/market-cockpit.json
+mirrors/price-snapshot.json
+mirrors/earnings.json
+mirrors/quotes.json
+mirrors/arb-liquidity-pulse.json
+mirrors/_health.json
+mirrors/why-moved.json
+mirrors/news.json
+mirrors/tech-signals.json
+mirrors/yield-curve.json
+mirrors/hype-divergence.json
+mirrors/news-intelligence.json
+mirrors/top-movers.json
+mirrors/sentiment-barometer.json
+mirrors/manifest.json
+mirrors/insider-cluster.json
+mirrors/sp500-sectors.json
+mirrors/market-regime.json
+mirrors/earnings-reality.json
+mirrors/earnings-calendar.json
+mirrors/alpha-radar.json
+mirrors/crypto-snapshot.json
+mirrors/watchlist-local.json
+mirrors/arb-breadth-lite.json
+mirrors/system-health.json
+mirrors/central-bank-watch.json
+mirrors/congress-trading.json
 public/diagnose.js
 
 TREE_SCRIPTS_MAXDEPTH4_FILES:
