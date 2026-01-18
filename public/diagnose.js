@@ -328,7 +328,7 @@ function buildReport({ blocks, server, options }) {
 
 export async function runDiagnostics(opts = {}) {
   const options = { ...DEFAULT_OPTIONS, ...opts };
-  const server = await fetch("/data/system-health.json")
+  const server = await fetch("//data/system-health.json")
     .then((r) => r.json())
     .catch(() => null);
   const serverBlocks = new Map(

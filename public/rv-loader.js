@@ -12,7 +12,7 @@ import { resolveApiBase } from "./features/utils/api.js";
 import { initFlagsPanel } from "./features/rv-flags-panel.js";
 import { BLOCK_REGISTRY, formatBlockTitle } from "./features/blocks-registry.js";
 
-const RENDER_PLAN_URL = "./data/render-plan.json";
+const RENDER_PLAN_URL = "//data/render-plan.json";
 const MANIFEST_URL = "./data/seed-manifest.json";
 const RVCI_LATEST_URL = "./data/rvci_latest.json";
 const RUN_ID = (() => {
