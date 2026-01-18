@@ -68,10 +68,10 @@ function resolveDomain(item) {
 }
 
 function isEnglishSource(item) {
-  if (item?.language === "en") return true;
-  const domain = resolveDomain(item);
-  if (!domain) return false;
-  return ENGLISH_SOURCE_DOMAINS.some((allowed) => domain === allowed || domain.endsWith(`.${allowed}`));
+  if (item?.language) {
+    return item.language === "en";
+  }
+  return true;
 }
 
 function normalizeItems(items = []) {

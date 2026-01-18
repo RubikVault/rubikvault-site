@@ -85,65 +85,64 @@ const HERO_GROUPS = [
 ];
 
 const HERO_LABEL_INFO = {
-  "RiskRegime": "A simplified risk-on/risk-off classification from multiple markets. It helps you quickly judge whether the tape supports adding or reducing risk.",
-  "VIX Close": "The S&P 500 implied volatility index level. Spikes often signal stress and can precede de-risking and wider price swings.",
-  "VIX3M Close": "3-month implied volatility for the S&P 500. It shows medium-term risk expectations beyond the near-term VIX.",
-  "VIX/VIX3M": "Ratio of near-term to 3-month volatility. A high ratio signals short-term fear relative to the medium-term baseline.",
-  "Curve10-2": "10Y minus 2Y Treasury yield slope. Inversions can signal tighter financial conditions and higher recession risk.",
-  "US2Y Yield": "2-year Treasury yield, highly sensitive to Fed policy expectations. It’s a key read on near-term rate pressure.",
-  "US10Y Yield": "10-year Treasury yield, a core long-rate benchmark. It impacts valuations, mortgages, and broader financial conditions.",
-  "US30Y Yield": "30-year Treasury yield, the long end of the curve. It reflects long-run inflation and growth expectations.",
-  "SOFR": "Secured Overnight Financing Rate, a key USD funding benchmark. It’s used across derivatives and reflects short-term money-market conditions.",
-  "EFFR": "Effective Fed Funds Rate, the Fed’s policy operating rate. It anchors short-term rates across USD markets.",
-  "HY OAS": "High-yield option-adjusted spread over Treasuries. Widening often signals rising default risk and risk-off behavior.",
-  "IG OAS": "Investment-grade option-adjusted spread over Treasuries. It tracks corporate funding stress for higher-quality issuers.",
-  "BBB OAS": "BBB corporate spread (lowest IG tier) over Treasuries. It’s a sensitive early-warning gauge for credit deterioration.",
-  "BAA Yield": "Moody’s Baa corporate yield level. It captures borrowing cost pressure for mid-grade corporates.",
-  "StressSprd": "A composite stress spread proxy across credit conditions. Rising levels often coincide with tightening liquidity and risk aversion.",
-  "USD Broad": "A broad USD strength proxy (here via DXY). A stronger USD can tighten global financial conditions and pressure risk assets.",
-  "EURUSD": "EUR/USD exchange rate. It matters for global risk sentiment and relative growth/inflation expectations.",
-  "USDJPY": "USD/JPY exchange rate. It’s a key barometer for risk sentiment and rate differentials.",
-  "GBPUSD": "GBP/USD exchange rate. Sensitive to UK macro shocks and global dollar strength.",
-  "USDCNY": "USD/CNY exchange rate. It’s important for global trade expectations and China-related risk signals.",
-  "Gold USD": "Gold price in USD. Often acts as a hedge vs. inflation shocks and financial stress.",
-  "WTI Oil": "WTI crude oil price. A key input for inflation expectations and global growth sentiment.",
-  "Brent Oil": "Brent crude oil price, global benchmark. Useful for tracking energy-driven macro pressure outside the US.",
-  "Copper": "Copper price, often called 'Dr. Copper'. It’s a proxy for industrial demand and global growth.",
-  "NatGas": "Natural gas price. Impacts energy costs and can influence inflation and industrial activity.",
-  "SPX Close": "S&P 500 index level. Core proxy for US equity risk appetite.",
-  "NDX Close": "Nasdaq 100 index level. High-duration growth proxy, very rate-sensitive.",
-  "DAX Close": "Germany’s DAX index level. Proxy for European cyclicals and global trade sensitivity.",
-  "NikkeiCls": "Japan’s Nikkei index level. Tracks Japan equity risk and global manufacturing sensitivity.",
-  "R2K Close": "Russell 2000 index level. Small-caps are sensitive to domestic growth and credit conditions.",
-  "BTC Price": "Bitcoin price level. Often trades as a high-beta liquidity/risk proxy.",
-  "ETH Price": "Ethereum price level. Important for broader crypto risk and DeFi activity.",
-  "Crypto MC": "Total crypto market capitalization. A broad measure of crypto risk appetite and liquidity.",
-  "BTC Dom": "Bitcoin dominance share of total crypto market cap. Rising dominance often signals flight-to-quality within crypto.",
-  "DeFi TVL": "Total value locked in DeFi protocols. A rough gauge of on-chain activity and risk-taking.",
-  "US CPI YoY": "US consumer inflation rate year-over-year. It drives rate expectations and valuation pressure.",
-  "US Unemp": "US unemployment rate. A key recession-risk and policy reaction function input.",
-  "US GDP": "US GDP growth proxy. Signals the growth backdrop that supports or undermines risk assets.",
-  "BuffettInd": "Market cap-to-GDP valuation proxy ('Buffett Indicator'). Useful for spotting stretched equity valuations versus the economy.",
-  "CAPE": "Cyclically adjusted P/E ratio. A long-horizon valuation metric that helps frame return expectations."
+  "RiskRegime": "Composite risk regime from volatility and breadth. Helps judge risk-on vs risk-off conditions.",
+  "VIX Close": "S&P 500 implied volatility index level. Rising VIX often signals stress and tighter risk appetite.",
+  "VIX3M Close": "3-month implied volatility expectation. Shows medium-term uncertainty beyond short-term noise.",
+  "VIX/VIX3M": "Term-structure ratio (front vs 3M vol). High values can indicate near-term fear.",
+  "Curve10-2": "US 10Y minus 2Y yield spread. Inversions often precede slowdowns and risk repricing.",
+  "US2Y Yield": "2-year Treasury yield. Sensitive to Fed policy expectations and near-term growth/inflation.",
+  "US10Y Yield": "10-year Treasury yield. Key discount rate for equities and mortgages; reflects growth/inflation outlook.",
+  "US30Y Yield": "30-year Treasury yield. Long-duration rate that affects housing/valuations and term premium.",
+  "SOFR": "Secured Overnight Financing Rate. Proxy for short-term funding conditions in USD.",
+  "EFFR": "Effective Federal Funds Rate. The Fed’s policy anchor for the short end of the curve.",
+  "HY OAS": "High-yield option-adjusted spread. Wider spreads imply rising default risk and risk-off credit conditions.",
+  "IG OAS": "Investment-grade option-adjusted spread. Tracks corporate funding stress for higher-quality issuers.",
+  "BBB OAS": "BBB spread (lowest IG tier). Early-warning gauge for credit deterioration before HY moves.",
+  "BAA Yield": "Moody’s Baa corporate yield. Useful long history; reflects borrowing costs for mid-grade corporates.",
+  "StressSprd": "Composite credit stress spread. Summarizes broad credit risk premium in one gauge.",
+  "USD Broad": "Broad trade-weighted USD index. Strong USD tightens global financial conditions.",
+  "EURUSD": "Euro vs USD exchange rate. Impacts global liquidity and risk sentiment.",
+  "USDJPY": "USD vs JPY rate. Often reflects risk appetite and relative rate differentials.",
+  "GBPUSD": "Pound vs USD rate. Sensitive to UK macro and global risk trends.",
+  "USDCNY": "USD vs China yuan. Signals China policy stance and global trade/slowdown concerns.",
+  "Gold USD": "Gold price in USD. Hedge vs real-rate drops, stress, and USD debasement narratives.",
+  "WTI Oil": "WTI crude price. Key input for inflation and growth expectations.",
+  "Brent Oil": "Brent crude benchmark. Global oil pricing; useful vs WTI for international conditions.",
+  "Copper": "Industrial copper price. Often used as a growth proxy ('Dr. Copper').",
+  "NatGas": "US natural gas price. Energy and industrial cycle signal; can affect inflation locally.",
+  "SPX Close": "S&P 500 close level. Core risk asset benchmark and sentiment proxy.",
+  "NDX Close": "Nasdaq 100 close level. Growth/tech beta; sensitive to rates and liquidity.",
+  "DAX Close": "German DAX close level. EU equity sentiment proxy and global cyclical exposure.",
+  "NikkeiCls": "Nikkei 225 close level. Japan equity proxy; sensitive to yen and global cycle.",
+  "R2K Close": "Russell 2000 close level. Small-cap risk and domestic growth sensitivity.",
+  "BTC Price": "Bitcoin spot price. High-beta liquidity proxy; often leads risk appetite shifts.",
+  "ETH Price": "Ethereum spot price. Crypto risk-on proxy with ecosystem/activity sensitivity.",
+  "Crypto MC": "Total crypto market cap. Broad measure of crypto risk appetite.",
+  "BTC Dom": "Bitcoin dominance share. Rising dominance can signal flight to quality within crypto.",
+  "DeFi TVL": "Total value locked in DeFi. Activity/liquidity gauge for on-chain risk appetite.",
+  "US CPI YoY": "Year-over-year consumer inflation. Drives rate expectations and real yield regime.",
+  "US Unemp": "US unemployment rate. Key recession/risk signal and consumer health proxy.",
+  "US GDP": "US GDP growth/level series. Macro baseline for earnings and policy.",
+  "BuffettInd": "Market cap to GDP proxy. Rough valuation regime gauge versus economic size.",
+  "CAPE": "Cyclically adjusted P/E. Long-horizon valuation indicator; high CAPE implies lower forward returns on average."
 };
 
 const DELTA_FIELD_CANDIDATES = [
   "changePct",
   "pctChange",
-  "pct_change",
   "deltaPct",
+  "change_percent",
   "dayChangePct",
-  "change_1d_pct",
-  "changePercent",
-  "change_percent"
+  "changePercent"
 ];
 
-const PREV_VALUE_FIELDS = ["prev", "prevValue", "previous", "prior", "last"];
+const PREV_VALUE_FIELDS = ["prevClose", "prev", "prevValue", "previous", "prior", "last"];
 
 let heroMetricsAwait = false;
 let heroTooltipKey = null;
 let heroTooltipRoot = null;
 let heroTooltipHandlersBound = false;
+let heroDebugLogged = false;
 
 function getLayout() {
   try {
@@ -236,7 +235,10 @@ function findDeltaPercent(metric) {
     const candidate = readNumber(metric[key]);
     if (candidate !== null) return candidate;
   }
-  const current = readNumber(metric.value);
+  const current =
+    readNumber(metric.value) ??
+    readNumber(metric.currentClose) ??
+    readNumber(metric.close);
   if (current === null) return null;
   let prev = null;
   for (const key of PREV_VALUE_FIELDS) {
@@ -394,7 +396,7 @@ function renderMetricRow(metric) {
             <div class="rv-gh-label" title="${labelText}" style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:flex;align-items:center;gap:6px;">
               <span class="rv-gh-label-text" style="min-width:0;flex:1 1 auto;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${labelText}</span>
               <button type="button" class="rv-gh-info" aria-label="Info: ${labelText}" style="display:inline-flex;align-items:center;justify-content:center;width:14px;height:14px;border-radius:50%;border:1px solid rgba(148,163,184,0.5);background:transparent;color:var(--rv-text-muted);font-size:10px;line-height:1;padding:0;cursor:pointer;flex:0 0 auto;">i</button>
-              <span class="rv-gh-tooltip" role="tooltip" style="position:absolute;z-index:20;min-width:220px;max-width:260px;background:#111;color:#fff;padding:8px 10px;border-radius:8px;font-size:11px;line-height:1.35;box-shadow:0 8px 20px rgba(0,0,0,0.2);top:100%;left:0;margin-top:6px;display:none;">${infoText}</span>
+              <span class="rv-gh-tooltip" role="tooltip" style="position:absolute;z-index:20;min-width:220px;max-width:260px;background:#000;color:#f8fafc;padding:8px 10px;border-radius:8px;font-size:11px;line-height:1.35;box-shadow:0 8px 20px rgba(0,0,0,0.35);top:100%;left:0;margin-top:6px;display:none;">${infoText}</span>
             </div>
             <div class="rv-gh-value" title="${metric.value}" style="text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${metric.value}</div>
             <div class="rv-gh-delta" title="${metric.deltaText}" style="text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:${metric.deltaColor};">${metric.deltaText}</div>
@@ -665,6 +667,7 @@ function render(root, payload, logger, featureId) {
   const metricsEnvelope = getMetricsEnvelope();
   const heroMetrics = buildHeroMetricsModel(metricsEnvelope);
   const auditEnabled = typeof window !== "undefined" && new URLSearchParams(window.location.search).get("heroAudit") === "1";
+  const debugEnabled = auditEnabled || (typeof window !== "undefined" && new URLSearchParams(window.location.search).get("debug") === "1");
   const auditHtml = auditEnabled
     ? renderHeroAudit(heroMetrics, window.__RV_METRICS_FETCH_COUNT || 0)
     : "";
@@ -711,6 +714,10 @@ function render(root, payload, logger, featureId) {
     root.style.boxShadow = "none";
     setHeroHeaderMeta(root, headerStatus);
     attachHeroTooltips(root);
+    if (debugEnabled && !heroDebugLogged) {
+      heroDebugLogged = true;
+      console.info("[Global Macro Hub] render path: public/features/rv-market-cockpit.js");
+    }
   }
   if (auditEnabled && layout === "B") {
     const holder = root.querySelector("[data-hero-audit-values]");

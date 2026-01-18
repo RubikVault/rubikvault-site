@@ -93,18 +93,6 @@
   color: var(--rv-accent);
 }
 
-html[data-theme="light"] {
-  --rv-bg: #f5f7fb;
-  --rv-bg-soft: #f8fafc;
-  --rv-bg-card: #ffffff;
-  --rv-border: rgba(15, 23, 42, 0.12);
-  --rv-text: #0f172a;
-  --rv-text-muted: #475569;
-  --rv-accent: #0ea5e9;
-  --rv-accent-soft: rgba(14, 165, 233, 0.14);
-  --rv-shadow: 0 20px 60px rgba(15, 23, 42, 0.12);
-}
-
 /* =========================
    GLOBAL
    ========================= */
@@ -124,11 +112,6 @@ body {
   background: radial-gradient(circle at top left, #111827 0%, #0b1120 50%, #05070b 100%);
   color: var(--rv-text);
   line-height: 1.6;
-}
-
-html[data-theme="light"] body {
-  background: radial-gradient(circle at top left, #ffffff 0%, #f1f5f9 55%, #e2e8f0 100%);
-  color: var(--rv-text);
 }
 
 a {
@@ -177,10 +160,6 @@ a {
   background: rgba(15, 23, 42, 0.35);
 }
 
-html[data-theme="light"] .rv-market-clock {
-  background: rgba(255, 255, 255, 0.7);
-}
-
 .rv-clock-time {
   font-weight: 600;
   color: var(--rv-text);
@@ -218,20 +197,6 @@ html[data-theme="light"] .rv-market-clock {
 
 .rv-market-countdown {
   color: var(--rv-text-muted);
-}
-
-.rv-theme-toggle {
-  border: 1px solid var(--rv-border);
-  background: rgba(15, 23, 42, 0.45);
-  color: var(--rv-text);
-  padding: 6px 10px;
-  border-radius: 999px;
-  font-size: 12px;
-  cursor: pointer;
-}
-
-html[data-theme="light"] .rv-theme-toggle {
-  background: rgba(255, 255, 255, 0.8);
 }
 
 .rv-status-strip {
@@ -1424,8 +1389,14 @@ section[data-rv-deprecated="true"] {
 }
 
 #rv-dashboard .rv-cockpit-hero {
-  border: 1px solid rgba(148, 163, 184, 0.25);
-  background: rgba(10, 16, 32, 0.85);
+  border: none;
+  background: transparent;
+}
+
+#rv-dashboard .rv-cockpit-hero .rv-native-body {
+  background: transparent;
+  border: none;
+  padding: 0;
 }
 
 #rv-dashboard .rv-ms-controls {

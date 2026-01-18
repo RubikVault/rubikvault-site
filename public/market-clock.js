@@ -1,11 +1,9 @@
 const TIMEZONE = "America/New_York";
-const THEME_KEY = "rv-theme";
 
 const timeEl = document.getElementById("rv-ny-time");
 const countdownEl = document.getElementById("rv-market-countdown");
 const labelEl = document.querySelector("[data-rv-market-label]");
 const ledEl = document.querySelector("[data-rv-led]");
-const themeToggle = document.getElementById("rv-theme-toggle");
 
 const formatter = new Intl.DateTimeFormat("en-US", {
   timeZone: TIMEZONE,
@@ -121,34 +119,5 @@ function updateClock() {
   countdownEl.textContent = `${market.countdownLabel} ${formatDuration(market.countdown)}`;
 }
 
-function applyTheme(theme) {
-  const root = document.documentElement;
-  root.setAttribute("data-theme", theme);
-  if (themeToggle) {
-    themeToggle.textContent = theme === "dark" ? "Light" : "Dark";
-  }
-}
-
-function initTheme() {
-  const stored = window.localStorage?.getItem(THEME_KEY);
-  if (stored === "dark" || stored === "light") {
-    applyTheme(stored);
-    return;
-  }
-  applyTheme("dark");
-}
-
-function handleThemeToggle() {
-  if (!themeToggle) return;
-  themeToggle.addEventListener("click", () => {
-    const current = document.documentElement.getAttribute("data-theme") || "dark";
-    const next = current === "dark" ? "light" : "dark";
-    window.localStorage?.setItem(THEME_KEY, next);
-    applyTheme(next);
-  });
-}
-
-initTheme();
-handleThemeToggle();
 updateClock();
 setInterval(updateClock, 1000);
