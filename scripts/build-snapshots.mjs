@@ -32,6 +32,7 @@ const MIRROR_MAP = new Map([
   ["news", "news-headlines"],
   ["market-cockpit", "market-cockpit"],
   ["sp500-sectors", "sp500-sectors"],
+  ["sector-rotation", "sp500-sectors"], // sector-rotation mirror maps to sp500-sectors snapshot
   ["tech-signals", "tech-signals"],
   ["alpha-radar", "alpha-radar"],
   ["rvci-engine", "rvci-engine"],
@@ -232,7 +233,8 @@ function extractSectors(payload) {
 }
 
 function mapMirrorData(mirrorId, raw) {
-  if (mirrorId === "sp500-sectors") {
+  // Handle both sp500-sectors and sector-rotation mirrors (both map to sp500-sectors snapshot)
+  if (mirrorId === "sp500-sectors" || mirrorId === "sector-rotation") {
     const sectors = extractSectors(raw);
     const items = extractItems(raw);
     return { items, extraData: { ...extractExtraData(raw), sectors } };
