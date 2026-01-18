@@ -1,16 +1,16 @@
 {
-  "runId": "2026-01-18T15:48:42.543Z",
-  "updatedAt": "2026-01-18T15:48:42.965Z",
+  "runId": "2026-01-18T17:44:40.354Z",
+  "updatedAt": "2026-01-18T17:44:43.000Z",
   "asOfDate": "2026-01-18",
   "providerCalls": {
-    "COINGECKO": 2,
+    "COINGECKO": 5,
     "DEFILLAMA": 1
   },
   "counts": {
     "total": 40,
-    "freshOrDerivedOk": 4,
-    "stale": 36,
-    "null": 36
+    "freshOrDerivedOk": 2,
+    "stale": 38,
+    "null": 38
   },
   "errors": [
     {
@@ -132,12 +132,17 @@
       "provider": "ALPHAVANTAGE",
       "metric": "SPY_history",
       "message": "missing_api_key"
+    },
+    {
+      "provider": "COINGECKO",
+      "metric": "global",
+      "message": "HTTP_429"
     }
   ],
   "budgets": {
     "coingecko": {
       "simple": 1,
-      "global": 1
+      "global": 4
     },
     "defillama": {
       "stable": 1
@@ -151,7 +156,7 @@
     },
     "crypto": {
       "coingeckoSimple": true,
-      "coingeckoGlobal": true,
+      "coingeckoGlobal": false,
       "defillamaStable": true
     }
   }
