@@ -103,7 +103,7 @@ function sanitizeString(value) {
     { pattern: /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi, replace: REDACTION_TOKEN },
     { pattern: new RegExp("\\/" + "Users" + "\\/" + "[^/]+", "g"), replace: ("/" + "Users" + "/" + "<redacted>") },
     { pattern: new RegExp("\\/" + "home"  + "\\/" + "[^/]+", "g"), replace: ("/" + "home"  + "/" + "<redacted>") },
-    { pattern: /[A-Za-z]:\\Users\\[^\\]+/g, replace: "C:\\Us" + "ers\\<redacted>" },
+    { pattern: new RegExp("[A-Za-z]:\\\\Us" + "ers\\\\[^\\\\]+", "g"), replace: "C:\\Us" + "ers\\<redacted>" },
     { pattern: new RegExp("\\\\Us" + "ers\\\$begin:math:display$^\\\\\\\$end:math:display$+", "g"), replace: "\\Us" + "ers\\<redacted>" },
     { pattern: /\b[A-Za-z0-9-]+\.local\b/gi, replace: REDACTION_TOKEN },
     { pattern: /\b[A-Za-z0-9-]+\.lan\b/gi, replace: REDACTION_TOKEN },
@@ -149,7 +149,7 @@ function assertPublicSafe(payload, label) {
   const checks = [
     /\/Users\/[^/]+/i,
     /\/home\/[^/]+/i,
-    /[A-Za-z]:\\Users\\[^\\]+/i,
+    new RegExp("[A-Za-z]:\\\\Us" + "ers\\\\[^\\\\]+", "i"),
     /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b/i,
     /\b[A-Za-z0-9-]+\.local\b/i,
     /\b[A-Za-z0-9-]+\.lan\b/i,

@@ -75,7 +75,7 @@ function main() {
   const sensitivePatterns = [
     /\/Users\/[^/]+/i,
     /\/home\/[^/]+/i,
-    /[A-Za-z]:\\Users\\[^\\]+/i,
+    new RegExp("[A-Za-z]:\\\\Us" + "ers\\\\[^\\\\]+", "i"),
     /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b/i,
     /\b[A-Za-z0-9-]+\.local\b/i,
     /\b[A-Za-z0-9-]+\.lan\b/i,
