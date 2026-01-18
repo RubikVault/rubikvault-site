@@ -94,3 +94,14 @@ debug/
 
 # local backups (never commit)
 functions/api/_middleware.js.bak.*
+
+# generated / local-only
+.wrangler/
+.wrangler/**
+.venv-rvci/
+.venv-rvci/**
+.venv/
+.DS_Store
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
