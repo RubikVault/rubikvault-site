@@ -701,3 +701,17 @@ main().catch((error) => {
   console.error("build-snapshots failed:", error.message || error);
   process.exit(1);
 });
+
+
+
+// --- v3 SSOT glue: always (re)generate public/data/bundle.json + public/data/render-plan.json
+try {
+  const { execFileSync } = await import("node:child_process");
+  const gen = "scripts/build-bundle-and-render-plan.mjs";
+  if (fs.existsSync(gen)) {
+    execFileSync(process.execPath, [gen], { stdio: "inherit", env: { ...process.env, RV_RUN_ID: process.env.RV_RUN_ID || new Date().toISOString() } });
+  }
+} catch (e) {
+  console.error("WARN: bundle/render-plan generation hook failed:", e?.message || e);
+}
+

@@ -123,3 +123,88 @@ function main() {
 }
 
 main();
+
+
+
+// RV_V3_SPLIT_BRAIN_GATES
+// Hard gates to prevent split-brain:
+// 1) providers must not write public/data
+// 2) public UI/dashboard must not fetch /api
+// 3) build-snapshots must not do network
+// 4) functions/api must not call external providers
+// 5) public/data snapshots must include required v3 meta fields (best-effort checks)
+import fs from "node:fs";
+import path from "node:path";
+
+function die(msg) {
+  console.error("::error::" + msg);
+  process.exit(1);
+}
+
+function rgLike(pattern, dir) {
+  const out = [];
+  const stack = [dir];
+  while (stack.length) {
+    const d = stack.pop();
+    let ents = [];
+    try { ents = fs.readdirSync(d, { withFileTypes: true }); } catch { continue; }
+    for (const e of ents) {
+      const p = path.join(d, e.name);
+      if (e.isDirectory()) {
+        if (e.name === "node_modules" || e.name === ".git") continue;
+        stack.push(p);
+      } else {
+        try {
+          const t = fs.readFileSync(p, "utf-8");
+          if (pattern.test(t)) out.push(p);
+        } catch {}
+      }
+    }
+  }
+  return out;
+}
+
+// (1) providers writing public/data
+{
+  const hits = rgLike(/public\/data\//g, "scripts/providers");
+  if (hits.length) die("providers must not touch public/data/* (found in: " + hits.slice(0,10).join(", ") + ")");
+}
+
+// (2) UI fetching /api (public surface)
+{
+  const hits = rgLike(/fetch\(\s*["']\/api\//g, "public");
+  if (hits.length) die("public UI must not fetch /api/* (found in: " + hits.slice(0,10).join(", ") + ")");
+}
+
+// (3) build-snapshots doing network
+{
+  const t = fs.readFileSync("scripts/build-snapshots.mjs", "utf-8");
+  if (/(fetch\(|https?:\/\/|node:net|node:dns|curl\s)/.test(t)) die("build-snapshots.mjs must not do network calls");
+}
+
+// (4) functions/api calling externals
+{
+  const hits = rgLike(/https?:\/\/|fetch\(/g, "functions/api");
+  const bad = hits.filter(p => !/\/_middleware\.js$/.test(p));
+  if (bad.length) die("functions/api must serve static snapshots only (found external patterns in: " + bad.slice(0,10).join(", ") + ")");
+}
+
+// (5) required v3 meta fields (best-effort on key files)
+{
+  const must = [
+    "public/data/system-health.json",
+    "public/data/provider-state.json",
+    "public/data/usage-report.json",
+    "public/data/error-summary.json",
+    "public/data/run-report.json",
+  ];
+  for (const f of must) {
+    if (!fs.existsSync(f)) die("missing required public snapshot: " + f);
+    const txt = fs.readFileSync(f, "utf-8");
+    if (!/\"meta\"\s*:\s*\{/.test(txt)) die("missing meta object in: " + f);
+    if (!/freshness/.test(txt)) die("missing meta.freshness in: " + f);
+    if (!/validation/.test(txt)) die("missing meta.validation in: " + f);
+    if (!/schedule/.test(txt)) die("missing meta.schedule in: " + f);
+  }
+}
+

@@ -16,73 +16,75 @@ jobs:
         run: |
           set -o pipefail
           echo "Scanning current tracked file contents (HEAD only, no history)..."
-          python3 -c 'exec(r"""
-import os, re, subprocess, sys
+          python3 -c 'import textwrap; exec(textwrap.dedent(r"""
+          import os, re, subprocess, sys
 
-WORKFLOW = ".github/workflows/privacy-guard.yml"
+          WORKFLOW = ".github/workflows/privacy-guard.yml"
 
-def git_ls_files():
-    out = subprocess.check_output(["git", "ls-files"], text=True).splitlines()
-    return [p for p in out if p and p != WORKFLOW]
+          def git_ls_files():
+              out = subprocess.check_output(["git", "ls-files"], text=True).splitlines()
+              return [p for p in out if p and p != WORKFLOW]
 
-files = git_ls_files()
-if not files:
-    print("No tracked files found.")
-    sys.exit(0)
+          files = git_ls_files()
+          if not files:
+              print("No tracked files found.")
+              sys.exit(0)
 
-# Build patterns WITHOUT embedding obvious literals in a single token
-p_users = "/" + "Us" + "ers" + "/"
-p_home = "/" + "ho" + "me" + "/"
-p_docs = "/" + "Do" + "cuments" + "/" + "Gi" + "tHub" + "/"
-p_icloud = "/" + "iC" + "loud" + "/"
-p_win = "C:" + "\\" + "Us" + "ers" + "\\"
-p_unc = "\\" + "\\" + "Us" + "ers" + "\\"
+          # Build patterns without embedding obvious literals in a single token
+          p_users = "/" + "Us" + "ers" + "/"
+          p_home = "/" + "ho" + "me" + "/"
+          p_docs = "/" + "Do" + "cuments" + "/" + "Gi" + "tHub" + "/"
+          p_icloud = "/" + "iC" + "loud" + "/"
+          p_win = "C:" + "\\" + "Us" + "ers" + "\\"
+          p_unc = "\\" + "\\" + "Us" + "ers" + "\\"
 
-rx_content = re.compile("|".join([
-    re.escape(p_users),
-    re.escape(p_home),
-    re.escape(p_docs),
-    re.escape(p_icloud),
-    re.escape(p_win),
-    re.escape(p_unc),
-]), re.IGNORECASE)
+          rx_content = re.compile("|".join([
+              re.escape(p_users),
+              re.escape(p_home),
+              re.escape(p_docs),
+              re.escape(p_icloud),
+              re.escape(p_win),
+              re.escape(p_unc),
+          ]), re.IGNORECASE)
 
-leaks = 0
-for f in files:
-    if not os.path.isfile(f):
-        continue
-    try:
-        data = open(f, "rb").read()
-        if b"\x00" in data:
-            continue
-        text = data.decode("utf-8", errors="ignore")
-    except Exception:
-        continue
-    if rx_content.search(text):
-        print(f"::error file={f}::Privacy leak detected in {f}")
-        leaks += 1
+          leaks = 0
 
-if leaks:
-    print("::error::Privacy leak detected in tracked files. Remove absolute user paths.")
-    sys.exit(1)
+          for f in files:
+              if not os.path.isfile(f):
+                  continue
+              try:
+                  data = open(f, "rb").read()
+                  if b"\\x00" in data:
+                      continue
+                  text = data.decode("utf-8", errors="ignore")
+              except Exception:
+                  continue
 
-print("Scanning filenames...")
-rx_name = re.compile("|".join([
-    re.escape("Us" + "ers"),
-    re.escape("Do" + "cuments"),
-    re.escape("iC" + "loud"),
-    re.escape("/ho" + "me/"),
-    re.escape("/Us" + "ers/"),
-    re.escape("\\" + "\\" + "Us" + "ers" + "\\"),
-    re.escape("C:" + "\\" + "Us" + "ers" + "\\"),
-]), re.IGNORECASE)
+              if rx_content.search(text):
+                  print(f"::error file={f}::Privacy leak detected in tracked file content")
+                  leaks += 1
 
-bad = [p for p in files if rx_name.search(p)]
-if bad:
-    for p in bad[:50]:
-        print(p)
-    print("::error::Suspicious filename/path detected.")
-    sys.exit(1)
+          if leaks:
+              print("::error::Privacy leak detected in tracked files. Remove absolute user paths.")
+              sys.exit(1)
 
-print("OK: No leaks found in current files.")
-""")'
+          print("Scanning filenames...")
+          rx_name = re.compile("|".join([
+              re.escape("Us" + "ers"),
+              re.escape("Do" + "cuments"),
+              re.escape("iC" + "loud"),
+              re.escape("/ho" + "me/"),
+              re.escape("/Us" + "ers/"),
+              re.escape("\\\\" + "Us" + "ers" + "\\\\"),
+              re.escape("C:" + "\\\\" + "Us" + "ers" + "\\\\"),
+          ]), re.IGNORECASE)
+
+          bad = [p for p in files if rx_name.search(p)]
+          if bad:
+              for p in bad[:50]:
+                  print(p)
+              print("::error::Suspicious filename/path detected.")
+              sys.exit(1)
+
+          print("OK: No leaks found in current files.")
+          """))'
