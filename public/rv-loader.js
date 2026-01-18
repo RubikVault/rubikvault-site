@@ -2146,11 +2146,6 @@ function renderTechSignalsSnapshot(contentEl, snapshot) {
       ${partialNote ? `<div class="rv-native-note">${partialNote}</div>` : ""}
       ${missingNote ? `<div class="rv-native-note">${missingNote}</div>` : ""}
       <div class="rv-tech-section">
-        <h3>Watchlist Signals</h3>
-        ${renderWatchlist(watchlist, symbols)}
-      </div>
-      <div class="rv-tech-section">
-        <h3>Top 30 Market Cap Table</h3>
         <div class="rv-native-note">How computed? RSI/MACD/Stoch RSI are derived from OHLC (stooq) per timeframe.</div>
         <div class="rv-top30-controls">
           <button type="button" class="rv-top30-tab${state.timeframe === "daily" ? " is-active" : ""}" data-rv-timeframe="daily" ${availableTimeframes.length ? "" : "disabled"}>Daily</button>
@@ -2160,7 +2155,6 @@ function renderTechSignalsSnapshot(contentEl, snapshot) {
         <div data-rv-top30-table>
           ${renderTop30Table(top30, state)}
         </div>
-        <div class="rv-native-note">Universe: fixed mega-cap list (approx top 30).</div>
       </div>
     `;
 
@@ -2495,6 +2489,63 @@ function renderVolumeAnomalySnapshot(contentEl, snapshot) {
   renderDebugMeta(contentEl, snapshot.meta || {});
 }
 
+function setRvciHeaderLine(contentEl, meta) {
+  const block = contentEl?.closest?.('[data-rv-feature="rv-rvci-engine"]');
+  const title = block?.querySelector?.(".rv-native-header h2");
+  if (!title) return;
+  const status = meta.status || "NO_DATA";
+  const regime = meta.regime || "—";
+  const coverage =
+    typeof meta.coveragePct === "number"
+      ? `${formatNumber(meta.coveragePct, { maximumFractionDigits: 1 })}%`
+      : meta.coveragePct
+        ? `${meta.coveragePct}%`
+        : "—";
+  const headerText = `RVCI Engine | Status: ${status} | Regime: ${regime} | Coverage: ${coverage} `;
+  const textNode = Array.from(title.childNodes || []).find((node) => node.nodeType === Node.TEXT_NODE);
+  if (textNode) {
+    textNode.textContent = headerText;
+  } else {
+    title.prepend(document.createTextNode(headerText));
+  }
+}
+
+function toSortableCell(value) {
+  const raw = String(value ?? "").trim();
+  const cleaned = raw.replace(/[%,$]/g, "");
+  const num = Number(cleaned);
+  if (!Number.isNaN(num) && cleaned !== "") return { type: "number", value: num };
+  return { type: "string", value: raw.toLowerCase() };
+}
+
+function bindSortableTable(table) {
+  const thead = table.querySelector("thead");
+  const tbody = table.querySelector("tbody");
+  if (!thead || !tbody) return;
+  thead.addEventListener("click", (event) => {
+    const th = event.target.closest("th");
+    if (!th) return;
+    const index = Array.from(th.parentNode.children).indexOf(th);
+    if (index < 0) return;
+    const currentIndex = Number(table.getAttribute("data-rv-sort-index") || "-1");
+    const currentDir = table.getAttribute("data-rv-sort-dir") || "asc";
+    const dir = currentIndex === index && currentDir === "asc" ? "desc" : "asc";
+    table.setAttribute("data-rv-sort-index", String(index));
+    table.setAttribute("data-rv-sort-dir", dir);
+    const rows = Array.from(tbody.querySelectorAll("tr"));
+    rows.sort((a, b) => {
+      const av = toSortableCell(a.children[index]?.textContent || "");
+      const bv = toSortableCell(b.children[index]?.textContent || "");
+      if (av.type === "number" && bv.type === "number") {
+        return dir === "asc" ? av.value - bv.value : bv.value - av.value;
+      }
+      if (av.value === bv.value) return 0;
+      return dir === "asc" ? av.value.localeCompare(bv.value) : bv.value.localeCompare(av.value);
+    });
+    rows.forEach((row) => tbody.appendChild(row));
+  });
+}
+
 async function renderRvciEngineSnapshot(contentEl, feature, logger) {
   const debug = new URLSearchParams(window.location.search).get("debug") === "1";
   const latestResult = await loadRvciLatest(debug);
@@ -2519,7 +2570,6 @@ async function renderRvciEngineSnapshot(contentEl, feature, logger) {
     source: "rvci"
   });
 
-  const isSkipped = status === "SKIPPED_MARKET_CLOSED" || status === "MARKET_NOT_CLOSED";
   if (debug) {
     console.log("[RVCI] Source selected:", sourceUrl);
     console.log(`[RVCI] Status: ${status} hasPaths=${Object.keys(normalizedPaths).length > 0} completePaths=${pathCheck.ok}`);
@@ -2610,7 +2660,7 @@ async function renderRvciEngineSnapshot(contentEl, feature, logger) {
     }
     return `
       <div class="rv-native-table-wrap">
-        <table class="rv-native-table rv-table--compact">
+        <table class="rv-native-table rv-table--compact" data-rv-sortable="rvci-signals">
           <thead>
             <tr>
               <th>Symbol</th>
@@ -2662,7 +2712,7 @@ async function renderRvciEngineSnapshot(contentEl, feature, logger) {
     }
     return `
       <div class="rv-native-table-wrap">
-        <table class="rv-native-table rv-table--compact">
+        <table class="rv-native-table rv-table--compact" data-rv-sortable="rvci-triggers">
           <thead>
             <tr>
               <th>Symbol</th>
@@ -2694,19 +2744,6 @@ async function renderRvciEngineSnapshot(contentEl, feature, logger) {
     const tab = tabs[state.tab];
     const items = toItems(tab.payload);
     const tabError = tabErrors[state.tab] || null;
-    const statusNote =
-      status && status !== "LIVE" ? `Status: ${status} · ${reason}` : "";
-    const coverageNote =
-      typeof meta.coveragePct === "number"
-        ? `Coverage: ${formatNumber(meta.coveragePct, { maximumFractionDigits: 1 })}%`
-        : "";
-    const regimeNote = meta.regime ? `Regime: ${meta.regime}` : "";
-    const generatedNote = meta.generatedAt ? `Generated: ${meta.generatedAt}` : "";
-    const warningNote = warnings.length ? warnings.join(" · ") : "";
-    const generatedTs = Date.parse(meta.generatedAt || "");
-    const ageHours = Number.isFinite(generatedTs) ? (Date.now() - generatedTs) / 3600000 : null;
-    const ageNote = isSkipped && ageHours && ageHours > 48 ? ` (data is ${Math.round(ageHours / 24)} days old)` : "";
-    const lastGoodNote = isSkipped ? `Market closed — showing last complete trading day${ageNote}` : "";
     const missingSample = healthPayload?.data?.missingSample || {};
     const missingList = [
       ...(Array.isArray(missingSample.A) ? missingSample.A : []),
@@ -2724,11 +2761,6 @@ async function renderRvciEngineSnapshot(contentEl, feature, logger) {
     };
 
     contentEl.innerHTML = `
-      ${statusNote ? `<div class="rv-native-note rv-native-warning">${statusNote}</div>` : ""}
-      ${warningNote ? `<div class="rv-native-note">${warningNote}</div>` : ""}
-      ${lastGoodNote ? `<div class="rv-native-note">${lastGoodNote}</div>` : ""}
-      <div class="rv-native-note">Composite Market Indicator (Daily)</div>
-      <div class="rv-native-note">${[regimeNote, coverageNote, generatedNote].filter(Boolean).join(" · ")}</div>
       <div class="rv-tech-section">
         <div class="rv-top30-controls">
           ${Object.entries(tabs)
@@ -2761,6 +2793,8 @@ async function renderRvciEngineSnapshot(contentEl, feature, logger) {
       });
     });
 
+    setRvciHeaderLine(contentEl, meta);
+    contentEl.querySelectorAll("table[data-rv-sortable]").forEach((table) => bindSortableTable(table));
     renderDebugMeta(contentEl, meta);
   };
 

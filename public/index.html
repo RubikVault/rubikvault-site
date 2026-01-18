@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
   <meta charset="UTF-8" />
   <title>RubikVault – Decode the Markets</title>
@@ -8,13 +8,6 @@
     name="description"
     content="RubikVault – calm, data-driven multi-asset market insights across stocks, crypto, macro and commodities. Educational only."
   />
-  <script>
-    (function() {
-      var stored = window.localStorage && window.localStorage.getItem("rv-theme");
-      var theme = stored === "light" ? "light" : "dark";
-      document.documentElement.setAttribute("data-theme", theme);
-    })();
-  </script>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
@@ -50,6 +43,9 @@
       </nav>
 
       <div class="rv-header-tools" aria-live="polite">
+        <div class="rv-data-updated" id="rv-data-updated" style="font-size: 12px; color: var(--rv-text-muted);">
+          Data updated: <span id="rv-data-updated-date">Loading...</span> (daily snapshots)
+        </div>
         <div class="rv-market-clock">
           <span class="rv-clock-time" id="rv-ny-time">NY: --:--:--</span>
           <span class="rv-clock-status">
@@ -58,13 +54,7 @@
             <span class="rv-market-countdown" id="rv-market-countdown">opens in --:--:--</span>
           </span>
         </div>
-        <button class="rv-theme-toggle" type="button" id="rv-theme-toggle" aria-label="Toggle theme">
-          Dark
-        </button>
       </div>
-    </div>
-    <div class="rv-data-updated" id="rv-data-updated" style="text-align: center; padding: 8px; font-size: 12px; color: var(--rv-text-muted); border-bottom: 1px solid var(--rv-border);">
-      Data updated: <span id="rv-data-updated-date">Loading...</span> (daily snapshots)
     </div>
     <script>
       // Update date immediately when DOM is ready
