@@ -16,7 +16,7 @@ jobs:
         run: |
           set -o pipefail
           echo "Scanning current tracked file contents (HEAD only, no history)..."
-          python3 - <<'PY'
+          python3 -c 'exec(r"""
 import os, re, subprocess, sys
 
 WORKFLOW = ".github/workflows/privacy-guard.yml"
@@ -30,7 +30,7 @@ if not files:
     print("No tracked files found.")
     sys.exit(0)
 
-# Build patterns WITHOUT embedding obvious literals in a single token (avoid naive scanners)
+# Build patterns WITHOUT embedding obvious literals in a single token
 p_users = "/" + "Us" + "ers" + "/"
 p_home = "/" + "ho" + "me" + "/"
 p_docs = "/" + "Do" + "cuments" + "/" + "Gi" + "tHub" + "/"
@@ -48,8 +48,6 @@ rx_content = re.compile("|".join([
 ]), re.IGNORECASE)
 
 leaks = 0
-
-# Content scan
 for f in files:
     if not os.path.isfile(f):
         continue
@@ -69,7 +67,6 @@ if leaks:
     sys.exit(1)
 
 print("Scanning filenames...")
-
 rx_name = re.compile("|".join([
     re.escape("Us" + "ers"),
     re.escape("Do" + "cuments"),
@@ -88,4 +85,4 @@ if bad:
     sys.exit(1)
 
 print("OK: No leaks found in current files.")
-PY
+""")'
