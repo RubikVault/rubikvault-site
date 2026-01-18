@@ -1,29 +1,29 @@
 {
   "schemaVersion": "v3",
   "blockId": "alpha-radar",
-  "generatedAt": "2026-01-18T20:54:29.489Z",
+  "generatedAt": "2026-01-18T21:09:10.378Z",
   "dataAt": "2026-01-16T21:00:00.000Z",
   "meta": {
     "status": "OK",
     "reason": "OK",
-    "generatedAt": "2026-01-18T20:54:29.489Z",
+    "generatedAt": "2026-01-18T21:09:10.378Z",
     "asOf": "2026-01-16T21:00:00.000Z",
     "source": "stooq",
     "ttlSeconds": 3600,
     "stale": true,
     "itemsCount": 10,
-    "stalenessSec": 172440,
+    "stalenessSec": 173340,
     "freshness": {
       "status": "expired",
-      "ageMinutes": 2874
+      "ageMinutes": 2889
     },
     "schedule": {
       "rule": "eod",
-      "nextPlannedFetchAt": "2026-01-19T20:54:29.489Z",
+      "nextPlannedFetchAt": "2026-01-19T21:09:10.378Z",
       "expectedNextRunWindowMinutes": 1440,
       "ttlSeconds": 3600
     },
-    "runId": "2026-01-18T20:54:29.482Z",
+    "runId": "2026-01-18T21:09:10.371Z",
     "validation": {
       "schema": {
         "ok": true,
@@ -43,143 +43,283 @@
     "items": [
       {
         "symbol": "AAPL",
-        "score": 55,
-        "state": "WATCH",
-        "reasons": [
-          "TREND_UP_200",
-          "RSI_OVERSOLD",
-          "MACD_NEGATIVE"
-        ],
+        "name": "AAPL",
         "close": 255.517,
         "changePct": -1.042949537198401,
-        "barsUsed": 10421,
-        "missingFields": []
+        "stop": null,
+        "setupScore": 22,
+        "triggerScore": 33,
+        "totalScore": 55,
+        "setup": {
+          "rsiExtreme": true,
+          "bbExtreme": false,
+          "nearSma200": false,
+          "rvolGte15": false,
+          "extremeGate": false
+        },
+        "trigger": {
+          "ema21Reclaim": false,
+          "higherLowFt": false,
+          "bosBreak": false,
+          "volumeConfirm": false,
+          "rsiUpturn": false
+        },
+        "tags": [
+          "WATCH"
+        ],
+        "notes": null
       },
       {
         "symbol": "MSFT",
-        "score": 35,
-        "state": "NEUTRAL",
-        "reasons": [
-          "TREND_DOWN",
-          "RSI_RECOVERY",
-          "MACD_NEGATIVE"
-        ],
+        "name": "MSFT",
         "close": 459.86,
         "changePct": 0.7007401567906024,
-        "barsUsed": 10038,
-        "missingFields": []
+        "stop": null,
+        "setupScore": 14,
+        "triggerScore": 21,
+        "totalScore": 35,
+        "setup": {
+          "rsiExtreme": true,
+          "bbExtreme": false,
+          "nearSma200": false,
+          "rvolGte15": false,
+          "extremeGate": false
+        },
+        "trigger": {
+          "ema21Reclaim": false,
+          "higherLowFt": false,
+          "bosBreak": false,
+          "volumeConfirm": false,
+          "rsiUpturn": false
+        },
+        "tags": [
+          "NEUTRAL"
+        ],
+        "notes": null
       },
       {
         "symbol": "NVDA",
-        "score": 65,
-        "state": "WATCH",
-        "reasons": [
-          "TREND_STRONG",
-          "RSI_NEUTRAL",
-          "MACD_NEGATIVE"
-        ],
+        "name": "NVDA",
         "close": 186.105,
         "changePct": -0.5052125100240668,
-        "barsUsed": 6788,
-        "missingFields": []
+        "stop": null,
+        "setupScore": 26,
+        "triggerScore": 39,
+        "totalScore": 65,
+        "setup": {
+          "rsiExtreme": true,
+          "bbExtreme": false,
+          "nearSma200": false,
+          "rvolGte15": false,
+          "extremeGate": false
+        },
+        "trigger": {
+          "ema21Reclaim": false,
+          "higherLowFt": false,
+          "bosBreak": false,
+          "volumeConfirm": false,
+          "rsiUpturn": false
+        },
+        "tags": [
+          "WATCH"
+        ],
+        "notes": null
       },
       {
         "symbol": "AMZN",
-        "score": 85,
-        "state": "STRONG",
-        "reasons": [
-          "TREND_STRONG",
-          "RSI_NEUTRAL",
-          "MACD_POSITIVE"
-        ],
+        "name": "AMZN",
         "close": 239.09,
         "changePct": 0.3820639852212704,
-        "barsUsed": 7208,
-        "missingFields": []
+        "stop": null,
+        "setupScore": 34,
+        "triggerScore": 51,
+        "totalScore": 85,
+        "setup": {
+          "rsiExtreme": true,
+          "bbExtreme": false,
+          "nearSma200": false,
+          "rvolGte15": false,
+          "extremeGate": false
+        },
+        "trigger": {
+          "ema21Reclaim": false,
+          "higherLowFt": false,
+          "bosBreak": false,
+          "volumeConfirm": false,
+          "rsiUpturn": false
+        },
+        "tags": [
+          "STRONG"
+        ],
+        "notes": null
       },
       {
         "symbol": "GOOGL",
-        "score": 85,
-        "state": "STRONG",
-        "reasons": [
-          "TREND_STRONG",
-          "RSI_NEUTRAL",
-          "MACD_POSITIVE"
-        ],
+        "name": "GOOGL",
         "close": 330,
         "changePct": -0.8353867419916949,
-        "barsUsed": 5388,
-        "missingFields": []
+        "stop": null,
+        "setupScore": 34,
+        "triggerScore": 51,
+        "totalScore": 85,
+        "setup": {
+          "rsiExtreme": true,
+          "bbExtreme": false,
+          "nearSma200": false,
+          "rvolGte15": false,
+          "extremeGate": false
+        },
+        "trigger": {
+          "ema21Reclaim": false,
+          "higherLowFt": false,
+          "bosBreak": false,
+          "volumeConfirm": false,
+          "rsiUpturn": false
+        },
+        "tags": [
+          "STRONG"
+        ],
+        "notes": null
       },
       {
         "symbol": "META",
-        "score": 35,
-        "state": "NEUTRAL",
-        "reasons": [
-          "TREND_DOWN",
-          "RSI_RECOVERY",
-          "MACD_NEGATIVE"
-        ],
+        "name": "META",
         "close": 620.25,
         "changePct": -0.08859536082473918,
-        "barsUsed": 3436,
-        "missingFields": []
+        "stop": null,
+        "setupScore": 14,
+        "triggerScore": 21,
+        "totalScore": 35,
+        "setup": {
+          "rsiExtreme": true,
+          "bbExtreme": false,
+          "nearSma200": false,
+          "rvolGte15": false,
+          "extremeGate": false
+        },
+        "trigger": {
+          "ema21Reclaim": false,
+          "higherLowFt": false,
+          "bosBreak": false,
+          "volumeConfirm": false,
+          "rsiUpturn": false
+        },
+        "tags": [
+          "NEUTRAL"
+        ],
+        "notes": null
       },
       {
         "symbol": "TSLA",
-        "score": 50,
-        "state": "NEUTRAL",
-        "reasons": [
-          "TREND_UP_200",
-          "RSI_RECOVERY",
-          "MACD_NEGATIVE"
-        ],
+        "name": "TSLA",
         "close": 437.52,
         "changePct": -0.23941446063342475,
-        "barsUsed": 3913,
-        "missingFields": []
+        "stop": null,
+        "setupScore": 20,
+        "triggerScore": 30,
+        "totalScore": 50,
+        "setup": {
+          "rsiExtreme": true,
+          "bbExtreme": false,
+          "nearSma200": false,
+          "rvolGte15": false,
+          "extremeGate": false
+        },
+        "trigger": {
+          "ema21Reclaim": false,
+          "higherLowFt": false,
+          "bosBreak": false,
+          "volumeConfirm": false,
+          "rsiUpturn": false
+        },
+        "tags": [
+          "NEUTRAL"
+        ],
+        "notes": null
       },
       {
         "symbol": "SPY",
-        "score": 85,
-        "state": "STRONG",
-        "reasons": [
-          "TREND_STRONG",
-          "RSI_NEUTRAL",
-          "MACD_POSITIVE"
-        ],
+        "name": "SPY",
         "close": 691.72,
         "changePct": -0.07511845602681255,
-        "barsUsed": 5256,
-        "missingFields": []
+        "stop": null,
+        "setupScore": 34,
+        "triggerScore": 51,
+        "totalScore": 85,
+        "setup": {
+          "rsiExtreme": true,
+          "bbExtreme": false,
+          "nearSma200": false,
+          "rvolGte15": false,
+          "extremeGate": false
+        },
+        "trigger": {
+          "ema21Reclaim": false,
+          "higherLowFt": false,
+          "bosBreak": false,
+          "volumeConfirm": false,
+          "rsiUpturn": false
+        },
+        "tags": [
+          "STRONG"
+        ],
+        "notes": null
       },
       {
         "symbol": "QQQ",
-        "score": 65,
-        "state": "WATCH",
-        "reasons": [
-          "TREND_STRONG",
-          "RSI_NEUTRAL",
-          "MACD_NEGATIVE"
-        ],
+        "name": "QQQ",
         "close": 621.055,
         "changePct": -0.11660072694522627,
-        "barsUsed": 6756,
-        "missingFields": []
+        "stop": null,
+        "setupScore": 26,
+        "triggerScore": 39,
+        "totalScore": 65,
+        "setup": {
+          "rsiExtreme": true,
+          "bbExtreme": false,
+          "nearSma200": false,
+          "rvolGte15": false,
+          "extremeGate": false
+        },
+        "trigger": {
+          "ema21Reclaim": false,
+          "higherLowFt": false,
+          "bosBreak": false,
+          "volumeConfirm": false,
+          "rsiUpturn": false
+        },
+        "tags": [
+          "WATCH"
+        ],
+        "notes": null
       },
       {
         "symbol": "IWM",
-        "score": 70,
-        "state": "STRONG",
-        "reasons": [
-          "TREND_STRONG",
-          "RSI_EXTENDED",
-          "MACD_POSITIVE"
-        ],
+        "name": "IWM",
         "close": 265.74,
         "changePct": 0.086625739143531,
-        "barsUsed": 5256,
-        "missingFields": []
+        "stop": null,
+        "setupScore": 28,
+        "triggerScore": 42,
+        "totalScore": 70,
+        "setup": {
+          "rsiExtreme": true,
+          "bbExtreme": false,
+          "nearSma200": false,
+          "rvolGte15": false,
+          "extremeGate": false
+        },
+        "trigger": {
+          "ema21Reclaim": false,
+          "higherLowFt": false,
+          "bosBreak": false,
+          "volumeConfirm": false,
+          "rsiUpturn": false
+        },
+        "tags": [
+          "STRONG"
+        ],
+        "notes": null
       }
     ],
     "picks": {
@@ -189,7 +329,7 @@
           "name": "AMZN",
           "close": 239.09,
           "changePct": 0.3820639852212704,
-          "stop": null,
+          "stop": 0,
           "setupScore": 34,
           "triggerScore": 51,
           "totalScore": 85,
@@ -217,7 +357,7 @@
           "name": "GOOGL",
           "close": 330,
           "changePct": -0.8353867419916949,
-          "stop": null,
+          "stop": 0,
           "setupScore": 34,
           "triggerScore": 51,
           "totalScore": 85,
@@ -245,7 +385,7 @@
           "name": "SPY",
           "close": 691.72,
           "changePct": -0.07511845602681255,
-          "stop": null,
+          "stop": 0,
           "setupScore": 34,
           "triggerScore": 51,
           "totalScore": 85,
@@ -275,7 +415,7 @@
           "name": "AMZN",
           "close": 239.09,
           "changePct": 0.3820639852212704,
-          "stop": null,
+          "stop": 0,
           "setupScore": 34,
           "triggerScore": 51,
           "totalScore": 85,
@@ -303,7 +443,7 @@
           "name": "GOOGL",
           "close": 330,
           "changePct": -0.8353867419916949,
-          "stop": null,
+          "stop": 0,
           "setupScore": 34,
           "triggerScore": 51,
           "totalScore": 85,
@@ -331,7 +471,7 @@
           "name": "SPY",
           "close": 691.72,
           "changePct": -0.07511845602681255,
-          "stop": null,
+          "stop": 0,
           "setupScore": 34,
           "triggerScore": 51,
           "totalScore": 85,
@@ -361,7 +501,7 @@
           "name": "IWM",
           "close": 265.74,
           "changePct": 0.086625739143531,
-          "stop": null,
+          "stop": 0,
           "setupScore": 28,
           "triggerScore": 42,
           "totalScore": 70,
@@ -389,7 +529,7 @@
           "name": "NVDA",
           "close": 186.105,
           "changePct": -0.5052125100240668,
-          "stop": null,
+          "stop": 0,
           "setupScore": 26,
           "triggerScore": 39,
           "totalScore": 65,
@@ -417,7 +557,7 @@
           "name": "QQQ",
           "close": 621.055,
           "changePct": -0.11660072694522627,
-          "stop": null,
+          "stop": 0,
           "setupScore": 26,
           "triggerScore": 39,
           "totalScore": 65,

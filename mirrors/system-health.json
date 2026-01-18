@@ -1,0 +1,47 @@
+{
+  "meta": {
+    "provider": "system-health",
+    "dataset": "system-health",
+    "fetchedAt": "2026-01-18T21:09:10.192Z",
+    "ttlSeconds": 3600,
+    "source": "mirror",
+    "runId": "2026-01-18T21:09:10.192Z",
+    "cost": null
+  },
+  "raw": {
+    "schemaVersion": "1.0",
+    "mirrorId": "system-health",
+    "updatedAt": "2026-01-18T21:09:10.192Z",
+    "overallStatus": "OK",
+    "jobs": [
+      {
+        "id": "crypto-snapshot",
+        "lastRunAt": "2026-01-18T21:09:10.192Z",
+        "lastSuccessAt": "2026-01-18T21:09:10.192Z",
+        "status": "OK",
+        "durationMs": 0,
+        "errors": [],
+        "notes": []
+      }
+    ],
+    "mirrors": [
+      {
+        "id": "crypto-snapshot",
+        "updatedAt": "2026-01-18T21:09:10.192Z",
+        "dataQuality": "OK",
+        "itemCount": 3,
+        "sizeKB": 0
+      }
+    ],
+    "alerts": [],
+    "selectedSymbols": [],
+    "skippedSymbols": [],
+    "runId": "2026-01-18T21:09:10.192Z",
+    "asOf": "2026-01-18T21:09:10.192Z",
+    "meta": {
+      "status": "PARTIAL",
+      "updatedAt": "2026-01-18T21:09:10.192Z",
+      "reason": "EMPTY_ITEMS"
+    }
+  }
+}
