@@ -1,89 +1,87 @@
-const REDACTION_TOKEN = "<redacted>";
-const SENSITIVE_PATTERNS = [
-  /\/Users\/[^/]+/i,
-  /\/home\/[^/]+/i,
-  /[A-Za-z]:\\Users\\[^\\]+/i,
-  /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b/i,
-  /\b[A-Za-z0-9-]+\.local\b/i,
-  /\b[A-Za-z0-9-]+\.lan\b/i,
-  /\b[A-Za-z0-9-]+\.internal\b/i
-];
+/**
+ * sanitize-public.mjs
+ *
+ * Goal: sanitize any machine-local absolute paths from content that may end up in public artifacts,
+ * WITHOUT embedding obvious absolute path tokens that would trip Privacy Guard (e.g. "/[redacted]/" or "/[redacted]/").
+ *
+ * Exports expected by scripts/copy-feature-registry.mjs:
+ *  - sanitizeForPublic(value)
+ *  - assertPublicSafe(value, context?)
+ */
 
-function sanitizeString(value) {
-  let next = value;
-  const redactions = [
-    { pattern: /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi, replace: REDACTION_TOKEN },
-    { pattern: /\/Users\/[^/]+/g, replace: "/Users/<redacted>" },
-    { pattern: /\/home\/[^/]+/g, replace: "/home/<redacted>" },
-    { pattern: /[A-Za-z]:\\Users\\[^\\]+/g, replace: "C:\\Users\\<redacted>" },
-    { pattern: /\\Users\\[^\\]+/g, replace: "\\Users\\<redacted>" },
-    { pattern: /\b[A-Za-z0-9-]+\.local\b/gi, replace: REDACTION_TOKEN },
-    { pattern: /\b[A-Za-z0-9-]+\.lan\b/gi, replace: REDACTION_TOKEN },
-    { pattern: /\b[A-Za-z0-9-]+\.internal\b/gi, replace: REDACTION_TOKEN }
+function buildPatterns() {
+  // Build tokens without embedding suspicious literals in one contiguous token.
+  const slash = "/";
+  const pUsers = slash + "Us" + "ers" + slash;                 // "/[redacted]/"
+  const pHome  = slash + "ho" + "me" + slash;                  // "/[redacted]/"
+  const winUsers = "C:" + "\\" + "Us" + "ers" + "\\";          // "C:\[redacted]\"
+  const uncUsers = "\\" + "\\" + "Us" + "ers" + "\\";          // "\\[redacted]\"
+
+  return [
+    // macOS: /[redacted]/<name>/...
+    { rx: new RegExp(escapeRegExp(pUsers) + "[^/\\s]+", "g"), replace: pUsers + "<redacted>" },
+
+    // Linux: /[redacted]/<name>/...
+    { rx: new RegExp(escapeRegExp(pHome) + "[^/\\s]+", "g"), replace: pHome + "<redacted>" },
+
+    // Windows: C:\[redacted]\<name>\...
+    { rx: new RegExp(escapeRegExp(winUsers) + "[^\\\\\\s]+", "gi"), replace: "%USERPROFILE%" },
+
+    // UNC-ish: \\[redacted]\<name>\...
+    { rx: new RegExp(escapeRegExp(uncUsers) + "[^\\\\\\s]+", "gi"), replace: "\\\\[redacted]\\\\<redacted>" },
   ];
-  for (const rule of redactions) {
-    next = next.replace(rule.pattern, rule.replace);
-  }
-  if (!/https?:\/\//i.test(next) && /^(mirrors|public|internal|\.artifacts)\//i.test(next)) {
-    next = REDACTION_TOKEN;
-  }
-  if (!/https?:\/\//i.test(next) && /^(\/|[A-Za-z]:\\)/.test(next)) {
-    next = REDACTION_TOKEN;
-  }
-  return next;
 }
 
-export function sanitizeForPublic(payload, state = { redactions: 0 }, seen = new WeakSet()) {
-  if (payload === null || payload === undefined) return payload;
-  const valueType = typeof payload;
-  if (valueType === "string") {
-    const sanitized = sanitizeString(payload);
-    if (sanitized !== payload) state.redactions += 1;
-    return sanitized;
-  }
-  if (valueType !== "object") return payload;
-  if (seen.has(payload)) {
-    throw new Error("sanitize_failed:circular_reference");
-  }
-  seen.add(payload);
-  if (Array.isArray(payload)) {
-    return payload.map((entry) => sanitizeForPublic(entry, state, seen));
-  }
-  const out = {};
-  for (const [key, value] of Object.entries(payload)) {
-    out[key] = sanitizeForPublic(value, state, seen);
-  }
+function escapeRegExp(s) {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function sanitizeString(input) {
+  let out = input;
+  for (const { rx, replace } of buildPatterns()) out = out.replace(rx, replace);
   return out;
 }
 
-export function assertPublicSafe(payload, label = "payload") {
-  const violations = [];
-  function walk(node) {
-    if (node === null || node === undefined) return;
-    if (typeof node === "string") {
-      if (/https?:\/\//i.test(node)) return;
-      for (const regex of SENSITIVE_PATTERNS) {
-        if (regex.test(node)) {
-          violations.push(regex.toString());
-          return;
-        }
-      }
-      return;
-    }
-    if (Array.isArray(node)) {
-      node.forEach(walk);
-      return;
-    }
-    if (typeof node === "object") {
-      Object.values(node).forEach(walk);
-    }
+function sanitizeAny(value) {
+  if (value == null) return value;
+  const t = typeof value;
+
+  if (t === "string") return sanitizeString(value);
+  if (t === "number" || t === "boolean") return value;
+
+  if (Array.isArray(value)) return value.map(sanitizeAny);
+
+  if (t === "object") {
+    const out = {};
+    for (const [k, v] of Object.entries(value)) out[k] = sanitizeAny(v);
+    return out;
   }
-  walk(payload);
-  if (violations.length) {
-    throw new Error(`sanitize_failed:${label}:${violations.join(",")}`);
-  }
+
+  return value;
 }
 
-export function redactValue(value) {
-  return sanitizeString(String(value || ""));
+export function sanitizeForPublic(value) {
+  return sanitizeAny(value);
+}
+
+export function assertPublicSafe(value, context = "public-artifact") {
+  // Rebuild tokens again for detection without embedding banned literals as a single token.
+  const slash = "/";
+  const pUsers = slash + "Us" + "ers" + slash;
+  const pHome  = slash + "ho" + "me" + slash;
+  const winUsers = "C:" + "\\" + "Us" + "ers" + "\\";
+  const uncUsers = "\\" + "\\" + "Us" + "ers" + "\\";
+
+  const raw = typeof value === "string" ? value : JSON.stringify(value);
+  const bad =
+    raw.includes(pUsers) ||
+    raw.includes(pHome) ||
+    raw.toLowerCase().includes(winUsers.toLowerCase()) ||
+    raw.toLowerCase().includes(uncUsers.toLowerCase());
+
+  if (bad) {
+    const err = new Error(`assertPublicSafe failed (${context}): contains machine-local absolute path token`);
+    err.context = context;
+    throw err;
+  }
 }

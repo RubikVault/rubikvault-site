@@ -27,7 +27,19 @@ jobs:
           FMP_API_KEY: ${{ secrets.FMP_API_KEY }}
           ALPHAVANTAGE_API_KEY: ${{ secrets.ALPHAVANTAGE_API_KEY }}
           COINGECKO_DEMO_KEY: ${{ secrets.COINGECKO_DEMO_KEY }}
-        run: node scripts/update-macro-hub.v3.mjs
+        run: |
+          echo "FRED_API_KEY: $([[ -n \"$FRED_API_KEY\" ]] && echo 'SET' || echo 'EMPTY')"
+          echo "EIA_API_KEY: $([[ -n \"$EIA_API_KEY\" ]] && echo 'SET' || echo 'EMPTY')"
+          echo "FINNHUB_API_KEY: $([[ -n \"$FINNHUB_API_KEY\" ]] && echo 'SET' || echo 'EMPTY')"
+          echo "FMP_API_KEY: $([[ -n \"$FMP_API_KEY\" ]] && echo 'SET' || echo 'EMPTY')"
+          echo "ALPHAVANTAGE_API_KEY: $([[ -n \"$ALPHAVANTAGE_API_KEY\" ]] && echo 'SET' || echo 'EMPTY')"
+          echo "COINGECKO_DEMO_KEY: $([[ -n \"$COINGECKO_DEMO_KEY\" ]] && echo 'SET' || echo 'EMPTY')"
+          if grep -q '"provider": "EIA"' config/macro-hub.catalog.v3.json; then
+            if [ -z "${EIA_API_KEY}" ]; then
+              echo "WARN: EIA_API_KEY empty"
+            fi
+          fi
+          node scripts/update-macro-hub.v3.mjs
       - name: Commit snapshots if changed
         run: |
           git config user.name "macro-hub-bot"
@@ -38,4 +50,12 @@ jobs:
             exit 0
           fi
           git commit -m "chore(snapshot): macro-hub $(date -u +%F) [skip ci]"
-          git push
+          for i in 1 2 3; do
+            git pull --rebase origin main && git push origin HEAD:main && break
+            echo "Push failed (attempt $i), retrying..."
+            sleep $((i * 3))
+          done
+          if ! git push --dry-run origin HEAD:main >/dev/null 2>&1; then
+            echo "Push failed after retries"
+            exit 1
+          fi
