@@ -300,32 +300,118 @@ function validateSchema(snapshot) {
   return { ok: errors.length === 0, errors };
 }
 
-function buildSnapshot({ blockId, raw, mirrorMeta }) {
+function buildSnapshot({ blockId, raw, mirrorMeta, lastGoodSnapshot = null }) {
   const generatedAt = new Date().toISOString();
   const asOf = mirrorMeta.asOf || mirrorMeta.updatedAt || generatedAt;
   const ttlSeconds = Number.isFinite(mirrorMeta.ttlSeconds) ? mirrorMeta.ttlSeconds : 3600;
   const freshness = computeFreshness(asOf, ttlSeconds);
   const schedule = computeSchedule(mirrorMeta.cadence || mirrorMeta.mode || "daily", ttlSeconds);
-  const { items, extraData } = mapMirrorData(blockId, raw);
+  let { items, extraData } = mapMirrorData(blockId, raw);
+  
+  // --- LASTGOOD fallback: if items empty, fill from lastGood ---
+  let lastGoodUsed = 0;
+  let lastGoodFilled = 0;
+  if (lastGoodSnapshot) {
+    const lastGoodData = lastGoodSnapshot?.data || {};
+    const lastGoodItems = lastGoodData.items;
+    const lastGoodSectors = lastGoodData.sectors;
+    
+    // Fill items from lastGood if empty
+    if ((!Array.isArray(items) || items.length === 0) && Array.isArray(lastGoodItems) && lastGoodItems.length > 0) {
+      items = lastGoodItems.map((item) => ({
+        ...item,
+        derivedFromLastGood: true,
+        derivationReason: "LASTGOOD_FALLBACK"
+      }));
+      lastGoodUsed += items.length;
+      lastGoodFilled += items.length;
+    }
+    
+    // Fill sectors from lastGood if empty (for sp500-sectors)
+    if (blockId === "sp500-sectors") {
+      const currentSectors = extraData.sectors || [];
+      if ((!Array.isArray(currentSectors) || currentSectors.length === 0) && 
+          Array.isArray(lastGoodSectors) && lastGoodSectors.length > 0) {
+        extraData.sectors = lastGoodSectors.map((sector) => ({
+          ...sector,
+          derivedFromLastGood: true,
+          derivationReason: "LASTGOOD_FALLBACK"
+        }));
+        lastGoodUsed += extraData.sectors.length;
+        lastGoodFilled += extraData.sectors.length;
+      }
+    }
+    
+    // Also merge other extraData from lastGood if current is empty
+    const { items: _, sectors: __, ...lastGoodRest } = lastGoodData;
+    if (Object.keys(extraData).length === 0 && Object.keys(lastGoodRest).length > 0) {
+      extraData = { ...lastGoodRest, ...extraData };
+    } else if (Object.keys(lastGoodRest).length > 0) {
+      // Merge missing keys from lastGood
+      for (const [key, value] of Object.entries(lastGoodRest)) {
+        if (!(key in extraData) || (Array.isArray(extraData[key]) && extraData[key].length === 0)) {
+          extraData[key] = value;
+        }
+      }
+    }
+  }
+  
+  // --- NEVER EMPTY: if still empty after lastGood, create minimal placeholder ---
+  // This ensures UI never shows completely empty blocks (per .cursorrules rule 7.1)
+  if ((!Array.isArray(items) || items.length === 0) && !lastGoodSnapshot) {
+    // Create minimal placeholder item so UI has something to display
+    items = [{
+      id: `${blockId}_status`,
+      label: blockId.replace(/^rv-/, "").replace(/-/g, " "),
+      value: "NO_DATA",
+      unit: "",
+      derivedFromLastGood: false,
+      derivationReason: "EMPTY_AFTER_FALLBACK",
+      stale: true,
+      staleReason: "missing"
+    }];
+    lastGoodFilled = 1; // Track that we created placeholder
+  }
+  
   const sanitizedItems = redactSecrets(items);
   const data = { items: sanitizedItems, ...redactSecrets(extraData) };
   const itemsCount = sanitizedItems.length;
   const sourceUpstream = typeof mirrorMeta.sourceUpstream === "string" ? mirrorMeta.sourceUpstream : null;
   const sourceValue = typeof mirrorMeta.source === "string" ? mirrorMeta.source : null;
+  // Determine status: if items empty after lastGood fallback, mark as PARTIAL
+  const hasItems = sanitizedItems.length > 0;
+  const status = mirrorMeta.status || (hasItems ? "LIVE" : "PARTIAL");
+  const reason = mirrorMeta.reason || (hasItems ? "OK" : (lastGoodUsed > 0 ? "LASTGOOD_FALLBACK" : "EMPTY_ITEMS"));
+  
   const meta = {
-    status: mirrorMeta.status || (sanitizedItems.length ? "LIVE" : "PARTIAL"),
-    reason: mirrorMeta.reason || (sanitizedItems.length ? "OK" : "EMPTY"),
+    status,
+    reason,
     generatedAt,
     asOf,
     source: sourceUpstream || sourceValue || "mirror",
     ttlSeconds,
-    stale: freshness.status !== "fresh",
+    stale: freshness.status !== "fresh" || lastGoodUsed > 0,
     itemsCount,
     stalenessSec: Number.isFinite(freshness.ageMinutes) ? freshness.ageMinutes * 60 : null,
     freshness,
     schedule,
     runId: RUN_ID
   };
+  
+  // Add lastGood debug info if used
+  if (lastGoodUsed > 0) {
+    if (!meta.notes) meta.notes = {};
+    if (typeof meta.notes !== "object") meta.notes = {};
+    meta.notes.lastGoodUsed = lastGoodUsed;
+    meta.notes.lastGoodFilled = lastGoodFilled;
+    
+    if (!data.debug) data.debug = {};
+    data.debug.lastGood = {
+      used: lastGoodUsed,
+      filled: lastGoodFilled,
+      reason: "EMPTY_ITEMS_FALLBACK"
+    };
+  }
   const schema = validateSchema({ blockId, meta, data });
   const ranges = validateRanges(sanitizedItems);
   const integrity = validateIntegrity(meta);
@@ -616,12 +702,15 @@ async function main() {
     if (!blockId) continue;
     const unwrapped = unwrapEnvelope(raw);
     const mirrorMeta = normalizeMirrorMeta(unwrapped.raw, unwrapped.meta, blockId);
-    const snapshot = buildSnapshot({ blockId, raw: unwrapped.raw, mirrorMeta });
+    
+    // Load lastGood snapshot for fallback
+    const snapshotPath = path.join(SNAPSHOT_DIR, `${blockId}.json`);
+    const lastGoodSnapshot = loadJson(snapshotPath);
+    
+    const snapshot = buildSnapshot({ blockId, raw: unwrapped.raw, mirrorMeta, lastGoodSnapshot });
     const valid = snapshot.meta.validation.schema.ok &&
       snapshot.meta.validation.ranges.ok &&
       snapshot.meta.validation.integrity.ok;
-
-    const snapshotPath = path.join(SNAPSHOT_DIR, `${blockId}.json`);
     if (!valid) {
       const existing = loadJson(snapshotPath);
       if (existing?.dataAt) lastGoodAsOf[blockId] = existing.dataAt;
