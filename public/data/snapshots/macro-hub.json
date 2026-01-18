@@ -1,174 +1,29 @@
 {
+  "schemaVersion": "v3",
+  "blockId": "macro-hub",
+  "generatedAt": "2026-01-18T20:54:29.498Z",
+  "dataAt": "2026-01-18",
   "meta": {
-    "status": "LIVE",
-    "reason": "OK",
-    "generatedAt": "2026-01-18T20:40:33.595Z",
+    "status": "PARTIAL",
+    "reason": "PARTIAL",
+    "generatedAt": "2026-01-18T20:54:29.498Z",
     "asOf": "2026-01-18",
     "source": "multi",
-    "ttlSeconds": 86400,
-    "runId": "2026-01-18T20:40:13.195Z",
-    "version": "3.0",
-    "asOfDate": "2026-01-18",
-    "updatedAt": "2026-01-18T20:40:33.595Z",
-    "counts": {
-      "total": 40,
-      "freshOrDerivedOk": 32,
-      "stale": 27,
-      "null": 8
+    "ttlSeconds": 3600,
+    "stale": true,
+    "itemsCount": 0,
+    "stalenessSec": 75240,
+    "freshness": {
+      "status": "expired",
+      "ageMinutes": 1254
     },
-    "providerCalls": {
-      "FRED": 30,
-      "FINNHUB": 5,
-      "FMP": 4,
-      "ALPHAVANTAGE": 1,
-      "COINGECKO": 2,
-      "DEFILLAMA": 1
+    "schedule": {
+      "rule": "daily",
+      "nextPlannedFetchAt": "2026-01-19T20:54:29.498Z",
+      "expectedNextRunWindowMinutes": 1440,
+      "ttlSeconds": 3600
     },
-    "errors": [
-      {
-        "provider": "FRED",
-        "metric": "VIX3M",
-        "message": "HTTP_400"
-      },
-      {
-        "provider": "FRED",
-        "metric": "GOLDAMGBD228NLBM",
-        "message": "HTTP_400"
-      },
-      {
-        "provider": "FRED",
-        "metric": "WILSHIRE5000IND",
-        "message": "HTTP_400"
-      },
-      {
-        "provider": "FMP",
-        "metric": "SPY_history",
-        "message": "HTTP_403"
-      }
-    ],
-    "staleMetrics": [
-      {
-        "id": "RISKREG",
-        "reason": "ttl_exceeded"
-      },
-      {
-        "id": "VIXCLS",
-        "reason": "ttl_exceeded"
-      },
-      {
-        "id": "VIX3M",
-        "reason": "lastgood"
-      },
-      {
-        "id": "VIXRATIO",
-        "reason": "lastgood"
-      },
-      {
-        "id": "US2Y",
-        "reason": "ttl_exceeded"
-      },
-      {
-        "id": "US10Y",
-        "reason": "ttl_exceeded"
-      },
-      {
-        "id": "US30Y",
-        "reason": "ttl_exceeded"
-      },
-      {
-        "id": "SOFR",
-        "reason": "ttl_exceeded"
-      },
-      {
-        "id": "EFFR",
-        "reason": "ttl_exceeded"
-      },
-      {
-        "id": "HY_OAS",
-        "reason": "ttl_exceeded"
-      },
-      {
-        "id": "IG_OAS",
-        "reason": "ttl_exceeded"
-      },
-      {
-        "id": "BBB_OAS",
-        "reason": "ttl_exceeded"
-      },
-      {
-        "id": "BAA_YLD",
-        "reason": "ttl_exceeded"
-      },
-      {
-        "id": "STRESS",
-        "reason": "ttl_exceeded"
-      },
-      {
-        "id": "USD_BRD",
-        "reason": "ttl_exceeded"
-      },
-      {
-        "id": "EURUSD",
-        "reason": "ttl_exceeded"
-      },
-      {
-        "id": "USDJPY",
-        "reason": "ttl_exceeded"
-      },
-      {
-        "id": "GOLD",
-        "reason": "lastgood"
-      },
-      {
-        "id": "WTI",
-        "reason": "ttl_exceeded"
-      },
-      {
-        "id": "CURVE_1M",
-        "reason": "lastgood"
-      },
-      {
-        "id": "VOL_TERM",
-        "reason": "lastgood"
-      },
-      {
-        "id": "STBL_MCAP",
-        "reason": "lastgood"
-      },
-      {
-        "id": "CPI_YOY",
-        "reason": "ttl_exceeded"
-      },
-      {
-        "id": "UNRATE",
-        "reason": "ttl_exceeded"
-      },
-      {
-        "id": "GDP_QOQ",
-        "reason": "ttl_exceeded"
-      },
-      {
-        "id": "CAPE",
-        "reason": "lastgood"
-      },
-      {
-        "id": "BUFFETT",
-        "reason": "lastgood"
-      }
-    ],
-    "notes": {
-      "equitiesAreProxies": true,
-      "proxyMap": {
-        "SPY": "S&P 500",
-        "QQQ": "Nasdaq 100",
-        "IWM": "Russell 2000",
-        "EWG": "Germany",
-        "EWJ": "Japan"
-      },
-      "lastGoodIndexLoaded": true,
-      "lastGoodUsed": 27,
-      "lastGoodFilledFields": 0
-    },
+    "runId": "2026-01-18T20:54:29.482Z",
     "validation": {
       "schema": {
         "ok": true,
@@ -182,19 +37,10 @@
         "ok": true,
         "errors": []
       }
-    },
-    "schedule": {
-      "rule": "daily",
-      "nextPlannedFetchAt": "2026-01-19T20:40:33.595Z",
-      "expectedNextRunWindowMinutes": 1440,
-      "ttlSeconds": 86400
-    },
-    "freshness": {
-      "status": "fresh",
-      "ageMinutes": 1240
     }
   },
   "data": {
+    "items": [],
     "RISKREG": {
       "value": 45,
       "change": null,
@@ -672,63 +518,5 @@
         "afterMetrics": 41
       }
     }
-  },
-  "categories": {
-    "RISK_VOL": [
-      "RISKREG",
-      "VIXCLS",
-      "VIX3M",
-      "VIXRATIO",
-      "CURVE10_2"
-    ],
-    "RATES": [
-      "US2Y",
-      "US10Y",
-      "US30Y",
-      "SOFR",
-      "EFFR"
-    ],
-    "CREDIT": [
-      "HY_OAS",
-      "IG_OAS",
-      "BBB_OAS",
-      "BAA_YLD",
-      "STRESS"
-    ],
-    "FX_CMDS": [
-      "USD_BRD",
-      "EURUSD",
-      "USDJPY",
-      "GOLD",
-      "WTI"
-    ],
-    "EQUITIES": [
-      "SPY",
-      "QQQ",
-      "IWM",
-      "EWG",
-      "EWJ"
-    ],
-    "BREADTH": [
-      "HY_OAS_1M",
-      "CURVE_1M",
-      "SPY_20D",
-      "SPY_200D",
-      "VOL_TERM"
-    ],
-    "CRYPTO": [
-      "BTCUSD",
-      "ETHUSD",
-      "CRY_MCAP",
-      "BTC_DOM",
-      "STBL_MCAP"
-    ],
-    "MACRO_VAL": [
-      "CPI_YOY",
-      "UNRATE",
-      "GDP_QOQ",
-      "CAPE",
-      "BUFFETT"
-    ]
   }
 }
