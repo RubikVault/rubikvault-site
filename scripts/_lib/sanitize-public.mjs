@@ -13,10 +13,7 @@ function sanitizeString(value) {
   let next = value;
   const redactions = [
     { pattern: /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi, replace: REDACTION_TOKEN },
-    { pattern: /\/Users\/[^/]+/g, replace: "/Users/<redacted>" },
-    { pattern: /\/home\/[^/]+/g, replace: "/home/<redacted>" },
-    { pattern: /[A-Za-z]:\\Users\\[^\\]+/g, replace: "C:\\Users\\<redacted>" },
-    { pattern: /\\Users\\[^\\]+/g, replace: "\\Users\\<redacted>" },
+    { pattern: /\/Users\/[^/]+/g, replace: "$HOME    { pattern: /\/home\/[^/]+/g, replace: "$HOME    { pattern: /[A-Za-z]:\\Users\\[^\\]+/g, replace: "%USERPROFILE%    { pattern: /\\Users\\[^\\]+/g, replace: "\\Users\\<redacted>" },
     { pattern: /\b[A-Za-z0-9-]+\.local\b/gi, replace: REDACTION_TOKEN },
     { pattern: /\b[A-Za-z0-9-]+\.lan\b/gi, replace: REDACTION_TOKEN },
     { pattern: /\b[A-Za-z0-9-]+\.internal\b/gi, replace: REDACTION_TOKEN }
