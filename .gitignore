@@ -86,3 +86,22 @@ mirrors/.locks/
 # standard noise (keep repo clean)
 # standard noise
 # generated dirs (avoid privacy-guard false positives)
+
+### RV_PRIVACY_GUARD_BLOCK ###
+# standard noise
+.DS_Store
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# generated dirs / local artifacts (avoid privacy-guard false positives)
+.wrangler/
+.wrangler/**
+.venv/
+.venv*/
+.venv-rvci/
+.venv-rvci/**
+debug/
+mirrors/.locks/
+*.tmp
+*.log
