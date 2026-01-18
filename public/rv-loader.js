@@ -12,9 +12,9 @@ import { resolveApiBase } from "./features/utils/api.js";
 import { initFlagsPanel } from "./features/rv-flags-panel.js";
 import { BLOCK_REGISTRY, formatBlockTitle } from "./features/blocks-registry.js";
 
-const RENDER_PLAN_URL = "./data/render-plan.json";
-const MANIFEST_URL = "./data/seed-manifest.json";
-const RVCI_LATEST_URL = "./data/rvci_latest.json";
+const RENDER_PLAN_URL = "/data/render-plan.json";
+const MANIFEST_URL = "/data/seed-manifest.json";
+const RVCI_LATEST_URL = "/data/rvci_latest.json";
 const RUN_ID = (() => {
   if (typeof window === "undefined") return "";
   if (window.__RV_RUN_ID) return window.__RV_RUN_ID;
@@ -193,7 +193,7 @@ function getMirrorUpdatedAt(raw) {
 
 async function loadMirrorSnapshot(featureId, mirrorId) {
   try {
-    const res = await fetch(`./data/snapshots/${mirrorId}.json`, { cache: "no-store" });
+    const res = await fetch(`/data/snapshots/${mirrorId}.json`, { cache: "no-store" });
     if (!res.ok) return null;
     const raw = await res.json();
     const normalized = normalizeSnapshotEnvelope(raw, featureId);
@@ -224,7 +224,7 @@ async function loadMirrorSnapshot(featureId, mirrorId) {
 }
 
 async function loadApiFallbackSnapshot(featureId, apiId) {
-  const res = await fetch(`./data/snapshots/${apiId}.json`, {
+  const res = await fetch(`/data/snapshots/${apiId}.json`, {
     cache: "no-store",
     headers: { Accept: "application/json" }
   });
@@ -267,7 +267,7 @@ async function loadSnapshot(rawId, { force = false } = {}) {
   }
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), SNAPSHOT_TIMEOUT_MS);
-  const fetchPromise = fetch(`./data/snapshots/${snapshotId}.json`, {
+  const fetchPromise = fetch(`/data/snapshots/${snapshotId}.json`, {
     cache: "no-store",
     signal: controller.signal
   })
@@ -1654,10 +1654,10 @@ function getFeatureEndpoint(feature) {
   const api = feature?.api ? String(feature.api) : "";
   if (api) {
     const cleaned = api.replace(/^\/+/, "").replace(/^api\//, "");
-    return cleaned ? `./data/snapshots/${cleaned}.json` : "";
+    return cleaned ? `/data/snapshots/${cleaned}.json` : "";
   }
   const fallback = normalizeId(feature?.id);
-  return fallback ? `./data/snapshots/${fallback}.json` : "";
+  return fallback ? `/data/snapshots/${fallback}.json` : "";
 }
 
 function getManifestBlockId(feature, section) {
@@ -1676,7 +1676,7 @@ function getManifestEndpoint(feature, section) {
   const blockId = getManifestBlockId(feature, section);
   if (blockId === "rvci-engine") return "/data/snapshots/rvci-engine.json";
   const snapshotId = normalizeId(blockId);
-  return snapshotId ? `./data/snapshots/${snapshotId}.json` : "";
+  return snapshotId ? `/data/snapshots/${snapshotId}.json` : "";
 }
 
 function formatNumber(value, options = {}) {
