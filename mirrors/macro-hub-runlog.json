@@ -1,0 +1,158 @@
+{
+  "runId": "2026-01-18T15:48:42.543Z",
+  "updatedAt": "2026-01-18T15:48:42.965Z",
+  "asOfDate": "2026-01-18",
+  "providerCalls": {
+    "COINGECKO": 2,
+    "DEFILLAMA": 1
+  },
+  "counts": {
+    "total": 40,
+    "freshOrDerivedOk": 4,
+    "stale": 36,
+    "null": 36
+  },
+  "errors": [
+    {
+      "provider": "FRED",
+      "metric": "VIXCLS",
+      "message": "missing_api_key"
+    },
+    {
+      "provider": "FRED",
+      "metric": "VIX3M",
+      "message": "missing_api_key"
+    },
+    {
+      "provider": "FRED",
+      "metric": "T10Y2Y",
+      "message": "missing_api_key"
+    },
+    {
+      "provider": "FRED",
+      "metric": "DGS2",
+      "message": "missing_api_key"
+    },
+    {
+      "provider": "FRED",
+      "metric": "DGS10",
+      "message": "missing_api_key"
+    },
+    {
+      "provider": "FRED",
+      "metric": "DGS30",
+      "message": "missing_api_key"
+    },
+    {
+      "provider": "FRED",
+      "metric": "SOFR",
+      "message": "missing_api_key"
+    },
+    {
+      "provider": "FRED",
+      "metric": "EFFR",
+      "message": "missing_api_key"
+    },
+    {
+      "provider": "FRED",
+      "metric": "BAMLH0A0HYM2",
+      "message": "missing_api_key"
+    },
+    {
+      "provider": "FRED",
+      "metric": "BAMLC0A0CM",
+      "message": "missing_api_key"
+    },
+    {
+      "provider": "FRED",
+      "metric": "BAMLC0A4CBBB",
+      "message": "missing_api_key"
+    },
+    {
+      "provider": "FRED",
+      "metric": "BAA",
+      "message": "missing_api_key"
+    },
+    {
+      "provider": "FRED",
+      "metric": "DTWEXBGS",
+      "message": "missing_api_key"
+    },
+    {
+      "provider": "FRED",
+      "metric": "DEXUSEU",
+      "message": "missing_api_key"
+    },
+    {
+      "provider": "FRED",
+      "metric": "DEXJPUS",
+      "message": "missing_api_key"
+    },
+    {
+      "provider": "FRED",
+      "metric": "GOLDAMGBD228NLBM",
+      "message": "missing_api_key"
+    },
+    {
+      "provider": "FRED",
+      "metric": "DCOILWTICO",
+      "message": "missing_api_key"
+    },
+    {
+      "provider": "FRED",
+      "metric": "CPIAUCSL",
+      "message": "missing_api_key"
+    },
+    {
+      "provider": "FRED",
+      "metric": "UNRATE",
+      "message": "missing_api_key"
+    },
+    {
+      "provider": "FRED",
+      "metric": "GDP",
+      "message": "missing_api_key"
+    },
+    {
+      "provider": "FRED",
+      "metric": "WILSHIRE5000IND",
+      "message": "missing_api_key"
+    },
+    {
+      "provider": "FMP",
+      "metric": "quotes",
+      "message": "missing_api_key"
+    },
+    {
+      "provider": "FMP",
+      "metric": "SPY_history",
+      "message": "missing_api_key"
+    },
+    {
+      "provider": "ALPHAVANTAGE",
+      "metric": "SPY_history",
+      "message": "missing_api_key"
+    }
+  ],
+  "budgets": {
+    "coingecko": {
+      "simple": 1,
+      "global": 1
+    },
+    "defillama": {
+      "stable": 1
+    }
+  },
+  "sources": {
+    "fred": [],
+    "equities": {
+      "quotes": [],
+      "history": null
+    },
+    "crypto": {
+      "coingeckoSimple": true,
+      "coingeckoGlobal": true,
+      "defillamaStable": true
+    }
+  }
+}
