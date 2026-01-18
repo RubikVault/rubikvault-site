@@ -244,9 +244,15 @@ function mapMirrorData(mirrorId, raw) {
     return { items, extraData: { ...extractExtraData(raw), signals: items, rows: items } };
   }
   if (mirrorId === "alpha-radar") {
-    const items = extractItems(raw);
+    // Import normalizePick dynamically to normalize items
+    const { normalizePick, computeAlphaRadarPicks } = await import("./core/alpha-radar-core.mjs");
+    const rawItems = extractItems(raw);
+    // Normalize items to include setupScore/triggerScore/totalScore
+    const items = Array.isArray(rawItems) ? rawItems.map(normalizePick) : [];
     const picks = raw?.data?.picks || raw?.picks || null;
-    const extraData = picks && typeof picks === "object" ? { ...extractExtraData(raw), picks } : extractExtraData(raw);
+    // If picks exist, normalize them too
+    const normalizedPicks = picks && typeof picks === "object" ? computeAlphaRadarPicks({ picks }) : null;
+    const extraData = normalizedPicks ? { ...extractExtraData(raw), picks: normalizedPicks } : extractExtraData(raw);
     return { items, extraData };
   }
   const items = extractItems(raw);

@@ -80,7 +80,20 @@ function renderTop20Table(payload) {
     `;
   }
 
-  const signals = payload?.data?.signals || [];
+  // Handle snapshot format: payload.data.items for snapshot, payload.data.signals for API
+  const rawSignals = payload?.data?.signals || payload?.data?.items || [];
+  // Filter by timeframe: use rsi for daily, rsiWeekly for weekly, rsiMonthly for monthly
+  const signals = rawSignals.map((item) => {
+    if (!item || typeof item !== "object") return item;
+    const timeframe = top20State.timeframe || "daily";
+    if (timeframe === "weekly" && item.rsiWeekly != null) {
+      return { ...item, rsi: item.rsiWeekly };
+    } else if (timeframe === "monthly" && item.rsiMonthly != null) {
+      return { ...item, rsi: item.rsiMonthly };
+    }
+    // Default to daily (item.rsi)
+    return item;
+  });
   const sortKey = top20State.sortKey;
   const dir = top20State.sortDir === "desc" ? -1 : 1;
   const sorted = signals.slice().sort((a, b) => {
@@ -168,7 +181,8 @@ function renderTop20Table(payload) {
 }
 
 async function fetchSignals(symbols, timeframe, logger) {
-  return fetchJSON(`/tech-signals?timeframe=${encodeURIComponent(timeframe)}` , {
+  // Load snapshot directly (timeframe filtering happens client-side)
+  return fetchJSON("/data/snapshots/tech-signals.json", {
     feature: "rv-tech-signals",
     traceId: Math.random().toString(36).slice(2, 10),
     logger
