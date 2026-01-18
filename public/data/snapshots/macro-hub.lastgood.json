@@ -2,14 +2,14 @@
   "meta": {
     "status": "LIVE",
     "reason": "OK",
-    "generatedAt": "2026-01-18T20:31:54.547Z",
+    "generatedAt": "2026-01-18T20:40:33.595Z",
     "asOf": "2026-01-18",
     "source": "multi",
     "ttlSeconds": 86400,
-    "runId": "2026-01-18T20:31:41.849Z",
+    "runId": "2026-01-18T20:40:13.195Z",
     "version": "3.0",
     "asOfDate": "2026-01-18",
-    "updatedAt": "2026-01-18T20:31:54.547Z",
+    "updatedAt": "2026-01-18T20:40:33.595Z",
     "counts": {
       "total": 40,
       "freshOrDerivedOk": 32,
@@ -185,13 +185,13 @@
     },
     "schedule": {
       "rule": "daily",
-      "nextPlannedFetchAt": "2026-01-19T20:31:54.547Z",
+      "nextPlannedFetchAt": "2026-01-19T20:40:33.595Z",
       "expectedNextRunWindowMinutes": 1440,
       "ttlSeconds": 86400
     },
     "freshness": {
       "status": "fresh",
-      "ageMinutes": 1231
+      "ageMinutes": 1240
     }
   },
   "data": {
@@ -552,8 +552,8 @@
       "derivationReason": "LASTGOOD_FALLBACK"
     },
     "BTCUSD": {
-      "value": 95386,
-      "change": 0.10928806316818573,
+      "value": 95324,
+      "change": 0.06798027663849845,
       "changeUnit": "%",
       "unit": "USD",
       "observedAt": "2026-01-18",
@@ -562,8 +562,8 @@
       "staleReason": null
     },
     "ETHUSD": {
-      "value": 3349.55,
-      "change": 1.0189711918909818,
+      "value": 3344.45,
+      "change": 0.8915371461890846,
       "changeUnit": "%",
       "unit": "USD",
       "observedAt": "2026-01-18",
@@ -572,8 +572,8 @@
       "staleReason": null
     },
     "CRY_MCAP": {
-      "value": 3324879045074.067,
-      "change": 0.005248049085551173,
+      "value": 3323865172509.2603,
+      "change": -0.02524706846884634,
       "changeUnit": "%",
       "unit": "USD",
       "observedAt": "2026-01-18",
@@ -582,7 +582,7 @@
       "staleReason": null
     },
     "BTC_DOM": {
-      "value": 57.32520232658385,
+      "value": 57.31847747237436,
       "change": null,
       "changeUnit": "pts",
       "unit": "%",
@@ -665,7 +665,7 @@
     },
     "debug": {
       "lastGood": {
-        "available": 42,
+        "available": 41,
         "used": 27,
         "filledFields": 0,
         "beforeMetrics": 41,
