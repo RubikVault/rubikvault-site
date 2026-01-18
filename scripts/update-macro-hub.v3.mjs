@@ -7,7 +7,9 @@ import { saveMirror } from "./utils/mirror-io.mjs";
 const ROOT = path.resolve(new URL("..", import.meta.url).pathname);
 const CATALOG_PATH = path.join(ROOT, "config", "macro-hub.catalog.v3.json");
 const SNAPSHOT_PATH = path.join(ROOT, "public", "data", "snapshots", "macro-hub.json");
+const LASTGOOD_SNAPSHOT_PATH = SNAPSHOT_PATH; // SSOT lastGood: same path as snapshot
 const LASTGOOD_PATH = path.join(ROOT, "public", "data", "snapshots", "macro-hub.lastgood.json");
+const PROVIDER_STATE_PATH = path.join(ROOT, "public", "data", "provider-state.json");
 const RUNLOG_PATH = path.join(ROOT, "mirrors", "macro-hub-runlog.json");
 const MIRROR_PATH = path.join(ROOT, "mirrors", "macro-hub.json");
 const MAX_PUBLIC_BYTES = 200 * 1024;
@@ -509,15 +511,15 @@ function buildFreshness(asOfDate, ttlHours) {
 }
 
 async function main() {
+  // --- Load lastGood from SSOT (same path as snapshot) ---
+  const lastGood = readJson(LASTGOOD_SNAPSHOT_PATH) || readJson(LASTGOOD_PATH);
+  
   const catalog = readJson(CATALOG_PATH);
   if (!catalog) {
     throw new Error("macro-hub catalog missing");
   }
   const metricsList = Array.isArray(catalog.metrics) ? catalog.metrics : [];
   const categories = catalog.categories || {};
-
-  const previous = readJson(SNAPSHOT_PATH);
-  const lastGood = readJson(LASTGOOD_PATH);
 
   const errors = [];
   const rawSources = {};
@@ -994,11 +996,25 @@ async function main() {
 
   const providerCalls = fetchJson.budget.toProviderCalls();
 
+  // Determine status based on data quality
+  const status = freshOrDerivedOk >= 30 ? "LIVE" : (freshOrDerivedOk >= 10 ? "PARTIAL" : "STALE");
+  const reason = freshOrDerivedOk >= 30 ? "OK" : (freshOrDerivedOk >= 10 ? "PARTIAL" : "INSUFFICIENT_DATA");
+  const generatedAt = new Date().toISOString();
+  const ttlSeconds = 24 * 60 * 60; // 24h
+
   const meta = {
+    // v3 snapshot contract (required by validate-snapshots.js)
+    status,
+    reason,
+    generatedAt,
+    asOf: asOfDate,
+    source: "multi",
+    ttlSeconds,
+    runId: RUN_ID,
+    // Additional meta fields
     version: "3.0",
     asOfDate,
-    updatedAt: new Date().toISOString(),
-    runId: RUN_ID,
+    updatedAt: generatedAt,
     counts,
     providerCalls,
     errors,
@@ -1014,7 +1030,7 @@ async function main() {
     rule: "daily",
     nextPlannedFetchAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
     expectedNextRunWindowMinutes: 1440,
-    ttlSeconds: 24 * 60 * 60
+    ttlSeconds
   };
   meta.freshness = buildFreshness(asOfDate, 24);
 
@@ -1023,6 +1039,109 @@ async function main() {
     data: metricData,
     categories: catalog.categories
   };
+
+  // --- LASTGOOD fallback to enforce "never empty" ---
+  try {
+    const lastGoodData = lastGood?.data || {};
+    let lastGoodUsed = 0;
+    let lastGoodFilled = 0;
+    
+    // For each metric that is null/stale/missing, fill from lastGood
+    for (const [metricId, currentMetric] of Object.entries(metricData)) {
+      const isEmptyValue = (v) => {
+        if (v === null || v === undefined) return true;
+        if (typeof v === "number") return !Number.isFinite(v);
+        if (typeof v === "string") return v.trim().length === 0;
+        if (Array.isArray(v)) return v.length === 0;
+        if (typeof v === "object") return Object.keys(v).length === 0;
+        return false;
+      };
+      
+      // Check if primary display value is empty
+      const needsFallback = currentMetric.value === null || 
+                           currentMetric.stale === true ||
+                           (isEmptyValue(currentMetric.value) && !isEmptyValue(lastGoodData[metricId]?.value));
+      
+      if (needsFallback && lastGoodData[metricId]) {
+        const lastGoodMetric = lastGoodData[metricId];
+        lastGoodUsed += 1;
+        
+        // Merge: keep current meta flags but fill empty values from lastGood
+        const merged = { ...currentMetric };
+        for (const [key, lgValue] of Object.entries(lastGoodMetric)) {
+          if (key === "value" && isEmptyValue(merged.value) && !isEmptyValue(lgValue)) {
+            merged.value = lgValue;
+            lastGoodFilled += 1;
+          } else if (key === "change" && isEmptyValue(merged.change) && !isEmptyValue(lgValue)) {
+            merged.change = lgValue;
+            lastGoodFilled += 1;
+          } else if (!(key in merged) && !isEmptyValue(lgValue)) {
+            // If current lacked field entirely, allow lastGood to supply it
+            merged[key] = lgValue;
+          } else if (key in merged && isEmptyValue(merged[key]) && !isEmptyValue(lgValue)) {
+            merged[key] = lgValue;
+            lastGoodFilled += 1;
+          }
+        }
+        
+        merged.derivedFromLastGood = true;
+        merged.derivationReason = "LASTGOOD_FALLBACK";
+        if (merged.stale !== false) merged.stale = true;
+        if (!merged.staleReason || merged.staleReason === "missing") {
+          merged.staleReason = "lastgood_fallback";
+        }
+        
+        metricData[metricId] = merged;
+        snapshot.data[metricId] = merged;
+      }
+    }
+    
+    // Update meta with lastGood stats
+    if (lastGood && Object.keys(lastGoodData).length > 0) {
+      if (!snapshot.meta.notes || typeof snapshot.meta.notes !== "object") {
+        snapshot.meta.notes = snapshot.meta.notes || {};
+      }
+      snapshot.meta.notes.lastGoodIndexLoaded = true;
+    }
+    if (lastGoodUsed > 0) {
+      if (!snapshot.meta.notes || typeof snapshot.meta.notes !== "object") {
+        snapshot.meta.notes = snapshot.meta.notes || {};
+      }
+      snapshot.meta.notes.lastGoodUsed = lastGoodUsed;
+      snapshot.meta.notes.lastGoodFilledFields = lastGoodFilled;
+    }
+    
+    // Add debug info
+    snapshot.data.debug = snapshot.data.debug || {};
+    snapshot.data.debug.lastGood = {
+      available: lastGood ? Object.keys(lastGoodData).length : 0,
+      used: lastGoodUsed,
+      filledFields: lastGoodFilled,
+      beforeMetrics: Object.keys(metricData).length,
+      afterMetrics: Object.keys(snapshot.data).length
+    };
+    
+    // Recompute counts after fallback
+    const freshOrDerivedOkAfter = Object.values(snapshot.data)
+      .filter((m) => m && !m.stale && m.value !== null).length;
+    const nullCountAfter = Object.values(snapshot.data)
+      .filter((m) => m && m.value === null).length;
+    const staleCountAfter = Object.values(snapshot.data)
+      .filter((m) => m && m.stale === true).length;
+    
+    snapshot.meta.counts = {
+      total: counts.total,
+      freshOrDerivedOk: Math.max(freshOrDerivedOk, freshOrDerivedOkAfter),
+      stale: staleCountAfter,
+      null: nullCountAfter
+    };
+    
+  } catch (e) {
+    snapshot.meta = snapshot.meta || {};
+    snapshot.meta.status = "PARTIAL";
+    snapshot.meta.reason = snapshot.meta.reason || "LASTGOOD_MERGE_ERROR";
+    console.error("lastGood merge error:", e.message);
+  }
 
   saveMirror(MIRROR_PATH, {
     schemaVersion: "rv-mirror-v1",
@@ -1059,13 +1178,69 @@ async function main() {
 
   sanitizeAndWritePublic(SNAPSHOT_PATH, snapshot);
 
-  if (freshOrDerivedOk >= 30) {
+  // Save as lastGood if quality is sufficient
+  const finalFreshCount = snapshot.meta.counts?.freshOrDerivedOk || freshOrDerivedOk;
+  if (finalFreshCount >= 30) {
     sanitizeAndWritePublic(LASTGOOD_PATH, snapshot);
-  } else if (lastGood) {
-    // preserve lastgood
   }
 
-  console.log(`macro-hub snapshot built: ${freshOrDerivedOk}/40 fresh_or_derived`);
+  // --- Update provider-state with providerCalls/errors from snapshot.meta ---
+  try {
+    const providerState = readJson(PROVIDER_STATE_PATH) || {
+      schemaVersion: "v1",
+      generatedAt: new Date().toISOString(),
+      providers: {},
+      meta: {
+        status: "OK",
+        reason: "OK"
+      }
+    };
+    
+    const prov = providerState.providers && typeof providerState.providers === "object" 
+      ? providerState.providers 
+      : {};
+    
+    const pc = snapshot.meta.providerCalls || {};
+    const errs = Array.isArray(snapshot.meta.errors) ? snapshot.meta.errors : [];
+    
+    // Build provider stats from calls and errors
+    const byProv = {};
+    for (const [k, v] of Object.entries(pc)) {
+      const providerKey = k.toLowerCase();
+      byProv[providerKey] = byProv[providerKey] || { calls: 0, errors: 0 };
+      byProv[providerKey].calls = Number(v) || 0;
+    }
+    for (const e of errs) {
+      const p = String(e?.provider || "UNKNOWN").toLowerCase();
+      byProv[p] = byProv[p] || { calls: 0, errors: 0 };
+      byProv[p].errors += 1;
+    }
+    
+    // Update providers map
+    for (const [p, stat] of Object.entries(byProv)) {
+      prov[p] = {
+        ...(prov[p] || {}),
+        status: stat.errors > 0 ? "PARTIAL" : (stat.calls > 0 ? "OK" : "EMPTY"),
+        calls: stat.calls,
+        errors: stat.errors,
+        lastSeen: new Date().toISOString()
+      };
+    }
+    
+    providerState.providers = prov;
+    providerState.generatedAt = new Date().toISOString();
+    providerState.meta = providerState.meta || {};
+    providerState.meta.status = Object.values(prov).some((p) => p.errors > 0) ? "PARTIAL" : "OK";
+    
+    sanitizeAndWritePublic(PROVIDER_STATE_PATH, providerState);
+  } catch (e) {
+    console.error("provider-state update error:", e.message);
+  }
+
+  console.log(`macro-hub snapshot built: ${snapshot.meta.counts?.freshOrDerivedOk || freshOrDerivedOk}/40 fresh_or_derived`);
+  if (snapshot.data.debug?.lastGood?.used > 0) {
+    console.log(`  lastGood fallback: ${snapshot.data.debug.lastGood.used} metrics, ${snapshot.data.debug.lastGood.filledFields} fields filled`);
+  }
 }
 
 main().catch((error) => {
