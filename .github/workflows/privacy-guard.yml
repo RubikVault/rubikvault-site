@@ -14,7 +14,7 @@ jobs:
         shell: bash
         run: |
           set -o pipefail
-          PATTERN='(/'"'"'Us'"'"'ers'"'"'/'|/'"'"'ho'"'"'me'"'"'/'|/'"'"'Do'"'"'cuments'"'"'/'"'"'Gi'"'"'tHub'"'"'/'|/'"'"'iC'"'"'loud'"'"'/'|\\\\'"'"'Us'"'"'ers'"'"'\\\\|[A-Za-z]:\\\\'"'"'Us'"'"'ers'"'"'\\\\)'
+          PATTERN="/""Us""ers/|/""ho""me/|/""Do""cuments/""Gi""tHub/|/""iC""loud/|\\\\Us""ers\\\\|[A-Za-z]:\\\\Us""ers\\\\"
           echo "Scanning current tracked file contents (HEAD only, no history)..."
           # Scan only tracked files in working tree, not git history
           # Exclude this workflow file itself (it contains the patterns in the code)
@@ -36,7 +36,12 @@ jobs:
           fi
           echo "Scanning filenames..."
           # Exclude this workflow file from filename check too
-          if echo "$TRACKED_FILES" | grep -v '^\.github/workflows/privacy-guard\.yml$' | grep -nE '(Us'"'"'ers|Do'"'"'cuments|iC'"'"'loud|\/home\/|\/Us'"'"'ers\/|\\\\Us'"'"'ers\\\\|[A-Za-z]:\\\\Us'"'"'ers\\\\)' ; then
+          if echo "$TRACKED_FILES" | grep -v '^\.github/workflows/privacy-guard\.yml
+            echo "::error::Suspicious filename/path detected."
+            exit 1
+          fi
+          echo "OK: No leaks found in current files."
+ | grep -nE "$PATTERN" ; then
             echo "::error::Suspicious filename/path detected."
             exit 1
           fi
