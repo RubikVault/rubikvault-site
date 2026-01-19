@@ -526,6 +526,13 @@
         }
 
         const analysis = analyzeBlockData(snapshot, block.id);
+        // DEBUG: Log analysis results
+        console.log(`[DASHBOARD] Block ${block.id}:`, {
+          status: analysis.status,
+          dataPresent: analysis.dataPresent,
+          itemsCount: analysis.itemsCount,
+          reason: analysis.reason
+        });
         return {
           block: block.name,
           ...analysis
