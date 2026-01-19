@@ -1,9 +1,40 @@
 {
-  "name": "RubikVault",
+  "name": "RubikVault - Stock Analyzer",
   "short_name": "RubikVault",
+  "description": "Find the best stocks to invest in. Analyze stocks by name or ticker symbol.",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
+  "orientation": "portrait-primary",
   "background_color": "#0b0f19",
-  "theme_color": "#0b0f19",
-  "icons": []
+  "theme_color": "#3b82f6",
+  "icons": [
+    {
+      "src": "/assets/rv-icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/rv-icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/assets/rv-apple-icon.png",
+      "sizes": "180x180",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/rv-favicon.png",
+      "sizes": "32x32",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ],
+  "categories": ["finance", "business", "productivity"],
+  "lang": "en",
+  "dir": "ltr"
 }
