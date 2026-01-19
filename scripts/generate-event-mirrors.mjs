@@ -206,10 +206,10 @@ try {
 
   systemHealth.mirrors = systemHealth.mirrors.filter((m) => !mirrorUpdates.find((n) => n.id === m.id));
   systemHealth.mirrors.push(...mirrorUpdates);
+
+  saveMirror(SYSTEM_HEALTH_PATH, systemHealth);
 } finally {
   releaseLock(lock.path);
 }
-
-saveMirror(SYSTEM_HEALTH_PATH, systemHealth);
 
 console.log("EVENT_MIRRORS_DONE", mirrors.length);
