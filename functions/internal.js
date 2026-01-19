@@ -2,18 +2,36 @@ export async function onRequestGet(context) {
   const { request, env } = context;
   const url = new URL(request.url);
 
-  // IMPORTANT: Don't handle /internal/health - let _redirects serve the static file
-  // Return early with a pass-through response
+  // IMPORTANT: /internal/health should be handled by static files
+  // This function matches /internal/* but we want to skip /internal/health
+  // The best approach: read and serve the HTML file directly
   if (url.pathname.startsWith('/internal/health')) {
-    // Return a response that allows static file serving to proceed
-    // We use a 307 redirect to the exact file path
     const targetPath = url.pathname === '/internal/health' || url.pathname === '/internal/health/'
       ? '/internal/health/index.html'
       : url.pathname;
     
-    // Use a temporary redirect (307) which preserves method and lets the static file be served
-    const targetUrl = new URL(targetPath, request.url);
-    return Response.redirect(targetUrl.toString(), 307);
+    // Try multiple approaches to serve the static file
+    // Approach 1: Use ASSETS binding if available (Cloudflare Pages feature)
+    if (context.env && context.env.ASSETS) {
+      try {
+        const assetRequest = new Request(new URL(targetPath, request.url));
+        const assetResponse = await context.env.ASSETS.fetch(assetRequest);
+        if (assetResponse.ok) {
+          return new Response(assetResponse.body, {
+            headers: {
+              'Content-Type': 'text/html; charset=utf-8',
+              'Cache-Control': 'no-store'
+            }
+          });
+        }
+      } catch (err) {
+        // Fall through to next approach
+      }
+    }
+    
+    // Approach 2: Redirect - _redirects should handle this
+    // Use 301 permanent redirect so browser caches the redirect
+    return Response.redirect(new URL(targetPath, request.url), 301);
   }
 
   const required = env?.RV_INTERNAL_TOKEN;
