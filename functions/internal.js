@@ -1,9 +1,15 @@
 export async function onRequestGet(context) {
   const { request, env } = context;
+  const url = new URL(request.url);
+
+  // Allow /internal/health to pass through to static files
+  if (url.pathname.startsWith('/internal/health')) {
+    // Let _redirects handle routing to static files
+    return context.next();
+  }
 
   const required = env?.RV_INTERNAL_TOKEN;
   if (required) {
-    const url = new URL(request.url);
     const provided =
       request.headers.get("x-rv-internal-token") ||
       url.searchParams.get("token") ||
@@ -17,7 +23,6 @@ export async function onRequestGet(context) {
     }
   }
 
-  const url = new URL(request.url);
   const redirectTo = new URL("/internal-dashboard", request.url);
   const token = url.searchParams.get("token") || "";
   if (token) redirectTo.searchParams.set("token", token);
