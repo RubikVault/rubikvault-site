@@ -6,7 +6,7 @@
       "module": "stocks",
       "tier": "critical",
       "domain": "stocks",
-      "enabled": true,
+      "enabled": false,
       "source": "stooq",
       "freshness": {
         "expected_interval_minutes": 1440,
@@ -115,7 +115,7 @@
       "module": "crypto",
       "tier": "standard",
       "domain": "crypto",
-      "enabled": true,
+      "enabled": false,
       "source": "coingecko",
       "freshness": {
         "expected_interval_minutes": 360,
@@ -169,7 +169,7 @@
       "module": "sp500-sectors",
       "tier": "standard",
       "domain": "stocks",
-      "enabled": true,
+      "enabled": false,
       "source": "yahoo_proxy",
       "freshness": {
         "expected_interval_minutes": 1440,
@@ -217,7 +217,7 @@
       "module": "macro-hub",
       "tier": "standard",
       "domain": "macro",
-      "enabled": true,
+      "enabled": false,
       "source": "fred+ecb",
       "freshness": {
         "expected_interval_minutes": 1440,
