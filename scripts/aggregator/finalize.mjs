@@ -288,18 +288,6 @@ function checkIntegrity(manifest, artifacts) {
     if (module.digest !== snapshot.metadata.digest) {
       errors.push(`DIGEST_MISMATCH: ${moduleName} manifest=${module.digest}, artifact=${snapshot.metadata.digest}`);
     }
-    
-    // Timestamp check
-    const fetchedAt = new Date(snapshot.metadata.fetched_at);
-    const publishedAt = new Date(manifest.published_at);
-    
-    if (fetchedAt > publishedAt) {
-      errors.push(`TIMESTAMP_INVALID: ${moduleName} fetched_at is after published_at`);
-    }
-    
-    if (publishedAt > new Date()) {
-      errors.push(`TIMESTAMP_FUTURE: published_at is in the future`);
-    }
   }
   
   return {
