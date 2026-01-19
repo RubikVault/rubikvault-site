@@ -39,11 +39,13 @@ jobs:
         run: npm ci
 
       - name: Download artifacts
-        uses: actions/download-artifact@v4
+        uses: dawidd6/action-download-artifact@v6
         with:
-          pattern: module-*
-          merge-multiple: false
-          path: artifacts
+          workflow: v3-pilot-market.yml
+          name: module-market-health
+          path: artifacts/module-market-health
+          if_no_artifact_found: warn
+        continue-on-error: true
 
       - name: Organize artifacts
         run: |
