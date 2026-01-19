@@ -13,7 +13,7 @@
       line-height: 1.6;
       padding: 20px;
     }
-    .container { max-width: 1400px; margin: 0 auto; }
+    .container { max-width: 1600px; margin: 0 auto; }
     h1 { margin-bottom: 30px; color: #38bdf8; }
     .section {
       background: #111827;
@@ -62,10 +62,10 @@
     table {
       width: 100%;
       border-collapse: collapse;
-      font-size: 13px;
+      font-size: 12px;
     }
     th, td {
-      padding: 10px;
+      padding: 8px;
       text-align: left;
       border-bottom: 1px solid rgba(148, 163, 184, 0.15);
     }
@@ -75,6 +75,7 @@
       color: #cbd5f5;
       position: sticky;
       top: 0;
+      font-size: 11px;
     }
     tr:hover { background: rgba(15, 23, 42, 0.4); }
     .badge {
@@ -106,12 +107,98 @@
       margin-top: 10px;
     }
     .loading { opacity: 0.5; pointer-events: none; }
+    .reason-text {
+      font-size: 11px;
+      color: #94a3b8;
+      font-style: italic;
+    }
+    .age-badge {
+      font-size: 10px;
+      padding: 2px 6px;
+      border-radius: 3px;
+      background: rgba(148, 163, 184, 0.2);
+    }
+    .age-badge.fresh { background: #10b981; color: white; }
+    .age-badge.stale { background: #f59e0b; color: white; }
+    .age-badge.expired { background: #ef4444; color: white; }
   </style>
 </head>
 <body>
   <div class="container">
     <h1>🔍 RubikVault Internal Dashboard <span id="rv-internal-auth" class="badge warn">auth: unknown</span></h1>
     
+    <div class="section">
+      <h2>System Health Overview</h2>
+      <button class="refresh-btn" onclick="refreshAll()">🔄 Refresh All</button>
+      <div class="status-grid" id="health-overview">
+        <div class="status-card">
+          <h3>Overall Status</h3>
+          <div class="value">—</div>
+          <div class="label">Loading...</div>
+        </div>
+      </div>
+      <div class="timestamp" id="health-timestamp"></div>
+    </div>
+
+    <div class="section">
+      <h2>Active Blocks Status (8 Blocks)</h2>
+      <div style="overflow-x: auto;">
+        <table id="block-matrix">
+          <thead>
+            <tr>
+              <th>Block</th>
+              <th>Status</th>
+              <th>Data Present</th>
+              <th>Items Count</th>
+              <th>Age</th>
+              <th>Freshness</th>
+              <th>Reason / Issue</th>
+              <th>Last Updated</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td colspan="8">Loading...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="section">
+      <h2>API Key Usage & Limits</h2>
+      <table id="api-keys">
+        <thead>
+          <tr>
+            <th>Provider</th>
+            <th>Status</th>
+            <th>Used Today</th>
+            <th>Limit (Day)</th>
+            <th>Remaining (Day)</th>
+            <th>% Used (Day)</th>
+            <th>Used (Month)</th>
+            <th>Limit (Month)</th>
+            <th>Remaining (Month)</th>
+            <th>% Used (Month)</th>
+            <th>Last Error</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td colspan="11">Loading...</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="section">
+      <h2>Cloudflare Workers Usage</h2>
+      <div class="status-grid" id="workers-usage">
+        <div class="status-card">
+          <h3>Workers Requests</h3>
+          <div class="value">—</div>
+          <div class="label">Loading...</div>
+        </div>
+      </div>
+      <div class="timestamp" id="workers-timestamp"></div>
+    </div>
+
     <div class="section">
       <h2>Endpoint Reachability</h2>
       <div style="overflow-x: auto;">
@@ -129,118 +216,25 @@
         </table>
       </div>
     </div>
-
-    <div class="section">
-      <h2>System Health Overview</h2>
-      <button class="refresh-btn" onclick="refreshAll()">🔄 Refresh All</button>
-      <div class="status-grid" id="health-overview">
-        <div class="status-card">
-          <h3>Overall Status</h3>
-          <div class="value">—</div>
-          <div class="label">Loading...</div>
-        </div>
-      </div>
-      <div class="timestamp" id="health-timestamp"></div>
-    </div>
-
-    <div class="section">
-      <h2>Block × Field Matrix</h2>
-      <div style="overflow-x: auto;">
-        <table id="block-matrix">
-          <thead>
-            <tr>
-              <th>Block</th>
-              <th>Feature ID</th>
-              <th>Status</th>
-              <th>Data Present</th>
-              <th>Quality</th>
-              <th>As-of</th>
-              <th>Source</th>
-              <th>Cache</th>
-              <th>Last Error</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr><td colspan="9">Loading...</td></tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-
-    <div class="section">
-      <h2>API Keys & Limits</h2>
-      <table id="api-keys">
-        <thead>
-          <tr>
-            <th>Provider</th>
-            <th>Key Alias</th>
-            <th>Status</th>
-            <th>Counts (Today)</th>
-            <th>Counts (Week)</th>
-            <th>Counts (Month)</th>
-            <th>Hard Limit</th>
-            <th>Remaining</th>
-            <th>Remaining (Week)</th>
-            <th>Remaining (Month)</th>
-            <th>Burn/Hour</th>
-            <th>Last Error</th>
-            <th>Last Used</th>
-            <th>Hint</th>
-            <th>Recommended Action</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr><td colspan="14">Loading...</td></tr>
-        </tbody>
-      </table>
-    </div>
-
-    <div class="section">
-      <h2>Error & Events Timeline</h2>
-      <div style="max-height: 400px; overflow-y: auto;">
-        <table id="error-timeline">
-          <thead>
-            <tr>
-              <th>Time</th>
-              <th>Type</th>
-              <th>Feature</th>
-              <th>Error Code</th>
-              <th>Message</th>
-              <th>Details</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr><td colspan="6">Loading...</td></tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-
-    <div class="section">
-      <h2>Field Drilldown</h2>
-      <select id="field-selector" style="width: 100%; padding: 8px; margin-bottom: 15px; background: #111827; color: #f8fafc; border: 1px solid rgba(148, 163, 184, 0.2); border-radius: 6px;">
-        <option>Select a field to inspect...</option>
-      </select>
-      <div id="field-details" style="background: rgba(15, 23, 42, 0.6); padding: 15px; border-radius: 8px; font-family: monospace; font-size: 12px; white-space: pre-wrap; max-height: 400px; overflow-y: auto;">
-        Select a field above to see details...
-      </div>
-    </div>
   </div>
 
   <script type="module">
-    const API_BASE = '/api';
-    const INTERNAL_TOKEN = new URLSearchParams(window.location.search).get('token') || '';
-    const withToken = (url) => {
-      if (!INTERNAL_TOKEN) return url;
-      const u = new URL(url, window.location.origin);
-      u.searchParams.set('token', INTERNAL_TOKEN);
-      return u.pathname + u.search;
-    };
-    
+    // ACTIVE BLOCKS ONLY (8 blocks on the website)
+    const ACTIVE_BLOCKS = [
+      { id: 'macro-hub', name: 'Global Macro Hub', snapshotPath: '/data/snapshots/macro-hub.json' },
+      { id: 'news-headlines', name: 'News Headlines', snapshotPath: '/data/snapshots/news-headlines.json' },
+      { id: 'sp500-sectors', name: 'S&P 500 Sectors', snapshotPath: '/data/snapshots/sp500-sectors.json' },
+      { id: 'tech-signals', name: 'Tech Signals', snapshotPath: '/data/snapshots/tech-signals.json' },
+      { id: 'rvci-engine', name: 'RVCI Engine', snapshotPath: '/data/snapshots/rvci-engine.json', altPath: '/data/rvci_latest.json' },
+      { id: 'alpha-radar', name: 'Alpha Radar', snapshotPath: '/data/snapshots/alpha-radar.json' },
+      { id: 'marketphase', name: 'MarketPhase AI', snapshotPath: null, note: 'Static content, no snapshot' },
+      { id: 'moats', name: 'Monopoles / Economic Moats', snapshotPath: null, note: 'Static content, no snapshot' }
+    ];
+
     async function fetchJSON(url) {
       try {
-        const res = await fetch(withToken(url));
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const res = await fetch(url, { cache: 'no-store' });
+        if (!res.ok) return null;
         return await res.json();
       } catch (err) {
         console.error('Fetch error:', err);
@@ -248,36 +242,277 @@
       }
     }
 
-    const authEl = document.getElementById('rv-internal-auth');
-    if (authEl) {
-      if (INTERNAL_TOKEN) {
-        authEl.textContent = 'auth: token';
-        authEl.className = 'badge ok';
+    function formatAge(minutes) {
+      if (minutes < 60) return `${Math.round(minutes)}m`;
+      if (minutes < 1440) return `${Math.round(minutes / 60)}h`;
+      return `${Math.round(minutes / 1440)}d`;
+    }
+
+    function getAgeBadgeClass(minutes) {
+      if (minutes < 60) return 'fresh';
+      if (minutes < 1440) return 'stale';
+      return 'expired';
+    }
+
+    function analyzeBlockData(snapshot, blockId) {
+      if (!snapshot) {
+        return {
+          status: 'NO_DATA',
+          dataPresent: false,
+          itemsCount: 0,
+          age: null,
+          freshness: 'MISSING',
+          reason: 'Snapshot file not found or failed to load',
+          lastUpdated: null
+        };
+      }
+
+      const meta = snapshot.meta || {};
+      const data = snapshot.data || {};
+      const status = meta.status || 'UNKNOWN';
+      const freshness = meta.freshness || {};
+      const freshnessStatus = freshness.status || 'unknown';
+      const ageMinutes = freshness.ageMinutes || null;
+
+      // Check if data is actually present
+      let itemsCount = 0;
+      let dataPresent = false;
+
+      if (blockId === 'macro-hub') {
+        const metrics = data;
+        const metricKeys = Object.keys(metrics).filter(k => !['debug', 'categories'].includes(k));
+        itemsCount = metricKeys.length;
+        const metricsWithValues = metricKeys.filter(k => {
+          const m = metrics[k];
+          return m && (m.value !== null && m.value !== undefined);
+        }).length;
+        dataPresent = metricsWithValues > 0;
+      } else if (blockId === 'rvci-engine') {
+        const paths = data.paths || {};
+        const counts = data.counts || {};
+        itemsCount = Object.keys(paths).length;
+        dataPresent = itemsCount > 0 && Object.keys(counts).length > 0;
+      } else if (blockId === 'alpha-radar') {
+        const items = data.items || [];
+        const picks = data.picks || data.extraData?.picks || null;
+        itemsCount = items.length || (picks ? Object.keys(picks).length : 0);
+        dataPresent = itemsCount > 0;
+        // Check for dummy values
+        if (items.length > 0) {
+          const firstItem = items[0];
+          if (firstItem.setupScore === 34 && firstItem.triggerScore === 51 && firstItem.totalScore === 85) {
+            return {
+              status: 'DUMMY_DATA',
+              dataPresent: true,
+              itemsCount,
+              age: ageMinutes,
+              freshness: freshnessStatus,
+              reason: `Data contains dummy values (Setup 34, Trigger 51, Total 85). Data is ${ageMinutes ? formatAge(ageMinutes) : 'unknown'} old. Snapshot may not be updating correctly.`,
+              lastUpdated: meta.generatedAt || meta.updatedAt
+            };
+          }
+        }
       } else {
-        authEl.textContent = 'auth: none';
-        authEl.className = 'badge warn';
+        const items = data.items || [];
+        itemsCount = items.length;
+        dataPresent = itemsCount > 0;
       }
+
+      let reason = meta.reason || status;
+      if (status === 'PARTIAL' && itemsCount === 0) {
+        reason = 'EMPTY_ITEMS - No data items in snapshot';
+      } else if (status === 'DEGRADED_COVERAGE') {
+        reason = `DEGRADED_COVERAGE - ${meta.universe ? `Expected ${meta.universe.expected}, got ${meta.universe.received}` : 'Coverage below threshold'}`;
+      } else if (ageMinutes && ageMinutes > 1440) {
+        reason = `Data is ${formatAge(ageMinutes)} old (${Math.round(ageMinutes / 1440)} days). Last update: ${meta.generatedAt || meta.updatedAt || 'unknown'}`;
+      }
+
+      return {
+        status,
+        dataPresent,
+        itemsCount,
+        age: ageMinutes,
+        freshness: freshnessStatus,
+        reason,
+        lastUpdated: meta.generatedAt || meta.updatedAt || meta.dataAt
+      };
     }
 
-    async function refreshAll() {
-      document.body.classList.add('loading');
-      await Promise.all([
-        updateEndpointProbes(),
-        updateHealthOverview(),
-        updateBlockMatrix(),
-        updateApiKeys(),
-        updateErrorTimeline()
-      ]);
-      document.body.classList.remove('loading');
+    async function updateHealthOverview() {
+      const systemHealth = await fetchJSON('/data/system-health.json');
+      const container = document.getElementById('health-overview');
+      
+      if (!systemHealth) {
+        container.innerHTML = '<div class="status-card fail"><h3>Error</h3><div class="value">Failed</div><div class="label">Cannot fetch system-health.json</div></div>';
+        return;
+      }
+
+      const buildStatus = systemHealth.buildStatus || 'UNKNOWN';
+      const summary = systemHealth.summary || {};
+      const statusClass = buildStatus === 'OK' ? 'ok' : buildStatus === 'WARN' ? 'warn' : 'fail';
+      
+      container.innerHTML = `
+        <div class="status-card ${statusClass}">
+          <h3>Build Status</h3>
+          <div class="value">${buildStatus}</div>
+          <div class="label">${systemHealth.reasons?.length ? systemHealth.reasons.join(', ') : 'Static snapshot pipeline'}</div>
+        </div>
+        <div class="status-card">
+          <h3>Blocks OK</h3>
+          <div class="value">${summary.ok || 0}</div>
+          <div class="label">of ${summary.total || 0} total</div>
+        </div>
+        <div class="status-card">
+          <h3>Blocks Failed</h3>
+          <div class="value">${summary.fail || 0}</div>
+          <div class="label">Requires attention</div>
+        </div>
+        <div class="status-card">
+          <h3>Last Build</h3>
+          <div class="value">${systemHealth.generatedAt ? new Date(systemHealth.generatedAt).toLocaleDateString() : '—'}</div>
+          <div class="label">${systemHealth.generatedAt ? new Date(systemHealth.generatedAt).toLocaleTimeString() : '—'}</div>
+        </div>
+      `;
+      
+      document.getElementById('health-timestamp').textContent = `Last updated: ${new Date().toLocaleString()}`;
     }
 
-    async function probeEndpoint(path) {
-      try {
-        const res = await fetch(withToken(path), { method: 'HEAD' });
-        return { ok: res.ok, status: res.status };
-      } catch (err) {
-        return { ok: false, status: 0 };
+    async function updateBlockMatrix() {
+      const tbody = document.querySelector('#block-matrix tbody');
+      if (!tbody) return;
+
+      const results = await Promise.all(ACTIVE_BLOCKS.map(async (block) => {
+        if (!block.snapshotPath) {
+          return {
+            block: block.name,
+            status: 'STATIC',
+            dataPresent: true,
+            itemsCount: 'N/A',
+            age: null,
+            freshness: 'STATIC',
+            reason: block.note || 'Static content, no snapshot required',
+            lastUpdated: 'N/A'
+          };
+        }
+
+        let snapshot = await fetchJSON(block.snapshotPath);
+        if (!snapshot && block.altPath) {
+          snapshot = await fetchJSON(block.altPath);
+        }
+
+        const analysis = analyzeBlockData(snapshot, block.id);
+        return {
+          block: block.name,
+          ...analysis
+        };
+      }));
+
+      tbody.innerHTML = results.map(result => {
+        const statusClass = result.status === 'OK' || result.status === 'STATIC' ? 'ok' 
+          : result.status === 'PARTIAL' || result.status === 'DUMMY_DATA' ? 'warn' 
+          : 'fail';
+        const ageDisplay = result.age !== null ? formatAge(result.age) : '—';
+        const ageBadgeClass = result.age !== null ? getAgeBadgeClass(result.age) : '';
+        
+        return `
+          <tr>
+            <td><strong>${result.block}</strong></td>
+            <td><span class="badge ${statusClass}">${result.status}</span></td>
+            <td>${result.dataPresent ? '✅' : '❌'}</td>
+            <td>${result.itemsCount}</td>
+            <td>${result.age !== null ? `<span class="age-badge ${ageBadgeClass}">${ageDisplay}</span>` : '—'}</td>
+            <td><span class="badge ${result.freshness === 'fresh' ? 'ok' : result.freshness === 'stale' ? 'warn' : 'fail'}">${result.freshness.toUpperCase()}</span></td>
+            <td><span class="reason-text">${result.reason}</span></td>
+            <td>${result.lastUpdated ? new Date(result.lastUpdated).toLocaleString() : '—'}</td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    async function updateApiKeys() {
+      const usageReport = await fetchJSON('/data/usage-report.json');
+      const providerState = await fetchJSON('/data/provider-state.json');
+      const macroHub = await fetchJSON('/data/snapshots/macro-hub.json');
+      const tbody = document.querySelector('#api-keys tbody');
+      
+      if (!usageReport || !usageReport.providers) {
+        tbody.innerHTML = '<tr><td colspan="11">No API usage data available</td></tr>';
+        return;
       }
+
+      const providers = usageReport.providers || {};
+      const macroHubCalls = macroHub?.meta?.providerCalls || {};
+      const macroHubErrors = macroHub?.meta?.errors || [];
+
+      // Build error map
+      const errorMap = {};
+      macroHubErrors.forEach(err => {
+        const provider = err.provider || 'UNKNOWN';
+        if (!errorMap[provider]) errorMap[provider] = [];
+        errorMap[provider].push(err.message || err.code || 'ERROR');
+      });
+
+      const rows = Object.entries(providers).map(([provider, data]) => {
+        const daily = data.daily || {};
+        const monthly = data.monthly || {};
+        const usedToday = daily.used || 0;
+        const limitToday = daily.limit || 0;
+        const remainingToday = daily.remaining || 0;
+        const pctToday = limitToday > 0 ? ((usedToday / limitToday) * 100).toFixed(1) : '0.0';
+        const usedMonth = monthly.used || 0;
+        const limitMonth = monthly.limit || 0;
+        const remainingMonth = monthly.remaining || 0;
+        const pctMonth = limitMonth > 0 ? ((usedMonth / limitMonth) * 100).toFixed(1) : '0.0';
+        
+        const statusClass = data.status === 'green' ? 'ok' : data.status === 'yellow' ? 'warn' : 'fail';
+        const pctTodayClass = parseFloat(pctToday) > 95 ? 'fail' : parseFloat(pctToday) > 80 ? 'warn' : 'ok';
+        const pctMonthClass = parseFloat(pctMonth) > 95 ? 'fail' : parseFloat(pctMonth) > 80 ? 'warn' : 'ok';
+        
+        const lastError = errorMap[provider] ? errorMap[provider][errorMap[provider].length - 1] : '—';
+        const callsFromMacroHub = macroHubCalls[provider] || 0;
+
+        return `
+          <tr>
+            <td><strong>${provider}</strong></td>
+            <td><span class="badge ${statusClass}">${data.status || 'UNKNOWN'}</span></td>
+            <td>${usedToday + callsFromMacroHub}</td>
+            <td>${limitToday}</td>
+            <td>${remainingToday - callsFromMacroHub}</td>
+            <td><span class="badge ${pctTodayClass}">${pctToday}%</span></td>
+            <td>${usedMonth + callsFromMacroHub}</td>
+            <td>${limitMonth}</td>
+            <td>${remainingMonth - callsFromMacroHub}</td>
+            <td><span class="badge ${pctMonthClass}">${pctMonth}%</span></td>
+            <td><code style="font-size: 10px;">${lastError}</code></td>
+          </tr>
+        `;
+      }).join('');
+
+      tbody.innerHTML = rows || '<tr><td colspan="11">No provider data</td></tr>';
+    }
+
+    async function updateWorkersUsage() {
+      const container = document.getElementById('workers-usage');
+      // Cloudflare Workers usage is not directly tracked in static files
+      // We can show estimated usage based on system-health or leave as placeholder
+      container.innerHTML = `
+        <div class="status-card">
+          <h3>Workers Requests (Daily)</h3>
+          <div class="value">—</div>
+          <div class="label">Not tracked in static files</div>
+        </div>
+        <div class="status-card">
+          <h3>Workers CPU Time</h3>
+          <div class="value">—</div>
+          <div class="label">Check Cloudflare Dashboard</div>
+        </div>
+        <div class="status-card">
+          <h3>Note</h3>
+          <div class="value" style="font-size: 14px;">Static-First</div>
+          <div class="label">All data served from CDN (public/data/*)</div>
+        </div>
+      `;
+      document.getElementById('workers-timestamp').textContent = `Workers usage should be monitored via Cloudflare Dashboard. Static-first architecture minimizes Workers usage.`;
     }
 
     async function updateEndpointProbes() {
@@ -285,21 +520,26 @@
       if (!tbody) return;
 
       const targets = [
-        { path: `${API_BASE}/health`, hint: '200 expected (prod: internal token bypasses debug guard)' },
-        { path: `${API_BASE}/diag`, hint: 'Requires RV_INTERNAL_TOKEN (otherwise 404)' },
-        { path: `${API_BASE}/system-health`, hint: 'Requires RV_INTERNAL_TOKEN (otherwise 404)' },
-        { path: `${API_BASE}/debug-bundle`, hint: 'Requires RV_INTERNAL_TOKEN (otherwise 404)' }
+        { path: '/data/system-health.json', hint: 'Static build health snapshot' },
+        { path: '/data/provider-state.json', hint: 'Circuit + lock state' },
+        { path: '/data/usage-report.json', hint: 'Budget usage and remaining' },
+        { path: '/data/snapshots/macro-hub.json', hint: 'Macro hub snapshot' },
+        { path: '/data/snapshots/alpha-radar.json', hint: 'Alpha radar snapshot' },
+        { path: '/data/snapshots/rvci-engine.json', hint: 'RVCI engine snapshot' }
       ];
 
-      const results = await Promise.all(targets.map(async (t) => ({
-        ...t,
-        result: await probeEndpoint(t.path)
-      })));
+      const results = await Promise.all(targets.map(async (t) => {
+        try {
+          const res = await fetch(t.path, { method: 'HEAD', cache: 'no-store' });
+          return { ...t, ok: res.ok, status: res.status };
+        } catch (err) {
+          return { ...t, ok: false, status: 0 };
+        }
+      }));
 
       tbody.innerHTML = results.map((row) => {
-        const status = row.result.status;
-        const statusClass = row.result.ok ? 'ok' : status === 404 ? 'warn' : 'fail';
-        const label = row.result.ok ? `OK (${status})` : status ? `FAIL (${status})` : 'FAIL (network)';
+        const statusClass = row.ok ? 'ok' : row.status === 404 ? 'warn' : 'fail';
+        const label = row.ok ? `OK (${row.status})` : row.status ? `FAIL (${row.status})` : 'FAIL (network)';
         return `
           <tr>
             <td><code>${row.path}</code></td>
@@ -310,127 +550,16 @@
       }).join('');
     }
 
-    async function updateHealthOverview() {
-      const health = await fetchJSON(`${API_BASE}/health`);
-      const diag = await fetchJSON(`${API_BASE}/diag`);
-      
-      const container = document.getElementById('health-overview');
-      if (!health && !diag) {
-        container.innerHTML = '<div class="status-card fail"><h3>Error</h3><div class="value">Failed</div><div class="label">Cannot fetch health data</div></div>';
-        return;
-      }
-
-      const overallStatus = health?.status || diag?.overall_status || 'UNKNOWN';
-      const statusClass = overallStatus === 'OK' ? 'ok' : overallStatus === 'DEGRADED' ? 'warn' : 'fail';
-      
-      container.innerHTML = `
-        <div class="status-card ${statusClass}">
-          <h3>Overall Status</h3>
-          <div class="value">${overallStatus}</div>
-          <div class="label">System Health</div>
-        </div>
-        <div class="status-card">
-          <h3>Blocks Active</h3>
-          <div class="value">${health?.blocks_ok || 0}</div>
-          <div class="label">of ${health?.blocks_total || 0} total</div>
-        </div>
-        <div class="status-card">
-          <h3>API Calls (24h)</h3>
-          <div class="value">${health?.api_calls_24h || 0}</div>
-          <div class="label">Estimated</div>
-        </div>
-        <div class="status-card">
-          <h3>Cache Hit Rate</h3>
-          <div class="value">${health?.cache_hit_rate || 0}%</div>
-          <div class="label">Last 24h</div>
-        </div>
-      `;
-      
-      document.getElementById('health-timestamp').textContent = `Last updated: ${new Date().toLocaleString()}`;
-    }
-
-    async function updateBlockMatrix() {
-      const diag = await fetchJSON(`${API_BASE}/diag`);
-      const tbody = document.querySelector('#block-matrix tbody');
-      
-      if (!diag || !diag.blocks) {
-        tbody.innerHTML = '<tr><td colspan="9">No data available</td></tr>';
-        return;
-      }
-
-      tbody.innerHTML = diag.blocks.map(block => {
-        const statusClass = block.status === 'OK' ? 'ok' : block.status === 'PARTIAL' ? 'warn' : 'fail';
-        return `
-          <tr>
-            <td>${block.title || block.feature_id}</td>
-            <td><code>${block.feature_id}</code></td>
-            <td><span class="badge ${statusClass}">${block.status || 'UNKNOWN'}</span></td>
-            <td>${block.data_present ? '✅' : '❌'}</td>
-            <td><span class="badge ${block.quality === 'OK' ? 'ok' : block.quality === 'DEGRADED' ? 'warn' : 'fail'}">${block.quality || 'UNKNOWN'}</span></td>
-            <td>${block.as_of ? new Date(block.as_of).toLocaleString() : '—'}</td>
-            <td>${block.source || '—'}</td>
-            <td>${block.cache_layer || 'none'}</td>
-            <td><code style="font-size: 11px;">${block.last_error || '—'}</code></td>
-          </tr>
-        `;
-      }).join('');
-    }
-
-    async function updateApiKeys() {
-      const diag = await fetchJSON(`${API_BASE}/diag`);
-      const tbody = document.querySelector('#api-keys tbody');
-      
-      if (!diag || !diag.api_keys) {
-        tbody.innerHTML = '<tr><td colspan="14">No API key data available</td></tr>';
-        return;
-      }
-
-      tbody.innerHTML = diag.api_keys.map(key => {
-        const statusClass = key.status === 'present' ? 'ok' : key.status === 'missing' ? 'fail' : 'warn';
-        return `
-          <tr>
-            <td>${key.provider || '—'}</td>
-            <td><code>${key.alias || '—'}</code></td>
-            <td><span class="badge ${statusClass}">${key.status || 'UNKNOWN'}</span></td>
-            <td>${key.counts_today || 0}</td>
-            <td>${key.counts_week ?? '—'}</td>
-            <td>${key.counts_month ?? '—'}</td>
-            <td>${key.hard_limit || '—'}</td>
-            <td>${key.remaining || '—'}</td>
-            <td>${key.remaining_week ?? '—'}</td>
-            <td>${key.remaining_month ?? '—'}</td>
-            <td>${key.burn_rate_per_hour ?? '—'}</td>
-            <td><code style="font-size: 11px;">${key.last_error || '—'}</code></td>
-            <td>${key.last_used ? new Date(key.last_used).toLocaleString() : '—'}</td>
-            <td style="max-width: 260px;">${key.hint || '—'}</td>
-            <td style="max-width: 260px;">${key.recommended_action || '—'}</td>
-          </tr>
-        `;
-      }).join('');
-    }
-
-    async function updateErrorTimeline() {
-      const diag = await fetchJSON(`${API_BASE}/diag`);
-      const tbody = document.querySelector('#error-timeline tbody');
-      
-      if (!diag || !diag.events) {
-        tbody.innerHTML = '<tr><td colspan="6">No events available</td></tr>';
-        return;
-      }
-
-      tbody.innerHTML = diag.events.slice(0, 50).map(event => {
-        const typeClass = event.type === 'error' ? 'fail' : event.type === 'warn' ? 'warn' : 'ok';
-        return `
-          <tr>
-            <td>${new Date(event.timestamp).toLocaleString()}</td>
-            <td><span class="badge ${typeClass}">${event.type || 'info'}</span></td>
-            <td><code>${event.feature || '—'}</code></td>
-            <td><code>${event.error_code || '—'}</code></td>
-            <td>${event.message || '—'}</td>
-            <td><code style="font-size: 11px;">${event.details || '—'}</code></td>
-          </tr>
-        `;
-      }).join('');
+    async function refreshAll() {
+      document.body.classList.add('loading');
+      await Promise.all([
+        updateHealthOverview(),
+        updateBlockMatrix(),
+        updateApiKeys(),
+        updateWorkersUsage(),
+        updateEndpointProbes()
+      ]);
+      document.body.classList.remove('loading');
     }
 
     // Auto-refresh every 30 seconds
