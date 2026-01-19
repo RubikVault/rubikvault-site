@@ -31,11 +31,18 @@ jobs:
           ARTIFACTS_DIR: ${{ runner.temp }}/artifacts
         run: node scripts/providers/market-health-v3.mjs
 
+      - name: List artifacts directory
+        if: always()
+        run: |
+          echo "Checking artifacts directory:"
+          ls -la ${{ runner.temp }}/artifacts/ || echo "Artifacts dir does not exist"
+          ls -la ${{ runner.temp }}/artifacts/market-health/ || echo "market-health dir does not exist"
+
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: module-market-health
-          path: ${{ runner.temp }}/artifacts/market-health/*
+          path: ${{ runner.temp }}/artifacts/market-health/
           retention-days: 1
           if-no-files-found: error
 

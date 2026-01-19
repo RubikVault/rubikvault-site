@@ -372,7 +372,8 @@ async function main() {
   };
   
   // Write artifacts
-  const artifactsDir = process.env.ARTIFACTS_DIR || join(BASE_DIR, 'artifacts', 'market-health');
+  const artifactsBaseDir = process.env.ARTIFACTS_DIR || join(BASE_DIR, 'artifacts');
+  const artifactsDir = join(artifactsBaseDir, 'market-health');
   await mkdir(artifactsDir, { recursive: true });
   
   const snapshotPath = join(artifactsDir, 'snapshot.json');

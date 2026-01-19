@@ -584,7 +584,6 @@
     })();
     let INTERNAL_TOKEN = urlToken || storedToken || '';
     const RV_DASH_RUN_ID = `dash-${Date.now().toString(36)}`;
-    const RV_DASH_RUN_ID = `dash-${Date.now().toString(36)}`;
 
     const withToken = (url) => {
       if (!INTERNAL_TOKEN) return url;
