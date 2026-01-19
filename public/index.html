@@ -92,25 +92,28 @@
   <main class="rv-main" id="rv-dashboard">
     <h1 style="color: red; font-size: 48px; text-align: center; padding: 20px;">🔴 TEST! 🔴</h1>
     
-    <!-- Simple Major Indices Block -->
-    <section class="rv-section rv-native-block" style="margin-bottom: 24px;">
+    <!-- Major Indices EOD - Dynamic from API -->
+    <section
+      class="rv-section rv-native-block"
+      data-rv-feature="rv-major-indices"
+      data-block-id="major-indices"
+      data-rv-block-name="Major Indices EOD"
+      data-rv-priority="high"
+      data-rv-loading="true"
+      data-rv-collapsible="false"
+      style="margin-bottom: 24px;"
+    >
       <div class="rv-native-header">
         <h2>Major Indices EOD</h2>
+        <button class="rv-native-refresh" type="button" data-rv-action="refresh">Refresh</button>
       </div>
       <div class="rv-native-body rv-card">
-        <div style="display: grid; grid-template-columns: 200px 1fr; gap: 16px; padding: 16px;">
-          <div style="font-weight: 600; color: #e5e7eb;">S&P 500</div>
-          <div style="color: #10b981; font-size: 18px; font-weight: 600;">$5,998.74</div>
-          
-          <div style="font-weight: 600; color: #e5e7eb;">Nasdaq</div>
-          <div style="color: #10b981; font-size: 18px; font-weight: 600;">19,511.23</div>
-          
-          <div style="font-weight: 600; color: #e5e7eb;">DOW</div>
-          <div style="color: #ef4444; font-size: 18px; font-weight: 600;">43,487.83</div>
-          
-          <div style="font-weight: 600; color: #e5e7eb;">Russell 2000</div>
-          <div style="color: #10b981; font-size: 18px; font-weight: 600;">2,259.75</div>
+        <div class="rv-native-skeleton">
+          <div class="rv-native-line"></div>
+          <div class="rv-native-line short"></div>
+          <div class="rv-native-line"></div>
         </div>
+        <div class="rv-native-root" data-rv-root></div>
       </div>
     </section>
     

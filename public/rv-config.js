@@ -2,6 +2,21 @@ export const DEBUG_PANIC_MODE = false;
 
 export const FEATURES = [
   {
+    id: "rv-major-indices",
+    title: "Major Indices EOD",
+    module: "./features/rv-major-indices.js",
+    api: "market-health",
+    computation: {
+      where: "Pages Function",
+      update: "Daily EOD",
+      cost: "free and automated",
+      trust: "raw"
+    },
+    enabled: true,
+    lazyLoad: false,
+    refreshIntervalMs: 15 * 60 * 1000
+  },
+  {
     id: "rv-market-cockpit",
     title: "Hero – Market Snapshot",
     module: "./features/rv-market-cockpit.js",
