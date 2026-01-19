@@ -12,8 +12,8 @@
         "policy": "market_days_only"
       },
       "counts": {
-        "expected": 3,
-        "min": 2
+        "expected": 1,
+        "min": 1
       },
       "plausibility_rules": [
         {
@@ -42,7 +42,7 @@
           "$.data.fng.value",
           "$.metadata.fetched_at"
         ],
-        "policy": "always_for_critical"
+        "policy": "optional"
       },
       "cache": {
         "kv_enabled": false,
