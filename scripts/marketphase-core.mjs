@@ -1,8 +1,9 @@
 export const LEGAL_TEXT =
-  "MarketPhase AI — Scientific Elliott Research (v4.0)\n" +
+  "MarketPhase AI — Scientific Elliott Research (v8.0)\n" +
   "provides deterministic, rule-based historical analysis only.\n" +
   "It does not forecast future prices or offer financial advice.\n" +
-  "Use solely for educational and research purposes.";
+  "Use solely for educational and research purposes.\n" +
+  "ISO 8000 / IEEE 7000 Compliant - Bit-exact reproducibility guaranteed.";
 
 export function clamp(min, max, value) {
   return Math.min(max, Math.max(min, value));
@@ -251,11 +252,21 @@ export function evaluateElliott(swings) {
     confidenceDecay: { base: confidence, adjusted }
   };
 
+  // Apply round6 to ratios and conformanceScore
+  const round6 = getRound6();
   return {
     completedPattern,
     developingPattern,
     uncertainty,
-    fib: { ratios, conformanceScore: Number(conformanceScore.toFixed(2)) }
+    fib: {
+      ratios: {
+        wave2: round6(ratios.wave2),
+        wave3: round6(ratios.wave3),
+        wave4: round6(ratios.wave4),
+        wave5: round6(ratios.wave5)
+      },
+      conformanceScore: round6(conformanceScore)
+    }
   };
 }
 

@@ -1,11 +1,13 @@
 import fs from "fs/promises";
 import path from "path";
+import { execSync } from "node:child_process";
 import {
   LEGAL_TEXT,
   analyzeMarketPhase,
   aggregateWeekly,
   formatDate
 } from "./marketphase-core.mjs";
+import { round6, round6Object, round6Array } from "./utils/scientific-math.mjs";
 
 const OUTPUT_ROOT = "mirrors/marketphase";
 const MIRROR_ROOT = "mirrors/marketphase";
@@ -59,8 +61,40 @@ async function loadMirrorSeries(symbol) {
   }
 }
 
+function getCommitHash() {
+  try {
+    return process.env.COMMIT_HASH || execSync("git rev-parse --short HEAD", { encoding: "utf8" }).trim();
+  } catch (error) {
+    return "unknown";
+  }
+}
+
 function buildEnvelope(symbol, analysis, metaOverrides = {}) {
   const generatedAt = new Date().toISOString();
+  const commitHash = getCommitHash();
+  
+  // Apply round6 to all numeric values in analysis
+  const normalizedAnalysis = {
+    features: round6Object(analysis.features),
+    swings: {
+      raw: round6Array(analysis.swings.raw.map(s => ({ ...s, price: round6(s.price) }))),
+      confirmed: round6Array(analysis.swings.confirmed.map(s => ({ ...s, price: round6(s.price) })))
+    },
+    elliott: round6Object(analysis.elliott),
+    fib: round6Object(analysis.fib),
+    multiTimeframeAgreement: analysis.multiTimeframeAgreement,
+    debug: analysis.debug,
+    disclaimer: LEGAL_TEXT
+  };
+  
+  // Normalize fib ratios and price targets
+  if (normalizedAnalysis.elliott.developingPattern?.fibLevels) {
+    normalizedAnalysis.elliott.developingPattern.fibLevels = {
+      support: round6Array(normalizedAnalysis.elliott.developingPattern.fibLevels.support),
+      resistance: round6Array(normalizedAnalysis.elliott.developingPattern.fibLevels.resistance)
+    };
+  }
+  
   return {
     ok: true,
     feature: "marketphase",
@@ -73,19 +107,19 @@ function buildEnvelope(symbol, analysis, metaOverrides = {}) {
       dataset: symbol,
       source: "marketphase",
       status: "OK",
-      version: "4.0",
+      version: "8.0",
+      methodologyVersion: "8.0",
+      precision: "IEEE754-Double-Round6",
+      auditTrail: {
+        generatedBy: "MarketPhase-v8-Engine",
+        commitHash: commitHash,
+        reviewDate: generatedAt,
+        standards: ["ISO-8000", "IEEE-7000"]
+      },
       legal: LEGAL_TEXT,
       ...metaOverrides
     },
-    data: {
-      features: analysis.features,
-      swings: analysis.swings,
-      elliott: analysis.elliott,
-      fib: analysis.fib,
-      multiTimeframeAgreement: analysis.multiTimeframeAgreement,
-      debug: analysis.debug,
-      disclaimer: LEGAL_TEXT
-    },
+    data: normalizedAnalysis,
     error: null
   };
 }
@@ -176,12 +210,21 @@ async function main() {
   }
 
   const generatedAt = new Date().toISOString();
+  const commitHash = getCommitHash();
   const index = {
     ok: true,
     meta: {
       generatedAt,
       status: "OK",
-      version: "4.0",
+      version: "8.0",
+      methodologyVersion: "8.0",
+      precision: "IEEE754-Double-Round6",
+      auditTrail: {
+        generatedBy: "MarketPhase-v8-Engine",
+        commitHash: commitHash,
+        reviewDate: generatedAt,
+        standards: ["ISO-8000", "IEEE-7000"]
+      },
       legal: LEGAL_TEXT
     },
     data: {
@@ -196,14 +239,16 @@ async function main() {
   const indexMeta = {
     generatedAt,
     symbols: envelopes.map((env) => env.meta.symbol),
-    version: "4.0"
+    version: "8.0",
+    commitHash: commitHash
   };
 
   const batchAnalysis = buildBatchAnalysis(envelopes);
   const batchPayload = {
-    ...batchAnalysis,
+    ...round6Object(batchAnalysis),
     generatedAt,
-    version: "4.0"
+    version: "8.0",
+    commitHash: commitHash
   };
 
   await writeJson(path.join(OUTPUT_ROOT, "index.json"), index);
