@@ -1,49 +1,24 @@
 {
   "data": {
-    "counts": {
-      "long": 100,
-      "mid": 100,
-      "short": 100,
-      "triggers": 100
-    },
+    "notes": "Market closed (non-trading day).",
     "paths": {
       "health": "data/rvci/health.json",
       "long": "data/rvci/rvci_top_long.json",
       "mid": "data/rvci/rvci_top_mid.json",
       "short": "data/rvci/rvci_top_short.json",
-      "triggers": "data/rvci/rvci_triggers.json",
-      "universe": "data/rvci/universe_meta.json"
-    }
+      "triggers": "data/rvci/rvci_triggers.json"
+    },
+    "status": "SKIPPED_MARKET_CLOSED"
   },
   "error": null,
   "feature": "rvci-engine",
   "meta": {
-    "bias": {
-      "survivorship": "present"
-    },
-    "coveragePct": 43.75,
-    "dataAsOf": "2026-01-16T00:00:00Z",
-    "generatedAt": "2026-01-16T23:39:31.033743Z",
-    "marketDate": "2026-01-16",
-    "reason": "DEGRADED_COVERAGE",
-    "regime": "Bull",
-    "source": {
-      "prices": "yfinance",
-      "universe": "data/symbols"
-    },
-    "status": "DEGRADED_COVERAGE",
-    "tierStatus": {
-      "A": "degraded",
-      "B": "complete"
-    },
-    "universe": {
-      "expected": 512,
-      "missing": 288,
-      "received": 224
-    }
+    "generatedAt": "2026-01-19T08:43:28.889923Z",
+    "reason": "SKIPPED_MARKET_CLOSED",
+    "status": "SKIPPED_MARKET_CLOSED"
   },
-  "ok": true,
+  "ok": false,
   "warnings": [
-    "FUNDAMENTALS_DISABLED_FREE_TIER"
+    "MARKET_CLOSED"
   ]
 }
