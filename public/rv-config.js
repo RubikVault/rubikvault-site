@@ -538,7 +538,7 @@ FEATURES.forEach((feature) => {
 
 export const RV_CONFIG = {
   version: "rv-2025-01-15",
-  apiBase: "./data/snapshots",
+  apiBase: "/api",
   buildId: "2025-01-15-local",
   buildInfo: {
     commit: "local",
