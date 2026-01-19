@@ -1,2 +1,6 @@
 import { serveStaticJson } from "./_shared/static-only.js";
-export default { fetch: serveStaticJson };
+
+// Cloudflare Pages Functions export format
+export async function onRequestGet(context) {
+  return serveStaticJson(context.request);
+}
