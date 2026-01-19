@@ -2,10 +2,9 @@ export async function onRequestGet(context) {
   const { request, env } = context;
   const url = new URL(request.url);
 
-  // Allow /internal/health to pass through to static files
+  // Skip /internal/health - handled by functions/internal/health.js
   if (url.pathname.startsWith('/internal/health')) {
-    // Let _redirects handle routing to static files
-    return context.next();
+    return new Response("Not found", { status: 404 });
   }
 
   const required = env?.RV_INTERNAL_TOKEN;
