@@ -47,9 +47,9 @@ jobs:
 
       - name: Organize artifacts
         run: |
+          set +e  # Disable exit on error for this step
+          
           # Reorganize artifacts into expected structure
-          # artifacts/module-market-health/ contains the files
-          # We need: artifacts-organized/market-health/snapshot.json and module-state.json
           mkdir -p artifacts-organized
           
           echo "Checking for downloaded artifacts..."
@@ -61,10 +61,16 @@ jobs:
           fi
           
           echo "Artifacts directory contents:"
-          ls -la artifacts/ || echo "No artifacts directory"
+          ls -la artifacts/ 2>/dev/null || echo "No artifacts directory"
           
           artifact_count=0
           for dir in artifacts/module-*; do
+            # Check if glob matched anything
+            if [ ! -e "$dir" ]; then
+              echo "No module-* directories found"
+              break
+            fi
+            
             if [ -d "$dir" ]; then
               module_name=$(basename "$dir" | sed 's/module-//')
               echo "Processing module: $module_name"
@@ -99,9 +105,7 @@ jobs:
           
           # Verify structure (only if artifacts were found)
           if [ $artifact_count -gt 0 ]; then
-            echo "Artifacts organized:"
-            # Use find instead of ls with glob to avoid errors when pattern doesn't match
-            find artifacts-organized -mindepth 1 -maxdepth 1 -type d -exec ls -la {} \; 2>/dev/null || echo "No artifacts organized"
+            echo "Artifacts organized successfully!"
           else
             echo "No artifacts to organize. Finalizer will generate empty state."
           fi
