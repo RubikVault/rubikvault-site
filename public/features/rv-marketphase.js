@@ -97,6 +97,7 @@ function loadMarketPhase(symbol) {
 function getState(root) {
   if (!root.__rvMarketphaseState) {
     root.__rvMarketphaseState = {
+      symbol: "AAPL", // Default symbol
       symbol: resolveSymbol(),
       layout: resolveLayout(),
       data: null,

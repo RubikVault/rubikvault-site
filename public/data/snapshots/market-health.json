@@ -1,29 +1,29 @@
 {
   "schemaVersion": "v3",
   "blockId": "market-health",
-  "generatedAt": "2026-01-19T09:49:20.366Z",
-  "dataAt": "2026-01-19T09:05:19.466Z",
+  "generatedAt": "2026-01-19T10:09:35.445Z",
+  "dataAt": "2026-01-16T21:00:00.000Z",
   "meta": {
     "status": "OK",
     "reason": "OK",
-    "generatedAt": "2026-01-19T09:49:20.366Z",
-    "asOf": "2026-01-19T09:05:19.466Z",
-    "source": "market-health",
+    "generatedAt": "2026-01-19T10:09:35.445Z",
+    "asOf": "2026-01-16T21:00:00.000Z",
+    "source": "stooq",
     "ttlSeconds": 3600,
-    "stale": false,
-    "itemsCount": 4,
-    "stalenessSec": 2640,
+    "stale": true,
+    "itemsCount": 3,
+    "stalenessSec": 220140,
     "freshness": {
-      "status": "fresh",
-      "ageMinutes": 44
+      "status": "expired",
+      "ageMinutes": 3669
     },
     "schedule": {
-      "rule": "best_effort",
-      "nextPlannedFetchAt": "2026-01-19T12:49:20.366Z",
-      "expectedNextRunWindowMinutes": 180,
+      "rule": "eod",
+      "nextPlannedFetchAt": "2026-01-20T10:09:35.445Z",
+      "expectedNextRunWindowMinutes": 1440,
       "ttlSeconds": 3600
     },
-    "runId": "2026-01-19T09:49:20.327Z",
+    "runId": "2026-01-19T10:09:35.387Z",
     "validation": {
       "schema": {
         "ok": true,
@@ -42,37 +42,37 @@
   "data": {
     "items": [
       {
-        "symbol": "BTC",
-        "label": "Bitcoin",
-        "price": 93127,
-        "changePercent": -2.1084469812804345,
-        "ts": "2026-01-19T09:05:19.465Z",
-        "source": "coingecko"
+        "symbol": "SPY",
+        "close": 691.66,
+        "prevClose": 692.24,
+        "changePct": -0.08378597018375844,
+        "lastBarDate": "2026-01-16",
+        "barsUsed": 5256,
+        "missingFields": []
       },
       {
-        "symbol": "ETH",
-        "label": "Ethereum",
-        "price": 3208.92,
-        "changePercent": -3.2016508017426717,
-        "ts": "2026-01-19T09:05:19.465Z",
-        "source": "coingecko"
+        "symbol": "QQQ",
+        "close": 621.26,
+        "prevClose": 621.78,
+        "changePct": -0.08363086622277249,
+        "lastBarDate": "2026-01-16",
+        "barsUsed": 6756,
+        "missingFields": []
       },
       {
-        "symbol": "SOL",
-        "label": "Solana",
-        "price": 133.71,
-        "changePercent": -6.074205430273855,
-        "ts": "2026-01-19T09:05:19.465Z",
-        "source": "coingecko"
-      },
-      {
-        "symbol": "XRP",
-        "label": "XRP",
-        "price": 1.98,
-        "changePercent": -3.7881584857819646,
-        "ts": "2026-01-19T09:05:19.465Z",
-        "source": "coingecko"
+        "symbol": "IWM",
+        "close": 265.76,
+        "prevClose": 265.51,
+        "changePct": 0.09415841211253273,
+        "lastBarDate": "2026-01-16",
+        "barsUsed": 5256,
+        "missingFields": []
       }
+    ],
+    "benchmarks": [
+      "SPY",
+      "QQQ",
+      "IWM"
     ],
     "fng": {
       "value": 44,

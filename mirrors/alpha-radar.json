@@ -2,10 +2,10 @@
   "meta": {
     "provider": "stooq",
     "dataset": "alpha-radar",
-    "fetchedAt": "2026-01-19T09:04:57.123Z",
+    "fetchedAt": "2026-01-19T10:08:46.157Z",
     "ttlSeconds": 3600,
     "source": "mirror",
-    "runId": "2026-01-19T09:04:57.123Z",
+    "runId": "2026-01-19T10:08:46.157Z",
     "cost": null
   },
   "raw": {
@@ -13,9 +13,9 @@
     "mirrorId": "alpha-radar",
     "provider": "stooq",
     "dataset": "alpha-radar",
-    "runId": "2026-01-19T09:04:57.123Z",
-    "fetchedAt": "2026-01-19T09:04:57.123Z",
-    "updatedAt": "2026-01-19T09:04:57.123Z",
+    "runId": "2026-01-19T10:08:46.157Z",
+    "fetchedAt": "2026-01-19T10:08:46.157Z",
+    "updatedAt": "2026-01-19T10:08:46.157Z",
     "asOf": "2026-01-16T21:00:00.000Z",
     "mode": "EOD",
     "cadence": "EOD",
@@ -46,10 +46,10 @@
     "items": [
       {
         "symbol": "AAPL",
-        "score": 45,
-        "totalScore": 45,
+        "score": 17,
+        "totalScore": 17,
         "setupScore": 17,
-        "triggerScore": 28,
+        "triggerScore": 0,
         "state": "NEUTRAL",
         "reasons": [
           "RSI_OVERSOLD",
@@ -77,10 +77,10 @@
       },
       {
         "symbol": "MSFT",
-        "score": 30,
-        "totalScore": 30,
+        "score": 13,
+        "totalScore": 13,
         "setupScore": 13,
-        "triggerScore": 17,
+        "triggerScore": 0,
         "state": "NEUTRAL",
         "reasons": [
           "RSI_RECOVERY",
@@ -108,11 +108,11 @@
       },
       {
         "symbol": "NVDA",
-        "score": 55,
-        "totalScore": 55,
+        "score": 20,
+        "totalScore": 20,
         "setupScore": 5,
-        "triggerScore": 50,
-        "state": "WATCH",
+        "triggerScore": 15,
+        "state": "NEUTRAL",
         "reasons": [
           "RSI_NEUTRAL",
           "TREND_STRONG",
@@ -139,11 +139,11 @@
       },
       {
         "symbol": "AMZN",
-        "score": 75,
-        "totalScore": 75,
+        "score": 40,
+        "totalScore": 40,
         "setupScore": 5,
-        "triggerScore": 60,
-        "state": "STRONG",
+        "triggerScore": 35,
+        "state": "NEUTRAL",
         "reasons": [
           "RSI_NEUTRAL",
           "TREND_STRONG",
@@ -170,11 +170,11 @@
       },
       {
         "symbol": "GOOGL",
-        "score": 75,
-        "totalScore": 75,
+        "score": 40,
+        "totalScore": 40,
         "setupScore": 5,
-        "triggerScore": 60,
-        "state": "STRONG",
+        "triggerScore": 35,
+        "state": "NEUTRAL",
         "reasons": [
           "RSI_NEUTRAL",
           "TREND_STRONG",
@@ -201,10 +201,10 @@
       },
       {
         "symbol": "META",
-        "score": 30,
-        "totalScore": 30,
+        "score": 5,
+        "totalScore": 5,
         "setupScore": 5,
-        "triggerScore": 25,
+        "triggerScore": 0,
         "state": "NEUTRAL",
         "reasons": [
           "RSI_RECOVERY",
@@ -232,10 +232,10 @@
       },
       {
         "symbol": "TSLA",
-        "score": 45,
-        "totalScore": 45,
+        "score": 5,
+        "totalScore": 5,
         "setupScore": 5,
-        "triggerScore": 40,
+        "triggerScore": 0,
         "state": "NEUTRAL",
         "reasons": [
           "RSI_RECOVERY",
@@ -263,11 +263,11 @@
       },
       {
         "symbol": "SPY",
-        "score": 75,
-        "totalScore": 75,
+        "score": 40,
+        "totalScore": 40,
         "setupScore": 5,
-        "triggerScore": 60,
-        "state": "STRONG",
+        "triggerScore": 35,
+        "state": "NEUTRAL",
         "reasons": [
           "RSI_NEUTRAL",
           "TREND_STRONG",
@@ -294,11 +294,11 @@
       },
       {
         "symbol": "QQQ",
-        "score": 55,
-        "totalScore": 55,
+        "score": 20,
+        "totalScore": 20,
         "setupScore": 5,
-        "triggerScore": 50,
-        "state": "WATCH",
+        "triggerScore": 15,
+        "state": "NEUTRAL",
         "reasons": [
           "RSI_NEUTRAL",
           "TREND_STRONG",
@@ -325,11 +325,11 @@
       },
       {
         "symbol": "IWM",
-        "score": 75,
-        "totalScore": 75,
+        "score": 35,
+        "totalScore": 35,
         "setupScore": 0,
-        "triggerScore": 60,
-        "state": "STRONG",
+        "triggerScore": 35,
+        "state": "NEUTRAL",
         "reasons": [
           "RSI_EXTENDED",
           "TREND_STRONG",
@@ -355,7 +355,7 @@
         "missingFields": []
       }
     ],
-    "generatedAt": "2026-01-19T09:04:57.123Z",
+    "generatedAt": "2026-01-19T10:08:46.157Z",
     "data": {
       "picks": {
         "top": [
@@ -366,8 +366,8 @@
             "changePct": 0.39465950121757576,
             "stop": null,
             "setupScore": 5,
-            "triggerScore": 60,
-            "totalScore": 75,
+            "triggerScore": 35,
+            "totalScore": 40,
             "setup": {
               "rsiExtreme": true,
               "bbExtreme": false,
@@ -383,7 +383,7 @@
               "rsiUpturn": false
             },
             "tags": [
-              "STRONG"
+              "NEUTRAL"
             ],
             "notes": null
           },
@@ -394,8 +394,8 @@
             "changePct": -0.8353867419916949,
             "stop": null,
             "setupScore": 5,
-            "triggerScore": 60,
-            "totalScore": 75,
+            "triggerScore": 35,
+            "totalScore": 40,
             "setup": {
               "rsiExtreme": true,
               "bbExtreme": false,
@@ -411,7 +411,7 @@
               "rsiUpturn": false
             },
             "tags": [
-              "STRONG"
+              "NEUTRAL"
             ],
             "notes": null
           },
@@ -422,8 +422,8 @@
             "changePct": -0.08378597018375844,
             "stop": null,
             "setupScore": 5,
-            "triggerScore": 60,
-            "totalScore": 75,
+            "triggerScore": 35,
+            "totalScore": 40,
             "setup": {
               "rsiExtreme": true,
               "bbExtreme": false,
@@ -439,7 +439,7 @@
               "rsiUpturn": false
             },
             "tags": [
-              "STRONG"
+              "NEUTRAL"
             ],
             "notes": null
           }
@@ -452,8 +452,8 @@
             "changePct": 0.39465950121757576,
             "stop": null,
             "setupScore": 5,
-            "triggerScore": 60,
-            "totalScore": 75,
+            "triggerScore": 35,
+            "totalScore": 40,
             "setup": {
               "rsiExtreme": true,
               "bbExtreme": false,
@@ -469,7 +469,7 @@
               "rsiUpturn": false
             },
             "tags": [
-              "STRONG"
+              "NEUTRAL"
             ],
             "notes": null
           },
@@ -480,8 +480,8 @@
             "changePct": -0.8353867419916949,
             "stop": null,
             "setupScore": 5,
-            "triggerScore": 60,
-            "totalScore": 75,
+            "triggerScore": 35,
+            "totalScore": 40,
             "setup": {
               "rsiExtreme": true,
               "bbExtreme": false,
@@ -497,7 +497,7 @@
               "rsiUpturn": false
             },
             "tags": [
-              "STRONG"
+              "NEUTRAL"
             ],
             "notes": null
           },
@@ -508,8 +508,8 @@
             "changePct": -0.08378597018375844,
             "stop": null,
             "setupScore": 5,
-            "triggerScore": 60,
-            "totalScore": 75,
+            "triggerScore": 35,
+            "totalScore": 40,
             "setup": {
               "rsiExtreme": true,
               "bbExtreme": false,
@@ -525,7 +525,7 @@
               "rsiUpturn": false
             },
             "tags": [
-              "STRONG"
+              "NEUTRAL"
             ],
             "notes": null
           }
@@ -538,8 +538,8 @@
             "changePct": 0.09415841211253273,
             "stop": null,
             "setupScore": 0,
-            "triggerScore": 60,
-            "totalScore": 75,
+            "triggerScore": 35,
+            "totalScore": 35,
             "setup": {
               "rsiExtreme": true,
               "bbExtreme": false,
@@ -555,7 +555,7 @@
               "rsiUpturn": false
             },
             "tags": [
-              "STRONG"
+              "NEUTRAL"
             ],
             "notes": null
           },
@@ -566,8 +566,8 @@
             "changePct": -0.4383854584335878,
             "stop": null,
             "setupScore": 5,
-            "triggerScore": 50,
-            "totalScore": 55,
+            "triggerScore": 15,
+            "totalScore": 20,
             "setup": {
               "rsiExtreme": true,
               "bbExtreme": false,
@@ -583,7 +583,7 @@
               "rsiUpturn": false
             },
             "tags": [
-              "WATCH"
+              "NEUTRAL"
             ],
             "notes": null
           },
@@ -594,8 +594,8 @@
             "changePct": -0.08363086622277249,
             "stop": null,
             "setupScore": 5,
-            "triggerScore": 50,
-            "totalScore": 55,
+            "triggerScore": 15,
+            "totalScore": 20,
             "setup": {
               "rsiExtreme": true,
               "bbExtreme": false,
@@ -611,7 +611,7 @@
               "rsiUpturn": false
             },
             "tags": [
-              "WATCH"
+              "NEUTRAL"
             ],
             "notes": null
           }
@@ -620,7 +620,7 @@
     },
     "meta": {
       "status": "OK",
-      "updatedAt": "2026-01-19T09:04:57.123Z",
+      "updatedAt": "2026-01-19T10:08:46.157Z",
       "reason": null
     }
   }

@@ -146,44 +146,40 @@ export function alphaScore({ close, sma20, sma50, sma200, rsi, macdVal, macdSign
     setupReasons.push("RVOL_GE_15");
   }
   
-  // Trend strength (affects both setup and trigger)
+  // Trend strength (affects trigger score only)
   if (Number.isFinite(close) && Number.isFinite(sma20) && Number.isFinite(sma50) && Number.isFinite(sma200)) {
     if (close > sma20 && close > sma50 && close > sma200) {
-      score += 15;
-      triggerScore += 10; // Strong trend helps trigger
+      triggerScore += 20; // Strong trend helps trigger significantly
       reasons.push("TREND_STRONG");
       triggerReasons.push("TREND_STRONG");
     } else if (close > sma50 && close > sma200) {
-      score += 10;
-      triggerScore += 5;
+      triggerScore += 10; // Moderate trend
       reasons.push("TREND_UP");
       triggerReasons.push("TREND_UP");
     } else if (close > sma200) {
-      score += 5;
+      triggerScore += 5; // Weak trend above SMA200
       reasons.push("TREND_UP_200");
     } else if (close < sma200) {
-      score -= 10;
+      triggerScore -= 5; // Below SMA200 reduces trigger potential
       reasons.push("TREND_DOWN");
     }
   }
   
-  // MACD (affects trigger more than setup)
+  // MACD (affects trigger score only)
   if (Number.isFinite(macdVal) && Number.isFinite(macdSignal) && Number.isFinite(macdHist)) {
     if (macdVal > macdSignal && macdHist > 0) {
-      score += 10;
-      triggerScore += 8;
+      triggerScore += 15; // Strong MACD bullish signal
       reasons.push("MACD_POSITIVE");
       triggerReasons.push("MACD_POSITIVE");
     } else if (macdHist < 0) {
-      score -= 10;
+      triggerScore -= 5; // Negative MACD histogram reduces trigger
       reasons.push("MACD_NEGATIVE");
     }
   }
   
   // RVOL confirm (trigger condition)
   if (Number.isFinite(rvol20) && rvol20 > 1.5 && Number.isFinite(close) && Number.isFinite(prevClose) && close > prevClose) {
-    score += 5;
-    triggerScore += 5;
+    triggerScore += 10; // Volume confirmation adds to trigger
     reasons.push("RVOL_CONFIRM");
     triggerReasons.push("VOL_CONFIRM_12x");
   }
@@ -191,18 +187,15 @@ export function alphaScore({ close, sma20, sma50, sma200, rsi, macdVal, macdSign
   // Clamp scores
   setupScore = clamp(setupScore, 0, 40);
   triggerScore = clamp(triggerScore, 0, 60);
-  const totalScore = clamp(score, 0, 100);
   
-  // Ensure totalScore = setupScore + triggerScore (approximately)
-  // If they don't add up, adjust triggerScore to match
-  const expectedTotal = setupScore + triggerScore;
-  if (Math.abs(totalScore - expectedTotal) > 5) {
-    // Adjust triggerScore to make totalScore match setupScore + triggerScore
-    triggerScore = Math.max(0, Math.min(60, totalScore - setupScore));
-  }
+  // CRITICAL FIX: totalScore should be the sum of setupScore + triggerScore
+  // NOT the base score (which was used for legacy compatibility)
+  // This ensures each asset has unique scores based on its actual setup/trigger conditions
+  const totalScore = clamp(setupScore + triggerScore, 0, 100);
   
   return { 
-    score: totalScore, 
+    score: totalScore,
+    totalScore, // Alias for compatibility
     setupScore, 
     triggerScore, 
     reasons,
