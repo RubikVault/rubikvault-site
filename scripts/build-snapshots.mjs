@@ -249,9 +249,23 @@ async function mapMirrorData(mirrorId, raw) {
     const rawItems = extractItems(raw);
     // Normalize items to include setupScore/triggerScore/totalScore
     const items = Array.isArray(rawItems) ? rawItems.map(normalizePick) : [];
-    const picks = raw?.data?.picks || raw?.picks || null;
-    // If picks exist, normalize them too
-    const normalizedPicks = picks && typeof picks === "object" ? computeAlphaRadarPicks({ picks }) : null;
+    // Extract picks from raw data (could be in data.picks, picks, or data.data.picks)
+    const picks = raw?.data?.picks || raw?.picks || raw?.data?.data?.picks || null;
+    // Normalize picks: if picks is an object with top/shortterm/longterm, use computeAlphaRadarPicks
+    // Otherwise, if picks is an array or object, try to normalize it
+    let normalizedPicks = null;
+    if (picks && typeof picks === "object") {
+      if (Array.isArray(picks.top) || Array.isArray(picks.shortterm) || Array.isArray(picks.longterm)) {
+        // Already structured as { top, shortterm, longterm }
+        normalizedPicks = computeAlphaRadarPicks({ picks });
+      } else if (Array.isArray(picks)) {
+        // Picks is an array, treat as itemsAlpha
+        normalizedPicks = computeAlphaRadarPicks({ itemsAlpha: picks });
+      } else {
+        // Try to extract itemsAlpha or candidates from picks object
+        normalizedPicks = computeAlphaRadarPicks(picks);
+      }
+    }
     const extraData = normalizedPicks ? { ...extractExtraData(raw), picks: normalizedPicks } : extractExtraData(raw);
     return { items, extraData };
   }
@@ -493,6 +507,17 @@ async function collectMirrorInputs() {
     if (shouldSkipMirrorId(base)) return;
     mirrors[base] = loadJson(filePath);
   });
+  // Fallback: if sector-rotation mirror is missing from mirrors/, try public/mirrors/
+  // This handles cases where mirrors are generated in public/mirrors/ instead of mirrors/
+  if (!mirrors["sector-rotation"]) {
+    const publicMirrorPath = path.join(ROOT, "public", "mirrors", "sector-rotation.json");
+    if (fs.existsSync(publicMirrorPath)) {
+      const publicMirror = loadJson(publicMirrorPath);
+      if (publicMirror) {
+        mirrors["sector-rotation"] = publicMirror;
+      }
+    }
+  }
   return mirrors;
 }
 
