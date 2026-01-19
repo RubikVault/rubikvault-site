@@ -49,25 +49,61 @@ jobs:
         run: |
           # Reorganize artifacts into expected structure
           # artifacts/module-market-health/ contains the files
-          # We need: artifacts/market-health/snapshot.json and module-state.json
+          # We need: artifacts-organized/market-health/snapshot.json and module-state.json
           mkdir -p artifacts-organized
           
+          echo "Checking for downloaded artifacts..."
+          if [ ! -d "artifacts" ] || [ -z "$(ls -A artifacts 2>/dev/null)" ]; then
+            echo "⚠ No artifacts directory found or directory is empty"
+            echo "This is expected if the Pilot workflow hasn't run yet"
+            echo "Finalizer will generate empty provider-state.json"
+            exit 0  # Success - this is OK, finalizer handles empty state
+          fi
+          
+          echo "Artifacts directory contents:"
+          ls -la artifacts/ || echo "No artifacts directory"
+          
+          artifact_count=0
           for dir in artifacts/module-*; do
             if [ -d "$dir" ]; then
               module_name=$(basename "$dir" | sed 's/module-//')
+              echo "Processing module: $module_name"
               mkdir -p "artifacts-organized/$module_name"
               
               # Find and copy snapshot.json and module-state.json
-              find "$dir" -name "snapshot.json" -exec cp {} "artifacts-organized/$module_name/" \;
-              find "$dir" -name "module-state.json" -exec cp {} "artifacts-organized/$module_name/" \;
+              if find "$dir" -name "snapshot.json" -exec cp {} "artifacts-organized/$module_name/" \; 2>/dev/null; then
+                echo "  ✓ Copied snapshot.json"
+              else
+                echo "  ⚠ snapshot.json not found in $dir"
+              fi
               
-              echo "✓ Organized artifact: $module_name"
+              if find "$dir" -name "module-state.json" -exec cp {} "artifacts-organized/$module_name/" \; 2>/dev/null; then
+                echo "  ✓ Copied module-state.json"
+              else
+                echo "  ⚠ module-state.json not found in $dir"
+              fi
+              
+              # Verify both files exist
+              if [ -f "artifacts-organized/$module_name/snapshot.json" ] && [ -f "artifacts-organized/$module_name/module-state.json" ]; then
+                echo "✓ Organized artifact: $module_name"
+                artifact_count=$((artifact_count + 1))
+              else
+                echo "  ⚠ Incomplete artifact for $module_name, removing directory"
+                rm -rf "artifacts-organized/$module_name"
+              fi
             fi
           done
           
-          # Verify structure
-          echo "Artifacts organized:"
-          ls -la artifacts-organized/*/
+          echo ""
+          echo "Artifact organization complete. Found $artifact_count module(s)."
+          
+          # Verify structure (only if artifacts were found)
+          if [ $artifact_count -gt 0 ]; then
+            echo "Artifacts organized:"
+            ls -la artifacts-organized/*/ 2>/dev/null || echo "No artifacts organized"
+          else
+            echo "No artifacts to organize. Finalizer will generate empty state."
+          fi
 
       - name: Run Finalizer
         env:
