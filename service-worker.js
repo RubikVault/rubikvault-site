@@ -1,57 +1,260 @@
-/* Minimal SW: do NOT aggressively cache /api/* to keep news fresh */
+/**
+ * RubikVault Service Worker v3.0
+ * 
+ * Features:
+ * - Offline-first for critical data
+ * - Cache manifest + last_good snapshots
+ * - Network-first with fallback for API
+ * - Background sync ready
+ */
 
-const STATIC_CACHE = "rv-static-v1";
+const CACHE_VERSION = 'rv-v3.0';
+const STATIC_CACHE = `${CACHE_VERSION}-static`;
+const DATA_CACHE = `${CACHE_VERSION}-data`;
+const API_CACHE = `${CACHE_VERSION}-api`;
+
+// Static assets (UI)
 const STATIC_ASSETS = [
-  "/",
-  "/index.html",
-  "/style.css",
-  "/script.js",
-  "/manifest.json"
+  '/',
+  '/index.html',
+  '/style.css',
+  '/market-clock.js',
+  '/manifest.json',
+  '/assets/rv-icon.png',
+  '/assets/rv-favicon.png'
 ];
 
-self.addEventListener("install", (event) => {
+// Critical data (always cache last_good)
+const CRITICAL_DATA = [
+  '/data/manifest.json',
+  '/data/provider-state.json',
+  '/data/snapshots/market-health/latest.json',
+  '/data/snapshots/stocks/latest.json'
+];
+
+/**
+ * Install: Pre-cache critical assets
+ */
+self.addEventListener('install', (event) => {
+  console.log('[SW] Installing v3.0...');
+  
   event.waitUntil(
-    caches.open(STATIC_CACHE).then((cache) => cache.addAll(STATIC_ASSETS)).catch(() => {})
+    Promise.all([
+      // Cache static assets
+      caches.open(STATIC_CACHE).then(cache => {
+        return cache.addAll(STATIC_ASSETS).catch(err => {
+          console.warn('[SW] Failed to cache some static assets:', err);
+        });
+      }),
+      
+      // Cache critical data
+      caches.open(DATA_CACHE).then(cache => {
+        return Promise.all(
+          CRITICAL_DATA.map(url => 
+            fetch(url)
+              .then(response => cache.put(url, response))
+              .catch(err => console.warn(`[SW] Failed to cache ${url}:`, err))
+          )
+        );
+      })
+    ]).then(() => {
+      console.log('[SW] Installation complete!');
+      self.skipWaiting();
+    })
   );
-  self.skipWaiting();
 });
 
-self.addEventListener("activate", (event) => {
-  event.waitUntil(self.clients.claim());
+/**
+ * Activate: Clean old caches
+ */
+self.addEventListener('activate', (event) => {
+  console.log('[SW] Activating v3.0...');
+  
+  event.waitUntil(
+    caches.keys().then(cacheNames => {
+      return Promise.all(
+        cacheNames
+          .filter(name => name.startsWith('rv-') && name !== STATIC_CACHE && name !== DATA_CACHE && name !== API_CACHE)
+          .map(name => {
+            console.log('[SW] Deleting old cache:', name);
+            return caches.delete(name);
+          })
+      );
+    }).then(() => {
+      console.log('[SW] Activation complete!');
+      return self.clients.claim();
+    })
+  );
 });
 
-// Network-first for HTML, cache-first only for known static assets, always network for /api/*
-self.addEventListener("fetch", (event) => {
-  const req = event.request;
-  const url = new URL(req.url);
-
-  if (url.pathname.toLowerCase().startsWith("/api/")) {
-    event.respondWith(fetch(req).catch(() => new Response(JSON.stringify({ error: "offline" }), { status: 503 })));
+/**
+ * Fetch: Handle requests with offline-first strategy
+ */
+self.addEventListener('fetch', (event) => {
+  const { request } = event;
+  const url = new URL(request.url);
+  
+  // 1) API REQUESTS (/api/*)
+  if (url.pathname.startsWith('/api/')) {
+    event.respondWith(handleAPIRequest(request));
     return;
   }
+  
+  // 2) DATA REQUESTS (/data/*)
+  if (url.pathname.startsWith('/data/')) {
+    event.respondWith(handleDataRequest(request));
+    return;
+  }
+  
+  // 3) NAVIGATION (HTML)
+  if (request.mode === 'navigate') {
+    event.respondWith(handleNavigationRequest(request));
+    return;
+  }
+  
+  // 4) STATIC ASSETS
+  event.respondWith(handleStaticRequest(request));
+});
 
-  if (req.mode === "navigate") {
-    event.respondWith(
-      fetch(req).then((res) => {
-        const copy = res.clone();
-        caches.open(STATIC_CACHE).then((c) => c.put(req, copy)).catch(() => {});
-        return res;
-      }).catch(() => caches.match(req))
+/**
+ * Handle API requests: Network-first with cache fallback
+ */
+async function handleAPIRequest(request) {
+  try {
+    const response = await fetch(request);
+    
+    // Cache successful responses
+    if (response.ok) {
+      const cache = await caches.open(API_CACHE);
+      cache.put(request, response.clone()).catch(() => {});
+    }
+    
+    return response;
+  } catch (error) {
+    // Network failed, try cache
+    const cached = await caches.match(request);
+    if (cached) {
+      console.log('[SW] Serving API from cache (offline):', request.url);
+      return cached;
+    }
+    
+    // Return offline envelope
+    return new Response(
+      JSON.stringify({
+        schema_version: '3.0',
+        metadata: {
+          served_from: 'SERVICE_WORKER_OFFLINE',
+          offline: true
+        },
+        data: [],
+        error: {
+          class: 'OFFLINE',
+          message: 'Network unavailable. Please check connection.',
+          user_message: 'You are offline. Showing cached data.'
+        }
+      }),
+      {
+        status: 503,
+        headers: { 'Content-Type': 'application/json' }
+      }
     );
-    return;
   }
+}
 
-  const isStaticAsset = STATIC_ASSETS.includes(url.pathname);
-  if (isStaticAsset) {
-    event.respondWith(
-      caches.match(req).then((hit) => hit || fetch(req).then((res) => {
-        const copy = res.clone();
-        caches.open(STATIC_CACHE).then((c) => c.put(req, copy)).catch(() => {});
-        return res;
-      }))
+/**
+ * Handle data requests: Cache-first for last_good
+ */
+async function handleDataRequest(request) {
+  const url = new URL(request.url);
+  const isCritical = CRITICAL_DATA.some(path => url.pathname === path);
+  
+  if (isCritical) {
+    // Cache-first for critical data
+    const cached = await caches.match(request);
+    if (cached) {
+      // Update cache in background
+      fetch(request).then(response => {
+        if (response.ok) {
+          caches.open(DATA_CACHE).then(cache => cache.put(request, response.clone()));
+        }
+      }).catch(() => {});
+      
+      return cached;
+    }
+  }
+  
+  // Network-first for non-critical
+  try {
+    const response = await fetch(request);
+    if (response.ok) {
+      const cache = await caches.open(DATA_CACHE);
+      cache.put(request, response.clone()).catch(() => {});
+    }
+    return response;
+  } catch (error) {
+    const cached = await caches.match(request);
+    if (cached) {
+      return cached;
+    }
+    throw error;
+  }
+}
+
+/**
+ * Handle navigation: Network-first with fallback
+ */
+async function handleNavigationRequest(request) {
+  try {
+    const response = await fetch(request);
+    const cache = await caches.open(STATIC_CACHE);
+    cache.put(request, response.clone()).catch(() => {});
+    return response;
+  } catch (error) {
+    const cached = await caches.match(request);
+    if (cached) {
+      return cached;
+    }
+    // Fallback to index
+    return caches.match('/index.html') || fetch('/index.html');
+  }
+}
+
+/**
+ * Handle static assets: Cache-first with network fallback
+ */
+async function handleStaticRequest(request) {
+  const cached = await caches.match(request);
+  if (cached) {
+    return cached;
+  }
+  
+  try {
+    const response = await fetch(request);
+    if (response.ok) {
+      const cache = await caches.open(STATIC_CACHE);
+      cache.put(request, response.clone()).catch(() => {});
+    }
+    return response;
+  } catch (error) {
+    throw error;
+  }
+}
+
+/**
+ * Message handler for cache updates
+ */
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
+  
+  if (event.data && event.data.type === 'CLEAR_CACHE') {
+    event.waitUntil(
+      caches.keys().then(names => {
+        return Promise.all(names.map(name => caches.delete(name)));
+      })
     );
-    return;
   }
-
-  event.respondWith(fetch(req).catch(() => caches.match(req)));
 });
+
+console.log('[SW] RubikVault Service Worker v3.0 loaded!');

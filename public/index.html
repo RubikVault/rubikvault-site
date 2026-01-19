@@ -12,6 +12,15 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="RubikVault" />
   
+  <!-- Deep Links for Mobile Apps -->
+  <meta property="al:ios:url" content="rubikvault://analyze" />
+  <meta property="al:ios:app_store_id" content="YOUR_APP_STORE_ID" />
+  <meta property="al:ios:app_name" content="RubikVault" />
+  <meta property="al:android:url" content="rubikvault://analyze" />
+  <meta property="al:android:package" content="com.rubikvault.app" />
+  <meta property="al:android:app_name" content="RubikVault" />
+  <meta property="al:web:url" content="https://rubikvault.com" />
+  
   <!-- Icons -->
   <link rel="icon" type="image/png" sizes="32x32" href="/assets/rv-favicon.png" />
   <link rel="apple-touch-icon" sizes="180x180" href="/assets/rv-apple-icon.png" />
@@ -306,7 +315,25 @@
 
     // Auto-focus search on page load
     document.addEventListener('DOMContentLoaded', () => {
-      searchInput.focus();
+      // Check for deep link: /analyze/TICKER
+      const path = window.location.pathname;
+      const match = path.match(/^\/analyze\/([A-Z]+)$/i);
+      
+      if (match) {
+        const ticker = match[1].toUpperCase();
+        searchInput.value = ticker;
+        searchStock(ticker);
+      } else {
+        searchInput.focus();
+      }
+    });
+    
+    // Handle browser back button
+    window.addEventListener('popstate', () => {
+      const path = window.location.pathname;
+      if (path === '/' || path === '/index.html') {
+        clearSearch();
+      }
     });
   </script>
 

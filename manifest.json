@@ -36,5 +36,16 @@
   ],
   "categories": ["finance", "business", "productivity"],
   "lang": "en",
-  "dir": "ltr"
+  "dir": "ltr",
+  "rv_mobile": {
+    "bandwidth_aware": true,
+    "offline_capable": true,
+    "critical_modules": ["market-health", "stocks"],
+    "lazy_load_threshold": "2g",
+    "deep_link_patterns": [
+      "/analyze/:ticker",
+      "/module/:module",
+      "/alert/:alertId"
+    ]
+  }
 }
