@@ -208,8 +208,8 @@ try {
   systemHealth.mirrors.push(...mirrorUpdates);
 
   saveMirror(SYSTEM_HEALTH_PATH, systemHealth);
+  
+  console.log("EVENT_MIRRORS_DONE", mirrors.length);
 } finally {
   releaseLock(lock.path);
 }
-
-console.log("EVENT_MIRRORS_DONE", mirrors.length);
