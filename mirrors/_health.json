@@ -1,0 +1,80 @@
+{
+  "meta": {
+    "provider": "seed-mirrors",
+    "dataset": "_health",
+    "fetchedAt": "2026-01-19T08:42:59.979Z",
+    "ttlSeconds": 3600,
+    "source": "mirror",
+    "runId": "2026-01-19T08:42:59.979Z",
+    "cost": null
+  },
+  "raw": {
+    "schemaVersion": "1.0",
+    "mirrorId": "_health",
+    "mode": "EOD",
+    "cadence": "best_effort",
+    "trust": "derived",
+    "sourceUpstream": "seed-mirrors",
+    "whyUnique": "Seeder health report",
+    "items": [],
+    "context": {
+      "savedAt": "2026-01-19T08:42:53.093Z",
+      "schemaVersion": "1.0",
+      "summary": {
+        "ok": 4,
+        "bad": 0,
+        "total": 4
+      },
+      "blocks": {
+        "top-movers": {
+          "ok": true,
+          "http": 200,
+          "bytes": 7395,
+          "provider": "alphavantage",
+          "metaStatus": "LIVE",
+          "metaReason": null,
+          "write": "UPDATED",
+          "error": null
+        },
+        "yield-curve": {
+          "ok": true,
+          "http": 200,
+          "bytes": 665,
+          "provider": "fred",
+          "metaStatus": "LIVE",
+          "metaReason": null,
+          "write": "CREATED",
+          "error": null
+        },
+        "sector-rotation": {
+          "ok": true,
+          "http": 200,
+          "bytes": 1810,
+          "provider": "stooq",
+          "metaStatus": "LIVE",
+          "metaReason": null,
+          "write": "CREATED",
+          "error": null
+        },
+        "market-health": {
+          "ok": true,
+          "http": 200,
+          "bytes": 1634,
+          "provider": "market-health",
+          "metaStatus": "LIVE",
+          "metaReason": null,
+          "write": "UPDATED",
+          "error": null
+        }
+      }
+    },
+    "runId": "2026-01-19T08:42:59.979Z",
+    "updatedAt": "2026-01-19T08:42:59.979Z",
+    "asOf": "2026-01-19T08:42:59.979Z",
+    "meta": {
+      "status": "PARTIAL",
+      "updatedAt": "2026-01-19T08:42:59.979Z",
+      "reason": "EMPTY_ITEMS"
+    }
+  }
+}

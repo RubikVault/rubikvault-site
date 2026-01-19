@@ -1,29 +1,29 @@
 {
   "schemaVersion": "v3",
   "blockId": "yield-curve",
-  "generatedAt": "2026-01-18T11:11:16.546Z",
-  "dataAt": "2026-01-02T18:07:20.263Z",
+  "generatedAt": "2026-01-19T08:43:00.074Z",
+  "dataAt": "2026-01-19T08:42:54.173Z",
   "meta": {
     "status": "OK",
     "reason": "OK",
-    "generatedAt": "2026-01-18T11:11:16.546Z",
-    "asOf": "2026-01-02T18:07:20.263Z",
+    "generatedAt": "2026-01-19T08:43:00.074Z",
+    "asOf": "2026-01-19T08:42:54.173Z",
     "source": "fred",
     "ttlSeconds": 3600,
-    "stale": true,
+    "stale": false,
     "itemsCount": 9,
-    "stalenessSec": 1357380,
+    "stalenessSec": 0,
     "freshness": {
-      "status": "expired",
-      "ageMinutes": 22623
+      "status": "fresh",
+      "ageMinutes": 0
     },
     "schedule": {
       "rule": "best_effort",
-      "nextPlannedFetchAt": "2026-01-18T14:11:16.546Z",
+      "nextPlannedFetchAt": "2026-01-19T11:43:00.074Z",
       "expectedNextRunWindowMinutes": 180,
       "ttlSeconds": 3600
     },
-    "runId": "2026-01-18T11:11:16.534Z",
+    "runId": "2026-01-19T08:43:00.036Z",
     "validation": {
       "schema": {
         "ok": true,
@@ -43,39 +43,39 @@
     "items": [
       {
         "tenor": "1m",
-        "value": 3.65
+        "value": 3.75
       },
       {
         "tenor": "3m",
-        "value": 3.65
-      },
-      {
-        "tenor": "6m",
-        "value": 3.59
-      },
-      {
-        "tenor": "1y",
-        "value": 3.47
-      },
-      {
-        "tenor": "2y",
-        "value": 3.45
-      },
-      {
-        "tenor": "5y",
         "value": 3.68
       },
       {
+        "tenor": "6m",
+        "value": 3.6
+      },
+      {
+        "tenor": "1y",
+        "value": 3.54
+      },
+      {
+        "tenor": "2y",
+        "value": 3.56
+      },
+      {
+        "tenor": "5y",
+        "value": 3.77
+      },
+      {
         "tenor": "10y",
-        "value": 4.14
+        "value": 4.17
       },
       {
         "tenor": "20y",
-        "value": 4.76
+        "value": 4.74
       },
       {
         "tenor": "30y",
-        "value": 4.81
+        "value": 4.79
       }
     ]
   }
