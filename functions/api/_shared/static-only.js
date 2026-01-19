@@ -102,7 +102,13 @@ export async function serveStaticJson(req) {
         }
         
         // Apply module-specific transformations (field name mappings, etc.)
+        // THIS RUNS FOR ALL FORMATS (v3.0, v3 legacy, and flat legacy)
         parsed = applyModuleTransformations(moduleName, parsed);
+        
+        // Ensure 'ok' field is set for legacy frontend compatibility
+        if (parsed.ok === undefined || parsed.ok === null) {
+          parsed.ok = true; // Default to true if data was successfully loaded
+        }
         
         const headers = {
           "Content-Type": "application/json",
