@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Mission Control – RubikVault</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    
+    :root {
+      --bg-primary: #0b0f19;
+      --bg-secondary: #1a1f2e;
+      --bg-card: #1e2433;
+      --text-primary: #e5e7eb;
+      --text-secondary: #94a3b8;
+      --text-muted: #64748b;
+      --border: rgba(100, 116, 139, 0.2);
+      --accent-blue: #3b82f6;
+      --accent-green: #10b981;
+      --accent-yellow: #f59e0b;
+      --accent-red: #ef4444;
+    }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      line-height: 1.6;
+    }
+    
+    .container {
+      max-width: 1600px;
+      margin: 0 auto;
+      padding: 2rem;
+    }
+    
+    /* Header */
+    .header {
+      margin-bottom: 2rem;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 1.5rem;
+    }
+    
+    .header h1 {
+      font-size: 2.5rem;
+      font-weight: 800;
+      margin-bottom: 0.5rem;
+      background: linear-gradient(135deg, var(--accent-blue), var(--accent-green));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    
+    .header p {
+      color: var(--text-secondary);
+      font-size: 1.125rem;
+    }
+    
+    /* System Status */
+    .system-status {
+      background: var(--bg-card);
+      border-radius: 12px;
+      padding: 1.5rem;
+      margin-bottom: 2rem;
+      border: 1px solid var(--border);
+    }
+    
+    .system-status-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1.5rem;
+    }
+    
+    .status-item {
+      text-align: center;
+    }
+    
+    .status-value {
+      font-size: 2.5rem;
+      font-weight: 700;
+      margin-bottom: 0.25rem;
+    }
+    
+    .status-label {
+      color: var(--text-secondary);
+      font-size: 0.875rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    
+    /* Controls */
+    .controls {
+      display: flex;
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+      flex-wrap: wrap;
+    }
+    
+    .search-box {
+      flex: 1;
+      min-width: 300px;
+      position: relative;
+    }
+    
+    .search-box input {
+      width: 100%;
+      padding: 0.75rem 1rem 0.75rem 2.5rem;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text-primary);
+      font-size: 1rem;
+    }
+    
+    .search-box svg {
+      position: absolute;
+      left: 0.75rem;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 1.25rem;
+      height: 1.25rem;
+      color: var(--text-muted);
+    }
+    
+    .filter-group {
+      display: flex;
+      gap: 0.5rem;
+    }
+    
+    .filter-btn {
+      padding: 0.75rem 1.25rem;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text-primary);
+      cursor: pointer;
+      transition: all 0.2s;
+      font-size: 0.875rem;
+      font-weight: 600;
+    }
+    
+    .filter-btn:hover {
+      background: var(--bg-secondary);
+      border-color: var(--accent-blue);
+    }
+    
+    .filter-btn.active {
+      background: var(--accent-blue);
+      border-color: var(--accent-blue);
+      color: white;
+    }
+    
+    .btn {
+      padding: 0.75rem 1.5rem;
+      background: var(--accent-blue);
+      border: none;
+      border-radius: 8px;
+      color: white;
+      cursor: pointer;
+      font-weight: 600;
+      transition: all 0.2s;
+    }
+    
+    .btn:hover {
+      background: #2563eb;
+      transform: translateY(-2px);
+    }
+    
+    /* Table */
+    .modules-table {
+      background: var(--bg-card);
+      border-radius: 12px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+    }
+    
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    
+    thead {
+      background: var(--bg-secondary);
+    }
+    
+    th {
+      padding: 1rem;
+      text-align: left;
+      font-weight: 600;
+      color: var(--text-secondary);
+      font-size: 0.875rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      cursor: pointer;
+      user-select: none;
+    }
+    
+    th:hover {
+      color: var(--text-primary);
+    }
+    
+    td {
+      padding: 1rem;
+      border-top: 1px solid var(--border);
+    }
+    
+    tr:hover {
+      background: rgba(59, 130, 246, 0.05);
+    }
+    
+    /* Badges */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.25rem 0.75rem;
+      border-radius: 9999px;
+      font-size: 0.875rem;
+      font-weight: 600;
+    }
+    
+    .badge-ok { background: rgba(16, 185, 129, 0.1); color: var(--accent-green); }
+    .badge-warn { background: rgba(245, 158, 11, 0.1); color: var(--accent-yellow); }
+    .badge-error { background: rgba(239, 68, 68, 0.1); color: var(--accent-red); }
+    .badge-stale { background: rgba(100, 116, 139, 0.1); color: var(--text-muted); }
+    
+    .badge-critical { background: rgba(239, 68, 68, 0.2); color: var(--accent-red); border: 1px solid var(--accent-red); }
+    .badge-standard { background: rgba(59, 130, 246, 0.1); color: var(--accent-blue); }
+    .badge-experimental { background: rgba(168, 85, 247, 0.1); color: #a855f7; }
+    
+    /* Proof Chain */
+    .proof-chain {
+      display: flex;
+      gap: 0.5rem;
+    }
+    
+    .proof-item {
+      width: 2rem;
+      height: 2rem;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.75rem;
+      font-weight: 700;
+      position: relative;
+      cursor: help;
+    }
+    
+    .proof-pass { background: rgba(16, 185, 129, 0.2); color: var(--accent-green); }
+    .proof-warn { background: rgba(245, 158, 11, 0.2); color: var(--accent-yellow); }
+    .proof-fail { background: rgba(239, 68, 68, 0.2); color: var(--accent-red); }
+    .proof-skip { background: rgba(100, 116, 139, 0.1); color: var(--text-muted); }
+    .proof-unknown { background: rgba(100, 116, 139, 0.05); color: var(--text-muted); }
+    
+    /* Actions */
+    .actions {
+      display: flex;
+      gap: 0.5rem;
+    }
+    
+    .action-btn {
+      padding: 0.375rem 0.75rem;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text-primary);
+      text-decoration: none;
+      font-size: 0.875rem;
+      transition: all 0.2s;
+      cursor: pointer;
+    }
+    
+    .action-btn:hover {
+      background: var(--accent-blue);
+      border-color: var(--accent-blue);
+      color: white;
+    }
+    
+    /* Loading */
+    .loading {
+      text-align: center;
+      padding: 4rem;
+      color: var(--text-secondary);
+    }
+    
+    .spinner {
+      width: 3rem;
+      height: 3rem;
+      border: 4px solid var(--border);
+      border-top-color: var(--accent-blue);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 1rem;
+    }
+    
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    
+    /* Error */
+    .error {
+      background: rgba(239, 68, 68, 0.1);
+      border: 1px solid var(--accent-red);
+      border-radius: 12px;
+      padding: 1.5rem;
+      margin: 2rem 0;
+    }
+    
+    .error h3 {
+      color: var(--accent-red);
+      margin-bottom: 0.5rem;
+    }
+    
+    /* Utility */
+    .text-muted { color: var(--text-muted); }
+    .text-small { font-size: 0.875rem; }
+    .mt-2 { margin-top: 1rem; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>🎯 Mission Control</h1>
+      <p>RubikVault System Status & Diagnostics</p>
+    </div>
+
+    <!-- System Status -->
+    <div class="system-status">
+      <div class="system-status-grid">
+        <div class="status-item">
+          <div class="status-value" id="system-status" style="color: var(--accent-green);">●</div>
+          <div class="status-label">System</div>
+        </div>
+        <div class="status-item">
+          <div class="status-value" id="modules-total">--</div>
+          <div class="status-label">Total Modules</div>
+        </div>
+        <div class="status-item">
+          <div class="status-value" id="modules-ok" style="color: var(--accent-green);">--</div>
+          <div class="status-label">OK</div>
+        </div>
+        <div class="status-item">
+          <div class="status-value" id="modules-warn" style="color: var(--accent-yellow);">--</div>
+          <div class="status-label">Warn</div>
+        </div>
+        <div class="status-item">
+          <div class="status-value" id="modules-error" style="color: var(--accent-red);">--</div>
+          <div class="status-label">Error</div>
+        </div>
+        <div class="status-item">
+          <div class="status-value" id="last-publish">--</div>
+          <div class="status-label">Last Publish</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Controls -->
+    <div class="controls">
+      <div class="search-box">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="11" cy="11" r="8"></circle>
+          <path d="m21 21-4.35-4.35"></path>
+        </svg>
+        <input type="text" id="search-input" placeholder="Search modules..." />
+      </div>
+      
+      <div class="filter-group">
+        <button class="filter-btn active" data-filter="all">All</button>
+        <button class="filter-btn" data-filter="critical">Critical</button>
+        <button class="filter-btn" data-filter="error">Errors</button>
+        <button class="filter-btn" data-filter="warn">Warnings</button>
+      </div>
+      
+      <button class="btn" onclick="loadData()">🔄 Refresh</button>
+    </div>
+
+    <!-- Modules Table -->
+    <div class="modules-table">
+      <table>
+        <thead>
+          <tr>
+            <th onclick="sortTable('module')">Module</th>
+            <th onclick="sortTable('tier')">Tier</th>
+            <th onclick="sortTable('status')">Status</th>
+            <th>Proof Chain</th>
+            <th onclick="sortTable('age')">Age</th>
+            <th>Failure</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="modules-tbody">
+          <tr>
+            <td colspan="7" class="loading">
+              <div class="spinner"></div>
+              <div>Loading modules...</div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <script>
+    let modulesData = [];
+    let currentSort = { column: 'module', direction: 'asc' };
+
+    // Load data
+    async function loadData() {
+      try {
+        // Try provider-state.json first
+        let response = await fetch('/data/provider-state.json');
+        
+        if (response.ok) {
+          const data = await response.json();
+          displayData(data);
+        } else {
+          // Fallback to manifest.json
+          response = await fetch('/data/manifest.json');
+          if (response.ok) {
+            const manifest = await response.json();
+            displayManifestData(manifest);
+          } else {
+            throw new Error('Could not load system data');
+          }
+        }
+      } catch (error) {
+        displayError(error);
+      }
+    }
+
+    // Display provider-state data
+    function displayData(data) {
+      // Update system status
+      document.getElementById('system-status').textContent = data.system?.critical_ok ? '●' : '◐';
+      document.getElementById('system-status').style.color = data.system?.critical_ok ? 'var(--accent-green)' : 'var(--accent-red)';
+      
+      const modulesArray = data.modules || [];
+      document.getElementById('modules-total').textContent = modulesArray.length;
+      document.getElementById('modules-ok').textContent = modulesArray.filter(m => m.status === 'ok').length;
+      document.getElementById('modules-warn').textContent = modulesArray.filter(m => m.status === 'warn').length;
+      document.getElementById('modules-error').textContent = modulesArray.filter(m => m.status === 'error' || m.status === 'stale').length;
+      
+      if (data.system?.last_publish_at) {
+        const date = new Date(data.system.last_publish_at);
+        document.getElementById('last-publish').textContent = date.toLocaleTimeString();
+      }
+      
+      modulesData = modulesArray;
+      renderTable();
+    }
+
+    // Display manifest data (fallback)
+    function displayManifestData(manifest) {
+      const modulesArray = Object.entries(manifest.modules || {}).map(([name, data]) => ({
+        module: name,
+        ...data,
+        proof_chain: { FILE: 'UNKNOWN', SCHEMA: 'UNKNOWN', PLAUS: 'UNKNOWN', UI: 'UNKNOWN', FRESH: 'UNKNOWN', DELIVERY: 'UNKNOWN' }
+      }));
+      
+      document.getElementById('modules-total').textContent = modulesArray.length;
+      document.getElementById('modules-ok').textContent = modulesArray.filter(m => m.status === 'ok').length;
+      document.getElementById('modules-warn').textContent = modulesArray.filter(m => m.status === 'warn').length;
+      document.getElementById('modules-error').textContent = modulesArray.filter(m => m.status === 'error').length;
+      
+      modulesData = modulesArray;
+      renderTable();
+    }
+
+    // Render table
+    function renderTable() {
+      const tbody = document.getElementById('modules-tbody');
+      const searchTerm = document.getElementById('search-input').value.toLowerCase();
+      const activeFilter = document.querySelector('.filter-btn.active')?.dataset.filter || 'all';
+      
+      let filtered = modulesData.filter(m => {
+        const matchesSearch = m.module.toLowerCase().includes(searchTerm) ||
+                              m.domain?.toLowerCase().includes(searchTerm);
+        
+        const matchesFilter = activeFilter === 'all' ||
+                              (activeFilter === 'critical' && m.tier === 'critical') ||
+                              (activeFilter === 'error' && (m.status === 'error' || m.status === 'stale')) ||
+                              (activeFilter === 'warn' && m.status === 'warn');
+        
+        return matchesSearch && matchesFilter;
+      });
+      
+      // Sort
+      filtered.sort((a, b) => {
+        let aVal = a[currentSort.column];
+        let bVal = b[currentSort.column];
+        
+        if (currentSort.column === 'age') {
+          aVal = a.freshness?.age_minutes || 0;
+          bVal = b.freshness?.age_minutes || 0;
+        }
+        
+        if (aVal < bVal) return currentSort.direction === 'asc' ? -1 : 1;
+        if (aVal > bVal) return currentSort.direction === 'asc' ? 1 : -1;
+        return 0;
+      });
+      
+      tbody.innerHTML = filtered.map(m => `
+        <tr>
+          <td>
+            <div style="font-weight: 600;">${m.module}</div>
+            <div class="text-muted text-small">${m.domain || 'unknown'}</div>
+          </td>
+          <td>
+            <span class="badge badge-${m.tier}">${m.tier}</span>
+          </td>
+          <td>
+            <span class="badge badge-${m.status}">${m.status}</span>
+          </td>
+          <td>
+            ${renderProofChain(m.proof_chain)}
+          </td>
+          <td class="text-small">
+            ${m.freshness ? `${m.freshness.age_minutes || 0}m` : '--'}
+          </td>
+          <td class="text-small text-muted">
+            ${m.failure?.class || '--'}
+          </td>
+          <td>
+            <div class="actions">
+              <a href="/api/${m.module}?debug=1" class="action-btn" target="_blank">Debug</a>
+              <a href="/api/probe/${m.module}" class="action-btn" target="_blank">Probe</a>
+            </div>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    // Render proof chain
+    function renderProofChain(chain) {
+      if (!chain) return '<span class="text-muted">--</span>';
+      
+      const checks = ['FILE', 'SCHEMA', 'PLAUS', 'UI', 'FRESH', 'DELIVERY'];
+      return `<div class="proof-chain">${checks.map(check => {
+        const status = chain[check] || 'UNKNOWN';
+        const statusClass = status.toLowerCase();
+        const label = check.substring(0, 1);
+        return `<div class="proof-item proof-${statusClass}" title="${check}: ${status}">${label}</div>`;
+      }).join('')}</div>`;
+    }
+
+    // Display error
+    function displayError(error) {
+      document.getElementById('modules-tbody').innerHTML = `
+        <tr>
+          <td colspan="7">
+            <div class="error">
+              <h3>⚠️ Error Loading Data</h3>
+              <p>${error.message}</p>
+              <button class="btn mt-2" onclick="loadData()">Retry</button>
+            </div>
+          </td>
+        </tr>
+      `;
+    }
+
+    // Sort table
+    function sortTable(column) {
+      if (currentSort.column === column) {
+        currentSort.direction = currentSort.direction === 'asc' ? 'desc' : 'asc';
+      } else {
+        currentSort.column = column;
+        currentSort.direction = 'asc';
+      }
+      renderTable();
+    }
+
+    // Event listeners
+    document.getElementById('search-input').addEventListener('input', renderTable);
+    
+    document.querySelectorAll('.filter-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        renderTable();
+      });
+    });
+
+    // Load on page load
+    loadData();
+  </script>
+</body>
+</html>
