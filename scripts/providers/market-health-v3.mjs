@@ -197,6 +197,11 @@ function validateData(data, registryConfig) {
   }
   
   // Count validation
+  // Don't validate item counts - this is a single data object, not an array
+  // The counts in registry refer to the data array (snapshot level), not data.items
+  // Comment out count validation at provider level - finalizer handles this
+  
+  /*
   const items = data.items || [];
   const expectedCount = registryConfig?.counts?.expected;
   const minCount = registryConfig?.counts?.min;
@@ -207,6 +212,7 @@ function validateData(data, registryConfig) {
   if (minCount !== null && minCount !== undefined && items.length < minCount) {
     errors.push(`Item count below minimum: got ${items.length}, minimum ${minCount}`);
   }
+  */
   
   const checks = ['schema', 'records'];
   if (plausibilityRules.length > 0) checks.push('ranges');
