@@ -411,12 +411,15 @@ async function buildSnapshot({ blockId, raw, mirrorMeta, lastGoodSnapshot = null
     }
     
     // Also merge other extraData from lastGood if current is empty
+    // CRITICAL: Exclude sectors from lastGoodRest merge to preserve sectors from mirror
     const { items: _, sectors: __, ...lastGoodRest } = lastGoodData;
     if (Object.keys(extraData).length === 0 && Object.keys(lastGoodRest).length > 0) {
       extraData = { ...lastGoodRest, ...extraData };
     } else if (Object.keys(lastGoodRest).length > 0) {
-      // Merge missing keys from lastGood
+      // Merge missing keys from lastGood, but preserve sectors if already present
       for (const [key, value] of Object.entries(lastGoodRest)) {
+        // Skip sectors - they are handled separately above
+        if (key === "sectors") continue;
         if (!(key in extraData) || (Array.isArray(extraData[key]) && extraData[key].length === 0)) {
           extraData[key] = value;
         }
