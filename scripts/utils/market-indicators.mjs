@@ -105,14 +105,59 @@ export function avg(values, period) {
 
 export function alphaScore({ close, sma20, sma50, sma200, rsi, macdVal, macdSignal, macdHist, rvol20, prevClose }) {
   let score = 50;
+  let setupScore = 0;
+  let triggerScore = 0;
   const reasons = [];
+  const setupReasons = [];
+  const triggerReasons = [];
+  
+  // Setup Score (0-40): Based on entry conditions (RSI extremes, BB, SMA200 proximity, RVOL, extreme gate)
+  if (Number.isFinite(rsi)) {
+    if (rsi <= 30) {
+      setupScore += 10;
+      reasons.push("RSI_OVERSOLD");
+      setupReasons.push("RSI_OVERSOLD");
+    } else if (rsi > 30 && rsi < 45) {
+      setupScore += 5;
+      reasons.push("RSI_RECOVERY");
+      setupReasons.push("RSI_RECOVERY");
+    } else if (rsi >= 45 && rsi <= 65) {
+      setupScore += 5;
+      reasons.push("RSI_NEUTRAL");
+    } else if (rsi > 65 && rsi < 75) {
+      reasons.push("RSI_EXTENDED");
+    } else if (rsi >= 75) {
+      reasons.push("RSI_OVERBOUGHT");
+    }
+  }
+  
+  // Near SMA200 (setup condition)
+  if (Number.isFinite(close) && Number.isFinite(sma200)) {
+    const distFromSma200 = Math.abs((close - sma200) / sma200);
+    if (distFromSma200 < 0.05) { // Within 5% of SMA200
+      setupScore += 8;
+      setupReasons.push("NEAR_SMA200");
+    }
+  }
+  
+  // RVOL >= 1.5 (setup condition)
+  if (Number.isFinite(rvol20) && rvol20 >= 1.5) {
+    setupScore += 7;
+    setupReasons.push("RVOL_GE_15");
+  }
+  
+  // Trend strength (affects both setup and trigger)
   if (Number.isFinite(close) && Number.isFinite(sma20) && Number.isFinite(sma50) && Number.isFinite(sma200)) {
     if (close > sma20 && close > sma50 && close > sma200) {
       score += 15;
+      triggerScore += 10; // Strong trend helps trigger
       reasons.push("TREND_STRONG");
+      triggerReasons.push("TREND_STRONG");
     } else if (close > sma50 && close > sma200) {
       score += 10;
+      triggerScore += 5;
       reasons.push("TREND_UP");
+      triggerReasons.push("TREND_UP");
     } else if (close > sma200) {
       score += 5;
       reasons.push("TREND_UP_200");
@@ -121,38 +166,49 @@ export function alphaScore({ close, sma20, sma50, sma200, rsi, macdVal, macdSign
       reasons.push("TREND_DOWN");
     }
   }
-  if (Number.isFinite(rsi)) {
-    if (rsi <= 30) {
-      score += 10;
-      reasons.push("RSI_OVERSOLD");
-    } else if (rsi > 30 && rsi < 45) {
-      score += 5;
-      reasons.push("RSI_RECOVERY");
-    } else if (rsi >= 45 && rsi <= 65) {
-      score += 10;
-      reasons.push("RSI_NEUTRAL");
-    } else if (rsi > 65 && rsi < 75) {
-      score -= 5;
-      reasons.push("RSI_EXTENDED");
-    } else if (rsi >= 75) {
-      score -= 15;
-      reasons.push("RSI_OVERBOUGHT");
-    }
-  }
+  
+  // MACD (affects trigger more than setup)
   if (Number.isFinite(macdVal) && Number.isFinite(macdSignal) && Number.isFinite(macdHist)) {
     if (macdVal > macdSignal && macdHist > 0) {
       score += 10;
+      triggerScore += 8;
       reasons.push("MACD_POSITIVE");
+      triggerReasons.push("MACD_POSITIVE");
     } else if (macdHist < 0) {
       score -= 10;
       reasons.push("MACD_NEGATIVE");
     }
   }
+  
+  // RVOL confirm (trigger condition)
   if (Number.isFinite(rvol20) && rvol20 > 1.5 && Number.isFinite(close) && Number.isFinite(prevClose) && close > prevClose) {
     score += 5;
+    triggerScore += 5;
     reasons.push("RVOL_CONFIRM");
+    triggerReasons.push("VOL_CONFIRM_12x");
   }
-  return { score: clamp(score, 0, 100), reasons };
+  
+  // Clamp scores
+  setupScore = clamp(setupScore, 0, 40);
+  triggerScore = clamp(triggerScore, 0, 60);
+  const totalScore = clamp(score, 0, 100);
+  
+  // Ensure totalScore = setupScore + triggerScore (approximately)
+  // If they don't add up, adjust triggerScore to match
+  const expectedTotal = setupScore + triggerScore;
+  if (Math.abs(totalScore - expectedTotal) > 5) {
+    // Adjust triggerScore to make totalScore match setupScore + triggerScore
+    triggerScore = Math.max(0, Math.min(60, totalScore - setupScore));
+  }
+  
+  return { 
+    score: totalScore, 
+    setupScore, 
+    triggerScore, 
+    reasons,
+    setupReasons,
+    triggerReasons
+  };
 }
 
 export function deriveRegime({ breadth50, breadth200, prevState }) {

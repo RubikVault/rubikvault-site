@@ -292,7 +292,14 @@ function extractYieldCurveItems(payload) {
 
 function extractSectorRotationItems(payload) {
   const items = Array.isArray(payload?.data?.sectors) ? payload.data.sectors : [];
-  return { items, context: { rotationLabel: payload?.data?.rotationLabel || null, groups: payload?.data?.groups || {} } };
+  // Also preserve sectors in context for build-snapshots.mjs to find them
+  const context = {
+    sectors: items,
+    rotationLabel: payload?.data?.rotationLabel || "Neutral",
+    groups: payload?.data?.groups || {},
+    spyChangePercent: payload?.data?.spyChangePercent || null
+  };
+  return { items, context };
 }
 
 function extractMarketHealthItems(payload) {
