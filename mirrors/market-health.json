@@ -1,179 +1,73 @@
 {
   "meta": {
-    "provider": "market-health",
+    "provider": "stooq",
     "dataset": "market-health",
-    "fetchedAt": "2026-01-19T08:42:59.979Z",
+    "fetchedAt": "2026-01-19T09:04:57.123Z",
     "ttlSeconds": 3600,
     "source": "mirror",
-    "runId": "2026-01-19T08:42:59.979Z",
+    "runId": "2026-01-19T09:04:57.123Z",
     "cost": null
   },
   "raw": {
     "schemaVersion": "rv-mirror-v1",
     "mirrorId": "market-health",
-    "provider": "market-health",
+    "provider": "stooq",
     "dataset": "market-health",
-    "runId": "2026-01-19T08:42:59.979Z",
-    "fetchedAt": "2026-01-19T08:42:59.979Z",
-    "updatedAt": "2026-01-19T08:42:59.979Z",
-    "asOf": "2026-01-19T08:42:59.979Z",
-    "mode": "LIVE",
-    "cadence": "best_effort",
+    "runId": "2026-01-19T09:04:57.123Z",
+    "fetchedAt": "2026-01-19T09:04:57.123Z",
+    "updatedAt": "2026-01-19T09:04:57.123Z",
+    "asOf": "2026-01-16T21:00:00.000Z",
+    "mode": "EOD",
+    "cadence": "EOD",
     "trust": "derived",
     "source": "mirror",
-    "sourceUpstream": "market-health",
+    "sourceUpstream": "stooq",
     "ttlSeconds": null,
     "dataQuality": "OK",
     "delayMinutes": 0,
     "missingSymbols": [],
     "errors": [],
     "notes": [],
-    "whyUnique": "Seeded from market-health upstream",
+    "whyUnique": "EOD benchmark health snapshot.",
     "context": {
-      "fng": {
-        "value": 44,
-        "valueClassification": "Fear",
-        "timestamp": 1768780800
-      },
-      "fngStocks": {
-        "value": 62.1714285714286,
-        "valueClassification": "greed",
-        "timestamp": 1768812179978
-      },
-      "btc": {
-        "usd": 93039,
-        "usd_24h_change": -2.1905648856155526
-      },
-      "source": "alternative.me, cnn, coingecko"
+      "benchmarks": [
+        "SPY",
+        "QQQ",
+        "IWM"
+      ]
     },
     "items": [
       {
-        "symbol": "BTC",
-        "label": "Bitcoin",
-        "price": 93039,
-        "changePercent": -2.1905648856155526,
-        "ts": "2026-01-19T08:42:59.978Z",
-        "source": "coingecko"
-      },
-      {
-        "symbol": "ETH",
-        "label": "Ethereum",
-        "price": 3213.71,
-        "changePercent": -2.91540633094287,
-        "ts": "2026-01-19T08:42:59.978Z",
-        "source": "coingecko"
-      },
-      {
-        "symbol": "SOL",
-        "label": "Solana",
-        "price": 133.64,
-        "changePercent": -6.085772839800343,
-        "ts": "2026-01-19T08:42:59.978Z",
-        "source": "coingecko"
-      },
-      {
-        "symbol": "XRP",
-        "label": "XRP",
-        "price": 1.98,
-        "changePercent": -3.988184246762081,
-        "ts": "2026-01-19T08:42:59.978Z",
-        "source": "coingecko"
-      }
-    ],
-    "savedAt": "2026-01-19T08:42:59.979Z",
-    "_meta": {
-      "updated_at": "2026-01-19T08:42:59.979Z",
-      "provider": "market-health",
-      "status": "fresh"
-    },
-    "payload": {
-      "ok": true,
-      "feature": "market-health",
-      "ts": "2026-01-19T08:42:59.978Z",
-      "traceId": "seed",
-      "schemaVersion": 1,
-      "cache": {
-        "hit": false,
-        "ttl": 0,
-        "layer": "seed"
-      },
-      "upstream": {
-        "url": "https://api.alternative.me/fng/?limit=1&format=json | https://production.dataviz.cnn.io/index/fearandgreed/graphdata | https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,solana,ripple&vs_currencies=usd&include_24hr_change=true | https://query1.finance.yahoo.com/v7/finance/quote?symbols=%5EDJI%2C%5EGSPC%2C%5EIXIC%2C%5ERUT%2CGC%3DF%2CSI%3DF%2CCL%3DF",
-        "status": 200,
-        "snippet": ""
-      },
-      "rateLimit": {
-        "remaining": "unknown",
-        "reset": null,
-        "estimated": true
-      },
-      "dataQuality": {
-        "status": "LIVE",
-        "reason": "LIVE",
+        "symbol": "SPY",
+        "close": 691.66,
+        "prevClose": 692.24,
+        "changePct": -0.08378597018375844,
+        "lastBarDate": "2026-01-16",
+        "barsUsed": 5256,
         "missingFields": []
       },
-      "meta": {
-        "status": "LIVE",
-        "reason": null
+      {
+        "symbol": "QQQ",
+        "close": 621.26,
+        "prevClose": 621.78,
+        "changePct": -0.08363086622277249,
+        "lastBarDate": "2026-01-16",
+        "barsUsed": 6756,
+        "missingFields": []
       },
-      "data": {
-        "updatedAt": "2026-01-19T08:42:59.978Z",
-        "source": "alternative.me, cnn, coingecko",
-        "fng": {
-          "value": 44,
-          "valueClassification": "Fear",
-          "timestamp": 1768780800
-        },
-        "fngStocks": {
-          "value": 62.1714285714286,
-          "valueClassification": "greed",
-          "timestamp": 1768812179978
-        },
-        "btc": {
-          "usd": 93039,
-          "usd_24h_change": -2.1905648856155526
-        },
-        "crypto": [
-          {
-            "symbol": "BTC",
-            "label": "Bitcoin",
-            "price": 93039,
-            "changePercent": -2.1905648856155526,
-            "ts": "2026-01-19T08:42:59.978Z",
-            "source": "coingecko"
-          },
-          {
-            "symbol": "ETH",
-            "label": "Ethereum",
-            "price": 3213.71,
-            "changePercent": -2.91540633094287,
-            "ts": "2026-01-19T08:42:59.978Z",
-            "source": "coingecko"
-          },
-          {
-            "symbol": "SOL",
-            "label": "Solana",
-            "price": 133.64,
-            "changePercent": -6.085772839800343,
-            "ts": "2026-01-19T08:42:59.978Z",
-            "source": "coingecko"
-          },
-          {
-            "symbol": "XRP",
-            "label": "XRP",
-            "price": 1.98,
-            "changePercent": -3.988184246762081,
-            "ts": "2026-01-19T08:42:59.978Z",
-            "source": "coingecko"
-          }
-        ],
-        "indices": [],
-        "commodities": []
+      {
+        "symbol": "IWM",
+        "close": 265.76,
+        "prevClose": 265.51,
+        "changePct": 0.09415841211253273,
+        "lastBarDate": "2026-01-16",
+        "barsUsed": 5256,
+        "missingFields": []
       }
-    },
+    ],
     "meta": {
       "status": "OK",
-      "updatedAt": "2026-01-19T08:42:59.979Z",
+      "updatedAt": "2026-01-19T09:04:57.123Z",
       "reason": null
     }
   }

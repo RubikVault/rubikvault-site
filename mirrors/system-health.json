@@ -2,40 +2,22 @@
   "meta": {
     "provider": "system-health",
     "dataset": "system-health",
-    "fetchedAt": "2026-01-18T21:11:52.841Z",
+    "fetchedAt": "2026-01-19T09:04:57.128Z",
     "ttlSeconds": 3600,
     "source": "mirror",
-    "runId": "2026-01-18T21:11:52.841Z",
+    "runId": "2026-01-19T09:04:57.128Z",
     "cost": null
   },
   "raw": {
     "schemaVersion": "1.0",
     "mirrorId": "system-health",
-    "updatedAt": "2026-01-18T21:11:52.841Z",
+    "updatedAt": "2026-01-19T09:04:57.128Z",
     "overallStatus": "OK",
     "jobs": [
       {
         "id": "eod-market",
-        "lastRunAt": "2026-01-18T21:11:52.841Z",
-        "lastSuccessAt": "2026-01-18T21:11:52.841Z",
-        "status": "OK",
-        "durationMs": 0,
-        "errors": [],
-        "notes": []
-      },
-      {
-        "id": "crypto-snapshot",
-        "lastRunAt": "2026-01-19T06:51:55.573Z",
-        "lastSuccessAt": "2026-01-19T06:51:55.573Z",
-        "status": "OK",
-        "durationMs": 0,
-        "errors": [],
-        "notes": []
-      },
-      {
-        "id": "event-mirrors",
-        "lastRunAt": "2026-01-19T08:00:30.099Z",
-        "lastSuccessAt": "2026-01-19T08:00:30.099Z",
+        "lastRunAt": "2026-01-19T09:04:57.128Z",
+        "lastSuccessAt": "2026-01-19T09:04:57.128Z",
         "status": "OK",
         "durationMs": 0,
         "errors": [],
@@ -45,148 +27,71 @@
     "mirrors": [
       {
         "id": "quotes",
-        "updatedAt": "2026-01-18T21:11:52.836Z",
+        "updatedAt": "2026-01-19T09:04:57.123Z",
         "dataQuality": "OK",
         "itemCount": 10,
         "sizeKB": 0
       },
       {
         "id": "price-snapshot",
-        "updatedAt": "2026-01-18T21:11:52.836Z",
+        "updatedAt": "2026-01-19T09:04:57.123Z",
         "dataQuality": "OK",
         "itemCount": 10,
         "sizeKB": 0
       },
       {
         "id": "top-movers",
-        "updatedAt": "2026-01-18T21:11:52.836Z",
+        "updatedAt": "2026-01-19T09:04:57.123Z",
         "dataQuality": "OK",
         "itemCount": 10,
         "sizeKB": 0
       },
       {
         "id": "market-cockpit",
-        "updatedAt": "2026-01-18T21:11:52.836Z",
+        "updatedAt": "2026-01-19T09:04:57.123Z",
         "dataQuality": "OK",
         "itemCount": 1,
         "sizeKB": 0
       },
       {
         "id": "market-health",
-        "updatedAt": "2026-01-18T21:11:52.836Z",
+        "updatedAt": "2026-01-19T09:04:57.123Z",
         "dataQuality": "OK",
         "itemCount": 3,
         "sizeKB": 0
       },
       {
         "id": "tech-signals",
-        "updatedAt": "2026-01-18T21:11:52.836Z",
+        "updatedAt": "2026-01-19T09:04:57.123Z",
         "dataQuality": "OK",
         "itemCount": 10,
         "sizeKB": 0
       },
       {
         "id": "alpha-radar",
-        "updatedAt": "2026-01-18T21:11:52.836Z",
+        "updatedAt": "2026-01-19T09:04:57.123Z",
         "dataQuality": "OK",
         "itemCount": 10,
         "sizeKB": 0
       },
       {
         "id": "market-regime",
-        "updatedAt": "2026-01-18T21:11:52.837Z",
+        "updatedAt": "2026-01-19T09:04:57.124Z",
         "dataQuality": "OK",
         "itemCount": 1,
         "sizeKB": 0
       },
       {
         "id": "volume-anomaly",
-        "updatedAt": "2026-01-18T21:11:52.837Z",
+        "updatedAt": "2026-01-19T09:04:57.124Z",
         "dataQuality": "STALE",
         "itemCount": 1,
         "sizeKB": 0
       },
       {
         "id": "breakout-energy",
-        "updatedAt": "2026-01-18T21:11:52.837Z",
+        "updatedAt": "2026-01-19T09:04:57.124Z",
         "dataQuality": "EMPTY",
-        "itemCount": 0,
-        "sizeKB": 0
-      },
-      {
-        "id": "crypto-snapshot",
-        "updatedAt": "2026-01-19T06:51:55.573Z",
-        "dataQuality": "OK",
-        "itemCount": 3,
-        "sizeKB": 0
-      },
-      {
-        "id": "news",
-        "updatedAt": "2026-01-19T08:00:30.095Z",
-        "dataQuality": "OK",
-        "itemCount": 50,
-        "sizeKB": 0
-      },
-      {
-        "id": "why-moved",
-        "updatedAt": "2026-01-19T08:00:30.095Z",
-        "dataQuality": "COVERAGE_LIMIT",
-        "itemCount": 0,
-        "sizeKB": 0
-      },
-      {
-        "id": "hype-divergence",
-        "updatedAt": "2026-01-19T08:00:30.095Z",
-        "dataQuality": "COVERAGE_LIMIT",
-        "itemCount": 0,
-        "sizeKB": 0
-      },
-      {
-        "id": "earnings",
-        "updatedAt": "2026-01-19T08:00:30.095Z",
-        "dataQuality": "COVERAGE_LIMIT",
-        "itemCount": 0,
-        "sizeKB": 0
-      },
-      {
-        "id": "congress-trading",
-        "updatedAt": "2026-01-19T08:00:30.096Z",
-        "dataQuality": "COVERAGE_LIMIT",
-        "itemCount": 0,
-        "sizeKB": 0
-      },
-      {
-        "id": "insider-cluster",
-        "updatedAt": "2026-01-19T08:00:30.096Z",
-        "dataQuality": "COVERAGE_LIMIT",
-        "itemCount": 0,
-        "sizeKB": 0
-      },
-      {
-        "id": "analyst-stampede",
-        "updatedAt": "2026-01-19T08:00:30.096Z",
-        "dataQuality": "COVERAGE_LIMIT",
-        "itemCount": 0,
-        "sizeKB": 0
-      },
-      {
-        "id": "smart-money",
-        "updatedAt": "2026-01-19T08:00:30.096Z",
-        "dataQuality": "COVERAGE_LIMIT",
-        "itemCount": 0,
-        "sizeKB": 0
-      },
-      {
-        "id": "alpha-performance",
-        "updatedAt": "2026-01-19T08:00:30.096Z",
-        "dataQuality": "COVERAGE_LIMIT",
-        "itemCount": 0,
-        "sizeKB": 0
-      },
-      {
-        "id": "earnings-reality",
-        "updatedAt": "2026-01-19T08:00:30.096Z",
-        "dataQuality": "COVERAGE_LIMIT",
         "itemCount": 0,
         "sizeKB": 0
       }
@@ -205,11 +110,11 @@
       "IWM"
     ],
     "skippedSymbols": [],
-    "runId": "2026-01-18T21:11:52.841Z",
-    "asOf": "2026-01-18T21:11:52.841Z",
+    "runId": "2026-01-19T09:04:57.128Z",
+    "asOf": "2026-01-19T09:04:57.128Z",
     "meta": {
       "status": "PARTIAL",
-      "updatedAt": "2026-01-18T21:11:52.841Z",
+      "updatedAt": "2026-01-19T09:04:57.128Z",
       "reason": "EMPTY_ITEMS"
     }
   }

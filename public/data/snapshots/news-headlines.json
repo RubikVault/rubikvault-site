@@ -1,29 +1,29 @@
 {
   "schemaVersion": "v3",
   "blockId": "news-headlines",
-  "generatedAt": "2026-01-19T08:43:00.062Z",
+  "generatedAt": "2026-01-19T09:04:57.271Z",
   "dataAt": "2026-01-19T08:00:30.095Z",
   "meta": {
     "status": "OK",
     "reason": "OK",
-    "generatedAt": "2026-01-19T08:43:00.062Z",
+    "generatedAt": "2026-01-19T09:04:57.271Z",
     "asOf": "2026-01-19T08:00:30.095Z",
     "source": "rss",
     "ttlSeconds": 3600,
-    "stale": false,
+    "stale": true,
     "itemsCount": 50,
-    "stalenessSec": 2520,
+    "stalenessSec": 3840,
     "freshness": {
-      "status": "fresh",
-      "ageMinutes": 42
+      "status": "stale",
+      "ageMinutes": 64
     },
     "schedule": {
       "rule": "best_effort",
-      "nextPlannedFetchAt": "2026-01-19T11:43:00.062Z",
+      "nextPlannedFetchAt": "2026-01-19T12:04:57.271Z",
       "expectedNextRunWindowMinutes": 180,
       "ttlSeconds": 3600
     },
-    "runId": "2026-01-19T08:43:00.036Z",
+    "runId": "2026-01-19T09:04:57.238Z",
     "validation": {
       "schema": {
         "ok": true,
@@ -341,6 +341,13 @@
         "source": "CNBC",
         "publishedAt": "Sat, 17 Jan 2026 09:54:08 GMT"
       }
-    ]
+    ],
+    "debug": {
+      "lastGood": {
+        "used": 50,
+        "filled": 50,
+        "reason": "EMPTY_ITEMS_FALLBACK"
+      }
+    }
   }
 }
