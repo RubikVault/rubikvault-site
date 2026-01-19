@@ -104,6 +104,22 @@ function validateSnapshot(snapshot, moduleConfig) {
   const computedDigest = computeSnapshotDigest(snapshot);
   if (snapshot.metadata.digest !== computedDigest) {
     errors.push(`DIGEST_MISMATCH: computed=${computedDigest}, provided=${snapshot.metadata.digest}`);
+    
+    // DEBUG: Show what data is being hashed
+    console.log(`\n🔍 DIGEST MISMATCH DEBUG for ${moduleName}:`);
+    console.log(`  Provider digest:  ${snapshot.metadata.digest}`);
+    console.log(`  Computed digest:  ${computedDigest}`);
+    console.log(`\n  Snapshot structure:`);
+    console.log(`    schema_version: ${snapshot.schema_version}`);
+    console.log(`    module: ${snapshot.metadata.module}`);
+    console.log(`    source: ${snapshot.metadata.source}`);
+    console.log(`    record_count: ${snapshot.metadata.record_count}`);
+    console.log(`    data array length: ${snapshot.data?.length}`);
+    if (snapshot.data && snapshot.data[0]) {
+      console.log(`    data[0] keys: ${Object.keys(snapshot.data[0]).join(', ')}`);
+      console.log(`    data[0] preview: ${JSON.stringify(snapshot.data[0]).substring(0, 200)}...`);
+    }
+    console.log(`\n  This suggests the snapshot was modified after digest was computed!`);
   }
   
   // Validation status check - DETAILED LOGGING
