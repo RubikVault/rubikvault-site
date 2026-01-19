@@ -2,32 +2,18 @@ export async function onRequestGet(context) {
   const { request, env } = context;
   const url = new URL(request.url);
 
-  // Handle /internal/health by fetching static file via ASSETS binding
+  // IMPORTANT: Don't handle /internal/health - let _redirects serve the static file
+  // Return early with a pass-through response
   if (url.pathname.startsWith('/internal/health')) {
+    // Return a response that allows static file serving to proceed
+    // We use a 307 redirect to the exact file path
     const targetPath = url.pathname === '/internal/health' || url.pathname === '/internal/health/'
       ? '/internal/health/index.html'
       : url.pathname;
     
-    // Try to fetch static file using ASSETS binding
-    try {
-      if (context.env && context.env.ASSETS) {
-        const assetRequest = new Request(new URL(targetPath, request.url));
-        const response = await context.env.ASSETS.fetch(assetRequest);
-        if (response.ok) {
-          return new Response(response.body, {
-            headers: {
-              'Content-Type': 'text/html; charset=utf-8',
-              'Cache-Control': 'no-store'
-            }
-          });
-        }
-      }
-    } catch (err) {
-      console.error('Error fetching static file:', err);
-    }
-    
-    // Fallback: redirect
-    return Response.redirect(new URL(targetPath, request.url), 302);
+    // Use a temporary redirect (307) which preserves method and lets the static file be served
+    const targetUrl = new URL(targetPath, request.url);
+    return Response.redirect(targetUrl.toString(), 307);
   }
 
   const required = env?.RV_INTERNAL_TOKEN;

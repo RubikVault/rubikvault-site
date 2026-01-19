@@ -72,7 +72,14 @@ jobs:
       - name: Run Finalizer
         env:
           ARTIFACTS_DIR: artifacts-organized
-        run: node scripts/aggregator/finalize.mjs
+        run: |
+          echo "Running finalizer with ARTIFACTS_DIR=$ARTIFACTS_DIR"
+          echo "Artifacts directory contents:"
+          ls -la $ARTIFACTS_DIR/ || echo "Artifacts dir does not exist"
+          node scripts/aggregator/finalize.mjs || {
+            echo "Finalizer exited with code $?"
+            exit 1
+          }
 
       - name: Check for changes
         id: changes

@@ -397,7 +397,8 @@ async function main() {
     if (artifacts.size === 0) {
       console.warn('⚠ No artifacts found. Exiting (nothing to publish).');
       console.log('ℹ This is normal if the Pilot workflow has not run yet or no artifacts were uploaded.');
-      process.exit(0);
+      console.log('ℹ Finalizer completed successfully (no changes to publish).');
+      process.exit(0); // Exit with 0 = success, not error
     }
     
     // Validate all artifacts
