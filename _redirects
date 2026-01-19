@@ -7,6 +7,17 @@
 /debug/*        /debug/:splat    200
 /mirror/*       /mirror/:splat   200
 /mirrors/*      /mirrors/:splat  200
+/favicon.ico    /assets/rv-icon.png 200
+/data/snapshots/rv-:splat.json /data/snapshots/:splat.json 200
+/data/blocks/rv-:splat.latest.json /data/blocks/:splat.latest.json 200
+/internal-dashboard.html /internal-dashboard 301
+/internal-dashboard /internal-dashboard 200
+# common typo + ops alias
+/internal-dahboard /internal-dashboard 301
+/ops /internal-dashboard 301
+/dev/internal-dashboard /internal-dashboard 301
+/dev/ops /internal-dashboard 301
+# Explicit index route to avoid rewrite loop warnings
 /index.html     /index.html      200
 # SPA fallback (last)
 /*              /index.html      200
