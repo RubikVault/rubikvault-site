@@ -1,2 +1,5 @@
 import { serveStaticJson } from "./_shared/static-only.js";
-export default { fetch: serveStaticJson };
+
+export async function onRequestGet(context) {
+  return serveStaticJson(context.request, "news", null, context);
+}
