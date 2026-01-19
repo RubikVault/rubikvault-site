@@ -1,29 +1,29 @@
 {
   "schemaVersion": "v3",
   "blockId": "system-health",
-  "generatedAt": "2026-01-19T10:09:35.461Z",
+  "generatedAt": "2026-01-19T12:26:32.302Z",
   "dataAt": "2026-01-19T10:08:46.178Z",
   "meta": {
     "status": "PARTIAL",
     "reason": "EMPTY_ITEMS",
-    "generatedAt": "2026-01-19T10:09:35.461Z",
+    "generatedAt": "2026-01-19T12:26:32.302Z",
     "asOf": "2026-01-19T10:08:46.178Z",
     "source": "system-health",
     "ttlSeconds": 3600,
-    "stale": false,
+    "stale": true,
     "itemsCount": 0,
-    "stalenessSec": 0,
+    "stalenessSec": 8220,
     "freshness": {
-      "status": "fresh",
-      "ageMinutes": 0
+      "status": "expired",
+      "ageMinutes": 137
     },
     "schedule": {
       "rule": "daily",
-      "nextPlannedFetchAt": "2026-01-20T10:09:35.461Z",
+      "nextPlannedFetchAt": "2026-01-20T12:26:32.302Z",
       "expectedNextRunWindowMinutes": 1440,
       "ttlSeconds": 3600
     },
-    "runId": "2026-01-19T10:09:35.387Z",
+    "runId": "2026-01-19T12:26:32.258Z",
     "validation": {
       "schema": {
         "ok": true,

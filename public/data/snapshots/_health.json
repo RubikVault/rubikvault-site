@@ -1,29 +1,29 @@
 {
   "schemaVersion": "v3",
   "blockId": "_health",
-  "generatedAt": "2026-01-19T10:09:35.416Z",
-  "dataAt": "2026-01-19T09:05:19.466Z",
+  "generatedAt": "2026-01-19T12:26:32.268Z",
+  "dataAt": "2026-01-19T12:26:32.203Z",
   "meta": {
     "status": "PARTIAL",
     "reason": "EMPTY_ITEMS",
-    "generatedAt": "2026-01-19T10:09:35.416Z",
-    "asOf": "2026-01-19T09:05:19.466Z",
+    "generatedAt": "2026-01-19T12:26:32.268Z",
+    "asOf": "2026-01-19T12:26:32.203Z",
     "source": "seed-mirrors",
     "ttlSeconds": 3600,
-    "stale": true,
+    "stale": false,
     "itemsCount": 0,
-    "stalenessSec": 3840,
+    "stalenessSec": 0,
     "freshness": {
-      "status": "stale",
-      "ageMinutes": 64
+      "status": "fresh",
+      "ageMinutes": 0
     },
     "schedule": {
       "rule": "best_effort",
-      "nextPlannedFetchAt": "2026-01-19T13:09:35.416Z",
+      "nextPlannedFetchAt": "2026-01-19T15:26:32.268Z",
       "expectedNextRunWindowMinutes": 180,
       "ttlSeconds": 3600
     },
-    "runId": "2026-01-19T10:09:35.387Z",
+    "runId": "2026-01-19T12:26:32.258Z",
     "validation": {
       "schema": {
         "ok": true,
@@ -41,7 +41,7 @@
   },
   "data": {
     "items": [],
-    "savedAt": "2026-01-19T09:05:12.753Z",
+    "savedAt": "2026-01-19T12:26:24.914Z",
     "schemaVersion": "1.0",
     "summary": {
       "ok": 4,
@@ -82,7 +82,7 @@
       "market-health": {
         "ok": true,
         "http": 200,
-        "bytes": 1637,
+        "bytes": 1636,
         "provider": "market-health",
         "metaStatus": "LIVE",
         "metaReason": null,
