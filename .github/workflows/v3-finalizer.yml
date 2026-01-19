@@ -124,13 +124,20 @@ jobs:
           echo "Looking for JSON files:"
           find $ARTIFACTS_DIR -name "*.json" -type f 2>&1 || echo "No JSON files found"
           echo ""
+          echo "=== RUNNING FINALIZER ==="
           node scripts/aggregator/finalize.mjs 2>&1
           FINALIZER_EXIT=$?
           echo ""
-          echo "Finalizer exited with code: $FINALIZER_EXIT"
+          echo "=== FINALIZER COMPLETED ==="
+          echo "Exit code: $FINALIZER_EXIT"
+          
           if [ $FINALIZER_EXIT -ne 0 ]; then
-            echo "ERROR: Finalizer failed with exit code $FINALIZER_EXIT"
+            echo ""
+            echo "❌ ERROR: Finalizer failed with exit code $FINALIZER_EXIT"
+            echo "Check the logs above for detailed error information"
             exit $FINALIZER_EXIT
+          else
+            echo "✅ Finalizer completed successfully"
           fi
 
       - name: Check for changes

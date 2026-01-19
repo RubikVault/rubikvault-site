@@ -381,26 +381,37 @@ async function promoteArtifacts(manifest, artifacts, tmpDir) {
  * Main execution
  */
 async function main() {
-  console.log('🚀 Finalizer starting...\n');
+  console.log('🚀 Finalizer starting...');
+  console.log(`  Node version: ${process.version}`);
+  console.log(`  CWD: ${process.cwd()}`);
+  console.log(`  ARTIFACTS_DIR: ${ARTIFACTS_DIR}`);
+  console.log(`  BASE_DIR: ${BASE_DIR}`);
+  console.log(`  TMP_DIR: ${TMP_DIR}`);
+  console.log(`  PUBLIC_DIR: ${PUBLIC_DIR}`);
+  console.log(`  REGISTRY_PATH: ${REGISTRY_PATH}\n`);
   
   try {
     // Load registry
-    console.log('📋 Loading registry...');
+    console.log('📋 Step 1: Loading registry...');
+    console.log(`  Looking for registry at: ${REGISTRY_PATH}`);
     const registry = await loadRegistry();
-    console.log(`✓ Loaded ${Object.keys(registry.modules).length} modules from registry\n`);
+    console.log(`  ✓ Registry loaded successfully`);
+    console.log(`  ✓ Found ${Object.keys(registry.modules).length} module(s) in registry: ${Object.keys(registry.modules).join(', ')}\n`);
     
     // Load artifacts
-    console.log('📦 Loading artifacts...');
+    console.log('📦 Step 2: Loading artifacts...');
     console.log(`  ARTIFACTS_DIR: ${ARTIFACTS_DIR}`);
     const artifacts = await loadArtifacts();
-    console.log(`✓ Loaded ${artifacts.size} artifacts\n`);
+    console.log(`  ✓ Artifact loading complete`);
+    console.log(`  ✓ Found ${artifacts.size} artifact(s)\n`);
     
     if (artifacts.size === 0) {
-      console.warn('⚠ No artifacts found. Generating empty provider-state...');
-      console.log('ℹ This is normal if the Pilot workflow has not run yet or no artifacts were uploaded.');
+      console.log('📊 Step 3: No artifacts found - generating empty provider-state...');
+      console.log('  ℹ This is normal if the Pilot workflow has not run yet or no artifacts were uploaded.');
       
       // Generate empty but valid provider-state so dashboard doesn't show errors
       try {
+        console.log('  Creating empty manifest structure...');
         const emptyManifest = {
           schema_version: "3.0",
           published_at: new Date().toISOString(),
@@ -415,19 +426,31 @@ async function main() {
             critical_ok: true
           }
         };
+        console.log('  ✓ Empty manifest created');
         
+        console.log('  Generating provider state from empty manifest...');
         // generateProviderState and writeProviderState are already imported at top
         const emptyProviderState = generateProviderState(emptyManifest, new Map());
-        await writeProviderState(emptyProviderState, BASE_DIR);
+        console.log('  ✓ Provider state generated');
+        console.log(`  State keys: ${Object.keys(emptyProviderState).join(', ')}`);
         
-        console.log('✓ Generated empty provider-state.json');
-        console.log('ℹ Finalizer completed successfully (no changes to publish).');
+        console.log(`  Writing provider-state.json to: ${join(BASE_DIR, 'public/data/provider-state.json')}`);
+        await writeProviderState(emptyProviderState, BASE_DIR);
+        console.log('  ✓ Provider-state.json written successfully');
+        
+        console.log('\n✅ Finalizer completed successfully (no artifacts to publish)');
+        console.log('  Exit code: 0');
         process.exit(0); // Exit with 0 = success, not error
       } catch (emptyStateErr) {
-        console.error('❌ Failed to generate empty provider-state:', emptyStateErr.message);
+        console.error('\n❌ ERROR in empty state generation:');
+        console.error(`  Error type: ${emptyStateErr.constructor.name}`);
+        console.error(`  Error message: ${emptyStateErr.message}`);
+        console.error(`  Error code: ${emptyStateErr.code || 'N/A'}`);
+        console.error('  Stack trace:');
         console.error(emptyStateErr.stack);
         // Don't fail hard - empty state is optional
-        console.warn('⚠ Continuing without provider-state (will use existing or dashboard will show error)');
+        console.warn('\n⚠ WARNING: Continuing without provider-state');
+        console.warn('  (Dashboard may show error, but this is non-fatal)');
         process.exit(0); // Still exit 0 - empty artifacts are OK
       }
     }
@@ -496,13 +519,49 @@ async function main() {
     console.log(`   Critical OK: ${manifest.summary.critical_ok}`);
     
   } catch (err) {
-    console.error(`\n❌ Finalizer failed: ${err.message}`);
-    console.error('Stack trace:');
-    console.error(err.stack);
+    console.error('\n❌❌❌ FATAL ERROR - Finalizer failed ❌❌❌');
+    console.error('='.repeat(60));
+    console.error(`Error Type: ${err.constructor.name}`);
+    console.error(`Error Message: ${err.message}`);
+    console.error(`Error Code: ${err.code || 'N/A'}`);
+    console.error(`Error Name: ${err.name || 'N/A'}`);
+    
+    if (err.stack) {
+      console.error('\nStack Trace:');
+      console.error(err.stack);
+    }
+    
+    if (err.cause) {
+      console.error('\nCaused by:');
+      console.error(err.cause);
+    }
+    
     console.error('\nEnvironment:');
+    console.error(`  Node version: ${process.version}`);
+    console.error(`  Platform: ${process.platform}`);
+    console.error(`  CWD: ${process.cwd()}`);
     console.error(`  ARTIFACTS_DIR: ${ARTIFACTS_DIR}`);
     console.error(`  BASE_DIR: ${BASE_DIR}`);
-    console.error(`  CWD: ${process.cwd()}`);
+    console.error(`  TMP_DIR: ${TMP_DIR}`);
+    console.error(`  PUBLIC_DIR: ${PUBLIC_DIR}`);
+    console.error(`  REGISTRY_PATH: ${REGISTRY_PATH}`);
+    
+    // Check if directories exist
+    try {
+      const fs = await import('node:fs/promises');
+      const artifactsExists = await fs.access(ARTIFACTS_DIR).then(() => true).catch(() => false);
+      const baseExists = await fs.access(BASE_DIR).then(() => true).catch(() => false);
+      const publicExists = await fs.access(PUBLIC_DIR).then(() => true).catch(() => false);
+      console.error('\nDirectory Checks:');
+      console.error(`  ARTIFACTS_DIR exists: ${artifactsExists}`);
+      console.error(`  BASE_DIR exists: ${baseExists}`);
+      console.error(`  PUBLIC_DIR exists: ${publicExists}`);
+    } catch (checkErr) {
+      console.error('  Could not check directory existence:', checkErr.message);
+    }
+    
+    console.error('='.repeat(60));
+    console.error('Exiting with code 2 (error)');
     process.exit(2); // Exit 2 for errors (as reported by user)
   }
 }
@@ -512,22 +571,44 @@ async function main() {
 const isMainModule = process.argv[1] && (
   import.meta.url === `file://${process.argv[1]}` ||
   import.meta.url.endsWith(process.argv[1]) ||
-  import.meta.url.includes('finalize.mjs')
+  import.meta.url.includes('finalize.mjs') ||
+  process.argv[1].includes('finalize.mjs')
 );
 
 if (isMainModule) {
+  console.log('🔍 Debug: Detected as main module');
+  console.log(`  import.meta.url: ${import.meta.url}`);
+  console.log(`  process.argv[1]: ${process.argv[1]}`);
+  
   // Wrap in try-catch to handle any sync errors
   try {
-    main().catch(err => {
-      console.error('❌ FATAL: Unhandled promise rejection in main():');
-      console.error(err.message);
-      console.error(err.stack);
+    console.log('🔍 Debug: Calling main()...');
+    const mainPromise = main();
+    
+    mainPromise.catch(err => {
+      console.error('\n❌ FATAL: Unhandled promise rejection in main():');
+      console.error(`Error Type: ${err.constructor.name}`);
+      console.error(`Error Message: ${err.message}`);
+      console.error(`Error Code: ${err.code || 'N/A'}`);
+      if (err.stack) {
+        console.error('Stack Trace:');
+        console.error(err.stack);
+      }
       process.exit(2);
     });
   } catch (err) {
-    console.error('❌ FATAL: Sync error in main() invocation:');
-    console.error(err.message);
-    console.error(err.stack);
+    console.error('\n❌ FATAL: Sync error in main() invocation:');
+    console.error(`Error Type: ${err.constructor.name}`);
+    console.error(`Error Message: ${err.message}`);
+    console.error(`Error Code: ${err.code || 'N/A'}`);
+    if (err.stack) {
+      console.error('Stack Trace:');
+      console.error(err.stack);
+    }
     process.exit(2);
   }
+} else {
+  console.log('🔍 Debug: Not detected as main module - skipping execution');
+  console.log(`  import.meta.url: ${import.meta.url}`);
+  console.log(`  process.argv[1]: ${process.argv[1]}`);
 }
