@@ -2,7 +2,9 @@ name: v3 Finalizer
 
 on:
   workflow_run:
-    workflows: ["v3 Pilot - Market Health"]
+    workflows: 
+      - "v3 Pilot - Market Health"
+      - "v3 Scrape Template"
     types:
       - completed
   workflow_dispatch:
@@ -11,6 +13,10 @@ on:
         description: 'Artifact name to finalize (default: all)'
         required: false
         default: ''
+      skip_kv_write:
+        description: 'Skip KV writes (for testing)'
+        required: false
+        default: 'false'
 
 jobs:
   finalize:
@@ -38,12 +44,22 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Download artifacts
+      - name: Download artifacts from v3-pilot-market
         uses: dawidd6/action-download-artifact@v6
         with:
           workflow: v3-pilot-market.yml
           name: module-market-health
           path: artifacts/module-market-health
+          if_no_artifact_found: warn
+        continue-on-error: true
+
+      - name: Download artifacts from v3-scrape-template
+        uses: dawidd6/action-download-artifact@v6
+        with:
+          workflow: v3-scrape-template.yml
+          name_is_regexp: true
+          name: module-.*
+          path: artifacts/
           if_no_artifact_found: warn
         continue-on-error: true
 

@@ -1,0 +1,196 @@
+name: v3 Scrape Template
+
+on:
+  schedule:
+    # Run at 22:30 UTC on market days
+    - cron: "30 22 * * 1-5"
+  workflow_dispatch:
+    inputs:
+      modules:
+        description: 'Modules to scrape (comma-separated, or "all")'
+        required: false
+        default: 'all'
+
+jobs:
+  # Determine which modules to scrape
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Generate module matrix
+        id: set-matrix
+        run: |
+          # Read enabled modules from registry
+          MODULES=$(node -e "
+            const registry = require('./public/data/registry/modules.json');
+            const modules = Object.entries(registry.modules || registry)
+              .filter(([name, config]) => {
+                // Skip schema_version and metadata fields
+                if (name === 'schema_version' || name === 'generated_at' || name === 'modules' || name === 'tiers' || name === 'policies') return false;
+                // Only include enabled modules
+                return config.enabled !== false;
+              })
+              .map(([name]) => name);
+            console.log(JSON.stringify(modules));
+          ")
+          
+          echo "Available modules: $MODULES"
+          
+          # If manual trigger with specific modules
+          INPUT_MODULES='${{ github.event.inputs.modules }}'
+          if [ ! -z "$INPUT_MODULES" ] && [ "$INPUT_MODULES" != "all" ]; then
+            # Parse comma-separated list
+            MODULES=$(echo "$INPUT_MODULES" | jq -R 'split(",") | map(gsub("^\\s+|\\s+$";""))')
+          fi
+          
+          echo "matrix={\"module\":$MODULES}" >> $GITHUB_OUTPUT
+          echo "Scraping modules: $MODULES"
+
+  # Scrape modules in parallel (matrix)
+  scrape:
+    needs: prepare
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: read
+    
+    strategy:
+      matrix: ${{ fromJson(needs.prepare.outputs.matrix) }}
+      fail-fast: false  # Continue even if one module fails
+      max-parallel: 5   # Limit parallel jobs to avoid rate limits
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run provider for ${{ matrix.module }}
+        env:
+          MODULE: ${{ matrix.module }}
+          ARTIFACTS_DIR: ${{ runner.temp }}/artifacts
+          # API Keys (all available)
+          POLYGON_API_KEY: ${{ secrets.POLYGON_API_KEY }}
+          FMP_API_KEY: ${{ secrets.FMP_API_KEY }}
+          ALPHAVANTAGE_API_KEY: ${{ secrets.ALPHAVANTAGE_API_KEY }}
+          FINNHUB_API_KEY: ${{ secrets.FINNHUB_API_KEY }}
+          FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
+          TWELVEDATA_API_KEY: ${{ secrets.TWELVEDATA_API_KEY }}
+          # Yahoo/Proxy settings
+          ALLOW_YAHOO: ${{ vars.ALLOW_YAHOO || '0' }}
+          YAHOO_MARKET_URL: ${{ vars.YAHOO_MARKET_URL || '' }}
+        run: |
+          echo "🔄 Scraping module: $MODULE"
+          
+          # Check if provider script exists
+          PROVIDER_SCRIPT="scripts/providers/${MODULE}-v3.mjs"
+          if [ ! -f "$PROVIDER_SCRIPT" ]; then
+            echo "⚠️ Provider script not found: $PROVIDER_SCRIPT"
+            echo "Checking for alternative script name..."
+            
+            # Try without -v3 suffix
+            PROVIDER_SCRIPT="scripts/providers/${MODULE}.mjs"
+            if [ ! -f "$PROVIDER_SCRIPT" ]; then
+              echo "❌ No provider script found for module: $MODULE"
+              exit 1
+            fi
+          fi
+          
+          echo "✅ Found provider: $PROVIDER_SCRIPT"
+          node "$PROVIDER_SCRIPT"
+
+      - name: Verify artifact structure
+        run: |
+          MODULE="${{ matrix.module }}"
+          ARTIFACT_DIR="${{ runner.temp }}/artifacts/${MODULE}"
+          
+          echo "Verifying artifact for: $MODULE"
+          
+          if [ ! -d "$ARTIFACT_DIR" ]; then
+            echo "❌ Artifact directory not created: $ARTIFACT_DIR"
+            exit 1
+          fi
+          
+          if [ ! -f "$ARTIFACT_DIR/snapshot.json" ]; then
+            echo "❌ snapshot.json missing"
+            exit 1
+          fi
+          
+          if [ ! -f "$ARTIFACT_DIR/module-state.json" ]; then
+            echo "❌ module-state.json missing"
+            exit 1
+          fi
+          
+          echo "✅ Artifact structure valid"
+          echo "Files:"
+          ls -lh "$ARTIFACT_DIR/"
+          
+          echo ""
+          echo "Snapshot preview:"
+          head -n 20 "$ARTIFACT_DIR/snapshot.json"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: module-${{ matrix.module }}
+          path: ${{ runner.temp }}/artifacts/${{ matrix.module }}/
+          retention-days: 1
+          if-no-files-found: error
+          compression-level: 9  # Maximum compression
+
+      - name: Summary
+        if: always()
+        run: |
+          MODULE="${{ matrix.module }}"
+          STATUS="${{ job.status }}"
+          
+          echo "## 📦 Module: $MODULE" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- Status: $STATUS" >> $GITHUB_STEP_SUMMARY
+          echo "- Artifact: module-$MODULE" >> $GITHUB_STEP_SUMMARY
+          
+          if [ "$STATUS" = "success" ]; then
+            ARTIFACT_DIR="${{ runner.temp }}/artifacts/${MODULE}"
+            
+            if [ -f "$ARTIFACT_DIR/snapshot.json" ]; then
+              RECORD_COUNT=$(jq -r '.metadata.record_count // .meta.record_count // "unknown"' "$ARTIFACT_DIR/snapshot.json")
+              FETCHED_AT=$(jq -r '.metadata.fetched_at // .meta.fetchedAt // "unknown"' "$ARTIFACT_DIR/snapshot.json")
+              echo "- Records: $RECORD_COUNT" >> $GITHUB_STEP_SUMMARY
+              echo "- Fetched: $FETCHED_AT" >> $GITHUB_STEP_SUMMARY
+            fi
+            
+            if [ -f "$ARTIFACT_DIR/module-state.json" ]; then
+              STATE_STATUS=$(jq -r '.status // "unknown"' "$ARTIFACT_DIR/module-state.json")
+              PUBLISHED=$(jq -r '.published // false' "$ARTIFACT_DIR/module-state.json")
+              echo "- State: $STATE_STATUS" >> $GITHUB_STEP_SUMMARY
+              echo "- Published: $PUBLISHED" >> $GITHUB_STEP_SUMMARY
+            fi
+          fi
+
+  # Wait for all scrapes to complete, then trigger finalizer
+  trigger-finalizer:
+    needs: scrape
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Summary
+        run: |
+          echo "## 🎯 Scrape Complete" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "All scrape jobs have completed." >> $GITHUB_STEP_SUMMARY
+          echo "Finalizer will be triggered automatically via workflow_run." >> $GITHUB_STEP_SUMMARY
