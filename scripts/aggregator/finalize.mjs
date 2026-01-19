@@ -400,28 +400,36 @@ async function main() {
       console.log('ℹ This is normal if the Pilot workflow has not run yet or no artifacts were uploaded.');
       
       // Generate empty but valid provider-state so dashboard doesn't show errors
-      const emptyManifest = {
-        schema_version: "3.0",
-        published_at: new Date().toISOString(),
-        publish_policy: "critical_core_hybrid_v3",
-        modules: {},
-        summary: {
-          modules_total: 0,
-          ok: 0,
-          warn: 0,
-          error: 0,
-          stale_ratio: 0,
-          critical_ok: true
-        }
-      };
-      
-      // generateProviderState and writeProviderState are already imported at top
-      const emptyProviderState = generateProviderState(emptyManifest, new Map());
-      await writeProviderState(emptyProviderState, BASE_DIR);
-      
-      console.log('✓ Generated empty provider-state.json');
-      console.log('ℹ Finalizer completed successfully (no changes to publish).');
-      process.exit(0); // Exit with 0 = success, not error
+      try {
+        const emptyManifest = {
+          schema_version: "3.0",
+          published_at: new Date().toISOString(),
+          publish_policy: "critical_core_hybrid_v3",
+          modules: {},
+          summary: {
+            modules_total: 0,
+            ok: 0,
+            warn: 0,
+            error: 0,
+            stale_ratio: 0,
+            critical_ok: true
+          }
+        };
+        
+        // generateProviderState and writeProviderState are already imported at top
+        const emptyProviderState = generateProviderState(emptyManifest, new Map());
+        await writeProviderState(emptyProviderState, BASE_DIR);
+        
+        console.log('✓ Generated empty provider-state.json');
+        console.log('ℹ Finalizer completed successfully (no changes to publish).');
+        process.exit(0); // Exit with 0 = success, not error
+      } catch (emptyStateErr) {
+        console.error('❌ Failed to generate empty provider-state:', emptyStateErr.message);
+        console.error(emptyStateErr.stack);
+        // Don't fail hard - empty state is optional
+        console.warn('⚠ Continuing without provider-state (will use existing or dashboard will show error)');
+        process.exit(0); // Still exit 0 - empty artifacts are OK
+      }
     }
     
     // Validate all artifacts
