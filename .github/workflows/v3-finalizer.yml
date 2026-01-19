@@ -162,10 +162,17 @@ jobs:
           git config user.name "RubikVault Bot"
           git config user.email "bot@rubikvault.com"
           
-          git add public/data/snapshots/*/latest.json
-          git add public/data/state/modules/*.json
-          git add public/data/manifest.json
-          git add public/data/provider-state.json
+          # Add files only if they exist
+          git add public/data/snapshots/*/latest.json 2>/dev/null || echo "No snapshot files to add"
+          git add public/data/state/modules/*.json 2>/dev/null || echo "No module state files to add"
+          git add public/data/manifest.json 2>/dev/null || echo "No manifest to add"
+          git add public/data/provider-state.json 2>/dev/null || echo "No provider-state to add"
+          
+          # Commit only if there are staged changes
+          if git diff --cached --quiet; then
+            echo "No files staged for commit"
+            exit 0
+          fi
           
           git commit -m "data: v3.0 publish via finalizer [skip ci]" || exit 0
           
