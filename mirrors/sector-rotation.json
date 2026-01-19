@@ -1,0 +1,244 @@
+{
+  "meta": {
+    "provider": "stooq",
+    "dataset": "sector-rotation",
+    "fetchedAt": "2026-01-19T06:24:07.608Z",
+    "ttlSeconds": 3600,
+    "source": "mirror",
+    "runId": "2026-01-19T06:24:07.608Z",
+    "cost": null
+  },
+  "raw": {
+    "schemaVersion": "rv-mirror-v1",
+    "mirrorId": "sector-rotation",
+    "provider": "stooq",
+    "dataset": "sector-rotation",
+    "runId": "2026-01-19T06:24:07.608Z",
+    "fetchedAt": "2026-01-19T06:24:07.608Z",
+    "updatedAt": "2026-01-19T06:24:07.608Z",
+    "asOf": "2026-01-19T06:24:07.608Z",
+    "mode": "LIVE",
+    "cadence": "best_effort",
+    "trust": "derived",
+    "source": "mirror",
+    "sourceUpstream": "stooq",
+    "ttlSeconds": null,
+    "dataQuality": "OK",
+    "delayMinutes": 0,
+    "missingSymbols": [],
+    "errors": [],
+    "notes": [],
+    "whyUnique": "Seeded from sector-rotation upstream",
+    "context": {
+      "rotationLabel": "Neutral",
+      "groups": {}
+    },
+    "items": [
+      {
+        "symbol": "XLK",
+        "name": "XLK",
+        "price": 145.62,
+        "changePercent": 0.10999587515467935,
+        "relativeToSpy": 0.19378184533843656
+      },
+      {
+        "symbol": "XLF",
+        "name": "XLF",
+        "price": 54.44,
+        "changePercent": 0.12874747103181955,
+        "relativeToSpy": 0.21253344121557677
+      },
+      {
+        "symbol": "XLV",
+        "name": "XLV",
+        "price": 155.74,
+        "changePercent": -0.7772680937818545,
+        "relativeToSpy": -0.6934821235980972
+      },
+      {
+        "symbol": "XLE",
+        "name": "XLE",
+        "price": 47.69,
+        "changePercent": 0.16803192606594894,
+        "relativeToSpy": 0.2518178962497062
+      },
+      {
+        "symbol": "XLI",
+        "name": "XLI",
+        "price": 166.9,
+        "changePercent": 0.6755941609361832,
+        "relativeToSpy": 0.7593801311199404
+      },
+      {
+        "symbol": "XLP",
+        "name": "XLP",
+        "price": 82.11,
+        "changePercent": -0.31564890129902284,
+        "relativeToSpy": -0.23186293111526562
+      },
+      {
+        "symbol": "XLU",
+        "name": "XLU",
+        "price": 43.39,
+        "changePercent": -0.5044714515019465,
+        "relativeToSpy": -0.4206854813181893
+      },
+      {
+        "symbol": "XLRE",
+        "name": "XLRE",
+        "price": 42.21,
+        "changePercent": 1.223021582733808,
+        "relativeToSpy": 1.3068075529175651
+      },
+      {
+        "symbol": "XLB",
+        "name": "XLB",
+        "price": 48.68,
+        "changePercent": -0.5718954248366036,
+        "relativeToSpy": -0.4881094546528464
+      },
+      {
+        "symbol": "XLC",
+        "name": "XLC",
+        "price": 115.17,
+        "changePercent": -0.8949315893640755,
+        "relativeToSpy": -0.8111456191803182
+      },
+      {
+        "symbol": "XLY",
+        "name": "XLY",
+        "price": 122.3,
+        "changePercent": -0.32599837000815457,
+        "relativeToSpy": -0.24221239982439735
+      }
+    ],
+    "savedAt": "2026-01-19T06:24:07.608Z",
+    "_meta": {
+      "updated_at": "2026-01-19T06:24:07.608Z",
+      "provider": "stooq",
+      "status": "fresh"
+    },
+    "payload": {
+      "ok": true,
+      "feature": "sector-rotation",
+      "ts": "2026-01-19T06:24:07.607Z",
+      "traceId": "seed",
+      "schemaVersion": 1,
+      "cache": {
+        "hit": false,
+        "ttl": 0,
+        "layer": "seed"
+      },
+      "upstream": {
+        "url": "stooq",
+        "status": 200,
+        "snippet": ""
+      },
+      "rateLimit": {
+        "remaining": "unknown",
+        "reset": null,
+        "estimated": true
+      },
+      "dataQuality": {
+        "status": "LIVE",
+        "reason": "LIVE",
+        "missingFields": []
+      },
+      "meta": {
+        "status": "LIVE",
+        "reason": null
+      },
+      "data": {
+        "updatedAt": "2026-01-19T06:24:07.607Z",
+        "rotationLabel": "Neutral",
+        "groups": {},
+        "spyChangePercent": -0.08378597018375722,
+        "sectors": [
+          {
+            "symbol": "XLK",
+            "name": "XLK",
+            "price": 145.62,
+            "changePercent": 0.10999587515467935,
+            "relativeToSpy": 0.19378184533843656
+          },
+          {
+            "symbol": "XLF",
+            "name": "XLF",
+            "price": 54.44,
+            "changePercent": 0.12874747103181955,
+            "relativeToSpy": 0.21253344121557677
+          },
+          {
+            "symbol": "XLV",
+            "name": "XLV",
+            "price": 155.74,
+            "changePercent": -0.7772680937818545,
+            "relativeToSpy": -0.6934821235980972
+          },
+          {
+            "symbol": "XLE",
+            "name": "XLE",
+            "price": 47.69,
+            "changePercent": 0.16803192606594894,
+            "relativeToSpy": 0.2518178962497062
+          },
+          {
+            "symbol": "XLI",
+            "name": "XLI",
+            "price": 166.9,
+            "changePercent": 0.6755941609361832,
+            "relativeToSpy": 0.7593801311199404
+          },
+          {
+            "symbol": "XLP",
+            "name": "XLP",
+            "price": 82.11,
+            "changePercent": -0.31564890129902284,
+            "relativeToSpy": -0.23186293111526562
+          },
+          {
+            "symbol": "XLU",
+            "name": "XLU",
+            "price": 43.39,
+            "changePercent": -0.5044714515019465,
+            "relativeToSpy": -0.4206854813181893
+          },
+          {
+            "symbol": "XLRE",
+            "name": "XLRE",
+            "price": 42.21,
+            "changePercent": 1.223021582733808,
+            "relativeToSpy": 1.3068075529175651
+          },
+          {
+            "symbol": "XLB",
+            "name": "XLB",
+            "price": 48.68,
+            "changePercent": -0.5718954248366036,
+            "relativeToSpy": -0.4881094546528464
+          },
+          {
+            "symbol": "XLC",
+            "name": "XLC",
+            "price": 115.17,
+            "changePercent": -0.8949315893640755,
+            "relativeToSpy": -0.8111456191803182
+          },
+          {
+            "symbol": "XLY",
+            "name": "XLY",
+            "price": 122.3,
+            "changePercent": -0.32599837000815457,
+            "relativeToSpy": -0.24221239982439735
+          }
+        ],
+        "source": "stooq"
+      }
+    },
+    "meta": {
+      "status": "OK",
+      "updatedAt": "2026-01-19T06:24:07.608Z",
+      "reason": null
+    }
+  }
+}

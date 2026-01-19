@@ -1,143 +1,679 @@
 {
   "meta": {
-    "provider": "stooq",
+    "provider": "alphavantage",
     "dataset": "top-movers",
-    "fetchedAt": "2026-01-18T21:11:52.836Z",
+    "fetchedAt": "2026-01-19T06:23:59.400Z",
     "ttlSeconds": 3600,
     "source": "mirror",
-    "runId": "2026-01-18T21:11:52.836Z",
+    "runId": "2026-01-19T06:23:59.400Z",
     "cost": null
   },
   "raw": {
     "schemaVersion": "rv-mirror-v1",
     "mirrorId": "top-movers",
-    "provider": "stooq",
+    "provider": "alphavantage",
     "dataset": "top-movers",
-    "runId": "2026-01-18T21:11:52.836Z",
-    "fetchedAt": "2026-01-18T21:11:52.836Z",
-    "updatedAt": "2026-01-18T21:11:52.836Z",
-    "asOf": "2026-01-16T21:00:00.000Z",
-    "mode": "EOD",
-    "cadence": "EOD",
+    "runId": "2026-01-19T06:23:59.400Z",
+    "fetchedAt": "2026-01-19T06:23:59.400Z",
+    "updatedAt": "2026-01-19T06:23:59.400Z",
+    "asOf": "2026-01-19T06:23:59.400Z",
+    "mode": "LIVE",
+    "cadence": "best_effort",
     "trust": "derived",
     "source": "mirror",
-    "sourceUpstream": "stooq",
+    "sourceUpstream": "alphavantage",
     "ttlSeconds": null,
     "dataQuality": "OK",
     "delayMinutes": 0,
     "missingSymbols": [],
     "errors": [],
     "notes": [],
-    "whyUnique": "EOD top movers derived from quotes.",
+    "whyUnique": "Seeded from top-movers upstream",
     "context": {
-      "selectedSymbols": [
-        "AAPL",
-        "MSFT",
-        "NVDA",
-        "AMZN",
-        "GOOGL",
-        "META",
-        "TSLA",
-        "SPY",
-        "QQQ",
-        "IWM"
+      "universe": [
+        "VERO",
+        "JFBR",
+        "JAGX",
+        "MYSEW",
+        "JFBRW",
+        "TNMG",
+        "CRGOW",
+        "BIYA",
+        "CREVW",
+        "OABIW",
+        "NXPLW",
+        "HYT^",
+        "MKDWW",
+        "LCFY",
+        "WGSWW",
+        "NIVFW",
+        "IBRX",
+        "PRFX",
+        "CELG^",
+        "BNAIW",
+        "THH",
+        "SPHL",
+        "AUUDW",
+        "LVROW",
+        "NUVB+",
+        "ANPA",
+        "CAPTW",
+        "LCFYW",
+        "DFSCW",
+        "MLEC",
+        "ITOC",
+        "QUMSR",
+        "WENNW",
+        "KWMWW",
+        "ANGHW",
+        "RAYA",
+        "ROLR",
+        "YOUL",
+        "ADSEW",
+        "AMPGW"
       ]
     },
     "items": [
       {
-        "symbol": "MSFT",
-        "close": 459.86,
-        "prevClose": 456.66,
-        "changePct": 0.7007401567906024,
-        "lastBarDate": "2026-01-16",
-        "barsUsed": 10038,
-        "missingFields": []
+        "symbol": "VERO",
+        "name": "VERO",
+        "price": 7.891,
+        "lastClose": null,
+        "changePercent": 451.8182,
+        "volume": 303920921,
+        "ts": "2026-01-19T06:23:59.399Z",
+        "source": "alphavantage"
       },
       {
-        "symbol": "AMZN",
-        "close": 239.12,
-        "prevClose": 238.18,
-        "changePct": 0.39465950121757576,
-        "lastBarDate": "2026-01-16",
-        "barsUsed": 7208,
-        "missingFields": []
+        "symbol": "JFBR",
+        "name": "JFBR",
+        "price": 1.29,
+        "lastClose": null,
+        "changePercent": 131.1828,
+        "volume": 232941305,
+        "ts": "2026-01-19T06:23:59.399Z",
+        "source": "alphavantage"
       },
       {
-        "symbol": "IWM",
-        "close": 265.76,
-        "prevClose": 265.51,
-        "changePct": 0.09415841211253273,
-        "lastBarDate": "2026-01-16",
-        "barsUsed": 5256,
-        "missingFields": []
+        "symbol": "JAGX",
+        "name": "JAGX",
+        "price": 1.43,
+        "lastClose": null,
+        "changePercent": 87.0504,
+        "volume": 156076026,
+        "ts": "2026-01-19T06:23:59.399Z",
+        "source": "alphavantage"
       },
       {
-        "symbol": "QQQ",
-        "close": 621.26,
-        "prevClose": 621.78,
-        "changePct": -0.08363086622277249,
-        "lastBarDate": "2026-01-16",
-        "barsUsed": 6756,
-        "missingFields": []
+        "symbol": "MYSEW",
+        "name": "MYSEW",
+        "price": 0.1,
+        "lastClose": null,
+        "changePercent": 81.4882,
+        "volume": 265,
+        "ts": "2026-01-19T06:23:59.399Z",
+        "source": "alphavantage"
       },
       {
-        "symbol": "SPY",
-        "close": 691.66,
-        "prevClose": 692.24,
-        "changePct": -0.08378597018375844,
-        "lastBarDate": "2026-01-16",
-        "barsUsed": 5256,
-        "missingFields": []
+        "symbol": "JFBRW",
+        "name": "JFBRW",
+        "price": 0.0259,
+        "lastClose": null,
+        "changePercent": 81.1189,
+        "volume": 230894,
+        "ts": "2026-01-19T06:23:59.399Z",
+        "source": "alphavantage"
       },
       {
-        "symbol": "META",
-        "close": 620.25,
-        "prevClose": 620.8,
-        "changePct": -0.08859536082473918,
-        "lastBarDate": "2026-01-16",
-        "barsUsed": 3436,
-        "missingFields": []
+        "symbol": "TNMG",
+        "name": "TNMG",
+        "price": 3.91,
+        "lastClose": null,
+        "changePercent": 65.678,
+        "volume": 27524243,
+        "ts": "2026-01-19T06:23:59.399Z",
+        "source": "alphavantage"
       },
       {
-        "symbol": "TSLA",
-        "close": 437.5,
-        "prevClose": 438.57,
-        "changePct": -0.24397473607405962,
-        "lastBarDate": "2026-01-16",
-        "barsUsed": 3913,
-        "missingFields": []
+        "symbol": "CRGOW",
+        "name": "CRGOW",
+        "price": 0.28,
+        "lastClose": null,
+        "changePercent": 64.7059,
+        "volume": 308598,
+        "ts": "2026-01-19T06:23:59.399Z",
+        "source": "alphavantage"
       },
       {
-        "symbol": "NVDA",
-        "close": 186.23,
-        "prevClose": 187.05,
-        "changePct": -0.4383854584335878,
-        "lastBarDate": "2026-01-16",
-        "barsUsed": 6788,
-        "missingFields": []
+        "symbol": "BIYA",
+        "name": "BIYA",
+        "price": 7.05,
+        "lastClose": null,
+        "changePercent": 56.3193,
+        "volume": 20236341,
+        "ts": "2026-01-19T06:23:59.399Z",
+        "source": "alphavantage"
       },
       {
-        "symbol": "GOOGL",
-        "close": 330,
-        "prevClose": 332.78,
-        "changePct": -0.8353867419916949,
-        "lastBarDate": "2026-01-16",
-        "barsUsed": 5388,
-        "missingFields": []
+        "symbol": "CREVW",
+        "name": "CREVW",
+        "price": 0.0107,
+        "lastClose": null,
+        "changePercent": 55.0725,
+        "volume": 4622,
+        "ts": "2026-01-19T06:23:59.399Z",
+        "source": "alphavantage"
       },
       {
-        "symbol": "AAPL",
-        "close": 255.53,
-        "prevClose": 258.21,
-        "changePct": -1.0379148754889322,
-        "lastBarDate": "2026-01-16",
-        "barsUsed": 10421,
-        "missingFields": []
+        "symbol": "OABIW",
+        "name": "OABIW",
+        "price": 0.115,
+        "lastClose": null,
+        "changePercent": 53.1292,
+        "volume": 4,
+        "ts": "2026-01-19T06:23:59.399Z",
+        "source": "alphavantage"
       }
     ],
+    "savedAt": "2026-01-19T06:23:59.400Z",
+    "_meta": {
+      "updated_at": "2026-01-19T06:23:59.400Z",
+      "provider": "alphavantage",
+      "status": "fresh"
+    },
+    "payload": {
+      "ok": true,
+      "feature": "top-movers",
+      "ts": "2026-01-19T06:23:59.400Z",
+      "traceId": "seed",
+      "schemaVersion": 1,
+      "cache": {
+        "hit": false,
+        "ttl": 0,
+        "layer": "seed"
+      },
+      "upstream": {
+        "url": "https://www.alphavantage.co/query?function=TOP_GAINERS_LOSERS&apikey=REDACTED",
+        "status": 200,
+        "snippet": ""
+      },
+      "rateLimit": {
+        "remaining": "unknown",
+        "reset": null,
+        "estimated": true
+      },
+      "dataQuality": {
+        "status": "LIVE",
+        "reason": "LIVE",
+        "missingFields": []
+      },
+      "meta": {
+        "status": "LIVE",
+        "reason": null
+      },
+      "data": {
+        "updatedAt": "2026-01-19T06:23:59.400Z",
+        "source": "alphavantage",
+        "method": "AlphaVantage TOP_GAINERS_LOSERS.",
+        "crypto": [],
+        "stocks": {
+          "volumeLeaders": [
+            {
+              "symbol": "VERO",
+              "name": "VERO",
+              "price": 7.891,
+              "lastClose": null,
+              "changePercent": 451.8182,
+              "volume": 303920921,
+              "ts": "2026-01-19T06:23:59.399Z",
+              "source": "alphavantage"
+            },
+            {
+              "symbol": "JFBR",
+              "name": "JFBR",
+              "price": 1.29,
+              "lastClose": null,
+              "changePercent": 131.1828,
+              "volume": 232941305,
+              "ts": "2026-01-19T06:23:59.399Z",
+              "source": "alphavantage"
+            },
+            {
+              "symbol": "JAGX",
+              "name": "JAGX",
+              "price": 1.43,
+              "lastClose": null,
+              "changePercent": 87.0504,
+              "volume": 156076026,
+              "ts": "2026-01-19T06:23:59.399Z",
+              "source": "alphavantage"
+            },
+            {
+              "symbol": "MYSEW",
+              "name": "MYSEW",
+              "price": 0.1,
+              "lastClose": null,
+              "changePercent": 81.4882,
+              "volume": 265,
+              "ts": "2026-01-19T06:23:59.399Z",
+              "source": "alphavantage"
+            },
+            {
+              "symbol": "JFBRW",
+              "name": "JFBRW",
+              "price": 0.0259,
+              "lastClose": null,
+              "changePercent": 81.1189,
+              "volume": 230894,
+              "ts": "2026-01-19T06:23:59.399Z",
+              "source": "alphavantage"
+            },
+            {
+              "symbol": "TNMG",
+              "name": "TNMG",
+              "price": 3.91,
+              "lastClose": null,
+              "changePercent": 65.678,
+              "volume": 27524243,
+              "ts": "2026-01-19T06:23:59.399Z",
+              "source": "alphavantage"
+            },
+            {
+              "symbol": "CRGOW",
+              "name": "CRGOW",
+              "price": 0.28,
+              "lastClose": null,
+              "changePercent": 64.7059,
+              "volume": 308598,
+              "ts": "2026-01-19T06:23:59.399Z",
+              "source": "alphavantage"
+            },
+            {
+              "symbol": "BIYA",
+              "name": "BIYA",
+              "price": 7.05,
+              "lastClose": null,
+              "changePercent": 56.3193,
+              "volume": 20236341,
+              "ts": "2026-01-19T06:23:59.399Z",
+              "source": "alphavantage"
+            },
+            {
+              "symbol": "CREVW",
+              "name": "CREVW",
+              "price": 0.0107,
+              "lastClose": null,
+              "changePercent": 55.0725,
+              "volume": 4622,
+              "ts": "2026-01-19T06:23:59.399Z",
+              "source": "alphavantage"
+            },
+            {
+              "symbol": "OABIW",
+              "name": "OABIW",
+              "price": 0.115,
+              "lastClose": null,
+              "changePercent": 53.1292,
+              "volume": 4,
+              "ts": "2026-01-19T06:23:59.399Z",
+              "source": "alphavantage"
+            }
+          ],
+          "volumeLaggards": [
+            {
+              "symbol": "THH",
+              "name": "THH",
+              "price": 0.9601,
+              "lastClose": null,
+              "changePercent": -87.3671,
+              "volume": 26725728,
+              "ts": "2026-01-19T06:23:59.400Z",
+              "source": "alphavantage"
+            },
+            {
+              "symbol": "SPHL",
+              "name": "SPHL",
+              "price": 7.43,
+              "lastClose": null,
+              "changePercent": -57.3234,
+              "volume": 3927523,
+              "ts": "2026-01-19T06:23:59.400Z",
+              "source": "alphavantage"
+            },
+            {
+              "symbol": "AUUDW",
+              "name": "AUUDW",
+              "price": 0.0054,
+              "lastClose": null,
+              "changePercent": -53.8462,
+              "volume": 210263,
+              "ts": "2026-01-19T06:23:59.400Z",
+              "source": "alphavantage"
+            },
+            {
+              "symbol": "LVROW",
+              "name": "LVROW",
+              "price": 0.0151,
+              "lastClose": null,
+              "changePercent": -43.8662,
+              "volume": 1180,
+              "ts": "2026-01-19T06:23:59.400Z",
+              "source": "alphavantage"
+            },
+            {
+              "symbol": "NUVB+",
+              "name": "NUVB+",
+              "price": 0.0301,
+              "lastClose": null,
+              "changePercent": -40.9804,
+              "volume": 50690,
+              "ts": "2026-01-19T06:23:59.400Z",
+              "source": "alphavantage"
+            },
+            {
+              "symbol": "ANPA",
+              "name": "ANPA",
+              "price": 99.66,
+              "lastClose": null,
+              "changePercent": -36.8801,
+              "volume": 120811,
+              "ts": "2026-01-19T06:23:59.400Z",
+              "source": "alphavantage"
+            },
+            {
+              "symbol": "CAPTW",
+              "name": "CAPTW",
+              "price": 0.0126,
+              "lastClose": null,
+              "changePercent": -36.6834,
+              "volume": 50,
+              "ts": "2026-01-19T06:23:59.400Z",
+              "source": "alphavantage"
+            },
+            {
+              "symbol": "LCFYW",
+              "name": "LCFYW",
+              "price": 2.84,
+              "lastClose": null,
+              "changePercent": -35.4545,
+              "volume": 11858,
+              "ts": "2026-01-19T06:23:59.400Z",
+              "source": "alphavantage"
+            },
+            {
+              "symbol": "DFSCW",
+              "name": "DFSCW",
+              "price": 0.0257,
+              "lastClose": null,
+              "changePercent": -34.9367,
+              "volume": 19158,
+              "ts": "2026-01-19T06:23:59.400Z",
+              "source": "alphavantage"
+            },
+            {
+              "symbol": "MLEC",
+              "name": "MLEC",
+              "price": 5.05,
+              "lastClose": null,
+              "changePercent": -34.4156,
+              "volume": 585333,
+              "ts": "2026-01-19T06:23:59.400Z",
+              "source": "alphavantage"
+            }
+          ],
+          "gainers": [
+            {
+              "symbol": "VERO",
+              "name": "VERO",
+              "price": 7.891,
+              "lastClose": null,
+              "changePercent": 451.8182,
+              "volume": 303920921,
+              "ts": "2026-01-19T06:23:59.399Z",
+              "source": "alphavantage"
+            },
+            {
+              "symbol": "JFBR",
+              "name": "JFBR",
+              "price": 1.29,
+              "lastClose": null,
+              "changePercent": 131.1828,
+              "volume": 232941305,
+              "ts": "2026-01-19T06:23:59.399Z",
+              "source": "alphavantage"
+            },
+            {
+              "symbol": "JAGX",
+              "name": "JAGX",
+              "price": 1.43,
+              "lastClose": null,
+              "changePercent": 87.0504,
+              "volume": 156076026,
+              "ts": "2026-01-19T06:23:59.399Z",
+              "source": "alphavantage"
+            },
+            {
+              "symbol": "MYSEW",
+              "name": "MYSEW",
+              "price": 0.1,
+              "lastClose": null,
+              "changePercent": 81.4882,
+              "volume": 265,
+              "ts": "2026-01-19T06:23:59.399Z",
+              "source": "alphavantage"
+            },
+            {
+              "symbol": "JFBRW",
+              "name": "JFBRW",
+              "price": 0.0259,
+              "lastClose": null,
+              "changePercent": 81.1189,
+              "volume": 230894,
+              "ts": "2026-01-19T06:23:59.399Z",
+              "source": "alphavantage"
+            },
+            {
+              "symbol": "TNMG",
+              "name": "TNMG",
+              "price": 3.91,
+              "lastClose": null,
+              "changePercent": 65.678,
+              "volume": 27524243,
+              "ts": "2026-01-19T06:23:59.399Z",
+              "source": "alphavantage"
+            },
+            {
+              "symbol": "CRGOW",
+              "name": "CRGOW",
+              "price": 0.28,
+              "lastClose": null,
+              "changePercent": 64.7059,
+              "volume": 308598,
+              "ts": "2026-01-19T06:23:59.399Z",
+              "source": "alphavantage"
+            },
+            {
+              "symbol": "BIYA",
+              "name": "BIYA",
+              "price": 7.05,
+              "lastClose": null,
+              "changePercent": 56.3193,
+              "volume": 20236341,
+              "ts": "2026-01-19T06:23:59.399Z",
+              "source": "alphavantage"
+            },
+            {
+              "symbol": "CREVW",
+              "name": "CREVW",
+              "price": 0.0107,
+              "lastClose": null,
+              "changePercent": 55.0725,
+              "volume": 4622,
+              "ts": "2026-01-19T06:23:59.399Z",
+              "source": "alphavantage"
+            },
+            {
+              "symbol": "OABIW",
+              "name": "OABIW",
+              "price": 0.115,
+              "lastClose": null,
+              "changePercent": 53.1292,
+              "volume": 4,
+              "ts": "2026-01-19T06:23:59.399Z",
+              "source": "alphavantage"
+            }
+          ],
+          "losers": [
+            {
+              "symbol": "THH",
+              "name": "THH",
+              "price": 0.9601,
+              "lastClose": null,
+              "changePercent": -87.3671,
+              "volume": 26725728,
+              "ts": "2026-01-19T06:23:59.400Z",
+              "source": "alphavantage"
+            },
+            {
+              "symbol": "SPHL",
+              "name": "SPHL",
+              "price": 7.43,
+              "lastClose": null,
+              "changePercent": -57.3234,
+              "volume": 3927523,
+              "ts": "2026-01-19T06:23:59.400Z",
+              "source": "alphavantage"
+            },
+            {
+              "symbol": "AUUDW",
+              "name": "AUUDW",
+              "price": 0.0054,
+              "lastClose": null,
+              "changePercent": -53.8462,
+              "volume": 210263,
+              "ts": "2026-01-19T06:23:59.400Z",
+              "source": "alphavantage"
+            },
+            {
+              "symbol": "LVROW",
+              "name": "LVROW",
+              "price": 0.0151,
+              "lastClose": null,
+              "changePercent": -43.8662,
+              "volume": 1180,
+              "ts": "2026-01-19T06:23:59.400Z",
+              "source": "alphavantage"
+            },
+            {
+              "symbol": "NUVB+",
+              "name": "NUVB+",
+              "price": 0.0301,
+              "lastClose": null,
+              "changePercent": -40.9804,
+              "volume": 50690,
+              "ts": "2026-01-19T06:23:59.400Z",
+              "source": "alphavantage"
+            },
+            {
+              "symbol": "ANPA",
+              "name": "ANPA",
+              "price": 99.66,
+              "lastClose": null,
+              "changePercent": -36.8801,
+              "volume": 120811,
+              "ts": "2026-01-19T06:23:59.400Z",
+              "source": "alphavantage"
+            },
+            {
+              "symbol": "CAPTW",
+              "name": "CAPTW",
+              "price": 0.0126,
+              "lastClose": null,
+              "changePercent": -36.6834,
+              "volume": 50,
+              "ts": "2026-01-19T06:23:59.400Z",
+              "source": "alphavantage"
+            },
+            {
+              "symbol": "LCFYW",
+              "name": "LCFYW",
+              "price": 2.84,
+              "lastClose": null,
+              "changePercent": -35.4545,
+              "volume": 11858,
+              "ts": "2026-01-19T06:23:59.400Z",
+              "source": "alphavantage"
+            },
+            {
+              "symbol": "DFSCW",
+              "name": "DFSCW",
+              "price": 0.0257,
+              "lastClose": null,
+              "changePercent": -34.9367,
+              "volume": 19158,
+              "ts": "2026-01-19T06:23:59.400Z",
+              "source": "alphavantage"
+            },
+            {
+              "symbol": "MLEC",
+              "name": "MLEC",
+              "price": 5.05,
+              "lastClose": null,
+              "changePercent": -34.4156,
+              "volume": 585333,
+              "ts": "2026-01-19T06:23:59.400Z",
+              "source": "alphavantage"
+            }
+          ],
+          "universe": [
+            "VERO",
+            "JFBR",
+            "JAGX",
+            "MYSEW",
+            "JFBRW",
+            "TNMG",
+            "CRGOW",
+            "BIYA",
+            "CREVW",
+            "OABIW",
+            "NXPLW",
+            "HYT^",
+            "MKDWW",
+            "LCFY",
+            "WGSWW",
+            "NIVFW",
+            "IBRX",
+            "PRFX",
+            "CELG^",
+            "BNAIW",
+            "THH",
+            "SPHL",
+            "AUUDW",
+            "LVROW",
+            "NUVB+",
+            "ANPA",
+            "CAPTW",
+            "LCFYW",
+            "DFSCW",
+            "MLEC",
+            "ITOC",
+            "QUMSR",
+            "WENNW",
+            "KWMWW",
+            "ANGHW",
+            "RAYA",
+            "ROLR",
+            "YOUL",
+            "ADSEW",
+            "AMPGW"
+          ],
+          "provider": "alphavantage"
+        }
+      }
+    },
     "meta": {
       "status": "OK",
-      "updatedAt": "2026-01-18T21:11:52.836Z",
+      "updatedAt": "2026-01-19T06:23:59.400Z",
       "reason": null
     }
   }
