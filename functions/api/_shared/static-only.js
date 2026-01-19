@@ -42,14 +42,27 @@ function applyModuleTransformations(moduleName, parsed) {
   
   // S&P 500 Sectors: Frontend expects "sectors" but snapshot has "items"
   if (moduleName === "sp500-sectors" && result.data?.items && !result.data?.sectors) {
-    result.data.sectors = result.data.items;
-    console.log(`[Transform] sp500-sectors: Mapped items → sectors (${result.data.sectors.length} items)`);
+    result.data.sectors = result.data.items.map(item => ({
+      ...item,
+      // Map changePercent to r1d (1 day return)
+      r1d: item.changePercent || item.r1d || null,
+      r1w: item.r1w || null, // Keep if exists
+      r1m: item.r1m || null,
+      r1y: item.r1y || null
+    }));
+    console.log(`[Transform] sp500-sectors: Mapped items → sectors with r1d field (${result.data.sectors.length} items)`);
   }
   
   // Sector Rotation: Same issue
   if (moduleName === "sector-rotation" && result.data?.items && !result.data?.sectors) {
-    result.data.sectors = result.data.items;
-    console.log(`[Transform] sector-rotation: Mapped items → sectors (${result.data.sectors.length} items)`);
+    result.data.sectors = result.data.items.map(item => ({
+      ...item,
+      r1d: item.changePercent || item.r1d || null,
+      r1w: item.r1w || null,
+      r1m: item.r1m || null,
+      r1y: item.r1y || null
+    }));
+    console.log(`[Transform] sector-rotation: Mapped items → sectors with r1d field (${result.data.sectors.length} items)`);
   }
   
   return result;
