@@ -1,32 +1,47 @@
 {
-  "schemaVersion": "rv-mirror-v1",
-  "mirrorId": "why-moved",
-  "runId": "2026-01-18T12:58:55.456Z",
-  "updatedAt": "2026-01-18T12:58:55.456Z",
-  "asOf": "2026-01-18T12:58:55.456Z",
-  "mode": "EMPTY",
-  "cadence": "daily",
-  "trust": "heuristic",
-  "source": "mirror",
-  "sourceUpstream": "unknown",
-  "dataQuality": "COVERAGE_LIMIT",
-  "delayMinutes": 0,
-  "missingSymbols": [],
-  "errors": [],
-  "notes": [
-    "COVERAGE_LIMIT"
-  ],
-  "whyUnique": "Derived event context from news and anomalies.",
-  "context": {
-    "lookbackWindowDays": 30,
-    "explain": "Derived event context from news and anomalies.",
-    "lastEventAt": null,
-    "lastEventSummary": null
-  },
-  "items": [],
   "meta": {
-    "status": "PARTIAL",
-    "updatedAt": "2026-01-18T12:58:55.456Z",
-    "reason": "COVERAGE_LIMIT"
+    "provider": "unknown",
+    "dataset": "why-moved",
+    "fetchedAt": "2026-01-19T08:00:30.095Z",
+    "ttlSeconds": 3600,
+    "source": "mirror",
+    "runId": "2026-01-19T08:00:30.095Z",
+    "cost": null
+  },
+  "raw": {
+    "schemaVersion": "rv-mirror-v1",
+    "mirrorId": "why-moved",
+    "provider": "unknown",
+    "dataset": "why-moved",
+    "runId": "2026-01-19T08:00:30.095Z",
+    "fetchedAt": "2026-01-19T08:00:30.095Z",
+    "updatedAt": "2026-01-19T08:00:30.095Z",
+    "asOf": "2026-01-19T08:00:30.095Z",
+    "mode": "EMPTY",
+    "cadence": "daily",
+    "trust": "heuristic",
+    "source": "mirror",
+    "sourceUpstream": "unknown",
+    "ttlSeconds": null,
+    "dataQuality": "COVERAGE_LIMIT",
+    "delayMinutes": 0,
+    "missingSymbols": [],
+    "errors": [],
+    "notes": [
+      "COVERAGE_LIMIT"
+    ],
+    "whyUnique": "Derived event context from news and anomalies.",
+    "context": {
+      "lookbackWindowDays": 30,
+      "explain": "Derived event context from news and anomalies.",
+      "lastEventAt": null,
+      "lastEventSummary": null
+    },
+    "items": [],
+    "meta": {
+      "status": "PARTIAL",
+      "updatedAt": "2026-01-19T08:00:30.095Z",
+      "reason": "COVERAGE_LIMIT"
+    }
   }
 }

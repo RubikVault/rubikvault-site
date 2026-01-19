@@ -2,10 +2,10 @@
   "meta": {
     "provider": "rss",
     "dataset": "news",
-    "fetchedAt": "2026-01-19T07:36:02.948Z",
+    "fetchedAt": "2026-01-19T08:00:30.095Z",
     "ttlSeconds": 3600,
-    "source": "rss",
-    "runId": "2026-01-19T07:36:02.948Z",
+    "source": "mirror",
+    "runId": "2026-01-19T08:00:30.095Z",
     "cost": null
   },
   "raw": {
@@ -13,688 +13,334 @@
     "mirrorId": "news",
     "provider": "rss",
     "dataset": "news",
-    "fetchedAt": "2026-01-19T07:36:02.948Z",
-    "ttlSeconds": 3600,
-    "source": "rss",
-    "runId": "2026-01-19T07:36:02.948Z",
-    "updatedAt": "2026-01-19T07:36:02.948Z",
-    "asOf": "2026-01-19T07:36:02.948Z",
+    "runId": "2026-01-19T08:00:30.095Z",
+    "fetchedAt": "2026-01-19T08:00:30.095Z",
+    "updatedAt": "2026-01-19T08:00:30.095Z",
+    "asOf": "2026-01-19T08:00:30.095Z",
     "mode": "LIVE",
     "cadence": "best_effort",
     "trust": "raw",
+    "source": "mirror",
     "sourceUpstream": "rss",
+    "ttlSeconds": null,
     "dataQuality": "OK",
     "delayMinutes": 0,
     "missingSymbols": [],
     "errors": [],
     "notes": [],
-    "whyUnique": "Aggregated RSS headlines (English-only filter).",
-    "context": {},
+    "whyUnique": "RSS-only headlines for key market sources.",
+    "context": {
+      "feeds": [
+        "WSJ",
+        "CNBC",
+        "YH"
+      ]
+    },
     "items": [
       {
-        "id": "4fa211d58c052212b57a20242126b67404d9d3510617963359033e20652110dd",
-        "title": "AKTIEN IM FOKUS: Autosektor stark unter Druck wegen Zollandrohung",
-        "url": "https://www.finanzen.net/nachricht/aktien/aktien-im-fokus-autosektor-stark-unter-druck-wegen-zollandrohung-15422207",
-        "publishedAt": "2026-01-19T07:25:38.000Z",
-        "source": {
-          "name": "finanzen.net News",
-          "domain": "www.finanzen.net"
-        },
-        "topic": null
+        "title": "Stocks Sink in Broad AI Rout Sparked by China's DeepSeek",
+        "url": "https://www.wsj.com/articles/nikkei-may-rise-as-weak-yen-raises-earnings-hopes-776a8056?mod=rss_markets_main",
+        "source": "WSJ",
+        "publishedAt": "Mon, 27 Jan 2025 14:26:00 -0500"
       },
       {
-        "id": "08f913027193748b7ab56ebdfb42b154e928f24ef3edd12080bf6167ef59508a",
-        "title": "25.000-Punkte-Marke in Gefahr? DAX dürfte Trumps Zolldrohungen voraussichtlich absacken",
-        "url": "https://www.finanzen.net/nachricht/aktien/dax-aktuell-25-000-punkte-marke-in-gefahr-dax-duerfte-trumps-zolldrohungen-voraussichtlich-absacken-15416619",
-        "publishedAt": "2026-01-19T07:25:00.000Z",
-        "source": {
-          "name": "finanzen.net News",
-          "domain": "www.finanzen.net"
-        },
-        "topic": "dax"
+        "title": "Comex Gold, Silver Settle Lower",
+        "url": "https://www.wsj.com/articles/gold-edges-lower-feds-rate-decision-in-focus-09dbfceb?mod=rss_markets_main",
+        "source": "WSJ",
+        "publishedAt": "Mon, 27 Jan 2025 14:01:00 -0500"
       },
       {
-        "id": "f5cbf65e18eb1e987577ab69fa3f2cfd62258c2f921f992531550a1ae7326fc9",
-        "title": "MÄRKTE ASIEN/Keine klare Tendenz - Zwischen China-BIP und Zollsorgen",
-        "url": "https://www.finanzen.net/nachricht/aktien/maerkte-asien-keine-klare-tendenz-zwischen-china-bip-und-zollsorgen-15422203",
-        "publishedAt": "2026-01-19T07:23:41.000Z",
-        "source": {
-          "name": "finanzen.net News",
-          "domain": "www.finanzen.net"
-        },
-        "topic": null
+        "title": "DeepSeek Won't Sink U.S. AI Titans",
+        "url": "https://www.wsj.com/articles/deepseek-us-ai-stocks-nvidia-broadcom-6cdfae81?mod=rss_markets_main",
+        "source": "WSJ",
+        "publishedAt": "Mon, 27 Jan 2025 13:12:00 -0500"
       },
       {
-        "id": "a65acc364086a6a7a07ae35413908c6b89dc3b86cf04ba426569511ee1c57ce9",
-        "title": "Der neue WhatsApp-Channel von finanzen.net ist da - jetzt abonnieren!",
-        "url": "https://www.finanzen.net/nachricht/aktien/top-news-im-ueberblick-der-neue-whatsapp-channel-von-finanzen-net-ist-da-jetzt-abonnieren-13733006",
-        "publishedAt": "2026-01-19T07:23:00.000Z",
-        "source": {
-          "name": "finanzen.net News",
-          "domain": "www.finanzen.net"
-        },
-        "topic": null
+        "title": "Financial Services Roundup: Market Talk",
+        "url": "https://www.wsj.com/articles/financial-services-roundup-market-talk-94f52cba?mod=rss_markets_main",
+        "source": "WSJ",
+        "publishedAt": "Mon, 27 Jan 2025 12:27:00 -0500"
       },
       {
-        "id": "f77eb8cc4227ef3869c744774d02d1db4a223d1f4f6eb9155f65eae5751712ef",
-        "title": "HT5-Aktie: Unternehmen will mit Tessiner Technologiefirma Centiel fusionieren",
-        "url": "https://www.finanzen.net/nachricht/aktien/ht5-aktie-unternehmen-will-mit-tessiner-technologiefirma-centiel-fusionieren-15422208",
-        "publishedAt": "2026-01-19T07:22:37.000Z",
-        "source": {
-          "name": "finanzen.net News",
-          "domain": "www.finanzen.net"
-        },
-        "topic": null
+        "title": "Arabica Coffee Prices Hit Record on U.S., Colombia Tariff Spat",
+        "url": "https://www.wsj.com/articles/arabica-coffee-prices-hit-new-high-on-u-s-colombia-tariff-spat-582446fe?mod=rss_markets_main",
+        "source": "WSJ",
+        "publishedAt": "Mon, 27 Jan 2025 12:20:00 -0500"
       },
       {
-        "id": "bf84ed72dcda1c00733f0fa6bfe1734e08a28163f2df729a68d41bf536e78aac",
-        "title": "DAX – kurzfristig abwärts",
-        "url": "https://www.finanzen.net/nachricht/trading/dax-kurzfristig-abwrts-15422206",
-        "publishedAt": "2026-01-19T07:22:23.000Z",
-        "source": {
-          "name": "finanzen.net News",
-          "domain": "www.finanzen.net"
-        },
-        "topic": "dax"
+        "title": "Swiss franc, Japanese yen Rise as DeepSeek News Boosts Safe Havens",
+        "url": "https://www.wsj.com/articles/safe-haven-currencies-strengthen-amid-fears-over-global-tariffs-9964e17a?mod=rss_markets_main",
+        "source": "WSJ",
+        "publishedAt": "Mon, 27 Jan 2025 09:55:00 -0500"
       },
       {
-        "id": "4e5b9d5bbc3c2422cd2765e874f492c5415d254a8c36c51eae73e31a45c036da",
-        "title": "DAX – kurzfristig abwärts",
-        "url": "https://www.finanzen.net/nachricht/zertifikate/dax-kurzfristig-abwrts-15422205",
-        "publishedAt": "2026-01-19T07:22:23.000Z",
-        "source": {
-          "name": "finanzen.net News",
-          "domain": "www.finanzen.net"
-        },
-        "topic": "dax"
+        "title": "Natural Gas Falls on Shifting Weather Forecasts",
+        "url": "https://www.wsj.com/articles/u-s-natural-gas-futures-fall-on-shifting-weather-forecasts-1ef3e457?mod=rss_markets_main",
+        "source": "WSJ",
+        "publishedAt": "Mon, 27 Jan 2025 09:05:00 -0500"
       },
       {
-        "id": "7ff09964b2536efe6728001f2d1b2f321e7876bc49bb78d82d61cc6873dbb59e",
-        "title": "DAX – kurzfristig abwärts",
-        "url": "https://www.finanzen.net/nachricht/aktien/dax-kurzfristig-abwrts-15422204",
-        "publishedAt": "2026-01-19T07:22:23.000Z",
-        "source": {
-          "name": "finanzen.net News",
-          "domain": "www.finanzen.net"
-        },
-        "topic": "dax"
+        "title": "Building-Products Distributor QXO Launches Hostile Bid for Beacon",
+        "url": "https://www.wsj.com/articles/building-products-distributor-qxo-launching-hostile-bid-for-beacon-de024410?mod=rss_markets_main",
+        "source": "WSJ",
+        "publishedAt": "Mon, 27 Jan 2025 08:28:00 -0500"
       },
       {
-        "id": "81d19460dd29fc20b61783e33f4ec44089864325a4fa3b3b10969b9f45f333c9",
-        "title": "Richemont Sector Perform",
-        "url": "https://www.finanzen.net/analyse/richemont_sector_perform-rbc_capital_markets_1053837",
-        "publishedAt": "2026-01-19T07:21:14.000Z",
-        "source": {
-          "name": "finanzen.net Analysen",
-          "domain": "www.finanzen.net"
-        },
-        "topic": null
+        "title": "Natural-Gas Firm Diversified Energy Strikes Deal for Permian Basin Player",
+        "url": "https://www.wsj.com/articles/natural-gas-firm-diversified-energy-nears-deal-for-permian-basin-player-4c1c5ff5?mod=rss_markets_main",
+        "source": "WSJ",
+        "publishedAt": "Mon, 27 Jan 2025 06:57:00 -0500"
       },
       {
-        "id": "f54a4835bfdb5adc25c009e89f9ec01edf5b5fc874417daae5c73d70e2813b75",
-        "title": "EUREX/Bund-Future im Verlauf höher - Bild hellt sich auf",
-        "url": "https://www.finanzen.net/nachricht/anleihen/EUREX-Bund-Future-im-Verlauf-hoeher-Bild-hellt-sich-auf-15422201",
-        "publishedAt": "2026-01-19T07:20:41.000Z",
-        "source": {
-          "name": "finanzen.net News",
-          "domain": "www.finanzen.net"
-        },
-        "topic": "rates"
+        "title": "What's New This Tax Season That Can Save You Money",
+        "url": "https://www.wsj.com/articles/tax-season-2024-irs-filing-dates-explained-628a8b37?mod=rss_markets_main",
+        "source": "WSJ",
+        "publishedAt": "Mon, 27 Jan 2025 05:30:00 -0500"
       },
       {
-        "id": "1ed6b07bcbdb44f9762872b1146017f8e0ac09d94e4d2176aea3ac0e013d4dc8",
-        "title": "EUREX/Bund-Future im Verlauf höher - Bild hellt sich auf",
-        "url": "https://www.finanzen.net/nachricht/aktien/eurex-bund-future-im-verlauf-hoeher-bild-hellt-sich-auf-15422200",
-        "publishedAt": "2026-01-19T07:20:41.000Z",
-        "source": {
-          "name": "finanzen.net News",
-          "domain": "www.finanzen.net"
-        },
-        "topic": "rates"
+        "title": "Chinese Investors With Few Options Turn to Dividends",
+        "url": "https://www.wsj.com/articles/chinese-investors-with-few-options-turn-to-dividends-ad31dcc4?mod=rss_markets_main",
+        "source": "WSJ",
+        "publishedAt": "Mon, 27 Jan 2025 05:30:00 -0500"
       },
       {
-        "id": "aa9a6127a04bf59b93af9aa0001beca8164595cf457ce906f932b30994a79402",
-        "title": "Warum Industrieunternehmen immer mehr zu Dienstleistern werden",
-        "url": "https://www.tagesschau.de/wirtschaft/unternehmen/studie-ifo-institut-dienstleistungen-100.html",
-        "publishedAt": "2026-01-19T07:19:30.000Z",
-        "source": {
-          "name": "Tagesschau",
-          "domain": "www.tagesschau.de"
-        },
-        "topic": null
+        "title": "U.S. Treasury Yields Fall But Direction for Long-End Yields Still Seen Upward",
+        "url": "https://www.wsj.com/articles/jgbs-consolidate-supported-by-u-s-treasurys-gains-7edccc7d?mod=rss_markets_main",
+        "source": "WSJ",
+        "publishedAt": "Mon, 27 Jan 2025 05:02:00 -0500"
       },
       {
-        "id": "bfceefe6b16b2687fc73b8090fad03998f8d95017c06b0fe03ecd392fb1b18f5",
-        "title": "Stellantis Buy",
-        "url": "https://www.finanzen.net/analyse/stellantis_buy-joh_berenberg_gossler__co_kg_berenberg_bank__1053836",
-        "publishedAt": "2026-01-19T07:16:14.000Z",
-        "source": {
-          "name": "finanzen.net Analysen",
-          "domain": "www.finanzen.net"
-        },
-        "topic": null
+        "title": "Russia's Crude Exports Fairly Stable Despite U.S. Sanctions, Goldman Says",
+        "url": "https://www.wsj.com/articles/oil-futures-fall-after-trump-calls-for-tariffs-on-colombia-5b2a178c?mod=rss_markets_main",
+        "source": "WSJ",
+        "publishedAt": "Mon, 27 Jan 2025 04:46:00 -0500"
       },
       {
-        "id": "c5c791113b752e1c8837e528473d0cd65475a53575d1ae2e0ea5aa3ef33bf201",
-        "title": "Dax startet nach Zoll-Drohungen gut ein Prozent tiefer in den Handel",
-        "url": "https://www.onvista.de/news/2026/01-19-dax-startet-nach-zoll-drohungen-gut-ein-prozent-tiefer-in-den-handel-41121301-19-26470025",
-        "publishedAt": "2026-01-19T07:15:35.000Z",
-        "source": {
-          "name": "OnVista",
-          "domain": "www.onvista.de"
-        },
-        "topic": "dax"
+        "title": "The Extra Reward for Owning Stocks Over Bonds Has Disappeared",
+        "url": "https://www.wsj.com/articles/the-extra-reward-for-owning-stocks-over-bonds-has-disappeared-c3f9c223?mod=rss_markets_main",
+        "source": "WSJ",
+        "publishedAt": "Mon, 27 Jan 2025 01:05:00 -0500"
       },
       {
-        "id": "c384eb907293abf1df2c167e6453b387b9f5c973de1f7e880621d1af535fb7df",
-        "title": "Aktien Frankfurt Ausblick: Dax rutscht wegen Zollsorgen unter 25.000 Punkte - boerse.de - boerse.de",
-        "url": "https://news.google.com/rss/articles/CBMitwFBVV95cUxOZkdWNTdoNVhpSldXY3pVSnR6eTJuSDFRTkRtNjByQndGYldjeURtQ3kxWl9ZNGwtZ1lxYjFnV0h0RjJZOFNXQzJrdWk0VURfcTZzd2ZCakdNUWtFUGxMR28wWENFMmIxRDFSa1h1akY0bWhjVzN1S2hDVDlBMVp5SXNLMnp2WFBMSTJ4UGZISHNNTlBNSk80NjFwVWZuVEl6NGwzMTFYS01ZVlV5MjdsSWRybEdiV1nSAbwBQVVfeXFMTVhKVlg3Vl9oN2tQc2trb2xkUEtmVVFZcFk4TkttOGJDeUxPUzVCdlNoYkxYVVpQdnA5ZGpLSnp4ZlppTmFzdUZFYXplWks5NmVKNGFpZmZPUWpud190bEE1Q1ZZUXBxOVNEaXo0VjlITU1vY2NzZnRISEoyeDZwYUxiU3Z5Z2h2YzU3OW1UWGZ6Uzl3Y29id3BqUDRHSmpiVHpoYUZRYlVUOHh2VUJ4NXNHdHROa0dDSXh2TEI?oc=5",
-        "publishedAt": "2026-01-19T07:12:00.000Z",
-        "source": {
-          "name": "Google News (Markets)",
-          "domain": "news.google.com"
-        },
-        "topic": "dax"
+        "title": "Heard on the Street's Stock-Picking Series",
+        "url": "https://www.wsj.com/articles/heard-on-the-streets-stock-picking-series-98f04640?mod=rss_markets_main",
+        "source": "WSJ",
+        "publishedAt": "Sun, 26 Jan 2025 22:33:00 -0500"
       },
       {
-        "id": "eb363480926273135b675693cb21d04cadae251c5deefb934ba8f604dc665867",
-        "title": "Renault Hold",
-        "url": "https://www.finanzen.net/analyse/renault_hold-joh_berenberg_gossler__co_kg_berenberg_bank__1053835",
-        "publishedAt": "2026-01-19T07:11:15.000Z",
-        "source": {
-          "name": "finanzen.net Analysen",
-          "domain": "www.finanzen.net"
-        },
-        "topic": null
+        "title": "What Will It Take for Home Buyers to Start Asking for a Disaster Discount?",
+        "url": "https://www.wsj.com/articles/what-will-it-take-for-home-buyers-to-start-asking-for-a-disaster-discount-c662cb96?mod=rss_markets_main",
+        "source": "WSJ",
+        "publishedAt": "Sun, 26 Jan 2025 06:00:00 -0500"
       },
       {
-        "id": "b815b07d6a80ddfe5e13d29117eafcf1fe56e01861c5bdc61fcd3b54e0940797",
-        "title": "Volkswagen (VW) vz Buy",
-        "url": "https://www.finanzen.net/analyse/volkswagen_vw_vz_buy-joh_berenberg_gossler__co_kg_berenberg_bank__1053834",
-        "publishedAt": "2026-01-19T07:11:14.000Z",
-        "source": {
-          "name": "finanzen.net Analysen",
-          "domain": "www.finanzen.net"
-        },
-        "topic": null
+        "title": "Now Wanted in Silicon Valley: Ho-Hum Businesses With Thin Profit Margins",
+        "url": "https://www.wsj.com/articles/now-wanted-in-silicon-valley-ho-hum-businesses-with-thin-profit-margins-ab07de5f?mod=rss_markets_main",
+        "source": "WSJ",
+        "publishedAt": "Sun, 26 Jan 2025 05:30:00 -0500"
       },
       {
-        "id": "5c13b9a8615cb3c033c371a580316e7108e7b8d2f8bd008833e188c4cd5e6964",
-        "title": "Mercedes-Benz Group (ex Daimler) Hold",
-        "url": "https://www.finanzen.net/analyse/mercedes_benz_group_ex_daimler_hold-joh_berenberg_gossler__co_kg_berenberg_bank__1053833",
-        "publishedAt": "2026-01-19T07:06:18.000Z",
-        "source": {
-          "name": "finanzen.net Analysen",
-          "domain": "www.finanzen.net"
-        },
-        "topic": null
+        "title": "In China, a Cat-and-Mouse Game to Rein In Crypto",
+        "url": "https://www.wsj.com/articles/china-cryptocurrency-market-trading-restrictions-3e050cd9?mod=rss_markets_main",
+        "source": "WSJ",
+        "publishedAt": "Sun, 26 Jan 2025 00:01:00 -0500"
       },
       {
-        "id": "fc55e62ff37f9b52ca0bdee18d2eb14cc38d65760897887d5526b4b995be434f",
-        "title": "BMW Hold",
-        "url": "https://www.finanzen.net/analyse/bmw_hold-joh_berenberg_gossler__co_kg_berenberg_bank__1053832",
-        "publishedAt": "2026-01-19T07:06:17.000Z",
-        "source": {
-          "name": "finanzen.net Analysen",
-          "domain": "www.finanzen.net"
-        },
-        "topic": null
+        "title": "One House, Three Owners: The Ballooning Cost of the American Dream",
+        "url": "https://www.wsj.com/articles/rising-house-mortgage-costs-north-carolina-home-468a46e5?mod=rss_markets_main",
+        "source": "WSJ",
+        "publishedAt": "Sat, 25 Jan 2025 21:00:00 -0500"
       },
       {
-        "id": "a8f887120e2e4d98cce88533a02d2b7c56b785d03e6ad268ec4be2816e361bdb",
-        "title": "Delivery Hero Overweight",
-        "url": "https://www.finanzen.net/analyse/delivery_hero_overweight-jp_morgan_chase__co__1053831",
-        "publishedAt": "2026-01-19T07:06:17.000Z",
-        "source": {
-          "name": "finanzen.net Analysen",
-          "domain": "www.finanzen.net"
-        },
-        "topic": null
+        "title": "Trump Adds Fuel to Claims That Big Banks Discriminate Against Conservatives",
+        "url": "https://www.wsj.com/articles/trump-big-bank-conservative-bias-accusations-168abb27?mod=rss_markets_main",
+        "source": "WSJ",
+        "publishedAt": "Sat, 25 Jan 2025 05:30:00 -0500"
       },
       {
-        "id": "df662e89c366bf4ea7dcc60bab6c891bb983a0f45e50e8f8b190b3b0cfb342be",
-        "title": "Porsche vz Hold",
-        "url": "https://www.finanzen.net/analyse/porsche_vz_hold-joh_berenberg_gossler__co_kg_berenberg_bank__1053830",
-        "publishedAt": "2026-01-19T07:06:16.000Z",
-        "source": {
-          "name": "finanzen.net Analysen",
-          "domain": "www.finanzen.net"
-        },
-        "topic": null
+        "title": "Trump says 8 European nations face tariffs rising to 25% if Greenland isn't sold to the U.S.",
+        "url": "https://www.cnbc.com/2026/01/17/trump-greenland-tariffs-nato.html",
+        "source": "CNBC",
+        "publishedAt": "Sun, 18 Jan 2026 15:17:16 GMT"
       },
       {
-        "id": "67785b83227ad406aec54e0d38f9c7526e3e4d8144d96525995aea36c9b92f79",
-        "title": "Merck Overweight",
-        "url": "https://www.finanzen.net/analyse/merck_overweight-jp_morgan_chase__co__1053829",
-        "publishedAt": "2026-01-19T07:06:13.000Z",
-        "source": {
-          "name": "finanzen.net Analysen",
-          "domain": "www.finanzen.net"
-        },
-        "topic": null
+        "title": "Supreme Court unlikely to overturn Trump tariffs, his ‘signature economic policy’: Bessent",
+        "url": "https://www.cnbc.com/2026/01/18/trump-tariffs-supreme-court-bessent-trade-greenland.html",
+        "source": "CNBC",
+        "publishedAt": "Sun, 18 Jan 2026 19:04:48 GMT"
       },
       {
-        "id": "4fc4cd618787dad39e61630e0834ecbd648510d376b85c1c98ce1873801d908a",
-        "title": "Bayer Overweight",
-        "url": "https://www.finanzen.net/analyse/bayer_overweight-jp_morgan_chase__co__1053828",
-        "publishedAt": "2026-01-19T07:01:15.000Z",
-        "source": {
-          "name": "finanzen.net Analysen",
-          "domain": "www.finanzen.net"
-        },
-        "topic": null
+        "title": "Trump wants nations to pay $1 billion for permanent Board of Peace seats",
+        "url": "https://www.cnbc.com/2026/01/18/trump-board-of-peace.html",
+        "source": "CNBC",
+        "publishedAt": "Sun, 18 Jan 2026 19:01:42 GMT"
       },
       {
-        "id": "a25f00555058184801259488b8698e0132ac40dfd0c2e0e2c37f9dc5e4391670",
-        "title": "Bayer Hold",
-        "url": "https://www.finanzen.net/analyse/bayer_hold-jefferies__company_inc__1053827",
-        "publishedAt": "2026-01-19T07:01:13.000Z",
-        "source": {
-          "name": "finanzen.net Analysen",
-          "domain": "www.finanzen.net"
-        },
-        "topic": null
+        "title": "Global week ahead: Hopes that cooler heads can prevail in Davos",
+        "url": "https://www.cnbc.com/2026/01/18/trump-davos.html",
+        "source": "CNBC",
+        "publishedAt": "Sun, 18 Jan 2026 11:45:28 GMT"
       },
       {
-        "id": "4786137a26e32e5f37341cefa8ed4e81a59b83db8c3c799ca32ae929388afaee",
-        "title": "Marktbericht: Zoll-Schock auch an der Börse?",
-        "url": "https://www.tagesschau.de/wirtschaft/finanzen/marktberichte/marktbericht-zollsorgen-dax-wallstreet-100.html",
-        "publishedAt": "2026-01-19T07:00:45.000Z",
-        "source": {
-          "name": "Tagesschau",
-          "domain": "www.tagesschau.de"
-        },
-        "topic": null
+        "title": "China fourth-quarter growth slows to 4.5%, weakest in nearly three years as consumption misses forecasts",
+        "url": "https://www.cnbc.com/2026/01/19/china-q4-gdp-growth-2025-target-retail-sales-industrial-output-investment-income-employment.html",
+        "source": "CNBC",
+        "publishedAt": "Mon, 19 Jan 2026 04:48:08 GMT"
       },
       {
-        "id": "0729620fd0537ab5e001ff830ac9fd454f619cdcdd37322e103ea2bd3578be08",
-        "title": "Berlin: Mindestens 2.000 Menschen zeigen Solidarität mit Iranern",
-        "url": "https://www.tagesschau.de/inland/regional/berlin/berlin-demonstration-iran-100.html",
-        "publishedAt": "2026-01-19T07:00:02.000Z",
-        "source": {
-          "name": "Tagesschau",
-          "domain": "www.tagesschau.de"
-        },
-        "topic": null
+        "title": "China birthrate shrinks to lowest on record as policies fail to to lift births",
+        "url": "https://www.cnbc.com/2026/01/19/china-birthrate-record-low-aging-population-fertility-crisis.html",
+        "source": "CNBC",
+        "publishedAt": "Mon, 19 Jan 2026 05:59:55 GMT"
       },
       {
-        "id": "ff1c14765d0cb798aaf7fc1b99bcbdc43afbf9715138edf64fd6428266aed8bb",
-        "title": "Mindestens 39 Tote nach schwerem Zugunglück in Spanien",
-        "url": "https://www.tagesschau.de/ausland/europa/spanien-zugunglueck-116.html",
-        "publishedAt": "2026-01-19T06:45:52.000Z",
-        "source": {
-          "name": "Tagesschau",
-          "domain": "www.tagesschau.de"
-        },
-        "topic": null
+        "title": "Billionaires have ‘outsized’ political influence — and they’re richer than ever, says Oxfam",
+        "url": "https://www.cnbc.com/2026/01/19/billionaires-richer-than-ever-oxfam-inequality-report.html",
+        "source": "CNBC",
+        "publishedAt": "Mon, 19 Jan 2026 00:03:40 GMT"
       },
       {
-        "id": "bb7e8d3a821fb0bb8668217f972b24c26124e52f103c90a290f386cf98499ca8",
-        "title": "Immobilien: So verkaufen Sie Ihre Immobilie nach weniger als zehn Jahren steuerfrei",
-        "url": "https://www.handelsblatt.com/finanzen/immobilien/immobilien-so-laesst-sich-die-spekulationssteuer-umgehen-02/100132692.html",
-        "publishedAt": "2026-01-19T06:08:00.000Z",
-        "source": {
-          "name": "Handelsblatt Finanzen",
-          "domain": "www.handelsblatt.com"
-        },
-        "topic": null
+        "title": "What the U.S.-Taiwan deal means for the island's 'silicon shield'",
+        "url": "https://www.cnbc.com/2026/01/19/us-taiwan-chip-deal-silicon-shield-tsmc-trump-tapei-ai-semiconductor-supply-chain.html",
+        "source": "CNBC",
+        "publishedAt": "Mon, 19 Jan 2026 01:38:58 GMT"
       },
       {
-        "id": "f477c63b50e7697c2f8048ae1cc94695732ea8a5b78c5a00f6be45bc81986f10",
-        "title": "Börse am 19. Januar: Trumps neue Zölle: Sechs Punkte, die für Anleger heute wichtig sind",
-        "url": "https://www.handelsblatt.com/finanzen/maerkte/marktberichte/dax-und-boerse-aktuell-sechs-punkte-die-fuer-anleger-heute-wichtig-sind/100002161.html",
-        "publishedAt": "2026-01-19T05:23:39.000Z",
-        "source": {
-          "name": "Handelsblatt Finanzen",
-          "domain": "www.handelsblatt.com"
-        },
-        "topic": null
+        "title": "He worked four blue-collar jobs in his teens to stay afloat. Today, his fintech startup is worth $8 billion",
+        "url": "https://www.cnbc.com/2026/01/19/jack-zhang-helped-build-a-8-billion-fintech-startup-called-airwallex.html",
+        "source": "CNBC",
+        "publishedAt": "Sun, 18 Jan 2026 23:59:40 GMT"
       },
       {
-        "id": "a0ff92cff9a372bdcab8f3342ace55994bff24952bbabe4afa31efd8bee87648",
-        "title": "Geschäfts- und Quartalsberichte heute, 19.01.2026",
-        "url": "https://www.onvista.de/news/2026/01-19-finanzberichte-heute-19-01-2026-41121301-19-26469990",
-        "publishedAt": "2026-01-19T05:10:00.000Z",
-        "source": {
-          "name": "OnVista",
-          "domain": "www.onvista.de"
-        },
-        "topic": null
+        "title": "New $6,000 senior deduction offers an ‘incredible, valuable opportunity,’ CPA says: How to make the most of it",
+        "url": "https://www.cnbc.com/2026/01/18/big-beautiful-bill-senior-deduction.html",
+        "source": "CNBC",
+        "publishedAt": "Sun, 18 Jan 2026 13:30:01 GMT"
       },
       {
-        "id": "b7be33cde5b19bd90c9e9caa714aef77120e476eb2b644deb39bc05b2a4b8e90",
-        "title": "Dividendenkalender heute, 19.01.2026",
-        "url": "https://www.onvista.de/news/2026/01-19-dividendenalarm-heute-19-01-2026-41121301-19-26469988",
-        "publishedAt": "2026-01-19T05:00:00.000Z",
-        "source": {
-          "name": "OnVista",
-          "domain": "www.onvista.de"
-        },
-        "topic": null
+        "title": "Why South Korean noodle companies are betting on an overseas appetite for growth",
+        "url": "https://www.cnbc.com/2026/01/19/south-korea-instant-noodles-ramyun-food-ramyeon-nongshim-samyang-buldak-ottogi-jin-ramen.html",
+        "source": "CNBC",
+        "publishedAt": "Sun, 18 Jan 2026 23:14:02 GMT"
       },
       {
-        "id": "88280a6c81d08b7dd7f21fc38f845f2ee441580b205dd2810b8fa714e9f02dbd",
-        "title": "Grönland-Streit: EU sucht nach starker Antwort auf Trump",
-        "url": "https://www.tagesschau.de/ausland/europa/eu-trump-zoelle-groenland-100.html",
-        "publishedAt": "2026-01-19T03:56:51.000Z",
-        "source": {
-          "name": "Tagesschau",
-          "domain": "www.tagesschau.de"
-        },
-        "topic": null
+        "title": "Democrat Khanna refloats bill to block investors from buying up homes after Trump proposal",
+        "url": "https://www.cnbc.com/2026/01/18/trump-khanna-housing-investor-ban.html",
+        "source": "CNBC",
+        "publishedAt": "Sun, 18 Jan 2026 22:00:31 GMT"
       },
       {
-        "id": "03b3444a0e636b185ce3322606b3fe4bacb18d18f25ac999f363d78f439b1c83",
-        "title": "Tote bei Waldbränden in Chile",
-        "url": "https://www.tagesschau.de/ausland/amerika/waldbraende-chile-112.html",
-        "publishedAt": "2026-01-19T03:47:41.000Z",
-        "source": {
-          "name": "Tagesschau",
-          "domain": "www.tagesschau.de"
-        },
-        "topic": null
+        "title": "Trump threatens to sue JPMorgan Chase for 'debanking' him",
+        "url": "https://www.cnbc.com/2026/01/17/trump-jpmorgan-chase-debanking.html",
+        "source": "CNBC",
+        "publishedAt": "Sun, 18 Jan 2026 13:47:50 GMT"
       },
       {
-        "id": "a01f2801fd6ef1deec11ff379563dbecec5d58e407aa807dfb03846c35b19763",
-        "title": "Dolly Parton zum 80. - mehr als die \"Barbie der Countrymusik\"",
-        "url": "https://www.tagesschau.de/kultur/dolly-parton-134.html",
-        "publishedAt": "2026-01-19T03:47:00.000Z",
-        "source": {
-          "name": "Tagesschau",
-          "domain": "www.tagesschau.de"
-        },
-        "topic": null
+        "title": "Asia-Pacific markets mostly slip as investors assess Greenland developments and key China data",
+        "url": "https://www.cnbc.com/2026/01/19/asia-markets-china-gdp-greenland-nikkei-kospi-hang-seng.html",
+        "source": "CNBC",
+        "publishedAt": "Mon, 19 Jan 2026 06:46:57 GMT"
       },
       {
-        "id": "3a04ae4e803c945ce4ac1eae6e8b73b9e038387b2f8906a846896eda9d8b7927",
-        "title": "Schnellzüge entgleist: Tote und Verletzte nach Zugunglück in Spanien",
-        "url": "https://www.tagesschau.de/ausland/europa/spanien-zugunglueck-110.html",
-        "publishedAt": "2026-01-19T03:44:03.000Z",
-        "source": {
-          "name": "Tagesschau",
-          "domain": "www.tagesschau.de"
-        },
-        "topic": null
+        "title": "The minimum savings needed to retire at 65 in every U.S. state—it's over $2 million in Hawaii",
+        "url": "https://www.cnbc.com/2026/01/18/minimum-savings-needed-to-retire-at-65-in-every-us-state.html",
+        "source": "CNBC",
+        "publishedAt": "Sun, 18 Jan 2026 14:00:01 GMT"
       },
       {
-        "id": "a449c341a63b7e6fde33945fcf3e979a544595b3432b6bfe6e9d70f450dbebac",
-        "title": "Börse: Nikkei sinkt, Kospi-Index steigt: Asiens Märkte reagieren uneinheitlich auf Trumps Zollandrohungen",
-        "url": "https://www.handelsblatt.com/finanzen/maerkte/marktberichte/asiens-maerkte-reagieren-uneinheitlich-nach-trumps-neuen-eu-zoellen/100192568.html",
-        "publishedAt": "2026-01-19T03:43:31.000Z",
-        "source": {
-          "name": "Handelsblatt Finanzen",
-          "domain": "www.handelsblatt.com"
-        },
-        "topic": null
+        "title": "I talked to many health CEOs out West and see big things for drug stocks",
+        "url": "https://www.cnbc.com/2026/01/18/cramer-i-talked-to-many-health-ceos-out-west-and-see-big-things-for-drug-stocks.html",
+        "source": "CNBC",
+        "publishedAt": "Sun, 18 Jan 2026 21:43:29 GMT"
       },
       {
-        "id": "407a0963b96572eaa8aa5afa0f3282daea27beb275618b8342cffe66e1e6b5c7",
-        "title": "Geldpolitik: Warum ein Finne Favorit für die EZB-Vizepräsidentschaft ist",
-        "url": "https://www.handelsblatt.com/finanzen/geldpolitik/ezb-olli-rehn-ist-favorit-fuer-die-vizepraesidentschaft/100191451.html",
-        "publishedAt": "2026-01-19T03:05:12.000Z",
-        "source": {
-          "name": "Handelsblatt Finanzen",
-          "domain": "www.handelsblatt.com"
-        },
-        "topic": null
+        "title": "Who will be next to implement an Australia-style under-16s social media ban?",
+        "url": "https://www.cnbc.com/2026/01/18/uk-australia-style-under-16s-social-media-ban.html",
+        "source": "CNBC",
+        "publishedAt": "Sun, 18 Jan 2026 12:19:41 GMT"
       },
       {
-        "id": "9b9bc47e7bcc8208d7995e06adddf250c3db62dddb69103ca94ffdffb8f910e2",
-        "title": "Kaum Zuspruch in den USA für Trumps Grönland-Kurs",
-        "url": "https://www.tagesschau.de/ausland/amerika/usa-debatte-groenland-100.html",
-        "publishedAt": "2026-01-19T02:10:16.000Z",
-        "source": {
-          "name": "Tagesschau",
-          "domain": "www.tagesschau.de"
-        },
-        "topic": null
+        "title": "Top Wall Street analysts are confident about these three stocks for the long term",
+        "url": "https://www.cnbc.com/2026/01/18/top-wall-street-analysts-are-confident-about-these-three-stocks-for-the-long-term.html",
+        "source": "CNBC",
+        "publishedAt": "Sun, 18 Jan 2026 12:30:59 GMT"
       },
       {
-        "id": "6c520e30b3eb3d8c02d90d06513ddfc78be4f45950466e18fb1a3b84446d7d08",
-        "title": "Protest gegen neue chinesische Botschaft in London",
-        "url": "https://www.tagesschau.de/ausland/europa/london-streit-um-botschaft-china-100.html",
-        "publishedAt": "2026-01-19T01:19:51.000Z",
-        "source": {
-          "name": "Tagesschau",
-          "domain": "www.tagesschau.de"
-        },
-        "topic": null
+        "title": "Education Department to delay collections on defaulted student loans",
+        "url": "https://www.cnbc.com/2026/01/16/student-loan-collections-paused.html",
+        "source": "CNBC",
+        "publishedAt": "Fri, 16 Jan 2026 22:27:20 GMT"
       },
       {
-        "id": "ff30a3f9381c7d6c38142d9d6fadb14cc92c3a6f23705320c79149da2e771bb1",
-        "title": "Mehr Milliardäre - und die werden immer reicher",
-        "url": "https://www.tagesschau.de/wirtschaft/oxfam-superreiche-100.html",
-        "publishedAt": "2026-01-19T01:19:13.000Z",
-        "source": {
-          "name": "Tagesschau",
-          "domain": "www.tagesschau.de"
-        },
-        "topic": null
+        "title": "Mark Cuban's money helped build Indiana University's football team—he shares 'how championship teams and organizations are built'",
+        "url": "https://www.cnbc.com/2026/01/18/mark-cuban-indiana-football-donor-how-to-build-successful-teams.html",
+        "source": "CNBC",
+        "publishedAt": "Sun, 18 Jan 2026 14:05:01 GMT"
       },
       {
-        "id": "d92b3f2fe3a6850215994c91725406e6f4319b19088784664da415487d1cb583",
-        "title": "Portugal: Seguro und Ventura müssen wohl in Stichwahl um Präsidentenamt",
-        "url": "https://www.tagesschau.de/ausland/europa/portugal-praesident-102.html",
-        "publishedAt": "2026-01-19T00:51:15.000Z",
-        "source": {
-          "name": "Tagesschau",
-          "domain": "www.tagesschau.de"
-        },
-        "topic": null
+        "title": "Disney dominated the 2025 box office. Here's how it could keep the crown in 2026",
+        "url": "https://www.cnbc.com/2026/01/17/disney-dominated-2025-box-office.html",
+        "source": "CNBC",
+        "publishedAt": "Sat, 17 Jan 2026 13:00:01 GMT"
       },
       {
-        "id": "ab49927a9685a84e954c369806e6947803d9647639898d3c1e19171bec093bd2",
-        "title": "++ Grönland-Liveblog: US-Finanzminister spricht von \"schwachen\" Europäern ++",
-        "url": "https://www.tagesschau.de/newsticker/liveblog-groenland-konflikt-100.html",
-        "publishedAt": "2026-01-18T23:08:04.000Z",
-        "source": {
-          "name": "Tagesschau",
-          "domain": "www.tagesschau.de"
-        },
-        "topic": null
+        "title": "Bozoma Saint John says she's successful in her career because she ignored this piece of advice: 'It really shrank me'",
+        "url": "https://www.cnbc.com/2026/01/18/bozoma-saint-john-says-shes-successful-in-her-career-because-she-ignored-this-piece-of-advice.html",
+        "source": "CNBC",
+        "publishedAt": "Sun, 18 Jan 2026 14:30:01 GMT"
       },
       {
-        "id": "6bb5c2dc38cf9c66685de28198de1f3862e8d380c5b1a4aacfbfc3407111af91",
-        "title": "Grönland-Konflikt: Die EU will sich gegen Trump wehren - aber wie?",
-        "url": "https://www.tagesschau.de/ausland/europa/groenland-trump-usa-eu-100.html",
-        "publishedAt": "2026-01-18T21:15:22.000Z",
-        "source": {
-          "name": "Tagesschau",
-          "domain": "www.tagesschau.de"
-        },
-        "topic": null
+        "title": "Smaller companies are rising quickly to challenge Big Tech as AI's best trade",
+        "url": "https://www.cnbc.com/2026/01/17/ai-power-demand-markets-investor-risk.html",
+        "source": "CNBC",
+        "publishedAt": "Sat, 17 Jan 2026 21:43:09 GMT"
       },
       {
-        "id": "ae27d65aa296ae67fd9967f36c6c84ed232b6e29801ed28258e5a17fda06358e",
-        "title": "Syrische Regierung und Kurden schließen offenbar Waffenruhe",
-        "url": "https://www.tagesschau.de/ausland/asien/syrien-waffenruhe-152.html",
-        "publishedAt": "2026-01-18T21:08:44.000Z",
-        "source": {
-          "name": "Tagesschau",
-          "domain": "www.tagesschau.de"
-        },
-        "topic": null
+        "title": "Warren Buffett used to ask college students this question—it can help you become richer and more successful",
+        "url": "https://www.cnbc.com/2026/01/17/warren-buffett-to-maximize-your-potential-ask-yourself-this-question.html",
+        "source": "CNBC",
+        "publishedAt": "Sat, 17 Jan 2026 14:00:02 GMT"
       },
       {
-        "id": "77d9974509a8256c08a56620423660a822471806076466a53c66d5ff2721b330",
-        "title": "Früherer ARD-Korrespondent Friedhelm Brebeck gestorben",
-        "url": "https://www.tagesschau.de/inland/regional/bayern/reporter-friedhelm-brebeck-gestorben-100.html",
-        "publishedAt": "2026-01-18T20:06:50.000Z",
-        "source": {
-          "name": "Tagesschau",
-          "domain": "www.tagesschau.de"
-        },
-        "topic": null
+        "title": "Unexpected expenses take 10% of retirees' income, on average, research shows — many don't have enough cash on hand",
+        "url": "https://www.cnbc.com/2026/01/17/retirees-emergency-savings.html",
+        "source": "CNBC",
+        "publishedAt": "Sat, 17 Jan 2026 13:30:01 GMT"
       },
       {
-        "id": "8a5f7505d8125a67beeff5f5fb99c93469f71ea1aa32aabc87ab9f62a9794bd2",
-        "title": "Syrischer Übergangspräsident sagt Besuch in Deutschland ab",
-        "url": "https://www.tagesschau.de/ausland/asien/syrien-besuch-deutschland-100.html",
-        "publishedAt": "2026-01-18T19:41:41.000Z",
-        "source": {
-          "name": "Tagesschau",
-          "domain": "www.tagesschau.de"
-        },
-        "topic": null
+        "title": "I've studied over 200 kids—here's the No. 1 'magic phrase' that truly teaches kids emotional intelligence",
+        "url": "https://www.cnbc.com/2026/01/18/child-psychologist-the-no-1-magic-phrase-that-truly-teaches-kids-emotional-intelligence.html",
+        "source": "CNBC",
+        "publishedAt": "Sun, 18 Jan 2026 13:50:29 GMT"
       },
       {
-        "id": "216acbebf19281378d6d35610d0b86170f42f1be57b9cf6a205241513873f14d",
-        "title": "Wieso es immer noch Zeit für Gold ist",
-        "url": "https://www.onvista.de/news/2026/01-18-chaotische-weltpolitik-zeit-fuer-gold-41121763-19-26469935",
-        "publishedAt": "2026-01-18T19:30:17.000Z",
-        "source": {
-          "name": "OnVista",
-          "domain": "www.onvista.de"
-        },
-        "topic": null
+        "title": "Led by Texas, New Hampshire, U.S. states race to prove they can put bitcoin on public balance sheet",
+        "url": "https://www.cnbc.com/2026/01/17/texas-us-states-budgets-bitcoin-crypto-strategic-reserve.html",
+        "source": "CNBC",
+        "publishedAt": "Sat, 17 Jan 2026 15:35:04 GMT"
       },
       {
-        "id": "d024a12697fc6ac7e4b45ab68e24e538e1ac8ab0314e4973b2bf3216a9b25858",
-        "title": "WOCHENAUSBLICK 2: US-Zolldrohungen könnten Dax-Rekordfahrt vorerst stoppen - boerse.de - boerse.de",
-        "url": "https://news.google.com/rss/articles/CBMiuAFBVV95cUxNVWV2VE1vbEhyWFRvV20tdlA3QlpQS1gzYjVlSTU2dEx1MWFoeW9sVko3TVlaS2NySk82TVg5STZ4SjNYb1NtS0lHY1Fjc25IeUM0Z3FPSHBNVHBHaERZSFhLeW9IMURjX1ltNDN6Wm9NcU9ySGh5WVBKcjJfOGxfekU4SXdIMmNJdEtMd3dxcDFCWnRWX21GVWdqS3dMNVgzZ1EwTzFXZWtsOFBNQUxBckJUZjBxUVMz0gG-AUFVX3lxTFBRLUlzQXhNYXJHaWl4NHM1SjFjZHdha1VGSmUwaEM3MVV1R2pEN2dkRDNqUllhVzBnSVJtNHg2V0tTTS1mRVBvdGVHbmI0LVlQOWlHRjBMUUttZkdTWHdWY0xCTXB4SXhJLVJvNWdzMlhyVEFyWTB2RVdoLTZVTTlkb0hyeXRhSnlFR0laeEhlVVRRSFBFcVVhUkl1d3VkTU9TOWFHXzg5UlBFenpqRkp0VGtRTndZMzNiSXdRZVE?oc=5",
-        "publishedAt": "2026-01-18T19:05:00.000Z",
-        "source": {
-          "name": "Google News (Markets)",
-          "domain": "news.google.com"
-        },
-        "topic": "dax"
+        "title": "Hassett pivots to possible 'Trump cards' amid credit card interest rate battle with banks",
+        "url": "https://www.cnbc.com/2026/01/16/white-house-hassett-trump-cards-credit-card-battle.html",
+        "source": "CNBC",
+        "publishedAt": "Fri, 16 Jan 2026 19:33:45 GMT"
       },
       {
-        "id": "9a70040859ca7f43b8130e261b1de792828e7996f509b67bd4fc82cb4535a816",
-        "title": "Wie US-Soldaten im Dschungel von Hawaii trainiert werden",
-        "url": "https://www.tagesschau.de/ausland/amerika/hawaii-us-soldaten-100.html",
-        "publishedAt": "2026-01-18T18:02:12.000Z",
-        "source": {
-          "name": "Tagesschau",
-          "domain": "www.tagesschau.de"
-        },
-        "topic": null
+        "title": "Activist Irenic takes a stake in Integer. Here’s what could be next for the company",
+        "url": "https://www.cnbc.com/2026/01/17/activist-irenic-takes-a-stake-in-integer-heres-what-could-be-next-for-the-company.html",
+        "source": "CNBC",
+        "publishedAt": "Sat, 17 Jan 2026 14:18:27 GMT"
       },
       {
-        "id": "7d40a21b4d39d16b325425cdff9ba340261e14b5f8ad3812d8c7636395a071d0",
-        "title": "Behörden in Südafrika rufen nationalen Katastrophenfall aus",
-        "url": "https://www.tagesschau.de/ausland/afrika/suedafrika-hochwasser-katastrophenfall-100.html",
-        "publishedAt": "2026-01-18T17:35:51.000Z",
-        "source": {
-          "name": "Tagesschau",
-          "domain": "www.tagesschau.de"
-        },
-        "topic": null
-      },
-      {
-        "id": "c27979c555adba566fbcdf2c686c286f1fbc5bebdfb42affb407807ab233a0c0",
-        "title": "Aluminium, Kupfer, Nickel: Warum Industriemetalle so teuer sind",
-        "url": "https://www.tagesschau.de/wirtschaft/weltwirtschaft/preise-industriemetalle-100.html",
-        "publishedAt": "2026-01-18T17:03:22.000Z",
-        "source": {
-          "name": "Tagesschau",
-          "domain": "www.tagesschau.de"
-        },
-        "topic": null
-      },
-      {
-        "id": "9da990db1a6672b8033d5a6ce36472fdf576b7db8b7bb10067334d366b821bcd",
-        "title": "Märkte-Insight: Der lange Schatten der Fed – Worauf es für Anleger in den kommenden Tagen und Wochen ankommt",
-        "url": "https://www.handelsblatt.com/finanzen/anlagestrategie/kolumnen/maerkte-insight-der-lange-schatten-der-fed/100190604.html",
-        "publishedAt": "2026-01-18T14:16:33.000Z",
-        "source": {
-          "name": "Handelsblatt Finanzen",
-          "domain": "www.handelsblatt.com"
-        },
-        "topic": "rates"
-      },
-      {
-        "id": "88962a748b07b4a9526277b335e33fb94375c2c96d5fc26f7581b6eb6d825a9a",
-        "title": "Frischer Wind für die Märkte: Erste Börsengänge schon angekündigt - tagesschau.de",
-        "url": "https://news.google.com/rss/articles/CBMiiAFBVV95cUxPbF9HNkE3MVJrRjVRRVZROFZtbVZpLXlYYmZfM0NjRFNSSTBNTzFXcFRzN2dkRzdFd1hhaFVEUkE4SDRRNVZjTnhYbmIxajQwNGtxSjJmenpFcFhoQldXaTQzSzJUalctTk9TQUdxUmZFbjE3a1g2X1hFTThoN2oxTnJjVmxDdVZy?oc=5",
-        "publishedAt": "2026-01-18T03:32:00.000Z",
-        "source": {
-          "name": "Google News (Markets)",
-          "domain": "news.google.com"
-        },
-        "topic": null
-      },
-      {
-        "id": "ec098cbd419c54b7ef3b50df31db6497751232d7476ddcf35a73817795799605",
-        "title": "INDEX-FLASH: Trumps Grönland-Zoll setzt Dax-Indikation deutlich unter Druck - boerse.de - boerse.de",
-        "url": "https://news.google.com/rss/articles/CBMiugFBVV95cUxPLXdjVTJGZU9zNlhzUzlqbkJldlZ0LV9MVVhBZmxlX09LRE12Rlk2ZmdrYmM4RVpFbVdWRG11YUpkUVdscnJ2NXRYTEljZVRYSUhtT0Fla2Zmcmg4Z3psY3FCOFFOeTJ4R3RLR1hwb2Fyd0ZTRURGVVVQMWNYdnhDNnZDZENaNzFvNC1NbzFlVndZTUw1T181Z3AyQzhHNmR6OFFxZmpQLVdfQWZFM0IwZC1kek5kaGM0b1HSAb8BQVVfeXFMT090Z055eldISThBbGhFeFJhVnJCc0NickJNZHh2QXRIY0V6MnN4YU5SUUZCbjlPU1VyWjJERVFYN3ZLM1hiZHpIVDhKYWRPd2ptcWg1U1lOMHZKampKSHRvNHdQanh0NWhDR0kyeExkZUpYdWlQQUZqSjFmWDFMamVKQnl3ZmtqcFNuZTl2SlY1dTQ3U09fNXVTV0tZckp3MVlOdTFKRjluMzBxbWN6Sl9SMHZkcENlYmVXUW1abUk?oc=5",
-        "publishedAt": "2026-01-17T17:35:00.000Z",
-        "source": {
-          "name": "Google News (Markets)",
-          "domain": "news.google.com"
-        },
-        "topic": "dax"
-      },
-      {
-        "id": "2cbd12fd574c84e91103bfa9f5dc810fa95535c4b01497ac43f9ade07887e57d",
-        "title": "Trump kündigt Zölle gegen Deutschland an",
-        "url": "https://www.onvista.de/news/2026/01-17-donald-trump-kuendigt-zoelle-gegen-deutschland-an-41121763-19-26469740",
-        "publishedAt": "2026-01-17T16:47:20.000Z",
-        "source": {
-          "name": "OnVista",
-          "domain": "www.onvista.de"
-        },
-        "topic": null
-      },
-      {
-        "id": "66ca01d691d65cb00d39895da8a2a3c853a0bd4c5681ec9200ca6ff18b7568f0",
-        "title": "Immobilien: Goldgrube Schnee – Skihütten für 34.000 Euro pro Quadratmeter",
-        "url": "https://www.handelsblatt.com/finanzen/immobilien/immobilien-skihuetten-fuer-34.000-euro-pro-quadratmeter/100185376.html",
-        "publishedAt": "2026-01-17T14:35:31.000Z",
-        "source": {
-          "name": "Handelsblatt Finanzen",
-          "domain": "www.handelsblatt.com"
-        },
-        "topic": null
-      },
-      {
-        "id": "a7c9f24c7f5f81e96d8bdf1260af929f25f1047134940648265c347de5cda806",
-        "title": "Immobilien: Comeback der KfW-55-Förderung – Wer jetzt profitiert",
-        "url": "https://www.handelsblatt.com/finanzen/immobilien/immobilien-wie-sie-von-der-kfw-55-foerderung-profitieren-koennen-01/100172428.html",
-        "publishedAt": "2026-01-17T10:48:00.000Z",
-        "source": {
-          "name": "Handelsblatt Finanzen",
-          "domain": "www.handelsblatt.com"
-        },
-        "topic": null
-      },
-      {
-        "id": "8d2302a7329216e00d51256c336282fae78127cfd6501d5340bdac3e87d8477f",
-        "title": "ETF: Den MSCI World verkaufen und später wieder kaufen? Wir haben nachgerechnet, wie sinnvoll das ist",
-        "url": "https://www.handelsblatt.com/finanzen/anlagestrategie/trends/msci-world-wannsollten-sie-ihren-etf-verkaufen-und-spaeter-zurueckkaufen-03/100116029.html",
-        "publishedAt": "2026-01-17T09:46:00.000Z",
-        "source": {
-          "name": "Handelsblatt Finanzen",
-          "domain": "www.handelsblatt.com"
-        },
-        "topic": null
-      },
-      {
-        "id": "fe0605c723f4d2e13dd86e2f8609580cfa43528b86f4b9decbe7b0ac7d85fae8",
-        "title": "Geldanlage: Warum so viele Anleger mit ETFs Geld verlieren",
-        "url": "https://www.handelsblatt.com/finanzen/anlagestrategie/geldanlage-diese-fehler-sollten-sie-bei-der-etf-auswahl-vermeiden-02/100099179.html",
-        "publishedAt": "2026-01-17T08:53:00.000Z",
-        "source": {
-          "name": "Handelsblatt Finanzen",
-          "domain": "www.handelsblatt.com"
-        },
-        "topic": null
-      },
-      {
-        "id": "5f56aef7648c0a7e0aeae2525f6c0b76bc5be8cd9c671e4e78af29a452442b05",
-        "title": "Grönland: Diese Rohstoffprojekte gibt es in Grönland – und das ist ihr Potenzial",
-        "url": "https://www.handelsblatt.com/finanzen/maerkte/devisen-rohstoffe/groenland-diese-rohstoffprojekte-gibt-es-und-das-ist-ihr-potenzial/100189730.html",
-        "publishedAt": "2026-01-17T08:41:02.000Z",
-        "source": {
-          "name": "Handelsblatt Finanzen",
-          "domain": "www.handelsblatt.com"
-        },
-        "topic": null
+        "title": "The founders of billion-dollar AI startups are getting younger — here’s why",
+        "url": "https://www.cnbc.com/2026/01/17/billion-dollar-ai-startup-founders-are-getting-younger-heres-why.html",
+        "source": "CNBC",
+        "publishedAt": "Sat, 17 Jan 2026 09:54:08 GMT"
       }
     ],
     "meta": {
       "status": "OK",
-      "updatedAt": "2026-01-19T07:36:02.948Z",
+      "updatedAt": "2026-01-19T08:00:30.095Z",
       "reason": null
     }
   }
