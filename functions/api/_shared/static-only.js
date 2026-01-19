@@ -32,6 +32,29 @@ function transformV3ToLegacy(v3Snapshot) {
   };
 }
 
+/**
+ * Module-specific transformations for field name mismatches
+ * Some legacy frontends expect different field names than the snapshots provide
+ */
+function applyModuleTransformations(moduleName, parsed) {
+  // Clone to avoid mutation
+  const result = JSON.parse(JSON.stringify(parsed));
+  
+  // S&P 500 Sectors: Frontend expects "sectors" but snapshot has "items"
+  if (moduleName === "sp500-sectors" && result.data?.items && !result.data?.sectors) {
+    result.data.sectors = result.data.items;
+    console.log(`[Transform] sp500-sectors: Mapped items → sectors (${result.data.sectors.length} items)`);
+  }
+  
+  // Sector Rotation: Same issue
+  if (moduleName === "sector-rotation" && result.data?.items && !result.data?.sectors) {
+    result.data.sectors = result.data.items;
+    console.log(`[Transform] sector-rotation: Mapped items → sectors (${result.data.sectors.length} items)`);
+  }
+  
+  return result;
+}
+
 export async function serveStaticJson(req) {
   const url = new URL(req.url);
   const moduleName = url.pathname.replace(/^\/api\//, "").replace(/\/$/, "") || "bundle";
@@ -64,6 +87,9 @@ export async function serveStaticJson(req) {
           parsed = transformV3ToLegacy(parsed);
           transformed = true;
         }
+        
+        // Apply module-specific transformations (field name mappings, etc.)
+        parsed = applyModuleTransformations(moduleName, parsed);
         
         const headers = {
           "Content-Type": "application/json",
