@@ -584,13 +584,7 @@
     })();
     let INTERNAL_TOKEN = urlToken || storedToken || '';
     const RV_DASH_RUN_ID = `dash-${Date.now().toString(36)}`;
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/7b213daf-87b9-4130-9bc8-db3131856ffb',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'internal-dashboard:init',message:'dashboard init',data:{path:window.location.pathname,hasToken:!!INTERNAL_TOKEN},timestamp:Date.now(),sessionId:'debug-session',runId:RV_DASH_RUN_ID,hypothesisId:'H1'})}).catch(()=>{});
-    // #endregion
     const RV_DASH_RUN_ID = `dash-${Date.now().toString(36)}`;
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/7b213daf-87b9-4130-9bc8-db3131856ffb',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'internal-dashboard:586',message:'dashboard init',data:{path:window.location.pathname,hasToken:!!INTERNAL_TOKEN,title:document.title},timestamp:Date.now(),sessionId:'debug-session',runId:RV_DASH_RUN_ID,hypothesisId:'H1'})}).catch(()=>{});
-    // #endregion
 
     const withToken = (url) => {
       if (!INTERNAL_TOKEN) return url;
@@ -792,9 +786,6 @@
         itemsCount: rvciLatest?.data?.items?.length || 0
       };
 
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/7b213daf-87b9-4130-9bc8-db3131856ffb',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'internal-dashboard:auditActiveBlocks',message:'active blocks audit',data:{sp500:sp500Info,tech:techInfo,alpha:alphaInfo,marketphase:marketphaseInfo,rvciLatest:rvciLatestInfo},timestamp:Date.now(),sessionId:'debug-session',runId:RV_DASH_RUN_ID,hypothesisId:'H2'})}).catch(()=>{});
-      // #endregion
     }
 
     async function auditActiveBlocks() {
@@ -840,9 +831,6 @@
         itemsCount: rvciLatest?.data?.items?.length || 0
       };
 
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/7b213daf-87b9-4130-9bc8-db3131856ffb',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'internal-dashboard:auditActiveBlocks',message:'active blocks audit',data:{sp500:sp500Info,tech:techInfo,alpha:alphaInfo,marketphase:marketphaseInfo,rvciLatest:rvciLatestInfo},timestamp:Date.now(),sessionId:'debug-session',runId:RV_DASH_RUN_ID,hypothesisId:'H2'})}).catch(()=>{});
-      // #endregion
     }
 
     const WORKER_BUDGET_KEY = 'rv_internal_workers_daily_budget';
@@ -1360,9 +1348,6 @@
       const tbody = document.querySelector('#block-matrix tbody');
       
       const blocks = Array.isArray(diag?.snapshots) ? diag.snapshots : [];
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/7b213daf-87b9-4130-9bc8-db3131856ffb',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'internal-dashboard:updateBlockMatrix',message:'system-health snapshot summary',data:{diagOk:diag?.ok,snapshotsCount:blocks.length,firstBlockId:blocks[0]?.blockId || null,hasLastGoodAsOf:!!diag?.lastGoodAsOf},timestamp:Date.now(),sessionId:'debug-session',runId:RV_DASH_RUN_ID,hypothesisId:'H1'})}).catch(()=>{});
-      // #endregion
       if (!diag || diag.ok === false || !blocks.length) {
         tbody.innerHTML = '<tr><td colspan="9">No data available</td></tr>';
         return;
