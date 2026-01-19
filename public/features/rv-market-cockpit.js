@@ -655,27 +655,67 @@ function render(root, payload, logger, featureId) {
 }
 
 async function loadData() {
+  // Try main snapshot first
   const url = "/data/snapshots/macro-hub.json";
   try {
     const response = await fetch(url, { cache: "no-store" });
     const text = await response.text();
-    if (!response.ok) {
-      return {
-        ok: false,
-        ts: new Date().toISOString(),
-        error: { code: `HTTP_${response.status}`, message: `HTTP ${response.status}` }
-      };
+    if (response.ok && text) {
+      const snapshot = JSON.parse(text);
+      if (snapshot && typeof snapshot === "object") {
+        return { ok: true, snapshot, ts: snapshot?.meta?.updatedAt || new Date().toISOString() };
+      }
     }
-    const snapshot = text ? JSON.parse(text) : null;
-    if (!snapshot || typeof snapshot !== "object") {
-      return {
-        ok: false,
-        ts: new Date().toISOString(),
-        error: { code: "INVALID_JSON", message: "Invalid snapshot payload" }
-      };
+    // If main snapshot fails, try lastGood fallback
+    const lastGoodUrl = "/data/snapshots/macro-hub.lastgood.json";
+    try {
+      const lastGoodResponse = await fetch(lastGoodUrl, { cache: "no-store" });
+      const lastGoodText = await lastGoodResponse.text();
+      if (lastGoodResponse.ok && lastGoodText) {
+        const lastGoodSnapshot = JSON.parse(lastGoodText);
+        if (lastGoodSnapshot && typeof lastGoodSnapshot === "object") {
+          // Mark as stale since we're using lastGood
+          lastGoodSnapshot.meta = lastGoodSnapshot.meta || {};
+          lastGoodSnapshot.meta.freshness = { status: "stale", reason: "lastgood_fallback" };
+          return { 
+            ok: true, 
+            snapshot: lastGoodSnapshot, 
+            ts: lastGoodSnapshot?.meta?.updatedAt || new Date().toISOString(),
+            isLastGood: true
+          };
+        }
+      }
+    } catch (lastGoodError) {
+      // Ignore lastGood fetch errors, fall through to main error
     }
-    return { ok: true, snapshot, ts: snapshot?.meta?.updatedAt || new Date().toISOString() };
+    // Both failed
+    return {
+      ok: false,
+      ts: new Date().toISOString(),
+      error: { code: `HTTP_${response.status}`, message: `HTTP ${response.status}` }
+    };
   } catch (error) {
+    // Try lastGood on network error too
+    try {
+      const lastGoodUrl = "/data/snapshots/macro-hub.lastgood.json";
+      const lastGoodResponse = await fetch(lastGoodUrl, { cache: "no-store" });
+      const lastGoodText = await lastGoodResponse.text();
+      if (lastGoodResponse.ok && lastGoodText) {
+        const lastGoodSnapshot = JSON.parse(lastGoodText);
+        if (lastGoodSnapshot && typeof lastGoodSnapshot === "object") {
+          lastGoodSnapshot.meta = lastGoodSnapshot.meta || {};
+          lastGoodSnapshot.meta.freshness = { status: "stale", reason: "lastgood_fallback" };
+          return { 
+            ok: true, 
+            snapshot: lastGoodSnapshot, 
+            ts: lastGoodSnapshot?.meta?.updatedAt || new Date().toISOString(),
+            isLastGood: true
+          };
+        }
+      }
+    } catch (lastGoodError) {
+      // Ignore
+    }
     return {
       ok: false,
       ts: new Date().toISOString(),

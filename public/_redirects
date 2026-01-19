@@ -13,6 +13,8 @@
 # common typo + ops alias
 /internal-dahboard /internal-dashboard 301
 /ops /internal-dashboard 301
+/dev/internal-dashboard /internal-dashboard 301
+/dev/ops /internal-dashboard 301
 # Explicit index route to avoid rewrite loop warnings
 /index.html     /index.html     200
 # SPA fallback (last)

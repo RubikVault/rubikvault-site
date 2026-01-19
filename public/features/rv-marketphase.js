@@ -77,7 +77,8 @@ function getCache() {
 }
 
 async function fetchMarketPhase(symbol) {
-  const response = await fetch(`./data/marketphase/${symbol}.json`, { cache: "no-store" });
+  // Use absolute root path to avoid 404 on subroutes (SSOT rule)
+  const response = await fetch(`/data/marketphase/${symbol}.json`, { cache: "no-store" });
   if (!response.ok) {
     throw new Error(`MarketPhase fetch failed (${response.status})`);
   }
