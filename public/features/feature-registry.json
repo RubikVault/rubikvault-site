@@ -287,6 +287,21 @@
     },
     {
       "_deprecated": false,
+      "_lastSeen": "2026-01-19T19:00:00.000Z",
+      "critical": false,
+      "id": "major-indices",
+      "mirrorPath": "mirrors/market-health.json",
+      "name": "Major Indices EOD",
+      "providers": [],
+      "requiredFields": [
+        "meta.status",
+        "meta.updatedAt"
+      ],
+      "schemaVersion": "v1",
+      "staleAfterMinutes": 1440
+    },
+    {
+      "_deprecated": false,
       "_lastSeen": "2026-01-03T16:20:36.294Z",
       "critical": false,
       "id": "market-health",

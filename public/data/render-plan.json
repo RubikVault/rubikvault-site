@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-01-19T13:11:09.945Z",
+  "generatedAt": "2026-01-19T18:35:02.454Z",
   "source": "registry",
   "blocks": [
     {
@@ -148,19 +148,19 @@
       "critical": false
     },
     {
+      "id": "major-indices",
+      "name": "Major Indices EOD",
+      "module": "/features/rv-major-indices.js",
+      "snapshot": "/data/snapshots/major-indices.json",
+      "mirror": "mirrors/market-health.json",
+      "critical": false
+    },
+    {
       "id": "market-cockpit",
       "name": "Market Cockpit",
       "module": "/features/rv-market-cockpit.js",
       "snapshot": "/data/snapshots/market-cockpit.json",
       "mirror": "mirrors/market-cockpit.json",
-      "critical": false
-    },
-    {
-      "id": "major-indices",
-      "name": "Major Indices EOD",
-      "module": "/features/rv-major-indices.js",
-      "snapshot": "/data/snapshots/market-health/latest.json",
-      "mirror": "mirrors/market-health.json",
       "critical": false
     },
     {

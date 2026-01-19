@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-01-19T13:11:09.945Z",
+  "generatedAt": "2026-01-19T18:35:02.454Z",
   "source": "registry",
   "blocks": [
     {
@@ -232,6 +232,19 @@
       "schemaVersion": "v1",
       "staleAfterMinutes": 1440,
       "mirrorPath": "mirrors/macro-rates.json",
+      "requiredFields": [
+        "meta.status",
+        "meta.updatedAt"
+      ]
+    },
+    {
+      "id": "major-indices",
+      "name": "Major Indices EOD",
+      "critical": false,
+      "deprecated": false,
+      "schemaVersion": "v1",
+      "staleAfterMinutes": 1440,
+      "mirrorPath": "mirrors/market-health.json",
       "requiredFields": [
         "meta.status",
         "meta.updatedAt"
