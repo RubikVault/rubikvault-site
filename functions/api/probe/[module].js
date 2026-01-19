@@ -19,6 +19,7 @@ import { serveStaticJson } from '../_shared/static-only.js';
 
 /**
  * Extract critical UI fields from data
+ * Handles both v3.0 and legacy-transformed formats
  */
 function extractUIFields(data, requiredPaths) {
   if (!requiredPaths || requiredPaths.length === 0) {
@@ -28,30 +29,64 @@ function extractUIFields(data, requiredPaths) {
   const fields = {};
   let allPresent = true;
   
+  // Check if data is legacy-transformed (has .data and .meta)
+  const isLegacyFormat = data && typeof data === 'object' && 'data' in data && 'meta' in data;
+  
   for (const path of requiredPaths) {
-    // Simple path evaluation ($.data[0].field)
     try {
+      let value = null;
+      
+      // Try v3.0 path first ($.data[0].items[0].symbol)
       const parts = path.replace(/^\$\./, '').split(/[\.\[\]]+/).filter(Boolean);
-      let value = data;
+      let current = data;
       
       for (const part of parts) {
-        if (value === null || value === undefined) {
-          value = null;
+        if (current === null || current === undefined) {
+          current = null;
           break;
         }
         
         if (part === '*') {
-          // Wildcard - just take first item
-          if (Array.isArray(value)) {
-            value = value[0];
+          if (Array.isArray(current)) {
+            current = current[0];
           }
         } else if (!isNaN(part)) {
-          // Array index
-          value = value[parseInt(part, 10)];
+          current = current[parseInt(part, 10)];
         } else {
-          // Object key
-          value = value[part];
+          current = current[part];
         }
+      }
+      
+      value = current;
+      
+      // If not found and legacy format, try alternative path
+      if ((value === null || value === undefined) && isLegacyFormat) {
+        // Transform $.data[0].items[0].symbol to $.data.items[0].symbol
+        const legacyPath = path
+          .replace(/\$\.data\[0\]\./, '$.data.')
+          .replace(/\$\.metadata\./, '$.meta.');
+        
+        const legacyParts = legacyPath.replace(/^\$\./, '').split(/[\.\[\]]+/).filter(Boolean);
+        let legacyCurrent = data;
+        
+        for (const part of legacyParts) {
+          if (legacyCurrent === null || legacyCurrent === undefined) {
+            legacyCurrent = null;
+            break;
+          }
+          
+          if (part === '*') {
+            if (Array.isArray(legacyCurrent)) {
+              legacyCurrent = legacyCurrent[0];
+            }
+          } else if (!isNaN(part)) {
+            legacyCurrent = legacyCurrent[parseInt(part, 10)];
+          } else {
+            legacyCurrent = legacyCurrent[part];
+          }
+        }
+        
+        value = legacyCurrent;
       }
       
       fields[path] = value;
