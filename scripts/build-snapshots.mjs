@@ -281,7 +281,9 @@ async function mapMirrorData(mirrorId, raw) {
   if (mirrorId === "sp500-sectors" || mirrorId === "sector-rotation") {
     const sectors = extractSectors(raw);
     const items = extractItems(raw);
-    return { items, extraData: { ...extractExtraData(raw), sectors } };
+    const extraDataBase = extractExtraData(raw);
+    const extraData = { ...extraDataBase, sectors };
+    return { items, extraData };
   }
   if (mirrorId === "tech-signals") {
     const items = extractItems(raw);
@@ -366,13 +368,14 @@ function validateSchema(snapshot) {
   return { ok: errors.length === 0, errors };
 }
 
-async function buildSnapshot({ blockId, raw, mirrorMeta, lastGoodSnapshot = null }) {
+async function buildSnapshot({ blockId, mirrorId, raw, mirrorMeta, lastGoodSnapshot = null }) {
   const generatedAt = new Date().toISOString();
   const asOf = mirrorMeta.asOf || mirrorMeta.updatedAt || generatedAt;
   const ttlSeconds = Number.isFinite(mirrorMeta.ttlSeconds) ? mirrorMeta.ttlSeconds : 3600;
   const freshness = computeFreshness(asOf, ttlSeconds);
   const schedule = computeSchedule(mirrorMeta.cadence || mirrorMeta.mode || "daily", ttlSeconds);
-  let { items, extraData } = await mapMirrorData(blockId, raw);
+  // Use mirrorId (not blockId) for mapMirrorData to correctly identify the source mirror
+  let { items, extraData } = await mapMirrorData(mirrorId || blockId, raw);
   
   // --- LASTGOOD fallback: if items empty, fill from lastGood ---
   let lastGoodUsed = 0;
@@ -445,7 +448,8 @@ async function buildSnapshot({ blockId, raw, mirrorMeta, lastGoodSnapshot = null
   }
   
   const sanitizedItems = redactSecrets(items);
-  const data = { items: sanitizedItems, ...redactSecrets(extraData) };
+  const sanitizedExtraData = redactSecrets(extraData);
+  const data = { items: sanitizedItems, ...sanitizedExtraData };
   const itemsCount = sanitizedItems.length;
   const sourceUpstream = typeof mirrorMeta.sourceUpstream === "string" ? mirrorMeta.sourceUpstream : null;
   const sourceValue = typeof mirrorMeta.source === "string" ? mirrorMeta.source : null;
@@ -554,7 +558,10 @@ async function collectMirrorInputs() {
   snapshotFiles.forEach((filePath) => {
     const base = path.basename(filePath, ".json");
     if (shouldSkipMirrorId(base)) return;
-    mirrors[base] = loadJson(filePath);
+    // Only load from snapshots/ if not already loaded from mirrors/ (priority: mirrors/ over snapshots/)
+    if (!mirrors[base]) {
+      mirrors[base] = loadJson(filePath);
+    }
   });
   // Fallback: if sector-rotation mirror is missing from mirrors/, try public/mirrors/
   // This handles cases where mirrors are generated in public/mirrors/ instead of mirrors/
@@ -778,10 +785,31 @@ async function main() {
   const snapshotStatuses = [];
   const lastGoodAsOf = {};
 
-  const entries = Object.entries(mirrors);
+  // Priority order: prefer sector-rotation over sp500-sectors for sp500-sectors block
+  const priorityMirrors = new Set(["sector-rotation"]);
+  
+  // Sort entries: priority mirrors first, then others
+  const entries = Object.entries(mirrors).sort(([a], [b]) => {
+    const aPriority = priorityMirrors.has(a);
+    const bPriority = priorityMirrors.has(b);
+    if (aPriority && !bPriority) return -1;
+    if (!aPriority && bPriority) return 1;
+    return 0;
+  });
+  
+  // Track which blockIds we've already processed to avoid overwriting with empty mirrors
+  const processedBlocks = new Set();
+  
   for (const [mirrorId, raw] of entries) {
     const blockId = MIRROR_MAP.get(mirrorId) || mirrorId;
     if (!blockId) continue;
+    
+    // Skip if we've already processed this blockId (priority mirrors are processed first)
+    if (processedBlocks.has(blockId)) {
+      console.log(`[INFO] Skipping ${mirrorId} -> ${blockId} (already processed by priority mirror)`);
+      continue;
+    }
+    
     const unwrapped = unwrapEnvelope(raw);
     const mirrorMeta = normalizeMirrorMeta(unwrapped.raw, unwrapped.meta, blockId);
     
@@ -789,7 +817,11 @@ async function main() {
     const snapshotPath = path.join(SNAPSHOT_DIR, `${blockId}.json`);
     const lastGoodSnapshot = loadJson(snapshotPath);
     
-    const snapshot = await buildSnapshot({ blockId, raw: unwrapped.raw, mirrorMeta, lastGoodSnapshot });
+    // Pass mirrorId to buildSnapshot so mapMirrorData can use it
+    const snapshot = await buildSnapshot({ blockId, mirrorId, raw: unwrapped.raw, mirrorMeta, lastGoodSnapshot });
+    
+    // Mark this blockId as processed
+    processedBlocks.add(blockId);
     const valid = snapshot.meta.validation.schema.ok &&
       snapshot.meta.validation.ranges.ok &&
       snapshot.meta.validation.integrity.ok;
