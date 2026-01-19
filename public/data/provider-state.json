@@ -1,13 +1,62 @@
 {
   "schema_version": "3.0",
-  "generated_at": "2026-01-19T14:25:08.470Z",
+  "generated_at": "2026-01-19T14:55:10.942Z",
   "system": {
-    "status": "ok",
-    "last_publish_at": "2026-01-19T14:25:08.469Z",
-    "critical_ok": true,
-    "top_issues": []
+    "status": "crit",
+    "last_publish_at": "2026-01-19T14:55:10.940Z",
+    "critical_ok": false,
+    "top_issues": [
+      {
+        "module": "market-health",
+        "class": "VALIDATION_FAILED_SCHEMA",
+        "severity": "crit",
+        "hint": "Check validation warnings and fix data normalization"
+      }
+    ]
   },
-  "modules": [],
+  "modules": [
+    {
+      "module": "market-health",
+      "tier": "critical",
+      "domain": "stocks",
+      "status": "error",
+      "severity": "crit",
+      "published": false,
+      "digest": "sha256:5535ae47c53bb6ef066d098b40989cf777cfadc9086bbea92c82b232928e0258",
+      "freshness": {
+        "expected_interval_minutes": 1440,
+        "grace_minutes": 180,
+        "policy": "market_days_only",
+        "age_minutes": 0,
+        "next_expected_at": "2026-01-20T14:54:45.431Z"
+      },
+      "proof_chain": {
+        "FILE": "PASS",
+        "SCHEMA": "FAIL",
+        "FRESH": "PASS",
+        "PLAUS": "FAIL",
+        "UI": "SKIP",
+        "DELIVERY": "UNKNOWN"
+      },
+      "delivery": {
+        "probed_at": null,
+        "status": "UNKNOWN",
+        "served_from": "ASSET",
+        "latency_ms": null
+      },
+      "failure": {
+        "class": "VALIDATION_FAILED_SCHEMA",
+        "message": "",
+        "upstream_status": 200,
+        "hint": "Check validation warnings and fix data normalization"
+      },
+      "links": {
+        "debug": "/api/market-health?debug=1",
+        "snapshot": "/data/snapshots/market-health/latest.json",
+        "state": "/data/state/modules/market-health.json"
+      }
+    }
+  ],
   "help": {
     "failure_classes_ref": "/data/failure-hints.json",
     "playbook_ref": "/internal/health#playbook"
