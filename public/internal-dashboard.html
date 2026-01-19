@@ -227,7 +227,7 @@
       { id: 'tech-signals', name: 'Tech Signals', snapshotPath: '/data/snapshots/tech-signals.json' },
       { id: 'rvci-engine', name: 'RVCI Engine', snapshotPath: '/data/snapshots/rvci-engine.json', altPath: '/data/rvci_latest.json' },
       { id: 'alpha-radar', name: 'Alpha Radar', snapshotPath: '/data/snapshots/alpha-radar.json' },
-      { id: 'marketphase', name: 'MarketPhase AI', snapshotPath: null, note: 'Static content, no snapshot' },
+      { id: 'marketphase', name: 'MarketPhase AI', snapshotPath: '/data/marketphase/index.json', note: 'Loads individual symbol files (AAPL.json, MSFT.json, etc.)' },
       { id: 'moats', name: 'Monopoles / Economic Moats', snapshotPath: null, note: 'Static content, no snapshot' }
     ];
 
@@ -295,9 +295,34 @@
       } else if (blockId === 'alpha-radar') {
         const items = data.items || [];
         const picks = data.picks || data.extraData?.picks || null;
-        itemsCount = items.length || (picks ? Object.keys(picks).length : 0);
+        const picksTop = picks?.top || [];
+        itemsCount = items.length || picksTop.length || 0;
         dataPresent = itemsCount > 0;
-        // Check for dummy values
+        
+        // Check for dummy values in picks (UI uses picks, not items)
+        if (picksTop.length > 0) {
+          const uniqueScores = new Set();
+          picksTop.forEach(p => {
+            if (p.setupScore !== undefined && p.triggerScore !== undefined && p.totalScore !== undefined) {
+              uniqueScores.add(`${p.setupScore}-${p.triggerScore}-${p.totalScore}`);
+            }
+          });
+          // If all picks have identical scores, it's likely dummy data
+          if (uniqueScores.size === 1 && picksTop.length > 1) {
+            const firstPick = picksTop[0];
+            return {
+              status: 'DUMMY_DATA',
+              dataPresent: true,
+              itemsCount,
+              age: ageMinutes,
+              freshness: freshnessStatus,
+              reason: `All picks have identical dummy values (Setup ${firstPick.setupScore}, Trigger ${firstPick.triggerScore}, Total ${firstPick.totalScore}). Data is ${ageMinutes ? formatAge(ageMinutes) : 'unknown'} old. Snapshot picks may not be updating correctly.`,
+              lastUpdated: meta.generatedAt || meta.updatedAt
+            };
+          }
+        }
+        
+        // Also check items for old dummy pattern
         if (items.length > 0) {
           const firstItem = items[0];
           if (firstItem.setupScore === 34 && firstItem.triggerScore === 51 && firstItem.totalScore === 85) {
@@ -312,6 +337,58 @@
             };
           }
         }
+      } else if (blockId === 'sp500-sectors') {
+        const items = data.items || [];
+        const sectors = data.sectors || [];
+        itemsCount = items.length || sectors.length;
+        dataPresent = itemsCount > 0 || sectors.length > 0;
+        if (itemsCount === 0 && sectors.length === 0) {
+          return {
+            status: 'EMPTY_ITEMS',
+            dataPresent: false,
+            itemsCount: 0,
+            age: ageMinutes,
+            freshness: freshnessStatus,
+            reason: 'No sectors or items found in snapshot. Mirror may be empty or not generating correctly.',
+            lastUpdated: meta.generatedAt || meta.updatedAt
+          };
+        }
+      } else if (blockId === 'tech-signals') {
+        const items = data.items || [];
+        itemsCount = items.length;
+        dataPresent = itemsCount > 0;
+        // Check if items have actual signal data
+        if (itemsCount > 0) {
+          const firstItem = items[0];
+          const hasSignals = firstItem.rsi !== undefined || firstItem.macd !== undefined || firstItem.rsiWeekly !== undefined;
+          if (!hasSignals) {
+            return {
+              status: 'INVALID_DATA',
+              dataPresent: false,
+              itemsCount,
+              age: ageMinutes,
+              freshness: freshnessStatus,
+              reason: 'Items exist but lack signal data (RSI, MACD, etc.). Snapshot may be incomplete.',
+              lastUpdated: meta.generatedAt || meta.updatedAt
+            };
+          }
+        }
+      } else if (blockId === 'marketphase') {
+        // MarketPhase loads individual symbol files, check index.json
+        const symbols = data.symbols || [];
+        itemsCount = symbols.length;
+        dataPresent = symbols.length > 0;
+        if (symbols.length === 0) {
+          return {
+            status: 'NO_SYMBOLS',
+            dataPresent: false,
+            itemsCount: 0,
+            age: ageMinutes,
+            freshness: freshnessStatus,
+            reason: 'No symbols found in index.json. MarketPhase files may not be generated.',
+            lastUpdated: meta.generatedAt || meta.updatedAt
+          };
+        }
       } else {
         const items = data.items || [];
         itemsCount = items.length;
@@ -325,6 +402,8 @@
         reason = `DEGRADED_COVERAGE - ${meta.universe ? `Expected ${meta.universe.expected}, got ${meta.universe.received}` : 'Coverage below threshold'}`;
       } else if (ageMinutes && ageMinutes > 1440) {
         reason = `Data is ${formatAge(ageMinutes)} old (${Math.round(ageMinutes / 1440)} days). Last update: ${meta.generatedAt || meta.updatedAt || 'unknown'}`;
+      } else if (status === 'OK' && !dataPresent) {
+        reason = 'OK status but no data present - snapshot may be empty or invalid';
       }
 
       return {
@@ -408,9 +487,20 @@
       }));
 
       tbody.innerHTML = results.map(result => {
-        const statusClass = result.status === 'OK' || result.status === 'STATIC' ? 'ok' 
-          : result.status === 'PARTIAL' || result.status === 'DUMMY_DATA' ? 'warn' 
-          : 'fail';
+        // Determine status class based on actual data quality
+        let statusClass = 'ok';
+        if (result.status === 'DUMMY_DATA' || result.status === 'NO_DATA' || result.status === 'EMPTY_ITEMS' || result.status === 'INVALID_DATA') {
+          statusClass = 'fail';
+        } else if (result.status === 'PARTIAL' || !result.dataPresent) {
+          statusClass = 'warn';
+        } else if (result.status === 'OK' && !result.dataPresent) {
+          statusClass = 'fail';
+        } else if (result.age && result.age > 1440) {
+          statusClass = 'warn';
+        } else if (result.status === 'STATIC') {
+          statusClass = 'ok';
+        }
+        
         const ageDisplay = result.age !== null ? formatAge(result.age) : '—';
         const ageBadgeClass = result.age !== null ? getAgeBadgeClass(result.age) : '';
         
