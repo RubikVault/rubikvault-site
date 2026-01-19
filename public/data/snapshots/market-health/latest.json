@@ -1,0 +1,117 @@
+{
+  "schema_version": "3.0",
+  "metadata": {
+    "module": "market-health",
+    "tier": "critical",
+    "domain": "stocks",
+    "source": "alternative.me, cnn, coingecko",
+    "fetched_at": "2026-01-19T15:06:24.260Z",
+    "published_at": "2026-01-19T15:06:24.260Z",
+    "digest": "sha256:9f8d7af648a391fba8d328695f0c628a3235be1bc5b31b70ec4b0916a73ea3dc",
+    "record_count": 1,
+    "expected_count": null,
+    "validation": {
+      "passed": true,
+      "dropped_records": 0,
+      "drop_ratio": 0,
+      "checks": [
+        "schema",
+        "records",
+        "ranges",
+        "ui_contract"
+      ],
+      "warnings": []
+    },
+    "freshness": {
+      "expected_interval_minutes": 1440,
+      "grace_minutes": 180,
+      "policy": "market_days_only",
+      "age_minutes": 0,
+      "next_expected_at": "2026-01-20T15:06:24.260Z"
+    },
+    "upstream": {
+      "http_status": 200,
+      "latency_ms": 370,
+      "rate_limit_remaining": null,
+      "retry_count": 0
+    }
+  },
+  "data": [
+    {
+      "items": [
+        {
+          "symbol": "SPY",
+          "close": null,
+          "prevClose": null,
+          "changePct": null,
+          "lastBarDate": null,
+          "barsUsed": null,
+          "missingFields": []
+        },
+        {
+          "symbol": "QQQ",
+          "close": null,
+          "prevClose": null,
+          "changePct": null,
+          "lastBarDate": null,
+          "barsUsed": null,
+          "missingFields": []
+        },
+        {
+          "symbol": "IWM",
+          "close": null,
+          "prevClose": null,
+          "changePct": null,
+          "lastBarDate": null,
+          "barsUsed": null,
+          "missingFields": []
+        }
+      ],
+      "benchmarks": [
+        "SPY",
+        "QQQ",
+        "IWM"
+      ],
+      "fng": {
+        "value": "44",
+        "valueClassification": "Fear",
+        "timestamp": "1768780800"
+      },
+      "fngStocks": {
+        "value": null,
+        "valueClassification": null,
+        "timestamp": null
+      },
+      "btc": {
+        "usd": 92887,
+        "usd_24h_change": -2.197757667738927
+      },
+      "crypto": [
+        {
+          "symbol": "BTC",
+          "price": 92887,
+          "changePercent": -2.197757667738927
+        },
+        {
+          "symbol": "ETH",
+          "price": 3215.26,
+          "changePercent": -3.3037801844236028
+        },
+        {
+          "symbol": "XRP",
+          "price": 1.98,
+          "changePercent": -3.398619892176815
+        },
+        {
+          "symbol": "SOL",
+          "price": 133.55,
+          "changePercent": -5.829140171946708
+        }
+      ],
+      "indices": [],
+      "commodities": [],
+      "source": "alternative.me, cnn, coingecko"
+    }
+  ],
+  "error": null
+}

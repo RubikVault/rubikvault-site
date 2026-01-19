@@ -1,0 +1,36 @@
+{
+  "schema_version": "3.0",
+  "module": "market-health",
+  "tier": "critical",
+  "domain": "stocks",
+  "status": "ok",
+  "severity": "info",
+  "published": false,
+  "last_success_at": "2026-01-19T15:06:24.260Z",
+  "last_attempt_at": "2026-01-19T15:06:24.260Z",
+  "digest": "sha256:9f8d7af648a391fba8d328695f0c628a3235be1bc5b31b70ec4b0916a73ea3dc",
+  "record_count": 1,
+  "expected_count": 1,
+  "freshness": {
+    "expected_interval_minutes": 1440,
+    "grace_minutes": 180,
+    "policy": "market_days_only",
+    "age_minutes": 0,
+    "next_expected_at": "2026-01-20T15:06:24.260Z"
+  },
+  "failure": null,
+  "ui_contract": {
+    "required": true,
+    "passed": true,
+    "failed_paths": []
+  },
+  "proof": {
+    "file_present": true,
+    "schema_valid": true,
+    "plausible": true
+  },
+  "debug": {
+    "curl": "/api/market-health?debug=1",
+    "last_run_url": "https://github.com/RubikVault/rubikvault-site/actions/runs/21142324978"
+  }
+}
