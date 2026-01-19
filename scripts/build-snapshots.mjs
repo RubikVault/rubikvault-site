@@ -225,10 +225,20 @@ function extractExtraData(payload) {
 }
 
 function extractSectors(payload) {
+  // Try multiple locations for sectors array
   if (Array.isArray(payload?.sectors)) return payload.sectors;
+  if (Array.isArray(payload?.context?.sectors)) return payload.context.sectors; // From seed-mirrors.mjs
+  if (Array.isArray(payload?.data?.sectors)) return payload.data.sectors;
   if (Array.isArray(payload?.payload?.data?.data?.sectors)) return payload.payload.data.data.sectors;
   if (Array.isArray(payload?.payload?.data?.sectors)) return payload.payload.data.sectors;
   if (Array.isArray(payload?.items) && payload.items.length && payload.items[0]?.sector) return payload.items;
+  // If items look like sectors (have symbol, price, changePercent), use them as sectors
+  if (Array.isArray(payload?.items) && payload.items.length > 0) {
+    const firstItem = payload.items[0];
+    if (firstItem.symbol && (Number.isFinite(firstItem.price) || Number.isFinite(firstItem.changePercent))) {
+      return payload.items; // Items are actually sectors
+    }
+  }
   return [];
 }
 

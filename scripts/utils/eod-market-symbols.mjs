@@ -116,8 +116,25 @@ export async function processSymbols(universe) {
     itemsAlpha.push({
       symbol,
       score: alpha.score,
+      totalScore: alpha.score, // For compatibility with normalizePick
+      setupScore: alpha.setupScore,
+      triggerScore: alpha.triggerScore,
       state: alpha.score >= 70 ? "STRONG" : alpha.score >= 55 ? "WATCH" : "NEUTRAL",
       reasons: alpha.reasons,
+      setup: {
+        rsiExtreme: alpha.setupReasons.some((r) => /^RSI_/.test(r)),
+        bbExtreme: false, // BB not calculated here
+        nearSma200: alpha.setupReasons.includes("NEAR_SMA200"),
+        rvolGte15: alpha.setupReasons.includes("RVOL_GE_15"),
+        extremeGate: false // Extreme gate not calculated here
+      },
+      trigger: {
+        ema21Reclaim: false, // EMA21 not calculated here
+        higherLowFt: false, // Higher low not calculated here
+        bosBreak: false, // BOS not calculated here
+        volumeConfirm: alpha.triggerReasons.includes("VOL_CONFIRM_12x"),
+        rsiUpturn: false // RSI upturn not calculated here
+      },
       close,
       changePct,
       barsUsed,
