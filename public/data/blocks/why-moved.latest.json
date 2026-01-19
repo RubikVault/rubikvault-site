@@ -1,18 +1,43 @@
 {
-  "ok": false,
-  "feature": "why-moved",
+  "schemaVersion": "v3",
+  "blockId": "why-moved",
+  "generatedAt": "2026-01-19T07:07:27.164Z",
+  "dataAt": "2026-01-18T12:58:55.456Z",
   "meta": {
-    "status": "NO_DATA",
-    "reason": "EMPTY_ITEMS",
-    "generatedAt": "2026-01-18T04:01:19.678Z",
-    "stalenessSec": 5075,
-    "durationMs": 1,
-    "latencyMs": 1,
+    "status": "PARTIAL",
+    "reason": "COVERAGE_LIMIT",
+    "generatedAt": "2026-01-19T07:07:27.164Z",
+    "asOf": "2026-01-18T12:58:55.456Z",
+    "source": "unknown",
+    "ttlSeconds": 3600,
+    "stale": true,
     "itemsCount": 0,
-    "coveragePct": 0,
-    "timezoneAssumption": "UTC",
-    "dataAtDefinition": "2026-01-18T02:36:43.697Z",
-    "bytes": 404
+    "stalenessSec": 65280,
+    "freshness": {
+      "status": "expired",
+      "ageMinutes": 1088
+    },
+    "schedule": {
+      "rule": "daily",
+      "nextPlannedFetchAt": "2026-01-20T07:07:27.164Z",
+      "expectedNextRunWindowMinutes": 1440,
+      "ttlSeconds": 3600
+    },
+    "runId": "2026-01-19T07:07:27.128Z",
+    "validation": {
+      "schema": {
+        "ok": true,
+        "errors": []
+      },
+      "ranges": {
+        "ok": true,
+        "errors": []
+      },
+      "integrity": {
+        "ok": true,
+        "errors": []
+      }
+    }
   },
   "data": {
     "items": []

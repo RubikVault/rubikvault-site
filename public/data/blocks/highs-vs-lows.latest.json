@@ -1,130 +1,155 @@
 {
-  "schemaVersion": "v1",
+  "schemaVersion": "v3",
   "blockId": "highs-vs-lows",
-  "title": "09 - Highs vs Lows",
-  "generatedAt": "2026-01-15T13:01:38.497Z",
-  "dataAt": "2026-01-14",
+  "generatedAt": "2026-01-19T07:07:27.168Z",
+  "dataAt": "2026-01-16",
   "meta": {
     "status": "LIVE",
     "reason": "OK",
-    "stalenessSec": 133298,
-    "coveragePct": 100,
-    "timezoneAssumption": "UTC",
-    "dataAtDefinition": "Derived from market-breadth EOD history",
-    "latencyMs": 6,
-    "itemsCount": 15
+    "generatedAt": "2026-01-19T07:07:27.168Z",
+    "asOf": "2026-01-16",
+    "source": "mirror",
+    "ttlSeconds": 3600,
+    "stale": true,
+    "itemsCount": 15,
+    "stalenessSec": 284820,
+    "freshness": {
+      "status": "expired",
+      "ageMinutes": 4747
+    },
+    "schedule": {
+      "rule": "daily",
+      "nextPlannedFetchAt": "2026-01-20T07:07:27.168Z",
+      "expectedNextRunWindowMinutes": 1440,
+      "ttlSeconds": 3600
+    },
+    "runId": "2026-01-19T07:07:27.128Z",
+    "validation": {
+      "schema": {
+        "ok": true,
+        "errors": []
+      },
+      "ranges": {
+        "ok": true,
+        "errors": []
+      },
+      "integrity": {
+        "ok": true,
+        "errors": []
+      }
+    }
   },
   "data": {
     "items": [
       {
         "symbol": "AAPL",
-        "close": 259.96,
+        "close": 255.53,
         "isHigh": false,
-        "isLow": false,
-        "date": "2026-01-14"
+        "isLow": true,
+        "date": "2026-01-16"
       },
       {
         "symbol": "MSFT",
-        "close": 459.38,
+        "close": 459.86,
         "isHigh": false,
-        "isLow": true,
-        "date": "2026-01-14"
+        "isLow": false,
+        "date": "2026-01-16"
       },
       {
         "symbol": "NVDA",
-        "close": 183.14,
+        "close": 186.23,
         "isHigh": false,
         "isLow": false,
-        "date": "2026-01-14"
+        "date": "2026-01-16"
       },
       {
         "symbol": "AMZN",
-        "close": 236.65,
+        "close": 239.12,
         "isHigh": false,
         "isLow": false,
-        "date": "2026-01-14"
+        "date": "2026-01-16"
       },
       {
         "symbol": "META",
-        "close": 615.52,
+        "close": 620.25,
         "isHigh": false,
-        "isLow": true,
-        "date": "2026-01-14"
+        "isLow": false,
+        "date": "2026-01-16"
       },
       {
         "symbol": "GOOGL",
-        "close": 335.84,
+        "close": 330,
         "isHigh": false,
         "isLow": false,
-        "date": "2026-01-14"
+        "date": "2026-01-16"
       },
       {
         "symbol": "TSLA",
-        "close": 439.2,
+        "close": 437.5,
         "isHigh": false,
         "isLow": false,
-        "date": "2026-01-14"
+        "date": "2026-01-16"
       },
       {
         "symbol": "JPM",
-        "close": 307.87,
+        "close": 312.47,
         "isHigh": false,
-        "isLow": true,
-        "date": "2026-01-14"
+        "isLow": false,
+        "date": "2026-01-16"
       },
       {
         "symbol": "UNH",
-        "close": 334.96,
+        "close": 331.02,
         "isHigh": false,
         "isLow": false,
-        "date": "2026-01-14"
+        "date": "2026-01-16"
       },
       {
         "symbol": "XOM",
-        "close": 130.2,
-        "isHigh": true,
+        "close": 129.89,
+        "isHigh": false,
         "isLow": false,
-        "date": "2026-01-14"
+        "date": "2026-01-16"
       },
       {
         "symbol": "LLY",
-        "close": 1073.29,
+        "close": 1038.4,
         "isHigh": false,
         "isLow": false,
-        "date": "2026-01-14"
+        "date": "2026-01-16"
       },
       {
         "symbol": "AVGO",
-        "close": 339.89,
+        "close": 351.71,
         "isHigh": false,
         "isLow": false,
-        "date": "2026-01-14"
+        "date": "2026-01-16"
       },
       {
         "symbol": "COST",
-        "close": 950.98,
+        "close": 963.61,
         "isHigh": true,
         "isLow": false,
-        "date": "2026-01-14"
+        "date": "2026-01-16"
       },
       {
         "symbol": "WMT",
-        "close": 120.04,
+        "close": 119.7,
         "isHigh": false,
         "isLow": false,
-        "date": "2026-01-14"
+        "date": "2026-01-16"
       },
       {
         "symbol": "PG",
-        "close": 146.35,
+        "close": 144.53,
         "isHigh": false,
         "isLow": false,
-        "date": "2026-01-14"
+        "date": "2026-01-16"
       }
     ],
     "summary": {
-      "highs": 2,
-      "lows": 3
+      "highs": 1,
+      "lows": 1
     }
   }
 }

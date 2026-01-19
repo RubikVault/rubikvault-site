@@ -1,0 +1,242 @@
+{
+  "meta": {
+    "provider": "health_history",
+    "dataset": "health_history",
+    "fetchedAt": "2026-01-19T07:07:27.427Z",
+    "ttlSeconds": 3600,
+    "source": "mirror",
+    "runId": "2026-01-19T07:07:27.427Z",
+    "cost": null
+  },
+  "raw": {
+    "schemaVersion": "1.0.0",
+    "items": [
+      {
+        "schemaVersion": "1.0.0",
+        "meta": {
+          "blockId": "health",
+          "generatedAt": "2026-01-19T07:07:27.426Z",
+          "marketDate": "2026-01-19",
+          "dataAsOf": "2026-01-19T07:05:17.453Z",
+          "status": "LIVE",
+          "coveragePct": 1,
+          "reason": null,
+          "inputs": [
+            "mirrors/seed-manifest.json",
+            "mirrors/usage-report.json"
+          ]
+        },
+        "data": {
+          "blocks": [
+            {
+              "blockId": "market-breadth",
+              "title": "08 - Market Breadth",
+              "status": "LIVE",
+              "reason": "OK",
+              "itemsCount": 15,
+              "coveragePct": 100,
+              "wroteSnapshot": true,
+              "durationMs": 20846
+            },
+            {
+              "blockId": "liquidity-conditions-proxy",
+              "title": "12 - Liquidity Conditions Proxy",
+              "status": "LIVE",
+              "reason": "OK",
+              "itemsCount": 1,
+              "coveragePct": 100,
+              "wroteSnapshot": true,
+              "durationMs": 337
+            },
+            {
+              "blockId": "vol-regime",
+              "title": "11 - Vol Regime",
+              "status": "LIVE",
+              "reason": "OK",
+              "itemsCount": 1,
+              "coveragePct": 100,
+              "wroteSnapshot": true,
+              "durationMs": 92
+            },
+            {
+              "blockId": "sector-rotation",
+              "title": "10 - Sector Rotation",
+              "status": "LIVE",
+              "reason": "OK",
+              "itemsCount": 11,
+              "coveragePct": 100,
+              "wroteSnapshot": true,
+              "durationMs": 4424
+            },
+            {
+              "blockId": "highs-vs-lows",
+              "title": "09 - Highs vs Lows",
+              "status": "LIVE",
+              "reason": "OK",
+              "itemsCount": 15,
+              "coveragePct": 100,
+              "wroteSnapshot": true,
+              "durationMs": 7
+            },
+            {
+              "blockId": "fx-board",
+              "title": "07 - FX Board",
+              "status": "LIVE",
+              "reason": "OK",
+              "itemsCount": 3,
+              "coveragePct": 100,
+              "wroteSnapshot": true,
+              "durationMs": 24963
+            },
+            {
+              "blockId": "credit-stress-proxy",
+              "title": "06 - Credit Stress Proxy",
+              "status": "LIVE",
+              "reason": "OK",
+              "itemsCount": 1,
+              "coveragePct": 100,
+              "wroteSnapshot": true,
+              "durationMs": 244
+            },
+            {
+              "blockId": "energy-macro",
+              "title": "05 - Energy Macro",
+              "status": "LIVE",
+              "reason": "OK",
+              "itemsCount": 1,
+              "coveragePct": 100,
+              "wroteSnapshot": true,
+              "durationMs": 238
+            },
+            {
+              "blockId": "labor-pulse",
+              "title": "04 - Labor Pulse",
+              "status": "LIVE",
+              "reason": "OK",
+              "itemsCount": 2,
+              "coveragePct": 100,
+              "wroteSnapshot": true,
+              "durationMs": 197
+            },
+            {
+              "blockId": "inflation-pulse",
+              "title": "03 - Inflation Pulse",
+              "status": "LIVE",
+              "reason": "OK",
+              "itemsCount": 1,
+              "coveragePct": 100,
+              "wroteSnapshot": true,
+              "durationMs": 102
+            },
+            {
+              "blockId": "ecb-rates-board",
+              "title": "02 - ECB Rates Board",
+              "status": "LIVE",
+              "reason": "OK",
+              "itemsCount": 3,
+              "coveragePct": 100,
+              "wroteSnapshot": true,
+              "durationMs": 77362
+            },
+            {
+              "blockId": "us-yield-curve",
+              "title": "01 - US Yield Curve",
+              "status": "LIVE",
+              "reason": "OK",
+              "itemsCount": 9,
+              "coveragePct": 100,
+              "wroteSnapshot": true,
+              "durationMs": 815
+            }
+          ],
+          "summary": {
+            "LIVE": 12,
+            "PARTIAL": 0,
+            "ERROR": 0,
+            "total": 12,
+            "okPct": 1,
+            "reasons": {
+              "OK": 12
+            }
+          },
+          "usage": {
+            "providers": {
+              "stooq": {
+                "requests": 26,
+                "credits": 0,
+                "bytesIn": 10633433,
+                "latencyMs": 25033,
+                "errors": {},
+                "endpoints": {
+                  "daily": {
+                    "requests": 26,
+                    "credits": 0,
+                    "bytesIn": 10633433,
+                    "latencyMs": 25033,
+                    "errors": {}
+                  }
+                },
+                "limit": {
+                  "daily": 800,
+                  "monthly": 16000
+                }
+              },
+              "fred": {
+                "requests": 16,
+                "credits": 0,
+                "bytesIn": 7169,
+                "latencyMs": 2018,
+                "errors": {},
+                "endpoints": {
+                  "series": {
+                    "requests": 16,
+                    "credits": 0,
+                    "bytesIn": 7169,
+                    "latencyMs": 2018,
+                    "errors": {}
+                  }
+                },
+                "limit": {
+                  "daily": 200,
+                  "monthly": 4000
+                }
+              },
+              "ecb": {
+                "requests": 8,
+                "credits": 0,
+                "bytesIn": 14837,
+                "latencyMs": 39313,
+                "errors": {},
+                "endpoints": {
+                  "sdmx": {
+                    "requests": 8,
+                    "credits": 0,
+                    "bytesIn": 14837,
+                    "latencyMs": 39313,
+                    "errors": {}
+                  }
+                },
+                "limit": {
+                  "daily": 200,
+                  "monthly": 4000
+                }
+              }
+            },
+            "totals": {
+              "requests": 50,
+              "credits": 0
+            }
+          }
+        }
+      }
+    ],
+    "runId": "2026-01-19T07:07:27.427Z",
+    "updatedAt": "2026-01-19T07:07:27.427Z",
+    "asOf": "2026-01-19T07:07:27.427Z",
+    "meta": {
+      "status": "OK",
+      "updatedAt": "2026-01-19T07:07:27.427Z",
+      "reason": null
+    }
+  }
+}

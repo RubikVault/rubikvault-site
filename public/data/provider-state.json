@@ -1,12 +1,40 @@
 {
   "schemaVersion": "v1",
-  "generatedAt": "2026-01-19T06:51:55.780Z",
-  "providers": {},
+  "generatedAt": "2026-01-19T07:07:27.177Z",
+  "providers": {
+    "stooq": {
+      "cooldownUntil": null,
+      "circuitState": "closed",
+      "openUntil": null,
+      "failures": {},
+      "lastReason": "OK",
+      "lastHttpStatus": null,
+      "lastSeen": "2026-01-19T07:05:43.159Z"
+    },
+    "fred": {
+      "cooldownUntil": null,
+      "circuitState": "closed",
+      "openUntil": null,
+      "failures": {},
+      "lastReason": "OK",
+      "lastHttpStatus": null,
+      "lastSeen": "2026-01-19T07:07:27.080Z"
+    },
+    "ecb": {
+      "cooldownUntil": null,
+      "circuitState": "closed",
+      "openUntil": null,
+      "failures": {},
+      "lastReason": "OK",
+      "lastHttpStatus": null,
+      "lastSeen": "2026-01-19T07:07:26.265Z"
+    }
+  },
   "meta": {
     "status": "OK",
     "reason": "OK",
-    "generatedAt": "2026-01-19T06:51:55.780Z",
-    "asOf": "2026-01-19T06:51:55.780Z",
+    "generatedAt": "2026-01-19T07:07:27.177Z",
+    "asOf": "2026-01-19T07:07:27.177Z",
     "ttlSeconds": 3600,
     "stale": false,
     "freshness": {
@@ -15,7 +43,7 @@
     },
     "schedule": {
       "rule": "daily",
-      "nextPlannedFetchAt": "2026-01-20T06:51:55.781Z",
+      "nextPlannedFetchAt": "2026-01-20T07:07:27.177Z",
       "expectedNextRunWindowMinutes": 1440,
       "ttlSeconds": 3600
     },
@@ -33,6 +61,6 @@
         "errors": []
       }
     },
-    "runId": "2026-01-19T06:51:55.741Z"
+    "runId": "2026-01-19T07:07:27.128Z"
   }
 }

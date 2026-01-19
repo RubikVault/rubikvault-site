@@ -1,86 +1,122 @@
 {
-  "schemaVersion": "v1",
+  "schemaVersion": "v3",
   "blockId": "sector-rotation",
-  "title": "10 - Sector Rotation",
-  "generatedAt": "2026-01-15T13:01:38.490Z",
-  "dataAt": "2026-01-14",
+  "generatedAt": "2026-01-18T11:11:16.546Z",
+  "dataAt": "2026-01-02T18:07:25.101Z",
   "meta": {
-    "status": "LIVE",
+    "status": "OK",
     "reason": "OK",
-    "stalenessSec": 133298,
-    "coveragePct": 100,
-    "timezoneAssumption": "UTC",
-    "dataAtDefinition": "Stooq EOD closes for sector ETFs",
-    "latencyMs": 1614,
-    "itemsCount": 11
+    "generatedAt": "2026-01-18T11:11:16.546Z",
+    "asOf": "2026-01-02T18:07:25.101Z",
+    "source": "stooq",
+    "ttlSeconds": 3600,
+    "stale": true,
+    "itemsCount": 11,
+    "stalenessSec": 1357380,
+    "freshness": {
+      "status": "expired",
+      "ageMinutes": 22623
+    },
+    "schedule": {
+      "rule": "best_effort",
+      "nextPlannedFetchAt": "2026-01-18T14:11:16.546Z",
+      "expectedNextRunWindowMinutes": 180,
+      "ttlSeconds": 3600
+    },
+    "runId": "2026-01-18T11:11:16.534Z",
+    "validation": {
+      "schema": {
+        "ok": true,
+        "errors": []
+      },
+      "ranges": {
+        "ok": true,
+        "errors": []
+      },
+      "integrity": {
+        "ok": true,
+        "errors": []
+      }
+    }
   },
   "data": {
     "items": [
       {
         "symbol": "XLK",
-        "close": 144.7,
-        "returnPct": -1.248891012079446,
-        "date": "2026-01-14"
+        "name": "XLK",
+        "price": 143.8,
+        "changePercent": -0.11808015558796103,
+        "relativeToSpy": -0.03155974263630715
       },
       {
         "symbol": "XLF",
-        "close": 54.15,
-        "returnPct": -2.6254270814601703,
-        "date": "2026-01-14"
+        "name": "XLF",
+        "price": 54.665,
+        "changePercent": -0.19171079057879126,
+        "relativeToSpy": -0.10519037762713737
       },
       {
         "symbol": "XLV",
-        "close": 157.86,
-        "returnPct": -1.1273957158962689,
-        "date": "2026-01-14"
+        "name": "XLV",
+        "price": 154.84,
+        "changePercent": 0.025839793281648607,
+        "relativeToSpy": 0.11236020623330249
       },
       {
         "symbol": "XLE",
-        "close": 48.06,
-        "returnPct": 6.492355417682251,
-        "date": "2026-01-14"
+        "name": "XLE",
+        "price": 45.4,
+        "changePercent": 1.5432789085215786,
+        "relativeToSpy": 1.6297993214732325
       },
       {
         "symbol": "XLI",
-        "close": 164.27,
-        "returnPct": 3.3339623828395366,
-        "date": "2026-01-14"
+        "name": "XLI",
+        "price": 157.095,
+        "changePercent": 1.2732078390923118,
+        "relativeToSpy": 1.3597282520439657
       },
       {
         "symbol": "XLP",
-        "close": 82.23,
-        "returnPct": 7.321848081440876,
-        "date": "2026-01-14"
+        "name": "XLP",
+        "price": 77.67,
+        "changePercent": -0.012873326467565803,
+        "relativeToSpy": 0.07364708648408808
       },
       {
         "symbol": "XLU",
-        "close": 43.17,
-        "returnPct": 3.104848340100321,
-        "date": "2026-01-14"
+        "name": "XLU",
+        "price": 43.175,
+        "changePercent": 1.1360974467088298,
+        "relativeToSpy": 1.2226178596604838
       },
       {
         "symbol": "XLRE",
-        "close": 41.39,
-        "returnPct": 3.114100647732935,
-        "date": "2026-01-14"
+        "name": "XLRE",
+        "price": 40.24,
+        "changePercent": -0.2726146220569998,
+        "relativeToSpy": -0.18609420910534594
       },
       {
         "symbol": "XLB",
-        "close": 48.75,
-        "returnPct": 4.434447300771209,
-        "date": "2026-01-14"
+        "name": "XLB",
+        "price": 45.875,
+        "changePercent": 1.1576626240352779,
+        "relativeToSpy": 1.2441830369869318
       },
       {
         "symbol": "XLC",
-        "close": 116.64,
-        "returnPct": -0.38431975403535984,
-        "date": "2026-01-14"
+        "name": "XLC",
+        "price": 116.98,
+        "changePercent": -0.6286102616377802,
+        "relativeToSpy": -0.5420898486861263
       },
       {
         "symbol": "XLY",
-        "close": 122.25,
-        "returnPct": 1.1166253101736925,
-        "date": "2026-01-14"
+        "name": "XLY",
+        "price": 118.26,
+        "changePercent": -0.9630684197303337,
+        "relativeToSpy": -0.8765480067786798
       }
     ]
   }

@@ -1,18 +1,43 @@
 {
-  "schemaVersion": "v1",
+  "schemaVersion": "v3",
   "blockId": "market-health-summary",
-  "title": "25 - Market Health Summary",
-  "generatedAt": "2026-01-09T19:53:58.702Z",
+  "generatedAt": "2026-01-18T10:52:12.936Z",
   "dataAt": "2026-01-09T19:53:58.695Z",
   "meta": {
     "status": "LIVE",
     "reason": "OK",
-    "stalenessSec": 0,
-    "coveragePct": 100,
-    "timezoneAssumption": "UTC",
-    "dataAtDefinition": "Rollup of blocks 1-24",
-    "latencyMs": 2,
-    "itemsCount": 24
+    "generatedAt": "2026-01-18T10:52:12.936Z",
+    "asOf": "2026-01-09T19:53:58.695Z",
+    "source": "mirror",
+    "ttlSeconds": 3600,
+    "stale": true,
+    "itemsCount": 24,
+    "stalenessSec": 745080,
+    "freshness": {
+      "status": "expired",
+      "ageMinutes": 12418
+    },
+    "schedule": {
+      "rule": "daily",
+      "nextPlannedFetchAt": "2026-01-19T10:52:12.936Z",
+      "expectedNextRunWindowMinutes": 1440,
+      "ttlSeconds": 3600
+    },
+    "runId": "2026-01-18T10:52:12.904Z",
+    "validation": {
+      "schema": {
+        "ok": true,
+        "errors": []
+      },
+      "ranges": {
+        "ok": true,
+        "errors": []
+      },
+      "integrity": {
+        "ok": true,
+        "errors": []
+      }
+    }
   },
   "data": {
     "items": [

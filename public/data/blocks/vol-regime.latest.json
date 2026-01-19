@@ -1,26 +1,51 @@
 {
-  "schemaVersion": "v1",
+  "schemaVersion": "v3",
   "blockId": "vol-regime",
-  "title": "11 - Vol Regime",
-  "generatedAt": "2026-01-15T13:01:36.875Z",
-  "dataAt": "2026-01-13",
+  "generatedAt": "2026-01-19T07:07:27.173Z",
+  "dataAt": "2026-01-15",
   "meta": {
     "status": "LIVE",
     "reason": "OK",
-    "stalenessSec": 219696,
-    "coveragePct": 100,
-    "timezoneAssumption": "UTC",
-    "dataAtDefinition": "FRED VIXCLS latest observation",
-    "latencyMs": 119,
-    "itemsCount": 1
+    "generatedAt": "2026-01-19T07:07:27.173Z",
+    "asOf": "2026-01-15",
+    "source": "mirror",
+    "ttlSeconds": 3600,
+    "stale": true,
+    "itemsCount": 1,
+    "stalenessSec": 371220,
+    "freshness": {
+      "status": "expired",
+      "ageMinutes": 6187
+    },
+    "schedule": {
+      "rule": "daily",
+      "nextPlannedFetchAt": "2026-01-20T07:07:27.173Z",
+      "expectedNextRunWindowMinutes": 1440,
+      "ttlSeconds": 3600
+    },
+    "runId": "2026-01-19T07:07:27.128Z",
+    "validation": {
+      "schema": {
+        "ok": true,
+        "errors": []
+      },
+      "ranges": {
+        "ok": true,
+        "errors": []
+      },
+      "integrity": {
+        "ok": true,
+        "errors": []
+      }
+    }
   },
   "data": {
     "items": [
       {
         "series": "VIX",
-        "value": 15.98,
+        "value": 15.84,
         "regime": "mid",
-        "date": "2026-01-13"
+        "date": "2026-01-15"
       }
     ]
   }

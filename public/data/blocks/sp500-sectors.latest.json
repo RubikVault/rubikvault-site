@@ -1,21 +1,113 @@
 {
-  "ok": false,
-  "feature": "sp500-sectors",
+  "schemaVersion": "v3",
+  "blockId": "sp500-sectors",
+  "generatedAt": "2026-01-19T07:07:27.171Z",
+  "dataAt": "2026-01-16",
   "meta": {
-    "status": "NO_DATA",
-    "reason": "EMPTY_ITEMS",
-    "generatedAt": "2026-01-18T04:01:19.675Z",
-    "stalenessSec": 1523457,
-    "durationMs": 1,
-    "latencyMs": 1,
-    "itemsCount": 0,
-    "coveragePct": 0,
-    "timezoneAssumption": "UTC",
-    "dataAtDefinition": "2025-12-31T12:50:21.836Z",
-    "bytes": 430
+    "status": "LIVE",
+    "reason": "OK",
+    "generatedAt": "2026-01-19T07:07:27.171Z",
+    "asOf": "2026-01-16",
+    "source": "mirror",
+    "ttlSeconds": 3600,
+    "stale": true,
+    "itemsCount": 11,
+    "stalenessSec": 284820,
+    "freshness": {
+      "status": "expired",
+      "ageMinutes": 4747
+    },
+    "schedule": {
+      "rule": "daily",
+      "nextPlannedFetchAt": "2026-01-20T07:07:27.171Z",
+      "expectedNextRunWindowMinutes": 1440,
+      "ttlSeconds": 3600
+    },
+    "runId": "2026-01-19T07:07:27.128Z",
+    "validation": {
+      "schema": {
+        "ok": true,
+        "errors": []
+      },
+      "ranges": {
+        "ok": true,
+        "errors": []
+      },
+      "integrity": {
+        "ok": true,
+        "errors": []
+      }
+    }
   },
   "data": {
-    "items": [],
+    "items": [
+      {
+        "symbol": "XLK",
+        "close": 145.62,
+        "returnPct": -0.36264112213479377,
+        "date": "2026-01-16"
+      },
+      {
+        "symbol": "XLF",
+        "close": 54.44,
+        "returnPct": -2.3147317423290854,
+        "date": "2026-01-16"
+      },
+      {
+        "symbol": "XLV",
+        "close": 155.74,
+        "returnPct": -0.9980293687623121,
+        "date": "2026-01-16"
+      },
+      {
+        "symbol": "XLE",
+        "close": 47.69,
+        "returnPct": 2.1855581744161046,
+        "date": "2026-01-16"
+      },
+      {
+        "symbol": "XLI",
+        "close": 166.9,
+        "returnPct": 3.069227443957265,
+        "date": "2026-01-16"
+      },
+      {
+        "symbol": "XLP",
+        "close": 82.11,
+        "returnPct": 3.6088328075709777,
+        "date": "2026-01-16"
+      },
+      {
+        "symbol": "XLU",
+        "close": 43.39,
+        "returnPct": 2.070101152669966,
+        "date": "2026-01-16"
+      },
+      {
+        "symbol": "XLRE",
+        "close": 42.21,
+        "returnPct": 4.222222222222224,
+        "date": "2026-01-16"
+      },
+      {
+        "symbol": "XLB",
+        "close": 48.68,
+        "returnPct": 0.8702859510982215,
+        "date": "2026-01-16"
+      },
+      {
+        "symbol": "XLC",
+        "close": 115.17,
+        "returnPct": -2.323806292935285,
+        "date": "2026-01-16"
+      },
+      {
+        "symbol": "XLY",
+        "close": 122.3,
+        "returnPct": -1.696005144281006,
+        "date": "2026-01-16"
+      }
+    ],
     "sectors": []
   }
 }

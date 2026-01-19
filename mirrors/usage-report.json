@@ -1,0 +1,225 @@
+{
+  "meta": {
+    "provider": "usage-report",
+    "dataset": "usage-report",
+    "fetchedAt": "2026-01-19T07:07:27.080Z",
+    "ttlSeconds": 3600,
+    "source": "mirror",
+    "runId": "2026-01-19T07:07:27.080Z",
+    "cost": null
+  },
+  "raw": {
+    "day": "2026-01-19",
+    "providers": {
+      "stooq": {
+        "requests": 26,
+        "credits": 0,
+        "bytesIn": 10633433,
+        "latencyMs": 25033,
+        "errors": {},
+        "endpoints": {
+          "daily": {
+            "requests": 26,
+            "credits": 0,
+            "bytesIn": 10633433,
+            "latencyMs": 25033,
+            "errors": {}
+          }
+        },
+        "limit": {
+          "daily": 800,
+          "monthly": 16000
+        }
+      },
+      "fred": {
+        "requests": 16,
+        "credits": 0,
+        "bytesIn": 7169,
+        "latencyMs": 2018,
+        "errors": {},
+        "endpoints": {
+          "series": {
+            "requests": 16,
+            "credits": 0,
+            "bytesIn": 7169,
+            "latencyMs": 2018,
+            "errors": {}
+          }
+        },
+        "limit": {
+          "daily": 200,
+          "monthly": 4000
+        }
+      },
+      "ecb": {
+        "requests": 8,
+        "credits": 0,
+        "bytesIn": 14837,
+        "latencyMs": 39313,
+        "errors": {},
+        "endpoints": {
+          "sdmx": {
+            "requests": 8,
+            "credits": 0,
+            "bytesIn": 14837,
+            "latencyMs": 39313,
+            "errors": {}
+          }
+        },
+        "limit": {
+          "daily": 200,
+          "monthly": 4000
+        }
+      }
+    },
+    "totals": {
+      "requests": 50,
+      "credits": 0
+    },
+    "notes": [],
+    "daily": {
+      "providers": {
+        "stooq": {
+          "requests": 26,
+          "credits": 0,
+          "bytesIn": 10633433,
+          "latencyMs": 25033,
+          "errors": {},
+          "endpoints": {
+            "daily": {
+              "requests": 26,
+              "credits": 0,
+              "bytesIn": 10633433,
+              "latencyMs": 25033,
+              "errors": {}
+            }
+          },
+          "limit": {
+            "daily": 800,
+            "monthly": 16000
+          }
+        },
+        "fred": {
+          "requests": 16,
+          "credits": 0,
+          "bytesIn": 7169,
+          "latencyMs": 2018,
+          "errors": {},
+          "endpoints": {
+            "series": {
+              "requests": 16,
+              "credits": 0,
+              "bytesIn": 7169,
+              "latencyMs": 2018,
+              "errors": {}
+            }
+          },
+          "limit": {
+            "daily": 200,
+            "monthly": 4000
+          }
+        },
+        "ecb": {
+          "requests": 8,
+          "credits": 0,
+          "bytesIn": 14837,
+          "latencyMs": 39313,
+          "errors": {},
+          "endpoints": {
+            "sdmx": {
+              "requests": 8,
+              "credits": 0,
+              "bytesIn": 14837,
+              "latencyMs": 39313,
+              "errors": {}
+            }
+          },
+          "limit": {
+            "daily": 200,
+            "monthly": 4000
+          }
+        }
+      },
+      "totals": {
+        "requests": 50,
+        "credits": 0
+      }
+    },
+    "monthly": {
+      "providers": {
+        "stooq": {
+          "requests": 26,
+          "credits": 0,
+          "bytesIn": 10633433,
+          "latencyMs": 25033,
+          "errors": {},
+          "endpoints": {
+            "daily": {
+              "requests": 26,
+              "credits": 0,
+              "bytesIn": 10633433,
+              "latencyMs": 25033,
+              "errors": {}
+            }
+          },
+          "limit": {
+            "daily": 800,
+            "monthly": 16000
+          }
+        },
+        "fred": {
+          "requests": 16,
+          "credits": 0,
+          "bytesIn": 7169,
+          "latencyMs": 2018,
+          "errors": {},
+          "endpoints": {
+            "series": {
+              "requests": 16,
+              "credits": 0,
+              "bytesIn": 7169,
+              "latencyMs": 2018,
+              "errors": {}
+            }
+          },
+          "limit": {
+            "daily": 200,
+            "monthly": 4000
+          }
+        },
+        "ecb": {
+          "requests": 8,
+          "credits": 0,
+          "bytesIn": 14837,
+          "latencyMs": 39313,
+          "errors": {},
+          "endpoints": {
+            "sdmx": {
+              "requests": 8,
+              "credits": 0,
+              "bytesIn": 14837,
+              "latencyMs": 39313,
+              "errors": {}
+            }
+          },
+          "limit": {
+            "daily": 200,
+            "monthly": 4000
+          }
+        }
+      },
+      "totals": {
+        "requests": 50,
+        "credits": 0
+      }
+    },
+    "runId": "2026-01-19T07:07:27.080Z",
+    "updatedAt": "2026-01-19T07:07:27.080Z",
+    "asOf": "2026-01-19T07:07:27.080Z",
+    "meta": {
+      "status": "PARTIAL",
+      "updatedAt": "2026-01-19T07:07:27.080Z",
+      "reason": "EMPTY_ITEMS"
+    }
+  }
+}

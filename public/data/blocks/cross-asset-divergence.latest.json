@@ -1,18 +1,43 @@
 {
-  "schemaVersion": "v1",
+  "schemaVersion": "v3",
   "blockId": "cross-asset-divergence",
-  "title": "39 - Cross Asset Divergence",
-  "generatedAt": "2026-01-15T12:40:23.089Z",
+  "generatedAt": "2026-01-18T10:52:12.934Z",
   "dataAt": "2026-01-14",
   "meta": {
     "status": "LIVE",
     "reason": "OK",
-    "stalenessSec": 132023,
-    "coveragePct": 100,
-    "timezoneAssumption": "UTC",
-    "dataAtDefinition": "FX vs yields vs equities divergence",
-    "latencyMs": 0,
-    "itemsCount": 1
+    "generatedAt": "2026-01-18T10:52:12.934Z",
+    "asOf": "2026-01-14",
+    "source": "mirror",
+    "ttlSeconds": 3600,
+    "stale": true,
+    "itemsCount": 1,
+    "stalenessSec": 384720,
+    "freshness": {
+      "status": "expired",
+      "ageMinutes": 6412
+    },
+    "schedule": {
+      "rule": "daily",
+      "nextPlannedFetchAt": "2026-01-19T10:52:12.934Z",
+      "expectedNextRunWindowMinutes": 1440,
+      "ttlSeconds": 3600
+    },
+    "runId": "2026-01-18T10:52:12.904Z",
+    "validation": {
+      "schema": {
+        "ok": true,
+        "errors": []
+      },
+      "ranges": {
+        "ok": true,
+        "errors": []
+      },
+      "integrity": {
+        "ok": true,
+        "errors": []
+      }
+    }
   },
   "data": {
     "items": [

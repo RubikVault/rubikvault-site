@@ -1,18 +1,43 @@
 {
-  "schemaVersion": "v1",
+  "schemaVersion": "v3",
   "blockId": "regime-transition-watch",
-  "title": "24 - Regime Transition Watch",
-  "generatedAt": "2026-01-09T19:53:52.359Z",
+  "generatedAt": "2026-01-18T10:52:12.937Z",
   "dataAt": "2026-01-09",
   "meta": {
     "status": "LIVE",
     "reason": "OK",
-    "stalenessSec": 71632,
-    "coveragePct": 100,
-    "timezoneAssumption": "UTC",
-    "dataAtDefinition": "Regime changes vs prior snapshot",
-    "latencyMs": 0,
-    "itemsCount": 1
+    "generatedAt": "2026-01-18T10:52:12.937Z",
+    "asOf": "2026-01-09",
+    "source": "mirror",
+    "ttlSeconds": 3600,
+    "stale": true,
+    "itemsCount": 1,
+    "stalenessSec": 816720,
+    "freshness": {
+      "status": "expired",
+      "ageMinutes": 13612
+    },
+    "schedule": {
+      "rule": "daily",
+      "nextPlannedFetchAt": "2026-01-19T10:52:12.937Z",
+      "expectedNextRunWindowMinutes": 1440,
+      "ttlSeconds": 3600
+    },
+    "runId": "2026-01-18T10:52:12.904Z",
+    "validation": {
+      "schema": {
+        "ok": true,
+        "errors": []
+      },
+      "ranges": {
+        "ok": true,
+        "errors": []
+      },
+      "integrity": {
+        "ok": true,
+        "errors": []
+      }
+    }
   },
   "data": {
     "items": [

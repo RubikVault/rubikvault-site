@@ -1,10 +1,10 @@
 {
-  "generatedAt": "2026-01-19T06:51:55.954Z",
+  "generatedAt": "2026-01-19T07:07:27.226Z",
   "buildStatus": "OK",
   "reasons": [],
   "summary": {
-    "total": 27,
-    "ok": 27,
+    "total": 39,
+    "ok": 39,
     "fail": 0
   },
   "lastGoodAsOf": {},
@@ -140,17 +140,77 @@
       "reason": "COVERAGE_LIMIT"
     },
     {
+      "blockId": "credit-stress-proxy",
+      "status": "OK",
+      "reason": "OK"
+    },
+    {
+      "blockId": "ecb-rates-board",
+      "status": "OK",
+      "reason": "OK"
+    },
+    {
+      "blockId": "energy-macro",
+      "status": "OK",
+      "reason": "OK"
+    },
+    {
+      "blockId": "fx-board",
+      "status": "OK",
+      "reason": "OK"
+    },
+    {
+      "blockId": "highs-vs-lows",
+      "status": "OK",
+      "reason": "OK"
+    },
+    {
+      "blockId": "inflation-pulse",
+      "status": "OK",
+      "reason": "OK"
+    },
+    {
+      "blockId": "labor-pulse",
+      "status": "OK",
+      "reason": "OK"
+    },
+    {
+      "blockId": "liquidity-conditions-proxy",
+      "status": "OK",
+      "reason": "OK"
+    },
+    {
+      "blockId": "market-breadth",
+      "status": "OK",
+      "reason": "OK"
+    },
+    {
+      "blockId": "sp500-sectors",
+      "status": "OK",
+      "reason": "OK"
+    },
+    {
+      "blockId": "us-yield-curve",
+      "status": "OK",
+      "reason": "OK"
+    },
+    {
+      "blockId": "vol-regime",
+      "status": "OK",
+      "reason": "OK"
+    },
+    {
       "blockId": "rvci-engine",
       "status": "OK",
       "reason": "DEGRADED_COVERAGE"
     }
   ],
-  "runId": "2026-01-19T06:51:55.741Z",
+  "runId": "2026-01-19T07:07:27.128Z",
   "meta": {
     "status": "OK",
     "reason": "OK",
-    "generatedAt": "2026-01-19T06:51:55.954Z",
-    "asOf": "2026-01-19T06:51:55.954Z",
+    "generatedAt": "2026-01-19T07:07:27.226Z",
+    "asOf": "2026-01-19T07:07:27.226Z",
     "ttlSeconds": 3600,
     "stale": false,
     "freshness": {
@@ -159,7 +219,7 @@
     },
     "schedule": {
       "rule": "daily",
-      "nextPlannedFetchAt": "2026-01-20T06:51:55.955Z",
+      "nextPlannedFetchAt": "2026-01-20T07:07:27.226Z",
       "expectedNextRunWindowMinutes": 1440,
       "ttlSeconds": 3600
     },
@@ -177,6 +237,6 @@
         "errors": []
       }
     },
-    "runId": "2026-01-19T06:51:55.741Z"
+    "runId": "2026-01-19T07:07:27.128Z"
   }
 }
