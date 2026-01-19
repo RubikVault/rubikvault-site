@@ -32,7 +32,7 @@ export function normalizePick(pick = {}) {
     triggerScore = Math.max(0, Math.round(totalScore - setupScore));
   } else if (setupScore === null && totalScore !== null) {
     // If only setupScore is missing, derive it but keep triggerScore
-    setupScore = Math.min(40, Math.round(totalScore * 0.4));
+      setupScore = Math.min(40, Math.round(totalScore * 0.4));
     if (triggerScore === null) {
       triggerScore = Math.max(0, Math.round(totalScore - setupScore));
     }

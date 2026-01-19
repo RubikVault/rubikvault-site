@@ -560,7 +560,7 @@ async function collectMirrorInputs() {
     if (shouldSkipMirrorId(base)) return;
     // Only load from snapshots/ if not already loaded from mirrors/ (priority: mirrors/ over snapshots/)
     if (!mirrors[base]) {
-      mirrors[base] = loadJson(filePath);
+    mirrors[base] = loadJson(filePath);
     }
   });
   // Fallback: if sector-rotation mirror is missing from mirrors/, try public/mirrors/

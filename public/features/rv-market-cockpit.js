@@ -689,11 +689,11 @@ async function loadData() {
       // Ignore lastGood fetch errors, fall through to main error
     }
     // Both failed
-    return {
-      ok: false,
-      ts: new Date().toISOString(),
-      error: { code: `HTTP_${response.status}`, message: `HTTP ${response.status}` }
-    };
+      return {
+        ok: false,
+        ts: new Date().toISOString(),
+        error: { code: `HTTP_${response.status}`, message: `HTTP ${response.status}` }
+      };
   } catch (error) {
     // Try lastGood on network error too
     try {
@@ -705,7 +705,7 @@ async function loadData() {
         if (lastGoodSnapshot && typeof lastGoodSnapshot === "object") {
           lastGoodSnapshot.meta = lastGoodSnapshot.meta || {};
           lastGoodSnapshot.meta.freshness = { status: "stale", reason: "lastgood_fallback" };
-          return { 
+      return {
             ok: true, 
             snapshot: lastGoodSnapshot, 
             ts: lastGoodSnapshot?.meta?.updatedAt || new Date().toISOString(),

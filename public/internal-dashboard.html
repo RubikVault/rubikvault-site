@@ -126,7 +126,7 @@
 <body>
   <div class="container">
     <h1>🔍 RubikVault Internal Dashboard <span id="rv-internal-auth" class="badge warn">auth: unknown</span></h1>
-    
+
     <div class="section">
       <h2>System Health Overview</h2>
       <button class="refresh-btn" onclick="refreshAll()">🔄 Refresh All</button>
@@ -220,17 +220,18 @@
 
   <script type="module">
     // ACTIVE BLOCKS ONLY (8 blocks on the website)
+    // These match the data-rv-feature attributes in index.html
     const ACTIVE_BLOCKS = [
-      { id: 'macro-hub', name: 'Global Macro Hub', snapshotPath: '/data/snapshots/macro-hub.json' },
-      { id: 'news-headlines', name: 'News Headlines', snapshotPath: '/data/snapshots/news-headlines.json' },
-      { id: 'sp500-sectors', name: 'S&P 500 Sectors', snapshotPath: '/data/snapshots/sp500-sectors.json' },
-      { id: 'tech-signals', name: 'Tech Signals', snapshotPath: '/data/snapshots/tech-signals.json' },
-      { id: 'rvci-engine', name: 'RVCI Engine', snapshotPath: '/data/snapshots/rvci-engine.json', altPath: '/data/rvci_latest.json' },
-      { id: 'alpha-radar', name: 'Alpha Radar', snapshotPath: '/data/snapshots/alpha-radar.json' },
-      { id: 'marketphase', name: 'MarketPhase AI', snapshotPath: '/data/marketphase/index.json', note: 'Loads individual symbol files (AAPL.json, MSFT.json, etc.)' },
+      { id: 'rv-market-cockpit', name: 'Market Snapshot (Global Macro Hub)', snapshotPath: '/data/snapshots/macro-hub.json' },
+      { id: 'rv-news-headlines', name: 'News Headlines', snapshotPath: '/data/snapshots/news-headlines.json' },
+      { id: 'rv-sp500-sectors', name: 'S&P 500 Sectors', snapshotPath: '/data/snapshots/sp500-sectors.json' },
+      { id: 'rv-tech-signals', name: 'Tech Signals', snapshotPath: '/data/snapshots/tech-signals.json' },
+      { id: 'rv-rvci-engine', name: 'RVCI Engine', snapshotPath: '/data/snapshots/rvci-engine.json', altPath: '/data/rvci_latest.json' },
+      { id: 'rv-alpha-radar', name: 'Alpha Radar', snapshotPath: '/data/snapshots/alpha-radar.json' },
+      { id: 'rv-marketphase', name: 'MarketPhase AI', snapshotPath: '/data/marketphase/index.json', note: 'Loads individual symbol files (AAPL.json, MSFT.json, etc.)' },
       { id: 'moats', name: 'Monopoles / Economic Moats', snapshotPath: null, note: 'Static content, no snapshot' }
     ];
-
+    
     async function fetchJSON(url) {
       try {
         const res = await fetch(url, { cache: 'no-store' });
@@ -278,7 +279,7 @@
       let itemsCount = 0;
       let dataPresent = false;
 
-      if (blockId === 'macro-hub') {
+      if (blockId === 'rv-market-cockpit' || blockId === 'macro-hub') {
         const metrics = data;
         const metricKeys = Object.keys(metrics).filter(k => !['debug', 'categories'].includes(k));
         itemsCount = metricKeys.length;
@@ -287,12 +288,12 @@
           return m && (m.value !== null && m.value !== undefined);
         }).length;
         dataPresent = metricsWithValues > 0;
-      } else if (blockId === 'rvci-engine') {
+      } else if (blockId === 'rv-rvci-engine' || blockId === 'rvci-engine') {
         const paths = data.paths || {};
         const counts = data.counts || {};
         itemsCount = Object.keys(paths).length;
         dataPresent = itemsCount > 0 && Object.keys(counts).length > 0;
-      } else if (blockId === 'alpha-radar') {
+      } else if (blockId === 'rv-alpha-radar' || blockId === 'alpha-radar') {
         const items = data.items || [];
         const picks = data.picks || data.extraData?.picks || null;
         const picksTop = picks?.top || [];
@@ -337,11 +338,35 @@
             };
           }
         }
-      } else if (blockId === 'sp500-sectors') {
+      } else if (blockId === 'rv-sp500-sectors' || blockId === 'sp500-sectors') {
         const items = data.items || [];
         const sectors = data.sectors || [];
         itemsCount = items.length || sectors.length;
         dataPresent = itemsCount > 0 || sectors.length > 0;
+        
+        // Check if data structure matches UI expectations
+        if (sectors.length > 0) {
+          const firstSector = sectors[0];
+          // UI expects: rel.r1w, rel.r1d, rel.r1m, relTech.rsi, etc.
+          // Snapshot has: changePercent, relativeToSpy, price, symbol, name
+          const hasRelFields = firstSector.rel && (firstSector.rel.r1w !== undefined || firstSector.rel.r1d !== undefined);
+          const hasRelTechFields = firstSector.relTech && firstSector.relTech.rsi !== undefined;
+          const hasOldFields = firstSector.changePercent !== undefined && firstSector.relativeToSpy !== undefined;
+          
+          // If we have old structure (changePercent) but not new structure (rel.r1w), UI won't render correctly
+          if (hasOldFields && !hasRelFields && !hasRelTechFields) {
+            return {
+              status: 'INVALID_DATA_STRUCTURE',
+              dataPresent: true,
+              itemsCount,
+              age: ageMinutes,
+              freshness: freshnessStatus,
+              reason: `Data structure mismatch: Snapshot has ${itemsCount} sectors with old structure (changePercent, relativeToSpy) but UI expects new structure (rel.r1w, relTech.rsi). UI cannot render this data. Check build-snapshots.mjs mapping for sp500-sectors.`,
+              lastUpdated: meta.generatedAt || meta.updatedAt
+            };
+          }
+        }
+        
         if (itemsCount === 0 && sectors.length === 0) {
           return {
             status: 'EMPTY_ITEMS',
@@ -353,7 +378,7 @@
             lastUpdated: meta.generatedAt || meta.updatedAt
           };
         }
-      } else if (blockId === 'tech-signals') {
+      } else if (blockId === 'rv-tech-signals' || blockId === 'tech-signals') {
         const items = data.items || [];
         itemsCount = items.length;
         dataPresent = itemsCount > 0;
@@ -373,7 +398,7 @@
             };
           }
         }
-      } else if (blockId === 'marketphase') {
+      } else if (blockId === 'rv-marketphase' || blockId === 'marketphase') {
         // MarketPhase loads individual symbol files, check index.json
         const symbols = data.symbols || [];
         itemsCount = symbols.length;
@@ -489,7 +514,7 @@
       tbody.innerHTML = results.map(result => {
         // Determine status class based on actual data quality
         let statusClass = 'ok';
-        if (result.status === 'DUMMY_DATA' || result.status === 'NO_DATA' || result.status === 'EMPTY_ITEMS' || result.status === 'INVALID_DATA') {
+        if (result.status === 'DUMMY_DATA' || result.status === 'NO_DATA' || result.status === 'EMPTY_ITEMS' || result.status === 'INVALID_DATA' || result.status === 'INVALID_DATA_STRUCTURE' || result.status === 'NO_SYMBOLS') {
           statusClass = 'fail';
         } else if (result.status === 'PARTIAL' || !result.dataPresent) {
           statusClass = 'warn';
