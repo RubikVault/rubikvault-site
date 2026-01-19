@@ -2,9 +2,17 @@ export async function onRequestGet(context) {
   const { request, env } = context;
   const url = new URL(request.url);
 
-  // Skip /internal/health - redirect to static file
+  // Skip /internal/health - let static files be served by _redirects
+  // Return undefined/null to let the request pass through to static file serving
   if (url.pathname.startsWith('/internal/health')) {
-    return Response.redirect(new URL('/internal/health/index.html', request.url), 302);
+    // Don't handle this - let Cloudflare Pages serve the static file
+    // We can't return undefined, so we'll just not handle it in this function
+    // But since this function matches /internal/*, we need to handle it
+    // Best approach: redirect to the exact path that exists
+    const targetPath = url.pathname === '/internal/health' || url.pathname === '/internal/health/' 
+      ? '/internal/health/index.html'
+      : url.pathname;
+    return Response.redirect(new URL(targetPath, request.url), 301);
   }
 
   const required = env?.RV_INTERNAL_TOKEN;

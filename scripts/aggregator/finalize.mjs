@@ -324,27 +324,52 @@ async function promoteArtifacts(manifest, artifacts, tmpDir) {
   const snapshotsDir = join(PUBLIC_DIR, 'snapshots');
   const stateDir = join(PUBLIC_DIR, 'state');
   
+  let promotedCount = 0;
   for (const [moduleName] of Object.entries(manifest.modules)) {
     if (!manifest.modules[moduleName].published) continue;
     
-    // Promote snapshot
-    const tmpSnapshot = join(tmpBase, 'snapshots', moduleName, 'latest.json');
-    const finalSnapshot = join(snapshotsDir, moduleName, 'latest.json');
-    await mkdir(dirname(finalSnapshot), { recursive: true });
-    await rename(tmpSnapshot, finalSnapshot);
-    
-    // Promote state
-    const tmpState = join(tmpBase, 'state', 'modules', `${moduleName}.json`);
-    const finalState = join(stateDir, 'modules', `${moduleName}.json`);
-    await mkdir(dirname(finalState), { recursive: true });
-    await rename(tmpState, finalState);
+    try {
+      // Promote snapshot
+      const tmpSnapshot = join(tmpBase, 'snapshots', moduleName, 'latest.json');
+      const finalSnapshot = join(snapshotsDir, moduleName, 'latest.json');
+      await mkdir(dirname(finalSnapshot), { recursive: true });
+      
+      // Check if tmp file exists before renaming
+      try {
+        await stat(tmpSnapshot);
+        await rename(tmpSnapshot, finalSnapshot);
+      } catch (err) {
+        console.warn(`⚠ Snapshot file missing for ${moduleName}, skipping`);
+        continue;
+      }
+      
+      // Promote state
+      const tmpState = join(tmpBase, 'state', 'modules', `${moduleName}.json`);
+      const finalState = join(stateDir, 'modules', `${moduleName}.json`);
+      await mkdir(dirname(finalState), { recursive: true });
+      
+      try {
+        await stat(tmpState);
+        await rename(tmpState, finalState);
+      } catch (err) {
+        console.warn(`⚠ State file missing for ${moduleName}, continuing anyway`);
+      }
+      
+      promotedCount++;
+    } catch (err) {
+      console.error(`❌ Failed to promote ${moduleName}: ${err.message}`);
+      throw err; // Fail if promotion fails
+    }
   }
   
-  // Promote manifest
-  const finalManifest = join(PUBLIC_DIR, 'manifest.json');
-  await writeAtomic(finalManifest, manifestContent);
-  
-  console.log(`✓ Promoted ${Object.values(manifest.modules).filter(m => m.published).length} modules`);
+  // Promote manifest only if we promoted at least one module
+  if (promotedCount > 0) {
+    const finalManifest = join(PUBLIC_DIR, 'manifest.json');
+    await writeAtomic(finalManifest, manifestContent);
+    console.log(`✓ Promoted ${promotedCount} modules`);
+  } else {
+    console.warn('⚠ No modules promoted, skipping manifest update');
+  }
   
   // Cleanup tmp
   // Note: In real implementation, we'd use fs.rm with recursive
@@ -371,6 +396,7 @@ async function main() {
     
     if (artifacts.size === 0) {
       console.warn('⚠ No artifacts found. Exiting (nothing to publish).');
+      console.log('ℹ This is normal if the Pilot workflow has not run yet or no artifacts were uploaded.');
       process.exit(0);
     }
     
