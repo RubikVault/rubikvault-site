@@ -2,36 +2,61 @@ export async function onRequestGet(context) {
   const { request, env } = context;
   const url = new URL(request.url);
 
-  // IMPORTANT: /internal/health should be handled by static files
-  // This function matches /internal/* but we want to skip /internal/health
-  // The best approach: read and serve the HTML file directly
+  // Handle /internal/health by serving HTML directly
+  // Since Cloudflare Functions execute BEFORE _redirects,
+  // we must serve the file here, not just redirect
   if (url.pathname.startsWith('/internal/health')) {
     const targetPath = url.pathname === '/internal/health' || url.pathname === '/internal/health/'
       ? '/internal/health/index.html'
       : url.pathname;
     
-    // Try multiple approaches to serve the static file
-    // Approach 1: Use ASSETS binding if available (Cloudflare Pages feature)
+    // Try to fetch static file using ASSETS binding (Cloudflare Pages)
     if (context.env && context.env.ASSETS) {
       try {
-        const assetRequest = new Request(new URL(targetPath, request.url));
+        const assetUrl = new URL(targetPath, request.url);
+        const assetRequest = new Request(assetUrl.toString(), {
+          method: 'GET',
+          headers: request.headers
+        });
+        
         const assetResponse = await context.env.ASSETS.fetch(assetRequest);
-        if (assetResponse.ok) {
-          return new Response(assetResponse.body, {
+        
+        if (assetResponse && assetResponse.ok) {
+          const html = await assetResponse.text();
+          return new Response(html, {
+            status: 200,
             headers: {
               'Content-Type': 'text/html; charset=utf-8',
-              'Cache-Control': 'no-store'
+              'Cache-Control': 'no-store',
+              'X-Served-By': 'internal.js-function'
             }
           });
         }
       } catch (err) {
-        // Fall through to next approach
+        console.error('ASSETS fetch failed:', err.message);
+        // Continue to fallback
       }
     }
     
-    // Approach 2: Redirect - _redirects should handle this
-    // Use 301 permanent redirect so browser caches the redirect
-    return Response.redirect(new URL(targetPath, request.url), 301);
+    // Fallback: Return HTML with meta refresh redirect
+    // This helps if ASSETS binding is not available
+    const redirectUrl = new URL(targetPath, request.url).toString();
+    return new Response(`<!DOCTYPE html>
+<html>
+<head>
+  <meta http-equiv="refresh" content="0; url=${redirectUrl}">
+  <script>window.location.href = ${JSON.stringify(redirectUrl)};</script>
+</head>
+<body>
+  <p>Redirecting to <a href="${redirectUrl}">Mission Control Dashboard</a>...</p>
+</body>
+</html>`, {
+      status: 200,
+      headers: {
+        'Content-Type': 'text/html; charset=utf-8',
+        'Location': redirectUrl
+      }
+    });
   }
 
   const required = env?.RV_INTERNAL_TOKEN;
