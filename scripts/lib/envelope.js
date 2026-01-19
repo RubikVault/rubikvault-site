@@ -15,48 +15,64 @@ import { computeSnapshotDigest } from './digest.js';
 
 /**
  * Build v3.0 snapshot envelope
- * @param {array} data - Array of data records
- * @param {object} metadata - Metadata fields
+ * Supports two call styles for backward compatibility:
+ * 1. buildEnvelope(data, metadata) - New style (two params)
+ * 2. buildEnvelope({ module, data, ... }) - Legacy style (single object)
+ * 
+ * @param {array|object} dataOrOptions - Data array OR options object
+ * @param {object} metadata - Metadata fields (only for new style)
  * @returns {object} Complete envelope
  */
-export function buildEnvelope(data, metadata) {
+export function buildEnvelope(dataOrOptions, metadata) {
   const now = new Date().toISOString();
+  
+  // Detect call style
+  let data, meta;
+  if (metadata === undefined && typeof dataOrOptions === 'object' && !Array.isArray(dataOrOptions) && dataOrOptions.data) {
+    // Legacy style: buildEnvelope({ module, data, ... })
+    meta = dataOrOptions;
+    data = meta.data;
+  } else {
+    // New style: buildEnvelope(data, metadata)
+    data = dataOrOptions;
+    meta = metadata || {};
+  }
   
   const envelope = {
     schema_version: "3.0",
     metadata: {
-      module: metadata.module || "unknown",
-      tier: metadata.tier || "standard",
-      domain: metadata.domain || "unknown",
-      source: metadata.source || "unknown",
-      fetched_at: metadata.fetched_at || now,
-      published_at: metadata.published_at || now,
+      module: meta.module || "unknown",
+      tier: meta.tier || "standard",
+      domain: meta.domain || "unknown",
+      source: meta.source || "unknown",
+      fetched_at: (meta.fetchedAt instanceof Date ? meta.fetchedAt.toISOString() : meta.fetched_at) || now,
+      published_at: (meta.publishedAt instanceof Date ? meta.publishedAt.toISOString() : meta.published_at) || now,
       digest: null, // Will be computed below
       record_count: Array.isArray(data) ? data.length : 0,
-      expected_count: metadata.expected_count || null,
+      expected_count: meta.expected_count || null,
       validation: {
-        passed: metadata.validation?.passed ?? true,
-        dropped_records: metadata.validation?.dropped_records ?? 0,
-        drop_ratio: metadata.validation?.drop_ratio ?? 0,
-        checks: metadata.validation?.checks ?? [],
-        warnings: metadata.validation?.warnings ?? []
+        passed: meta.validation?.passed ?? true,
+        dropped_records: meta.validation?.dropped_records ?? 0,
+        drop_ratio: meta.validation?.drop_ratio ?? 0,
+        checks: meta.validation?.checks ?? [],
+        warnings: meta.validation?.warnings ?? []
       },
       freshness: {
-        expected_interval_minutes: metadata.freshness?.expected_interval_minutes || 1440,
-        grace_minutes: metadata.freshness?.grace_minutes || 180,
-        policy: metadata.freshness?.policy || "always",
-        age_minutes: metadata.freshness?.age_minutes || 0,
-        next_expected_at: metadata.freshness?.next_expected_at || null
+        expected_interval_minutes: meta.freshness?.expected_interval_minutes || 1440,
+        grace_minutes: meta.freshness?.grace_minutes || 180,
+        policy: meta.freshness?.policy || "always",
+        age_minutes: meta.freshness?.age_minutes || 0,
+        next_expected_at: meta.freshness?.next_expected_at || null
       },
       upstream: {
-        http_status: metadata.upstream?.http_status || null,
-        latency_ms: metadata.upstream?.latency_ms || null,
-        rate_limit_remaining: metadata.upstream?.rate_limit_remaining || null,
-        retry_count: metadata.upstream?.retry_count || 0
+        http_status: meta.upstream?.http_status || null,
+        latency_ms: meta.upstream?.latency_ms || null,
+        rate_limit_remaining: meta.upstream?.rate_limit_remaining || null,
+        retry_count: meta.upstream?.retry_count || 0
       }
     },
     data: Array.isArray(data) ? data : [data],
-    error: metadata.error || null
+    error: meta.error || null
   };
   
   // Compute digest
