@@ -1,29 +1,29 @@
 {
   "schemaVersion": "v3",
   "blockId": "news-headlines",
-  "generatedAt": "2026-01-19T09:05:19.551Z",
+  "generatedAt": "2026-01-19T09:33:45.545Z",
   "dataAt": "2026-01-19T08:00:30.095Z",
   "meta": {
     "status": "OK",
     "reason": "OK",
-    "generatedAt": "2026-01-19T09:05:19.551Z",
+    "generatedAt": "2026-01-19T09:33:45.545Z",
     "asOf": "2026-01-19T08:00:30.095Z",
     "source": "rss",
     "ttlSeconds": 3600,
     "stale": true,
     "itemsCount": 50,
-    "stalenessSec": 3840,
+    "stalenessSec": 5580,
     "freshness": {
       "status": "stale",
-      "ageMinutes": 64
+      "ageMinutes": 93
     },
     "schedule": {
       "rule": "best_effort",
-      "nextPlannedFetchAt": "2026-01-19T12:05:19.551Z",
+      "nextPlannedFetchAt": "2026-01-19T12:33:45.545Z",
       "expectedNextRunWindowMinutes": 180,
       "ttlSeconds": 3600
     },
-    "runId": "2026-01-19T09:05:19.518Z",
+    "runId": "2026-01-19T09:33:45.524Z",
     "validation": {
       "schema": {
         "ok": true,
@@ -341,6 +341,11 @@
         "source": "CNBC",
         "publishedAt": "Sat, 17 Jan 2026 09:54:08 GMT"
       }
+    ],
+    "feeds": [
+      "WSJ",
+      "CNBC",
+      "YH"
     ],
     "debug": {
       "lastGood": {

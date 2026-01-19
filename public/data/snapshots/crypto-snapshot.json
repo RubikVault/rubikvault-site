@@ -1,29 +1,29 @@
 {
   "schemaVersion": "v3",
   "blockId": "crypto-snapshot",
-  "generatedAt": "2026-01-19T09:05:19.535Z",
+  "generatedAt": "2026-01-19T09:33:45.538Z",
   "dataAt": "2026-01-19T06:51:55.573Z",
   "meta": {
     "status": "OK",
     "reason": "OK",
-    "generatedAt": "2026-01-19T09:05:19.535Z",
+    "generatedAt": "2026-01-19T09:33:45.538Z",
     "asOf": "2026-01-19T06:51:55.573Z",
     "source": "coingecko",
     "ttlSeconds": 3600,
     "stale": true,
     "itemsCount": 3,
-    "stalenessSec": 7980,
+    "stalenessSec": 9660,
     "freshness": {
       "status": "expired",
-      "ageMinutes": 133
+      "ageMinutes": 161
     },
     "schedule": {
       "rule": "hourly",
-      "nextPlannedFetchAt": "2026-01-19T10:05:19.535Z",
+      "nextPlannedFetchAt": "2026-01-19T10:33:45.538Z",
       "expectedNextRunWindowMinutes": 60,
       "ttlSeconds": 3600
     },
-    "runId": "2026-01-19T09:05:19.518Z",
+    "runId": "2026-01-19T09:33:45.524Z",
     "validation": {
       "schema": {
         "ok": true,
@@ -59,6 +59,11 @@
         "change24h": -6.706598627851244,
         "marketCap": 75230581873.54692
       }
+    ],
+    "coins": [
+      "bitcoin",
+      "ethereum",
+      "solana"
     ]
   }
 }

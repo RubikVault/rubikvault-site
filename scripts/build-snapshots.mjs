@@ -208,8 +208,13 @@ function redactSecrets(value) {
 }
 
 function extractItems(payload) {
-  if (Array.isArray(payload?.items)) return payload.items;
-  if (Array.isArray(payload?.data?.items)) return payload.data.items;
+  // Handle envelope format: { meta: {...}, raw: {...} }
+  const raw = payload?.raw || payload;
+  
+  if (Array.isArray(raw?.items)) return raw.items;
+  if (Array.isArray(raw?.data?.items)) return raw.data.items;
+  if (Array.isArray(payload?.items)) return payload.items; // Fallback to top-level
+  if (Array.isArray(payload?.data?.items)) return payload.data.items; // Fallback to top-level data
   if (Array.isArray(payload?.payload?.items)) return payload.payload.items;
   if (Array.isArray(payload?.payload?.data?.items)) return payload.payload.data.items;
   if (Array.isArray(payload?.payload?.data?.data?.items)) return payload.payload.data.data.items;
@@ -218,21 +223,50 @@ function extractItems(payload) {
 }
 
 function extractExtraData(payload) {
-  const data = payload?.data;
-  if (!data || typeof data !== "object" || Array.isArray(data)) return {};
+  // Handle envelope format: { meta: {...}, raw: {...} }
+  const raw = payload?.raw || payload;
+  const data = raw?.data || payload?.data;
+  if (!data || typeof data !== "object" || Array.isArray(data)) {
+    // Also check context for extraData (e.g., sectors in context)
+    const context = raw?.context || payload?.context;
+    if (context && typeof context === "object" && !Array.isArray(context)) {
+      return context;
+    }
+    return {};
+  }
   const { items, ...rest } = data;
-  return rest && typeof rest === "object" ? rest : {};
+  const result = rest && typeof rest === "object" ? rest : {};
+  // Also merge context if present (e.g., sectors array)
+  const context = raw?.context || payload?.context;
+  if (context && typeof context === "object" && !Array.isArray(context)) {
+    return { ...result, ...context };
+  }
+  return result;
 }
 
 function extractSectors(payload) {
   // Try multiple locations for sectors array
-  if (Array.isArray(payload?.sectors)) return payload.sectors;
-  if (Array.isArray(payload?.context?.sectors)) return payload.context.sectors; // From seed-mirrors.mjs
-  if (Array.isArray(payload?.data?.sectors)) return payload.data.sectors;
+  // Handle envelope format: { meta: {...}, raw: {...} }
+  const raw = payload?.raw || payload;
+  
+  if (Array.isArray(raw?.sectors)) return raw.sectors;
+  if (Array.isArray(raw?.context?.sectors)) return raw.context.sectors; // From seed-mirrors.mjs
+  if (Array.isArray(raw?.data?.sectors)) return raw.data.sectors;
+  if (Array.isArray(raw?.data?.data?.sectors)) return raw.data.data.sectors;
+  if (Array.isArray(payload?.sectors)) return payload.sectors; // Fallback to top-level
+  if (Array.isArray(payload?.context?.sectors)) return payload.context.sectors; // Fallback to top-level context
+  if (Array.isArray(payload?.data?.sectors)) return payload.data.sectors; // Fallback to top-level data
   if (Array.isArray(payload?.payload?.data?.data?.sectors)) return payload.payload.data.data.sectors;
   if (Array.isArray(payload?.payload?.data?.sectors)) return payload.payload.data.sectors;
+  if (Array.isArray(raw?.items) && raw.items.length && raw.items[0]?.sector) return raw.items;
   if (Array.isArray(payload?.items) && payload.items.length && payload.items[0]?.sector) return payload.items;
   // If items look like sectors (have symbol, price, changePercent), use them as sectors
+  if (Array.isArray(raw?.items) && raw.items.length > 0) {
+    const firstItem = raw.items[0];
+    if (firstItem.symbol && (Number.isFinite(firstItem.price) || Number.isFinite(firstItem.changePercent))) {
+      return raw.items; // Items are actually sectors
+    }
+  }
   if (Array.isArray(payload?.items) && payload.items.length > 0) {
     const firstItem = payload.items[0];
     if (firstItem.symbol && (Number.isFinite(firstItem.price) || Number.isFinite(firstItem.changePercent))) {
