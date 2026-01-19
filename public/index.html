@@ -82,6 +82,7 @@
     <a href="#stocks">Stocks</a>
     <a href="#tech-signals">Tech Signals</a>
     <a href="#rvci-engine">RVCI Engine</a>
+    <a href="#rvci-2">RVCI 2</a>
     <a href="#alpha-radar">Alpha Radar</a>
     <a href="#moats">Moats</a>
     <a href="#marketphase">MarketPhase</a>
@@ -201,6 +202,31 @@
       <a id="rvci-engine" style="position: absolute; top: -110px;"></a>
       <div class="rv-native-header">
         <h2>RVCI Engine <span class="rv-tooltip-wrapper"><span class="rv-tooltip-icon" aria-label="Information">ⓘ</span><span class="rv-tooltip-content"><strong>RVCI Engine</strong><br>Purpose: Regime + breadth snapshot from the RVCI pipeline.<br>Data source: Static snapshot (EOD)<br>Update: Daily (EOD)<br>Limitations: Coverage may be degraded on free tier.</span></span></h2>
+        <button class="rv-native-refresh" type="button" data-rv-action="refresh">Refresh</button>
+      </div>
+      <div class="rv-native-body rv-card">
+        <div class="rv-native-skeleton">
+          <div class="rv-native-line"></div>
+          <div class="rv-native-line short"></div>
+          <div class="rv-native-line"></div>
+        </div>
+        <div class="rv-native-root" data-rv-root></div>
+      </div>
+    </section>
+
+    <!-- RVCI 2 - Enhanced Confidence Index -->
+    <section
+      class="rv-section rv-native-block"
+      data-rv-feature="rv-rvci-2" data-block-id="rvci-2"
+      data-rv-block-name="RVCI 2"
+      data-rv-priority="low"
+      data-rv-loading="true"
+      data-rv-collapsible="true"
+      data-rv-span="wide"
+    >
+      <a id="rvci-2" style="position: absolute; top: -110px;"></a>
+      <div class="rv-native-header">
+        <h2>RVCI 2 <span class="rv-tooltip-wrapper"><span class="rv-tooltip-icon" aria-label="Information">ⓘ</span><span class="rv-tooltip-content"><strong>RVCI 2 - Enhanced Confidence Index</strong><br>Purpose: Shows top-scored stocks with signals and risk assessment.<br>Data source: Static snapshot (EOD)<br>Update: Every 5 minutes<br>Features: Signal badges, Risk/Quality scoring, Sortable table.</span></span></h2>
         <button class="rv-native-refresh" type="button" data-rv-action="refresh">Refresh</button>
       </div>
       <div class="rv-native-body rv-card">
