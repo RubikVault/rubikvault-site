@@ -19,6 +19,8 @@ import { fileURLToPath } from 'node:url';
 import { computeSnapshotDigest, computeDigest } from '../lib/digest.js';
 import { validateEnvelopeSchema } from '../lib/envelope.js';
 import { generateProviderState, writeProviderState } from '../lib/provider-state.js';
+import { getCurrentBuildId } from '../lib/build-id.js';
+import { appendAuditEvent, createPublishEvent, createBlockEvent, EventType } from '../lib/audit-log.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -201,7 +203,7 @@ function applyPublishPolicy(manifest, registry) {
 /**
  * Build candidate manifest
  */
-function buildManifest(artifacts, registry, publishedAt) {
+function buildManifest(artifacts, registry, publishedAt, buildId) {
   const modules = {};
   
   for (const [moduleName, artifact] of artifacts.entries()) {
@@ -221,6 +223,7 @@ function buildManifest(artifacts, registry, publishedAt) {
       published: false, // Will be set by publish policy
       digest: snapshot.metadata.digest,
       fetched_at: snapshot.metadata.fetched_at,
+      build_id: buildId, // Add Build ID
       freshness: snapshot.metadata.freshness,
       cache: {
         kv_enabled: config.cache?.kv_enabled || false,
@@ -231,6 +234,7 @@ function buildManifest(artifacts, registry, publishedAt) {
   
   const manifest = {
     schema_version: "3.0",
+    active_build_id: buildId, // Add Build ID to manifest
     published_at: publishedAt || new Date().toISOString(),
     publish_policy: "critical_core_hybrid_v3",
     modules,
@@ -245,6 +249,13 @@ function buildManifest(artifacts, registry, publishedAt) {
  */
 function checkIntegrity(manifest, artifacts) {
   const errors = [];
+  const now = new Date();
+  
+  // Check manifest-level timestamps
+  const publishedAt = new Date(manifest.published_at);
+  if (publishedAt > now) {
+    errors.push(`MANIFEST_TIMESTAMP_FUTURE: published_at is in the future (${manifest.published_at})`);
+  }
   
   for (const [moduleName, module] of Object.entries(manifest.modules)) {
     if (!module.published) continue; // Only check published modules
@@ -256,6 +267,22 @@ function checkIntegrity(manifest, artifacts) {
     }
     
     const snapshot = artifact.snapshot;
+    
+    // Timestamp validation
+    const fetchedAt = new Date(snapshot.metadata.fetched_at);
+    const snapshotPublishedAt = new Date(snapshot.metadata.published_at);
+    
+    if (fetchedAt > now) {
+      errors.push(`${moduleName}: TIMESTAMP_FUTURE: fetched_at is in the future (${snapshot.metadata.fetched_at})`);
+    }
+    
+    if (snapshotPublishedAt > now) {
+      errors.push(`${moduleName}: TIMESTAMP_FUTURE: published_at is in the future (${snapshot.metadata.published_at})`);
+    }
+    
+    if (snapshotPublishedAt < fetchedAt) {
+      errors.push(`${moduleName}: TIMESTAMP_INVALID: published_at (${snapshot.metadata.published_at}) before fetched_at (${snapshot.metadata.fetched_at})`);
+    }
     
     // Digest match
     if (module.digest !== snapshot.metadata.digest) {
@@ -495,7 +522,9 @@ async function main() {
     // Build manifest
     console.log('📝 Building manifest...');
     const publishedAt = new Date().toISOString();
-    const manifest = buildManifest(artifacts, registry, publishedAt);
+    const buildId = getCurrentBuildId();
+    console.log(`  Build ID: ${buildId}`);
+    const manifest = buildManifest(artifacts, registry, publishedAt, buildId);
     console.log(`✓ Manifest built: ${manifest.summary.ok} ok, ${manifest.summary.error} error\n`);
     
     // Integrity check
@@ -524,6 +553,31 @@ async function main() {
     const providerState = generateProviderState(manifest, moduleStatesMap);
     await writeProviderState(providerState, BASE_DIR);
     console.log('✓ Provider-state written\n');
+    
+    // Log audit event
+    console.log('📊 Logging audit event...');
+    try {
+      const modulesPublished = Object.entries(manifest.modules)
+        .filter(([_, m]) => m.published)
+        .map(([name, _]) => name);
+      
+      const modulesFailed = Object.entries(manifest.modules)
+        .filter(([_, m]) => !m.published)
+        .map(([name, _]) => name);
+      
+      const auditEvent = createPublishEvent({
+        buildId,
+        modulesPublished,
+        modulesFailed,
+        critical_ok: manifest.summary.critical_ok
+      });
+      
+      await appendAuditEvent(auditEvent, BASE_DIR);
+      console.log('✓ Audit event logged\n');
+    } catch (auditErr) {
+      console.warn(`⚠ Failed to log audit event: ${auditErr.message}`);
+      // Non-fatal, continue
+    }
     
     console.log('✅ Finalizer completed successfully!');
     console.log(`   Published: ${manifest.summary.ok} modules`);

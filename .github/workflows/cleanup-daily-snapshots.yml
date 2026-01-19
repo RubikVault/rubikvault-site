@@ -1,0 +1,73 @@
+name: Cleanup Daily Snapshots
+
+on:
+  schedule:
+    # Run weekly on Sundays at 02:00 UTC
+    - cron: "0 2 * * 0"
+  workflow_dispatch:
+    inputs:
+      days_to_keep:
+        description: 'Days to keep (default: 7)'
+        required: false
+        default: '7'
+      dry_run:
+        description: 'Dry run (true/false)'
+        required: false
+        default: 'false'
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run Cleanup Script
+        env:
+          DAYS_TO_KEEP: ${{ github.event.inputs.days_to_keep || '7' }}
+          DRY_RUN: ${{ github.event.inputs.dry_run || 'false' }}
+        run: |
+          echo "🗑️  Running cleanup script..."
+          echo "Days to keep: $DAYS_TO_KEEP"
+          echo "Dry run: $DRY_RUN"
+          
+          # Make script executable
+          chmod +x scripts/cleanup-daily-snapshots.sh
+          
+          # Run cleanup
+          ./scripts/cleanup-daily-snapshots.sh "$DAYS_TO_KEEP"
+
+      - name: Check for changes
+        id: changes
+        run: |
+          if git diff --quiet public/data; then
+            echo "changed=false" >> $GITHUB_OUTPUT
+            echo "No files deleted"
+          else
+            echo "changed=true" >> $GITHUB_OUTPUT
+            echo "Changes detected:"
+            git diff --stat public/data
+          fi
+
+      - name: Commit and push
+        if: steps.changes.outputs.changed == 'true' && github.event.inputs.dry_run != 'true'
+        run: |
+          git config user.name "RubikVault Bot"
+          git config user.email "bot@rubikvault.com"
+          
+          git add public/data
+          git commit -m "chore: cleanup daily snapshots (keep last ${{ github.event.inputs.days_to_keep || '7' }} days)" || exit 0
+          
+          git push origin main
+
+      - name: Summary
+        if: always()
+        run: |
+          echo "## Cleanup Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- Days to keep: ${{ github.event.inputs.days_to_keep || '7' }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Dry run: ${{ github.event.inputs.dry_run || 'false' }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Changes: ${{ steps.changes.outputs.changed }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Status: ${{ job.status }}" >> $GITHUB_STEP_SUMMARY

@@ -1,0 +1,336 @@
+name: CI Gates - Quality & Budget Checks
+
+on:
+  pull_request:
+    paths:
+      - 'public/data/**'
+      - 'scripts/**'
+      - '.github/workflows/**'
+  push:
+    branches:
+      - main
+    paths:
+      - 'public/data/**'
+      - 'scripts/**'
+
+jobs:
+  asset-budget:
+    name: Asset Budget Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Check Asset Budget
+        run: |
+          echo "🔍 Checking Asset Budget..."
+          
+          # Count files in public/data
+          TOTAL_FILES=$(find public/data -type f -name "*.json" | wc -l)
+          echo "Total JSON files: $TOTAL_FILES"
+          
+          # Check total file count (Cloudflare Pages limit: 20k files, we use 15k as safety)
+          MAX_FILES=15000
+          if [ $TOTAL_FILES -gt $MAX_FILES ]; then
+            echo "❌ ERROR: Total files ($TOTAL_FILES) exceeds limit ($MAX_FILES)"
+            echo "Clean up old files or adjust rolling window!"
+            exit 1
+          fi
+          echo "✅ Total file count OK ($TOTAL_FILES/$MAX_FILES)"
+          
+          # Check individual file sizes (max 25MB, we use 10MB as safety)
+          MAX_SIZE_MB=10
+          MAX_SIZE_BYTES=$((MAX_SIZE_MB * 1024 * 1024))
+          LARGE_FILES=$(find public/data -type f -name "*.json" -size +${MAX_SIZE_MB}M)
+          if [ ! -z "$LARGE_FILES" ]; then
+            echo "❌ ERROR: Files exceed ${MAX_SIZE_MB}MB:"
+            echo "$LARGE_FILES"
+            find public/data -type f -name "*.json" -size +${MAX_SIZE_MB}M -exec ls -lh {} \;
+            exit 1
+          fi
+          echo "✅ Individual file sizes OK (all < ${MAX_SIZE_MB}MB)"
+          
+          # Check per-module file count (max 500 files per module)
+          MAX_FILES_PER_MODULE=500
+          for module_dir in public/data/snapshots/*/; do
+            if [ -d "$module_dir" ]; then
+              MODULE_NAME=$(basename "$module_dir")
+              MODULE_FILES=$(find "$module_dir" -type f -name "*.json" | wc -l)
+              if [ $MODULE_FILES -gt $MAX_FILES_PER_MODULE ]; then
+                echo "❌ ERROR: Module $MODULE_NAME has $MODULE_FILES files (max $MAX_FILES_PER_MODULE)"
+                exit 1
+              fi
+              echo "  ✓ $MODULE_NAME: $MODULE_FILES files"
+            fi
+          done
+          echo "✅ Per-module file count OK"
+          
+          # Calculate total size
+          TOTAL_SIZE=$(du -sb public/data | cut -f1)
+          TOTAL_SIZE_MB=$((TOTAL_SIZE / 1024 / 1024))
+          echo "Total size: ${TOTAL_SIZE_MB}MB"
+          
+          # Budget summary
+          echo ""
+          echo "═══════════════════════════════════════"
+          echo "         ASSET BUDGET SUMMARY"
+          echo "═══════════════════════════════════════"
+          echo "Total files:     $TOTAL_FILES / $MAX_FILES"
+          echo "Total size:      ${TOTAL_SIZE_MB}MB"
+          echo "Max file size:   < ${MAX_SIZE_MB}MB"
+          echo "Status:          ✅ PASS"
+          echo "═══════════════════════════════════════"
+
+  schema-validation:
+    name: JSON Schema Validation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Validate JSON Schemas
+        run: |
+          echo "🔍 Validating JSON Schemas..."
+          
+          # Check if files are valid JSON
+          INVALID_COUNT=0
+          
+          echo "Checking manifest.json..."
+          if [ -f public/data/manifest.json ]; then
+            if ! jq empty public/data/manifest.json 2>/dev/null; then
+              echo "❌ manifest.json is invalid JSON"
+              INVALID_COUNT=$((INVALID_COUNT + 1))
+            else
+              echo "✅ manifest.json valid"
+              
+              # Check required fields
+              SCHEMA_VERSION=$(jq -r '.schema_version // "missing"' public/data/manifest.json)
+              if [ "$SCHEMA_VERSION" != "3.0" ]; then
+                echo "❌ manifest.json: schema_version should be '3.0', got '$SCHEMA_VERSION'"
+                INVALID_COUNT=$((INVALID_COUNT + 1))
+              fi
+              
+              ACTIVE_BUILD_ID=$(jq -r '.active_build_id // "missing"' public/data/manifest.json)
+              if [ "$ACTIVE_BUILD_ID" = "missing" ]; then
+                echo "⚠️ manifest.json: active_build_id is missing (optional for now)"
+              fi
+            fi
+          fi
+          
+          echo ""
+          echo "Checking provider-state.json..."
+          if [ -f public/data/provider-state.json ]; then
+            if ! jq empty public/data/provider-state.json 2>/dev/null; then
+              echo "❌ provider-state.json is invalid JSON"
+              INVALID_COUNT=$((INVALID_COUNT + 1))
+            else
+              echo "✅ provider-state.json valid"
+            fi
+          fi
+          
+          echo ""
+          echo "Checking module snapshots..."
+          SNAPSHOT_COUNT=0
+          for snapshot in public/data/snapshots/*/latest.json; do
+            if [ -f "$snapshot" ]; then
+              SNAPSHOT_COUNT=$((SNAPSHOT_COUNT + 1))
+              MODULE_NAME=$(basename $(dirname "$snapshot"))
+              
+              if ! jq empty "$snapshot" 2>/dev/null; then
+                echo "❌ $MODULE_NAME: latest.json is invalid JSON"
+                INVALID_COUNT=$((INVALID_COUNT + 1))
+              else
+                # Check required envelope fields
+                SCHEMA_VERSION=$(jq -r '.schema_version // "missing"' "$snapshot")
+                if [ "$SCHEMA_VERSION" != "3.0" ]; then
+                  echo "⚠️ $MODULE_NAME: schema_version is '$SCHEMA_VERSION' (expected '3.0')"
+                fi
+                
+                # Check metadata exists
+                HAS_METADATA=$(jq 'has("metadata")' "$snapshot")
+                if [ "$HAS_METADATA" != "true" ]; then
+                  echo "❌ $MODULE_NAME: missing 'metadata' field"
+                  INVALID_COUNT=$((INVALID_COUNT + 1))
+                fi
+                
+                # Check data field exists
+                HAS_DATA=$(jq 'has("data")' "$snapshot")
+                if [ "$HAS_DATA" != "true" ]; then
+                  echo "❌ $MODULE_NAME: missing 'data' field"
+                  INVALID_COUNT=$((INVALID_COUNT + 1))
+                fi
+                
+                echo "✅ $MODULE_NAME valid"
+              fi
+            fi
+          done
+          
+          echo ""
+          echo "═══════════════════════════════════════"
+          echo "      SCHEMA VALIDATION SUMMARY"
+          echo "═══════════════════════════════════════"
+          echo "Snapshots checked: $SNAPSHOT_COUNT"
+          echo "Invalid files:     $INVALID_COUNT"
+          if [ $INVALID_COUNT -gt 0 ]; then
+            echo "Status:            ❌ FAIL"
+            exit 1
+          else
+            echo "Status:            ✅ PASS"
+          fi
+          echo "═══════════════════════════════════════"
+
+  manifest-integrity:
+    name: Manifest Integrity Check
+    runs-on: ubuntu-latest
+    needs: schema-validation
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Check Manifest Integrity
+        run: |
+          echo "🔍 Checking Manifest Integrity..."
+          
+          if [ ! -f public/data/manifest.json ]; then
+            echo "⚠️ manifest.json not found (expected for first run)"
+            exit 0
+          fi
+          
+          # Get published modules from manifest
+          PUBLISHED_MODULES=$(jq -r '.modules | to_entries | .[] | select(.value.published == true) | .key' public/data/manifest.json)
+          
+          if [ -z "$PUBLISHED_MODULES" ]; then
+            echo "No published modules in manifest"
+            exit 0
+          fi
+          
+          MISMATCH_COUNT=0
+          
+          for module in $PUBLISHED_MODULES; do
+            echo "Checking $module..."
+            
+            # Get digest from manifest
+            MANIFEST_DIGEST=$(jq -r ".modules[\"$module\"].digest" public/data/manifest.json)
+            
+            # Check if snapshot exists
+            SNAPSHOT_PATH="public/data/snapshots/$module/latest.json"
+            if [ ! -f "$SNAPSHOT_PATH" ]; then
+              echo "❌ $module: snapshot missing but marked as published"
+              MISMATCH_COUNT=$((MISMATCH_COUNT + 1))
+              continue
+            fi
+            
+            # Get digest from snapshot
+            SNAPSHOT_DIGEST=$(jq -r '.metadata.digest' "$SNAPSHOT_PATH")
+            
+            # Compare
+            if [ "$MANIFEST_DIGEST" != "$SNAPSHOT_DIGEST" ]; then
+              echo "❌ $module: digest mismatch"
+              echo "  Manifest: $MANIFEST_DIGEST"
+              echo "  Snapshot: $SNAPSHOT_DIGEST"
+              MISMATCH_COUNT=$((MISMATCH_COUNT + 1))
+            else
+              echo "✅ $module: digest match"
+            fi
+          done
+          
+          echo ""
+          echo "═══════════════════════════════════════"
+          echo "    MANIFEST INTEGRITY SUMMARY"
+          echo "═══════════════════════════════════════"
+          echo "Modules checked: $(echo "$PUBLISHED_MODULES" | wc -l)"
+          echo "Mismatches:      $MISMATCH_COUNT"
+          if [ $MISMATCH_COUNT -gt 0 ]; then
+            echo "Status:          ❌ FAIL"
+            echo ""
+            echo "CRITICAL: Manifest-Asset integrity violated!"
+            echo "This indicates non-atomic publish or corruption."
+            echo "DO NOT DEPLOY until fixed!"
+            exit 1
+          else
+            echo "Status:          ✅ PASS"
+          fi
+          echo "═══════════════════════════════════════"
+
+  repo-policies:
+    name: Repository Policy Checks
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Check Forbidden Patterns
+        run: |
+          echo "🔍 Checking Repository Policies..."
+          
+          VIOLATIONS=0
+          
+          # Check: No build/ directory committed
+          if [ -d "build" ]; then
+            BUILD_FILES=$(find build -type f | wc -l)
+            if [ $BUILD_FILES -gt 0 ]; then
+              echo "❌ VIOLATION: build/ directory contains $BUILD_FILES files"
+              echo "build/ must not be committed (add to .gitignore)"
+              VIOLATIONS=$((VIOLATIONS + 1))
+            fi
+          fi
+          
+          # Check: No modules write to provider-state.json
+          PROVIDER_STATE_WRITES=$(grep -r "provider-state.json" scripts/providers/ 2>/dev/null | grep -v "read" | grep -v "#" || true)
+          if [ ! -z "$PROVIDER_STATE_WRITES" ]; then
+            echo "❌ VIOLATION: Provider scripts writing to provider-state.json"
+            echo "$PROVIDER_STATE_WRITES"
+            VIOLATIONS=$((VIOLATIONS + 1))
+          fi
+          
+          # Check: No KV writes in functions
+          KV_WRITES=$(grep -r "KV.put\|kv.put" functions/ 2>/dev/null | grep -v "#" || true)
+          if [ ! -z "$KV_WRITES" ]; then
+            echo "⚠️ WARNING: KV writes found in functions/ (should be read-only)"
+            echo "$KV_WRITES"
+            # Not a hard error, just warning for now
+          fi
+          
+          echo ""
+          echo "═══════════════════════════════════════"
+          echo "       REPOSITORY POLICIES"
+          echo "═══════════════════════════════════════"
+          echo "Violations: $VIOLATIONS"
+          if [ $VIOLATIONS -gt 0 ]; then
+            echo "Status:     ❌ FAIL"
+            exit 1
+          else
+            echo "Status:     ✅ PASS"
+          fi
+          echo "═══════════════════════════════════════"
+
+  summary:
+    name: CI Gates Summary
+    runs-on: ubuntu-latest
+    needs: [asset-budget, schema-validation, manifest-integrity, repo-policies]
+    if: always()
+    steps:
+      - name: Summary
+        run: |
+          echo "## CI Gates Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- Asset Budget: ${{ needs.asset-budget.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Schema Validation: ${{ needs.schema-validation.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Manifest Integrity: ${{ needs.manifest-integrity.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Repo Policies: ${{ needs.repo-policies.result }}" >> $GITHUB_STEP_SUMMARY
