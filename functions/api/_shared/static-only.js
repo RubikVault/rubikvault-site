@@ -1,5 +1,8 @@
-import fs from "node:fs/promises";
-import path from "node:path";
+/**
+ * Static JSON server for Cloudflare Pages Functions
+ * CRITICAL: Uses fetch() not fs - Cloudflare Workers Runtime!
+ * Supports v3.0 snapshot structure with backward compatibility transformation
+ */
 
 /**
  * Transform v3.0 snapshot to legacy format for backward compatibility
@@ -31,68 +34,103 @@ function transformV3ToLegacy(v3Snapshot) {
 
 export async function serveStaticJson(req) {
   const url = new URL(req.url);
-  const p = url.pathname.replace(/^\/api/, "").replace(/\/$/, "") || "/bundle";
+  const moduleName = url.pathname.replace(/^\/api\//, "").replace(/\/$/, "") || "bundle";
   const isDebug = url.searchParams.has("debug");
   
-  // Try v3.0 structure first: snapshots/MODULE/latest.json
-  const v3File = path.join(process.cwd(), "public", "data", "snapshots", p.replace(/^\//, ""), "latest.json");
-  // Fallback to old structure: MODULE.json
-  const oldFile = path.join(process.cwd(), "public", "data", `${p}.json`);
-
+  // Try v3.0 structure first: /data/snapshots/MODULE/latest.json
+  const v3Path = `/data/snapshots/${moduleName}/latest.json`;
+  // Fallback to legacy: /data/MODULE.json
+  const legacyPath = `/data/${moduleName}.json`;
+  
+  let response;
+  let source = "v3";
+  let transformed = false;
+  
+  // Try v3.0 first
   try {
-    // Try v3.0 first
-    let body;
-    let source = "v3";
-    let parsed;
+    const v3Url = new URL(v3Path, url.origin);
+    response = await fetch(v3Url.toString());
     
-    try {
-      body = await fs.readFile(v3File, "utf8");
-      parsed = JSON.parse(body);
+    if (response.ok) {
+      const text = await response.text();
+      let parsed = JSON.parse(text);
       
-      // Transform v3.0 to legacy format for backward compatibility
+      // Transform v3.0 to legacy format
       if (parsed.schema_version === "3.0") {
         parsed = transformV3ToLegacy(parsed);
-        body = JSON.stringify(parsed);
+        transformed = true;
       }
-    } catch {
-      // Fallback to old structure
-      body = await fs.readFile(oldFile, "utf8");
-      parsed = JSON.parse(body);
-      source = "legacy";
-    }
-    
-    const headers = {
-      "Content-Type": "application/json",
-      "X-RV-Source": source,
-      "X-RV-File": source === "v3" ? v3File : oldFile,
-      "X-RV-Transformed": source === "v3" ? "true" : "false"
-    };
-    
-    // If debug mode, add metadata
-    if (isDebug) {
-      const debugResponse = {
-        debug: true,
-        source,
-        file_path: source === "v3" ? `/data/snapshots${p}/latest.json` : `/data${p}.json`,
-        transformed: source === "v3",
-        snapshot: parsed
+      
+      const headers = {
+        "Content-Type": "application/json",
+        "X-RV-Source": "v3",
+        "X-RV-Transformed": transformed ? "true" : "false",
+        "Cache-Control": "public, max-age=60"
       };
-      return new Response(JSON.stringify(debugResponse, null, 2), { headers });
+      
+      // Debug mode: wrap with metadata
+      if (isDebug) {
+        const debugResponse = {
+          debug: true,
+          source: "v3",
+          file_path: v3Path,
+          transformed,
+          snapshot: parsed
+        };
+        return new Response(JSON.stringify(debugResponse, null, 2), { headers });
+      }
+      
+      return new Response(JSON.stringify(parsed), { headers });
     }
-    
-    return new Response(body, { headers });
   } catch (err) {
-    return new Response(
-      JSON.stringify({ 
-        ok: false, 
-        error: "SNAPSHOT_NOT_FOUND", 
-        tried_paths: [
-          `/data/snapshots${p}/latest.json`,
-          `/data${p}.json`
-        ],
-        message: err.message
-      }),
-      { status: 404, headers: { "Content-Type": "application/json" } }
-    );
+    // v3.0 not found or error, try legacy
+    console.log(`v3.0 fetch failed for ${moduleName}, trying legacy:`, err.message);
   }
+  
+  // Fallback to legacy
+  try {
+    const legacyUrl = new URL(legacyPath, url.origin);
+    response = await fetch(legacyUrl.toString());
+    
+    if (response.ok) {
+      const text = await response.text();
+      const parsed = JSON.parse(text);
+      
+      const headers = {
+        "Content-Type": "application/json",
+        "X-RV-Source": "legacy",
+        "X-RV-Transformed": "false",
+        "Cache-Control": "public, max-age=60"
+      };
+      
+      if (isDebug) {
+        const debugResponse = {
+          debug: true,
+          source: "legacy",
+          file_path: legacyPath,
+          transformed: false,
+          snapshot: parsed
+        };
+        return new Response(JSON.stringify(debugResponse, null, 2), { headers });
+      }
+      
+      return new Response(text, { headers });
+    }
+  } catch (err) {
+    console.log(`Legacy fetch failed for ${moduleName}:`, err.message);
+  }
+  
+  // Both failed
+  return new Response(
+    JSON.stringify({ 
+      ok: false, 
+      error: "SNAPSHOT_NOT_FOUND", 
+      tried_paths: [v3Path, legacyPath],
+      message: `Neither v3.0 nor legacy snapshot found for ${moduleName}`
+    }),
+    { 
+      status: 404, 
+      headers: { "Content-Type": "application/json" } 
+    }
+  );
 }
