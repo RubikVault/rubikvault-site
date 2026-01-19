@@ -74,12 +74,24 @@ jobs:
           ARTIFACTS_DIR: artifacts-organized
         run: |
           echo "Running finalizer with ARTIFACTS_DIR=$ARTIFACTS_DIR"
+          echo "Current directory: $(pwd)"
           echo "Artifacts directory contents:"
-          ls -la $ARTIFACTS_DIR/ || echo "Artifacts dir does not exist"
-          node scripts/aggregator/finalize.mjs || {
-            echo "Finalizer exited with code $?"
-            exit 1
-          }
+          ls -la $ARTIFACTS_DIR/ 2>&1 || echo "Artifacts dir does not exist or is empty"
+          echo ""
+          echo "Looking for module directories:"
+          find $ARTIFACTS_DIR -type d -mindepth 1 -maxdepth 1 2>&1 || echo "No directories found"
+          echo ""
+          echo "Looking for JSON files:"
+          find $ARTIFACTS_DIR -name "*.json" -type f 2>&1 || echo "No JSON files found"
+          echo ""
+          node scripts/aggregator/finalize.mjs 2>&1
+          FINALIZER_EXIT=$?
+          echo ""
+          echo "Finalizer exited with code: $FINALIZER_EXIT"
+          if [ $FINALIZER_EXIT -ne 0 ]; then
+            echo "ERROR: Finalizer failed with exit code $FINALIZER_EXIT"
+            exit $FINALIZER_EXIT
+          fi
 
       - name: Check for changes
         id: changes

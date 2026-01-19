@@ -391,12 +391,35 @@ async function main() {
     
     // Load artifacts
     console.log('📦 Loading artifacts...');
+    console.log(`  ARTIFACTS_DIR: ${ARTIFACTS_DIR}`);
     const artifacts = await loadArtifacts();
     console.log(`✓ Loaded ${artifacts.size} artifacts\n`);
     
     if (artifacts.size === 0) {
-      console.warn('⚠ No artifacts found. Exiting (nothing to publish).');
+      console.warn('⚠ No artifacts found. Generating empty provider-state...');
       console.log('ℹ This is normal if the Pilot workflow has not run yet or no artifacts were uploaded.');
+      
+      // Generate empty but valid provider-state so dashboard doesn't show errors
+      const emptyManifest = {
+        schema_version: "3.0",
+        published_at: new Date().toISOString(),
+        publish_policy: "critical_core_hybrid_v3",
+        modules: {},
+        summary: {
+          modules_total: 0,
+          ok: 0,
+          warn: 0,
+          error: 0,
+          stale_ratio: 0,
+          critical_ok: true
+        }
+      };
+      
+      const { generateProviderState, writeProviderState } = await import('../lib/provider-state.js');
+      const emptyProviderState = generateProviderState(emptyManifest, new Map());
+      await writeProviderState(emptyProviderState, BASE_DIR);
+      
+      console.log('✓ Generated empty provider-state.json');
       console.log('ℹ Finalizer completed successfully (no changes to publish).');
       process.exit(0); // Exit with 0 = success, not error
     }
@@ -466,8 +489,13 @@ async function main() {
     
   } catch (err) {
     console.error(`\n❌ Finalizer failed: ${err.message}`);
+    console.error('Stack trace:');
     console.error(err.stack);
-    process.exit(1);
+    console.error('\nEnvironment:');
+    console.error(`  ARTIFACTS_DIR: ${ARTIFACTS_DIR}`);
+    console.error(`  BASE_DIR: ${BASE_DIR}`);
+    console.error(`  CWD: ${process.cwd()}`);
+    process.exit(2); // Exit 2 for errors (as reported by user)
   }
 }
 
