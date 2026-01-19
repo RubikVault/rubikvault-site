@@ -1,46 +1,54 @@
 {
   "schema_version": "3.0",
-  "generated_at": "2026-01-19T17:21:04.836Z",
+  "generated_at": "2026-01-19T21:21:07.262Z",
   "system": {
-    "status": "ok",
-    "last_publish_at": "2026-01-19T17:21:04.832Z",
-    "critical_ok": true,
-    "top_issues": []
+    "status": "crit",
+    "last_publish_at": "2026-01-19T21:21:07.254Z",
+    "critical_ok": false,
+    "top_issues": [
+      {
+        "module": "market-health",
+        "class": "VALIDATION_FAILED_SCHEMA",
+        "severity": "crit",
+        "hint": "Check validation warnings and fix data normalization"
+      }
+    ]
   },
   "modules": [
     {
       "module": "market-health",
       "tier": "critical",
       "domain": "stocks",
-      "status": "ok",
-      "severity": "info",
-      "published": true,
-      "digest": "sha256:bc1dbd3a82fe067f508bc5dc33301842b8458a6c833ba569e5ee99761dcd099e",
+      "status": "error",
+      "severity": "crit",
+      "published": false,
+      "digest": "sha256:4642d24e1d955a557974ac242b819dcfd4fcf551f905604bc85f33a83ef112f3",
       "freshness": {
         "expected_interval_minutes": 1440,
         "grace_minutes": 180,
         "policy": "market_days_only",
         "age_minutes": 0,
-        "next_expected_at": "2026-01-20T17:20:41.092Z"
+        "next_expected_at": "2026-01-20T21:20:38.580Z"
       },
       "proof_chain": {
         "FILE": "PASS",
-        "SCHEMA": "PASS",
+        "SCHEMA": "FAIL",
         "FRESH": "PASS",
-        "PLAUS": "PASS",
+        "PLAUS": "FAIL",
         "UI": "SKIP",
         "DELIVERY": "UNKNOWN"
       },
       "delivery": {
         "probed_at": null,
         "status": "UNKNOWN",
-        "served_from": "ASSET",
+        "served_from": "KV",
         "latency_ms": null
       },
       "failure": {
-        "class": null,
-        "message": null,
-        "hint": null
+        "class": "VALIDATION_FAILED_SCHEMA",
+        "message": "",
+        "upstream_status": 200,
+        "hint": "Check validation warnings and fix data normalization"
       },
       "links": {
         "debug": "/api/market-health?debug=1",
