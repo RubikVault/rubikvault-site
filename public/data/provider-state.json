@@ -1,6 +1,6 @@
 {
   "schemaVersion": "v1",
-  "generatedAt": "2026-01-19T07:07:27.177Z",
+  "generatedAt": "2026-01-19T07:09:48.657Z",
   "providers": {
     "stooq": {
       "cooldownUntil": null,
@@ -28,13 +28,64 @@
       "lastReason": "OK",
       "lastHttpStatus": null,
       "lastSeen": "2026-01-19T07:07:26.265Z"
+    },
+    "internal": {
+      "cooldownUntil": null,
+      "circuitState": "closed",
+      "openUntil": null,
+      "failures": {
+        "NO_DATA": 1
+      },
+      "lastReason": "NO_DATA",
+      "lastHttpStatus": null,
+      "lastSeen": "2026-01-19T07:09:48.397Z"
+    },
+    "fmp": {
+      "cooldownUntil": null,
+      "circuitState": "closed",
+      "openUntil": null,
+      "failures": {
+        "UNAUTHORIZED": 2
+      },
+      "lastReason": "UNAUTHORIZED",
+      "lastHttpStatus": 403,
+      "lastSeen": "2026-01-19T07:09:48.395Z"
+    },
+    "marketaux": {
+      "cooldownUntil": null,
+      "circuitState": "closed",
+      "openUntil": null,
+      "failures": {},
+      "lastReason": "OK",
+      "lastHttpStatus": null,
+      "lastSeen": "2026-01-19T07:09:44.609Z"
+    },
+    "finnhub": {
+      "cooldownUntil": null,
+      "circuitState": "closed",
+      "openUntil": null,
+      "failures": {
+        "NO_DATA": 1
+      },
+      "lastReason": "NO_DATA",
+      "lastHttpStatus": null,
+      "lastSeen": "2026-01-19T07:09:48.254Z"
+    },
+    "sec": {
+      "cooldownUntil": null,
+      "circuitState": "closed",
+      "openUntil": null,
+      "failures": {},
+      "lastReason": "OK",
+      "lastHttpStatus": null,
+      "lastSeen": "2026-01-19T07:09:48.551Z"
     }
   },
   "meta": {
     "status": "OK",
     "reason": "OK",
-    "generatedAt": "2026-01-19T07:07:27.177Z",
-    "asOf": "2026-01-19T07:07:27.177Z",
+    "generatedAt": "2026-01-19T07:09:48.657Z",
+    "asOf": "2026-01-19T07:09:48.657Z",
     "ttlSeconds": 3600,
     "stale": false,
     "freshness": {
@@ -43,7 +94,7 @@
     },
     "schedule": {
       "rule": "daily",
-      "nextPlannedFetchAt": "2026-01-20T07:07:27.177Z",
+      "nextPlannedFetchAt": "2026-01-20T07:09:48.657Z",
       "expectedNextRunWindowMinutes": 1440,
       "ttlSeconds": 3600
     },
@@ -61,6 +112,6 @@
         "errors": []
       }
     },
-    "runId": "2026-01-19T07:07:27.128Z"
+    "runId": "2026-01-19T07:09:48.599Z"
   }
 }

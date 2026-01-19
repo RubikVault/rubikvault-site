@@ -1,10 +1,10 @@
 {
-  "generatedAt": "2026-01-19T07:07:27.226Z",
+  "generatedAt": "2026-01-19T07:09:48.706Z",
   "buildStatus": "OK",
   "reasons": [],
   "summary": {
-    "total": 39,
-    "ok": 39,
+    "total": 58,
+    "ok": 58,
     "fail": 0
   },
   "lastGoodAsOf": {},
@@ -53,6 +53,11 @@
       "blockId": "earnings",
       "status": "OK",
       "reason": "COVERAGE_LIMIT"
+    },
+    {
+      "blockId": "health",
+      "status": "OK",
+      "reason": "EMPTY_ITEMS"
     },
     {
       "blockId": "hype-divergence",
@@ -140,9 +145,34 @@
       "reason": "COVERAGE_LIMIT"
     },
     {
+      "blockId": "alpha-radar-lite",
+      "status": "OK",
+      "reason": "DEGRADED_COVERAGE"
+    },
+    {
+      "blockId": "analyst-revision-lite",
+      "status": "OK",
+      "reason": "UNAUTHORIZED"
+    },
+    {
+      "blockId": "catalyst-calendar-lite",
+      "status": "OK",
+      "reason": "DEGRADED_COVERAGE"
+    },
+    {
       "blockId": "credit-stress-proxy",
       "status": "OK",
       "reason": "OK"
+    },
+    {
+      "blockId": "cross-asset-divergence",
+      "status": "OK",
+      "reason": "OK"
+    },
+    {
+      "blockId": "earnings-pressure-lite",
+      "status": "OK",
+      "reason": "UNAUTHORIZED"
     },
     {
       "blockId": "ecb-rates-board",
@@ -155,9 +185,19 @@
       "reason": "OK"
     },
     {
+      "blockId": "flow-anomaly-lite",
+      "status": "OK",
+      "reason": "OK"
+    },
+    {
       "blockId": "fx-board",
       "status": "OK",
       "reason": "OK"
+    },
+    {
+      "blockId": "gamma-exposure-lite",
+      "status": "OK",
+      "reason": "NO_DATA"
     },
     {
       "blockId": "highs-vs-lows",
@@ -166,6 +206,11 @@
     },
     {
       "blockId": "inflation-pulse",
+      "status": "OK",
+      "reason": "OK"
+    },
+    {
+      "blockId": "insider-activity-lite",
       "status": "OK",
       "reason": "OK"
     },
@@ -180,12 +225,57 @@
       "reason": "OK"
     },
     {
+      "blockId": "liquidity-stress-watch",
+      "status": "OK",
+      "reason": "OK"
+    },
+    {
+      "blockId": "macro-risk-score",
+      "status": "OK",
+      "reason": "OK"
+    },
+    {
       "blockId": "market-breadth",
       "status": "OK",
       "reason": "OK"
     },
     {
+      "blockId": "master-market-dashboard",
+      "status": "OK",
+      "reason": "OK"
+    },
+    {
+      "blockId": "options-skew-lite",
+      "status": "OK",
+      "reason": "NO_DATA"
+    },
+    {
+      "blockId": "regime-fracture-alert",
+      "status": "OK",
+      "reason": "OK"
+    },
+    {
       "blockId": "sp500-sectors",
+      "status": "OK",
+      "reason": "OK"
+    },
+    {
+      "blockId": "sentiment-lite",
+      "status": "OK",
+      "reason": "DEGRADED_COVERAGE"
+    },
+    {
+      "blockId": "social-velocity-lite",
+      "status": "OK",
+      "reason": "OK"
+    },
+    {
+      "blockId": "systemic-risk-lite",
+      "status": "OK",
+      "reason": "OK"
+    },
+    {
+      "blockId": "tail-risk-watch",
       "status": "OK",
       "reason": "OK"
     },
@@ -200,17 +290,22 @@
       "reason": "OK"
     },
     {
+      "blockId": "weekly-market-brief",
+      "status": "OK",
+      "reason": "DEGRADED_COVERAGE"
+    },
+    {
       "blockId": "rvci-engine",
       "status": "OK",
       "reason": "DEGRADED_COVERAGE"
     }
   ],
-  "runId": "2026-01-19T07:07:27.128Z",
+  "runId": "2026-01-19T07:09:48.599Z",
   "meta": {
     "status": "OK",
     "reason": "OK",
-    "generatedAt": "2026-01-19T07:07:27.226Z",
-    "asOf": "2026-01-19T07:07:27.226Z",
+    "generatedAt": "2026-01-19T07:09:48.706Z",
+    "asOf": "2026-01-19T07:09:48.706Z",
     "ttlSeconds": 3600,
     "stale": false,
     "freshness": {
@@ -219,7 +314,7 @@
     },
     "schedule": {
       "rule": "daily",
-      "nextPlannedFetchAt": "2026-01-20T07:07:27.226Z",
+      "nextPlannedFetchAt": "2026-01-20T07:09:48.706Z",
       "expectedNextRunWindowMinutes": 1440,
       "ttlSeconds": 3600
     },
@@ -237,6 +332,6 @@
         "errors": []
       }
     },
-    "runId": "2026-01-19T07:07:27.128Z"
+    "runId": "2026-01-19T07:09:48.599Z"
   }
 }

@@ -1,29 +1,29 @@
 {
   "schemaVersion": "v3",
   "blockId": "cross-asset-divergence",
-  "generatedAt": "2026-01-18T10:52:12.934Z",
-  "dataAt": "2026-01-14",
+  "generatedAt": "2026-01-19T07:09:48.637Z",
+  "dataAt": "2026-01-16",
   "meta": {
     "status": "LIVE",
     "reason": "OK",
-    "generatedAt": "2026-01-18T10:52:12.934Z",
-    "asOf": "2026-01-14",
+    "generatedAt": "2026-01-19T07:09:48.637Z",
+    "asOf": "2026-01-16",
     "source": "mirror",
     "ttlSeconds": 3600,
     "stale": true,
     "itemsCount": 1,
-    "stalenessSec": 384720,
+    "stalenessSec": 284940,
     "freshness": {
       "status": "expired",
-      "ageMinutes": 6412
+      "ageMinutes": 4749
     },
     "schedule": {
       "rule": "daily",
-      "nextPlannedFetchAt": "2026-01-19T10:52:12.934Z",
+      "nextPlannedFetchAt": "2026-01-20T07:09:48.637Z",
       "expectedNextRunWindowMinutes": 1440,
       "ttlSeconds": 3600
     },
-    "runId": "2026-01-18T10:52:12.904Z",
+    "runId": "2026-01-19T07:09:48.599Z",
     "validation": {
       "schema": {
         "ok": true,
@@ -42,11 +42,11 @@
   "data": {
     "items": [
       {
-        "usdEur": null,
-        "yield10y": 4.18,
-        "sectorAvgReturn": 2.1392867197517798,
+        "usdEur": 1.1617,
+        "yield10y": 4.17,
+        "sectorAvgReturn": 0,
         "divergence": false,
-        "date": "2026-01-14"
+        "date": "2026-01-16"
       }
     ]
   }

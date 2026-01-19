@@ -2,10 +2,10 @@
   "meta": {
     "provider": "health_history",
     "dataset": "health_history",
-    "fetchedAt": "2026-01-19T07:07:27.427Z",
+    "fetchedAt": "2026-01-19T07:09:48.909Z",
     "ttlSeconds": 3600,
     "source": "mirror",
-    "runId": "2026-01-19T07:07:27.427Z",
+    "runId": "2026-01-19T07:09:48.909Z",
     "cost": null
   },
   "raw": {
@@ -15,12 +15,12 @@
         "schemaVersion": "1.0.0",
         "meta": {
           "blockId": "health",
-          "generatedAt": "2026-01-19T07:07:27.426Z",
+          "generatedAt": "2026-01-19T07:09:48.908Z",
           "marketDate": "2026-01-19",
-          "dataAsOf": "2026-01-19T07:05:17.453Z",
-          "status": "LIVE",
-          "coveragePct": 1,
-          "reason": null,
+          "dataAsOf": "2026-01-19T07:09:43.733Z",
+          "status": "PARTIAL",
+          "coveragePct": 0.7777777777777778,
+          "reason": "BLOCK_ERRORS",
           "inputs": [
             "mirrors/seed-manifest.json",
             "mirrors/usage-report.json"
@@ -29,213 +29,321 @@
         "data": {
           "blocks": [
             {
-              "blockId": "market-breadth",
-              "title": "08 - Market Breadth",
-              "status": "LIVE",
-              "reason": "OK",
-              "itemsCount": 15,
-              "coveragePct": 100,
-              "wroteSnapshot": true,
-              "durationMs": 20846
-            },
-            {
-              "blockId": "liquidity-conditions-proxy",
-              "title": "12 - Liquidity Conditions Proxy",
+              "blockId": "macro-risk-score",
+              "title": "34 - Macro Risk Score",
               "status": "LIVE",
               "reason": "OK",
               "itemsCount": 1,
               "coveragePct": 100,
               "wroteSnapshot": true,
-              "durationMs": 337
+              "durationMs": 2
             },
             {
-              "blockId": "vol-regime",
-              "title": "11 - Vol Regime",
+              "blockId": "systemic-risk-lite",
+              "title": "40 - Systemic Risk Lite",
               "status": "LIVE",
               "reason": "OK",
               "itemsCount": 1,
               "coveragePct": 100,
               "wroteSnapshot": true,
-              "durationMs": 92
+              "durationMs": 1
             },
             {
-              "blockId": "sector-rotation",
-              "title": "10 - Sector Rotation",
-              "status": "LIVE",
-              "reason": "OK",
-              "itemsCount": 11,
-              "coveragePct": 100,
+              "blockId": "alpha-radar-lite",
+              "title": "42 - Alpha Radar Lite",
+              "status": "PARTIAL",
+              "reason": "DEGRADED_COVERAGE",
+              "itemsCount": 5,
+              "coveragePct": 83,
               "wroteSnapshot": true,
-              "durationMs": 4424
+              "durationMs": 0
             },
             {
-              "blockId": "highs-vs-lows",
-              "title": "09 - Highs vs Lows",
-              "status": "LIVE",
-              "reason": "OK",
-              "itemsCount": 15,
-              "coveragePct": 100,
+              "blockId": "weekly-market-brief",
+              "title": "41 - Weekly Market Brief",
+              "status": "PARTIAL",
+              "reason": "DEGRADED_COVERAGE",
+              "itemsCount": 4,
+              "coveragePct": 67,
               "wroteSnapshot": true,
-              "durationMs": 7
+              "durationMs": 1
             },
             {
-              "blockId": "fx-board",
-              "title": "07 - FX Board",
-              "status": "LIVE",
-              "reason": "OK",
+              "blockId": "earnings-pressure-lite",
+              "title": "26 - Earnings Pressure Lite",
+              "status": "ERROR",
+              "reason": "UNAUTHORIZED",
+              "itemsCount": 0,
+              "coveragePct": 0,
+              "wroteSnapshot": true,
+              "durationMs": 255
+            },
+            {
+              "blockId": "sentiment-lite",
+              "title": "31 - Sentiment Lite",
+              "status": "PARTIAL",
+              "reason": "DEGRADED_COVERAGE",
               "itemsCount": 3,
-              "coveragePct": 100,
+              "coveragePct": 30,
               "wroteSnapshot": true,
-              "durationMs": 24963
+              "durationMs": 617
             },
             {
-              "blockId": "credit-stress-proxy",
-              "title": "06 - Credit Stress Proxy",
+              "blockId": "options-skew-lite",
+              "title": "28 - Options Skew Lite",
+              "status": "ERROR",
+              "reason": "NO_DATA",
+              "itemsCount": 0,
+              "coveragePct": 0,
+              "wroteSnapshot": true,
+              "durationMs": 3645
+            },
+            {
+              "blockId": "master-market-dashboard",
+              "title": "43 - Master Market Dashboard",
+              "status": "LIVE",
+              "reason": "OK",
+              "itemsCount": 42,
+              "coveragePct": 100,
+              "wroteSnapshot": true,
+              "durationMs": 2
+            },
+            {
+              "blockId": "cross-asset-divergence",
+              "title": "39 - Cross Asset Divergence",
               "status": "LIVE",
               "reason": "OK",
               "itemsCount": 1,
               "coveragePct": 100,
               "wroteSnapshot": true,
-              "durationMs": 244
+              "durationMs": 0
             },
             {
-              "blockId": "energy-macro",
-              "title": "05 - Energy Macro",
-              "status": "LIVE",
-              "reason": "OK",
-              "itemsCount": 1,
-              "coveragePct": 100,
-              "wroteSnapshot": true,
-              "durationMs": 238
-            },
-            {
-              "blockId": "labor-pulse",
-              "title": "04 - Labor Pulse",
-              "status": "LIVE",
-              "reason": "OK",
-              "itemsCount": 2,
-              "coveragePct": 100,
-              "wroteSnapshot": true,
-              "durationMs": 197
-            },
-            {
-              "blockId": "inflation-pulse",
-              "title": "03 - Inflation Pulse",
-              "status": "LIVE",
-              "reason": "OK",
-              "itemsCount": 1,
-              "coveragePct": 100,
-              "wroteSnapshot": true,
-              "durationMs": 102
-            },
-            {
-              "blockId": "ecb-rates-board",
-              "title": "02 - ECB Rates Board",
-              "status": "LIVE",
-              "reason": "OK",
+              "blockId": "catalyst-calendar-lite",
+              "title": "38 - Catalyst Calendar Lite",
+              "status": "PARTIAL",
+              "reason": "DEGRADED_COVERAGE",
               "itemsCount": 3,
-              "coveragePct": 100,
+              "coveragePct": 30,
               "wroteSnapshot": true,
-              "durationMs": 77362
+              "durationMs": 1
             },
             {
-              "blockId": "us-yield-curve",
-              "title": "01 - US Yield Curve",
+              "blockId": "regime-fracture-alert",
+              "title": "37 - Regime Fracture Alert",
               "status": "LIVE",
               "reason": "OK",
-              "itemsCount": 9,
+              "itemsCount": 1,
               "coveragePct": 100,
               "wroteSnapshot": true,
-              "durationMs": 815
+              "durationMs": 0
+            },
+            {
+              "blockId": "liquidity-stress-watch",
+              "title": "36 - Liquidity Stress Watch",
+              "status": "LIVE",
+              "reason": "OK",
+              "itemsCount": 1,
+              "coveragePct": 100,
+              "wroteSnapshot": true,
+              "durationMs": 0
+            },
+            {
+              "blockId": "tail-risk-watch",
+              "title": "35 - Tail Risk Watch",
+              "status": "LIVE",
+              "reason": "OK",
+              "itemsCount": 1,
+              "coveragePct": 100,
+              "wroteSnapshot": true,
+              "durationMs": 0
+            },
+            {
+              "blockId": "analyst-revision-lite",
+              "title": "33 - Analyst Revision Lite",
+              "status": "ERROR",
+              "reason": "UNAUTHORIZED",
+              "itemsCount": 0,
+              "coveragePct": 0,
+              "wroteSnapshot": true,
+              "durationMs": 136
+            },
+            {
+              "blockId": "social-velocity-lite",
+              "title": "32 - Social Velocity Lite",
+              "status": "LIVE",
+              "reason": "OK",
+              "itemsCount": 1,
+              "coveragePct": 100,
+              "wroteSnapshot": true,
+              "durationMs": 1
+            },
+            {
+              "blockId": "flow-anomaly-lite",
+              "title": "30 - Flow Anomaly Lite",
+              "status": "LIVE",
+              "reason": "OK",
+              "itemsCount": 1,
+              "coveragePct": 100,
+              "wroteSnapshot": true,
+              "durationMs": 0
+            },
+            {
+              "blockId": "gamma-exposure-lite",
+              "title": "29 - Gamma Exposure Lite",
+              "status": "ERROR",
+              "reason": "NO_DATA",
+              "itemsCount": 0,
+              "coveragePct": 0,
+              "wroteSnapshot": true,
+              "durationMs": 1
+            },
+            {
+              "blockId": "insider-activity-lite",
+              "title": "27 - Insider Activity Lite",
+              "status": "LIVE",
+              "reason": "OK",
+              "itemsCount": 10,
+              "coveragePct": 100,
+              "wroteSnapshot": true,
+              "durationMs": 154
             }
           ],
           "summary": {
-            "LIVE": 12,
-            "PARTIAL": 0,
-            "ERROR": 0,
-            "total": 12,
-            "okPct": 1,
+            "LIVE": 10,
+            "PARTIAL": 4,
+            "ERROR": 4,
+            "total": 18,
+            "okPct": 0.7777777777777778,
             "reasons": {
-              "OK": 12
+              "OK": 10,
+              "DEGRADED_COVERAGE": 4,
+              "UNAUTHORIZED": 2,
+              "NO_DATA": 2
             }
           },
           "usage": {
             "providers": {
-              "stooq": {
-                "requests": 26,
+              "fmp": {
+                "requests": 4,
                 "credits": 0,
-                "bytesIn": 10633433,
-                "latencyMs": 25033,
-                "errors": {},
+                "bytesIn": 660,
+                "latencyMs": 389,
+                "errors": {
+                  "UNAUTHORIZED": 2
+                },
                 "endpoints": {
-                  "daily": {
-                    "requests": 26,
+                  "earnings-calendar": {
+                    "requests": 2,
                     "credits": 0,
-                    "bytesIn": 10633433,
-                    "latencyMs": 25033,
+                    "bytesIn": 330,
+                    "latencyMs": 253,
+                    "errors": {}
+                  },
+                  "analyst-revisions": {
+                    "requests": 2,
+                    "credits": 0,
+                    "bytesIn": 330,
+                    "latencyMs": 136,
                     "errors": {}
                   }
                 },
                 "limit": {
-                  "daily": 800,
-                  "monthly": 16000
+                  "daily": 300,
+                  "monthly": 6000
                 }
               },
-              "fred": {
-                "requests": 16,
+              "marketaux": {
+                "requests": 1,
                 "credits": 0,
-                "bytesIn": 7169,
-                "latencyMs": 2018,
+                "bytesIn": 8284,
+                "latencyMs": 616,
                 "errors": {},
                 "endpoints": {
-                  "series": {
-                    "requests": 16,
+                  "news": {
+                    "requests": 1,
                     "credits": 0,
-                    "bytesIn": 7169,
-                    "latencyMs": 2018,
+                    "bytesIn": 8284,
+                    "latencyMs": 616,
+                    "errors": {}
+                  }
+                },
+                "limit": {
+                  "daily": 120,
+                  "monthly": 2500
+                }
+              },
+              "finnhub": {
+                "requests": 1,
+                "credits": 0,
+                "bytesIn": 6051366,
+                "latencyMs": 3613,
+                "errors": {
+                  "NO_DATA": 1
+                },
+                "endpoints": {
+                  "option-chain": {
+                    "requests": 1,
+                    "credits": 0,
+                    "bytesIn": 6051366,
+                    "latencyMs": 3613,
                     "errors": {}
                   }
                 },
                 "limit": {
                   "daily": 200,
-                  "monthly": 4000
+                  "monthly": 5000
                 }
               },
-              "ecb": {
-                "requests": 8,
+              "internal": {
+                "requests": 0,
                 "credits": 0,
-                "bytesIn": 14837,
-                "latencyMs": 39313,
+                "bytesIn": 0,
+                "latencyMs": 0,
+                "errors": {
+                  "NO_DATA": 1
+                },
+                "endpoints": {},
+                "limit": {
+                  "daily": 1000,
+                  "monthly": 20000
+                }
+              },
+              "sec": {
+                "requests": 1,
+                "credits": 0,
+                "bytesIn": 160714,
+                "latencyMs": 153,
                 "errors": {},
                 "endpoints": {
-                  "sdmx": {
-                    "requests": 8,
+                  "edgar": {
+                    "requests": 1,
                     "credits": 0,
-                    "bytesIn": 14837,
-                    "latencyMs": 39313,
+                    "bytesIn": 160714,
+                    "latencyMs": 153,
                     "errors": {}
                   }
                 },
                 "limit": {
-                  "daily": 200,
-                  "monthly": 4000
+                  "daily": 80,
+                  "monthly": 1600
                 }
               }
             },
             "totals": {
-              "requests": 50,
+              "requests": 7,
               "credits": 0
             }
           }
         }
       }
     ],
-    "runId": "2026-01-19T07:07:27.427Z",
-    "updatedAt": "2026-01-19T07:07:27.427Z",
-    "asOf": "2026-01-19T07:07:27.427Z",
+    "runId": "2026-01-19T07:09:48.909Z",
+    "updatedAt": "2026-01-19T07:09:48.909Z",
+    "asOf": "2026-01-19T07:09:48.909Z",
     "meta": {
       "status": "OK",
-      "updatedAt": "2026-01-19T07:07:27.427Z",
+      "updatedAt": "2026-01-19T07:09:48.909Z",
       "reason": null
     }
   }
