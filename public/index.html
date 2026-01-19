@@ -55,35 +55,96 @@
     </div>
   </header>
 
-  <!-- MAIN CONTENT - CLEAN SLATE -->
-  <main class="rv-main" style="max-width: 1400px; margin: 0 auto; padding: 2rem;">
+  <!-- MAIN CONTENT -->
+  <main class="rv-main" style="max-width: 1200px; margin: 0 auto; padding: 3rem 2rem;">
     
-    <h1 style="text-align: center; margin: 2rem 0; color: #e5e7eb;">
-      🚀 RubikVault - Clean Slate Edition
-    </h1>
-
-    <p style="text-align: center; color: #94a3b8; margin-bottom: 3rem;">
-      Starting fresh with a simple, working architecture. One block at a time.
-    </p>
-
-    <!-- FIRST BLOCK: Market Indices (PROOF OF CONCEPT) -->
-    <section class="rv-card" style="margin-bottom: 2rem; padding: 2rem;">
-      <h2 style="color: #e5e7eb; margin-bottom: 1.5rem; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 0.5rem;">
-        📊 Major Market Indices
-      </h2>
+    <!-- HERO SECTION: Stock Analyzer -->
+    <section style="text-align: center; margin-bottom: 4rem;">
+      <h1 style="font-size: 4rem; font-weight: 800; margin-bottom: 1rem; color: #f1f5f9; letter-spacing: -0.02em;">
+        Stock Analyzer
+      </h1>
       
-      <div id="indices-content" style="min-height: 200px;">
-        <div style="text-align: center; padding: 2rem; color: #64748b;">
-          Loading market data...
+      <p style="font-size: 1.5rem; color: #e5e7eb; margin-bottom: 0.5rem;">
+        Find the best stocks to invest in
+      </p>
+      
+      <p style="font-size: 1.125rem; color: #94a3b8; margin-bottom: 3rem;">
+        Analyze stocks by name or ticker symbol
+      </p>
+
+      <!-- SEARCH BOX -->
+      <div style="max-width: 700px; margin: 0 auto 3rem; position: relative;">
+        <svg style="position: absolute; left: 20px; top: 50%; transform: translateY(-50%); width: 24px; height: 24px; color: #64748b;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="11" cy="11" r="8"></circle>
+          <path d="m21 21-4.35-4.35"></path>
+        </svg>
+        <input 
+          type="text" 
+          id="stock-search-input" 
+          placeholder="Type Stock you want to check here...."
+          autocomplete="off"
+          style="
+            width: 100%;
+            padding: 1.25rem 1.5rem 1.25rem 3.5rem;
+            font-size: 1.125rem;
+            background: rgba(30, 41, 59, 0.8);
+            border: 2px solid rgba(100, 116, 139, 0.3);
+            border-radius: 12px;
+            color: #e5e7eb;
+            transition: all 0.2s;
+          "
+          onfocus="this.style.borderColor='rgba(59, 130, 246, 0.6)'; this.style.background='rgba(30, 41, 59, 1)';"
+          onblur="this.style.borderColor='rgba(100, 116, 139, 0.3)'; this.style.background='rgba(30, 41, 59, 0.8)';"
+        />
+      </div>
+
+      <!-- QUICK STATS -->
+      <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 2rem; max-width: 700px; margin: 0 auto 2rem;">
+        <div style="text-align: center;">
+          <div style="font-size: 3rem; font-weight: 700; color: #3b82f6; margin-bottom: 0.5rem;">8</div>
+          <div style="font-size: 1rem; color: #94a3b8;">Top Stocks</div>
+        </div>
+        <div style="text-align: center;">
+          <div style="font-size: 3rem; font-weight: 700; color: #10b981; margin-bottom: 0.5rem;">5</div>
+          <div style="font-size: 1rem; color: #94a3b8;">Buy Signals</div>
+        </div>
+        <div style="text-align: center;">
+          <div style="font-size: 3rem; font-weight: 700; color: #f59e0b; margin-bottom: 0.5rem;">8.5</div>
+          <div style="font-size: 1rem; color: #94a3b8;">Ø Score</div>
         </div>
       </div>
-      
-      <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid rgba(255,255,255,0.05); font-size: 0.875rem; color: #64748b;">
-        Source: <code>/api/market-health</code> | Updated: <span id="indices-updated">--</span>
-      </div>
+
+      <p style="font-size: 0.875rem; color: #64748b; font-style: italic;">
+        Enter a stock name or ticker to start the analysis
+      </p>
     </section>
 
-    <!-- More blocks will be added here, one at a time -->
+    <!-- RESULTS SECTION (Hidden by default) -->
+    <section id="search-results" style="display: none; margin-top: 3rem;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+        <h2 id="results-title" style="font-size: 2rem; color: #e5e7eb;">Analysis Results</h2>
+        <button 
+          onclick="clearSearch()" 
+          style="
+            padding: 0.75rem 1.5rem;
+            background: rgba(100, 116, 139, 0.2);
+            border: 1px solid rgba(100, 116, 139, 0.3);
+            border-radius: 8px;
+            color: #e5e7eb;
+            cursor: pointer;
+            transition: all 0.2s;
+          "
+          onmouseover="this.style.background='rgba(100, 116, 139, 0.3)'"
+          onmouseout="this.style.background='rgba(100, 116, 139, 0.2)'"
+        >
+          ← Back to Search
+        </button>
+      </div>
+      
+      <div id="results-content" class="rv-card" style="padding: 2rem;">
+        <!-- Results will be loaded here -->
+      </div>
+    </section>
     
   </main>
 
@@ -115,83 +176,125 @@
     })();
   </script>
 
-  <!-- SIMPLE BLOCK LOADER - NO COMPLEX FRAMEWORK! -->
+  <!-- STOCK SEARCH LOGIC -->
   <script>
-    (async function() {
-      const container = document.getElementById('indices-content');
-      const updatedEl = document.getElementById('indices-updated');
-      
-      try {
-        // Fetch data from API
-        const response = await fetch('/api/market-health');
-        const data = await response.json();
-        
-        if (!data.ok) {
-          throw new Error(data.error?.message || 'API error');
+    const searchInput = document.getElementById('stock-search-input');
+    const resultsSection = document.getElementById('search-results');
+    const resultsContent = document.getElementById('results-content');
+    const resultsTitle = document.getElementById('results-title');
+    
+    // Popular tickers for quick suggestions (can be expanded)
+    const popularTickers = ['AAPL', 'MSFT', 'GOOGL', 'AMZN', 'TSLA', 'NVDA', 'META', 'NFLX', 'SPY', 'QQQ'];
+
+    // Search on Enter key
+    searchInput.addEventListener('keypress', async (e) => {
+      if (e.key === 'Enter') {
+        const ticker = searchInput.value.trim().toUpperCase();
+        if (ticker) {
+          await searchStock(ticker);
         }
-        
-        // Extract indices data
-        const items = data.data?.items || [];
-        const spy = items.find(i => i.symbol === 'SPY');
-        const qqq = items.find(i => i.symbol === 'QQQ');
-        const iwm = items.find(i => i.symbol === 'IWM');
-        
-        // Calculate approximate index values (ETF price * 10)
-        const sp500 = spy ? (spy.close * 10).toFixed(2) : 'N/A';
-        const nasdaq = qqq ? (qqq.close * 10).toFixed(2) : 'N/A';
-        const russell = iwm ? (iwm.close * 10).toFixed(2) : 'N/A';
-        
-        // Simple rendering - NO COMPLEX FRAMEWORK!
-        container.innerHTML = `
-          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem;">
+      }
+    });
+
+    // Main search function
+    async function searchStock(ticker) {
+      // Show results section
+      resultsSection.style.display = 'block';
+      resultsTitle.textContent = `Analyzing ${ticker}...`;
+      resultsContent.innerHTML = `
+        <div style="text-align: center; padding: 3rem; color: #64748b;">
+          <div style="font-size: 3rem; margin-bottom: 1rem;">⏳</div>
+          <div>Loading analysis for ${ticker}...</div>
+        </div>
+      `;
+
+      // Scroll to results
+      resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+      try {
+        // TODO: Replace with real API call to stock analysis endpoint
+        // For now, we simulate a delay and show placeholder data
+        await new Promise(resolve => setTimeout(resolve, 800));
+
+        resultsTitle.textContent = `Analysis for ${ticker}`;
+        resultsContent.innerHTML = `
+          <div style="text-align: center; padding: 2rem;">
+            <h3 style="font-size: 2.5rem; color: #3b82f6; margin-bottom: 1rem;">${ticker}</h3>
             
-            <div style="padding: 1.5rem; background: rgba(16, 185, 129, 0.1); border-radius: 8px; border: 1px solid rgba(16, 185, 129, 0.2);">
-              <div style="font-size: 0.875rem; color: #94a3b8; margin-bottom: 0.5rem;">S&P 500</div>
-              <div style="font-size: 2rem; font-weight: 700; color: ${spy?.changePct >= 0 ? '#10b981' : '#ef4444'};">
-                ${sp500}
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem; margin: 2rem 0;">
+              <div style="padding: 1.5rem; background: rgba(59, 130, 246, 0.1); border-radius: 8px; border: 1px solid rgba(59, 130, 246, 0.2);">
+                <div style="font-size: 0.875rem; color: #94a3b8; margin-bottom: 0.5rem;">Price</div>
+                <div style="font-size: 2rem; font-weight: 700; color: #e5e7eb;">$XXX.XX</div>
               </div>
-              <div style="font-size: 0.875rem; color: ${spy?.changePct >= 0 ? '#10b981' : '#ef4444'}; margin-top: 0.5rem;">
-                ${spy ? (spy.changePct >= 0 ? '+' : '') + spy.changePct.toFixed(2) + '%' : '--'}
+              
+              <div style="padding: 1.5rem; background: rgba(16, 185, 129, 0.1); border-radius: 8px; border: 1px solid rgba(16, 185, 129, 0.2);">
+                <div style="font-size: 0.875rem; color: #94a3b8; margin-bottom: 0.5rem;">Change</div>
+                <div style="font-size: 2rem; font-weight: 700; color: #10b981;">+X.XX%</div>
+              </div>
+              
+              <div style="padding: 1.5rem; background: rgba(245, 158, 11, 0.1); border-radius: 8px; border: 1px solid rgba(245, 158, 11, 0.2);">
+                <div style="font-size: 0.875rem; color: #94a3b8; margin-bottom: 0.5rem;">RV Score</div>
+                <div style="font-size: 2rem; font-weight: 700; color: #f59e0b;">8.5/10</div>
               </div>
             </div>
             
-            <div style="padding: 1.5rem; background: rgba(59, 130, 246, 0.1); border-radius: 8px; border: 1px solid rgba(59, 130, 246, 0.2);">
-              <div style="font-size: 0.875rem; color: #94a3b8; margin-bottom: 0.5rem;">Nasdaq</div>
-              <div style="font-size: 2rem; font-weight: 700; color: ${qqq?.changePct >= 0 ? '#10b981' : '#ef4444'};">
-                ${nasdaq}
-              </div>
-              <div style="font-size: 0.875rem; color: ${qqq?.changePct >= 0 ? '#10b981' : '#ef4444'}; margin-top: 0.5rem;">
-                ${qqq ? (qqq.changePct >= 0 ? '+' : '') + qqq.changePct.toFixed(2) + '%' : '--'}
-              </div>
+            <div style="margin: 3rem 0; padding: 2rem; background: rgba(59, 130, 246, 0.05); border-radius: 12px; border: 1px solid rgba(59, 130, 246, 0.1);">
+              <p style="color: #94a3b8; font-size: 1.125rem; margin-bottom: 1rem;">
+                🚀 Full stock analysis coming soon!
+              </p>
+              <p style="color: #64748b; font-size: 0.875rem;">
+                We're building an advanced stock analyzer that will integrate:<br>
+                • Real-time price data<br>
+                • Technical indicators<br>
+                • Sentiment analysis<br>
+                • AI-powered recommendations<br>
+              </p>
             </div>
             
-            <div style="padding: 1.5rem; background: rgba(168, 85, 247, 0.1); border-radius: 8px; border: 1px solid rgba(168, 85, 247, 0.2);">
-              <div style="font-size: 0.875rem; color: #94a3b8; margin-bottom: 0.5rem;">Russell 2000</div>
-              <div style="font-size: 2rem; font-weight: 700; color: ${iwm?.changePct >= 0 ? '#10b981' : '#ef4444'};">
-                ${russell}
-              </div>
-              <div style="font-size: 0.875rem; color: ${iwm?.changePct >= 0 ? '#10b981' : '#ef4444'}; margin-top: 0.5rem;">
-                ${iwm ? (iwm.changePct >= 0 ? '+' : '') + iwm.changePct.toFixed(2) + '%' : '--'}
-              </div>
-            </div>
-            
+            <button 
+              onclick="clearSearch()" 
+              style="
+                padding: 1rem 2rem;
+                background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+                border: none;
+                border-radius: 8px;
+                color: white;
+                font-weight: 600;
+                cursor: pointer;
+                font-size: 1rem;
+                transition: all 0.2s;
+              "
+              onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 10px 25px rgba(59, 130, 246, 0.4)'"
+              onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none'"
+            >
+              Search Another Stock
+            </button>
           </div>
         `;
-        
-        // Update timestamp
-        if (updatedEl && data.meta?.updatedAt) {
-          updatedEl.textContent = new Date(data.meta.updatedAt).toLocaleString();
-        }
-        
       } catch (error) {
-        console.error('Failed to load indices:', error);
-        container.innerHTML = `
-          <div style="text-align: center; padding: 2rem; color: #ef4444;">
-            ❌ Failed to load data: ${error.message}
+        resultsTitle.textContent = 'Error';
+        resultsContent.innerHTML = `
+          <div style="text-align: center; padding: 3rem; color: #ef4444;">
+            <div style="font-size: 3rem; margin-bottom: 1rem;">❌</div>
+            <div>Failed to analyze ${ticker}</div>
+            <div style="margin-top: 1rem; font-size: 0.875rem; color: #94a3b8;">${error.message}</div>
           </div>
         `;
       }
-    })();
+    }
+
+    // Clear search and return to hero
+    function clearSearch() {
+      searchInput.value = '';
+      resultsSection.style.display = 'none';
+      searchInput.focus();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    // Auto-focus search on page load
+    document.addEventListener('DOMContentLoaded', () => {
+      searchInput.focus();
+    });
   </script>
 
 </body>
