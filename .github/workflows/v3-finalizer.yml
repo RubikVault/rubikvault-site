@@ -174,7 +174,7 @@ jobs:
             exit 0
           fi
           
-          git commit -m "data: v3.0 publish via finalizer [skip ci]" || exit 0
+          git commit -m "data: v3.0 publish via finalizer" || exit 0
           
           # Retry push with merge handling
           for i in 1 2 3; do
