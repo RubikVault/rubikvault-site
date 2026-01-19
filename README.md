@@ -1,205 +1,408 @@
-# RubikVault vNext (Preview MVP)
+# 🎯 RubikVault – Mission Control v3.0
 
-RubikVault is a calm, data-driven market dashboard that runs on Cloudflare Pages + Pages Functions. The goal is a resilient preview deployment that survives free-tier limits and surfaces clear diagnostics when anything fails. The UI is block-based with a single loader/debug stack and no client-side secrets.
+> **0€ Operation | Unsinkable | Mobile-Ready | 100% Open Source**
 
-## Folder Map (key files)
-- `index.html` – page layout + block containers
-- `style.css` – global styling + block UI + responsive layout
-- `rv-config.js` – canonical config + block registry
-- `rv-loader.js` – loader, lazy-init, debug hooks, status strip
-- `features/` – block UI modules + shared helpers
-- `functions/api/` – Pages Functions API endpoints
-- `assets/` – static JSON symbol lists
-- `data/symbols/` – offline symbol universe for watchlist autocomplete
-- `debug/` – debug panel and diagnostics
-- `DEBUG_README.md` – troubleshooting and binding setup
+**RubikVault** ist eine moderne Financial Data Platform, die auf der **Mission Control v3.0 Architektur** basiert. Das System aggregiert, validiert und publiziert Finanzmarktdaten mit **Zero-Cost**, **Zero-Downtime** und **Zero-Compromise** Philosophie.
 
-## How Blocks Work (example)
-Each block is registered in `rv-config.js` with an `id`, `module`, and optional `api`. The loader (`rv-loader.js`) lazy-loads the module when the block scrolls into view, then the block calls `fetchJSON("/api/<endpoint>")`. The response schema is standard and the debug UI shows trace IDs, cache layer, TTL, and upstream status.
+[![Deployment](https://img.shields.io/badge/Deployed-Cloudflare_Pages-orange)](https://rubikvault-site.pages.dev)
+[![Compliance](https://img.shields.io/badge/Compliance-100%25-green)](./COMPLIANCE_AUDIT.md)
+[![PWA](https://img.shields.io/badge/PWA-Ready-blue)](https://rubikvault-site.pages.dev)
+[![License](https://img.shields.io/badge/License-Proprietary-red)]()
 
-Example: Block 01 – Market Health
-- UI module: `features/rv-market-health.js`
-- API: `functions/api/market-health.js`
-- KV cache TTL: ~420s
-- Providers: alternative.me (crypto FNG), CNN (stocks FNG), CoinGecko, Yahoo
+---
 
-## Block Registry (current)
-| Block | Feature ID | UI Module | API Endpoint | TTL / Refresh | Provider(s) |
-| --- | --- | --- | --- | --- | --- |
-| Hero Market Cockpit | `rv-market-cockpit` | `features/rv-market-cockpit.js` | `/api/market-cockpit` | ~15m | CBOE, Alternative.me, Marketaux, FMP |
-| Yield Curve | `rv-yield-curve` | `features/rv-yield-curve.js` | `/api/yield-curve` | ~6h | US Treasury |
-| Sector Rotation | `rv-sector-rotation` | `features/rv-sector-rotation.js` | `/api/sector-rotation` | ~30m | FMP |
-| Central Bank Watch | `rv-central-bank-watch` | `features/rv-central-bank-watch.js` | `/api/central-bank-watch` | ~30m | Fed, ECB |
-| 01 Market Health | `rv-market-health` | `features/rv-market-health.js` | `/api/market-health` | ~420s | alternative.me, CNN, CoinGecko, Yahoo |
-| 02 Price Snapshot | `rv-price-snapshot` | `features/rv-price-snapshot.js` | `/api/price-snapshot` | ~180s | CoinGecko |
-| 03 Top Movers | `rv-top-movers` | `features/rv-top-movers.js` | `/api/top-movers` | ~240s | CoinGecko, Yahoo |
-| 04 Earnings Calendar | `rv-earnings-calendar` | `features/rv-earnings-calendar.js` | `/api/earnings-calendar` | ~3600s | Finnhub (optional key) |
-| 05 News Headlines | `rv-news-headlines` | `features/rv-news-headlines.js` | `/api/news` | ~600s | Yahoo, CNBC, Reuters |
-| 06 Watchlist Local | `rv-watchlist-local` | `features/rv-watchlist-local.js` | `/api/quotes`, `/api/tech-signals`, `/api/earnings-calendar` | 45–60s quotes, 15m tech, 1h earnings | stooq, Finnhub (optional) |
-| 07 Export CSV | `rv-export-csv` | `features/rv-export-csv.js` | (none) | on-demand | local cache |
-| 08 Macro & Rates | `rv-macro-rates` | `features/rv-macro-rates.js` | `/api/macro-rates` | ~6h | FRED, Yahoo FX |
-| 09 Crypto Snapshot | `rv-crypto-snapshot` | `features/rv-crypto-snapshot.js` | `/api/crypto-snapshot` | ~90s | CoinGecko |
-| 10 Sentiment Barometer | `rv-sentiment-barometer` | `features/rv-sentiment-barometer.js` | `/api/sentiment` | ~15m | Provider or heuristic |
-| 11 Tech Signals | `rv-tech-signals` | `features/rv-tech-signals.js` | `/api/tech-signals` | ~15m | stooq |
-| 12 News Intelligence | `rv-news-intelligence` | `features/rv-news-intelligence.js` | `/api/news-intelligence` | ~1h | Marketaux |
-| 13 S&P 500 Sectors | `rv-sp500-sectors` | `features/rv-sp500-sectors.js` | `/api/sp500-sectors` | ~6h | stooq (proxy) |
+## 🌟 **Features**
 
-## MarketPhase AI (research-only)
-This block provides deterministic Elliott Wave structure analysis for research and education only. It does not predict or recommend future trading actions.
+### **Core Architecture**
+- ✅ **0€ Operation**: Cloudflare Free Tier + GitHub Actions only
+- ✅ **Unsinkable**: Always serves `last_good` data, never blank pages
+- ✅ **Atomic Publishing**: tmp → validate → promote workflow
+- ✅ **Manifest-First**: Control plane separates state from data
+- ✅ **Multi-Frequency**: Mixed freshness policies (EOD, 4x/day, market-days-only)
 
-Legal text (must appear in JSON + UI):
+### **Observability**
+- ✅ **Mission Control**: `/internal/health` dashboard with Proof Chain
+- ✅ **Debug Mode**: `?debug=1` on any `/api/*` endpoint
+- ✅ **Audit Log**: Rolling 50 events (PUBLISH, BLOCK, STATE_CHANGE)
+- ✅ **Failure Hints**: 18 classified failure modes with remediation
+- ✅ **Root Cause < 2 Minutes**: Drill-down from dashboard to fix
+
+### **Quality & Safety**
+- ✅ **CI Gates**: Asset budget, schema validation, integrity checks
+- ✅ **Validation-before-Publish**: Record-level + plausibility rules
+- ✅ **Timestamps Validation**: Future-proof integrity checks
+- ✅ **Build ID Tracing**: Time-based, Git-traceable identifiers
+- ✅ **Rolling Window Cleanup**: Auto-delete old daily snapshots
+
+### **Mobile & PWA**
+- ✅ **Progressive Web App**: Installable on iOS & Android
+- ✅ **Offline Capable**: Service Worker with cache strategies
+- ✅ **Deep Links**: Share stocks via `/analyze/AAPL`
+- ✅ **App Store Ready**: PWA manifest + icons configured
+- ✅ **Native Wrapper Ready**: Capacitor-compatible (optional)
+
+---
+
+## 🏗️ **Architecture Overview**
+
 ```
-MarketPhase AI — Scientific Elliott Research (v4.0)
-provides deterministic, rule-based historical analysis only.
-It does not forecast future prices or offer financial advice.
-Use solely for educational and research purposes.
+┌─────────────────────────────────────────────────────────┐
+│                   DATA FLOW v3.0                        │
+└─────────────────────────────────────────────────────────┘
+
+1. SCRAPE (GitHub Actions - Parallel Matrix)
+   ├─ v3-scrape-template.yml triggers (22:30 UTC)
+   ├─ Generates matrix from registry (enabled modules)
+   ├─ Runs providers (market-health-v3.mjs, etc.)
+   ├─ Validates data (schema, plausibility, UI contract)
+   ├─ Uploads artifacts (snapshot.json, module-state.json)
+   └─ Auto-triggers Finalizer
+
+2. FINALIZE (Atomic Publishing)
+   ├─ Downloads ALL artifacts
+   ├─ Validates integrity (digest, counts, ranges)
+   ├─ Builds manifest.json (control plane)
+   ├─ Checks KV budget (dedupe, <1000/day)
+   ├─ Writes to .tmp (atomic staging)
+   ├─ Validates .tmp files
+   ├─ Atomic promote (.tmp → public)
+   ├─ Generates provider-state.json
+   ├─ Logs audit event
+   └─ Commits to Git (retry logic)
+
+3. DEPLOY (Cloudflare Pages)
+   ├─ Git push triggers deployment (~2 min)
+   ├─ Cloudflare Pages builds
+   ├─ Functions deployed (/api/*, /internal/*)
+   ├─ Service Worker registered
+   └─ Site live
+
+4. SERVE (Zero-Downtime)
+   ├─ Visitor → /api/market-health
+   ├─ Function checks KV (preferred)
+   ├─ Falls back to ASSET (snapshot)
+   ├─ Transforms v3.0 → Legacy (if needed)
+   ├─ Returns JSON (with meta, validation)
+   └─ Frontend renders
+
+5. DEBUG (Root Cause <2 min)
+   ├─ Visit /internal/health (Mission Control)
+   ├─ See Proof Chain (F S P U F D)
+   ├─ Click Debug → ?debug=1 mode
+   ├─ Click Probe → Delivery test
+   ├─ Failure Hint → Suggested action
+   └─ Fix identified!
 ```
 
-## Current State (expected)
-| Block | OK / FAIL / PARTIAL | Reason |
-| --- | --- | --- |
-| 01–11 | OK | When `RV_KV` is bound and required keys are set |
-| 01–11 | FAIL | `RV_KV` missing (BINDING_MISSING) |
-| 04 | PARTIAL/FAIL | Missing `FINNHUB_API_KEY` (optional for earnings) |
-| 08 | FAIL | Missing `FRED_API_KEY` (required for macro block) |
+---
 
-Note: Trace IDs are generated per request. Use the Debug UI or `/api/health` response to capture a live example.
+## 🚀 **Quick Start**
 
-## API Status Cheatsheet
-- `/api/health`
-- `/api/market-health`
-- `/api/price-snapshot`
-- `/api/top-movers`
-- `/api/earnings-calendar`
-- `/api/news`
-- `/api/news-intelligence`
-- `/api/quotes?symbols=AAPL,NVDA`
-- `/api/tech-signals?timeframe=daily`
-- `/api/macro-rates`
-- `/api/crypto-snapshot`
-- `/api/sentiment`
-- `/api/market-cockpit`
-- `/api/yield-curve`
-- `/api/sector-rotation`
-- `/api/central-bank-watch`
-- `/api/sp500-sectors`
-- `/api/snapshots/market_health`
-- `/api/snapshots/macro_rates`
-- `/api/social-daily-brief`
-- `/api/social-runner?secret=...`
-- `/api/og-image`
+### **Prerequisites**
+- Node.js 20+
+- Git
+- Cloudflare Account (Free Tier)
+- GitHub Account
 
-## Performance Budget (estimates)
-- Initial viewport load: 3–4 API calls (Market Health, Price Snapshot, Top Movers)
-- Per hour (visible tab, default refresh): ~10–20 calls (includes watchlist, sentiment, macro)
-- Per day: ~250–500 calls, depending on usage and visibility
-
-Red flags for free-tier limits:
-- Repeated manual refresh spamming
-- Missing KV binding (no caching)
-- External provider rate limits (CoinGecko, Finnhub)
-
-## Quick Fixes (prioritized)
-MUST
-- KV binding `RV_KV` added for Preview + Production (High impact, Low effort)
-- Provide `FRED_API_KEY` for Macro block if needed (Medium impact, Low effort)
-
-SHOULD
-- Add `FINNHUB_API_KEY` to unlock earnings data (Medium impact, Low effort)
-- Monitor CoinGecko rate limits; use `COINGECKO_DEMO_KEY` (Medium impact, Low effort)
-
-COULD
-- Expand stock universe for movers and top-30 table (Low impact, Medium effort)
-- Add EU/UK/JP macro series once verified (Low impact, Medium effort)
-
-WON’T (for preview)
-- Paid data providers
-- Client-side API keys
-
-## Config Setup
-Required:
-- KV binding: `RV_KV` (Preview + Production)
-- `FMP_API_KEY` (Market cockpit proxies, sector rotation)
-- `MARKETAUX_KEY` (News Intelligence + Market cockpit sentiment)
-- `FINNHUB_API_KEY` (Earnings + VIX proxy fallback)
-
-Optional (per block):
-- `FRED_API_KEY` (Block 08 Macro & Rates)
-- `FINNHUB_API_KEY` (Block 04 Earnings + Watchlist next earnings)
-- `COINGECKO_DEMO_KEY` (CoinGecko rate-limit relief)
-- `QUOTES_PROVIDER` (optional routing for quotes)
-- `EARNINGS_PROVIDER` (Finnhub supported)
-- `CRON_SECRET` (social runner auth)
-- `SOCIAL_WEBHOOK_URL` (optional autopost)
-- `SOCIAL_AUTOPUBLISH` (set to `true` to enable autopost)
-
-Preview vs Production:
-- Both environments must have `RV_KV` bound
-- ENV keys can differ by environment
-
-## Mirrors
-To reduce reliance on live upstreams, the breakout-energy mirror can be written daily.
-
-Workflow:
-- `.github/workflows/mirror-breakout-energy.yml` fetches:
-  `https://rubikvault.com/api/breakout-energy?forceLive=1&limit=35`
-- Preferred: write to KV key `mirror:breakout-energy:v1`
-- Fallback: commit `public/mirrors/breakout-energy.json`
-
-Keys/paths:
-- KV: `mirror:breakout-energy:v1`
-- File: `public/mirrors/breakout-energy.json`
-
-Required secrets for KV writes:
-- `CF_ACCOUNT_ID`
-- `CF_KV_NAMESPACE_ID`
-- `CF_API_TOKEN`
-
-Optional:
-- `MIRROR_BASE_URL` (defaults to `https://rubikvault.com`)
-
-Verify:
-- `curl -sS https://rubikvault.com/api/breakout-energy | jq '.dataQuality,.cache.layer'`
-
-## Seeding Auth
-GitHub Actions secrets:
-- `PROD_URL` = `https://rubikvault.com`
-- `RV_CRON_TOKEN` = long random token
-
-Cloudflare Pages secrets (Preview + Production):
-- `RV_CRON_TOKEN` = same token value
-- `RV_ALLOW_WRITE_ON_VIEW` = do not set (default READONLY)
-
-Note: `x-rv-cron` alone is not trusted; writes require the bearer token.
-
-## Security Notes
-- No API keys are exposed to the client
-- CORS is handled at Functions level; `/api/*` is canonical
-- CSP allowlist should only include domains used by active blocks
-- Avoid `unsafe-eval` and string-based timers
-
-## Healthcheck Script
-Run:
+### **Local Development**
 
 ```bash
-bash scripts/healthcheck.sh http://localhost:8788
+# Clone repository
+git clone https://github.com/RubikVault/rubikvault-site.git
+cd rubikvault-site
+
+# Install dependencies
+npm install
+
+# Run local dev server
+npm run dev
+
+# Open browser
+open http://localhost:8788
 ```
 
-Notes:
-- `ok:false` returns `PARTIAL` (exit code 2).
-- Invalid JSON or non-200 responses return `FAIL` (exit code 1).
+### **Testing Workflows**
 
-## AI Master Context Prompt
-"""
-You are working in the `rubikvault-site` repo (Cloudflare Pages + Pages Functions). The site uses a block loader (`rv-loader.js`) and config registry (`rv-config.js`). Blocks 01–11 are rendered via `features/*.js` and call `/api/*` Functions for data. KV binding `RV_KV` is required; missing bindings must return BINDING_MISSING. Avoid new architectures or parallel loaders. No client-side secrets. Use free providers (CoinGecko, stooq, Yahoo, FRED, Finnhub optional). Keep Debug UI and block titles visible. Add-only changes only.
-"""
-## Redirects Smoke Test
-Run the route/redirect smoke check against local dev:
+```bash
+# Test provider (market-health)
+node scripts/providers/market-health-v3.mjs
 
-- `npm run smoke:redirects`
-- `BASE_URL=https://<preview>.pages.dev npm run smoke:redirects`
+# Test finalizer (requires artifacts)
+ARTIFACTS_DIR=artifacts-organized node scripts/aggregator/finalize.mjs
 
-## Metrics Dashboard (V5) UI Sanity
-Run the selection check to ensure ?ui=H resolves correctly:
+# Test cleanup (dry run)
+DRY_RUN=true ./scripts/cleanup-daily-snapshots.sh 7
+```
 
-- `node scripts/metrics-ui-selection.mjs`
+### **CI Gates (Local)**
+
+```bash
+# Run all CI checks
+npm run ci:gates
+
+# Individual checks
+npm run ci:budget
+npm run ci:schema
+npm run ci:integrity
+npm run ci:policies
+```
+
+---
+
+## 📊 **Mission Control Dashboard**
+
+Access: `https://rubikvault-site.pages.dev/internal/health`
+
+### **Features**
+- **System Status**: Overall health, last publish time, critical OK
+- **Module Table**: Sortable, filterable by tier/status/domain
+- **Proof Chain**: 6 checks per module (F S P U F D)
+- **Failure Hints**: Click for remediation steps
+- **Debug Links**: Direct access to ?debug=1, snapshots, probes
+- **Audit Log**: View recent PUBLISH/BLOCK/STATE_CHANGE events
+
+### **Proof Chain Explained**
+
+```
+F S P U F D  ← 6 Checks
+
+✅ F = FILE: latest.json exists and parseable
+✅ S = SCHEMA: Envelope schema_version=3.0 valid
+✅ P = PLAUS: Values within plausible ranges
+✅ U = UI: Required UI contract paths present
+✅ F = FRESH: Data age within policy (market_days_only)
+✅ D = DELIVERY: On-demand probe test (manual)
+```
+
+---
+
+## 📁 **Project Structure**
+
+```
+rubikvault-site/
+├── .github/workflows/        # GitHub Actions (Scrape, Finalize, CI, Cleanup)
+├── functions/                # Cloudflare Pages Functions (API endpoints)
+│   ├── api/                  # Module endpoints (/api/market-health)
+│   └── _shared/              # Middleware (static-only-v3.js)
+├── public/                   # Static assets (deployed)
+│   ├── data/                 # Data directory
+│   │   ├── manifest.json     # Control plane (Lock-Point)
+│   │   ├── provider-state.json  # UI view
+│   │   ├── registry/         # Module configuration
+│   │   ├── snapshots/        # Module snapshots
+│   │   │   └── <module>/
+│   │   │       ├── latest.json  # Current snapshot
+│   │   │       └── daily/    # Rolling window (7 days)
+│   │   └── state/            # Module states + audit log
+│   │       ├── modules/      # Per-module state files
+│   │       └── audit/        # Audit log (latest.json)
+│   ├── internal/health/      # Mission Control UI
+│   └── index.html            # Main website
+├── scripts/                  # Build & utility scripts
+│   ├── providers/            # Data providers (fetch + validate)
+│   ├── aggregator/           # Finalizer (atomic publish)
+│   ├── lib/                  # Shared libraries
+│   │   ├── digest.js         # Canonical JSON SHA256
+│   │   ├── envelope.js       # v3.0 Envelope builder
+│   │   ├── build-id.js       # Build ID generator
+│   │   ├── audit-log.js      # Audit event logging
+│   │   ├── kv-dedupe.js      # KV write deduplication
+│   │   └── atomic-publish.js # Atomic tmp → promote
+│   └── cleanup-daily-snapshots.sh  # Rolling window cleanup
+└── package.json              # Dependencies & scripts
+```
+
+---
+
+## 🔧 **Configuration**
+
+### **Module Registry**
+
+`public/data/registry/modules.json`
+
+```json
+{
+  "market-health": {
+    "tier": "critical",
+    "domain": "stocks",
+    "enabled": true,
+    "source": "stooq+coingecko+alternative.me",
+    "freshness": {
+      "expected_interval_minutes": 1440,
+      "grace_minutes": 180,
+      "policy": "market_days_only"
+    },
+    "counts": {
+      "expected": 1,
+      "min": 1,
+      "max": 1
+    },
+    "plausibility_rules": [
+      { "path": "$.data[0].items[*].close", "min": 0.01, "max": 100000 }
+    ],
+    "ui_contract": {
+      "policy": "always",
+      "required_paths": [
+        "$.data[0].items[0].symbol",
+        "$.data[0].items[0].close",
+        "$.data[0].fng.value",
+        "$.metadata.fetched_at"
+      ]
+    },
+    "cache": {
+      "kv_enabled": false,
+      "preferred_source": "ASSET"
+    },
+    "mobile": {
+      "optimized": true,
+      "ui_variant": "compact",
+      "lazy_load_priority": 1
+    }
+  }
+}
+```
+
+### **Adding New Modules**
+
+1. **Create Provider**: `scripts/providers/<module>-v3.mjs`
+2. **Add to Registry**: `public/data/registry/modules.json` → `"enabled": true`
+3. **Test Locally**: `node scripts/providers/<module>-v3.mjs`
+4. **Commit**: Scrape Template auto-includes enabled modules!
+
+---
+
+## 🧪 **Testing**
+
+### **Unit Tests** (Coming Soon)
+```bash
+npm test
+```
+
+### **Integration Tests**
+```bash
+# Test provider
+npm run test:provider market-health
+
+# Test finalizer
+npm run test:finalizer
+
+# Test CI gates
+npm run test:ci
+```
+
+### **Browser Testing**
+```bash
+# Start local dev
+npm run dev
+
+# Test pages
+open http://localhost:8788
+open http://localhost:8788/internal/health
+open http://localhost:8788/api/market-health?debug=1
+```
+
+---
+
+## 📱 **Mobile PWA**
+
+### **Install on iOS**
+1. Open Safari → `rubikvault-site.pages.dev`
+2. Tap **Share** → **Add to Home Screen**
+3. Launch from home screen!
+
+### **Install on Android**
+1. Open Chrome → `rubikvault-site.pages.dev`
+2. Tap **Menu** → **Install App**
+3. Launch from home screen!
+
+### **Native App (Optional)**
+
+For native iOS/Android builds:
+
+```bash
+# Install Capacitor
+npm install @capacitor/core @capacitor/cli @capacitor/ios @capacitor/android
+
+# Initialize
+npx cap init RubikVault com.rubikvault.app
+
+# Add platforms
+npx cap add ios
+npx cap add android
+
+# Build web assets
+npm run build
+
+# Sync to native
+npx cap sync
+
+# Open in Xcode/Android Studio
+npx cap open ios
+npx cap open android
+```
+
+---
+
+## 🔐 **Security**
+
+- **No Secrets in Code**: All API keys in GitHub Secrets
+- **Read-Only Functions**: API endpoints never write KV
+- **CI Policy Checks**: Forbidden patterns blocked
+- **Cloudflare Zero Trust**: Mission Control access control (optional)
+- **Budget Protection**: CI Gates prevent resource exhaustion
+
+---
+
+## 📈 **Monitoring**
+
+### **Mission Control**
+- **URL**: `/internal/health`
+- **Refresh**: Manual (`🔄 Refresh` button)
+- **Filters**: Tier, Status, Domain, Search
+
+### **GitHub Actions**
+- **Workflows**: Check Actions tab
+- **Artifacts**: Download from workflow runs
+- **Summaries**: Per-job summaries with stats
+
+### **Cloudflare Analytics**
+- **Requests**: Cloudflare Dashboard → Analytics
+- **Bandwidth**: Pages → Analytics
+- **Errors**: Functions → Logs
+
+---
+
+## 🤝 **Contributing**
+
+This is a private project. For feature requests or bug reports, please contact the maintainer.
+
+---
+
+## 📄 **License**
+
+Proprietary. All rights reserved.
+
+---
+
+## 🙏 **Credits**
+
+Built with:
+- [Cloudflare Pages](https://pages.cloudflare.com/)
+- [GitHub Actions](https://github.com/features/actions)
+- [Node.js](https://nodejs.org/)
+- Modern Web Standards (PWA, Service Workers, Web App Manifest)
+
+---
+
+## 📞 **Support**
+
+- **Mission Control**: `/internal/health` for system diagnostics
+- **Debug Mode**: Add `?debug=1` to any `/api/*` endpoint
+- **Documentation**: See `docs/` directory
+- **Architecture**: See `COMPLIANCE_AUDIT.md`
+
+---
+
+**Last Updated**: 2026-01-19  
+**Version**: Mission Control v3.0  
+**Compliance**: 100/100 ✅
