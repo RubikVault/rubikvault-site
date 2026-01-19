@@ -194,7 +194,13 @@ function validateData(data, registryConfig) {
       }
     }
     
-    if (current !== null && current !== undefined && typeof current === 'number') {
+    // Check if value is null/undefined for required numeric fields
+    if (current === null || current === undefined) {
+      // If this is a critical field, treat as error
+      if (rule.path.includes('close') || rule.path.includes('fng.value')) {
+        errors.push(`Required field ${rule.path} is null or missing`);
+      }
+    } else if (typeof current === 'number') {
       if (rule.min !== undefined && current < rule.min) {
         warnings.push(`${rule.path} value ${current} below minimum ${rule.min}`);
       }
@@ -296,11 +302,40 @@ async function main() {
   const btcEntry = cryptoData.find(entry => entry.symbol === "BTC");
   
   // Build data structure matching existing format
+  // Map yahoo indices to items (SPY, QQQ, IWM) if available
+  const spyIndex = yahooData.indices.find(i => i.symbol === '^GSPC') || yahooData.indices.find(i => i.label?.includes('S&P'));
+  const qqqIndex = yahooData.indices.find(i => i.symbol === '^IXIC') || yahooData.indices.find(i => i.label?.includes('Nasdaq'));
+  const iwmIndex = yahooData.indices.find(i => i.symbol === '^RUT') || yahooData.indices.find(i => i.label?.includes('Russell'));
+  
   const data = {
     items: [
-      { symbol: "SPY", close: null, prevClose: null, changePct: null, lastBarDate: null, barsUsed: null, missingFields: [] },
-      { symbol: "QQQ", close: null, prevClose: null, changePct: null, lastBarDate: null, barsUsed: null, missingFields: [] },
-      { symbol: "IWM", close: null, prevClose: null, changePct: null, lastBarDate: null, barsUsed: null, missingFields: [] }
+      { 
+        symbol: "SPY", 
+        close: spyIndex?.price ?? null, 
+        prevClose: null, 
+        changePct: spyIndex?.changePercent ?? null, 
+        lastBarDate: null, 
+        barsUsed: null, 
+        missingFields: spyIndex?.price ? [] : ['close', 'changePct'] 
+      },
+      { 
+        symbol: "QQQ", 
+        close: qqqIndex?.price ?? null, 
+        prevClose: null, 
+        changePct: qqqIndex?.changePercent ?? null, 
+        lastBarDate: null, 
+        barsUsed: null, 
+        missingFields: qqqIndex?.price ? [] : ['close', 'changePct'] 
+      },
+      { 
+        symbol: "IWM", 
+        close: iwmIndex?.price ?? null, 
+        prevClose: null, 
+        changePct: iwmIndex?.changePercent ?? null, 
+        lastBarDate: null, 
+        barsUsed: null, 
+        missingFields: iwmIndex?.price ? [] : ['close', 'changePct'] 
+      }
     ],
     benchmarks: ["SPY", "QQQ", "IWM"],
     fng: fngData,
