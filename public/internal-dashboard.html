@@ -263,7 +263,7 @@
           itemsCount: 0,
           age: null,
           freshness: 'MISSING',
-          reason: 'Snapshot file not found or failed to load',
+          reason: '❌ Snapshot file not found or failed to load',
           lastUpdated: null
         };
       }
@@ -274,6 +274,9 @@
       const freshness = meta.freshness || {};
       const freshnessStatus = freshness.status || 'unknown';
       const ageMinutes = freshness.ageMinutes || null;
+      
+      // CRITICAL: Always validate data structure FIRST, regardless of meta.status
+      // meta.status can be 'OK' but data structure can still be wrong!
 
       // Check if data is actually present
       let itemsCount = 0;
@@ -298,9 +301,8 @@
         const picks = data.picks || data.extraData?.picks || null;
         const picksTop = picks?.top || [];
         itemsCount = items.length || picksTop.length || 0;
-        dataPresent = itemsCount > 0;
         
-        // Check for dummy values in picks (UI uses picks, not items)
+        // CRITICAL: Check for dummy values FIRST (UI uses picks, not items)
         if (picksTop.length > 0) {
           const uniqueScores = new Set();
           picksTop.forEach(p => {
@@ -308,16 +310,16 @@
               uniqueScores.add(`${p.setupScore}-${p.triggerScore}-${p.totalScore}`);
             }
           });
-          // If all picks have identical scores, it's likely dummy data
+          // If all picks have identical scores, it's DUMMY_DATA (UI cannot use this)
           if (uniqueScores.size === 1 && picksTop.length > 1) {
             const firstPick = picksTop[0];
             return {
               status: 'DUMMY_DATA',
-              dataPresent: true,
+              dataPresent: false, // UI cannot use identical dummy scores
               itemsCount,
               age: ageMinutes,
               freshness: freshnessStatus,
-              reason: `All picks have identical dummy values (Setup ${firstPick.setupScore}, Trigger ${firstPick.triggerScore}, Total ${firstPick.totalScore}). Data is ${ageMinutes ? formatAge(ageMinutes) : 'unknown'} old. Snapshot picks may not be updating correctly.`,
+              reason: `❌ DUMMY DATA: All ${picksTop.length} picks have identical scores (Setup ${firstPick.setupScore}, Trigger ${firstPick.triggerScore}, Total ${firstPick.totalScore}). This is invalid - different assets should have different scores. UI cannot render meaningful data. Fix: Check alphaScore calculation in market-indicators.mjs.`,
               lastUpdated: meta.generatedAt || meta.updatedAt
             };
           }
@@ -329,15 +331,17 @@
           if (firstItem.setupScore === 34 && firstItem.triggerScore === 51 && firstItem.totalScore === 85) {
             return {
               status: 'DUMMY_DATA',
-              dataPresent: true,
+              dataPresent: false,
               itemsCount,
               age: ageMinutes,
               freshness: freshnessStatus,
-              reason: `Data contains dummy values (Setup 34, Trigger 51, Total 85). Data is ${ageMinutes ? formatAge(ageMinutes) : 'unknown'} old. Snapshot may not be updating correctly.`,
+              reason: `❌ DUMMY DATA: Contains old dummy pattern (Setup 34, Trigger 51, Total 85). UI cannot render this. Fix: Check alphaScore calculation.`,
               lastUpdated: meta.generatedAt || meta.updatedAt
             };
           }
         }
+        
+        dataPresent = itemsCount > 0;
       } else if (blockId === 'rv-sp500-sectors' || blockId === 'sp500-sectors') {
         const items = data.items || [];
         const sectors = data.sectors || [];
@@ -381,24 +385,40 @@
         }
       } else if (blockId === 'rv-tech-signals' || blockId === 'tech-signals') {
         const items = data.items || [];
-        itemsCount = items.length;
-        dataPresent = itemsCount > 0;
-        // Check if items have actual signal data
+        const signals = data.signals || []; // UI can use either items or signals
+        itemsCount = items.length || signals.length;
+        
+        // CRITICAL: Check if items have actual signal data that UI can render
         if (itemsCount > 0) {
-          const firstItem = items[0];
-          const hasSignals = firstItem.rsi !== undefined || firstItem.macd !== undefined || firstItem.rsiWeekly !== undefined;
-          if (!hasSignals) {
+          const firstItem = items[0] || signals[0];
+          if (!firstItem) {
+            return {
+              status: 'EMPTY_ITEMS',
+              dataPresent: false,
+              itemsCount: 0,
+              age: ageMinutes,
+              freshness: freshnessStatus,
+              reason: '❌ Items array exists but is empty or invalid. UI cannot render empty table.',
+              lastUpdated: meta.generatedAt || meta.updatedAt
+            };
+          }
+          // UI expects: rsi, macd, macdHist, stochRsi, rsiWeekly, symbol, etc.
+          const hasSignals = firstItem.rsi !== undefined || firstItem.macd !== undefined || firstItem.rsiWeekly !== undefined || firstItem.macdHist !== undefined || firstItem.stochRsi !== undefined;
+          const hasSymbol = firstItem.symbol !== undefined;
+          if (!hasSignals || !hasSymbol) {
             return {
               status: 'INVALID_DATA',
               dataPresent: false,
               itemsCount,
               age: ageMinutes,
               freshness: freshnessStatus,
-              reason: 'Items exist but lack signal data (RSI, MACD, etc.). Snapshot may be incomplete.',
+              reason: `❌ INVALID DATA STRUCTURE: ${itemsCount} items exist but lack required fields (RSI/MACD/stochRsi or symbol). UI cannot render table. Check snapshot mapping.`,
               lastUpdated: meta.generatedAt || meta.updatedAt
             };
           }
         }
+        
+        dataPresent = itemsCount > 0;
       } else if (blockId === 'rv-marketphase' || blockId === 'marketphase') {
         // MarketPhase loads individual symbol files, check index.json
         const symbols = data.symbols || [];
