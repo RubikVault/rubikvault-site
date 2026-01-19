@@ -342,9 +342,8 @@
         const items = data.items || [];
         const sectors = data.sectors || [];
         itemsCount = items.length || sectors.length;
-        dataPresent = itemsCount > 0 || sectors.length > 0;
         
-        // Check if data structure matches UI expectations
+        // CRITICAL: Check if data structure matches UI expectations FIRST
         if (sectors.length > 0) {
           const firstSector = sectors[0];
           // UI expects: rel.r1w, rel.r1d, rel.r1m, relTech.rsi, etc.
@@ -357,16 +356,18 @@
           if (hasOldFields && !hasRelFields && !hasRelTechFields) {
             return {
               status: 'INVALID_DATA_STRUCTURE',
-              dataPresent: true,
+              dataPresent: false, // UI cannot render this, so data is NOT present for UI
               itemsCount,
               age: ageMinutes,
               freshness: freshnessStatus,
-              reason: `Data structure mismatch: Snapshot has ${itemsCount} sectors with old structure (changePercent, relativeToSpy) but UI expects new structure (rel.r1w, relTech.rsi). UI cannot render this data. Check build-snapshots.mjs mapping for sp500-sectors.`,
+              reason: `❌ DATA STRUCTURE MISMATCH: Snapshot has ${itemsCount} sectors with OLD structure (changePercent, relativeToSpy) but UI expects NEW structure (rel.r1w, rel.r1d, rel.r1m, relTech.rsi). UI CANNOT RENDER THIS DATA. Fix: Update build-snapshots.mjs mapping for sp500-sectors to transform old structure to new structure.`,
               lastUpdated: meta.generatedAt || meta.updatedAt
             };
           }
         }
         
+        // Only check for empty if structure is OK
+        dataPresent = itemsCount > 0 || sectors.length > 0;
         if (itemsCount === 0 && sectors.length === 0) {
           return {
             status: 'EMPTY_ITEMS',
@@ -513,10 +514,14 @@
 
       tbody.innerHTML = results.map(result => {
         // Determine status class based on actual data quality
+        // CRITICAL: If data structure is invalid or data is not present, it's a FAIL
         let statusClass = 'ok';
         if (result.status === 'DUMMY_DATA' || result.status === 'NO_DATA' || result.status === 'EMPTY_ITEMS' || result.status === 'INVALID_DATA' || result.status === 'INVALID_DATA_STRUCTURE' || result.status === 'NO_SYMBOLS') {
           statusClass = 'fail';
-        } else if (result.status === 'PARTIAL' || !result.dataPresent) {
+        } else if (!result.dataPresent) {
+          // If data is not present, it's always a FAIL (UI cannot render)
+          statusClass = 'fail';
+        } else if (result.status === 'PARTIAL') {
           statusClass = 'warn';
         } else if (result.status === 'OK' && !result.dataPresent) {
           statusClass = 'fail';
