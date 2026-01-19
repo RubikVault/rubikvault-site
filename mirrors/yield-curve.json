@@ -1,0 +1,142 @@
+{
+  "meta": {
+    "provider": "fred",
+    "dataset": "yield-curve",
+    "fetchedAt": "2026-01-19T06:24:00.205Z",
+    "ttlSeconds": 3600,
+    "source": "mirror",
+    "runId": "2026-01-19T06:24:00.205Z",
+    "cost": null
+  },
+  "raw": {
+    "schemaVersion": "rv-mirror-v1",
+    "mirrorId": "yield-curve",
+    "provider": "fred",
+    "dataset": "yield-curve",
+    "runId": "2026-01-19T06:24:00.205Z",
+    "fetchedAt": "2026-01-19T06:24:00.205Z",
+    "updatedAt": "2026-01-19T06:24:00.205Z",
+    "asOf": "2026-01-19T06:24:00.205Z",
+    "mode": "LIVE",
+    "cadence": "best_effort",
+    "trust": "derived",
+    "source": "mirror",
+    "sourceUpstream": "fred",
+    "ttlSeconds": null,
+    "dataQuality": "OK",
+    "delayMinutes": 0,
+    "missingSymbols": [],
+    "errors": [],
+    "notes": [],
+    "whyUnique": "Seeded from yield-curve upstream",
+    "context": {
+      "spreads": {
+        "tenTwo": 0.6099999999999999,
+        "tenThreeMonth": 0.48999999999999977
+      }
+    },
+    "items": [
+      {
+        "tenor": "1m",
+        "value": 3.75
+      },
+      {
+        "tenor": "3m",
+        "value": 3.68
+      },
+      {
+        "tenor": "6m",
+        "value": 3.6
+      },
+      {
+        "tenor": "1y",
+        "value": 3.54
+      },
+      {
+        "tenor": "2y",
+        "value": 3.56
+      },
+      {
+        "tenor": "5y",
+        "value": 3.77
+      },
+      {
+        "tenor": "10y",
+        "value": 4.17
+      },
+      {
+        "tenor": "20y",
+        "value": 4.74
+      },
+      {
+        "tenor": "30y",
+        "value": 4.79
+      }
+    ],
+    "savedAt": "2026-01-19T06:24:00.205Z",
+    "_meta": {
+      "updated_at": "2026-01-19T06:24:00.205Z",
+      "provider": "fred",
+      "status": "fresh"
+    },
+    "payload": {
+      "ok": true,
+      "feature": "yield-curve",
+      "ts": "2026-01-19T06:24:00.204Z",
+      "traceId": "seed",
+      "schemaVersion": 1,
+      "cache": {
+        "hit": false,
+        "ttl": 0,
+        "layer": "seed"
+      },
+      "upstream": {
+        "url": "fred",
+        "status": 200,
+        "snippet": ""
+      },
+      "rateLimit": {
+        "remaining": "unknown",
+        "reset": null,
+        "estimated": true
+      },
+      "dataQuality": {
+        "status": "LIVE",
+        "reason": "LIVE",
+        "missingFields": []
+      },
+      "meta": {
+        "status": "LIVE",
+        "reason": null
+      },
+      "data": {
+        "updatedAt": "2026-01-15T00:00:00.000Z",
+        "yields": {
+          "1m": 3.75,
+          "3m": 3.68,
+          "6m": 3.6,
+          "1y": 3.54,
+          "2y": 3.56,
+          "5y": 3.77,
+          "10y": 4.17,
+          "20y": 4.74,
+          "30y": 4.79
+        },
+        "spreads": {
+          "tenTwo": 0.6099999999999999,
+          "tenThreeMonth": 0.48999999999999977
+        },
+        "inversion": {
+          "tenTwo": false,
+          "tenThreeMonth": false
+        },
+        "source": "FRED"
+      }
+    },
+    "meta": {
+      "status": "OK",
+      "updatedAt": "2026-01-19T06:24:00.205Z",
+      "reason": null
+    }
+  }
+}
