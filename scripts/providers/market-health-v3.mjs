@@ -159,12 +159,16 @@ function validateData(data, registryConfig) {
   const requiredPaths = registryConfig?.ui_contract?.required_paths || [];
   for (const path of requiredPaths) {
     // Simple path check (can be enhanced with JSONPath library)
-    // Remove both $. and $.data. prefixes, as we're validating the unwrapped data object
+    // Remove $., $.data., and $.data[0]. prefixes
+    // Provider receives the unwrapped data object (one item from snapshot.data array)
     // If path starts with $.metadata, skip it (metadata is added later in envelope)
     if (path.startsWith('$.metadata')) {
       continue; // Skip metadata paths - they're not in the data object
     }
-    let cleanPath = path.replace(/^\$\.data\./, '').replace(/^\$\./, '');
+    let cleanPath = path
+      .replace(/^\$\.data\[\d+\]\./, '') // Remove $.data[0]. or $.data[1]. etc
+      .replace(/^\$\.data\./, '')        // Remove $.data.
+      .replace(/^\$\./, '');              // Remove $.
     const parts = cleanPath.split(/[\.\[\]]/).filter(Boolean);
     let current = data;
     for (const part of parts) {
@@ -180,8 +184,11 @@ function validateData(data, registryConfig) {
   const plausibilityRules = registryConfig?.plausibility_rules || [];
   for (const rule of plausibilityRules) {
     // Simplified validation - in production, use JSONPath
-    // Remove both $. and $.data. prefixes, as we're validating the unwrapped data object
-    let rulePath = rule.path.replace(/^\$\.data\./, '').replace(/^\$\./, '');
+    // Remove $., $.data., and $.data[0]. prefixes
+    let rulePath = rule.path
+      .replace(/^\$\.data\[\d+\]\./, '') // Remove $.data[0]. or $.data[1]. etc
+      .replace(/^\$\.data\./, '')        // Remove $.data.
+      .replace(/^\$\./, '');              // Remove $.
     
     // Handle wildcard paths like "items[*].close"
     if (rulePath.includes('[*]')) {
