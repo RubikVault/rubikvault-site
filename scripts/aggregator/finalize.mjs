@@ -103,10 +103,11 @@ function validateSnapshot(snapshot, moduleConfig) {
   // Digest verification
   const computedDigest = computeSnapshotDigest(snapshot);
   if (snapshot.metadata.digest !== computedDigest) {
+    const module = snapshot.metadata?.module || 'unknown';
     errors.push(`DIGEST_MISMATCH: computed=${computedDigest}, provided=${snapshot.metadata.digest}`);
     
     // DEBUG: Show what data is being hashed
-    console.log(`\n🔍 DIGEST MISMATCH DEBUG for ${moduleName}:`);
+    console.log(`\n🔍 DIGEST MISMATCH DEBUG for ${module}:`);
     console.log(`  Provider digest:  ${snapshot.metadata.digest}`);
     console.log(`  Computed digest:  ${computedDigest}`);
     console.log(`\n  Snapshot structure:`);
