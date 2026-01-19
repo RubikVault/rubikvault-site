@@ -5,6 +5,20 @@ export const LEGAL_TEXT =
   "Use solely for educational and research purposes.\n" +
   "ISO 8000 / IEEE 7000 Compliant - Bit-exact reproducibility guaranteed.";
 
+// Import round6 for precision control (v8.0 upgrade)
+// Note: Dynamic import not available in all contexts, so we'll use a function that can be overridden
+let round6Fn = null;
+function getRound6() {
+  if (round6Fn) return round6Fn;
+  // Fallback implementation
+  return (n) => typeof n === 'number' && Number.isFinite(n) ? Math.round(n * 1_000_000) / 1_000_000 : n;
+}
+
+// Allow external override of round6 function (for testing or when scientific-math.mjs is available)
+export function setRound6(fn) {
+  round6Fn = fn;
+}
+
 export function clamp(min, max, value) {
   return Math.min(max, Math.max(min, value));
 }
@@ -234,12 +248,19 @@ export function evaluateElliott(swings) {
 
   const mid = (p4.price + p5.price) / 2;
   const range = Math.abs(p5.price - p4.price) || 1;
+  const round6 = getRound6();
   const developingPattern = {
     possibleWave: "Wave 4 or ABC",
     confidence: clamp(0, 100, Math.round(confidence * 0.6)),
     fibLevels: {
-      support: [Number((mid - range * 0.382).toFixed(2)), Number((mid - range * 0.618).toFixed(2))],
-      resistance: [Number((mid + range * 0.382).toFixed(2)), Number((mid + range * 0.618).toFixed(2))]
+      support: [
+        round6(mid - range * 0.382),
+        round6(mid - range * 0.618)
+      ],
+      resistance: [
+        round6(mid + range * 0.382),
+        round6(mid + range * 0.618)
+      ]
     },
     disclaimer: "Reference levels only — no prediction"
   };
@@ -330,13 +351,14 @@ export function analyzeMarketPhase(symbol, ohlc) {
   if (!swings.confirmed.length || swingSet !== swings.confirmed) {
     elliott.uncertainty.lastSwingConfirmed = false;
   }
+  const round6 = getRound6();
   return {
     features: {
-      RSI: lastRsi ? Number(lastRsi.toFixed(2)) : null,
-      MACDHist: lastMacd ? Number(lastMacd.toFixed(3)) : null,
-      "ATR%": Number(atrPct.toFixed(2)),
-      SMA50: lastSma50 ? Number(lastSma50.toFixed(2)) : null,
-      SMA200: lastSma200 ? Number(lastSma200.toFixed(2)) : null,
+      RSI: lastRsi ? round6(lastRsi) : null,
+      MACDHist: lastMacd ? round6(lastMacd) : null,
+      "ATR%": round6(atrPct),
+      SMA50: lastSma50 ? round6(lastSma50) : null,
+      SMA200: lastSma200 ? round6(lastSma200) : null,
       SMATrend:
         lastSma50 && lastSma200 ? (lastSma50 >= lastSma200 ? "bullish" : "bearish") : "unknown"
     },
