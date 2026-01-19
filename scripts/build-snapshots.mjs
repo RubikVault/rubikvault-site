@@ -396,6 +396,8 @@ async function buildSnapshot({ blockId, raw, mirrorMeta, lastGoodSnapshot = null
     // Fill sectors from lastGood if empty (for sp500-sectors)
     if (blockId === "sp500-sectors") {
       const currentSectors = extraData.sectors || [];
+      // Only fill from lastGood if current sectors array is empty
+      // CRITICAL: Do NOT overwrite sectors if they were already extracted from mirror
       if ((!Array.isArray(currentSectors) || currentSectors.length === 0) && 
           Array.isArray(lastGoodSectors) && lastGoodSectors.length > 0) {
         extraData.sectors = lastGoodSectors.map((sector) => ({
