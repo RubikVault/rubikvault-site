@@ -109,7 +109,29 @@ function upsertHistory(history, health) {
 async function main() {
   const seedManifest = await readJsonIfExists(SEED_MANIFEST_PATH);
   if (!seedManifest) {
-    throw new Error("seed-manifest.json missing or invalid");
+    console.warn("seed-manifest.json missing or invalid, creating minimal health");
+    // Create minimal health if manifest is missing
+    const minimalHealth = {
+      schemaVersion: "1.0.0",
+      meta: {
+        blockId: "health",
+        generatedAt: new Date().toISOString(),
+        marketDate: todayUtc(),
+        dataAsOf: new Date().toISOString(),
+        status: "PARTIAL",
+        coveragePct: 0,
+        reason: "SEED_MANIFEST_MISSING",
+        inputs: []
+      },
+      data: {
+        blocks: [],
+        summary: { total: 0, LIVE: 0, PARTIAL: 0, ERROR: 0, okPct: 0, reasons: {} },
+        usage: { providers: {}, totals: {} }
+      }
+    };
+    saveMirror(HEALTH_PATH, minimalHealth);
+    console.log(`[health] wrote minimal health.json for ${minimalHealth.meta.marketDate}`);
+    return;
   }
   const usageReport = await readJsonIfExists(USAGE_REPORT_PATH);
 

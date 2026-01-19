@@ -35,6 +35,8 @@ jobs:
           # Reset to origin/main to ensure clean state
           git reset --hard origin/main
           git clean -fd || true
+          # Install dependencies
+          npm ci
           # NOW generate snapshots (after reset, so they're in clean state)
           echo "FRED_API_KEY: $([[ -n \"$FRED_API_KEY\" ]] && echo 'SET' || echo 'EMPTY')"
           echo "EIA_API_KEY: $([[ -n \"$EIA_API_KEY\" ]] && echo 'SET' || echo 'EMPTY')"
@@ -64,9 +66,12 @@ jobs:
             echo "Push failed (attempt $i), retrying..."
             # If push fails, fetch and merge (not rebase) to avoid unstaged changes conflict
             git fetch origin main
+            # Stash any local changes before merge
+            git stash || true
             if git merge origin/main --no-edit || git merge --abort || true; then
               git push origin HEAD:main || true
             fi
+            git stash pop || true
             sleep $((i * 3))
           done
           echo "Push failed after all retries"

@@ -30,6 +30,8 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: "20"
+      - name: Install dependencies
+        run: npm ci
       - name: Seed package1 snapshots
         run: |
           node -e 'console.log({FRED:!!process.env.FRED_API_KEY,FINNHUB:!!process.env.FINNHUB_API_KEY,FMP:!!process.env.FMP_API_KEY,SEC:!!process.env.SEC_API_KEY,MARKETAUX_API_KEY:!!process.env.MARKETAUX_API_KEY,MARKETAUX_KEY:!!process.env.MARKETAUX_KEY})'
