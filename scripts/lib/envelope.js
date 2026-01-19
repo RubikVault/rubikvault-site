@@ -1,153 +1,320 @@
 /**
- * Snapshot Envelope Builder v3.0
+ * Envelope Library - v3.0 Snapshot Envelope
  * 
- * Creates Mission Control v3.0 compliant snapshot envelopes
- * with validation metadata, freshness, and upstream tracking.
+ * Provides:
+ * - Envelope builder (wrap data with metadata)
+ * - Envelope validator (schema validation)
+ * - Contract checker (UI contract, plausibility)
+ * 
+ * Usage:
+ *   const envelope = buildEnvelope(data, metadata);
+ *   const valid = validateEnvelope(envelope, registry);
  */
 
 import { computeSnapshotDigest } from './digest.js';
 
 /**
- * Build a v3.0 snapshot envelope
- * @param {object} params - Envelope parameters
- * @param {string} params.module - Module name
- * @param {string} params.tier - Module tier (critical|standard|experimental)
- * @param {string} params.domain - Domain (macro|stocks|crypto|fx|altdata)
- * @param {string} params.source - Data source identifier
- * @param {Array} params.data - Data array
- * @param {Date|string} params.fetchedAt - Fetch timestamp
- * @param {Date|string} params.publishedAt - Publish timestamp (optional, defaults to fetchedAt)
- * @param {object} params.upstream - Upstream metadata (optional)
- * @param {object} params.validation - Validation results (optional)
- * @param {object} params.freshness - Freshness config (optional)
- * @returns {object} v3.0 Envelope
+ * Build v3.0 snapshot envelope
+ * @param {array} data - Array of data records
+ * @param {object} metadata - Metadata fields
+ * @returns {object} Complete envelope
  */
-export function buildEnvelope({
-  module,
-  tier,
-  domain,
-  source,
-  data,
-  fetchedAt,
-  publishedAt,
-  upstream = {},
-  validation = { passed: true, dropped_records: 0, drop_ratio: 0, checks: [], warnings: [] },
-  freshness = {}
-}) {
-  const fetchedAtIso = fetchedAt instanceof Date ? fetchedAt.toISOString() : fetchedAt;
-  const publishedAtIso = publishedAt instanceof Date 
-    ? publishedAt.toISOString() 
-    : (publishedAt || fetchedAtIso);
-
-  const recordCount = Array.isArray(data) ? data.length : (data ? 1 : 0);
-
+export function buildEnvelope(data, metadata) {
+  const now = new Date().toISOString();
+  
   const envelope = {
     schema_version: "3.0",
     metadata: {
-      module,
-      tier,
-      domain,
-      source,
-      fetched_at: fetchedAtIso,
-      published_at: publishedAtIso,
-      digest: null, // Will be computed after
-      record_count: recordCount,
-      expected_count: freshness.expected_count || null,
+      module: metadata.module || "unknown",
+      tier: metadata.tier || "standard",
+      domain: metadata.domain || "unknown",
+      source: metadata.source || "unknown",
+      fetched_at: metadata.fetched_at || now,
+      published_at: metadata.published_at || now,
+      digest: null, // Will be computed below
+      record_count: Array.isArray(data) ? data.length : 0,
+      expected_count: metadata.expected_count || null,
       validation: {
-        passed: validation.passed ?? true,
-        dropped_records: validation.dropped_records || 0,
-        drop_ratio: validation.drop_ratio || 0,
-        checks: validation.checks || [],
-        warnings: validation.warnings || []
+        passed: metadata.validation?.passed ?? true,
+        dropped_records: metadata.validation?.dropped_records ?? 0,
+        drop_ratio: metadata.validation?.drop_ratio ?? 0,
+        checks: metadata.validation?.checks ?? [],
+        warnings: metadata.validation?.warnings ?? []
       },
       freshness: {
-        expected_interval_minutes: freshness.expected_interval_minutes || null,
-        grace_minutes: freshness.grace_minutes || null,
-        policy: freshness.policy || "always",
-        age_minutes: null, // Computed at runtime
-        next_expected_at: null // Computed at runtime
+        expected_interval_minutes: metadata.freshness?.expected_interval_minutes || 1440,
+        grace_minutes: metadata.freshness?.grace_minutes || 180,
+        policy: metadata.freshness?.policy || "always",
+        age_minutes: metadata.freshness?.age_minutes || 0,
+        next_expected_at: metadata.freshness?.next_expected_at || null
       },
       upstream: {
-        http_status: upstream.http_status || null,
-        latency_ms: upstream.latency_ms || null,
-        rate_limit_remaining: upstream.rate_limit_remaining || null,
-        retry_count: upstream.retry_count || 0
+        http_status: metadata.upstream?.http_status || null,
+        latency_ms: metadata.upstream?.latency_ms || null,
+        rate_limit_remaining: metadata.upstream?.rate_limit_remaining || null,
+        retry_count: metadata.upstream?.retry_count || 0
       }
     },
-    data: data || [],
-    error: null
+    data: Array.isArray(data) ? data : [data],
+    error: metadata.error || null
   };
-
-  // Compute digest after structure is complete
+  
+  // Compute digest
   envelope.metadata.digest = computeSnapshotDigest(envelope);
-
+  
   return envelope;
 }
 
 /**
- * Compute age and freshness metadata
- * @param {object} envelope - Envelope to update
- * @param {object} freshnessConfig - Freshness configuration
- * @returns {object} Updated envelope with computed freshness
- */
-export function computeFreshness(envelope, freshnessConfig) {
-  if (!envelope.metadata.fetched_at) return envelope;
-
-  const fetchedAt = new Date(envelope.metadata.fetched_at);
-  const now = new Date();
-  const ageMinutes = Math.floor((now - fetchedAt) / (1000 * 60));
-
-  const expectedInterval = freshnessConfig.expected_interval_minutes || 1440;
-  const graceMinutes = freshnessConfig.grace_minutes || 120;
-  const nextExpected = new Date(fetchedAt);
-  nextExpected.setMinutes(nextExpected.getMinutes() + expectedInterval);
-
-  envelope.metadata.freshness = {
-    expected_interval_minutes: expectedInterval,
-    grace_minutes: graceMinutes,
-    policy: freshnessConfig.policy || "always",
-    age_minutes: ageMinutes,
-    next_expected_at: nextExpected.toISOString()
-  };
-
-  return envelope;
-}
-
-/**
- * Validate envelope schema
+ * Validate envelope schema (v3.0)
  * @param {object} envelope - Envelope to validate
- * @returns {object} Validation result { valid: boolean, errors: string[] }
+ * @returns {object} { valid: boolean, errors: string[] }
  */
 export function validateEnvelopeSchema(envelope) {
   const errors = [];
-
-  if (!envelope.schema_version || envelope.schema_version !== "3.0") {
-    errors.push("schema_version must be '3.0'");
-  }
-
-  const meta = envelope.metadata;
-  if (!meta) {
-    errors.push("metadata is required");
-    return { valid: false, errors };
-  }
-
-  const required = ['module', 'tier', 'domain', 'source', 'fetched_at', 'digest', 'record_count'];
-  for (const field of required) {
-    if (meta[field] === undefined || meta[field] === null) {
-      errors.push(`metadata.${field} is required`);
+  
+  // Required top-level fields
+  if (!envelope.schema_version) errors.push("Missing schema_version");
+  if (envelope.schema_version !== "3.0") errors.push(`Invalid schema_version: ${envelope.schema_version}, expected 3.0`);
+  if (!envelope.metadata) errors.push("Missing metadata");
+  if (!Array.isArray(envelope.data)) errors.push("data must be an array");
+  
+  // Required metadata fields
+  if (envelope.metadata) {
+    const m = envelope.metadata;
+    if (!m.module) errors.push("Missing metadata.module");
+    if (!m.tier) errors.push("Missing metadata.tier");
+    if (!m.source) errors.push("Missing metadata.source");
+    if (!m.fetched_at) errors.push("Missing metadata.fetched_at");
+    if (!m.digest) errors.push("Missing metadata.digest");
+    
+    // Validate timestamps
+    if (m.fetched_at) {
+      try {
+        const fetchedDate = new Date(m.fetched_at);
+        if (isNaN(fetchedDate.getTime())) {
+          errors.push("Invalid fetched_at timestamp");
+        }
+      } catch (e) {
+        errors.push(`Invalid fetched_at: ${e.message}`);
+      }
+    }
+    
+    // Validation object required
+    if (!m.validation) {
+      errors.push("Missing metadata.validation");
+    } else {
+      if (typeof m.validation.passed !== 'boolean') {
+        errors.push("validation.passed must be boolean");
+      }
     }
   }
-
-  if (!Array.isArray(envelope.data)) {
-    errors.push("data must be an array");
-  }
-
-  if (!meta.validation || typeof meta.validation.passed !== 'boolean') {
-    errors.push("metadata.validation.passed must be a boolean");
-  }
-
+  
   return {
     valid: errors.length === 0,
     errors
   };
 }
+
+/**
+ * Evaluate JSONPath-like path on object
+ * @param {object} obj - Object to evaluate
+ * @param {string} path - Path like "$.data[0].close"
+ * @returns {array} Array of values found
+ */
+function evaluatePath(obj, path) {
+  // Simple JSONPath evaluator
+  // Handles: $.data[0].field, $.data[*].field
+  
+  const parts = path.replace(/^\$\./, '').split('.');
+  let current = [obj];
+  
+  for (const part of parts) {
+    const next = [];
+    
+    for (const item of current) {
+      if (!item) continue;
+      
+      // Handle array indexing: field[0] or field[*]
+      const match = part.match(/^(\w+)(?:\[(\d+|\*)\])?$/);
+      if (!match) continue;
+      
+      const [, key, index] = match;
+      const value = item[key];
+      
+      if (index === '*' && Array.isArray(value)) {
+        next.push(...value);
+      } else if (index !== undefined && Array.isArray(value)) {
+        const idx = parseInt(index, 10);
+        if (value[idx] !== undefined) {
+          next.push(value[idx]);
+        }
+      } else {
+        next.push(value);
+      }
+    }
+    
+    current = next;
+  }
+  
+  return current.filter(v => v !== undefined);
+}
+
+/**
+ * Check plausibility rules
+ * @param {object} envelope - Envelope to check
+ * @param {array} rules - Plausibility rules from registry
+ * @returns {object} { passed: boolean, errors: string[] }
+ */
+export function checkPlausibility(envelope, rules) {
+  if (!rules || rules.length === 0) {
+    return { passed: true, errors: [] };
+  }
+  
+  const errors = [];
+  
+  for (const rule of rules) {
+    const values = evaluatePath(envelope, rule.path);
+    
+    for (const value of values) {
+      // Check for null/undefined
+      if (value === null || value === undefined) {
+        if (!rule.allow_null) {
+          errors.push(`Plausibility fail: ${rule.path} is null/undefined`);
+        }
+        continue;
+      }
+      
+      // Check min/max
+      const num = parseFloat(value);
+      if (isNaN(num)) {
+        errors.push(`Plausibility fail: ${rule.path} is NaN (${value})`);
+        continue;
+      }
+      
+      if (rule.min !== undefined && num < rule.min) {
+        errors.push(`Plausibility fail: ${rule.path} = ${num} < min ${rule.min}`);
+      }
+      
+      if (rule.max !== undefined && num > rule.max) {
+        errors.push(`Plausibility fail: ${rule.path} = ${num} > max ${rule.max}`);
+      }
+    }
+  }
+  
+  return {
+    passed: errors.length === 0,
+    errors
+  };
+}
+
+/**
+ * Check UI contract (required paths exist)
+ * @param {object} envelope - Envelope to check
+ * @param {array} requiredPaths - Required JSONPath expressions
+ * @returns {object} { passed: boolean, failed_paths: string[] }
+ */
+export function checkUIContract(envelope, requiredPaths) {
+  if (!requiredPaths || requiredPaths.length === 0) {
+    return { passed: true, failed_paths: [] };
+  }
+  
+  const failedPaths = [];
+  
+  for (const path of requiredPaths) {
+    const values = evaluatePath(envelope, path);
+    
+    if (values.length === 0) {
+      failedPaths.push(path);
+    } else {
+      // Check that values are not null/undefined/empty
+      const hasValidValue = values.some(v => {
+        if (v === null || v === undefined) return false;
+        if (typeof v === 'string' && v.trim() === '') return false;
+        if (typeof v === 'number' && isNaN(v)) return false;
+        return true;
+      });
+      
+      if (!hasValidValue) {
+        failedPaths.push(path);
+      }
+    }
+  }
+  
+  return {
+    passed: failedPaths.length === 0,
+    failed_paths: failedPaths
+  };
+}
+
+/**
+ * Validate envelope against registry config
+ * @param {object} envelope - Envelope to validate
+ * @param {object} moduleConfig - Module config from registry
+ * @returns {object} { valid: boolean, errors: string[], warnings: string[] }
+ */
+export function validateEnvelope(envelope, moduleConfig) {
+  const errors = [];
+  const warnings = [];
+  
+  // 1. Schema validation
+  const schemaResult = validateEnvelopeSchema(envelope);
+  if (!schemaResult.valid) {
+    errors.push(...schemaResult.errors);
+    return { valid: false, errors, warnings };
+  }
+  
+  // 2. Count validation
+  const recordCount = envelope.metadata.record_count;
+  if (moduleConfig.counts) {
+    const { expected, min, max } = moduleConfig.counts;
+    
+    if (expected && recordCount !== expected) {
+      warnings.push(`Record count ${recordCount} != expected ${expected}`);
+    }
+    
+    if (min && recordCount < min) {
+      errors.push(`Record count ${recordCount} < min ${min}`);
+    }
+    
+    if (max && recordCount > max) {
+      errors.push(`Record count ${recordCount} > max ${max}`);
+    }
+  }
+  
+  // 3. Plausibility rules
+  if (moduleConfig.plausibility_rules) {
+    const plausResult = checkPlausibility(envelope, moduleConfig.plausibility_rules);
+    if (!plausResult.passed) {
+      errors.push(...plausResult.errors);
+    }
+  }
+  
+  // 4. UI Contract
+  if (moduleConfig.ui_contract && moduleConfig.ui_contract.required_paths) {
+    const uiResult = checkUIContract(envelope, moduleConfig.ui_contract.required_paths);
+    if (!uiResult.passed) {
+      const policy = moduleConfig.ui_contract.policy;
+      
+      if (policy === 'always' || (policy === 'always_for_critical' && moduleConfig.tier === 'critical')) {
+        errors.push(`UI Contract failed: ${uiResult.failed_paths.join(', ')}`);
+      } else {
+        warnings.push(`UI Contract failed: ${uiResult.failed_paths.join(', ')}`);
+      }
+    }
+  }
+  
+  return {
+    valid: errors.length === 0,
+    errors,
+    warnings
+  };
+}
+
+export default {
+  buildEnvelope,
+  validateEnvelopeSchema,
+  validateEnvelope,
+  checkPlausibility,
+  checkUIContract
+};
