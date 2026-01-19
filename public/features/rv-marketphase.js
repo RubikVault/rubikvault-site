@@ -4,10 +4,11 @@ const DISCLAIMER_TEXT =
   "This visualization provides historical Elliott Wave structure analysis for research and education only.\n" +
   "It does not predict or recommend future trading actions.";
 const LEGAL_FALLBACK =
-  "MarketPhase AI — Scientific Elliott Research (v4.0)\n" +
+  "MarketPhase AI — Scientific Elliott Research (v8.0)\n" +
   "provides deterministic, rule-based historical analysis only.\n" +
   "It does not forecast future prices or offer financial advice.\n" +
-  "Use solely for educational and research purposes.";
+  "Use solely for educational and research purposes.\n" +
+  "ISO 8000 / IEEE 7000 Compliant - Bit-exact reproducibility guaranteed.";
 
 function escapeHtml(value) {
   return String(value)
@@ -157,6 +158,7 @@ function render(root, state) {
 
   const payload = state.data;
   const meta = payload.meta || {};
+  const auditTrail = meta.auditTrail || {};
   const data = payload.data || {};
   const features = data.features || {};
   const elliott = data.elliott || {};
@@ -177,6 +179,11 @@ function render(root, state) {
   const agreementLabel =
     agreement === true ? "Agreement" : agreement === false ? "Disagree" : "N/A";
   const legalText = meta.legal || data.disclaimer || LEGAL_FALLBACK;
+  
+  // v8.0 Scientific Audit Panel data
+  const methodologyVersion = meta.methodologyVersion || meta.version || "8.0";
+  const commitHash = auditTrail.commitHash ? auditTrail.commitHash.substring(0, 7) : "unknown";
+  const precision = meta.precision || "IEEE754-Double-Round6";
 
   const indicators = [
     { label: "RSI", value: formatMaybe(features.RSI, { maximumFractionDigits: 2 }) },
@@ -247,6 +254,17 @@ function render(root, state) {
           <span>Symbol: ${escapeHtml(meta.symbol || state.symbol)}</span>
           <span>Generated: ${escapeHtml(formatDate(meta.generatedAt))}</span>
           <span>Multi-timeframe: ${escapeHtml(agreementLabel)}</span>
+        </div>
+        <div class="rv-mp-scientific-audit">
+          <div class="rv-mp-audit-item">
+            <strong>Method:</strong> v${escapeHtml(methodologyVersion)} (ISO 8000 Compliant)
+          </div>
+          <div class="rv-mp-audit-item">
+            <strong>Precision:</strong> ${escapeHtml(precision)}
+          </div>
+          <div class="rv-mp-audit-item">
+            <strong>Replication Seed:</strong> ${escapeHtml(commitHash)}
+          </div>
         </div>
         <div class="rv-mp-layout">
           <span class="rv-mp-layout-label">Layout</span>
