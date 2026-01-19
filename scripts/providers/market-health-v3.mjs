@@ -269,6 +269,14 @@ function validateData(data, registryConfig) {
   if (plausibilityRules.length > 0) checks.push('ranges');
   if (requiredPaths.length > 0) checks.push('ui_contract');
   
+  console.log(`🔍 validateData result: errors=${errors.length}, warnings=${warnings.length}, passed=${errors.length === 0}`);
+  if (errors.length > 0) {
+    console.error('  ERRORS:', errors);
+  }
+  if (warnings.length > 0) {
+    console.warn('  WARNINGS:', warnings);
+  }
+  
   return {
     passed: errors.length === 0,
     dropped_records: droppedRecords,
@@ -365,12 +373,14 @@ async function main() {
   
   if (!validation.passed) {
     console.error('❌ Validation failed:');
+    console.error(`  validation.passed: ${validation.passed}`);
+    console.error(`  warnings.length: ${validation.warnings.length}`);
+    console.error(`  checks: ${JSON.stringify(validation.checks)}`);
     for (const err of validation.warnings) {
       console.error(`  WARNING: ${err}`);
     }
-    for (const err of validation.checks) {
-      // Errors are in validation object
-    }
+  } else {
+    console.log('✅ Validation passed');
   }
   
   // Build envelope
