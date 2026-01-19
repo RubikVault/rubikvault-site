@@ -137,6 +137,12 @@ function render(root, payload, logger, featureId) {
   const shortterm = Array.isArray(picks.shortterm) ? picks.shortterm : [];
   const longterm = Array.isArray(picks.longterm) ? picks.longterm : [];
   const top = Array.isArray(picks.top) ? picks.top : [];
+  // #region agent log
+  const topScores = top.slice(0, 3).map(p => ({symbol:p.symbol,setupScore:p.setupScore,triggerScore:p.triggerScore,totalScore:p.totalScore}));
+  const uniqueScores = new Set(top.map(p => `${p.setupScore}-${p.triggerScore}-${p.totalScore}`));
+  const isDummyData = uniqueScores.size === 1 && top.length > 1;
+  fetch('http://127.0.0.1:7242/ingest/7b213daf-87b9-4130-9bc8-db3131856ffb',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'rv-alpha-radar.js:139',message:'alpha radar picks check',data:{topCount:top.length,shorttermCount:shortterm.length,longtermCount:longterm.length,topScores,uniqueScoresCount:uniqueScores.size,isDummyData},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+  // #endregion
   const partialNote =
     resolved?.ok && (resolved?.isStale || data.partial || resolved?.error?.code)
       ? "Partial data — some symbols unavailable."

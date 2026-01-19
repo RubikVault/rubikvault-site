@@ -361,11 +361,20 @@ function render(root, state) {
 export async function init(root, context = {}) {
   const state = getState(root);
   state.error = null;
+  // #region agent log
+  fetch('http://127.0.0.1:7242/ingest/7b213daf-87b9-4130-9bc8-db3131856ffb',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'rv-marketphase.js:361',message:'init() entry',data:{symbol:state.symbol},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+  // #endregion
   try {
     const data = await loadMarketPhase(state.symbol);
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/7b213daf-87b9-4130-9bc8-db3131856ffb',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'rv-marketphase.js:365',message:'loadMarketPhase() success',data:{symbol:state.symbol,hasData:!!data,dataKeys:data?Object.keys(data):null},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+    // #endregion
     state.data = data;
     render(root, state);
   } catch (error) {
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/7b213daf-87b9-4130-9bc8-db3131856ffb',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'rv-marketphase.js:369',message:'loadMarketPhase() error',data:{symbol:state.symbol,errorMessage:error?.message,errorStack:error?.stack?.substring(0,200)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+    // #endregion
     state.error = error;
     state.data = null;
     render(root, state);

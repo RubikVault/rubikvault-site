@@ -245,6 +245,12 @@ function renderTop20(root, logger) {
 }
 
 function render(root, topPayload, logger) {
+  // #region agent log
+  const asOf = topPayload?.data?.updatedAt || topPayload?.meta?.asOf || topPayload?.ts;
+  const ageMs = asOf ? Date.now() - new Date(asOf).getTime() : null;
+  const ageHours = ageMs ? Math.round(ageMs / (1000 * 60 * 60) * 10) / 10 : null;
+  fetch('http://127.0.0.1:7242/ingest/7b213daf-87b9-4130-9bc8-db3131856ffb',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'rv-tech-signals.js:247',message:'render() entry',data:{payloadOk:topPayload?.ok,asOf,ageHours,itemsCount:topPayload?.data?.items?.length||topPayload?.data?.signals?.length||0},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+  // #endregion
   const partialNote =
     topPayload?.ok && (topPayload?.isStale || topPayload?.error?.code)
       ? "Partial data — some sources unavailable."

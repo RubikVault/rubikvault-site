@@ -70,6 +70,11 @@ function bindSortableTable(table) {
 }
 
 function render(root, payload, logger, featureId) {
+  // #region agent log
+  const hasItems = !!(payload?.data?.items || payload?.data?.data?.items);
+  const metaStatus = payload?.meta?.status || payload?.data?.meta?.status || payload?.data?.data?.meta?.status;
+  fetch('http://127.0.0.1:7242/ingest/7b213daf-87b9-4130-9bc8-db3131856ffb',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'rv-rvci-engine.js:72',message:'render() entry',data:{payloadOk:payload?.ok,hasItems,metaStatus,dataKeys:payload?.data?Object.keys(payload.data):null},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
+  // #endregion
   if (!payload?.ok) {
     const errorMessage = payload?.error?.message || "API error";
     const errorCode = payload?.error?.code || "";

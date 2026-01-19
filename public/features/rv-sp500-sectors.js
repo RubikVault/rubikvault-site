@@ -149,6 +149,9 @@ function sortLabel(label, key) {
 }
 
 function render(root, payload, logger) {
+  // #region agent log
+  fetch('http://127.0.0.1:7242/ingest/7b213daf-87b9-4130-9bc8-db3131856ffb',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'rv-sp500-sectors.js:151',message:'render() entry',data:{payloadOk:payload?.ok,sectorsCount:Array.isArray(payload?.data?.sectors)?payload.data.sectors.length:0,firstSectorKeys:payload?.data?.sectors?.[0]?Object.keys(payload.data.sectors[0]):null},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+  // #endregion
   const data = payload?.data || {};
   const sectors = Array.isArray(data.sectors) ? data.sectors : [];
   const missing = Array.isArray(data.missingSymbols) ? data.missingSymbols : [];
@@ -195,6 +198,13 @@ function render(root, payload, logger) {
     return;
   }
 
+  // #region agent log
+  const firstSector = sectors[0] || {};
+  const hasRelFields = firstSector.rel && (firstSector.rel.r1w !== undefined || firstSector.rel.r1d !== undefined);
+  const hasRelTechFields = firstSector.relTech && firstSector.relTech.rsi !== undefined;
+  const hasOldFields = firstSector.changePercent !== undefined && firstSector.relativeToSpy !== undefined;
+  fetch('http://127.0.0.1:7242/ingest/7b213daf-87b9-4130-9bc8-db3131856ffb',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'rv-sp500-sectors.js:198',message:'data structure check',data:{sectorsCount:sectors.length,hasRelFields,hasRelTechFields,hasOldFields,firstSectorKeys:Object.keys(firstSector)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+  // #endregion
   const sorted = sortRows(sectors);
   const narrative = buildNarrative(sorted);
   const breadth = computeBreadth(sorted);
