@@ -100,10 +100,14 @@ jobs:
           # Verify structure (only if artifacts were found)
           if [ $artifact_count -gt 0 ]; then
             echo "Artifacts organized:"
-            ls -la artifacts-organized/*/ 2>/dev/null || echo "No artifacts organized"
+            # Use find instead of ls with glob to avoid errors when pattern doesn't match
+            find artifacts-organized -mindepth 1 -maxdepth 1 -type d -exec ls -la {} \; 2>/dev/null || echo "No artifacts organized"
           else
             echo "No artifacts to organize. Finalizer will generate empty state."
           fi
+          
+          # Always exit with success - empty artifacts are OK
+          exit 0
 
       - name: Run Finalizer
         env:
