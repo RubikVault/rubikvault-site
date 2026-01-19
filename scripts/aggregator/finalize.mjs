@@ -508,6 +508,26 @@ async function main() {
 }
 
 // Run if executed directly
-if (import.meta.url === `file://${process.argv[1]}`) {
-  main();
+// Check if this file is being executed directly (not imported)
+const isMainModule = process.argv[1] && (
+  import.meta.url === `file://${process.argv[1]}` ||
+  import.meta.url.endsWith(process.argv[1]) ||
+  import.meta.url.includes('finalize.mjs')
+);
+
+if (isMainModule) {
+  // Wrap in try-catch to handle any sync errors
+  try {
+    main().catch(err => {
+      console.error('❌ FATAL: Unhandled promise rejection in main():');
+      console.error(err.message);
+      console.error(err.stack);
+      process.exit(2);
+    });
+  } catch (err) {
+    console.error('❌ FATAL: Sync error in main() invocation:');
+    console.error(err.message);
+    console.error(err.stack);
+    process.exit(2);
+  }
 }
