@@ -415,7 +415,7 @@ async function main() {
         }
       };
       
-      const { generateProviderState, writeProviderState } = await import('../lib/provider-state.js');
+      // generateProviderState and writeProviderState are already imported at top
       const emptyProviderState = generateProviderState(emptyManifest, new Map());
       await writeProviderState(emptyProviderState, BASE_DIR);
       
