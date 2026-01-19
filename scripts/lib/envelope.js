@@ -327,10 +327,41 @@ export function validateEnvelope(envelope, moduleConfig) {
   };
 }
 
+/**
+ * Compute freshness metadata
+ * @param {object} envelope - Envelope with metadata.fetched_at
+ * @param {object} freshnessConfig - Freshness config from registry
+ * @returns {void} (mutates envelope.metadata.freshness)
+ */
+export function computeFreshness(envelope, freshnessConfig) {
+  if (!envelope || !envelope.metadata) return;
+  
+  const config = freshnessConfig || {};
+  const fetchedAt = new Date(envelope.metadata.fetched_at);
+  const now = new Date();
+  const ageMinutes = Math.floor((now - fetchedAt) / 1000 / 60);
+  
+  const expectedIntervalMinutes = config.expected_interval_minutes || 1440;
+  const graceMinutes = config.grace_minutes || 180;
+  const policy = config.policy || "always";
+  
+  // Calculate next expected update time
+  const nextExpectedAt = new Date(fetchedAt.getTime() + expectedIntervalMinutes * 60 * 1000);
+  
+  envelope.metadata.freshness = {
+    expected_interval_minutes: expectedIntervalMinutes,
+    grace_minutes: graceMinutes,
+    policy,
+    age_minutes: ageMinutes,
+    next_expected_at: nextExpectedAt.toISOString()
+  };
+}
+
 export default {
   buildEnvelope,
   validateEnvelopeSchema,
   validateEnvelope,
   checkPlausibility,
-  checkUIContract
+  checkUIContract,
+  computeFreshness
 };
