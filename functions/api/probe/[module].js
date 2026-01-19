@@ -59,34 +59,45 @@ function extractUIFields(data, requiredPaths) {
       
       value = current;
       
-      // If not found and legacy format, try alternative path
+      // If not found and legacy format, try alternative paths
       if ((value === null || value === undefined) && isLegacyFormat) {
-        // Transform $.data[0].items[0].symbol to $.data.items[0].symbol
-        const legacyPath = path
-          .replace(/\$\.data\[0\]\./, '$.data.')
-          .replace(/\$\.metadata\./, '$.meta.');
+        // Try multiple legacy path transformations
+        const legacyPathVariants = [
+          // $.data[0].items[0].symbol → $.data.items[0].symbol
+          path.replace(/\$\.data\[0\]\./, '$.data.'),
+          // $.metadata.fetched_at → $.meta.fetchedAt (camelCase)
+          path.replace(/\$\.metadata\.fetched_at/, '$.meta.fetchedAt'),
+          // $.metadata. → $.meta.
+          path.replace(/\$\.metadata\./, '$.meta.')
+        ];
         
-        const legacyParts = legacyPath.replace(/^\$\./, '').split(/[\.\[\]]+/).filter(Boolean);
-        let legacyCurrent = data;
-        
-        for (const part of legacyParts) {
-          if (legacyCurrent === null || legacyCurrent === undefined) {
-            legacyCurrent = null;
-            break;
+        for (const legacyPath of legacyPathVariants) {
+          const legacyParts = legacyPath.replace(/^\$\./, '').split(/[\.\[\]]+/).filter(Boolean);
+          let legacyCurrent = data;
+          
+          for (const part of legacyParts) {
+            if (legacyCurrent === null || legacyCurrent === undefined) {
+              legacyCurrent = null;
+              break;
+            }
+            
+            if (part === '*') {
+              if (Array.isArray(legacyCurrent)) {
+                legacyCurrent = legacyCurrent[0];
+              }
+            } else if (!isNaN(part)) {
+              legacyCurrent = legacyCurrent[parseInt(part, 10)];
+            } else {
+              legacyCurrent = legacyCurrent[part];
+            }
           }
           
-          if (part === '*') {
-            if (Array.isArray(legacyCurrent)) {
-              legacyCurrent = legacyCurrent[0];
-            }
-          } else if (!isNaN(part)) {
-            legacyCurrent = legacyCurrent[parseInt(part, 10)];
-          } else {
-            legacyCurrent = legacyCurrent[part];
+          // If we found a value, use it
+          if (legacyCurrent !== null && legacyCurrent !== undefined) {
+            value = legacyCurrent;
+            break;
           }
         }
-        
-        value = legacyCurrent;
       }
       
       fields[path] = value;
