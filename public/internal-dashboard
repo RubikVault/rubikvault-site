@@ -13,42 +13,8 @@
       line-height: 1.6;
       padding: 20px;
     }
-    .container { max-width: 1400px; margin: 0 auto; }
+    .container { max-width: 1600px; margin: 0 auto; }
     h1 { margin-bottom: 30px; color: #38bdf8; }
-    .banner {
-      background: rgba(15, 23, 42, 0.6);
-      border: 1px solid rgba(148, 163, 184, 0.2);
-      border-radius: 12px;
-      padding: 12px 14px;
-      margin-bottom: 20px;
-      display: flex;
-      gap: 12px;
-      align-items: center;
-      justify-content: space-between;
-      flex-wrap: wrap;
-    }
-    .banner-left {
-      display: flex;
-      gap: 10px;
-      align-items: center;
-      flex-wrap: wrap;
-    }
-    .banner-right {
-      display: flex;
-      gap: 10px;
-      align-items: center;
-      flex-wrap: wrap;
-    }
-    .token-input {
-      background: #111827;
-      color: #f8fafc;
-      border: 1px solid rgba(148, 163, 184, 0.2);
-      border-radius: 8px;
-      padding: 8px 10px;
-      min-width: 360px;
-      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-      font-size: 12px;
-    }
     .section {
       background: #111827;
       border: 1px solid rgba(148, 163, 184, 0.2);
@@ -96,10 +62,10 @@
     table {
       width: 100%;
       border-collapse: collapse;
-      font-size: 13px;
+      font-size: 12px;
     }
     th, td {
-      padding: 10px;
+      padding: 8px;
       text-align: left;
       border-bottom: 1px solid rgba(148, 163, 184, 0.15);
     }
@@ -109,6 +75,7 @@
       color: #cbd5f5;
       position: sticky;
       top: 0;
+      font-size: 11px;
     }
     tr:hover { background: rgba(15, 23, 42, 0.4); }
     .badge {
@@ -133,90 +100,105 @@
       font-size: 13px;
       margin-bottom: 15px;
     }
-    .usage-panel {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px 14px;
-      align-items: center;
-      margin-bottom: 12px;
-      color: #cbd5f5;
-      font-size: 12px;
-    }
-    .usage-panel label {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      color: #94a3b8;
-    }
-    .usage-panel input {
-      background: #0f172a;
-      color: #f8fafc;
-      border: 1px solid rgba(148, 163, 184, 0.2);
-      border-radius: 6px;
-      padding: 6px 8px;
-      width: 140px;
-      font-size: 12px;
-    }
-    .usage-metric strong { color: #f8fafc; }
     .refresh-btn:hover { background: #0ea5e9; }
-    .secondary-btn {
-      background: rgba(15, 23, 42, 0.6);
-      color: #f8fafc;
-      border: 1px solid rgba(148, 163, 184, 0.2);
-      padding: 8px 12px;
-      border-radius: 6px;
-      cursor: pointer;
-      font-size: 13px;
-    }
-    .secondary-btn:hover { border-color: rgba(56, 189, 248, 0.6); }
-    a { color: #38bdf8; text-decoration: none; }
-    a:hover { text-decoration: underline; }
-    code { color: #cbd5f5; }
-    pre {
-      background: rgba(15, 23, 42, 0.6);
-      border: 1px solid rgba(148, 163, 184, 0.15);
-      border-radius: 10px;
-      padding: 12px;
-      white-space: pre-wrap;
-      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-      font-size: 12px;
-      color: #e2e8f0;
-      max-height: 360px;
-      overflow: auto;
-    }
-    .split {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 12px;
-    }
-    @media (max-width: 980px) {
-      .split { grid-template-columns: 1fr; }
-      .token-input { min-width: 260px; }
-    }
     .timestamp {
       font-size: 11px;
       color: #94a3b8;
       margin-top: 10px;
     }
     .loading { opacity: 0.5; pointer-events: none; }
+    .reason-text {
+      font-size: 11px;
+      color: #94a3b8;
+      font-style: italic;
+    }
+    .age-badge {
+      font-size: 10px;
+      padding: 2px 6px;
+      border-radius: 3px;
+      background: rgba(148, 163, 184, 0.2);
+    }
+    .age-badge.fresh { background: #10b981; color: white; }
+    .age-badge.stale { background: #f59e0b; color: white; }
+    .age-badge.expired { background: #ef4444; color: white; }
   </style>
 </head>
 <body>
   <div class="container">
     <h1>🔍 RubikVault Internal Dashboard <span id="rv-internal-auth" class="badge warn">auth: unknown</span></h1>
 
-    <div class="banner" id="auth-banner">
-      <div class="banner-left">
-        <span id="auth-banner-badge" class="badge warn">token missing</span>
-        <span style="color:#cbd5f5; font-size: 13px;">Internal endpoints need <code>RV_INTERNAL_TOKEN</code>. Without it, many calls intentionally return <code>404</code>.</span>
+    <div class="section">
+      <h2>System Health Overview</h2>
+      <button class="refresh-btn" onclick="refreshAll()">🔄 Refresh All</button>
+      <div class="status-grid" id="health-overview">
+        <div class="status-card">
+          <h3>Overall Status</h3>
+          <div class="value">—</div>
+          <div class="label">Loading...</div>
+        </div>
       </div>
-      <div class="banner-right">
-        <input id="token-input" class="token-input" placeholder="Paste token here (stored in localStorage)" />
-        <button class="secondary-btn" id="apply-token">Apply</button>
-        <button class="secondary-btn" id="copy-link">Copy link</button>
+      <div class="timestamp" id="health-timestamp"></div>
+    </div>
+
+    <div class="section">
+      <h2>Active Blocks Status (8 Blocks)</h2>
+      <div style="overflow-x: auto;">
+        <table id="block-matrix">
+          <thead>
+            <tr>
+              <th>Block</th>
+              <th>Status</th>
+              <th>Data Present</th>
+              <th>Items Count</th>
+              <th>Age</th>
+              <th>Freshness</th>
+              <th>Reason / Issue</th>
+              <th>Last Updated</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td colspan="8">Loading...</td></tr>
+          </tbody>
+        </table>
       </div>
     </div>
-    
+
+    <div class="section">
+      <h2>API Key Usage & Limits</h2>
+      <table id="api-keys">
+        <thead>
+          <tr>
+            <th>Provider</th>
+            <th>Status</th>
+            <th>Used Today</th>
+            <th>Limit (Day)</th>
+            <th>Remaining (Day)</th>
+            <th>% Used (Day)</th>
+            <th>Used (Month)</th>
+            <th>Limit (Month)</th>
+            <th>Remaining (Month)</th>
+            <th>% Used (Month)</th>
+            <th>Last Error</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td colspan="11">Loading...</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="section">
+      <h2>Cloudflare Workers Usage</h2>
+      <div class="status-grid" id="workers-usage">
+        <div class="status-card">
+          <h3>Workers Requests</h3>
+          <div class="value">—</div>
+          <div class="label">Loading...</div>
+        </div>
+      </div>
+      <div class="timestamp" id="workers-timestamp"></div>
+    </div>
+
     <div class="section">
       <h2>Endpoint Reachability</h2>
       <div style="overflow-x: auto;">
@@ -234,870 +216,450 @@
         </table>
       </div>
     </div>
-
-    <div class="section">
-      <h2>System Health Overview</h2>
-      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:8px;">
-        <button class="refresh-btn" id="refresh-all">🔄 Refresh All</button>
-        <span class="usage-metric">Workers left today: <strong id="workers-remaining">—</strong></span>
-        <span class="usage-metric">One refresh uses: <strong id="workers-refresh-cost">—</strong> (<span id="workers-refresh-pct">—</span>)</span>
-        <span class="usage-metric">Last refresh calls: <strong id="workers-last-calls">—</strong></span>
-      </div>
-      <div class="usage-panel">
-        <label>Daily budget
-          <input id="workers-daily-budget" type="number" min="0" step="1" placeholder="e.g. 100000" />
-        </label>
-        <label>Used today
-          <input id="workers-used-today" type="number" min="0" step="1" placeholder="e.g. 1200" />
-        </label>
-        <span style="color:#94a3b8;">Manual estimate. Stored locally.</span>
-      </div>
-      <div class="status-grid" id="health-overview">
-        <div class="status-card">
-          <h3>Overall Status</h3>
-          <div class="value">—</div>
-          <div class="label">Loading...</div>
-        </div>
-      </div>
-      <div class="timestamp" id="health-timestamp"></div>
-      <div class="timestamp" id="health-report-note">Block status: not refreshed yet.</div>
-    </div>
-
-    <div class="section">
-      <h2>Snapshot Freshness (Static)</h2>
-      <div style="color:#94a3b8;font-size:12px;margin-bottom:10px;">
-        Static files only. No API calls. Uses simple freshness budgets (EOD ≤ 36h, Crypto ≤ 12h, News ≤ 6h).
-      </div>
-      <div style="overflow-x:auto;">
-        <table id="snapshot-freshness">
-          <thead>
-            <tr>
-              <th>Snapshot</th>
-              <th>Path</th>
-              <th>Updated</th>
-              <th>Age</th>
-              <th>Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr><td colspan="5">Loading...</td></tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-
-    <div class="section">
-      <h2>Targets (Preview + Prod)</h2>
-      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:10px;">
-        <span class="badge" style="background:rgba(56,189,248,0.15);color:#cbd5f5;border:1px solid rgba(56,189,248,0.25);">same-origin preferred</span>
-        <span style="color:#94a3b8;font-size:12px;">Cross-origin fetch may be blocked unless CORS is enabled.</span>
-        <button class="secondary-btn" id="load-targets">Load Targets</button>
-        <span style="color:#94a3b8;font-size:12px;">Request-heavy. Load only when needed.</span>
-      </div>
-      <div class="split">
-        <div>
-          <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
-            <strong style="color:#cbd5f5;">This origin</strong>
-            <code id="origin-this">—</code>
-            <button class="secondary-btn" id="open-this">Open</button>
-          </div>
-          <div class="timestamp" id="targets-this-status">—</div>
-          <pre id="targets-this" style="max-height:240px;">Loading...</pre>
-        </div>
-        <div>
-          <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
-            <strong style="color:#cbd5f5;">Prod origin</strong>
-            <input id="origin-prod" class="token-input" style="min-width:260px;" placeholder="https://rubikvault.com" />
-            <button class="secondary-btn" id="open-prod">Open</button>
-          </div>
-          <div class="timestamp" id="targets-prod-status">—</div>
-          <pre id="targets-prod" style="max-height:240px;">Set prod origin and refresh.</pre>
-        </div>
-      </div>
-    </div>
-
-    <div class="section">
-      <h2>Debug Bundle (Consolidated)</h2>
-      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:10px;">
-        <button class="secondary-btn" id="load-debug-bundle">Load Debug Bundle</button>
-        <span style="color:#94a3b8;font-size:12px;">KV-heavy. Load only when needed.</span>
-      </div>
-      <div class="status-grid" id="debug-summary">
-        <div class="status-card">
-          <h3>Bundle Status</h3>
-          <div class="value">—</div>
-          <div class="label">Loading...</div>
-        </div>
-      </div>
-      <div class="timestamp" id="debug-timestamp"></div>
-      <div style="overflow-x: auto; margin-top: 12px;">
-        <table id="debug-attempts">
-          <thead>
-            <tr>
-              <th>Target</th>
-              <th>OK</th>
-              <th>Status</th>
-              <th>Reason</th>
-              <th>Snippet</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr><td colspan="5">Loading...</td></tr>
-          </tbody>
-        </table>
-      </div>
-      <div style="max-height: 320px; overflow-y: auto; margin-top: 12px;">
-        <table id="recent-events">
-          <thead>
-            <tr>
-              <th>Time</th>
-              <th>Feature</th>
-              <th>HTTP</th>
-              <th>Quality</th>
-              <th>Error</th>
-              <th>Trace</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr><td colspan="6">Loading...</td></tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-
-    <div class="section">
-      <h2>Client Debug Tools</h2>
-      <div style="display:grid;gap:10px;">
-        <div>
-          <span class="badge" style="background:rgba(16,185,129,0.15);color:#cbd5f5;border:1px solid rgba(16,185,129,0.25);">Enable</span>
-        <span style="color:#cbd5f5;font-size:13px;">Open any public page with <code>?debug=1</code>.</span>
-        </div>
-        <div>
-          <span style="color:#cbd5f5;font-size:13px;">Debug assets (static):</span>
-          <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:6px;">
-            <a href="/debug/rv-debug-console.js" target="_blank" rel="noreferrer">/debug/rv-debug-console.js</a>
-            <a href="/debug/panel.js" target="_blank" rel="noreferrer">/debug/panel.js</a>
-            <a href="/debug/diagnostics.js" target="_blank" rel="noreferrer">/debug/diagnostics.js</a>
-            <a href="/debug/rv-debug.js" target="_blank" rel="noreferrer">/debug/rv-debug.js</a>
-            <a href="/diagnose.js" target="_blank" rel="noreferrer">/diagnose.js</a>
-          </div>
-        </div>
-        <div>
-          <span style="color:#94a3b8;font-size:12px;">If you see <code>Config missing - API disabled</code>, check <code>window.RV_CONFIG.apiBase</code> and the config loader.</span>
-        </div>
-      </div>
-    </div>
-
-    <div class="section">
-      <h2>Docs (Runbook + Debug + Block Analysis)</h2>
-      <div style="display:grid;gap:10px;">
-        <details open>
-          <summary style="cursor:pointer;color:#cbd5f5;">DEBUG_README.md</summary>
-          <pre id="doc-debug-readme">Loading...</pre>
-        </details>
-        <details>
-          <summary style="cursor:pointer;color:#cbd5f5;">RUNBOOK.md</summary>
-          <pre id="doc-runbook">Loading...</pre>
-        </details>
-        <details>
-          <summary style="cursor:pointer;color:#cbd5f5;">BLOCK_ANALYSIS.md</summary>
-          <pre id="doc-block-analysis">Loading...</pre>
-        </details>
-      </div>
-    </div>
-
-    <div class="section">
-      <h2>Block Verification (Server)</h2>
-      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:10px;">
-        <span class="badge" style="background:rgba(56,189,248,0.15);color:#cbd5f5;border:1px solid rgba(56,189,248,0.25);">/data/system-health.json</span>
-        <span style="color:#94a3b8;font-size:12px;">Static snapshot overview derived from mirrors and validation gates.</span>
-      </div>
-      <div class="status-grid" id="health-report-summary">
-        <div class="status-card"><h3>Health Score</h3><div class="value">—</div><div class="label">Loading...</div></div>
-        <div class="status-card"><h3>OK</h3><div class="value">—</div><div class="label">Blocks</div></div>
-        <div class="status-card"><h3>PARTIAL</h3><div class="value">—</div><div class="label">Blocks</div></div>
-        <div class="status-card"><h3>BAD</h3><div class="value">—</div><div class="label">Blocks</div></div>
-      </div>
-      <div class="timestamp" id="health-report-timestamp"></div>
-      <div style="overflow-x:auto; margin-top: 12px;">
-        <table id="health-report-table">
-          <thead>
-            <tr>
-              <th>Block</th>
-              <th>Feature</th>
-              <th>State</th>
-              <th>Endpoint</th>
-              <th>Status</th>
-              <th>Reason</th>
-              <th>Invalid Fields</th>
-              <th>Circuit</th>
-              <th>Error</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr><td colspan="9">Loading...</td></tr>
-          </tbody>
-        </table>
-      </div>
-      <div style="margin-top: 12px;">
-        <select id="health-report-block" style="width: 100%; padding: 8px; margin-bottom: 10px; background: #111827; color: #f8fafc; border: 1px solid rgba(148, 163, 184, 0.2); border-radius: 6px;">
-          <option value="">Select a block for field details...</option>
-        </select>
-        <div style="overflow-x:auto;">
-          <table id="health-report-fields">
-            <thead>
-              <tr>
-                <th>Field</th>
-                <th>Path</th>
-                <th>Required</th>
-                <th>Valid</th>
-                <th>Reason</th>
-                <th>Fix</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr><td colspan="6">Select a block above...</td></tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-
-    <div class="section">
-      <h2>Debug Matrix (KV / Mirrors)</h2>
-      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:10px;">
-        <span class="badge" style="background:rgba(16,185,129,0.15);color:#cbd5f5;border:1px solid rgba(16,185,129,0.25);">/data/provider-state.json</span>
-        <button class="secondary-btn" id="load-debug-matrix">Load Debug Matrix</button>
-        <span style="color:#94a3b8;font-size:12px;">Reads provider/circuit state + lock status from static snapshots.</span>
-      </div>
-      <div class="timestamp" id="debug-matrix-timestamp"></div>
-      <div style="overflow-x:auto;">
-        <table id="debug-matrix-table">
-          <thead>
-            <tr>
-              <th>Feature</th>
-              <th>Endpoint</th>
-              <th>Status</th>
-              <th>Empty Reason</th>
-              <th>Last Update</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr><td colspan="5">Loading...</td></tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-
-    <div class="section">
-      <h2>Block × Field Matrix</h2>
-      <div style="overflow-x: auto;">
-        <table id="block-matrix">
-          <thead>
-            <tr>
-              <th>Block</th>
-              <th>Feature ID</th>
-              <th>Status</th>
-              <th>Data Present</th>
-              <th>Quality</th>
-              <th>As-of</th>
-              <th>Source</th>
-              <th>Cache</th>
-              <th>Last Error</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr><td colspan="9">Loading...</td></tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-
-    <div class="section">
-      <h2>API Keys & Limits</h2>
-      <table id="api-keys">
-        <thead>
-          <tr>
-            <th>Provider</th>
-            <th>Key Alias</th>
-            <th>Status</th>
-            <th>Counts (Today)</th>
-            <th>Counts (Week)</th>
-            <th>Counts (Month)</th>
-            <th>Hard Limit</th>
-            <th>Remaining</th>
-            <th>Remaining (Week)</th>
-            <th>Remaining (Month)</th>
-            <th>Burn/Hour</th>
-            <th>Last Error</th>
-            <th>Last Used</th>
-            <th>Hint</th>
-            <th>Recommended Action</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr><td colspan="14">Loading...</td></tr>
-        </tbody>
-      </table>
-    </div>
-
-    <div class="section">
-      <h2>Error & Events Timeline</h2>
-      <div style="max-height: 400px; overflow-y: auto;">
-        <table id="error-timeline">
-          <thead>
-            <tr>
-              <th>Time</th>
-              <th>Type</th>
-              <th>Feature</th>
-              <th>Error Code</th>
-              <th>Message</th>
-              <th>Details</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr><td colspan="6">Loading...</td></tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-
-    <div class="section">
-      <h2>Field Drilldown</h2>
-      <select id="field-selector" style="width: 100%; padding: 8px; margin-bottom: 15px; background: #111827; color: #f8fafc; border: 1px solid rgba(148, 163, 184, 0.2); border-radius: 6px;">
-        <option>Select a field to inspect...</option>
-      </select>
-      <div id="field-details" style="background: rgba(15, 23, 42, 0.6); padding: 15px; border-radius: 8px; font-family: monospace; font-size: 12px; white-space: pre-wrap; max-height: 400px; overflow-y: auto;">
-        Select a field above to see details...
-      </div>
-    </div>
   </div>
 
   <script type="module">
-    const API_BASE = '/data';
-    const TOKEN_STORAGE_KEY = 'rv_internal_token';
-    const PROD_ORIGIN_KEY = 'rv_internal_prod_origin';
-    const urlParams = new URLSearchParams(window.location.search);
-    const urlToken = urlParams.get('token') || '';
-    const storedToken = (() => {
-      try { return window.localStorage.getItem(TOKEN_STORAGE_KEY) || ''; } catch { return ''; }
-    })();
-    let INTERNAL_TOKEN = urlToken || storedToken || '';
-
-    const withToken = (url) => {
-      if (!INTERNAL_TOKEN) return url;
-      const u = new URL(url, window.location.origin);
-      u.searchParams.set('token', INTERNAL_TOKEN);
-      return u.pathname + u.search;
-    };
-
-    function setToken(nextToken) {
-      INTERNAL_TOKEN = String(nextToken || '').trim();
-      try {
-        if (INTERNAL_TOKEN) window.localStorage.setItem(TOKEN_STORAGE_KEY, INTERNAL_TOKEN);
-        else window.localStorage.removeItem(TOKEN_STORAGE_KEY);
-      } catch {}
-    }
-
-    function updateAuthUI() {
-      const authEl = document.getElementById('rv-internal-auth');
-      if (authEl) {
-        if (INTERNAL_TOKEN) {
-          authEl.textContent = 'auth: token';
-          authEl.className = 'badge ok';
-        } else {
-          authEl.textContent = 'auth: none';
-          authEl.className = 'badge warn';
-        }
-      }
-
-      const bannerBadge = document.getElementById('auth-banner-badge');
-      if (bannerBadge) {
-        if (INTERNAL_TOKEN) {
-          bannerBadge.textContent = 'token set';
-          bannerBadge.className = 'badge ok';
-        } else {
-          bannerBadge.textContent = 'token missing';
-          bannerBadge.className = 'badge warn';
-        }
-      }
-    }
-
-    function getProdOrigin() {
-      const input = document.getElementById('origin-prod');
-      const fromInput = input ? String(input.value || '').trim() : '';
-      if (fromInput) return fromInput.replace(/\/$/, '');
-      try {
-        const stored = window.localStorage.getItem(PROD_ORIGIN_KEY) || '';
-        return String(stored || '').trim().replace(/\/$/, '');
-      } catch {
-        return '';
-      }
-    }
-
-    function setProdOrigin(origin) {
-      const clean = String(origin || '').trim().replace(/\/$/, '');
-      try {
-        if (clean) window.localStorage.setItem(PROD_ORIGIN_KEY, clean);
-        else window.localStorage.removeItem(PROD_ORIGIN_KEY);
-      } catch {}
-    }
-
-    function withTokenTo(origin, path) {
-      const u = new URL(path, origin);
-      if (INTERNAL_TOKEN) u.searchParams.set('token', INTERNAL_TOKEN);
-      return u.toString();
-    }
-
-    async function fetchJSONFromOrigin(origin, path) {
-      try {
-        recordRequest();
-        const res = await fetch(withTokenTo(origin, path), { headers: { Accept: 'application/json' } });
-        const text = await res.text();
-        if (!res.ok) return { ok: false, status: res.status, text };
-        try { return JSON.parse(text); } catch { return { ok: false, status: res.status, text }; }
-      } catch (err) {
-        return { ok: false, status: 0, text: String(err?.message || err || '') };
-      }
-    }
-
-    async function updateTargets() {
-      const originThisEl = document.getElementById('origin-this');
-      const preThis = document.getElementById('targets-this');
-      const preProd = document.getElementById('targets-prod');
-      const stThis = document.getElementById('targets-this-status');
-      const stProd = document.getElementById('targets-prod-status');
-
-      const originThis = window.location.origin;
-      if (originThisEl) originThisEl.textContent = originThis;
-
-      const thisHealth = await fetchJSONFromOrigin(originThis, '/data/system-health.json');
-      const thisDiag = await fetchJSONFromOrigin(originThis, '/data/error-summary.json');
-      const thisSummary = {
-        origin: originThis,
-        health: thisHealth?.ok ? (thisHealth || {}) : { error: thisHealth },
-        diag: thisDiag?.ok ? (thisDiag || {}) : { error: thisDiag }
-      };
-      if (preThis) preThis.textContent = JSON.stringify(thisSummary, null, 2);
-      if (stThis) stThis.textContent = `Updated: ${new Date().toLocaleString()}`;
-
-      const prodOrigin = getProdOrigin();
-      if (!prodOrigin) {
-        if (preProd) preProd.textContent = 'Set prod origin and refresh.';
-        if (stProd) stProd.textContent = '—';
-        return;
-      }
-      setProdOrigin(prodOrigin);
-
-      const prodHealth = await fetchJSONFromOrigin(prodOrigin, '/data/system-health.json');
-      const prodDiag = await fetchJSONFromOrigin(prodOrigin, '/data/error-summary.json');
-      const prodSummary = {
-        origin: prodOrigin,
-        health: prodHealth?.ok ? (prodHealth || {}) : { error: prodHealth },
-        diag: prodDiag?.ok ? (prodDiag || {}) : { error: prodDiag }
-      };
-      if (preProd) preProd.textContent = JSON.stringify(prodSummary, null, 2);
-      if (stProd) {
-        const maybeCors = prodHealth?.status === 0 || prodDiag?.status === 0;
-        stProd.textContent = maybeCors
-          ? `Updated: ${new Date().toLocaleString()} (note: status 0 may indicate CORS blocked)`
-          : `Updated: ${new Date().toLocaleString()}`;
-      }
-    }
-
-    async function loadDoc(path, targetId) {
-      const el = document.getElementById(targetId);
-      if (!el) return;
-      try {
-        recordRequest();
-        const res = await fetch(path, { cache: 'no-store' });
-        if (!res.ok) {
-          el.textContent = `Failed to load ${path} (HTTP ${res.status})`;
-          return;
-        }
-        const text = await res.text();
-        el.textContent = text;
-      } catch (err) {
-        el.textContent = `Failed to load ${path}: ${String(err?.message || err || '')}`;
-      }
-    }
-
+    // ACTIVE BLOCKS ONLY (8 blocks on the website)
+    // These match the data-rv-feature attributes in index.html
+    const ACTIVE_BLOCKS = [
+      { id: 'rv-market-cockpit', name: 'Market Snapshot (Global Macro Hub)', snapshotPath: '/data/snapshots/macro-hub.json' },
+      { id: 'rv-news-headlines', name: 'News Headlines', snapshotPath: '/data/snapshots/news-headlines.json' },
+      { id: 'rv-sp500-sectors', name: 'S&P 500 Sectors', snapshotPath: '/data/snapshots/sp500-sectors.json' },
+      { id: 'rv-tech-signals', name: 'Tech Signals', snapshotPath: '/data/snapshots/tech-signals.json' },
+      { id: 'rv-rvci-engine', name: 'RVCI Engine', snapshotPath: '/data/snapshots/rvci-engine.json', altPath: '/data/rvci_latest.json' },
+      { id: 'rv-alpha-radar', name: 'Alpha Radar', snapshotPath: '/data/snapshots/alpha-radar.json' },
+      { id: 'rv-marketphase', name: 'MarketPhase AI', snapshotPath: '/data/marketphase/index.json', note: 'Loads individual symbol files (AAPL.json, MSFT.json, etc.)' },
+      { id: 'moats', name: 'Monopoles / Economic Moats', snapshotPath: null, note: 'Static content, no snapshot' }
+    ];
+    
     async function fetchJSON(url) {
       try {
-        recordRequest();
-        const res = await fetch(withToken(url), { headers: { Accept: 'application/json' } });
-        const text = await res.text();
-        if (!res.ok) {
-          return { ok: false, status: res.status, text };
-        }
-        try {
-          return JSON.parse(text);
-        } catch {
-          return { ok: false, status: res.status, text };
-        }
+        const res = await fetch(url, { cache: 'no-store' });
+        if (!res.ok) return null;
+        return await res.json();
       } catch (err) {
         console.error('Fetch error:', err);
-        return { ok: false, status: 0, text: String(err?.message || err || '') };
+        return null;
       }
     }
 
-    const WORKER_BUDGET_KEY = 'rv_internal_workers_daily_budget';
-    const WORKER_USED_KEY = 'rv_internal_workers_used_today';
-    const WORKER_LAST_CALLS_KEY = 'rv_internal_workers_last_calls';
-    const refreshMetrics = { counting: false, requestCount: 0 };
-
-    function toNumber(value) {
-      const num = Number(String(value || '').replace(/[^0-9.]/g, ''));
-      return Number.isFinite(num) ? num : 0;
+    function formatAge(minutes) {
+      if (minutes < 60) return `${Math.round(minutes)}m`;
+      if (minutes < 1440) return `${Math.round(minutes / 60)}h`;
+      return `${Math.round(minutes / 1440)}d`;
     }
 
-    function getStoredNumber(key) {
-      try {
-        const raw = window.localStorage.getItem(key);
-        return toNumber(raw);
-      } catch {
-        return 0;
+    function getAgeBadgeClass(minutes) {
+      if (minutes < 60) return 'fresh';
+      if (minutes < 1440) return 'stale';
+      return 'expired';
+    }
+
+    function analyzeBlockData(snapshot, blockId) {
+      if (!snapshot) {
+        return {
+          status: 'NO_DATA',
+          dataPresent: false,
+          itemsCount: 0,
+          age: null,
+          freshness: 'MISSING',
+          reason: '❌ Snapshot file not found or failed to load',
+          lastUpdated: null
+        };
       }
-    }
 
-    function setStoredNumber(key, value) {
-      try {
-        window.localStorage.setItem(key, String(value));
-      } catch {}
-    }
+      const meta = snapshot.meta || {};
+      const data = snapshot.data || {};
+      const status = meta.status || 'UNKNOWN';
+      const freshness = meta.freshness || {};
+      const freshnessStatus = freshness.status || 'unknown';
+      const ageMinutes = freshness.ageMinutes || null;
+      
+      // CRITICAL: Always validate data structure FIRST, regardless of meta.status
+      // meta.status can be 'OK' but data structure can still be wrong!
 
-    function recordRequest() {
-      if (!refreshMetrics.counting) return;
-      refreshMetrics.requestCount += 1;
-    }
+      // Check if data is actually present
+      let itemsCount = 0;
+      let dataPresent = false;
 
-    function updateUsageUI() {
-      const dailyBudget = getStoredNumber(WORKER_BUDGET_KEY);
-      const usedToday = getStoredNumber(WORKER_USED_KEY);
-      const remaining = Math.max(dailyBudget - usedToday, 0);
-      const lastCalls = getStoredNumber(WORKER_LAST_CALLS_KEY);
-      const refreshCalls = lastCalls || refreshMetrics.requestCount || 0;
-      const pct = dailyBudget > 0 ? ((refreshCalls / dailyBudget) * 100) : 0;
-
-      const remainingEl = document.getElementById('workers-remaining');
-      const costEl = document.getElementById('workers-refresh-cost');
-      const pctEl = document.getElementById('workers-refresh-pct');
-      const lastCallsEl = document.getElementById('workers-last-calls');
-      const dailyInput = document.getElementById('workers-daily-budget');
-      const usedInput = document.getElementById('workers-used-today');
-
-      if (remainingEl) remainingEl.textContent = dailyBudget ? `${remaining.toLocaleString()} req` : '—';
-      if (costEl) costEl.textContent = refreshCalls ? `${refreshCalls.toLocaleString()} req` : '—';
-      if (pctEl) pctEl.textContent = dailyBudget ? `${pct.toFixed(2)}%` : '—';
-      if (lastCallsEl) lastCallsEl.textContent = refreshCalls ? refreshCalls.toLocaleString() : '—';
-
-      if (dailyInput && !dailyInput.value) dailyInput.value = dailyBudget ? String(dailyBudget) : '';
-      if (usedInput && !usedInput.value) usedInput.value = usedToday ? String(usedToday) : '';
-    }
-
-    const tokenInput = document.getElementById('token-input');
-    if (tokenInput) tokenInput.value = INTERNAL_TOKEN || '';
-    const applyBtn = document.getElementById('apply-token');
-    if (applyBtn && tokenInput) {
-      applyBtn.addEventListener('click', async () => {
-        setToken(tokenInput.value);
-        updateAuthUI();
-      });
-    }
-    const copyBtn = document.getElementById('copy-link');
-    if (copyBtn) {
-      copyBtn.addEventListener('click', async () => {
-        const u = new URL(window.location.href);
-        if (INTERNAL_TOKEN) u.searchParams.set('token', INTERNAL_TOKEN);
-        else u.searchParams.delete('token');
-        try { await navigator.clipboard.writeText(u.toString()); } catch {}
-      });
-    }
-
-    const originProdInput = document.getElementById('origin-prod');
-    if (originProdInput) {
-      const stored = (() => {
-        try { return window.localStorage.getItem(PROD_ORIGIN_KEY) || ''; } catch { return ''; }
-      })();
-      originProdInput.value = String(stored || '').trim();
-      originProdInput.addEventListener('change', () => {
-        setProdOrigin(originProdInput.value);
-      });
-    }
-
-    const openThis = document.getElementById('open-this');
-    if (openThis) {
-      openThis.addEventListener('click', () => {
-        const u = new URL('/internal-dashboard', window.location.origin);
-        if (INTERNAL_TOKEN) u.searchParams.set('token', INTERNAL_TOKEN);
-        window.open(u.toString(), '_blank', 'noreferrer');
-      });
-    }
-    const openProd = document.getElementById('open-prod');
-    if (openProd) {
-      openProd.addEventListener('click', () => {
-        const origin = getProdOrigin();
-        if (!origin) return;
-        const u = new URL('/internal-dashboard', origin);
-        if (INTERNAL_TOKEN) u.searchParams.set('token', INTERNAL_TOKEN);
-        window.open(u.toString(), '_blank', 'noreferrer');
-      });
-    }
-
-    updateAuthUI();
-
-    const loadTargetsBtn = document.getElementById('load-targets');
-    if (loadTargetsBtn) {
-      loadTargetsBtn.addEventListener('click', async () => {
-        await updateTargets();
-      });
-    }
-
-    const loadBundleBtn = document.getElementById('load-debug-bundle');
-    if (loadBundleBtn) {
-      loadBundleBtn.addEventListener('click', async () => {
-        await updateDebugBundle();
-      });
-    }
-    const loadMatrixBtn = document.getElementById('load-debug-matrix');
-    if (loadMatrixBtn) {
-      loadMatrixBtn.addEventListener('click', async () => {
-        await updateDebugMatrix();
-      });
-    }
-
-    async function refreshAll() {
-      document.body.classList.add('loading');
-      refreshMetrics.counting = true;
-      refreshMetrics.requestCount = 0;
-      await Promise.all([
-        updateEndpointProbes(),
-        updateHealthOverview(),
-        loadDoc('/DEBUG_README.md', 'doc-debug-readme'),
-        loadDoc('/RUNBOOK.md', 'doc-runbook'),
-        loadDoc('/BLOCK_ANALYSIS.md', 'doc-block-analysis'),
-        updateSnapshotFreshness(),
-        updateHealthReport(),
-        updateBlockMatrix(),
-        updateApiKeys(),
-        updateErrorTimeline()
-      ]);
-      refreshMetrics.counting = false;
-      setStoredNumber(WORKER_LAST_CALLS_KEY, refreshMetrics.requestCount);
-      updateUsageUI();
-      document.body.classList.remove('loading');
-    }
-
-    const refreshBtn = document.getElementById('refresh-all');
-    if (refreshBtn) {
-      refreshBtn.addEventListener('click', refreshAll);
-    }
-
-    const dailyInput = document.getElementById('workers-daily-budget');
-    if (dailyInput) {
-      dailyInput.addEventListener('change', () => {
-        setStoredNumber(WORKER_BUDGET_KEY, toNumber(dailyInput.value));
-        updateUsageUI();
-      });
-    }
-    const usedInput = document.getElementById('workers-used-today');
-    if (usedInput) {
-      usedInput.addEventListener('change', () => {
-        setStoredNumber(WORKER_USED_KEY, toNumber(usedInput.value));
-        updateUsageUI();
-      });
-    }
-
-    function safeText(value) {
-      return String(value ?? '').replace(/[&<>"']/g, (c) => ({
-        '&': '&amp;',
-        '<': '&lt;',
-        '>': '&gt;',
-        '"': '&quot;',
-        "'": '&#039;'
-      }[c]));
-    }
-
-    function badgeFor(value) {
-      const text = String(value || '').toUpperCase();
-      const cls = text === 'OK' || text === 'LIVE'
-        ? 'ok'
-        : text === 'PARTIAL' || text === 'STALE'
-          ? 'warn'
-          : text === 'EXPECTED'
-            ? 'partial'
-            : 'fail';
-      return `<span class="badge ${cls}">${safeText(text || '—')}</span>`;
-    }
-
-    function ageToLabel(ageMs) {
-      if (!Number.isFinite(ageMs) || ageMs < 0) return '—';
-      const minutes = Math.floor(ageMs / 60000);
-      if (minutes < 90) return `${minutes}m`;
-      const hours = Math.floor(minutes / 60);
-      if (hours < 48) return `${hours}h`;
-      const days = Math.floor(hours / 24);
-      return `${days}d`;
-    }
-
-    function freshnessStatus(ageMs, maxHours) {
-      if (!Number.isFinite(ageMs) || ageMs < 0) return 'UNKNOWN';
-      const hours = ageMs / 3600000;
-      if (hours <= maxHours) return 'OK';
-      if (hours <= maxHours * 1.5) return 'STALE';
-      return 'MISSING';
-    }
-
-    async function fetchStaticJson(path) {
-      try {
-        recordRequest();
-        const res = await fetch(path, { cache: 'no-store' });
-        if (!res.ok) return { ok: false, status: res.status };
-        const json = await res.json();
-        return { ok: true, json };
-      } catch (err) {
-        return { ok: false, status: 0, error: String(err?.message || err || '') };
+      if (blockId === 'rv-market-cockpit' || blockId === 'macro-hub') {
+        const metrics = data;
+        const metricKeys = Object.keys(metrics).filter(k => !['debug', 'categories'].includes(k));
+        itemsCount = metricKeys.length;
+        const metricsWithValues = metricKeys.filter(k => {
+          const m = metrics[k];
+          return m && (m.value !== null && m.value !== undefined);
+        }).length;
+        dataPresent = metricsWithValues > 0;
+      } else if (blockId === 'rv-rvci-engine' || blockId === 'rvci-engine') {
+        const paths = data.paths || {};
+        const counts = data.counts || {};
+        itemsCount = Object.keys(paths).length;
+        dataPresent = itemsCount > 0 && Object.keys(counts).length > 0;
+      } else if (blockId === 'rv-alpha-radar' || blockId === 'alpha-radar') {
+        const items = data.items || [];
+        const picks = data.picks || data.extraData?.picks || null;
+        const picksTop = picks?.top || [];
+        itemsCount = items.length || picksTop.length || 0;
+        
+        // CRITICAL: Check for dummy values FIRST (UI uses picks, not items)
+        if (picksTop.length > 0) {
+          const uniqueScores = new Set();
+          picksTop.forEach(p => {
+            if (p.setupScore !== undefined && p.triggerScore !== undefined && p.totalScore !== undefined) {
+              uniqueScores.add(`${p.setupScore}-${p.triggerScore}-${p.totalScore}`);
+            }
+          });
+          // If all picks have identical scores, it's DUMMY_DATA (UI cannot use this)
+          if (uniqueScores.size === 1 && picksTop.length > 1) {
+            const firstPick = picksTop[0];
+            return {
+              status: 'DUMMY_DATA',
+              dataPresent: false, // UI cannot use identical dummy scores
+              itemsCount,
+              age: ageMinutes,
+              freshness: freshnessStatus,
+              reason: `❌ DUMMY DATA: All ${picksTop.length} picks have identical scores (Setup ${firstPick.setupScore}, Trigger ${firstPick.triggerScore}, Total ${firstPick.totalScore}). This is invalid - different assets should have different scores. UI cannot render meaningful data. Fix: Check alphaScore calculation in market-indicators.mjs.`,
+              lastUpdated: meta.generatedAt || meta.updatedAt
+            };
+          }
+        }
+        
+        // Also check items for old dummy pattern
+        if (items.length > 0) {
+          const firstItem = items[0];
+          if (firstItem.setupScore === 34 && firstItem.triggerScore === 51 && firstItem.totalScore === 85) {
+            return {
+              status: 'DUMMY_DATA',
+              dataPresent: false,
+              itemsCount,
+              age: ageMinutes,
+              freshness: freshnessStatus,
+              reason: `❌ DUMMY DATA: Contains old dummy pattern (Setup 34, Trigger 51, Total 85). UI cannot render this. Fix: Check alphaScore calculation.`,
+              lastUpdated: meta.generatedAt || meta.updatedAt
+            };
+          }
+        }
+        
+        dataPresent = itemsCount > 0;
+      } else if (blockId === 'rv-sp500-sectors' || blockId === 'sp500-sectors') {
+        const items = data.items || [];
+        const sectors = data.sectors || [];
+        itemsCount = items.length || sectors.length;
+        
+        // CRITICAL: Check if data structure matches UI expectations FIRST
+        if (sectors.length > 0) {
+          const firstSector = sectors[0];
+          // UI expects: rel.r1w, rel.r1d, rel.r1m, relTech.rsi, etc.
+          // Snapshot has: changePercent, relativeToSpy, price, symbol, name
+          const hasRelFields = firstSector.rel && (firstSector.rel.r1w !== undefined || firstSector.rel.r1d !== undefined);
+          const hasRelTechFields = firstSector.relTech && firstSector.relTech.rsi !== undefined;
+          const hasOldFields = firstSector.changePercent !== undefined && firstSector.relativeToSpy !== undefined;
+          
+          // If we have old structure (changePercent) but not new structure (rel.r1w), UI won't render correctly
+          if (hasOldFields && !hasRelFields && !hasRelTechFields) {
+            return {
+              status: 'INVALID_DATA_STRUCTURE',
+              dataPresent: false, // UI cannot render this, so data is NOT present for UI
+              itemsCount,
+              age: ageMinutes,
+              freshness: freshnessStatus,
+              reason: `❌ DATA STRUCTURE MISMATCH: Snapshot has ${itemsCount} sectors with OLD structure (changePercent, relativeToSpy) but UI expects NEW structure (rel.r1w, rel.r1d, rel.r1m, relTech.rsi). UI CANNOT RENDER THIS DATA. Fix: Update build-snapshots.mjs mapping for sp500-sectors to transform old structure to new structure.`,
+              lastUpdated: meta.generatedAt || meta.updatedAt
+            };
+          }
+        }
+        
+        // Only check for empty if structure is OK
+        dataPresent = itemsCount > 0 || sectors.length > 0;
+        if (itemsCount === 0 && sectors.length === 0) {
+          return {
+            status: 'EMPTY_ITEMS',
+            dataPresent: false,
+            itemsCount: 0,
+            age: ageMinutes,
+            freshness: freshnessStatus,
+            reason: 'No sectors or items found in snapshot. Mirror may be empty or not generating correctly.',
+            lastUpdated: meta.generatedAt || meta.updatedAt
+          };
+        }
+      } else if (blockId === 'rv-tech-signals' || blockId === 'tech-signals') {
+        const items = data.items || [];
+        const signals = data.signals || []; // UI can use either items or signals
+        itemsCount = items.length || signals.length;
+        
+        // CRITICAL: Check if items have actual signal data that UI can render
+        if (itemsCount > 0) {
+          const firstItem = items[0] || signals[0];
+          if (!firstItem) {
+            return {
+              status: 'EMPTY_ITEMS',
+              dataPresent: false,
+              itemsCount: 0,
+              age: ageMinutes,
+              freshness: freshnessStatus,
+              reason: '❌ Items array exists but is empty or invalid. UI cannot render empty table.',
+              lastUpdated: meta.generatedAt || meta.updatedAt
+            };
+          }
+          // UI expects: rsi, macd, macdHist, stochRsi, rsiWeekly, symbol, etc.
+          const hasSignals = firstItem.rsi !== undefined || firstItem.macd !== undefined || firstItem.rsiWeekly !== undefined || firstItem.macdHist !== undefined || firstItem.stochRsi !== undefined;
+          const hasSymbol = firstItem.symbol !== undefined;
+          if (!hasSignals || !hasSymbol) {
+            return {
+              status: 'INVALID_DATA',
+              dataPresent: false,
+              itemsCount,
+              age: ageMinutes,
+              freshness: freshnessStatus,
+              reason: `❌ INVALID DATA STRUCTURE: ${itemsCount} items exist but lack required fields (RSI/MACD/stochRsi or symbol). UI cannot render table. Check snapshot mapping.`,
+              lastUpdated: meta.generatedAt || meta.updatedAt
+            };
+          }
+        }
+        
+        dataPresent = itemsCount > 0;
+      } else if (blockId === 'rv-marketphase' || blockId === 'marketphase') {
+        // MarketPhase loads individual symbol files, check index.json
+        const symbols = data.symbols || [];
+        itemsCount = symbols.length;
+        dataPresent = symbols.length > 0;
+        if (symbols.length === 0) {
+          return {
+            status: 'NO_SYMBOLS',
+            dataPresent: false,
+            itemsCount: 0,
+            age: ageMinutes,
+            freshness: freshnessStatus,
+            reason: 'No symbols found in index.json. MarketPhase files may not be generated.',
+            lastUpdated: meta.generatedAt || meta.updatedAt
+          };
+        }
+      } else {
+        const items = data.items || [];
+        itemsCount = items.length;
+        dataPresent = itemsCount > 0;
       }
+
+      let reason = meta.reason || status;
+      if (status === 'PARTIAL' && itemsCount === 0) {
+        reason = 'EMPTY_ITEMS - No data items in snapshot';
+      } else if (status === 'DEGRADED_COVERAGE') {
+        reason = `DEGRADED_COVERAGE - ${meta.universe ? `Expected ${meta.universe.expected}, got ${meta.universe.received}` : 'Coverage below threshold'}`;
+      } else if (ageMinutes && ageMinutes > 1440) {
+        reason = `Data is ${formatAge(ageMinutes)} old (${Math.round(ageMinutes / 1440)} days). Last update: ${meta.generatedAt || meta.updatedAt || 'unknown'}`;
+      } else if (status === 'OK' && !dataPresent) {
+        reason = 'OK status but no data present - snapshot may be empty or invalid';
+      }
+
+      return {
+        status,
+        dataPresent,
+        itemsCount,
+        age: ageMinutes,
+        freshness: freshnessStatus,
+        reason,
+        lastUpdated: meta.generatedAt || meta.updatedAt || meta.dataAt
+      };
     }
 
-    async function updateSnapshotFreshness() {
-      const tbody = document.querySelector('#snapshot-freshness tbody');
-      if (!tbody) return;
-      const now = Date.now();
-      const snapshots = [
-        { label: 'Market Cockpit', path: '/data/snapshots/market-cockpit.json', maxHours: 36 },
-        { label: 'S&P 500 Sectors', path: '/data/snapshots/sp500-sectors.json', maxHours: 36 },
-        { label: 'Tech Signals', path: '/data/snapshots/tech-signals.json', maxHours: 36 },
-        { label: 'Alpha Radar', path: '/data/snapshots/alpha-radar.json', maxHours: 36 },
-        { label: 'News Headlines', path: '/data/snapshots/news-headlines.json', maxHours: 6 },
-        { label: 'RVCI Latest', path: '/data/rvci_latest.json', maxHours: 36 }
-      ];
-
-      const rows = await Promise.all(
-        snapshots.map(async (snap) => {
-          const res = await fetchStaticJson(snap.path);
-          const payload = res.ok ? res.json : {};
-          const updatedAt =
-            payload.updatedAt ||
-            payload.generatedAt ||
-            payload.asOf ||
-            payload.meta?.generatedAt ||
-            payload.meta?.dataAsOf ||
-            null;
-          const updatedMs = updatedAt ? Date.parse(updatedAt) : NaN;
-          const ageMs = Number.isFinite(updatedMs) ? now - updatedMs : NaN;
-          const status = freshnessStatus(ageMs, snap.maxHours);
-          const statusClass = status === 'OK' ? 'ok' : status === 'STALE' ? 'warn' : 'fail';
-          return `
-            <tr>
-              <td>${safeText(snap.label)}</td>
-              <td><code>${safeText(snap.path)}</code></td>
-              <td>${updatedAt ? new Date(updatedAt).toLocaleString() : '—'}</td>
-              <td>${ageToLabel(ageMs)}</td>
-              <td><span class="badge ${statusClass}">${status}</span></td>
-            </tr>
-          `;
-        })
-      );
-
-      tbody.innerHTML = rows.join('') || '<tr><td colspan="5">No snapshots found</td></tr>';
-    }
-
-    async function updateHealthReport() {
-      const tbody = document.querySelector('#health-report-table tbody');
-      const summaryEl = document.getElementById('health-report-summary');
-      const ts = document.getElementById('health-report-timestamp');
-      const noteEl = document.getElementById('health-report-note');
-      const selector = document.getElementById('health-report-block');
-      const fieldsBody = document.querySelector('#health-report-fields tbody');
-      if (!tbody || !summaryEl || !selector || !fieldsBody) return;
-
-      const report = await fetchJSON('/data/system-health.json');
-      if (!report || report.ok === false) {
-        tbody.innerHTML = '<tr><td colspan="9">No data available</td></tr>';
-        if (ts) ts.textContent = `Last updated: ${new Date().toLocaleString()}`;
-        if (noteEl) noteEl.textContent = 'Block status: unavailable (static snapshot missing).';
+    async function updateHealthOverview() {
+      const systemHealth = await fetchJSON('/data/system-health.json');
+      const container = document.getElementById('health-overview');
+      
+      if (!systemHealth) {
+        container.innerHTML = '<div class="status-card fail"><h3>Error</h3><div class="value">Failed</div><div class="label">Cannot fetch system-health.json</div></div>';
         return;
       }
 
-      const blocks = Array.isArray(report.snapshots) ? report.snapshots : [];
-      const summary = report.summary || {};
-      const okBlocks = summary.ok ?? 0;
-      const badBlocks = summary.fail ?? 0;
-      const totalBlocks = summary.total ?? blocks.length;
-      const score = report.buildStatus || '—';
-
-      if (noteEl) {
-        noteEl.textContent = `Block status: OK ${okBlocks} · BAD ${badBlocks} · TOTAL ${totalBlocks}`;
-      }
-      summaryEl.innerHTML = `
-        <div class="status-card"><h3>Build Status</h3><div class="value">${safeText(score)}</div><div class="label">static pipeline</div></div>
-        <div class="status-card ok"><h3>OK</h3><div class="value">${safeText(okBlocks)}</div><div class="label">Blocks</div></div>
-        <div class="status-card fail"><h3>BAD</h3><div class="value">${safeText(badBlocks)}</div><div class="label">Blocks</div></div>
-        <div class="status-card"><h3>Total</h3><div class="value">${safeText(totalBlocks)}</div><div class="label">Blocks</div></div>
+      const buildStatus = systemHealth.buildStatus || 'UNKNOWN';
+      const summary = systemHealth.summary || {};
+      const statusClass = buildStatus === 'OK' ? 'ok' : buildStatus === 'WARN' ? 'warn' : 'fail';
+      
+      container.innerHTML = `
+        <div class="status-card ${statusClass}">
+          <h3>Build Status</h3>
+          <div class="value">${buildStatus}</div>
+          <div class="label">${systemHealth.reasons?.length ? systemHealth.reasons.join(', ') : 'Static snapshot pipeline'}</div>
+        </div>
+        <div class="status-card">
+          <h3>Blocks OK</h3>
+          <div class="value">${summary.ok || 0}</div>
+          <div class="label">of ${summary.total || 0} total</div>
+        </div>
+        <div class="status-card">
+          <h3>Blocks Failed</h3>
+          <div class="value">${summary.fail || 0}</div>
+          <div class="label">Requires attention</div>
+        </div>
+        <div class="status-card">
+          <h3>Last Build</h3>
+          <div class="value">${systemHealth.generatedAt ? new Date(systemHealth.generatedAt).toLocaleDateString() : '—'}</div>
+          <div class="label">${systemHealth.generatedAt ? new Date(systemHealth.generatedAt).toLocaleTimeString() : '—'}</div>
+        </div>
       `;
+      
+      document.getElementById('health-timestamp').textContent = `Last updated: ${new Date().toLocaleString()}`;
+    }
 
-      tbody.innerHTML = blocks.map((b) => {
-        const blockId = b.blockId || b.block || '—';
+    async function updateBlockMatrix() {
+      const tbody = document.querySelector('#block-matrix tbody');
+      if (!tbody) return;
+
+      const results = await Promise.all(ACTIVE_BLOCKS.map(async (block) => {
+        if (!block.snapshotPath) {
+          return {
+            block: block.name,
+            status: 'STATIC',
+            dataPresent: true,
+            itemsCount: 'N/A',
+            age: null,
+            freshness: 'STATIC',
+            reason: block.note || 'Static content, no snapshot required',
+            lastUpdated: 'N/A'
+          };
+        }
+
+        let snapshot = await fetchJSON(block.snapshotPath);
+        if (!snapshot && block.altPath) {
+          snapshot = await fetchJSON(block.altPath);
+        }
+
+        const analysis = analyzeBlockData(snapshot, block.id);
+        // DEBUG: Log analysis results
+        console.log(`[DASHBOARD] Block ${block.id}:`, {
+          status: analysis.status,
+          dataPresent: analysis.dataPresent,
+          itemsCount: analysis.itemsCount,
+          reason: analysis.reason
+        });
+        return {
+          block: block.name,
+          ...analysis
+        };
+      }));
+
+      tbody.innerHTML = results.map(result => {
+        // Determine status class based on actual data quality
+        // CRITICAL: If data structure is invalid or data is not present, it's a FAIL
+        let statusClass = 'ok';
+        if (result.status === 'DUMMY_DATA' || result.status === 'NO_DATA' || result.status === 'EMPTY_ITEMS' || result.status === 'INVALID_DATA' || result.status === 'INVALID_DATA_STRUCTURE' || result.status === 'NO_SYMBOLS') {
+          statusClass = 'fail';
+        } else if (!result.dataPresent) {
+          // If data is not present, it's always a FAIL (UI cannot render)
+          statusClass = 'fail';
+        } else if (result.status === 'PARTIAL') {
+          statusClass = 'warn';
+        } else if (result.status === 'OK' && !result.dataPresent) {
+          statusClass = 'fail';
+        } else if (result.age && result.age > 1440) {
+          statusClass = 'warn';
+        } else if (result.status === 'STATIC') {
+          statusClass = 'ok';
+        }
+        
+        const ageDisplay = result.age !== null ? formatAge(result.age) : '—';
+        const ageBadgeClass = result.age !== null ? getAgeBadgeClass(result.age) : '';
+        
         return `
           <tr>
-            <td><code>${safeText(blockId)}</code></td>
-            <td><code>${safeText(blockId)}</code></td>
-            <td>${badgeFor(b.status || '—')}</td>
-            <td><code>${safeText(`/data/snapshots/${blockId}.json`)}</code></td>
-            <td>${badgeFor(b.status || '—')}</td>
-            <td><code style="font-size: 11px;">${safeText(b.reason || '—')}</code></td>
-            <td>0</td>
-            <td>—</td>
-            <td>—</td>
+            <td><strong>${result.block}</strong></td>
+            <td><span class="badge ${statusClass}">${result.status}</span></td>
+            <td>${result.dataPresent ? '✅' : '❌'}</td>
+            <td>${result.itemsCount}</td>
+            <td>${result.age !== null ? `<span class="age-badge ${ageBadgeClass}">${ageDisplay}</span>` : '—'}</td>
+            <td><span class="badge ${result.freshness === 'fresh' ? 'ok' : result.freshness === 'stale' ? 'warn' : 'fail'}">${result.freshness.toUpperCase()}</span></td>
+            <td><span class="reason-text">${result.reason}</span></td>
+            <td>${result.lastUpdated ? new Date(result.lastUpdated).toLocaleString() : '—'}</td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    async function updateApiKeys() {
+      const usageReport = await fetchJSON('/data/usage-report.json');
+      const providerState = await fetchJSON('/data/provider-state.json');
+      const macroHub = await fetchJSON('/data/snapshots/macro-hub.json');
+      const tbody = document.querySelector('#api-keys tbody');
+      
+      if (!usageReport || !usageReport.providers) {
+        tbody.innerHTML = '<tr><td colspan="11">No API usage data available</td></tr>';
+        return;
+      }
+
+      const providers = usageReport.providers || {};
+      const macroHubCalls = macroHub?.meta?.providerCalls || {};
+      const macroHubErrors = macroHub?.meta?.errors || [];
+
+      // Build error map
+      const errorMap = {};
+      macroHubErrors.forEach(err => {
+        const provider = err.provider || 'UNKNOWN';
+        if (!errorMap[provider]) errorMap[provider] = [];
+        errorMap[provider].push(err.message || err.code || 'ERROR');
+      });
+
+      const rows = Object.entries(providers).map(([provider, data]) => {
+        const daily = data.daily || {};
+        const monthly = data.monthly || {};
+        const usedToday = daily.used || 0;
+        const limitToday = daily.limit || 0;
+        const remainingToday = daily.remaining || 0;
+        const pctToday = limitToday > 0 ? ((usedToday / limitToday) * 100).toFixed(1) : '0.0';
+        const usedMonth = monthly.used || 0;
+        const limitMonth = monthly.limit || 0;
+        const remainingMonth = monthly.remaining || 0;
+        const pctMonth = limitMonth > 0 ? ((usedMonth / limitMonth) * 100).toFixed(1) : '0.0';
+        
+        const statusClass = data.status === 'green' ? 'ok' : data.status === 'yellow' ? 'warn' : 'fail';
+        const pctTodayClass = parseFloat(pctToday) > 95 ? 'fail' : parseFloat(pctToday) > 80 ? 'warn' : 'ok';
+        const pctMonthClass = parseFloat(pctMonth) > 95 ? 'fail' : parseFloat(pctMonth) > 80 ? 'warn' : 'ok';
+        
+        const lastError = errorMap[provider] ? errorMap[provider][errorMap[provider].length - 1] : '—';
+        const callsFromMacroHub = macroHubCalls[provider] || 0;
+
+        return `
+          <tr>
+            <td><strong>${provider}</strong></td>
+            <td><span class="badge ${statusClass}">${data.status || 'UNKNOWN'}</span></td>
+            <td>${usedToday + callsFromMacroHub}</td>
+            <td>${limitToday}</td>
+            <td>${remainingToday - callsFromMacroHub}</td>
+            <td><span class="badge ${pctTodayClass}">${pctToday}%</span></td>
+            <td>${usedMonth + callsFromMacroHub}</td>
+            <td>${limitMonth}</td>
+            <td>${remainingMonth - callsFromMacroHub}</td>
+            <td><span class="badge ${pctMonthClass}">${pctMonth}%</span></td>
+            <td><code style="font-size: 10px;">${lastError}</code></td>
           </tr>
         `;
       }).join('');
 
-      selector.innerHTML = '<option value="">Field details not available in static mode.</option>';
-      selector.onchange = () => {
-        fieldsBody.innerHTML = '<tr><td colspan="6">Field contract is not stored in static snapshots.</td></tr>';
-      };
-      if (ts) ts.textContent = `Last updated: ${new Date().toLocaleString()}`;
+      tbody.innerHTML = rows || '<tr><td colspan="11">No provider data</td></tr>';
     }
 
-    async function updateDebugMatrix() {
-      const tbody = document.querySelector('#debug-matrix-table tbody');
-      const ts = document.getElementById('debug-matrix-timestamp');
-      if (!tbody) return;
-
-      const res = await fetchJSON('/data/provider-state.json');
-      const providers = res?.providers || {};
-      const rows = Object.entries(providers).map(([providerId, entry]) => {
-        const status = entry.circuitState || 'unknown';
-        const statusClass = status === 'closed' ? 'ok' : status === 'half_open' ? 'warn' : 'fail';
-        const locks = Array.isArray(entry.locks) ? entry.locks.length : 0;
-        const lastSeen = entry.lastSeen || entry.updatedAt || '—';
-        return `
-          <tr>
-            <td><code>${safeText(providerId)}</code></td>
-            <td><code>${safeText(`${locks} locks`)}</code></td>
-            <td><span class="badge ${statusClass}">${safeText(status)}</span></td>
-            <td><code style="font-size:11px;">${safeText(entry.lastReason || '—')}</code></td>
-            <td>${safeText(lastSeen)}</td>
-          </tr>
-        `;
-      });
-      tbody.innerHTML = rows.length ? rows.join('') : '<tr><td colspan="5">No data available</td></tr>';
-      if (ts) ts.textContent = `Last updated: ${new Date().toLocaleString()}`;
-    }
-
-    async function probeEndpoint(path) {
-      try {
-        const res = await fetch(withToken(path), {
-          method: 'GET',
-          headers: { Accept: 'application/json' },
-          cache: 'no-store'
-        });
-        return { ok: res.ok, status: res.status };
-      } catch (err) {
-        return { ok: false, status: 0 };
-      }
+    async function updateWorkersUsage() {
+      const container = document.getElementById('workers-usage');
+      // Cloudflare Workers usage is not directly tracked in static files
+      // We can show estimated usage based on system-health or leave as placeholder
+      container.innerHTML = `
+        <div class="status-card">
+          <h3>Workers Requests (Daily)</h3>
+          <div class="value">—</div>
+          <div class="label">Not tracked in static files</div>
+        </div>
+        <div class="status-card">
+          <h3>Workers CPU Time</h3>
+          <div class="value">—</div>
+          <div class="label">Check Cloudflare Dashboard</div>
+        </div>
+        <div class="status-card">
+          <h3>Note</h3>
+          <div class="value" style="font-size: 14px;">Static-First</div>
+          <div class="label">All data served from CDN (public/data/*)</div>
+        </div>
+      `;
+      document.getElementById('workers-timestamp').textContent = `Workers usage should be monitored via Cloudflare Dashboard. Static-first architecture minimizes Workers usage.`;
     }
 
     async function updateEndpointProbes() {
@@ -1107,18 +669,24 @@
       const targets = [
         { path: '/data/system-health.json', hint: 'Static build health snapshot' },
         { path: '/data/provider-state.json', hint: 'Circuit + lock state' },
-        { path: '/data/usage-report.json', hint: 'Budget usage and remaining' }
+        { path: '/data/usage-report.json', hint: 'Budget usage and remaining' },
+        { path: '/data/snapshots/macro-hub.json', hint: 'Macro hub snapshot' },
+        { path: '/data/snapshots/alpha-radar.json', hint: 'Alpha radar snapshot' },
+        { path: '/data/snapshots/rvci-engine.json', hint: 'RVCI engine snapshot' }
       ];
 
-      const results = await Promise.all(targets.map(async (t) => ({
-        ...t,
-        result: await probeEndpoint(t.path)
-      })));
+      const results = await Promise.all(targets.map(async (t) => {
+        try {
+          const res = await fetch(t.path, { method: 'HEAD', cache: 'no-store' });
+          return { ...t, ok: res.ok, status: res.status };
+        } catch (err) {
+          return { ...t, ok: false, status: 0 };
+        }
+      }));
 
       tbody.innerHTML = results.map((row) => {
-        const status = row.result.status;
-        const statusClass = row.result.ok ? 'ok' : status === 404 ? 'warn' : 'fail';
-        const label = row.result.ok ? `OK (${status})` : status ? `FAIL (${status})` : 'FAIL (network)';
+        const statusClass = row.ok ? 'ok' : row.status === 404 ? 'warn' : 'fail';
+        const label = row.ok ? `OK (${row.status})` : row.status ? `FAIL (${row.status})` : 'FAIL (network)';
         return `
           <tr>
             <td><code>${row.path}</code></td>
@@ -1129,248 +697,21 @@
       }).join('');
     }
 
-    async function updateHealthOverview() {
-      const health = await fetchJSON('/data/system-health.json');
-      const usage = await fetchJSON('/data/usage-report.json');
-
-      const container = document.getElementById('health-overview');
-      if (!health || health.ok === false) {
-        container.innerHTML = '<div class="status-card fail"><h3>Error</h3><div class="value">Failed</div><div class="label">Cannot fetch health data</div></div>';
-        return;
-      }
-
-      const summary = health.summary || {};
-      const providers = usage?.providers || {};
-      const remainingPcts = Object.values(providers)
-        .map((entry) => entry?.daily?.pctRemaining)
-        .filter((value) => typeof value === 'number');
-      const worstPct = remainingPcts.length ? Math.min(...remainingPcts) : null;
-      const budgetLabel = worstPct === null ? '—' : `${(worstPct * 100).toFixed(1)}%`;
-
-      const overallStatus = health.buildStatus || 'UNKNOWN';
-      const statusClass = overallStatus === 'OK' ? 'ok' : overallStatus === 'WARN' ? 'warn' : 'fail';
-
-      const lastBuildAt = health.generatedAt ? new Date(health.generatedAt).toLocaleString() : '—';
-
-      container.innerHTML = `
-        <div class="status-card ${statusClass}">
-          <h3>Overall Status</h3>
-          <div class="value">${overallStatus}</div>
-          <div class="label">Static snapshot pipeline</div>
-        </div>
-        <div class="status-card">
-          <h3>Blocks Active</h3>
-          <div class="value">${summary.ok || 0}</div>
-          <div class="label">of ${summary.total || 0} total</div>
-        </div>
-        <div class="status-card">
-          <h3>Budget Remaining</h3>
-          <div class="value">${budgetLabel}</div>
-          <div class="label">Worst daily provider</div>
-        </div>
-        <div class="status-card">
-          <h3>Last Build</h3>
-          <div class="value">${lastBuildAt}</div>
-          <div class="label">system-health</div>
-        </div>
-      `;
-
-      document.getElementById('health-timestamp').textContent = `Last updated: ${new Date().toLocaleString()}`;
+    async function refreshAll() {
+      document.body.classList.add('loading');
+      await Promise.all([
+        updateHealthOverview(),
+        updateBlockMatrix(),
+        updateApiKeys(),
+        updateWorkersUsage(),
+        updateEndpointProbes()
+      ]);
+      document.body.classList.remove('loading');
     }
 
-    async function updateDebugBundle() {
-      const health = await fetchJSON('/data/system-health.json');
-      const errors = await fetchJSON('/data/error-summary.json');
-      const container = document.getElementById('debug-summary');
-      const ts = document.getElementById('debug-timestamp');
-      const attemptsBody = document.querySelector('#debug-attempts tbody');
-      const eventsBody = document.querySelector('#recent-events tbody');
-
-      if (!container || !attemptsBody || !eventsBody) return;
-
-      if (!health || health.ok === false) {
-        container.innerHTML = '<div class="status-card fail"><h3>Bundle Status</h3><div class="value">ERROR</div><div class="label">system-health unavailable</div></div>';
-        attemptsBody.innerHTML = '<tr><td colspan="5">No data available</td></tr>';
-        eventsBody.innerHTML = '<tr><td colspan="6">No data available</td></tr>';
-        if (ts) ts.textContent = `Last updated: ${new Date().toLocaleString()}`;
-        return;
-      }
-
-      const summary = health.summary || {};
-
-      container.innerHTML = `
-        <div class="status-card">
-          <h3>Build Run</h3>
-          <div class="value">${safeText(health.runId || '—')}</div>
-          <div class="label">system-health</div>
-        </div>
-        <div class="status-card">
-          <h3>Status</h3>
-          <div class="value">${safeText(health.buildStatus || '—')}</div>
-          <div class="label">build status</div>
-        </div>
-        <div class="status-card">
-          <h3>Snapshots OK</h3>
-          <div class="value">${safeText(summary.ok ?? 0)}</div>
-          <div class="label">of ${safeText(summary.total ?? 0)}</div>
-        </div>
-        <div class="status-card">
-          <h3>Errors</h3>
-          <div class="value">${safeText(summary.fail ?? 0)}</div>
-          <div class="label">snapshot failures</div>
-        </div>
-      `;
-
-      const errorItems = Array.isArray(errors?.items) ? errors.items : [];
-      attemptsBody.innerHTML = errorItems.length
-        ? errorItems.slice(0, 50).map((e) => `
-            <tr>
-              <td>${e.lastSeenAt ? new Date(e.lastSeenAt).toLocaleString() : '—'}</td>
-              <td><code>${safeText(e.dataset || '—')}</code></td>
-              <td>${badgeFor(e.severity || 'UNKNOWN')}</td>
-              <td><code style="font-size: 11px;">${safeText(e.code || '—')}</code></td>
-              <td><code style="font-size: 11px;">${safeText(e.message || '—')}</code></td>
-            </tr>
-          `).join('')
-        : '<tr><td colspan="5">No errors recorded</td></tr>';
-
-      eventsBody.innerHTML = errorItems.length
-        ? errorItems.slice(0, 120).map((e) => `
-            <tr>
-              <td>${e.lastSeenAt ? new Date(e.lastSeenAt).toLocaleString() : '—'}</td>
-              <td><code>${safeText(e.provider || '—')}</code></td>
-              <td>—</td>
-              <td>${badgeFor(e.severity || 'UNKNOWN')}</td>
-              <td><code style="font-size: 11px;">${safeText(e.code || '—')}</code></td>
-              <td><code style="font-size: 11px;">${safeText(e.runId || '—')}</code></td>
-            </tr>
-          `).join('')
-        : '<tr><td colspan="6">No recent errors</td></tr>';
-
-      if (ts) ts.textContent = `Last updated: ${new Date().toLocaleString()}`;
-    }
-
-    async function updateBlockMatrix() {
-      const diag = await fetchJSON('/data/system-health.json');
-      const tbody = document.querySelector('#block-matrix tbody');
-      
-      const blocks = Array.isArray(diag?.snapshots) ? diag.snapshots : [];
-      if (!diag || diag.ok === false || !blocks.length) {
-        tbody.innerHTML = '<tr><td colspan="9">No data available</td></tr>';
-        return;
-      }
-
-      tbody.innerHTML = blocks.map(block => {
-        const statusClass = block.status === 'OK' ? 'ok' : block.status === 'WARN' ? 'warn' : 'fail';
-        const blockId = block.blockId || block.block || '—';
-        const asOf = diag?.lastGoodAsOf?.[blockId] || '—';
-        return `
-          <tr>
-            <td>${blockId}</td>
-            <td><code>${blockId}</code></td>
-            <td><span class="badge ${statusClass}">${block.status || 'UNKNOWN'}</span></td>
-            <td>${block.status === 'OK' ? '✅' : '❌'}</td>
-            <td><span class="badge ${statusClass}">${block.status || 'UNKNOWN'}</span></td>
-            <td>${asOf !== '—' ? new Date(asOf).toLocaleString() : '—'}</td>
-            <td>${block.source || 'mirror'}</td>
-            <td>static</td>
-            <td><code style="font-size: 11px;">${block.reason || '—'}</code></td>
-          </tr>
-        `;
-      }).join('');
-    }
-
-    async function updateApiKeys() {
-      const diag = await fetchJSON('/data/usage-report.json');
-      const tbody = document.querySelector('#api-keys tbody');
-
-      const keys = diag?.providers || {};
-      const cloudflare = diag?.cloudflare || {};
-      
-      if (!diag || diag.ok === false || !keys || !Object.keys(keys).length) {
-        tbody.innerHTML = '<tr><td colspan="14">No API key data available</td></tr>';
-        return;
-      }
-
-      const rows = Object.entries(keys).map(([providerId, key]) => {
-        const statusClass = key.status === 'red' ? 'fail' : key.status === 'yellow' ? 'warn' : 'ok';
-        const dailyPct = typeof key.daily?.pctRemaining === 'number' ? ` (${(key.daily.pctRemaining * 100).toFixed(1)}%)` : '';
-        const monthlyPct = typeof key.monthly?.pctRemaining === 'number' ? ` (${(key.monthly.pctRemaining * 100).toFixed(1)}%)` : '';
-        return `
-          <tr>
-            <td>${providerId}</td>
-            <td><code>—</code></td>
-            <td><span class="badge ${statusClass}">${key.status || 'UNKNOWN'}</span></td>
-            <td>${key.daily?.used ?? 0}</td>
-            <td>—</td>
-            <td>${key.monthly?.used ?? '—'}</td>
-            <td>${key.daily?.limit ?? '—'}</td>
-            <td>${key.daily?.remaining ?? '—'}${dailyPct}</td>
-            <td>—</td>
-            <td>${key.monthly?.remaining ?? '—'}${monthlyPct}</td>
-            <td>—</td>
-            <td><code style="font-size: 11px;">—</code></td>
-            <td>—</td>
-            <td style="max-width: 260px;">Static budget snapshot</td>
-            <td style="max-width: 260px;">Reduce ingestion if near red.</td>
-          </tr>
-        `;
-      });
-
-      if (cloudflare?.daily || cloudflare?.monthly) {
-        const cfDailyPct = typeof cloudflare.daily?.pctRemaining === 'number' ? ` (${(cloudflare.daily.pctRemaining * 100).toFixed(1)}%)` : '';
-        const cfMonthlyPct = typeof cloudflare.monthly?.pctRemaining === 'number' ? ` (${(cloudflare.monthly.pctRemaining * 100).toFixed(1)}%)` : '';
-        rows.unshift(`
-          <tr>
-            <td>cloudflare</td>
-            <td><code>—</code></td>
-            <td><span class="badge ok">STATIC</span></td>
-            <td>${cloudflare.daily?.used ?? 0}</td>
-            <td>—</td>
-            <td>${cloudflare.monthly?.used ?? '—'}</td>
-            <td>${cloudflare.daily?.limit ?? '—'}</td>
-            <td>${cloudflare.daily?.remaining ?? '—'}${cfDailyPct}</td>
-            <td>—</td>
-            <td>${cloudflare.monthly?.remaining ?? '—'}${cfMonthlyPct}</td>
-            <td>—</td>
-            <td><code style="font-size: 11px;">—</code></td>
-            <td>—</td>
-            <td style="max-width: 260px;">Cloudflare free tier budget</td>
-            <td style="max-width: 260px;">Reduce refresh if near limit.</td>
-          </tr>
-        `);
-      }
-
-      tbody.innerHTML = rows.join('');
-    }
-
-    async function updateErrorTimeline() {
-      const diag = await fetchJSON('/data/error-summary.json');
-      const tbody = document.querySelector('#error-timeline tbody');
-
-      const events = Array.isArray(diag?.items) ? diag.items : [];
-      
-      if (!diag || diag.ok === false || !events.length) {
-        tbody.innerHTML = '<tr><td colspan="6">No events available</td></tr>';
-        return;
-      }
-
-      tbody.innerHTML = events.slice(0, 50).map(event => {
-        const typeClass = event.severity === 'error' ? 'fail' : event.severity === 'warn' ? 'warn' : 'ok';
-        return `
-          <tr>
-            <td>${event.lastSeenAt ? new Date(event.lastSeenAt).toLocaleString() : '—'}</td>
-            <td><span class="badge ${typeClass}">${event.severity || 'info'}</span></td>
-            <td><code>${event.dataset || '—'}</code></td>
-            <td><code>${event.code || '—'}</code></td>
-            <td>${event.message || '—'}</td>
-            <td><code style="font-size: 11px;">${safeText(event.provider || '—')}</code></td>
-          </tr>
-        `;
-      }).join('');
-    }
-
-    updateUsageUI();
+    // Auto-refresh every 30 seconds
+    refreshAll();
+    setInterval(refreshAll, 30000);
   </script>
 </body>
 </html>
