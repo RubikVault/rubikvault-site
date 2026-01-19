@@ -38,6 +38,12 @@ jobs:
             exit 1
           fi
 
+      - name: Prepare clean state
+        run: |
+          git fetch origin main
+          git reset --hard origin/main
+          git clean -fd || true
+
       - name: Seed mirrors
         env:
           ALPHAVANTAGE_API_KEY: ${{ secrets.ALPHAVANTAGE_API_KEY }}
@@ -120,31 +126,38 @@ jobs:
             scripts/audit/REALITY.md
           retention-days: 365
 
-      - name: Commit mirrors to PR branch if changed
+      - name: Commit mirrors to main if changed
         env:
           RV_GH_PUSH_TOKEN: ${{ secrets.RV_GH_PUSH_TOKEN }}
-          GH_TOKEN: ${{ secrets.RV_GH_PUSH_TOKEN }}
         run: |
           if ! git status --porcelain | grep -qE "mirrors/|public/data/"; then
             echo "No data changes."
             exit 0
           fi
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git checkout -B mirrors-auto
+          git config user.name "RubikVault Bot"
+          git config user.email "bot@rubikvault.com"
           git add mirrors public/data
-          git commit -m "data: auto-update [skip ci]"
-          git remote set-url origin "https://x-access-token:${RV_GH_PUSH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
-          git push --force origin mirrors-auto
-          printf "Seed Mirrors summary (%s)\n\n" "$(date -u +"%Y-%m-%dT%H:%M:%SZ")" > /tmp/pr-body.txt
-          cat /tmp/seed-summary.json >> /tmp/pr-body.txt
-          PR_NUMBER=$(gh pr list --head mirrors-auto --base main --json number --jq '.[0].number')
-          if [ -n "$PR_NUMBER" ]; then
-            gh pr edit "$PR_NUMBER" --title "data: auto-update" --body-file /tmp/pr-body.txt
-            gh pr comment "$PR_NUMBER" --body-file /tmp/pr-body.txt
-          else
-            gh pr create --head mirrors-auto --base main --title "data: auto-update" --body-file /tmp/pr-body.txt
+          if git diff --cached --quiet; then
+            echo "No mirror changes to commit."
+            exit 0
           fi
+          git commit -m "data: auto-update"
+          # Push with retry
+          git remote set-url origin "https://x-access-token:${RV_GH_PUSH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          for i in 1 2 3; do
+            if git push origin HEAD:main; then
+              echo "Push succeeded"
+              exit 0
+            fi
+            echo "Push failed (attempt $i), retrying..."
+            git fetch origin main
+            if git merge origin/main --no-edit || git merge --abort || true; then
+              git push origin HEAD:main || true
+            fi
+            sleep $((i * 3))
+          done
+          echo "Push failed after all retries"
+          exit 1
 
 
       - name: Install dependencies
