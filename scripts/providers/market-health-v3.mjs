@@ -16,6 +16,7 @@ import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { buildEnvelope, computeFreshness } from '../lib/envelope.js';
 import { writeFile, mkdir } from 'node:fs/promises';
+import { fetchStooqDaily } from '../providers/stooq.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -24,20 +25,9 @@ const BASE_DIR = process.cwd();
 const FNG_URL = "https://api.alternative.me/fng/?limit=1&format=json";
 const FNG_STOCKS_URL = "https://production.dataviz.cnn.io/index/fearandgreed/graphdata";
 const COINGECKO_URL = "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,solana,ripple&vs_currencies=usd&include_24hr_change=true";
-const YAHOO_MARKET_URL = process.env.YAHOO_MARKET_URL || "";
 
-const ALLOW_YAHOO = process.env.ALLOW_YAHOO === "1";
-
-// Yahoo symbols
-const YAHOO_SYMBOLS = [
-  { symbol: "^DJI", label: "Dow Jones", type: "index" },
-  { symbol: "^GSPC", label: "S&P 500", type: "index" },
-  { symbol: "^IXIC", label: "Nasdaq", type: "index" },
-  { symbol: "^RUT", label: "Russell 2000", type: "index" },
-  { symbol: "GC=F", label: "Gold", type: "commodity" },
-  { symbol: "SI=F", label: "Silver", type: "commodity" },
-  { symbol: "CL=F", label: "Oil (WTI)", type: "commodity" }
-];
+// Benchmark symbols for market health (using Stooq)
+const BENCHMARK_SYMBOLS = ["SPY", "QQQ", "IWM"];
 
 function buildHeaders() {
   return {
@@ -117,35 +107,44 @@ function normalizeCrypto(payload) {
   return result;
 }
 
-function normalizeYahoo(payload) {
-  if (!payload?.quoteResponse?.result) {
-    return { indices: [], commodities: [] };
-  }
+/**
+ * Fetch benchmark data from Stooq (SPY, QQQ, IWM)
+ */
+async function fetchStooqBenchmarks(symbols) {
+  const ctx = { providerId: "stooq", endpoint: "daily" };
+  const results = [];
   
-  const indices = [];
-  const commodities = [];
-  
-  for (const entry of payload.quoteResponse.result) {
-    const symbol = entry.symbol;
-    const yahooSymbol = YAHOO_SYMBOLS.find(s => s.symbol === symbol);
-    
-    if (!yahooSymbol) continue;
-    
-    const item = {
-      symbol,
-      label: yahooSymbol.label,
-      price: entry.regularMarketPrice || null,
-      changePercent: entry.regularMarketChangePercent || null
-    };
-    
-    if (yahooSymbol.type === "index") {
-      indices.push(item);
-    } else {
-      commodities.push(item);
+  for (const symbol of symbols) {
+    try {
+      const { data } = await fetchStooqDaily(ctx, symbol);
+      if (!data || data.length === 0) {
+        results.push({ symbol, close: null, prevClose: null, changePct: null, error: "no_data" });
+        continue;
+      }
+      
+      // Get last and previous close
+      const lastBar = data[data.length - 1];
+      const prevBar = data.length > 1 ? data[data.length - 2] : null;
+      
+      const close = lastBar.close;
+      const prevClose = prevBar ? prevBar.close : lastBar.open;
+      const changePct = prevClose && prevClose !== 0 ? ((close - prevClose) / prevClose) * 100 : null;
+      
+      results.push({
+        symbol,
+        close,
+        prevClose,
+        changePct,
+        lastBarDate: lastBar.date,
+        error: null
+      });
+    } catch (err) {
+      console.warn(`⚠️  Failed to fetch ${symbol} from Stooq: ${err.message}`);
+      results.push({ symbol, close: null, prevClose: null, changePct: null, error: err.message });
     }
   }
   
-  return { indices, commodities };
+  return results;
 }
 
 /**
@@ -183,29 +182,67 @@ function validateData(data, registryConfig) {
     // Simplified validation - in production, use JSONPath
     // Remove both $. and $.data. prefixes, as we're validating the unwrapped data object
     let rulePath = rule.path.replace(/^\$\.data\./, '').replace(/^\$\./, '');
-    const parts = rulePath.split(/[\.\[\]]/).filter(Boolean);
-    let current = data;
-    for (const part of parts) {
-      if (current === null || current === undefined) break;
-      if (part.match(/^\d+$/)) {
-        current = current[parseInt(part)];
-      } else {
-        current = current[part];
-      }
-    }
     
-    // Check if value is null/undefined for required numeric fields
-    if (current === null || current === undefined) {
-      // If this is a critical field, treat as error
-      if (rule.path.includes('close') || rule.path.includes('fng.value')) {
-        errors.push(`Required field ${rule.path} is null or missing`);
+    // Handle wildcard paths like "items[*].close"
+    if (rulePath.includes('[*]')) {
+      const [arrayPath, ...restParts] = rulePath.split('[*].');
+      const arrayParts = arrayPath.split('.');
+      let current = data;
+      for (const part of arrayParts) {
+        if (!part) continue;
+        current = current?.[part];
       }
-    } else if (typeof current === 'number') {
-      if (rule.min !== undefined && current < rule.min) {
-        warnings.push(`${rule.path} value ${current} below minimum ${rule.min}`);
+      
+      // Current should now be an array
+      if (Array.isArray(current)) {
+        for (const item of current) {
+          let value = item;
+          for (const part of restParts.join('.').split('.')) {
+            if (!part) continue;
+            value = value?.[part];
+          }
+          
+          // Check if value is null/undefined for required numeric fields
+          if (value === null || value === undefined) {
+            if (rule.path.includes('close') || rule.path.includes('fng.value')) {
+              errors.push(`Required field ${rule.path} is null or missing`);
+            }
+          } else if (typeof value === 'number') {
+            if (rule.min !== undefined && value < rule.min) {
+              warnings.push(`${rule.path} value ${value} below minimum ${rule.min}`);
+            }
+            if (rule.max !== undefined && value > rule.max) {
+              warnings.push(`${rule.path} value ${value} above maximum ${rule.max}`);
+            }
+          }
+        }
       }
-      if (rule.max !== undefined && current > rule.max) {
-        warnings.push(`${rule.path} value ${current} above maximum ${rule.max}`);
+    } else {
+      // Non-wildcard path
+      const parts = rulePath.split(/[\.\[\]]/).filter(Boolean);
+      let current = data;
+      for (const part of parts) {
+        if (current === null || current === undefined) break;
+        if (part.match(/^\d+$/)) {
+          current = current[parseInt(part)];
+        } else {
+          current = current[part];
+        }
+      }
+      
+      // Check if value is null/undefined for required numeric fields
+      if (current === null || current === undefined) {
+        // If this is a critical field, treat as error
+        if (rule.path.includes('close') || rule.path.includes('fng.value')) {
+          errors.push(`Required field ${rule.path} is null or missing`);
+        }
+      } else if (typeof current === 'number') {
+        if (rule.min !== undefined && current < rule.min) {
+          warnings.push(`${rule.path} value ${current} below minimum ${rule.min}`);
+        }
+        if (rule.max !== undefined && current > rule.max) {
+          warnings.push(`${rule.path} value ${current} above maximum ${rule.max}`);
+        }
       }
     }
   }
@@ -266,16 +303,12 @@ async function main() {
   
   const startTime = Date.now();
   
-  // Fetch data
-  const yahooPromise = ALLOW_YAHOO && YAHOO_MARKET_URL
-    ? fetchSafe(YAHOO_MARKET_URL)
-    : Promise.resolve({ ok: false, error: new Error("CONFIG_MISSING") });
-  
-  const [fng, stocks, crypto, yahoo] = await Promise.all([
+  // Fetch data (parallel)
+  const [fng, stocks, crypto, benchmarks] = await Promise.all([
     fetchSafe(FNG_URL),
     fetchSafe(FNG_STOCKS_URL),
     fetchSafe(COINGECKO_URL),
-    yahooPromise
+    fetchStooqBenchmarks(BENCHMARK_SYMBOLS)
   ]);
   
   const latencyMs = Date.now() - startTime;
@@ -293,51 +326,27 @@ async function main() {
   if (!fng.ok) errors.push("fng_failed");
   if (!stocks.ok) errors.push("stocks_failed");
   if (!crypto.ok) errors.push("crypto_failed");
-  if (!yahoo.ok && ALLOW_YAHOO) errors.push("yahoo_failed");
+  if (benchmarks.some(b => b.error)) {
+    errors.push(...benchmarks.filter(b => b.error).map(b => `${b.symbol}_stooq_failed`));
+  }
   
   const fngData = normalizeFng(fng.json || {});
   const fngStocks = normalizeFngStocks(stocks.json || {});
   const cryptoData = normalizeCrypto(crypto.json || {});
-  const yahooData = ALLOW_YAHOO ? normalizeYahoo(yahoo.json || {}) : { indices: [], commodities: [] };
   const btcEntry = cryptoData.find(entry => entry.symbol === "BTC");
   
-  // Build data structure matching existing format
-  // Map yahoo indices to items (SPY, QQQ, IWM) if available
-  const spyIndex = yahooData.indices.find(i => i.symbol === '^GSPC') || yahooData.indices.find(i => i.label?.includes('S&P'));
-  const qqqIndex = yahooData.indices.find(i => i.symbol === '^IXIC') || yahooData.indices.find(i => i.label?.includes('Nasdaq'));
-  const iwmIndex = yahooData.indices.find(i => i.symbol === '^RUT') || yahooData.indices.find(i => i.label?.includes('Russell'));
-  
+  // Build data structure with Stooq benchmarks
   const data = {
-    items: [
-      { 
-        symbol: "SPY", 
-        close: spyIndex?.price ?? null, 
-        prevClose: null, 
-        changePct: spyIndex?.changePercent ?? null, 
-        lastBarDate: null, 
-        barsUsed: null, 
-        missingFields: spyIndex?.price ? [] : ['close', 'changePct'] 
-      },
-      { 
-        symbol: "QQQ", 
-        close: qqqIndex?.price ?? null, 
-        prevClose: null, 
-        changePct: qqqIndex?.changePercent ?? null, 
-        lastBarDate: null, 
-        barsUsed: null, 
-        missingFields: qqqIndex?.price ? [] : ['close', 'changePct'] 
-      },
-      { 
-        symbol: "IWM", 
-        close: iwmIndex?.price ?? null, 
-        prevClose: null, 
-        changePct: iwmIndex?.changePercent ?? null, 
-        lastBarDate: null, 
-        barsUsed: null, 
-        missingFields: iwmIndex?.price ? [] : ['close', 'changePct'] 
-      }
-    ],
-    benchmarks: ["SPY", "QQQ", "IWM"],
+    items: benchmarks.map(b => ({
+      symbol: b.symbol,
+      close: b.close,
+      prevClose: b.prevClose,
+      changePct: b.changePct,
+      lastBarDate: b.lastBarDate || null,
+      barsUsed: null,
+      missingFields: b.close ? [] : ['close', 'prevClose', 'changePct']
+    })),
+    benchmarks: BENCHMARK_SYMBOLS,
     fng: fngData,
     fngStocks,
     btc: btcEntry ? {
@@ -345,9 +354,9 @@ async function main() {
       usd_24h_change: btcEntry.changePercent ?? null
     } : { usd: null, usd_24h_change: null },
     crypto: cryptoData,
-    indices: yahooData.indices,
-    commodities: yahooData.commodities,
-    source: ALLOW_YAHOO ? "alternative.me, cnn, coingecko, yahoo" : "alternative.me, cnn, coingecko"
+    indices: [], // Indices now in items array
+    commodities: [], // Not fetched yet
+    source: "alternative.me, cnn, coingecko, stooq"
   };
   
   // Validate
