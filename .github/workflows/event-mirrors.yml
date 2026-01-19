@@ -26,6 +26,8 @@ jobs:
         run: node scripts/generate-event-mirrors.mjs
 
       - name: Validate mirrors
+        env:
+          VALIDATE_EVENT_MIRRORS_ONLY: "1"
         run: node scripts/validate-mirrors.mjs
 
       - name: Build snapshots
