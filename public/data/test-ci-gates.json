@@ -1,0 +1,11 @@
+{
+  "test": "CI Gates trigger test",
+  "purpose": "Verify CI Gates workflow runs on PR",
+  "timestamp": "2026-01-19T20:30:00Z",
+  "expected_checks": [
+    "asset-budget",
+    "schema-validation",
+    "manifest-integrity",
+    "repo-policies"
+  ]
+}
