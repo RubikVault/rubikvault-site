@@ -365,9 +365,10 @@ export async function onRequestGet(context) {
   const { request } = context;
   const url = new URL(request.url);
   
-  // Serve embedded HTML for /internal-health/* (matches /internal/health after routing)
-  // Note: Cloudflare Pages routes /internal/health to functions/internal-health.js
-  if (url.pathname.startsWith('/internal-health') || url.pathname.startsWith('/internal/health')) {
+  // Serve embedded HTML for /internal-health/* 
+  // _redirects routes /internal/health → /internal-health
+  // This function matches /internal-health/* and serves the embedded HTML
+  if (url.pathname.startsWith('/internal-health') || url.pathname === '/internal-health') {
     return new Response(MISSION_CONTROL_HTML, {
       headers: {
         'Content-Type': 'text/html; charset=utf-8',
