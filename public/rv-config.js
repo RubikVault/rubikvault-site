@@ -266,6 +266,21 @@ export const FEATURES = [
     refreshIntervalMs: 6 * 60 * 60 * 1000
   },
   {
+    id: "rv-rvci-2",
+    title: "RVCI 2",
+    module: "./features/rv-rvci-2.js",
+    api: "rvci-2",
+    computation: {
+      where: "Pages Function",
+      update: "EOD",
+      cost: "free and automated",
+      trust: "derived"
+    },
+    enabled: true,
+    lazyLoad: true,
+    refreshIntervalMs: 5 * 60 * 1000
+  },
+  {
     id: "rv-alpha-radar",
     title: "Alpha Radar",
     module: "./features/rv-alpha-radar.js",
