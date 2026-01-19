@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <title>RubikVault – Decode the Markets</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta
+    name="description"
+    content="RubikVault – calm, data-driven multi-asset market insights across stocks, crypto, macro and commodities. Educational only."
+  />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <!-- HEADER MIT INLINE-LOGO -->
+  <header class="rv-header">
+    <div class="rv-header-inner">
+      <a class="rv-brand" href="/" aria-label="RubikVault">
+        <img class="rv-brand-icon" src="/assets/rv-icon.png" alt="" />
+        <span class="rv-brand-text">RubikVault</span>
+      </a>
+
+      <nav class="rv-nav">
+        <a class="rv-social-link" href="https://www.youtube.com/@RubikVault" target="_blank" rel="noopener noreferrer" aria-label="YouTube">
+          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+            <path d="M21.58 7.19a2.5 2.5 0 0 0-1.76-1.77C18.25 5 12 5 12 5s-6.25 0-7.82.42A2.5 2.5 0 0 0 2.42 7.2 26.6 26.6 0 0 0 2 12s0 2.55.42 4.81a2.5 2.5 0 0 0 1.76 1.77C5.75 19 12 19 12 19s6.25 0 7.82-.42a2.5 2.5 0 0 0 1.76-1.77C22 14.55 22 12 22 12s0-2.55-.42-4.81ZM10 15.5v-7l6 3.5-6 3.5Z" />
+          </svg>
+        </a>
+        <a class="rv-social-link" href="https://x.com/RubikVault" target="_blank" rel="noopener noreferrer" aria-label="X">
+          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+            <path d="M18.9 2H22l-6.79 7.76L23 22h-6.2l-4.86-6.02L6.66 22H3.5l7.26-8.3L3 2h6.35l4.4 5.52L18.9 2Zm-1.09 18h1.72L8.4 3.93H6.56L17.81 20Z" />
+          </svg>
+        </a>
+        <a class="rv-social-link" href="https://www.tiktok.com/@rubikvault" target="_blank" rel="noopener noreferrer" aria-label="TikTok">
+          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+            <path d="M16.7 5.2c.8 1.2 2.1 2 3.6 2.1v3.1c-1.7-.1-3.3-.7-4.6-1.7v7.4c0 3.4-2.8 6.2-6.2 6.2S3.3 19.5 3.3 16.1s2.8-6.2 6.2-6.2c.4 0 .8 0 1.2.1v3.3c-.4-.1-.8-.2-1.2-.2-1.7 0-3.1 1.4-3.1 3.1s1.4 3.1 3.1 3.1 3.1-1.4 3.1-3.1V2h3.1c0 1.2.3 2.3 1 3.2Z" />
+          </svg>
+        </a>
+        <a class="rv-social-link" href="https://www.instagram.com/rubikvault" target="_blank" rel="noopener noreferrer" aria-label="Instagram">
+          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+            <path d="M7 2h10a5 5 0 0 1 5 5v10a5 5 0 0 1-5 5H7a5 5 0 0 1-5-5V7a5 5 0 0 1 5-5Zm10 2H7a3 3 0 0 0-3 3v10a3 3 0 0 0 3 3h10a3 3 0 0 0 3-3V7a3 3 0 0 0-3-3Zm-5 3.5a4.5 4.5 0 1 1 0 9 4.5 4.5 0 0 1 0-9Zm0 2a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5ZM17.8 6.2a1 1 0 1 1 0 2 1 1 0 0 1 0-2Z" />
+          </svg>
+        </a>
+      </nav>
+
+      <div class="rv-header-tools" aria-live="polite">
+        <div class="rv-data-updated" id="rv-data-updated" style="font-size: 12px; color: var(--rv-text-muted);">
+          Data updated: <span id="rv-data-updated-date">Loading...</span> (daily snapshots)
+        </div>
+        <div class="rv-market-clock">
+          <span class="rv-clock-time" id="rv-ny-time">NY: --:--:--</span>
+          <span class="rv-clock-status">
+            <span class="rv-led" data-rv-led="closed"></span>
+            <span class="rv-market-label" data-rv-market-label>Closed</span>
+            <span class="rv-market-countdown" id="rv-market-countdown">opens in --:--:--</span>
+          </span>
+        </div>
+      </div>
+    </div>
+    <script>
+      // Update date immediately when DOM is ready
+      (function() {
+        const updateDate = () => {
+          const el = document.getElementById("rv-data-updated-date");
+          if (el) {
+            const today = new Date();
+            const dateStr = today.toISOString().split("T")[0];
+            el.textContent = dateStr;
+          }
+        };
+        if (document.readyState === "loading") {
+          document.addEventListener("DOMContentLoaded", updateDate);
+        } else {
+          updateDate();
+        }
+      })();
+    </script>
+  </header>
+
+  <nav class="rv-subnav" aria-label="Dashboard sections">
+    <a href="#cockpit">Overview</a>
+    <a href="#news">News</a>
+    <a href="#stocks">Stocks</a>
+    <a href="#tech-signals">Tech Signals</a>
+    <a href="#rvci-engine">RVCI Engine</a>
+    <a href="#rvci-2">RVCI 2</a>
+    <a href="#alpha-radar">Alpha Radar</a>
+    <a href="#moats">Moats</a>
+    <a href="#marketphase">MarketPhase</a>
+  </nav>
+
+  <!-- MAIN -->
+  <main class="rv-main" id="rv-dashboard">
+    
+    <section
+      class="rv-section rv-native-block rv-cockpit-hero"
+      data-rv-feature="rv-market-cockpit"
+      data-rv-block-name="Market Snapshot"
+      data-rv-priority="high"
+      data-rv-loading="true"
+      data-rv-collapsible="false"
+    >
+      <a id="cockpit" style="position: absolute; top: -110px;"></a>
+      <div class="rv-native-header">
+        <h2>Market Snapshot <span class="rv-tooltip-wrapper"><span class="rv-tooltip-icon" aria-label="Information">ⓘ</span><span class="rv-tooltip-content"><strong>Market Snapshot</strong><br>Purpose: Quick market overview across equities, crypto, macro<br>Update: 15m<br>Limitations: EOD snapshots, no intraday</span></span></h2>
+        <button class="rv-native-refresh" type="button" data-rv-action="refresh">Refresh</button>
+      </div>
+      <div class="rv-native-body rv-card">
+        <div class="rv-native-skeleton">
+          <div class="rv-native-line"></div>
+          <div class="rv-native-line short"></div>
+          <div class="rv-native-line"></div>
+        </div>
+        <div class="rv-native-root" data-rv-root></div>
+      </div>
+    </section>
+
+    <!-- News Headlines (Public v1) -->
+    <section
+      class="rv-section rv-native-block"
+      data-rv-feature="rv-news-headlines"
+      data-rv-block-name="News Headlines"
+      data-rv-priority="low"
+      data-rv-loading="true"
+      data-rv-collapsible="true"
+      data-rv-span="wide"
+    >
+      <a id="news" style="position: absolute; top: -110px;"></a>
+      <div class="rv-native-header">
+        <h2>News Headlines <span class="rv-tooltip-wrapper"><span class="rv-tooltip-icon" aria-label="Information">ⓘ</span><span class="rv-tooltip-content"><strong>News Headlines</strong><br>Purpose: Curated RSS headlines across major market sources.<br>Data source: Snapshot (RSS mirrors)<br>Update: Every 5 minutes<br>Limitations: No intraday API calls, no financial advice.</span></span></h2>
+        <button class="rv-native-refresh" type="button" data-rv-action="refresh">Refresh</button>
+      </div>
+      <div class="rv-native-body rv-card">
+        <div class="rv-native-skeleton">
+          <div class="rv-native-line"></div>
+          <div class="rv-native-line short"></div>
+          <div class="rv-native-line"></div>
+        </div>
+        <div class="rv-native-root" data-rv-root></div>
+      </div>
+    </section>
+
+    <!-- S&P 500 Sectors (Public v1) -->
+    <section
+      class="rv-section rv-native-block"
+      data-rv-feature="rv-sp500-sectors"
+      data-rv-block-name="S&amp;P 500 Sectors"
+      data-rv-priority="low"
+      data-rv-loading="true"
+      data-rv-collapsible="true"
+      data-rv-span="wide"
+    >
+      <a id="stocks" style="position: absolute; top: -110px;"></a>
+      <a id="sectors" style="position: absolute; top: -110px;"></a>
+      <div class="rv-native-header">
+        <h2>S&amp;P 500 Sectors <span class="rv-tooltip-wrapper"><span class="rv-tooltip-icon" aria-label="Information">ⓘ</span><span class="rv-tooltip-content"><strong>S&amp;P 500 Sectors</strong><br>Purpose: Daily performance of S&amp;P 500 sectors to identify relative strength/weakness.<br>Data source: Snapshot (Yahoo Finance sector data)<br>Update: Daily (EOD)<br>Limitations: No intraday data, no financial advice.</span></span></h2>
+        <button class="rv-native-refresh" type="button" data-rv-action="refresh">Refresh</button>
+      </div>
+      <div class="rv-native-body rv-card">
+        <div class="rv-native-skeleton">
+          <div class="rv-native-line"></div>
+          <div class="rv-native-line short"></div>
+          <div class="rv-native-line"></div>
+        </div>
+        <div class="rv-native-root" data-rv-root></div>
+      </div>
+    </section>
+
+    <!-- Tech Signals (Public v1) -->
+    <section
+      class="rv-section rv-native-block"
+      data-rv-feature="rv-tech-signals" data-block-id="tech-signals"
+      data-rv-block-name="Tech Signals"
+      data-rv-priority="low"
+      data-rv-loading="true"
+      data-rv-collapsible="true"
+      data-rv-span="wide"
+    >
+      <a id="tech-signals" style="position: absolute; top: -110px;"></a>
+      <div class="rv-native-header">
+        <h2>Top 20 Marketcap US <span class="rv-tooltip-wrapper"><span class="rv-tooltip-icon" aria-label="Information">ⓘ</span><span class="rv-tooltip-content"><strong>Top 20 Marketcap US</strong><br>Purpose: Technical indicators (RSI, MACD, Stoch RSI) for the largest US stocks by market cap.<br>Data source: Snapshot (stooq OHLC data)<br>Update: Daily (EOD)<br>Limitations: No intraday data, no financial advice.</span></span></h2>
+        <button class="rv-native-refresh" type="button" data-rv-action="refresh">Refresh</button>
+      </div>
+      <div class="rv-native-body rv-card">
+        <div class="rv-native-skeleton">
+          <div class="rv-native-line"></div>
+          <div class="rv-native-line short"></div>
+          <div class="rv-native-line"></div>
+        </div>
+        <div class="rv-native-root" data-rv-root></div>
+      </div>
+    </section>
+
+    <!-- RVCI Engine (Public v1) -->
+    <section
+      class="rv-section rv-native-block"
+      data-rv-feature="rv-rvci-engine" data-block-id="rvci-engine"
+      data-rv-block-name="RVCI Engine"
+      data-rv-priority="low"
+      data-rv-loading="true"
+      data-rv-collapsible="true"
+      data-rv-span="wide"
+    >
+      <a id="rvci-engine" style="position: absolute; top: -110px;"></a>
+      <div class="rv-native-header">
+        <h2>RVCI Engine <span class="rv-tooltip-wrapper"><span class="rv-tooltip-icon" aria-label="Information">ⓘ</span><span class="rv-tooltip-content"><strong>RVCI Engine</strong><br>Purpose: Regime + breadth snapshot from the RVCI pipeline.<br>Data source: Static snapshot (EOD)<br>Update: Daily (EOD)<br>Limitations: Coverage may be degraded on free tier.</span></span></h2>
+        <button class="rv-native-refresh" type="button" data-rv-action="refresh">Refresh</button>
+      </div>
+      <div class="rv-native-body rv-card">
+        <div class="rv-native-skeleton">
+          <div class="rv-native-line"></div>
+          <div class="rv-native-line short"></div>
+          <div class="rv-native-line"></div>
+        </div>
+        <div class="rv-native-root" data-rv-root></div>
+      </div>
+    </section>
+
+    <!-- RVCI 2 - Enhanced Confidence Index -->
+    <section
+      class="rv-section rv-native-block"
+      data-rv-feature="rv-rvci-2" data-block-id="rvci-2"
+      data-rv-block-name="RVCI 2"
+      data-rv-priority="low"
+      data-rv-loading="true"
+      data-rv-collapsible="true"
+      data-rv-span="wide"
+    >
+      <a id="rvci-2" style="position: absolute; top: -110px;"></a>
+      <div class="rv-native-header">
+        <h2>RVCI 2 <span class="rv-tooltip-wrapper"><span class="rv-tooltip-icon" aria-label="Information">ⓘ</span><span class="rv-tooltip-content"><strong>RVCI 2 - Enhanced Confidence Index</strong><br>Purpose: Shows top-scored stocks with signals and risk assessment.<br>Data source: Static snapshot (EOD)<br>Update: Every 5 minutes<br>Features: Signal badges, Risk/Quality scoring, Sortable table.</span></span></h2>
+        <button class="rv-native-refresh" type="button" data-rv-action="refresh">Refresh</button>
+      </div>
+      <div class="rv-native-body rv-card">
+        <div class="rv-native-skeleton">
+          <div class="rv-native-line"></div>
+          <div class="rv-native-line short"></div>
+          <div class="rv-native-line"></div>
+        </div>
+        <div class="rv-native-root" data-rv-root></div>
+      </div>
+    </section>
+
+    <section
+      class="rv-section rv-native-block"
+      data-rv-feature="rv-alpha-radar" data-block-id="alpha-radar"
+      data-rv-block-name="Alpha Radar"
+      data-rv-priority="low"
+      data-rv-loading="true"
+      data-rv-collapsible="true"
+      data-rv-span="wide"
+      id="rv-alpha"
+      data-rv-anchor="alpha-radar"
+    >
+      <a id="alpha-radar" style="position: absolute; top: -110px;"></a>
+      <div class="rv-native-header">
+        <h2>Alpha Radar <span class="rv-tooltip-wrapper"><span class="rv-tooltip-icon" aria-label="Information">ⓘ</span><span class="rv-tooltip-content"><strong>Alpha Radar</strong><br>Purpose: Identifies potential trading setups based on technical conditions (RSI extremes, EMA21 reclaim, volume confirmation).<br>Data source: Snapshot (stooq OHLC data)<br>Update: Daily (EOD)<br>Limitations: No intraday data, no financial advice. Scoring combines setup and trigger conditions.</span></span></h2>
+        <button class="rv-native-refresh" type="button" data-rv-action="refresh">Refresh</button>
+      </div>
+      <div class="rv-native-body rv-card">
+        <div class="rv-native-skeleton">
+          <div class="rv-native-line"></div>
+          <div class="rv-native-line short"></div>
+          <div class="rv-native-line"></div>
+        </div>
+        <div class="rv-native-root" data-rv-root></div>
+      </div>
+    </section>
+    
+    <!-- Monopoles / Economic Moats -->
+    <section
+      class="rv-section rv-native-block"
+      data-rv-block-name="Monopoles / Economic Moats"
+    >
+      <a id="moats" style="position: absolute; top: -110px;"></a>
+      <div class="rv-native-header">
+        <h2>Monopoles / Economic Moats</h2>
+        <span class="rv-tooltip-wrapper">
+          <span class="rv-tooltip-icon" aria-label="Information">ⓘ</span>
+          <span class="rv-tooltip-content">
+            <strong>Economic Moats</strong><br>
+            This section highlights companies with durable competitive advantages (moats) that create barriers to entry. These are educational examples of structural market positions. No financial advice. Data source: Public company information. Update: Static educational content.
+          </span>
+        </span>
+      </div>
+      <div class="rv-native-body rv-card">
+        <div class="rv-moats-content">
+          <p class="rv-moats-intro">
+            Economic moats are structural advantages that protect a company's market position and profitability over time. 
+            This section highlights examples of durable competitive advantages in US-tradable markets. 
+            Understanding moats helps identify companies with sustainable business models, though disruption risks always exist.
+          </p>
+          
+          <div class="rv-moats-category">
+            <h3>Payment Rails</h3>
+            <div class="rv-moats-examples">
+              <div class="rv-moats-item">
+                <strong>Visa (V) / Mastercard (MA)</strong>
+                <p><strong>Warum Moat:</strong> Network effects create a two-sided marketplace where merchants and cardholders both benefit from more participants. High switching costs and regulatory barriers protect the duopoly.</p>
+                <p><strong>Disruption-Risiko:</strong> Digital wallets (Apple Pay, Google Pay) and blockchain-based payments could bypass traditional rails, though adoption remains limited.</p>
+              </div>
+            </div>
+          </div>
+          
+          <div class="rv-moats-category">
+            <h3>Semiconductor Chokepoints</h3>
+            <div class="rv-moats-examples">
+              <div class="rv-moats-item">
+                <strong>ASML (ASML)</strong>
+                <p><strong>Warum Moat:</strong> Monopoly on extreme ultraviolet (EUV) lithography equipment required for cutting-edge chip manufacturing. Decades of R&D and capital intensity create insurmountable barriers.</p>
+                <p><strong>Disruption-Risiko:</strong> Alternative lithography technologies or geopolitical restrictions could impact demand, though no viable competitor exists today.</p>
+              </div>
+            </div>
+          </div>
+          
+          <div class="rv-moats-category">
+            <h3>Foundry Dominance</h3>
+            <div class="rv-moats-examples">
+              <div class="rv-moats-item">
+                <strong>TSMC (TSM)</strong>
+                <p><strong>Warum Moat:</strong> Leading-edge semiconductor manufacturing requires massive capital investment ($20B+ per fab) and decades of process expertise. TSMC's scale and technology leadership create a near-monopoly on advanced nodes.</p>
+                <p><strong>Disruption-Risiko:</strong> Geopolitical tensions (Taiwan risk) and potential government subsidies for competitors (Intel, Samsung) could shift market share over time.</p>
+              </div>
+            </div>
+          </div>
+          
+          <div class="rv-moats-category">
+            <h3>GPU Compute</h3>
+            <div class="rv-moats-examples">
+              <div class="rv-moats-item">
+                <strong>NVIDIA (NVDA)</strong>
+                <p><strong>Warum Moat:</strong> Dominance in AI/ML training infrastructure (CUDA ecosystem) creates software lock-in. Hardware performance leadership in data center GPUs drives pricing power.</p>
+                <p><strong>Disruption-Risiko:</strong> AMD (AMD) and custom silicon (Google TPU, Amazon Trainium) are gaining traction, though CUDA's ecosystem remains the standard.</p>
+              </div>
+            </div>
+          </div>
+          
+          <div class="rv-moats-category">
+            <h3>Search & Advertising</h3>
+            <div class="rv-moats-examples">
+              <div class="rv-moats-item">
+                <strong>Google (GOOGL)</strong>
+                <p><strong>Warum Moat:</strong> Search engine market share (>90%) creates data network effects. Advertisers must be where users are, creating a self-reinforcing cycle.</p>
+                <p><strong>Disruption-Risiko:</strong> Regulatory pressure (antitrust), AI-powered search (ChatGPT, Perplexity), and privacy changes (cookie deprecation) could erode the moat.</p>
+              </div>
+            </div>
+          </div>
+          
+          <div class="rv-moats-category">
+            <h3>OS & Enterprise Software</h3>
+            <div class="rv-moats-examples">
+              <div class="rv-moats-item">
+                <strong>Microsoft (MSFT)</strong>
+                <p><strong>Warum Moat:</strong> Windows OS dominance in enterprise creates switching costs. Office 365 and Azure cloud services create recurring revenue and ecosystem lock-in.</p>
+                <p><strong>Disruption-Risiko:</strong> Open-source alternatives (Linux, LibreOffice) and cloud-native competitors (Google Workspace) exist, though enterprise inertia protects market share.</p>
+              </div>
+            </div>
+          </div>
+          
+          <div class="rv-moats-category">
+            <h3>Duopole / Tripole Examples</h3>
+            <div class="rv-moats-examples">
+              <div class="rv-moats-item">
+                <strong>Boeing (BA) / Airbus (EADSY)</strong>
+                <p><strong>Warum Moat:</strong> Commercial aircraft manufacturing requires massive capital, regulatory certification, and decades of expertise. The duopoly benefits from high barriers to entry.</p>
+                <p><strong>Disruption-Risiko:</strong> Chinese competitor (COMAC) and potential new entrants (SpaceX, Boom Supersonic) could challenge the duopoly over decades.</p>
+              </div>
+              <div class="rv-moats-item">
+                <strong>Moody's (MCO) / S&P Global (SPGI) / Fitch</strong>
+                <p><strong>Warum Moat:</strong> Credit rating agencies benefit from regulatory recognition and network effects. Issuers need ratings to access capital markets.</p>
+                <p><strong>Disruption-Risiko:</strong> Regulatory changes (Dodd-Frank) and alternative credit assessment methods (AI, blockchain) could reduce reliance on traditional ratings.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+    
+    <section
+      class="rv-section rv-native-block"
+      data-rv-feature="rv-marketphase"
+      data-rv-block-name="MarketPhase AI — Elliott Research"
+      data-rv-priority="low"
+      data-rv-loading="true"
+      data-rv-collapsible="true"
+      data-rv-span="wide"
+      id="rv-marketphase"
+      data-rv-anchor="marketphase"
+    >
+      <a id="marketphase" style="position: absolute; top: -110px;"></a>
+      <div class="rv-native-header">
+        <h2>MarketPhase AI — Elliott Research <span class="rv-tooltip-wrapper"><span class="rv-tooltip-icon" aria-label="Information">ⓘ</span><span class="rv-tooltip-content"><strong>MarketPhase AI</strong><br>Purpose: Deterministic Elliott Wave structure research (completed impulses only).<br>Data source: Static research snapshot (marketphase JSON).<br>Update: Daily (EOD)<br>Limitations: Historical analysis only, no forecasts.</span></span></h2>
+        <button class="rv-native-refresh" type="button" data-rv-action="refresh">Refresh</button>
+      </div>
+      <div class="rv-native-body rv-card">
+        <div class="rv-native-skeleton">
+          <div class="rv-native-line"></div>
+          <div class="rv-native-line short"></div>
+          <div class="rv-native-line"></div>
+        </div>
+        <div class="rv-native-root" data-rv-root></div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- FOOTER (ohne Bild, nur Text + Links) -->
+  <footer class="rv-footer">
+    <div class="rv-footer-top">
+      <div class="rv-footer-brand">
+        <span>RubikVault</span>
+      </div>
+      <div class="rv-footer-links">
+        <a href="imprint.html">Imprint</a>
+        <a href="privacy.html">Privacy</a>
+        <a href="disclaimer.html">Disclaimer</a>
+      </div>
+    </div>
+    <p class="rv-footer-disclaimer">
+      RubikVault provides educational content only and does not offer financial advice or brokerage services.
+    </p>
+    <p class="rv-footer-copy">
+      &copy; <span id="rv-year">2025</span> RubikVault. All rights reserved.
+    </p>
+  <script>
+    // kleines JS, falls du kein extra script.js nutzen willst
+    document.getElementById('rv-year').textContent = new Date().getFullYear();
+  </script>
+  </footer>
+  <script type="module" src="./market-clock.js"></script>
+  <script type="module" src="./rv-loader.js"></script>
+  </body>
+</html>
