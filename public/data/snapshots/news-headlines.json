@@ -1,29 +1,33 @@
 {
   "schemaVersion": "v3",
   "blockId": "news-headlines",
-  "generatedAt": "2026-01-19T09:05:19.551Z",
-  "dataAt": "2026-01-19T08:00:30.095Z",
+  "generatedAt": "2026-01-19T09:49:20.367Z",
+  "dataAt": "2026-01-19T08:43:00.470Z",
   "meta": {
-    "status": "OK",
-    "reason": "OK",
-    "generatedAt": "2026-01-19T09:05:19.551Z",
-    "asOf": "2026-01-19T08:00:30.095Z",
-    "source": "rss",
+    "status": "STUB",
+    "reason": "MIRROR_MISSING",
+    "generatedAt": "2026-01-19T09:49:20.367Z",
+    "asOf": "2026-01-19T08:43:00.470Z",
+    "source": "news-headlines",
     "ttlSeconds": 3600,
     "stale": true,
     "itemsCount": 50,
-    "stalenessSec": 3840,
+    "stalenessSec": 3960,
     "freshness": {
       "status": "stale",
-      "ageMinutes": 64
+      "ageMinutes": 66
     },
     "schedule": {
-      "rule": "best_effort",
-      "nextPlannedFetchAt": "2026-01-19T12:05:19.551Z",
-      "expectedNextRunWindowMinutes": 180,
+      "rule": "daily",
+      "nextPlannedFetchAt": "2026-01-20T09:49:20.367Z",
+      "expectedNextRunWindowMinutes": 1440,
       "ttlSeconds": 3600
     },
-    "runId": "2026-01-19T09:05:19.518Z",
+    "runId": "2026-01-19T09:49:20.327Z",
+    "notes": {
+      "lastGoodUsed": 50,
+      "lastGoodFilled": 50
+    },
     "validation": {
       "schema": {
         "ok": true,
@@ -45,302 +49,407 @@
         "title": "Stocks Sink in Broad AI Rout Sparked by China's DeepSeek",
         "url": "https://www.wsj.com/articles/nikkei-may-rise-as-weak-yen-raises-earnings-hopes-776a8056?mod=rss_markets_main",
         "source": "WSJ",
-        "publishedAt": "Mon, 27 Jan 2025 14:26:00 -0500"
+        "publishedAt": "Mon, 27 Jan 2025 14:26:00 -0500",
+        "derivedFromLastGood": true,
+        "derivationReason": "LASTGOOD_FALLBACK"
       },
       {
         "title": "Comex Gold, Silver Settle Lower",
         "url": "https://www.wsj.com/articles/gold-edges-lower-feds-rate-decision-in-focus-09dbfceb?mod=rss_markets_main",
         "source": "WSJ",
-        "publishedAt": "Mon, 27 Jan 2025 14:01:00 -0500"
+        "publishedAt": "Mon, 27 Jan 2025 14:01:00 -0500",
+        "derivedFromLastGood": true,
+        "derivationReason": "LASTGOOD_FALLBACK"
       },
       {
         "title": "DeepSeek Won't Sink U.S. AI Titans",
         "url": "https://www.wsj.com/articles/deepseek-us-ai-stocks-nvidia-broadcom-6cdfae81?mod=rss_markets_main",
         "source": "WSJ",
-        "publishedAt": "Mon, 27 Jan 2025 13:12:00 -0500"
+        "publishedAt": "Mon, 27 Jan 2025 13:12:00 -0500",
+        "derivedFromLastGood": true,
+        "derivationReason": "LASTGOOD_FALLBACK"
       },
       {
         "title": "Financial Services Roundup: Market Talk",
         "url": "https://www.wsj.com/articles/financial-services-roundup-market-talk-94f52cba?mod=rss_markets_main",
         "source": "WSJ",
-        "publishedAt": "Mon, 27 Jan 2025 12:27:00 -0500"
+        "publishedAt": "Mon, 27 Jan 2025 12:27:00 -0500",
+        "derivedFromLastGood": true,
+        "derivationReason": "LASTGOOD_FALLBACK"
       },
       {
         "title": "Arabica Coffee Prices Hit Record on U.S., Colombia Tariff Spat",
         "url": "https://www.wsj.com/articles/arabica-coffee-prices-hit-new-high-on-u-s-colombia-tariff-spat-582446fe?mod=rss_markets_main",
         "source": "WSJ",
-        "publishedAt": "Mon, 27 Jan 2025 12:20:00 -0500"
+        "publishedAt": "Mon, 27 Jan 2025 12:20:00 -0500",
+        "derivedFromLastGood": true,
+        "derivationReason": "LASTGOOD_FALLBACK"
       },
       {
         "title": "Swiss franc, Japanese yen Rise as DeepSeek News Boosts Safe Havens",
         "url": "https://www.wsj.com/articles/safe-haven-currencies-strengthen-amid-fears-over-global-tariffs-9964e17a?mod=rss_markets_main",
         "source": "WSJ",
-        "publishedAt": "Mon, 27 Jan 2025 09:55:00 -0500"
+        "publishedAt": "Mon, 27 Jan 2025 09:55:00 -0500",
+        "derivedFromLastGood": true,
+        "derivationReason": "LASTGOOD_FALLBACK"
       },
       {
         "title": "Natural Gas Falls on Shifting Weather Forecasts",
         "url": "https://www.wsj.com/articles/u-s-natural-gas-futures-fall-on-shifting-weather-forecasts-1ef3e457?mod=rss_markets_main",
         "source": "WSJ",
-        "publishedAt": "Mon, 27 Jan 2025 09:05:00 -0500"
+        "publishedAt": "Mon, 27 Jan 2025 09:05:00 -0500",
+        "derivedFromLastGood": true,
+        "derivationReason": "LASTGOOD_FALLBACK"
       },
       {
         "title": "Building-Products Distributor QXO Launches Hostile Bid for Beacon",
         "url": "https://www.wsj.com/articles/building-products-distributor-qxo-launching-hostile-bid-for-beacon-de024410?mod=rss_markets_main",
         "source": "WSJ",
-        "publishedAt": "Mon, 27 Jan 2025 08:28:00 -0500"
+        "publishedAt": "Mon, 27 Jan 2025 08:28:00 -0500",
+        "derivedFromLastGood": true,
+        "derivationReason": "LASTGOOD_FALLBACK"
       },
       {
         "title": "Natural-Gas Firm Diversified Energy Strikes Deal for Permian Basin Player",
         "url": "https://www.wsj.com/articles/natural-gas-firm-diversified-energy-nears-deal-for-permian-basin-player-4c1c5ff5?mod=rss_markets_main",
         "source": "WSJ",
-        "publishedAt": "Mon, 27 Jan 2025 06:57:00 -0500"
+        "publishedAt": "Mon, 27 Jan 2025 06:57:00 -0500",
+        "derivedFromLastGood": true,
+        "derivationReason": "LASTGOOD_FALLBACK"
       },
       {
         "title": "What's New This Tax Season That Can Save You Money",
         "url": "https://www.wsj.com/articles/tax-season-2024-irs-filing-dates-explained-628a8b37?mod=rss_markets_main",
         "source": "WSJ",
-        "publishedAt": "Mon, 27 Jan 2025 05:30:00 -0500"
+        "publishedAt": "Mon, 27 Jan 2025 05:30:00 -0500",
+        "derivedFromLastGood": true,
+        "derivationReason": "LASTGOOD_FALLBACK"
       },
       {
         "title": "Chinese Investors With Few Options Turn to Dividends",
         "url": "https://www.wsj.com/articles/chinese-investors-with-few-options-turn-to-dividends-ad31dcc4?mod=rss_markets_main",
         "source": "WSJ",
-        "publishedAt": "Mon, 27 Jan 2025 05:30:00 -0500"
+        "publishedAt": "Mon, 27 Jan 2025 05:30:00 -0500",
+        "derivedFromLastGood": true,
+        "derivationReason": "LASTGOOD_FALLBACK"
       },
       {
         "title": "U.S. Treasury Yields Fall But Direction for Long-End Yields Still Seen Upward",
         "url": "https://www.wsj.com/articles/jgbs-consolidate-supported-by-u-s-treasurys-gains-7edccc7d?mod=rss_markets_main",
         "source": "WSJ",
-        "publishedAt": "Mon, 27 Jan 2025 05:02:00 -0500"
+        "publishedAt": "Mon, 27 Jan 2025 05:02:00 -0500",
+        "derivedFromLastGood": true,
+        "derivationReason": "LASTGOOD_FALLBACK"
       },
       {
         "title": "Russia's Crude Exports Fairly Stable Despite U.S. Sanctions, Goldman Says",
         "url": "https://www.wsj.com/articles/oil-futures-fall-after-trump-calls-for-tariffs-on-colombia-5b2a178c?mod=rss_markets_main",
         "source": "WSJ",
-        "publishedAt": "Mon, 27 Jan 2025 04:46:00 -0500"
+        "publishedAt": "Mon, 27 Jan 2025 04:46:00 -0500",
+        "derivedFromLastGood": true,
+        "derivationReason": "LASTGOOD_FALLBACK"
       },
       {
         "title": "The Extra Reward for Owning Stocks Over Bonds Has Disappeared",
         "url": "https://www.wsj.com/articles/the-extra-reward-for-owning-stocks-over-bonds-has-disappeared-c3f9c223?mod=rss_markets_main",
         "source": "WSJ",
-        "publishedAt": "Mon, 27 Jan 2025 01:05:00 -0500"
+        "publishedAt": "Mon, 27 Jan 2025 01:05:00 -0500",
+        "derivedFromLastGood": true,
+        "derivationReason": "LASTGOOD_FALLBACK"
       },
       {
         "title": "Heard on the Street's Stock-Picking Series",
         "url": "https://www.wsj.com/articles/heard-on-the-streets-stock-picking-series-98f04640?mod=rss_markets_main",
         "source": "WSJ",
-        "publishedAt": "Sun, 26 Jan 2025 22:33:00 -0500"
+        "publishedAt": "Sun, 26 Jan 2025 22:33:00 -0500",
+        "derivedFromLastGood": true,
+        "derivationReason": "LASTGOOD_FALLBACK"
       },
       {
         "title": "What Will It Take for Home Buyers to Start Asking for a Disaster Discount?",
         "url": "https://www.wsj.com/articles/what-will-it-take-for-home-buyers-to-start-asking-for-a-disaster-discount-c662cb96?mod=rss_markets_main",
         "source": "WSJ",
-        "publishedAt": "Sun, 26 Jan 2025 06:00:00 -0500"
+        "publishedAt": "Sun, 26 Jan 2025 06:00:00 -0500",
+        "derivedFromLastGood": true,
+        "derivationReason": "LASTGOOD_FALLBACK"
       },
       {
         "title": "Now Wanted in Silicon Valley: Ho-Hum Businesses With Thin Profit Margins",
         "url": "https://www.wsj.com/articles/now-wanted-in-silicon-valley-ho-hum-businesses-with-thin-profit-margins-ab07de5f?mod=rss_markets_main",
         "source": "WSJ",
-        "publishedAt": "Sun, 26 Jan 2025 05:30:00 -0500"
+        "publishedAt": "Sun, 26 Jan 2025 05:30:00 -0500",
+        "derivedFromLastGood": true,
+        "derivationReason": "LASTGOOD_FALLBACK"
       },
       {
         "title": "In China, a Cat-and-Mouse Game to Rein In Crypto",
         "url": "https://www.wsj.com/articles/china-cryptocurrency-market-trading-restrictions-3e050cd9?mod=rss_markets_main",
         "source": "WSJ",
-        "publishedAt": "Sun, 26 Jan 2025 00:01:00 -0500"
+        "publishedAt": "Sun, 26 Jan 2025 00:01:00 -0500",
+        "derivedFromLastGood": true,
+        "derivationReason": "LASTGOOD_FALLBACK"
       },
       {
         "title": "One House, Three Owners: The Ballooning Cost of the American Dream",
         "url": "https://www.wsj.com/articles/rising-house-mortgage-costs-north-carolina-home-468a46e5?mod=rss_markets_main",
         "source": "WSJ",
-        "publishedAt": "Sat, 25 Jan 2025 21:00:00 -0500"
+        "publishedAt": "Sat, 25 Jan 2025 21:00:00 -0500",
+        "derivedFromLastGood": true,
+        "derivationReason": "LASTGOOD_FALLBACK"
       },
       {
         "title": "Trump Adds Fuel to Claims That Big Banks Discriminate Against Conservatives",
         "url": "https://www.wsj.com/articles/trump-big-bank-conservative-bias-accusations-168abb27?mod=rss_markets_main",
         "source": "WSJ",
-        "publishedAt": "Sat, 25 Jan 2025 05:30:00 -0500"
+        "publishedAt": "Sat, 25 Jan 2025 05:30:00 -0500",
+        "derivedFromLastGood": true,
+        "derivationReason": "LASTGOOD_FALLBACK"
       },
       {
         "title": "Trump says 8 European nations face tariffs rising to 25% if Greenland isn't sold to the U.S.",
         "url": "https://www.cnbc.com/2026/01/17/trump-greenland-tariffs-nato.html",
         "source": "CNBC",
-        "publishedAt": "Sun, 18 Jan 2026 15:17:16 GMT"
+        "publishedAt": "Sun, 18 Jan 2026 15:17:16 GMT",
+        "derivedFromLastGood": true,
+        "derivationReason": "LASTGOOD_FALLBACK"
       },
       {
         "title": "Supreme Court unlikely to overturn Trump tariffs, his ‘signature economic policy’: Bessent",
         "url": "https://www.cnbc.com/2026/01/18/trump-tariffs-supreme-court-bessent-trade-greenland.html",
         "source": "CNBC",
-        "publishedAt": "Sun, 18 Jan 2026 19:04:48 GMT"
+        "publishedAt": "Sun, 18 Jan 2026 19:04:48 GMT",
+        "derivedFromLastGood": true,
+        "derivationReason": "LASTGOOD_FALLBACK"
       },
       {
         "title": "Trump wants nations to pay $1 billion for permanent Board of Peace seats",
         "url": "https://www.cnbc.com/2026/01/18/trump-board-of-peace.html",
         "source": "CNBC",
-        "publishedAt": "Sun, 18 Jan 2026 19:01:42 GMT"
+        "publishedAt": "Sun, 18 Jan 2026 19:01:42 GMT",
+        "derivedFromLastGood": true,
+        "derivationReason": "LASTGOOD_FALLBACK"
       },
       {
         "title": "Global week ahead: Hopes that cooler heads can prevail in Davos",
         "url": "https://www.cnbc.com/2026/01/18/trump-davos.html",
         "source": "CNBC",
-        "publishedAt": "Sun, 18 Jan 2026 11:45:28 GMT"
+        "publishedAt": "Sun, 18 Jan 2026 11:45:28 GMT",
+        "derivedFromLastGood": true,
+        "derivationReason": "LASTGOOD_FALLBACK"
       },
       {
         "title": "China fourth-quarter growth slows to 4.5%, weakest in nearly three years as consumption misses forecasts",
         "url": "https://www.cnbc.com/2026/01/19/china-q4-gdp-growth-2025-target-retail-sales-industrial-output-investment-income-employment.html",
         "source": "CNBC",
-        "publishedAt": "Mon, 19 Jan 2026 04:48:08 GMT"
+        "publishedAt": "Mon, 19 Jan 2026 04:48:08 GMT",
+        "derivedFromLastGood": true,
+        "derivationReason": "LASTGOOD_FALLBACK"
       },
       {
         "title": "China birthrate shrinks to lowest on record as policies fail to to lift births",
         "url": "https://www.cnbc.com/2026/01/19/china-birthrate-record-low-aging-population-fertility-crisis.html",
         "source": "CNBC",
-        "publishedAt": "Mon, 19 Jan 2026 05:59:55 GMT"
+        "publishedAt": "Mon, 19 Jan 2026 05:59:55 GMT",
+        "derivedFromLastGood": true,
+        "derivationReason": "LASTGOOD_FALLBACK"
       },
       {
         "title": "Billionaires have ‘outsized’ political influence — and they’re richer than ever, says Oxfam",
         "url": "https://www.cnbc.com/2026/01/19/billionaires-richer-than-ever-oxfam-inequality-report.html",
         "source": "CNBC",
-        "publishedAt": "Mon, 19 Jan 2026 00:03:40 GMT"
+        "publishedAt": "Mon, 19 Jan 2026 00:03:40 GMT",
+        "derivedFromLastGood": true,
+        "derivationReason": "LASTGOOD_FALLBACK"
       },
       {
         "title": "What the U.S.-Taiwan deal means for the island's 'silicon shield'",
         "url": "https://www.cnbc.com/2026/01/19/us-taiwan-chip-deal-silicon-shield-tsmc-trump-tapei-ai-semiconductor-supply-chain.html",
         "source": "CNBC",
-        "publishedAt": "Mon, 19 Jan 2026 01:38:58 GMT"
+        "publishedAt": "Mon, 19 Jan 2026 01:38:58 GMT",
+        "derivedFromLastGood": true,
+        "derivationReason": "LASTGOOD_FALLBACK"
       },
       {
         "title": "He worked four blue-collar jobs in his teens to stay afloat. Today, his fintech startup is worth $8 billion",
         "url": "https://www.cnbc.com/2026/01/19/jack-zhang-helped-build-a-8-billion-fintech-startup-called-airwallex.html",
         "source": "CNBC",
-        "publishedAt": "Sun, 18 Jan 2026 23:59:40 GMT"
+        "publishedAt": "Sun, 18 Jan 2026 23:59:40 GMT",
+        "derivedFromLastGood": true,
+        "derivationReason": "LASTGOOD_FALLBACK"
       },
       {
         "title": "New $6,000 senior deduction offers an ‘incredible, valuable opportunity,’ CPA says: How to make the most of it",
         "url": "https://www.cnbc.com/2026/01/18/big-beautiful-bill-senior-deduction.html",
         "source": "CNBC",
-        "publishedAt": "Sun, 18 Jan 2026 13:30:01 GMT"
+        "publishedAt": "Sun, 18 Jan 2026 13:30:01 GMT",
+        "derivedFromLastGood": true,
+        "derivationReason": "LASTGOOD_FALLBACK"
       },
       {
         "title": "Why South Korean noodle companies are betting on an overseas appetite for growth",
         "url": "https://www.cnbc.com/2026/01/19/south-korea-instant-noodles-ramyun-food-ramyeon-nongshim-samyang-buldak-ottogi-jin-ramen.html",
         "source": "CNBC",
-        "publishedAt": "Sun, 18 Jan 2026 23:14:02 GMT"
+        "publishedAt": "Sun, 18 Jan 2026 23:14:02 GMT",
+        "derivedFromLastGood": true,
+        "derivationReason": "LASTGOOD_FALLBACK"
       },
       {
         "title": "Democrat Khanna refloats bill to block investors from buying up homes after Trump proposal",
         "url": "https://www.cnbc.com/2026/01/18/trump-khanna-housing-investor-ban.html",
         "source": "CNBC",
-        "publishedAt": "Sun, 18 Jan 2026 22:00:31 GMT"
+        "publishedAt": "Sun, 18 Jan 2026 22:00:31 GMT",
+        "derivedFromLastGood": true,
+        "derivationReason": "LASTGOOD_FALLBACK"
       },
       {
         "title": "Trump threatens to sue JPMorgan Chase for 'debanking' him",
         "url": "https://www.cnbc.com/2026/01/17/trump-jpmorgan-chase-debanking.html",
         "source": "CNBC",
-        "publishedAt": "Sun, 18 Jan 2026 13:47:50 GMT"
+        "publishedAt": "Sun, 18 Jan 2026 13:47:50 GMT",
+        "derivedFromLastGood": true,
+        "derivationReason": "LASTGOOD_FALLBACK"
       },
       {
         "title": "Asia-Pacific markets mostly slip as investors assess Greenland developments and key China data",
         "url": "https://www.cnbc.com/2026/01/19/asia-markets-china-gdp-greenland-nikkei-kospi-hang-seng.html",
         "source": "CNBC",
-        "publishedAt": "Mon, 19 Jan 2026 06:46:57 GMT"
+        "publishedAt": "Mon, 19 Jan 2026 06:46:57 GMT",
+        "derivedFromLastGood": true,
+        "derivationReason": "LASTGOOD_FALLBACK"
       },
       {
         "title": "The minimum savings needed to retire at 65 in every U.S. state—it's over $2 million in Hawaii",
         "url": "https://www.cnbc.com/2026/01/18/minimum-savings-needed-to-retire-at-65-in-every-us-state.html",
         "source": "CNBC",
-        "publishedAt": "Sun, 18 Jan 2026 14:00:01 GMT"
+        "publishedAt": "Sun, 18 Jan 2026 14:00:01 GMT",
+        "derivedFromLastGood": true,
+        "derivationReason": "LASTGOOD_FALLBACK"
       },
       {
         "title": "I talked to many health CEOs out West and see big things for drug stocks",
         "url": "https://www.cnbc.com/2026/01/18/cramer-i-talked-to-many-health-ceos-out-west-and-see-big-things-for-drug-stocks.html",
         "source": "CNBC",
-        "publishedAt": "Sun, 18 Jan 2026 21:43:29 GMT"
+        "publishedAt": "Sun, 18 Jan 2026 21:43:29 GMT",
+        "derivedFromLastGood": true,
+        "derivationReason": "LASTGOOD_FALLBACK"
       },
       {
         "title": "Who will be next to implement an Australia-style under-16s social media ban?",
         "url": "https://www.cnbc.com/2026/01/18/uk-australia-style-under-16s-social-media-ban.html",
         "source": "CNBC",
-        "publishedAt": "Sun, 18 Jan 2026 12:19:41 GMT"
+        "publishedAt": "Sun, 18 Jan 2026 12:19:41 GMT",
+        "derivedFromLastGood": true,
+        "derivationReason": "LASTGOOD_FALLBACK"
       },
       {
         "title": "Top Wall Street analysts are confident about these three stocks for the long term",
         "url": "https://www.cnbc.com/2026/01/18/top-wall-street-analysts-are-confident-about-these-three-stocks-for-the-long-term.html",
         "source": "CNBC",
-        "publishedAt": "Sun, 18 Jan 2026 12:30:59 GMT"
+        "publishedAt": "Sun, 18 Jan 2026 12:30:59 GMT",
+        "derivedFromLastGood": true,
+        "derivationReason": "LASTGOOD_FALLBACK"
       },
       {
         "title": "Education Department to delay collections on defaulted student loans",
         "url": "https://www.cnbc.com/2026/01/16/student-loan-collections-paused.html",
         "source": "CNBC",
-        "publishedAt": "Fri, 16 Jan 2026 22:27:20 GMT"
+        "publishedAt": "Fri, 16 Jan 2026 22:27:20 GMT",
+        "derivedFromLastGood": true,
+        "derivationReason": "LASTGOOD_FALLBACK"
       },
       {
         "title": "Mark Cuban's money helped build Indiana University's football team—he shares 'how championship teams and organizations are built'",
         "url": "https://www.cnbc.com/2026/01/18/mark-cuban-indiana-football-donor-how-to-build-successful-teams.html",
         "source": "CNBC",
-        "publishedAt": "Sun, 18 Jan 2026 14:05:01 GMT"
+        "publishedAt": "Sun, 18 Jan 2026 14:05:01 GMT",
+        "derivedFromLastGood": true,
+        "derivationReason": "LASTGOOD_FALLBACK"
       },
       {
         "title": "Disney dominated the 2025 box office. Here's how it could keep the crown in 2026",
         "url": "https://www.cnbc.com/2026/01/17/disney-dominated-2025-box-office.html",
         "source": "CNBC",
-        "publishedAt": "Sat, 17 Jan 2026 13:00:01 GMT"
+        "publishedAt": "Sat, 17 Jan 2026 13:00:01 GMT",
+        "derivedFromLastGood": true,
+        "derivationReason": "LASTGOOD_FALLBACK"
       },
       {
         "title": "Bozoma Saint John says she's successful in her career because she ignored this piece of advice: 'It really shrank me'",
         "url": "https://www.cnbc.com/2026/01/18/bozoma-saint-john-says-shes-successful-in-her-career-because-she-ignored-this-piece-of-advice.html",
         "source": "CNBC",
-        "publishedAt": "Sun, 18 Jan 2026 14:30:01 GMT"
+        "publishedAt": "Sun, 18 Jan 2026 14:30:01 GMT",
+        "derivedFromLastGood": true,
+        "derivationReason": "LASTGOOD_FALLBACK"
       },
       {
         "title": "Smaller companies are rising quickly to challenge Big Tech as AI's best trade",
         "url": "https://www.cnbc.com/2026/01/17/ai-power-demand-markets-investor-risk.html",
         "source": "CNBC",
-        "publishedAt": "Sat, 17 Jan 2026 21:43:09 GMT"
+        "publishedAt": "Sat, 17 Jan 2026 21:43:09 GMT",
+        "derivedFromLastGood": true,
+        "derivationReason": "LASTGOOD_FALLBACK"
       },
       {
         "title": "Warren Buffett used to ask college students this question—it can help you become richer and more successful",
         "url": "https://www.cnbc.com/2026/01/17/warren-buffett-to-maximize-your-potential-ask-yourself-this-question.html",
         "source": "CNBC",
-        "publishedAt": "Sat, 17 Jan 2026 14:00:02 GMT"
+        "publishedAt": "Sat, 17 Jan 2026 14:00:02 GMT",
+        "derivedFromLastGood": true,
+        "derivationReason": "LASTGOOD_FALLBACK"
       },
       {
         "title": "Unexpected expenses take 10% of retirees' income, on average, research shows — many don't have enough cash on hand",
         "url": "https://www.cnbc.com/2026/01/17/retirees-emergency-savings.html",
         "source": "CNBC",
-        "publishedAt": "Sat, 17 Jan 2026 13:30:01 GMT"
+        "publishedAt": "Sat, 17 Jan 2026 13:30:01 GMT",
+        "derivedFromLastGood": true,
+        "derivationReason": "LASTGOOD_FALLBACK"
       },
       {
         "title": "I've studied over 200 kids—here's the No. 1 'magic phrase' that truly teaches kids emotional intelligence",
         "url": "https://www.cnbc.com/2026/01/18/child-psychologist-the-no-1-magic-phrase-that-truly-teaches-kids-emotional-intelligence.html",
         "source": "CNBC",
-        "publishedAt": "Sun, 18 Jan 2026 13:50:29 GMT"
+        "publishedAt": "Sun, 18 Jan 2026 13:50:29 GMT",
+        "derivedFromLastGood": true,
+        "derivationReason": "LASTGOOD_FALLBACK"
       },
       {
         "title": "Led by Texas, New Hampshire, U.S. states race to prove they can put bitcoin on public balance sheet",
         "url": "https://www.cnbc.com/2026/01/17/texas-us-states-budgets-bitcoin-crypto-strategic-reserve.html",
         "source": "CNBC",
-        "publishedAt": "Sat, 17 Jan 2026 15:35:04 GMT"
+        "publishedAt": "Sat, 17 Jan 2026 15:35:04 GMT",
+        "derivedFromLastGood": true,
+        "derivationReason": "LASTGOOD_FALLBACK"
       },
       {
         "title": "Hassett pivots to possible 'Trump cards' amid credit card interest rate battle with banks",
         "url": "https://www.cnbc.com/2026/01/16/white-house-hassett-trump-cards-credit-card-battle.html",
         "source": "CNBC",
-        "publishedAt": "Fri, 16 Jan 2026 19:33:45 GMT"
+        "publishedAt": "Fri, 16 Jan 2026 19:33:45 GMT",
+        "derivedFromLastGood": true,
+        "derivationReason": "LASTGOOD_FALLBACK"
       },
       {
         "title": "Activist Irenic takes a stake in Integer. Here’s what could be next for the company",
         "url": "https://www.cnbc.com/2026/01/17/activist-irenic-takes-a-stake-in-integer-heres-what-could-be-next-for-the-company.html",
         "source": "CNBC",
-        "publishedAt": "Sat, 17 Jan 2026 14:18:27 GMT"
+        "publishedAt": "Sat, 17 Jan 2026 14:18:27 GMT",
+        "derivedFromLastGood": true,
+        "derivationReason": "LASTGOOD_FALLBACK"
       },
       {
         "title": "The founders of billion-dollar AI startups are getting younger — here’s why",
         "url": "https://www.cnbc.com/2026/01/17/billion-dollar-ai-startup-founders-are-getting-younger-heres-why.html",
         "source": "CNBC",
-        "publishedAt": "Sat, 17 Jan 2026 09:54:08 GMT"
+        "publishedAt": "Sat, 17 Jan 2026 09:54:08 GMT",
+        "derivedFromLastGood": true,
+        "derivationReason": "LASTGOOD_FALLBACK"
       }
+    ],
+    "feeds": [
+      "WSJ",
+      "CNBC",
+      "YH"
     ],
     "debug": {
       "lastGood": {

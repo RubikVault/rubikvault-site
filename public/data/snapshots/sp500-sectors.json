@@ -1,33 +1,29 @@
 {
   "schemaVersion": "v3",
   "blockId": "sp500-sectors",
-  "generatedAt": "2026-01-19T09:05:19.560Z",
-  "dataAt": "2026-01-03T12:54:48.823Z",
+  "generatedAt": "2026-01-19T09:49:20.344Z",
+  "dataAt": "2026-01-19T09:05:19.353Z",
   "meta": {
-    "status": "PARTIAL",
-    "reason": "EMPTY_ITEMS",
-    "generatedAt": "2026-01-19T09:05:19.560Z",
-    "asOf": "2026-01-03T12:54:48.823Z",
-    "source": "mirror",
+    "status": "OK",
+    "reason": "OK",
+    "generatedAt": "2026-01-19T09:49:20.344Z",
+    "asOf": "2026-01-19T09:05:19.353Z",
+    "source": "stooq",
     "ttlSeconds": 3600,
-    "stale": true,
+    "stale": false,
     "itemsCount": 11,
-    "stalenessSec": 1368600,
+    "stalenessSec": 2640,
     "freshness": {
-      "status": "expired",
-      "ageMinutes": 22810
+      "status": "fresh",
+      "ageMinutes": 44
     },
     "schedule": {
-      "rule": "daily",
-      "nextPlannedFetchAt": "2026-01-20T09:05:19.560Z",
-      "expectedNextRunWindowMinutes": 1440,
+      "rule": "best_effort",
+      "nextPlannedFetchAt": "2026-01-19T12:49:20.344Z",
+      "expectedNextRunWindowMinutes": 180,
       "ttlSeconds": 3600
     },
-    "runId": "2026-01-19T09:05:19.518Z",
-    "notes": {
-      "lastGoodUsed": 11,
-      "lastGoodFilled": 11
-    },
+    "runId": "2026-01-19T09:49:20.327Z",
     "validation": {
       "schema": {
         "ok": true,
@@ -47,94 +43,164 @@
     "items": [
       {
         "symbol": "XLK",
-        "close": 145.62,
-        "returnPct": -0.36264112213479377,
-        "date": "2026-01-16",
-        "derivedFromLastGood": true,
-        "derivationReason": "LASTGOOD_FALLBACK"
+        "name": "XLK",
+        "price": 145.62,
+        "changePercent": 0.10999587515467935,
+        "relativeToSpy": 0.19378184533843656
       },
       {
         "symbol": "XLF",
-        "close": 54.44,
-        "returnPct": -2.3147317423290854,
-        "date": "2026-01-16",
-        "derivedFromLastGood": true,
-        "derivationReason": "LASTGOOD_FALLBACK"
+        "name": "XLF",
+        "price": 54.44,
+        "changePercent": 0.12874747103181955,
+        "relativeToSpy": 0.21253344121557677
       },
       {
         "symbol": "XLV",
-        "close": 155.74,
-        "returnPct": -0.9980293687623121,
-        "date": "2026-01-16",
-        "derivedFromLastGood": true,
-        "derivationReason": "LASTGOOD_FALLBACK"
+        "name": "XLV",
+        "price": 155.74,
+        "changePercent": -0.7772680937818545,
+        "relativeToSpy": -0.6934821235980972
       },
       {
         "symbol": "XLE",
-        "close": 47.69,
-        "returnPct": 2.1855581744161046,
-        "date": "2026-01-16",
-        "derivedFromLastGood": true,
-        "derivationReason": "LASTGOOD_FALLBACK"
+        "name": "XLE",
+        "price": 47.69,
+        "changePercent": 0.16803192606594894,
+        "relativeToSpy": 0.2518178962497062
       },
       {
         "symbol": "XLI",
-        "close": 166.9,
-        "returnPct": 3.069227443957265,
-        "date": "2026-01-16",
-        "derivedFromLastGood": true,
-        "derivationReason": "LASTGOOD_FALLBACK"
+        "name": "XLI",
+        "price": 166.9,
+        "changePercent": 0.6755941609361832,
+        "relativeToSpy": 0.7593801311199404
       },
       {
         "symbol": "XLP",
-        "close": 82.11,
-        "returnPct": 3.6088328075709777,
-        "date": "2026-01-16",
-        "derivedFromLastGood": true,
-        "derivationReason": "LASTGOOD_FALLBACK"
+        "name": "XLP",
+        "price": 82.11,
+        "changePercent": -0.31564890129902284,
+        "relativeToSpy": -0.23186293111526562
       },
       {
         "symbol": "XLU",
-        "close": 43.39,
-        "returnPct": 2.070101152669966,
-        "date": "2026-01-16",
-        "derivedFromLastGood": true,
-        "derivationReason": "LASTGOOD_FALLBACK"
+        "name": "XLU",
+        "price": 43.39,
+        "changePercent": -0.5044714515019465,
+        "relativeToSpy": -0.4206854813181893
       },
       {
         "symbol": "XLRE",
-        "close": 42.21,
-        "returnPct": 4.222222222222224,
-        "date": "2026-01-16",
-        "derivedFromLastGood": true,
-        "derivationReason": "LASTGOOD_FALLBACK"
+        "name": "XLRE",
+        "price": 42.21,
+        "changePercent": 1.223021582733808,
+        "relativeToSpy": 1.3068075529175651
       },
       {
         "symbol": "XLB",
-        "close": 48.68,
-        "returnPct": 0.8702859510982215,
-        "date": "2026-01-16",
-        "derivedFromLastGood": true,
-        "derivationReason": "LASTGOOD_FALLBACK"
+        "name": "XLB",
+        "price": 48.68,
+        "changePercent": -0.5718954248366036,
+        "relativeToSpy": -0.4881094546528464
       },
       {
         "symbol": "XLC",
-        "close": 115.17,
-        "returnPct": -2.323806292935285,
-        "date": "2026-01-16",
-        "derivedFromLastGood": true,
-        "derivationReason": "LASTGOOD_FALLBACK"
+        "name": "XLC",
+        "price": 115.17,
+        "changePercent": -0.8949315893640755,
+        "relativeToSpy": -0.8111456191803182
       },
       {
         "symbol": "XLY",
-        "close": 122.3,
-        "returnPct": -1.696005144281006,
-        "date": "2026-01-16",
-        "derivedFromLastGood": true,
-        "derivationReason": "LASTGOOD_FALLBACK"
+        "name": "XLY",
+        "price": 122.3,
+        "changePercent": -0.32599837000815457,
+        "relativeToSpy": -0.24221239982439735
       }
     ],
-    "sectors": [],
+    "sectors": [
+      {
+        "symbol": "XLK",
+        "name": "XLK",
+        "price": 145.62,
+        "changePercent": 0.10999587515467935,
+        "relativeToSpy": 0.19378184533843656
+      },
+      {
+        "symbol": "XLF",
+        "name": "XLF",
+        "price": 54.44,
+        "changePercent": 0.12874747103181955,
+        "relativeToSpy": 0.21253344121557677
+      },
+      {
+        "symbol": "XLV",
+        "name": "XLV",
+        "price": 155.74,
+        "changePercent": -0.7772680937818545,
+        "relativeToSpy": -0.6934821235980972
+      },
+      {
+        "symbol": "XLE",
+        "name": "XLE",
+        "price": 47.69,
+        "changePercent": 0.16803192606594894,
+        "relativeToSpy": 0.2518178962497062
+      },
+      {
+        "symbol": "XLI",
+        "name": "XLI",
+        "price": 166.9,
+        "changePercent": 0.6755941609361832,
+        "relativeToSpy": 0.7593801311199404
+      },
+      {
+        "symbol": "XLP",
+        "name": "XLP",
+        "price": 82.11,
+        "changePercent": -0.31564890129902284,
+        "relativeToSpy": -0.23186293111526562
+      },
+      {
+        "symbol": "XLU",
+        "name": "XLU",
+        "price": 43.39,
+        "changePercent": -0.5044714515019465,
+        "relativeToSpy": -0.4206854813181893
+      },
+      {
+        "symbol": "XLRE",
+        "name": "XLRE",
+        "price": 42.21,
+        "changePercent": 1.223021582733808,
+        "relativeToSpy": 1.3068075529175651
+      },
+      {
+        "symbol": "XLB",
+        "name": "XLB",
+        "price": 48.68,
+        "changePercent": -0.5718954248366036,
+        "relativeToSpy": -0.4881094546528464
+      },
+      {
+        "symbol": "XLC",
+        "name": "XLC",
+        "price": 115.17,
+        "changePercent": -0.8949315893640755,
+        "relativeToSpy": -0.8111456191803182
+      },
+      {
+        "symbol": "XLY",
+        "name": "XLY",
+        "price": 122.3,
+        "changePercent": -0.32599837000815457,
+        "relativeToSpy": -0.24221239982439735
+      }
+    ],
+    "rotationLabel": "Neutral",
+    "groups": {},
+    "spyChangePercent": -0.08378597018375722,
     "debug": {
       "lastGood": {
         "used": 11,

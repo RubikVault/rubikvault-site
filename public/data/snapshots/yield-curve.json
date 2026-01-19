@@ -1,29 +1,29 @@
 {
   "schemaVersion": "v3",
   "blockId": "yield-curve",
-  "generatedAt": "2026-01-19T09:05:19.567Z",
+  "generatedAt": "2026-01-19T09:49:20.378Z",
   "dataAt": "2026-01-19T09:05:13.994Z",
   "meta": {
     "status": "OK",
     "reason": "OK",
-    "generatedAt": "2026-01-19T09:05:19.567Z",
+    "generatedAt": "2026-01-19T09:49:20.378Z",
     "asOf": "2026-01-19T09:05:13.994Z",
     "source": "fred",
     "ttlSeconds": 3600,
     "stale": false,
     "itemsCount": 9,
-    "stalenessSec": 0,
+    "stalenessSec": 2640,
     "freshness": {
       "status": "fresh",
-      "ageMinutes": 0
+      "ageMinutes": 44
     },
     "schedule": {
       "rule": "best_effort",
-      "nextPlannedFetchAt": "2026-01-19T12:05:19.567Z",
+      "nextPlannedFetchAt": "2026-01-19T12:49:20.378Z",
       "expectedNextRunWindowMinutes": 180,
       "ttlSeconds": 3600
     },
-    "runId": "2026-01-19T09:05:19.518Z",
+    "runId": "2026-01-19T09:49:20.327Z",
     "validation": {
       "schema": {
         "ok": true,
@@ -77,6 +77,10 @@
         "tenor": "30y",
         "value": 4.79
       }
-    ]
+    ],
+    "spreads": {
+      "tenTwo": 0.6099999999999999,
+      "tenThreeMonth": 0.48999999999999977
+    }
   }
 }

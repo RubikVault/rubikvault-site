@@ -208,8 +208,13 @@ function redactSecrets(value) {
 }
 
 function extractItems(payload) {
-  if (Array.isArray(payload?.items)) return payload.items;
-  if (Array.isArray(payload?.data?.items)) return payload.data.items;
+  // Handle envelope format: { meta: {...}, raw: {...} }
+  const raw = payload?.raw || payload;
+  
+  if (Array.isArray(raw?.items)) return raw.items;
+  if (Array.isArray(raw?.data?.items)) return raw.data.items;
+  if (Array.isArray(payload?.items)) return payload.items; // Fallback to top-level
+  if (Array.isArray(payload?.data?.items)) return payload.data.items; // Fallback to top-level data
   if (Array.isArray(payload?.payload?.items)) return payload.payload.items;
   if (Array.isArray(payload?.payload?.data?.items)) return payload.payload.data.items;
   if (Array.isArray(payload?.payload?.data?.data?.items)) return payload.payload.data.data.items;
@@ -218,21 +223,50 @@ function extractItems(payload) {
 }
 
 function extractExtraData(payload) {
-  const data = payload?.data;
-  if (!data || typeof data !== "object" || Array.isArray(data)) return {};
+  // Handle envelope format: { meta: {...}, raw: {...} }
+  const raw = payload?.raw || payload;
+  const data = raw?.data || payload?.data;
+  if (!data || typeof data !== "object" || Array.isArray(data)) {
+    // Also check context for extraData (e.g., sectors in context)
+    const context = raw?.context || payload?.context;
+    if (context && typeof context === "object" && !Array.isArray(context)) {
+      return context;
+    }
+    return {};
+  }
   const { items, ...rest } = data;
-  return rest && typeof rest === "object" ? rest : {};
+  const result = rest && typeof rest === "object" ? rest : {};
+  // Also merge context if present (e.g., sectors array)
+  const context = raw?.context || payload?.context;
+  if (context && typeof context === "object" && !Array.isArray(context)) {
+    return { ...result, ...context };
+  }
+  return result;
 }
 
 function extractSectors(payload) {
   // Try multiple locations for sectors array
-  if (Array.isArray(payload?.sectors)) return payload.sectors;
-  if (Array.isArray(payload?.context?.sectors)) return payload.context.sectors; // From seed-mirrors.mjs
-  if (Array.isArray(payload?.data?.sectors)) return payload.data.sectors;
+  // Handle envelope format: { meta: {...}, raw: {...} }
+  const raw = payload?.raw || payload;
+  
+  if (Array.isArray(raw?.sectors)) return raw.sectors;
+  if (Array.isArray(raw?.context?.sectors)) return raw.context.sectors; // From seed-mirrors.mjs
+  if (Array.isArray(raw?.data?.sectors)) return raw.data.sectors;
+  if (Array.isArray(raw?.data?.data?.sectors)) return raw.data.data.sectors;
+  if (Array.isArray(payload?.sectors)) return payload.sectors; // Fallback to top-level
+  if (Array.isArray(payload?.context?.sectors)) return payload.context.sectors; // Fallback to top-level context
+  if (Array.isArray(payload?.data?.sectors)) return payload.data.sectors; // Fallback to top-level data
   if (Array.isArray(payload?.payload?.data?.data?.sectors)) return payload.payload.data.data.sectors;
   if (Array.isArray(payload?.payload?.data?.sectors)) return payload.payload.data.sectors;
+  if (Array.isArray(raw?.items) && raw.items.length && raw.items[0]?.sector) return raw.items;
   if (Array.isArray(payload?.items) && payload.items.length && payload.items[0]?.sector) return payload.items;
   // If items look like sectors (have symbol, price, changePercent), use them as sectors
+  if (Array.isArray(raw?.items) && raw.items.length > 0) {
+    const firstItem = raw.items[0];
+    if (firstItem.symbol && (Number.isFinite(firstItem.price) || Number.isFinite(firstItem.changePercent))) {
+      return raw.items; // Items are actually sectors
+    }
+  }
   if (Array.isArray(payload?.items) && payload.items.length > 0) {
     const firstItem = payload.items[0];
     if (firstItem.symbol && (Number.isFinite(firstItem.price) || Number.isFinite(firstItem.changePercent))) {
@@ -247,7 +281,9 @@ async function mapMirrorData(mirrorId, raw) {
   if (mirrorId === "sp500-sectors" || mirrorId === "sector-rotation") {
     const sectors = extractSectors(raw);
     const items = extractItems(raw);
-    return { items, extraData: { ...extractExtraData(raw), sectors } };
+    const extraDataBase = extractExtraData(raw);
+    const extraData = { ...extraDataBase, sectors };
+    return { items, extraData };
   }
   if (mirrorId === "tech-signals") {
     const items = extractItems(raw);
@@ -332,13 +368,14 @@ function validateSchema(snapshot) {
   return { ok: errors.length === 0, errors };
 }
 
-async function buildSnapshot({ blockId, raw, mirrorMeta, lastGoodSnapshot = null }) {
+async function buildSnapshot({ blockId, mirrorId, raw, mirrorMeta, lastGoodSnapshot = null }) {
   const generatedAt = new Date().toISOString();
   const asOf = mirrorMeta.asOf || mirrorMeta.updatedAt || generatedAt;
   const ttlSeconds = Number.isFinite(mirrorMeta.ttlSeconds) ? mirrorMeta.ttlSeconds : 3600;
   const freshness = computeFreshness(asOf, ttlSeconds);
   const schedule = computeSchedule(mirrorMeta.cadence || mirrorMeta.mode || "daily", ttlSeconds);
-  let { items, extraData } = await mapMirrorData(blockId, raw);
+  // Use mirrorId (not blockId) for mapMirrorData to correctly identify the source mirror
+  let { items, extraData } = await mapMirrorData(mirrorId || blockId, raw);
   
   // --- LASTGOOD fallback: if items empty, fill from lastGood ---
   let lastGoodUsed = 0;
@@ -362,6 +399,8 @@ async function buildSnapshot({ blockId, raw, mirrorMeta, lastGoodSnapshot = null
     // Fill sectors from lastGood if empty (for sp500-sectors)
     if (blockId === "sp500-sectors") {
       const currentSectors = extraData.sectors || [];
+      // Only fill from lastGood if current sectors array is empty
+      // CRITICAL: Do NOT overwrite sectors if they were already extracted from mirror
       if ((!Array.isArray(currentSectors) || currentSectors.length === 0) && 
           Array.isArray(lastGoodSectors) && lastGoodSectors.length > 0) {
         extraData.sectors = lastGoodSectors.map((sector) => ({
@@ -375,12 +414,15 @@ async function buildSnapshot({ blockId, raw, mirrorMeta, lastGoodSnapshot = null
     }
     
     // Also merge other extraData from lastGood if current is empty
+    // CRITICAL: Exclude sectors from lastGoodRest merge to preserve sectors from mirror
     const { items: _, sectors: __, ...lastGoodRest } = lastGoodData;
     if (Object.keys(extraData).length === 0 && Object.keys(lastGoodRest).length > 0) {
       extraData = { ...lastGoodRest, ...extraData };
     } else if (Object.keys(lastGoodRest).length > 0) {
-      // Merge missing keys from lastGood
+      // Merge missing keys from lastGood, but preserve sectors if already present
       for (const [key, value] of Object.entries(lastGoodRest)) {
+        // Skip sectors - they are handled separately above
+        if (key === "sectors") continue;
         if (!(key in extraData) || (Array.isArray(extraData[key]) && extraData[key].length === 0)) {
           extraData[key] = value;
         }
@@ -406,7 +448,8 @@ async function buildSnapshot({ blockId, raw, mirrorMeta, lastGoodSnapshot = null
   }
   
   const sanitizedItems = redactSecrets(items);
-  const data = { items: sanitizedItems, ...redactSecrets(extraData) };
+  const sanitizedExtraData = redactSecrets(extraData);
+  const data = { items: sanitizedItems, ...sanitizedExtraData };
   const itemsCount = sanitizedItems.length;
   const sourceUpstream = typeof mirrorMeta.sourceUpstream === "string" ? mirrorMeta.sourceUpstream : null;
   const sourceValue = typeof mirrorMeta.source === "string" ? mirrorMeta.source : null;
@@ -515,7 +558,10 @@ async function collectMirrorInputs() {
   snapshotFiles.forEach((filePath) => {
     const base = path.basename(filePath, ".json");
     if (shouldSkipMirrorId(base)) return;
-    mirrors[base] = loadJson(filePath);
+    // Only load from snapshots/ if not already loaded from mirrors/ (priority: mirrors/ over snapshots/)
+    if (!mirrors[base]) {
+      mirrors[base] = loadJson(filePath);
+    }
   });
   // Fallback: if sector-rotation mirror is missing from mirrors/, try public/mirrors/
   // This handles cases where mirrors are generated in public/mirrors/ instead of mirrors/
@@ -739,10 +785,31 @@ async function main() {
   const snapshotStatuses = [];
   const lastGoodAsOf = {};
 
-  const entries = Object.entries(mirrors);
+  // Priority order: prefer sector-rotation over sp500-sectors for sp500-sectors block
+  const priorityMirrors = new Set(["sector-rotation"]);
+  
+  // Sort entries: priority mirrors first, then others
+  const entries = Object.entries(mirrors).sort(([a], [b]) => {
+    const aPriority = priorityMirrors.has(a);
+    const bPriority = priorityMirrors.has(b);
+    if (aPriority && !bPriority) return -1;
+    if (!aPriority && bPriority) return 1;
+    return 0;
+  });
+  
+  // Track which blockIds we've already processed to avoid overwriting with empty mirrors
+  const processedBlocks = new Set();
+  
   for (const [mirrorId, raw] of entries) {
     const blockId = MIRROR_MAP.get(mirrorId) || mirrorId;
     if (!blockId) continue;
+    
+    // Skip if we've already processed this blockId (priority mirrors are processed first)
+    if (processedBlocks.has(blockId)) {
+      console.log(`[INFO] Skipping ${mirrorId} -> ${blockId} (already processed by priority mirror)`);
+      continue;
+    }
+    
     const unwrapped = unwrapEnvelope(raw);
     const mirrorMeta = normalizeMirrorMeta(unwrapped.raw, unwrapped.meta, blockId);
     
@@ -750,7 +817,11 @@ async function main() {
     const snapshotPath = path.join(SNAPSHOT_DIR, `${blockId}.json`);
     const lastGoodSnapshot = loadJson(snapshotPath);
     
-    const snapshot = await buildSnapshot({ blockId, raw: unwrapped.raw, mirrorMeta, lastGoodSnapshot });
+    // Pass mirrorId to buildSnapshot so mapMirrorData can use it
+    const snapshot = await buildSnapshot({ blockId, mirrorId, raw: unwrapped.raw, mirrorMeta, lastGoodSnapshot });
+    
+    // Mark this blockId as processed
+    processedBlocks.add(blockId);
     const valid = snapshot.meta.validation.schema.ok &&
       snapshot.meta.validation.ranges.ok &&
       snapshot.meta.validation.integrity.ok;

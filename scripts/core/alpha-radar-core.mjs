@@ -22,15 +22,23 @@ export function normalizePick(pick = {}) {
   const symbol = pick.symbol ?? null;
   const name = pick.name ?? symbol ?? null;
   const totalScore = parseNumber(pick.totalScore ?? pick.score);
+  // CRITICAL FIX: Only derive setupScore/triggerScore if they are NOT already present
+  // If they are already calculated (from alphaScore), use them directly
   let setupScore = parseNumber(pick.setupScore);
   let triggerScore = parseNumber(pick.triggerScore);
-  if (totalScore !== null) {
-    if (setupScore === null) {
-      setupScore = Math.min(40, Math.round(totalScore * 0.4));
-    }
+  // Only derive if both are missing AND totalScore exists
+  if (setupScore === null && triggerScore === null && totalScore !== null) {
+    setupScore = Math.min(40, Math.round(totalScore * 0.4));
+    triggerScore = Math.max(0, Math.round(totalScore - setupScore));
+  } else if (setupScore === null && totalScore !== null) {
+    // If only setupScore is missing, derive it but keep triggerScore
+    setupScore = Math.min(40, Math.round(totalScore * 0.4));
     if (triggerScore === null) {
       triggerScore = Math.max(0, Math.round(totalScore - setupScore));
     }
+  } else if (triggerScore === null && totalScore !== null && setupScore !== null) {
+    // If only triggerScore is missing, derive it from totalScore - setupScore
+    triggerScore = Math.max(0, Math.round(totalScore - setupScore));
   }
 
   return {
