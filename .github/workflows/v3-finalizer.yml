@@ -1,0 +1,126 @@
+name: v3 Finalizer
+
+on:
+  workflow_run:
+    workflows: ["v3 Pilot - Market Health"]
+    types:
+      - completed
+  workflow_dispatch:
+    inputs:
+      artifact_name:
+        description: 'Artifact name to finalize (default: all)'
+        required: false
+        default: ''
+
+jobs:
+  finalize:
+    runs-on: ubuntu-latest
+    # Single-flight: cancel any in-progress runs
+    concurrency:
+      group: rv-finalizer
+      cancel-in-progress: true
+    
+    permissions:
+      contents: write
+      actions: read
+      artifacts: read
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: module-*
+          merge-multiple: false
+          path: artifacts
+
+      - name: Organize artifacts
+        run: |
+          # Reorganize artifacts into expected structure
+          # artifacts/module-market-health/ contains the files
+          # We need: artifacts/market-health/snapshot.json and module-state.json
+          mkdir -p artifacts-organized
+          
+          for dir in artifacts/module-*; do
+            if [ -d "$dir" ]; then
+              module_name=$(basename "$dir" | sed 's/module-//')
+              mkdir -p "artifacts-organized/$module_name"
+              
+              # Find and copy snapshot.json and module-state.json
+              find "$dir" -name "snapshot.json" -exec cp {} "artifacts-organized/$module_name/" \;
+              find "$dir" -name "module-state.json" -exec cp {} "artifacts-organized/$module_name/" \;
+              
+              echo "✓ Organized artifact: $module_name"
+            fi
+          done
+          
+          # Verify structure
+          echo "Artifacts organized:"
+          ls -la artifacts-organized/*/
+
+      - name: Run Finalizer
+        env:
+          ARTIFACTS_DIR: artifacts-organized
+        run: node scripts/aggregator/finalize.mjs
+
+      - name: Check for changes
+        id: changes
+        run: |
+          if git diff --quiet public/data; then
+            echo "changed=false" >> $GITHUB_OUTPUT
+            echo "No changes to commit"
+          else
+            echo "changed=true" >> $GITHUB_OUTPUT
+            echo "Changes detected:"
+            git diff --stat public/data
+          fi
+
+      - name: Commit and push
+        if: steps.changes.outputs.changed == 'true'
+        run: |
+          git config user.name "RubikVault Bot"
+          git config user.email "bot@rubikvault.com"
+          
+          git add public/data/snapshots/*/latest.json
+          git add public/data/state/modules/*.json
+          git add public/data/manifest.json
+          git add public/data/provider-state.json
+          
+          git commit -m "data: v3.0 publish via finalizer [skip ci]" || exit 0
+          
+          # Retry push with merge handling
+          for i in 1 2 3; do
+            if git push origin HEAD:${{ github.ref_name }}; then
+              echo "Push succeeded"
+              exit 0
+            fi
+            echo "Push failed (attempt $i), retrying..."
+            git fetch origin ${{ github.ref_name }}
+            if git merge origin/${{ github.ref_name }} --no-edit || git merge --abort || true; then
+              git push origin HEAD:${{ github.ref_name }} || true
+            fi
+            sleep $((i * 3))
+          done
+
+      - name: Summary
+        if: always()
+        run: |
+          echo "## Finalizer v3.0" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- Status: ${{ job.status }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Changes: ${{ steps.changes.outputs.changed }}" >> $GITHUB_STEP_SUMMARY
+          if [ -f public/data/manifest.json ]; then
+            echo "- Manifest: ✓" >> $GITHUB_STEP_SUMMARY
+          fi

@@ -1,0 +1,113 @@
+{
+  "schema_version": "1.0",
+  "failure_classes": {
+    "UPSTREAM_TIMEOUT": {
+      "severity": "warn",
+      "explanation": "Upstream provider did not respond within timeout period",
+      "next_action": "WAIT",
+      "user_message": "Data temporarily unavailable. Retrying automatically."
+    },
+    "UPSTREAM_429": {
+      "severity": "warn",
+      "explanation": "Rate limit exceeded. Too many requests to upstream provider.",
+      "next_action": "WAIT",
+      "user_message": "Rate limit reached. Waiting before retry."
+    },
+    "UPSTREAM_HTTP_5XX": {
+      "severity": "warn",
+      "explanation": "Upstream provider returned server error (5xx)",
+      "next_action": "WAIT",
+      "user_message": "Upstream provider error. Retrying automatically."
+    },
+    "UPSTREAM_SCHEMA_BREAK": {
+      "severity": "crit",
+      "explanation": "Upstream provider changed data format. Parser needs update.",
+      "next_action": "FIX_PARSER",
+      "user_message": "Data format changed. Update required."
+    },
+    "VALIDATION_FAILED_SCHEMA": {
+      "severity": "crit",
+      "explanation": "Data failed schema validation",
+      "next_action": "ADJUST_RULES",
+      "user_message": "Data validation failed. Check data structure."
+    },
+    "VALIDATION_FAILED_COUNTS": {
+      "severity": "crit",
+      "explanation": "Record count mismatch or below minimum",
+      "next_action": "ADJUST_RULES",
+      "user_message": "Data count mismatch. Check expected counts."
+    },
+    "VALIDATION_FAILED_RANGE": {
+      "severity": "warn",
+      "explanation": "Data values outside expected ranges",
+      "next_action": "ADJUST_RULES",
+      "user_message": "Data values outside expected ranges."
+    },
+    "VALIDATION_DROPS_EXCEEDED": {
+      "severity": "crit",
+      "explanation": "Too many records dropped during validation",
+      "next_action": "ADJUST_RULES",
+      "user_message": "Too many invalid records. Data quality issue."
+    },
+    "PLAUSIBILITY_FAILED": {
+      "severity": "crit",
+      "explanation": "Data failed plausibility checks",
+      "next_action": "ADJUST_RULES",
+      "user_message": "Data failed plausibility checks."
+    },
+    "UI_CONTRACT_FAILED": {
+      "severity": "crit",
+      "explanation": "Required UI contract paths missing or invalid",
+      "next_action": "FIX_PARSER",
+      "user_message": "Required data fields missing."
+    },
+    "MANIFEST_INVALID": {
+      "severity": "crit",
+      "explanation": "Manifest schema validation failed",
+      "next_action": "FIX_FINALIZER",
+      "user_message": "System configuration error."
+    },
+    "MANIFEST_ASSET_MISMATCH": {
+      "severity": "crit",
+      "explanation": "Manifest digest does not match asset digest",
+      "next_action": "FIX_FINALIZER",
+      "user_message": "Data integrity error detected."
+    },
+    "PUBLISH_BLOCKED_CRITICAL": {
+      "severity": "crit",
+      "explanation": "Publish blocked because critical module failed",
+      "next_action": "FIX_CRITICAL",
+      "user_message": "Critical data unavailable. System blocked."
+    },
+    "KV_READ_FAILED": {
+      "severity": "info",
+      "explanation": "KV read failed (fallback to asset)",
+      "next_action": "NONE",
+      "user_message": null
+    },
+    "KV_WRITE_FAILED": {
+      "severity": "warn",
+      "explanation": "KV write failed (non-fatal, asset still available)",
+      "next_action": "NONE",
+      "user_message": null
+    },
+    "KV_WRITE_SKIPPED_NO_CHANGE": {
+      "severity": "info",
+      "explanation": "KV write skipped because digest unchanged",
+      "next_action": "NONE",
+      "user_message": null
+    },
+    "ASSET_FETCH_FAILED": {
+      "severity": "crit",
+      "explanation": "Failed to fetch asset from repository",
+      "next_action": "CHECK_DEPLOY",
+      "user_message": "Data temporarily unavailable. Check system status."
+    },
+    "PROVIDER_STATE_UNAVAILABLE": {
+      "severity": "warn",
+      "explanation": "Provider state file unavailable (cockpit fallback)",
+      "next_action": "CHECK_DEPLOY",
+      "user_message": "Status information temporarily unavailable."
+    }
+  }
+}

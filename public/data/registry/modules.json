@@ -1,0 +1,55 @@
+{
+  "schema_version": "3.0",
+  "registry_version": "1.0",
+  "modules": {
+    "market-health": {
+      "module": "market-health",
+      "tier": "critical",
+      "domain": "stocks",
+      "freshness": {
+        "expected_interval_minutes": 1440,
+        "grace_minutes": 180,
+        "policy": "market_days_only"
+      },
+      "counts": {
+        "expected": 3,
+        "min": 2
+      },
+      "plausibility_rules": [
+        {
+          "path": "$.data.items[*].close",
+          "min": 0.01,
+          "max": 10000,
+          "description": "Close price must be positive and reasonable"
+        },
+        {
+          "path": "$.data.items[*].changePct",
+          "min": -50,
+          "max": 50,
+          "description": "Daily change percentage must be within reasonable bounds"
+        },
+        {
+          "path": "$.data.fng.value",
+          "min": 0,
+          "max": 100,
+          "description": "Fear & Greed index must be 0-100"
+        }
+      ],
+      "ui_contract": {
+        "required_paths": [
+          "$.data.items[0].symbol",
+          "$.data.items[0].close",
+          "$.data.fng.value",
+          "$.metadata.fetched_at"
+        ],
+        "policy": "always_for_critical"
+      },
+      "cache": {
+        "kv_enabled": false,
+        "preferred_source": "ASSET"
+      },
+      "source": "alternative.me, cnn, coingecko",
+      "endpoint": "/api/market-health"
+    }
+  }
+}

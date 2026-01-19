@@ -1,0 +1,49 @@
+name: v3 Pilot - Market Health
+
+on:
+  schedule:
+    # Run at 22:30 UTC on market days (similar to eod-market)
+    - cron: "30 22 * * 1-5"
+  workflow_dispatch:
+
+jobs:
+  scrape-market-health:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run market-health provider v3
+        env:
+          ALLOW_YAHOO: ${{ vars.ALLOW_YAHOO || '0' }}
+          YAHOO_MARKET_URL: ${{ vars.YAHOO_MARKET_URL || '' }}
+          ARTIFACTS_DIR: ${{ runner.temp }}/artifacts
+        run: node scripts/providers/market-health-v3.mjs
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: module-market-health
+          path: ${{ runner.temp }}/artifacts/market-health/*
+          retention-days: 1
+          if-no-files-found: error
+
+      - name: Summary
+        if: always()
+        run: |
+          echo "## Market Health v3.0 Scrape" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- Module: market-health" >> $GITHUB_STEP_SUMMARY
+          echo "- Status: ${{ job.status }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Artifact: module-market-health" >> $GITHUB_STEP_SUMMARY
