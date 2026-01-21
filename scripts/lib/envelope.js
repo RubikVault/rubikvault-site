@@ -54,6 +54,8 @@ export function buildEnvelope(dataOrOptions, metadata) {
         passed: meta.validation?.passed ?? true,
         dropped_records: meta.validation?.dropped_records ?? 0,
         drop_ratio: meta.validation?.drop_ratio ?? 0,
+        drop_check_passed: meta.validation?.drop_check_passed ?? true,
+        drop_threshold: meta.validation?.drop_threshold ?? null,
         checks: meta.validation?.checks ?? [],
         warnings: meta.validation?.warnings ?? []
       },
@@ -65,10 +67,11 @@ export function buildEnvelope(dataOrOptions, metadata) {
         next_expected_at: meta.freshness?.next_expected_at || null
       },
       upstream: {
-        http_status: meta.upstream?.http_status || null,
-        latency_ms: meta.upstream?.latency_ms || null,
-        rate_limit_remaining: meta.upstream?.rate_limit_remaining || null,
-        retry_count: meta.upstream?.retry_count || 0
+        http_status: meta.upstream?.http_status ?? null,
+        latency_ms: meta.upstream?.latency_ms ?? 0,
+        rate_limit_remaining: meta.upstream?.rate_limit_remaining ?? null,
+        retry_count: meta.upstream?.retry_count ?? 0,
+        rate_limited: meta.upstream?.rate_limited ?? false
       }
     },
     data: Array.isArray(data) ? data : [data],
