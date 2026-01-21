@@ -96,6 +96,16 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: "Repo policy: forbid KV writes in API"
+        run: bash scripts/ci/forbid-kv-writes-in-api.sh
+
+      - name: Run unit tests
+        run: |
+          npm run test:drop-threshold
+          npm run test:fetch-retry
+          npm run test:p2-build-id
+          npm run test:p3-kv-write
+
       - name: Validate Against JSON Schemas
         run: |
           echo "🔍 Validating against JSON Schemas..."
@@ -303,9 +313,6 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
-      - name: Forbid KV writes in API request path
-        run: bash scripts/ci/forbid-kv-writes-in-api.sh
 
       - name: Check Forbidden Patterns
         run: |

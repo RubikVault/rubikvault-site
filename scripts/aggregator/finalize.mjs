@@ -20,7 +20,12 @@ import { computeSnapshotDigest, computeDigest } from '../lib/digest.js';
 import { validateEnvelopeSchema } from '../lib/envelope.js';
 import { generateProviderState, writeProviderState } from '../lib/provider-state.js';
 import { getCurrentBuildId } from '../lib/build-id.js';
-import { appendAuditEvent, createPublishEvent, createBlockEvent, EventType } from '../lib/audit-log.js';
+import { appendAuditEvent, createPublishEvent, createBlockEvent, createStateChangeEvent, EventType } from '../lib/audit-log.js';
+import {
+  createOptionalCloudflareRestKVFromEnv,
+  kvPutSnapshotIfChanged,
+  shouldSkipKvWrite
+} from '../lib/kv-write.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -330,7 +335,7 @@ async function writeAtomic(filePath, content) {
 /**
  * Promote artifacts to public (atomic)
  */
-async function promoteArtifacts(manifest, artifacts, tmpDir) {
+async function promoteArtifacts(manifest, artifacts, tmpDir, kv, kvWriteEnabled) {
   const runId = `finalize-${Date.now()}`;
   const tmpBase = join(tmpDir, runId);
   
@@ -349,6 +354,34 @@ async function promoteArtifacts(manifest, artifacts, tmpDir) {
     const snapshotPath = join(snapshotDir, 'latest.json');
     const content = JSON.stringify(artifact.snapshot, null, 2) + '\n';
     await writeFile(snapshotPath, content, 'utf-8');
+
+    if (kvWriteEnabled) {
+      const kvEnabled = module?.cache?.kv_enabled === true;
+      if (!kvEnabled) {
+        console.log(`KV_WRITE_SKIP_DISABLED ${moduleName}`);
+      } else {
+        const key = `/data/snapshots/${moduleName}/latest.json`;
+        const digest = module?.digest || artifact?.snapshot?.metadata?.digest || null;
+        const result = await kvPutSnapshotIfChanged(kv, key, content, digest, { timeoutMs: 500 });
+        console.log(`${result.status} ${moduleName}`);
+        if (!result.ok && result.error) {
+          console.warn(`KV_WRITE_ERROR ${moduleName} ${result.error}`);
+        }
+        if (result.status === 'KV_WRITE_FAILED') {
+          try {
+            const auditEvent = createStateChangeEvent({
+              module: moduleName,
+              from: null,
+              to: null,
+              failureClass: 'KV_WRITE_FAILED'
+            });
+            await appendAuditEvent(auditEvent, BASE_DIR);
+          } catch (auditErr) {
+            console.warn(`⚠ Failed to log KV audit event: ${auditErr.message}`);
+          }
+        }
+      }
+    }
     
     // Write module state
     const stateDir = join(tmpBase, 'state', 'modules');
@@ -556,7 +589,14 @@ async function main() {
     
     // Promote artifacts
     console.log('🚀 Promoting artifacts...');
-    await promoteArtifacts(manifest, artifacts, TMP_DIR);
+    const kvWriteEnabled = !shouldSkipKvWrite();
+    const kv = kvWriteEnabled ? createOptionalCloudflareRestKVFromEnv() : null;
+    if (!kvWriteEnabled) {
+      console.log('KV_WRITE_SKIP_ENV');
+    } else if (!kv) {
+      console.log('KV_WRITE_SKIP_NO_KV_BACKEND');
+    }
+    await promoteArtifacts(manifest, artifacts, TMP_DIR, kv, kvWriteEnabled);
     console.log('✓ Artifacts promoted\n');
     
     // Generate and write provider-state
