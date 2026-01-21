@@ -172,6 +172,12 @@ function getFailureInfo(snapshot, proofChain) {
 async function buildDebugResponse(moduleName, snapshot, moduleConfig, sourceInfo, url) {
   const proofChain = evaluateProofChain(snapshot, moduleConfig);
   const failureInfo = getFailureInfo(snapshot, proofChain);
+
+  const kvBackend = sourceInfo?.kv_backend || null;
+  let suggestedAction = failureInfo.hint || 'Data is healthy';
+  if (kvBackend === 'MISSING') {
+    suggestedAction = 'KV backend is unavailable. Ensure Cloudflare Pages KV binding RV_KV is configured and enabled for this environment.';
+  }
   
   // Try to load module state
   let moduleState = null;
@@ -203,6 +209,7 @@ async function buildDebugResponse(moduleName, snapshot, moduleConfig, sourceInfo
     module: moduleName,
     served_from: sourceInfo.served_from,
     kv_status: sourceInfo.kv_status,
+    kv_backend: kvBackend,
     asset_status: sourceInfo.asset_status,
     manifest_ref: sourceInfo.manifest_ref,
     build_id: sourceInfo.build_id,
@@ -257,7 +264,7 @@ async function buildDebugResponse(moduleName, snapshot, moduleConfig, sourceInfo
     metadata: snapshot?.metadata || null,
     
     // Suggested Action
-    suggested_action: failureInfo.hint || 'Data is healthy',
+    suggested_action: suggestedAction,
     
     // Links
     links: {
@@ -342,6 +349,7 @@ export async function serveStaticJson(req, envOrModule, ignored, ctxOrContext) {
   const kvEnabled = manifestEntry?.cache?.kv_enabled === true;
   const kv = env?.RV_KV || null;
   const hasKV = kv && typeof kv.get === "function";
+  const kvBackend = hasKV ? 'BOUND' : 'MISSING';
 
   // Load module config
   let moduleConfig = null;
@@ -393,6 +401,7 @@ export async function serveStaticJson(req, envOrModule, ignored, ctxOrContext) {
     lastError: null,
     served_from: null,
     kv_status: kvStatus,
+    kv_backend: kvBackend,
     asset_status: "MISS",
     manifest_ref: manifestRef,
     build_id: buildId,
@@ -432,6 +441,7 @@ export async function serveStaticJson(req, envOrModule, ignored, ctxOrContext) {
             lastError: null,
             served_from: "ASSET",
             kv_status: kvStatus,
+            kv_backend: kvBackend,
             asset_status: "HIT",
             manifest_ref: manifestRef,
             build_id: buildId,
