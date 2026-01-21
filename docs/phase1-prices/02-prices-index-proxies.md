@@ -56,6 +56,9 @@ It fails loud if the Provider A API key is missing:
 
 When the API key is present (see registry), real mode activates.
 
+If Alpha Vantage returns a 200 response with an error payload (Note/Error Message/Information),
+the run fails loud and `snapshot.metadata.upstream.*` includes the error classification.
+
 ## Required env vars
 
 - `RV_PRICES_FORCE_REAL=1` to enable real mode.

@@ -24,6 +24,12 @@ function toBool(v) {
   return s === '1' || s === 'true' || s === 'yes';
 }
 
+function truncateNote(value, maxLen = 180) {
+  const note = String(value || '').trim();
+  if (note.length <= maxLen) return note;
+  return note.slice(0, maxLen);
+}
+
 function stableNumberFromString(input, label) {
   const h = crypto.createHash('sha256').update(`${label}:${input}`, 'utf8').digest('hex');
   const slice = h.slice(0, 12);
@@ -75,6 +81,22 @@ function makeStubBar(symbol) {
   };
 }
 
+export function classifyAlphaVantagePayload(payload) {
+  if (!payload || typeof payload !== 'object') return null;
+
+  if (payload.Note) {
+    return { kind: 'Note', note: truncateNote(payload.Note) };
+  }
+  if (payload['Error Message']) {
+    return { kind: 'Error Message', note: truncateNote(payload['Error Message']) };
+  }
+  if (payload.Information) {
+    return { kind: 'Information', note: truncateNote(payload.Information) };
+  }
+
+  return null;
+}
+
 function validateBar(bar) {
   const errors = [];
 
@@ -106,6 +128,13 @@ function validateBar(bar) {
   }
 
   return { ok: errors.length === 0, errors };
+}
+
+function computeAsOf(bars) {
+  if (!Array.isArray(bars) || bars.length === 0) return null;
+  const dates = bars.map((bar) => bar?.date).filter((date) => typeof date === 'string' && date.length === 10);
+  if (dates.length === 0) return null;
+  return dates.sort().slice(-1)[0];
 }
 
 async function loadUniverseIndexProxies() {
@@ -305,17 +334,20 @@ async function fetchProviderABar(symbol, providerConfig, { apiKey, targetDate })
     return { ok: false, errorClass: 'PROVIDER_BAD_PAYLOAD', upstream, text: result.text || '' };
   }
 
-  if (payload?.Note) {
-    return { ok: false, errorClass: 'PROVIDER_RATE_LIMITED', upstream, text: String(payload.Note) };
-  }
-
-  if (payload?.['Error Message']) {
-    return { ok: false, errorClass: 'PROVIDER_ERROR_MESSAGE', upstream, text: String(payload['Error Message']) };
+  const errorPayload = classifyAlphaVantagePayload(payload);
+  if (errorPayload) {
+    return {
+      ok: false,
+      errorClass: 'ALPHAVANTAGE_ERROR_PAYLOAD',
+      upstream: { ...upstream, http_status: 200 },
+      errorPayload,
+      text: result.text || ''
+    };
   }
 
   const { bar, warnings } = normalizeAlphaVantageDailyAdjusted(payload, symbol, {
     targetDate,
-    sourceProvider: providerConfig.alias || providerConfig.id || 'A',
+    sourceProvider: providerConfig.id || providerConfig.alias || 'A',
     ingestedAt: new Date().toISOString()
   });
 
@@ -348,7 +380,7 @@ async function throttleProvider(providerConfig, state) {
   state.requestsMade += 1;
 }
 
-async function main() {
+export async function main() {
   const outDir = process.env.RV_ARTIFACT_OUT_DIR
     ? String(process.env.RV_ARTIFACT_OUT_DIR)
     : (process.env.ARTIFACTS_DIR
@@ -369,6 +401,7 @@ async function main() {
   }
 
   const mode = forcedStub ? 'STUB' : (forcedReal && apiKey ? 'REAL' : 'STUB');
+  const providerId = mode === 'STUB' ? 'stub' : (providerConfig.id || providerConfig.alias || 'unknown');
 
   const symbols = await loadUniverseIndexProxies();
   const config = await loadModuleConfig();
@@ -378,6 +411,8 @@ async function main() {
   const rawBars = [];
   const validBars = [];
   const upstreamResults = [];
+  const symbolErrors = {};
+  let upstreamNote = null;
   const throttleState = { requestsMade: 0 };
   const targetDate = getYesterdayUTCString();
   const realStart = Date.now();
@@ -409,7 +444,16 @@ async function main() {
         warnings.push(...result.warnings);
       }
     } else {
-      rawBars.push(buildMissingBar(symbol, providerConfig.alias || providerConfig.id || 'A'));
+      if (result?.errorClass === 'ALPHAVANTAGE_ERROR_PAYLOAD' && result?.errorPayload) {
+        const note = result.errorPayload.note || '';
+        symbolErrors[symbol] = {
+          kind: result.errorPayload.kind,
+          note,
+          http_status: 200
+        };
+        if (!upstreamNote && note) upstreamNote = note;
+      }
+      rawBars.push(buildMissingBar(symbol, providerId));
     }
   }
 
@@ -427,7 +471,8 @@ async function main() {
   const droppedRecords = rawCount - validCount;
 
   const validationMeta = computeValidationMetadata(rawCount, validCount, droppedRecords, errors.length === 0);
-  const passed = errors.length === 0 && validationMeta.drop_check_passed;
+  const noValidBars = validCount === 0;
+  const passed = !noValidBars && errors.length === 0 && validationMeta.drop_check_passed;
 
   let upstream = {
     http_status: null,
@@ -436,21 +481,30 @@ async function main() {
     retry_count: 0,
     rate_limited: false
   };
+  let upstreamExtras = null;
 
   if (mode === 'REAL') {
     const httpStatus = upstreamResults.find((u) => u && u.http_status !== null)?.http_status ?? null;
     const retryCount = upstreamResults.reduce((max, u) => Math.max(max, u?.retry_count || 0), 0);
     const rateLimited = upstreamResults.some((u) => u?.rate_limited);
+    const errorPayloadSeen = Object.keys(symbolErrors).length > 0;
+    const upstreamError = errorPayloadSeen ? 'ALPHAVANTAGE_ERROR_PAYLOAD' : null;
     upstream = {
-      http_status: httpStatus,
+      http_status: errorPayloadSeen ? 200 : httpStatus,
       latency_ms: Date.now() - realStart,
       rate_limit_remaining: null,
       retry_count: retryCount,
       rate_limited: rateLimited
     };
+    upstreamExtras = {
+      error: upstreamError,
+      note: upstreamNote || null,
+      symbol_errors: symbolErrors
+    };
   }
 
   const fetchedAt = new Date().toISOString();
+  const asOf = computeAsOf(validBars);
   const envelope = buildEnvelope(validBars, {
     module: MODULE_NAME,
     tier: config.tier || 'standard',
@@ -472,14 +526,27 @@ async function main() {
     error: passed
       ? null
       : {
-          class: 'VALIDATION_FAILED',
-          message: 'One or more symbols failed hard validation',
+          class: noValidBars ? 'NO_VALID_BARS' : 'VALIDATION_FAILED',
+          message: noValidBars ? 'No valid bars after normalization' : 'One or more symbols failed hard validation',
           details: {
             dropped_records: droppedRecords,
             errors
           }
         }
   });
+
+  envelope.metadata.provider = providerId;
+  envelope.metadata.as_of = asOf;
+  if (upstreamExtras) {
+    envelope.metadata.upstream = { ...envelope.metadata.upstream, ...upstreamExtras };
+  }
+  if (noValidBars) {
+    envelope.metadata.compute = { reason: 'NO_VALID_BARS' };
+  }
+
+  if (mode === 'REAL' && noValidBars && !envelope.metadata.upstream?.error) {
+    envelope.metadata.upstream.error = 'NO_VALID_BARS';
+  }
 
   envelope.metadata.digest = computeSnapshotDigest(envelope);
 
@@ -488,15 +555,23 @@ async function main() {
     throw new Error(`ENVELOPE_SCHEMA_INVALID: ${schemaCheck.errors.join('; ')}`);
   }
 
+  const failureClass = noValidBars ? 'NO_VALID_BARS' : (passed ? null : 'VALIDATION_FAILED');
+  const failureMessage = noValidBars
+    ? 'No valid bars after normalization'
+    : (passed ? null : 'One or more symbols failed hard validation');
+  const failureHint = noValidBars
+    ? 'Inspect snapshot.metadata.upstream for provider error payloads.'
+    : (passed ? null : 'Inspect tmp artifacts and fix the provider normalization/validation.');
+
   const moduleState = buildModuleState(
     MODULE_NAME,
     envelope,
-    { valid: passed, passed, errors: passed ? [] : ['VALIDATION_FAILED'], warnings },
+    { valid: passed, passed, errors: passed ? [] : [failureClass || 'VALIDATION_FAILED'], warnings },
     config,
     {
-      failure_class: passed ? null : 'VALIDATION_FAILED',
-      failure_message: passed ? null : 'One or more symbols failed hard validation',
-      failure_hint: passed ? null : 'Inspect tmp artifacts and fix the provider normalization/validation.'
+      failure_class: failureClass,
+      failure_message: failureMessage,
+      failure_hint: failureHint
     }
   );
 
@@ -508,7 +583,15 @@ async function main() {
   await writeFile(snapshotPath, JSON.stringify(envelope, null, 2) + '\n', 'utf-8');
   await writeFile(statePath, JSON.stringify(moduleState, null, 2) + '\n', 'utf-8');
 
-  process.stdout.write(`OK: ${MODULE_NAME} artifacts written (${mode})\n`);
+  const shouldFailHard = forcedReal && mode === 'REAL' && symbols.length > 0 && noValidBars;
+  if (shouldFailHard) {
+    process.exitCode = 2;
+    process.stderr.write(
+      `FAIL: ${providerId} produced 0 valid bars (likely Note/Error Message/Information). See snapshot.metadata.upstream.*\n`
+    );
+  } else {
+    process.stdout.write(`OK: ${MODULE_NAME} artifacts written (${mode})\n`);
+  }
   process.stdout.write(`  out_dir: ${outDir}\n`);
   process.stdout.write(`  symbols: ${symbols.join(', ')}\n`);
   process.stdout.write(`  status: ${moduleState.status}\n`);

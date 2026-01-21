@@ -4,7 +4,10 @@ import path from 'node:path';
 import os from 'node:os';
 import { spawnSync } from 'node:child_process';
 
-import { normalizeAlphaVantageDailyAdjusted } from '../scripts/providers/market-prices-v3.mjs';
+import {
+  classifyAlphaVantagePayload,
+  normalizeAlphaVantageDailyAdjusted
+} from '../scripts/providers/market-prices-v3.mjs';
 
 let passed = 0;
 let failed = 0;
@@ -62,6 +65,28 @@ function runMarketPrices(envOverrides, outDir) {
   const env = { ...process.env, ...envOverrides };
   if (outDir) env.RV_ARTIFACT_OUT_DIR = outDir;
   return spawnSync('node', ['scripts/providers/market-prices-v3.mjs'], {
+    env,
+    encoding: 'utf-8'
+  });
+}
+
+function runMarketPricesWithMock(envOverrides, outDir, payloadPath) {
+  const env = { ...process.env, ...envOverrides };
+  if (outDir) env.RV_ARTIFACT_OUT_DIR = outDir;
+  env.RV_TEST_PAYLOAD_PATH = payloadPath;
+  const inlineScript = `
+import fs from 'node:fs';
+const payload = fs.readFileSync(process.env.RV_TEST_PAYLOAD_PATH, 'utf-8');
+global.fetch = async () => ({
+  ok: true,
+  status: 200,
+  headers: { get: () => null },
+  text: async () => payload
+});
+const mod = await import('./scripts/providers/market-prices-v3.mjs');
+await mod.main();
+`;
+  return spawnSync('node', ['--input-type=module', '-e', inlineScript], {
     env,
     encoding: 'utf-8'
   });
@@ -125,7 +150,51 @@ const test3 = test('Normalize Provider A payload → canonical bar', async () =>
   assertEqual(warnings.length, 0, 'Expected no warnings for fixture payload');
 });
 
-const tests = [test1, test2, test3];
+const test4 = test('Classify AlphaVantage Note payload → error payload', async () => {
+  const fixturePath = path.join(process.cwd(), 'tests', 'fixtures', 'alphavantage-note.sample.json');
+  const payload = JSON.parse(fs.readFileSync(fixturePath, 'utf-8'));
+  const classified = classifyAlphaVantagePayload(payload);
+  assert(classified, 'Expected classification');
+  assertEqual(classified.kind, 'Note');
+  assertEqual(classified.note, payload.Note.trim());
+});
+
+const test5 = test('Classify AlphaVantage Error Message payload → error payload', async () => {
+  const fixturePath = path.join(process.cwd(), 'tests', 'fixtures', 'alphavantage-error-message.sample.json');
+  const payload = JSON.parse(fs.readFileSync(fixturePath, 'utf-8'));
+  const classified = classifyAlphaVantagePayload(payload);
+  assert(classified, 'Expected classification');
+  assertEqual(classified.kind, 'Error Message');
+  assertEqual(classified.note, payload['Error Message'].trim());
+});
+
+const test6 = test('REAL mode error payload → fail loud with upstream metadata', async () => {
+  const registry = loadProvidersRegistry();
+  const provider = selectProviderConfig(registry);
+  const envVar = provider.auth_env_var;
+  const fixturePath = path.join(process.cwd(), 'tests', 'fixtures', 'alphavantage-note.sample.json');
+
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'rv-market-prices-real-note-'));
+  const result = runMarketPricesWithMock({
+    RV_PRICES_FORCE_REAL: '1',
+    RV_PRICES_STUB: '',
+    [envVar]: 'dummy'
+  }, tmpDir, fixturePath);
+
+  assert(result.status !== 0, 'Expected non-zero exit code');
+  const snapshot = JSON.parse(fs.readFileSync(path.join(tmpDir, 'snapshot.json'), 'utf-8'));
+  const state = JSON.parse(fs.readFileSync(path.join(tmpDir, 'module-state.json'), 'utf-8'));
+
+  assertEqual(snapshot.metadata.provider, 'alphavantage');
+  assertEqual(snapshot.metadata.compute?.reason, 'NO_VALID_BARS');
+  assertEqual(snapshot.metadata.upstream?.error, 'ALPHAVANTAGE_ERROR_PAYLOAD');
+  assertEqual(snapshot.metadata.upstream?.http_status, 200);
+  assert(snapshot.metadata.upstream?.symbol_errors?.SPY, 'Expected symbol error for SPY');
+  assertEqual(state.status, 'error');
+  assertEqual(state.failure?.class, 'NO_VALID_BARS');
+});
+
+const tests = [test1, test2, test3, test4, test5, test6];
 
 (async () => {
   for (const t of tests) {
