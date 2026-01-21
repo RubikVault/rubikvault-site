@@ -304,6 +304,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Forbid KV writes in API request path
+        run: bash scripts/ci/forbid-kv-writes-in-api.sh
+
       - name: Check Forbidden Patterns
         run: |
           echo "🔍 Checking Repository Policies..."
