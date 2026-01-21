@@ -1,13 +1,13 @@
 #!/usr/bin/env node
 /**
  * Market Health Provider v3.0
- * 
+ *
  * Fetches and normalizes market health data from:
  * - alternative.me (Fear & Greed Index)
  * - CNN (Stock Fear & Greed)
  * - CoinGecko (Crypto prices)
  * - Yahoo Finance (Indices & Commodities, optional)
- * 
+ *
  * Outputs v3.0 envelope format ready for validation and artifact upload.
  */
 
@@ -17,6 +17,8 @@ import { fileURLToPath } from 'node:url';
 import { buildEnvelope, computeFreshness } from '../lib/envelope.js';
 import { writeFile, mkdir } from 'node:fs/promises';
 import { fetchStooqDaily } from '../providers/stooq.js';
+import { computeValidationMetadata } from '../lib/drop-threshold.js';
+import { fetchWithRetry } from '../providers/_shared.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -35,31 +37,6 @@ function buildHeaders() {
     "accept": "application/json",
     "cache-control": "no-cache"
   };
-}
-
-async function fetchSafe(url) {
-  try {
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 10000);
-    
-    const res = await fetch(url, { 
-      headers: buildHeaders(),
-      signal: controller.signal 
-    });
-    
-    clearTimeout(timer);
-    
-    if (!res.ok) {
-      return { ok: false, error: `HTTP ${res.status}`, httpStatus: res.status };
-    }
-    
-    const json = await res.json();
-    const latency = Date.now() - Date.now(); // Simplified
-    
-    return { ok: true, json, httpStatus: res.status, latency };
-  } catch (err) {
-    return { ok: false, error: err.message, httpStatus: null };
-  }
 }
 
 function normalizeFng(payload) {
@@ -149,8 +126,12 @@ async function fetchStooqBenchmarks(symbols) {
 
 /**
  * Validate data structure
+ * @param {object} data - Data to validate
+ * @param {object} registryConfig - Registry configuration
+ * @param {number} rawCount - Total records before filtering (for drop threshold)
+ * @returns {object} Validation result with drop threshold enforcement
  */
-function validateData(data, registryConfig) {
+function validateData(data, registryConfig, rawCount = 1) {
   const errors = [];
   const warnings = [];
   let droppedRecords = 0;
@@ -276,18 +257,27 @@ function validateData(data, registryConfig) {
   if (plausibilityRules.length > 0) checks.push('ranges');
   if (requiredPaths.length > 0) checks.push('ui_contract');
   
-  console.log(`🔍 validateData result: errors=${errors.length}, warnings=${warnings.length}, passed=${errors.length === 0}`);
+  // Apply drop threshold validation
+  const validCount = rawCount - droppedRecords;
+  const validationMeta = computeValidationMetadata(rawCount, validCount, droppedRecords, errors.length === 0);
+  
+  const passed = (errors.length === 0) && validationMeta.drop_check_passed;
+  console.log(`🔍 validateData result: errors=${errors.length}, warnings=${warnings.length}, dropped=${droppedRecords}, drop_ratio=${(validationMeta.drop_ratio * 100).toFixed(3)}%, passed=${passed}`);
   if (errors.length > 0) {
     console.error('  ERRORS:', errors);
   }
   if (warnings.length > 0) {
     console.warn('  WARNINGS:', warnings);
   }
+  if (!validationMeta.checks.drop_threshold.passed) {
+    console.error('  DROP THRESHOLD EXCEEDED:', validationMeta.checks.drop_threshold.reason);
+    errors.push(validationMeta.checks.drop_threshold.reason);
+  }
   
   return {
-    passed: errors.length === 0,
-    dropped_records: droppedRecords,
-    drop_ratio: 0,
+    passed,
+    dropped_records: validationMeta.dropped_records,
+    drop_ratio: validationMeta.drop_ratio,
     checks,
     warnings
   };
@@ -320,20 +310,20 @@ async function main() {
   
   // Fetch data (parallel)
   const [fng, stocks, crypto, benchmarks] = await Promise.all([
-    fetchSafe(FNG_URL),
-    fetchSafe(FNG_STOCKS_URL),
-    fetchSafe(COINGECKO_URL),
+    fetchWithRetry(FNG_URL, { headers: buildHeaders() }),
+    fetchWithRetry(FNG_STOCKS_URL, { headers: buildHeaders() }),
+    fetchWithRetry(COINGECKO_URL, { headers: buildHeaders() }),
     fetchStooqBenchmarks(BENCHMARK_SYMBOLS)
   ]);
   
   const latencyMs = Date.now() - startTime;
   
-  // Build upstream metadata
+  // Build upstream metadata from fetch results
   const upstream = {
-    http_status: fng.ok ? fng.httpStatus : (stocks.ok ? stocks.httpStatus : (crypto.ok ? crypto.httpStatus : null)),
+    http_status: fng.upstream.http_status || stocks.upstream.http_status || crypto.upstream.http_status || null,
     latency_ms: latencyMs,
     rate_limit_remaining: null,
-    retry_count: 0
+    retry_count: Math.max(fng.upstream.retry_count, stocks.upstream.retry_count, crypto.upstream.retry_count)
   };
   
   // Normalize data
@@ -345,9 +335,38 @@ async function main() {
     errors.push(...benchmarks.filter(b => b.error).map(b => `${b.symbol}_stooq_failed`));
   }
   
-  const fngData = normalizeFng(fng.json || {});
-  const fngStocks = normalizeFngStocks(stocks.json || {});
-  const cryptoData = normalizeCrypto(crypto.json || {});
+  // Parse JSON from responses
+  let fngJson = {};
+  let stocksJson = {};
+  let cryptoJson = {};
+
+  try {
+    if (fng.ok) {
+      fngJson = JSON.parse(fng.text || "{}");
+    }
+  } catch (err) {
+    errors.push("fng_parse_failed");
+  }
+  
+  try {
+    if (stocks.ok) {
+      stocksJson = JSON.parse(stocks.text || "{}");
+    }
+  } catch (err) {
+    errors.push("stocks_parse_failed");
+  }
+  
+  try {
+    if (crypto.ok) {
+      cryptoJson = JSON.parse(crypto.text || "{}");
+    }
+  } catch (err) {
+    errors.push("crypto_parse_failed");
+  }
+  
+  const fngData = normalizeFng(fngJson);
+  const fngStocks = normalizeFngStocks(stocksJson);
+  const cryptoData = normalizeCrypto(cryptoJson);
   const btcEntry = cryptoData.find(entry => entry.symbol === "BTC");
   
   // Build data structure with Stooq benchmarks
@@ -376,7 +395,9 @@ async function main() {
   
   // Validate
   console.log('🔍 Validating data...');
-  const validation = validateData(data, config);
+  // For market-health, rawCount is 1 (single aggregated data object)
+  const rawCount = 1;
+  const validation = validateData(data, config, rawCount);
   
   if (!validation.passed) {
     console.error('❌ Validation failed:');

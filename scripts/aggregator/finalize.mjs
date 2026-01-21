@@ -123,20 +123,19 @@ function validateSnapshot(snapshot, moduleConfig) {
     console.log(`\n  This suggests the snapshot was modified after digest was computed!`);
   }
   
-  // Validation status check - DETAILED LOGGING
+  // Validation status check - HARD BLOCK on validation.passed=false
   if (!snapshot.metadata.validation.passed) {
-    console.log(`  ⚠ Snapshot has validation.passed=false`);
+    console.log(`  ❌ Snapshot has validation.passed=false`);
     console.log(`    Validation details:`, JSON.stringify(snapshot.metadata.validation, null, 2));
     console.log(`    This means the PROVIDER marked this data as invalid!`);
-    console.log(`    Checking if we should reject or accept anyway...`);
     
-    // If there are actual errors (not just warnings), reject
-    // But if it's just warnings, we might want to accept
-    const hasErrors = snapshot.metadata.validation.warnings?.some(w => w.includes('error')) || false;
-    if (hasErrors) {
-      errors.push(`VALIDATION_FAILED: ${JSON.stringify(snapshot.metadata.validation)}`);
-    } else {
-      console.log(`    No critical errors found, accepting snapshot despite validation.passed=false`);
+    // HARD BLOCK: validation.passed=false always blocks publish
+    // This enforces drop threshold and other validation rules
+    errors.push(`VALIDATION_FAILED: Provider validation failed - ${JSON.stringify(snapshot.metadata.validation)}`);
+    
+    // Check for drop threshold violation specifically
+    if (snapshot.metadata.validation.checks?.drop_threshold && !snapshot.metadata.validation.checks.drop_threshold.passed) {
+      console.error(`    DROP THRESHOLD VIOLATION: ${snapshot.metadata.validation.checks.drop_threshold.reason}`);
     }
   }
   
