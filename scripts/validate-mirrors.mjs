@@ -54,16 +54,19 @@ function normalizeDataQuality(rawStatus) {
 function normalizeMirrorPayload(mirrorId, envelope) {
   const raw = envelope?.raw ?? envelope;
   const envelopeMeta = envelope?.meta ?? null;
+  const isEnvelope = envelope?.isEnvelope === true;
   if (!raw) return { mirror: null, errors: ["mirror_missing"] };
   const errors = [];
-  if (!envelopeMeta || typeof envelopeMeta !== "object") {
-    errors.push("envelope_missing");
-  } else {
-    ["provider", "dataset", "fetchedAt", "source", "runId", "ttlSeconds"].forEach((field) => {
-      if (envelopeMeta[field] === undefined || envelopeMeta[field] === null || envelopeMeta[field] === "") {
-        errors.push(`envelope_meta_missing_${field}`);
-      }
-    });
+  if (isEnvelope) {
+    if (!envelopeMeta || typeof envelopeMeta !== "object") {
+      errors.push("envelope_missing");
+    } else {
+      ["provider", "dataset", "fetchedAt", "source", "runId", "ttlSeconds"].forEach((field) => {
+        if (envelopeMeta[field] === undefined || envelopeMeta[field] === null || envelopeMeta[field] === "") {
+          errors.push(`envelope_meta_missing_${field}`);
+        }
+      });
+    }
   }
 
   if (raw && typeof raw === "object" && raw.schemaVersion && raw.mirrorId && raw.items) {

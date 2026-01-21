@@ -47,9 +47,9 @@ export function loadMirrorEnvelope(filePath) {
     if (!raw.trim()) return null;
     const parsed = JSON.parse(raw);
     if (isMirrorEnvelope(parsed)) {
-      return { meta: parsed.meta, raw: parsed.raw, envelope: parsed };
+      return { meta: parsed.meta, raw: parsed.raw, envelope: parsed, isEnvelope: true };
     }
-    return { meta: null, raw: parsed, envelope: null };
+    return { raw: parsed, envelope: null, isEnvelope: false };
   } catch (err) {
     return null;
   }
