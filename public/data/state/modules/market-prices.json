@@ -1,0 +1,43 @@
+{
+  "schema_version": "3.0",
+  "module": "market-prices",
+  "tier": "standard",
+  "domain": "stocks",
+  "status": "ok",
+  "severity": "info",
+  "published": true,
+  "last_success_at": "2026-01-21T22:54:31.376Z",
+  "last_attempt_at": "2026-01-21T22:54:31.376Z",
+  "digest": "sha256:bd033d1e6c796bbe12e2eaa736110e0009cc3481e5101a1db3abd5cfa6629745",
+  "record_count": 4,
+  "expected_count": 4,
+  "freshness": {
+    "expected_interval_minutes": 1440,
+    "grace_minutes": 180,
+    "policy": "market_days_only",
+    "age_minutes": 0,
+    "next_expected_at": "2026-01-22T22:54:31.376Z"
+  },
+  "failure": {
+    "class": null,
+    "message": null,
+    "upstream_status": null,
+    "hint": null
+  },
+  "ui_contract": {
+    "required": false,
+    "passed": true,
+    "failed_paths": []
+  },
+  "proof": {
+    "file_present": true,
+    "schema_valid": true,
+    "plausible": true
+  },
+  "debug": {
+    "curl": "/api/market-prices?debug=1",
+    "last_run_url": null
+  },
+  "build_id": "20260121T225504Z_b2884c7",
+  "manifest_ref": "20260121T225504Z_b2884c7"
+}

@@ -1,9 +1,9 @@
 {
   "schema_version": "3.0",
-  "build_id": "20260120T224652Z_4449bae",
-  "active_build_id": "20260120T224652Z_4449bae",
-  "manifest_ref": "20260120T224652Z_4449bae",
-  "published_at": "2026-01-20T22:46:52.197Z",
+  "build_id": "20260121T225504Z_b2884c7",
+  "active_build_id": "20260121T225504Z_b2884c7",
+  "manifest_ref": "20260121T225504Z_b2884c7",
+  "published_at": "2026-01-21T22:55:04.264Z",
   "publish_policy": "critical_core_hybrid_v3",
   "modules": {
     "market-health": {
@@ -11,25 +11,47 @@
       "domain": "stocks",
       "status": "ok",
       "published": true,
-      "digest": "sha256:566a459f9fee6ca79bad7777603e5e3b07e799c54a97655cdd7c5fe8d4db0029",
-      "fetched_at": "2026-01-20T22:46:23.922Z",
-      "build_id": "20260120T224652Z_4449bae",
+      "digest": "sha256:d2fb16994d73e39e047da43fdfcdd045198aa839ffcc67dc0355b416b32b0fab",
+      "fetched_at": "2026-01-21T22:54:32.791Z",
+      "build_id": "20260121T225504Z_b2884c7",
+      "manifest_ref": "20260121T225504Z_b2884c7",
       "freshness": {
         "expected_interval_minutes": 1440,
         "grace_minutes": 180,
         "policy": "market_days_only",
         "age_minutes": 0,
-        "next_expected_at": "2026-01-21T22:46:23.922Z"
+        "next_expected_at": "2026-01-22T22:54:32.791Z"
       },
       "cache": {
         "kv_enabled": true,
         "preferred_source": "KV"
       }
+    },
+    "market-prices": {
+      "tier": "standard",
+      "domain": "stocks",
+      "status": "ok",
+      "published": true,
+      "digest": "sha256:bd033d1e6c796bbe12e2eaa736110e0009cc3481e5101a1db3abd5cfa6629745",
+      "fetched_at": "2026-01-21T22:54:31.376Z",
+      "build_id": "20260121T225504Z_b2884c7",
+      "manifest_ref": "20260121T225504Z_b2884c7",
+      "freshness": {
+        "expected_interval_minutes": 1440,
+        "grace_minutes": 180,
+        "policy": "market_days_only",
+        "age_minutes": 0,
+        "next_expected_at": null
+      },
+      "cache": {
+        "kv_enabled": false,
+        "preferred_source": "ASSET"
+      }
     }
   },
   "summary": {
-    "modules_total": 1,
-    "ok": 1,
+    "modules_total": 2,
+    "ok": 2,
     "warn": 0,
     "error": 0,
     "stale_ratio": 0,

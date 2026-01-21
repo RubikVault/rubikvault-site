@@ -1,11 +1,11 @@
 {
   "schema_version": "3.0",
-  "generated_at": "2026-01-20T22:46:52.207Z",
+  "generated_at": "2026-01-21T22:55:04.274Z",
   "system": {
     "status": "ok",
-    "build_id": "20260120T224652Z_4449bae",
-    "manifest_ref": "20260120T224652Z_4449bae",
-    "last_publish_at": "2026-01-20T22:46:52.197Z",
+    "build_id": "20260121T225504Z_b2884c7",
+    "manifest_ref": "20260121T225504Z_b2884c7",
+    "last_publish_at": "2026-01-21T22:55:04.264Z",
     "critical_ok": true,
     "top_issues": []
   },
@@ -17,13 +17,13 @@
       "status": "ok",
       "severity": "info",
       "published": true,
-      "digest": "sha256:566a459f9fee6ca79bad7777603e5e3b07e799c54a97655cdd7c5fe8d4db0029",
+      "digest": "sha256:d2fb16994d73e39e047da43fdfcdd045198aa839ffcc67dc0355b416b32b0fab",
       "freshness": {
         "expected_interval_minutes": 1440,
         "grace_minutes": 180,
         "policy": "market_days_only",
         "age_minutes": 0,
-        "next_expected_at": "2026-01-21T22:46:23.922Z"
+        "next_expected_at": "2026-01-22T22:54:32.791Z"
       },
       "proof_chain": {
         "FILE": "PASS",
@@ -48,6 +48,47 @@
         "debug": "/api/market-health?debug=1",
         "snapshot": "/data/snapshots/market-health/latest.json",
         "state": "/data/state/modules/market-health.json"
+      }
+    },
+    {
+      "module": "market-prices",
+      "tier": "standard",
+      "domain": "stocks",
+      "status": "ok",
+      "severity": "info",
+      "published": true,
+      "digest": "sha256:bd033d1e6c796bbe12e2eaa736110e0009cc3481e5101a1db3abd5cfa6629745",
+      "freshness": {
+        "expected_interval_minutes": 1440,
+        "grace_minutes": 180,
+        "policy": "market_days_only",
+        "age_minutes": 0,
+        "next_expected_at": null
+      },
+      "proof_chain": {
+        "FILE": "PASS",
+        "SCHEMA": "PASS",
+        "FRESH": "PASS",
+        "PLAUS": "PASS",
+        "UI": "SKIP",
+        "DELIVERY": "UNKNOWN"
+      },
+      "delivery": {
+        "probed_at": null,
+        "status": "UNKNOWN",
+        "served_from": "ASSET",
+        "latency_ms": null
+      },
+      "failure": {
+        "class": null,
+        "message": null,
+        "upstream_status": null,
+        "hint": null
+      },
+      "links": {
+        "debug": "/api/market-prices?debug=1",
+        "snapshot": "/data/snapshots/market-prices/latest.json",
+        "state": "/data/state/modules/market-prices.json"
       }
     }
   ],
