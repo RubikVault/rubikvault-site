@@ -201,7 +201,12 @@ async function buildDebugResponse(moduleName, snapshot, moduleConfig, sourceInfo
   return {
     debug: true,
     module: moduleName,
-    served_from: sourceInfo.type,
+    served_from: sourceInfo.served_from,
+    kv_status: sourceInfo.kv_status,
+    asset_status: sourceInfo.asset_status,
+    manifest_ref: sourceInfo.manifest_ref,
+    kv_latency_ms: sourceInfo.kv_latency_ms,
+    asset_latency_ms: sourceInfo.asset_latency_ms,
     timestamp: new Date().toISOString(),
     
     // Proof Chain
@@ -269,14 +274,67 @@ async function buildDebugResponse(moduleName, snapshot, moduleConfig, sourceInfo
   };
 }
 
+function withTimeout(promise, ms) {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error("TIMEOUT")), ms);
+    promise
+      .then((value) => {
+        clearTimeout(timer);
+        resolve(value);
+      })
+      .catch((err) => {
+        clearTimeout(timer);
+        reject(err);
+      });
+  });
+}
+
+async function readKvWithTimeout(kv, key, ms) {
+  const started = Date.now();
+  try {
+    const value = await withTimeout(kv.get(key, { type: "json" }), ms);
+    return { value, hit: value !== null && value !== undefined, latency_ms: Date.now() - started, error: null };
+  } catch (error) {
+    return { value: null, hit: false, latency_ms: Date.now() - started, error };
+  }
+}
+
+function getManifestRef(manifest) {
+  if (!manifest || typeof manifest !== "object") return null;
+  return manifest.active_build_id || manifest.published_at || null;
+}
+
 /**
  * Main API handler
  */
-export async function serveStaticJson(req, env, ctx) {
+export async function serveStaticJson(req, envOrModule, ignored, ctxOrContext) {
   const url = new URL(req.url);
-  const moduleName = url.pathname.replace(/^\/api\//, "").replace(/\/$/, "") || "bundle";
+  const moduleOverride = typeof envOrModule === "string" ? envOrModule : null;
+  const env = moduleOverride ? ctxOrContext?.env : envOrModule;
+  const ctx = moduleOverride ? ctxOrContext : ctxOrContext;
+  const moduleName = moduleOverride || url.pathname.replace(/^\/api\//, "").replace(/\/$/, "") || "bundle";
   const isDebug = url.searchParams.has("debug") || url.searchParams.get("debug") === "1";
-  
+
+  // Manifest-first (asset)
+  let manifest = null;
+  let manifestEntry = null;
+  let manifestRef = null;
+  try {
+    const manifestUrl = new URL('/data/manifest.json', url.origin);
+    const manifestResponse = await fetch(manifestUrl.toString());
+    if (manifestResponse.ok) {
+      manifest = await manifestResponse.json();
+      manifestEntry = manifest?.modules?.[moduleName] || null;
+      manifestRef = getManifestRef(manifest);
+    }
+  } catch (e) {
+    // optional
+  }
+
+  const kvEnabled = manifestEntry?.cache?.kv_enabled === true;
+  const kv = env?.RV_KV || null;
+  const hasKV = kv && typeof kv.get === "function";
+
   // Load module config
   let moduleConfig = null;
   try {
@@ -289,6 +347,27 @@ export async function serveStaticJson(req, env, ctx) {
   } catch (e) {
     console.warn('[API] Failed to load registry:', e.message);
   }
+
+  // Optional KV read-only (500ms)
+  let kvResult = { value: null, hit: false, latency_ms: null, error: null };
+  let kvStatus = "DISABLED";
+  let kvPayload = null;
+
+  if (kvEnabled) {
+    if (!hasKV) {
+      kvStatus = "ERROR";
+    } else {
+      kvStatus = "MISS";
+      const key = `/data/snapshots/${moduleName}/latest.json`;
+      kvResult = await readKvWithTimeout(kv, key, 500);
+      if (kvResult.hit) {
+        kvStatus = "HIT";
+        kvPayload = kvResult.value;
+      } else if (kvResult.error) {
+        kvStatus = "ERROR";
+      }
+    }
+  }
   
   // Try multiple paths
   const pathsToTry = [
@@ -298,21 +377,66 @@ export async function serveStaticJson(req, env, ctx) {
   ];
   
   let snapshot = null;
-  let sourceInfo = { found: false, type: null, path: null, lastError: null };
-  
-  for (const { path, type } of pathsToTry) {
-    try {
-      const fetchUrl = new URL(path, url.origin);
-      const response = await fetch(fetchUrl.toString());
-      
-      if (response.ok) {
-        const text = await response.text();
-        snapshot = JSON.parse(text);
-        sourceInfo = { found: true, type, path, lastError: null };
-        break;
+  let servedFrom = null;
+  let sourceInfo = {
+    found: false,
+    type: null,
+    path: null,
+    lastError: null,
+    served_from: null,
+    kv_status: kvStatus,
+    asset_status: "MISS",
+    manifest_ref: manifestRef,
+    kv_latency_ms: kvResult.latency_ms,
+    asset_latency_ms: null
+  };
+
+  // Serve order: KV HIT → serve from KV
+  if (kvStatus === "HIT" && kvPayload) {
+    snapshot = kvPayload;
+    servedFrom = "KV";
+    sourceInfo.found = true;
+    sourceInfo.type = "KV";
+    sourceInfo.path = "RV_KV";
+    sourceInfo.served_from = "KV";
+    sourceInfo.asset_status = "MISS";
+  }
+
+  // KV MISS/ERROR → serve asset snapshot
+  const assetStarted = Date.now();
+  if (!snapshot) {
+    sourceInfo.served_from = "ASSET";
+    sourceInfo.asset_status = "MISS";
+    for (const { path, type } of pathsToTry) {
+      try {
+        const fetchUrl = new URL(path, url.origin);
+        const response = await fetch(fetchUrl.toString());
+        
+        if (response.ok) {
+          const text = await response.text();
+          snapshot = JSON.parse(text);
+          servedFrom = "ASSET";
+          sourceInfo = {
+            found: true,
+            type,
+            path,
+            lastError: null,
+            served_from: "ASSET",
+            kv_status: kvStatus,
+            asset_status: "HIT",
+            manifest_ref: manifestRef,
+            kv_latency_ms: kvResult.latency_ms,
+            asset_latency_ms: Date.now() - assetStarted
+          };
+          break;
+        }
+      } catch (err) {
+        sourceInfo.lastError = err.message;
+        sourceInfo.asset_status = "ERROR";
       }
-    } catch (err) {
-      sourceInfo.lastError = err.message;
+    }
+    if (snapshot && !sourceInfo.asset_latency_ms) {
+      sourceInfo.asset_latency_ms = Date.now() - assetStarted;
     }
   }
   
@@ -331,6 +455,8 @@ export async function serveStaticJson(req, env, ctx) {
   // NORMAL MODE
   if (!snapshot) {
     // Return maintenance envelope
+    const kvForMaintenance = kvEnabled ? (hasKV ? kvStatus : "ERROR") : "DISABLED";
+    sourceInfo.served_from = "MAINTENANCE";
     return new Response(
       JSON.stringify({
         schema_version: "3.0",
@@ -351,7 +477,8 @@ export async function serveStaticJson(req, env, ctx) {
         headers: {
           "Content-Type": "application/json",
           "Cache-Control": "no-store",
-          "X-RV-Source": "MAINTENANCE"
+          "X-RV-Source": "MAINTENANCE",
+          "X-RV-KV": kvForMaintenance
         }
       }
     );
