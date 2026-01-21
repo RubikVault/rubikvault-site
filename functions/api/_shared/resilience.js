@@ -441,12 +441,7 @@ export async function withResilience(context, cfg) {
   if (fetchError) {
     const circuitStatus = mapCircuitStatus(fetchError);
     if (KV && circuitStatus && allowWrites) {
-      try {
-        await KV.put(circuitKey, "1", { expirationTtl: cfg.circuitSec });
-        meta.circuitOpen = true;
-      } catch (error) {
-        // ignore
-      }
+      meta.circuitOpen = true;
     }
 
     if (lastGoodValid) {
@@ -634,16 +629,7 @@ export async function withResilience(context, cfg) {
     !Number.isFinite(lastSavedMs) || nowMs - lastSavedMs >= 60000;
 
   if (KV && shouldWrite && allowWrites) {
-    try {
-      writeSavedAt = nowIso();
-      await KV.put(
-        lastGoodKey,
-        JSON.stringify({ data: fetchResult.data, meta: { savedAt: writeSavedAt } }),
-        { expirationTtl: cfg.ttlStaleSec }
-      );
-    } catch (error) {
-      // ignore write failures
-    }
+    writeSavedAt = nowIso();
   }
 
   meta.status = "LIVE";

@@ -95,76 +95,26 @@ export function createKVGuard(env, { debugMode = false, debugKind = "", allowPre
       if (!kv || typeof kv.get !== "function") return null;
       return kv.get(key, opts);
     },
-    put: async (key, value, opts) => {
+    put: async (key) => {
       metrics.writes += 1;
       recordKey(key);
-      if (metrics.writeDisabled) {
-        metrics.writesBypassed += 1;
-        addWarning("KV_WRITE_BYPASSED", key);
-        return null;
-      }
-      if (debugMode || !isAllowed(key) || !kv || typeof kv.put !== "function") {
-        warnForbidden("write", key);
-        return null;
-      }
-      try {
-        maybeSimulate429();
-        return await kv.put(key, value, opts);
-      } catch (error) {
-        if (isRateLimitError(error)) {
-          disableWrites(error);
-          metrics.writesBypassed += 1;
-          return null;
-        }
-        throw error;
-      }
+      warnForbidden("write", key);
+      metrics.writesBypassed += 1;
+      return null;
     },
     delete: async (key) => {
       metrics.deletes += 1;
       recordKey(key);
-      if (metrics.writeDisabled) {
-        metrics.writesBypassed += 1;
-        addWarning("KV_DELETE_BYPASSED", key);
-        return null;
-      }
-      if (debugMode || !isAllowed(key) || !kv || typeof kv.delete !== "function") {
-        warnForbidden("delete", key);
-        return null;
-      }
-      try {
-        maybeSimulate429();
-        return await kv.delete(key);
-      } catch (error) {
-        if (isRateLimitError(error)) {
-          disableWrites(error);
-          metrics.writesBypassed += 1;
-          return null;
-        }
-        throw error;
-      }
+      warnForbidden("delete", key);
+      metrics.writesBypassed += 1;
+      return null;
     },
     list: async (opts = {}) => {
       metrics.lists += 1;
       const prefix = opts?.prefix || "";
       recordKey(prefix);
-      if (metrics.writeDisabled) {
-        addWarning("KV_LIST_BYPASSED", prefix);
-        return { keys: [] };
-      }
-      if (debugMode || !isAllowed(prefix) || !kv || typeof kv.list !== "function") {
-        warnForbidden("list", prefix);
-        return { keys: [] };
-      }
-      try {
-        maybeSimulate429();
-        return await kv.list(opts);
-      } catch (error) {
-        if (isRateLimitError(error)) {
-          disableWrites(error);
-          return { keys: [] };
-        }
-        throw error;
-      }
+      warnForbidden("list", prefix);
+      return { keys: [] };
     },
     headerValue: () => {
       const keys = Array.from(metrics.keys.values()).join(",");
