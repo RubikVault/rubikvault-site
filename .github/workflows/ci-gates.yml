@@ -96,6 +96,35 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Validate Against JSON Schemas
+        run: |
+          echo "🔍 Validating against JSON Schemas..."
+          
+          # Validate manifest
+          if [ -f public/data/manifest.json ] && [ -f schemas/manifest.schema.json ]; then
+            echo "Validating manifest.json..."
+            npx --yes ajv-cli@5 validate -s schemas/manifest.schema.json -d public/data/manifest.json
+          fi
+          
+          # Validate provider-state
+          if [ -f public/data/provider-state.json ] && [ -f schemas/provider-state.schema.json ]; then
+            echo "Validating provider-state.json..."
+            npx --yes ajv-cli@5 validate -s schemas/provider-state.schema.json -d public/data/provider-state.json
+          fi
+          
+          # Validate snapshots
+          if [ -f schemas/snapshot-envelope.schema.json ]; then
+            echo "Validating snapshot envelopes..."
+            for snapshot in public/data/snapshots/*/latest.json; do
+              if [ -f "$snapshot" ]; then
+                echo "  Validating $snapshot..."
+                npx --yes ajv-cli@5 validate -s schemas/snapshot-envelope.schema.json -d "$snapshot"
+              fi
+            done
+          fi
+          
+          echo "✅ JSON Schema validation complete"
+
       - name: Validate JSON Schemas
         run: |
           echo "🔍 Validating JSON Schemas..."
@@ -302,9 +331,9 @@ jobs:
           # Check: No KV writes in functions
           KV_WRITES=$(grep -r "KV.put\|kv.put" functions/ 2>/dev/null | grep -v "#" || true)
           if [ ! -z "$KV_WRITES" ]; then
-            echo "⚠️ WARNING: KV writes found in functions/ (should be read-only)"
+            echo "❌ VIOLATION: KV writes forbidden in functions (functions must be read-only)"
             echo "$KV_WRITES"
-            # Not a hard error, just warning for now
+            VIOLATIONS=$((VIOLATIONS + 1))
           fi
           
           echo ""

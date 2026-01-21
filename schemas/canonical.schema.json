@@ -1,0 +1,115 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Canonical Market Data v3.0",
+  "description": "Deterministic, provider-agnostic market data with OHLCV and technical indicators",
+  "type": "object",
+  "required": ["schema_version", "ticker", "data", "meta"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "const": "3.0"
+    },
+    "ticker": {
+      "type": "string",
+      "description": "Stock ticker symbol"
+    },
+    "data": {
+      "type": "object",
+      "required": ["ohlcv", "indicators"],
+      "additionalProperties": true,
+      "properties": {
+        "ohlcv": {
+          "type": "object",
+          "required": ["open", "high", "low", "close", "volume"],
+          "properties": {
+            "open": { "type": "number", "minimum": 0 },
+            "high": { "type": "number", "minimum": 0 },
+            "low": { "type": "number", "minimum": 0 },
+            "close": { "type": "number", "minimum": 0 },
+            "volume": { "type": "number", "minimum": 0 }
+          }
+        },
+        "indicators": {
+          "type": "object",
+          "additionalProperties": true,
+          "properties": {
+            "rsi": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 100,
+              "description": "Relative Strength Index"
+            },
+            "macd": {
+              "type": "object",
+              "properties": {
+                "value": { "type": "number" },
+                "signal": { "type": "number" },
+                "histogram": { "type": "number" }
+              }
+            },
+            "sma_20": { "type": "number", "description": "Simple Moving Average 20-period" },
+            "sma_50": { "type": "number", "description": "Simple Moving Average 50-period" },
+            "sma_200": { "type": "number", "description": "Simple Moving Average 200-period" },
+            "ema_12": { "type": "number", "description": "Exponential Moving Average 12-period" },
+            "ema_26": { "type": "number", "description": "Exponential Moving Average 26-period" },
+            "bollinger_bands": {
+              "type": "object",
+              "properties": {
+                "upper": { "type": "number" },
+                "middle": { "type": "number" },
+                "lower": { "type": "number" }
+              }
+            },
+            "atr": {
+              "type": "number",
+              "minimum": 0,
+              "description": "Average True Range"
+            },
+            "volume_sma_20": {
+              "type": "number",
+              "minimum": 0,
+              "description": "Volume Simple Moving Average 20-period"
+            }
+          }
+        }
+      }
+    },
+    "meta": {
+      "type": "object",
+      "required": ["sources", "quality_flags", "staleness_hours", "digest", "validation"],
+      "additionalProperties": true,
+      "properties": {
+        "sources": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Data provider sources"
+        },
+        "quality_flags": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Quality indicators and warnings"
+        },
+        "staleness_hours": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Hours since last update"
+        },
+        "digest": {
+          "type": "string",
+          "pattern": "^sha256:",
+          "description": "SHA-256 content hash for integrity verification"
+        },
+        "validation": {
+          "type": "object",
+          "required": ["passed", "dropped_records", "drop_ratio"],
+          "properties": {
+            "passed": { "type": "boolean" },
+            "dropped_records": { "type": "integer", "minimum": 0 },
+            "drop_ratio": { "type": "number", "minimum": 0, "maximum": 1 }
+          }
+        }
+      }
+    }
+  }
+}

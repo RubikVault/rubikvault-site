@@ -1,0 +1,79 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Dashboard Summary v3.0",
+  "description": "Lightweight summary for mobile UX - single fetch replaces 30+ requests",
+  "type": "object",
+  "required": ["schema_version", "generated_at", "items", "meta"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "const": "3.0"
+    },
+    "generated_at": {
+      "type": "string",
+      "description": "ISO8601 timestamp of summary generation"
+    },
+    "items": {
+      "type": "array",
+      "maxItems": 50,
+      "description": "Top N tickers for dashboard display",
+      "items": {
+        "type": "object",
+        "required": ["ticker", "price", "score", "recommendation", "short_reasons"],
+        "additionalProperties": true,
+        "properties": {
+          "ticker": {
+            "type": "string",
+            "description": "Stock ticker symbol"
+          },
+          "price": {
+            "type": "number",
+            "exclusiveMinimum": 0,
+            "description": "Current price"
+          },
+          "score": {
+            "type": "number",
+            "minimum": -100,
+            "maximum": 100,
+            "description": "Signal score"
+          },
+          "recommendation": {
+            "type": "string",
+            "enum": ["BUY", "HOLD", "SELL", "NO_SIGNAL"],
+            "description": "Trading recommendation"
+          },
+          "short_reasons": {
+            "type": "array",
+            "maxItems": 3,
+            "items": { "type": "string" },
+            "description": "Top 3 brief explanations for mobile display"
+          }
+        }
+      }
+    },
+    "meta": {
+      "type": "object",
+      "required": ["build_id", "total_tickers", "filter_applied"],
+      "additionalProperties": true,
+      "properties": {
+        "build_id": {
+          "type": "string",
+          "description": "Build identifier for traceability"
+        },
+        "total_tickers": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Total tickers available before filtering"
+        },
+        "filter_applied": {
+          "description": "Filter criteria applied or null if none",
+          "oneOf": [
+            { "type": "string" },
+            { "type": "null" }
+          ]
+        }
+      }
+    }
+  }
+}

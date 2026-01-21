@@ -1,0 +1,126 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Provider State v3.0",
+  "description": "Provider health monitoring with quota tracking and severity escalation",
+  "type": "object",
+  "required": ["schema_version", "generated_at", "system", "providers", "quotas"],
+  "additionalProperties": true,
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "const": "3.0"
+    },
+    "generated_at": {
+      "type": "string",
+      "description": "ISO8601 timestamp of state generation"
+    },
+    "system": {
+      "type": "object",
+      "required": ["status", "last_publish_at", "critical_ok", "top_issues"],
+      "additionalProperties": true,
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": ["ok", "degraded", "critical"],
+          "description": "Overall system health status"
+        },
+        "last_publish_at": {
+          "type": "string",
+          "description": "ISO8601 timestamp of last successful publish"
+        },
+        "critical_ok": {
+          "type": "boolean",
+          "description": "Whether all critical providers are healthy"
+        },
+        "top_issues": {
+          "type": "array",
+          "description": "Most severe issues across all providers",
+          "items": {
+            "type": "object",
+            "required": ["severity", "message", "provider"],
+            "properties": {
+              "severity": {
+                "type": "string",
+                "enum": ["info", "warn", "error", "critical"]
+              },
+              "message": { "type": "string" },
+              "provider": { "type": "string" }
+            },
+            "additionalProperties": true
+          }
+        }
+      }
+    },
+    "providers": {
+      "type": "array",
+      "description": "Individual provider health status",
+      "items": {
+        "type": "object",
+        "required": ["name", "status", "last_success_at", "last_failure_at", "consecutive_failures", "severity"],
+        "additionalProperties": true,
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Provider identifier"
+          },
+          "status": {
+            "type": "string",
+            "enum": ["ok", "stale_3d", "stale_7d", "error"],
+            "description": "Provider status (stale_3d: >3 days triggers warning, stale_7d: >7 days triggers degraded mode)"
+          },
+          "last_success_at": {
+            "description": "ISO8601 timestamp of last successful fetch or null if never succeeded",
+            "oneOf": [
+              { "type": "string" },
+              { "type": "null" }
+            ]
+          },
+          "last_failure_at": {
+            "description": "ISO8601 timestamp of last failure or null if no recent failures",
+            "oneOf": [
+              { "type": "string" },
+              { "type": "null" }
+            ]
+          },
+          "consecutive_failures": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Count of consecutive failures"
+          },
+          "severity": {
+            "type": "string",
+            "enum": ["info", "warn", "error", "critical"],
+            "description": "Severity level for alerting"
+          }
+        }
+      }
+    },
+    "quotas": {
+      "type": "object",
+      "required": ["daily_used", "daily_limit", "weekly_used", "weekly_limit"],
+      "additionalProperties": true,
+      "properties": {
+        "daily_used": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "API calls used today"
+        },
+        "daily_limit": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Daily API call limit"
+        },
+        "weekly_used": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "API calls used this week"
+        },
+        "weekly_limit": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Weekly API call limit"
+        }
+      }
+    }
+  }
+}

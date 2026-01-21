@@ -155,7 +155,7 @@ function testMirrorMetaNormalization() {
     mirrorId: "omega",
     updatedAt: new Date().toISOString(),
     items: [],
-    meta: null
+    // meta intentionally omitted: normalization should add meta with status/updatedAt
   });
   run(SCRIPTS.artifacts, [], dir);
   const mirror = readJson(path.join(mirrorsDir, "omega.json"));

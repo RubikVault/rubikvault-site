@@ -25,6 +25,8 @@
     "validate:registry": "node scripts/validate-registry.js",
     "simulate:cost": "node scripts/simulate-cost.js",
     "test:contracts": "node scripts/contract-smoke.js",
+    "test:drop-threshold": "node tests/drop-threshold.test.mjs",
+    "test:fetch-retry": "node tests/fetch-retry.test.mjs",
     "test:metrics-v5": "node scripts/metrics-v5-gates.mjs",
     "validate:snapshots": "node scripts/validate-snapshots.js",
     "validate:public-registry": "node scripts/validate-public-registry.mjs",
@@ -41,6 +43,7 @@
     "simple-statistics": "^7.8.8"
   },
   "devDependencies": {
+    "ajv-cli": "^5.0.0",
     "wrangler": "4.56.0"
   }
 }

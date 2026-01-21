@@ -1,0 +1,80 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Snapshot Envelope v3.0",
+  "type": "object",
+  "required": ["schema_version", "metadata", "data", "error"],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "const": "3.0"
+    },
+    "metadata": {
+      "type": "object",
+      "required": [
+        "module",
+        "tier",
+        "domain",
+        "source",
+        "fetched_at",
+        "published_at",
+        "digest",
+        "record_count",
+        "validation",
+        "freshness",
+        "upstream"
+      ],
+      "properties": {
+        "module": { "type": "string" },
+        "tier": { "type": "string" },
+        "domain": { "type": "string" },
+        "source": { "type": "string" },
+        "fetched_at": { "type": "string", "description": "ISO8601 timestamp" },
+        "published_at": { "type": "string", "description": "ISO8601 timestamp" },
+        "digest": { "type": "string" },
+        "record_count": { "type": "integer" },
+        "expected_count": { "type": ["integer", "null"] },
+        "validation": {
+          "type": "object",
+          "required": ["passed"],
+          "properties": {
+            "passed": { "type": "boolean" },
+            "dropped_records": { "type": "integer" },
+            "drop_ratio": { "type": "number" },
+            "checks": { "type": "array", "items": { "type": "string" } },
+            "warnings": { "type": "array", "items": { "type": "string" } }
+          },
+          "additionalProperties": true
+        },
+        "freshness": {
+          "type": "object",
+          "properties": {
+            "expected_interval_minutes": { "type": "integer" },
+            "grace_minutes": { "type": "integer" },
+            "policy": { "type": "string" },
+            "age_minutes": { "type": "integer" },
+            "next_expected_at": { "type": ["string", "null"], "description": "ISO8601 timestamp" }
+          },
+          "additionalProperties": true
+        },
+        "upstream": {
+          "type": "object",
+          "properties": {
+            "http_status": { "type": ["integer", "null"] },
+            "latency_ms": { "type": ["integer", "null"] },
+            "rate_limit_remaining": { "type": ["integer", "null"] },
+            "retry_count": { "type": "integer" }
+          },
+          "additionalProperties": true
+        }
+      },
+      "additionalProperties": true
+    },
+    "data": {
+      "type": "array"
+    },
+    "error": {
+      "type": ["object", "null"]
+    }
+  },
+  "additionalProperties": false
+}
