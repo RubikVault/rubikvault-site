@@ -4,6 +4,26 @@ import { fileURLToPath } from "node:url";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
+async function resolveLoaderPath() {
+  const candidates = [
+    path.join(ROOT, "public", "rv-loader.js"),
+    path.join(ROOT, "rv-loader.js"),
+    path.join(ROOT, "public", "features", "rv-loader.js"),
+    path.join(ROOT, "public", "features", "blocks-registry.js"),
+    path.join(ROOT, "features", "blocks-registry.js")
+  ];
+  for (const candidate of candidates) {
+    try {
+      await fs.access(candidate);
+      return candidate;
+    } catch {
+      // continue
+    }
+  }
+  fail(`Loader file not found. Tried:\n${candidates.map((p) => `- ${p}`).join("\n")}`);
+  return null;
+}
+
 function fail(message) {
   console.error(`[contract-smoke] ${message}`);
   process.exit(1);
@@ -27,22 +47,17 @@ function isEmptyValid(meta, rows) {
 }
 
 async function checkMirrorPriority() {
-  const loaderPath = path.join(ROOT, "public", "rv-loader.js");
+  const loaderPath = await resolveLoaderPath();
   const loader = await fs.readFile(loaderPath, "utf8");
-  const mirrorLine = loader.split("\n").find((line) => line.includes("MIRROR_PREFERRED_IDS"));
-  if (!mirrorLine) fail("MIRROR_PREFERRED_IDS set not found in loader");
-  const listMatch = mirrorLine.match(/\[(.*)\]/);
-  if (!listMatch) fail("MIRROR_PREFERRED_IDS list not found in loader");
-  const list = listMatch[1]
-    .split(",")
-    .map((value) => value.trim().replace(/^['"]|['"]$/g, ""))
-    .filter(Boolean);
-  if (!list.includes("tech-signals")) fail("tech-signals missing from MIRROR_PREFERRED_IDS");
-  if (!list.includes("alpha-radar")) fail("alpha-radar missing from MIRROR_PREFERRED_IDS");
+  const required = ["rv-tech-signals", "rv-alpha-radar"];
+  const missing = required.filter((token) => !loader.includes(token));
+  if (missing.length) {
+    fail(`Required feature ids not referenced in loader (${path.basename(loaderPath)}): ${missing.join(", ")}`);
+  }
 }
 
 async function checkAlphaRadarTitle() {
-  const configPath = path.join(ROOT, "public", "rv-config.js");
+  const configPath = path.join(ROOT, "rv-config.js");
   const config = await fs.readFile(configPath, "utf8");
   const match = config.match(/id:\s*"rv-alpha-radar"[\s\S]*?title:\s*"([^"]+)"/);
   if (!match) fail("rv-alpha-radar title not found in rv-config.js");

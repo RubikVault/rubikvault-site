@@ -2,6 +2,61 @@ import fs from "node:fs";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 
+function resolveFirstExisting(root, relPaths) {
+  const tried = [];
+  for (const rel of relPaths) {
+    const abs = path.join(root, rel);
+    tried.push(abs);
+    if (fs.existsSync(abs)) return { ok: true, path: abs, tried };
+  }
+  return { ok: false, path: null, tried };
+}
+
+function walkFiles(dir, out, opts) {
+  if (!fs.existsSync(dir)) return;
+  const entries = fs.readdirSync(dir, { withFileTypes: true });
+  for (const entry of entries) {
+    const full = path.join(dir, entry.name);
+    if (entry.isDirectory()) {
+      if (opts.skipDirs.has(entry.name)) continue;
+      walkFiles(full, out, opts);
+      continue;
+    }
+    if (!entry.isFile()) continue;
+    const lower = entry.name.toLowerCase();
+    if (opts.skipExts.has(path.extname(lower))) continue;
+    if (lower.includes(".bak")) continue;
+    if (lower.endsWith(".map")) continue;
+    out.push(full);
+  }
+}
+
+function guardNoMetaNull(root) {
+  const files = [];
+  const opts = {
+    skipDirs: new Set(["node_modules", ".git", ".wrangler", "dist", "build"]),
+    skipExts: new Set([".png", ".jpg", ".jpeg", ".gif", ".webp", ".ico", ".svg"]) 
+  };
+  ["scripts", "public"].forEach((rel) => walkFiles(path.join(root, rel), files, opts));
+  walkFiles(path.join(root, "functions", "api"), files, opts);
+  const offenders = [];
+  const re = /\bmeta\s*:\s*null\b|\bmeta\s*=\s*null\b|return\s*\{\s*meta\s*:\s*null\b/;
+  for (const filePath of files) {
+    if (!/\.(js|mjs|ts|json|md)$/i.test(filePath)) continue;
+    let raw;
+    try {
+      raw = fs.readFileSync(filePath, "utf8");
+    } catch {
+      continue;
+    }
+    if (re.test(raw)) offenders.push(filePath);
+    if (offenders.length >= 10) break;
+  }
+  if (offenders.length) {
+    throw new Error(`Forbidden meta null pattern found in:\n${offenders.map((p) => `- ${p}`).join("\n")}`);
+  }
+}
+
 function validateEnvelope(obj) {
   if (!obj || typeof obj !== "object") return false;
   if (typeof obj.ok !== "boolean") return false;
@@ -40,6 +95,8 @@ async function main() {
   const root = process.cwd();
   const schemaPath = path.join(root, "schemas", "api-envelope.schema.json");
   await readFile(schemaPath, "utf8");
+
+  guardNoMetaNull(root);
 
   const sample = {
     ok: true,
