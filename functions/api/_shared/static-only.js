@@ -205,6 +205,7 @@ async function buildDebugResponse(moduleName, snapshot, moduleConfig, sourceInfo
     kv_status: sourceInfo.kv_status,
     asset_status: sourceInfo.asset_status,
     manifest_ref: sourceInfo.manifest_ref,
+    build_id: sourceInfo.build_id,
     kv_latency_ms: sourceInfo.kv_latency_ms,
     asset_latency_ms: sourceInfo.asset_latency_ms,
     timestamp: new Date().toISOString(),
@@ -301,7 +302,12 @@ async function readKvWithTimeout(kv, key, ms) {
 
 function getManifestRef(manifest) {
   if (!manifest || typeof manifest !== "object") return null;
-  return manifest.active_build_id || manifest.published_at || null;
+  return manifest.manifest_ref || manifest.build_id || manifest.active_build_id || manifest.published_at || null;
+}
+
+function getBuildId(manifest) {
+  if (!manifest || typeof manifest !== "object") return null;
+  return manifest.build_id || manifest.active_build_id || null;
 }
 
 /**
@@ -319,6 +325,7 @@ export async function serveStaticJson(req, envOrModule, ignored, ctxOrContext) {
   let manifest = null;
   let manifestEntry = null;
   let manifestRef = null;
+  let buildId = null;
   try {
     const manifestUrl = new URL('/data/manifest.json', url.origin);
     const manifestResponse = await fetch(manifestUrl.toString());
@@ -326,6 +333,7 @@ export async function serveStaticJson(req, envOrModule, ignored, ctxOrContext) {
       manifest = await manifestResponse.json();
       manifestEntry = manifest?.modules?.[moduleName] || null;
       manifestRef = getManifestRef(manifest);
+      buildId = getBuildId(manifest);
     }
   } catch (e) {
     // optional
@@ -387,6 +395,7 @@ export async function serveStaticJson(req, envOrModule, ignored, ctxOrContext) {
     kv_status: kvStatus,
     asset_status: "MISS",
     manifest_ref: manifestRef,
+    build_id: buildId,
     kv_latency_ms: kvResult.latency_ms,
     asset_latency_ms: null
   };
@@ -425,6 +434,7 @@ export async function serveStaticJson(req, envOrModule, ignored, ctxOrContext) {
             kv_status: kvStatus,
             asset_status: "HIT",
             manifest_ref: manifestRef,
+            build_id: buildId,
             kv_latency_ms: kvResult.latency_ms,
             asset_latency_ms: Date.now() - assetStarted
           };

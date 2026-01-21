@@ -24,6 +24,14 @@
           "enum": ["ok", "degraded", "critical"],
           "description": "Overall system health status"
         },
+        "build_id": {
+          "type": "string",
+          "description": "Canonical build identifier for traceability"
+        },
+        "manifest_ref": {
+          "type": "string",
+          "description": "Stable reference for this manifest/build"
+        },
         "last_publish_at": {
           "type": "string",
           "description": "ISO8601 timestamp of last successful publish"

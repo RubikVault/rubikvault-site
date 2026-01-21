@@ -39,6 +39,8 @@ export async function loadProviderState(baseDir = process.cwd()) {
  */
 export function generateProviderState(manifest, moduleStates = new Map(), options = {}) {
   const now = new Date().toISOString();
+  const buildId = manifest?.build_id || manifest?.active_build_id || null;
+  const manifestRef = manifest?.manifest_ref || buildId || null;
   
   // Analyze summary
   const modules = manifest.modules || {};
@@ -120,6 +122,8 @@ export function generateProviderState(manifest, moduleStates = new Map(), option
     generated_at: now,
     system: {
       status: systemStatus,
+      build_id: buildId,
+      manifest_ref: manifestRef,
       last_publish_at: manifest.published_at || now,
       critical_ok: summary.critical_ok !== false,
       top_issues: topIssues.slice(0, 10) // Top 10

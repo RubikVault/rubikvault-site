@@ -240,6 +240,7 @@ function buildManifest(artifacts, registry, publishedAt, buildId) {
       digest: snapshot.metadata.digest,
       fetched_at: snapshot.metadata.fetched_at,
       build_id: buildId, // Add Build ID
+      manifest_ref: buildId,
       freshness: snapshot.metadata.freshness,
       cache: {
         kv_enabled: config.cache?.kv_enabled || false,
@@ -250,7 +251,9 @@ function buildManifest(artifacts, registry, publishedAt, buildId) {
   
   const manifest = {
     schema_version: "3.0",
+    build_id: buildId,
     active_build_id: buildId, // Add Build ID to manifest
+    manifest_ref: buildId,
     published_at: publishedAt || new Date().toISOString(),
     publish_policy: "critical_core_hybrid_v3",
     modules,
@@ -351,7 +354,11 @@ async function promoteArtifacts(manifest, artifacts, tmpDir) {
     const stateDir = join(tmpBase, 'state', 'modules');
     await mkdir(stateDir, { recursive: true });
     const statePath = join(stateDir, `${moduleName}.json`);
-    const stateContent = JSON.stringify(artifact.state, null, 2) + '\n';
+    const stateContent = JSON.stringify({
+      ...artifact.state,
+      build_id: manifest.build_id || manifest.active_build_id || null,
+      manifest_ref: manifest.manifest_ref || null
+    }, null, 2) + '\n';
     await writeFile(statePath, stateContent, 'utf-8');
   }
   
@@ -455,8 +462,12 @@ async function main() {
       // Generate empty but valid provider-state so dashboard doesn't show errors
       try {
         console.log('  Creating empty manifest structure...');
+        const buildId = getCurrentBuildId();
         const emptyManifest = {
           schema_version: "3.0",
+          build_id: buildId,
+          active_build_id: buildId,
+          manifest_ref: buildId,
           published_at: new Date().toISOString(),
           publish_policy: "critical_core_hybrid_v3",
           modules: {},

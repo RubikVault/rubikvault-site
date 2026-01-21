@@ -1,99 +1,75 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "Manifest v3.0 - Per-Ticker Authority",
-  "description": "Single source of truth for per-ticker canonical and signals data state",
+  "title": "Manifest v3.0 - Modules",
+  "description": "Single source of truth for published modules state (Mission Control v3.0)",
   "type": "object",
-  "required": ["schema_version", "generated_at", "tickers", "summary"],
-  "additionalProperties": false,
+  "required": ["schema_version", "published_at", "publish_policy", "modules", "summary"],
+  "additionalProperties": true,
   "properties": {
     "schema_version": {
       "type": "string",
       "const": "3.0"
     },
-    "generated_at": {
+    "published_at": {
       "type": "string",
-      "description": "ISO8601 timestamp of manifest generation"
+      "description": "ISO8601 timestamp of publish"
     },
-    "tickers": {
+    "publish_policy": {
+      "type": "string"
+    },
+    "build_id": {
+      "type": "string",
+      "description": "Canonical build identifier for traceability"
+    },
+    "active_build_id": {
+      "type": "string",
+      "description": "Legacy alias for build_id"
+    },
+    "manifest_ref": {
+      "type": "string",
+      "description": "Stable reference for this manifest/build"
+    },
+    "modules": {
       "type": "object",
-      "description": "Per-ticker state mapping (ticker symbol as key)",
+      "description": "Per-module state mapping (module id as key)",
       "additionalProperties": {
         "type": "object",
-        "required": ["status", "canon_ref", "signals_ref", "last_updated", "warnings"],
+        "required": ["tier", "status", "published", "digest"],
         "additionalProperties": true,
         "properties": {
-          "status": {
-            "type": "string",
-            "enum": ["valid", "stale", "invalid", "degraded"],
-            "description": "Current data status"
+          "tier": { "type": "string" },
+          "domain": { "type": "string" },
+          "status": { "type": "string" },
+          "published": { "type": "boolean" },
+          "digest": { "type": "string" },
+          "fetched_at": { "type": "string" },
+          "build_id": { "type": "string" },
+          "manifest_ref": { "type": "string" },
+          "freshness": {
+            "type": "object",
+            "additionalProperties": true
           },
-          "canon_ref": {
-            "type": "string",
-            "description": "Reference path to canonical data file"
-          },
-          "signals_ref": {
-            "description": "Reference path to signals file or null if unavailable",
-            "oneOf": [
-              { "type": "string" },
-              { "type": "null" }
-            ]
-          },
-          "last_updated": {
-            "type": "string",
-            "description": "ISO8601 timestamp of last successful update"
-          },
-          "warnings": {
-            "type": "array",
-            "items": { "type": "string" },
-            "description": "Warning messages for this ticker"
-          },
-          "fallback_date": {
-            "type": "string",
-            "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
-            "description": "YYYY-MM-DD date of fallback data if using historical"
-          },
-          "staleness_hours": {
-            "type": "number",
-            "minimum": 0,
-            "description": "Hours since last update"
+          "cache": {
+            "type": "object",
+            "additionalProperties": true,
+            "properties": {
+              "kv_enabled": { "type": "boolean" },
+              "preferred_source": { "type": "string" }
+            }
           }
         }
       }
     },
     "summary": {
       "type": "object",
-      "required": ["total", "valid", "stale", "invalid", "degraded", "last_build_id"],
       "additionalProperties": true,
       "properties": {
-        "total": {
-          "type": "integer",
-          "minimum": 0,
-          "description": "Total number of tickers"
-        },
-        "valid": {
-          "type": "integer",
-          "minimum": 0,
-          "description": "Count of valid tickers"
-        },
-        "stale": {
-          "type": "integer",
-          "minimum": 0,
-          "description": "Count of stale tickers"
-        },
-        "invalid": {
-          "type": "integer",
-          "minimum": 0,
-          "description": "Count of invalid tickers"
-        },
-        "degraded": {
-          "type": "integer",
-          "minimum": 0,
-          "description": "Count of degraded tickers"
-        },
-        "last_build_id": {
-          "type": "string",
-          "description": "Build identifier for traceability"
-        }
+        "modules_total": { "type": "integer", "minimum": 0 },
+        "ok": { "type": "integer", "minimum": 0 },
+        "warn": { "type": "integer", "minimum": 0 },
+        "error": { "type": "integer", "minimum": 0 },
+        "stale_ratio": { "type": "number", "minimum": 0 },
+        "critical_ok": { "type": "boolean" }
       }
     }
   }
