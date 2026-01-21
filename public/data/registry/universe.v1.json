@@ -1,0 +1,37 @@
+{
+  "schema_version": "1.0",
+  "universe_version": "v1",
+  "generated_at": null,
+  "notes": [
+    "Phase 1: EOD prices pipeline. This file defines WHAT symbols exist; not prices.",
+    "MVP uses ETF proxies for indices (SPY, QQQ, DIA, IWM) and a watchlist.",
+    "Constituent lists can be filled later via a separate step; this registry is stable."
+  ],
+  "groups": {
+    "index_proxies": {
+      "description": "Always-on proxies used for regime/context.",
+      "symbols": ["SPY", "QQQ", "DIA", "IWM"]
+    },
+    "watchlist": {
+      "description": "Hand-picked symbols (start small, expand later).",
+      "symbols": []
+    },
+    "sp500": {
+      "description": "S&P 500 constituents (fill later).",
+      "symbols": []
+    },
+    "nasdaq100": {
+      "description": "Nasdaq 100 constituents (fill later).",
+      "symbols": []
+    },
+    "dow30": {
+      "description": "Dow Jones 30 constituents (fill later).",
+      "symbols": []
+    }
+  },
+  "symbol_rules": {
+    "allowed_pattern": "^[A-Z0-9.\\-]{1,15}$",
+    "max_total_symbols": 6000,
+    "dedupe_across_groups": true
+  }
+}

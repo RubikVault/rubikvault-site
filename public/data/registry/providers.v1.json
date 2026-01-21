@@ -1,0 +1,15 @@
+{
+  "schema_version": "1.0",
+  "providers_version": "v1",
+  "notes": [
+    "Prices are fetched EOD only.",
+    "Provider selection is config-driven. No source mixing per symbol per run.",
+    "Fallback chain A->B is allowed; C is last_good for UI only."
+  ],
+  "chains": {
+    "prices_eod": [
+      { "id": "providerA", "kind": "alpha_vantage_eod", "enabled": false },
+      { "id": "providerB", "kind": "twelve_data_eod", "enabled": false }
+    ]
+  }
+}

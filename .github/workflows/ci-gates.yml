@@ -106,6 +106,7 @@ jobs:
           npm run test:p2-build-id
           npm run test:p3-kv-write
 
+          npm run test:universe-registry
       - name: Validate Against JSON Schemas
         run: |
           echo "🔍 Validating against JSON Schemas..."
