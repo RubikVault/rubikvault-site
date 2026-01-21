@@ -34,7 +34,8 @@
     "validate:public-registry": "node scripts/validate-public-registry.mjs",
     "smoke:redirects": "sh scripts/smoke-redirects.sh",
     "smoke:redirects:preview": "BASE_URL=$PREVIEW_URL sh scripts/smoke-redirects.sh",
-    "test:universe-registry": "node scripts/validate/universe-registry.v1.mjs"
+    "test:universe-registry": "node scripts/validate/universe-registry.v1.mjs",
+    "test:market-prices-artifact": "node scripts/validate/market-prices-artifact.v1.mjs"
   },
   "dependencies": {
     "d3-dsv": "^3.0.1",
