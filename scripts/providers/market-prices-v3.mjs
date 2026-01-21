@@ -163,7 +163,9 @@ function detectSecretsPresent() {
 async function main() {
   const outDir = process.env.RV_ARTIFACT_OUT_DIR
     ? String(process.env.RV_ARTIFACT_OUT_DIR)
-    : DEFAULT_OUT_DIR;
+    : (process.env.ARTIFACTS_DIR
+        ? join(String(process.env.ARTIFACTS_DIR), MODULE_NAME)
+        : DEFAULT_OUT_DIR);
 
   const forcedStub = toBool(process.env.RV_PRICES_STUB);
   const forcedReal = toBool(process.env.RV_PRICES_FORCE_REAL);

@@ -15,6 +15,10 @@
 
 WP2 produces artifacts only (no `public/data` writes). Real fetch is deferred to WP3.
 
+## WP3
+
+WP3: `market-prices` artifacts are promoted by the finalizer into `public/data` and are API-servable.
+
 ## How to run locally (stub mode)
 
 Generate artifacts:

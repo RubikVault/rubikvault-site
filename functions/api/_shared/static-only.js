@@ -205,6 +205,7 @@ async function buildDebugResponse(moduleName, snapshot, moduleConfig, sourceInfo
   }
   
   return {
+    schema_version: snapshot?.schema_version || null,
     debug: true,
     module: moduleName,
     served_from: sourceInfo.served_from,
@@ -506,11 +507,15 @@ export async function serveStaticJson(req, envOrModule, ignored, ctxOrContext) {
   
   // Transform v3.0 to legacy
   const isV3 = snapshot.schema_version === "3.0" || snapshot.schemaVersion === "v3";
+  const wantsLegacy = url.searchParams.get('legacy') === '1' || url.searchParams.get('format') === 'legacy';
   let transformed = false;
   
-  if (isV3) {
+  if (isV3 && wantsLegacy) {
     snapshot = transformV3ToLegacy(snapshot);
     transformed = true;
+  } else if (isV3) {
+    if (!snapshot.metadata) snapshot.metadata = {};
+    if (!snapshot.metadata.served_from) snapshot.metadata.served_from = sourceInfo.served_from;
   }
   
   // Apply module-specific transformations

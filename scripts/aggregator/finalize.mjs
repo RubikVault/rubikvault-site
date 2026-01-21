@@ -164,6 +164,42 @@ function validateSnapshot(snapshot, moduleConfig) {
   };
 }
 
+function validateArtifactConsistency(moduleName, snapshot, state) {
+  const errors = [];
+
+  if (!state || typeof state !== 'object') {
+    errors.push('STATE_MISSING');
+    return { valid: false, errors };
+  }
+
+  if (state.schema_version !== '3.0') {
+    errors.push(`STATE_SCHEMA_VERSION: expected=3.0, got=${state.schema_version}`);
+  }
+
+  const snapshotModule = snapshot?.metadata?.module || null;
+  const snapshotDigest = snapshot?.metadata?.digest || null;
+  const snapshotCount = snapshot?.metadata?.record_count;
+
+  if (state.module !== moduleName) {
+    errors.push(`STATE_MODULE_MISMATCH: state=${state.module}, expected=${moduleName}`);
+  }
+  if (snapshotModule && snapshotModule !== moduleName) {
+    errors.push(`SNAPSHOT_MODULE_MISMATCH: snapshot=${snapshotModule}, expected=${moduleName}`);
+  }
+  if (state.digest && snapshotDigest && state.digest !== snapshotDigest) {
+    errors.push(`STATE_DIGEST_MISMATCH: state=${state.digest}, snapshot=${snapshotDigest}`);
+  }
+  if (
+    typeof snapshotCount === 'number' &&
+    typeof state.record_count === 'number' &&
+    state.record_count !== snapshotCount
+  ) {
+    errors.push(`STATE_RECORD_COUNT_MISMATCH: state=${state.record_count}, snapshot=${snapshotCount}`);
+  }
+
+  return { valid: errors.length === 0, errors };
+}
+
 /**
  * Apply critical-core publish policy
  */
@@ -555,6 +591,11 @@ async function main() {
       const result = validateSnapshot(artifact.snapshot, config);
       if (!result.valid) {
         validationErrors.push(`${moduleName}: ${result.errors.join(', ')}`);
+      }
+
+      const consistency = validateArtifactConsistency(moduleName, artifact.snapshot, artifact.state);
+      if (!consistency.valid) {
+        validationErrors.push(`${moduleName}: ${consistency.errors.join(', ')}`);
       }
     }
     
