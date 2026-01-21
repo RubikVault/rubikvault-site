@@ -6,9 +6,26 @@
     "Provider selection is config-driven. No source mixing per symbol per run.",
     "Fallback chain A->B is allowed; C is last_good for UI only."
   ],
+  "providers": [
+    {
+      "id": "alphavantage",
+      "name": "Alpha Vantage",
+      "alias": "A",
+      "kind": "alpha_vantage_eod",
+      "base_url": "https://www.alphavantage.co/query",
+      "auth_env_var": "ALPHAVANTAGE_API_KEY",
+      "default_throttle_ms": 12000,
+      "burst_cap": 1,
+      "timeout_ms": 20000,
+      "rate_limits": {
+        "requests_per_day": 500,
+        "requests_per_minute": 5
+      }
+    }
+  ],
   "chains": {
     "prices_eod": [
-      { "id": "providerA", "kind": "alpha_vantage_eod", "enabled": false },
+      { "id": "alphavantage", "kind": "alpha_vantage_eod", "enabled": false },
       { "id": "providerB", "kind": "twelve_data_eod", "enabled": false }
     ]
   }

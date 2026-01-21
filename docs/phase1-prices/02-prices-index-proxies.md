@@ -1,4 +1,4 @@
-# Phase 1 / WP2 — Prices (Index Proxies) Artifacts (market-prices)
+# Phase 1 / WP4 — Prices (Index Proxies) Artifacts (market-prices)
 
 ## What this adds
 
@@ -13,7 +13,7 @@
 - `scripts/lib/digest.js` → `computeSnapshotDigest(envelope)`
 - `scripts/lib/module-state.js` → `buildModuleState(moduleName, envelope, validationResult, moduleConfig, options)`
 
-WP2 produces artifacts only (no `public/data` writes). Real fetch is deferred to WP3.
+Artifacts only (no `public/data` writes). Real provider fetch is available in WP4.
 
 ## WP3
 
@@ -44,12 +44,25 @@ The symbols are sourced from:
 
 ## Real mode
 
-WP2 does not implement real provider fetch.
+Real fetch is opt-in and config-driven.
 
 If you force real mode:
 
 - `RV_PRICES_FORCE_REAL=1 node scripts/providers/market-prices-v3.mjs`
 
-It fails loud with:
+It fails loud if the Provider A API key is missing:
 
-- `REAL_FETCH_NOT_IMPLEMENTED_YET (use STUB or implement WP3 provider)`
+- `REAL_FETCH_MISSING_API_KEY`
+
+When the API key is present (see registry), real mode activates.
+
+## Required env vars
+
+- `RV_PRICES_FORCE_REAL=1` to enable real mode.
+- `ALPHAVANTAGE_API_KEY` (from `public/data/registry/providers.v1.json` → Provider A).
+
+## 60s local run (commands)
+
+- `node scripts/providers/market-prices-v3.mjs`
+- `RV_PRICES_FORCE_REAL=1 ALPHAVANTAGE_API_KEY=your_key node scripts/providers/market-prices-v3.mjs`
+- `node scripts/validate/market-prices-artifact.v1.mjs`
