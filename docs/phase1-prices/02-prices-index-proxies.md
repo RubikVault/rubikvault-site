@@ -99,3 +99,13 @@ the run fails loud and `snapshot.metadata.upstream.*` includes the classificatio
 - Health scores start at 100 and subtract weighted penalties: cooldowns (−40), rate-limit notes (−25), HTTP 429s (−20), network errors (−15), and a final 100×(1−success_ratio) adjustment. Scores are clamped between 0 and 100.
 - Run quality is derived from coverage: ≥95% → `OK`, 50–95% → `DEGRADED`, <50% or zero valid bars → `FAILED`. `fallback_usage_ratio` reports how often fallbacks supplied bars, and `reason_summary` is a histogram of failure classifications.
 - UI/ops can read these artifacts without touching the snapshot schema; they already surface all required metadata so nothing else moves in this WP.
+
+## Market Stats (derived module)
+
+- `market-stats` is a derived module that reads the canonical bars produced by `market-prices` and computes ~20–25 metrics per symbol (returns, volatility, momentum, drawdowns, SMAs, RSI, ATR, z-scores, and health stats) using at most the most recent 252 bars while remaining static-first.
+- The stats provider looks for market-prices artifacts first (`BARS_ARTIFACTS_DIR/market-prices/snapshot.json`) and otherwise falls back to the published asset (`public/data/snapshots/market-prices/latest.json`). No extra upstream API calls are made.
+- Outputs:
+  - `snapshot.json` (v3 envelope) with `data[*].stats` + `coverage` details.
+  - `module-state.json` and `market-stats-health.json` (coverage ratio, run quality, reason summary).
+  - Exposed endpoint: `/api/market-stats` (served from ASSET via `functions/api/market-stats.js`).
+- Required env toggles are the same as market-prices (since stats are derived from its artifacts).

@@ -159,6 +159,54 @@
         "probe": "/api/probe/market-prices"
       }
     },
+    "market-stats": {
+      "module": "market-stats",
+      "tier": "standard",
+      "domain": "stocks",
+      "enabled": true,
+      "source": "derived",
+      "freshness": {
+        "expected_interval_minutes": 1440,
+        "grace_minutes": 180,
+        "policy": "market_days_only"
+      },
+      "counts": {
+        "expected": 4,
+        "min": 4,
+        "max": 4
+      },
+      "plausibility_rules": [
+        {
+          "path": "$.data[*].stats.returns_1d",
+          "min": -10,
+          "max": 10,
+          "allow_null": true
+        }
+      ],
+      "ui_contract": {
+        "policy": "digest_change_for_noncritical",
+        "required_paths": [
+          "$.data[0].symbol",
+          "$.data[0].stats",
+          "$.metadata.fetched_at"
+        ]
+      },
+      "cache": {
+        "kv_enabled": false,
+        "preferred_source": "ASSET"
+      },
+      "mobile": {
+        "optimized": true,
+        "ui_variant": "compact",
+        "lazy_load_priority": 2,
+        "size_category": "small"
+      },
+      "endpoints": {
+        "api": "/api/market-stats",
+        "debug": "/api/market-stats?debug=1",
+        "probe": "/api/probe/market-stats"
+      }
+    },
     "crypto": {
       "module": "crypto",
       "tier": "standard",

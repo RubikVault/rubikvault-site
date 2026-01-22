@@ -30,6 +30,8 @@
     "test:p2-build-id": "node tests/p2-build-id.test.mjs",
     "test:p3-kv-write": "node tests/p3-kv-write-dedup.test.mjs",
     "test:metrics-v5": "node scripts/metrics-v5-gates.mjs",
+    "test:market-stats-artifact": "node tests/market-stats-artifact.test.mjs",
+    "test:market-stats-metrics": "node tests/market-stats-metrics.test.mjs",
     "validate:snapshots": "node scripts/validate-snapshots.js",
     "validate:public-registry": "node scripts/validate-public-registry.mjs",
     "smoke:redirects": "sh scripts/smoke-redirects.sh",
