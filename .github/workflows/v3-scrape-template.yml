@@ -97,18 +97,18 @@ jobs:
         run: |
           echo "🔄 Scraping module: $MODULE"
           
-          # Check if provider script exists
-          PROVIDER_SCRIPT="scripts/providers/${MODULE}-v3.mjs"
-          if [ ! -f "$PROVIDER_SCRIPT" ]; then
-            echo "⚠️ Provider script not found: $PROVIDER_SCRIPT"
-            echo "Checking for alternative script name..."
-            
-            # Try without -v3 suffix
-            PROVIDER_SCRIPT="scripts/providers/${MODULE}.mjs"
-            if [ ! -f "$PROVIDER_SCRIPT" ]; then
-              echo "❌ No provider script found for module: $MODULE"
-              exit 1
+          PROVIDER_SCRIPT=""
+          for SUFFIX in "-v3" "-v2" "-v1" ""; do
+            CANDIDATE="scripts/providers/${MODULE}${SUFFIX}.mjs"
+            if [ -f "$CANDIDATE" ]; then
+              PROVIDER_SCRIPT="$CANDIDATE"
+              break
             fi
+          done
+          
+          if [ -z "$PROVIDER_SCRIPT" ]; then
+            echo "❌ No provider script found for module: $MODULE"
+            exit 1
           fi
           
           echo "✅ Found provider: $PROVIDER_SCRIPT"
