@@ -7,6 +7,7 @@
   <meta name="description" content="Join universe, market-prices, and market-stats for a single ticker." />
   <link rel="icon" type="image/png" sizes="32x32" href="/assets/rv-favicon.png" />
   <link rel="stylesheet" href="/style.css" />
+  <link rel="stylesheet" href="/search.css" />
   <style>
     body {
       margin: 0;
@@ -214,6 +215,7 @@
   </style>
 </head>
 <body>
+  <div id="rv-stock-search-root"></div>
   <main class="rv-main">
     <section class="stock-card">
       <header class="stock-header">
@@ -531,6 +533,19 @@
       scoreReasonsShort.innerHTML = '<h3>Short horizon</h3><div class="score-reason">Score not available</div>';
       scoreReasonsMid.innerHTML = '<h3>Mid horizon</h3><div class="score-reason">Score not available</div>';
       scoreReasonsLong.innerHTML = '<h3>Long horizon</h3><div class="score-reason">Score not available</div>';
+    }
+  </script>
+  <script type="module">
+    import { attachSearchUI } from '/search.js';
+    const root = document.getElementById('rv-stock-search-root');
+    const params = new URLSearchParams(window.location.search);
+    const ticker = params.get('ticker') || '';
+    if (root) {
+      attachSearchUI(root, {
+        placeholder: 'Search ticker or company',
+        limit: 10,
+        prefill: ticker
+      });
     }
   </script>
 </body>

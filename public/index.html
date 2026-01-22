@@ -28,8 +28,10 @@
   
   <!-- Styles -->
   <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="/search.css" />
 </head>
 <body>
+  <div id="rv-search-root"></div>
   <!-- HEADER -->
   <header class="rv-header">
     <div class="rv-header-inner">
@@ -335,6 +337,17 @@
         clearSearch();
       }
     });
+  </script>
+
+  <script type="module">
+    import { attachSearchUI } from '/search.js';
+    const root = document.getElementById('rv-search-root');
+    if (root) {
+      attachSearchUI(root, {
+        placeholder: 'Search ticker or company',
+        limit: 10
+      });
+    }
   </script>
 
 </body>

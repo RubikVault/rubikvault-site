@@ -130,3 +130,10 @@ the run fails loud and `snapshot.metadata.upstream.*` includes the classificatio
   - `/tmp/.../market-score/market-score-health.json` (coverage/run-quality).
 - API: `/api/market-score` (served from ASSET via `functions/api/market-score.js`) and the `/api/stock` response now includes the joined `market_score` block so the UI can surface chips + “Why?” details.
 - The new score layer powers the `Score` section in `public/stock.html`, showing three chips (short/mid/long), confidence, and top 5 contributors per horizon; missing data gracefully shows placeholder messaging rather than guessing.
+
+## WP13 — Global search & routing (universe)
+
+- The universe snapshot (`/api/universe`) now powers instant client-side autocomplete without any extra API calls. `public/search.js` loads + caches the asset (6h TTL), builds a lightweight index, and exposes `attachSearchUI` so any root can host the experience.
+- Autocomplete ranking is deterministic: exact ticker > ticker prefix > name prefix > name substring; ties fall back to ticker alphabetical order. Each entry shows index badges (DJ30, SP500, NDX100, RUT2000) derived from the universe list.
+- `public/index.html` and `public/stock.html` include `/search.css`, render `<div id="rv-search-root">`/`<div id="rv-stock-search-root">`, and call `attachSearchUI` to route every selection to `/stock.html?ticker=XYZ`.
+- UI-only: all autocomplete data is read from `public/data/snapshots/universe/latest.json` (no new snapshots or writes), and unknown tickers still surface the WP11 `UNKNOWN_TICKER` experience.

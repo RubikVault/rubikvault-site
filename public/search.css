@@ -1,0 +1,60 @@
+.rv-search {
+  position: relative;
+  max-width: 360px;
+}
+
+.rv-search-input {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.5);
+  background: rgba(15, 23, 42, 0.9);
+  color: #f8fafc;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.4);
+  font-size: 1rem;
+}
+
+.rv-search-dd {
+  position: absolute;
+  width: 100%;
+  background: rgba(2, 6, 23, 0.95);
+  border: 1px solid rgba(148, 163, 184, 0.4);
+  border-radius: 12px;
+  margin-top: 0.5rem;
+  max-height: 320px;
+  overflow: auto;
+  z-index: 10;
+}
+
+.rv-dd-item {
+  padding: 0.75rem 1rem;
+  cursor: pointer;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+}
+
+.rv-dd-item:last-child {
+  border-bottom: none;
+}
+
+.rv-dd-item:hover,
+.rv-dd-item--highlighted {
+  background: rgba(99, 102, 241, 0.15);
+}
+
+.rv-badge {
+  display: inline-block;
+  margin-right: 0.4rem;
+  margin-top: 0.25rem;
+  padding: 0.15rem 0.6rem;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  font-size: 0.75rem;
+  color: #e2e8f0;
+}
+
+.rv-badge-row {
+  margin-top: 0.35rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+}
