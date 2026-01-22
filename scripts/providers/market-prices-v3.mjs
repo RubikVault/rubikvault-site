@@ -24,6 +24,25 @@ function toBool(v) {
   return s === '1' || s === 'true' || s === 'yes';
 }
 
+const CLASSIFICATIONS = {
+  OK: 'OK',
+  RATE_LIMIT_NOTE: 'RATE_LIMIT_NOTE',
+  UPSTREAM_INFORMATION: 'UPSTREAM_INFORMATION',
+  UPSTREAM_ERROR_MESSAGE: 'UPSTREAM_ERROR_MESSAGE',
+  HTTP_429: 'HTTP_429',
+  NETWORK_ERROR: 'NETWORK_ERROR',
+  COOLDOWN_ACTIVE: 'COOLDOWN_ACTIVE'
+};
+
+function isCooldownClassification(classification) {
+  return (
+    classification === CLASSIFICATIONS.RATE_LIMIT_NOTE ||
+    classification === CLASSIFICATIONS.HTTP_429 ||
+    classification === CLASSIFICATIONS.UPSTREAM_INFORMATION ||
+    classification === CLASSIFICATIONS.UPSTREAM_ERROR_MESSAGE
+  );
+}
+
 function truncateNote(value, maxLen = 180) {
   const note = String(value || '').trim();
   if (note.length <= maxLen) return note;
@@ -85,13 +104,25 @@ export function classifyAlphaVantagePayload(payload) {
   if (!payload || typeof payload !== 'object') return null;
 
   if (payload.Note) {
-    return { kind: 'Note', note: truncateNote(payload.Note) };
+    return {
+      classification: CLASSIFICATIONS.RATE_LIMIT_NOTE,
+      kind: 'Note',
+      note: truncateNote(payload.Note)
+    };
   }
   if (payload['Error Message']) {
-    return { kind: 'Error Message', note: truncateNote(payload['Error Message']) };
+    return {
+      classification: CLASSIFICATIONS.UPSTREAM_ERROR_MESSAGE,
+      kind: 'Error Message',
+      note: truncateNote(payload['Error Message'])
+    };
   }
   if (payload.Information) {
-    return { kind: 'Information', note: truncateNote(payload.Information) };
+    return {
+      classification: CLASSIFICATIONS.UPSTREAM_INFORMATION,
+      kind: 'Information',
+      note: truncateNote(payload.Information)
+    };
   }
 
   return null;
@@ -128,6 +159,22 @@ function validateBar(bar) {
   }
 
   return { ok: errors.length === 0, errors };
+}
+
+
+async function loadProviderRuntimeState(outDir) {
+  const runtimePath = join(outDir, 'provider-runtime.json');
+  try {
+    const raw = await readFile(runtimePath, 'utf-8');
+    return JSON.parse(raw);
+  } catch (error) {
+    return null;
+  }
+}
+
+async function saveProviderRuntimeState(outDir, state) {
+  const runtimePath = join(outDir, 'provider-runtime.json');
+  await writeFile(runtimePath, JSON.stringify(state, null, 2) + '\n', 'utf-8');
 }
 
 function computeAsOf(bars) {
@@ -324,24 +371,38 @@ async function fetchProviderABar(symbol, providerConfig, { apiKey, targetDate })
   };
 
   if (!result.ok) {
-    return { ok: false, errorClass: `PROVIDER_HTTP_${upstream.http_status || 'ERROR'}`, upstream, text: result.text || '' };
+    const classification =
+      upstream.http_status === 429 ? CLASSIFICATIONS.HTTP_429 : CLASSIFICATIONS.NETWORK_ERROR;
+    return {
+      ok: false,
+      classification,
+      note: truncateNote(result.text),
+      http_status: upstream.http_status,
+      upstream
+    };
   }
 
   let payload;
   try {
     payload = JSON.parse(result.text || '{}');
   } catch (error) {
-    return { ok: false, errorClass: 'PROVIDER_BAD_PAYLOAD', upstream, text: result.text || '' };
+    return {
+      ok: false,
+      classification: CLASSIFICATIONS.NETWORK_ERROR,
+      note: 'failed_json_parse',
+      http_status: upstream.http_status,
+      upstream
+    };
   }
 
   const errorPayload = classifyAlphaVantagePayload(payload);
   if (errorPayload) {
     return {
       ok: false,
-      errorClass: 'ALPHAVANTAGE_ERROR_PAYLOAD',
-      upstream: { ...upstream, http_status: 200 },
-      errorPayload,
-      text: result.text || ''
+      classification: errorPayload.classification,
+      note: errorPayload.note,
+      http_status: 200,
+      upstream: { ...upstream, http_status: 200 }
     };
   }
 
@@ -352,10 +413,59 @@ async function fetchProviderABar(symbol, providerConfig, { apiKey, targetDate })
   });
 
   if (!bar) {
-    return { ok: false, errorClass: 'PROVIDER_SCHEMA_MISMATCH', upstream, text: result.text || '' };
+    return {
+      ok: false,
+      classification: CLASSIFICATIONS.NETWORK_ERROR,
+      note: 'schema_mismatch',
+      http_status: upstream.http_status,
+      upstream
+    };
   }
 
-  return { ok: true, bar, warnings, upstream };
+  return {
+    ok: true,
+    bar,
+    warnings,
+    classification: CLASSIFICATIONS.OK,
+    upstream
+  };
+}
+
+async function fetchBarWithRetries(symbol, providerConfig, options = {}) {
+  const {
+    apiKey,
+    targetDate,
+    maxRetriesNotePayload = 0,
+    maxRetries429 = 0,
+    throttleMs = 1000
+  } = options;
+
+  let noteAttempts = 0;
+  let rateAttempts = 0;
+  while (true) {
+    const result = await fetchProviderABar(symbol, providerConfig, { apiKey, targetDate });
+    if (result.ok) {
+      return result;
+    }
+
+    const classification = result.classification || CLASSIFICATIONS.NETWORK_ERROR;
+    if (
+      (classification === CLASSIFICATIONS.RATE_LIMIT_NOTE || classification === CLASSIFICATIONS.UPSTREAM_INFORMATION) &&
+      noteAttempts < maxRetriesNotePayload
+    ) {
+      noteAttempts += 1;
+      await sleep(throttleMs);
+      continue;
+    }
+
+    if (classification === CLASSIFICATIONS.HTTP_429 && rateAttempts < maxRetries429) {
+      rateAttempts += 1;
+      await sleep(throttleMs);
+      continue;
+    }
+
+    return result;
+  }
 }
 
 async function throttleProvider(providerConfig, state) {
@@ -387,6 +497,8 @@ export async function main() {
         ? join(String(process.env.ARTIFACTS_DIR), MODULE_NAME)
         : DEFAULT_OUT_DIR);
 
+  await mkdir(outDir, { recursive: true });
+
   const forcedStub = toBool(process.env.RV_PRICES_STUB);
   const forcedReal = toBool(process.env.RV_PRICES_FORCE_REAL);
 
@@ -405,6 +517,7 @@ export async function main() {
 
   const symbols = await loadUniverseIndexProxies();
   const config = await loadModuleConfig();
+  const minCount = Number.isFinite(config.counts?.min) ? config.counts.min : symbols.length;
 
   const errors = [];
   const warnings = [];
@@ -416,44 +529,114 @@ export async function main() {
   const throttleState = { requestsMade: 0 };
   const targetDate = getYesterdayUTCString();
   const realStart = Date.now();
+  const runtimeState = mode === 'REAL' ? (await loadProviderRuntimeState(outDir)) || {} : {};
+  runtimeState.provider_id = providerId;
 
-  for (const symbol of symbols) {
-    if (mode === 'STUB') {
+  const nowMs = Date.now();
+  const cooldownMinutes = Math.max(0, Number(providerConfig.cooldown_minutes_default) || 30);
+  const maxRetriesNote = Math.max(0, Number(providerConfig.max_retries_note_payload) || 0);
+  const maxRetries429 = Math.max(0, Number(providerConfig.max_retries_429) || 0);
+  const throttleDelay = Math.max(1000, Number(providerConfig.default_throttle_ms) || 1000);
+
+  let cooldownActive = false;
+  let cooldownNote = null;
+  if (mode === 'REAL' && runtimeState.cooldown_until) {
+    const until = Date.parse(runtimeState.cooldown_until);
+    if (!Number.isNaN(until) && until > nowMs) {
+      cooldownActive = true;
+      cooldownNote = runtimeState.cooldown_note || `Cooldown active until ${runtimeState.cooldown_until}`;
+    } else {
+      delete runtimeState.cooldown_until;
+      delete runtimeState.cooldown_note;
+    }
+  }
+
+  let runClassification = CLASSIFICATIONS.OK;
+  let reasonCode = null;
+  let lastHttpStatus = null;
+  let stopIndex = null;
+  let succeededSymbols = 0;
+
+  if (mode === 'STUB') {
+    for (const symbol of symbols) {
       rawBars.push(makeStubBar(symbol));
-      continue;
     }
-
-    await throttleProvider(providerConfig, throttleState);
-
-    let result;
-    try {
-      result = await fetchProviderABar(symbol, providerConfig, { apiKey, targetDate });
-    } catch (error) {
-      result = {
-        ok: false,
-        errorClass: 'PROVIDER_FETCH_EXCEPTION',
-        upstream: { http_status: null, latency_ms: 0, retry_count: 0, rate_limited: false }
-      };
-    }
-
-    if (result?.upstream) upstreamResults.push(result.upstream);
-
-    if (result?.ok && result.bar) {
-      rawBars.push(result.bar);
-      if (Array.isArray(result.warnings) && result.warnings.length > 0) {
-        warnings.push(...result.warnings);
+  } else {
+    if (cooldownActive && forcedReal) {
+      reasonCode = 'COOLDOWN_ACTIVE';
+      runClassification = CLASSIFICATIONS.COOLDOWN_ACTIVE;
+      upstreamNote = upstreamNote || cooldownNote;
+      for (const symbol of symbols) {
+        rawBars.push(buildMissingBar(symbol, providerId));
+        symbolErrors[symbol] = {
+          classification: CLASSIFICATIONS.COOLDOWN_ACTIVE,
+          note: upstreamNote,
+          http_status: runtimeState.last_http_status || null
+        };
       }
     } else {
-      if (result?.errorClass === 'ALPHAVANTAGE_ERROR_PAYLOAD' && result?.errorPayload) {
-        const note = result.errorPayload.note || '';
+      for (let idx = 0; idx < symbols.length; idx += 1) {
+        const symbol = symbols[idx];
+        await throttleProvider(providerConfig, throttleState);
+
+        const result = await fetchBarWithRetries(symbol, providerConfig, {
+          apiKey,
+          targetDate,
+          maxRetriesNotePayload: maxRetriesNote,
+          maxRetries429,
+          throttleMs: throttleDelay
+        });
+
+        if (result?.upstream) upstreamResults.push(result.upstream);
+
+        if (result?.ok && result.bar) {
+          rawBars.push(result.bar);
+          if (Array.isArray(result.warnings) && result.warnings.length > 0) {
+            warnings.push(...result.warnings);
+          }
+          succeededSymbols += 1;
+          continue;
+        }
+
+        const classification = result?.classification || CLASSIFICATIONS.NETWORK_ERROR;
+        const note = result?.note || null;
+        const httpStatus = result?.http_status ?? result?.upstream?.http_status ?? null;
         symbolErrors[symbol] = {
-          kind: result.errorPayload.kind,
+          classification,
           note,
-          http_status: 200
+          http_status: httpStatus
         };
+        rawBars.push(buildMissingBar(symbol, providerId));
+        lastHttpStatus = httpStatus || lastHttpStatus;
+        runClassification = classification;
         if (!upstreamNote && note) upstreamNote = note;
+
+        if (isCooldownClassification(classification)) {
+          stopIndex = idx + 1;
+          reasonCode = succeededSymbols > 0 ? 'PARTIAL_DUE_TO_RATE_LIMIT' : classification;
+          runtimeState.last_rate_limit_at = new Date().toISOString();
+          runtimeState.last_classification = classification;
+          runtimeState.last_http_status = httpStatus;
+          const cooldownUntilMs = Date.now() + cooldownMinutes * 60 * 1000;
+          runtimeState.cooldown_until = new Date(cooldownUntilMs).toISOString();
+          runtimeState.cooldown_note = note;
+          break;
+        }
       }
-      rawBars.push(buildMissingBar(symbol, providerId));
+
+      if (stopIndex !== null) {
+        for (let idx = stopIndex; idx < symbols.length; idx += 1) {
+          const symbol = symbols[idx];
+          rawBars.push(buildMissingBar(symbol, providerId));
+          if (!symbolErrors[symbol]) {
+            symbolErrors[symbol] = {
+              classification: CLASSIFICATIONS.COOLDOWN_ACTIVE,
+              note: 'Stopped due to rate limit',
+              http_status: lastHttpStatus || null
+            };
+          }
+        }
+      }
     }
   }
 
@@ -469,39 +652,36 @@ export async function main() {
   const rawCount = rawBars.length;
   const validCount = validBars.length;
   const droppedRecords = rawCount - validCount;
-
   const validationMeta = computeValidationMetadata(rawCount, validCount, droppedRecords, errors.length === 0);
+  const meetsMinCount = validCount >= minCount;
   const noValidBars = validCount === 0;
-  const passed = !noValidBars && errors.length === 0 && validationMeta.drop_check_passed;
+  const passed = !noValidBars && meetsMinCount && errors.length === 0 && validationMeta.drop_check_passed;
 
-  let upstream = {
-    http_status: null,
-    latency_ms: 0,
-    rate_limit_remaining: null,
-    retry_count: 0,
-    rate_limited: false
-  };
-  let upstreamExtras = null;
-
-  if (mode === 'REAL') {
-    const httpStatus = upstreamResults.find((u) => u && u.http_status !== null)?.http_status ?? null;
-    const retryCount = upstreamResults.reduce((max, u) => Math.max(max, u?.retry_count || 0), 0);
-    const rateLimited = upstreamResults.some((u) => u?.rate_limited);
-    const errorPayloadSeen = Object.keys(symbolErrors).length > 0;
-    const upstreamError = errorPayloadSeen ? 'ALPHAVANTAGE_ERROR_PAYLOAD' : null;
-    upstream = {
-      http_status: errorPayloadSeen ? 200 : httpStatus,
-      latency_ms: Date.now() - realStart,
-      rate_limit_remaining: null,
-      retry_count: retryCount,
-      rate_limited: rateLimited
-    };
-    upstreamExtras = {
-      error: upstreamError,
-      note: upstreamNote || null,
-      symbol_errors: symbolErrors
-    };
+  if (!reasonCode) {
+    if (cooldownActive) {
+      reasonCode = 'COOLDOWN_ACTIVE';
+    } else if (!meetsMinCount) {
+      reasonCode = runClassification === CLASSIFICATIONS.OK ? 'NO_VALID_BARS' : runClassification;
+    } else {
+      reasonCode = 'FULL_SUCCESS';
+    }
   }
+
+  const httpStatus = upstreamResults.find((u) => u && u.http_status !== null)?.http_status ?? lastHttpStatus ?? null;
+  const retryCount = upstreamResults.reduce((max, u) => Math.max(max, u?.retry_count || 0), 0);
+  const rateLimited = upstreamResults.some((u) => u?.rate_limited) || runClassification === CLASSIFICATIONS.HTTP_429;
+
+  const upstream = {
+    http_status: httpStatus,
+    latency_ms: Date.now() - realStart,
+    rate_limit_remaining: null,
+    retry_count: retryCount,
+    rate_limited: rateLimited,
+    classification: runClassification,
+    note: upstreamNote || null,
+    error: runClassification === CLASSIFICATIONS.OK ? null : runClassification,
+    symbol_errors: Object.keys(symbolErrors).length > 0 ? symbolErrors : {}
+  };
 
   const fetchedAt = new Date().toISOString();
   const asOf = computeAsOf(validBars);
@@ -526,7 +706,7 @@ export async function main() {
     error: passed
       ? null
       : {
-          class: noValidBars ? 'NO_VALID_BARS' : 'VALIDATION_FAILED',
+          class: noValidBars ? 'NO_VALID_BARS' : (runClassification || 'VALIDATION_FAILED'),
           message: noValidBars ? 'No valid bars after normalization' : 'One or more symbols failed hard validation',
           details: {
             dropped_records: droppedRecords,
@@ -535,19 +715,16 @@ export async function main() {
         }
   });
 
+  envelope.metadata.upstream = { ...envelope.metadata.upstream, ...upstream };
   envelope.metadata.provider = providerId;
   envelope.metadata.as_of = asOf;
-  if (upstreamExtras) {
-    envelope.metadata.upstream = { ...envelope.metadata.upstream, ...upstreamExtras };
-  }
-  if (noValidBars) {
-    envelope.metadata.compute = { reason: 'NO_VALID_BARS' };
-  }
-
-  if (mode === 'REAL' && noValidBars && !envelope.metadata.upstream?.error) {
-    envelope.metadata.upstream.error = 'NO_VALID_BARS';
-  }
-
+  envelope.metadata.compute = {
+    planned_symbols: symbols.length,
+    done_symbols: validCount,
+    dropped_symbols: Object.keys(symbolErrors).sort(),
+    reason_code: reasonCode,
+    cooldown_until: runtimeState.cooldown_until || null
+  };
   envelope.metadata.digest = computeSnapshotDigest(envelope);
 
   const schemaCheck = validateEnvelopeSchema(envelope);
@@ -555,13 +732,9 @@ export async function main() {
     throw new Error(`ENVELOPE_SCHEMA_INVALID: ${schemaCheck.errors.join('; ')}`);
   }
 
-  const failureClass = noValidBars ? 'NO_VALID_BARS' : (passed ? null : 'VALIDATION_FAILED');
-  const failureMessage = noValidBars
-    ? 'No valid bars after normalization'
-    : (passed ? null : 'One or more symbols failed hard validation');
-  const failureHint = noValidBars
-    ? 'Inspect snapshot.metadata.upstream for provider error payloads.'
-    : (passed ? null : 'Inspect tmp artifacts and fix the provider normalization/validation.');
+  const failureClass = passed ? null : (reasonCode || 'VALIDATION_FAILED');
+  const failureMessage = passed ? null : `Run failed (${reasonCode})`;
+  const failureHint = passed ? null : 'Inspect metadata.upstream for classification details.';
 
   const moduleState = buildModuleState(
     MODULE_NAME,
@@ -575,7 +748,13 @@ export async function main() {
     }
   );
 
-  await mkdir(outDir, { recursive: true });
+  if (mode === 'REAL') {
+    runtimeState.last_run_at = new Date().toISOString();
+    runtimeState.last_classification = runClassification;
+    runtimeState.last_http_status = lastHttpStatus ?? runtimeState.last_http_status ?? null;
+    runtimeState.last_note = upstreamNote || runtimeState.last_note || null;
+    await saveProviderRuntimeState(outDir, runtimeState);
+  }
 
   const snapshotPath = join(outDir, 'snapshot.json');
   const statePath = join(outDir, 'module-state.json');
@@ -586,8 +765,9 @@ export async function main() {
   const shouldFailHard = forcedReal && mode === 'REAL' && symbols.length > 0 && noValidBars;
   if (shouldFailHard) {
     process.exitCode = 2;
+    const reasonLabel = reasonCode === 'COOLDOWN_ACTIVE' ? 'REAL_FETCH_COOLDOWN_ACTIVE' : 'REAL_FETCH_NO_VALID_BARS';
     process.stderr.write(
-      `FAIL: ${providerId} produced 0 valid bars (likely Note/Error Message/Information). See snapshot.metadata.upstream.*\n`
+      `FAIL: ${providerId} ${reasonLabel} (classification=${runClassification}). See snapshot.metadata.upstream.*\n`
     );
   } else {
     process.stdout.write(`OK: ${MODULE_NAME} artifacts written (${mode})\n`);

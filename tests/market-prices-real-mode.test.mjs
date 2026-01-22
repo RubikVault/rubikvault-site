@@ -70,19 +70,57 @@ function runMarketPrices(envOverrides, outDir) {
   });
 }
 
-function runMarketPricesWithMock(envOverrides, outDir, payloadPath) {
+function runMarketPricesWithMock(envOverrides, outDir, fetchConfig = []) {
   const env = { ...process.env, ...envOverrides };
   if (outDir) env.RV_ARTIFACT_OUT_DIR = outDir;
-  env.RV_TEST_PAYLOAD_PATH = payloadPath;
+  env.RV_TEST_FETCH_CONFIG = JSON.stringify(fetchConfig);
   const inlineScript = `
 import fs from 'node:fs';
-const payload = fs.readFileSync(process.env.RV_TEST_PAYLOAD_PATH, 'utf-8');
-global.fetch = async () => ({
-  ok: true,
+import path from 'node:path';
+const config = JSON.parse(process.env.RV_TEST_FETCH_CONFIG || '[]');
+const sequences = {};
+for (const entry of config) {
+  const key = entry.symbol || '*';
+  sequences[key] = entry.sequence || [entry];
+}
+const callCounts = {};
+const root = process.cwd();
+const defaultSequence = sequences['*'] || [{
   status: 200,
-  headers: { get: () => null },
-  text: async () => payload
-});
+  fixture: 'tests/fixtures/alphavantage-daily-adjusted.sample.json'
+}];
+
+function getEntry(symbol) {
+  const seq = sequences[symbol] || sequences['*'] || defaultSequence;
+  const idx = Math.min(callCounts[symbol] || 0, seq.length - 1);
+  callCounts[symbol] = idx + 1;
+  return seq[idx] || seq[seq.length - 1];
+}
+
+function buildResponse(entry) {
+  const status = entry.status ?? 200;
+  const fixtureContent = entry.fixture
+    ? fs.readFileSync(path.join(root, entry.fixture), 'utf-8')
+    : (entry.body || '');
+
+  return {
+    ok: entry.ok ?? (status >= 200 && status < 300),
+    status,
+    headers: {
+      get: (name) => (entry.headers?.[name.toLowerCase()] || null)
+    },
+    text: async () => fixtureContent
+  };
+}
+
+  global.fetch = async (url) => {
+    const parsed = new URL(url);
+    const symbol = parsed.searchParams.get('symbol') || '*';
+    const entry = getEntry(symbol);
+    if (!entry) throw new Error('Missing fetch config for ' + symbol);
+    return buildResponse(entry);
+  };
+
 const mod = await import('./scripts/providers/market-prices-v3.mjs');
 await mod.main();
 `;
@@ -156,6 +194,7 @@ const test4 = test('Classify AlphaVantage Note payload → error payload', async
   const classified = classifyAlphaVantagePayload(payload);
   assert(classified, 'Expected classification');
   assertEqual(classified.kind, 'Note');
+  assertEqual(classified.classification, 'RATE_LIMIT_NOTE');
   assertEqual(classified.note, payload.Note.trim());
 });
 
@@ -165,6 +204,7 @@ const test5 = test('Classify AlphaVantage Error Message payload → error payloa
   const classified = classifyAlphaVantagePayload(payload);
   assert(classified, 'Expected classification');
   assertEqual(classified.kind, 'Error Message');
+  assertEqual(classified.classification, 'UPSTREAM_ERROR_MESSAGE');
   assertEqual(classified.note, payload['Error Message'].trim());
 });
 
@@ -172,29 +212,173 @@ const test6 = test('REAL mode error payload → fail loud with upstream metadata
   const registry = loadProvidersRegistry();
   const provider = selectProviderConfig(registry);
   const envVar = provider.auth_env_var;
-  const fixturePath = path.join(process.cwd(), 'tests', 'fixtures', 'alphavantage-note.sample.json');
-
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'rv-market-prices-real-note-'));
+
+  const fetchConfig = [
+    {
+      symbol: 'SPY',
+      sequence: [
+        { status: 200, fixture: 'tests/fixtures/alphavantage-note.sample.json' }
+      ]
+    },
+    {
+      symbol: '*',
+      sequence: [
+        { status: 200, fixture: 'tests/fixtures/alphavantage-daily-adjusted.sample.json' }
+      ]
+    }
+  ];
+
   const result = runMarketPricesWithMock({
     RV_PRICES_FORCE_REAL: '1',
     RV_PRICES_STUB: '',
     [envVar]: 'dummy'
-  }, tmpDir, fixturePath);
+  }, tmpDir, fetchConfig);
 
   assert(result.status !== 0, 'Expected non-zero exit code');
   const snapshot = JSON.parse(fs.readFileSync(path.join(tmpDir, 'snapshot.json'), 'utf-8'));
   const state = JSON.parse(fs.readFileSync(path.join(tmpDir, 'module-state.json'), 'utf-8'));
 
   assertEqual(snapshot.metadata.provider, 'alphavantage');
-  assertEqual(snapshot.metadata.compute?.reason, 'NO_VALID_BARS');
-  assertEqual(snapshot.metadata.upstream?.error, 'ALPHAVANTAGE_ERROR_PAYLOAD');
-  assertEqual(snapshot.metadata.upstream?.http_status, 200);
-  assert(snapshot.metadata.upstream?.symbol_errors?.SPY, 'Expected symbol error for SPY');
+  assertEqual(snapshot.metadata.compute?.reason_code, 'RATE_LIMIT_NOTE');
+  assertEqual(snapshot.metadata.upstream?.classification, 'RATE_LIMIT_NOTE');
+  assert(snapshot.metadata.upstream?.note?.includes('Thank you'), 'Expected upstream note text');
+  assertEqual(snapshot.metadata.upstream?.symbol_errors?.SPY?.classification, 'RATE_LIMIT_NOTE');
   assertEqual(state.status, 'error');
-  assertEqual(state.failure?.class, 'NO_VALID_BARS');
+  assertEqual(state.failure?.class, 'RATE_LIMIT_NOTE');
 });
 
-const tests = [test1, test2, test3, test4, test5, test6];
+const test7 = test('Cooldown active → fail immediately with runtime state preserved', async () => {
+  const registry = loadProvidersRegistry();
+  const provider = selectProviderConfig(registry);
+  const envVar = provider.auth_env_var;
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'rv-market-prices-real-cooldown-'));
+  const runtimePath = path.join(tmpDir, 'provider-runtime.json');
+  const future = new Date(Date.now() + 60 * 60 * 1000).toISOString();
+  fs.writeFileSync(
+    runtimePath,
+    JSON.stringify({
+      provider_id: 'alphavantage',
+      cooldown_until: future,
+      cooldown_note: 'manual cooldown',
+      last_http_status: 429
+    }, null, 2),
+    'utf-8'
+  );
+
+  const result = runMarketPrices({
+    RV_PRICES_FORCE_REAL: '1',
+    RV_PRICES_STUB: '',
+    [envVar]: 'dummy'
+  }, tmpDir);
+
+  assert(result.status !== 0, 'Expected cooldown exit code');
+  assert(result.stderr.includes('REAL_FETCH_COOLDOWN_ACTIVE'), 'Expected cooldown error logged');
+  const snapshot = JSON.parse(fs.readFileSync(path.join(tmpDir, 'snapshot.json'), 'utf-8'));
+  const state = JSON.parse(fs.readFileSync(path.join(tmpDir, 'module-state.json'), 'utf-8'));
+  const runtime = JSON.parse(fs.readFileSync(runtimePath, 'utf-8'));
+
+  assertEqual(snapshot.metadata.upstream?.classification, 'COOLDOWN_ACTIVE');
+  assertEqual(snapshot.metadata.compute?.reason_code, 'COOLDOWN_ACTIVE');
+  assertEqual(snapshot.metadata.compute?.dropped_symbols.length, 4);
+  assertEqual(state.failure?.class, 'COOLDOWN_ACTIVE');
+  assertEqual(runtime.cooldown_until, future);
+});
+
+const test8 = test('HTTP 429 → triggers cooldown and metadata', async () => {
+  const registry = loadProvidersRegistry();
+  const provider = selectProviderConfig(registry);
+  const envVar = provider.auth_env_var;
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'rv-market-prices-real-429-'));
+
+  const fetchConfig = [
+    {
+      symbol: 'SPY',
+      sequence: [
+        { status: 429 },
+        { status: 429 },
+        { status: 429 }
+      ]
+    },
+    {
+      symbol: '*',
+      sequence: [
+        { status: 200, fixture: 'tests/fixtures/alphavantage-daily-adjusted.sample.json' }
+      ]
+    }
+  ];
+
+  const result = runMarketPricesWithMock({
+    RV_PRICES_FORCE_REAL: '1',
+    RV_PRICES_STUB: '',
+    [envVar]: 'dummy'
+  }, tmpDir, fetchConfig);
+
+  assert(result.status !== 0, 'Expected rate-limit exit');
+  const snapshot = JSON.parse(fs.readFileSync(path.join(tmpDir, 'snapshot.json'), 'utf-8'));
+  const runtime = JSON.parse(fs.readFileSync(path.join(tmpDir, 'provider-runtime.json'), 'utf-8'));
+
+  assertEqual(snapshot.metadata.upstream?.classification, 'HTTP_429');
+  assertEqual(snapshot.metadata.compute?.reason_code, 'HTTP_429');
+  assertEqual(snapshot.metadata.upstream?.symbol_errors?.SPY?.classification, 'HTTP_429');
+  assert(runtime.cooldown_until, 'Expected cooldown until timestamp');
+  assertEqual(runtime.last_classification, 'HTTP_429');
+});
+
+const test9 = test('Partial success then rate-limit note → reason PARTIAL_DUE_TO_RATE_LIMIT', async () => {
+  const registry = loadProvidersRegistry();
+  const provider = selectProviderConfig(registry);
+  const envVar = provider.auth_env_var;
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'rv-market-prices-real-partial-'));
+
+  const fetchConfig = [
+    {
+      symbol: 'SPY',
+      sequence: [
+        { status: 200, fixture: 'tests/fixtures/alphavantage-daily-adjusted.sample.json' }
+      ]
+    },
+    {
+      symbol: 'QQQ',
+      sequence: [
+        { status: 200, fixture: 'tests/fixtures/alphavantage-daily-adjusted.sample.json' }
+      ]
+    },
+    {
+      symbol: 'DIA',
+      sequence: [
+        { status: 200, fixture: 'tests/fixtures/alphavantage-note.sample.json' }
+      ]
+    },
+    {
+      symbol: '*',
+      sequence: [
+        { status: 200, fixture: 'tests/fixtures/alphavantage-daily-adjusted.sample.json' }
+      ]
+    }
+  ];
+
+  const result = runMarketPricesWithMock({
+    RV_PRICES_FORCE_REAL: '1',
+    RV_PRICES_STUB: '',
+    [envVar]: 'dummy'
+  }, tmpDir, fetchConfig);
+
+  assertEqual(result.status, 0, 'Partial run should exit 0 (module state failure)');
+  const snapshot = JSON.parse(fs.readFileSync(path.join(tmpDir, 'snapshot.json'), 'utf-8'));
+  const state = JSON.parse(fs.readFileSync(path.join(tmpDir, 'module-state.json'), 'utf-8'));
+  const runtime = JSON.parse(fs.readFileSync(path.join(tmpDir, 'provider-runtime.json'), 'utf-8'));
+
+  assertEqual(snapshot.metadata.upstream?.classification, 'RATE_LIMIT_NOTE');
+  assertEqual(snapshot.metadata.compute?.reason_code, 'PARTIAL_DUE_TO_RATE_LIMIT');
+  assert(snapshot.metadata.compute?.dropped_symbols.includes('DIA'), 'Expected DIA dropped due to rate limit');
+  assert(snapshot.metadata.compute?.dropped_symbols.includes('IWM'), 'Expected IWM dropped due to cooldown');
+  assertEqual(snapshot.metadata.upstream?.symbol_errors?.DIA?.classification, 'RATE_LIMIT_NOTE');
+  assertEqual(state.failure?.class, 'PARTIAL_DUE_TO_RATE_LIMIT');
+  assert(runtime.cooldown_until, 'Expected cooldown persisted');
+});
+
+const tests = [test1, test2, test3, test4, test5, test6, test7, test8, test9];
 
 (async () => {
   for (const t of tests) {

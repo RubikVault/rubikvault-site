@@ -57,7 +57,13 @@ It fails loud if the Provider A API key is missing:
 When the API key is present (see registry), real mode activates.
 
 If Alpha Vantage returns a 200 response with an error payload (Note/Error Message/Information),
-the run fails loud and `snapshot.metadata.upstream.*` includes the error classification.
+the run fails loud and `snapshot.metadata.upstream.*` includes the classification and upstream note.
+
+## Cooldown behavior
+
+- Artifacts now include `provider-runtime.json` under the artifacts directory. It tracks the last classification, `cooldown_until`, and `last_http_status`; real runs read this file first to avoid hammering the API while the cooldown is active.
+- Supported reason codes surfaced in `snapshot.metadata.compute.reason_code` include `FULL_SUCCESS`, `PARTIAL_DUE_TO_RATE_LIMIT`, `RATE_LIMIT_NOTE`, `UPSTREAM_ERROR_MESSAGE`, `HTTP_429`, `NETWORK_ERROR`, and `COOLDOWN_ACTIVE`.
+- When real mode detects rate limiting, it records `metadata.upstream.classification`/`symbol_errors` per symbol, sets a cooldown window (default 30 minutes), and stops fetching further symbols. UI/ops can read `metadata.compute` and `module-state.json` to understand the degraded state.
 
 ## Required env vars
 

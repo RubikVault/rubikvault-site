@@ -25,7 +25,17 @@ if (String(doc.providers_version || "") !== "v1") die("providers_version must be
 
 if (!Array.isArray(doc.providers)) die("providers must be an array");
 
-const requiredKeys = ["id", "base_url", "auth_env_var", "default_throttle_ms", "burst_cap", "timeout_ms"];
+const requiredKeys = [
+  "id",
+  "base_url",
+  "auth_env_var",
+  "default_throttle_ms",
+  "burst_cap",
+  "timeout_ms",
+  "cooldown_minutes_default",
+  "max_retries_note_payload",
+  "max_retries_429"
+];
 const seenIds = new Set();
 for (const provider of doc.providers) {
   if (!isObj(provider)) die("provider entry must be an object");
@@ -43,17 +53,19 @@ for (const provider of doc.providers) {
   if (typeof provider.auth_env_var !== "string" || !provider.auth_env_var.trim()) {
     die(`provider '${id}' auth_env_var must be a non-empty string`);
   }
-  const throttle = Number(provider.default_throttle_ms);
-  if (!Number.isFinite(throttle) || throttle < 0) {
-    die(`provider '${id}' default_throttle_ms must be a non-negative number`);
-  }
-  const burst = Number(provider.burst_cap);
-  if (!Number.isFinite(burst) || burst < 0) {
-    die(`provider '${id}' burst_cap must be a non-negative number`);
-  }
-  const timeout = Number(provider.timeout_ms);
-  if (!Number.isFinite(timeout) || timeout < 0) {
-    die(`provider '${id}' timeout_ms must be a non-negative number`);
+  const numericKeys = [
+    "default_throttle_ms",
+    "burst_cap",
+    "timeout_ms",
+    "cooldown_minutes_default",
+    "max_retries_note_payload",
+    "max_retries_429"
+  ];
+  for (const key of numericKeys) {
+    const value = Number(provider[key]);
+    if (!Number.isFinite(value) || value < 0) {
+      die(`provider '${id}' ${key} must be a non-negative number`);
+    }
   }
 }
 
