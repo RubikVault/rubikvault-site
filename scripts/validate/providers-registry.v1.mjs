@@ -15,10 +15,13 @@ function loadJson(p) {
 }
 
 const repoRoot = process.cwd();
-const file = path.join(repoRoot, "public", "data", "registry", "providers.v1.json");
-if (!fs.existsSync(file)) die(`missing file: ${file}`);
+const defaultPath = path.join(repoRoot, "public", "data", "registry", "providers.v1.json");
+const registryPath = process.env.RV_PROVIDERS_REGISTRY_PATH
+  ? path.resolve(process.env.RV_PROVIDERS_REGISTRY_PATH)
+  : defaultPath;
+if (!fs.existsSync(registryPath)) die(`missing file: ${registryPath}`);
 
-const doc = loadJson(file);
+const doc = loadJson(registryPath);
 if (!isObj(doc)) die("root must be an object");
 if (String(doc.schema_version || "") !== "1.0") die("schema_version must be '1.0'");
 if (String(doc.providers_version || "") !== "v1") die("providers_version must be 'v1'");
@@ -34,7 +37,11 @@ const requiredKeys = [
   "timeout_ms",
   "cooldown_minutes_default",
   "max_retries_note_payload",
-  "max_retries_429"
+  "max_retries_429",
+  "min_delay_ms_default",
+  "jitter_ms_default",
+  "enabled",
+  "role"
 ];
 const seenIds = new Set();
 for (const provider of doc.providers) {
@@ -59,13 +66,22 @@ for (const provider of doc.providers) {
     "timeout_ms",
     "cooldown_minutes_default",
     "max_retries_note_payload",
-    "max_retries_429"
+    "max_retries_429",
+    "min_delay_ms_default",
+    "jitter_ms_default"
   ];
   for (const key of numericKeys) {
     const value = Number(provider[key]);
     if (!Number.isFinite(value) || value < 0) {
       die(`provider '${id}' ${key} must be a non-negative number`);
     }
+  }
+  if (typeof provider.enabled !== "boolean") {
+    die(`provider '${id}' enabled must be boolean`);
+  }
+  const role = String(provider.role || "").toLowerCase();
+  if (!["primary", "fallback"].includes(role)) {
+    die(`provider '${id}' role must be 'primary' or 'fallback'`);
   }
 }
 

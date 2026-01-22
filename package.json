@@ -35,7 +35,7 @@
     "smoke:redirects": "sh scripts/smoke-redirects.sh",
     "smoke:redirects:preview": "BASE_URL=$PREVIEW_URL sh scripts/smoke-redirects.sh",
     "test:universe-registry": "node scripts/validate/universe-registry.v1.mjs",
-    "test:providers-registry": "node scripts/validate/providers-registry.v1.mjs",
+    "test:providers-registry": "node tests/providers-registry.test.mjs",
     "test:market-prices-artifact": "node scripts/validate/market-prices-artifact.v1.mjs",
     "test:market-prices-real-mode": "node tests/market-prices-real-mode.test.mjs"
   },

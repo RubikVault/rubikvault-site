@@ -4,7 +4,8 @@
   "notes": [
     "Prices are fetched EOD only.",
     "Provider selection is config-driven. No source mixing per symbol per run.",
-    "Fallback chain A->B is allowed; C is last_good for UI only."
+    "Fallback chain A->B is allowed; C is last_good for UI only.",
+    "Registry now describes multiple providers even before fallback logic is implemented."
   ],
   "providers": [
     {
@@ -20,16 +21,45 @@
       "cooldown_minutes_default": 30,
       "max_retries_note_payload": 2,
       "max_retries_429": 3,
+      "min_delay_ms_default": 12000,
+      "jitter_ms_default": 2000,
+      "enabled": false,
+      "role": "primary",
       "rate_limits": {
         "requests_per_day": 500,
         "requests_per_minute": 5
+      }
+    },
+    {
+      "id": "twelvedata",
+      "name": "Twelve Data",
+      "alias": "B",
+      "kind": "twelve_data_eod",
+      "base_url": "https://api.twelvedata.com",
+      "auth_env_var": "TWELVEDATA_API_KEY",
+      "default_throttle_ms": 15000,
+      "burst_cap": 1,
+      "timeout_ms": 25000,
+      "cooldown_minutes_default": 30,
+      "max_retries_note_payload": 1,
+      "max_retries_429": 2,
+      "min_delay_ms_default": 15000,
+      "jitter_ms_default": 2500,
+      "enabled": false,
+      "role": "fallback",
+      "endpoints": {
+        "time_series_eod": "/time_series"
+      },
+      "params": {
+        "interval": "1day",
+        "outputsize": "5"
       }
     }
   ],
   "chains": {
     "prices_eod": [
       { "id": "alphavantage", "kind": "alpha_vantage_eod", "enabled": false },
-      { "id": "providerB", "kind": "twelve_data_eod", "enabled": false }
+      { "id": "twelvedata", "kind": "twelve_data_eod", "enabled": false }
     ]
   }
 }

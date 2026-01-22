@@ -59,6 +59,11 @@ When the API key is present (see registry), real mode activates.
 If Alpha Vantage returns a 200 response with an error payload (Note/Error Message/Information),
 the run fails loud and `snapshot.metadata.upstream.*` includes the classification and upstream note.
 
+## Provider registry declarations
+
+- The registry now lists both Alpha Vantage (primary) and Twelve Data (fallback), but only the primary is active until WP6B wires the fallback chain.
+- Each provider entry includes `auth_env_var`, throttling defaults, and a `"role"` indicator so upcoming steps can pick the right candidate without runtime schema changes.
+
 ## Cooldown behavior
 
 - Artifacts now include `provider-runtime.json` under the artifacts directory. It tracks the last classification, `cooldown_until`, and `last_http_status`; real runs read this file first to avoid hammering the API while the cooldown is active.
