@@ -207,6 +207,60 @@
         "probe": "/api/probe/market-stats"
       }
     },
+    "market-score": {
+      "module": "market-score",
+      "tier": "standard",
+      "domain": "stocks",
+      "enabled": true,
+      "source": "derived",
+      "freshness": {
+        "expected_interval_minutes": 1440,
+        "grace_minutes": 180,
+        "policy": "market_days_only"
+      },
+      "counts": {
+        "expected": 4,
+        "min": 4,
+        "max": 4
+      },
+      "plausibility_rules": [
+        {
+          "path": "$.data[*].score_short",
+          "min": 0,
+          "max": 100,
+          "allow_null": false
+        },
+        {
+          "path": "$.data[*].confidence",
+          "min": 0,
+          "max": 1,
+          "allow_null": false
+        }
+      ],
+      "ui_contract": {
+        "policy": "digest_change_for_noncritical",
+        "required_paths": [
+          "$.data.SPY.score_short",
+          "$.data.SPY.score_mid",
+          "$.metadata.fetched_at"
+        ]
+      },
+      "cache": {
+        "kv_enabled": false,
+        "preferred_source": "ASSET"
+      },
+      "mobile": {
+        "optimized": true,
+        "ui_variant": "compact",
+        "lazy_load_priority": 2,
+        "size_category": "small"
+      },
+      "endpoints": {
+        "api": "/api/market-score",
+        "debug": "/api/market-score?debug=1",
+        "probe": "/api/probe/market-score"
+      }
+    },
     "universe": {
       "module": "universe",
       "tier": "standard",

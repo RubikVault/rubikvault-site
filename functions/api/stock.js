@@ -6,7 +6,7 @@ const SNAPSHOT_PATH_TEMPLATES = [
   '/data/snapshots/{module}.json',
   '/data/{module}.json'
 ];
-const MODULE_PATHS = ['universe', 'market-prices', 'market-stats'];
+const MODULE_PATHS = ['universe', 'market-prices', 'market-stats', 'market-score'];
 
 function normalizeTicker(raw) {
   if (typeof raw !== 'string') return null;
@@ -210,6 +210,7 @@ export async function onRequestGet(context) {
   const universeEntry = findRecord(snapshots['universe']?.snapshot, normalizedTicker);
   const priceEntry = findRecord(snapshots['market-prices']?.snapshot, normalizedTicker);
   const statsEntry = findRecord(snapshots['market-stats']?.snapshot, normalizedTicker);
+  const scoreEntry = findRecord(snapshots['market-score']?.snapshot, normalizedTicker);
   const universePayload = buildUniversePayload(universeEntry, normalizedTicker);
   const marketPricesPayload = buildMarketPricesPayload(priceEntry, normalizedTicker);
   const marketStatsPayload = buildMarketStatsPayload(statsEntry, normalizedTicker);
@@ -234,7 +235,8 @@ export async function onRequestGet(context) {
   const data = {
     universe: universePayload,
     market_prices: marketPricesPayload,
-    market_stats: marketStatsPayload
+    market_stats: marketStatsPayload,
+    market_score: scoreEntry
   };
 
   const asOf =

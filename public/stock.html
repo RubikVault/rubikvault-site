@@ -154,6 +154,63 @@
       grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
       gap: 1rem;
     }
+    .score-card {
+      padding: 1.5rem;
+      border-radius: 16px;
+      border: 1px solid rgba(148, 163, 184, 0.2);
+      background: rgba(15, 23, 42, 0.9);
+    }
+    .score-chips {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+      margin-bottom: 0.5rem;
+    }
+    .score-chip {
+      border-radius: 999px;
+      padding: 0.35rem 0.8rem;
+      border: 1px solid rgba(99, 102, 241, 0.6);
+      background: rgba(99, 102, 241, 0.1);
+      font-size: 0.9rem;
+      font-weight: 600;
+    }
+    .score-chip span {
+      font-weight: 400;
+      margin-left: 0.25rem;
+    }
+    .score-chip.positive {
+      border-color: rgba(16, 185, 129, 0.6);
+      background: rgba(16, 185, 129, 0.1);
+    }
+    .score-chip.neutral {
+      border-color: rgba(148, 163, 184, 0.6);
+    }
+    .score-chip.negative {
+      border-color: rgba(248, 113, 113, 0.6);
+      background: rgba(248, 113, 113, 0.1);
+    }
+    .score-confidence {
+      font-size: 0.85rem;
+      color: #94a3b8;
+      margin-bottom: 0.75rem;
+    }
+    .score-reasons {
+      display: grid;
+      gap: 1rem;
+    }
+    .score-reason-group {
+      border-top: 1px solid rgba(148, 163, 184, 0.2);
+      padding-top: 0.75rem;
+    }
+    .score-reason-group h3 {
+      margin: 0 0 0.35rem;
+      font-size: 0.9rem;
+      color: #cbd5f5;
+    }
+    .score-reason {
+      font-size: 0.85rem;
+      color: #e2e8f0;
+    }
   </style>
 </head>
 <body>
@@ -195,6 +252,20 @@
         <div class="card">
           <h2>Data quality</h2>
           <div class="metric-grid" id="quality-grid"></div>
+        </div>
+        <div class="card score-card" id="score-card">
+          <h2>Market score</h2>
+          <div class="score-chips">
+            <span class="score-chip" id="score-short">Short: —</span>
+            <span class="score-chip" id="score-mid">Mid: —</span>
+            <span class="score-chip" id="score-long">Long: —</span>
+          </div>
+          <div class="score-confidence" id="score-confidence">Confidence: —</div>
+          <div class="score-reasons" id="score-reasons">
+            <div class="score-reason-group" id="score-reasons-short"></div>
+            <div class="score-reason-group" id="score-reasons-mid"></div>
+            <div class="score-reason-group" id="score-reasons-long"></div>
+          </div>
         </div>
       </div>
     </section>
@@ -242,6 +313,14 @@
       ]
     };
 
+    const scoreShortChip = document.getElementById('score-short');
+    const scoreMidChip = document.getElementById('score-mid');
+    const scoreLongChip = document.getElementById('score-long');
+    const scoreConfidenceEl = document.getElementById('score-confidence');
+    const scoreReasonsShort = document.getElementById('score-reasons-short');
+    const scoreReasonsMid = document.getElementById('score-reasons-mid');
+    const scoreReasonsLong = document.getElementById('score-reasons-long');
+
     form.addEventListener('submit', (event) => {
       event.preventDefault();
       const ticker = tickerInput.value.trim();
@@ -285,6 +364,7 @@
       renderTrend(data?.market_stats?.stats);
       renderVolatility(data?.market_stats?.stats);
       renderQuality(data?.market_stats?.coverage, metadata);
+      renderScore(data?.market_score);
 
       if (error) {
         errorBox.style.display = 'block';
@@ -401,6 +481,56 @@
       trendGrid.innerHTML = '';
       qualityGrid.innerHTML = '';
       membershipEl.innerHTML = '';
+      clearScore();
+    }
+
+    function renderScore(score) {
+      if (!score) {
+        clearScore();
+        return;
+      }
+      scoreShortChip.textContent = `Short: ${score.score_short ?? '—'}`;
+      scoreMidChip.textContent = `Mid: ${score.score_mid ?? '—'}`;
+      scoreLongChip.textContent = `Long: ${score.score_long ?? '—'}`;
+      scoreConfidenceEl.textContent = `Confidence: ${score.confidence ?? '—'}`;
+
+      scoreShortChip.className = `score-chip ${score.score_short >= 70 ? 'positive' : score.score_short <= 40 ? 'negative' : 'neutral'}`;
+      scoreMidChip.className = `score-chip ${score.score_mid >= 70 ? 'positive' : score.score_mid <= 40 ? 'negative' : 'neutral'}`;
+      scoreLongChip.className = `score-chip ${score.score_long >= 70 ? 'positive' : score.score_long <= 40 ? 'negative' : 'neutral'}`;
+
+      renderReasons(scoreReasonsShort, 'Short horizon', score.reasons_top?.short || []);
+      renderReasons(scoreReasonsMid, 'Mid horizon', score.reasons_top?.mid || []);
+      renderReasons(scoreReasonsLong, 'Long horizon', score.reasons_top?.long || []);
+    }
+
+    function renderReasons(container, title, contributions) {
+      container.innerHTML = `<h3>${title}</h3>`;
+      if (!contributions.length) {
+        container.innerHTML += '<div class="score-reason">No contributors recorded</div>';
+        return;
+      }
+      contributions.forEach((entry) => {
+        const el = document.createElement('div');
+        el.className = 'score-reason';
+        el.textContent = `${entry.metric}: ${formatPoints(entry.points)}`;
+        container.appendChild(el);
+      });
+    }
+
+    function formatPoints(points) {
+      if (points === null || points === undefined) return '0.00';
+      const sign = points >= 0 ? '+' : '';
+      return `${sign}${points.toFixed(2)}`;
+    }
+
+    function clearScore() {
+      scoreShortChip.textContent = 'Short: —';
+      scoreMidChip.textContent = 'Mid: —';
+      scoreLongChip.textContent = 'Long: —';
+      scoreConfidenceEl.textContent = 'Confidence: —';
+      scoreReasonsShort.innerHTML = '<h3>Short horizon</h3><div class="score-reason">Score not available</div>';
+      scoreReasonsMid.innerHTML = '<h3>Mid horizon</h3><div class="score-reason">Score not available</div>';
+      scoreReasonsLong.innerHTML = '<h3>Long horizon</h3><div class="score-reason">Score not available</div>';
     }
   </script>
 </body>

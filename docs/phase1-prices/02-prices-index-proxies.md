@@ -120,3 +120,13 @@ the run fails loud and `snapshot.metadata.upstream.*` includes the classificatio
 - `functions/api/stock.js` stitches together the published `/data/snapshots/universe`, `/data/snapshots/market-prices`, and `/data/snapshots/market-stats` artifacts for a single ticker and emits a schema_version 3.0 envelope with structured error codes (`UNKNOWN_TICKER`, `DATA_NOT_READY`, `BAD_REQUEST`).
 - `public/stock.html` is a static-first UI that calls `/api/stock?ticker=<SYMBOL>` (optionally with `debug=1`), renders membership badges, latest price, returns + momentum, volatility + risk, trend metrics, and data quality diagnostics, and surfaces the API error banner when data is missing.
 - The stock page is accessible via `/stock.html?ticker=SPY` or any known ticker once the pipeline publishes new snapshots, and it gracefully informs users when the ticker is unknown or market prices/stats are not yet available.
+
+## Market score (WP12)
+
+- `market-score` is a derived module that consumes `market-stats` and calculates short/mid/long horizon scores plus explainability per symbol. The scoring engine normalizes momentum, trend, volatility, RSI, and drawdown inputs, records top contributors per horizon, and exposes confidence + coverage so downstream UI can explain each grade.
+- Artifacts:
+  - `/tmp/.../market-score/snapshot.json` (`schema_version=3.0`, `module=market-score`, `data` is a map of symbols with `score_short`, `score_mid`, `score_long`, `confidence`, `reasons_top`, and `inputs_used`).
+  - `/tmp/.../market-score/module-state.json` (validation + digest).
+  - `/tmp/.../market-score/market-score-health.json` (coverage/run-quality).
+- API: `/api/market-score` (served from ASSET via `functions/api/market-score.js`) and the `/api/stock` response now includes the joined `market_score` block so the UI can surface chips + “Why?” details.
+- The new score layer powers the `Score` section in `public/stock.html`, showing three chips (short/mid/long), confidence, and top 5 contributors per horizon; missing data gracefully shows placeholder messaging rather than guessing.
