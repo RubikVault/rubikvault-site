@@ -1,0 +1,53 @@
+{
+  "schema_version": "3.0",
+  "metadata": {
+    "module": "universe",
+    "tier": "standard",
+    "domain": "stocks",
+    "source": "stub",
+    "fetched_at": "2026-01-21T00:00:00Z",
+    "published_at": "2026-01-21T00:00:00Z",
+    "digest": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+    "record_count": 4,
+    "validation": {
+      "passed": true,
+      "dropped_records": 0,
+      "drop_ratio": 0,
+      "drop_check_passed": true,
+      "drop_threshold": null,
+      "checks": [],
+      "warnings": []
+    }
+  },
+  "data": {
+    "SPY": {
+      "symbol": "SPY",
+      "name": "Synthetic SPY",
+      "exchange": "NYSE",
+      "currency": "USD",
+      "country": "US",
+      "sector": "Synthetic",
+      "industry": "Synthetic",
+      "indexes": ["DJ30", "SP500"],
+      "source": {
+        "DJ30": "stub",
+        "SP500": "stub"
+      },
+      "updated_at": "2026-01-20"
+    },
+    "QQQ": {
+      "symbol": "QQQ",
+      "name": "Synthetic QQQ",
+      "exchange": "NASDAQ",
+      "currency": "USD",
+      "country": "US",
+      "sector": "Technology",
+      "industry": "Synthetic",
+      "indexes": ["NDX100"],
+      "source": {
+        "NDX100": "stub"
+      },
+      "updated_at": "2026-01-20"
+    }
+  }
+}

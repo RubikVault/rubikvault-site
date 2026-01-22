@@ -109,3 +109,14 @@ the run fails loud and `snapshot.metadata.upstream.*` includes the classificatio
   - `module-state.json` and `market-stats-health.json` (coverage ratio, run quality, reason summary).
   - Exposed endpoint: `/api/market-stats` (served from ASSET via `functions/api/market-stats.js`).
 - Required env toggles are the same as market-prices (since stats are derived from its artifacts).
+
+## Universe v2 (index constituents)
+
+- `universe` is the new core catalog that lists every symbol belonging to DJ30, SP500, NDX100, and RUT2000 along with metadata such as name, sector, and industry. The snapshot is built from per-index data sources, normalized, merged, and published via the same artifact/finalizer pipeline.
+- The API `/api/universe` serves the ASSET snapshot (schema_version 3.0) and is the source of truth for future search/autocomplete and ticker detail work in WP11/WP12.
+
+## Stock page v1 (ticker join)
+
+- `functions/api/stock.js` stitches together the published `/data/snapshots/universe`, `/data/snapshots/market-prices`, and `/data/snapshots/market-stats` artifacts for a single ticker and emits a schema_version 3.0 envelope with structured error codes (`UNKNOWN_TICKER`, `DATA_NOT_READY`, `BAD_REQUEST`).
+- `public/stock.html` is a static-first UI that calls `/api/stock?ticker=<SYMBOL>` (optionally with `debug=1`), renders membership badges, latest price, returns + momentum, volatility + risk, trend metrics, and data quality diagnostics, and surfaces the API error banner when data is missing.
+- The stock page is accessible via `/stock.html?ticker=SPY` or any known ticker once the pipeline publishes new snapshots, and it gracefully informs users when the ticker is unknown or market prices/stats are not yet available.

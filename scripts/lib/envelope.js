@@ -38,6 +38,8 @@ export function buildEnvelope(dataOrOptions, metadata) {
     meta = metadata || {};
   }
   
+  const isObjectMap = data && typeof data === "object" && !Array.isArray(data);
+  const envelopeData = isObjectMap ? data : Array.isArray(data) ? data : [data];
   const envelope = {
     schema_version: "3.0",
     metadata: {
@@ -48,7 +50,7 @@ export function buildEnvelope(dataOrOptions, metadata) {
       fetched_at: (meta.fetchedAt instanceof Date ? meta.fetchedAt.toISOString() : meta.fetched_at) || now,
       published_at: (meta.publishedAt instanceof Date ? meta.publishedAt.toISOString() : meta.published_at) || now,
       digest: null, // Will be computed below
-      record_count: Array.isArray(data) ? data.length : 0,
+      record_count: isObjectMap ? Object.keys(data).length : Array.isArray(data) ? data.length : 0,
       expected_count: meta.expected_count || null,
       validation: {
         passed: meta.validation?.passed ?? true,
@@ -74,7 +76,7 @@ export function buildEnvelope(dataOrOptions, metadata) {
         rate_limited: meta.upstream?.rate_limited ?? false
       }
     },
-    data: Array.isArray(data) ? data : [data],
+    data: envelopeData,
     error: meta.error || null
   };
   
@@ -96,7 +98,9 @@ export function validateEnvelopeSchema(envelope) {
   if (!envelope.schema_version) errors.push("Missing schema_version");
   if (envelope.schema_version !== "3.0") errors.push(`Invalid schema_version: ${envelope.schema_version}, expected 3.0`);
   if (!envelope.metadata) errors.push("Missing metadata");
-  if (!Array.isArray(envelope.data)) errors.push("data must be an array");
+  if (!Array.isArray(envelope.data) && !(envelope.data && typeof envelope.data === "object")) {
+    errors.push("data must be an array or object map");
+  }
   
   // Required metadata fields
   if (envelope.metadata) {

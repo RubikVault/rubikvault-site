@@ -1,0 +1,57 @@
+{
+  "schema_version": "3.0",
+  "metadata": {
+    "module": "market-stats",
+    "tier": "standard",
+    "domain": "stocks",
+    "source": "stub",
+    "fetched_at": "2026-01-21T00:00:00Z",
+    "published_at": "2026-01-21T00:00:00Z",
+    "digest": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+    "record_count": 1,
+    "validation": {
+      "passed": true,
+      "dropped_records": 0,
+      "drop_ratio": 0,
+      "drop_check_passed": true,
+      "drop_threshold": null,
+      "checks": [],
+      "warnings": []
+    }
+  },
+  "data": [
+    {
+      "symbol": "SPY",
+      "as_of": "2026-01-20",
+      "stats": {
+        "returns_1d": 0.0012,
+        "returns_5d": 0.0123,
+        "returns_21d": 0.0389,
+        "momentum_21d": 1.23,
+        "momentum_63d": 2.45,
+        "momentum_252d": 5.12,
+        "volatility_21d": 0.0078,
+        "volatility_63d": 0.0091,
+        "atr_14": 0.86,
+        "drawdown_max_252d": -0.12,
+        "drawdown_current_252d": -0.03,
+        "rsi_14": 54.2,
+        "sma_20": 102.4,
+        "sma_50": 101.2,
+        "sma_200": 98.5,
+        "distance_to_sma_20": 0.012,
+        "distance_to_sma_50": 0.02,
+        "distance_to_sma_200": 0.04
+      },
+      "coverage": {
+        "bars_used": 252,
+        "bars_expected": 252,
+        "coverage_ratio": 1,
+        "coverage_days": 252,
+        "freshness_days": 1
+      },
+      "warnings": []
+    }
+  ],
+  "error": null
+}

@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <title>Stock page · RubikVault</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+  <meta name="description" content="Join universe, market-prices, and market-stats for a single ticker." />
+  <link rel="icon" type="image/png" sizes="32x32" href="/assets/rv-favicon.png" />
+  <link rel="stylesheet" href="/style.css" />
+  <style>
+    body {
+      margin: 0;
+      font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+      background: #020617;
+      color: #e2e8f0;
+    }
+    .rv-main {
+      max-width: 980px;
+      margin: 0 auto;
+      padding: 2.5rem 1.5rem 4rem;
+    }
+    .stock-card {
+      background: rgba(15, 23, 42, 0.95);
+      border-radius: 20px;
+      border: 1px solid rgba(148, 163, 184, 0.2);
+      padding: 2rem;
+      box-shadow: 0 30px 80px rgba(2, 6, 23, 0.65);
+    }
+    .stock-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+    .stock-banner {
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+    }
+    .stock-title {
+      font-size: 2rem;
+      margin: 0;
+    }
+    .ticker-flag {
+      padding: 0.25rem 0.75rem;
+      border-radius: 12px;
+      border: 1px solid rgba(59, 130, 246, 0.6);
+      font-size: 0.9rem;
+      color: #93c5fd;
+      background: rgba(59, 130, 246, 0.08);
+      text-transform: uppercase;
+    }
+    .stock-form {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    .stock-form input {
+      padding: 0.75rem 1rem;
+      border-radius: 999px;
+      border: 1px solid rgba(148, 163, 184, 0.4);
+      background: rgba(15, 23, 42, 0.8);
+      color: #f8fafc;
+      font-size: 1rem;
+      width: 160px;
+    }
+    .stock-form button {
+      padding: 0.75rem 1.25rem;
+      border-radius: 999px;
+      border: none;
+      background: linear-gradient(135deg, #14b8a6, #06b6d4);
+      color: #0f172a;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .badge-row {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+      margin-top: 0.75rem;
+    }
+    .badge {
+      padding: 0.35rem 0.8rem;
+      border-radius: 999px;
+      border: 1px solid rgba(226, 232, 240, 0.4);
+      font-size: 0.85rem;
+      color: #e2e8f0;
+    }
+    .badge.unknown {
+      border-color: rgba(248, 113, 113, 0.5);
+      color: #fecaca;
+      background: rgba(248, 113, 113, 0.1);
+    }
+    .status-line {
+      margin-top: 0.5rem;
+      font-size: 0.85rem;
+      color: #94a3b8;
+    }
+    .panel {
+      margin-top: 1.5rem;
+      display: grid;
+      gap: 1rem;
+    }
+    .price-panel,
+    .card {
+      padding: 1.5rem;
+      border-radius: 16px;
+      border: 1px solid rgba(148, 163, 184, 0.2);
+      background: rgba(15, 23, 42, 0.9);
+    }
+    .price-value {
+      font-size: 2.3rem;
+      font-weight: 700;
+      margin: 0;
+    }
+    .price-meta {
+      font-size: 0.95rem;
+      color: #94a3b8;
+      margin-top: 0.25rem;
+    }
+    .metric-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 0.75rem;
+    }
+    .metric {
+      padding: 0.9rem;
+      border-radius: 12px;
+      background: rgba(15, 23, 42, 0.75);
+      border: 1px solid rgba(148, 163, 184, 0.2);
+    }
+    .metric-title {
+      font-size: 0.85rem;
+      color: #94a3b8;
+    }
+    .metric-value {
+      font-size: 1.25rem;
+      font-weight: 600;
+      color: #f8fafc;
+    }
+    .error-box {
+      margin-top: 1rem;
+      padding: 1rem 1.25rem;
+      border-radius: 12px;
+      background: rgba(248, 113, 113, 0.12);
+      border: 1px solid rgba(248, 113, 113, 0.5);
+      color: #fecaca;
+      font-size: 0.95rem;
+    }
+    .quality-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1rem;
+    }
+  </style>
+</head>
+<body>
+  <main class="rv-main">
+    <section class="stock-card">
+      <header class="stock-header">
+        <div class="stock-banner">
+          <h1 class="stock-title">Stock page</h1>
+          <div class="status-line" id="stock-status">Loading data...</div>
+          <div class="badge-row" id="stock-membership"></div>
+        </div>
+        <form id="stock-form" class="stock-form">
+          <label>
+            Ticker
+            <input id="stock-ticker" name="ticker" type="text" placeholder="SPY" autocomplete="off" />
+          </label>
+          <button type="submit">Load</button>
+        </form>
+      </header>
+      <div id="stock-error" class="error-box" style="display:none;"></div>
+      <div class="panel">
+        <div class="price-panel" id="price-panel">
+          <div class="price-label">Latest price</div>
+          <p class="price-value" id="price-value">—</p>
+          <div class="price-meta" id="price-meta">Awaiting data</div>
+        </div>
+        <div class="card">
+          <h2>Returns &amp; momentum</h2>
+          <div class="metric-grid" id="returns-grid"></div>
+        </div>
+        <div class="card">
+          <h2>Volatility &amp; risk</h2>
+          <div class="metric-grid" id="volatility-grid"></div>
+        </div>
+        <div class="card">
+          <h2>Trend</h2>
+          <div class="metric-grid" id="trend-grid"></div>
+        </div>
+        <div class="card">
+          <h2>Data quality</h2>
+          <div class="metric-grid" id="quality-grid"></div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const form = document.getElementById('stock-form');
+    const tickerInput = document.getElementById('stock-ticker');
+    const statusEl = document.getElementById('stock-status');
+    const membershipEl = document.getElementById('stock-membership');
+    const errorBox = document.getElementById('stock-error');
+    const priceValue = document.getElementById('price-value');
+    const priceMeta = document.getElementById('price-meta');
+    const returnsGrid = document.getElementById('returns-grid');
+    const volatilityGrid = document.getElementById('volatility-grid');
+    const trendGrid = document.getElementById('trend-grid');
+    const qualityGrid = document.getElementById('quality-grid');
+    const params = new URLSearchParams(window.location.search);
+    const debugParam = params.has('debug');
+
+    const metricsGroups = {
+      returns: [
+        { key: 'returns_1d', label: '1d log return', format: formatPercent },
+        { key: 'returns_5d', label: '5d log return', format: formatPercent },
+        { key: 'returns_21d', label: '21d log return', format: formatPercent },
+        { key: 'momentum_21d', label: '21d momentum %', format: formatPercent },
+        { key: 'momentum_63d', label: '63d momentum %', format: formatPercent },
+        { key: 'momentum_252d', label: '252d momentum %', format: formatPercent }
+      ],
+      volatility: [
+        { key: 'volatility_21d', label: '21d volatility', format: formatPercent },
+        { key: 'volatility_63d', label: '63d volatility', format: formatPercent },
+        { key: 'atr_14', label: 'ATR 14', format: formatNumber },
+        { key: 'drawdown_max_252d', label: 'Max drawdown', format: formatPercent },
+        { key: 'drawdown_current_252d', label: 'Current drawdown', format: formatPercent },
+        { key: 'rsi_14', label: 'RSI 14', format: formatNumber }
+      ],
+      trend: [
+        { key: 'sma_20', label: 'SMA 20', format: formatNumber },
+        { key: 'sma_50', label: 'SMA 50', format: formatNumber },
+        { key: 'sma_200', label: 'SMA 200', format: formatNumber },
+        { key: 'distance_to_sma_20', label: 'Distance to SMA20 %', format: formatPercent },
+        { key: 'distance_to_sma_50', label: 'Distance to SMA50 %', format: formatPercent },
+        { key: 'distance_to_sma_200', label: 'Distance to SMA200 %', format: formatPercent }
+      ]
+    };
+
+    form.addEventListener('submit', (event) => {
+      event.preventDefault();
+      const ticker = tickerInput.value.trim();
+      if (!ticker) return;
+      loadTicker(ticker);
+    });
+
+    if (params.has('ticker')) {
+      const queued = params.get('ticker');
+      tickerInput.value = queued;
+      loadTicker(queued);
+    } else {
+      tickerInput.value = 'SPY';
+      loadTicker('SPY');
+    }
+
+    async function loadTicker(ticker) {
+      statusEl.textContent = `Looking up ${ticker.toUpperCase()}...`;
+      errorBox.style.display = 'none';
+      const debugQuery = debugParam ? '&debug=1' : '';
+      try {
+        const response = await fetch(`/api/stock?ticker=${encodeURIComponent(ticker)}${debugQuery}`);
+        const payload = await response.json();
+        renderPayload(payload);
+      } catch (error) {
+        statusEl.textContent = 'Unable to reach stock API yet.';
+        errorBox.style.display = 'block';
+        errorBox.textContent = 'Network error while contacting /api/stock.';
+        clearContent();
+      }
+    }
+
+    function renderPayload(payload) {
+      const { data, error, metadata } = payload;
+      const normalized = metadata?.request?.normalized_ticker || '—';
+
+      statusEl.textContent = `Ticker ${normalized}`;
+      renderMembership(data?.universe);
+      renderPrice(data?.market_prices, data?.market_stats);
+      renderMetrics(data?.market_stats?.stats);
+      renderTrend(data?.market_stats?.stats);
+      renderVolatility(data?.market_stats?.stats);
+      renderQuality(data?.market_stats?.coverage, metadata);
+
+      if (error) {
+        errorBox.style.display = 'block';
+        errorBox.innerHTML = `<strong>${error.code}</strong>: ${error.message}` +
+          (error.details?.missing ? `<div>Missing: ${error.details.missing.join(', ')}</div>` : '');
+      } else {
+        errorBox.style.display = 'none';
+      }
+    }
+
+    function renderMembership(universe) {
+      membershipEl.innerHTML = '';
+      if (!universe?.exists_in_universe) {
+        const badge = document.createElement('span');
+        badge.className = 'badge unknown';
+        badge.textContent = 'Unknown ticker';
+        membershipEl.appendChild(badge);
+        return;
+      }
+      const indexes = universe?.indexes || [];
+      if (!indexes.length) {
+        const badge = document.createElement('span');
+        badge.className = 'badge';
+        badge.textContent = 'Universe entry present';
+        membershipEl.appendChild(badge);
+        return;
+      }
+      indexes.forEach((index) => {
+        const badge = document.createElement('span');
+        badge.className = 'badge';
+        badge.textContent = index;
+        membershipEl.appendChild(badge);
+      });
+    }
+
+    function renderPrice(price, stats) {
+      if (!price) {
+        priceValue.textContent = '—';
+        priceMeta.textContent = 'Market prices unavailable';
+        return;
+      }
+      priceValue.textContent = formatCurrency(price.close, price.currency);
+      const dateLabel = price.date ? `as of ${price.date}` : 'date unknown';
+      const momentum = stats?.stats?.returns_1d;
+      const extra = momentum !== undefined && momentum !== null ? `· 1d return ${formatPercent(momentum)}` : '';
+      priceMeta.textContent = `${dateLabel} ${extra}`;
+    }
+
+    function renderMetrics(stats) {
+      fillMetricGrid(returnsGrid, stats, metricsGroups.returns);
+    }
+
+    function renderVolatility(stats) {
+      fillMetricGrid(volatilityGrid, stats, metricsGroups.volatility);
+    }
+
+    function renderTrend(stats) {
+      fillMetricGrid(trendGrid, stats, metricsGroups.trend);
+    }
+
+    function renderQuality(coverage, metadata) {
+      qualityGrid.innerHTML = '';
+      const moduleSource = metadata?.served_from || 'unknown';
+      const runQuality = coverage ? (coverage.coverage_ratio >= 0.95 ? 'OK' : coverage.coverage_ratio >= 0.5 ? 'DEGRADED' : 'FAILED') : 'UNKNOWN';
+      const metrics = [
+        { title: 'Run quality', value: runQuality },
+        { title: 'Coverage ratio', value: coverage ? formatPercent(coverage.coverage_ratio) : '—' },
+        { title: 'Bars used', value: coverage ? coverage.bars_used : '—' },
+        { title: 'Freshness days', value: coverage ? coverage.freshness_days : '—' },
+        { title: 'Served from', value: moduleSource }
+      ];
+      metrics.forEach(({ title, value }) => {
+        const el = document.createElement('div');
+        el.className = 'metric';
+        el.innerHTML = `<div class="metric-title">${title}</div><div class="metric-value">${value}</div>`;
+        qualityGrid.appendChild(el);
+      });
+    }
+
+    function fillMetricGrid(container, stats, definitions) {
+      container.innerHTML = '';
+      definitions.forEach(({ key, label, format }) => {
+        const value = stats?.[key];
+        const metric = document.createElement('div');
+        metric.className = 'metric';
+        metric.innerHTML = `
+          <div class="metric-title">${label}</div>
+          <div class="metric-value">${format(value)}</div>
+        `;
+        container.appendChild(metric);
+      });
+    }
+
+    function formatNumber(value) {
+      if (value === null || value === undefined || Number.isNaN(value)) return '—';
+      return new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value);
+    }
+
+    function formatPercent(value) {
+      if (value === null || value === undefined || Number.isNaN(value)) return '—';
+      return `${(value * 100).toFixed(2)}%`;
+    }
+
+    function formatCurrency(value, currency = 'USD') {
+      if (value === null || value === undefined || Number.isNaN(value)) return '—';
+      return new Intl.NumberFormat('en-US', { style: 'currency', currency }).format(value);
+    }
+
+    function clearContent() {
+      priceValue.textContent = '—';
+      priceMeta.textContent = '';
+      returnsGrid.innerHTML = '';
+      volatilityGrid.innerHTML = '';
+      trendGrid.innerHTML = '';
+      qualityGrid.innerHTML = '';
+      membershipEl.innerHTML = '';
+    }
+  </script>
+</body>
+</html>

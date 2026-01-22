@@ -207,6 +207,54 @@
         "probe": "/api/probe/market-stats"
       }
     },
+    "universe": {
+      "module": "universe",
+      "tier": "standard",
+      "domain": "stocks",
+      "enabled": true,
+      "source": "derived",
+      "freshness": {
+        "expected_interval_minutes": 1440,
+        "grace_minutes": 180,
+        "policy": "market_days_only"
+      },
+      "counts": {
+        "expected": null,
+        "min": 2600,
+        "max": null
+      },
+      "plausibility_rules": [
+        {
+          "path": "$.data[*].indexes",
+          "min": 1,
+          "max": null,
+          "allow_null": false
+        }
+      ],
+      "ui_contract": {
+        "policy": "digest_change_for_noncritical",
+        "required_paths": [
+          "$.data.AAPL.name",
+          "$.data.AAPL.indexes",
+          "$.metadata.fetched_at"
+        ]
+      },
+      "cache": {
+        "kv_enabled": false,
+        "preferred_source": "ASSET"
+      },
+      "mobile": {
+        "optimized": true,
+        "ui_variant": "compact",
+        "lazy_load_priority": 1,
+        "size_category": "small"
+      },
+      "endpoints": {
+        "api": "/api/universe",
+        "debug": "/api/universe?debug=1",
+        "probe": "/api/probe/universe"
+      }
+    },
     "crypto": {
       "module": "crypto",
       "tier": "standard",
