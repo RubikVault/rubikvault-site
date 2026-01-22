@@ -6,7 +6,9 @@ import { spawnSync } from 'node:child_process';
 
 import {
   classifyAlphaVantagePayload,
-  normalizeAlphaVantageDailyAdjusted
+  normalizeAlphaVantageDailyAdjusted,
+  normalizeTwelveDataTimeSeries,
+  buildProviderChain
 } from '../scripts/providers/market-prices-v3.mjs';
 
 let passed = 0;
@@ -47,18 +49,12 @@ function loadProvidersRegistry() {
   return JSON.parse(raw);
 }
 
-function selectProviderConfig(registry) {
-  const chain = registry?.chains?.prices_eod || [];
-  const selected = chain.find((entry) => entry && entry.enabled !== false) || chain[0];
-  if (!selected || !selected.id) {
-    throw new Error('Missing provider in registry chain');
+function selectPrimaryProvider(registry) {
+  const chain = buildProviderChain(registry, 'prices_eod');
+  if (!Array.isArray(chain) || chain.length === 0) {
+    throw new Error('Missing provider chain');
   }
-  const providers = Array.isArray(registry?.providers) ? registry.providers : [];
-  const provider = providers.find((entry) => entry && entry.id === selected.id);
-  if (!provider || typeof provider !== 'object') {
-    throw new Error('Missing provider config in registry');
-  }
-  return provider;
+  return chain[0];
 }
 
 function runMarketPrices(envOverrides, outDir) {
@@ -80,21 +76,44 @@ import path from 'node:path';
 const config = JSON.parse(process.env.RV_TEST_FETCH_CONFIG || '[]');
 const sequences = {};
 for (const entry of config) {
-  const key = entry.symbol || '*';
-  sequences[key] = entry.sequence || [entry];
+  const provider = entry.provider || '*';
+  const symbol = entry.symbol || '*';
+  sequences[provider] = sequences[provider] || {};
+  sequences[provider][symbol] = entry.sequence || [entry];
 }
 const callCounts = {};
 const root = process.cwd();
-const defaultSequence = sequences['*'] || [{
-  status: 200,
-  fixture: 'tests/fixtures/alphavantage-daily-adjusted.sample.json'
-}];
+const defaults = {
+  alphavantage: [{ status: 200, fixture: 'tests/fixtures/alphavantage-daily-adjusted.sample.json' }],
+  twelvedata: [{ status: 200, fixture: 'tests/fixtures/twelvedata-time-series.sample.json' }],
+  '*': [{ status: 200, fixture: 'tests/fixtures/alphavantage-daily-adjusted.sample.json' }]
+};
 
-function getEntry(symbol) {
-  const seq = sequences[symbol] || sequences['*'] || defaultSequence;
-  const idx = Math.min(callCounts[symbol] || 0, seq.length - 1);
-  callCounts[symbol] = idx + 1;
-  return seq[idx] || seq[seq.length - 1];
+function resolveSequence(provider, symbol) {
+  const providerSeq = sequences[provider] || {};
+  const starSeq = sequences['*'] || {};
+  return (
+    providerSeq[symbol] ||
+    providerSeq['*'] ||
+    starSeq[symbol] ||
+    starSeq['*'] ||
+    defaults[provider] ||
+    defaults['*']
+  );
+}
+
+function buildKey(provider, symbol) {
+  return \`\${provider}:\${symbol}\`;
+}
+
+function getEntry(provider, symbol) {
+  const sequence = resolveSequence(provider, symbol);
+  if (!sequence || sequence.length === 0) return null;
+  const key = buildKey(provider, symbol);
+  callCounts[key] = callCounts[key] ?? 0;
+  const idx = Math.min(callCounts[key], sequence.length - 1);
+  callCounts[key] = idx + 1;
+  return sequence[idx];
 }
 
 function buildResponse(entry) {
@@ -116,8 +135,11 @@ function buildResponse(entry) {
   global.fetch = async (url) => {
     const parsed = new URL(url);
     const symbol = parsed.searchParams.get('symbol') || '*';
-    const entry = getEntry(symbol);
-    if (!entry) throw new Error('Missing fetch config for ' + symbol);
+    let provider = '*';
+    if (parsed.host.includes('alphavantage')) provider = 'alphavantage';
+    else if (parsed.host.includes('twelvedata')) provider = 'twelvedata';
+    const entry = getEntry(provider, symbol) || getEntry('*', symbol);
+    if (!entry) throw new Error('Missing fetch config for ' + provider + ':' + symbol);
     return buildResponse(entry);
   };
 
@@ -132,7 +154,7 @@ await mod.main();
 
 const test1 = test('REAL mode without key → fails with REAL_FETCH_MISSING_API_KEY', async () => {
   const registry = loadProvidersRegistry();
-  const provider = selectProviderConfig(registry);
+  const provider = selectPrimaryProvider(registry);
   const envVar = provider.auth_env_var;
 
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'rv-market-prices-real-'));
@@ -161,6 +183,14 @@ const test2 = test('STUB mode → deterministic digest', async () => {
   const snapB = JSON.parse(fs.readFileSync(path.join(dirB, 'snapshot.json'), 'utf-8'));
 
   assertEqual(snapA.metadata.digest, snapB.metadata.digest, 'Expected digests to match');
+
+  const providerHealthA = fs.readFileSync(path.join(dirA, 'provider-health.json'), 'utf-8');
+  const providerHealthB = fs.readFileSync(path.join(dirB, 'provider-health.json'), 'utf-8');
+  assertEqual(providerHealthA, providerHealthB, 'Expected provider health artifacts to be deterministic');
+
+  const marketHealthA = fs.readFileSync(path.join(dirA, 'market-prices-health.json'), 'utf-8');
+  const marketHealthB = fs.readFileSync(path.join(dirB, 'market-prices-health.json'), 'utf-8');
+  assertEqual(marketHealthA, marketHealthB, 'Expected market health artifacts to be deterministic');
 });
 
 const test3 = test('Normalize Provider A payload → canonical bar', async () => {
@@ -188,6 +218,32 @@ const test3 = test('Normalize Provider A payload → canonical bar', async () =>
   assertEqual(warnings.length, 0, 'Expected no warnings for fixture payload');
 });
 
+const test3a = test('Normalize Twelve Data payload → canonical bar', async () => {
+  const fixturePath = path.join(process.cwd(), 'tests', 'fixtures', 'twelvedata-time-series.sample.json');
+  const payload = JSON.parse(fs.readFileSync(fixturePath, 'utf-8'));
+  const { bar, warnings } = normalizeTwelveDataTimeSeries(payload, 'SPY', {
+    ingestedAt: '2025-01-18T00:00:00Z',
+    sourceProvider: 'twelvedata'
+  });
+
+  assert(bar, 'Expected bar to be returned');
+  assertEqual(bar.symbol, 'SPY');
+  assertEqual(bar.date, '2025-01-16');
+  assertEqual(bar.open, 475.0);
+  assertEqual(bar.high, 485.0);
+  assertEqual(bar.low, 472.0);
+  assertEqual(bar.close, 482.0);
+  assertEqual(bar.volume, 12345678);
+  assertEqual(bar.currency, 'USD');
+  assertEqual(bar.source_provider, 'twelvedata');
+  assertEqual(bar.ingested_at, '2025-01-18T00:00:00Z');
+  assert(bar.adj_close === null, 'Expected adj_close to be null when not provided');
+  assert(
+    warnings.includes('MISSING_ADJ:SPY'),
+    'Expected missing adj warning for twelve data payload'
+  );
+});
+
 const test4 = test('Classify AlphaVantage Note payload → error payload', async () => {
   const fixturePath = path.join(process.cwd(), 'tests', 'fixtures', 'alphavantage-note.sample.json');
   const payload = JSON.parse(fs.readFileSync(fixturePath, 'utf-8'));
@@ -210,18 +266,20 @@ const test5 = test('Classify AlphaVantage Error Message payload → error payloa
 
 const test6 = test('REAL mode error payload → fail loud with upstream metadata', async () => {
   const registry = loadProvidersRegistry();
-  const provider = selectProviderConfig(registry);
+  const provider = selectPrimaryProvider(registry);
   const envVar = provider.auth_env_var;
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'rv-market-prices-real-note-'));
 
   const fetchConfig = [
     {
+      provider: 'alphavantage',
       symbol: 'SPY',
       sequence: [
         { status: 200, fixture: 'tests/fixtures/alphavantage-note.sample.json' }
       ]
     },
     {
+      provider: 'alphavantage',
       symbol: '*',
       sequence: [
         { status: 200, fixture: 'tests/fixtures/alphavantage-daily-adjusted.sample.json' }
@@ -239,18 +297,20 @@ const test6 = test('REAL mode error payload → fail loud with upstream metadata
   const snapshot = JSON.parse(fs.readFileSync(path.join(tmpDir, 'snapshot.json'), 'utf-8'));
   const state = JSON.parse(fs.readFileSync(path.join(tmpDir, 'module-state.json'), 'utf-8'));
 
-  assertEqual(snapshot.metadata.provider, 'alphavantage');
-  assertEqual(snapshot.metadata.compute?.reason_code, 'RATE_LIMIT_NOTE');
-  assertEqual(snapshot.metadata.upstream?.classification, 'RATE_LIMIT_NOTE');
+  assertEqual(snapshot.metadata.compute?.reason_code, 'COOLDOWN_ACTIVE');
+  assertEqual(snapshot.metadata.upstream?.classification, 'NETWORK_ERROR');
   assert(snapshot.metadata.upstream?.note?.includes('Thank you'), 'Expected upstream note text');
-  assertEqual(snapshot.metadata.upstream?.symbol_errors?.SPY?.classification, 'RATE_LIMIT_NOTE');
+  assertEqual(snapshot.metadata.upstream?.symbol_errors?.SPY?.classification, 'NETWORK_ERROR');
+  assertEqual(snapshot.metadata.upstream?.symbol_errors?.SPY?.provider_id, 'twelvedata');
+  assert(snapshot.metadata.upstream?.symbol_attempts?.SPY, 'Expected SYMBOL attempts log');
+  assertEqual(snapshot.metadata.upstream?.symbol_attempts?.SPY[0]?.provider_id, 'alphavantage');
   assertEqual(state.status, 'error');
-  assertEqual(state.failure?.class, 'RATE_LIMIT_NOTE');
+  assertEqual(state.failure?.class, 'COOLDOWN_ACTIVE');
 });
 
 const test7 = test('Cooldown active → fail immediately with runtime state preserved', async () => {
   const registry = loadProvidersRegistry();
-  const provider = selectProviderConfig(registry);
+  const provider = selectPrimaryProvider(registry);
   const envVar = provider.auth_env_var;
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'rv-market-prices-real-cooldown-'));
   const runtimePath = path.join(tmpDir, 'provider-runtime.json');
@@ -258,10 +318,14 @@ const test7 = test('Cooldown active → fail immediately with runtime state pres
   fs.writeFileSync(
     runtimePath,
     JSON.stringify({
-      provider_id: 'alphavantage',
-      cooldown_until: future,
-      cooldown_note: 'manual cooldown',
-      last_http_status: 429
+      providers: {
+        alphavantage: {
+          provider_id: 'alphavantage',
+          cooldown_until: future,
+          cooldown_note: 'manual cooldown',
+          last_http_status: 429
+        }
+      }
     }, null, 2),
     'utf-8'
   );
@@ -278,21 +342,23 @@ const test7 = test('Cooldown active → fail immediately with runtime state pres
   const state = JSON.parse(fs.readFileSync(path.join(tmpDir, 'module-state.json'), 'utf-8'));
   const runtime = JSON.parse(fs.readFileSync(runtimePath, 'utf-8'));
 
-  assertEqual(snapshot.metadata.upstream?.classification, 'COOLDOWN_ACTIVE');
+  assertEqual(snapshot.metadata.upstream?.classification, 'NETWORK_ERROR');
   assertEqual(snapshot.metadata.compute?.reason_code, 'COOLDOWN_ACTIVE');
   assertEqual(snapshot.metadata.compute?.dropped_symbols.length, 4);
   assertEqual(state.failure?.class, 'COOLDOWN_ACTIVE');
-  assertEqual(runtime.cooldown_until, future);
+  assertEqual(runtime.providers?.alphavantage?.cooldown_until, future);
+  assert(snapshot.metadata.upstream?.symbol_attempts?.SPY?.[0]?.classification === 'COOLDOWN_ACTIVE', 'Expected cooldown attempt logged');
 });
 
 const test8 = test('HTTP 429 → triggers cooldown and metadata', async () => {
   const registry = loadProvidersRegistry();
-  const provider = selectProviderConfig(registry);
+  const provider = selectPrimaryProvider(registry);
   const envVar = provider.auth_env_var;
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'rv-market-prices-real-429-'));
 
   const fetchConfig = [
     {
+      provider: 'alphavantage',
       symbol: 'SPY',
       sequence: [
         { status: 429 },
@@ -301,6 +367,7 @@ const test8 = test('HTTP 429 → triggers cooldown and metadata', async () => {
       ]
     },
     {
+      provider: 'alphavantage',
       symbol: '*',
       sequence: [
         { status: 200, fixture: 'tests/fixtures/alphavantage-daily-adjusted.sample.json' }
@@ -317,40 +384,49 @@ const test8 = test('HTTP 429 → triggers cooldown and metadata', async () => {
   assert(result.status !== 0, 'Expected rate-limit exit');
   const snapshot = JSON.parse(fs.readFileSync(path.join(tmpDir, 'snapshot.json'), 'utf-8'));
   const runtime = JSON.parse(fs.readFileSync(path.join(tmpDir, 'provider-runtime.json'), 'utf-8'));
+  const state = JSON.parse(fs.readFileSync(path.join(tmpDir, 'module-state.json'), 'utf-8'));
 
-  assertEqual(snapshot.metadata.upstream?.classification, 'HTTP_429');
-  assertEqual(snapshot.metadata.compute?.reason_code, 'HTTP_429');
-  assertEqual(snapshot.metadata.upstream?.symbol_errors?.SPY?.classification, 'HTTP_429');
-  assert(runtime.cooldown_until, 'Expected cooldown until timestamp');
-  assertEqual(runtime.last_classification, 'HTTP_429');
+
+  assertEqual(snapshot.metadata.upstream?.classification, 'NETWORK_ERROR');
+  assertEqual(snapshot.metadata.compute?.reason_code, 'COOLDOWN_ACTIVE');
+  assertEqual(snapshot.metadata.upstream?.symbol_errors?.SPY?.classification, 'NETWORK_ERROR');
+  assertEqual(snapshot.metadata.upstream?.symbol_errors?.SPY?.provider_id, 'twelvedata');
+  assert(runtime.providers?.alphavantage?.cooldown_until, 'Expected cooldown until timestamp');
+  assertEqual(runtime.providers?.alphavantage?.last_classification, 'HTTP_429');
+  assertEqual(snapshot.metadata.upstream?.symbol_attempts?.SPY?.[0]?.classification, 'HTTP_429');
+  assertEqual(state.failure?.class, 'COOLDOWN_ACTIVE');
 });
 
 const test9 = test('Partial success then rate-limit note → reason PARTIAL_DUE_TO_RATE_LIMIT', async () => {
   const registry = loadProvidersRegistry();
-  const provider = selectProviderConfig(registry);
+  const provider = selectPrimaryProvider(registry);
   const envVar = provider.auth_env_var;
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'rv-market-prices-real-partial-'));
 
   const fetchConfig = [
     {
+      provider: 'alphavantage',
       symbol: 'SPY',
       sequence: [
         { status: 200, fixture: 'tests/fixtures/alphavantage-daily-adjusted.sample.json' }
       ]
     },
     {
+      provider: 'alphavantage',
       symbol: 'QQQ',
       sequence: [
         { status: 200, fixture: 'tests/fixtures/alphavantage-daily-adjusted.sample.json' }
       ]
     },
     {
+      provider: 'alphavantage',
       symbol: 'DIA',
       sequence: [
         { status: 200, fixture: 'tests/fixtures/alphavantage-note.sample.json' }
       ]
     },
     {
+      provider: 'alphavantage',
       symbol: '*',
       sequence: [
         { status: 200, fixture: 'tests/fixtures/alphavantage-daily-adjusted.sample.json' }
@@ -369,16 +445,403 @@ const test9 = test('Partial success then rate-limit note → reason PARTIAL_DUE_
   const state = JSON.parse(fs.readFileSync(path.join(tmpDir, 'module-state.json'), 'utf-8'));
   const runtime = JSON.parse(fs.readFileSync(path.join(tmpDir, 'provider-runtime.json'), 'utf-8'));
 
-  assertEqual(snapshot.metadata.upstream?.classification, 'RATE_LIMIT_NOTE');
-  assertEqual(snapshot.metadata.compute?.reason_code, 'PARTIAL_DUE_TO_RATE_LIMIT');
+  assertEqual(snapshot.metadata.upstream?.classification, 'NETWORK_ERROR');
+  assertEqual(snapshot.metadata.compute?.reason_code, 'COOLDOWN_ACTIVE');
   assert(snapshot.metadata.compute?.dropped_symbols.includes('DIA'), 'Expected DIA dropped due to rate limit');
   assert(snapshot.metadata.compute?.dropped_symbols.includes('IWM'), 'Expected IWM dropped due to cooldown');
-  assertEqual(snapshot.metadata.upstream?.symbol_errors?.DIA?.classification, 'RATE_LIMIT_NOTE');
-  assertEqual(state.failure?.class, 'PARTIAL_DUE_TO_RATE_LIMIT');
-  assert(runtime.cooldown_until, 'Expected cooldown persisted');
+  assertEqual(snapshot.metadata.upstream?.symbol_errors?.DIA?.classification, 'NETWORK_ERROR');
+  assertEqual(snapshot.metadata.upstream?.symbol_errors?.DIA?.provider_id, 'twelvedata');
+  assertEqual(snapshot.metadata.upstream?.symbol_attempts?.DIA?.[0]?.classification, 'RATE_LIMIT_NOTE');
+  assertEqual(state.failure?.class, 'COOLDOWN_ACTIVE');
+  assert(runtime.providers?.alphavantage?.cooldown_until, 'Expected cooldown persisted');
 });
 
-const tests = [test1, test2, test3, test4, test5, test6, test7, test8, test9];
+const test10 = test('Twelve Data fallback yields bar when Alpha returns Note', async () => {
+  const registry = loadProvidersRegistry();
+  const chain = buildProviderChain(registry, 'prices_eod');
+  const primary = chain[0];
+  const fallback = chain.find((provider) => provider.role === 'fallback');
+  if (!fallback) throw new Error('Fallback provider missing');
+  const envVarPrimary = primary.auth_env_var;
+  const envVarFallback = fallback.auth_env_var;
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'rv-market-prices-real-fallback-'));
+
+  const fetchConfig = [
+    {
+      provider: 'alphavantage',
+      symbol: 'SPY',
+      sequence: [
+        { status: 200, fixture: 'tests/fixtures/alphavantage-note.sample.json' }
+      ]
+    },
+    {
+      provider: 'alphavantage',
+      symbol: '*',
+      sequence: [
+        { status: 200, fixture: 'tests/fixtures/alphavantage-daily-adjusted.sample.json' }
+      ]
+    },
+    {
+      provider: 'twelvedata',
+      symbol: 'SPY',
+      sequence: [
+        { status: 200, fixture: 'tests/fixtures/twelvedata-time-series.sample.json' }
+      ]
+    }
+  ];
+
+  const result = runMarketPricesWithMock({
+    RV_PRICES_FORCE_REAL: '1',
+    RV_PRICES_STUB: '',
+    [envVarPrimary]: 'alpha-key',
+    [envVarFallback]: 'td-key'
+  }, tmpDir, fetchConfig);
+
+  assertEqual(result.status, 0, 'Expected fallback run to succeed');
+  const snapshot = JSON.parse(fs.readFileSync(path.join(tmpDir, 'snapshot.json'), 'utf-8'));
+  const state = JSON.parse(fs.readFileSync(path.join(tmpDir, 'module-state.json'), 'utf-8'));
+
+  assertEqual(snapshot.metadata.provider, fallback.id);
+  assertEqual(snapshot.metadata.upstream?.symbol_sources?.SPY, fallback.id);
+  assertEqual(snapshot.metadata.upstream?.symbol_attempts?.SPY?.[0]?.provider_id, primary.id);
+  assertEqual(snapshot.metadata.upstream?.symbol_attempts?.SPY?.[1]?.provider_id, fallback.id);
+  assertEqual(snapshot.metadata.upstream?.symbol_attempts?.SPY?.[0]?.classification, 'RATE_LIMIT_NOTE');
+  assertEqual(snapshot.metadata.upstream?.symbol_attempts?.SPY?.[1]?.classification, 'OK');
+  assertEqual(snapshot.metadata.compute?.done_symbols, 4);
+  assertEqual(state.status, 'warn');
+});
+
+const test11 = test('Alpha HTTP 429 triggers Twelve Data fallback for symbols', async () => {
+  const registry = loadProvidersRegistry();
+  const chain = buildProviderChain(registry, 'prices_eod');
+  const primary = chain[0];
+  const fallback = chain.find((provider) => provider.role === 'fallback');
+  if (!fallback) throw new Error('Fallback provider missing');
+  const envVarPrimary = primary.auth_env_var;
+  const envVarFallback = fallback.auth_env_var;
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'rv-market-prices-real-fallback-429-'));
+
+
+  const fetchConfig = [
+    {
+      provider: 'alphavantage',
+      symbol: 'SPY',
+      sequence: [
+        { status: 429 },
+        { status: 429 },
+        { status: 429 }
+      ]
+    },
+    {
+      provider: 'alphavantage',
+      symbol: '*',
+      sequence: [
+        { status: 200, fixture: 'tests/fixtures/alphavantage-daily-adjusted.sample.json' }
+      ]
+    },
+    {
+      provider: 'twelvedata',
+      symbol: '*',
+      sequence: [
+        { status: 200, fixture: 'tests/fixtures/twelvedata-time-series.sample.json' }
+      ]
+    }
+  ];
+
+  const result = runMarketPricesWithMock({
+    RV_PRICES_FORCE_REAL: '1',
+    RV_PRICES_STUB: '',
+    [envVarPrimary]: 'alpha-key',
+    [envVarFallback]: 'td-key'
+  }, tmpDir, fetchConfig);
+
+  assertEqual(result.status, 0, 'Fallback run should recover from 429');
+  const snapshot = JSON.parse(fs.readFileSync(path.join(tmpDir, 'snapshot.json'), 'utf-8'));
+  const runtime = JSON.parse(fs.readFileSync(path.join(tmpDir, 'provider-runtime.json'), 'utf-8'));
+  const state = JSON.parse(fs.readFileSync(path.join(tmpDir, 'module-state.json'), 'utf-8'));
+
+  assertEqual(snapshot.metadata.provider, fallback.id);
+  assertEqual(snapshot.metadata.upstream?.classification, 'HTTP_429');
+  assertEqual(snapshot.metadata.compute?.reason_code, 'COOLDOWN_ACTIVE');
+  assertEqual(snapshot.metadata.upstream?.symbol_attempts?.SPY?.[0]?.classification, 'HTTP_429');
+  assertEqual(snapshot.metadata.upstream?.symbol_attempts?.SPY?.[1]?.classification, 'OK');
+  assertEqual(snapshot.metadata.upstream?.symbol_sources?.SPY, fallback.id);
+  assert(runtime.providers?.alphavantage?.cooldown_until, 'Expected provider cooldown after 429');
+  assert(
+    [null, 'COOLDOWN_ACTIVE'].includes(state.failure?.class),
+    'Expected module-state failure class to be null or COOLDOWN_ACTIVE'
+  );
+});
+
+const test12 = test('Fallback failure leaves run with no valid bars', async () => {
+  const registry = loadProvidersRegistry();
+  const chain = buildProviderChain(registry, 'prices_eod');
+  const primary = chain[0];
+  const fallback = chain.find((provider) => provider.role === 'fallback');
+  if (!fallback) throw new Error('Fallback provider missing');
+  const envVarPrimary = primary.auth_env_var;
+  const envVarFallback = fallback.auth_env_var;
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'rv-market-prices-real-fallback-fail-'));
+  const fetchConfig = [
+    {
+      provider: 'alphavantage',
+      symbol: '*',
+      sequence: [
+        { status: 200, fixture: 'tests/fixtures/alphavantage-note.sample.json' }
+      ]
+    },
+    {
+      provider: 'twelvedata',
+      symbol: '*',
+      sequence: [
+        { status: 500 }
+      ]
+    }
+  ];
+
+  const result = runMarketPricesWithMock({
+    RV_PRICES_FORCE_REAL: '1',
+    RV_PRICES_STUB: '',
+    [envVarPrimary]: 'alpha-key',
+    [envVarFallback]: 'td-key'
+  }, tmpDir, fetchConfig);
+
+  assert(result.status !== 0, 'Expected fallback failure to exit non-zero');
+  const snapshot = JSON.parse(fs.readFileSync(path.join(tmpDir, 'snapshot.json'), 'utf-8'));
+  const state = JSON.parse(fs.readFileSync(path.join(tmpDir, 'module-state.json'), 'utf-8'));
+
+  assertEqual(snapshot.metadata.upstream?.symbol_errors?.SPY?.provider_id, fallback.id);
+  assertEqual(state.status, 'error');
+  assertEqual(snapshot.metadata.compute?.reason_code, 'COOLDOWN_ACTIVE');
+  assertEqual(state.failure?.class, 'COOLDOWN_ACTIVE');
+});
+
+const test13 = test('Alpha-only run yields perfect health metrics', async () => {
+  const registry = loadProvidersRegistry();
+  const chain = buildProviderChain(registry, 'prices_eod');
+  const primary = chain[0];
+  const fallback = chain.find((provider) => provider.role === 'fallback');
+  const envVarPrimary = primary.auth_env_var;
+  const envVarFallback = fallback?.auth_env_var;
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'rv-market-prices-real-health-alpha-'));
+
+  const fetchConfig = [
+    {
+      provider: 'alphavantage',
+      symbol: '*',
+      sequence: [
+        { status: 200, fixture: 'tests/fixtures/alphavantage-daily-adjusted.sample.json' }
+      ]
+    }
+  ];
+
+  const env = {
+    RV_PRICES_FORCE_REAL: '1',
+    RV_PRICES_STUB: '',
+    [envVarPrimary]: 'alpha-key'
+  };
+  if (envVarFallback) env[envVarFallback] = 'td-key';
+
+  const result = runMarketPricesWithMock(env, tmpDir, fetchConfig);
+  assertEqual(result.status, 0, 'Expected alpha-only run to succeed');
+
+  const providerHealth = JSON.parse(fs.readFileSync(path.join(tmpDir, 'provider-health.json'), 'utf-8'));
+  const alphaEntry = providerHealth.providers.find((entry) => entry.provider_id === primary.id);
+  assert(alphaEntry, 'Expected provider health entry for AlphaVantage');
+  assertEqual(alphaEntry.success_ratio, 1);
+  assertEqual(alphaEntry.run_health_score, 100);
+
+  const marketHealth = JSON.parse(fs.readFileSync(path.join(tmpDir, 'market-prices-health.json'), 'utf-8'));
+  assertEqual(marketHealth.run_quality, 'OK');
+  assertEqual(marketHealth.fallback_usage_ratio, 0);
+  assertEqual(Object.keys(marketHealth.reason_summary).length, 0);
+});
+
+const test14 = test('Alpha cooldown triggers Twelve Data fallback health metrics', async () => {
+  const registry = loadProvidersRegistry();
+  const chain = buildProviderChain(registry, 'prices_eod');
+  const primary = chain[0];
+  const fallback = chain.find((provider) => provider.role === 'fallback');
+  if (!fallback) throw new Error('Fallback provider missing');
+  const envVarPrimary = primary.auth_env_var;
+  const envVarFallback = fallback.auth_env_var;
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'rv-market-prices-real-health-fallback-'));
+
+  const fetchConfig = [
+    {
+      provider: 'alphavantage',
+      symbol: 'SPY',
+      sequence: [
+        { status: 200, fixture: 'tests/fixtures/alphavantage-note.sample.json' }
+      ]
+    },
+    {
+      provider: 'alphavantage',
+      symbol: '*',
+      sequence: [
+        { status: 200, fixture: 'tests/fixtures/alphavantage-daily-adjusted.sample.json' }
+      ]
+    },
+    {
+      provider: 'twelvedata',
+      symbol: '*',
+      sequence: [
+        { status: 200, fixture: 'tests/fixtures/twelvedata-time-series.sample.json' }
+      ]
+    }
+  ];
+
+  const result = runMarketPricesWithMock({
+    RV_PRICES_FORCE_REAL: '1',
+    RV_PRICES_STUB: '',
+    [envVarPrimary]: 'alpha-key',
+    [envVarFallback]: 'td-key'
+  }, tmpDir, fetchConfig);
+
+  assertEqual(result.status, 0, 'Expected fallback recovery run to succeed');
+  const providerHealth = JSON.parse(fs.readFileSync(path.join(tmpDir, 'provider-health.json'), 'utf-8'));
+  const alphaEntry = providerHealth.providers.find((entry) => entry.provider_id === primary.id);
+  const fallbackEntry = providerHealth.providers.find((entry) => entry.provider_id === fallback.id);
+  assert(alphaEntry, 'Expected AlphaVantage health entry');
+  assert(fallbackEntry, 'Expected TwelveData health entry');
+  assert(alphaEntry.run_health_score < 50, 'Expected Alpha score to dip below 50');
+  assert(fallbackEntry.run_health_score > 80, 'Expected fallback score above 80');
+
+  const marketHealth = JSON.parse(fs.readFileSync(path.join(tmpDir, 'market-prices-health.json'), 'utf-8'));
+  assert(marketHealth.fallback_usage_ratio > 0, 'Expected fallback usage');
+  assertEqual(marketHealth.run_quality, 'OK');
+});
+
+const test15 = test('Partial coverage results in DEGRADED run quality', async () => {
+  const registry = loadProvidersRegistry();
+  const chain = buildProviderChain(registry, 'prices_eod');
+  const primary = chain[0];
+  const fallback = chain.find((provider) => provider.role === 'fallback');
+  if (!fallback) throw new Error('Fallback provider missing');
+  const envVarPrimary = primary.auth_env_var;
+  const envVarFallback = fallback.auth_env_var;
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'rv-market-prices-real-health-partial-'));
+
+  const fetchConfig = [
+    {
+      provider: 'alphavantage',
+      symbol: 'SPY',
+      sequence: [
+        { status: 200, fixture: 'tests/fixtures/alphavantage-daily-adjusted.sample.json' }
+      ]
+    },
+    {
+      provider: 'alphavantage',
+      symbol: 'QQQ',
+      sequence: [
+        { status: 200, fixture: 'tests/fixtures/alphavantage-daily-adjusted.sample.json' }
+      ]
+    },
+    {
+      provider: 'alphavantage',
+      symbol: 'DIA',
+      sequence: [
+        { status: 200, fixture: 'tests/fixtures/alphavantage-note.sample.json' }
+      ]
+    },
+    {
+      provider: 'alphavantage',
+      symbol: 'IWM',
+      sequence: [
+        { status: 200, fixture: 'tests/fixtures/alphavantage-note.sample.json' }
+      ]
+    },
+    {
+      provider: 'twelvedata',
+      symbol: 'DIA',
+      sequence: [
+        { status: 500 }
+      ]
+    },
+    {
+      provider: 'twelvedata',
+      symbol: 'IWM',
+      sequence: [
+        { status: 500 }
+      ]
+    }
+  ];
+
+  const result = runMarketPricesWithMock({
+    RV_PRICES_FORCE_REAL: '1',
+    RV_PRICES_STUB: '',
+    [envVarPrimary]: 'alpha-key',
+    [envVarFallback]: 'td-key'
+  }, tmpDir, fetchConfig);
+
+  assertEqual(result.status, 0, 'Expected partial run to exit zero with WARN status');
+  const marketHealth = JSON.parse(fs.readFileSync(path.join(tmpDir, 'market-prices-health.json'), 'utf-8'));
+  assertEqual(marketHealth.run_quality, 'DEGRADED');
+  assertEqual(marketHealth.symbols_resolved, 2);
+  assert(marketHealth.reason_summary.NETWORK_ERROR >= 2, 'Expected at least two network failures');
+});
+
+const test16 = test('Zero valid bars yields FAILED run quality', async () => {
+  const registry = loadProvidersRegistry();
+  const chain = buildProviderChain(registry, 'prices_eod');
+  const primary = chain[0];
+  const fallback = chain.find((provider) => provider.role === 'fallback');
+  if (!fallback) throw new Error('Fallback provider missing');
+  const envVarPrimary = primary.auth_env_var;
+  const envVarFallback = fallback.auth_env_var;
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'rv-market-prices-real-health-zero-'));
+
+  const fetchConfig = [
+    {
+      provider: 'alphavantage',
+      symbol: '*',
+      sequence: [
+        { status: 200, fixture: 'tests/fixtures/alphavantage-note.sample.json' }
+      ]
+    },
+    {
+      provider: 'twelvedata',
+      symbol: '*',
+      sequence: [
+        { status: 500 }
+      ]
+    }
+  ];
+
+  const result = runMarketPricesWithMock({
+    RV_PRICES_FORCE_REAL: '1',
+    RV_PRICES_STUB: '',
+    [envVarPrimary]: 'alpha-key',
+    [envVarFallback]: 'td-key'
+  }, tmpDir, fetchConfig);
+
+  assert(result.status !== 0, 'Expected zero-bar run to fail');
+  const marketHealth = JSON.parse(fs.readFileSync(path.join(tmpDir, 'market-prices-health.json'), 'utf-8'));
+  assertEqual(marketHealth.run_quality, 'FAILED');
+  assertEqual(marketHealth.symbols_resolved, 0);
+  const providerHealth = JSON.parse(fs.readFileSync(path.join(tmpDir, 'provider-health.json'), 'utf-8'));
+  assert(providerHealth.providers.length >= 1, 'Expected provider health artifact present');
+});
+
+const tests = [
+  test1,
+  test2,
+  test3,
+  test3a,
+  test4,
+  test5,
+  test6,
+  test7,
+  test8,
+  test9,
+  test10,
+  test11,
+  test12,
+  test13,
+  test14,
+  test15,
+  test16
+];
 
 (async () => {
   for (const t of tests) {

@@ -61,8 +61,17 @@ the run fails loud and `snapshot.metadata.upstream.*` includes the classificatio
 
 ## Provider registry declarations
 
-- The registry now lists both Alpha Vantage (primary) and Twelve Data (fallback), but only the primary is active until WP6B wires the fallback chain.
-- Each provider entry includes `auth_env_var`, throttling defaults, and a `"role"` indicator so upcoming steps can pick the right candidate without runtime schema changes.
+- `public/data/registry/providers.v1.json` now declares both Alpha Vantage (primary) and Twelve Data (fallback) along with their throttles and retry knobs.
+- Each entry exposes an `auth_env_var`, `role` (`primary` vs. `fallback`), and the per-provider `cooldown_minutes_default`, `max_retries_*`, and throttle defaults used by `market-prices-v3.mjs`.
+- The provider chain for market-prices is lexically sorted: all enabled primaries run first and fallbacks are run afterward. Providers with a cooldown still active are skipped so the next enabled fallback can catch up.
+- The run retains per-symbol attribution data (`metadata.upstream.symbol_sources`, `metadata.upstream.symbol_attempts`) while still keeping the envelope schema at 3.0; `metadata.provider` becomes `MIXED_BY_SYMBOL` when multiple providers contribute.
+
+## Provider chain & fallback behavior
+
+- Real mode fetches are driven entirely by the registry-defined provider chain (first enabled primary, then any enabled fallbacks), and a symbol is closed as soon as the first provider in the chain returns a valid bar—there is no mixing per symbol.
+- If a provider sends a `Note`, `Information`, `Error Message`, or HTTP `429`, that classification is stored in the snapshot (`metadata.upstream.classification`, `symbol_errors`, `symbol_attempts`), a cooldown is written to `provider-runtime.json`, and later runs will skip the throttled provider in favor of fallbacks.
+- `metadata.compute.reason_code` reflects the run's outcome (`FULL_SUCCESS`, `PARTIAL_DUE_TO_RATE_LIMIT`, `HTTP_429`, `NO_VALID_BARS`, etc.), while `metadata.upstream.symbol_sources`/`symbol_attempts` document which provider ultimately succeeded per symbol.
+- The runtime `provider-runtime.json` file under the artifacts directory now records each provider's cooldown and last classification so operator tooling can inspect why a fallback was chosen.
 
 ## Cooldown behavior
 
@@ -74,9 +83,19 @@ the run fails loud and `snapshot.metadata.upstream.*` includes the classificatio
 
 - `RV_PRICES_FORCE_REAL=1` to enable real mode.
 - `ALPHAVANTAGE_API_KEY` (from `public/data/registry/providers.v1.json` → Provider A).
+- `TWELVEDATA_API_KEY` (from the fallback provider entry) if you want fallback runs to activate locally.
 
 ## 60s local run (commands)
 
 - `node scripts/providers/market-prices-v3.mjs`
 - `RV_PRICES_FORCE_REAL=1 ALPHAVANTAGE_API_KEY=your_key node scripts/providers/market-prices-v3.mjs`
 - `node scripts/validate/market-prices-artifact.v1.mjs`
+
+## Provider Health & Run Quality
+
+- Every module run now emits two diagnostic artifacts in the same artifacts directory:
+  - `provider-health.json` — a per-provider scorecard (`symbols_attempted`, `symbols_success`, `cooldown_triggered`, `dominant_failure_reason`, `run_health_score`).
+  - `market-prices-health.json` — the module-level coverage and fallback metrics plus a `reason_summary`.
+- Health scores start at 100 and subtract weighted penalties: cooldowns (−40), rate-limit notes (−25), HTTP 429s (−20), network errors (−15), and a final 100×(1−success_ratio) adjustment. Scores are clamped between 0 and 100.
+- Run quality is derived from coverage: ≥95% → `OK`, 50–95% → `DEGRADED`, <50% or zero valid bars → `FAILED`. `fallback_usage_ratio` reports how often fallbacks supplied bars, and `reason_summary` is a histogram of failure classifications.
+- UI/ops can read these artifacts without touching the snapshot schema; they already surface all required metadata so nothing else moves in this WP.

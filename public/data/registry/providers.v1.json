@@ -23,7 +23,7 @@
       "max_retries_429": 3,
       "min_delay_ms_default": 12000,
       "jitter_ms_default": 2000,
-      "enabled": false,
+      "enabled": true,
       "role": "primary",
       "rate_limits": {
         "requests_per_day": 500,
@@ -45,7 +45,7 @@
       "max_retries_429": 2,
       "min_delay_ms_default": 15000,
       "jitter_ms_default": 2500,
-      "enabled": false,
+      "enabled": true,
       "role": "fallback",
       "endpoints": {
         "time_series_eod": "/time_series"
@@ -58,8 +58,8 @@
   ],
   "chains": {
     "prices_eod": [
-      { "id": "alphavantage", "kind": "alpha_vantage_eod", "enabled": false },
-      { "id": "twelvedata", "kind": "twelve_data_eod", "enabled": false }
+      { "id": "alphavantage", "kind": "alpha_vantage_eod", "enabled": true },
+      { "id": "twelvedata", "kind": "twelve_data_eod", "enabled": true }
     ]
   }
 }
