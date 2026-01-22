@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <title>Market Stats · RubikVault</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+  <meta name="description" content="Market stats derived from RubikVault market-prices." />
+  <link rel="icon" type="image/png" sizes="32x32" href="/assets/rv-favicon.png" />
+  <link rel="stylesheet" href="/style.css" />
+  <style>
+    body {
+      margin: 0;
+      font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+      background: #060b15;
+      color: #e2e8f0;
+    }
+    .rv-main {
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 3rem 1.5rem 4rem;
+    }
+    .market-stats-card {
+      background: rgba(15, 23, 42, 0.9);
+      border: 1px solid rgba(148, 163, 184, 0.2);
+      border-radius: 16px;
+      padding: 1.5rem;
+      box-shadow: 0 20px 60px rgba(15, 23, 42, 0.6);
+    }
+    .market-stats-card h1 {
+      margin-top: 0;
+    }
+    .market-stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 1rem;
+      margin-top: 1.5rem;
+    }
+    .metric {
+      padding: 1rem;
+      border-radius: 12px;
+      background: rgba(15, 23, 42, 0.7);
+      border: 1px solid rgba(148, 163, 184, 0.2);
+    }
+    .metric-title {
+      font-size: 0.9rem;
+      color: #94a3b8;
+    }
+    .metric-value {
+      font-size: 1.3rem;
+      font-weight: 600;
+      color: #f8fafc;
+    }
+    .controls {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      flex-wrap: wrap;
+      margin-top: 1rem;
+    }
+    .controls select {
+      padding: 0.75rem 1rem;
+      border-radius: 999px;
+      border: 1px solid rgba(148, 163, 184, 0.4);
+      background: rgba(15, 23, 42, 0.8);
+      color: #f8fafc;
+      font-size: 1rem;
+    }
+    .status {
+      font-size: 0.9rem;
+      color: #94a3b8;
+    }
+    .coverage {
+      margin-top: 1.5rem;
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+    .coverage div {
+      padding: 0.75rem 1rem;
+      border-radius: 10px;
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px solid rgba(148, 163, 184, 0.2);
+      font-size: 0.95rem;
+    }
+    .empty-state {
+      margin-top: 2rem;
+      padding: 1.25rem;
+      border-radius: 12px;
+      background: rgba(248, 113, 113, 0.1);
+      border: 1px solid rgba(248, 113, 113, 0.4);
+      color: #fecaca;
+    }
+  </style>
+</head>
+<body>
+  <main class="rv-main">
+    <section class="market-stats-card">
+      <h1>Market Stats</h1>
+      <p class="status" id="market-stats-status">Loading stats...</p>
+      <div class="controls">
+        <label for="market-stats-symbol">
+          Symbol
+          <select id="market-stats-symbol" aria-label="Select symbol">
+            <option value="">Select symbol</option>
+          </select>
+        </label>
+        <span id="market-stats-meta"></span>
+      </div>
+      <div id="market-stats-content"></div>
+    </section>
+  </main>
+
+  <script>
+    const symbolSelect = document.getElementById('market-stats-symbol');
+    const statusEl = document.getElementById('market-stats-status');
+    const metaEl = document.getElementById('market-stats-meta');
+    const contentEl = document.getElementById('market-stats-content');
+
+    const formatNumber = (value, options = {}) => {
+      if (value === null || value === undefined || Number.isNaN(value)) return '—';
+      const { style, minimumFractionDigits = 2, maximumFractionDigits = 2 } = options;
+      return new Intl.NumberFormat('en-US', { style, minimumFractionDigits, maximumFractionDigits }).format(value);
+    };
+
+    const metricDefinitions = [
+      { key: 'returns_1d', label: '1d log return' },
+      { key: 'returns_5d', label: '5d log return' },
+      { key: 'returns_21d', label: '21d log return' },
+      { key: 'returns_63d', label: '63d log return' },
+      { key: 'returns_126d', label: '126d log return' },
+      { key: 'returns_252d', label: '252d log return' },
+      { key: 'volatility_21d', label: '21d volatility' },
+      { key: 'volatility_63d', label: '63d volatility' },
+      { key: 'momentum_21d', label: '21d momentum (%)' },
+      { key: 'momentum_63d', label: '63d momentum (%)' },
+      { key: 'momentum_252d', label: '252d momentum (%)' },
+      { key: 'drawdown_max_252d', label: 'Max drawdown 252d' },
+      { key: 'drawdown_current_252d', label: 'Current drawdown' },
+      { key: 'sma_20', label: 'SMA 20' },
+      { key: 'sma_50', label: 'SMA 50' },
+      { key: 'sma_200', label: 'SMA 200' },
+      { key: 'distance_to_sma_20', label: 'Distance to SMA20 (%)' },
+      { key: 'distance_to_sma_50', label: 'Distance to SMA50 (%)' },
+      { key: 'distance_to_sma_200', label: 'Distance to SMA200 (%)' },
+      { key: 'rsi_14', label: 'RSI 14' },
+      { key: 'atr_14', label: 'ATR 14' },
+      { key: 'atr_20', label: 'ATR 20' },
+      { key: 'close_zscore_63d', label: 'Close z-score 63d' },
+      { key: 'return_zscore_63d', label: 'Return z-score 63d' }
+    ];
+
+    let statsBySymbol = {};
+
+    async function loadStats() {
+      statusEl.textContent = 'Loading market-stats from ASSET...';
+      try {
+        const response = await fetch('/data/snapshots/market-stats/latest.json');
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const payload = await response.json();
+        const data = payload?.data || [];
+        statsBySymbol = data.reduce((acc, entry) => {
+          if (entry?.symbol) acc[entry.symbol] = entry;
+          return acc;
+        }, {});
+
+        const symbols = Object.keys(statsBySymbol);
+        if (!symbols.length) {
+          statusEl.textContent = 'No market-stats data published yet.';
+          renderEmptyState();
+          return;
+        }
+
+        symbolSelect.innerHTML = '<option value="">Select symbol</option>';
+        symbols.forEach((symbol) => {
+          const option = document.createElement('option');
+          option.value = symbol;
+          option.textContent = symbol;
+          symbolSelect.appendChild(option);
+        });
+
+        statusEl.textContent = `Loaded ${symbols.length} symbols · latest publish ${payload?.metadata?.fetched_at || 'unknown'}`;
+        metaEl.textContent = `Module status: ${payload?.metadata?.module || 'unknown'}`;
+        renderSymbol(symbols[0]);
+        symbolSelect.value = symbols[0];
+      } catch (error) {
+        statusEl.textContent = 'Unable to load market-stats yet. Waiting for publish.';
+        renderEmptyState();
+        console.error('market-stats load error', error);
+      }
+    }
+
+    function renderEmptyState() {
+      contentEl.innerHTML = '<div class="empty-state">No market-stats snapshot available yet. Check back after the pipeline runs.</div>';
+    }
+
+    function renderSymbol(symbol) {
+      if (!symbol || !statsBySymbol[symbol]) {
+        renderEmptyState();
+        return;
+      }
+
+      const entry = statsBySymbol[symbol];
+      const stats = entry.stats || {};
+      const coverage = entry.coverage || {};
+
+      const metricsHtml = metricDefinitions
+        .map(
+          ({ key, label }) => `
+            <div class="metric">
+              <div class="metric-title">${label}</div>
+              <div class="metric-value">${formatNumber(stats[key])}</div>
+            </div>
+          `
+        )
+        .join('');
+
+      const coverageHtml = `
+        <div>Bars used: ${coverage.bars_used ?? '—'}</div>
+        <div>Coverage ratio: ${coverage.coverage_ratio ?? '—'}</div>
+        <div>Freshness: ${coverage.freshness_days ?? '—'} days</div>
+      `;
+
+      contentEl.innerHTML = `
+        <div style="margin-top:1rem; font-size:0.9rem; color:#94a3b8;">
+          Data as of ${entry.as_of || 'unknown'} · Coverage warnings: ${entry.warnings?.length || 0}
+        </div>
+        <div class="market-stats-grid">
+          ${metricsHtml}
+        </div>
+        <div class="coverage">
+          ${coverageHtml}
+        </div>
+      `;
+    }
+
+    symbolSelect.addEventListener('change', () => {
+      renderSymbol(symbolSelect.value);
+    });
+
+    loadStats();
+  </script>
+</body>
+</html>
