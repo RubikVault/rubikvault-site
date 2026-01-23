@@ -108,15 +108,22 @@ const STOOQ_SYMBOL_MAP = {
   IWM: 'iwm.us'
 };
 
-function parseStooqLatestRow(text) {
+export function parseStooqLatestRow(text) {
   if (!text || typeof text !== 'string') return null;
-  const rows = text
+  const lines = text
     .split(/\r?\n/)
     .map((line) => line.trim())
     .filter((line) => line.length > 0);
-  if (rows.length <= 1) return null;
-  const lastLine = rows[rows.length - 1];
-  return lastLine.split(',');
+  if (lines.length <= 1) return null;
+  let lastLine = null;
+  for (let i = lines.length - 1; i >= 0; i -= 1) {
+    const candidate = lines[i];
+    if (/^date/i.test(candidate)) continue;
+    lastLine = candidate;
+    break;
+  }
+  if (!lastLine) return null;
+  return lastLine.split(',').map((value) => value.trim());
 }
 
 function toNumber(value) {
@@ -125,19 +132,25 @@ function toNumber(value) {
   return Number(sanitized);
 }
 
-function buildStooqBar(symbol, row) {
-  if (!Array.isArray(row) || row.length < 7) {
-    throw new Error(`STOOQ_ROW_INVALID:${symbol}`);
+export function buildStooqBar(symbol, row) {
+  if (!Array.isArray(row) || row.length < 5) {
+    const snippet = Array.isArray(row) ? row.slice(0, 5).join(',') : String(row);
+    throw new Error(`STOOQ_ROW_INVALID:${symbol}:SYNTAX:${snippet}`);
   }
   const [date, openStr, highStr, lowStr, closeStr, , volumeStr] = row;
   const open = toNumber(openStr);
   const high = toNumber(highStr);
   const low = toNumber(lowStr);
   const close = toNumber(closeStr);
-  const volume = toNumber(volumeStr);
-  if ([open, high, low, close].some((value) => !Number.isFinite(value) || value <= 0)) {
-    throw new Error(`STOOQ_PRICE_MALFORMED:${symbol}`);
+  if ([open, high, low, close].some((value) => !Number.isFinite(value) || value < 0)) {
+    const field = !Number.isFinite(open) || open < 0 ? 'open' :
+      !Number.isFinite(high) || high < 0 ? 'high' :
+      !Number.isFinite(low) || low < 0 ? 'low' :
+      !Number.isFinite(close) || close < 0 ? 'close' :
+      'unknown';
+    throw new Error(`STOOQ_ROW_INVALID:${symbol}:${field}:${[date, openStr, highStr, lowStr, closeStr, volumeStr].join(',')}`);
   }
+  const volume = Number.isFinite(toNumber(volumeStr)) ? Math.max(0, toNumber(volumeStr)) : null;
   return {
     symbol,
     date,
@@ -145,7 +158,7 @@ function buildStooqBar(symbol, row) {
     high,
     low,
     close,
-    volume: Number.isFinite(volume) ? Math.max(0, volume) : 0,
+    volume,
     adj_close: null,
     currency: 'USD',
     source_provider: 'stooq',
@@ -266,7 +279,10 @@ function validateBar(bar) {
     }
   }
 
-  if (typeof bar.volume !== 'number' || !Number.isFinite(bar.volume) || bar.volume < 0) {
+  if (
+    bar.volume !== null &&
+    (typeof bar.volume !== 'number' || !Number.isFinite(bar.volume) || bar.volume < 0)
+  ) {
     errors.push('INVALID_VOLUME');
   }
 
@@ -1383,6 +1399,16 @@ export async function main() {
     cooldown_until: cooldownUntil
   };
   envelope.metadata.digest = computeSnapshotDigest(envelope);
+
+  envelope.meta = {
+    status: envelope.metadata.validation?.passed ? 'OK' : 'ERROR',
+    reason: envelope.error?.class || (envelope.metadata.validation?.passed ? 'OK' : 'VALIDATION_FAILED'),
+    provider: envelope.metadata.provider,
+    source: envelope.metadata.source,
+    asOf: envelope.metadata.as_of || null,
+    savedAt: envelope.metadata.published_at || envelope.metadata.fetched_at || new Date().toISOString(),
+    error: envelope.error?.class || null
+  };
 
   const healthArtifacts = buildHealthArtifacts({
     mode,
