@@ -202,12 +202,43 @@ jobs:
         env:
           ARTIFACTS_DIR: ${{ runner.temp }}/artifacts
           BARS_ARTIFACTS_DIR: ${{ runner.temp }}/artifacts
+          RV_PRICES_FORCE_REAL: '1'
         run: |
           echo "Building market-prices..."
           node scripts/providers/market-prices-v3.mjs
           echo "Building market-stats..."
           node scripts/providers/market-stats-v3.mjs
 
+
+      - name: WP16 DEBUG: dump market-prices artifacts
+        if: always()
+        env:
+          ARTIFACTS_DIR: ${{ runner.temp }}/artifacts
+        run: |
+          set -euo pipefail
+          echo "=== DEBUG: artifacts root ==="
+          ls -lah "$ARTIFACTS_DIR" || true
+          echo ""
+          echo "=== DEBUG: find snapshot.json/module-state.json ==="
+          find "$ARTIFACTS_DIR" -maxdepth 4 -type f \( -name "snapshot.json" -o -name "module-state.json" \) -print -exec wc -c {} \; || true
+          echo ""
+          echo "=== DEBUG: print market-prices snapshot.json (first 120 lines) ==="
+          if [ -f "$ARTIFACTS_DIR/market-prices/snapshot.json" ]; then
+            sed -n '1,120p' "$ARTIFACTS_DIR/market-prices/snapshot.json"
+            echo ""
+            echo "=== DEBUG: jq key fields ==="
+            jq -r '{
+              schema_version: (.schema_version // null),
+              meta_source: (.meta.source // null),
+              metadata_source: (.metadata.source // null),
+              metadata_provider: (.metadata.provider // null),
+              record_count: (.metadata.record_count // null),
+              data_len: ((.data|type)=="array" and (.data|length) or 0),
+              error: (.error // null)
+            }' "$ARTIFACTS_DIR/market-prices/snapshot.json"
+          else
+            echo "MISSING: $ARTIFACTS_DIR/market-prices/snapshot.json"
+          fi
       - name: Finalize artifacts
         env:
           ARTIFACTS_DIR: ${{ runner.temp }}/artifacts

@@ -180,6 +180,74 @@ jobs:
             exit 1
           fi
 
+      - name: Guard market-prices snapshot
+        id: market-prices-guard
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+const fs = require('node:fs');
+const snapshotPath = './public/data/snapshots/market-prices/latest.json';
+const result = { valid: true, reason: 'ok' };
+
+function fail(msg) {
+  if (result.valid) {
+    result.valid = false;
+    result.reason = msg;
+  }
+}
+
+try {
+  if (!fs.existsSync(snapshotPath)) {
+    fail('snapshot-missing');
+  } else {
+    const stat = fs.statSync(snapshotPath);
+    if (!stat.isFile() || stat.size === 0) {
+      fail('snapshot-empty');
+    } else {
+      let snapshot;
+      try {
+        snapshot = JSON.parse(fs.readFileSync(snapshotPath, 'utf-8'));
+      } catch (parseErr) {
+        fail(`json-parse-error:${parseErr.message.replace(/\n/g, ' ')}`);
+      }
+
+      if (snapshot) {
+        const metadataSource = snapshot?.metadata?.source ?? '';
+        const metaSource = snapshot?.meta?.source ?? '';
+        const metadataProvider = snapshot?.metadata?.provider ?? '';
+        const dataLen = Array.isArray(snapshot?.data) ? snapshot.data.length : 0;
+
+        if (metadataSource !== 'stooq') {
+          fail(`metadata-source=${metadataSource || 'missing'}`);
+        }
+        if (metaSource === 'stub') {
+          fail('meta-source=stub');
+        }
+        if (!metadataProvider || metadataProvider === 'stub') {
+          fail(`metadata-provider=${metadataProvider || 'missing'}`);
+        }
+        if (dataLen <= 0) {
+          fail('data-length=0');
+        }
+      }
+    }
+  }
+} catch (err) {
+  fail(`unexpected-error:${err.message}`);
+}
+
+const ghOutput = process.env.GITHUB_OUTPUT;
+if (!ghOutput) {
+  throw new Error('GITHUB_OUTPUT not available (expected in GitHub Actions)');
+}
+
+fs.appendFileSync(ghOutput, `valid=${result.valid}\nreason=${result.reason}\n`);
+
+if (!result.valid) {
+  console.warn(`Market-prices guard blocked publish: ${result.reason}`);
+}
+NODE
+
       - name: Check for changes
         id: changes
         run: |
@@ -193,7 +261,7 @@ jobs:
           fi
 
       - name: Commit and push
-        if: steps.changes.outputs.changed == 'true'
+        if: steps.changes.outputs.changed == 'true' && steps.market-prices-guard.outputs.valid == 'true'
         run: |
           git config user.name "RubikVault Bot"
           git config user.email "bot@rubikvault.com"
