@@ -100,6 +100,128 @@ function makeStubBar(symbol) {
   };
 }
 
+const STOOQ_BASE_URL = 'https://stooq.pl/q/d/l/';
+const STOOQ_SYMBOL_MAP = {
+  SPY: 'spy.us',
+  QQQ: 'qqq.us',
+  DIA: 'dia.us',
+  IWM: 'iwm.us'
+};
+
+function parseStooqLatestRow(text) {
+  if (!text || typeof text !== 'string') return null;
+  const rows = text
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0);
+  if (rows.length <= 1) return null;
+  const lastLine = rows[rows.length - 1];
+  return lastLine.split(',');
+}
+
+function toNumber(value) {
+  if (value === null || value === undefined) return NaN;
+  const sanitized = String(value).replace(/,/g, '');
+  return Number(sanitized);
+}
+
+function buildStooqBar(symbol, row) {
+  if (!Array.isArray(row) || row.length < 7) {
+    throw new Error(`STOOQ_ROW_INVALID:${symbol}`);
+  }
+  const [date, openStr, highStr, lowStr, closeStr, , volumeStr] = row;
+  const open = toNumber(openStr);
+  const high = toNumber(highStr);
+  const low = toNumber(lowStr);
+  const close = toNumber(closeStr);
+  const volume = toNumber(volumeStr);
+  if ([open, high, low, close].some((value) => !Number.isFinite(value) || value <= 0)) {
+    throw new Error(`STOOQ_PRICE_MALFORMED:${symbol}`);
+  }
+  return {
+    symbol,
+    date,
+    open,
+    high,
+    low,
+    close,
+    volume: Number.isFinite(volume) ? Math.max(0, volume) : 0,
+    adj_close: null,
+    currency: 'USD',
+    source_provider: 'stooq',
+    ingested_at: new Date().toISOString()
+  };
+}
+
+async function fetchStooqBars(symbols, outDir) {
+  const stooqCacheDir = join(outDir, 'stooq-cache');
+  await mkdir(stooqCacheDir, { recursive: true });
+  const bars = [];
+  const upstreams = [];
+  const attempts = {};
+  const sources = {};
+
+  for (const symbol of symbols) {
+    const symbolKey = STOOQ_SYMBOL_MAP[symbol];
+    if (!symbolKey) {
+      throw new Error(`STOOQ_SYMBOL_MAPPING_MISSING:${symbol}`);
+    }
+    const url = `${STOOQ_BASE_URL}?s=${symbolKey}&i=d`;
+    const result = await fetchWithRetry(
+      url,
+      {
+        headers: { 'User-Agent': 'RubikVault/3.0 market-prices' },
+        timeoutMs: 20000
+      },
+      {
+        maxRetries: 2,
+        baseDelayMs: 1500,
+        sleep
+      }
+    );
+
+    if (!result.ok) {
+      throw new Error(`STOOQ_FETCH_FAILED:${symbol}:${result.upstream?.http_status ?? 'unknown'}`);
+    }
+
+    const csvPath = join(stooqCacheDir, `${symbol}.csv`);
+    await writeFile(csvPath, result.text, 'utf-8');
+    const row = parseStooqLatestRow(result.text);
+    if (!row) {
+      throw new Error(`STOOQ_NO_DATA:${symbol}`);
+    }
+    const bar = buildStooqBar(symbol, row);
+    bars.push(bar);
+    const upstreamEntry = {
+      symbol,
+      http_status: result.upstream?.http_status ?? null,
+      latency_ms: result.upstream?.latency_ms ?? null,
+      rate_limited: Boolean(result.upstream?.rate_limited),
+      retry_count: result.upstream?.retry_count ?? 0
+    };
+    upstreams.push(upstreamEntry);
+    attempts[symbol] = [
+      {
+        provider_id: 'stooq',
+        classification: CLASSIFICATIONS.OK,
+        http_status: upstreamEntry.http_status,
+        note: null,
+        ok: true
+      }
+    ];
+    sources[symbol] = 'stooq';
+    await sleep(400);
+  }
+
+  return {
+    bars,
+    upstreams,
+    warnings: [],
+    attempts,
+    sources
+  };
+}
+
 export function classifyAlphaVantagePayload(payload) {
   if (!payload || typeof payload !== 'object') return null;
 
@@ -963,28 +1085,41 @@ export async function main() {
   const forcedStub = toBool(process.env.RV_PRICES_STUB);
   const forcedReal = toBool(process.env.RV_PRICES_FORCE_REAL);
 
+  const useStooq = !forcedStub;
   const providersRegistry = await loadProvidersRegistry();
-  const providerChain = buildProviderChain(providersRegistry, 'prices_eod');
+  const stooqProviderEntry = {
+    id: 'stooq',
+    name: 'Stooq',
+    role: 'primary',
+    enabled: true,
+    order: 0
+  };
+  const providerChain = useStooq
+    ? [stooqProviderEntry]
+    : buildProviderChain(providersRegistry, 'prices_eod');
   const providerChainSummary = describeProviderChain(providerChain);
   const providerAuthInfo = {};
-  for (const provider of providerChain) {
-    providerAuthInfo[provider.id] = getProviderAuthInfo(provider);
+  if (!useStooq) {
+    for (const provider of providerChain) {
+      providerAuthInfo[provider.id] = getProviderAuthInfo(provider);
+    }
   }
   const primaryProvider = providerChain.find((provider) => provider.role === 'primary');
   if (!primaryProvider) {
     throw new Error('PROVIDER_PRIMARY_AVAILABLE');
   }
 
-  const primaryAuth = providerAuthInfo[primaryProvider.id];
-  if (forcedReal && !primaryAuth.apiKey) {
-    const err = new Error('REAL_FETCH_MISSING_API_KEY');
-    err.class = 'REAL_FETCH_MISSING_API_KEY';
-    throw err;
+  if (!useStooq) {
+    const primaryAuth = providerAuthInfo[primaryProvider.id];
+    if (forcedReal && !primaryAuth.apiKey) {
+      const err = new Error('REAL_FETCH_MISSING_API_KEY');
+      err.class = 'REAL_FETCH_MISSING_API_KEY';
+      throw err;
+    }
   }
 
-
-  const mode = forcedStub ? 'STUB' : (forcedReal && primaryAuth.apiKey ? 'REAL' : 'STUB');
-  let providerLabel = mode === 'STUB' ? 'stub' : (providerChain[0]?.id || 'unknown');
+  const mode = forcedStub ? 'STUB' : 'REAL';
+  let providerLabel = mode === 'STUB' ? 'stub' : 'stooq';
 
   const symbols = await loadUniverseIndexProxies();
   const config = await loadModuleConfig();
@@ -1011,7 +1146,14 @@ export async function main() {
   let succeededSymbols = 0;
 
   const throttleStates = {};
-  if (mode === 'STUB') {
+  if (useStooq) {
+    const stooqResult = await fetchStooqBars(symbols, outDir);
+    rawBars.push(...stooqResult.bars);
+    Object.assign(symbolSources, stooqResult.sources);
+    Object.assign(symbolAttempts, stooqResult.attempts);
+    upstreamResults.push(...stooqResult.upstreams);
+    succeededSymbols = stooqResult.bars.length;
+  } else if (mode === 'STUB') {
     for (const symbol of symbols) {
       rawBars.push(makeStubBar(symbol));
     }
@@ -1198,7 +1340,7 @@ export async function main() {
     module: MODULE_NAME,
     tier: config.tier || 'standard',
     domain: config.domain || 'stocks',
-    source: mode === 'STUB' ? 'stub' : 'market-prices-real',
+    source: mode === 'STUB' ? 'stub' : 'stooq',
     fetched_at: fetchedAt,
     published_at: fetchedAt,
     freshness: config.freshness,
