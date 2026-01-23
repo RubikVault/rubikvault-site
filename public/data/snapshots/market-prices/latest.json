@@ -1,22 +1,13 @@
 {
   "schema_version": "3.0",
-  "meta": {
-    "status": "OK",
-    "reason": "OK",
-    "provider": "stub",
-    "source": "stub",
-    "asOf": "2026-01-20",
-    "savedAt": "2026-01-21T22:54:31.376Z",
-    "error": null
-  },
   "metadata": {
     "module": "market-prices",
     "tier": "standard",
     "domain": "stocks",
-    "source": "stub",
-    "fetched_at": "2026-01-21T22:54:31.376Z",
-    "published_at": "2026-01-21T22:54:31.376Z",
-    "digest": "sha256:bd033d1e6c796bbe12e2eaa736110e0009cc3481e5101a1db3abd5cfa6629745",
+    "source": "stooq",
+    "fetched_at": "2026-01-23T21:36:09.857Z",
+    "published_at": "2026-01-23T21:36:09.857Z",
+    "digest": "sha256:b923100bf851bfbffbfb70e1729dc89dc74e17f619f75ddb9b06572dc5deeaf2",
     "record_count": 4,
     "expected_count": null,
     "validation": {
@@ -44,68 +35,145 @@
       "next_expected_at": null
     },
     "upstream": {
-      "http_status": null,
-      "latency_ms": 0,
+      "http_status": 200,
+      "latency_ms": 3950,
       "rate_limit_remaining": null,
       "retry_count": 0,
-      "rate_limited": false
+      "rate_limited": false,
+      "classification": "OK",
+      "note": null,
+      "error": null,
+      "symbol_errors": {},
+      "symbol_attempts": {
+        "SPY": [
+          {
+            "provider_id": "stooq",
+            "classification": "OK",
+            "http_status": 200,
+            "note": null,
+            "ok": true
+          }
+        ],
+        "QQQ": [
+          {
+            "provider_id": "stooq",
+            "classification": "OK",
+            "http_status": 200,
+            "note": null,
+            "ok": true
+          }
+        ],
+        "DIA": [
+          {
+            "provider_id": "stooq",
+            "classification": "OK",
+            "http_status": 200,
+            "note": null,
+            "ok": true
+          }
+        ],
+        "IWM": [
+          {
+            "provider_id": "stooq",
+            "classification": "OK",
+            "http_status": 200,
+            "note": null,
+            "ok": true
+          }
+        ]
+      },
+      "symbol_sources": {
+        "SPY": "stooq",
+        "QQQ": "stooq",
+        "DIA": "stooq",
+        "IWM": "stooq"
+      }
     },
-    "provider": "stub",
-    "as_of": "2026-01-20"
+    "provider": "stooq",
+    "as_of": "2026-01-23",
+    "compute": {
+      "planned_symbols": 4,
+      "done_symbols": 4,
+      "dropped_symbols": [],
+      "provider_chain": [
+        {
+          "id": "stooq",
+          "role": "primary",
+          "enabled": true
+        }
+      ],
+      "provider_sources": {
+        "SPY": "stooq",
+        "QQQ": "stooq",
+        "DIA": "stooq",
+        "IWM": "stooq"
+      },
+      "reason_code": "FULL_SUCCESS",
+      "cooldown_until": null
+    }
   },
   "data": [
     {
       "symbol": "SPY",
-      "date": "2026-01-20",
-      "open": 101.4745,
-      "high": 102.2912,
-      "low": 101.2716,
-      "close": 102.087,
-      "volume": 6192180,
+      "date": "2026-01-23",
+      "open": 688.15,
+      "high": 690.96,
+      "low": 687.16,
+      "close": 689.13,
+      "volume": null,
       "adj_close": null,
       "currency": "USD",
-      "source_provider": "stub",
-      "ingested_at": null
+      "source_provider": "stooq",
+      "ingested_at": "2026-01-23T21:36:07.249Z"
     },
     {
       "symbol": "QQQ",
-      "date": "2026-01-20",
-      "open": 108.5322,
-      "high": 109.1193,
-      "low": 108.1415,
-      "close": 108.7279,
-      "volume": 8434909,
+      "date": "2026-01-23",
+      "open": 619.73,
+      "high": 625.3999,
+      "low": 618.65,
+      "close": 622.72,
+      "volume": null,
       "adj_close": null,
       "currency": "USD",
-      "source_provider": "stub",
-      "ingested_at": null
+      "source_provider": "stooq",
+      "ingested_at": "2026-01-23T21:36:08.058Z"
     },
     {
       "symbol": "DIA",
-      "date": "2026-01-20",
-      "open": 119.1144,
-      "high": 119.9289,
-      "low": 118.9715,
-      "close": 119.7852,
-      "volume": 2158328,
+      "date": "2026-01-23",
+      "open": 491.82,
+      "high": 492.13,
+      "low": 489.56,
+      "close": 490.9,
+      "volume": null,
       "adj_close": null,
       "currency": "USD",
-      "source_provider": "stub",
-      "ingested_at": null
+      "source_provider": "stooq",
+      "ingested_at": "2026-01-23T21:36:08.763Z"
     },
     {
       "symbol": "IWM",
-      "date": "2026-01-20",
-      "open": 105.8704,
-      "high": 106.6984,
-      "low": 105.3199,
-      "close": 106.1464,
-      "volume": 5604713,
+      "date": "2026-01-23",
+      "open": 269.04,
+      "high": 269.05,
+      "low": 264.46,
+      "close": 264.795,
+      "volume": null,
       "adj_close": null,
       "currency": "USD",
-      "source_provider": "stub",
-      "ingested_at": null
+      "source_provider": "stooq",
+      "ingested_at": "2026-01-23T21:36:09.456Z"
     }
   ],
-  "error": null
+  "error": null,
+  "meta": {
+    "status": "OK",
+    "reason": "OK",
+    "provider": "stooq",
+    "source": "stooq",
+    "asOf": "2026-01-23",
+    "savedAt": "2026-01-23T21:36:09.857Z",
+    "error": null
+  }
 }
