@@ -35,6 +35,81 @@ const ARTIFACTS_DIR = process.env.ARTIFACTS_DIR || join(BASE_DIR, 'artifacts');
 const TMP_DIR = join(BASE_DIR, 'public/data/.tmp');
 const PUBLIC_DIR = join(BASE_DIR, 'public/data');
 const REGISTRY_PATH = join(PUBLIC_DIR, 'registry/modules.json');
+const CORE_MODULES = ['universe', 'market-prices', 'market-stats', 'market-score'];
+
+async function hasNonZeroFile(filePath) {
+  try {
+    const stats = await stat(filePath);
+    return stats.isFile() && stats.size > 0;
+  } catch (err) {
+    if (err.code === 'ENOENT') return false;
+    throw err;
+  }
+}
+
+function buildPlaceholderEnvelope(moduleName, reason) {
+  const now = new Date().toISOString();
+  const placeholder = {
+    schema_version: '3.0',
+    module: moduleName,
+    metadata: {
+      module: moduleName,
+      schema_version: '3.0',
+      source: 'finalizer-placeholder',
+      provider: 'finalizer',
+      fetched_at: now,
+      published_at: now,
+      record_count: 0,
+      validation: {
+        passed: false,
+        checks: {
+          placeholder: {
+            passed: false,
+            reason: reason.message,
+            details: reason.details
+          }
+        }
+      },
+      warnings: ['SNAPSHOT_PLACEHOLDER']
+    },
+    error: {
+      code: reason.code,
+      message: reason.message,
+      details: reason.details
+    },
+    data: null
+  };
+  placeholder.metadata.digest = computeSnapshotDigest(placeholder);
+  return placeholder;
+}
+
+async function ensureCoreSnapshots(artifacts) {
+  const artifactsMap = artifacts || new Map();
+
+  for (const moduleName of CORE_MODULES) {
+    const snapshotDir = join(PUBLIC_DIR, 'snapshots', moduleName);
+    const snapshotPath = join(snapshotDir, 'latest.json');
+    await mkdir(snapshotDir, { recursive: true });
+    const exists = await hasNonZeroFile(snapshotPath);
+    if (exists) continue;
+
+    const artifactPresent = artifactsMap.has(moduleName);
+    const reason = {
+      code: artifactPresent ? 'ARTIFACT_PROMOTION_FAILED' : 'SNAPSHOT_MISSING',
+      message: artifactPresent
+        ? 'Snapshot artifact produced but could not be promoted; placeholder inserted.'
+        : 'No artifact available for this module; placeholder inserted to avoid 404.',
+      details: {
+        module: moduleName,
+        artifact_present: artifactPresent,
+        timestamp: new Date().toISOString()
+      }
+    };
+
+    const placeholder = buildPlaceholderEnvelope(moduleName, reason);
+    await writeFile(snapshotPath, JSON.stringify(placeholder, null, 2) + '\n', 'utf-8');
+  }
+}
 
 /**
  * Load module registry
@@ -561,6 +636,7 @@ async function main() {
         await writeProviderState(emptyProviderState, BASE_DIR);
         console.log('  ✓ Provider-state.json written successfully');
         
+        await ensureCoreSnapshots(artifacts);
         console.log('\n✅ Finalizer completed successfully (no artifacts to publish)');
         console.log('  Exit code: 0');
         process.exit(0); // Exit with 0 = success, not error
@@ -638,6 +714,7 @@ async function main() {
       console.log('KV_WRITE_SKIP_NO_KV_BACKEND');
     }
     await promoteArtifacts(manifest, artifacts, TMP_DIR, kv, kvWriteEnabled);
+    await ensureCoreSnapshots(artifacts);
     console.log('✓ Artifacts promoted\n');
     
     // Generate and write provider-state

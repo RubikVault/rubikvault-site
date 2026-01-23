@@ -162,6 +162,24 @@ jobs:
             echo "✅ Finalizer completed successfully"
           fi
 
+      - name: Verify core snapshots
+        run: |
+          set -euo pipefail
+          missing=false
+          for module in universe market-prices market-stats market-score; do
+            path="public/data/snapshots/${module}/latest.json"
+            if [ ! -s "$path" ]; then
+              echo "❌ Missing or empty snapshot: $path"
+              missing=true
+            else
+              echo "✓ Snapshot exists: $path ($(wc -c < "$path") bytes)"
+            fi
+          done
+          if [ "$missing" = true ]; then
+            echo "Missing core snapshots, aborting publish"
+            exit 1
+          fi
+
       - name: Check for changes
         id: changes
         run: |
@@ -181,7 +199,7 @@ jobs:
           git config user.email "bot@rubikvault.com"
           
           # Add files only if they exist
-          git add public/data/snapshots/*/latest.json 2>/dev/null || echo "No snapshot files to add"
+          git add public/data/snapshots 2>/dev/null || echo "No snapshot files to add"
           git add public/data/state/modules/*.json 2>/dev/null || echo "No module state files to add"
           git add public/data/manifest.json 2>/dev/null || echo "No manifest to add"
           git add public/data/provider-state.json 2>/dev/null || echo "No provider-state to add"
