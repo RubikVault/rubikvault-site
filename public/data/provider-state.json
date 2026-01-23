@@ -1,97 +1,15 @@
 {
   "schema_version": "3.0",
-  "generated_at": "2026-01-22T22:50:54.706Z",
+  "generated_at": "2026-01-23T08:19:48.615Z",
   "system": {
     "status": "ok",
-    "build_id": "20260122T225054Z_c2b76a2",
-    "manifest_ref": "20260122T225054Z_c2b76a2",
-    "last_publish_at": "2026-01-22T22:50:54.694Z",
+    "build_id": "20260123T081948Z_0958980",
+    "manifest_ref": "20260123T081948Z_0958980",
+    "last_publish_at": "2026-01-23T08:19:48.615Z",
     "critical_ok": true,
     "top_issues": []
   },
-  "modules": [
-    {
-      "module": "market-health",
-      "tier": "critical",
-      "domain": "stocks",
-      "status": "ok",
-      "severity": "info",
-      "published": true,
-      "digest": "sha256:d2fb16994d73e39e047da43fdfcdd045198aa839ffcc67dc0355b416b32b0fab",
-      "freshness": {
-        "expected_interval_minutes": 1440,
-        "grace_minutes": 180,
-        "policy": "market_days_only",
-        "age_minutes": 0,
-        "next_expected_at": "2026-01-22T22:54:32.791Z"
-      },
-      "proof_chain": {
-        "FILE": "PASS",
-        "SCHEMA": "PASS",
-        "FRESH": "PASS",
-        "PLAUS": "PASS",
-        "UI": "SKIP",
-        "DELIVERY": "UNKNOWN"
-      },
-      "delivery": {
-        "probed_at": null,
-        "status": "UNKNOWN",
-        "served_from": "KV",
-        "latency_ms": null
-      },
-      "failure": {
-        "class": null,
-        "message": null,
-        "hint": null
-      },
-      "links": {
-        "debug": "/api/market-health?debug=1",
-        "snapshot": "/data/snapshots/market-health/latest.json",
-        "state": "/data/state/modules/market-health.json"
-      }
-    },
-    {
-      "module": "market-prices",
-      "tier": "standard",
-      "domain": "stocks",
-      "status": "ok",
-      "severity": "info",
-      "published": true,
-      "digest": "sha256:bd033d1e6c796bbe12e2eaa736110e0009cc3481e5101a1db3abd5cfa6629745",
-      "freshness": {
-        "expected_interval_minutes": 1440,
-        "grace_minutes": 180,
-        "policy": "market_days_only",
-        "age_minutes": 0,
-        "next_expected_at": null
-      },
-      "proof_chain": {
-        "FILE": "PASS",
-        "SCHEMA": "PASS",
-        "FRESH": "PASS",
-        "PLAUS": "PASS",
-        "UI": "SKIP",
-        "DELIVERY": "UNKNOWN"
-      },
-      "delivery": {
-        "probed_at": null,
-        "status": "UNKNOWN",
-        "served_from": "ASSET",
-        "latency_ms": null
-      },
-      "failure": {
-        "class": null,
-        "message": null,
-        "upstream_status": null,
-        "hint": null
-      },
-      "links": {
-        "debug": "/api/market-prices?debug=1",
-        "snapshot": "/data/snapshots/market-prices/latest.json",
-        "state": "/data/state/modules/market-prices.json"
-      }
-    }
-  ],
+  "modules": [],
   "help": {
     "failure_classes_ref": "/data/failure-hints.json",
     "playbook_ref": "/internal/health#playbook"
