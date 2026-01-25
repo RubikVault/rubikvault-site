@@ -33,9 +33,9 @@ function testRegistryBuild() {
   const dir = tmpDir();
   const publicDir = path.join(dir, "public");
   const mirrorsDir = path.join(publicDir, "mirrors");
-  const featuresDir = path.join(dir, "features");
+  const dataDir = path.join(publicDir, "data");
   fs.mkdirSync(mirrorsDir, { recursive: true });
-  fs.mkdirSync(featuresDir, { recursive: true });
+  fs.mkdirSync(dataDir, { recursive: true });
   fs.writeFileSync(
     path.join(publicDir, "index.html"),
     '<section data-rv-feature="rv-market-health"></section>\n<section data-rv-feature="rv-top-movers"></section>'
@@ -45,7 +45,7 @@ function testRegistryBuild() {
     data: { items: [{ id: 1 }] }
   });
   run(SCRIPTS.registry, ["--mode", "discover"], dir);
-  const registry = readJson(path.join(featuresDir, "feature-registry.json"));
+  const registry = readJson(path.join(dataDir, "feature-registry.v1.json"));
   assert.ok(Array.isArray(registry.features), "registry.features should be array");
   const ids = registry.features.map((f) => f.id);
   assert.ok(ids.includes("market-health"));
@@ -54,9 +54,9 @@ function testRegistryBuild() {
 
 function testStubGeneration() {
   const dir = tmpDir();
-  const featuresDir = path.join(dir, "features");
-  fs.mkdirSync(featuresDir, { recursive: true });
-  writeJson(path.join(featuresDir, "feature-registry.json"), {
+  const dataDir = path.join(dir, "public", "data");
+  fs.mkdirSync(dataDir, { recursive: true });
+  writeJson(path.join(dataDir, "feature-registry.v1.json"), {
     registryVersion: "1.0",
     generatedAt: new Date().toISOString(),
     features: [{ id: "alpha", mirrorPath: "public/mirrors/alpha.json", schemaVersion: "v1" }]
@@ -68,11 +68,11 @@ function testStubGeneration() {
 
 function testArtifactsBuild() {
   const dir = tmpDir();
-  const featuresDir = path.join(dir, "features");
+  const dataDir = path.join(dir, "public", "data");
   const mirrorsDir = path.join(dir, "public", "mirrors");
-  fs.mkdirSync(featuresDir, { recursive: true });
+  fs.mkdirSync(dataDir, { recursive: true });
   fs.mkdirSync(mirrorsDir, { recursive: true });
-  writeJson(path.join(featuresDir, "feature-registry.json"), {
+  writeJson(path.join(dataDir, "feature-registry.v1.json"), {
     registryVersion: "1.0",
     generatedAt: new Date().toISOString(),
     features: [{ id: "beta", mirrorPath: "public/mirrors/beta.json", schemaVersion: "v1" }]
@@ -90,11 +90,11 @@ function testArtifactsBuild() {
 
 function testAuditMissingField() {
   const dir = tmpDir();
-  const featuresDir = path.join(dir, "features");
+  const dataDir = path.join(dir, "public", "data");
   const mirrorsDir = path.join(dir, "public", "mirrors");
-  fs.mkdirSync(featuresDir, { recursive: true });
+  fs.mkdirSync(dataDir, { recursive: true });
   fs.mkdirSync(mirrorsDir, { recursive: true });
-  writeJson(path.join(featuresDir, "feature-registry.json"), {
+  writeJson(path.join(dataDir, "feature-registry.v1.json"), {
     registryVersion: "1.0",
     generatedAt: new Date().toISOString(),
     features: [
@@ -121,11 +121,11 @@ function testAuditMissingField() {
 
 function testAuditJsonParseError() {
   const dir = tmpDir();
-  const featuresDir = path.join(dir, "features");
+  const dataDir = path.join(dir, "public", "data");
   const mirrorsDir = path.join(dir, "public", "mirrors");
-  fs.mkdirSync(featuresDir, { recursive: true });
+  fs.mkdirSync(dataDir, { recursive: true });
   fs.mkdirSync(mirrorsDir, { recursive: true });
-  writeJson(path.join(featuresDir, "feature-registry.json"), {
+  writeJson(path.join(dataDir, "feature-registry.v1.json"), {
     registryVersion: "1.0",
     generatedAt: new Date().toISOString(),
     features: [{ id: "delta", mirrorPath: "public/mirrors/delta.json" }]
@@ -141,11 +141,11 @@ function testAuditJsonParseError() {
 
 function testMirrorMetaNormalization() {
   const dir = tmpDir();
-  const featuresDir = path.join(dir, "features");
+  const dataDir = path.join(dir, "public", "data");
   const mirrorsDir = path.join(dir, "public", "mirrors");
-  fs.mkdirSync(featuresDir, { recursive: true });
+  fs.mkdirSync(dataDir, { recursive: true });
   fs.mkdirSync(mirrorsDir, { recursive: true });
-  writeJson(path.join(featuresDir, "feature-registry.json"), {
+  writeJson(path.join(dataDir, "feature-registry.v1.json"), {
     registryVersion: "1.0",
     generatedAt: new Date().toISOString(),
     features: [{ id: "omega", mirrorPath: "public/mirrors/omega.json", schemaVersion: "v1" }]

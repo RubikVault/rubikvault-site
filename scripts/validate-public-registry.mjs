@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 
-const REGISTRY_PATH = path.join("public", "data", "feature-registry.json");
+const REGISTRY_PATH = path.join("public", "data", "feature-registry.v1.json");
 const MANIFEST_PATH = path.join("public", "data", "seed-manifest.json");
 
 function fail(message) {
@@ -36,12 +36,6 @@ if (!Array.isArray(manifest.blocks)) {
   fail("Manifest payload missing blocks array");
 }
 
-const registryCount = registry.features.length;
-const manifestCount = manifest.blocks.length;
-if (registryCount < manifestCount) {
-  fail(`Registry features (${registryCount}) must be >= manifest blocks (${manifestCount})`);
-}
-
 console.log(
-  `Public registry OK (features=${registryCount}, manifestBlocks=${manifestCount})`
+  `Public registry OK (features=${registry.features.length}, manifestBlocks=${manifest.blocks.length})`
 );

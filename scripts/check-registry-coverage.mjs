@@ -4,7 +4,7 @@ import path from "node:path";
 import { pathToFileURL } from "node:url";
 
 const ROOT = process.cwd();
-const REGISTRY_PATH = path.join(ROOT, "data", "feature-registry.json");
+const REGISTRY_PATH = path.join(ROOT, "feature-registry.json");
 
 function toFileUrl(filePath) {
   return pathToFileURL(path.join(ROOT, filePath)).href;
@@ -28,7 +28,7 @@ async function loadModule(modulePath, label) {
 
 function loadRegistry() {
   if (!fs.existsSync(REGISTRY_PATH)) {
-    console.error("feature-registry.json missing under data/");
+    console.error("feature-registry.json missing at repo root");
     process.exit(1);
   }
   try {

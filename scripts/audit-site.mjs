@@ -734,13 +734,8 @@ async function loadSchemaRegistry(auditTrace) {
 }
 
 function loadFeatureRegistry(auditTrace) {
-  const candidates = [
-    path.join(process.cwd(), "public", "data", "feature-registry.json"),
-    path.join(process.cwd(), "registry", "feature-registry.json"),
-    path.join(process.cwd(), "features", "feature-registry.json")
-  ];
-  const filePath = candidates.find((candidate) => fs.existsSync(candidate));
-  if (!filePath) {
+  const filePath = path.join(process.cwd(), "public", "data", "feature-registry.v1.json");
+  if (!fs.existsSync(filePath)) {
     auditTrace.push({
       step: "feature_registry",
       outcome: "skipped",
@@ -894,7 +889,7 @@ async function auditLive({ base, args, auditTrace, uiMappings, schemaRegistry, f
       evidence: []
     });
   } else {
-    const registryUrl = `${base.replace(/\/+$/, "")}/data/feature-registry.json`;
+    const registryUrl = `${base.replace(/\/+$/, "")}/data/feature-registry.v1.json`;
     let registryJson;
     try {
       const { response, text } = await fetchWithTimeout(registryUrl, args.timeoutMs);

@@ -12,7 +12,7 @@ import { resolveApiBase } from "./features/utils/api.js";
 import { initFlagsPanel } from "./features/rv-flags-panel.js";
 import { BLOCK_REGISTRY, formatBlockTitle } from "./features/blocks-registry.js";
 
-const REGISTRY_URL = "./data/feature-registry.json";
+const REGISTRY_URL = "/feature-registry.json";
 const RUN_ID = (() => {
   if (typeof window === "undefined") return "";
   if (window.__RV_RUN_ID) return window.__RV_RUN_ID;

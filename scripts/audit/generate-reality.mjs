@@ -140,8 +140,8 @@ const htmlMissing = htmlFeatures.filter((id) => !mirrorFeatures.includes(id));
 const mirrorMissing = mirrorFeatures.filter((id) => !htmlFeatures.includes(id));
 const issues = [];
 
-if (!fs.existsSync(path.join(root, "features", "feature-registry.json"))) {
-  issues.push(formatIssue("WARN", "feature-registry.json missing (registry-first audit will fall back to discovery)"));
+if (!fs.existsSync(path.join(root, "public", "data", "feature-registry.v1.json"))) {
+  issues.push(formatIssue("WARN", "feature-registry.v1.json missing (registry-first audit will fall back to discovery)"));
 }
 if (htmlMissing.length) {
   issues.push(

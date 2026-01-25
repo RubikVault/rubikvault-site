@@ -5,7 +5,7 @@ TOPLEVEL: (captured at runtime; do not hardcode absolute paths)
 BRANCH: main
 GIT_SHA: 0164b992abbbdcdd82df089945d50f360beb7c93
 GIT_STATUS_PORCELAIN:
-M features/feature-registry.json
+M public/data/feature-registry.v1.json
  M public/mirrors/_health.json
  M public/mirrors/manifest.json
  M scripts/audit/REALITY.md

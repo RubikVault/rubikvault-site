@@ -18,20 +18,15 @@ function parseArgs() {
 }
 
 async function loadFeatureRegistry() {
-  const candidates = [
-    path.join(ROOT, "public", "data", "feature-registry.json"),
-    path.join(ROOT, "registry", "feature-registry.json")
-  ];
-  for (const candidate of candidates) {
-    try {
-      const raw = await fs.readFile(candidate, "utf8");
-      const parsed = JSON.parse(raw);
-      if (parsed && typeof parsed === "object" && Array.isArray(parsed.features)) {
-        return parsed.features;
-      }
-    } catch {
-      continue;
+  const registryPath = path.join(ROOT, "public", "data", "feature-registry.v1.json");
+  try {
+    const raw = await fs.readFile(registryPath, "utf8");
+    const parsed = JSON.parse(raw);
+    if (parsed && typeof parsed === "object" && Array.isArray(parsed.features)) {
+      return parsed.features;
     }
+  } catch {
+    // ignore
   }
   return [];
 }

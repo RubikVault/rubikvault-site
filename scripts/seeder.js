@@ -1071,7 +1071,7 @@ async function main() {
   const { only } = parseArgs();
   execSync("node scripts/build-registry.js", { stdio: "inherit" });
 
-  const registry = loadJson(path.join("registry", "feature-registry.json"));
+  const registry = loadJson(path.join("public", "data", "feature-registry.v1.json"));
   if (!registry || !Array.isArray(registry.features)) {
     throw new Error("registry load failed");
   }

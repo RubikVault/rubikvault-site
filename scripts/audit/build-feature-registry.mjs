@@ -3,7 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 
 const ROOT = process.cwd();
-const REGISTRY_PATH = path.join(ROOT, "features", "feature-registry.json");
+const REGISTRY_PATH = path.join(ROOT, "public", "data", "feature-registry.v1.json");
 const MIRRORS_DIR = path.join(ROOT, "mirrors");
 
 function nowIso() {

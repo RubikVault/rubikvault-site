@@ -4,7 +4,7 @@ import path from "node:path";
 import { execSync } from "node:child_process";
 
 const ROOT = process.cwd();
-const REGISTRY_PATH = path.join(ROOT, "features", "feature-registry.json");
+const REGISTRY_PATH = path.join(ROOT, "public", "data", "feature-registry.v1.json");
 const OUTPUT_DIR = path.join(ROOT, "internal", "mirror-artifacts");
 const MANIFEST_PATH = path.join(OUTPUT_DIR, "manifest.json");
 const HEALTH_PATH = path.join(OUTPUT_DIR, "_health.json");

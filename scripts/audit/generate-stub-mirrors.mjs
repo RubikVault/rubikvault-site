@@ -4,7 +4,7 @@ import path from "node:path";
 import { saveMirror } from "../utils/mirror-io.mjs";
 
 const ROOT = process.cwd();
-const REGISTRY_PATH = path.join(ROOT, "features", "feature-registry.json");
+const REGISTRY_PATH = path.join(ROOT, "public", "data", "feature-registry.v1.json");
 
 function nowIso() {
   return new Date().toISOString();

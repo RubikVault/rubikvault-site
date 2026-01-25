@@ -3,7 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 
 const ROOT = process.cwd();
-const REGISTRY_PATH = path.join(ROOT, "data", "feature-registry.json");
+const REGISTRY_PATH = path.join(ROOT, "feature-registry.json");
 
 function fail(message) {
   console.error(message);
