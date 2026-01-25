@@ -63,7 +63,8 @@ function testStubGeneration() {
   });
   run(SCRIPTS.stubs, [], dir);
   const stub = readJson(path.join(dir, "public", "mirrors", "alpha.json"));
-  assert.equal(stub.meta.status, "STUB");
+  const payload = stub && typeof stub === "object" && stub.raw ? stub.raw : stub;
+  assert.equal(payload.meta.status, "STUB");
 }
 
 function testArtifactsBuild() {
@@ -139,6 +140,34 @@ function testAuditJsonParseError() {
   assert.ok(codes.includes("JSON_PARSE_ERROR"));
 }
 
+function testAuditBooleanTypeAllowed() {
+  const dir = tmpDir();
+  const dataDir = path.join(dir, "public", "data");
+  const mirrorsDir = path.join(dir, "public", "mirrors");
+  fs.mkdirSync(dataDir, { recursive: true });
+  fs.mkdirSync(mirrorsDir, { recursive: true });
+  writeJson(path.join(dataDir, "feature-registry.v1.json"), {
+    registryVersion: "1.0",
+    generatedAt: new Date().toISOString(),
+    features: [{ id: "bool", mirrorPath: "public/mirrors/bool.json" }]
+  });
+  writeJson(path.join(mirrorsDir, "bool.json"), {
+    meta: { status: "OK", updatedAt: new Date().toISOString() },
+    data: { items: [{ flag: true }] }
+  });
+  const output = run(SCRIPTS.audit, ["--mode", "local", "--base", "public", "--format", "json", "--fail-on", "none"], dir);
+  const report = JSON.parse(output);
+  const boolBlock = report.blocks.find((b) => b.blockId === "bool");
+  assert.ok(boolBlock, "bool block should exist");
+  const typeIssues = [];
+  for (const field of boolBlock.fields || []) {
+    for (const reason of field.reasons || []) {
+      if (reason.reasonCode === "TYPE_MISMATCH") typeIssues.push({ path: field.path, reason: reason.reason });
+    }
+  }
+  assert.equal(typeIssues.length, 0, `Expected no TYPE_MISMATCH issues, got: ${JSON.stringify(typeIssues)}`);
+}
+
 function testMirrorMetaNormalization() {
   const dir = tmpDir();
   const dataDir = path.join(dir, "public", "data");
@@ -171,6 +200,7 @@ try {
   testArtifactsBuild();
   testAuditMissingField();
   testAuditJsonParseError();
+  testAuditBooleanTypeAllowed();
   testMirrorMetaNormalization();
   process.stdout.write("audit tests: OK\n");
 } catch (error) {

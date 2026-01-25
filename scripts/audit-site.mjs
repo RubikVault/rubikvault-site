@@ -331,7 +331,13 @@ function validateField(pathName, value) {
       }
     }
   }
-  if (typeof value !== "object" && typeof value !== "string" && typeof value !== "number" && value !== null) {
+  if (
+    typeof value !== "object" &&
+    typeof value !== "string" &&
+    typeof value !== "number" &&
+    typeof value !== "boolean" &&
+    value !== null
+  ) {
     issues.push(
       makeReason(
         "TYPE_MISMATCH",
