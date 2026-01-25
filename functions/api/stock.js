@@ -381,6 +381,15 @@ export async function onRequestGet(context) {
   const indicatorOut = computeIndicators(eodBars);
   reasons = [...new Set([...(Array.isArray(reasons) ? reasons : []), ...(indicatorOut.issues || [])])];
 
+  const indicatorList = Array.isArray(indicatorOut.indicators) ? indicatorOut.indicators : [];
+  const indicatorNullCount = indicatorList.reduce((acc, item) => {
+    const value = item?.value;
+    if (value == null) return acc + 1;
+    const num = Number(value);
+    if (!Number.isFinite(num)) return acc + 1;
+    return acc;
+  }, 0);
+
   const data = {
     ticker: normalizedTicker,
     name: resolvedName || universePayload?.name || null,
@@ -441,6 +450,10 @@ export async function onRequestGet(context) {
       },
       as_of: asOf,
       source_chain: sourceChain,
+      indicators: {
+        count: indicatorList.length,
+        nullCount: indicatorNullCount
+      },
       reasons,
       sources
     },

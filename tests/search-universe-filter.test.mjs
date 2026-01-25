@@ -6,16 +6,23 @@ function assert(condition, message) {
   if (!condition) throw new Error(message || 'assertion_failed');
 }
 
-const universeFixture = {
-  SPY: { name: 'SPDR S&P 500 ETF', indexes: ['DJ30', 'SP500'] },
-  STAR: { name: 'Starline Systems', indexes: ['NDX100'] },
-  STELLAR: { name: 'Stellar Labs', indexes: ['RUT2000'] },
-  APPLE: { name: 'Apple Inc', indexes: ['NDX100', 'SP500'] },
-  AAPLX: { name: 'AAPLX Research', indexes: ['NDX100'] },
-  BETA: { name: 'Beta Systems', indexes: ['RUT2000'] }
-};
+const universeFixture = [
+  { symbol: "SPY", name: "SPDR S&P 500 ETF" },
+  { symbol: "STAR", name: "Starline Systems" },
+  { symbol: "STELLAR", name: "Stellar Labs" },
+  { symbol: "APPLE", name: "Apple Inc" },
+  { symbol: "AAPL", name: "Apple Inc" },
+  { symbol: "AAPLX", name: "AAPLX Research" },
+  { symbol: "BETA", name: "Beta Systems" }
+];
 
-const index = buildSearchIndex(universeFixture);
+const index = universeFixture.map((entry) => ({
+  ticker: entry.symbol,
+  name: entry.name,
+  nameLower: entry.name.toLowerCase(),
+  membership: {},
+  indexes: []
+}));
 
 function testExactTicker() {
   const results = filterUniverse(index, 'SPY');
@@ -42,12 +49,18 @@ function testNoMatches() {
   assert(results.length === 0, 'No matches should yield empty array');
 }
 
+function testAutocompleteSmokeAAP() {
+  const results = filterUniverse(index, 'AAP');
+  assert(results[0]?.ticker === 'AAPL', 'AAP should suggest AAPL');
+}
+
 async function main() {
   testExactTicker();
   testTickerPrefixBeatsName();
   testNamePrefixBeatsSubstring();
   testSubstringMatch();
   testNoMatches();
+  testAutocompleteSmokeAAP();
   console.log('✅ search-universe filtering tests passed');
 }
 

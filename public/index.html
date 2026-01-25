@@ -299,9 +299,9 @@
       if (typeahead.universeEntries.length) return typeahead.universeEntries;
       if (!typeahead.universePromise) {
         typeahead.universePromise = (async () => {
-          const { payload, networkError } = await fetchJson('/data/snapshots/universe/latest.json');
+          const { payload, networkError } = await fetchJson('/api/universe');
           if (networkError || !payload) throw new Error('universe_fetch_failed');
-          const entries = normalizeUniverseEntries(payload);
+          const entries = normalizeUniverseEntries(payload?.data || payload);
           typeahead.universeEntries = entries;
           return entries;
         })().catch(() => {
@@ -417,6 +417,7 @@
 
     function renderSourceChain(chain) {
       if (!chain) return '';
+      const primary = escapeHtml(chain?.primary || '—');
       const selected = escapeHtml(chain?.selected || '—');
       const forced = chain?.forced ? 'true' : 'false';
       const fallbackUsed = chain?.fallbackUsed ? 'true' : 'false';
@@ -424,16 +425,25 @@
       const primaryCode = escapeHtml(chain?.primaryFailure?.code || '');
       const secondaryCode = escapeHtml(chain?.secondaryFailure?.code || '');
 
+      const primaryFailureProvider = escapeHtml(chain?.primaryFailure?.provider || chain?.primary || '');
+      const primaryFailureMessage = escapeHtml(chain?.primaryFailure?.message || '');
+
       const extra = [
         failureReason ? `failureReason=${failureReason}` : null,
         primaryCode ? `primaryFailure=${primaryCode}` : null,
         secondaryCode ? `secondaryFailure=${secondaryCode}` : null
       ].filter(Boolean).join(' • ');
 
+      const primaryFailureHint =
+        chain?.fallbackUsed && (primaryCode || primaryFailureMessage)
+          ? `primary=${primary} failed: ${primaryFailureProvider || primary}${primaryCode ? ` (${primaryCode})` : ''}${primaryFailureMessage ? ` — ${primaryFailureMessage}` : ''}`
+          : '';
+
       return `
         <div style="margin-top: 1rem; padding: 0.9rem 1rem; border-radius: 10px; background: rgba(15, 23, 42, 0.35); border: 1px solid rgba(100, 116, 139, 0.22);">
           <div style="font-size: 0.8rem; color: #94a3b8;">Data source</div>
-          <div style="margin-top: 0.25rem; color: #e5e7eb; font-weight: 600;">selected=${selected} • forced=${forced} • fallbackUsed=${fallbackUsed}</div>
+          <div style="margin-top: 0.25rem; color: #e5e7eb; font-weight: 600;">selected=${selected} • primary=${primary} • forced=${forced} • fallbackUsed=${fallbackUsed}</div>
+          ${primaryFailureHint ? `<div style="margin-top: 0.35rem; color: #94a3b8; font-size: 0.85rem;">${primaryFailureHint}</div>` : ''}
           ${extra ? `<div style="margin-top: 0.35rem; color: #94a3b8; font-size: 0.85rem;">${extra}</div>` : ''}
         </div>
       `;
@@ -460,6 +470,19 @@
       const changePct = data?.change?.pct;
 
       const indicators = Array.isArray(data?.indicators) ? data.indicators : [];
+      const computedNullCount = indicators.reduce((acc, item) => {
+        const value = item?.value;
+        if (value == null) return acc + 1;
+        const num = Number(value);
+        if (!Number.isFinite(num)) return acc + 1;
+        return acc;
+      }, 0);
+      const indicatorCount = Number.isFinite(Number(meta?.indicators?.count)) ? Number(meta.indicators.count) : indicators.length;
+      const nullIndicatorCount = Number.isFinite(Number(meta?.indicators?.nullCount))
+        ? Number(meta.indicators.nullCount)
+        : computedNullCount;
+      const expectedIndicatorCount = 27;
+      const indicatorsValidated = indicatorCount === expectedIndicatorCount && nullIndicatorCount === 0;
       const indicatorsHtml = indicators
         .map((item) => {
           const id = escapeHtml(item?.id);
@@ -512,7 +535,10 @@
 
         <div style="margin-top: 2rem; display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; flex-wrap: wrap;">
           <h3 style="margin: 0; font-size: 1.25rem; color: #e5e7eb;">Indicators</h3>
-          <div style="font-size: 0.9rem; color: #94a3b8;">count=${indicators.length}</div>
+          <div style="display:flex; gap: 0.6rem; align-items: baseline; flex-wrap: wrap; justify-content: flex-end;">
+            ${indicatorsValidated ? '<span style="display:inline-flex; align-items:center; gap:0.35rem; padding: 0.2rem 0.55rem; border-radius: 999px; border: 1px solid rgba(16, 185, 129, 0.35); background: rgba(16, 185, 129, 0.12); color: #a7f3d0; font-size: 0.85rem; font-weight: 700;">Validated</span>' : ''}
+            <div style="font-size: 0.9rem; color: #94a3b8;">count=${indicatorCount} • null=${nullIndicatorCount}</div>
+          </div>
         </div>
 
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 0.75rem; margin-top: 1rem;">
