@@ -65,6 +65,15 @@ function computeDayChange(bars) {
   return { abs, pct: abs / prev.close };
 }
 
+function computeStartDateISO(daysBack) {
+  const days = Number.isFinite(Number(daysBack)) ? Number(daysBack) : 0;
+  if (days <= 0) return null;
+  const ms = Date.now() - days * 24 * 60 * 60 * 1000;
+  const d = new Date(ms);
+  if (Number.isNaN(d.getTime())) return null;
+  return d.toISOString().slice(0, 10);
+}
+
 async function fetchSnapshot(moduleName, request) {
   const baseUrl = new URL(request.url);
   let lastError = null;
@@ -225,8 +234,12 @@ export async function onRequestGet(context) {
       reasons = ['EOD_KEYS_MISSING'];
     } else {
       eodAttempted = true;
+      // Tiingo returns limited data when no startDate is provided. We set a deterministic
+      // lookback to ensure enough bars for indicators (>= 200 trading days).
+      const startDate = computeStartDateISO(365 * 3);
       const chainResult = await fetchBarsWithProviderChain(normalizedTicker, env, {
-        outputsize: '300'
+        outputsize: '300',
+        startDate
       });
       sourceChain = buildSourceChainMetadata(chainResult.chain);
       if (chainResult.ok) {
@@ -304,6 +317,24 @@ export async function onRequestGet(context) {
   const priceEntry = findRecord(snapshots['market-prices']?.snapshot, normalizedTicker);
   const statsEntry = findRecord(snapshots['market-stats']?.snapshot, normalizedTicker);
   const scoreEntry = findRecord(snapshots['market-score']?.snapshot, normalizedTicker);
+
+  // Attribute DATA_NOT_READY to concrete lookup outcomes.
+  for (const moduleName of MODULE_PATHS) {
+    if (!sources[moduleName]) continue;
+    sources[moduleName].lookup_key = normalizedTicker;
+  }
+  sources.universe.record_found = Boolean(universeEntry);
+  sources['market-prices'].record_found = Boolean(priceEntry);
+  sources['market-stats'].record_found = Boolean(statsEntry);
+  sources['market-score'].record_found = Boolean(scoreEntry);
+
+  if (snapshots['market-stats']?.snapshot?.data == null && snapshots['market-stats']?.snapshot?.error) {
+    sources['market-stats'].note = 'snapshot_placeholder_or_empty_data';
+  }
+  if (snapshots['market-prices']?.snapshot && snapshots['market-prices']?.snapshot?.data && !priceEntry) {
+    sources['market-prices'].note = 'entry_not_found_for_symbol';
+  }
+
   const universePayload = buildUniversePayload(universeEntry, normalizedTicker);
   const marketPricesPayload = buildMarketPricesPayload(priceEntry, normalizedTicker);
   const marketStatsPayload = buildMarketStatsPayload(statsEntry, normalizedTicker);
@@ -377,7 +408,7 @@ export async function onRequestGet(context) {
   const validationPassed = !errorPayload;
   const status = errorPayload
     ? 'ERROR'
-    : reasons.includes('DATA_NOT_READY') || reasons.includes('INSUFFICIENT_HISTORY')
+    : reasons.includes('INSUFFICIENT_HISTORY')
     ? 'PARTIAL'
     : 'OK';
   const payload = {

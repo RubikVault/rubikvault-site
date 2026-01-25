@@ -583,6 +583,10 @@ async function main() {
   console.log(`  TMP_DIR: ${TMP_DIR}`);
   console.log(`  PUBLIC_DIR: ${PUBLIC_DIR}`);
   console.log(`  REGISTRY_PATH: ${REGISTRY_PATH}\n`);
+  const skipInvalidArtifacts = String(process.env.RV_FINALIZER_SKIP_INVALID || '').trim() === '1';
+  if (skipInvalidArtifacts) {
+    console.warn('⚠ RV_FINALIZER_SKIP_INVALID=1 (invalid artifacts will be skipped)');
+  }
   
   try {
     // Load registry
@@ -657,22 +661,42 @@ async function main() {
     // Validate all artifacts
     console.log('🔍 Validating artifacts...');
     const validationErrors = [];
+    const validArtifacts = new Map();
     for (const [moduleName, artifact] of artifacts.entries()) {
       const config = registry.modules[moduleName];
       if (!config) {
-        validationErrors.push(`${moduleName}: NOT_IN_REGISTRY`);
+        const msg = `${moduleName}: NOT_IN_REGISTRY`;
+        if (skipInvalidArtifacts) {
+          console.warn(`⚠ SKIP_INVALID ${msg}`);
+          continue;
+        }
+        validationErrors.push(msg);
         continue;
       }
       
       const result = validateSnapshot(artifact.snapshot, config);
       if (!result.valid) {
-        validationErrors.push(`${moduleName}: ${result.errors.join(', ')}`);
+        const msg = `${moduleName}: ${result.errors.join(', ')}`;
+        if (skipInvalidArtifacts) {
+          console.warn(`⚠ SKIP_INVALID ${msg}`);
+          continue;
+        }
+        validationErrors.push(msg);
+        continue;
       }
 
       const consistency = validateArtifactConsistency(moduleName, artifact.snapshot, artifact.state);
       if (!consistency.valid) {
-        validationErrors.push(`${moduleName}: ${consistency.errors.join(', ')}`);
+        const msg = `${moduleName}: ${consistency.errors.join(', ')}`;
+        if (skipInvalidArtifacts) {
+          console.warn(`⚠ SKIP_INVALID ${msg}`);
+          continue;
+        }
+        validationErrors.push(msg);
+        continue;
       }
+
+      validArtifacts.set(moduleName, artifact);
     }
     
     if (validationErrors.length > 0) {
@@ -682,6 +706,36 @@ async function main() {
       }
       process.exit(1);
     }
+
+    if (skipInvalidArtifacts && validArtifacts.size === 0) {
+      console.warn('⚠ All artifacts were skipped as invalid; treating as no artifacts to publish');
+      const buildId = getCurrentBuildId();
+      const emptyManifest = {
+        schema_version: '3.0',
+        build_id: buildId,
+        active_build_id: buildId,
+        manifest_ref: buildId,
+        published_at: new Date().toISOString(),
+        publish_policy: 'critical_core_hybrid_v3',
+        modules: {},
+        summary: {
+          modules_total: 0,
+          ok: 0,
+          warn: 0,
+          error: 0,
+          stale_ratio: 0,
+          critical_ok: true
+        }
+      };
+      const emptyProviderState = generateProviderState(emptyManifest, new Map());
+      await writeProviderState(emptyProviderState, BASE_DIR);
+      await ensureCoreSnapshots(new Map());
+      console.log('\n✅ Finalizer completed successfully (all artifacts skipped as invalid)');
+      process.exit(0);
+    }
+
+    // Replace artifacts set with validated artifacts.
+    artifacts = validArtifacts;
     console.log('✓ All artifacts validated\n');
     
     // Build manifest

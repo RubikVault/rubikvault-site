@@ -44,4 +44,73 @@ function assert(condition, message) {
   }
 
   console.log('✅ finalize placeholder smoke test');
+  
+  // Regression: fail-loud by default when an invalid artifact exists; opt-in skip keeps run green.
+  const base2 = fs.mkdtempSync(path.join(os.tmpdir(), 'rv-finalizer-skip-invalid-test-'));
+  const artifacts2 = path.join(base2, 'artifacts');
+  const registryDir2 = path.join(base2, 'public', 'data', 'registry');
+  fs.mkdirSync(registryDir2, { recursive: true });
+  fs.copyFileSync(
+    path.join(process.cwd(), 'public', 'data', 'registry', 'modules.json'),
+    path.join(registryDir2, 'modules.json')
+  );
+
+  // Create a deliberately invalid artifact (loaded by finalizer, then rejected by validation).
+  // We force a digest mismatch so validateSnapshot fails.
+  const badModule = 'market-health';
+  const badDir = path.join(artifacts2, badModule);
+  fs.mkdirSync(badDir, { recursive: true });
+  const badSnapshot = {
+    schema_version: '3.0',
+    metadata: {
+      module: badModule,
+      tier: 'standard',
+      domain: 'stocks',
+      source: 'test',
+      fetched_at: new Date().toISOString(),
+      published_at: new Date().toISOString(),
+      digest: 'sha256:0000000000000000000000000000000000000000000000000000000000000000',
+      record_count: 1,
+      validation: {
+        passed: true,
+        dropped_records: 0,
+        drop_ratio: 0,
+        drop_check_passed: true,
+        drop_threshold: null,
+        checks: [],
+        warnings: []
+      }
+    },
+    data: [{ ok: true }],
+    error: null
+  };
+  fs.writeFileSync(path.join(badDir, 'snapshot.json'), JSON.stringify(badSnapshot, null, 2) + '\n', 'utf-8');
+  const badState = {
+    schema_version: '3.0',
+    module: badModule,
+    digest: badSnapshot.metadata.digest,
+    record_count: 1,
+    published_at: new Date().toISOString(),
+    validation: { passed: true, errors: [], warnings: [] }
+  };
+  fs.writeFileSync(path.join(badDir, 'module-state.json'), JSON.stringify(badState, null, 2) + '\n', 'utf-8');
+
+  const failLoud = spawnSync(process.execPath, [path.resolve('scripts/aggregator/finalize.mjs')], {
+    cwd: base2,
+    env: { ...process.env, ARTIFACTS_DIR: artifacts2 },
+    encoding: 'utf-8'
+  });
+  assert(failLoud.status !== 0, 'expected finalize to fail loud when invalid artifact exists');
+
+  const skipped = spawnSync(process.execPath, [path.resolve('scripts/aggregator/finalize.mjs')], {
+    cwd: base2,
+    env: { ...process.env, ARTIFACTS_DIR: artifacts2, RV_FINALIZER_SKIP_INVALID: '1' },
+    encoding: 'utf-8'
+  });
+  assert(skipped.status === 0, `expected finalize to succeed with RV_FINALIZER_SKIP_INVALID=1: ${skipped.stderr || skipped.stdout}`);
+  for (const moduleName of MODULES) {
+    const snapshotPath = path.join(base2, 'public', 'data', 'snapshots', moduleName, 'latest.json');
+    assert(fs.existsSync(snapshotPath), `missing snapshot ${moduleName} after skip-invalid run`);
+  }
+  console.log('✅ finalize skip-invalid regression test');
 })();
