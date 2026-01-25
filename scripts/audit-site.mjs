@@ -36,6 +36,36 @@ function getByPath(obj, pathExpr) {
   return current;
 }
 
+function auditLocal({ args, auditTrace, uiMappings, schemaRegistry, featureRegistry }) {
+  const basePath = args.base;
+  const base = path.isAbsolute(basePath) ? basePath : path.join(process.cwd(), basePath);
+  const blocks = featureRegistry ? discoverBlocksFromRegistry(featureRegistry, base) : discoverLocalBlocks(base, auditTrace);
+  const freshnessPolicy = readFreshnessPolicy();
+  const results = [];
+  for (const entry of blocks) {
+    if (results.length >= args.maxBlocks) break;
+    const schemaRules =
+      schemaRegistry?.blockSchemas?.[entry.id] ||
+      schemaRegistry?.blockSchemas?.[String(entry.id).toLowerCase()] ||
+      schemaRegistry?.blockSchemas?.["*"] ||
+      null;
+    results.push(
+      auditBlockLocal({
+        filePath: entry.file,
+        blockId: entry.id,
+        optional: Boolean(entry.optional),
+        limits: { maxDepth: args.maxDepth, maxItems: args.maxItems, maxFieldsPerBlock: args.maxFieldsPerBlock },
+        auditTrace,
+        uiMappings,
+        schemaRules,
+        requiredFields: entry.requiredFields,
+        freshnessPolicy
+      })
+    );
+  }
+  return results;
+}
+
 const REASON_CODES = [
   "FILE_MISSING",
   "JSON_PARSE_ERROR",
@@ -79,6 +109,41 @@ const SEVERITY_BY_REASON = {
   CIRCUIT_OPEN: "WARN",
   FIELD_NULLISH: "ERROR"
 };
+
+function readFreshnessPolicy() {
+  const filePath = path.join(process.cwd(), "config", "freshness-policy.v6.json");
+  if (!fs.existsSync(filePath)) return null;
+  try {
+    const parsed = JSON.parse(fs.readFileSync(filePath, "utf8"));
+    if (!parsed || typeof parsed !== "object") return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+function resolveFreshnessPolicy(policy, blockId) {
+  if (!policy || typeof policy !== "object") return null;
+  const defaults = policy.defaults && typeof policy.defaults === "object" ? policy.defaults : {};
+  const blocks = policy.blocks && typeof policy.blocks === "object" ? policy.blocks : {};
+  const byBlock = blocks && blockId && blocks[blockId] && typeof blocks[blockId] === "object" ? blocks[blockId] : {};
+  const warnAfterHours =
+    Number.isFinite(byBlock.warn_after_hours)
+      ? byBlock.warn_after_hours
+      : Number.isFinite(defaults.warn_after_hours)
+        ? defaults.warn_after_hours
+        : 24;
+  const errorAfterHours =
+    Number.isFinite(byBlock.error_after_hours)
+      ? byBlock.error_after_hours
+      : Number.isFinite(defaults.error_after_hours)
+        ? defaults.error_after_hours
+        : null;
+  return {
+    warnAfterMs: Number.isFinite(warnAfterHours) ? warnAfterHours * 3600 * 1000 : null,
+    errorAfterMs: Number.isFinite(errorAfterHours) ? errorAfterHours * 3600 * 1000 : null
+  };
+}
 
 function redact(str) {
   if (typeof str !== "string") return str;
@@ -349,6 +414,25 @@ function validateField(pathName, value) {
   return sortReasons(issues);
 }
 
+function applyFreshnessPolicyToReasons(blockId, pathName, reasons, policyCfg, ageMs) {
+  if (!Array.isArray(reasons) || reasons.length === 0) return reasons;
+  if (!Number.isFinite(ageMs)) return reasons;
+  if (!pathName || !pathName.endsWith("/date")) return reasons;
+  const policy = resolveFreshnessPolicy(policyCfg, blockId);
+  if (!policy) return reasons;
+  const warnAfter = policy.warnAfterMs;
+  const errorAfter = policy.errorAfterMs;
+  return reasons.map((r) => {
+    if (r.reasonCode !== "STALE_DATA") return r;
+    if (errorAfter != null && ageMs >= errorAfter) return r;
+    if (warnAfter != null && ageMs >= warnAfter) {
+      // stale is truthful; we only tune severity based on policy
+      return { ...r, severity: "WARN" };
+    }
+    return r;
+  });
+}
+
 function severityFromReasons(reasons) {
   if (!reasons || !reasons.length) return "INFO";
   const ranks = { CRITICAL: 4, ERROR: 3, WARN: 2, INFO: 1 };
@@ -384,7 +468,8 @@ function auditBlockJson({
   json,
   uiMappings,
   schemaRules,
-  requiredFields
+  requiredFields,
+  freshnessPolicy
 }) {
   const block = {
     blockId,
@@ -423,6 +508,14 @@ function auditBlockJson({
       valuePreview: valuePreview(entry.value),
       reasons: issues
     };
+    if (field.reasons && field.reasons.length && entry.path && entry.path.endsWith("/date")) {
+      const parsed = typeof entry.value === "string" ? Date.parse(entry.value) : NaN;
+      const ageMs = Number.isFinite(parsed) ? Date.now() - parsed : NaN;
+      const tuned = applyFreshnessPolicyToReasons(blockId, entry.path, field.reasons, freshnessPolicy, ageMs);
+      field.reasons = sortReasons(tuned);
+      field.severity = severityFromReasons(field.reasons);
+      field.valid = field.reasons.length === 0;
+    }
     fields.push(field);
   }
 
@@ -546,7 +639,8 @@ function auditBlockLocal({
   auditTrace,
   uiMappings,
   schemaRules,
-  requiredFields
+  requiredFields,
+  freshnessPolicy
 }) {
   let raw = null;
   try {
@@ -562,7 +656,8 @@ function auditBlockLocal({
         makeReason(
           "FILE_MISSING",
           "Mirror file missing",
-          [makeEvidence("file_system", filePath, error.message, "read failed")]
+          [makeEvidence("file_system", filePath, error.message, "read failed")],
+          optional ? "WARN" : undefined
         )
       ],
       fields: []
@@ -582,7 +677,8 @@ function auditBlockLocal({
         makeReason(
           "JSON_PARSE_ERROR",
           "Failed to parse JSON",
-          [makeEvidence("file_system", filePath, error.message, "parse error")]
+          [makeEvidence("file_system", filePath, error.message, "parse error")],
+          optional ? "WARN" : undefined
         )
       ],
       fields: []
@@ -597,7 +693,8 @@ function auditBlockLocal({
     json,
     uiMappings,
     schemaRules,
-    requiredFields
+    requiredFields,
+    freshnessPolicy
   });
 }
 
@@ -1247,6 +1344,7 @@ async function main() {
     const discovered = featureRegistry
       ? discoverBlocksFromRegistry(featureRegistry, basePath)
       : discoverLocalBlocks(basePath, auditTrace);
+    const freshnessPolicy = readFreshnessPolicy();
     const ordered = discovered.sort((a, b) => a.id.localeCompare(b.id));
     if (ordered.length > args.maxBlocks) {
       auditTrace.push({
@@ -1306,7 +1404,8 @@ async function main() {
           auditTrace,
           uiMappings,
           schemaRules,
-          requiredFields: entry.requiredFields
+          requiredFields: entry.requiredFields,
+          freshnessPolicy
         })
       );
     }
