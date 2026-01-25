@@ -3,6 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 import os from "node:os";
 import { execFileSync } from "node:child_process";
+import { saveMirror } from "../scripts/utils/mirror-io.mjs";
 
 const ROOT = process.cwd();
 const SCRIPTS = {
@@ -71,6 +72,7 @@ function testArtifactsBuild() {
   const dir = tmpDir();
   const dataDir = path.join(dir, "public", "data");
   const mirrorsDir = path.join(dir, "public", "mirrors");
+  const internalArtifactsDir = path.join(dir, "internal", "mirror-artifacts");
   fs.mkdirSync(dataDir, { recursive: true });
   fs.mkdirSync(mirrorsDir, { recursive: true });
   writeJson(path.join(dataDir, "feature-registry.v1.json"), {
@@ -83,18 +85,18 @@ function testArtifactsBuild() {
     data: { items: [{ id: 1 }] }
   });
   run(SCRIPTS.artifacts, [], dir);
-  assert.ok(fs.existsSync(path.join(mirrorsDir, "manifest.json")));
-  assert.ok(fs.existsSync(path.join(mirrorsDir, "_health.json")));
-  const manifest = readJson(path.join(mirrorsDir, "manifest.json"));
+  assert.ok(fs.existsSync(path.join(internalArtifactsDir, "manifest.json")));
+  assert.ok(fs.existsSync(path.join(internalArtifactsDir, "_health.json")));
+  const manifest = readJson(path.join(internalArtifactsDir, "manifest.json"));
   assert.ok(manifest.blocks.some((b) => b.id === "beta"));
 }
 
 function testAuditMissingField() {
   const dir = tmpDir();
   const dataDir = path.join(dir, "public", "data");
-  const mirrorsDir = path.join(dir, "public", "mirrors");
+  const snapshotsDir = path.join(dir, "public", "data", "snapshots");
   fs.mkdirSync(dataDir, { recursive: true });
-  fs.mkdirSync(mirrorsDir, { recursive: true });
+  fs.mkdirSync(snapshotsDir, { recursive: true });
   writeJson(path.join(dataDir, "feature-registry.v1.json"), {
     registryVersion: "1.0",
     generatedAt: new Date().toISOString(),
@@ -106,7 +108,7 @@ function testAuditMissingField() {
       }
     ]
   });
-  writeJson(path.join(mirrorsDir, "gamma.json"), {
+  writeJson(path.join(snapshotsDir, "gamma.json"), {
     meta: { updatedAt: new Date().toISOString() },
     data: { items: [{ id: 1 }] }
   });
@@ -123,15 +125,15 @@ function testAuditMissingField() {
 function testAuditJsonParseError() {
   const dir = tmpDir();
   const dataDir = path.join(dir, "public", "data");
-  const mirrorsDir = path.join(dir, "public", "mirrors");
+  const snapshotsDir = path.join(dir, "public", "data", "snapshots");
   fs.mkdirSync(dataDir, { recursive: true });
-  fs.mkdirSync(mirrorsDir, { recursive: true });
+  fs.mkdirSync(snapshotsDir, { recursive: true });
   writeJson(path.join(dataDir, "feature-registry.v1.json"), {
     registryVersion: "1.0",
     generatedAt: new Date().toISOString(),
     features: [{ id: "delta", mirrorPath: "public/mirrors/delta.json" }]
   });
-  fs.writeFileSync(path.join(mirrorsDir, "delta.json"), "{ invalid json");
+  fs.writeFileSync(path.join(snapshotsDir, "delta.json"), "{ invalid json");
   const output = run(SCRIPTS.audit, ["--mode", "local", "--base", "public", "--format", "json", "--fail-on", "none"], dir);
   const report = JSON.parse(output);
   const delta = report.blocks.find((b) => b.blockId === "delta");
@@ -143,15 +145,15 @@ function testAuditJsonParseError() {
 function testAuditBooleanTypeAllowed() {
   const dir = tmpDir();
   const dataDir = path.join(dir, "public", "data");
-  const mirrorsDir = path.join(dir, "public", "mirrors");
+  const snapshotsDir = path.join(dir, "public", "data", "snapshots");
   fs.mkdirSync(dataDir, { recursive: true });
-  fs.mkdirSync(mirrorsDir, { recursive: true });
+  fs.mkdirSync(snapshotsDir, { recursive: true });
   writeJson(path.join(dataDir, "feature-registry.v1.json"), {
     registryVersion: "1.0",
     generatedAt: new Date().toISOString(),
     features: [{ id: "bool", mirrorPath: "public/mirrors/bool.json" }]
   });
-  writeJson(path.join(mirrorsDir, "bool.json"), {
+  writeJson(path.join(snapshotsDir, "bool.json"), {
     meta: { status: "OK", updatedAt: new Date().toISOString() },
     data: { items: [{ flag: true }] }
   });
@@ -179,19 +181,20 @@ function testMirrorMetaNormalization() {
     generatedAt: new Date().toISOString(),
     features: [{ id: "omega", mirrorPath: "public/mirrors/omega.json", schemaVersion: "v1" }]
   });
-  writeJson(path.join(mirrorsDir, "omega.json"), {
+
+  const omegaPath = path.join(mirrorsDir, "omega.json");
+  saveMirror(omegaPath, {
     schemaVersion: "1.0",
     mirrorId: "omega",
     updatedAt: new Date().toISOString(),
-    items: [],
-    // meta intentionally omitted: normalization should add meta with status/updatedAt
+    items: []
   });
-  run(SCRIPTS.artifacts, [], dir);
-  const mirror = readJson(path.join(mirrorsDir, "omega.json"));
-  assert.ok(mirror.meta, "meta should be present");
-  assert.ok(typeof mirror.meta.status === "string" && mirror.meta.status.length > 0, "meta.status required");
-  assert.ok(mirror.meta.updatedAt, "meta.updatedAt required");
-  assert.notEqual(mirror.meta.status, "OK", "empty items must not be OK");
+  const envelope = readJson(omegaPath);
+  assert.ok(envelope && envelope.meta && envelope.raw, "mirror envelope should be present");
+  assert.ok(envelope.raw.meta, "raw.meta should be present");
+  assert.ok(typeof envelope.raw.meta.status === "string" && envelope.raw.meta.status.length > 0, "raw.meta.status required");
+  assert.ok(envelope.raw.meta.updatedAt, "raw.meta.updatedAt required");
+  assert.notEqual(envelope.raw.meta.status, "OK", "empty items must not be OK");
 }
 
 try {
