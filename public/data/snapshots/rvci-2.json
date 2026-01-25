@@ -10,11 +10,24 @@
     "asOf": "2026-01-19T18:00:00.000Z",
     "source": "rvci-engine-v2",
     "ttlSeconds": 3600,
+    "runId": "2026-01-19T18:00:00.000Z",
     "stale": false,
     "itemsCount": 8,
     "freshness": {
       "status": "fresh",
       "ageMinutes": 0
+    },
+    "schedule": {
+      "rule": "daily",
+      "nextPlannedFetchAt": "2026-01-20T18:00:00.000Z",
+      "expectedNextRunWindowMinutes": 1440,
+      "ttlSeconds": 3600
+    },
+    "validation": {
+      "schema": {
+        "ok": true,
+        "errors": []
+      }
     }
   },
   "data": {
