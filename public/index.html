@@ -373,8 +373,7 @@
           if (!item?.symbol) return;
           closeTypeahead();
           searchInput.value = item.symbol;
-          lastResolved = { ticker: item.symbol, name: item.name || null };
-          await loadAnalyze(item.symbol, { fallback: lastResolved });
+          await resolveAndAnalyze(item.symbol);
         });
       });
     }
@@ -606,8 +605,7 @@
           const item = typeahead.items[typeahead.activeIndex];
           closeTypeahead();
           searchInput.value = item.symbol;
-          lastResolved = { ticker: item.symbol, name: item.name || null };
-          await loadAnalyze(item.symbol, { fallback: lastResolved });
+          await resolveAndAnalyze(item.symbol);
           return;
         }
         closeTypeahead();
