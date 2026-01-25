@@ -9,20 +9,14 @@
 /data/snapshots/rv-:splat.json /data/snapshots/:splat.json 200
 /data/blocks/rv-:splat.latest.json /data/blocks/:splat.latest.json 200
 /internal-dashboard.html /internal-dashboard 301
-/internal-dashboard /internal-dashboard 200
+/internal-dashboard /internal-dashboard.html 200
  # TODO(v6): internal-dashboard.html can be removed once redirect compatibility is fully cleaned.
 # common typo + ops alias
 /internal-dahboard /internal-dashboard 301
 /ops /internal-dashboard 301
 /dev/internal-dashboard /internal-dashboard 301
 /dev/ops /internal-dashboard 301
-/internal/health /internal/health/index.html 200
-/internal/health/ /internal/health/index.html 200
 # Deep Links (Stock Analyzer)
-/analyze/:ticker /index.html 200
-/module/:module /index.html 200
-/alert/:alertId /index.html 200
-# Explicit index route to avoid rewrite loop warnings
-/index.html     /index.html     200
-# SPA fallback (last)
-/*              /index.html      200
+/analyze/* / 200
+/module/* / 200
+/alert/* / 200

@@ -1100,8 +1100,12 @@ export async function main() {
 
   const forcedStub = toBool(process.env.RV_PRICES_STUB);
   const forcedReal = toBool(process.env.RV_PRICES_FORCE_REAL);
+  const forcedProviderRaw = process.env.RV_FORCE_PROVIDER ? String(process.env.RV_FORCE_PROVIDER) : '';
+  const forcedProvider = forcedProviderRaw.trim() ? forcedProviderRaw.trim().toLowerCase() : null;
 
-  const useStooq = !forcedStub;
+  const mode = forcedStub ? 'STUB' : 'REAL';
+
+  const useStooq = !forcedStub && !forcedReal;
   const providersRegistry = await loadProvidersRegistry();
   const stooqProviderEntry = {
     id: 'stooq',
@@ -1110,9 +1114,17 @@ export async function main() {
     enabled: true,
     order: 0
   };
-  const providerChain = useStooq
+  let providerChain = useStooq
     ? [stooqProviderEntry]
     : buildProviderChain(providersRegistry, 'prices_eod');
+
+  if (!useStooq && mode === 'REAL' && forcedProvider) {
+    const match = providerChain.find((provider) => String(provider.id || '').toLowerCase() === forcedProvider);
+    if (!match) {
+      throw new Error(`RV_FORCE_PROVIDER_UNKNOWN:${forcedProvider}`);
+    }
+    providerChain = [{ ...match, role: 'primary' }];
+  }
   const providerChainSummary = describeProviderChain(providerChain);
   const providerAuthInfo = {};
   if (!useStooq) {
@@ -1134,8 +1146,7 @@ export async function main() {
     }
   }
 
-  const mode = forcedStub ? 'STUB' : 'REAL';
-  let providerLabel = mode === 'STUB' ? 'stub' : 'stooq';
+  let providerLabel = mode === 'STUB' ? 'stub' : (useStooq ? 'stooq' : (primaryProvider?.id || 'unknown'));
 
   const symbols = await loadUniverseIndexProxies();
   const config = await loadModuleConfig();
@@ -1155,6 +1166,17 @@ export async function main() {
   const runtimeState = mode === 'REAL' ? (await loadProviderRuntimeState(outDir)) || {} : {};
   runtimeState.providers = runtimeState.providers || {};
   runtimeState.provider_chain = providerChainSummary;
+
+  const chainPrimaryId = providerChain.find((provider) => provider.role === 'primary')?.id || providerChain[0]?.id || null;
+  const chainSecondaryId = providerChain.find((provider) => provider.role === 'fallback')?.id || null;
+  const sourceChainMeta = {
+    primary: chainPrimaryId,
+    secondary: chainSecondaryId,
+    selected: null,
+    fallbackUsed: false,
+    fallbackProvider: null,
+    primaryFailure: null
+  };
 
   let runClassification = CLASSIFICATIONS.OK;
   let reasonCode = null;
@@ -1232,6 +1254,19 @@ export async function main() {
         if (result.ok && result.bar) {
           selectedBar = result.bar;
           selectedProviderId = provider.id;
+          if (provider.id !== chainPrimaryId) {
+            sourceChainMeta.fallbackUsed = true;
+            sourceChainMeta.fallbackProvider = provider.id;
+            if (!sourceChainMeta.primaryFailure && attempts.length > 0) {
+              const firstAttempt = attempts[0];
+              if (firstAttempt && firstAttempt.provider_id === chainPrimaryId && !firstAttempt.ok) {
+                sourceChainMeta.primaryFailure = {
+                  code: firstAttempt.classification || null,
+                  message: firstAttempt.note || null
+                };
+              }
+            }
+          }
           if (Array.isArray(result.warnings) && result.warnings.length > 0) {
             warnings.push(...result.warnings);
           }
@@ -1303,6 +1338,23 @@ export async function main() {
   const meetsMinCount = validCount >= minCount;
   const noValidBars = validCount === 0;
   const passed = !noValidBars && meetsMinCount && errors.length === 0 && validationMeta.drop_check_passed;
+
+  if (sourceChainMeta.selected === null) {
+    sourceChainMeta.selected = providerChain[providerChain.length - 1]?.id || providerChain[0]?.id || null;
+  }
+  if (sourceChainMeta.secondary && !sourceChainMeta.primaryFailure) {
+    const firstSymbol = symbols[0];
+    const firstAttempts = firstSymbol ? symbolAttempts[firstSymbol] : null;
+    const primaryAttempt = Array.isArray(firstAttempts)
+      ? firstAttempts.find((attempt) => attempt?.provider_id === sourceChainMeta.primary)
+      : null;
+    if (primaryAttempt && primaryAttempt.ok === false) {
+      sourceChainMeta.primaryFailure = {
+        code: primaryAttempt.classification || null,
+        message: primaryAttempt.note || null
+      };
+    }
+  }
 
   const providerCooldownActive =
     mode === 'REAL' &&
@@ -1385,6 +1437,8 @@ export async function main() {
   envelope.metadata.upstream = { ...envelope.metadata.upstream, ...upstream };
   envelope.metadata.provider = providerLabel;
   envelope.metadata.as_of = asOf;
+
+  envelope.metadata.source_chain = sourceChainMeta;
   const cooldownUntil =
     providerChain
       .map((provider) => runtimeState.providers?.[provider.id]?.cooldown_until)

@@ -43,6 +43,26 @@ function assertEqual(actual, expected, message) {
   }
 }
 
+function assertSourceChain(snapshot, expected = {}) {
+  const chain = snapshot?.metadata?.source_chain;
+  assert(chain && typeof chain === 'object', 'Expected metadata.source_chain to be present');
+  if ('primary' in expected) assertEqual(chain.primary, expected.primary, 'source_chain.primary mismatch');
+  if ('secondary' in expected) assertEqual(chain.secondary, expected.secondary, 'source_chain.secondary mismatch');
+  if ('selected' in expected) assertEqual(chain.selected, expected.selected, 'source_chain.selected mismatch');
+  if ('fallbackUsed' in expected) assertEqual(chain.fallbackUsed, expected.fallbackUsed, 'source_chain.fallbackUsed mismatch');
+  if ('fallbackProvider' in expected) assertEqual(chain.fallbackProvider, expected.fallbackProvider, 'source_chain.fallbackProvider mismatch');
+  if ('primaryFailure' in expected) {
+    if (expected.primaryFailure === null) {
+      assertEqual(chain.primaryFailure, null, 'source_chain.primaryFailure expected null');
+    } else {
+      assert(chain.primaryFailure && typeof chain.primaryFailure === 'object', 'Expected source_chain.primaryFailure object');
+      if ('code' in expected.primaryFailure) {
+        assertEqual(chain.primaryFailure.code, expected.primaryFailure.code, 'source_chain.primaryFailure.code mismatch');
+      }
+    }
+  }
+}
+
 function loadProvidersRegistry() {
   const filePath = path.join(process.cwd(), 'public', 'data', 'registry', 'providers.v1.json');
   const raw = fs.readFileSync(filePath, 'utf-8');
@@ -502,6 +522,14 @@ const test10 = test('Twelve Data fallback yields bar when Alpha returns Note', a
   const state = JSON.parse(fs.readFileSync(path.join(tmpDir, 'module-state.json'), 'utf-8'));
 
   assertEqual(snapshot.metadata.provider, fallback.id);
+  assertSourceChain(snapshot, {
+    primary: primary.id,
+    secondary: fallback.id,
+    selected: fallback.id,
+    fallbackUsed: true,
+    fallbackProvider: fallback.id,
+    primaryFailure: { code: 'RATE_LIMIT_NOTE' }
+  });
   assertEqual(snapshot.metadata.upstream?.symbol_sources?.SPY, fallback.id);
   assertEqual(snapshot.metadata.upstream?.symbol_attempts?.SPY?.[0]?.provider_id, primary.id);
   assertEqual(snapshot.metadata.upstream?.symbol_attempts?.SPY?.[1]?.provider_id, fallback.id);
@@ -561,6 +589,14 @@ const test11 = test('Alpha HTTP 429 triggers Twelve Data fallback for symbols', 
   const state = JSON.parse(fs.readFileSync(path.join(tmpDir, 'module-state.json'), 'utf-8'));
 
   assertEqual(snapshot.metadata.provider, fallback.id);
+  assertSourceChain(snapshot, {
+    primary: primary.id,
+    secondary: fallback.id,
+    selected: fallback.id,
+    fallbackUsed: true,
+    fallbackProvider: fallback.id,
+    primaryFailure: { code: 'HTTP_429' }
+  });
   assertEqual(snapshot.metadata.upstream?.classification, 'HTTP_429');
   assertEqual(snapshot.metadata.compute?.reason_code, 'COOLDOWN_ACTIVE');
   assertEqual(snapshot.metadata.upstream?.symbol_attempts?.SPY?.[0]?.classification, 'HTTP_429');
@@ -610,10 +646,153 @@ const test12 = test('Fallback failure leaves run with no valid bars', async () =
   const snapshot = JSON.parse(fs.readFileSync(path.join(tmpDir, 'snapshot.json'), 'utf-8'));
   const state = JSON.parse(fs.readFileSync(path.join(tmpDir, 'module-state.json'), 'utf-8'));
 
+  assertSourceChain(snapshot, {
+    primary: primary.id,
+    secondary: fallback.id,
+    selected: fallback.id,
+    fallbackUsed: false,
+    fallbackProvider: null
+  });
   assertEqual(snapshot.metadata.upstream?.symbol_errors?.SPY?.provider_id, fallback.id);
   assertEqual(state.status, 'error');
   assertEqual(snapshot.metadata.compute?.reason_code, 'COOLDOWN_ACTIVE');
   assertEqual(state.failure?.class, 'COOLDOWN_ACTIVE');
+});
+
+const testForceAlphaSuccess = test('RV_FORCE_PROVIDER=alphavantage forces primary only (no fallback) - success', async () => {
+  const registry = loadProvidersRegistry();
+  const chain = buildProviderChain(registry, 'prices_eod');
+  const primary = chain[0];
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'rv-market-prices-force-alpha-'));
+
+  const fetchConfig = [
+    {
+      provider: 'alphavantage',
+      symbol: '*',
+      sequence: [{ status: 200, fixture: 'tests/fixtures/alphavantage-daily-adjusted.sample.json' }]
+    }
+  ];
+
+  const result = runMarketPricesWithMock({
+    RV_PRICES_FORCE_REAL: '1',
+    RV_PRICES_STUB: '',
+    RV_FORCE_PROVIDER: 'alphavantage',
+    [primary.auth_env_var]: 'alpha-key'
+  }, tmpDir, fetchConfig);
+
+  assertEqual(result.status, 0, 'Forced alphavantage run should succeed');
+  const snapshot = JSON.parse(fs.readFileSync(path.join(tmpDir, 'snapshot.json'), 'utf-8'));
+  assertSourceChain(snapshot, {
+    primary: primary.id,
+    secondary: null,
+    selected: primary.id,
+    fallbackUsed: false,
+    fallbackProvider: null,
+    primaryFailure: null
+  });
+  assertEqual(snapshot.metadata.provider, primary.id);
+});
+
+const testForceAlphaFail = test('RV_FORCE_PROVIDER=alphavantage forces primary only (no fallback) - fail loud', async () => {
+  const registry = loadProvidersRegistry();
+  const chain = buildProviderChain(registry, 'prices_eod');
+  const primary = chain[0];
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'rv-market-prices-force-alpha-fail-'));
+
+  const fetchConfig = [
+    {
+      provider: 'alphavantage',
+      symbol: '*',
+      sequence: [{ status: 200, fixture: 'tests/fixtures/alphavantage-note.sample.json' }]
+    }
+  ];
+
+  const result = runMarketPricesWithMock({
+    RV_PRICES_FORCE_REAL: '1',
+    RV_PRICES_STUB: '',
+    RV_FORCE_PROVIDER: 'alphavantage',
+    [primary.auth_env_var]: 'alpha-key'
+  }, tmpDir, fetchConfig);
+
+  assert(result.status !== 0, 'Forced alphavantage failure should exit non-zero');
+  const snapshot = JSON.parse(fs.readFileSync(path.join(tmpDir, 'snapshot.json'), 'utf-8'));
+  assertSourceChain(snapshot, {
+    primary: primary.id,
+    secondary: null,
+    selected: primary.id,
+    fallbackUsed: false,
+    fallbackProvider: null
+  });
+});
+
+const testForceTwelveDataSuccess = test('RV_FORCE_PROVIDER=twelvedata forces secondary only (no fallback) - success', async () => {
+  const registry = loadProvidersRegistry();
+  const chain = buildProviderChain(registry, 'prices_eod');
+  const primary = chain[0];
+  const fallback = chain.find((provider) => provider.role === 'fallback');
+  if (!fallback) throw new Error('Fallback provider missing');
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'rv-market-prices-force-td-'));
+
+  const fetchConfig = [
+    {
+      provider: 'twelvedata',
+      symbol: '*',
+      sequence: [{ status: 200, fixture: 'tests/fixtures/twelvedata-time-series.sample.json' }]
+    }
+  ];
+
+  const result = runMarketPricesWithMock({
+    RV_PRICES_FORCE_REAL: '1',
+    RV_PRICES_STUB: '',
+    RV_FORCE_PROVIDER: 'twelvedata',
+    [fallback.auth_env_var]: 'td-key'
+  }, tmpDir, fetchConfig);
+
+  assertEqual(result.status, 0, 'Forced twelvedata run should succeed');
+  const snapshot = JSON.parse(fs.readFileSync(path.join(tmpDir, 'snapshot.json'), 'utf-8'));
+  assertSourceChain(snapshot, {
+    primary: fallback.id,
+    secondary: null,
+    selected: fallback.id,
+    fallbackUsed: false,
+    fallbackProvider: null,
+    primaryFailure: null
+  });
+  assertEqual(snapshot.metadata.provider, fallback.id);
+  assert(snapshot.metadata.upstream?.symbol_attempts?.SPY?.[0]?.provider_id === fallback.id);
+});
+
+const testForceTwelveDataFail = test('RV_FORCE_PROVIDER=twelvedata forces secondary only (no fallback) - fail loud', async () => {
+  const registry = loadProvidersRegistry();
+  const chain = buildProviderChain(registry, 'prices_eod');
+  const fallback = chain.find((provider) => provider.role === 'fallback');
+  if (!fallback) throw new Error('Fallback provider missing');
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'rv-market-prices-force-td-fail-'));
+
+  const fetchConfig = [
+    {
+      provider: 'twelvedata',
+      symbol: '*',
+      sequence: [{ status: 500 }]
+    }
+  ];
+
+  const result = runMarketPricesWithMock({
+    RV_PRICES_FORCE_REAL: '1',
+    RV_PRICES_STUB: '',
+    RV_FORCE_PROVIDER: 'twelvedata',
+    [fallback.auth_env_var]: 'td-key'
+  }, tmpDir, fetchConfig);
+
+  assert(result.status !== 0, 'Forced twelvedata failure should exit non-zero');
+  const snapshot = JSON.parse(fs.readFileSync(path.join(tmpDir, 'snapshot.json'), 'utf-8'));
+  assertSourceChain(snapshot, {
+    primary: fallback.id,
+    secondary: null,
+    selected: fallback.id,
+    fallbackUsed: false,
+    fallbackProvider: null
+  });
 });
 
 const test13 = test('Alpha-only run yields perfect health metrics', async () => {
@@ -837,6 +1016,10 @@ const tests = [
   test10,
   test11,
   test12,
+  testForceAlphaSuccess,
+  testForceAlphaFail,
+  testForceTwelveDataSuccess,
+  testForceTwelveDataFail,
   test13,
   test14,
   test15,

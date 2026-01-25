@@ -1,3 +1,8 @@
+import { sha256Hex } from './_shared/digest.mjs';
+import { resolveSymbol, normalizeTicker as normalizeTickerStrict } from './_shared/symbol-resolver.mjs';
+import { fetchBarsWithProviderChain } from './_shared/eod-providers.mjs';
+import { computeIndicators } from './_shared/eod-indicators.mjs';
+
 const MODULE_NAME = 'stock';
 const TICKER_MAX_LENGTH = 12;
 const VALID_TICKER_REGEX = /^[A-Z0-9.\-]+$/;
@@ -17,6 +22,47 @@ function normalizeTicker(raw) {
   const normalized = trimmed.toUpperCase();
   if (!VALID_TICKER_REGEX.test(normalized)) return null;
   return normalized;
+}
+
+function buildSourceChainMetadata(chain) {
+  if (!chain || typeof chain !== 'object') {
+    return {
+      primary: 'tiingo',
+      secondary: 'twelvedata',
+      forced: null,
+      selected: null,
+      fallbackUsed: false,
+      failureReason: null,
+      primaryFailure: null
+    };
+  }
+  return {
+    primary: chain.primary || 'tiingo',
+    secondary: chain.secondary || 'twelvedata',
+    forced: chain.forced || null,
+    selected: chain.selected || null,
+    fallbackUsed: Boolean(chain.fallbackUsed),
+    failureReason: chain.failureReason || null,
+    primaryFailure: chain.primaryFailure || null
+  };
+}
+
+function pickLatestBar(bars) {
+  if (!Array.isArray(bars) || bars.length === 0) return null;
+  return bars[bars.length - 1] || null;
+}
+
+function computeDayChange(bars) {
+  if (!Array.isArray(bars) || bars.length < 2) {
+    return { abs: null, pct: null };
+  }
+  const latest = bars[bars.length - 1];
+  const prev = bars[bars.length - 2];
+  if (!Number.isFinite(latest?.close) || !Number.isFinite(prev?.close) || prev.close === 0) {
+    return { abs: null, pct: null };
+  }
+  const abs = latest.close - prev.close;
+  return { abs, pct: abs / prev.close };
 }
 
 async function fetchSnapshot(moduleName, request) {
@@ -69,18 +115,8 @@ function findRecord(snapshot, symbol) {
 
 async function computeDigest(input) {
   const canonical = JSON.stringify(input);
-  const encoder = new TextEncoder();
-  const data = encoder.encode(canonical);
-  if (globalThis.crypto?.subtle) {
-    const digestBuffer = await globalThis.crypto.subtle.digest('SHA-256', data);
-    const hash = Array.from(new Uint8Array(digestBuffer))
-      .map((b) => b.toString(16).padStart(2, '0'))
-      .join('');
-    return `sha256:${hash}`;
-  }
-  const { createHash } = await import('node:crypto');
-  const hash = createHash('sha256').update(data).digest('hex');
-  return `sha256:${hash}`;
+  const hex = await sha256Hex(canonical);
+  return `sha256:${hex}`;
 }
 
 function buildUniversePayload(entry, symbol) {
@@ -152,9 +188,57 @@ function aggregateSources(results) {
 
 export async function onRequestGet(context) {
   const { request } = context;
+  const env = context?.env || {};
   const url = new URL(request.url);
   const tickerParam = url.searchParams.get('ticker') || '';
   const normalizedTicker = normalizeTicker(tickerParam);
+
+  const startedAt = new Date().toISOString();
+
+  // Phase 2: resolve name + fetch EOD history via provider chain.
+  // This is independent of the legacy snapshot join below (kept for backwards compatibility).
+  let resolvedName = null;
+  let resolvedMethod = null;
+  try {
+    const resolved = await resolveSymbol(normalizedTicker || tickerParam, request);
+    if (resolved?.ok && resolved?.data?.ticker) {
+      const strictTicker = normalizeTickerStrict(resolved.data.ticker);
+      if (strictTicker) {
+        resolvedName = resolved.data.name || null;
+        resolvedMethod = resolved.data.method || null;
+      }
+    }
+  } catch {
+    // ignore
+  }
+
+  let eodBars = [];
+  let eodError = null;
+  let sourceChain = buildSourceChainMetadata(null);
+  let reasons = [];
+  let eodAttempted = false;
+
+  if (normalizedTicker) {
+    const forcedProvider = String(env?.RV_FORCE_PROVIDER || '').trim();
+    const hasEodKeys = Boolean(env?.TIINGO_API_KEY || env?.TWELVEDATA_API_KEY);
+    if (!forcedProvider && !hasEodKeys) {
+      reasons = ['EOD_KEYS_MISSING'];
+    } else {
+      eodAttempted = true;
+      const chainResult = await fetchBarsWithProviderChain(normalizedTicker, env, {
+        outputsize: '300'
+      });
+      sourceChain = buildSourceChainMetadata(chainResult.chain);
+      if (chainResult.ok) {
+        eodBars = Array.isArray(chainResult.bars) ? chainResult.bars : [];
+        const indicatorOut = computeIndicators(eodBars);
+        reasons = Array.isArray(indicatorOut.issues) ? indicatorOut.issues : [];
+      } else {
+        eodError = chainResult.error || { code: 'EOD_FETCH_FAILED', message: 'Unable to fetch EOD history' };
+      }
+    }
+  }
+
   const modulePromises = MODULE_PATHS.map((moduleName) => fetchSnapshot(moduleName, request));
   const moduleResults = await Promise.all(modulePromises);
   const snapshots = Object.fromEntries(
@@ -173,9 +257,10 @@ export async function onRequestGet(context) {
         tier: 'standard',
         domain: 'stocks',
         source: 'stock-api',
-        fetched_at: new Date().toISOString(),
-        published_at: new Date().toISOString(),
+        fetched_at: startedAt,
+        published_at: startedAt,
         digest: null,
+        status: 'ERROR',
         record_count: 0,
         expected_count: 1,
         validation: {
@@ -192,9 +277,17 @@ export async function onRequestGet(context) {
           ticker: tickerParam,
           normalized_ticker: null
         },
+        source_chain: sourceChain,
+        reasons: ['INVALID_TICKER'],
         sources
       },
       data: {
+        ticker: null,
+        name: null,
+        bars: [],
+        latest_bar: null,
+        change: { abs: null, pct: null },
+        indicators: [],
         universe: null,
         market_prices: null,
         market_stats: null
@@ -222,17 +315,53 @@ export async function onRequestGet(context) {
   if (!snapshots['market-stats'].snapshot) missingSections.push('market_stats');
 
   let errorPayload = null;
-  if (!universeEntry) {
+  if (!universeEntry && !eodAttempted) {
     errorPayload = buildErrorPayload('UNKNOWN_TICKER', `Ticker ${normalizedTicker} is not in the universe`, {
       membership: universePayload.membership
     });
-  } else if (missingSections.length) {
+  }
+  if (!errorPayload && !eodAttempted && universeEntry && missingSections.length) {
     errorPayload = buildErrorPayload('DATA_NOT_READY', 'Market prices/stats are not available yet', {
       missing: [...new Set(missingSections)]
     });
   }
+  if (missingSections.length) {
+    reasons = [...new Set([...(Array.isArray(reasons) ? reasons : []), 'DATA_NOT_READY'])];
+  }
+
+  if (eodAttempted && !eodError && eodBars.length === 0) {
+    eodError = {
+      code: 'EOD_EMPTY',
+      message: 'No EOD bars returned',
+      details: { ticker: normalizedTicker }
+    };
+  }
+
+  // Prefer EOD provider chain errors over legacy data readiness errors.
+  if (eodError) {
+    errorPayload = buildErrorPayload('EOD_FETCH_FAILED', 'Unable to fetch EOD history', {
+      upstream: eodError,
+      source_chain: sourceChain
+    });
+  }
+
+  const latestBar = pickLatestBar(eodBars);
+  const dayChange = computeDayChange(eodBars);
+  const indicatorOut = computeIndicators(eodBars);
+  reasons = [...new Set([...(Array.isArray(reasons) ? reasons : []), ...(indicatorOut.issues || [])])];
 
   const data = {
+    ticker: normalizedTicker,
+    name: resolvedName || universePayload?.name || null,
+    resolution: {
+      ticker: normalizedTicker,
+      name: resolvedName || universePayload?.name || null,
+      method: resolvedMethod || null
+    },
+    bars: eodBars,
+    latest_bar: latestBar,
+    change: dayChange,
+    indicators: indicatorOut.indicators,
     universe: universePayload,
     market_prices: marketPricesPayload,
     market_stats: marketStatsPayload,
@@ -246,6 +375,11 @@ export async function onRequestGet(context) {
     null;
 
   const validationPassed = !errorPayload;
+  const status = errorPayload
+    ? 'ERROR'
+    : reasons.includes('DATA_NOT_READY') || reasons.includes('INSUFFICIENT_HISTORY')
+    ? 'PARTIAL'
+    : 'OK';
   const payload = {
     schema_version: '3.0',
     module: MODULE_NAME,
@@ -254,9 +388,10 @@ export async function onRequestGet(context) {
       tier: 'standard',
       domain: 'stocks',
       source: 'stock-api',
-      fetched_at: new Date().toISOString(),
-      published_at: new Date().toISOString(),
+      fetched_at: startedAt,
+      published_at: startedAt,
       digest: null,
+      status,
       record_count: validationPassed ? 1 : 0,
       expected_count: 1,
       validation: {
@@ -274,6 +409,8 @@ export async function onRequestGet(context) {
         normalized_ticker: normalizedTicker
       },
       as_of: asOf,
+      source_chain: sourceChain,
+      reasons,
       sources
     },
     data,

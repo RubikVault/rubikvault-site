@@ -27,24 +27,59 @@ for p in $ENDPOINTS; do
   [[ -n "$ct" ]] || fail "missing Content-Type for $url"
   echo "$ct" | grep -qi "^application/json" || fail "non-JSON Content-Type for $url: $ct"
 
-  body=$(curl -sS --max-time 12 "$url" | head -c 20)
-  echo "$body" | grep -qi "<!doctype\\|<html" && fail "HTML body for $url"
-  echo "$body" | grep -q "^<" && fail "HTML-like body for $url"
-  echo "$body" | grep -q "^{\\|^\\[" || fail "non-JSON body for $url"
+  body=$(curl -sS --max-time 12 "$url")
+  head20=$(printf "%s" "$body" | head -c 20)
+  echo "$head20" | grep -qi "<!doctype\\|<html" && fail "HTML body for $url"
+  echo "$head20" | grep -q "^<" && fail "HTML-like body for $url"
+  echo "$head20" | grep -q "^{\\|^\\[" || fail "non-JSON body for $url"
 
   if [[ "$p" == "debug-bundle" ]]; then
     if [[ "$HAS_JQ" == "1" ]]; then
-      curl -s --max-time 12 "$url" | jq -e '(.ok==true) or (has("schema")) or (has("schemaVersion"))' >/dev/null || fail "debug-bundle missing ok/schema/schemaVersion for $url"
+      printf "%s" "$body" | jq -e '(.ok==true) or (has("schema")) or (has("schemaVersion")) or (has("schema_version") and has("metadata"))' >/dev/null || fail "debug-bundle missing ok/schema/schemaVersion/schema_version+metadata for $url"
     else
-      curl -s --max-time 12 "$url" | grep -Eq '"ok"[[:space:]]*:[[:space:]]*true|"schema"|\"schemaVersion\"' || fail "debug-bundle missing ok/schema/schemaVersion for $url"
+      printf "%s" "$body" | grep -Eq '"ok"[[:space:]]*:[[:space:]]*true|"schema"|\"schemaVersion\"|"schema_version"|"metadata"' || fail "debug-bundle missing ok/schema/schemaVersion/schema_version+metadata for $url"
     fi
   else
     if [[ "$HAS_JQ" == "1" ]]; then
-      curl -s --max-time 12 "$url" | jq -e '.ok' >/dev/null || fail "missing .ok for $url"
-      curl -s --max-time 12 "$url" | jq -e '.feature' >/dev/null || fail "missing .feature for $url"
+      kind=$(printf "%s" "$body" | jq -er '
+        if (has("ok") and ((has("meta")) or (has("schemaVersion")))) then
+          "legacy"
+        elif (has("schema_version") and has("metadata") and has("data") and has("error")) then
+          "v3_maintenance"
+        elif (((.schemaVersion? == "v3") or (has("blockId"))) and (has("meta")) and (has("data"))) then
+          "v3_flat"
+        else
+          "unknown"
+        end
+      ' 2>/dev/null || true)
+
+      if [[ "$kind" == "legacy" ]]; then
+        printf "%s" "$body" | jq -e 'has("ok")' >/dev/null || fail "legacy envelope missing .ok for $url"
+        printf "%s" "$body" | jq -e 'has("meta") or has("schemaVersion")' >/dev/null || fail "legacy envelope missing meta/schemaVersion for $url"
+      elif [[ "$kind" == "v3_maintenance" ]]; then
+        printf "%s" "$body" | jq -e 'has("schema_version") and has("metadata") and has("data") and has("error")' >/dev/null || fail "v3 maintenance missing schema_version/metadata/data/error for $url"
+      elif [[ "$kind" == "v3_flat" ]]; then
+        printf "%s" "$body" | jq -e '(has("schemaVersion") and has("blockId") and has("meta") and has("data"))' >/dev/null || fail "v3-flat missing schemaVersion/blockId/meta/data for $url"
+      else
+        fail "unknown contract kind for $url"
+      fi
     else
-      curl -s --max-time 12 "$url" | grep -Eq '"ok"[[:space:]]*:' || fail "missing .ok for $url"
-      curl -s --max-time 12 "$url" | grep -Eq '"feature"[[:space:]]*:' || fail "missing .feature for $url"
+      # Heuristic fallback without jq:
+      # - legacy: has "ok" and ("meta" or "schemaVersion")
+      # - v3-flat: has "schemaVersion":"v3" or "blockId" plus "meta" and "data"
+      if printf "%s" "$body" | grep -Eq '"schema_version"[[:space:]]*:'; then
+        printf "%s" "$body" | grep -Eq '"metadata"[[:space:]]*:' || fail "v3 maintenance missing metadata for $url"
+        printf "%s" "$body" | grep -Eq '"data"[[:space:]]*:' || fail "v3 maintenance missing data for $url"
+        printf "%s" "$body" | grep -Eq '"error"[[:space:]]*:' || fail "v3 maintenance missing error for $url"
+      elif printf "%s" "$body" | grep -Eq '"schemaVersion"[[:space:]]*:[[:space:]]*"v3"|"blockId"[[:space:]]*:'; then
+        printf "%s" "$body" | grep -Eq '"schemaVersion"[[:space:]]*:' || fail "v3-flat missing schemaVersion for $url"
+        printf "%s" "$body" | grep -Eq '"blockId"[[:space:]]*:' || fail "v3-flat missing blockId for $url"
+        printf "%s" "$body" | grep -Eq '"meta"[[:space:]]*:' || fail "v3-flat missing meta for $url"
+        printf "%s" "$body" | grep -Eq '"data"[[:space:]]*:' || fail "v3-flat missing data for $url"
+      else
+        printf "%s" "$body" | grep -Eq '"ok"[[:space:]]*:' || fail "legacy missing ok for $url"
+        printf "%s" "$body" | grep -Eq '"meta"[[:space:]]*:|"schemaVersion"[[:space:]]*:' || fail "legacy missing meta/schemaVersion for $url"
+      fi
     fi
   fi
 done

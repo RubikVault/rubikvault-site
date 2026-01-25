@@ -210,102 +210,437 @@
     // Popular tickers for quick suggestions (can be expanded)
     const popularTickers = ['AAPL', 'MSFT', 'GOOGL', 'AMZN', 'TSLA', 'NVDA', 'META', 'NFLX', 'SPY', 'QQQ'];
 
-    // Search on Enter key
-    searchInput.addEventListener('keypress', async (e) => {
-      if (e.key === 'Enter') {
-        const ticker = searchInput.value.trim().toUpperCase();
-        if (ticker) {
-          await searchStock(ticker);
-        }
-      }
-    });
+    let lastResolved = { ticker: null, name: null };
 
-    // Main search function
-    async function searchStock(ticker) {
+    const typeahead = {
+      root: null,
+      items: [],
+      open: false,
+      activeIndex: -1,
+      debounceMs: 200,
+      debounceTimer: null,
+      universePromise: null,
+      universeFailed: false,
+      universeEntries: []
+    };
+
+    async function fetchJson(url) {
+      try {
+        const response = await fetch(url);
+        const payload = await response.json().catch(() => null);
+        return { response, payload, networkError: null };
+      } catch (error) {
+        return { response: null, payload: null, networkError: error };
+      }
+    }
+
+    function ensureTypeaheadRoot() {
+      if (typeahead.root) return typeahead.root;
+      const parent = searchInput?.parentElement;
+      if (!parent) return null;
+      const root = document.createElement('div');
+      root.id = 'rv-typeahead';
+      root.style.position = 'absolute';
+      root.style.left = '0';
+      root.style.right = '0';
+      root.style.top = 'calc(100% + 10px)';
+      root.style.zIndex = '50';
+      root.style.background = 'rgba(15, 23, 42, 0.98)';
+      root.style.border = '1px solid rgba(100, 116, 139, 0.28)';
+      root.style.borderRadius = '12px';
+      root.style.boxShadow = '0 18px 40px rgba(0,0,0,0.35)';
+      root.style.overflow = 'hidden';
+      root.style.display = 'none';
+      parent.appendChild(root);
+      typeahead.root = root;
+      return root;
+    }
+
+    function closeTypeahead() {
+      typeahead.open = false;
+      typeahead.items = [];
+      typeahead.activeIndex = -1;
+      if (typeahead.root) typeahead.root.style.display = 'none';
+    }
+
+    function openTypeahead(items) {
+      const root = ensureTypeaheadRoot();
+      if (!root) return;
+      typeahead.items = Array.isArray(items) ? items : [];
+      typeahead.open = typeahead.items.length > 0;
+      typeahead.activeIndex = typeahead.open ? 0 : -1;
+      renderTypeahead();
+    }
+
+    function normalizeUniverseEntries(snapshot) {
+      const data = snapshot?.data;
+      if (!data || typeof data !== 'object') return [];
+      if (Array.isArray(data)) {
+        return data
+          .map((entry) => {
+            const symbol = entry?.symbol ? String(entry.symbol).toUpperCase() : null;
+            if (!symbol) return null;
+            return { symbol, name: entry?.name ? String(entry.name) : '' };
+          })
+          .filter(Boolean);
+      }
+      return Object.entries(data)
+        .map(([symbol, entry]) => {
+          const sym = symbol ? String(symbol).toUpperCase() : null;
+          if (!sym) return null;
+          const name = entry?.name ? String(entry.name) : '';
+          return { symbol: sym, name };
+        })
+        .filter(Boolean);
+    }
+
+    async function ensureUniverseLoaded() {
+      if (typeahead.universeFailed) return [];
+      if (typeahead.universeEntries.length) return typeahead.universeEntries;
+      if (!typeahead.universePromise) {
+        typeahead.universePromise = (async () => {
+          const { payload, networkError } = await fetchJson('/data/snapshots/universe/latest.json');
+          if (networkError || !payload) throw new Error('universe_fetch_failed');
+          const entries = normalizeUniverseEntries(payload);
+          typeahead.universeEntries = entries;
+          return entries;
+        })().catch(() => {
+          typeahead.universeFailed = true;
+          typeahead.universeEntries = [];
+          return [];
+        });
+      }
+      return typeahead.universePromise;
+    }
+
+    function buildSuggestions(query, entries) {
+      const q = String(query || '').trim();
+      if (q.length < 2) return [];
+      const qUpper = q.toUpperCase();
+      const qLower = q.toLowerCase();
+
+      const ranked = [];
+      for (const entry of entries) {
+        const symbol = entry?.symbol || '';
+        const name = entry?.name || '';
+        const symbolMatch = symbol.startsWith(qUpper);
+        const nameMatch = name.toLowerCase().includes(qLower);
+        if (!symbolMatch && !nameMatch) continue;
+        const score = symbolMatch ? (symbol === qUpper ? 0 : 1) : 3;
+        ranked.push({ symbol, name, score });
+      }
+
+      ranked.sort((a, b) => {
+        if (a.score !== b.score) return a.score - b.score;
+        return a.symbol.localeCompare(b.symbol);
+      });
+
+      return ranked.slice(0, 10);
+    }
+
+    function renderTypeahead() {
+      const root = ensureTypeaheadRoot();
+      if (!root) return;
+      if (!typeahead.open || !typeahead.items.length) {
+        root.style.display = 'none';
+        return;
+      }
+      root.style.display = 'block';
+      const html = typeahead.items
+        .map((item, idx) => {
+          const active = idx === typeahead.activeIndex;
+          const bg = active ? 'rgba(59, 130, 246, 0.18)' : 'transparent';
+          const border = active ? 'rgba(59, 130, 246, 0.35)' : 'transparent';
+          return `
+            <div data-idx="${idx}" style="padding: 0.8rem 1rem; cursor: pointer; background: ${bg}; border-left: 3px solid ${border};">
+              <div style="display:flex; justify-content: space-between; gap: 1rem; align-items: baseline;">
+                <div style="font-weight: 800; color: #e5e7eb;">${escapeHtml(item.symbol)}</div>
+                <div style="font-size: 0.85rem; color: #94a3b8; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width: 420px;">${escapeHtml(item.name || '')}</div>
+              </div>
+            </div>
+          `;
+        })
+        .join('');
+      root.innerHTML = html;
+
+      root.querySelectorAll('[data-idx]').forEach((el) => {
+        el.addEventListener('mousedown', (ev) => {
+          ev.preventDefault();
+        });
+        el.addEventListener('click', async () => {
+          const idx = Number(el.getAttribute('data-idx'));
+          const item = typeahead.items[idx];
+          if (!item?.symbol) return;
+          closeTypeahead();
+          searchInput.value = item.symbol;
+          lastResolved = { ticker: item.symbol, name: item.name || null };
+          await loadAnalyze(item.symbol, { fallback: lastResolved });
+        });
+      });
+    }
+
+    function formatNumber(value, options = {}) {
+      const num = Number(value);
+      if (!Number.isFinite(num)) return '—';
+      const digits = Number.isFinite(options.digits) ? options.digits : 2;
+      return num.toLocaleString(undefined, { minimumFractionDigits: digits, maximumFractionDigits: digits });
+    }
+
+    function formatPercent(value, digits = 2) {
+      const num = Number(value);
+      if (!Number.isFinite(num)) return '—';
+      const pct = num * 100;
+      const sign = pct > 0 ? '+' : '';
+      return `${sign}${pct.toFixed(digits)}%`;
+    }
+
+    function escapeHtml(text) {
+      return String(text || '')
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#39;');
+    }
+
+    function renderErrorBanner(error, meta) {
+      const code = escapeHtml(error?.code || 'ERROR');
+      const message = escapeHtml(error?.message || 'Unable to load stock data');
+      const status = escapeHtml(meta?.status || 'ERROR');
+      return `
+        <div style="padding: 1rem; border-radius: 10px; background: rgba(239, 68, 68, 0.12); border: 1px solid rgba(239, 68, 68, 0.35); margin-bottom: 1.5rem;">
+          <div style="font-weight: 700; color: #fecaca;">${code}</div>
+          <div style="color: #fca5a5; margin-top: 0.25rem;">${message}</div>
+          <div style="color: #94a3b8; font-size: 0.875rem; margin-top: 0.5rem;">status=${status}</div>
+        </div>
+      `;
+    }
+
+    function renderSourceChain(chain) {
+      if (!chain) return '';
+      const selected = escapeHtml(chain?.selected || '—');
+      const forced = chain?.forced ? 'true' : 'false';
+      const fallbackUsed = chain?.fallbackUsed ? 'true' : 'false';
+      const failureReason = escapeHtml(chain?.failureReason || '');
+      const primaryCode = escapeHtml(chain?.primaryFailure?.code || '');
+      const secondaryCode = escapeHtml(chain?.secondaryFailure?.code || '');
+
+      const extra = [
+        failureReason ? `failureReason=${failureReason}` : null,
+        primaryCode ? `primaryFailure=${primaryCode}` : null,
+        secondaryCode ? `secondaryFailure=${secondaryCode}` : null
+      ].filter(Boolean).join(' • ');
+
+      return `
+        <div style="margin-top: 1rem; padding: 0.9rem 1rem; border-radius: 10px; background: rgba(15, 23, 42, 0.35); border: 1px solid rgba(100, 116, 139, 0.22);">
+          <div style="font-size: 0.8rem; color: #94a3b8;">Data source</div>
+          <div style="margin-top: 0.25rem; color: #e5e7eb; font-weight: 600;">selected=${selected} • forced=${forced} • fallbackUsed=${fallbackUsed}</div>
+          ${extra ? `<div style="margin-top: 0.35rem; color: #94a3b8; font-size: 0.85rem;">${extra}</div>` : ''}
+        </div>
+      `;
+    }
+
+    function renderStock(payload, fallback = {}) {
+      const data = payload?.data || {};
+      const meta = payload?.metadata || {};
+      const error = payload?.error || null;
+
+      const effectiveTicker = data?.ticker || fallback?.ticker || '—';
+      const effectiveName = data?.name || fallback?.name || '—';
+      const showBanner = Boolean(error) || (meta?.status && meta?.status !== 'OK');
+      const bannerError = error || {
+        code: meta?.status && meta?.status !== 'OK' ? 'UPSTREAM_ERROR' : 'ERROR',
+        message: meta?.status && meta?.status !== 'OK' ? 'Stock data unavailable' : 'Unable to load stock data'
+      };
+
+      const bar = data?.latest_bar || null;
+      const close = bar?.close;
+      const volume = bar?.volume;
+      const date = bar?.date || '—';
+      const changeAbs = data?.change?.abs;
+      const changePct = data?.change?.pct;
+
+      const indicators = Array.isArray(data?.indicators) ? data.indicators : [];
+      const indicatorsHtml = indicators
+        .map((item) => {
+          const id = escapeHtml(item?.id);
+          const value = item?.value;
+          const display = Number.isFinite(Number(value)) ? formatNumber(value, { digits: 4 }) : '—';
+          return `
+            <div style="padding: 0.75rem 0.9rem; background: rgba(15, 23, 42, 0.35); border: 1px solid rgba(100, 116, 139, 0.22); border-radius: 10px;">
+              <div style="font-size: 0.8rem; color: #94a3b8;">${id}</div>
+              <div style="margin-top: 0.25rem; font-weight: 700; color: #e5e7eb;">${display}</div>
+            </div>
+          `;
+        })
+        .join('');
+
+      const statusChipColor = meta?.status === 'OK' ? '#10b981' : meta?.status === 'PARTIAL' ? '#f59e0b' : '#ef4444';
+
+      resultsTitle.textContent = `Analysis for ${effectiveTicker}`;
+      resultsContent.innerHTML = `
+        ${showBanner ? renderErrorBanner(bannerError, meta) : ''}
+        <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; flex-wrap: wrap;">
+          <div>
+            <div style="font-size: 2.1rem; font-weight: 800; color: #f1f5f9;">${escapeHtml(effectiveName)}</div>
+            <div style="margin-top: 0.25rem; font-size: 1.1rem; color: #94a3b8;">${escapeHtml(effectiveTicker)} • ${escapeHtml(date)}</div>
+          </div>
+          <div style="padding: 0.35rem 0.75rem; border-radius: 999px; border: 1px solid rgba(100,116,139,0.35); color: #e5e7eb; background: rgba(15,23,42,0.35);">
+            <span style="display:inline-block; width: 8px; height: 8px; border-radius: 999px; background:${statusChipColor}; margin-right: 8px;"></span>
+            ${escapeHtml(meta?.status || 'UNKNOWN')}
+          </div>
+        </div>
+
+        ${renderSourceChain(meta?.source_chain)}
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; margin-top: 1.5rem;">
+          <div style="padding: 1.2rem; background: rgba(59, 130, 246, 0.1); border-radius: 12px; border: 1px solid rgba(59, 130, 246, 0.2);">
+            <div style="font-size: 0.875rem; color: #94a3b8; margin-bottom: 0.4rem;">Close</div>
+            <div style="font-size: 2rem; font-weight: 800; color: #e5e7eb;">${close == null ? '—' : '$' + formatNumber(close, { digits: 2 })}</div>
+          </div>
+
+          <div style="padding: 1.2rem; background: rgba(16, 185, 129, 0.1); border-radius: 12px; border: 1px solid rgba(16, 185, 129, 0.2);">
+            <div style="font-size: 0.875rem; color: #94a3b8; margin-bottom: 0.4rem;">Day change</div>
+            <div style="font-size: 2rem; font-weight: 800; color: #e5e7eb;">${formatNumber(changeAbs, { digits: 2 })}</div>
+            <div style="margin-top: 0.25rem; font-size: 1rem; color: #94a3b8;">${formatPercent(changePct, 2)}</div>
+          </div>
+
+          <div style="padding: 1.2rem; background: rgba(245, 158, 11, 0.1); border-radius: 12px; border: 1px solid rgba(245, 158, 11, 0.2);">
+            <div style="font-size: 0.875rem; color: #94a3b8; margin-bottom: 0.4rem;">Volume</div>
+            <div style="font-size: 2rem; font-weight: 800; color: #e5e7eb;">${volume == null ? '—' : Number(volume).toLocaleString()}</div>
+          </div>
+        </div>
+
+        <div style="margin-top: 2rem; display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; flex-wrap: wrap;">
+          <h3 style="margin: 0; font-size: 1.25rem; color: #e5e7eb;">Indicators</h3>
+          <div style="font-size: 0.9rem; color: #94a3b8;">count=${indicators.length}</div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 0.75rem; margin-top: 1rem;">
+          ${indicatorsHtml || '<div style="color:#94a3b8;">No indicators available.</div>'}
+        </div>
+      `;
+    }
+
+    function showLoading(label) {
       // Show results section
       resultsSection.style.display = 'block';
-      resultsTitle.textContent = `Analyzing ${ticker}...`;
+      resultsTitle.textContent = label;
       resultsContent.innerHTML = `
         <div style="text-align: center; padding: 3rem; color: #64748b;">
-          <div style="font-size: 3rem; margin-bottom: 1rem;">⏳</div>
-          <div>Loading analysis for ${ticker}...</div>
+          <div>Loading...</div>
         </div>
       `;
 
       // Scroll to results
       resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
-      try {
-        // TODO: Replace with real API call to stock analysis endpoint
-        // For now, we simulate a delay and show placeholder data
-        await new Promise(resolve => setTimeout(resolve, 800));
-
-        resultsTitle.textContent = `Analysis for ${ticker}`;
-        resultsContent.innerHTML = `
-          <div style="text-align: center; padding: 2rem;">
-            <h3 style="font-size: 2.5rem; color: #3b82f6; margin-bottom: 1rem;">${ticker}</h3>
-            
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem; margin: 2rem 0;">
-              <div style="padding: 1.5rem; background: rgba(59, 130, 246, 0.1); border-radius: 8px; border: 1px solid rgba(59, 130, 246, 0.2);">
-                <div style="font-size: 0.875rem; color: #94a3b8; margin-bottom: 0.5rem;">Price</div>
-                <div style="font-size: 2rem; font-weight: 700; color: #e5e7eb;">$XXX.XX</div>
-              </div>
-              
-              <div style="padding: 1.5rem; background: rgba(16, 185, 129, 0.1); border-radius: 8px; border: 1px solid rgba(16, 185, 129, 0.2);">
-                <div style="font-size: 0.875rem; color: #94a3b8; margin-bottom: 0.5rem;">Change</div>
-                <div style="font-size: 2rem; font-weight: 700; color: #10b981;">+X.XX%</div>
-              </div>
-              
-              <div style="padding: 1.5rem; background: rgba(245, 158, 11, 0.1); border-radius: 8px; border: 1px solid rgba(245, 158, 11, 0.2);">
-                <div style="font-size: 0.875rem; color: #94a3b8; margin-bottom: 0.5rem;">RV Score</div>
-                <div style="font-size: 2rem; font-weight: 700; color: #f59e0b;">8.5/10</div>
-              </div>
-            </div>
-            
-            <div style="margin: 3rem 0; padding: 2rem; background: rgba(59, 130, 246, 0.05); border-radius: 12px; border: 1px solid rgba(59, 130, 246, 0.1);">
-              <p style="color: #94a3b8; font-size: 1.125rem; margin-bottom: 1rem;">
-                🚀 Full stock analysis coming soon!
-              </p>
-              <p style="color: #64748b; font-size: 0.875rem;">
-                We're building an advanced stock analyzer that will integrate:<br>
-                • Real-time price data<br>
-                • Technical indicators<br>
-                • Sentiment analysis<br>
-                • AI-powered recommendations<br>
-              </p>
-            </div>
-            
-            <button 
-              onclick="clearSearch()" 
-              style="
-                padding: 1rem 2rem;
-                background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-                border: none;
-                border-radius: 8px;
-                color: white;
-                font-weight: 600;
-                cursor: pointer;
-                font-size: 1rem;
-                transition: all 0.2s;
-              "
-              onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 10px 25px rgba(59, 130, 246, 0.4)'"
-              onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none'"
-            >
-              Search Another Stock
-            </button>
-          </div>
-        `;
-      } catch (error) {
-        resultsTitle.textContent = 'Error';
-        resultsContent.innerHTML = `
-          <div style="text-align: center; padding: 3rem; color: #ef4444;">
-            <div style="font-size: 3rem; margin-bottom: 1rem;">❌</div>
-            <div>Failed to analyze ${ticker}</div>
-            <div style="margin-top: 1rem; font-size: 0.875rem; color: #94a3b8;">${error.message}</div>
-          </div>
-        `;
-      }
     }
+
+    async function loadAnalyze(ticker, options = {}) {
+      const upperTicker = String(ticker || '').trim().toUpperCase();
+      if (!upperTicker) return;
+      const push = options.push !== false;
+      if (push) {
+        window.history.pushState({}, '', `/analyze/${encodeURIComponent(upperTicker)}`);
+      }
+
+      showLoading(`Analyzing ${upperTicker}...`);
+      resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      const fallback = options.fallback || { ticker: upperTicker, name: lastResolved?.name || null };
+      const { payload, networkError } = await fetchJson(`/api/stock?ticker=${encodeURIComponent(upperTicker)}`);
+      if (networkError) {
+        renderStock(
+          { error: { code: 'NETWORK_ERROR', message: 'Unable to reach /api/stock' }, metadata: { status: 'ERROR' } },
+          fallback
+        );
+        return;
+      }
+      renderStock(payload || { error: { code: 'NETWORK_ERROR', message: 'Unable to reach /api/stock' }, metadata: { status: 'ERROR' } }, fallback);
+    }
+
+    async function resolveAndAnalyze(query) {
+      const trimmed = String(query || '').trim();
+      if (!trimmed) return;
+      showLoading(`Resolving ${trimmed}...`);
+      resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      const { payload, networkError } = await fetchJson(`/api/resolve?q=${encodeURIComponent(trimmed)}`);
+      if (networkError) {
+        resultsTitle.textContent = 'Resolve failed';
+        resultsContent.innerHTML = renderErrorBanner({ code: 'NETWORK_ERROR', message: 'Unable to reach /api/resolve' }, { status: 'ERROR' });
+        return;
+      }
+      if (!payload || payload.error || !payload.data?.ticker) {
+        resultsTitle.textContent = 'Resolve failed';
+        resultsContent.innerHTML = renderErrorBanner(payload?.error || { code: 'SYMBOL_NOT_FOUND', message: 'Unable to resolve symbol' }, payload?.metadata);
+        return;
+      }
+
+      lastResolved = { ticker: payload.data.ticker || null, name: payload.data.name || null };
+      searchInput.value = payload.data.ticker;
+      await loadAnalyze(payload.data.ticker, { fallback: lastResolved });
+    }
+
+    // Search on Enter key
+    searchInput.addEventListener('keydown', async (e) => {
+      if (e.key === 'ArrowDown' && typeahead.open) {
+        e.preventDefault();
+        typeahead.activeIndex = Math.min(typeahead.items.length - 1, typeahead.activeIndex + 1);
+        renderTypeahead();
+        return;
+      }
+      if (e.key === 'ArrowUp' && typeahead.open) {
+        e.preventDefault();
+        typeahead.activeIndex = Math.max(0, typeahead.activeIndex - 1);
+        renderTypeahead();
+        return;
+      }
+      if (e.key === 'Escape' && typeahead.open) {
+        e.preventDefault();
+        closeTypeahead();
+        return;
+      }
+      if (e.key === 'Enter') {
+        if (typeahead.open && typeahead.activeIndex >= 0 && typeahead.items[typeahead.activeIndex]) {
+          e.preventDefault();
+          const item = typeahead.items[typeahead.activeIndex];
+          closeTypeahead();
+          searchInput.value = item.symbol;
+          lastResolved = { ticker: item.symbol, name: item.name || null };
+          await loadAnalyze(item.symbol, { fallback: lastResolved });
+          return;
+        }
+        closeTypeahead();
+        await resolveAndAnalyze(searchInput.value);
+      }
+    });
+
+    searchInput.addEventListener('input', () => {
+      const value = String(searchInput.value || '').trim();
+      if (typeahead.debounceTimer) clearTimeout(typeahead.debounceTimer);
+      if (value.length < 2) {
+        closeTypeahead();
+        return;
+      }
+      typeahead.debounceTimer = setTimeout(async () => {
+        const entries = await ensureUniverseLoaded();
+        if (!entries.length) {
+          closeTypeahead();
+          return;
+        }
+        const suggestions = buildSuggestions(value, entries);
+        openTypeahead(suggestions);
+      }, typeahead.debounceMs);
+    });
+
+    document.addEventListener('click', (ev) => {
+      if (!typeahead.open) return;
+      const root = typeahead.root;
+      if (!root) return;
+      const target = ev.target;
+      if (target === searchInput || root.contains(target)) return;
+      closeTypeahead();
+    });
 
     // Clear search and return to hero
     function clearSearch() {
@@ -324,7 +659,7 @@
       if (match) {
         const ticker = match[1].toUpperCase();
         searchInput.value = ticker;
-        searchStock(ticker);
+        loadAnalyze(ticker, { push: false });
       } else {
         searchInput.focus();
       }
@@ -333,21 +668,17 @@
     // Handle browser back button
     window.addEventListener('popstate', () => {
       const path = window.location.pathname;
+      const match = path.match(/^\/analyze\/([A-Z]+)$/i);
+      if (match) {
+        const ticker = match[1].toUpperCase();
+        searchInput.value = ticker;
+        loadAnalyze(ticker, { push: false });
+        return;
+      }
       if (path === '/' || path === '/index.html') {
         clearSearch();
       }
     });
-  </script>
-
-  <script type="module">
-    import { attachSearchUI } from '/search.js';
-    const root = document.getElementById('rv-search-root');
-    if (root) {
-      attachSearchUI(root, {
-        placeholder: 'Search ticker or company',
-        limit: 10
-      });
-    }
   </script>
 
 </body>
