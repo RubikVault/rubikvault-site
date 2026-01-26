@@ -265,7 +265,6 @@ export async function onRequestGet(context) {
   if (!normalizedTicker) {
     const payload = {
       schema_version: '3.0',
-      module: MODULE_NAME,
       metadata: {
         module: MODULE_NAME,
         tier: 'standard',
@@ -292,6 +291,18 @@ export async function onRequestGet(context) {
           normalized_ticker: null
         },
         source_chain: sourceChain,
+        telemetry: {
+          provider: {
+            primary: sourceChain?.primary || 'tiingo',
+            selected: sourceChain?.selected || null,
+            forced: Boolean(sourceChain?.forced),
+            fallbackUsed: Boolean(sourceChain?.fallbackUsed),
+            primaryFailure: sourceChain?.primaryFailure?.code || null
+          },
+          latencyMs: null,
+          ok: false,
+          httpStatus: 400
+        },
         reasons: ['INVALID_TICKER'],
         sources
       },
@@ -423,7 +434,6 @@ export async function onRequestGet(context) {
     : 'OK';
   const payload = {
     schema_version: '3.0',
-    module: MODULE_NAME,
     metadata: {
       module: MODULE_NAME,
       tier: 'standard',
@@ -451,6 +461,18 @@ export async function onRequestGet(context) {
       },
       as_of: asOf,
       source_chain: sourceChain,
+      telemetry: {
+        provider: {
+          primary: sourceChain?.primary || 'tiingo',
+          selected: sourceChain?.selected || null,
+          forced: Boolean(sourceChain?.forced),
+          fallbackUsed: Boolean(sourceChain?.fallbackUsed),
+          primaryFailure: errorPayload ? (sourceChain?.primaryFailure?.code || errorPayload?.code || null) : null
+        },
+        latencyMs: null,
+        ok: !errorPayload,
+        httpStatus: errorPayload ? 502 : 200
+      },
       indicators: {
         count: indicatorList.length,
         nullCount: indicatorNullCount

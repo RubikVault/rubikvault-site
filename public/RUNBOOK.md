@@ -26,6 +26,25 @@
   - `/api/alpha-performance`
   - `/api/earnings-reality`
 
+## Mission Control Smoke (Ops)
+```bash
+BASE_URL="http://127.0.0.1:${PORT:-8788}"
+
+# 1) Mission Control page is static (and should not auto-poll)
+curl -fsS -I "$BASE_URL/mission-control" | tr -d "\r" | sed -n '1,15p'
+curl -fsS "$BASE_URL/mission-control.html" | rg -n 'setInterval\(|Polling: OFF|/api/mission-control/summary' | head -n 40
+
+# 2) Summary endpoint works and returns strict v3 envelope + budgets
+curl -fsS "$BASE_URL/api/mission-control/summary" | jq '{schema_version, metaStatus:(.metadata.status//null), hasKV:(.data.hasKV//null), asOf:(.data.asOf//null), budgets:(.data.budgets//null)}'
+
+# 3) Debug gating: only debug should include heavy sections
+curl -fsS "$BASE_URL/api/mission-control/summary" | jq '{hasFailures:(.data.failures.day|length), hasLive:(.data.liveApis.items|length)}'
+curl -fsS "$BASE_URL/api/mission-control/summary?debug=1" | jq '{hasFailures:(.data.failures.day|length), hasLive:(.data.liveApis.items|length)}'
+
+# 4) Cache headers (CDN + server-side cache): should be >= 10s
+curl -fsS -I "$BASE_URL/api/mission-control/summary" | tr -d "\r" | rg -n 'cache-control|etag|cf-cache-status' || true
+```
+
 ## Local Proof Harness (Deterministic)
 ```bash
 BASE_URL="http://127.0.0.1:${PORT:-8788}"

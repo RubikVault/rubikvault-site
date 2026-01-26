@@ -1,11 +1,16 @@
 import { sha256Hex } from '../_shared/digest.mjs';
+import { buildDashKeys, kvGetJsonKVSafe, computeBudgets, summarizeProviderStats } from '../_shared/telemetry.mjs';
 
 const MODULE_NAME = 'mission-control-summary';
-const MODULES_TO_TRACK = ['universe', 'market-prices', 'market-stats', 'market-score', 'stock'];
+const SNAPSHOT_MODULES_HINT = ['universe', 'market-prices', 'market-stats', 'market-score'];
 const SNAPSHOT_PATHS = [
   (moduleName) => `/data/snapshots/${moduleName}/latest.json`,
   (moduleName) => `/data/snapshots/${moduleName}.json`
 ];
+
+let LAST_CACHE = null;
+let LAST_CACHE_AT_MS = 0;
+const CACHE_TTL_MS = 10_000;
 
 async function computeDigest(input) {
   const canonical = JSON.stringify(input);
@@ -43,6 +48,11 @@ function toInt(value) {
   return Number.isFinite(n) ? n : 0;
 }
 
+function toNumber(value) {
+  const n = Number(value);
+  return Number.isFinite(n) ? n : null;
+}
+
 async function kvGetInt(env, key) {
   const kv = env?.RV_KV;
   const hasKV = kv && typeof kv.get === 'function';
@@ -52,6 +62,20 @@ async function kvGetInt(env, key) {
     return { ok: true, value: toInt(raw), reason: null };
   } catch {
     return { ok: false, value: 0, reason: 'KV_ERROR' };
+  }
+}
+
+async function fetchBuildInfo(requestUrl) {
+  try {
+    const url = new URL('/build-info.json', requestUrl);
+    const res = await fetch(url.toString());
+    if (!res.ok) return null;
+    const json = await res.json();
+    const sha = json?.gitSha || json?.git_sha || json?.sha || json?.commit || null;
+    const ts = json?.buildTs || json?.build_ts || json?.builtAt || json?.built_at || json?.timestamp || null;
+    return { gitSha: sha ? String(sha) : null, buildTs: ts ? String(ts) : null };
+  } catch {
+    return null;
   }
 }
 
@@ -89,65 +113,95 @@ export async function onRequestGet(context) {
   const startedAtIso = new Date().toISOString();
   const now = new Date();
 
-  const kv = env?.RV_KV || null;
-  const hasKV = kv && typeof kv.get === 'function' && typeof kv.put === 'function';
-
-  const dayKey = `mc:calls:day:${isoDay(now)}`;
-  const weekKey = `mc:calls:week:${isoWeek(now)}`;
-  const monthKey = `mc:calls:month:${isoMonth(now)}`;
-
-  const [dayTotal, weekTotal, monthTotal] = await Promise.all([
-    kvGetInt(env, dayKey),
-    kvGetInt(env, weekKey),
-    kvGetInt(env, monthKey)
-  ]);
-
-  const topEndpoints = [];
-  if (hasKV) {
-    const endpoints = [
-      '/api/stock',
-      '/api/universe',
-      '/api/resolve',
-      '/api/diagnostics/tiingo',
-      '/api/fundamentals'
-    ];
-    const rows = await Promise.all(
-      endpoints.map(async (ep) => {
-        const r = await kvGetInt(env, `${dayKey}:${ep}`);
-        return { endpoint: ep, day: r.value };
-      })
-    );
-    rows.sort((a, b) => b.day - a.day);
-    for (const row of rows) {
-      if (row.day > 0) topEndpoints.push(row);
-    }
-  }
-
-  const snapshots = [];
-  for (const moduleName of MODULES_TO_TRACK) {
-    const info = await fetchSnapshotInfo(request.url, moduleName);
-    snapshots.push({
-      module: moduleName,
-      ok: Boolean(info.ok),
-      as_of: info.ok ? info.as_of : null,
-      status: info.ok ? info.status : null,
-      record_count: info.ok ? info.record_count : null,
-      path: info.ok ? info.path : info.paths_checked
+  if (!isDebug && LAST_CACHE && Date.now() - LAST_CACHE_AT_MS < CACHE_TTL_MS) {
+    return new Response(LAST_CACHE, {
+      headers: {
+        'Content-Type': 'application/json',
+        'Cache-Control': 'public, max-age=10, s-maxage=10, stale-while-revalidate=60'
+      }
     });
   }
 
-  let tiingoDiag = null;
-  try {
-    const diagUrl = new URL('/api/diagnostics/tiingo', request.url);
-    if (isDebug) diagUrl.searchParams.set('debug', '1');
-    const res = await fetch(diagUrl.toString());
-    if (res.ok) {
-      const payload = await res.json();
-      tiingoDiag = payload?.data || null;
+  const kv = env?.RV_KV || null;
+  const hasKV = kv && typeof kv.get === 'function' && typeof kv.put === 'function';
+
+  const dash = buildDashKeys(now);
+  const [dayTotal, weekTotal, monthTotal] = await Promise.all([
+    kvGetInt(env, dash.callsDay),
+    kvGetInt(env, dash.callsWeek),
+    kvGetInt(env, dash.callsMonth)
+  ]);
+
+  const endpointsMapRes = await kvGetJsonKVSafe(env, dash.endpointsDay, {});
+  const endpointsMap = endpointsMapRes.value && typeof endpointsMapRes.value === 'object' ? endpointsMapRes.value : {};
+  const endpointsDayTop = Object.entries(endpointsMap)
+    .map(([endpoint, calls]) => ({ endpoint, calls: toInt(calls) }))
+    .sort((a, b) => b.calls - a.calls)
+    .slice(0, 12);
+
+  const kvOpsRes = await kvGetJsonKVSafe(env, dash.kvOpsDay, null);
+  const kvOpsDay = kvOpsRes.value && typeof kvOpsRes.value === 'object' ? kvOpsRes.value : null;
+
+  const providersRes = await kvGetJsonKVSafe(env, dash.providersDay, {});
+  const providersRaw = providersRes.value && typeof providersRes.value === 'object' ? providersRes.value : {};
+  const providersDay = Object.fromEntries(
+    Object.entries(providersRaw).map(([k, v]) => [k, summarizeProviderStats(v)])
+  );
+
+  let failuresDay = [];
+  let snapshots = [];
+  let liveApis = { items: [] };
+  if (isDebug) {
+    const failuresRes = await kvGetJsonKVSafe(env, dash.failuresRingDay, []);
+    const failuresArr = Array.isArray(failuresRes.value) ? failuresRes.value : [];
+    failuresDay = failuresArr.slice(Math.max(0, failuresArr.length - 20)).reverse();
+
+    for (const moduleName of SNAPSHOT_MODULES_HINT) {
+      const info = await fetchSnapshotInfo(request.url, moduleName);
+      if (!info.ok) continue;
+      snapshots.push({
+        module: moduleName,
+        ok: true,
+        asOf: info.as_of,
+        status: info.status,
+        records: info.record_count,
+        type: 'snapshot',
+        note: null
+      });
     }
-  } catch {
-    tiingoDiag = null;
+
+    // live API checks removed (avoid request amplification)
   }
+
+  const budgetsLimits = {
+    workersRequests: 100000,
+    kvReads: 20000,
+    kvWrites: 20000
+  };
+  const workersUsedToday = dayTotal.value;
+  const kvReadsToday = kvOpsDay ? toInt(kvOpsDay.reads) : null;
+  const kvWritesToday = kvOpsDay ? toInt(kvOpsDay.writes) : null;
+  const budgets = {
+    asOf: startedAtIso,
+    workersRequests: {
+      usedToday: workersUsedToday,
+      limitToday: budgetsLimits.workersRequests,
+      pctUsed: budgetsLimits.workersRequests ? Math.round((workersUsedToday / budgetsLimits.workersRequests) * 1000) / 10 : null,
+      pctRemaining: budgetsLimits.workersRequests ? Math.round(((budgetsLimits.workersRequests - workersUsedToday) / budgetsLimits.workersRequests) * 1000) / 10 : null
+    },
+    kvReads: {
+      usedToday: kvReadsToday,
+      limitToday: budgetsLimits.kvReads,
+      pctUsed: kvReadsToday == null ? null : (budgetsLimits.kvReads ? Math.round((kvReadsToday / budgetsLimits.kvReads) * 1000) / 10 : null)
+    },
+    kvWrites: {
+      usedToday: kvWritesToday,
+      limitToday: budgetsLimits.kvWrites,
+      pctUsed: kvWritesToday == null ? null : (budgetsLimits.kvWrites ? Math.round((kvWritesToday / budgetsLimits.kvWrites) * 1000) / 10 : null)
+    }
+  };
+
+  const deploy = await fetchBuildInfo(request.url);
 
   const warnings = [];
   if (!hasKV) warnings.push('KV_NOT_BOUND');
@@ -171,17 +225,17 @@ export async function onRequestGet(context) {
       warnings
     },
     data: {
-      kv: {
-        hasKV
-      },
-      calls: {
-        day: dayTotal.value,
-        week: weekTotal.value,
-        month: monthTotal.value
-      },
-      top_endpoints: topEndpoints,
-      snapshots,
-      tiingo: tiingoDiag
+      hasKV,
+      asOf: startedAtIso,
+      calls: { day: dayTotal.value, week: weekTotal.value, month: monthTotal.value },
+      endpoints: { dayTop: endpointsDayTop },
+      kvOps: { day: kvOpsDay },
+      providers: { day: providersDay },
+      failures: { day: failuresDay },
+      budgets,
+      deploy,
+      snapshots: { items: snapshots },
+      liveApis
     },
     error: null
   };
@@ -192,7 +246,16 @@ export async function onRequestGet(context) {
 
   payload.metadata.digest = await computeDigest(payload);
 
-  return new Response(JSON.stringify(payload, null, 2) + '\n', {
-    headers: { 'Content-Type': 'application/json' }
+  const body = JSON.stringify(payload, null, 2) + '\n';
+  if (!isDebug) {
+    LAST_CACHE = body;
+    LAST_CACHE_AT_MS = Date.now();
+  }
+
+  return new Response(body, {
+    headers: {
+      'Content-Type': 'application/json',
+      'Cache-Control': 'public, max-age=10, s-maxage=10, stale-while-revalidate=60'
+    }
   });
 }

@@ -92,7 +92,19 @@ export async function onRequestGet(context) {
       request: {
         debug: isDebug
       },
-      status: canReachTiingo ? 'OK' : 'ERROR'
+      status: canReachTiingo ? 'OK' : 'ERROR',
+      telemetry: {
+        provider: {
+          primary: 'tiingo',
+          selected: 'tiingo',
+          forced: false,
+          fallbackUsed: false,
+          primaryFailure: canReachTiingo ? null : errorCode
+        },
+        latencyMs,
+        ok: canReachTiingo,
+        httpStatus
+      }
     },
     data: {
       keyPresent,

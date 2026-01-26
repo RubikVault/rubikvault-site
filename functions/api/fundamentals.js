@@ -220,7 +220,19 @@ export async function onRequestGet(context) {
         served_from: cached.layer === 'kv' ? 'KV' : 'MEM',
         request: { ticker: tickerParam, normalized_ticker: ticker },
         status: 'OK',
-        cache: { hit: true, layer: cached.layer, ttlSeconds: TTL_SECONDS }
+        cache: { hit: true, layer: cached.layer, ttlSeconds: TTL_SECONDS },
+        telemetry: {
+          provider: {
+            primary: 'tiingo',
+            selected: 'tiingo',
+            forced: false,
+            fallbackUsed: false,
+            primaryFailure: null
+          },
+          latencyMs: null,
+          ok: true,
+          httpStatus: 200
+        }
       },
       data: cached.value,
       error: null
@@ -260,6 +272,18 @@ export async function onRequestGet(context) {
           keySource: upstream.key.source,
           httpStatus: upstream.httpStatus,
           latencyMs: upstream.latencyMs
+        },
+        telemetry: {
+          provider: {
+            primary: 'tiingo',
+            selected: upstream.provider,
+            forced: false,
+            fallbackUsed: false,
+            primaryFailure: null
+          },
+          latencyMs: upstream.latencyMs,
+          ok: true,
+          httpStatus: upstream.httpStatus
         }
       },
       data: upstream.data,
@@ -295,6 +319,18 @@ export async function onRequestGet(context) {
           keySource: upstream.key?.source || null,
           httpStatus: upstream.httpStatus,
           latencyMs: upstream.latencyMs
+        },
+        telemetry: {
+          provider: {
+            primary: 'tiingo',
+            selected: upstream.provider,
+            forced: false,
+            fallbackUsed: true,
+            primaryFailure: upstream.error?.code || null
+          },
+          latencyMs: upstream.latencyMs,
+          ok: false,
+          httpStatus: upstream.httpStatus
         }
       },
       data: lastGood.value,
@@ -328,6 +364,18 @@ export async function onRequestGet(context) {
         keySource: upstream.key?.source || null,
         httpStatus: upstream.httpStatus,
         latencyMs: upstream.latencyMs
+      },
+      telemetry: {
+        provider: {
+          primary: 'tiingo',
+          selected: upstream.provider,
+          forced: false,
+          fallbackUsed: false,
+          primaryFailure: upstream.error?.code || null
+        },
+        latencyMs: upstream.latencyMs,
+        ok: false,
+        httpStatus: upstream.httpStatus
       }
     },
     data: {

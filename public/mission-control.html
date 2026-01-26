@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Mission Control — RubikVault</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Helvetica Neue", Arial, sans-serif;
+      background: #0b1220;
+      color: #e5e7eb;
+    }
+    .wrap { max-width: 1100px; margin: 0 auto; padding: 24px; }
+    h1 { margin: 0 0 6px; font-size: 28px; letter-spacing: -0.02em; }
+    .sub { color: #94a3b8; margin-bottom: 18px; font-size: 14px; }
+    .grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin: 14px 0 22px; }
+    .card { border: 1px solid rgba(148, 163, 184, 0.25); background: rgba(15, 23, 42, 0.7); border-radius: 12px; padding: 14px; overflow: hidden; }
+    .k { color: #94a3b8; font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em; }
+    .v { margin-top: 6px; font-size: 22px; font-weight: 800; }
+    .warn { color: #fbbf24; }
+    .ok { color: #34d399; }
+    .bad { color: #fb7185; }
+    .row { display: flex; gap: 10px; align-items: baseline; justify-content: space-between; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { text-align: left; padding: 10px 8px; border-bottom: 1px solid rgba(148, 163, 184, 0.15); font-size: 13px; }
+    th { color: #94a3b8; font-weight: 700; }
+    .pill { display: inline-block; padding: 2px 8px; border-radius: 999px; border: 1px solid rgba(148,163,184,0.25); font-size: 12px; color: #e5e7eb; }
+    .pill.ok { border-color: rgba(52, 211, 153, 0.35); color: #a7f3d0; }
+    .pill.bad { border-color: rgba(251, 113, 133, 0.35); color: #fecdd3; }
+    .pill.warn { border-color: rgba(251, 191, 36, 0.35); color: #fde68a; }
+    .small { color: #94a3b8; font-size: 12px; }
+    .controls { display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin: 12px 0 18px; }
+    .btn {
+      background: rgba(30, 41, 59, 0.9);
+      border: 1px solid rgba(148,163,184,0.25);
+      color: #e5e7eb;
+      padding: 8px 10px;
+      border-radius: 10px;
+      font-size: 13px;
+      cursor: pointer;
+    }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    select {
+      background: rgba(30, 41, 59, 0.9);
+      border: 1px solid rgba(148,163,184,0.25);
+      color: #e5e7eb;
+      padding: 8px 10px;
+      border-radius: 10px;
+      font-size: 13px;
+    }
+    @media (max-width: 860px) { .grid { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Mission Control</h1>
+    <div class="sub">Ops-grade observability (safe-by-default, no secrets)</div>
+
+    <div class="controls card">
+      <button id="btn-refresh" class="btn">Refresh</button>
+      <label class="small">Polling</label>
+      <select id="polling">
+        <option value="off" selected>OFF</option>
+        <option value="60">60s</option>
+        <option value="120">120s</option>
+      </select>
+      <span id="polling-status" class="small">Polling: OFF</span>
+      <span style="flex:1"></span>
+      <span id="debug-hint" class="small"></span>
+    </div>
+
+    <div id="loading" class="card">Click Refresh to load summary.</div>
+
+    <div id="main" style="display:none;">
+      <div class="grid">
+        <div class="card">
+          <div class="k">Workers requests (today)</div>
+          <div class="v" id="workers-requests">—</div>
+          <div class="small" id="workers-budget">—</div>
+        </div>
+        <div class="card">
+          <div class="k">KV reads (today)</div>
+          <div class="v" id="kv-reads">—</div>
+          <div class="small" id="kv-reads-budget">—</div>
+        </div>
+        <div class="card">
+          <div class="k">KV writes (today)</div>
+          <div class="v" id="kv-writes">—</div>
+          <div class="small" id="kv-writes-budget">—</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="k" style="margin-bottom: 10px;">Top talkers (today)</div>
+        <table>
+          <thead>
+            <tr><th>Route</th><th>Hits</th></tr>
+          </thead>
+          <tbody id="endpoints"></tbody>
+        </table>
+      </div>
+
+      <div class="card" style="margin-top: 12px;">
+        <div class="k" style="margin-bottom: 10px;">Provider health (today)</div>
+        <table>
+          <thead>
+            <tr><th>Provider</th><th>Calls</th><th>Fallback rate</th><th>Top failure</th><th>Avg latency</th></tr>
+          </thead>
+          <tbody id="providers"></tbody>
+        </table>
+      </div>
+
+      <div id="debug-only" style="display:none;">
+        <div class="card" style="margin-top: 12px;">
+          <div class="k" style="margin-bottom: 10px;">Recent failures (today)</div>
+          <table>
+            <thead>
+              <tr><th>Time</th><th>Endpoint</th><th>Provider</th><th>Error</th><th>HTTP</th><th>Note</th></tr>
+            </thead>
+            <tbody id="failures"></tbody>
+          </table>
+        </div>
+
+        <div class="card" style="margin-top: 12px;">
+          <div class="k" style="margin-bottom: 10px;">Snapshots</div>
+          <table>
+            <thead>
+              <tr><th>Module</th><th>Status</th><th>As of</th><th>Records</th></tr>
+            </thead>
+            <tbody id="snapshots"></tbody>
+          </table>
+        </div>
+
+        <div class="card" style="margin-top: 12px;">
+          <div class="k" style="margin-bottom: 10px;">Live APIs</div>
+          <table>
+            <thead>
+              <tr><th>API</th><th>Status</th><th>Endpoint</th><th>Note</th></tr>
+            </thead>
+            <tbody id="liveApis"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="small" style="margin-top: 14px;">
+        API: <a href="/api/mission-control/summary" style="color:#60a5fa;">/api/mission-control/summary</a>
+        <span class="small" id="asof" style="margin-left:10px;"></span>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function esc(s) {
+      return String(s == null ? '' : s)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    function fmtNum(n) {
+      const v = Number(n);
+      if (!Number.isFinite(v)) return '—';
+      return v.toLocaleString();
+    }
+
+    function pill(text, cls) {
+      return '<span class="pill ' + cls + '">' + esc(text) + '</span>';
+    }
+
+    function percentToClass(p) {
+      if (p == null) return 'warn';
+      const v = Number(p);
+      if (!Number.isFinite(v)) return 'warn';
+      if (v >= 90) return 'bad';
+      if (v >= 70) return 'warn';
+      return 'ok';
+    }
+
+    function readDebug() {
+      return new URLSearchParams(location.search).get('debug') === '1';
+    }
+
+    async function load() {
+      const loading = document.getElementById('loading');
+      const main = document.getElementById('main');
+      const isDebug = readDebug();
+
+      document.getElementById('debug-hint').innerHTML = isDebug
+        ? '<span class="small">Debug: ON</span>'
+        : '<span class="small">Debug: OFF (add ?debug=1 for deep details)</span>';
+      document.getElementById('debug-only').style.display = isDebug ? 'block' : 'none';
+
+      const summaryUrl = isDebug ? '/api/mission-control/summary?debug=1' : '/api/mission-control/summary';
+
+      try {
+        const res = await fetch(summaryUrl, { cache: 'no-store' });
+        const payload = await res.json();
+        const data = payload && payload.data ? payload.data : {};
+
+        const budgets = data.budgets || {};
+        const w = budgets.workersRequests || {};
+        const r = budgets.kvReads || {};
+        const wr = budgets.kvWrites || {};
+
+        document.getElementById('workers-requests').textContent = fmtNum(w.usedToday);
+        document.getElementById('workers-budget').innerHTML = w.pctUsed == null
+          ? '<span class="small">limit=' + esc(w.limitToday) + ' (n/a)</span>'
+          : pill(String(w.pctUsed) + '% used', percentToClass(w.pctUsed)) + ' <span class="small">limit=' + esc(w.limitToday) + '</span>';
+
+        document.getElementById('kv-reads').textContent = fmtNum(r.usedToday);
+        document.getElementById('kv-reads-budget').innerHTML = r.pctUsed == null
+          ? '<span class="small">limit=' + esc(r.limitToday) + ' (n/a)</span>'
+          : pill(String(r.pctUsed) + '% used', percentToClass(r.pctUsed)) + ' <span class="small">limit=' + esc(r.limitToday) + '</span>';
+
+        document.getElementById('kv-writes').textContent = fmtNum(wr.usedToday);
+        document.getElementById('kv-writes-budget').innerHTML = wr.pctUsed == null
+          ? '<span class="small">limit=' + esc(wr.limitToday) + ' (n/a)</span>'
+          : pill(String(wr.pctUsed) + '% used', percentToClass(wr.pctUsed)) + ' <span class="small">limit=' + esc(wr.limitToday) + '</span>';
+
+        document.getElementById('asof').textContent = data.asOf ? ('asOf=' + String(data.asOf)) : '';
+
+        const endpoints = (data.endpoints && Array.isArray(data.endpoints.dayTop)) ? data.endpoints.dayTop : [];
+        document.getElementById('endpoints').innerHTML = endpoints.length
+          ? endpoints.map((row) => '<tr><td>' + esc(row.endpoint) + '</td><td>' + fmtNum(row.calls) + '</td></tr>').join('')
+          : '<tr><td colspan="2" class="small">No route counters yet</td></tr>';
+
+        const providers = (data.providers && data.providers.day) ? data.providers.day : {};
+        const provRows = Object.entries(providers).map(([name, s]) => {
+          const calls = Number(s.calls_total || 0);
+          const fallbackWins = Number(s.fallback_wins || 0);
+          const fallbackRate = calls ? Math.round((fallbackWins / calls) * 1000) / 10 : 0;
+          const failures = s.failures_by_code || {};
+          let topFail = null;
+          let topFailN = 0;
+          Object.entries(failures).forEach(([code, n]) => {
+            const v = Number(n || 0);
+            if (v > topFailN) { topFailN = v; topFail = code; }
+          });
+          const latency = s.avg_latency_ms == null ? '—' : String(s.avg_latency_ms) + 'ms';
+          return '<tr>' +
+            '<td>' + esc(name) + '</td>' +
+            '<td>' + fmtNum(calls) + '</td>' +
+            '<td>' + esc(String(fallbackRate) + '%') + '</td>' +
+            '<td class="small">' + esc(topFail ? (topFail + ' (' + topFailN + ')') : '—') + '</td>' +
+            '<td>' + esc(latency) + '</td>' +
+          '</tr>';
+        });
+        document.getElementById('providers').innerHTML = provRows.length
+          ? provRows.join('')
+          : '<tr><td colspan="5" class="small">No provider stats yet</td></tr>';
+
+        if (isDebug) {
+          const failures = (data.failures && Array.isArray(data.failures.day)) ? data.failures.day : [];
+          document.getElementById('failures').innerHTML = failures.length
+            ? failures.map((f) => '<tr>' +
+                '<td class="small">' + esc(String(f.ts || '').slice(11, 19)) + '</td>' +
+                '<td>' + esc(f.endpoint || '') + '</td>' +
+                '<td>' + esc(f.providerSelected || '—') + '</td>' +
+                '<td class="small">' + esc(f.errorCode || '—') + '</td>' +
+                '<td>' + esc(f.httpStatus == null ? '—' : f.httpStatus) + '</td>' +
+                '<td class="small">' + esc(f.note || '—') + '</td>' +
+              '</tr>').join('')
+            : '<tr><td colspan="6" class="small">No failures recorded</td></tr>';
+
+          const snaps = (data.snapshots && Array.isArray(data.snapshots.items)) ? data.snapshots.items : [];
+          document.getElementById('snapshots').innerHTML = snaps.map((s) => {
+            const ok = Boolean(s.ok);
+            const st = ok ? (s.status || 'OK') : 'MISSING';
+            const cls = ok ? 'ok' : 'warn';
+            return '<tr>' +
+              '<td>' + esc(s.module) + '</td>' +
+              '<td>' + pill(st, cls) + '</td>' +
+              '<td class="small">' + esc(s.asOf || '—') + '</td>' +
+              '<td>' + esc(s.records == null ? '—' : s.records) + '</td>' +
+            '</tr>';
+          }).join('');
+
+          const live = (data.liveApis && Array.isArray(data.liveApis.items)) ? data.liveApis.items : [];
+          document.getElementById('liveApis').innerHTML = live.length
+            ? live.map((a) => {
+                const ok = Boolean(a.ok);
+                const cls = ok ? 'ok' : 'bad';
+                return '<tr>' +
+                  '<td>' + esc(a.module) + '</td>' +
+                  '<td>' + pill(a.status || 'UNKNOWN', cls) + '</td>' +
+                  '<td class="small">' + esc(a.endpoint || '') + '</td>' +
+                  '<td class="small">' + esc(a.note || '—') + '</td>' +
+                '</tr>';
+              }).join('')
+            : '<tr><td colspan="4" class="small">No live API checks</td></tr>';
+        }
+
+        loading.style.display = 'none';
+        main.style.display = 'block';
+      } catch (e) {
+        loading.textContent = 'Failed to load mission control summary.';
+      }
+    }
+
+    let pollTimer = null;
+
+    function setPolling(seconds) {
+      if (pollTimer) {
+        clearInterval(pollTimer);
+        pollTimer = null;
+      }
+
+      const label = document.getElementById('polling-status');
+      if (seconds === 0) {
+        label.textContent = 'Polling: OFF';
+        return;
+      }
+
+      const min = 60;
+      const s = Math.max(min, seconds);
+      label.textContent = 'Polling: ' + String(s) + 's';
+      pollTimer = setInterval(load, s * 1000);
+    }
+
+    document.getElementById('btn-refresh').addEventListener('click', () => load());
+    document.getElementById('polling').addEventListener('change', (e) => {
+      const v = String(e.target.value || 'off');
+      const seconds = v === 'off' ? 0 : Number(v);
+      setPolling(Number.isFinite(seconds) ? seconds : 0);
+    });
+
+    setPolling(0);
+  </script>
+</body>
+</html>
