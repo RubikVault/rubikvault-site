@@ -212,6 +212,15 @@
 
     let lastResolved = { ticker: null, name: null };
 
+    const pageDebug = (() => {
+      try {
+        const params = new URLSearchParams(window.location.search || '');
+        return params.get('debug') === '1';
+      } catch {
+        return false;
+      }
+    })();
+
     const typeahead = {
       root: null,
       items: [],
@@ -220,7 +229,8 @@
       debounceMs: 150,
       debounceTimer: null,
       blurTimer: null,
-      requestSeq: 0
+      requestSeq: 0,
+      emptyMessage: null
     };
 
     async function fetchJson(url) {
@@ -259,6 +269,7 @@
       typeahead.open = false;
       typeahead.items = [];
       typeahead.activeIndex = -1;
+      typeahead.emptyMessage = null;
       if (typeahead.root) typeahead.root.style.display = 'none';
     }
 
@@ -268,6 +279,7 @@
       typeahead.items = Array.isArray(items) ? items : [];
       typeahead.open = typeahead.items.length > 0;
       typeahead.activeIndex = -1;
+      typeahead.emptyMessage = null;
       renderTypeahead();
     }
 
@@ -285,21 +297,60 @@
       const url = `/api/universe?q=${encodeURIComponent(query)}&t=${Date.now()}`;
       const { payload, networkError } = await fetchJson(url);
       if (seq !== typeahead.requestSeq) return;
+
+      if (pageDebug) {
+        console.log('[rv][typeahead] universe request', {
+          url,
+          ok: Boolean(payload && !networkError && !payload.error),
+          networkError: Boolean(networkError)
+        });
+      }
+
       if (networkError || !payload) {
         clearSuggestions();
         return;
       }
+
+      if (!Array.isArray(payload?.data?.symbols)) {
+        if (pageDebug) {
+          console.warn('[rv][typeahead] invalid universe payload shape', {
+            hasData: typeof payload?.data === 'object',
+            symbolsType: typeof payload?.data?.symbols
+          });
+        }
+        clearSuggestions();
+        return;
+      }
+
       const items = payload?.data?.symbols ?? [];
+      if (pageDebug) {
+        console.log('[rv][typeahead] universe results', {
+          q: query,
+          count: Array.isArray(items) ? items.length : null
+        });
+      }
+
+      if (!items.length) {
+        if (pageDebug && query.length >= 1) {
+          typeahead.items = [];
+          typeahead.open = true;
+          typeahead.activeIndex = -1;
+          typeahead.emptyMessage = 'No matches';
+          renderTypeahead();
+          return;
+        }
+        clearSuggestions();
+        return;
+      }
+
       openTypeahead(
-        Array.isArray(items)
-          ? items
-              .map((it) => {
-                const symbol = it?.symbol ? String(it.symbol).toUpperCase() : null;
-                if (!symbol) return null;
-                return { symbol, name: it?.name ? String(it.name) : '' };
-              })
-              .filter(Boolean)
-          : []
+        items
+          .map((it) => {
+            const symbol = it?.symbol ? String(it.symbol).toUpperCase() : null;
+            if (!symbol) return null;
+            return { symbol, name: it?.name ? String(it.name) : '' };
+          })
+          .filter(Boolean)
       );
     }
 
@@ -311,11 +362,17 @@
     function renderTypeahead() {
       const root = ensureTypeaheadRoot();
       if (!root) return;
-      if (!typeahead.open || !typeahead.items.length) {
+      if (!typeahead.open || (!typeahead.items.length && !typeahead.emptyMessage)) {
         root.style.display = 'none';
         return;
       }
       root.style.display = 'block';
+
+      if (!typeahead.items.length && typeahead.emptyMessage) {
+        root.innerHTML = `<div style="padding: 0.8rem 1rem; color: #94a3b8;">${escapeHtml(typeahead.emptyMessage)}</div>`;
+        return;
+      }
+
       const html = typeahead.items
         .map((item, idx) => {
           const active = idx === typeahead.activeIndex;
@@ -675,6 +732,16 @@
         clearSearch();
       }
     });
+
+    /*
+    Manual verification checklist:
+    - Type "Apple" -> shows "Apple Inc. (AAPL)"
+    - ArrowDown + Enter navigates to /analyze/AAPL
+    - Type "aap" -> shows AAP + AAPL
+    - Esc closes suggestions
+    - Clicking suggestion navigates
+    - With ?debug=1, console logs request URL + ok + count
+    */
   </script>
 
 </body>
