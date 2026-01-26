@@ -368,6 +368,16 @@
       typeahead.debounceTimer = setTimeout(() => doFetch(q), typeahead.debounceMs);
     }
 
+    async function selectSymbol(symbol, name, { push = true } = {}) {
+      const s = String(symbol || '').trim().toUpperCase();
+      if (!s) return;
+      lastResolved = { ticker: s, name: name || lastResolved?.name || null };
+      searchInput.value = s;
+      closeTypeahead();
+      if (push) window.history.pushState({}, '', `/analyze/${encodeURIComponent(s)}`);
+      await loadAnalyze(s, { push: false, fallback: lastResolved });
+    }
+
     function renderTypeahead() {
       const root = ensureTypeaheadRoot();
       if (!root) return;
@@ -387,10 +397,12 @@
           const active = idx === typeahead.activeIndex;
           const bg = active ? 'rgba(59, 130, 246, 0.18)' : 'transparent';
           const border = active ? 'rgba(59, 130, 246, 0.35)' : 'transparent';
-          const label = item.name ? `${escapeHtml(item.name)} (${escapeHtml(item.symbol)})` : escapeHtml(item.symbol);
           return `
             <div data-idx="${idx}" class="${active ? 'is-active' : ''}" style="padding: 0.8rem 1rem; cursor: pointer; background: ${bg}; border-left: 3px solid ${border};">
-              <div style="font-weight: 700; color: #e5e7eb; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${label}</div>
+              <div style="display:flex; justify-content: space-between; gap: 1rem; align-items: baseline;">
+                <div style="font-weight: 800; color: #e5e7eb;">${escapeHtml(item.symbol)}</div>
+                <div style="font-size: 0.85rem; color: #94a3b8; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width: 420px;">${escapeHtml(item.name || '—')}</div>
+              </div>
             </div>
           `;
         })
@@ -400,14 +412,10 @@
       root.querySelectorAll('[data-idx]').forEach((el) => {
         el.addEventListener('mousedown', (ev) => {
           ev.preventDefault();
-        });
-        el.addEventListener('click', async () => {
           const idx = Number(el.getAttribute('data-idx'));
           const item = typeahead.items[idx];
           if (!item?.symbol) return;
-          closeTypeahead();
-          searchInput.value = item.symbol;
-          window.location.href = `/analyze/${encodeURIComponent(item.symbol)}`;
+          selectSymbol(item.symbol, item.name, { push: true });
         });
       });
     }
@@ -533,7 +541,7 @@
 
       const statusChipColor = meta?.status === 'OK' ? '#10b981' : meta?.status === 'PARTIAL' ? '#f59e0b' : '#ef4444';
 
-      resultsTitle.textContent = `Analysis for ${effectiveTicker}`;
+      resultsTitle.textContent = `${effectiveName} (${effectiveTicker})`;
       resultsContent.innerHTML = `
         ${showBanner ? renderErrorBanner(bannerError, meta) : ''}
         <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; flex-wrap: wrap;">
@@ -663,9 +671,7 @@
         if (typeahead.open && typeahead.items.length) {
           e.preventDefault();
           const pick = typeahead.activeIndex >= 0 ? typeahead.items[typeahead.activeIndex] : typeahead.items[0];
-          closeTypeahead();
-          searchInput.value = pick.symbol;
-          window.location.href = `/analyze/${encodeURIComponent(pick.symbol)}`;
+          await selectSymbol(pick.symbol, pick.name, { push: true });
           return;
         }
         closeTypeahead();
@@ -713,7 +719,7 @@
     }
 
     // Auto-focus search on page load
-    document.addEventListener('DOMContentLoaded', () => {
+    document.addEventListener('DOMContentLoaded', async () => {
       // Check for deep link: /analyze/TICKER
       const path = window.location.pathname;
       const match = path.match(/^\/analyze\/([A-Z]+)$/i);
@@ -721,7 +727,13 @@
       if (match) {
         const ticker = match[1].toUpperCase();
         searchInput.value = ticker;
-        loadAnalyze(ticker, { push: false });
+        try {
+          const { payload } = await fetchJson(`/api/resolve?q=${encodeURIComponent(ticker)}`);
+          if (payload?.data?.ticker) {
+            lastResolved = { ticker: payload.data.ticker, name: payload.data.name || null };
+          }
+        } catch {}
+        await loadAnalyze(ticker, { push: false, fallback: lastResolved || { ticker, name: null } });
       } else {
         searchInput.focus();
       }
