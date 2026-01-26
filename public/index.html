@@ -98,11 +98,7 @@
 
       <!-- SEARCH BOX -->
       <div style="max-width: 700px; margin: 0 auto 3rem;">
-        <div style="display: flex; align-items: center; gap: 0.85rem; padding: 0 1.1rem; background: rgba(30, 41, 59, 0.8); border: 2px solid rgba(100, 116, 139, 0.3); border-radius: 12px; transition: all 0.2s;">
-        <svg style="display: block; flex: 0 0 auto; width: 24px; height: 24px; color: #64748b;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <circle cx="11" cy="11" r="8"></circle>
-          <path d="m21 21-4.35-4.35"></path>
-        </svg>
+        <div style="position: relative; display: flex; align-items: center; gap: 0.85rem; padding: 0 1.1rem; background: rgba(30, 41, 59, 0.8); border: 2px solid rgba(100, 116, 139, 0.3); border-radius: 12px; transition: all 0.2s;">
         <input 
           type="text" 
           id="stock-search-input" 
@@ -121,6 +117,29 @@
           onfocus="this.parentElement.style.borderColor='rgba(59, 130, 246, 0.6)'; this.parentElement.style.background='rgba(30, 41, 59, 1)';"
           onblur="this.parentElement.style.borderColor='rgba(100, 116, 139, 0.3)'; this.parentElement.style.background='rgba(30, 41, 59, 0.8)';"
         />
+        <button
+          id="stock-search-btn"
+          type="button"
+          aria-label="Analyze"
+          style="
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            flex: 0 0 auto;
+            width: 44px;
+            height: 44px;
+            border-radius: 10px;
+            border: 1px solid rgba(100, 116, 139, 0.35);
+            background: rgba(15, 23, 42, 0.35);
+            color: #e5e7eb;
+            cursor: pointer;
+          "
+        >
+          <svg style="display:block; width: 22px; height: 22px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" focusable="false">
+            <circle cx="11" cy="11" r="8"></circle>
+            <path d="m21 21-4.35-4.35"></path>
+          </svg>
+        </button>
         </div>
         <div style="margin-top: 0.6rem; font-size: 0.9rem; color: #94a3b8; text-align: left; padding-left: 0.25rem;">
           Searching: NASDAQ-100 (100 stocks)
@@ -864,6 +883,14 @@
         searchInput.focus();
       }
     });
+
+    const searchBtn = document.getElementById('stock-search-btn');
+    if (searchBtn) {
+      searchBtn.addEventListener('click', async () => {
+        closeTypeahead();
+        await resolveAndAnalyze(searchInput.value);
+      });
+    }
     
     // Handle browser back button
     window.addEventListener('popstate', () => {
