@@ -1,3 +1,5 @@
+import { getTiingoKeyInfo } from './tiingo-key.mjs';
+
 function toIsoDate(value) {
   if (!value) return null;
   try {
@@ -39,12 +41,14 @@ export function getForcedProvider(env) {
 }
 
 export async function fetchTiingoBars(symbol, env, options = {}) {
-  const apiKey = env?.TIINGO_API_KEY;
+  const keyInfo = getTiingoKeyInfo(env);
+  const apiKey = keyInfo.key;
   if (!apiKey) {
     return {
       ok: false,
       provider: 'tiingo',
-      error: { code: 'MISSING_API_KEY', message: 'Missing TIINGO_API_KEY' }
+      error: { code: 'MISSING_API_KEY', message: 'Missing TIINGO_API_KEY' },
+      key: { present: false, source: null }
     };
   }
 
@@ -96,12 +100,13 @@ export async function fetchTiingoBars(symbol, env, options = {}) {
       .filter(Boolean)
       .sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
 
-    return { ok: true, provider: 'tiingo', bars };
+    return { ok: true, provider: 'tiingo', bars, key: { present: true, source: keyInfo.source } };
   } catch (error) {
     return {
       ok: false,
       provider: 'tiingo',
-      error: { code: 'NETWORK_ERROR', message: error?.message || 'network_error' }
+      error: { code: 'NETWORK_ERROR', message: error?.message || 'network_error' },
+      key: { present: true, source: keyInfo.source }
     };
   }
 }

@@ -2,6 +2,7 @@ import { sha256Hex } from './_shared/digest.mjs';
 import { resolveSymbol, normalizeTicker as normalizeTickerStrict } from './_shared/symbol-resolver.mjs';
 import { fetchBarsWithProviderChain } from './_shared/eod-providers.mjs';
 import { computeIndicators } from './_shared/eod-indicators.mjs';
+import { getTiingoKeyInfo } from './_shared/tiingo-key.mjs';
 
 const MODULE_NAME = 'stock';
 const TICKER_MAX_LENGTH = 12;
@@ -229,7 +230,7 @@ export async function onRequestGet(context) {
 
   if (normalizedTicker) {
     const forcedProvider = String(env?.RV_FORCE_PROVIDER || '').trim();
-    const hasEodKeys = Boolean(env?.TIINGO_API_KEY || env?.TWELVEDATA_API_KEY);
+    const hasEodKeys = Boolean(getTiingoKeyInfo(env).key || env?.TWELVEDATA_API_KEY);
     if (!forcedProvider && !hasEodKeys) {
       reasons = ['EOD_KEYS_MISSING'];
     } else {

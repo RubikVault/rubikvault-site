@@ -97,8 +97,9 @@
       </p>
 
       <!-- SEARCH BOX -->
-      <div style="max-width: 700px; margin: 0 auto 3rem; position: relative;">
-        <svg style="position: absolute; left: 20px; top: 50%; transform: translateY(-50%); width: 24px; height: 24px; color: #64748b;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <div style="max-width: 700px; margin: 0 auto 3rem;">
+        <div style="display: flex; align-items: center; gap: 0.85rem; padding: 0 1.1rem; background: rgba(30, 41, 59, 0.8); border: 2px solid rgba(100, 116, 139, 0.3); border-radius: 12px; transition: all 0.2s;">
+        <svg style="display: block; flex: 0 0 auto; width: 24px; height: 24px; color: #64748b;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <circle cx="11" cy="11" r="8"></circle>
           <path d="m21 21-4.35-4.35"></path>
         </svg>
@@ -109,17 +110,18 @@
           autocomplete="off"
           style="
             width: 100%;
-            padding: 1.25rem 1.5rem 1.25rem 3.5rem;
+            flex: 1;
+            padding: 1.25rem 0;
             font-size: 1.125rem;
-            background: rgba(30, 41, 59, 0.8);
-            border: 2px solid rgba(100, 116, 139, 0.3);
-            border-radius: 12px;
+            background: transparent;
+            border: none;
             color: #e5e7eb;
             transition: all 0.2s;
           "
-          onfocus="this.style.borderColor='rgba(59, 130, 246, 0.6)'; this.style.background='rgba(30, 41, 59, 1)';"
-          onblur="this.style.borderColor='rgba(100, 116, 139, 0.3)'; this.style.background='rgba(30, 41, 59, 0.8)';"
+          onfocus="this.parentElement.style.borderColor='rgba(59, 130, 246, 0.6)'; this.parentElement.style.background='rgba(30, 41, 59, 1)';"
+          onblur="this.parentElement.style.borderColor='rgba(100, 116, 139, 0.3)'; this.parentElement.style.background='rgba(30, 41, 59, 0.8)';"
         />
+        </div>
         <div style="margin-top: 0.6rem; font-size: 0.9rem; color: #94a3b8; text-align: left; padding-left: 0.25rem;">
           Searching: NASDAQ-100 (100 stocks)
         </div>
@@ -485,6 +487,7 @@
     }
 
     function renderSourceChain(chain) {
+      if (!pageDebug) return '';
       if (!chain) return '';
       const primary = escapeHtml(chain?.primary || '—');
       const selected = escapeHtml(chain?.selected || '—');
@@ -514,6 +517,77 @@
           <div style="margin-top: 0.25rem; color: #e5e7eb; font-weight: 600;">selected=${selected} • primary=${primary} • forced=${forced} • fallbackUsed=${fallbackUsed}</div>
           ${primaryFailureHint ? `<div style="margin-top: 0.35rem; color: #94a3b8; font-size: 0.85rem;">${primaryFailureHint}</div>` : ''}
           ${extra ? `<div style="margin-top: 0.35rem; color: #94a3b8; font-size: 0.85rem;">${extra}</div>` : ''}
+        </div>
+      `;
+    }
+
+    function renderFundamentalsBlock(payload) {
+      const meta = payload?.metadata || {};
+      const data = payload?.data || {};
+      const error = payload?.error || null;
+
+      const marketCap = data?.marketCap;
+      const pe = data?.pe_ttm;
+      const ps = data?.ps_ttm;
+      const eps = data?.eps_ttm;
+      const nextEarnings = data?.nextEarningsDate;
+      const gross = data?.grossMargin;
+      const op = data?.operatingMargin;
+      const net = data?.netMargin;
+
+      const line = (label, value) => `
+        <div style="padding: 0.75rem 0.9rem; background: rgba(15, 23, 42, 0.35); border: 1px solid rgba(100, 116, 139, 0.22); border-radius: 10px;">
+          <div style="font-size: 0.8rem; color: #94a3b8;">${escapeHtml(label)}</div>
+          <div style="margin-top: 0.25rem; font-weight: 700; color: #e5e7eb;">${value == null ? '—' : escapeHtml(String(value))}</div>
+        </div>
+      `;
+
+      const fmtMarketCap = (v) => {
+        const n = Number(v);
+        if (!Number.isFinite(n)) return null;
+        if (n >= 1e12) return `${formatNumber(n / 1e12, { digits: 2 })}T`;
+        if (n >= 1e9) return `${formatNumber(n / 1e9, { digits: 2 })}B`;
+        if (n >= 1e6) return `${formatNumber(n / 1e6, { digits: 2 })}M`;
+        return formatNumber(n, { digits: 0 });
+      };
+
+      const fmtRatio = (v) => {
+        const n = Number(v);
+        return Number.isFinite(n) ? formatNumber(n, { digits: 2 }) : null;
+      };
+
+      const fmtPct = (v) => {
+        const n = Number(v);
+        return Number.isFinite(n) ? `${formatNumber(n * 100, { digits: 1 })}%` : null;
+      };
+
+      const providerLine = pageDebug
+        ? `<div style="margin-top: 0.75rem; color: #94a3b8; font-size: 0.85rem;">provider=${escapeHtml(meta?.provider?.selected || '')} • fallbackUsed=${meta?.provider?.fallbackUsed ? 'true' : 'false'} • keySource=${escapeHtml(meta?.provider?.keySource || '')}</div>`
+        : '';
+
+      if (meta?.status === 'ERROR' && error && !pageDebug) {
+        return `
+          <div style="margin-top: 1.5rem;">
+            <h3 style="margin: 0 0 0.75rem; font-size: 1.25rem; color: #e5e7eb;">Fundamentals</h3>
+            <div style="color:#94a3b8;">Fundamentals unavailable (slow-data).</div>
+          </div>
+        `;
+      }
+
+      return `
+        <div style="margin-top: 1.5rem;">
+          <h3 style="margin: 0 0 0.75rem; font-size: 1.25rem; color: #e5e7eb;">Fundamentals</h3>
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 0.75rem;">
+            ${line('Market cap', fmtMarketCap(marketCap))}
+            ${line('P/E (TTM)', fmtRatio(pe))}
+            ${line('P/S (TTM)', fmtRatio(ps))}
+            ${line('EPS (TTM)', fmtRatio(eps))}
+            ${line('Next earnings', nextEarnings || null)}
+            ${line('Gross margin', fmtPct(gross))}
+            ${line('Operating margin', fmtPct(op))}
+            ${line('Net margin', fmtPct(net))}
+          </div>
+          ${providerLine}
         </div>
       `;
     }
@@ -570,6 +644,7 @@
       const statusChipColor = meta?.status === 'OK' ? '#10b981' : meta?.status === 'PARTIAL' ? '#f59e0b' : '#ef4444';
 
       resultsTitle.textContent = `${effectiveName} (${effectiveTicker || '—'})`;
+      const fundamentalsHtml = data?.fundamentals_html || '';
       resultsContent.innerHTML = `
         ${showBanner ? renderErrorBanner(bannerError, meta) : ''}
         <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; flex-wrap: wrap;">
@@ -584,6 +659,8 @@
         </div>
 
         ${renderSourceChain(meta?.source_chain)}
+
+        ${fundamentalsHtml}
 
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; margin-top: 1.5rem;">
           <div style="padding: 1.2rem; background: rgba(59, 130, 246, 0.1); border-radius: 12px; border: 1px solid rgba(59, 130, 246, 0.2);">
@@ -662,7 +739,14 @@
       showLoading(`Analyzing ${upperTicker}...`);
       resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
       const fallback = options.fallback || { ticker: upperTicker, name: universeByTicker.get(upperTicker) || null };
-      const { payload, networkError } = await fetchJson(`/api/stock?ticker=${encodeURIComponent(upperTicker)}`);
+      const [stockRes, fundRes] = await Promise.all([
+        fetchJson(`/api/stock?ticker=${encodeURIComponent(upperTicker)}`),
+        fetchJson(`/api/fundamentals?ticker=${encodeURIComponent(upperTicker)}${pageDebug ? '&debug=1' : ''}`)
+      ]);
+
+      const { payload, networkError } = stockRes;
+      const fundamentalsPayload = fundRes?.payload || null;
+
       if (networkError) {
         renderStock(
           { error: { code: 'NETWORK_ERROR', message: 'Unable to reach /api/stock' }, metadata: { status: 'ERROR' } },
@@ -670,7 +754,11 @@
         );
         return;
       }
-      renderStock(payload || { error: { code: 'NETWORK_ERROR', message: 'Unable to reach /api/stock' }, metadata: { status: 'ERROR' } }, fallback);
+
+      const safePayload = payload || { error: { code: 'NETWORK_ERROR', message: 'Unable to reach /api/stock' }, metadata: { status: 'ERROR' }, data: {} };
+      safePayload.data = safePayload.data || {};
+      safePayload.data.fundamentals_html = renderFundamentalsBlock(fundamentalsPayload);
+      renderStock(safePayload, fallback);
     }
 
     async function resolveAndAnalyze(query) {
