@@ -19,6 +19,17 @@ const PROVIDER_STATE_PATH = path.join("mirrors", "provider-state.json");
 
 const DEFAULT_PACKAGES = ["blocks1-12", "blocks13-25", "blocks26-43"];
 
+const NON_SYSTEMIC_REASONS = new Set([
+  "MISSING_SECRET",
+  "UNAUTHORIZED",
+  "NO_DATA",
+  "PAYLOAD_TOO_LARGE"
+]);
+
+function manifestStatusForReason(reason) {
+  return NON_SYSTEMIC_REASONS.has(String(reason || "")) ? "PARTIAL" : "ERROR";
+}
+
 const YIELD_SERIES = {
   "1m": "DGS1MO",
   "3m": "DGS3MO",
@@ -1123,7 +1134,7 @@ async function main() {
           manifest.blocks.push({
             blockId: entry.blockId,
             title: entry.title,
-            status: "ERROR",
+            status: manifestStatusForReason(reason),
             reason,
             itemsCount: 0,
             coveragePct: 0,
@@ -1156,7 +1167,7 @@ async function main() {
           manifest.blocks.push({
             blockId: entry.blockId,
             title: entry.title,
-            status: "ERROR",
+            status: manifestStatusForReason(reason),
             reason,
             itemsCount: 0,
             coveragePct: 0,
@@ -1188,7 +1199,7 @@ async function main() {
             manifest.blocks.push({
               blockId: entry.blockId,
               title: entry.title,
-              status: "ERROR",
+              status: manifestStatusForReason(reason),
               reason,
               itemsCount: 0,
               coveragePct: 0,
@@ -1213,7 +1224,7 @@ async function main() {
           manifest.blocks.push({
             blockId: entry.blockId,
             title: entry.title,
-            status: "ERROR",
+            status: manifestStatusForReason(reason),
             reason,
             itemsCount: 0,
             coveragePct: 0,
@@ -1287,7 +1298,7 @@ async function main() {
         manifest.blocks.push({
           blockId: entry.blockId,
           title: entry.title,
-          status: "ERROR",
+          status: manifestStatusForReason(reason),
           reason,
           itemsCount: 0,
           coveragePct: 0,

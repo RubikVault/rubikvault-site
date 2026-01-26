@@ -1,19 +1,14 @@
 {
-  "generatedAt": "2026-01-19T13:11:09.964Z",
+  "generatedAt": "2026-01-26T07:03:51.598Z",
   "buildStatus": "OK",
   "reasons": [],
   "summary": {
-    "total": 71,
-    "ok": 71,
+    "total": 89,
+    "ok": 89,
     "fail": 0
   },
   "lastGoodAsOf": {},
   "snapshots": [
-    {
-      "blockId": "sp500-sectors",
-      "status": "OK",
-      "reason": "OK"
-    },
     {
       "blockId": "_health",
       "status": "OK",
@@ -25,9 +20,19 @@
       "reason": "COVERAGE_LIMIT"
     },
     {
+      "blockId": "alpha-radar-lite",
+      "status": "OK",
+      "reason": "DEGRADED_COVERAGE"
+    },
+    {
       "blockId": "alpha-radar",
       "status": "OK",
       "reason": "OK"
+    },
+    {
+      "blockId": "analyst-revision-lite",
+      "status": "OK",
+      "reason": "UNAUTHORIZED"
     },
     {
       "blockId": "analyst-stampede",
@@ -50,9 +55,19 @@
       "reason": "MIRROR_MISSING"
     },
     {
+      "blockId": "breadth-delta",
+      "status": "OK",
+      "reason": "OK"
+    },
+    {
       "blockId": "breakout-energy",
       "status": "OK",
       "reason": "EMPTY"
+    },
+    {
+      "blockId": "catalyst-calendar-lite",
+      "status": "OK",
+      "reason": "DEGRADED_COVERAGE"
     },
     {
       "blockId": "central-bank-watch",
@@ -65,174 +80,9 @@
       "reason": "COVERAGE_LIMIT"
     },
     {
-      "blockId": "crypto-snapshot",
+      "blockId": "credit-spread-proxy-lite",
       "status": "OK",
       "reason": "OK"
-    },
-    {
-      "blockId": "daily-digest",
-      "status": "OK",
-      "reason": "EMPTY_ITEMS"
-    },
-    {
-      "blockId": "earnings-calendar",
-      "status": "OK",
-      "reason": "MIRROR_MISSING"
-    },
-    {
-      "blockId": "earnings-reality",
-      "status": "OK",
-      "reason": "COVERAGE_LIMIT"
-    },
-    {
-      "blockId": "earnings",
-      "status": "OK",
-      "reason": "COVERAGE_LIMIT"
-    },
-    {
-      "blockId": "export-csv",
-      "status": "OK",
-      "reason": "MIRROR_MISSING"
-    },
-    {
-      "blockId": "health",
-      "status": "OK",
-      "reason": "BLOCK_ERRORS"
-    },
-    {
-      "blockId": "hype-divergence",
-      "status": "OK",
-      "reason": "COVERAGE_LIMIT"
-    },
-    {
-      "blockId": "insider-cluster",
-      "status": "OK",
-      "reason": "COVERAGE_LIMIT"
-    },
-    {
-      "blockId": "macro-hub-runlog",
-      "status": "OK",
-      "reason": "OK"
-    },
-    {
-      "blockId": "macro-hub",
-      "status": "OK",
-      "reason": "PARTIAL"
-    },
-    {
-      "blockId": "macro-rates",
-      "status": "OK",
-      "reason": "MIRROR_MISSING"
-    },
-    {
-      "blockId": "market-cockpit",
-      "status": "OK",
-      "reason": "OK"
-    },
-    {
-      "blockId": "market-health",
-      "status": "OK",
-      "reason": "OK"
-    },
-    {
-      "blockId": "market-regime",
-      "status": "OK",
-      "reason": "OK"
-    },
-    {
-      "blockId": "marketphase",
-      "status": "OK",
-      "reason": "MIRROR_MISSING"
-    },
-    {
-      "blockId": "news-headlines",
-      "status": "OK",
-      "reason": "MIRROR_MISSING"
-    },
-    {
-      "blockId": "news-intelligence",
-      "status": "OK",
-      "reason": "MIRROR_MISSING"
-    },
-    {
-      "blockId": "price-snapshot",
-      "status": "OK",
-      "reason": "OK"
-    },
-    {
-      "blockId": "quotes",
-      "status": "OK",
-      "reason": "OK"
-    },
-    {
-      "blockId": "rvci-engine",
-      "status": "OK",
-      "reason": "MIRROR_MISSING"
-    },
-    {
-      "blockId": "sentiment-barometer",
-      "status": "OK",
-      "reason": "MIRROR_MISSING"
-    },
-    {
-      "blockId": "sentiment",
-      "status": "OK",
-      "reason": "MIRROR_MISSING"
-    },
-    {
-      "blockId": "smart-money",
-      "status": "OK",
-      "reason": "COVERAGE_LIMIT"
-    },
-    {
-      "blockId": "system-health",
-      "status": "OK",
-      "reason": "EMPTY_ITEMS"
-    },
-    {
-      "blockId": "tech-signals",
-      "status": "OK",
-      "reason": "OK"
-    },
-    {
-      "blockId": "top-movers",
-      "status": "OK",
-      "reason": "OK"
-    },
-    {
-      "blockId": "volume-anomaly",
-      "status": "OK",
-      "reason": "OK"
-    },
-    {
-      "blockId": "watchlist-local",
-      "status": "OK",
-      "reason": "MIRROR_MISSING"
-    },
-    {
-      "blockId": "why-moved",
-      "status": "OK",
-      "reason": "COVERAGE_LIMIT"
-    },
-    {
-      "blockId": "yield-curve",
-      "status": "OK",
-      "reason": "OK"
-    },
-    {
-      "blockId": "alpha-radar-lite",
-      "status": "OK",
-      "reason": "DEGRADED_COVERAGE"
-    },
-    {
-      "blockId": "analyst-revision-lite",
-      "status": "OK",
-      "reason": "UNAUTHORIZED"
-    },
-    {
-      "blockId": "catalyst-calendar-lite",
-      "status": "OK",
-      "reason": "DEGRADED_COVERAGE"
     },
     {
       "blockId": "credit-stress-proxy",
@@ -245,9 +95,39 @@
       "reason": "OK"
     },
     {
+      "blockId": "crypto-snapshot",
+      "status": "OK",
+      "reason": "OK"
+    },
+    {
+      "blockId": "daily-digest",
+      "status": "OK",
+      "reason": "EMPTY_ITEMS"
+    },
+    {
+      "blockId": "drawdown-monitor",
+      "status": "OK",
+      "reason": "OK"
+    },
+    {
+      "blockId": "earnings-calendar",
+      "status": "OK",
+      "reason": "MIRROR_MISSING"
+    },
+    {
       "blockId": "earnings-pressure-lite",
       "status": "OK",
       "reason": "UNAUTHORIZED"
+    },
+    {
+      "blockId": "earnings-reality",
+      "status": "OK",
+      "reason": "COVERAGE_LIMIT"
+    },
+    {
+      "blockId": "earnings",
+      "status": "OK",
+      "reason": "COVERAGE_LIMIT"
     },
     {
       "blockId": "ecb-rates-board",
@@ -258,6 +138,11 @@
       "blockId": "energy-macro",
       "status": "OK",
       "reason": "OK"
+    },
+    {
+      "blockId": "export-csv",
+      "status": "OK",
+      "reason": "MIRROR_MISSING"
     },
     {
       "blockId": "flow-anomaly-lite",
@@ -275,9 +160,19 @@
       "reason": "NO_DATA"
     },
     {
+      "blockId": "health",
+      "status": "OK",
+      "reason": "LIVE"
+    },
+    {
       "blockId": "highs-vs-lows",
       "status": "OK",
       "reason": "OK"
+    },
+    {
+      "blockId": "hype-divergence",
+      "status": "OK",
+      "reason": "COVERAGE_LIMIT"
     },
     {
       "blockId": "inflation-pulse",
@@ -290,6 +185,11 @@
       "reason": "OK"
     },
     {
+      "blockId": "insider-cluster",
+      "status": "OK",
+      "reason": "COVERAGE_LIMIT"
+    },
+    {
       "blockId": "labor-pulse",
       "status": "OK",
       "reason": "OK"
@@ -300,12 +200,47 @@
       "reason": "OK"
     },
     {
+      "blockId": "liquidity-delta",
+      "status": "OK",
+      "reason": "OK"
+    },
+    {
       "blockId": "liquidity-stress-watch",
       "status": "OK",
       "reason": "OK"
     },
     {
+      "blockId": "macro-hub-runlog",
+      "status": "OK",
+      "reason": "OK"
+    },
+    {
+      "blockId": "macro-hub",
+      "status": "OK",
+      "reason": "PARTIAL"
+    },
+    {
+      "blockId": "unknown",
+      "status": "OK",
+      "reason": "OK"
+    },
+    {
+      "blockId": "macro-rates",
+      "status": "OK",
+      "reason": "MIRROR_MISSING"
+    },
+    {
       "blockId": "macro-risk-score",
+      "status": "OK",
+      "reason": "OK"
+    },
+    {
+      "blockId": "macro-surprise-lite",
+      "status": "OK",
+      "reason": "OK"
+    },
+    {
+      "blockId": "manifest",
       "status": "OK",
       "reason": "OK"
     },
@@ -315,9 +250,54 @@
       "reason": "OK"
     },
     {
+      "blockId": "market-cockpit",
+      "status": "OK",
+      "reason": "OK"
+    },
+    {
+      "blockId": "market-health-summary",
+      "status": "OK",
+      "reason": "OK"
+    },
+    {
+      "blockId": "market-health",
+      "status": "OK",
+      "reason": "OK"
+    },
+    {
+      "blockId": "market-regime",
+      "status": "OK",
+      "reason": "OK"
+    },
+    {
+      "blockId": "market-stress-composite",
+      "status": "OK",
+      "reason": "OK"
+    },
+    {
+      "blockId": "marketphase",
+      "status": "OK",
+      "reason": "MIRROR_MISSING"
+    },
+    {
       "blockId": "master-market-dashboard",
       "status": "OK",
       "reason": "OK"
+    },
+    {
+      "blockId": "momentum-heatmap-lite",
+      "status": "OK",
+      "reason": "OK"
+    },
+    {
+      "blockId": "news-headlines",
+      "status": "OK",
+      "reason": "MIRROR_MISSING"
+    },
+    {
+      "blockId": "news-intelligence",
+      "status": "OK",
+      "reason": "MIRROR_MISSING"
     },
     {
       "blockId": "options-skew-lite",
@@ -325,9 +305,59 @@
       "reason": "NO_DATA"
     },
     {
+      "blockId": "price-snapshot",
+      "status": "OK",
+      "reason": "OK"
+    },
+    {
+      "blockId": "quotes",
+      "status": "OK",
+      "reason": "OK"
+    },
+    {
       "blockId": "regime-fracture-alert",
       "status": "OK",
       "reason": "OK"
+    },
+    {
+      "blockId": "regime-transition-watch",
+      "status": "OK",
+      "reason": "OK"
+    },
+    {
+      "blockId": "risk-regime-lite",
+      "status": "OK",
+      "reason": "OK"
+    },
+    {
+      "blockId": "rvci-2",
+      "status": "OK",
+      "reason": "OK"
+    },
+    {
+      "blockId": "rvci-engine",
+      "status": "OK",
+      "reason": "MIRROR_MISSING"
+    },
+    {
+      "blockId": "rvci_latest",
+      "status": "OK",
+      "reason": "DEGRADED_COVERAGE"
+    },
+    {
+      "blockId": "sector-relative-strength",
+      "status": "OK",
+      "reason": "OK"
+    },
+    {
+      "blockId": "sector-rotation",
+      "status": "OK",
+      "reason": "OK"
+    },
+    {
+      "blockId": "sentiment-barometer",
+      "status": "OK",
+      "reason": "MIRROR_MISSING"
     },
     {
       "blockId": "sentiment-lite",
@@ -335,9 +365,29 @@
       "reason": "DEGRADED_COVERAGE"
     },
     {
+      "blockId": "sentiment",
+      "status": "OK",
+      "reason": "MIRROR_MISSING"
+    },
+    {
+      "blockId": "smart-money",
+      "status": "OK",
+      "reason": "COVERAGE_LIMIT"
+    },
+    {
       "blockId": "social-velocity-lite",
       "status": "OK",
       "reason": "OK"
+    },
+    {
+      "blockId": "sp500-sectors",
+      "status": "OK",
+      "reason": "OK"
+    },
+    {
+      "blockId": "system-health",
+      "status": "OK",
+      "reason": "EMPTY_ITEMS"
     },
     {
       "blockId": "systemic-risk-lite",
@@ -346,6 +396,21 @@
     },
     {
       "blockId": "tail-risk-watch",
+      "status": "OK",
+      "reason": "OK"
+    },
+    {
+      "blockId": "tech-signals",
+      "status": "OK",
+      "reason": "OK"
+    },
+    {
+      "blockId": "top-movers",
+      "status": "OK",
+      "reason": "OK"
+    },
+    {
+      "blockId": "trend-strength-board",
       "status": "OK",
       "reason": "OK"
     },
@@ -360,43 +425,34 @@
       "reason": "OK"
     },
     {
+      "blockId": "volatility-term-lite",
+      "status": "OK",
+      "reason": "OK"
+    },
+    {
+      "blockId": "volume-anomaly",
+      "status": "OK",
+      "reason": "OK"
+    },
+    {
+      "blockId": "watchlist-local",
+      "status": "OK",
+      "reason": "MIRROR_MISSING"
+    },
+    {
       "blockId": "weekly-market-brief",
       "status": "OK",
       "reason": "DEGRADED_COVERAGE"
+    },
+    {
+      "blockId": "why-moved",
+      "status": "OK",
+      "reason": "COVERAGE_LIMIT"
+    },
+    {
+      "blockId": "yield-curve",
+      "status": "OK",
+      "reason": "OK"
     }
-  ],
-  "runId": "2026-01-19T13:11:09.818Z",
-  "meta": {
-    "status": "OK",
-    "reason": "OK",
-    "generatedAt": "2026-01-19T13:11:09.964Z",
-    "asOf": "2026-01-19T13:11:09.964Z",
-    "ttlSeconds": 3600,
-    "stale": false,
-    "freshness": {
-      "status": "fresh",
-      "ageMinutes": 0
-    },
-    "schedule": {
-      "rule": "daily",
-      "nextPlannedFetchAt": "2026-01-20T13:11:09.964Z",
-      "expectedNextRunWindowMinutes": 1440,
-      "ttlSeconds": 3600
-    },
-    "validation": {
-      "schema": {
-        "ok": true,
-        "errors": []
-      },
-      "ranges": {
-        "ok": true,
-        "errors": []
-      },
-      "integrity": {
-        "ok": true,
-        "errors": []
-      }
-    },
-    "runId": "2026-01-19T13:11:09.818Z"
-  }
+  ]
 }

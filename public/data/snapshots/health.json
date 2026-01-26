@@ -1,32 +1,32 @@
 {
   "schemaVersion": "v3",
   "blockId": "health",
-  "generatedAt": "2026-01-19T13:11:09.839Z",
-  "dataAt": "2026-01-19T07:21:32.053Z",
+  "generatedAt": "2026-01-26T07:03:51.598Z",
+  "dataAt": "2026-01-19T07:09:43.733Z",
   "meta": {
-    "status": "PARTIAL",
-    "reason": "BLOCK_ERRORS",
-    "generatedAt": "2026-01-19T13:11:09.839Z",
-    "asOf": "2026-01-19T07:21:32.053Z",
+    "status": "LIVE",
+    "reason": null,
+    "generatedAt": "2026-01-26T07:03:51.598Z",
+    "asOf": "2026-01-19T07:09:43.733Z",
     "source": "health",
     "ttlSeconds": 3600,
-    "stale": true,
+    "stale": false,
     "itemsCount": 1,
-    "stalenessSec": 20940,
+    "stalenessSec": 0,
     "freshness": {
-      "status": "expired",
-      "ageMinutes": 349
+      "status": "fresh",
+      "ageMinutes": 0
     },
     "schedule": {
       "rule": "daily",
-      "nextPlannedFetchAt": "2026-01-20T13:11:09.839Z",
+      "nextPlannedFetchAt": "2026-01-26T07:03:51.598Z",
       "expectedNextRunWindowMinutes": 1440,
       "ttlSeconds": 3600
     },
-    "runId": "2026-01-19T13:11:09.818Z",
+    "runId": "2026-01-26T07:03:51.598Z",
     "notes": {
-      "lastGoodUsed": 1,
-      "lastGoodFilled": 1
+      "lastGoodUsed": 0,
+      "lastGoodFilled": 0
     },
     "validation": {
       "schema": {
@@ -48,12 +48,12 @@
       {
         "id": "health_status",
         "label": "health",
-        "value": "NO_DATA",
+        "value": "LIVE",
         "unit": "",
-        "derivedFromLastGood": true,
-        "derivationReason": "LASTGOOD_FALLBACK",
-        "stale": true,
-        "staleReason": "missing"
+        "derivedFromLastGood": false,
+        "derivationReason": null,
+        "stale": false,
+        "staleReason": null
       }
     ],
     "blocks": [
@@ -100,7 +100,7 @@
       {
         "blockId": "earnings-pressure-lite",
         "title": "26 - Earnings Pressure Lite",
-        "status": "ERROR",
+        "status": "PARTIAL",
         "reason": "UNAUTHORIZED",
         "itemsCount": 0,
         "coveragePct": 0,
@@ -120,7 +120,7 @@
       {
         "blockId": "options-skew-lite",
         "title": "28 - Options Skew Lite",
-        "status": "ERROR",
+        "status": "PARTIAL",
         "reason": "NO_DATA",
         "itemsCount": 0,
         "coveragePct": 0,
@@ -190,7 +190,7 @@
       {
         "blockId": "analyst-revision-lite",
         "title": "33 - Analyst Revision Lite",
-        "status": "ERROR",
+        "status": "PARTIAL",
         "reason": "UNAUTHORIZED",
         "itemsCount": 0,
         "coveragePct": 0,
@@ -220,7 +220,7 @@
       {
         "blockId": "gamma-exposure-lite",
         "title": "29 - Gamma Exposure Lite",
-        "status": "ERROR",
+        "status": "PARTIAL",
         "reason": "NO_DATA",
         "itemsCount": 0,
         "coveragePct": 0,
@@ -240,10 +240,10 @@
     ],
     "summary": {
       "LIVE": 10,
-      "PARTIAL": 4,
-      "ERROR": 4,
+      "PARTIAL": 8,
+      "ERROR": 0,
       "total": 18,
-      "okPct": 0.7777777777777778,
+      "okPct": 1,
       "reasons": {
         "OK": 10,
         "DEGRADED_COVERAGE": 4,

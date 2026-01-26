@@ -1,6 +1,7 @@
 import { buildProviderError, fetchWithRetry, normalizeProviderDetails } from "./_shared.js";
 
 const BASE_URL = "https://finnhub.io/api/v1";
+const MAX_OPTION_CHAIN_BYTES = Number(process.env.FINNHUB_OPTION_CHAIN_MAX_BYTES || 750000);
 
 export async function fetchFinnhubOptionChain(ctx, { symbol = "SPY" } = {}) {
   const requestCtx = ctx ? (ctx.endpoint ? ctx : { ...ctx, endpoint: "option-chain" }) : { endpoint: "option-chain" };
@@ -31,6 +32,15 @@ export async function fetchFinnhubOptionChain(ctx, { symbol = "SPY" } = {}) {
     throw buildProviderError("PROVIDER_BAD_PAYLOAD", error?.message || "finnhub_fetch_failed", {
       httpStatus: null,
       snippet: "",
+      urlHost: "finnhub.io"
+    });
+  }
+
+  const bytesIn = Buffer.byteLength(text || "", "utf8");
+  if (Number.isFinite(MAX_OPTION_CHAIN_BYTES) && MAX_OPTION_CHAIN_BYTES > 0 && bytesIn > MAX_OPTION_CHAIN_BYTES) {
+    throw buildProviderError("PAYLOAD_TOO_LARGE", "finnhub_option_chain_too_large", {
+      httpStatus: res?.status ?? null,
+      snippet: `payload ${bytesIn} bytes exceeds MAX_OPTION_CHAIN_BYTES=${MAX_OPTION_CHAIN_BYTES}`,
       urlHost: "finnhub.io"
     });
   }

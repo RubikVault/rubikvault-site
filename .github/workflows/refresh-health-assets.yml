@@ -1,0 +1,41 @@
+name: Refresh Health Assets
+
+on:
+  schedule:
+    - cron: "17 6 * * *"
+  workflow_dispatch:
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          token: "${{ secrets.GITHUB_TOKEN }}"
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Refresh health assets
+        run: node scripts/refresh-health-assets.mjs
+
+      - name: Commit and push if changed
+        run: |
+          set -euo pipefail
+          if git diff --quiet public/data; then
+            echo "No health asset changes"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add public/data/system-health.json public/data/blocks/health.latest.json public/data/snapshots/health.json public/data/snapshots/health/latest.json
+          git commit -m "chore(health): refresh health assets"
+          git push
