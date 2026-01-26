@@ -1,29 +1,10 @@
 {
   "schema_version": "3.0",
   "metadata": {
-    "status": "LIVE",
-    "reason": null,
-    "generatedAt": "2026-01-26T07:03:51.598Z",
-    "asOf": "2026-01-19T07:09:43.733Z",
     "source": "health",
-    "ttlSeconds": 3600,
-    "stale": false,
-    "itemsCount": 1,
-    "stalenessSec": 0,
     "freshness": {
       "status": "fresh",
       "ageMinutes": 0
-    },
-    "schedule": {
-      "rule": "daily",
-      "nextPlannedFetchAt": "2026-01-26T07:03:51.598Z",
-      "expectedNextRunWindowMinutes": 1440,
-      "ttlSeconds": 3600
-    },
-    "runId": "2026-01-26T07:03:51.598Z",
-    "notes": {
-      "lastGoodUsed": 0,
-      "lastGoodFilled": 0
     },
     "validation": {
       "schema": {
@@ -38,7 +19,15 @@
         "ok": true,
         "errors": []
       }
-    }
+    },
+    "module": "health",
+    "tier": "standard",
+    "domain": "internal",
+    "fetched_at": "",
+    "published_at": "",
+    "digest": "",
+    "record_count": 0,
+    "upstream": {}
   },
   "data": {
     "items": [
