@@ -217,11 +217,10 @@
       items: [],
       open: false,
       activeIndex: -1,
-      debounceMs: 200,
+      debounceMs: 150,
       debounceTimer: null,
-      universePromise: null,
-      universeFailed: false,
-      universeEntries: []
+      blurTimer: null,
+      requestSeq: 0
     };
 
     async function fetchJson(url) {
@@ -268,74 +267,45 @@
       if (!root) return;
       typeahead.items = Array.isArray(items) ? items : [];
       typeahead.open = typeahead.items.length > 0;
-      typeahead.activeIndex = typeahead.open ? 0 : -1;
+      typeahead.activeIndex = -1;
       renderTypeahead();
     }
 
-    function normalizeUniverseEntries(snapshot) {
-      const data = snapshot?.data;
-      if (!data || typeof data !== 'object') return [];
-      if (Array.isArray(data)) {
-        return data
-          .map((entry) => {
-            const symbol = entry?.symbol ? String(entry.symbol).toUpperCase() : null;
-            if (!symbol) return null;
-            return { symbol, name: entry?.name ? String(entry.name) : '' };
-          })
-          .filter(Boolean);
-      }
-      return Object.entries(data)
-        .map(([symbol, entry]) => {
-          const sym = symbol ? String(symbol).toUpperCase() : null;
-          if (!sym) return null;
-          const name = entry?.name ? String(entry.name) : '';
-          return { symbol: sym, name };
-        })
-        .filter(Boolean);
+    function clearSuggestions() {
+      closeTypeahead();
     }
 
-    async function ensureUniverseLoaded() {
-      if (typeahead.universeFailed) return [];
-      if (typeahead.universeEntries.length) return typeahead.universeEntries;
-      if (!typeahead.universePromise) {
-        typeahead.universePromise = (async () => {
-          const { payload, networkError } = await fetchJson('/api/universe');
-          if (networkError || !payload) throw new Error('universe_fetch_failed');
-          const entries = normalizeUniverseEntries(payload?.data || payload);
-          typeahead.universeEntries = entries;
-          return entries;
-        })().catch(() => {
-          typeahead.universeFailed = true;
-          typeahead.universeEntries = [];
-          return [];
-        });
+    async function doFetch(q) {
+      const query = String(q || '').trim();
+      if (!query) {
+        clearSuggestions();
+        return;
       }
-      return typeahead.universePromise;
+      const seq = ++typeahead.requestSeq;
+      const url = `/api/universe?q=${encodeURIComponent(query)}&t=${Date.now()}`;
+      const { payload, networkError } = await fetchJson(url);
+      if (seq !== typeahead.requestSeq) return;
+      if (networkError || !payload) {
+        clearSuggestions();
+        return;
+      }
+      const items = payload?.data?.symbols ?? [];
+      openTypeahead(
+        Array.isArray(items)
+          ? items
+              .map((it) => {
+                const symbol = it?.symbol ? String(it.symbol).toUpperCase() : null;
+                if (!symbol) return null;
+                return { symbol, name: it?.name ? String(it.name) : '' };
+              })
+              .filter(Boolean)
+          : []
+      );
     }
 
-    function buildSuggestions(query, entries) {
-      const q = String(query || '').trim();
-      if (q.length < 2) return [];
-      const qUpper = q.toUpperCase();
-      const qLower = q.toLowerCase();
-
-      const ranked = [];
-      for (const entry of entries) {
-        const symbol = entry?.symbol || '';
-        const name = entry?.name || '';
-        const symbolMatch = symbol.startsWith(qUpper);
-        const nameMatch = name.toLowerCase().includes(qLower);
-        if (!symbolMatch && !nameMatch) continue;
-        const score = symbolMatch ? (symbol === qUpper ? 0 : 1) : 3;
-        ranked.push({ symbol, name, score });
-      }
-
-      ranked.sort((a, b) => {
-        if (a.score !== b.score) return a.score - b.score;
-        return a.symbol.localeCompare(b.symbol);
-      });
-
-      return ranked.slice(0, 10);
+    function scheduleFetch(q) {
+      if (typeahead.debounceTimer) clearTimeout(typeahead.debounceTimer);
+      typeahead.debounceTimer = setTimeout(() => doFetch(q), typeahead.debounceMs);
     }
 
     function renderTypeahead() {
@@ -351,12 +321,10 @@
           const active = idx === typeahead.activeIndex;
           const bg = active ? 'rgba(59, 130, 246, 0.18)' : 'transparent';
           const border = active ? 'rgba(59, 130, 246, 0.35)' : 'transparent';
+          const label = item.name ? `${escapeHtml(item.name)} (${escapeHtml(item.symbol)})` : escapeHtml(item.symbol);
           return `
-            <div data-idx="${idx}" style="padding: 0.8rem 1rem; cursor: pointer; background: ${bg}; border-left: 3px solid ${border};">
-              <div style="display:flex; justify-content: space-between; gap: 1rem; align-items: baseline;">
-                <div style="font-weight: 800; color: #e5e7eb;">${escapeHtml(item.symbol)}</div>
-                <div style="font-size: 0.85rem; color: #94a3b8; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width: 420px;">${escapeHtml(item.name || '')}</div>
-              </div>
+            <div data-idx="${idx}" class="${active ? 'is-active' : ''}" style="padding: 0.8rem 1rem; cursor: pointer; background: ${bg}; border-left: 3px solid ${border};">
+              <div style="font-weight: 700; color: #e5e7eb; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${label}</div>
             </div>
           `;
         })
@@ -373,7 +341,7 @@
           if (!item?.symbol) return;
           closeTypeahead();
           searchInput.value = item.symbol;
-          await resolveAndAnalyze(item.symbol);
+          window.location.href = `/analyze/${encodeURIComponent(item.symbol)}`;
         });
       });
     }
@@ -626,12 +594,12 @@
         return;
       }
       if (e.key === 'Enter') {
-        if (typeahead.open && typeahead.activeIndex >= 0 && typeahead.items[typeahead.activeIndex]) {
+        if (typeahead.open && typeahead.items.length) {
           e.preventDefault();
-          const item = typeahead.items[typeahead.activeIndex];
+          const pick = typeahead.activeIndex >= 0 ? typeahead.items[typeahead.activeIndex] : typeahead.items[0];
           closeTypeahead();
-          searchInput.value = item.symbol;
-          await resolveAndAnalyze(item.symbol);
+          searchInput.value = pick.symbol;
+          window.location.href = `/analyze/${encodeURIComponent(pick.symbol)}`;
           return;
         }
         closeTypeahead();
@@ -641,20 +609,24 @@
 
     searchInput.addEventListener('input', () => {
       const value = String(searchInput.value || '').trim();
-      if (typeahead.debounceTimer) clearTimeout(typeahead.debounceTimer);
-      if (value.length < 2) {
-        closeTypeahead();
+      if (value.length < 1) {
+        clearSuggestions();
         return;
       }
-      typeahead.debounceTimer = setTimeout(async () => {
-        const entries = await ensureUniverseLoaded();
-        if (!entries.length) {
-          closeTypeahead();
-          return;
-        }
-        const suggestions = buildSuggestions(value, entries);
-        openTypeahead(suggestions);
-      }, typeahead.debounceMs);
+      scheduleFetch(value);
+    });
+
+    searchInput.addEventListener('blur', () => {
+      if (typeahead.blurTimer) clearTimeout(typeahead.blurTimer);
+      typeahead.blurTimer = setTimeout(() => closeTypeahead(), 120);
+    });
+
+    searchInput.addEventListener('focus', () => {
+      if (typeahead.blurTimer) clearTimeout(typeahead.blurTimer);
+      if (searchInput.value.trim() && typeahead.items.length) {
+        typeahead.open = true;
+        renderTypeahead();
+      }
     });
 
     document.addEventListener('click', (ev) => {

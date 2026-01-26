@@ -1,109 +1,7 @@
-const CACHE_KEY = 'rv-search-universe-v1';
-const CACHE_TTL_MS = 6 * 60 * 60 * 1000;
-
-const storage = typeof window !== 'undefined' ? window.localStorage : null;
-let cachedIndex = null;
-
-function readCache() {
-  if (!storage) return null;
-  try {
-    const payload = storage.getItem(CACHE_KEY);
-    if (!payload) return null;
-    const parsed = JSON.parse(payload);
-    if (Date.now() - (parsed.timestamp || 0) > CACHE_TTL_MS) {
-      storage.removeItem(CACHE_KEY);
-      return null;
-    }
-    return parsed.data;
-  } catch (error) {
-    return null;
-  }
-}
-
-function writeCache(data) {
-  if (!storage) return;
-  try {
-    storage.setItem(CACHE_KEY, JSON.stringify({ timestamp: Date.now(), data }));
-  } catch (error) {
-    // ignore
-  }
-}
-
-async function fetchUniverse(debug = false) {
-  const url = new URL('/api/universe', window.location.origin);
-  if (debug) url.searchParams.set('debug', '1');
-  const response = await fetch(url.toString());
-  if (!response.ok) throw new Error('unable to load universe');
-  const payload = await response.json();
-  if (payload?.schema_version !== '3.0' || typeof payload?.data !== 'object') {
-    throw new Error('invalid universe payload');
-  }
-  return payload.data;
-}
-
-export async function loadUniverseIndex(debug = false) {
-  if (cachedIndex) return cachedIndex;
-  let universeData = readCache();
-  if (!universeData) {
-    universeData = await fetchUniverse(debug);
-    writeCache(universeData);
-  }
-  cachedIndex = buildSearchIndex(universeData);
-  return cachedIndex;
-}
-
-export function buildSearchIndex(universeData) {
-  if (!universeData || typeof universeData !== 'object') return [];
-  return Object.entries(universeData).map(([ticker, record]) => {
-    const name = record?.name || '';
-    const nameLower = name.toLowerCase();
-    const indexes = Array.isArray(record?.indexes) ? record.indexes : [];
-    return {
-      ticker: String(ticker || '').toUpperCase(),
-      name,
-      nameLower,
-      membership: {
-        DJ30: indexes.includes('DJ30'),
-        SP500: indexes.includes('SP500'),
-        NDX100: indexes.includes('NDX100'),
-        RUT2000: indexes.includes('RUT2000')
-      },
-      indexes
-    };
-  });
-}
-
-export function filterUniverse(index, query, limit = 12) {
-  if (!query || !index || !Array.isArray(index)) return [];
-  const raw = query.trim();
-  if (!raw) return [];
-  const upper = raw.toUpperCase();
-  const lower = raw.toLowerCase();
-
-  const scored = index
-    .map((entry) => {
-      let score = 0;
-      if (entry.ticker === upper) {
-        score = 4;
-      } else if (entry.ticker.startsWith(upper)) {
-        score = 3;
-      } else if (entry.nameLower.startsWith(lower)) {
-        score = 2;
-      } else if (entry.nameLower.includes(lower)) {
-        score = 1;
-      }
-      return { entry, score };
-    })
-    .filter((item) => item.score > 0);
-
-  scored.sort((a, b) => {
-    if (b.score !== a.score) return b.score - a.score;
-    if (a.entry.ticker < b.entry.ticker) return -1;
-    if (a.entry.ticker > b.entry.ticker) return 1;
-    return 0;
-  });
-
-  return scored.slice(0, limit).map((item) => item.entry);
+async function fetchJson(url) {
+  const response = await fetch(url);
+  if (!response.ok) throw new Error('request_failed');
+  return response.json();
 }
 
 function createBadge(text) {
@@ -143,21 +41,12 @@ export async function attachSearchUI(rootElement, options = {}) {
   dropdown.style.display = 'none';
   rootElement.appendChild(dropdown);
 
-  let index = [];
   let suggestions = [];
-  let highlighted = -1;
-  let loaded = false;
-
-  async function ensureIndex() {
-    if (loaded) return;
-    try {
-      index = await loadUniverseIndex(debug);
-    } catch (error) {
-      console.error('search universe load failed', error);
-      index = [];
-    }
-    loaded = true;
-  }
+  let activeIndex = -1;
+  let open = false;
+  let debounceTimer = null;
+  let blurTimer = null;
+  let requestSeq = 0;
 
   function renderDropdown(items) {
     dropdown.innerHTML = '';
@@ -167,6 +56,7 @@ export async function attachSearchUI(rootElement, options = {}) {
       empty.textContent = 'No matches';
       dropdown.appendChild(empty);
       dropdown.style.display = 'block';
+      open = true;
       return;
     }
     items.forEach((item, idx) => {
@@ -174,14 +64,10 @@ export async function attachSearchUI(rootElement, options = {}) {
       entry.className = 'rv-dd-item';
       entry.tabIndex = 0;
       entry.dataset.index = String(idx);
+      const label = item.name ? `${item.name} (${item.ticker})` : item.ticker;
       const title = document.createElement('strong');
-      title.textContent = item.ticker;
+      title.textContent = label;
       entry.appendChild(title);
-      if (item.name) {
-        const sub = document.createElement('div');
-        sub.textContent = item.name;
-        entry.appendChild(sub);
-      }
       const badgeRow = document.createElement('div');
       badgeRow.className = 'rv-badge-row';
       ['DJ30', 'SP500', 'NDX100', 'RUT2000'].forEach((key) => {
@@ -194,69 +80,140 @@ export async function attachSearchUI(rootElement, options = {}) {
       dropdown.appendChild(entry);
     });
     dropdown.style.display = 'block';
+    open = true;
   }
 
-  async function handleInput() {
-    await ensureIndex();
-    const query = input.value;
-    suggestions = filterUniverse(index, query, limit);
-    highlighted = -1;
-    if (!query.trim()) {
-      dropdown.style.display = 'none';
-      suggestions = [];
+  function close() {
+    open = false;
+    activeIndex = -1;
+    suggestions = [];
+    dropdown.style.display = 'none';
+  }
+
+  function applyActiveClass() {
+    Array.from(dropdown.children).forEach((el, idx) => {
+      el.classList.toggle('rv-dd-item--highlighted', idx === activeIndex);
+    });
+  }
+
+  async function doFetch(q) {
+    const raw = String(q || '').trim();
+    if (!raw) {
+      close();
+      return;
+    }
+    const seq = ++requestSeq;
+    const url = `/api/universe?q=${encodeURIComponent(raw)}&t=${Date.now()}`;
+    let payload;
+    try {
+      payload = await fetchJson(url);
+    } catch {
+      if (seq !== requestSeq) return;
+      close();
+      return;
+    }
+    if (seq !== requestSeq) return;
+    const items = payload?.data?.symbols ?? [];
+    const mapped = Array.isArray(items)
+      ? items
+          .map((it) => {
+            const symbol = it?.symbol ? String(it.symbol).toUpperCase() : null;
+            if (!symbol) return null;
+            return {
+              ticker: symbol,
+              name: it?.name ? String(it.name) : '',
+              nameLower: it?.name ? String(it.name).toLowerCase() : '',
+              membership: { DJ30: false, SP500: false, NDX100: false, RUT2000: false },
+              indexes: []
+            };
+          })
+          .filter(Boolean)
+      : [];
+    suggestions = mapped.slice(0, limit);
+    activeIndex = -1;
+    if (!suggestions.length) {
+      close();
       return;
     }
     renderDropdown(suggestions);
+    applyActiveClass();
+  }
+
+  function scheduleFetch(q) {
+    if (debounceTimer) clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(() => doFetch(q), 150);
   }
 
   function handleSelect(indexPosition) {
     const item = suggestions[indexPosition];
     if (!item) return;
     onSelect(item);
-    dropdown.style.display = 'none';
-    highlighted = -1;
+    close();
   }
 
   function highlightSelection(direction) {
-    if (!suggestions.length) return;
-    highlighted = Math.max(0, Math.min(suggestions.length - 1, highlighted + direction));
-    Array.from(dropdown.children).forEach((el, idx) => {
-      el.classList.toggle('rv-dd-item--highlighted', idx === highlighted);
-    });
+    if (!open || !suggestions.length) return;
+    activeIndex = Math.max(0, Math.min(suggestions.length - 1, activeIndex + direction));
+    applyActiveClass();
   }
 
-  input.addEventListener('input', () => handleInput());
-  input.addEventListener('focus', () => {
-    if (!dropdown.innerHTML && input.value.trim()) {
-      handleInput();
+  input.addEventListener('input', () => {
+    const q = input.value.trim();
+    if (!q) {
+      close();
+      return;
     }
+    scheduleFetch(q);
+  });
+
+  input.addEventListener('focus', () => {
+    if (blurTimer) clearTimeout(blurTimer);
+    if (input.value.trim() && suggestions.length) {
+      open = true;
+      dropdown.style.display = 'block';
+      applyActiveClass();
+      return;
+    }
+    if (input.value.trim()) {
+      scheduleFetch(input.value.trim());
+    }
+  });
+
+  input.addEventListener('blur', () => {
+    if (blurTimer) clearTimeout(blurTimer);
+    blurTimer = setTimeout(() => close(), 120);
   });
 
   input.addEventListener('keydown', (event) => {
     if (event.key === 'ArrowDown') {
-      event.preventDefault();
-      highlightSelection(1);
-    } else if (event.key === 'ArrowUp') {
-      event.preventDefault();
-      highlightSelection(-1);
-    } else if (event.key === 'Enter') {
-      if (highlighted >= 0) {
+      if (open) {
         event.preventDefault();
-        handleSelect(highlighted);
+        highlightSelection(1);
+      }
+    } else if (event.key === 'ArrowUp') {
+      if (open) {
+        event.preventDefault();
+        highlightSelection(-1);
+      }
+    } else if (event.key === 'Enter') {
+      if (open && suggestions.length) {
+        event.preventDefault();
+        const pickIndex = activeIndex >= 0 ? activeIndex : 0;
+        handleSelect(pickIndex);
       }
     } else if (event.key === 'Escape') {
-      dropdown.style.display = 'none';
+      close();
     }
   });
 
   document.addEventListener('click', (event) => {
     if (!rootElement.contains(event.target)) {
-      dropdown.style.display = 'none';
+      close();
     }
   });
 
   if (prefill) {
-    handleInput();
+    scheduleFetch(prefill);
   }
 
   return {
