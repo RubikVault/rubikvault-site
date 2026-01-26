@@ -19,6 +19,15 @@ export async function attachSearchUI(rootElement, options = {}) {
   const limit = Number.isFinite(options.limit) ? options.limit : 12;
   const debug = Boolean(options.debug);
   const prefill = options.prefill || '';
+
+  const pageDebug = (() => {
+    try {
+      const params = new URLSearchParams(window.location.search || '');
+      return params.get('debug') === '1';
+    } catch {
+      return false;
+    }
+  })();
   const onSelect =
     options.onSelect ||
     ((item) => {
@@ -47,13 +56,19 @@ export async function attachSearchUI(rootElement, options = {}) {
   let debounceTimer = null;
   let blurTimer = null;
   let requestSeq = 0;
+  let emptyMessage = null;
 
   function renderDropdown(items) {
     dropdown.innerHTML = '';
     if (!items.length) {
+      if (!emptyMessage) {
+        dropdown.style.display = 'none';
+        open = false;
+        return;
+      }
       const empty = document.createElement('div');
       empty.className = 'rv-dd-item';
-      empty.textContent = 'No matches';
+      empty.textContent = emptyMessage;
       dropdown.appendChild(empty);
       dropdown.style.display = 'block';
       open = true;
@@ -87,6 +102,7 @@ export async function attachSearchUI(rootElement, options = {}) {
     open = false;
     activeIndex = -1;
     suggestions = [];
+    emptyMessage = null;
     dropdown.style.display = 'none';
   }
 
@@ -104,16 +120,52 @@ export async function attachSearchUI(rootElement, options = {}) {
     }
     const seq = ++requestSeq;
     const url = `/api/universe?q=${encodeURIComponent(raw)}&t=${Date.now()}`;
+
+    if (pageDebug) {
+      console.log('[rv][search] universe request', { url });
+    }
+
     let payload;
     try {
       payload = await fetchJson(url);
     } catch {
       if (seq !== requestSeq) return;
+      if (pageDebug) {
+        console.log('[rv][search] universe response', { ok: false, count: null });
+      }
       close();
       return;
     }
     if (seq !== requestSeq) return;
+
+    if (!Array.isArray(payload?.data?.symbols)) {
+      if (pageDebug) {
+        console.warn('[rv][search] invalid universe payload shape', {
+          hasData: typeof payload?.data === 'object',
+          symbolsType: typeof payload?.data?.symbols
+        });
+      }
+      close();
+      return;
+    }
+
     const items = payload?.data?.symbols ?? [];
+    if (pageDebug) {
+      console.log('[rv][search] universe response', { ok: true, count: items.length });
+    }
+
+    if (!items.length) {
+      if (pageDebug && raw.length >= 1) {
+        emptyMessage = 'No matches';
+        suggestions = [];
+        activeIndex = -1;
+        renderDropdown([]);
+        return;
+      }
+      close();
+      return;
+    }
+
     const mapped = Array.isArray(items)
       ? items
           .map((it) => {
@@ -129,9 +181,15 @@ export async function attachSearchUI(rootElement, options = {}) {
           })
           .filter(Boolean)
       : [];
+    emptyMessage = null;
     suggestions = mapped.slice(0, limit);
     activeIndex = -1;
     if (!suggestions.length) {
+      if (pageDebug && raw.length >= 1) {
+        emptyMessage = 'No matches';
+        renderDropdown([]);
+        return;
+      }
       close();
       return;
     }
@@ -223,3 +281,13 @@ export async function attachSearchUI(rootElement, options = {}) {
     }
   };
 }
+
+/*
+Manual verification checklist:
+- Type "Apple" -> shows "Apple Inc. (AAPL)"
+- ArrowDown + Enter navigates
+- Type "aap" -> shows AAP + AAPL
+- Esc closes suggestions
+- Clicking suggestion navigates
+- With ?debug=1, console logs request URL + ok + count
+*/

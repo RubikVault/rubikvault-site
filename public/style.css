@@ -3122,3 +3122,39 @@ section[data-rv-deprecated="true"] {
   max-height: none !important;
   overflow: visible !important;
 }
+
+/* =========================
+   ANALYZE MODE HARD ISOLATION
+   (prevents global dashboard/debug CSS from breaking /analyze/*)
+   ========================= */
+
+body.rv-analyze {
+  overflow-x: hidden;
+}
+
+body.rv-analyze * {
+  max-width: 100%;
+}
+
+body.rv-analyze svg,
+body.rv-analyze canvas,
+body.rv-analyze iframe {
+  max-width: 100%;
+  height: auto;
+}
+
+/* Neutralize global overflow bombs (many rules use overflow: visible !important) */
+body.rv-analyze * {
+  overflow: hidden !important;
+}
+
+/* Allow normal layout where the analyzer renders */
+body.rv-analyze #search-results,
+body.rv-analyze #results-content {
+  overflow: visible !important;
+}
+
+/* Debug console should not interfere with analyzer layout */
+body.rv-analyze #rv-debug-root {
+  display: none !important;
+}
