@@ -221,7 +221,16 @@
       }
     })();
 
-    const typeahead = {
+    
+
+      // Analyze-route CSS isolation (prevents global CSS leaks)
+      try {
+        if (window.location.pathname && window.location.pathname.startsWith("/analyze/")) {
+          document.body.classList.add("rv-analyze");
+        }
+      } catch {}
+
+      const typeahead = {
       root: null,
       items: [],
       open: false,
