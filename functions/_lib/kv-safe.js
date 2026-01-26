@@ -158,7 +158,7 @@ export async function kvPutJson(env, key, value, ttlSeconds) {
       }
     };
   }
-  const missing = !env?.RV_KV || typeof env.RV_KV.put !== "function";
+  const missing = !env?.RV_KV || typeof env.RV_KV['put'] !== "function";
   if (missing) {
     memSet(key, value);
     return {
@@ -169,7 +169,7 @@ export async function kvPutJson(env, key, value, ttlSeconds) {
     };
   }
   try {
-    await env.RV_KV.put(key, JSON.stringify(value), {
+    await env.RV_KV['put'](key, JSON.stringify(value), {
       expirationTtl: ttlSeconds
     });
     return { layer: "kv", hit: false, durationMs: Date.now() - started };

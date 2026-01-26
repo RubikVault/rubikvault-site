@@ -26,14 +26,14 @@ export async function getJSON(env, key) {
 }
 
 export async function putJSON(env, key, obj, { ttlSeconds, allowEmpty = true } = {}) {
-  if (!env?.RV_KV || typeof env.RV_KV.put !== "function") {
+  if (!env?.RV_KV || typeof env.RV_KV['put'] !== "function") {
     return { ok: false, skipped: true, reason: "ERR_BINDING_MISSING" };
   }
   if (!allowEmpty && isEmptyItems(obj)) {
     return { ok: false, skipped: true, reason: "NO_DATA" };
   }
   try {
-    await env.RV_KV.put(key, JSON.stringify(obj), {
+    await env.RV_KV['put'](key, JSON.stringify(obj), {
       expirationTtl: ttlSeconds
     });
     return { ok: true };
