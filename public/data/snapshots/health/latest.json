@@ -10,11 +10,25 @@
     "digest": "sha256:845b9cd4e642f6949916efa66b9b788b0dcc61d84a11e8b6f626ec432bf95283",
     "record_count": 5,
     "validation": {
-      "passed": true
+      "passed": true,
+      "checks": [
+        "schema"
+      ],
+      "warnings": [],
+      "dropped_records": 0,
+      "drop_ratio": 0
     },
-    "freshness": {},
-    "upstream": {},
-    "expected_count": 5
+    "freshness": {
+      "expected_interval_minutes": 1440,
+      "policy": "best_effort",
+      "next_expected_at": ""
+    },
+    "upstream": {
+      "http_status": 200,
+      "latency_ms": 0,
+      "retry_count": 0,
+      "rate_limit_remaining": null
+    }
   },
   "data": [],
   "error": {}

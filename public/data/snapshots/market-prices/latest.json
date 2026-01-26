@@ -9,107 +9,26 @@
     "published_at": "2026-01-23T21:36:09.857Z",
     "digest": "sha256:b923100bf851bfbffbfb70e1729dc89dc74e17f619f75ddb9b06572dc5deeaf2",
     "record_count": 4,
-    "expected_count": null,
     "validation": {
       "passed": true,
-      "dropped_records": 0,
-      "drop_ratio": 0,
-      "drop_check_passed": true,
-      "drop_threshold": {
-        "max_drop_abs": 5,
-        "max_drop_ratio": 0.001,
-        "limit": 0.004,
-        "violated": false
-      },
       "checks": [
         "bars",
         "drop_threshold"
       ],
-      "warnings": []
+      "warnings": [],
+      "dropped_records": 0,
+      "drop_ratio": 0
     },
     "freshness": {
       "expected_interval_minutes": 1440,
-      "grace_minutes": 180,
       "policy": "market_days_only",
-      "age_minutes": 0,
-      "next_expected_at": null
+      "next_expected_at": ""
     },
     "upstream": {
       "http_status": 200,
       "latency_ms": 3950,
-      "rate_limit_remaining": null,
       "retry_count": 0,
-      "rate_limited": false,
-      "classification": "OK",
-      "note": null,
-      "error": null,
-      "symbol_errors": {},
-      "symbol_attempts": {
-        "SPY": [
-          {
-            "provider_id": "stooq",
-            "classification": "OK",
-            "http_status": 200,
-            "note": null,
-            "ok": true
-          }
-        ],
-        "QQQ": [
-          {
-            "provider_id": "stooq",
-            "classification": "OK",
-            "http_status": 200,
-            "note": null,
-            "ok": true
-          }
-        ],
-        "DIA": [
-          {
-            "provider_id": "stooq",
-            "classification": "OK",
-            "http_status": 200,
-            "note": null,
-            "ok": true
-          }
-        ],
-        "IWM": [
-          {
-            "provider_id": "stooq",
-            "classification": "OK",
-            "http_status": 200,
-            "note": null,
-            "ok": true
-          }
-        ]
-      },
-      "symbol_sources": {
-        "SPY": "stooq",
-        "QQQ": "stooq",
-        "DIA": "stooq",
-        "IWM": "stooq"
-      }
-    },
-    "provider": "stooq",
-    "as_of": "2026-01-23",
-    "compute": {
-      "planned_symbols": 4,
-      "done_symbols": 4,
-      "dropped_symbols": [],
-      "provider_chain": [
-        {
-          "id": "stooq",
-          "role": "primary",
-          "enabled": true
-        }
-      ],
-      "provider_sources": {
-        "SPY": "stooq",
-        "QQQ": "stooq",
-        "DIA": "stooq",
-        "IWM": "stooq"
-      },
-      "reason_code": "FULL_SUCCESS",
-      "cooldown_until": null
+      "rate_limit_remaining": null
     }
   },
   "data": [
@@ -166,14 +85,5 @@
       "ingested_at": "2026-01-23T21:36:09.456Z"
     }
   ],
-  "error": null,
-  "meta": {
-    "status": "OK",
-    "reason": "OK",
-    "provider": "stooq",
-    "source": "stooq",
-    "asOf": "2026-01-23",
-    "savedAt": "2026-01-23T21:36:09.857Z",
-    "error": null
-  }
+  "error": null
 }

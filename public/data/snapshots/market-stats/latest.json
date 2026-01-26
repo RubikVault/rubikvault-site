@@ -1,33 +1,36 @@
 {
   "schema_version": "3.0",
-  "module": "market-stats",
   "metadata": {
     "module": "market-stats",
-    "schema_version": "3.0",
+    "tier": "standard",
+    "domain": "market",
     "source": "finalizer-placeholder",
-    "provider": "finalizer",
     "fetched_at": "2026-01-23T08:19:48.619Z",
     "published_at": "2026-01-23T08:19:48.619Z",
+    "digest": "sha256:c6e76ee5f01b36f3dd3cabdf72d48a3ce1c1d78ca31f95a00879d52543fd809e",
     "record_count": 0,
     "validation": {
       "passed": false,
-      "checks": {
-        "placeholder": {
-          "passed": false,
-          "reason": "No artifact available for this module; placeholder inserted to avoid 404.",
-          "details": {
-            "module": "market-stats",
-            "artifact_present": false,
-            "timestamp": "2026-01-23T08:19:48.619Z"
-          }
-        }
-      }
+      "checks": [
+        "schema"
+      ],
+      "warnings": [],
+      "dropped_records": 0,
+      "drop_ratio": 0
     },
-    "warnings": [
-      "SNAPSHOT_PLACEHOLDER"
-    ],
-    "digest": "sha256:c6e76ee5f01b36f3dd3cabdf72d48a3ce1c1d78ca31f95a00879d52543fd809e"
+    "freshness": {
+      "expected_interval_minutes": 1440,
+      "policy": "best_effort",
+      "next_expected_at": ""
+    },
+    "upstream": {
+      "http_status": 200,
+      "latency_ms": 0,
+      "retry_count": 0,
+      "rate_limit_remaining": null
+    }
   },
+  "data": [],
   "error": {
     "code": "SNAPSHOT_MISSING",
     "message": "No artifact available for this module; placeholder inserted to avoid 404.",
@@ -36,6 +39,5 @@
       "artifact_present": false,
       "timestamp": "2026-01-23T08:19:48.619Z"
     }
-  },
-  "data": null
+  }
 }
