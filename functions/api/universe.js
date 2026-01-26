@@ -29,12 +29,33 @@ export async function onRequestGet(context) {
     return Array.isArray(list) && list.length > 0;
   }
 
+  // --- q-filter (symbol OR name) for autocomplete ---
+  const q = String(url.searchParams.get("q") || "").trim().toLowerCase();
+  const LIMIT = 25;
+
+  function applyQFilter(list) {
+    const arr = Array.isArray(list) ? list : [];
+    if (!q) return arr;
+    return arr
+      .filter((it) => {
+        const sym = String(it?.symbol || it || "").toLowerCase();
+        const name = String(it?.name || "").toLowerCase();
+        return (
+          (sym && (sym.startsWith(q) || sym.includes(q))) ||
+          (name && name.includes(q))
+        );
+      })
+      .slice(0, LIMIT);
+  }
+  // --- end q-filter ---
+
+
   // 1) Primary source: v3 universe snapshot (may be placeholder with data:null)
   const snapshot = await fetchJson("/data/snapshots/universe/latest.json");
   const snapshotSymbols = snapshot?.data?.symbols;
   if (snapshot?.schema_version === "3.0" && isNonEmptySymbols(snapshotSymbols)) {
     const symbols = snapshotSymbols
-      .map((item) => {
+        .map((item) => {
         if (typeof item === "string") return { symbol: normalizeSymbol(item) };
         if (!item || typeof item !== "object") return null;
         const symbol = normalizeSymbol(item.symbol || item.ticker || item.id);
@@ -49,7 +70,7 @@ export async function onRequestGet(context) {
         schema_version: "3.0",
         ok: true,
         metadata: { impl: implMarker, fallbackUsed: false },
-        data: { symbols }
+        data: { symbols: applyQFilter(symbols) }
       }),
       {
         headers: {
@@ -116,7 +137,7 @@ export async function onRequestGet(context) {
       schema_version: "3.0",
       ok: true,
       metadata: { impl: implMarker, fallbackUsed: true },
-      data: { symbols: merged }
+      data: { symbols: applyQFilter(merged) }
     }),
     {
       headers: {
