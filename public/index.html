@@ -120,6 +120,9 @@
           onfocus="this.style.borderColor='rgba(59, 130, 246, 0.6)'; this.style.background='rgba(30, 41, 59, 1)';"
           onblur="this.style.borderColor='rgba(100, 116, 139, 0.3)'; this.style.background='rgba(30, 41, 59, 0.8)';"
         />
+        <div style="margin-top: 0.6rem; font-size: 0.9rem; color: #94a3b8; text-align: left; padding-left: 0.25rem;">
+          Searching: NASDAQ-100 (100 stocks)
+        </div>
       </div>
 
       <!-- QUICK STATS -->
@@ -212,6 +215,69 @@
 
     let lastResolved = { ticker: null, name: null };
 
+    const UNIVERSE_URL = '/data/universe/nasdaq100.json';
+    let universe = [];
+    const universeByTicker = new Map();
+    let universeReady = null;
+
+    function normalizeTicker(raw) {
+      const s = String(raw || '').trim().toUpperCase();
+      if (!s) return '';
+      if (!/^[A-Z0-9\-\.]{1,15}$/.test(s)) return '';
+      return s;
+    }
+
+    function normalizeUniverseName(raw) {
+      return String(raw || '')
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z0-9\s]/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+    }
+
+    async function loadUniverse() {
+      const res = await fetch(UNIVERSE_URL, { cache: 'no-store' });
+      if (!res.ok) throw new Error('universe_fetch_failed');
+      const entries = await res.json();
+      if (!Array.isArray(entries)) throw new Error('universe_invalid_shape');
+
+      const normalized = [];
+      universeByTicker.clear();
+      for (const entry of entries) {
+        if (!entry || typeof entry !== 'object') continue;
+        const ticker = normalizeTicker(entry.ticker);
+        if (!ticker) continue;
+        const name = typeof entry.name === 'string' ? entry.name.trim() : '';
+        normalized.push({ ticker, name });
+        universeByTicker.set(ticker, name || null);
+      }
+      universe = normalized;
+      return universe;
+    }
+
+    universeReady = loadUniverse();
+
+    function getUniverseSuggestions(query, limit = 12) {
+      const q = String(query || '').trim().toLowerCase();
+      if (!q) return [];
+      const qName = normalizeUniverseName(q);
+      const out = [];
+
+      for (const entry of universe) {
+        const t = entry.ticker;
+        const n = entry.name;
+        const tLower = String(t || '').toLowerCase();
+        const nNorm = normalizeUniverseName(n);
+        if (tLower.startsWith(q) || (qName && nNorm.startsWith(qName))) {
+          out.push({ symbol: t, name: universeByTicker.get(t) || null });
+          if (out.length >= limit) break;
+        }
+      }
+
+      return out;
+    }
+
     const pageDebug = (() => {
       try {
         const params = new URLSearchParams(window.location.search || '');
@@ -302,65 +368,15 @@
         clearSuggestions();
         return;
       }
-      const seq = ++typeahead.requestSeq;
-      const url = `/api/universe?q=${encodeURIComponent(query)}&t=${Date.now()}`;
-      const { payload, networkError } = await fetchJson(url);
-      if (seq !== typeahead.requestSeq) return;
+      if (!universeReady) universeReady = loadUniverse();
+      await universeReady;
 
-      if (pageDebug) {
-        console.log('[rv][typeahead] universe request', {
-          url,
-          ok: Boolean(payload && !networkError && !payload.error),
-          networkError: Boolean(networkError)
-        });
-      }
-
-      if (networkError || !payload) {
-        clearSuggestions();
-        return;
-      }
-
-      if (!Array.isArray(payload?.data?.symbols)) {
-        if (pageDebug) {
-          console.warn('[rv][typeahead] invalid universe payload shape', {
-            hasData: typeof payload?.data === 'object',
-            symbolsType: typeof payload?.data?.symbols
-          });
-        }
-        clearSuggestions();
-        return;
-      }
-
-      const items = payload?.data?.symbols ?? [];
-      if (pageDebug) {
-        console.log('[rv][typeahead] universe results', {
-          q: query,
-          count: Array.isArray(items) ? items.length : null
-        });
-      }
-
-      if (!items.length) {
-        if (pageDebug && query.length >= 1) {
-          typeahead.items = [];
-          typeahead.open = true;
-          typeahead.activeIndex = -1;
-          typeahead.emptyMessage = 'No matches';
-          renderTypeahead();
-          return;
-        }
-        clearSuggestions();
-        return;
-      }
-
-      openTypeahead(
-        items
-          .map((it) => {
-            const symbol = it?.symbol ? String(it.symbol).toUpperCase() : null;
-            if (!symbol) return null;
-            return { symbol, name: it?.name ? String(it.name) : '' };
-          })
-          .filter(Boolean)
-      );
+      const items = getUniverseSuggestions(query, 12);
+      typeahead.items = items;
+      typeahead.activeIndex = -1;
+      typeahead.open = items.length > 0;
+      typeahead.emptyMessage = items.length ? null : 'No matches in NASDAQ-100';
+      renderTypeahead();
     }
 
     function scheduleFetch(q) {
@@ -371,7 +387,18 @@
     async function selectSymbol(symbol, name, { push = true } = {}) {
       const s = String(symbol || '').trim().toUpperCase();
       if (!s) return;
-      lastResolved = { ticker: s, name: name || lastResolved?.name || null };
+
+      if (!universeReady) universeReady = loadUniverse();
+      await universeReady;
+
+      if (!universeByTicker.has(s)) {
+        closeTypeahead();
+        renderUnsupported(s);
+        return;
+      }
+
+      const resolvedName = universeByTicker.get(s) || null;
+      lastResolved = { ticker: s, name: resolvedName };
       searchInput.value = s;
       closeTypeahead();
       if (push) window.history.pushState({}, '', `/analyze/${encodeURIComponent(s)}`);
@@ -496,8 +523,9 @@
       const meta = payload?.metadata || {};
       const error = payload?.error || null;
 
-      const effectiveTicker = data?.ticker || fallback?.ticker || '—';
-      const effectiveName = data?.name || fallback?.name || '—';
+      const effectiveTicker = normalizeTicker(fallback?.ticker || '');
+      const universeName = effectiveTicker ? (universeByTicker.get(effectiveTicker) || null) : null;
+      const effectiveName = universeName || '—';
       const showBanner = Boolean(error) || (meta?.status && meta?.status !== 'OK');
       const bannerError = error || {
         code: meta?.status && meta?.status !== 'OK' ? 'UPSTREAM_ERROR' : 'ERROR',
@@ -541,7 +569,7 @@
 
       const statusChipColor = meta?.status === 'OK' ? '#10b981' : meta?.status === 'PARTIAL' ? '#f59e0b' : '#ef4444';
 
-      resultsTitle.textContent = `${effectiveName} (${effectiveTicker})`;
+      resultsTitle.textContent = `${effectiveName} (${effectiveTicker || '—'})`;
       resultsContent.innerHTML = `
         ${showBanner ? renderErrorBanner(bannerError, meta) : ''}
         <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; flex-wrap: wrap;">
@@ -604,9 +632,28 @@
 
     }
 
+    function renderUnsupported(symbol) {
+      const s = normalizeTicker(symbol);
+      resultsSection.style.display = 'block';
+      resultsTitle.textContent = 'Not supported';
+      resultsContent.innerHTML = `
+        <div style="padding: 1rem; border-radius: 10px; background: rgba(245, 158, 11, 0.10); border: 1px solid rgba(245, 158, 11, 0.35); margin-bottom: 1.5rem;">
+          <div style="font-weight: 700; color: #fde68a;">Diese Aktie ist aktuell nicht im unterstützten Universe.</div>
+          <div style="margin-top: 0.35rem; color: #fde68a;">Aktuell unterstützt: NASDAQ-100 (100)</div>
+        </div>
+      `;
+      resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
     async function loadAnalyze(ticker, options = {}) {
-      const upperTicker = String(ticker || '').trim().toUpperCase();
+      if (!universeReady) universeReady = loadUniverse();
+      await universeReady;
+      const upperTicker = normalizeTicker(ticker);
       if (!upperTicker) return;
+      if (!universeByTicker.has(upperTicker)) {
+        renderUnsupported(upperTicker);
+        return;
+      }
       const push = options.push !== false;
       if (push) {
         window.history.pushState({}, '', `/analyze/${encodeURIComponent(upperTicker)}`);
@@ -614,7 +661,7 @@
 
       showLoading(`Analyzing ${upperTicker}...`);
       resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      const fallback = options.fallback || { ticker: upperTicker, name: lastResolved?.name || null };
+      const fallback = options.fallback || { ticker: upperTicker, name: universeByTicker.get(upperTicker) || null };
       const { payload, networkError } = await fetchJson(`/api/stock?ticker=${encodeURIComponent(upperTicker)}`);
       if (networkError) {
         renderStock(
@@ -627,25 +674,16 @@
     }
 
     async function resolveAndAnalyze(query) {
+      if (!universeReady) universeReady = loadUniverse();
+      await universeReady;
       const trimmed = String(query || '').trim();
-      if (!trimmed) return;
-      showLoading(`Resolving ${trimmed}...`);
-      resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      const { payload, networkError } = await fetchJson(`/api/resolve?q=${encodeURIComponent(trimmed)}`);
-      if (networkError) {
-        resultsTitle.textContent = 'Resolve failed';
-        resultsContent.innerHTML = renderErrorBanner({ code: 'NETWORK_ERROR', message: 'Unable to reach /api/resolve' }, { status: 'ERROR' });
+      const t = normalizeTicker(trimmed);
+      if (!t) return;
+      if (!universeByTicker.has(t)) {
+        renderUnsupported(t);
         return;
       }
-      if (!payload || payload.error || !payload.data?.ticker) {
-        resultsTitle.textContent = 'Resolve failed';
-        resultsContent.innerHTML = renderErrorBanner(payload?.error || { code: 'SYMBOL_NOT_FOUND', message: 'Unable to resolve symbol' }, payload?.metadata);
-        return;
-      }
-
-      lastResolved = { ticker: payload.data.ticker || null, name: payload.data.name || null };
-      searchInput.value = payload.data.ticker;
-      await loadAnalyze(payload.data.ticker, { fallback: lastResolved });
+      await selectSymbol(t, universeByTicker.get(t) || null, { push: true });
     }
 
     // Search on Enter key
@@ -720,20 +758,20 @@
 
     // Auto-focus search on page load
     document.addEventListener('DOMContentLoaded', async () => {
+      if (!universeReady) universeReady = loadUniverse();
+      await universeReady;
       // Check for deep link: /analyze/TICKER
       const path = window.location.pathname;
       const match = path.match(/^\/analyze\/([A-Z]+)$/i);
       
       if (match) {
-        const ticker = match[1].toUpperCase();
+        const ticker = normalizeTicker(match[1]);
         searchInput.value = ticker;
-        try {
-          const { payload } = await fetchJson(`/api/resolve?q=${encodeURIComponent(ticker)}`);
-          if (payload?.data?.ticker) {
-            lastResolved = { ticker: payload.data.ticker, name: payload.data.name || null };
-          }
-        } catch {}
-        await loadAnalyze(ticker, { push: false, fallback: lastResolved || { ticker, name: null } });
+        if (!ticker || !universeByTicker.has(ticker)) {
+          renderUnsupported(ticker);
+          return;
+        }
+        await selectSymbol(ticker, null, { push: false });
       } else {
         searchInput.focus();
       }
@@ -744,9 +782,13 @@
       const path = window.location.pathname;
       const match = path.match(/^\/analyze\/([A-Z]+)$/i);
       if (match) {
-        const ticker = match[1].toUpperCase();
+        const ticker = normalizeTicker(match[1]);
         searchInput.value = ticker;
-        loadAnalyze(ticker, { push: false });
+        if (!ticker || !universeByTicker.has(ticker)) {
+          renderUnsupported(ticker);
+          return;
+        }
+        selectSymbol(ticker, null, { push: false });
         return;
       }
       if (path === '/' || path === '/index.html') {
