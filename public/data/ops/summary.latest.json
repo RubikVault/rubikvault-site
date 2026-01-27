@@ -1,0 +1,98 @@
+{
+  "schema_version": "1.0",
+  "generated_at": "2026-01-27T19:45:32.641Z",
+  "overall": {
+    "status": "RISK",
+    "reason": "PIPELINE_STATIC_READY=2/100"
+  },
+  "universes": [
+    {
+      "name": "nasdaq100",
+      "expected": 100,
+      "fetched": 0,
+      "validated": 0,
+      "computed": 2,
+      "staticReady": 2,
+      "missing": 98
+    }
+  ],
+  "providers": {
+    "stooq": {
+      "name": "stooq",
+      "usedMonth": 0,
+      "limitMonth": 16000,
+      "remainingMonth": 16000,
+      "remainingPct": 1
+    },
+    "fred": {
+      "name": "fred",
+      "usedMonth": 0,
+      "limitMonth": 4000,
+      "remainingMonth": 4000,
+      "remainingPct": 1
+    },
+    "ecb": {
+      "name": "ecb",
+      "usedMonth": 0,
+      "limitMonth": 4000,
+      "remainingMonth": 4000,
+      "remainingPct": 1
+    },
+    "marketaux": {
+      "name": "marketaux",
+      "usedMonth": 1,
+      "limitMonth": 2500,
+      "remainingMonth": 2499,
+      "remainingPct": 0
+    },
+    "finnhub": {
+      "name": "finnhub",
+      "usedMonth": 1,
+      "limitMonth": 5000,
+      "remainingMonth": 4999,
+      "remainingPct": 0
+    },
+    "fmp": {
+      "name": "fmp",
+      "usedMonth": 4,
+      "limitMonth": 6000,
+      "remainingMonth": 5996,
+      "remainingPct": 0
+    },
+    "sec": {
+      "name": "sec",
+      "usedMonth": 1,
+      "limitMonth": 1600,
+      "remainingMonth": 1599,
+      "remainingPct": 0
+    },
+    "rss": {
+      "name": "rss",
+      "usedMonth": 0,
+      "limitMonth": 6000,
+      "remainingMonth": 6000,
+      "remainingPct": 1
+    },
+    "alphavantage": {
+      "name": "alphavantage",
+      "usedMonth": 0,
+      "limitMonth": 1000,
+      "remainingMonth": 1000,
+      "remainingPct": 1
+    },
+    "coingecko": {
+      "name": "coingecko",
+      "usedMonth": 0,
+      "limitMonth": 4000,
+      "remainingMonth": 4000,
+      "remainingPct": 1
+    },
+    "internal": {
+      "name": "internal",
+      "usedMonth": 0,
+      "limitMonth": 20000,
+      "remainingMonth": 20000,
+      "remainingPct": 1
+    }
+  }
+}

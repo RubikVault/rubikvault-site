@@ -55,6 +55,7 @@
       <button id="btn-refresh" class="btn">Refresh (LIVE)</button>
       <span class="small">Baseline asOf: <span id="baseline-asof" class="mono">—</span></span>
       <span class="small">Live asOf: <span id="live-asof" class="mono">—</span></span>
+      <span class="small">Source: <span id="data-source" class="mono">—</span></span>
       <span style="flex:1"></span>
       <span class="small" id="last-refresh"></span>
     </div>
@@ -296,20 +297,49 @@
       main.style.display = 'block';
     }
 
-    async function fetchLiveOnce(key) {
-      const res = await fetch('/api/mission-control/summary?live=1', {
-        cache: 'no-store',
-        headers: {
-          'X-OPS-KEY': key
+    async function fetchWithFallback(primaryUrl, fallbackUrl, headers = {}) {
+      const t = Date.now();
+      const cacheHeaders = {
+        'Cache-Control': 'no-cache',
+        'Pragma': 'no-cache',
+        ...headers
+      };
+
+      try {
+        const primaryRes = await fetch(`${primaryUrl}?t=${t}`, { cache: 'no-store', headers: cacheHeaders });
+        if (primaryRes.ok) {
+          const data = await primaryRes.json();
+          return { ok: true, res: primaryRes, payload: data, source: 'static_summary' };
         }
-      });
-      const payload = await res.json();
-      return { res, payload };
+        if (primaryRes.status !== 404) {
+          return { ok: false, res: primaryRes, payload: null, source: null };
+        }
+      } catch (err) {
+        console.warn('Primary fetch failed:', err.message);
+      }
+
+      try {
+        const fallbackRes = await fetch(`${fallbackUrl}?t=${t}`, { cache: 'no-store', headers: cacheHeaders });
+        const fallbackData = await fallbackRes.json();
+        return { ok: fallbackRes.ok, res: fallbackRes, payload: fallbackData, source: 'mission_control_api' };
+      } catch (err) {
+        return { ok: false, res: null, payload: null, source: null, error: err.message };
+      }
+    }
+
+    async function fetchLiveOnce(key) {
+      const result = await fetchWithFallback(
+        '/data/ops/summary.latest.json',
+        '/api/mission-control/summary?live=1',
+        { 'X-OPS-KEY': key }
+      );
+      return result;
     }
 
     async function refreshLiveWithPromptAndRetry() {
       const statusEl = document.getElementById('loading');
       const last = document.getElementById('last-refresh');
+      const sourceEl = document.getElementById('data-source');
       if (last) last.textContent = `Last action: ${new Date().toLocaleString()}`;
 
       const key0 = getOpsKey();
@@ -320,9 +350,9 @@
       }
 
       setOpsKey(key1);
-      let { res, payload } = await fetchLiveOnce(key1);
+      let result = await fetchLiveOnce(key1);
 
-      if (res.status === 403) {
+      if (result.res && result.res.status === 403) {
         try { sessionStorage.removeItem('rv_ops_key'); } catch {}
         const key2 = window.prompt('403: wrong OPS key. Enter OPS key');
         if (!key2) {
@@ -330,16 +360,20 @@
           return;
         }
         setOpsKey(key2);
-        ({ res, payload } = await fetchLiveOnce(key2));
+        result = await fetchLiveOnce(key2);
       }
 
-      if (!res.ok) {
-        const msg = payload?.meta?.reason || payload?.error?.message || `HTTP ${res.status}`;
+      if (!result.ok) {
+        const msg = result.payload?.meta?.reason || result.payload?.error?.message || (result.res ? `HTTP ${result.res.status}` : result.error || 'Fetch failed');
         if (statusEl) statusEl.textContent = String(msg);
         return;
       }
 
-      const data = payload && payload.data && typeof payload.data === 'object' ? payload.data : {};
+      if (sourceEl) {
+        sourceEl.textContent = result.source === 'static_summary' ? 'static' : 'live API';
+      }
+
+      const data = result.payload && result.payload.data && typeof result.payload.data === 'object' ? result.payload.data : {};
       const opsBaseline = data.opsBaseline || null;
       const baseline = opsBaseline && opsBaseline.baseline ? opsBaseline.baseline : null;
       const baselineAsOf = opsBaseline && typeof opsBaseline.asOf === 'string' ? opsBaseline.asOf : null;

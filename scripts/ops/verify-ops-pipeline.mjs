@@ -2,6 +2,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 
 const REPO_ROOT = process.cwd();
+const BASE_URL = process.env.VERIFY_BASE_URL || 'http://localhost:8788';
 
 function fail(msg) {
   throw new Error(msg);
@@ -11,6 +12,38 @@ async function readJson(relPath) {
   const abs = path.join(REPO_ROOT, relPath);
   const raw = await fs.readFile(abs, 'utf-8');
   return JSON.parse(raw);
+}
+
+async function fetchWithFallback(primaryUrl, fallbackUrl) {
+  const t = Date.now();
+  const headers = {
+    'Cache-Control': 'no-cache',
+    'Pragma': 'no-cache'
+  };
+
+  try {
+    const primaryRes = await fetch(`${primaryUrl}?t=${t}`, { headers });
+    if (primaryRes.ok) {
+      const data = await primaryRes.json();
+      return { ok: true, data, source: 'static_summary', url: primaryUrl, status: primaryRes.status };
+    }
+    if (primaryRes.status !== 404) {
+      return { ok: false, source: null, url: primaryUrl, status: primaryRes.status, error: `Primary returned ${primaryRes.status}` };
+    }
+  } catch (err) {
+    console.warn(`Primary fetch failed: ${err.message}`);
+  }
+
+  try {
+    const fallbackRes = await fetch(`${fallbackUrl}?t=${t}`, { headers });
+    if (fallbackRes.ok) {
+      const data = await fallbackRes.json();
+      return { ok: true, data, source: 'mission_control_api', url: fallbackUrl, status: fallbackRes.status };
+    }
+    return { ok: false, source: null, url: fallbackUrl, status: fallbackRes.status, error: `Fallback returned ${fallbackRes.status}` };
+  } catch (err) {
+    return { ok: false, source: null, url: fallbackUrl, status: null, error: `Fallback fetch error: ${err.message}` };
+  }
 }
 
 function assertPipelineTruth(doc) {
@@ -54,6 +87,10 @@ async function main() {
   if (!Array.isArray(pipeline.missing)) fail('ops-daily pipeline.missing must be array');
   if (pipeline.missing.length !== staticReady.missing.length) fail('ops-daily pipeline.missing length mismatch');
 
+  if (pipeline.expected > 0 && pipeline.fetched === 0) {
+    fail('ops-daily pipeline.fetched=0 with expected>0 indicates empty artifact generation');
+  }
+
   const html = await fs.readFile(path.join(REPO_ROOT, 'public/ops/index.html'), 'utf-8');
   if (!html.includes('Refresh (LIVE)')) fail('/ops must contain Refresh (LIVE) marker');
   if (!html.includes('/api/mission-control/summary?live=1')) fail('/ops must call mission-control/summary?live=1');
@@ -61,7 +98,16 @@ async function main() {
   if (html.includes('setInterval(')) fail('/ops must not contain setInterval');
   if (html.includes('btn-baseline') || html.includes('btn-live')) fail('/ops must not contain old baseline/live button ids');
 
-  process.stdout.write('OK: ops pipeline truth + wiring verification\n');
+  const summaryResult = await fetchWithFallback(
+    `${BASE_URL}/data/ops/summary.latest.json`,
+    `${BASE_URL}/api/mission-control/summary`
+  );
+
+  if (!summaryResult.ok) {
+    fail(`Summary fetch failed: ${summaryResult.error} (status=${summaryResult.status}, url=${summaryResult.url})`);
+  }
+
+  process.stdout.write(`OK: ops pipeline truth + wiring verification (summary source=${summaryResult.source})\n`);
 }
 
 main().catch((err) => {

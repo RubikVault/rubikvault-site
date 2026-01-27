@@ -464,8 +464,25 @@ async function main() {
   await writeJsonAtomic(pipelinePath, pipelineTruth);
 
   if (writeFailed) {
+    process.stderr.write('FAIL: Write failed for one or more artifacts\n');
     process.exitCode = 1;
+    return;
   }
+
+  if (symbols.length > 0 && fetchedCount === 0) {
+    process.stderr.write(`FAIL: expected=${symbols.length} but fetched=0 (empty artifact generation blocked)\n`);
+    process.exitCode = 1;
+    return;
+  }
+
+  const rateLimitErrors = errorsByClass['RATE_LIMIT'] || 0;
+  if (rateLimitErrors > 0 && validatedCount === 0) {
+    process.stderr.write(`FAIL: RATE_LIMIT errors=${rateLimitErrors} and validated=0 (empty artifact generation blocked)\n`);
+    process.exitCode = 1;
+    return;
+  }
+
+  process.stdout.write(`OK: eod-latest artifacts generated (fetched=${fetchedCount}/${symbols.length})\n`);
 }
 
 await main();
