@@ -9,14 +9,14 @@
 /data/snapshots/rv-:splat.json /data/snapshots/:splat.json 200
 /data/blocks/rv-:splat.latest.json /data/blocks/:splat.latest.json 200
 /mission-control /mission-control/index.html 200
-/ops /mission-control/index.html 200
+/ops /ops/index.html 200
 /internal-dashboard.html /internal-dashboard 301
 /internal-dashboard /internal-dashboard.html 200
  # TODO(v6): internal-dashboard.html can be removed once redirect compatibility is fully cleaned.
 # common typo + ops alias
 /internal-dahboard /internal-dashboard 301
 /dev/internal-dashboard /internal-dashboard 301
-/dev/ops /internal-dashboard 301
+# /ops is now the canonical owner view.
 # Deep Links (Stock Analyzer)
 /analyze/* / 200
 /module/* / 200

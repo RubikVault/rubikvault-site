@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Ops — RubikVault</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Helvetica Neue", Arial, sans-serif;
+      background: #0b1220;
+      color: #e5e7eb;
+    }
+    .wrap { max-width: 1180px; margin: 0 auto; padding: 24px; }
+    h1 { margin: 0 0 6px; font-size: 28px; letter-spacing: -0.02em; }
+    .sub { color: #94a3b8; margin-bottom: 18px; font-size: 14px; }
+    .card { border: 1px solid rgba(148, 163, 184, 0.25); background: rgba(15, 23, 42, 0.7); border-radius: 12px; padding: 14px; overflow: hidden; }
+    .grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+    .grid2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+    .k { color: #94a3b8; font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em; }
+    .v { margin-top: 6px; font-size: 22px; font-weight: 800; }
+    .small { color: #94a3b8; font-size: 12px; }
+    .controls { display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin: 12px 0 18px; }
+    .btn {
+      background: rgba(30, 41, 59, 0.9);
+      border: 1px solid rgba(148,163,184,0.25);
+      color: #e5e7eb;
+      padding: 8px 10px;
+      border-radius: 10px;
+      font-size: 13px;
+      cursor: pointer;
+    }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .pill { display: inline-block; padding: 2px 8px; border-radius: 999px; border: 1px solid rgba(148,163,184,0.25); font-size: 12px; color: #e5e7eb; }
+    .pill.ok { border-color: rgba(52, 211, 153, 0.35); color: #a7f3d0; }
+    .pill.warn { border-color: rgba(251, 191, 36, 0.35); color: #fde68a; }
+    .pill.bad { border-color: rgba(251, 113, 133, 0.35); color: #fecdd3; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { text-align: left; padding: 10px 8px; border-bottom: 1px solid rgba(148, 163, 184, 0.15); font-size: 13px; }
+    th { color: #94a3b8; font-weight: 700; }
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
+    @media (max-width: 860px) {
+      .grid { grid-template-columns: 1fr; }
+      .grid2 { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Ops</h1>
+    <div class="sub">Owner-grade view (static-first, read-only). No auto refresh.</div>
+
+    <div class="controls card">
+      <button id="btn-refresh" class="btn">Refresh (manual)</button>
+      <label class="small" style="display:flex; align-items:center; gap:8px;">
+        <input id="debug" type="checkbox" />
+        Debug mode
+      </label>
+      <span class="small" id="cooldown"></span>
+      <span style="flex:1"></span>
+      <span class="small" id="last-refresh"></span>
+    </div>
+
+    <div id="loading" class="card">No data loaded. Click Refresh.</div>
+
+    <div id="main" style="display:none;">
+      <div class="card" style="margin-bottom: 12px;">
+        <div class="k">Overall status</div>
+        <div class="v" id="overall">—</div>
+        <div class="small" id="overall-reason">—</div>
+      </div>
+
+      <div class="grid" style="margin-bottom: 12px;">
+        <div class="card">
+          <div class="k">Costs today (Workers)</div>
+          <div class="v" id="workers-used">—</div>
+          <div class="small" id="workers-budget">—</div>
+        </div>
+        <div class="card">
+          <div class="k">Runtime mode</div>
+          <div class="v" id="runtime-mode">—</div>
+          <div class="small" id="runtime-note">—</div>
+        </div>
+        <div class="card">
+          <div class="k">Safety locks</div>
+          <div class="v" id="safety-kv-writes">—</div>
+          <div class="small" id="safety-note">—</div>
+        </div>
+      </div>
+
+      <div class="grid2" style="margin-bottom: 12px;">
+        <div class="card">
+          <div class="k" style="margin-bottom: 10px;">Provider budgets (monthly)</div>
+          <table>
+            <thead>
+              <tr><th>Provider</th><th>Used</th><th>Limit</th><th>Remaining</th><th>Reset</th><th>Runtime calls today</th></tr>
+            </thead>
+            <tbody id="providers"></tbody>
+          </table>
+        </div>
+        <div class="card">
+          <div class="k" style="margin-bottom: 10px;">Daily snapshot pipeline (NASDAQ-100)</div>
+          <table>
+            <thead>
+              <tr><th>Stage</th><th>Count</th><th>Expected</th><th>Status</th></tr>
+            </thead>
+            <tbody id="pipeline"></tbody>
+          </table>
+          <div id="pipeline-missing" class="small" style="margin-top: 10px;"></div>
+        </div>
+      </div>
+
+      <div class="grid2" style="margin-bottom: 12px;">
+        <div class="card">
+          <div class="k" style="margin-bottom: 10px;">Data freshness</div>
+          <div class="small" id="freshness-global">—</div>
+          <div class="small" id="freshness-stale" style="margin-top: 8px;">—</div>
+          <div class="small" id="freshness-list" style="margin-top: 8px;"></div>
+        </div>
+        <div class="card">
+          <div class="k" style="margin-bottom: 10px;">Manual actions</div>
+          <div class="small">Last manual refresh (client): <span class="mono" id="manual-ts">—</span></div>
+          <div class="small" style="margin-top: 8px;">Min refresh interval enforced client-side: <span class="mono">60s</span></div>
+        </div>
+      </div>
+
+      <div class="small" style="margin-top: 14px;">
+        Source: <a href="/api/mission-control/summary" style="color:#60a5fa;">/api/mission-control/summary</a>
+        <span class="small" id="asof" style="margin-left:10px;"></span>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function esc(s) {
+      return String(s == null ? '' : s)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    function fmtNum(n) {
+      const v = Number(n);
+      if (!Number.isFinite(v)) return '—';
+      return v.toLocaleString();
+    }
+
+    function pill(text, cls) {
+      return '<span class="pill ' + cls + '">' + esc(text) + '</span>';
+    }
+
+    function pctClass(p) {
+      const v = Number(p);
+      if (!Number.isFinite(v)) return 'warn';
+      if (v >= 90) return 'bad';
+      if (v >= 70) return 'warn';
+      return 'ok';
+    }
+
+    function getDebug() {
+      const el = document.getElementById('debug');
+      return Boolean(el && el.checked);
+    }
+
+    function setManualTs(ts) {
+      try {
+        localStorage.setItem('rv_ops_last_manual_refresh', ts);
+      } catch {}
+      const el = document.getElementById('manual-ts');
+      if (el) el.textContent = ts;
+    }
+
+    function getManualTs() {
+      try {
+        return localStorage.getItem('rv_ops_last_manual_refresh');
+      } catch {
+        return null;
+      }
+    }
+
+    const COOLDOWN_MS = 60 * 1000;
+    let lastRefreshAt = 0;
+
+    function updateCooldown() {
+      const btn = document.getElementById('btn-refresh');
+      const out = document.getElementById('cooldown');
+      const last = document.getElementById('last-refresh');
+      const now = Date.now();
+      const remaining = Math.max(0, (lastRefreshAt + COOLDOWN_MS) - now);
+      if (btn) btn.disabled = remaining > 0;
+      if (out) out.textContent = remaining > 0 ? `Cooldown: ${Math.ceil(remaining / 1000)}s` : '';
+      if (last) last.textContent = lastRefreshAt ? `Last refresh: ${new Date(lastRefreshAt).toLocaleString()}` : '';
+    }
+
+    async function loadOnce() {
+      const loading = document.getElementById('loading');
+      const main = document.getElementById('main');
+
+      try {
+        const res = await fetch('/api/mission-control/summary', { cache: 'no-store' });
+        const payload = await res.json();
+        const data = payload && payload.data ? payload.data : {};
+        const ops = data.ops || {};
+
+        const budgets = data.budgets || {};
+        const w = budgets.workersRequests || {};
+
+        const expected = Number(ops.pipeline?.expected || 100);
+        const fetched = Number(ops.pipeline?.fetched || 0);
+        const validated = Number(ops.pipeline?.validatedStored || 0);
+        const computed = Number(ops.pipeline?.computed || 0);
+        const staticReady = Number(ops.pipeline?.staticReady || 0);
+
+        const kvWritesToday = (budgets.kvWrites && budgets.kvWrites.usedToday != null) ? budgets.kvWrites.usedToday : null;
+
+        const overall = ops.overall || {};
+        document.getElementById('overall').innerHTML = overall.verdict
+          ? (overall.verdict === 'HEALTHY' ? 'HEALTHY ✅' : overall.verdict === 'DEGRADED' ? 'DEGRADED ⚠️' : 'RISK 🔴')
+          : '—';
+        document.getElementById('overall-reason').textContent = overall.reason || '—';
+
+        document.getElementById('workers-used').textContent = fmtNum(w.usedToday);
+        const remainingAbs = (w.limitToday != null && w.usedToday != null) ? Math.max(0, Number(w.limitToday) - Number(w.usedToday)) : null;
+        const remainingPct = w.pctRemaining;
+        document.getElementById('workers-budget').innerHTML =
+          (w.limitToday == null)
+            ? '<span class="small">limit=—</span>'
+            : (pill(String(w.pctUsed) + '% used', pctClass(w.pctUsed)) + ' <span class="small">limit=' + esc(w.limitToday) + ' • remaining=' + esc(remainingAbs) + ' (' + esc(remainingPct) + '%)</span>');
+
+        document.getElementById('runtime-mode').textContent = 'RUNTIME';
+        document.getElementById('runtime-note').textContent = 'Static page; runtime only on manual refresh.';
+
+        document.getElementById('safety-kv-writes').textContent = kvWritesToday == null ? 'KV writes today: —' : ('KV writes today: ' + String(kvWritesToday));
+        document.getElementById('safety-note').textContent = `Polling default OFF: ${ops.safety?.pollingDefaultOff ? 'YES' : 'NO'} • Runtime writes disabled: ${ops.safety?.runtimeWritesDisabled ? 'YES' : 'NO'}`;
+
+        const providers = Array.isArray(ops.providers) ? ops.providers : [];
+        document.getElementById('providers').innerHTML = providers.length
+          ? providers.map((p) => {
+              const name = p.name || 'unknown';
+              const used = p.usedMonth;
+              const lim = p.limitMonth;
+              const rem = p.remainingMonth;
+              const remPct = p.remainingPct;
+              const callsToday = p.runtimeCallsToday;
+              const status = remPct == null ? 'warn' : pctClass(100 - Number(remPct));
+              const remText = remPct == null ? '—' : (pill(String(remPct) + '%', status) + ' <span class="small">' + esc(rem) + '</span>');
+              return '<tr>' +
+                '<td>' + esc(name) + '</td>' +
+                '<td>' + esc(used == null ? '—' : used) + '</td>' +
+                '<td>' + esc(lim == null ? '—' : lim) + '</td>' +
+                '<td>' + remText + '</td>' +
+                '<td class="small">' + esc(p.resetDate || '—') + '</td>' +
+                '<td>' + esc(callsToday == null ? '—' : callsToday) + '</td>' +
+              '</tr>';
+            }).join('')
+          : '<tr><td colspan="6" class="small">No provider budgets</td></tr>';
+
+        const stageRow = (label, value) => {
+          const ok = value >= expected;
+          const cls = ok ? 'ok' : (value >= Math.floor(expected * 0.9) ? 'warn' : 'bad');
+          return '<tr>' +
+            '<td>' + esc(label) + '</td>' +
+            '<td>' + esc(String(value)) + '</td>' +
+            '<td>' + esc(String(expected)) + '</td>' +
+            '<td>' + pill(ok ? 'OK' : 'MISSING', cls) + '</td>' +
+          '</tr>';
+        };
+
+        document.getElementById('pipeline').innerHTML =
+          stageRow('Fetched', fetched) +
+          stageRow('Validated & Stored', validated) +
+          stageRow('Computed', computed) +
+          stageRow('Static-ready', staticReady);
+
+        const missing = Array.isArray(ops.pipeline?.missing) ? ops.pipeline.missing : [];
+        const missingText = missing.length
+          ? ('Missing: ' + missing.slice(0, getDebug() ? 60 : 20).map((m) => `${m.ticker}:${m.reason}`).join(', ') + (missing.length > (getDebug() ? 60 : 20) ? ` …(+${missing.length - (getDebug() ? 60 : 20)})` : ''))
+          : 'Missing: —';
+        document.getElementById('pipeline-missing').textContent = missingText;
+
+        const freshness = ops.freshness || {};
+        document.getElementById('freshness-global').textContent = `Latest snapshot date: ${freshness.latestSnapshotDate || '—'} • Expected: ${freshness.expectedTradingDay || '—'}`;
+        document.getElementById('freshness-stale').textContent = `Stale stocks: ${freshness.staleCount == null ? '—' : freshness.staleCount}/${expected}`;
+        const staleList = Array.isArray(freshness.staleList) ? freshness.staleList : [];
+        document.getElementById('freshness-list').textContent = staleList.length
+          ? ('Stale: ' + staleList.slice(0, getDebug() ? 60 : 20).join(', ') + (staleList.length > (getDebug() ? 60 : 20) ? ` …(+${staleList.length - (getDebug() ? 60 : 20)})` : ''))
+          : '';
+
+        document.getElementById('asof').textContent = data.asOf ? ('asOf=' + String(data.asOf)) : '';
+
+        loading.style.display = 'none';
+        main.style.display = 'block';
+      } catch {
+        const loading = document.getElementById('loading');
+        if (loading) loading.textContent = 'Failed to load ops summary.';
+      }
+    }
+
+    document.getElementById('btn-refresh').addEventListener('click', async () => {
+      const now = Date.now();
+      if (now - lastRefreshAt < COOLDOWN_MS) {
+        updateCooldown();
+        return;
+      }
+      lastRefreshAt = now;
+      updateCooldown();
+      const ts = new Date().toISOString();
+      setManualTs(ts);
+      await loadOnce();
+
+      const remaining = Math.max(0, (lastRefreshAt + COOLDOWN_MS) - Date.now());
+      if (remaining > 0) {
+        setTimeout(() => updateCooldown(), remaining + 25);
+      }
+    });
+
+    document.getElementById('debug').addEventListener('change', () => {
+      updateCooldown();
+    });
+
+    const previous = getManualTs();
+    if (previous) {
+      const el = document.getElementById('manual-ts');
+      if (el) el.textContent = previous;
+    }
+
+    updateCooldown();
+  </script>
+</body>
+</html>

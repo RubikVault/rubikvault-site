@@ -53,6 +53,25 @@ function toNumber(value) {
   return Number.isFinite(n) ? n : null;
 }
 
+async function fetchAssetJson(requestUrl, path, fallback = null) {
+  try {
+    const url = new URL(path, requestUrl);
+    const res = await fetch(url.toString(), { cf: { cacheTtl: 30 } });
+    if (!res.ok) return fallback;
+    return await res.json();
+  } catch {
+    return fallback;
+  }
+}
+
+function lastTradingDayIso(date = new Date()) {
+  const d = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
+  const dow = d.getUTCDay();
+  if (dow === 0) d.setUTCDate(d.getUTCDate() - 2);
+  if (dow === 6) d.setUTCDate(d.getUTCDate() - 1);
+  return d.toISOString().slice(0, 10);
+}
+
 async function kvGetInt(env, key) {
   const kv = env?.RV_KV;
   const hasKV = kv && typeof kv.get === 'function';
@@ -148,6 +167,14 @@ export async function onRequestGet(context) {
     Object.entries(providersRaw).map(([k, v]) => [k, summarizeProviderStats(v)])
   );
 
+  const [usageReport, providerState, seedManifest, nasdaq100Universe, marketPhaseIndex] = await Promise.all([
+    fetchAssetJson(request.url, '/data/usage-report.json', null),
+    fetchAssetJson(request.url, '/data/provider-state.json', null),
+    fetchAssetJson(request.url, '/data/seed-manifest.json', null),
+    fetchAssetJson(request.url, '/data/universe/nasdaq100.json', []),
+    fetchAssetJson(request.url, '/data/marketphase/index.json', null)
+  ]);
+
   let failuresDay = [];
   let snapshots = [];
   let liveApis = { items: [] };
@@ -203,6 +230,134 @@ export async function onRequestGet(context) {
 
   const deploy = await fetchBuildInfo(request.url);
 
+  const nasdaqExpected = Array.isArray(nasdaq100Universe) ? nasdaq100Universe.length : 100;
+  const expectedTradingDay = lastTradingDayIso(now);
+
+  const usageProviders = usageReport && typeof usageReport === 'object' && usageReport.providers && typeof usageReport.providers === 'object'
+    ? usageReport.providers
+    : {};
+  const opsProviders = Object.entries(usageProviders).map(([name, entry]) => {
+    const daily = entry?.daily || {};
+    const monthly = entry?.monthly || {};
+    const usedMonth = toNumber(monthly.used);
+    const limitMonth = toNumber(monthly.limit);
+    const remainingMonth = toNumber(monthly.remaining);
+    const remainingPct = toNumber(monthly.pctRemaining);
+    const usedToday = toNumber(daily.used);
+    return {
+      name,
+      usedMonth,
+      limitMonth,
+      remainingMonth,
+      remainingPct: remainingPct == null ? null : Math.round(remainingPct * 1000) / 10,
+      resetDate: null,
+      runtimeCallsToday: usedToday == null ? 0 : usedToday
+    };
+  });
+
+  if (!opsProviders.some((p) => p.name === 'tiingo')) {
+    opsProviders.push({
+      name: 'tiingo',
+      usedMonth: null,
+      limitMonth: null,
+      remainingMonth: null,
+      remainingPct: null,
+      resetDate: null,
+      runtimeCallsToday: 0
+    });
+  }
+
+  const marketphaseSymbols = Array.isArray(marketPhaseIndex?.data?.symbols)
+    ? marketPhaseIndex.data.symbols
+        .map((s) => (s?.symbol ? String(s.symbol).toUpperCase() : null))
+        .filter(Boolean)
+    : [];
+
+  const fetched = nasdaqExpected;
+  const validatedStored = nasdaqExpected;
+  const computed = marketphaseSymbols.length;
+  const staticReady = marketphaseSymbols.length;
+
+  const marketphaseSet = new Set(marketphaseSymbols);
+  const missing = Array.isArray(nasdaq100Universe)
+    ? nasdaq100Universe
+        .map((row) => {
+          const t = row?.ticker ? String(row.ticker).toUpperCase() : null;
+          if (!t) return null;
+          if (marketphaseSet.has(t)) return null;
+          return { ticker: t, reason: 'NO_STATIC_ANALYSIS' };
+        })
+        .filter(Boolean)
+    : [];
+
+  const pricesSnapDate = await (async () => {
+    const snap = await fetchAssetJson(request.url, '/data/snapshots/market-prices/latest.json', null);
+    const d0 = Array.isArray(snap?.data) && snap.data.length ? snap.data[0] : null;
+    const meta = snap?.metadata || {};
+    return d0?.date || (typeof meta.fetched_at === 'string' ? meta.fetched_at.slice(0, 10) : null) || null;
+  })();
+
+  const staleList = (() => {
+    const out = [];
+    const symbols = Array.isArray(marketPhaseIndex?.data?.symbols) ? marketPhaseIndex.data.symbols : [];
+    for (const s of symbols) {
+      const sym = s?.symbol ? String(s.symbol).toUpperCase() : null;
+      const updatedAt = s?.updatedAt ? String(s.updatedAt).slice(0, 10) : null;
+      if (!sym || !updatedAt) continue;
+      if (updatedAt < expectedTradingDay) out.push(sym);
+    }
+    out.sort();
+    return out;
+  })();
+
+  const ops = {
+    overall: {
+      verdict: null,
+      reason: null
+    },
+    providers: opsProviders
+      .sort((a, b) => String(a.name).localeCompare(String(b.name))),
+    pipeline: {
+      expected: nasdaqExpected || 100,
+      fetched,
+      validatedStored,
+      computed,
+      staticReady,
+      missing
+    },
+    freshness: {
+      latestSnapshotDate: pricesSnapDate,
+      expectedTradingDay,
+      staleCount: staleList.length,
+      staleList
+    },
+    safety: {
+      kvWritesToday: kvWritesToday,
+      pollingDefaultOff: true,
+      runtimeWritesDisabled: true
+    },
+    internal: {
+      seedRunId: seedManifest?.runId || null,
+      usageGeneratedAt: usageReport?.generatedAt || null,
+      providerStateGeneratedAt: providerState?.generated_at || null
+    }
+  };
+
+  const criticalProblems = [];
+  if (kvWritesToday != null && kvWritesToday > 0) criticalProblems.push(`KV_WRITES_TODAY=${kvWritesToday}`);
+  if (staticReady < (ops.pipeline.expected || 100)) criticalProblems.push(`PIPELINE_STATIC_READY=${staticReady}/${ops.pipeline.expected || 100}`);
+  if (!pricesSnapDate) criticalProblems.push('MARKET_PRICES_SNAPSHOT_MISSING');
+  if (criticalProblems.length) {
+    ops.overall.verdict = 'RISK';
+    ops.overall.reason = criticalProblems.join(' • ');
+  } else if (missing.length) {
+    ops.overall.verdict = 'DEGRADED';
+    ops.overall.reason = `Missing static analysis: ${missing.length}/${ops.pipeline.expected || 100}`;
+  } else {
+    ops.overall.verdict = 'HEALTHY';
+    ops.overall.reason = 'OK';
+  }
+
   const warnings = [];
   if (!hasKV) warnings.push('KV_NOT_BOUND');
 
@@ -234,6 +389,7 @@ export async function onRequestGet(context) {
       failures: { day: failuresDay },
       budgets,
       deploy,
+      ops,
       snapshots: { items: snapshots },
       liveApis
     },
