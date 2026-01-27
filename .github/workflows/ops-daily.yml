@@ -1,0 +1,59 @@
+name: Ops Daily Snapshot
+
+on:
+  schedule:
+    - cron: "5 7 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: ops-daily
+  cancel-in-progress: true
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install deps
+        run: npm ci
+
+      - name: Build ops-daily snapshot
+        env:
+          CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+          CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
+        run: node scripts/ops/build-ops-daily.mjs
+
+      - name: Commit + push (if changed)
+        run: |
+          set -euo pipefail
+          git config user.name "RubikVault Bot"
+          git config user.email "bot@rubikvault.com"
+          git add public/data/ops-daily.json
+          if git diff --cached --quiet; then
+            echo "No staged changes"
+            exit 0
+          fi
+          git commit -m "chore(ops): update ops-daily snapshot" || exit 0
+
+          for i in 1 2 3; do
+            if git push origin HEAD:main; then
+              exit 0
+            fi
+            echo "push failed (attempt $i); retrying in 5s" >&2
+            sleep 5
+            git pull --rebase origin main || true
+          done
+          echo "push failed after retries" >&2
+          exit 1

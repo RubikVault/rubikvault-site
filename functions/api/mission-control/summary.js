@@ -53,6 +53,36 @@ function toNumber(value) {
   return Number.isFinite(n) ? n : null;
 }
 
+function authFail() {
+  const payload = {
+    schema_version: '3.0',
+    metadata: {
+      module: MODULE_NAME,
+      schema_version: '3.0',
+      tier: 'standard',
+      domain: 'system',
+      source: 'mission-control',
+      fetched_at: new Date().toISOString(),
+      published_at: new Date().toISOString(),
+      digest: null,
+      served_from: 'RUNTIME',
+      request: { debug: false },
+      status: 'ERROR',
+      warnings: []
+    },
+    data: null,
+    error: buildErrorPayload('FORBIDDEN', 'Live check requires valid OPS_KEY')
+  };
+
+  return new Response(JSON.stringify(payload, null, 2) + '\n', {
+    status: 403,
+    headers: {
+      'Content-Type': 'application/json',
+      'Cache-Control': 'no-store'
+    }
+  });
+}
+
 async function fetchAssetJson(requestUrl, path, fallback = null) {
   try {
     const url = new URL(path, requestUrl);
@@ -70,6 +100,128 @@ function lastTradingDayIso(date = new Date()) {
   if (dow === 0) d.setUTCDate(d.getUTCDate() - 2);
   if (dow === 6) d.setUTCDate(d.getUTCDate() - 1);
   return d.toISOString().slice(0, 10);
+}
+
+async function fetchCloudflareWorkerRequests(env) {
+  const accountId = env?.CF_ACCOUNT_ID;
+  const apiToken = env?.CF_API_TOKEN;
+  if (!accountId || !apiToken) {
+    return {
+      requestsToday: null,
+      requestsLast24h: null,
+      notes: 'CF analytics not configured'
+    };
+  }
+
+  const endpoint = 'https://api.cloudflare.com/client/v4/graphql';
+  const now = new Date();
+  const startToday = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+  const start24h = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+
+  const query = `query($accountTag: String!, $startToday: DateTime!, $start24h: DateTime!, $end: DateTime!) {
+    viewer {
+      accounts(filter: { accountTag: $accountTag }) {
+        workersInvocationsAdaptiveGroups(
+          limit: 1,
+          filter: { datetime_geq: $startToday, datetime_leq: $end }
+        ) {
+          sum { requests }
+        }
+        workersInvocationsAdaptiveGroupsLast24h: workersInvocationsAdaptiveGroups(
+          limit: 1,
+          filter: { datetime_geq: $start24h, datetime_leq: $end }
+        ) {
+          sum { requests }
+        }
+      }
+    }
+  }`;
+
+  try {
+    const res = await fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        authorization: `Bearer ${apiToken}`
+      },
+      body: JSON.stringify({
+        query,
+        variables: {
+          accountTag: accountId,
+          startToday: startToday.toISOString(),
+          start24h: start24h.toISOString(),
+          end: now.toISOString()
+        }
+      })
+    });
+
+    if (!res.ok) {
+      return {
+        requestsToday: null,
+        requestsLast24h: null,
+        notes: `CF analytics query failed (HTTP ${res.status})`
+      };
+    }
+
+    const payload = await res.json();
+    const account = payload?.data?.viewer?.accounts?.[0];
+    const today = account?.workersInvocationsAdaptiveGroups?.[0]?.sum?.requests;
+    const last24h = account?.workersInvocationsAdaptiveGroupsLast24h?.[0]?.sum?.requests;
+    return {
+      requestsToday: toNumber(today),
+      requestsLast24h: toNumber(last24h),
+      notes: 'ok'
+    };
+  } catch (e) {
+    return {
+      requestsToday: null,
+      requestsLast24h: null,
+      notes: `CF analytics query error: ${String(e?.message || e)}`
+    };
+  }
+}
+
+function computeVerdictFromBaseline(baseline) {
+  const expected = baseline?.pipeline?.expected;
+  const staticReady = baseline?.pipeline?.staticReady;
+  const staleCount = baseline?.freshness?.staleCount;
+  const missingCount = Array.isArray(baseline?.pipeline?.missing) ? baseline.pipeline.missing.length : 0;
+  const hasPipeline = Number.isFinite(Number(expected)) && Number.isFinite(Number(staticReady));
+  const pipelineOk = hasPipeline ? Number(staticReady) >= Number(expected) : false;
+  const freshnessKnown = staleCount !== null && staleCount !== undefined;
+  const freshnessOk = freshnessKnown ? Number(staleCount) === 0 : false;
+
+  if (pipelineOk && freshnessOk) return { verdict: 'HEALTHY', reason: 'OK' };
+  if (!pipelineOk) return { verdict: 'RISK', reason: `PIPELINE_STATIC_READY=${staticReady}/${expected} (missing=${missingCount})` };
+  if (!freshnessOk) return { verdict: 'RISK', reason: `SNAPSHOT_STALE (stale=${staleCount})` };
+  return { verdict: 'DEGRADED', reason: 'UNKNOWN' };
+}
+
+function baselineFromComputed(opsComputed) {
+  const expectedUniverse = opsComputed?.pipeline?.expected ?? 100;
+  return {
+    expectedUniverse,
+    pipeline: {
+      expected: opsComputed?.pipeline?.expected ?? expectedUniverse,
+      fetched: opsComputed?.pipeline?.fetched ?? null,
+      validatedStored: opsComputed?.pipeline?.validatedStored ?? null,
+      computed: opsComputed?.pipeline?.computed ?? null,
+      staticReady: opsComputed?.pipeline?.staticReady ?? null,
+      missing: Array.isArray(opsComputed?.pipeline?.missing) ? opsComputed.pipeline.missing : []
+    },
+    freshness: {
+      latestSnapshotDate: opsComputed?.freshness?.latestSnapshotDate ?? null,
+      expectedTradingDay: opsComputed?.freshness?.expectedTradingDay ?? null,
+      staleCount: opsComputed?.freshness?.staleCount ?? null,
+      staleList: Array.isArray(opsComputed?.freshness?.staleList) ? opsComputed.freshness.staleList : []
+    },
+    providers: Array.isArray(opsComputed?.providers) ? opsComputed.providers : [],
+    cloudflare: {
+      requestsToday: null,
+      requestsLast24h: null,
+      notes: 'CF analytics not configured'
+    }
+  };
 }
 
 async function kvGetInt(env, key) {
@@ -129,10 +281,19 @@ export async function onRequestGet(context) {
   const { request, env } = context;
   const url = new URL(request.url);
   const isDebug = url.searchParams.get('debug') === '1';
+  const wantsLive = url.searchParams.get('live') === '1';
   const startedAtIso = new Date().toISOString();
   const now = new Date();
 
-  if (!isDebug && LAST_CACHE && Date.now() - LAST_CACHE_AT_MS < CACHE_TTL_MS) {
+  if (wantsLive) {
+    const requiredKey = env?.OPS_KEY;
+    const providedKey = request.headers.get('x-ops-key') || '';
+    if (!requiredKey || providedKey !== requiredKey) {
+      return authFail();
+    }
+  }
+
+  if (!wantsLive && !isDebug && LAST_CACHE && Date.now() - LAST_CACHE_AT_MS < CACHE_TTL_MS) {
     return new Response(LAST_CACHE, {
       headers: {
         'Content-Type': 'application/json',
@@ -167,7 +328,8 @@ export async function onRequestGet(context) {
     Object.entries(providersRaw).map(([k, v]) => [k, summarizeProviderStats(v)])
   );
 
-  const [usageReport, providerState, seedManifest, nasdaq100Universe, marketPhaseIndex] = await Promise.all([
+  const [opsDaily, usageReport, providerState, seedManifest, nasdaq100Universe, marketPhaseIndex] = await Promise.all([
+    fetchAssetJson(request.url, '/data/ops-daily.json', null),
     fetchAssetJson(request.url, '/data/usage-report.json', null),
     fetchAssetJson(request.url, '/data/provider-state.json', null),
     fetchAssetJson(request.url, '/data/seed-manifest.json', null),
@@ -310,13 +472,8 @@ export async function onRequestGet(context) {
     return out;
   })();
 
-  const ops = {
-    overall: {
-      verdict: null,
-      reason: null
-    },
-    providers: opsProviders
-      .sort((a, b) => String(a.name).localeCompare(String(b.name))),
+  const opsComputed = {
+    providers: opsProviders.sort((a, b) => String(a.name).localeCompare(String(b.name))),
     pipeline: {
       expected: nasdaqExpected || 100,
       fetched,
@@ -343,19 +500,39 @@ export async function onRequestGet(context) {
     }
   };
 
-  const criticalProblems = [];
-  if (kvWritesToday != null && kvWritesToday > 0) criticalProblems.push(`KV_WRITES_TODAY=${kvWritesToday}`);
-  if (staticReady < (ops.pipeline.expected || 100)) criticalProblems.push(`PIPELINE_STATIC_READY=${staticReady}/${ops.pipeline.expected || 100}`);
-  if (!pricesSnapDate) criticalProblems.push('MARKET_PRICES_SNAPSHOT_MISSING');
-  if (criticalProblems.length) {
-    ops.overall.verdict = 'RISK';
-    ops.overall.reason = criticalProblems.join(' • ');
-  } else if (missing.length) {
-    ops.overall.verdict = 'DEGRADED';
-    ops.overall.reason = `Missing static analysis: ${missing.length}/${ops.pipeline.expected || 100}`;
-  } else {
-    ops.overall.verdict = 'HEALTHY';
-    ops.overall.reason = 'OK';
+  const opsDailyBaseline = opsDaily?.baseline && typeof opsDaily.baseline === 'object' ? opsDaily.baseline : null;
+  const opsBaseline = opsDailyBaseline || baselineFromComputed(opsComputed);
+  const opsBaselineAsOf = typeof opsDaily?.asOf === 'string' ? opsDaily.asOf : null;
+  const baselineVerdict = computeVerdictFromBaseline(opsBaseline);
+
+  const baselineMissing = !opsDailyBaseline;
+  const overall = {
+    verdict: baselineMissing ? 'DEGRADED' : baselineVerdict.verdict,
+    reason: baselineMissing ? 'OPS_DAILY_MISSING' : baselineVerdict.reason
+  };
+
+  let opsLiveResolved = null;
+  if (wantsLive) {
+    const cf = await fetchCloudflareWorkerRequests(env);
+    opsLiveResolved = {
+      asOf: startedAtIso,
+      cooldownSeconds: 60,
+      cloudflare: {
+        requestsToday: cf.requestsToday,
+        requestsLast24h: cf.requestsLast24h,
+        notes: cf.notes
+      },
+      providers: (Array.isArray(opsBaseline?.providers) ? opsBaseline.providers : []).map((p) => ({
+        name: p?.name ?? null,
+        usedMonth: null,
+        limitMonth: null,
+        remainingMonth: null,
+        remainingPct: null,
+        resetDate: null,
+        runtimeCallsToday: null
+      })),
+      notes: 'live usage not available; relying on baseline'
+    };
   }
 
   const warnings = [];
@@ -389,7 +566,16 @@ export async function onRequestGet(context) {
       failures: { day: failuresDay },
       budgets,
       deploy,
-      ops,
+      opsBaseline: {
+        schema_version: '1.0',
+        asOf: opsBaselineAsOf,
+        baseline: opsBaseline
+      },
+      opsComputed: {
+        overall,
+        ...opsComputed
+      },
+      opsLive: opsLiveResolved,
       snapshots: { items: snapshots },
       liveApis
     },
@@ -403,7 +589,7 @@ export async function onRequestGet(context) {
   payload.metadata.digest = await computeDigest(payload);
 
   const body = JSON.stringify(payload, null, 2) + '\n';
-  if (!isDebug) {
+  if (!wantsLive && !isDebug) {
     LAST_CACHE = body;
     LAST_CACHE_AT_MS = Date.now();
   }
@@ -411,7 +597,7 @@ export async function onRequestGet(context) {
   return new Response(body, {
     headers: {
       'Content-Type': 'application/json',
-      'Cache-Control': 'public, max-age=10, s-maxage=10, stale-while-revalidate=60'
+      'Cache-Control': wantsLive ? 'no-store' : 'public, max-age=10, s-maxage=10, stale-while-revalidate=60'
     }
   });
 }

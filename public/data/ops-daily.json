@@ -1,0 +1,532 @@
+{
+  "schema_version": "1.0",
+  "asOf": "2026-01-27T09:43:11.147Z",
+  "baseline": {
+    "expectedUniverse": 100,
+    "pipeline": {
+      "expected": 100,
+      "fetched": null,
+      "validatedStored": null,
+      "computed": 2,
+      "staticReady": 2,
+      "missing": [
+        {
+          "ticker": "ABNB",
+          "reason": "NO_STATIC_ANALYSIS"
+        },
+        {
+          "ticker": "ADBE",
+          "reason": "NO_STATIC_ANALYSIS"
+        },
+        {
+          "ticker": "ADI",
+          "reason": "NO_STATIC_ANALYSIS"
+        },
+        {
+          "ticker": "ADP",
+          "reason": "NO_STATIC_ANALYSIS"
+        },
+        {
+          "ticker": "ADSK",
+          "reason": "NO_STATIC_ANALYSIS"
+        },
+        {
+          "ticker": "AEP",
+          "reason": "NO_STATIC_ANALYSIS"
+        },
+        {
+          "ticker": "AMAT",
+          "reason": "NO_STATIC_ANALYSIS"
+        },
+        {
+          "ticker": "AMD",
+          "reason": "NO_STATIC_ANALYSIS"
+        },
+        {
+          "ticker": "AMGN",
+          "reason": "NO_STATIC_ANALYSIS"
+        },
+        {
+          "ticker": "AMZN",
+          "reason": "NO_STATIC_ANALYSIS"
+        },
+        {
+          "ticker": "APP",
+          "reason": "NO_STATIC_ANALYSIS"
+        },
+        {
+          "ticker": "ARM",
+          "reason": "NO_STATIC_ANALYSIS"
+        },
+        {
+          "ticker": "ASML",
+          "reason": "NO_STATIC_ANALYSIS"
+        },
+        {
+          "ticker": "AVGO",
+          "reason": "NO_STATIC_ANALYSIS"
+        },
+        {
+          "ticker": "AXON",
+          "reason": "NO_STATIC_ANALYSIS"
+        },
+        {
+          "ticker": "AZN",
+          "reason": "NO_STATIC_ANALYSIS"
+        },
+        {
+          "ticker": "BIIB",
+          "reason": "NO_STATIC_ANALYSIS"
+        },
+        {
+          "ticker": "BKNG",
+          "reason": "NO_STATIC_ANALYSIS"
+        },
+        {
+          "ticker": "BKR",
+          "reason": "NO_STATIC_ANALYSIS"
+        },
+        {
+          "ticker": "CCEP",
+          "reason": "NO_STATIC_ANALYSIS"
+        },
+        {
+          "ticker": "CDNS",
+          "reason": "NO_STATIC_ANALYSIS"
+        },
+        {
+          "ticker": "CDW",
+          "reason": "NO_STATIC_ANALYSIS"
+        },
+        {
+          "ticker": "CHTR",
+          "reason": "NO_STATIC_ANALYSIS"
+        },
+        {
+          "ticker": "CMCSA",
+          "reason": "NO_STATIC_ANALYSIS"
+        },
+        {
+          "ticker": "COST",
+          "reason": "NO_STATIC_ANALYSIS"
+        },
+        {
+          "ticker": "CPRT",
+          "reason": "NO_STATIC_ANALYSIS"
+        },
+        {
+          "ticker": "CRWD",
+          "reason": "NO_STATIC_ANALYSIS"
+        },
+        {
+          "ticker": "CSGP",
+          "reason": "NO_STATIC_ANALYSIS"
+        },
+        {
+          "ticker": "CSCO",
+          "reason": "NO_STATIC_ANALYSIS"
+        },
+        {
+          "ticker": "CSX",
+          "reason": "NO_STATIC_ANALYSIS"
+        },
+        {
+          "ticker": "CTAS",
+          "reason": "NO_STATIC_ANALYSIS"
+        },
+        {
+          "ticker": "CTSH",
+          "reason": "NO_STATIC_ANALYSIS"
+        },
+        {
+          "ticker": "DASH",
+          "reason": "NO_STATIC_ANALYSIS"
+        },
+        {
+          "ticker": "DDOG",
+          "reason": "NO_STATIC_ANALYSIS"
+        },
+        {
+          "ticker": "DXCM",
+          "reason": "NO_STATIC_ANALYSIS"
+        },
+        {
+          "ticker": "EA",
+          "reason": "NO_STATIC_ANALYSIS"
+        },
+        {
+          "ticker": "EXC",
+          "reason": "NO_STATIC_ANALYSIS"
+        },
+        {
+          "ticker": "FANG",
+          "reason": "NO_STATIC_ANALYSIS"
+        },
+        {
+          "ticker": "FAST",
+          "reason": "NO_STATIC_ANALYSIS"
+        },
+        {
+          "ticker": "FTNT",
+          "reason": "NO_STATIC_ANALYSIS"
+        },
+        {
+          "ticker": "GEHC",
+          "reason": "NO_STATIC_ANALYSIS"
+        },
+        {
+          "ticker": "GFS",
+          "reason": "NO_STATIC_ANALYSIS"
+        },
+        {
+          "ticker": "GILD",
+          "reason": "NO_STATIC_ANALYSIS"
+        },
+        {
+          "ticker": "GOOG",
+          "reason": "NO_STATIC_ANALYSIS"
+        },
+        {
+          "ticker": "GOOGL",
+          "reason": "NO_STATIC_ANALYSIS"
+        },
+        {
+          "ticker": "HON",
+          "reason": "NO_STATIC_ANALYSIS"
+        },
+        {
+          "ticker": "IDXX",
+          "reason": "NO_STATIC_ANALYSIS"
+        },
+        {
+          "ticker": "INTC",
+          "reason": "NO_STATIC_ANALYSIS"
+        },
+        {
+          "ticker": "INTU",
+          "reason": "NO_STATIC_ANALYSIS"
+        },
+        {
+          "ticker": "ISRG",
+          "reason": "NO_STATIC_ANALYSIS"
+        },
+        {
+          "ticker": "KDP",
+          "reason": "NO_STATIC_ANALYSIS"
+        },
+        {
+          "ticker": "KHC",
+          "reason": "NO_STATIC_ANALYSIS"
+        },
+        {
+          "ticker": "KLAC",
+          "reason": "NO_STATIC_ANALYSIS"
+        },
+        {
+          "ticker": "LRCX",
+          "reason": "NO_STATIC_ANALYSIS"
+        },
+        {
+          "ticker": "LULU",
+          "reason": "NO_STATIC_ANALYSIS"
+        },
+        {
+          "ticker": "LIN",
+          "reason": "NO_STATIC_ANALYSIS"
+        },
+        {
+          "ticker": "MAR",
+          "reason": "NO_STATIC_ANALYSIS"
+        },
+        {
+          "ticker": "MCHP",
+          "reason": "NO_STATIC_ANALYSIS"
+        },
+        {
+          "ticker": "MDLZ",
+          "reason": "NO_STATIC_ANALYSIS"
+        },
+        {
+          "ticker": "MELI",
+          "reason": "NO_STATIC_ANALYSIS"
+        },
+        {
+          "ticker": "META",
+          "reason": "NO_STATIC_ANALYSIS"
+        },
+        {
+          "ticker": "MNST",
+          "reason": "NO_STATIC_ANALYSIS"
+        },
+        {
+          "ticker": "MRVL",
+          "reason": "NO_STATIC_ANALYSIS"
+        },
+        {
+          "ticker": "MSTR",
+          "reason": "NO_STATIC_ANALYSIS"
+        },
+        {
+          "ticker": "MU",
+          "reason": "NO_STATIC_ANALYSIS"
+        },
+        {
+          "ticker": "NVDA",
+          "reason": "NO_STATIC_ANALYSIS"
+        },
+        {
+          "ticker": "NXPI",
+          "reason": "NO_STATIC_ANALYSIS"
+        },
+        {
+          "ticker": "ODFL",
+          "reason": "NO_STATIC_ANALYSIS"
+        },
+        {
+          "ticker": "ON",
+          "reason": "NO_STATIC_ANALYSIS"
+        },
+        {
+          "ticker": "ORLY",
+          "reason": "NO_STATIC_ANALYSIS"
+        },
+        {
+          "ticker": "PANW",
+          "reason": "NO_STATIC_ANALYSIS"
+        },
+        {
+          "ticker": "PAYX",
+          "reason": "NO_STATIC_ANALYSIS"
+        },
+        {
+          "ticker": "PCAR",
+          "reason": "NO_STATIC_ANALYSIS"
+        },
+        {
+          "ticker": "PDD",
+          "reason": "NO_STATIC_ANALYSIS"
+        },
+        {
+          "ticker": "PEP",
+          "reason": "NO_STATIC_ANALYSIS"
+        },
+        {
+          "ticker": "PLTR",
+          "reason": "NO_STATIC_ANALYSIS"
+        },
+        {
+          "ticker": "PYPL",
+          "reason": "NO_STATIC_ANALYSIS"
+        },
+        {
+          "ticker": "QCOM",
+          "reason": "NO_STATIC_ANALYSIS"
+        },
+        {
+          "ticker": "REGN",
+          "reason": "NO_STATIC_ANALYSIS"
+        },
+        {
+          "ticker": "ROP",
+          "reason": "NO_STATIC_ANALYSIS"
+        },
+        {
+          "ticker": "ROST",
+          "reason": "NO_STATIC_ANALYSIS"
+        },
+        {
+          "ticker": "SBUX",
+          "reason": "NO_STATIC_ANALYSIS"
+        },
+        {
+          "ticker": "SHOP",
+          "reason": "NO_STATIC_ANALYSIS"
+        },
+        {
+          "ticker": "SNPS",
+          "reason": "NO_STATIC_ANALYSIS"
+        },
+        {
+          "ticker": "TEAM",
+          "reason": "NO_STATIC_ANALYSIS"
+        },
+        {
+          "ticker": "TMUS",
+          "reason": "NO_STATIC_ANALYSIS"
+        },
+        {
+          "ticker": "TRI",
+          "reason": "NO_STATIC_ANALYSIS"
+        },
+        {
+          "ticker": "TSLA",
+          "reason": "NO_STATIC_ANALYSIS"
+        },
+        {
+          "ticker": "TTD",
+          "reason": "NO_STATIC_ANALYSIS"
+        },
+        {
+          "ticker": "TTWO",
+          "reason": "NO_STATIC_ANALYSIS"
+        },
+        {
+          "ticker": "TXN",
+          "reason": "NO_STATIC_ANALYSIS"
+        },
+        {
+          "ticker": "UBER",
+          "reason": "NO_STATIC_ANALYSIS"
+        },
+        {
+          "ticker": "VRTX",
+          "reason": "NO_STATIC_ANALYSIS"
+        },
+        {
+          "ticker": "VRSK",
+          "reason": "NO_STATIC_ANALYSIS"
+        },
+        {
+          "ticker": "WBD",
+          "reason": "NO_STATIC_ANALYSIS"
+        },
+        {
+          "ticker": "WDAY",
+          "reason": "NO_STATIC_ANALYSIS"
+        },
+        {
+          "ticker": "XEL",
+          "reason": "NO_STATIC_ANALYSIS"
+        },
+        {
+          "ticker": "ZS",
+          "reason": "NO_STATIC_ANALYSIS"
+        }
+      ]
+    },
+    "freshness": {
+      "latestSnapshotDate": "2026-01-23",
+      "expectedTradingDay": "2026-01-27",
+      "staleCount": 2,
+      "staleList": [
+        "AAPL",
+        "MSFT"
+      ]
+    },
+    "providers": [
+      {
+        "name": "alphavantage",
+        "usedMonth": 0,
+        "limitMonth": 1000,
+        "remainingMonth": 1000,
+        "remainingPct": 100,
+        "resetDate": null,
+        "runtimeCallsToday": 0
+      },
+      {
+        "name": "coingecko",
+        "usedMonth": 0,
+        "limitMonth": 4000,
+        "remainingMonth": 4000,
+        "remainingPct": 100,
+        "resetDate": null,
+        "runtimeCallsToday": 0
+      },
+      {
+        "name": "ecb",
+        "usedMonth": 0,
+        "limitMonth": 4000,
+        "remainingMonth": 4000,
+        "remainingPct": 100,
+        "resetDate": null,
+        "runtimeCallsToday": 0
+      },
+      {
+        "name": "finnhub",
+        "usedMonth": 1,
+        "limitMonth": 5000,
+        "remainingMonth": 4999,
+        "remainingPct": 100,
+        "resetDate": null,
+        "runtimeCallsToday": 1
+      },
+      {
+        "name": "fmp",
+        "usedMonth": 4,
+        "limitMonth": 6000,
+        "remainingMonth": 5996,
+        "remainingPct": 99.9,
+        "resetDate": null,
+        "runtimeCallsToday": 4
+      },
+      {
+        "name": "fred",
+        "usedMonth": 0,
+        "limitMonth": 4000,
+        "remainingMonth": 4000,
+        "remainingPct": 100,
+        "resetDate": null,
+        "runtimeCallsToday": 0
+      },
+      {
+        "name": "internal",
+        "usedMonth": 0,
+        "limitMonth": 20000,
+        "remainingMonth": 20000,
+        "remainingPct": 100,
+        "resetDate": null,
+        "runtimeCallsToday": 0
+      },
+      {
+        "name": "marketaux",
+        "usedMonth": 1,
+        "limitMonth": 2500,
+        "remainingMonth": 2499,
+        "remainingPct": 100,
+        "resetDate": null,
+        "runtimeCallsToday": 1
+      },
+      {
+        "name": "rss",
+        "usedMonth": 0,
+        "limitMonth": 6000,
+        "remainingMonth": 6000,
+        "remainingPct": 100,
+        "resetDate": null,
+        "runtimeCallsToday": 0
+      },
+      {
+        "name": "sec",
+        "usedMonth": 1,
+        "limitMonth": 1600,
+        "remainingMonth": 1599,
+        "remainingPct": 99.9,
+        "resetDate": null,
+        "runtimeCallsToday": 1
+      },
+      {
+        "name": "stooq",
+        "usedMonth": 0,
+        "limitMonth": 16000,
+        "remainingMonth": 16000,
+        "remainingPct": 100,
+        "resetDate": null,
+        "runtimeCallsToday": 0
+      },
+      {
+        "name": "tiingo",
+        "usedMonth": null,
+        "limitMonth": null,
+        "remainingMonth": null,
+        "remainingPct": null,
+        "resetDate": null,
+        "runtimeCallsToday": null
+      }
+    ],
+    "cloudflare": {
+      "requestsToday": null,
+      "requestsLast24h": null,
+      "notes": "CF analytics not configured"
+    }
+  }
+}
