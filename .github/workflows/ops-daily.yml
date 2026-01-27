@@ -29,6 +29,9 @@ jobs:
       - name: Install deps
         run: npm ci
 
+      - name: Build pipeline truth (NASDAQ-100)
+        run: node scripts/pipeline/build-ndx100-pipeline-truth.mjs
+
       - name: Build ops-daily snapshot
         env:
           CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
@@ -40,7 +43,7 @@ jobs:
           set -euo pipefail
           git config user.name "RubikVault Bot"
           git config user.email "bot@rubikvault.com"
-          git add public/data/ops-daily.json
+          git add public/data/pipeline/*.json public/data/ops-daily.json
           if git diff --cached --quiet; then
             echo "No staged changes"
             exit 0

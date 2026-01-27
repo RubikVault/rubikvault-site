@@ -98,6 +98,26 @@ async function fetchAssetJson(requestUrl, path, fallback = null) {
   }
 }
 
+function isPipelineTruthDoc(doc) {
+  return doc && typeof doc === 'object' && typeof doc.universe === 'string' && 'expected' in doc && 'count' in doc && 'missing' in doc;
+}
+
+function toIntOrNull(v) {
+  const n = Number(v);
+  return Number.isFinite(n) ? Math.trunc(n) : null;
+}
+
+function normalizePipelineTruth(doc) {
+  if (!isPipelineTruthDoc(doc)) return null;
+  return {
+    universe: typeof doc.universe === 'string' ? doc.universe : null,
+    expected: toIntOrNull(doc.expected),
+    count: toIntOrNull(doc.count),
+    reason: doc.reason ? String(doc.reason) : null,
+    missing: Array.isArray(doc.missing) ? doc.missing : []
+  };
+}
+
 function lastTradingDayIso(date = new Date()) {
   const d = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
   const dow = d.getUTCDay();
@@ -433,28 +453,30 @@ export async function onRequestGet(context) {
     });
   }
 
-  const marketphaseSymbols = Array.isArray(marketPhaseIndex?.data?.symbols)
-    ? marketPhaseIndex.data.symbols
-        .map((s) => (s?.symbol ? String(s.symbol).toUpperCase() : null))
-        .filter(Boolean)
-    : [];
+  const [pipelineFetchedRaw, pipelineValidatedRaw, pipelineComputedRaw, pipelineStaticReadyRaw] = await Promise.all([
+    fetchAssetJson(request.url, '/data/pipeline/nasdaq100.fetched.json', null),
+    fetchAssetJson(request.url, '/data/pipeline/nasdaq100.validated.json', null),
+    fetchAssetJson(request.url, '/data/pipeline/nasdaq100.computed.json', null),
+    fetchAssetJson(request.url, '/data/pipeline/nasdaq100.static-ready.json', null)
+  ]);
 
-  const fetched = nasdaqExpected;
-  const validatedStored = nasdaqExpected;
-  const computed = marketphaseSymbols.length;
-  const staticReady = marketphaseSymbols.length;
+  const pipelineFetched = normalizePipelineTruth(pipelineFetchedRaw);
+  const pipelineValidated = normalizePipelineTruth(pipelineValidatedRaw);
+  const pipelineComputedTruth = normalizePipelineTruth(pipelineComputedRaw);
+  const pipelineStaticReadyTruth = normalizePipelineTruth(pipelineStaticReadyRaw);
 
-  const marketphaseSet = new Set(marketphaseSymbols);
-  const missing = Array.isArray(nasdaq100Universe)
-    ? nasdaq100Universe
-        .map((row) => {
-          const t = row?.ticker ? String(row.ticker).toUpperCase() : null;
-          if (!t) return null;
-          if (marketphaseSet.has(t)) return null;
-          return { ticker: t, reason: 'NO_STATIC_ANALYSIS' };
-        })
-        .filter(Boolean)
-    : [];
+  const pipelineExpected =
+    pipelineFetched?.expected ??
+    pipelineValidated?.expected ??
+    pipelineComputedTruth?.expected ??
+    pipelineStaticReadyTruth?.expected ??
+    (nasdaqExpected || 100);
+
+  const fetched = pipelineFetched?.count ?? null;
+  const validatedStored = pipelineValidated?.count ?? null;
+  const computed = pipelineComputedTruth?.count ?? null;
+  const staticReady = pipelineStaticReadyTruth?.count ?? null;
+  const missing = pipelineStaticReadyTruth?.missing ?? [];
 
   const pricesSnapDate = await (async () => {
     const snap = await fetchAssetJson(request.url, '/data/snapshots/market-prices/latest.json', null);
@@ -479,7 +501,7 @@ export async function onRequestGet(context) {
   const opsComputed = {
     providers: opsProviders.sort((a, b) => String(a.name).localeCompare(String(b.name))),
     pipeline: {
-      expected: nasdaqExpected || 100,
+      expected: pipelineExpected,
       fetched,
       validatedStored,
       computed,

@@ -2,7 +2,6 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 
 const REPO_ROOT = process.cwd();
-const PUBLIC_DATA_ROOT = path.join(REPO_ROOT, 'public', 'data');
 
 function isoNow() {
   return new Date().toISOString();
@@ -35,99 +34,24 @@ async function atomicWriteJson(relPath, value) {
   await fs.rename(tmp, full);
 }
 
-async function walkFiles(rootDir) {
-  const out = [];
-  const stack = [rootDir];
-  while (stack.length) {
-    const dir = stack.pop();
-    let entries;
-    try {
-      entries = await fs.readdir(dir, { withFileTypes: true });
-    } catch {
-      continue;
-    }
-    for (const ent of entries) {
-      const full = path.join(dir, ent.name);
-      if (ent.isDirectory()) {
-        stack.push(full);
-        continue;
-      }
-      if (ent.isFile()) out.push(full);
-    }
-  }
-  return out;
+function isPipelineTruthDoc(doc) {
+  return doc && typeof doc === 'object' && typeof doc.universe === 'string' && 'expected' in doc && 'count' in doc && 'missing' in doc;
 }
 
-function looksLikePipelineArtifact(rel) {
-  const s = rel.replace(/\\/g, '/');
-  if (!s.endsWith('.json')) return false;
-  if (s === 'ops-daily.json') return false;
-  if (s.includes('/pipeline/')) return true;
-  if (s.includes('/mission-control/')) return true;
-  if (/nasdaq[-_]?100/i.test(s)) return true;
-  return false;
+function toIntOrNull(v) {
+  const n = Number(v);
+  return Number.isFinite(n) ? Math.trunc(n) : null;
 }
 
-function extractPipelineCounts(obj) {
-  const candidate = obj && typeof obj === 'object' && obj.pipeline && typeof obj.pipeline === 'object'
-    ? obj.pipeline
-    : null;
-  const p = candidate;
-  if (!p) return null;
-
-  const expected = toNumberOrNull(p.expected);
-  const fetched = toNumberOrNull(p.fetched);
-  const validatedStored = toNumberOrNull(p.validatedStored);
-  const computed = toNumberOrNull(p.computed);
-  const staticReady = toNumberOrNull(p.staticReady);
-
-  const hasAny = [expected, fetched, validatedStored, computed, staticReady].some((v) => v !== null);
-  if (!hasAny) return null;
-
-  return {
-    expected,
-    fetched,
-    validatedStored,
-    computed,
-    staticReady
-  };
-}
-
-async function discoverPipelineFromArtifacts() {
-  const files = await walkFiles(PUBLIC_DATA_ROOT);
-  const candidates = [];
-
-  for (const full of files) {
-    const rel = path.relative(PUBLIC_DATA_ROOT, full);
-    if (!looksLikePipelineArtifact(rel)) continue;
-    if (!full.endsWith('.json')) continue;
-    candidates.push(full);
+async function readPipelineTruth(relPath) {
+  const doc = await readJson(relPath, null);
+  if (!doc) {
+    return { ok: false, doc: null, reason: 'PIPELINE_TRUTH_FILE_NOT_FOUND' };
   }
-
-  const withMtime = await Promise.all(candidates.map(async (full) => {
-    try {
-      const st = await fs.stat(full);
-      return { full, mtimeMs: st.mtimeMs };
-    } catch {
-      return null;
-    }
-  }));
-
-  const sorted = withMtime.filter(Boolean).sort((a, b) => b.mtimeMs - a.mtimeMs);
-
-  for (const item of sorted.slice(0, 50)) {
-    try {
-      const raw = await fs.readFile(item.full, 'utf-8');
-      const json = JSON.parse(raw);
-      const data = json && typeof json === 'object' && json.data && typeof json.data === 'object' ? json.data : json;
-      const extracted = extractPipelineCounts(data);
-      if (extracted) return extracted;
-    } catch {
-      continue;
-    }
+  if (!isPipelineTruthDoc(doc)) {
+    return { ok: false, doc: null, reason: 'PIPELINE_TRUTH_INVALID_SCHEMA' };
   }
-
-  return null;
+  return { ok: true, doc, reason: null };
 }
 
 function toNumberOrNull(v) {
@@ -261,26 +185,36 @@ async function main() {
   const nasdaq100 = await readJson('public/data/universe/nasdaq100.json', []);
   const expectedUniverse = Array.isArray(nasdaq100) ? nasdaq100.length : 100;
 
+  const truthFetched = await readPipelineTruth('public/data/pipeline/nasdaq100.fetched.json');
+  const truthValidated = await readPipelineTruth('public/data/pipeline/nasdaq100.validated.json');
+  const truthComputed = await readPipelineTruth('public/data/pipeline/nasdaq100.computed.json');
+  const truthStaticReady = await readPipelineTruth('public/data/pipeline/nasdaq100.static-ready.json');
+
+  const expectedPipeline = (() => {
+    if (truthFetched.ok) return toIntOrNull(truthFetched.doc.expected);
+    if (truthValidated.ok) return toIntOrNull(truthValidated.doc.expected);
+    if (truthComputed.ok) return toIntOrNull(truthComputed.doc.expected);
+    if (truthStaticReady.ok) return toIntOrNull(truthStaticReady.doc.expected);
+    return expectedUniverse;
+  })();
+
+  const pipelineReason = (() => {
+    const r = truthFetched.ok ? truthFetched.doc.reason : truthFetched.reason;
+    if (r) return String(r);
+    const r2 = truthValidated.ok ? truthValidated.doc.reason : truthValidated.reason;
+    if (r2) return String(r2);
+    const r3 = truthComputed.ok ? truthComputed.doc.reason : truthComputed.reason;
+    if (r3) return String(r3);
+    const r4 = truthStaticReady.ok ? truthStaticReady.doc.reason : truthStaticReady.reason;
+    if (r4) return String(r4);
+    return null;
+  })();
+
+  const pipelineMissing = truthStaticReady.ok && Array.isArray(truthStaticReady.doc.missing)
+    ? truthStaticReady.doc.missing
+    : [];
+
   const marketphaseIndex = await readJson('public/data/marketphase/index.json', null);
-  const marketphaseSymbols = Array.isArray(marketphaseIndex?.data?.symbols)
-    ? marketphaseIndex.data.symbols
-        .map((s) => (s?.symbol ? String(s.symbol).toUpperCase() : null))
-        .filter(Boolean)
-    : [];
-
-  const marketphaseSet = new Set(marketphaseSymbols);
-  const missing = Array.isArray(nasdaq100)
-    ? nasdaq100
-        .map((row) => {
-          const t = row?.ticker ? String(row.ticker).toUpperCase() : null;
-          if (!t) return null;
-          if (marketphaseSet.has(t)) return null;
-          return { ticker: t, reason: 'NO_STATIC_ANALYSIS' };
-        })
-        .filter(Boolean)
-    : [];
-
-  const discoveredPipeline = await discoverPipelineFromArtifacts();
 
   const pricesSnap = await readJson('public/data/snapshots/market-prices/latest.json', null);
   const pricesMeta = pricesSnap?.metadata || {};
@@ -316,13 +250,13 @@ async function main() {
     baseline: {
       expectedUniverse,
       pipeline: {
-        expected: discoveredPipeline && discoveredPipeline.expected != null ? discoveredPipeline.expected : expectedUniverse,
-        fetched: discoveredPipeline ? discoveredPipeline.fetched : null,
-        validatedStored: discoveredPipeline ? discoveredPipeline.validatedStored : null,
-        computed: discoveredPipeline ? discoveredPipeline.computed : null,
-        staticReady: discoveredPipeline ? discoveredPipeline.staticReady : null,
-        reason: discoveredPipeline ? null : 'PIPELINE_ARTIFACT_NOT_FOUND',
-        missing
+        expected: expectedPipeline,
+        fetched: truthFetched.ok ? toIntOrNull(truthFetched.doc.count) : null,
+        validatedStored: truthValidated.ok ? toIntOrNull(truthValidated.doc.count) : null,
+        computed: truthComputed.ok ? toIntOrNull(truthComputed.doc.count) : null,
+        staticReady: truthStaticReady.ok ? toIntOrNull(truthStaticReady.doc.count) : null,
+        ...(pipelineReason ? { reason: pipelineReason } : {}),
+        missing: pipelineMissing
       },
       freshness: {
         latestSnapshotDate,
