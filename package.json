@@ -48,7 +48,9 @@
     "test:providers-registry": "node tests/providers-registry.test.mjs",
     "test:market-prices-artifact": "node scripts/validate/market-prices-artifact.v1.mjs",
     "test:market-prices-real-mode": "node tests/market-prices-real-mode.test.mjs",
-    "test:stock-endpoint": "node tests/stock-endpoint.test.mjs"
+    "test:stock-endpoint": "node tests/stock-endpoint.test.mjs",
+    "rv:eod:nasdaq100": "node scripts/eod/build-eod-latest.mjs --universe nasdaq100 --chunk-size 500 --out public/data",
+    "rv:ops": "node scripts/ops/build-ops-daily.mjs"
   },
   "dependencies": {
     "d3-dsv": "^3.0.1",

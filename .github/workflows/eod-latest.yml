@@ -1,0 +1,75 @@
+name: EOD Latest (NASDAQ-100)
+
+on:
+  schedule:
+    - cron: "10 22 * * 1-5"
+  workflow_dispatch:
+    inputs:
+      universe:
+        description: "Universe"
+        default: "nasdaq100"
+        required: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: eod-latest
+  cancel-in-progress: true
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    env:
+      RV_UNIVERSE: ${{ github.event.inputs.universe || 'nasdaq100' }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install deps
+        run: npm ci
+
+      - name: Export Tiingo token (typo-safe)
+        run: |
+          set -euo pipefail
+          if [ -n "${{ secrets.TIINGO_API_KEY }}" ]; then
+            echo "TIINGO_API_KEY=${{ secrets.TIINGO_API_KEY }}" >> "$GITHUB_ENV"
+          elif [ -n "${{ secrets.TIIANGO_API_KEY }}" ]; then
+            echo "TIINGO_API_KEY=${{ secrets.TIIANGO_API_KEY }}" >> "$GITHUB_ENV"
+          fi
+
+      - name: Build EOD latest
+        run: node scripts/eod/build-eod-latest.mjs --universe "$RV_UNIVERSE" --chunk-size 500 --out public/data
+
+      - name: Build ops-daily snapshot
+        run: npm run rv:ops
+
+      - name: Commit + push (if changed)
+        run: |
+          set -euo pipefail
+          git config user.name "RubikVault Bot"
+          git config user.email "bot@rubikvault.com"
+          git add public/data/eod public/data/pipeline public/data/ops-daily.json docs/architecture/data-layout-law-v1.md
+          if git diff --cached --quiet; then
+            echo "No staged changes"
+            exit 0
+          fi
+          git commit -m "data(eod): update nasdaq100 latest" || exit 0
+
+          for i in 1 2 3; do
+            if git push origin HEAD:main; then
+              exit 0
+            fi
+            echo "push failed (attempt $i); retrying in 5s" >&2
+            sleep 5
+            git pull --rebase origin main || true
+          done
+          echo "push failed after retries" >&2
+          exit 1

@@ -34,8 +34,17 @@ async function atomicWriteJson(relPath, value) {
   await fs.rename(tmp, full);
 }
 
-function isPipelineTruthDoc(doc) {
+function isLegacyPipelineDoc(doc) {
   return doc && typeof doc === 'object' && typeof doc.universe === 'string' && 'expected' in doc && 'count' in doc && 'missing' in doc;
+}
+
+function isPipelineLatestDoc(doc) {
+  return doc
+    && typeof doc === 'object'
+    && doc.type === 'pipeline.truth'
+    && typeof doc.universe === 'string'
+    && doc.counts
+    && typeof doc.counts === 'object';
 }
 
 function toIntOrNull(v) {
@@ -43,13 +52,24 @@ function toIntOrNull(v) {
   return Number.isFinite(n) ? Math.trunc(n) : null;
 }
 
-async function readPipelineTruth(relPath) {
+async function readLegacyPipelineTruth(relPath) {
   const doc = await readJson(relPath, null);
   if (!doc) {
     return { ok: false, doc: null, reason: 'PIPELINE_TRUTH_FILE_NOT_FOUND' };
   }
-  if (!isPipelineTruthDoc(doc)) {
+  if (!isLegacyPipelineDoc(doc)) {
     return { ok: false, doc: null, reason: 'PIPELINE_TRUTH_INVALID_SCHEMA' };
+  }
+  return { ok: true, doc, reason: null };
+}
+
+async function readPipelineLatest(relPath) {
+  const doc = await readJson(relPath, null);
+  if (!doc) {
+    return { ok: false, doc: null, reason: 'PIPELINE_LATEST_FILE_NOT_FOUND' };
+  }
+  if (!isPipelineLatestDoc(doc)) {
+    return { ok: false, doc: null, reason: 'PIPELINE_LATEST_INVALID_SCHEMA' };
   }
   return { ok: true, doc, reason: null };
 }
@@ -185,12 +205,14 @@ async function main() {
   const nasdaq100 = await readJson('public/data/universe/nasdaq100.json', []);
   const expectedUniverse = Array.isArray(nasdaq100) ? nasdaq100.length : 100;
 
-  const truthFetched = await readPipelineTruth('public/data/pipeline/nasdaq100.fetched.json');
-  const truthValidated = await readPipelineTruth('public/data/pipeline/nasdaq100.validated.json');
-  const truthComputed = await readPipelineTruth('public/data/pipeline/nasdaq100.computed.json');
-  const truthStaticReady = await readPipelineTruth('public/data/pipeline/nasdaq100.static-ready.json');
+  const pipelineLatest = await readPipelineLatest('public/data/pipeline/nasdaq100.latest.json');
+  const truthFetched = await readLegacyPipelineTruth('public/data/pipeline/nasdaq100.fetched.json');
+  const truthValidated = await readLegacyPipelineTruth('public/data/pipeline/nasdaq100.validated.json');
+  const truthComputed = await readLegacyPipelineTruth('public/data/pipeline/nasdaq100.computed.json');
+  const truthStaticReady = await readLegacyPipelineTruth('public/data/pipeline/nasdaq100.static-ready.json');
 
   const expectedPipeline = (() => {
+    if (pipelineLatest.ok) return toIntOrNull(pipelineLatest.doc.counts?.expected);
     if (truthFetched.ok) return toIntOrNull(truthFetched.doc.expected);
     if (truthValidated.ok) return toIntOrNull(truthValidated.doc.expected);
     if (truthComputed.ok) return toIntOrNull(truthComputed.doc.expected);
@@ -199,6 +221,7 @@ async function main() {
   })();
 
   const pipelineReason = (() => {
+    if (pipelineLatest.ok && pipelineLatest.doc.root_failure?.class) return String(pipelineLatest.doc.root_failure.class);
     const r = truthFetched.ok ? truthFetched.doc.reason : truthFetched.reason;
     if (r) return String(r);
     const r2 = truthValidated.ok ? truthValidated.doc.reason : truthValidated.reason;
@@ -210,9 +233,56 @@ async function main() {
     return null;
   })();
 
-  const pipelineMissing = truthStaticReady.ok && Array.isArray(truthStaticReady.doc.missing)
-    ? truthStaticReady.doc.missing
-    : [];
+  const pipelineMissing = (() => {
+    if (pipelineLatest.ok && Array.isArray(pipelineLatest.doc.degraded_summary?.sample)) {
+      return pipelineLatest.doc.degraded_summary.sample.map((entry) => ({
+        ticker: entry.symbol || 'UNKNOWN',
+        reason: entry.class || 'DEGRADED'
+      }));
+    }
+    if (truthStaticReady.ok && Array.isArray(truthStaticReady.doc.missing)) {
+      return truthStaticReady.doc.missing;
+    }
+    return [];
+  })();
+
+  const pipelineOps = (() => {
+    if (pipelineLatest.ok) {
+      return {
+        universe: pipelineLatest.doc.universe,
+        counts: pipelineLatest.doc.counts,
+        degraded_summary: pipelineLatest.doc.degraded_summary,
+        root_failure: pipelineLatest.doc.root_failure || null,
+        generated_at: pipelineLatest.doc.generated_at
+      };
+    }
+
+    const counts = {
+      expected: expectedPipeline,
+      fetched: truthFetched.ok ? toIntOrNull(truthFetched.doc.count) : null,
+      validated: truthValidated.ok ? toIntOrNull(truthValidated.doc.count) : null,
+      computed: truthComputed.ok ? toIntOrNull(truthComputed.doc.count) : null,
+      static_ready: truthStaticReady.ok ? toIntOrNull(truthStaticReady.doc.count) : null
+    };
+
+    return {
+      universe: 'nasdaq100',
+      counts,
+      degraded_summary: {
+        count: pipelineMissing.length,
+        classes: pipelineMissing.length ? { LEGACY_MISSING: pipelineMissing.length } : {},
+        sample: pipelineMissing.slice(0, 25).map((entry) => ({
+          symbol: entry.ticker || 'UNKNOWN',
+          stage: 'legacy',
+          class: 'LEGACY_MISSING',
+          hint: entry.reason || 'missing',
+          since: asOf
+        }))
+      },
+      root_failure: pipelineReason ? { class: String(pipelineReason), hint: 'Legacy pipeline truth fallback' } : null,
+      generated_at: asOf
+    };
+  })();
 
   const marketphaseIndex = await readJson('public/data/marketphase/index.json', null);
 
@@ -251,10 +321,10 @@ async function main() {
       expectedUniverse,
       pipeline: {
         expected: expectedPipeline,
-        fetched: truthFetched.ok ? toIntOrNull(truthFetched.doc.count) : null,
-        validatedStored: truthValidated.ok ? toIntOrNull(truthValidated.doc.count) : null,
-        computed: truthComputed.ok ? toIntOrNull(truthComputed.doc.count) : null,
-        staticReady: truthStaticReady.ok ? toIntOrNull(truthStaticReady.doc.count) : null,
+        fetched: pipelineLatest.ok ? toIntOrNull(pipelineLatest.doc.counts?.fetched) : (truthFetched.ok ? toIntOrNull(truthFetched.doc.count) : null),
+        validatedStored: pipelineLatest.ok ? toIntOrNull(pipelineLatest.doc.counts?.validated) : (truthValidated.ok ? toIntOrNull(truthValidated.doc.count) : null),
+        computed: pipelineLatest.ok ? toIntOrNull(pipelineLatest.doc.counts?.computed) : (truthComputed.ok ? toIntOrNull(truthComputed.doc.count) : null),
+        staticReady: pipelineLatest.ok ? toIntOrNull(pipelineLatest.doc.counts?.static_ready) : (truthStaticReady.ok ? toIntOrNull(truthStaticReady.doc.count) : null),
         ...(pipelineReason ? { reason: pipelineReason } : {}),
         missing: pipelineMissing
       },
@@ -270,6 +340,9 @@ async function main() {
         requestsLast24h: cf.requestsLast24h,
         notes: cf.notes
       }
+    },
+    ops: {
+      pipeline: pipelineOps
     }
   };
 

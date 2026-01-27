@@ -107,6 +107,9 @@ jobs:
           npm run test:p3-kv-write
 
           npm run test:universe-registry
+
+      - name: Check EOD artifacts
+        run: node scripts/eod/check-eod-artifacts.mjs
       - name: Validate Against JSON Schemas
         run: |
           echo "🔍 Validating against JSON Schemas..."
