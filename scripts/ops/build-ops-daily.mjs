@@ -2,6 +2,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 
 const REPO_ROOT = process.cwd();
+const PUBLIC_DATA_ROOT = path.join(REPO_ROOT, 'public', 'data');
 
 function isoNow() {
   return new Date().toISOString();
@@ -32,6 +33,101 @@ async function atomicWriteJson(relPath, value) {
   const tmp = `${full}.tmp-${Date.now()}`;
   await fs.writeFile(tmp, JSON.stringify(value, null, 2) + '\n', 'utf-8');
   await fs.rename(tmp, full);
+}
+
+async function walkFiles(rootDir) {
+  const out = [];
+  const stack = [rootDir];
+  while (stack.length) {
+    const dir = stack.pop();
+    let entries;
+    try {
+      entries = await fs.readdir(dir, { withFileTypes: true });
+    } catch {
+      continue;
+    }
+    for (const ent of entries) {
+      const full = path.join(dir, ent.name);
+      if (ent.isDirectory()) {
+        stack.push(full);
+        continue;
+      }
+      if (ent.isFile()) out.push(full);
+    }
+  }
+  return out;
+}
+
+function looksLikePipelineArtifact(rel) {
+  const s = rel.replace(/\\/g, '/');
+  if (!s.endsWith('.json')) return false;
+  if (s === 'ops-daily.json') return false;
+  if (s.includes('/pipeline/')) return true;
+  if (s.includes('/mission-control/')) return true;
+  if (/nasdaq[-_]?100/i.test(s)) return true;
+  return false;
+}
+
+function extractPipelineCounts(obj) {
+  const candidate = obj && typeof obj === 'object' && obj.pipeline && typeof obj.pipeline === 'object'
+    ? obj.pipeline
+    : null;
+  const p = candidate;
+  if (!p) return null;
+
+  const expected = toNumberOrNull(p.expected);
+  const fetched = toNumberOrNull(p.fetched);
+  const validatedStored = toNumberOrNull(p.validatedStored);
+  const computed = toNumberOrNull(p.computed);
+  const staticReady = toNumberOrNull(p.staticReady);
+
+  const hasAny = [expected, fetched, validatedStored, computed, staticReady].some((v) => v !== null);
+  if (!hasAny) return null;
+
+  return {
+    expected,
+    fetched,
+    validatedStored,
+    computed,
+    staticReady
+  };
+}
+
+async function discoverPipelineFromArtifacts() {
+  const files = await walkFiles(PUBLIC_DATA_ROOT);
+  const candidates = [];
+
+  for (const full of files) {
+    const rel = path.relative(PUBLIC_DATA_ROOT, full);
+    if (!looksLikePipelineArtifact(rel)) continue;
+    if (!full.endsWith('.json')) continue;
+    candidates.push(full);
+  }
+
+  const withMtime = await Promise.all(candidates.map(async (full) => {
+    try {
+      const st = await fs.stat(full);
+      return { full, mtimeMs: st.mtimeMs };
+    } catch {
+      return null;
+    }
+  }));
+
+  const sorted = withMtime.filter(Boolean).sort((a, b) => b.mtimeMs - a.mtimeMs);
+
+  for (const item of sorted.slice(0, 50)) {
+    try {
+      const raw = await fs.readFile(item.full, 'utf-8');
+      const json = JSON.parse(raw);
+      const data = json && typeof json === 'object' && json.data && typeof json.data === 'object' ? json.data : json;
+      const extracted = extractPipelineCounts(data);
+      if (extracted) return extracted;
+    } catch {
+      continue;
+    }
+  }
+
+  return null;
 }
 
 function toNumberOrNull(v) {
@@ -184,6 +280,8 @@ async function main() {
         .filter(Boolean)
     : [];
 
+  const discoveredPipeline = await discoverPipelineFromArtifacts();
+
   const pricesSnap = await readJson('public/data/snapshots/market-prices/latest.json', null);
   const pricesMeta = pricesSnap?.metadata || {};
   const d0 = Array.isArray(pricesSnap?.data) && pricesSnap.data.length ? pricesSnap.data[0] : null;
@@ -218,11 +316,12 @@ async function main() {
     baseline: {
       expectedUniverse,
       pipeline: {
-        expected: expectedUniverse,
-        fetched: null,
-        validatedStored: null,
-        computed: marketphaseSymbols.length,
-        staticReady: marketphaseSymbols.length,
+        expected: discoveredPipeline && discoveredPipeline.expected != null ? discoveredPipeline.expected : expectedUniverse,
+        fetched: discoveredPipeline ? discoveredPipeline.fetched : null,
+        validatedStored: discoveredPipeline ? discoveredPipeline.validatedStored : null,
+        computed: discoveredPipeline ? discoveredPipeline.computed : null,
+        staticReady: discoveredPipeline ? discoveredPipeline.staticReady : null,
+        reason: discoveredPipeline ? null : 'PIPELINE_ARTIFACT_NOT_FOUND',
         missing
       },
       freshness: {

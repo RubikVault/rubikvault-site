@@ -56,6 +56,10 @@ function toNumber(value) {
 function authFail() {
   const payload = {
     schema_version: '3.0',
+    meta: {
+      asOf: new Date().toISOString(),
+      reason: 'OPS_KEY_MISSING_OR_WRONG'
+    },
     metadata: {
       module: MODULE_NAME,
       schema_version: '3.0',
@@ -287,7 +291,7 @@ export async function onRequestGet(context) {
 
   if (wantsLive) {
     const requiredKey = env?.OPS_KEY;
-    const providedKey = request.headers.get('x-ops-key') || '';
+    const providedKey = request.headers.get('x-ops-key') || request.headers.get('X-OPS-KEY') || '';
     if (!requiredKey || providedKey !== requiredKey) {
       return authFail();
     }
@@ -489,14 +493,9 @@ export async function onRequestGet(context) {
       staleList
     },
     safety: {
-      kvWritesToday: kvWritesToday,
+      kvWritesToday,
       pollingDefaultOff: true,
       runtimeWritesDisabled: true
-    },
-    internal: {
-      seedRunId: seedManifest?.runId || null,
-      usageGeneratedAt: usageReport?.generatedAt || null,
-      providerStateGeneratedAt: providerState?.generated_at || null
     }
   };
 
@@ -504,7 +503,6 @@ export async function onRequestGet(context) {
   const opsBaseline = opsDailyBaseline || baselineFromComputed(opsComputed);
   const opsBaselineAsOf = typeof opsDaily?.asOf === 'string' ? opsDaily.asOf : null;
   const baselineVerdict = computeVerdictFromBaseline(opsBaseline);
-
   const baselineMissing = !opsDailyBaseline;
   const overall = {
     verdict: baselineMissing ? 'DEGRADED' : baselineVerdict.verdict,
@@ -516,30 +514,21 @@ export async function onRequestGet(context) {
     const cf = await fetchCloudflareWorkerRequests(env);
     opsLiveResolved = {
       asOf: startedAtIso,
-      cooldownSeconds: 60,
       cloudflare: {
         requestsToday: cf.requestsToday,
         requestsLast24h: cf.requestsLast24h,
         notes: cf.notes
-      },
-      providers: (Array.isArray(opsBaseline?.providers) ? opsBaseline.providers : []).map((p) => ({
-        name: p?.name ?? null,
-        usedMonth: null,
-        limitMonth: null,
-        remainingMonth: null,
-        remainingPct: null,
-        resetDate: null,
-        runtimeCallsToday: null
-      })),
-      notes: 'live usage not available; relying on baseline'
+      }
     };
   }
 
-  const warnings = [];
-  if (!hasKV) warnings.push('KV_NOT_BOUND');
-
   const payload = {
     schema_version: '3.0',
+    meta: {
+      asOf: startedAtIso,
+      baselineAsOf: opsBaselineAsOf,
+      liveAsOf: wantsLive ? startedAtIso : null
+    },
     metadata: {
       module: MODULE_NAME,
       schema_version: '3.0',
@@ -550,15 +539,13 @@ export async function onRequestGet(context) {
       published_at: startedAtIso,
       digest: null,
       served_from: 'RUNTIME',
-      request: {
-        debug: isDebug
-      },
+      request: { debug: isDebug },
       status: 'OK',
-      warnings
+      warnings: []
     },
     data: {
-      hasKV,
       asOf: startedAtIso,
+      hasKV,
       calls: { day: dayTotal.value, week: weekTotal.value, month: monthTotal.value },
       endpoints: { dayTop: endpointsDayTop },
       kvOps: { day: kvOpsDay },
@@ -567,13 +554,14 @@ export async function onRequestGet(context) {
       budgets,
       deploy,
       opsBaseline: {
-        schema_version: '1.0',
         asOf: opsBaselineAsOf,
+        overall,
         baseline: opsBaseline
       },
       opsComputed: {
+        asOf: startedAtIso,
         overall,
-        ...opsComputed
+        baseline: opsComputed
       },
       opsLive: opsLiveResolved,
       snapshots: { items: snapshots },

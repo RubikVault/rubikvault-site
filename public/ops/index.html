@@ -52,26 +52,21 @@
     <div class="sub">Owner-grade view (static-first, read-only). No auto refresh.</div>
 
     <div class="controls card">
-      <button id="btn-baseline" class="btn">Refresh (Baseline)</button>
-      <button id="btn-live" class="btn">Live Check</button>
-      <label class="small" style="display:flex; align-items:center; gap:8px;">
-        <input id="debug" type="checkbox" />
-        Debug mode
-      </label>
-      <span class="small" id="cooldown"></span>
+      <button id="btn-refresh" class="btn">Refresh (LIVE)</button>
       <span class="small">Baseline asOf: <span id="baseline-asof" class="mono">—</span></span>
       <span class="small">Live asOf: <span id="live-asof" class="mono">—</span></span>
       <span style="flex:1"></span>
       <span class="small" id="last-refresh"></span>
     </div>
 
-    <div id="loading" class="card">No data loaded. Click Refresh (Baseline) or Live Check.</div>
+    <div id="loading" class="card">No data loaded. Click Refresh (LIVE).</div>
 
     <div id="main" style="display:none;">
       <div class="card" style="margin-bottom: 12px;">
         <div class="k">Overall status</div>
         <div class="v" id="overall">—</div>
         <div class="small" id="overall-reason">—</div>
+        <div class="small" id="what-to-fix" style="margin-top:6px;"></div>
       </div>
 
       <div class="grid" style="margin-bottom: 12px;">
@@ -169,11 +164,6 @@
       return 'ok';
     }
 
-    function getDebug() {
-      const el = document.getElementById('debug');
-      return Boolean(el && el.checked);
-    }
-
     function setManualTs(ts) {
       try {
         localStorage.setItem('rv_ops_last_manual_refresh', ts);
@@ -204,23 +194,7 @@
       } catch {}
     }
 
-    const COOLDOWN_MS = 60 * 1000;
-    let lastActionAt = 0;
-
-    function updateCooldown() {
-      const btnBaseline = document.getElementById('btn-baseline');
-      const btnLive = document.getElementById('btn-live');
-      const out = document.getElementById('cooldown');
-      const last = document.getElementById('last-refresh');
-      const now = Date.now();
-      const remaining = Math.max(0, (lastActionAt + COOLDOWN_MS) - now);
-      if (btnBaseline) btnBaseline.disabled = remaining > 0;
-      if (btnLive) btnLive.disabled = remaining > 0;
-      if (out) out.textContent = remaining > 0 ? `Cooldown: ${Math.ceil(remaining / 1000)}s` : '';
-      if (last) last.textContent = lastActionAt ? `Last action: ${new Date(lastActionAt).toLocaleString()}` : '';
-    }
-
-    function renderFromBaseline(baseline, baselineAsOf, mode, opsLive, liveAsOf) {
+    function renderFromBaseline(baseline, baselineAsOf, opsLive, liveAsOf) {
       const loading = document.getElementById('loading');
       const main = document.getElementById('main');
 
@@ -245,18 +219,17 @@
         ? (freshnessOk ? 'OK' : `SNAPSHOT_STALE (stale=${fmtNa(staleCount)})`)
         : `PIPELINE_STATIC_READY=${staticReady}/${expected}`;
 
-      if (mode === 'live') {
-        document.getElementById('workers-used').textContent = opsLive?.cloudflare ? fmtNa(opsLive.cloudflare.requestsToday) : 'N/A (not configured)';
-        document.getElementById('workers-budget').textContent = opsLive?.cloudflare ? `Last 24h: ${fmtNa(opsLive.cloudflare.requestsLast24h)}` : 'N/A (not configured)';
-      } else {
-        document.getElementById('workers-used').textContent = fmtNa(baseline?.cloudflare?.requestsToday);
-        document.getElementById('workers-budget').textContent = `Last 24h: ${fmtNa(baseline?.cloudflare?.requestsLast24h)}`;
-      }
+      const missingCount = Array.isArray(baseline?.pipeline?.missing) ? baseline.pipeline.missing.length : 0;
+      const what = (!pipelineOk)
+        ? 'Pipeline static-ready missing: computed/static steps not producing artifacts'
+        : (!freshnessOk ? 'Freshness stale: daily snapshot job not producing expected trading day' : '');
+      document.getElementById('what-to-fix').textContent = what;
 
-      document.getElementById('runtime-mode').textContent = mode === 'live' ? 'LIVE' : 'BASELINE';
-      document.getElementById('runtime-note').textContent = mode === 'live'
-        ? 'Live Check (manual, gated)'
-        : 'Baseline only (/data/ops-daily.json)';
+      document.getElementById('workers-used').textContent = opsLive?.cloudflare ? fmtNa(opsLive.cloudflare.requestsToday) : 'N/A (not configured)';
+      document.getElementById('workers-budget').textContent = opsLive?.cloudflare ? `Last 24h: ${fmtNa(opsLive.cloudflare.requestsLast24h)}` : 'N/A (not configured)';
+
+      document.getElementById('runtime-mode').textContent = 'LIVE';
+      document.getElementById('runtime-note').textContent = 'Single-click live refresh (manual, gated).';
 
       const safety = baseline?.safety || {};
       const pollingDefaultOff = safety.pollingDefaultOff;
@@ -305,7 +278,7 @@
 
       const missing = Array.isArray(baseline?.pipeline?.missing) ? baseline.pipeline.missing : [];
       const missingText = missing.length
-        ? ('Missing: ' + missing.slice(0, getDebug() ? 60 : 20).map((m) => `${m.ticker}:${m.reason}`).join(', ') + (missing.length > (getDebug() ? 60 : 20) ? ` …(+${missing.length - (getDebug() ? 60 : 20)})` : ''))
+        ? ('Missing: ' + missing.slice(0, 20).map((m) => `${m.ticker}:${m.reason}`).join(', ') + (missing.length > 20 ? ` …(+${missing.length - 20})` : ''))
         : 'Missing: —';
       document.getElementById('pipeline-missing').textContent = missingText;
 
@@ -314,7 +287,7 @@
       document.getElementById('freshness-stale').textContent = `Stale stocks: ${freshness.staleCount == null ? 'N/A (not configured)' : freshness.staleCount}/${expected}`;
       const staleList = Array.isArray(freshness.staleList) ? freshness.staleList : [];
       document.getElementById('freshness-list').textContent = staleList.length
-        ? ('Stale: ' + staleList.slice(0, getDebug() ? 60 : 20).join(', ') + (staleList.length > (getDebug() ? 60 : 20) ? ` …(+${staleList.length - (getDebug() ? 60 : 20)})` : ''))
+        ? ('Stale: ' + staleList.slice(0, 20).join(', ') + (staleList.length > 20 ? ` …(+${staleList.length - 20})` : ''))
         : '';
 
       document.getElementById('asof').textContent = '';
@@ -323,20 +296,7 @@
       main.style.display = 'block';
     }
 
-    async function loadBaseline() {
-      const res = await fetch('/data/ops-daily.json', { cache: 'no-store' });
-      const payload = await res.json();
-      const data = payload && payload.data && typeof payload.data === 'object' ? payload.data : payload;
-      const baseline = data && data.baseline && typeof data.baseline === 'object' ? data.baseline : data;
-      const baselineAsOf = (data && typeof data.asOf === 'string') ? data.asOf : (payload && typeof payload.asOf === 'string' ? payload.asOf : null);
-      renderFromBaseline(baseline, baselineAsOf, 'baseline', null, null);
-    }
-
-    async function loadLive() {
-      const key = getOpsKey() || window.prompt('Enter OPS key for Live Check');
-      if (!key) return;
-      setOpsKey(key);
-
+    async function fetchLiveOnce(key) {
       const res = await fetch('/api/mission-control/summary?live=1', {
         cache: 'no-store',
         headers: {
@@ -344,7 +304,40 @@
         }
       });
       const payload = await res.json();
-      if (!res.ok) throw new Error(payload?.error?.code || `HTTP_${res.status}`);
+      return { res, payload };
+    }
+
+    async function refreshLiveWithPromptAndRetry() {
+      const statusEl = document.getElementById('loading');
+      const last = document.getElementById('last-refresh');
+      if (last) last.textContent = `Last action: ${new Date().toLocaleString()}`;
+
+      const key0 = getOpsKey();
+      const key1 = key0 || window.prompt('Enter OPS key');
+      if (!key1) {
+        if (statusEl) statusEl.textContent = 'Missing OPS key.';
+        return;
+      }
+
+      setOpsKey(key1);
+      let { res, payload } = await fetchLiveOnce(key1);
+
+      if (res.status === 403) {
+        try { sessionStorage.removeItem('rv_ops_key'); } catch {}
+        const key2 = window.prompt('403: wrong OPS key. Enter OPS key');
+        if (!key2) {
+          if (statusEl) statusEl.textContent = '403: wrong OPS key.';
+          return;
+        }
+        setOpsKey(key2);
+        ({ res, payload } = await fetchLiveOnce(key2));
+      }
+
+      if (!res.ok) {
+        const msg = payload?.meta?.reason || payload?.error?.message || `HTTP ${res.status}`;
+        if (statusEl) statusEl.textContent = String(msg);
+        return;
+      }
 
       const data = payload && payload.data && typeof payload.data === 'object' ? payload.data : {};
       const opsBaseline = data.opsBaseline || null;
@@ -352,49 +345,11 @@
       const baselineAsOf = opsBaseline && typeof opsBaseline.asOf === 'string' ? opsBaseline.asOf : null;
       const opsLive = data.opsLive || null;
       const liveAsOf = opsLive && typeof opsLive.asOf === 'string' ? opsLive.asOf : null;
-      renderFromBaseline(baseline, baselineAsOf, 'live', opsLive, liveAsOf);
+      renderFromBaseline(baseline, baselineAsOf, opsLive, liveAsOf);
     }
 
-    document.getElementById('btn-baseline').addEventListener('click', async () => {
-      const now = Date.now();
-      if (now - lastActionAt < COOLDOWN_MS) {
-        updateCooldown();
-        return;
-      }
-      lastActionAt = now;
-      updateCooldown();
-      setManualTs(new Date().toISOString());
-      try {
-        await loadBaseline();
-      } catch {
-        const loading = document.getElementById('loading');
-        if (loading) loading.textContent = 'Failed to load baseline /data/ops-daily.json.';
-      }
-      const remaining = Math.max(0, (lastActionAt + COOLDOWN_MS) - Date.now());
-      if (remaining > 0) setTimeout(() => updateCooldown(), remaining + 25);
-    });
-
-    document.getElementById('btn-live').addEventListener('click', async () => {
-      const now = Date.now();
-      if (now - lastActionAt < COOLDOWN_MS) {
-        updateCooldown();
-        return;
-      }
-      lastActionAt = now;
-      updateCooldown();
-      setManualTs(new Date().toISOString());
-      try {
-        await loadLive();
-      } catch {
-        const loading = document.getElementById('loading');
-        if (loading) loading.textContent = 'Live check failed (403 if OPS key missing/wrong).';
-      }
-      const remaining = Math.max(0, (lastActionAt + COOLDOWN_MS) - Date.now());
-      if (remaining > 0) setTimeout(() => updateCooldown(), remaining + 25);
-    });
-
-    document.getElementById('debug').addEventListener('change', () => {
-      updateCooldown();
+    document.getElementById('btn-refresh').addEventListener('click', async () => {
+      await refreshLiveWithPromptAndRetry();
     });
 
     const previous = getManualTs();
@@ -403,7 +358,8 @@
       if (el) el.textContent = previous;
     }
 
-    updateCooldown();
+    const baselineAsOfEl = document.getElementById('baseline-asof');
+    if (baselineAsOfEl) baselineAsOfEl.textContent = '—';
   </script>
 </body>
 </html>
