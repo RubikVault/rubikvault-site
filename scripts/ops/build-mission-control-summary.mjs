@@ -70,25 +70,64 @@ async function main() {
     }
   }
 
-  const summary = {
-    schema_version: '1.0',
-    generated_at: asOf,
-    overall: {
-      status: overallStatus,
-      reason: overallReason
+  const baseline = {
+    expectedUniverse: expected,
+    pipeline: {
+      expected,
+      fetched,
+      validatedStored: validated,
+      computed,
+      staticReady,
+      missing: Array.isArray(staticReadyDoc.missing) ? staticReadyDoc.missing : []
     },
-    universes: [
-      {
-        name: 'nasdaq100',
-        expected,
-        fetched,
-        validated,
-        computed,
-        staticReady,
-        missing: Array.isArray(staticReadyDoc.missing) ? staticReadyDoc.missing.length : 0
-      }
-    ],
-    providers
+    freshness: {
+      latestSnapshotDate: null,
+      expectedTradingDay: null,
+      staleCount: null,
+      staleList: []
+    },
+    providers: Object.values(providers).sort((a, b) => String(a.name).localeCompare(String(b.name))),
+    safety: {
+      kvWritesToday: null,
+      pollingDefaultOff: true,
+      runtimeWritesDisabled: true
+    }
+  };
+
+  const summary = {
+    schema_version: '3.0',
+    meta: {
+      asOf,
+      baselineAsOf: asOf,
+      liveAsOf: null
+    },
+    metadata: {
+      module: 'mission-control-summary',
+      schema_version: '3.0',
+      tier: 'standard',
+      domain: 'system',
+      source: 'build-script',
+      fetched_at: asOf,
+      published_at: asOf,
+      digest: null,
+      served_from: 'STATIC',
+      request: { debug: false },
+      status: 'OK',
+      warnings: []
+    },
+    data: {
+      asOf,
+      opsBaseline: {
+        asOf,
+        overall: {
+          verdict: overallStatus,
+          reason: overallReason
+        },
+        baseline
+      },
+      opsLive: null
+    },
+    error: null
   };
 
   await atomicWriteJson('public/data/ops/summary.latest.json', summary);

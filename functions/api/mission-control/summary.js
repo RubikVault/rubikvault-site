@@ -240,6 +240,11 @@ function baselineFromComputed(opsComputed) {
       staleList: Array.isArray(opsComputed?.freshness?.staleList) ? opsComputed.freshness.staleList : []
     },
     providers: Array.isArray(opsComputed?.providers) ? opsComputed.providers : [],
+    safety: {
+      kvWritesToday: opsComputed?.safety?.kvWritesToday ?? null,
+      pollingDefaultOff: opsComputed?.safety?.pollingDefaultOff ?? true,
+      runtimeWritesDisabled: opsComputed?.safety?.runtimeWritesDisabled ?? true
+    },
     cloudflare: {
       requestsToday: null,
       requestsLast24h: null,

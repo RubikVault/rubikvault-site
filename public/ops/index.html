@@ -204,6 +204,39 @@
       const liveAsOfEl = document.getElementById('live-asof');
       if (liveAsOfEl) liveAsOfEl.textContent = liveAsOf || '—';
 
+      // Schema 1.0 fallback: transform old format to expected structure
+      if (!baseline && typeof baseline === 'object') {
+        baseline = null;
+      }
+      if (!baseline?.pipeline && baseline?.universes && Array.isArray(baseline.universes) && baseline.universes.length > 0) {
+        const u = baseline.universes[0];
+        baseline = {
+          expectedUniverse: u.expected || 100,
+          pipeline: {
+            expected: u.expected || 100,
+            fetched: u.fetched ?? null,
+            validatedStored: u.validated ?? null,
+            computed: u.computed ?? null,
+            staticReady: u.staticReady ?? null,
+            missing: []
+          },
+          freshness: {
+            latestSnapshotDate: null,
+            expectedTradingDay: null,
+            staleCount: null,
+            staleList: []
+          },
+          providers: baseline.providers && typeof baseline.providers === 'object'
+            ? Object.values(baseline.providers).sort((a, b) => String(a.name || '').localeCompare(String(b.name || '')))
+            : [],
+          safety: {
+            kvWritesToday: null,
+            pollingDefaultOff: true,
+            runtimeWritesDisabled: true
+          }
+        };
+      }
+
       const expected = Number(baseline?.pipeline?.expected || baseline?.expectedUniverse || 100);
       const fetched = Number(baseline?.pipeline?.fetched || 0);
       const validated = Number(baseline?.pipeline?.validatedStored || 0);

@@ -107,7 +107,26 @@ async function main() {
     fail(`Summary fetch failed: ${summaryResult.error} (status=${summaryResult.status}, url=${summaryResult.url})`);
   }
 
-  process.stdout.write(`OK: ops pipeline truth + wiring verification (summary source=${summaryResult.source})\n`);
+  // Schema 3.0 validation
+  const payload = summaryResult.payload;
+  if (payload.schema_version !== '3.0') {
+    fail(`mission-control summary must use schema 3.0, got: ${payload.schema_version}`);
+  }
+  if (!payload.data) fail('mission-control summary missing data property');
+  if (!payload.data.opsBaseline) fail('mission-control summary missing data.opsBaseline');
+  if (!payload.data.opsBaseline.baseline) fail('mission-control summary missing data.opsBaseline.baseline');
+  
+  const baseline = payload.data.opsBaseline.baseline;
+  if (!baseline.pipeline) fail('baseline missing pipeline property');
+  if (!baseline.freshness) fail('baseline missing freshness property');
+  if (!baseline.providers) fail('baseline missing providers property');
+  if (!baseline.safety) fail('baseline missing safety property');
+  
+  if (typeof baseline.pipeline.expected !== 'number') fail('baseline.pipeline.expected must be number');
+  if (!Array.isArray(baseline.pipeline.missing)) fail('baseline.pipeline.missing must be array');
+  if (!Array.isArray(baseline.providers)) fail('baseline.providers must be array');
+
+  process.stdout.write(`OK: ops pipeline truth + wiring verification (summary source=${summaryResult.source}, schema=3.0)\n`);
 }
 
 main().catch((err) => {
