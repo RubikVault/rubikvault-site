@@ -1,12 +1,18 @@
 {
   "schema_version": "1.0",
   "type": "eod.latest.manifest",
-  "generated_at": "2026-01-27T13:46:05.419Z",
+  "generated_at": "2026-01-27T14:39:04.368Z",
   "universe": "nasdaq100",
   "total_symbols": 100,
   "chunk_size": 500,
-  "chunks": [],
-  "errors_by_class": {
-    "NO_API_KEY": 100
-  }
+  "chunks": [
+    {
+      "chunk_id": "000",
+      "file": "eod/batches/eod.latest.000.json",
+      "count": 100,
+      "ok": 100,
+      "errors": 0
+    }
+  ],
+  "errors_by_class": {}
 }
