@@ -86,11 +86,12 @@ function buildCosts(opsDaily) {
 function buildSafety(opsDaily) {
   const safety = opsDaily?.baseline?.safety || null;
   const kvWritesToday = safety?.kvWritesToday ?? null;
-  const note = kvWritesToday === null 
+  const computedNote = kvWritesToday === null
     ? 'KV tracking not configured'
-    : kvWritesToday === 0 
+    : kvWritesToday === 0
       ? 'No KV writes today (read-only mode)'
       : `${kvWritesToday} KV writes today`;
+  const note = safety?.note || computedNote;
   return {
     kv_writes_today: kvWritesToday,
     note

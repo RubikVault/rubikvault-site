@@ -25,6 +25,10 @@ async function readJson(relPath, fallback = null) {
   }
 }
 
+async function readJsonOptional(relPath) {
+  return readJson(relPath, null);
+}
+
 async function atomicWriteJson(relPath, value) {
   const full = path.join(REPO_ROOT, relPath);
   const dir = path.dirname(full);
@@ -161,39 +165,46 @@ function buildProvidersBaseline(usageReport) {
   const providers = usageReport?.providers && typeof usageReport.providers === 'object'
     ? usageReport.providers
     : {};
+  const limits = usageReport?.limits && typeof usageReport.limits === 'object'
+    ? usageReport.limits
+    : {};
 
-  const out = Object.entries(providers).map(([name, entry]) => {
+  const names = new Set([
+    ...Object.keys(providers),
+    ...Object.keys(limits)
+  ]);
+
+  const out = Array.from(names).map((name) => {
+    const entry = providers[name] || {};
     const daily = entry?.daily || {};
     const monthly = entry?.monthly || {};
-    const usedMonth = toNumberOrNull(monthly.used);
-    const limitMonth = toNumberOrNull(monthly.limit);
-    const remainingMonth = toNumberOrNull(monthly.remaining);
-    const pctRemaining = toNumberOrNull(monthly.pctRemaining);
+    const limitCfg = limits[name] || {};
 
     const usedToday = toNumberOrNull(daily.used);
+    const usedMonth = toNumberOrNull(monthly.used);
+    const limitMonth = toNumberOrNull(monthly.limit ?? limitCfg.monthlyRequests);
+    const limitDay = toNumberOrNull(daily.limit ?? limitCfg.dailyRequests);
+
+    const normalizedUsedMonth = usedMonth == null ? (limitMonth != null ? 0 : null) : usedMonth;
+    const normalizedUsedToday = usedToday == null ? (limitDay != null ? 0 : null) : usedToday;
+
+    const remainingMonth = limitMonth == null || normalizedUsedMonth == null
+      ? null
+      : Math.max(0, limitMonth - normalizedUsedMonth);
+    const remainingPct = limitMonth && normalizedUsedMonth != null
+      ? Math.round(((remainingMonth / limitMonth) * 1000)) / 10
+      : null;
 
     return {
       name,
-      usedMonth,
-      limitMonth,
+      usedMonth: normalizedUsedMonth,
+      limitMonth: limitMonth ?? null,
       remainingMonth,
-      remainingPct: pctRemaining == null ? null : Math.round(pctRemaining * 1000) / 10,
+      remainingPct,
       resetDate: null,
-      runtimeCallsToday: usedToday
+      runtimeCallsToday: normalizedUsedToday
     };
   });
-
-  if (!out.some((p) => p.name === 'tiingo')) {
-    out.push({
-      name: 'tiingo',
-      usedMonth: null,
-      limitMonth: null,
-      remainingMonth: null,
-      remainingPct: null,
-      resetDate: null,
-      runtimeCallsToday: null
-    });
-  }
 
   out.sort((a, b) => String(a.name).localeCompare(String(b.name)));
   return out;
@@ -306,13 +317,31 @@ async function main() {
     return out;
   })();
 
+  const budgetsConfig = await readJsonOptional('config/rv-budgets.json');
   const usageReport = await readJson('public/data/usage-report.json', null);
-  const providers = buildProvidersBaseline(usageReport);
+  const usageWithLimits = usageReport && typeof usageReport === 'object'
+    ? {
+        ...usageReport,
+        limits: budgetsConfig?.providers || usageReport?.limits || {}
+      }
+    : { limits: budgetsConfig?.providers || {} };
+
+  const providers = buildProvidersBaseline(usageWithLimits);
 
   const cf = await fetchCloudflareWorkerRequests({
     accountId: process.env.CF_ACCOUNT_ID,
     apiToken: process.env.CF_API_TOKEN
   });
+
+  const cfFallback = usageReport?.cloudflare || null;
+  const cfRequestsToday = cf.requestsToday ?? toNumberOrNull(cfFallback?.daily?.used);
+  const cfRequestsLast24h = cf.requestsLast24h ?? toNumberOrNull(cfFallback?.daily?.used);
+
+  const safetySnapshot = await readJsonOptional('public/data/ops/safety.latest.json');
+  const safetyNote = safetySnapshot?.note || 'No active locks detected';
+  const safetyKvWrites = Number.isFinite(Number(safetySnapshot?.kvWritesToday))
+    ? Number(safetySnapshot.kvWritesToday)
+    : 0;
 
   const opsDaily = {
     schema_version: '1.0',
@@ -336,9 +365,13 @@ async function main() {
       },
       providers,
       cloudflare: {
-        requestsToday: cf.requestsToday,
-        requestsLast24h: cf.requestsLast24h,
+        requestsToday: cfRequestsToday,
+        requestsLast24h: cfRequestsLast24h,
         notes: cf.notes
+      },
+      safety: {
+        kvWritesToday: safetyKvWrites,
+        note: safetyNote
       }
     },
     ops: {

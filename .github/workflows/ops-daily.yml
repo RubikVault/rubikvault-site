@@ -32,6 +32,9 @@ jobs:
       - name: Build pipeline truth (NASDAQ-100)
         run: node scripts/pipeline/build-ndx100-pipeline-truth.mjs
 
+      - name: Build safety snapshot
+        run: node scripts/ops/build-safety-snapshot.mjs
+
       - name: Build ops-daily snapshot
         env:
           CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}

@@ -1,7 +1,7 @@
 {
   "schema_version": "ops.summary.v1",
-  "generated_at": "2026-01-28T20:41:15.232Z",
-  "asof": "2026-01-28T07:36:24.906Z",
+  "generated_at": "2026-01-28T21:20:32.875Z",
+  "asof": "2026-01-28T21:20:25.058Z",
   "overall": {
     "status": "OK",
     "reasons": [],
@@ -176,27 +176,27 @@
       "mode": "unknown",
       "note": null,
       "budget": {
-        "usedMonth": null,
-        "limitMonth": null,
-        "remainingMonth": null,
-        "remainingPct": null,
+        "usedMonth": 0,
+        "limitMonth": 5000,
+        "remainingMonth": 5000,
+        "remainingPct": 100,
         "resetDate": null,
-        "runtimeCallsToday": null
+        "runtimeCallsToday": 0
       }
     }
   },
   "ops_daily": {
-    "generated_at": "2026-01-28T07:36:24.906Z",
+    "generated_at": "2026-01-28T21:20:25.058Z",
     "ref": "/data/ops-daily.json"
   },
   "costs": {
     "workers": {
-      "requests_today": null,
-      "requests_last_24h": null
+      "requests_today": 0,
+      "requests_last_24h": 0
     }
   },
   "safety": {
-    "kv_writes_today": null,
-    "note": "KV tracking not configured"
+    "kv_writes_today": 0,
+    "note": "No lock directory or empty; assuming no active locks"
   }
 }

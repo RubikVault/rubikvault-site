@@ -1,6 +1,6 @@
 {
   "schema_version": "1.0",
-  "asOf": "2026-01-28T07:36:24.906Z",
+  "asOf": "2026-01-28T21:20:25.058Z",
   "baseline": {
     "expectedUniverse": 100,
     "pipeline": {
@@ -122,18 +122,22 @@
       },
       {
         "name": "tiingo",
-        "usedMonth": null,
-        "limitMonth": null,
-        "remainingMonth": null,
-        "remainingPct": null,
+        "usedMonth": 0,
+        "limitMonth": 5000,
+        "remainingMonth": 5000,
+        "remainingPct": 100,
         "resetDate": null,
-        "runtimeCallsToday": null
+        "runtimeCallsToday": 0
       }
     ],
     "cloudflare": {
-      "requestsToday": null,
-      "requestsLast24h": null,
+      "requestsToday": 0,
+      "requestsLast24h": 0,
       "notes": "CF analytics not configured"
+    },
+    "safety": {
+      "kvWritesToday": 0,
+      "note": "No lock directory or empty; assuming no active locks"
     }
   },
   "ops": {
@@ -152,7 +156,7 @@
         "sample": []
       },
       "root_failure": null,
-      "generated_at": "2026-01-27T22:33:09.505Z"
+      "generated_at": "2026-01-28T20:07:38.129Z"
     }
   }
 }

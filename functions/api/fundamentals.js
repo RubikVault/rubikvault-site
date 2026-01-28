@@ -247,14 +247,32 @@ export async function onRequestGet(context) {
     });
   }
 
-  let upstream = await fetchTiingoFundamentalsDaily(ticker, env);
+  const primary = await fetchTiingoFundamentalsDaily(ticker, env);
+  let upstream = primary;
+  const primaryFailure = primary.ok ? null : (primary.error?.code || 'UNKNOWN');
+  let fallbackUsed = false;
 
-  // Fallback to FMP if Tiingo fails (rate limit, auth, etc.)
-  if (!upstream.ok && (upstream.httpStatus === 429 || upstream.error?.code === 'RATE_LIMITED' || upstream.error?.code === 'AUTH_FAILED')) {
+  const shouldFallbackToFmp = (result) => {
+    if (!result || result.ok) return false;
+    const code = String(result.error?.code || '').toUpperCase();
+    const status = Number(result.httpStatus || 0);
+    return (
+      code === 'MISSING_API_KEY' ||
+      code === 'NO_DATA' ||
+      code === 'TIMEOUT' ||
+      code === 'NETWORK_ERROR' ||
+      code === 'AUTH_FAILED' ||
+      code === 'HTTP_ERROR' ||
+      status === 429 ||
+      (status >= 500 && status < 600)
+    );
+  };
+
+  if (shouldFallbackToFmp(primary)) {
     const fmpResult = await fetchFmpFundamentals(ticker, env);
     if (fmpResult.ok && fmpResult.data) {
       upstream = fmpResult;
-      upstream.fallbackFrom = 'tiingo';
+      fallbackUsed = true;
     }
   }
 
@@ -278,7 +296,8 @@ export async function onRequestGet(context) {
         status: 'OK',
         provider: {
           selected: upstream.provider,
-          fallbackUsed: false,
+          fallbackUsed,
+          failureReason: fallbackUsed ? primaryFailure : null,
           keyPresent: upstream.key.present,
           keySource: upstream.key.source,
           httpStatus: upstream.httpStatus,
@@ -289,8 +308,8 @@ export async function onRequestGet(context) {
             primary: 'tiingo',
             selected: upstream.provider,
             forced: false,
-            fallbackUsed: false,
-            primaryFailure: null
+            fallbackUsed,
+            primaryFailure: fallbackUsed ? primaryFailure : null
           },
           latencyMs: upstream.latencyMs,
           ok: true,
@@ -325,7 +344,7 @@ export async function onRequestGet(context) {
         provider: {
           selected: upstream.provider,
           fallbackUsed: true,
-          failureReason: upstream.error?.code || null,
+          failureReason: upstream.error?.code || primaryFailure || null,
           keyPresent: upstream.key?.present || false,
           keySource: upstream.key?.source || null,
           httpStatus: upstream.httpStatus,
@@ -337,7 +356,7 @@ export async function onRequestGet(context) {
             selected: upstream.provider,
             forced: false,
             fallbackUsed: true,
-            primaryFailure: upstream.error?.code || null
+            primaryFailure: upstream.error?.code || primaryFailure || null
           },
           latencyMs: upstream.latencyMs,
           ok: false,

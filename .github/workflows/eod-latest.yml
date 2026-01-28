@@ -48,6 +48,9 @@ jobs:
       - name: Build EOD latest
         run: node scripts/eod/build-eod-latest.mjs --universe "$RV_UNIVERSE" --chunk-size 500 --out public/data
 
+      - name: Build safety snapshot
+        run: node scripts/ops/build-safety-snapshot.mjs
+
       - name: Build ops-daily snapshot
         run: npm run rv:ops
 
