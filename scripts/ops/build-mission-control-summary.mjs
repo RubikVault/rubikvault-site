@@ -85,9 +85,15 @@ function buildCosts(opsDaily) {
 
 function buildSafety(opsDaily) {
   const safety = opsDaily?.baseline?.safety || null;
+  const kvWritesToday = safety?.kvWritesToday ?? null;
+  const note = kvWritesToday === null 
+    ? 'KV tracking not configured'
+    : kvWritesToday === 0 
+      ? 'No KV writes today (read-only mode)'
+      : `${kvWritesToday} KV writes today`;
   return {
-    kv_writes_today: safety?.kvWritesToday ?? null,
-    note: 'Static-only view.'
+    kv_writes_today: kvWritesToday,
+    note
   };
 }
 

@@ -1,5 +1,6 @@
 import { sha256Hex } from './_shared/digest.mjs';
 import { getTiingoKeyInfo } from './_shared/tiingo-key.mjs';
+import { fetchFmpFundamentals } from './_shared/fundamentals-fmp.mjs';
 import { kvGetJson, kvPutJson } from '../_lib/kv-safe.js';
 
 const MODULE_NAME = 'fundamentals';
@@ -246,7 +247,17 @@ export async function onRequestGet(context) {
     });
   }
 
-  const upstream = await fetchTiingoFundamentalsDaily(ticker, env);
+  let upstream = await fetchTiingoFundamentalsDaily(ticker, env);
+
+  // Fallback to FMP if Tiingo fails (rate limit, auth, etc.)
+  if (!upstream.ok && (upstream.httpStatus === 429 || upstream.error?.code === 'RATE_LIMITED' || upstream.error?.code === 'AUTH_FAILED')) {
+    const fmpResult = await fetchFmpFundamentals(ticker, env);
+    if (fmpResult.ok && fmpResult.data) {
+      upstream = fmpResult;
+      upstream.fallbackFrom = 'tiingo';
+    }
+  }
+
   if (upstream.ok && upstream.data) {
     await kvPutJson(env, key, upstream.data, TTL_SECONDS);
     await kvPutJson(env, lastGoodKey, upstream.data, 14 * 24 * 60 * 60);

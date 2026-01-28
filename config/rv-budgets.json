@@ -10,75 +10,115 @@
       "dailyRequests": 800,
       "monthlyRequests": 16000,
       "endpoints": {
-        "daily": { "dailyRequests": 800, "monthlyRequests": 16000 }
+        "daily": {
+          "dailyRequests": 800,
+          "monthlyRequests": 16000
+        }
       }
     },
     "fred": {
       "dailyRequests": 200,
       "monthlyRequests": 4000,
       "endpoints": {
-        "series": { "dailyRequests": 200, "monthlyRequests": 4000 }
+        "series": {
+          "dailyRequests": 200,
+          "monthlyRequests": 4000
+        }
       }
     },
     "ecb": {
       "dailyRequests": 200,
       "monthlyRequests": 4000,
       "endpoints": {
-        "sdmx": { "dailyRequests": 200, "monthlyRequests": 4000 }
+        "sdmx": {
+          "dailyRequests": 200,
+          "monthlyRequests": 4000
+        }
       }
     },
     "marketaux": {
       "dailyRequests": 120,
       "monthlyRequests": 2500,
       "endpoints": {
-        "news": { "dailyRequests": 120, "monthlyRequests": 2500 }
+        "news": {
+          "dailyRequests": 120,
+          "monthlyRequests": 2500
+        }
       }
     },
     "finnhub": {
       "dailyRequests": 200,
       "monthlyRequests": 5000,
       "endpoints": {
-        "calendar": { "dailyRequests": 200, "monthlyRequests": 5000 }
+        "calendar": {
+          "dailyRequests": 200,
+          "monthlyRequests": 5000
+        }
       }
     },
     "fmp": {
       "dailyRequests": 300,
       "monthlyRequests": 6000,
       "endpoints": {
-        "quotes": { "dailyRequests": 300, "monthlyRequests": 6000 }
+        "quotes": {
+          "dailyRequests": 300,
+          "monthlyRequests": 6000
+        }
       }
     },
     "sec": {
       "dailyRequests": 80,
       "monthlyRequests": 1600,
       "endpoints": {
-        "edgar": { "dailyRequests": 80, "monthlyRequests": 1600 }
+        "edgar": {
+          "dailyRequests": 80,
+          "monthlyRequests": 1600
+        }
       }
     },
     "rss": {
       "dailyRequests": 300,
       "monthlyRequests": 6000,
       "endpoints": {
-        "rss": { "dailyRequests": 300, "monthlyRequests": 6000 }
+        "rss": {
+          "dailyRequests": 300,
+          "monthlyRequests": 6000
+        }
       }
     },
     "alphavantage": {
       "dailyRequests": 50,
       "monthlyRequests": 1000,
       "endpoints": {
-        "daily": { "dailyRequests": 50, "monthlyRequests": 1000 }
+        "daily": {
+          "dailyRequests": 50,
+          "monthlyRequests": 1000
+        }
       }
     },
     "coingecko": {
       "dailyRequests": 200,
       "monthlyRequests": 4000,
       "endpoints": {
-        "simple": { "dailyRequests": 200, "monthlyRequests": 4000 }
+        "simple": {
+          "dailyRequests": 200,
+          "monthlyRequests": 4000
+        }
       }
     },
     "internal": {
       "dailyRequests": 1000,
       "monthlyRequests": 20000
+    },
+    "tiingo": {
+      "dailyRequests": 500,
+      "monthlyRequests": 5000,
+      "endpoints": {
+        "fundamentals": {
+          "dailyRequests": 500,
+          "monthlyRequests": 5000
+        }
+      }
     }
   },
   "cloudflare": {
