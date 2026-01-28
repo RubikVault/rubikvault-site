@@ -60,6 +60,11 @@
       <span class="small" id="last-refresh"></span>
     </div>
 
+    <div id="ops-alert" class="card" style="display:none; margin-bottom: 12px; border-color: rgba(251, 191, 36, 0.5); background: rgba(120, 53, 15, 0.18);">
+      <div class="k">Warning</div>
+      <div class="small" id="ops-alert-text"></div>
+    </div>
+
     <div id="loading" class="card">No data loaded. Click Refresh (LIVE).</div>
 
     <div id="main" style="display:none;">
@@ -187,6 +192,61 @@
       return match || universes[0];
     }
 
+    let LAST_PIPELINE_COUNTS = null;
+
+    function setSourceLabel(text) {
+      const sourceEl = document.getElementById('data-source');
+      if (sourceEl) sourceEl.textContent = text;
+    }
+
+    function showAlert(html) {
+      const alertEl = document.getElementById('ops-alert');
+      const textEl = document.getElementById('ops-alert-text');
+      if (!alertEl || !textEl) return;
+      textEl.innerHTML = html;
+      alertEl.style.display = 'block';
+    }
+
+    function clearAlert() {
+      const alertEl = document.getElementById('ops-alert');
+      const textEl = document.getElementById('ops-alert-text');
+      if (textEl) textEl.textContent = '';
+      if (alertEl) alertEl.style.display = 'none';
+    }
+
+    function computeStatusFromCounts(counts) {
+      if (counts.expected > 0 && counts.static_ready >= counts.expected) return 'OK';
+      if (counts.expected > 0 && counts.fetched > 0) return 'WARN';
+      return 'UNKNOWN';
+    }
+
+    function extractCountsFromSummary(summary, universeId) {
+      const universe = pickUniverse(summary?.universes, universeId);
+      if (!universe) return null;
+      return {
+        expected: Number(universe.expected || 0),
+        fetched: Number(universe.fetched || 0),
+        validated: Number(universe.validated || 0),
+        computed: Number(universe.computed || 0),
+        static_ready: Number(universe.static_ready || 0)
+      };
+    }
+
+    function overlaySummaryWithPipeline(summary, pipelineCounts) {
+      if (!summary || !pipelineCounts) return summary;
+      const universe = pickUniverse(summary.universes, 'nasdaq100');
+      if (!universe) return summary;
+      universe.expected = pipelineCounts.expected;
+      universe.fetched = pipelineCounts.fetched;
+      universe.validated = pipelineCounts.validated;
+      universe.computed = pipelineCounts.computed;
+      universe.static_ready = pipelineCounts.static_ready;
+      universe.status = computeStatusFromCounts(pipelineCounts);
+      summary.overall = summary.overall || {};
+      summary.overall.status = universe.status;
+      return summary;
+    }
+
     function renderSummary(summary) {
       const loading = document.getElementById('loading');
       const main = document.getElementById('main');
@@ -283,21 +343,26 @@
       main.style.display = 'block';
     }
 
-    function renderFromLegacySummary(payload) {
+    function buildSummaryFromLegacy(payload, pipelineCountsOverride) {
       const baseline = payload?.data?.opsBaseline?.baseline || null;
       if (!baseline || typeof baseline !== 'object') {
-        const statusEl = document.getElementById('loading');
-        if (statusEl) statusEl.textContent = 'Legacy summary missing baseline data.';
-        return;
+        return null;
       }
 
       const pipeline = baseline.pipeline || {};
-      const expected = Number(pipeline.expected || baseline.expectedUniverse || 0);
-      const fetched = Number(pipeline.fetched || 0);
-      const validated = Number(pipeline.validatedStored || 0);
-      const staticReady = Number(pipeline.staticReady || 0);
+      const expected = Number(pipelineCountsOverride?.expected ?? pipeline.expected ?? baseline.expectedUniverse ?? 0);
+      const fetched = Number(pipelineCountsOverride?.fetched ?? pipeline.fetched ?? 0);
+      const validated = Number(pipelineCountsOverride?.validated ?? pipeline.validatedStored ?? 0);
+      const computed = Number(pipelineCountsOverride?.computed ?? pipeline.computed ?? 0);
+      const staticReady = Number(pipelineCountsOverride?.static_ready ?? pipeline.staticReady ?? 0);
 
-      const status = expected > 0 && staticReady >= expected ? 'OK' : (staticReady > 0 ? 'WARN' : 'RISK');
+      const status = computeStatusFromCounts({
+        expected,
+        fetched,
+        validated,
+        computed,
+        static_ready: staticReady
+      });
 
       const providers = Array.isArray(baseline.providers)
         ? baseline.providers.reduce((acc, entry) => {
@@ -325,7 +390,7 @@
       const expectedTradingDay = typeof freshness.expectedTradingDay === 'string' ? freshness.expectedTradingDay : null;
 
       const overall = payload?.data?.opsBaseline?.overall || {};
-      const verdict = overall.verdict === 'HEALTHY' ? 'OK' : (overall.verdict || 'RISK');
+      const verdict = status === 'OK' ? 'OK' : (status === 'WARN' ? 'WARN' : (overall.verdict === 'HEALTHY' ? 'OK' : (overall.verdict || 'RISK')));
       const reasons = overall.reason ? [String(overall.reason)] : [];
 
       const summary = {
@@ -347,6 +412,7 @@
             expected,
             fetched,
             validated,
+            computed,
             static_ready: staticReady,
             status,
             refs: {
@@ -374,40 +440,157 @@
         }
       };
 
-      renderSummary(summary);
+      return summary;
     }
 
-    async function refreshSummary() {
+    async function refreshSummary(options = {}) {
       const statusEl = document.getElementById('loading');
       const last = document.getElementById('last-refresh');
-      const sourceEl = document.getElementById('data-source');
       if (last) last.textContent = `Last action: ${new Date().toLocaleString()}`;
-      const url = `/data/ops/summary.latest.json?t=${Date.now()}`;
+      const t = Date.now();
+      const summaryUrl = `/data/ops/summary.latest.json?t=${t}`;
+      const pipelineUrl = `/data/pipeline/nasdaq100.latest.json?t=${t}`;
 
       try {
-        const res = await fetch(url, { cache: 'no-store' });
-        if (!res.ok) {
-          if (statusEl) statusEl.textContent = `Failed to load summary (HTTP ${res.status}).`;
+        const [summaryRes, pipelineRes] = await Promise.all([
+          fetch(summaryUrl, { cache: 'no-store' }),
+          fetch(pipelineUrl, { cache: 'no-store' })
+        ]);
+
+        if (!summaryRes.ok) {
+          if (statusEl) statusEl.textContent = `Failed to load summary (HTTP ${summaryRes.status}).`;
           return;
         }
-        const summary = await res.json();
-        if (sourceEl) sourceEl.textContent = 'static';
-        if (summary?.schema_version === 'ops.summary.v1') {
-          renderSummary(summary);
-        } else if (summary?.schema_version === '3.0') {
-          renderFromLegacySummary(summary);
-        } else {
-          renderSummary(summary);
+
+        const summary = await summaryRes.json();
+        const pipeline = pipelineRes.ok ? await pipelineRes.json() : null;
+        const pipelineCounts = pipeline?.counts ? {
+          expected: Number(pipeline.counts.expected || 0),
+          fetched: Number(pipeline.counts.fetched || 0),
+          validated: Number(pipeline.counts.validated || 0),
+          computed: Number(pipeline.counts.computed || 0),
+          static_ready: Number(pipeline.counts.static_ready || 0)
+        } : null;
+
+        LAST_PIPELINE_COUNTS = pipelineCounts;
+        let displaySummary = summary;
+        clearAlert();
+
+        if (summary?.schema_version !== 'ops.summary.v1') {
+          const schema = summary?.schema_version || 'missing';
+          showAlert(`SUMMARY_SCHEMA_MISMATCH: expected ops.summary.v1, got ${esc(schema)}. ` +
+            `See <a href=\"/data/ops/summary.latest.json\" style=\"color:#93c5fd;\">summary</a> and ` +
+            `<a href=\"/data/pipeline/nasdaq100.latest.json\" style=\"color:#93c5fd;\">pipeline.latest</a>.`);
+          displaySummary = buildSummaryFromLegacy(summary, pipelineCounts);
+        } else if (pipelineCounts) {
+          const summaryCounts = extractCountsFromSummary(summary, 'nasdaq100');
+          if (!summaryCounts) {
+            showAlert('SUMMARY_UNIVERSE_MISSING: nasdaq100 not present in summary.');
+          } else {
+            const mismatches = [];
+            for (const key of ['expected', 'fetched', 'validated', 'computed', 'static_ready']) {
+              if (Number(summaryCounts[key]) !== Number(pipelineCounts[key])) {
+                mismatches.push(`${key} summary=${summaryCounts[key]} pipeline=${pipelineCounts[key]}`);
+              }
+            }
+            if (mismatches.length) {
+              showAlert(`DRIFT_DETECTED: summary disagrees with pipeline.latest. ${esc(mismatches.join('; '))}`);
+              displaySummary = overlaySummaryWithPipeline(summary, pipelineCounts);
+            }
+          }
+        }
+
+        if (!displaySummary) {
+          if (statusEl) statusEl.textContent = 'Summary unavailable (legacy or missing).';
+          return;
+        }
+
+        setSourceLabel(options.sourceLabel || 'static');
+        renderSummary(displaySummary);
+
+        if (options.triggerLive) {
+          attemptLiveRefresh({ force: options.forceLive });
         }
       } catch (err) {
         if (statusEl) statusEl.textContent = 'Failed to load summary.';
       }
     }
 
+    function getOpsKeyFromUrl() {
+      try {
+        const params = new URLSearchParams(window.location.search);
+        return params.get('ops_key') || params.get('opsKey') || null;
+      } catch {
+        return null;
+      }
+    }
+
+    function getOpsKeyFromSession() {
+      try {
+        return sessionStorage.getItem('rv_ops_key');
+      } catch {
+        return null;
+      }
+    }
+
+    function setOpsKey(key) {
+      try {
+        sessionStorage.setItem('rv_ops_key', key);
+      } catch {}
+    }
+
+    async function refreshLiveWithKey(key) {
+      try {
+        const res = await fetch('/api/mission-control/summary?live=1', {
+          cache: 'no-store',
+          headers: {
+            'X-OPS-KEY': key
+          }
+        });
+        if (!res.ok) {
+          setSourceLabel('live locked');
+          return;
+        }
+        const payload = await res.json();
+        const summary = buildSummaryFromLegacy(payload, LAST_PIPELINE_COUNTS);
+        if (!summary) return;
+        setSourceLabel('live');
+        const liveAsOfEl = document.getElementById('live-asof');
+        if (liveAsOfEl) liveAsOfEl.textContent = payload?.meta?.asOf || payload?.data?.asOf || '—';
+        renderSummary(summary);
+      } catch {
+        setSourceLabel('live locked');
+      }
+    }
+
+    function attemptLiveRefresh({ force = false } = {}) {
+      try {
+        if (!force) {
+          const already = sessionStorage.getItem('ops_auto_live_once');
+          if (already === '1') return;
+          sessionStorage.setItem('ops_auto_live_once', '1');
+        }
+      } catch {}
+
+      const urlKey = getOpsKeyFromUrl();
+      const sessionKey = getOpsKeyFromSession();
+      const key = sessionKey || urlKey;
+      if (urlKey && !sessionKey) {
+        setOpsKey(urlKey);
+      }
+      if (!key) {
+        setSourceLabel('static (no key)');
+        return;
+      }
+      setTimeout(() => {
+        refreshLiveWithKey(key);
+      }, 400);
+    }
+
     document.getElementById('btn-refresh').addEventListener('click', async () => {
       const now = new Date().toLocaleString();
       setManualTs(now);
-      refreshSummary();
+      refreshSummary({ sourceLabel: 'static', triggerLive: true, forceLive: true });
     });
 
     const previous = getManualTs();
@@ -422,7 +605,7 @@
     const autoRefreshOnce = () => {
       if (!window.__opsAutoRefreshed) {
         window.__opsAutoRefreshed = true;
-        refreshSummary();
+        refreshSummary({ sourceLabel: 'static (auto)', triggerLive: true, forceLive: false });
       }
     };
 

@@ -32,21 +32,24 @@ jobs:
       - name: Build pipeline truth (NASDAQ-100)
         run: node scripts/pipeline/build-ndx100-pipeline-truth.mjs
 
-      - name: Build mission-control summary
-        run: node scripts/ops/build-mission-control-summary.mjs
-
       - name: Build ops-daily snapshot
         env:
           CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
           CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
         run: node scripts/ops/build-ops-daily.mjs
 
+      - name: Build ops summary
+        run: node scripts/ops/build-mission-control-summary.mjs
+
+      - name: Validate ops summary
+        run: node scripts/ops/validate-ops-summary.mjs
+
       - name: Commit + push (if changed)
         run: |
           set -euo pipefail
           git config user.name "RubikVault Bot"
           git config user.email "bot@rubikvault.com"
-          git add public/data/pipeline/*.json public/data/ops/summary.latest.json public/data/ops-daily.json
+          git add public/data/pipeline/*.json public/data/ops public/data/ops-daily.json
           if git diff --cached --quiet; then
             echo "No staged changes"
             exit 0

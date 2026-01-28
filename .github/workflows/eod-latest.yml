@@ -51,12 +51,18 @@ jobs:
       - name: Build ops-daily snapshot
         run: npm run rv:ops
 
+      - name: Build ops summary
+        run: node scripts/ops/build-mission-control-summary.mjs
+
+      - name: Validate ops summary
+        run: node scripts/ops/validate-ops-summary.mjs
+
       - name: Commit + push (if changed)
         run: |
           set -euo pipefail
           git config user.name "RubikVault Bot"
           git config user.email "bot@rubikvault.com"
-          git add public/data/eod public/data/pipeline public/data/ops-daily.json docs/architecture/data-layout-law-v1.md
+          git add public/data/eod public/data/pipeline public/data/ops public/data/ops-daily.json docs/architecture/data-layout-law-v1.md
           if git diff --cached --quiet; then
             echo "No staged changes"
             exit 0
