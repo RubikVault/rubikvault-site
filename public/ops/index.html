@@ -203,14 +203,17 @@
       document.getElementById('overall-reason').textContent = overallReasons.length ? overallReasons.join(' • ') : 'OK';
       document.getElementById('what-to-fix').textContent = overallReasons.length ? 'Check pipeline latest + manifest consistency.' : '';
 
-      document.getElementById('workers-used').textContent = 'not tracked';
-      document.getElementById('workers-budget').textContent = 'not tracked';
+      const workersToday = summary?.costs?.workers?.requests_today ?? null;
+      const workersLast24h = summary?.costs?.workers?.requests_last_24h ?? null;
+      document.getElementById('workers-used').textContent = workersToday == null ? 'not tracked' : fmtNum(workersToday);
+      document.getElementById('workers-budget').textContent = workersLast24h == null ? 'not tracked' : `Last 24h: ${fmtNum(workersLast24h)}`;
 
       document.getElementById('runtime-mode').textContent = 'STATIC';
       document.getElementById('runtime-note').textContent = 'Static summary artifact (no runtime auth).';
 
-      document.getElementById('safety-kv-writes').textContent = 'not tracked';
-      document.getElementById('safety-note').textContent = 'Static-only view.';
+      const safetyKvWrites = summary?.safety?.kv_writes_today ?? null;
+      document.getElementById('safety-kv-writes').textContent = safetyKvWrites == null ? 'not tracked' : fmtNum(safetyKvWrites);
+      document.getElementById('safety-note').textContent = summary?.safety?.note || 'Static-only view.';
 
       const providers = summary?.providers && typeof summary.providers === 'object'
         ? Object.entries(summary.providers)
@@ -280,6 +283,100 @@
       main.style.display = 'block';
     }
 
+    function renderFromLegacySummary(payload) {
+      const baseline = payload?.data?.opsBaseline?.baseline || null;
+      if (!baseline || typeof baseline !== 'object') {
+        const statusEl = document.getElementById('loading');
+        if (statusEl) statusEl.textContent = 'Legacy summary missing baseline data.';
+        return;
+      }
+
+      const pipeline = baseline.pipeline || {};
+      const expected = Number(pipeline.expected || baseline.expectedUniverse || 0);
+      const fetched = Number(pipeline.fetched || 0);
+      const validated = Number(pipeline.validatedStored || 0);
+      const staticReady = Number(pipeline.staticReady || 0);
+
+      const status = expected > 0 && staticReady >= expected ? 'OK' : (staticReady > 0 ? 'WARN' : 'RISK');
+
+      const providers = Array.isArray(baseline.providers)
+        ? baseline.providers.reduce((acc, entry) => {
+            const name = String(entry?.name || '').trim();
+            if (!name) return acc;
+            acc[name] = {
+              configured: true,
+              mode: 'unknown',
+              note: null,
+              budget: {
+                usedMonth: entry?.usedMonth ?? null,
+                limitMonth: entry?.limitMonth ?? null,
+                remainingMonth: entry?.remainingMonth ?? null,
+                remainingPct: entry?.remainingPct ?? null,
+                resetDate: entry?.resetDate ?? null,
+                runtimeCallsToday: entry?.runtimeCallsToday ?? null
+              }
+            };
+            return acc;
+          }, {})
+        : {};
+
+      const freshness = baseline.freshness || {};
+      const staleCount = Number.isFinite(Number(freshness.staleCount)) ? Number(freshness.staleCount) : null;
+      const expectedTradingDay = typeof freshness.expectedTradingDay === 'string' ? freshness.expectedTradingDay : null;
+
+      const overall = payload?.data?.opsBaseline?.overall || {};
+      const verdict = overall.verdict === 'HEALTHY' ? 'OK' : (overall.verdict || 'RISK');
+      const reasons = overall.reason ? [String(overall.reason)] : [];
+
+      const summary = {
+        schema_version: 'ops.summary.v1',
+        generated_at: payload?.meta?.asOf || payload?.data?.asOf || null,
+        asof: payload?.meta?.baselineAsOf || payload?.data?.asOf || null,
+        overall: {
+          status: verdict,
+          reasons,
+          stale_universes: [],
+          stale_symbols_count: staleCount == null ? 0 : staleCount,
+          expected_trading_day: expectedTradingDay
+        },
+        universes: [
+          {
+            id: 'nasdaq100',
+            generated_at: payload?.meta?.baselineAsOf || payload?.data?.asOf || null,
+            asof: payload?.meta?.baselineAsOf || payload?.data?.asOf || null,
+            expected,
+            fetched,
+            validated,
+            static_ready: staticReady,
+            status,
+            refs: {
+              pipeline: '/data/pipeline/nasdaq100.latest.json',
+              manifest: '/data/eod/manifest.latest.json',
+              batch0: '/data/eod/batches/eod.latest.000.json'
+            },
+            providers_used: Object.keys(providers)
+          }
+        ],
+        providers,
+        ops_daily: {
+          generated_at: payload?.meta?.baselineAsOf || null,
+          ref: '/data/ops-daily.json'
+        },
+        costs: {
+          workers: {
+            requests_today: payload?.data?.opsLive?.cloudflare?.requestsToday ?? null,
+            requests_last_24h: payload?.data?.opsLive?.cloudflare?.requestsLast24h ?? null
+          }
+        },
+        safety: {
+          kv_writes_today: baseline?.safety?.kvWritesToday ?? null,
+          note: 'Static-only view.'
+        }
+      };
+
+      renderSummary(summary);
+    }
+
     async function refreshSummary() {
       const statusEl = document.getElementById('loading');
       const last = document.getElementById('last-refresh');
@@ -295,7 +392,13 @@
         }
         const summary = await res.json();
         if (sourceEl) sourceEl.textContent = 'static';
-        renderSummary(summary);
+        if (summary?.schema_version === 'ops.summary.v1') {
+          renderSummary(summary);
+        } else if (summary?.schema_version === '3.0') {
+          renderFromLegacySummary(summary);
+        } else {
+          renderSummary(summary);
+        }
       } catch (err) {
         if (statusEl) statusEl.textContent = 'Failed to load summary.';
       }
