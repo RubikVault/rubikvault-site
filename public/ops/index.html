@@ -125,7 +125,7 @@
       </div>
 
       <div class="small" style="margin-top: 14px;">
-        Source: <a href="/api/mission-control/summary" style="color:#60a5fa;">/api/mission-control/summary</a>
+        Source: <a href="/data/ops/summary.latest.json" style="color:#60a5fa;">/data/ops/summary.latest.json</a>
         <span class="small" id="asof" style="margin-left:10px;"></span>
       </div>
     </div>
@@ -145,12 +145,6 @@
       const v = Number(n);
       if (!Number.isFinite(v)) return '—';
       return v.toLocaleString();
-    }
-
-    function fmtNa(v) {
-      if (v === null || v === undefined) return 'N/A (not configured)';
-      if (typeof v === 'number' && !Number.isFinite(v)) return 'N/A (not configured)';
-      return String(v);
     }
 
     function pill(text, cls) {
@@ -181,148 +175,104 @@
       }
     }
 
-    function getOpsKey() {
-      try {
-        return sessionStorage.getItem('rv_ops_key');
-      } catch {
-        return null;
-      }
+    function fmtTracked(value) {
+      if (value === null || value === undefined) return 'not tracked';
+      if (typeof value === 'number' && !Number.isFinite(value)) return 'not tracked';
+      return String(value);
     }
 
-    function setOpsKey(key) {
-      try {
-        sessionStorage.setItem('rv_ops_key', key);
-      } catch {}
+    function pickUniverse(universes, id) {
+      if (!Array.isArray(universes) || universes.length === 0) return null;
+      const match = universes.find((u) => u && u.id === id);
+      return match || universes[0];
     }
 
-    function renderFromBaseline(baseline, baselineAsOf, opsLive, liveAsOf) {
+    function renderSummary(summary) {
       const loading = document.getElementById('loading');
       const main = document.getElementById('main');
 
       const baselineAsOfEl = document.getElementById('baseline-asof');
-      if (baselineAsOfEl) baselineAsOfEl.textContent = baselineAsOf || '—';
+      if (baselineAsOfEl) baselineAsOfEl.textContent = summary?.ops_daily?.generated_at || '—';
       const liveAsOfEl = document.getElementById('live-asof');
-      if (liveAsOfEl) liveAsOfEl.textContent = liveAsOf || '—';
+      if (liveAsOfEl) liveAsOfEl.textContent = summary?.generated_at || summary?.asof || '—';
 
-      // Schema 1.0 fallback: transform old format to expected structure
-      if (!baseline && typeof baseline === 'object') {
-        baseline = null;
-      }
-      if (!baseline?.pipeline && baseline?.universes && Array.isArray(baseline.universes) && baseline.universes.length > 0) {
-        const u = baseline.universes[0];
-        baseline = {
-          expectedUniverse: u.expected || 100,
-          pipeline: {
-            expected: u.expected || 100,
-            fetched: u.fetched ?? null,
-            validatedStored: u.validated ?? null,
-            computed: u.computed ?? null,
-            staticReady: u.staticReady ?? null,
-            missing: []
-          },
-          freshness: {
-            latestSnapshotDate: null,
-            expectedTradingDay: null,
-            staleCount: null,
-            staleList: []
-          },
-          providers: baseline.providers && typeof baseline.providers === 'object'
-            ? Object.values(baseline.providers).sort((a, b) => String(a.name || '').localeCompare(String(b.name || '')))
-            : [],
-          safety: {
-            kvWritesToday: null,
-            pollingDefaultOff: true,
-            runtimeWritesDisabled: true
-          }
-        };
-      }
+      const overallStatus = summary?.overall?.status || 'UNKNOWN';
+      const overallReasons = Array.isArray(summary?.overall?.reasons) ? summary.overall.reasons : [];
+      const overallLabel = overallStatus === 'OK' ? 'OK ✅' : (overallStatus === 'WARN' ? 'WARN 🟠' : 'RISK 🔴');
+      document.getElementById('overall').textContent = overallLabel;
+      document.getElementById('overall-reason').textContent = overallReasons.length ? overallReasons.join(' • ') : 'OK';
+      document.getElementById('what-to-fix').textContent = overallReasons.length ? 'Check pipeline latest + manifest consistency.' : '';
 
-      const expected = Number(baseline?.pipeline?.expected || baseline?.expectedUniverse || 100);
-      const fetched = Number(baseline?.pipeline?.fetched || 0);
-      const validated = Number(baseline?.pipeline?.validatedStored || 0);
-      const computed = Number(baseline?.pipeline?.computed || 0);
-      const staticReady = Number(baseline?.pipeline?.staticReady || 0);
+      document.getElementById('workers-used').textContent = 'not tracked';
+      document.getElementById('workers-budget').textContent = 'not tracked';
 
-      const pipelineOk = Number.isFinite(expected) && Number.isFinite(staticReady) && staticReady >= expected;
-      const staleCount = baseline?.freshness?.staleCount;
-      const freshnessOk = staleCount !== null && staleCount !== undefined ? Number(staleCount) === 0 : false;
+      document.getElementById('runtime-mode').textContent = 'STATIC';
+      document.getElementById('runtime-note').textContent = 'Static summary artifact (no runtime auth).';
 
-      const verdict = pipelineOk && freshnessOk ? 'HEALTHY' : 'RISK';
-      document.getElementById('overall').innerHTML = verdict === 'HEALTHY' ? 'HEALTHY ✅' : 'RISK 🔴';
-      document.getElementById('overall-reason').textContent = pipelineOk
-        ? (freshnessOk ? 'OK' : `SNAPSHOT_STALE (stale=${fmtNa(staleCount)})`)
-        : `PIPELINE_STATIC_READY=${staticReady}/${expected}`;
+      document.getElementById('safety-kv-writes').textContent = 'not tracked';
+      document.getElementById('safety-note').textContent = 'Static-only view.';
 
-      const missingCount = Array.isArray(baseline?.pipeline?.missing) ? baseline.pipeline.missing.length : 0;
-      const what = (!pipelineOk)
-        ? 'Pipeline static-ready missing: computed/static steps not producing artifacts'
-        : (!freshnessOk ? 'Freshness stale: daily snapshot job not producing expected trading day' : '');
-      document.getElementById('what-to-fix').textContent = what;
-
-      document.getElementById('workers-used').textContent = opsLive?.cloudflare ? fmtNa(opsLive.cloudflare.requestsToday) : 'N/A (not configured)';
-      document.getElementById('workers-budget').textContent = opsLive?.cloudflare ? `Last 24h: ${fmtNa(opsLive.cloudflare.requestsLast24h)}` : 'N/A (not configured)';
-
-      document.getElementById('runtime-mode').textContent = 'LIVE';
-      document.getElementById('runtime-note').textContent = 'Single-click live refresh (manual, gated).';
-
-      const safety = baseline?.safety || {};
-      const pollingDefaultOff = safety.pollingDefaultOff;
-      const runtimeWritesDisabled = safety.runtimeWritesDisabled;
-      document.getElementById('safety-kv-writes').textContent = 'N/A (runtime writes disabled)';
-      document.getElementById('safety-note').textContent = `Polling default OFF: ${pollingDefaultOff == null ? 'N/A (not configured)' : (pollingDefaultOff ? 'YES' : 'NO')} • Runtime writes disabled: ${runtimeWritesDisabled == null ? 'N/A (not configured)' : (runtimeWritesDisabled ? 'YES' : 'NO')}`;
-
-      const providers = Array.isArray(baseline?.providers) ? baseline.providers : [];
+      const providers = summary?.providers && typeof summary.providers === 'object'
+        ? Object.entries(summary.providers)
+        : [];
       document.getElementById('providers').innerHTML = providers.length
-        ? providers.map((p) => {
-            const name = p.name || 'unknown';
-            const used = p.usedMonth;
-            const lim = p.limitMonth;
-            const rem = p.remainingMonth;
-            const remPct = p.remainingPct;
-            const callsToday = p.runtimeCallsToday;
+        ? providers.sort(([a], [b]) => a.localeCompare(b)).map(([name, entry]) => {
+            const budget = entry?.budget || null;
+            const used = budget?.usedMonth ?? null;
+            const lim = budget?.limitMonth ?? null;
+            const rem = budget?.remainingMonth ?? null;
+            const remPct = budget?.remainingPct ?? null;
+            const callsToday = budget?.runtimeCallsToday ?? null;
             const status = remPct == null ? 'warn' : pctClass(100 - Number(remPct));
-            const remText = remPct == null ? 'N/A (not configured)' : (pill(String(remPct) + '%', status) + ' <span class="small">' + esc(rem) + '</span>');
+            const remText = remPct == null
+              ? 'not tracked'
+              : (pill(String(remPct) + '%', status) + ' <span class="small">' + esc(rem) + '</span>');
             return '<tr>' +
               '<td>' + esc(name) + '</td>' +
-              '<td>' + esc(used == null ? 'N/A (not configured)' : used) + '</td>' +
-              '<td>' + esc(lim == null ? 'N/A (not configured)' : lim) + '</td>' +
+              '<td>' + esc(fmtTracked(used)) + '</td>' +
+              '<td>' + esc(fmtTracked(lim)) + '</td>' +
               '<td>' + remText + '</td>' +
-              '<td class="small">' + esc(p.resetDate || '—') + '</td>' +
-              '<td>' + esc(callsToday == null ? 'N/A (not configured)' : callsToday) + '</td>' +
+              '<td class="small">' + esc(budget?.resetDate || '—') + '</td>' +
+              '<td>' + esc(fmtTracked(callsToday)) + '</td>' +
             '</tr>';
           }).join('')
         : '<tr><td colspan="6" class="small">No provider budgets</td></tr>';
 
+      const universe = pickUniverse(summary?.universes, 'nasdaq100');
+      const expected = Number(universe?.expected || 0);
+      const fetched = Number(universe?.fetched || 0);
+      const validated = Number(universe?.validated || 0);
+      const staticReady = Number(universe?.static_ready || 0);
+
       const stageRow = (label, value) => {
-        const ok = value >= expected;
+        const ok = expected > 0 && value >= expected;
         const cls = ok ? 'ok' : (value >= Math.floor(expected * 0.9) ? 'warn' : 'bad');
         return '<tr>' +
           '<td>' + esc(label) + '</td>' +
-          '<td>' + esc(String(value)) + '</td>' +
-          '<td>' + esc(String(expected)) + '</td>' +
+          '<td>' + esc(String(Number.isFinite(value) ? value : '—')) + '</td>' +
+          '<td>' + esc(String(Number.isFinite(expected) && expected > 0 ? expected : '—')) + '</td>' +
           '<td>' + pill(ok ? 'OK' : 'MISSING', cls) + '</td>' +
         '</tr>';
       };
 
       document.getElementById('pipeline').innerHTML =
         stageRow('Fetched', fetched) +
-        stageRow('Validated & Stored', validated) +
-        stageRow('Computed', computed) +
+        stageRow('Validated', validated) +
         stageRow('Static-ready', staticReady);
 
-      const missing = Array.isArray(baseline?.pipeline?.missing) ? baseline.pipeline.missing : [];
-      const missingText = missing.length
-        ? ('Missing: ' + missing.slice(0, 20).map((m) => `${m.ticker}:${m.reason}`).join(', ') + (missing.length > 20 ? ` …(+${missing.length - 20})` : ''))
-        : 'Missing: —';
-      document.getElementById('pipeline-missing').textContent = missingText;
+      document.getElementById('pipeline-missing').textContent = universe
+        ? `Universe status: ${universe.status || 'UNKNOWN'}`
+        : 'Universe status: UNKNOWN';
 
-      const freshness = baseline?.freshness || {};
-      document.getElementById('freshness-global').textContent = `Latest snapshot date: ${freshness.latestSnapshotDate || '—'} • Expected: ${freshness.expectedTradingDay || '—'}`;
-      document.getElementById('freshness-stale').textContent = `Stale stocks: ${freshness.staleCount == null ? 'N/A (not configured)' : freshness.staleCount}/${expected}`;
-      const staleList = Array.isArray(freshness.staleList) ? freshness.staleList : [];
-      document.getElementById('freshness-list').textContent = staleList.length
-        ? ('Stale: ' + staleList.slice(0, 20).join(', ') + (staleList.length > 20 ? ` …(+${staleList.length - 20})` : ''))
-        : '';
+      const expectedTradingDay = summary?.overall?.expected_trading_day || null;
+      const staleSymbols = summary?.overall?.stale_symbols_count ?? null;
+      document.getElementById('freshness-global').textContent = expectedTradingDay
+        ? `Expected trading day: ${expectedTradingDay}`
+        : 'Freshness: not tracked';
+      document.getElementById('freshness-stale').textContent = staleSymbols == null
+        ? 'Stale symbols: not tracked'
+        : `Stale symbols: ${staleSymbols}`;
+      document.getElementById('freshness-list').textContent = '';
 
       document.getElementById('asof').textContent = '';
 
@@ -330,93 +280,31 @@
       main.style.display = 'block';
     }
 
-    async function fetchWithFallback(primaryUrl, fallbackUrl, headers = {}) {
-      const t = Date.now();
-      const cacheHeaders = {
-        'Cache-Control': 'no-cache',
-        'Pragma': 'no-cache',
-        ...headers
-      };
-
-      try {
-        const primaryRes = await fetch(`${primaryUrl}?t=${t}`, { cache: 'no-store', headers: cacheHeaders });
-        if (primaryRes.ok) {
-          const data = await primaryRes.json();
-          return { ok: true, res: primaryRes, payload: data, source: 'static_summary' };
-        }
-        if (primaryRes.status !== 404) {
-          return { ok: false, res: primaryRes, payload: null, source: null };
-        }
-      } catch (err) {
-        console.warn('Primary fetch failed:', err.message);
-      }
-
-      try {
-        const fallbackRes = await fetch(`${fallbackUrl}?t=${t}`, { cache: 'no-store', headers: cacheHeaders });
-        const fallbackData = await fallbackRes.json();
-        return { ok: fallbackRes.ok, res: fallbackRes, payload: fallbackData, source: 'mission_control_api' };
-      } catch (err) {
-        return { ok: false, res: null, payload: null, source: null, error: err.message };
-      }
-    }
-
-    async function fetchLiveOnce(key) {
-      const result = await fetchWithFallback(
-        '/data/ops/summary.latest.json',
-        '/api/mission-control/summary?live=1',
-        { 'X-OPS-KEY': key }
-      );
-      return result;
-    }
-
-    async function refreshLiveWithPromptAndRetry() {
+    async function refreshSummary() {
       const statusEl = document.getElementById('loading');
       const last = document.getElementById('last-refresh');
       const sourceEl = document.getElementById('data-source');
       if (last) last.textContent = `Last action: ${new Date().toLocaleString()}`;
+      const url = `/data/ops/summary.latest.json?t=${Date.now()}`;
 
-      const key0 = getOpsKey();
-      const key1 = key0 || window.prompt('Enter OPS key');
-      if (!key1) {
-        if (statusEl) statusEl.textContent = 'Missing OPS key.';
-        return;
-      }
-
-      setOpsKey(key1);
-      let result = await fetchLiveOnce(key1);
-
-      if (result.res && result.res.status === 403) {
-        try { sessionStorage.removeItem('rv_ops_key'); } catch {}
-        const key2 = window.prompt('403: wrong OPS key. Enter OPS key');
-        if (!key2) {
-          if (statusEl) statusEl.textContent = '403: wrong OPS key.';
+      try {
+        const res = await fetch(url, { cache: 'no-store' });
+        if (!res.ok) {
+          if (statusEl) statusEl.textContent = `Failed to load summary (HTTP ${res.status}).`;
           return;
         }
-        setOpsKey(key2);
-        result = await fetchLiveOnce(key2);
+        const summary = await res.json();
+        if (sourceEl) sourceEl.textContent = 'static';
+        renderSummary(summary);
+      } catch (err) {
+        if (statusEl) statusEl.textContent = 'Failed to load summary.';
       }
-
-      if (!result.ok) {
-        const msg = result.payload?.meta?.reason || result.payload?.error?.message || (result.res ? `HTTP ${result.res.status}` : result.error || 'Fetch failed');
-        if (statusEl) statusEl.textContent = String(msg);
-        return;
-      }
-
-      if (sourceEl) {
-        sourceEl.textContent = result.source === 'static_summary' ? 'static' : 'live API';
-      }
-
-      const data = result.payload && result.payload.data && typeof result.payload.data === 'object' ? result.payload.data : {};
-      const opsBaseline = data.opsBaseline || null;
-      const baseline = opsBaseline && opsBaseline.baseline ? opsBaseline.baseline : null;
-      const baselineAsOf = opsBaseline && typeof opsBaseline.asOf === 'string' ? opsBaseline.asOf : null;
-      const opsLive = data.opsLive || null;
-      const liveAsOf = opsLive && typeof opsLive.asOf === 'string' ? opsLive.asOf : null;
-      renderFromBaseline(baseline, baselineAsOf, opsLive, liveAsOf);
     }
 
     document.getElementById('btn-refresh').addEventListener('click', async () => {
-      await refreshLiveWithPromptAndRetry();
+      const now = new Date().toLocaleString();
+      setManualTs(now);
+      refreshSummary();
     });
 
     const previous = getManualTs();
@@ -427,6 +315,19 @@
 
     const baselineAsOfEl = document.getElementById('baseline-asof');
     if (baselineAsOfEl) baselineAsOfEl.textContent = '—';
+
+    const autoRefreshOnce = () => {
+      if (!window.__opsAutoRefreshed) {
+        window.__opsAutoRefreshed = true;
+        refreshSummary();
+      }
+    };
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', autoRefreshOnce);
+    } else {
+      autoRefreshOnce();
+    }
   </script>
 </body>
 </html>
