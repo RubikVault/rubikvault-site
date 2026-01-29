@@ -20,6 +20,7 @@ import {
 } from './_shared/cache-law.js';
 import { evaluateQuality } from './_shared/quality.js';
 import { isPrivilegedDebug, redact } from './_shared/observability.js';
+import { computeCacheStatus } from './_shared/freshness.js';
 
 const MODULE_NAME = 'stock';
 const TICKER_MAX_LENGTH = 12;
@@ -190,6 +191,17 @@ async function loadSchedulerState(env, isPrivileged) {
   };
 }
 
+async function getSWRPending(env, swrKey, pendingWindowSeconds) {
+  if (!swrKey) return false;
+  const result = await getJsonKV(env, swrKey);
+  if (!result?.meta?.hit) return false;
+  const marker = result.value || {};
+  const markedAt = marker.marked_at || marker.ts || marker.time || '';
+  const ageSeconds = computeAgeSeconds(markedAt);
+  if (ageSeconds == null) return false;
+  return ageSeconds <= pendingWindowSeconds;
+}
+
 async function fetchSnapshot(moduleName, request) {
   const baseUrl = new URL(request.url);
   let lastError = null;
@@ -356,6 +368,7 @@ export async function onRequestGet(context) {
   const lockTtlSeconds = Number(env?.EOD_LOCK_TTL_SECONDS) || DEFAULT_EOD_LOCK_TTL_SECONDS;
   const maxStaleDays = Number(env?.EOD_MAX_STALE_DAYS) || DEFAULT_MAX_STALE_DAYS;
   const pendingWindowMinutes = Number(env?.EOD_PENDING_WINDOW_MINUTES) || DEFAULT_PENDING_WINDOW_MINUTES;
+  const pendingWindowSeconds = Number(env?.SWR_PENDING_WINDOW_SECONDS) || 120;
 
   const primaryKey = cacheId ? cache.dataKey(cacheId) : null;
   const primaryMetaKey = cacheId ? cache.metaKey(cacheId) : null;
@@ -375,6 +388,7 @@ export async function onRequestGet(context) {
   let cacheMetaKeyUsed = null;
   let cacheHit = false;
   let swrMarked = undefined;
+  let swrPending = false;
 
   if (cacheId) {
     const kvStart = Date.now();
@@ -414,11 +428,20 @@ export async function onRequestGet(context) {
       ? computeStatusFromDataDate(cachedDataDate, now, maxStaleDays, pendingWindowMinutes)
       : null;
     cachedAgeSeconds = computeAgeSeconds(cachedMeta?.generated_at);
+    swrPending = cacheId ? await getSWRPending(env, swrKey, pendingWindowSeconds) : false;
+    const cacheStatus = computeCacheStatus({
+      hasData: cachedBars.length > 0,
+      ageSeconds: cachedAgeSeconds,
+      ttlSeconds: cacheTtlSeconds,
+      pending: swrPending
+    });
     cachedStale =
+      cacheStatus.stale ||
       cachedStatus === 'stale' ||
       cachedStatus === 'pending' ||
-      cachedStatus === 'error' ||
-      (cachedAgeSeconds != null && cachedAgeSeconds > cacheTtlSeconds);
+      cachedStatus === 'error';
+  } else if (cacheId) {
+    swrPending = await getSWRPending(env, swrKey, pendingWindowSeconds);
   }
 
   const forcedProvider = String(env?.RV_FORCE_PROVIDER || '').trim();
@@ -504,6 +527,13 @@ export async function onRequestGet(context) {
     eodAttempted = true;
   } else if (normalizedTicker && cachedBars.length && cachedStatus === 'error' && canFetchProvider) {
     eodAttempted = true;
+    if (swrPending) {
+      cacheHit = true;
+      eodBars = cachedBars;
+      eodProvider = cachedProvider || 'tiingo';
+      eodStatus = 'pending';
+      qualityFlags.add('PENDING_REFRESH');
+    } else {
     const gotLock = await cache.acquireLock(cacheId, lockTtlSeconds);
     if (!gotLock) {
       cacheHit = true;
@@ -537,6 +567,7 @@ export async function onRequestGet(context) {
         await cache.releaseLock(cacheId);
       }
     }
+    }
   } else if (normalizedTicker && cachedBars.length) {
     cacheHit = true;
     eodBars = cachedBars;
@@ -546,7 +577,11 @@ export async function onRequestGet(context) {
       qualityFlags.add('CACHE_TOO_OLD');
     }
     eodAttempted = true;
-    if (canFetchProvider) {
+    if (swrPending) {
+      swrMarked = false;
+      eodStatus = 'pending';
+      qualityFlags.add('PENDING_REFRESH');
+    } else if (canFetchProvider) {
       swrMarked = await tryMarkSWR(env, swrKey, SWR_MARK_TTL_SECONDS);
       if (swrMarked) {
         const refreshPromise = refreshCacheInBackground();
@@ -570,31 +605,37 @@ export async function onRequestGet(context) {
       eodAttempted = false;
     } else {
       eodAttempted = true;
-      const gotLock = await cache.acquireLock(cacheId, lockTtlSeconds);
-      if (!gotLock) {
+      if (swrPending) {
         eodError = { code: 'LOCKED_REFRESH', message: 'EOD refresh already in progress' };
         eodStatus = 'pending';
-        qualityFlags.add('LOCKED_REFRESH');
+        qualityFlags.add('PENDING_REFRESH');
       } else {
-        try {
-          const result = await fetchProviderBars({ recordTiming: true });
-          if (result.ok) {
-            eodBars = result.bars;
-            eodProvider = result.provider || 'tiingo';
-            const latest = pickLatestBar(eodBars);
-            const dataDate = latest?.date || todayUtcDate();
-            eodStatus = computeStatusFromDataDate(dataDate, now, maxStaleDays, pendingWindowMinutes);
-            await cache.writeCached(cacheId, { bars: eodBars }, cacheTtlSeconds, {
-              provider: eodProvider,
-              data_date: dataDate
-            });
-          } else {
-            eodError = result.error || { code: 'EOD_FETCH_FAILED', message: 'Unable to fetch EOD history' };
-            eodStatus = eodError?.code === 'CB_OPEN' ? 'stale' : 'error';
-            qualityFlags.add(eodError?.code === 'CB_OPEN' ? 'CB_OPEN' : 'PROVIDER_FAIL');
+        const gotLock = await cache.acquireLock(cacheId, lockTtlSeconds);
+        if (!gotLock) {
+          eodError = { code: 'LOCKED_REFRESH', message: 'EOD refresh already in progress' };
+          eodStatus = 'pending';
+          qualityFlags.add('LOCKED_REFRESH');
+        } else {
+          try {
+            const result = await fetchProviderBars({ recordTiming: true });
+            if (result.ok) {
+              eodBars = result.bars;
+              eodProvider = result.provider || 'tiingo';
+              const latest = pickLatestBar(eodBars);
+              const dataDate = latest?.date || todayUtcDate();
+              eodStatus = computeStatusFromDataDate(dataDate, now, maxStaleDays, pendingWindowMinutes);
+              await cache.writeCached(cacheId, { bars: eodBars }, cacheTtlSeconds, {
+                provider: eodProvider,
+                data_date: dataDate
+              });
+            } else {
+              eodError = result.error || { code: 'EOD_FETCH_FAILED', message: 'Unable to fetch EOD history' };
+              eodStatus = eodError?.code === 'CB_OPEN' ? 'stale' : 'error';
+              qualityFlags.add(eodError?.code === 'CB_OPEN' ? 'CB_OPEN' : 'PROVIDER_FAIL');
+            }
+          } finally {
+            await cache.releaseLock(cacheId);
           }
-        } finally {
-          await cache.releaseLock(cacheId);
         }
       }
     }

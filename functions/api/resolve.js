@@ -15,6 +15,7 @@ import {
   tryMarkSWR
 } from './_shared/cache-law.js';
 import { isPrivilegedDebug, redact } from './_shared/observability.js';
+import { computeCacheStatus } from './_shared/freshness.js';
 
 const MODULE_NAME = 'resolve';
 const DEFAULT_RESOLVE_CACHE_TTL_SECONDS = DEFAULT_TTL_SECONDS;
@@ -81,6 +82,17 @@ async function loadSchedulerState(env, isPrivileged) {
   };
 }
 
+async function getSWRPending(env, swrKey, pendingWindowSeconds) {
+  if (!swrKey) return false;
+  const result = await getJsonKV(env, swrKey);
+  if (!result?.meta?.hit) return false;
+  const marker = result.value || {};
+  const markedAt = marker.marked_at || marker.ts || marker.time || '';
+  const ageSeconds = computeAgeSeconds(markedAt);
+  if (ageSeconds == null) return false;
+  return ageSeconds <= pendingWindowSeconds;
+}
+
 export async function onRequestGet(context) {
   const { request } = context;
   const env = context?.env || {};
@@ -96,6 +108,7 @@ export async function onRequestGet(context) {
   const cacheId = normalizedQuery ? `resolve:${normalizedQuery}` : null;
   const cacheTtlSeconds = Number(env?.RESOLVE_CACHE_TTL_SECONDS) || DEFAULT_RESOLVE_CACHE_TTL_SECONDS;
   const lockTtlSeconds = Number(env?.RESOLVE_LOCK_TTL_SECONDS) || DEFAULT_RESOLVE_LOCK_TTL_SECONDS;
+  const pendingWindowSeconds = Number(env?.SWR_PENDING_WINDOW_SECONDS) || 120;
   const qualityFlags = [];
   let result;
   let envelopeStatus = 'fresh';
@@ -112,6 +125,7 @@ export async function onRequestGet(context) {
   let cachedStale = false;
   let cacheHit = false;
   let swrMarked = undefined;
+  let swrPending = false;
   let cacheKeyUsed = null;
   let cacheMetaKeyUsed = null;
 
@@ -141,8 +155,15 @@ export async function onRequestGet(context) {
   }
 
   cachedAgeSeconds = computeAgeSeconds(cachedMeta?.generated_at);
-  const cacheFresh = cachedData && cachedAgeSeconds != null && cachedAgeSeconds <= cacheTtlSeconds;
-  cachedStale = Boolean(cachedData) && !cacheFresh;
+  swrPending = cacheId ? await getSWRPending(env, swrKey, pendingWindowSeconds) : false;
+  const cacheStatus = computeCacheStatus({
+    hasData: Boolean(cachedData),
+    ageSeconds: cachedAgeSeconds,
+    ttlSeconds: cacheTtlSeconds,
+    pending: swrPending
+  });
+  const cacheFresh = cacheStatus.status === 'fresh';
+  cachedStale = cacheStatus.stale;
 
   async function refreshCacheInBackground() {
     if (!cacheId) return;
@@ -185,21 +206,38 @@ export async function onRequestGet(context) {
     result = { ok: true, data: cachedData };
     envelopeStatus = 'stale';
     if (cacheId) {
-      swrMarked = await tryMarkSWR(env, swrKey, SWR_MARK_TTL_SECONDS);
-      if (swrMarked) {
-        const refresh = refreshCacheInBackground();
-        if (typeof context?.waitUntil === 'function') {
-          context.waitUntil(refresh);
-        } else {
-          refresh.catch(() => {});
-        }
-      } else {
+      if (swrPending) {
+        swrMarked = false;
         envelopeStatus = 'pending';
-        qualityFlags.push('LOCKED_REFRESH');
+        qualityFlags.push('PENDING_REFRESH');
+      } else {
+        swrMarked = await tryMarkSWR(env, swrKey, SWR_MARK_TTL_SECONDS);
+        if (swrMarked) {
+          const refresh = refreshCacheInBackground();
+          if (typeof context?.waitUntil === 'function') {
+            context.waitUntil(refresh);
+          } else {
+            refresh.catch(() => {});
+          }
+        } else {
+          envelopeStatus = 'pending';
+          qualityFlags.push('LOCKED_REFRESH');
+        }
       }
     }
   } else {
     if (cacheId) {
+      if (swrPending) {
+        result = {
+          ok: false,
+          error: {
+            code: 'LOCKED_REFRESH',
+            message: 'Resolve refresh already in progress'
+          }
+        };
+        envelopeStatus = 'pending';
+        qualityFlags.push('PENDING_REFRESH');
+      } else {
       const gotLock = await cache.acquireLock(cacheId, lockTtlSeconds);
       if (!gotLock) {
         result = {
@@ -236,6 +274,7 @@ export async function onRequestGet(context) {
         } finally {
           await cache.releaseLock(cacheId);
         }
+      }
       }
     } else {
       try {

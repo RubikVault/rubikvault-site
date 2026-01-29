@@ -279,6 +279,129 @@ verify_envelope() {
   return $node_exit
 }
 
+# Verify a POST endpoint returns valid envelope JSON
+# Args: $1 = endpoint path, $2 = expected_ok, $3 = body JSON, $4 = optional auth token
+verify_post_envelope() {
+  local endpoint="$1"
+  local expected_ok="${2:-any}"
+  local body="${3:-{}}"
+  local token="${4:-}"
+  local url="${PREVIEW_BASE}${endpoint}"
+
+  local tmp_headers=$(mktemp)
+  local tmp_body=$(mktemp)
+
+  local http_code
+  if [[ -n "$token" ]]; then
+    http_code=$(curl -sS -D "$tmp_headers" -o "$tmp_body" -w "%{http_code}" --max-time 30 \
+      -H "Content-Type: application/json" -H "X-Admin-Token: ${token}" \
+      -X POST -d "$body" "$url" 2>&1)
+  else
+    http_code=$(curl -sS -D "$tmp_headers" -o "$tmp_body" -w "%{http_code}" --max-time 30 \
+      -H "Content-Type: application/json" -X POST -d "$body" "$url" 2>&1)
+  fi
+  local curl_exit=$?
+  if [[ $curl_exit -ne 0 ]]; then
+    log_fail "Endpoint $endpoint (POST): curl failed (exit $curl_exit)"
+    rm -f "$tmp_headers" "$tmp_body"
+    return 1
+  fi
+
+  local validation_result
+  validation_result=$(node -e "
+    const fs = require('fs');
+    try {
+      const body = fs.readFileSync('$tmp_body', 'utf-8');
+      const json = JSON.parse(body);
+      const errors = [];
+      if (typeof json.ok !== 'boolean') errors.push('ok is not boolean');
+      if (!json.meta || typeof json.meta !== 'object') errors.push('meta missing or not object');
+      if (json.meta) {
+        if (typeof json.meta.status !== 'string') errors.push('meta.status is not string');
+        if (typeof json.meta.generated_at !== 'string') errors.push('meta.generated_at is not string');
+        if (typeof json.meta.data_date !== 'string') errors.push('meta.data_date is not string');
+        if (json.meta.data_date === '') errors.push('meta.data_date is empty');
+        if (typeof json.meta.provider !== 'string' || json.meta.provider.trim() === '') errors.push('meta.provider missing');
+      }
+      if (json.ok === false) {
+        if (!json.error || typeof json.error !== 'object') errors.push('ok=false but error missing');
+        if (json.meta && json.meta.status !== 'error') errors.push('ok=false but meta.status is not error');
+      }
+      if (errors.length > 0) {
+        console.log('FAIL:' + errors.join(', '));
+        process.exit(1);
+      }
+      const expectedOk = '$expected_ok';
+      if (expectedOk === 'true' && json.ok !== true) {
+        console.log('FAIL:expected ok=true but got ok=' + json.ok);
+        process.exit(1);
+      }
+      if (expectedOk === 'false' && json.ok !== false) {
+        console.log('FAIL:expected ok=false but got ok=' + json.ok);
+        process.exit(1);
+      }
+      const errorCode = json.error ? json.error.code : 'none';
+      console.log('OK:status=' + json.meta.status + ',data_date=' + json.meta.data_date + ',provider=' + json.meta.provider + ',http=' + '$http_code' + ',ok=' + json.ok + ',error_code=' + errorCode);
+      process.exit(0);
+    } catch (e) {
+      console.log('FAIL:JSON parse error: ' + e.message);
+      process.exit(1);
+    }
+  " 2>&1)
+
+  local node_exit=$?
+  if [[ $node_exit -eq 0 ]]; then
+    local summary="${validation_result#OK:}"
+    log_pass "Endpoint $endpoint (POST): envelope valid ($summary)"
+  else
+    local error_msg="${validation_result#FAIL:}"
+    log_fail "Endpoint $endpoint (POST): BAD ENVELOPE SHAPE - $error_msg"
+  fi
+
+  rm -f "$tmp_headers" "$tmp_body"
+  return $node_exit
+}
+
+verify_not_fresh() {
+  local endpoint="$1"
+  local url="${PREVIEW_BASE}${endpoint}"
+  local tmp_body=$(mktemp)
+  local http_code
+  http_code=$(curl -sS -o "$tmp_body" -w "%{http_code}" --max-time 30 "$url" 2>&1)
+  local curl_exit=$?
+  if [[ $curl_exit -ne 0 ]]; then
+    log_fail "Endpoint $endpoint: curl failed (exit $curl_exit)"
+    rm -f "$tmp_body"
+    return 1
+  fi
+  local status_check
+  status_check=$(node -e "
+    const fs = require('fs');
+    try {
+      const body = fs.readFileSync('$tmp_body', 'utf-8');
+      const json = JSON.parse(body);
+      const status = String(json?.meta?.status || '');
+      if (!status || status.toLowerCase() === 'fresh' || status.toLowerCase() === 'live') {
+        console.log('FAIL:meta.status should not be fresh/live');
+        process.exit(1);
+      }
+      console.log('OK:' + status);
+      process.exit(0);
+    } catch (e) {
+      console.log('FAIL:JSON parse error: ' + e.message);
+      process.exit(1);
+    }
+  " 2>&1)
+  local node_exit=$?
+  if [[ $node_exit -eq 0 ]]; then
+    log_pass "Endpoint $endpoint: freshness transition ok (${status_check#OK:})"
+  else
+    log_fail "Endpoint $endpoint: freshness transition check failed (${status_check#FAIL:})"
+  fi
+  rm -f "$tmp_body"
+  return $node_exit
+}
+
 verify_preview_endpoints() {
   log_section "Step 3: Verifying Preview API Envelope Shape"
   log_info "Preview base URL: $PREVIEW_BASE"
@@ -286,6 +409,9 @@ verify_preview_endpoints() {
   # Normal success endpoints
   verify_envelope "/api/resolve?debug=1" "any" "cache"
   verify_envelope "/api/stock?debug=1" "any" "cache"
+
+  # Scheduler health
+  verify_envelope "/api/scheduler/health" "any"
   
   # Try health endpoint, fallback to another if not found
   local health_result
@@ -300,6 +426,10 @@ verify_preview_endpoints() {
   # Error path: non-existent endpoint should return envelope with ok=false
   log_info "Testing error path (404)..."
   verify_envelope "/api/does-not-exist-runblock1-test" "false"
+
+  # Freshness transitions (error cases should not be fresh)
+  verify_not_fresh "/api/stock?ticker=INVALID&debug=1"
+  verify_not_fresh "/api/resolve?q=notarealcompany&debug=1"
 }
 
 verify_privileged_debug_keys() {
@@ -339,8 +469,18 @@ main() {
   verify_files
   run_local_tests
   verify_preview_endpoints
-  verify_privileged_debug_keys "/api/resolve?debug=1"
-  verify_privileged_debug_keys "/api/stock?debug=1"
+verify_privileged_debug_keys "/api/resolve?debug=1"
+verify_privileged_debug_keys "/api/stock?debug=1"
+
+  # Scheduler trigger (unauth should fail)
+  verify_post_envelope "/api/scheduler/run" "false" '{"job":"eod_stock","mode":"s2","assets":[{"ticker":"SPY"}]}' ""
+
+  # Scheduler trigger (auth required)
+  if [[ -n "${RV_ADMIN_TOKEN:-}" ]]; then
+    verify_post_envelope "/api/scheduler/run" "any" '{"job":"eod_stock","mode":"s2","assets":[{"ticker":"SPY"}]}' "${RV_ADMIN_TOKEN}"
+  else
+    log_skip "Scheduler trigger privileged check skipped (RV_ADMIN_TOKEN not set)"
+  fi
   
   log_section "Summary"
   echo "Passed: ${GREEN}${pass_count}${NC}"

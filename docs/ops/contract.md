@@ -55,3 +55,10 @@
 - Privileged debug requires `X-Admin-Token` matching `ADMIN_TOKEN` or `RV_ADMIN_TOKEN`.
 - Public debug must NOT expose `cache_key`/`swr_key` or provider URLs/tokens.
 - Privileged debug may include `cache_key`/`swr_key` for troubleshooting.
+
+## Scheduler Law (Runblock E)
+- Heartbeat keys: `meta:scheduler:last_ok`, `meta:scheduler:last_run`, and status payload at `meta:scheduler:status`.
+- Scheduler health: `/api/scheduler/health` returns `ok=true` + `meta.status=LIVE` when heartbeat is recent; otherwise `ok=false`, `meta.status=error`, `error.code=SCHEDULER_STALE`.
+- Scheduler runs are chunked (default 50) with bounded concurrency (default 3); partial success is allowed.
+- Per-run cursor stored at `sched:cursor:<job>:<run_id>`; attempt markers at `sched:attempt:<job>:<asset_id>:<yyyymmdd>`.
+- Scheduler trigger requires `X-Admin-Token` (env `ADMIN_TOKEN` or `RV_ADMIN_TOKEN`).
