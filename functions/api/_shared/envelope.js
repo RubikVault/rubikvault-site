@@ -66,7 +66,8 @@ function extractDataDate(meta, metadata, data) {
     const iso = toIsoDate(value);
     if (iso) return iso;
   }
-  return "";
+  // Fallback to current UTC date instead of empty string
+  return new Date().toISOString().slice(0, 10);
 }
 
 function normalizeError(error, ok, statusCode) {
@@ -287,7 +288,7 @@ export async function ensureEnvelopeResponse(response) {
     const fallback = errorEnvelope(
       "ENVELOPE_INVALID",
       "Envelope validation failed",
-      { provider: "unknown", data_date: "" },
+      { provider: "unknown", data_date: new Date().toISOString().slice(0, 10) },
       { message: String(error?.message || error || "validation_error") }
     );
     const fallbackHeaders = new Headers(response.headers);

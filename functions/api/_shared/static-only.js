@@ -17,7 +17,7 @@ function transformV3ToLegacy(v3Snapshot) {
   const metadata = v3Snapshot.metadata || {};
   const dataArray = v3Snapshot.data || [];
   const dataObject = dataArray[0] || {};
-  
+
   return {
     ok: true,
     data: dataObject,
@@ -39,10 +39,10 @@ function transformV3ToLegacy(v3Snapshot) {
  */
 function applyModuleTransformations(moduleName, parsed) {
   const result = JSON.parse(JSON.stringify(parsed));
-  
+
   // S&P 500 Sectors & Sector Rotation: items → sectors
-  if ((moduleName === "sp500-sectors" || moduleName === "sector-rotation") && 
-      result.data?.items && !result.data?.sectors) {
+  if ((moduleName === "sp500-sectors" || moduleName === "sector-rotation") &&
+    result.data?.items && !result.data?.sectors) {
     result.data.sectors = result.data.items.map(item => ({
       ...item,
       r1d: item.changePercent ?? item.r1d ?? null,
@@ -51,7 +51,7 @@ function applyModuleTransformations(moduleName, parsed) {
       r1y: item.r1y ?? null
     }));
   }
-  
+
   return result;
 }
 
@@ -67,32 +67,32 @@ function evaluateProofChain(snapshot, moduleConfig) {
     FRESH: 'UNKNOWN',
     DELIVERY: 'PASS' // Assumed PASS if we got here
   };
-  
+
   if (!snapshot) {
     proofChain.FILE = 'FAIL';
     return proofChain;
   }
-  
+
   proofChain.FILE = 'PASS';
-  
+
   // SCHEMA Check
   if (snapshot.schema_version === '3.0' && snapshot.metadata && Array.isArray(snapshot.data)) {
     proofChain.SCHEMA = 'PASS';
   } else {
     proofChain.SCHEMA = 'FAIL';
   }
-  
+
   // PLAUS Check
   if (snapshot.metadata?.validation?.passed) {
     proofChain.PLAUS = 'PASS';
   } else {
     proofChain.PLAUS = 'FAIL';
   }
-  
+
   // UI Check
   const uiRequired = moduleConfig?.ui_contract?.policy === 'always' ||
-                     (moduleConfig?.ui_contract?.policy === 'always_for_critical' && moduleConfig?.tier === 'critical');
-  
+    (moduleConfig?.ui_contract?.policy === 'always_for_critical' && moduleConfig?.tier === 'critical');
+
   if (uiRequired) {
     if (snapshot.metadata?.validation?.passed) {
       proofChain.UI = 'PASS';
@@ -102,13 +102,13 @@ function evaluateProofChain(snapshot, moduleConfig) {
   } else {
     proofChain.UI = 'SKIP';
   }
-  
+
   // FRESH Check
   if (snapshot.metadata?.freshness) {
     const ageMinutes = snapshot.metadata.freshness.age_minutes;
     const expected = snapshot.metadata.freshness.expected_interval_minutes;
     const grace = snapshot.metadata.freshness.grace_minutes;
-    
+
     if (ageMinutes <= expected) {
       proofChain.FRESH = 'PASS';
     } else if (ageMinutes <= expected + grace) {
@@ -117,7 +117,7 @@ function evaluateProofChain(snapshot, moduleConfig) {
       proofChain.FRESH = 'FAIL';
     }
   }
-  
+
   return proofChain;
 }
 
@@ -131,35 +131,35 @@ function getFailureInfo(snapshot, proofChain) {
       hint: 'Check Cloudflare Pages deployment'
     };
   }
-  
+
   if (proofChain.SCHEMA === 'FAIL') {
     return {
       class: 'VALIDATION_FAILED_SCHEMA',
       hint: 'Update provider to v3.0 schema'
     };
   }
-  
+
   if (proofChain.PLAUS === 'FAIL') {
     return {
       class: 'PLAUSIBILITY_FAILED',
       hint: 'Check data source or adjust plausibility rules'
     };
   }
-  
+
   if (proofChain.UI === 'FAIL') {
     return {
       class: 'UI_CONTRACT_FAILED',
       hint: 'Fix provider to include required UI fields'
     };
   }
-  
+
   if (proofChain.FRESH === 'FAIL') {
     return {
       class: 'STALE_DATA',
       hint: 'Check scraper schedule and provider availability'
     };
   }
-  
+
   return {
     class: null,
     hint: null
@@ -172,13 +172,15 @@ function getFailureInfo(snapshot, proofChain) {
 async function buildDebugResponse(moduleName, snapshot, moduleConfig, sourceInfo, url) {
   const proofChain = evaluateProofChain(snapshot, moduleConfig);
   const failureInfo = getFailureInfo(snapshot, proofChain);
+  const isSuccess = Object.values(proofChain).every(v => v === 'PASS' || v === 'SKIP');
+  const todayUtc = new Date().toISOString().slice(0, 10);
 
   const kvBackend = sourceInfo?.kv_backend || null;
   let suggestedAction = failureInfo.hint || 'Data is healthy';
   if (kvBackend === 'MISSING') {
     suggestedAction = 'KV backend is unavailable. Ensure Cloudflare Pages KV binding RV_KV is configured and enabled for this environment.';
   }
-  
+
   // Try to load module state
   let moduleState = null;
   try {
@@ -190,7 +192,7 @@ async function buildDebugResponse(moduleName, snapshot, moduleConfig, sourceInfo
   } catch (e) {
     // Module state optional for debug
   }
-  
+
   // Try to load manifest
   let manifestEntry = null;
   try {
@@ -203,7 +205,7 @@ async function buildDebugResponse(moduleName, snapshot, moduleConfig, sourceInfo
   } catch (e) {
     // Manifest optional for debug
   }
-  
+
   return {
     schema_version: snapshot?.schema_version || null,
     debug: true,
@@ -217,14 +219,14 @@ async function buildDebugResponse(moduleName, snapshot, moduleConfig, sourceInfo
     kv_latency_ms: sourceInfo.kv_latency_ms,
     asset_latency_ms: sourceInfo.asset_latency_ms,
     timestamp: new Date().toISOString(),
-    
+
     // Proof Chain
     proof_chain: proofChain,
-    proof_summary: Object.values(proofChain).every(v => v === 'PASS' || v === 'SKIP') ? 'ALL_PASS' : 'FAILED',
-    
+    proof_summary: isSuccess ? 'ALL_PASS' : 'FAILED',
+
     // Failure Info
     failure: failureInfo,
-    
+
     // Source Info
     source: {
       file_path: sourceInfo.path,
@@ -232,7 +234,7 @@ async function buildDebugResponse(moduleName, snapshot, moduleConfig, sourceInfo
       file_present: sourceInfo.found,
       last_error: sourceInfo.lastError
     },
-    
+
     // Module State (if available)
     module_state: moduleState ? {
       status: moduleState.status,
@@ -242,7 +244,7 @@ async function buildDebugResponse(moduleName, snapshot, moduleConfig, sourceInfo
       last_attempt_at: moduleState.last_attempt_at,
       failure_class: moduleState.failure?.class
     } : null,
-    
+
     // Manifest Entry (if available)
     manifest: manifestEntry ? {
       tier: manifestEntry.tier,
@@ -252,7 +254,7 @@ async function buildDebugResponse(moduleName, snapshot, moduleConfig, sourceInfo
       age_minutes: manifestEntry.freshness?.age_minutes,
       preferred_source: manifestEntry.cache?.preferred_source
     } : null,
-    
+
     // Module Config
     config: moduleConfig ? {
       tier: moduleConfig.tier,
@@ -260,13 +262,13 @@ async function buildDebugResponse(moduleName, snapshot, moduleConfig, sourceInfo
       expected_interval_minutes: moduleConfig.freshness?.expected_interval_minutes,
       ui_contract_policy: moduleConfig.ui_contract?.policy
     } : null,
-    
+
     // Metadata
     metadata: snapshot?.metadata || null,
-    
+
     // Suggested Action
     suggested_action: suggestedAction,
-    
+
     // Links
     links: {
       snapshot: `/data/snapshots/${moduleName}/latest.json`,
@@ -274,12 +276,26 @@ async function buildDebugResponse(moduleName, snapshot, moduleConfig, sourceInfo
       manifest: '/data/manifest.json',
       probe: `/api/probe/${moduleName}`
     },
-    
+
     // Actual Data (truncated in debug)
     data_preview: snapshot?.data ? {
       record_count: snapshot.metadata?.record_count || 0,
       first_record: snapshot.data[0] || null
-    } : null
+    } : null,
+
+    // Envelope fields (required for compliance)
+    ok: isSuccess,
+    error: isSuccess ? null : {
+      code: failureInfo.class === 'ASSET_FETCH_FAILED' ? 'NOT_FOUND' : 'PROOF_FAILED',
+      message: failureInfo.hint || 'Proof chain validation failed'
+    },
+    data: null,
+    meta: {
+      status: isSuccess ? 'fresh' : 'error',
+      provider: snapshot?.metadata?.source || 'unknown',
+      data_date: todayUtc,
+      generated_at: new Date().toISOString()
+    }
   };
 }
 
@@ -385,14 +401,14 @@ export async function serveStaticJson(req, envOrModule, ignored, ctxOrContext) {
       }
     }
   }
-  
+
   // Try multiple paths
   const pathsToTry = [
     { path: `/data/snapshots/${moduleName}/latest.json`, type: "v3_directory" },
     { path: `/data/snapshots/${moduleName}.json`, type: "v3_flat" },
     { path: `/data/${moduleName}.json`, type: "legacy" }
   ];
-  
+
   let snapshot = null;
   let servedFrom = null;
   let sourceInfo = {
@@ -430,7 +446,7 @@ export async function serveStaticJson(req, envOrModule, ignored, ctxOrContext) {
       try {
         const fetchUrl = new URL(path, url.origin);
         const response = await fetch(fetchUrl.toString());
-        
+
         if (response.ok) {
           const text = await response.text();
           snapshot = JSON.parse(text);
@@ -460,7 +476,7 @@ export async function serveStaticJson(req, envOrModule, ignored, ctxOrContext) {
       sourceInfo.asset_latency_ms = Date.now() - assetStarted;
     }
   }
-  
+
   // DEBUG MODE
   if (isDebug) {
     const debugResponse = await buildDebugResponse(moduleName, snapshot, moduleConfig, sourceInfo, url);
@@ -472,7 +488,7 @@ export async function serveStaticJson(req, envOrModule, ignored, ctxOrContext) {
       }
     });
   }
-  
+
   // NORMAL MODE
   if (!snapshot) {
     // Return maintenance envelope
@@ -488,9 +504,15 @@ export async function serveStaticJson(req, envOrModule, ignored, ctxOrContext) {
         },
         data: [],
         error: {
-          class: "ASSET_FETCH_FAILED",
-          message: "Data temporarily unavailable",
-          user_message: "Data is being updated. Please try again shortly."
+          code: "SERVICE_UNAVAILABLE",
+          message: "Data temporarily unavailable"
+        },
+        ok: false,
+        meta: {
+          status: "error",
+          provider: "internal",
+          data_date: new Date().toISOString().slice(0, 10),
+          generated_at: new Date().toISOString()
         }
       }),
       {
@@ -504,12 +526,12 @@ export async function serveStaticJson(req, envOrModule, ignored, ctxOrContext) {
       }
     );
   }
-  
+
   // Transform v3.0 to legacy
   const isV3 = snapshot.schema_version === "3.0" || snapshot.schemaVersion === "v3";
   const wantsLegacy = url.searchParams.get('legacy') === '1' || url.searchParams.get('format') === 'legacy';
   let transformed = false;
-  
+
   if (isV3 && wantsLegacy) {
     snapshot = transformV3ToLegacy(snapshot);
     transformed = true;
@@ -517,15 +539,15 @@ export async function serveStaticJson(req, envOrModule, ignored, ctxOrContext) {
     if (!snapshot.metadata) snapshot.metadata = {};
     if (!snapshot.metadata.served_from) snapshot.metadata.served_from = sourceInfo.served_from;
   }
-  
+
   // Apply module-specific transformations
   snapshot = applyModuleTransformations(moduleName, snapshot);
-  
+
   // Ensure ok field
   if (snapshot.ok === undefined || snapshot.ok === null) {
     snapshot.ok = true;
   }
-  
+
   return new Response(JSON.stringify(snapshot), {
     headers: {
       "Content-Type": "application/json",

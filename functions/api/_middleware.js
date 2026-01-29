@@ -12,10 +12,11 @@ export async function onRequest(context) {
     res = await context.next();
   } catch (err) {
     // Return error envelope for thrown exceptions - never leak stack traces
+    const todayUtc = new Date().toISOString().slice(0, 10);
     const envelope = errorEnvelope(
       "INTERNAL",
       "An unexpected error occurred",
-      { provider: "internal", data_date: "" }
+      { provider: "internal", data_date: todayUtc }
     );
     return new Response(JSON.stringify(envelope), {
       status: 500,
@@ -28,10 +29,11 @@ export async function onRequest(context) {
     const fallback = await serveStaticJson(request, env);
     if (!fallback || fallback.status === 404) {
       // Static fallback also 404 - return proper error envelope
+      const todayUtc = new Date().toISOString().slice(0, 10);
       const envelope = errorEnvelope(
         "NOT_FOUND",
         `Resource not found: ${path}`,
-        { provider: "internal", data_date: "" }
+        { provider: "internal", data_date: todayUtc }
       );
       return new Response(JSON.stringify(envelope), {
         status: 404,

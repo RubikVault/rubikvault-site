@@ -192,13 +192,30 @@ verify_envelope() {
         if (typeof json.meta.generated_at !== 'string') {
           errors.push('meta.generated_at is not string');
         }
-        // meta.data_date must be string
+        // meta.data_date must be non-empty string matching YYYY-MM-DD
         if (typeof json.meta.data_date !== 'string') {
           errors.push('meta.data_date is not string');
+        } else if (json.meta.data_date === '') {
+          errors.push('meta.data_date is empty (must be YYYY-MM-DD)');
+        } else if (!/^\d{4}-\d{2}-\d{2}\$/.test(json.meta.data_date)) {
+          errors.push('meta.data_date does not match YYYY-MM-DD format');
         }
         // meta.provider must be non-empty string (schema enforces this)
         if (typeof json.meta.provider !== 'string' || json.meta.provider.trim() === '') {
           errors.push('meta.provider is not a non-empty string');
+        }
+      }
+      
+      // When ok=false, error must be present with code
+      if (json.ok === false) {
+        if (!json.error || typeof json.error !== 'object') {
+          errors.push('ok=false but error is missing');
+        } else if (typeof json.error.code !== 'string') {
+          errors.push('ok=false but error.code is missing');
+        }
+        // meta.status should be 'error' when ok=false
+        if (json.meta && json.meta.status !== 'error') {
+          errors.push('ok=false but meta.status is not error');
         }
       }
       
@@ -219,7 +236,8 @@ verify_envelope() {
       }
       
       // Print success summary
-      console.log('OK:status=' + json.meta.status + ',data_date=' + json.meta.data_date + ',provider=' + json.meta.provider + ',http=' + '$http_code' + ',ok=' + json.ok);
+      const errorCode = json.error ? json.error.code : 'none';
+      console.log('OK:status=' + json.meta.status + ',data_date=' + json.meta.data_date + ',provider=' + json.meta.provider + ',http=' + '$http_code' + ',ok=' + json.ok + ',error_code=' + errorCode);
       process.exit(0);
     } catch (e) {
       console.log('FAIL:JSON parse error: ' + e.message);
