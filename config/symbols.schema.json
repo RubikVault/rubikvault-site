@@ -1,0 +1,43 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Symbols Catalog",
+  "type": "array",
+  "items": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["uuid", "asset_id", "ticker", "mic", "provider_symbols"],
+    "properties": {
+      "uuid": {
+        "type": "string",
+        "format": "uuid",
+        "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+      },
+      "asset_id": {
+        "type": "string",
+        "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+      },
+      "ticker": {
+        "type": "string",
+        "pattern": "^[A-Z0-9]+(?:[.-][A-Z0-9]+)*$"
+      },
+      "mic": {
+        "type": "string",
+        "pattern": "^[A-Z]{4}$"
+      },
+      "provider_symbols": {
+        "type": "object",
+        "minProperties": 1,
+        "additionalProperties": { "type": "string" }
+      },
+      "aliases": {
+        "type": "array",
+        "items": { "type": "string" },
+        "uniqueItems": true
+      },
+      "active": {
+        "type": "boolean",
+        "default": true
+      }
+    }
+  }
+}

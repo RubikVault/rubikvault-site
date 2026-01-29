@@ -3,9 +3,14 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { onRequestGet } from '../functions/api/resolve.js';
+import { onRequest as apiMiddleware } from '../functions/api/_middleware.js';
 
 function assert(condition, message) {
   if (!condition) throw new Error(message || 'assertion_failed');
+}
+
+function assertHasMetaStatus(result) {
+  assert(result.meta && typeof result.meta.status === 'string', 'meta.status missing');
 }
 
 function loadFixture(name) {
@@ -46,10 +51,14 @@ function stubFetch(overrides = {}) {
 }
 
 async function requestResolve(q) {
+  const request = new Request(`https://example.com/api/resolve?q=${encodeURIComponent(q)}`);
+  const env = {};
   const context = {
-    request: new Request(`https://example.com/api/resolve?q=${encodeURIComponent(q)}`)
+    request,
+    env,
+    next: () => onRequestGet({ request, env })
   };
-  const response = await onRequestGet(context);
+  const response = await apiMiddleware(context);
   return JSON.parse(await response.text());
 }
 
@@ -62,6 +71,7 @@ async function testTickerPassThrough() {
     assert(!result.error, 'expected no error');
     assert(result.data.ticker === 'AAPL', 'ticker mismatch');
     assert(result.data.method === 'ticker', 'method mismatch');
+    assertHasMetaStatus(result);
   } finally {
     restore();
   }
@@ -75,6 +85,7 @@ async function testNameResolvesApple() {
     assert(!result.error, 'expected no error');
     assert(result.data.ticker === 'AAPL', 'expected AAPL');
     assert(result.data.method === 'name_exact', 'expected name_exact');
+    assertHasMetaStatus(result);
   } finally {
     restore();
   }
@@ -87,6 +98,7 @@ async function testNameResolvesMicrosoft() {
     const result = await requestResolve('Microsoft');
     assert(!result.error, 'expected no error');
     assert(result.data.ticker === 'MSFT', 'expected MSFT');
+    assertHasMetaStatus(result);
   } finally {
     restore();
   }
@@ -99,6 +111,7 @@ async function testUnknown() {
     const result = await requestResolve('NotARealCompany');
     assert(result.error?.code === 'SYMBOL_NOT_FOUND', 'expected SYMBOL_NOT_FOUND');
     assert(result.data === null, 'expected null data');
+    assertHasMetaStatus(result);
   } finally {
     restore();
   }

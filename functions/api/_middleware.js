@@ -1,4 +1,5 @@
 import { serveStaticJson } from "./_shared/static-only.js";
+import { ensureEnvelopeResponse } from "./_shared/envelope.js";
 
 
 export async function onRequest(context) {
@@ -6,10 +7,10 @@ export async function onRequest(context) {
   const url = new URL(request.url);
   const path = url.pathname;
 
-  const res = await context.next();
+  let res = await context.next();
 
   if (res && typeof res.status === "number" && res.status === 404 && path.startsWith("/api/")) {
-    return serveStaticJson(request, env);
+    res = await serveStaticJson(request, env);
   }
-  return res;
+  return ensureEnvelopeResponse(res);
 }

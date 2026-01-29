@@ -108,6 +108,9 @@ jobs:
 
           npm run test:universe-registry
 
+      - name: Run contract tests
+        run: npm run test:contracts
+
       - name: Check EOD artifacts
         run: node scripts/eod/check-eod-artifacts.mjs
       - name: Validate Against JSON Schemas

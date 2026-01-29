@@ -3,9 +3,14 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { onRequestGet } from '../functions/api/stock.js';
+import { onRequest as apiMiddleware } from '../functions/api/_middleware.js';
 
 function assert(condition, message) {
   if (!condition) throw new Error(message || 'assertion_failed');
+}
+
+function assertHasMetaStatus(result) {
+  assert(result.meta && typeof result.meta.status === 'string', 'meta.status missing');
 }
 
 function loadFixture(name) {
@@ -43,10 +48,14 @@ function stubFetch(overrides = {}) {
 }
 
 async function requestTicker(ticker) {
+  const request = new Request(`https://example.com/api/stock?ticker=${encodeURIComponent(ticker)}`);
+  const env = {};
   const context = {
-    request: new Request(`https://example.com/api/stock?ticker=${encodeURIComponent(ticker)}`)
+    request,
+    env,
+    next: () => onRequestGet({ request, env })
   };
-  const response = await onRequestGet(context);
+  const response = await apiMiddleware(context);
   return JSON.parse(await response.text());
 }
 
@@ -60,6 +69,7 @@ async function testKnownTicker() {
     assert(result.data.universe.exists_in_universe === true, 'universe flag');
     assert(result.data.market_prices, 'market prices section');
     assert(result.data.market_stats, 'market stats section');
+    assertHasMetaStatus(result);
   } finally {
     restore();
   }
@@ -74,6 +84,7 @@ async function testUnknownTicker() {
     assert(result.data.universe.exists_in_universe === false, 'universe miss');
     assert(result.data.market_prices === null, 'prices should be null');
     assert(result.data.market_stats === null, 'stats should be null');
+    assertHasMetaStatus(result);
   } finally {
     restore();
   }
@@ -90,6 +101,7 @@ async function testMissingStats() {
     assert(result.error?.details?.missing?.includes('market_stats'), 'missing stats noted');
     assert(result.data.market_prices, 'prices still present');
     assert(result.data.market_stats === null, 'stats null');
+    assertHasMetaStatus(result);
   } finally {
     restore();
   }
