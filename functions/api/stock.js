@@ -3,6 +3,8 @@ import { resolveSymbol, normalizeTicker as normalizeTickerStrict } from './_shar
 import { fetchBarsWithProviderChain } from './_shared/eod-providers.mjs';
 import { computeIndicators } from './_shared/eod-indicators.mjs';
 import { getTiingoKeyInfo } from './_shared/tiingo-key.mjs';
+import { createCache } from './_shared/cache-law.js';
+import { evaluateQuality } from './_shared/quality.js';
 
 const MODULE_NAME = 'stock';
 const TICKER_MAX_LENGTH = 12;
@@ -13,6 +15,10 @@ const SNAPSHOT_PATH_TEMPLATES = [
   '/data/{module}.json'
 ];
 const MODULE_PATHS = ['universe', 'market-prices', 'market-stats', 'market-score'];
+const DEFAULT_EOD_CACHE_TTL_SECONDS = 6 * 60 * 60;
+const DEFAULT_EOD_LOCK_TTL_SECONDS = 60;
+const DEFAULT_MAX_STALE_DAYS = 14;
+const DEFAULT_PENDING_WINDOW_MINUTES = 120;
 
 function normalizeTicker(raw) {
   if (typeof raw !== 'string') return null;
@@ -73,6 +79,51 @@ function computeStartDateISO(daysBack) {
   const d = new Date(ms);
   if (Number.isNaN(d.getTime())) return null;
   return d.toISOString().slice(0, 10);
+}
+
+function isoDay(date = new Date()) {
+  return date.toISOString().slice(0, 10);
+}
+
+function parseIsoDay(value) {
+  if (typeof value !== 'string') return null;
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) return trimmed;
+  const parsed = Date.parse(trimmed);
+  if (Number.isNaN(parsed)) return null;
+  return new Date(parsed).toISOString().slice(0, 10);
+}
+
+function diffDays(fromDay, toDay) {
+  const from = Date.UTC(
+    Number(fromDay.slice(0, 4)),
+    Number(fromDay.slice(5, 7)) - 1,
+    Number(fromDay.slice(8, 10))
+  );
+  const to = Date.UTC(
+    Number(toDay.slice(0, 4)),
+    Number(toDay.slice(5, 7)) - 1,
+    Number(toDay.slice(8, 10))
+  );
+  return Math.floor((to - from) / 86400000);
+}
+
+function minutesSinceUtcMidnight(date) {
+  return date.getUTCHours() * 60 + date.getUTCMinutes();
+}
+
+function computeStatusFromDataDate(dataDate, now, maxStaleDays, pendingWindowMinutes) {
+  const today = isoDay(now);
+  const normalized = parseIsoDay(dataDate);
+  if (!normalized) {
+    return minutesSinceUtcMidnight(now) <= pendingWindowMinutes ? 'pending' : 'error';
+  }
+  if (normalized === today) return 'fresh';
+  const ageDays = diffDays(normalized, today);
+  if (ageDays === 1 && minutesSinceUtcMidnight(now) <= pendingWindowMinutes) return 'pending';
+  if (ageDays <= maxStaleDays) return 'stale';
+  return 'error';
 }
 
 async function fetchSnapshot(moduleName, request) {
@@ -224,31 +275,191 @@ export async function onRequestGet(context) {
 
   let eodBars = [];
   let eodError = null;
+  let eodStatus = null;
+  let eodProvider = null;
   let sourceChain = buildSourceChainMetadata(null);
   let reasons = [];
   let eodAttempted = false;
+  const qualityFlags = new Set();
 
-  if (normalizedTicker) {
-    const forcedProvider = String(env?.RV_FORCE_PROVIDER || '').trim();
-    const hasEodKeys = Boolean(getTiingoKeyInfo(env).key || env?.TWELVEDATA_API_KEY);
-    if (!forcedProvider && !hasEodKeys) {
+  const cache = createCache(env);
+  const now = new Date();
+  const cacheId = normalizedTicker || null;
+  const cacheTtlSeconds = Number(env?.EOD_CACHE_TTL_SECONDS) || DEFAULT_EOD_CACHE_TTL_SECONDS;
+  const lockTtlSeconds = Number(env?.EOD_LOCK_TTL_SECONDS) || DEFAULT_EOD_LOCK_TTL_SECONDS;
+  const maxStaleDays = Number(env?.EOD_MAX_STALE_DAYS) || DEFAULT_MAX_STALE_DAYS;
+  const pendingWindowMinutes = Number(env?.EOD_PENDING_WINDOW_MINUTES) || DEFAULT_PENDING_WINDOW_MINUTES;
+
+  let cachedBars = [];
+  let cachedMeta = null;
+  let cachedStatus = null;
+  let cachedProvider = null;
+  let cachedDataDate = '';
+
+  if (cacheId) {
+    const cached = await cache.readCached(cacheId);
+    const cachedPayload = cached?.data;
+    cachedBars = Array.isArray(cachedPayload?.bars)
+      ? cachedPayload.bars
+      : Array.isArray(cachedPayload)
+      ? cachedPayload
+      : [];
+    cachedMeta = cached?.metaLike || null;
+    cachedProvider = cachedMeta?.provider || null;
+    cachedDataDate = cachedMeta?.data_date || pickLatestBar(cachedBars)?.date || '';
+    cachedStatus = cachedBars.length
+      ? computeStatusFromDataDate(cachedDataDate, now, maxStaleDays, pendingWindowMinutes)
+      : null;
+  }
+
+  const forcedProvider = String(env?.RV_FORCE_PROVIDER || '').trim();
+  const hasEodKeys = Boolean(getTiingoKeyInfo(env).key || env?.TWELVEDATA_API_KEY);
+  const canFetchProvider = Boolean(forcedProvider || hasEodKeys);
+
+  async function fetchProviderBars() {
+    const startDate = computeStartDateISO(365 * 3);
+    const chainResult = await fetchBarsWithProviderChain(normalizedTicker, env, {
+      outputsize: '300',
+      startDate,
+      allowFailover: true
+    });
+    sourceChain = buildSourceChainMetadata(chainResult.chain);
+    if (!chainResult.ok) {
+      return { ok: false, error: chainResult.error || { code: 'EOD_FETCH_FAILED', message: 'Unable to fetch EOD history' } };
+    }
+    const bars = Array.isArray(chainResult.bars) ? chainResult.bars : [];
+    const quality = evaluateQuality({ bars }, env);
+    if (quality.reject) {
+      return { ok: false, error: { code: 'QUALITY_REJECT', message: quality.reject.message, details: quality.reject } };
+    }
+    if (Array.isArray(quality.flags)) {
+      quality.flags.forEach((flag) => qualityFlags.add(flag));
+    }
+    return { ok: true, bars, provider: chainResult.provider || sourceChain?.selected || null };
+  }
+
+  async function refreshCacheInBackground() {
+    if (!cacheId || !normalizedTicker) return;
+    const gotLock = await cache.acquireLock(cacheId, lockTtlSeconds);
+    if (!gotLock) {
+      qualityFlags.add('LOCKED_REFRESH');
+      return;
+    }
+    try {
+      const result = await fetchProviderBars();
+      if (result.ok && result.bars.length) {
+        const latest = pickLatestBar(result.bars);
+        const dataDate = latest?.date || '';
+        await cache.writeCached(cacheId, { bars: result.bars }, cacheTtlSeconds, {
+          provider: result.provider || 'tiingo',
+          data_date: dataDate
+        });
+      }
+    } finally {
+      await cache.releaseLock(cacheId);
+    }
+  }
+
+  if (normalizedTicker && cachedBars.length) {
+    const cachedQuality = evaluateQuality({ bars: cachedBars }, env);
+    if (cachedQuality.reject) {
+      cachedBars = [];
+      cachedStatus = null;
+      cachedProvider = null;
+      cachedDataDate = '';
+      qualityFlags.add('CACHE_REJECTED');
+    } else if (Array.isArray(cachedQuality.flags)) {
+      cachedQuality.flags.forEach((flag) => qualityFlags.add(flag));
+    }
+  }
+
+  if (normalizedTicker && cachedBars.length && cachedStatus === 'fresh') {
+    eodBars = cachedBars;
+    eodProvider = cachedProvider || 'tiingo';
+    eodStatus = 'fresh';
+    eodAttempted = true;
+  } else if (normalizedTicker && cachedBars.length && cachedStatus === 'error' && canFetchProvider) {
+    eodAttempted = true;
+    const gotLock = await cache.acquireLock(cacheId, lockTtlSeconds);
+    if (!gotLock) {
+      eodBars = cachedBars;
+      eodProvider = cachedProvider || 'tiingo';
+      eodStatus = 'pending';
+      qualityFlags.add('LOCKED_REFRESH');
+    } else {
+      try {
+        const result = await fetchProviderBars();
+        if (result.ok) {
+          eodBars = result.bars;
+          eodProvider = result.provider || 'tiingo';
+          const latest = pickLatestBar(eodBars);
+          const dataDate = latest?.date || '';
+          eodStatus = computeStatusFromDataDate(dataDate, now, maxStaleDays, pendingWindowMinutes);
+          await cache.writeCached(cacheId, { bars: eodBars }, cacheTtlSeconds, {
+            provider: eodProvider,
+            data_date: dataDate
+          });
+        } else {
+          eodBars = cachedBars;
+          eodProvider = cachedProvider || 'tiingo';
+          eodStatus = 'stale';
+          qualityFlags.add('PROVIDER_FAIL');
+          qualityFlags.add('CACHE_TOO_OLD');
+          eodError = null;
+        }
+      } finally {
+        await cache.releaseLock(cacheId);
+      }
+    }
+  } else if (normalizedTicker && cachedBars.length) {
+    eodBars = cachedBars;
+    eodProvider = cachedProvider || 'tiingo';
+    eodStatus = cachedStatus || 'stale';
+    eodAttempted = true;
+    if (canFetchProvider) {
+      const refreshPromise = refreshCacheInBackground();
+      if (typeof context?.waitUntil === 'function') {
+        context.waitUntil(refreshPromise);
+      } else {
+        refreshPromise.catch(() => {});
+      }
+    } else {
+      qualityFlags.add('EOD_KEYS_MISSING');
+    }
+  } else if (normalizedTicker) {
+    if (!canFetchProvider) {
       reasons = ['EOD_KEYS_MISSING'];
+      qualityFlags.add('EOD_KEYS_MISSING');
+      eodStatus = 'error';
+      eodAttempted = false;
     } else {
       eodAttempted = true;
-      // Tiingo returns limited data when no startDate is provided. We set a deterministic
-      // lookback to ensure enough bars for indicators (>= 200 trading days).
-      const startDate = computeStartDateISO(365 * 3);
-      const chainResult = await fetchBarsWithProviderChain(normalizedTicker, env, {
-        outputsize: '300',
-        startDate
-      });
-      sourceChain = buildSourceChainMetadata(chainResult.chain);
-      if (chainResult.ok) {
-        eodBars = Array.isArray(chainResult.bars) ? chainResult.bars : [];
-        const indicatorOut = computeIndicators(eodBars);
-        reasons = Array.isArray(indicatorOut.issues) ? indicatorOut.issues : [];
+      const gotLock = await cache.acquireLock(cacheId, lockTtlSeconds);
+      if (!gotLock) {
+        eodError = { code: 'LOCKED_REFRESH', message: 'EOD refresh already in progress' };
+        eodStatus = 'pending';
+        qualityFlags.add('LOCKED_REFRESH');
       } else {
-        eodError = chainResult.error || { code: 'EOD_FETCH_FAILED', message: 'Unable to fetch EOD history' };
+        try {
+          const result = await fetchProviderBars();
+          if (result.ok) {
+            eodBars = result.bars;
+            eodProvider = result.provider || 'tiingo';
+            const latest = pickLatestBar(eodBars);
+            const dataDate = latest?.date || '';
+            eodStatus = computeStatusFromDataDate(dataDate, now, maxStaleDays, pendingWindowMinutes);
+            await cache.writeCached(cacheId, { bars: eodBars }, cacheTtlSeconds, {
+              provider: eodProvider,
+              data_date: dataDate
+            });
+          } else {
+            eodError = result.error || { code: 'EOD_FETCH_FAILED', message: 'Unable to fetch EOD history' };
+            eodStatus = eodError?.code === 'CB_OPEN' ? 'stale' : 'error';
+            qualityFlags.add(eodError?.code === 'CB_OPEN' ? 'CB_OPEN' : 'PROVIDER_FAIL');
+          }
+        } finally {
+          await cache.releaseLock(cacheId);
+        }
       }
     }
   }
@@ -263,8 +474,16 @@ export async function onRequestGet(context) {
   const sources = aggregateSources(snapshots);
 
   if (!normalizedTicker) {
+    const metaNow = new Date().toISOString();
     const payload = {
       schema_version: '3.0',
+      meta: {
+        status: 'error',
+        generated_at: metaNow,
+        data_date: '',
+        provider: 'stock-api',
+        quality_flags: ['INVALID_TICKER']
+      },
       metadata: {
         module: MODULE_NAME,
         tier: 'standard',
@@ -382,9 +601,25 @@ export async function onRequestGet(context) {
 
   // Prefer EOD provider chain errors over legacy data readiness errors.
   if (eodError) {
-    errorPayload = buildErrorPayload('EOD_FETCH_FAILED', 'Unable to fetch EOD history', {
+    const isQualityReject = eodError?.code === 'QUALITY_REJECT';
+    const isLocked = eodError?.code === 'LOCKED_REFRESH';
+    const code = isQualityReject ? 'QUALITY_REJECT' : isLocked ? 'LOCKED_REFRESH' : 'EOD_FETCH_FAILED';
+    const message = isQualityReject
+      ? 'Quality gate rejected data'
+      : isLocked
+      ? eodError.message || 'Refresh already in progress'
+      : 'Unable to fetch EOD history';
+    errorPayload = buildErrorPayload(code, message, {
       upstream: eodError,
       source_chain: sourceChain
+    });
+  }
+
+  if (eodProvider && (!sourceChain?.selected || sourceChain.selected === 'unknown')) {
+    sourceChain = buildSourceChainMetadata({
+      ...sourceChain,
+      selected: eodProvider,
+      fallbackUsed: eodProvider && sourceChain?.primary ? eodProvider !== sourceChain.primary : Boolean(sourceChain?.fallbackUsed)
     });
   }
 
@@ -426,6 +661,15 @@ export async function onRequestGet(context) {
     universePayload.updated_at ||
     null;
 
+  const envelopeProvider = eodProvider || sourceChain?.selected || sourceChain?.primary || 'unknown';
+  const envelopeDataDate = parseIsoDay(latestBar?.date) || parseIsoDay(asOf) || '';
+  const derivedStatus = envelopeDataDate
+    ? computeStatusFromDataDate(envelopeDataDate, now, maxStaleDays, pendingWindowMinutes)
+    : errorPayload
+    ? 'error'
+    : 'fresh';
+  const envelopeStatus = eodStatus || derivedStatus;
+
   const validationPassed = !errorPayload;
   const status = errorPayload
     ? 'ERROR'
@@ -434,6 +678,13 @@ export async function onRequestGet(context) {
     : 'OK';
   const payload = {
     schema_version: '3.0',
+    meta: {
+      status: envelopeStatus,
+      generated_at: new Date().toISOString(),
+      data_date: envelopeDataDate || '',
+      provider: envelopeProvider,
+      quality_flags: Array.from(qualityFlags)
+    },
     metadata: {
       module: MODULE_NAME,
       tier: 'standard',
@@ -464,7 +715,7 @@ export async function onRequestGet(context) {
       telemetry: {
         provider: {
           primary: sourceChain?.primary || 'tiingo',
-          selected: sourceChain?.selected || null,
+          selected: envelopeProvider || sourceChain?.selected || null,
           forced: Boolean(sourceChain?.forced),
           fallbackUsed: Boolean(sourceChain?.fallbackUsed),
           primaryFailure: errorPayload ? (sourceChain?.primaryFailure?.code || errorPayload?.code || null) : null

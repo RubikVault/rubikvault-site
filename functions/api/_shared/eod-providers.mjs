@@ -1,4 +1,5 @@
 import { getTiingoKeyInfo } from './tiingo-key.mjs';
+import { checkCircuit, recordFailure, recordSuccess } from './circuit.js';
 
 function toIsoDate(value) {
   if (!value) return null;
@@ -38,6 +39,31 @@ export function getForcedProvider(env) {
   if (forced === 'tiingo') return 'tiingo';
   if (forced === 'twelvedata') return 'twelvedata';
   return null;
+}
+
+function resolveProviderMode(env) {
+  const mode = String(env?.PROVIDER_MODE || 'PRIMARY_ONLY').trim().toUpperCase();
+  return mode === 'FAILOVER_ALLOWED' ? 'FAILOVER_ALLOWED' : 'PRIMARY_ONLY';
+}
+
+async function guardedFetch(env, provider, fetcher) {
+  const circuit = await checkCircuit(env, provider);
+  if (!circuit.allow) {
+    return {
+      ok: false,
+      provider,
+      error: { code: 'CB_OPEN', message: `Circuit open for ${provider}` },
+      circuit: circuit.state
+    };
+  }
+
+  const result = await fetcher();
+  if (result.ok) {
+    await recordSuccess(env, provider);
+  } else {
+    await recordFailure(env, provider);
+  }
+  return { ...result, circuit: circuit.state };
 }
 
 export async function fetchTiingoBars(symbol, env, options = {}) {
@@ -187,6 +213,8 @@ export async function fetchTwelveDataBars(symbol, env, options = {}) {
 
 export async function fetchBarsWithProviderChain(symbol, env, options = {}) {
   const forced = getForcedProvider(env);
+  const providerMode = resolveProviderMode(env);
+  const allowFailover = providerMode === 'FAILOVER_ALLOWED' && options.allowFailover === true;
   const chain = {
     primary: 'tiingo',
     secondary: 'twelvedata',
@@ -194,7 +222,9 @@ export async function fetchBarsWithProviderChain(symbol, env, options = {}) {
     selected: null,
     fallbackUsed: false,
     failureReason: null,
-    primaryFailure: null
+    primaryFailure: null,
+    mode: providerMode,
+    allowFailover
   };
 
   const startDate = options.startDate || null;
@@ -206,7 +236,7 @@ export async function fetchBarsWithProviderChain(symbol, env, options = {}) {
   };
 
   if (forced) {
-    const result = await fetchFromProvider(forced);
+    const result = await guardedFetch(env, forced, () => fetchFromProvider(forced));
     if (!result.ok) {
       chain.failureReason = 'FORCED_PROVIDER_FAILED';
       chain.primaryFailure = result.error;
@@ -216,7 +246,7 @@ export async function fetchBarsWithProviderChain(symbol, env, options = {}) {
     return { ok: true, chain, bars: result.bars, provider: forced };
   }
 
-  const primaryResult = await fetchFromProvider(chain.primary);
+  const primaryResult = await guardedFetch(env, chain.primary, () => fetchFromProvider(chain.primary));
   if (primaryResult.ok) {
     chain.selected = chain.primary;
     return { ok: true, chain, bars: primaryResult.bars, provider: chain.primary };
@@ -224,24 +254,38 @@ export async function fetchBarsWithProviderChain(symbol, env, options = {}) {
 
   chain.primaryFailure = primaryResult.error;
 
-  const secondaryResult = await fetchFromProvider(chain.secondary);
-  if (secondaryResult.ok) {
-    chain.selected = chain.secondary;
+  if (allowFailover) {
+    const secondaryResult = await guardedFetch(env, chain.secondary, () => fetchFromProvider(chain.secondary));
+    if (secondaryResult.ok) {
+      chain.selected = chain.secondary;
+      chain.fallbackUsed = true;
+      chain.failureReason = 'PRIMARY_FAILED_FALLBACK_OK';
+      return { ok: true, chain, bars: secondaryResult.bars, provider: chain.secondary };
+    }
+
+    chain.selected = null;
     chain.fallbackUsed = true;
-    chain.failureReason = 'PRIMARY_FAILED_FALLBACK_OK';
-    return { ok: true, chain, bars: secondaryResult.bars, provider: chain.secondary };
+    chain.failureReason = 'BOTH_FAILED';
+    return {
+      ok: false,
+      chain,
+      error: {
+        code: 'BOTH_FAILED',
+        message: 'Both providers failed',
+        details: { primary: primaryResult.error, secondary: secondaryResult.error }
+      },
+      bars: []
+    };
   }
 
   chain.selected = null;
-  chain.fallbackUsed = true;
-  chain.failureReason = 'BOTH_FAILED';
   return {
     ok: false,
     chain,
     error: {
-      code: 'BOTH_FAILED',
-      message: 'Both providers failed',
-      details: { primary: primaryResult.error, secondary: secondaryResult.error }
+      code: primaryResult.error?.code || 'PRIMARY_FAILED',
+      message: primaryResult.error?.message || 'Primary provider failed',
+      details: { primary: primaryResult.error, secondary: null }
     },
     bars: []
   };

@@ -11,6 +11,7 @@ function assert(condition, message) {
 
 function assertHasMetaStatus(result) {
   assert(result.meta && typeof result.meta.status === 'string', 'meta.status missing');
+  assert(typeof result.meta.provider === 'string', 'meta.provider missing');
 }
 
 function loadFixture(name) {
