@@ -1,5 +1,5 @@
 import { getTiingoKeyInfo } from './tiingo-key.mjs';
-import { checkCircuit, recordFailure, recordSuccess } from './circuit.js';
+import { checkCircuit, recordFailure, recordSuccess, circuitSnapshotForMeta } from './circuit.js';
 
 function toIsoDate(value) {
   if (!value) return null;
@@ -48,12 +48,13 @@ function resolveProviderMode(env) {
 
 async function guardedFetch(env, provider, fetcher) {
   const circuit = await checkCircuit(env, provider);
+  const circuitMeta = circuitSnapshotForMeta(circuit.state, provider);
   if (!circuit.allow) {
     return {
       ok: false,
       provider,
       error: { code: 'CB_OPEN', message: `Circuit open for ${provider}` },
-      circuit: circuit.state
+      circuit: circuitMeta
     };
   }
 
@@ -61,9 +62,9 @@ async function guardedFetch(env, provider, fetcher) {
   if (result.ok) {
     await recordSuccess(env, provider);
   } else {
-    await recordFailure(env, provider);
+    await recordFailure(env, provider, result.error?.code || null);
   }
-  return { ...result, circuit: circuit.state };
+  return { ...result, circuit: circuitMeta };
 }
 
 export async function fetchTiingoBars(symbol, env, options = {}) {
@@ -240,19 +241,23 @@ export async function fetchBarsWithProviderChain(symbol, env, options = {}) {
     if (!result.ok) {
       chain.failureReason = 'FORCED_PROVIDER_FAILED';
       chain.primaryFailure = result.error;
-      return { ok: false, chain, error: result.error, bars: [] };
+      chain.circuit = result.circuit;
+      return { ok: false, chain, error: result.error, bars: [], circuit: result.circuit };
     }
     chain.selected = forced;
-    return { ok: true, chain, bars: result.bars, provider: forced };
+    chain.circuit = result.circuit;
+    return { ok: true, chain, bars: result.bars, provider: forced, circuit: result.circuit };
   }
 
   const primaryResult = await guardedFetch(env, chain.primary, () => fetchFromProvider(chain.primary));
   if (primaryResult.ok) {
     chain.selected = chain.primary;
-    return { ok: true, chain, bars: primaryResult.bars, provider: chain.primary };
+    chain.circuit = primaryResult.circuit;
+    return { ok: true, chain, bars: primaryResult.bars, provider: chain.primary, circuit: primaryResult.circuit };
   }
 
   chain.primaryFailure = primaryResult.error;
+  chain.circuit = primaryResult.circuit;
 
   if (allowFailover) {
     const secondaryResult = await guardedFetch(env, chain.secondary, () => fetchFromProvider(chain.secondary));
@@ -260,7 +265,8 @@ export async function fetchBarsWithProviderChain(symbol, env, options = {}) {
       chain.selected = chain.secondary;
       chain.fallbackUsed = true;
       chain.failureReason = 'PRIMARY_FAILED_FALLBACK_OK';
-      return { ok: true, chain, bars: secondaryResult.bars, provider: chain.secondary };
+      chain.circuit = secondaryResult.circuit;
+      return { ok: true, chain, bars: secondaryResult.bars, provider: chain.secondary, circuit: secondaryResult.circuit };
     }
 
     chain.selected = null;
@@ -274,7 +280,8 @@ export async function fetchBarsWithProviderChain(symbol, env, options = {}) {
         message: 'Both providers failed',
         details: { primary: primaryResult.error, secondary: secondaryResult.error }
       },
-      bars: []
+      bars: [],
+      circuit: secondaryResult.circuit
     };
   }
 
@@ -287,6 +294,7 @@ export async function fetchBarsWithProviderChain(symbol, env, options = {}) {
       message: primaryResult.error?.message || 'Primary provider failed',
       details: { primary: primaryResult.error, secondary: null }
     },
-    bars: []
+    bars: [],
+    circuit: primaryResult.circuit
   };
 }

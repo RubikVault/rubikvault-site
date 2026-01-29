@@ -83,7 +83,7 @@ export async function recordSuccess(env, provider) {
   return state;
 }
 
-export async function recordFailure(env, provider) {
+export async function recordFailure(env, provider, errorCode = null) {
   const failThreshold = resolveFailThreshold(env);
   const openSeconds = resolveOpenSeconds(env);
   const ttlSeconds = Math.max(openSeconds * 4, 300);
@@ -93,6 +93,9 @@ export async function recordFailure(env, provider) {
   const nextFailures = (state.failures || 0) + 1;
   state.failures = nextFailures;
   state.last_failure_at = now;
+  if (errorCode) {
+    state.last_error_code = errorCode;
+  }
 
   if (state.state === 'half_open' || nextFailures >= failThreshold) {
     state.state = 'open';
@@ -101,4 +104,16 @@ export async function recordFailure(env, provider) {
 
   await saveState(env, provider, state, ttlSeconds);
   return state;
+}
+
+export function circuitSnapshotForMeta(circuitState, provider) {
+  if (!circuitState || typeof circuitState !== 'object') {
+    return { provider: provider || 'unknown', state: 'closed', fail_count: 0, opened_at: null };
+  }
+  return {
+    provider: provider || 'unknown',
+    state: circuitState.state || 'closed',
+    fail_count: circuitState.failures || 0,
+    opened_at: circuitState.opened_at ? new Date(circuitState.opened_at).toISOString() : null
+  };
 }

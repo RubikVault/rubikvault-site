@@ -1,6 +1,7 @@
 import { sha256Hex } from './_shared/digest.mjs';
 import { resolveSymbol, normalizeTicker as normalizeTickerStrict } from './_shared/symbol-resolver.mjs';
 import { fetchBarsWithProviderChain } from './_shared/eod-providers.mjs';
+import { recordFailure } from './_shared/circuit.js';
 import { computeIndicators } from './_shared/eod-indicators.mjs';
 import { getTiingoKeyInfo } from './_shared/tiingo-key.mjs';
 import {
@@ -54,7 +55,8 @@ function buildSourceChainMetadata(chain) {
       selected: null,
       fallbackUsed: false,
       failureReason: null,
-      primaryFailure: null
+      primaryFailure: null,
+      circuit: null
     };
   }
   return {
@@ -64,7 +66,8 @@ function buildSourceChainMetadata(chain) {
     selected: chain.selected || null,
     fallbackUsed: Boolean(chain.fallbackUsed),
     failureReason: chain.failureReason || null,
-    primaryFailure: chain.primaryFailure || null
+    primaryFailure: chain.primaryFailure || null,
+    circuit: chain.circuit || null
   };
 }
 
@@ -402,8 +405,8 @@ export async function onRequestGet(context) {
     cachedBars = Array.isArray(cachedPayload?.bars)
       ? cachedPayload.bars
       : Array.isArray(cachedPayload)
-      ? cachedPayload
-      : [];
+        ? cachedPayload
+        : [];
     cachedMeta = cachedMeta || null;
     cachedProvider = cachedMeta?.provider || null;
     cachedDataDate = cachedMeta?.data_date || pickLatestBar(cachedBars)?.date || '';
@@ -437,6 +440,8 @@ export async function onRequestGet(context) {
     const bars = Array.isArray(chainResult.bars) ? chainResult.bars : [];
     const quality = evaluateQuality({ bars }, env);
     if (quality.reject) {
+      const provider = chainResult.provider || sourceChain?.selected || 'tiingo';
+      await recordFailure(env, provider, 'QUALITY_REJECT');
       return { ok: false, error: { code: 'QUALITY_REJECT', message: quality.reject.message, details: quality.reject } };
     }
     if (Array.isArray(quality.flags)) {
@@ -548,7 +553,7 @@ export async function onRequestGet(context) {
         if (typeof context?.waitUntil === 'function') {
           context.waitUntil(refreshPromise);
         } else {
-          refreshPromise.catch(() => {});
+          refreshPromise.catch(() => { });
         }
       } else {
         qualityFlags.add('LOCKED_REFRESH');
@@ -772,8 +777,8 @@ export async function onRequestGet(context) {
     const message = isQualityReject
       ? 'Quality gate rejected data'
       : isLocked
-      ? eodError.message || 'Refresh already in progress'
-      : 'Unable to fetch EOD history';
+        ? eodError.message || 'Refresh already in progress'
+        : 'Unable to fetch EOD history';
     errorPayload = buildErrorPayload(code, message, {
       upstream: eodError,
       source_chain: sourceChain
@@ -831,16 +836,16 @@ export async function onRequestGet(context) {
   const derivedStatus = envelopeDataDate
     ? computeStatusFromDataDate(envelopeDataDate, now, maxStaleDays, pendingWindowMinutes)
     : errorPayload
-    ? 'error'
-    : 'fresh';
+      ? 'error'
+      : 'fresh';
   const envelopeStatus = eodStatus || derivedStatus;
 
   const validationPassed = !errorPayload;
   const status = errorPayload
     ? 'ERROR'
     : reasons.includes('INSUFFICIENT_HISTORY')
-    ? 'PARTIAL'
-    : 'OK';
+      ? 'PARTIAL'
+      : 'OK';
   const buildStart = Date.now();
   const payload = {
     schema_version: '3.0',
@@ -850,6 +855,7 @@ export async function onRequestGet(context) {
       data_date: envelopeDataDate,
       provider: envelopeProvider,
       quality_flags: Array.from(qualityFlags),
+      circuit: sourceChain?.circuit || null,
       cache: cacheMeta,
       timings,
       degraded: schedulerState.degraded,

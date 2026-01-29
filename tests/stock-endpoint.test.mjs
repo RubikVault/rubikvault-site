@@ -288,6 +288,48 @@ async function testFailoverProvider() {
   console.log('✅ failover provider selected without mixing');
 }
 
+async function testCircuitOpenReturnsError() {
+  const kv = createKv();
+  const circuitState = {
+    state: 'open',
+    failures: 3,
+    opened_at: Date.now(),
+    last_failure_at: Date.now()
+  };
+  await kv.put('cb:tiingo', JSON.stringify(circuitState));
+
+  const env = makeEnv({ RV_KV: kv, PROVIDER_MODE: 'PRIMARY_ONLY' });
+  const restore = stubFetch({
+    tiingo: () => ({ ok: false, status: 500, json: async () => ({}) })
+  });
+  try {
+    const result = await requestTicker('SPY', env);
+    assert(result.meta?.circuit?.state === 'open', 'expected circuit state open in meta');
+    assert(result.error || result.meta.status === 'error', 'expected error when circuit open');
+  } finally {
+    restore();
+  }
+  console.log('✅ circuit open returns error with circuit state in meta');
+}
+
+async function testQualityRejectRecordsCircuitFailure() {
+  const kv = createKv();
+  const env = makeEnv({ RV_KV: kv });
+  const badBars = makeBars({ invalid: true });
+  const restore = stubFetch({
+    tiingo: () => ({ ok: true, status: 200, json: async () => tiingoPayload(badBars) })
+  });
+  try {
+    await requestTicker('SPY', env);
+    const circuitRaw = await kv.get('cb:tiingo', 'json');
+    assert(circuitRaw?.failures >= 1, 'expected circuit failure recorded');
+    assert(circuitRaw?.last_error_code === 'QUALITY_REJECT', 'expected QUALITY_REJECT error code');
+  } finally {
+    restore();
+  }
+  console.log('✅ quality reject records circuit failure');
+}
+
 async function main() {
   await testKnownTicker();
   await testUnknownTicker();
@@ -297,6 +339,8 @@ async function main() {
   await testHardRejectBlocksInvalidData();
   await testSoftWarnFlags();
   await testFailoverProvider();
+  await testCircuitOpenReturnsError();
+  await testQualityRejectRecordsCircuitFailure();
   console.log('✅ stock endpoint smoke tests passed');
 }
 
