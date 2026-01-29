@@ -48,3 +48,10 @@
 - Stale or Mirror Fallback => `meta.status=STALE`, `reason=STALE` or `MIRROR_FALLBACK`.
 - Upstream/error => `meta.status=ERROR`, `reason=error.code`.
 - Empty/no data but not an error => `meta.status=EMPTY`, `reason` describes why.
+
+## Cache + Debug (Runblock C)
+- `/api/stock` and `/api/resolve` attach `meta.cache` with `{mode, hit, stale, age_s, ttl_s, swr}`.
+- Public debug (`?debug=1`) may include `meta.cache`, `meta.timings`, `meta.degraded`.
+- Privileged debug requires `X-Admin-Token` matching `ADMIN_TOKEN` or `RV_ADMIN_TOKEN`.
+- Public debug must NOT expose `cache_key`/`swr_key` or provider URLs/tokens.
+- Privileged debug may include `cache_key`/`swr_key` for troubleshooting.

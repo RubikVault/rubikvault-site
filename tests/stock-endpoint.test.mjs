@@ -74,7 +74,7 @@ function createKv() {
     async get(key, opts) {
       if (!store.has(key)) return null;
       const value = store.get(key);
-      if (opts?.type === 'json') {
+      if (opts === 'json' || opts?.type === 'json') {
         return JSON.parse(value);
       }
       return value;
@@ -89,7 +89,7 @@ function createKv() {
 }
 
 function makeEnv(extra = {}) {
-  return { RV_KV: createKv(), TIINGO_API_KEY: 'test', ...extra };
+  return { RV_KV: createKv(), TIINGO_API_KEY: 'test', RV_ALLOW_WRITE_ON_VIEW: '1', ...extra };
 }
 
 function stubFetch({ overrides = {}, tiingo, twelvedata } = {}) {

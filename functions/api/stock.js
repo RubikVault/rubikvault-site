@@ -3,8 +3,22 @@ import { resolveSymbol, normalizeTicker as normalizeTickerStrict } from './_shar
 import { fetchBarsWithProviderChain } from './_shared/eod-providers.mjs';
 import { computeIndicators } from './_shared/eod-indicators.mjs';
 import { getTiingoKeyInfo } from './_shared/tiingo-key.mjs';
-import { createCache } from './_shared/cache-law.js';
+import {
+  DEFAULT_TTL_SECONDS,
+  SWR_MARK_TTL_SECONDS,
+  DEGRADE_AFTER_SECONDS,
+  buildCacheMeta,
+  computeAgeSeconds,
+  createCache,
+  getJsonKV,
+  makeCacheKey,
+  nowUtcIso,
+  parseIsoDateToMs,
+  todayUtcDate,
+  tryMarkSWR
+} from './_shared/cache-law.js';
 import { evaluateQuality } from './_shared/quality.js';
+import { isPrivilegedDebug, redact } from './_shared/observability.js';
 
 const MODULE_NAME = 'stock';
 const TICKER_MAX_LENGTH = 12;
@@ -15,7 +29,7 @@ const SNAPSHOT_PATH_TEMPLATES = [
   '/data/{module}.json'
 ];
 const MODULE_PATHS = ['universe', 'market-prices', 'market-stats', 'market-score'];
-const DEFAULT_EOD_CACHE_TTL_SECONDS = 6 * 60 * 60;
+const DEFAULT_EOD_CACHE_TTL_SECONDS = DEFAULT_TTL_SECONDS;
 const DEFAULT_EOD_LOCK_TTL_SECONDS = 60;
 const DEFAULT_MAX_STALE_DAYS = 14;
 const DEFAULT_PENDING_WINDOW_MINUTES = 120;
@@ -124,6 +138,53 @@ function computeStatusFromDataDate(dataDate, now, maxStaleDays, pendingWindowMin
   if (ageDays === 1 && minutesSinceUtcMidnight(now) <= pendingWindowMinutes) return 'pending';
   if (ageDays <= maxStaleDays) return 'stale';
   return 'error';
+}
+
+function coerceTimestampMs(value) {
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return value > 1e12 ? value : value * 1000;
+  }
+  if (typeof value === 'string') {
+    return parseIsoDateToMs(value);
+  }
+  return 0;
+}
+
+function parseSchedulerLastOk(value) {
+  if (value == null) return 0;
+  if (typeof value === 'string' || typeof value === 'number') {
+    return coerceTimestampMs(value);
+  }
+  if (typeof value === 'object') {
+    const candidate =
+      value.generated_at ||
+      value.last_ok ||
+      value.lastOk ||
+      value.ts ||
+      value.timestamp ||
+      value.time;
+    return coerceTimestampMs(candidate);
+  }
+  return 0;
+}
+
+async function loadSchedulerState(env, isPrivileged) {
+  const keys = ['meta:scheduler:last_ok', 'rv:scheduler:last_ok'];
+  for (const key of keys) {
+    const result = await getJsonKV(env, key);
+    if (!result?.meta?.hit) continue;
+    const ms = parseSchedulerLastOk(result.value);
+    const ageSeconds = ms ? Math.floor((Date.now() - ms) / 1000) : null;
+    const degraded = typeof ageSeconds === 'number' && ageSeconds > DEGRADE_AFTER_SECONDS;
+    return {
+      degraded,
+      reason: degraded ? 'scheduler_stale' : null
+    };
+  }
+  return {
+    degraded: false,
+    reason: isPrivileged ? 'unknown' : null
+  };
 }
 
 async function fetchSnapshot(moduleName, request) {
@@ -254,7 +315,10 @@ export async function onRequestGet(context) {
   const tickerParam = url.searchParams.get('ticker') || '';
   const normalizedTicker = normalizeTicker(tickerParam);
 
-  const startedAt = new Date().toISOString();
+  const isPrivileged = isPrivilegedDebug(request, env);
+  const timings = { t_total_ms: 0, t_kv_ms: null, t_origin_ms: null, t_build_ms: null };
+  const requestStart = Date.now();
+  const startedAt = nowUtcIso();
 
   // Phase 2: resolve name + fetch EOD history via provider chain.
   // This is independent of the legacy snapshot join below (kept for backwards compatibility).
@@ -290,33 +354,76 @@ export async function onRequestGet(context) {
   const maxStaleDays = Number(env?.EOD_MAX_STALE_DAYS) || DEFAULT_MAX_STALE_DAYS;
   const pendingWindowMinutes = Number(env?.EOD_PENDING_WINDOW_MINUTES) || DEFAULT_PENDING_WINDOW_MINUTES;
 
+  const primaryKey = cacheId ? cache.dataKey(cacheId) : null;
+  const primaryMetaKey = cacheId ? cache.metaKey(cacheId) : null;
+  const aliasKey = cacheId ? makeCacheKey('stock', cacheId) : null;
+  const aliasMetaKey = cacheId ? makeCacheKey('meta', `stock:${cacheId}`) : null;
+  const swrKey = cacheId ? makeCacheKey('swr', `stock:${cacheId}`) : null;
+
+  let cachedPayload = null;
   let cachedBars = [];
   let cachedMeta = null;
   let cachedStatus = null;
   let cachedProvider = null;
   let cachedDataDate = '';
+  let cachedAgeSeconds = null;
+  let cachedStale = false;
+  let cacheKeyUsed = null;
+  let cacheMetaKeyUsed = null;
+  let cacheHit = false;
+  let swrMarked = undefined;
 
   if (cacheId) {
+    const kvStart = Date.now();
     const cached = await cache.readCached(cacheId);
-    const cachedPayload = cached?.data;
+    cachedPayload = cached?.data ?? null;
+    cachedMeta = cached?.metaLike ?? null;
+    cacheKeyUsed = primaryKey;
+    cacheMetaKeyUsed = primaryMetaKey;
+
+    if (cachedPayload == null && aliasKey && aliasKey !== primaryKey) {
+      const aliasData = await getJsonKV(env, aliasKey);
+      if (aliasData?.meta?.hit) {
+        cachedPayload = aliasData.value;
+        cacheKeyUsed = aliasKey;
+      }
+      if (cachedPayload && aliasMetaKey) {
+        const aliasMeta = await getJsonKV(env, aliasMetaKey);
+        if (aliasMeta?.meta?.hit) {
+          cachedMeta = aliasMeta.value;
+          cacheMetaKeyUsed = aliasMetaKey;
+        }
+      }
+    }
+    timings.t_kv_ms = Date.now() - kvStart;
+  }
+
+  if (cachedPayload != null) {
     cachedBars = Array.isArray(cachedPayload?.bars)
       ? cachedPayload.bars
       : Array.isArray(cachedPayload)
       ? cachedPayload
       : [];
-    cachedMeta = cached?.metaLike || null;
+    cachedMeta = cachedMeta || null;
     cachedProvider = cachedMeta?.provider || null;
     cachedDataDate = cachedMeta?.data_date || pickLatestBar(cachedBars)?.date || '';
     cachedStatus = cachedBars.length
       ? computeStatusFromDataDate(cachedDataDate, now, maxStaleDays, pendingWindowMinutes)
       : null;
+    cachedAgeSeconds = computeAgeSeconds(cachedMeta?.generated_at);
+    cachedStale =
+      cachedStatus === 'stale' ||
+      cachedStatus === 'pending' ||
+      cachedStatus === 'error' ||
+      (cachedAgeSeconds != null && cachedAgeSeconds > cacheTtlSeconds);
   }
 
   const forcedProvider = String(env?.RV_FORCE_PROVIDER || '').trim();
   const hasEodKeys = Boolean(getTiingoKeyInfo(env).key || env?.TWELVEDATA_API_KEY);
   const canFetchProvider = Boolean(forcedProvider || hasEodKeys);
 
-  async function fetchProviderBars() {
+  async function fetchProviderBars({ flagSet = qualityFlags, recordTiming = false } = {}) {
+    const originStart = recordTiming ? Date.now() : null;
     const startDate = computeStartDateISO(365 * 3);
     const chainResult = await fetchBarsWithProviderChain(normalizedTicker, env, {
       outputsize: '300',
@@ -333,30 +440,39 @@ export async function onRequestGet(context) {
       return { ok: false, error: { code: 'QUALITY_REJECT', message: quality.reject.message, details: quality.reject } };
     }
     if (Array.isArray(quality.flags)) {
-      quality.flags.forEach((flag) => qualityFlags.add(flag));
+      quality.flags.forEach((flag) => flagSet.add(flag));
+    }
+    if (recordTiming && originStart != null) {
+      timings.t_origin_ms = Date.now() - originStart;
     }
     return { ok: true, bars, provider: chainResult.provider || sourceChain?.selected || null };
   }
 
   async function refreshCacheInBackground() {
     if (!cacheId || !normalizedTicker) return;
-    const gotLock = await cache.acquireLock(cacheId, lockTtlSeconds);
-    if (!gotLock) {
-      qualityFlags.add('LOCKED_REFRESH');
-      return;
-    }
+    const refreshFlags = new Set();
     try {
-      const result = await fetchProviderBars();
+      const result = await fetchProviderBars({ flagSet: refreshFlags });
       if (result.ok && result.bars.length) {
         const latest = pickLatestBar(result.bars);
-        const dataDate = latest?.date || '';
+        const dataDate = latest?.date || todayUtcDate();
         await cache.writeCached(cacheId, { bars: result.bars }, cacheTtlSeconds, {
           provider: result.provider || 'tiingo',
           data_date: dataDate
         });
       }
+      console.log(
+        JSON.stringify({
+          event: 'swr_refresh',
+          module: MODULE_NAME,
+          ticker: normalizedTicker,
+          ok: result.ok,
+          provider: result.provider || null,
+          cache_key: cacheKeyUsed || primaryKey || null
+        })
+      );
     } finally {
-      await cache.releaseLock(cacheId);
+      // no-op: best-effort refresh
     }
   }
 
@@ -367,13 +483,16 @@ export async function onRequestGet(context) {
       cachedStatus = null;
       cachedProvider = null;
       cachedDataDate = '';
+      cachedAgeSeconds = null;
+      cachedStale = false;
       qualityFlags.add('CACHE_REJECTED');
     } else if (Array.isArray(cachedQuality.flags)) {
       cachedQuality.flags.forEach((flag) => qualityFlags.add(flag));
     }
   }
 
-  if (normalizedTicker && cachedBars.length && cachedStatus === 'fresh') {
+  if (normalizedTicker && cachedBars.length && !cachedStale) {
+    cacheHit = true;
     eodBars = cachedBars;
     eodProvider = cachedProvider || 'tiingo';
     eodStatus = 'fresh';
@@ -382,24 +501,26 @@ export async function onRequestGet(context) {
     eodAttempted = true;
     const gotLock = await cache.acquireLock(cacheId, lockTtlSeconds);
     if (!gotLock) {
+      cacheHit = true;
       eodBars = cachedBars;
       eodProvider = cachedProvider || 'tiingo';
       eodStatus = 'pending';
       qualityFlags.add('LOCKED_REFRESH');
     } else {
       try {
-        const result = await fetchProviderBars();
+        const result = await fetchProviderBars({ recordTiming: true });
         if (result.ok) {
           eodBars = result.bars;
           eodProvider = result.provider || 'tiingo';
           const latest = pickLatestBar(eodBars);
-          const dataDate = latest?.date || '';
+          const dataDate = latest?.date || todayUtcDate();
           eodStatus = computeStatusFromDataDate(dataDate, now, maxStaleDays, pendingWindowMinutes);
           await cache.writeCached(cacheId, { bars: eodBars }, cacheTtlSeconds, {
             provider: eodProvider,
             data_date: dataDate
           });
         } else {
+          cacheHit = true;
           eodBars = cachedBars;
           eodProvider = cachedProvider || 'tiingo';
           eodStatus = 'stale';
@@ -412,16 +533,26 @@ export async function onRequestGet(context) {
       }
     }
   } else if (normalizedTicker && cachedBars.length) {
+    cacheHit = true;
     eodBars = cachedBars;
     eodProvider = cachedProvider || 'tiingo';
-    eodStatus = cachedStatus || 'stale';
+    eodStatus = cachedStatus === 'pending' ? 'pending' : 'stale';
+    if (cachedStatus === 'error') {
+      qualityFlags.add('CACHE_TOO_OLD');
+    }
     eodAttempted = true;
     if (canFetchProvider) {
-      const refreshPromise = refreshCacheInBackground();
-      if (typeof context?.waitUntil === 'function') {
-        context.waitUntil(refreshPromise);
+      swrMarked = await tryMarkSWR(env, swrKey, SWR_MARK_TTL_SECONDS);
+      if (swrMarked) {
+        const refreshPromise = refreshCacheInBackground();
+        if (typeof context?.waitUntil === 'function') {
+          context.waitUntil(refreshPromise);
+        } else {
+          refreshPromise.catch(() => {});
+        }
       } else {
-        refreshPromise.catch(() => {});
+        qualityFlags.add('LOCKED_REFRESH');
+        eodStatus = 'pending';
       }
     } else {
       qualityFlags.add('EOD_KEYS_MISSING');
@@ -441,12 +572,12 @@ export async function onRequestGet(context) {
         qualityFlags.add('LOCKED_REFRESH');
       } else {
         try {
-          const result = await fetchProviderBars();
+          const result = await fetchProviderBars({ recordTiming: true });
           if (result.ok) {
             eodBars = result.bars;
             eodProvider = result.provider || 'tiingo';
             const latest = pickLatestBar(eodBars);
-            const dataDate = latest?.date || '';
+            const dataDate = latest?.date || todayUtcDate();
             eodStatus = computeStatusFromDataDate(dataDate, now, maxStaleDays, pendingWindowMinutes);
             await cache.writeCached(cacheId, { bars: eodBars }, cacheTtlSeconds, {
               provider: eodProvider,
@@ -473,16 +604,48 @@ export async function onRequestGet(context) {
   const servedFrom = Object.values(snapshots).some((result) => result.snapshot) ? 'ASSET' : 'MISSING';
   const sources = aggregateSources(snapshots);
 
+  const schedulerStart = Date.now();
+  const schedulerState = await loadSchedulerState(env, isPrivileged);
+  const schedulerMs = Date.now() - schedulerStart;
+  timings.t_kv_ms = (timings.t_kv_ms || 0) + schedulerMs;
+
+  const cacheMetaBase = buildCacheMeta({
+    mode: cacheHit && cachedStale ? 'swr' : 'kv',
+    key_kind: 'stock',
+    hit: cacheHit,
+    stale: cacheHit ? cachedStale : false,
+    age_s: cacheHit ? cachedAgeSeconds : null,
+    ttl_s: cacheTtlSeconds,
+    swr_marked: swrMarked
+  });
+  if (isPrivileged) {
+    cacheMetaBase.cache_key = cacheKeyUsed || primaryKey || null;
+    cacheMetaBase.meta_key = cacheMetaKeyUsed || primaryMetaKey || null;
+    if (aliasKey && aliasKey !== (cacheKeyUsed || primaryKey)) {
+      cacheMetaBase.alias_key = aliasKey;
+    }
+    if (aliasMetaKey && aliasMetaKey !== (cacheMetaKeyUsed || primaryMetaKey)) {
+      cacheMetaBase.alias_meta_key = aliasMetaKey;
+    }
+    cacheMetaBase.swr_key = swrKey || null;
+  }
+  const cacheMeta = isPrivileged ? cacheMetaBase : redact(cacheMetaBase);
+
   if (!normalizedTicker) {
-    const metaNow = new Date().toISOString();
+    const buildStart = Date.now();
+    const metaNow = nowUtcIso();
     const payload = {
       schema_version: '3.0',
       meta: {
         status: 'error',
         generated_at: metaNow,
-        data_date: '',
+        data_date: todayUtcDate(),
         provider: 'stock-api',
-        quality_flags: ['INVALID_TICKER']
+        quality_flags: ['INVALID_TICKER'],
+        cache: cacheMeta,
+        timings,
+        degraded: schedulerState.degraded,
+        degraded_reason: schedulerState.reason || null
       },
       metadata: {
         module: MODULE_NAME,
@@ -539,6 +702,8 @@ export async function onRequestGet(context) {
       error: buildErrorPayload('BAD_REQUEST', 'Invalid ticker parameter', { ticker: tickerParam })
     };
     payload.metadata.digest = await computeDigest(payload);
+    timings.t_build_ms = Date.now() - buildStart;
+    timings.t_total_ms = Date.now() - requestStart;
     return new Response(JSON.stringify(payload, null, 2) + '\n', {
       headers: { 'Content-Type': 'application/json' }
     });
@@ -662,7 +827,7 @@ export async function onRequestGet(context) {
     null;
 
   const envelopeProvider = eodProvider || sourceChain?.selected || sourceChain?.primary || 'unknown';
-  const envelopeDataDate = parseIsoDay(latestBar?.date) || parseIsoDay(asOf) || '';
+  const envelopeDataDate = parseIsoDay(latestBar?.date) || parseIsoDay(asOf) || todayUtcDate();
   const derivedStatus = envelopeDataDate
     ? computeStatusFromDataDate(envelopeDataDate, now, maxStaleDays, pendingWindowMinutes)
     : errorPayload
@@ -676,14 +841,19 @@ export async function onRequestGet(context) {
     : reasons.includes('INSUFFICIENT_HISTORY')
     ? 'PARTIAL'
     : 'OK';
+  const buildStart = Date.now();
   const payload = {
     schema_version: '3.0',
     meta: {
       status: envelopeStatus,
-      generated_at: new Date().toISOString(),
-      data_date: envelopeDataDate || '',
+      generated_at: nowUtcIso(),
+      data_date: envelopeDataDate,
       provider: envelopeProvider,
-      quality_flags: Array.from(qualityFlags)
+      quality_flags: Array.from(qualityFlags),
+      cache: cacheMeta,
+      timings,
+      degraded: schedulerState.degraded,
+      degraded_reason: schedulerState.reason || null
     },
     metadata: {
       module: MODULE_NAME,
@@ -736,6 +906,8 @@ export async function onRequestGet(context) {
   };
 
   payload.metadata.digest = await computeDigest(payload);
+  timings.t_build_ms = Date.now() - buildStart;
+  timings.t_total_ms = Date.now() - requestStart;
 
   return new Response(JSON.stringify(payload, null, 2) + '\n', {
     headers: { 'Content-Type': 'application/json' }

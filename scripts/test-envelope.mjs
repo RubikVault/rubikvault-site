@@ -1,5 +1,7 @@
 #!/usr/bin/env node
 import { okEnvelope, errorEnvelope, assertEnvelope, ensureEnvelopePayload } from "../functions/api/_shared/envelope.js";
+import { buildCacheMeta } from "../functions/api/_shared/cache-law.js";
+import { isPublicDebug, isPrivilegedDebug, redact } from "../functions/api/_shared/observability.js";
 
 function assert(condition, message) {
   if (!condition) throw new Error(message || "assertion_failed");
@@ -93,6 +95,54 @@ function testMetaNullRejected() {
   console.log("✅ assertEnvelope rejects null meta");
 }
 
+function testCacheMetaBuilder() {
+  const meta = buildCacheMeta({
+    mode: "swr",
+    hit: true,
+    stale: true,
+    age_s: 120,
+    ttl_s: 3600,
+    swr_marked: true
+  });
+  assert(meta.mode === "swr", "cache meta mode should be swr");
+  assert(meta.hit === true, "cache meta hit should be true");
+  assert(meta.stale === true, "cache meta stale should be true");
+  assert(meta.swr === "marked", "cache meta swr should be marked");
+  console.log("✅ cache meta builder");
+}
+
+function testRedactPublicDebug() {
+  const input = {
+    meta: {
+      cache: {
+        cache_key: "eod:stock:SPY",
+        swr_key: "swr:stock:SPY",
+        provider_url: "https://provider.example.com?token=secret"
+      },
+      token: "supersecret"
+    }
+  };
+  const output = redact(input);
+  assert(output.meta && output.meta.cache, "redact should preserve meta.cache");
+  assert(!("cache_key" in output.meta.cache), "redact should drop cache_key");
+  assert(!("swr_key" in output.meta.cache), "redact should drop swr_key");
+  assert(!("provider_url" in output.meta.cache), "redact should drop provider_url");
+  assert(output.meta.token === "[redacted]", "redact should mask token");
+  console.log("✅ redact public debug");
+}
+
+function testDebugGuards() {
+  const url = new URL("https://example.com/api/stock?debug=1");
+  assert(isPublicDebug(url) === true, "isPublicDebug should detect debug=1");
+  const req = new Request("https://example.com/api/stock", {
+    headers: { "X-Admin-Token": "secret" }
+  });
+  assert(isPrivilegedDebug(req, { RV_ADMIN_TOKEN: "secret" }) === true, "privileged debug should pass");
+  assert(isPrivilegedDebug(req, { RV_ADMIN_TOKEN: "other" }) === false, "privileged debug should fail");
+  assert(isPrivilegedDebug(req, {}) === false, "privileged debug should be false without token");
+  console.log("✅ debug guards");
+}
+
 function main() {
   testOkEnvelope();
   testErrorEnvelope();
@@ -102,6 +152,9 @@ function main() {
   testEnsureEnvelopePayload500();
   testProviderFallback();
   testMetaNullRejected();
+  testCacheMetaBuilder();
+  testRedactPublicDebug();
+  testDebugGuards();
   console.log("✅ envelope tests passed");
 }
 
