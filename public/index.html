@@ -195,22 +195,32 @@
         </div>
       </div>
 
-      <!-- QUICK STATS -->
-      <div
+      <!-- BUY SIGNALS BY TIMEFRAME -->
+      <div id="buy-signals-stats"
         style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 2rem; max-width: 700px; margin: 0 auto 2rem;">
         <div style="text-align: center;">
-          <div style="font-size: 3rem; font-weight: 700; color: #3b82f6; margin-bottom: 0.5rem;">8</div>
-          <div style="font-size: 1rem; color: #94a3b8;">Top Stocks</div>
+          <div id="signal-short" style="font-size: 3rem; font-weight: 700; color: #10b981; margin-bottom: 0.5rem;">-
+          </div>
+          <div style="font-size: 1rem; color: #94a3b8;">Short-Term Buy Signals</div>
+          <div style="font-size: 0.75rem; color: #64748b;">(1-5 days)</div>
         </div>
         <div style="text-align: center;">
-          <div style="font-size: 3rem; font-weight: 700; color: #10b981; margin-bottom: 0.5rem;">5</div>
-          <div style="font-size: 1rem; color: #94a3b8;">Buy Signals</div>
+          <div id="signal-medium" style="font-size: 3rem; font-weight: 700; color: #3b82f6; margin-bottom: 0.5rem;">-
+          </div>
+          <div style="font-size: 1rem; color: #94a3b8;">Medium-Term Buy Signals</div>
+          <div style="font-size: 0.75rem; color: #64748b;">(5-20 days)</div>
         </div>
         <div style="text-align: center;">
-          <div style="font-size: 3rem; font-weight: 700; color: #f59e0b; margin-bottom: 0.5rem;">8.5</div>
-          <div style="font-size: 1rem; color: #94a3b8;">Ø Score</div>
+          <div id="signal-long" style="font-size: 3rem; font-weight: 700; color: #a78bfa; margin-bottom: 0.5rem;">-
+          </div>
+          <div style="font-size: 1rem; color: #94a3b8;">Long-Term Buy Signals</div>
+          <div style="font-size: 0.75rem; color: #64748b;">(20-60 days)</div>
         </div>
       </div>
+
+      <p id="buy-signals-note" style="font-size: 0.8rem; color: #64748b; margin: 0 0 1rem;">
+        Counts reflect Setup + Trigger + >=90% model up-probability. Elliott support is applied when available.
+      </p>
 
       <p style="font-size: 0.875rem; color: #64748b; font-style: italic;">
         Enter a stock name or ticker to start the analysis
@@ -269,6 +279,125 @@
       }
     })();
   </script>
+
+  <!-- Load Scientific Analysis Data -->
+  <script>
+    // Global data stores
+    let scientificAnalysisData = null;
+    const scientificByTimeframe = { short: new Map(), medium: new Map(), long: new Map() };
+    const elliottWavesData = new Map();
+    const elliottSupportByTicker = new Map();
+    let elliottIndexLoaded = false;
+
+    async function loadScientificData() {
+      try {
+        const res = await fetch('/data/snapshots/stock-analysis.json');
+        if (!res.ok) return;
+        scientificAnalysisData = await res.json();
+        buildScientificMaps();
+        updateBuySignalsStats();
+        loadElliottSupportIndex().then(updateBuySignalsStats);
+      } catch (e) {
+        console.warn('Scientific analysis data not available:', e);
+      }
+    }
+
+    function buildScientificMaps() {
+      scientificByTimeframe.short.clear();
+      scientificByTimeframe.medium.clear();
+      scientificByTimeframe.long.clear();
+      const byTimeframe = scientificAnalysisData?._rankings?.by_timeframe || {};
+      ['short', 'medium', 'long'].forEach((tf) => {
+        const rows = Array.isArray(byTimeframe[tf]) ? byTimeframe[tf] : [];
+        for (const row of rows) {
+          const t = normalizeTicker(row?.ticker || '');
+          if (!t) continue;
+          scientificByTimeframe[tf].set(t, row);
+        }
+      });
+    }
+
+    async function loadElliottSupportIndex() {
+      if (elliottIndexLoaded) return;
+      elliottIndexLoaded = true;
+      try {
+        const res = await fetch('/data/marketphase/index.json', { cache: 'no-store' });
+        if (!res.ok) return;
+        const payload = await res.json();
+        const symbols = payload?.data?.symbols || [];
+        if (!Array.isArray(symbols) || !symbols.length) return;
+        for (const item of symbols) {
+          const t = normalizeTicker(item?.symbol || '');
+          const path = item?.path;
+          if (!t || !path) continue;
+          const { payload: mpPayload } = await fetchJson(path);
+          if (!mpPayload || mpPayload.ok !== true) {
+            elliottSupportByTicker.set(t, null);
+            continue;
+          }
+          elliottWavesData.set(t, mpPayload);
+          const support = computeElliottSupport(mpPayload);
+          elliottSupportByTicker.set(t, support);
+        }
+      } catch (e) {
+        console.warn('Elliott Waves index not available:', e);
+      }
+    }
+
+    function computeElliottSupport(payload) {
+      const data = payload?.data || {};
+      const elliott = data?.elliott || {};
+      const features = data?.features || {};
+      const direction = elliott?.completedPattern?.direction || features?.SMATrend || null;
+      const confidence = Number(elliott?.developingPattern?.confidence ?? elliott?.completedPattern?.confidence0_100);
+      if (!direction) return null;
+      if (!Number.isFinite(confidence)) return direction === 'bullish';
+      return direction === 'bullish' && confidence >= 55;
+    }
+
+    function updateBuySignalsStats() {
+      if (!scientificAnalysisData?._rankings) return;
+      if (!scientificByTimeframe.short.size) buildScientificMaps();
+
+      const timeframeKeys = ['short', 'medium', 'long'];
+      const counts = { short: 0, medium: 0, long: 0 };
+      const tickers = Object.keys(scientificAnalysisData || {}).filter(k => !k.startsWith('_'));
+
+      for (const t of tickers) {
+        const entry = scientificAnalysisData?.[t];
+        const setupOk = entry?.setup?.fulfilled === true;
+        const triggerOk = entry?.trigger?.fulfilled === true;
+        if (!setupOk || !triggerOk) continue;
+
+        for (const tf of timeframeKeys) {
+          const row = scientificByTimeframe[tf].get(t);
+          const prob = Number(row?.probability);
+          if (!Number.isFinite(prob) || prob < 0.90) continue;
+          const elliottSupport = elliottSupportByTicker.get(t);
+          if (elliottSupport === false) continue;
+          counts[tf] += 1;
+        }
+      }
+
+      const shortEl = document.getElementById('signal-short');
+      const mediumEl = document.getElementById('signal-medium');
+      const longEl = document.getElementById('signal-long');
+      const noteEl = document.getElementById('buy-signals-note');
+
+      if (shortEl) shortEl.textContent = counts.short;
+      if (mediumEl) mediumEl.textContent = counts.medium;
+      if (longEl) longEl.textContent = counts.long;
+      if (noteEl) {
+        const coverage = elliottSupportByTicker.size;
+        const coverageNote = coverage ? ` Elliott coverage: ${coverage} symbol${coverage === 1 ? '' : 's'}.` : '';
+        noteEl.textContent = `Counts reflect Setup + Trigger + >=90% model up-probability. Elliott support is applied when available.${coverageNote}`;
+      }
+    }
+
+    // Load on page ready
+    loadScientificData();
+  </script>
+
 
   <!-- STOCK SEARCH LOGIC -->
   <script>
@@ -750,8 +879,20 @@
       resultsContent.innerHTML = `
         ${showBanner ? renderErrorBanner(bannerError, meta) : ''}
         <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; flex-wrap: wrap;">
-          <div>
-            <!-- Name shown in title bar only -->
+          <div style="display: flex; gap: 1.5rem; flex-wrap: wrap; align-items: baseline;">
+            <div style="display: flex; align-items: baseline; gap: 0.5rem;">
+              <span style="font-size: 0.95rem; color: #94a3b8;">Close</span>
+              <span style="font-size: 1.5rem; font-weight: 800; color: #60a5fa;">${close == null ? '—' : '$' + formatNumber(close, { digits: 2 })}</span>
+            </div>
+            <div style="display: flex; align-items: baseline; gap: 0.5rem;">
+              <span style="font-size: 0.95rem; color: #94a3b8;">Day</span>
+              <span style="font-size: 1.5rem; font-weight: 800; color: ${changeAbs >= 0 ? '#34d399' : '#f87171'};">${formatNumber(changeAbs, { digits: 2 })}</span>
+              <span style="font-size: 1.1rem; color: ${changePct >= 0 ? '#34d399' : '#f87171'};">(${formatPercent(changePct, 2)})</span>
+            </div>
+            <div style="display: flex; align-items: baseline; gap: 0.5rem;">
+              <span style="font-size: 0.95rem; color: #94a3b8;">Volume</span>
+              <span style="font-size: 1.5rem; font-weight: 800; color: #fbbf24;">${volume == null ? '—' : Number(volume).toLocaleString()}</span>
+            </div>
           </div>
           <div style="text-align: right;">
             <div style="padding: 0.35rem 0.75rem; border-radius: 999px; border: 1px solid rgba(100,116,139,0.35); color: #e5e7eb; background: rgba(15,23,42,0.35); display: inline-block;">
@@ -763,23 +904,6 @@
         </div>
 
         ${renderSourceChain(meta?.source_chain)}
-
-        <!-- Compact Price Row -->
-        <div style="display: flex; gap: 1.5rem; flex-wrap: wrap; margin-top: 1.25rem; align-items: baseline;">
-          <div style="display: flex; align-items: baseline; gap: 0.5rem;">
-            <span style="font-size: 0.95rem; color: #94a3b8;">Close</span>
-            <span style="font-size: 1.5rem; font-weight: 800; color: #60a5fa;">${close == null ? '—' : '$' + formatNumber(close, { digits: 2 })}</span>
-          </div>
-          <div style="display: flex; align-items: baseline; gap: 0.5rem;">
-            <span style="font-size: 0.95rem; color: #94a3b8;">Day</span>
-            <span style="font-size: 1.5rem; font-weight: 800; color: ${changeAbs >= 0 ? '#34d399' : '#f87171'};">${formatNumber(changeAbs, { digits: 2 })}</span>
-            <span style="font-size: 1.1rem; color: ${changePct >= 0 ? '#34d399' : '#f87171'};">(${formatPercent(changePct, 2)})</span>
-          </div>
-          <div style="display: flex; align-items: baseline; gap: 0.5rem;">
-            <span style="font-size: 0.95rem; color: #94a3b8;">Vol</span>
-            <span style="font-size: 1.5rem; font-weight: 800; color: #fbbf24;">${volume == null ? '—' : Number(volume).toLocaleString()}</span>
-          </div>
-        </div>
 
         ${fundamentalsHtml}
 
@@ -801,6 +925,25 @@
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem; margin-top: 1rem; padding: 1rem; background: rgba(15, 23, 42, 0.35); border: 1px solid rgba(100, 116, 139, 0.22); border-radius: 12px;">
           ${indicatorsHtml || '<div style="color:#94a3b8;">No indicators available.</div>'}
         </div>
+        
+        <!-- Analysis Summary -->
+        <div id="analysis-summary" style="margin-top: 2rem;">
+          <h3 style="margin: 0 0 1rem; font-size: 1.25rem; color: #e5e7eb;">Analysis Summary</h3>
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1rem;">
+            <div style="padding: 1rem; background: rgba(15, 23, 42, 0.35); border: 1px solid rgba(100, 116, 139, 0.22); border-radius: 12px;">
+              <div style="font-size: 0.85rem; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 0.5rem;">Elliott Waves</div>
+              <div id="elliott-content" style="color: #64748b; font-style: italic;">Loading Elliott Waves analysis...</div>
+            </div>
+            <div style="padding: 1rem; background: rgba(15, 23, 42, 0.35); border: 1px solid rgba(100, 116, 139, 0.22); border-radius: 12px;">
+              <div style="font-size: 0.85rem; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 0.5rem;">Scientific Analyzer</div>
+              <div id="scientific-content" style="color: #64748b; font-style: italic;">Loading scientific analysis...</div>
+            </div>
+          </div>
+          <div style="margin-top: 1rem; padding: 1rem; background: rgba(15, 23, 42, 0.35); border: 1px solid rgba(100, 116, 139, 0.22); border-radius: 12px;">
+            <div style="font-size: 0.85rem; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 0.5rem;">Up/Down Probability (Short / Medium / Long)</div>
+            <div id="probability-content" style="color: #64748b; font-style: italic;">Loading probability summary...</div>
+          </div>
+        </div>
       `;
 
       // Render price chart using available data
@@ -814,6 +957,8 @@
         bb_upper: indicatorById['bb_upper']?.value,
         bb_lower: indicatorById['bb_lower']?.value
       });
+
+      void updateAnalysisSections(effectiveTicker);
     }
 
     function renderPriceChart(data) {
@@ -906,6 +1051,160 @@
       ctx.fillText('Price Levels (52w range + SMAs + Bollinger)', padding.left, 18);
     }
 
+    function getScientificEntry(ticker) {
+      const t = normalizeTicker(ticker);
+      if (!t || !scientificAnalysisData) return null;
+      return scientificAnalysisData[t] || null;
+    }
+
+    function getTimeframeRow(ticker, timeframe) {
+      const t = normalizeTicker(ticker);
+      if (!t) return null;
+      const map = scientificByTimeframe?.[timeframe];
+      if (!map) return null;
+      return map.get(t) || null;
+    }
+
+    function formatProbability(prob) {
+      const n = Number(prob);
+      if (!Number.isFinite(n)) return '—';
+      return `${Math.round(n * 100)}%`;
+    }
+
+    function formatSignedPercent(value, digits = 1) {
+      const n = Number(value);
+      if (!Number.isFinite(n)) return '—';
+      const sign = n > 0 ? '+' : '';
+      return `${sign}${n.toFixed(digits)}%`;
+    }
+
+    function renderScientificSummary(entry) {
+      if (!entry) {
+        return '<div style="color:#64748b;">Scientific analysis not available for this ticker.</div>';
+      }
+      const setupOk = entry?.setup?.fulfilled === true;
+      const triggerOk = entry?.trigger?.fulfilled === true;
+      const setupScore = Number(entry?.setup?.score);
+      const triggerScore = Number(entry?.trigger?.score);
+      const setupConditions = entry?.setup?.conditions_met || '—';
+      const triggerConditions = entry?.trigger?.conditions_met || '—';
+      const timeframe = entry?.timeframe || '—';
+      const signalStrength = entry?.signal_strength || '—';
+      const prob = entry?.probability;
+      const expectedReturn = entry?.expected_return_10d;
+
+      const yesNo = (v) => v ? '<span style="color:#34d399; font-weight:700;">Yes</span>' : '<span style="color:#f87171; font-weight:700;">No</span>';
+      const line = (label, value) => `
+        <div style="display:flex; justify-content: space-between; gap: 1rem; padding: 4px 0; border-bottom: 1px solid rgba(100, 116, 139, 0.12);">
+          <span style="color:#94a3b8; font-size: 0.85rem;">${escapeHtml(label)}</span>
+          <span style="color:#e5e7eb; font-weight:600; font-size:0.85rem;">${value}</span>
+        </div>
+      `;
+
+      return `
+        ${line('Setup', `${yesNo(setupOk)} <span style="color:#64748b;">(${Number.isFinite(setupScore) ? setupScore : '—'}/100 • ${escapeHtml(setupConditions)})</span>`)}
+        ${line('Trigger', `${yesNo(triggerOk)} <span style="color:#64748b;">(${Number.isFinite(triggerScore) ? triggerScore : '—'}/100 • ${escapeHtml(triggerConditions)})</span>`)}
+        ${line('Setup + Trigger', yesNo(setupOk && triggerOk))}
+        ${line('Timeframe', escapeHtml(timeframe))}
+        ${line('Signal strength', escapeHtml(signalStrength))}
+        ${line('Model up probability', formatProbability(prob))}
+        ${line('Expected return (10d)', formatSignedPercent(expectedReturn, 2))}
+      `;
+    }
+
+    function renderProbabilitySummary(ticker, entry) {
+      const timeframes = [
+        { key: 'short', label: 'Short-term (1-5d)' },
+        { key: 'medium', label: 'Medium-term (5-20d)' },
+        { key: 'long', label: 'Long-term (20-60d)' }
+      ];
+
+      const cards = timeframes.map(({ key, label }) => {
+        const row = getTimeframeRow(ticker, key);
+        let prob = Number(row?.probability);
+        if (!Number.isFinite(prob) && entry?.timeframe === key) {
+          prob = Number(entry?.probability);
+        }
+        const up = Number.isFinite(prob) ? Math.round(prob * 100) : null;
+        const down = Number.isFinite(prob) ? 100 - up : null;
+        return `
+          <div style="padding: 0.5rem 0.75rem; border-radius: 10px; border: 1px solid rgba(100, 116, 139, 0.18); background: rgba(15, 23, 42, 0.35);">
+            <div style="font-size: 0.8rem; color:#94a3b8; margin-bottom: 0.35rem;">${escapeHtml(label)}</div>
+            <div style="display:flex; justify-content: space-between; gap: 1rem;">
+              <span style="color:#34d399; font-weight:700;">Up ${up == null ? '—' : `${up}%`}</span>
+              <span style="color:#f87171; font-weight:700;">Down ${down == null ? '—' : `${down}%`}</span>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      return `<div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 0.75rem;">${cards}</div>`;
+    }
+
+    async function getElliottPayload(ticker) {
+      const t = normalizeTicker(ticker);
+      if (!t) return null;
+      if (elliottWavesData.has(t)) return elliottWavesData.get(t);
+      const { payload } = await fetchJson(`/data/marketphase/${encodeURIComponent(t)}.json`);
+      if (!payload || payload.ok !== true) return null;
+      elliottWavesData.set(t, payload);
+      if (!elliottSupportByTicker.has(t)) {
+        elliottSupportByTicker.set(t, computeElliottSupport(payload));
+      }
+      return payload;
+    }
+
+    function renderElliottSummary(payload) {
+      if (!payload || payload.ok !== true) {
+        return '<div style="color:#64748b;">Elliott Waves data not available for this ticker.</div>';
+      }
+      const data = payload?.data || {};
+      const elliott = data?.elliott || {};
+      const features = data?.features || {};
+      const direction = elliott?.completedPattern?.direction || features?.SMATrend || '—';
+      const wave = elliott?.developingPattern?.possibleWave || '—';
+      const confidence = Number(elliott?.developingPattern?.confidence ?? elliott?.completedPattern?.confidence0_100);
+      const conformance = Number(data?.fib?.conformanceScore);
+      const fibLevels = elliott?.developingPattern?.fibLevels || {};
+      const support = Array.isArray(fibLevels.support) ? fibLevels.support.map(v => Number(v).toFixed(2)).join(' / ') : '—';
+      const resistance = Array.isArray(fibLevels.resistance) ? fibLevels.resistance.map(v => Number(v).toFixed(2)).join(' / ') : '—';
+
+      const line = (label, value) => `
+        <div style="display:flex; justify-content: space-between; gap: 1rem; padding: 4px 0; border-bottom: 1px solid rgba(100, 116, 139, 0.12);">
+          <span style="color:#94a3b8; font-size: 0.85rem;">${escapeHtml(label)}</span>
+          <span style="color:#e5e7eb; font-weight:600; font-size:0.85rem;">${escapeHtml(value)}</span>
+        </div>
+      `;
+
+      return `
+        ${line('Direction', escapeHtml(direction))}
+        ${line('Current wave', escapeHtml(wave))}
+        ${line('Wave confidence', Number.isFinite(confidence) ? `${Math.round(confidence)}%` : '—')}
+        ${line('Fib conformance', Number.isFinite(conformance) ? `${conformance.toFixed(1)}%` : '—')}
+        ${line('Support', support)}
+        ${line('Resistance', resistance)}
+      `;
+    }
+
+    async function updateAnalysisSections(ticker) {
+      const sciEl = document.getElementById('scientific-content');
+      const elliottEl = document.getElementById('elliott-content');
+      const probEl = document.getElementById('probability-content');
+      if (!sciEl || !elliottEl || !probEl) return;
+
+      if (!scientificAnalysisData) {
+        await loadScientificData();
+      }
+
+      const entry = getScientificEntry(ticker);
+      sciEl.innerHTML = renderScientificSummary(entry);
+      probEl.innerHTML = renderProbabilitySummary(ticker, entry);
+
+      elliottEl.innerHTML = '<div style="color:#64748b; font-style: italic;">Loading Elliott Waves analysis...</div>';
+      const elliottPayload = await getElliottPayload(ticker);
+      elliottEl.innerHTML = renderElliottSummary(elliottPayload);
+    }
+
     function showLoading(label) {
       // Show results section
       resultsSection.style.display = 'block';
@@ -927,8 +1226,8 @@
       resultsTitle.textContent = 'Not supported';
       resultsContent.innerHTML = `
         <div style="padding: 1rem; border-radius: 10px; background: rgba(245, 158, 11, 0.10); border: 1px solid rgba(245, 158, 11, 0.35); margin-bottom: 1.5rem;">
-          <div style="font-weight: 700; color: #fde68a;">Diese Aktie ist aktuell nicht im unterstützten Universe.</div>
-          <div style="margin-top: 0.35rem; color: #fde68a;">Aktuell unterstützt: NASDAQ-100 (100)</div>
+          <div style="font-weight: 700; color: #fde68a;">This ticker is not in the supported universe.</div>
+          <div style="margin-top: 0.35rem; color: #fde68a;">Currently supported: NASDAQ-100 (100)</div>
         </div>
       `;
       resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
