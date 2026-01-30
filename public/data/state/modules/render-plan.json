@@ -1,0 +1,38 @@
+{
+  "schema_version": "3.0",
+  "module": "render-plan",
+  "tier": "system",
+  "domain": "system",
+  "status": "ok",
+  "severity": "info",
+  "published": true,
+  "last_success_at": "2026-01-23T21:36:09.955Z",
+  "last_attempt_at": "2026-01-23T21:36:09.955Z",
+  "digest": null,
+  "record_count": 1,
+  "expected_count": 1,
+  "freshness": {
+    "expected_interval_minutes": 1440,
+    "grace_minutes": 180,
+    "policy": "manual",
+    "age_minutes": 0,
+    "next_expected_at": "2026-01-24T21:36:09.955Z"
+  },
+  "failure": null,
+  "ui_contract": {
+    "required": false,
+    "passed": true,
+    "failed_paths": []
+  },
+  "proof": {
+    "file_present": true,
+    "schema_valid": true,
+    "plausible": true
+  },
+  "debug": {
+    "curl": "/api/render-plan?debug=1",
+    "last_run_url": null
+  },
+  "build_id": "20260123T213609Z_3901a32",
+  "manifest_ref": "20260123T213609Z_3901a32"
+}

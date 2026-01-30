@@ -21,6 +21,7 @@ on:
 jobs:
   finalize:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     # Single-flight: cancel any in-progress runs
     concurrency:
       group: rv-finalizer

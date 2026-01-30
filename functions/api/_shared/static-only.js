@@ -1,3 +1,5 @@
+import { isPrivilegedDebug, redact } from "./observability.js";
+
 /**
  * Static JSON API Server v3.0 - Enhanced with Debug Mode
  * 
@@ -344,6 +346,7 @@ export async function serveStaticJson(req, envOrModule, ignored, ctxOrContext) {
   const ctx = moduleOverride ? ctxOrContext : ctxOrContext;
   const moduleName = moduleOverride || url.pathname.replace(/^\/api\//, "").replace(/\/$/, "") || "bundle";
   const isDebug = url.searchParams.has("debug") || url.searchParams.get("debug") === "1";
+  const isPrivileged = isPrivilegedDebug(req, env);
 
   // Manifest-first (asset)
   let manifest = null;
@@ -480,7 +483,8 @@ export async function serveStaticJson(req, envOrModule, ignored, ctxOrContext) {
   // DEBUG MODE
   if (isDebug) {
     const debugResponse = await buildDebugResponse(moduleName, snapshot, moduleConfig, sourceInfo, url);
-    return new Response(JSON.stringify(debugResponse, null, 2), {
+    const payload = isPrivileged ? debugResponse : redact(debugResponse);
+    return new Response(JSON.stringify(payload, null, 2), {
       headers: {
         "Content-Type": "application/json",
         "Cache-Control": "no-store",

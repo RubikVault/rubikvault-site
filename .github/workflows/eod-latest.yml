@@ -20,6 +20,7 @@ concurrency:
 jobs:
   run:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     env:
       RV_UNIVERSE: ${{ github.event.inputs.universe || 'nasdaq100' }}
     steps:
