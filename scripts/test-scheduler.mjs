@@ -95,10 +95,29 @@ async function testSchedulerRunAndHealthOk() {
   console.log("✅ scheduler run updates health");
 }
 
+async function testSchedulerRunBearerAuth() {
+  const env = { RV_KV: createKv(), RV_ADMIN_TOKEN: "secret" };
+  const payload = { job: "eod_stock", mode: "s2", assets: [{ ticker: "SPY" }] };
+  const request = new Request("https://example.com/api/scheduler/run", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": "Bearer secret"
+    },
+    body: JSON.stringify(payload)
+  });
+  const response = await runWithMiddleware(request, env, schedulerRun);
+  const body = JSON.parse(await response.text());
+  assert(body.ok === true, "scheduler run should accept bearer token");
+  assert(body.meta?.status, "meta.status required");
+  console.log("✅ scheduler run accepts bearer token");
+}
+
 async function main() {
   await testSchedulerHealthStale();
   await testSchedulerRunAuth();
   await testSchedulerRunAndHealthOk();
+  await testSchedulerRunBearerAuth();
   console.log("✅ scheduler tests passed");
 }
 

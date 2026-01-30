@@ -48,6 +48,7 @@ async function fetchWithFallback(primaryUrl, fallbackUrl) {
 
 function assertPipelineTruth(doc) {
   if (!doc || typeof doc !== 'object') fail('pipeline truth doc not an object');
+  if (doc.type !== 'pipeline.truth') fail('pipeline truth doc.type must be pipeline.truth');
   if (typeof doc.asOf !== 'string' || !doc.asOf.includes('T')) fail('pipeline truth doc.asOf missing/invalid');
   if (typeof doc.universe !== 'string' || doc.universe !== 'nasdaq100') fail('pipeline truth doc.universe must be nasdaq100');
   if (!Number.isInteger(doc.expected) || doc.expected <= 0) fail('pipeline truth doc.expected must be positive int');
@@ -90,6 +91,9 @@ async function main() {
   const pipelineLatest = await readJson('public/data/pipeline/nasdaq100.latest.json');
   if (!pipelineLatest?.counts || typeof pipelineLatest.counts !== 'object') {
     fail('pipeline.latest counts missing');
+  }
+  if (pipelineLatest.counts.expected !== staticReady.expected) {
+    fail('pipeline.latest counts.expected must equal pipeline static-ready expected');
   }
   if (pipelineLatest.counts.static_ready !== staticReady.count) {
     fail('pipeline.latest counts.static_ready must equal pipeline static-ready count');

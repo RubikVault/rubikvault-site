@@ -1,0 +1,49 @@
+name: Scheduler Kick
+
+on:
+  schedule:
+    - cron: "15 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  kick:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger scheduler
+        env:
+          RV_BASE: ${{ vars.RV_PROD_BASE }}
+          RV_ADMIN_TOKEN: ${{ secrets.RV_ADMIN_TOKEN }}
+        run: |
+          set -euo pipefail
+
+          if [ -z "${RV_BASE:-}" ]; then
+            echo "RV_PROD_BASE is not set" >&2
+            exit 1
+          fi
+          if [ -z "${RV_ADMIN_TOKEN:-}" ]; then
+            echo "RV_ADMIN_TOKEN is not set" >&2
+            exit 1
+          fi
+
+          payload='{"job":"eod_stock","mode":"s2","universe":"nasdaq100"}'
+          status=$(curl -sS -o /tmp/scheduler.json -w "%{http_code}" \
+            -X POST "${RV_BASE%/}/api/scheduler/run" \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer ${RV_ADMIN_TOKEN}" \
+            --data "$payload")
+
+          if [ "$status" -lt 200 ] || [ "$status" -ge 300 ]; then
+            echo "Scheduler kick failed (HTTP $status)" >&2
+            cat /tmp/scheduler.json >&2 || true
+            exit 1
+          fi
+
+          jq -e '.ok | type == "boolean"' /tmp/scheduler.json >/dev/null
+          jq -e '.meta.status | type == "string"' /tmp/scheduler.json >/dev/null
+          jq -e '.meta.data_date | type == "string"' /tmp/scheduler.json >/dev/null
+
+          jq -r '{ok, meta_status:.meta.status, job:(.data.job // null), run_id:(.data.run_id // null)}' /tmp/scheduler.json
