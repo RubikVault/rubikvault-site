@@ -87,6 +87,14 @@ async function main() {
   if (!Array.isArray(pipeline.missing)) fail('ops-daily pipeline.missing must be array');
   if (pipeline.missing.length !== staticReady.missing.length) fail('ops-daily pipeline.missing length mismatch');
 
+  const pipelineLatest = await readJson('public/data/pipeline/nasdaq100.latest.json');
+  if (!pipelineLatest?.counts || typeof pipelineLatest.counts !== 'object') {
+    fail('pipeline.latest counts missing');
+  }
+  if (pipelineLatest.counts.static_ready !== staticReady.count) {
+    fail('pipeline.latest counts.static_ready must equal pipeline static-ready count');
+  }
+
   if (pipeline.expected > 0 && pipeline.fetched === 0) {
     fail('ops-daily pipeline.fetched=0 with expected>0 indicates empty artifact generation');
   }
