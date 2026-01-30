@@ -235,13 +235,31 @@ async function main() {
 
   // Build nasdaq100.pipeline-truth.json — canonical Truth Chain summary
   const latestPayload = await readJsonRel('public/data/pipeline/nasdaq100.latest.json');
-  const latestCounts = latestPayload?.counts || {
-    expected: tickers.length,
-    fetched: fetchedCount ?? 0,
-    validated: validatedCount ?? 0,
-    computed: computedCount,
-    static_ready: staticReadyCount
+
+  // TRUST nasdaq100.latest.json if it exists and looks valid.
+  // The local recalculation above (based on market-prices/latest.json) is often wrong 
+  // because market-prices/latest.json might only contain indices (SPY, QQQ etc) 
+  // while the actual pipeline run successfully fetched the universe.
+  const sourcePayload = latestPayload?.counts ? latestPayload : null;
+
+  const finalCounts = {
+    expected: sourcePayload?.counts?.expected ?? tickers.length,
+    fetched: sourcePayload?.counts?.fetched ?? fetchedCount ?? 0,
+    validated: sourcePayload?.counts?.validated ?? validatedCount ?? 0,
+    computed: sourcePayload?.counts?.computed ?? computedCount,
+    static_ready: sourcePayload?.counts?.static_ready ?? staticReadyCount
   };
+
+  // Re-map the payload steps to use the trusted counts
+  fetchedPayload.count = finalCounts.fetched;
+  validatedPayload.count = finalCounts.validated;
+  computedPayload.count = finalCounts.computed;
+  staticReadyPayload.count = finalCounts.static_ready;
+
+  // Recalculate computed missing/static missing based on the NEW counts if possible, 
+  // but we don't have the list of specific missing items from latest.json unless we infer it.
+  // For now, we trust the COUNTS for the dashboard.
+
 
   // Count missing reasons
   const reasonCounts = {};
@@ -255,32 +273,32 @@ async function main() {
     {
       id: 'S1',
       title: 'Provider fetched',
-      status: (fetchedCount ?? 0) >= tickers.length ? 'OK' : (fetchedCount ?? 0) > 0 ? 'WARN' : 'FAIL',
-      detail: `${fetchedCount ?? 0}/${tickers.length} symbols fetched`
+      status: (finalCounts.fetched ?? 0) >= tickers.length ? 'OK' : (finalCounts.fetched ?? 0) > 0 ? 'WARN' : 'FAIL',
+      detail: `${finalCounts.fetched ?? 0}/${tickers.length} symbols fetched`
     },
     {
       id: 'S2',
       title: 'OHLC validated',
-      status: (validatedCount ?? 0) >= (fetchedCount ?? 0) ? 'OK' : (validatedCount ?? 0) > 0 ? 'WARN' : 'FAIL',
-      detail: `${validatedCount ?? 0}/${fetchedCount ?? 0} passed validation`
+      status: (finalCounts.validated ?? 0) >= (finalCounts.fetched ?? 0) ? 'OK' : (finalCounts.validated ?? 0) > 0 ? 'WARN' : 'FAIL',
+      detail: `${finalCounts.validated ?? 0}/${finalCounts.fetched ?? 0} passed validation`
     },
     {
       id: 'S3',
       title: 'Indicators computed',
-      status: computedCount >= (validatedCount ?? 0) * 0.9 ? 'OK' : computedCount > 0 ? 'WARN' : 'FAIL',
-      detail: `${computedCount}/${validatedCount ?? 0} indicators computed`
+      status: finalCounts.computed >= (finalCounts.validated ?? 0) * 0.9 ? 'OK' : finalCounts.computed > 0 ? 'WARN' : 'FAIL',
+      detail: `${finalCounts.computed}/${finalCounts.validated ?? 0} indicators computed`
     },
     {
       id: 'S4',
       title: 'MarketPhase generated',
-      status: computedCount >= 2 ? 'OK' : computedCount > 0 ? 'WARN' : 'FAIL',
-      detail: `${computedCount} marketphase files generated`
+      status: finalCounts.computed >= 2 ? 'OK' : finalCounts.computed > 0 ? 'WARN' : 'FAIL',
+      detail: `${finalCounts.computed} marketphase files generated`
     },
     {
       id: 'S5',
       title: 'Static ready',
-      status: staticReadyCount >= computedCount ? 'OK' : staticReadyCount > 0 ? 'WARN' : 'FAIL',
-      detail: `${staticReadyCount}/${computedCount} static ready`
+      status: finalCounts.static_ready >= finalCounts.computed ? 'OK' : finalCounts.static_ready > 0 ? 'WARN' : 'FAIL',
+      detail: `${finalCounts.static_ready}/${finalCounts.computed} static ready`
     },
     {
       id: 'S6',
@@ -293,8 +311,8 @@ async function main() {
     {
       id: 'S7',
       title: 'Site serves data',
-      status: staticReadyCount > 0 ? 'OK' : 'FAIL',
-      detail: staticReadyCount > 0 ? 'Static files deployed' : 'No static files available'
+      status: finalCounts.static_ready > 0 ? 'OK' : 'FAIL',
+      detail: finalCounts.static_ready > 0 ? 'Static files deployed' : 'No static files available'
     }
   ];
 
@@ -324,11 +342,11 @@ async function main() {
     universe: universeName,
     asof: asOf,
     counts: {
-      expected: tickers.length,
-      fetched: fetchedCount ?? 0,
-      validated: validatedCount ?? 0,
-      computed: computedCount,
-      static_ready: staticReadyCount
+      expected: finalCounts.expected,
+      fetched: finalCounts.fetched,
+      validated: finalCounts.validated,
+      computed: finalCounts.computed,
+      static_ready: finalCounts.static_ready
     },
     first_blocker: firstBlocker,
     first_blocker_id: firstBlocker?.id || null,
