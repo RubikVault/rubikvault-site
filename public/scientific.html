@@ -3,10 +3,10 @@
 
 <head>
     <meta charset="UTF-8" />
-    <title>RubikVault – Scientific Stock Analyzer v9.0</title>
+    <title>RubikVault – Scientific Stock Analyzer v9.1</title>
     <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
     <meta name="description"
-        content="Explainable Quant AI Framework. Scientific probability analysis with SHAP explanations, calibration metrics, and risk assessment." />
+        content="Scientific Setup/Trigger Scanner. See which stocks are about to break out with clear Setup and Trigger indicators." />
 
     <meta name="theme-color" content="#3b82f6" />
     <link rel="icon" type="image/png" sizes="32x32" href="/assets/rv-favicon.png" />
@@ -24,7 +24,6 @@
                 <img class="rv-brand-icon" src="/assets/rv-icon.png" alt="" />
                 <span class="rv-brand-text">RubikVault</span>
             </a>
-
             <nav class="rv-nav">
                 <a class="rv-social-link" href="https://www.youtube.com/@RubikVault" target="_blank"
                     rel="noopener noreferrer" aria-label="YouTube">
@@ -41,10 +40,9 @@
                     </svg>
                 </a>
             </nav>
-
             <div class="rv-header-tools" aria-live="polite">
                 <div class="rv-data-updated" style="font-size: 12px; color: var(--rv-text-muted);">
-                    Scientific Analyzer v9.0 (Research Simulation)
+                    Scientific Analyzer v9.1 (Setup/Trigger Scanner)
                 </div>
                 <div class="rv-market-clock">
                     <span class="rv-clock-time" id="rv-ny-time">NY: --:--:--</span>
@@ -110,7 +108,7 @@
             display: flex;
             align-items: center;
             gap: 1.5rem;
-            margin-bottom: 2rem;
+            margin-bottom: 1.5rem;
             flex-wrap: wrap;
         }
 
@@ -121,36 +119,26 @@
             margin: 0;
         }
 
-        .stock-selector {
-            display: flex;
-            gap: 0.75rem;
-            align-items: center;
+        /* Rankings Section */
+        .rankings-section {
+            margin-bottom: 2rem;
         }
 
-        .stock-selector select {
-            padding: 0.6rem 1rem;
-            border-radius: 8px;
-            border: 1px solid rgba(100, 116, 139, 0.3);
-            background: rgba(15, 23, 42, 0.8);
-            color: #e5e7eb;
-            font-size: 1rem;
-            min-width: 200px;
-        }
-
-        .analysis-grid {
+        .rankings-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
             gap: 1.5rem;
+            margin-bottom: 1.5rem;
         }
 
-        .analysis-card {
-            background: rgba(15, 23, 42, 0.5);
-            border: 1px solid rgba(100, 116, 139, 0.2);
+        .ranking-card {
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid rgba(100, 116, 139, 0.25);
             border-radius: 12px;
-            padding: 1.5rem;
+            padding: 1.25rem;
         }
 
-        .card-title {
+        .ranking-title {
             font-size: 1.1rem;
             font-weight: 600;
             color: #e5e7eb;
@@ -160,143 +148,377 @@
             gap: 0.5rem;
         }
 
-        .probability-gauge {
+        .ranking-title .icon {
+            font-size: 1.25rem;
+        }
+
+        .ranking-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.85rem;
+        }
+
+        .ranking-table th {
+            text-align: left;
+            padding: 0.5rem;
+            color: #94a3b8;
+            font-weight: 500;
+            border-bottom: 1px solid rgba(100, 116, 139, 0.2);
+        }
+
+        .ranking-table td {
+            padding: 0.5rem;
+            color: #e5e7eb;
+            border-bottom: 1px solid rgba(100, 116, 139, 0.1);
+        }
+
+        .ranking-table tr:hover {
+            background: rgba(59, 130, 246, 0.1);
+            cursor: pointer;
+        }
+
+        .ranking-table .ticker {
+            font-weight: 600;
+            color: #60a5fa;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 0.15rem 0.5rem;
+            border-radius: 999px;
+            font-size: 0.7rem;
+            font-weight: 600;
+        }
+
+        .badge.strong {
+            background: rgba(34, 197, 94, 0.2);
+            color: #22c55e;
+        }
+
+        .badge.moderate {
+            background: rgba(251, 191, 36, 0.2);
+            color: #fbbf24;
+        }
+
+        .badge.short {
+            background: rgba(34, 197, 94, 0.15);
+            color: #34d399;
+        }
+
+        .badge.medium {
+            background: rgba(59, 130, 246, 0.15);
+            color: #60a5fa;
+        }
+
+        .badge.long {
+            background: rgba(139, 92, 246, 0.15);
+            color: #a78bfa;
+        }
+
+        /* Stock Selector */
+        .stock-selector {
             display: flex;
-            flex-direction: column;
+            gap: 0.75rem;
             align-items: center;
-            gap: 1rem;
+            flex-wrap: wrap;
         }
 
-        .gauge-container {
+        .stock-selector select {
+            padding: 0.5rem 0.75rem;
+            border-radius: 8px;
+            border: 1px solid rgba(100, 116, 139, 0.3);
+            background: rgba(15, 23, 42, 0.8);
+            color: #e5e7eb;
+            font-size: 0.95rem;
+            min-width: 180px;
+        }
+
+        /* Detail Section */
+        .detail-section {
+            margin-top: 2rem;
+        }
+
+        .analysis-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.25rem;
+        }
+
+        .analysis-card {
+            background: rgba(15, 23, 42, 0.5);
+            border: 1px solid rgba(100, 116, 139, 0.2);
+            border-radius: 12px;
+            padding: 1.25rem;
+        }
+
+        .card-title {
+            font-size: 1rem;
+            font-weight: 600;
+            color: #e5e7eb;
+            margin: 0 0 1rem 0;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        /* Setup/Trigger Cards */
+        .setup-trigger-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.25rem;
+            margin-bottom: 1.25rem;
+        }
+
+        @media (max-width: 768px) {
+            .setup-trigger-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .setup-card,
+        .trigger-card {
+            background: rgba(15, 23, 42, 0.6);
+            border-radius: 12px;
+            padding: 1.25rem;
             position: relative;
-            width: 180px;
-            height: 100px;
+            overflow: hidden;
         }
 
-        .gauge-value {
-            font-size: 2.5rem;
+        .setup-card {
+            border: 2px solid rgba(59, 130, 246, 0.4);
+        }
+
+        .setup-card.fulfilled {
+            border-color: rgba(34, 197, 94, 0.6);
+            background: linear-gradient(135deg, rgba(34, 197, 94, 0.08) 0%, rgba(15, 23, 42, 0.6) 100%);
+        }
+
+        .trigger-card {
+            border: 2px solid rgba(251, 191, 36, 0.4);
+        }
+
+        .trigger-card.fulfilled {
+            border-color: rgba(34, 197, 94, 0.6);
+            background: linear-gradient(135deg, rgba(34, 197, 94, 0.08) 0%, rgba(15, 23, 42, 0.6) 100%);
+        }
+
+        .trigger-card.pending {
+            border-color: rgba(100, 116, 139, 0.3);
+            opacity: 0.7;
+        }
+
+        .status-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .status-label {
+            font-size: 1rem;
+            font-weight: 600;
+            color: #e5e7eb;
+        }
+
+        .status-badge {
+            padding: 0.3rem 0.75rem;
+            border-radius: 999px;
+            font-size: 0.8rem;
             font-weight: 700;
-            color: #f1f5f9;
         }
 
-        .gauge-label {
-            font-size: 0.9rem;
+        .status-badge.fulfilled {
+            background: rgba(34, 197, 94, 0.2);
+            color: #22c55e;
+        }
+
+        .status-badge.not-fulfilled {
+            background: rgba(239, 68, 68, 0.2);
+            color: #f87171;
+        }
+
+        .status-badge.pending {
+            background: rgba(100, 116, 139, 0.2);
             color: #94a3b8;
         }
 
-        .confidence-interval {
+        .score-bar {
+            height: 8px;
+            background: rgba(100, 116, 139, 0.2);
+            border-radius: 4px;
+            margin-bottom: 0.75rem;
+            overflow: hidden;
+        }
+
+        .score-fill {
+            height: 100%;
+            border-radius: 4px;
+            transition: width 0.3s ease;
+        }
+
+        .score-fill.high {
+            background: linear-gradient(90deg, #22c55e 0%, #34d399 100%);
+        }
+
+        .score-fill.medium {
+            background: linear-gradient(90deg, #fbbf24 0%, #fcd34d 100%);
+        }
+
+        .score-fill.low {
+            background: linear-gradient(90deg, #f87171 0%, #fca5a5 100%);
+        }
+
+        .proof-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .proof-list li {
+            padding: 0.4rem 0;
             font-size: 0.85rem;
+            color: #94a3b8;
+            display: flex;
+            align-items: flex-start;
+            gap: 0.5rem;
+        }
+
+        .proof-list li::before {
+            content: "✓";
+            color: #22c55e;
+            font-weight: 600;
+        }
+
+        .proof-list.missing li::before {
+            content: "○";
             color: #64748b;
         }
 
-        .risk-metrics {
+        .conditions-count {
+            font-size: 0.85rem;
+            color: #64748b;
+            margin-bottom: 0.5rem;
+        }
+
+        /* Probability Gauge */
+        .probability-section {
+            text-align: center;
+            padding: 1rem 0;
+        }
+
+        .prob-value {
+            font-size: 2.5rem;
+            font-weight: 700;
+        }
+
+        .prob-value.high {
+            color: #22c55e;
+        }
+
+        .prob-value.medium {
+            color: #fbbf24;
+        }
+
+        .prob-value.low {
+            color: #f87171;
+        }
+
+        .prob-label {
+            font-size: 0.9rem;
+            color: #94a3b8;
+            margin-top: 0.25rem;
+        }
+
+        .prob-ci {
+            font-size: 0.8rem;
+            color: #64748b;
+        }
+
+        /* Signal Strength */
+        .signal-indicator {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            padding: 0.75rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+        }
+
+        .signal-indicator.strong {
+            background: rgba(34, 197, 94, 0.15);
+            color: #22c55e;
+        }
+
+        .signal-indicator.moderate {
+            background: rgba(251, 191, 36, 0.15);
+            color: #fbbf24;
+        }
+
+        .signal-indicator.weak {
+            background: rgba(100, 116, 139, 0.15);
+            color: #94a3b8;
+        }
+
+        .signal-text {
+            font-size: 0.9rem;
+            font-weight: 600;
+        }
+
+        /* Risk Metrics */
+        .metrics-grid {
             display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 1rem;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 0.75rem;
         }
 
         .metric-box {
             background: rgba(30, 41, 59, 0.5);
-            padding: 1rem;
+            padding: 0.75rem;
             border-radius: 8px;
             text-align: center;
         }
 
         .metric-value {
-            font-size: 1.5rem;
+            font-size: 1.25rem;
             font-weight: 700;
             color: #f1f5f9;
         }
 
         .metric-label {
-            font-size: 0.8rem;
+            font-size: 0.75rem;
             color: #94a3b8;
-            margin-top: 0.25rem;
+            margin-top: 0.15rem;
         }
 
-        .feature-list {
-            display: flex;
-            flex-direction: column;
+        /* Indicator Panel */
+        .indicator-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
             gap: 0.5rem;
         }
 
-        .feature-item {
+        .indicator-item {
             display: flex;
             justify-content: space-between;
-            align-items: center;
-            padding: 0.5rem 0;
+            padding: 0.4rem 0;
             border-bottom: 1px solid rgba(100, 116, 139, 0.1);
         }
 
-        .feature-name {
-            font-size: 0.9rem;
-            color: #cbd5e1;
-        }
-
-        .feature-value {
-            font-size: 0.9rem;
-            font-weight: 600;
-            padding: 0.2rem 0.5rem;
-            border-radius: 4px;
-        }
-
-        .feature-value.positive {
-            color: #34d399;
-            background: rgba(16, 185, 129, 0.15);
-        }
-
-        .feature-value.negative {
-            color: #f87171;
-            background: rgba(239, 68, 68, 0.15);
-        }
-
-        .model-integrity {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 0.75rem;
-        }
-
-        .integrity-item {
-            text-align: center;
-            padding: 0.75rem;
-            background: rgba(30, 41, 59, 0.3);
-            border-radius: 6px;
-        }
-
-        .integrity-value {
-            font-size: 1.1rem;
-            font-weight: 600;
-            color: #f1f5f9;
-        }
-
-        .integrity-label {
-            font-size: 0.75rem;
+        .indicator-name {
             color: #94a3b8;
-        }
-
-        .drift-status {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.35rem;
-            padding: 0.2rem 0.6rem;
-            border-radius: 999px;
-            font-size: 0.8rem;
-            font-weight: 600;
-        }
-
-        .drift-status.stable {
-            background: rgba(16, 185, 129, 0.15);
-            color: #34d399;
-        }
-
-        .drift-status.warning {
-            background: rgba(251, 191, 36, 0.15);
-            color: #fbbf24;
-        }
-
-        .counterfactual-list {
             font-size: 0.85rem;
-            color: #94a3b8;
+        }
+
+        .indicator-value {
+            color: #e5e7eb;
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+
+        #shap-chart {
+            width: 100%;
+            height: 220px;
         }
 
         .disclaimer-box {
@@ -309,24 +531,10 @@
             color: #fca5a5;
         }
 
-        #shap-chart,
-        #calibration-chart {
-            width: 100%;
-            height: 250px;
-        }
-
         .loading-state {
             text-align: center;
             padding: 3rem;
             color: #64748b;
-        }
-
-        .error-state {
-            text-align: center;
-            padding: 2rem;
-            color: #f87171;
-            background: rgba(239, 68, 68, 0.1);
-            border-radius: 8px;
         }
     </style>
 
@@ -338,326 +546,318 @@
                 <select id="stock-select">
                     <option value="">Select a stock...</option>
                 </select>
-                <button id="analyze-btn" class="rv-btn"
-                    style="padding: 0.6rem 1.2rem; background: #3b82f6; color: white; border: none; border-radius: 8px; cursor: pointer;">
-                    Analyze
-                </button>
             </div>
         </div>
 
-        <div id="analysis-content" class="loading-state">
-            Select a stock to view scientific analysis...
-        </div>
+        <!-- TOP RANKINGS -->
+        <section class="rankings-section">
+            <div class="rankings-grid">
+                <!-- Triggered Setups (Buy Candidates) -->
+                <div class="ranking-card" style="border-color: rgba(34, 197, 94, 0.4);">
+                    <h3 class="ranking-title"><span class="icon">🚀</span> Triggered Setups (Kauf-Kandidaten)</h3>
+                    <table class="ranking-table" id="triggered-table">
+                        <thead>
+                            <tr>
+                                <th>Ticker</th>
+                                <th>Preis</th>
+                                <th>Signal</th>
+                                <th>Prob.</th>
+                                <th>Timeframe</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+
+                <!-- Top Setups (Watchlist) -->
+                <div class="ranking-card" style="border-color: rgba(59, 130, 246, 0.4);">
+                    <h3 class="ranking-title"><span class="icon">👁️</span> Top Setups (Watchlist)</h3>
+                    <table class="ranking-table" id="setups-table">
+                        <thead>
+                            <tr>
+                                <th>Ticker</th>
+                                <th>Preis</th>
+                                <th>Setup</th>
+                                <th>Trigger</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- DETAIL SECTION -->
+        <section class="detail-section" id="detail-section" style="display: none;">
+            <h2 id="detail-title" style="color: #e5e7eb; margin-bottom: 1rem;">Analyse: <span></span></h2>
+
+            <!-- Signal Strength -->
+            <div class="signal-indicator" id="signal-indicator">
+                <span class="signal-text"></span>
+            </div>
+
+            <!-- SETUP / TRIGGER -->
+            <div class="setup-trigger-grid">
+                <div class="setup-card" id="setup-card">
+                    <div class="status-header">
+                        <span class="status-label">📋 SETUP</span>
+                        <span class="status-badge" id="setup-badge"></span>
+                    </div>
+                    <div class="score-bar">
+                        <div class="score-fill" id="setup-score-fill"></div>
+                    </div>
+                    <div class="conditions-count" id="setup-conditions"></div>
+                    <ul class="proof-list" id="setup-proofs"></ul>
+                </div>
+
+                <div class="trigger-card" id="trigger-card">
+                    <div class="status-header">
+                        <span class="status-label">⚡ TRIGGER</span>
+                        <span class="status-badge" id="trigger-badge"></span>
+                    </div>
+                    <div class="score-bar">
+                        <div class="score-fill" id="trigger-score-fill"></div>
+                    </div>
+                    <div class="conditions-count" id="trigger-conditions"></div>
+                    <ul class="proof-list" id="trigger-proofs"></ul>
+                </div>
+            </div>
+
+            <div class="analysis-grid">
+                <!-- Probability -->
+                <div class="analysis-card">
+                    <h3 class="card-title">📊 Wahrscheinlichkeit</h3>
+                    <div class="probability-section">
+                        <div class="prob-value" id="prob-value">--%</div>
+                        <div class="prob-label">Positive Return (10 Tage)</div>
+                        <div class="prob-ci" id="prob-ci"></div>
+                    </div>
+                </div>
+
+                <!-- Risk Metrics -->
+                <div class="analysis-card">
+                    <h3 class="card-title">⚠️ Risiko-Metriken</h3>
+                    <div class="metrics-grid">
+                        <div class="metric-box">
+                            <div class="metric-value" id="sharpe-value">--</div>
+                            <div class="metric-label">Sharpe Proxy</div>
+                        </div>
+                        <div class="metric-box">
+                            <div class="metric-value" id="var-value">--</div>
+                            <div class="metric-label">VaR 95%</div>
+                        </div>
+                        <div class="metric-box">
+                            <div class="metric-value" id="return-value">--</div>
+                            <div class="metric-label">Expected Return</div>
+                        </div>
+                        <div class="metric-box">
+                            <div class="metric-value" id="timeframe-value">--</div>
+                            <div class="metric-label">Timeframe</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Indicators -->
+                <div class="analysis-card">
+                    <h3 class="card-title">📈 Indikatoren</h3>
+                    <div class="indicator-grid" id="indicator-grid"></div>
+                </div>
+
+                <!-- SHAP Chart -->
+                <div class="analysis-card">
+                    <h3 class="card-title">🧠 Feature Importance</h3>
+                    <div id="shap-chart"></div>
+                </div>
+            </div>
+        </section>
 
         <div class="disclaimer-box">
-            <strong>⚠️ Academic Disclaimer:</strong> This analyzer is designed for educational and research purposes
-            only.
-            Model outputs are probability estimates based on historical patterns and should NOT be used for trading
-            decisions.
-            All predictions are simulations — past performance does not guarantee future results.
+            <strong>⚠️ Research Simulation:</strong> Diese Analyse dient ausschließlich Bildungs- und Forschungszwecken.
+            Keine Anlageberatung. Setup/Trigger sind technische Indikatoren, keine Kauf-/Verkaufsempfehlungen.
         </div>
     </main>
 
     <script>
-        // State
         let analysisData = null;
-        let currentSymbol = null;
 
-        // Load analysis data
-        async function loadAnalysisData() {
+        async function loadData() {
             try {
                 const response = await fetch('/data/snapshots/stock-analysis.json');
-                if (!response.ok) throw new Error('Failed to load analysis data');
                 analysisData = await response.json();
-                populateStockSelector();
-            } catch (error) {
-                console.error('Error loading analysis data:', error);
-                document.getElementById('analysis-content').innerHTML = `
-                    <div class="error-state">
-                        Failed to load analysis data. Please try again later.
-                    </div>
-                `;
+                populateRankings();
+                populateSelector();
+            } catch (err) {
+                console.error('Error loading data:', err);
             }
         }
 
-        // Populate stock selector
-        function populateStockSelector() {
+        function populateRankings() {
+            const triggeredTbody = document.querySelector('#triggered-table tbody');
+            const setupsTbody = document.querySelector('#setups-table tbody');
+            
+            // Triggered setups (Kauf-Kandidaten)
+            const triggered = analysisData._rankings?.triggered_setups || [];
+            triggeredTbody.innerHTML = triggered.slice(0, 8).map(s => `
+                <tr onclick="selectStock('${s.ticker}')">
+                    <td class="ticker">${s.ticker}</td>
+                    <td>$${s.price.toFixed(0)}</td>
+                    <td><span class="badge strong">STRONG</span></td>
+                    <td>${Math.round(s.probability * 100)}%</td>
+                    <td><span class="badge ${s.timeframe}">${s.timeframe.toUpperCase()}</span></td>
+                </tr>
+            `).join('') || '<tr><td colspan="5" style="color:#64748b;text-align:center;">Keine aktiven Trigger</td></tr>';
+
+            // Top setups
+            const setups = analysisData._rankings?.top_setups || [];
+            setupsTbody.innerHTML = setups.slice(0, 8).map(s => `
+                <tr onclick="selectStock('${s.ticker}')">
+                    <td class="ticker">${s.ticker}</td>
+                    <td>$${s.price.toFixed(0)}</td>
+                    <td>${s.setup_score}%</td>
+                    <td>${s.trigger_score}%</td>
+                    <td>${s.trigger_fulfilled ? '<span class="badge strong">TRIGGER</span>' : '<span class="badge moderate">WATCH</span>'}</td>
+                </tr>
+            `).join('') || '<tr><td colspan="5" style="color:#64748b;text-align:center;">Keine Setups</td></tr>';
+        }
+
+        function populateSelector() {
             const select = document.getElementById('stock-select');
             const symbols = Object.keys(analysisData)
-                .filter(k => k !== '_meta' && analysisData[k].probability !== null)
+                .filter(k => !k.startsWith('_') && analysisData[k].probability !== null)
                 .sort();
+            
+            // Group by signal strength
+            const strong = symbols.filter(s => analysisData[s].signal_strength === 'STRONG');
+            const moderate = symbols.filter(s => analysisData[s].signal_strength === 'MODERATE');
+            const weak = symbols.filter(s => analysisData[s].signal_strength === 'WEAK');
 
-            symbols.forEach(symbol => {
-                const option = document.createElement('option');
-                option.value = symbol;
-                option.textContent = symbol;
-                select.appendChild(option);
-            });
-
-            // Also add unavailable symbols
-            const unavailable = Object.keys(analysisData)
-                .filter(k => k !== '_meta' && analysisData[k].probability === null)
-                .sort();
-
-            if (unavailable.length > 0) {
-                const optgroup = document.createElement('optgroup');
-                optgroup.label = 'Data Unavailable';
-                unavailable.forEach(symbol => {
-                    const option = document.createElement('option');
-                    option.value = symbol;
-                    option.textContent = `${symbol} (no data)`;
-                    option.disabled = true;
-                    optgroup.appendChild(option);
-                });
-                select.appendChild(optgroup);
+            select.innerHTML = '<option value="">Wähle eine Aktie...</option>';
+            
+            if (strong.length > 0) {
+                const og1 = document.createElement('optgroup');
+                og1.label = '🚀 Triggered (Kauf-Signal)';
+                strong.forEach(s => { const o = document.createElement('option'); o.value = s; o.textContent = `${s} - ${analysisData[s].name}`; og1.appendChild(o); });
+                select.appendChild(og1);
             }
-
-            // Auto-select first available
-            if (symbols.length > 0) {
-                select.value = symbols[0];
+            
+            if (moderate.length > 0) {
+                const og2 = document.createElement('optgroup');
+                og2.label = '👁️ Setup erfüllt (Watchlist)';
+                moderate.forEach(s => { const o = document.createElement('option'); o.value = s; o.textContent = `${s} - ${analysisData[s].name}`; og2.appendChild(o); });
+                select.appendChild(og2);
+            }
+            
+            if (weak.length > 0) {
+                const og3 = document.createElement('optgroup');
+                og3.label = '○ Kein Setup';
+                weak.forEach(s => { const o = document.createElement('option'); o.value = s; o.textContent = `${s} - ${analysisData[s].name}`; og3.appendChild(o); });
+                select.appendChild(og3);
             }
         }
 
-        // Render analysis for selected stock
-        function renderAnalysis(symbol) {
-            const data = analysisData[symbol];
-            if (!data || data.probability === null) {
-                document.getElementById('analysis-content').innerHTML = `
-                    <div class="error-state">
-                        ${data?.error || 'Analysis data not available for this symbol.'}
-                    </div>
-                `;
-                return;
-            }
+        function selectStock(ticker) {
+            document.getElementById('stock-select').value = ticker;
+            renderDetail(ticker);
+        }
 
-            currentSymbol = symbol;
+        function renderDetail(ticker) {
+            const data = analysisData[ticker];
+            if (!data || data.probability === null) return;
 
+            document.getElementById('detail-section').style.display = 'block';
+            document.querySelector('#detail-title span').textContent = `${ticker} - ${data.name}`;
+
+            // Signal Indicator
+            const signalEl = document.getElementById('signal-indicator');
+            signalEl.className = `signal-indicator ${data.signal_strength.toLowerCase()}`;
+            signalEl.querySelector('.signal-text').textContent = 
+                data.signal_strength === 'STRONG' ? '🚀 KAUF-SIGNAL: Setup + Trigger erfüllt!' :
+                data.signal_strength === 'MODERATE' ? '👁️ WATCHLIST: Setup erfüllt, Trigger ausstehend' :
+                '○ Kein aktives Setup';
+
+            // Setup Card
+            const setupCard = document.getElementById('setup-card');
+            setupCard.className = `setup-card ${data.setup.fulfilled ? 'fulfilled' : ''}`;
+            document.getElementById('setup-badge').textContent = data.setup.fulfilled ? '✓ ERFÜLLT' : '✗ NICHT ERFÜLLT';
+            document.getElementById('setup-badge').className = `status-badge ${data.setup.fulfilled ? 'fulfilled' : 'not-fulfilled'}`;
+            document.getElementById('setup-score-fill').style.width = `${data.setup.score}%`;
+            document.getElementById('setup-score-fill').className = `score-fill ${data.setup.score >= 70 ? 'high' : data.setup.score >= 50 ? 'medium' : 'low'}`;
+            document.getElementById('setup-conditions').textContent = `${data.setup.conditions_met} Bedingungen erfüllt (Score: ${data.setup.score}%)`;
+            document.getElementById('setup-proofs').innerHTML = data.setup.proof_points.map(p => `<li>${p}</li>`).join('') || '<li class="missing">Keine Bedingungen erfüllt</li>';
+
+            // Trigger Card
+            const triggerCard = document.getElementById('trigger-card');
+            triggerCard.className = `trigger-card ${data.trigger.fulfilled ? 'fulfilled' : ''} ${data.trigger.pending ? 'pending' : ''}`;
+            document.getElementById('trigger-badge').textContent = data.trigger.pending ? '⏳ WARTE AUF SETUP' : data.trigger.fulfilled ? '✓ ERFÜLLT' : '✗ NICHT ERFÜLLT';
+            document.getElementById('trigger-badge').className = `status-badge ${data.trigger.pending ? 'pending' : data.trigger.fulfilled ? 'fulfilled' : 'not-fulfilled'}`;
+            document.getElementById('trigger-score-fill').style.width = `${data.trigger.score}%`;
+            document.getElementById('trigger-score-fill').className = `score-fill ${data.trigger.score >= 70 ? 'high' : data.trigger.score >= 50 ? 'medium' : 'low'}`;
+            document.getElementById('trigger-conditions').textContent = data.trigger.pending ? 'Setup muss zuerst erfüllt sein' : `${data.trigger.conditions_met} Bedingungen erfüllt (Score: ${data.trigger.score}%)`;
+            document.getElementById('trigger-proofs').innerHTML = data.trigger.proof_points.map(p => `<li>${p}</li>`).join('') || (data.trigger.pending ? '<li class="missing">Warte auf Setup...</li>' : '<li class="missing">Keine Trigger-Bedingungen erfüllt</li>');
+
+            // Probability
             const prob = data.probability;
-            const probClass = prob >= 0.6 ? 'positive' : prob <= 0.4 ? 'negative' : '';
-            const probColor = prob >= 0.6 ? '#34d399' : prob <= 0.4 ? '#f87171' : '#fbbf24';
+            const probEl = document.getElementById('prob-value');
+            probEl.textContent = `${Math.round(prob * 100)}%`;
+            probEl.className = `prob-value ${prob >= 0.6 ? 'high' : prob >= 0.45 ? 'medium' : 'low'}`;
+            document.getElementById('prob-ci').textContent = `95% CI: [${Math.round(data.metadata.confidence_interval[0] * 100)}% – ${Math.round(data.metadata.confidence_interval[1] * 100)}%]`;
 
-            const ci = data.metadata?.confidence_interval || [prob - 0.1, prob + 0.1];
+            // Risk Metrics
+            document.getElementById('sharpe-value').textContent = data.risk_metrics.sharpe_proxy.toFixed(2);
+            document.getElementById('sharpe-value').style.color = data.risk_metrics.sharpe_proxy >= 0 ? '#22c55e' : '#f87171';
+            document.getElementById('var-value').textContent = `${data.risk_metrics.var95.toFixed(1)}%`;
+            document.getElementById('return-value').textContent = `${data.expected_return_10d >= 0 ? '+' : ''}${data.expected_return_10d}%`;
+            document.getElementById('return-value').style.color = data.expected_return_10d >= 0 ? '#22c55e' : '#f87171';
+            document.getElementById('timeframe-value').textContent = data.timeframe ? data.timeframe.toUpperCase() : '-';
 
-            document.getElementById('analysis-content').innerHTML = `
-                <div class="analysis-grid">
-                    <!-- Probability Card -->
-                    <div class="analysis-card">
-                        <h3 class="card-title">📊 Probability Estimate</h3>
-                        <div class="probability-gauge">
-                            <div class="gauge-container">
-                                <canvas id="gauge-canvas" width="180" height="100"></canvas>
-                            </div>
-                            <div class="gauge-value" style="color: ${probColor}">${(prob * 100).toFixed(0)}%</div>
-                            <div class="gauge-label">Positive Return (10d)</div>
-                            <div class="confidence-interval">95% CI: [${(ci[0] * 100).toFixed(0)}% – ${(ci[1] * 100).toFixed(0)}%]</div>
-                        </div>
-                    </div>
-
-                    <!-- Risk Metrics Card -->
-                    <div class="analysis-card">
-                        <h3 class="card-title">⚠️ Risk Metrics</h3>
-                        <div class="risk-metrics">
-                            <div class="metric-box">
-                                <div class="metric-value" style="color: ${data.risk_metrics.sharpe_proxy >= 0 ? '#34d399' : '#f87171'}">
-                                    ${data.risk_metrics.sharpe_proxy.toFixed(2)}
-                                </div>
-                                <div class="metric-label">Sharpe Proxy</div>
-                            </div>
-                            <div class="metric-box">
-                                <div class="metric-value" style="color: #f87171">
-                                    ${data.risk_metrics.var95.toFixed(1)}%
-                                </div>
-                                <div class="metric-label">VaR 95%</div>
-                            </div>
-                            <div class="metric-box">
-                                <div class="metric-value" style="color: ${data.expected_return_10d >= 0 ? '#34d399' : '#f87171'}">
-                                    ${data.expected_return_10d >= 0 ? '+' : ''}${data.expected_return_10d.toFixed(1)}%
-                                </div>
-                                <div class="metric-label">Expected Return (10d)</div>
-                            </div>
-                            <div class="metric-box">
-                                <div class="drift-status ${data.metadata.drift_status}">
-                                    ● ${data.metadata.drift_status.toUpperCase()}
-                                </div>
-                                <div class="metric-label">Drift Status</div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- SHAP Values Card -->
-                    <div class="analysis-card">
-                        <h3 class="card-title">🧠 Feature Importance (SHAP)</h3>
-                        <div id="shap-chart"></div>
-                    </div>
-
-                    <!-- Top Features Card -->
-                    <div class="analysis-card">
-                        <h3 class="card-title">📈 Key Drivers</h3>
-                        <div class="feature-list">
-                            ${renderFeatureList(data.explainability)}
-                        </div>
-                    </div>
-
-                    <!-- Model Integrity Card -->
-                    <div class="analysis-card">
-                        <h3 class="card-title">🔬 Model Integrity</h3>
-                        <div class="model-integrity">
-                            <div class="integrity-item">
-                                <div class="integrity-value">${data.metadata.model_auc}</div>
-                                <div class="integrity-label">AUC Score</div>
-                            </div>
-                            <div class="integrity-item">
-                                <div class="integrity-value">${data.metadata.calibration_error}</div>
-                                <div class="integrity-label">ECE</div>
-                            </div>
-                            <div class="integrity-item">
-                                <div class="drift-status ${data.metadata.drift_status}">●</div>
-                                <div class="integrity-label">Drift</div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- LIME Explanations Card -->
-                    <div class="analysis-card">
-                        <h3 class="card-title">💡 LIME Explanations</h3>
-                        <div style="margin-bottom: 1rem;">
-                            <strong style="color: #34d399;">Positive Factors:</strong>
-                            <div style="color: #94a3b8; font-size: 0.9rem;">
-                                ${data.explainability.lime_explanations.positive.join(', ') || 'None'}
-                            </div>
-                        </div>
-                        <div>
-                            <strong style="color: #f87171;">Negative Factors:</strong>
-                            <div style="color: #94a3b8; font-size: 0.9rem;">
-                                ${data.explainability.lime_explanations.negative.join(', ') || 'None'}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            `;
-
-            // Render gauge
-            renderGauge(prob, probColor);
-
-            // Render SHAP chart
-            renderSHAPChart(data.explainability.shap_values);
-        }
-
-        function renderFeatureList(explainability) {
-            const shapValues = explainability.shap_values || {};
-            const sorted = Object.entries(shapValues)
-                .sort((a, b) => Math.abs(b[1]) - Math.abs(a[1]))
-                .slice(0, 6);
-
-            return sorted.map(([feature, value]) => `
-                <div class="feature-item">
-                    <span class="feature-name">${formatFeatureName(feature)}</span>
-                    <span class="feature-value ${value >= 0 ? 'positive' : 'negative'}">
-                        ${value >= 0 ? '+' : ''}${value.toFixed(2)}
-                    </span>
+            // Indicators
+            const indGrid = document.getElementById('indicator-grid');
+            const ind = data.indicators;
+            indGrid.innerHTML = Object.entries(ind).map(([k, v]) => `
+                <div class="indicator-item">
+                    <span class="indicator-name">${k.replace(/_/g, ' ').toUpperCase()}</span>
+                    <span class="indicator-value">${typeof v === 'number' ? v.toFixed(2) : v}</span>
                 </div>
             `).join('');
-        }
 
-        function formatFeatureName(name) {
-            return name
-                .replace(/_/g, ' ')
-                .replace(/\b\w/g, c => c.toUpperCase())
-                .replace('Pct', '%')
-                .replace('20D', '20d')
-                .replace('50 200', '50/200');
-        }
+            // SHAP Chart
+            renderSHAPChart(data.explainability.shap_values);
 
-        function renderGauge(prob, color) {
-            const canvas = document.getElementById('gauge-canvas');
-            if (!canvas) return;
-
-            const ctx = canvas.getContext('2d');
-            const width = canvas.width;
-            const height = canvas.height;
-            const centerX = width / 2;
-            const centerY = height - 10;
-            const radius = 80;
-
-            ctx.clearRect(0, 0, width, height);
-
-            // Background arc
-            ctx.beginPath();
-            ctx.arc(centerX, centerY, radius, Math.PI, 2 * Math.PI);
-            ctx.strokeStyle = 'rgba(100, 116, 139, 0.2)';
-            ctx.lineWidth = 12;
-            ctx.stroke();
-
-            // Value arc
-            const angle = Math.PI + (prob * Math.PI);
-            ctx.beginPath();
-            ctx.arc(centerX, centerY, radius, Math.PI, angle);
-            ctx.strokeStyle = color;
-            ctx.lineWidth = 12;
-            ctx.lineCap = 'round';
-            ctx.stroke();
+            // Scroll to detail
+            document.getElementById('detail-section').scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
 
         function renderSHAPChart(shapValues) {
             const chartDiv = document.getElementById('shap-chart');
-            if (!chartDiv) return;
-
-            const entries = Object.entries(shapValues)
-                .sort((a, b) => b[1] - a[1])
-                .slice(0, 8);
-
-            const features = entries.map(e => formatFeatureName(e[0]));
+            const entries = Object.entries(shapValues || {}).sort((a, b) => b[1] - a[1]).slice(0, 8);
+            const features = entries.map(e => e[0].replace(/_/g, ' '));
             const values = entries.map(e => e[1]);
             const colors = values.map(v => v >= 0 ? 'rgba(52, 211, 153, 0.8)' : 'rgba(248, 113, 113, 0.8)');
 
             Plotly.newPlot(chartDiv, [{
-                type: 'bar',
-                x: values,
-                y: features,
-                orientation: 'h',
-                marker: { color: colors }
+                type: 'bar', x: values, y: features, orientation: 'h', marker: { color: colors }
             }], {
-                margin: { l: 120, r: 20, t: 20, b: 40 },
-                paper_bgcolor: 'transparent',
-                plot_bgcolor: 'transparent',
-                font: { color: '#94a3b8' },
-                xaxis: { title: 'SHAP Value', gridcolor: 'rgba(100, 116, 139, 0.2)' },
+                margin: { l: 100, r: 20, t: 10, b: 30 },
+                paper_bgcolor: 'transparent', plot_bgcolor: 'transparent',
+                font: { color: '#94a3b8', size: 10 },
+                xaxis: { gridcolor: 'rgba(100, 116, 139, 0.2)' },
                 yaxis: { automargin: true }
             }, { responsive: true, displayModeBar: false });
         }
 
-        // Event handlers
-        document.getElementById('analyze-btn').addEventListener('click', () => {
-            const symbol = document.getElementById('stock-select').value;
-            if (symbol) {
-                renderAnalysis(symbol);
-            }
+        document.getElementById('stock-select').addEventListener('change', e => {
+            if (e.target.value) renderDetail(e.target.value);
         });
 
-        document.getElementById('stock-select').addEventListener('change', (e) => {
-            if (e.target.value) {
-                renderAnalysis(e.target.value);
-            }
-        });
-
-        // Initialize
-        loadAnalysisData();
-
-        // NY Time clock
         function updateClock() {
             const now = new Date();
-            const nyTime = now.toLocaleTimeString('en-US', {
-                timeZone: 'America/New_York',
-                hour: '2-digit',
-                minute: '2-digit',
-                second: '2-digit',
-                hour12: false
-            });
-            const el = document.getElementById('rv-ny-time');
-            if (el) el.textContent = `NY: ${nyTime}`;
+            const nyTime = now.toLocaleTimeString('en-US', { timeZone: 'America/New_York', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
+            document.getElementById('rv-ny-time').textContent = `NY: ${nyTime}`;
         }
         setInterval(updateClock, 1000);
         updateClock();
+        loadData();
     </script>
 </body>
 
