@@ -312,6 +312,61 @@ export function computeStatsForSymbol(symbol, bars, options = {}) {
   }
   stats.return_zscore_63d = returns63.length >= 2 ? computeZScore(returns63[0], returns63) : null;
 
+  // === NEW INDICATORS: Rolling Std, Lag-1 Autocorrelation, Volume MA, Volatility Percentile ===
+
+  // Rolling Std (20d) — standard deviation of close prices over 20 days
+  const closes20 = bars.slice(0, 20).map((bar) => bar.close).filter((c) => Number.isFinite(c));
+  const { std: rollingStd20 } = computeStd(closes20);
+  stats.rolling_std_20 = closes20.length >= 18 ? rollingStd20 : null;
+
+  // Lag-1 Autocorrelation — correlation of log returns with 1-day lag for AR(1) surrogate
+  const returns20 = [];
+  for (let i = 0; i < 20; i++) {
+    const value = computeLogReturn(bars[i]?.close ?? null, bars[i + 1]?.close ?? null);
+    if (value !== null) returns20.push(value);
+  }
+  if (returns20.length >= 10) {
+    const returnsT = returns20.slice(0, -1);
+    const returnsTMinus1 = returns20.slice(1);
+    const n = Math.min(returnsT.length, returnsTMinus1.length);
+    if (n >= 5) {
+      const meanT = returnsT.slice(0, n).reduce((sum, v) => sum + v, 0) / n;
+      const meanTM1 = returnsTMinus1.slice(0, n).reduce((sum, v) => sum + v, 0) / n;
+      let cov = 0, varT = 0, varTM1 = 0;
+      for (let i = 0; i < n; i++) {
+        cov += (returnsT[i] - meanT) * (returnsTMinus1[i] - meanTM1);
+        varT += (returnsT[i] - meanT) ** 2;
+        varTM1 += (returnsTMinus1[i] - meanTM1) ** 2;
+      }
+      const denom = Math.sqrt(varT * varTM1);
+      stats.lag1_autocorrelation = denom > 0 ? cov / denom : null;
+    } else {
+      stats.lag1_autocorrelation = null;
+    }
+  } else {
+    stats.lag1_autocorrelation = null;
+  }
+
+  // Volume MA (20d) — rolling average of volume
+  const volumes20 = bars.slice(0, 20).map((bar) => bar.volume).filter((v) => Number.isFinite(v));
+  stats.volume_ma_20 = volumes20.length >= 15 ? volumes20.reduce((sum, v) => sum + v, 0) / volumes20.length : null;
+
+  // Volatility Percentile (252d) — ATR percentile rank over 1 year
+  const atrValues252 = [];
+  for (let i = 0; i < Math.min(bars.length - 14, 252); i++) {
+    const atrVal = computeATR(bars.slice(i), 14);
+    if (atrVal !== null) atrValues252.push(atrVal);
+  }
+  const currentATR = stats.atr_14;
+  if (currentATR !== null && atrValues252.length >= 60) {
+    const countBelow = atrValues252.filter((v) => v < currentATR).length;
+    stats.volatility_percentile_252 = (countBelow / atrValues252.length) * 100;
+  } else {
+    stats.volatility_percentile_252 = null;
+  }
+
+  // === END NEW INDICATORS ===
+
   if (stats.close_zscore_63d === null) gaps.push('MISSING_CLOSE_ZSCORE');
   if (stats.return_zscore_63d === null) gaps.push('MISSING_RETURN_ZSCORE');
 
@@ -358,8 +413,8 @@ async function main() {
   const artifactsOutDir = process.env.RV_ARTIFACT_OUT_DIR
     ? String(process.env.RV_ARTIFACT_OUT_DIR)
     : process.env.ARTIFACTS_DIR
-    ? join(String(process.env.ARTIFACTS_DIR), MODULE_NAME)
-    : DEFAULT_ARTIFACTS_DIR;
+      ? join(String(process.env.ARTIFACTS_DIR), MODULE_NAME)
+      : DEFAULT_ARTIFACTS_DIR;
   await mkdir(artifactsOutDir, { recursive: true });
 
   const symbols = await loadUniverseSymbols();

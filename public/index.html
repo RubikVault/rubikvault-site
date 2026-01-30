@@ -1,17 +1,19 @@
 <!DOCTYPE html>
 <html lang="en" data-theme="dark">
+
 <head>
   <meta charset="UTF-8" />
   <title>RubikVault – Stock Analyzer</title>
   <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
-  <meta name="description" content="Find the best stocks to invest in. Analyze stocks by name or ticker symbol with RubikVault Stock Analyzer." />
-  
+  <meta name="description"
+    content="Find the best stocks to invest in. Analyze stocks by name or ticker symbol with RubikVault Stock Analyzer." />
+
   <!-- PWA Meta Tags -->
   <meta name="theme-color" content="#3b82f6" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="RubikVault" />
-  
+
   <!-- Deep Links for Mobile Apps -->
   <meta property="al:ios:url" content="rubikvault://analyze" />
   <meta property="al:ios:app_store_id" content="YOUR_APP_STORE_ID" />
@@ -20,16 +22,17 @@
   <meta property="al:android:package" content="com.rubikvault.app" />
   <meta property="al:android:app_name" content="RubikVault" />
   <meta property="al:web:url" content="https://rubikvault.com" />
-  
+
   <!-- Icons -->
   <link rel="icon" type="image/png" sizes="32x32" href="/assets/rv-favicon.png" />
   <link rel="apple-touch-icon" sizes="180x180" href="/assets/rv-apple-icon.png" />
   <link rel="manifest" href="/manifest.json" />
-  
+
   <!-- Styles -->
   <link rel="stylesheet" href="/style.css" />
   <link rel="stylesheet" href="/search.css" />
 </head>
+
 <body>
   <div id="rv-search-root"></div>
   <!-- HEADER -->
@@ -41,24 +44,32 @@
       </a>
 
       <nav class="rv-nav">
-        <a class="rv-social-link" href="https://www.youtube.com/@RubikVault" target="_blank" rel="noopener noreferrer" aria-label="YouTube">
+        <a class="rv-social-link" href="https://www.youtube.com/@RubikVault" target="_blank" rel="noopener noreferrer"
+          aria-label="YouTube">
           <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-            <path d="M21.58 7.19a2.5 2.5 0 0 0-1.76-1.77C18.25 5 12 5 12 5s-6.25 0-7.82.42A2.5 2.5 0 0 0 2.42 7.2 26.6 26.6 0 0 0 2 12s0 2.55.42 4.81a2.5 2.5 0 0 0 1.76 1.77C5.75 19 12 19 12 19s6.25 0 7.82-.42a2.5 2.5 0 0 0 1.76-1.77C22 14.55 22 12 22 12s0-2.55-.42-4.81ZM10 15.5v-7l6 3.5-6 3.5Z" />
+            <path
+              d="M21.58 7.19a2.5 2.5 0 0 0-1.76-1.77C18.25 5 12 5 12 5s-6.25 0-7.82.42A2.5 2.5 0 0 0 2.42 7.2 26.6 26.6 0 0 0 2 12s0 2.55.42 4.81a2.5 2.5 0 0 0 1.76 1.77C5.75 19 12 19 12 19s6.25 0 7.82-.42a2.5 2.5 0 0 0 1.76-1.77C22 14.55 22 12 22 12s0-2.55-.42-4.81ZM10 15.5v-7l6 3.5-6 3.5Z" />
           </svg>
         </a>
-        <a class="rv-social-link" href="https://x.com/RubikVault" target="_blank" rel="noopener noreferrer" aria-label="X">
+        <a class="rv-social-link" href="https://x.com/RubikVault" target="_blank" rel="noopener noreferrer"
+          aria-label="X">
           <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-            <path d="M18.9 2H22l-6.79 7.76L23 22h-6.2l-4.86-6.02L6.66 22H3.5l7.26-8.3L3 2h6.35l4.4 5.52L18.9 2Zm-1.09 18h1.72L8.4 3.93H6.56L17.81 20Z" />
+            <path
+              d="M18.9 2H22l-6.79 7.76L23 22h-6.2l-4.86-6.02L6.66 22H3.5l7.26-8.3L3 2h6.35l4.4 5.52L18.9 2Zm-1.09 18h1.72L8.4 3.93H6.56L17.81 20Z" />
           </svg>
         </a>
-        <a class="rv-social-link" href="https://www.tiktok.com/@rubikvault" target="_blank" rel="noopener noreferrer" aria-label="TikTok">
+        <a class="rv-social-link" href="https://www.tiktok.com/@rubikvault" target="_blank" rel="noopener noreferrer"
+          aria-label="TikTok">
           <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-            <path d="M16.7 5.2c.8 1.2 2.1 2 3.6 2.1v3.1c-1.7-.1-3.3-.7-4.6-1.7v7.4c0 3.4-2.8 6.2-6.2 6.2S3.3 19.5 3.3 16.1s2.8-6.2 6.2-6.2c.4 0 .8 0 1.2.1v3.3c-.4-.1-.8-.2-1.2-.2-1.7 0-3.1 1.4-3.1 3.1s1.4 3.1 3.1 3.1 3.1-1.4 3.1-3.1V2h3.1c0 1.2.3 2.3 1 3.2Z" />
+            <path
+              d="M16.7 5.2c.8 1.2 2.1 2 3.6 2.1v3.1c-1.7-.1-3.3-.7-4.6-1.7v7.4c0 3.4-2.8 6.2-6.2 6.2S3.3 19.5 3.3 16.1s2.8-6.2 6.2-6.2c.4 0 .8 0 1.2.1v3.3c-.4-.1-.8-.2-1.2-.2-1.7 0-3.1 1.4-3.1 3.1s1.4 3.1 3.1 3.1 3.1-1.4 3.1-3.1V2h3.1c0 1.2.3 2.3 1 3.2Z" />
           </svg>
         </a>
-        <a class="rv-social-link" href="https://www.instagram.com/rubikvault" target="_blank" rel="noopener noreferrer" aria-label="Instagram">
+        <a class="rv-social-link" href="https://www.instagram.com/rubikvault" target="_blank" rel="noopener noreferrer"
+          aria-label="Instagram">
           <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-            <path d="M7 2h10a5 5 0 0 1 5 5v10a5 5 0 0 1-5 5H7a5 5 0 0 1-5-5V7a5 5 0 0 1 5-5Zm10 2H7a3 3 0 0 0-3 3v10a3 3 0 0 0 3 3h10a3 3 0 0 0 3-3V7a3 3 0 0 0-3-3Zm-5 3.5a4.5 4.5 0 1 1 0 9 4.5 4.5 0 0 1 0-9Zm0 2a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5ZM17.8 6.2a1 1 0 1 1 0 2 1 1 0 0 1 0-2Z" />
+            <path
+              d="M7 2h10a5 5 0 0 1 5 5v10a5 5 0 0 1-5 5H7a5 5 0 0 1-5-5V7a5 5 0 0 1 5-5Zm10 2H7a3 3 0 0 0-3 3v10a3 3 0 0 0 3 3h10a3 3 0 0 0 3-3V7a3 3 0 0 0-3-3Zm-5 3.5a4.5 4.5 0 1 1 0 9 4.5 4.5 0 0 1 0-9Zm0 2a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5ZM17.8 6.2a1 1 0 1 1 0 2 1 1 0 0 1 0-2Z" />
           </svg>
         </a>
       </nav>
@@ -81,30 +92,27 @@
 
   <!-- MAIN CONTENT -->
   <main class="rv-main" style="max-width: 1200px; margin: 0 auto; padding: 3rem 2rem;">
-    
+
     <!-- HERO SECTION: Stock Analyzer -->
     <section style="text-align: center; margin-bottom: 4rem;">
       <h1 style="font-size: 4rem; font-weight: 800; margin-bottom: 1rem; color: #f1f5f9; letter-spacing: -0.02em;">
         Stock Analyzer
       </h1>
-      
+
       <p style="font-size: 1.5rem; color: #e5e7eb; margin-bottom: 0.5rem;">
         Find the best stocks to invest in
       </p>
-      
+
       <p style="font-size: 1.125rem; color: #94a3b8; margin-bottom: 3rem;">
         Analyze stocks by name or ticker symbol
       </p>
 
       <!-- SEARCH BOX -->
       <div style="max-width: 700px; margin: 0 auto 3rem;">
-        <div style="position: relative; display: flex; align-items: center; gap: 0.85rem; padding: 0 1.1rem; background: rgba(30, 41, 59, 0.8); border: 2px solid rgba(100, 116, 139, 0.3); border-radius: 12px; transition: all 0.2s;">
-        <input 
-          type="text" 
-          id="stock-search-input" 
-          placeholder="Type Stock you want to check here...."
-          autocomplete="off"
-          style="
+        <div
+          style="position: relative; display: flex; align-items: center; gap: 0.85rem; padding: 0 1.1rem; background: rgba(30, 41, 59, 0.8); border: 2px solid rgba(100, 116, 139, 0.3); border-radius: 12px; transition: all 0.2s;">
+          <input type="text" id="stock-search-input" placeholder="Type Stock you want to check here...."
+            autocomplete="off" style="
             width: 100%;
             flex: 1;
             padding: 1.25rem 0;
@@ -113,15 +121,9 @@
             border: none;
             color: #e5e7eb;
             transition: all 0.2s;
-          "
-          onfocus="this.parentElement.style.borderColor='rgba(59, 130, 246, 0.6)'; this.parentElement.style.background='rgba(30, 41, 59, 1)';"
-          onblur="this.parentElement.style.borderColor='rgba(100, 116, 139, 0.3)'; this.parentElement.style.background='rgba(30, 41, 59, 0.8)';"
-        />
-        <button
-          id="stock-search-btn"
-          type="button"
-          aria-label="Analyze"
-          style="
+          " onfocus="this.parentElement.style.borderColor='rgba(59, 130, 246, 0.6)'; this.parentElement.style.background='rgba(30, 41, 59, 1)';"
+            onblur="this.parentElement.style.borderColor='rgba(100, 116, 139, 0.3)'; this.parentElement.style.background='rgba(30, 41, 59, 0.8)';" />
+          <button id="stock-search-btn" type="button" aria-label="Analyze" style="
             display: inline-flex;
             align-items: center;
             justify-content: center;
@@ -133,13 +135,13 @@
             background: rgba(15, 23, 42, 0.35);
             color: #e5e7eb;
             cursor: pointer;
-          "
-        >
-          <svg style="display:block; width: 22px; height: 22px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" focusable="false">
-            <circle cx="11" cy="11" r="8"></circle>
-            <path d="m21 21-4.35-4.35"></path>
-          </svg>
-        </button>
+          ">
+            <svg style="display:block; width: 22px; height: 22px;" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+              stroke-width="2" aria-hidden="true" focusable="false">
+              <circle cx="11" cy="11" r="8"></circle>
+              <path d="m21 21-4.35-4.35"></path>
+            </svg>
+          </button>
         </div>
         <div style="margin-top: 0.6rem; font-size: 0.9rem; color: #94a3b8; text-align: left; padding-left: 0.25rem;">
           Searching: NASDAQ-100 (100 stocks)
@@ -147,7 +149,8 @@
       </div>
 
       <!-- QUICK STATS -->
-      <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 2rem; max-width: 700px; margin: 0 auto 2rem;">
+      <div
+        style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 2rem; max-width: 700px; margin: 0 auto 2rem;">
         <div style="text-align: center;">
           <div style="font-size: 3rem; font-weight: 700; color: #3b82f6; margin-bottom: 0.5rem;">8</div>
           <div style="font-size: 1rem; color: #94a3b8;">Top Stocks</div>
@@ -171,9 +174,7 @@
     <section id="search-results" style="display: none; margin-top: 3rem;">
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
         <h2 id="results-title" style="font-size: 2rem; color: #e5e7eb;">Analysis Results</h2>
-        <button 
-          onclick="clearSearch()" 
-          style="
+        <button onclick="clearSearch()" style="
             padding: 0.75rem 1.5rem;
             background: rgba(100, 116, 139, 0.2);
             border: 1px solid rgba(100, 116, 139, 0.3);
@@ -181,19 +182,17 @@
             color: #e5e7eb;
             cursor: pointer;
             transition: all 0.2s;
-          "
-          onmouseover="this.style.background='rgba(100, 116, 139, 0.3)'"
-          onmouseout="this.style.background='rgba(100, 116, 139, 0.2)'"
-        >
+          " onmouseover="this.style.background='rgba(100, 116, 139, 0.3)'"
+          onmouseout="this.style.background='rgba(100, 116, 139, 0.2)'">
           ← Back to Search
         </button>
       </div>
-      
+
       <div id="results-content" class="rv-card" style="padding: 2rem;">
         <!-- Results will be loaded here -->
       </div>
     </section>
-    
+
   </main>
 
   <!-- FOOTER -->
@@ -212,10 +211,10 @@
 
   <!-- Market Clock Script -->
   <script src="/market-clock.js"></script>
-  
+
   <!-- Update Date -->
   <script>
-    (function() {
+    (function () {
       const el = document.getElementById("rv-data-updated-date");
       if (el) {
         const today = new Date();
@@ -230,7 +229,7 @@
     const resultsSection = document.getElementById('search-results');
     const resultsContent = document.getElementById('results-content');
     const resultsTitle = document.getElementById('results-title');
-    
+
     // Popular tickers for quick suggestions (can be expanded)
     const popularTickers = ['AAPL', 'MSFT', 'GOOGL', 'AMZN', 'TSLA', 'NVDA', 'META', 'NFLX', 'SPY', 'QQQ'];
 
@@ -308,16 +307,16 @@
       }
     })();
 
-    
 
-      // Analyze-route CSS isolation (prevents global CSS leaks)
-      try {
-        if (window.location.pathname && window.location.pathname.startsWith("/analyze/")) {
-          document.body.classList.add("rv-analyze");
-        }
-      } catch {}
 
-      const typeahead = {
+    // Analyze-route CSS isolation (prevents global CSS leaks)
+    try {
+      if (window.location.pathname && window.location.pathname.startsWith("/analyze/")) {
+        document.body.classList.add("rv-analyze");
+      }
+    } catch { }
+
+    const typeahead = {
       root: null,
       items: [],
       open: false,
@@ -644,21 +643,53 @@
       const nullIndicatorCount = Number.isFinite(Number(meta?.indicators?.nullCount))
         ? Number(meta.indicators.nullCount)
         : computedNullCount;
-      const expectedIndicatorCount = 27;
+      const expectedIndicatorCount = 32;
       const indicatorsValidated = indicatorCount === expectedIndicatorCount && nullIndicatorCount === 0;
-      const indicatorsHtml = indicators
-        .map((item) => {
-          const id = escapeHtml(item?.id);
+
+      // Group indicators by category for compact display
+      const indicatorGroups = {
+        'Price & Averages': ['sma20', 'sma50', 'sma200', 'ema12', 'ema26'],
+        'Volatility & Scale': ['atr14', 'volatility_20d', 'rolling_std_20', 'volatility_percentile'],
+        'Trend & Direction': ['log_return_1d', 'lag1_autocorrelation'],
+        'Bollinger Bands': ['bb_mid', 'bb_upper', 'bb_lower'],
+        'Momentum': ['rsi14', 'macd', 'macd_signal', 'macd_hist'],
+        'Returns': ['ret_1d_abs', 'ret_1d_pct', 'ret_5d_abs', 'ret_5d_pct', 'ret_20d_abs', 'ret_20d_pct'],
+        '52-Week Range': ['high_52w', 'low_52w', 'range_52w_pct'],
+        'Volume': ['avg_volume_20d', 'volume_ma_20', 'volume_ratio_20d'],
+        'Distance to SMAs': ['close_to_sma20_pct', 'close_to_sma200_pct']
+      };
+
+      const indicatorById = Object.fromEntries(indicators.map(i => [i.id, i]));
+
+      const formatIndicatorValue = (id, value) => {
+        if (value == null || !Number.isFinite(Number(value))) return '—';
+        const num = Number(value);
+        if (id.includes('pct') || id.includes('percentile')) return `${num >= 0 ? '+' : ''}${num.toFixed(2)}%`;
+        if (id.includes('volume') && !id.includes('ratio')) return Math.round(num).toLocaleString();
+        if (id.includes('autocorrelation')) return num.toFixed(4);
+        if (Math.abs(num) >= 1000) return num.toLocaleString(undefined, { maximumFractionDigits: 2 });
+        return num.toFixed(4);
+      };
+
+      const indicatorsHtml = Object.entries(indicatorGroups).map(([groupName, ids]) => {
+        const rows = ids.map(id => {
+          const item = indicatorById[id];
           const value = item?.value;
-          const display = Number.isFinite(Number(value)) ? formatNumber(value, { digits: 4 }) : '—';
-          return `
-            <div style="padding: 0.75rem 0.9rem; background: rgba(15, 23, 42, 0.35); border: 1px solid rgba(100, 116, 139, 0.22); border-radius: 10px;">
-              <div style="font-size: 0.8rem; color: #94a3b8;">${id}</div>
-              <div style="margin-top: 0.25rem; font-weight: 700; color: #e5e7eb;">${display}</div>
-            </div>
-          `;
-        })
-        .join('');
+          const display = formatIndicatorValue(id, value);
+          const isNull = value == null || !Number.isFinite(Number(value));
+          const color = isNull ? '#64748b' : '#e5e7eb';
+          return `<div style="display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px solid rgba(100, 116, 139, 0.12);">
+            <span style="color: #94a3b8; font-size: 0.85rem;">${escapeHtml(id)}</span>
+            <span style="color: ${color}; font-weight: 600; font-size: 0.85rem; font-family: 'SF Mono', 'Monaco', monospace;">${display}</span>
+          </div>`;
+        }).join('');
+        return `
+          <div style="margin-bottom: 1rem;">
+            <div style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; margin-bottom: 6px; font-weight: 600;">${escapeHtml(groupName)}</div>
+            ${rows}
+          </div>
+        `;
+      }).join('');
 
       const statusChipColor = meta?.status === 'OK' ? '#10b981' : meta?.status === 'PARTIAL' ? '#f59e0b' : '#ef4444';
 
@@ -700,14 +731,14 @@
         </div>
 
         <div style="margin-top: 2rem; display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; flex-wrap: wrap;">
-          <h3 style="margin: 0; font-size: 1.25rem; color: #e5e7eb;">Indicators</h3>
+          <h3 style="margin: 0; font-size: 1.25rem; color: #e5e7eb;">Indicators (${indicatorCount})</h3>
           <div style="display:flex; gap: 0.6rem; align-items: baseline; flex-wrap: wrap; justify-content: flex-end;">
             ${indicatorsValidated ? '<span style="display:inline-flex; align-items:center; gap:0.35rem; padding: 0.2rem 0.55rem; border-radius: 999px; border: 1px solid rgba(16, 185, 129, 0.35); background: rgba(16, 185, 129, 0.12); color: #a7f3d0; font-size: 0.85rem; font-weight: 700;">Validated</span>' : ''}
-            <div style="font-size: 0.9rem; color: #94a3b8;">count=${indicatorCount} • null=${nullIndicatorCount}</div>
+            <div style="font-size: 0.9rem; color: #94a3b8;">null=${nullIndicatorCount}</div>
           </div>
         </div>
 
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 0.75rem; margin-top: 1rem;">
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem; margin-top: 1rem; padding: 1rem; background: rgba(15, 23, 42, 0.35); border: 1px solid rgba(100, 116, 139, 0.22); border-radius: 12px;">
           ${indicatorsHtml || '<div style="color:#94a3b8;">No indicators available.</div>'}
         </div>
       `;
@@ -870,7 +901,7 @@
       // Check for deep link: /analyze/TICKER
       const path = window.location.pathname;
       const match = path.match(/^\/analyze\/([A-Z]+)$/i);
-      
+
       if (match) {
         const ticker = normalizeTicker(match[1]);
         searchInput.value = ticker;
@@ -891,7 +922,7 @@
         await resolveAndAnalyze(searchInput.value);
       });
     }
-    
+
     // Handle browser back button
     window.addEventListener('popstate', () => {
       const path = window.location.pathname;
@@ -923,4 +954,5 @@
   </script>
 
 </body>
+
 </html>

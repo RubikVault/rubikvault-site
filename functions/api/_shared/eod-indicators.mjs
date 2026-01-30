@@ -150,32 +150,106 @@ export function computeIndicators(bars) {
       ? (latest.close - sma200) / sma200
       : null;
 
+  // === NEW SCIENTIFIC INDICATORS ===
+
+  // Rolling Std (20d) — standard deviation of close prices
+  const rollingStd20 = closes.length >= 20 ? stddev(closes.slice(closes.length - 20)) : null;
+
+  // Log Return (1d) — natural log of price ratio
+  const logReturn1d = closes.length >= 2
+    ? (() => {
+      const cur = closes[closes.length - 1];
+      const prev = closes[closes.length - 2];
+      if (!Number.isFinite(cur) || !Number.isFinite(prev) || prev <= 0) return null;
+      return Math.log(cur / prev);
+    })()
+    : null;
+
+  // Lag-1 Autocorrelation — AR(1) correlation of log returns
+  const lag1Autocorrelation = (() => {
+    if (closes.length < 22) return null;
+    const logReturns = [];
+    for (let i = closes.length - 21; i < closes.length; i++) {
+      const prev = closes[i - 1];
+      const cur = closes[i];
+      if (!Number.isFinite(prev) || !Number.isFinite(cur) || prev <= 0) continue;
+      logReturns.push(Math.log(cur / prev));
+    }
+    if (logReturns.length < 10) return null;
+    const returnsT = logReturns.slice(0, -1);
+    const returnsTM1 = logReturns.slice(1);
+    const n = Math.min(returnsT.length, returnsTM1.length);
+    if (n < 5) return null;
+    const meanT = returnsT.reduce((sum, v) => sum + v, 0) / n;
+    const meanTM1 = returnsTM1.reduce((sum, v) => sum + v, 0) / n;
+    let cov = 0, varT = 0, varTM1 = 0;
+    for (let i = 0; i < n; i++) {
+      cov += (returnsT[i] - meanT) * (returnsTM1[i] - meanTM1);
+      varT += (returnsT[i] - meanT) ** 2;
+      varTM1 += (returnsTM1[i] - meanTM1) ** 2;
+    }
+    const denom = Math.sqrt(varT * varTM1);
+    return denom > 0 ? cov / denom : null;
+  })();
+
+  // Volume MA (20d) — rolling average of volume
+  const volumeMa20 = volumes.length >= 20 ? mean(volumes.slice(volumes.length - 20)) : null;
+
+  // Volatility Percentile (252d) — ATR percentile rank
+  const volatilityPercentile = (() => {
+    if (!Number.isFinite(atr14) || cleanBars.length < 60) return null;
+    const atrValues = [];
+    for (let i = 14; i < Math.min(cleanBars.length, 252); i++) {
+      const atrVal = atr(cleanBars.slice(0, i + 1), 14);
+      if (Number.isFinite(atrVal)) atrValues.push(atrVal);
+    }
+    if (atrValues.length < 30) return null;
+    const countBelow = atrValues.filter((v) => v < atr14).length;
+    return (countBelow / atrValues.length) * 100;
+  })();
+
+  // === END NEW SCIENTIFIC INDICATORS ===
+
   const indicatorList = [
+    // Price & Averages
     { id: 'sma20', value: sma20 },
     { id: 'sma50', value: sma50 },
     { id: 'sma200', value: sma200 },
     { id: 'ema12', value: ema12 },
     { id: 'ema26', value: ema26 },
+    // Volatility & Scale
+    { id: 'atr14', value: atr14 },
+    { id: 'volatility_20d', value: vol20 },
+    { id: 'rolling_std_20', value: rollingStd20 },
+    { id: 'volatility_percentile', value: volatilityPercentile },
+    // Trend & Direction
+    { id: 'log_return_1d', value: logReturn1d },
+    { id: 'lag1_autocorrelation', value: lag1Autocorrelation },
+    // Bollinger Bands
+    { id: 'bb_mid', value: bb.mid },
+    { id: 'bb_upper', value: bb.upper },
+    { id: 'bb_lower', value: bb.lower },
+    // Momentum
     { id: 'rsi14', value: rsi14 },
     { id: 'macd', value: macdOut.macd },
     { id: 'macd_signal', value: macdOut.signal },
     { id: 'macd_hist', value: macdOut.hist },
-    { id: 'bb_mid', value: bb.mid },
-    { id: 'bb_upper', value: bb.upper },
-    { id: 'bb_lower', value: bb.lower },
-    { id: 'atr14', value: atr14 },
+    // Returns
     { id: 'ret_1d_abs', value: ret1.abs },
     { id: 'ret_1d_pct', value: ret1.pct },
     { id: 'ret_5d_abs', value: ret5.abs },
     { id: 'ret_5d_pct', value: ret5.pct },
     { id: 'ret_20d_abs', value: ret20.abs },
     { id: 'ret_20d_pct', value: ret20.pct },
-    { id: 'volatility_20d', value: vol20 },
+    // 52-Week Range
     { id: 'high_52w', value: high52w },
     { id: 'low_52w', value: low52w },
     { id: 'range_52w_pct', value: range52wPct },
+    // Volume
     { id: 'avg_volume_20d', value: avgVol20 },
+    { id: 'volume_ma_20', value: volumeMa20 },
     { id: 'volume_ratio_20d', value: volumeRatio20 },
+    // Distance to SMAs
     { id: 'close_to_sma20_pct', value: closeToSma20Pct },
     { id: 'close_to_sma200_pct', value: closeToSma200Pct }
   ];
