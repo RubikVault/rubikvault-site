@@ -1,0 +1,701 @@
+{
+  "_meta": {
+    "type": "stock-analysis.snapshot",
+    "version": "9.0",
+    "generated_at": "2026-01-30T15:52:33.847Z",
+    "model_version": "v9.0",
+    "symbols_processed": 2,
+    "symbols_failed": 98,
+    "duration_ms": 16
+  },
+  "AAPL": {
+    "probability": 0.44,
+    "expected_return_10d": -0.6,
+    "risk_metrics": {
+      "sharpe_proxy": -0.48,
+      "var95": -1.98
+    },
+    "explainability": {
+      "top_features": [
+        "adx_14",
+        "sentiment_score",
+        "overbought_signal",
+        "ma_distance_50_200",
+        "rsi_volume_interaction"
+      ],
+      "shap_values": {
+        "ma_distance_50_200": 0.04,
+        "adx_14": 0.5,
+        "macd_hist": -0.06,
+        "rsi_14": -0.28,
+        "deep_value_signal": -0.03,
+        "overbought_signal": 0.05,
+        "vix_level": -0.04,
+        "sentiment_score": 0.25,
+        "rsi_volume_interaction": 0.02
+      },
+      "lime_explanations": {
+        "positive": [
+          "return_20d",
+          "ma_distance_50_200",
+          "close_to_sma200_pct"
+        ],
+        "negative": [
+          "macd_hist",
+          "rsi_14",
+          "bb_pctb"
+        ]
+      },
+      "counterfactuals": {}
+    },
+    "metadata": {
+      "model_auc": 0.78,
+      "calibration_error": 0.02,
+      "drift_status": "stable",
+      "confidence_interval": [
+        0.36,
+        0.52
+      ]
+    },
+    "academic_disclaimer": "Research Simulation - model trained for educational and research purposes only. Not for trading decisions."
+  },
+  "ABNB": {
+    "probability": null,
+    "status": "DATA_UNAVAILABLE",
+    "error": "No marketphase data available",
+    "academic_disclaimer": "Research Simulation - model trained for educational and research purposes only. Not for trading decisions."
+  },
+  "ADBE": {
+    "probability": null,
+    "status": "DATA_UNAVAILABLE",
+    "error": "No marketphase data available",
+    "academic_disclaimer": "Research Simulation - model trained for educational and research purposes only. Not for trading decisions."
+  },
+  "ADI": {
+    "probability": null,
+    "status": "DATA_UNAVAILABLE",
+    "error": "No marketphase data available",
+    "academic_disclaimer": "Research Simulation - model trained for educational and research purposes only. Not for trading decisions."
+  },
+  "ADP": {
+    "probability": null,
+    "status": "DATA_UNAVAILABLE",
+    "error": "No marketphase data available",
+    "academic_disclaimer": "Research Simulation - model trained for educational and research purposes only. Not for trading decisions."
+  },
+  "ADSK": {
+    "probability": null,
+    "status": "DATA_UNAVAILABLE",
+    "error": "No marketphase data available",
+    "academic_disclaimer": "Research Simulation - model trained for educational and research purposes only. Not for trading decisions."
+  },
+  "AEP": {
+    "probability": null,
+    "status": "DATA_UNAVAILABLE",
+    "error": "No marketphase data available",
+    "academic_disclaimer": "Research Simulation - model trained for educational and research purposes only. Not for trading decisions."
+  },
+  "AMAT": {
+    "probability": null,
+    "status": "DATA_UNAVAILABLE",
+    "error": "No marketphase data available",
+    "academic_disclaimer": "Research Simulation - model trained for educational and research purposes only. Not for trading decisions."
+  },
+  "AMD": {
+    "probability": null,
+    "status": "DATA_UNAVAILABLE",
+    "error": "No marketphase data available",
+    "academic_disclaimer": "Research Simulation - model trained for educational and research purposes only. Not for trading decisions."
+  },
+  "AMGN": {
+    "probability": null,
+    "status": "DATA_UNAVAILABLE",
+    "error": "No marketphase data available",
+    "academic_disclaimer": "Research Simulation - model trained for educational and research purposes only. Not for trading decisions."
+  },
+  "AMZN": {
+    "probability": null,
+    "status": "DATA_UNAVAILABLE",
+    "error": "No marketphase data available",
+    "academic_disclaimer": "Research Simulation - model trained for educational and research purposes only. Not for trading decisions."
+  },
+  "APP": {
+    "probability": null,
+    "status": "DATA_UNAVAILABLE",
+    "error": "No marketphase data available",
+    "academic_disclaimer": "Research Simulation - model trained for educational and research purposes only. Not for trading decisions."
+  },
+  "ARM": {
+    "probability": null,
+    "status": "DATA_UNAVAILABLE",
+    "error": "No marketphase data available",
+    "academic_disclaimer": "Research Simulation - model trained for educational and research purposes only. Not for trading decisions."
+  },
+  "ASML": {
+    "probability": null,
+    "status": "DATA_UNAVAILABLE",
+    "error": "No marketphase data available",
+    "academic_disclaimer": "Research Simulation - model trained for educational and research purposes only. Not for trading decisions."
+  },
+  "AVGO": {
+    "probability": null,
+    "status": "DATA_UNAVAILABLE",
+    "error": "No marketphase data available",
+    "academic_disclaimer": "Research Simulation - model trained for educational and research purposes only. Not for trading decisions."
+  },
+  "AXON": {
+    "probability": null,
+    "status": "DATA_UNAVAILABLE",
+    "error": "No marketphase data available",
+    "academic_disclaimer": "Research Simulation - model trained for educational and research purposes only. Not for trading decisions."
+  },
+  "AZN": {
+    "probability": null,
+    "status": "DATA_UNAVAILABLE",
+    "error": "No marketphase data available",
+    "academic_disclaimer": "Research Simulation - model trained for educational and research purposes only. Not for trading decisions."
+  },
+  "BIIB": {
+    "probability": null,
+    "status": "DATA_UNAVAILABLE",
+    "error": "No marketphase data available",
+    "academic_disclaimer": "Research Simulation - model trained for educational and research purposes only. Not for trading decisions."
+  },
+  "BKNG": {
+    "probability": null,
+    "status": "DATA_UNAVAILABLE",
+    "error": "No marketphase data available",
+    "academic_disclaimer": "Research Simulation - model trained for educational and research purposes only. Not for trading decisions."
+  },
+  "BKR": {
+    "probability": null,
+    "status": "DATA_UNAVAILABLE",
+    "error": "No marketphase data available",
+    "academic_disclaimer": "Research Simulation - model trained for educational and research purposes only. Not for trading decisions."
+  },
+  "CCEP": {
+    "probability": null,
+    "status": "DATA_UNAVAILABLE",
+    "error": "No marketphase data available",
+    "academic_disclaimer": "Research Simulation - model trained for educational and research purposes only. Not for trading decisions."
+  },
+  "CDNS": {
+    "probability": null,
+    "status": "DATA_UNAVAILABLE",
+    "error": "No marketphase data available",
+    "academic_disclaimer": "Research Simulation - model trained for educational and research purposes only. Not for trading decisions."
+  },
+  "CDW": {
+    "probability": null,
+    "status": "DATA_UNAVAILABLE",
+    "error": "No marketphase data available",
+    "academic_disclaimer": "Research Simulation - model trained for educational and research purposes only. Not for trading decisions."
+  },
+  "CHTR": {
+    "probability": null,
+    "status": "DATA_UNAVAILABLE",
+    "error": "No marketphase data available",
+    "academic_disclaimer": "Research Simulation - model trained for educational and research purposes only. Not for trading decisions."
+  },
+  "CMCSA": {
+    "probability": null,
+    "status": "DATA_UNAVAILABLE",
+    "error": "No marketphase data available",
+    "academic_disclaimer": "Research Simulation - model trained for educational and research purposes only. Not for trading decisions."
+  },
+  "COST": {
+    "probability": null,
+    "status": "DATA_UNAVAILABLE",
+    "error": "No marketphase data available",
+    "academic_disclaimer": "Research Simulation - model trained for educational and research purposes only. Not for trading decisions."
+  },
+  "CPRT": {
+    "probability": null,
+    "status": "DATA_UNAVAILABLE",
+    "error": "No marketphase data available",
+    "academic_disclaimer": "Research Simulation - model trained for educational and research purposes only. Not for trading decisions."
+  },
+  "CRWD": {
+    "probability": null,
+    "status": "DATA_UNAVAILABLE",
+    "error": "No marketphase data available",
+    "academic_disclaimer": "Research Simulation - model trained for educational and research purposes only. Not for trading decisions."
+  },
+  "CSGP": {
+    "probability": null,
+    "status": "DATA_UNAVAILABLE",
+    "error": "No marketphase data available",
+    "academic_disclaimer": "Research Simulation - model trained for educational and research purposes only. Not for trading decisions."
+  },
+  "CSCO": {
+    "probability": null,
+    "status": "DATA_UNAVAILABLE",
+    "error": "No marketphase data available",
+    "academic_disclaimer": "Research Simulation - model trained for educational and research purposes only. Not for trading decisions."
+  },
+  "CSX": {
+    "probability": null,
+    "status": "DATA_UNAVAILABLE",
+    "error": "No marketphase data available",
+    "academic_disclaimer": "Research Simulation - model trained for educational and research purposes only. Not for trading decisions."
+  },
+  "CTAS": {
+    "probability": null,
+    "status": "DATA_UNAVAILABLE",
+    "error": "No marketphase data available",
+    "academic_disclaimer": "Research Simulation - model trained for educational and research purposes only. Not for trading decisions."
+  },
+  "CTSH": {
+    "probability": null,
+    "status": "DATA_UNAVAILABLE",
+    "error": "No marketphase data available",
+    "academic_disclaimer": "Research Simulation - model trained for educational and research purposes only. Not for trading decisions."
+  },
+  "DASH": {
+    "probability": null,
+    "status": "DATA_UNAVAILABLE",
+    "error": "No marketphase data available",
+    "academic_disclaimer": "Research Simulation - model trained for educational and research purposes only. Not for trading decisions."
+  },
+  "DDOG": {
+    "probability": null,
+    "status": "DATA_UNAVAILABLE",
+    "error": "No marketphase data available",
+    "academic_disclaimer": "Research Simulation - model trained for educational and research purposes only. Not for trading decisions."
+  },
+  "DXCM": {
+    "probability": null,
+    "status": "DATA_UNAVAILABLE",
+    "error": "No marketphase data available",
+    "academic_disclaimer": "Research Simulation - model trained for educational and research purposes only. Not for trading decisions."
+  },
+  "EA": {
+    "probability": null,
+    "status": "DATA_UNAVAILABLE",
+    "error": "No marketphase data available",
+    "academic_disclaimer": "Research Simulation - model trained for educational and research purposes only. Not for trading decisions."
+  },
+  "EXC": {
+    "probability": null,
+    "status": "DATA_UNAVAILABLE",
+    "error": "No marketphase data available",
+    "academic_disclaimer": "Research Simulation - model trained for educational and research purposes only. Not for trading decisions."
+  },
+  "FANG": {
+    "probability": null,
+    "status": "DATA_UNAVAILABLE",
+    "error": "No marketphase data available",
+    "academic_disclaimer": "Research Simulation - model trained for educational and research purposes only. Not for trading decisions."
+  },
+  "FAST": {
+    "probability": null,
+    "status": "DATA_UNAVAILABLE",
+    "error": "No marketphase data available",
+    "academic_disclaimer": "Research Simulation - model trained for educational and research purposes only. Not for trading decisions."
+  },
+  "FTNT": {
+    "probability": null,
+    "status": "DATA_UNAVAILABLE",
+    "error": "No marketphase data available",
+    "academic_disclaimer": "Research Simulation - model trained for educational and research purposes only. Not for trading decisions."
+  },
+  "GEHC": {
+    "probability": null,
+    "status": "DATA_UNAVAILABLE",
+    "error": "No marketphase data available",
+    "academic_disclaimer": "Research Simulation - model trained for educational and research purposes only. Not for trading decisions."
+  },
+  "GFS": {
+    "probability": null,
+    "status": "DATA_UNAVAILABLE",
+    "error": "No marketphase data available",
+    "academic_disclaimer": "Research Simulation - model trained for educational and research purposes only. Not for trading decisions."
+  },
+  "GILD": {
+    "probability": null,
+    "status": "DATA_UNAVAILABLE",
+    "error": "No marketphase data available",
+    "academic_disclaimer": "Research Simulation - model trained for educational and research purposes only. Not for trading decisions."
+  },
+  "GOOG": {
+    "probability": null,
+    "status": "DATA_UNAVAILABLE",
+    "error": "No marketphase data available",
+    "academic_disclaimer": "Research Simulation - model trained for educational and research purposes only. Not for trading decisions."
+  },
+  "GOOGL": {
+    "probability": null,
+    "status": "DATA_UNAVAILABLE",
+    "error": "No marketphase data available",
+    "academic_disclaimer": "Research Simulation - model trained for educational and research purposes only. Not for trading decisions."
+  },
+  "HON": {
+    "probability": null,
+    "status": "DATA_UNAVAILABLE",
+    "error": "No marketphase data available",
+    "academic_disclaimer": "Research Simulation - model trained for educational and research purposes only. Not for trading decisions."
+  },
+  "IDXX": {
+    "probability": null,
+    "status": "DATA_UNAVAILABLE",
+    "error": "No marketphase data available",
+    "academic_disclaimer": "Research Simulation - model trained for educational and research purposes only. Not for trading decisions."
+  },
+  "INTC": {
+    "probability": null,
+    "status": "DATA_UNAVAILABLE",
+    "error": "No marketphase data available",
+    "academic_disclaimer": "Research Simulation - model trained for educational and research purposes only. Not for trading decisions."
+  },
+  "INTU": {
+    "probability": null,
+    "status": "DATA_UNAVAILABLE",
+    "error": "No marketphase data available",
+    "academic_disclaimer": "Research Simulation - model trained for educational and research purposes only. Not for trading decisions."
+  },
+  "ISRG": {
+    "probability": null,
+    "status": "DATA_UNAVAILABLE",
+    "error": "No marketphase data available",
+    "academic_disclaimer": "Research Simulation - model trained for educational and research purposes only. Not for trading decisions."
+  },
+  "KDP": {
+    "probability": null,
+    "status": "DATA_UNAVAILABLE",
+    "error": "No marketphase data available",
+    "academic_disclaimer": "Research Simulation - model trained for educational and research purposes only. Not for trading decisions."
+  },
+  "KHC": {
+    "probability": null,
+    "status": "DATA_UNAVAILABLE",
+    "error": "No marketphase data available",
+    "academic_disclaimer": "Research Simulation - model trained for educational and research purposes only. Not for trading decisions."
+  },
+  "KLAC": {
+    "probability": null,
+    "status": "DATA_UNAVAILABLE",
+    "error": "No marketphase data available",
+    "academic_disclaimer": "Research Simulation - model trained for educational and research purposes only. Not for trading decisions."
+  },
+  "LRCX": {
+    "probability": null,
+    "status": "DATA_UNAVAILABLE",
+    "error": "No marketphase data available",
+    "academic_disclaimer": "Research Simulation - model trained for educational and research purposes only. Not for trading decisions."
+  },
+  "LULU": {
+    "probability": null,
+    "status": "DATA_UNAVAILABLE",
+    "error": "No marketphase data available",
+    "academic_disclaimer": "Research Simulation - model trained for educational and research purposes only. Not for trading decisions."
+  },
+  "LIN": {
+    "probability": null,
+    "status": "DATA_UNAVAILABLE",
+    "error": "No marketphase data available",
+    "academic_disclaimer": "Research Simulation - model trained for educational and research purposes only. Not for trading decisions."
+  },
+  "MAR": {
+    "probability": null,
+    "status": "DATA_UNAVAILABLE",
+    "error": "No marketphase data available",
+    "academic_disclaimer": "Research Simulation - model trained for educational and research purposes only. Not for trading decisions."
+  },
+  "MCHP": {
+    "probability": null,
+    "status": "DATA_UNAVAILABLE",
+    "error": "No marketphase data available",
+    "academic_disclaimer": "Research Simulation - model trained for educational and research purposes only. Not for trading decisions."
+  },
+  "MDLZ": {
+    "probability": null,
+    "status": "DATA_UNAVAILABLE",
+    "error": "No marketphase data available",
+    "academic_disclaimer": "Research Simulation - model trained for educational and research purposes only. Not for trading decisions."
+  },
+  "MELI": {
+    "probability": null,
+    "status": "DATA_UNAVAILABLE",
+    "error": "No marketphase data available",
+    "academic_disclaimer": "Research Simulation - model trained for educational and research purposes only. Not for trading decisions."
+  },
+  "META": {
+    "probability": null,
+    "status": "DATA_UNAVAILABLE",
+    "error": "No marketphase data available",
+    "academic_disclaimer": "Research Simulation - model trained for educational and research purposes only. Not for trading decisions."
+  },
+  "MNST": {
+    "probability": null,
+    "status": "DATA_UNAVAILABLE",
+    "error": "No marketphase data available",
+    "academic_disclaimer": "Research Simulation - model trained for educational and research purposes only. Not for trading decisions."
+  },
+  "MRVL": {
+    "probability": null,
+    "status": "DATA_UNAVAILABLE",
+    "error": "No marketphase data available",
+    "academic_disclaimer": "Research Simulation - model trained for educational and research purposes only. Not for trading decisions."
+  },
+  "MSFT": {
+    "probability": 0.44,
+    "expected_return_10d": -0.6,
+    "risk_metrics": {
+      "sharpe_proxy": -0.48,
+      "var95": -1.98
+    },
+    "explainability": {
+      "top_features": [
+        "adx_14",
+        "sentiment_score",
+        "overbought_signal",
+        "ma_distance_50_200",
+        "rsi_volume_interaction"
+      ],
+      "shap_values": {
+        "ma_distance_50_200": 0.04,
+        "adx_14": 0.5,
+        "macd_hist": -0.06,
+        "rsi_14": -0.28,
+        "deep_value_signal": -0.03,
+        "overbought_signal": 0.05,
+        "vix_level": -0.04,
+        "sentiment_score": 0.25,
+        "rsi_volume_interaction": 0.02
+      },
+      "lime_explanations": {
+        "positive": [
+          "return_20d",
+          "ma_distance_50_200",
+          "close_to_sma200_pct"
+        ],
+        "negative": [
+          "macd_hist",
+          "rsi_14",
+          "bb_pctb"
+        ]
+      },
+      "counterfactuals": {}
+    },
+    "metadata": {
+      "model_auc": 0.78,
+      "calibration_error": 0.02,
+      "drift_status": "stable",
+      "confidence_interval": [
+        0.36,
+        0.52
+      ]
+    },
+    "academic_disclaimer": "Research Simulation - model trained for educational and research purposes only. Not for trading decisions."
+  },
+  "MSTR": {
+    "probability": null,
+    "status": "DATA_UNAVAILABLE",
+    "error": "No marketphase data available",
+    "academic_disclaimer": "Research Simulation - model trained for educational and research purposes only. Not for trading decisions."
+  },
+  "MU": {
+    "probability": null,
+    "status": "DATA_UNAVAILABLE",
+    "error": "No marketphase data available",
+    "academic_disclaimer": "Research Simulation - model trained for educational and research purposes only. Not for trading decisions."
+  },
+  "NVDA": {
+    "probability": null,
+    "status": "DATA_UNAVAILABLE",
+    "error": "No marketphase data available",
+    "academic_disclaimer": "Research Simulation - model trained for educational and research purposes only. Not for trading decisions."
+  },
+  "NXPI": {
+    "probability": null,
+    "status": "DATA_UNAVAILABLE",
+    "error": "No marketphase data available",
+    "academic_disclaimer": "Research Simulation - model trained for educational and research purposes only. Not for trading decisions."
+  },
+  "ODFL": {
+    "probability": null,
+    "status": "DATA_UNAVAILABLE",
+    "error": "No marketphase data available",
+    "academic_disclaimer": "Research Simulation - model trained for educational and research purposes only. Not for trading decisions."
+  },
+  "ON": {
+    "probability": null,
+    "status": "DATA_UNAVAILABLE",
+    "error": "No marketphase data available",
+    "academic_disclaimer": "Research Simulation - model trained for educational and research purposes only. Not for trading decisions."
+  },
+  "ORLY": {
+    "probability": null,
+    "status": "DATA_UNAVAILABLE",
+    "error": "No marketphase data available",
+    "academic_disclaimer": "Research Simulation - model trained for educational and research purposes only. Not for trading decisions."
+  },
+  "PANW": {
+    "probability": null,
+    "status": "DATA_UNAVAILABLE",
+    "error": "No marketphase data available",
+    "academic_disclaimer": "Research Simulation - model trained for educational and research purposes only. Not for trading decisions."
+  },
+  "PAYX": {
+    "probability": null,
+    "status": "DATA_UNAVAILABLE",
+    "error": "No marketphase data available",
+    "academic_disclaimer": "Research Simulation - model trained for educational and research purposes only. Not for trading decisions."
+  },
+  "PCAR": {
+    "probability": null,
+    "status": "DATA_UNAVAILABLE",
+    "error": "No marketphase data available",
+    "academic_disclaimer": "Research Simulation - model trained for educational and research purposes only. Not for trading decisions."
+  },
+  "PDD": {
+    "probability": null,
+    "status": "DATA_UNAVAILABLE",
+    "error": "No marketphase data available",
+    "academic_disclaimer": "Research Simulation - model trained for educational and research purposes only. Not for trading decisions."
+  },
+  "PEP": {
+    "probability": null,
+    "status": "DATA_UNAVAILABLE",
+    "error": "No marketphase data available",
+    "academic_disclaimer": "Research Simulation - model trained for educational and research purposes only. Not for trading decisions."
+  },
+  "PLTR": {
+    "probability": null,
+    "status": "DATA_UNAVAILABLE",
+    "error": "No marketphase data available",
+    "academic_disclaimer": "Research Simulation - model trained for educational and research purposes only. Not for trading decisions."
+  },
+  "PYPL": {
+    "probability": null,
+    "status": "DATA_UNAVAILABLE",
+    "error": "No marketphase data available",
+    "academic_disclaimer": "Research Simulation - model trained for educational and research purposes only. Not for trading decisions."
+  },
+  "QCOM": {
+    "probability": null,
+    "status": "DATA_UNAVAILABLE",
+    "error": "No marketphase data available",
+    "academic_disclaimer": "Research Simulation - model trained for educational and research purposes only. Not for trading decisions."
+  },
+  "REGN": {
+    "probability": null,
+    "status": "DATA_UNAVAILABLE",
+    "error": "No marketphase data available",
+    "academic_disclaimer": "Research Simulation - model trained for educational and research purposes only. Not for trading decisions."
+  },
+  "ROP": {
+    "probability": null,
+    "status": "DATA_UNAVAILABLE",
+    "error": "No marketphase data available",
+    "academic_disclaimer": "Research Simulation - model trained for educational and research purposes only. Not for trading decisions."
+  },
+  "ROST": {
+    "probability": null,
+    "status": "DATA_UNAVAILABLE",
+    "error": "No marketphase data available",
+    "academic_disclaimer": "Research Simulation - model trained for educational and research purposes only. Not for trading decisions."
+  },
+  "SBUX": {
+    "probability": null,
+    "status": "DATA_UNAVAILABLE",
+    "error": "No marketphase data available",
+    "academic_disclaimer": "Research Simulation - model trained for educational and research purposes only. Not for trading decisions."
+  },
+  "SHOP": {
+    "probability": null,
+    "status": "DATA_UNAVAILABLE",
+    "error": "No marketphase data available",
+    "academic_disclaimer": "Research Simulation - model trained for educational and research purposes only. Not for trading decisions."
+  },
+  "SNPS": {
+    "probability": null,
+    "status": "DATA_UNAVAILABLE",
+    "error": "No marketphase data available",
+    "academic_disclaimer": "Research Simulation - model trained for educational and research purposes only. Not for trading decisions."
+  },
+  "TEAM": {
+    "probability": null,
+    "status": "DATA_UNAVAILABLE",
+    "error": "No marketphase data available",
+    "academic_disclaimer": "Research Simulation - model trained for educational and research purposes only. Not for trading decisions."
+  },
+  "TMUS": {
+    "probability": null,
+    "status": "DATA_UNAVAILABLE",
+    "error": "No marketphase data available",
+    "academic_disclaimer": "Research Simulation - model trained for educational and research purposes only. Not for trading decisions."
+  },
+  "TRI": {
+    "probability": null,
+    "status": "DATA_UNAVAILABLE",
+    "error": "No marketphase data available",
+    "academic_disclaimer": "Research Simulation - model trained for educational and research purposes only. Not for trading decisions."
+  },
+  "TSLA": {
+    "probability": null,
+    "status": "DATA_UNAVAILABLE",
+    "error": "No marketphase data available",
+    "academic_disclaimer": "Research Simulation - model trained for educational and research purposes only. Not for trading decisions."
+  },
+  "TTD": {
+    "probability": null,
+    "status": "DATA_UNAVAILABLE",
+    "error": "No marketphase data available",
+    "academic_disclaimer": "Research Simulation - model trained for educational and research purposes only. Not for trading decisions."
+  },
+  "TTWO": {
+    "probability": null,
+    "status": "DATA_UNAVAILABLE",
+    "error": "No marketphase data available",
+    "academic_disclaimer": "Research Simulation - model trained for educational and research purposes only. Not for trading decisions."
+  },
+  "TXN": {
+    "probability": null,
+    "status": "DATA_UNAVAILABLE",
+    "error": "No marketphase data available",
+    "academic_disclaimer": "Research Simulation - model trained for educational and research purposes only. Not for trading decisions."
+  },
+  "UBER": {
+    "probability": null,
+    "status": "DATA_UNAVAILABLE",
+    "error": "No marketphase data available",
+    "academic_disclaimer": "Research Simulation - model trained for educational and research purposes only. Not for trading decisions."
+  },
+  "VRTX": {
+    "probability": null,
+    "status": "DATA_UNAVAILABLE",
+    "error": "No marketphase data available",
+    "academic_disclaimer": "Research Simulation - model trained for educational and research purposes only. Not for trading decisions."
+  },
+  "VRSK": {
+    "probability": null,
+    "status": "DATA_UNAVAILABLE",
+    "error": "No marketphase data available",
+    "academic_disclaimer": "Research Simulation - model trained for educational and research purposes only. Not for trading decisions."
+  },
+  "WBD": {
+    "probability": null,
+    "status": "DATA_UNAVAILABLE",
+    "error": "No marketphase data available",
+    "academic_disclaimer": "Research Simulation - model trained for educational and research purposes only. Not for trading decisions."
+  },
+  "WDAY": {
+    "probability": null,
+    "status": "DATA_UNAVAILABLE",
+    "error": "No marketphase data available",
+    "academic_disclaimer": "Research Simulation - model trained for educational and research purposes only. Not for trading decisions."
+  },
+  "XEL": {
+    "probability": null,
+    "status": "DATA_UNAVAILABLE",
+    "error": "No marketphase data available",
+    "academic_disclaimer": "Research Simulation - model trained for educational and research purposes only. Not for trading decisions."
+  },
+  "ZS": {
+    "probability": null,
+    "status": "DATA_UNAVAILABLE",
+    "error": "No marketphase data available",
+    "academic_disclaimer": "Research Simulation - model trained for educational and research purposes only. Not for trading decisions."
+  }
+}

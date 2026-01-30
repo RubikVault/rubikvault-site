@@ -57,7 +57,8 @@
     "rv:eod:nasdaq100": "node scripts/eod/build-eod-latest.mjs --universe nasdaq100 --chunk-size 500 --out public/data",
     "rv:ops": "node scripts/ops/build-ops-daily.mjs",
     "build:pipeline-truth": "node scripts/pipeline/build-ndx100-pipeline-truth.mjs",
-    "test:truth-artifacts": "bash ./scripts/ops/verify-truth-artifacts.sh"
+    "test:truth-artifacts": "bash ./scripts/ops/verify-truth-artifacts.sh",
+    "build:scientific-analysis": "node scripts/scientific-analyzer/generate-analysis.mjs"
   },
   "dependencies": {
     "d3-dsv": "^3.0.1",

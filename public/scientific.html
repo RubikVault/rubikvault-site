@@ -1,0 +1,664 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+
+<head>
+    <meta charset="UTF-8" />
+    <title>RubikVault – Scientific Stock Analyzer v9.0</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+    <meta name="description"
+        content="Explainable Quant AI Framework. Scientific probability analysis with SHAP explanations, calibration metrics, and risk assessment." />
+
+    <meta name="theme-color" content="#3b82f6" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/assets/rv-favicon.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/assets/rv-apple-icon.png" />
+    <link rel="manifest" href="/manifest.json" />
+    <link rel="stylesheet" href="/style.css" />
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+</head>
+
+<body>
+    <!-- HEADER -->
+    <header class="rv-header">
+        <div class="rv-header-inner">
+            <a class="rv-brand" href="/" aria-label="RubikVault">
+                <img class="rv-brand-icon" src="/assets/rv-icon.png" alt="" />
+                <span class="rv-brand-text">RubikVault</span>
+            </a>
+
+            <nav class="rv-nav">
+                <a class="rv-social-link" href="https://www.youtube.com/@RubikVault" target="_blank"
+                    rel="noopener noreferrer" aria-label="YouTube">
+                    <svg viewBox="0 0 24 24">
+                        <path
+                            d="M21.58 7.19a2.5 2.5 0 0 0-1.76-1.77C18.25 5 12 5 12 5s-6.25 0-7.82.42A2.5 2.5 0 0 0 2.42 7.2 26.6 26.6 0 0 0 2 12s0 2.55.42 4.81a2.5 2.5 0 0 0 1.76 1.77C5.75 19 12 19 12 19s6.25 0 7.82-.42a2.5 2.5 0 0 0 1.76-1.77C22 14.55 22 12 22 12s0-2.55-.42-4.81ZM10 15.5v-7l6 3.5-6 3.5Z" />
+                    </svg>
+                </a>
+                <a class="rv-social-link" href="https://x.com/RubikVault" target="_blank" rel="noopener noreferrer"
+                    aria-label="X">
+                    <svg viewBox="0 0 24 24">
+                        <path
+                            d="M18.9 2H22l-6.79 7.76L23 22h-6.2l-4.86-6.02L6.66 22H3.5l7.26-8.3L3 2h6.35l4.4 5.52L18.9 2Zm-1.09 18h1.72L8.4 3.93H6.56L17.81 20Z" />
+                    </svg>
+                </a>
+            </nav>
+
+            <div class="rv-header-tools" aria-live="polite">
+                <div class="rv-data-updated" style="font-size: 12px; color: var(--rv-text-muted);">
+                    Scientific Analyzer v9.0 (Research Simulation)
+                </div>
+                <div class="rv-market-clock">
+                    <span class="rv-clock-time" id="rv-ny-time">NY: --:--:--</span>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- PAGE NAVIGATION -->
+    <nav class="rv-page-nav">
+        <div class="rv-page-nav-inner">
+            <a href="/" class="rv-page-nav-link" data-page="analyzer">Stock Analyzer</a>
+            <a href="/elliott.html" class="rv-page-nav-link" data-page="elliott">Elliott Waves</a>
+            <a href="/scientific.html" class="rv-page-nav-link active" data-page="scientific">Scientific Analyzer</a>
+        </div>
+    </nav>
+
+    <style>
+        .rv-page-nav {
+            background: rgba(15, 23, 42, 0.8);
+            border-bottom: 1px solid rgba(100, 116, 139, 0.2);
+            padding: 0.6rem 0;
+            position: sticky;
+            top: 60px;
+            z-index: 90;
+            backdrop-filter: blur(8px);
+        }
+
+        .rv-page-nav-inner {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0 2rem;
+            display: flex;
+            gap: 2rem;
+        }
+
+        .rv-page-nav-link {
+            color: #94a3b8;
+            text-decoration: none;
+            font-size: 0.95rem;
+            font-weight: 500;
+            padding: 0.4rem 0;
+            border-bottom: 2px solid transparent;
+            transition: all 0.2s;
+        }
+
+        .rv-page-nav-link:hover {
+            color: #e5e7eb;
+        }
+
+        .rv-page-nav-link.active {
+            color: #60a5fa;
+            border-bottom-color: #60a5fa;
+        }
+
+        .scientific-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .scientific-header {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+        }
+
+        .scientific-title {
+            font-size: 1.75rem;
+            font-weight: 700;
+            color: #f1f5f9;
+            margin: 0;
+        }
+
+        .stock-selector {
+            display: flex;
+            gap: 0.75rem;
+            align-items: center;
+        }
+
+        .stock-selector select {
+            padding: 0.6rem 1rem;
+            border-radius: 8px;
+            border: 1px solid rgba(100, 116, 139, 0.3);
+            background: rgba(15, 23, 42, 0.8);
+            color: #e5e7eb;
+            font-size: 1rem;
+            min-width: 200px;
+        }
+
+        .analysis-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .analysis-card {
+            background: rgba(15, 23, 42, 0.5);
+            border: 1px solid rgba(100, 116, 139, 0.2);
+            border-radius: 12px;
+            padding: 1.5rem;
+        }
+
+        .card-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #e5e7eb;
+            margin: 0 0 1rem 0;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .probability-gauge {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .gauge-container {
+            position: relative;
+            width: 180px;
+            height: 100px;
+        }
+
+        .gauge-value {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: #f1f5f9;
+        }
+
+        .gauge-label {
+            font-size: 0.9rem;
+            color: #94a3b8;
+        }
+
+        .confidence-interval {
+            font-size: 0.85rem;
+            color: #64748b;
+        }
+
+        .risk-metrics {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+
+        .metric-box {
+            background: rgba(30, 41, 59, 0.5);
+            padding: 1rem;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .metric-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #f1f5f9;
+        }
+
+        .metric-label {
+            font-size: 0.8rem;
+            color: #94a3b8;
+            margin-top: 0.25rem;
+        }
+
+        .feature-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .feature-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.5rem 0;
+            border-bottom: 1px solid rgba(100, 116, 139, 0.1);
+        }
+
+        .feature-name {
+            font-size: 0.9rem;
+            color: #cbd5e1;
+        }
+
+        .feature-value {
+            font-size: 0.9rem;
+            font-weight: 600;
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+        }
+
+        .feature-value.positive {
+            color: #34d399;
+            background: rgba(16, 185, 129, 0.15);
+        }
+
+        .feature-value.negative {
+            color: #f87171;
+            background: rgba(239, 68, 68, 0.15);
+        }
+
+        .model-integrity {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 0.75rem;
+        }
+
+        .integrity-item {
+            text-align: center;
+            padding: 0.75rem;
+            background: rgba(30, 41, 59, 0.3);
+            border-radius: 6px;
+        }
+
+        .integrity-value {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #f1f5f9;
+        }
+
+        .integrity-label {
+            font-size: 0.75rem;
+            color: #94a3b8;
+        }
+
+        .drift-status {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            padding: 0.2rem 0.6rem;
+            border-radius: 999px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .drift-status.stable {
+            background: rgba(16, 185, 129, 0.15);
+            color: #34d399;
+        }
+
+        .drift-status.warning {
+            background: rgba(251, 191, 36, 0.15);
+            color: #fbbf24;
+        }
+
+        .counterfactual-list {
+            font-size: 0.85rem;
+            color: #94a3b8;
+        }
+
+        .disclaimer-box {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-top: 1.5rem;
+            font-size: 0.85rem;
+            color: #fca5a5;
+        }
+
+        #shap-chart,
+        #calibration-chart {
+            width: 100%;
+            height: 250px;
+        }
+
+        .loading-state {
+            text-align: center;
+            padding: 3rem;
+            color: #64748b;
+        }
+
+        .error-state {
+            text-align: center;
+            padding: 2rem;
+            color: #f87171;
+            background: rgba(239, 68, 68, 0.1);
+            border-radius: 8px;
+        }
+    </style>
+
+    <!-- MAIN CONTENT -->
+    <main class="scientific-container">
+        <div class="scientific-header">
+            <h1 class="scientific-title">🧬 Scientific Stock Analyzer</h1>
+            <div class="stock-selector">
+                <select id="stock-select">
+                    <option value="">Select a stock...</option>
+                </select>
+                <button id="analyze-btn" class="rv-btn"
+                    style="padding: 0.6rem 1.2rem; background: #3b82f6; color: white; border: none; border-radius: 8px; cursor: pointer;">
+                    Analyze
+                </button>
+            </div>
+        </div>
+
+        <div id="analysis-content" class="loading-state">
+            Select a stock to view scientific analysis...
+        </div>
+
+        <div class="disclaimer-box">
+            <strong>⚠️ Academic Disclaimer:</strong> This analyzer is designed for educational and research purposes
+            only.
+            Model outputs are probability estimates based on historical patterns and should NOT be used for trading
+            decisions.
+            All predictions are simulations — past performance does not guarantee future results.
+        </div>
+    </main>
+
+    <script>
+        // State
+        let analysisData = null;
+        let currentSymbol = null;
+
+        // Load analysis data
+        async function loadAnalysisData() {
+            try {
+                const response = await fetch('/data/snapshots/stock-analysis.json');
+                if (!response.ok) throw new Error('Failed to load analysis data');
+                analysisData = await response.json();
+                populateStockSelector();
+            } catch (error) {
+                console.error('Error loading analysis data:', error);
+                document.getElementById('analysis-content').innerHTML = `
+                    <div class="error-state">
+                        Failed to load analysis data. Please try again later.
+                    </div>
+                `;
+            }
+        }
+
+        // Populate stock selector
+        function populateStockSelector() {
+            const select = document.getElementById('stock-select');
+            const symbols = Object.keys(analysisData)
+                .filter(k => k !== '_meta' && analysisData[k].probability !== null)
+                .sort();
+
+            symbols.forEach(symbol => {
+                const option = document.createElement('option');
+                option.value = symbol;
+                option.textContent = symbol;
+                select.appendChild(option);
+            });
+
+            // Also add unavailable symbols
+            const unavailable = Object.keys(analysisData)
+                .filter(k => k !== '_meta' && analysisData[k].probability === null)
+                .sort();
+
+            if (unavailable.length > 0) {
+                const optgroup = document.createElement('optgroup');
+                optgroup.label = 'Data Unavailable';
+                unavailable.forEach(symbol => {
+                    const option = document.createElement('option');
+                    option.value = symbol;
+                    option.textContent = `${symbol} (no data)`;
+                    option.disabled = true;
+                    optgroup.appendChild(option);
+                });
+                select.appendChild(optgroup);
+            }
+
+            // Auto-select first available
+            if (symbols.length > 0) {
+                select.value = symbols[0];
+            }
+        }
+
+        // Render analysis for selected stock
+        function renderAnalysis(symbol) {
+            const data = analysisData[symbol];
+            if (!data || data.probability === null) {
+                document.getElementById('analysis-content').innerHTML = `
+                    <div class="error-state">
+                        ${data?.error || 'Analysis data not available for this symbol.'}
+                    </div>
+                `;
+                return;
+            }
+
+            currentSymbol = symbol;
+
+            const prob = data.probability;
+            const probClass = prob >= 0.6 ? 'positive' : prob <= 0.4 ? 'negative' : '';
+            const probColor = prob >= 0.6 ? '#34d399' : prob <= 0.4 ? '#f87171' : '#fbbf24';
+
+            const ci = data.metadata?.confidence_interval || [prob - 0.1, prob + 0.1];
+
+            document.getElementById('analysis-content').innerHTML = `
+                <div class="analysis-grid">
+                    <!-- Probability Card -->
+                    <div class="analysis-card">
+                        <h3 class="card-title">📊 Probability Estimate</h3>
+                        <div class="probability-gauge">
+                            <div class="gauge-container">
+                                <canvas id="gauge-canvas" width="180" height="100"></canvas>
+                            </div>
+                            <div class="gauge-value" style="color: ${probColor}">${(prob * 100).toFixed(0)}%</div>
+                            <div class="gauge-label">Positive Return (10d)</div>
+                            <div class="confidence-interval">95% CI: [${(ci[0] * 100).toFixed(0)}% – ${(ci[1] * 100).toFixed(0)}%]</div>
+                        </div>
+                    </div>
+
+                    <!-- Risk Metrics Card -->
+                    <div class="analysis-card">
+                        <h3 class="card-title">⚠️ Risk Metrics</h3>
+                        <div class="risk-metrics">
+                            <div class="metric-box">
+                                <div class="metric-value" style="color: ${data.risk_metrics.sharpe_proxy >= 0 ? '#34d399' : '#f87171'}">
+                                    ${data.risk_metrics.sharpe_proxy.toFixed(2)}
+                                </div>
+                                <div class="metric-label">Sharpe Proxy</div>
+                            </div>
+                            <div class="metric-box">
+                                <div class="metric-value" style="color: #f87171">
+                                    ${data.risk_metrics.var95.toFixed(1)}%
+                                </div>
+                                <div class="metric-label">VaR 95%</div>
+                            </div>
+                            <div class="metric-box">
+                                <div class="metric-value" style="color: ${data.expected_return_10d >= 0 ? '#34d399' : '#f87171'}">
+                                    ${data.expected_return_10d >= 0 ? '+' : ''}${data.expected_return_10d.toFixed(1)}%
+                                </div>
+                                <div class="metric-label">Expected Return (10d)</div>
+                            </div>
+                            <div class="metric-box">
+                                <div class="drift-status ${data.metadata.drift_status}">
+                                    ● ${data.metadata.drift_status.toUpperCase()}
+                                </div>
+                                <div class="metric-label">Drift Status</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- SHAP Values Card -->
+                    <div class="analysis-card">
+                        <h3 class="card-title">🧠 Feature Importance (SHAP)</h3>
+                        <div id="shap-chart"></div>
+                    </div>
+
+                    <!-- Top Features Card -->
+                    <div class="analysis-card">
+                        <h3 class="card-title">📈 Key Drivers</h3>
+                        <div class="feature-list">
+                            ${renderFeatureList(data.explainability)}
+                        </div>
+                    </div>
+
+                    <!-- Model Integrity Card -->
+                    <div class="analysis-card">
+                        <h3 class="card-title">🔬 Model Integrity</h3>
+                        <div class="model-integrity">
+                            <div class="integrity-item">
+                                <div class="integrity-value">${data.metadata.model_auc}</div>
+                                <div class="integrity-label">AUC Score</div>
+                            </div>
+                            <div class="integrity-item">
+                                <div class="integrity-value">${data.metadata.calibration_error}</div>
+                                <div class="integrity-label">ECE</div>
+                            </div>
+                            <div class="integrity-item">
+                                <div class="drift-status ${data.metadata.drift_status}">●</div>
+                                <div class="integrity-label">Drift</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- LIME Explanations Card -->
+                    <div class="analysis-card">
+                        <h3 class="card-title">💡 LIME Explanations</h3>
+                        <div style="margin-bottom: 1rem;">
+                            <strong style="color: #34d399;">Positive Factors:</strong>
+                            <div style="color: #94a3b8; font-size: 0.9rem;">
+                                ${data.explainability.lime_explanations.positive.join(', ') || 'None'}
+                            </div>
+                        </div>
+                        <div>
+                            <strong style="color: #f87171;">Negative Factors:</strong>
+                            <div style="color: #94a3b8; font-size: 0.9rem;">
+                                ${data.explainability.lime_explanations.negative.join(', ') || 'None'}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // Render gauge
+            renderGauge(prob, probColor);
+
+            // Render SHAP chart
+            renderSHAPChart(data.explainability.shap_values);
+        }
+
+        function renderFeatureList(explainability) {
+            const shapValues = explainability.shap_values || {};
+            const sorted = Object.entries(shapValues)
+                .sort((a, b) => Math.abs(b[1]) - Math.abs(a[1]))
+                .slice(0, 6);
+
+            return sorted.map(([feature, value]) => `
+                <div class="feature-item">
+                    <span class="feature-name">${formatFeatureName(feature)}</span>
+                    <span class="feature-value ${value >= 0 ? 'positive' : 'negative'}">
+                        ${value >= 0 ? '+' : ''}${value.toFixed(2)}
+                    </span>
+                </div>
+            `).join('');
+        }
+
+        function formatFeatureName(name) {
+            return name
+                .replace(/_/g, ' ')
+                .replace(/\b\w/g, c => c.toUpperCase())
+                .replace('Pct', '%')
+                .replace('20D', '20d')
+                .replace('50 200', '50/200');
+        }
+
+        function renderGauge(prob, color) {
+            const canvas = document.getElementById('gauge-canvas');
+            if (!canvas) return;
+
+            const ctx = canvas.getContext('2d');
+            const width = canvas.width;
+            const height = canvas.height;
+            const centerX = width / 2;
+            const centerY = height - 10;
+            const radius = 80;
+
+            ctx.clearRect(0, 0, width, height);
+
+            // Background arc
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, radius, Math.PI, 2 * Math.PI);
+            ctx.strokeStyle = 'rgba(100, 116, 139, 0.2)';
+            ctx.lineWidth = 12;
+            ctx.stroke();
+
+            // Value arc
+            const angle = Math.PI + (prob * Math.PI);
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, radius, Math.PI, angle);
+            ctx.strokeStyle = color;
+            ctx.lineWidth = 12;
+            ctx.lineCap = 'round';
+            ctx.stroke();
+        }
+
+        function renderSHAPChart(shapValues) {
+            const chartDiv = document.getElementById('shap-chart');
+            if (!chartDiv) return;
+
+            const entries = Object.entries(shapValues)
+                .sort((a, b) => b[1] - a[1])
+                .slice(0, 8);
+
+            const features = entries.map(e => formatFeatureName(e[0]));
+            const values = entries.map(e => e[1]);
+            const colors = values.map(v => v >= 0 ? 'rgba(52, 211, 153, 0.8)' : 'rgba(248, 113, 113, 0.8)');
+
+            Plotly.newPlot(chartDiv, [{
+                type: 'bar',
+                x: values,
+                y: features,
+                orientation: 'h',
+                marker: { color: colors }
+            }], {
+                margin: { l: 120, r: 20, t: 20, b: 40 },
+                paper_bgcolor: 'transparent',
+                plot_bgcolor: 'transparent',
+                font: { color: '#94a3b8' },
+                xaxis: { title: 'SHAP Value', gridcolor: 'rgba(100, 116, 139, 0.2)' },
+                yaxis: { automargin: true }
+            }, { responsive: true, displayModeBar: false });
+        }
+
+        // Event handlers
+        document.getElementById('analyze-btn').addEventListener('click', () => {
+            const symbol = document.getElementById('stock-select').value;
+            if (symbol) {
+                renderAnalysis(symbol);
+            }
+        });
+
+        document.getElementById('stock-select').addEventListener('change', (e) => {
+            if (e.target.value) {
+                renderAnalysis(e.target.value);
+            }
+        });
+
+        // Initialize
+        loadAnalysisData();
+
+        // NY Time clock
+        function updateClock() {
+            const now = new Date();
+            const nyTime = now.toLocaleTimeString('en-US', {
+                timeZone: 'America/New_York',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+                hour12: false
+            });
+            const el = document.getElementById('rv-ny-time');
+            if (el) el.textContent = `NY: ${nyTime}`;
+        }
+        setInterval(updateClock, 1000);
+        updateClock();
+    </script>
+</body>
+
+</html>

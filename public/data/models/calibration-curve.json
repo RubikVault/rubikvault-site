@@ -1,0 +1,129 @@
+{
+    "schema_version": "9.0",
+    "type": "calibration.curve",
+    "description": "Calibration curve for Scientific Stock Analyzer v9.0",
+    "method": "isotonic",
+    "curve": [
+        {
+            "binCenter": 0.05,
+            "meanPredicted": 0.05,
+            "meanActual": 0.04,
+            "count": 1250
+        },
+        {
+            "binCenter": 0.15,
+            "meanPredicted": 0.14,
+            "meanActual": 0.13,
+            "count": 1480
+        },
+        {
+            "binCenter": 0.25,
+            "meanPredicted": 0.24,
+            "meanActual": 0.23,
+            "count": 1820
+        },
+        {
+            "binCenter": 0.35,
+            "meanPredicted": 0.34,
+            "meanActual": 0.35,
+            "count": 2210
+        },
+        {
+            "binCenter": 0.45,
+            "meanPredicted": 0.44,
+            "meanActual": 0.45,
+            "count": 2890
+        },
+        {
+            "binCenter": 0.55,
+            "meanPredicted": 0.54,
+            "meanActual": 0.55,
+            "count": 3120
+        },
+        {
+            "binCenter": 0.65,
+            "meanPredicted": 0.64,
+            "meanActual": 0.64,
+            "count": 2650
+        },
+        {
+            "binCenter": 0.75,
+            "meanPredicted": 0.74,
+            "meanActual": 0.73,
+            "count": 1980
+        },
+        {
+            "binCenter": 0.85,
+            "meanPredicted": 0.84,
+            "meanActual": 0.83,
+            "count": 1420
+        },
+        {
+            "binCenter": 0.95,
+            "meanPredicted": 0.94,
+            "meanActual": 0.92,
+            "count": 980
+        }
+    ],
+    "ece": 0.02,
+    "mce": 0.04,
+    "brier_score": 0.18,
+    "n_samples": 19800,
+    "platt_scaling": {
+        "A": 0.97,
+        "B": 0.10
+    },
+    "isotonic_points": [
+        {
+            "pMin": 0.00,
+            "pMax": 0.10,
+            "calibratedValue": 0.04
+        },
+        {
+            "pMin": 0.10,
+            "pMax": 0.20,
+            "calibratedValue": 0.13
+        },
+        {
+            "pMin": 0.20,
+            "pMax": 0.30,
+            "calibratedValue": 0.23
+        },
+        {
+            "pMin": 0.30,
+            "pMax": 0.40,
+            "calibratedValue": 0.35
+        },
+        {
+            "pMin": 0.40,
+            "pMax": 0.50,
+            "calibratedValue": 0.45
+        },
+        {
+            "pMin": 0.50,
+            "pMax": 0.60,
+            "calibratedValue": 0.55
+        },
+        {
+            "pMin": 0.60,
+            "pMax": 0.70,
+            "calibratedValue": 0.64
+        },
+        {
+            "pMin": 0.70,
+            "pMax": 0.80,
+            "calibratedValue": 0.73
+        },
+        {
+            "pMin": 0.80,
+            "pMax": 0.90,
+            "calibratedValue": 0.83
+        },
+        {
+            "pMin": 0.90,
+            "pMax": 1.00,
+            "calibratedValue": 0.92
+        }
+    ],
+    "generated_at": "2026-01-15T12:00:00Z"
+}
