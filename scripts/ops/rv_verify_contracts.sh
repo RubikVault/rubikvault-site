@@ -26,23 +26,25 @@ fetch_json() {
 }
 
 assert_jq() {
-  local filter="$1"
-  local json="$2"
-  echo "$json" | jq -e -f "$ASSERTS" "$filter" >/dev/null
+  local mode="$1"
+  local module="$2"
+  local json="$3"
+  echo "$json" | jq -e -f "$ASSERTS" --arg mode "$mode" --arg module "$module" >/dev/null
 }
 
 check_endpoint() {
   local base="$1"
   local label="$2"
   local path="$3"
-  local filter="$4"
+  local mode="$4"
+  local module="${5:-}"
   local url="${base%/}${path}"
   local json
   if ! json=$(fetch_json "$url"); then
     fail "$label $path fetch failed"
     return
   fi
-  if assert_jq "$filter" "$json"; then
+  if assert_jq "$mode" "$module" "$json"; then
     pass "$label $path"
   else
     fail "$label $path contract assert failed"
@@ -53,13 +55,13 @@ run_checks() {
   local base="$1"
   local label="$2"
   echo "== $label ($base) =="
-  check_endpoint "$base" "$label" "/data/manifest.json" 'manifest_assert'
-  check_endpoint "$base" "$label" "/api/mission-control/summary" 'mission_control_assert'
-  check_endpoint "$base" "$label" "/api/health?debug=1" 'debug_probe_assert("health")'
-  check_endpoint "$base" "$label" "/api/render-plan?debug=1" 'debug_probe_assert("render-plan")'
-  check_endpoint "$base" "$label" "/data/render-plan.json" 'render_plan_asset_assert'
-  check_endpoint "$base" "$label" "/data/snapshots/render-plan/latest.json" 'render_plan_snapshot_assert'
-  check_endpoint "$base" "$label" "/data/state/modules/render-plan.json" 'render_plan_state_assert'
+  check_endpoint "$base" "$label" "/data/manifest.json" "manifest"
+  check_endpoint "$base" "$label" "/api/mission-control/summary" "mission_control"
+  check_endpoint "$base" "$label" "/api/health?debug=1" "debug_probe" "health"
+  check_endpoint "$base" "$label" "/api/render-plan?debug=1" "debug_probe" "render-plan"
+  check_endpoint "$base" "$label" "/data/render-plan.json" "render_plan_asset"
+  check_endpoint "$base" "$label" "/data/snapshots/render-plan/latest.json" "render_plan_snapshot"
+  check_endpoint "$base" "$label" "/data/state/modules/render-plan.json" "render_plan_state"
   echo
 }
 

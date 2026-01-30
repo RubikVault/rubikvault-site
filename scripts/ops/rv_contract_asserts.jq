@@ -53,3 +53,15 @@ def render_plan_state_assert:
   and (.module == "render-plan")
   and ((.status | type) == "string")
   and (.status == "ok");
+
+def run($mode; $module):
+  if $mode == "manifest" then manifest_assert
+  elif $mode == "mission_control" then mission_control_assert
+  elif $mode == "debug_probe" then debug_probe_assert($module)
+  elif $mode == "render_plan_asset" then render_plan_asset_assert
+  elif $mode == "render_plan_snapshot" then render_plan_snapshot_assert
+  elif $mode == "render_plan_state" then render_plan_state_assert
+  else false
+  end;
+
+run($mode; $module)
