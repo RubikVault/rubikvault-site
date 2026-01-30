@@ -93,6 +93,15 @@ bash scripts/smoke-static-mime.sh "$PREVIEW"
 
 # Health summary check
 curl -fsS "$PREVIEW/api/health-report" | jq '{ok, feature, status:.data?.status, summary:.data?.summary}'
+
+# Missing mirror semantic equivalence (ignores extra top-level metadata)
+node scripts/ops/verify-missing-mirror-semantic.mjs
+
+# Preview semantic check (download then compare)
+# BASE="https://<preview>.pages.dev"
+# curl -fsS "$BASE/data/marketphase/missing.json" > /tmp/marketphase-missing.json
+# curl -fsS "$BASE/data/pipeline/missing.json" > /tmp/pipeline-missing.json
+# node scripts/ops/verify-missing-mirror-semantic.mjs /tmp/marketphase-missing.json /tmp/pipeline-missing.json
 ```
 
 ## Preview vs Prod Drift Checklist
