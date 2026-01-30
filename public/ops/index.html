@@ -1,51 +1,159 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Ops — RubikVault</title>
   <style>
-    * { box-sizing: border-box; }
+    * {
+      box-sizing: border-box;
+    }
+
     body {
       margin: 0;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Helvetica Neue", Arial, sans-serif;
       background: #0b1220;
       color: #e5e7eb;
     }
-    .wrap { max-width: 1180px; margin: 0 auto; padding: 24px; }
-    h1 { margin: 0 0 6px; font-size: 28px; letter-spacing: -0.02em; }
-    .sub { color: #94a3b8; margin-bottom: 18px; font-size: 14px; }
-    .card { border: 1px solid rgba(148, 163, 184, 0.25); background: rgba(15, 23, 42, 0.7); border-radius: 12px; padding: 14px; overflow: hidden; }
-    .grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
-    .grid2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
-    .k { color: #94a3b8; font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em; }
-    .v { margin-top: 6px; font-size: 22px; font-weight: 800; }
-    .small { color: #94a3b8; font-size: 12px; }
-    .controls { display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin: 12px 0 18px; }
+
+    .wrap {
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 24px;
+    }
+
+    h1 {
+      margin: 0 0 6px;
+      font-size: 28px;
+      letter-spacing: -0.02em;
+    }
+
+    .sub {
+      color: #94a3b8;
+      margin-bottom: 18px;
+      font-size: 14px;
+    }
+
+    .card {
+      border: 1px solid rgba(148, 163, 184, 0.25);
+      background: rgba(15, 23, 42, 0.7);
+      border-radius: 12px;
+      padding: 14px;
+      overflow: hidden;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .grid2 {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .k {
+      color: #94a3b8;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    .v {
+      margin-top: 6px;
+      font-size: 22px;
+      font-weight: 800;
+    }
+
+    .small {
+      color: #94a3b8;
+      font-size: 12px;
+    }
+
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+      margin: 12px 0 18px;
+    }
+
     .btn {
       background: rgba(30, 41, 59, 0.9);
-      border: 1px solid rgba(148,163,184,0.25);
+      border: 1px solid rgba(148, 163, 184, 0.25);
       color: #e5e7eb;
       padding: 8px 10px;
       border-radius: 10px;
       font-size: 13px;
       cursor: pointer;
     }
-    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
-    .pill { display: inline-block; padding: 2px 8px; border-radius: 999px; border: 1px solid rgba(148,163,184,0.25); font-size: 12px; color: #e5e7eb; }
-    .pill.ok { border-color: rgba(52, 211, 153, 0.35); color: #a7f3d0; }
-    .pill.warn { border-color: rgba(251, 191, 36, 0.35); color: #fde68a; }
-    .pill.bad { border-color: rgba(251, 113, 133, 0.35); color: #fecdd3; }
-    table { width: 100%; border-collapse: collapse; }
-    th, td { text-align: left; padding: 10px 8px; border-bottom: 1px solid rgba(148, 163, 184, 0.15); font-size: 13px; }
-    th { color: #94a3b8; font-weight: 700; }
-    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
+
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .pill {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 999px;
+      border: 1px solid rgba(148, 163, 184, 0.25);
+      font-size: 12px;
+      color: #e5e7eb;
+    }
+
+    .pill.ok {
+      border-color: rgba(52, 211, 153, 0.35);
+      color: #a7f3d0;
+    }
+
+    .pill.warn {
+      border-color: rgba(251, 191, 36, 0.35);
+      color: #fde68a;
+    }
+
+    .pill.bad {
+      border-color: rgba(251, 113, 133, 0.35);
+      color: #fecdd3;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    th,
+    td {
+      text-align: left;
+      padding: 10px 8px;
+      border-bottom: 1px solid rgba(148, 163, 184, 0.15);
+      font-size: 13px;
+    }
+
+    th {
+      color: #94a3b8;
+      font-weight: 700;
+    }
+
+    .mono {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    }
+
     @media (max-width: 860px) {
-      .grid { grid-template-columns: 1fr; }
-      .grid2 { grid-template-columns: 1fr; }
+      .grid {
+        grid-template-columns: 1fr;
+      }
+
+      .grid2 {
+        grid-template-columns: 1fr;
+      }
     }
   </style>
 </head>
+
 <body>
   <div class="wrap">
     <h1>Ops</h1>
@@ -60,7 +168,8 @@
       <span class="small" id="last-refresh"></span>
     </div>
 
-    <div id="ops-alert" class="card" style="display:none; margin-bottom: 12px; border-color: rgba(251, 191, 36, 0.5); background: rgba(120, 53, 15, 0.18);">
+    <div id="ops-alert" class="card"
+      style="display:none; margin-bottom: 12px; border-color: rgba(251, 191, 36, 0.5); background: rgba(120, 53, 15, 0.18);">
       <div class="k">Warning</div>
       <div class="small" id="ops-alert-text"></div>
     </div>
@@ -98,7 +207,14 @@
           <div class="k" style="margin-bottom: 10px;">Provider budgets (monthly)</div>
           <table>
             <thead>
-              <tr><th>Provider</th><th>Used</th><th>Limit</th><th>Remaining</th><th>Reset</th><th>Runtime calls today</th></tr>
+              <tr>
+                <th>Provider</th>
+                <th>Used</th>
+                <th>Limit</th>
+                <th>Remaining</th>
+                <th>Reset</th>
+                <th>Runtime calls today</th>
+              </tr>
             </thead>
             <tbody id="providers"></tbody>
           </table>
@@ -107,7 +223,12 @@
           <div class="k" style="margin-bottom: 10px;">Daily snapshot pipeline (NASDAQ-100)</div>
           <table>
             <thead>
-              <tr><th>Stage</th><th>Count</th><th>Expected</th><th>Status</th></tr>
+              <tr>
+                <th>Stage</th>
+                <th>Count</th>
+                <th>Expected</th>
+                <th>Status</th>
+              </tr>
             </thead>
             <tbody id="pipeline"></tbody>
           </table>
@@ -123,10 +244,17 @@
           <div class="small" id="freshness-list" style="margin-top: 8px;"></div>
         </div>
         <div class="card">
-          <div class="k" style="margin-bottom: 10px;">Manual actions</div>
-          <div class="small">Last manual refresh (client): <span class="mono" id="manual-ts">—</span></div>
-          <div class="small" style="margin-top: 8px;">Min refresh interval enforced client-side: <span class="mono">60s</span></div>
+          <div class="k" style="margin-bottom: 10px;">Scheduler status</div>
+          <div class="small" id="scheduler-expected">—</div>
+          <div class="small" id="scheduler-note" style="margin-top: 8px;">—</div>
         </div>
+      </div>
+
+      <div class="card" style="margin-bottom: 12px;" id="truth-chain-section">
+        <div class="k" style="margin-bottom: 10px;">Truth Chain (NASDAQ-100)</div>
+        <div id="truth-chain-steps" style="display: flex; flex-direction: column; gap: 6px;"></div>
+        <div id="truth-chain-blocker" class="small"
+          style="margin-top: 10px; padding: 8px; border-radius: 6px; display: none;"></div>
       </div>
 
       <div class="small" style="margin-top: 14px;">
@@ -167,7 +295,7 @@
     function setManualTs(ts) {
       try {
         localStorage.setItem('rv_ops_last_manual_refresh', ts);
-      } catch {}
+      } catch { }
       const el = document.getElementById('manual-ts');
       if (el) el.textContent = ts;
     }
@@ -280,25 +408,25 @@
         : [];
       document.getElementById('providers').innerHTML = providers.length
         ? providers.sort(([a], [b]) => a.localeCompare(b)).map(([name, entry]) => {
-            const budget = entry?.budget || null;
-            const used = budget?.usedMonth ?? null;
-            const lim = budget?.limitMonth ?? null;
-            const rem = budget?.remainingMonth ?? null;
-            const remPct = budget?.remainingPct ?? null;
-            const callsToday = budget?.runtimeCallsToday ?? null;
-            const status = remPct == null ? 'warn' : pctClass(100 - Number(remPct));
-            const remText = remPct == null
-              ? 'not tracked'
-              : (pill(String(remPct) + '%', status) + ' <span class="small">' + esc(rem) + '</span>');
-            return '<tr>' +
-              '<td>' + esc(name) + '</td>' +
-              '<td>' + esc(fmtTracked(used)) + '</td>' +
-              '<td>' + esc(fmtTracked(lim)) + '</td>' +
-              '<td>' + remText + '</td>' +
-              '<td class="small">' + esc(budget?.resetDate || '—') + '</td>' +
-              '<td>' + esc(fmtTracked(callsToday)) + '</td>' +
+          const budget = entry?.budget || null;
+          const used = budget?.usedMonth ?? null;
+          const lim = budget?.limitMonth ?? null;
+          const rem = budget?.remainingMonth ?? null;
+          const remPct = budget?.remainingPct ?? null;
+          const callsToday = budget?.runtimeCallsToday ?? null;
+          const status = remPct == null ? 'warn' : pctClass(100 - Number(remPct));
+          const remText = remPct == null
+            ? 'not tracked'
+            : (pill(String(remPct) + '%', status) + ' <span class="small">' + esc(rem) + '</span>');
+          return '<tr>' +
+            '<td>' + esc(name) + '</td>' +
+            '<td>' + esc(fmtTracked(used)) + '</td>' +
+            '<td>' + esc(fmtTracked(lim)) + '</td>' +
+            '<td>' + remText + '</td>' +
+            '<td class="small">' + esc(budget?.resetDate || '—') + '</td>' +
+            '<td>' + esc(fmtTracked(callsToday)) + '</td>' +
             '</tr>';
-          }).join('')
+        }).join('')
         : '<tr><td colspan="6" class="small">No provider budgets</td></tr>';
 
       const universe = pickUniverse(summary?.universes, 'nasdaq100');
@@ -315,7 +443,7 @@
           '<td>' + esc(String(Number.isFinite(value) ? value : '—')) + '</td>' +
           '<td>' + esc(String(Number.isFinite(expected) && expected > 0 ? expected : '—')) + '</td>' +
           '<td>' + pill(ok ? 'OK' : 'MISSING', cls) + '</td>' +
-        '</tr>';
+          '</tr>';
       };
 
       document.getElementById('pipeline').innerHTML =
@@ -366,23 +494,23 @@
 
       const providers = Array.isArray(baseline.providers)
         ? baseline.providers.reduce((acc, entry) => {
-            const name = String(entry?.name || '').trim();
-            if (!name) return acc;
-            acc[name] = {
-              configured: true,
-              mode: 'unknown',
-              note: null,
-              budget: {
-                usedMonth: entry?.usedMonth ?? null,
-                limitMonth: entry?.limitMonth ?? null,
-                remainingMonth: entry?.remainingMonth ?? null,
-                remainingPct: entry?.remainingPct ?? null,
-                resetDate: entry?.resetDate ?? null,
-                runtimeCallsToday: entry?.runtimeCallsToday ?? null
-              }
-            };
-            return acc;
-          }, {})
+          const name = String(entry?.name || '').trim();
+          if (!name) return acc;
+          acc[name] = {
+            configured: true,
+            mode: 'unknown',
+            note: null,
+            budget: {
+              usedMonth: entry?.usedMonth ?? null,
+              limitMonth: entry?.limitMonth ?? null,
+              remainingMonth: entry?.remainingMonth ?? null,
+              remainingPct: entry?.remainingPct ?? null,
+              resetDate: entry?.resetDate ?? null,
+              runtimeCallsToday: entry?.runtimeCallsToday ?? null
+            }
+          };
+          return acc;
+        }, {})
         : {};
 
       const freshness = baseline.freshness || {};
@@ -392,6 +520,10 @@
       const overall = payload?.data?.opsBaseline?.overall || {};
       const verdict = status === 'OK' ? 'OK' : (status === 'WARN' ? 'WARN' : (overall.verdict === 'HEALTHY' ? 'OK' : (overall.verdict || 'RISK')));
       const reasons = overall.reason ? [String(overall.reason)] : [];
+
+      // Extract runtime and truthChain for new UI elements
+      const runtime = payload?.data?.opsBaseline?.runtime || {};
+      const truthChain = payload?.data?.opsBaseline?.truthChain || {};
 
       const summary = {
         schema_version: 'ops.summary.v1',
@@ -437,10 +569,81 @@
         safety: {
           kv_writes_today: baseline?.safety?.kvWritesToday ?? null,
           note: 'Static-only view.'
-        }
+        },
+        runtime,
+        truthChain
       };
 
       return summary;
+    }
+
+    function renderTruthChain(truthChain) {
+      const stepsEl = document.getElementById('truth-chain-steps');
+      const blockerEl = document.getElementById('truth-chain-blocker');
+      if (!stepsEl || !blockerEl) return;
+
+      const nasdaq100 = truthChain?.nasdaq100;
+      if (!nasdaq100 || !Array.isArray(nasdaq100.steps)) {
+        stepsEl.innerHTML = '<div class="small">Truth chain data not available</div>';
+        blockerEl.style.display = 'none';
+        return;
+      }
+
+      const statusIcon = (s) => {
+        if (s === 'OK') return '✅';
+        if (s === 'WARN') return '⚠️';
+        if (s === 'FAIL') return '❌';
+        return '❓';
+      };
+
+      const firstBlocker = nasdaq100.first_blocker;
+
+      stepsEl.innerHTML = nasdaq100.steps.map(step => {
+        const isBlocker = step.id === firstBlocker;
+        const borderStyle = isBlocker ? 'border: 1px solid rgba(251, 113, 133, 0.5); background: rgba(120, 20, 30, 0.15);' : 'border: 1px solid rgba(148, 163, 184, 0.15);';
+        const evidence = step.evidence ? Object.entries(step.evidence).map(([k, v]) => `${k}: ${v === null ? '—' : v}`).join(', ') : '';
+        return `<div style="padding: 8px 10px; border-radius: 6px; ${borderStyle}">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span style="font-size: 16px;">${statusIcon(step.status)}</span>
+            <span style="font-weight: 600; font-size: 13px;">${esc(step.id)}</span>
+            <span style="flex: 1; font-size: 13px;">${esc(step.title)}</span>
+            ${isBlocker ? '<span class="pill bad">BLOCKER</span>' : ''}
+          </div>
+          <div class="small" style="margin-top: 4px; color: #94a3b8;">${esc(evidence)}</div>
+          ${step.details ? `<div class="small" style="margin-top: 2px; color: #fecdd3;">${esc(step.details)}</div>` : ''}
+        </div>`;
+      }).join('');
+
+      if (firstBlocker) {
+        const blockerStep = nasdaq100.steps.find(s => s.id === firstBlocker);
+        blockerEl.style.display = 'block';
+        blockerEl.style.background = 'rgba(120, 20, 30, 0.18)';
+        blockerEl.style.borderColor = 'rgba(251, 113, 133, 0.35)';
+        blockerEl.innerHTML = `<strong>First blocker:</strong> ${esc(firstBlocker)} — ${esc(blockerStep?.title || '')}`;
+      } else {
+        blockerEl.style.display = 'none';
+      }
+    }
+
+    function renderSchedulerStatus(runtime) {
+      const expectedEl = document.getElementById('scheduler-expected');
+      const noteEl = document.getElementById('scheduler-note');
+      if (!expectedEl || !noteEl) return;
+
+      const expected = runtime?.schedulerExpected;
+      const reason = runtime?.schedulerExpectedReason || '';
+      const hostname = runtime?.hostname || '';
+
+      if (expected === true) {
+        expectedEl.innerHTML = '<span class="pill ok">Scheduler expected: YES</span>';
+        noteEl.textContent = reason || 'Production environment';
+      } else if (expected === false) {
+        expectedEl.innerHTML = '<span class="pill warn">Scheduler expected: NO</span>';
+        noteEl.textContent = reason || 'Preview/Static mode';
+      } else {
+        expectedEl.textContent = 'Scheduler expected: UNKNOWN';
+        noteEl.textContent = `Runtime: ${hostname || 'unknown'}`;
+      }
     }
 
     async function refreshSummary(options = {}) {
@@ -507,6 +710,8 @@
 
         setSourceLabel(options.sourceLabel || 'static');
         renderSummary(displaySummary);
+        renderTruthChain(displaySummary?.truthChain);
+        renderSchedulerStatus(displaySummary?.runtime);
 
         if (options.triggerLive) {
           attemptLiveRefresh({ force: options.forceLive });
@@ -536,7 +741,7 @@
     function setOpsKey(key) {
       try {
         sessionStorage.setItem('rv_ops_key', key);
-      } catch {}
+      } catch { }
     }
 
     async function refreshLiveWithKey(key) {
@@ -558,6 +763,8 @@
         const liveAsOfEl = document.getElementById('live-asof');
         if (liveAsOfEl) liveAsOfEl.textContent = payload?.meta?.asOf || payload?.data?.asOf || '—';
         renderSummary(summary);
+        renderTruthChain(summary?.truthChain);
+        renderSchedulerStatus(summary?.runtime);
       } catch {
         setSourceLabel('live locked');
       }
@@ -570,7 +777,7 @@
           if (already === '1') return;
           sessionStorage.setItem('ops_auto_live_once', '1');
         }
-      } catch {}
+      } catch { }
 
       const urlKey = getOpsKeyFromUrl();
       const sessionKey = getOpsKeyFromSession();
@@ -616,4 +823,5 @@
     }
   </script>
 </body>
+
 </html>

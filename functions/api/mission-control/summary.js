@@ -221,6 +221,113 @@ function computeVerdictFromBaseline(baseline) {
   return { verdict: 'DEGRADED', reason: 'UNKNOWN' };
 }
 
+function detectPreviewMode(url, env) {
+  const hostname = url?.hostname || '';
+  const isPages = hostname.endsWith('.pages.dev');
+  const isLocalhost = hostname === 'localhost' || hostname === '127.0.0.1';
+  const isProd = hostname === 'rubikvault.com' || hostname === 'www.rubikvault.com';
+  const hasCron = Boolean(env?.CRON_TRIGGER);
+  return {
+    isPreview: isPages || isLocalhost,
+    isProduction: isProd,
+    hasCron,
+    hostname
+  };
+}
+
+function buildTruthChainStep(id, title, status, evidence, details = null) {
+  return { id, title, status, evidence, details };
+}
+
+function buildNasdaq100TruthChain(pipelineTruths, snapshotInfo, runtimeInfo, asOf) {
+  const { fetched, validated, computed, staticReady } = pipelineTruths;
+  const steps = [];
+
+  // S1 — Provider fetch attempted
+  const s1Status = fetched?.count != null ? (fetched.count >= fetched.expected ? 'OK' : 'WARN') : 'UNKNOWN';
+  steps.push(buildTruthChainStep('S1', 'Provider fetch attempted', s1Status, {
+    count: fetched?.count ?? null,
+    expected: fetched?.expected ?? null,
+    path: '/data/pipeline/nasdaq100.fetched.json'
+  }, fetched?.reason || null));
+
+  // S2 — Responses parseable
+  const s2Status = validated?.count != null ? (validated.count >= validated.expected ? 'OK' : 'WARN') : 'UNKNOWN';
+  steps.push(buildTruthChainStep('S2', 'Responses parseable', s2Status, {
+    count: validated?.count ?? null,
+    expected: validated?.expected ?? null,
+    path: '/data/pipeline/nasdaq100.validated.json'
+  }, validated?.reason || null));
+
+  // S3 — EOD fields validated
+  const s3Status = validated?.count != null ? 'OK' : 'UNKNOWN';
+  steps.push(buildTruthChainStep('S3', 'EOD fields validated', s3Status, {
+    validatedCount: validated?.count ?? null,
+    note: 'Validation occurs during fetch pipeline'
+  }, null));
+
+  // S4 — Stored in public/data
+  const snapshotOk = snapshotInfo?.recordCount > 0;
+  const s4Status = snapshotOk ? 'OK' : (snapshotInfo?.ok === false ? 'FAIL' : 'UNKNOWN');
+  steps.push(buildTruthChainStep('S4', 'Stored in public/data', s4Status, {
+    snapshotPath: '/data/snapshots/market-prices/latest.json',
+    recordCount: snapshotInfo?.recordCount ?? null,
+    asOf: snapshotInfo?.asOf ?? null
+  }, snapshotOk ? null : 'Market-prices snapshot may be missing or empty'));
+
+  // S5 — Indicators computed (marketphase)
+  const computedExpected = computed?.expected ?? 100;
+  const computedCount = computed?.count ?? 0;
+  const s5Status = computedCount >= computedExpected ? 'OK' : (computedCount > 0 ? 'WARN' : 'FAIL');
+  const missingReasons = computed?.missing?.length > 0
+    ? [...new Set(computed.missing.map(m => m.reason))].join(', ')
+    : null;
+  steps.push(buildTruthChainStep('S5', 'Indicators computed (marketphase)', s5Status, {
+    count: computedCount,
+    expected: computedExpected,
+    missingCount: computed?.missing?.length ?? 0,
+    path: '/data/pipeline/nasdaq100.computed.json',
+    sampleReasons: missingReasons
+  }, s5Status === 'FAIL' ? `Indicator files not generated for ${computedExpected - computedCount} symbols` : null));
+
+  // S6 — Static-ready index
+  const staticExpected = staticReady?.expected ?? 100;
+  const staticCount = staticReady?.count ?? 0;
+  const s6Status = staticCount >= staticExpected ? 'OK' : (staticCount > 0 ? 'WARN' : 'FAIL');
+  steps.push(buildTruthChainStep('S6', 'Static-ready index', s6Status, {
+    count: staticCount,
+    expected: staticExpected,
+    path: '/data/pipeline/nasdaq100.static-ready.json'
+  }, s6Status !== 'OK' ? `static-ready ${staticCount}/${staticExpected}` : null));
+
+  // S7 — Public serving
+  const s7Status = snapshotOk ? 'OK' : 'UNKNOWN';
+  steps.push(buildTruthChainStep('S7', 'Public serving', s7Status, {
+    note: snapshotOk ? 'Market-prices snapshot accessible' : 'Cannot verify without probe'
+  }, null));
+
+  // S8 — Runtime bindings
+  const hasKV = runtimeInfo?.hasKV ?? false;
+  const s8Status = hasKV ? 'OK' : 'WARN';
+  steps.push(buildTruthChainStep('S8', 'Runtime bindings', s8Status, {
+    hasKV,
+    isPreview: runtimeInfo?.isPreview ?? false,
+    hostname: runtimeInfo?.hostname ?? null
+  }, hasKV ? null : 'KV binding not available (static/preview mode)'));
+
+  // Determine first blocker
+  const firstFail = steps.find(s => s.status === 'FAIL');
+  const firstWarn = steps.find(s => s.status === 'WARN');
+  const firstBlocker = firstFail?.id || firstWarn?.id || null;
+
+  return {
+    chain_version: 'v1',
+    asOf,
+    steps,
+    first_blocker: firstBlocker
+  };
+}
+
 function baselineFromComputed(opsComputed) {
   const expectedUniverse = opsComputed?.pipeline?.expected ?? 100;
   return {
@@ -554,6 +661,43 @@ export async function onRequestGet(context) {
   }
   const opsBaselineOverall = baselineExplain ? { ...overall, explain: baselineExplain } : overall;
 
+  // Build Truth-Chain for NASDAQ-100 pipeline
+  const previewMode = detectPreviewMode(url, env);
+  const marketPricesSnap = await fetchAssetJson(request.url, '/data/snapshots/market-prices/latest.json', null);
+  const snapshotInfo = {
+    ok: marketPricesSnap != null,
+    recordCount: Array.isArray(marketPricesSnap?.data) ? marketPricesSnap.data.length : 0,
+    asOf: marketPricesSnap?.metadata?.fetched_at || marketPricesSnap?.metadata?.published_at || null
+  };
+  const runtimeInfo = {
+    hasKV,
+    isPreview: previewMode.isPreview,
+    isProduction: previewMode.isProduction,
+    hostname: previewMode.hostname
+  };
+  const pipelineTruths = {
+    fetched: pipelineFetched,
+    validated: pipelineValidated,
+    computed: pipelineComputedTruth,
+    staticReady: pipelineStaticReadyTruth
+  };
+  const truthChainNasdaq100 = buildNasdaq100TruthChain(pipelineTruths, snapshotInfo, runtimeInfo, startedAtIso);
+
+  // Runtime context for scheduler expectation
+  const schedulerExpected = previewMode.isProduction && !previewMode.isPreview;
+  const schedulerExpectedReason = previewMode.isPreview
+    ? 'Preview/Static: cron not expected'
+    : (previewMode.isProduction ? 'Production: cron expected' : 'Unknown environment');
+
+  const opsBaselineRuntime = {
+    hasKV,
+    isPreview: previewMode.isPreview,
+    isProduction: previewMode.isProduction,
+    hostname: previewMode.hostname,
+    schedulerExpected,
+    schedulerExpectedReason
+  };
+
   let opsLiveResolved = null;
   if (wantsLive) {
     const cf = await fetchCloudflareWorkerRequests(env);
@@ -601,7 +745,11 @@ export async function onRequestGet(context) {
       opsBaseline: {
         asOf: opsBaselineAsOf,
         overall: opsBaselineOverall,
-        baseline: opsBaseline
+        baseline: opsBaseline,
+        runtime: opsBaselineRuntime,
+        truthChain: {
+          nasdaq100: truthChainNasdaq100
+        }
       },
       opsComputed: {
         asOf: startedAtIso,
