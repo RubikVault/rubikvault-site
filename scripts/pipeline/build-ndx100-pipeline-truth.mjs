@@ -232,6 +232,120 @@ async function main() {
   await atomicWriteJsonRel('public/data/pipeline/nasdaq100.validated.json', validatedPayload);
   await atomicWriteJsonRel('public/data/pipeline/nasdaq100.computed.json', computedPayload);
   await atomicWriteJsonRel('public/data/pipeline/nasdaq100.static-ready.json', staticReadyPayload);
+
+  // Build nasdaq100.pipeline-truth.json — canonical Truth Chain summary
+  const latestPayload = await readJsonRel('public/data/pipeline/nasdaq100.latest.json');
+  const latestCounts = latestPayload?.counts || {
+    expected: tickers.length,
+    fetched: fetchedCount ?? 0,
+    validated: validatedCount ?? 0,
+    computed: computedCount,
+    static_ready: staticReadyCount
+  };
+
+  // Count missing reasons
+  const reasonCounts = {};
+  for (const entry of computedMissing) {
+    const reason = entry?.reason || 'UNKNOWN';
+    reasonCounts[reason] = (reasonCounts[reason] || 0) + 1;
+  }
+
+  // Build 7-step truth chain with status
+  const truthSteps = [
+    {
+      id: 'S1',
+      title: 'Provider fetched',
+      status: (fetchedCount ?? 0) >= tickers.length ? 'OK' : (fetchedCount ?? 0) > 0 ? 'WARN' : 'FAIL',
+      detail: `${fetchedCount ?? 0}/${tickers.length} symbols fetched`
+    },
+    {
+      id: 'S2',
+      title: 'OHLC validated',
+      status: (validatedCount ?? 0) >= (fetchedCount ?? 0) ? 'OK' : (validatedCount ?? 0) > 0 ? 'WARN' : 'FAIL',
+      detail: `${validatedCount ?? 0}/${fetchedCount ?? 0} passed validation`
+    },
+    {
+      id: 'S3',
+      title: 'Indicators computed',
+      status: computedCount >= (validatedCount ?? 0) * 0.9 ? 'OK' : computedCount > 0 ? 'WARN' : 'FAIL',
+      detail: `${computedCount}/${validatedCount ?? 0} indicators computed`
+    },
+    {
+      id: 'S4',
+      title: 'MarketPhase generated',
+      status: computedCount >= 2 ? 'OK' : computedCount > 0 ? 'WARN' : 'FAIL',
+      detail: `${computedCount} marketphase files generated`
+    },
+    {
+      id: 'S5',
+      title: 'Static ready',
+      status: staticReadyCount >= computedCount ? 'OK' : staticReadyCount > 0 ? 'WARN' : 'FAIL',
+      detail: `${staticReadyCount}/${computedCount} static ready`
+    },
+    {
+      id: 'S6',
+      title: 'KV backend',
+      status: reasonCounts['KV_BACKEND_UNAVAILABLE'] ? 'WARN' : 'OK',
+      detail: reasonCounts['KV_BACKEND_UNAVAILABLE']
+        ? `${reasonCounts['KV_BACKEND_UNAVAILABLE']} symbols missing due to KV unavailable`
+        : 'KV accessible'
+    },
+    {
+      id: 'S7',
+      title: 'Site serves data',
+      status: staticReadyCount > 0 ? 'OK' : 'FAIL',
+      detail: staticReadyCount > 0 ? 'Static files deployed' : 'No static files available'
+    }
+  ];
+
+  // Find first blocker
+  const firstFail = truthSteps.find(s => s.status === 'FAIL');
+  const firstWarn = truthSteps.find(s => s.status === 'WARN');
+  const firstBlockerStep = firstFail || firstWarn || null;
+  const firstBlocker = firstBlockerStep
+    ? { id: firstBlockerStep.id, title: firstBlockerStep.title, status: firstBlockerStep.status }
+    : null;
+
+  // Build blockers array
+  const blockers = [];
+  for (const step of truthSteps) {
+    if (step.status === 'FAIL' || step.status === 'WARN') {
+      const blocker = { id: step.id, status: step.status, detail: step.detail };
+      if (step.id === 'S6' && reasonCounts['KV_BACKEND_UNAVAILABLE']) {
+        blocker.code = 'KV_BACKEND_UNAVAILABLE';
+        blocker.count = reasonCounts['KV_BACKEND_UNAVAILABLE'];
+      }
+      blockers.push(blocker);
+    }
+  }
+
+  const pipelineTruthPayload = {
+    type: 'pipeline.truth',
+    universe: universeName,
+    asof: asOf,
+    counts: {
+      expected: tickers.length,
+      fetched: fetchedCount ?? 0,
+      validated: validatedCount ?? 0,
+      computed: computedCount,
+      static_ready: staticReadyCount
+    },
+    first_blocker: firstBlocker,
+    first_blocker_id: firstBlocker?.id || null,
+    blockers: blockers.length > 0 ? blockers : null,
+    steps: truthSteps,
+    source: {
+      latest: '/data/pipeline/nasdaq100.latest.json',
+      truth_static_ready: '/data/pipeline/nasdaq100.static-ready.json',
+      missing_marketphase: '/data/marketphase/missing.json',
+      missing_pipeline: '/data/pipeline/missing.json'
+    }
+  };
+
+  await atomicWriteJsonRel('public/data/pipeline/nasdaq100.pipeline-truth.json', pipelineTruthPayload);
+  console.log(`✓ Written: public/data/pipeline/nasdaq100.pipeline-truth.json`);
+  console.log(`  counts: expected=${tickers.length}, fetched=${fetchedCount ?? 0}, validated=${validatedCount ?? 0}, computed=${computedCount}, static_ready=${staticReadyCount}`);
+  console.log(`  first_blocker: ${firstBlocker ? `${firstBlocker.id} (${firstBlocker.status})` : 'none'}`);
 }
 
 await main();

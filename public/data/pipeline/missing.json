@@ -1,9 +1,9 @@
 {
-  "type": "pipeline.truth",
-  "asOf": "2026-01-30T15:39:51.499Z",
+  "type": "pipeline.missing",
+  "asOf": "2026-01-30T14:36:35.685Z",
   "universe": "nasdaq100",
   "expected": 100,
-  "count": 2,
+  "generated": 2,
   "missing": [
     {
       "ticker": "ABNB",
@@ -397,5 +397,8 @@
       "ticker": "ZS",
       "reason": "KV_BACKEND_UNAVAILABLE"
     }
-  ]
+  ],
+  "mirrors": {
+    "from": "/data/marketphase/missing.json"
+  }
 }

@@ -446,14 +446,24 @@ async function main() {
     await writeJson(path.join(outRoot, "index.meta.json"), indexMeta);
     await writeJson(path.join(outRoot, "batch-analysis.json"), batchPayload);
   }
-  await writeJson(path.join(outRoot, "missing.json"), {
+  const missingPayload = {
     type: "marketphase.missing",
     asOf: generatedAt,
     universe: args.universe,
     expected: tickers.length,
     generated: mergedSymbols.length,
     missing: missing.filter((entry) => !symbolMap.has(normalizeTicker(entry?.ticker || "")))
-  });
+  };
+  await writeJson(path.join(outRoot, "missing.json"), missingPayload);
+
+  // Mirror missing.json to pipeline directory for audit compliance
+  const pipelineMirrorPayload = {
+    ...missingPayload,
+    type: "pipeline.missing",
+    mirrors: { from: "/data/marketphase/missing.json" }
+  };
+  await writeJson("public/data/pipeline/missing.json", pipelineMirrorPayload);
+  console.log(`Mirror written: public/data/pipeline/missing.json`);
 
   console.log(`MarketPhase generated: ${generated.length}/${tickers.length}`);
   if (missing.length) {

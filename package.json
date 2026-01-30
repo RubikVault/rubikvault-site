@@ -55,7 +55,9 @@
     "test:market-prices-real-mode": "node tests/market-prices-real-mode.test.mjs",
     "test:stock-endpoint": "node tests/stock-endpoint.test.mjs",
     "rv:eod:nasdaq100": "node scripts/eod/build-eod-latest.mjs --universe nasdaq100 --chunk-size 500 --out public/data",
-    "rv:ops": "node scripts/ops/build-ops-daily.mjs"
+    "rv:ops": "node scripts/ops/build-ops-daily.mjs",
+    "build:pipeline-truth": "node scripts/pipeline/build-ndx100-pipeline-truth.mjs",
+    "test:truth-artifacts": "bash ./scripts/ops/verify-truth-artifacts.sh"
   },
   "dependencies": {
     "d3-dsv": "^3.0.1",
@@ -71,6 +73,7 @@
     "ajv": "^8.17.1",
     "ajv-cli": "^5.0.0",
     "ajv-formats": "^3.0.1",
+    "playwright": "^1.58.0",
     "wrangler": "4.56.0"
   }
 }
