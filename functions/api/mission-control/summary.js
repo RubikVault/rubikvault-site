@@ -535,6 +535,24 @@ export async function onRequestGet(context) {
     verdict: baselineMissing ? 'DEGRADED' : baselineVerdict.verdict,
     reason: baselineMissing ? 'OPS_DAILY_MISSING' : baselineVerdict.reason
   };
+  let baselineExplain = null;
+  if (
+    overall.verdict === 'RISK' &&
+    typeof overall.reason === 'string' &&
+    overall.reason.includes('PIPELINE_STATIC_READY=')
+  ) {
+    const expectedVal = opsBaseline?.pipeline?.expected;
+    const staticReadyVal = opsBaseline?.pipeline?.staticReady;
+    const expectedNum = Number(expectedVal);
+    const staticReadyNum = Number(staticReadyVal);
+    if (Number.isFinite(expectedNum) && Number.isFinite(staticReadyNum) && staticReadyNum < expectedNum) {
+      baselineExplain =
+        `Coverage ist noch niedrig (computed/static-ready erst ${staticReadyNum}/${expectedNum}). ` +
+        'Das ist in der Initialphase erwartbar, bis KV-Bars & Ops-Daily die Analysen für alle Ticker aufgebaut haben. ' +
+        'RISK bleibt, bis static-ready ~ expected.';
+    }
+  }
+  const opsBaselineOverall = baselineExplain ? { ...overall, explain: baselineExplain } : overall;
 
   let opsLiveResolved = null;
   if (wantsLive) {
@@ -582,7 +600,7 @@ export async function onRequestGet(context) {
       deploy,
       opsBaseline: {
         asOf: opsBaselineAsOf,
-        overall,
+        overall: opsBaselineOverall,
         baseline: opsBaseline
       },
       opsComputed: {

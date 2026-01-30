@@ -31,6 +31,10 @@
     .pill.bad { border-color: rgba(251, 113, 133, 0.35); color: #fecdd3; }
     .pill.warn { border-color: rgba(251, 191, 36, 0.35); color: #fde68a; }
     .small { color: #94a3b8; font-size: 12px; }
+    .banner {
+      border-color: rgba(251, 191, 36, 0.5);
+      background: rgba(251, 191, 36, 0.08);
+    }
     .controls { display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin: 12px 0 18px; }
     .btn {
       background: rgba(30, 41, 59, 0.9);
@@ -74,6 +78,10 @@
     <div id="loading" class="card">Click Refresh to load summary.</div>
 
     <div id="main" style="display:none;">
+      <div id="baseline-explain" class="card banner" style="display:none; margin-bottom: 12px;">
+        <div class="k">Pipeline Risk Note</div>
+        <div class="small" id="baseline-explain-text"></div>
+      </div>
       <div class="grid">
         <div class="card">
           <div class="k">Workers requests (today)</div>
@@ -200,6 +208,18 @@
         const res = await fetch(summaryUrl, { cache: 'no-store' });
         const payload = await res.json();
         const data = payload && payload.data ? payload.data : {};
+        const explainWrap = document.getElementById('baseline-explain');
+        const explainText = document.getElementById('baseline-explain-text');
+        const explainValue = data?.opsBaseline?.overall?.explain;
+        if (explainWrap && explainText) {
+          if (typeof explainValue === 'string' && explainValue.trim()) {
+            explainText.textContent = explainValue;
+            explainWrap.style.display = 'block';
+          } else {
+            explainText.textContent = '';
+            explainWrap.style.display = 'none';
+          }
+        }
 
         const budgets = data.budgets || {};
         const w = budgets.workersRequests || {};
