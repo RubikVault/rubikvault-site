@@ -118,6 +118,26 @@ function normalizePipelineTruth(doc) {
   };
 }
 
+function normalizePipelineLatest(doc) {
+  if (!doc || typeof doc !== 'object') return null;
+  const counts = doc.counts && typeof doc.counts === 'object' ? doc.counts : {};
+  return {
+    universe: typeof doc.universe === 'string' ? doc.universe : null,
+    generated_at: typeof doc.generated_at === 'string' ? doc.generated_at : null,
+    type: typeof doc.type === 'string' ? doc.type : null,
+    counts: {
+      expected: toIntOrNull(counts.expected),
+      fetched: toIntOrNull(counts.fetched),
+      validated: toIntOrNull(counts.validated),
+      computed: toIntOrNull(counts.computed),
+      static_ready: toIntOrNull(counts.static_ready)
+    },
+    root_failure: doc.root_failure || null,
+    degraded_summary: doc.degraded_summary || null,
+    source: '/data/pipeline/nasdaq100.latest.json'
+  };
+}
+
 function lastTradingDayIso(date = new Date()) {
   const d = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
   const dow = d.getUTCDay();
@@ -239,12 +259,24 @@ function buildTruthChainStep(id, title, status, evidence, details = null) {
   return { id, title, status, evidence, details };
 }
 
+function statusForCount(count, expected) {
+  const c = Number(count);
+  const e = Number(expected);
+  if (!Number.isFinite(c)) return 'UNKNOWN';
+  if (!Number.isFinite(e) || e <= 0) {
+    return c > 0 ? 'OK' : 'UNKNOWN';
+  }
+  if (c <= 0) return 'FAIL';
+  if (c < e) return 'WARN';
+  return 'OK';
+}
+
 function buildNasdaq100TruthChain(pipelineTruths, snapshotInfo, runtimeInfo, asOf) {
   const { fetched, validated, computed, staticReady } = pipelineTruths;
   const steps = [];
 
   // S1 — Provider fetch attempted
-  const s1Status = fetched?.count != null ? (fetched.count >= fetched.expected ? 'OK' : 'WARN') : 'UNKNOWN';
+  const s1Status = statusForCount(fetched?.count, fetched?.expected);
   steps.push(buildTruthChainStep('S1', 'Provider fetch attempted', s1Status, {
     count: fetched?.count ?? null,
     expected: fetched?.expected ?? null,
@@ -252,7 +284,7 @@ function buildNasdaq100TruthChain(pipelineTruths, snapshotInfo, runtimeInfo, asO
   }, fetched?.reason || null));
 
   // S2 — Responses parseable
-  const s2Status = validated?.count != null ? (validated.count >= validated.expected ? 'OK' : 'WARN') : 'UNKNOWN';
+  const s2Status = statusForCount(validated?.count, validated?.expected);
   steps.push(buildTruthChainStep('S2', 'Responses parseable', s2Status, {
     count: validated?.count ?? null,
     expected: validated?.expected ?? null,
@@ -260,7 +292,7 @@ function buildNasdaq100TruthChain(pipelineTruths, snapshotInfo, runtimeInfo, asO
   }, validated?.reason || null));
 
   // S3 — EOD fields validated
-  const s3Status = validated?.count != null ? 'OK' : 'UNKNOWN';
+  const s3Status = statusForCount(validated?.count, validated?.expected);
   steps.push(buildTruthChainStep('S3', 'EOD fields validated', s3Status, {
     validatedCount: validated?.count ?? null,
     note: 'Validation occurs during fetch pipeline'
@@ -569,17 +601,19 @@ export async function onRequestGet(context) {
     });
   }
 
-  const [pipelineFetchedRaw, pipelineValidatedRaw, pipelineComputedRaw, pipelineStaticReadyRaw] = await Promise.all([
+  const [pipelineFetchedRaw, pipelineValidatedRaw, pipelineComputedRaw, pipelineStaticReadyRaw, pipelineLatestRaw] = await Promise.all([
     fetchAssetJson(request.url, '/data/pipeline/nasdaq100.fetched.json', null),
     fetchAssetJson(request.url, '/data/pipeline/nasdaq100.validated.json', null),
     fetchAssetJson(request.url, '/data/pipeline/nasdaq100.computed.json', null),
-    fetchAssetJson(request.url, '/data/pipeline/nasdaq100.static-ready.json', null)
+    fetchAssetJson(request.url, '/data/pipeline/nasdaq100.static-ready.json', null),
+    fetchAssetJson(request.url, '/data/pipeline/nasdaq100.latest.json', null)
   ]);
 
   const pipelineFetched = normalizePipelineTruth(pipelineFetchedRaw);
   const pipelineValidated = normalizePipelineTruth(pipelineValidatedRaw);
   const pipelineComputedTruth = normalizePipelineTruth(pipelineComputedRaw);
   const pipelineStaticReadyTruth = normalizePipelineTruth(pipelineStaticReadyRaw);
+  const pipelineLatest = normalizePipelineLatest(pipelineLatestRaw);
 
   const pipelineExpected =
     pipelineFetched?.expected ??
@@ -624,6 +658,7 @@ export async function onRequestGet(context) {
       staticReady,
       missing
     },
+    pipelineLatest,
     freshness: {
       latestSnapshotDate: pricesSnapDate,
       expectedTradingDay,
@@ -658,9 +693,9 @@ export async function onRequestGet(context) {
     const staticReadyNum = Number(staticReadyVal);
     if (Number.isFinite(expectedNum) && Number.isFinite(staticReadyNum) && staticReadyNum < expectedNum) {
       baselineExplain =
-        `Coverage ist noch niedrig (computed/static-ready erst ${staticReadyNum}/${expectedNum}). ` +
-        'Das ist in der Initialphase erwartbar, bis KV-Bars & Ops-Daily die Analysen für alle Ticker aufgebaut haben. ' +
-        'RISK bleibt, bis static-ready ~ expected.';
+        `Coverage is still low (computed/static-ready is ${staticReadyNum}/${expectedNum}). ` +
+        'This is expected during the initial ramp-up until KV bars and ops-daily build analyses for all tickers. ' +
+        'RISK remains until static-ready is near expected.';
     }
   }
   const opsBaselineOverall = baselineExplain ? { ...overall, explain: baselineExplain } : overall;
@@ -751,6 +786,7 @@ export async function onRequestGet(context) {
         overall: opsBaselineOverall,
         baseline: opsBaseline,
         runtime: opsBaselineRuntime,
+        pipelineLatest,
         truthChain: {
           nasdaq100: truthChainNasdaq100
         }

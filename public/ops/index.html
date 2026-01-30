@@ -169,6 +169,7 @@
       <span class="small">Baseline asOf: <span id="baseline-asof" class="mono">—</span></span>
       <span class="small">Live asOf: <span id="live-asof" class="mono">—</span></span>
       <span class="small">Source: <span id="data-source" class="mono">—</span></span>
+      <span class="small">Served from: <span id="served-from" class="mono">—</span></span>
       <span style="flex:1"></span>
       <span class="small" id="last-refresh"></span>
     </div>
@@ -238,7 +239,7 @@
           </table>
         </div>
         <div class="card">
-          <div class="k" style="margin-bottom: 10px;">Daily snapshot pipeline (NASDAQ-100)</div>
+          <div class="k" style="margin-bottom: 10px;">MarketPhase pipeline (NASDAQ-100)</div>
           <table>
             <thead>
               <tr>
@@ -248,9 +249,25 @@
                 <th>Status</th>
               </tr>
             </thead>
-            <tbody id="pipeline"></tbody>
+            <tbody id="pipeline-marketphase"></tbody>
           </table>
-          <div id="pipeline-missing" class="small" style="margin-top: 10px;"></div>
+          <div id="pipeline-marketphase-note" class="small" style="margin-top: 10px;"></div>
+
+          <div style="margin-top: 14px; padding-top: 12px; border-top: 1px solid rgba(148, 163, 184, 0.15);">
+            <div class="k" style="margin-bottom: 10px;">EOD fetch pipeline (NASDAQ-100)</div>
+            <table>
+              <thead>
+                <tr>
+                  <th>Stage</th>
+                  <th>Count</th>
+                  <th>Expected</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody id="pipeline-eod"></tbody>
+            </table>
+            <div id="pipeline-eod-note" class="small" style="margin-top: 10px;"></div>
+          </div>
         </div>
       </div>
 
@@ -410,9 +427,13 @@
     }
 
     function computeStatusFromCounts(counts) {
-      if (counts.expected > 0 && counts.static_ready >= counts.expected) return 'OK';
-      if (counts.expected > 0 && counts.fetched > 0) return 'WARN';
-      return 'UNKNOWN';
+      const expected = Number(counts?.expected);
+      const staticReady = Number(counts?.static_ready);
+      if (!Number.isFinite(expected) || expected <= 0) return 'UNKNOWN';
+      if (!Number.isFinite(staticReady)) return 'UNKNOWN';
+      if (staticReady >= expected) return 'OK';
+      if (staticReady > 0) return 'WARN';
+      return 'MISSING';
     }
 
     function extractCountsFromSummary(summary, universeId) {
@@ -456,7 +477,12 @@
       const overallLabel = overallStatus === 'OK' ? 'OK ✅' : (overallStatus === 'WARN' ? 'WARN 🟠' : 'RISK 🔴');
       document.getElementById('overall').textContent = overallLabel;
       document.getElementById('overall-reason').textContent = overallReasons.length ? overallReasons.join(' • ') : 'OK';
-      document.getElementById('what-to-fix').textContent = overallReasons.length ? 'Check pipeline latest + manifest consistency.' : '';
+      const fixHint = overallReasons.find((r) => r.startsWith('PIPELINE_STATIC_READY'))
+        ? 'Check MarketPhase computed/static-ready coverage and KV availability.'
+        : overallReasons.find((r) => r.startsWith('SNAPSHOT_STALE'))
+          ? 'Check snapshot freshness and scheduler.'
+          : overallReasons.length ? 'Review pipeline consistency.' : '';
+      document.getElementById('what-to-fix').textContent = fixHint;
 
       const workersToday = summary?.costs?.workers?.requests_today ?? null;
       const workersLast24h = summary?.costs?.workers?.requests_last_24h ?? null;
@@ -519,30 +545,61 @@
         : '<tr><td colspan="6" class="small">No provider budgets</td></tr>';
 
       const universe = pickUniverse(summary?.universes, 'nasdaq100');
-      const expected = Number(universe?.expected || 0);
-      const fetched = Number(universe?.fetched || 0);
-      const validated = Number(universe?.validated || 0);
-      const staticReady = Number(universe?.static_ready || 0);
+      const expected = Number.isFinite(Number(universe?.expected)) ? Number(universe.expected) : null;
+      const fetched = Number.isFinite(Number(universe?.fetched)) ? Number(universe.fetched) : null;
+      const validated = Number.isFinite(Number(universe?.validated)) ? Number(universe.validated) : null;
+      const computed = Number.isFinite(Number(universe?.computed)) ? Number(universe.computed) : null;
+      const staticReady = Number.isFinite(Number(universe?.static_ready)) ? Number(universe.static_ready) : null;
+      const missingList = Array.isArray(universe?.missing) ? universe.missing : [];
 
-      const stageRow = (label, value) => {
-        const ok = expected > 0 && value >= expected;
-        const cls = ok ? 'ok' : (value >= Math.floor(expected * 0.9) ? 'warn' : 'bad');
+      const stageRow = (label, value, expectedValue) => {
+        const hasExpected = Number.isFinite(expectedValue) && expectedValue > 0;
+        const hasValue = Number.isFinite(value);
+        let cls = 'warn';
+        let statusLabel = 'UNKNOWN';
+        if (hasExpected && hasValue) {
+          if (value >= expectedValue) {
+            cls = 'ok';
+            statusLabel = 'OK';
+          } else if (value > 0) {
+            cls = 'warn';
+            statusLabel = 'WARN';
+          } else {
+            cls = 'bad';
+            statusLabel = 'MISSING';
+          }
+        }
         return '<tr>' +
           '<td>' + esc(label) + '</td>' +
-          '<td>' + esc(String(Number.isFinite(value) ? value : '—')) + '</td>' +
-          '<td>' + esc(String(Number.isFinite(expected) && expected > 0 ? expected : '—')) + '</td>' +
-          '<td>' + pill(ok ? 'OK' : 'MISSING', cls) + '</td>' +
+          '<td>' + esc(hasValue ? String(value) : '—') + '</td>' +
+          '<td>' + esc(hasExpected ? String(expectedValue) : '—') + '</td>' +
+          '<td>' + pill(statusLabel, cls) + '</td>' +
           '</tr>';
       };
 
-      document.getElementById('pipeline').innerHTML =
-        stageRow('Fetched', fetched) +
-        stageRow('Validated', validated) +
-        stageRow('Static-ready', staticReady);
+      document.getElementById('pipeline-marketphase').innerHTML =
+        stageRow('Fetched', fetched, expected) +
+        stageRow('Validated', validated, expected) +
+        stageRow('Computed', computed, expected) +
+        stageRow('Static-ready', staticReady, expected);
 
-      document.getElementById('pipeline-missing').textContent = universe
-        ? `Universe status: ${universe.status || 'UNKNOWN'}`
-        : 'Universe status: UNKNOWN';
+      document.getElementById('pipeline-marketphase-note').textContent = universe
+        ? `Status: ${universe.status || 'UNKNOWN'} • Missing: ${missingList.length}`
+        : 'Status: UNKNOWN';
+
+      const eodLatest = summary?.pipeline_latest || null;
+      const eodCounts = eodLatest?.counts || {};
+      const eodExpected = Number.isFinite(Number(eodCounts.expected)) ? Number(eodCounts.expected) : null;
+      const eodFetched = Number.isFinite(Number(eodCounts.fetched)) ? Number(eodCounts.fetched) : null;
+      const eodValidated = Number.isFinite(Number(eodCounts.validated)) ? Number(eodCounts.validated) : null;
+
+      document.getElementById('pipeline-eod').innerHTML =
+        stageRow('Fetched (EOD)', eodFetched, eodExpected) +
+        stageRow('Validated (EOD)', eodValidated, eodExpected);
+
+      document.getElementById('pipeline-eod-note').textContent = eodLatest
+        ? `Source: ${eodLatest.source || '/data/pipeline/nasdaq100.latest.json'} • asOf: ${eodLatest.generated_at || '—'}`
+        : 'EOD pipeline latest not available';
 
       const expectedTradingDay = summary?.overall?.expected_trading_day || null;
       const staleSymbols = summary?.overall?.stale_symbols_count ?? null;
@@ -619,11 +676,15 @@
       }
 
       const pipeline = baseline.pipeline || {};
-      const expected = Number(pipelineCountsOverride?.expected ?? pipeline.expected ?? baseline.expectedUniverse ?? 0);
-      const fetched = Number(pipelineCountsOverride?.fetched ?? pipeline.fetched ?? 0);
-      const validated = Number(pipelineCountsOverride?.validated ?? pipeline.validatedStored ?? 0);
-      const computed = Number(pipelineCountsOverride?.computed ?? pipeline.computed ?? 0);
-      const staticReady = Number(pipelineCountsOverride?.static_ready ?? pipeline.staticReady ?? 0);
+      const toNumOrNull = (value) => {
+        const n = Number(value);
+        return Number.isFinite(n) ? n : null;
+      };
+      const expected = toNumOrNull(pipelineCountsOverride?.expected ?? pipeline.expected ?? baseline.expectedUniverse);
+      const fetched = toNumOrNull(pipelineCountsOverride?.fetched ?? pipeline.fetched);
+      const validated = toNumOrNull(pipelineCountsOverride?.validated ?? pipeline.validatedStored);
+      const computed = toNumOrNull(pipelineCountsOverride?.computed ?? pipeline.computed);
+      const staticReady = toNumOrNull(pipelineCountsOverride?.static_ready ?? pipeline.staticReady);
 
       const status = computeStatusFromCounts({
         expected,
@@ -665,6 +726,7 @@
       // Extract runtime and truthChain for new UI elements
       const runtime = payload?.data?.opsBaseline?.runtime || {};
       const truthChain = payload?.data?.opsBaseline?.truthChain || {};
+      const pipelineLatest = payload?.data?.opsBaseline?.pipelineLatest || payload?.data?.opsComputed?.pipelineLatest || null;
 
       const summary = {
         schema_version: 'ops.summary.v1',
@@ -687,6 +749,7 @@
             validated,
             computed,
             static_ready: staticReady,
+            missing: Array.isArray(pipeline.missing) ? pipeline.missing : [],
             status,
             refs: {
               pipeline: '/data/pipeline/nasdaq100.latest.json',
@@ -697,6 +760,7 @@
           }
         ],
         providers,
+        pipeline_latest: pipelineLatest,
         ops_daily: {
           generated_at: payload?.meta?.baselineAsOf || null,
           ref: '/data/ops-daily.json'
@@ -810,6 +874,9 @@
         const displaySummary = buildSummaryFromLegacy(payload, null);
         clearAlert();
 
+        const servedFromEl = document.getElementById('served-from');
+        if (servedFromEl) servedFromEl.textContent = payload?.metadata?.served_from || '—';
+
         if (!displaySummary) {
           if (statusEl) statusEl.textContent = 'Summary unavailable (legacy or missing).';
           setRenderStatus('error', 'json_invalid');
@@ -873,6 +940,8 @@
         setSourceLabel('live');
         const liveAsOfEl = document.getElementById('live-asof');
         if (liveAsOfEl) liveAsOfEl.textContent = payload?.meta?.asOf || payload?.data?.asOf || '—';
+        const servedFromEl = document.getElementById('served-from');
+        if (servedFromEl) servedFromEl.textContent = payload?.metadata?.served_from || '—';
         renderSummary(summary);
         renderTruthChain(summary?.truthChain);
         renderSchedulerStatus(summary?.runtime);
