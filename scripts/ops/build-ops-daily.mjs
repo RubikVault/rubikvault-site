@@ -194,8 +194,8 @@ function buildProvidersBaseline(usageReport) {
     const limitMonth = toNumberOrNull(monthly.limit ?? limitCfg.monthlyRequests);
     const limitDay = toNumberOrNull(daily.limit ?? limitCfg.dailyRequests);
 
-    const normalizedUsedMonth = usedMonth == null ? (limitMonth != null ? 0 : null) : usedMonth;
-    const normalizedUsedToday = usedToday == null ? (limitDay != null ? 0 : null) : usedToday;
+    const normalizedUsedMonth = usedMonth == null ? 0 : usedMonth;
+    const normalizedUsedToday = usedToday == null ? 0 : usedToday;
 
     const remainingMonth = limitMonth == null || normalizedUsedMonth == null
       ? null
@@ -330,9 +330,9 @@ async function main() {
   const usageReport = await readJson('public/data/usage-report.json', null);
   const usageWithLimits = usageReport && typeof usageReport === 'object'
     ? {
-        ...usageReport,
-        limits: budgetsConfig?.providers || usageReport?.limits || {}
-      }
+      ...usageReport,
+      limits: budgetsConfig?.providers || usageReport?.limits || {}
+    }
     : { limits: budgetsConfig?.providers || {} };
 
   const providers = buildProvidersBaseline(usageWithLimits);
@@ -362,23 +362,23 @@ async function main() {
         fetched: truthFetched.ok
           ? normalizeStageCount(truthFetched.doc.count, truthFetched.doc, expectedPipeline)
           : pipelineLatest.ok
-          ? toIntOrNull(pipelineLatest.doc.counts?.fetched)
-          : null,
+            ? toIntOrNull(pipelineLatest.doc.counts?.fetched)
+            : null,
         validatedStored: truthValidated.ok
           ? normalizeStageCount(truthValidated.doc.count, truthValidated.doc, expectedPipeline)
           : pipelineLatest.ok
-          ? toIntOrNull(pipelineLatest.doc.counts?.validated)
-          : null,
+            ? toIntOrNull(pipelineLatest.doc.counts?.validated)
+            : null,
         computed: truthComputed.ok
           ? normalizeStageCount(truthComputed.doc.count, truthComputed.doc, expectedPipeline)
           : pipelineLatest.ok
-          ? toIntOrNull(pipelineLatest.doc.counts?.computed)
-          : null,
+            ? toIntOrNull(pipelineLatest.doc.counts?.computed)
+            : null,
         staticReady: truthStaticReady.ok
           ? normalizeStageCount(truthStaticReady.doc.count, truthStaticReady.doc, expectedPipeline)
           : pipelineLatest.ok
-          ? toIntOrNull(pipelineLatest.doc.counts?.static_ready)
-          : null,
+            ? toIntOrNull(pipelineLatest.doc.counts?.static_ready)
+            : null,
         ...(pipelineReason ? { reason: pipelineReason } : {}),
         missing: pipelineMissing
       },

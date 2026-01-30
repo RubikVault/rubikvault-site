@@ -592,10 +592,10 @@ export async function onRequestGet(context) {
   if (!opsProviders.some((p) => p.name === 'tiingo')) {
     opsProviders.push({
       name: 'tiingo',
-      usedMonth: null,
-      limitMonth: null,
-      remainingMonth: null,
-      remainingPct: null,
+      usedMonth: 0,
+      limitMonth: 5000,
+      remainingMonth: 5000,
+      remainingPct: 100,
       resetDate: null,
       runtimeCallsToday: 0
     });
@@ -755,7 +755,7 @@ export async function onRequestGet(context) {
     meta: {
       asOf: startedAtIso,
       baselineAsOf: opsBaselineAsOf,
-      liveAsOf: wantsLive ? startedAtIso : null
+      liveAsOf: startedAtIso
     },
     metadata: {
       module: MODULE_NAME,

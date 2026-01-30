@@ -470,7 +470,7 @@
       const baselineAsOfEl = document.getElementById('baseline-asof');
       if (baselineAsOfEl) baselineAsOfEl.textContent = summary?.ops_daily?.generated_at || '—';
       const liveAsOfEl = document.getElementById('live-asof');
-      if (liveAsOfEl) liveAsOfEl.textContent = summary?.generated_at || summary?.asof || '—';
+      if (liveAsOfEl) liveAsOfEl.textContent = summary?.generated_at || '—';
 
       const overallStatus = summary?.overall?.status || 'UNKNOWN';
       const overallReasons = Array.isArray(summary?.overall?.reasons) ? summary.overall.reasons : [];
@@ -681,10 +681,14 @@
         return Number.isFinite(n) ? n : null;
       };
       const expected = toNumOrNull(pipelineCountsOverride?.expected ?? pipeline.expected ?? baseline.expectedUniverse);
-      const fetched = toNumOrNull(pipelineCountsOverride?.fetched ?? pipeline.fetched);
-      const validated = toNumOrNull(pipelineCountsOverride?.validated ?? pipeline.validatedStored);
-      const computed = toNumOrNull(pipelineCountsOverride?.computed ?? pipeline.computed);
-      const staticReady = toNumOrNull(pipelineCountsOverride?.static_ready ?? pipeline.staticReady);
+
+      // Fix: Prefer pipelineLatest from summary if available, as 'baseline.pipeline' may be legacy/null
+      const plCounts = payload?.data?.opsBaseline?.pipelineLatest?.counts || {};
+
+      const fetched = toNumOrNull(pipelineCountsOverride?.fetched ?? plCounts.fetched ?? pipeline.fetched);
+      const validated = toNumOrNull(pipelineCountsOverride?.validated ?? plCounts.validated ?? pipeline.validatedStored);
+      const computed = toNumOrNull(pipelineCountsOverride?.computed ?? plCounts.computed ?? pipeline.computed);
+      const staticReady = toNumOrNull(pipelineCountsOverride?.static_ready ?? plCounts.static_ready ?? pipeline.staticReady);
 
       const status = computeStatusFromCounts({
         expected,
@@ -794,28 +798,31 @@
         return;
       }
 
-      const statusIcon = (s) => {
-        if (s === 'OK') return '✅';
-        if (s === 'WARN') return '⚠️';
-        if (s === 'FAIL') return '❌';
-        return '❓';
-      };
-
       const firstBlockerObj = nasdaq100.first_blocker || null;
       const firstBlocker = typeof firstBlockerObj === 'string' ? firstBlockerObj : firstBlockerObj?.id || null;
 
       stepsEl.innerHTML = nasdaq100.steps.map(step => {
         const isBlocker = step.id === firstBlocker;
         const borderStyle = isBlocker ? 'border: 1px solid rgba(251, 113, 133, 0.5); background: rgba(120, 20, 30, 0.15);' : 'border: 1px solid rgba(148, 163, 184, 0.15);';
-        const evidence = step.evidence ? Object.entries(step.evidence).map(([k, v]) => `${k}: ${v === null ? '—' : v}`).join(', ') : '';
-        return `<div style="padding: 8px 10px; border-radius: 6px; ${borderStyle}">
+
+        // Handle evidence object or flattened evidence string
+        let evidenceStr = '';
+        if (step.evidence && typeof step.evidence === 'object') {
+          evidenceStr = Object.entries(step.evidence)
+            .map(([k, v]) => `${k}: ${v === null ? '—' : v}`)
+            .join(', ');
+        } else if (typeof step.evidence === 'string') {
+          evidenceStr = step.evidence;
+        }
+
+        return `<div style="padding: 8px 10px; border-radius: 6px; ${borderStyle} margin-bottom: 8px;">
           <div style="display: flex; align-items: center; gap: 8px;">
             <span style="font-size: 16px;">${statusIcon(step.status)}</span>
             <span style="font-weight: 600; font-size: 13px;">${esc(step.id)}</span>
             <span style="flex: 1; font-size: 13px;">${esc(step.title)}</span>
             ${isBlocker ? '<span class="pill bad">BLOCKER</span>' : ''}
           </div>
-          <div class="small" style="margin-top: 4px; color: #94a3b8;">${esc(evidence)}</div>
+          <div class="small" style="margin-top: 4px; color: #94a3b8;">${esc(evidenceStr)}</div>
           ${step.details ? `<div class="small" style="margin-top: 2px; color: #fecdd3;">${esc(step.details)}</div>` : ''}
         </div>`;
       }).join('');
@@ -862,7 +869,10 @@
 
       try {
         setRenderStatus('boot', 'fetching');
-        const summaryRes = await fetch(summaryUrl, { cache: 'no-store' });
+        const [summaryRes, truthRes] = await Promise.all([
+          fetch(summaryUrl, { cache: 'no-store' }),
+          fetch('/data/pipeline/nasdaq100.pipeline-truth.json', { cache: 'no-store' })
+        ]);
 
         if (!summaryRes.ok) {
           if (statusEl) statusEl.textContent = `Failed to load summary (HTTP ${summaryRes.status}).`;
@@ -871,6 +881,15 @@
         }
 
         const payload = await summaryRes.json();
+        const truthDoc = truthRes.ok ? await truthRes.json() : null;
+
+        // Fix: Use truth doc for truth chain if available, else legacy fallback
+        if (truthDoc) {
+          payload.data = payload.data || {};
+          payload.data.opsBaseline = payload.data.opsBaseline || {};
+          payload.data.opsBaseline.truthChain = { nasdaq100: truthDoc };
+        }
+
         const displaySummary = buildSummaryFromLegacy(payload, null);
         clearAlert();
 
