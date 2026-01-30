@@ -8,11 +8,18 @@ import {
 } from "../marketphase-core.mjs";
 import { round6, round6Object, round6Array } from "../utils/scientific-math.mjs";
 import { createOptionalCloudflareRestKVFromEnv } from "../lib/kv-write.js";
+import { fetchBarsWithProviderChain } from "../../functions/api/_shared/eod-providers.mjs";
 
 const REPO_ROOT = process.cwd();
 const DEFAULT_UNIVERSE = "nasdaq100";
 const DEFAULT_CONCURRENCY = 3;
 const DEFAULT_MIN_BARS = 200;
+const DEFAULT_OUTPUTSIZE = 300;
+
+function toBool(value) {
+  const s = String(value || "").trim().toLowerCase();
+  return s === "1" || s === "true" || s === "yes" || s === "on";
+}
 
 function isoNow() {
   return new Date().toISOString();
@@ -28,6 +35,23 @@ async function readJson(relPath) {
   return JSON.parse(raw);
 }
 
+async function readJsonOptional(relPath) {
+  try {
+    return await readJson(relPath);
+  } catch {
+    return null;
+  }
+}
+
+async function fileExists(absPath) {
+  try {
+    await fs.stat(absPath);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 async function writeJson(relPath, payload) {
   const abs = path.join(REPO_ROOT, relPath);
   await fs.mkdir(path.dirname(abs), { recursive: true });
@@ -39,7 +63,10 @@ function parseArgs(argv) {
     universe: DEFAULT_UNIVERSE,
     outDir: "public/data/marketphase",
     concurrency: DEFAULT_CONCURRENCY,
-    minBars: DEFAULT_MIN_BARS
+    minBars: DEFAULT_MIN_BARS,
+    outputsize: DEFAULT_OUTPUTSIZE,
+    allowProviderFallback: false,
+    writeBackKv: false
   };
   for (let i = 0; i < argv.length; i += 1) {
     const arg = argv[i];
@@ -55,6 +82,13 @@ function parseArgs(argv) {
     } else if (arg === "--min-bars") {
       out.minBars = Number(argv[i + 1]) || out.minBars;
       i += 1;
+    } else if (arg === "--outputsize") {
+      out.outputsize = Number(argv[i + 1]) || out.outputsize;
+      i += 1;
+    } else if (arg === "--allow-provider" || arg === "--provider-fallback") {
+      out.allowProviderFallback = true;
+    } else if (arg === "--write-kv") {
+      out.writeBackKv = true;
     }
   }
   return out;
@@ -185,6 +219,21 @@ function normalizeBars(bars) {
     .sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
 }
 
+async function writeKvBars(kv, key, bars, provider = null) {
+  if (!kv || typeof kv.put !== "function") return false;
+  const payload = {
+    bars,
+    provider,
+    stored_at: isoNow()
+  };
+  try {
+    await kv.put(key, JSON.stringify(payload));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 async function loadKvNamespaceIdFromWrangler() {
   try {
     const raw = await fs.readFile(path.join(REPO_ROOT, "wrangler.toml"), "utf-8");
@@ -224,9 +273,10 @@ async function main() {
   await ensureKvNamespaceEnv();
 
   const kv = createOptionalCloudflareRestKVFromEnv();
-  if (!kv) {
-    console.warn("KV backend unavailable (CF_ACCOUNT_ID/CF_API_TOKEN/CF_KV_NAMESPACE_ID missing). Skipping marketphase build.");
-    return;
+  const allowProviderFallback = args.allowProviderFallback || toBool(process.env.ALLOW_PROVIDER_FETCH) || toBool(process.env.MARKETPHASE_PROVIDER_FALLBACK);
+  const writeBackKv = args.writeBackKv || toBool(process.env.MARKETPHASE_WRITE_BACK_KV);
+  if (!kv && !allowProviderFallback) {
+    console.warn("KV backend unavailable (CF_ACCOUNT_ID/CF_API_TOKEN/CF_KV_NAMESPACE_ID missing). Provider fallback disabled.");
   }
 
   const universe = await readJson(`public/data/universe/${args.universe}.json`);
@@ -242,35 +292,73 @@ async function main() {
 
   const results = await mapWithConcurrency(tickers, args.concurrency, async (ticker) => {
     const key = `eod:${ticker}`;
-    let raw = null;
-    try {
-      raw = await kv.get(key);
-    } catch (err) {
-      missing.push({ ticker, reason: "KV_READ_FAILED" });
-      return null;
-    }
-
-    if (!raw) {
-      missing.push({ ticker, reason: "NO_EOD_BARS" });
-      return null;
-    }
-
     let parsed = null;
-    try {
-      parsed = JSON.parse(raw);
-    } catch {
-      missing.push({ ticker, reason: "INVALID_EOD_JSON" });
+    let bars = [];
+    let provider = null;
+    let usedProviderFallback = false;
+
+    if (kv && typeof kv.get === "function") {
+      let raw = null;
+      try {
+        raw = await kv.get(key);
+      } catch (err) {
+        missing.push({ ticker, reason: "KV_READ_FAILED", details: { message: err?.message || String(err) } });
+        return null;
+      }
+      if (raw) {
+        try {
+          parsed = JSON.parse(raw);
+        } catch {
+          missing.push({ ticker, reason: "INVALID_EOD_JSON" });
+          return null;
+        }
+        bars = normalizeBars(parsed?.bars || parsed?.data?.bars || parsed?.data || []);
+      }
+    }
+
+    const hasBars = bars.length > 0;
+    const barsSufficient = bars.length >= args.minBars;
+
+    if ((!hasBars || !barsSufficient) && allowProviderFallback) {
+      const startDate = new Date(Date.now() - 365 * 3 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+      const result = await fetchBarsWithProviderChain(ticker, process.env, {
+        outputsize: String(args.outputsize || DEFAULT_OUTPUTSIZE),
+        startDate,
+        allowFailover: true
+      });
+      if (result.ok) {
+        usedProviderFallback = true;
+        provider = result.provider || null;
+        bars = normalizeBars(result.bars || []);
+      } else {
+        const code = result.error?.code ? String(result.error.code) : "PROVIDER_FETCH_FAILED";
+        missing.push({
+          ticker,
+          reason: `PROVIDER_${code}`,
+          details: {
+            provider: result.provider || null,
+            error: result.error || null
+          }
+        });
+        return null;
+      }
+    }
+
+    if (!bars.length) {
+      const reason = !kv
+        ? "KV_BACKEND_UNAVAILABLE"
+        : "NO_EOD_BARS";
+      missing.push({ ticker, reason });
       return null;
     }
 
-    const bars = normalizeBars(parsed?.bars || parsed?.data?.bars || parsed?.data || []);
-    if (!bars.length) {
-      missing.push({ ticker, reason: "NO_EOD_BARS" });
+    if (bars.length < args.minBars) {
+      missing.push({ ticker, reason: "INSUFFICIENT_BARS", details: { bars: bars.length, minBars: args.minBars } });
       return null;
     }
-    if (bars.length < args.minBars) {
-      missing.push({ ticker, reason: "INSUFFICIENT_BARS" });
-      return null;
+
+    if (usedProviderFallback && kv && writeBackKv) {
+      await writeKvBars(kv, key, bars, provider);
     }
 
     const t0 = Date.now();
@@ -297,6 +385,24 @@ async function main() {
   const generatedAt = isoNow();
   const commitHash = getCommitHash();
 
+  const existingIndex = await readJsonOptional(path.join(outRoot, "index.json"));
+  const existingSymbols = Array.isArray(existingIndex?.data?.symbols) ? existingIndex.data.symbols : [];
+  const symbolMap = new Map();
+  for (const entry of existingSymbols) {
+    const sym = normalizeTicker(entry?.symbol);
+    if (!sym) continue;
+    symbolMap.set(sym, entry);
+  }
+  for (const env of envelopes) {
+    if (!env?.meta?.symbol) continue;
+    symbolMap.set(env.meta.symbol, {
+      symbol: env.meta.symbol,
+      path: `/data/marketphase/${env.meta.symbol}.json`,
+      updatedAt: env.meta.generatedAt
+    });
+  }
+  const mergedSymbols = Array.from(symbolMap.values()).sort((a, b) => String(a.symbol).localeCompare(String(b.symbol)));
+
   const index = {
     ok: true,
     meta: {
@@ -314,17 +420,13 @@ async function main() {
       legal: LEGAL_TEXT
     },
     data: {
-      symbols: envelopes.map((env) => ({
-        symbol: env.meta.symbol,
-        path: `/data/marketphase/${env.meta.symbol}.json`,
-        updatedAt: env.meta.generatedAt
-      }))
+      symbols: mergedSymbols
     }
   };
 
   const indexMeta = {
     generatedAt,
-    symbols: envelopes.map((env) => env.meta.symbol),
+    symbols: mergedSymbols.map((entry) => entry.symbol),
     version: "8.0",
     commitHash
   };
@@ -337,9 +439,21 @@ async function main() {
     commitHash
   };
 
-  await writeJson(path.join(outRoot, "index.json"), index);
-  await writeJson(path.join(outRoot, "index.meta.json"), indexMeta);
-  await writeJson(path.join(outRoot, "batch-analysis.json"), batchPayload);
+  const existingIndexPath = path.join(REPO_ROOT, outRoot, "index.json");
+  const shouldWriteIndex = generated.length > 0 || !(await fileExists(existingIndexPath));
+  if (shouldWriteIndex) {
+    await writeJson(path.join(outRoot, "index.json"), index);
+    await writeJson(path.join(outRoot, "index.meta.json"), indexMeta);
+    await writeJson(path.join(outRoot, "batch-analysis.json"), batchPayload);
+  }
+  await writeJson(path.join(outRoot, "missing.json"), {
+    type: "marketphase.missing",
+    asOf: generatedAt,
+    universe: args.universe,
+    expected: tickers.length,
+    generated: mergedSymbols.length,
+    missing: missing.filter((entry) => !symbolMap.has(normalizeTicker(entry?.ticker || "")))
+  });
 
   console.log(`MarketPhase generated: ${generated.length}/${tickers.length}`);
   if (missing.length) {

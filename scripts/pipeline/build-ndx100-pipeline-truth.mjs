@@ -35,6 +35,18 @@ function normalizeTicker(t) {
   return String(t || '').trim().toUpperCase();
 }
 
+function buildMissingReasonMap(payload) {
+  const map = new Map();
+  const items = Array.isArray(payload?.missing) ? payload.missing : [];
+  for (const item of items) {
+    const ticker = normalizeTicker(item?.ticker ?? item?.symbol ?? item?.code ?? null);
+    if (!ticker) continue;
+    const reason = item?.reason ? String(item.reason) : 'NO_COMPUTED_ANALYSIS';
+    map.set(ticker, reason);
+  }
+  return map;
+}
+
 function extractUniverseTickers(universeJson) {
   if (!Array.isArray(universeJson)) return [];
   return universeJson
@@ -129,6 +141,8 @@ async function main() {
   }
 
   const tickers = extractUniverseTickers(universe);
+  const marketphaseMissing = await readJsonRel('public/data/marketphase/missing.json');
+  const missingReasonMap = buildMissingReasonMap(marketphaseMissing?.__missing ? null : marketphaseMissing);
 
   const pricesSnap = await readJsonRel('public/data/snapshots/market-prices/latest.json');
   const hasPricesSnap = !pricesSnap?.__missing;
@@ -162,8 +176,9 @@ async function main() {
   for (const t of tickers) {
     const status = await analysisFileStatusForTicker(t);
     if (!status.exists) {
-      computedMissing.push({ ticker: t, reason: 'NO_COMPUTED_ANALYSIS' });
-      staticReadyMissing.push({ ticker: t, reason: 'NO_COMPUTED_ANALYSIS' });
+      const reason = missingReasonMap.get(t) || 'NO_COMPUTED_ANALYSIS';
+      computedMissing.push({ ticker: t, reason });
+      staticReadyMissing.push({ ticker: t, reason });
       continue;
     }
 

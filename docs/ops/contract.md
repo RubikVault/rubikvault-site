@@ -62,3 +62,9 @@
 - Scheduler runs are chunked (default 50) with bounded concurrency (default 3); partial success is allowed.
 - Per-run cursor stored at `sched:cursor:<job>:<run_id>`; attempt markers at `sched:attempt:<job>:<asset_id>:<yyyymmdd>`.
 - Scheduler trigger requires `X-Admin-Token` (env `ADMIN_TOKEN` or `RV_ADMIN_TOKEN`).
+
+## Mission Control (Ops) Additions
+- `data.opsBaseline.runtime.schedulerExpected`: boolean indicating whether cron is expected in the current environment.
+- `data.opsBaseline.runtime.schedulerExpectedReason`: short reason string (e.g., preview/static).
+- `data.opsBaseline.truthChain.nasdaq100`: ordered truth-chain steps with `id`, `title`, `status`, `evidence`, and `first_blocker`.
+- `public/data/marketphase/missing.json`: optional build artifact listing per-ticker missing reasons for MarketPhase (used to explain pipeline gaps).

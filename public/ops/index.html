@@ -213,7 +213,7 @@
                 <th>Limit</th>
                 <th>Remaining</th>
                 <th>Reset</th>
-                <th>Runtime calls today</th>
+                <th id="providers-calls-label">Runtime calls today</th>
               </tr>
             </thead>
             <tbody id="providers"></tbody>
@@ -396,8 +396,22 @@
       document.getElementById('workers-used').textContent = workersToday == null ? 'not tracked' : fmtNum(workersToday);
       document.getElementById('workers-budget').textContent = workersLast24h == null ? 'not tracked' : `Last 24h: ${fmtNum(workersLast24h)}`;
 
-      document.getElementById('runtime-mode').textContent = 'STATIC';
-      document.getElementById('runtime-note').textContent = 'Static summary artifact (no runtime auth).';
+      const runtime = summary?.runtime || {};
+      const runtimeMode = runtime?.isPreview
+        ? 'PREVIEW'
+        : runtime?.isProduction
+          ? 'PROD'
+          : 'STATIC';
+      document.getElementById('runtime-mode').textContent = runtimeMode;
+      document.getElementById('runtime-note').textContent = runtime?.isPreview
+        ? 'Preview/Static environment (cron not expected).'
+        : runtime?.isProduction
+          ? 'Production runtime.'
+          : 'Static summary artifact (no runtime auth).';
+      const callsHeader = document.getElementById('providers-calls-label');
+      if (callsHeader) {
+        callsHeader.textContent = runtime?.isProduction ? 'Runtime calls today' : 'Runtime calls today (static)';
+      }
 
       const safetyKvWrites = summary?.safety?.kv_writes_today ?? null;
       document.getElementById('safety-kv-writes').textContent = safetyKvWrites == null ? 'not tracked' : fmtNum(safetyKvWrites);

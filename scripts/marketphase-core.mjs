@@ -274,7 +274,6 @@ export function evaluateElliott(swings) {
   };
 
   // Apply round6 to ratios and conformanceScore
-  const round6 = getRound6();
   return {
     completedPattern,
     developingPattern,
