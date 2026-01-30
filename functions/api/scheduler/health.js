@@ -42,6 +42,7 @@ export async function onRequestGet(context) {
   if (!healthy) {
     return jsonEnvelopeResponse({
       ok: false,
+      data,
       error: {
         code: "SCHEDULER_STALE",
         message: "Scheduler heartbeat is stale",

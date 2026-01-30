@@ -83,6 +83,15 @@ function toNumberOrNull(v) {
   return Number.isFinite(n) ? n : null;
 }
 
+function normalizeStageCount(count, truthDoc, expected) {
+  const value = toIntOrNull(count);
+  if (value === 0 && Number.isFinite(expected) && expected > 0) {
+    const missing = Array.isArray(truthDoc?.missing) ? truthDoc.missing.length : 0;
+    if (missing >= expected) return null;
+  }
+  return value;
+}
+
 async function fetchCloudflareWorkerRequests({ accountId, apiToken }) {
   if (!accountId || !apiToken) {
     return {
@@ -223,11 +232,11 @@ async function main() {
   const truthStaticReady = await readLegacyPipelineTruth('public/data/pipeline/nasdaq100.static-ready.json');
 
   const expectedPipeline = (() => {
-    if (pipelineLatest.ok) return toIntOrNull(pipelineLatest.doc.counts?.expected);
-    if (truthFetched.ok) return toIntOrNull(truthFetched.doc.expected);
-    if (truthValidated.ok) return toIntOrNull(truthValidated.doc.expected);
-    if (truthComputed.ok) return toIntOrNull(truthComputed.doc.expected);
     if (truthStaticReady.ok) return toIntOrNull(truthStaticReady.doc.expected);
+    if (truthComputed.ok) return toIntOrNull(truthComputed.doc.expected);
+    if (truthValidated.ok) return toIntOrNull(truthValidated.doc.expected);
+    if (truthFetched.ok) return toIntOrNull(truthFetched.doc.expected);
+    if (pipelineLatest.ok) return toIntOrNull(pipelineLatest.doc.counts?.expected);
     return expectedUniverse;
   })();
 
@@ -245,14 +254,14 @@ async function main() {
   })();
 
   const pipelineMissing = (() => {
+    if (truthStaticReady.ok && Array.isArray(truthStaticReady.doc.missing)) {
+      return truthStaticReady.doc.missing;
+    }
     if (pipelineLatest.ok && Array.isArray(pipelineLatest.doc.degraded_summary?.sample)) {
       return pipelineLatest.doc.degraded_summary.sample.map((entry) => ({
         ticker: entry.symbol || 'UNKNOWN',
         reason: entry.class || 'DEGRADED'
       }));
-    }
-    if (truthStaticReady.ok && Array.isArray(truthStaticReady.doc.missing)) {
-      return truthStaticReady.doc.missing;
     }
     return [];
   })();
@@ -350,10 +359,26 @@ async function main() {
       expectedUniverse,
       pipeline: {
         expected: expectedPipeline,
-        fetched: pipelineLatest.ok ? toIntOrNull(pipelineLatest.doc.counts?.fetched) : (truthFetched.ok ? toIntOrNull(truthFetched.doc.count) : null),
-        validatedStored: pipelineLatest.ok ? toIntOrNull(pipelineLatest.doc.counts?.validated) : (truthValidated.ok ? toIntOrNull(truthValidated.doc.count) : null),
-        computed: pipelineLatest.ok ? toIntOrNull(pipelineLatest.doc.counts?.computed) : (truthComputed.ok ? toIntOrNull(truthComputed.doc.count) : null),
-        staticReady: pipelineLatest.ok ? toIntOrNull(pipelineLatest.doc.counts?.static_ready) : (truthStaticReady.ok ? toIntOrNull(truthStaticReady.doc.count) : null),
+        fetched: truthFetched.ok
+          ? normalizeStageCount(truthFetched.doc.count, truthFetched.doc, expectedPipeline)
+          : pipelineLatest.ok
+          ? toIntOrNull(pipelineLatest.doc.counts?.fetched)
+          : null,
+        validatedStored: truthValidated.ok
+          ? normalizeStageCount(truthValidated.doc.count, truthValidated.doc, expectedPipeline)
+          : pipelineLatest.ok
+          ? toIntOrNull(pipelineLatest.doc.counts?.validated)
+          : null,
+        computed: truthComputed.ok
+          ? normalizeStageCount(truthComputed.doc.count, truthComputed.doc, expectedPipeline)
+          : pipelineLatest.ok
+          ? toIntOrNull(pipelineLatest.doc.counts?.computed)
+          : null,
+        staticReady: truthStaticReady.ok
+          ? normalizeStageCount(truthStaticReady.doc.count, truthStaticReady.doc, expectedPipeline)
+          : pipelineLatest.ok
+          ? toIntOrNull(pipelineLatest.doc.counts?.static_ready)
+          : null,
         ...(pipelineReason ? { reason: pipelineReason } : {}),
         missing: pipelineMissing
       },

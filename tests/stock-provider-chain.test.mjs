@@ -123,7 +123,11 @@ async function testFallbackToTwelveData() {
   });
 
   try {
-    const result = await requestStock('AAPL', { TIINGO_API_KEY: 'x', TWELVEDATA_API_KEY: 'y' });
+    const result = await requestStock('AAPL', {
+      TIINGO_API_KEY: 'x',
+      TWELVEDATA_API_KEY: 'y',
+      PROVIDER_MODE: 'FAILOVER_ALLOWED'
+    });
     assert(!result.error, 'expected no error');
     assert(result.metadata?.source_chain?.selected === 'twelvedata', 'expected selected twelvedata');
     assert(result.metadata?.source_chain?.fallbackUsed === true, 'expected fallbackUsed true');
@@ -189,7 +193,11 @@ async function testBothFail() {
   });
 
   try {
-    const result = await requestStock('AAPL', { TIINGO_API_KEY: 'x', TWELVEDATA_API_KEY: 'y' });
+    const result = await requestStock('AAPL', {
+      TIINGO_API_KEY: 'x',
+      TWELVEDATA_API_KEY: 'y',
+      PROVIDER_MODE: 'FAILOVER_ALLOWED'
+    });
     assert(result.error?.code === 'EOD_FETCH_FAILED', 'expected EOD_FETCH_FAILED');
     assert(result.metadata?.status === 'ERROR', 'expected status ERROR when errorPayload present');
     assert(result.metadata?.source_chain?.failureReason === 'BOTH_FAILED', 'expected BOTH_FAILED');
