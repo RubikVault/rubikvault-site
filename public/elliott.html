@@ -165,6 +165,22 @@
             font-size: 0.8rem;
             text-transform: uppercase;
             letter-spacing: 0.05em;
+            cursor: pointer;
+            user-select: none;
+            transition: color 0.2s;
+        }
+
+        .elliott-table th:hover {
+            color: #e5e7eb;
+        }
+
+        .elliott-table th .sort-arrow {
+            margin-left: 4px;
+            opacity: 0.5;
+        }
+
+        .elliott-table th.sorted .sort-arrow {
+            opacity: 1;
         }
 
         .elliott-table td {
@@ -243,9 +259,9 @@
         <div class="rv-card" style="padding: 1.5rem;">
             <div class="elliott-filters">
                 <button class="elliott-filter-btn active" data-filter="all">All Setups</button>
+                <button class="elliott-filter-btn" data-filter="wave1">Wave 1 Start</button>
                 <button class="elliott-filter-btn" data-filter="wave3">Pre Wave 3</button>
                 <button class="elliott-filter-btn" data-filter="wave5">Pre Wave 5</button>
-                <button class="elliott-filter-btn" data-filter="wave1">Wave 1 Start</button>
                 <button class="elliott-filter-btn" data-filter="correction">In Correction</button>
                 <div style="flex: 1;"></div>
                 <div style="color: #64748b; font-size: 0.85rem;">
@@ -262,12 +278,12 @@
                 <table class="elliott-table">
                     <thead>
                         <tr>
-                            <th>Ticker</th>
-                            <th>Name</th>
-                            <th>Wave Position</th>
-                            <th>Confidence</th>
-                            <th>Direction</th>
-                            <th>Fib Conformance</th>
+                            <th data-sort="ticker">Ticker <span class="sort-arrow">↕</span></th>
+                            <th data-sort="name">Name <span class="sort-arrow">↕</span></th>
+                            <th data-sort="wavePosition">Wave Position <span class="sort-arrow">↕</span></th>
+                            <th data-sort="confidence">Confidence <span class="sort-arrow">↕</span></th>
+                            <th data-sort="direction">Direction <span class="sort-arrow">↕</span></th>
+                            <th data-sort="fibConformance">Fib Conformance <span class="sort-arrow">↕</span></th>
                             <th>Action</th>
                         </tr>
                     </thead>
@@ -315,6 +331,8 @@
         // Scanner state
         let allSetups = [];
         let currentFilter = 'all';
+        let sortColumn = 'confidence';
+        let sortDirection = 'desc';
 
         function escapeHtml(text) {
             return String(text || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -346,7 +364,7 @@
         }
 
         function renderTable(setups) {
-            const filtered = currentFilter === 'all'
+            let filtered = currentFilter === 'all'
                 ? setups
                 : setups.filter(s => {
                     if (currentFilter === 'wave3') return s.wavePosition === 'pre-wave-3';
@@ -355,6 +373,42 @@
                     if (currentFilter === 'correction') return s.wavePosition === 'in-correction';
                     return true;
                 });
+
+            // Sort by current column
+            filtered = [...filtered].sort((a, b) => {
+                let aVal = a[sortColumn];
+                let bVal = b[sortColumn];
+
+                // Handle null values
+                if (aVal == null) aVal = '';
+                if (bVal == null) bVal = '';
+
+                // Numeric comparison
+                if (typeof aVal === 'number' && typeof bVal === 'number') {
+                    return sortDirection === 'asc' ? aVal - bVal : bVal - aVal;
+                }
+
+                // String comparison
+                const strA = String(aVal).toLowerCase();
+                const strB = String(bVal).toLowerCase();
+                if (sortDirection === 'asc') {
+                    return strA.localeCompare(strB);
+                }
+                return strB.localeCompare(strA);
+            });
+
+            // Update header classes
+            document.querySelectorAll('.elliott-table th[data-sort]').forEach(th => {
+                th.classList.remove('sorted');
+                const arrow = th.querySelector('.sort-arrow');
+                if (arrow) arrow.textContent = '↕';
+            });
+            const sortedTh = document.querySelector(`.elliott-table th[data-sort="${sortColumn}"]`);
+            if (sortedTh) {
+                sortedTh.classList.add('sorted');
+                const arrow = sortedTh.querySelector('.sort-arrow');
+                if (arrow) arrow.textContent = sortDirection === 'asc' ? '↑' : '↓';
+            }
 
             document.getElementById('setup-count').textContent = filtered.length;
             const tbody = document.getElementById('scanner-tbody');
@@ -400,6 +454,20 @@
                 document.querySelectorAll('.elliott-filter-btn').forEach(b => b.classList.remove('active'));
                 btn.classList.add('active');
                 currentFilter = btn.dataset.filter;
+                renderTable(allSetups);
+            });
+        });
+
+        // Sortable table headers
+        document.querySelectorAll('.elliott-table th[data-sort]').forEach(th => {
+            th.addEventListener('click', () => {
+                const column = th.dataset.sort;
+                if (sortColumn === column) {
+                    sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
+                } else {
+                    sortColumn = column;
+                    sortDirection = 'desc';
+                }
                 renderTable(allSetups);
             });
         });

@@ -630,12 +630,8 @@
         : '';
 
       if (meta?.status === 'ERROR' && error && !pageDebug) {
-        return `
-          <div style="margin-top: 1.5rem;">
-            <h3 style="margin: 0 0 0.75rem; font-size: 1.25rem; color: #e5e7eb;">Fundamentals</h3>
-            <div style="color:#94a3b8;">Fundamentals unavailable (slow-data).</div>
-          </div>
-        `;
+        // Hide fundamentals section entirely when unavailable
+        return '';
       }
 
       return `
@@ -739,42 +735,52 @@
 
       const statusChipColor = meta?.status === 'OK' ? '#10b981' : meta?.status === 'PARTIAL' ? '#f59e0b' : '#ef4444';
 
+      // Format date as DD-MM-YYYY
+      const formatDateDDMMYYYY = (d) => {
+        if (!d || d === '—') return '—';
+        const parts = d.split('-');
+        if (parts.length === 3) return `${parts[2]}-${parts[1]}-${parts[0]}`;
+        return d;
+      };
+      const formattedDate = formatDateDDMMYYYY(date);
+
       resultsTitle.textContent = `${effectiveName} (${effectiveTicker || '—'})`;
       const fundamentalsHtml = data?.fundamentals_html || '';
       resultsContent.innerHTML = `
         ${showBanner ? renderErrorBanner(bannerError, meta) : ''}
-        <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; flex-wrap: wrap;">
+        <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; flex-wrap: wrap;">
           <div>
-            <div style="font-size: 2.1rem; font-weight: 800; color: #f1f5f9;">${escapeHtml(effectiveName)}</div>
-            <div style="margin-top: 0.25rem; font-size: 1.1rem; color: #94a3b8;">${escapeHtml(effectiveTicker)} • ${escapeHtml(date)}</div>
+            <div style="font-size: 2.1rem; font-weight: 800; color: #f1f5f9;">${escapeHtml(effectiveName)} <span style="font-weight: 600; color: #94a3b8;">${escapeHtml(effectiveTicker)}</span></div>
           </div>
-          <div style="padding: 0.35rem 0.75rem; border-radius: 999px; border: 1px solid rgba(100,116,139,0.35); color: #e5e7eb; background: rgba(15,23,42,0.35);">
-            <span style="display:inline-block; width: 8px; height: 8px; border-radius: 999px; background:${statusChipColor}; margin-right: 8px;"></span>
-            ${escapeHtml(meta?.status || 'UNKNOWN')}
+          <div style="text-align: right;">
+            <div style="padding: 0.35rem 0.75rem; border-radius: 999px; border: 1px solid rgba(100,116,139,0.35); color: #e5e7eb; background: rgba(15,23,42,0.35); display: inline-block;">
+              <span style="display:inline-block; width: 8px; height: 8px; border-radius: 999px; background:${statusChipColor}; margin-right: 8px;"></span>
+              ${escapeHtml(meta?.status || 'UNKNOWN')}
+            </div>
+            <div style="margin-top: 0.5rem; font-size: 0.95rem; color: #94a3b8;">${escapeHtml(formattedDate)}</div>
           </div>
         </div>
 
         ${renderSourceChain(meta?.source_chain)}
 
-        ${fundamentalsHtml}
-
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; margin-top: 1.5rem;">
-          <div style="padding: 1.2rem; background: rgba(59, 130, 246, 0.1); border-radius: 12px; border: 1px solid rgba(59, 130, 246, 0.2);">
-            <div style="font-size: 0.875rem; color: #94a3b8; margin-bottom: 0.4rem;">Close</div>
-            <div style="font-size: 2rem; font-weight: 800; color: #e5e7eb;">${close == null ? '—' : '$' + formatNumber(close, { digits: 2 })}</div>
+        <!-- Compact Price Row -->
+        <div style="display: flex; gap: 1.5rem; flex-wrap: wrap; margin-top: 1.25rem; align-items: baseline;">
+          <div style="display: flex; align-items: baseline; gap: 0.5rem;">
+            <span style="font-size: 0.95rem; color: #94a3b8;">Close</span>
+            <span style="font-size: 1.5rem; font-weight: 800; color: #60a5fa;">${close == null ? '—' : '$' + formatNumber(close, { digits: 2 })}</span>
           </div>
-
-          <div style="padding: 1.2rem; background: rgba(16, 185, 129, 0.1); border-radius: 12px; border: 1px solid rgba(16, 185, 129, 0.2);">
-            <div style="font-size: 0.875rem; color: #94a3b8; margin-bottom: 0.4rem;">Day change</div>
-            <div style="font-size: 2rem; font-weight: 800; color: #e5e7eb;">${formatNumber(changeAbs, { digits: 2 })}</div>
-            <div style="margin-top: 0.25rem; font-size: 1rem; color: #94a3b8;">${formatPercent(changePct, 2)}</div>
+          <div style="display: flex; align-items: baseline; gap: 0.5rem;">
+            <span style="font-size: 0.95rem; color: #94a3b8;">Day</span>
+            <span style="font-size: 1.5rem; font-weight: 800; color: ${changeAbs >= 0 ? '#34d399' : '#f87171'};">${formatNumber(changeAbs, { digits: 2 })}</span>
+            <span style="font-size: 1.1rem; color: ${changePct >= 0 ? '#34d399' : '#f87171'};">(${formatPercent(changePct, 2)})</span>
           </div>
-
-          <div style="padding: 1.2rem; background: rgba(245, 158, 11, 0.1); border-radius: 12px; border: 1px solid rgba(245, 158, 11, 0.2);">
-            <div style="font-size: 0.875rem; color: #94a3b8; margin-bottom: 0.4rem;">Volume</div>
-            <div style="font-size: 2rem; font-weight: 800; color: #e5e7eb;">${volume == null ? '—' : Number(volume).toLocaleString()}</div>
+          <div style="display: flex; align-items: baseline; gap: 0.5rem;">
+            <span style="font-size: 0.95rem; color: #94a3b8;">Vol</span>
+            <span style="font-size: 1.5rem; font-weight: 800; color: #fbbf24;">${volume == null ? '—' : Number(volume).toLocaleString()}</span>
           </div>
         </div>
+
+        ${fundamentalsHtml}
 
         <div style="margin-top: 2rem; display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; flex-wrap: wrap;">
           <h3 style="margin: 0; font-size: 1.25rem; color: #e5e7eb;">Indicators (${indicatorCount})</h3>
