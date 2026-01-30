@@ -45,6 +45,10 @@ async function testSchedulerHealthStale() {
   assert(body.error?.code === "SCHEDULER_STALE", "health stale should return SCHEDULER_STALE");
   assert(body.meta?.status === "error", "health stale should set meta.status=error");
   assert(typeof body.meta?.data_date === "string" && body.meta.data_date.length === 10, "data_date required");
+  assert(body.data && typeof body.data === "object", "health stale should include data object");
+  assert("last_ok" in body.data, "health stale data.last_ok required");
+  assert("age_s" in body.data, "health stale data.age_s required");
+  assert(typeof body.data.max_age_s === "number", "health stale data.max_age_s required");
   console.log("✅ scheduler health stale");
 }
 
@@ -85,6 +89,9 @@ async function testSchedulerRunAndHealthOk() {
   const healthBody = JSON.parse(await healthRes.text());
   assert(healthBody.ok === true, "health should be ok after scheduler run");
   assert(healthBody.meta?.status, "health meta.status required");
+  assert(healthBody.data && typeof healthBody.data === "object", "health ok should include data object");
+  assert("last_ok" in healthBody.data, "health ok data.last_ok required");
+  assert(typeof healthBody.data.max_age_s === "number", "health ok data.max_age_s required");
   console.log("✅ scheduler run updates health");
 }
 

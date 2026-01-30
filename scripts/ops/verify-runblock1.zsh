@@ -402,6 +402,50 @@ verify_not_fresh() {
   return $node_exit
 }
 
+verify_scheduler_health_payload() {
+  local endpoint="/api/scheduler/health"
+  local url="${PREVIEW_BASE}${endpoint}"
+  local tmp_body=$(mktemp)
+
+  local http_code
+  http_code=$(curl -sS -o "$tmp_body" -w "%{http_code}" --max-time 30 "$url" 2>&1)
+  local curl_exit=$?
+  if [[ $curl_exit -ne 0 ]]; then
+    log_fail "Endpoint $endpoint: curl failed (exit $curl_exit)"
+    rm -f "$tmp_body"
+    return 1
+  fi
+
+  local validation_result
+  validation_result=$(node -e "
+    const fs = require('fs');
+    try {
+      const body = fs.readFileSync('$tmp_body', 'utf-8');
+      const json = JSON.parse(body);
+      const data = json.data;
+      if (!data || typeof data !== 'object' || Array.isArray(data)) {
+        throw new Error('data must be an object');
+      }
+      if (!('last_ok' in data)) throw new Error('data.last_ok missing');
+      if (!('age_s' in data)) throw new Error('data.age_s missing');
+      if (typeof data.max_age_s !== 'number') throw new Error('data.max_age_s missing');
+      process.stdout.write('OK');
+    } catch (err) {
+      process.stdout.write('ERROR: ' + err.message);
+      process.exit(1);
+    }
+  " 2>/dev/null)
+
+  if [[ "$validation_result" != "OK" ]]; then
+    log_fail "Endpoint $endpoint: scheduler health data payload invalid (${validation_result#ERROR: })"
+    rm -f "$tmp_body"
+    return 1
+  fi
+
+  log_pass "Endpoint $endpoint: scheduler health data payload includes last_ok/age_s/max_age_s"
+  rm -f "$tmp_body"
+}
+
 verify_preview_endpoints() {
   log_section "Step 3: Verifying Preview API Envelope Shape"
   log_info "Preview base URL: $PREVIEW_BASE"
@@ -412,6 +456,7 @@ verify_preview_endpoints() {
 
   # Scheduler health
   verify_envelope "/api/scheduler/health" "any"
+  verify_scheduler_health_payload
   
   # Try health endpoint, fallback to another if not found
   local health_result

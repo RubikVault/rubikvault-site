@@ -48,6 +48,17 @@ async function readJson(filePath) {
   return JSON.parse(raw);
 }
 
+async function readStaticReadyCount(outRoot, universe) {
+  const filePath = path.join(outRoot, 'pipeline', `${universe}.static-ready.json`);
+  try {
+    const doc = await readJson(filePath);
+    const count = Number(doc?.count);
+    return Number.isInteger(count) ? count : null;
+  } catch {
+    return null;
+  }
+}
+
 function extractUniverseSymbols(payload) {
   if (!Array.isArray(payload)) return [];
   const symbols = new Set();
@@ -223,6 +234,7 @@ async function main() {
 
   const startedAt = isoNow();
   const outRoot = path.resolve(REPO_ROOT, args.outDir);
+  const staticReadyTruthCount = await readStaticReadyCount(outRoot, args.universe);
 
   const universePath = path.join(outRoot, 'universe', `${args.universe}.json`);
   const universePayload = await readJson(universePath);
@@ -268,6 +280,7 @@ async function main() {
     const manifestPath = path.join(outRoot, 'eod', 'manifest.latest.json');
     await writeJsonAtomic(manifestPath, manifest);
 
+    const staticReadyCount = Number.isInteger(staticReadyTruthCount) ? staticReadyTruthCount : 0;
     const pipelineTruth = {
       schema_version: '1.0',
       type: 'pipeline.truth',
@@ -282,7 +295,7 @@ async function main() {
         fetched: 0,
         validated: 0,
         computed: 0,
-        static_ready: 0
+        static_ready: staticReadyCount
       },
       root_failure: {
         class: classification.class,
@@ -435,6 +448,11 @@ async function main() {
     sample: buildDegradedSample(failures)
   };
 
+  const staticReadyCount = Number.isInteger(staticReadyTruthCount)
+    ? staticReadyTruthCount
+    : writeFailed
+      ? 0
+      : validatedCount;
   const pipelineTruth = {
     schema_version: '1.0',
     type: 'pipeline.truth',
@@ -449,7 +467,7 @@ async function main() {
       fetched: fetchedCount,
       validated: validatedCount,
       computed: validatedCount,
-      static_ready: writeFailed ? 0 : validatedCount
+      static_ready: staticReadyCount
     },
     root_failure: writeFailed
       ? { class: 'WRITE_FAILED', hint: 'Failed to write one or more artifacts' }
