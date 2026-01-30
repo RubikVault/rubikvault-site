@@ -91,6 +91,7 @@ async function analysisFileStatusForTicker(ticker) {
 function buildStagePayload({ asOf, universeName, tickers, count, reason, missing }) {
   const expected = tickers.length;
   const payload = {
+    type: 'pipeline.truth',
     asOf,
     universe: universeName,
     expected,
@@ -111,6 +112,7 @@ async function main() {
     const emptyUniverse = [];
 
     const base = {
+      type: 'pipeline.truth',
       asOf,
       universe: universeName,
       expected: 0,

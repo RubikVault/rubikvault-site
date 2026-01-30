@@ -61,8 +61,12 @@ export function isPrivilegedDebug(request, env) {
   const token = String(env?.ADMIN_TOKEN || env?.RV_ADMIN_TOKEN || "").trim();
   if (!token) return false;
   const header = request?.headers?.get?.("X-Admin-Token");
-  if (!header) return false;
-  return header === token;
+  if (header && header === token) return true;
+  const auth = request?.headers?.get?.("Authorization") || request?.headers?.get?.("authorization");
+  if (!auth) return false;
+  const match = auth.match(/^Bearer\s+(.+)$/i);
+  if (!match) return false;
+  return match[1].trim() === token;
 }
 
 export function redact(obj) {

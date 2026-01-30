@@ -29,6 +29,12 @@ jobs:
       - name: Install deps
         run: npm ci
 
+      - name: Build MarketPhase from KV (NASDAQ-100)
+        env:
+          CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+          CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
+        run: node scripts/pipeline/build-marketphase-from-kv.mjs --universe nasdaq100
+
       - name: Build pipeline truth (NASDAQ-100)
         run: node scripts/pipeline/build-ndx100-pipeline-truth.mjs
 

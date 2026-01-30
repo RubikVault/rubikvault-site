@@ -59,6 +59,16 @@ async function readStaticReadyCount(outRoot, universe) {
   }
 }
 
+async function readComputedCount(outRoot, universe) {
+  const filePath = path.join(outRoot, 'pipeline', `${universe}.computed.json`);
+  try {
+    const doc = await readJson(filePath);
+    const count = Number(doc?.count);
+    return Number.isInteger(count) ? count : null;
+  } catch {
+    return null;
+  }
+}
 function extractUniverseSymbols(payload) {
   if (!Array.isArray(payload)) return [];
   const symbols = new Set();
@@ -235,6 +245,7 @@ async function main() {
   const startedAt = isoNow();
   const outRoot = path.resolve(REPO_ROOT, args.outDir);
   const staticReadyTruthCount = await readStaticReadyCount(outRoot, args.universe);
+  const computedTruthCount = await readComputedCount(outRoot, args.universe);
 
   const universePath = path.join(outRoot, 'universe', `${args.universe}.json`);
   const universePayload = await readJson(universePath);
@@ -281,6 +292,7 @@ async function main() {
     await writeJsonAtomic(manifestPath, manifest);
 
     const staticReadyCount = Number.isInteger(staticReadyTruthCount) ? staticReadyTruthCount : 0;
+    const computedCount = Number.isInteger(computedTruthCount) ? computedTruthCount : 0;
     const pipelineTruth = {
       schema_version: '1.0',
       type: 'pipeline.truth',
@@ -294,7 +306,7 @@ async function main() {
         expected: symbols.length,
         fetched: 0,
         validated: 0,
-        computed: 0,
+        computed: computedCount,
         static_ready: staticReadyCount
       },
       root_failure: {
@@ -303,7 +315,7 @@ async function main() {
       },
       degraded_summary: degradedSummary,
       metadata: {
-        computed_not_applicable: true
+        computed_not_applicable: !Number.isInteger(computedTruthCount)
       }
     };
 
@@ -453,6 +465,7 @@ async function main() {
     : writeFailed
       ? 0
       : validatedCount;
+  const computedCount = Number.isInteger(computedTruthCount) ? computedTruthCount : validatedCount;
   const pipelineTruth = {
     schema_version: '1.0',
     type: 'pipeline.truth',
@@ -466,7 +479,7 @@ async function main() {
       expected: symbols.length,
       fetched: fetchedCount,
       validated: validatedCount,
-      computed: validatedCount,
+      computed: computedCount,
       static_ready: staticReadyCount
     },
     root_failure: writeFailed
@@ -474,7 +487,7 @@ async function main() {
       : null,
     degraded_summary: degradedSummary,
     metadata: {
-      computed_not_applicable: true
+      computed_not_applicable: !Number.isInteger(computedTruthCount)
     }
   };
 
