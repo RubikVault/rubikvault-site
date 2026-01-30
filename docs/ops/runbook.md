@@ -260,3 +260,19 @@ curl -fsS "$PREVIEW/api/health-report" | jq '{ok, feature, status:.data?.status,
 - Evidence-based: show real outputs; do not assume.
 - Minimal diffs; isolate fixes; keep commits small.
 - Always show retest commands and outputs.
+
+## How to Run (Ops Contract + E2E)
+Verify contracts (PROD, and PREVIEW if provided):
+```bash
+./scripts/ops/rv_verify_contracts.sh
+PREVIEW_BASE="https://<preview>.pages.dev" ./scripts/ops/rv_verify_contracts.sh
+```
+
+Run Ops E2E locally (base URL override):
+```bash
+BASE_URL="https://<preview>.pages.dev" npx playwright test
+BASE_URL="https://rubikvault.com" npx playwright test
+```
+
+CI workflow (manual):
+- GitHub Actions → `e2e-playwright` → Run workflow

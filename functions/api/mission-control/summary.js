@@ -318,13 +318,17 @@ function buildNasdaq100TruthChain(pipelineTruths, snapshotInfo, runtimeInfo, asO
   // Determine first blocker
   const firstFail = steps.find(s => s.status === 'FAIL');
   const firstWarn = steps.find(s => s.status === 'WARN');
-  const firstBlocker = firstFail?.id || firstWarn?.id || null;
+  const firstStep = firstFail || firstWarn || null;
+  const firstBlocker = firstStep
+    ? { id: firstStep.id, title: firstStep.title, status: firstStep.status }
+    : null;
 
   return {
     chain_version: 'v1',
     asOf,
     steps,
-    first_blocker: firstBlocker
+    first_blocker: firstBlocker,
+    first_blocker_id: firstStep?.id || null
   };
 }
 

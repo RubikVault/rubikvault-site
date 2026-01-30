@@ -66,8 +66,11 @@ for (const step of steps) {
 }
 
 const expectedBlocker = pickBlocker(steps);
-if (truthChain.first_blocker !== expectedBlocker) {
-  fail(`Truth chain first_blocker expected ${expectedBlocker}, got ${truthChain.first_blocker}`);
+const actualBlocker = typeof truthChain.first_blocker === 'string'
+  ? truthChain.first_blocker
+  : truthChain.first_blocker?.id || null;
+if (actualBlocker !== expectedBlocker) {
+  fail(`Truth chain first_blocker expected ${expectedBlocker}, got ${actualBlocker}`);
 }
 
 console.log('Truth chain test OK');

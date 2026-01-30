@@ -66,5 +66,5 @@
 ## Mission Control (Ops) Additions
 - `data.opsBaseline.runtime.schedulerExpected`: boolean indicating whether cron is expected in the current environment.
 - `data.opsBaseline.runtime.schedulerExpectedReason`: short reason string (e.g., preview/static).
-- `data.opsBaseline.truthChain.nasdaq100`: ordered truth-chain steps with `id`, `title`, `status`, `evidence`, and `first_blocker`.
+- `data.opsBaseline.truthChain.nasdaq100`: ordered truth-chain steps with `id`, `title`, `status`, `evidence`, and `first_blocker` (object or null).
 - `public/data/marketphase/missing.json`: optional build artifact listing per-ticker missing reasons for MarketPhase (used to explain pipeline gaps).

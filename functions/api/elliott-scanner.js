@@ -158,6 +158,7 @@ function estimateWaveFromEOD(ticker, name, eod) {
     const close = eod.close;
     const high = eod.high;
     const low = eod.low;
+    const open = eod.open;
 
     if (!Number.isFinite(close)) {
         return {
@@ -173,12 +174,29 @@ function estimateWaveFromEOD(ticker, name, eod) {
     }
 
     // Estimate direction from today's bar
-    const dayChange = (close - eod.open) / eod.open;
+    const dayChange = (close - open) / open;
     const direction = dayChange >= 0 ? 'bullish' : 'bearish';
 
     // Position in day's range
     const range = high - low;
     const positionInRange = range > 0 ? (close - low) / range : 0.5;
+
+    // Calculate Fibonacci conformance based on close position relative to key Fib levels
+    // Key Fib retracement levels: 0%, 23.6%, 38.2%, 50%, 61.8%, 78.6%, 100%
+    const fibLevels = [0, 0.236, 0.382, 0.5, 0.618, 0.786, 1.0];
+
+    // Find nearest Fib level
+    let minDistance = 1;
+    for (const fibLevel of fibLevels) {
+        const distance = Math.abs(positionInRange - fibLevel);
+        if (distance < minDistance) {
+            minDistance = distance;
+        }
+    }
+
+    // Convert distance to conformance score (0-100%)
+    // Distance 0 = 100% conformance, Distance 0.5 = 0% conformance
+    const fibConformance = Math.max(0, Math.min(100, (1 - minDistance * 2) * 100));
 
     // Heuristic wave position
     let wavePosition;
@@ -204,7 +222,7 @@ function estimateWaveFromEOD(ticker, name, eod) {
         wavePosition,
         confidence,
         direction,
-        fibConformance: null,
+        fibConformance: Math.round(fibConformance * 10) / 10,
         validPattern: false,
         source: 'heuristic'
     };

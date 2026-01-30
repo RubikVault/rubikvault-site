@@ -750,7 +750,7 @@
         ${showBanner ? renderErrorBanner(bannerError, meta) : ''}
         <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; flex-wrap: wrap;">
           <div>
-            <div style="font-size: 2.1rem; font-weight: 800; color: #f1f5f9;">${escapeHtml(effectiveName)} <span style="font-weight: 600; color: #94a3b8;">${escapeHtml(effectiveTicker)}</span></div>
+            <!-- Name shown in title bar only -->
           </div>
           <div style="text-align: right;">
             <div style="padding: 0.35rem 0.75rem; border-radius: 999px; border: 1px solid rgba(100,116,139,0.35); color: #e5e7eb; background: rgba(15,23,42,0.35); display: inline-block;">
@@ -782,11 +782,18 @@
 
         ${fundamentalsHtml}
 
+        <!-- Price Chart Section -->
+        <div style="margin-top: 2rem;">
+          <h3 style="margin: 0 0 1rem; font-size: 1.25rem; color: #e5e7eb;">Price History</h3>
+          <div id="price-chart-container" style="width: 100%; height: 280px; background: rgba(15, 23, 42, 0.35); border: 1px solid rgba(100, 116, 139, 0.22); border-radius: 12px; position: relative;">
+            <canvas id="price-chart" style="width: 100%; height: 100%;"></canvas>
+          </div>
+        </div>
+
         <div style="margin-top: 2rem; display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; flex-wrap: wrap;">
           <h3 style="margin: 0; font-size: 1.25rem; color: #e5e7eb;">Indicators (${indicatorCount})</h3>
           <div style="display:flex; gap: 0.6rem; align-items: baseline; flex-wrap: wrap; justify-content: flex-end;">
             ${indicatorsValidated ? '<span style="display:inline-flex; align-items:center; gap:0.35rem; padding: 0.2rem 0.55rem; border-radius: 999px; border: 1px solid rgba(16, 185, 129, 0.35); background: rgba(16, 185, 129, 0.12); color: #a7f3d0; font-size: 0.85rem; font-weight: 700;">Validated</span>' : ''}
-            <div style="font-size: 0.9rem; color: #94a3b8;">null=${nullIndicatorCount}</div>
           </div>
         </div>
 
@@ -794,6 +801,108 @@
           ${indicatorsHtml || '<div style="color:#94a3b8;">No indicators available.</div>'}
         </div>
       `;
+
+      // Render price chart using available data
+      renderPriceChart({
+        close,
+        high52w: indicatorById['high_52w']?.value,
+        low52w: indicatorById['low_52w']?.value,
+        sma20: indicatorById['sma20']?.value,
+        sma50: indicatorById['sma50']?.value,
+        sma200: indicatorById['sma200']?.value,
+        bb_upper: indicatorById['bb_upper']?.value,
+        bb_lower: indicatorById['bb_lower']?.value
+      });
+    }
+
+    function renderPriceChart(data) {
+      const canvas = document.getElementById('price-chart');
+      const container = document.getElementById('price-chart-container');
+      if (!canvas || !container) return;
+
+      const ctx = canvas.getContext('2d');
+      const dpr = window.devicePixelRatio || 1;
+
+      // Set actual canvas size
+      const rect = container.getBoundingClientRect();
+      canvas.width = rect.width * dpr;
+      canvas.height = rect.height * dpr;
+      canvas.style.width = rect.width + 'px';
+      canvas.style.height = rect.height + 'px';
+      ctx.scale(dpr, dpr);
+
+      const w = rect.width;
+      const h = rect.height;
+      const padding = { top: 30, right: 80, bottom: 40, left: 20 };
+      const chartW = w - padding.left - padding.right;
+      const chartH = h - padding.top - padding.bottom;
+
+      // Collect available price points
+      const points = [];
+      const labels = [];
+
+      if (Number.isFinite(data.low52w)) { points.push(data.low52w); labels.push({ value: data.low52w, label: '52w Low', color: '#f87171' }); }
+      if (Number.isFinite(data.sma200)) { points.push(data.sma200); labels.push({ value: data.sma200, label: 'SMA200', color: '#fbbf24' }); }
+      if (Number.isFinite(data.bb_lower)) { points.push(data.bb_lower); labels.push({ value: data.bb_lower, label: 'BB↓', color: '#94a3b8' }); }
+      if (Number.isFinite(data.sma50)) { points.push(data.sma50); labels.push({ value: data.sma50, label: 'SMA50', color: '#34d399' }); }
+      if (Number.isFinite(data.sma20)) { points.push(data.sma20); labels.push({ value: data.sma20, label: 'SMA20', color: '#60a5fa' }); }
+      if (Number.isFinite(data.close)) { points.push(data.close); labels.push({ value: data.close, label: 'Close', color: '#f1f5f9' }); }
+      if (Number.isFinite(data.bb_upper)) { points.push(data.bb_upper); labels.push({ value: data.bb_upper, label: 'BB↑', color: '#94a3b8' }); }
+      if (Number.isFinite(data.high52w)) { points.push(data.high52w); labels.push({ value: data.high52w, label: '52w High', color: '#34d399' }); }
+
+      if (points.length < 2) {
+        ctx.fillStyle = '#64748b';
+        ctx.font = '14px system-ui, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('Insufficient price data for chart', w / 2, h / 2);
+        return;
+      }
+
+      // Calculate range
+      const minP = Math.min(...points) * 0.98;
+      const maxP = Math.max(...points) * 1.02;
+      const range = maxP - minP || 1;
+
+      const toY = (val) => padding.top + chartH - ((val - minP) / range) * chartH;
+
+      // Draw grid
+      ctx.strokeStyle = 'rgba(100, 116, 139, 0.15)';
+      ctx.lineWidth = 1;
+      for (let i = 0; i <= 4; i++) {
+        const y = padding.top + (chartH / 4) * i;
+        ctx.beginPath();
+        ctx.moveTo(padding.left, y);
+        ctx.lineTo(w - padding.right, y);
+        ctx.stroke();
+      }
+
+      // Draw price levels as horizontal lines with labels
+      labels.sort((a, b) => a.value - b.value);
+      for (const item of labels) {
+        const y = toY(item.value);
+
+        // Line
+        ctx.strokeStyle = item.color;
+        ctx.lineWidth = item.label === 'Close' ? 2 : 1;
+        ctx.setLineDash(item.label === 'Close' ? [] : [4, 4]);
+        ctx.beginPath();
+        ctx.moveTo(padding.left, y);
+        ctx.lineTo(w - padding.right, y);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        // Label
+        ctx.fillStyle = item.color;
+        ctx.font = item.label === 'Close' ? 'bold 12px system-ui, sans-serif' : '11px system-ui, sans-serif';
+        ctx.textAlign = 'left';
+        ctx.fillText(`${item.label}: $${item.value.toFixed(2)}`, w - padding.right + 6, y + 4);
+      }
+
+      // Title
+      ctx.fillStyle = '#94a3b8';
+      ctx.font = '11px system-ui, sans-serif';
+      ctx.textAlign = 'left';
+      ctx.fillText('Price Levels (52w range + SMAs + Bollinger)', padding.left, 18);
     }
 
     function showLoading(label) {

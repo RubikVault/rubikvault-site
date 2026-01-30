@@ -156,6 +156,11 @@
 
 <body>
   <div class="wrap">
+    <div id="ops-render-status" data-status="boot" data-reason="starting" class="small"
+      style="margin-bottom: 10px; color: #94a3b8;">
+      Render status: <span id="ops-render-status-text">boot</span>
+    </div>
+
     <h1>Ops</h1>
     <div class="sub">Owner-grade view (static-first, read-only). No auto refresh.</div>
 
@@ -174,6 +179,12 @@
       <div class="small" id="ops-alert-text"></div>
     </div>
 
+    <div id="ops-render-error" class="card"
+      style="display:none; margin-bottom: 12px; border-color: rgba(248, 113, 113, 0.5); background: rgba(120, 20, 30, 0.18);">
+      <div class="k">Render error</div>
+      <div class="small" id="ops-render-error-text"></div>
+    </div>
+
     <div id="loading" class="card">No data loaded. Click Refresh (LIVE).</div>
 
     <div id="main" style="display:none;">
@@ -182,6 +193,13 @@
         <div class="v" id="overall">—</div>
         <div class="small" id="overall-reason">—</div>
         <div class="small" id="what-to-fix" style="margin-top:6px;"></div>
+      </div>
+
+      <div class="card" style="margin-bottom: 12px;">
+        <div class="k">Render diagnostics</div>
+        <div class="small">Last summary fetch: <span id="ops-last-fetch" class="mono">—</span></div>
+        <div class="small" style="margin-top: 6px;">Scheduler expected: <span id="ops-scheduler-expected">—</span></div>
+        <div class="small" id="ops-scheduler-expected-reason" style="margin-top: 4px;">—</div>
       </div>
 
       <div class="grid" style="margin-bottom: 12px;">
@@ -243,22 +261,32 @@
           <div class="small" id="freshness-stale" style="margin-top: 8px;">—</div>
           <div class="small" id="freshness-list" style="margin-top: 8px;"></div>
         </div>
-        <div class="card">
+        <div class="card" id="scheduler-card" data-testid="scheduler-card">
           <div class="k" style="margin-bottom: 10px;">Scheduler status</div>
           <div class="small" id="scheduler-expected">—</div>
           <div class="small" id="scheduler-note" style="margin-top: 8px;">—</div>
         </div>
       </div>
 
-      <div class="card" style="margin-bottom: 12px;" id="truth-chain-section">
+      <div class="card" style="margin-bottom: 12px;" id="truth-chain-section" data-testid="truth-chain">
         <div class="k" style="margin-bottom: 10px;">Truth Chain (NASDAQ-100)</div>
         <div id="truth-chain-steps" style="display: flex; flex-direction: column; gap: 6px;"></div>
         <div id="truth-chain-blocker" class="small"
           style="margin-top: 10px; padding: 8px; border-radius: 6px; display: none;"></div>
       </div>
 
+      <details id="ops-raw-json" style="margin-bottom: 12px;">
+        <summary>Raw mission-control summary (sanitized)</summary>
+        <div style="margin-top: 8px; display: flex; gap: 8px; align-items: center;">
+          <button id="ops-raw-copy" class="btn" type="button">Copy JSON</button>
+          <span class="small" id="ops-raw-mode">sanitized</span>
+        </div>
+        <pre id="ops-raw-json-pre"
+          style="margin-top: 8px; white-space: pre-wrap; word-break: break-word; background: rgba(15, 23, 42, 0.7); padding: 10px; border-radius: 8px;"></pre>
+      </details>
+
       <div class="small" style="margin-top: 14px;">
-        Source: <a href="/data/ops/summary.latest.json" style="color:#60a5fa;">/data/ops/summary.latest.json</a>
+        Source: <a href="/api/mission-control/summary" style="color:#60a5fa;">/api/mission-control/summary</a>
         <span class="small" id="asof" style="margin-left:10px;"></span>
       </div>
     </div>
@@ -290,6 +318,31 @@
       if (v >= 90) return 'bad';
       if (v >= 70) return 'warn';
       return 'ok';
+    }
+
+    const renderStatusEl = document.getElementById('ops-render-status');
+    const renderStatusText = document.getElementById('ops-render-status-text');
+    const renderErrorEl = document.getElementById('ops-render-error');
+    const renderErrorText = document.getElementById('ops-render-error-text');
+
+    function setRenderStatus(status, reason, asOf) {
+      if (renderStatusEl) {
+        renderStatusEl.dataset.status = status || 'unknown';
+        renderStatusEl.dataset.reason = reason || '';
+        if (asOf) renderStatusEl.dataset.asof = asOf;
+      }
+      if (renderStatusText) {
+        renderStatusText.textContent = status || 'unknown';
+      }
+      if (renderErrorEl && renderErrorText) {
+        if (status === 'error') {
+          renderErrorEl.style.display = 'block';
+          renderErrorText.textContent = reason || 'unknown';
+        } else {
+          renderErrorEl.style.display = 'none';
+          renderErrorText.textContent = '';
+        }
+      }
     }
 
     function setManualTs(ts) {
@@ -413,6 +466,14 @@
         callsHeader.textContent = runtime?.isProduction ? 'Runtime calls today' : 'Runtime calls today (static)';
       }
 
+      const lastFetchEl = document.getElementById('ops-last-fetch');
+      if (lastFetchEl) lastFetchEl.textContent = summary?.generated_at || summary?.asof || '—';
+      const schedulerExpectedEl = document.getElementById('ops-scheduler-expected');
+      if (schedulerExpectedEl) schedulerExpectedEl.textContent =
+        runtime?.schedulerExpected === true ? 'YES' : runtime?.schedulerExpected === false ? 'NO' : 'UNKNOWN';
+      const schedulerExpectedReasonEl = document.getElementById('ops-scheduler-expected-reason');
+      if (schedulerExpectedReasonEl) schedulerExpectedReasonEl.textContent = runtime?.schedulerExpectedReason || '—';
+
       const safetyKvWrites = summary?.safety?.kv_writes_today ?? null;
       document.getElementById('safety-kv-writes').textContent = safetyKvWrites == null ? 'not tracked' : fmtNum(safetyKvWrites);
       document.getElementById('safety-note').textContent = summary?.safety?.note || 'Static-only view.';
@@ -483,6 +544,58 @@
 
       loading.style.display = 'none';
       main.style.display = 'block';
+    }
+
+    function redactKeys(value) {
+      const redaction = '[REDACTED]';
+      const deny = /apiKey|token|secret|authorization|headers/i;
+      if (Array.isArray(value)) {
+        return value.map((item) => redactKeys(item));
+      }
+      if (value && typeof value === 'object') {
+        const out = {};
+        for (const [key, val] of Object.entries(value)) {
+          if (deny.test(key)) {
+            out[key] = redaction;
+          } else {
+            out[key] = redactKeys(val);
+          }
+        }
+        return out;
+      }
+      return value;
+    }
+
+    function updateRawJson(payload, allowFull) {
+      const pre = document.getElementById('ops-raw-json-pre');
+      const modeEl = document.getElementById('ops-raw-mode');
+      const details = document.getElementById('ops-raw-json');
+      if (!pre || !payload) return;
+      const redacted = redactKeys(payload);
+      const output = allowFull ? redacted : redacted;
+      pre.textContent = JSON.stringify(output, null, 2);
+      if (modeEl) modeEl.textContent = allowFull ? 'sanitized (debug)' : 'sanitized';
+      if (details && allowFull) details.open = true;
+    }
+
+    function setupCopyJson() {
+      const btn = document.getElementById('ops-raw-copy');
+      const pre = document.getElementById('ops-raw-json-pre');
+      if (!btn || !pre) return;
+      btn.addEventListener('click', async () => {
+        try {
+          await navigator.clipboard.writeText(pre.textContent || '');
+          btn.textContent = 'Copied';
+          setTimeout(() => {
+            btn.textContent = 'Copy JSON';
+          }, 1200);
+        } catch {
+          btn.textContent = 'Copy failed';
+          setTimeout(() => {
+            btn.textContent = 'Copy JSON';
+          }, 1200);
+        }
+      });
     }
 
     function buildSummaryFromLegacy(payload, pipelineCountsOverride) {
@@ -610,7 +723,8 @@
         return '❓';
       };
 
-      const firstBlocker = nasdaq100.first_blocker;
+      const firstBlockerObj = nasdaq100.first_blocker || null;
+      const firstBlocker = typeof firstBlockerObj === 'string' ? firstBlockerObj : firstBlockerObj?.id || null;
 
       stepsEl.innerHTML = nasdaq100.steps.map(step => {
         const isBlocker = step.id === firstBlocker;
@@ -665,60 +779,26 @@
       const last = document.getElementById('last-refresh');
       if (last) last.textContent = `Last action: ${new Date().toLocaleString()}`;
       const t = Date.now();
-      const summaryUrl = `/data/ops/summary.latest.json?t=${t}`;
-      const pipelineUrl = `/data/pipeline/nasdaq100.latest.json?t=${t}`;
+      const debugEnabled = new URLSearchParams(window.location.search).get('debug') === '1';
+      const summaryUrl = `/api/mission-control/summary${debugEnabled ? '?debug=1' : ''}${debugEnabled ? '&' : '?'}t=${t}`;
 
       try {
-        const [summaryRes, pipelineRes] = await Promise.all([
-          fetch(summaryUrl, { cache: 'no-store' }),
-          fetch(pipelineUrl, { cache: 'no-store' })
-        ]);
+        setRenderStatus('boot', 'fetching');
+        const summaryRes = await fetch(summaryUrl, { cache: 'no-store' });
 
         if (!summaryRes.ok) {
           if (statusEl) statusEl.textContent = `Failed to load summary (HTTP ${summaryRes.status}).`;
+          setRenderStatus('error', 'fetch_failed');
           return;
         }
 
-        const summary = await summaryRes.json();
-        const pipeline = pipelineRes.ok ? await pipelineRes.json() : null;
-        const pipelineCounts = pipeline?.counts ? {
-          expected: Number(pipeline.counts.expected || 0),
-          fetched: Number(pipeline.counts.fetched || 0),
-          validated: Number(pipeline.counts.validated || 0),
-          computed: Number(pipeline.counts.computed || 0),
-          static_ready: Number(pipeline.counts.static_ready || 0)
-        } : null;
-
-        LAST_PIPELINE_COUNTS = pipelineCounts;
-        let displaySummary = summary;
+        const payload = await summaryRes.json();
+        const displaySummary = buildSummaryFromLegacy(payload, null);
         clearAlert();
-
-        if (summary?.schema_version !== 'ops.summary.v1') {
-          const schema = summary?.schema_version || 'missing';
-          showAlert(`SUMMARY_SCHEMA_MISMATCH: expected ops.summary.v1, got ${esc(schema)}. ` +
-            `See <a href=\"/data/ops/summary.latest.json\" style=\"color:#93c5fd;\">summary</a> and ` +
-            `<a href=\"/data/pipeline/nasdaq100.latest.json\" style=\"color:#93c5fd;\">pipeline.latest</a>.`);
-          displaySummary = buildSummaryFromLegacy(summary, pipelineCounts);
-        } else if (pipelineCounts) {
-          const summaryCounts = extractCountsFromSummary(summary, 'nasdaq100');
-          if (!summaryCounts) {
-            showAlert('SUMMARY_UNIVERSE_MISSING: nasdaq100 not present in summary.');
-          } else {
-            const mismatches = [];
-            for (const key of ['expected', 'fetched', 'validated', 'computed', 'static_ready']) {
-              if (Number(summaryCounts[key]) !== Number(pipelineCounts[key])) {
-                mismatches.push(`${key} summary=${summaryCounts[key]} pipeline=${pipelineCounts[key]}`);
-              }
-            }
-            if (mismatches.length) {
-              showAlert(`DRIFT_DETECTED: summary disagrees with pipeline.latest. ${esc(mismatches.join('; '))}`);
-              displaySummary = overlaySummaryWithPipeline(summary, pipelineCounts);
-            }
-          }
-        }
 
         if (!displaySummary) {
           if (statusEl) statusEl.textContent = 'Summary unavailable (legacy or missing).';
+          setRenderStatus('error', 'json_invalid');
           return;
         }
 
@@ -726,12 +806,15 @@
         renderSummary(displaySummary);
         renderTruthChain(displaySummary?.truthChain);
         renderSchedulerStatus(displaySummary?.runtime);
+        updateRawJson(payload, debugEnabled);
+        setRenderStatus('ok', 'rendered', payload?.meta?.asOf || payload?.metadata?.fetched_at || null);
 
         if (options.triggerLive) {
           attemptLiveRefresh({ force: options.forceLive });
         }
       } catch (err) {
         if (statusEl) statusEl.textContent = 'Failed to load summary.';
+        setRenderStatus('error', 'json_invalid');
       }
     }
 
@@ -779,6 +862,9 @@
         renderSummary(summary);
         renderTruthChain(summary?.truthChain);
         renderSchedulerStatus(summary?.runtime);
+        const debugEnabled = new URLSearchParams(window.location.search).get('debug') === '1';
+        updateRawJson(payload, debugEnabled);
+        setRenderStatus('ok', 'rendered', payload?.meta?.asOf || payload?.metadata?.fetched_at || null);
       } catch {
         setSourceLabel('live locked');
       }
@@ -808,6 +894,7 @@
       }, 400);
     }
 
+    setupCopyJson();
     document.getElementById('btn-refresh').addEventListener('click', async () => {
       const now = new Date().toLocaleString();
       setManualTs(now);
