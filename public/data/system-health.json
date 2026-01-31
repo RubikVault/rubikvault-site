@@ -1,11 +1,11 @@
 {
-  "generatedAt": "2026-01-30T07:08:56.391Z",
-  "buildStatus": "OK",
+  "generatedAt": "2026-01-31T06:58:38.835Z",
+  "buildStatus": "PARTIAL",
   "reasons": [],
   "summary": {
-    "total": 89,
+    "total": 90,
     "ok": 89,
-    "fail": 0
+    "fail": 1
   },
   "lastGoodAsOf": {},
   "snapshots": [
@@ -382,6 +382,11 @@
     {
       "blockId": "sp500-sectors",
       "status": "OK",
+      "reason": "OK"
+    },
+    {
+      "blockId": "unknown",
+      "status": "FAIL",
       "reason": "OK"
     },
     {
