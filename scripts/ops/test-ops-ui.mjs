@@ -32,6 +32,7 @@ function parseFirstInt(text) {
 async function extractMarketPhaseInfo(page) {
   return page.evaluate(() => {
     const table = document.querySelector('#pipeline-marketphase');
+    const renderStatus = document.querySelector('#ops-render-status');
     const rows = Array.from(table?.querySelectorAll('tr') || []);
     const rowData = rows.map((row) => {
       const cells = Array.from(row.querySelectorAll('td')).map((td) => td.textContent?.trim() || '');
@@ -45,6 +46,11 @@ async function extractMarketPhaseInfo(page) {
       rows: rowData,
       fetchedRaw: fetchedRow?.count || '',
       validatedRaw: validatedRow?.count || '',
+      renderStatus: {
+        status: renderStatus?.getAttribute('data-status') || '',
+        baseline: renderStatus?.getAttribute('data-baseline') || '',
+        reason: renderStatus?.getAttribute('data-reason') || ''
+      },
       tableText: table?.innerText || '',
       tableHtml: table?.outerHTML || ''
     };
@@ -75,7 +81,13 @@ try {
   browser = await chromium.launch();
   const page = await browser.newPage();
   await page.goto(opsUrl, { waitUntil: 'domcontentloaded' });
-  await page.waitForSelector('#ops-render-status[data-status="ok"]', { timeout: 20000 });
+  try {
+    await page.waitForSelector('#ops-render-status[data-status="ok"][data-baseline="ok"]', { timeout: 20000 });
+  } catch (err) {
+    const info = await extractMarketPhaseInfo(page);
+    printForensic(info);
+    throw new Error('Timeout waiting for baseline render status');
+  }
 
   try {
     await page.waitForFunction((expected) => {

@@ -272,6 +272,22 @@
         </div>
       </div>
 
+      <div class="card" id="eod-section" style="margin-bottom: 12px;">
+        <div class="k" style="margin-bottom: 10px;">EOD fetch pipeline (NASDAQ-100)</div>
+        <table>
+          <thead>
+            <tr>
+              <th>Stage</th>
+              <th>Count</th>
+              <th>Expected</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="pipeline-eod"></tbody>
+        </table>
+        <div id="pipeline-eod-note" class="small" style="margin-top: 10px;"></div>
+      </div>
+
       <div class="grid2" style="margin-bottom: 12px;">
         <div class="card">
           <div class="k" style="margin-bottom: 10px;">Data freshness</div>
@@ -560,6 +576,26 @@
       document.getElementById('pipeline-marketphase-note').textContent =
         health?.pipeline?.reason ? `Status: ${health.pipeline.status} • ${health.pipeline.reason}` : 'Status: UNKNOWN';
 
+      const eodSection = document.getElementById('eod-section');
+      const eodCounts = data?.eod?.counts || {};
+      const eodExpected = Number.isFinite(Number(eodCounts.expected)) ? Number(eodCounts.expected) : null;
+      const eodFetched = Number.isFinite(Number(eodCounts.fetched)) ? Number(eodCounts.fetched) : null;
+      const eodValidated = Number.isFinite(Number(eodCounts.validated)) ? Number(eodCounts.validated) : null;
+      if (eodSection) {
+        if (eodExpected != null && eodFetched != null && eodValidated != null) {
+          eodSection.style.display = 'block';
+          document.getElementById('pipeline-eod').innerHTML =
+            stageRow('Fetched', eodFetched, eodExpected, health?.pipeline?.status) +
+            stageRow('Validated', eodValidated, eodExpected, health?.pipeline?.status);
+          document.getElementById('pipeline-eod-note').textContent =
+            eodCounts && eodExpected != null
+              ? `Manifest expected ${eodExpected} symbols`
+              : 'EOD baseline unavailable';
+        } else {
+          eodSection.style.display = 'none';
+        }
+      }
+
       document.getElementById('freshness-global').textContent =
         health?.freshness?.asOf ? `Snapshot asOf: ${health.freshness.asOf}` : 'Snapshot asOf: unknown';
       document.getElementById('freshness-stale').textContent =
@@ -568,6 +604,11 @@
 
       renderTruthChain(data?.pipeline?.truth || null);
       renderSchedulerStatus(runtime);
+
+      const baselineReady = Number.isFinite(fetched) && Number.isFinite(validated);
+      if (renderStatusEl) {
+        renderStatusEl.dataset.baseline = baselineReady ? 'ok' : 'missing';
+      }
 
       const sourceEntries = data?.sourceMap?.entries || [];
       document.getElementById('source-map-table').innerHTML = Array.isArray(sourceEntries) && sourceEntries.length

@@ -152,6 +152,21 @@ function normalizePipelineLatest(doc) {
   };
 }
 
+function normalizeEodManifest(doc) {
+  if (!doc || typeof doc !== 'object') return null;
+  const total = toIntOrNull(doc.total_symbols ?? doc.expected ?? null);
+  const chunks = Array.isArray(doc.chunks) ? doc.chunks : [];
+  const count = chunks.reduce((sum, chunk) => sum + (toIntOrNull(chunk?.count) ?? 0), 0);
+  const ok = chunks.reduce((sum, chunk) => sum + (toIntOrNull(chunk?.ok) ?? 0), 0);
+  return {
+    total,
+    count,
+    ok,
+    generated_at: typeof doc.generated_at === 'string' ? doc.generated_at : null,
+    source: '/data/eod/manifest.latest.json'
+  };
+}
+
 function lastTradingDayIso(date = new Date()) {
   const d = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
   const dow = d.getUTCDay();
@@ -559,7 +574,7 @@ export async function onRequestGet(context) {
     Object.entries(providersRaw).map(([k, v]) => [k, summarizeProviderStats(v)])
   );
 
-  const [opsDaily, usageReport, providerState, seedManifest, nasdaq100Universe, marketPhaseIndex, healthProfilesRaw, thresholdsRaw, sourceMapRaw] = await Promise.all([
+  const [opsDaily, usageReport, providerState, seedManifest, nasdaq100Universe, marketPhaseIndex, healthProfilesRaw, thresholdsRaw, sourceMapRaw, eodManifestRaw] = await Promise.all([
     fetchAssetJson(request.url, '/data/ops-daily.json', null),
     fetchAssetJson(request.url, '/data/usage-report.json', null),
     fetchAssetJson(request.url, '/data/provider-state.json', null),
@@ -568,7 +583,8 @@ export async function onRequestGet(context) {
     fetchAssetJson(request.url, '/data/marketphase/index.json', null),
     fetchAssetJson(request.url, '/data/ops/health-profiles.v1.json', null),
     fetchAssetJson(request.url, '/data/ops/thresholds.v1.json', null),
-    fetchAssetJson(request.url, '/data/ops/source-map.v1.json', null)
+    fetchAssetJson(request.url, '/data/ops/source-map.v1.json', null),
+    fetchAssetJson(request.url, '/data/eod/manifest.latest.json', null)
   ]);
 
   const healthProfilesCheck = validateHealthProfiles(healthProfilesRaw);
@@ -708,7 +724,12 @@ export async function onRequestGet(context) {
   const pipelineComputedCheck = pipelineComputedRaw ? validatePipelineArtifact(pipelineComputedRaw) : { valid: false, errors: ['artifact missing'] };
   const pipelineStaticReadyCheck = pipelineStaticReadyRaw ? validatePipelineArtifact(pipelineStaticReadyRaw) : { valid: false, errors: ['artifact missing'] };
 
+  const pipelineLatestCounts = pipelineLatest?.counts && typeof pipelineLatest.counts === 'object'
+    ? pipelineLatest.counts
+    : null;
+
   const pipelineExpected =
+    (Number.isFinite(Number(pipelineLatestCounts?.expected)) ? Number(pipelineLatestCounts.expected) : null) ??
     pipelineFetched?.expected ??
     pipelineValidated?.expected ??
     pipelineComputedTruth?.expected ??
@@ -726,6 +747,29 @@ export async function onRequestGet(context) {
   const computed = ensureCount(pipelineComputedTruth);
   const staticReady = ensureCount(pipelineStaticReadyTruth);
   const missing = pipelineStaticReadyTruth?.missing ?? [];
+
+  const resolveCount = (latestValue, fallbackValue) => {
+    if (Number.isFinite(Number(latestValue))) return Number(latestValue);
+    if (!expectedFlags.pipeline) return null;
+    return fallbackValue;
+  };
+
+  const pipelineCounts = {
+    expected: pipelineExpected,
+    fetched: resolveCount(pipelineLatestCounts?.fetched, fetched),
+    validated: resolveCount(pipelineLatestCounts?.validated, validatedStored),
+    computed: resolveCount(pipelineLatestCounts?.computed, computed),
+    static_ready: resolveCount(pipelineLatestCounts?.static_ready, staticReady)
+  };
+
+  const eodManifest = normalizeEodManifest(eodManifestRaw);
+  const eodCounts = eodManifest
+    ? {
+      expected: eodManifest.total,
+      fetched: eodManifest.ok,
+      validated: eodManifest.ok
+    }
+    : null;
 
   const marketPricesSnapshot = await fetchAssetJson(request.url, '/data/snapshots/market-prices/latest.json', null);
   const marketPricesSnapshotCheck = marketPricesSnapshot
@@ -761,10 +805,10 @@ export async function onRequestGet(context) {
     providers: opsProviders.sort((a, b) => String(a.name).localeCompare(String(b.name))),
     pipeline: {
       expected: pipelineExpected,
-      fetched,
-      validatedStored,
-      computed,
-      staticReady,
+      fetched: pipelineCounts.fetched,
+      validatedStored: pipelineCounts.validated,
+      computed: pipelineCounts.computed,
+      staticReady: pipelineCounts.static_ready,
       missing
     },
     pipelineLatest,
@@ -782,7 +826,20 @@ export async function onRequestGet(context) {
   };
 
   const opsDailyBaseline = opsDaily?.baseline && typeof opsDaily.baseline === 'object' ? opsDaily.baseline : null;
-  const opsBaseline = opsDailyBaseline || baselineFromComputed(opsComputed);
+  let opsBaseline = opsDailyBaseline || baselineFromComputed(opsComputed);
+  if (!expectedFlags.pipeline && pipelineLatestCounts) {
+    opsBaseline = {
+      ...opsBaseline,
+      pipeline: {
+        ...(opsBaseline?.pipeline || {}),
+        expected: pipelineCounts.expected,
+        fetched: pipelineCounts.fetched,
+        validatedStored: pipelineCounts.validated,
+        computed: pipelineCounts.computed,
+        staticReady: pipelineCounts.static_ready
+      }
+    };
+  }
   const opsBaselineAsOf = typeof opsDaily?.asOf === 'string' ? opsDaily.asOf : null;
   const baselineVerdict = computeVerdictFromBaseline(opsBaseline);
   const baselineMissing = !opsDailyBaseline;
@@ -854,14 +911,6 @@ export async function onRequestGet(context) {
   const snapshotAsOfMs = parseIsoToMs(snapshotAsOfIso);
   const ageHours = snapshotAsOfMs ? (Date.now() - snapshotAsOfMs) / (1000 * 60 * 60) : null;
   const thresholdProfile = thresholds?.[profilePick.key] || thresholds?.production || null;
-
-  const pipelineCounts = {
-    expected: pipelineExpected,
-    fetched,
-    validated: validatedStored,
-    computed,
-    static_ready: staticReady
-  };
 
   let pipelineHealth = computePipelineStatus(pipelineCounts, pipelineExpected, expectedFlags.pipeline);
   const pipelineContractOk = pipelineFetchedCheck.valid && pipelineValidatedCheck.valid && pipelineComputedCheck.valid && pipelineStaticReadyCheck.valid;
@@ -1003,6 +1052,12 @@ export async function onRequestGet(context) {
         truth: pipelineTruth,
         missing
       },
+      eod: eodManifest
+        ? {
+          counts: eodCounts,
+          manifest: eodManifest
+        }
+        : null,
       opsBaseline: {
         asOf: opsBaselineAsOf,
         overall: opsBaselineOverall,
