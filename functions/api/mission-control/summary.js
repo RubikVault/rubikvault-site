@@ -1,5 +1,13 @@
 import { sha256Hex } from '../_shared/digest.mjs';
 import { buildDashKeys, kvGetJsonKVSafe, computeBudgets, summarizeProviderStats } from '../_shared/telemetry.mjs';
+import {
+  validateHealthProfiles,
+  validateThresholds,
+  validateSourceMap,
+  validatePipelineArtifact,
+  validateSnapshot,
+  trimErrors
+} from '../_shared/contracts.js';
 
 const MODULE_NAME = 'mission-control-summary';
 const SNAPSHOT_MODULES_HINT = ['universe', 'market-prices', 'market-stats', 'market-score'];
@@ -109,12 +117,18 @@ function toIntOrNull(v) {
 
 function normalizePipelineTruth(doc) {
   if (!isPipelineTruthDoc(doc)) return null;
+  const expected = toIntOrNull(doc.expected);
+  let count = toIntOrNull(doc.count);
+  const missing = Array.isArray(doc.missing) ? doc.missing : [];
+  if (count == null && Number.isFinite(expected) && expected >= 0 && Array.isArray(missing)) {
+    count = Math.max(0, expected - missing.length);
+  }
   return {
     universe: typeof doc.universe === 'string' ? doc.universe : null,
-    expected: toIntOrNull(doc.expected),
-    count: toIntOrNull(doc.count),
+    expected,
+    count,
     reason: doc.reason ? String(doc.reason) : null,
-    missing: Array.isArray(doc.missing) ? doc.missing : []
+    missing
   };
 }
 
@@ -253,6 +267,51 @@ function detectPreviewMode(url, env) {
     hasCron,
     hostname
   };
+}
+
+const HEALTH_STATUS = ['OK', 'INFO', 'WARNING', 'CRITICAL'];
+
+function pickProfile(previewMode, profiles) {
+  if (previewMode?.isProduction && profiles?.production) return { key: 'production', profile: profiles.production };
+  if (profiles?.preview) return { key: 'preview', profile: profiles.preview };
+  return { key: 'preview', profile: null };
+}
+
+function toHealthStatus(value) {
+  return HEALTH_STATUS.includes(value) ? value : 'INFO';
+}
+
+function contractResult(valid, errors = []) {
+  return {
+    valid: Boolean(valid),
+    errors: trimErrors(errors)
+  };
+}
+
+function parseIsoToMs(value) {
+  if (typeof value !== 'string') return null;
+  const ms = Date.parse(value);
+  return Number.isFinite(ms) ? ms : null;
+}
+
+function computeFreshnessStatus(ageHours, thresholds, expected) {
+  if (!expected) return { status: 'INFO', reason: 'NOT_EXPECTED' };
+  if (!Number.isFinite(ageHours)) return { status: 'WARNING', reason: 'FRESHNESS_UNKNOWN' };
+  const warn = thresholds?.freshness_warn_hours;
+  const crit = thresholds?.freshness_crit_hours;
+  if (Number.isFinite(crit) && ageHours >= crit) return { status: 'CRITICAL', reason: `STALE_${Math.round(ageHours)}h` };
+  if (Number.isFinite(warn) && ageHours >= warn) return { status: 'WARNING', reason: `STALE_${Math.round(ageHours)}h` };
+  return { status: 'OK', reason: 'FRESH' };
+}
+
+function computePipelineStatus(counts, expected, isExpected) {
+  if (!isExpected) return { status: 'INFO', reason: 'NOT_EXPECTED' };
+  if (!Number.isFinite(expected) || expected <= 0) return { status: 'WARNING', reason: 'EXPECTED_UNKNOWN' };
+  const staticReady = Number(counts?.static_ready);
+  if (!Number.isFinite(staticReady)) return { status: 'CRITICAL', reason: 'STATIC_READY_UNKNOWN' };
+  if (staticReady <= 0) return { status: 'CRITICAL', reason: `STATIC_READY_${staticReady}/${expected}` };
+  if (staticReady < expected) return { status: 'WARNING', reason: `STATIC_READY_${staticReady}/${expected}` };
+  return { status: 'OK', reason: 'STATIC_READY_OK' };
 }
 
 function buildTruthChainStep(id, title, status, evidence, details = null) {
@@ -500,14 +559,29 @@ export async function onRequestGet(context) {
     Object.entries(providersRaw).map(([k, v]) => [k, summarizeProviderStats(v)])
   );
 
-  const [opsDaily, usageReport, providerState, seedManifest, nasdaq100Universe, marketPhaseIndex] = await Promise.all([
+  const [opsDaily, usageReport, providerState, seedManifest, nasdaq100Universe, marketPhaseIndex, healthProfilesRaw, thresholdsRaw, sourceMapRaw] = await Promise.all([
     fetchAssetJson(request.url, '/data/ops-daily.json', null),
     fetchAssetJson(request.url, '/data/usage-report.json', null),
     fetchAssetJson(request.url, '/data/provider-state.json', null),
     fetchAssetJson(request.url, '/data/seed-manifest.json', null),
     fetchAssetJson(request.url, '/data/universe/nasdaq100.json', []),
-    fetchAssetJson(request.url, '/data/marketphase/index.json', null)
+    fetchAssetJson(request.url, '/data/marketphase/index.json', null),
+    fetchAssetJson(request.url, '/data/ops/health-profiles.v1.json', null),
+    fetchAssetJson(request.url, '/data/ops/thresholds.v1.json', null),
+    fetchAssetJson(request.url, '/data/ops/source-map.v1.json', null)
   ]);
+
+  const healthProfilesCheck = validateHealthProfiles(healthProfilesRaw);
+  const thresholdsCheck = validateThresholds(thresholdsRaw);
+  const sourceMapCheck = validateSourceMap(sourceMapRaw);
+  const healthProfiles = healthProfilesCheck.valid ? healthProfilesRaw : null;
+  const thresholds = thresholdsCheck.valid ? thresholdsRaw : null;
+  const sourceMap = sourceMapCheck.valid ? sourceMapRaw : null;
+
+  const previewMode = detectPreviewMode(url, env);
+  const profilePick = pickProfile(previewMode, healthProfiles?.profiles || {});
+  const profile = profilePick.profile || { expected: { scheduler: !previewMode.isPreview, kv: !previewMode.isPreview, pipeline: !previewMode.isPreview }, not_expected_status: 'INFO' };
+  const expectedFlags = profile.expected || { scheduler: !previewMode.isPreview, kv: !previewMode.isPreview, pipeline: !previewMode.isPreview };
 
   let failuresDay = [];
   let snapshots = [];
@@ -613,12 +687,13 @@ export async function onRequestGet(context) {
     });
   }
 
-  const [pipelineFetchedRaw, pipelineValidatedRaw, pipelineComputedRaw, pipelineStaticReadyRaw, pipelineLatestRaw] = await Promise.all([
+  const [pipelineFetchedRaw, pipelineValidatedRaw, pipelineComputedRaw, pipelineStaticReadyRaw, pipelineLatestRaw, pipelineTruthRaw] = await Promise.all([
     fetchAssetJson(request.url, '/data/pipeline/nasdaq100.fetched.json', null),
     fetchAssetJson(request.url, '/data/pipeline/nasdaq100.validated.json', null),
     fetchAssetJson(request.url, '/data/pipeline/nasdaq100.computed.json', null),
     fetchAssetJson(request.url, '/data/pipeline/nasdaq100.static-ready.json', null),
-    fetchAssetJson(request.url, '/data/pipeline/nasdaq100.latest.json', null)
+    fetchAssetJson(request.url, '/data/pipeline/nasdaq100.latest.json', null),
+    fetchAssetJson(request.url, '/data/pipeline/nasdaq100.pipeline-truth.json', null)
   ]);
 
   const pipelineFetched = normalizePipelineTruth(pipelineFetchedRaw);
@@ -626,6 +701,12 @@ export async function onRequestGet(context) {
   const pipelineComputedTruth = normalizePipelineTruth(pipelineComputedRaw);
   const pipelineStaticReadyTruth = normalizePipelineTruth(pipelineStaticReadyRaw);
   const pipelineLatest = normalizePipelineLatest(pipelineLatestRaw);
+  const pipelineTruth = pipelineTruthRaw && typeof pipelineTruthRaw === 'object' ? pipelineTruthRaw : null;
+
+  const pipelineFetchedCheck = pipelineFetchedRaw ? validatePipelineArtifact(pipelineFetchedRaw) : { valid: false, errors: ['artifact missing'] };
+  const pipelineValidatedCheck = pipelineValidatedRaw ? validatePipelineArtifact(pipelineValidatedRaw) : { valid: false, errors: ['artifact missing'] };
+  const pipelineComputedCheck = pipelineComputedRaw ? validatePipelineArtifact(pipelineComputedRaw) : { valid: false, errors: ['artifact missing'] };
+  const pipelineStaticReadyCheck = pipelineStaticReadyRaw ? validatePipelineArtifact(pipelineStaticReadyRaw) : { valid: false, errors: ['artifact missing'] };
 
   const pipelineExpected =
     pipelineFetched?.expected ??
@@ -634,17 +715,33 @@ export async function onRequestGet(context) {
     pipelineStaticReadyTruth?.expected ??
     (nasdaqExpected || 100);
 
-  const fetched = pipelineFetched?.count ?? null;
-  const validatedStored = pipelineValidated?.count ?? null;
-  const computed = pipelineComputedTruth?.count ?? null;
-  const staticReady = pipelineStaticReadyTruth?.count ?? null;
+  const ensureCount = (truthDoc) => {
+    if (truthDoc && Number.isFinite(Number(truthDoc.count))) return Number(truthDoc.count);
+    if (expectedFlags.pipeline && Number.isFinite(Number(pipelineExpected))) return 0;
+    return null;
+  };
+
+  const fetched = ensureCount(pipelineFetched);
+  const validatedStored = ensureCount(pipelineValidated);
+  const computed = ensureCount(pipelineComputedTruth);
+  const staticReady = ensureCount(pipelineStaticReadyTruth);
   const missing = pipelineStaticReadyTruth?.missing ?? [];
 
-  const pricesSnapDate = await (async () => {
-    const snap = await fetchAssetJson(request.url, '/data/snapshots/market-prices/latest.json', null);
+  const marketPricesSnapshot = await fetchAssetJson(request.url, '/data/snapshots/market-prices/latest.json', null);
+  const marketPricesSnapshotCheck = marketPricesSnapshot
+    ? validateSnapshot(marketPricesSnapshot)
+    : { valid: false, errors: ['artifact missing'] };
+  const pricesSnapDate = (() => {
+    const snap = marketPricesSnapshot;
     const d0 = Array.isArray(snap?.data) && snap.data.length ? snap.data[0] : null;
     const meta = snap?.metadata || {};
-    return d0?.date || (typeof meta.fetched_at === 'string' ? meta.fetched_at.slice(0, 10) : null) || null;
+    const metaAsOf = snap?.meta?.asOf || snap?.meta?.as_of || null;
+    return (
+      (typeof metaAsOf === 'string' ? metaAsOf.slice(0, 10) : null) ||
+      d0?.date ||
+      (typeof meta.fetched_at === 'string' ? meta.fetched_at.slice(0, 10) : null) ||
+      null
+    );
   })();
 
   const staleList = (() => {
@@ -713,12 +810,10 @@ export async function onRequestGet(context) {
   const opsBaselineOverall = baselineExplain ? { ...overall, explain: baselineExplain } : overall;
 
   // Build Truth-Chain for NASDAQ-100 pipeline
-  const previewMode = detectPreviewMode(url, env);
-  const marketPricesSnap = await fetchAssetJson(request.url, '/data/snapshots/market-prices/latest.json', null);
   const snapshotInfo = {
-    ok: marketPricesSnap != null,
-    recordCount: Array.isArray(marketPricesSnap?.data) ? marketPricesSnap.data.length : 0,
-    asOf: marketPricesSnap?.metadata?.fetched_at || marketPricesSnap?.metadata?.published_at || null
+    ok: marketPricesSnapshot != null,
+    recordCount: Array.isArray(marketPricesSnapshot?.data) ? marketPricesSnapshot.data.length : 0,
+    asOf: marketPricesSnapshot?.meta?.asOf || marketPricesSnapshot?.metadata?.fetched_at || marketPricesSnapshot?.metadata?.published_at || null
   };
   const runtimeInfo = {
     hasKV,
@@ -735,10 +830,10 @@ export async function onRequestGet(context) {
   const truthChainNasdaq100 = buildNasdaq100TruthChain(pipelineTruths, snapshotInfo, runtimeInfo, startedAtIso);
 
   // Runtime context for scheduler expectation
-  const schedulerExpected = previewMode.isProduction && !previewMode.isPreview;
-  const schedulerExpectedReason = previewMode.isPreview
-    ? 'Preview/Static: cron not expected'
-    : (previewMode.isProduction ? 'Production: cron expected' : 'Unknown environment');
+  const schedulerExpected = Boolean(expectedFlags.scheduler);
+  const schedulerExpectedReason = schedulerExpected
+    ? 'Production: cron expected'
+    : 'Preview/Static: cron not expected';
 
   const opsBaselineRuntime = {
     hasKV,
@@ -746,8 +841,105 @@ export async function onRequestGet(context) {
     isProduction: previewMode.isProduction,
     hostname: previewMode.hostname,
     schedulerExpected,
-    schedulerExpectedReason
+    schedulerExpectedReason,
+    kvExpected: expectedFlags.kv,
+    pipelineExpected: expectedFlags.pipeline
   };
+
+  const snapshotAsOfIso =
+    marketPricesSnapshot?.meta?.asOf ||
+    marketPricesSnapshot?.metadata?.published_at ||
+    marketPricesSnapshot?.metadata?.fetched_at ||
+    null;
+  const snapshotAsOfMs = parseIsoToMs(snapshotAsOfIso);
+  const ageHours = snapshotAsOfMs ? (Date.now() - snapshotAsOfMs) / (1000 * 60 * 60) : null;
+  const thresholdProfile = thresholds?.[profilePick.key] || thresholds?.production || null;
+
+  const pipelineCounts = {
+    expected: pipelineExpected,
+    fetched,
+    validated: validatedStored,
+    computed,
+    static_ready: staticReady
+  };
+
+  let pipelineHealth = computePipelineStatus(pipelineCounts, pipelineExpected, expectedFlags.pipeline);
+  const pipelineContractOk = pipelineFetchedCheck.valid && pipelineValidatedCheck.valid && pipelineComputedCheck.valid && pipelineStaticReadyCheck.valid;
+  if (expectedFlags.pipeline && !pipelineContractOk) {
+    pipelineHealth = { status: 'CRITICAL', reason: 'PIPELINE_CONTRACT_INVALID' };
+  }
+
+  let freshnessHealth = computeFreshnessStatus(ageHours, thresholdProfile, expectedFlags.pipeline);
+  if (expectedFlags.pipeline && !marketPricesSnapshotCheck.valid) {
+    freshnessHealth = { status: 'CRITICAL', reason: 'SNAPSHOT_CONTRACT_INVALID' };
+  }
+
+  const platformStatus = expectedFlags.kv ? (hasKV ? 'OK' : 'CRITICAL') : toHealthStatus(profile.not_expected_status);
+  const apiStatus = 'OK';
+
+  const health = {
+    platform: {
+      status: platformStatus,
+      reason: expectedFlags.kv ? (hasKV ? 'KV_OK' : 'KV_MISSING') : 'NOT_EXPECTED',
+      action: {
+        url: '/data/ops/health-profiles.v1.json',
+        howTo: expectedFlags.kv ? 'Verify KV binding for RV_KV' : 'Preview mode: KV not expected'
+      }
+    },
+    api: {
+      status: apiStatus,
+      reason: 'SUMMARY_OK',
+      action: {
+        url: '/api/mission-control/summary',
+        howTo: 'Inspect summary output'
+      }
+    },
+    freshness: {
+      status: freshnessHealth.status,
+      reason: freshnessHealth.reason,
+      age_hours: Number.isFinite(ageHours) ? Math.round(ageHours * 10) / 10 : null,
+      asOf: snapshotAsOfIso,
+      action: {
+        url: '/data/snapshots/market-prices/latest.json',
+        howTo: 'Refresh market-prices snapshot'
+      }
+    },
+    pipeline: {
+      status: pipelineHealth.status,
+      reason: pipelineHealth.reason,
+      counts: pipelineCounts,
+      first_blocker: pipelineTruth?.first_blocker_id || pipelineTruth?.first_blocker?.id || null,
+      action: {
+        url: '/data/pipeline/nasdaq100.latest.json',
+        howTo: expectedFlags.pipeline ? 'Run scheduler/pipeline jobs' : 'Preview mode: pipeline not expected'
+      }
+    }
+  };
+
+  const contracts = {
+    configs: {
+      health_profiles: contractResult(healthProfilesCheck.valid, healthProfilesCheck.errors),
+      thresholds: contractResult(thresholdsCheck.valid, thresholdsCheck.errors),
+      source_map: contractResult(sourceMapCheck.valid, sourceMapCheck.errors)
+    },
+    snapshots: {
+      market_prices: contractResult(marketPricesSnapshotCheck.valid, marketPricesSnapshotCheck.errors)
+    },
+    pipeline: {
+      fetched: contractResult(pipelineFetchedCheck.valid, pipelineFetchedCheck.errors),
+      validated: contractResult(pipelineValidatedCheck.valid, pipelineValidatedCheck.errors),
+      computed: contractResult(pipelineComputedCheck.valid, pipelineComputedCheck.errors),
+      static_ready: contractResult(pipelineStaticReadyCheck.valid, pipelineStaticReadyCheck.errors)
+    }
+  };
+
+  const contractsOk =
+    healthProfilesCheck.valid &&
+    thresholdsCheck.valid &&
+    sourceMapCheck.valid &&
+    marketPricesSnapshotCheck.valid &&
+    pipelineContractOk;
+  const contractCritical = previewMode.isProduction && !contractsOk;
 
   let opsLiveResolved = null;
   if (wantsLive) {
@@ -786,6 +978,18 @@ export async function onRequestGet(context) {
     data: {
       asOf: startedAtIso,
       hasKV,
+      health,
+      runtime: {
+        env: profilePick.key,
+        expected: expectedFlags,
+        schedulerExpected,
+        schedulerExpectedReason,
+        kvExpected: expectedFlags.kv,
+        pipelineExpected: expectedFlags.pipeline,
+        hostname: previewMode.hostname
+      },
+      sourceMap,
+      contracts,
       calls: { day: dayTotal.value, week: weekTotal.value, month: monthTotal.value },
       endpoints: { dayTop: endpointsDayTop },
       kvOps: { day: kvOpsDay },
@@ -793,6 +997,12 @@ export async function onRequestGet(context) {
       failures: { day: failuresDay },
       budgets,
       deploy,
+      pipeline: {
+        counts: pipelineCounts,
+        latest: pipelineLatest,
+        truth: pipelineTruth,
+        missing
+      },
       opsBaseline: {
         asOf: opsBaselineAsOf,
         overall: opsBaselineOverall,
@@ -817,6 +1027,11 @@ export async function onRequestGet(context) {
 
   if (!hasKV) {
     payload.metadata.status = 'PARTIAL';
+  }
+  if (contractCritical) {
+    payload.metadata.status = 'ERROR';
+    payload.metadata.warnings = payload.metadata.warnings || [];
+    payload.metadata.warnings.push('CONTRACT_INVALID');
   }
 
   payload.metadata.digest = await computeDigest(payload);

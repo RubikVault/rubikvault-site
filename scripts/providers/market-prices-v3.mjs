@@ -1454,6 +1454,10 @@ export async function main() {
   };
   envelope.metadata.digest = computeSnapshotDigest(envelope);
 
+  const recordCount = typeof envelope.metadata.record_count === 'number'
+    ? envelope.metadata.record_count
+    : (Array.isArray(envelope.data) ? envelope.data.length : 0);
+  const isBootstrapMini = recordCount > 0 && recordCount <= 10;
   envelope.meta = {
     status: envelope.metadata.validation?.passed ? 'OK' : 'ERROR',
     reason: envelope.error?.class || (envelope.metadata.validation?.passed ? 'OK' : 'VALIDATION_FAILED'),
@@ -1461,7 +1465,10 @@ export async function main() {
     source: envelope.metadata.source,
     asOf: envelope.metadata.as_of || null,
     savedAt: envelope.metadata.published_at || envelope.metadata.fetched_at || new Date().toISOString(),
-    error: envelope.error?.class || null
+    error: envelope.error?.class || null,
+    kind: isBootstrapMini ? 'bootstrap-mini' : 'full',
+    expectedCount: recordCount,
+    universe: isBootstrapMini ? 'market-prices-mini' : 'market-prices'
   };
 
   const healthArtifacts = buildHealthArtifacts({

@@ -1,0 +1,28 @@
+{
+  "version": "1.0",
+  "updatedAt": "2026-01-31T00:00:00Z",
+  "entries": [
+    {
+      "id": "analyzer.page",
+      "sources": ["/api/stock", "/api/fundamentals"],
+      "fallbacks": ["synthetic_seed"],
+      "notes": "Analyzer uses runtime APIs; falls back to seed data when providers unavailable."
+    },
+    {
+      "id": "pipeline.coverage",
+      "sources": ["/data/pipeline/nasdaq100.*"],
+      "depends": ["scheduler", "kv"],
+      "notes": "Pipeline coverage derived from published pipeline artifacts."
+    },
+    {
+      "id": "snapshots.market-prices",
+      "sources": ["/data/snapshots/market-prices/latest.json"],
+      "notes": "Bootstrap-mini snapshot for index coverage unless full universe snapshot is published."
+    },
+    {
+      "id": "ops.summary",
+      "sources": ["/api/mission-control/summary"],
+      "notes": "SSOT for Ops UI and health." 
+    }
+  ]
+}

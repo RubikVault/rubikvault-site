@@ -688,6 +688,10 @@ export async function onRequestGet(context) {
         data_date: todayUtcDate(),
         provider: 'stock-api',
         quality_flags: ['INVALID_TICKER'],
+        data_source: 'unknown',
+        mode: 'DEGRADED',
+        asOf: null,
+        freshness: 'unknown',
         cache: cacheMeta,
         timings,
         degraded: schedulerState.degraded,
@@ -887,6 +891,18 @@ export async function onRequestGet(context) {
     : reasons.includes('INSUFFICIENT_HISTORY')
       ? 'PARTIAL'
       : 'OK';
+  const dataSource = servedFrom === 'ASSET'
+    ? 'snapshot'
+    : (sourceChain?.selected ? 'real_provider' : 'unknown');
+  const mode = errorPayload
+    ? 'DEGRADED'
+    : (servedFrom === 'ASSET' ? 'DEMO' : 'LIVE');
+  const metaAsOf = asOf || null;
+  const freshness = envelopeStatus === 'fresh'
+    ? 'fresh'
+    : envelopeStatus === 'stale'
+      ? 'stale'
+      : 'unknown';
   const buildStart = Date.now();
   const payload = {
     schema_version: '3.0',
@@ -896,6 +912,10 @@ export async function onRequestGet(context) {
       data_date: envelopeDataDate,
       provider: envelopeProvider,
       quality_flags: Array.from(qualityFlags),
+      data_source: dataSource,
+      mode,
+      asOf: metaAsOf,
+      freshness,
       circuit: sourceChain?.circuit || null,
       cache: cacheMeta,
       timings,

@@ -79,6 +79,23 @@ function normalizeFundamentalsFromTiingoRow(ticker, row) {
   };
 }
 
+function buildWatermark({ servedFrom, status, data }) {
+  const dataSource = servedFrom ? 'real_provider' : 'unknown';
+  const mode = status === 'ERROR' ? 'DEGRADED' : 'LIVE';
+  const asOf = data?.updatedAt ? String(data.updatedAt) : null;
+  return {
+    data_source: dataSource,
+    mode,
+    asOf,
+    freshness: 'unknown'
+  };
+}
+
+function dataDateFrom(asOf, fallbackIso) {
+  if (typeof asOf === 'string' && asOf.length >= 10) return asOf.slice(0, 10);
+  return fallbackIso.slice(0, 10);
+}
+
 async function fetchTiingoFundamentalsDaily(ticker, env) {
   const keyInfo = getTiingoKeyInfo(env);
   if (!keyInfo.key) {
@@ -181,8 +198,19 @@ export async function onRequestGet(context) {
   const lastGoodKey = `${key}:last_good`;
 
   if (!ticker) {
+    const wm = buildWatermark({ servedFrom: 'RUNTIME', status: 'ERROR', data: null });
     const payload = {
       schema_version: '3.0',
+      meta: {
+        status: 'error',
+        generated_at: startedAtIso,
+        data_date: dataDateFrom(wm.asOf, startedAtIso),
+        provider: 'fundamentals-api',
+        data_source: wm.data_source,
+        mode: wm.mode,
+        asOf: wm.asOf,
+        freshness: wm.freshness
+      },
       metadata: {
         module: MODULE_NAME,
         schema_version: '3.0',
@@ -207,8 +235,20 @@ export async function onRequestGet(context) {
 
   const cached = await kvGetJson(env, key);
   if (cached.hit && cached.value) {
+    const servedFrom = cached.layer === 'kv' ? 'KV' : 'MEM';
+    const wm = buildWatermark({ servedFrom, status: 'OK', data: cached.value });
     const payload = {
       schema_version: '3.0',
+      meta: {
+        status: 'fresh',
+        generated_at: startedAtIso,
+        data_date: dataDateFrom(wm.asOf, startedAtIso),
+        provider: 'fundamentals-api',
+        data_source: wm.data_source,
+        mode: wm.mode,
+        asOf: wm.asOf,
+        freshness: wm.freshness
+      },
       metadata: {
         module: MODULE_NAME,
         schema_version: '3.0',
@@ -218,7 +258,7 @@ export async function onRequestGet(context) {
         fetched_at: startedAtIso,
         published_at: startedAtIso,
         digest: null,
-        served_from: cached.layer === 'kv' ? 'KV' : 'MEM',
+        served_from: servedFrom,
         request: { ticker: tickerParam, normalized_ticker: ticker },
         status: 'OK',
         cache: { hit: true, layer: cached.layer, ttlSeconds: TTL_SECONDS },
@@ -280,8 +320,19 @@ export async function onRequestGet(context) {
     await kvPutJson(env, key, upstream.data, TTL_SECONDS);
     await kvPutJson(env, lastGoodKey, upstream.data, 14 * 24 * 60 * 60);
 
+    const wm = buildWatermark({ servedFrom: 'RUNTIME', status: 'OK', data: upstream.data });
     const payload = {
       schema_version: '3.0',
+      meta: {
+        status: 'fresh',
+        generated_at: startedAtIso,
+        data_date: dataDateFrom(wm.asOf, startedAtIso),
+        provider: 'fundamentals-api',
+        data_source: wm.data_source,
+        mode: wm.mode,
+        asOf: wm.asOf,
+        freshness: wm.freshness
+      },
       metadata: {
         module: MODULE_NAME,
         schema_version: '3.0',
@@ -327,8 +378,20 @@ export async function onRequestGet(context) {
 
   const lastGood = await kvGetJson(env, lastGoodKey);
   if (lastGood.hit && lastGood.value) {
+    const servedFrom = lastGood.layer === 'kv' ? 'KV' : 'MEM';
+    const wm = buildWatermark({ servedFrom, status: 'PARTIAL', data: lastGood.value });
     const payload = {
       schema_version: '3.0',
+      meta: {
+        status: 'stale',
+        generated_at: startedAtIso,
+        data_date: dataDateFrom(wm.asOf, startedAtIso),
+        provider: 'fundamentals-api',
+        data_source: wm.data_source,
+        mode: 'DEGRADED',
+        asOf: wm.asOf,
+        freshness: wm.freshness
+      },
       metadata: {
         module: MODULE_NAME,
         schema_version: '3.0',
@@ -338,7 +401,7 @@ export async function onRequestGet(context) {
         fetched_at: startedAtIso,
         published_at: startedAtIso,
         digest: null,
-        served_from: lastGood.layer === 'kv' ? 'KV' : 'MEM',
+        served_from,
         request: { ticker: tickerParam, normalized_ticker: ticker },
         status: 'PARTIAL',
         provider: {
@@ -374,6 +437,16 @@ export async function onRequestGet(context) {
 
   const payload = {
     schema_version: '3.0',
+    meta: {
+      status: 'error',
+      generated_at: startedAtIso,
+      data_date: dataDateFrom(null, startedAtIso),
+      provider: 'fundamentals-api',
+      data_source: 'unknown',
+      mode: 'DEGRADED',
+      asOf: null,
+      freshness: 'unknown'
+    },
     metadata: {
       module: MODULE_NAME,
       schema_version: '3.0',

@@ -66,9 +66,19 @@ run_checks() {
 }
 
 run_checks "$PROD_BASE" "PROD"
+if OPS_BASE="${PROD_BASE%/}" node scripts/ops/rv_verify_truth_summary.mjs >/dev/null 2>&1; then
+  pass "PROD /api/mission-control/summary truth summary"
+else
+  fail "PROD /api/mission-control/summary truth summary"
+fi
 
 if [ -n "$PREVIEW_BASE" ]; then
   run_checks "$PREVIEW_BASE" "PREVIEW"
+  if OPS_BASE="${PREVIEW_BASE%/}" node scripts/ops/rv_verify_truth_summary.mjs >/dev/null 2>&1; then
+    pass "PREVIEW /api/mission-control/summary truth summary"
+  else
+    fail "PREVIEW /api/mission-control/summary truth summary"
+  fi
 else
   warn "PREVIEW_BASE not set; skipping preview checks"
   echo

@@ -189,11 +189,27 @@
     <div id="loading" class="card">No data loaded. Click Refresh (LIVE).</div>
 
     <div id="main" style="display:none;">
-      <div class="card" style="margin-bottom: 12px;">
-        <div class="k">Overall status</div>
-        <div class="v" id="overall">—</div>
-        <div class="small" id="overall-reason">—</div>
-        <div class="small" id="what-to-fix" style="margin-top:6px;"></div>
+      <div class="grid" style="margin-bottom: 12px;">
+        <div class="card">
+          <div class="k">Platform</div>
+          <div class="v" id="health-platform">—</div>
+          <div class="small" id="health-platform-reason">—</div>
+        </div>
+        <div class="card">
+          <div class="k">API</div>
+          <div class="v" id="health-api">—</div>
+          <div class="small" id="health-api-reason">—</div>
+        </div>
+        <div class="card">
+          <div class="k">Freshness</div>
+          <div class="v" id="health-freshness">—</div>
+          <div class="small" id="health-freshness-reason">—</div>
+        </div>
+        <div class="card">
+          <div class="k">Pipeline</div>
+          <div class="v" id="health-pipeline">—</div>
+          <div class="small" id="health-pipeline-reason">—</div>
+        </div>
       </div>
 
       <div class="card" style="margin-bottom: 12px;">
@@ -253,21 +269,6 @@
           </table>
           <div id="pipeline-marketphase-note" class="small" style="margin-top: 10px;"></div>
 
-          <div style="margin-top: 14px; padding-top: 12px; border-top: 1px solid rgba(148, 163, 184, 0.15);">
-            <div class="k" style="margin-bottom: 10px;">EOD fetch pipeline (NASDAQ-100)</div>
-            <table>
-              <thead>
-                <tr>
-                  <th>Stage</th>
-                  <th>Count</th>
-                  <th>Expected</th>
-                  <th>Status</th>
-                </tr>
-              </thead>
-              <tbody id="pipeline-eod"></tbody>
-            </table>
-            <div id="pipeline-eod-note" class="small" style="margin-top: 10px;"></div>
-          </div>
         </div>
       </div>
 
@@ -296,6 +297,26 @@
             style="color:#60a5fa; margin-left: 8px;">pipeline-truth.json</a>
           <a href="/data/pipeline/missing.json" style="color:#60a5fa; margin-left: 8px;">missing.json</a>
           <a href="/data/marketphase/missing.json" style="color:#60a5fa; margin-left: 8px;">marketphase missing</a>
+        </div>
+      </div>
+
+      <div class="grid2" style="margin-bottom: 12px;">
+        <div class="card">
+          <div class="k" style="margin-bottom: 10px;">Source map</div>
+          <table>
+            <thead>
+              <tr>
+                <th>Id</th>
+                <th>Sources</th>
+                <th>Depends</th>
+              </tr>
+            </thead>
+            <tbody id="source-map-table"></tbody>
+          </table>
+        </div>
+        <div class="card">
+          <div class="k" style="margin-bottom: 10px;">Drilldowns</div>
+          <div id="health-actions" class="small" style="display:flex; flex-direction:column; gap:8px;"></div>
         </div>
       </div>
 
@@ -400,14 +421,6 @@
       return String(value);
     }
 
-    function pickUniverse(universes, id) {
-      if (!Array.isArray(universes) || universes.length === 0) return null;
-      const match = universes.find((u) => u && u.id === id);
-      return match || universes[0];
-    }
-
-    let LAST_PIPELINE_COUNTS = null;
-
     function setSourceLabel(text) {
       const sourceEl = document.getElementById('data-source');
       if (sourceEl) sourceEl.textContent = text;
@@ -428,228 +441,157 @@
       if (alertEl) alertEl.style.display = 'none';
     }
 
-    function computeStatusFromCounts(counts) {
-      const expected = Number(counts?.expected);
-      const staticReady = Number(counts?.static_ready);
-      if (!Number.isFinite(expected) || expected <= 0) return 'UNKNOWN';
-      if (!Number.isFinite(staticReady)) return 'UNKNOWN';
-      if (staticReady >= expected) return 'OK';
-      if (staticReady > 0) return 'WARN';
-      return 'MISSING';
+
+    function statusClass(status) {
+      if (status === 'OK') return 'ok';
+      if (status === 'INFO') return 'warn';
+      if (status === 'WARNING') return 'warn';
+      if (status === 'CRITICAL') return 'bad';
+      return 'warn';
     }
 
-    function normalizePipelineLatestDoc(doc) {
-      if (!doc || typeof doc !== 'object') return null;
-      const counts = doc.counts && typeof doc.counts === 'object' ? doc.counts : {};
-      const toNumOrNull = (value) => {
-        const n = Number(value);
-        return Number.isFinite(n) ? n : null;
-      };
-      return {
-        generated_at: typeof doc.generated_at === 'string' ? doc.generated_at : null,
-        source: '/data/pipeline/nasdaq100.latest.json',
-        counts: {
-          expected: toNumOrNull(counts.expected),
-          fetched: toNumOrNull(counts.fetched),
-          validated: toNumOrNull(counts.validated),
-          computed: toNumOrNull(counts.computed),
-          static_ready: toNumOrNull(counts.static_ready)
-        }
-      };
+    function renderHealthTile(id, item) {
+      const valueEl = document.getElementById(`health-${id}`);
+      const reasonEl = document.getElementById(`health-${id}-reason`);
+      if (!valueEl || !reasonEl) return;
+      const status = item?.status || 'UNKNOWN';
+      valueEl.innerHTML = pill(status, statusClass(status));
+      reasonEl.textContent = item?.reason || '—';
     }
 
-    function extractCountsFromSummary(summary, universeId) {
-      const universe = pickUniverse(summary?.universes, universeId);
-      if (!universe) return null;
-      return {
-        expected: Number(universe.expected || 0),
-        fetched: Number(universe.fetched || 0),
-        validated: Number(universe.validated || 0),
-        computed: Number(universe.computed || 0),
-        static_ready: Number(universe.static_ready || 0)
-      };
-    }
-
-    function overlaySummaryWithPipeline(summary, pipelineCounts) {
-      if (!summary || !pipelineCounts) return summary;
-      const universe = pickUniverse(summary.universes, 'nasdaq100');
-      if (!universe) return summary;
-      universe.expected = pipelineCounts.expected;
-      universe.fetched = pipelineCounts.fetched;
-      universe.validated = pipelineCounts.validated;
-      universe.computed = pipelineCounts.computed;
-      universe.static_ready = pipelineCounts.static_ready;
-      universe.status = computeStatusFromCounts(pipelineCounts);
-      summary.overall = summary.overall || {};
-      summary.overall.status = universe.status;
-      return summary;
-    }
-
-    function renderSummary(summary) {
+    function renderSummary(payload) {
       const loading = document.getElementById('loading');
       const main = document.getElementById('main');
+      const meta = payload?.meta || {};
+      const metadata = payload?.metadata || {};
+      const data = payload?.data || {};
 
       const baselineAsOfEl = document.getElementById('baseline-asof');
-      if (baselineAsOfEl) baselineAsOfEl.textContent = summary?.ops_daily?.generated_at || '—';
+      if (baselineAsOfEl) baselineAsOfEl.textContent = meta?.baselineAsOf || data?.opsBaseline?.asOf || '';
       const liveLabelEl = document.getElementById('live-asof-label');
       const liveAsOfEl = document.getElementById('live-asof');
-      const servedFrom = summary?.served_from || null;
       if (liveLabelEl) {
-        liveLabelEl.textContent = servedFrom === 'RUNTIME' ? 'Runtime asOf' : 'Snapshot asOf';
+        liveLabelEl.textContent = metadata.served_from === 'RUNTIME' ? 'Runtime asOf' : 'Snapshot asOf';
       }
-      if (liveAsOfEl) liveAsOfEl.textContent = summary?.runtime_asof || summary?.generated_at || '—';
+      if (liveAsOfEl) liveAsOfEl.textContent = meta?.asOf || data?.asOf || '';
 
-      const overallStatus = summary?.overall?.status || 'UNKNOWN';
-      const overallReasons = Array.isArray(summary?.overall?.reasons) ? summary.overall.reasons : [];
-      const overallLabel = overallStatus === 'OK' ? 'OK ✅' : (overallStatus === 'WARN' ? 'WARN 🟠' : 'RISK 🔴');
-      document.getElementById('overall').textContent = overallLabel;
-      document.getElementById('overall-reason').textContent = overallReasons.length ? overallReasons.join(' • ') : 'OK';
-      const fixHint = overallReasons.find((r) => r.startsWith('PIPELINE_STATIC_READY'))
-        ? 'Check MarketPhase computed/static-ready coverage and KV availability.'
-        : overallReasons.find((r) => r.startsWith('SNAPSHOT_STALE'))
-          ? 'Check snapshot freshness and scheduler.'
-          : overallReasons.length ? 'Review pipeline consistency.' : '';
-      document.getElementById('what-to-fix').textContent = fixHint;
+      const health = data?.health || {};
+      renderHealthTile('platform', health.platform);
+      renderHealthTile('api', health.api);
+      renderHealthTile('freshness', health.freshness);
+      renderHealthTile('pipeline', health.pipeline);
 
-      const workersToday = summary?.costs?.workers?.requests_today ?? null;
-      const workersLast24h = summary?.costs?.workers?.requests_last_24h ?? null;
+      const workersToday = data?.budgets?.workersRequests?.usedToday ?? null;
+      const workersLast24h = data?.opsLive?.cloudflare?.requestsLast24h ?? null;
       document.getElementById('workers-used').textContent = workersToday == null ? 'not tracked' : fmtNum(workersToday);
       document.getElementById('workers-budget').textContent = workersLast24h == null ? 'not tracked' : `Last 24h: ${fmtNum(workersLast24h)}`;
 
-      const runtime = summary?.runtime || {};
-      const runtimeMode = runtime?.isPreview
-        ? 'PREVIEW'
-        : runtime?.isProduction
-          ? 'PROD'
-          : 'STATIC';
+      const runtime = data?.runtime || {};
+      const runtimeMode = runtime?.env ? runtime.env.toUpperCase() : 'UNKNOWN';
       document.getElementById('runtime-mode').textContent = runtimeMode;
-      document.getElementById('runtime-note').textContent = runtime?.isPreview
+      document.getElementById('runtime-note').textContent = runtime?.schedulerExpected === false
         ? 'Preview/Static environment (cron not expected).'
-        : runtime?.isProduction
+        : runtime?.schedulerExpected === true
           ? 'Production runtime.'
           : 'Static summary artifact (no runtime auth).';
       const callsHeader = document.getElementById('providers-calls-label');
       if (callsHeader) {
-        callsHeader.textContent = runtime?.isProduction ? 'Runtime calls today' : 'Runtime calls today (static)';
+        callsHeader.textContent = runtime?.env === 'production' ? 'Runtime calls today' : 'Runtime calls today (static)';
       }
 
       const lastFetchEl = document.getElementById('ops-last-fetch');
-      if (lastFetchEl) lastFetchEl.textContent = summary?.generated_at || summary?.asof || '—';
+      if (lastFetchEl) lastFetchEl.textContent = metadata?.fetched_at || meta?.asOf || '';
       const schedulerExpectedEl = document.getElementById('ops-scheduler-expected');
       if (schedulerExpectedEl) schedulerExpectedEl.textContent =
         runtime?.schedulerExpected === true ? 'YES' : runtime?.schedulerExpected === false ? 'NO' : 'UNKNOWN';
       const schedulerExpectedReasonEl = document.getElementById('ops-scheduler-expected-reason');
       if (schedulerExpectedReasonEl) schedulerExpectedReasonEl.textContent = runtime?.schedulerExpectedReason || '—';
 
-      const safetyKvWrites = summary?.safety?.kv_writes_today ?? null;
+      const safetyKvWrites = data?.opsBaseline?.baseline?.safety?.kvWritesToday ?? null;
       document.getElementById('safety-kv-writes').textContent = safetyKvWrites == null ? 'not tracked' : fmtNum(safetyKvWrites);
-      document.getElementById('safety-note').textContent = summary?.safety?.note || 'Static-only view.';
+      document.getElementById('safety-note').textContent = 'Static-only view.';
 
-      const providers = summary?.providers && typeof summary.providers === 'object'
-        ? Object.entries(summary.providers)
-        : [];
-      document.getElementById('providers').innerHTML = providers.length
-        ? providers.sort(([a], [b]) => a.localeCompare(b)).map(([name, entry]) => {
-          const budget = entry?.budget || null;
-          const used = budget?.usedMonth ?? null;
-          const lim = budget?.limitMonth ?? null;
-          const rem = budget?.remainingMonth ?? null;
-          const remPct = budget?.remainingPct ?? null;
-          const callsToday = budget?.runtimeCallsToday ?? null;
+      const providersArray = data?.opsBaseline?.baseline?.providers || data?.opsComputed?.baseline?.providers || [];
+      document.getElementById('providers').innerHTML = Array.isArray(providersArray) && providersArray.length
+        ? providersArray.sort((a, b) => String(a.name).localeCompare(String(b.name))).map((entry) => {
+          const name = entry?.name || '';
+          const used = entry?.usedMonth ?? null;
+          const lim = entry?.limitMonth ?? null;
+          const rem = entry?.remainingMonth ?? null;
+          const remPct = entry?.remainingPct ?? null;
+          const callsToday = entry?.runtimeCallsToday ?? null;
           const status = remPct == null ? 'warn' : pctClass(100 - Number(remPct));
           const remText = remPct == null
             ? 'not tracked'
-            : (pill(String(remPct) + '%', status) + ' <span class="small">' + esc(rem) + '</span>');
+            : (pill(String(remPct) + '%', status) + ' <span class=\"small\">' + esc(rem) + '</span>');
           return '<tr>' +
             '<td>' + esc(name) + '</td>' +
             '<td>' + esc(fmtTracked(used)) + '</td>' +
             '<td>' + esc(fmtTracked(lim)) + '</td>' +
             '<td>' + remText + '</td>' +
-            '<td class="small">' + esc(budget?.resetDate || '—') + '</td>' +
+            '<td class=\"small\">' + esc(entry?.resetDate || '—') + '</td>' +
             '<td>' + esc(fmtTracked(callsToday)) + '</td>' +
             '</tr>';
         }).join('')
-        : '<tr><td colspan="6" class="small">No provider budgets</td></tr>';
+        : '<tr><td colspan=\"6\" class=\"small\">No provider budgets</td></tr>';
 
-      const universe = pickUniverse(summary?.universes, 'nasdaq100');
-      const latestCounts = summary?.pipeline_latest?.counts || {};
-      const expected = Number.isFinite(Number(latestCounts?.expected))
-        ? Number(latestCounts.expected)
-        : (Number.isFinite(Number(universe?.expected)) ? Number(universe.expected) : null);
-      const fetched = Number.isFinite(Number(latestCounts?.fetched))
-        ? Number(latestCounts.fetched)
-        : (Number.isFinite(Number(universe?.fetched)) ? Number(universe.fetched) : null);
-      const validated = Number.isFinite(Number(latestCounts?.validated))
-        ? Number(latestCounts.validated)
-        : (Number.isFinite(Number(universe?.validated)) ? Number(universe.validated) : null);
-      const computed = Number.isFinite(Number(latestCounts?.computed))
-        ? Number(latestCounts.computed)
-        : (Number.isFinite(Number(universe?.computed)) ? Number(universe.computed) : null);
-      const staticReady = Number.isFinite(Number(latestCounts?.static_ready))
-        ? Number(latestCounts.static_ready)
-        : (Number.isFinite(Number(universe?.static_ready)) ? Number(universe.static_ready) : null);
-      const missingList = Array.isArray(universe?.missing) ? universe.missing : [];
+      const counts = data?.pipeline?.counts || {};
+      const expected = Number.isFinite(Number(counts.expected)) ? Number(counts.expected) : null;
+      const fetched = Number.isFinite(Number(counts.fetched)) ? Number(counts.fetched) : null;
+      const validated = Number.isFinite(Number(counts.validated)) ? Number(counts.validated) : null;
+      const computed = Number.isFinite(Number(counts.computed)) ? Number(counts.computed) : null;
+      const staticReady = Number.isFinite(Number(counts.static_ready)) ? Number(counts.static_ready) : null;
 
-      const stageRow = (label, value, expectedValue) => {
-        const hasExpected = Number.isFinite(expectedValue) && expectedValue > 0;
-        const hasValue = Number.isFinite(value);
-        let cls = 'warn';
-        let statusLabel = 'UNKNOWN';
-        if (hasExpected && hasValue) {
-          if (value >= expectedValue) {
-            cls = 'ok';
-            statusLabel = 'OK';
-          } else if (value > 0) {
-            cls = 'warn';
-            statusLabel = 'WARN';
-          } else {
-            cls = 'bad';
-            statusLabel = 'MISSING';
-          }
-        }
+      const stageRow = (label, value, expectedValue, statusLabel) => {
         return '<tr>' +
           '<td>' + esc(label) + '</td>' +
-          '<td>' + esc(hasValue ? String(value) : '—') + '</td>' +
-          '<td>' + esc(hasExpected ? String(expectedValue) : '—') + '</td>' +
-          '<td>' + pill(statusLabel, cls) + '</td>' +
+          '<td>' + esc(value == null ? '—' : String(value)) + '</td>' +
+          '<td>' + esc(expectedValue == null ? '—' : String(expectedValue)) + '</td>' +
+          '<td>' + pill(statusLabel || 'UNKNOWN', statusClass(statusLabel || 'UNKNOWN')) + '</td>' +
           '</tr>';
       };
 
       document.getElementById('pipeline-marketphase').innerHTML =
-        stageRow('Fetched', fetched, expected) +
-        stageRow('Validated', validated, expected) +
-        stageRow('Computed', computed, expected) +
-        stageRow('Static-ready', staticReady, expected);
+        stageRow('Fetched', fetched, expected, health?.pipeline?.status) +
+        stageRow('Validated', validated, expected, health?.pipeline?.status) +
+        stageRow('Computed', computed, expected, health?.pipeline?.status) +
+        stageRow('Static-ready', staticReady, expected, health?.pipeline?.status);
 
-      const pipelineStatus = computeStatusFromCounts({ expected, static_ready: staticReady });
-      const pipelineSource = summary?.pipeline_latest?.source || '/data/pipeline/nasdaq100.latest.json';
-      document.getElementById('pipeline-marketphase-note').textContent = universe
-        ? `Status: ${pipelineStatus} • Missing: ${missingList.length} • Source: ${pipelineSource}`
-        : 'Status: UNKNOWN';
+      document.getElementById('pipeline-marketphase-note').textContent =
+        health?.pipeline?.reason ? `Status: ${health.pipeline.status} • ${health.pipeline.reason}` : 'Status: UNKNOWN';
 
-      const eodLatest = summary?.pipeline_latest || null;
-      const eodCounts = eodLatest?.counts || {};
-      const eodExpected = Number.isFinite(Number(eodCounts.expected)) ? Number(eodCounts.expected) : null;
-      const eodFetched = Number.isFinite(Number(eodCounts.fetched)) ? Number(eodCounts.fetched) : null;
-      const eodValidated = Number.isFinite(Number(eodCounts.validated)) ? Number(eodCounts.validated) : null;
-
-      document.getElementById('pipeline-eod').innerHTML =
-        stageRow('Fetched (EOD)', eodFetched, eodExpected) +
-        stageRow('Validated (EOD)', eodValidated, eodExpected);
-
-      document.getElementById('pipeline-eod-note').textContent = eodLatest
-        ? `Source: ${eodLatest.source || '/data/pipeline/nasdaq100.latest.json'} • asOf: ${eodLatest.generated_at || '—'}`
-        : 'EOD pipeline latest not available';
-
-      const expectedTradingDay = summary?.overall?.expected_trading_day || null;
-      const staleSymbols = summary?.overall?.stale_symbols_count ?? null;
-      document.getElementById('freshness-global').textContent = expectedTradingDay
-        ? `Expected trading day: ${expectedTradingDay}`
-        : 'Freshness: not tracked';
-      document.getElementById('freshness-stale').textContent = staleSymbols == null
-        ? 'Stale symbols: not tracked'
-        : `Stale symbols: ${staleSymbols}`;
+      document.getElementById('freshness-global').textContent =
+        health?.freshness?.asOf ? `Snapshot asOf: ${health.freshness.asOf}` : 'Snapshot asOf: unknown';
+      document.getElementById('freshness-stale').textContent =
+        health?.freshness?.age_hours != null ? `Age (hours): ${health.freshness.age_hours}` : 'Age (hours): unknown';
       document.getElementById('freshness-list').textContent = '';
+
+      renderTruthChain(data?.pipeline?.truth || null);
+      renderSchedulerStatus(runtime);
+
+      const sourceEntries = data?.sourceMap?.entries || [];
+      document.getElementById('source-map-table').innerHTML = Array.isArray(sourceEntries) && sourceEntries.length
+        ? sourceEntries.map((entry) => {
+          const sources = Array.isArray(entry.sources) ? entry.sources.join(', ') : '';
+          const depends = Array.isArray(entry.depends) ? entry.depends.join(', ') : '';
+          return '<tr>' +
+            '<td>' + esc(entry.id || '') + '</td>' +
+            '<td class=\"small\">' + esc(sources) + '</td>' +
+            '<td class=\"small\">' + esc(depends) + '</td>' +
+            '</tr>';
+        }).join('')
+        : '<tr><td colspan=\"3\" class=\"small\">No source-map entries</td></tr>';
+
+      const actionItems = [];
+      for (const key of ['platform', 'api', 'freshness', 'pipeline']) {
+        const item = health?.[key];
+        if (item?.action?.url) {
+          actionItems.push(`<a href=\"${esc(item.action.url)}\" style=\"color:#60a5fa;\">${esc(key)}</a> — ${esc(item.action.howTo || '')}`);
+        }
+      }
+      document.getElementById('health-actions').innerHTML = actionItems.length
+        ? actionItems.map((line) => `<div>${line}</div>`).join('')
+        : '<div class=\"small\">No actions</div>';
 
       document.getElementById('asof').textContent = '';
 
@@ -709,124 +651,6 @@
       });
     }
 
-    function buildSummaryFromLegacy(payload, pipelineCountsOverride) {
-      const baseline = payload?.data?.opsBaseline?.baseline || null;
-      if (!baseline || typeof baseline !== 'object') {
-        return null;
-      }
-
-      const pipeline = baseline.pipeline || {};
-      const toNumOrNull = (value) => {
-        const n = Number(value);
-        return Number.isFinite(n) ? n : null;
-      };
-
-      // Prefer pipelineLatest from summary if available, as 'baseline.pipeline' may be legacy/null
-      const plCounts = payload?.data?.opsBaseline?.pipelineLatest?.counts || {};
-      const expected = toNumOrNull(pipelineCountsOverride?.expected ?? plCounts.expected ?? pipeline.expected ?? baseline.expectedUniverse);
-
-      const fetched = toNumOrNull(pipelineCountsOverride?.fetched ?? plCounts.fetched ?? pipeline.fetched);
-      const validated = toNumOrNull(pipelineCountsOverride?.validated ?? plCounts.validated ?? pipeline.validatedStored);
-      const computed = toNumOrNull(pipelineCountsOverride?.computed ?? plCounts.computed ?? pipeline.computed);
-      const staticReady = toNumOrNull(pipelineCountsOverride?.static_ready ?? plCounts.static_ready ?? pipeline.staticReady);
-
-      const status = computeStatusFromCounts({
-        expected,
-        fetched,
-        validated,
-        computed,
-        static_ready: staticReady
-      });
-
-      const providers = Array.isArray(baseline.providers)
-        ? baseline.providers.reduce((acc, entry) => {
-          const name = String(entry?.name || '').trim();
-          if (!name) return acc;
-          acc[name] = {
-            configured: true,
-            mode: 'unknown',
-            note: null,
-            budget: {
-              usedMonth: entry?.usedMonth ?? null,
-              limitMonth: entry?.limitMonth ?? null,
-              remainingMonth: entry?.remainingMonth ?? null,
-              remainingPct: entry?.remainingPct ?? null,
-              resetDate: entry?.resetDate ?? null,
-              runtimeCallsToday: entry?.runtimeCallsToday ?? null
-            }
-          };
-          return acc;
-        }, {})
-        : {};
-
-      const freshness = baseline.freshness || {};
-      const staleCount = Number.isFinite(Number(freshness.staleCount)) ? Number(freshness.staleCount) : null;
-      const expectedTradingDay = typeof freshness.expectedTradingDay === 'string' ? freshness.expectedTradingDay : null;
-
-      const overall = payload?.data?.opsBaseline?.overall || {};
-      const verdict = status === 'OK' ? 'OK' : (status === 'WARN' ? 'WARN' : (overall.verdict === 'HEALTHY' ? 'OK' : (overall.verdict || 'RISK')));
-      const reasons = overall.reason ? [String(overall.reason)] : [];
-
-      // Extract runtime and truthChain for new UI elements
-      const runtime = payload?.data?.opsBaseline?.runtime || {};
-      const truthChain = payload?.data?.opsBaseline?.truthChain || {};
-      const pipelineLatest = payload?.data?.opsBaseline?.pipelineLatest || payload?.data?.opsComputed?.pipelineLatest || null;
-
-      const summary = {
-        schema_version: 'ops.summary.v1',
-        generated_at: payload?.meta?.asOf || payload?.data?.asOf || null,
-        asof: payload?.meta?.baselineAsOf || payload?.data?.asOf || null,
-        runtime_asof: payload?.meta?.asOf || payload?.data?.asOf || null,
-        served_from: payload?.metadata?.served_from || null,
-        overall: {
-          status: verdict,
-          reasons,
-          stale_universes: [],
-          stale_symbols_count: staleCount == null ? 0 : staleCount,
-          expected_trading_day: expectedTradingDay
-        },
-        universes: [
-          {
-            id: 'nasdaq100',
-            generated_at: payload?.meta?.baselineAsOf || payload?.data?.asOf || null,
-            asof: payload?.meta?.baselineAsOf || payload?.data?.asOf || null,
-            expected,
-            fetched,
-            validated,
-            computed,
-            static_ready: staticReady,
-            missing: Array.isArray(pipeline.missing) ? pipeline.missing : [],
-            status,
-            refs: {
-              pipeline: '/data/pipeline/nasdaq100.latest.json',
-              manifest: '/data/eod/manifest.latest.json',
-              batch0: '/data/eod/batches/eod.latest.000.json'
-            },
-            providers_used: Object.keys(providers)
-          }
-        ],
-        providers,
-        pipeline_latest: pipelineLatest,
-        ops_daily: {
-          generated_at: payload?.meta?.baselineAsOf || null,
-          ref: '/data/ops-daily.json'
-        },
-        costs: {
-          workers: {
-            requests_today: payload?.data?.opsLive?.cloudflare?.requestsToday ?? null,
-            requests_last_24h: payload?.data?.opsLive?.cloudflare?.requestsLast24h ?? null
-          }
-        },
-        safety: {
-          kv_writes_today: baseline?.safety?.kvWritesToday ?? null,
-          note: 'Static-only view.'
-        },
-        runtime,
-        truthChain
-      };
-
-      return summary;
-    }
 
     function renderTruthChain(truthDoc) {
       const stepsEl = document.getElementById('truth-chain-steps');
@@ -921,11 +745,7 @@
 
       try {
         setRenderStatus('boot', 'fetching');
-        const [summaryRes, truthRes, latestRes] = await Promise.all([
-          fetch(summaryUrl, { cache: 'no-store' }),
-          fetch('/data/pipeline/nasdaq100.pipeline-truth.json', { cache: 'no-store' }),
-          fetch('/data/pipeline/nasdaq100.latest.json', { cache: 'no-store' })
-        ]);
+        const summaryRes = await fetch(summaryUrl, { cache: 'no-store' });
 
         if (!summaryRes.ok) {
           if (statusEl) statusEl.textContent = `Failed to load summary (HTTP ${summaryRes.status}).`;
@@ -934,44 +754,19 @@
         }
 
         const payload = await summaryRes.json();
-        const truthDoc = truthRes.ok ? await truthRes.json() : null;
-        const latestDoc = latestRes.ok ? await latestRes.json() : null;
-        const latestNormalized = normalizePipelineLatestDoc(latestDoc);
-
-        if (latestNormalized) {
-          payload.data = payload.data || {};
-          payload.data.opsBaseline = payload.data.opsBaseline || {};
-          const existingLatest = payload?.data?.opsBaseline?.pipelineLatest || {};
-          const mergedCounts = {
-            expected: Number.isFinite(Number(existingLatest?.counts?.expected)) ? existingLatest.counts.expected : latestNormalized.counts.expected,
-            fetched: Number.isFinite(Number(existingLatest?.counts?.fetched)) ? existingLatest.counts.fetched : latestNormalized.counts.fetched,
-            validated: Number.isFinite(Number(existingLatest?.counts?.validated)) ? existingLatest.counts.validated : latestNormalized.counts.validated,
-            computed: Number.isFinite(Number(existingLatest?.counts?.computed)) ? existingLatest.counts.computed : latestNormalized.counts.computed,
-            static_ready: Number.isFinite(Number(existingLatest?.counts?.static_ready)) ? existingLatest.counts.static_ready : latestNormalized.counts.static_ready
-          };
-          payload.data.opsBaseline.pipelineLatest = {
-            ...latestNormalized,
-            ...existingLatest,
-            counts: mergedCounts
-          };
-        }
-
-        const displaySummary = buildSummaryFromLegacy(payload, null);
         clearAlert();
 
         const servedFromEl = document.getElementById('served-from');
         if (servedFromEl) servedFromEl.textContent = payload?.metadata?.served_from || '—';
 
-        if (!displaySummary) {
-          if (statusEl) statusEl.textContent = 'Summary unavailable (legacy or missing).';
+        if (!payload?.data) {
+          if (statusEl) statusEl.textContent = 'Summary unavailable (missing data).';
           setRenderStatus('error', 'json_invalid');
           return;
         }
 
         setSourceLabel(options.sourceLabel || 'static');
-        renderSummary(displaySummary);
-        renderTruthChain(truthDoc);
-        renderSchedulerStatus(displaySummary?.runtime);
+        renderSummary(payload);
         updateRawJson(payload, debugEnabled);
         setRenderStatus('ok', 'rendered', payload?.meta?.asOf || payload?.metadata?.fetched_at || null);
 
@@ -1009,51 +804,25 @@
 
     async function refreshLiveWithKey(key) {
       try {
-        const [res, truthRes, latestRes] = await Promise.all([
-          fetch('/api/mission-control/summary?live=1', {
-            cache: 'no-store',
-            headers: {
-              'X-OPS-KEY': key
-            }
-          }),
-          fetch('/data/pipeline/nasdaq100.pipeline-truth.json', { cache: 'no-store' }),
-          fetch('/data/pipeline/nasdaq100.latest.json', { cache: 'no-store' })
-        ]);
+        const res = await fetch('/api/mission-control/summary?live=1', {
+          cache: 'no-store',
+          headers: {
+            'X-OPS-KEY': key
+          }
+        });
         if (!res.ok) {
           setSourceLabel('live locked');
           return;
         }
         const payload = await res.json();
-        const truthDoc = truthRes.ok ? await truthRes.json() : null;
-        const latestDoc = latestRes.ok ? await latestRes.json() : null;
-        const latestNormalized = normalizePipelineLatestDoc(latestDoc);
-        if (latestNormalized) {
-          payload.data = payload.data || {};
-          payload.data.opsBaseline = payload.data.opsBaseline || {};
-          const existingLatest = payload?.data?.opsBaseline?.pipelineLatest || {};
-          const mergedCounts = {
-            expected: Number.isFinite(Number(existingLatest?.counts?.expected)) ? existingLatest.counts.expected : latestNormalized.counts.expected,
-            fetched: Number.isFinite(Number(existingLatest?.counts?.fetched)) ? existingLatest.counts.fetched : latestNormalized.counts.fetched,
-            validated: Number.isFinite(Number(existingLatest?.counts?.validated)) ? existingLatest.counts.validated : latestNormalized.counts.validated,
-            computed: Number.isFinite(Number(existingLatest?.counts?.computed)) ? existingLatest.counts.computed : latestNormalized.counts.computed,
-            static_ready: Number.isFinite(Number(existingLatest?.counts?.static_ready)) ? existingLatest.counts.static_ready : latestNormalized.counts.static_ready
-          };
-          payload.data.opsBaseline.pipelineLatest = {
-            ...latestNormalized,
-            ...existingLatest,
-            counts: mergedCounts
-          };
-        }
-        const summary = buildSummaryFromLegacy(payload, LAST_PIPELINE_COUNTS);
-        if (!summary) return;
+        if (!payload?.data) return;
         setSourceLabel('live');
         const liveAsOfEl = document.getElementById('live-asof');
         if (liveAsOfEl) liveAsOfEl.textContent = payload?.meta?.asOf || payload?.data?.asOf || '—';
         const servedFromEl = document.getElementById('served-from');
         if (servedFromEl) servedFromEl.textContent = payload?.metadata?.served_from || '—';
-        renderSummary(summary);
-        renderTruthChain(truthDoc);
-        renderSchedulerStatus(summary?.runtime);
+        renderSummary(payload);
+        renderSchedulerStatus(payload?.data?.runtime);
         const debugEnabled = new URLSearchParams(window.location.search).get('debug') === '1';
         updateRawJson(payload, debugEnabled);
         setRenderStatus('ok', 'rendered', payload?.meta?.asOf || payload?.metadata?.fetched_at || null);
