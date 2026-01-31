@@ -7,9 +7,8 @@ const url = `${base}/ops/`;
 const res = await fetchWithContext(url, {}, { name: 'ops-ui-smoke' });
 const html = await res.text();
 
-if (!html.includes('MarketPhase pipeline')) {
-  throw new Error('ops UI missing MarketPhase pipeline marker');
+if (!html.includes('id="ops-bridge"')) {
+  throw new Error('ops UI missing ops-bridge marker');
 }
 
 console.log('OK ops-ui-smoke');
-

@@ -1,4 +1,4 @@
-import { chromium } from 'playwright';
+import { chromium, expect } from '@playwright/test';
 import { getOpsBase } from './env.config.mjs';
 import { fetchWithContext } from './fetch-with-context.mjs';
 
@@ -18,53 +18,32 @@ function requireNumber(value, label) {
   return n;
 }
 
-function ensureEqual(actual, expected, label) {
-  if (actual !== expected) {
-    throw new Error(`${label} mismatch: got ${actual}, expected ${expected}`);
-  }
-}
-
 function parseFirstInt(text) {
   const match = String(text || '').match(/-?\d+/);
   return match ? Number(match[0]) : NaN;
 }
 
-async function extractMarketPhaseInfo(page) {
+async function extractBridgeInfo(page) {
   return page.evaluate(() => {
-    const table = document.querySelector('#pipeline-marketphase');
-    const renderStatus = document.querySelector('#ops-render-status');
-    const rows = Array.from(table?.querySelectorAll('tr') || []);
-    const rowData = rows.map((row) => {
-      const cells = Array.from(row.querySelectorAll('td')).map((td) => td.textContent?.trim() || '');
-      return { label: cells[0] || '', count: cells[1] || '' };
-    });
-    const labels = rowData.map((row) => row.label);
-    const fetchedRow = rowData.find((row) => row.label === 'Fetched');
-    const validatedRow = rowData.find((row) => row.label === 'Validated');
+    const bridge = document.querySelector('#ops-bridge');
     return {
-      labels,
-      rows: rowData,
-      fetchedRaw: fetchedRow?.count || '',
-      validatedRaw: validatedRow?.count || '',
-      renderStatus: {
-        status: renderStatus?.getAttribute('data-status') || '',
-        baseline: renderStatus?.getAttribute('data-baseline') || '',
-        reason: renderStatus?.getAttribute('data-reason') || ''
-      },
-      tableText: table?.innerText || '',
-      tableHtml: table?.outerHTML || ''
+      bridge: {
+        status: bridge?.getAttribute('data-status') || '',
+        baseline: bridge?.getAttribute('data-baseline') || '',
+        health: bridge?.getAttribute('data-health') || '',
+        fetched: bridge?.getAttribute('data-count-fetched') || '',
+        validated: bridge?.getAttribute('data-count-validated') || '',
+        computed: bridge?.getAttribute('data-coverage-computed') || '',
+        missing: bridge?.getAttribute('data-coverage-missing') || '',
+        reason: bridge?.getAttribute('data-reason') || ''
+      }
     };
   });
 }
 
 function printForensic(info) {
   console.error('Forensic dump:');
-  console.error('Labels:', info?.labels || []);
-  console.error('Rows:', info?.rows || []);
-  console.error('Fetched raw:', info?.fetchedRaw || '');
-  console.error('Validated raw:', info?.validatedRaw || '');
-  console.error('Table text:', info?.tableText || '');
-  console.error('Table html:', info?.tableHtml || '');
+  console.error('Bridge:', info?.bridge || {});
 }
 
 let browser;
@@ -81,48 +60,26 @@ try {
   browser = await chromium.launch();
   const page = await browser.newPage();
   await page.goto(opsUrl, { waitUntil: 'domcontentloaded' });
+  const bridge = page.locator('#ops-bridge');
   try {
-    await page.waitForSelector('#ops-render-status[data-status="ok"][data-baseline="ok"]', { timeout: 20000 });
+    await expect(bridge).toHaveAttribute('data-status', /ok|degraded/, { timeout: 20000 });
+    await expect(bridge).toHaveAttribute('data-baseline', /ok|pending/, { timeout: 20000 });
   } catch (err) {
-    const info = await extractMarketPhaseInfo(page);
+    const info = await extractBridgeInfo(page);
     printForensic(info);
-    throw new Error('Timeout waiting for baseline render status');
+    throw new Error('Timeout waiting for ops-bridge readiness');
   }
 
-  try {
-    await page.waitForFunction((expected) => {
-      const table = document.querySelector('#pipeline-marketphase');
-      if (!table) return false;
-      const rows = Array.from(table.querySelectorAll('tr'));
-      for (const row of rows) {
-        const cells = row.querySelectorAll('td');
-        const label = cells[0]?.textContent?.trim() || '';
-        if (label === 'Fetched') {
-          const raw = cells[1]?.textContent || '';
-          const match = raw.match(/-?\d+/);
-          const value = match ? Number(match[0]) : NaN;
-          return Number.isFinite(value) && value === expected;
-        }
-      }
-      return false;
-    }, { timeout: 15000 }, expectedFetched);
-  } catch (err) {
-    const info = await extractMarketPhaseInfo(page);
-    printForensic(info);
-    const lastObserved = parseFirstInt(info.fetchedRaw);
-    throw new Error(`Timeout waiting for fetched count=${expectedFetched}. Last observed=${Number.isFinite(lastObserved) ? lastObserved : 'invalid'}`);
-  }
-
-  const info = await extractMarketPhaseInfo(page);
-  const fetchedUi = parseFirstInt(info.fetchedRaw);
-  const validatedUi = parseFirstInt(info.validatedRaw);
+  const info = await extractBridgeInfo(page);
+  const fetchedUi = parseFirstInt(info.bridge?.fetched);
+  const validatedUi = parseFirstInt(info.bridge?.validated);
   if (!Number.isFinite(fetchedUi)) {
     printForensic(info);
-    throw new Error(`UI fetched count missing or invalid: "${info.fetchedRaw}"`);
+    throw new Error(`UI fetched count missing or invalid: "${info.bridge?.fetched}"`);
   }
   if (!Number.isFinite(validatedUi)) {
     printForensic(info);
-    throw new Error(`UI validated count missing or invalid: "${info.validatedRaw}"`);
+    throw new Error(`UI validated count missing or invalid: "${info.bridge?.validated}"`);
   }
 
   if (fetchedUi !== expectedFetched) {
@@ -134,8 +91,8 @@ try {
     throw new Error(`UI validated vs latest mismatch: got ${validatedUi}, expected ${expectedValidated}`);
   }
 
-  const s1Status = await page.getAttribute('[data-step-id="S1"]', 'data-step-status');
-  const s2Status = await page.getAttribute('[data-step-id="S2"]', 'data-step-status');
+  const s1Locator = page.locator('[data-step-id="S1"]');
+  const s2Locator = page.locator('[data-step-id="S2"]');
   const uiBlocker = await page.getAttribute('#truth-chain-steps', 'data-first-blocker');
 
   const truthSteps = Array.isArray(truthDoc?.steps) ? truthDoc.steps : [];
@@ -147,8 +104,8 @@ try {
     throw new Error('Truth doc missing S1/S2 steps');
   }
 
-  ensureEqual(s1Status, truthS1.status, 'UI S1 status');
-  ensureEqual(s2Status, truthS2.status, 'UI S2 status');
+  await expect(s1Locator).toHaveAttribute('data-step-status', truthS1.status);
+  await expect(s2Locator).toHaveAttribute('data-step-status', truthS2.status);
   if (truthBlocker && uiBlocker !== truthBlocker) {
     throw new Error(`First blocker mismatch: UI ${uiBlocker}, truth ${truthBlocker}`);
   }

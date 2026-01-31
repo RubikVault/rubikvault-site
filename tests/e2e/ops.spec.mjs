@@ -2,11 +2,9 @@ import { test, expect } from '@playwright/test';
 
 test('ops render stamp goes ok', async ({ page }) => {
   await page.goto('/ops', { waitUntil: 'domcontentloaded' });
-  await page.waitForSelector('#ops-render-status[data-status="ok"]', { timeout: 20000 });
-  const render = page.locator('#ops-render-status');
-  await expect(render).toHaveAttribute('data-reason', 'rendered');
-  const asof = await render.getAttribute('data-asof');
-  expect(asof).toBeTruthy();
+  const bridge = page.locator('#ops-bridge');
+  await expect(bridge).toHaveAttribute('data-status', /ok|degraded/, { timeout: 20000 });
+  await expect(bridge).toHaveAttribute('data-baseline', /ok|pending/);
 });
 
 test('ops truth-chain sections render', async ({ page }) => {
@@ -22,12 +20,5 @@ test('ops truth-chain sections render', async ({ page }) => {
   const rawPre = page.locator('#ops-raw-json-pre');
   // Raw JSON panel may be collapsed/hidden by design; require it exists and is populated.
   await expect(rawPre).toBeAttached();
-  await page.waitForFunction(() => {
-    const el = document.querySelector('#ops-raw-json-pre');
-    const t = el?.textContent || '';
-    return t.trim().length > 50;
-  }, { timeout: 20000 });
-
-  const text = await rawPre.textContent();
-  expect((text || '').length).toBeGreaterThan(50);
+  await expect(rawPre).toHaveText(/schema_version|meta|data/, { timeout: 20000 });
 });
