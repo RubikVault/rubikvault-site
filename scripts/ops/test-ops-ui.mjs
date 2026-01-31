@@ -1,13 +1,14 @@
 import { chromium } from 'playwright';
+import { getOpsBase } from './env.config.mjs';
+import { fetchWithContext } from './fetch-with-context.mjs';
 
-const base = process.env.OPS_BASE || process.env.BASE_URL || 'http://127.0.0.1:8788';
-const opsUrl = `${base.replace(/\/$/, '')}/ops/?debug=1`;
-const latestUrl = `${base.replace(/\/$/, '')}/data/pipeline/nasdaq100.latest.json`;
-const truthUrl = `${base.replace(/\/$/, '')}/data/pipeline/nasdaq100.pipeline-truth.json`;
+const base = getOpsBase();
+const opsUrl = `${base}/ops/?debug=1`;
+const latestUrl = `${base}/data/pipeline/nasdaq100.latest.json`;
+const truthUrl = `${base}/data/pipeline/nasdaq100.pipeline-truth.json`;
 
-async function fetchJson(url) {
-  const res = await fetch(url, { cache: 'no-store' });
-  if (!res.ok) throw new Error(`Fetch failed ${res.status} for ${url}`);
+async function fetchJson(url, ctx) {
+  const res = await fetchWithContext(url, {}, ctx);
   return res.json();
 }
 
@@ -26,8 +27,8 @@ function ensureEqual(actual, expected, label) {
 let browser;
 try {
   const [latestDoc, truthDoc] = await Promise.all([
-    fetchJson(latestUrl),
-    fetchJson(truthUrl)
+    fetchJson(latestUrl, { name: 'pipeline-latest' }),
+    fetchJson(truthUrl, { name: 'pipeline-truth' })
   ]);
 
   const latestCounts = latestDoc?.counts || {};

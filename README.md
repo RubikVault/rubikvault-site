@@ -134,6 +134,14 @@ ARTIFACTS_DIR=artifacts-organized node scripts/aggregator/finalize.mjs
 DRY_RUN=true ./scripts/cleanup-daily-snapshots.sh 7
 ```
 
+### **OPS Testing**
+- Preferred base: `OPS_BASE`
+- Tier-1 (artifacts + UI smoke):
+  - `OPS_BASE="https://<preview>.pages.dev" npm run test:ops`
+- Tier-3 (Playwright E2E):
+  - `OPS_BASE="https://<preview>.pages.dev" npm run test:ops-ui`
+  - If browsers are missing: `npx playwright install`
+
 ### **CI Gates (Local)**
 
 ```bash
