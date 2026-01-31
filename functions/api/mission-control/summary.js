@@ -762,6 +762,64 @@ export async function onRequestGet(context) {
     static_ready: resolveCount(pipelineLatestCounts?.static_ready, staticReady)
   };
 
+  const buildCountSource = (key, latestValue, stageDoc, stageResolved) => {
+    const latestNum = Number.isFinite(Number(latestValue)) ? Number(latestValue) : null;
+    const stageRaw = stageDoc && Number.isFinite(Number(stageDoc.count)) ? Number(stageDoc.count) : null;
+    let used = 'default';
+    let reason = 'latest_missing_or_invalid';
+    let resolved = null;
+    if (latestNum != null) {
+      used = 'latest';
+      reason = 'latest_non_null';
+      resolved = latestNum;
+    } else if (!expectedFlags.pipeline) {
+      used = 'none';
+      reason = 'pipeline_not_expected';
+      resolved = null;
+    } else if (Number.isFinite(Number(stageResolved))) {
+      used = 'stage';
+      reason = 'stage_non_null';
+      resolved = Number(stageResolved);
+    } else {
+      used = 'default';
+      reason = 'stage_missing_or_invalid';
+      resolved = null;
+    }
+    return {
+      used,
+      reason,
+      latestRaw: latestValue ?? null,
+      stageRaw,
+      resolved
+    };
+  };
+
+  const countSources = {
+    fetched: buildCountSource('fetched', pipelineLatestCounts?.fetched, pipelineFetched, fetched),
+    validated: buildCountSource('validated', pipelineLatestCounts?.validated, pipelineValidated, validatedStored),
+    computed: buildCountSource('computed', pipelineLatestCounts?.computed, pipelineComputedTruth, computed),
+    static_ready: buildCountSource('static_ready', pipelineLatestCounts?.static_ready, pipelineStaticReadyTruth, staticReady)
+  };
+
+  let invariantOk = true;
+  const invariantDetails = {};
+  for (const key of ['fetched', 'validated']) {
+    const latestVal = pipelineLatestCounts?.[key];
+    if (Number.isFinite(Number(latestVal))) {
+      if (Number(pipelineCounts[key]) !== Number(latestVal)) {
+        invariantOk = false;
+        invariantDetails[key] = { latest: Number(latestVal), resolved: pipelineCounts[key] };
+      }
+    }
+  }
+  if (!invariantOk) {
+    countSources.__invariant = {
+      ok: false,
+      message: 'LATEST_COUNTS_MISMATCH',
+      details: invariantDetails
+    };
+  }
+
   const eodManifest = normalizeEodManifest(eodManifestRaw);
   const eodCounts = eodManifest
     ? {
@@ -1048,6 +1106,7 @@ export async function onRequestGet(context) {
       deploy,
       pipeline: {
         counts: pipelineCounts,
+        countSources,
         latest: pipelineLatest,
         truth: pipelineTruth,
         missing

@@ -60,6 +60,7 @@
     "test:market-prices-artifact": "node scripts/validate/market-prices-artifact.v1.mjs",
     "test:market-prices-real-mode": "node tests/market-prices-real-mode.test.mjs",
     "test:stock-endpoint": "node tests/stock-endpoint.test.mjs",
+    "test:ops:provenance": "node scripts/ops/rv_verify_count_provenance.mjs",
     "rv:eod:nasdaq100": "node scripts/eod/build-eod-latest.mjs --universe nasdaq100 --chunk-size 500 --out public/data",
     "rv:ops": "node scripts/ops/build-ops-daily.mjs",
     "build:pipeline-truth": "node scripts/pipeline/build-ndx100-pipeline-truth.mjs",
