@@ -573,17 +573,29 @@ export async function onRequestGet(context) {
   const opsProviders = Object.entries(usageProviders).map(([name, entry]) => {
     const daily = entry?.daily || {};
     const monthly = entry?.monthly || {};
-    const usedMonth = toNumber(monthly.used);
-    const limitMonth = toNumber(monthly.limit);
-    const remainingMonth = toNumber(monthly.remaining);
-    const remainingPct = toNumber(monthly.pctRemaining);
+    const usedMonthRaw = toNumber(monthly.used);
+    const limitMonthRaw = toNumber(monthly.limit);
+    const remainingMonthRaw = toNumber(monthly.remaining);
+    const remainingPctRaw = toNumber(monthly.pctRemaining);
     const usedToday = toNumber(daily.used);
+
+    const limitMonth = Number.isFinite(limitMonthRaw) ? limitMonthRaw : null;
+    const usedMonth = usedMonthRaw == null && limitMonth != null ? 0 : usedMonthRaw;
+    const remainingMonth = remainingMonthRaw != null
+      ? remainingMonthRaw
+      : (limitMonth != null && usedMonth != null ? Math.max(0, limitMonth - usedMonth) : null);
+    const remainingPct = remainingPctRaw != null
+      ? Math.round(remainingPctRaw * 1000) / 10
+      : (limitMonth != null && remainingMonth != null
+        ? Math.round(((remainingMonth / limitMonth) * 1000)) / 10
+        : null);
+
     return {
       name,
       usedMonth,
       limitMonth,
       remainingMonth,
-      remainingPct: remainingPct == null ? null : Math.round(remainingPct * 1000) / 10,
+      remainingPct,
       resetDate: null,
       runtimeCallsToday: usedToday == null ? 0 : usedToday
     };
