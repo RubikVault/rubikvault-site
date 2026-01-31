@@ -18,6 +18,9 @@ if (summary?.schema_version !== '3.0') {
 if (summary?.meta?.asOf === '—') {
   fail('meta.asOf must not be "—"');
 }
+if (typeof summary?.meta?.status !== 'string') {
+  fail('meta.status missing');
+}
 
 const health = summary?.data?.health || {};
 for (const key of ['platform', 'api', 'freshness', 'pipeline']) {
@@ -47,5 +50,14 @@ for (const key of ['expected', 'fetched', 'validated', 'computed', 'static_ready
   }
 }
 
-console.log('OK: truth summary contract');
+const coverageMissing = summary?.data?.coverage?.missing;
+if (Number.isFinite(coverageMissing) && coverageMissing > 50) {
+  const msg = `Coverage degraded (${coverageMissing} missing)`;
+  if (process.env.CI === 'true' || process.env.GITHUB_ACTIONS === 'true') {
+    console.warn(`::warning::${msg}`);
+  } else {
+    console.warn(`WARN: ${msg}`);
+  }
+}
 
+console.log('OK: truth summary contract');
