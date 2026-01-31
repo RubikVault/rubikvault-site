@@ -3,7 +3,7 @@ import { getOpsBase } from './env.config.mjs';
 import { fetchWithContext } from './fetch-with-context.mjs';
 
 const base = getOpsBase();
-const opsUrl = `${base}/ops/?debug=1`;
+const opsUrl = `${base}/ops/?debug=1&t=${Date.now()}`;
 const latestUrl = `${base}/data/pipeline/nasdaq100.latest.json`;
 const truthUrl = `${base}/data/pipeline/nasdaq100.pipeline-truth.json`;
 
@@ -24,6 +24,43 @@ function ensureEqual(actual, expected, label) {
   }
 }
 
+function parseFirstInt(text) {
+  const match = String(text || '').match(/-?\d+/);
+  return match ? Number(match[0]) : NaN;
+}
+
+async function extractMarketPhaseInfo(page) {
+  return page.evaluate(() => {
+    const table = document.querySelector('#pipeline-marketphase');
+    const rows = Array.from(table?.querySelectorAll('tr') || []);
+    const rowData = rows.map((row) => {
+      const cells = Array.from(row.querySelectorAll('td')).map((td) => td.textContent?.trim() || '');
+      return { label: cells[0] || '', count: cells[1] || '' };
+    });
+    const labels = rowData.map((row) => row.label);
+    const fetchedRow = rowData.find((row) => row.label === 'Fetched');
+    const validatedRow = rowData.find((row) => row.label === 'Validated');
+    return {
+      labels,
+      rows: rowData,
+      fetchedRaw: fetchedRow?.count || '',
+      validatedRaw: validatedRow?.count || '',
+      tableText: table?.innerText || '',
+      tableHtml: table?.outerHTML || ''
+    };
+  });
+}
+
+function printForensic(info) {
+  console.error('Forensic dump:');
+  console.error('Labels:', info?.labels || []);
+  console.error('Rows:', info?.rows || []);
+  console.error('Fetched raw:', info?.fetchedRaw || '');
+  console.error('Validated raw:', info?.validatedRaw || '');
+  console.error('Table text:', info?.tableText || '');
+  console.error('Table html:', info?.tableHtml || '');
+}
+
 let browser;
 try {
   const [latestDoc, truthDoc] = await Promise.all([
@@ -40,17 +77,50 @@ try {
   await page.goto(opsUrl, { waitUntil: 'domcontentloaded' });
   await page.waitForSelector('#ops-render-status[data-status="ok"]', { timeout: 20000 });
 
-  const rows = await page.$$eval('#pipeline-marketphase tr', (els) => els.map((row) => {
-    const cells = Array.from(row.querySelectorAll('td')).map((td) => td.textContent?.trim() || '');
-    return { label: cells[0] || '', count: cells[1] || '' };
-  }));
+  try {
+    await page.waitForFunction((expected) => {
+      const table = document.querySelector('#pipeline-marketphase');
+      if (!table) return false;
+      const rows = Array.from(table.querySelectorAll('tr'));
+      for (const row of rows) {
+        const cells = row.querySelectorAll('td');
+        const label = cells[0]?.textContent?.trim() || '';
+        if (label === 'Fetched') {
+          const raw = cells[1]?.textContent || '';
+          const match = raw.match(/-?\d+/);
+          const value = match ? Number(match[0]) : NaN;
+          return Number.isFinite(value) && value === expected;
+        }
+      }
+      return false;
+    }, { timeout: 15000 }, expectedFetched);
+  } catch (err) {
+    const info = await extractMarketPhaseInfo(page);
+    printForensic(info);
+    const lastObserved = parseFirstInt(info.fetchedRaw);
+    throw new Error(`Timeout waiting for fetched count=${expectedFetched}. Last observed=${Number.isFinite(lastObserved) ? lastObserved : 'invalid'}`);
+  }
 
-  const counts = Object.fromEntries(rows.map((row) => [row.label.toLowerCase(), row.count]));
-  const fetchedUi = requireNumber(counts['fetched'], 'UI fetched count');
-  const validatedUi = requireNumber(counts['validated'], 'UI validated count');
+  const info = await extractMarketPhaseInfo(page);
+  const fetchedUi = parseFirstInt(info.fetchedRaw);
+  const validatedUi = parseFirstInt(info.validatedRaw);
+  if (!Number.isFinite(fetchedUi)) {
+    printForensic(info);
+    throw new Error(`UI fetched count missing or invalid: "${info.fetchedRaw}"`);
+  }
+  if (!Number.isFinite(validatedUi)) {
+    printForensic(info);
+    throw new Error(`UI validated count missing or invalid: "${info.validatedRaw}"`);
+  }
 
-  ensureEqual(fetchedUi, expectedFetched, 'UI fetched vs latest');
-  ensureEqual(validatedUi, expectedValidated, 'UI validated vs latest');
+  if (fetchedUi !== expectedFetched) {
+    printForensic(info);
+    throw new Error(`UI fetched vs latest mismatch: got ${fetchedUi}, expected ${expectedFetched}`);
+  }
+  if (validatedUi !== expectedValidated) {
+    printForensic(info);
+    throw new Error(`UI validated vs latest mismatch: got ${validatedUi}, expected ${expectedValidated}`);
+  }
 
   const s1Status = await page.getAttribute('[data-step-id="S1"]', 'data-step-status');
   const s2Status = await page.getAttribute('[data-step-id="S2"]', 'data-step-status');
