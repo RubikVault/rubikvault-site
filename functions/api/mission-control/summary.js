@@ -1023,6 +1023,18 @@ export async function onRequestGet(context) {
     }
   };
 
+  const metaStatus = (() => {
+    const statuses = Object.values(health).map((h) => h?.status).filter(Boolean);
+    if (statuses.includes('CRITICAL')) return 'error';
+    if (statuses.includes('WARNING')) return 'degraded';
+    return 'ok';
+  })();
+  const metaReason =
+    health.pipeline?.reason ||
+    health.freshness?.reason ||
+    health.platform?.reason ||
+    null;
+
   const contracts = {
     configs: {
       health_profiles: contractResult(healthProfilesCheck.valid, healthProfilesCheck.errors),
@@ -1066,7 +1078,9 @@ export async function onRequestGet(context) {
     meta: {
       asOf: startedAtIso,
       baselineAsOf: opsBaselineAsOf,
-      liveAsOf: startedAtIso
+      liveAsOf: startedAtIso,
+      status: metaStatus,
+      reason: metaReason
     },
     metadata: {
       module: MODULE_NAME,
@@ -1110,6 +1124,10 @@ export async function onRequestGet(context) {
         latest: pipelineLatest,
         truth: pipelineTruth,
         missing
+      },
+      coverage: {
+        computed: Number.isFinite(Number(pipelineCounts.computed)) ? Number(pipelineCounts.computed) : 0,
+        missing: Array.isArray(missing) ? missing.length : 0
       },
       eod: eodManifest
         ? {

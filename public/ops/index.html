@@ -160,6 +160,16 @@
       style="margin-bottom: 10px; color: #94a3b8;">
       Render status: <span id="ops-render-status-text">boot</span>
     </div>
+    <div id="ops-bridge"
+      data-status="loading"
+      data-baseline="pending"
+      data-health="unknown"
+      data-count-fetched="0"
+      data-count-validated="0"
+      data-coverage-computed="0"
+      data-coverage-missing="0"
+      data-reason=""
+      style="display:none;"></div>
 
     <h1>Ops</h1>
     <div class="sub">Owner-grade view (static-first, read-only). No auto refresh.</div>
@@ -394,6 +404,7 @@
     const renderStatusText = document.getElementById('ops-render-status-text');
     const renderErrorEl = document.getElementById('ops-render-error');
     const renderErrorText = document.getElementById('ops-render-error-text');
+    const opsBridgeEl = document.getElementById('ops-bridge');
 
     function setRenderStatus(status, reason, asOf) {
       if (renderStatusEl) {
@@ -413,6 +424,65 @@
           renderErrorText.textContent = '';
         }
       }
+    }
+
+    function setOpsBridge(state) {
+      if (!opsBridgeEl) {
+        setRenderStatus('error', 'bridge_missing');
+        if (renderErrorEl && renderErrorText) {
+          renderErrorEl.style.display = 'block';
+          renderErrorText.textContent = 'ops-bridge missing';
+        }
+        throw new Error('ops-bridge missing');
+      }
+      const next = {
+        status: state.status || 'unknown',
+        baseline: state.baseline || 'pending',
+        health: state.health || 'unknown',
+        countFetched: state.countFetched ?? 0,
+        countValidated: state.countValidated ?? 0,
+        coverageComputed: state.coverageComputed ?? 0,
+        coverageMissing: state.coverageMissing ?? 0,
+        reason: state.reason || ''
+      };
+      const attrs = {
+        'data-status': String(next.status),
+        'data-baseline': String(next.baseline),
+        'data-health': String(next.health),
+        'data-count-fetched': String(next.countFetched),
+        'data-count-validated': String(next.countValidated),
+        'data-coverage-computed': String(next.coverageComputed),
+        'data-coverage-missing': String(next.coverageMissing),
+        'data-reason': String(next.reason)
+      };
+      for (const [k, v] of Object.entries(attrs)) {
+        opsBridgeEl.setAttribute(k, v);
+      }
+    }
+
+    function validateOpsSummary(payload) {
+      if (!payload || typeof payload !== 'object') {
+        return { ok: false, level: 'error', reason: 'NOT_OBJECT' };
+      }
+      const meta = payload.meta || {};
+      if (typeof meta.status !== 'string') {
+        return { ok: false, level: 'error', reason: 'MISSING_META' };
+      }
+      const counts = payload?.data?.pipeline?.counts || {};
+      const coverage = payload?.data?.coverage || {};
+      const required = {
+        fetched: counts.fetched,
+        validated: counts.validated,
+        computed: coverage.computed,
+        missing: coverage.missing
+      };
+      for (const [key, value] of Object.entries(required)) {
+        if (!Number.isFinite(Number(value))) {
+          return { ok: false, level: 'error', reason: `MISSING_FIELDS:${key}` };
+        }
+      }
+      const level = meta.status === 'error' ? 'error' : meta.status === 'degraded' ? 'degraded' : 'ok';
+      return { ok: true, level, reason: meta.reason || '' };
     }
 
     function setManualTs(ts) {
