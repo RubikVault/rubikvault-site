@@ -149,7 +149,7 @@ verify_envelope() {
   
   # Fetch with curl
   local http_code
-  http_code=$(curl -sS -D "$tmp_headers" -o "$tmp_body" -w "%{http_code}" --max-time 30 "$url" 2>&1)
+  http_code=$(curl -sSf -D "$tmp_headers" -o "$tmp_body" -w "%{http_code}" --max-time 30 "$url" 2>&1)
   local curl_exit=$?
   
   if [[ $curl_exit -ne 0 ]]; then
@@ -175,108 +175,47 @@ verify_envelope() {
     fi
   fi
 
-  # Parse JSON and validate envelope shape using node
-  local validation_result
-  validation_result=$(node -e "
-    const fs = require('fs');
-    try {
-      const body = fs.readFileSync('$tmp_body', 'utf-8');
-      const json = JSON.parse(body);
-      
-      const errors = [];
-      
-      // ok must be boolean
-      if (typeof json.ok !== 'boolean') {
-        errors.push('ok is not boolean');
-      }
-      
-      // meta must be object
-      if (!json.meta || typeof json.meta !== 'object') {
-        errors.push('meta missing or not object');
-      } else {
-        // meta.status must be string
-        if (typeof json.meta.status !== 'string') {
-          errors.push('meta.status is not string');
-        }
-        // meta.generated_at must be string
-        if (typeof json.meta.generated_at !== 'string') {
-          errors.push('meta.generated_at is not string');
-        }
-        // meta.data_date must be non-empty string matching YYYY-MM-DD
-        if (typeof json.meta.data_date !== 'string') {
-          errors.push('meta.data_date is not string');
-        } else if (json.meta.data_date === '') {
-          errors.push('meta.data_date is empty (must be YYYY-MM-DD)');
-        } else if (!/^\d{4}-\d{2}-\d{2}\$/.test(json.meta.data_date)) {
-          errors.push('meta.data_date does not match YYYY-MM-DD format');
-        }
-        // meta.provider must be non-empty string (schema enforces this)
-        if (typeof json.meta.provider !== 'string' || json.meta.provider.trim() === '') {
-          errors.push('meta.provider is not a non-empty string');
-        }
-      }
-      
-      // When ok=false, error must be present with code
-      if (json.ok === false) {
-        if (!json.error || typeof json.error !== 'object') {
-          errors.push('ok=false but error is missing');
-        } else if (typeof json.error.code !== 'string') {
-          errors.push('ok=false but error.code is missing');
-        }
-        // meta.status should be 'error' when ok=false
-        if (json.meta && json.meta.status !== 'error') {
-          errors.push('ok=false but meta.status is not error');
-        }
-      }
-      
-      const debugCheck = '$debug_check' === 'cache';
-      if (debugCheck) {
-        if (!json.meta.cache || typeof json.meta.cache !== 'object') {
-          errors.push('meta.cache missing or not object');
-        }
-        if ('timings' in json.meta && (json.meta.timings === null || typeof json.meta.timings !== 'object')) {
-          errors.push('meta.timings is not object');
-        }
-      }
+  local jq_err
+  jq_err=$(mktemp)
+  jq -e --arg expected_ok "$expected_ok" --arg debug_check "$debug_check" '
+    def err($msg): ($msg | halt_error(1));
+    if (.ok|type)!="boolean" then err("ok is not boolean")
+    elif (.meta|type)!="object" then err("meta missing or not object")
+    elif (.meta.status|type)!="string" then err("meta.status is not string")
+    elif (.meta.generated_at|type)!="string" then err("meta.generated_at is not string")
+    elif (.meta.data_date|type)!="string" then err("meta.data_date is not string")
+    elif (.meta.data_date=="") then err("meta.data_date is empty (must be YYYY-MM-DD)")
+    elif ((.meta.data_date|test("^\\d{4}-\\d{2}-\\d{2}$"))|not) then err("meta.data_date does not match YYYY-MM-DD format")
+    elif (.meta.provider|type)!="string" or (.meta.provider|length)==0 then err("meta.provider is not a non-empty string")
+    elif (.ok==false and ((.error|type)!="object")) then err("ok=false but error is missing")
+    elif (.ok==false and ((.error.code|type)!="string")) then err("ok=false but error.code is missing")
+    elif (.ok==false and .meta.status!="error") then err("ok=false but meta.status is not error")
+    elif ($debug_check=="cache" and (.meta.cache|type)!="object") then err("meta.cache missing or not object")
+    elif ($debug_check=="cache" and (.meta|has("timings")) and (.meta.timings|type)!="object") then err("meta.timings is not object")
+    elif ($expected_ok=="true" and .ok!=true) then err("expected ok=true but got ok=" + (.ok|tostring))
+    elif ($expected_ok=="false" and .ok!=false) then err("expected ok=false but got ok=" + (.ok|tostring))
+    else true end
+  ' "$tmp_body" 2>"$jq_err"
 
-      if (errors.length > 0) {
-        console.log('FAIL:' + errors.join(', '));
-        process.exit(1);
-      }
-      
-      // Check expected_ok if specified
-      const expectedOk = '$expected_ok';
-      if (expectedOk === 'true' && json.ok !== true) {
-        console.log('FAIL:expected ok=true but got ok=' + json.ok);
-        process.exit(1);
-      }
-      if (expectedOk === 'false' && json.ok !== false) {
-        console.log('FAIL:expected ok=false but got ok=' + json.ok);
-        process.exit(1);
-      }
-      
-      // Print success summary
-      const errorCode = json.error ? json.error.code : 'none';
-      console.log('OK:status=' + json.meta.status + ',data_date=' + json.meta.data_date + ',provider=' + json.meta.provider + ',http=' + '$http_code' + ',ok=' + json.ok + ',error_code=' + errorCode);
-      process.exit(0);
-    } catch (e) {
-      console.log('FAIL:JSON parse error: ' + e.message);
-      process.exit(1);
-    }
-  " 2>&1)
-  
-  local node_exit=$?
-  
-  if [[ $node_exit -eq 0 ]]; then
-    local summary="${validation_result#OK:}"
+  local jq_exit=$?
+
+  if [[ $jq_exit -eq 0 ]]; then
+    local status data_date provider ok_val error_code
+    status=$(jq -r '.meta.status' "$tmp_body")
+    data_date=$(jq -r '.meta.data_date' "$tmp_body")
+    provider=$(jq -r '.meta.provider' "$tmp_body")
+    ok_val=$(jq -r '.ok' "$tmp_body")
+    error_code=$(jq -r '.error.code // "none"' "$tmp_body")
+    local summary="status=${status},data_date=${data_date},provider=${provider},http=${http_code},ok=${ok_val},error_code=${error_code}"
     log_pass "Endpoint $endpoint: envelope valid ($summary)"
   else
-    local error_msg="${validation_result#FAIL:}"
+    local error_msg
+    error_msg=$(tail -1 "$jq_err")
     log_fail "Endpoint $endpoint: BAD ENVELOPE SHAPE - $error_msg"
   fi
-  
-  rm -f "$tmp_headers" "$tmp_body"
-  return $node_exit
+
+  rm -f "$jq_err" "$tmp_headers" "$tmp_body"
+  return $jq_exit
 }
 
 # Verify a POST endpoint returns valid envelope JSON
@@ -293,11 +232,11 @@ verify_post_envelope() {
 
   local http_code
   if [[ -n "$token" ]]; then
-    http_code=$(curl -sS -D "$tmp_headers" -o "$tmp_body" -w "%{http_code}" --max-time 30 \
+    http_code=$(curl -sSf -D "$tmp_headers" -o "$tmp_body" -w "%{http_code}" --max-time 30 \
       -H "Content-Type: application/json" -H "X-Admin-Token: ${token}" \
       -X POST -d "$body" "$url" 2>&1)
   else
-    http_code=$(curl -sS -D "$tmp_headers" -o "$tmp_body" -w "%{http_code}" --max-time 30 \
+    http_code=$(curl -sSf -D "$tmp_headers" -o "$tmp_body" -w "%{http_code}" --max-time 30 \
       -H "Content-Type: application/json" -X POST -d "$body" "$url" 2>&1)
   fi
   local curl_exit=$?
@@ -307,59 +246,43 @@ verify_post_envelope() {
     return 1
   fi
 
-  local validation_result
-  validation_result=$(node -e "
-    const fs = require('fs');
-    try {
-      const body = fs.readFileSync('$tmp_body', 'utf-8');
-      const json = JSON.parse(body);
-      const errors = [];
-      if (typeof json.ok !== 'boolean') errors.push('ok is not boolean');
-      if (!json.meta || typeof json.meta !== 'object') errors.push('meta missing or not object');
-      if (json.meta) {
-        if (typeof json.meta.status !== 'string') errors.push('meta.status is not string');
-        if (typeof json.meta.generated_at !== 'string') errors.push('meta.generated_at is not string');
-        if (typeof json.meta.data_date !== 'string') errors.push('meta.data_date is not string');
-        if (json.meta.data_date === '') errors.push('meta.data_date is empty');
-        if (typeof json.meta.provider !== 'string' || json.meta.provider.trim() === '') errors.push('meta.provider missing');
-      }
-      if (json.ok === false) {
-        if (!json.error || typeof json.error !== 'object') errors.push('ok=false but error missing');
-        if (json.meta && json.meta.status !== 'error') errors.push('ok=false but meta.status is not error');
-      }
-      if (errors.length > 0) {
-        console.log('FAIL:' + errors.join(', '));
-        process.exit(1);
-      }
-      const expectedOk = '$expected_ok';
-      if (expectedOk === 'true' && json.ok !== true) {
-        console.log('FAIL:expected ok=true but got ok=' + json.ok);
-        process.exit(1);
-      }
-      if (expectedOk === 'false' && json.ok !== false) {
-        console.log('FAIL:expected ok=false but got ok=' + json.ok);
-        process.exit(1);
-      }
-      const errorCode = json.error ? json.error.code : 'none';
-      console.log('OK:status=' + json.meta.status + ',data_date=' + json.meta.data_date + ',provider=' + json.meta.provider + ',http=' + '$http_code' + ',ok=' + json.ok + ',error_code=' + errorCode);
-      process.exit(0);
-    } catch (e) {
-      console.log('FAIL:JSON parse error: ' + e.message);
-      process.exit(1);
-    }
-  " 2>&1)
+  local jq_err
+  jq_err=$(mktemp)
+  jq -e --arg expected_ok "$expected_ok" '
+    def err($msg): ($msg | halt_error(1));
+    if (.ok|type)!="boolean" then err("ok is not boolean")
+    elif (.meta|type)!="object" then err("meta missing or not object")
+    elif (.meta.status|type)!="string" then err("meta.status is not string")
+    elif (.meta.generated_at|type)!="string" then err("meta.generated_at is not string")
+    elif (.meta.data_date|type)!="string" then err("meta.data_date is not string")
+    elif (.meta.data_date=="") then err("meta.data_date is empty")
+    elif ((.meta.data_date|test("^\\d{4}-\\d{2}-\\d{2}$"))|not) then err("meta.data_date does not match YYYY-MM-DD format")
+    elif (.meta.provider|type)!="string" or (.meta.provider|length)==0 then err("meta.provider missing")
+    elif (.ok==false and ((.error|type)!="object")) then err("ok=false but error missing")
+    elif (.ok==false and .meta.status!="error") then err("ok=false but meta.status is not error")
+    elif ($expected_ok=="true" and .ok!=true) then err("expected ok=true but got ok=" + (.ok|tostring))
+    elif ($expected_ok=="false" and .ok!=false) then err("expected ok=false but got ok=" + (.ok|tostring))
+    else true end
+  ' "$tmp_body" 2>"$jq_err"
 
-  local node_exit=$?
-  if [[ $node_exit -eq 0 ]]; then
-    local summary="${validation_result#OK:}"
+  local jq_exit=$?
+  if [[ $jq_exit -eq 0 ]]; then
+    local status data_date provider ok_val error_code
+    status=$(jq -r '.meta.status' "$tmp_body")
+    data_date=$(jq -r '.meta.data_date' "$tmp_body")
+    provider=$(jq -r '.meta.provider' "$tmp_body")
+    ok_val=$(jq -r '.ok' "$tmp_body")
+    error_code=$(jq -r '.error.code // "none"' "$tmp_body")
+    local summary="status=${status},data_date=${data_date},provider=${provider},http=${http_code},ok=${ok_val},error_code=${error_code}"
     log_pass "Endpoint $endpoint (POST): envelope valid ($summary)"
   else
-    local error_msg="${validation_result#FAIL:}"
+    local error_msg
+    error_msg=$(tail -1 "$jq_err")
     log_fail "Endpoint $endpoint (POST): BAD ENVELOPE SHAPE - $error_msg"
   fi
 
-  rm -f "$tmp_headers" "$tmp_body"
-  return $node_exit
+  rm -f "$jq_err" "$tmp_headers" "$tmp_body"
+  return $jq_exit
 }
 
 verify_not_fresh() {
@@ -367,39 +290,34 @@ verify_not_fresh() {
   local url="${PREVIEW_BASE}${endpoint}"
   local tmp_body=$(mktemp)
   local http_code
-  http_code=$(curl -sS -o "$tmp_body" -w "%{http_code}" --max-time 30 "$url" 2>&1)
+  http_code=$(curl -sSf -o "$tmp_body" -w "%{http_code}" --max-time 30 "$url" 2>&1)
   local curl_exit=$?
   if [[ $curl_exit -ne 0 ]]; then
     log_fail "Endpoint $endpoint: curl failed (exit $curl_exit)"
     rm -f "$tmp_body"
     return 1
   fi
-  local status_check
-  status_check=$(node -e "
-    const fs = require('fs');
-    try {
-      const body = fs.readFileSync('$tmp_body', 'utf-8');
-      const json = JSON.parse(body);
-      const status = String(json?.meta?.status || '');
-      if (!status || status.toLowerCase() === 'fresh' || status.toLowerCase() === 'live') {
-        console.log('FAIL:meta.status should not be fresh/live');
-        process.exit(1);
-      }
-      console.log('OK:' + status);
-      process.exit(0);
-    } catch (e) {
-      console.log('FAIL:JSON parse error: ' + e.message);
-      process.exit(1);
-    }
-  " 2>&1)
-  local node_exit=$?
-  if [[ $node_exit -eq 0 ]]; then
-    log_pass "Endpoint $endpoint: freshness transition ok (${status_check#OK:})"
+  local jq_err
+  jq_err=$(mktemp)
+  jq -e '
+    def err($msg): ($msg | halt_error(1));
+    if (.meta.status|type)!="string" then err("meta.status missing")
+    elif ((.meta.status|ascii_downcase)=="fresh" or (.meta.status|ascii_downcase)=="live") then err("meta.status should not be fresh/live")
+    else true end
+  ' "$tmp_body" 2>"$jq_err"
+  local jq_exit=$?
+  if [[ $jq_exit -eq 0 ]]; then
+    local status
+    status=$(jq -r '.meta.status' "$tmp_body")
+    log_pass "Endpoint $endpoint: freshness transition ok ($status)"
   else
-    log_fail "Endpoint $endpoint: freshness transition check failed (${status_check#FAIL:})"
+    local error_msg
+    error_msg=$(tail -1 "$jq_err")
+    log_fail "Endpoint $endpoint: freshness transition check failed ($error_msg)"
   fi
+  rm -f "$jq_err"
   rm -f "$tmp_body"
-  return $node_exit
+  return $jq_exit
 }
 
 verify_scheduler_health_payload() {
@@ -408,7 +326,7 @@ verify_scheduler_health_payload() {
   local tmp_body=$(mktemp)
 
   local http_code
-  http_code=$(curl -sS -o "$tmp_body" -w "%{http_code}" --max-time 30 "$url" 2>&1)
+  http_code=$(curl -sSf -o "$tmp_body" -w "%{http_code}" --max-time 30 "$url" 2>&1)
   local curl_exit=$?
   if [[ $curl_exit -ne 0 ]]; then
     log_fail "Endpoint $endpoint: curl failed (exit $curl_exit)"
@@ -416,33 +334,27 @@ verify_scheduler_health_payload() {
     return 1
   fi
 
-  local validation_result
-  validation_result=$(node -e "
-    const fs = require('fs');
-    try {
-      const body = fs.readFileSync('$tmp_body', 'utf-8');
-      const json = JSON.parse(body);
-      const data = json.data;
-      if (!data || typeof data !== 'object' || Array.isArray(data)) {
-        throw new Error('data must be an object');
-      }
-      if (!('last_ok' in data)) throw new Error('data.last_ok missing');
-      if (!('age_s' in data)) throw new Error('data.age_s missing');
-      if (typeof data.max_age_s !== 'number') throw new Error('data.max_age_s missing');
-      process.stdout.write('OK');
-    } catch (err) {
-      process.stdout.write('ERROR: ' + err.message);
-      process.exit(1);
-    }
-  " 2>/dev/null)
-
-  if [[ "$validation_result" != "OK" ]]; then
-    log_fail "Endpoint $endpoint: scheduler health data payload invalid (${validation_result#ERROR: })"
-    rm -f "$tmp_body"
+  local jq_err
+  jq_err=$(mktemp)
+  jq -e '
+    def err($msg): ($msg | halt_error(1));
+    if (.data|type)!="object" then err("data must be an object")
+    elif (.data|has("last_ok")|not) then err("data.last_ok missing")
+    elif (.data|has("age_s")|not) then err("data.age_s missing")
+    elif (.data.max_age_s|type)!="number" then err("data.max_age_s missing")
+    else true end
+  ' "$tmp_body" 2>"$jq_err"
+  local jq_exit=$?
+  if [[ $jq_exit -ne 0 ]]; then
+    local error_msg
+    error_msg=$(tail -1 "$jq_err")
+    log_fail "Endpoint $endpoint: scheduler health data payload invalid ($error_msg)"
+    rm -f "$jq_err" "$tmp_body"
     return 1
   fi
 
   log_pass "Endpoint $endpoint: scheduler health data payload includes last_ok/age_s/max_age_s"
+  rm -f "$jq_err"
   rm -f "$tmp_body"
 }
 
