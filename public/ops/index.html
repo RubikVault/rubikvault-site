@@ -627,6 +627,9 @@
       const validated = Number.isFinite(Number(counts.validated)) ? Number(counts.validated) : null;
       const computed = Number.isFinite(Number(counts.computed)) ? Number(counts.computed) : null;
       const staticReady = Number.isFinite(Number(counts.static_ready)) ? Number(counts.static_ready) : null;
+      const coverage = data?.coverage || {};
+      const coverageComputed = Number.isFinite(Number(coverage.computed)) ? Number(coverage.computed) : 0;
+      const coverageMissing = Number.isFinite(Number(coverage.missing)) ? Number(coverage.missing) : 0;
 
       const stageRow = (label, value, expectedValue, statusLabel) => {
         return '<tr>' +
@@ -675,10 +678,21 @@
       renderTruthChain(data?.pipeline?.truth || null);
       renderSchedulerStatus(runtime);
 
-      const baselineReady = Number.isFinite(fetched) && Number.isFinite(validated);
-      if (renderStatusEl) {
-        renderStatusEl.dataset.baseline = baselineReady ? 'ok' : 'missing';
-      }
+      const validation = validateOpsSummary(payload);
+      const healthStatus = validation.level === 'ok' ? 'green' : validation.level === 'degraded' ? 'yellow' : 'red';
+      const baselineStatus = validation.level === 'error'
+        ? 'fail'
+        : (Number.isFinite(fetched) && Number.isFinite(validated)) ? 'ok' : 'pending';
+      setOpsBridge({
+        status: validation.level === 'ok' ? 'ok' : validation.level === 'degraded' ? 'degraded' : 'error',
+        baseline: baselineStatus,
+        health: healthStatus,
+        countFetched: fetched ?? 0,
+        countValidated: validated ?? 0,
+        coverageComputed,
+        coverageMissing,
+        reason: validation.reason || ''
+      });
 
       const sourceEntries = data?.sourceMap?.entries || [];
       document.getElementById('source-map-table').innerHTML = Array.isArray(sourceEntries) && sourceEntries.length
@@ -708,6 +722,7 @@
 
       loading.style.display = 'none';
       main.style.display = 'block';
+      return validation;
     }
 
     function redactKeys(value) {
@@ -856,11 +871,31 @@
 
       try {
         setRenderStatus('boot', 'fetching');
+        setOpsBridge({
+          status: 'loading',
+          baseline: 'pending',
+          health: 'unknown',
+          countFetched: 0,
+          countValidated: 0,
+          coverageComputed: 0,
+          coverageMissing: 0,
+          reason: 'FETCHING'
+        });
         const summaryRes = await fetch(summaryUrl, { cache: 'no-store' });
 
         if (!summaryRes.ok) {
           if (statusEl) statusEl.textContent = `Failed to load summary (HTTP ${summaryRes.status}).`;
           setRenderStatus('error', 'fetch_failed');
+          setOpsBridge({
+            status: 'error',
+            baseline: 'fail',
+            health: 'red',
+            countFetched: 0,
+            countValidated: 0,
+            coverageComputed: 0,
+            coverageMissing: 0,
+            reason: `HTTP_${summaryRes.status}`
+          });
           return;
         }
 
@@ -873,13 +908,25 @@
         if (!payload?.data) {
           if (statusEl) statusEl.textContent = 'Summary unavailable (missing data).';
           setRenderStatus('error', 'json_invalid');
+          setOpsBridge({
+            status: 'error',
+            baseline: 'fail',
+            health: 'red',
+            countFetched: 0,
+            countValidated: 0,
+            coverageComputed: 0,
+            coverageMissing: 0,
+            reason: 'JSON_INVALID'
+          });
           return;
         }
 
         setSourceLabel(options.sourceLabel || 'static');
-        renderSummary(payload);
+        const validation = renderSummary(payload);
         updateRawJson(payload, debugEnabled);
-        setRenderStatus('ok', 'rendered', payload?.meta?.asOf || payload?.metadata?.fetched_at || null);
+        const status = validation?.level === 'error' ? 'error' : 'ok';
+        const reason = validation?.level === 'error' ? (validation?.reason || 'contract_invalid') : 'rendered';
+        setRenderStatus(status, reason, payload?.meta?.asOf || payload?.metadata?.fetched_at || null);
 
         if (options.triggerLive) {
           attemptLiveRefresh({ force: options.forceLive });
@@ -887,6 +934,16 @@
       } catch (err) {
         if (statusEl) statusEl.textContent = 'Failed to load summary.';
         setRenderStatus('error', 'json_invalid');
+        setOpsBridge({
+          status: 'error',
+          baseline: 'fail',
+          health: 'red',
+          countFetched: 0,
+          countValidated: 0,
+          coverageComputed: 0,
+          coverageMissing: 0,
+          reason: 'EXCEPTION'
+        });
       }
     }
 
