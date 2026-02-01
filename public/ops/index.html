@@ -460,9 +460,25 @@
       }
     }
 
+    function isOkVerdict(value) {
+      const v = String(value || '').toUpperCase();
+      return v === 'OK' || v === 'HEALTHY' || v === 'GREEN';
+    }
+
+    function computeHealthColor(health) {
+      const statuses = Object.values(health || {}).map((h) => h?.status).filter(Boolean);
+      if (statuses.includes('CRITICAL')) return 'red';
+      if (statuses.includes('WARNING') || statuses.includes('INFO')) return 'yellow';
+      if (statuses.length) return 'green';
+      return 'unknown';
+    }
+
     function validateOpsSummary(payload) {
       if (!payload || typeof payload !== 'object') {
         return { ok: false, level: 'error', reason: 'NOT_OBJECT' };
+      }
+      if (payload.schema_version !== '3.0') {
+        return { ok: false, level: 'error', reason: 'SCHEMA_INVALID' };
       }
       const meta = payload.meta || {};
       if (typeof meta.status !== 'string') {
@@ -481,8 +497,18 @@
           return { ok: false, level: 'error', reason: `MISSING_FIELDS:${key}` };
         }
       }
-      const level = meta.status === 'error' ? 'error' : meta.status === 'degraded' ? 'degraded' : 'ok';
-      return { ok: true, level, reason: meta.reason || '' };
+      const overallVerdict =
+        payload?.data?.opsComputed?.overall?.verdict ||
+        payload?.data?.opsBaseline?.overall?.verdict ||
+        null;
+      const baselineVerdict = payload?.data?.opsBaseline?.overall?.verdict || null;
+      const reason =
+        payload?.data?.opsBaseline?.overall?.reason ||
+        payload?.data?.opsComputed?.overall?.reason ||
+        meta.reason ||
+        '';
+      const level = isOkVerdict(overallVerdict) ? 'ok' : 'degraded';
+      return { ok: true, level, reason, overallVerdict, baselineVerdict };
     }
 
     function setManualTs(ts) {
@@ -679,10 +705,13 @@
       renderSchedulerStatus(runtime);
 
       const validation = validateOpsSummary(payload);
-      const healthStatus = validation.level === 'ok' ? 'green' : validation.level === 'degraded' ? 'yellow' : 'red';
-      const baselineStatus = validation.level === 'error'
-        ? 'fail'
-        : (Number.isFinite(fetched) && Number.isFinite(validated)) ? 'ok' : 'pending';
+      const healthStatus = computeHealthColor(payload?.data?.health);
+      const baselineVerdict = validation?.baselineVerdict;
+      const baselineStatus = baselineVerdict == null
+        ? 'pending'
+        : isOkVerdict(baselineVerdict)
+          ? 'ok'
+          : 'fail';
       setOpsBridge({
         status: validation.level === 'ok' ? 'ok' : validation.level === 'degraded' ? 'degraded' : 'error',
         baseline: baselineStatus,
