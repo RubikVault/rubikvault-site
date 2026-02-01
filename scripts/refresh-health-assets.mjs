@@ -1,5 +1,6 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
+import { buildEnvelope, createValidator, loadSnapshotEnvelopeSchema } from "./lib/envelope-builder.mjs";
 
 const ROOT = process.cwd();
 const PUBLIC_DATA = path.join(ROOT, "public", "data");
@@ -169,8 +170,37 @@ async function main() {
 
   const refreshedHealth = buildV3HealthFromSeedManifest(existingHealth, seedManifest, generatedAt);
   await writeJson(healthPath, refreshedHealth);
-  await writeJson(healthDirLatestPath, refreshedHealth);
   await writeJson(healthLatestPath, refreshedHealth);
+
+  const healthBlocks = Array.isArray(refreshedHealth?.data?.blocks) ? refreshedHealth.data.blocks : [];
+  const schema = loadSnapshotEnvelopeSchema();
+  const { validate } = createValidator(schema);
+  const envelope = buildEnvelope(schema, {
+    module: "health",
+    tier: "critical",
+    domain: "system",
+    source: "health-refresh",
+    fetched_at: generatedAt,
+    published_at: generatedAt,
+    data: healthBlocks,
+    record_count: healthBlocks.length,
+    expected_count: healthBlocks.length,
+    validation: { passed: true },
+    freshness: {
+      policy: "daily",
+      expected_interval_minutes: 1440,
+      age_minutes: 0,
+      next_expected_at: generatedAt
+    }
+  });
+
+  if (!validate(envelope)) {
+    console.error("Health snapshot envelope validation failed");
+    console.error(validate.errors);
+    throw new Error("health latest.json failed schema validation");
+  }
+
+  await writeJson(healthDirLatestPath, envelope);
 
   const snapshotFiles = await listSnapshotJsonFiles(SNAPSHOTS_DIR);
   const allSnapshots = [];

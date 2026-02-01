@@ -123,77 +123,10 @@ export async function kvGetJson(env, key) {
 
 export async function kvPutJson(env, key, value, ttlSeconds) {
   const started = Date.now();
-  if (!env?.RV_ALLOW_WRITE_ON_VIEW && !env?.__RV_ALLOW_WRITE__) {
-    return { layer: "none", hit: false, durationMs: Date.now() - started };
-  }
-
-  if (env?.RV_SIMULATE_KV_429 === "1" && !globalThis[KV_SIMULATE_429_FLAG]) {
-    globalThis[KV_SIMULATE_429_FLAG] = true;
-    const err = new Error("SIMULATED_KV_429");
-    err.status = 429;
-    tripWriteFuse(env, err);
-    memSet(key, value);
-    return {
-      layer: "mem",
-      hit: false,
-      durationMs: Date.now() - started,
-      error: {
-        code: ERR_KV_WRITE_DISABLED,
-        message: "KV rate limit exceeded",
-        hash: hash8(key)
-      }
-    };
-  }
-
-  if (isWriteDisabledNow()) {
-    memSet(key, value);
-    return {
-      layer: "mem",
-      hit: false,
-      durationMs: Date.now() - started,
-      error: {
-        code: ERR_KV_WRITE_DISABLED,
-        message: "KV writes disabled",
-        hash: hash8(key)
-      }
-    };
-  }
-  const missing = !env?.RV_KV || typeof env.RV_KV['put'] !== "function";
-  if (missing) {
-    memSet(key, value);
-    return {
-      layer: "mem",
-      hit: false,
-      durationMs: Date.now() - started,
-      error: { code: ERR_BINDING_MISSING, message: "KV binding missing", hash: hash8(key) }
-    };
-  }
-  try {
-    await env.RV_KV['put'](key, JSON.stringify(value), {
-      expirationTtl: ttlSeconds
-    });
-    return { layer: "kv", hit: false, durationMs: Date.now() - started };
-  } catch (error) {
-    if (isKvRateLimitError(error)) {
-      tripWriteFuse(env, error);
-      memSet(key, value);
-      return {
-        layer: "mem",
-        hit: false,
-        durationMs: Date.now() - started,
-        error: {
-          code: ERR_KV_WRITE_DISABLED,
-          message: "KV rate limit exceeded",
-          hash: hash8(key)
-        }
-      };
-    }
-    memSet(key, value);
-    return {
-      layer: "mem",
-      hit: false,
-      durationMs: Date.now() - started,
-      error: { code: ERR_KV_WRITE, message: "KV write failed", hash: hash8(key) }
-    };
-  }
+  return {
+    layer: "none",
+    hit: false,
+    durationMs: Date.now() - started,
+    error: { code: ERR_KV_WRITE_DISABLED, message: "KV writes disabled", hash: hash8(key) }
+  };
 }

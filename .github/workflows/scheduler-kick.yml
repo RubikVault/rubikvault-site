@@ -15,13 +15,13 @@ jobs:
     steps:
       - name: Trigger scheduler
         env:
-          RV_BASE: ${{ vars.RV_PROD_BASE }}
+          RV_PROD_BASE: ${{ vars.RV_PROD_BASE }}
           RV_ADMIN_TOKEN: ${{ secrets.RV_ADMIN_TOKEN }}
         run: |
           set -euo pipefail
 
-          if [ -z "${RV_BASE:-}" ]; then
-            echo "RV_PROD_BASE is not set" >&2
+          if [ -z "${RV_PROD_BASE:-}" ]; then
+            echo "RV_PROD_BASE is not set (GitHub Actions variable)" >&2
             exit 1
           fi
           if [ -z "${RV_ADMIN_TOKEN:-}" ]; then
@@ -31,7 +31,7 @@ jobs:
 
           payload='{"job":"eod_stock","mode":"s2","universe":"nasdaq100"}'
           status=$(curl -sS -o /tmp/scheduler.json -w "%{http_code}" \
-            -X POST "${RV_BASE%/}/api/scheduler/run" \
+            -X POST "${RV_PROD_BASE%/}/api/scheduler/run" \
             -H "Content-Type: application/json" \
             -H "Authorization: Bearer ${RV_ADMIN_TOKEN}" \
             --data "$payload")

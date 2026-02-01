@@ -91,6 +91,20 @@ async function validateTechSignalsPayloads(root) {
   }
 }
 
+function validateHealthLatestSnapshot(root) {
+  const healthLatestPath = path.join(root, "public", "data", "snapshots", "health", "latest.json");
+  if (!fs.existsSync(healthLatestPath)) {
+    throw new Error("Health latest snapshot missing at public/data/snapshots/health/latest.json");
+  }
+  const payload = JSON.parse(fs.readFileSync(healthLatestPath, "utf8"));
+  if (payload?.schema_version !== "3.0") {
+    throw new Error(`Health latest snapshot schema_version must be 3.0, got: ${payload?.schema_version}`);
+  }
+  if (!payload.metadata || typeof payload.metadata !== "object") {
+    throw new Error("Health latest snapshot missing metadata object");
+  }
+}
+
 async function main() {
   const root = process.cwd();
   const schemaPath = path.join(root, "schemas", "api-envelope.schema.json");
@@ -109,6 +123,7 @@ async function main() {
   if (!validateEnvelope(sample)) {
     throw new Error("Sample envelope does not match required shape");
   }
+  validateHealthLatestSnapshot(root);
   await validateTechSignalsPayloads(root);
 
   // --- SNAPSHOT>=MIRROR guard (tech-signals + alpha-radar) ---

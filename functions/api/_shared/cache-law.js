@@ -1,4 +1,4 @@
-import { kvGetJson, kvPutJson } from "../../_lib/kv-safe.js";
+import { kvGetJson } from "../../_lib/kv-safe.js";
 
 export const DEFAULT_TTL_SECONDS = 6 * 60 * 60;
 export const SWR_MARK_TTL_SECONDS = 120;
@@ -67,18 +67,8 @@ export async function getJsonKV(env, key) {
 }
 
 export async function putJsonKV(env, key, value, ttlSeconds) {
-  if (!key) return;
-  if (typeof kvPutJson === "function") {
-    await kvPutJson(env, key, value, ttlSeconds);
-    return;
-  }
-  const kv = env?.RV_KV || null;
-  if (!kv || typeof kv.put !== "function") return;
-  try {
-    await kv.put(key, JSON.stringify(value), { expirationTtl: ttlSeconds });
-  } catch {
-    // best-effort
-  }
+  // KV writes are disabled in functions; keep cache read-only.
+  return false;
 }
 
 export async function tryMarkSWR(env, swrKey, ttlSeconds) {
@@ -86,7 +76,7 @@ export async function tryMarkSWR(env, swrKey, ttlSeconds) {
   // best-effort, not strict mutex
   const existing = await getJsonKV(env, swrKey);
   if (existing?.meta?.hit) return false;
-  await putJsonKV(env, swrKey, { marked_at: nowUtcIso() }, ttlSeconds);
+  // No write; allow refresh to proceed without lock.
   return true;
 }
 
@@ -130,7 +120,7 @@ export function createCache(env) {
         putJsonKV(env, dataKey(uuid), payload, ttlSeconds),
         putJsonKV(env, metaKey(uuid), metaOut, ttlSeconds)
       ]);
-      return { ok: true };
+      return { ok: false, reason: "KV_WRITES_DISABLED" };
     },
 
     async acquireLock(uuid, lockTtlSeconds) {
@@ -138,18 +128,11 @@ export function createCache(env) {
       const key = lockKey(uuid);
       const existing = await getJsonKV(env, key);
       if (existing?.meta?.hit) return false;
-      await putJsonKV(env, key, { locked_at: nowUtcIso() }, lockTtlSeconds);
       return true;
     },
 
     async releaseLock(uuid) {
-      if (!kv || typeof kv.delete !== "function") return false;
-      try {
-        await kv.delete(lockKey(uuid));
-        return true;
-      } catch {
-        return false;
-      }
+      return false;
     }
   };
 }

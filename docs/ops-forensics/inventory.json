@@ -123,6 +123,12 @@
       "schema": "build-info.v1 (git_sha/build_time_utc)",
       "fields": ["git_sha", "build_time_utc", "env"],
       "evidence": "public/data/build-info.json"
+    },
+    "health_snapshot_latest": {
+      "path": "public/data/snapshots/health/latest.json",
+      "schema": "snapshot-envelope.v3 (schema_version 3.0)",
+      "fields": ["schema_version", "metadata", "data", "error"],
+      "evidence": "public/data/snapshots/health/latest.json"
     }
   },
   "workflows": [

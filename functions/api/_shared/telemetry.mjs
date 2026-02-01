@@ -21,7 +21,7 @@ export function isoWeek(date = new Date()) {
 
 function hasKV(env) {
   const kv = env?.RV_KV;
-  return Boolean(kv && typeof kv.get === 'function' && typeof kv.put === 'function');
+  return Boolean(kv && typeof kv.get === 'function');
 }
 
 function safeJsonParse(raw, fallback) {

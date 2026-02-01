@@ -50,6 +50,15 @@ fi
 jq -e '(.baseline.pipeline.expected|type=="number") and (.baseline.pipeline.staticReady|type=="number")' "$DATA/ops-daily.json" >/dev/null
 pass "ops-daily baseline pipeline ok"
 
+# health snapshot latest (envelope)
+if [ -f "$DATA/snapshots/health/latest.json" ]; then
+  jq -e '(.schema_version=="3.0") and (.metadata|type=="object") and (.data|type=="array")' \
+    "$DATA/snapshots/health/latest.json" >/dev/null
+  pass "health latest snapshot envelope ok"
+else
+  warn "missing health latest snapshot envelope"
+fi
+
 # warn-only coverage (non-blocking by design)
 missing=$(jq -r '.baseline.pipeline.missing|length' "$DATA/ops-daily.json" 2>/dev/null || echo "")
 if [ -n "$missing" ] && [ "$missing" -gt 50 ]; then

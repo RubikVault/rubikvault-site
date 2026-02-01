@@ -549,7 +549,7 @@ export async function onRequestGet(context) {
   }
 
   const kv = env?.RV_KV || null;
-  const hasKV = kv && typeof kv.get === 'function' && typeof kv.put === 'function';
+  const hasKV = kv && typeof kv.get === 'function';
 
   const dash = buildDashKeys(now);
   const [dayTotal, weekTotal, monthTotal] = await Promise.all([

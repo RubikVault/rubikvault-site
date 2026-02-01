@@ -6,7 +6,7 @@ Date: 2026-02-01
 
 ### Repo identity
 - `pwd`: `/Users/michaelpuchowezki/Dev/rubikvault-site`
-- `git rev-parse HEAD`: `9ef89cb48ec555cd3b675f7ed3d4e801049638f9`
+- `git rev-parse HEAD`: `039679b` (short)
 - `git branch`: `main`
 
 ### /ops UI reads only mission-control summary
@@ -55,15 +55,24 @@ $ jq -r '.expected, .count, (.missing|length)' public/data/pipeline/nasdaq100.va
 ```
 Latest shows 100/100 fetched+validated, but stage files show count=0 and missing length=100.
 
-### ops-daily baseline pipeline fetched/validated are null
+### ops-daily baseline pipeline fetched/validated align with latest
 **Proof:** `public/data/ops-daily.json`
 ```
 $ jq -r '.baseline.pipeline.expected, .baseline.pipeline.fetched, .baseline.pipeline.validatedStored' public/data/ops-daily.json
 100
-null
-null
+100
+100
 ```
-So ops-daily (baseline) does not carry fetched/validated counts.
+Baseline now reflects canonical latest counts.
+
+### Health snapshot latest is now schema-enveloped (v3)
+**Proof:** `public/data/snapshots/health/latest.json`
+```
+schema_version: "3.0"
+metadata: { module, tier, domain, source, fetched_at, published_at, ... }
+data: [ { blockId, status, ... }, ... ]
+```
+This aligns with `schemas/snapshot-envelope.schema.json` and unblocks CI schema validation.
 
 ### build-ndx100-pipeline-truth writes stage files BEFORE trusting latest counts
 **Proof:** `scripts/pipeline/build-ndx100-pipeline-truth.mjs:231-240, 253-257`
@@ -111,13 +120,13 @@ This explains why ops-daily baseline fetched/validated are null even when latest
 
 ---
 
-### Issue B — ops-daily baseline fetched/validated are null despite latest counts
-**Observed:** `public/data/ops-daily.json` has `fetched=null` and `validatedStored=null` but `nasdaq100.latest.json` has `fetched=validated=100`.
+### Issue B — ops-daily baseline fetched/validated were null despite latest counts (fixed)
+**Observed (before fix):** `public/data/ops-daily.json` had `fetched=null` and `validatedStored=null` while `nasdaq100.latest.json` had `fetched=validated=100`.
 
 **Expected (policy in tests):** `scripts/ops/rv_verify_truth_summary.mjs` enforces summary counts equal latest counts whenever latest exists.
 **Proof:** `scripts/ops/rv_verify_truth_summary.mjs:18-33`.
 
-**Root cause (proved):** `normalizeStageCount()` converts stage count 0 + missing>=expected to `null`, and ops-daily uses stage truth before latest. Since stage files have `count=0`, `fetched` and `validatedStored` become `null`.
+**Root cause (proved):** `normalizeStageCount()` converts stage count 0 + missing>=expected to `null`, and ops-daily used stage truth before latest. Since stage files had `count=0`, `fetched` and `validatedStored` became `null`.
 
 **Proof:** `scripts/ops/build-ops-daily.mjs:86-93` and `360-371`.
 
@@ -132,7 +141,23 @@ This explains why ops-daily baseline fetched/validated are null even when latest
   - **Pros:** simpler counts; no fallback.
   - **Cons:** turns “unknown” into “0”, which is less truthful (violates Truth > Green).
 
-**Chosen fix (recommended):** Option A + Issue A.
+**Fix status:** Implemented: ops-daily now prefers latest counts when available, so baseline fetched/validated are populated.
+
+---
+
+### Issue D — Health snapshot schema mismatch (CI gate)
+**Observed:** CI schema validation expects `schema_version` + `metadata` envelope for `public/data/snapshots/*/latest.json`.
+
+**Root cause (proved):** `scripts/refresh-health-assets.mjs` writes legacy `schemaVersion` object to `public/data/snapshots/health/latest.json`.
+
+**Fix (implemented):** Generate an envelope (`schema_version: "3.0"`) for `health/latest.json` via `scripts/lib/envelope-builder.mjs`.
+
+---
+
+### Issue E — “No KV writes in functions” policy violation risk
+**Observed:** KV write paths existed in functions (cache-law/circuit/fundamentals).
+
+**Fix (implemented):** Remove/disable KV write code paths in functions and make cache/circuit persistence read-only.
 
 ---
 
@@ -193,7 +218,22 @@ If CI logs show a step writing `nasdaq100.latest.json`, capture the step and map
 
 ---
 
-## 5) PR/commit plan (minimal, ordered)
+## 5) Operator checklist (required external settings)
+
+**GitHub Actions Vars**
+- `RV_PROD_BASE`: base URL for scheduler kick (prod).
+- `PREVIEW_BASE`: optional base URL for Playwright/e2e in preview.
+
+**GitHub Actions Secrets**
+- `RV_ADMIN_TOKEN`: token used by scheduler-kick to call `/api/scheduler/run`.
+
+**Cloudflare Pages**
+- KV binding: `RV_KV` (preview + production) — read-only in functions by policy.
+- Optional analytics (summary-only): `CF_ACCOUNT_ID`, `CF_API_TOKEN` (enables worker request counts).
+
+---
+
+## 6) PR/commit plan (minimal, ordered)
 
 1. **Add build provenance artifact**
    - `scripts/ops/build-build-info.mjs`

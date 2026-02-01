@@ -1,7 +1,7 @@
 import { sha256Hex } from './_shared/digest.mjs';
 import { getTiingoKeyInfo } from './_shared/tiingo-key.mjs';
 import { fetchFmpFundamentals } from './_shared/fundamentals-fmp.mjs';
-import { kvGetJson, kvPutJson } from '../_lib/kv-safe.js';
+import { kvGetJson } from '../_lib/kv-safe.js';
 
 const MODULE_NAME = 'fundamentals';
 const TTL_SECONDS = 24 * 60 * 60;
@@ -317,9 +317,6 @@ export async function onRequestGet(context) {
   }
 
   if (upstream.ok && upstream.data) {
-    await kvPutJson(env, key, upstream.data, TTL_SECONDS);
-    await kvPutJson(env, lastGoodKey, upstream.data, 14 * 24 * 60 * 60);
-
     const wm = buildWatermark({ servedFrom: 'RUNTIME', status: 'OK', data: upstream.data });
     const payload = {
       schema_version: '3.0',

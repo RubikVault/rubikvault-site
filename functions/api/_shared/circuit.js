@@ -44,16 +44,8 @@ async function loadState(env, provider) {
 }
 
 async function saveState(env, provider, state, ttlSeconds) {
-  const kv = env?.RV_KV;
-  if (!kv || typeof kv.put !== 'function') return false;
-  try {
-    await kv.put(getKey(provider), JSON.stringify(state), {
-      expirationTtl: ttlSeconds
-    });
-    return true;
-  } catch {
-    return false;
-  }
+  // KV writes are disabled in functions; keep state ephemeral.
+  return false;
 }
 
 export async function checkCircuit(env, provider) {

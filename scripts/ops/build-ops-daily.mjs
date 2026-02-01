@@ -92,6 +92,14 @@ function normalizeStageCount(count, truthDoc, expected) {
   return value;
 }
 
+function resolveStageOrLatest(stageDoc, expected, latestValue) {
+  const latestNum = toIntOrNull(latestValue);
+  if (Number.isFinite(latestNum)) return latestNum;
+  if (!stageDoc || typeof stageDoc !== 'object') return null;
+  const stageNum = normalizeStageCount(stageDoc.count, stageDoc, expected);
+  return Number.isFinite(stageNum) ? stageNum : null;
+}
+
 async function fetchCloudflareWorkerRequests({ accountId, apiToken }) {
   if (!accountId || !apiToken) {
     return {
@@ -359,26 +367,26 @@ async function main() {
       expectedUniverse,
       pipeline: {
         expected: expectedPipeline,
-        fetched: truthFetched.ok
-          ? normalizeStageCount(truthFetched.doc.count, truthFetched.doc, expectedPipeline)
-          : pipelineLatest.ok
-            ? toIntOrNull(pipelineLatest.doc.counts?.fetched)
-            : null,
-        validatedStored: truthValidated.ok
-          ? normalizeStageCount(truthValidated.doc.count, truthValidated.doc, expectedPipeline)
-          : pipelineLatest.ok
-            ? toIntOrNull(pipelineLatest.doc.counts?.validated)
-            : null,
-        computed: truthComputed.ok
-          ? normalizeStageCount(truthComputed.doc.count, truthComputed.doc, expectedPipeline)
-          : pipelineLatest.ok
-            ? toIntOrNull(pipelineLatest.doc.counts?.computed)
-            : null,
-        staticReady: truthStaticReady.ok
-          ? normalizeStageCount(truthStaticReady.doc.count, truthStaticReady.doc, expectedPipeline)
-          : pipelineLatest.ok
-            ? toIntOrNull(pipelineLatest.doc.counts?.static_ready)
-            : null,
+        fetched: resolveStageOrLatest(
+          truthFetched.ok ? truthFetched.doc : null,
+          expectedPipeline,
+          pipelineLatest.ok ? pipelineLatest.doc.counts?.fetched : null
+        ),
+        validatedStored: resolveStageOrLatest(
+          truthValidated.ok ? truthValidated.doc : null,
+          expectedPipeline,
+          pipelineLatest.ok ? pipelineLatest.doc.counts?.validated : null
+        ),
+        computed: resolveStageOrLatest(
+          truthComputed.ok ? truthComputed.doc : null,
+          expectedPipeline,
+          pipelineLatest.ok ? pipelineLatest.doc.counts?.computed : null
+        ),
+        staticReady: resolveStageOrLatest(
+          truthStaticReady.ok ? truthStaticReady.doc : null,
+          expectedPipeline,
+          pipelineLatest.ok ? pipelineLatest.doc.counts?.static_ready : null
+        ),
         ...(pipelineReason ? { reason: pipelineReason } : {}),
         missing: pipelineMissing
       },
