@@ -1,0 +1,142 @@
+{
+  "routes": {
+    "ops_page": {
+      "path": "/ops",
+      "file": "public/ops/index.html",
+      "evidence": "public/ops/index.html:864-871"
+    },
+    "mission_control_api": {
+      "path": "/api/mission-control/summary",
+      "file": "functions/api/mission-control/summary.js",
+      "evidence": "functions/api/mission-control/summary.js:577-587"
+    }
+  },
+  "ui_components": [
+    {
+      "id": "pipeline-marketphase",
+      "source": "summary.data.pipeline.counts",
+      "file": "public/ops/index.html",
+      "evidence": "public/ops/index.html:624-647"
+    },
+    {
+      "id": "pipeline-eod",
+      "source": "summary.data.eod.counts",
+      "file": "public/ops/index.html",
+      "evidence": "public/ops/index.html:652-667"
+    },
+    {
+      "id": "truth-chain",
+      "source": "summary.data.pipeline.truth",
+      "file": "public/ops/index.html",
+      "evidence": "public/ops/index.html:678"
+    },
+    {
+      "id": "scheduler-status",
+      "source": "summary.data.runtime.schedulerExpected",
+      "file": "public/ops/index.html",
+      "evidence": "public/ops/index.html:843-858"
+    },
+    {
+      "id": "ops-bridge",
+      "source": "summary.meta/status + summary.data.pipeline.counts + summary.data.coverage",
+      "file": "public/ops/index.html",
+      "evidence": "public/ops/index.html:624-695"
+    }
+  ],
+  "summary_reads": [
+    {
+      "path": "/data/ops-daily.json",
+      "consumer": "mission-control summary",
+      "file": "functions/api/mission-control/summary.js",
+      "evidence": "functions/api/mission-control/summary.js:577-579"
+    },
+    {
+      "path": "/data/universe/nasdaq100.json",
+      "consumer": "mission-control summary",
+      "file": "functions/api/mission-control/summary.js",
+      "evidence": "functions/api/mission-control/summary.js:581-583"
+    },
+    {
+      "path": "/data/pipeline/nasdaq100.*.json",
+      "consumer": "mission-control summary",
+      "file": "functions/api/mission-control/summary.js",
+      "evidence": "functions/api/mission-control/summary.js:706-712"
+    },
+    {
+      "path": "/data/eod/manifest.latest.json",
+      "consumer": "mission-control summary",
+      "file": "functions/api/mission-control/summary.js",
+      "evidence": "functions/api/mission-control/summary.js:587,823-829"
+    },
+    {
+      "path": "/data/snapshots/market-prices/latest.json",
+      "consumer": "mission-control summary",
+      "file": "functions/api/mission-control/summary.js",
+      "evidence": "functions/api/mission-control/summary.js:832-840"
+    }
+  ],
+  "artifacts": {
+    "pipeline_latest": {
+      "path": "public/data/pipeline/nasdaq100.latest.json",
+      "schema": "pipeline.truth (counts object)",
+      "fields": ["counts.expected", "counts.fetched", "counts.validated", "counts.computed", "counts.static_ready"],
+      "evidence": "public/data/pipeline/nasdaq100.latest.json"
+    },
+    "pipeline_stage_fetched": {
+      "path": "public/data/pipeline/nasdaq100.fetched.json",
+      "schema": "pipeline.truth (expected/count/missing array)",
+      "fields": ["expected", "count", "missing"],
+      "evidence": "public/data/pipeline/nasdaq100.fetched.json"
+    },
+    "pipeline_stage_validated": {
+      "path": "public/data/pipeline/nasdaq100.validated.json",
+      "schema": "pipeline.truth (expected/count/missing array)",
+      "fields": ["expected", "count", "missing"],
+      "evidence": "public/data/pipeline/nasdaq100.validated.json"
+    },
+    "pipeline_stage_computed": {
+      "path": "public/data/pipeline/nasdaq100.computed.json",
+      "schema": "pipeline.truth (expected/count/missing array)",
+      "fields": ["expected", "count", "missing"],
+      "evidence": "public/data/pipeline/nasdaq100.computed.json"
+    },
+    "pipeline_stage_static_ready": {
+      "path": "public/data/pipeline/nasdaq100.static-ready.json",
+      "schema": "pipeline.truth (expected/count/missing array)",
+      "fields": ["expected", "count", "missing"],
+      "evidence": "public/data/pipeline/nasdaq100.static-ready.json"
+    },
+    "ops_summary": {
+      "path": "public/data/ops/summary.latest.json",
+      "schema": "ops.summary.v1",
+      "fields": ["schema_version", "ops_daily.ref"],
+      "evidence": "public/data/ops/summary.latest.json"
+    },
+    "ops_daily": {
+      "path": "public/data/ops-daily.json",
+      "schema": "ops-daily baseline",
+      "fields": ["baseline.pipeline"],
+      "evidence": "public/data/ops-daily.json"
+    },
+    "build_info": {
+      "path": "public/data/build-info.json",
+      "schema": "build-info.v1 (git_sha/build_time_utc)",
+      "fields": ["git_sha", "build_time_utc", "env"],
+      "evidence": "public/data/build-info.json"
+    }
+  },
+  "workflows": [
+    {
+      "name": "ops-daily",
+      "file": ".github/workflows/ops-daily.yml",
+      "outputs": ["public/data/pipeline/*.json", "public/data/ops/summary.latest.json", "public/data/ops-daily.json"],
+      "evidence": ".github/workflows/ops-daily.yml:1-80"
+    },
+    {
+      "name": "eod-latest",
+      "file": ".github/workflows/eod-latest.yml",
+      "outputs": ["public/data/eod/*", "public/data/ops/summary.latest.json", "public/data/ops-daily.json"],
+      "evidence": ".github/workflows/eod-latest.yml:1-80"
+    }
+  ]
+}

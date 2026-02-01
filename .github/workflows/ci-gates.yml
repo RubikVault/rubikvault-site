@@ -374,10 +374,29 @@ jobs:
           fi
           echo "═══════════════════════════════════════"
 
+  truth-gates:
+    name: OPS Truth Validation (non-blocking)
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Ensure jq
+        run: |
+          if ! command -v jq >/dev/null 2>&1; then
+            sudo apt-get update
+            sudo apt-get install -y jq
+          fi
+          jq --version
+
+      - name: Validate truth artifacts
+        run: bash scripts/ops/validate-truth.sh
+
   summary:
     name: CI Gates Summary
     runs-on: ubuntu-latest
-    needs: [asset-budget, schema-validation, manifest-integrity, repo-policies]
+    needs: [asset-budget, schema-validation, manifest-integrity, repo-policies, truth-gates]
     if: always()
     steps:
       - name: Summary
@@ -388,3 +407,4 @@ jobs:
           echo "- Schema Validation: ${{ needs.schema-validation.result }}" >> $GITHUB_STEP_SUMMARY
           echo "- Manifest Integrity: ${{ needs.manifest-integrity.result }}" >> $GITHUB_STEP_SUMMARY
           echo "- Repo Policies: ${{ needs.repo-policies.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- OPS Truth Validation: ${{ needs.truth-gates.result }}" >> $GITHUB_STEP_SUMMARY
