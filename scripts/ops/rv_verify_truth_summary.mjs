@@ -30,6 +30,27 @@ for (const key of ['platform', 'api', 'freshness', 'pipeline']) {
   }
 }
 
+const priceTruth = summary?.data?.priceTruth;
+if (!priceTruth || !Array.isArray(priceTruth.steps)) {
+  fail('priceTruth.steps missing');
+}
+const allowedPriceSteps = new Set([
+  'S0_PROVIDER_SNAPSHOT',
+  'S1_SNAPSHOT_INTEGRITY',
+  'S2_OHLC_VALIDATION',
+  'S3_FORMATTER_PARITY',
+  'S4_STATIC_ARTIFACT',
+  'S5_UI_RENDER_PROBE'
+]);
+for (const step of priceTruth.steps) {
+  if (!allowedPriceSteps.has(step.id)) {
+    fail(`priceTruth step invalid: ${step.id}`);
+  }
+}
+if (priceTruth.first_blocker_id && !allowedPriceSteps.has(priceTruth.first_blocker_id)) {
+  fail(`priceTruth first_blocker invalid: ${priceTruth.first_blocker_id}`);
+}
+
 const runtime = summary?.data?.runtime || {};
 if (runtime?.schedulerExpected === false && health?.pipeline?.status === 'CRITICAL') {
   fail('preview pipeline should not be CRITICAL solely due to cron absence');

@@ -161,6 +161,7 @@ const trace = {
   },
   artifacts: {
     sources: sourceArtifacts,
+    ui_universe_local: localArtifact('/data/universe/nasdaq100.json'),
     marketphase_local: localArtifact(`/data/marketphase/${ticker}.json`),
     marketphase_index_local: localArtifact('/data/marketphase/index.json'),
     stock_analysis_local: localArtifact('/data/snapshots/stock-analysis.json')

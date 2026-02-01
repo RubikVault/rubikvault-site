@@ -15,6 +15,9 @@ const SNAPSHOT_PATHS = [
   (moduleName) => `/data/snapshots/${moduleName}/latest.json`,
   (moduleName) => `/data/snapshots/${moduleName}.json`
 ];
+const PRICE_TRACE_TICKERS = ['UBER', 'TEAM', 'WBD'];
+const PRICE_TRACE_PATH = (ticker) => `/debug/truth-chain/${ticker}.trace.json`;
+const PRICE_CHAIN_VERSION = 'v1';
 
 let LAST_CACHE = null;
 let LAST_CACHE_AT_MS = 0;
@@ -106,6 +109,24 @@ async function fetchAssetJson(requestUrl, path, fallback = null) {
   }
 }
 
+async function fetchAssetText(requestUrl, path, fallback = null) {
+  try {
+    const url = new URL(path, requestUrl);
+    const res = await fetch(url.toString(), { cf: { cacheTtl: 30 } });
+    if (!res.ok) return { ok: false, status: res.status, text: null, json: fallback };
+    const text = await res.text();
+    let json = fallback;
+    try {
+      json = text ? JSON.parse(text) : fallback;
+    } catch {
+      json = fallback;
+    }
+    return { ok: true, status: res.status, text, json };
+  } catch {
+    return { ok: false, status: null, text: null, json: fallback };
+  }
+}
+
 function isPipelineTruthDoc(doc) {
   return doc && typeof doc === 'object' && typeof doc.universe === 'string' && 'expected' in doc && 'count' in doc && 'missing' in doc;
 }
@@ -164,6 +185,192 @@ function normalizeEodManifest(doc) {
     ok,
     generated_at: typeof doc.generated_at === 'string' ? doc.generated_at : null,
     source: '/data/eod/manifest.latest.json'
+  };
+}
+
+function formatNumberUi(value, digits = 2) {
+  const num = Number(value);
+  if (!Number.isFinite(num)) return '—';
+  return num.toLocaleString(undefined, { minimumFractionDigits: digits, maximumFractionDigits: digits });
+}
+
+function formatPercentUi(value, digits = 2) {
+  const num = Number(value);
+  if (!Number.isFinite(num)) return '—';
+  const pct = num * 100;
+  const sign = pct > 0 ? '+' : '';
+  return `${sign}${pct.toFixed(digits)}%`;
+}
+
+function formatDateUi(d) {
+  if (!d || d === '—') return '—';
+  const parts = String(d).split('-');
+  if (parts.length === 3) return `${parts[2]}-${parts[1]}-${parts[0]}`;
+  return String(d);
+}
+
+function computeUiDisplayFromTrace(trace) {
+  const latestBar = trace?.response_excerpt?.latest_bar || {};
+  const change = trace?.response_excerpt?.change || {};
+  const close = latestBar['data.latest_bar.close'];
+  const volume = latestBar['data.latest_bar.volume'];
+  const date = latestBar['data.latest_bar.date'];
+  const changeAbs = change['data.change.abs'];
+  const changePct = change['data.change.pct'];
+  return {
+    closeDisplay: close == null ? '—' : `$${formatNumberUi(close, 2)}`,
+    dayAbsDisplay: formatNumberUi(changeAbs, 2),
+    dayPctDisplay: `(${formatPercentUi(changePct, 2)})`,
+    volumeDisplay: volume == null ? '—' : Number(volume).toLocaleString(),
+    dateDisplay: formatDateUi(date)
+  };
+}
+
+function buildPriceTruthChain({ traces, universeCount, universeHash, expected, toleranceDays, nowIso }) {
+  const steps = [];
+  const traceList = traces.filter((t) => t && t.trace);
+  const hasTraces = traceList.length > 0;
+  const traceEvidence = traceList.map((t) => ({
+    ticker: t.ticker,
+    path: t.path,
+    status: t.trace?.network?.stock?.status,
+    sha256: t.trace?.network?.stock?.sha256
+  }));
+
+  const providerOk = hasTraces && traceEvidence.every((t) => t.status === 200 && t.sha256);
+  steps.push({
+    id: 'S0_PROVIDER_SNAPSHOT',
+    title: 'Provider fetch recorded',
+    status: providerOk ? 'OK' : 'ERROR',
+    evidence: {
+      traces: traceEvidence
+    },
+    detail: providerOk ? 'api/stock responses recorded in trace artifacts.' : 'Missing trace or /api/stock response hash.'
+  });
+
+  const universeOk = Number(universeCount) === Number(expected);
+  const traceUniverseHashes = traceList.map((t) => t.trace?.artifacts?.ui_universe_local?.sha256).filter(Boolean);
+  const universeHashOk = Boolean(universeHash) && traceUniverseHashes.every((h) => h === universeHash);
+  const dataDates = traceList.map((t) => t.trace?.response_excerpt?.meta?.['meta.data_date']).filter(Boolean);
+  const ages = dataDates.map((d) => {
+    const ms = parseIsoToMs(d);
+    if (!ms) return null;
+    return Math.floor((Date.now() - ms) / 86400000);
+  });
+  const maxAge = ages.filter((v) => Number.isFinite(v)).reduce((m, v) => Math.max(m, v), 0);
+  const ageOk = ages.length > 0 && ages.every((v) => v == null || v <= toleranceDays);
+
+  steps.push({
+    id: 'S1_SNAPSHOT_INTEGRITY',
+    title: 'Universe + date integrity',
+    status: universeOk && universeHashOk && ageOk ? 'OK' : 'ERROR',
+    evidence: {
+      universe_count: universeCount,
+      expected,
+      universe_sha256: universeHash,
+      trace_universe_hashes: traceUniverseHashes,
+      data_dates: dataDates,
+      max_age_days: Number.isFinite(maxAge) ? maxAge : null,
+      tolerance_days: toleranceDays
+    },
+    detail: universeOk && universeHashOk && ageOk
+      ? 'Universe count/hash match and data_date within tolerance.'
+      : 'Universe count/hash or data_date check failed.'
+  });
+
+  const ohlcIssues = [];
+  for (const t of traceList) {
+    const latest = t.trace?.response_excerpt?.latest_bar || {};
+    const change = t.trace?.response_excerpt?.change || {};
+    const close = latest['data.latest_bar.close'];
+    const volume = latest['data.latest_bar.volume'];
+    const date = latest['data.latest_bar.date'];
+    const abs = change['data.change.abs'];
+    const pct = change['data.change.pct'];
+    if (!Number.isFinite(close)) ohlcIssues.push(`${t.ticker}: close not finite`);
+    if (!Number.isFinite(volume) || Number(volume) < 0) ohlcIssues.push(`${t.ticker}: volume invalid`);
+    if (!date || !/\\d{4}-\\d{2}-\\d{2}/.test(String(date))) ohlcIssues.push(`${t.ticker}: date invalid`);
+    if (!Number.isFinite(abs) || !Number.isFinite(pct)) ohlcIssues.push(`${t.ticker}: change invalid`);
+  }
+  steps.push({
+    id: 'S2_OHLC_VALIDATION',
+    title: 'OHLC validation',
+    status: ohlcIssues.length ? 'ERROR' : 'OK',
+    evidence: ohlcIssues.length ? { issues: ohlcIssues } : { issues: [] },
+    detail: ohlcIssues.length ? 'Numeric sanity check failed.' : 'Numeric sanity check passed.'
+  });
+
+  const formatterMismatches = [];
+  for (const t of traceList) {
+    const computed = computeUiDisplayFromTrace(t.trace);
+    const final = t.trace?.final || {};
+    if (computed.closeDisplay !== final.closeDisplay) formatterMismatches.push(`${t.ticker}: close`);
+    if (computed.dayAbsDisplay !== final.dayAbsDisplay) formatterMismatches.push(`${t.ticker}: day_abs`);
+    if (computed.dayPctDisplay !== final.dayPctDisplay) formatterMismatches.push(`${t.ticker}: day_pct`);
+    if (computed.volumeDisplay !== final.volumeDisplay) formatterMismatches.push(`${t.ticker}: volume`);
+    if (computed.dateDisplay !== final.dateDisplay) formatterMismatches.push(`${t.ticker}: date`);
+  }
+  steps.push({
+    id: 'S3_FORMATTER_PARITY',
+    title: 'Formatter parity (UI ↔ OPS)',
+    status: formatterMismatches.length ? 'ERROR' : 'OK',
+    evidence: {
+      mismatches: formatterMismatches,
+      formatter_refs: traceList[0]?.trace?.ui?.formatters || null
+    },
+    detail: formatterMismatches.length ? 'Formatter parity mismatch.' : 'Formatter parity confirmed.'
+  });
+
+  const traceHashes = traceList.map((t) => ({ ticker: t.ticker, path: t.path, sha256: t.hash }));
+  steps.push({
+    id: 'S4_STATIC_ARTIFACT',
+    title: 'Static trace artifacts',
+    status: traceList.length === PRICE_TRACE_TICKERS.length ? 'OK' : 'ERROR',
+    evidence: { traces: traceHashes },
+    detail: traceList.length === PRICE_TRACE_TICKERS.length ? 'Trace artifacts present.' : 'Trace artifacts missing.'
+  });
+
+  const missingFinal = traceList.filter((t) => {
+    const f = t.trace?.final || {};
+    return [f.closeDisplay, f.dayAbsDisplay, f.dayPctDisplay, f.volumeDisplay, f.dateDisplay].some((v) => !v || v === '—');
+  });
+  steps.push({
+    id: 'S5_UI_RENDER_PROBE',
+    title: 'UI render probe',
+    status: missingFinal.length ? 'ERROR' : 'OK',
+    evidence: missingFinal.length ? { missing: missingFinal.map((t) => t.ticker) } : { samples: traceList.map((t) => t.ticker) },
+    detail: missingFinal.length ? 'UI render probe missing values.' : 'UI render probe values present.'
+  });
+
+  const firstFail = steps.find((s) => s.status !== 'OK');
+  return {
+    chain_version: PRICE_CHAIN_VERSION,
+    asOf: nowIso,
+    domain: 'prices',
+    status: firstFail ? 'ERROR' : 'OK',
+    first_blocker_id: firstFail ? firstFail.id : null,
+    steps
+  };
+}
+
+function buildFundamentalsTruthChain(traces, nowIso) {
+  const list = traces.filter((t) => t && t.trace);
+  const statuses = list.map((t) => ({ ticker: t.ticker, status: t.trace?.network?.fundamentals?.status || null }));
+  const ok = statuses.every((s) => s.status === 200);
+  return {
+    chain_version: 'v1',
+    asOf: nowIso,
+    domain: 'fundamentals',
+    status: ok ? 'INFO' : 'WARNING',
+    steps: [
+      {
+        id: 'F0_API_RESPONSE',
+        title: 'Fundamentals API response',
+        status: ok ? 'OK' : 'WARN',
+        evidence: { statuses },
+        detail: ok ? 'All sample fundamentals responses returned 200.' : 'One or more fundamentals responses missing.'
+      }
+    ]
   };
 }
 
@@ -657,6 +864,20 @@ export async function onRequestGet(context) {
   const nasdaqExpected = Array.isArray(nasdaq100Universe) ? nasdaq100Universe.length : 100;
   const expectedTradingDay = lastTradingDayIso(now);
 
+  const universeAsset = await fetchAssetText(request.url, '/data/universe/nasdaq100.json', []);
+  const universeHash = universeAsset.ok && typeof universeAsset.text === 'string' ? sha256Hex(universeAsset.text) : null;
+  const universeCount = Array.isArray(universeAsset.json) ? universeAsset.json.length : nasdaqExpected;
+
+  const traceAssets = await Promise.all(
+    PRICE_TRACE_TICKERS.map(async (ticker) => {
+      const path = PRICE_TRACE_PATH(ticker);
+      const res = await fetchAssetText(request.url, path, null);
+      const trace = res.json && typeof res.json === 'object' ? res.json : null;
+      const hash = res.ok && typeof res.text === 'string' ? sha256Hex(res.text) : null;
+      return { ticker, path, ok: res.ok, trace, hash };
+    })
+  );
+
   const usageProviders = usageReport && typeof usageReport === 'object' && usageReport.providers && typeof usageReport.providers === 'object'
     ? usageReport.providers
     : {};
@@ -833,6 +1054,16 @@ export async function onRequestGet(context) {
   const marketPricesSnapshotCheck = marketPricesSnapshot
     ? validateSnapshot(marketPricesSnapshot)
     : { valid: false, errors: ['artifact missing'] };
+
+  const priceTruth = buildPriceTruthChain({
+    traces: traceAssets,
+    universeCount,
+    universeHash,
+    expected: nasdaqExpected,
+    toleranceDays: 14,
+    nowIso: startedAtIso
+  });
+  const fundamentalsTruth = buildFundamentalsTruthChain(traceAssets, startedAtIso);
   const pricesSnapDate = (() => {
     const snap = marketPricesSnapshot;
     const d0 = Array.isArray(snap?.data) && snap.data.length ? snap.data[0] : null;
@@ -1111,6 +1342,8 @@ export async function onRequestGet(context) {
       },
       sourceMap,
       contracts,
+      priceTruth,
+      fundamentalsTruth,
       calls: { day: dayTotal.value, week: weekTotal.value, month: monthTotal.value },
       endpoints: { dayTop: endpointsDayTop },
       kvOps: { day: kvOpsDay },

@@ -83,17 +83,17 @@
     "stock": {
       "url": "https://rubikvault.com/api/stock?ticker=TEAM",
       "status": 200,
-      "sha256": "9433a1d3d8df6b8858ebdb9f5c42cbfd024ab74fbba71d3166e0eb6786f848de"
+      "sha256": "be774a8efe3df39c25077d7715d807351eb92f35b599f34816f7aa480ce650f3"
     },
     "fundamentals": {
       "url": "https://rubikvault.com/api/fundamentals?ticker=TEAM",
       "status": 200,
-      "sha256": "239559edf2c9e5219cc130f491fec2c3a8c04896e76a30a3064ad3c86458bd0f"
+      "sha256": "eb59fe6a63528205a4028ef3f90e4078887c08babde7c1e2963c06d03934445b"
     },
     "marketphase": {
       "url": "https://rubikvault.com/data/marketphase/TEAM.json",
       "status": 404,
-      "sha256": "d29273e0b6680300c577186b166b86f17abf3979918610075001a9e6d541ac63"
+      "sha256": "e6c02ffdfdf5960441a308f0e990d4a515a4a3ca23d450c02fc87bf8a83ac82b"
     },
     "stock_analysis": {
       "url": "https://rubikvault.com/data/snapshots/stock-analysis.json",
@@ -223,6 +223,14 @@
         "error": null
       }
     ],
+    "ui_universe_local": {
+      "path": "/data/universe/nasdaq100.json",
+      "local_path": "/Users/michaelpuchowezki/Dev/rubikvault-site/public/data/universe/nasdaq100.json",
+      "exists": true,
+      "sha256": "a0099fc584efd0ae58e99d47644112ff6ecda29b95a40d5be22e7dd6ebd77f75",
+      "schema_version": null,
+      "excerpt": {}
+    },
     "marketphase_local": {
       "path": "/data/marketphase/TEAM.json",
       "local_path": "/Users/michaelpuchowezki/Dev/rubikvault-site/public/data/marketphase/TEAM.json",

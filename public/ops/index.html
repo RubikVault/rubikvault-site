@@ -269,7 +269,7 @@
           </table>
         </div>
         <div class="card">
-          <div class="k" style="margin-bottom: 10px;">MarketPhase pipeline (NASDAQ-100)</div>
+          <div class="k" style="margin-bottom: 10px;">Indicators pipeline (NASDAQ-100)</div>
           <table>
             <thead>
               <tr>
@@ -316,8 +316,21 @@
         </div>
       </div>
 
+      <div class="card" style="margin-bottom: 12px;" id="truth-chain-prices-section" data-testid="truth-chain-prices">
+        <div class="k" style="margin-bottom: 10px;">Truth Chain (Prices)</div>
+        <div id="truth-chain-prices-steps" style="display: flex; flex-direction: column; gap: 6px;"></div>
+        <div id="truth-chain-prices-blocker" class="small"
+          style="margin-top: 10px; padding: 8px; border-radius: 6px; display: none;"></div>
+        <div class="small" style="margin-top: 12px; color: #94a3b8;">
+          Traces:
+          <a href="/debug/truth-chain/UBER.trace.json" style="color:#60a5fa; margin-left: 8px;">UBER</a>
+          <a href="/debug/truth-chain/TEAM.trace.json" style="color:#60a5fa; margin-left: 8px;">TEAM</a>
+          <a href="/debug/truth-chain/WBD.trace.json" style="color:#60a5fa; margin-left: 8px;">WBD</a>
+        </div>
+      </div>
+
       <div class="card" style="margin-bottom: 12px;" id="truth-chain-section" data-testid="truth-chain">
-        <div class="k" style="margin-bottom: 10px;">Truth Chain (NASDAQ-100)</div>
+        <div class="k" style="margin-bottom: 10px;">Truth Chain (Indicators)</div>
         <div id="truth-chain-steps" style="display: flex; flex-direction: column; gap: 6px;"></div>
         <div id="truth-chain-blocker" class="small"
           style="margin-top: 10px; padding: 8px; border-radius: 6px; display: none;"></div>
@@ -328,6 +341,12 @@
           <a href="/data/pipeline/missing.json" style="color:#60a5fa; margin-left: 8px;">missing.json</a>
           <a href="/data/marketphase/missing.json" style="color:#60a5fa; margin-left: 8px;">marketphase missing</a>
         </div>
+      </div>
+
+      <div class="card" style="margin-bottom: 12px;" id="truth-chain-fundamentals-section" data-testid="truth-chain-fundamentals">
+        <div class="k" style="margin-bottom: 10px;">Truth Chain (Fundamentals)</div>
+        <div id="truth-chain-fundamentals-steps" style="display: flex; flex-direction: column; gap: 6px;"></div>
+        <div class="small" style="margin-top: 10px; color: #94a3b8;">Non-blocking informational checks.</div>
       </div>
 
       <div class="grid2" style="margin-bottom: 12px;">
@@ -712,7 +731,9 @@
         health?.freshness?.age_hours != null ? `Age (hours): ${health.freshness.age_hours}` : 'Age (hours): unknown';
       document.getElementById('freshness-list').textContent = '';
 
+      renderPriceTruthChain(data?.priceTruth || null);
       renderTruthChain(data?.pipeline?.truth || null, runtime);
+      renderFundamentalsTruthChain(data?.fundamentalsTruth || null);
       renderSchedulerStatus(runtime);
 
       const validation = validateOpsSummary(payload);
@@ -933,6 +954,84 @@
         expectedEl.textContent = 'Scheduler expected: UNKNOWN';
         noteEl.textContent = `Runtime: ${hostname || 'unknown'}`;
       }
+    }
+
+    function renderPriceTruthChain(priceTruth) {
+      const stepsEl = document.getElementById('truth-chain-prices-steps');
+      const blockerEl = document.getElementById('truth-chain-prices-blocker');
+      if (!stepsEl || !blockerEl) return;
+
+      if (!priceTruth || !Array.isArray(priceTruth.steps)) {
+        stepsEl.innerHTML = '<div class="small">Price truth chain data not available</div>';
+        blockerEl.style.display = 'none';
+        return;
+      }
+
+      const firstBlocker = priceTruth.first_blocker_id || null;
+      stepsEl.dataset.firstBlocker = firstBlocker || '';
+
+      const statusIcon = (s) => {
+        if (s === 'OK') return '✅';
+        if (s === 'ERROR') return '❌';
+        return '❓';
+      };
+
+      stepsEl.innerHTML = priceTruth.steps.map(step => {
+        const isBlocker = step.id === firstBlocker;
+        const borderStyle = isBlocker ? 'border: 1px solid rgba(251, 113, 133, 0.5); background: rgba(120, 20, 30, 0.15);' : 'border: 1px solid rgba(148, 163, 184, 0.15);';
+        const detailText = typeof step.detail === 'string' ? step.detail : '';
+        let evidenceStr = '';
+        if (step.evidence && typeof step.evidence === 'object') {
+          evidenceStr = Object.entries(step.evidence)
+            .map(([k, v]) => `${k}: ${v === null ? '—' : typeof v === 'object' ? '[...]' : v}`)
+            .join(', ');
+        }
+
+        return `<div class="truth-step" data-step-id="${esc(step.id)}" data-step-status="${esc(step.status)}" style="padding: 8px 10px; border-radius: 6px; ${borderStyle} margin-bottom: 8px;">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span style="font-size: 16px;">${statusIcon(step.status)}</span>
+            <span style="font-weight: 600; font-size: 13px;">${esc(step.id)}</span>
+            <span style="flex: 1; font-size: 13px;">${esc(step.title)}</span>
+            ${isBlocker ? '<span class="pill bad">BLOCKER</span>' : ''}
+          </div>
+          ${evidenceStr ? `<div class="small" style="margin-top: 4px; color: #94a3b8;">${esc(evidenceStr)}</div>` : ''}
+          ${detailText ? `<div class="small" style="margin-top: 2px; color: #fecdd3;">${esc(detailText)}</div>` : ''}
+        </div>`;
+      }).join('');
+
+      if (firstBlocker) {
+        const blockerStep = priceTruth.steps.find(s => s.id === firstBlocker);
+        blockerEl.style.display = 'block';
+        blockerEl.style.background = 'rgba(120, 20, 30, 0.18)';
+        blockerEl.style.borderColor = 'rgba(251, 113, 133, 0.35)';
+        blockerEl.innerHTML = `<strong>First blocker:</strong> ${esc(firstBlocker)} — ${esc(blockerStep?.title || '')}`;
+      } else {
+        blockerEl.style.display = 'none';
+      }
+    }
+
+    function renderFundamentalsTruthChain(truth) {
+      const stepsEl = document.getElementById('truth-chain-fundamentals-steps');
+      if (!stepsEl) return;
+      if (!truth || !Array.isArray(truth.steps)) {
+        stepsEl.innerHTML = '<div class="small">Fundamentals checks not available.</div>';
+        return;
+      }
+      const statusIcon = (s) => {
+        if (s === 'OK') return '✅';
+        if (s === 'WARN') return '⚠️';
+        return 'ℹ️';
+      };
+      stepsEl.innerHTML = truth.steps.map(step => {
+        return `<div class="truth-step" data-step-id="${esc(step.id)}" data-step-status="${esc(step.status)}" style="padding: 8px 10px; border-radius: 6px; border: 1px solid rgba(148, 163, 184, 0.15);">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span style="font-size: 16px;">${statusIcon(step.status)}</span>
+            <span style="font-weight: 600; font-size: 13px;">${esc(step.id)}</span>
+            <span style="flex: 1; font-size: 13px;">${esc(step.title)}</span>
+          </div>
+          ${step.detail ? `<div class="small" style="margin-top: 4px; color: #94a3b8;">${esc(step.detail)}</div>` : ''}
+        </div>`;
+      }).join('');
     }
 
     async function refreshSummary(options = {}) {

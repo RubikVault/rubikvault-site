@@ -83,17 +83,17 @@
     "stock": {
       "url": "https://rubikvault.com/api/stock?ticker=WBD",
       "status": 200,
-      "sha256": "1eda468719697baaec1f7f2414c160d15edfbb2129d7e81691eb6e959485a2a8"
+      "sha256": "0eab2c524d491eb55cf9163c3959864d1cb0fcc284ca9bf48dd1e0871e72b9b4"
     },
     "fundamentals": {
       "url": "https://rubikvault.com/api/fundamentals?ticker=WBD",
       "status": 200,
-      "sha256": "dfdfd9f90ebc9ad1d8bf0b95d459ec220096fdf93999407c64e651690065ea33"
+      "sha256": "3402b299cf2fa7ca87ab5f21ad55e6ffac664e2007c21923e99c8b4a5f9391d0"
     },
     "marketphase": {
       "url": "https://rubikvault.com/data/marketphase/WBD.json",
       "status": 404,
-      "sha256": "07a28f85980db231427a8e6b245a65aef3dd174de6bbc2ee5a20b051cde8a793"
+      "sha256": "914a91eced0a82d02f850cccb74f13c83312992684d4824387252686fb8c9577"
     },
     "stock_analysis": {
       "url": "https://rubikvault.com/data/snapshots/stock-analysis.json",
@@ -223,6 +223,14 @@
         "error": null
       }
     ],
+    "ui_universe_local": {
+      "path": "/data/universe/nasdaq100.json",
+      "local_path": "/Users/michaelpuchowezki/Dev/rubikvault-site/public/data/universe/nasdaq100.json",
+      "exists": true,
+      "sha256": "a0099fc584efd0ae58e99d47644112ff6ecda29b95a40d5be22e7dd6ebd77f75",
+      "schema_version": null,
+      "excerpt": {}
+    },
     "marketphase_local": {
       "path": "/data/marketphase/WBD.json",
       "local_path": "/Users/michaelpuchowezki/Dev/rubikvault-site/public/data/marketphase/WBD.json",

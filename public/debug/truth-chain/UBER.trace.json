@@ -83,17 +83,17 @@
     "stock": {
       "url": "https://rubikvault.com/api/stock?ticker=UBER",
       "status": 200,
-      "sha256": "afa02d977276fb5a75fe0b7edb0da458f4751d560243178de93239d9d621a986"
+      "sha256": "1b8ed6a147a5cf7d73b6faefd29ac807c48ea6e53e83ec90223028e04e7b13e3"
     },
     "fundamentals": {
       "url": "https://rubikvault.com/api/fundamentals?ticker=UBER",
       "status": 200,
-      "sha256": "f1af7b1918261f70d06cffb21e67590567857430ff598cfa2cb23f6737d8be28"
+      "sha256": "9737941bff04599ee0bde8ea388386928c2657022217eedae4b1b963ba8a9f4f"
     },
     "marketphase": {
       "url": "https://rubikvault.com/data/marketphase/UBER.json",
       "status": 404,
-      "sha256": "3775d0f032f487755b08eb7cac71891e280b4ffad8bf948c1ed8d1fb34b5f208"
+      "sha256": "c8625405698df445f6cf031a88cc5a0d59dd7407b036e129ce7c093e0abcad18"
     },
     "stock_analysis": {
       "url": "https://rubikvault.com/data/snapshots/stock-analysis.json",
@@ -223,6 +223,14 @@
         "error": null
       }
     ],
+    "ui_universe_local": {
+      "path": "/data/universe/nasdaq100.json",
+      "local_path": "/Users/michaelpuchowezki/Dev/rubikvault-site/public/data/universe/nasdaq100.json",
+      "exists": true,
+      "sha256": "a0099fc584efd0ae58e99d47644112ff6ecda29b95a40d5be22e7dd6ebd77f75",
+      "schema_version": null,
+      "excerpt": {}
+    },
     "marketphase_local": {
       "path": "/data/marketphase/UBER.json",
       "local_path": "/Users/michaelpuchowezki/Dev/rubikvault-site/public/data/marketphase/UBER.json",
