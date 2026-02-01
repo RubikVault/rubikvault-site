@@ -1,0 +1,332 @@
+{
+  "ticker": "WBD",
+  "base": "https://rubikvault.com",
+  "ui": {
+    "file": "/Users/michaelpuchowezki/Dev/rubikvault-site/public/index.html",
+    "sha256": "141b65c914c6e7f71ad3216b39200cfa825f9f189a63f8989e92dda7a736c459",
+    "refs": {
+      "loadAnalyze": {
+        "line": 1448,
+        "text": "    async function loadAnalyze(ticker, options = {}) {",
+        "snippet": "    async function loadAnalyze(ticker, options = {}) {"
+      },
+      "fetchStock": {
+        "line": 1466,
+        "text": "        fetchJson(`/api/stock?ticker=${encodeURIComponent(upperTicker)}`),",
+        "snippet": "        fetchJson(`/api/stock?ticker=${encodeURIComponent(upperTicker)}`),"
+      },
+      "fetchFundamentals": {
+        "line": 1467,
+        "text": "        fetchJson(`/api/fundamentals?ticker=${encodeURIComponent(upperTicker)}${pageDebug ? '&debug=1' : ''}`)",
+        "snippet": "        fetchJson(`/api/fundamentals?ticker=${encodeURIComponent(upperTicker)}${pageDebug ? '&debug=1' : ''}`)"
+      },
+      "barLine": {
+        "line": 931,
+        "text": "      const bar = data?.latest_bar || null;",
+        "snippet": "      const bar = data?.latest_bar || null;"
+      },
+      "closeLine": {
+        "line": 932,
+        "text": "      const close = bar?.close;",
+        "snippet": "      const close = bar?.close;"
+      },
+      "changeAbsLine": {
+        "line": 935,
+        "text": "      const changeAbs = data?.change?.abs;",
+        "snippet": "      const changeAbs = data?.change?.abs;"
+      },
+      "changePctLine": {
+        "line": 936,
+        "text": "      const changePct = data?.change?.pct;",
+        "snippet": "      const changePct = data?.change?.pct;"
+      },
+      "volumeLine": {
+        "line": 933,
+        "text": "      const volume = bar?.volume;",
+        "snippet": "      const volume = bar?.volume;"
+      },
+      "dateLine": {
+        "line": 934,
+        "text": "      const date = bar?.date || '—';",
+        "snippet": "      const date = bar?.date || '—';"
+      },
+      "formatNumber": {
+        "line": 778,
+        "text": "    function formatNumber(value, options = {}) {",
+        "snippet": "    function formatNumber(value, options = {}) {"
+      },
+      "formatPercent": {
+        "line": 785,
+        "text": "    function formatPercent(value, digits = 2) {",
+        "snippet": "    function formatPercent(value, digits = 2) {"
+      },
+      "formatDate": {
+        "line": 1001,
+        "text": "      const formatDateDDMMYYYY = (d) => {",
+        "snippet": "      const formatDateDDMMYYYY = (d) => {"
+      }
+    },
+    "render_values_from": {
+      "latest_bar_close": "932:const close = bar?.close;",
+      "change_abs": "935:const changeAbs = data?.change?.abs;",
+      "change_pct": "936:const changePct = data?.change?.pct;",
+      "volume": "933:const volume = bar?.volume;",
+      "date": "934:const date = bar?.date || '—';"
+    },
+    "formatters": {
+      "formatNumber": "778:function formatNumber(value, options = {}) {",
+      "formatPercent": "785:function formatPercent(value, digits = 2) {",
+      "formatDate": "1001:const formatDateDDMMYYYY = (d) => {"
+    }
+  },
+  "network": {
+    "stock": {
+      "url": "https://rubikvault.com/api/stock?ticker=WBD",
+      "status": 200,
+      "sha256": "1eda468719697baaec1f7f2414c160d15edfbb2129d7e81691eb6e959485a2a8"
+    },
+    "fundamentals": {
+      "url": "https://rubikvault.com/api/fundamentals?ticker=WBD",
+      "status": 200,
+      "sha256": "dfdfd9f90ebc9ad1d8bf0b95d459ec220096fdf93999407c64e651690065ea33"
+    },
+    "marketphase": {
+      "url": "https://rubikvault.com/data/marketphase/WBD.json",
+      "status": 404,
+      "sha256": "07a28f85980db231427a8e6b245a65aef3dd174de6bbc2ee5a20b051cde8a793"
+    },
+    "stock_analysis": {
+      "url": "https://rubikvault.com/data/snapshots/stock-analysis.json",
+      "status": 200,
+      "sha256": "5d14a21585e436f0c2912c127b0ae7d533559812da151004d8b6c3304f0c323b"
+    },
+    "marketphase_index": {
+      "url": "https://rubikvault.com/data/marketphase/index.json",
+      "status": 200,
+      "sha256": "90855708cad6a88e0a55ae531f70971f78f58d724ae93a314fc48657f1b6a5b2"
+    }
+  },
+  "server": {
+    "stock_handler": {
+      "file": "/Users/michaelpuchowezki/Dev/rubikvault-site/functions/api/stock.js",
+      "sha256": "f59cae3e2df8a05c0a2876853e667a10354494b18df7f4bbffc4886668d2eac4",
+      "refs": {
+        "handler": {
+          "line": 326,
+          "text": "export async function onRequestGet(context) {",
+          "snippet": "export async function onRequestGet(context) {"
+        },
+        "pickLatestBar": {
+          "line": 75,
+          "text": "function pickLatestBar(bars) {",
+          "snippet": "function pickLatestBar(bars) {"
+        },
+        "computeDayChange": {
+          "line": 80,
+          "text": "function computeDayChange(bars) {",
+          "snippet": "function computeDayChange(bars) {"
+        },
+        "latestBarAssign": {
+          "line": 841,
+          "text": "  const latestBar = pickLatestBar(eodBars);",
+          "snippet": "  const latestBar = pickLatestBar(eodBars);"
+        },
+        "dayChangeAssign": {
+          "line": 842,
+          "text": "  const dayChange = computeDayChange(eodBars);",
+          "snippet": "  const dayChange = computeDayChange(eodBars);"
+        },
+        "indicatorsAssign": {
+          "line": 843,
+          "text": "  const indicatorOut = computeIndicators(eodBars);",
+          "snippet": "  const indicatorOut = computeIndicators(eodBars);"
+        }
+      }
+    },
+    "fundamentals_handler": {
+      "file": "/Users/michaelpuchowezki/Dev/rubikvault-site/functions/api/fundamentals.js",
+      "sha256": "731620d8097ba8b9443e0e8c15e5f97d191165b9edbdc003208de889a6e29fb6",
+      "refs": {
+        "handler": {
+          "line": 189,
+          "text": "export async function onRequestGet(context) {",
+          "snippet": "export async function onRequestGet(context) {"
+        },
+        "normalize": {
+          "line": 43,
+          "text": "function normalizeFundamentalsFromTiingoRow(ticker, row) {",
+          "snippet": "function normalizeFundamentalsFromTiingoRow(ticker, row) {"
+        }
+      }
+    }
+  },
+  "artifacts": {
+    "sources": [
+      {
+        "module": "universe",
+        "path": "/data/snapshots/universe/latest.json",
+        "local_path": "/Users/michaelpuchowezki/Dev/rubikvault-site/public/data/snapshots/universe/latest.json",
+        "exists": true,
+        "sha256": "9484bd4bf2da6bff67edd8da6d116ab5097c91dc0f42b6e72a2d79532f69446d",
+        "schema_version": "3.0",
+        "excerpt": {
+          "schema_version": "3.0",
+          "metadata.module": "universe"
+        },
+        "served_from": "ASSET",
+        "status": 200,
+        "error": null
+      },
+      {
+        "module": "market-prices",
+        "path": "/data/snapshots/market-prices/latest.json",
+        "local_path": "/Users/michaelpuchowezki/Dev/rubikvault-site/public/data/snapshots/market-prices/latest.json",
+        "exists": true,
+        "sha256": "073b69d578ebec7423c4a646cd50129586ae2d4bbe4c539306c76f758d6aa80b",
+        "schema_version": "3.0",
+        "excerpt": {
+          "schema_version": "3.0",
+          "metadata.module": "market-prices"
+        },
+        "served_from": "ASSET",
+        "status": 200,
+        "error": null
+      },
+      {
+        "module": "market-stats",
+        "path": "/data/snapshots/market-stats/latest.json",
+        "local_path": "/Users/michaelpuchowezki/Dev/rubikvault-site/public/data/snapshots/market-stats/latest.json",
+        "exists": true,
+        "sha256": "206e2bd7977f1aed880da32916989f05b3d565b1db0693efda6dc4bd32cabb05",
+        "schema_version": "3.0",
+        "excerpt": {
+          "schema_version": "3.0",
+          "metadata.module": "market-stats"
+        },
+        "served_from": "ASSET",
+        "status": 200,
+        "error": null
+      },
+      {
+        "module": "market-score",
+        "path": "/data/snapshots/market-score/latest.json",
+        "local_path": "/Users/michaelpuchowezki/Dev/rubikvault-site/public/data/snapshots/market-score/latest.json",
+        "exists": true,
+        "sha256": "3eb7002e8632f2a6c402a35c8f5d71098303192a74e1bbd6c877ccaaff2760ba",
+        "schema_version": "3.0",
+        "excerpt": {
+          "schema_version": "3.0",
+          "metadata.module": "market-score"
+        },
+        "served_from": "ASSET",
+        "status": 200,
+        "error": null
+      }
+    ],
+    "marketphase_local": {
+      "path": "/data/marketphase/WBD.json",
+      "local_path": "/Users/michaelpuchowezki/Dev/rubikvault-site/public/data/marketphase/WBD.json",
+      "exists": false
+    },
+    "marketphase_index_local": {
+      "path": "/data/marketphase/index.json",
+      "local_path": "/Users/michaelpuchowezki/Dev/rubikvault-site/public/data/marketphase/index.json",
+      "exists": true,
+      "sha256": "90855708cad6a88e0a55ae531f70971f78f58d724ae93a314fc48657f1b6a5b2",
+      "schema_version": null,
+      "excerpt": {
+        "meta.status": "OK",
+        "data.symbols": [
+          {
+            "symbol": "AAPL",
+            "path": "/data/marketphase/AAPL.json",
+            "updatedAt": "2026-01-18T09:43:40.637Z"
+          },
+          {
+            "symbol": "MSFT",
+            "path": "/data/marketphase/MSFT.json",
+            "updatedAt": "2026-01-18T09:43:40.638Z"
+          }
+        ]
+      }
+    },
+    "stock_analysis_local": {
+      "path": "/data/snapshots/stock-analysis.json",
+      "local_path": "/Users/michaelpuchowezki/Dev/rubikvault-site/public/data/snapshots/stock-analysis.json",
+      "exists": true,
+      "sha256": "5d14a21585e436f0c2912c127b0ae7d533559812da151004d8b6c3304f0c323b",
+      "schema_version": null,
+      "excerpt": {}
+    }
+  },
+  "transforms": [
+    {
+      "file": "/Users/michaelpuchowezki/Dev/rubikvault-site/functions/api/stock.js",
+      "fn": "pickLatestBar",
+      "line": 75
+    },
+    {
+      "file": "/Users/michaelpuchowezki/Dev/rubikvault-site/functions/api/stock.js",
+      "fn": "computeDayChange",
+      "line": 80
+    },
+    {
+      "file": "/Users/michaelpuchowezki/Dev/rubikvault-site/functions/api/stock.js",
+      "fn": "computeIndicators",
+      "line": 843
+    },
+    {
+      "file": "/Users/michaelpuchowezki/Dev/rubikvault-site/public/index.html",
+      "fn": "formatNumber",
+      "line": 778
+    },
+    {
+      "file": "/Users/michaelpuchowezki/Dev/rubikvault-site/public/index.html",
+      "fn": "formatPercent",
+      "line": 785
+    },
+    {
+      "file": "/Users/michaelpuchowezki/Dev/rubikvault-site/public/index.html",
+      "fn": "formatDateDDMMYYYY",
+      "line": 1001
+    }
+  ],
+  "response_excerpt": {
+    "meta": {
+      "meta.status": "stale",
+      "meta.data_date": "2026-01-30",
+      "meta.provider": "tiingo",
+      "meta.data_source": "snapshot",
+      "meta.mode": "DEMO",
+      "meta.asOf": null,
+      "meta.freshness": "stale"
+    },
+    "metadata": {
+      "metadata.status": "OK",
+      "metadata.served_from": "ASSET",
+      "metadata.request.ticker": "WBD",
+      "metadata.request.normalized_ticker": "WBD"
+    },
+    "latest_bar": {
+      "data.latest_bar.close": 27.54,
+      "data.latest_bar.volume": 24238625,
+      "data.latest_bar.date": "2026-01-30"
+    },
+    "change": {
+      "data.change.abs": -0.060000000000002274,
+      "data.change.pct": -0.0021739130434783433
+    }
+  },
+  "final": {
+    "close": 27.54,
+    "closeDisplay": "$27.54",
+    "dayAbs": -0.060000000000002274,
+    "dayAbsDisplay": "-0.06",
+    "dayPct": -0.0021739130434783433,
+    "dayPctDisplay": "(-0.22%)",
+    "volume": 24238625,
+    "volumeDisplay": "24,238,625",
+    "date": "2026-01-30",
+    "dateDisplay": "30-01-2026"
+  }
+}
