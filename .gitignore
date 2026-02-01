@@ -80,6 +80,10 @@ src/**
 !src/lib/freshness.ts
 # local/CI debug reports
 debug/
+# Playwright artifacts
+test-results/
+test-results/**
+.last-run.json
 # local backups (never commit)
 functions/api/_middleware.js.bak.*
 # generated / local-only

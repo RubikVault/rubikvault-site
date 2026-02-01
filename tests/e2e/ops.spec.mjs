@@ -6,6 +6,10 @@ test('ops render stamp goes ok', async ({ page }) => {
   const bridge = page.locator('#ops-bridge');
   await expect(bridge).toHaveAttribute('data-status', /ok|degraded/, { timeout: 20000 });
   await expect(bridge).toHaveAttribute('data-baseline', /ok|pending|fail/);
+  const pipelineExpected = await bridge.getAttribute('data-pipeline-expected');
+  if (pipelineExpected === 'false') {
+    await expect(page.locator('#truth-chain-steps .pill.bad')).toHaveCount(0);
+  }
 });
 
 test('ops truth-chain sections render', async ({ page }) => {
@@ -23,4 +27,9 @@ test('ops truth-chain sections render', async ({ page }) => {
   // Raw JSON panel may be collapsed/hidden by design; require it exists and is populated.
   await expect(rawPre).toBeAttached();
   await expect(rawPre).toHaveText(/schema_version|meta|data/, { timeout: 20000 });
+  const bridge = page.locator('#ops-bridge');
+  const pipelineExpected = await bridge.getAttribute('data-pipeline-expected');
+  if (pipelineExpected === 'false') {
+    await expect(page.locator('#truth-chain-steps .pill.bad')).toHaveCount(0);
+  }
 });

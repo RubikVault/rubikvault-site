@@ -168,11 +168,15 @@
       data-count-validated="0"
       data-coverage-computed="0"
       data-coverage-missing="0"
+      data-build-sha="unknown"
+      data-runtime-env="unknown"
+      data-pipeline-expected="unknown"
       data-reason=""
       style="display:none;"></div>
 
     <h1>Ops</h1>
     <div class="sub">Owner-grade view (static-first, read-only). No auto refresh.</div>
+    <div class="small mono" id="build-info">Build: unknown</div>
 
     <div class="controls card">
       <button id="btn-refresh" class="btn">Refresh (LIVE)</button>
@@ -405,6 +409,7 @@
     const renderErrorEl = document.getElementById('ops-render-error');
     const renderErrorText = document.getElementById('ops-render-error-text');
     const opsBridgeEl = document.getElementById('ops-bridge');
+    let buildInfoCache = { sha: 'unknown', time: null };
 
     function setRenderStatus(status, reason, asOf) {
       if (renderStatusEl) {
@@ -443,7 +448,10 @@
         countValidated: state.countValidated ?? 0,
         coverageComputed: state.coverageComputed ?? 0,
         coverageMissing: state.coverageMissing ?? 0,
-        reason: state.reason || ''
+        reason: state.reason || '',
+        buildSha: state.buildSha || buildInfoCache.sha || 'unknown',
+        runtimeEnv: state.runtimeEnv || 'unknown',
+        pipelineExpected: state.pipelineExpected ?? 'unknown'
       };
       const attrs = {
         'data-status': String(next.status),
@@ -453,7 +461,10 @@
         'data-count-validated': String(next.countValidated),
         'data-coverage-computed': String(next.coverageComputed),
         'data-coverage-missing': String(next.coverageMissing),
-        'data-reason': String(next.reason)
+        'data-reason': String(next.reason),
+        'data-build-sha': String(next.buildSha),
+        'data-runtime-env': String(next.runtimeEnv),
+        'data-pipeline-expected': String(next.pipelineExpected)
       };
       for (const [k, v] of Object.entries(attrs)) {
         opsBridgeEl.setAttribute(k, v);
@@ -701,7 +712,7 @@
         health?.freshness?.age_hours != null ? `Age (hours): ${health.freshness.age_hours}` : 'Age (hours): unknown';
       document.getElementById('freshness-list').textContent = '';
 
-      renderTruthChain(data?.pipeline?.truth || null);
+      renderTruthChain(data?.pipeline?.truth || null, runtime);
       renderSchedulerStatus(runtime);
 
       const validation = validateOpsSummary(payload);
@@ -720,7 +731,10 @@
         countValidated: validated ?? 0,
         coverageComputed,
         coverageMissing,
-        reason: validation.reason || ''
+        reason: validation.reason || '',
+        buildSha: buildInfoCache.sha || 'unknown',
+        runtimeEnv: runtime?.env || 'unknown',
+        pipelineExpected: runtime?.pipelineExpected ?? runtime?.expected?.pipeline ?? 'unknown'
       });
 
       const sourceEntries = data?.sourceMap?.entries || [];
@@ -806,8 +820,29 @@
       });
     }
 
+    async function loadBuildInfo() {
+      try {
+        const res = await fetch('/data/build-info.json', { cache: 'no-store' });
+        if (!res.ok) throw new Error('build-info fetch failed');
+        const payload = await res.json();
+        const sha = payload?.git_sha || payload?.env?.cf_pages_commit_sha || payload?.env?.github_sha || 'unknown';
+        const time = payload?.build_time_utc || null;
+        buildInfoCache = { sha, time };
+        const buildEl = document.getElementById('build-info');
+        if (buildEl) {
+          buildEl.textContent = time ? `Build: ${sha} • ${time}` : `Build: ${sha}`;
+        }
+        if (opsBridgeEl) {
+          opsBridgeEl.setAttribute('data-build-sha', sha);
+        }
+      } catch {
+        const buildEl = document.getElementById('build-info');
+        if (buildEl) buildEl.textContent = 'Build: unknown';
+      }
+    }
 
-    function renderTruthChain(truthDoc) {
+
+    function renderTruthChain(truthDoc, runtime) {
       const stepsEl = document.getElementById('truth-chain-steps');
       const blockerEl = document.getElementById('truth-chain-blocker');
       if (!stepsEl || !blockerEl) return;
@@ -818,13 +853,16 @@
         return;
       }
 
-      const firstBlocker = truthDoc?.first_blocker_id || truthDoc?.first_blocker?.id || null;
+      const pipelineExpected = runtime?.pipelineExpected ?? runtime?.expected?.pipeline;
+      const suppressBlocker = pipelineExpected === false;
+      const firstBlocker = suppressBlocker ? null : (truthDoc?.first_blocker_id || truthDoc?.first_blocker?.id || null);
       stepsEl.dataset.firstBlocker = firstBlocker || '';
 
       const statusIcon = (s) => {
         if (s === 'OK') return '✅';
         if (s === 'WARN') return '⚠️';
         if (s === 'FAIL') return '❌';
+        if (s === 'INFO') return 'ℹ️';
         return '❓';
       };
 
@@ -832,9 +870,16 @@
         const isBlocker = step.id === firstBlocker;
         const borderStyle = isBlocker ? 'border: 1px solid rgba(251, 113, 133, 0.5); background: rgba(120, 20, 30, 0.15);' : 'border: 1px solid rgba(148, 163, 184, 0.15);';
 
-        const detailText = typeof step.detail === 'string'
+        let detailText = typeof step.detail === 'string'
           ? step.detail
           : (typeof step.details === 'string' ? step.details : '');
+        let statusValue = step.status || 'UNKNOWN';
+        if (pipelineExpected === false && (step.id === 'S3' || step.id === 'S6')) {
+          statusValue = 'INFO';
+          detailText = detailText
+            ? `${detailText} • NOT_EXPECTED (preview)`
+            : 'NOT_EXPECTED (preview)';
+        }
         let evidenceStr = '';
         if (step.evidence && typeof step.evidence === 'object') {
           evidenceStr = Object.entries(step.evidence)
@@ -846,9 +891,9 @@
           evidenceStr = '';
         }
 
-        return `<div class="truth-step" data-step-id="${esc(step.id)}" data-step-status="${esc(step.status || 'UNKNOWN')}" style="padding: 8px 10px; border-radius: 6px; ${borderStyle} margin-bottom: 8px;">
+        return `<div class="truth-step" data-step-id="${esc(step.id)}" data-step-status="${esc(statusValue)}" style="padding: 8px 10px; border-radius: 6px; ${borderStyle} margin-bottom: 8px;">
           <div style="display: flex; align-items: center; gap: 8px;">
-            <span style="font-size: 16px;">${statusIcon(step.status)}</span>
+            <span style="font-size: 16px;">${statusIcon(statusValue)}</span>
             <span style="font-weight: 600; font-size: 13px;">${esc(step.id)}</span>
             <span style="flex: 1; font-size: 13px;">${esc(step.title)}</span>
             ${isBlocker ? '<span class="pill bad">BLOCKER</span>' : ''}
@@ -1053,6 +1098,7 @@
     }
 
     setupCopyJson();
+    loadBuildInfo();
     document.getElementById('btn-refresh').addEventListener('click', async () => {
       const now = new Date().toLocaleString();
       setManualTs(now);

@@ -9,8 +9,25 @@ permissions:
   contents: read
 
 jobs:
+  dry-run:
+    name: Scheduler Kick Dry-Run (no secrets)
+    if: ${{ vars.RV_CI_MODE == 'dry' || secrets.RV_ADMIN_TOKEN == '' || vars.RV_PROD_BASE == '' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Install deps
+        run: npm ci
+      - name: Contracts (dry-run)
+        run: npm run test:contracts
+
   kick:
-    if: github.ref == 'refs/heads/main'
+    if: ${{ github.ref == 'refs/heads/main' && vars.RV_CI_MODE != 'dry' && secrets.RV_ADMIN_TOKEN != '' && vars.RV_PROD_BASE != '' }}
     runs-on: ubuntu-latest
     steps:
       - name: Trigger scheduler

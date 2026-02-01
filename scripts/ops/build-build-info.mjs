@@ -14,7 +14,8 @@ function safeExec(cmd) {
   }
 }
 
-const gitSha = safeExec('git rev-parse HEAD');
+const envSha = process.env.CF_PAGES_COMMIT_SHA || process.env.GITHUB_SHA || null;
+const gitSha = envSha || safeExec('git rev-parse HEAD');
 const branch = safeExec('git rev-parse --abbrev-ref HEAD');
 const now = new Date().toISOString();
 
@@ -26,6 +27,8 @@ const payload = {
     ci: Boolean(process.env.CI),
     github_actions: Boolean(process.env.GITHUB_ACTIONS),
     cf_pages: Boolean(process.env.CF_PAGES),
+    cf_pages_commit_sha: process.env.CF_PAGES_COMMIT_SHA || null,
+    github_sha: process.env.GITHUB_SHA || null,
     branch
   }
 };

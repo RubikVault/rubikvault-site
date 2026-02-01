@@ -13,7 +13,25 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  dry-run:
+    name: Ops Daily Dry-Run (no secrets)
+    if: ${{ vars.RV_CI_MODE == 'dry' || secrets.CF_ACCOUNT_ID == '' || secrets.CF_API_TOKEN == '' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Install deps
+        run: npm ci
+      - name: Contracts (dry-run)
+        run: npm run test:contracts
+
   run:
+    if: ${{ vars.RV_CI_MODE != 'dry' && secrets.CF_ACCOUNT_ID != '' && secrets.CF_API_TOKEN != '' }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
