@@ -49,15 +49,15 @@ const steps = truthChain.steps;
 if (!Array.isArray(steps)) {
   fail('Truth chain steps missing or not an array');
 }
-if (steps.length !== 8) {
-  fail(`Truth chain steps length expected 8, got ${steps.length}`);
+if (steps.length !== 6) {
+  fail(`Truth chain steps length expected 6, got ${steps.length}`);
 }
 
 for (const step of steps) {
   if (!step?.id || !step?.title) {
     fail('Truth chain step missing id/title');
   }
-  if (!['OK', 'WARN', 'FAIL', 'UNKNOWN'].includes(step.status)) {
+  if (!['OK', 'WARN', 'FAIL', 'UNKNOWN', 'INFO'].includes(step.status)) {
     fail(`Truth chain step ${step.id} has invalid status ${step.status}`);
   }
   if (!step.evidence || typeof step.evidence !== 'object') {

@@ -41,6 +41,9 @@ export function validateHealthProfiles(doc) {
         }
       }
     }
+    if (profile.prices_static_required !== undefined && typeof profile.prices_static_required !== 'boolean') {
+      errors.push(`profiles.${key}.prices_static_required must be boolean`);
+    }
     if (profile.not_expected_status && !HEALTH_STATUSES.has(profile.not_expected_status)) {
       errors.push(`profiles.${key}.not_expected_status invalid`);
     }
@@ -139,4 +142,3 @@ export function trimErrors(errors, max = 8) {
   if (!Array.isArray(errors)) return [];
   return errors.slice(0, max);
 }
-

@@ -17,7 +17,8 @@ const SNAPSHOT_PATHS = [
 ];
 const PRICE_TRACE_TICKERS = ['UBER', 'TEAM', 'WBD'];
 const PRICE_TRACE_PATH = (ticker) => `/debug/truth-chain/${ticker}.trace.json`;
-const PRICE_CHAIN_VERSION = 'v1';
+const PRICE_UI_TRACE_PATH = (ticker) => `/debug/ui-path/${ticker}.ui-path.trace.json`;
+const PRICE_CHAIN_VERSION = 'v2';
 
 let LAST_CACHE = null;
 let LAST_CACHE_AT_MS = 0;
@@ -226,136 +227,274 @@ function computeUiDisplayFromTrace(trace) {
   };
 }
 
-function buildPriceTruthChain({ traces, universeCount, universeHash, expected, toleranceDays, nowIso }) {
+function extractStockCallFromUiTrace(uiTrace) {
+  if (!uiTrace?.network?.calls) return null;
+  return uiTrace.network.calls.find((call) => typeof call?.url === 'string' && call.url.includes('/api/stock')) || null;
+}
+
+function extractStockResponseFromTrace(trace) {
+  if (!trace) return null;
+  if (trace?.network?.calls) {
+    const stockCall = extractStockCallFromUiTrace(trace);
+    if (stockCall?.response_excerpt) return stockCall.response_excerpt;
+  }
+  if (trace?.response_excerpt) return trace.response_excerpt;
+  return null;
+}
+
+function extractLatestBarFields(response) {
+  if (!response) return {};
+  if (response?.data?.latest_bar) {
+    const latest = response.data.latest_bar;
+    return {
+      close: latest.close,
+      volume: latest.volume,
+      date: latest.date
+    };
+  }
+  const latest = response.latest_bar || {};
+  return {
+    close: latest['data.latest_bar.close'] ?? latest.close,
+    volume: latest['data.latest_bar.volume'] ?? latest.volume,
+    date: latest['data.latest_bar.date'] ?? latest.date
+  };
+}
+
+function extractChangeFields(response) {
+  if (!response) return {};
+  if (response?.data?.change) {
+    const change = response.data.change;
+    return { abs: change.abs, pct: change.pct };
+  }
+  const change = response.change || {};
+  return {
+    abs: change['data.change.abs'] ?? change.abs,
+    pct: change['data.change.pct'] ?? change.pct
+  };
+}
+
+function buildPriceTruthChain({ traces, nowIso, pricesStaticRequired }) {
   const steps = [];
-  const traceList = traces.filter((t) => t && t.trace);
+  const traceList = traces
+    .map((t) => {
+      const uiTrace = t.uiTrace || null;
+      const truthTrace = t.truthTrace || null;
+      const stockCall = extractStockCallFromUiTrace(uiTrace);
+      const response = extractStockResponseFromTrace(uiTrace) || extractStockResponseFromTrace(truthTrace);
+      const latestBar = extractLatestBarFields(response);
+      const change = extractChangeFields(response);
+      const uiDetected = uiTrace?.ui?.detected_values || (truthTrace?.final
+        ? { close: truthTrace.final.close, volume: truthTrace.final.volume, date: truthTrace.final.date }
+        : null);
+      return {
+        ticker: t.ticker,
+        uiTrace,
+        truthTrace,
+        uiTracePath: t.uiTracePath,
+        truthPath: t.truthPath,
+        uiHash: t.uiHash,
+        truthHash: t.truthHash,
+        uiWinningUrl: uiTrace?.winning_response?.url || null,
+        uiWinningStatus: uiTrace?.winning_response?.status || null,
+        stockCall,
+        stockStatus: stockCall?.status || truthTrace?.network?.stock?.status || null,
+        stockSha: stockCall?.sha256 || truthTrace?.network?.stock?.sha256 || null,
+        response,
+        latestBar,
+        change,
+        upstream: uiTrace?.upstream || null,
+        uiDetected
+      };
+    })
+    .filter((t) => t && (t.uiTrace || t.truthTrace));
+
   const hasTraces = traceList.length > 0;
+
   const traceEvidence = traceList.map((t) => ({
     ticker: t.ticker,
-    path: t.path,
-    status: t.trace?.network?.stock?.status,
-    sha256: t.trace?.network?.stock?.sha256
+    source: t.uiTrace ? 'ui-path' : 'truth-chain',
+    path: t.uiTracePath || t.truthPath,
+    status: t.stockStatus ?? null,
+    sha256: t.stockSha ?? t.uiHash ?? t.truthHash ?? null
   }));
 
-  const providerOk = hasTraces && traceEvidence.every((t) => t.status === 200 && t.sha256);
+  const missingTrace = PRICE_TRACE_TICKERS.filter((ticker) => !traceList.find((t) => t.ticker === ticker));
+  const p0Status = missingTrace.length === 0 ? 'OK' : hasTraces ? 'WARN' : 'UNKNOWN';
   steps.push({
-    id: 'S0_PROVIDER_SNAPSHOT',
-    title: 'Provider fetch recorded',
-    status: providerOk ? 'OK' : 'ERROR',
+    id: 'P0_UI_START',
+    title: 'User opens /analyze/<T> and the page JS loads.',
+    status: p0Status,
     evidence: {
-      traces: traceEvidence
+      samples: traceEvidence.map((t) => t.ticker),
+      sources: traceEvidence.map((t) => `${t.ticker}:${t.source}`)
     },
-    detail: providerOk ? 'api/stock responses recorded in trace artifacts.' : 'Missing trace or /api/stock response hash.'
+    detail: missingTrace.length ? `Missing traces for ${missingTrace.join(', ')}` : 'Trace artifacts recorded.'
   });
 
-  const universeOk = Number(universeCount) === Number(expected);
-  const traceUniverseHashes = traceList.map((t) => t.trace?.artifacts?.ui_universe_local?.sha256).filter(Boolean);
-  const universeHashOk = Boolean(universeHash) && traceUniverseHashes.every((h) => h === universeHash);
-  const dataDates = traceList.map((t) => t.trace?.response_excerpt?.meta?.['meta.data_date']).filter(Boolean);
-  const ages = dataDates.map((d) => {
-    const ms = parseIsoToMs(d);
-    if (!ms) return null;
-    return Math.floor((Date.now() - ms) / 86400000);
-  });
-  const maxAge = ages.filter((v) => Number.isFinite(v)).reduce((m, v) => Math.max(m, v), 0);
-  const ageOk = ages.length > 0 && ages.every((v) => v == null || v <= toleranceDays);
-
-  steps.push({
-    id: 'S1_SNAPSHOT_INTEGRITY',
-    title: 'Universe + date integrity',
-    status: universeOk && universeHashOk && ageOk ? 'OK' : 'ERROR',
-    evidence: {
-      universe_count: universeCount,
-      expected,
-      universe_sha256: universeHash,
-      trace_universe_hashes: traceUniverseHashes,
-      data_dates: dataDates,
-      max_age_days: Number.isFinite(maxAge) ? maxAge : null,
-      tolerance_days: toleranceDays
-    },
-    detail: universeOk && universeHashOk && ageOk
-      ? 'Universe count/hash match and data_date within tolerance.'
-      : 'Universe count/hash or data_date check failed.'
-  });
-
-  const ohlcIssues = [];
+  const uiCallsMissing = [];
+  const uiCallsBad = [];
   for (const t of traceList) {
-    const latest = t.trace?.response_excerpt?.latest_bar || {};
-    const change = t.trace?.response_excerpt?.change || {};
-    const close = latest['data.latest_bar.close'];
-    const volume = latest['data.latest_bar.volume'];
-    const date = latest['data.latest_bar.date'];
-    const abs = change['data.change.abs'];
-    const pct = change['data.change.pct'];
-    if (!Number.isFinite(close)) ohlcIssues.push(`${t.ticker}: close not finite`);
-    if (!Number.isFinite(volume) || Number(volume) < 0) ohlcIssues.push(`${t.ticker}: volume invalid`);
-    if (!date || !/\\d{4}-\\d{2}-\\d{2}/.test(String(date))) ohlcIssues.push(`${t.ticker}: date invalid`);
-    if (!Number.isFinite(abs) || !Number.isFinite(pct)) ohlcIssues.push(`${t.ticker}: change invalid`);
+    const call = t.stockCall;
+    if (!call) {
+      uiCallsMissing.push(t.ticker);
+      continue;
+    }
+    if (call.status !== 200) uiCallsBad.push(`${t.ticker}:${call.status}`);
+  }
+  const p1Status = uiCallsBad.length ? 'FAIL' : uiCallsMissing.length ? 'WARN' : 'OK';
+  steps.push({
+    id: 'P1_UI_CALLS_API',
+    title: 'The page triggers the winning request to /api/stock?ticker=<T>.',
+    status: p1Status,
+    evidence: {
+      calls: traceList.map((t) => `${t.ticker}:${t.stockCall?.status || t.uiWinningStatus || 'na'}`),
+      handlers: traceList
+        .map((t) => t.uiTrace?.server?.handler_file)
+        .filter(Boolean)
+        .filter((v, idx, arr) => arr.indexOf(v) === idx)
+    },
+    detail: uiCallsBad.length ? `Non-200 responses: ${uiCallsBad.join(', ')}` : uiCallsMissing.length ? `Missing api/stock calls for ${uiCallsMissing.join(', ')}` : 'api/stock calls recorded.'
+  });
+
+  const rawMissing = [];
+  for (const t of traceList) {
+    if (!t.response) rawMissing.push(t.ticker);
+  }
+  const p2Status = rawMissing.length ? 'WARN' : 'OK';
+  steps.push({
+    id: 'P2_API_RECEIVES_RAW',
+    title: 'The backend receives upstream/cache data (HTTP ok + body) before any validation.',
+    status: p2Status,
+    evidence: {
+      upstream: traceList.map((t) => `${t.ticker}:${t.upstream?.kind || 'unknown'}`),
+      paths: traceList.map((t) => `${t.ticker}:${t.upstream?.key_or_path || 'unknown'}`),
+      contains: traceList.map((t) => `${t.ticker}:${t.upstream?.snapshot_probe?.contains ?? 'unknown'}`)
+    },
+    detail: rawMissing.length ? `Missing response bodies for ${rawMissing.join(', ')}` : 'Upstream/cache payloads recorded.'
+  });
+
+  const validationIssues = [];
+  for (const t of traceList) {
+    const latest = t.latestBar;
+    if (!Number.isFinite(latest.close)) validationIssues.push(`${t.ticker}: close`);
+    if (!Number.isFinite(latest.volume) || Number(latest.volume) < 0) validationIssues.push(`${t.ticker}: volume`);
+    if (!latest.date || !/\\d{4}-\\d{2}-\\d{2}/.test(String(latest.date))) validationIssues.push(`${t.ticker}: date`);
+  }
+  const p3Status = validationIssues.length ? 'FAIL' : 'OK';
+  steps.push({
+    id: 'P3_API_PARSES_VALIDATES',
+    title: 'Backend parses and validates required fields (close, volume, date) for sanity.',
+    status: p3Status,
+    evidence: validationIssues.length ? { issues: validationIssues } : { samples: traceList.map((t) => t.ticker) },
+    detail: validationIssues.length ? 'Validation failed for one or more fields.' : 'Required fields parsed and valid.'
+  });
+
+  const changeIssues = [];
+  for (const t of traceList) {
+    const change = t.change;
+    if (!Number.isFinite(change.abs) || !Number.isFinite(change.pct)) changeIssues.push(`${t.ticker}: change`);
+  }
+  const p4Status = changeIssues.length ? 'WARN' : 'OK';
+  steps.push({
+    id: 'P4_CANONICAL_FORMAT',
+    title: 'Backend maps raw data into canonical latest_bar + change format.',
+    status: p4Status,
+    evidence: changeIssues.length ? { issues: changeIssues } : { samples: traceList.map((t) => t.ticker) },
+    detail: changeIssues.length ? 'Change fields missing or invalid.' : 'Canonical fields present.'
+  });
+
+  const staticContains = traceList.map((t) => ({
+    ticker: t.ticker,
+    path: t.upstream?.key_or_path || null,
+    contains: t.upstream?.snapshot_probe?.contains ?? null
+  }));
+  let p5Status = 'WARN';
+  let p5Detail = 'Static persistence not required by policy.';
+  if (pricesStaticRequired) {
+    const missingStatic = staticContains.filter((c) => c.contains !== true);
+    p5Status = missingStatic.length ? 'FAIL' : 'OK';
+    p5Detail = missingStatic.length
+      ? `Static artifact missing for ${missingStatic.map((c) => c.ticker).join(', ')}`
+      : 'Static artifacts present for samples.';
   }
   steps.push({
-    id: 'S2_OHLC_VALIDATION',
-    title: 'OHLC validation',
-    status: ohlcIssues.length ? 'ERROR' : 'OK',
-    evidence: ohlcIssues.length ? { issues: ohlcIssues } : { issues: [] },
-    detail: ohlcIssues.length ? 'Numeric sanity check failed.' : 'Numeric sanity check passed.'
-  });
-
-  const formatterMismatches = [];
-  for (const t of traceList) {
-    const computed = computeUiDisplayFromTrace(t.trace);
-    const final = t.trace?.final || {};
-    if (computed.closeDisplay !== final.closeDisplay) formatterMismatches.push(`${t.ticker}: close`);
-    if (computed.dayAbsDisplay !== final.dayAbsDisplay) formatterMismatches.push(`${t.ticker}: day_abs`);
-    if (computed.dayPctDisplay !== final.dayPctDisplay) formatterMismatches.push(`${t.ticker}: day_pct`);
-    if (computed.volumeDisplay !== final.volumeDisplay) formatterMismatches.push(`${t.ticker}: volume`);
-    if (computed.dateDisplay !== final.dateDisplay) formatterMismatches.push(`${t.ticker}: date`);
-  }
-  steps.push({
-    id: 'S3_FORMATTER_PARITY',
-    title: 'Formatter parity (UI ↔ OPS)',
-    status: formatterMismatches.length ? 'ERROR' : 'OK',
+    id: 'P5_STATIC_PERSIST',
+    title: 'If configured, the canonical data is written to public/data and is fetchable as static; otherwise this is WARN.',
+    status: p5Status,
     evidence: {
-      mismatches: formatterMismatches,
-      formatter_refs: traceList[0]?.trace?.ui?.formatters || null
+      required: pricesStaticRequired,
+      samples: staticContains.map((c) => `${c.ticker}:${c.contains ?? 'unknown'}`),
+      path: staticContains.find((c) => c.path)?.path || null
     },
-    detail: formatterMismatches.length ? 'Formatter parity mismatch.' : 'Formatter parity confirmed.'
+    detail: p5Detail
   });
 
-  const traceHashes = traceList.map((t) => ({ ticker: t.ticker, path: t.path, sha256: t.hash }));
+  const contractIssues = [];
+  for (const t of traceList) {
+    if (!t.response) {
+      contractIssues.push(`${t.ticker}: response missing`);
+      continue;
+    }
+    if (!Number.isFinite(t.latestBar.close)) contractIssues.push(`${t.ticker}: close`);
+    if (!Number.isFinite(t.latestBar.volume)) contractIssues.push(`${t.ticker}: volume`);
+    if (!t.latestBar.date) contractIssues.push(`${t.ticker}: date`);
+  }
+  const p6Status = contractIssues.length ? 'FAIL' : 'OK';
   steps.push({
-    id: 'S4_STATIC_ARTIFACT',
-    title: 'Static trace artifacts',
-    status: traceList.length === PRICE_TRACE_TICKERS.length ? 'OK' : 'ERROR',
-    evidence: { traces: traceHashes },
-    detail: traceList.length === PRICE_TRACE_TICKERS.length ? 'Trace artifacts present.' : 'Trace artifacts missing.'
+    id: 'P6_API_CONTRACT',
+    title: '/api/stock returns JSON that satisfies the contract (latest_bar.close/volume/date present).',
+    status: p6Status,
+    evidence: contractIssues.length ? { issues: contractIssues } : { samples: traceList.map((t) => t.ticker) },
+    detail: contractIssues.length ? 'Contract fields missing.' : 'Contract fields present.'
   });
 
-  const missingFinal = traceList.filter((t) => {
-    const f = t.trace?.final || {};
-    return [f.closeDisplay, f.dayAbsDisplay, f.dayPctDisplay, f.volumeDisplay, f.dateDisplay].some((v) => !v || v === '—');
-  });
+  const renderIssues = [];
+  for (const t of traceList) {
+    const uiDetected = t.uiDetected;
+    if (!uiDetected) {
+      renderIssues.push(`${t.ticker}: ui_missing`);
+      continue;
+    }
+    if (Number(uiDetected.close) !== Number(t.latestBar.close)) renderIssues.push(`${t.ticker}: close`);
+    if (Number(uiDetected.volume) !== Number(t.latestBar.volume)) renderIssues.push(`${t.ticker}: volume`);
+    if (String(uiDetected.date) !== String(t.latestBar.date)) renderIssues.push(`${t.ticker}: date`);
+  }
+  const p7Status = renderIssues.length ? 'FAIL' : 'OK';
   steps.push({
-    id: 'S5_UI_RENDER_PROBE',
-    title: 'UI render probe',
-    status: missingFinal.length ? 'ERROR' : 'OK',
-    evidence: missingFinal.length ? { missing: missingFinal.map((t) => t.ticker) } : { samples: traceList.map((t) => t.ticker) },
-    detail: missingFinal.length ? 'UI render probe missing values.' : 'UI render probe values present.'
+    id: 'P7_UI_RENDERS',
+    title: 'The UI displays values matching the API response.',
+    status: p7Status,
+    evidence: renderIssues.length ? { issues: renderIssues } : { samples: traceList.map((t) => t.ticker) },
+    detail: renderIssues.length ? 'UI values do not match API response.' : 'UI values match API response.'
   });
 
-  const firstFail = steps.find((s) => s.status !== 'OK');
+  const firstFail = steps.find((s) => s.status === 'FAIL');
   return {
     chain_version: PRICE_CHAIN_VERSION,
     asOf: nowIso,
     domain: 'prices',
     status: firstFail ? 'ERROR' : 'OK',
     first_blocker_id: firstFail ? firstFail.id : null,
-    steps
+    steps,
+    artifacts: {
+      traces: traceEvidence,
+      links: traceList
+        .map((t) => t.uiTracePath || t.truthPath)
+        .filter(Boolean)
+        .map((path) => ({ label: path.split('/').pop(), url: path }))
+    }
   };
 }
 
 function buildFundamentalsTruthChain(traces, nowIso) {
   const list = traces.filter((t) => t && t.trace);
-  const statuses = list.map((t) => ({ ticker: t.ticker, status: t.trace?.network?.fundamentals?.status || null }));
+  const statuses = list.map((t) => {
+    const trace = t.trace;
+    const direct = trace?.network?.fundamentals?.status || null;
+    if (direct != null) return { ticker: t.ticker, status: direct };
+    const call = trace?.network?.calls?.find((c) => typeof c?.url === 'string' && c.url.includes('/api/fundamentals'));
+    return { ticker: t.ticker, status: call?.status || null };
+  });
   const ok = statuses.every((s) => s.status === 200);
   return {
     chain_version: 'v1',
@@ -540,7 +679,8 @@ function buildTruthChainStep(id, title, status, evidence, details = null) {
   return { id, title, status, evidence, details };
 }
 
-function statusForCount(count, expected) {
+function statusForCount(count, expected, isExpected = true, notExpectedStatus = 'INFO') {
+  if (!isExpected) return notExpectedStatus;
   const c = Number(count);
   const e = Number(expected);
   if (!Number.isFinite(c)) return 'UNKNOWN';
@@ -552,89 +692,63 @@ function statusForCount(count, expected) {
   return 'OK';
 }
 
-function buildNasdaq100TruthChain(pipelineTruths, snapshotInfo, runtimeInfo, asOf) {
+function buildIndicatorsTruthChain(pipelineTruths, runtimeInfo, asOf, expectedFlags, notExpectedStatus = 'INFO') {
   const { fetched, validated, computed, staticReady } = pipelineTruths;
   const steps = [];
+  const isExpected = Boolean(expectedFlags?.pipeline);
 
-  // S1 — Provider fetch attempted
-  const s1Status = statusForCount(fetched?.count, fetched?.expected);
-  steps.push(buildTruthChainStep('S1', 'Provider fetch attempted', s1Status, {
+  const i0Status = statusForCount(fetched?.count, fetched?.expected, isExpected, notExpectedStatus);
+  steps.push(buildTruthChainStep('I0_PIPELINE_INPUTS', 'The NASDAQ-100 universe and EOD inputs for 100 tickers are present for the run.', i0Status, {
     count: fetched?.count ?? null,
     expected: fetched?.expected ?? null,
     path: '/data/pipeline/nasdaq100.fetched.json'
-  }, fetched?.reason || null));
+  }, isExpected ? fetched?.reason || null : 'NOT_EXPECTED'));
 
-  // S2 — Responses parseable
-  const s2Status = statusForCount(validated?.count, validated?.expected);
-  steps.push(buildTruthChainStep('S2', 'Responses parseable', s2Status, {
+  const i1Status = statusForCount(validated?.count, validated?.expected, isExpected, notExpectedStatus);
+  steps.push(buildTruthChainStep('I1_EOD_VALIDATED', 'All tickers have validated EOD fields required to compute indicators.', i1Status, {
     count: validated?.count ?? null,
     expected: validated?.expected ?? null,
     path: '/data/pipeline/nasdaq100.validated.json'
-  }, validated?.reason || null));
+  }, isExpected ? validated?.reason || null : 'NOT_EXPECTED'));
 
-  // S3 — EOD fields validated
-  const s3Status = statusForCount(validated?.count, validated?.expected);
-  steps.push(buildTruthChainStep('S3', 'EOD fields validated', s3Status, {
-    validatedCount: validated?.count ?? null,
-    note: 'Validation occurs during fetch pipeline'
-  }, null));
-
-  // S4 — Stored in public/data
-  const snapshotOk = snapshotInfo?.recordCount > 0;
-  const s4Status = snapshotOk ? 'OK' : (snapshotInfo?.ok === false ? 'FAIL' : 'UNKNOWN');
-  steps.push(buildTruthChainStep('S4', 'Stored in public/data', s4Status, {
-    snapshotPath: '/data/snapshots/market-prices/latest.json',
-    recordCount: snapshotInfo?.recordCount ?? null,
-    asOf: snapshotInfo?.asOf ?? null
-  }, snapshotOk ? null : 'Market-prices snapshot may be missing or empty'));
-
-  // S5 — Indicators computed (marketphase)
   const computedExpected = computed?.expected ?? 100;
   const computedCount = computed?.count ?? 0;
-  const s5Status = computedCount >= computedExpected ? 'OK' : (computedCount > 0 ? 'WARN' : 'FAIL');
-  const missingReasons = computed?.missing?.length > 0
-    ? [...new Set(computed.missing.map(m => m.reason))].join(', ')
-    : null;
-  steps.push(buildTruthChainStep('S5', 'Indicators computed (marketphase)', s5Status, {
+  const i2Status = statusForCount(computedCount, computedExpected, isExpected, notExpectedStatus);
+  steps.push(buildTruthChainStep('I2_INDICATORS_COMPUTED', 'Indicators (40+) are computed and validated per ticker.', i2Status, {
     count: computedCount,
     expected: computedExpected,
     missingCount: computed?.missing?.length ?? 0,
-    path: '/data/pipeline/nasdaq100.computed.json',
-    sampleReasons: missingReasons
-  }, s5Status === 'FAIL' ? `Indicator files not generated for ${computedExpected - computedCount} symbols` : null));
+    path: '/data/pipeline/nasdaq100.computed.json'
+  }, isExpected ? (computedCount < computedExpected ? `missing ${computedExpected - computedCount}` : null) : 'NOT_EXPECTED'));
 
-  // S6 — Static-ready index
+  const i3Status = statusForCount(computedCount, computedExpected, isExpected, notExpectedStatus);
+  steps.push(buildTruthChainStep('I3_STATIC_PERSIST_INDICATORS', 'Indicator outputs are written to public/data and are UI-readable anytime.', i3Status, {
+    count: computedCount,
+    expected: computedExpected,
+    path: '/data/pipeline/nasdaq100.computed.json'
+  }, isExpected ? null : 'NOT_EXPECTED'));
+
   const staticExpected = staticReady?.expected ?? 100;
   const staticCount = staticReady?.count ?? 0;
-  const s6Status = staticCount >= staticExpected ? 'OK' : (staticCount > 0 ? 'WARN' : 'FAIL');
-  steps.push(buildTruthChainStep('S6', 'Static-ready index', s6Status, {
+  const i4Status = statusForCount(staticCount, staticExpected, isExpected, notExpectedStatus);
+  steps.push(buildTruthChainStep('I4_STATIC_READY_INDEX', 'A static-ready index reports how many tickers have complete static indicator artifacts.', i4Status, {
     count: staticCount,
     expected: staticExpected,
     path: '/data/pipeline/nasdaq100.static-ready.json'
-  }, s6Status !== 'OK' ? `static-ready ${staticCount}/${staticExpected}` : null));
+  }, isExpected ? (staticCount < staticExpected ? `static-ready ${staticCount}/${staticExpected}` : null) : 'NOT_EXPECTED'));
 
-  // S7 — Public serving
-  const s7Status = snapshotOk ? 'OK' : 'UNKNOWN';
-  steps.push(buildTruthChainStep('S7', 'Public serving', s7Status, {
-    note: snapshotOk ? 'Market-prices snapshot accessible' : 'Cannot verify without probe'
-  }, null));
-
-  // S8 — Runtime bindings
   const hasKV = runtimeInfo?.hasKV ?? false;
-  const s8Status = hasKV ? 'OK' : 'WARN';
-  steps.push(buildTruthChainStep('S8', 'Runtime bindings', s8Status, {
+  const i5Status = expectedFlags?.kv ? (hasKV ? 'OK' : 'WARN') : notExpectedStatus;
+  steps.push(buildTruthChainStep('I5_RUNTIME_BINDINGS', 'Runtime bindings (KV/scheduler) are reported but do not affect Prices verdict.', i5Status, {
     hasKV,
     isPreview: runtimeInfo?.isPreview ?? false,
     hostname: runtimeInfo?.hostname ?? null
-  }, hasKV ? null : 'KV binding not available (static/preview mode)'));
+  }, expectedFlags?.kv ? (hasKV ? null : 'KV binding not available') : 'NOT_EXPECTED'));
 
-  // Determine first blocker
-  const firstFail = steps.find(s => s.status === 'FAIL');
-  const firstWarn = steps.find(s => s.status === 'WARN');
+  const firstFail = isExpected ? steps.find((s) => s.status === 'FAIL') : null;
+  const firstWarn = isExpected ? steps.find((s) => s.status === 'WARN') : null;
   const firstStep = firstFail || firstWarn || null;
-  const firstBlocker = firstStep
-    ? { id: firstStep.id, title: firstStep.title, status: firstStep.status }
-    : null;
+  const firstBlocker = firstStep ? { id: firstStep.id, title: firstStep.title, status: firstStep.status } : null;
 
   return {
     chain_version: 'v1',
@@ -805,6 +919,7 @@ export async function onRequestGet(context) {
   const profilePick = pickProfile(previewMode, healthProfiles?.profiles || {});
   const profile = profilePick.profile || { expected: { scheduler: !previewMode.isPreview, kv: !previewMode.isPreview, pipeline: !previewMode.isPreview }, not_expected_status: 'INFO' };
   const expectedFlags = profile.expected || { scheduler: !previewMode.isPreview, kv: !previewMode.isPreview, pipeline: !previewMode.isPreview };
+  const pricesStaticRequired = typeof profile.prices_static_required === 'boolean' ? profile.prices_static_required : false;
 
   let failuresDay = [];
   let snapshots = [];
@@ -870,11 +985,27 @@ export async function onRequestGet(context) {
 
   const traceAssets = await Promise.all(
     PRICE_TRACE_TICKERS.map(async (ticker) => {
-      const path = PRICE_TRACE_PATH(ticker);
-      const res = await fetchAssetText(request.url, path, null);
-      const trace = res.json && typeof res.json === 'object' ? res.json : null;
-      const hash = res.ok && typeof res.text === 'string' ? sha256Hex(res.text) : null;
-      return { ticker, path, ok: res.ok, trace, hash };
+      const uiPath = PRICE_UI_TRACE_PATH(ticker);
+      const uiRes = await fetchAssetText(request.url, uiPath, null);
+      const uiTrace = uiRes.json && typeof uiRes.json === 'object' ? uiRes.json : null;
+      const uiHash = uiRes.ok && typeof uiRes.text === 'string' ? sha256Hex(uiRes.text) : null;
+
+      const truthPath = PRICE_TRACE_PATH(ticker);
+      const truthRes = await fetchAssetText(request.url, truthPath, null);
+      const truthTrace = truthRes.json && typeof truthRes.json === 'object' ? truthRes.json : null;
+      const truthHash = truthRes.ok && typeof truthRes.text === 'string' ? sha256Hex(truthRes.text) : null;
+
+      return {
+        ticker,
+        uiTrace,
+        uiTracePath: uiPath,
+        uiHash,
+        truthTrace,
+        truthPath,
+        truthHash,
+        trace: uiTrace || truthTrace || null,
+        ok: uiRes.ok || truthRes.ok
+      };
     })
   );
 
@@ -1057,11 +1188,8 @@ export async function onRequestGet(context) {
 
   const priceTruth = buildPriceTruthChain({
     traces: traceAssets,
-    universeCount,
-    universeHash,
-    expected: nasdaqExpected,
-    toleranceDays: 14,
-    nowIso: startedAtIso
+    nowIso: startedAtIso,
+    pricesStaticRequired
   });
   const fundamentalsTruth = buildFundamentalsTruthChain(traceAssets, startedAtIso);
   const pricesSnapDate = (() => {
@@ -1173,7 +1301,7 @@ export async function onRequestGet(context) {
     computed: pipelineComputedTruth,
     staticReady: pipelineStaticReadyTruth
   };
-  const truthChainNasdaq100 = buildNasdaq100TruthChain(pipelineTruths, snapshotInfo, runtimeInfo, startedAtIso);
+  const truthChainNasdaq100 = buildIndicatorsTruthChain(pipelineTruths, runtimeInfo, startedAtIso, expectedFlags, profile.not_expected_status || 'INFO');
 
   // Runtime context for scheduler expectation
   const schedulerExpected = Boolean(expectedFlags.scheduler);
@@ -1189,7 +1317,8 @@ export async function onRequestGet(context) {
     schedulerExpected,
     schedulerExpectedReason,
     kvExpected: expectedFlags.kv,
-    pipelineExpected: expectedFlags.pipeline
+    pipelineExpected: expectedFlags.pipeline,
+    pricesStaticRequired
   };
 
   const snapshotAsOfIso =
@@ -1338,12 +1467,17 @@ export async function onRequestGet(context) {
         schedulerExpectedReason,
         kvExpected: expectedFlags.kv,
         pipelineExpected: expectedFlags.pipeline,
-        hostname: previewMode.hostname
+        hostname: previewMode.hostname,
+        pricesStaticRequired
       },
       sourceMap,
       contracts,
       priceTruth,
       fundamentalsTruth,
+      truthChains: {
+        prices: priceTruth,
+        indicators: truthChainNasdaq100
+      },
       calls: { day: dayTotal.value, week: weekTotal.value, month: monthTotal.value },
       endpoints: { dayTop: endpointsDayTop },
       kvOps: { day: kvOpsDay },

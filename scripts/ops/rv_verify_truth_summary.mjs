@@ -35,12 +35,14 @@ if (!priceTruth || !Array.isArray(priceTruth.steps)) {
   fail('priceTruth.steps missing');
 }
 const allowedPriceSteps = new Set([
-  'S0_PROVIDER_SNAPSHOT',
-  'S1_SNAPSHOT_INTEGRITY',
-  'S2_OHLC_VALIDATION',
-  'S3_FORMATTER_PARITY',
-  'S4_STATIC_ARTIFACT',
-  'S5_UI_RENDER_PROBE'
+  'P0_UI_START',
+  'P1_UI_CALLS_API',
+  'P2_API_RECEIVES_RAW',
+  'P3_API_PARSES_VALIDATES',
+  'P4_CANONICAL_FORMAT',
+  'P5_STATIC_PERSIST',
+  'P6_API_CONTRACT',
+  'P7_UI_RENDERS'
 ]);
 for (const step of priceTruth.steps) {
   if (!allowedPriceSteps.has(step.id)) {

@@ -323,14 +323,12 @@
           style="margin-top: 10px; padding: 8px; border-radius: 6px; display: none;"></div>
         <div class="small" style="margin-top: 12px; color: #94a3b8;">
           Traces:
-          <a href="/debug/truth-chain/UBER.trace.json" style="color:#60a5fa; margin-left: 8px;">UBER</a>
-          <a href="/debug/truth-chain/TEAM.trace.json" style="color:#60a5fa; margin-left: 8px;">TEAM</a>
-          <a href="/debug/truth-chain/WBD.trace.json" style="color:#60a5fa; margin-left: 8px;">WBD</a>
+          <a href="/debug/ui-path/UBER.ui-path.trace.json" style="color:#60a5fa; margin-left: 8px;">UBER</a>
         </div>
       </div>
 
       <div class="card" style="margin-bottom: 12px;" id="truth-chain-section" data-testid="truth-chain">
-        <div class="k" style="margin-bottom: 10px;">Truth Chain (Indicators)</div>
+        <div class="k" style="margin-bottom: 10px;">Truth Chain (Indicators/Pipeline)</div>
         <div id="truth-chain-steps" style="display: flex; flex-direction: column; gap: 6px;"></div>
         <div id="truth-chain-blocker" class="small"
           style="margin-top: 10px; padding: 8px; border-radius: 6px; display: none;"></div>
@@ -731,8 +729,8 @@
         health?.freshness?.age_hours != null ? `Age (hours): ${health.freshness.age_hours}` : 'Age (hours): unknown';
       document.getElementById('freshness-list').textContent = '';
 
-      renderPriceTruthChain(data?.priceTruth || null);
-      renderTruthChain(data?.pipeline?.truth || null, runtime);
+      renderPriceTruthChain(data?.truthChains?.prices || data?.priceTruth || null);
+      renderTruthChain(data?.truthChains?.indicators || data?.pipeline?.truth || null, runtime);
       renderFundamentalsTruthChain(data?.fundamentalsTruth || null);
       renderSchedulerStatus(runtime);
 
@@ -895,7 +893,7 @@
           ? step.detail
           : (typeof step.details === 'string' ? step.details : '');
         let statusValue = step.status || 'UNKNOWN';
-        if (pipelineExpected === false && (step.id === 'S3' || step.id === 'S6')) {
+        if (pipelineExpected === false) {
           statusValue = 'INFO';
           detailText = detailText
             ? `${detailText} • NOT_EXPECTED (preview)`
@@ -972,7 +970,9 @@
 
       const statusIcon = (s) => {
         if (s === 'OK') return '✅';
-        if (s === 'ERROR') return '❌';
+        if (s === 'FAIL') return '❌';
+        if (s === 'WARN') return '⚠️';
+        if (s === 'INFO') return 'ℹ️';
         return '❓';
       };
 
