@@ -1,0 +1,574 @@
+{
+  "presentPaths": {
+    "data.truthChains": true,
+    "truthChains": false,
+    "data.truthChains.prices": true,
+    "truthChains.prices": false
+  },
+  "extractedValues": {
+    "truthChains": {
+      "prices": {
+        "chain_version": "v2",
+        "asOf": "2026-02-02T12:10:51.460Z",
+        "domain": "prices",
+        "status": "ERROR",
+        "first_blocker_id": "P6_API_CONTRACT",
+        "steps": [
+          {
+            "id": "P0_UI_START",
+            "title": "User opens /analyze/<T> and the page JS loads.",
+            "status": "OK",
+            "evidence": {
+              "samples": [
+                "UBER",
+                "TEAM",
+                "WBD"
+              ],
+              "sources": [
+                "UBER:truth-chain",
+                "TEAM:truth-chain",
+                "WBD:truth-chain"
+              ]
+            },
+            "detail": "Trace artifacts recorded."
+          },
+          {
+            "id": "P1_UI_CALLS_API",
+            "title": "The page triggers the winning request to /api/stock?ticker=<T>.",
+            "status": "WARN",
+            "evidence": {
+              "calls": [
+                "UBER:no_trace",
+                "TEAM:no_trace",
+                "WBD:no_trace"
+              ],
+              "handlers": []
+            },
+            "detail": "Missing ui-path trace for UBER, TEAM, WBD"
+          },
+          {
+            "id": "P2_API_RECEIVES_RAW",
+            "title": "The backend receives upstream/cache data (HTTP ok + body) before any validation.",
+            "status": "OK",
+            "evidence": {
+              "upstream": [
+                "UBER:snapshot",
+                "TEAM:snapshot",
+                "WBD:snapshot"
+              ],
+              "paths": [
+                "UBER:/data/snapshots/market-prices/latest.json",
+                "TEAM:/data/snapshots/market-prices/latest.json",
+                "WBD:/data/snapshots/market-prices/latest.json"
+              ],
+              "contains": [
+                "UBER:false",
+                "TEAM:false",
+                "WBD:false"
+              ]
+            },
+            "detail": "Upstream/cache payloads recorded."
+          },
+          {
+            "id": "P3_API_PARSES_VALIDATES",
+            "title": "Backend parses and validates required fields (close, volume, date) for sanity.",
+            "status": "FAIL",
+            "evidence": {
+              "checked_path": "data.latest_bar",
+              "required_fields": [
+                "date",
+                "close",
+                "volume"
+              ],
+              "per_ticker": {
+                "UBER": {
+                  "ok": false,
+                  "missing_fields": [],
+                  "type_errors": [
+                    "date_format"
+                  ],
+                  "sample_values": null
+                },
+                "TEAM": {
+                  "ok": false,
+                  "missing_fields": [],
+                  "type_errors": [
+                    "date_format"
+                  ],
+                  "sample_values": null
+                },
+                "WBD": {
+                  "ok": false,
+                  "missing_fields": [],
+                  "type_errors": [
+                    "date_format"
+                  ],
+                  "sample_values": null
+                }
+              },
+              "issues": [
+                "UBER: date_format",
+                "TEAM: date_format",
+                "WBD: date_format"
+              ]
+            },
+            "detail": "Validation failed for one or more fields."
+          },
+          {
+            "id": "P4_CANONICAL_FORMAT",
+            "title": "Backend maps raw data into canonical latest_bar + change format.",
+            "status": "OK",
+            "evidence": {
+              "samples": [
+                "UBER",
+                "TEAM",
+                "WBD"
+              ]
+            },
+            "detail": "Canonical fields present."
+          },
+          {
+            "id": "P5_STATIC_PERSIST",
+            "title": "If configured, the canonical data is written to public/data and is fetchable as static; otherwise this is WARN.",
+            "status": "FAIL",
+            "evidence": {
+              "required": true,
+              "samples": [
+                "UBER:false",
+                "TEAM:false",
+                "WBD:false"
+              ],
+              "path": "/data/snapshots/market-prices/latest.json"
+            },
+            "detail": "Static artifact missing for UBER, TEAM, WBD"
+          },
+          {
+            "id": "P6_API_CONTRACT",
+            "title": "/api/stock returns JSON that satisfies the contract (latest_bar.close/volume/date present).",
+            "status": "FAIL",
+            "evidence": {
+              "checked_path": "data.latest_bar",
+              "required_fields": [
+                "date",
+                "close",
+                "volume"
+              ],
+              "per_ticker": {
+                "UBER": {
+                  "ok": false,
+                  "missing_fields": [],
+                  "type_errors": [
+                    "date_format"
+                  ],
+                  "sample_values": null
+                },
+                "TEAM": {
+                  "ok": false,
+                  "missing_fields": [],
+                  "type_errors": [
+                    "date_format"
+                  ],
+                  "sample_values": null
+                },
+                "WBD": {
+                  "ok": false,
+                  "missing_fields": [],
+                  "type_errors": [
+                    "date_format"
+                  ],
+                  "sample_values": null
+                }
+              },
+              "issues": [
+                "UBER: date_format",
+                "TEAM: date_format",
+                "WBD: date_format"
+              ]
+            },
+            "detail": "Contract fields missing."
+          },
+          {
+            "id": "P7_UI_RENDERS",
+            "title": "The UI displays values matching the API response.",
+            "status": "WARN",
+            "evidence": {
+              "mismatch": [],
+              "missing": [
+                "UBER: ui_missing",
+                "TEAM: ui_missing",
+                "WBD: ui_missing"
+              ]
+            },
+            "detail": "UI trace missing for current origin."
+          }
+        ],
+        "artifacts": {
+          "traces": [
+            {
+              "ticker": "UBER",
+              "source": "truth-chain",
+              "path": "/debug/truth-chain/UBER.trace.json",
+              "base_url": "https://cf4b6652.rubikvault-site.pages.dev",
+              "base_match": false,
+              "status": 200,
+              "sha256": "1b8ed6a147a5cf7d73b6faefd29ac807c48ea6e53e83ec90223028e04e7b13e3"
+            },
+            {
+              "ticker": "TEAM",
+              "source": "truth-chain",
+              "path": "/debug/truth-chain/TEAM.trace.json",
+              "base_url": null,
+              "base_match": true,
+              "status": 200,
+              "sha256": "be774a8efe3df39c25077d7715d807351eb92f35b599f34816f7aa480ce650f3"
+            },
+            {
+              "ticker": "WBD",
+              "source": "truth-chain",
+              "path": "/debug/truth-chain/WBD.trace.json",
+              "base_url": null,
+              "base_match": true,
+              "status": 200,
+              "sha256": "0eab2c524d491eb55cf9163c3959864d1cb0fcc284ca9bf48dd1e0871e72b9b4"
+            }
+          ],
+          "links": [
+            {
+              "label": "UBER.trace.json",
+              "url": "/debug/truth-chain/UBER.trace.json"
+            },
+            {
+              "label": "TEAM.trace.json",
+              "url": "/debug/truth-chain/TEAM.trace.json"
+            },
+            {
+              "label": "WBD.trace.json",
+              "url": "/debug/truth-chain/WBD.trace.json"
+            }
+          ]
+        }
+      },
+      "indicators": {
+        "chain_version": "v1",
+        "asOf": "2026-02-02T12:10:51.460Z",
+        "steps": [
+          {
+            "id": "I0_PIPELINE_INPUTS",
+            "title": "The NASDAQ-100 universe and EOD inputs for 100 tickers are present for the run.",
+            "status": "OK",
+            "evidence": {
+              "count": 100,
+              "expected": 100,
+              "path": "/data/pipeline/nasdaq100.fetched.json"
+            },
+            "details": null
+          },
+          {
+            "id": "I1_EOD_VALIDATED",
+            "title": "All tickers have validated EOD fields required to compute indicators.",
+            "status": "OK",
+            "evidence": {
+              "count": 100,
+              "expected": 100,
+              "path": "/data/pipeline/nasdaq100.validated.json"
+            },
+            "details": null
+          },
+          {
+            "id": "I2_INDICATORS_COMPUTED",
+            "title": "Indicators (40+) are computed and validated per ticker.",
+            "status": "WARN",
+            "evidence": {
+              "count": 2,
+              "expected": 100,
+              "missingCount": 98,
+              "path": "/data/pipeline/nasdaq100.computed.json"
+            },
+            "details": "missing 98"
+          },
+          {
+            "id": "I3_STATIC_PERSIST_INDICATORS",
+            "title": "Indicator outputs are written to public/data and are UI-readable anytime.",
+            "status": "WARN",
+            "evidence": {
+              "count": 2,
+              "expected": 100,
+              "path": "/data/pipeline/nasdaq100.computed.json"
+            },
+            "details": null
+          },
+          {
+            "id": "I4_STATIC_READY_INDEX",
+            "title": "A static-ready index reports how many tickers have complete static indicator artifacts.",
+            "status": "WARN",
+            "evidence": {
+              "count": 2,
+              "expected": 100,
+              "path": "/data/pipeline/nasdaq100.static-ready.json"
+            },
+            "details": "static-ready 2/100"
+          },
+          {
+            "id": "I5_RUNTIME_BINDINGS",
+            "title": "Runtime bindings (KV/scheduler) are reported but do not affect Prices verdict.",
+            "status": "OK",
+            "evidence": {
+              "hasKV": true,
+              "isPreview": false,
+              "hostname": "rubikvault.com"
+            },
+            "details": null
+          }
+        ],
+        "first_blocker": {
+          "id": "I2_INDICATORS_COMPUTED",
+          "title": "Indicators (40+) are computed and validated per ticker.",
+          "status": "WARN"
+        },
+        "first_blocker_id": "I2_INDICATORS_COMPUTED"
+      }
+    },
+    "prices": {
+      "chain_version": "v2",
+      "asOf": "2026-02-02T12:10:51.460Z",
+      "domain": "prices",
+      "status": "ERROR",
+      "first_blocker_id": "P6_API_CONTRACT",
+      "steps": [
+        {
+          "id": "P0_UI_START",
+          "title": "User opens /analyze/<T> and the page JS loads.",
+          "status": "OK",
+          "evidence": {
+            "samples": [
+              "UBER",
+              "TEAM",
+              "WBD"
+            ],
+            "sources": [
+              "UBER:truth-chain",
+              "TEAM:truth-chain",
+              "WBD:truth-chain"
+            ]
+          },
+          "detail": "Trace artifacts recorded."
+        },
+        {
+          "id": "P1_UI_CALLS_API",
+          "title": "The page triggers the winning request to /api/stock?ticker=<T>.",
+          "status": "WARN",
+          "evidence": {
+            "calls": [
+              "UBER:no_trace",
+              "TEAM:no_trace",
+              "WBD:no_trace"
+            ],
+            "handlers": []
+          },
+          "detail": "Missing ui-path trace for UBER, TEAM, WBD"
+        },
+        {
+          "id": "P2_API_RECEIVES_RAW",
+          "title": "The backend receives upstream/cache data (HTTP ok + body) before any validation.",
+          "status": "OK",
+          "evidence": {
+            "upstream": [
+              "UBER:snapshot",
+              "TEAM:snapshot",
+              "WBD:snapshot"
+            ],
+            "paths": [
+              "UBER:/data/snapshots/market-prices/latest.json",
+              "TEAM:/data/snapshots/market-prices/latest.json",
+              "WBD:/data/snapshots/market-prices/latest.json"
+            ],
+            "contains": [
+              "UBER:false",
+              "TEAM:false",
+              "WBD:false"
+            ]
+          },
+          "detail": "Upstream/cache payloads recorded."
+        },
+        {
+          "id": "P3_API_PARSES_VALIDATES",
+          "title": "Backend parses and validates required fields (close, volume, date) for sanity.",
+          "status": "FAIL",
+          "evidence": {
+            "checked_path": "data.latest_bar",
+            "required_fields": [
+              "date",
+              "close",
+              "volume"
+            ],
+            "per_ticker": {
+              "UBER": {
+                "ok": false,
+                "missing_fields": [],
+                "type_errors": [
+                  "date_format"
+                ],
+                "sample_values": null
+              },
+              "TEAM": {
+                "ok": false,
+                "missing_fields": [],
+                "type_errors": [
+                  "date_format"
+                ],
+                "sample_values": null
+              },
+              "WBD": {
+                "ok": false,
+                "missing_fields": [],
+                "type_errors": [
+                  "date_format"
+                ],
+                "sample_values": null
+              }
+            },
+            "issues": [
+              "UBER: date_format",
+              "TEAM: date_format",
+              "WBD: date_format"
+            ]
+          },
+          "detail": "Validation failed for one or more fields."
+        },
+        {
+          "id": "P4_CANONICAL_FORMAT",
+          "title": "Backend maps raw data into canonical latest_bar + change format.",
+          "status": "OK",
+          "evidence": {
+            "samples": [
+              "UBER",
+              "TEAM",
+              "WBD"
+            ]
+          },
+          "detail": "Canonical fields present."
+        },
+        {
+          "id": "P5_STATIC_PERSIST",
+          "title": "If configured, the canonical data is written to public/data and is fetchable as static; otherwise this is WARN.",
+          "status": "FAIL",
+          "evidence": {
+            "required": true,
+            "samples": [
+              "UBER:false",
+              "TEAM:false",
+              "WBD:false"
+            ],
+            "path": "/data/snapshots/market-prices/latest.json"
+          },
+          "detail": "Static artifact missing for UBER, TEAM, WBD"
+        },
+        {
+          "id": "P6_API_CONTRACT",
+          "title": "/api/stock returns JSON that satisfies the contract (latest_bar.close/volume/date present).",
+          "status": "FAIL",
+          "evidence": {
+            "checked_path": "data.latest_bar",
+            "required_fields": [
+              "date",
+              "close",
+              "volume"
+            ],
+            "per_ticker": {
+              "UBER": {
+                "ok": false,
+                "missing_fields": [],
+                "type_errors": [
+                  "date_format"
+                ],
+                "sample_values": null
+              },
+              "TEAM": {
+                "ok": false,
+                "missing_fields": [],
+                "type_errors": [
+                  "date_format"
+                ],
+                "sample_values": null
+              },
+              "WBD": {
+                "ok": false,
+                "missing_fields": [],
+                "type_errors": [
+                  "date_format"
+                ],
+                "sample_values": null
+              }
+            },
+            "issues": [
+              "UBER: date_format",
+              "TEAM: date_format",
+              "WBD: date_format"
+            ]
+          },
+          "detail": "Contract fields missing."
+        },
+        {
+          "id": "P7_UI_RENDERS",
+          "title": "The UI displays values matching the API response.",
+          "status": "WARN",
+          "evidence": {
+            "mismatch": [],
+            "missing": [
+              "UBER: ui_missing",
+              "TEAM: ui_missing",
+              "WBD: ui_missing"
+            ]
+          },
+          "detail": "UI trace missing for current origin."
+        }
+      ],
+      "artifacts": {
+        "traces": [
+          {
+            "ticker": "UBER",
+            "source": "truth-chain",
+            "path": "/debug/truth-chain/UBER.trace.json",
+            "base_url": "https://cf4b6652.rubikvault-site.pages.dev",
+            "base_match": false,
+            "status": 200,
+            "sha256": "1b8ed6a147a5cf7d73b6faefd29ac807c48ea6e53e83ec90223028e04e7b13e3"
+          },
+          {
+            "ticker": "TEAM",
+            "source": "truth-chain",
+            "path": "/debug/truth-chain/TEAM.trace.json",
+            "base_url": null,
+            "base_match": true,
+            "status": 200,
+            "sha256": "be774a8efe3df39c25077d7715d807351eb92f35b599f34816f7aa480ce650f3"
+          },
+          {
+            "ticker": "WBD",
+            "source": "truth-chain",
+            "path": "/debug/truth-chain/WBD.trace.json",
+            "base_url": null,
+            "base_match": true,
+            "status": 200,
+            "sha256": "0eab2c524d491eb55cf9163c3959864d1cb0fcc284ca9bf48dd1e0871e72b9b4"
+          }
+        ],
+        "links": [
+          {
+            "label": "UBER.trace.json",
+            "url": "/debug/truth-chain/UBER.trace.json"
+          },
+          {
+            "label": "TEAM.trace.json",
+            "url": "/debug/truth-chain/TEAM.trace.json"
+          },
+          {
+            "label": "WBD.trace.json",
+            "url": "/debug/truth-chain/WBD.trace.json"
+          }
+        ]
+      }
+    }
+  },
+  "violations": []
+}

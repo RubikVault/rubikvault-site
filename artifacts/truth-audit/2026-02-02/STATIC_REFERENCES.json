@@ -1,0 +1,3954 @@
+[
+  {
+    "token": "/ops/",
+    "file": "AI_CONTEXT.md",
+    "line": 14,
+    "col": 7,
+    "lineText": "- `docs/ops/contract.md`",
+    "lineHash": "ee88bc2f"
+  },
+  {
+    "token": "/ops/",
+    "file": "AI_CONTEXT.md",
+    "line": 15,
+    "col": 7,
+    "lineText": "- `docs/ops/runbook.md`",
+    "lineHash": "a7b31a74"
+  },
+  {
+    "token": "/ops/",
+    "file": "AI_CONTEXT.md",
+    "line": 16,
+    "col": 7,
+    "lineText": "- `docs/ops/architecture.md`",
+    "lineHash": "16c14539"
+  },
+  {
+    "token": "/ops/",
+    "file": "AI_CONTEXT.md",
+    "line": 17,
+    "col": 7,
+    "lineText": "- `docs/ops/decisions.md`",
+    "lineHash": "186e2c2f"
+  },
+  {
+    "token": "/analyze/",
+    "file": "COMPLIANCE_AUDIT.md",
+    "line": 62,
+    "col": 16,
+    "lineText": "- ✅ Deep Links (/analyze/:ticker)",
+    "lineHash": "b7dff571"
+  },
+  {
+    "token": "/analyze/",
+    "file": "NATIVE_APP_GUIDE.md",
+    "line": 247,
+    "col": 55,
+    "lineText": "- iOS: Open Safari → `https://rubikvault-site.pages.dev/analyze/AAPL`",
+    "lineHash": "d30efb13"
+  },
+  {
+    "token": "/analyze/",
+    "file": "NATIVE_APP_GUIDE.md",
+    "line": 286,
+    "col": 34,
+    "lineText": "- [ ] Deep links open correctly (`/analyze/AAPL`)",
+    "lineHash": "4d1461fa"
+  },
+  {
+    "token": "/analyze/",
+    "file": "NATIVE_APP_GUIDE.md",
+    "line": 392,
+    "col": 22,
+    "lineText": "3. Share deep links (`/analyze/AAPL`)",
+    "lineHash": "f20f234a"
+  },
+  {
+    "token": "/analyze/",
+    "file": "README.md",
+    "line": 40,
+    "col": 38,
+    "lineText": "- ✅ **Deep Links**: Share stocks via `/analyze/AAPL`",
+    "lineHash": "9688eedf"
+  },
+  {
+    "token": "/ops/",
+    "file": "docs/OPS_WORKFLOW_SAFETY.md",
+    "line": 30,
+    "col": 10,
+    "lineText": "- `scripts/ops/verify-ops-pipeline.mjs`",
+    "lineHash": "b4d49e28"
+  },
+  {
+    "token": "/ops/",
+    "file": "docs/OPS_WORKFLOW_SAFETY.md",
+    "line": 46,
+    "col": 12,
+    "lineText": "node scripts/ops/build-mission-control-summary.mjs",
+    "lineHash": "23950cc9"
+  },
+  {
+    "token": "/ops/",
+    "file": "docs/OPS_WORKFLOW_SAFETY.md",
+    "line": 47,
+    "col": 12,
+    "lineText": "node scripts/ops/build-ops-daily.mjs",
+    "lineHash": "41270c15"
+  },
+  {
+    "token": "/ops/",
+    "file": "docs/OPS_WORKFLOW_SAFETY.md",
+    "line": 50,
+    "col": 12,
+    "lineText": "node scripts/ops/verify-ops-pipeline.mjs",
+    "lineHash": "b8fee3bf"
+  },
+  {
+    "token": "/ops/",
+    "file": "docs/OPS_WORKFLOW_SAFETY.md",
+    "line": 53,
+    "col": 47,
+    "lineText": "git add public/data/pipeline/*.json public/data/ops/summary.latest.json public/data/ops-daily.json",
+    "lineHash": "ddfa9435"
+  },
+  {
+    "token": "/ops/",
+    "file": "docs/OPS_WORKFLOW_SAFETY.md",
+    "line": 69,
+    "col": 58,
+    "lineText": "- Run `VERIFY_BASE_URL=https://rubikvault.com node scripts/ops/verify-ops-pipeline.mjs`",
+    "lineHash": "9f57df0d"
+  },
+  {
+    "token": "/ops/",
+    "file": "docs/OPS_WORKFLOW_SAFETY.md",
+    "line": 76,
+    "col": 26,
+    "lineText": "1. **Primary:** Try `/data/ops/summary.latest.json` (static artifact)",
+    "lineHash": "ba8f3347"
+  },
+  {
+    "token": "/api/mission-control/summary",
+    "file": "docs/OPS_WORKFLOW_SAFETY.md",
+    "line": 77,
+    "col": 30,
+    "lineText": "2. **Fallback:** If 404, use `/api/mission-control/summary` (live API)",
+    "lineHash": "7e520351"
+  },
+  {
+    "token": "/ops/",
+    "file": "docs/architecture/data-layout-law-v1.md",
+    "line": 17,
+    "col": 9,
+    "lineText": "- scripts/ops/build-ops-daily.mjs MUST NOT do directory discovery (no readdir/glob/walk). Only explicit filenames are allowed.",
+    "lineHash": "a80586dd"
+  },
+  {
+    "token": "/ops/",
+    "file": "docs/architecture/data-layout-law-v1.md",
+    "line": 23,
+    "col": 16,
+    "lineText": "- node scripts/ops/build-ops-daily.mjs",
+    "lineHash": "5747d304"
+  },
+  {
+    "token": "/ops/",
+    "file": "docs/architecture/data-layout-law-v1.md",
+    "line": 30,
+    "col": 44,
+    "lineText": "- rg -n \"readdir|glob|walk|dirent\" scripts/ops/build-ops-daily.mjs",
+    "lineHash": "f7ef6756"
+  },
+  {
+    "token": "/ops/",
+    "file": "docs/architecture/ops-trust-layer.md",
+    "line": 6,
+    "col": 8,
+    "lineText": "- public/ops/usage.html",
+    "lineHash": "05c6ab94"
+  },
+  {
+    "token": "/ops/",
+    "file": "docs/ops/OPS_PAGE_FIX_SUMMARY.md",
+    "line": 1,
+    "col": 2,
+    "lineText": "# /ops/ Page Fix Summary",
+    "lineHash": "611e8dfe"
+  },
+  {
+    "token": "/ops/",
+    "file": "docs/ops/OPS_PAGE_FIX_SUMMARY.md",
+    "line": 4,
+    "col": 100,
+    "lineText": "**Issue**: Debug/Log health information not displaying on https://17c63acc.rubikvault-site.pages.dev/ops/",
+    "lineHash": "215a2a8a"
+  },
+  {
+    "token": "/ops/",
+    "file": "docs/ops/OPS_PAGE_FIX_SUMMARY.md",
+    "line": 14,
+    "col": 30,
+    "lineText": "1. **Static Fallback** (`/data/ops/summary.latest.json`):",
+    "lineHash": "f0f0be1c"
+  },
+  {
+    "token": "/ops/",
+    "file": "docs/ops/OPS_PAGE_FIX_SUMMARY.md",
+    "line": 17,
+    "col": 26,
+    "lineText": "- Generated by `scripts/ops/build-mission-control-summary.mjs`",
+    "lineHash": "bdf44dfc"
+  },
+  {
+    "token": "/api/mission-control/summary",
+    "file": "docs/ops/OPS_PAGE_FIX_SUMMARY.md",
+    "line": 19,
+    "col": 22,
+    "lineText": "2. **API Response** (`/api/mission-control/summary`):",
+    "lineHash": "aceb5289"
+  },
+  {
+    "token": "/api/mission-control/summary",
+    "file": "docs/ops/OPS_PAGE_FIX_SUMMARY.md",
+    "line": 22,
+    "col": 28,
+    "lineText": "- Generated by `functions/api/mission-control/summary.js`",
+    "lineHash": "fa597a91"
+  },
+  {
+    "token": "/ops/",
+    "file": "docs/ops/OPS_PAGE_FIX_SUMMARY.md",
+    "line": 24,
+    "col": 36,
+    "lineText": "3. **Frontend Expectation** (`public/ops/index.html`):",
+    "lineHash": "265a2476"
+  },
+  {
+    "token": "/ops/",
+    "file": "docs/ops/OPS_PAGE_FIX_SUMMARY.md",
+    "line": 34,
+    "col": 18,
+    "lineText": "**File**: `scripts/ops/build-mission-control-summary.mjs`",
+    "lineHash": "a00f8e3a"
+  },
+  {
+    "token": "/ops/",
+    "file": "docs/ops/OPS_PAGE_FIX_SUMMARY.md",
+    "line": 47,
+    "col": 17,
+    "lineText": "**File**: `public/ops/index.html`",
+    "lineHash": "f2b32036"
+  },
+  {
+    "token": "/api/mission-control/summary",
+    "file": "docs/ops/OPS_PAGE_FIX_SUMMARY.md",
+    "line": 60,
+    "col": 20,
+    "lineText": "**File**: `functions/api/mission-control/summary.js`",
+    "lineHash": "43619d74"
+  },
+  {
+    "token": "/ops/",
+    "file": "docs/ops/OPS_PAGE_FIX_SUMMARY.md",
+    "line": 72,
+    "col": 18,
+    "lineText": "**File**: `scripts/ops/verify-ops-pipeline.mjs`",
+    "lineHash": "d3fade25"
+  },
+  {
+    "token": "/ops/",
+    "file": "docs/ops/OPS_PAGE_FIX_SUMMARY.md",
+    "line": 87,
+    "col": 10,
+    "lineText": "- `scripts/ops/build-mission-control-summary.mjs` (regenerated artifact)",
+    "lineHash": "cf028f64"
+  },
+  {
+    "token": "/ops/",
+    "file": "docs/ops/OPS_PAGE_FIX_SUMMARY.md",
+    "line": 88,
+    "col": 14,
+    "lineText": "- `public/data/ops/summary.latest.json` (updated to Schema 3.0)",
+    "lineHash": "a368f4f3"
+  },
+  {
+    "token": "/ops/",
+    "file": "docs/ops/OPS_PAGE_FIX_SUMMARY.md",
+    "line": 91,
+    "col": 19,
+    "lineText": "- Ran `node scripts/ops/build-mission-control-summary.mjs` successfully",
+    "lineHash": "9c9b7b9e"
+  },
+  {
+    "token": "/ops/",
+    "file": "docs/ops/OPS_PAGE_FIX_SUMMARY.md",
+    "line": 101,
+    "col": 13,
+    "lineText": "1. ✅ `scripts/ops/build-mission-control-summary.mjs` - Schema 3.0 migration",
+    "lineHash": "a3403647"
+  },
+  {
+    "token": "/ops/",
+    "file": "docs/ops/OPS_PAGE_FIX_SUMMARY.md",
+    "line": 102,
+    "col": 12,
+    "lineText": "2. ✅ `public/ops/index.html` - Fallback logic for backward compatibility",
+    "lineHash": "701ca55e"
+  },
+  {
+    "token": "/api/mission-control/summary",
+    "file": "docs/ops/OPS_PAGE_FIX_SUMMARY.md",
+    "line": 103,
+    "col": 15,
+    "lineText": "3. ✅ `functions/api/mission-control/summary.js` - Added missing `safety` property",
+    "lineHash": "21786618"
+  },
+  {
+    "token": "/ops/",
+    "file": "docs/ops/OPS_PAGE_FIX_SUMMARY.md",
+    "line": 104,
+    "col": 13,
+    "lineText": "4. ✅ `scripts/ops/verify-ops-pipeline.mjs` - Schema validation",
+    "lineHash": "711a06e5"
+  },
+  {
+    "token": "/ops/",
+    "file": "docs/ops/OPS_PAGE_FIX_SUMMARY.md",
+    "line": 105,
+    "col": 17,
+    "lineText": "5. ✅ `public/data/ops/summary.latest.json` - Regenerated with Schema 3.0",
+    "lineHash": "201be82b"
+  },
+  {
+    "token": "/ops/",
+    "file": "docs/ops/OPS_PAGE_FIX_SUMMARY.md",
+    "line": 112,
+    "col": 58,
+    "lineText": "1. Navigate to `https://17c63acc.rubikvault-site.pages.dev/ops/`",
+    "lineHash": "819c6df3"
+  },
+  {
+    "token": "/ops/",
+    "file": "docs/ops/OPS_PAGE_FIX_SUMMARY.md",
+    "line": 157,
+    "col": 27,
+    "lineText": "**Status**: NOT RELATED to /ops/ page display fix. This is a separate data pipeline issue.",
+    "lineHash": "83a5cfba"
+  },
+  {
+    "token": "/ops/",
+    "file": "docs/ops/OPS_PAGE_FIX_SUMMARY.md",
+    "line": 182,
+    "col": 37,
+    "lineText": "git checkout HEAD~1 -- public/data/ops/summary.latest.json",
+    "lineHash": "3878fcdd"
+  },
+  {
+    "token": "/ops/",
+    "file": "docs/ops/OPS_PAGE_FIX_SUMMARY.md",
+    "line": 187,
+    "col": 32,
+    "lineText": "git checkout HEAD~1 -- public/ops/index.html",
+    "lineHash": "1ae6cbe8"
+  },
+  {
+    "token": "/ops/",
+    "file": "docs/ops/OPS_PAGE_FIX_SUMMARY.md",
+    "line": 192,
+    "col": 33,
+    "lineText": "git checkout HEAD~1 -- scripts/ops/build-mission-control-summary.mjs",
+    "lineHash": "a466ba92"
+  },
+  {
+    "token": "/ops/",
+    "file": "docs/ops/OPS_PAGE_FIX_SUMMARY.md",
+    "line": 202,
+    "col": 22,
+    "lineText": "- This document: `docs/ops/OPS_PAGE_FIX_SUMMARY.md`",
+    "lineHash": "72aee83a"
+  },
+  {
+    "token": "/ops/",
+    "file": "docs/ops/OPS_PAGE_FIX_SUMMARY.md",
+    "line": 203,
+    "col": 21,
+    "lineText": "- Architecture: `docs/ops/architecture.md`",
+    "lineHash": "88a0c6f2"
+  },
+  {
+    "token": "/ops/",
+    "file": "docs/ops/OPS_PAGE_FIX_SUMMARY.md",
+    "line": 204,
+    "col": 17,
+    "lineText": "- Contract: `docs/ops/contract.md`",
+    "lineHash": "0f431606"
+  },
+  {
+    "token": "/ops/",
+    "file": "docs/ops/OPS_PAGE_FIX_SUMMARY.md",
+    "line": 205,
+    "col": 16,
+    "lineText": "- Runbook: `docs/ops/runbook.md`",
+    "lineHash": "8f2189cf"
+  },
+  {
+    "token": "/api/stock",
+    "file": "docs/ops/contract.md",
+    "line": 53,
+    "col": 3,
+    "lineText": "- `/api/stock` and `/api/resolve` attach `meta.cache` with `{mode, hit, stale, age_s, ttl_s, swr}`.",
+    "lineHash": "962f9e1a"
+  },
+  {
+    "token": "/api/mission-control/summary",
+    "file": "docs/ops/indicators-chain.audit.md",
+    "line": 11,
+    "col": 44,
+    "lineText": "- Indicators truth chain builder: `functions/api/mission-control/summary.js` lines 520–616.",
+    "lineHash": "ecc9b45e"
+  },
+  {
+    "token": "/ops/",
+    "file": "docs/ops/indicators-chain.audit.md",
+    "line": 12,
+    "col": 23,
+    "lineText": "- UI rendering: `public/ops/index.html` lines 830–900 (renderTruthChain).",
+    "lineHash": "7221205a"
+  },
+  {
+    "token": "truthChains",
+    "file": "docs/ops/indicators-chain.audit.md",
+    "line": 21,
+    "col": 50,
+    "lineText": "- STORAGE: `/api/mission-control/summary` → `data.truthChains.indicators.steps`.",
+    "lineHash": "429c53b1"
+  },
+  {
+    "token": "data.truthChains",
+    "file": "docs/ops/indicators-chain.audit.md",
+    "line": 21,
+    "col": 45,
+    "lineText": "- STORAGE: `/api/mission-control/summary` → `data.truthChains.indicators.steps`.",
+    "lineHash": "429c53b1"
+  },
+  {
+    "token": "/api/mission-control/summary",
+    "file": "docs/ops/indicators-chain.audit.md",
+    "line": 21,
+    "col": 12,
+    "lineText": "- STORAGE: `/api/mission-control/summary` → `data.truthChains.indicators.steps`.",
+    "lineHash": "429c53b1"
+  },
+  {
+    "token": "/api/stock",
+    "file": "docs/ops/ops-shapes.ssot.md",
+    "line": 7,
+    "col": 4,
+    "lineText": "1) `/api/stock?ticker=UBER` (normal)",
+    "lineHash": "f2ff8d2b"
+  },
+  {
+    "token": "latest_bar",
+    "file": "docs/ops/ops-shapes.ssot.md",
+    "line": 17,
+    "col": 5,
+    "lineText": "\"latest_bar\": {",
+    "lineHash": "579ae7ee"
+  },
+  {
+    "token": "latest_bar",
+    "file": "docs/ops/ops-shapes.ssot.md",
+    "line": 32,
+    "col": 37,
+    "lineText": "Authoritative node for bars: **`data.latest_bar`** (NOT top-level `latest_bar`).",
+    "lineHash": "631bca77"
+  },
+  {
+    "token": "data.latest_bar",
+    "file": "docs/ops/ops-shapes.ssot.md",
+    "line": 32,
+    "col": 32,
+    "lineText": "Authoritative node for bars: **`data.latest_bar`** (NOT top-level `latest_bar`).",
+    "lineHash": "631bca77"
+  },
+  {
+    "token": "/api/stock",
+    "file": "docs/ops/ops-shapes.ssot.md",
+    "line": 34,
+    "col": 4,
+    "lineText": "2) `/api/stock?ticker=UBER&debug=1`",
+    "lineHash": "be862eda"
+  },
+  {
+    "token": "latest_bar",
+    "file": "docs/ops/ops-shapes.ssot.md",
+    "line": 38,
+    "col": 37,
+    "lineText": "Authoritative node for bars: **`data.latest_bar`**.",
+    "lineHash": "246fab89"
+  },
+  {
+    "token": "data.latest_bar",
+    "file": "docs/ops/ops-shapes.ssot.md",
+    "line": 38,
+    "col": 32,
+    "lineText": "Authoritative node for bars: **`data.latest_bar`**.",
+    "lineHash": "246fab89"
+  },
+  {
+    "token": "/api/mission-control/summary",
+    "file": "docs/ops/ops-shapes.ssot.md",
+    "line": 40,
+    "col": 4,
+    "lineText": "3) `/api/mission-control/summary?debug=1`",
+    "lineHash": "48cb2a09"
+  },
+  {
+    "token": "truthChains",
+    "file": "docs/ops/ops-shapes.ssot.md",
+    "line": 49,
+    "col": 5,
+    "lineText": "\"truthChains\": {",
+    "lineHash": "37890f6c"
+  },
+  {
+    "token": "truthChains",
+    "file": "docs/ops/ops-shapes.ssot.md",
+    "line": 58,
+    "col": 45,
+    "lineText": "Authoritative node for truth chains: **`data.truthChains`** (NOT top-level).",
+    "lineHash": "a23e5e97"
+  },
+  {
+    "token": "data.truthChains",
+    "file": "docs/ops/ops-shapes.ssot.md",
+    "line": 58,
+    "col": 40,
+    "lineText": "Authoritative node for truth chains: **`data.truthChains`** (NOT top-level).",
+    "lineHash": "a23e5e97"
+  },
+  {
+    "token": "/analyze/",
+    "file": "docs/ops/price-indicator-truth.md",
+    "line": 14,
+    "col": 12,
+    "lineText": "“User opens /analyze/<T> and the page JS loads.”",
+    "lineHash": "69123858"
+  },
+  {
+    "token": "/api/stock",
+    "file": "docs/ops/price-indicator-truth.md",
+    "line": 17,
+    "col": 42,
+    "lineText": "“The page triggers the winning request to /api/stock?ticker=<T>.”",
+    "lineHash": "754ff6a5"
+  },
+  {
+    "token": "latest_bar",
+    "file": "docs/ops/price-indicator-truth.md",
+    "line": 26,
+    "col": 38,
+    "lineText": "“Backend maps raw data into canonical latest_bar + change format.”",
+    "lineHash": "dc5f6d20"
+  },
+  {
+    "token": "latest_bar",
+    "file": "docs/ops/price-indicator-truth.md",
+    "line": 32,
+    "col": 54,
+    "lineText": "“/api/stock returns JSON that satisfies the contract (latest_bar.close/volume/date present).”",
+    "lineHash": "8f52594c"
+  },
+  {
+    "token": "/api/stock",
+    "file": "docs/ops/price-indicator-truth.md",
+    "line": 32,
+    "col": 1,
+    "lineText": "“/api/stock returns JSON that satisfies the contract (latest_bar.close/volume/date present).”",
+    "lineHash": "8f52594c"
+  },
+  {
+    "token": "/ops/",
+    "file": "docs/ops/price-indicator-truth.md",
+    "line": 39,
+    "col": 33,
+    "lineText": "Policy is defined in `public/data/ops/health-profiles.v1.json` as:",
+    "lineHash": "37abeb14"
+  },
+  {
+    "token": "/debug/ui-path/",
+    "file": "docs/ops/price-indicator-truth.md",
+    "line": 73,
+    "col": 22,
+    "lineText": "- Prices chain reads `/debug/ui-path/<T>.ui-path.trace.json` when present; fallback is `/debug/truth-chain/<T>.trace.json`.",
+    "lineHash": "48308ec1"
+  },
+  {
+    "token": "/api/stock",
+    "file": "docs/ops/prices-chain.audit.md",
+    "line": 11,
+    "col": 74,
+    "lineText": "- UI route + API calls: `public/index.html` lines 1450–1485 (UI triggers `/api/stock`).",
+    "lineHash": "1545a2e4"
+  },
+  {
+    "token": "latest_bar",
+    "file": "docs/ops/prices-chain.audit.md",
+    "line": 12,
+    "col": 15,
+    "lineText": "- API handler (latest_bar/change): `functions/api/stock.js` lines 841–866.",
+    "lineHash": "27332b81"
+  },
+  {
+    "token": "/api/stock",
+    "file": "docs/ops/prices-chain.audit.md",
+    "line": 12,
+    "col": 45,
+    "lineText": "- API handler (latest_bar/change): `functions/api/stock.js` lines 841–866.",
+    "lineHash": "27332b81"
+  },
+  {
+    "token": "/api/mission-control/summary",
+    "file": "docs/ops/prices-chain.audit.md",
+    "line": 13,
+    "col": 44,
+    "lineText": "- Prices truth chain computation: `functions/api/mission-control/summary.js` lines 276–498.",
+    "lineHash": "2300f2bb"
+  },
+  {
+    "token": "/debug/ui-path/",
+    "file": "docs/ops/prices-chain.audit.md",
+    "line": 15,
+    "col": 41,
+    "lineText": "- Trace artifact (example, UBER): `public/debug/ui-path/UBER.ui-path.trace.json`.",
+    "lineHash": "b1b03ab1"
+  },
+  {
+    "token": "/analyze/",
+    "file": "docs/ops/prices-chain.audit.md",
+    "line": 20,
+    "col": 26,
+    "lineText": "P0_UI_START — “User opens /analyze/<T> and the page JS loads.”",
+    "lineHash": "29fe9689"
+  },
+  {
+    "token": "/analyze/",
+    "file": "docs/ops/prices-chain.audit.md",
+    "line": 22,
+    "col": 11,
+    "lineText": "- Route `/analyze/<T>` and UI event flow.",
+    "lineHash": "aa7f7123"
+  },
+  {
+    "token": "/api/stock",
+    "file": "docs/ops/prices-chain.audit.md",
+    "line": 23,
+    "col": 15,
+    "lineText": "- Evidence: `/api/stock` fetch triggered in UI.",
+    "lineHash": "9dbc0c79"
+  },
+  {
+    "token": "/api/stock",
+    "file": "docs/ops/prices-chain.audit.md",
+    "line": 26,
+    "col": 65,
+    "lineText": "- Code: `public/index.html` lines 1450–1485 (calls `fetchJson('/api/stock?...')`).",
+    "lineHash": "3a59c3b3"
+  },
+  {
+    "token": "/debug/ui-path/",
+    "file": "docs/ops/prices-chain.audit.md",
+    "line": 31,
+    "col": 17,
+    "lineText": "- File: `public/debug/ui-path/UBER.ui-path.trace.json`.",
+    "lineHash": "bca9184a"
+  },
+  {
+    "token": "/api/stock",
+    "file": "docs/ops/prices-chain.audit.md",
+    "line": 33,
+    "col": 40,
+    "lineText": "- P1_UI_CALLS_API reads the recorded `/api/stock` call.",
+    "lineHash": "95a29fa0"
+  },
+  {
+    "token": "/debug/ui-path/",
+    "file": "docs/ops/prices-chain.audit.md",
+    "line": 35,
+    "col": 35,
+    "lineText": "- UI-path trace artifact (`public/debug/ui-path/UBER.ui-path.trace.json`).",
+    "lineHash": "2df6a48f"
+  },
+  {
+    "token": "/api/stock",
+    "file": "docs/ops/prices-chain.audit.md",
+    "line": 37,
+    "col": 60,
+    "lineText": "P1_UI_CALLS_API — “The page triggers the winning request to /api/stock?ticker=<T>.”",
+    "lineHash": "c041c12d"
+  },
+  {
+    "token": "/api/stock",
+    "file": "docs/ops/prices-chain.audit.md",
+    "line": 41,
+    "col": 14,
+    "lineText": "- Identify `/api/stock` call and match it to UI-rendered values.",
+    "lineHash": "c9740f6c"
+  },
+  {
+    "token": "/debug/ui-path/",
+    "file": "docs/ops/prices-chain.audit.md",
+    "line": 46,
+    "col": 23,
+    "lineText": "- Trace file: `public/debug/ui-path/UBER.ui-path.trace.json`.",
+    "lineHash": "f87a5df2"
+  },
+  {
+    "token": "network.winning",
+    "file": "docs/ops/prices-chain.audit.md",
+    "line": 50,
+    "col": 5,
+    "lineText": "- `network.winning` in `public/debug/ui-path/UBER.ui-path.trace.json`.",
+    "lineHash": "85d4895e"
+  },
+  {
+    "token": "/debug/ui-path/",
+    "file": "docs/ops/prices-chain.audit.md",
+    "line": 50,
+    "col": 32,
+    "lineText": "- `network.winning` in `public/debug/ui-path/UBER.ui-path.trace.json`.",
+    "lineHash": "85d4895e"
+  },
+  {
+    "token": "/debug/ui-path/",
+    "file": "docs/ops/prices-chain.audit.md",
+    "line": 61,
+    "col": 23,
+    "lineText": "- Trace file: `public/debug/ui-path/UBER.ui-path.trace.json`.",
+    "lineHash": "f87a5df2"
+  },
+  {
+    "token": "latest_bar",
+    "file": "docs/ops/prices-chain.audit.md",
+    "line": 63,
+    "col": 18,
+    "lineText": "- P3 validates `latest_bar` fields.",
+    "lineHash": "e60969e1"
+  },
+  {
+    "token": "latest_bar",
+    "file": "docs/ops/prices-chain.audit.md",
+    "line": 69,
+    "col": 5,
+    "lineText": "- `latest_bar.close`, `latest_bar.volume`, `latest_bar.date` from API response.",
+    "lineHash": "fb279389"
+  },
+  {
+    "token": "/api/mission-control/summary",
+    "file": "docs/ops/prices-chain.audit.md",
+    "line": 72,
+    "col": 20,
+    "lineText": "- Code: `functions/api/mission-control/summary.js` lines 376–391.",
+    "lineHash": "959143bf"
+  },
+  {
+    "token": "truthChains",
+    "file": "docs/ops/prices-chain.audit.md",
+    "line": 76,
+    "col": 43,
+    "lineText": "- `/api/mission-control/summary` → `data.truthChains.prices.steps[]`.",
+    "lineHash": "ded1f12b"
+  },
+  {
+    "token": "data.truthChains",
+    "file": "docs/ops/prices-chain.audit.md",
+    "line": 76,
+    "col": 38,
+    "lineText": "- `/api/mission-control/summary` → `data.truthChains.prices.steps[]`.",
+    "lineHash": "ded1f12b"
+  },
+  {
+    "token": "/api/mission-control/summary",
+    "file": "docs/ops/prices-chain.audit.md",
+    "line": 76,
+    "col": 5,
+    "lineText": "- `/api/mission-control/summary` → `data.truthChains.prices.steps[]`.",
+    "lineHash": "ded1f12b"
+  },
+  {
+    "token": "truthChains",
+    "file": "docs/ops/prices-chain.audit.md",
+    "line": 80,
+    "col": 10,
+    "lineText": "- `data.truthChains.prices.steps` in mission-control summary.",
+    "lineHash": "84db81f9"
+  },
+  {
+    "token": "data.truthChains",
+    "file": "docs/ops/prices-chain.audit.md",
+    "line": 80,
+    "col": 5,
+    "lineText": "- `data.truthChains.prices.steps` in mission-control summary.",
+    "lineHash": "84db81f9"
+  },
+  {
+    "token": "latest_bar",
+    "file": "docs/ops/prices-chain.audit.md",
+    "line": 82,
+    "col": 60,
+    "lineText": "P4_CANONICAL_FORMAT — “Backend maps raw data into canonical latest_bar + change format.”",
+    "lineHash": "8f5aa523"
+  },
+  {
+    "token": "latest_bar",
+    "file": "docs/ops/prices-chain.audit.md",
+    "line": 84,
+    "col": 5,
+    "lineText": "- `latest_bar` and `change` fields from API response.",
+    "lineHash": "35dec553"
+  },
+  {
+    "token": "/api/mission-control/summary",
+    "file": "docs/ops/prices-chain.audit.md",
+    "line": 87,
+    "col": 20,
+    "lineText": "- Code: `functions/api/mission-control/summary.js` lines 393–405.",
+    "lineHash": "2ff74166"
+  },
+  {
+    "token": "/api/mission-control/summary",
+    "file": "docs/ops/prices-chain.audit.md",
+    "line": 91,
+    "col": 5,
+    "lineText": "- `/api/mission-control/summary`.",
+    "lineHash": "1f6cca74"
+  },
+  {
+    "token": "truthChains",
+    "file": "docs/ops/prices-chain.audit.md",
+    "line": 95,
+    "col": 10,
+    "lineText": "- `data.truthChains.prices.steps`.",
+    "lineHash": "327b1120"
+  },
+  {
+    "token": "data.truthChains",
+    "file": "docs/ops/prices-chain.audit.md",
+    "line": 95,
+    "col": 5,
+    "lineText": "- `data.truthChains.prices.steps`.",
+    "lineHash": "327b1120"
+  },
+  {
+    "token": "/api/mission-control/summary",
+    "file": "docs/ops/prices-chain.audit.md",
+    "line": 102,
+    "col": 20,
+    "lineText": "- Code: `functions/api/mission-control/summary.js` lines 407–431.",
+    "lineHash": "81e89211"
+  },
+  {
+    "token": "/api/mission-control/summary",
+    "file": "docs/ops/prices-chain.audit.md",
+    "line": 106,
+    "col": 5,
+    "lineText": "- `/api/mission-control/summary`.",
+    "lineHash": "1f6cca74"
+  },
+  {
+    "token": "/ops/",
+    "file": "docs/ops/prices-chain.audit.md",
+    "line": 110,
+    "col": 16,
+    "lineText": "- `public/data/ops/health-profiles.v1.json` (policy) + UI-path trace upstream probe.",
+    "lineHash": "fda29161"
+  },
+  {
+    "token": "latest_bar",
+    "file": "docs/ops/prices-chain.audit.md",
+    "line": 112,
+    "col": 72,
+    "lineText": "P6_API_CONTRACT — “/api/stock returns JSON that satisfies the contract (latest_bar.close/volume/date present).”",
+    "lineHash": "e5287744"
+  },
+  {
+    "token": "/api/stock",
+    "file": "docs/ops/prices-chain.audit.md",
+    "line": 112,
+    "col": 19,
+    "lineText": "P6_API_CONTRACT — “/api/stock returns JSON that satisfies the contract (latest_bar.close/volume/date present).”",
+    "lineHash": "e5287744"
+  },
+  {
+    "token": "/api/stock",
+    "file": "docs/ops/prices-chain.audit.md",
+    "line": 114,
+    "col": 30,
+    "lineText": "- API response payload for `/api/stock`.",
+    "lineHash": "ef8e3529"
+  },
+  {
+    "token": "/api/mission-control/summary",
+    "file": "docs/ops/prices-chain.audit.md",
+    "line": 117,
+    "col": 20,
+    "lineText": "- Code: `functions/api/mission-control/summary.js` lines 433–451.",
+    "lineHash": "31d63cfe"
+  },
+  {
+    "token": "/api/mission-control/summary",
+    "file": "docs/ops/prices-chain.audit.md",
+    "line": 121,
+    "col": 5,
+    "lineText": "- `/api/mission-control/summary`.",
+    "lineHash": "1f6cca74"
+  },
+  {
+    "token": "truthChains",
+    "file": "docs/ops/prices-chain.audit.md",
+    "line": 125,
+    "col": 10,
+    "lineText": "- `data.truthChains.prices.steps`.",
+    "lineHash": "327b1120"
+  },
+  {
+    "token": "data.truthChains",
+    "file": "docs/ops/prices-chain.audit.md",
+    "line": 125,
+    "col": 5,
+    "lineText": "- `data.truthChains.prices.steps`.",
+    "lineHash": "327b1120"
+  },
+  {
+    "token": "latest_bar",
+    "file": "docs/ops/prices-chain.audit.md",
+    "line": 131,
+    "col": 40,
+    "lineText": "- Compare UI close/volume/date to API latest_bar.",
+    "lineHash": "ea554379"
+  },
+  {
+    "token": "/api/mission-control/summary",
+    "file": "docs/ops/prices-chain.audit.md",
+    "line": 132,
+    "col": 20,
+    "lineText": "- Code: `functions/api/mission-control/summary.js` lines 453–472.",
+    "lineHash": "b47a008e"
+  },
+  {
+    "token": "/api/mission-control/summary",
+    "file": "docs/ops/prices-chain.audit.md",
+    "line": 136,
+    "col": 5,
+    "lineText": "- `/api/mission-control/summary`.",
+    "lineHash": "1f6cca74"
+  },
+  {
+    "token": "latest_bar",
+    "file": "docs/ops/runbook.md",
+    "line": 73,
+    "col": 148,
+    "lineText": "curl -fsS \"$BASE_URL/api/stock?ticker=AAPL\" | jq '{ok:(.error==null), status:(.metadata.status//null), source_chain:(.metadata.source_chain//null), latest_bar:(.data.latest_bar//null), indicatorsCount:(.data.indicators|length), error:(.error//null)}'",
+    "lineHash": "1f30a2cd"
+  },
+  {
+    "token": "data.latest_bar",
+    "file": "docs/ops/runbook.md",
+    "line": 73,
+    "col": 161,
+    "lineText": "curl -fsS \"$BASE_URL/api/stock?ticker=AAPL\" | jq '{ok:(.error==null), status:(.metadata.status//null), source_chain:(.metadata.source_chain//null), latest_bar:(.data.latest_bar//null), indicatorsCount:(.data.indicators|length), error:(.error//null)}'",
+    "lineHash": "1f30a2cd"
+  },
+  {
+    "token": "/api/stock",
+    "file": "docs/ops/runbook.md",
+    "line": 73,
+    "col": 20,
+    "lineText": "curl -fsS \"$BASE_URL/api/stock?ticker=AAPL\" | jq '{ok:(.error==null), status:(.metadata.status//null), source_chain:(.metadata.source_chain//null), latest_bar:(.data.latest_bar//null), indicatorsCount:(.data.indicators|length), error:(.error//null)}'",
+    "lineHash": "1f30a2cd"
+  },
+  {
+    "token": "/analyze/",
+    "file": "docs/ops/runbook.md",
+    "line": 74,
+    "col": 23,
+    "lineText": "curl -fsS -I \"$BASE_URL/analyze/AAPL\" | tr -d \"\\r\" | sed -n '1,12p'",
+    "lineHash": "2dbb7031"
+  },
+  {
+    "token": "/ops/",
+    "file": "docs/ops/runbook.md",
+    "line": 98,
+    "col": 12,
+    "lineText": "node scripts/ops/verify-missing-mirror-semantic.mjs",
+    "lineHash": "ea2fbb8d"
+  },
+  {
+    "token": "/ops/",
+    "file": "docs/ops/runbook.md",
+    "line": 104,
+    "col": 14,
+    "lineText": "# node scripts/ops/verify-missing-mirror-semantic.mjs /tmp/marketphase-missing.json /tmp/pipeline-missing.json",
+    "lineHash": "32c5af98"
+  },
+  {
+    "token": "/api/stock",
+    "file": "docs/ops/runbook.md",
+    "line": 150,
+    "col": 21,
+    "lineText": "curl -fsS \"$DEV_BASE/api/stock?ticker=$TICKER\" \\",
+    "lineHash": "9fe96747"
+  },
+  {
+    "token": "/api/stock",
+    "file": "docs/ops/runbook.md",
+    "line": 172,
+    "col": 21,
+    "lineText": "curl -fsS \"$DEV_BASE/api/stock?ticker=$TICKER\" \\",
+    "lineHash": "9fe96747"
+  },
+  {
+    "token": "/api/stock",
+    "file": "docs/ops/runbook.md",
+    "line": 181,
+    "col": 21,
+    "lineText": "curl -fsS \"$DEV_BASE/api/stock?ticker=$TICKER\" \\",
+    "lineHash": "9fe96747"
+  },
+  {
+    "token": "/api/stock",
+    "file": "docs/ops/runbook.md",
+    "line": 212,
+    "col": 21,
+    "lineText": "curl -fsS \"$DEV_BASE/api/stock?ticker=$TICKER\" \\",
+    "lineHash": "9fe96747"
+  },
+  {
+    "token": "/api/stock",
+    "file": "docs/ops/runbook.md",
+    "line": 220,
+    "col": 21,
+    "lineText": "curl -fsS \"$DEV_BASE/api/stock?ticker=$TICKER\" \\",
+    "lineHash": "9fe96747"
+  },
+  {
+    "token": "/api/stock",
+    "file": "docs/ops/runbook.md",
+    "line": 258,
+    "col": 25,
+    "lineText": "curl -fsS \"$PREVIEW_BASE/api/stock?ticker=$TICKER\" | jq '{status:.metadata.status, failureReason:(.metadata.source_chain.failureReason//null), primaryFailure:(.metadata.source_chain.primaryFailure.code//null), err:(.error.code//null)}'",
+    "lineHash": "cf2c5b7a"
+  },
+  {
+    "token": "/api/stock",
+    "file": "docs/ops/runbook.md",
+    "line": 259,
+    "col": 22,
+    "lineText": "curl -fsS \"$PROD_BASE/api/stock?ticker=$TICKER\" | jq '{status:.metadata.status, failureReason:(.metadata.source_chain.failureReason//null), primaryFailure:(.metadata.source_chain.primaryFailure.code//null), err:(.error.code//null)}'",
+    "lineHash": "ed65bcc1"
+  },
+  {
+    "token": "/ops/",
+    "file": "docs/ops/runbook.md",
+    "line": 276,
+    "col": 9,
+    "lineText": "./scripts/ops/rv_verify_contracts.sh",
+    "lineHash": "bcdcd11c"
+  },
+  {
+    "token": "/ops/",
+    "file": "docs/ops/runbook.md",
+    "line": 277,
+    "col": 52,
+    "lineText": "PREVIEW_BASE=\"https://<preview>.pages.dev\" ./scripts/ops/rv_verify_contracts.sh",
+    "lineHash": "a31e8051"
+  },
+  {
+    "token": "/ops/",
+    "file": "docs/ops-forensics/fix-plan.md",
+    "line": 5,
+    "col": 17,
+    "lineText": "- Add `scripts/ops/build-build-info.mjs`",
+    "lineHash": "9bddeac2"
+  },
+  {
+    "token": "/ops/",
+    "file": "docs/ops-forensics/fix-plan.md",
+    "line": 10,
+    "col": 17,
+    "lineText": "- Add `scripts/ops/validate-truth.sh`",
+    "lineHash": "1c2a21fe"
+  },
+  {
+    "token": "/ops/",
+    "file": "docs/ops-forensics/inventory.json",
+    "line": 5,
+    "col": 21,
+    "lineText": "\"file\": \"public/ops/index.html\",",
+    "lineHash": "79a9f322"
+  },
+  {
+    "token": "/ops/",
+    "file": "docs/ops-forensics/inventory.json",
+    "line": 6,
+    "col": 25,
+    "lineText": "\"evidence\": \"public/ops/index.html:864-871\"",
+    "lineHash": "fc5cb592"
+  },
+  {
+    "token": "/api/mission-control/summary",
+    "file": "docs/ops-forensics/inventory.json",
+    "line": 9,
+    "col": 15,
+    "lineText": "\"path\": \"/api/mission-control/summary\",",
+    "lineHash": "2aaf9396"
+  },
+  {
+    "token": "/api/mission-control/summary",
+    "file": "docs/ops-forensics/inventory.json",
+    "line": 10,
+    "col": 24,
+    "lineText": "\"file\": \"functions/api/mission-control/summary.js\",",
+    "lineHash": "96b31acc"
+  },
+  {
+    "token": "/api/mission-control/summary",
+    "file": "docs/ops-forensics/inventory.json",
+    "line": 11,
+    "col": 28,
+    "lineText": "\"evidence\": \"functions/api/mission-control/summary.js:577-587\"",
+    "lineHash": "79f6b655"
+  },
+  {
+    "token": "/ops/",
+    "file": "docs/ops-forensics/inventory.json",
+    "line": 18,
+    "col": 21,
+    "lineText": "\"file\": \"public/ops/index.html\",",
+    "lineHash": "79a9f322"
+  },
+  {
+    "token": "/ops/",
+    "file": "docs/ops-forensics/inventory.json",
+    "line": 19,
+    "col": 25,
+    "lineText": "\"evidence\": \"public/ops/index.html:624-647\"",
+    "lineHash": "b9805252"
+  },
+  {
+    "token": "/ops/",
+    "file": "docs/ops-forensics/inventory.json",
+    "line": 24,
+    "col": 21,
+    "lineText": "\"file\": \"public/ops/index.html\",",
+    "lineHash": "79a9f322"
+  },
+  {
+    "token": "/ops/",
+    "file": "docs/ops-forensics/inventory.json",
+    "line": 25,
+    "col": 25,
+    "lineText": "\"evidence\": \"public/ops/index.html:652-667\"",
+    "lineHash": "9a76dc79"
+  },
+  {
+    "token": "/ops/",
+    "file": "docs/ops-forensics/inventory.json",
+    "line": 30,
+    "col": 21,
+    "lineText": "\"file\": \"public/ops/index.html\",",
+    "lineHash": "79a9f322"
+  },
+  {
+    "token": "/ops/",
+    "file": "docs/ops-forensics/inventory.json",
+    "line": 31,
+    "col": 25,
+    "lineText": "\"evidence\": \"public/ops/index.html:678\"",
+    "lineHash": "7f4c1946"
+  },
+  {
+    "token": "/ops/",
+    "file": "docs/ops-forensics/inventory.json",
+    "line": 36,
+    "col": 21,
+    "lineText": "\"file\": \"public/ops/index.html\",",
+    "lineHash": "79a9f322"
+  },
+  {
+    "token": "/ops/",
+    "file": "docs/ops-forensics/inventory.json",
+    "line": 37,
+    "col": 25,
+    "lineText": "\"evidence\": \"public/ops/index.html:843-858\"",
+    "lineHash": "20bff835"
+  },
+  {
+    "token": "/ops/",
+    "file": "docs/ops-forensics/inventory.json",
+    "line": 42,
+    "col": 21,
+    "lineText": "\"file\": \"public/ops/index.html\",",
+    "lineHash": "79a9f322"
+  },
+  {
+    "token": "/ops/",
+    "file": "docs/ops-forensics/inventory.json",
+    "line": 43,
+    "col": 25,
+    "lineText": "\"evidence\": \"public/ops/index.html:624-695\"",
+    "lineHash": "f5164b48"
+  },
+  {
+    "token": "/api/mission-control/summary",
+    "file": "docs/ops-forensics/inventory.json",
+    "line": 50,
+    "col": 24,
+    "lineText": "\"file\": \"functions/api/mission-control/summary.js\",",
+    "lineHash": "96b31acc"
+  },
+  {
+    "token": "/api/mission-control/summary",
+    "file": "docs/ops-forensics/inventory.json",
+    "line": 51,
+    "col": 28,
+    "lineText": "\"evidence\": \"functions/api/mission-control/summary.js:577-579\"",
+    "lineHash": "ad11eb99"
+  },
+  {
+    "token": "/api/mission-control/summary",
+    "file": "docs/ops-forensics/inventory.json",
+    "line": 56,
+    "col": 24,
+    "lineText": "\"file\": \"functions/api/mission-control/summary.js\",",
+    "lineHash": "96b31acc"
+  },
+  {
+    "token": "/api/mission-control/summary",
+    "file": "docs/ops-forensics/inventory.json",
+    "line": 57,
+    "col": 28,
+    "lineText": "\"evidence\": \"functions/api/mission-control/summary.js:581-583\"",
+    "lineHash": "1405cf34"
+  },
+  {
+    "token": "/api/mission-control/summary",
+    "file": "docs/ops-forensics/inventory.json",
+    "line": 62,
+    "col": 24,
+    "lineText": "\"file\": \"functions/api/mission-control/summary.js\",",
+    "lineHash": "96b31acc"
+  },
+  {
+    "token": "/api/mission-control/summary",
+    "file": "docs/ops-forensics/inventory.json",
+    "line": 63,
+    "col": 28,
+    "lineText": "\"evidence\": \"functions/api/mission-control/summary.js:706-712\"",
+    "lineHash": "31bc62a1"
+  },
+  {
+    "token": "/api/mission-control/summary",
+    "file": "docs/ops-forensics/inventory.json",
+    "line": 68,
+    "col": 24,
+    "lineText": "\"file\": \"functions/api/mission-control/summary.js\",",
+    "lineHash": "96b31acc"
+  },
+  {
+    "token": "/api/mission-control/summary",
+    "file": "docs/ops-forensics/inventory.json",
+    "line": 69,
+    "col": 28,
+    "lineText": "\"evidence\": \"functions/api/mission-control/summary.js:587,823-829\"",
+    "lineHash": "8a4e854c"
+  },
+  {
+    "token": "/api/mission-control/summary",
+    "file": "docs/ops-forensics/inventory.json",
+    "line": 74,
+    "col": 24,
+    "lineText": "\"file\": \"functions/api/mission-control/summary.js\",",
+    "lineHash": "96b31acc"
+  },
+  {
+    "token": "/api/mission-control/summary",
+    "file": "docs/ops-forensics/inventory.json",
+    "line": 75,
+    "col": 28,
+    "lineText": "\"evidence\": \"functions/api/mission-control/summary.js:832-840\"",
+    "lineHash": "0b814dc4"
+  },
+  {
+    "token": "/ops/",
+    "file": "docs/ops-forensics/inventory.json",
+    "line": 110,
+    "col": 26,
+    "lineText": "\"path\": \"public/data/ops/summary.latest.json\",",
+    "lineHash": "fe88d03b"
+  },
+  {
+    "token": "/ops/",
+    "file": "docs/ops-forensics/inventory.json",
+    "line": 113,
+    "col": 30,
+    "lineText": "\"evidence\": \"public/data/ops/summary.latest.json\"",
+    "lineHash": "6f8148d3"
+  },
+  {
+    "token": "/ops/",
+    "file": "docs/ops-forensics/inventory.json",
+    "line": 138,
+    "col": 61,
+    "lineText": "\"outputs\": [\"public/data/pipeline/*.json\", \"public/data/ops/summary.latest.json\", \"public/data/ops-daily.json\"],",
+    "lineHash": "2e1cc6a9"
+  },
+  {
+    "token": "/ops/",
+    "file": "docs/ops-forensics/inventory.json",
+    "line": 144,
+    "col": 51,
+    "lineText": "\"outputs\": [\"public/data/eod/*\", \"public/data/ops/summary.latest.json\", \"public/data/ops-daily.json\"],",
+    "lineHash": "e6e2f739"
+  },
+  {
+    "token": "/ops/",
+    "file": "docs/ops-forensics/report.md",
+    "line": 13,
+    "col": 18,
+    "lineText": "**Proof:** `public/ops/index.html:864-871`",
+    "lineHash": "0c440448"
+  },
+  {
+    "token": "/api/mission-control/summary",
+    "file": "docs/ops-forensics/report.md",
+    "line": 15,
+    "col": 29,
+    "lineText": "864-871  const summaryUrl = `/api/mission-control/summary${debugEnabled ? '?debug=1' : ''}${debugEnabled ? '&' : '?'}t=${t}`;",
+    "lineHash": "933b13b4"
+  },
+  {
+    "token": "/ops/",
+    "file": "docs/ops-forensics/report.md",
+    "line": 20,
+    "col": 18,
+    "lineText": "**Proof:** `public/ops/index.html:624-647`",
+    "lineHash": "92e793ad"
+  },
+  {
+    "token": "/api/mission-control/summary",
+    "file": "docs/ops-forensics/report.md",
+    "line": 28,
+    "col": 4,
+    "lineText": "### /api/mission-control/summary reads static artifacts",
+    "lineHash": "3641790a"
+  },
+  {
+    "token": "/api/mission-control/summary",
+    "file": "docs/ops-forensics/report.md",
+    "line": 29,
+    "col": 21,
+    "lineText": "**Proof:** `functions/api/mission-control/summary.js:577-587` and `706-712`",
+    "lineHash": "38f307d8"
+  },
+  {
+    "token": "/ops/",
+    "file": "docs/ops-forensics/report.md",
+    "line": 31,
+    "col": 61,
+    "lineText": "577-587  fetchAssetJson(... '/data/ops-daily.json' ... '/data/ops/health-profiles.v1.json' ... '/data/eod/manifest.latest.json')",
+    "lineHash": "e985738f"
+  },
+  {
+    "token": "/ops/",
+    "file": "docs/ops-forensics/report.md",
+    "line": 87,
+    "col": 19,
+    "lineText": "**Proof:** `scripts/ops/build-ops-daily.mjs:86-93, 360-371`",
+    "lineHash": "135ec1d2"
+  },
+  {
+    "token": "/ops/",
+    "file": "docs/ops-forensics/report.md",
+    "line": 126,
+    "col": 40,
+    "lineText": "**Expected (policy in tests):** `scripts/ops/rv_verify_truth_summary.mjs` enforces summary counts equal latest counts whenever latest exists.",
+    "lineHash": "5aded4e1"
+  },
+  {
+    "token": "/ops/",
+    "file": "docs/ops-forensics/report.md",
+    "line": 127,
+    "col": 19,
+    "lineText": "**Proof:** `scripts/ops/rv_verify_truth_summary.mjs:18-33`.",
+    "lineHash": "ef463c93"
+  },
+  {
+    "token": "/ops/",
+    "file": "docs/ops-forensics/report.md",
+    "line": 131,
+    "col": 19,
+    "lineText": "**Proof:** `scripts/ops/build-ops-daily.mjs:86-93` and `360-371`.",
+    "lineHash": "3cfce31d"
+  },
+  {
+    "token": "/ops/",
+    "file": "docs/ops-forensics/report.md",
+    "line": 195,
+    "col": 88,
+    "lineText": "- `.github/workflows/ops-daily.yml` → writes `public/data/pipeline/*.json`, `public/data/ops/summary.latest.json`, `public/data/ops-daily.json`.",
+    "lineHash": "690cf603"
+  },
+  {
+    "token": "/api/mission-control/summary",
+    "file": "docs/ops-forensics/report.md",
+    "line": 199,
+    "col": 3,
+    "lineText": "- `/api/mission-control/summary` → reads `/data/ops-daily.json`, `/data/pipeline/*.json`, `/data/eod/manifest.latest.json`.",
+    "lineHash": "72f9481f"
+  },
+  {
+    "token": "/ops/",
+    "file": "docs/ops-forensics/report.md",
+    "line": 239,
+    "col": 13,
+    "lineText": "- `scripts/ops/build-build-info.mjs`",
+    "lineHash": "03602cbc"
+  },
+  {
+    "token": "/ops/",
+    "file": "docs/ops-forensics/report.md",
+    "line": 243,
+    "col": 13,
+    "lineText": "- `scripts/ops/validate-truth.sh` + CI job `truth-gates` (continue-on-error)",
+    "lineHash": "af0d6eb2"
+  },
+  {
+    "token": "/api/mission-control/summary",
+    "file": "docs/ops-gate.md",
+    "line": 6,
+    "col": 39,
+    "lineText": "- Missing required contract fields in `/api/mission-control/summary`.",
+    "lineHash": "0175784a"
+  },
+  {
+    "token": "latest_bar",
+    "file": "docs/ops-truth-chain-checks.md",
+    "line": 6,
+    "col": 3,
+    "lineText": "- `latest_bar.date` (API) must match the UI “as-of” date shown in /analyze/:ticker.",
+    "lineHash": "06d14c5d"
+  },
+  {
+    "token": "/analyze/",
+    "file": "docs/ops-truth-chain-checks.md",
+    "line": 6,
+    "col": 66,
+    "lineText": "- `latest_bar.date` (API) must match the UI “as-of” date shown in /analyze/:ticker.",
+    "lineHash": "06d14c5d"
+  },
+  {
+    "token": "latest_bar",
+    "file": "docs/ops-truth-chain-checks.md",
+    "line": 9,
+    "col": 41,
+    "lineText": "- `volume` must be an integer and match `latest_bar.volume`.",
+    "lineHash": "21edf835"
+  },
+  {
+    "token": "/api/stock",
+    "file": "docs/phase1-prices/02-prices-index-proxies.md",
+    "line": 120,
+    "col": 12,
+    "lineText": "- `functions/api/stock.js` stitches together the published `/data/snapshots/universe`, `/data/snapshots/market-prices`, and `/data/snapshots/market-stats` artifacts for a single ticker and emits a schema_version 3.0 envelope with structured error codes (`UNKNOWN_TICKER`, `DATA_NOT_READY`, `BAD_REQUEST`).",
+    "lineHash": "a8b9c455"
+  },
+  {
+    "token": "/api/stock",
+    "file": "docs/phase1-prices/02-prices-index-proxies.md",
+    "line": 121,
+    "col": 55,
+    "lineText": "- `public/stock.html` is a static-first UI that calls `/api/stock?ticker=<SYMBOL>` (optionally with `debug=1`), renders membership badges, latest price, returns + momentum, volatility + risk, trend metrics, and data quality diagnostics, and surfaces the API error banner when data is missing.",
+    "lineHash": "9ab7eccb"
+  },
+  {
+    "token": "/api/stock",
+    "file": "docs/phase1-prices/02-prices-index-proxies.md",
+    "line": 131,
+    "col": 92,
+    "lineText": "- API: `/api/market-score` (served from ASSET via `functions/api/market-score.js`) and the `/api/stock` response now includes the joined `market_score` block so the UI can surface chips + “Why?” details.",
+    "lineHash": "ac2a7fe5"
+  },
+  {
+    "token": "/ops/",
+    "file": "docs/runbooks/smoke-tests.md",
+    "line": 38,
+    "col": 25,
+    "lineText": "- `https://rubikvault.com/ops/usage.html`",
+    "lineHash": "9ac9b65c"
+  },
+  {
+    "token": "/analyze/",
+    "file": "docs/truth-chain-ui-to-origin.md",
+    "line": 8,
+    "col": 0,
+    "lineText": "/analyze/:ticker (public/index.html)",
+    "lineHash": "17e466ed"
+  },
+  {
+    "token": "/api/stock",
+    "file": "docs/truth-chain-ui-to-origin.md",
+    "line": 9,
+    "col": 11,
+    "lineText": "├─ fetch /api/stock?ticker=...  ──► functions/api/stock.js (onRequestGet)",
+    "lineHash": "34622eea"
+  },
+  {
+    "token": "latest_bar",
+    "file": "docs/truth-chain-ui-to-origin.md",
+    "line": 14,
+    "col": 24,
+    "lineText": "│    └─ response data.latest_bar / data.change",
+    "lineHash": "7afa347b"
+  },
+  {
+    "token": "data.latest_bar",
+    "file": "docs/truth-chain-ui-to-origin.md",
+    "line": 14,
+    "col": 19,
+    "lineText": "│    └─ response data.latest_bar / data.change",
+    "lineHash": "7afa347b"
+  },
+  {
+    "token": "/analyze/",
+    "file": "docs/truth-chain-ui-to-origin.md",
+    "line": 27,
+    "col": 17,
+    "lineText": "- **UI route:** `/analyze/:ticker`",
+    "lineHash": "453f0146"
+  },
+  {
+    "token": "/api/stock",
+    "file": "docs/truth-chain-ui-to-origin.md",
+    "line": 29,
+    "col": 5,
+    "lineText": "- `/api/stock` — line **1466** (`fetchJson(`/api/stock?...`)`)",
+    "lineHash": "9d2202ff"
+  },
+  {
+    "token": "latest_bar",
+    "file": "docs/truth-chain-ui-to-origin.md",
+    "line": 37,
+    "col": 10,
+    "lineText": "- `data.latest_bar.close` — line **932**",
+    "lineHash": "32823c9b"
+  },
+  {
+    "token": "data.latest_bar",
+    "file": "docs/truth-chain-ui-to-origin.md",
+    "line": 37,
+    "col": 5,
+    "lineText": "- `data.latest_bar.close` — line **932**",
+    "lineHash": "32823c9b"
+  },
+  {
+    "token": "latest_bar",
+    "file": "docs/truth-chain-ui-to-origin.md",
+    "line": 40,
+    "col": 10,
+    "lineText": "- `data.latest_bar.volume` — line **933**",
+    "lineHash": "cb8ecd7c"
+  },
+  {
+    "token": "data.latest_bar",
+    "file": "docs/truth-chain-ui-to-origin.md",
+    "line": 40,
+    "col": 5,
+    "lineText": "- `data.latest_bar.volume` — line **933**",
+    "lineHash": "cb8ecd7c"
+  },
+  {
+    "token": "latest_bar",
+    "file": "docs/truth-chain-ui-to-origin.md",
+    "line": 41,
+    "col": 10,
+    "lineText": "- `data.latest_bar.date` — line **934**",
+    "lineHash": "05ba7775"
+  },
+  {
+    "token": "data.latest_bar",
+    "file": "docs/truth-chain-ui-to-origin.md",
+    "line": 41,
+    "col": 5,
+    "lineText": "- `data.latest_bar.date` — line **934**",
+    "lineHash": "05ba7775"
+  },
+  {
+    "token": "/api/stock",
+    "file": "docs/truth-chain-ui-to-origin.md",
+    "line": 47,
+    "col": 13,
+    "lineText": "### Step 3 — /api/stock handler and transforms",
+    "lineHash": "4738591e"
+  },
+  {
+    "token": "/api/stock",
+    "file": "docs/truth-chain-ui-to-origin.md",
+    "line": 48,
+    "col": 25,
+    "lineText": "- **Handler:** `functions/api/stock.js` line **326** (`onRequestGet`)",
+    "lineHash": "9a021b24"
+  },
+  {
+    "token": "latest_bar",
+    "file": "docs/truth-chain-ui-to-origin.md",
+    "line": 54,
+    "col": 5,
+    "lineText": "- `latest_bar` — line **841**",
+    "lineHash": "8b15b3ed"
+  },
+  {
+    "token": "/api/stock",
+    "file": "docs/truth-chain-ui-to-origin.md",
+    "line": 71,
+    "col": 184,
+    "lineText": "| `/Users/michaelpuchowezki/Dev/rubikvault-site/public/data/snapshots/market-prices/latest.json` | 3.0 | `073b69d578ebec74…` | `data[].symbol`, `data[].date`, `data[].close` | used by /api/stock for market_prices + as_of |",
+    "lineHash": "c1f90010"
+  },
+  {
+    "token": "/api/stock",
+    "file": "docs/truth-chain-ui-to-origin.md",
+    "line": 72,
+    "col": 186,
+    "lineText": "| `/Users/michaelpuchowezki/Dev/rubikvault-site/public/data/snapshots/market-stats/latest.json` | 3.0 | `206e2bd7977f1aed…` | `data[].symbol`, `data[].as_of`, `data[].metrics` | used by /api/stock for market_stats |",
+    "lineHash": "c1e1f2ad"
+  },
+  {
+    "token": "/api/stock",
+    "file": "docs/truth-chain-ui-to-origin.md",
+    "line": 73,
+    "col": 168,
+    "lineText": "| `/Users/michaelpuchowezki/Dev/rubikvault-site/public/data/snapshots/market-score/latest.json` | 3.0 | `3eb7002e8632f2a6…` | `data[].symbol`, `data[].score` | used by /api/stock for market_score |",
+    "lineHash": "eddf60d1"
+  },
+  {
+    "token": "/analyze/",
+    "file": "docs/ui-path-proof.md",
+    "line": 3,
+    "col": 65,
+    "lineText": "**Goal:** Prove, with evidence, the exact request chain used by `/analyze/UBER` for the displayed close/volume/date.",
+    "lineHash": "d18f34a3"
+  },
+  {
+    "token": "/api/stock",
+    "file": "docs/ui-path-proof.md",
+    "line": 6,
+    "col": 7,
+    "lineText": "**UI → /api/stock → functions/api/stock.js → upstream (snapshot or provider)**",
+    "lineHash": "956ffa8a"
+  },
+  {
+    "token": "/api/stock",
+    "file": "docs/ui-path-proof.md",
+    "line": 14,
+    "col": 5,
+    "lineText": "- `/api/stock`: line **1466**",
+    "lineHash": "4ce131be"
+  },
+  {
+    "token": "latest_bar",
+    "file": "docs/ui-path-proof.md",
+    "line": 16,
+    "col": 5,
+    "lineText": "- `latest_bar` read: line **931**",
+    "lineHash": "820c9f06"
+  },
+  {
+    "token": "/api/stock",
+    "file": "docs/ui-path-proof.md",
+    "line": 20,
+    "col": 25,
+    "lineText": "- **Handler**: `functions/api/stock.js`",
+    "lineHash": "a3646111"
+  },
+  {
+    "token": "/debug/ui-path/",
+    "file": "docs/ui-path-proof.md",
+    "line": 26,
+    "col": 21,
+    "lineText": "- Trace file: `public/debug/ui-path/UBER.ui-path.trace.json`",
+    "lineHash": "b529ed3e"
+  },
+  {
+    "token": "/api/stock",
+    "file": "docs/ui-path-proof.md",
+    "line": 33,
+    "col": 13,
+    "lineText": "- Endpoint: `/api/stock?ticker=UBER`",
+    "lineHash": "46c55ee2"
+  },
+  {
+    "token": "/api/stock",
+    "file": "docs/ui-path-proof.md",
+    "line": 34,
+    "col": 26,
+    "lineText": "- Handler file: `functions/api/stock.js` (`onRequestGet`, line 326)",
+    "lineHash": "aad32f8c"
+  },
+  {
+    "token": "latest_bar",
+    "file": "docs/ui-path-proof.md",
+    "line": 35,
+    "col": 34,
+    "lineText": "- Winning response contains `data.latest_bar.close`, `data.latest_bar.volume`, `data.latest_bar.date` matching DOM values.",
+    "lineHash": "6b4c0fd8"
+  },
+  {
+    "token": "data.latest_bar",
+    "file": "docs/ui-path-proof.md",
+    "line": 35,
+    "col": 29,
+    "lineText": "- Winning response contains `data.latest_bar.close`, `data.latest_bar.volume`, `data.latest_bar.date` matching DOM values.",
+    "lineHash": "6b4c0fd8"
+  },
+  {
+    "token": "/analyze/",
+    "file": "docs/ui-path-proof.md",
+    "line": 47,
+    "col": 49,
+    "lineText": "These exist in the repo but are **not** used by `/analyze/:ticker` for price display:",
+    "lineHash": "cd9801e9"
+  },
+  {
+    "token": "/debug/ui-path/",
+    "file": "docs/ui-path-proof.md",
+    "line": 58,
+    "col": 9,
+    "lineText": "- `public/debug/ui-path/UBER.ui-path.trace.json`",
+    "lineHash": "c62dcaa5"
+  },
+  {
+    "token": "/api/stock",
+    "file": "docs/ui-path-proof.md",
+    "line": 59,
+    "col": 51,
+    "lineText": "- Trace contains a “winning response” pointing to `/api/stock` with matching values.",
+    "lineHash": "2b38bcfa"
+  },
+  {
+    "token": "latest_bar",
+    "file": "functions/_ops/shape.js",
+    "line": 4,
+    "col": 29,
+    "lineText": "return data && typeof data.latest_bar === 'object' ? data.latest_bar : null;",
+    "lineHash": "314d325f"
+  },
+  {
+    "token": "data.latest_bar",
+    "file": "functions/_ops/shape.js",
+    "line": 4,
+    "col": 24,
+    "lineText": "return data && typeof data.latest_bar === 'object' ? data.latest_bar : null;",
+    "lineHash": "314d325f"
+  },
+  {
+    "token": "truthChains",
+    "file": "functions/_ops/shape.js",
+    "line": 10,
+    "col": 29,
+    "lineText": "return data && typeof data.truthChains === 'object' ? data.truthChains : null;",
+    "lineHash": "2c03e7a4"
+  },
+  {
+    "token": "data.truthChains",
+    "file": "functions/_ops/shape.js",
+    "line": 10,
+    "col": 24,
+    "lineText": "return data && typeof data.truthChains === 'object' ? data.truthChains : null;",
+    "lineHash": "2c03e7a4"
+  },
+  {
+    "token": "latest_bar",
+    "file": "functions/api/_shared/quality.js",
+    "line": 17,
+    "col": 19,
+    "lineText": "if (data && data.latest_bar) return [data.latest_bar];",
+    "lineHash": "9b16416b"
+  },
+  {
+    "token": "data.latest_bar",
+    "file": "functions/api/_shared/quality.js",
+    "line": 17,
+    "col": 14,
+    "lineText": "if (data && data.latest_bar) return [data.latest_bar];",
+    "lineHash": "9b16416b"
+  },
+  {
+    "token": "/api/stock",
+    "file": "functions/api/debug/prove-ui-path.js",
+    "line": 5,
+    "col": 16,
+    "lineText": "const path = `/api/stock?ticker=${encodeURIComponent(ticker)}`;",
+    "lineHash": "ab3bdfb6"
+  },
+  {
+    "token": "/analyze/",
+    "file": "functions/api/debug/prove-ui-path.js",
+    "line": 19,
+    "col": 23,
+    "lineText": "page_url: new URL(`/analyze/${encodeURIComponent(ticker)}`, url.origin).toString(),",
+    "lineHash": "752ba04d"
+  },
+  {
+    "token": "latest_bar",
+    "file": "functions/api/debug/prove-ui-path.js",
+    "line": 27,
+    "col": 30,
+    "lineText": "checked_path: 'data.latest_bar',",
+    "lineHash": "974e8fb9"
+  },
+  {
+    "token": "data.latest_bar",
+    "file": "functions/api/debug/prove-ui-path.js",
+    "line": 27,
+    "col": 25,
+    "lineText": "checked_path: 'data.latest_bar',",
+    "lineHash": "974e8fb9"
+  },
+  {
+    "token": "/api/stock",
+    "file": "functions/api/debug/prove-ui-path.js",
+    "line": 37,
+    "col": 30,
+    "lineText": "handler_file: 'functions/api/stock.js'",
+    "lineHash": "789dd879"
+  },
+  {
+    "token": "winning_response",
+    "file": "functions/api/debug/prove-ui-path.js",
+    "line": 41,
+    "col": 4,
+    "lineText": "winning_response: {",
+    "lineHash": "2d5313ca"
+  },
+  {
+    "token": "/api/stock",
+    "file": "functions/api/debug/prove-ui-path.js",
+    "line": 61,
+    "col": 26,
+    "lineText": "const apiUrl = new URL('/api/stock', request.url);",
+    "lineHash": "8b99dcd8"
+  },
+  {
+    "token": "/debug/ui-path/",
+    "file": "functions/api/mission-control/summary.js",
+    "line": 21,
+    "col": 41,
+    "lineText": "const PRICE_UI_TRACE_PATH = (ticker) => `/debug/ui-path/${ticker}.ui-path.trace.json`;",
+    "lineHash": "94e861f7"
+  },
+  {
+    "token": "/api/stock",
+    "file": "functions/api/mission-control/summary.js",
+    "line": 134,
+    "col": 25,
+    "lineText": "const url = new URL('/api/stock', requestUrl);",
+    "lineHash": "06801fc4"
+  },
+  {
+    "token": "/api/stock",
+    "file": "functions/api/mission-control/summary.js",
+    "line": 157,
+    "col": 12,
+    "lineText": "url: `/api/stock?ticker=${encodeURIComponent(ticker)}`,",
+    "lineHash": "9451619a"
+  },
+  {
+    "token": "latest_bar",
+    "file": "functions/api/mission-control/summary.js",
+    "line": 249,
+    "col": 45,
+    "lineText": "const latestBar = trace?.response_excerpt?.latest_bar || {};",
+    "lineHash": "cb71045d"
+  },
+  {
+    "token": "latest_bar",
+    "file": "functions/api/mission-control/summary.js",
+    "line": 251,
+    "col": 32,
+    "lineText": "const close = latestBar['data.latest_bar.close'];",
+    "lineHash": "5ffd93a2"
+  },
+  {
+    "token": "data.latest_bar",
+    "file": "functions/api/mission-control/summary.js",
+    "line": 251,
+    "col": 27,
+    "lineText": "const close = latestBar['data.latest_bar.close'];",
+    "lineHash": "5ffd93a2"
+  },
+  {
+    "token": "latest_bar",
+    "file": "functions/api/mission-control/summary.js",
+    "line": 252,
+    "col": 33,
+    "lineText": "const volume = latestBar['data.latest_bar.volume'];",
+    "lineHash": "67e5a92f"
+  },
+  {
+    "token": "data.latest_bar",
+    "file": "functions/api/mission-control/summary.js",
+    "line": 252,
+    "col": 28,
+    "lineText": "const volume = latestBar['data.latest_bar.volume'];",
+    "lineHash": "67e5a92f"
+  },
+  {
+    "token": "latest_bar",
+    "file": "functions/api/mission-control/summary.js",
+    "line": 253,
+    "col": 31,
+    "lineText": "const date = latestBar['data.latest_bar.date'];",
+    "lineHash": "b0875458"
+  },
+  {
+    "token": "data.latest_bar",
+    "file": "functions/api/mission-control/summary.js",
+    "line": 253,
+    "col": 26,
+    "lineText": "const date = latestBar['data.latest_bar.date'];",
+    "lineHash": "b0875458"
+  },
+  {
+    "token": "/api/stock",
+    "file": "functions/api/mission-control/summary.js",
+    "line": 267,
+    "col": 98,
+    "lineText": "return uiTrace.network.calls.find((call) => typeof call?.url === 'string' && call.url.includes('/api/stock')) || null;",
+    "lineHash": "d8f40726"
+  },
+  {
+    "token": "latest_bar",
+    "file": "functions/api/mission-control/summary.js",
+    "line": 282,
+    "col": 22,
+    "lineText": "if (response?.data?.latest_bar) {",
+    "lineHash": "c72ad7de"
+  },
+  {
+    "token": "latest_bar",
+    "file": "functions/api/mission-control/summary.js",
+    "line": 283,
+    "col": 33,
+    "lineText": "const latest = response.data.latest_bar;",
+    "lineHash": "9db0b1a4"
+  },
+  {
+    "token": "data.latest_bar",
+    "file": "functions/api/mission-control/summary.js",
+    "line": 283,
+    "col": 28,
+    "lineText": "const latest = response.data.latest_bar;",
+    "lineHash": "9db0b1a4"
+  },
+  {
+    "token": "latest_bar",
+    "file": "functions/api/mission-control/summary.js",
+    "line": 290,
+    "col": 26,
+    "lineText": "const latest = response.latest_bar || {};",
+    "lineHash": "1199504b"
+  },
+  {
+    "token": "latest_bar",
+    "file": "functions/api/mission-control/summary.js",
+    "line": 292,
+    "col": 24,
+    "lineText": "close: latest['data.latest_bar.close'] ?? latest.close,",
+    "lineHash": "32863797"
+  },
+  {
+    "token": "data.latest_bar",
+    "file": "functions/api/mission-control/summary.js",
+    "line": 292,
+    "col": 19,
+    "lineText": "close: latest['data.latest_bar.close'] ?? latest.close,",
+    "lineHash": "32863797"
+  },
+  {
+    "token": "latest_bar",
+    "file": "functions/api/mission-control/summary.js",
+    "line": 293,
+    "col": 25,
+    "lineText": "volume: latest['data.latest_bar.volume'] ?? latest.volume,",
+    "lineHash": "a2d48b52"
+  },
+  {
+    "token": "data.latest_bar",
+    "file": "functions/api/mission-control/summary.js",
+    "line": 293,
+    "col": 20,
+    "lineText": "volume: latest['data.latest_bar.volume'] ?? latest.volume,",
+    "lineHash": "a2d48b52"
+  },
+  {
+    "token": "latest_bar",
+    "file": "functions/api/mission-control/summary.js",
+    "line": 294,
+    "col": 23,
+    "lineText": "date: latest['data.latest_bar.date'] ?? latest.date",
+    "lineHash": "727271fe"
+  },
+  {
+    "token": "data.latest_bar",
+    "file": "functions/api/mission-control/summary.js",
+    "line": 294,
+    "col": 18,
+    "lineText": "date: latest['data.latest_bar.date'] ?? latest.date",
+    "lineHash": "727271fe"
+  },
+  {
+    "token": "winning_response",
+    "file": "functions/api/mission-control/summary.js",
+    "line": 332,
+    "col": 31,
+    "lineText": "uiWinningUrl: uiTrace?.winning_response?.url || null,",
+    "lineHash": "5dbb08bd"
+  },
+  {
+    "token": "winning_response",
+    "file": "functions/api/mission-control/summary.js",
+    "line": 333,
+    "col": 34,
+    "lineText": "uiWinningStatus: uiTrace?.winning_response?.status || null,",
+    "lineHash": "654e59f5"
+  },
+  {
+    "token": "/analyze/",
+    "file": "functions/api/mission-control/summary.js",
+    "line": 362,
+    "col": 23,
+    "lineText": "title: 'User opens /analyze/<T> and the page JS loads.',",
+    "lineHash": "d8511521"
+  },
+  {
+    "token": "/api/stock",
+    "file": "functions/api/mission-control/summary.js",
+    "line": 384,
+    "col": 53,
+    "lineText": "title: 'The page triggers the winning request to /api/stock?ticker=<T>.',",
+    "lineHash": "79b3afa3"
+  },
+  {
+    "token": "latest_bar",
+    "file": "functions/api/mission-control/summary.js",
+    "line": 448,
+    "col": 26,
+    "lineText": "checked_path: 'data.latest_bar',",
+    "lineHash": "974e8fb9"
+  },
+  {
+    "token": "data.latest_bar",
+    "file": "functions/api/mission-control/summary.js",
+    "line": 448,
+    "col": 21,
+    "lineText": "checked_path: 'data.latest_bar',",
+    "lineHash": "974e8fb9"
+  },
+  {
+    "token": "latest_bar",
+    "file": "functions/api/mission-control/summary.js",
+    "line": 466,
+    "col": 49,
+    "lineText": "title: 'Backend maps raw data into canonical latest_bar + change format.',",
+    "lineHash": "9b248944"
+  },
+  {
+    "token": "latest_bar",
+    "file": "functions/api/mission-control/summary.js",
+    "line": 522,
+    "col": 65,
+    "lineText": "title: '/api/stock returns JSON that satisfies the contract (latest_bar.close/volume/date present).',",
+    "lineHash": "9b6425bd"
+  },
+  {
+    "token": "/api/stock",
+    "file": "functions/api/mission-control/summary.js",
+    "line": 522,
+    "col": 12,
+    "lineText": "title: '/api/stock returns JSON that satisfies the contract (latest_bar.close/volume/date present).',",
+    "lineHash": "9b6425bd"
+  },
+  {
+    "token": "latest_bar",
+    "file": "functions/api/mission-control/summary.js",
+    "line": 525,
+    "col": 26,
+    "lineText": "checked_path: 'data.latest_bar',",
+    "lineHash": "974e8fb9"
+  },
+  {
+    "token": "data.latest_bar",
+    "file": "functions/api/mission-control/summary.js",
+    "line": 525,
+    "col": 21,
+    "lineText": "checked_path: 'data.latest_bar',",
+    "lineHash": "974e8fb9"
+  },
+  {
+    "token": "/ops/",
+    "file": "functions/api/mission-control/summary.js",
+    "line": 1006,
+    "col": 38,
+    "lineText": "fetchAssetJson(request.url, '/data/ops/health-profiles.v1.json', null),",
+    "lineHash": "9b9cdc03"
+  },
+  {
+    "token": "/ops/",
+    "file": "functions/api/mission-control/summary.js",
+    "line": 1007,
+    "col": 38,
+    "lineText": "fetchAssetJson(request.url, '/data/ops/thresholds.v1.json', null),",
+    "lineHash": "107f3df0"
+  },
+  {
+    "token": "/ops/",
+    "file": "functions/api/mission-control/summary.js",
+    "line": 1008,
+    "col": 38,
+    "lineText": "fetchAssetJson(request.url, '/data/ops/source-map.v1.json', null),",
+    "lineHash": "917c9bc3"
+  },
+  {
+    "token": "/ops/",
+    "file": "functions/api/mission-control/summary.js",
+    "line": 1476,
+    "col": 19,
+    "lineText": "url: '/data/ops/health-profiles.v1.json',",
+    "lineHash": "10af5b58"
+  },
+  {
+    "token": "/api/mission-control/summary",
+    "file": "functions/api/mission-control/summary.js",
+    "line": 1484,
+    "col": 14,
+    "lineText": "url: '/api/mission-control/summary',",
+    "lineHash": "60ca8fde"
+  },
+  {
+    "token": "truthChains",
+    "file": "functions/api/mission-control/summary.js",
+    "line": 1601,
+    "col": 6,
+    "lineText": "truthChains: {",
+    "lineHash": "d3003fcd"
+  },
+  {
+    "token": "latest_bar",
+    "file": "functions/api/stock.js",
+    "line": 745,
+    "col": 8,
+    "lineText": "latest_bar: null,",
+    "lineHash": "3141962f"
+  },
+  {
+    "token": "latest_bar",
+    "file": "functions/api/stock.js",
+    "line": 864,
+    "col": 4,
+    "lineText": "latest_bar: latestBar,",
+    "lineHash": "6e152d1b"
+  },
+  {
+    "token": "/analyze/",
+    "file": "manifest.json",
+    "line": 46,
+    "col": 7,
+    "lineText": "\"/analyze/:ticker\",",
+    "lineHash": "ff6981af"
+  },
+  {
+    "token": "/ops/",
+    "file": "package.json",
+    "line": 4,
+    "col": 75,
+    "lineText": "\"prepare:data\": \"node scripts/copy-feature-registry.mjs && node scripts/ops/build-build-info.mjs\",",
+    "lineHash": "ca3cd846"
+  },
+  {
+    "token": "/ops/",
+    "file": "package.json",
+    "line": 31,
+    "col": 40,
+    "lineText": "\"test:missing-mirror\": \"node scripts/ops/verify-missing-mirror-semantic.mjs\",",
+    "lineHash": "5db0d744"
+  },
+  {
+    "token": "/ops/",
+    "file": "package.json",
+    "line": 33,
+    "col": 39,
+    "lineText": "\"test:ops-artifacts\": \"node scripts/ops/test-ops-artifacts.mjs\",",
+    "lineHash": "a5047762"
+  },
+  {
+    "token": "/ops/",
+    "file": "package.json",
+    "line": 34,
+    "col": 38,
+    "lineText": "\"test:ops-ui-smoke\": \"node scripts/ops/test-ops-ui-smoke.mjs\",",
+    "lineHash": "4563bb69"
+  },
+  {
+    "token": "/ops/",
+    "file": "package.json",
+    "line": 35,
+    "col": 32,
+    "lineText": "\"test:ops-ui\": \"node scripts/ops/test-ops-ui.mjs\",",
+    "lineHash": "937fecb1"
+  },
+  {
+    "token": "/ops/",
+    "file": "package.json",
+    "line": 36,
+    "col": 37,
+    "lineText": "\"test:ops-summary\": \"node scripts/ops/rv_verify_truth_summary.mjs\",",
+    "lineHash": "f3263783"
+  },
+  {
+    "token": "/ops/",
+    "file": "package.json",
+    "line": 37,
+    "col": 39,
+    "lineText": "\"verify:contracts\": \"bash ./scripts/ops/rv_verify_contracts.sh\",",
+    "lineHash": "9e618ea6"
+  },
+  {
+    "token": "/ops/",
+    "file": "package.json",
+    "line": 63,
+    "col": 40,
+    "lineText": "\"test:ops:provenance\": \"node scripts/ops/rv_verify_count_provenance.mjs\",",
+    "lineHash": "1c01a9a1"
+  },
+  {
+    "token": "/ops/",
+    "file": "package.json",
+    "line": 65,
+    "col": 27,
+    "lineText": "\"rv:ops\": \"node scripts/ops/build-ops-daily.mjs\",",
+    "lineHash": "b98910bb"
+  },
+  {
+    "token": "/ops/",
+    "file": "package.json",
+    "line": 67,
+    "col": 43,
+    "lineText": "\"test:truth-artifacts\": \"bash ./scripts/ops/verify-truth-artifacts.sh\",",
+    "lineHash": "04cbe958"
+  },
+  {
+    "token": "/api/mission-control/summary",
+    "file": "public/RUNBOOK.md",
+    "line": 35,
+    "col": 79,
+    "lineText": "curl -fsS \"$BASE_URL/mission-control.html\" | rg -n 'setInterval\\(|Polling: OFF|/api/mission-control/summary' | head -n 40",
+    "lineHash": "757c5d1b"
+  },
+  {
+    "token": "/api/mission-control/summary",
+    "file": "public/RUNBOOK.md",
+    "line": 38,
+    "col": 20,
+    "lineText": "curl -fsS \"$BASE_URL/api/mission-control/summary\" | jq '{schema_version, metaStatus:(.metadata.status//null), hasKV:(.data.hasKV//null), asOf:(.data.asOf//null), budgets:(.data.budgets//null)}'",
+    "lineHash": "e8058317"
+  },
+  {
+    "token": "/api/mission-control/summary",
+    "file": "public/RUNBOOK.md",
+    "line": 41,
+    "col": 20,
+    "lineText": "curl -fsS \"$BASE_URL/api/mission-control/summary\" | jq '{hasFailures:(.data.failures.day|length), hasLive:(.data.liveApis.items|length)}'",
+    "lineHash": "65cd55b4"
+  },
+  {
+    "token": "/api/mission-control/summary",
+    "file": "public/RUNBOOK.md",
+    "line": 42,
+    "col": 20,
+    "lineText": "curl -fsS \"$BASE_URL/api/mission-control/summary?debug=1\" | jq '{hasFailures:(.data.failures.day|length), hasLive:(.data.liveApis.items|length)}'",
+    "lineHash": "4c92f6e8"
+  },
+  {
+    "token": "/api/mission-control/summary",
+    "file": "public/RUNBOOK.md",
+    "line": 45,
+    "col": 23,
+    "lineText": "curl -fsS -I \"$BASE_URL/api/mission-control/summary\" | tr -d \"\\r\" | rg -n 'cache-control|etag|cf-cache-status' || true",
+    "lineHash": "03a8b1fc"
+  },
+  {
+    "token": "latest_bar",
+    "file": "public/RUNBOOK.md",
+    "line": 96,
+    "col": 148,
+    "lineText": "curl -fsS \"$BASE_URL/api/stock?ticker=AAPL\" | jq '{ok:(.error==null), status:(.metadata.status//null), source_chain:(.metadata.source_chain//null), latest_bar:(.data.latest_bar//null), indicatorsCount:(.data.indicators|length), error:(.error//null)}'",
+    "lineHash": "1f30a2cd"
+  },
+  {
+    "token": "data.latest_bar",
+    "file": "public/RUNBOOK.md",
+    "line": 96,
+    "col": 161,
+    "lineText": "curl -fsS \"$BASE_URL/api/stock?ticker=AAPL\" | jq '{ok:(.error==null), status:(.metadata.status//null), source_chain:(.metadata.source_chain//null), latest_bar:(.data.latest_bar//null), indicatorsCount:(.data.indicators|length), error:(.error//null)}'",
+    "lineHash": "1f30a2cd"
+  },
+  {
+    "token": "/api/stock",
+    "file": "public/RUNBOOK.md",
+    "line": 96,
+    "col": 20,
+    "lineText": "curl -fsS \"$BASE_URL/api/stock?ticker=AAPL\" | jq '{ok:(.error==null), status:(.metadata.status//null), source_chain:(.metadata.source_chain//null), latest_bar:(.data.latest_bar//null), indicatorsCount:(.data.indicators|length), error:(.error//null)}'",
+    "lineHash": "1f30a2cd"
+  },
+  {
+    "token": "/analyze/",
+    "file": "public/RUNBOOK.md",
+    "line": 97,
+    "col": 23,
+    "lineText": "curl -fsS -I \"$BASE_URL/analyze/AAPL\" | tr -d \"\\r\" | sed -n '1,12p'",
+    "lineHash": "2dbb7031"
+  },
+  {
+    "token": "/api/stock",
+    "file": "public/data/ops/source-map.v1.json",
+    "line": 7,
+    "col": 19,
+    "lineText": "\"sources\": [\"/api/stock\", \"/api/fundamentals\"],",
+    "lineHash": "5f111d16"
+  },
+  {
+    "token": "/api/mission-control/summary",
+    "file": "public/data/ops/source-map.v1.json",
+    "line": 24,
+    "col": 19,
+    "lineText": "\"sources\": [\"/api/mission-control/summary\"],",
+    "lineHash": "f4622a24"
+  },
+  {
+    "token": "/api/stock",
+    "file": "public/data/registry/modules.json",
+    "line": 54,
+    "col": 16,
+    "lineText": "\"api\": \"/api/stocks\",",
+    "lineHash": "b4531012"
+  },
+  {
+    "token": "/api/stock",
+    "file": "public/data/registry/modules.json",
+    "line": 55,
+    "col": 18,
+    "lineText": "\"debug\": \"/api/stocks?debug=1\",",
+    "lineHash": "22607b60"
+  },
+  {
+    "token": "/api/stock",
+    "file": "public/debug/truth-chain/TEAM.trace.json",
+    "line": 15,
+    "col": 36,
+    "lineText": "\"text\": \"        fetchJson(`/api/stock?ticker=${encodeURIComponent(upperTicker)}`),\",",
+    "lineHash": "cd7f36f3"
+  },
+  {
+    "token": "/api/stock",
+    "file": "public/debug/truth-chain/TEAM.trace.json",
+    "line": 16,
+    "col": 39,
+    "lineText": "\"snippet\": \"        fetchJson(`/api/stock?ticker=${encodeURIComponent(upperTicker)}`),\"",
+    "lineHash": "78361fd4"
+  },
+  {
+    "token": "latest_bar",
+    "file": "public/debug/truth-chain/TEAM.trace.json",
+    "line": 25,
+    "col": 41,
+    "lineText": "\"text\": \"      const bar = data?.latest_bar || null;\",",
+    "lineHash": "93732932"
+  },
+  {
+    "token": "latest_bar",
+    "file": "public/debug/truth-chain/TEAM.trace.json",
+    "line": 26,
+    "col": 44,
+    "lineText": "\"snippet\": \"      const bar = data?.latest_bar || null;\"",
+    "lineHash": "64b3f4f3"
+  },
+  {
+    "token": "latest_bar",
+    "file": "public/debug/truth-chain/TEAM.trace.json",
+    "line": 70,
+    "col": 7,
+    "lineText": "\"latest_bar_close\": \"932:const close = bar?.close;\",",
+    "lineHash": "35404bdd"
+  },
+  {
+    "token": "/api/stock",
+    "file": "public/debug/truth-chain/TEAM.trace.json",
+    "line": 84,
+    "col": 36,
+    "lineText": "\"url\": \"https://rubikvault.com/api/stock?ticker=TEAM\",",
+    "lineHash": "d6248a39"
+  },
+  {
+    "token": "/api/stock",
+    "file": "public/debug/truth-chain/TEAM.trace.json",
+    "line": 111,
+    "col": 69,
+    "lineText": "\"file\": \"/Users/michaelpuchowezki/Dev/rubikvault-site/functions/api/stock.js\",",
+    "lineHash": "83ba003e"
+  },
+  {
+    "token": "/api/stock",
+    "file": "public/debug/truth-chain/TEAM.trace.json",
+    "line": 272,
+    "col": 69,
+    "lineText": "\"file\": \"/Users/michaelpuchowezki/Dev/rubikvault-site/functions/api/stock.js\",",
+    "lineHash": "83ba003e"
+  },
+  {
+    "token": "/api/stock",
+    "file": "public/debug/truth-chain/TEAM.trace.json",
+    "line": 277,
+    "col": 69,
+    "lineText": "\"file\": \"/Users/michaelpuchowezki/Dev/rubikvault-site/functions/api/stock.js\",",
+    "lineHash": "83ba003e"
+  },
+  {
+    "token": "/api/stock",
+    "file": "public/debug/truth-chain/TEAM.trace.json",
+    "line": 282,
+    "col": 69,
+    "lineText": "\"file\": \"/Users/michaelpuchowezki/Dev/rubikvault-site/functions/api/stock.js\",",
+    "lineHash": "83ba003e"
+  },
+  {
+    "token": "latest_bar",
+    "file": "public/debug/truth-chain/TEAM.trace.json",
+    "line": 318,
+    "col": 5,
+    "lineText": "\"latest_bar\": {",
+    "lineHash": "579ae7ee"
+  },
+  {
+    "token": "latest_bar",
+    "file": "public/debug/truth-chain/TEAM.trace.json",
+    "line": 319,
+    "col": 12,
+    "lineText": "\"data.latest_bar.close\": 118.18,",
+    "lineHash": "f01dc669"
+  },
+  {
+    "token": "data.latest_bar",
+    "file": "public/debug/truth-chain/TEAM.trace.json",
+    "line": 319,
+    "col": 7,
+    "lineText": "\"data.latest_bar.close\": 118.18,",
+    "lineHash": "f01dc669"
+  },
+  {
+    "token": "latest_bar",
+    "file": "public/debug/truth-chain/TEAM.trace.json",
+    "line": 320,
+    "col": 12,
+    "lineText": "\"data.latest_bar.volume\": 4400025,",
+    "lineHash": "d03cf6e5"
+  },
+  {
+    "token": "data.latest_bar",
+    "file": "public/debug/truth-chain/TEAM.trace.json",
+    "line": 320,
+    "col": 7,
+    "lineText": "\"data.latest_bar.volume\": 4400025,",
+    "lineHash": "d03cf6e5"
+  },
+  {
+    "token": "latest_bar",
+    "file": "public/debug/truth-chain/TEAM.trace.json",
+    "line": 321,
+    "col": 12,
+    "lineText": "\"data.latest_bar.date\": \"2026-01-30\"",
+    "lineHash": "baf54a21"
+  },
+  {
+    "token": "data.latest_bar",
+    "file": "public/debug/truth-chain/TEAM.trace.json",
+    "line": 321,
+    "col": 7,
+    "lineText": "\"data.latest_bar.date\": \"2026-01-30\"",
+    "lineHash": "baf54a21"
+  },
+  {
+    "token": "/api/stock",
+    "file": "public/debug/truth-chain/UBER.trace.json",
+    "line": 15,
+    "col": 36,
+    "lineText": "\"text\": \"        fetchJson(`/api/stock?ticker=${encodeURIComponent(upperTicker)}`),\",",
+    "lineHash": "cd7f36f3"
+  },
+  {
+    "token": "/api/stock",
+    "file": "public/debug/truth-chain/UBER.trace.json",
+    "line": 16,
+    "col": 39,
+    "lineText": "\"snippet\": \"        fetchJson(`/api/stock?ticker=${encodeURIComponent(upperTicker)}`),\"",
+    "lineHash": "78361fd4"
+  },
+  {
+    "token": "latest_bar",
+    "file": "public/debug/truth-chain/UBER.trace.json",
+    "line": 25,
+    "col": 41,
+    "lineText": "\"text\": \"      const bar = data?.latest_bar || null;\",",
+    "lineHash": "93732932"
+  },
+  {
+    "token": "latest_bar",
+    "file": "public/debug/truth-chain/UBER.trace.json",
+    "line": 26,
+    "col": 44,
+    "lineText": "\"snippet\": \"      const bar = data?.latest_bar || null;\"",
+    "lineHash": "64b3f4f3"
+  },
+  {
+    "token": "latest_bar",
+    "file": "public/debug/truth-chain/UBER.trace.json",
+    "line": 70,
+    "col": 7,
+    "lineText": "\"latest_bar_close\": \"932:const close = bar?.close;\",",
+    "lineHash": "35404bdd"
+  },
+  {
+    "token": "/api/stock",
+    "file": "public/debug/truth-chain/UBER.trace.json",
+    "line": 84,
+    "col": 36,
+    "lineText": "\"url\": \"https://rubikvault.com/api/stock?ticker=UBER\",",
+    "lineHash": "6e470406"
+  },
+  {
+    "token": "/api/stock",
+    "file": "public/debug/truth-chain/UBER.trace.json",
+    "line": 111,
+    "col": 69,
+    "lineText": "\"file\": \"/Users/michaelpuchowezki/Dev/rubikvault-site/functions/api/stock.js\",",
+    "lineHash": "83ba003e"
+  },
+  {
+    "token": "/api/stock",
+    "file": "public/debug/truth-chain/UBER.trace.json",
+    "line": 272,
+    "col": 69,
+    "lineText": "\"file\": \"/Users/michaelpuchowezki/Dev/rubikvault-site/functions/api/stock.js\",",
+    "lineHash": "83ba003e"
+  },
+  {
+    "token": "/api/stock",
+    "file": "public/debug/truth-chain/UBER.trace.json",
+    "line": 277,
+    "col": 69,
+    "lineText": "\"file\": \"/Users/michaelpuchowezki/Dev/rubikvault-site/functions/api/stock.js\",",
+    "lineHash": "83ba003e"
+  },
+  {
+    "token": "/api/stock",
+    "file": "public/debug/truth-chain/UBER.trace.json",
+    "line": 282,
+    "col": 69,
+    "lineText": "\"file\": \"/Users/michaelpuchowezki/Dev/rubikvault-site/functions/api/stock.js\",",
+    "lineHash": "83ba003e"
+  },
+  {
+    "token": "latest_bar",
+    "file": "public/debug/truth-chain/UBER.trace.json",
+    "line": 318,
+    "col": 5,
+    "lineText": "\"latest_bar\": {",
+    "lineHash": "579ae7ee"
+  },
+  {
+    "token": "latest_bar",
+    "file": "public/debug/truth-chain/UBER.trace.json",
+    "line": 319,
+    "col": 12,
+    "lineText": "\"data.latest_bar.close\": 80.05,",
+    "lineHash": "caeb5fbe"
+  },
+  {
+    "token": "data.latest_bar",
+    "file": "public/debug/truth-chain/UBER.trace.json",
+    "line": 319,
+    "col": 7,
+    "lineText": "\"data.latest_bar.close\": 80.05,",
+    "lineHash": "caeb5fbe"
+  },
+  {
+    "token": "latest_bar",
+    "file": "public/debug/truth-chain/UBER.trace.json",
+    "line": 320,
+    "col": 12,
+    "lineText": "\"data.latest_bar.volume\": 24344094,",
+    "lineHash": "36f0f7ad"
+  },
+  {
+    "token": "data.latest_bar",
+    "file": "public/debug/truth-chain/UBER.trace.json",
+    "line": 320,
+    "col": 7,
+    "lineText": "\"data.latest_bar.volume\": 24344094,",
+    "lineHash": "36f0f7ad"
+  },
+  {
+    "token": "latest_bar",
+    "file": "public/debug/truth-chain/UBER.trace.json",
+    "line": 321,
+    "col": 12,
+    "lineText": "\"data.latest_bar.date\": \"2026-01-30\"",
+    "lineHash": "baf54a21"
+  },
+  {
+    "token": "data.latest_bar",
+    "file": "public/debug/truth-chain/UBER.trace.json",
+    "line": 321,
+    "col": 7,
+    "lineText": "\"data.latest_bar.date\": \"2026-01-30\"",
+    "lineHash": "baf54a21"
+  },
+  {
+    "token": "/api/stock",
+    "file": "public/debug/truth-chain/WBD.trace.json",
+    "line": 15,
+    "col": 36,
+    "lineText": "\"text\": \"        fetchJson(`/api/stock?ticker=${encodeURIComponent(upperTicker)}`),\",",
+    "lineHash": "cd7f36f3"
+  },
+  {
+    "token": "/api/stock",
+    "file": "public/debug/truth-chain/WBD.trace.json",
+    "line": 16,
+    "col": 39,
+    "lineText": "\"snippet\": \"        fetchJson(`/api/stock?ticker=${encodeURIComponent(upperTicker)}`),\"",
+    "lineHash": "78361fd4"
+  },
+  {
+    "token": "latest_bar",
+    "file": "public/debug/truth-chain/WBD.trace.json",
+    "line": 25,
+    "col": 41,
+    "lineText": "\"text\": \"      const bar = data?.latest_bar || null;\",",
+    "lineHash": "93732932"
+  },
+  {
+    "token": "latest_bar",
+    "file": "public/debug/truth-chain/WBD.trace.json",
+    "line": 26,
+    "col": 44,
+    "lineText": "\"snippet\": \"      const bar = data?.latest_bar || null;\"",
+    "lineHash": "64b3f4f3"
+  },
+  {
+    "token": "latest_bar",
+    "file": "public/debug/truth-chain/WBD.trace.json",
+    "line": 70,
+    "col": 7,
+    "lineText": "\"latest_bar_close\": \"932:const close = bar?.close;\",",
+    "lineHash": "35404bdd"
+  },
+  {
+    "token": "/api/stock",
+    "file": "public/debug/truth-chain/WBD.trace.json",
+    "line": 84,
+    "col": 36,
+    "lineText": "\"url\": \"https://rubikvault.com/api/stock?ticker=WBD\",",
+    "lineHash": "15b0fd17"
+  },
+  {
+    "token": "/api/stock",
+    "file": "public/debug/truth-chain/WBD.trace.json",
+    "line": 111,
+    "col": 69,
+    "lineText": "\"file\": \"/Users/michaelpuchowezki/Dev/rubikvault-site/functions/api/stock.js\",",
+    "lineHash": "83ba003e"
+  },
+  {
+    "token": "/api/stock",
+    "file": "public/debug/truth-chain/WBD.trace.json",
+    "line": 272,
+    "col": 69,
+    "lineText": "\"file\": \"/Users/michaelpuchowezki/Dev/rubikvault-site/functions/api/stock.js\",",
+    "lineHash": "83ba003e"
+  },
+  {
+    "token": "/api/stock",
+    "file": "public/debug/truth-chain/WBD.trace.json",
+    "line": 277,
+    "col": 69,
+    "lineText": "\"file\": \"/Users/michaelpuchowezki/Dev/rubikvault-site/functions/api/stock.js\",",
+    "lineHash": "83ba003e"
+  },
+  {
+    "token": "/api/stock",
+    "file": "public/debug/truth-chain/WBD.trace.json",
+    "line": 282,
+    "col": 69,
+    "lineText": "\"file\": \"/Users/michaelpuchowezki/Dev/rubikvault-site/functions/api/stock.js\",",
+    "lineHash": "83ba003e"
+  },
+  {
+    "token": "latest_bar",
+    "file": "public/debug/truth-chain/WBD.trace.json",
+    "line": 318,
+    "col": 5,
+    "lineText": "\"latest_bar\": {",
+    "lineHash": "579ae7ee"
+  },
+  {
+    "token": "latest_bar",
+    "file": "public/debug/truth-chain/WBD.trace.json",
+    "line": 319,
+    "col": 12,
+    "lineText": "\"data.latest_bar.close\": 27.54,",
+    "lineHash": "e9c7395d"
+  },
+  {
+    "token": "data.latest_bar",
+    "file": "public/debug/truth-chain/WBD.trace.json",
+    "line": 319,
+    "col": 7,
+    "lineText": "\"data.latest_bar.close\": 27.54,",
+    "lineHash": "e9c7395d"
+  },
+  {
+    "token": "latest_bar",
+    "file": "public/debug/truth-chain/WBD.trace.json",
+    "line": 320,
+    "col": 12,
+    "lineText": "\"data.latest_bar.volume\": 24238625,",
+    "lineHash": "3c6f9934"
+  },
+  {
+    "token": "data.latest_bar",
+    "file": "public/debug/truth-chain/WBD.trace.json",
+    "line": 320,
+    "col": 7,
+    "lineText": "\"data.latest_bar.volume\": 24238625,",
+    "lineHash": "3c6f9934"
+  },
+  {
+    "token": "latest_bar",
+    "file": "public/debug/truth-chain/WBD.trace.json",
+    "line": 321,
+    "col": 12,
+    "lineText": "\"data.latest_bar.date\": \"2026-01-30\"",
+    "lineHash": "baf54a21"
+  },
+  {
+    "token": "data.latest_bar",
+    "file": "public/debug/truth-chain/WBD.trace.json",
+    "line": 321,
+    "col": 7,
+    "lineText": "\"data.latest_bar.date\": \"2026-01-30\"",
+    "lineHash": "baf54a21"
+  },
+  {
+    "token": "/analyze/",
+    "file": "public/debug/ui-path/UBER.ui-path.trace.json",
+    "line": 6,
+    "col": 57,
+    "lineText": "\"page_url\": \"https://cf4b6652.rubikvault-site.pages.dev/analyze/UBER\",",
+    "lineHash": "e9388901"
+  },
+  {
+    "token": "/api/stock",
+    "file": "public/debug/ui-path/UBER.ui-path.trace.json",
+    "line": 19,
+    "col": 15,
+    "lineText": "\"path\": \"/api/stock?ticker=UBER\",",
+    "lineHash": "f45659ae"
+  },
+  {
+    "token": "latest_bar",
+    "file": "public/debug/ui-path/UBER.ui-path.trace.json",
+    "line": 31,
+    "col": 30,
+    "lineText": "\"checked_path\": \"data.latest_bar\",",
+    "lineHash": "22ec7075"
+  },
+  {
+    "token": "data.latest_bar",
+    "file": "public/debug/ui-path/UBER.ui-path.trace.json",
+    "line": 31,
+    "col": 25,
+    "lineText": "\"checked_path\": \"data.latest_bar\",",
+    "lineHash": "22ec7075"
+  },
+  {
+    "token": "latest_bar",
+    "file": "public/debug/ui-path/UBER.ui-path.trace.json",
+    "line": 70,
+    "col": 13,
+    "lineText": "\"latest_bar\": null,",
+    "lineHash": "a30bbb89"
+  },
+  {
+    "token": "/api/stock",
+    "file": "public/debug/ui-path/UBER.ui-path.trace.json",
+    "line": 76,
+    "col": 58,
+    "lineText": "\"url\": \"https://cf4b6652.rubikvault-site.pages.dev/api/stock?ticker=UBER\",",
+    "lineHash": "0e14fb33"
+  },
+  {
+    "token": "latest_bar",
+    "file": "public/debug/ui-path/UBER.ui-path.trace.json",
+    "line": 126,
+    "col": 13,
+    "lineText": "\"latest_bar\": {",
+    "lineHash": "579ae7ee"
+  },
+  {
+    "token": "latest_bar",
+    "file": "public/debug/ui-path/UBER.ui-path.trace.json",
+    "line": 164,
+    "col": 13,
+    "lineText": "\"latest_bar\": null,",
+    "lineHash": "a30bbb89"
+  },
+  {
+    "token": "latest_bar",
+    "file": "public/debug/ui-path/UBER.ui-path.trace.json",
+    "line": 189,
+    "col": 13,
+    "lineText": "\"latest_bar\": null,",
+    "lineHash": "a30bbb89"
+  },
+  {
+    "token": "latest_bar",
+    "file": "public/debug/ui-path/UBER.ui-path.trace.json",
+    "line": 217,
+    "col": 13,
+    "lineText": "\"latest_bar\": null,",
+    "lineHash": "a30bbb89"
+  },
+  {
+    "token": "/api/stock",
+    "file": "public/debug/ui-path/UBER.ui-path.trace.json",
+    "line": 466,
+    "col": 17,
+    "lineText": "\"endpoint\": \"/api/stock?ticker=UBER\",",
+    "lineHash": "ccfbcb5c"
+  },
+  {
+    "token": "/api/stock",
+    "file": "public/debug/ui-path/UBER.ui-path.trace.json",
+    "line": 467,
+    "col": 75,
+    "lineText": "\"handler_file\": \"/Users/michaelpuchowezki/Dev/rubikvault-site/functions/api/stock.js\",",
+    "lineHash": "7a8e650b"
+  },
+  {
+    "token": "/api/stock",
+    "file": "public/debug/ui-path/UBER.ui-path.trace.json",
+    "line": 469,
+    "col": 69,
+    "lineText": "\"file\": \"/Users/michaelpuchowezki/Dev/rubikvault-site/functions/api/stock.js\",",
+    "lineHash": "83ba003e"
+  },
+  {
+    "token": "latest_bar",
+    "file": "public/debug/ui-path/UBER.ui-path.trace.json",
+    "line": 474,
+    "col": 7,
+    "lineText": "\"latest_bar\": {",
+    "lineHash": "579ae7ee"
+  },
+  {
+    "token": "/api/stock",
+    "file": "public/debug/ui-path/UBER.ui-path.trace.json",
+    "line": 475,
+    "col": 71,
+    "lineText": "\"file\": \"/Users/michaelpuchowezki/Dev/rubikvault-site/functions/api/stock.js\",",
+    "lineHash": "83ba003e"
+  },
+  {
+    "token": "/api/stock",
+    "file": "public/debug/ui-path/UBER.ui-path.trace.json",
+    "line": 480,
+    "col": 71,
+    "lineText": "\"file\": \"/Users/michaelpuchowezki/Dev/rubikvault-site/functions/api/stock.js\",",
+    "lineHash": "83ba003e"
+  },
+  {
+    "token": "winning_response",
+    "file": "public/debug/ui-path/UBER.ui-path.trace.json",
+    "line": 497,
+    "col": 3,
+    "lineText": "\"winning_response\": {",
+    "lineHash": "28b1106f"
+  },
+  {
+    "token": "/api/stock",
+    "file": "public/debug/ui-path/UBER.ui-path.trace.json",
+    "line": 498,
+    "col": 13,
+    "lineText": "\"path\": \"/api/stock?ticker=UBER\",",
+    "lineHash": "f45659ae"
+  },
+  {
+    "token": "/analyze/",
+    "file": "public/elliott.html",
+    "line": 430,
+    "col": 23,
+    "lineText": "<td><a href=\"/analyze/${encodeURIComponent(s.ticker)}\" style=\"color: #60a5fa;\">View →</a></td>",
+    "lineHash": "51cbaea5"
+  },
+  {
+    "token": "/analyze/",
+    "file": "public/index.html",
+    "line": 622,
+    "col": 75,
+    "lineText": "if (window.location.pathname && window.location.pathname.startsWith(\"/analyze/\")) {",
+    "lineHash": "c77563b5"
+  },
+  {
+    "token": "/analyze/",
+    "file": "public/index.html",
+    "line": 732,
+    "col": 50,
+    "lineText": "if (push) window.history.pushState({}, '', `/analyze/${encodeURIComponent(s)}`);",
+    "lineHash": "4ca77169"
+  },
+  {
+    "token": "latest_bar",
+    "file": "public/index.html",
+    "line": 931,
+    "col": 24,
+    "lineText": "const bar = data?.latest_bar || null;",
+    "lineHash": "fe9c22f7"
+  },
+  {
+    "token": "/analyze/",
+    "file": "public/index.html",
+    "line": 1459,
+    "col": 42,
+    "lineText": "window.history.pushState({}, '', `/analyze/${encodeURIComponent(upperTicker)}`);",
+    "lineHash": "43cf96d4"
+  },
+  {
+    "token": "/api/stock",
+    "file": "public/index.html",
+    "line": 1466,
+    "col": 19,
+    "lineText": "fetchJson(`/api/stock?ticker=${encodeURIComponent(upperTicker)}`),",
+    "lineHash": "e9e1fc29"
+  },
+  {
+    "token": "/api/stock",
+    "file": "public/index.html",
+    "line": 1475,
+    "col": 70,
+    "lineText": "{ error: { code: 'NETWORK_ERROR', message: 'Unable to reach /api/stock' }, metadata: { status: 'ERROR' } },",
+    "lineHash": "2eebca32"
+  },
+  {
+    "token": "/api/stock",
+    "file": "public/index.html",
+    "line": 1481,
+    "col": 97,
+    "lineText": "const safePayload = payload || { error: { code: 'NETWORK_ERROR', message: 'Unable to reach /api/stock' }, metadata: { status: 'ERROR' }, data: {} };",
+    "lineHash": "0767846e"
+  },
+  {
+    "token": "/analyze/",
+    "file": "public/index.html",
+    "line": 1574,
+    "col": 30,
+    "lineText": "// Check for deep link: /analyze/TICKER",
+    "lineHash": "ab4dcaf5"
+  },
+  {
+    "token": "/analyze/",
+    "file": "public/index.html",
+    "line": 1621,
+    "col": 37,
+    "lineText": "- ArrowDown + Enter navigates to /analyze/AAPL",
+    "lineHash": "6d4f48e6"
+  },
+  {
+    "token": "/analyze/",
+    "file": "public/manifest.json",
+    "line": 46,
+    "col": 7,
+    "lineText": "\"/analyze/:ticker\",",
+    "lineHash": "ff6981af"
+  },
+  {
+    "token": "/api/mission-control/summary",
+    "file": "public/mission-control/index.html",
+    "line": 156,
+    "col": 22,
+    "lineText": "API: <a href=\"/api/mission-control/summary\" style=\"color:#60a5fa;\">/api/mission-control/summary</a>",
+    "lineHash": "87e94f3d"
+  },
+  {
+    "token": "/api/mission-control/summary",
+    "file": "public/mission-control/index.html",
+    "line": 205,
+    "col": 36,
+    "lineText": "const summaryUrl = isDebug ? '/api/mission-control/summary?debug=1' : '/api/mission-control/summary';",
+    "lineHash": "3590f410"
+  },
+  {
+    "token": "/api/mission-control/summary",
+    "file": "public/mission-control.html",
+    "line": 156,
+    "col": 22,
+    "lineText": "API: <a href=\"/api/mission-control/summary\" style=\"color:#60a5fa;\">/api/mission-control/summary</a>",
+    "lineHash": "87e94f3d"
+  },
+  {
+    "token": "/api/mission-control/summary",
+    "file": "public/mission-control.html",
+    "line": 205,
+    "col": 36,
+    "lineText": "const summaryUrl = isDebug ? '/api/mission-control/summary?debug=1' : '/api/mission-control/summary';",
+    "lineHash": "3590f410"
+  },
+  {
+    "token": "/api/mission-control/summary",
+    "file": "public/ops/index.html",
+    "line": 385,
+    "col": 25,
+    "lineText": "Source: <a href=\"/api/mission-control/summary\" style=\"color:#60a5fa;\">/api/mission-control/summary</a>",
+    "lineHash": "c1412595"
+  },
+  {
+    "token": "truthChains",
+    "file": "public/ops/index.html",
+    "line": 736,
+    "col": 34,
+    "lineText": "renderPriceTruthChain(data?.truthChains?.prices || data?.priceTruth || null);",
+    "lineHash": "dece5eb1"
+  },
+  {
+    "token": "truthChains",
+    "file": "public/ops/index.html",
+    "line": 737,
+    "col": 29,
+    "lineText": "renderTruthChain(data?.truthChains?.indicators || data?.pipeline?.truth || null, runtime);",
+    "lineHash": "3f49abaa"
+  },
+  {
+    "token": "/api/mission-control/summary",
+    "file": "public/ops/index.html",
+    "line": 1060,
+    "col": 26,
+    "lineText": "const summaryUrl = `/api/mission-control/summary${debugEnabled ? '?debug=1' : ''}${debugEnabled ? '&' : '?'}t=${t}`;",
+    "lineHash": "db1264be"
+  },
+  {
+    "token": "/api/mission-control/summary",
+    "file": "public/ops/index.html",
+    "line": 1165,
+    "col": 33,
+    "lineText": "const res = await fetch('/api/mission-control/summary?live=1', {",
+    "lineHash": "9547d49f"
+  },
+  {
+    "token": "/api/stock",
+    "file": "public/stock.html",
+    "line": 347,
+    "col": 38,
+    "lineText": "const response = await fetch(`/api/stock?ticker=${encodeURIComponent(ticker)}${debugQuery}`);",
+    "lineHash": "b262b93f"
+  },
+  {
+    "token": "/api/stock",
+    "file": "public/stock.html",
+    "line": 353,
+    "col": 63,
+    "lineText": "errorBox.textContent = 'Network error while contacting /api/stock.';",
+    "lineHash": "8aa11206"
+  },
+  {
+    "token": "/ops/",
+    "file": "scripts/ops/build-mission-control-summary.mjs",
+    "line": 173,
+    "col": 36,
+    "lineText": "await atomicWriteJson('public/data/ops/summary.latest.json', summary);",
+    "lineHash": "36e5b783"
+  },
+  {
+    "token": "/ops/",
+    "file": "scripts/ops/build-ops-daily.mjs",
+    "line": 357,
+    "col": 60,
+    "lineText": "const safetySnapshot = await readJsonOptional('public/data/ops/safety.latest.json');",
+    "lineHash": "0a99f844"
+  },
+  {
+    "token": "/api/mission-control/summary",
+    "file": "scripts/ops/rv_verify_count_provenance.mjs",
+    "line": 30,
+    "col": 29,
+    "lineText": "const summaryUrl = `${base}/api/mission-control/summary`;",
+    "lineHash": "a82e85e9"
+  },
+  {
+    "token": "/api/mission-control/summary",
+    "file": "scripts/ops/rv_verify_truth_summary.mjs",
+    "line": 5,
+    "col": 27,
+    "lineText": "const summaryUrl = `${base}/api/mission-control/summary`;",
+    "lineHash": "a82e85e9"
+  },
+  {
+    "token": "truthChains",
+    "file": "scripts/ops/rv_verify_truth_summary.mjs",
+    "line": 33,
+    "col": 6,
+    "lineText": "const truthChains = summary?.data?.truthChains;",
+    "lineHash": "199785b3"
+  },
+  {
+    "token": "truthChains",
+    "file": "scripts/ops/rv_verify_truth_summary.mjs",
+    "line": 34,
+    "col": 5,
+    "lineText": "if (!truthChains || typeof truthChains !== 'object') {",
+    "lineHash": "269394ba"
+  },
+  {
+    "token": "truthChains",
+    "file": "scripts/ops/rv_verify_truth_summary.mjs",
+    "line": 35,
+    "col": 8,
+    "lineText": "fail('truthChains missing at data.truthChains');",
+    "lineHash": "e9566ac9"
+  },
+  {
+    "token": "data.truthChains",
+    "file": "scripts/ops/rv_verify_truth_summary.mjs",
+    "line": 35,
+    "col": 31,
+    "lineText": "fail('truthChains missing at data.truthChains');",
+    "lineHash": "e9566ac9"
+  },
+  {
+    "token": "truthChains",
+    "file": "scripts/ops/rv_verify_truth_summary.mjs",
+    "line": 37,
+    "col": 19,
+    "lineText": "const priceTruth = truthChains?.prices;",
+    "lineHash": "0710df7b"
+  },
+  {
+    "token": "latest_bar",
+    "file": "scripts/ops/rv_verify_truth_summary.mjs",
+    "line": 71,
+    "col": 78,
+    "lineText": "if (!p6Step?.evidence?.checked_path || p6Step.evidence.checked_path !== 'data.latest_bar') {",
+    "lineHash": "663e4ea7"
+  },
+  {
+    "token": "data.latest_bar",
+    "file": "scripts/ops/rv_verify_truth_summary.mjs",
+    "line": 71,
+    "col": 73,
+    "lineText": "if (!p6Step?.evidence?.checked_path || p6Step.evidence.checked_path !== 'data.latest_bar') {",
+    "lineHash": "663e4ea7"
+  },
+  {
+    "token": "latest_bar",
+    "file": "scripts/ops/rv_verify_truth_summary.mjs",
+    "line": 72,
+    "col": 46,
+    "lineText": "fail('P6 evidence.checked_path must be data.latest_bar');",
+    "lineHash": "3e2403da"
+  },
+  {
+    "token": "data.latest_bar",
+    "file": "scripts/ops/rv_verify_truth_summary.mjs",
+    "line": 72,
+    "col": 41,
+    "lineText": "fail('P6 evidence.checked_path must be data.latest_bar');",
+    "lineHash": "3e2403da"
+  },
+  {
+    "token": "/ops/",
+    "file": "scripts/ops/test-ops-ui-smoke.mjs",
+    "line": 5,
+    "col": 20,
+    "lineText": "const url = `${base}/ops/`;",
+    "lineHash": "bdec2ce2"
+  },
+  {
+    "token": "/ops/",
+    "file": "scripts/ops/test-ops-ui.mjs",
+    "line": 6,
+    "col": 23,
+    "lineText": "const opsUrl = `${base}/ops/?debug=1&t=${Date.now()}`;",
+    "lineHash": "067cf199"
+  },
+  {
+    "token": "/ops/",
+    "file": "scripts/ops/validate-ops-summary.mjs",
+    "line": 37,
+    "col": 45,
+    "lineText": "const summary = await readJson('public/data/ops/summary.latest.json');",
+    "lineHash": "794a506a"
+  },
+  {
+    "token": "/ops/",
+    "file": "scripts/ops/verify-ops-pipeline.mjs",
+    "line": 106,
+    "col": 61,
+    "lineText": "const html = await fs.readFile(path.join(REPO_ROOT, 'public/ops/index.html'), 'utf-8');",
+    "lineHash": "e4552a01"
+  },
+  {
+    "token": "/api/mission-control/summary",
+    "file": "scripts/ops/verify-ops-pipeline.mjs",
+    "line": 108,
+    "col": 22,
+    "lineText": "if (!html.includes('/api/mission-control/summary?live=1')) fail('/ops must call mission-control/summary?live=1');",
+    "lineHash": "7e622f37"
+  },
+  {
+    "token": "/ops/",
+    "file": "scripts/ops/verify-ops-pipeline.mjs",
+    "line": 114,
+    "col": 21,
+    "lineText": "`${BASE_URL}/data/ops/summary.latest.json`,",
+    "lineHash": "f715652e"
+  },
+  {
+    "token": "/api/mission-control/summary",
+    "file": "scripts/ops/verify-ops-pipeline.mjs",
+    "line": 115,
+    "col": 16,
+    "lineText": "`${BASE_URL}/api/mission-control/summary`",
+    "lineHash": "702bddf0"
+  },
+  {
+    "token": "/ops/",
+    "file": "scripts/ops_selfcheck.mjs",
+    "line": 1,
+    "col": 29,
+    "lineText": "import { getOpsBase } from './ops/env.config.mjs';",
+    "lineHash": "e46eeb43"
+  },
+  {
+    "token": "/ops/",
+    "file": "scripts/ops_selfcheck.mjs",
+    "line": 2,
+    "col": 35,
+    "lineText": "import { fetchWithContext } from './ops/fetch-with-context.mjs';",
+    "lineHash": "f81815bd"
+  },
+  {
+    "token": "/api/mission-control/summary",
+    "file": "scripts/ops_selfcheck.mjs",
+    "line": 5,
+    "col": 20,
+    "lineText": "const url = `${base}/api/mission-control/summary`;",
+    "lineHash": "96b4bdb7"
+  },
+  {
+    "token": "truthChains",
+    "file": "scripts/ops_selfcheck.mjs",
+    "line": 10,
+    "col": 6,
+    "lineText": "const truthChains = summary?.data?.truthChains;",
+    "lineHash": "199785b3"
+  },
+  {
+    "token": "truthChains",
+    "file": "scripts/ops_selfcheck.mjs",
+    "line": 11,
+    "col": 5,
+    "lineText": "if (!truthChains) {",
+    "lineHash": "21f31048"
+  },
+  {
+    "token": "truthChains",
+    "file": "scripts/ops_selfcheck.mjs",
+    "line": 12,
+    "col": 19,
+    "lineText": "throw new Error('truthChains missing at data.truthChains');",
+    "lineHash": "50538f56"
+  },
+  {
+    "token": "data.truthChains",
+    "file": "scripts/ops_selfcheck.mjs",
+    "line": 12,
+    "col": 42,
+    "lineText": "throw new Error('truthChains missing at data.truthChains');",
+    "lineHash": "50538f56"
+  },
+  {
+    "token": "truthChains",
+    "file": "scripts/ops_selfcheck.mjs",
+    "line": 14,
+    "col": 15,
+    "lineText": "const prices = truthChains.prices;",
+    "lineHash": "1e0e45fc"
+  },
+  {
+    "token": "truthChains",
+    "file": "scripts/ops_selfcheck.mjs",
+    "line": 20,
+    "col": 2,
+    "lineText": "truthChainsKeys: Object.keys(truthChains || {}),",
+    "lineHash": "e374f8ec"
+  },
+  {
+    "token": "/api/stock",
+    "file": "scripts/test-envelope.mjs",
+    "line": 135,
+    "col": 42,
+    "lineText": "const url = new URL(\"https://example.com/api/stock?debug=1\");",
+    "lineHash": "57fc37e7"
+  },
+  {
+    "token": "/api/stock",
+    "file": "scripts/test-envelope.mjs",
+    "line": 137,
+    "col": 46,
+    "lineText": "const req = new Request(\"https://example.com/api/stock\", {",
+    "lineHash": "1281518d"
+  },
+  {
+    "token": "/api/mission-control/summary",
+    "file": "scripts/test-truth-chain.mjs",
+    "line": 3,
+    "col": 42,
+    "lineText": "import { onRequestGet } from '../functions/api/mission-control/summary.js';",
+    "lineHash": "33a256ca"
+  },
+  {
+    "token": "/api/mission-control/summary",
+    "file": "scripts/test-truth-chain.mjs",
+    "line": 37,
+    "col": 45,
+    "lineText": "const request = new Request('http://localhost/api/mission-control/summary?debug=1');",
+    "lineHash": "492a311c"
+  },
+  {
+    "token": "truthChains",
+    "file": "scripts/test-truth-chain.mjs",
+    "line": 76,
+    "col": 34,
+    "lineText": "const priceTruth = payload?.data?.truthChains?.prices || payload?.data?.priceTruth;",
+    "lineHash": "59b22cdb"
+  },
+  {
+    "token": "latest_bar",
+    "file": "scripts/test-truth-chain.mjs",
+    "line": 91,
+    "col": 78,
+    "lineText": "if (!p6Step?.evidence?.checked_path || p6Step.evidence.checked_path !== 'data.latest_bar') {",
+    "lineHash": "663e4ea7"
+  },
+  {
+    "token": "data.latest_bar",
+    "file": "scripts/test-truth-chain.mjs",
+    "line": 91,
+    "col": 73,
+    "lineText": "if (!p6Step?.evidence?.checked_path || p6Step.evidence.checked_path !== 'data.latest_bar') {",
+    "lineHash": "663e4ea7"
+  },
+  {
+    "token": "latest_bar",
+    "file": "scripts/test-truth-chain.mjs",
+    "line": 92,
+    "col": 46,
+    "lineText": "fail('P6 evidence.checked_path must be data.latest_bar');",
+    "lineHash": "3e2403da"
+  },
+  {
+    "token": "data.latest_bar",
+    "file": "scripts/test-truth-chain.mjs",
+    "line": 92,
+    "col": 41,
+    "lineText": "fail('P6 evidence.checked_path must be data.latest_bar');",
+    "lineHash": "3e2403da"
+  },
+  {
+    "token": "network.winning",
+    "file": "scripts/test-truth-chain.mjs",
+    "line": 118,
+    "col": 31,
+    "lineText": "if (!trace.network || !trace.network.winning) fail('ui-path trace missing network.winning');",
+    "lineHash": "6c457816"
+  },
+  {
+    "token": "network.winning",
+    "file": "scripts/test-truth-chain.mjs",
+    "line": 120,
+    "col": 13,
+    "lineText": "if (!trace.network.winning.path || !String(trace.network.winning.path).startsWith('/')) {",
+    "lineHash": "16d18130"
+  },
+  {
+    "token": "/api/stock",
+    "file": "scripts/truth-audit/fetch_raw.mjs",
+    "line": 10,
+    "col": 34,
+    "lineText": "{ name: 'api_stock_UBER', url: '/api/stock?ticker=UBER', type: 'json' },",
+    "lineHash": "5d89a867"
+  },
+  {
+    "token": "/api/stock",
+    "file": "scripts/truth-audit/fetch_raw.mjs",
+    "line": 11,
+    "col": 34,
+    "lineText": "{ name: 'api_stock_TEAM', url: '/api/stock?ticker=TEAM', type: 'json' },",
+    "lineHash": "fc5e4cfb"
+  },
+  {
+    "token": "/api/stock",
+    "file": "scripts/truth-audit/fetch_raw.mjs",
+    "line": 12,
+    "col": 33,
+    "lineText": "{ name: 'api_stock_WBD', url: '/api/stock?ticker=WBD', type: 'json' },",
+    "lineHash": "929224a4"
+  },
+  {
+    "token": "/api/stock",
+    "file": "scripts/truth-audit/fetch_raw.mjs",
+    "line": 13,
+    "col": 40,
+    "lineText": "{ name: 'api_stock_UBER_debug', url: '/api/stock?ticker=UBER&debug=1', type: 'json' },",
+    "lineHash": "22c29bc0"
+  },
+  {
+    "token": "/api/mission-control/summary",
+    "file": "scripts/truth-audit/fetch_raw.mjs",
+    "line": 14,
+    "col": 43,
+    "lineText": "{ name: 'mission_control_summary', url: '/api/mission-control/summary?debug=1', type: 'json' },",
+    "lineHash": "41887cc0"
+  },
+  {
+    "token": "/debug/ui-path/",
+    "file": "scripts/truth-audit/fetch_raw.mjs",
+    "line": 15,
+    "col": 38,
+    "lineText": "{ name: 'ui_path_trace_UBER', url: '/debug/ui-path/UBER.ui-path.trace.json', type: 'json' },",
+    "lineHash": "5e99d2bf"
+  },
+  {
+    "token": "/ops/",
+    "file": "scripts/truth-audit/fetch_raw.mjs",
+    "line": 16,
+    "col": 28,
+    "lineText": "{ name: 'ops_html', url: '/ops/', type: 'html' },",
+    "lineHash": "2ba575b5"
+  },
+  {
+    "token": "/analyze/",
+    "file": "scripts/truth-audit/fetch_raw.mjs",
+    "line": 17,
+    "col": 37,
+    "lineText": "{ name: 'analyze_UBER_html', url: '/analyze/UBER', type: 'html' }",
+    "lineHash": "5f1a2d08"
+  },
+  {
+    "token": "latest_bar",
+    "file": "scripts/truth-audit/run_scenarios.mjs",
+    "line": 12,
+    "col": 20,
+    "lineText": "bar: [\"data.latest_bar\", \"latest_bar\", \"data.bar\", \"bar\"],",
+    "lineHash": "555f10fb"
+  },
+  {
+    "token": "data.latest_bar",
+    "file": "scripts/truth-audit/run_scenarios.mjs",
+    "line": 12,
+    "col": 15,
+    "lineText": "bar: [\"data.latest_bar\", \"latest_bar\", \"data.bar\", \"bar\"],",
+    "lineHash": "555f10fb"
+  },
+  {
+    "token": "truthChains",
+    "file": "scripts/truth-audit/run_scenarios.mjs",
+    "line": 16,
+    "col": 8,
+    "lineText": "truthChains: [\"data.truthChains\", \"truthChains\"],",
+    "lineHash": "40596af5"
+  },
+  {
+    "token": "data.truthChains",
+    "file": "scripts/truth-audit/run_scenarios.mjs",
+    "line": 16,
+    "col": 23,
+    "lineText": "truthChains: [\"data.truthChains\", \"truthChains\"],",
+    "lineHash": "40596af5"
+  },
+  {
+    "token": "truthChains",
+    "file": "scripts/truth-audit/run_scenarios.mjs",
+    "line": 17,
+    "col": 23,
+    "lineText": "prices: [\"data.truthChains.prices\", \"truthChains.prices\"]",
+    "lineHash": "51f083cc"
+  },
+  {
+    "token": "data.truthChains",
+    "file": "scripts/truth-audit/run_scenarios.mjs",
+    "line": 17,
+    "col": 18,
+    "lineText": "prices: [\"data.truthChains.prices\", \"truthChains.prices\"]",
+    "lineHash": "51f083cc"
+  },
+  {
+    "token": "network.winning",
+    "file": "scripts/truth-audit/run_scenarios.mjs",
+    "line": 20,
+    "col": 20,
+    "lineText": "winning_path: ['network.winning.path'],",
+    "lineHash": "9a865ce3"
+  },
+  {
+    "token": "/api/stock",
+    "file": "scripts/truth-audit/run_scenarios.mjs",
+    "line": 41,
+    "col": 48,
+    "lineText": "const s0_uber = await fetchJson(`${BASE_URL}/api/stock?ticker=UBER`);",
+    "lineHash": "8ad8d9c9"
+  },
+  {
+    "token": "/api/mission-control/summary",
+    "file": "scripts/truth-audit/run_scenarios.mjs",
+    "line": 42,
+    "col": 51,
+    "lineText": "const s0_summary = await fetchJson(`${BASE_URL}/api/mission-control/summary?debug=1`);",
+    "lineHash": "5c3ca065"
+  },
+  {
+    "token": "/debug/ui-path/",
+    "file": "scripts/truth-audit/run_scenarios.mjs",
+    "line": 43,
+    "col": 49,
+    "lineText": "const s0_trace = await fetchJson(`${BASE_URL}/debug/ui-path/UBER.ui-path.trace.json`);",
+    "lineHash": "923fed08"
+  },
+  {
+    "token": "/api/stock",
+    "file": "scripts/truth-audit/run_scenarios.mjs",
+    "line": 51,
+    "col": 48,
+    "lineText": "const s1_uber = await fetchJson(`${BASE_URL}/api/stock?ticker=UBER&debug=1`);",
+    "lineHash": "4af01560"
+  },
+  {
+    "token": "truthChains",
+    "file": "scripts/truth-audit/run_scenarios.mjs",
+    "line": 62,
+    "col": 42,
+    "lineText": "const pricesSteps = s0_summary?.data?.truthChains?.prices?.steps || [];",
+    "lineHash": "bb580081"
+  },
+  {
+    "token": "latest_bar",
+    "file": "scripts/truth-audit/static_scan.mjs",
+    "line": 9,
+    "col": 3,
+    "lineText": "'latest_bar',",
+    "lineHash": "a8e2b147"
+  },
+  {
+    "token": "latest_bar",
+    "file": "scripts/truth-audit/static_scan.mjs",
+    "line": 10,
+    "col": 8,
+    "lineText": "'data.latest_bar',",
+    "lineHash": "296c5f18"
+  },
+  {
+    "token": "data.latest_bar",
+    "file": "scripts/truth-audit/static_scan.mjs",
+    "line": 10,
+    "col": 3,
+    "lineText": "'data.latest_bar',",
+    "lineHash": "296c5f18"
+  },
+  {
+    "token": "truthChains",
+    "file": "scripts/truth-audit/static_scan.mjs",
+    "line": 11,
+    "col": 3,
+    "lineText": "'truthChains',",
+    "lineHash": "328dbbf5"
+  },
+  {
+    "token": "truthChains",
+    "file": "scripts/truth-audit/static_scan.mjs",
+    "line": 12,
+    "col": 8,
+    "lineText": "'data.truthChains',",
+    "lineHash": "96231cd4"
+  },
+  {
+    "token": "data.truthChains",
+    "file": "scripts/truth-audit/static_scan.mjs",
+    "line": 12,
+    "col": 3,
+    "lineText": "'data.truthChains',",
+    "lineHash": "96231cd4"
+  },
+  {
+    "token": "network.winning",
+    "file": "scripts/truth-audit/static_scan.mjs",
+    "line": 13,
+    "col": 3,
+    "lineText": "'network.winning',",
+    "lineHash": "dbf279b3"
+  },
+  {
+    "token": "winning_response",
+    "file": "scripts/truth-audit/static_scan.mjs",
+    "line": 14,
+    "col": 3,
+    "lineText": "'winning_response',",
+    "lineHash": "91e37c42"
+  },
+  {
+    "token": "/api/stock",
+    "file": "scripts/truth-audit/static_scan.mjs",
+    "line": 15,
+    "col": 3,
+    "lineText": "'/api/stock',",
+    "lineHash": "418b87ab"
+  },
+  {
+    "token": "/api/mission-control/summary",
+    "file": "scripts/truth-audit/static_scan.mjs",
+    "line": 16,
+    "col": 3,
+    "lineText": "'/api/mission-control/summary',",
+    "lineHash": "e49d5df1"
+  },
+  {
+    "token": "/debug/ui-path/",
+    "file": "scripts/truth-audit/static_scan.mjs",
+    "line": 17,
+    "col": 3,
+    "lineText": "'/debug/ui-path/',",
+    "lineHash": "d1bf655d"
+  },
+  {
+    "token": "/analyze/",
+    "file": "scripts/truth-audit/static_scan.mjs",
+    "line": 18,
+    "col": 3,
+    "lineText": "'/analyze/',",
+    "lineHash": "1bb39e16"
+  },
+  {
+    "token": "/ops/",
+    "file": "scripts/truth-audit/static_scan.mjs",
+    "line": 19,
+    "col": 3,
+    "lineText": "'/ops/'",
+    "lineHash": "8d54106a"
+  },
+  {
+    "token": "latest_bar",
+    "file": "scripts/truth-chain/lib/ui-values.mjs",
+    "line": 5,
+    "col": 20,
+    "lineText": "const bar = data?.latest_bar || null;",
+    "lineHash": "fe9c22f7"
+  },
+  {
+    "token": "/api/stock",
+    "file": "scripts/truth-chain/snapshot_ui_values.mjs",
+    "line": 16,
+    "col": 21,
+    "lineText": "const url = new URL(`/api/stock?ticker=${encodeURIComponent(ticker)}`, base).toString();",
+    "lineHash": "afde2314"
+  },
+  {
+    "token": "/api/stock",
+    "file": "scripts/truth-chain/snapshot_ui_values.mjs",
+    "line": 29,
+    "col": 35,
+    "lineText": "console.error('Invalid JSON from /api/stock');",
+    "lineHash": "ce6017ca"
+  },
+  {
+    "token": "/api/stock",
+    "file": "scripts/truth-chain/trace_ui_to_origin.mjs",
+    "line": 25,
+    "col": 53,
+    "lineText": "const stockHandlerFile = resolve(repoRoot, 'functions/api/stock.js');",
+    "lineHash": "baf33174"
+  },
+  {
+    "token": "/api/stock",
+    "file": "scripts/truth-chain/trace_ui_to_origin.mjs",
+    "line": 38,
+    "col": 36,
+    "lineText": "fetchStock: firstLineRef(uiFile, '/api/stock'),",
+    "lineHash": "15b066ce"
+  },
+  {
+    "token": "latest_bar",
+    "file": "scripts/truth-chain/trace_ui_to_origin.mjs",
+    "line": 40,
+    "col": 51,
+    "lineText": "barLine: firstLineRef(uiFile, 'const bar = data?.latest_bar'),",
+    "lineHash": "bdbc3150"
+  },
+  {
+    "token": "/api/stock",
+    "file": "scripts/truth-chain/trace_ui_to_origin.mjs",
+    "line": 65,
+    "col": 26,
+    "lineText": "const stockUrl = new URL(`/api/stock?ticker=${encodeURIComponent(ticker)}`, base).toString();",
+    "lineHash": "ae419e2a"
+  },
+  {
+    "token": "/api/stock",
+    "file": "scripts/truth-chain/trace_ui_to_origin.mjs",
+    "line": 85,
+    "col": 24,
+    "lineText": "fail(`Failed to fetch /api/stock: HTTP ${stockRes.status}`);",
+    "lineHash": "d0d602f2"
+  },
+  {
+    "token": "latest_bar",
+    "file": "scripts/truth-chain/trace_ui_to_origin.mjs",
+    "line": 139,
+    "col": 6,
+    "lineText": "latest_bar_close: `${uiRefs.closeLine.line}:${uiRefs.closeLine.text.trim()}`,",
+    "lineHash": "a926f71f"
+  },
+  {
+    "token": "latest_bar",
+    "file": "scripts/truth-chain/trace_ui_to_origin.mjs",
+    "line": 180,
+    "col": 4,
+    "lineText": "latest_bar: pickPaths(stockRes.json, ['data.latest_bar.close', 'data.latest_bar.volume', 'data.latest_bar.date']),",
+    "lineHash": "b4d5c710"
+  },
+  {
+    "token": "data.latest_bar",
+    "file": "scripts/truth-chain/trace_ui_to_origin.mjs",
+    "line": 180,
+    "col": 43,
+    "lineText": "latest_bar: pickPaths(stockRes.json, ['data.latest_bar.close', 'data.latest_bar.volume', 'data.latest_bar.date']),",
+    "lineHash": "b4d5c710"
+  },
+  {
+    "token": "latest_bar",
+    "file": "scripts/truth-chain/trace_ui_to_origin.mjs",
+    "line": 196,
+    "col": 27,
+    "lineText": "console.log(`  renderStock latest_bar line: ${uiRefs.barLine.line}`);",
+    "lineHash": "a0f39e98"
+  },
+  {
+    "token": "/api/stock",
+    "file": "scripts/truth-chain/trace_ui_to_origin.mjs",
+    "line": 198,
+    "col": 15,
+    "lineText": "console.log(`  /api/stock -> ${stockRes.status} sha256=${stockRes.sha256}`);",
+    "lineHash": "a1dd9ad7"
+  },
+  {
+    "token": "latest_bar",
+    "file": "scripts/truth-chain/trace_ui_to_origin.mjs",
+    "line": 202,
+    "col": 70,
+    "lineText": "console.log(`  stock excerpt: ${JSON.stringify(trace.response_excerpt.latest_bar)} ${JSON.stringify(trace.response_excerpt.change)}`);",
+    "lineHash": "9d12b1f6"
+  },
+  {
+    "token": "/api/stock",
+    "file": "scripts/truth-chain/trace_ui_to_origin.mjs",
+    "line": 206,
+    "col": 40,
+    "lineText": "console.log('[4] Snapshot sources (from /api/stock metadata.sources)');",
+    "lineHash": "15cc3bd0"
+  },
+  {
+    "token": "/analyze/",
+    "file": "scripts/ui-path/prove_ui_path.mjs",
+    "line": 13,
+    "col": 25,
+    "lineText": "const pageUrl = new URL(`/analyze/${encodeURIComponent(ticker)}`, base).toString();",
+    "lineHash": "5daf3d93"
+  },
+  {
+    "token": "latest_bar",
+    "file": "scripts/ui-path/prove_ui_path.mjs",
+    "line": 77,
+    "col": 28,
+    "lineText": "data: json.data ? { latest_bar: json.data.latest_bar || null, change: json.data.change || null } : null",
+    "lineHash": "5bd977c7"
+  },
+  {
+    "token": "data.latest_bar",
+    "file": "scripts/ui-path/prove_ui_path.mjs",
+    "line": 77,
+    "col": 45,
+    "lineText": "data: json.data ? { latest_bar: json.data.latest_bar || null, change: json.data.change || null } : null",
+    "lineHash": "5bd977c7"
+  },
+  {
+    "token": "latest_bar",
+    "file": "scripts/ui-path/prove_ui_path.mjs",
+    "line": 124,
+    "col": 41,
+    "lineText": "const bar = call.response_excerpt.data.latest_bar || {};",
+    "lineHash": "75150bf9"
+  },
+  {
+    "token": "data.latest_bar",
+    "file": "scripts/ui-path/prove_ui_path.mjs",
+    "line": 124,
+    "col": 36,
+    "lineText": "const bar = call.response_excerpt.data.latest_bar || {};",
+    "lineHash": "75150bf9"
+  },
+  {
+    "token": "/api/stock",
+    "file": "scripts/ui-path/prove_ui_path.mjs",
+    "line": 135,
+    "col": 53,
+    "lineText": "const handlerFile = resolve(process.cwd(), 'functions/api/stock.js');",
+    "lineHash": "b74f0ebb"
+  },
+  {
+    "token": "latest_bar",
+    "file": "scripts/ui-path/prove_ui_path.mjs",
+    "line": 187,
+    "col": 52,
+    "lineText": "const winningBar = winning?.response_excerpt?.data?.latest_bar || null;",
+    "lineHash": "9c427e92"
+  },
+  {
+    "token": "latest_bar",
+    "file": "scripts/ui-path/prove_ui_path.mjs",
+    "line": 216,
+    "col": 28,
+    "lineText": "checked_path: 'data.latest_bar',",
+    "lineHash": "974e8fb9"
+  },
+  {
+    "token": "data.latest_bar",
+    "file": "scripts/ui-path/prove_ui_path.mjs",
+    "line": 216,
+    "col": 23,
+    "lineText": "checked_path: 'data.latest_bar',",
+    "lineHash": "974e8fb9"
+  },
+  {
+    "token": "latest_bar",
+    "file": "scripts/ui-path/prove_ui_path.mjs",
+    "line": 229,
+    "col": 6,
+    "lineText": "latest_bar: latestBarRef,",
+    "lineHash": "1446c9b9"
+  },
+  {
+    "token": "winning_response",
+    "file": "scripts/ui-path/prove_ui_path.mjs",
+    "line": 235,
+    "col": 2,
+    "lineText": "winning_response: {",
+    "lineHash": "2d5313ca"
+  },
+  {
+    "token": "/ops/",
+    "file": "tests/e2e/ops.spec.mjs",
+    "line": 4,
+    "col": 19,
+    "lineText": "await page.goto('/ops/', { waitUntil: 'domcontentloaded' });",
+    "lineHash": "5b7010c5"
+  },
+  {
+    "token": "/ops/",
+    "file": "tests/e2e/ops.spec.mjs",
+    "line": 5,
+    "col": 32,
+    "lineText": "expect(page.url()).toContain('/ops/');",
+    "lineHash": "69cadd92"
+  },
+  {
+    "token": "/api/mission-control/summary",
+    "file": "tests/e2e/ops.spec.mjs",
+    "line": 17,
+    "col": 32,
+    "lineText": "return resp.url().includes('/api/mission-control/summary') && resp.status() === 200;",
+    "lineHash": "defdff61"
+  },
+  {
+    "token": "/ops/",
+    "file": "tests/e2e/ops.spec.mjs",
+    "line": 19,
+    "col": 19,
+    "lineText": "await page.goto('/ops/', { waitUntil: 'domcontentloaded' });",
+    "lineHash": "5b7010c5"
+  },
+  {
+    "token": "/ops/",
+    "file": "tests/e2e/ops.spec.mjs",
+    "line": 20,
+    "col": 32,
+    "lineText": "expect(page.url()).toContain('/ops/');",
+    "lineHash": "69cadd92"
+  },
+  {
+    "token": "/api/stock",
+    "file": "tests/stock-endpoint.test.mjs",
+    "line": 5,
+    "col": 42,
+    "lineText": "import { onRequestGet } from '../functions/api/stock.js';",
+    "lineHash": "f6506fbe"
+  },
+  {
+    "token": "/api/stock",
+    "file": "tests/stock-endpoint.test.mjs",
+    "line": 137,
+    "col": 50,
+    "lineText": "const request = new Request(`https://example.com/api/stock?ticker=${encodeURIComponent(ticker)}`);",
+    "lineHash": "87b35232"
+  },
+  {
+    "token": "/api/stock",
+    "file": "tests/stock-provider-chain.test.mjs",
+    "line": 5,
+    "col": 42,
+    "lineText": "import { onRequestGet } from '../functions/api/stock.js';",
+    "lineHash": "f6506fbe"
+  },
+  {
+    "token": "/api/stock",
+    "file": "tests/stock-provider-chain.test.mjs",
+    "line": 44,
+    "col": 45,
+    "lineText": "request: new Request(`https://example.com/api/stock?ticker=${encodeURIComponent(ticker)}`),",
+    "lineHash": "c2edcb70"
+  },
+  {
+    "token": "latest_bar",
+    "file": "tests/stock-provider-chain.test.mjs",
+    "line": 84,
+    "col": 31,
+    "lineText": "assert(typeof result.data?.latest_bar?.close === 'number', 'expected latest_bar.close number');",
+    "lineHash": "9fe89a9b"
+  }
+]

@@ -1,0 +1,503 @@
+{
+  "trace_version": "v1",
+  "generated_at": "2026-02-02T11:36:21.408Z",
+  "base_url": "https://cf4b6652.rubikvault-site.pages.dev",
+  "ticker": "UBER",
+  "page_url": "https://cf4b6652.rubikvault-site.pages.dev/analyze/UBER",
+  "ui": {
+    "values": {
+      "close": 80.05,
+      "volume": 24344094,
+      "date": "2026-01-30",
+      "close_text": "$80.05",
+      "volume_text": "24,344,094",
+      "date_text": "30-01-2026"
+    }
+  },
+  "network": {
+    "winning": {
+      "path": "/api/stock?ticker=UBER",
+      "status": 200,
+      "sha256": "1f062a63f4107c2d7378ee6b3869f8c39763f8163f93b2ebb1246e109d774285",
+      "body_keys": [
+        "schema_version",
+        "meta",
+        "metadata",
+        "data",
+        "error",
+        "ok"
+      ],
+      "contract": {
+        "checked_path": "data.latest_bar",
+        "required_fields": [
+          "date",
+          "close",
+          "volume"
+        ],
+        "missing_fields": []
+      },
+      "error": null
+    },
+    "calls": [
+      {
+        "url": "https://cf4b6652.rubikvault-site.pages.dev/api/fundamentals?ticker=UBER",
+        "method": "GET",
+        "status": 200,
+        "content_type": "application/json; charset=utf-8",
+        "sha256": "50d64c2a3236c3b3c280b6cd8b76d16b24e718486ee8f663fb4f1bf77a3b2f4a",
+        "body_keys": [
+          "schema_version",
+          "meta",
+          "metadata",
+          "data",
+          "error",
+          "ok"
+        ],
+        "response_excerpt": {
+          "schema_version": "3.0",
+          "meta": {
+            "status": "error",
+            "generated_at": "2026-02-02T11:36:20.621Z",
+            "data_date": "2026-02-02",
+            "provider": "fundamentals-api",
+            "data_source": "unknown",
+            "mode": "DEGRADED",
+            "asOf": null,
+            "freshness": "unknown",
+            "version": "3.0"
+          },
+          "data": {
+            "latest_bar": null,
+            "change": null
+          }
+        }
+      },
+      {
+        "url": "https://cf4b6652.rubikvault-site.pages.dev/api/stock?ticker=UBER",
+        "method": "GET",
+        "status": 200,
+        "content_type": "application/json; charset=utf-8",
+        "sha256": "1f062a63f4107c2d7378ee6b3869f8c39763f8163f93b2ebb1246e109d774285",
+        "body_keys": [
+          "schema_version",
+          "meta",
+          "metadata",
+          "data",
+          "error",
+          "ok"
+        ],
+        "response_excerpt": {
+          "schema_version": "3.0",
+          "meta": {
+            "status": "stale",
+            "generated_at": "2026-02-02T11:36:20.655Z",
+            "data_date": "2026-01-30",
+            "provider": "tiingo",
+            "quality_flags": [],
+            "data_source": "snapshot",
+            "mode": "DEMO",
+            "asOf": null,
+            "freshness": "stale",
+            "circuit": {
+              "provider": "tiingo",
+              "state": "closed",
+              "fail_count": 0,
+              "opened_at": null
+            },
+            "cache": {
+              "mode": "kv",
+              "hit": false,
+              "stale": false,
+              "age_s": null,
+              "ttl_s": 21600,
+              "swr": "none",
+              "key_kind": "stock"
+            },
+            "timings": {
+              "t_total_ms": 787,
+              "t_kv_ms": 114,
+              "t_origin_ms": 577,
+              "t_build_ms": 0
+            },
+            "degraded": false,
+            "degraded_reason": null
+          },
+          "data": {
+            "latest_bar": {
+              "date": "2026-01-30",
+              "open": 80.91,
+              "high": 82.1,
+              "low": 79.42,
+              "close": 80.05,
+              "volume": 24344094
+            },
+            "change": {
+              "abs": -1.6500000000000057,
+              "pct": -0.020195838433292604
+            }
+          }
+        }
+      },
+      {
+        "url": "https://cf4b6652.rubikvault-site.pages.dev/data/marketphase/AAPL.json",
+        "method": "GET",
+        "status": 200,
+        "content_type": "application/json",
+        "sha256": "3de3aac55b3b716a829deace47156b7452512529655dc7b4572a4a8a514a80b3",
+        "body_keys": [
+          "ok",
+          "feature",
+          "meta",
+          "data",
+          "error"
+        ],
+        "response_excerpt": {
+          "schema_version": null,
+          "meta": {
+            "symbol": "AAPL",
+            "generatedAt": "2026-01-18T09:43:40.637Z",
+            "status": "OK",
+            "version": "4.0",
+            "legal": "MarketPhase AI — Scientific Elliott Research (v4.0)\nprovides deterministic, rule-based historical analysis only.\nIt does not forecast future prices or offer financial advice.\nUse solely for educational and research purposes."
+          },
+          "data": {
+            "latest_bar": null,
+            "change": null
+          }
+        }
+      },
+      {
+        "url": "https://cf4b6652.rubikvault-site.pages.dev/data/marketphase/index.json",
+        "method": "GET",
+        "status": 200,
+        "content_type": "application/json",
+        "sha256": "90855708cad6a88e0a55ae531f70971f78f58d724ae93a314fc48657f1b6a5b2",
+        "body_keys": [
+          "ok",
+          "meta",
+          "data"
+        ],
+        "response_excerpt": {
+          "schema_version": null,
+          "meta": {
+            "generatedAt": "2026-01-18T09:43:40.639Z",
+            "status": "OK",
+            "version": "4.0",
+            "legal": "MarketPhase AI — Scientific Elliott Research (v4.0)\nprovides deterministic, rule-based historical analysis only.\nIt does not forecast future prices or offer financial advice.\nUse solely for educational and research purposes."
+          },
+          "data": {
+            "latest_bar": null,
+            "change": null
+          }
+        }
+      },
+      {
+        "url": "https://cf4b6652.rubikvault-site.pages.dev/data/marketphase/MSFT.json",
+        "method": "GET",
+        "status": 200,
+        "content_type": "application/json",
+        "sha256": "d826939310e6b54cc3277549814f35088740aa2380d39c28e1759802ee37cb75",
+        "body_keys": [
+          "ok",
+          "feature",
+          "meta",
+          "data",
+          "error"
+        ],
+        "response_excerpt": {
+          "schema_version": null,
+          "meta": {
+            "symbol": "MSFT",
+            "generatedAt": "2026-01-18T09:43:40.638Z",
+            "status": "OK",
+            "version": "4.0",
+            "legal": "MarketPhase AI — Scientific Elliott Research (v4.0)\nprovides deterministic, rule-based historical analysis only.\nIt does not forecast future prices or offer financial advice.\nUse solely for educational and research purposes."
+          },
+          "data": {
+            "latest_bar": null,
+            "change": null
+          }
+        }
+      },
+      {
+        "url": "https://cf4b6652.rubikvault-site.pages.dev/data/marketphase/UBER.json",
+        "method": "GET",
+        "status": 404,
+        "content_type": "text/html; charset=utf-8",
+        "sha256": "6608707d0b7f6926396c335466f83cf725feadc94c2fad15e5adb5a7380040fe",
+        "body_keys": [],
+        "response_excerpt": {
+          "text": "<!doctype html><meta charset=\"utf-8\"><title>404</title>\n<h1>404</h1><p>Not found.</p>\n"
+        }
+      },
+      {
+        "url": "https://cf4b6652.rubikvault-site.pages.dev/data/snapshots/stock-analysis.json",
+        "method": "GET",
+        "status": 200,
+        "content_type": "application/json",
+        "sha256": "5d14a21585e436f0c2912c127b0ae7d533559812da151004d8b6c3304f0c323b",
+        "body_keys": [
+          "_meta",
+          "_rankings",
+          "AAPL",
+          "ABNB",
+          "ADBE",
+          "ADI",
+          "ADP",
+          "ADSK",
+          "AEP",
+          "AMAT",
+          "AMD",
+          "AMGN",
+          "AMZN",
+          "APP",
+          "ARM",
+          "ASML",
+          "AVGO",
+          "AXON",
+          "AZN",
+          "BIIB",
+          "BKNG",
+          "BKR",
+          "CCEP",
+          "CDNS",
+          "CDW",
+          "CHTR",
+          "CMCSA",
+          "COST",
+          "CPRT",
+          "CRWD",
+          "CSGP",
+          "CSCO",
+          "CSX",
+          "CTAS",
+          "CTSH",
+          "DASH",
+          "DDOG",
+          "DXCM",
+          "EA",
+          "EXC",
+          "FANG",
+          "FAST",
+          "FTNT",
+          "GEHC",
+          "GFS",
+          "GILD",
+          "GOOG",
+          "GOOGL",
+          "HON",
+          "IDXX",
+          "INTC",
+          "INTU",
+          "ISRG",
+          "KDP",
+          "KHC",
+          "KLAC",
+          "LRCX",
+          "LULU",
+          "LIN",
+          "MAR",
+          "MCHP",
+          "MDLZ",
+          "MELI",
+          "META",
+          "MNST",
+          "MRVL",
+          "MSFT",
+          "MSTR",
+          "MU",
+          "NVDA",
+          "NXPI",
+          "ODFL",
+          "ON",
+          "ORLY",
+          "PANW",
+          "PAYX",
+          "PCAR",
+          "PDD",
+          "PEP",
+          "PLTR",
+          "PYPL",
+          "QCOM",
+          "REGN",
+          "ROP",
+          "ROST",
+          "SBUX",
+          "SHOP",
+          "SNPS",
+          "TEAM",
+          "TMUS",
+          "TRI",
+          "TSLA",
+          "TTD",
+          "TTWO",
+          "TXN",
+          "UBER",
+          "VRTX",
+          "VRSK",
+          "WBD",
+          "WDAY",
+          "XEL",
+          "ZS"
+        ],
+        "response_excerpt": {
+          "schema_version": null,
+          "meta": null,
+          "data": null
+        }
+      },
+      {
+        "url": "https://cf4b6652.rubikvault-site.pages.dev/data/universe/nasdaq100.json",
+        "method": "GET",
+        "status": 200,
+        "content_type": "application/json",
+        "sha256": "a0099fc584efd0ae58e99d47644112ff6ecda29b95a40d5be22e7dd6ebd77f75",
+        "body_keys": [
+          "0",
+          "1",
+          "2",
+          "3",
+          "4",
+          "5",
+          "6",
+          "7",
+          "8",
+          "9",
+          "10",
+          "11",
+          "12",
+          "13",
+          "14",
+          "15",
+          "16",
+          "17",
+          "18",
+          "19",
+          "20",
+          "21",
+          "22",
+          "23",
+          "24",
+          "25",
+          "26",
+          "27",
+          "28",
+          "29",
+          "30",
+          "31",
+          "32",
+          "33",
+          "34",
+          "35",
+          "36",
+          "37",
+          "38",
+          "39",
+          "40",
+          "41",
+          "42",
+          "43",
+          "44",
+          "45",
+          "46",
+          "47",
+          "48",
+          "49",
+          "50",
+          "51",
+          "52",
+          "53",
+          "54",
+          "55",
+          "56",
+          "57",
+          "58",
+          "59",
+          "60",
+          "61",
+          "62",
+          "63",
+          "64",
+          "65",
+          "66",
+          "67",
+          "68",
+          "69",
+          "70",
+          "71",
+          "72",
+          "73",
+          "74",
+          "75",
+          "76",
+          "77",
+          "78",
+          "79",
+          "80",
+          "81",
+          "82",
+          "83",
+          "84",
+          "85",
+          "86",
+          "87",
+          "88",
+          "89",
+          "90",
+          "91",
+          "92",
+          "93",
+          "94",
+          "95",
+          "96",
+          "97",
+          "98",
+          "99"
+        ],
+        "response_excerpt": {
+          "schema_version": null,
+          "meta": null,
+          "data": null
+        }
+      }
+    ]
+  },
+  "server": {
+    "endpoint": "/api/stock?ticker=UBER",
+    "handler_file": "/Users/michaelpuchowezki/Dev/rubikvault-site/functions/api/stock.js",
+    "handler_line_ref": {
+      "file": "/Users/michaelpuchowezki/Dev/rubikvault-site/functions/api/stock.js",
+      "line": 326,
+      "text": "export async function onRequestGet(context) {"
+    },
+    "value_line_refs": {
+      "latest_bar": {
+        "file": "/Users/michaelpuchowezki/Dev/rubikvault-site/functions/api/stock.js",
+        "line": 841,
+        "text": "const latestBar = pickLatestBar(eodBars);"
+      },
+      "change": {
+        "file": "/Users/michaelpuchowezki/Dev/rubikvault-site/functions/api/stock.js",
+        "line": 842,
+        "text": "const dayChange = computeDayChange(eodBars);"
+      }
+    }
+  },
+  "upstream": {
+    "kind": "public_data",
+    "key_or_path": "/data/snapshots/market-prices/latest.json",
+    "snapshot_probe": {
+      "ok": true,
+      "status": 200,
+      "contains": false,
+      "url": "https://cf4b6652.rubikvault-site.pages.dev/data/snapshots/market-prices/latest.json"
+    }
+  },
+  "error": null,
+  "winning_response": {
+    "path": "/api/stock?ticker=UBER",
+    "status": 200,
+    "sha256": "1f062a63f4107c2d7378ee6b3869f8c39763f8163f93b2ebb1246e109d774285",
+    "error": null
+  }
+}

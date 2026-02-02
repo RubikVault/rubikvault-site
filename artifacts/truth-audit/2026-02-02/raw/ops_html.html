@@ -1,0 +1,1248 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Ops — RubikVault</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Helvetica Neue", Arial, sans-serif;
+      background: #0b1220;
+      color: #e5e7eb;
+    }
+
+    .wrap {
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 24px;
+    }
+
+    h1 {
+      margin: 0 0 6px;
+      font-size: 28px;
+      letter-spacing: -0.02em;
+    }
+
+    .sub {
+      color: #94a3b8;
+      margin-bottom: 18px;
+      font-size: 14px;
+    }
+
+    .card {
+      border: 1px solid rgba(148, 163, 184, 0.25);
+      background: rgba(15, 23, 42, 0.7);
+      border-radius: 12px;
+      padding: 14px;
+      overflow: hidden;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .grid2 {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .k {
+      color: #94a3b8;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    .v {
+      margin-top: 6px;
+      font-size: 22px;
+      font-weight: 800;
+    }
+
+    .small {
+      color: #94a3b8;
+      font-size: 12px;
+    }
+
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+      margin: 12px 0 18px;
+    }
+
+    .btn {
+      background: rgba(30, 41, 59, 0.9);
+      border: 1px solid rgba(148, 163, 184, 0.25);
+      color: #e5e7eb;
+      padding: 8px 10px;
+      border-radius: 10px;
+      font-size: 13px;
+      cursor: pointer;
+    }
+
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .pill {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 999px;
+      border: 1px solid rgba(148, 163, 184, 0.25);
+      font-size: 12px;
+      color: #e5e7eb;
+    }
+
+    .pill.ok {
+      border-color: rgba(52, 211, 153, 0.35);
+      color: #a7f3d0;
+    }
+
+    .pill.warn {
+      border-color: rgba(251, 191, 36, 0.35);
+      color: #fde68a;
+    }
+
+    .pill.bad {
+      border-color: rgba(251, 113, 133, 0.35);
+      color: #fecdd3;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    th,
+    td {
+      text-align: left;
+      padding: 10px 8px;
+      border-bottom: 1px solid rgba(148, 163, 184, 0.15);
+      font-size: 13px;
+    }
+
+    th {
+      color: #94a3b8;
+      font-weight: 700;
+    }
+
+    .mono {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    }
+
+    @media (max-width: 860px) {
+      .grid {
+        grid-template-columns: 1fr;
+      }
+
+      .grid2 {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="wrap">
+    <div id="ops-render-status" data-status="boot" data-reason="starting" class="small"
+      style="margin-bottom: 10px; color: #94a3b8;">
+      Render status: <span id="ops-render-status-text">boot</span>
+    </div>
+    <div id="ops-bridge"
+      data-status="loading"
+      data-baseline="pending"
+      data-health="unknown"
+      data-count-fetched="0"
+      data-count-validated="0"
+      data-coverage-computed="0"
+      data-coverage-missing="0"
+      data-build-sha="unknown"
+      data-runtime-env="unknown"
+      data-pipeline-expected="unknown"
+      data-reason=""
+      style="display:none;"></div>
+
+    <h1>Ops</h1>
+    <div class="sub">Owner-grade view (static-first, read-only). No auto refresh.</div>
+    <div class="small mono" id="build-info">Build: unknown</div>
+
+    <div class="controls card">
+      <button id="btn-refresh" class="btn">Refresh (LIVE)</button>
+      <span class="small">Baseline asOf: <span id="baseline-asof" class="mono">—</span></span>
+      <span class="small"><span id="live-asof-label">Runtime asOf</span>: <span id="live-asof" class="mono">—</span></span>
+      <span class="small">Source: <span id="data-source" class="mono">—</span></span>
+      <span class="small">Served from: <span id="served-from" class="mono">—</span></span>
+      <span style="flex:1"></span>
+      <span class="small" id="last-refresh"></span>
+    </div>
+
+    <div id="ops-alert" class="card"
+      style="display:none; margin-bottom: 12px; border-color: rgba(251, 191, 36, 0.5); background: rgba(120, 53, 15, 0.18);">
+      <div class="k">Warning</div>
+      <div class="small" id="ops-alert-text"></div>
+    </div>
+
+    <div id="ops-render-error" class="card"
+      style="display:none; margin-bottom: 12px; border-color: rgba(248, 113, 113, 0.5); background: rgba(120, 20, 30, 0.18);">
+      <div class="k">Render error</div>
+      <div class="small" id="ops-render-error-text"></div>
+    </div>
+
+    <div id="loading" class="card">No data loaded. Click Refresh (LIVE).</div>
+
+    <div id="main" style="display:none;">
+      <div class="grid" style="margin-bottom: 12px;">
+        <div class="card">
+          <div class="k">Platform</div>
+          <div class="v" id="health-platform">—</div>
+          <div class="small" id="health-platform-reason">—</div>
+        </div>
+        <div class="card">
+          <div class="k">API</div>
+          <div class="v" id="health-api">—</div>
+          <div class="small" id="health-api-reason">—</div>
+        </div>
+        <div class="card">
+          <div class="k">Freshness</div>
+          <div class="v" id="health-freshness">—</div>
+          <div class="small" id="health-freshness-reason">—</div>
+        </div>
+        <div class="card">
+          <div class="k">Pipeline</div>
+          <div class="v" id="health-pipeline">—</div>
+          <div class="small" id="health-pipeline-reason">—</div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-bottom: 12px;">
+        <div class="k">Render diagnostics</div>
+        <div class="small">Last summary fetch: <span id="ops-last-fetch" class="mono">—</span></div>
+        <div class="small" style="margin-top: 6px;">Scheduler expected: <span id="ops-scheduler-expected">—</span></div>
+        <div class="small" id="ops-scheduler-expected-reason" style="margin-top: 4px;">—</div>
+      </div>
+
+      <div class="grid" style="margin-bottom: 12px;">
+        <div class="card">
+          <div class="k">Costs today (Workers)</div>
+          <div class="v" id="workers-used">—</div>
+          <div class="small" id="workers-budget">—</div>
+        </div>
+        <div class="card">
+          <div class="k">Runtime mode</div>
+          <div class="v" id="runtime-mode">—</div>
+          <div class="small" id="runtime-note">—</div>
+        </div>
+        <div class="card">
+          <div class="k">Safety locks</div>
+          <div class="v" id="safety-kv-writes">—</div>
+          <div class="small" id="safety-note">—</div>
+        </div>
+      </div>
+
+      <div class="grid2" style="margin-bottom: 12px;">
+        <div class="card">
+          <div class="k" style="margin-bottom: 10px;">Provider budgets (monthly)</div>
+          <table>
+            <thead>
+              <tr>
+                <th>Provider</th>
+                <th>Used</th>
+                <th>Limit</th>
+                <th>Remaining</th>
+                <th>Reset</th>
+                <th id="providers-calls-label">Runtime calls today</th>
+              </tr>
+            </thead>
+            <tbody id="providers"></tbody>
+          </table>
+        </div>
+        <div class="card">
+          <div class="k" style="margin-bottom: 10px;">Indicators pipeline (NASDAQ-100)</div>
+          <table>
+            <thead>
+              <tr>
+                <th>Stage</th>
+                <th>Count</th>
+                <th>Expected</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="pipeline-marketphase"></tbody>
+          </table>
+          <div id="pipeline-marketphase-note" class="small" style="margin-top: 10px;"></div>
+
+        </div>
+      </div>
+
+      <div class="card" id="eod-section" style="margin-bottom: 12px;">
+        <div class="k" style="margin-bottom: 10px;">EOD fetch pipeline (NASDAQ-100)</div>
+        <table>
+          <thead>
+            <tr>
+              <th>Stage</th>
+              <th>Count</th>
+              <th>Expected</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="pipeline-eod"></tbody>
+        </table>
+        <div id="pipeline-eod-note" class="small" style="margin-top: 10px;"></div>
+      </div>
+
+      <div class="grid2" style="margin-bottom: 12px;">
+        <div class="card">
+          <div class="k" style="margin-bottom: 10px;">Data freshness</div>
+          <div class="small" id="freshness-global">—</div>
+          <div class="small" id="freshness-stale" style="margin-top: 8px;">—</div>
+          <div class="small" id="freshness-list" style="margin-top: 8px;"></div>
+        </div>
+        <div class="card" id="scheduler-card" data-testid="scheduler-card">
+          <div class="k" style="margin-bottom: 10px;">Scheduler status</div>
+          <div class="small" id="scheduler-expected">—</div>
+          <div class="small" id="scheduler-note" style="margin-top: 8px;">—</div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-bottom: 12px;" id="truth-chain-prices-section" data-testid="truth-chain-prices">
+        <div class="k" style="margin-bottom: 10px;">Truth Chain (Prices — Product Path)</div>
+        <div id="truth-chain-prices-steps" style="display: flex; flex-direction: column; gap: 6px;"></div>
+        <div id="truth-chain-prices-blocker" class="small"
+          style="margin-top: 10px; padding: 8px; border-radius: 6px; display: none;"></div>
+        <div class="small" style="margin-top: 6px; color: #94a3b8;">
+          Meta/freshness/static persistence are informational unless policy requires them.
+        </div>
+        <div id="truth-chain-prices-warning" class="small" style="margin-top: 6px; color: #f59e0b; display: none;"></div>
+        <div class="small" style="margin-top: 12px; color: #94a3b8;">
+          Traces:
+          <a href="/api/debug/prove-ui-path?ticker=UBER" style="color:#60a5fa; margin-left: 8px;">UBER</a>
+        </div>
+      </div>
+
+      <div class="card" style="margin-bottom: 12px;" id="truth-chain-section" data-testid="truth-chain">
+        <div class="k" style="margin-bottom: 10px;">Truth Chain (Indicators/Pipeline — Observability)</div>
+        <div id="truth-chain-steps" style="display: flex; flex-direction: column; gap: 6px;"></div>
+        <div id="truth-chain-blocker" class="small"
+          style="margin-top: 10px; padding: 8px; border-radius: 6px; display: none;"></div>
+        <div class="small" style="margin-top: 12px; color: #94a3b8;">
+          Artifacts:
+          <a href="/data/pipeline/nasdaq100.pipeline-truth.json"
+            style="color:#60a5fa; margin-left: 8px;">pipeline-truth.json</a>
+          <a href="/data/pipeline/missing.json" style="color:#60a5fa; margin-left: 8px;">missing.json</a>
+          <a href="/data/marketphase/missing.json" style="color:#60a5fa; margin-left: 8px;">marketphase missing</a>
+        </div>
+      </div>
+
+      <div class="card" style="margin-bottom: 12px;" id="truth-chain-fundamentals-section" data-testid="truth-chain-fundamentals">
+        <div class="k" style="margin-bottom: 10px;">Truth Chain (Fundamentals)</div>
+        <div id="truth-chain-fundamentals-steps" style="display: flex; flex-direction: column; gap: 6px;"></div>
+        <div class="small" style="margin-top: 10px; color: #94a3b8;">Non-blocking informational checks.</div>
+      </div>
+
+      <div class="grid2" style="margin-bottom: 12px;">
+        <div class="card">
+          <div class="k" style="margin-bottom: 10px;">Source map</div>
+          <table>
+            <thead>
+              <tr>
+                <th>Id</th>
+                <th>Sources</th>
+                <th>Depends</th>
+              </tr>
+            </thead>
+            <tbody id="source-map-table"></tbody>
+          </table>
+        </div>
+        <div class="card">
+          <div class="k" style="margin-bottom: 10px;">Drilldowns</div>
+          <div id="health-actions" class="small" style="display:flex; flex-direction:column; gap:8px;"></div>
+        </div>
+      </div>
+
+      <details id="ops-raw-json" style="margin-bottom: 12px;">
+        <summary>Raw mission-control summary (sanitized)</summary>
+        <div style="margin-top: 8px; display: flex; gap: 8px; align-items: center;">
+          <button id="ops-raw-copy" class="btn" type="button">Copy JSON</button>
+          <span class="small" id="ops-raw-mode">sanitized</span>
+        </div>
+        <pre id="ops-raw-json-pre"
+          style="margin-top: 8px; white-space: pre-wrap; word-break: break-word; background: rgba(15, 23, 42, 0.7); padding: 10px; border-radius: 8px;"></pre>
+      </details>
+
+      <div class="small" style="margin-top: 14px;">
+        Source: <a href="/api/mission-control/summary" style="color:#60a5fa;">/api/mission-control/summary</a>
+        <span class="small" id="asof" style="margin-left:10px;"></span>
+      </div>
+      <div class="small" style="margin-top: 6px;">
+        Static artifacts:
+        <a href="/data/pipeline/nasdaq100.latest.json" style="color:#60a5fa; margin-left: 4px;">latest</a>
+        <a href="/data/pipeline/nasdaq100.static-ready.json" style="color:#60a5fa; margin-left: 4px;">static-ready</a>
+        <a href="/data/pipeline/nasdaq100.pipeline-truth.json"
+          style="color:#60a5fa; margin-left: 4px;">pipeline-truth</a>
+        <a href="/data/pipeline/missing.json" style="color:#60a5fa; margin-left: 4px;">missing</a>
+        <a href="/data/marketphase/missing.json" style="color:#60a5fa; margin-left: 4px;">marketphase missing</a>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function esc(s) {
+      return String(s == null ? '' : s)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    function fmtNum(n) {
+      const v = Number(n);
+      if (!Number.isFinite(v)) return '—';
+      return v.toLocaleString();
+    }
+
+    function pill(text, cls) {
+      return '<span class="pill ' + cls + '">' + esc(text) + '</span>';
+    }
+
+    function pctClass(p) {
+      const v = Number(p);
+      if (!Number.isFinite(v)) return 'warn';
+      if (v >= 90) return 'bad';
+      if (v >= 70) return 'warn';
+      return 'ok';
+    }
+
+    const renderStatusEl = document.getElementById('ops-render-status');
+    const renderStatusText = document.getElementById('ops-render-status-text');
+    const renderErrorEl = document.getElementById('ops-render-error');
+    const renderErrorText = document.getElementById('ops-render-error-text');
+    const opsBridgeEl = document.getElementById('ops-bridge');
+    let buildInfoCache = { sha: 'unknown', time: null };
+
+    function setRenderStatus(status, reason, asOf) {
+      if (renderStatusEl) {
+        renderStatusEl.dataset.status = status || 'unknown';
+        renderStatusEl.dataset.reason = reason || '';
+        if (asOf) renderStatusEl.dataset.asof = asOf;
+      }
+      if (renderStatusText) {
+        renderStatusText.textContent = status || 'unknown';
+      }
+      if (renderErrorEl && renderErrorText) {
+        if (status === 'error') {
+          renderErrorEl.style.display = 'block';
+          renderErrorText.textContent = reason || 'unknown';
+        } else {
+          renderErrorEl.style.display = 'none';
+          renderErrorText.textContent = '';
+        }
+      }
+    }
+
+    function setOpsBridge(state) {
+      if (!opsBridgeEl) {
+        setRenderStatus('error', 'bridge_missing');
+        if (renderErrorEl && renderErrorText) {
+          renderErrorEl.style.display = 'block';
+          renderErrorText.textContent = 'ops-bridge missing';
+        }
+        throw new Error('ops-bridge missing');
+      }
+      const next = {
+        status: state.status || 'unknown',
+        baseline: state.baseline || 'pending',
+        health: state.health || 'unknown',
+        countFetched: state.countFetched ?? 0,
+        countValidated: state.countValidated ?? 0,
+        coverageComputed: state.coverageComputed ?? 0,
+        coverageMissing: state.coverageMissing ?? 0,
+        reason: state.reason || '',
+        buildSha: state.buildSha || buildInfoCache.sha || 'unknown',
+        runtimeEnv: state.runtimeEnv || 'unknown',
+        pipelineExpected: state.pipelineExpected ?? 'unknown'
+      };
+      const attrs = {
+        'data-status': String(next.status),
+        'data-baseline': String(next.baseline),
+        'data-health': String(next.health),
+        'data-count-fetched': String(next.countFetched),
+        'data-count-validated': String(next.countValidated),
+        'data-coverage-computed': String(next.coverageComputed),
+        'data-coverage-missing': String(next.coverageMissing),
+        'data-reason': String(next.reason),
+        'data-build-sha': String(next.buildSha),
+        'data-runtime-env': String(next.runtimeEnv),
+        'data-pipeline-expected': String(next.pipelineExpected)
+      };
+      for (const [k, v] of Object.entries(attrs)) {
+        opsBridgeEl.setAttribute(k, v);
+      }
+    }
+
+    function isOkVerdict(value) {
+      const v = String(value || '').toUpperCase();
+      return v === 'OK' || v === 'HEALTHY' || v === 'GREEN';
+    }
+
+    function computeHealthColor(health) {
+      const statuses = Object.values(health || {}).map((h) => h?.status).filter(Boolean);
+      if (statuses.includes('CRITICAL')) return 'red';
+      if (statuses.includes('WARNING') || statuses.includes('INFO')) return 'yellow';
+      if (statuses.length) return 'green';
+      return 'unknown';
+    }
+
+    function validateOpsSummary(payload) {
+      if (!payload || typeof payload !== 'object') {
+        return { ok: false, level: 'error', reason: 'NOT_OBJECT' };
+      }
+      if (payload.schema_version !== '3.0') {
+        return { ok: false, level: 'error', reason: 'SCHEMA_INVALID' };
+      }
+      const meta = payload.meta || {};
+      if (typeof meta.status !== 'string') {
+        return { ok: false, level: 'error', reason: 'MISSING_META' };
+      }
+      const counts = payload?.data?.pipeline?.counts || {};
+      const coverage = payload?.data?.coverage || {};
+      const required = {
+        fetched: counts.fetched,
+        validated: counts.validated,
+        computed: coverage.computed,
+        missing: coverage.missing
+      };
+      for (const [key, value] of Object.entries(required)) {
+        if (!Number.isFinite(Number(value))) {
+          return { ok: false, level: 'error', reason: `MISSING_FIELDS:${key}` };
+        }
+      }
+      const overallVerdict =
+        payload?.data?.opsComputed?.overall?.verdict ||
+        payload?.data?.opsBaseline?.overall?.verdict ||
+        null;
+      const baselineVerdict = payload?.data?.opsBaseline?.overall?.verdict || null;
+      const reason =
+        payload?.data?.opsBaseline?.overall?.reason ||
+        payload?.data?.opsComputed?.overall?.reason ||
+        meta.reason ||
+        '';
+      const level = isOkVerdict(overallVerdict) ? 'ok' : 'degraded';
+      return { ok: true, level, reason, overallVerdict, baselineVerdict };
+    }
+
+    function setManualTs(ts) {
+      try {
+        localStorage.setItem('rv_ops_last_manual_refresh', ts);
+      } catch { }
+      const el = document.getElementById('manual-ts');
+      if (el) el.textContent = ts;
+    }
+
+    function getManualTs() {
+      try {
+        return localStorage.getItem('rv_ops_last_manual_refresh');
+      } catch {
+        return null;
+      }
+    }
+
+    function fmtTracked(value) {
+      if (value === null || value === undefined) return 'not tracked';
+      if (typeof value === 'number' && !Number.isFinite(value)) return 'not tracked';
+      return String(value);
+    }
+
+    function setSourceLabel(text) {
+      const sourceEl = document.getElementById('data-source');
+      if (sourceEl) sourceEl.textContent = text;
+    }
+
+    function showAlert(html) {
+      const alertEl = document.getElementById('ops-alert');
+      const textEl = document.getElementById('ops-alert-text');
+      if (!alertEl || !textEl) return;
+      textEl.innerHTML = html;
+      alertEl.style.display = 'block';
+    }
+
+    function clearAlert() {
+      const alertEl = document.getElementById('ops-alert');
+      const textEl = document.getElementById('ops-alert-text');
+      if (textEl) textEl.textContent = '';
+      if (alertEl) alertEl.style.display = 'none';
+    }
+
+
+    function statusClass(status) {
+      if (status === 'OK') return 'ok';
+      if (status === 'INFO') return 'warn';
+      if (status === 'WARNING') return 'warn';
+      if (status === 'CRITICAL') return 'bad';
+      return 'warn';
+    }
+
+    function renderHealthTile(id, item) {
+      const valueEl = document.getElementById(`health-${id}`);
+      const reasonEl = document.getElementById(`health-${id}-reason`);
+      if (!valueEl || !reasonEl) return;
+      const status = item?.status || 'UNKNOWN';
+      valueEl.innerHTML = pill(status, statusClass(status));
+      reasonEl.textContent = item?.reason || '—';
+    }
+
+    function renderSummary(payload) {
+      const loading = document.getElementById('loading');
+      const main = document.getElementById('main');
+      const meta = payload?.meta || {};
+      const metadata = payload?.metadata || {};
+      const data = payload?.data || {};
+
+      const baselineAsOfEl = document.getElementById('baseline-asof');
+      if (baselineAsOfEl) baselineAsOfEl.textContent = meta?.baselineAsOf || data?.opsBaseline?.asOf || '';
+      const liveLabelEl = document.getElementById('live-asof-label');
+      const liveAsOfEl = document.getElementById('live-asof');
+      if (liveLabelEl) {
+        liveLabelEl.textContent = metadata.served_from === 'RUNTIME' ? 'Runtime asOf' : 'Snapshot asOf';
+      }
+      if (liveAsOfEl) liveAsOfEl.textContent = meta?.asOf || data?.asOf || '';
+
+      const health = data?.health || {};
+      renderHealthTile('platform', health.platform);
+      renderHealthTile('api', health.api);
+      renderHealthTile('freshness', health.freshness);
+      renderHealthTile('pipeline', health.pipeline);
+
+      const workersToday = data?.budgets?.workersRequests?.usedToday ?? null;
+      const workersLast24h = data?.opsLive?.cloudflare?.requestsLast24h ?? null;
+      document.getElementById('workers-used').textContent = workersToday == null ? 'not tracked' : fmtNum(workersToday);
+      document.getElementById('workers-budget').textContent = workersLast24h == null ? 'not tracked' : `Last 24h: ${fmtNum(workersLast24h)}`;
+
+      const runtime = data?.runtime || {};
+      const runtimeMode = runtime?.env ? runtime.env.toUpperCase() : 'UNKNOWN';
+      document.getElementById('runtime-mode').textContent = runtimeMode;
+      document.getElementById('runtime-note').textContent = runtime?.schedulerExpected === false
+        ? 'Preview/Static environment (cron not expected).'
+        : runtime?.schedulerExpected === true
+          ? 'Production runtime.'
+          : 'Static summary artifact (no runtime auth).';
+      const callsHeader = document.getElementById('providers-calls-label');
+      if (callsHeader) {
+        callsHeader.textContent = runtime?.env === 'production' ? 'Runtime calls today' : 'Runtime calls today (static)';
+      }
+
+      const lastFetchEl = document.getElementById('ops-last-fetch');
+      if (lastFetchEl) lastFetchEl.textContent = metadata?.fetched_at || meta?.asOf || '';
+      const schedulerExpectedEl = document.getElementById('ops-scheduler-expected');
+      if (schedulerExpectedEl) schedulerExpectedEl.textContent =
+        runtime?.schedulerExpected === true ? 'YES' : runtime?.schedulerExpected === false ? 'NO' : 'UNKNOWN';
+      const schedulerExpectedReasonEl = document.getElementById('ops-scheduler-expected-reason');
+      if (schedulerExpectedReasonEl) schedulerExpectedReasonEl.textContent = runtime?.schedulerExpectedReason || '—';
+
+      const safetyKvWrites = data?.opsBaseline?.baseline?.safety?.kvWritesToday ?? null;
+      document.getElementById('safety-kv-writes').textContent = safetyKvWrites == null ? 'not tracked' : fmtNum(safetyKvWrites);
+      document.getElementById('safety-note').textContent = 'Static-only view.';
+
+      const providersArray = data?.opsBaseline?.baseline?.providers || data?.opsComputed?.baseline?.providers || [];
+      document.getElementById('providers').innerHTML = Array.isArray(providersArray) && providersArray.length
+        ? providersArray.sort((a, b) => String(a.name).localeCompare(String(b.name))).map((entry) => {
+          const name = entry?.name || '';
+          const used = entry?.usedMonth ?? null;
+          const lim = entry?.limitMonth ?? null;
+          const rem = entry?.remainingMonth ?? null;
+          const remPct = entry?.remainingPct ?? null;
+          const callsToday = entry?.runtimeCallsToday ?? null;
+          const status = remPct == null ? 'warn' : pctClass(100 - Number(remPct));
+          const remText = remPct == null
+            ? 'not tracked'
+            : (pill(String(remPct) + '%', status) + ' <span class=\"small\">' + esc(rem) + '</span>');
+          return '<tr>' +
+            '<td>' + esc(name) + '</td>' +
+            '<td>' + esc(fmtTracked(used)) + '</td>' +
+            '<td>' + esc(fmtTracked(lim)) + '</td>' +
+            '<td>' + remText + '</td>' +
+            '<td class=\"small\">' + esc(entry?.resetDate || '—') + '</td>' +
+            '<td>' + esc(fmtTracked(callsToday)) + '</td>' +
+            '</tr>';
+        }).join('')
+        : '<tr><td colspan=\"6\" class=\"small\">No provider budgets</td></tr>';
+
+      const counts = data?.pipeline?.counts || {};
+      const expected = Number.isFinite(Number(counts.expected)) ? Number(counts.expected) : null;
+      const fetched = Number.isFinite(Number(counts.fetched)) ? Number(counts.fetched) : null;
+      const validated = Number.isFinite(Number(counts.validated)) ? Number(counts.validated) : null;
+      const computed = Number.isFinite(Number(counts.computed)) ? Number(counts.computed) : null;
+      const staticReady = Number.isFinite(Number(counts.static_ready)) ? Number(counts.static_ready) : null;
+      const coverage = data?.coverage || {};
+      const coverageComputed = Number.isFinite(Number(coverage.computed)) ? Number(coverage.computed) : 0;
+      const coverageMissing = Number.isFinite(Number(coverage.missing)) ? Number(coverage.missing) : 0;
+
+      const stageRow = (label, value, expectedValue, statusLabel) => {
+        return '<tr>' +
+          '<td>' + esc(label) + '</td>' +
+          '<td>' + esc(value == null ? '—' : String(value)) + '</td>' +
+          '<td>' + esc(expectedValue == null ? '—' : String(expectedValue)) + '</td>' +
+          '<td>' + pill(statusLabel || 'UNKNOWN', statusClass(statusLabel || 'UNKNOWN')) + '</td>' +
+          '</tr>';
+      };
+
+      document.getElementById('pipeline-marketphase').innerHTML =
+        stageRow('Fetched', fetched, expected, health?.pipeline?.status) +
+        stageRow('Validated', validated, expected, health?.pipeline?.status) +
+        stageRow('Computed', computed, expected, health?.pipeline?.status) +
+        stageRow('Static-ready', staticReady, expected, health?.pipeline?.status);
+
+      document.getElementById('pipeline-marketphase-note').textContent =
+        health?.pipeline?.reason ? `Status: ${health.pipeline.status} • ${health.pipeline.reason}` : 'Status: UNKNOWN';
+
+      const eodSection = document.getElementById('eod-section');
+      const eodCounts = data?.eod?.counts || {};
+      const eodExpected = Number.isFinite(Number(eodCounts.expected)) ? Number(eodCounts.expected) : null;
+      const eodFetched = Number.isFinite(Number(eodCounts.fetched)) ? Number(eodCounts.fetched) : null;
+      const eodValidated = Number.isFinite(Number(eodCounts.validated)) ? Number(eodCounts.validated) : null;
+      if (eodSection) {
+        if (eodExpected != null && eodFetched != null && eodValidated != null) {
+          eodSection.style.display = 'block';
+          document.getElementById('pipeline-eod').innerHTML =
+            stageRow('Fetched', eodFetched, eodExpected, health?.pipeline?.status) +
+            stageRow('Validated', eodValidated, eodExpected, health?.pipeline?.status);
+          document.getElementById('pipeline-eod-note').textContent =
+            eodCounts && eodExpected != null
+              ? `Manifest expected ${eodExpected} symbols`
+              : 'EOD baseline unavailable';
+        } else {
+          eodSection.style.display = 'none';
+        }
+      }
+
+      document.getElementById('freshness-global').textContent =
+        health?.freshness?.asOf ? `Snapshot asOf: ${health.freshness.asOf}` : 'Snapshot asOf: unknown';
+      document.getElementById('freshness-stale').textContent =
+        health?.freshness?.age_hours != null ? `Age (hours): ${health.freshness.age_hours}` : 'Age (hours): unknown';
+      document.getElementById('freshness-list').textContent = '';
+
+      renderPriceTruthChain(data?.truthChains?.prices || data?.priceTruth || null);
+      renderTruthChain(data?.truthChains?.indicators || data?.pipeline?.truth || null, runtime);
+      renderFundamentalsTruthChain(data?.fundamentalsTruth || null);
+      renderSchedulerStatus(runtime);
+
+      const validation = validateOpsSummary(payload);
+      const healthStatus = computeHealthColor(payload?.data?.health);
+      const baselineVerdict = validation?.baselineVerdict;
+      const baselineStatus = baselineVerdict == null
+        ? 'pending'
+        : isOkVerdict(baselineVerdict)
+          ? 'ok'
+          : 'fail';
+      setOpsBridge({
+        status: validation.level === 'ok' ? 'ok' : validation.level === 'degraded' ? 'degraded' : 'error',
+        baseline: baselineStatus,
+        health: healthStatus,
+        countFetched: fetched ?? 0,
+        countValidated: validated ?? 0,
+        coverageComputed,
+        coverageMissing,
+        reason: validation.reason || '',
+        buildSha: buildInfoCache.sha || 'unknown',
+        runtimeEnv: runtime?.env || 'unknown',
+        pipelineExpected: runtime?.pipelineExpected ?? runtime?.expected?.pipeline ?? 'unknown'
+      });
+
+      const sourceEntries = data?.sourceMap?.entries || [];
+      document.getElementById('source-map-table').innerHTML = Array.isArray(sourceEntries) && sourceEntries.length
+        ? sourceEntries.map((entry) => {
+          const sources = Array.isArray(entry.sources) ? entry.sources.join(', ') : '';
+          const depends = Array.isArray(entry.depends) ? entry.depends.join(', ') : '';
+          return '<tr>' +
+            '<td>' + esc(entry.id || '') + '</td>' +
+            '<td class=\"small\">' + esc(sources) + '</td>' +
+            '<td class=\"small\">' + esc(depends) + '</td>' +
+            '</tr>';
+        }).join('')
+        : '<tr><td colspan=\"3\" class=\"small\">No source-map entries</td></tr>';
+
+      const actionItems = [];
+      for (const key of ['platform', 'api', 'freshness', 'pipeline']) {
+        const item = health?.[key];
+        if (item?.action?.url) {
+          actionItems.push(`<a href=\"${esc(item.action.url)}\" style=\"color:#60a5fa;\">${esc(key)}</a> — ${esc(item.action.howTo || '')}`);
+        }
+      }
+      document.getElementById('health-actions').innerHTML = actionItems.length
+        ? actionItems.map((line) => `<div>${line}</div>`).join('')
+        : '<div class=\"small\">No actions</div>';
+
+      document.getElementById('asof').textContent = '';
+
+      loading.style.display = 'none';
+      main.style.display = 'block';
+      return validation;
+    }
+
+    function redactKeys(value) {
+      const redaction = '[REDACTED]';
+      const deny = /apiKey|token|secret|authorization|headers/i;
+      if (Array.isArray(value)) {
+        return value.map((item) => redactKeys(item));
+      }
+      if (value && typeof value === 'object') {
+        const out = {};
+        for (const [key, val] of Object.entries(value)) {
+          if (deny.test(key)) {
+            out[key] = redaction;
+          } else {
+            out[key] = redactKeys(val);
+          }
+        }
+        return out;
+      }
+      return value;
+    }
+
+    function updateRawJson(payload, allowFull) {
+      const pre = document.getElementById('ops-raw-json-pre');
+      const modeEl = document.getElementById('ops-raw-mode');
+      const details = document.getElementById('ops-raw-json');
+      if (!pre || !payload) return;
+      const redacted = redactKeys(payload);
+      const output = allowFull ? redacted : redacted;
+      pre.textContent = JSON.stringify(output, null, 2);
+      if (modeEl) modeEl.textContent = allowFull ? 'sanitized (debug)' : 'sanitized';
+      if (details && allowFull) details.open = true;
+    }
+
+    function setupCopyJson() {
+      const btn = document.getElementById('ops-raw-copy');
+      const pre = document.getElementById('ops-raw-json-pre');
+      if (!btn || !pre) return;
+      btn.addEventListener('click', async () => {
+        try {
+          await navigator.clipboard.writeText(pre.textContent || '');
+          btn.textContent = 'Copied';
+          setTimeout(() => {
+            btn.textContent = 'Copy JSON';
+          }, 1200);
+        } catch {
+          btn.textContent = 'Copy failed';
+          setTimeout(() => {
+            btn.textContent = 'Copy JSON';
+          }, 1200);
+        }
+      });
+    }
+
+    async function loadBuildInfo() {
+      try {
+        const res = await fetch('/data/build-info.json', { cache: 'no-store' });
+        if (!res.ok) throw new Error('build-info fetch failed');
+        const payload = await res.json();
+        const sha = payload?.git_sha || payload?.env?.cf_pages_commit_sha || payload?.env?.github_sha || 'unknown';
+        const time = payload?.build_time_utc || null;
+        buildInfoCache = { sha, time };
+        const buildEl = document.getElementById('build-info');
+        if (buildEl) {
+          buildEl.textContent = time ? `Build: ${sha} • ${time}` : `Build: ${sha}`;
+        }
+        if (opsBridgeEl) {
+          opsBridgeEl.setAttribute('data-build-sha', sha);
+        }
+      } catch {
+        const buildEl = document.getElementById('build-info');
+        if (buildEl) buildEl.textContent = 'Build: unknown';
+      }
+    }
+
+
+    function renderTruthChain(truthDoc, runtime) {
+      const stepsEl = document.getElementById('truth-chain-steps');
+      const blockerEl = document.getElementById('truth-chain-blocker');
+      if (!stepsEl || !blockerEl) return;
+
+      if (!truthDoc || !Array.isArray(truthDoc.steps)) {
+        stepsEl.innerHTML = '<div class="small">Truth chain data not available</div>';
+        blockerEl.style.display = 'none';
+        return;
+      }
+
+      const pipelineExpected = runtime?.pipelineExpected ?? runtime?.expected?.pipeline;
+      const suppressBlocker = pipelineExpected === false;
+      const firstBlocker = suppressBlocker ? null : (truthDoc?.first_blocker_id || truthDoc?.first_blocker?.id || null);
+      stepsEl.dataset.firstBlocker = firstBlocker || '';
+
+      const statusIcon = (s) => {
+        if (s === 'OK') return '✅';
+        if (s === 'WARN') return '⚠️';
+        if (s === 'FAIL') return '❌';
+        if (s === 'INFO') return 'ℹ️';
+        return '❓';
+      };
+
+      stepsEl.innerHTML = truthDoc.steps.map(step => {
+        const isBlocker = step.id === firstBlocker;
+        const borderStyle = isBlocker ? 'border: 1px solid rgba(251, 113, 133, 0.5); background: rgba(120, 20, 30, 0.15);' : 'border: 1px solid rgba(148, 163, 184, 0.15);';
+
+        let detailText = typeof step.detail === 'string'
+          ? step.detail
+          : (typeof step.details === 'string' ? step.details : '');
+        let statusValue = step.status || 'UNKNOWN';
+        if (pipelineExpected === false) {
+          statusValue = 'INFO';
+          detailText = detailText
+            ? `${detailText} • NOT_EXPECTED (preview)`
+            : 'NOT_EXPECTED (preview)';
+        }
+        let evidenceStr = '';
+        if (step.evidence && typeof step.evidence === 'object') {
+          evidenceStr = Object.entries(step.evidence)
+            .map(([k, v]) => `${k}: ${v === null ? '—' : v}`)
+            .join(', ');
+        } else if (typeof step.evidence === 'string') {
+          evidenceStr = step.evidence;
+        } else if (!detailText) {
+          evidenceStr = '';
+        }
+
+        return `<div class="truth-step" data-step-id="${esc(step.id)}" data-step-status="${esc(statusValue)}" style="padding: 8px 10px; border-radius: 6px; ${borderStyle} margin-bottom: 8px;">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span style="font-size: 16px;">${statusIcon(statusValue)}</span>
+            <span style="font-weight: 600; font-size: 13px;">${esc(step.id)}</span>
+            <span style="flex: 1; font-size: 13px;">${esc(step.title)}</span>
+            ${isBlocker ? '<span class="pill bad">BLOCKER</span>' : ''}
+          </div>
+          ${evidenceStr ? `<div class="small" style="margin-top: 4px; color: #94a3b8;">${esc(evidenceStr)}</div>` : ''}
+          ${detailText ? `<div class="small" style="margin-top: 2px; color: #fecdd3;">${esc(detailText)}</div>` : ''}
+        </div>`;
+      }).join('');
+
+      if (firstBlocker) {
+        const blockerStep = truthDoc.steps.find(s => s.id === firstBlocker);
+        blockerEl.style.display = 'block';
+        blockerEl.style.background = 'rgba(120, 20, 30, 0.18)';
+        blockerEl.style.borderColor = 'rgba(251, 113, 133, 0.35)';
+        blockerEl.innerHTML = `<strong>First blocker:</strong> ${esc(firstBlocker)} — ${esc(blockerStep?.title || '')}`;
+      } else {
+        blockerEl.style.display = 'none';
+      }
+    }
+
+    function renderSchedulerStatus(runtime) {
+      const expectedEl = document.getElementById('scheduler-expected');
+      const noteEl = document.getElementById('scheduler-note');
+      if (!expectedEl || !noteEl) return;
+
+      const expected = runtime?.schedulerExpected;
+      const reason = runtime?.schedulerExpectedReason || '';
+      const hostname = runtime?.hostname || '';
+
+      if (expected === true) {
+        expectedEl.innerHTML = '<span class="pill ok">Scheduler expected: YES</span>';
+        noteEl.textContent = reason || 'Production environment';
+      } else if (expected === false) {
+        expectedEl.innerHTML = '<span class="pill warn">Scheduler expected: NO</span>';
+        noteEl.textContent = reason || 'Preview/Static mode';
+      } else {
+        expectedEl.textContent = 'Scheduler expected: UNKNOWN';
+        noteEl.textContent = `Runtime: ${hostname || 'unknown'}`;
+      }
+    }
+
+    function renderPriceTruthChain(priceTruth) {
+      const stepsEl = document.getElementById('truth-chain-prices-steps');
+      const blockerEl = document.getElementById('truth-chain-prices-blocker');
+      const warningEl = document.getElementById('truth-chain-prices-warning');
+      if (!stepsEl || !blockerEl) return;
+
+      if (!priceTruth || !Array.isArray(priceTruth.steps)) {
+        stepsEl.innerHTML = '<div class="small">Price truth chain data not available</div>';
+        blockerEl.style.display = 'none';
+        if (warningEl) warningEl.style.display = 'none';
+        return;
+      }
+
+      const firstBlocker = priceTruth.first_blocker_id || null;
+      stepsEl.dataset.firstBlocker = firstBlocker || '';
+
+      const statusIcon = (s) => {
+        if (s === 'OK') return '✅';
+        if (s === 'FAIL') return '❌';
+        if (s === 'WARN') return '⚠️';
+        if (s === 'INFO') return 'ℹ️';
+        return '❓';
+      };
+
+      stepsEl.innerHTML = priceTruth.steps.map(step => {
+        const isBlocker = step.id === firstBlocker;
+        const borderStyle = isBlocker ? 'border: 1px solid rgba(251, 113, 133, 0.5); background: rgba(120, 20, 30, 0.15);' : 'border: 1px solid rgba(148, 163, 184, 0.15);';
+        const detailText = typeof step.detail === 'string' ? step.detail : '';
+        let evidenceStr = '';
+        if (step.evidence && typeof step.evidence === 'object') {
+          evidenceStr = Object.entries(step.evidence)
+            .map(([k, v]) => `${k}: ${v === null ? '—' : typeof v === 'object' ? '[...]' : v}`)
+            .join(', ');
+        }
+
+        return `<div class="truth-step" data-step-id="${esc(step.id)}" data-step-status="${esc(step.status)}" style="padding: 8px 10px; border-radius: 6px; ${borderStyle} margin-bottom: 8px;">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span style="font-size: 16px;">${statusIcon(step.status)}</span>
+            <span style="font-weight: 600; font-size: 13px;">${esc(step.id)}</span>
+            <span style="flex: 1; font-size: 13px;">${esc(step.title)}</span>
+            ${isBlocker ? '<span class="pill bad">BLOCKER</span>' : ''}
+          </div>
+          ${evidenceStr ? `<div class="small" style="margin-top: 4px; color: #94a3b8;">${esc(evidenceStr)}</div>` : ''}
+          ${detailText ? `<div class="small" style="margin-top: 2px; color: #fecdd3;">${esc(detailText)}</div>` : ''}
+        </div>`;
+      }).join('');
+
+      if (firstBlocker) {
+        const blockerStep = priceTruth.steps.find(s => s.id === firstBlocker);
+        blockerEl.style.display = 'block';
+        blockerEl.style.background = 'rgba(120, 20, 30, 0.18)';
+        blockerEl.style.borderColor = 'rgba(251, 113, 133, 0.35)';
+        blockerEl.innerHTML = `<strong>First blocker:</strong> ${esc(firstBlocker)} — ${esc(blockerStep?.title || '')}`;
+      } else {
+        blockerEl.style.display = 'none';
+      }
+
+      if (warningEl) {
+        const traces = Array.isArray(priceTruth?.artifacts?.traces) ? priceTruth.artifacts.traces : [];
+        const mismatched = traces.filter(t => t.base_match === false && t.base_url);
+        if (mismatched.length) {
+          warningEl.style.display = 'block';
+          warningEl.textContent = `Trace base mismatch for ${mismatched.map(t => t.ticker).join(', ')} — use path-only trace.`;
+        } else {
+          warningEl.style.display = 'none';
+        }
+      }
+    }
+
+    function renderFundamentalsTruthChain(truth) {
+      const stepsEl = document.getElementById('truth-chain-fundamentals-steps');
+      if (!stepsEl) return;
+      if (!truth || !Array.isArray(truth.steps)) {
+        stepsEl.innerHTML = '<div class="small">Fundamentals checks not available.</div>';
+        return;
+      }
+      const statusIcon = (s) => {
+        if (s === 'OK') return '✅';
+        if (s === 'WARN') return '⚠️';
+        return 'ℹ️';
+      };
+      stepsEl.innerHTML = truth.steps.map(step => {
+        return `<div class="truth-step" data-step-id="${esc(step.id)}" data-step-status="${esc(step.status)}" style="padding: 8px 10px; border-radius: 6px; border: 1px solid rgba(148, 163, 184, 0.15);">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span style="font-size: 16px;">${statusIcon(step.status)}</span>
+            <span style="font-weight: 600; font-size: 13px;">${esc(step.id)}</span>
+            <span style="flex: 1; font-size: 13px;">${esc(step.title)}</span>
+          </div>
+          ${step.detail ? `<div class="small" style="margin-top: 4px; color: #94a3b8;">${esc(step.detail)}</div>` : ''}
+        </div>`;
+      }).join('');
+    }
+
+    async function refreshSummary(options = {}) {
+      const statusEl = document.getElementById('loading');
+      const last = document.getElementById('last-refresh');
+      if (last) last.textContent = `Last action: ${new Date().toLocaleString()}`;
+      const t = Date.now();
+      const debugEnabled = new URLSearchParams(window.location.search).get('debug') === '1';
+      const summaryUrl = `/api/mission-control/summary${debugEnabled ? '?debug=1' : ''}${debugEnabled ? '&' : '?'}t=${t}`;
+
+      try {
+        setRenderStatus('boot', 'fetching');
+        setOpsBridge({
+          status: 'loading',
+          baseline: 'pending',
+          health: 'unknown',
+          countFetched: 0,
+          countValidated: 0,
+          coverageComputed: 0,
+          coverageMissing: 0,
+          reason: 'FETCHING'
+        });
+        const summaryRes = await fetch(summaryUrl, { cache: 'no-store' });
+
+        if (!summaryRes.ok) {
+          if (statusEl) statusEl.textContent = `Failed to load summary (HTTP ${summaryRes.status}).`;
+          setRenderStatus('error', 'fetch_failed');
+          setOpsBridge({
+            status: 'error',
+            baseline: 'fail',
+            health: 'red',
+            countFetched: 0,
+            countValidated: 0,
+            coverageComputed: 0,
+            coverageMissing: 0,
+            reason: `HTTP_${summaryRes.status}`
+          });
+          return;
+        }
+
+        const payload = await summaryRes.json();
+        clearAlert();
+
+        const servedFromEl = document.getElementById('served-from');
+        if (servedFromEl) servedFromEl.textContent = payload?.metadata?.served_from || '—';
+
+        if (!payload?.data) {
+          if (statusEl) statusEl.textContent = 'Summary unavailable (missing data).';
+          setRenderStatus('error', 'json_invalid');
+          setOpsBridge({
+            status: 'error',
+            baseline: 'fail',
+            health: 'red',
+            countFetched: 0,
+            countValidated: 0,
+            coverageComputed: 0,
+            coverageMissing: 0,
+            reason: 'JSON_INVALID'
+          });
+          return;
+        }
+
+        setSourceLabel(options.sourceLabel || 'static');
+        const validation = renderSummary(payload);
+        updateRawJson(payload, debugEnabled);
+        const status = validation?.level === 'error' ? 'error' : 'ok';
+        const reason = validation?.level === 'error' ? (validation?.reason || 'contract_invalid') : 'rendered';
+        setRenderStatus(status, reason, payload?.meta?.asOf || payload?.metadata?.fetched_at || null);
+
+        if (options.triggerLive) {
+          attemptLiveRefresh({ force: options.forceLive });
+        }
+      } catch (err) {
+        if (statusEl) statusEl.textContent = 'Failed to load summary.';
+        setRenderStatus('error', 'json_invalid');
+        setOpsBridge({
+          status: 'error',
+          baseline: 'fail',
+          health: 'red',
+          countFetched: 0,
+          countValidated: 0,
+          coverageComputed: 0,
+          coverageMissing: 0,
+          reason: 'EXCEPTION'
+        });
+      }
+    }
+
+    function getOpsKeyFromUrl() {
+      try {
+        const params = new URLSearchParams(window.location.search);
+        return params.get('ops_key') || params.get('opsKey') || null;
+      } catch {
+        return null;
+      }
+    }
+
+    function getOpsKeyFromSession() {
+      try {
+        return sessionStorage.getItem('rv_ops_key');
+      } catch {
+        return null;
+      }
+    }
+
+    function setOpsKey(key) {
+      try {
+        sessionStorage.setItem('rv_ops_key', key);
+      } catch { }
+    }
+
+    async function refreshLiveWithKey(key) {
+      try {
+        const res = await fetch('/api/mission-control/summary?live=1', {
+          cache: 'no-store',
+          headers: {
+            'X-OPS-KEY': key
+          }
+        });
+        if (!res.ok) {
+          setSourceLabel('live locked');
+          return;
+        }
+        const payload = await res.json();
+        if (!payload?.data) return;
+        setSourceLabel('live');
+        const liveAsOfEl = document.getElementById('live-asof');
+        if (liveAsOfEl) liveAsOfEl.textContent = payload?.meta?.asOf || payload?.data?.asOf || '—';
+        const servedFromEl = document.getElementById('served-from');
+        if (servedFromEl) servedFromEl.textContent = payload?.metadata?.served_from || '—';
+        renderSummary(payload);
+        renderSchedulerStatus(payload?.data?.runtime);
+        const debugEnabled = new URLSearchParams(window.location.search).get('debug') === '1';
+        updateRawJson(payload, debugEnabled);
+        setRenderStatus('ok', 'rendered', payload?.meta?.asOf || payload?.metadata?.fetched_at || null);
+      } catch {
+        setSourceLabel('live locked');
+      }
+    }
+
+    function attemptLiveRefresh({ force = false } = {}) {
+      try {
+        if (!force) {
+          const already = sessionStorage.getItem('ops_auto_live_once');
+          if (already === '1') return;
+          sessionStorage.setItem('ops_auto_live_once', '1');
+        }
+      } catch { }
+
+      const urlKey = getOpsKeyFromUrl();
+      const sessionKey = getOpsKeyFromSession();
+      const key = sessionKey || urlKey;
+      if (urlKey && !sessionKey) {
+        setOpsKey(urlKey);
+      }
+      if (!key) {
+        setSourceLabel('static (no key)');
+        return;
+      }
+      setTimeout(() => {
+        refreshLiveWithKey(key);
+      }, 400);
+    }
+
+    setupCopyJson();
+    loadBuildInfo();
+    document.getElementById('btn-refresh').addEventListener('click', async () => {
+      const now = new Date().toLocaleString();
+      setManualTs(now);
+      refreshSummary({ sourceLabel: 'static', triggerLive: true, forceLive: true });
+    });
+
+    const previous = getManualTs();
+    if (previous) {
+      const el = document.getElementById('manual-ts');
+      if (el) el.textContent = previous;
+    }
+
+    const baselineAsOfEl = document.getElementById('baseline-asof');
+    if (baselineAsOfEl) baselineAsOfEl.textContent = '—';
+
+    const autoRefreshOnce = () => {
+      if (!window.__opsAutoRefreshed) {
+        window.__opsAutoRefreshed = true;
+        refreshSummary({ sourceLabel: 'static (auto)', triggerLive: true, forceLive: false });
+      }
+    };
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', autoRefreshOnce);
+    } else {
+      autoRefreshOnce();
+    }
+  </script>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9c798462ab6be00a',t:'MTc3MDAzMzUxMA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+
+</html>

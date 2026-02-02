@@ -1,22 +1,22 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
+import { ROOT, AUDIT_DIR, ensureAuditDirs } from './config.mjs';
 
-const ROOT_DIR = process.cwd();
-const EXCLUDE_DIRS = ['node_modules', '.git', 'artifacts', 'dist', '.wrangler'];
+const EXCLUDE_DIRS = ['node_modules', '.git', 'artifacts', 'dist', '.wrangler', '_local_trash', 'tmp', '.tmp', 'test-results'];
 const EXTENSIONS = ['.js', '.mjs', '.ts', '.html', '.md', '.json'];
 const TOKENS = [
-    "latest_bar",
-    "data.latest_bar",
-    "truthChains",
-    "data.truthChains",
-    "network.winning",
-    "winning_response",
-    "/api/stock",
-    "/api/mission-control/summary",
-    "/debug/ui-path/",
-    "/analyze/",
-    "/ops/"
+  'latest_bar',
+  'data.latest_bar',
+  'truthChains',
+  'data.truthChains',
+  'network.winning',
+  'winning_response',
+  '/api/stock',
+  '/api/mission-control/summary',
+  '/debug/ui-path/',
+  '/analyze/',
+  '/ops/'
 ];
 
 function sha256(str) {
@@ -33,12 +33,12 @@ function scanFile(filePath) {
             TOKENS.forEach(token => {
                 if (line.includes(token)) {
                     results.push({
-                        token,
-                        file: path.relative(ROOT_DIR, filePath),
-                        line: index + 1,
-                        col: line.indexOf(token),
-                        lineText: line.trim(),
-                        lineHash: sha256(line.trim())
+                      token,
+                      file: path.relative(ROOT, filePath),
+                      line: index + 1,
+                      col: line.indexOf(token),
+                      lineText: line.trim(),
+                      lineHash: sha256(line.trim())
                     });
                 }
             });
@@ -69,14 +69,15 @@ function walkDir(dir, callback) {
 
 function main() {
     const allRefs = [];
-    walkDir(ROOT_DIR, (filePath) => {
-        const refs = scanFile(filePath);
-        allRefs.push(...refs);
+    ensureAuditDirs();
+    walkDir(ROOT, (filePath) => {
+      const refs = scanFile(filePath);
+      allRefs.push(...refs);
     });
 
-    const outFile = path.join(ROOT_DIR, 'artifacts/truth-audit/2026-02-02/STATIC_REFERENCES.json');
+    const outFile = path.join(AUDIT_DIR, 'STATIC_REFERENCES.json');
     fs.writeFileSync(outFile, JSON.stringify(allRefs, null, 2));
-    console.log(`Wrote ${allRefs.length} references to ${path.relative(ROOT_DIR, outFile)}`);
+    console.log(`Wrote ${allRefs.length} references to ${path.relative(ROOT, outFile)}`);
 }
 
 main();

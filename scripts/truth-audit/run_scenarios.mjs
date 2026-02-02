@@ -1,16 +1,11 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { inspect } from './inspect_shapes.mjs';
+import { AUDIT_DIR, RUNTIME_DIR, getBaseUrl, ensureAuditDirs, writeRuntimeContext } from './config.mjs';
 
-const ROOT_DIR = process.cwd();
-const ARTIFACTS_DIR = path.join(ROOT_DIR, 'artifacts/truth-audit/2026-02-02');
-const RUNTIME_DIR = path.join(ARTIFACTS_DIR, 'runtime');
-const RAW_DIR = path.join(ARTIFACTS_DIR, 'raw');
-
-if (!fs.existsSync(RUNTIME_DIR)) fs.mkdirSync(RUNTIME_DIR, { recursive: true });
-
-const CONTEXT = JSON.parse(fs.readFileSync(path.join(ARTIFACTS_DIR, 'RUNTIME_CONTEXT.json'), 'utf-8'));
-const BASE_URL = CONTEXT.BASE_URL;
+ensureAuditDirs();
+writeRuntimeContext();
+const BASE_URL = getBaseUrl();
 
 const SPECS = {
     api_stock: {
@@ -21,10 +16,10 @@ const SPECS = {
         truthChains: ["data.truthChains", "truthChains"],
         prices: ["data.truthChains.prices", "truthChains.prices"]
     },
-    ui_trace: {
-        winning_url: ["network.winning.url"],
-        ui_values: ["ui.values"]
-    }
+  ui_trace: {
+    winning_path: ['network.winning.path'],
+    ui_values: ['ui.values']
+  }
 };
 
 async function fetchJson(url) {
@@ -58,20 +53,31 @@ async function runScenarios() {
 
     // S2: Trace Integrity
     console.log('Running S2: Trace Integrity...');
-    const traceUrl = s0_trace?.network?.winning?.url;
-    const traceStatus = traceUrl && traceUrl.startsWith('/api') ? 'PASS' : 'FAIL';
-    matrix.push({ scenario: 'S2_TRACE_BASE_INTEGRITY', check: 'winning_url_prefix', result: traceStatus, detail: traceUrl });
+    const tracePath = s0_trace?.network?.winning?.path;
+    const traceBase = s0_trace?.base_url || null;
+    const pathOk = tracePath && tracePath.startsWith('/');
+    const baseOk = traceBase ? traceBase === BASE_URL : false;
+    const traceStatus = pathOk && baseOk ? 'PASS' : 'FAIL';
+    const traceDetail = `path=${tracePath || 'null'} base_url=${traceBase || 'null'} base_match=${baseOk}`;
+    matrix.push({ scenario: 'S2_TRACE_BASE_INTEGRITY', check: 'winning_path_relative+base_match', result: traceStatus, detail: traceDetail });
 
     // S3: Contract Consistency (OPS)
     console.log('Running S3: Contract Consistency...');
     const pricesSteps = s0_summary?.data?.truthChains?.prices?.steps || [];
     const p6 = pricesSteps.find(s => s.id === 'P6_API_CONTRACT');
     const p6Status = p6?.status === 'OK' ? 'PASS' : 'FAIL';
-    matrix.push({ scenario: 'S3_CONTRACT_CONSISTENCY', check: 'OPS_P6_OK', result: p6Status, detail: p6?.evidence });
+    const p6Detail = p6?.evidence ? JSON.stringify(p6.evidence).slice(0, 300) : 'no evidence';
+    matrix.push({ scenario: 'S3_CONTRACT_CONSISTENCY', check: 'OPS_P6_OK', result: p6Status, detail: p6Detail });
+
+    // S4: Degrade Simulation (if available)
+    console.log('Running S4: Degrade Simulation...');
+    const degradeHint = s0_summary?.data?.runtime?.mode || null;
+    const s4Result = degradeHint ? 'NOT_AVAILABLE' : 'NOT_AVAILABLE';
+    matrix.push({ scenario: 'S4_DEGRADE_SIM', check: 'degrade_mode', result: s4Result, detail: degradeHint || 'no degrade toggle detected' });
 
     // Output
-    fs.writeFileSync(path.join(ARTIFACTS_DIR, 'RUNTIME_TELEMETRY.json'), JSON.stringify(telemetry, null, 2));
-    fs.writeFileSync(path.join(ARTIFACTS_DIR, 'SCENARIO_MATRIX.md'), _renderMatrix(matrix));
+    fs.writeFileSync(path.join(AUDIT_DIR, 'RUNTIME_TELEMETRY.json'), JSON.stringify(telemetry, null, 2));
+    fs.writeFileSync(path.join(AUDIT_DIR, 'SCENARIO_MATRIX.md'), _renderMatrix(matrix));
     console.log('Runtime analysis complete.');
 }
 
