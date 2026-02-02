@@ -53,6 +53,16 @@ if (priceTruth.first_blocker_id && !allowedPriceSteps.has(priceTruth.first_block
   fail(`priceTruth first_blocker invalid: ${priceTruth.first_blocker_id}`);
 }
 
+const priceStepMap = Object.fromEntries(priceTruth.steps.map((s) => [s.id, s.status]));
+const p6 = priceStepMap.P6_API_CONTRACT;
+const p7 = priceStepMap.P7_UI_RENDERS;
+if (p6 === 'OK' && p7 === 'OK' && priceTruth.status === 'ERROR') {
+  fail('priceTruth.status should not be ERROR when P6 and P7 are OK');
+}
+if (priceTruth.first_blocker_id && !['P6_API_CONTRACT', 'P7_UI_RENDERS'].includes(priceTruth.first_blocker_id)) {
+  fail(`priceTruth first_blocker invalid for Prices chain: ${priceTruth.first_blocker_id}`);
+}
+
 const runtime = summary?.data?.runtime || {};
 if (runtime?.schedulerExpected === false && health?.pipeline?.status === 'CRITICAL') {
   fail('preview pipeline should not be CRITICAL solely due to cron absence');

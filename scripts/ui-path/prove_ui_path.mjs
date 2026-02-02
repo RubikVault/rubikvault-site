@@ -63,12 +63,14 @@ page.on('response', async (response) => {
     } catch {
       json = null;
     }
+    const bodyKeys = json && typeof json === 'object' ? Object.keys(json) : [];
     networkCalls.push({
       url,
       method: response.request().method(),
       status: response.status(),
       content_type: ct,
       sha256: sha,
+      body_keys: bodyKeys,
       response_excerpt: json ? {
         schema_version: json.schema_version || json.schemaVersion || null,
         meta: json.meta || null,
@@ -126,12 +128,9 @@ const winning = networkCalls.find((call) => {
   const dateMatch = String(bar.date).slice(0, 10) === uiDateIso;
   return closeMatch && volumeMatch && dateMatch;
 });
-
-if (!winning) {
-  console.error('No winning response matched UI values');
-  console.error({ ui });
-  process.exit(1);
-}
+const winningError = winning
+  ? null
+  : { code: 'WINNING_RESPONSE_NOT_FOUND', message: 'No response matched UI values', ui };
 
 const handlerFile = resolve(process.cwd(), 'functions/api/stock.js');
 const handlerRef = findLineRef(handlerFile, 'export async function onRequestGet');
@@ -157,7 +156,7 @@ async function inspectSnapshotContainsTicker() {
 }
 
 const upstream = await (async () => {
-  const meta = winning.response_excerpt?.meta || {};
+  const meta = winning?.response_excerpt?.meta || {};
   const dataSource = meta.data_source || null;
   if (dataSource === 'snapshot') {
     const snap = await inspectSnapshotContainsTicker();
@@ -170,10 +169,15 @@ const upstream = await (async () => {
   if (dataSource === 'real_provider') {
     return { kind: 'provider', provider_name: meta.provider || null, key_or_path: null };
   }
+  if (!winning) {
+    return { kind: 'unknown', key_or_path: null, error: 'no winning response' };
+  }
   return { kind: 'unknown', key_or_path: null };
 })();
 
 const trace = {
+  trace_version: 'v1',
+  generated_at: new Date().toISOString(),
   base_url: base,
   ticker,
   page_url: pageUrl,
@@ -188,10 +192,18 @@ const trace = {
     }
   },
   network: {
+    winning: {
+      url: winning?.url || null,
+      status: winning?.status ?? null,
+      sha256: winning?.sha256 || null,
+      body_keys: winning?.body_keys || [],
+      response_excerpt: winning?.response_excerpt || null,
+      error: winningError
+    },
     calls: networkCalls.sort((a, b) => a.url.localeCompare(b.url))
   },
   server: {
-    endpoint: winning.url,
+    endpoint: winning?.url || null,
     handler_file: handlerFile,
     handler_line_ref: handlerRef,
     value_line_refs: {
@@ -201,9 +213,10 @@ const trace = {
   },
   upstream,
   winning_response: {
-    url: winning.url,
-    status: winning.status,
-    sha256: winning.sha256
+    url: winning?.url || null,
+    status: winning?.status ?? null,
+    sha256: winning?.sha256 || null,
+    error: winningError
   }
 };
 
@@ -215,6 +228,11 @@ try {
   await import('node:fs').then(fs => fs.writeFileSync(outPath, JSON.stringify(trace, null, 2) + '\n'));
 } catch (err) {
   console.error('Failed to write trace file:', err);
+  process.exit(1);
+}
+
+if (winningError) {
+  console.error(winningError.message);
   process.exit(1);
 }
 

@@ -73,4 +73,42 @@ if (actualBlocker !== expectedBlocker) {
   fail(`Truth chain first_blocker expected ${expectedBlocker}, got ${actualBlocker}`);
 }
 
+const priceTruth = payload?.data?.priceTruth;
+if (!priceTruth || typeof priceTruth !== 'object' || !Array.isArray(priceTruth.steps)) {
+  fail('Missing priceTruth.steps');
+}
+const priceSteps = new Set(priceTruth.steps.map((s) => s.id));
+const requiredPriceSteps = ['P0_UI_START', 'P1_UI_CALLS_API', 'P2_API_RECEIVES_RAW', 'P3_API_PARSES_VALIDATES', 'P4_CANONICAL_FORMAT', 'P5_STATIC_PERSIST', 'P6_API_CONTRACT', 'P7_UI_RENDERS'];
+for (const id of requiredPriceSteps) {
+  if (!priceSteps.has(id)) fail(`Missing priceTruth step ${id}`);
+}
+const p6 = priceTruth.steps.find((s) => s.id === 'P6_API_CONTRACT')?.status;
+const p7 = priceTruth.steps.find((s) => s.id === 'P7_UI_RENDERS')?.status;
+if (p6 === 'OK' && p7 === 'OK' && priceTruth.status === 'ERROR') {
+  fail('priceTruth.status should not be ERROR when P6 and P7 are OK');
+}
+const p3Step = priceTruth.steps.find((s) => s.id === 'P3_API_PARSES_VALIDATES');
+if (p3Step?.evidence?.issues) {
+  const issues = p3Step.evidence.issues;
+  const allowed = ['close', 'volume', 'date'];
+  for (const issue of issues) {
+    if (!allowed.some((key) => String(issue).includes(key))) {
+      fail(`P3 issue contains non-contract field: ${issue}`);
+    }
+  }
+}
+
+// ui-path trace schema sanity (if present)
+const tracePath = path.join(ROOT, 'public', 'debug', 'ui-path', 'UBER.ui-path.trace.json');
+try {
+  const traceRaw = await fs.readFile(tracePath, 'utf8');
+  const trace = JSON.parse(traceRaw);
+  if (!trace.trace_version) fail('ui-path trace missing trace_version');
+  if (!trace.generated_at) fail('ui-path trace missing generated_at');
+  if (!trace.network || !trace.network.winning) fail('ui-path trace missing network.winning');
+  if (!trace.ui || !trace.ui.detected_values) fail('ui-path trace missing ui.detected_values');
+} catch (err) {
+  fail(`ui-path trace missing or invalid: ${err?.message || err}`);
+}
+
 console.log('Truth chain test OK');

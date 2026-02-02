@@ -1,0 +1,404 @@
+{
+  "chain_version": "v2",
+  "asOf": "2026-02-02T10:04:53.046Z",
+  "domain": "prices",
+  "status": "ERROR",
+  "first_blocker_id": "P3_API_PARSES_VALIDATES",
+  "steps": [
+    {
+      "id": "P0_UI_START",
+      "title": "User opens /analyze/<T> and the page JS loads.",
+      "status": "OK",
+      "evidence": {
+        "samples": [
+          "UBER",
+          "TEAM",
+          "WBD"
+        ],
+        "sources": [
+          "UBER:ui-path",
+          "TEAM:truth-chain",
+          "WBD:truth-chain"
+        ]
+      },
+      "detail": "Trace artifacts recorded."
+    },
+    {
+      "id": "P1_UI_CALLS_API",
+      "title": "The page triggers the winning request to /api/stock?ticker=<T>.",
+      "status": "WARN",
+      "evidence": {
+        "calls": [
+          "UBER:200",
+          "TEAM:na",
+          "WBD:na"
+        ],
+        "handlers": [
+          "/Users/michaelpuchowezki/Dev/rubikvault-site/functions/api/stock.js"
+        ]
+      },
+      "detail": "Missing api/stock calls for TEAM, WBD"
+    },
+    {
+      "id": "P2_API_RECEIVES_RAW",
+      "title": "The backend receives upstream/cache data (HTTP ok + body) before any validation.",
+      "status": "OK",
+      "evidence": {
+        "upstream": [
+          "UBER:public_data",
+          "TEAM:unknown",
+          "WBD:unknown"
+        ],
+        "paths": [
+          "UBER:/data/snapshots/market-prices/latest.json",
+          "TEAM:unknown",
+          "WBD:unknown"
+        ],
+        "contains": [
+          "UBER:false",
+          "TEAM:unknown",
+          "WBD:unknown"
+        ]
+      },
+      "detail": "Upstream/cache payloads recorded."
+    },
+    {
+      "id": "P3_API_PARSES_VALIDATES",
+      "title": "Backend parses and validates required fields (close, volume, date) for sanity.",
+      "status": "FAIL",
+      "evidence": {
+        "issues": [
+          "UBER: date",
+          "TEAM: date",
+          "WBD: date"
+        ]
+      },
+      "detail": "Validation failed for one or more fields."
+    },
+    {
+      "id": "P4_CANONICAL_FORMAT",
+      "title": "Backend maps raw data into canonical latest_bar + change format.",
+      "status": "OK",
+      "evidence": {
+        "samples": [
+          "UBER",
+          "TEAM",
+          "WBD"
+        ]
+      },
+      "detail": "Canonical fields present."
+    },
+    {
+      "id": "P5_STATIC_PERSIST",
+      "title": "If configured, the canonical data is written to public/data and is fetchable as static; otherwise this is WARN.",
+      "status": "WARN",
+      "evidence": {
+        "required": false,
+        "samples": [
+          "UBER:false",
+          "TEAM:unknown",
+          "WBD:unknown"
+        ],
+        "path": "/data/snapshots/market-prices/latest.json"
+      },
+      "detail": "Static persistence not required by policy."
+    },
+    {
+      "id": "P6_API_CONTRACT",
+      "title": "/api/stock returns JSON that satisfies the contract (latest_bar.close/volume/date present).",
+      "status": "OK",
+      "evidence": {
+        "samples": [
+          "UBER",
+          "TEAM",
+          "WBD"
+        ]
+      },
+      "detail": "Contract fields present."
+    },
+    {
+      "id": "P7_UI_RENDERS",
+      "title": "The UI displays values matching the API response.",
+      "status": "OK",
+      "evidence": {
+        "samples": [
+          "UBER",
+          "TEAM",
+          "WBD"
+        ]
+      },
+      "detail": "UI values match API response."
+    }
+  ],
+  "artifacts": {
+    "traces": [
+      {
+        "ticker": "UBER",
+        "source": "ui-path",
+        "path": "/debug/ui-path/UBER.ui-path.trace.json",
+        "status": 200,
+        "sha256": "5d9ed9decdcc5f9ee523f6ef876a0ff94d6f8226dee035846a59d5c85e8ab5f8"
+      },
+      {
+        "ticker": "TEAM",
+        "source": "truth-chain",
+        "path": "/debug/ui-path/TEAM.ui-path.trace.json",
+        "status": 200,
+        "sha256": "be774a8efe3df39c25077d7715d807351eb92f35b599f34816f7aa480ce650f3"
+      },
+      {
+        "ticker": "WBD",
+        "source": "truth-chain",
+        "path": "/debug/ui-path/WBD.ui-path.trace.json",
+        "status": 200,
+        "sha256": "0eab2c524d491eb55cf9163c3959864d1cb0fcc284ca9bf48dd1e0871e72b9b4"
+      }
+    ],
+    "links": [
+      {
+        "label": "UBER.ui-path.trace.json",
+        "url": "/debug/ui-path/UBER.ui-path.trace.json"
+      },
+      {
+        "label": "TEAM.ui-path.trace.json",
+        "url": "/debug/ui-path/TEAM.ui-path.trace.json"
+      },
+      {
+        "label": "WBD.ui-path.trace.json",
+        "url": "/debug/ui-path/WBD.ui-path.trace.json"
+      }
+    ]
+  }
+}
+{
+  "chain_version": "v1",
+  "asOf": "2026-02-02T10:04:53.046Z",
+  "steps": [
+    {
+      "id": "I0_PIPELINE_INPUTS",
+      "title": "The NASDAQ-100 universe and EOD inputs for 100 tickers are present for the run.",
+      "status": "INFO",
+      "evidence": {
+        "count": 0,
+        "expected": 100,
+        "path": "/data/pipeline/nasdaq100.fetched.json"
+      },
+      "details": "NOT_EXPECTED"
+    },
+    {
+      "id": "I1_EOD_VALIDATED",
+      "title": "All tickers have validated EOD fields required to compute indicators.",
+      "status": "INFO",
+      "evidence": {
+        "count": 0,
+        "expected": 100,
+        "path": "/data/pipeline/nasdaq100.validated.json"
+      },
+      "details": "NOT_EXPECTED"
+    },
+    {
+      "id": "I2_INDICATORS_COMPUTED",
+      "title": "Indicators (40+) are computed and validated per ticker.",
+      "status": "INFO",
+      "evidence": {
+        "count": 2,
+        "expected": 100,
+        "missingCount": 98,
+        "path": "/data/pipeline/nasdaq100.computed.json"
+      },
+      "details": "NOT_EXPECTED"
+    },
+    {
+      "id": "I3_STATIC_PERSIST_INDICATORS",
+      "title": "Indicator outputs are written to public/data and are UI-readable anytime.",
+      "status": "INFO",
+      "evidence": {
+        "count": 2,
+        "expected": 100,
+        "path": "/data/pipeline/nasdaq100.computed.json"
+      },
+      "details": "NOT_EXPECTED"
+    },
+    {
+      "id": "I4_STATIC_READY_INDEX",
+      "title": "A static-ready index reports how many tickers have complete static indicator artifacts.",
+      "status": "INFO",
+      "evidence": {
+        "count": 2,
+        "expected": 100,
+        "path": "/data/pipeline/nasdaq100.static-ready.json"
+      },
+      "details": "NOT_EXPECTED"
+    },
+    {
+      "id": "I5_RUNTIME_BINDINGS",
+      "title": "Runtime bindings (KV/scheduler) are reported but do not affect Prices verdict.",
+      "status": "INFO",
+      "evidence": {
+        "hasKV": true,
+        "isPreview": true,
+        "hostname": "cf4b6652.rubikvault-site.pages.dev"
+      },
+      "details": "NOT_EXPECTED"
+    }
+  ],
+  "first_blocker": null,
+  "first_blocker_id": null
+}
+{
+  "type": "pipeline.truth",
+  "universe": "nasdaq100",
+  "asof": "2026-02-01T07:43:51.439Z",
+  "counts": {
+    "expected": 100,
+    "fetched": 100,
+    "validated": 100,
+    "computed": 2,
+    "static_ready": 2
+  },
+  "first_blocker": {
+    "id": "S3",
+    "title": "Indicators computed",
+    "status": "WARN"
+  },
+  "first_blocker_id": "S3",
+  "blockers": [
+    {
+      "id": "S3",
+      "status": "WARN",
+      "detail": "2/100 indicators computed"
+    },
+    {
+      "id": "S6",
+      "status": "WARN",
+      "detail": "98 symbols missing due to KV unavailable",
+      "code": "KV_BACKEND_UNAVAILABLE",
+      "count": 98
+    }
+  ],
+  "steps": [
+    {
+      "id": "S1",
+      "title": "Provider fetched",
+      "status": "OK",
+      "detail": "100/100 symbols fetched"
+    },
+    {
+      "id": "S2",
+      "title": "OHLC validated",
+      "status": "OK",
+      "detail": "100/100 passed validation"
+    },
+    {
+      "id": "S3",
+      "title": "Indicators computed",
+      "status": "WARN",
+      "detail": "2/100 indicators computed"
+    },
+    {
+      "id": "S4",
+      "title": "MarketPhase generated",
+      "status": "OK",
+      "detail": "2 marketphase files generated"
+    },
+    {
+      "id": "S5",
+      "title": "Static ready",
+      "status": "OK",
+      "detail": "2/2 static ready"
+    },
+    {
+      "id": "S6",
+      "title": "KV backend",
+      "status": "WARN",
+      "detail": "98 symbols missing due to KV unavailable"
+    },
+    {
+      "id": "S7",
+      "title": "Site serves data",
+      "status": "OK",
+      "detail": "Static files deployed"
+    }
+  ],
+  "source": {
+    "latest": "/data/pipeline/nasdaq100.latest.json",
+    "truth_static_ready": "/data/pipeline/nasdaq100.static-ready.json",
+    "missing_marketphase": "/data/marketphase/missing.json",
+    "missing_pipeline": "/data/pipeline/missing.json"
+  }
+}
+{
+  "chain_version": "v1",
+  "asOf": "2026-02-02T10:04:53.046Z",
+  "steps": [
+    {
+      "id": "I0_PIPELINE_INPUTS",
+      "title": "The NASDAQ-100 universe and EOD inputs for 100 tickers are present for the run.",
+      "status": "INFO",
+      "evidence": {
+        "count": 0,
+        "expected": 100,
+        "path": "/data/pipeline/nasdaq100.fetched.json"
+      },
+      "details": "NOT_EXPECTED"
+    },
+    {
+      "id": "I1_EOD_VALIDATED",
+      "title": "All tickers have validated EOD fields required to compute indicators.",
+      "status": "INFO",
+      "evidence": {
+        "count": 0,
+        "expected": 100,
+        "path": "/data/pipeline/nasdaq100.validated.json"
+      },
+      "details": "NOT_EXPECTED"
+    },
+    {
+      "id": "I2_INDICATORS_COMPUTED",
+      "title": "Indicators (40+) are computed and validated per ticker.",
+      "status": "INFO",
+      "evidence": {
+        "count": 2,
+        "expected": 100,
+        "missingCount": 98,
+        "path": "/data/pipeline/nasdaq100.computed.json"
+      },
+      "details": "NOT_EXPECTED"
+    },
+    {
+      "id": "I3_STATIC_PERSIST_INDICATORS",
+      "title": "Indicator outputs are written to public/data and are UI-readable anytime.",
+      "status": "INFO",
+      "evidence": {
+        "count": 2,
+        "expected": 100,
+        "path": "/data/pipeline/nasdaq100.computed.json"
+      },
+      "details": "NOT_EXPECTED"
+    },
+    {
+      "id": "I4_STATIC_READY_INDEX",
+      "title": "A static-ready index reports how many tickers have complete static indicator artifacts.",
+      "status": "INFO",
+      "evidence": {
+        "count": 2,
+        "expected": 100,
+        "path": "/data/pipeline/nasdaq100.static-ready.json"
+      },
+      "details": "NOT_EXPECTED"
+    },
+    {
+      "id": "I5_RUNTIME_BINDINGS",
+      "title": "Runtime bindings (KV/scheduler) are reported but do not affect Prices verdict.",
+      "status": "INFO",
+      "evidence": {
+        "hasKV": true,
+        "isPreview": true,
+        "hostname": "cf4b6652.rubikvault-site.pages.dev"
+      },
+      "details": "NOT_EXPECTED"
+    }
+  ],
+  "first_blocker": null,
+  "first_blocker_id": null
+}

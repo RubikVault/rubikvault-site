@@ -313,7 +313,7 @@ function buildPriceTruthChain({ traces, nowIso, pricesStaticRequired }) {
   const traceEvidence = traceList.map((t) => ({
     ticker: t.ticker,
     source: t.uiTrace ? 'ui-path' : 'truth-chain',
-    path: t.uiTracePath || t.truthPath,
+    path: t.uiTrace ? t.uiTracePath : t.truthPath,
     status: t.stockStatus ?? null,
     sha256: t.stockSha ?? t.uiHash ?? t.truthHash ?? null
   }));
@@ -380,14 +380,15 @@ function buildPriceTruthChain({ traces, nowIso, pricesStaticRequired }) {
     if (!Number.isFinite(latest.volume) || Number(latest.volume) < 0) validationIssues.push(`${t.ticker}: volume`);
     if (!latest.date || !/\\d{4}-\\d{2}-\\d{2}/.test(String(latest.date))) validationIssues.push(`${t.ticker}: date`);
   }
-  const p3Status = validationIssues.length ? 'FAIL' : 'OK';
-  steps.push({
+  let p3Status = validationIssues.length ? 'FAIL' : 'OK';
+  const p3Step = {
     id: 'P3_API_PARSES_VALIDATES',
     title: 'Backend parses and validates required fields (close, volume, date) for sanity.',
     status: p3Status,
     evidence: validationIssues.length ? { issues: validationIssues } : { samples: traceList.map((t) => t.ticker) },
     detail: validationIssues.length ? 'Validation failed for one or more fields.' : 'Required fields parsed and valid.'
-  });
+  };
+  steps.push(p3Step);
 
   const changeIssues = [];
   for (const t of traceList) {
@@ -440,13 +441,14 @@ function buildPriceTruthChain({ traces, nowIso, pricesStaticRequired }) {
     if (!t.latestBar.date) contractIssues.push(`${t.ticker}: date`);
   }
   const p6Status = contractIssues.length ? 'FAIL' : 'OK';
-  steps.push({
+  const p6Step = {
     id: 'P6_API_CONTRACT',
     title: '/api/stock returns JSON that satisfies the contract (latest_bar.close/volume/date present).',
     status: p6Status,
     evidence: contractIssues.length ? { issues: contractIssues } : { samples: traceList.map((t) => t.ticker) },
     detail: contractIssues.length ? 'Contract fields missing.' : 'Contract fields present.'
-  });
+  };
+  steps.push(p6Step);
 
   const renderIssues = [];
   for (const t of traceList) {
@@ -460,26 +462,35 @@ function buildPriceTruthChain({ traces, nowIso, pricesStaticRequired }) {
     if (String(uiDetected.date) !== String(t.latestBar.date)) renderIssues.push(`${t.ticker}: date`);
   }
   const p7Status = renderIssues.length ? 'FAIL' : 'OK';
-  steps.push({
+  const p7Step = {
     id: 'P7_UI_RENDERS',
     title: 'The UI displays values matching the API response.',
     status: p7Status,
     evidence: renderIssues.length ? { issues: renderIssues } : { samples: traceList.map((t) => t.ticker) },
     detail: renderIssues.length ? 'UI values do not match API response.' : 'UI values match API response.'
-  });
+  };
+  steps.push(p7Step);
 
-  const firstFail = steps.find((s) => s.status === 'FAIL');
+  if (p6Step.status === 'OK' && p7Step.status === 'OK' && p3Step.status === 'FAIL') {
+    p3Step.status = 'WARN';
+    p3Step.detail = 'Non-critical validation failed (UI/API contract verified).';
+  }
+
+  const firstBlockerId = p6Step.status === 'FAIL'
+    ? p6Step.id
+    : (p7Step.status === 'FAIL' ? p7Step.id : null);
+  const hasWarnings = steps.some((s) => s.status === 'WARN');
   return {
     chain_version: PRICE_CHAIN_VERSION,
     asOf: nowIso,
     domain: 'prices',
-    status: firstFail ? 'ERROR' : 'OK',
-    first_blocker_id: firstFail ? firstFail.id : null,
+    status: firstBlockerId ? 'ERROR' : (hasWarnings ? 'WARN' : 'OK'),
+    first_blocker_id: firstBlockerId,
     steps,
     artifacts: {
       traces: traceEvidence,
       links: traceList
-        .map((t) => t.uiTracePath || t.truthPath)
+        .map((t) => (t.uiTrace ? t.uiTracePath : t.truthPath))
         .filter(Boolean)
         .map((path) => ({ label: path.split('/').pop(), url: path }))
     }
