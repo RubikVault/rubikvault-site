@@ -324,9 +324,10 @@
         <div class="small" style="margin-top: 6px; color: #94a3b8;">
           Meta/freshness/static persistence are informational unless policy requires them.
         </div>
+        <div id="truth-chain-prices-warning" class="small" style="margin-top: 6px; color: #f59e0b; display: none;"></div>
         <div class="small" style="margin-top: 12px; color: #94a3b8;">
           Traces:
-          <a href="/debug/ui-path/UBER.ui-path.trace.json" style="color:#60a5fa; margin-left: 8px;">UBER</a>
+          <a href="/api/debug/prove-ui-path?ticker=UBER" style="color:#60a5fa; margin-left: 8px;">UBER</a>
         </div>
       </div>
 
@@ -960,11 +961,13 @@
     function renderPriceTruthChain(priceTruth) {
       const stepsEl = document.getElementById('truth-chain-prices-steps');
       const blockerEl = document.getElementById('truth-chain-prices-blocker');
+      const warningEl = document.getElementById('truth-chain-prices-warning');
       if (!stepsEl || !blockerEl) return;
 
       if (!priceTruth || !Array.isArray(priceTruth.steps)) {
         stepsEl.innerHTML = '<div class="small">Price truth chain data not available</div>';
         blockerEl.style.display = 'none';
+        if (warningEl) warningEl.style.display = 'none';
         return;
       }
 
@@ -1010,6 +1013,17 @@
         blockerEl.innerHTML = `<strong>First blocker:</strong> ${esc(firstBlocker)} — ${esc(blockerStep?.title || '')}`;
       } else {
         blockerEl.style.display = 'none';
+      }
+
+      if (warningEl) {
+        const traces = Array.isArray(priceTruth?.artifacts?.traces) ? priceTruth.artifacts.traces : [];
+        const mismatched = traces.filter(t => t.base_match === false && t.base_url);
+        if (mismatched.length) {
+          warningEl.style.display = 'block';
+          warningEl.textContent = `Trace base mismatch for ${mismatched.map(t => t.ticker).join(', ')} — use path-only trace.`;
+        } else {
+          warningEl.style.display = 'none';
+        }
       }
     }
 

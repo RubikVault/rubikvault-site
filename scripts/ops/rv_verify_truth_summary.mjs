@@ -30,7 +30,11 @@ for (const key of ['platform', 'api', 'freshness', 'pipeline']) {
   }
 }
 
-const priceTruth = summary?.data?.priceTruth;
+const truthChains = summary?.data?.truthChains;
+if (!truthChains || typeof truthChains !== 'object') {
+  fail('truthChains missing at data.truthChains');
+}
+const priceTruth = truthChains?.prices;
 if (!priceTruth || !Array.isArray(priceTruth.steps)) {
   fail('priceTruth.steps missing');
 }
@@ -61,6 +65,21 @@ if (p6 === 'OK' && p7 === 'OK' && priceTruth.status === 'ERROR') {
 }
 if (priceTruth.first_blocker_id && !['P6_API_CONTRACT', 'P7_UI_RENDERS'].includes(priceTruth.first_blocker_id)) {
   fail(`priceTruth first_blocker invalid for Prices chain: ${priceTruth.first_blocker_id}`);
+}
+
+const p6Step = priceTruth.steps.find((s) => s.id === 'P6_API_CONTRACT');
+if (!p6Step?.evidence?.checked_path || p6Step.evidence.checked_path !== 'data.latest_bar') {
+  fail('P6 evidence.checked_path must be data.latest_bar');
+}
+if (!Array.isArray(p6Step?.evidence?.required_fields)) {
+  fail('P6 evidence.required_fields missing');
+}
+if (!p6Step?.evidence?.per_ticker || typeof p6Step.evidence.per_ticker !== 'object') {
+  fail('P6 evidence.per_ticker missing');
+}
+const sample = p6Step.evidence.per_ticker.UBER;
+if (!sample || !Array.isArray(sample.missing_fields)) {
+  fail('P6 evidence.per_ticker.UBER missing_fields invalid');
 }
 
 const runtime = summary?.data?.runtime || {};

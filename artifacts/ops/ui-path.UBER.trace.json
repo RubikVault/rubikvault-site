@@ -1,11 +1,11 @@
 {
   "trace_version": "v1",
-  "generated_at": "2026-02-02T10:11:09.217Z",
+  "generated_at": "2026-02-02T11:36:21.408Z",
   "base_url": "https://cf4b6652.rubikvault-site.pages.dev",
   "ticker": "UBER",
   "page_url": "https://cf4b6652.rubikvault-site.pages.dev/analyze/UBER",
   "ui": {
-    "detected_values": {
+    "values": {
       "close": 80.05,
       "volume": 24344094,
       "date": "2026-01-30",
@@ -16,9 +16,9 @@
   },
   "network": {
     "winning": {
-      "url": "https://cf4b6652.rubikvault-site.pages.dev/api/stock?ticker=UBER",
+      "path": "/api/stock?ticker=UBER",
       "status": 200,
-      "sha256": "d80956f8252a6a1976d0132ef19a36dcde126b0786720622772df30d9ed5955d",
+      "sha256": "1f062a63f4107c2d7378ee6b3869f8c39763f8163f93b2ebb1246e109d774285",
       "body_keys": [
         "schema_version",
         "meta",
@@ -27,56 +27,14 @@
         "error",
         "ok"
       ],
-      "response_excerpt": {
-        "schema_version": "3.0",
-        "meta": {
-          "status": "stale",
-          "generated_at": "2026-02-02T10:11:08.359Z",
-          "data_date": "2026-01-30",
-          "provider": "tiingo",
-          "quality_flags": [],
-          "data_source": "snapshot",
-          "mode": "DEMO",
-          "asOf": null,
-          "freshness": "stale",
-          "circuit": {
-            "provider": "tiingo",
-            "state": "closed",
-            "fail_count": 0,
-            "opened_at": null
-          },
-          "cache": {
-            "mode": "kv",
-            "hit": false,
-            "stale": false,
-            "age_s": null,
-            "ttl_s": 21600,
-            "swr": "none",
-            "key_kind": "stock"
-          },
-          "timings": {
-            "t_total_ms": 750,
-            "t_kv_ms": 100,
-            "t_origin_ms": 572,
-            "t_build_ms": 0
-          },
-          "degraded": false,
-          "degraded_reason": null
-        },
-        "data": {
-          "latest_bar": {
-            "date": "2026-01-30",
-            "open": 80.91,
-            "high": 82.1,
-            "low": 79.42,
-            "close": 80.05,
-            "volume": 24344094
-          },
-          "change": {
-            "abs": -1.6500000000000057,
-            "pct": -0.020195838433292604
-          }
-        }
+      "contract": {
+        "checked_path": "data.latest_bar",
+        "required_fields": [
+          "date",
+          "close",
+          "volume"
+        ],
+        "missing_fields": []
       },
       "error": null
     },
@@ -86,7 +44,7 @@
         "method": "GET",
         "status": 200,
         "content_type": "application/json; charset=utf-8",
-        "sha256": "26772a8b5ca3dd09c0d23dd2324b406c0ff3a305c8da3f1a2938731b33c1c56d",
+        "sha256": "50d64c2a3236c3b3c280b6cd8b76d16b24e718486ee8f663fb4f1bf77a3b2f4a",
         "body_keys": [
           "schema_version",
           "meta",
@@ -99,7 +57,7 @@
           "schema_version": "3.0",
           "meta": {
             "status": "error",
-            "generated_at": "2026-02-02T10:11:08.396Z",
+            "generated_at": "2026-02-02T11:36:20.621Z",
             "data_date": "2026-02-02",
             "provider": "fundamentals-api",
             "data_source": "unknown",
@@ -119,7 +77,7 @@
         "method": "GET",
         "status": 200,
         "content_type": "application/json; charset=utf-8",
-        "sha256": "d80956f8252a6a1976d0132ef19a36dcde126b0786720622772df30d9ed5955d",
+        "sha256": "1f062a63f4107c2d7378ee6b3869f8c39763f8163f93b2ebb1246e109d774285",
         "body_keys": [
           "schema_version",
           "meta",
@@ -132,7 +90,7 @@
           "schema_version": "3.0",
           "meta": {
             "status": "stale",
-            "generated_at": "2026-02-02T10:11:08.359Z",
+            "generated_at": "2026-02-02T11:36:20.655Z",
             "data_date": "2026-01-30",
             "provider": "tiingo",
             "quality_flags": [],
@@ -156,9 +114,9 @@
               "key_kind": "stock"
             },
             "timings": {
-              "t_total_ms": 750,
-              "t_kv_ms": 100,
-              "t_origin_ms": 572,
+              "t_total_ms": 787,
+              "t_kv_ms": 114,
+              "t_origin_ms": 577,
               "t_build_ms": 0
             },
             "degraded": false,
@@ -505,7 +463,7 @@
     ]
   },
   "server": {
-    "endpoint": "https://cf4b6652.rubikvault-site.pages.dev/api/stock?ticker=UBER",
+    "endpoint": "/api/stock?ticker=UBER",
     "handler_file": "/Users/michaelpuchowezki/Dev/rubikvault-site/functions/api/stock.js",
     "handler_line_ref": {
       "file": "/Users/michaelpuchowezki/Dev/rubikvault-site/functions/api/stock.js",
@@ -535,10 +493,11 @@
       "url": "https://cf4b6652.rubikvault-site.pages.dev/data/snapshots/market-prices/latest.json"
     }
   },
+  "error": null,
   "winning_response": {
-    "url": "https://cf4b6652.rubikvault-site.pages.dev/api/stock?ticker=UBER",
+    "path": "/api/stock?ticker=UBER",
     "status": 200,
-    "sha256": "d80956f8252a6a1976d0132ef19a36dcde126b0786720622772df30d9ed5955d",
+    "sha256": "1f062a63f4107c2d7378ee6b3869f8c39763f8163f93b2ebb1246e109d774285",
     "error": null
   }
 }

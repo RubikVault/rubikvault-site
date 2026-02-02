@@ -175,6 +175,21 @@ const upstream = await (async () => {
   return { kind: 'unknown', key_or_path: null };
 })();
 
+const winningPath = (() => {
+  if (!winning?.url) return null;
+  try {
+    const u = new URL(winning.url);
+    return `${u.pathname}${u.search}`;
+  } catch {
+    return null;
+  }
+})();
+const winningBar = winning?.response_excerpt?.data?.latest_bar || null;
+const requiredFields = ['date', 'close', 'volume'];
+const missingFields = winningBar
+  ? requiredFields.filter((key) => winningBar[key] == null)
+  : requiredFields.slice();
+
 const trace = {
   trace_version: 'v1',
   generated_at: new Date().toISOString(),
@@ -182,7 +197,7 @@ const trace = {
   ticker,
   page_url: pageUrl,
   ui: {
-    detected_values: {
+    values: {
       close: uiClose,
       volume: uiVolume,
       date: uiDateIso,
@@ -193,17 +208,21 @@ const trace = {
   },
   network: {
     winning: {
-      url: winning?.url || null,
+      path: winningPath,
       status: winning?.status ?? null,
       sha256: winning?.sha256 || null,
       body_keys: winning?.body_keys || [],
-      response_excerpt: winning?.response_excerpt || null,
+      contract: {
+        checked_path: 'data.latest_bar',
+        required_fields: requiredFields,
+        missing_fields: missingFields
+      },
       error: winningError
     },
     calls: networkCalls.sort((a, b) => a.url.localeCompare(b.url))
   },
   server: {
-    endpoint: winning?.url || null,
+    endpoint: winningPath,
     handler_file: handlerFile,
     handler_line_ref: handlerRef,
     value_line_refs: {
@@ -212,8 +231,9 @@ const trace = {
     }
   },
   upstream,
+  error: winningError,
   winning_response: {
-    url: winning?.url || null,
+    path: winningPath,
     status: winning?.status ?? null,
     sha256: winning?.sha256 || null,
     error: winningError

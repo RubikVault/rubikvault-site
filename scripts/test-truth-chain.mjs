@@ -73,7 +73,7 @@ if (actualBlocker !== expectedBlocker) {
   fail(`Truth chain first_blocker expected ${expectedBlocker}, got ${actualBlocker}`);
 }
 
-const priceTruth = payload?.data?.priceTruth;
+const priceTruth = payload?.data?.truthChains?.prices || payload?.data?.priceTruth;
 if (!priceTruth || typeof priceTruth !== 'object' || !Array.isArray(priceTruth.steps)) {
   fail('Missing priceTruth.steps');
 }
@@ -86,6 +86,16 @@ const p6 = priceTruth.steps.find((s) => s.id === 'P6_API_CONTRACT')?.status;
 const p7 = priceTruth.steps.find((s) => s.id === 'P7_UI_RENDERS')?.status;
 if (p6 === 'OK' && p7 === 'OK' && priceTruth.status === 'ERROR') {
   fail('priceTruth.status should not be ERROR when P6 and P7 are OK');
+}
+const p6Step = priceTruth.steps.find((s) => s.id === 'P6_API_CONTRACT');
+if (!p6Step?.evidence?.checked_path || p6Step.evidence.checked_path !== 'data.latest_bar') {
+  fail('P6 evidence.checked_path must be data.latest_bar');
+}
+if (!Array.isArray(p6Step?.evidence?.required_fields)) {
+  fail('P6 evidence.required_fields missing');
+}
+if (!p6Step?.evidence?.per_ticker || typeof p6Step.evidence.per_ticker !== 'object') {
+  fail('P6 evidence.per_ticker missing');
 }
 const p3Step = priceTruth.steps.find((s) => s.id === 'P3_API_PARSES_VALIDATES');
 if (p3Step?.evidence?.issues) {
@@ -106,7 +116,10 @@ try {
   if (!trace.trace_version) fail('ui-path trace missing trace_version');
   if (!trace.generated_at) fail('ui-path trace missing generated_at');
   if (!trace.network || !trace.network.winning) fail('ui-path trace missing network.winning');
-  if (!trace.ui || !trace.ui.detected_values) fail('ui-path trace missing ui.detected_values');
+  if (!trace.ui || !trace.ui.values) fail('ui-path trace missing ui.values');
+  if (!trace.network.winning.path || !String(trace.network.winning.path).startsWith('/')) {
+    fail('ui-path trace winning.path must be relative');
+  }
 } catch (err) {
   fail(`ui-path trace missing or invalid: ${err?.message || err}`);
 }
