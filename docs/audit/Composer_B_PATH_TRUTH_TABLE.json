@@ -1,0 +1,253 @@
+{
+  "schema": "path_truth_table_v1",
+  "base_url_used_for_runtime": "https://d86f7e35.rubikvault-site.pages.dev",
+  "inputs_ingested": {
+    "docs_audit_files": [
+      {
+        "path": "docs/audit/01-golden-path-ui.md",
+        "mtime_iso": "2026-02-03T12:48:17"
+      },
+      {
+        "path": "docs/audit/01-golden-path-ui.json",
+        "mtime_iso": "2026-02-03T12:48:17"
+      },
+      {
+        "path": "docs/audit/01.5-ui-surface.json",
+        "mtime_iso": "2026-02-03T12:48:17"
+      },
+      {
+        "path": "docs/audit/01.5-ui-surface.md",
+        "mtime_iso": "2026-02-03T12:48:17"
+      },
+      {
+        "path": "docs/audit/02-artifact-registry-run02.json",
+        "mtime_iso": "2026-02-03T12:52:21"
+      },
+      {
+        "path": "docs/audit/03-ops-golden-path-run02.md",
+        "mtime_iso": "2026-02-03T12:52:50"
+      },
+      {
+        "path": "docs/audit/03-ops-mismatch-run02.json",
+        "mtime_iso": "2026-02-03T12:53:20"
+      },
+      {
+        "path": "docs/audit/04-ssot-violations.json",
+        "mtime_iso": "2026-02-03T12:53:43"
+      },
+      {
+        "path": "docs/audit/05-cleanup-candidates.json",
+        "mtime_iso": "2026-02-03T12:54:00"
+      },
+      {
+        "path": "docs/audit/05.5-dependency-impact.json",
+        "mtime_iso": "2026-02-03T12:54:15"
+      },
+      {
+        "path": "docs/audit/07-report-validity.json",
+        "mtime_iso": "2026-02-03T12:54:38"
+      },
+      {
+        "path": "docs/audit/ZZ-summary.md",
+        "mtime_iso": "2026-02-03T12:55:38"
+      },
+      {
+        "path": "evidence/06-ui-runtime-baseline.json",
+        "mtime_iso": "2026-02-03T12:51:32"
+      },
+      {
+        "path": "evidence/06-ops-runtime-baseline.json",
+        "mtime_iso": "2026-02-03T12:51:32"
+      }
+    ],
+    "evidence_files": [
+      {
+        "path": "evidence/06-ui-runtime-baseline.json",
+        "mtime_iso": "2026-02-03T12:51:32"
+      },
+      {
+        "path": "evidence/06-ops-runtime-baseline.json",
+        "mtime_iso": "2026-02-03T12:51:32"
+      }
+    ]
+  },
+  "ui": [
+    {
+      "surface": {
+        "file": "public/index.html",
+        "lines": [
+          1448,
+          1467
+        ],
+        "evidence": [
+          "public/index.html:1448-1467"
+        ]
+      },
+      "calls": [
+        {
+          "endpoint": "/api/stock?ticker=<T>",
+          "fields_used": [
+            "data.latest_bar"
+          ],
+          "evidence": [
+            {
+              "file": "public/index.html",
+              "lines": [
+                931,
+                934
+              ]
+            },
+            {
+              "file": "public/index.html",
+              "lines": [
+                1448,
+                1467
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "api": [
+    {
+      "endpoint": "/api/stock",
+      "handler": {
+        "file": "functions/api/stock.js",
+        "lines": [
+          855,
+          865
+        ]
+      },
+      "reads": [
+        {
+          "source": "fs",
+          "key_or_path": "/data/snapshots/market-prices/latest.json",
+          "evidence": [
+            {
+              "file": "functions/api/stock.js",
+              "lines": [
+                762,
+                786
+              ]
+            }
+          ]
+        },
+        {
+          "source": "fs",
+          "key_or_path": "/data/snapshots/market-stats/latest.json",
+          "evidence": [
+            {
+              "file": "functions/api/stock.js",
+              "lines": [
+                762,
+                786
+              ]
+            }
+          ]
+        },
+        {
+          "source": "fs",
+          "key_or_path": "/data/snapshots/universe/latest.json",
+          "evidence": [
+            {
+              "file": "functions/api/stock.js",
+              "lines": [
+                762,
+                786
+              ]
+            }
+          ]
+        }
+      ],
+      "runtime": {
+        "probed": true,
+        "http_status": null,
+        "has_meta": true,
+        "meta_status": "[",
+        "notes": "Runtime probe in evidence/C_EVIDENCE.tar.gz:runtime_api_stock_UBER.txt"
+      }
+    }
+  ],
+  "ops": [
+    {
+      "consumer": {
+        "name": "mission-control summary",
+        "file": "functions/api/mission-control/summary.js",
+        "lines": [
+          1201,
+          1215
+        ]
+      },
+      "reads": [
+        {
+          "source": "fs",
+          "key_or_path": "/data/pipeline/nasdaq100.*.json",
+          "evidence": [
+            {
+              "file": "functions/api/mission-control/summary.js",
+              "lines": [
+                1201,
+                1215
+              ]
+            }
+          ]
+        },
+        {
+          "source": "fs",
+          "key_or_path": "/data/snapshots/market-prices/latest.json",
+          "evidence": [
+            {
+              "file": "functions/api/mission-control/summary.js",
+              "lines": [
+                1327,
+                1333
+              ]
+            }
+          ]
+        }
+      ],
+      "runtime": {
+        "probed": true,
+        "http_status": null,
+        "has_meta": true,
+        "meta_status": "# jq meta.status/meta.reason/error for https://d86f7e35.rubikvault-site.pages.dev/api/mission-control/summary?debug=1",
+        "notes": "Runtime probe in evidence/C_EVIDENCE.tar.gz:runtime_ops_summary.txt"
+      }
+    }
+  ],
+  "mismatch": [
+    {
+      "claim": "OPS tracks market-prices snapshot while UI uses /api/stock contract",
+      "ui_path": "endpoint:/api/stock -> handler:functions/api/stock.js -> source:/data/snapshots/market-prices/latest.json (snapshot only, not SSOT)",
+      "ops_path": "consumer:mission-control summary -> source:/data/snapshots/market-prices/latest.json",
+      "divergence_point": "functions/api/mission-control/summary.js:1327-1345 vs public/index.html:931-934",
+      "primary_root_cause_category": "A_WRONG_INPUT_PATH",
+      "proof_level": "mixed",
+      "confidence": 80,
+      "evidence": [
+        {
+          "file": "public/index.html",
+          "lines": [
+            931,
+            934
+          ]
+        },
+        {
+          "file": "functions/api/mission-control/summary.js",
+          "lines": [
+            1327,
+            1345
+          ]
+        },
+        {
+          "file": "public/data/snapshots/market-prices/latest.json",
+          "lines": [
+            35,
+            38
+          ]
+        }
+      ]
+    }
+  ]
+}

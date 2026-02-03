@@ -1,0 +1,5202 @@
+[
+  {
+    "type": "begin",
+    "data": {
+      "path": {
+        "text": "src/lib/envelope.ts"
+      }
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "src/lib/envelope.ts"
+      },
+      "lines": {
+        "text": "  assert(typeof meta.status === \"string\", \"Envelope.meta.status missing\");\n"
+      },
+      "line_number": 53,
+      "absolute_offset": 1355,
+      "submatches": [
+        {
+          "match": {
+            "text": "meta.status"
+          },
+          "start": 16,
+          "end": 27
+        },
+        {
+          "match": {
+            "text": "meta.status"
+          },
+          "start": 52,
+          "end": 63
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "src/lib/envelope.ts"
+      },
+      "lines": {
+        "text": "  assert(STATUS_SET.has(meta.status), `Envelope.meta.status invalid: ${meta.status}`);\n"
+      },
+      "line_number": 54,
+      "absolute_offset": 1430,
+      "submatches": [
+        {
+          "match": {
+            "text": "meta.status"
+          },
+          "start": 24,
+          "end": 35
+        },
+        {
+          "match": {
+            "text": "meta.status"
+          },
+          "start": 48,
+          "end": 59
+        },
+        {
+          "match": {
+            "text": "meta.status"
+          },
+          "start": 71,
+          "end": 82
+        }
+      ]
+    }
+  },
+  {
+    "type": "end",
+    "data": {
+      "path": {
+        "text": "src/lib/envelope.ts"
+      },
+      "binary_offset": null,
+      "stats": {
+        "elapsed": {
+          "secs": 0,
+          "nanos": 13458,
+          "human": "0.000013s"
+        },
+        "searches": 1,
+        "searches_with_match": 1,
+        "bytes_searched": 3858,
+        "bytes_printed": 775,
+        "matched_lines": 2,
+        "matches": 5
+      }
+    }
+  },
+  {
+    "type": "begin",
+    "data": {
+      "path": {
+        "text": "scripts/marketphase-validate.mjs"
+      }
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/marketphase-validate.mjs"
+      },
+      "lines": {
+        "text": "function validateEnvelope(errors, payload, symbol) {\n"
+      },
+      "line_number": 34,
+      "absolute_offset": 1001,
+      "submatches": [
+        {
+          "match": {
+            "text": "validateEnvelope"
+          },
+          "start": 9,
+          "end": 25
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/marketphase-validate.mjs"
+      },
+      "lines": {
+        "text": "  if (!meta.status) pushError(errors, `${symbol}: meta.status missing.`);\n"
+      },
+      "line_number": 49,
+      "absolute_offset": 1585,
+      "submatches": [
+        {
+          "match": {
+            "text": "meta.status"
+          },
+          "start": 7,
+          "end": 18
+        },
+        {
+          "match": {
+            "text": "meta.status"
+          },
+          "start": 50,
+          "end": 61
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/marketphase-validate.mjs"
+      },
+      "lines": {
+        "text": "    validateEnvelope(errors, payload, symbol);\n"
+      },
+      "line_number": 146,
+      "absolute_offset": 5686,
+      "submatches": [
+        {
+          "match": {
+            "text": "validateEnvelope"
+          },
+          "start": 4,
+          "end": 20
+        }
+      ]
+    }
+  },
+  {
+    "type": "end",
+    "data": {
+      "path": {
+        "text": "scripts/marketphase-validate.mjs"
+      },
+      "binary_offset": null,
+      "stats": {
+        "elapsed": {
+          "secs": 0,
+          "nanos": 8375,
+          "human": "0.000008s"
+        },
+        "searches": 1,
+        "searches_with_match": 1,
+        "bytes_searched": 6090,
+        "bytes_printed": 930,
+        "matched_lines": 3,
+        "matches": 4
+      }
+    }
+  },
+  {
+    "type": "begin",
+    "data": {
+      "path": {
+        "text": "scripts/utils/mirror-io.mjs"
+      }
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/utils/mirror-io.mjs"
+      },
+      "lines": {
+        "text": "    \"schemaVersion\",\n"
+      },
+      "line_number": 65,
+      "absolute_offset": 1691,
+      "submatches": [
+        {
+          "match": {
+            "text": "schemaVersion"
+          },
+          "start": 5,
+          "end": 18
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/utils/mirror-io.mjs"
+      },
+      "lines": {
+        "text": "  if (data.schemaVersion && !allowedSchemaVersions.has(data.schemaVersion)) {\n"
+      },
+      "line_number": 89,
+      "absolute_offset": 2100,
+      "submatches": [
+        {
+          "match": {
+            "text": "schemaVersion"
+          },
+          "start": 11,
+          "end": 24
+        },
+        {
+          "match": {
+            "text": "schemaVersion"
+          },
+          "start": 60,
+          "end": 73
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/utils/mirror-io.mjs"
+      },
+      "lines": {
+        "text": "    errors.push(\"schemaVersion_invalid\");\n"
+      },
+      "line_number": 90,
+      "absolute_offset": 2178,
+      "submatches": [
+        {
+          "match": {
+            "text": "schemaVersion"
+          },
+          "start": 17,
+          "end": 30
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/utils/mirror-io.mjs"
+      },
+      "lines": {
+        "text": "    payload.meta.status !== nextMeta.status ||\n"
+      },
+      "line_number": 166,
+      "absolute_offset": 4711,
+      "submatches": [
+        {
+          "match": {
+            "text": "meta.status"
+          },
+          "start": 12,
+          "end": 23
+        }
+      ]
+    }
+  },
+  {
+    "type": "end",
+    "data": {
+      "path": {
+        "text": "scripts/utils/mirror-io.mjs"
+      },
+      "binary_offset": null,
+      "stats": {
+        "elapsed": {
+          "secs": 0,
+          "nanos": 8292,
+          "human": "0.000008s"
+        },
+        "searches": 1,
+        "searches_with_match": 1,
+        "bytes_searched": 7730,
+        "bytes_printed": 1129,
+        "matched_lines": 4,
+        "matches": 5
+      }
+    }
+  },
+  {
+    "type": "begin",
+    "data": {
+      "path": {
+        "text": "scripts/test-api.sh"
+      }
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/test-api.sh"
+      },
+      "lines": {
+        "text": "      printf \"%s\" \"$body\" | jq -e '(.ok==true) or (has(\"schema\")) or (has(\"schemaVersion\")) or (has(\"schema_version\") and has(\"metadata\"))' >/dev/null || fail \"debug-bundle missing ok/schema/schemaVersion/schema_version+metadata for $url\"\n"
+      },
+      "line_number": 38,
+      "absolute_offset": 1106,
+      "submatches": [
+        {
+          "match": {
+            "text": "schemaVersion"
+          },
+          "start": 75,
+          "end": 88
+        },
+        {
+          "match": {
+            "text": "schemaVersion"
+          },
+          "start": 191,
+          "end": 204
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/test-api.sh"
+      },
+      "lines": {
+        "text": "      printf \"%s\" \"$body\" | grep -Eq '\"ok\"[[:space:]]*:[[:space:]]*true|\"schema\"|\\\"schemaVersion\\\"|\"schema_version\"|\"metadata\"' || fail \"debug-bundle missing ok/schema/schemaVersion/schema_version+metadata for $url\"\n"
+      },
+      "line_number": 40,
+      "absolute_offset": 1354,
+      "submatches": [
+        {
+          "match": {
+            "text": "schemaVersion"
+          },
+          "start": 83,
+          "end": 96
+        },
+        {
+          "match": {
+            "text": "schemaVersion"
+          },
+          "start": 168,
+          "end": 181
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/test-api.sh"
+      },
+      "lines": {
+        "text": "        if (has(\"ok\") and ((has(\"meta\")) or (has(\"schemaVersion\")))) then\n"
+      },
+      "line_number": 45,
+      "absolute_offset": 1664,
+      "submatches": [
+        {
+          "match": {
+            "text": "schemaVersion"
+          },
+          "start": 50,
+          "end": 63
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/test-api.sh"
+      },
+      "lines": {
+        "text": "        elif (((.schemaVersion? == \"v3\") or (has(\"blockId\"))) and (has(\"meta\")) and (has(\"data\"))) then\n"
+      },
+      "line_number": 49,
+      "absolute_offset": 1879,
+      "submatches": [
+        {
+          "match": {
+            "text": "schemaVersion"
+          },
+          "start": 17,
+          "end": 30
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/test-api.sh"
+      },
+      "lines": {
+        "text": "        printf \"%s\" \"$body\" | jq -e 'has(\"meta\") or has(\"schemaVersion\")' >/dev/null || fail \"legacy envelope missing meta/schemaVersion for $url\"\n"
+      },
+      "line_number": 58,
+      "absolute_offset": 2225,
+      "submatches": [
+        {
+          "match": {
+            "text": "schemaVersion"
+          },
+          "start": 57,
+          "end": 70
+        },
+        {
+          "match": {
+            "text": "schemaVersion"
+          },
+          "start": 123,
+          "end": 136
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/test-api.sh"
+      },
+      "lines": {
+        "text": "        printf \"%s\" \"$body\" | jq -e '(has(\"schemaVersion\") and has(\"blockId\") and has(\"meta\") and has(\"data\"))' >/dev/null || fail \"v3-flat missing schemaVersion/blockId/meta/data for $url\"\n"
+      },
+      "line_number": 62,
+      "absolute_offset": 2668,
+      "submatches": [
+        {
+          "match": {
+            "text": "schemaVersion"
+          },
+          "start": 43,
+          "end": 56
+        },
+        {
+          "match": {
+            "text": "schemaVersion"
+          },
+          "start": 148,
+          "end": 161
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/test-api.sh"
+      },
+      "lines": {
+        "text": "      # - legacy: has \"ok\" and (\"meta\" or \"schemaVersion\")\n"
+      },
+      "line_number": 68,
+      "absolute_offset": 2972,
+      "submatches": [
+        {
+          "match": {
+            "text": "schemaVersion"
+          },
+          "start": 43,
+          "end": 56
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/test-api.sh"
+      },
+      "lines": {
+        "text": "      # - v3-flat: has \"schemaVersion\":\"v3\" or \"blockId\" plus \"meta\" and \"data\"\n"
+      },
+      "line_number": 69,
+      "absolute_offset": 3031,
+      "submatches": [
+        {
+          "match": {
+            "text": "schemaVersion"
+          },
+          "start": 24,
+          "end": 37
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/test-api.sh"
+      },
+      "lines": {
+        "text": "      elif printf \"%s\" \"$body\" | grep -Eq '\"schemaVersion\"[[:space:]]*:[[:space:]]*\"v3\"|\"blockId\"[[:space:]]*:'; then\n"
+      },
+      "line_number": 74,
+      "absolute_offset": 3523,
+      "submatches": [
+        {
+          "match": {
+            "text": "schemaVersion"
+          },
+          "start": 44,
+          "end": 57
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/test-api.sh"
+      },
+      "lines": {
+        "text": "        printf \"%s\" \"$body\" | grep -Eq '\"schemaVersion\"[[:space:]]*:' || fail \"v3-flat missing schemaVersion for $url\"\n"
+      },
+      "line_number": 75,
+      "absolute_offset": 3641,
+      "submatches": [
+        {
+          "match": {
+            "text": "schemaVersion"
+          },
+          "start": 41,
+          "end": 54
+        },
+        {
+          "match": {
+            "text": "schemaVersion"
+          },
+          "start": 95,
+          "end": 108
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/test-api.sh"
+      },
+      "lines": {
+        "text": "        printf \"%s\" \"$body\" | grep -Eq '\"meta\"[[:space:]]*:|\"schemaVersion\"[[:space:]]*:' || fail \"legacy missing meta/schemaVersion for $url\"\n"
+      },
+      "line_number": 81,
+      "absolute_offset": 4176,
+      "submatches": [
+        {
+          "match": {
+            "text": "schemaVersion"
+          },
+          "start": 61,
+          "end": 74
+        },
+        {
+          "match": {
+            "text": "schemaVersion"
+          },
+          "start": 119,
+          "end": 132
+        }
+      ]
+    }
+  },
+  {
+    "type": "end",
+    "data": {
+      "path": {
+        "text": "scripts/test-api.sh"
+      },
+      "binary_offset": null,
+      "stats": {
+        "elapsed": {
+          "secs": 0,
+          "nanos": 14709,
+          "human": "0.000015s"
+        },
+        "searches": 1,
+        "searches_with_match": 1,
+        "bytes_searched": 4356,
+        "bytes_printed": 4153,
+        "matched_lines": 11,
+        "matches": 17
+      }
+    }
+  },
+  {
+    "type": "begin",
+    "data": {
+      "path": {
+        "text": "functions/api/diag.js"
+      }
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "functions/api/diag.js"
+      },
+      "lines": {
+        "text": "      schemaVersion: \"v1\",\n"
+      },
+      "line_number": 33,
+      "absolute_offset": 868,
+      "submatches": [
+        {
+          "match": {
+            "text": "schemaVersion"
+          },
+          "start": 6,
+          "end": 19
+        }
+      ]
+    }
+  },
+  {
+    "type": "end",
+    "data": {
+      "path": {
+        "text": "functions/api/diag.js"
+      },
+      "binary_offset": null,
+      "stats": {
+        "elapsed": {
+          "secs": 0,
+          "nanos": 4750,
+          "human": "0.000005s"
+        },
+        "searches": 1,
+        "searches_with_match": 1,
+        "bytes_searched": 1149,
+        "bytes_printed": 290,
+        "matched_lines": 1,
+        "matches": 1
+      }
+    }
+  },
+  {
+    "type": "begin",
+    "data": {
+      "path": {
+        "text": "scripts/utils/mirror-builders.mjs"
+      }
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/utils/mirror-builders.mjs"
+      },
+      "lines": {
+        "text": "    schemaVersion: \"rv-mirror-v1\",\n"
+      },
+      "line_number": 6,
+      "absolute_offset": 304,
+      "submatches": [
+        {
+          "match": {
+            "text": "schemaVersion"
+          },
+          "start": 4,
+          "end": 17
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/utils/mirror-builders.mjs"
+      },
+      "lines": {
+        "text": "    schemaVersion: \"1.0\",\n"
+      },
+      "line_number": 34,
+      "absolute_offset": 1091,
+      "submatches": [
+        {
+          "match": {
+            "text": "schemaVersion"
+          },
+          "start": 4,
+          "end": 17
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/utils/mirror-builders.mjs"
+      },
+      "lines": {
+        "text": "    schemaVersion: \"1.0\",\n"
+      },
+      "line_number": 49,
+      "absolute_offset": 1421,
+      "submatches": [
+        {
+          "match": {
+            "text": "schemaVersion"
+          },
+          "start": 4,
+          "end": 17
+        }
+      ]
+    }
+  },
+  {
+    "type": "end",
+    "data": {
+      "path": {
+        "text": "scripts/utils/mirror-builders.mjs"
+      },
+      "binary_offset": null,
+      "stats": {
+        "elapsed": {
+          "secs": 0,
+          "nanos": 4083,
+          "human": "0.000004s"
+        },
+        "searches": 1,
+        "searches_with_match": 1,
+        "bytes_searched": 1646,
+        "bytes_printed": 793,
+        "matched_lines": 3,
+        "matches": 3
+      }
+    }
+  },
+  {
+    "type": "begin",
+    "data": {
+      "path": {
+        "text": "scripts/validate-snapshots.js"
+      }
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/validate-snapshots.js"
+      },
+      "lines": {
+        "text": "  // - meta.status/meta.reason/meta.generatedAt/meta.asOf/meta.source/meta.ttlSeconds/meta.runId\n"
+      },
+      "line_number": 32,
+      "absolute_offset": 829,
+      "submatches": [
+        {
+          "match": {
+            "text": "meta.status"
+          },
+          "start": 7,
+          "end": 18
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/validate-snapshots.js"
+      },
+      "lines": {
+        "text": "  assert(isNonEmptyString(meta.status), `${filePath}: meta.status invalid`, errors);\n"
+      },
+      "line_number": 34,
+      "absolute_offset": 986,
+      "submatches": [
+        {
+          "match": {
+            "text": "meta.status"
+          },
+          "start": 26,
+          "end": 37
+        },
+        {
+          "match": {
+            "text": "meta.status"
+          },
+          "start": 54,
+          "end": 65
+        }
+      ]
+    }
+  },
+  {
+    "type": "end",
+    "data": {
+      "path": {
+        "text": "scripts/validate-snapshots.js"
+      },
+      "binary_offset": null,
+      "stats": {
+        "elapsed": {
+          "secs": 0,
+          "nanos": 5667,
+          "human": "0.000006s"
+        },
+        "searches": 1,
+        "searches_with_match": 1,
+        "bytes_searched": 2511,
+        "bytes_printed": 712,
+        "matched_lines": 2,
+        "matches": 3
+      }
+    }
+  },
+  {
+    "type": "begin",
+    "data": {
+      "path": {
+        "text": "scripts/refresh-health-assets.mjs"
+      }
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/refresh-health-assets.mjs"
+      },
+      "lines": {
+        "text": "  base.schemaVersion = base.schemaVersion || \"v3\";\n"
+      },
+      "line_number": 85,
+      "absolute_offset": 2896,
+      "submatches": [
+        {
+          "match": {
+            "text": "schemaVersion"
+          },
+          "start": 7,
+          "end": 20
+        },
+        {
+          "match": {
+            "text": "schemaVersion"
+          },
+          "start": 28,
+          "end": 41
+        }
+      ]
+    }
+  },
+  {
+    "type": "end",
+    "data": {
+      "path": {
+        "text": "scripts/refresh-health-assets.mjs"
+      },
+      "binary_offset": null,
+      "stats": {
+        "elapsed": {
+          "secs": 0,
+          "nanos": 4917,
+          "human": "0.000005s"
+        },
+        "searches": 1,
+        "searches_with_match": 1,
+        "bytes_searched": 7195,
+        "bytes_printed": 394,
+        "matched_lines": 1,
+        "matches": 2
+      }
+    }
+  },
+  {
+    "type": "begin",
+    "data": {
+      "path": {
+        "text": "scripts/test-scheduler.mjs"
+      }
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/test-scheduler.mjs"
+      },
+      "lines": {
+        "text": "  assert(body.meta?.status === \"error\", \"health stale should set meta.status=error\");\n"
+      },
+      "line_number": 46,
+      "absolute_offset": 1431,
+      "submatches": [
+        {
+          "match": {
+            "text": "meta.status"
+          },
+          "start": 65,
+          "end": 76
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/test-scheduler.mjs"
+      },
+      "lines": {
+        "text": "  assert(body.meta?.status, \"meta.status required\");\n"
+      },
+      "line_number": 84,
+      "absolute_offset": 3353,
+      "submatches": [
+        {
+          "match": {
+            "text": "meta.status"
+          },
+          "start": 29,
+          "end": 40
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/test-scheduler.mjs"
+      },
+      "lines": {
+        "text": "  assert(healthBody.meta?.status, \"health meta.status required\");\n"
+      },
+      "line_number": 90,
+      "absolute_offset": 3730,
+      "submatches": [
+        {
+          "match": {
+            "text": "meta.status"
+          },
+          "start": 42,
+          "end": 53
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/test-scheduler.mjs"
+      },
+      "lines": {
+        "text": "  assert(body.meta?.status, \"meta.status required\");\n"
+      },
+      "line_number": 116,
+      "absolute_offset": 4987,
+      "submatches": [
+        {
+          "match": {
+            "text": "meta.status"
+          },
+          "start": 29,
+          "end": 40
+        }
+      ]
+    }
+  },
+  {
+    "type": "end",
+    "data": {
+      "path": {
+        "text": "scripts/test-scheduler.mjs"
+      },
+      "binary_offset": null,
+      "stats": {
+        "elapsed": {
+          "secs": 0,
+          "nanos": 6208,
+          "human": "0.000006s"
+        },
+        "searches": 1,
+        "searches_with_match": 1,
+        "bytes_searched": 5454,
+        "bytes_printed": 1140,
+        "matched_lines": 4,
+        "matches": 4
+      }
+    }
+  },
+  {
+    "type": "begin",
+    "data": {
+      "path": {
+        "text": "scripts/seeder.js"
+      }
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/seeder.js"
+      },
+      "lines": {
+        "text": "    schemaVersion: \"v1\",\n"
+      },
+      "line_number": 258,
+      "absolute_offset": 7524,
+      "submatches": [
+        {
+          "match": {
+            "text": "schemaVersion"
+          },
+          "start": 4,
+          "end": 17
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/seeder.js"
+      },
+      "lines": {
+        "text": "  const status = meta.status;\n"
+      },
+      "line_number": 310,
+      "absolute_offset": 9230,
+      "submatches": [
+        {
+          "match": {
+            "text": "meta.status"
+          },
+          "start": 17,
+          "end": 28
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/seeder.js"
+      },
+      "lines": {
+        "text": "  if (dataAtCheckBlocks.has(entry.blockId) && snapshot.meta.status === \"LIVE\") {\n"
+      },
+      "line_number": 1033,
+      "absolute_offset": 35969,
+      "submatches": [
+        {
+          "match": {
+            "text": "meta.status"
+          },
+          "start": 55,
+          "end": 66
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/seeder.js"
+      },
+      "lines": {
+        "text": "      snapshot.meta.status = \"ERROR\";\n"
+      },
+      "line_number": 1035,
+      "absolute_offset": 36106,
+      "submatches": [
+        {
+          "match": {
+            "text": "meta.status"
+          },
+          "start": 15,
+          "end": 26
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/seeder.js"
+      },
+      "lines": {
+        "text": "    schemaVersion: \"v1\",\n"
+      },
+      "line_number": 1104,
+      "absolute_offset": 38458,
+      "submatches": [
+        {
+          "match": {
+            "text": "schemaVersion"
+          },
+          "start": 4,
+          "end": 17
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/seeder.js"
+      },
+      "lines": {
+        "text": "          if (snapshot.meta.status === \"ERROR\") {\n"
+      },
+      "line_number": 1244,
+      "absolute_offset": 44014,
+      "submatches": [
+        {
+          "match": {
+            "text": "meta.status"
+          },
+          "start": 23,
+          "end": 34
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/seeder.js"
+      },
+      "lines": {
+        "text": "            status: snapshot.meta.status,\n"
+      },
+      "line_number": 1271,
+      "absolute_offset": 45122,
+      "submatches": [
+        {
+          "match": {
+            "text": "meta.status"
+          },
+          "start": 29,
+          "end": 40
+        }
+      ]
+    }
+  },
+  {
+    "type": "end",
+    "data": {
+      "path": {
+        "text": "scripts/seeder.js"
+      },
+      "binary_offset": null,
+      "stats": {
+        "elapsed": {
+          "secs": 0,
+          "nanos": 15792,
+          "human": "0.000016s"
+        },
+        "searches": 1,
+        "searches_with_match": 1,
+        "bytes_searched": 46885,
+        "bytes_printed": 1719,
+        "matched_lines": 7,
+        "matches": 7
+      }
+    }
+  },
+  {
+    "type": "begin",
+    "data": {
+      "path": {
+        "text": "functions/api/debug-matrix.js"
+      }
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "functions/api/debug-matrix.js"
+      },
+      "lines": {
+        "text": "      schemaVersion: \"v1\",\n"
+      },
+      "line_number": 32,
+      "absolute_offset": 826,
+      "submatches": [
+        {
+          "match": {
+            "text": "schemaVersion"
+          },
+          "start": 6,
+          "end": 19
+        }
+      ]
+    }
+  },
+  {
+    "type": "end",
+    "data": {
+      "path": {
+        "text": "functions/api/debug-matrix.js"
+      },
+      "binary_offset": null,
+      "stats": {
+        "elapsed": {
+          "secs": 0,
+          "nanos": 3417,
+          "human": "0.000003s"
+        },
+        "searches": 1,
+        "searches_with_match": 1,
+        "bytes_searched": 1115,
+        "bytes_printed": 306,
+        "matched_lines": 1,
+        "matches": 1
+      }
+    }
+  },
+  {
+    "type": "begin",
+    "data": {
+      "path": {
+        "text": "functions/api/debug-bundle.js"
+      }
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "functions/api/debug-bundle.js"
+      },
+      "lines": {
+        "text": "      schemaVersion: \"v1\",\n"
+      },
+      "line_number": 32,
+      "absolute_offset": 825,
+      "submatches": [
+        {
+          "match": {
+            "text": "schemaVersion"
+          },
+          "start": 6,
+          "end": 19
+        }
+      ]
+    }
+  },
+  {
+    "type": "end",
+    "data": {
+      "path": {
+        "text": "functions/api/debug-bundle.js"
+      },
+      "binary_offset": null,
+      "stats": {
+        "elapsed": {
+          "secs": 0,
+          "nanos": 3250,
+          "human": "0.000003s"
+        },
+        "searches": 1,
+        "searches_with_match": 1,
+        "bytes_searched": 1114,
+        "bytes_printed": 306,
+        "matched_lines": 1,
+        "matches": 1
+      }
+    }
+  },
+  {
+    "type": "begin",
+    "data": {
+      "path": {
+        "text": "scripts/metrics-v5-gates.mjs"
+      }
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/metrics-v5-gates.mjs"
+      },
+      "lines": {
+        "text": "function validateEnvelope(payload, catalog) {\n"
+      },
+      "line_number": 36,
+      "absolute_offset": 1112,
+      "submatches": [
+        {
+          "match": {
+            "text": "validateEnvelope"
+          },
+          "start": 9,
+          "end": 25
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/metrics-v5-gates.mjs"
+      },
+      "lines": {
+        "text": "  assert([\"OK\", \"PARTIAL\", \"ERROR\"].includes(meta.status), \"meta.status invalid\");\n"
+      },
+      "line_number": 43,
+      "absolute_offset": 1434,
+      "submatches": [
+        {
+          "match": {
+            "text": "meta.status"
+          },
+          "start": 45,
+          "end": 56
+        },
+        {
+          "match": {
+            "text": "meta.status"
+          },
+          "start": 60,
+          "end": 71
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/metrics-v5-gates.mjs"
+      },
+      "lines": {
+        "text": "  if (meta.status === \"ERROR\") {\n"
+      },
+      "line_number": 54,
+      "absolute_offset": 2186,
+      "submatches": [
+        {
+          "match": {
+            "text": "meta.status"
+          },
+          "start": 6,
+          "end": 17
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/metrics-v5-gates.mjs"
+      },
+      "lines": {
+        "text": "  if (meta.status === \"OK\") {\n"
+      },
+      "line_number": 72,
+      "absolute_offset": 3044,
+      "submatches": [
+        {
+          "match": {
+            "text": "meta.status"
+          },
+          "start": 6,
+          "end": 17
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/metrics-v5-gates.mjs"
+      },
+      "lines": {
+        "text": "  if (meta.status === \"PARTIAL\") {\n"
+      },
+      "line_number": 79,
+      "absolute_offset": 3383,
+      "submatches": [
+        {
+          "match": {
+            "text": "meta.status"
+          },
+          "start": 6,
+          "end": 17
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/metrics-v5-gates.mjs"
+      },
+      "lines": {
+        "text": "  validateEnvelope(payload, catalog);\n"
+      },
+      "line_number": 92,
+      "absolute_offset": 3860,
+      "submatches": [
+        {
+          "match": {
+            "text": "validateEnvelope"
+          },
+          "start": 2,
+          "end": 18
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/metrics-v5-gates.mjs"
+      },
+      "lines": {
+        "text": "  assert(partialPayload.meta.status === \"PARTIAL\", \"Partial gate status mismatch\");\n"
+      },
+      "line_number": 96,
+      "absolute_offset": 4019,
+      "submatches": [
+        {
+          "match": {
+            "text": "meta.status"
+          },
+          "start": 24,
+          "end": 35
+        }
+      ]
+    }
+  },
+  {
+    "type": "end",
+    "data": {
+      "path": {
+        "text": "scripts/metrics-v5-gates.mjs"
+      },
+      "binary_offset": null,
+      "stats": {
+        "elapsed": {
+          "secs": 0,
+          "nanos": 8041,
+          "human": "0.000008s"
+        },
+        "searches": 1,
+        "searches_with_match": 1,
+        "bytes_searched": 4441,
+        "bytes_printed": 1912,
+        "matched_lines": 7,
+        "matches": 8
+      }
+    }
+  },
+  {
+    "type": "begin",
+    "data": {
+      "path": {
+        "text": "functions/api/mission-control/summary.js"
+      }
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "functions/api/mission-control/summary.js"
+      },
+      "lines": {
+        "text": "      type_errors: typeErrors,\n"
+      },
+      "line_number": 428,
+      "absolute_offset": 14517,
+      "submatches": [
+        {
+          "match": {
+            "text": "type_errors"
+          },
+          "start": 6,
+          "end": 17
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "functions/api/mission-control/summary.js"
+      },
+      "lines": {
+        "text": "      sample_values: ok ? { date: bar.date, close: bar.close, volume: bar.volume } : null\n"
+      },
+      "line_number": 429,
+      "absolute_offset": 14548,
+      "submatches": [
+        {
+          "match": {
+            "text": "sample_values"
+          },
+          "start": 6,
+          "end": 19
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "functions/api/mission-control/summary.js"
+      },
+      "lines": {
+        "text": "      type_errors: typeErrors,\n"
+      },
+      "line_number": 511,
+      "absolute_offset": 18152,
+      "submatches": [
+        {
+          "match": {
+            "text": "type_errors"
+          },
+          "start": 6,
+          "end": 17
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "functions/api/mission-control/summary.js"
+      },
+      "lines": {
+        "text": "      sample_values: ok\n"
+      },
+      "line_number": 512,
+      "absolute_offset": 18183,
+      "submatches": [
+        {
+          "match": {
+            "text": "sample_values"
+          },
+          "start": 6,
+          "end": 19
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "functions/api/mission-control/summary.js"
+      },
+      "lines": {
+        "text": "    .map((entry) => entry?.sample_values?.universe)\n"
+      },
+      "line_number": 599,
+      "absolute_offset": 21541,
+      "submatches": [
+        {
+          "match": {
+            "text": "sample_values"
+          },
+          "start": 27,
+          "end": 40
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "functions/api/mission-control/summary.js"
+      },
+      "lines": {
+        "text": "  let reason = 'CONTRACT_FAIL';\n"
+      },
+      "line_number": 603,
+      "absolute_offset": 21749,
+      "submatches": [
+        {
+          "match": {
+            "text": "CONTRACT_FAIL"
+          },
+          "start": 16,
+          "end": 29
+        }
+      ]
+    }
+  },
+  {
+    "type": "end",
+    "data": {
+      "path": {
+        "text": "functions/api/mission-control/summary.js"
+      },
+      "binary_offset": null,
+      "stats": {
+        "elapsed": {
+          "secs": 0,
+          "nanos": 24167,
+          "human": "0.000024s"
+        },
+        "searches": 1,
+        "searches_with_match": 1,
+        "bytes_searched": 64968,
+        "bytes_printed": 1645,
+        "matched_lines": 6,
+        "matches": 6
+      }
+    }
+  },
+  {
+    "type": "begin",
+    "data": {
+      "path": {
+        "text": "scripts/truth-chain/trace_ui_to_origin.mjs"
+      }
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/truth-chain/trace_ui_to_origin.mjs"
+      },
+      "lines": {
+        "text": "    schema_version: json?.schema_version || json?.schemaVersion || null,\n"
+      },
+      "line_number": 112,
+      "absolute_offset": 4697,
+      "submatches": [
+        {
+          "match": {
+            "text": "schemaVersion"
+          },
+          "start": 50,
+          "end": 63
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/truth-chain/trace_ui_to_origin.mjs"
+      },
+      "lines": {
+        "text": "    excerpt: json ? pickPaths(json, ['schema_version', 'meta.status', 'meta.data_date', 'metadata.module', 'data.symbols', 'data.records']) : null\n"
+      },
+      "line_number": 113,
+      "absolute_offset": 4770,
+      "submatches": [
+        {
+          "match": {
+            "text": "meta.status"
+          },
+          "start": 56,
+          "end": 67
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/truth-chain/trace_ui_to_origin.mjs"
+      },
+      "lines": {
+        "text": "    meta: pickPaths(stockRes.json, ['meta.status', 'meta.data_date', 'meta.provider', 'meta.data_source', 'meta.mode', 'meta.asOf', 'meta.freshness']),\n"
+      },
+      "line_number": 178,
+      "absolute_offset": 7808,
+      "submatches": [
+        {
+          "match": {
+            "text": "meta.status"
+          },
+          "start": 37,
+          "end": 48
+        }
+      ]
+    }
+  },
+  {
+    "type": "end",
+    "data": {
+      "path": {
+        "text": "scripts/truth-chain/trace_ui_to_origin.mjs"
+      },
+      "binary_offset": null,
+      "stats": {
+        "elapsed": {
+          "secs": 0,
+          "nanos": 5917,
+          "human": "0.000006s"
+        },
+        "searches": 1,
+        "searches_with_match": 1,
+        "bytes_searched": 10176,
+        "bytes_printed": 1112,
+        "matched_lines": 3,
+        "matches": 3
+      }
+    }
+  },
+  {
+    "type": "begin",
+    "data": {
+      "path": {
+        "text": "scripts/_lib/provider-state.js"
+      }
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/_lib/provider-state.js"
+      },
+      "lines": {
+        "text": "    schemaVersion: \"v1\",\n"
+      },
+      "line_number": 24,
+      "absolute_offset": 484,
+      "submatches": [
+        {
+          "match": {
+            "text": "schemaVersion"
+          },
+          "start": 4,
+          "end": 17
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/_lib/provider-state.js"
+      },
+      "lines": {
+        "text": "        schemaVersion: parsed.schemaVersion || \"v1\",\n"
+      },
+      "line_number": 33,
+      "absolute_offset": 696,
+      "submatches": [
+        {
+          "match": {
+            "text": "schemaVersion"
+          },
+          "start": 8,
+          "end": 21
+        },
+        {
+          "match": {
+            "text": "schemaVersion"
+          },
+          "start": 30,
+          "end": 43
+        }
+      ]
+    }
+  },
+  {
+    "type": "end",
+    "data": {
+      "path": {
+        "text": "scripts/_lib/provider-state.js"
+      },
+      "binary_offset": null,
+      "stats": {
+        "elapsed": {
+          "secs": 0,
+          "nanos": 7958,
+          "human": "0.000008s"
+        },
+        "searches": 1,
+        "searches_with_match": 1,
+        "bytes_searched": 4740,
+        "bytes_printed": 620,
+        "matched_lines": 2,
+        "matches": 3
+      }
+    }
+  },
+  {
+    "type": "begin",
+    "data": {
+      "path": {
+        "text": "scripts/audit/build-feature-registry.mjs"
+      }
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/audit/build-feature-registry.mjs"
+      },
+      "lines": {
+        "text": "    schemaVersion: \"v1\",\n"
+      },
+      "line_number": 88,
+      "absolute_offset": 2149,
+      "submatches": [
+        {
+          "match": {
+            "text": "schemaVersion"
+          },
+          "start": 4,
+          "end": 17
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/audit/build-feature-registry.mjs"
+      },
+      "lines": {
+        "text": "    requiredFields: [\"meta.status\", \"meta.updatedAt\"],\n"
+      },
+      "line_number": 91,
+      "absolute_offset": 2224,
+      "submatches": [
+        {
+          "match": {
+            "text": "meta.status"
+          },
+          "start": 22,
+          "end": 33
+        }
+      ]
+    }
+  },
+  {
+    "type": "end",
+    "data": {
+      "path": {
+        "text": "scripts/audit/build-feature-registry.mjs"
+      },
+      "binary_offset": null,
+      "stats": {
+        "elapsed": {
+          "secs": 0,
+          "nanos": 10042,
+          "human": "0.000010s"
+        },
+        "searches": 1,
+        "searches_with_match": 1,
+        "bytes_searched": 4752,
+        "bytes_printed": 600,
+        "matched_lines": 2,
+        "matches": 2
+      }
+    }
+  },
+  {
+    "type": "begin",
+    "data": {
+      "path": {
+        "text": "scripts/ui-path/prove_ui_path.mjs"
+      }
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/ui-path/prove_ui_path.mjs"
+      },
+      "lines": {
+        "text": "        schema_version: json.schema_version || json.schemaVersion || null,\n"
+      },
+      "line_number": 75,
+      "absolute_offset": 2187,
+      "submatches": [
+        {
+          "match": {
+            "text": "schemaVersion"
+          },
+          "start": 52,
+          "end": 65
+        }
+      ]
+    }
+  },
+  {
+    "type": "end",
+    "data": {
+      "path": {
+        "text": "scripts/ui-path/prove_ui_path.mjs"
+      },
+      "binary_offset": null,
+      "stats": {
+        "elapsed": {
+          "secs": 0,
+          "nanos": 4875,
+          "human": "0.000005s"
+        },
+        "searches": 1,
+        "searches_with_match": 1,
+        "bytes_searched": 8407,
+        "bytes_printed": 362,
+        "matched_lines": 1,
+        "matches": 1
+      }
+    }
+  },
+  {
+    "type": "begin",
+    "data": {
+      "path": {
+        "text": "functions/api/_shared/static-handler.js"
+      }
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "functions/api/_shared/static-handler.js"
+      },
+      "lines": {
+        "text": "      schemaVersion: 1,\n"
+      },
+      "line_number": 32,
+      "absolute_offset": 774,
+      "submatches": [
+        {
+          "match": {
+            "text": "schemaVersion"
+          },
+          "start": 6,
+          "end": 19
+        }
+      ]
+    }
+  },
+  {
+    "type": "end",
+    "data": {
+      "path": {
+        "text": "functions/api/_shared/static-handler.js"
+      },
+      "binary_offset": null,
+      "stats": {
+        "elapsed": {
+          "secs": 0,
+          "nanos": 3500,
+          "human": "0.000003s"
+        },
+        "searches": 1,
+        "searches_with_match": 1,
+        "bytes_searched": 4194,
+        "bytes_printed": 321,
+        "matched_lines": 1,
+        "matches": 1
+      }
+    }
+  },
+  {
+    "type": "begin",
+    "data": {
+      "path": {
+        "text": "functions/api/_shared/static-only-backup.js"
+      }
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "functions/api/_shared/static-only-backup.js"
+      },
+      "lines": {
+        "text": "    schemaVersion: \"v1\", // Legacy format identifier\n"
+      },
+      "line_number": 30,
+      "absolute_offset": 1039,
+      "submatches": [
+        {
+          "match": {
+            "text": "schemaVersion"
+          },
+          "start": 4,
+          "end": 17
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "functions/api/_shared/static-only-backup.js"
+      },
+      "lines": {
+        "text": "        const isV3 = parsed.schema_version === \"3.0\" || parsed.schemaVersion === \"v3\";\n"
+      },
+      "line_number": 96,
+      "absolute_offset": 3458,
+      "submatches": [
+        {
+          "match": {
+            "text": "schemaVersion"
+          },
+          "start": 63,
+          "end": 76
+        }
+      ]
+    }
+  },
+  {
+    "type": "end",
+    "data": {
+      "path": {
+        "text": "functions/api/_shared/static-only-backup.js"
+      },
+      "binary_offset": null,
+      "stats": {
+        "elapsed": {
+          "secs": 0,
+          "nanos": 5167,
+          "human": "0.000005s"
+        },
+        "searches": 1,
+        "searches_with_match": 1,
+        "bytes_searched": 5526,
+        "bytes_printed": 671,
+        "matched_lines": 2,
+        "matches": 2
+      }
+    }
+  },
+  {
+    "type": "begin",
+    "data": {
+      "path": {
+        "text": "scripts/smoke-rvci.sh"
+      }
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/smoke-rvci.sh"
+      },
+      "lines": {
+        "text": "      \"status=\" + (v(.meta.status)|tostring),\n"
+      },
+      "line_number": 56,
+      "absolute_offset": 1317,
+      "submatches": [
+        {
+          "match": {
+            "text": "meta.status"
+          },
+          "start": 22,
+          "end": 33
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/smoke-rvci.sh"
+      },
+      "lines": {
+        "text": "  echo \"ERROR: missing meta.status or meta.generatedAt\" >&2\n"
+      },
+      "line_number": 181,
+      "absolute_offset": 4346,
+      "submatches": [
+        {
+          "match": {
+            "text": "meta.status"
+          },
+          "start": 23,
+          "end": 34
+        }
+      ]
+    }
+  },
+  {
+    "type": "end",
+    "data": {
+      "path": {
+        "text": "scripts/smoke-rvci.sh"
+      },
+      "binary_offset": null,
+      "stats": {
+        "elapsed": {
+          "secs": 0,
+          "nanos": 18666,
+          "human": "0.000019s"
+        },
+        "searches": 1,
+        "searches_with_match": 1,
+        "bytes_searched": 6326,
+        "bytes_printed": 567,
+        "matched_lines": 2,
+        "matches": 2
+      }
+    }
+  },
+  {
+    "type": "begin",
+    "data": {
+      "path": {
+        "text": "functions/api/_shared/resilience.js"
+      }
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "functions/api/_shared/resilience.js"
+      },
+      "lines": {
+        "text": "  if (!meta.schemaVersion) meta.schemaVersion = 1;\n"
+      },
+      "line_number": 49,
+      "absolute_offset": 1341,
+      "submatches": [
+        {
+          "match": {
+            "text": "meta.schema"
+          },
+          "start": 7,
+          "end": 18
+        },
+        {
+          "match": {
+            "text": "meta.schema"
+          },
+          "start": 27,
+          "end": 38
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "functions/api/_shared/resilience.js"
+      },
+      "lines": {
+        "text": "  if (!meta.status) {\n"
+      },
+      "line_number": 54,
+      "absolute_offset": 1560,
+      "submatches": [
+        {
+          "match": {
+            "text": "meta.status"
+          },
+          "start": 7,
+          "end": 18
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "functions/api/_shared/resilience.js"
+      },
+      "lines": {
+        "text": "    meta.status = \"EMPTY\";\n"
+      },
+      "line_number": 55,
+      "absolute_offset": 1582,
+      "submatches": [
+        {
+          "match": {
+            "text": "meta.status"
+          },
+          "start": 4,
+          "end": 15
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "functions/api/_shared/resilience.js"
+      },
+      "lines": {
+        "text": "  if (meta.status === \"LIVE\" && dataEmpty && !allowEmptyData) {\n"
+      },
+      "line_number": 60,
+      "absolute_offset": 1729,
+      "submatches": [
+        {
+          "match": {
+            "text": "meta.status"
+          },
+          "start": 6,
+          "end": 17
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "functions/api/_shared/resilience.js"
+      },
+      "lines": {
+        "text": "      meta.status = \"STALE\";\n"
+      },
+      "line_number": 63,
+      "absolute_offset": 1876,
+      "submatches": [
+        {
+          "match": {
+            "text": "meta.status"
+          },
+          "start": 6,
+          "end": 17
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "functions/api/_shared/resilience.js"
+      },
+      "lines": {
+        "text": "      meta.status = \"EMPTY\";\n"
+      },
+      "line_number": 68,
+      "absolute_offset": 2027,
+      "submatches": [
+        {
+          "match": {
+            "text": "meta.status"
+          },
+          "start": 6,
+          "end": 17
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "functions/api/_shared/resilience.js"
+      },
+      "lines": {
+        "text": "  if (meta.status === \"STALE\" && dataEmpty) {\n"
+      },
+      "line_number": 76,
+      "absolute_offset": 2283,
+      "submatches": [
+        {
+          "match": {
+            "text": "meta.status"
+          },
+          "start": 6,
+          "end": 17
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "functions/api/_shared/resilience.js"
+      },
+      "lines": {
+        "text": "      meta.status = \"EMPTY\";\n"
+      },
+      "line_number": 82,
+      "absolute_offset": 2481,
+      "submatches": [
+        {
+          "match": {
+            "text": "meta.status"
+          },
+          "start": 6,
+          "end": 17
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "functions/api/_shared/resilience.js"
+      },
+      "lines": {
+        "text": "        meta.status = \"STALE\";\n"
+      },
+      "line_number": 263,
+      "absolute_offset": 8574,
+      "submatches": [
+        {
+          "match": {
+            "text": "meta.status"
+          },
+          "start": 8,
+          "end": 19
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "functions/api/_shared/resilience.js"
+      },
+      "lines": {
+        "text": "      meta.status = \"STALE\";\n"
+      },
+      "line_number": 306,
+      "absolute_offset": 9880,
+      "submatches": [
+        {
+          "match": {
+            "text": "meta.status"
+          },
+          "start": 6,
+          "end": 17
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "functions/api/_shared/resilience.js"
+      },
+      "lines": {
+        "text": "    meta.status = \"NO_DATA\";\n"
+      },
+      "line_number": 347,
+      "absolute_offset": 11052,
+      "submatches": [
+        {
+          "match": {
+            "text": "meta.status"
+          },
+          "start": 4,
+          "end": 15
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "functions/api/_shared/resilience.js"
+      },
+      "lines": {
+        "text": "      meta.status = \"STALE\";\n"
+      },
+      "line_number": 448,
+      "absolute_offset": 13810,
+      "submatches": [
+        {
+          "match": {
+            "text": "meta.status"
+          },
+          "start": 6,
+          "end": 17
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "functions/api/_shared/resilience.js"
+      },
+      "lines": {
+        "text": "    meta.status = \"NO_DATA\";\n"
+      },
+      "line_number": 492,
+      "absolute_offset": 15158,
+      "submatches": [
+        {
+          "match": {
+            "text": "meta.status"
+          },
+          "start": 4,
+          "end": 15
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "functions/api/_shared/resilience.js"
+      },
+      "lines": {
+        "text": "    meta.status = \"STALE\";\n"
+      },
+      "line_number": 538,
+      "absolute_offset": 16562,
+      "submatches": [
+        {
+          "match": {
+            "text": "meta.status"
+          },
+          "start": 4,
+          "end": 15
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "functions/api/_shared/resilience.js"
+      },
+      "lines": {
+        "text": "    meta.status = \"NO_DATA\";\n"
+      },
+      "line_number": 583,
+      "absolute_offset": 17850,
+      "submatches": [
+        {
+          "match": {
+            "text": "meta.status"
+          },
+          "start": 4,
+          "end": 15
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "functions/api/_shared/resilience.js"
+      },
+      "lines": {
+        "text": "  meta.status = \"LIVE\";\n"
+      },
+      "line_number": 635,
+      "absolute_offset": 19344,
+      "submatches": [
+        {
+          "match": {
+            "text": "meta.status"
+          },
+          "start": 2,
+          "end": 13
+        }
+      ]
+    }
+  },
+  {
+    "type": "end",
+    "data": {
+      "path": {
+        "text": "functions/api/_shared/resilience.js"
+      },
+      "binary_offset": null,
+      "stats": {
+        "elapsed": {
+          "secs": 0,
+          "nanos": 15000,
+          "human": "0.000015s"
+        },
+        "searches": 1,
+        "searches_with_match": 1,
+        "bytes_searched": 20471,
+        "bytes_printed": 4027,
+        "matched_lines": 16,
+        "matches": 17
+      }
+    }
+  },
+  {
+    "type": "begin",
+    "data": {
+      "path": {
+        "text": "scripts/audit/build-artifacts.mjs"
+      }
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/audit/build-artifacts.mjs"
+      },
+      "lines": {
+        "text": "  const schemaVersion = raw?.meta?.schemaVersion || raw?.schemaVersion || \"v1\";\n"
+      },
+      "line_number": 69,
+      "absolute_offset": 1961,
+      "submatches": [
+        {
+          "match": {
+            "text": "schemaVersion"
+          },
+          "start": 8,
+          "end": 21
+        },
+        {
+          "match": {
+            "text": "schemaVersion"
+          },
+          "start": 35,
+          "end": 48
+        },
+        {
+          "match": {
+            "text": "schemaVersion"
+          },
+          "start": 57,
+          "end": 70
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/audit/build-artifacts.mjs"
+      },
+      "lines": {
+        "text": "    schemaVersion,\n"
+      },
+      "line_number": 111,
+      "absolute_offset": 3234,
+      "submatches": [
+        {
+          "match": {
+            "text": "schemaVersion"
+          },
+          "start": 4,
+          "end": 17
+        }
+      ]
+    }
+  },
+  {
+    "type": "end",
+    "data": {
+      "path": {
+        "text": "scripts/audit/build-artifacts.mjs"
+      },
+      "binary_offset": null,
+      "stats": {
+        "elapsed": {
+          "secs": 0,
+          "nanos": 5750,
+          "human": "0.000006s"
+        },
+        "searches": 1,
+        "searches_with_match": 1,
+        "bytes_searched": 4370,
+        "bytes_printed": 706,
+        "matched_lines": 2,
+        "matches": 4
+      }
+    }
+  },
+  {
+    "type": "begin",
+    "data": {
+      "path": {
+        "text": "scripts/seed-mirrors.mjs"
+      }
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/seed-mirrors.mjs"
+      },
+      "lines": {
+        "text": "    schemaVersion: 1,\n"
+      },
+      "line_number": 501,
+      "absolute_offset": 17799,
+      "submatches": [
+        {
+          "match": {
+            "text": "schemaVersion"
+          },
+          "start": 4,
+          "end": 17
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/seed-mirrors.mjs"
+      },
+      "lines": {
+        "text": "    schemaVersion: \"1.0\",\n"
+      },
+      "line_number": 1038,
+      "absolute_offset": 36566,
+      "submatches": [
+        {
+          "match": {
+            "text": "schemaVersion"
+          },
+          "start": 4,
+          "end": 17
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/seed-mirrors.mjs"
+      },
+      "lines": {
+        "text": "    schemaVersion: \"1.0\",\n"
+      },
+      "line_number": 1144,
+      "absolute_offset": 39870,
+      "submatches": [
+        {
+          "match": {
+            "text": "schemaVersion"
+          },
+          "start": 4,
+          "end": 17
+        }
+      ]
+    }
+  },
+  {
+    "type": "end",
+    "data": {
+      "path": {
+        "text": "scripts/seed-mirrors.mjs"
+      },
+      "binary_offset": null,
+      "stats": {
+        "elapsed": {
+          "secs": 0,
+          "nanos": 16083,
+          "human": "0.000016s"
+        },
+        "searches": 1,
+        "searches_with_match": 1,
+        "bytes_searched": 41237,
+        "bytes_printed": 752,
+        "matched_lines": 3,
+        "matches": 3
+      }
+    }
+  },
+  {
+    "type": "begin",
+    "data": {
+      "path": {
+        "text": "scripts/audit-site.mjs"
+      }
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/audit-site.mjs"
+      },
+      "lines": {
+        "text": "    schemaVersion: \"unknown\",\n"
+      },
+      "line_number": 477,
+      "absolute_offset": 14588,
+      "submatches": [
+        {
+          "match": {
+            "text": "schemaVersion"
+          },
+          "start": 4,
+          "end": 17
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/audit-site.mjs"
+      },
+      "lines": {
+        "text": "  block.schemaVersion = json.schemaVersion || json.schema || \"unknown\";\n"
+      },
+      "line_number": 494,
+      "absolute_offset": 14970,
+      "submatches": [
+        {
+          "match": {
+            "text": "schemaVersion"
+          },
+          "start": 8,
+          "end": 21
+        },
+        {
+          "match": {
+            "text": "schemaVersion"
+          },
+          "start": 29,
+          "end": 42
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/audit-site.mjs"
+      },
+      "lines": {
+        "text": "      schemaVersion: \"unknown\",\n"
+      },
+      "line_number": 652,
+      "absolute_offset": 19956,
+      "submatches": [
+        {
+          "match": {
+            "text": "schemaVersion"
+          },
+          "start": 6,
+          "end": 19
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/audit-site.mjs"
+      },
+      "lines": {
+        "text": "      schemaVersion: \"unknown\",\n"
+      },
+      "line_number": 673,
+      "absolute_offset": 20439,
+      "submatches": [
+        {
+          "match": {
+            "text": "schemaVersion"
+          },
+          "start": 6,
+          "end": 19
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/audit-site.mjs"
+      },
+      "lines": {
+        "text": "            schemaVersion: \"unknown\",\n"
+      },
+      "line_number": 1378,
+      "absolute_offset": 43368,
+      "submatches": [
+        {
+          "match": {
+            "text": "schemaVersion"
+          },
+          "start": 12,
+          "end": 25
+        }
+      ]
+    }
+  },
+  {
+    "type": "end",
+    "data": {
+      "path": {
+        "text": "scripts/audit-site.mjs"
+      },
+      "binary_offset": null,
+      "stats": {
+        "elapsed": {
+          "secs": 0,
+          "nanos": 15916,
+          "human": "0.000016s"
+        },
+        "searches": 1,
+        "searches_with_match": 1,
+        "bytes_searched": 46642,
+        "bytes_printed": 1333,
+        "matched_lines": 5,
+        "matches": 6
+      }
+    }
+  },
+  {
+    "type": "begin",
+    "data": {
+      "path": {
+        "text": "scripts/aggregator/finalize.mjs"
+      }
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/aggregator/finalize.mjs"
+      },
+      "lines": {
+        "text": "import { validateEnvelopeSchema } from '../lib/envelope.js';\n"
+      },
+      "line_number": 20,
+      "absolute_offset": 646,
+      "submatches": [
+        {
+          "match": {
+            "text": "validateEnvelope"
+          },
+          "start": 9,
+          "end": 25
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/aggregator/finalize.mjs"
+      },
+      "lines": {
+        "text": "  const schemaCheck = validateEnvelopeSchema(snapshot);\n"
+      },
+      "line_number": 178,
+      "absolute_offset": 5451,
+      "submatches": [
+        {
+          "match": {
+            "text": "validateEnvelope"
+          },
+          "start": 22,
+          "end": 38
+        }
+      ]
+    }
+  },
+  {
+    "type": "end",
+    "data": {
+      "path": {
+        "text": "scripts/aggregator/finalize.mjs"
+      },
+      "binary_offset": null,
+      "stats": {
+        "elapsed": {
+          "secs": 0,
+          "nanos": 11959,
+          "human": "0.000012s"
+        },
+        "searches": 1,
+        "searches_with_match": 1,
+        "bytes_searched": 32116,
+        "bytes_printed": 612,
+        "matched_lines": 2,
+        "matches": 2
+      }
+    }
+  },
+  {
+    "type": "begin",
+    "data": {
+      "path": {
+        "text": "scripts/lib/envelope.js"
+      }
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/lib/envelope.js"
+      },
+      "lines": {
+        "text": " *   const valid = validateEnvelope(envelope, registry);\n"
+      },
+      "line_number": 11,
+      "absolute_offset": 275,
+      "submatches": [
+        {
+          "match": {
+            "text": "validateEnvelope"
+          },
+          "start": 19,
+          "end": 35
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/lib/envelope.js"
+      },
+      "lines": {
+        "text": "export function validateEnvelopeSchema(envelope) {\n"
+      },
+      "line_number": 94,
+      "absolute_offset": 3524,
+      "submatches": [
+        {
+          "match": {
+            "text": "validateEnvelope"
+          },
+          "start": 16,
+          "end": 32
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/lib/envelope.js"
+      },
+      "lines": {
+        "text": "export function validateEnvelope(envelope, moduleConfig) {\n"
+      },
+      "line_number": 279,
+      "absolute_offset": 8826,
+      "submatches": [
+        {
+          "match": {
+            "text": "validateEnvelope"
+          },
+          "start": 16,
+          "end": 32
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/lib/envelope.js"
+      },
+      "lines": {
+        "text": "  const schemaResult = validateEnvelopeSchema(envelope);\n"
+      },
+      "line_number": 284,
+      "absolute_offset": 8958,
+      "submatches": [
+        {
+          "match": {
+            "text": "validateEnvelope"
+          },
+          "start": 23,
+          "end": 39
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/lib/envelope.js"
+      },
+      "lines": {
+        "text": "  validateEnvelopeSchema,\n"
+      },
+      "line_number": 369,
+      "absolute_offset": 11663,
+      "submatches": [
+        {
+          "match": {
+            "text": "validateEnvelope"
+          },
+          "start": 2,
+          "end": 18
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/lib/envelope.js"
+      },
+      "lines": {
+        "text": "  validateEnvelope,\n"
+      },
+      "line_number": 370,
+      "absolute_offset": 11689,
+      "submatches": [
+        {
+          "match": {
+            "text": "validateEnvelope"
+          },
+          "start": 2,
+          "end": 18
+        }
+      ]
+    }
+  },
+  {
+    "type": "end",
+    "data": {
+      "path": {
+        "text": "scripts/lib/envelope.js"
+      },
+      "binary_offset": null,
+      "stats": {
+        "elapsed": {
+          "secs": 0,
+          "nanos": 60750,
+          "human": "0.000061s"
+        },
+        "searches": 1,
+        "searches_with_match": 1,
+        "bytes_searched": 11771,
+        "bytes_printed": 1553,
+        "matched_lines": 6,
+        "matches": 6
+      }
+    }
+  },
+  {
+    "type": "begin",
+    "data": {
+      "path": {
+        "text": "functions/api/_shared/envelope.js"
+      }
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "functions/api/_shared/envelope.js"
+      },
+      "lines": {
+        "text": "      metadata?.schemaVersion,\n"
+      },
+      "line_number": 156,
+      "absolute_offset": 4663,
+      "submatches": [
+        {
+          "match": {
+            "text": "schemaVersion"
+          },
+          "start": 16,
+          "end": 29
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "functions/api/_shared/envelope.js"
+      },
+      "lines": {
+        "text": "      existingMeta.schemaVersion\n"
+      },
+      "line_number": 158,
+      "absolute_offset": 4729,
+      "submatches": [
+        {
+          "match": {
+            "text": "schemaVersion"
+          },
+          "start": 19,
+          "end": 32
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "functions/api/_shared/envelope.js"
+      },
+      "lines": {
+        "text": "  if (!isAllowedStatus(meta.status)) {\n"
+      },
+      "line_number": 173,
+      "absolute_offset": 5169,
+      "submatches": [
+        {
+          "match": {
+            "text": "meta.status"
+          },
+          "start": 23,
+          "end": 34
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "functions/api/_shared/envelope.js"
+      },
+      "lines": {
+        "text": "    throw new Error(`Envelope.meta.status invalid: ${meta.status}`);\n"
+      },
+      "line_number": 174,
+      "absolute_offset": 5208,
+      "submatches": [
+        {
+          "match": {
+            "text": "meta.status"
+          },
+          "start": 30,
+          "end": 41
+        },
+        {
+          "match": {
+            "text": "meta.status"
+          },
+          "start": 53,
+          "end": 64
+        }
+      ]
+    }
+  },
+  {
+    "type": "end",
+    "data": {
+      "path": {
+        "text": "functions/api/_shared/envelope.js"
+      },
+      "binary_offset": null,
+      "stats": {
+        "elapsed": {
+          "secs": 0,
+          "nanos": 9875,
+          "human": "0.000010s"
+        },
+        "searches": 1,
+        "searches_with_match": 1,
+        "bytes_searched": 9733,
+        "bytes_printed": 1139,
+        "matched_lines": 4,
+        "matches": 5
+      }
+    }
+  },
+  {
+    "type": "begin",
+    "data": {
+      "path": {
+        "text": "scripts/update-news.mjs"
+      }
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/update-news.mjs"
+      },
+      "lines": {
+        "text": "    schemaVersion: 1,\n"
+      },
+      "line_number": 191,
+      "absolute_offset": 5241,
+      "submatches": [
+        {
+          "match": {
+            "text": "schemaVersion"
+          },
+          "start": 4,
+          "end": 17
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/update-news.mjs"
+      },
+      "lines": {
+        "text": "    schemaVersion: \"rv-mirror-v1\",\n"
+      },
+      "line_number": 208,
+      "absolute_offset": 5532,
+      "submatches": [
+        {
+          "match": {
+            "text": "schemaVersion"
+          },
+          "start": 4,
+          "end": 17
+        }
+      ]
+    }
+  },
+  {
+    "type": "end",
+    "data": {
+      "path": {
+        "text": "scripts/update-news.mjs"
+      },
+      "binary_offset": null,
+      "stats": {
+        "elapsed": {
+          "secs": 0,
+          "nanos": 6292,
+          "human": "0.000006s"
+        },
+        "searches": 1,
+        "searches_with_match": 1,
+        "bytes_searched": 11648,
+        "bytes_printed": 525,
+        "matched_lines": 2,
+        "matches": 2
+      }
+    }
+  },
+  {
+    "type": "begin",
+    "data": {
+      "path": {
+        "text": "scripts/generate-health.mjs"
+      }
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/generate-health.mjs"
+      },
+      "lines": {
+        "text": "    schemaVersion: \"1.0.0\",\n"
+      },
+      "line_number": 70,
+      "absolute_offset": 2405,
+      "submatches": [
+        {
+          "match": {
+            "text": "schemaVersion"
+          },
+          "start": 4,
+          "end": 17
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/generate-health.mjs"
+      },
+      "lines": {
+        "text": "  if (!history || typeof history !== \"object\") return { schemaVersion: \"1.0.0\", items: [] };\n"
+      },
+      "line_number": 94,
+      "absolute_offset": 2946,
+      "submatches": [
+        {
+          "match": {
+            "text": "schemaVersion"
+          },
+          "start": 56,
+          "end": 69
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/generate-health.mjs"
+      },
+      "lines": {
+        "text": "  if (!Array.isArray(history.items)) return { schemaVersion: \"1.0.0\", items: [] };\n"
+      },
+      "line_number": 95,
+      "absolute_offset": 3039,
+      "submatches": [
+        {
+          "match": {
+            "text": "schemaVersion"
+          },
+          "start": 46,
+          "end": 59
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/generate-health.mjs"
+      },
+      "lines": {
+        "text": "  return { schemaVersion: \"1.0.0\", items: history.items };\n"
+      },
+      "line_number": 96,
+      "absolute_offset": 3122,
+      "submatches": [
+        {
+          "match": {
+            "text": "schemaVersion"
+          },
+          "start": 11,
+          "end": 24
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/generate-health.mjs"
+      },
+      "lines": {
+        "text": "  return { schemaVersion: \"1.0.0\", items: last30 };\n"
+      },
+      "line_number": 106,
+      "absolute_offset": 3628,
+      "submatches": [
+        {
+          "match": {
+            "text": "schemaVersion"
+          },
+          "start": 11,
+          "end": 24
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/generate-health.mjs"
+      },
+      "lines": {
+        "text": "      schemaVersion: \"1.0.0\",\n"
+      },
+      "line_number": 115,
+      "absolute_offset": 3961,
+      "submatches": [
+        {
+          "match": {
+            "text": "schemaVersion"
+          },
+          "start": 6,
+          "end": 19
+        }
+      ]
+    }
+  },
+  {
+    "type": "end",
+    "data": {
+      "path": {
+        "text": "scripts/generate-health.mjs"
+      },
+      "binary_offset": null,
+      "stats": {
+        "elapsed": {
+          "secs": 0,
+          "nanos": 10459,
+          "human": "0.000010s"
+        },
+        "searches": 1,
+        "searches_with_match": 1,
+        "bytes_searched": 5165,
+        "bytes_printed": 1649,
+        "matched_lines": 6,
+        "matches": 6
+      }
+    }
+  },
+  {
+    "type": "begin",
+    "data": {
+      "path": {
+        "text": "scripts/test-envelope.mjs"
+      }
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/test-envelope.mjs"
+      },
+      "lines": {
+        "text": "  assert(payload.meta.status === \"fresh\", \"okEnvelope default status should be fresh\");\n"
+      },
+      "line_number": 14,
+      "absolute_offset": 687,
+      "submatches": [
+        {
+          "match": {
+            "text": "meta.status"
+          },
+          "start": 17,
+          "end": 28
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/test-envelope.mjs"
+      },
+      "lines": {
+        "text": "  assert(payload.meta.status === \"error\", \"errorEnvelope status should be error\");\n"
+      },
+      "line_number": 28,
+      "absolute_offset": 1184,
+      "submatches": [
+        {
+          "match": {
+            "text": "meta.status"
+          },
+          "start": 17,
+          "end": 28
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/test-envelope.mjs"
+      },
+      "lines": {
+        "text": "  assert(ensured.meta && typeof ensured.meta.status === \"string\", \"ensureEnvelopePayload adds meta.status\");\n"
+      },
+      "line_number": 35,
+      "absolute_offset": 1454,
+      "submatches": [
+        {
+          "match": {
+            "text": "meta.status"
+          },
+          "start": 40,
+          "end": 51
+        },
+        {
+          "match": {
+            "text": "meta.status"
+          },
+          "start": 94,
+          "end": 105
+        }
+      ]
+    }
+  },
+  {
+    "type": "end",
+    "data": {
+      "path": {
+        "text": "scripts/test-envelope.mjs"
+      },
+      "binary_offset": null,
+      "stats": {
+        "elapsed": {
+          "secs": 0,
+          "nanos": 16792,
+          "human": "0.000017s"
+        },
+        "searches": 1,
+        "searches_with_match": 1,
+        "bytes_searched": 6390,
+        "bytes_printed": 1012,
+        "matched_lines": 3,
+        "matches": 4
+      }
+    }
+  },
+  {
+    "type": "begin",
+    "data": {
+      "path": {
+        "text": "functions/api/_shared/static-only-v3.js"
+      }
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "functions/api/_shared/static-only-v3.js"
+      },
+      "lines": {
+        "text": "    schemaVersion: \"v1\",\n"
+      },
+      "line_number": 32,
+      "absolute_offset": 875,
+      "submatches": [
+        {
+          "match": {
+            "text": "schemaVersion"
+          },
+          "start": 4,
+          "end": 17
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "functions/api/_shared/static-only-v3.js"
+      },
+      "lines": {
+        "text": "      class: 'UI_CONTRACT_FAILED',\n"
+      },
+      "line_number": 151,
+      "absolute_offset": 3772,
+      "submatches": [
+        {
+          "match": {
+            "text": "CONTRACT_FAIL"
+          },
+          "start": 17,
+          "end": 30
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "functions/api/_shared/static-only-v3.js"
+      },
+      "lines": {
+        "text": "  const isV3 = snapshot.schema_version === \"3.0\" || snapshot.schemaVersion === \"v3\";\n"
+      },
+      "line_number": 361,
+      "absolute_offset": 9832,
+      "submatches": [
+        {
+          "match": {
+            "text": "schemaVersion"
+          },
+          "start": 61,
+          "end": 74
+        }
+      ]
+    }
+  },
+  {
+    "type": "end",
+    "data": {
+      "path": {
+        "text": "functions/api/_shared/static-only-v3.js"
+      },
+      "binary_offset": null,
+      "stats": {
+        "elapsed": {
+          "secs": 0,
+          "nanos": 12666,
+          "human": "0.000013s"
+        },
+        "searches": 1,
+        "searches_with_match": 1,
+        "bytes_searched": 10556,
+        "bytes_printed": 880,
+        "matched_lines": 3,
+        "matches": 3
+      }
+    }
+  },
+  {
+    "type": "begin",
+    "data": {
+      "path": {
+        "text": "scripts/contract-smoke.js"
+      }
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/contract-smoke.js"
+      },
+      "lines": {
+        "text": "function validateEnvelope(obj) {\n"
+      },
+      "line_number": 60,
+      "absolute_offset": 1911,
+      "submatches": [
+        {
+          "match": {
+            "text": "validateEnvelope"
+          },
+          "start": 9,
+          "end": 25
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/contract-smoke.js"
+      },
+      "lines": {
+        "text": "  if (typeof obj.meta.status !== \"string\") return false;\n"
+      },
+      "line_number": 65,
+      "absolute_offset": 2162,
+      "submatches": [
+        {
+          "match": {
+            "text": "meta.status"
+          },
+          "start": 17,
+          "end": 28
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/contract-smoke.js"
+      },
+      "lines": {
+        "text": "    meta: { status: \"LIVE\", reason: \"\", schemaVersion: \"v1\" },\n"
+      },
+      "line_number": 118,
+      "absolute_offset": 4214,
+      "submatches": [
+        {
+          "match": {
+            "text": "schemaVersion"
+          },
+          "start": 40,
+          "end": 53
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/contract-smoke.js"
+      },
+      "lines": {
+        "text": "  if (!validateEnvelope(sample)) {\n"
+      },
+      "line_number": 123,
+      "absolute_offset": 4324,
+      "submatches": [
+        {
+          "match": {
+            "text": "validateEnvelope"
+          },
+          "start": 7,
+          "end": 23
+        }
+      ]
+    }
+  },
+  {
+    "type": "end",
+    "data": {
+      "path": {
+        "text": "scripts/contract-smoke.js"
+      },
+      "binary_offset": null,
+      "stats": {
+        "elapsed": {
+          "secs": 0,
+          "nanos": 13333,
+          "human": "0.000013s"
+        },
+        "searches": 1,
+        "searches_with_match": 1,
+        "bytes_searched": 8115,
+        "bytes_printed": 1074,
+        "matched_lines": 4,
+        "matches": 4
+      }
+    }
+  },
+  {
+    "type": "begin",
+    "data": {
+      "path": {
+        "text": "scripts/llm-context.sh"
+      }
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/llm-context.sh"
+      },
+      "lines": {
+        "text": "curl -fsS \"$PREVIEW/api/price-snapshot?debug=1\" | jq '{feature, ok, hasMeta:(.meta!=null), metaStatus:(.meta.status//null), metaReason:(.meta.reason//null)}'\n"
+      },
+      "line_number": 40,
+      "absolute_offset": 674,
+      "submatches": [
+        {
+          "match": {
+            "text": "meta.status"
+          },
+          "start": 104,
+          "end": 115
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/llm-context.sh"
+      },
+      "lines": {
+        "text": "curl -fsS \"$PREVIEW/api/alpha-radar?debug=1\" | jq '{feature, ok, hasMeta:(.meta!=null), metaStatus:(.meta.status//null), metaReason:(.meta.reason//null)}'\n"
+      },
+      "line_number": 41,
+      "absolute_offset": 832,
+      "submatches": [
+        {
+          "match": {
+            "text": "meta.status"
+          },
+          "start": 101,
+          "end": 112
+        }
+      ]
+    }
+  },
+  {
+    "type": "end",
+    "data": {
+      "path": {
+        "text": "scripts/llm-context.sh"
+      },
+      "binary_offset": null,
+      "stats": {
+        "elapsed": {
+          "secs": 0,
+          "nanos": 7875,
+          "human": "0.000008s"
+        },
+        "searches": 1,
+        "searches_with_match": 1,
+        "bytes_searched": 1574,
+        "bytes_printed": 778,
+        "matched_lines": 2,
+        "matches": 2
+      }
+    }
+  },
+  {
+    "type": "begin",
+    "data": {
+      "path": {
+        "text": "scripts/validate-mirrors.mjs"
+      }
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/validate-mirrors.mjs"
+      },
+      "lines": {
+        "text": "  if (raw && typeof raw === \"object\" && raw.schemaVersion && raw.mirrorId && raw.items) {\n"
+      },
+      "line_number": 77,
+      "absolute_offset": 2577,
+      "submatches": [
+        {
+          "match": {
+            "text": "schemaVersion"
+          },
+          "start": 44,
+          "end": 57
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/validate-mirrors.mjs"
+      },
+      "lines": {
+        "text": "  const dataQuality = normalizeDataQuality(meta.status || legacy.dataQuality || (legacy.ok === false ? \"ERROR\" : null));\n"
+      },
+      "line_number": 93,
+      "absolute_offset": 3216,
+      "submatches": [
+        {
+          "match": {
+            "text": "meta.status"
+          },
+          "start": 43,
+          "end": 54
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/validate-mirrors.mjs"
+      },
+      "lines": {
+        "text": "    schemaVersion: \"rv-mirror-v1\",\n"
+      },
+      "line_number": 104,
+      "absolute_offset": 3705,
+      "submatches": [
+        {
+          "match": {
+            "text": "schemaVersion"
+          },
+          "start": 4,
+          "end": 17
+        }
+      ]
+    }
+  },
+  {
+    "type": "end",
+    "data": {
+      "path": {
+        "text": "scripts/validate-mirrors.mjs"
+      },
+      "binary_offset": null,
+      "stats": {
+        "elapsed": {
+          "secs": 0,
+          "nanos": 7667,
+          "human": "0.000008s"
+        },
+        "searches": 1,
+        "searches_with_match": 1,
+        "bytes_searched": 9486,
+        "bytes_printed": 935,
+        "matched_lines": 3,
+        "matches": 3
+      }
+    }
+  },
+  {
+    "type": "begin",
+    "data": {
+      "path": {
+        "text": "scripts/audit/generate-stub-mirrors.mjs"
+      }
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/audit/generate-stub-mirrors.mjs"
+      },
+      "lines": {
+        "text": "      schemaVersion: feature.schemaVersion || \"v1\"\n"
+      },
+      "line_number": 38,
+      "absolute_offset": 1042,
+      "submatches": [
+        {
+          "match": {
+            "text": "schemaVersion"
+          },
+          "start": 6,
+          "end": 19
+        },
+        {
+          "match": {
+            "text": "schemaVersion"
+          },
+          "start": 29,
+          "end": 42
+        }
+      ]
+    }
+  },
+  {
+    "type": "end",
+    "data": {
+      "path": {
+        "text": "scripts/audit/generate-stub-mirrors.mjs"
+      },
+      "binary_offset": null,
+      "stats": {
+        "elapsed": {
+          "secs": 0,
+          "nanos": 3542,
+          "human": "0.000004s"
+        },
+        "searches": 1,
+        "searches_with_match": 1,
+        "bytes_searched": 1229,
+        "bytes_printed": 406,
+        "matched_lines": 1,
+        "matches": 2
+      }
+    }
+  },
+  {
+    "type": "begin",
+    "data": {
+      "path": {
+        "text": "scripts/providers/market-prices-v3.mjs"
+      }
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/providers/market-prices-v3.mjs"
+      },
+      "lines": {
+        "text": "import { buildEnvelope, validateEnvelopeSchema } from '../lib/envelope.js';\n"
+      },
+      "line_number": 8,
+      "absolute_offset": 219,
+      "submatches": [
+        {
+          "match": {
+            "text": "validateEnvelope"
+          },
+          "start": 24,
+          "end": 40
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/providers/market-prices-v3.mjs"
+      },
+      "lines": {
+        "text": "  const schemaCheck = validateEnvelopeSchema(envelope);\n"
+      },
+      "line_number": 1490,
+      "absolute_offset": 46987,
+      "submatches": [
+        {
+          "match": {
+            "text": "validateEnvelope"
+          },
+          "start": 22,
+          "end": 38
+        }
+      ]
+    }
+  },
+  {
+    "type": "end",
+    "data": {
+      "path": {
+        "text": "scripts/providers/market-prices-v3.mjs"
+      },
+      "binary_offset": null,
+      "stats": {
+        "elapsed": {
+          "secs": 0,
+          "nanos": 31792,
+          "human": "0.000032s"
+        },
+        "searches": 1,
+        "searches_with_match": 1,
+        "bytes_searched": 49634,
+        "bytes_printed": 650,
+        "matched_lines": 2,
+        "matches": 2
+      }
+    }
+  },
+  {
+    "type": "begin",
+    "data": {
+      "path": {
+        "text": "scripts/generate-eod-mirrors.mjs"
+      }
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/generate-eod-mirrors.mjs"
+      },
+      "lines": {
+        "text": "    schemaVersion: 1,\n"
+      },
+      "line_number": 36,
+      "absolute_offset": 946,
+      "submatches": [
+        {
+          "match": {
+            "text": "schemaVersion"
+          },
+          "start": 4,
+          "end": 17
+        }
+      ]
+    }
+  },
+  {
+    "type": "end",
+    "data": {
+      "path": {
+        "text": "scripts/generate-eod-mirrors.mjs"
+      },
+      "binary_offset": null,
+      "stats": {
+        "elapsed": {
+          "secs": 0,
+          "nanos": 7792,
+          "human": "0.000008s"
+        },
+        "searches": 1,
+        "searches_with_match": 1,
+        "bytes_searched": 2130,
+        "bytes_printed": 305,
+        "matched_lines": 1,
+        "matches": 1
+      }
+    }
+  },
+  {
+    "type": "begin",
+    "data": {
+      "path": {
+        "text": "scripts/build-mirrors-manifest.mjs"
+      }
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/build-mirrors-manifest.mjs"
+      },
+      "lines": {
+        "text": "    schemaVersion: raw?.schemaVersion || raw?.schema || \"unknown\",\n"
+      },
+      "line_number": 53,
+      "absolute_offset": 1258,
+      "submatches": [
+        {
+          "match": {
+            "text": "schemaVersion"
+          },
+          "start": 4,
+          "end": 17
+        },
+        {
+          "match": {
+            "text": "schemaVersion"
+          },
+          "start": 24,
+          "end": 37
+        }
+      ]
+    }
+  },
+  {
+    "type": "end",
+    "data": {
+      "path": {
+        "text": "scripts/build-mirrors-manifest.mjs"
+      },
+      "binary_offset": null,
+      "stats": {
+        "elapsed": {
+          "secs": 0,
+          "nanos": 10833,
+          "human": "0.000011s"
+        },
+        "searches": 1,
+        "searches_with_match": 1,
+        "bytes_searched": 1833,
+        "bytes_printed": 412,
+        "matched_lines": 1,
+        "matches": 2
+      }
+    }
+  },
+  {
+    "type": "begin",
+    "data": {
+      "path": {
+        "text": "scripts/providers/market-score-v3.mjs"
+      }
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/providers/market-score-v3.mjs"
+      },
+      "lines": {
+        "text": "import { buildEnvelope, validateEnvelopeSchema } from '../lib/envelope.js';\n"
+      },
+      "line_number": 6,
+      "absolute_offset": 160,
+      "submatches": [
+        {
+          "match": {
+            "text": "validateEnvelope"
+          },
+          "start": 24,
+          "end": 40
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/providers/market-score-v3.mjs"
+      },
+      "lines": {
+        "text": "  const schemaCheck = validateEnvelopeSchema(envelope);\n"
+      },
+      "line_number": 259,
+      "absolute_offset": 8582,
+      "submatches": [
+        {
+          "match": {
+            "text": "validateEnvelope"
+          },
+          "start": 22,
+          "end": 38
+        }
+      ]
+    }
+  },
+  {
+    "type": "end",
+    "data": {
+      "path": {
+        "text": "scripts/providers/market-score-v3.mjs"
+      },
+      "binary_offset": null,
+      "stats": {
+        "elapsed": {
+          "secs": 0,
+          "nanos": 12125,
+          "human": "0.000012s"
+        },
+        "searches": 1,
+        "searches_with_match": 1,
+        "bytes_searched": 9805,
+        "bytes_printed": 645,
+        "matched_lines": 2,
+        "matches": 2
+      }
+    }
+  },
+  {
+    "type": "begin",
+    "data": {
+      "path": {
+        "text": "scripts/providers/market-stats-v3.mjs"
+      }
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/providers/market-stats-v3.mjs"
+      },
+      "lines": {
+        "text": "import { buildEnvelope, validateEnvelopeSchema } from '../lib/envelope.js';\n"
+      },
+      "line_number": 6,
+      "absolute_offset": 175,
+      "submatches": [
+        {
+          "match": {
+            "text": "validateEnvelope"
+          },
+          "start": 24,
+          "end": 40
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/providers/market-stats-v3.mjs"
+      },
+      "lines": {
+        "text": "  const schemaCheck = validateEnvelopeSchema(envelope);\n"
+      },
+      "line_number": 470,
+      "absolute_offset": 16791,
+      "submatches": [
+        {
+          "match": {
+            "text": "validateEnvelope"
+          },
+          "start": 22,
+          "end": 38
+        }
+      ]
+    }
+  },
+  {
+    "type": "end",
+    "data": {
+      "path": {
+        "text": "scripts/providers/market-stats-v3.mjs"
+      },
+      "binary_offset": null,
+      "stats": {
+        "elapsed": {
+          "secs": 0,
+          "nanos": 9792,
+          "human": "0.000010s"
+        },
+        "searches": 1,
+        "searches_with_match": 1,
+        "bytes_searched": 18602,
+        "bytes_printed": 646,
+        "matched_lines": 2,
+        "matches": 2
+      }
+    }
+  },
+  {
+    "type": "begin",
+    "data": {
+      "path": {
+        "text": "scripts/update-macro-hub.v3.mjs"
+      }
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/update-macro-hub.v3.mjs"
+      },
+      "lines": {
+        "text": "    snapshot.meta.status = \"PARTIAL\";\n"
+      },
+      "line_number": 1166,
+      "absolute_offset": 41975,
+      "submatches": [
+        {
+          "match": {
+            "text": "meta.status"
+          },
+          "start": 13,
+          "end": 24
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/update-macro-hub.v3.mjs"
+      },
+      "lines": {
+        "text": "    schemaVersion: \"rv-mirror-v1\",\n"
+      },
+      "line_number": 1172,
+      "absolute_offset": 42176,
+      "submatches": [
+        {
+          "match": {
+            "text": "schemaVersion"
+          },
+          "start": 4,
+          "end": 17
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/update-macro-hub.v3.mjs"
+      },
+      "lines": {
+        "text": "      schemaVersion: \"v1\",\n"
+      },
+      "line_number": 1215,
+      "absolute_offset": 43348,
+      "submatches": [
+        {
+          "match": {
+            "text": "schemaVersion"
+          },
+          "start": 6,
+          "end": 19
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/update-macro-hub.v3.mjs"
+      },
+      "lines": {
+        "text": "    providerState.meta.status = Object.values(prov).some((p) => p.errors > 0) ? \"PARTIAL\" : \"OK\";\n"
+      },
+      "line_number": 1258,
+      "absolute_offset": 44750,
+      "submatches": [
+        {
+          "match": {
+            "text": "meta.status"
+          },
+          "start": 18,
+          "end": 29
+        }
+      ]
+    }
+  },
+  {
+    "type": "end",
+    "data": {
+      "path": {
+        "text": "scripts/update-macro-hub.v3.mjs"
+      },
+      "binary_offset": null,
+      "stats": {
+        "elapsed": {
+          "secs": 0,
+          "nanos": 30500,
+          "human": "0.000030s"
+        },
+        "searches": 1,
+        "searches_with_match": 1,
+        "bytes_searched": 45419,
+        "bytes_printed": 1118,
+        "matched_lines": 4,
+        "matches": 4
+      }
+    }
+  },
+  {
+    "type": "begin",
+    "data": {
+      "path": {
+        "text": "scripts/ops/rv_contract_asserts.jq"
+      }
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/ops/rv_contract_asserts.jq"
+      },
+      "lines": {
+        "text": "  and (.meta.status | is_str)\n"
+      },
+      "line_number": 15,
+      "absolute_offset": 380,
+      "submatches": [
+        {
+          "match": {
+            "text": "meta.status"
+          },
+          "start": 8,
+          "end": 19
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/ops/rv_contract_asserts.jq"
+      },
+      "lines": {
+        "text": "  and (.meta.status | is_str);\n"
+      },
+      "line_number": 36,
+      "absolute_offset": 1457,
+      "submatches": [
+        {
+          "match": {
+            "text": "meta.status"
+          },
+          "start": 8,
+          "end": 19
+        }
+      ]
+    }
+  },
+  {
+    "type": "end",
+    "data": {
+      "path": {
+        "text": "scripts/ops/rv_contract_asserts.jq"
+      },
+      "binary_offset": null,
+      "stats": {
+        "elapsed": {
+          "secs": 0,
+          "nanos": 10541,
+          "human": "0.000011s"
+        },
+        "searches": 1,
+        "searches_with_match": 1,
+        "bytes_searched": 2385,
+        "bytes_printed": 553,
+        "matched_lines": 2,
+        "matches": 2
+      }
+    }
+  },
+  {
+    "type": "begin",
+    "data": {
+      "path": {
+        "text": "functions/api/_shared/feature-contract.js"
+      }
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "functions/api/_shared/feature-contract.js"
+      },
+      "lines": {
+        "text": "  const schemaVersion =\n"
+      },
+      "line_number": 70,
+      "absolute_offset": 2501,
+      "submatches": [
+        {
+          "match": {
+            "text": "schemaVersion"
+          },
+          "start": 8,
+          "end": 21
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "functions/api/_shared/feature-contract.js"
+      },
+      "lines": {
+        "text": "    typeof payload.schemaVersion === \"number\" ? payload.schemaVersion : 1;\n"
+      },
+      "line_number": 71,
+      "absolute_offset": 2525,
+      "submatches": [
+        {
+          "match": {
+            "text": "schemaVersion"
+          },
+          "start": 19,
+          "end": 32
+        },
+        {
+          "match": {
+            "text": "schemaVersion"
+          },
+          "start": 56,
+          "end": 69
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "functions/api/_shared/feature-contract.js"
+      },
+      "lines": {
+        "text": "    schemaVersion,\n"
+      },
+      "line_number": 101,
+      "absolute_offset": 3433,
+      "submatches": [
+        {
+          "match": {
+            "text": "schemaVersion"
+          },
+          "start": 4,
+          "end": 17
+        }
+      ]
+    }
+  },
+  {
+    "type": "end",
+    "data": {
+      "path": {
+        "text": "functions/api/_shared/feature-contract.js"
+      },
+      "binary_offset": null,
+      "stats": {
+        "elapsed": {
+          "secs": 0,
+          "nanos": 4958,
+          "human": "0.000005s"
+        },
+        "searches": 1,
+        "searches_with_match": 1,
+        "bytes_searched": 4164,
+        "bytes_printed": 911,
+        "matched_lines": 3,
+        "matches": 4
+      }
+    }
+  },
+  {
+    "type": "begin",
+    "data": {
+      "path": {
+        "text": "scripts/ops/rv_verify_truth_summary.mjs"
+      }
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/ops/rv_verify_truth_summary.mjs"
+      },
+      "lines": {
+        "text": "  fail('meta.status missing');\n"
+      },
+      "line_number": 22,
+      "absolute_offset": 679,
+      "submatches": [
+        {
+          "match": {
+            "text": "meta.status"
+          },
+          "start": 8,
+          "end": 19
+        }
+      ]
+    }
+  },
+  {
+    "type": "end",
+    "data": {
+      "path": {
+        "text": "scripts/ops/rv_verify_truth_summary.mjs"
+      },
+      "binary_offset": null,
+      "stats": {
+        "elapsed": {
+          "secs": 0,
+          "nanos": 11958,
+          "human": "0.000012s"
+        },
+        "searches": 1,
+        "searches_with_match": 1,
+        "bytes_searched": 4194,
+        "bytes_printed": 326,
+        "matched_lines": 1,
+        "matches": 1
+      }
+    }
+  },
+  {
+    "type": "begin",
+    "data": {
+      "path": {
+        "text": "functions/api/_shared/static-only.js"
+      }
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "functions/api/_shared/static-only.js"
+      },
+      "lines": {
+        "text": "    schemaVersion: \"v1\",\n"
+      },
+      "line_number": 34,
+      "absolute_offset": 938,
+      "submatches": [
+        {
+          "match": {
+            "text": "schemaVersion"
+          },
+          "start": 4,
+          "end": 17
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "functions/api/_shared/static-only.js"
+      },
+      "lines": {
+        "text": "      class: 'UI_CONTRACT_FAILED',\n"
+      },
+      "line_number": 153,
+      "absolute_offset": 3785,
+      "submatches": [
+        {
+          "match": {
+            "text": "CONTRACT_FAIL"
+          },
+          "start": 17,
+          "end": 30
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "functions/api/_shared/static-only.js"
+      },
+      "lines": {
+        "text": "  const isV3 = snapshot.schema_version === \"3.0\" || snapshot.schemaVersion === \"v3\";\n"
+      },
+      "line_number": 535,
+      "absolute_offset": 15345,
+      "submatches": [
+        {
+          "match": {
+            "text": "schemaVersion"
+          },
+          "start": 61,
+          "end": 74
+        }
+      ]
+    }
+  },
+  {
+    "type": "end",
+    "data": {
+      "path": {
+        "text": "functions/api/_shared/static-only.js"
+      },
+      "binary_offset": null,
+      "stats": {
+        "elapsed": {
+          "secs": 0,
+          "nanos": 7458,
+          "human": "0.000007s"
+        },
+        "searches": 1,
+        "searches_with_match": 1,
+        "bytes_searched": 16354,
+        "bytes_printed": 869,
+        "matched_lines": 3,
+        "matches": 3
+      }
+    }
+  },
+  {
+    "type": "begin",
+    "data": {
+      "path": {
+        "text": "scripts/ops/verify-runblock1.zsh"
+      }
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/ops/verify-runblock1.zsh"
+      },
+      "lines": {
+        "text": "    elif (.meta.status|type)!=\"string\" then err(\"meta.status is not string\")\n"
+      },
+      "line_number": 184,
+      "absolute_offset": 7043,
+      "submatches": [
+        {
+          "match": {
+            "text": "meta.status"
+          },
+          "start": 11,
+          "end": 22
+        },
+        {
+          "match": {
+            "text": "meta.status"
+          },
+          "start": 49,
+          "end": 60
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/ops/verify-runblock1.zsh"
+      },
+      "lines": {
+        "text": "    elif (.ok==false and .meta.status!=\"error\") then err(\"ok=false but meta.status is not error\")\n"
+      },
+      "line_number": 192,
+      "absolute_offset": 7825,
+      "submatches": [
+        {
+          "match": {
+            "text": "meta.status"
+          },
+          "start": 26,
+          "end": 37
+        },
+        {
+          "match": {
+            "text": "meta.status"
+          },
+          "start": 71,
+          "end": 82
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/ops/verify-runblock1.zsh"
+      },
+      "lines": {
+        "text": "    status=$(jq -r '.meta.status' \"$tmp_body\")\n"
+      },
+      "line_number": 204,
+      "absolute_offset": 8532,
+      "submatches": [
+        {
+          "match": {
+            "text": "meta.status"
+          },
+          "start": 21,
+          "end": 32
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/ops/verify-runblock1.zsh"
+      },
+      "lines": {
+        "text": "    elif (.meta.status|type)!=\"string\" then err(\"meta.status is not string\")\n"
+      },
+      "line_number": 255,
+      "absolute_offset": 10409,
+      "submatches": [
+        {
+          "match": {
+            "text": "meta.status"
+          },
+          "start": 11,
+          "end": 22
+        },
+        {
+          "match": {
+            "text": "meta.status"
+          },
+          "start": 49,
+          "end": 60
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/ops/verify-runblock1.zsh"
+      },
+      "lines": {
+        "text": "    elif (.ok==false and .meta.status!=\"error\") then err(\"ok=false but meta.status is not error\")\n"
+      },
+      "line_number": 262,
+      "absolute_offset": 11045,
+      "submatches": [
+        {
+          "match": {
+            "text": "meta.status"
+          },
+          "start": 26,
+          "end": 37
+        },
+        {
+          "match": {
+            "text": "meta.status"
+          },
+          "start": 71,
+          "end": 82
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/ops/verify-runblock1.zsh"
+      },
+      "lines": {
+        "text": "    status=$(jq -r '.meta.status' \"$tmp_body\")\n"
+      },
+      "line_number": 271,
+      "absolute_offset": 11506,
+      "submatches": [
+        {
+          "match": {
+            "text": "meta.status"
+          },
+          "start": 21,
+          "end": 32
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/ops/verify-runblock1.zsh"
+      },
+      "lines": {
+        "text": "    if (.meta.status|type)!=\"string\" then err(\"meta.status missing\")\n"
+      },
+      "line_number": 304,
+      "absolute_offset": 12628,
+      "submatches": [
+        {
+          "match": {
+            "text": "meta.status"
+          },
+          "start": 9,
+          "end": 20
+        },
+        {
+          "match": {
+            "text": "meta.status"
+          },
+          "start": 47,
+          "end": 58
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/ops/verify-runblock1.zsh"
+      },
+      "lines": {
+        "text": "    elif ((.meta.status|ascii_downcase)==\"fresh\" or (.meta.status|ascii_downcase)==\"live\") then err(\"meta.status should not be fresh/live\")\n"
+      },
+      "line_number": 305,
+      "absolute_offset": 12697,
+      "submatches": [
+        {
+          "match": {
+            "text": "meta.status"
+          },
+          "start": 12,
+          "end": 23
+        },
+        {
+          "match": {
+            "text": "meta.status"
+          },
+          "start": 54,
+          "end": 65
+        },
+        {
+          "match": {
+            "text": "meta.status"
+          },
+          "start": 101,
+          "end": 112
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/ops/verify-runblock1.zsh"
+      },
+      "lines": {
+        "text": "    status=$(jq -r '.meta.status' \"$tmp_body\")\n"
+      },
+      "line_number": 311,
+      "absolute_offset": 12951,
+      "submatches": [
+        {
+          "match": {
+            "text": "meta.status"
+          },
+          "start": 21,
+          "end": 32
+        }
+      ]
+    }
+  },
+  {
+    "type": "end",
+    "data": {
+      "path": {
+        "text": "scripts/ops/verify-runblock1.zsh"
+      },
+      "binary_offset": null,
+      "stats": {
+        "elapsed": {
+          "secs": 0,
+          "nanos": 24750,
+          "human": "0.000025s"
+        },
+        "searches": 1,
+        "searches_with_match": 1,
+        "bytes_searched": 18087,
+        "bytes_printed": 3050,
+        "matched_lines": 9,
+        "matches": 16
+      }
+    }
+  },
+  {
+    "type": "begin",
+    "data": {
+      "path": {
+        "text": "scripts/providers/universe-v2.mjs"
+      }
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/providers/universe-v2.mjs"
+      },
+      "lines": {
+        "text": "import { buildEnvelope, validateEnvelopeSchema } from '../lib/envelope.js';\n"
+      },
+      "line_number": 6,
+      "absolute_offset": 184,
+      "submatches": [
+        {
+          "match": {
+            "text": "validateEnvelope"
+          },
+          "start": 24,
+          "end": 40
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/providers/universe-v2.mjs"
+      },
+      "lines": {
+        "text": "  const schemaCheck = validateEnvelopeSchema(envelope);\n"
+      },
+      "line_number": 289,
+      "absolute_offset": 8788,
+      "submatches": [
+        {
+          "match": {
+            "text": "validateEnvelope"
+          },
+          "start": 22,
+          "end": 38
+        }
+      ]
+    }
+  },
+  {
+    "type": "end",
+    "data": {
+      "path": {
+        "text": "scripts/providers/universe-v2.mjs"
+      },
+      "binary_offset": null,
+      "stats": {
+        "elapsed": {
+          "secs": 0,
+          "nanos": 11917,
+          "human": "0.000012s"
+        },
+        "searches": 1,
+        "searches_with_match": 1,
+        "bytes_searched": 10309,
+        "bytes_printed": 633,
+        "matched_lines": 2,
+        "matches": 2
+      }
+    }
+  },
+  {
+    "data": {
+      "elapsed_total": {
+        "human": "0.004591s",
+        "nanos": 4591166,
+        "secs": 0
+      },
+      "stats": {
+        "bytes_printed": 47956,
+        "bytes_searched": 1321767,
+        "elapsed": {
+          "human": "0.001661s",
+          "nanos": 1661380,
+          "secs": 0
+        },
+        "matched_lines": 160,
+        "matches": 191,
+        "searches": 291,
+        "searches_with_match": 48
+      }
+    },
+    "type": "summary"
+  }
+]

@@ -1,0 +1,1725 @@
+scripts/fix-api-exports.mjs:31:    return { status: 'skip', reason: 'already_fixed' };
+scripts/fix-api-exports.mjs:45:      return { status: 'fixed', type: 'serveStaticJson' };
+scripts/fix-api-exports.mjs:51:    return { status: 'skip', reason: 'custom_handler_needs_manual_fix' };
+scripts/fix-api-exports.mjs:54:  return { status: 'skip', reason: 'no_pattern_match' };
+scripts/fix-api-exports.mjs:75:      if (result.status === 'fixed') {
+src/lib/rv-envelope.ts:14:  status: RVMetaStatus;
+src/lib/rv-envelope.ts:33:  return { meta: { status: "OK", isStale: false, generatedAt: nowIso(), source, warnings: [], debug },
+src/lib/rv-envelope.ts:38:  return { meta: { status: "STALE", isStale: true, generatedAt: nowIso(), source, reason, stalenessSec,
+src/lib/rv-envelope.ts:44:  return { meta: { status: "NO_DATA", isStale: true, generatedAt: nowIso(), source, reason,
+src/lib/rv-envelope.ts:50:  return { meta: { status: "ERROR", isStale: true, generatedAt: nowIso(), source, reason,
+functions/_shared/budget.js:30:      status: response.status,
+scripts/test-truth-chain.mjs:3:import { onRequestGet } from '../functions/api/mission-control/summary.js';
+scripts/test-truth-chain.mjs:12:  const firstFail = steps.find((step) => step?.status === 'FAIL');
+scripts/test-truth-chain.mjs:14:  const firstWarn = steps.find((step) => step?.status === 'WARN');
+scripts/test-truth-chain.mjs:26:      return new Response(raw, { status: 200, headers: { 'Content-Type': 'application/json' } });
+scripts/test-truth-chain.mjs:28:      return new Response('not found', { status: 404 });
+scripts/test-truth-chain.mjs:35:      meta: { status: 'ok', asOf: '2026-01-30T00:00:00.000Z' },
+scripts/test-truth-chain.mjs:36:      metadata: { status: 'OK', served_from: 'RUNTIME' },
+scripts/test-truth-chain.mjs:46:    return new Response(JSON.stringify(payload), { status: 200, headers: { 'Content-Type': 'application/json' } });
+scripts/test-truth-chain.mjs:51:  return new Response('fetch not available', { status: 500 });
+scripts/test-truth-chain.mjs:54:const request = new Request('http://localhost/api/mission-control/summary?debug=1');
+scripts/test-truth-chain.mjs:60:const pricesHealth = payload?.data?.health?.prices;
+scripts/test-truth-chain.mjs:61:if (!pricesHealth || typeof pricesHealth.status !== 'string') {
+scripts/test-truth-chain.mjs:62:  fail('Missing health.prices.status');
+scripts/test-truth-chain.mjs:64:if (pricesHealth.status !== 'OK') {
+scripts/test-truth-chain.mjs:65:  fail(`health.prices.status expected OK, got ${pricesHealth.status}`);
+scripts/test-truth-chain.mjs:68:  fail(`health.prices.reason expected CONTRACT_OK, got ${pricesHealth.reason}`);
+scripts/test-truth-chain.mjs:71:const truthChain = payload?.data?.opsBaseline?.truthChain?.nasdaq100;
+scripts/test-truth-chain.mjs:73:  fail('Missing opsBaseline.truthChain.nasdaq100');
+scripts/test-truth-chain.mjs:88:  if (!['OK', 'WARN', 'FAIL', 'UNKNOWN', 'INFO'].includes(step.status)) {
+scripts/test-truth-chain.mjs:89:    fail(`Truth chain step ${step.id} has invalid status ${step.status}`);
+scripts/test-truth-chain.mjs:113:const p6 = priceTruth.steps.find((s) => s.id === 'P6_API_CONTRACT')?.status;
+scripts/test-truth-chain.mjs:114:const p7 = priceTruth.steps.find((s) => s.id === 'P7_UI_RENDERS')?.status;
+scripts/test-truth-chain.mjs:115:if (p6 === 'OK' && p7 === 'OK' && priceTruth.status === 'ERROR') {
+scripts/test-truth-chain.mjs:116:  fail('priceTruth.status should not be ERROR when P6 and P7 are OK');
+scripts/test-truth-chain.mjs:134:      fail(`P3 issue contains non-contract field: ${issue}`);
+src/lib/envelope.ts:10:  status: MetaStatus;
+src/lib/envelope.ts:53:  assert(typeof meta.status === "string", "Envelope.meta.status missing");
+src/lib/envelope.ts:54:  assert(STATUS_SET.has(meta.status), `Envelope.meta.status invalid: ${meta.status}`);
+src/lib/envelope.ts:78:      status: metaPartial.status ?? "fresh",
+src/lib/envelope.ts:109:      status: metaPartial.status ?? "error",
+scripts/healthcheck.sh:7:  "/api/market-health"
+scripts/healthcheck.sh:14:  "/api/snapshots/market_health"
+scripts/healthcheck.sh:22:echo "Running healthcheck against: ${BASE_URL}"
+scripts/healthcheck.sh:32:  status="FAIL"
+scripts/healthcheck.sh:47:    py_status=$?
+scripts/healthcheck.sh:50:    if [[ ${py_status} -eq 0 ]]; then
+scripts/healthcheck.sh:52:        status="OK"
+scripts/healthcheck.sh:56:        status="PARTIAL"
+scripts/healthcheck.sh:60:        status="FAIL"
+scripts/healthcheck.sh:65:      status="FAIL"
+scripts/healthcheck.sh:73:  if [[ "${status}" == "OK" ]]; then
+scripts/healthcheck.sh:75:  elif [[ "${status}" == "PARTIAL" ]]; then
+scripts/healthcheck.sh:81:  printf "%-32s %-8s %s (content-type: %s)\n" "${endpoint}" "${status}" "${message}" "${content_type:-unknown}"
+scripts/generate-health-snapshot.mjs:5:const OUT = "public/data/snapshots/health/latest.json";
+scripts/generate-health-snapshot.mjs:18:  const { validate } = createValidator(schema);
+scripts/generate-health-snapshot.mjs:33:    module: "health",
+scripts/generate-health-snapshot.mjs:37:    data: payload ?? { note: "health snapshot regenerated (empty legacy payload)" },
+scripts/generate-health-snapshot.mjs:41:  const ok = validate(env);
+scripts/generate-health-snapshot.mjs:43:    console.error("FAIL: generated health snapshot does not validate against schema");
+scripts/generate-health-snapshot.mjs:44:    console.error(validate.errors);
+scripts/marketphase-validate.mjs:15:function validateSwingList(errors, list, label) {
+scripts/marketphase-validate.mjs:34:function validateEnvelope(errors, payload, symbol) {
+scripts/marketphase-validate.mjs:49:  if (!meta.status) pushError(errors, `${symbol}: meta.status missing.`);
+scripts/marketphase-validate.mjs:68:  validateSwingList(errors, swings.raw, `${symbol}: swings.raw`);
+scripts/marketphase-validate.mjs:69:  validateSwingList(errors, swings.confirmed, `${symbol}: swings.confirmed`);
+scripts/marketphase-validate.mjs:146:    validateEnvelope(errors, payload, symbol);
+scripts/ui-path/prove_ui_path.mjs:70:      status: response.status(),
+scripts/ui-path/prove_ui_path.mjs:147:    if (!json) return { ok: false, status: res.status, contains: null, url: snapUrl };
+scripts/ui-path/prove_ui_path.mjs:152:    return { ok: res.ok, status: res.status, contains: found, url: snapUrl };
+scripts/ui-path/prove_ui_path.mjs:154:    return { ok: false, status: null, contains: null, url: null };
+scripts/ui-path/prove_ui_path.mjs:212:      status: winning?.status ?? null,
+scripts/ui-path/prove_ui_path.mjs:215:      contract: {
+scripts/ui-path/prove_ui_path.mjs:237:    status: winning?.status ?? null,
+functions/api/diag.js:6:    if (res && typeof res.status === "number" && res.status === 503) {
+functions/api/diag.js:15:        summary: {
+functions/api/diag.js:16:          status: "STUB",
+functions/api/diag.js:23:        status: "STUB",
+functions/api/diag.js:37:      status: 200,
+scripts/test-api.sh:10:ENDPOINTS="health diag debug-bundle debug-matrix arb-risk-regime arb-liquidity-pulse arb-breadth-lite"
+scripts/test-api.sh:64:        fail "unknown contract kind for $url"
+scripts/generate-snapshots.mjs.bak.1768075753:190:      status: metaStatus,
+scripts/generate-snapshots.mjs.bak.1768075753:204:    status: metaStatus,
+scripts/generate-snapshots.mjs.bak.1768075753:223:    const summary = await generateSnapshot(entry);
+scripts/generate-snapshots.mjs.bak.1768075753:224:    manifest.snapshots[entry.id] = summary;
+scripts/generate-snapshots.mjs.bak.1768075753:226:      `[snapshot] ${entry.id} status=${summary.status} reason=${summary.reason} items=${summary.itemsCount} durationMs=${summary.durationMs}`
+scripts/generate-snapshots.mjs.bak.1768075753:235:      status: "LIVE",
+scripts/aggregator/finalize.mjs:20:import { validateEnvelopeSchema } from '../lib/envelope.js';
+scripts/aggregator/finalize.mjs:174:function validateSnapshot(snapshot, moduleConfig) {
+scripts/aggregator/finalize.mjs:178:  const schemaCheck = validateEnvelopeSchema(snapshot);
+scripts/aggregator/finalize.mjs:206:  // Validation status check - HARD BLOCK on validation.passed=false
+scripts/aggregator/finalize.mjs:242:function validateArtifactConsistency(moduleName, snapshot, state) {
+scripts/aggregator/finalize.mjs:283:  const summary = {
+scripts/aggregator/finalize.mjs:298:      if (module.status === 'error') {
+scripts/aggregator/finalize.mjs:299:        summary.critical_ok = false;
+scripts/aggregator/finalize.mjs:301:      } else if (module.status === 'ok' || module.status === 'warn') {
+scripts/aggregator/finalize.mjs:306:      module.published = (module.status === 'ok' || module.status === 'warn');
+scripts/aggregator/finalize.mjs:312:    // Update summary
+scripts/aggregator/finalize.mjs:313:    if (module.status === 'ok') summary.ok++;
+scripts/aggregator/finalize.mjs:314:    else if (module.status === 'warn') summary.warn++;
+scripts/aggregator/finalize.mjs:315:    else if (module.status === 'error') summary.error++;
+scripts/aggregator/finalize.mjs:318:  summary.stale_ratio = summary.modules_total > 0 
+scripts/aggregator/finalize.mjs:319:    ? (summary.warn + summary.error) / summary.modules_total 
+scripts/aggregator/finalize.mjs:322:  manifest.summary = summary;
+scripts/aggregator/finalize.mjs:325:  if (!summary.critical_ok) {
+scripts/aggregator/finalize.mjs:354:      status: state.status || 'unknown',
+scripts/aggregator/finalize.mjs:376:    summary: {} // Will be computed by publish policy
+scripts/aggregator/finalize.mjs:477:        console.log(`${result.status} ${moduleName}`);
+scripts/aggregator/finalize.mjs:481:        if (result.status === 'KV_WRITE_FAILED') {
+scripts/aggregator/finalize.mjs:622:          summary: {
+scripts/aggregator/finalize.mjs:677:      const result = validateSnapshot(artifact.snapshot, config);
+scripts/aggregator/finalize.mjs:688:      const consistency = validateArtifactConsistency(moduleName, artifact.snapshot, artifact.state);
+scripts/aggregator/finalize.mjs:721:        summary: {
+scripts/aggregator/finalize.mjs:737:    // Replace artifacts set with validated artifacts.
+scripts/aggregator/finalize.mjs:739:    console.log('✓ All artifacts validated\n');
+scripts/aggregator/finalize.mjs:747:    console.log(`✓ Manifest built: ${manifest.summary.ok} ok, ${manifest.summary.error} error\n`);
+scripts/aggregator/finalize.mjs:799:        critical_ok: manifest.summary.critical_ok
+scripts/aggregator/finalize.mjs:810:    console.log(`   Published: ${manifest.summary.ok} modules`);
+scripts/aggregator/finalize.mjs:811:    console.log(`   Errors: ${manifest.summary.error}`);
+scripts/aggregator/finalize.mjs:812:    console.log(`   Critical OK: ${manifest.summary.critical_ok}`);
+functions/api/probe/[module].js:9: * - Validate UI contract fields
+functions/api/probe/[module].js:14: * - Returns: latency, status, proof chain, UI field check
+functions/api/probe/[module].js:158:      apiError = `HTTP ${apiResponse.status}`;
+functions/api/probe/[module].js:170:    const requiredPaths = moduleConfig.ui_contract?.required_paths || [];
+functions/api/probe/[module].js:174:  // Determine overall status
+functions/api/probe/[module].js:203:      status: apiStatus,
+functions/api/probe/[module].js:204:      http_status: apiResponse?.status || null,
+functions/api/probe/[module].js:208:      overall_status: overallStatus,
+functions/api/probe/[module].js:209:      proof_status: proofStatus,
+functions/api/probe/[module].js:212:    ui_contract: {
+functions/api/probe/[module].js:213:      required_paths: moduleConfig?.ui_contract?.required_paths || [],
+functions/api/probe/[module].js:233:    status: overallStatus === 'PASS' ? 200 : 503
+scripts/validate-snapshots.js:18:function validateSnapshot(filePath) {
+scripts/validate-snapshots.js:31:  // Snapshot contract (v3):
+scripts/validate-snapshots.js:32:  // - meta.status/meta.reason/meta.generatedAt/meta.asOf/meta.source/meta.ttlSeconds/meta.runId
+scripts/validate-snapshots.js:34:  assert(isNonEmptyString(meta.status), `${filePath}: meta.status invalid`, errors);
+scripts/validate-snapshots.js:59:    errors.push(...validateSnapshot(filePath));
+scripts/generate-snapshots.mjs.bak.1768075080:180:      status: metaStatus,
+scripts/generate-snapshots.mjs.bak.1768075080:194:    status: metaStatus,
+scripts/generate-snapshots.mjs.bak.1768075080:213:    const summary = await generateSnapshot(entry);
+scripts/generate-snapshots.mjs.bak.1768075080:214:    manifest.snapshots[entry.id] = summary;
+scripts/generate-snapshots.mjs.bak.1768075080:216:      `[snapshot] ${entry.id} status=${summary.status} reason=${summary.reason} items=${summary.itemsCount} durationMs=${summary.durationMs}`
+scripts/generate-snapshots.mjs.bak.1768075080:225:      status: "LIVE",
+functions/api/mission-control.js:53:    status: snapshotInfo.ok ? 'ok' : 'missing',
+functions/api/mission-control.js:77:    module: 'mission-control',
+scripts/contract-smoke.mjs:28:  console.error(`[contract-smoke] ${message}`);
+scripts/contract-smoke.mjs:45:  if (!rows.length && (meta?.status === "LIVE" || meta?.status === "STALE")) return true;
+scripts/contract-smoke.mjs:84:  const emptyValidTech = isEmptyValid({ status: "LIVE" }, []);
+scripts/contract-smoke.mjs:87:  const emptyValidAlpha = isEmptyValid({ status: "STALE" }, []);
+scripts/contract-smoke.mjs:90:  console.log("[contract-smoke] ok");
+functions/api/debug-matrix.js:6:    if (res && typeof res.status === "number" && res.status === 503) {
+functions/api/debug-matrix.js:16:        summary: {
+functions/api/debug-matrix.js:17:          status: "STUB",
+functions/api/debug-matrix.js:22:        status: "STUB",
+functions/api/debug-matrix.js:36:      status: 200,
+scripts/generate-snapshots.mjs.bak.1768075659:190:      status: metaStatus,
+scripts/generate-snapshots.mjs.bak.1768075659:204:    status: metaStatus,
+scripts/generate-snapshots.mjs.bak.1768075659:223:    const summary = await generateSnapshot(entry);
+scripts/generate-snapshots.mjs.bak.1768075659:224:    manifest.snapshots[entry.id] = summary;
+scripts/generate-snapshots.mjs.bak.1768075659:226:      `[snapshot] ${entry.id} status=${summary.status} reason=${summary.reason} items=${summary.itemsCount} durationMs=${summary.durationMs}`
+scripts/generate-snapshots.mjs.bak.1768075659:235:      status: "LIVE",
+scripts/seeder.js:228:  { items, dataAt, status, reason, generatedAt, latencyMs, extraData, metaDetails }
+scripts/seeder.js:239:  const safeStatus = typeof status === "string" && status ? status : "ERROR";
+scripts/seeder.js:264:      status: safeStatus,
+scripts/seeder.js:287:    return { allowed: false, status: "ERROR", reason: "POISON_GUARD" };
+scripts/seeder.js:290:    return { allowed: true, status: "PARTIAL", reason: "DEGRADED_COVERAGE" };
+scripts/seeder.js:293:    return { allowed: false, status: "ERROR", reason: "POISON_GUARD" };
+scripts/seeder.js:295:  return { allowed: true, status: "LIVE", reason: "OK" };
+scripts/seeder.js:310:  const status = meta.status;
+scripts/seeder.js:314:  if (typeof status !== "string" || !status.trim()) return true;
+scripts/seeder.js:317:  if (status === "ERROR" && (!meta.details || typeof meta.details !== "object")) return true;
+scripts/seeder.js:327:    status: "ERROR",
+scripts/seeder.js:486:  return { items, dataAt, extraData: { summary: { advancers, decliners, unchanged } } };
+scripts/seeder.js:511:  return { items, dataAt, extraData: { summary: { highs, lows } } };
+scripts/seeder.js:571:  const breadthSummary = breadthSnapshot?.data?.summary || {};
+scripts/seeder.js:857:  const summary = breadthSnapshot?.data?.summary || {};
+scripts/seeder.js:859:  const advancers = Number.isFinite(summary.advancers)
+scripts/seeder.js:860:    ? summary.advancers
+scripts/seeder.js:862:  const decliners = Number.isFinite(summary.decliners)
+scripts/seeder.js:863:    ? summary.decliners
+scripts/seeder.js:873:  const prevSummary = !isPlaceholderSnapshot(prevSnapshot) ? prevSnapshot?.data?.summary || {} : {};
+scripts/seeder.js:957:    const status = snapshot?.meta?.status || "ERROR";
+scripts/seeder.js:959:    if (status === "LIVE") live += 1;
+scripts/seeder.js:960:    else if (status === "PARTIAL") partial += 1;
+scripts/seeder.js:962:    items.push({ blockId, status, reason });
+scripts/seeder.js:967:    summary: {
+scripts/seeder.js:1003:  "market-health-summary": runMarketHealthSummary
+scripts/seeder.js:1025:    status: evaluation.status,
+scripts/seeder.js:1033:  if (dataAtCheckBlocks.has(entry.blockId) && snapshot.meta.status === "LIVE") {
+scripts/seeder.js:1035:      snapshot.meta.status = "ERROR";
+scripts/seeder.js:1137:            status: manifestStatusForReason(reason),
+scripts/seeder.js:1170:            status: manifestStatusForReason(reason),
+scripts/seeder.js:1202:              status: manifestStatusForReason(reason),
+scripts/seeder.js:1227:            status: manifestStatusForReason(reason),
+scripts/seeder.js:1244:          if (snapshot.meta.status === "ERROR") {
+scripts/seeder.js:1271:            status: snapshot.meta.status,
+scripts/seeder.js:1301:          status: manifestStatusForReason(reason),
+scripts/refresh-health-assets.mjs:25:function downgradeStatus(status, reason) {
+scripts/refresh-health-assets.mjs:26:  const s = String(status || "").toUpperCase();
+scripts/refresh-health-assets.mjs:32:function mapStatusToSystemHealth(status) {
+scripts/refresh-health-assets.mjs:33:  // legacy system-health.json uses OK/FAIL
+scripts/refresh-health-assets.mjs:34:  if (status === "ERROR") return "FAIL";
+scripts/refresh-health-assets.mjs:45:    const reason = snap?.meta?.reason || snap?.meta?.status || snap?.metadata?.validation?.reason || "OK";
+scripts/refresh-health-assets.mjs:46:    const statusV3 = downgradeStatus(snap?.meta?.status, snap?.meta?.reason);
+scripts/refresh-health-assets.mjs:47:    const status = mapStatusToSystemHealth(statusV3);
+scripts/refresh-health-assets.mjs:48:    snapshots.push({ blockId, status, reason: String(reason || "OK") });
+scripts/refresh-health-assets.mjs:49:    if (status === "OK") ok += 1;
+scripts/refresh-health-assets.mjs:57:    summary: { total: snapshots.length, ok, fail },
+scripts/refresh-health-assets.mjs:66:    const status = downgradeStatus(b?.status, b?.reason);
+scripts/refresh-health-assets.mjs:67:    return { ...b, status };
+scripts/refresh-health-assets.mjs:73:    const st = String(b?.status || "ERROR").toUpperCase();
+scripts/refresh-health-assets.mjs:86:  base.blockId = "health";
+scripts/refresh-health-assets.mjs:92:    status: overallStatus,
+scripts/refresh-health-assets.mjs:96:    source: "health",
+scripts/refresh-health-assets.mjs:101:    freshness: { status: "fresh", ageMinutes: 0 },
+scripts/refresh-health-assets.mjs:124:        id: "health_status",
+scripts/refresh-health-assets.mjs:125:        label: "health",
+scripts/refresh-health-assets.mjs:135:    summary: {
+scripts/refresh-health-assets.mjs:156:  const healthPath = path.join(SNAPSHOTS_DIR, "health.json");
+scripts/refresh-health-assets.mjs:157:  const healthDirLatestPath = path.join(SNAPSHOTS_DIR, "health", "latest.json");
+scripts/refresh-health-assets.mjs:158:  const healthLatestPath = path.join(PUBLIC_DATA, "blocks", "health.latest.json");
+scripts/refresh-health-assets.mjs:159:  const systemHealthPath = path.join(PUBLIC_DATA, "system-health.json");
+scripts/refresh-health-assets.mjs:166:    existingHealth = await readJson(healthPath);
+scripts/refresh-health-assets.mjs:172:  await writeJson(healthPath, refreshedHealth);
+scripts/refresh-health-assets.mjs:173:  await writeJson(healthLatestPath, refreshedHealth);
+scripts/refresh-health-assets.mjs:175:  const healthBlocks = Array.isArray(refreshedHealth?.data?.blocks) ? refreshedHealth.data.blocks : [];
+scripts/refresh-health-assets.mjs:177:  const { validate } = createValidator(schema);
+scripts/refresh-health-assets.mjs:179:    module: "health",
+scripts/refresh-health-assets.mjs:182:    source: "health-refresh",
+scripts/refresh-health-assets.mjs:185:    data: healthBlocks,
+scripts/refresh-health-assets.mjs:186:    record_count: healthBlocks.length,
+scripts/refresh-health-assets.mjs:187:    expected_count: healthBlocks.length,
+scripts/refresh-health-assets.mjs:197:  if (!validate(envelope)) {
+scripts/refresh-health-assets.mjs:199:    console.error(validate.errors);
+scripts/refresh-health-assets.mjs:200:    throw new Error("health latest.json failed schema validation");
+scripts/refresh-health-assets.mjs:203:  await writeJson(healthDirLatestPath, envelope);
+scripts/refresh-health-assets.mjs:220:  console.log(`[health-refresh] updated ${path.relative(ROOT, healthPath)}`);
+scripts/refresh-health-assets.mjs:221:  console.log(`[health-refresh] updated ${path.relative(ROOT, healthLatestPath)}`);
+scripts/refresh-health-assets.mjs:222:  console.log(`[health-refresh] updated ${path.relative(ROOT, systemHealthPath)} (n=${legacySystemHealth.summary.total})`);
+functions/api/debug-bundle.js:6:    if (res && typeof res.status === "number" && res.status === 503) {
+functions/api/debug-bundle.js:16:        summary: {
+functions/api/debug-bundle.js:17:          status: "STUB",
+functions/api/debug-bundle.js:22:        status: "STUB",
+functions/api/debug-bundle.js:36:      status: 200,
+scripts/providers/marketaux.js:47:      httpStatus: res.status,
+scripts/validate-symbols.mjs:55:const validate = ajv.compile(schema);
+scripts/validate-symbols.mjs:57:const valid = validate(symbols);
+scripts/validate-symbols.mjs:59:  fail("symbols.json failed schema validation", formatAjvErrors(validate.errors));
+scripts/test-scheduler.mjs:3:import { onRequestGet as schedulerHealth } from "../functions/api/scheduler/health.js";
+scripts/test-scheduler.mjs:41:  const request = new Request("https://example.com/api/scheduler/health");
+scripts/test-scheduler.mjs:44:  assert(body.ok === false, "health should be ok=false when missing heartbeat");
+scripts/test-scheduler.mjs:45:  assert(body.error?.code === "SCHEDULER_STALE", "health stale should return SCHEDULER_STALE");
+scripts/test-scheduler.mjs:46:  assert(body.meta?.status === "error", "health stale should set meta.status=error");
+scripts/test-scheduler.mjs:48:  assert(body.data && typeof body.data === "object", "health stale should include data object");
+scripts/test-scheduler.mjs:49:  assert("last_ok" in body.data, "health stale data.last_ok required");
+scripts/test-scheduler.mjs:50:  assert("age_s" in body.data, "health stale data.age_s required");
+scripts/test-scheduler.mjs:51:  assert(typeof body.data.max_age_s === "number", "health stale data.max_age_s required");
+scripts/test-scheduler.mjs:52:  console.log("✅ scheduler health stale");
+scripts/test-scheduler.mjs:84:  assert(body.meta?.status, "meta.status required");
+scripts/test-scheduler.mjs:87:  const healthReq = new Request("https://example.com/api/scheduler/health");
+scripts/test-scheduler.mjs:88:  const healthRes = await runWithMiddleware(healthReq, env, schedulerHealth);
+scripts/test-scheduler.mjs:89:  const healthBody = JSON.parse(await healthRes.text());
+scripts/test-scheduler.mjs:90:  assert(healthBody.meta?.status, "health meta.status required");
+scripts/test-scheduler.mjs:91:  assert(healthBody.data && typeof healthBody.data === "object", "health response should include data object");
+scripts/test-scheduler.mjs:92:  assert("last_ok" in healthBody.data, "health data.last_ok required");
+scripts/test-scheduler.mjs:93:  assert(typeof healthBody.data.max_age_s === "number", "health data.max_age_s required");
+scripts/test-scheduler.mjs:94:  if (healthBody.ok === true) {
+scripts/test-scheduler.mjs:95:    console.log("✅ scheduler run updates health");
+scripts/test-scheduler.mjs:97:    assert(healthBody.error?.code === "SCHEDULER_STALE", "health should be stale when KV writes are disabled");
+scripts/test-scheduler.mjs:98:    console.log("✅ scheduler run ok; health remains stale without KV writes");
+scripts/test-scheduler.mjs:116:  assert(body.meta?.status, "meta.status required");
+scripts/validate-feature-registry.mjs:29:function validateEntry(entry, index) {
+scripts/validate-feature-registry.mjs:54:    const issues = validateEntry(entry, index);
+scripts/mirror-breakout-energy.mjs:195:    console.error("KV_WRITE_FAIL", kvRes.status, parsed);
+scripts/mirror-breakout-energy.mjs:198:  console.log(`KV_WRITE_OK ${kvRes.status}`);
+scripts/mirror-breakout-energy.mjs:218:      status: hasItems ? "OK" : "PARTIAL",
+functions/api/resolve.js:165:  const cacheFresh = cacheStatus.status === 'fresh';
+functions/api/resolve.js:331:      status: envelopeStatus,
+functions/api/resolve.js:353:      status: result.ok ? 'OK' : 'ERROR'
+functions/api/health-report.js:4:  return serveStaticJson(context.request, "health-report", null, context);
+scripts/smoke-rvci.sh:56:      "status=" + (v(.meta.status)|tostring),
+scripts/smoke-rvci.sh:62:      "path_health=" + (v(.data.paths.health)|tostring)
+scripts/smoke-rvci.sh:76:out("status", meta.get("status"))
+scripts/smoke-rvci.sh:78:for key in ("short", "mid", "long", "triggers", "health"):
+scripts/smoke-rvci.sh:142:status=""
+scripts/smoke-rvci.sh:148:path_health=""
+scripts/smoke-rvci.sh:152:    status) status="$value" ;;
+scripts/smoke-rvci.sh:158:    path_health) path_health="$value" ;;
+scripts/smoke-rvci.sh:176:printf 'status=%s\n' "$status"
+scripts/smoke-rvci.sh:180:if [ -z "$status" ] || [ -z "$generatedAt" ]; then
+scripts/smoke-rvci.sh:181:  echo "ERROR: missing meta.status or meta.generatedAt" >&2
+scripts/smoke-rvci.sh:186:  if [ "$status" = "SKIPPED_MARKET_CLOSED" ] || [ "$status" = "MARKET_NOT_CLOSED" ]; then
+scripts/smoke-rvci.sh:195:  if [ "$status" = "SKIPPED_MARKET_CLOSED" ] || [ "$status" = "MARKET_NOT_CLOSED" ]; then
+scripts/smoke-rvci.sh:245:if [ "$fetch_error" -eq 1 ] && { [ "$status" = "SKIPPED_MARKET_CLOSED" ] || [ "$status" = "MARKET_NOT_CLOSED" ]; }; then
+scripts/smoke-rvci.sh:251:  if [ "$status" = "SKIPPED_MARKET_CLOSED" ] || [ "$status" = "MARKET_NOT_CLOSED" ] || [ "$status" = "LIVE" ]; then
+scripts/providers/sec_edgar.js:45:      httpStatus: res.status,
+scripts/metrics-v5-gates.mjs:36:function validateEnvelope(payload, catalog) {
+scripts/metrics-v5-gates.mjs:43:  assert(["OK", "PARTIAL", "ERROR"].includes(meta.status), "meta.status invalid");
+scripts/metrics-v5-gates.mjs:54:  if (meta.status === "ERROR") {
+scripts/metrics-v5-gates.mjs:72:  if (meta.status === "OK") {
+scripts/metrics-v5-gates.mjs:79:  if (meta.status === "PARTIAL") {
+scripts/metrics-v5-gates.mjs:92:  validateEnvelope(payload, catalog);
+scripts/metrics-v5-gates.mjs:96:  assert(partialPayload.meta.status === "PARTIAL", "Partial gate status mismatch");
+scripts/runners/package3/41-weekly-market-brief.js:4:  const health = getSnapshot(ctx.cache, "market-health-summary");
+scripts/runners/package3/41-weekly-market-brief.js:10:  if (health?.data?.summary) {
+scripts/runners/package3/41-weekly-market-brief.js:13:      value: `live ${health.data.summary.live || 0} / total ${health.data.summary.total || 0}`
+scripts/runners/package3/41-weekly-market-brief.js:37:  const dataAt = maxDate(health?.dataAt, stress?.dataAt, drawdown?.dataAt, macro?.dataAt);
+functions/api/scheduler/run.js:24:        status: "error",
+functions/api/scheduler/run.js:28:      status: 403
+functions/api/scheduler/run.js:40:        status: "error",
+functions/api/scheduler/run.js:44:      status: 400
+functions/api/scheduler/run.js:77:    run_id: result.status?.run_id || null,
+functions/api/scheduler/run.js:78:    started_at: result.status?.started_at || nowUtcIso(),
+functions/api/scheduler/run.js:79:    finished_at: result.status?.finished_at || nowUtcIso(),
+functions/api/scheduler/run.js:80:    summary: result.summary,
+functions/api/scheduler/run.js:82:    status: result.status
+functions/api/scheduler/run.js:93:      status: metaStatus,
+functions/api/scheduler/run.js:97:    status: result.ok ? 200 : 500
+scripts/marketphase-generate.mjs:109:      status: "OK",
+scripts/marketphase-generate.mjs:218:      status: "OK",
+scripts/providers/alphavantage.js:62:      httpStatus: res.status,
+functions/api/system-health.js:4:  return serveStaticJson(context.request, "system-health", null, context);
+functions/api/mission-control/summary.js:4:  validateHealthProfiles,
+functions/api/mission-control/summary.js:5:  validateThresholds,
+functions/api/mission-control/summary.js:6:  validateSourceMap,
+functions/api/mission-control/summary.js:7:  validatePipelineArtifact,
+functions/api/mission-control/summary.js:8:  validateSnapshot,
+functions/api/mission-control/summary.js:10:} from '../_shared/contracts.js';
+functions/api/mission-control/summary.js:11:import { getBarNode } from '../../_ops/shape.js';
+functions/api/mission-control/summary.js:13:const MODULE_NAME = 'mission-control-summary';
+functions/api/mission-control/summary.js:81:      source: 'mission-control',
+functions/api/mission-control/summary.js:87:      status: 'ERROR',
+functions/api/mission-control/summary.js:95:    status: 403,
+functions/api/mission-control/summary.js:118:    if (!res.ok) return { ok: false, status: res.status, text: null, json: fallback };
+functions/api/mission-control/summary.js:126:    return { ok: true, status: res.status, text, json };
+functions/api/mission-control/summary.js:128:    return { ok: false, status: null, text: null, json: fallback };
+functions/api/mission-control/summary.js:137:    const status = res.status;
+functions/api/mission-control/summary.js:147:      status,
+functions/api/mission-control/summary.js:156:      status: null,
+functions/api/mission-control/summary.js:202:      validated: toIntOrNull(counts.validated),
+functions/api/mission-control/summary.js:207:    degraded_summary: doc.degraded_summary || null,
+functions/api/mission-control/summary.js:333:        uiWinningStatus: uiTrace?.winning_response?.status || null,
+functions/api/mission-control/summary.js:335:        stockStatus: stockCall?.status || truthTrace?.network?.stock?.status || null,
+functions/api/mission-control/summary.js:354:    status: t.stockStatus ?? null,
+functions/api/mission-control/summary.js:363:    status: p0Status,
+functions/api/mission-control/summary.js:379:    if (call.status !== 200) uiCallsBad.push(`${t.ticker}:${call.status}`);
+functions/api/mission-control/summary.js:385:    status: p1Status,
+functions/api/mission-control/summary.js:387:      calls: traceList.map((t) => `${t.ticker}:${t.stockCall?.status || (t.uiTrace ? t.uiWinningStatus : 'no_trace') || 'na'}`),
+functions/api/mission-control/summary.js:405:    status: p2Status,
+functions/api/mission-control/summary.js:408:      responses: (apiSamples || []).map((s) => `${s.ticker}:${s.status ?? 'na'}`)
+functions/api/mission-control/summary.js:439:    title: 'Backend parses and validates required fields (close, volume, date) for sanity.',
+functions/api/mission-control/summary.js:440:    status: p3Status,
+functions/api/mission-control/summary.js:461:    status: p4Status,
+functions/api/mission-control/summary.js:483:    status: p5Status,
+functions/api/mission-control/summary.js:493:  const contractIssues = [];
+functions/api/mission-control/summary.js:498:    const responseOk = sample.ok === true && sample.status === 200;
+functions/api/mission-control/summary.js:523:      contractIssues.push(...issues);
+functions/api/mission-control/summary.js:526:  const p6Status = contractIssues.length ? 'FAIL' : 'OK';
+functions/api/mission-control/summary.js:529:    title: '/api/stock returns JSON that satisfies the contract (latest_bar.close/volume/date present).',
+functions/api/mission-control/summary.js:530:    status: p6Status,
+functions/api/mission-control/summary.js:535:      issues: contractIssues
+functions/api/mission-control/summary.js:537:    detail: contractIssues.length ? 'Contract fields missing.' : 'Contract fields present.'
+functions/api/mission-control/summary.js:557:    status: p7Status,
+functions/api/mission-control/summary.js:567:  if (p6Step.status === 'OK' && p3Step.status === 'FAIL') {
+functions/api/mission-control/summary.js:568:    p3Step.status = 'WARN';
+functions/api/mission-control/summary.js:569:    p3Step.detail = 'Non-critical validation failed (API contract verified).';
+functions/api/mission-control/summary.js:572:  const firstBlockerId = p6Step.status === 'FAIL'
+functions/api/mission-control/summary.js:574:    : (p7Step.status === 'FAIL' ? p7Step.id : null);
+functions/api/mission-control/summary.js:575:  const hasWarnings = steps.some((s) => s.status === 'WARN');
+functions/api/mission-control/summary.js:580:    status: firstBlockerId ? 'ERROR' : (hasWarnings ? 'WARN' : 'OK'),
+functions/api/mission-control/summary.js:602:  let status = 'CRITICAL';
+functions/api/mission-control/summary.js:604:  if (p6Step?.status === 'OK' && failures.length === 0) {
+functions/api/mission-control/summary.js:605:    status = uniqueUniverse.length > 1 ? 'CRITICAL' : 'OK';
+functions/api/mission-control/summary.js:609:    status,
+functions/api/mission-control/summary.js:616:      howTo: 'Verify /api/stock contract for sample tickers'
+functions/api/mission-control/summary.js:623:  const statuses = list.map((t) => {
+functions/api/mission-control/summary.js:625:    const direct = trace?.network?.fundamentals?.status || null;
+functions/api/mission-control/summary.js:626:    if (direct != null) return { ticker: t.ticker, status: direct };
+functions/api/mission-control/summary.js:628:    return { ticker: t.ticker, status: call?.status || null };
+functions/api/mission-control/summary.js:630:  const ok = statuses.every((s) => s.status === 200);
+functions/api/mission-control/summary.js:635:    status: ok ? 'INFO' : 'WARNING',
+functions/api/mission-control/summary.js:640:        status: ok ? 'OK' : 'WARN',
+functions/api/mission-control/summary.js:641:        evidence: { statuses },
+functions/api/mission-control/summary.js:713:        notes: `CF analytics query failed (HTTP ${res.status})`
+functions/api/mission-control/summary.js:777:function contractResult(valid, errors = []) {
+functions/api/mission-control/summary.js:791:  if (!expected) return { status: 'INFO', reason: 'NOT_EXPECTED' };
+functions/api/mission-control/summary.js:792:  if (!Number.isFinite(ageHours)) return { status: 'WARNING', reason: 'FRESHNESS_UNKNOWN' };
+functions/api/mission-control/summary.js:795:  if (Number.isFinite(crit) && ageHours >= crit) return { status: 'CRITICAL', reason: `STALE_${Math.round(ageHours)}h` };
+functions/api/mission-control/summary.js:796:  if (Number.isFinite(warn) && ageHours >= warn) return { status: 'WARNING', reason: `STALE_${Math.round(ageHours)}h` };
+functions/api/mission-control/summary.js:797:  return { status: 'OK', reason: 'FRESH' };
+functions/api/mission-control/summary.js:801:  if (!isExpected) return { status: 'INFO', reason: 'NOT_EXPECTED' };
+functions/api/mission-control/summary.js:802:  if (!Number.isFinite(expected) || expected <= 0) return { status: 'WARNING', reason: 'EXPECTED_UNKNOWN' };
+functions/api/mission-control/summary.js:804:  if (!Number.isFinite(staticReady)) return { status: 'CRITICAL', reason: 'STATIC_READY_UNKNOWN' };
+functions/api/mission-control/summary.js:805:  if (staticReady <= 0) return { status: 'CRITICAL', reason: `STATIC_READY_${staticReady}/${expected}` };
+functions/api/mission-control/summary.js:806:  if (staticReady < expected) return { status: 'WARNING', reason: `STATIC_READY_${staticReady}/${expected}` };
+functions/api/mission-control/summary.js:807:  return { status: 'OK', reason: 'STATIC_READY_OK' };
+functions/api/mission-control/summary.js:810:function buildTruthChainStep(id, title, status, evidence, details = null) {
+functions/api/mission-control/summary.js:811:  return { id, title, status, evidence, details };
+functions/api/mission-control/summary.js:814:function statusForCount(count, expected, isExpected = true, notExpectedStatus = 'INFO') {
+functions/api/mission-control/summary.js:828:  const { fetched, validated, computed, staticReady } = pipelineTruths;
+functions/api/mission-control/summary.js:834:  const i0Status = statusForCount(fetchedCount, fetchedExpected, isExpected, notExpectedStatus);
+functions/api/mission-control/summary.js:841:  const validatedCount = pipelineLatestCounts?.validated ?? validated?.count ?? null;
+functions/api/mission-control/summary.js:842:  const validatedExpected = pipelineLatestCounts?.expected ?? validated?.expected ?? null;
+functions/api/mission-control/summary.js:843:  const i1Status = statusForCount(validatedCount, validatedExpected, isExpected, notExpectedStatus);
+functions/api/mission-control/summary.js:844:  steps.push(buildTruthChainStep('I1_EOD_VALIDATED', 'All tickers have validated EOD fields required to compute indicators.', i1Status, {
+functions/api/mission-control/summary.js:845:    count: validatedCount,
+functions/api/mission-control/summary.js:846:    expected: validatedExpected,
+functions/api/mission-control/summary.js:847:    path: '/data/pipeline/nasdaq100.validated.json'
+functions/api/mission-control/summary.js:848:  }, isExpected ? validated?.reason || null : 'NOT_EXPECTED'));
+functions/api/mission-control/summary.js:852:  const i2Status = statusForCount(computedCount, computedExpected, isExpected, notExpectedStatus);
+functions/api/mission-control/summary.js:853:  steps.push(buildTruthChainStep('I2_INDICATORS_COMPUTED', 'Indicators (40+) are computed and validated per ticker.', i2Status, {
+functions/api/mission-control/summary.js:860:  const i3Status = statusForCount(computedCount, computedExpected, isExpected, notExpectedStatus);
+functions/api/mission-control/summary.js:869:  const i4Status = statusForCount(staticCount, staticExpected, isExpected, notExpectedStatus);
+functions/api/mission-control/summary.js:884:  const firstFail = isExpected ? steps.find((s) => s.status === 'FAIL') : null;
+functions/api/mission-control/summary.js:885:  const firstWarn = isExpected ? steps.find((s) => s.status === 'WARN') : null;
+functions/api/mission-control/summary.js:887:  const firstBlocker = firstStep ? { id: firstStep.id, title: firstStep.title, status: firstStep.status } : null;
+functions/api/mission-control/summary.js:898:function baselineFromComputed(opsComputed) {
+functions/api/mission-control/summary.js:899:  const expectedUniverse = opsComputed?.pipeline?.expected ?? 100;
+functions/api/mission-control/summary.js:903:      expected: opsComputed?.pipeline?.expected ?? expectedUniverse,
+functions/api/mission-control/summary.js:904:      fetched: opsComputed?.pipeline?.fetched ?? null,
+functions/api/mission-control/summary.js:905:      validatedStored: opsComputed?.pipeline?.validatedStored ?? null,
+functions/api/mission-control/summary.js:906:      computed: opsComputed?.pipeline?.computed ?? null,
+functions/api/mission-control/summary.js:907:      staticReady: opsComputed?.pipeline?.staticReady ?? null,
+functions/api/mission-control/summary.js:908:      missing: Array.isArray(opsComputed?.pipeline?.missing) ? opsComputed.pipeline.missing : []
+functions/api/mission-control/summary.js:911:      latestSnapshotDate: opsComputed?.freshness?.latestSnapshotDate ?? null,
+functions/api/mission-control/summary.js:912:      expectedTradingDay: opsComputed?.freshness?.expectedTradingDay ?? null,
+functions/api/mission-control/summary.js:913:      staleCount: opsComputed?.freshness?.staleCount ?? null,
+functions/api/mission-control/summary.js:914:      staleList: Array.isArray(opsComputed?.freshness?.staleList) ? opsComputed.freshness.staleList : []
+functions/api/mission-control/summary.js:916:    providers: Array.isArray(opsComputed?.providers) ? opsComputed.providers : [],
+functions/api/mission-control/summary.js:918:      kvWritesToday: opsComputed?.safety?.kvWritesToday ?? null,
+functions/api/mission-control/summary.js:919:      pollingDefaultOff: opsComputed?.safety?.pollingDefaultOff ?? true,
+functions/api/mission-control/summary.js:920:      runtimeWritesDisabled: opsComputed?.safety?.runtimeWritesDisabled ?? true
+functions/api/mission-control/summary.js:973:        status: metadata?.status || null,
+functions/api/mission-control/summary.js:993:    const providedKey = request.headers.get('x-ops-key') || request.headers.get('X-OPS-KEY') || '';
+functions/api/mission-control/summary.js:1003:        'Cache-Control': 'public, max-age=10, s-maxage=10, stale-while-revalidate=60'
+functions/api/mission-control/summary.js:1034:  const [opsDaily, usageReport, providerState, seedManifest, nasdaq100Universe, marketPhaseIndex, healthProfilesRaw, thresholdsRaw, sourceMapRaw, eodManifestRaw] = await Promise.all([
+functions/api/mission-control/summary.js:1035:    fetchAssetJson(request.url, '/data/ops-daily.json', null),
+functions/api/mission-control/summary.js:1041:    fetchAssetJson(request.url, '/data/ops/health-profiles.v1.json', null),
+functions/api/mission-control/summary.js:1042:    fetchAssetJson(request.url, '/data/ops/thresholds.v1.json', null),
+functions/api/mission-control/summary.js:1043:    fetchAssetJson(request.url, '/data/ops/source-map.v1.json', null),
+functions/api/mission-control/summary.js:1047:  const healthProfilesCheck = validateHealthProfiles(healthProfilesRaw);
+functions/api/mission-control/summary.js:1048:  const thresholdsCheck = validateThresholds(thresholdsRaw);
+functions/api/mission-control/summary.js:1049:  const sourceMapCheck = validateSourceMap(sourceMapRaw);
+functions/api/mission-control/summary.js:1050:  const healthProfiles = healthProfilesCheck.valid ? healthProfilesRaw : null;
+functions/api/mission-control/summary.js:1055:  const profilePick = pickProfile(previewMode, healthProfiles?.profiles || {});
+functions/api/mission-control/summary.js:1056:  const profile = profilePick.profile || { expected: { scheduler: !previewMode.isPreview, kv: !previewMode.isPreview, pipeline: !previewMode.isPreview }, not_expected_status: 'INFO' };
+functions/api/mission-control/summary.js:1075:        status: info.status,
+functions/api/mission-control/summary.js:1158:  const opsProviders = Object.entries(usageProviders).map(([name, entry]) => {
+functions/api/mission-control/summary.js:1189:  if (!opsProviders.some((p) => p.name === 'tiingo')) {
+functions/api/mission-control/summary.js:1190:    opsProviders.push({
+functions/api/mission-control/summary.js:1203:    fetchAssetJson(request.url, '/data/pipeline/nasdaq100.validated.json', null),
+functions/api/mission-control/summary.js:1217:  const pipelineFetchedCheck = pipelineFetchedRaw ? validatePipelineArtifact(pipelineFetchedRaw) : { valid: false, errors: ['artifact missing'] };
+functions/api/mission-control/summary.js:1218:  const pipelineValidatedCheck = pipelineValidatedRaw ? validatePipelineArtifact(pipelineValidatedRaw) : { valid: false, errors: ['artifact missing'] };
+functions/api/mission-control/summary.js:1219:  const pipelineComputedCheck = pipelineComputedRaw ? validatePipelineArtifact(pipelineComputedRaw) : { valid: false, errors: ['artifact missing'] };
+functions/api/mission-control/summary.js:1220:  const pipelineStaticReadyCheck = pipelineStaticReadyRaw ? validatePipelineArtifact(pipelineStaticReadyRaw) : { valid: false, errors: ['artifact missing'] };
+functions/api/mission-control/summary.js:1241:  const validatedStored = ensureCount(pipelineValidated);
+functions/api/mission-control/summary.js:1255:    validated: resolveCount(pipelineLatestCounts?.validated, validatedStored),
+functions/api/mission-control/summary.js:1294:    validated: buildCountSource('validated', pipelineLatestCounts?.validated, pipelineValidated, validatedStored),
+functions/api/mission-control/summary.js:1301:  for (const key of ['fetched', 'validated']) {
+functions/api/mission-control/summary.js:1323:      validated: eodManifest.ok
+functions/api/mission-control/summary.js:1329:    ? validateSnapshot(marketPricesSnapshot)
+functions/api/mission-control/summary.js:1374:  const opsComputed = {
+functions/api/mission-control/summary.js:1375:    providers: opsProviders.sort((a, b) => String(a.name).localeCompare(String(b.name))),
+functions/api/mission-control/summary.js:1379:      validatedStored: pipelineCounts.validated,
+functions/api/mission-control/summary.js:1398:  const opsDailyBaseline = opsDaily?.baseline && typeof opsDaily.baseline === 'object' ? opsDaily.baseline : null;
+functions/api/mission-control/summary.js:1399:  let opsBaseline = opsDailyBaseline || baselineFromComputed(opsComputed);
+functions/api/mission-control/summary.js:1401:    opsBaseline = {
+functions/api/mission-control/summary.js:1402:      ...opsBaseline,
+functions/api/mission-control/summary.js:1404:        ...(opsBaseline?.pipeline || {}),
+functions/api/mission-control/summary.js:1407:        validatedStored: pipelineCounts.validated,
+functions/api/mission-control/summary.js:1413:  const opsBaselineAsOf = typeof opsDaily?.asOf === 'string' ? opsDaily.asOf : null;
+functions/api/mission-control/summary.js:1414:  const baselineVerdict = computeVerdictFromBaseline(opsBaseline);
+functions/api/mission-control/summary.js:1415:  const baselineMissing = !opsDailyBaseline;
+functions/api/mission-control/summary.js:1426:    const expectedVal = opsBaseline?.pipeline?.expected;
+functions/api/mission-control/summary.js:1427:    const staticReadyVal = opsBaseline?.pipeline?.staticReady;
+functions/api/mission-control/summary.js:1433:        'This is expected during the initial ramp-up until KV bars and ops-daily build analyses for all tickers. ' +
+functions/api/mission-control/summary.js:1437:  const opsBaselineOverall = baselineExplain ? { ...overall, explain: baselineExplain } : overall;
+functions/api/mission-control/summary.js:1453:    validated: pipelineValidated,
+functions/api/mission-control/summary.js:1462:    profile.not_expected_status || 'INFO',
+functions/api/mission-control/summary.js:1472:  const opsBaselineRuntime = {
+functions/api/mission-control/summary.js:1496:    pipelineHealth = { status: 'CRITICAL', reason: 'PIPELINE_CONTRACT_INVALID' };
+functions/api/mission-control/summary.js:1501:    freshnessHealth = { status: 'CRITICAL', reason: 'SNAPSHOT_CONTRACT_INVALID' };
+functions/api/mission-control/summary.js:1504:  const platformStatus = expectedFlags.kv ? (hasKV ? 'OK' : 'CRITICAL') : toHealthStatus(profile.not_expected_status);
+functions/api/mission-control/summary.js:1507:  const health = {
+functions/api/mission-control/summary.js:1509:      status: platformStatus,
+functions/api/mission-control/summary.js:1512:        url: '/data/ops/health-profiles.v1.json',
+functions/api/mission-control/summary.js:1517:      status: apiStatus,
+functions/api/mission-control/summary.js:1520:        url: '/api/mission-control/summary',
+functions/api/mission-control/summary.js:1521:        howTo: 'Inspect summary output'
+functions/api/mission-control/summary.js:1526:      status: freshnessHealth.status,
+functions/api/mission-control/summary.js:1536:      status: pipelineHealth.status,
+functions/api/mission-control/summary.js:1548:    const statuses = Object.values(health).map((h) => h?.status).filter(Boolean);
+functions/api/mission-control/summary.js:1549:    if (statuses.includes('CRITICAL')) return 'error';
+functions/api/mission-control/summary.js:1550:    if (statuses.includes('WARNING')) return 'degraded';
+functions/api/mission-control/summary.js:1554:    health.prices?.reason ||
+functions/api/mission-control/summary.js:1555:    health.pipeline?.reason ||
+functions/api/mission-control/summary.js:1556:    health.freshness?.reason ||
+functions/api/mission-control/summary.js:1557:    health.platform?.reason ||
+functions/api/mission-control/summary.js:1560:  const contracts = {
+functions/api/mission-control/summary.js:1562:      health_profiles: contractResult(healthProfilesCheck.valid, healthProfilesCheck.errors),
+functions/api/mission-control/summary.js:1563:      thresholds: contractResult(thresholdsCheck.valid, thresholdsCheck.errors),
+functions/api/mission-control/summary.js:1564:      source_map: contractResult(sourceMapCheck.valid, sourceMapCheck.errors)
+functions/api/mission-control/summary.js:1567:      market_prices: contractResult(marketPricesSnapshotCheck.valid, marketPricesSnapshotCheck.errors)
+functions/api/mission-control/summary.js:1570:      fetched: contractResult(pipelineFetchedCheck.valid, pipelineFetchedCheck.errors),
+functions/api/mission-control/summary.js:1571:      validated: contractResult(pipelineValidatedCheck.valid, pipelineValidatedCheck.errors),
+functions/api/mission-control/summary.js:1572:      computed: contractResult(pipelineComputedCheck.valid, pipelineComputedCheck.errors),
+functions/api/mission-control/summary.js:1573:      static_ready: contractResult(pipelineStaticReadyCheck.valid, pipelineStaticReadyCheck.errors)
+functions/api/mission-control/summary.js:1577:  const contractsOk =
+functions/api/mission-control/summary.js:1578:    healthProfilesCheck.valid &&
+functions/api/mission-control/summary.js:1583:  const contractCritical = previewMode.isProduction && !contractsOk;
+functions/api/mission-control/summary.js:1585:  let opsLiveResolved = null;
+functions/api/mission-control/summary.js:1588:    opsLiveResolved = {
+functions/api/mission-control/summary.js:1602:      baselineAsOf: opsBaselineAsOf,
+functions/api/mission-control/summary.js:1604:      status: metaStatus,
+functions/api/mission-control/summary.js:1612:      source: 'mission-control',
+functions/api/mission-control/summary.js:1618:      status: 'OK',
+functions/api/mission-control/summary.js:1624:      health,
+functions/api/mission-control/summary.js:1636:      contracts,
+functions/api/mission-control/summary.js:1667:      opsBaseline: {
+functions/api/mission-control/summary.js:1668:        asOf: opsBaselineAsOf,
+functions/api/mission-control/summary.js:1669:        overall: opsBaselineOverall,
+functions/api/mission-control/summary.js:1670:        baseline: opsBaseline,
+functions/api/mission-control/summary.js:1671:        runtime: opsBaselineRuntime,
+functions/api/mission-control/summary.js:1677:      opsComputed: {
+functions/api/mission-control/summary.js:1680:        baseline: opsComputed
+functions/api/mission-control/summary.js:1682:      opsLive: opsLiveResolved,
+functions/api/mission-control/summary.js:1690:    payload.metadata.status = 'PARTIAL';
+functions/api/mission-control/summary.js:1692:  if (contractCritical) {
+functions/api/mission-control/summary.js:1693:    payload.metadata.status = 'ERROR';
+functions/api/mission-control/summary.js:1709:      'Cache-Control': wantsLive ? 'no-store' : 'public, max-age=10, s-maxage=10, stale-while-revalidate=60'
+functions/api/_middleware.js:22:      status: 500,
+functions/api/_middleware.js:27:  if (res && typeof res.status === "number" && res.status === 404 && path.startsWith("/api/")) {
+functions/api/_middleware.js:30:    if (!fallback || fallback.status === 404) {
+functions/api/_middleware.js:39:        status: 404,
+scripts/runners/package3/30-flow-anomaly-lite.js:5:  const summary = breadthSnapshot?.data?.summary || {};
+scripts/runners/package3/30-flow-anomaly-lite.js:7:  const advancers = Number.isFinite(summary.advancers)
+scripts/runners/package3/30-flow-anomaly-lite.js:8:    ? summary.advancers
+scripts/runners/package3/30-flow-anomaly-lite.js:10:  const decliners = Number.isFinite(summary.decliners)
+scripts/runners/package3/30-flow-anomaly-lite.js:11:    ? summary.decliners
+scripts/providers/market-prices-v3.mjs:8:import { buildEnvelope, validateEnvelopeSchema } from '../lib/envelope.js';
+scripts/providers/market-prices-v3.mjs:197:      throw new Error(`STOOQ_FETCH_FAILED:${symbol}:${result.upstream?.http_status ?? 'unknown'}`);
+scripts/providers/market-prices-v3.mjs:210:      http_status: result.upstream?.http_status ?? null,
+scripts/providers/market-prices-v3.mjs:220:        http_status: upstreamEntry.http_status,
+scripts/providers/market-prices-v3.mjs:266:function validateBar(bar) {
+scripts/providers/market-prices-v3.mjs:333:  const summary = {};
+scripts/providers/market-prices-v3.mjs:335:    summary[key] = counts[key];
+scripts/providers/market-prices-v3.mjs:337:  return summary;
+scripts/providers/market-prices-v3.mjs:439:      run_health_score: normalizedScore
+scripts/providers/market-prices-v3.mjs:467:      run_health_score: 100
+scripts/providers/market-prices-v3.mjs:480:      reason_summary: {}
+scripts/providers/market-prices-v3.mjs:512:    reason_summary: reasonSummary
+scripts/providers/market-prices-v3.mjs:574:      ui_contract: { policy: 'optional' },
+scripts/providers/market-prices-v3.mjs:707:  entry.last_http_status = httpStatus;
+scripts/providers/market-prices-v3.mjs:862:    http_status: null,
+scripts/providers/market-prices-v3.mjs:870:      upstream.http_status === 429 ? CLASSIFICATIONS.HTTP_429 : CLASSIFICATIONS.NETWORK_ERROR;
+scripts/providers/market-prices-v3.mjs:875:      http_status: upstream.http_status,
+scripts/providers/market-prices-v3.mjs:888:      http_status: upstream.http_status,
+scripts/providers/market-prices-v3.mjs:899:      http_status: 200,
+scripts/providers/market-prices-v3.mjs:900:      upstream: { ...upstream, http_status: 200 }
+scripts/providers/market-prices-v3.mjs:915:      http_status: upstream.http_status,
+scripts/providers/market-prices-v3.mjs:957:    http_status: null,
+scripts/providers/market-prices-v3.mjs:965:      upstream.http_status === 429 ? CLASSIFICATIONS.HTTP_429 : CLASSIFICATIONS.NETWORK_ERROR;
+scripts/providers/market-prices-v3.mjs:970:      http_status: upstream.http_status,
+scripts/providers/market-prices-v3.mjs:983:      http_status: upstream.http_status,
+scripts/providers/market-prices-v3.mjs:988:  if (payload?.status === 'error') {
+scripts/providers/market-prices-v3.mjs:992:      note: truncateNote(payload.message || payload['status']),
+scripts/providers/market-prices-v3.mjs:993:      http_status: upstream.http_status,
+scripts/providers/market-prices-v3.mjs:1008:      http_status: upstream.http_status,
+scripts/providers/market-prices-v3.mjs:1210:          http_status: null,
+scripts/providers/market-prices-v3.mjs:1248:        attempt.http_status = result.http_status ?? result.upstream?.http_status ?? null;
+scripts/providers/market-prices-v3.mjs:1277:        if (attempt.http_status) lastHttpStatus = attempt.http_status;
+scripts/providers/market-prices-v3.mjs:1285:            attempt.http_status,
+scripts/providers/market-prices-v3.mjs:1307:        http_status: null,
+scripts/providers/market-prices-v3.mjs:1313:        http_status: failureAttempt.http_status,
+scripts/providers/market-prices-v3.mjs:1318:      if (failureAttempt.http_status) lastHttpStatus = failureAttempt.http_status;
+scripts/providers/market-prices-v3.mjs:1326:    const check = validateBar(bar);
+scripts/providers/market-prices-v3.mjs:1375:  const httpStatus = upstreamResults.find((u) => u && u.http_status !== null)?.http_status ?? lastHttpStatus ?? null;
+scripts/providers/market-prices-v3.mjs:1380:    http_status: httpStatus,
+scripts/providers/market-prices-v3.mjs:1462:    status: envelope.metadata.validation?.passed ? 'OK' : 'ERROR',
+scripts/providers/market-prices-v3.mjs:1474:  const healthArtifacts = buildHealthArtifacts({
+scripts/providers/market-prices-v3.mjs:1485:  const providerHealthPath = join(outDir, 'provider-health.json');
+scripts/providers/market-prices-v3.mjs:1486:  const marketHealthPath = join(outDir, 'market-prices-health.json');
+scripts/providers/market-prices-v3.mjs:1487:  await writeFile(providerHealthPath, JSON.stringify(healthArtifacts.providerHealthPayload, null, 2) + '\n', 'utf-8');
+scripts/providers/market-prices-v3.mjs:1488:  await writeFile(marketHealthPath, JSON.stringify(healthArtifacts.marketHealthPayload, null, 2) + '\n', 'utf-8');
+scripts/providers/market-prices-v3.mjs:1490:  const schemaCheck = validateEnvelopeSchema(envelope);
+scripts/providers/market-prices-v3.mjs:1520:    runtimeState.last_http_status = lastHttpStatus ?? runtimeState.last_http_status ?? null;
+scripts/providers/market-prices-v3.mjs:1543:  process.stdout.write(`  status: ${moduleState.status}\n`);
+functions/api/diagnostics/tiingo.js:4:const MODULE_NAME = 'diagnostics-tiingo';
+functions/api/diagnostics/tiingo.js:62:      httpStatus = res.status;
+functions/api/diagnostics/tiingo.js:66:        errorCode = mapErrorCode({ httpStatus: res.status, error: null });
+functions/api/diagnostics/tiingo.js:87:      source: 'diagnostics',
+functions/api/diagnostics/tiingo.js:95:      status: canReachTiingo ? 'OK' : 'ERROR',
+functions/api/diagnostics/tiingo.js:121:    payload.error = buildErrorPayload(errorCode || 'TIINGO_UNAVAILABLE', 'Tiingo diagnostics failed', {
+functions/api/scheduler/health.js:39:  const status = await readSchedulerStatus(env);
+functions/api/scheduler/health.js:46:  const healthy = typeof ageSeconds === "number" ? ageSeconds <= maxAgeSeconds : false;
+functions/api/scheduler/health.js:47:  const healthStatus = hasLastOk
+functions/api/scheduler/health.js:48:    ? healthy
+functions/api/scheduler/health.js:58:    status: healthStatus,
+functions/api/scheduler/health.js:62:    scheduler: status
+functions/api/scheduler/health.js:70:  if (!healthy) {
+functions/api/scheduler/health.js:80:        status: "error",
+functions/api/scheduler/health.js:85:    return new Response(JSON.stringify(payload), { status: 503, headers });
+functions/api/scheduler/health.js:93:      status: "live",
+functions/api/scheduler/health.js:98:  return new Response(JSON.stringify(payload), { status: 200, headers });
+scripts/providers/market-score-v3.mjs:6:import { buildEnvelope, validateEnvelopeSchema } from '../lib/envelope.js';
+scripts/providers/market-score-v3.mjs:259:  const schemaCheck = validateEnvelopeSchema(envelope);
+scripts/providers/market-score-v3.mjs:264:  const health = buildHealth(symbolCount, symbolCount);
+scripts/providers/market-score-v3.mjs:284:  await writeFile(join(artifactsOutDir, 'market-score-health.json'), JSON.stringify(health, null, 2) + '\n', 'utf-8');
+scripts/generate-event-mirrors.mjs:14:const SYSTEM_HEALTH_PATH = path.resolve(__dirname, "../mirrors/system-health.json");
+scripts/generate-event-mirrors.mjs:190:    status: "OK",
+scripts/validate-mirrors.mjs:4:import { loadMirrorEnvelope, validateBasicMirrorShape, isFiniteNumber } from "./utils/mirror-io.mjs";
+scripts/validate-mirrors.mjs:13:  console.log(`validate-mirrors: skipped (missing ${MIRROR_ROOT})`);
+scripts/validate-mirrors.mjs:50:  const status = String(rawStatus || "").toUpperCase();
+scripts/validate-mirrors.mjs:51:  if (status === "LIVE" || status === "OK") return "OK";
+scripts/validate-mirrors.mjs:52:  if (status === "PARTIAL") return "PARTIAL";
+scripts/validate-mirrors.mjs:53:  if (status === "EMPTY") return "EMPTY";
+scripts/validate-mirrors.mjs:54:  if (status === "STALE") return "STALE";
+scripts/validate-mirrors.mjs:55:  if (status === "COVERAGE_LIMIT") return "COVERAGE_LIMIT";
+scripts/validate-mirrors.mjs:93:  const dataQuality = normalizeDataQuality(meta.status || legacy.dataQuality || (legacy.ok === false ? "ERROR" : null));
+scripts/validate-mirrors.mjs:129:// Only validate mirrors that are actually generated by this workflow
+scripts/validate-mirrors.mjs:130:// For event-mirrors workflow, only validate event-related mirrors
+scripts/validate-mirrors.mjs:146:  process.argv[1]?.includes("validate-mirrors");
+scripts/validate-mirrors.mjs:176:    const shape = validateBasicMirrorShape(normalized.mirror);
+scripts/audit/build-feature-registry.mjs:77:    .filter((file) => !["manifest.json", "_health.json"].includes(file))
+scripts/audit/build-feature-registry.mjs:91:    requiredFields: ["meta.status", "meta.updatedAt"],
+scripts/providers/market-health-v3.mjs:5: * Fetches and normalizes market health data from:
+scripts/providers/market-health-v3.mjs:31:// Benchmark symbols for market health (using Stooq)
+scripts/providers/market-health-v3.mjs:129: * @param {object} data - Data to validate
+scripts/providers/market-health-v3.mjs:134:function validateData(data, registryConfig, rawCount = 1) {
+scripts/providers/market-health-v3.mjs:139:  // Check required paths (UI contract)
+scripts/providers/market-health-v3.mjs:140:  const requiredPaths = registryConfig?.ui_contract?.required_paths || [];
+scripts/providers/market-health-v3.mjs:239:  // Don't validate item counts - this is a single data object, not an array
+scripts/providers/market-health-v3.mjs:258:  if (requiredPaths.length > 0) checks.push('ui_contract');
+scripts/providers/market-health-v3.mjs:265:  console.log(`🔍 validateData result: errors=${errors.length}, warnings=${warnings.length}, dropped=${droppedRecords}, drop_ratio=${(validationMeta.drop_ratio * 100).toFixed(3)}%, passed=${passed}`);
+scripts/providers/market-health-v3.mjs:290:  console.log('🔍 Fetching market health data...\n');
+scripts/providers/market-health-v3.mjs:303:  const config = registry.modules['market-health'];
+scripts/providers/market-health-v3.mjs:305:    console.error('ERROR: market-health not found in registry');
+scripts/providers/market-health-v3.mjs:323:    http_status: fng.upstream.http_status || stocks.upstream.http_status || crypto.upstream.http_status || null,
+scripts/providers/market-health-v3.mjs:398:  // For market-health, rawCount is 1 (single aggregated data object)
+scripts/providers/market-health-v3.mjs:400:  const validation = validateData(data, config, rawCount);
+scripts/providers/market-health-v3.mjs:417:    module: 'market-health',
+scripts/providers/market-health-v3.mjs:434:    module: "market-health",
+scripts/providers/market-health-v3.mjs:437:    status: validation.passed ? "ok" : "error",
+scripts/providers/market-health-v3.mjs:449:      upstream_status: upstream.http_status,
+scripts/providers/market-health-v3.mjs:452:    ui_contract: {
+scripts/providers/market-health-v3.mjs:453:      required: config.ui_contract?.required_paths?.length > 0,
+scripts/providers/market-health-v3.mjs:454:      passed: validation.passed && validation.checks.includes('ui_contract'),
+scripts/providers/market-health-v3.mjs:463:      curl: "/api/market-health?debug=1",
+scripts/providers/market-health-v3.mjs:472:  const artifactsDir = join(artifactsBaseDir, 'market-health');
+scripts/providers/market-health-v3.mjs:485:  console.log(`   Status: ${moduleState.status}`);
+functions/api/fundamentals.js:82:function buildWatermark({ servedFrom, status, data }) {
+functions/api/fundamentals.js:84:  const mode = status === 'ERROR' ? 'DEGRADED' : 'LIVE';
+functions/api/fundamentals.js:139:        error: { code: res.status === 401 || res.status === 403 ? 'AUTH_FAILED' : 'HTTP_ERROR', message: `HTTP ${res.status}` },
+functions/api/fundamentals.js:141:        httpStatus: res.status,
+functions/api/fundamentals.js:156:        httpStatus: res.status,
+functions/api/fundamentals.js:167:      httpStatus: res.status,
+functions/api/fundamentals.js:201:    const wm = buildWatermark({ servedFrom: 'RUNTIME', status: 'ERROR', data: null });
+functions/api/fundamentals.js:205:        status: 'error',
+functions/api/fundamentals.js:225:        status: 'ERROR'
+functions/api/fundamentals.js:239:    const wm = buildWatermark({ servedFrom, status: 'OK', data: cached.value });
+functions/api/fundamentals.js:243:        status: 'fresh',
+functions/api/fundamentals.js:263:        status: 'OK',
+functions/api/fundamentals.js:298:    const status = Number(result.httpStatus || 0);
+functions/api/fundamentals.js:306:      status === 429 ||
+functions/api/fundamentals.js:307:      (status >= 500 && status < 600)
+functions/api/fundamentals.js:320:    const wm = buildWatermark({ servedFrom: 'RUNTIME', status: 'OK', data: upstream.data });
+functions/api/fundamentals.js:324:        status: 'fresh',
+functions/api/fundamentals.js:344:        status: 'OK',
+functions/api/fundamentals.js:379:    const wm = buildWatermark({ servedFrom, status: 'PARTIAL', data: lastGood.value });
+functions/api/fundamentals.js:383:        status: 'stale',
+functions/api/fundamentals.js:403:        status: 'PARTIAL',
+functions/api/fundamentals.js:438:      status: 'error',
+functions/api/fundamentals.js:458:      status: 'ERROR',
+scripts/eod/build-eod-latest.mjs:6:import { validateEodRecord } from '../lib/validate-eod.mjs';
+scripts/eod/build-eod-latest.mjs:145:      const error = new Error(`HTTP ${res.status}`);
+scripts/eod/build-eod-latest.mjs:146:      error.status = res.status;
+scripts/eod/build-eod-latest.mjs:147:      return { ok: false, error, httpStatus: res.status };
+scripts/eod/build-eod-latest.mjs:153:      error.status = res.status;
+scripts/eod/build-eod-latest.mjs:154:      return { ok: false, error, httpStatus: res.status };
+scripts/eod/build-eod-latest.mjs:160:      error.status = res.status;
+scripts/eod/build-eod-latest.mjs:161:      return { ok: false, error, httpStatus: res.status };
+scripts/eod/build-eod-latest.mjs:167:      error.status = res.status;
+scripts/eod/build-eod-latest.mjs:168:      return { ok: false, error, httpStatus: res.status };
+scripts/eod/build-eod-latest.mjs:171:    return { ok: true, record, httpStatus: res.status };
+scripts/eod/build-eod-latest.mjs:308:        validated: 0,
+scripts/eod/build-eod-latest.mjs:316:      degraded_summary: degradedSummary,
+scripts/eod/build-eod-latest.mjs:344:    const validation = validateEodRecord(result.record);
+scripts/eod/build-eod-latest.mjs:346:      const classification = classifyError({ message: validation.reason }, { stage: 'validate' });
+scripts/eod/build-eod-latest.mjs:349:        stage: 'validate',
+scripts/eod/build-eod-latest.mjs:363:  let validatedCount = 0;
+scripts/eod/build-eod-latest.mjs:369:      validatedCount += 1;
+scripts/eod/build-eod-latest.mjs:467:      : validatedCount;
+scripts/eod/build-eod-latest.mjs:468:  const computedCount = Number.isInteger(computedTruthCount) ? computedTruthCount : validatedCount;
+scripts/eod/build-eod-latest.mjs:481:      validated: validatedCount,
+scripts/eod/build-eod-latest.mjs:488:    degraded_summary: degradedSummary,
+scripts/eod/build-eod-latest.mjs:510:  if (rateLimitErrors > 0 && validatedCount === 0) {
+scripts/eod/build-eod-latest.mjs:511:    process.stderr.write(`FAIL: RATE_LIMIT errors=${rateLimitErrors} and validated=0 (empty artifact generation blocked)\n`);
+scripts/dev-local.sh:7:# git status --porcelain: M .gitignore | M functions/api/health.js | M scripts/test-api.sh | ?? .wranglerignore | ?? scripts/dev-local.sh | ?? scripts/move-repo-out-of-cloud.sh
+scripts/generate-snapshots.mjs.bak:164:      status: metaStatus,
+scripts/generate-snapshots.mjs.bak:178:    status: metaStatus,
+scripts/generate-snapshots.mjs.bak:197:    const summary = await generateSnapshot(entry);
+scripts/generate-snapshots.mjs.bak:198:    manifest.snapshots[entry.id] = summary;
+scripts/generate-snapshots.mjs.bak:200:      `[snapshot] ${entry.id} status=${summary.status} reason=${summary.reason} items=${summary.itemsCount} durationMs=${summary.durationMs}`
+scripts/generate-snapshots.mjs.bak:209:      status: "LIVE",
+scripts/audit/build-artifacts.mjs:10:const HEALTH_PATH = path.join(OUTPUT_DIR, "_health.json");
+scripts/audit/build-artifacts.mjs:54:const healthFeatures = {};
+scripts/audit/build-artifacts.mjs:73:  let status = "OK";
+scripts/audit/build-artifacts.mjs:78:    status = "ERROR";
+scripts/audit/build-artifacts.mjs:81:    status = "ERROR";
+scripts/audit/build-artifacts.mjs:83:  } else if (raw?.meta?.status === "STUB") {
+scripts/audit/build-artifacts.mjs:84:    status = "STUB";
+scripts/audit/build-artifacts.mjs:90:      status = "STALE";
+scripts/audit/build-artifacts.mjs:95:  healthFeatures[feature.id] = {
+scripts/audit/build-artifacts.mjs:96:    status,
+scripts/audit/build-artifacts.mjs:124:const health = {
+scripts/audit/build-artifacts.mjs:126:    status: "OK",
+scripts/audit/build-artifacts.mjs:132:    Object.entries(healthFeatures).sort(([a], [b]) => String(a).localeCompare(String(b)))
+scripts/audit/build-artifacts.mjs:137:const healthText = JSON.stringify(health, null, 2);
+scripts/audit/build-artifacts.mjs:139:if (shouldWrite(MANIFEST_PATH, manifestText) || shouldWrite(HEALTH_PATH, healthText)) {
+scripts/audit/build-artifacts.mjs:144:  fs.writeFileSync(tmpHealth, healthText);
+functions/api/_shared/contracts.js:15:export function validateHealthProfiles(doc) {
+functions/api/_shared/contracts.js:47:    if (profile.not_expected_status && !HEALTH_STATUSES.has(profile.not_expected_status)) {
+functions/api/_shared/contracts.js:48:      errors.push(`profiles.${key}.not_expected_status invalid`);
+functions/api/_shared/contracts.js:54:export function validateThresholds(doc) {
+functions/api/_shared/contracts.js:78:export function validateSourceMap(doc) {
+functions/api/_shared/contracts.js:101:export function validatePipelineArtifact(doc) {
+functions/api/_shared/contracts.js:113:export function validateSnapshot(doc) {
+scripts/generate-eod-market.mjs:5:import { saveMirror, validateBasicMirrorShape, loadMirror, atomicWriteJson } from "./utils/mirror-io.mjs";
+scripts/generate-eod-market.mjs:15:const SYSTEM_HEALTH_PATH = path.resolve(__dirname, "../mirrors/system-health.json");
+scripts/generate-eod-market.mjs:23:  "market-health": 1,
+scripts/generate-eod-market.mjs:64:  const validation = validateBasicMirrorShape(mirrorData);
+scripts/generate-eod-market.mjs:86:      status: data.errors.length ? "FAILED" : "OK",
+scripts/smoke-redirects.sh:23:head_status() {
+scripts/smoke-redirects.sh:25:  status=$(curl -sS -o /dev/null -I -w "%{http_code}" "$url" || true)
+scripts/smoke-redirects.sh:26:  echo "$status"
+scripts/smoke-redirects.sh:32:  status=$(head_status "$url")
+scripts/smoke-redirects.sh:33:  if [ "$status" != "200" ]; then
+scripts/smoke-redirects.sh:34:    fail "$path expected 200, got $status"
+scripts/smoke-redirects.sh:44:  status=$(awk 'NR==1{print $2}' "$hdr")
+scripts/smoke-redirects.sh:48:  case "$status" in
+scripts/smoke-redirects.sh:50:    *) fail "$path expected 2xx/4xx, got $status" ;;
+scripts/smoke-redirects.sh:64:check_head_200 "/features/health"
+scripts/smoke-redirects.sh:69:if [ -f functions/api/health.js ]; then
+scripts/smoke-redirects.sh:70:  check_api "/api/health"
+scripts/providers/universe-v2.mjs:6:import { buildEnvelope, validateEnvelopeSchema } from '../lib/envelope.js';
+scripts/providers/universe-v2.mjs:163:    http_status: response.status,
+scripts/providers/universe-v2.mjs:164:    status: response.ok ? 'ok' : 'error'
+scripts/providers/universe-v2.mjs:247:    upstream.stub = { status: 'ok', sourced_from: 'tests/fixtures/universe-v2.stub.json' };
+scripts/providers/universe-v2.mjs:289:  const schemaCheck = validateEnvelopeSchema(envelope);
+scripts/providers/universe-v2.mjs:294:  const health = buildHealth(symbolCount);
+scripts/providers/universe-v2.mjs:315:  const healthPath = join(artifactsDir, 'universe-health.json');
+scripts/providers/universe-v2.mjs:319:  await writeFile(healthPath, JSON.stringify(health, null, 2) + '\n', 'utf-8');
+scripts/runners/package3/43-master-market-dashboard.js:45:  "market-health-summary"
+scripts/runners/package3/43-master-market-dashboard.js:55:    const status = snapshot?.meta?.status || "ERROR";
+scripts/runners/package3/43-master-market-dashboard.js:57:    items.push({ blockId, status, reason });
+scripts/ops_selfcheck.mjs:1:import { getOpsBase } from './ops/env.config.mjs';
+scripts/ops_selfcheck.mjs:2:import { fetchWithContext } from './ops/fetch-with-context.mjs';
+scripts/ops_selfcheck.mjs:5:const url = `${base}/api/mission-control/summary`;
+scripts/ops_selfcheck.mjs:7:const res = await fetchWithContext(url, {}, { name: 'ops-selfcheck' });
+scripts/ops_selfcheck.mjs:8:const summary = await res.json();
+scripts/ops_selfcheck.mjs:10:const truthChains = summary?.data?.truthChains;
+scripts/audit/generate-reality.mjs:12:{{git_status}}
+scripts/audit/generate-reality.mjs:114:    .filter((f) => !["manifest.json", "_health.json"].includes(f))
+scripts/audit/generate-reality.mjs:171:  git_status: run("git status --porcelain", { allowFail: true }),
+functions/api/metrics.js:62:      status: "PARTIAL",
+functions/api/metrics.js:85:    status: 200,
+scripts/eod/check-eod-artifacts.mjs:52:  if (!Number.isInteger(doc.counts.validated)) fail('pipeline: counts.validated must be int');
+scripts/eod/check-eod-artifacts.mjs:55:  if (!doc.degraded_summary || typeof doc.degraded_summary !== 'object') fail('pipeline: degraded_summary missing');
+scripts/eod/check-eod-artifacts.mjs:56:  if (!Number.isInteger(doc.degraded_summary.count)) fail('pipeline: degraded_summary.count must be int');
+scripts/eod/check-eod-artifacts.mjs:57:  if (!doc.degraded_summary.classes || typeof doc.degraded_summary.classes !== 'object') fail('pipeline: degraded_summary.classes must be object');
+scripts/eod/check-eod-artifacts.mjs:58:  if (!Array.isArray(doc.degraded_summary.sample)) fail('pipeline: degraded_summary.sample must be array');
+scripts/eod/check-eod-artifacts.mjs:59:  if (doc.degraded_summary.sample.length > 25) fail('pipeline: degraded_summary.sample max 25');
+scripts/truth-chain/trace_ui_to_origin.mjs:80:  return { url, ok: res.ok, status: res.status, text, json, sha256: sha256Hex(text) };
+scripts/truth-chain/trace_ui_to_origin.mjs:85:  fail(`Failed to fetch /api/stock: HTTP ${stockRes.status}`);
+scripts/truth-chain/trace_ui_to_origin.mjs:113:    excerpt: json ? pickPaths(json, ['schema_version', 'meta.status', 'meta.data_date', 'metadata.module', 'data.symbols', 'data.records']) : null
+scripts/truth-chain/trace_ui_to_origin.mjs:126:    status: info.status,
+scripts/truth-chain/trace_ui_to_origin.mjs:152:    stock: { url: stockRes.url, status: stockRes.status, sha256: stockRes.sha256 },
+scripts/truth-chain/trace_ui_to_origin.mjs:153:    fundamentals: { url: fundamentalsRes.url, status: fundamentalsRes.status, sha256: fundamentalsRes.sha256 },
+scripts/truth-chain/trace_ui_to_origin.mjs:154:    marketphase: { url: marketphaseRes.url, status: marketphaseRes.status, sha256: marketphaseRes.sha256 },
+scripts/truth-chain/trace_ui_to_origin.mjs:155:    stock_analysis: { url: stockAnalysisRes.url, status: stockAnalysisRes.status, sha256: stockAnalysisRes.sha256 },
+scripts/truth-chain/trace_ui_to_origin.mjs:156:    marketphase_index: { url: marketphaseIndexRes.url, status: marketphaseIndexRes.status, sha256: marketphaseIndexRes.sha256 }
+scripts/truth-chain/trace_ui_to_origin.mjs:178:    meta: pickPaths(stockRes.json, ['meta.status', 'meta.data_date', 'meta.provider', 'meta.data_source', 'meta.mode', 'meta.asOf', 'meta.freshness']),
+scripts/truth-chain/trace_ui_to_origin.mjs:179:    metadata: pickPaths(stockRes.json, ['metadata.status', 'metadata.served_from', 'metadata.request.ticker', 'metadata.request.normalized_ticker']),
+scripts/truth-chain/trace_ui_to_origin.mjs:198:console.log(`  /api/stock -> ${stockRes.status} sha256=${stockRes.sha256}`);
+scripts/truth-chain/trace_ui_to_origin.mjs:199:console.log(`  /api/fundamentals -> ${fundamentalsRes.status} sha256=${fundamentalsRes.sha256}`);
+scripts/truth-chain/trace_ui_to_origin.mjs:200:console.log(`  /data/marketphase/${ticker}.json -> ${marketphaseRes.status} sha256=${marketphaseRes.sha256}`);
+scripts/truth-chain/trace_ui_to_origin.mjs:201:console.log(`  /data/snapshots/stock-analysis.json -> ${stockAnalysisRes.status} sha256=${stockAnalysisRes.sha256}`);
+scripts/providers/market-stats-v3.mjs:6:import { buildEnvelope, validateEnvelopeSchema } from '../lib/envelope.js';
+scripts/providers/market-stats-v3.mjs:470:  const schemaCheck = validateEnvelopeSchema(envelope);
+scripts/providers/market-stats-v3.mjs:493:  const healthPayload = {
+scripts/providers/market-stats-v3.mjs:500:    reason_summary: reasonSummary
+scripts/providers/market-stats-v3.mjs:505:  const healthPath = join(artifactsOutDir, 'market-stats-health.json');
+scripts/providers/market-stats-v3.mjs:509:  await writeFile(healthPath, JSON.stringify(healthPayload, null, 2) + '\n', 'utf-8');
+scripts/generate-eod-mirrors.mjs:30:  const dataQuality = { status: "LIVE", reason: "EMPTY", missingFields: [] };
+scripts/generate-eod-mirrors.mjs:38:    upstream: { url: "mirror", status: null, snippet: "" },
+scripts/audit/REALITY.md:9: M public/mirrors/_health.json
+scripts/audit/REALITY.md:20:public/mirrors/_health.json
+scripts/audit/REALITY.md:41:rv-market-health
+scripts/audit/REALITY.md:79:market-health
+scripts/audit/REALITY.md:86:rv-market-health
+scripts/audit/REALITY.md:123:market-health
+scripts/audit/REALITY.md:141:public/mirrors/market-health.json
+scripts/audit/REALITY.md:150:public/mirrors/_health.json
+scripts/audit/REALITY.md:169:public/mirrors/system-health.json
+scripts/audit/REALITY.md:177:scripts/validate-mirrors.mjs
+scripts/audit/REALITY.md:203:scripts/healthcheck.sh
+scripts/audit/REALITY.md:209:- [WARN] HTML features missing mirrors: count=32 sample=rv-market-cockpit, rv-yield-curve, rv-sector-rotation, rv-central-bank-watch, rv-market-health, rv-price-snapshot, rv-top-movers, rv-earnings-calendar, rv-news-headlines, rv-news-intelligence
+scripts/generate-crypto-snapshot.mjs:11:const SYSTEM_HEALTH_PATH = path.resolve(__dirname, "../mirrors/system-health.json");
+scripts/generate-crypto-snapshot.mjs:98:    status: errors.length ? "FAILED" : "OK",
+scripts/truth-chain/snapshot_ui_values.mjs:20:  console.error(`HTTP ${res.status} for ${url}`);
+scripts/audit/generate-stub-mirrors.mjs:35:      status: "STUB",
+scripts/providers/finnhub.js:42:      httpStatus: res?.status ?? null,
+scripts/providers/finnhub.js:53:      httpStatus: res.status,
+scripts/smoke-debug.mjs:9:  console.error("FAIL: debug-bundle fetch", res.status);
+scripts/smoke-debug.mjs:14:const summary = payload?.summary || {};
+scripts/smoke-debug.mjs:15:const blocksDown = new Set(summary.blocksDown || []);
+scripts/smoke-debug.mjs:16:const endpointsDown = summary.endpointsDown || [];
+scripts/smoke-debug.mjs:19:const hasMarketHealthDown = blocksDown.has("market-health");
+scripts/smoke-debug.mjs:22:console.log("Debug bundle summary:");
+scripts/smoke-debug.mjs:30:  console.error("FAIL: market-health flagged as down");
+functions/api/_shared/scheduler-law.js:153:async function recordHeartbeat(env, { lastRun, lastOk, status }) {
+functions/api/_shared/scheduler-law.js:160:  if (status) {
+functions/api/_shared/scheduler-law.js:161:    await putJsonKV(env, "meta:scheduler:status", status, STATUS_TTL_SECONDS);
+functions/api/_shared/scheduler-law.js:240:  const statusBase = {
+functions/api/_shared/scheduler-law.js:249:    const status = {
+functions/api/_shared/scheduler-law.js:250:      ...statusBase,
+functions/api/_shared/scheduler-law.js:256:    await recordHeartbeat(env, { lastRun: status.finished_at, lastOk: status.finished_at, status });
+functions/api/_shared/scheduler-law.js:259:      status,
+functions/api/_shared/scheduler-law.js:260:      summary: {
+functions/api/_shared/scheduler-law.js:271:    const status = {
+functions/api/_shared/scheduler-law.js:272:      ...statusBase,
+functions/api/_shared/scheduler-law.js:278:    await recordHeartbeat(env, { lastRun: status.finished_at, status });
+functions/api/_shared/scheduler-law.js:281:      status,
+functions/api/_shared/scheduler-law.js:282:      summary: { total: totalAssets, ok: 0, failed: totalAssets, mode },
+functions/api/_shared/scheduler-law.js:289:    const status = {
+functions/api/_shared/scheduler-law.js:290:      ...statusBase,
+functions/api/_shared/scheduler-law.js:296:    await recordHeartbeat(env, { lastRun: status.finished_at, status });
+functions/api/_shared/scheduler-law.js:299:      status,
+functions/api/_shared/scheduler-law.js:300:      summary: { total: 0, ok: 0, failed: 0, mode },
+functions/api/_shared/scheduler-law.js:349:  const status = {
+functions/api/_shared/scheduler-law.js:350:    ...statusBase,
+functions/api/_shared/scheduler-law.js:356:  await recordHeartbeat(env, { lastRun: finishedAt, lastOk: ok ? finishedAt : null, status });
+functions/api/_shared/scheduler-law.js:361:    status,
+functions/api/_shared/scheduler-law.js:362:    summary: {
+functions/api/_shared/scheduler-law.js:374:  const status = await getJsonKV(env, "meta:scheduler:status");
+functions/api/_shared/scheduler-law.js:375:  return status?.value || null;
+scripts/contract-smoke.js:60:function validateEnvelope(obj) {
+scripts/contract-smoke.js:65:  if (typeof obj.meta.status !== "string") return false;
+scripts/contract-smoke.js:79:async function validateTechSignalsPayloads(root) {
+scripts/contract-smoke.js:94:function validateHealthLatestSnapshot(root) {
+scripts/contract-smoke.js:95:  const healthLatestPath = path.join(root, "public", "data", "snapshots", "health", "latest.json");
+scripts/contract-smoke.js:96:  if (!fs.existsSync(healthLatestPath)) {
+scripts/contract-smoke.js:97:    throw new Error("Health latest snapshot missing at public/data/snapshots/health/latest.json");
+scripts/contract-smoke.js:99:  const payload = JSON.parse(fs.readFileSync(healthLatestPath, "utf8"));
+scripts/contract-smoke.js:118:    meta: { status: "LIVE", reason: "", schemaVersion: "v1" },
+scripts/contract-smoke.js:123:  if (!validateEnvelope(sample)) {
+scripts/contract-smoke.js:126:  validateHealthLatestSnapshot(root);
+scripts/contract-smoke.js:127:  await validateTechSignalsPayloads(root);
+scripts/contract-smoke.js:177:      alphaMirror?.dataQuality === "PARTIAL" || alphaMirror?.meta?.status === "PARTIAL";
+scripts/smoke-static-mime.sh:14:  local status_code
+scripts/smoke-static-mime.sh:18:  status_code="$(curl -fsS -L --max-time 20 -o /dev/null -w "%{http_code}" "$full_url")"
+scripts/smoke-static-mime.sh:26:  if [[ "$status_code" != "200" ]]; then
+scripts/smoke-static-mime.sh:27:    echo "FAIL: HTTP ${status_code} for ${path}"
+scripts/smoke-static-mime.sh:42:check_url "/features/rv-market-health.js"
+functions/api/_shared/fundamentals-fmp.mjs:43:                error: { code: res.status === 401 || res.status === 403 ? 'AUTH_FAILED' : 'HTTP_ERROR', message: `HTTP ${res.status}` },
+functions/api/_shared/fundamentals-fmp.mjs:45:                httpStatus: res.status,
+functions/api/_shared/fundamentals-fmp.mjs:60:                httpStatus: res.status,
+functions/api/_shared/fundamentals-fmp.mjs:74:            httpStatus: res.status,
+scripts/providers/fmp.js:42:      httpStatus: res.status,
+scripts/pipeline/build-marketphase-from-kv.mjs:147:      status: "OK",
+scripts/pipeline/build-marketphase-from-kv.mjs:410:      status: "OK",
+scripts/scientific-analyzer/generate-analysis.mjs:454:                    drift_status: 'stable',
+scripts/scientific-analyzer/generate-analysis.mjs:497:                status: 'ERROR',
+scripts/test-envelope.mjs:14:  assert(payload.meta.status === "fresh", "okEnvelope default status should be fresh");
+scripts/test-envelope.mjs:28:  assert(payload.meta.status === "error", "errorEnvelope status should be error");
+scripts/test-envelope.mjs:34:  const ensured = ensureEnvelopePayload({ data: { x: 1 } }, { statusCode: 200 });
+scripts/test-envelope.mjs:35:  assert(ensured.meta && typeof ensured.meta.status === "string", "ensureEnvelopePayload adds meta.status");
+scripts/test-envelope.mjs:45:    assertEnvelope({ ok: true, data: null, error: null, meta: { status: "bad" } });
+scripts/test-envelope.mjs:49:  assert(threw, "assertEnvelope should reject invalid status");
+scripts/test-envelope.mjs:50:  console.log("✅ assertEnvelope rejects invalid status");
+scripts/test-envelope.mjs:54:  // 404 status code should produce ok=false with error populated
+scripts/test-envelope.mjs:55:  const ensured = ensureEnvelopePayload({ data: null }, { statusCode: 404 });
+scripts/test-envelope.mjs:64:  // 500 status code should produce ok=false with error populated
+scripts/test-envelope.mjs:65:  const ensured = ensureEnvelopePayload({ data: null }, { statusCode: 500 });
+scripts/test-envelope.mjs:75:  const ensured = ensureEnvelopePayload({ data: { x: 1 } }, { statusCode: 200 });
+scripts/test-envelope.mjs:84:  // Note: We use a variable to avoid triggering contract-smoke.js pattern guard
+functions/api/_shared/static-handler.js:9:function json(payload, status = 200) {
+functions/api/_shared/static-handler.js:11:    status,
+functions/api/_shared/static-handler.js:29:      status: st,
+functions/api/_shared/static-handler.js:49:  "system-health": "/data/system-health.json",
+functions/api/_shared/static-handler.js:52:  "error-summary": "/data/error-summary.json",
+functions/api/_shared/static-handler.js:54:  "health": "/data/system-health.json",
+functions/api/_shared/static-handler.js:55:  "health-report": "/data/system-health.json"
+functions/api/_shared/static-handler.js:95:          error: { code: "STATIC_MISSING", message: `${staticPath} unavailable (HTTP ${res.status})` },
+scripts/providers/coingecko.js:48:      httpStatus: res.status,
+scripts/providers/coingecko.js:56:      httpStatus: res.status,
+functions/api/_shared/freshness.js:4:      status: pending ? "pending" : "error",
+functions/api/_shared/freshness.js:10:      status: "pending",
+functions/api/_shared/freshness.js:16:      status: "stale",
+functions/api/_shared/freshness.js:22:      status: "fresh",
+functions/api/_shared/freshness.js:27:    status: "stale",
+functions/api/stock.js:221:          status: response.status,
+functions/api/stock.js:225:      lastError = new Error(`HTTP ${response.status}`);
+functions/api/stock.js:234:    status: null,
+functions/api/stock.js:319:      status: result.status,
+functions/api/stock.js:686:        status: 'error',
+functions/api/stock.js:708:        status: 'ERROR',
+functions/api/stock.js:889:  const status = errorPayload
+functions/api/stock.js:910:      status: envelopeStatus,
+functions/api/stock.js:933:      status,
+scripts/truth-audit/run_scenarios.mjs:28:        if (!res.ok) return { error: `HTTP ${res.status}` };
+scripts/truth-audit/run_scenarios.mjs:42:    const s0_summary = await fetchJson(`${BASE_URL}/api/mission-control/summary?debug=1`);
+scripts/truth-audit/run_scenarios.mjs:46:    _record(telemetry, matrix, 'S0', 'mission_control', s0_summary, SPECS.mission_control);
+scripts/truth-audit/run_scenarios.mjs:66:    const pricesSteps = s0_summary?.data?.truthChains?.prices?.steps || [];
+scripts/truth-audit/run_scenarios.mjs:68:    const p6Status = p6?.status === 'OK' ? 'PASS' : 'FAIL';
+scripts/truth-audit/run_scenarios.mjs:74:    const degradeHint = s0_summary?.data?.runtime?.mode || null;
+scripts/update-news.mjs:139:    return { ok: true, status: 200, text: result.data };
+scripts/update-news.mjs:141:    const status = error?.details?.httpStatus ?? 0;
+scripts/update-news.mjs:142:    return { ok: false, status, text: "", error };
+scripts/update-news.mjs:146:function isRetryable({ status, error }) {
+scripts/update-news.mjs:148:  if (status >= 500) return true;
+scripts/update-news.mjs:152:function computeBackoffSeconds(status) {
+scripts/update-news.mjs:153:  if (status === 429) return BACKOFF_RULES.RATE_LIMIT_429_SEC;
+scripts/update-news.mjs:154:  if (status >= 500) return BACKOFF_RULES.UPSTREAM_5XX_SEC;
+scripts/update-news.mjs:155:  if (status >= 400 && status < 500) return BACKOFF_RULES.UPSTREAM_4XX_SEC;
+scripts/update-news.mjs:188:function buildMeta({ status, lastSuccess, itemsCount, dedupedCount, sources, commit, runId }) {
+scripts/update-news.mjs:192:    status,
+scripts/update-news.mjs:263:      let status = 0;
+scripts/update-news.mjs:274:            status = res.status;
+scripts/update-news.mjs:275:            lastStatus = res.status;
+scripts/update-news.mjs:277:              lastErr = new Error(`HTTP ${res.status}`);
+scripts/update-news.mjs:278:              if (attempt <= RETRIES && isRetryable({ status: res.status })) {
+scripts/update-news.mjs:379:    const status = allOk ? "ok" : "degraded";
+scripts/update-news.mjs:384:      status,
+scripts/update-news.mjs:403:  const status = hasExisting ? (anyOk ? "stale" : "down") : "down";
+scripts/update-news.mjs:409:    status,
+scripts/pipeline/build-ndx100-pipeline-truth.mjs:137:    await atomicWriteJsonRel('public/data/pipeline/nasdaq100.validated.json', base);
+scripts/pipeline/build-ndx100-pipeline-truth.mjs:152:  const validatedMissing = [];
+scripts/pipeline/build-ndx100-pipeline-truth.mjs:154:  let validatedCount = 0;
+scripts/pipeline/build-ndx100-pipeline-truth.mjs:158:    validatedCount = null;
+scripts/pipeline/build-ndx100-pipeline-truth.mjs:163:        validatedCount += 1;
+scripts/pipeline/build-ndx100-pipeline-truth.mjs:166:        validatedMissing.push({ ticker: t, reason: 'NO_MARKET_PRICE' });
+scripts/pipeline/build-ndx100-pipeline-truth.mjs:177:    const status = await analysisFileStatusForTicker(t);
+scripts/pipeline/build-ndx100-pipeline-truth.mjs:178:    if (!status.exists) {
+scripts/pipeline/build-ndx100-pipeline-truth.mjs:187:    if (!status.validJson) {
+scripts/pipeline/build-ndx100-pipeline-truth.mjs:204:  const validatedPayload = buildStagePayload({
+scripts/pipeline/build-ndx100-pipeline-truth.mjs:208:    count: validatedCount,
+scripts/pipeline/build-ndx100-pipeline-truth.mjs:210:    missing: hasPricesSnap ? validatedMissing : []
+scripts/pipeline/build-ndx100-pipeline-truth.mjs:232:  await atomicWriteJsonRel('public/data/pipeline/nasdaq100.validated.json', validatedPayload);
+scripts/pipeline/build-ndx100-pipeline-truth.mjs:236:  // Build nasdaq100.pipeline-truth.json — canonical Truth Chain summary
+scripts/pipeline/build-ndx100-pipeline-truth.mjs:248:    validated: sourcePayload?.counts?.validated ?? validatedCount ?? 0,
+scripts/pipeline/build-ndx100-pipeline-truth.mjs:255:  validatedPayload.count = finalCounts.validated;
+scripts/pipeline/build-ndx100-pipeline-truth.mjs:271:  // Build 7-step truth chain with status
+scripts/pipeline/build-ndx100-pipeline-truth.mjs:276:      status: (finalCounts.fetched ?? 0) >= tickers.length ? 'OK' : (finalCounts.fetched ?? 0) > 0 ? 'WARN' : 'FAIL',
+scripts/pipeline/build-ndx100-pipeline-truth.mjs:281:      title: 'OHLC validated',
+scripts/pipeline/build-ndx100-pipeline-truth.mjs:282:      status: (finalCounts.validated ?? 0) >= (finalCounts.fetched ?? 0) ? 'OK' : (finalCounts.validated ?? 0) > 0 ? 'WARN' : 'FAIL',
+scripts/pipeline/build-ndx100-pipeline-truth.mjs:283:      detail: `${finalCounts.validated ?? 0}/${finalCounts.fetched ?? 0} passed validation`
+scripts/pipeline/build-ndx100-pipeline-truth.mjs:288:      status: finalCounts.computed >= (finalCounts.validated ?? 0) * 0.9 ? 'OK' : finalCounts.computed > 0 ? 'WARN' : 'FAIL',
+scripts/pipeline/build-ndx100-pipeline-truth.mjs:289:      detail: `${finalCounts.computed}/${finalCounts.validated ?? 0} indicators computed`
+scripts/pipeline/build-ndx100-pipeline-truth.mjs:294:      status: finalCounts.computed >= 2 ? 'OK' : finalCounts.computed > 0 ? 'WARN' : 'FAIL',
+scripts/pipeline/build-ndx100-pipeline-truth.mjs:300:      status: finalCounts.static_ready >= finalCounts.computed ? 'OK' : finalCounts.static_ready > 0 ? 'WARN' : 'FAIL',
+scripts/pipeline/build-ndx100-pipeline-truth.mjs:306:      status: reasonCounts['KV_BACKEND_UNAVAILABLE'] ? 'WARN' : 'OK',
+scripts/pipeline/build-ndx100-pipeline-truth.mjs:314:      status: finalCounts.static_ready > 0 ? 'OK' : 'FAIL',
+scripts/pipeline/build-ndx100-pipeline-truth.mjs:320:  const firstFail = truthSteps.find(s => s.status === 'FAIL');
+scripts/pipeline/build-ndx100-pipeline-truth.mjs:321:  const firstWarn = truthSteps.find(s => s.status === 'WARN');
+scripts/pipeline/build-ndx100-pipeline-truth.mjs:324:    ? { id: firstBlockerStep.id, title: firstBlockerStep.title, status: firstBlockerStep.status }
+scripts/pipeline/build-ndx100-pipeline-truth.mjs:330:    if (step.status === 'FAIL' || step.status === 'WARN') {
+scripts/pipeline/build-ndx100-pipeline-truth.mjs:331:      const blocker = { id: step.id, status: step.status, detail: step.detail };
+scripts/pipeline/build-ndx100-pipeline-truth.mjs:347:      validated: finalCounts.validated,
+scripts/pipeline/build-ndx100-pipeline-truth.mjs:365:  console.log(`  counts: expected=${tickers.length}, fetched=${fetchedCount ?? 0}, validated=${validatedCount ?? 0}, computed=${computedCount}, static_ready=${staticReadyCount}`);
+scripts/pipeline/build-ndx100-pipeline-truth.mjs:366:  console.log(`  first_blocker: ${firstBlocker ? `${firstBlocker.id} (${firstBlocker.status})` : 'none'}`);
+functions/api/_shared/static-only-backup.js:10: * Legacy: { ok, data: dataObject, meta: { status, updatedAt, source } }
+functions/api/_shared/static-only-backup.js:23:      status: metadata.validation?.passed ? "OK" : "PARTIAL",
+functions/api/_shared/static-only-backup.js:152:      status: 404, 
+scripts/llm-context.sh:6:  "docs/ops/contract.md"
+scripts/llm-context.sh:7:  "docs/ops/runbook.md"
+scripts/llm-context.sh:8:  "docs/ops/architecture.md"
+scripts/llm-context.sh:9:  "docs/ops/decisions.md"
+scripts/llm-context.sh:19:echo "== git status =="
+scripts/llm-context.sh:20:git status -sb
+scripts/llm-context.sh:31:echo "== docs/ops headings =="
+scripts/llm-context.sh:32:grep -hE '^#{1,2} ' docs/ops/*.md
+scripts/llm-context.sh:40:curl -fsS "$PREVIEW/api/price-snapshot?debug=1" | jq '{feature, ok, hasMeta:(.meta!=null), metaStatus:(.meta.status//null), metaReason:(.meta.reason//null)}'
+scripts/llm-context.sh:41:curl -fsS "$PREVIEW/api/alpha-radar?debug=1" | jq '{feature, ok, hasMeta:(.meta!=null), metaStatus:(.meta.status//null), metaReason:(.meta.reason//null)}'
+scripts/llm-context.sh:44:curl -fsS "$PREVIEW/api/debug-bundle" | jq '{hasKV:.infra.kv.hasKV, bindingPresent:.infra.kv.bindingPresent, opsWorking:.infra.kv.opsWorking, errors:.infra.kv.errors}'
+scripts/llm-context.sh:52:# Health summary check
+scripts/llm-context.sh:53:curl -fsS "$PREVIEW/api/health-report" | jq '{ok, feature, status:.data?.status, summary:.data?.summary}'
+functions/api/health.js:4:  return serveStaticJson(context.request, "health", null, context);
+scripts/generate-posts.js:11:  { id: "market-health", label: "Market Health", endpoint: "/api/market-health" },
+scripts/generate-posts.js:112:  const summary = {
+scripts/generate-posts.js:121:    summary: {
+scripts/generate-posts.js:130:  fs.writeFileSync(path.join(outDir, filename), JSON.stringify(summary, null, 2));
+scripts/generate-health.mjs:10:const HEALTH_PATH = path.join(DATA_DIR, "health.json");
+scripts/generate-health.mjs:11:const HEALTH_HISTORY_PATH = path.join(DATA_DIR, "health_history.json");
+scripts/generate-health.mjs:28:    const status = String(b?.status || "ERROR").toUpperCase();
+scripts/generate-health.mjs:30:    if (status === "LIVE") counts.LIVE += 1;
+scripts/generate-health.mjs:31:    else if (status === "PARTIAL") counts.PARTIAL += 1;
+scripts/generate-health.mjs:59:  let status = "LIVE";
+scripts/generate-health.mjs:62:    status = "ERROR";
+scripts/generate-health.mjs:65:    status = "PARTIAL";
+scripts/generate-health.mjs:72:      blockId: "health",
+scripts/generate-health.mjs:76:      status,
+scripts/generate-health.mjs:83:      summary: {
+scripts/generate-health.mjs:99:function upsertHistory(history, health) {
+scripts/generate-health.mjs:100:  const marketDate = health?.meta?.marketDate;
+scripts/generate-health.mjs:103:  filtered.push(health);
+scripts/generate-health.mjs:112:    console.warn("seed-manifest.json missing or invalid, creating minimal health");
+scripts/generate-health.mjs:113:    // Create minimal health if manifest is missing
+scripts/generate-health.mjs:117:        blockId: "health",
+scripts/generate-health.mjs:121:        status: "PARTIAL",
+scripts/generate-health.mjs:128:        summary: { total: 0, LIVE: 0, PARTIAL: 0, ERROR: 0, okPct: 0, reasons: {} },
+scripts/generate-health.mjs:133:    console.log(`[health] wrote minimal health.json for ${minimalHealth.meta.marketDate}`);
+scripts/generate-health.mjs:138:  const health = buildHealth(seedManifest, usageReport);
+scripts/generate-health.mjs:139:  saveMirror(HEALTH_PATH, health);
+scripts/generate-health.mjs:143:  const updated = upsertHistory(history, health);
+scripts/generate-health.mjs:146:  console.log(`[health] wrote health.json + health_history.json for ${health.meta.marketDate}`);
+scripts/truth-audit/fetch_raw.mjs:14:  { name: 'mission_control_summary', url: '/api/mission-control/summary?debug=1', type: 'json' },
+scripts/truth-audit/fetch_raw.mjs:16:  { name: 'ops_html', url: '/ops/', type: 'html' },
+scripts/truth-audit/fetch_raw.mjs:23:  return { status: res.status, ok: res.ok, contentType: res.headers.get('content-type') || '', text };
+scripts/truth-audit/fetch_raw.mjs:34:      status: result.status,
+scripts/truth-audit/fetch_raw.mjs:43:      fs.writeFileSync(filePath, JSON.stringify({ error: `HTTP ${result.status}`, url: fullUrl }, null, 2));
+scripts/truth-audit/fetch_raw.mjs:46:    console.log(`Fetched ${target.name} -> ${result.status}`);
+functions/api/_shared/eod-providers.mjs:22:  const status = err?.details?.status;
+functions/api/_shared/eod-providers.mjs:24:  const statusNum = Number.isFinite(Number(status)) ? Number(status) : null;
+functions/api/_shared/eod-providers.mjs:26:  const effective = statusNum || upstreamNum;
+functions/api/_shared/eod-providers.mjs:101:          message: `HTTP ${response.status}`,
+functions/api/_shared/eod-providers.mjs:102:          details: { status: response.status }
+functions/api/_shared/eod-providers.mjs:171:          message: `HTTP ${response.status}`,
+functions/api/_shared/eod-providers.mjs:172:          details: { status: response.status }
+functions/api/_shared/eod-providers.mjs:178:    if (payload?.status === 'error') {
+functions/api/elliott-scanner.js:97:function jsonResponse(data, status = 200) {
+functions/api/elliott-scanner.js:99:        status,
+scripts/utils/mirror-io.mjs:58:export function validateBasicMirrorShape(data) {
+scripts/utils/mirror-io.mjs:140:  const existingStatus = payload?.meta?.status || null;
+scripts/utils/mirror-io.mjs:141:  let status = existingStatus;
+scripts/utils/mirror-io.mjs:142:  if (!status) {
+scripts/utils/mirror-io.mjs:144:      status = "OK";
+scripts/utils/mirror-io.mjs:146:      status = "STUB";
+scripts/utils/mirror-io.mjs:148:      status = "ERROR";
+scripts/utils/mirror-io.mjs:150:      status = "PARTIAL";
+scripts/utils/mirror-io.mjs:153:  if (status === "OK" && items.length === 0) {
+scripts/utils/mirror-io.mjs:154:    status = "PARTIAL";
+scripts/utils/mirror-io.mjs:156:  const reason = payload?.meta?.reason || (status === "OK" ? null : payload?.dataQuality || "EMPTY_ITEMS");
+scripts/utils/mirror-io.mjs:159:    status,
+scripts/utils/mirror-io.mjs:166:    payload.meta.status !== nextMeta.status ||
+scripts/seed-mirrors.mjs:11:const FEATURES = ["top-movers", "yield-curve", "sector-rotation", "market-health"];
+scripts/seed-mirrors.mjs:147:    "cf-cache-status": headers?.get("cf-cache-status") || null,
+scripts/seed-mirrors.mjs:158:function logHttpIssue({ op, feature, url, status, text, headers, error }) {
+scripts/seed-mirrors.mjs:165:    http: status ?? null,
+scripts/seed-mirrors.mjs:212:      logHttpIssue({ op: "fetch_text", url, status: res.status, text, headers: res.headers, error: "HTTP_ERROR" });
+scripts/seed-mirrors.mjs:222:    logHttpIssue({ op: "fetch_json", url, status: res.status, text, headers: res.headers, error: "HTML_RESPONSE" });
+scripts/seed-mirrors.mjs:224:    error.httpStatus = res.status;
+scripts/seed-mirrors.mjs:229:    logHttpIssue({ op: "fetch_json", url, status: res.status, text, headers: res.headers, error: "HTTP_ERROR" });
+scripts/seed-mirrors.mjs:230:    const error = new Error(`HTTP ${res.status}`);
+scripts/seed-mirrors.mjs:231:    error.httpStatus = res.status;
+scripts/seed-mirrors.mjs:239:    logHttpIssue({ op: "fetch_json", url, status: res.status, text, headers: res.headers, error: "JSON_PARSE_ERROR" });
+scripts/seed-mirrors.mjs:241:    error.httpStatus = res.status;
+scripts/seed-mirrors.mjs:245:  return { json, bytes, httpStatus: res.status };
+scripts/seed-mirrors.mjs:249:  return payload?.meta?.status || payload?.dataQuality?.status || "UNKNOWN";
+scripts/seed-mirrors.mjs:267:  "market-health": [
+scripts/seed-mirrors.mjs:268:    { name: "market-health", fn: fetchMarketHealthUpstream }
+scripts/seed-mirrors.mjs:329:    case "market-health":
+scripts/seed-mirrors.mjs:336:function validateFeature(featureId, payload, items) {
+scripts/seed-mirrors.mjs:346:  if (featureId === "market-health") {
+scripts/seed-mirrors.mjs:362:  const httpCode = err.httpStatus ?? err.status ?? null;
+scripts/seed-mirrors.mjs:391:function buildResult(featureId, status, { providerUsed, reason, httpCode, wrote, timestamp }) {
+scripts/seed-mirrors.mjs:394:    status,
+scripts/seed-mirrors.mjs:424:      const validation = validateFeature(featureId, payload, items);
+scripts/seed-mirrors.mjs:485:    status: metaStatus === "LIVE" ? "fresh" : "stale"
+scripts/seed-mirrors.mjs:503:    upstream: { url: safeUpstreamUrl, status: upstreamStatus ?? null, snippet: "" },
+scripts/seed-mirrors.mjs:506:      status: metaStatus === "LIVE" ? "LIVE" : "NO_DATA",
+scripts/seed-mirrors.mjs:511:      status: metaStatus,
+scripts/seed-mirrors.mjs:766:    const error = new Error(`HTTP ${result.res.status}`);
+scripts/seed-mirrors.mjs:767:    error.httpStatus = result.res.status;
+scripts/seed-mirrors.mjs:774:    error.httpStatus = result.res.status;
+scripts/seed-mirrors.mjs:780:    upstreamStatus: result.res.status ?? 200,
+scripts/seed-mirrors.mjs:1015:      const status = eligible.length ? "READY" : "CONFIG_MISSING";
+scripts/seed-mirrors.mjs:1016:      return { feature: featureId, status, eligibleProviders: eligible };
+scripts/seed-mirrors.mjs:1018:    const readyCount = dryDetails.filter((entry) => entry.status === "READY").length;
+scripts/seed-mirrors.mjs:1025:    console.log(JSON.stringify({ summary: { readyCount, total: dryDetails.length }, details: dryDetails }));
+scripts/seed-mirrors.mjs:1036:  const summary = {
+scripts/seed-mirrors.mjs:1039:    summary: { ok: 0, bad: 0, total: FEATURES.length },
+scripts/seed-mirrors.mjs:1076:      summary.blocks[featureId] = {
+scripts/seed-mirrors.mjs:1086:      summary.summary.ok += 1;
+scripts/seed-mirrors.mjs:1116:    const status = existing ? "STALE" : "FAILED";
+scripts/seed-mirrors.mjs:1117:    const okForSummary = status === "STALE";
+scripts/seed-mirrors.mjs:1118:    summary.blocks[featureId] = {
+scripts/seed-mirrors.mjs:1129:      summary.summary.ok += 1;
+scripts/seed-mirrors.mjs:1131:      summary.summary.bad += 1;
+scripts/seed-mirrors.mjs:1133:    results.push(buildResult(featureId, status, {
+scripts/seed-mirrors.mjs:1142:  const healthPath = path.resolve(process.cwd(), "mirrors/_health.json");
+scripts/seed-mirrors.mjs:1143:  saveMirror(healthPath, {
+scripts/seed-mirrors.mjs:1145:    mirrorId: "_health",
+scripts/seed-mirrors.mjs:1150:    whyUnique: "Seeder health report",
+scripts/seed-mirrors.mjs:1152:    context: summary
+scripts/seed-mirrors.mjs:1155:  const okCount = results.filter((entry) => entry.status === "FRESH" || entry.status === "STALE").length;
+scripts/seed-mirrors.mjs:1156:  const failCount = results.filter((entry) => entry.status === "FAILED" && entry.reason !== "CONFIG_MISSING").length;
+scripts/seed-mirrors.mjs:1158:    (entry) => CRITICAL_FEATURES.has(entry.feature) && entry.status === "FAILED"
+scripts/seed-mirrors.mjs:1161:  const summaryLine = {
+scripts/seed-mirrors.mjs:1162:    summary: {
+scripts/seed-mirrors.mjs:1171:  console.log(JSON.stringify(summaryLine));
+functions/api/_shared/resilience.js:54:  if (!meta.status) {
+functions/api/_shared/resilience.js:55:    meta.status = "EMPTY";
+functions/api/_shared/resilience.js:60:  if (meta.status === "LIVE" && dataEmpty && !allowEmptyData) {
+functions/api/_shared/resilience.js:63:      meta.status = "STALE";
+functions/api/_shared/resilience.js:68:      meta.status = "EMPTY";
+functions/api/_shared/resilience.js:76:  if (meta.status === "STALE" && dataEmpty) {
+functions/api/_shared/resilience.js:82:      meta.status = "EMPTY";
+functions/api/_shared/resilience.js:117:  const status = error.status ?? error.statusCode ?? null;
+functions/api/_shared/resilience.js:118:  if (typeof status === "number" && status >= 500) return true;
+functions/api/_shared/resilience.js:124:  const status = error?.status ?? error?.statusCode ?? null;
+functions/api/_shared/resilience.js:125:  if (status === 403 || status === 429) return status;
+functions/api/_shared/resilience.js:222:    status: "EMPTY",
+functions/api/_shared/resilience.js:263:        meta.status = "STALE";
+functions/api/_shared/resilience.js:271:          upstream: { url: "mirror", status: null, snippet: "" },
+functions/api/_shared/resilience.js:300:          { status: httpStatus, cacheStatus: "STALE" }
+functions/api/_shared/resilience.js:306:      meta.status = "STALE";
+functions/api/_shared/resilience.js:314:        upstream: { url: cfg.upstreamUrl || "", status: null, snippet: "" },
+functions/api/_shared/resilience.js:343:        { status: httpStatus, cacheStatus: "STALE" }
+functions/api/_shared/resilience.js:347:    meta.status = "NO_DATA";
+functions/api/_shared/resilience.js:361:      upstream: { url: cfg.upstreamUrl || "", status: null, snippet: "" },
+functions/api/_shared/resilience.js:389:      { status: httpStatus, cacheStatus: "ERROR" }
+functions/api/_shared/resilience.js:448:      meta.status = "STALE";
+functions/api/_shared/resilience.js:456:        upstream: { url: upstreamUrl, status: upstreamStatus, snippet: safeSnippet(fetchError?.message || "") },
+functions/api/_shared/resilience.js:488:        { status: httpStatus, cacheStatus: "STALE" }
+functions/api/_shared/resilience.js:492:    meta.status = "NO_DATA";
+functions/api/_shared/resilience.js:500:      upstream: { url: upstreamUrl, status: upstreamStatus, snippet: safeSnippet(fetchError?.message || "") },
+functions/api/_shared/resilience.js:531:      { status: httpStatus, cacheStatus: "ERROR" }
+functions/api/_shared/resilience.js:538:    meta.status = "STALE";
+functions/api/_shared/resilience.js:547:        upstream: { url: upstreamUrl, status: upstreamStatus, snippet: upstreamSnippet },
+functions/api/_shared/resilience.js:579:        { status: httpStatus, cacheStatus: "STALE" }
+functions/api/_shared/resilience.js:583:    meta.status = "NO_DATA";
+functions/api/_shared/resilience.js:591:      upstream: { url: upstreamUrl, status: upstreamStatus, snippet: upstreamSnippet },
+functions/api/_shared/resilience.js:622:      { status: httpStatus, cacheStatus: "ERROR" }
+functions/api/_shared/resilience.js:635:  meta.status = "LIVE";
+functions/api/_shared/resilience.js:646:    upstream: { url: upstreamUrl, status: upstreamStatus ?? 200, snippet: upstreamSnippet },
+functions/api/_shared/resilience.js:674:    { status: httpStatus, cacheStatus: "MISS" }
+scripts/validate/market-stats-artifact.v1.mjs:22:  const health = await readJson(join(baseDir, 'market-stats-health.json'));
+scripts/validate/market-stats-artifact.v1.mjs:34:  assert(health?.module === 'market-stats', 'health.module must be market-stats');
+scripts/validate/market-stats-artifact.v1.mjs:35:  assert(['OK', 'DEGRADED', 'FAILED'].includes(health?.run_quality), 'health.run_quality invalid');
+scripts/validate/market-stats-artifact.v1.mjs:36:  assert(typeof health.coverage_ratio === 'number', 'health.coverage_ratio must be number');
+scripts/validate/market-stats-artifact.v1.mjs:37:  assert(health.coverage_ratio >= 0 && health.coverage_ratio <= 1, 'health.coverage_ratio must be between 0 and 1');
+scripts/truth-audit/static_scan.mjs:16:  '/api/mission-control/summary',
+scripts/truth-audit/static_scan.mjs:19:  '/ops/'
+functions/api/_shared/symbol-resolver.mjs:34:    const error = new Error(`HTTP ${response.status}`);
+functions/_lib/kv-safe.js:22:  const status = error?.status ?? error?.code;
+functions/_lib/kv-safe.js:23:  if (status === 429) return true;
+functions/_lib/kv-safe.js:81:export function jsonResponse(payload, status = 200) {
+functions/_lib/kv-safe.js:83:    status,
+scripts/providers/rss.js:38:      `rss_http_${res.status}`,
+scripts/providers/rss.js:39:      normalizeProviderDetails(url, { httpStatus: res.status, snippet: text })
+functions/api/_shared/envelope.js:73:function normalizeError(error, ok, statusCode) {
+functions/api/_shared/envelope.js:76:    const code = statusCode ? `HTTP_${statusCode}` : "ERROR";
+functions/api/_shared/envelope.js:77:    const message = statusCode ? `HTTP ${statusCode}` : "Unknown error";
+functions/api/_shared/envelope.js:98:  const raw = pickString(meta?.status, metadata?.status) || "";
+functions/api/_shared/envelope.js:109:export function ensureEnvelopePayload(payload, { statusCode } = {}) {
+functions/api/_shared/envelope.js:114:  if (typeof statusCode === "number" && statusCode >= 400) ok = false;
+functions/api/_shared/envelope.js:117:  obj.error = normalizeError(obj.error, ok, statusCode);
+functions/api/_shared/envelope.js:119:    obj.error = normalizeError(null, ok, statusCode);
+functions/api/_shared/envelope.js:126:  const statusCandidate = pickString(existingMeta.status, metadata?.status);
+functions/api/_shared/envelope.js:127:  const status = isAllowedStatus(statusCandidate)
+functions/api/_shared/envelope.js:128:    ? statusCandidate
+functions/api/_shared/envelope.js:130:  existingMeta.status = status;
+functions/api/_shared/envelope.js:173:  if (!isAllowedStatus(meta.status)) {
+functions/api/_shared/envelope.js:174:    throw new Error(`Envelope.meta.status invalid: ${meta.status}`);
+functions/api/_shared/envelope.js:209:      status: metaPartial?.status || "fresh",
+functions/api/_shared/envelope.js:235:      status: metaPartial?.status || "error",
+functions/api/_shared/envelope.js:254:  status = 200,
+functions/api/_shared/envelope.js:262:  return new Response(JSON.stringify(envelope), { status, headers: responseHeaders });
+functions/api/_shared/envelope.js:284:  const nextPayload = ensureEnvelopePayload(payload, { statusCode: response.status });
+functions/api/_shared/envelope.js:298:    return new Response(JSON.stringify(fallback), { status: 500, headers: fallbackHeaders });
+functions/api/_shared/envelope.js:306:    status: response.status,
+scripts/utils/eod-market-mirrors.mjs:56:    mirrorId: "market-health",
+scripts/utils/eod-market-mirrors.mjs:61:    whyUnique: "EOD benchmark health snapshot.",
+scripts/utils/eod-market-mirrors.mjs:240:      "market-health": marketHealthMirror,
+scripts/ops/env.config.mjs:16:    const summary = Object.fromEntries(order.map((key) => [key, Boolean(candidates[key])]));
+scripts/ops/env.config.mjs:17:    throw new Error(`OPS_BASE missing. Provide OPS_BASE/RV_BASE/BASE_URL/BASE. ${JSON.stringify(summary)}`);
+scripts/providers/_shared.js:21:  const httpStatus = details.httpStatus ?? details.status ?? null;
+functions/api/_shared/feature-contract.js:30:  if (input && typeof input === "object" && input.status) {
+functions/api/_shared/feature-contract.js:32:      status: input.status,
+functions/api/_shared/feature-contract.js:33:      reason: input.reason || input.status,
+functions/api/_shared/feature-contract.js:39:    if (input === "LIVE") return { status: "LIVE", reason: "LIVE", missingFields: [] };
+functions/api/_shared/feature-contract.js:40:    if (input === "STALE") return { status: "PARTIAL", reason: "STALE", missingFields: [] };
+functions/api/_shared/feature-contract.js:41:    if (input === "PARTIAL") return { status: "PARTIAL", reason: "PARTIAL", missingFields: [] };
+functions/api/_shared/feature-contract.js:42:    if (input === "NO_DATA") return { status: "PARTIAL", reason: "NO_DATA", missingFields: [] };
+functions/api/_shared/feature-contract.js:43:    return { status: ok ? "PARTIAL" : "FAIL", reason: input, missingFields: [] };
+functions/api/_shared/feature-contract.js:48:      status: "FAIL",
+functions/api/_shared/feature-contract.js:55:    return { status: "PARTIAL", reason: "NO_DATA", missingFields: [] };
+functions/api/_shared/feature-contract.js:58:  if (isStale) return { status: "PARTIAL", reason: "STALE", missingFields: [] };
+functions/api/_shared/feature-contract.js:59:  if (partial) return { status: "PARTIAL", reason: "PARTIAL", missingFields: [] };
+functions/api/_shared/feature-contract.js:60:  return { status: "LIVE", reason: "LIVE", missingFields: [] };
+functions/api/_shared/feature-contract.js:79:    status: payload.upstream?.status ?? null,
+scripts/audit-site.mjs:312:function validateField(pathName, value) {
+scripts/audit-site.mjs:479:    status: "OK",
+scripts/audit-site.mjs:484:    block.status = "ERROR";
+scripts/audit-site.mjs:501:    const issues = validateField(entry.path, entry.value);
+scripts/audit-site.mjs:629:    block.status = "ERROR";
+scripts/audit-site.mjs:654:      status: "ERROR",
+scripts/audit-site.mjs:675:      status: "ERROR",
+scripts/audit-site.mjs:1004:          evidence: [makeEvidence("http_response", registryUrl, response.status, "registry fetch")]
+scripts/audit-site.mjs:1012:            [makeEvidence("http_response", registryUrl, response.status, "registry fetch")]
+scripts/audit-site.mjs:1078:        status: "NOT_AUDITED",
+scripts/audit-site.mjs:1093:        status: "NOT_AUDITED",
+scripts/audit-site.mjs:1114:        if (response.status === 429) {
+scripts/audit-site.mjs:1120:        if (response.status >= 500) {
+scripts/audit-site.mjs:1132:    if (!response || response.status >= 500 || lastError) {
+scripts/audit-site.mjs:1137:        status: "ERROR",
+scripts/audit-site.mjs:1142:            [makeEvidence("http_response", url, lastError?.message || response?.status || "unknown", "live fetch")]
+scripts/audit-site.mjs:1156:        status: "ERROR",
+scripts/audit-site.mjs:1200:            status: "NOT_AUDITED",
+scripts/audit-site.mjs:1238:  const summary = {
+scripts/audit-site.mjs:1247:    summary.fieldCount += fields.length;
+scripts/audit-site.mjs:1250:      if (reasons.length) summary.issueCount += reasons.length;
+scripts/audit-site.mjs:1252:        summary.bySeverity[reason.severity] = (summary.bySeverity[reason.severity] || 0) + 1;
+scripts/audit-site.mjs:1253:        summary.byReasonCode[reason.reasonCode] = (summary.byReasonCode[reason.reasonCode] || 0) + 1;
+scripts/audit-site.mjs:1257:      summary.issueCount += 1;
+scripts/audit-site.mjs:1258:      summary.bySeverity[reason.severity] = (summary.bySeverity[reason.severity] || 0) + 1;
+scripts/audit-site.mjs:1259:      summary.byReasonCode[reason.reasonCode] = (summary.byReasonCode[reason.reasonCode] || 0) + 1;
+scripts/audit-site.mjs:1262:  summary.byReasonCode = Object.fromEntries(Object.entries(summary.byReasonCode).sort(([a], [b]) => a.localeCompare(b)));
+scripts/audit-site.mjs:1263:  return summary;
+scripts/audit-site.mjs:1274:  process.stdout.write(`${JSON.stringify({ type: "summary", data: report.summary })}\n`);
+scripts/audit-site.mjs:1279:  lines.push(`Blocks: ${report.summary.blockCount} | Issues: ${report.summary.issueCount}`);
+scripts/audit-site.mjs:1280:  lines.push(`BySeverity: ${JSON.stringify(report.summary.bySeverity)}`);
+scripts/audit-site.mjs:1281:  lines.push(`ByReasonCode: ${JSON.stringify(report.summary.byReasonCode)}`);
+scripts/audit-site.mjs:1380:            status: "NOT_AUDITED",
+scripts/audit-site.mjs:1424:        summary: {
+scripts/audit-site.mjs:1446:  const summary = summarize(blocks);
+scripts/audit-site.mjs:1449:    summary,
+scripts/audit-site.mjs:1459:  const hasCritical = summary.bySeverity.CRITICAL > 0;
+scripts/audit-site.mjs:1460:  const hasError = summary.bySeverity.ERROR > 0;
+scripts/audit-site.mjs:1481:    summary: {
+scripts/utils/mirror-builders.mjs:35:    mirrorId: "system-health",
+scripts/ops/verify-runblock1.zsh:3:# Usage: zsh scripts/ops/verify-runblock1.zsh
+scripts/ops/verify-runblock1.zsh:7:# 2. Local contract tests pass
+scripts/ops/verify-runblock1.zsh:70:    "scripts/validate-symbols.mjs"
+scripts/ops/verify-runblock1.zsh:104:  # validate:symbols
+scripts/ops/verify-runblock1.zsh:105:  log_info "Running npm run validate:symbols..."
+scripts/ops/verify-runblock1.zsh:106:  if npm run validate:symbols 2>&1; then
+scripts/ops/verify-runblock1.zsh:107:    log_pass "validate:symbols passed"
+scripts/ops/verify-runblock1.zsh:109:    log_fail "validate:symbols failed"
+scripts/ops/verify-runblock1.zsh:120:  # test:contracts (if exists)
+scripts/ops/verify-runblock1.zsh:121:  if grep -q '"test:contracts"' "${REPO_ROOT}/package.json" 2>/dev/null; then
+scripts/ops/verify-runblock1.zsh:122:    log_info "Running npm run test:contracts..."
+scripts/ops/verify-runblock1.zsh:123:    if npm run test:contracts 2>&1; then
+scripts/ops/verify-runblock1.zsh:124:      log_pass "test:contracts passed"
+scripts/ops/verify-runblock1.zsh:126:      log_fail "test:contracts failed"
+scripts/ops/verify-runblock1.zsh:129:    log_skip "test:contracts missing (not in package.json)"
+scripts/ops/verify-runblock1.zsh:184:    elif (.meta.status|type)!="string" then err("meta.status is not string")
+scripts/ops/verify-runblock1.zsh:192:    elif (.ok==false and .meta.status!="error") then err("ok=false but meta.status is not error")
+scripts/ops/verify-runblock1.zsh:203:    local status data_date provider ok_val error_code
+scripts/ops/verify-runblock1.zsh:204:    status=$(jq -r '.meta.status' "$tmp_body")
+scripts/ops/verify-runblock1.zsh:209:    local summary="status=${status},data_date=${data_date},provider=${provider},http=${http_code},ok=${ok_val},error_code=${error_code}"
+scripts/ops/verify-runblock1.zsh:210:    log_pass "Endpoint $endpoint: envelope valid ($summary)"
+scripts/ops/verify-runblock1.zsh:255:    elif (.meta.status|type)!="string" then err("meta.status is not string")
+scripts/ops/verify-runblock1.zsh:262:    elif (.ok==false and .meta.status!="error") then err("ok=false but meta.status is not error")
+scripts/ops/verify-runblock1.zsh:270:    local status data_date provider ok_val error_code
+scripts/ops/verify-runblock1.zsh:271:    status=$(jq -r '.meta.status' "$tmp_body")
+scripts/ops/verify-runblock1.zsh:276:    local summary="status=${status},data_date=${data_date},provider=${provider},http=${http_code},ok=${ok_val},error_code=${error_code}"
+scripts/ops/verify-runblock1.zsh:277:    log_pass "Endpoint $endpoint (POST): envelope valid ($summary)"
+scripts/ops/verify-runblock1.zsh:304:    if (.meta.status|type)!="string" then err("meta.status missing")
+scripts/ops/verify-runblock1.zsh:305:    elif ((.meta.status|ascii_downcase)=="fresh" or (.meta.status|ascii_downcase)=="live") then err("meta.status should not be fresh/live")
+scripts/ops/verify-runblock1.zsh:310:    local status
+scripts/ops/verify-runblock1.zsh:311:    status=$(jq -r '.meta.status' "$tmp_body")
+scripts/ops/verify-runblock1.zsh:312:    log_pass "Endpoint $endpoint: freshness transition ok ($status)"
+scripts/ops/verify-runblock1.zsh:323:verify_scheduler_health_payload() {
+scripts/ops/verify-runblock1.zsh:324:  local endpoint="/api/scheduler/health"
+scripts/ops/verify-runblock1.zsh:351:    log_fail "Endpoint $endpoint: scheduler health data payload invalid ($error_msg)"
+scripts/ops/verify-runblock1.zsh:356:  log_pass "Endpoint $endpoint: scheduler health data payload includes last_ok/age_s/max_age_s"
+scripts/ops/verify-runblock1.zsh:369:  # Scheduler health
+scripts/ops/verify-runblock1.zsh:370:  verify_envelope "/api/scheduler/health" "any"
+scripts/ops/verify-runblock1.zsh:371:  verify_scheduler_health_payload
+scripts/ops/verify-runblock1.zsh:373:  # Try health endpoint, fallback to another if not found
+scripts/ops/verify-runblock1.zsh:374:  local health_result
+scripts/ops/verify-runblock1.zsh:375:  health_result=$(curl -sS -o /dev/null -w "%{http_code}" --max-time 10 "${PREVIEW_BASE}/api/health" 2>&1)
+scripts/ops/verify-runblock1.zsh:376:  if [[ "$health_result" =~ ^[0-9]+$ ]] && [[ "$health_result" -ne 000 ]]; then
+scripts/ops/verify-runblock1.zsh:377:    verify_envelope "/api/health?debug=1" "any"
+scripts/ops/verify-runblock1.zsh:379:    log_info "No /api/health endpoint, testing /api/metrics instead"
+functions/api/_shared/parse.js:133:      status: response.status,
+functions/api/_shared/parse.js:147:      const { ok, status, text } = await fetchTextWithTimeout(
+functions/api/_shared/parse.js:153:      return { json, chosenUrl: url, upstreamStatus: status, upstreamOk: ok };
+scripts/ops/verify-truth-artifacts.sh:6:#   ./scripts/ops/verify-truth-artifacts.sh           # Check local files only
+scripts/ops/verify-truth-artifacts.sh:7:#   ./scripts/ops/verify-truth-artifacts.sh --live    # Check live URLs (requires BASE env var)
+scripts/ops/verify-truth-artifacts.sh:20:  "public/data/pipeline/nasdaq100.validated.json"
+scripts/ops/verify-truth-artifacts.sh:59:    echo "Example: BASE=https://d90a2286.rubikvault-site.pages.dev ./scripts/ops/verify-truth-artifacts.sh --live"
+scripts/ops/verify-truth-artifacts.sh:70:    status=$(curl -s -o /dev/null -w "%{http_code}" "$url" 2>/dev/null || echo "000")
+scripts/ops/verify-truth-artifacts.sh:71:    if [[ "$status" == "200" ]]; then
+scripts/ops/verify-truth-artifacts.sh:72:      echo "  ✓ $path (HTTP $status)"
+scripts/ops/verify-truth-artifacts.sh:75:      echo "  ✗ $path (HTTP $status)"
+functions/_ops/shape.js:7:export function getTruthChainsNode(summary) {
+functions/_ops/shape.js:8:  if (!summary || typeof summary !== 'object') return null;
+functions/_ops/shape.js:9:  const data = summary.data && typeof summary.data === 'object' ? summary.data : null;
+functions/internal.js:5:  // IMPORTANT: Don't handle /internal/health - let it be handled by functions/internal-health-html.js
+functions/internal.js:6:  // That function will match /internal-health/* and serve embedded HTML
+functions/internal.js:8:  if (url.pathname.startsWith('/internal/health')) {
+functions/internal.js:11:    return new Response('Not found', { status: 404 });
+functions/internal.js:23:        status: 404,
+scripts/_lib/with-meta.mjs:9:      freshness: { status: "fresh", ageMinutes: 0 },
+scripts/validate/market-score-artifact.v1.mjs:15:function validateSurely(value, min, max, allowNull = false) {
+scripts/validate/market-score-artifact.v1.mjs:44:    validateSurely(entry?.score_short, 0, 100);
+scripts/validate/market-score-artifact.v1.mjs:45:    validateSurely(entry?.score_mid, 0, 100);
+scripts/validate/market-score-artifact.v1.mjs:46:    validateSurely(entry?.score_long, 0, 100);
+scripts/validate/market-score-artifact.v1.mjs:47:    validateSurely(entry?.confidence, 0, 1);
+functions/internal-health.js:4: * This file contains the complete HTML for /internal/health
+functions/internal-health.js:43:    .status-ok { color: #4caf50; }
+functions/internal-health.js:44:    .status-warn { color: #ff9800; }
+functions/internal-health.js:45:    .status-crit { color: #f44336; }
+functions/internal-health.js:189:        <select id="filter-status">
+functions/internal-health.js:227:          throw new Error(\`HTTP \${res.status}: \${res.statusText}\`);
+functions/internal-health.js:251:      const statusClass = \`status-\${sys.status || 'unknown'}\`;
+functions/internal-health.js:255:          <div class="header-value \${statusClass}">\${(sys.status || 'unknown').toUpperCase()}</div>
+functions/internal-health.js:263:          <div class="header-value \${sys.critical_ok ? 'status-ok' : 'status-crit'}">
+functions/internal-health.js:296:      const status = document.getElementById('filter-status').value;
+functions/internal-health.js:301:        if (status && m.status !== status) return false;
+functions/internal-health.js:311:          <td><span class="badge badge-\${m.status}">\${m.status}</span></td>
+functions/internal-health.js:327:        const status = chain[item] || 'UNKNOWN';
+functions/internal-health.js:334:        return \`<span class="proof-item \${classMap[status] || 'proof-unknown'}" title="\${item}: \${status}">\${item[0]}</span>\`;
+functions/internal-health.js:340:      document.getElementById('filter-status').addEventListener('change', applyFilters);
+functions/internal-health.js:368:  // Serve embedded HTML for /internal-health/* 
+functions/internal-health.js:369:  // _redirects routes /internal/health → /internal-health
+functions/internal-health.js:370:  // This function matches /internal-health/* and serves the embedded HTML
+functions/internal-health.js:371:  if (url.pathname.startsWith('/internal-health') || url.pathname === '/internal-health') {
+functions/internal-health.js:380:  return new Response('Not found', { status: 404 });
+scripts/ops/test-ops-ui.mjs:6:const opsUrl = `${base}/ops/?debug=1&t=${Date.now()}`;
+scripts/ops/test-ops-ui.mjs:28:    const bridge = document.querySelector('#ops-bridge');
+scripts/ops/test-ops-ui.mjs:31:        status: bridge?.getAttribute('data-status') || '',
+scripts/ops/test-ops-ui.mjs:33:        health: bridge?.getAttribute('data-health') || '',
+scripts/ops/test-ops-ui.mjs:35:        validated: bridge?.getAttribute('data-count-validated') || '',
+scripts/ops/test-ops-ui.mjs:62:  const expectedValidated = requireNumber(latestCounts.validated, 'latest.counts.validated');
+scripts/ops/test-ops-ui.mjs:66:  await page.goto(opsUrl, { waitUntil: 'domcontentloaded' });
+scripts/ops/test-ops-ui.mjs:67:  const bridge = page.locator('#ops-bridge');
+scripts/ops/test-ops-ui.mjs:69:    await expect(bridge).toHaveAttribute('data-status', /ok|degraded/, { timeout: 20000 });
+scripts/ops/test-ops-ui.mjs:74:    throw new Error('Timeout waiting for ops-bridge readiness');
+scripts/ops/test-ops-ui.mjs:79:  const validatedUi = parseFirstInt(info.bridge?.validated);
+scripts/ops/test-ops-ui.mjs:84:  if (!Number.isFinite(validatedUi)) {
+scripts/ops/test-ops-ui.mjs:86:    throw new Error(`UI validated count missing or invalid: "${info.bridge?.validated}"`);
+scripts/ops/test-ops-ui.mjs:93:  if (validatedUi !== expectedValidated) {
+scripts/ops/test-ops-ui.mjs:95:    throw new Error(`UI validated vs latest mismatch: got ${validatedUi}, expected ${expectedValidated}`);
+scripts/ops/test-ops-ui.mjs:112:    await expect(s1Locator).toHaveAttribute('data-step-status', truthS1.status);
+scripts/ops/test-ops-ui.mjs:113:    await expect(s2Locator).toHaveAttribute('data-step-status', truthS2.status);
+scripts/ops/test-ops-ui.mjs:119:  console.log('OK: ops UI matches pipeline latest + truth chain');
+functions/proxy.js:17:      status: 204,
+functions/proxy.js:27:    return new Response('Missing "url" parameter', { status: 400, headers: CORS_HEADERS });
+functions/proxy.js:31:    return new Response('Invalid "url" parameter', { status: 400, headers: CORS_HEADERS });
+functions/proxy.js:35:    return new Response("Method not allowed", { status: 405, headers: CORS_HEADERS });
+functions/proxy.js:40:    return new Response("Host not allowed", { status: 403, headers: CORS_HEADERS });
+functions/proxy.js:71:        status: 500,
+scripts/ops/verify-ops-pipeline.mjs:28:      return { ok: true, data, source: 'static_summary', url: primaryUrl, status: primaryRes.status };
+scripts/ops/verify-ops-pipeline.mjs:30:    if (primaryRes.status !== 404) {
+scripts/ops/verify-ops-pipeline.mjs:31:      return { ok: false, source: null, url: primaryUrl, status: primaryRes.status, error: `Primary returned ${primaryRes.status}` };
+scripts/ops/verify-ops-pipeline.mjs:41:      return { ok: true, data, source: 'mission_control_api', url: fallbackUrl, status: fallbackRes.status };
+scripts/ops/verify-ops-pipeline.mjs:43:    return { ok: false, source: null, url: fallbackUrl, status: fallbackRes.status, error: `Fallback returned ${fallbackRes.status}` };
+scripts/ops/verify-ops-pipeline.mjs:45:    return { ok: false, source: null, url: fallbackUrl, status: null, error: `Fallback fetch error: ${err.message}` };
+scripts/ops/verify-ops-pipeline.mjs:71:    'public/data/pipeline/nasdaq100.validated.json',
+scripts/ops/verify-ops-pipeline.mjs:81:  const opsDaily = await readJson('public/data/ops-daily.json');
+scripts/ops/verify-ops-pipeline.mjs:82:  const pipeline = opsDaily?.baseline?.pipeline;
+scripts/ops/verify-ops-pipeline.mjs:83:  if (!pipeline || typeof pipeline !== 'object') fail('ops-daily baseline.pipeline missing');
+scripts/ops/verify-ops-pipeline.mjs:86:  if (pipeline.expected !== staticReady.expected) fail('ops-daily pipeline.expected must equal pipeline truth expected');
+scripts/ops/verify-ops-pipeline.mjs:87:  if (pipeline.staticReady !== staticReady.count) fail('ops-daily pipeline.staticReady must equal pipeline truth count');
+scripts/ops/verify-ops-pipeline.mjs:88:  if (!Array.isArray(pipeline.missing)) fail('ops-daily pipeline.missing must be array');
+scripts/ops/verify-ops-pipeline.mjs:89:  if (pipeline.missing.length !== staticReady.missing.length) fail('ops-daily pipeline.missing length mismatch');
+scripts/ops/verify-ops-pipeline.mjs:103:    fail('ops-daily pipeline.fetched=0 with expected>0 indicates empty artifact generation');
+scripts/ops/verify-ops-pipeline.mjs:106:  const html = await fs.readFile(path.join(REPO_ROOT, 'public/ops/index.html'), 'utf-8');
+scripts/ops/verify-ops-pipeline.mjs:107:  if (!html.includes('Refresh (LIVE)')) fail('/ops must contain Refresh (LIVE) marker');
+scripts/ops/verify-ops-pipeline.mjs:108:  if (!html.includes('/api/mission-control/summary?live=1')) fail('/ops must call mission-control/summary?live=1');
+scripts/ops/verify-ops-pipeline.mjs:109:  if (!html.includes('X-OPS-KEY')) fail('/ops must reference X-OPS-KEY');
+scripts/ops/verify-ops-pipeline.mjs:110:  if (html.includes('setInterval(')) fail('/ops must not contain setInterval');
+scripts/ops/verify-ops-pipeline.mjs:111:  if (html.includes('btn-baseline') || html.includes('btn-live')) fail('/ops must not contain old baseline/live button ids');
+scripts/ops/verify-ops-pipeline.mjs:113:  let summaryResult = await fetchWithFallback(
+scripts/ops/verify-ops-pipeline.mjs:114:    `${BASE_URL}/data/ops/summary.latest.json`,
+scripts/ops/verify-ops-pipeline.mjs:115:    `${BASE_URL}/api/mission-control/summary`
+scripts/ops/verify-ops-pipeline.mjs:118:  if (!summaryResult.ok) {
+scripts/ops/verify-ops-pipeline.mjs:119:    const localPath = path.join(REPO_ROOT, 'public', 'data', 'ops', 'summary.latest.json');
+scripts/ops/verify-ops-pipeline.mjs:123:      summaryResult = { ok: true, data: localData, source: 'local_file', url: localPath, status: 200 };
+scripts/ops/verify-ops-pipeline.mjs:125:      fail(`Summary fetch failed: ${summaryResult.error} (status=${summaryResult.status}, url=${summaryResult.url})`);
+scripts/ops/verify-ops-pipeline.mjs:129:  // Schema 3.0 validation (skip when using local summary file)
+scripts/ops/verify-ops-pipeline.mjs:130:  const payload = summaryResult.data;
+scripts/ops/verify-ops-pipeline.mjs:131:  if (summaryResult.source !== 'local_file') {
+scripts/ops/verify-ops-pipeline.mjs:133:      fail(`mission-control summary must use schema 3.0, got: ${payload.schema_version}`);
+scripts/ops/verify-ops-pipeline.mjs:135:    if (!payload.data) fail('mission-control summary missing data property');
+scripts/ops/verify-ops-pipeline.mjs:136:    if (!payload.data.opsBaseline) fail('mission-control summary missing data.opsBaseline');
+scripts/ops/verify-ops-pipeline.mjs:137:    if (!payload.data.opsBaseline.baseline) fail('mission-control summary missing data.opsBaseline.baseline');
+scripts/ops/verify-ops-pipeline.mjs:139:    const baseline = payload.data.opsBaseline.baseline;
+scripts/ops/verify-ops-pipeline.mjs:149:    if (!payload || typeof payload !== 'object') fail('local ops summary missing payload');
+scripts/ops/verify-ops-pipeline.mjs:150:    if (!payload.ops_daily) fail('local ops summary missing ops_daily');
+scripts/ops/verify-ops-pipeline.mjs:153:  process.stdout.write(`OK: ops pipeline truth + wiring verification (summary source=${summaryResult.source}, schema=3.0)\n`);
+functions/api/_shared/static-only.js:27:      status: metadata.validation?.passed ? "OK" : "PARTIAL",
+functions/api/_shared/static-only.js:95:  const uiRequired = moduleConfig?.ui_contract?.policy === 'always' ||
+functions/api/_shared/static-only.js:96:    (moduleConfig?.ui_contract?.policy === 'always_for_critical' && moduleConfig?.tier === 'critical');
+functions/api/_shared/static-only.js:181:  let suggestedAction = failureInfo.hint || 'Data is healthy';
+functions/api/_shared/static-only.js:216:    kv_status: sourceInfo.kv_status,
+functions/api/_shared/static-only.js:218:    asset_status: sourceInfo.asset_status,
+functions/api/_shared/static-only.js:227:    proof_summary: isSuccess ? 'ALL_PASS' : 'FAILED',
+functions/api/_shared/static-only.js:242:      status: moduleState.status,
+functions/api/_shared/static-only.js:253:      status: manifestEntry.status,
+functions/api/_shared/static-only.js:265:      ui_contract_policy: moduleConfig.ui_contract?.policy
+functions/api/_shared/static-only.js:296:      status: isSuccess ? 'fresh' : 'error',
+functions/api/_shared/static-only.js:423:    kv_status: kvStatus,
+functions/api/_shared/static-only.js:425:    asset_status: "MISS",
+functions/api/_shared/static-only.js:440:    sourceInfo.asset_status = "MISS";
+functions/api/_shared/static-only.js:447:    sourceInfo.asset_status = "MISS";
+functions/api/_shared/static-only.js:463:            kv_status: kvStatus,
+functions/api/_shared/static-only.js:465:            asset_status: "HIT",
+functions/api/_shared/static-only.js:475:        sourceInfo.asset_status = "ERROR";
+functions/api/_shared/static-only.js:516:          status: "error",
+functions/api/_shared/static-only.js:523:        status: 503,
+scripts/ops/validate-ops-summary.mjs:5:const SUMMARY_SCHEMA = 'ops.summary.v1';
+scripts/ops/validate-ops-summary.mjs:23:function compareCounts(summaryCounts, pipelineCounts) {
+scripts/ops/validate-ops-summary.mjs:24:  const fields = ['expected', 'fetched', 'validated', 'computed', 'static_ready'];
+scripts/ops/validate-ops-summary.mjs:27:    const sVal = toInt(summaryCounts[field]);
+scripts/ops/validate-ops-summary.mjs:30:      mismatches.push({ field, summary: sVal, pipeline: pVal });
+scripts/ops/validate-ops-summary.mjs:37:  const summary = await readJson('public/data/ops/summary.latest.json');
+scripts/ops/validate-ops-summary.mjs:40:  if (summary.schema_version !== SUMMARY_SCHEMA) {
+scripts/ops/validate-ops-summary.mjs:41:    fail(`summary schema_version mismatch: expected ${SUMMARY_SCHEMA}, got ${summary.schema_version || 'null'}`);
+scripts/ops/validate-ops-summary.mjs:44:  const universes = Array.isArray(summary.universes) ? summary.universes : [];
+scripts/ops/validate-ops-summary.mjs:47:    fail(`summary missing universe entry: ${UNIVERSE_ID}`);
+scripts/ops/validate-ops-summary.mjs:51:  const summaryCounts = {
+scripts/ops/validate-ops-summary.mjs:54:    validated: universe.validated,
+scripts/ops/validate-ops-summary.mjs:59:  const expected = toInt(summaryCounts.expected);
+scripts/ops/validate-ops-summary.mjs:61:    fail(`summary expected must be > 0 (got ${summaryCounts.expected})`);
+scripts/ops/validate-ops-summary.mjs:64:  for (const field of ['fetched', 'validated', 'computed', 'static_ready']) {
+scripts/ops/validate-ops-summary.mjs:65:    const value = toInt(summaryCounts[field]);
+scripts/ops/validate-ops-summary.mjs:67:      fail(`summary ${field} must be >= 0 (got ${summaryCounts[field]})`);
+scripts/ops/validate-ops-summary.mjs:71:  const mismatches = compareCounts(summaryCounts, pipelineCounts);
+scripts/ops/validate-ops-summary.mjs:73:    const details = mismatches.map((m) => `${m.field} summary=${m.summary} pipeline=${m.pipeline}`).join('; ');
+scripts/ops/validate-ops-summary.mjs:74:    fail(`summary drift detected: ${details}`);
+scripts/ops/validate-ops-summary.mjs:77:  process.stdout.write('OK: ops summary matches pipeline.latest\n');
+scripts/create-initial-provider-state.mjs:49:      summary: {
+scripts/ops/rv_verify_count_provenance.mjs:30:  const summaryUrl = `${base}/api/mission-control/summary`;
+scripts/ops/rv_verify_count_provenance.mjs:33:  const [summary, latest] = await Promise.all([
+scripts/ops/rv_verify_count_provenance.mjs:34:    fetchJson(summaryUrl, 'mission-control-summary'),
+scripts/ops/rv_verify_count_provenance.mjs:39:  const summaryCounts = summary?.data?.pipeline?.counts || {};
+scripts/ops/rv_verify_count_provenance.mjs:40:  const summaryLatest = summary?.data?.pipeline?.latest?.counts || {};
+scripts/ops/rv_verify_count_provenance.mjs:41:  const countSources = summary?.data?.pipeline?.countSources || {};
+scripts/ops/rv_verify_count_provenance.mjs:43:  for (const key of ['expected', 'fetched', 'validated', 'computed', 'static_ready']) {
+scripts/ops/rv_verify_count_provenance.mjs:45:    if (summaryLatest[key] == null) {
+scripts/ops/rv_verify_count_provenance.mjs:46:      fail(`summary.data.pipeline.latest.counts.${key} missing`, { base, latestCounts, summaryLatest });
+scripts/ops/rv_verify_count_provenance.mjs:50:  for (const key of ['fetched', 'validated']) {
+scripts/ops/rv_verify_count_provenance.mjs:51:    const latestVal = toNumberOrNull(summaryLatest[key]);
+scripts/ops/rv_verify_count_provenance.mjs:54:    const summaryVal = toNumberOrNull(summaryCounts[key]);
+scripts/ops/rv_verify_count_provenance.mjs:55:    if (summaryVal == null) {
+scripts/ops/rv_verify_count_provenance.mjs:56:      fail(`summary.data.pipeline.counts.${key} missing`, {
+scripts/ops/rv_verify_count_provenance.mjs:59:        summaryCounts,
+scripts/ops/rv_verify_count_provenance.mjs:60:        summaryLatest,
+scripts/ops/rv_verify_count_provenance.mjs:64:    if (summaryVal !== latestVal) {
+scripts/ops/rv_verify_count_provenance.mjs:65:      fail(`summary.data.pipeline.counts.${key} mismatch: ${summaryVal} vs ${latestVal}`, {
+scripts/ops/rv_verify_count_provenance.mjs:68:        summaryCounts,
+scripts/ops/rv_verify_count_provenance.mjs:69:        summaryLatest,
+scripts/ops/rv_verify_count_provenance.mjs:77:        summaryCounts,
+scripts/ops/rv_verify_count_provenance.mjs:78:        summaryLatest,
+scripts/ops/verify-runblock-e-operational.zsh:20:health_tmp=$(mktemp)
+scripts/ops/verify-runblock-e-operational.zsh:21:trap 'rm -f "$health_tmp"' EXIT
+scripts/ops/verify-runblock-e-operational.zsh:23:curl -fsS "${BASE_URL%/}/api/scheduler/health" > "$health_tmp" || fail "scheduler health fetch failed"
+scripts/ops/verify-runblock-e-operational.zsh:25:health_status=$(jq -r '.data.status // empty' "$health_tmp")
+scripts/ops/verify-runblock-e-operational.zsh:26:if [ -z "$health_status" ]; then
+scripts/ops/verify-runblock-e-operational.zsh:27:  fail "scheduler health missing data.status"
+scripts/ops/verify-runblock-e-operational.zsh:29:if [ "$health_status" = "never_ran" ]; then
+scripts/ops/verify-runblock-e-operational.zsh:30:  fail "scheduler health status is never_ran (prod should be running)"
+scripts/ops/verify-runblock-e-operational.zsh:32:pass "scheduler health status=${health_status}"
+scripts/ops/verify-runblock-e-operational.zsh:35:trap 'rm -f "$health_tmp" "$pipeline_tmp"' EXIT
+scripts/update-macro-hub.v3.mjs:210:        const err = new Error(`HTTP_${response.status}`);
+scripts/update-macro-hub.v3.mjs:211:        err.status = response.status;
+scripts/update-macro-hub.v3.mjs:505:  let status = "unknown";
+scripts/update-macro-hub.v3.mjs:506:  if (ageMinutes === null) status = "unknown";
+scripts/update-macro-hub.v3.mjs:507:  else if (ageMinutes <= ttlMinutes) status = "fresh";
+scripts/update-macro-hub.v3.mjs:508:  else if (ageMinutes <= ttlMinutes * 2) status = "stale";
+scripts/update-macro-hub.v3.mjs:509:  else status = "expired";
+scripts/update-macro-hub.v3.mjs:510:  return { status, ageMinutes };
+scripts/update-macro-hub.v3.mjs:1024:  // Determine status based on data quality
+scripts/update-macro-hub.v3.mjs:1025:  const status = freshOrDerivedOk >= 30 ? "LIVE" : (freshOrDerivedOk >= 10 ? "PARTIAL" : "STALE");
+scripts/update-macro-hub.v3.mjs:1031:    // v3 snapshot contract (required by validate-snapshots.js)
+scripts/update-macro-hub.v3.mjs:1032:    status,
+scripts/update-macro-hub.v3.mjs:1166:    snapshot.meta.status = "PARTIAL";
+scripts/update-macro-hub.v3.mjs:1219:        status: "OK",
+scripts/update-macro-hub.v3.mjs:1248:        status: stat.errors > 0 ? "PARTIAL" : (stat.calls > 0 ? "OK" : "EMPTY"),
+scripts/update-macro-hub.v3.mjs:1258:    providerState.meta.status = Object.values(prov).some((p) => p.errors > 0) ? "PARTIAL" : "OK";
+functions/api/_shared/static-only-v3.js:25:      status: metadata.validation?.passed ? "OK" : "PARTIAL",
+functions/api/_shared/static-only-v3.js:93:  const uiRequired = moduleConfig?.ui_contract?.policy === 'always' ||
+functions/api/_shared/static-only-v3.js:94:                     (moduleConfig?.ui_contract?.policy === 'always_for_critical' && moduleConfig?.tier === 'critical');
+functions/api/_shared/static-only-v3.js:209:    proof_summary: Object.values(proofChain).every(v => v === 'PASS' || v === 'SKIP') ? 'ALL_PASS' : 'FAILED',
+functions/api/_shared/static-only-v3.js:224:      status: moduleState.status,
+functions/api/_shared/static-only-v3.js:235:      status: manifestEntry.status,
+functions/api/_shared/static-only-v3.js:247:      ui_contract_policy: moduleConfig.ui_contract?.policy
+functions/api/_shared/static-only-v3.js:254:    suggested_action: failureInfo.hint || 'Data is healthy',
+functions/api/_shared/static-only-v3.js:350:        status: 503,
+scripts/lib/envelope-builder.mjs:48:    const props = node.properties || {};
+scripts/lib/envelope-builder.mjs:56:    const allowedKeys = new Set(Object.keys(props));
+scripts/lib/envelope-builder.mjs:60:      const childSchema = props[k];
+scripts/lib/envelope-builder.mjs:79:        const childSchema = props[k];
+scripts/lib/envelope-builder.mjs:113:  const validate = ajv.compile(schema);
+scripts/lib/envelope-builder.mjs:114:  return { ajv, validate };
+scripts/lib/envelope-builder.mjs:127:      module: input.module || "health",
+scripts/lib/drop-threshold.js:26:export function validateDropThreshold(rawCount, droppedRecords) {
+scripts/lib/drop-threshold.js:88:  const dropCheck = validateDropThreshold(rawCount, droppedRecords);
+scripts/lib/drop-threshold.js:119:  validateDropThreshold,
+scripts/_lib/contracts/envelope.js:1:import { STATUS_LIST } from "./status-enum.js";
+scripts/_lib/contracts/envelope.js:5:  const status = STATUS_LIST.includes(String(base.status)) ? base.status : "ERROR";
+scripts/_lib/contracts/envelope.js:8:    status,
+functions/api/_shared/kv_guard.js:34:    const status = error?.status ?? error?.code;
+functions/api/_shared/kv_guard.js:35:    if (status === 429) return true;
+functions/api/_shared/kv_guard.js:50:    metrics.writeDisabledStatus = error?.status ?? error?.code ?? 429;
+functions/api/_shared/kv_guard.js:59:    err.status = 429;
+scripts/ops/build-safety-snapshot.mjs:8:const OUT_PATH = path.join(REPO_ROOT, 'public', 'data', 'ops', 'safety.latest.json');
+scripts/ops/rv_verify_contracts.sh:6:ASSERTS="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/rv_contract_asserts.jq"
+scripts/ops/rv_verify_contracts.sh:50:    fail "$label $path contract assert failed"
+scripts/ops/rv_verify_contracts.sh:59:  check_endpoint "$base" "$label" "/api/mission-control/summary" "mission_control"
+scripts/ops/rv_verify_contracts.sh:60:  check_endpoint "$base" "$label" "/api/health?debug=1" "debug_probe" "health"
+scripts/ops/rv_verify_contracts.sh:69:if OPS_BASE="${PROD_BASE%/}" node scripts/ops/rv_verify_truth_summary.mjs >/dev/null 2>&1; then
+scripts/ops/rv_verify_contracts.sh:70:  pass "PROD /api/mission-control/summary truth summary"
+scripts/ops/rv_verify_contracts.sh:72:  fail "PROD /api/mission-control/summary truth summary"
+scripts/ops/rv_verify_contracts.sh:77:  if OPS_BASE="${PREVIEW_BASE%/}" node scripts/ops/rv_verify_truth_summary.mjs >/dev/null 2>&1; then
+scripts/ops/rv_verify_contracts.sh:78:    pass "PREVIEW /api/mission-control/summary truth summary"
+scripts/ops/rv_verify_contracts.sh:80:    fail "PREVIEW /api/mission-control/summary truth summary"
+scripts/ops/rv_verify_contracts.sh:99:  prod_mc=$(fetch_json "${PROD_BASE%/}/api/mission-control/summary" || echo '{}')
+scripts/ops/rv_verify_contracts.sh:100:  prev_mc=$(fetch_json "${PREVIEW_BASE%/}/api/mission-control/summary" || echo '{}')
+scripts/ops/rv_verify_contracts.sh:102:  prod_truth_chain=$(echo "$prod_mc" | jq -r '(.data.opsBaseline.truthChain|type) // "missing"')
+scripts/ops/rv_verify_contracts.sh:103:  prev_truth_chain=$(echo "$prev_mc" | jq -r '(.data.opsBaseline.truthChain|type) // "missing"')
+scripts/ops/rv_verify_contracts.sh:104:  prod_sched=$(echo "$prod_mc" | jq -r '(.data.opsBaseline.runtime.schedulerExpected|type) // "missing"')
+scripts/ops/rv_verify_contracts.sh:105:  prev_sched=$(echo "$prev_mc" | jq -r '(.data.opsBaseline.runtime.schedulerExpected|type) // "missing"')
+scripts/ops/rv_verify_contracts.sh:115:  echo "FAIL: $fail_count contract check(s) failed"
+scripts/ops/rv_verify_contracts.sh:119:echo "OK: all contract checks passed"
+scripts/lib/kv-write.js:47:      if (res.status === 404) return null;
+scripts/lib/kv-write.js:50:        throw new Error(`KV_GET_FAIL ${res.status} ${body.slice(0, 200)}`);
+scripts/lib/kv-write.js:66:        throw new Error(`KV_PUT_FAIL ${res.status} ${body.slice(0, 200)}`);
+scripts/lib/kv-write.js:77:    return { ok: true, status: "SKIP_NO_KV_BACKEND", wrote: false };
+scripts/lib/kv-write.js:81:    return { ok: false, status: "INVALID_INPUT", wrote: false };
+scripts/lib/kv-write.js:94:      return { ok: true, status: "KV_WRITE_SKIPPED_NO_CHANGE", wrote: false, digestKey };
+scripts/lib/kv-write.js:100:    return { ok: true, status: "KV_WRITE_OK", wrote: true, digestKey };
+scripts/lib/kv-write.js:104:      status: "KV_WRITE_FAILED",
+scripts/ops/fetch-with-context.mjs:22:      const err = new Error(`HTTP ${res.status} ${res.statusText || ''} (${ms}ms) ${snippet}`.trim());
+scripts/ops/fetch-with-context.mjs:23:      err.status = res.status;
+scripts/lib/envelope.js:7: * - Contract checker (UI contract, plausibility)
+scripts/lib/envelope.js:11: *   const valid = validateEnvelope(envelope, registry);
+scripts/lib/envelope.js:72:        http_status: meta.upstream?.http_status ?? null,
+scripts/lib/envelope.js:91: * @param {object} envelope - Envelope to validate
+scripts/lib/envelope.js:94:export function validateEnvelopeSchema(envelope) {
+scripts/lib/envelope.js:235: * Check UI contract (required paths exist)
+scripts/lib/envelope.js:275: * @param {object} envelope - Envelope to validate
+scripts/lib/envelope.js:279:export function validateEnvelope(envelope, moduleConfig) {
+scripts/lib/envelope.js:284:  const schemaResult = validateEnvelopeSchema(envelope);
+scripts/lib/envelope.js:317:  if (moduleConfig.ui_contract && moduleConfig.ui_contract.required_paths) {
+scripts/lib/envelope.js:318:    const uiResult = checkUIContract(envelope, moduleConfig.ui_contract.required_paths);
+scripts/lib/envelope.js:320:      const policy = moduleConfig.ui_contract.policy;
+scripts/lib/envelope.js:369:  validateEnvelopeSchema,
+scripts/lib/envelope.js:370:  validateEnvelope,
+scripts/lib/atomic-publish.js:87:export async function validateTempFiles(tmpDir, expectedModules) {
+scripts/ops/build-ops-daily.mjs:158:        notes: `CF analytics query failed (HTTP ${res.status})`
+scripts/ops/build-ops-daily.mjs:238:  const truthValidated = await readLegacyPipelineTruth('public/data/pipeline/nasdaq100.validated.json');
+scripts/ops/build-ops-daily.mjs:268:    if (pipelineLatest.ok && Array.isArray(pipelineLatest.doc.degraded_summary?.sample)) {
+scripts/ops/build-ops-daily.mjs:269:      return pipelineLatest.doc.degraded_summary.sample.map((entry) => ({
+scripts/ops/build-ops-daily.mjs:282:        degraded_summary: pipelineLatest.doc.degraded_summary,
+scripts/ops/build-ops-daily.mjs:291:      validated: truthValidated.ok ? toIntOrNull(truthValidated.doc.count) : null,
+scripts/ops/build-ops-daily.mjs:299:      degraded_summary: {
+scripts/ops/build-ops-daily.mjs:357:  const safetySnapshot = await readJsonOptional('public/data/ops/safety.latest.json');
+scripts/ops/build-ops-daily.mjs:363:  const opsDaily = {
+scripts/ops/build-ops-daily.mjs:375:        validatedStored: resolveStageOrLatest(
+scripts/ops/build-ops-daily.mjs:378:          pipelineLatest.ok ? pipelineLatest.doc.counts?.validated : null
+scripts/ops/build-ops-daily.mjs:410:    ops: {
+scripts/ops/build-ops-daily.mjs:415:  await atomicWriteJson('public/data/ops-daily.json', opsDaily);
+scripts/lib/scientific-analyzer/drift-detection.mjs:25:        return { psi: null, status: 'INSUFFICIENT_DATA' };
+scripts/lib/scientific-analyzer/drift-detection.mjs:61:    let status = 'STABLE';
+scripts/lib/scientific-analyzer/drift-detection.mjs:62:    if (psi > 0.25) status = 'SIGNIFICANT_DRIFT';
+scripts/lib/scientific-analyzer/drift-detection.mjs:63:    else if (psi > 0.1) status = 'MODERATE_DRIFT';
+scripts/lib/scientific-analyzer/drift-detection.mjs:65:    return { psi, status, nBins };
+scripts/lib/scientific-analyzer/drift-detection.mjs:98:        return { kl: null, status: 'INSUFFICIENT_DATA' };
+scripts/lib/scientific-analyzer/drift-detection.mjs:125:    let status = 'STABLE';
+scripts/lib/scientific-analyzer/drift-detection.mjs:126:    if (kl > 0.10) status = 'SIGNIFICANT_DRIFT';
+scripts/lib/scientific-analyzer/drift-detection.mjs:127:    else if (kl > 0.05) status = 'MODERATE_DRIFT';
+scripts/lib/scientific-analyzer/drift-detection.mjs:129:    return { kl, status };
+scripts/lib/scientific-analyzer/drift-detection.mjs:140:        return { ks: null, status: 'INSUFFICIENT_DATA' };
+scripts/lib/scientific-analyzer/drift-detection.mjs:168:    let status = 'STABLE';
+scripts/lib/scientific-analyzer/drift-detection.mjs:169:    if (maxDiff > 0.20) status = 'SIGNIFICANT_DRIFT';
+scripts/lib/scientific-analyzer/drift-detection.mjs:170:    else if (maxDiff > 0.10) status = 'MODERATE_DRIFT';
+scripts/lib/scientific-analyzer/drift-detection.mjs:176:        status
+scripts/lib/scientific-analyzer/drift-detection.mjs:238:    // Overall status
+scripts/lib/scientific-analyzer/drift-detection.mjs:239:    const statuses = [psiResult.status, klResult.status, ksResult.status];
+scripts/lib/scientific-analyzer/drift-detection.mjs:242:    if (statuses.includes('SIGNIFICANT_DRIFT')) {
+scripts/lib/scientific-analyzer/drift-detection.mjs:244:    } else if (statuses.includes('MODERATE_DRIFT')) {
+scripts/lib/scientific-analyzer/drift-detection.mjs:261:        status: overallStatus,
+scripts/ops/test-ops-artifacts.mjs:17:const validated = Number(counts.validated);
+scripts/ops/test-ops-artifacts.mjs:27:if (!Number.isFinite(validated) || validated <= 0) {
+scripts/ops/test-ops-artifacts.mjs:28:  throw new Error(`validated must be > 0, got ${counts.validated}`);
+scripts/ops/test-ops-artifacts.mjs:53:  `OK ops-artifacts: expected=${expected} fetched=${fetched} validated=${validated} computed=${Number.isFinite(computed) ? computed : '—'} static_ready=${Number.isFinite(staticReady) ? staticReady : '—'} first_blocker_id=${firstBlockerId}`
+scripts/ops/build-mission-control-summary.mjs:5:const SUMMARY_SCHEMA = 'ops.summary.v1';
+scripts/ops/build-mission-control-summary.mjs:41:    validated: toInt(counts.validated ?? pipelineDoc?.validated ?? 0, 0),
+scripts/ops/build-mission-control-summary.mjs:53:function buildProviders(opsDaily) {
+scripts/ops/build-mission-control-summary.mjs:54:  const providers = Array.isArray(opsDaily?.baseline?.providers) ? opsDaily.baseline.providers : [];
+scripts/ops/build-mission-control-summary.mjs:76:function buildCosts(opsDaily) {
+scripts/ops/build-mission-control-summary.mjs:77:  const cloudflare = opsDaily?.baseline?.cloudflare || null;
+scripts/ops/build-mission-control-summary.mjs:86:function buildSafety(opsDaily) {
+scripts/ops/build-mission-control-summary.mjs:87:  const safety = opsDaily?.baseline?.safety || null;
+scripts/ops/build-mission-control-summary.mjs:109:  const opsDaily = await readJson('public/data/ops-daily.json');
+scripts/ops/build-mission-control-summary.mjs:113:  const status = computeStatus(counts);
+scripts/ops/build-mission-control-summary.mjs:135:    validated: counts.validated,
+scripts/ops/build-mission-control-summary.mjs:138:    status,
+scripts/ops/build-mission-control-summary.mjs:146:  const overallStatus = status === 'OK' ? 'OK' : status;
+scripts/ops/build-mission-control-summary.mjs:148:  const freshness = opsDaily?.baseline?.freshness || {};
+scripts/ops/build-mission-control-summary.mjs:152:  const summary = {
+scripts/ops/build-mission-control-summary.mjs:155:    asof: opsDaily?.generated_at || opsDaily?.asOf || generatedAt,
+scripts/ops/build-mission-control-summary.mjs:157:      status: overallStatus,
+scripts/ops/build-mission-control-summary.mjs:164:    providers: buildProviders(opsDaily),
+scripts/ops/build-mission-control-summary.mjs:165:    ops_daily: {
+scripts/ops/build-mission-control-summary.mjs:166:      generated_at: opsDaily?.generated_at || opsDaily?.asOf || null,
+scripts/ops/build-mission-control-summary.mjs:167:      ref: '/data/ops-daily.json'
+scripts/ops/build-mission-control-summary.mjs:169:    costs: buildCosts(opsDaily),
+scripts/ops/build-mission-control-summary.mjs:170:    safety: buildSafety(opsDaily)
+scripts/ops/build-mission-control-summary.mjs:173:  await atomicWriteJson('public/data/ops/summary.latest.json', summary);
+scripts/ops/build-mission-control-summary.mjs:174:  process.stdout.write(`OK: ops summary generated (status=${overallStatus})\n`);
+scripts/lib/provider-state.js:45:  // Analyze summary
+scripts/lib/provider-state.js:47:  const summary = manifest.summary || {};
+scripts/lib/provider-state.js:49:  // Determine system status
+scripts/lib/provider-state.js:51:  if (!summary.critical_ok) {
+scripts/lib/provider-state.js:53:  } else if (summary.error > 0 || summary.warn > 0) {
+scripts/lib/provider-state.js:54:    systemStatus = summary.error > 0 ? 'crit' : 'warn';
+scripts/lib/provider-state.js:60:    if (module.status === 'error' || module.status === 'warn') {
+scripts/lib/provider-state.js:66:        severity: module.status === 'error' ? 'crit' : 'warn',
+scripts/lib/provider-state.js:86:      status: module.status || 'unknown',
+scripts/lib/provider-state.js:96:        UI: proof.ui_contract_passed !== undefined 
+scripts/lib/provider-state.js:97:          ? (proof.ui_contract_passed ? 'PASS' : 'FAIL')
+scripts/lib/provider-state.js:103:        status: 'UNKNOWN',
+scripts/lib/provider-state.js:124:      status: systemStatus,
+scripts/lib/provider-state.js:128:      critical_ok: summary.critical_ok !== false,
+scripts/lib/provider-state.js:134:      playbook_ref: "/internal/health#playbook"
+scripts/lib/provider-state.js:140: * Compute freshness status for proof chain
+scripts/lib/fetch.js:15:function shouldRetryStatus(status) {
+scripts/lib/fetch.js:16:  if (status === 429) return true;
+scripts/lib/fetch.js:17:  if (status >= 500 && status < 600) return true;
+scripts/lib/fetch.js:67:            http_status: res.status,
+scripts/lib/fetch.js:75:      const httpStatus = res.status;
+scripts/lib/fetch.js:83:        error.status = httpStatus;
+scripts/lib/fetch.js:92:            http_status: httpStatus,
+scripts/lib/fetch.js:117:            http_status: null,
+scripts/lib/fetch.js:138:      http_status: null,
+scripts/lib/scientific-analyzer/datavalidation.mjs:220: * @param {string[]} featureNames - Feature names to validate
+scripts/lib/scientific-analyzer/datavalidation.mjs:224:export function validateFeatures(samples, featureNames, options = {}) {
+scripts/ops/test-ops-ui-smoke.mjs:5:const url = `${base}/ops/`;
+scripts/ops/test-ops-ui-smoke.mjs:7:const res = await fetchWithContext(url, {}, { name: 'ops-ui-smoke' });
+scripts/ops/test-ops-ui-smoke.mjs:10:if (!html.includes('id="ops-bridge"')) {
+scripts/ops/test-ops-ui-smoke.mjs:11:  throw new Error('ops UI missing ops-bridge marker');
+scripts/ops/test-ops-ui-smoke.mjs:13:if (html.includes('/ops/pipeline-truth.json')) {
+scripts/ops/test-ops-ui-smoke.mjs:14:  throw new Error('ops UI references /ops/pipeline-truth.json (should not)');
+scripts/ops/test-ops-ui-smoke.mjs:17:console.log('OK ops-ui-smoke');
+scripts/lib/build-id.js:113: * @param {string} buildId - Build ID to validate
+scripts/ops/rv_contract_asserts.jq:15:  and (.meta.status | is_str)
+scripts/ops/rv_contract_asserts.jq:16:  and (.data.opsBaseline | is_obj)
+scripts/ops/rv_contract_asserts.jq:17:  and (.data.opsBaseline.truthChain | is_obj)
+scripts/ops/rv_contract_asserts.jq:18:  and ((.data.opsBaseline.truthChain.nasdaq100.steps | type) == "array")
+scripts/ops/rv_contract_asserts.jq:19:  and ((.data.opsBaseline.truthChain.nasdaq100.steps | length) >= 6)
+scripts/ops/rv_contract_asserts.jq:20:  and ((.data.opsBaseline.truthChain.nasdaq100.first_blocker | type) == "object" or .data.opsBaseline.truthChain.nasdaq100.first_blocker == null)
+scripts/ops/rv_contract_asserts.jq:21:  and (.data.opsBaseline.runtime.schedulerExpected | is_bool)
+scripts/ops/rv_contract_asserts.jq:22:  and (.data.opsBaseline.runtime.schedulerExpectedReason | is_str);
+scripts/ops/rv_contract_asserts.jq:31:  and ((.asset_status | type) == "string")
+scripts/ops/rv_contract_asserts.jq:32:  and (.asset_status == "HIT" or .asset_status == "MISS" or .asset_status == "ERROR")
+scripts/ops/rv_contract_asserts.jq:34:  and (.proof_summary | is_str)
+scripts/ops/rv_contract_asserts.jq:36:  and (.meta.status | is_str);
+scripts/ops/rv_contract_asserts.jq:54:  and ((.status | type) == "string")
+scripts/ops/rv_contract_asserts.jq:55:  and (.status == "ok");
+scripts/ops/rv_verify_truth_summary.mjs:5:const summaryUrl = `${base}/api/mission-control/summary`;
+scripts/ops/rv_verify_truth_summary.mjs:12:const summaryRes = await fetchWithContext(summaryUrl, {}, { name: 'mission-control-summary' });
+scripts/ops/rv_verify_truth_summary.mjs:13:const summary = await summaryRes.json();
+scripts/ops/rv_verify_truth_summary.mjs:15:if (summary?.schema_version !== '3.0') {
+scripts/ops/rv_verify_truth_summary.mjs:16:  fail(`schema_version mismatch: ${summary?.schema_version}`);
+scripts/ops/rv_verify_truth_summary.mjs:18:if (summary?.meta?.asOf === '—') {
+scripts/ops/rv_verify_truth_summary.mjs:21:if (typeof summary?.meta?.status !== 'string') {
+scripts/ops/rv_verify_truth_summary.mjs:22:  fail('meta.status missing');
+scripts/ops/rv_verify_truth_summary.mjs:25:const health = summary?.data?.health || {};
+scripts/ops/rv_verify_truth_summary.mjs:27:  const status = health?.[key]?.status;
+scripts/ops/rv_verify_truth_summary.mjs:28:  if (!['OK', 'INFO', 'WARNING', 'CRITICAL'].includes(status)) {
+scripts/ops/rv_verify_truth_summary.mjs:29:    fail(`health.${key}.status invalid: ${status}`);
+scripts/ops/rv_verify_truth_summary.mjs:33:const truthChains = summary?.data?.truthChains;
+scripts/ops/rv_verify_truth_summary.mjs:60:const priceStepMap = Object.fromEntries(priceTruth.steps.map((s) => [s.id, s.status]));
+scripts/ops/rv_verify_truth_summary.mjs:63:if (p6 === 'OK' && p7 === 'OK' && priceTruth.status === 'ERROR') {
+scripts/ops/rv_verify_truth_summary.mjs:64:  fail('priceTruth.status should not be ERROR when P6 and P7 are OK');
+scripts/ops/rv_verify_truth_summary.mjs:85:const runtime = summary?.data?.runtime || {};
+scripts/ops/rv_verify_truth_summary.mjs:86:if (runtime?.schedulerExpected === false && health?.pipeline?.status === 'CRITICAL') {
+scripts/ops/rv_verify_truth_summary.mjs:93:const summaryCounts = summary?.data?.pipeline?.counts || {};
+scripts/ops/rv_verify_truth_summary.mjs:94:for (const key of ['expected', 'fetched', 'validated', 'computed', 'static_ready']) {
+scripts/ops/rv_verify_truth_summary.mjs:96:    if (summaryCounts[key] == null) {
+scripts/ops/rv_verify_truth_summary.mjs:97:      fail(`summary pipeline counts.${key} missing`);
+scripts/ops/rv_verify_truth_summary.mjs:99:    if (Number(summaryCounts[key]) !== Number(latestCounts[key])) {
+scripts/ops/rv_verify_truth_summary.mjs:100:      fail(`summary counts.${key} mismatch: ${summaryCounts[key]} vs ${latestCounts[key]}`);
+scripts/ops/rv_verify_truth_summary.mjs:105:const coverageMissing = summary?.data?.coverage?.missing;
+scripts/ops/rv_verify_truth_summary.mjs:115:console.log('OK: truth summary contract');
+scripts/lib/validate-eod.mjs:7:export function validateEodRecord(rec) {
+scripts/lib/error-classify.mjs:21:      : Number.isFinite(Number(err?.status))
+scripts/lib/error-classify.mjs:22:        ? Number(err.status)
+scripts/lib/error-classify.mjs:35:  if (stage === 'validate') {
+scripts/lib/module-state.js:4: * Generates and writes module state files for diagnostics.
+scripts/lib/module-state.js:17: * Compute module status from validation and freshness
+scripts/lib/module-state.js:39: * Compute severity from tier and status
+scripts/lib/module-state.js:41: * @param {string} status - Module status
+scripts/lib/module-state.js:44:function computeSeverity(tier, status) {
+scripts/lib/module-state.js:45:  if (status === 'error') {
+scripts/lib/module-state.js:49:  if (status === 'stale') {
+scripts/lib/module-state.js:53:  if (status === 'warn') {
+scripts/lib/module-state.js:119:  const status = computeStatus(validationResult, freshness);
+scripts/lib/module-state.js:120:  const severity = computeSeverity(moduleConfig.tier, status);
+scripts/lib/module-state.js:127:    status,
+scripts/lib/module-state.js:145:      upstream_status: envelope.metadata.upstream?.http_status || null,
+scripts/lib/module-state.js:148:    ui_contract: {
+scripts/lib/module-state.js:149:      required: moduleConfig.ui_contract?.policy === 'always' || 
+scripts/lib/module-state.js:150:                (moduleConfig.ui_contract?.policy === 'always_for_critical' && moduleConfig.tier === 'critical'),
+scripts/lib/module-state.js:185: * Build error state (when scrape/validate fails completely)
+scripts/lib/module-state.js:199:    status: "error",
+scripts/lib/module-state.js:217:      upstream_status: error.upstream_status || null,
+scripts/lib/module-state.js:220:    ui_contract: {
+scripts/lib/module-state.js:221:      required: moduleConfig.ui_contract?.policy === 'always' || 
+scripts/lib/module-state.js:222:                (moduleConfig.ui_contract?.policy === 'always_for_critical' && moduleConfig.tier === 'critical'),
+scripts/ops/validate-truth.sh:26:jq -e '(.counts.expected|type=="number") and (.counts.fetched|type=="number") and (.counts.validated|type=="number")' "$DATA/pipeline/nasdaq100.latest.json" >/dev/null
+scripts/ops/validate-truth.sh:30:for stage in fetched validated computed static-ready; do
+scripts/ops/validate-truth.sh:39:# ops summary
+scripts/ops/validate-truth.sh:40:if [ ! -f "$DATA/ops/summary.latest.json" ]; then
+scripts/ops/validate-truth.sh:41:  fail "missing ops summary latest"
+scripts/ops/validate-truth.sh:43:jq -e '.schema_version=="ops.summary.v1" and (.ops_daily.ref|type=="string")' "$DATA/ops/summary.latest.json" >/dev/null
+scripts/ops/validate-truth.sh:44:pass "ops summary schema ok"
+scripts/ops/validate-truth.sh:46:# ops-daily
+scripts/ops/validate-truth.sh:47:if [ ! -f "$DATA/ops-daily.json" ]; then
+scripts/ops/validate-truth.sh:48:  fail "missing ops-daily"
+scripts/ops/validate-truth.sh:50:jq -e '(.baseline.pipeline.expected|type=="number") and (.baseline.pipeline.staticReady|type=="number")' "$DATA/ops-daily.json" >/dev/null
+scripts/ops/validate-truth.sh:51:pass "ops-daily baseline pipeline ok"
+scripts/ops/validate-truth.sh:53:# health snapshot latest (envelope)
+scripts/ops/validate-truth.sh:54:if [ -f "$DATA/snapshots/health/latest.json" ]; then
+scripts/ops/validate-truth.sh:56:    "$DATA/snapshots/health/latest.json" >/dev/null
+scripts/ops/validate-truth.sh:57:  pass "health latest snapshot envelope ok"
+scripts/ops/validate-truth.sh:59:  warn "missing health latest snapshot envelope"
+scripts/ops/validate-truth.sh:63:missing=$(jq -r '.baseline.pipeline.missing|length' "$DATA/ops-daily.json" 2>/dev/null || echo "")

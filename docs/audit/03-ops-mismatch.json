@@ -1,0 +1,74 @@
+{
+  "schema": "ops_mismatch_v1",
+  "primary_root_cause": {
+    "category": "D_PARALLEL_IMPLEMENTATION",
+    "confidence": 85,
+    "evidence": [
+      "functions/api/_shared/static-only-v3.js:294-297: Tries multiple paths including legacy fallbacks",
+      "public/data/snapshots/{module}/latest.json exists (v3.0 structure)",
+      "public/data/snapshots/{module}.json exists (legacy flat files)",
+      "Both structures coexist, causing potential inconsistency"
+    ],
+    "explanation": "OPS reads from multiple parallel snapshot paths (v3.0 directory structure vs legacy flat files). The API handler tries v3.0 first, then falls back to legacy. This creates potential for OPS to read different data than UI if legacy files are stale."
+  },
+  "secondary_causes": [
+    {
+      "category": "F_DATA_STALENESS_OR_RETENTION",
+      "confidence": 70,
+      "evidence": [
+        "public/data/snapshots/*.json files dated Jan 23 (legacy)",
+        "public/data/snapshots/{module}/latest.json files dated Jan 26-Feb 3 (v3.0)",
+        "Legacy files may be stale while v3.0 files are fresh"
+      ]
+    },
+    {
+      "category": "A_WRONG_INPUT_PATH",
+      "confidence": 60,
+      "evidence": [
+        "functions/api/_shared/static-only-v3.js:294-297: Fallback path order may serve legacy files",
+        "UI expects v3.0 structure but OPS may serve legacy if v3.0 missing"
+      ]
+    }
+  ],
+  "ui_ssot_reference": {
+    "canonical_paths": [
+      "/data/snapshots/{module}/latest.json"
+    ],
+    "evidence": [
+      "functions/api/_shared/static-only-v3.js:294: First path tried is v3.0 directory structure",
+      "scripts/aggregator/finalize.mjs:449-496: Finalizer writes to /data/snapshots/{module}/latest.json"
+    ]
+  },
+  "ops_paths_observed": {
+    "paths": [
+      "/data/snapshots/{module}/latest.json",
+      "/data/snapshots/{module}.json",
+      "/data/{module}.json"
+    ],
+    "evidence": [
+      "functions/api/_shared/static-only-v3.js:294-297: pathsToTry array includes all three"
+    ]
+  },
+  "field_level_diff": [
+    {
+      "field": "schema_version",
+      "ui": "3.0",
+      "ops_expected": "3.0",
+      "ops_actual": "v1 (legacy format)",
+      "evidence": [
+        "functions/api/_shared/static-only-v3.js:361-367: Transforms v3.0 to legacy format for UI",
+        "Legacy files may have schemaVersion: 'v1' instead of schema_version: '3.0'"
+      ]
+    },
+    {
+      "field": "metadata.fetched_at",
+      "ui": "Present in v3.0",
+      "ops_expected": "Present",
+      "ops_actual": "meta.fetchedAt (legacy camelCase)",
+      "evidence": [
+        "functions/api/_shared/static-only-v3.js:16-35: transformV3ToLegacy converts metadata to meta"
+      ]
+    }
+  ],
+  "recommended_fix_target": "Align OPS reads to SSOT: Remove legacy fallback paths, ensure all snapshots use v3.0 structure only. Migrate or delete legacy flat files."
+}

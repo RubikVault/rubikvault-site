@@ -1,0 +1,4671 @@
+[
+  {
+    "type": "begin",
+    "data": {
+      "path": {
+        "text": "scripts/fix-api-exports.mjs"
+      }
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/fix-api-exports.mjs"
+      },
+      "lines": {
+        "text": "const DRY_RUN = process.env.DRY_RUN === '1';\n"
+      },
+      "line_number": 14,
+      "absolute_offset": 402,
+      "submatches": [
+        {
+          "match": {
+            "text": "env.DRY_RUN"
+          },
+          "start": 24,
+          "end": 35
+        }
+      ]
+    }
+  },
+  {
+    "type": "end",
+    "data": {
+      "path": {
+        "text": "scripts/fix-api-exports.mjs"
+      },
+      "binary_offset": null,
+      "stats": {
+        "elapsed": {
+          "secs": 0,
+          "nanos": 18875,
+          "human": "0.000019s"
+        },
+        "searches": 1,
+        "searches_with_match": 1,
+        "bytes_searched": 3590,
+        "bytes_printed": 317,
+        "matched_lines": 1,
+        "matches": 1
+      }
+    }
+  },
+  {
+    "type": "begin",
+    "data": {
+      "path": {
+        "text": "functions/_shared/cache.js"
+      }
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "functions/_shared/cache.js"
+      },
+      "lines": {
+        "text": "  if (!env?.RV_KV || typeof env.RV_KV.get !== \"function\") {\n"
+      },
+      "line_number": 13,
+      "absolute_offset": 281,
+      "submatches": [
+        {
+          "match": {
+            "text": "env.RV_KV"
+          },
+          "start": 28,
+          "end": 37
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "functions/_shared/cache.js"
+      },
+      "lines": {
+        "text": "    const value = await env.RV_KV.get(key, \"json\");\n"
+      },
+      "line_number": 17,
+      "absolute_offset": 433,
+      "submatches": [
+        {
+          "match": {
+            "text": "env.RV_KV"
+          },
+          "start": 24,
+          "end": 33
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "functions/_shared/cache.js"
+      },
+      "lines": {
+        "text": "  if (!env?.RV_KV || typeof env.RV_KV['put'] !== \"function\") {\n"
+      },
+      "line_number": 29,
+      "absolute_offset": 794,
+      "submatches": [
+        {
+          "match": {
+            "text": "env.RV_KV"
+          },
+          "start": 28,
+          "end": 37
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "functions/_shared/cache.js"
+      },
+      "lines": {
+        "text": "    await env.RV_KV['put'](key, JSON.stringify(obj), {\n"
+      },
+      "line_number": 36,
+      "absolute_offset": 1047,
+      "submatches": [
+        {
+          "match": {
+            "text": "env.RV_KV"
+          },
+          "start": 10,
+          "end": 19
+        }
+      ]
+    }
+  },
+  {
+    "type": "end",
+    "data": {
+      "path": {
+        "text": "functions/_shared/cache.js"
+      },
+      "binary_offset": null,
+      "stats": {
+        "elapsed": {
+          "secs": 0,
+          "nanos": 8417,
+          "human": "0.000008s"
+        },
+        "searches": 1,
+        "searches_with_match": 1,
+        "bytes_searched": 1345,
+        "bytes_printed": 1096,
+        "matched_lines": 4,
+        "matches": 4
+      }
+    }
+  },
+  {
+    "type": "begin",
+    "data": {
+      "path": {
+        "text": "scripts/marketphase-validate.mjs"
+      }
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/marketphase-validate.mjs"
+      },
+      "lines": {
+        "text": "  const envSymbols = process.env.SYMBOLS;\n"
+      },
+      "line_number": 119,
+      "absolute_offset": 4841,
+      "submatches": [
+        {
+          "match": {
+            "text": "env.SYMBOLS"
+          },
+          "start": 29,
+          "end": 40
+        }
+      ]
+    }
+  },
+  {
+    "type": "end",
+    "data": {
+      "path": {
+        "text": "scripts/marketphase-validate.mjs"
+      },
+      "binary_offset": null,
+      "stats": {
+        "elapsed": {
+          "secs": 0,
+          "nanos": 4833,
+          "human": "0.000005s"
+        },
+        "searches": 1,
+        "searches_with_match": 1,
+        "bytes_searched": 6090,
+        "bytes_printed": 326,
+        "matched_lines": 1,
+        "matches": 1
+      }
+    }
+  },
+  {
+    "type": "begin",
+    "data": {
+      "path": {
+        "text": "scripts/metrics-v5-gates.mjs"
+      }
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/metrics-v5-gates.mjs"
+      },
+      "lines": {
+        "text": "const baseUrl = process.env.BASE_URL || \"http://127.0.0.1:8788\";\n"
+      },
+      "line_number": 7,
+      "absolute_offset": 220,
+      "submatches": [
+        {
+          "match": {
+            "text": "env.BASE_URL"
+          },
+          "start": 24,
+          "end": 36
+        }
+      ]
+    }
+  },
+  {
+    "type": "end",
+    "data": {
+      "path": {
+        "text": "scripts/metrics-v5-gates.mjs"
+      },
+      "binary_offset": null,
+      "stats": {
+        "elapsed": {
+          "secs": 0,
+          "nanos": 5333,
+          "human": "0.000005s"
+        },
+        "searches": 1,
+        "searches_with_match": 1,
+        "bytes_searched": 4441,
+        "bytes_printed": 341,
+        "matched_lines": 1,
+        "matches": 1
+      }
+    }
+  },
+  {
+    "type": "begin",
+    "data": {
+      "path": {
+        "text": "scripts/truth-chain/trace_ui_to_origin.mjs"
+      }
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/truth-chain/trace_ui_to_origin.mjs"
+      },
+      "lines": {
+        "text": "const base = process.env.BASE_URL || process.env.TRACE_BASE || process.env.RV_BASE || process.env.OPS_BASE;\n"
+      },
+      "line_number": 18,
+      "absolute_offset": 564,
+      "submatches": [
+        {
+          "match": {
+            "text": "env.BASE_URL"
+          },
+          "start": 21,
+          "end": 33
+        },
+        {
+          "match": {
+            "text": "env.TRACE_BASE"
+          },
+          "start": 45,
+          "end": 59
+        },
+        {
+          "match": {
+            "text": "env.RV_BASE"
+          },
+          "start": 71,
+          "end": 82
+        },
+        {
+          "match": {
+            "text": "env.OPS_BASE"
+          },
+          "start": 94,
+          "end": 106
+        }
+      ]
+    }
+  },
+  {
+    "type": "end",
+    "data": {
+      "path": {
+        "text": "scripts/truth-chain/trace_ui_to_origin.mjs"
+      },
+      "binary_offset": null,
+      "stats": {
+        "elapsed": {
+          "secs": 0,
+          "nanos": 32792,
+          "human": "0.000033s"
+        },
+        "searches": 1,
+        "searches_with_match": 1,
+        "bytes_searched": 10176,
+        "bytes_printed": 575,
+        "matched_lines": 1,
+        "matches": 4
+      }
+    }
+  },
+  {
+    "type": "begin",
+    "data": {
+      "path": {
+        "text": "scripts/truth-chain/snapshot_ui_values.mjs"
+      }
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/truth-chain/snapshot_ui_values.mjs"
+      },
+      "lines": {
+        "text": "const base = process.env.BASE_URL || process.env.TRACE_BASE || process.env.RV_BASE || process.env.OPS_BASE;\n"
+      },
+      "line_number": 10,
+      "absolute_offset": 275,
+      "submatches": [
+        {
+          "match": {
+            "text": "env.BASE_URL"
+          },
+          "start": 21,
+          "end": 33
+        },
+        {
+          "match": {
+            "text": "env.TRACE_BASE"
+          },
+          "start": 45,
+          "end": 59
+        },
+        {
+          "match": {
+            "text": "env.RV_BASE"
+          },
+          "start": 71,
+          "end": 82
+        },
+        {
+          "match": {
+            "text": "env.OPS_BASE"
+          },
+          "start": 94,
+          "end": 106
+        }
+      ]
+    }
+  },
+  {
+    "type": "end",
+    "data": {
+      "path": {
+        "text": "scripts/truth-chain/snapshot_ui_values.mjs"
+      },
+      "binary_offset": null,
+      "stats": {
+        "elapsed": {
+          "secs": 0,
+          "nanos": 37500,
+          "human": "0.000037s"
+        },
+        "searches": 1,
+        "searches_with_match": 1,
+        "bytes_searched": 1188,
+        "bytes_printed": 575,
+        "matched_lines": 1,
+        "matches": 4
+      }
+    }
+  },
+  {
+    "type": "begin",
+    "data": {
+      "path": {
+        "text": "scripts/alpha-radar-debug.js"
+      }
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/alpha-radar-debug.js"
+      },
+      "lines": {
+        "text": "const base = process.argv[3] || process.env.RV_BASE_URL || \"http://localhost:8788\";\n"
+      },
+      "line_number": 3,
+      "absolute_offset": 78,
+      "submatches": [
+        {
+          "match": {
+            "text": "env.RV_BASE_URL"
+          },
+          "start": 40,
+          "end": 55
+        }
+      ]
+    }
+  },
+  {
+    "type": "end",
+    "data": {
+      "path": {
+        "text": "scripts/alpha-radar-debug.js"
+      },
+      "binary_offset": null,
+      "stats": {
+        "elapsed": {
+          "secs": 0,
+          "nanos": 8708,
+          "human": "0.000009s"
+        },
+        "searches": 1,
+        "searches_with_match": 1,
+        "bytes_searched": 709,
+        "bytes_printed": 362,
+        "matched_lines": 1,
+        "matches": 1
+      }
+    }
+  },
+  {
+    "type": "begin",
+    "data": {
+      "path": {
+        "text": "scripts/mirror-breakout-energy.mjs"
+      }
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/mirror-breakout-energy.mjs"
+      },
+      "lines": {
+        "text": "const CF_ACCOUNT_ID = process.env.CF_ACCOUNT_ID || \"\";\n"
+      },
+      "line_number": 9,
+      "absolute_offset": 407,
+      "submatches": [
+        {
+          "match": {
+            "text": "env.CF_ACCOUNT_ID"
+          },
+          "start": 30,
+          "end": 47
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/mirror-breakout-energy.mjs"
+      },
+      "lines": {
+        "text": "const CF_KV_NAMESPACE_ID = process.env.CF_KV_NAMESPACE_ID || \"\";\n"
+      },
+      "line_number": 10,
+      "absolute_offset": 462,
+      "submatches": [
+        {
+          "match": {
+            "text": "env.CF_KV_NAMESPACE_ID"
+          },
+          "start": 35,
+          "end": 57
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/mirror-breakout-energy.mjs"
+      },
+      "lines": {
+        "text": "const CF_API_TOKEN = process.env.CF_API_TOKEN || \"\";\n"
+      },
+      "line_number": 11,
+      "absolute_offset": 527,
+      "submatches": [
+        {
+          "match": {
+            "text": "env.CF_API_TOKEN"
+          },
+          "start": 29,
+          "end": 45
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/mirror-breakout-energy.mjs"
+      },
+      "lines": {
+        "text": "const IS_CI = process.env.GITHUB_ACTIONS === \"true\";\n"
+      },
+      "line_number": 12,
+      "absolute_offset": 580,
+      "submatches": [
+        {
+          "match": {
+            "text": "env.GITHUB_ACTIONS"
+          },
+          "start": 22,
+          "end": 40
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/mirror-breakout-energy.mjs"
+      },
+      "lines": {
+        "text": "const LIMIT = Number.parseInt(process.env.MIRROR_LIMIT || \"35\", 10);\n"
+      },
+      "line_number": 14,
+      "absolute_offset": 667,
+      "submatches": [
+        {
+          "match": {
+            "text": "env.MIRROR_LIMIT"
+          },
+          "start": 38,
+          "end": 54
+        }
+      ]
+    }
+  },
+  {
+    "type": "end",
+    "data": {
+      "path": {
+        "text": "scripts/mirror-breakout-energy.mjs"
+      },
+      "binary_offset": null,
+      "stats": {
+        "elapsed": {
+          "secs": 0,
+          "nanos": 13750,
+          "human": "0.000014s"
+        },
+        "searches": 1,
+        "searches_with_match": 1,
+        "bytes_searched": 7100,
+        "bytes_printed": 1452,
+        "matched_lines": 5,
+        "matches": 5
+      }
+    }
+  },
+  {
+    "type": "begin",
+    "data": {
+      "path": {
+        "text": "scripts/ui-path/prove_ui_path.mjs"
+      }
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/ui-path/prove_ui_path.mjs"
+      },
+      "lines": {
+        "text": "const base = process.env.BASE_URL || 'https://rubikvault.com';\n"
+      },
+      "line_number": 12,
+      "absolute_offset": 332,
+      "submatches": [
+        {
+          "match": {
+            "text": "env.BASE_URL"
+          },
+          "start": 21,
+          "end": 33
+        }
+      ]
+    }
+  },
+  {
+    "type": "end",
+    "data": {
+      "path": {
+        "text": "scripts/ui-path/prove_ui_path.mjs"
+      },
+      "binary_offset": null,
+      "stats": {
+        "elapsed": {
+          "secs": 0,
+          "nanos": 8334,
+          "human": "0.000008s"
+        },
+        "searches": 1,
+        "searches_with_match": 1,
+        "bytes_searched": 8407,
+        "bytes_printed": 348,
+        "matched_lines": 1,
+        "matches": 1
+      }
+    }
+  },
+  {
+    "type": "begin",
+    "data": {
+      "path": {
+        "text": "scripts/aggregator/finalize.mjs"
+      }
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/aggregator/finalize.mjs"
+      },
+      "lines": {
+        "text": "const ARTIFACTS_DIR = process.env.ARTIFACTS_DIR || join(BASE_DIR, 'artifacts');\n"
+      },
+      "line_number": 34,
+      "absolute_offset": 1227,
+      "submatches": [
+        {
+          "match": {
+            "text": "env.ARTIFACTS_DIR"
+          },
+          "start": 30,
+          "end": 47
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/aggregator/finalize.mjs"
+      },
+      "lines": {
+        "text": "  const skipInvalidArtifacts = String(process.env.RV_FINALIZER_SKIP_INVALID || '').trim() === '1';\n"
+      },
+      "line_number": 586,
+      "absolute_offset": 19709,
+      "submatches": [
+        {
+          "match": {
+            "text": "env.RV_FINALIZER_SKIP_INVALID"
+          },
+          "start": 46,
+          "end": 75
+        }
+      ]
+    }
+  },
+  {
+    "type": "end",
+    "data": {
+      "path": {
+        "text": "scripts/aggregator/finalize.mjs"
+      },
+      "binary_offset": null,
+      "stats": {
+        "elapsed": {
+          "secs": 0,
+          "nanos": 12916,
+          "human": "0.000013s"
+        },
+        "searches": 1,
+        "searches_with_match": 1,
+        "bytes_searched": 32116,
+        "bytes_printed": 691,
+        "matched_lines": 2,
+        "matches": 2
+      }
+    }
+  },
+  {
+    "type": "begin",
+    "data": {
+      "path": {
+        "text": "functions/api/scheduler/run.js"
+      }
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "functions/api/scheduler/run.js"
+      },
+      "lines": {
+        "text": "  const prevAllowWrite = env.__RV_ALLOW_WRITE__;\n"
+      },
+      "line_number": 60,
+      "absolute_offset": 1767,
+      "submatches": [
+        {
+          "match": {
+            "text": "env.__RV_ALLOW_WRITE__"
+          },
+          "start": 25,
+          "end": 47
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "functions/api/scheduler/run.js"
+      },
+      "lines": {
+        "text": "  env.__RV_ALLOW_WRITE__ = true;\n"
+      },
+      "line_number": 61,
+      "absolute_offset": 1816,
+      "submatches": [
+        {
+          "match": {
+            "text": "env.__RV_ALLOW_WRITE__"
+          },
+          "start": 2,
+          "end": 24
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "functions/api/scheduler/run.js"
+      },
+      "lines": {
+        "text": "  env.__RV_ALLOW_WRITE__ = prevAllowWrite;\n"
+      },
+      "line_number": 72,
+      "absolute_offset": 1985,
+      "submatches": [
+        {
+          "match": {
+            "text": "env.__RV_ALLOW_WRITE__"
+          },
+          "start": 2,
+          "end": 24
+        }
+      ]
+    }
+  },
+  {
+    "type": "end",
+    "data": {
+      "path": {
+        "text": "functions/api/scheduler/run.js"
+      },
+      "binary_offset": null,
+      "stats": {
+        "elapsed": {
+          "secs": 0,
+          "nanos": 15500,
+          "human": "0.000016s"
+        },
+        "searches": 1,
+        "searches_with_match": 1,
+        "bytes_searched": 2789,
+        "bytes_printed": 843,
+        "matched_lines": 3,
+        "matches": 3
+      }
+    }
+  },
+  {
+    "type": "begin",
+    "data": {
+      "path": {
+        "text": "scripts/generate-posts.js"
+      }
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/generate-posts.js"
+      },
+      "lines": {
+        "text": "const baseUrl = process.argv[2] || process.env.RV_BASE_URL || \"http://localhost:8788\";\n"
+      },
+      "line_number": 5,
+      "absolute_offset": 87,
+      "submatches": [
+        {
+          "match": {
+            "text": "env.RV_BASE_URL"
+          },
+          "start": 43,
+          "end": 58
+        }
+      ]
+    }
+  },
+  {
+    "type": "end",
+    "data": {
+      "path": {
+        "text": "scripts/generate-posts.js"
+      },
+      "binary_offset": null,
+      "stats": {
+        "elapsed": {
+          "secs": 0,
+          "nanos": 14208,
+          "human": "0.000014s"
+        },
+        "searches": 1,
+        "searches_with_match": 1,
+        "bytes_searched": 6143,
+        "bytes_printed": 359,
+        "matched_lines": 1,
+        "matches": 1
+      }
+    }
+  },
+  {
+    "type": "begin",
+    "data": {
+      "path": {
+        "text": "functions/api/_shared/resilience.js"
+      }
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "functions/api/_shared/resilience.js"
+      },
+      "lines": {
+        "text": "    (env?.CF_PAGES_BRANCH && env.CF_PAGES_BRANCH !== \"main\");\n"
+      },
+      "line_number": 181,
+      "absolute_offset": 5770,
+      "submatches": [
+        {
+          "match": {
+            "text": "env.CF_PAGES_BRANCH"
+          },
+          "start": 29,
+          "end": 48
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "functions/api/_shared/resilience.js"
+      },
+      "lines": {
+        "text": "  const hasKV = KV && typeof KV.get === \"function\";\n"
+      },
+      "line_number": 186,
+      "absolute_offset": 6011,
+      "submatches": [
+        {
+          "match": {
+            "text": "KV.get"
+          },
+          "start": 29,
+          "end": 35
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "functions/api/_shared/resilience.js"
+      },
+      "lines": {
+        "text": "      lastGood = await KV.get(lastGoodKey, { type: \"json\" });\n"
+      },
+      "line_number": 205,
+      "absolute_offset": 6711,
+      "submatches": [
+        {
+          "match": {
+            "text": "KV.get"
+          },
+          "start": 23,
+          "end": 29
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "functions/api/_shared/resilience.js"
+      },
+      "lines": {
+        "text": "      circuitOpen = (await KV.get(circuitKey)) != null;\n"
+      },
+      "line_number": 206,
+      "absolute_offset": 6773,
+      "submatches": [
+        {
+          "match": {
+            "text": "KV.get"
+          },
+          "start": 27,
+          "end": 33
+        }
+      ]
+    }
+  },
+  {
+    "type": "end",
+    "data": {
+      "path": {
+        "text": "functions/api/_shared/resilience.js"
+      },
+      "binary_offset": null,
+      "stats": {
+        "elapsed": {
+          "secs": 0,
+          "nanos": 12375,
+          "human": "0.000012s"
+        },
+        "searches": 1,
+        "searches_with_match": 1,
+        "bytes_searched": 20471,
+        "bytes_printed": 1151,
+        "matched_lines": 4,
+        "matches": 4
+      }
+    }
+  },
+  {
+    "type": "begin",
+    "data": {
+      "path": {
+        "text": "scripts/providers/marketaux.js"
+      }
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/providers/marketaux.js"
+      },
+      "lines": {
+        "text": "  const apiKey = process.env.MARKETAUX_API_KEY || \"\";\n"
+      },
+      "line_number": 7,
+      "absolute_offset": 342,
+      "submatches": [
+        {
+          "match": {
+            "text": "env.MARKETAUX_API_KEY"
+          },
+          "start": 25,
+          "end": 46
+        }
+      ]
+    }
+  },
+  {
+    "type": "end",
+    "data": {
+      "path": {
+        "text": "scripts/providers/marketaux.js"
+      },
+      "binary_offset": null,
+      "stats": {
+        "elapsed": {
+          "secs": 0,
+          "nanos": 4583,
+          "human": "0.000005s"
+        },
+        "searches": 1,
+        "searches_with_match": 1,
+        "bytes_searched": 2264,
+        "bytes_printed": 343,
+        "matched_lines": 1,
+        "matches": 1
+      }
+    }
+  },
+  {
+    "type": "begin",
+    "data": {
+      "path": {
+        "text": "scripts/ops/env.config.mjs"
+      }
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/ops/env.config.mjs"
+      },
+      "lines": {
+        "text": "    OPS_BASE: process.env.OPS_BASE,\n"
+      },
+      "line_number": 3,
+      "absolute_offset": 54,
+      "submatches": [
+        {
+          "match": {
+            "text": "env.OPS_BASE"
+          },
+          "start": 22,
+          "end": 34
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/ops/env.config.mjs"
+      },
+      "lines": {
+        "text": "    RV_BASE: process.env.RV_BASE,\n"
+      },
+      "line_number": 4,
+      "absolute_offset": 90,
+      "submatches": [
+        {
+          "match": {
+            "text": "env.RV_BASE"
+          },
+          "start": 21,
+          "end": 32
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/ops/env.config.mjs"
+      },
+      "lines": {
+        "text": "    BASE_URL: process.env.BASE_URL,\n"
+      },
+      "line_number": 5,
+      "absolute_offset": 124,
+      "submatches": [
+        {
+          "match": {
+            "text": "env.BASE_URL"
+          },
+          "start": 22,
+          "end": 34
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/ops/env.config.mjs"
+      },
+      "lines": {
+        "text": "    BASE: process.env.BASE\n"
+      },
+      "line_number": 6,
+      "absolute_offset": 160,
+      "submatches": [
+        {
+          "match": {
+            "text": "env.BASE"
+          },
+          "start": 18,
+          "end": 26
+        }
+      ]
+    }
+  },
+  {
+    "type": "end",
+    "data": {
+      "path": {
+        "text": "scripts/ops/env.config.mjs"
+      },
+      "binary_offset": null,
+      "stats": {
+        "elapsed": {
+          "secs": 0,
+          "nanos": 6750,
+          "human": "0.000007s"
+        },
+        "searches": 1,
+        "searches_with_match": 1,
+        "bytes_searched": 723,
+        "bytes_printed": 993,
+        "matched_lines": 4,
+        "matches": 4
+      }
+    }
+  },
+  {
+    "type": "begin",
+    "data": {
+      "path": {
+        "text": "scripts/providers/fred.js"
+      }
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/providers/fred.js"
+      },
+      "lines": {
+        "text": "  const apiKey = process.env.FRED_API_KEY || \"\";\n"
+      },
+      "line_number": 42,
+      "absolute_offset": 1471,
+      "submatches": [
+        {
+          "match": {
+            "text": "env.FRED_API_KEY"
+          },
+          "start": 25,
+          "end": 41
+        }
+      ]
+    }
+  },
+  {
+    "type": "end",
+    "data": {
+      "path": {
+        "text": "scripts/providers/fred.js"
+      },
+      "binary_offset": null,
+      "stats": {
+        "elapsed": {
+          "secs": 0,
+          "nanos": 5083,
+          "human": "0.000005s"
+        },
+        "searches": 1,
+        "searches_with_match": 1,
+        "bytes_searched": 4795,
+        "bytes_printed": 325,
+        "matched_lines": 1,
+        "matches": 1
+      }
+    }
+  },
+  {
+    "type": "begin",
+    "data": {
+      "path": {
+        "text": "scripts/providers/sec_edgar.js"
+      }
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/providers/sec_edgar.js"
+      },
+      "lines": {
+        "text": "  const apiKey = process.env.SEC_API_KEY || \"\";\n"
+      },
+      "line_number": 7,
+      "absolute_offset": 321,
+      "submatches": [
+        {
+          "match": {
+            "text": "env.SEC_API_KEY"
+          },
+          "start": 25,
+          "end": 40
+        }
+      ]
+    }
+  },
+  {
+    "type": "end",
+    "data": {
+      "path": {
+        "text": "scripts/providers/sec_edgar.js"
+      },
+      "binary_offset": null,
+      "stats": {
+        "elapsed": {
+          "secs": 0,
+          "nanos": 3542,
+          "human": "0.000004s"
+        },
+        "searches": 1,
+        "searches_with_match": 1,
+        "bytes_searched": 2175,
+        "bytes_printed": 331,
+        "matched_lines": 1,
+        "matches": 1
+      }
+    }
+  },
+  {
+    "type": "begin",
+    "data": {
+      "path": {
+        "text": "scripts/providers/alphavantage.js"
+      }
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/providers/alphavantage.js"
+      },
+      "lines": {
+        "text": "  const apiKey = process.env.AV_API_KEY || \"\";\n"
+      },
+      "line_number": 25,
+      "absolute_offset": 967,
+      "submatches": [
+        {
+          "match": {
+            "text": "env.AV_API_KEY"
+          },
+          "start": 25,
+          "end": 39
+        }
+      ]
+    }
+  },
+  {
+    "type": "end",
+    "data": {
+      "path": {
+        "text": "scripts/providers/alphavantage.js"
+      },
+      "binary_offset": null,
+      "stats": {
+        "elapsed": {
+          "secs": 0,
+          "nanos": 4167,
+          "human": "0.000004s"
+        },
+        "searches": 1,
+        "searches_with_match": 1,
+        "bytes_searched": 2659,
+        "bytes_printed": 336,
+        "matched_lines": 1,
+        "matches": 1
+      }
+    }
+  },
+  {
+    "type": "begin",
+    "data": {
+      "path": {
+        "text": "scripts/providers/market-prices-v3.mjs"
+      }
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/providers/market-prices-v3.mjs"
+      },
+      "lines": {
+        "text": "  const outDir = process.env.RV_ARTIFACT_OUT_DIR\n"
+      },
+      "line_number": 1093,
+      "absolute_offset": 31695,
+      "submatches": [
+        {
+          "match": {
+            "text": "env.RV_ARTIFACT_OUT_DIR"
+          },
+          "start": 25,
+          "end": 48
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/providers/market-prices-v3.mjs"
+      },
+      "lines": {
+        "text": "    ? String(process.env.RV_ARTIFACT_OUT_DIR)\n"
+      },
+      "line_number": 1094,
+      "absolute_offset": 31744,
+      "submatches": [
+        {
+          "match": {
+            "text": "env.RV_ARTIFACT_OUT_DIR"
+          },
+          "start": 21,
+          "end": 44
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/providers/market-prices-v3.mjs"
+      },
+      "lines": {
+        "text": "    : (process.env.ARTIFACTS_DIR\n"
+      },
+      "line_number": 1095,
+      "absolute_offset": 31790,
+      "submatches": [
+        {
+          "match": {
+            "text": "env.ARTIFACTS_DIR"
+          },
+          "start": 15,
+          "end": 32
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/providers/market-prices-v3.mjs"
+      },
+      "lines": {
+        "text": "        ? join(String(process.env.ARTIFACTS_DIR), MODULE_NAME)\n"
+      },
+      "line_number": 1096,
+      "absolute_offset": 31823,
+      "submatches": [
+        {
+          "match": {
+            "text": "env.ARTIFACTS_DIR"
+          },
+          "start": 30,
+          "end": 47
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/providers/market-prices-v3.mjs"
+      },
+      "lines": {
+        "text": "  const forcedStub = toBool(process.env.RV_PRICES_STUB);\n"
+      },
+      "line_number": 1101,
+      "absolute_offset": 31960,
+      "submatches": [
+        {
+          "match": {
+            "text": "env.RV_PRICES_STUB"
+          },
+          "start": 36,
+          "end": 54
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/providers/market-prices-v3.mjs"
+      },
+      "lines": {
+        "text": "  const forcedReal = toBool(process.env.RV_PRICES_FORCE_REAL);\n"
+      },
+      "line_number": 1102,
+      "absolute_offset": 32017,
+      "submatches": [
+        {
+          "match": {
+            "text": "env.RV_PRICES_FORCE_REAL"
+          },
+          "start": 36,
+          "end": 60
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/providers/market-prices-v3.mjs"
+      },
+      "lines": {
+        "text": "  const forcedProviderRaw = process.env.RV_FORCE_PROVIDER ? String(process.env.RV_FORCE_PROVIDER) : '';\n"
+      },
+      "line_number": 1103,
+      "absolute_offset": 32080,
+      "submatches": [
+        {
+          "match": {
+            "text": "env.RV_FORCE_PROVIDER"
+          },
+          "start": 36,
+          "end": 57
+        },
+        {
+          "match": {
+            "text": "env.RV_FORCE_PROVIDER"
+          },
+          "start": 75,
+          "end": 96
+        }
+      ]
+    }
+  },
+  {
+    "type": "end",
+    "data": {
+      "path": {
+        "text": "scripts/providers/market-prices-v3.mjs"
+      },
+      "binary_offset": null,
+      "stats": {
+        "elapsed": {
+          "secs": 0,
+          "nanos": 21667,
+          "human": "0.000022s"
+        },
+        "searches": 1,
+        "searches_with_match": 1,
+        "bytes_searched": 49634,
+        "bytes_printed": 2132,
+        "matched_lines": 7,
+        "matches": 8
+      }
+    }
+  },
+  {
+    "type": "begin",
+    "data": {
+      "path": {
+        "text": "functions/_lib/kv-safe.js"
+      }
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "functions/_lib/kv-safe.js"
+      },
+      "lines": {
+        "text": "    env.__RV_ALLOW_WRITE__ = false;\n"
+      },
+      "line_number": 39,
+      "absolute_offset": 1277,
+      "submatches": [
+        {
+          "match": {
+            "text": "env.__RV_ALLOW_WRITE__"
+          },
+          "start": 4,
+          "end": 26
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "functions/_lib/kv-safe.js"
+      },
+      "lines": {
+        "text": "    env.__RV_KV_WRITE_DISABLED__ = true;\n"
+      },
+      "line_number": 40,
+      "absolute_offset": 1313,
+      "submatches": [
+        {
+          "match": {
+            "text": "env.__RV_KV_WRITE_DISABLED__"
+          },
+          "start": 4,
+          "end": 32
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "functions/_lib/kv-safe.js"
+      },
+      "lines": {
+        "text": "    env.__RV_KV_WRITE_DISABLED_UNTIL__ = until;\n"
+      },
+      "line_number": 41,
+      "absolute_offset": 1354,
+      "submatches": [
+        {
+          "match": {
+            "text": "env.__RV_KV_WRITE_DISABLED_UNTIL__"
+          },
+          "start": 4,
+          "end": 38
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "functions/_lib/kv-safe.js"
+      },
+      "lines": {
+        "text": "    env.__RV_KV_WRITE_DISABLED_REASON__ = error?.message || \"rate_limited\";\n"
+      },
+      "line_number": 42,
+      "absolute_offset": 1402,
+      "submatches": [
+        {
+          "match": {
+            "text": "env.__RV_KV_WRITE_DISABLED_REASON__"
+          },
+          "start": 4,
+          "end": 39
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "functions/_lib/kv-safe.js"
+      },
+      "lines": {
+        "text": "  const missing = !env?.RV_KV || typeof env.RV_KV.get !== \"function\";\n"
+      },
+      "line_number": 93,
+      "absolute_offset": 2685,
+      "submatches": [
+        {
+          "match": {
+            "text": "env.RV_KV"
+          },
+          "start": 40,
+          "end": 49
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "functions/_lib/kv-safe.js"
+      },
+      "lines": {
+        "text": "    const value = await env.RV_KV.get(key, \"json\");\n"
+      },
+      "line_number": 105,
+      "absolute_offset": 3048,
+      "submatches": [
+        {
+          "match": {
+            "text": "env.RV_KV"
+          },
+          "start": 24,
+          "end": 33
+        }
+      ]
+    }
+  },
+  {
+    "type": "end",
+    "data": {
+      "path": {
+        "text": "functions/_lib/kv-safe.js"
+      },
+      "binary_offset": null,
+      "stats": {
+        "elapsed": {
+          "secs": 0,
+          "nanos": 18791,
+          "human": "0.000019s"
+        },
+        "searches": 1,
+        "searches_with_match": 1,
+        "bytes_searched": 3796,
+        "bytes_printed": 1661,
+        "matched_lines": 6,
+        "matches": 6
+      }
+    }
+  },
+  {
+    "type": "begin",
+    "data": {
+      "path": {
+        "text": "scripts/providers/market-score-v3.mjs"
+      }
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/providers/market-score-v3.mjs"
+      },
+      "lines": {
+        "text": "  const artifactsDir = process.env.ARTIFACTS_DIR ? join(String(process.env.ARTIFACTS_DIR), SOURCE_MODULE) : null;\n"
+      },
+      "line_number": 159,
+      "absolute_offset": 5362,
+      "submatches": [
+        {
+          "match": {
+            "text": "env.ARTIFACTS_DIR"
+          },
+          "start": 31,
+          "end": 48
+        },
+        {
+          "match": {
+            "text": "env.ARTIFACTS_DIR"
+          },
+          "start": 71,
+          "end": 88
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/providers/market-score-v3.mjs"
+      },
+      "lines": {
+        "text": "  if (process.env.BARS_ARTIFACTS_DIR) {\n"
+      },
+      "line_number": 161,
+      "absolute_offset": 5501,
+      "submatches": [
+        {
+          "match": {
+            "text": "env.BARS_ARTIFACTS_DIR"
+          },
+          "start": 14,
+          "end": 36
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/providers/market-score-v3.mjs"
+      },
+      "lines": {
+        "text": "    candidates.push(join(String(process.env.BARS_ARTIFACTS_DIR), SOURCE_MODULE, 'snapshot.json'));\n"
+      },
+      "line_number": 162,
+      "absolute_offset": 5541,
+      "submatches": [
+        {
+          "match": {
+            "text": "env.BARS_ARTIFACTS_DIR"
+          },
+          "start": 40,
+          "end": 62
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/providers/market-score-v3.mjs"
+      },
+      "lines": {
+        "text": "  const artifactsOutDir = process.env.RV_ARTIFACT_OUT_DIR\n"
+      },
+      "line_number": 208,
+      "absolute_offset": 6882,
+      "submatches": [
+        {
+          "match": {
+            "text": "env.RV_ARTIFACT_OUT_DIR"
+          },
+          "start": 34,
+          "end": 57
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/providers/market-score-v3.mjs"
+      },
+      "lines": {
+        "text": "    ? String(process.env.RV_ARTIFACT_OUT_DIR)\n"
+      },
+      "line_number": 209,
+      "absolute_offset": 6940,
+      "submatches": [
+        {
+          "match": {
+            "text": "env.RV_ARTIFACT_OUT_DIR"
+          },
+          "start": 21,
+          "end": 44
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/providers/market-score-v3.mjs"
+      },
+      "lines": {
+        "text": "    : process.env.ARTIFACTS_DIR\n"
+      },
+      "line_number": 210,
+      "absolute_offset": 6986,
+      "submatches": [
+        {
+          "match": {
+            "text": "env.ARTIFACTS_DIR"
+          },
+          "start": 14,
+          "end": 31
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/providers/market-score-v3.mjs"
+      },
+      "lines": {
+        "text": "    ? join(String(process.env.ARTIFACTS_DIR), MODULE_NAME)\n"
+      },
+      "line_number": 211,
+      "absolute_offset": 7018,
+      "submatches": [
+        {
+          "match": {
+            "text": "env.ARTIFACTS_DIR"
+          },
+          "start": 26,
+          "end": 43
+        }
+      ]
+    }
+  },
+  {
+    "type": "end",
+    "data": {
+      "path": {
+        "text": "scripts/providers/market-score-v3.mjs"
+      },
+      "binary_offset": null,
+      "stats": {
+        "elapsed": {
+          "secs": 0,
+          "nanos": 9125,
+          "human": "0.000009s"
+        },
+        "searches": 1,
+        "searches_with_match": 1,
+        "bytes_searched": 9805,
+        "bytes_printed": 2137,
+        "matched_lines": 7,
+        "matches": 8
+      }
+    }
+  },
+  {
+    "type": "begin",
+    "data": {
+      "path": {
+        "text": "scripts/providers/market-health-v3.mjs"
+      }
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/providers/market-health-v3.mjs"
+      },
+      "lines": {
+        "text": "      last_run_url: process.env.GITHUB_SERVER_URL && process.env.GITHUB_RUN_ID\n"
+      },
+      "line_number": 464,
+      "absolute_offset": 15814,
+      "submatches": [
+        {
+          "match": {
+            "text": "env.GITHUB_SERVER_URL"
+          },
+          "start": 28,
+          "end": 49
+        },
+        {
+          "match": {
+            "text": "env.GITHUB_RUN_ID"
+          },
+          "start": 61,
+          "end": 78
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/providers/market-health-v3.mjs"
+      },
+      "lines": {
+        "text": "        ? `${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}`\n"
+      },
+      "line_number": 465,
+      "absolute_offset": 15893,
+      "submatches": [
+        {
+          "match": {
+            "text": "env.GITHUB_SERVER_URL"
+          },
+          "start": 21,
+          "end": 42
+        },
+        {
+          "match": {
+            "text": "env.GITHUB_REPOSITORY"
+          },
+          "start": 54,
+          "end": 75
+        },
+        {
+          "match": {
+            "text": "env.GITHUB_RUN_ID"
+          },
+          "start": 100,
+          "end": 117
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/providers/market-health-v3.mjs"
+      },
+      "lines": {
+        "text": "  const artifactsBaseDir = process.env.ARTIFACTS_DIR || join(BASE_DIR, 'artifacts');\n"
+      },
+      "line_number": 471,
+      "absolute_offset": 16063,
+      "submatches": [
+        {
+          "match": {
+            "text": "env.ARTIFACTS_DIR"
+          },
+          "start": 35,
+          "end": 52
+        }
+      ]
+    }
+  },
+  {
+    "type": "end",
+    "data": {
+      "path": {
+        "text": "scripts/providers/market-health-v3.mjs"
+      },
+      "binary_offset": null,
+      "stats": {
+        "elapsed": {
+          "secs": 0,
+          "nanos": 9375,
+          "human": "0.000009s"
+        },
+        "searches": 1,
+        "searches_with_match": 1,
+        "bytes_searched": 17028,
+        "bytes_printed": 1218,
+        "matched_lines": 3,
+        "matches": 6
+      }
+    }
+  },
+  {
+    "type": "begin",
+    "data": {
+      "path": {
+        "text": "scripts/providers/universe-v2.mjs"
+      }
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/providers/universe-v2.mjs"
+      },
+      "lines": {
+        "text": "  const artifactsDir = process.env.RV_ARTIFACT_OUT_DIR\n"
+      },
+      "line_number": 228,
+      "absolute_offset": 6673,
+      "submatches": [
+        {
+          "match": {
+            "text": "env.RV_ARTIFACT_OUT_DIR"
+          },
+          "start": 31,
+          "end": 54
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/providers/universe-v2.mjs"
+      },
+      "lines": {
+        "text": "    ? String(process.env.RV_ARTIFACT_OUT_DIR)\n"
+      },
+      "line_number": 229,
+      "absolute_offset": 6728,
+      "submatches": [
+        {
+          "match": {
+            "text": "env.RV_ARTIFACT_OUT_DIR"
+          },
+          "start": 21,
+          "end": 44
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/providers/universe-v2.mjs"
+      },
+      "lines": {
+        "text": "    : process.env.ARTIFACTS_DIR\n"
+      },
+      "line_number": 230,
+      "absolute_offset": 6774,
+      "submatches": [
+        {
+          "match": {
+            "text": "env.ARTIFACTS_DIR"
+          },
+          "start": 14,
+          "end": 31
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/providers/universe-v2.mjs"
+      },
+      "lines": {
+        "text": "    ? join(String(process.env.ARTIFACTS_DIR), MODULE_NAME)\n"
+      },
+      "line_number": 231,
+      "absolute_offset": 6806,
+      "submatches": [
+        {
+          "match": {
+            "text": "env.ARTIFACTS_DIR"
+          },
+          "start": 26,
+          "end": 43
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/providers/universe-v2.mjs"
+      },
+      "lines": {
+        "text": "  const forcedStub = toBool(process.env.RV_UNIVERSE_STUB);\n"
+      },
+      "line_number": 234,
+      "absolute_offset": 6944,
+      "submatches": [
+        {
+          "match": {
+            "text": "env.RV_UNIVERSE_STUB"
+          },
+          "start": 36,
+          "end": 56
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/providers/universe-v2.mjs"
+      },
+      "lines": {
+        "text": "  const forcedReal = toBool(process.env.RV_UNIVERSE_FORCE_REAL);\n"
+      },
+      "line_number": 235,
+      "absolute_offset": 7003,
+      "submatches": [
+        {
+          "match": {
+            "text": "env.RV_UNIVERSE_FORCE_REAL"
+          },
+          "start": 36,
+          "end": 62
+        }
+      ]
+    }
+  },
+  {
+    "type": "end",
+    "data": {
+      "path": {
+        "text": "scripts/providers/universe-v2.mjs"
+      },
+      "binary_offset": null,
+      "stats": {
+        "elapsed": {
+          "secs": 0,
+          "nanos": 7083,
+          "human": "0.000007s"
+        },
+        "searches": 1,
+        "searches_with_match": 1,
+        "bytes_searched": 10309,
+        "bytes_printed": 1702,
+        "matched_lines": 6,
+        "matches": 6
+      }
+    }
+  },
+  {
+    "type": "begin",
+    "data": {
+      "path": {
+        "text": "scripts/generate-eod-market.mjs"
+      }
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/generate-eod-market.mjs"
+      },
+      "lines": {
+        "text": "let commitSha = process.env.GITHUB_SHA || process.env.COMMIT_SHA || process.env.BUILD_SHA || \"\";\n"
+      },
+      "line_number": 107,
+      "absolute_offset": 3396,
+      "submatches": [
+        {
+          "match": {
+            "text": "env.GITHUB_SHA"
+          },
+          "start": 24,
+          "end": 38
+        },
+        {
+          "match": {
+            "text": "env.COMMIT_SHA"
+          },
+          "start": 50,
+          "end": 64
+        },
+        {
+          "match": {
+            "text": "env.BUILD_SHA"
+          },
+          "start": 76,
+          "end": 89
+        }
+      ]
+    }
+  },
+  {
+    "type": "end",
+    "data": {
+      "path": {
+        "text": "scripts/generate-eod-market.mjs"
+      },
+      "binary_offset": null,
+      "stats": {
+        "elapsed": {
+          "secs": 0,
+          "nanos": 8750,
+          "human": "0.000009s"
+        },
+        "searches": 1,
+        "searches_with_match": 1,
+        "bytes_searched": 3808,
+        "bytes_printed": 495,
+        "matched_lines": 1,
+        "matches": 3
+      }
+    }
+  },
+  {
+    "type": "begin",
+    "data": {
+      "path": {
+        "text": "scripts/providers/market-stats-v3.mjs"
+      }
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/providers/market-stats-v3.mjs"
+      },
+      "lines": {
+        "text": "  const barsDir = process.env.BARS_ARTIFACTS_DIR\n"
+      },
+      "line_number": 59,
+      "absolute_offset": 1965,
+      "submatches": [
+        {
+          "match": {
+            "text": "env.BARS_ARTIFACTS_DIR"
+          },
+          "start": 26,
+          "end": 48
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/providers/market-stats-v3.mjs"
+      },
+      "lines": {
+        "text": "    ? join(String(process.env.BARS_ARTIFACTS_DIR), SOURCE_MODULE)\n"
+      },
+      "line_number": 60,
+      "absolute_offset": 2014,
+      "submatches": [
+        {
+          "match": {
+            "text": "env.BARS_ARTIFACTS_DIR"
+          },
+          "start": 26,
+          "end": 48
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/providers/market-stats-v3.mjs"
+      },
+      "lines": {
+        "text": "  const artifactsOutDir = process.env.RV_ARTIFACT_OUT_DIR\n"
+      },
+      "line_number": 413,
+      "absolute_offset": 14575,
+      "submatches": [
+        {
+          "match": {
+            "text": "env.RV_ARTIFACT_OUT_DIR"
+          },
+          "start": 34,
+          "end": 57
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/providers/market-stats-v3.mjs"
+      },
+      "lines": {
+        "text": "    ? String(process.env.RV_ARTIFACT_OUT_DIR)\n"
+      },
+      "line_number": 414,
+      "absolute_offset": 14633,
+      "submatches": [
+        {
+          "match": {
+            "text": "env.RV_ARTIFACT_OUT_DIR"
+          },
+          "start": 21,
+          "end": 44
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/providers/market-stats-v3.mjs"
+      },
+      "lines": {
+        "text": "    : process.env.ARTIFACTS_DIR\n"
+      },
+      "line_number": 415,
+      "absolute_offset": 14679,
+      "submatches": [
+        {
+          "match": {
+            "text": "env.ARTIFACTS_DIR"
+          },
+          "start": 14,
+          "end": 31
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/providers/market-stats-v3.mjs"
+      },
+      "lines": {
+        "text": "      ? join(String(process.env.ARTIFACTS_DIR), MODULE_NAME)\n"
+      },
+      "line_number": 416,
+      "absolute_offset": 14711,
+      "submatches": [
+        {
+          "match": {
+            "text": "env.ARTIFACTS_DIR"
+          },
+          "start": 28,
+          "end": 45
+        }
+      ]
+    }
+  },
+  {
+    "type": "end",
+    "data": {
+      "path": {
+        "text": "scripts/providers/market-stats-v3.mjs"
+      },
+      "binary_offset": null,
+      "stats": {
+        "elapsed": {
+          "secs": 0,
+          "nanos": 9417,
+          "human": "0.000009s"
+        },
+        "searches": 1,
+        "searches_with_match": 1,
+        "bytes_searched": 18602,
+        "bytes_printed": 1726,
+        "matched_lines": 6,
+        "matches": 6
+      }
+    }
+  },
+  {
+    "type": "begin",
+    "data": {
+      "path": {
+        "text": "scripts/marketphase-generate.mjs"
+      }
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/marketphase-generate.mjs"
+      },
+      "lines": {
+        "text": "  const raw = process.env.SYMBOLS || \"AAPL\";\n"
+      },
+      "line_number": 16,
+      "absolute_offset": 407,
+      "submatches": [
+        {
+          "match": {
+            "text": "env.SYMBOLS"
+          },
+          "start": 22,
+          "end": 33
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/marketphase-generate.mjs"
+      },
+      "lines": {
+        "text": "    return process.env.COMMIT_HASH || execSync(\"git rev-parse --short HEAD\", { encoding: \"utf8\" }).trim();\n"
+      },
+      "line_number": 66,
+      "absolute_offset": 1774,
+      "submatches": [
+        {
+          "match": {
+            "text": "env.COMMIT_HASH"
+          },
+          "start": 19,
+          "end": 34
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/marketphase-generate.mjs"
+      },
+      "lines": {
+        "text": "  const dummyMode = process.env.DUMMY === \"1\";\n"
+      },
+      "line_number": 204,
+      "absolute_offset": 6683,
+      "submatches": [
+        {
+          "match": {
+            "text": "env.DUMMY"
+          },
+          "start": 28,
+          "end": 37
+        }
+      ]
+    }
+  },
+  {
+    "type": "end",
+    "data": {
+      "path": {
+        "text": "scripts/marketphase-generate.mjs"
+      },
+      "binary_offset": null,
+      "stats": {
+        "elapsed": {
+          "secs": 0,
+          "nanos": 11125,
+          "human": "0.000011s"
+        },
+        "searches": 1,
+        "searches_with_match": 1,
+        "bytes_searched": 8351,
+        "bytes_printed": 904,
+        "matched_lines": 3,
+        "matches": 3
+      }
+    }
+  },
+  {
+    "type": "begin",
+    "data": {
+      "path": {
+        "text": "scripts/providers/fmp.js"
+      }
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/providers/fmp.js"
+      },
+      "lines": {
+        "text": "  const apiKey = process.env.FMP_API_KEY || \"\";\n"
+      },
+      "line_number": 6,
+      "absolute_offset": 202,
+      "submatches": [
+        {
+          "match": {
+            "text": "env.FMP_API_KEY"
+          },
+          "start": 25,
+          "end": 40
+        }
+      ]
+    }
+  },
+  {
+    "type": "end",
+    "data": {
+      "path": {
+        "text": "scripts/providers/fmp.js"
+      },
+      "binary_offset": null,
+      "stats": {
+        "elapsed": {
+          "secs": 0,
+          "nanos": 5292,
+          "human": "0.000005s"
+        },
+        "searches": 1,
+        "searches_with_match": 1,
+        "bytes_searched": 3216,
+        "bytes_printed": 319,
+        "matched_lines": 1,
+        "matches": 1
+      }
+    }
+  },
+  {
+    "type": "begin",
+    "data": {
+      "path": {
+        "text": "scripts/providers/finnhub.js"
+      }
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/providers/finnhub.js"
+      },
+      "lines": {
+        "text": "const MAX_OPTION_CHAIN_BYTES = Number(process.env.FINNHUB_OPTION_CHAIN_MAX_BYTES || 750000);\n"
+      },
+      "line_number": 4,
+      "absolute_offset": 140,
+      "submatches": [
+        {
+          "match": {
+            "text": "env.FINNHUB_OPTION_CHAIN_MAX_BYTES"
+          },
+          "start": 46,
+          "end": 80
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/providers/finnhub.js"
+      },
+      "lines": {
+        "text": "  const apiKey = process.env.FINNHUB_API_KEY || \"\";\n"
+      },
+      "line_number": 8,
+      "absolute_offset": 431,
+      "submatches": [
+        {
+          "match": {
+            "text": "env.FINNHUB_API_KEY"
+          },
+          "start": 25,
+          "end": 44
+        }
+      ]
+    }
+  },
+  {
+    "type": "end",
+    "data": {
+      "path": {
+        "text": "scripts/providers/finnhub.js"
+      },
+      "binary_offset": null,
+      "stats": {
+        "elapsed": {
+          "secs": 0,
+          "nanos": 4375,
+          "human": "0.000004s"
+        },
+        "searches": 1,
+        "searches_with_match": 1,
+        "bytes_searched": 2362,
+        "bytes_printed": 651,
+        "matched_lines": 2,
+        "matches": 2
+      }
+    }
+  },
+  {
+    "type": "begin",
+    "data": {
+      "path": {
+        "text": "scripts/truth-audit/config.mjs"
+      }
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/truth-audit/config.mjs"
+      },
+      "lines": {
+        "text": "const DATE = process.env.TRUTH_AUDIT_DATE || new Date().toISOString().slice(0, 10);\n"
+      },
+      "line_number": 5,
+      "absolute_offset": 85,
+      "submatches": [
+        {
+          "match": {
+            "text": "env.TRUTH_AUDIT_DATE"
+          },
+          "start": 21,
+          "end": 41
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/truth-audit/config.mjs"
+      },
+      "lines": {
+        "text": "  const base = process.env.BASE_URL;\n"
+      },
+      "line_number": 11,
+      "absolute_offset": 361,
+      "submatches": [
+        {
+          "match": {
+            "text": "env.BASE_URL"
+          },
+          "start": 23,
+          "end": 35
+        }
+      ]
+    }
+  },
+  {
+    "type": "end",
+    "data": {
+      "path": {
+        "text": "scripts/truth-audit/config.mjs"
+      },
+      "binary_offset": null,
+      "stats": {
+        "elapsed": {
+          "secs": 0,
+          "nanos": 10917,
+          "human": "0.000011s"
+        },
+        "searches": 1,
+        "searches_with_match": 1,
+        "bytes_searched": 1063,
+        "bytes_printed": 610,
+        "matched_lines": 2,
+        "matches": 2
+      }
+    }
+  },
+  {
+    "type": "begin",
+    "data": {
+      "path": {
+        "text": "scripts/ops/verify-ops-pipeline.mjs"
+      }
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/ops/verify-ops-pipeline.mjs"
+      },
+      "lines": {
+        "text": "const BASE_URL = process.env.VERIFY_BASE_URL || 'http://localhost:8788';\n"
+      },
+      "line_number": 5,
+      "absolute_offset": 99,
+      "submatches": [
+        {
+          "match": {
+            "text": "env.VERIFY_BASE_URL"
+          },
+          "start": 25,
+          "end": 44
+        }
+      ]
+    }
+  },
+  {
+    "type": "end",
+    "data": {
+      "path": {
+        "text": "scripts/ops/verify-ops-pipeline.mjs"
+      },
+      "binary_offset": null,
+      "stats": {
+        "elapsed": {
+          "secs": 0,
+          "nanos": 8417,
+          "human": "0.000008s"
+        },
+        "searches": 1,
+        "searches_with_match": 1,
+        "bytes_searched": 7606,
+        "bytes_printed": 367,
+        "matched_lines": 1,
+        "matches": 1
+      }
+    }
+  },
+  {
+    "type": "begin",
+    "data": {
+      "path": {
+        "text": "scripts/eod/build-eod-latest.mjs"
+      }
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/eod/build-eod-latest.mjs"
+      },
+      "lines": {
+        "text": "  const token = process.env.TIINGO_API_KEY ?? process.env.TIIANGO_API_KEY;\n"
+      },
+      "line_number": 254,
+      "absolute_offset": 7557,
+      "submatches": [
+        {
+          "match": {
+            "text": "env.TIINGO_API_KEY"
+          },
+          "start": 24,
+          "end": 42
+        },
+        {
+          "match": {
+            "text": "env.TIIANGO_API_KEY"
+          },
+          "start": 54,
+          "end": 73
+        }
+      ]
+    }
+  },
+  {
+    "type": "end",
+    "data": {
+      "path": {
+        "text": "scripts/eod/build-eod-latest.mjs"
+      },
+      "binary_offset": null,
+      "stats": {
+        "elapsed": {
+          "secs": 0,
+          "nanos": 15584,
+          "human": "0.000016s"
+        },
+        "searches": 1,
+        "searches_with_match": 1,
+        "bytes_searched": 15330,
+        "bytes_printed": 427,
+        "matched_lines": 1,
+        "matches": 2
+      }
+    }
+  },
+  {
+    "type": "begin",
+    "data": {
+      "path": {
+        "text": "scripts/smoke-debug.mjs"
+      }
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/smoke-debug.mjs"
+      },
+      "lines": {
+        "text": "const host = process.env.HOST || \"http://127.0.0.1:8788\";\n"
+      },
+      "line_number": 1,
+      "absolute_offset": 0,
+      "submatches": [
+        {
+          "match": {
+            "text": "env.HOST"
+          },
+          "start": 21,
+          "end": 29
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/smoke-debug.mjs"
+      },
+      "lines": {
+        "text": "const token = process.env.RV_DEBUG_TOKEN || \"\";\n"
+      },
+      "line_number": 2,
+      "absolute_offset": 58,
+      "submatches": [
+        {
+          "match": {
+            "text": "env.RV_DEBUG_TOKEN"
+          },
+          "start": 22,
+          "end": 40
+        }
+      ]
+    }
+  },
+  {
+    "type": "end",
+    "data": {
+      "path": {
+        "text": "scripts/smoke-debug.mjs"
+      },
+      "binary_offset": null,
+      "stats": {
+        "elapsed": {
+          "secs": 0,
+          "nanos": 8292,
+          "human": "0.000008s"
+        },
+        "searches": 1,
+        "searches_with_match": 1,
+        "bytes_searched": 1243,
+        "bytes_printed": 569,
+        "matched_lines": 2,
+        "matches": 2
+      }
+    }
+  },
+  {
+    "type": "begin",
+    "data": {
+      "path": {
+        "text": "scripts/ops/rv_verify_truth_summary.mjs"
+      }
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/ops/rv_verify_truth_summary.mjs"
+      },
+      "lines": {
+        "text": "  if (process.env.CI === 'true' || process.env.GITHUB_ACTIONS === 'true') {\n"
+      },
+      "line_number": 108,
+      "absolute_offset": 3984,
+      "submatches": [
+        {
+          "match": {
+            "text": "env.CI"
+          },
+          "start": 14,
+          "end": 20
+        },
+        {
+          "match": {
+            "text": "env.GITHUB_ACTIONS"
+          },
+          "start": 43,
+          "end": 61
+        }
+      ]
+    }
+  },
+  {
+    "type": "end",
+    "data": {
+      "path": {
+        "text": "scripts/ops/rv_verify_truth_summary.mjs"
+      },
+      "binary_offset": null,
+      "stats": {
+        "elapsed": {
+          "secs": 0,
+          "nanos": 9042,
+          "human": "0.000009s"
+        },
+        "searches": 1,
+        "searches_with_match": 1,
+        "bytes_searched": 4194,
+        "bytes_printed": 429,
+        "matched_lines": 1,
+        "matches": 2
+      }
+    }
+  },
+  {
+    "type": "begin",
+    "data": {
+      "path": {
+        "text": "scripts/ops/fetch-with-context.mjs"
+      }
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/ops/fetch-with-context.mjs"
+      },
+      "lines": {
+        "text": "        OPS_BASE: process.env.OPS_BASE || null,\n"
+      },
+      "line_number": 36,
+      "absolute_offset": 1080,
+      "submatches": [
+        {
+          "match": {
+            "text": "env.OPS_BASE"
+          },
+          "start": 26,
+          "end": 38
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/ops/fetch-with-context.mjs"
+      },
+      "lines": {
+        "text": "        RV_BASE: process.env.RV_BASE || null,\n"
+      },
+      "line_number": 37,
+      "absolute_offset": 1128,
+      "submatches": [
+        {
+          "match": {
+            "text": "env.RV_BASE"
+          },
+          "start": 25,
+          "end": 36
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/ops/fetch-with-context.mjs"
+      },
+      "lines": {
+        "text": "        BASE_URL: process.env.BASE_URL || null,\n"
+      },
+      "line_number": 38,
+      "absolute_offset": 1174,
+      "submatches": [
+        {
+          "match": {
+            "text": "env.BASE_URL"
+          },
+          "start": 26,
+          "end": 38
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/ops/fetch-with-context.mjs"
+      },
+      "lines": {
+        "text": "        BASE: process.env.BASE || null,\n"
+      },
+      "line_number": 39,
+      "absolute_offset": 1222,
+      "submatches": [
+        {
+          "match": {
+            "text": "env.BASE"
+          },
+          "start": 22,
+          "end": 30
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/ops/fetch-with-context.mjs"
+      },
+      "lines": {
+        "text": "        CI: process.env.CI || null\n"
+      },
+      "line_number": 40,
+      "absolute_offset": 1262,
+      "submatches": [
+        {
+          "match": {
+            "text": "env.CI"
+          },
+          "start": 20,
+          "end": 26
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/ops/fetch-with-context.mjs"
+      },
+      "lines": {
+        "text": "    const jsonLog = process.env.CI === 'true' || process.env.CI === '1' || process.env.RV_LOG_JSON === '1';\n"
+      },
+      "line_number": 45,
+      "absolute_offset": 1367,
+      "submatches": [
+        {
+          "match": {
+            "text": "env.CI"
+          },
+          "start": 28,
+          "end": 34
+        },
+        {
+          "match": {
+            "text": "env.CI"
+          },
+          "start": 57,
+          "end": 63
+        },
+        {
+          "match": {
+            "text": "env.RV_LOG_JSON"
+          },
+          "start": 83,
+          "end": 98
+        }
+      ]
+    }
+  },
+  {
+    "type": "end",
+    "data": {
+      "path": {
+        "text": "scripts/ops/fetch-with-context.mjs"
+      },
+      "binary_offset": null,
+      "stats": {
+        "elapsed": {
+          "secs": 0,
+          "nanos": 7083,
+          "human": "0.000007s"
+        },
+        "searches": 1,
+        "searches_with_match": 1,
+        "bytes_searched": 1857,
+        "bytes_printed": 1746,
+        "matched_lines": 6,
+        "matches": 8
+      }
+    }
+  },
+  {
+    "type": "begin",
+    "data": {
+      "path": {
+        "text": "scripts/ops/build-ops-daily.mjs"
+      }
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/ops/build-ops-daily.mjs"
+      },
+      "lines": {
+        "text": "    accountId: process.env.CF_ACCOUNT_ID,\n"
+      },
+      "line_number": 349,
+      "absolute_offset": 12068,
+      "submatches": [
+        {
+          "match": {
+            "text": "env.CF_ACCOUNT_ID"
+          },
+          "start": 23,
+          "end": 40
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/ops/build-ops-daily.mjs"
+      },
+      "lines": {
+        "text": "    apiToken: process.env.CF_API_TOKEN\n"
+      },
+      "line_number": 350,
+      "absolute_offset": 12110,
+      "submatches": [
+        {
+          "match": {
+            "text": "env.CF_API_TOKEN"
+          },
+          "start": 22,
+          "end": 38
+        }
+      ]
+    }
+  },
+  {
+    "type": "end",
+    "data": {
+      "path": {
+        "text": "scripts/ops/build-ops-daily.mjs"
+      },
+      "binary_offset": null,
+      "stats": {
+        "elapsed": {
+          "secs": 0,
+          "nanos": 11000,
+          "human": "0.000011s"
+        },
+        "searches": 1,
+        "searches_with_match": 1,
+        "bytes_searched": 14308,
+        "bytes_printed": 582,
+        "matched_lines": 2,
+        "matches": 2
+      }
+    }
+  },
+  {
+    "type": "begin",
+    "data": {
+      "path": {
+        "text": "scripts/update-news.mjs"
+      }
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/update-news.mjs"
+      },
+      "lines": {
+        "text": "    const commit = process.env.GITHUB_SHA || \"local\";\n"
+      },
+      "line_number": 381,
+      "absolute_offset": 10544,
+      "submatches": [
+        {
+          "match": {
+            "text": "env.GITHUB_SHA"
+          },
+          "start": 27,
+          "end": 41
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/update-news.mjs"
+      },
+      "lines": {
+        "text": "    const runId = process.env.GITHUB_RUN_ID || null;\n"
+      },
+      "line_number": 382,
+      "absolute_offset": 10598,
+      "submatches": [
+        {
+          "match": {
+            "text": "env.GITHUB_RUN_ID"
+          },
+          "start": 26,
+          "end": 43
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/update-news.mjs"
+      },
+      "lines": {
+        "text": "  const commit = process.env.GITHUB_SHA || \"local\";\n"
+      },
+      "line_number": 399,
+      "absolute_offset": 10929,
+      "submatches": [
+        {
+          "match": {
+            "text": "env.GITHUB_SHA"
+          },
+          "start": 25,
+          "end": 39
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/update-news.mjs"
+      },
+      "lines": {
+        "text": "  const runId = process.env.GITHUB_RUN_ID || null;\n"
+      },
+      "line_number": 400,
+      "absolute_offset": 10981,
+      "submatches": [
+        {
+          "match": {
+            "text": "env.GITHUB_RUN_ID"
+          },
+          "start": 24,
+          "end": 41
+        }
+      ]
+    }
+  },
+  {
+    "type": "end",
+    "data": {
+      "path": {
+        "text": "scripts/update-news.mjs"
+      },
+      "binary_offset": null,
+      "stats": {
+        "elapsed": {
+          "secs": 0,
+          "nanos": 14333,
+          "human": "0.000014s"
+        },
+        "searches": 1,
+        "searches_with_match": 1,
+        "bytes_searched": 11648,
+        "bytes_printed": 1096,
+        "matched_lines": 4,
+        "matches": 4
+      }
+    }
+  },
+  {
+    "type": "begin",
+    "data": {
+      "path": {
+        "text": "scripts/audit-site.mjs"
+      }
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/audit-site.mjs"
+      },
+      "lines": {
+        "text": "  const envSha = process.env.GITHUB_SHA || process.env.CI_COMMIT_SHA || null;\n"
+      },
+      "line_number": 222,
+      "absolute_offset": 6897,
+      "submatches": [
+        {
+          "match": {
+            "text": "env.GITHUB_SHA"
+          },
+          "start": 25,
+          "end": 39
+        },
+        {
+          "match": {
+            "text": "env.CI_COMMIT_SHA"
+          },
+          "start": 51,
+          "end": 68
+        }
+      ]
+    }
+  },
+  {
+    "type": "end",
+    "data": {
+      "path": {
+        "text": "scripts/audit-site.mjs"
+      },
+      "binary_offset": null,
+      "stats": {
+        "elapsed": {
+          "secs": 0,
+          "nanos": 25500,
+          "human": "0.000025s"
+        },
+        "searches": 1,
+        "searches_with_match": 1,
+        "bytes_searched": 46642,
+        "bytes_printed": 404,
+        "matched_lines": 1,
+        "matches": 2
+      }
+    }
+  },
+  {
+    "type": "begin",
+    "data": {
+      "path": {
+        "text": "scripts/validate-mirrors.mjs"
+      }
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/validate-mirrors.mjs"
+      },
+      "lines": {
+        "text": "const isEventMirrorsContext = process.env.VALIDATE_EVENT_MIRRORS_ONLY === \"1\" || \n"
+      },
+      "line_number": 145,
+      "absolute_offset": 4810,
+      "submatches": [
+        {
+          "match": {
+            "text": "env.VALIDATE_EVENT_MIRRORS_ONLY"
+          },
+          "start": 38,
+          "end": 69
+        }
+      ]
+    }
+  },
+  {
+    "type": "end",
+    "data": {
+      "path": {
+        "text": "scripts/validate-mirrors.mjs"
+      },
+      "binary_offset": null,
+      "stats": {
+        "elapsed": {
+          "secs": 0,
+          "nanos": 10125,
+          "human": "0.000010s"
+        },
+        "searches": 1,
+        "searches_with_match": 1,
+        "bytes_searched": 9486,
+        "bytes_printed": 380,
+        "matched_lines": 1,
+        "matches": 1
+      }
+    }
+  },
+  {
+    "type": "begin",
+    "data": {
+      "path": {
+        "text": "scripts/ops/build-build-info.mjs"
+      }
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/ops/build-build-info.mjs"
+      },
+      "lines": {
+        "text": "const envSha = process.env.CF_PAGES_COMMIT_SHA || process.env.GITHUB_SHA || null;\n"
+      },
+      "line_number": 17,
+      "absolute_offset": 389,
+      "submatches": [
+        {
+          "match": {
+            "text": "env.CF_PAGES_COMMIT_SHA"
+          },
+          "start": 23,
+          "end": 46
+        },
+        {
+          "match": {
+            "text": "env.GITHUB_SHA"
+          },
+          "start": 58,
+          "end": 72
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/ops/build-build-info.mjs"
+      },
+      "lines": {
+        "text": "    ci: Boolean(process.env.CI),\n"
+      },
+      "line_number": 27,
+      "absolute_offset": 731,
+      "submatches": [
+        {
+          "match": {
+            "text": "env.CI"
+          },
+          "start": 24,
+          "end": 30
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/ops/build-build-info.mjs"
+      },
+      "lines": {
+        "text": "    github_actions: Boolean(process.env.GITHUB_ACTIONS),\n"
+      },
+      "line_number": 28,
+      "absolute_offset": 764,
+      "submatches": [
+        {
+          "match": {
+            "text": "env.GITHUB_ACTIONS"
+          },
+          "start": 36,
+          "end": 54
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/ops/build-build-info.mjs"
+      },
+      "lines": {
+        "text": "    cf_pages: Boolean(process.env.CF_PAGES),\n"
+      },
+      "line_number": 29,
+      "absolute_offset": 821,
+      "submatches": [
+        {
+          "match": {
+            "text": "env.CF_PAGES"
+          },
+          "start": 30,
+          "end": 42
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/ops/build-build-info.mjs"
+      },
+      "lines": {
+        "text": "    cf_pages_commit_sha: process.env.CF_PAGES_COMMIT_SHA || null,\n"
+      },
+      "line_number": 30,
+      "absolute_offset": 866,
+      "submatches": [
+        {
+          "match": {
+            "text": "env.CF_PAGES_COMMIT_SHA"
+          },
+          "start": 33,
+          "end": 56
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/ops/build-build-info.mjs"
+      },
+      "lines": {
+        "text": "    github_sha: process.env.GITHUB_SHA || null,\n"
+      },
+      "line_number": 31,
+      "absolute_offset": 932,
+      "submatches": [
+        {
+          "match": {
+            "text": "env.GITHUB_SHA"
+          },
+          "start": 24,
+          "end": 38
+        }
+      ]
+    }
+  },
+  {
+    "type": "end",
+    "data": {
+      "path": {
+        "text": "scripts/ops/build-build-info.mjs"
+      },
+      "binary_offset": null,
+      "stats": {
+        "elapsed": {
+          "secs": 0,
+          "nanos": 7709,
+          "human": "0.000008s"
+        },
+        "searches": 1,
+        "searches_with_match": 1,
+        "bytes_searched": 1182,
+        "bytes_printed": 1724,
+        "matched_lines": 6,
+        "matches": 7
+      }
+    }
+  },
+  {
+    "type": "begin",
+    "data": {
+      "path": {
+        "text": "scripts/seed-mirrors.mjs"
+      }
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/seed-mirrors.mjs"
+      },
+      "lines": {
+        "text": "const QUOTES_PROVIDER = String(process.env.QUOTES_PROVIDER || \"\").toLowerCase();\n"
+      },
+      "line_number": 13,
+      "absolute_offset": 459,
+      "submatches": [
+        {
+          "match": {
+            "text": "env.QUOTES_PROVIDER"
+          },
+          "start": 39,
+          "end": 58
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/seed-mirrors.mjs"
+      },
+      "lines": {
+        "text": "const FINNHUB_API_KEY = process.env.FINNHUB_API_KEY || \"\";\n"
+      },
+      "line_number": 14,
+      "absolute_offset": 540,
+      "submatches": [
+        {
+          "match": {
+            "text": "env.FINNHUB_API_KEY"
+          },
+          "start": 32,
+          "end": 51
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/seed-mirrors.mjs"
+      },
+      "lines": {
+        "text": "const FMP_API_KEY = process.env.FMP_API_KEY || \"\";\n"
+      },
+      "line_number": 15,
+      "absolute_offset": 599,
+      "submatches": [
+        {
+          "match": {
+            "text": "env.FMP_API_KEY"
+          },
+          "start": 28,
+          "end": 43
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/seed-mirrors.mjs"
+      },
+      "lines": {
+        "text": "const FRED_API_KEY = process.env.FRED_API_KEY || \"\";\n"
+      },
+      "line_number": 16,
+      "absolute_offset": 650,
+      "submatches": [
+        {
+          "match": {
+            "text": "env.FRED_API_KEY"
+          },
+          "start": 29,
+          "end": 45
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/seed-mirrors.mjs"
+      },
+      "lines": {
+        "text": "const ALPHAVANTAGE_API_KEY = process.env.ALPHAVANTAGE_API_KEY || \"\";\n"
+      },
+      "line_number": 17,
+      "absolute_offset": 703,
+      "submatches": [
+        {
+          "match": {
+            "text": "env.ALPHAVANTAGE_API_KEY"
+          },
+          "start": 37,
+          "end": 61
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/seed-mirrors.mjs"
+      },
+      "lines": {
+        "text": "const MARKETAUX_KEY = process.env.MARKETAUX_KEY || \"\";\n"
+      },
+      "line_number": 18,
+      "absolute_offset": 772,
+      "submatches": [
+        {
+          "match": {
+            "text": "env.MARKETAUX_KEY"
+          },
+          "start": 30,
+          "end": 47
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/seed-mirrors.mjs"
+      },
+      "lines": {
+        "text": "const ALLOW_YAHOO = process.env.ALLOW_YAHOO === \"1\";\n"
+      },
+      "line_number": 19,
+      "absolute_offset": 827,
+      "submatches": [
+        {
+          "match": {
+            "text": "env.ALLOW_YAHOO"
+          },
+          "start": 28,
+          "end": 43
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/seed-mirrors.mjs"
+      },
+      "lines": {
+        "text": "const ALLOW_TREASURY = process.env.ALLOW_TREASURY === \"1\";\n"
+      },
+      "line_number": 20,
+      "absolute_offset": 880,
+      "submatches": [
+        {
+          "match": {
+            "text": "env.ALLOW_TREASURY"
+          },
+          "start": 31,
+          "end": 49
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/seed-mirrors.mjs"
+      },
+      "lines": {
+        "text": "const MIN_OK_FEATURES = Number(process.env.MIN_OK_FEATURES || 2);\n"
+      },
+      "line_number": 21,
+      "absolute_offset": 939,
+      "submatches": [
+        {
+          "match": {
+            "text": "env.MIN_OK_FEATURES"
+          },
+          "start": 39,
+          "end": 58
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/seed-mirrors.mjs"
+      },
+      "lines": {
+        "text": "const MAX_FAIL_FEATURES = Number(process.env.MAX_FAIL_FEATURES || 2);\n"
+      },
+      "line_number": 22,
+      "absolute_offset": 1005,
+      "submatches": [
+        {
+          "match": {
+            "text": "env.MAX_FAIL_FEATURES"
+          },
+          "start": 41,
+          "end": 62
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/seed-mirrors.mjs"
+      },
+      "lines": {
+        "text": "  String(process.env.CRITICAL_FEATURES || \"\")\n"
+      },
+      "line_number": 24,
+      "absolute_offset": 1110,
+      "submatches": [
+        {
+          "match": {
+            "text": "env.CRITICAL_FEATURES"
+          },
+          "start": 17,
+          "end": 38
+        }
+      ]
+    }
+  },
+  {
+    "type": "end",
+    "data": {
+      "path": {
+        "text": "scripts/seed-mirrors.mjs"
+      },
+      "binary_offset": null,
+      "stats": {
+        "elapsed": {
+          "secs": 0,
+          "nanos": 19042,
+          "human": "0.000019s"
+        },
+        "searches": 1,
+        "searches_with_match": 1,
+        "bytes_searched": 41237,
+        "bytes_printed": 3001,
+        "matched_lines": 11,
+        "matches": 11
+      }
+    }
+  },
+  {
+    "type": "begin",
+    "data": {
+      "path": {
+        "text": "scripts/pipeline/build-marketphase-from-kv.mjs"
+      }
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/pipeline/build-marketphase-from-kv.mjs"
+      },
+      "lines": {
+        "text": "    return process.env.COMMIT_HASH || execSync(\"git rev-parse --short HEAD\", { encoding: \"utf8\" }).trim();\n"
+      },
+      "line_number": 106,
+      "absolute_offset": 2914,
+      "submatches": [
+        {
+          "match": {
+            "text": "env.COMMIT_HASH"
+          },
+          "start": 19,
+          "end": 34
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/pipeline/build-marketphase-from-kv.mjs"
+      },
+      "lines": {
+        "text": "  if (process.env.CF_KV_NAMESPACE_ID) return;\n"
+      },
+      "line_number": 248,
+      "absolute_offset": 7680,
+      "submatches": [
+        {
+          "match": {
+            "text": "env.CF_KV_NAMESPACE_ID"
+          },
+          "start": 14,
+          "end": 36
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/pipeline/build-marketphase-from-kv.mjs"
+      },
+      "lines": {
+        "text": "  if (id) process.env.CF_KV_NAMESPACE_ID = id;\n"
+      },
+      "line_number": 250,
+      "absolute_offset": 7778,
+      "submatches": [
+        {
+          "match": {
+            "text": "env.CF_KV_NAMESPACE_ID"
+          },
+          "start": 18,
+          "end": 40
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/pipeline/build-marketphase-from-kv.mjs"
+      },
+      "lines": {
+        "text": "  const allowProviderFallback = args.allowProviderFallback || toBool(process.env.ALLOW_PROVIDER_FETCH) || toBool(process.env.MARKETPHASE_PROVIDER_FALLBACK);\n"
+      },
+      "line_number": 276,
+      "absolute_offset": 8435,
+      "submatches": [
+        {
+          "match": {
+            "text": "env.ALLOW_PROVIDER_FETCH"
+          },
+          "start": 77,
+          "end": 101
+        },
+        {
+          "match": {
+            "text": "env.MARKETPHASE_PROVIDER_FALLBACK"
+          },
+          "start": 121,
+          "end": 154
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/pipeline/build-marketphase-from-kv.mjs"
+      },
+      "lines": {
+        "text": "  const writeBackKv = args.writeBackKv || toBool(process.env.MARKETPHASE_WRITE_BACK_KV);\n"
+      },
+      "line_number": 277,
+      "absolute_offset": 8592,
+      "submatches": [
+        {
+          "match": {
+            "text": "env.MARKETPHASE_WRITE_BACK_KV"
+          },
+          "start": 57,
+          "end": 86
+        }
+      ]
+    }
+  },
+  {
+    "type": "end",
+    "data": {
+      "path": {
+        "text": "scripts/pipeline/build-marketphase-from-kv.mjs"
+      },
+      "binary_offset": null,
+      "stats": {
+        "elapsed": {
+          "secs": 0,
+          "nanos": 30833,
+          "human": "0.000031s"
+        },
+        "searches": 1,
+        "searches_with_match": 1,
+        "bytes_searched": 15163,
+        "bytes_printed": 1781,
+        "matched_lines": 5,
+        "matches": 6
+      }
+    }
+  },
+  {
+    "type": "begin",
+    "data": {
+      "path": {
+        "text": "scripts/update-macro-hub.v3.mjs"
+      }
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/update-macro-hub.v3.mjs"
+      },
+      "lines": {
+        "text": "  const fredKey = process.env.FRED_API_KEY || \"\";\n"
+      },
+      "line_number": 552,
+      "absolute_offset": 20064,
+      "submatches": [
+        {
+          "match": {
+            "text": "env.FRED_API_KEY"
+          },
+          "start": 26,
+          "end": 42
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/update-macro-hub.v3.mjs"
+      },
+      "lines": {
+        "text": "  const finnhubKey = process.env.FINNHUB_API_KEY || \"\";\n"
+      },
+      "line_number": 553,
+      "absolute_offset": 20114,
+      "submatches": [
+        {
+          "match": {
+            "text": "env.FINNHUB_API_KEY"
+          },
+          "start": 29,
+          "end": 48
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/update-macro-hub.v3.mjs"
+      },
+      "lines": {
+        "text": "  const fmpKey = process.env.FMP_API_KEY || \"\";\n"
+      },
+      "line_number": 554,
+      "absolute_offset": 20170,
+      "submatches": [
+        {
+          "match": {
+            "text": "env.FMP_API_KEY"
+          },
+          "start": 25,
+          "end": 40
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/update-macro-hub.v3.mjs"
+      },
+      "lines": {
+        "text": "  const alphaKey = process.env.ALPHAVANTAGE_API_KEY || \"\";\n"
+      },
+      "line_number": 555,
+      "absolute_offset": 20218,
+      "submatches": [
+        {
+          "match": {
+            "text": "env.ALPHAVANTAGE_API_KEY"
+          },
+          "start": 27,
+          "end": 51
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/update-macro-hub.v3.mjs"
+      },
+      "lines": {
+        "text": "  const coingeckoKey = process.env.COINGECKO_DEMO_KEY || \"\";\n"
+      },
+      "line_number": 556,
+      "absolute_offset": 20277,
+      "submatches": [
+        {
+          "match": {
+            "text": "env.COINGECKO_DEMO_KEY"
+          },
+          "start": 31,
+          "end": 53
+        }
+      ]
+    }
+  },
+  {
+    "type": "end",
+    "data": {
+      "path": {
+        "text": "scripts/update-macro-hub.v3.mjs"
+      },
+      "binary_offset": null,
+      "stats": {
+        "elapsed": {
+          "secs": 0,
+          "nanos": 53583,
+          "human": "0.000054s"
+        },
+        "searches": 1,
+        "searches_with_match": 1,
+        "bytes_searched": 45419,
+        "bytes_printed": 1436,
+        "matched_lines": 5,
+        "matches": 5
+      }
+    }
+  },
+  {
+    "type": "begin",
+    "data": {
+      "path": {
+        "text": "scripts/validate/universe-artifact.v2.mjs"
+      }
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/validate/universe-artifact.v2.mjs"
+      },
+      "lines": {
+        "text": "  const baseDir = process.env.RV_ARTIFACT_OUT_DIR\n"
+      },
+      "line_number": 24,
+      "absolute_offset": 485,
+      "submatches": [
+        {
+          "match": {
+            "text": "env.RV_ARTIFACT_OUT_DIR"
+          },
+          "start": 26,
+          "end": 49
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/validate/universe-artifact.v2.mjs"
+      },
+      "lines": {
+        "text": "    ? String(process.env.RV_ARTIFACT_OUT_DIR)\n"
+      },
+      "line_number": 25,
+      "absolute_offset": 535,
+      "submatches": [
+        {
+          "match": {
+            "text": "env.RV_ARTIFACT_OUT_DIR"
+          },
+          "start": 21,
+          "end": 44
+        }
+      ]
+    }
+  },
+  {
+    "type": "end",
+    "data": {
+      "path": {
+        "text": "scripts/validate/universe-artifact.v2.mjs"
+      },
+      "binary_offset": null,
+      "stats": {
+        "elapsed": {
+          "secs": 0,
+          "nanos": 3917,
+          "human": "0.000004s"
+        },
+        "searches": 1,
+        "searches_with_match": 1,
+        "bytes_searched": 2523,
+        "bytes_printed": 634,
+        "matched_lines": 2,
+        "matches": 2
+      }
+    }
+  },
+  {
+    "type": "begin",
+    "data": {
+      "path": {
+        "text": "scripts/validate/market-stats-artifact.v1.mjs"
+      }
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/validate/market-stats-artifact.v1.mjs"
+      },
+      "lines": {
+        "text": "  const baseDir = process.env.RV_ARTIFACT_OUT_DIR\n"
+      },
+      "line_number": 16,
+      "absolute_offset": 347,
+      "submatches": [
+        {
+          "match": {
+            "text": "env.RV_ARTIFACT_OUT_DIR"
+          },
+          "start": 26,
+          "end": 49
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/validate/market-stats-artifact.v1.mjs"
+      },
+      "lines": {
+        "text": "    ? String(process.env.RV_ARTIFACT_OUT_DIR)\n"
+      },
+      "line_number": 17,
+      "absolute_offset": 397,
+      "submatches": [
+        {
+          "match": {
+            "text": "env.RV_ARTIFACT_OUT_DIR"
+          },
+          "start": 21,
+          "end": 44
+        }
+      ]
+    }
+  },
+  {
+    "type": "end",
+    "data": {
+      "path": {
+        "text": "scripts/validate/market-stats-artifact.v1.mjs"
+      },
+      "binary_offset": null,
+      "stats": {
+        "elapsed": {
+          "secs": 0,
+          "nanos": 4250,
+          "human": "0.000004s"
+        },
+        "searches": 1,
+        "searches_with_match": 1,
+        "bytes_searched": 2031,
+        "bytes_printed": 646,
+        "matched_lines": 2,
+        "matches": 2
+      }
+    }
+  },
+  {
+    "type": "begin",
+    "data": {
+      "path": {
+        "text": "scripts/validate/market-score-artifact.v1.mjs"
+      }
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/validate/market-score-artifact.v1.mjs"
+      },
+      "lines": {
+        "text": "  const baseDir = process.env.RV_ARTIFACT_OUT_DIR\n"
+      },
+      "line_number": 25,
+      "absolute_offset": 666,
+      "submatches": [
+        {
+          "match": {
+            "text": "env.RV_ARTIFACT_OUT_DIR"
+          },
+          "start": 26,
+          "end": 49
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/validate/market-score-artifact.v1.mjs"
+      },
+      "lines": {
+        "text": "    ? String(process.env.RV_ARTIFACT_OUT_DIR)\n"
+      },
+      "line_number": 26,
+      "absolute_offset": 716,
+      "submatches": [
+        {
+          "match": {
+            "text": "env.RV_ARTIFACT_OUT_DIR"
+          },
+          "start": 21,
+          "end": 44
+        }
+      ]
+    }
+  },
+  {
+    "type": "end",
+    "data": {
+      "path": {
+        "text": "scripts/validate/market-score-artifact.v1.mjs"
+      },
+      "binary_offset": null,
+      "stats": {
+        "elapsed": {
+          "secs": 0,
+          "nanos": 7667,
+          "human": "0.000008s"
+        },
+        "searches": 1,
+        "searches_with_match": 1,
+        "bytes_searched": 2879,
+        "bytes_printed": 646,
+        "matched_lines": 2,
+        "matches": 2
+      }
+    }
+  },
+  {
+    "type": "begin",
+    "data": {
+      "path": {
+        "text": "scripts/validate/market-prices-artifact.v1.mjs"
+      }
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/validate/market-prices-artifact.v1.mjs"
+      },
+      "lines": {
+        "text": "  const baseDir = process.env.RV_ARTIFACT_OUT_DIR\n"
+      },
+      "line_number": 20,
+      "absolute_offset": 445,
+      "submatches": [
+        {
+          "match": {
+            "text": "env.RV_ARTIFACT_OUT_DIR"
+          },
+          "start": 26,
+          "end": 49
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/validate/market-prices-artifact.v1.mjs"
+      },
+      "lines": {
+        "text": "    ? String(process.env.RV_ARTIFACT_OUT_DIR)\n"
+      },
+      "line_number": 21,
+      "absolute_offset": 495,
+      "submatches": [
+        {
+          "match": {
+            "text": "env.RV_ARTIFACT_OUT_DIR"
+          },
+          "start": 21,
+          "end": 44
+        }
+      ]
+    }
+  },
+  {
+    "type": "end",
+    "data": {
+      "path": {
+        "text": "scripts/validate/market-prices-artifact.v1.mjs"
+      },
+      "binary_offset": null,
+      "stats": {
+        "elapsed": {
+          "secs": 0,
+          "nanos": 3666,
+          "human": "0.000004s"
+        },
+        "searches": 1,
+        "searches_with_match": 1,
+        "bytes_searched": 1859,
+        "bytes_printed": 649,
+        "matched_lines": 2,
+        "matches": 2
+      }
+    }
+  },
+  {
+    "type": "begin",
+    "data": {
+      "path": {
+        "text": "scripts/validate/providers-registry.v1.mjs"
+      }
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/validate/providers-registry.v1.mjs"
+      },
+      "lines": {
+        "text": "const registryPath = process.env.RV_PROVIDERS_REGISTRY_PATH\n"
+      },
+      "line_number": 19,
+      "absolute_offset": 552,
+      "submatches": [
+        {
+          "match": {
+            "text": "env.RV_PROVIDERS_REGISTRY_PATH"
+          },
+          "start": 29,
+          "end": 59
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/validate/providers-registry.v1.mjs"
+      },
+      "lines": {
+        "text": "  ? path.resolve(process.env.RV_PROVIDERS_REGISTRY_PATH)\n"
+      },
+      "line_number": 20,
+      "absolute_offset": 612,
+      "submatches": [
+        {
+          "match": {
+            "text": "env.RV_PROVIDERS_REGISTRY_PATH"
+          },
+          "start": 25,
+          "end": 55
+        }
+      ]
+    }
+  },
+  {
+    "type": "end",
+    "data": {
+      "path": {
+        "text": "scripts/validate/providers-registry.v1.mjs"
+      },
+      "binary_offset": null,
+      "stats": {
+        "elapsed": {
+          "secs": 0,
+          "nanos": 8417,
+          "human": "0.000008s"
+        },
+        "searches": 1,
+        "searches_with_match": 1,
+        "bytes_searched": 2939,
+        "bytes_printed": 672,
+        "matched_lines": 2,
+        "matches": 2
+      }
+    }
+  },
+  {
+    "type": "begin",
+    "data": {
+      "path": {
+        "text": "scripts/lib/kv-write.js"
+      }
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/lib/kv-write.js"
+      },
+      "lines": {
+        "text": "  if (toBool(process.env.SKIP_KV_WRITE)) return true;\n"
+      },
+      "line_number": 24,
+      "absolute_offset": 555,
+      "submatches": [
+        {
+          "match": {
+            "text": "env.SKIP_KV_WRITE"
+          },
+          "start": 21,
+          "end": 38
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/lib/kv-write.js"
+      },
+      "lines": {
+        "text": "  if (toBool(process.env.INPUT_SKIP_KV_WRITE)) return true;\n"
+      },
+      "line_number": 25,
+      "absolute_offset": 609,
+      "submatches": [
+        {
+          "match": {
+            "text": "env.INPUT_SKIP_KV_WRITE"
+          },
+          "start": 21,
+          "end": 44
+        }
+      ]
+    }
+  },
+  {
+    "type": "end",
+    "data": {
+      "path": {
+        "text": "scripts/lib/kv-write.js"
+      },
+      "binary_offset": null,
+      "stats": {
+        "elapsed": {
+          "secs": 0,
+          "nanos": 5208,
+          "human": "0.000005s"
+        },
+        "searches": 1,
+        "searches_with_match": 1,
+        "bytes_searched": 3266,
+        "bytes_printed": 592,
+        "matched_lines": 2,
+        "matches": 2
+      }
+    }
+  },
+  {
+    "type": "begin",
+    "data": {
+      "path": {
+        "text": "scripts/lib/build-id.js"
+      }
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/lib/build-id.js"
+      },
+      "lines": {
+        "text": "  if (process.env.BUILD_ID) {\n"
+      },
+      "line_number": 103,
+      "absolute_offset": 2932,
+      "submatches": [
+        {
+          "match": {
+            "text": "env.BUILD_ID"
+          },
+          "start": 14,
+          "end": 26
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "scripts/lib/build-id.js"
+      },
+      "lines": {
+        "text": "    return process.env.BUILD_ID;\n"
+      },
+      "line_number": 104,
+      "absolute_offset": 2962,
+      "submatches": [
+        {
+          "match": {
+            "text": "env.BUILD_ID"
+          },
+          "start": 19,
+          "end": 31
+        }
+      ]
+    }
+  },
+  {
+    "type": "end",
+    "data": {
+      "path": {
+        "text": "scripts/lib/build-id.js"
+      },
+      "binary_offset": null,
+      "stats": {
+        "elapsed": {
+          "secs": 0,
+          "nanos": 5750,
+          "human": "0.000006s"
+        },
+        "searches": 1,
+        "searches_with_match": 1,
+        "bytes_searched": 4117,
+        "bytes_printed": 529,
+        "matched_lines": 2,
+        "matches": 2
+      }
+    }
+  },
+  {
+    "data": {
+      "elapsed_total": {
+        "human": "0.006146s",
+        "nanos": 6146333,
+        "secs": 0
+      },
+      "stats": {
+        "bytes_printed": 42629,
+        "bytes_searched": 1321767,
+        "elapsed": {
+          "human": "0.001764s",
+          "nanos": 1764291,
+          "secs": 0
+        },
+        "matched_lines": 138,
+        "matches": 158,
+        "searches": 291,
+        "searches_with_match": 49
+      }
+    },
+    "type": "summary"
+  }
+]

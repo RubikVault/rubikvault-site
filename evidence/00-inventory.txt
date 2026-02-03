@@ -1,0 +1,28 @@
+RUBIKVAULT FORENSIC AUDIT - INVENTORY
+=====================================
+
+Generated: 2026-02-03
+
+CODE_DIRS: scripts functions src backend
+UI_DIRS: public
+API_DIRS: functions functions/api functions/internal
+OPS_DIRS: functions/api functions/internal scripts/ops scripts/aggregator scripts/providers
+
+KEY FILES:
+- UI Entrypoints: public/index.html, public/internal/health/index.html
+- API Handlers: functions/api/_shared/static-only-v3.js, functions/api/_shared/static-only.js
+- OPS Scripts: scripts/aggregator/finalize.mjs, scripts/lib/provider-state.js
+- Control Plane: public/data/manifest.json, public/data/provider-state.json
+- Data Plane: public/data/snapshots/{module}/latest.json (v3.0), public/data/snapshots/*.json (legacy)
+
+WORKFLOWS:
+- .github/workflows/v3-scrape-template.yml
+- .github/workflows/v3-finalizer.yml
+- .github/workflows/ci-gates.yml
+
+STATISTICS:
+- Total JSON files in public/data: 245+
+- v3.0 snapshots: 7 modules
+- Legacy flat files: 245+ files
+- API handlers: 95+ files
+- Scripts: 181+ files

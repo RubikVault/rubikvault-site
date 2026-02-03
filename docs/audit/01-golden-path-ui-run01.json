@@ -1,0 +1,29 @@
+{
+  "schema": "ui_golden_path_v1",
+  "paths": [
+    {
+      "id": "ui_analyze_stock",
+      "entry": "/analyze/<T>",
+      "steps": [
+        {
+          "node": "public/index.html",
+          "action": "loadAnalyze -> fetchJson(/api/stock?ticker=<T>)",
+          "evidence": "public/index.html:1448-1468"
+        },
+        {
+          "node": "functions/api/stock.js",
+          "action": "construct data.latest_bar + change + indicators",
+          "evidence": "functions/api/stock.js:841-867"
+        },
+        {
+          "node": "public/index.html",
+          "action": "renderStock uses data.latest_bar (close/volume/date)",
+          "evidence": "public/index.html:931-936"
+        }
+      ],
+      "api_endpoints": ["/api/stock"],
+      "artifact_paths": [],
+      "confidence": 100
+    }
+  ]
+}

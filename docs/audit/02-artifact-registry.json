@@ -1,0 +1,143 @@
+{
+  "schema": "artifact_registry_v1",
+  "artifacts": [
+    {
+      "concept": "manifest",
+      "canonical_candidates": [
+        "/data/manifest.json"
+      ],
+      "producers": [
+        {
+          "script": "scripts/aggregator/finalize.mjs",
+          "line": 510,
+          "evidence": "scripts/aggregator/finalize.mjs:510-511"
+        }
+      ],
+      "consumers_ui": [],
+      "consumers_api": [
+        {
+          "handler": "functions/api/_shared/static-only-v3.js",
+          "line": 191,
+          "evidence": "functions/api/_shared/static-only-v3.js:191-196"
+        }
+      ],
+      "consumers_ops": [
+        {
+          "file": "public/internal/health/index.html",
+          "line": 419,
+          "evidence": "public/internal/health/index.html:419"
+        }
+      ],
+      "storage": "filesystem",
+      "schema": {
+        "expected_fields": ["schema_version", "build_id", "published_at", "modules", "summary"],
+        "versions_found": ["3.0"]
+      }
+    },
+    {
+      "concept": "provider-state",
+      "canonical_candidates": [
+        "/data/provider-state.json"
+      ],
+      "producers": [
+        {
+          "script": "scripts/lib/provider-state.js",
+          "line": 40,
+          "evidence": "scripts/lib/provider-state.js:40-175"
+        }
+      ],
+      "consumers_ui": [
+        {
+          "file": "public/internal/health/index.html",
+          "line": 412,
+          "evidence": "public/internal/health/index.html:412"
+        }
+      ],
+      "consumers_api": [],
+      "consumers_ops": [
+        {
+          "file": "public/internal/health/index.html",
+          "line": 412,
+          "evidence": "public/internal/health/index.html:412"
+        }
+      ],
+      "storage": "filesystem",
+      "schema": {
+        "expected_fields": ["schema_version", "system", "modules"],
+        "versions_found": ["3.0"]
+      }
+    },
+    {
+      "concept": "snapshots",
+      "canonical_candidates": [
+        "/data/snapshots/{module}/latest.json"
+      ],
+      "producers": [
+        {
+          "script": "scripts/aggregator/finalize.mjs",
+          "line": 449,
+          "evidence": "scripts/aggregator/finalize.mjs:449-496"
+        }
+      ],
+      "consumers_ui": [
+        {
+          "file": "public/index.html",
+          "line": 321,
+          "evidence": "public/index.html:321: fetch('/data/snapshots/stock-analysis.json')"
+        }
+      ],
+      "consumers_api": [
+        {
+          "handler": "functions/api/_shared/static-only-v3.js",
+          "line": 294,
+          "evidence": "functions/api/_shared/static-only-v3.js:294-317"
+        }
+      ],
+      "consumers_ops": [
+        {
+          "file": "functions/api/_shared/static-only-v3.js",
+          "line": 294,
+          "evidence": "functions/api/_shared/static-only-v3.js:294"
+        }
+      ],
+      "storage": "filesystem",
+      "schema": {
+        "expected_fields": ["schema_version", "metadata", "data"],
+        "versions_found": ["3.0"]
+      }
+    },
+    {
+      "concept": "module-state",
+      "canonical_candidates": [
+        "/data/state/modules/{module}.json"
+      ],
+      "producers": [
+        {
+          "script": "scripts/lib/module-state.js",
+          "line": 173,
+          "evidence": "scripts/lib/module-state.js:173-182"
+        }
+      ],
+      "consumers_ui": [],
+      "consumers_api": [
+        {
+          "handler": "functions/api/_shared/static-only-v3.js",
+          "line": 179,
+          "evidence": "functions/api/_shared/static-only-v3.js:179-186"
+        }
+      ],
+      "consumers_ops": [
+        {
+          "file": "functions/api/_shared/static-only-v3.js",
+          "line": 179,
+          "evidence": "functions/api/_shared/static-only-v3.js:179"
+        }
+      ],
+      "storage": "filesystem",
+      "schema": {
+        "expected_fields": ["schema_version", "module", "status", "proof"],
+        "versions_found": ["3.0"]
+      }
+    }
+  ]
+}

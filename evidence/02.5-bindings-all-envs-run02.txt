@@ -1,0 +1,17 @@
+     1	name = "rubikvault-site"
+     2	compatibility_date = "2025-12-17"
+     3	compatibility_flags = ["nodejs_compat"]
+     4	
+     5	# Cloudflare Pages output folder (must match Pages settings)
+     6	pages_build_output_dir = "public"
+     7	
+     8	# KV binding for Pages Functions + local dev
+     9	[[kv_namespaces]]
+    10	binding = "RV_KV"
+    11	id = "323d53e7392e42ff9089daf8977dfde3"
+    12	preview_id = "30c57392d8f04dfbaeb71fd8bedea15f"
+    13	
+    14	# Optional: put ONLY non-secret values here (never API keys)
+    15	# [vars]
+    16	# PROD_URL = "https://rubikvault.com"
+    17	# MIRROR_BASE_URL = "https://rubikvault.com"

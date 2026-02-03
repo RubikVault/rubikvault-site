@@ -1,0 +1,127 @@
+{
+  "schema": "artifact_registry_v1",
+  "artifacts": [
+    {
+      "concept": "universe.nasdaq100",
+      "canonical_path": "public/data/universe/nasdaq100.json",
+      "producers": [],
+      "producer_status": "REQUIRES_MANUAL_CHECK",
+      "consumers_ui": ["public/index.html"],
+      "consumers_api": ["functions/api/stock.js"],
+      "consumers_ops": ["scripts/ops/build-ops-daily.mjs"],
+      "storage": "FS",
+      "evidence": [
+        "public/index.html:546-570",
+        "scripts/pipeline/build-ndx100-pipeline-truth.mjs:121-145",
+        "scripts/ops/build-ops-daily.mjs:233-236"
+      ]
+    },
+    {
+      "concept": "marketphase.index",
+      "canonical_path": "public/data/marketphase/index.json",
+      "producers": [
+        "scripts/pipeline/build-marketphase-from-kv.mjs",
+        "scripts/marketphase-generate.mjs"
+      ],
+      "consumers_ui": ["public/index.html"],
+      "consumers_api": [],
+      "consumers_ops": ["public/ops/index.html"],
+      "storage": "FS",
+      "evidence": [
+        "scripts/pipeline/build-marketphase-from-kv.mjs:406-425",
+        "scripts/pipeline/build-marketphase-from-kv.mjs:445-447",
+        "scripts/marketphase-generate.mjs:254-256",
+        "public/index.html:351-360",
+        "public/ops/index.html:345-357"
+      ]
+    },
+    {
+      "concept": "marketphase.ticker",
+      "canonical_path": "public/data/marketphase/<T>.json",
+      "producers": ["scripts/pipeline/build-marketphase-from-kv.mjs"],
+      "consumers_ui": ["public/index.html"],
+      "consumers_api": [],
+      "consumers_ops": [],
+      "storage": "FS",
+      "evidence": [
+        "scripts/pipeline/build-marketphase-from-kv.mjs:374-379",
+        "public/index.html:1321-1322"
+      ]
+    },
+    {
+      "concept": "pipeline.stage",
+      "canonical_path": "public/data/pipeline/nasdaq100.{fetched,validated,computed,static-ready}.json",
+      "producers": ["scripts/pipeline/build-ndx100-pipeline-truth.mjs"],
+      "consumers_ui": [],
+      "consumers_api": ["functions/api/mission-control/summary.js"],
+      "consumers_ops": ["public/ops/index.html"],
+      "storage": "FS",
+      "evidence": [
+        "scripts/pipeline/build-ndx100-pipeline-truth.mjs:231-234",
+        "functions/api/mission-control/summary.js:1201-1214",
+        "public/ops/index.html:686-713"
+      ]
+    },
+    {
+      "concept": "pipeline.latest",
+      "canonical_path": "public/data/pipeline/nasdaq100.latest.json",
+      "producers": [],
+      "producer_status": "REQUIRES_MANUAL_CHECK",
+      "consumers_ui": [],
+      "consumers_api": ["functions/api/mission-control/summary.js"],
+      "consumers_ops": ["scripts/ops/test-ops-artifacts.mjs"],
+      "storage": "FS",
+      "evidence": [
+        "functions/api/mission-control/summary.js:1206-1215",
+        "scripts/ops/test-ops-artifacts.mjs:5-9"
+      ]
+    },
+    {
+      "concept": "pipeline.truth",
+      "canonical_path": "public/data/pipeline/nasdaq100.pipeline-truth.json",
+      "producers": ["scripts/pipeline/build-ndx100-pipeline-truth.mjs"],
+      "consumers_ui": [],
+      "consumers_api": ["functions/api/mission-control/summary.js"],
+      "consumers_ops": ["public/ops/index.html"],
+      "storage": "FS",
+      "evidence": [
+        "scripts/pipeline/build-ndx100-pipeline-truth.mjs:236-364",
+        "functions/api/mission-control/summary.js:1206-1215",
+        "public/ops/index.html:742-750"
+      ]
+    },
+    {
+      "concept": "market-prices.snapshot",
+      "canonical_path": "public/data/snapshots/market-prices/latest.json",
+      "producers": [
+        ".github/workflows/v3-finalizer.yml",
+        ".github/workflows/wp16-manual-market-prices.yml"
+      ],
+      "consumers_ui": [],
+      "consumers_api": ["functions/api/stock.js", "functions/api/mission-control/summary.js"],
+      "consumers_ops": ["scripts/pipeline/build-ndx100-pipeline-truth.mjs"],
+      "storage": "FS",
+      "evidence": [
+        "public/data/snapshots/market-prices/latest.json:1-38",
+        "functions/api/stock.js:762-786",
+        "functions/api/mission-control/summary.js:1327-1345",
+        "scripts/pipeline/build-ndx100-pipeline-truth.mjs:147-149",
+        ".github/workflows/v3-finalizer.yml:184-220",
+        ".github/workflows/wp16-manual-market-prices.yml:83-105"
+      ]
+    },
+    {
+      "concept": "scientific-analysis.snapshot",
+      "canonical_path": "public/data/snapshots/stock-analysis.json",
+      "producers": ["scripts/scientific-analyzer/generate-analysis.mjs"],
+      "consumers_ui": ["public/index.html"],
+      "consumers_api": [],
+      "consumers_ops": [],
+      "storage": "FS",
+      "evidence": [
+        "public/index.html:320-324",
+        "scripts/scientific-analyzer/generate-analysis.mjs:34-35"
+      ]
+    }
+  ]
+}

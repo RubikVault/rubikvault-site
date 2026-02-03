@@ -1,0 +1,143 @@
+{
+  "schema": "golden_path_v1",
+  "ui_entrypoints": [
+    {
+      "route": "/",
+      "entrypoint": "public/index.html",
+      "scripts": [
+        "/market-clock.js"
+      ],
+      "api_endpoints": [
+        "/api/stock",
+        "/api/fundamentals"
+      ],
+      "artifact_paths": [
+        "/data/snapshots/stock-analysis.json",
+        "/data/marketphase/index.json",
+        "/data/marketphase/{ticker}.json",
+        "/data/universe/nasdaq100.json"
+      ],
+      "evidence": [
+        "public/index.html:321: fetch('/data/snapshots/stock-analysis.json')",
+        "public/index.html:351: fetch('/data/marketphase/index.json')",
+        "public/index.html:546: UNIVERSE_URL = '/data/universe/nasdaq100.json'",
+        "public/index.html:1466: fetchJson('/api/stock?ticker=...')",
+        "public/index.html:1467: fetchJson('/api/fundamentals?ticker=...')"
+      ]
+    },
+    {
+      "route": "/analyze/:ticker",
+      "entrypoint": "public/index.html",
+      "scripts": [
+        "/market-clock.js"
+      ],
+      "api_endpoints": [
+        "/api/stock",
+        "/api/fundamentals"
+      ],
+      "artifact_paths": [
+        "/data/universe/nasdaq100.json",
+        "/data/marketphase/{ticker}.json"
+      ],
+      "evidence": [
+        "public/index.html:1459: window.history.pushState({}, '', `/analyze/${ticker}`)",
+        "public/index.html:1466: fetchJson('/api/stock?ticker=...')"
+      ]
+    },
+    {
+      "route": "/internal/health",
+      "entrypoint": "public/internal/health/index.html",
+      "scripts": [],
+      "api_endpoints": [],
+      "artifact_paths": [
+        "/data/provider-state.json",
+        "/data/manifest.json"
+      ],
+      "evidence": [
+        "public/internal/health/index.html:412: fetch('/data/provider-state.json')",
+        "public/internal/health/index.html:419: fetch('/data/manifest.json')"
+      ]
+    }
+  ],
+  "golden_ticker": "AAPL",
+  "data_flow": {
+    "ui_html": "public/index.html",
+    "scripts": [
+      {
+        "file": "/market-clock.js",
+        "type": "external",
+        "evidence": "public/index.html:297"
+      }
+    ],
+    "api_endpoints": [
+      {
+        "endpoint": "/api/stock",
+        "handler": "functions/api/stock.js",
+        "reads": [
+          "/data/snapshots/{module}/latest.json",
+          "/data/{module}.json"
+        ],
+        "evidence": [
+          "functions/api/_shared/static-only-v3.js:294-317"
+        ]
+      },
+      {
+        "endpoint": "/api/fundamentals",
+        "handler": "functions/api/fundamentals.js",
+        "reads": [
+          "/data/snapshots/{module}/latest.json"
+        ],
+        "evidence": [
+          "functions/api/_shared/static-only-v3.js:294-317"
+        ]
+      }
+    ],
+    "artifact_reads": [
+      {
+        "path": "/data/snapshots/stock-analysis.json",
+        "used_by": "public/index.html:321",
+        "producer": "scripts/generate-snapshots.mjs (inferred)"
+      },
+      {
+        "path": "/data/universe/nasdaq100.json",
+        "used_by": "public/index.html:546",
+        "producer": "scripts/eod/build-eod-latest.mjs (inferred)"
+      },
+      {
+        "path": "/data/marketphase/index.json",
+        "used_by": "public/index.html:351",
+        "producer": "scripts/marketphase-generate.mjs (inferred)"
+      },
+      {
+        "path": "/data/snapshots/{module}/latest.json",
+        "used_by": "functions/api/_shared/static-only-v3.js:294",
+        "producer": "scripts/aggregator/finalize.mjs"
+      }
+    ],
+    "generator_scripts": [
+      {
+        "script": "scripts/aggregator/finalize.mjs",
+        "produces": [
+          "/data/snapshots/{module}/latest.json",
+          "/data/manifest.json",
+          "/data/provider-state.json"
+        ],
+        "evidence": [
+          "scripts/aggregator/finalize.mjs:35-37"
+        ]
+      }
+    ],
+    "workflows": [
+      {
+        "workflow": ".github/workflows/v3-scrape-template.yml",
+        "triggers": "scripts/providers/{module}-v3.mjs",
+        "evidence": ".github/workflows/v3-scrape-template.yml"
+      },
+      {
+        "workflow": ".github/workflows/v3-finalizer.yml",
+        "triggers": "scripts/aggregator/finalize.mjs",
+        "evidence": ".github/workflows/v3-finalizer.yml"
+      }
+    ]
+  }
+}

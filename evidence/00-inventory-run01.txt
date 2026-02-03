@@ -1,0 +1,634 @@
+## Repo State
+/Users/michaelpuchowezki/Dev/rubikvault-site
+/Users/michaelpuchowezki/Dev/rubikvault-site
+origin	https://github.com/RubikVault/rubikvault-site.git (fetch)
+origin	https://github.com/RubikVault/rubikvault-site.git (push)
+?? docs/audit/
+?? evidence/
+main
+30e04d5 (HEAD -> main, origin/main, origin/HEAD, fix/block-numbering) Merge branch 'main' of https://github.com/RubikVault/rubikvault-site
+
+## Top Level
+total 664
+drwxr-xr-x@  59 michaelpuchowezki  staff   1888 Feb  3 12:25 .
+drwxr-xr-x@   6 michaelpuchowezki  staff    192 Jan 12 10:15 ..
+-rw-r--r--@   1 michaelpuchowezki  staff  14340 Feb  1 19:12 .DS_Store
+drwxr-xr-x@   3 michaelpuchowezki  staff     96 Jan 19 12:18 .cursor
+-rw-r--r--@   1 michaelpuchowezki  staff   7108 Jan 19 13:35 .cursorrules
+-rw-r--r--@   1 michaelpuchowezki  staff    109 Jan 25 18:29 .dev.vars
+-rw-r--r--@   1 michaelpuchowezki  staff     36 Jan 18 17:50 .dev.vars.example
+-rw-r--r--@   1 michaelpuchowezki  staff    108 Jan 18 17:50 .env.example
+drwxr-xr-x@  18 michaelpuchowezki  staff    576 Feb  3 12:27 .git
+drwxr-xr-x@   4 michaelpuchowezki  staff    128 Jan  7 12:31 .github
+-rw-r--r--@   1 michaelpuchowezki  staff   2290 Feb  1 19:08 .gitignore
+drwxr-xr-x@   4 michaelpuchowezki  staff    128 Jan 31 16:38 .rv_bench
+drwxr-xr-x@   5 michaelpuchowezki  staff    160 Jan 25 16:12 .tmp
+drwxr-xr-x@   8 michaelpuchowezki  staff    256 Jan 15 16:30 .wrangler
+-rw-r--r--@   1 michaelpuchowezki  staff    270 Jan 18 17:50 .wranglerignore
+-rw-r--r--@   1 michaelpuchowezki  staff   3087 Jan 18 17:50 AI_CONTEXT.md
+-rw-r--r--@   1 michaelpuchowezki  staff   1191 Jan 18 17:50 AI_README.md
+-rw-r--r--@   1 michaelpuchowezki  staff   7256 Jan 19 21:16 COMPLIANCE_AUDIT.md
+-rw-r--r--@   1 michaelpuchowezki  staff   9827 Jan 19 21:27 NATIVE_APP_GUIDE.md
+-rw-r--r--@   1 michaelpuchowezki  staff  12243 Jan 31 16:44 README.md
+-rw-r--r--@   1 michaelpuchowezki  staff     64 Jan 18 17:50 _headers
+drwxr-xr-x@   3 michaelpuchowezki  staff     96 Jan 28 22:13 _local_trash
+-rw-r--r--@   1 michaelpuchowezki  staff      0 Dec 23 21:10 _pre_codex_dirty.diff
+-rw-r--r--@   1 michaelpuchowezki  staff    926 Jan 19 08:48 _redirects
+drwxr-xr-x@   7 michaelpuchowezki  staff    224 Feb  2 12:38 artifacts
+drwxr-xr-x@  22 michaelpuchowezki  staff    704 Jan 18 17:50 assets
+drwxr-xr-x@   3 michaelpuchowezki  staff     96 Jan 12 07:46 backend
+-rw-r--r--@   1 michaelpuchowezki  staff    109 Jan 18 17:50 build-info.json
+-rw-r--r--@   1 michaelpuchowezki  staff   1033 Jan 19 21:26 capacitor.config.ts
+drwxr-xr-x@  15 michaelpuchowezki  staff    480 Jan 29 16:45 config
+drwxr-xr-x@   7 michaelpuchowezki  staff    224 Jan 25 17:40 data
+-rw-r--r--@   1 michaelpuchowezki  staff   1138 Jan 18 17:50 disclaimer.html
+drwxr-xr-x@  20 michaelpuchowezki  staff    640 Feb  3 12:25 docs
+drwxr-xr-x@  18 michaelpuchowezki  staff    576 Feb  3 12:27 evidence
+-rw-r--r--@   1 michaelpuchowezki  staff   4862 Jan 25 17:40 feature-registry.json
+drwxr-xr-x@  12 michaelpuchowezki  staff    384 Feb  2 12:25 functions
+-rw-r--r--@   1 michaelpuchowezki  staff   1138 Jan 18 17:50 imprint.html
+drwxr-xr-x@   4 michaelpuchowezki  staff    128 Jan 25 13:37 internal
+-rw-r--r--@   1 michaelpuchowezki  staff   1223 Jan 19 20:20 manifest.json
+-rw-r--r--@   1 michaelpuchowezki  staff   4016 Jan 18 17:50 market-clock.js
+drwxr-xr-x@ 103 michaelpuchowezki  staff   3296 Jan 30 16:55 node_modules
+-rw-------@   1 michaelpuchowezki  staff      0 Jan 12 12:24 nohup.out
+-rw-r--r--@   1 michaelpuchowezki  staff  74518 Jan 30 16:51 package-lock.json
+-rw-r--r--@   1 michaelpuchowezki  staff   6074 Feb  1 11:55 package.json
+-rw-r--r--@   1 michaelpuchowezki  staff    318 Jan 30 16:21 playwright.config.mjs
+-rw-r--r--@   1 michaelpuchowezki  staff   1465 Jan 18 17:50 privacy.html
+drwxr-xr-x@  38 michaelpuchowezki  staff   1216 Jan 30 16:54 public
+drwxr-xr-x@   6 michaelpuchowezki  staff    192 Jan 25 17:40 registry
+-rw-r--r--@   1 michaelpuchowezki  staff  13031 Jan 18 17:50 rv-config.js
+-rw-r--r--@   1 michaelpuchowezki  staff     45 Jan 18 17:50 rv-debug-console.js
+-rw-r--r--@   1 michaelpuchowezki  staff  43729 Jan 25 17:40 rv-loader.js
+drwxr-xr-x@  11 michaelpuchowezki  staff    352 Jan 21 14:38 schemas
+drwxr-xr-x@  76 michaelpuchowezki  staff   2432 Feb  2 12:41 scripts
+drwxr-xr-x@   4 michaelpuchowezki  staff    128 Jan 29 19:38 src
+-rw-r--r--@   1 michaelpuchowezki  staff  47325 Jan 18 17:50 style.css
+-rw-r--r--@   1 michaelpuchowezki  staff      0 Jan 22 21:38 testfile.tmp
+drwxr-xr-x@  26 michaelpuchowezki  staff    832 Jan 30 16:21 tests
+drwxr-xr-x@  12 michaelpuchowezki  staff    384 Jan 29 19:38 tmp
+-rw-r--r--@   1 michaelpuchowezki  staff    519 Jan 30 16:22 wrangler.toml
+
+## Workflows
+total 144
+drwxr-xr-x@ 12 michaelpuchowezki  staff    384 Jan 30 20:56 .
+drwxr-xr-x@  4 michaelpuchowezki  staff    128 Jan  7 12:31 ..
+-rw-r--r--@  1 michaelpuchowezki  staff  16088 Feb  1 11:57 ci-gates.yml
+-rw-r--r--@  1 michaelpuchowezki  staff   2404 Jan 30 14:05 cleanup-daily-snapshots.yml
+-rw-r--r--@  1 michaelpuchowezki  staff    610 Jan 30 16:22 e2e-playwright.yml
+-rw-r--r--@  1 michaelpuchowezki  staff   3047 Feb  1 17:29 eod-latest.yml
+-rw-r--r--@  1 michaelpuchowezki  staff   2773 Feb  1 17:28 ops-daily.yml
+-rw-r--r--@  1 michaelpuchowezki  staff   1171 Jan 30 14:05 refresh-health-assets.yml
+-rw-r--r--@  1 michaelpuchowezki  staff   2192 Feb  1 17:29 scheduler-kick.yml
+-rw-r--r--@  1 michaelpuchowezki  staff  10642 Jan 30 14:05 v3-finalizer.yml
+-rw-r--r--@  1 michaelpuchowezki  staff   9619 Jan 30 14:05 v3-scrape-template.yml
+-rw-r--r--@  1 michaelpuchowezki  staff   4719 Jan 30 14:05 wp16-manual-market-prices.yml
+
+## Key dirs
+-- public
+total 856
+drwxr-xr-x@ 38 michaelpuchowezki  staff   1216 Jan 30 16:54 .
+drwxr-xr-x@ 59 michaelpuchowezki  staff   1888 Feb  3 12:25 ..
+-rw-r--r--@  1 michaelpuchowezki  staff   8196 Jan 29 19:38 .DS_Store
+-rw-r--r--@  1 michaelpuchowezki  staff     86 Jan 18 17:50 404.html
+-rw-r--r--@  1 michaelpuchowezki  staff   5830 Jan 18 17:50 BLOCK_ANALYSIS.md
+-rw-r--r--@  1 michaelpuchowezki  staff   5121 Jan 18 17:50 DEBUG_README.md
+-rw-r--r--@  1 michaelpuchowezki  staff   4476 Jan 27 16:48 RUNBOOK.md
+-rw-r--r--@  1 michaelpuchowezki  staff     24 Jan 18 17:50 __redirects_canary
+-rw-r--r--@  1 michaelpuchowezki  staff    332 Jan 19 14:13 _headers
+-rw-r--r--@  1 michaelpuchowezki  staff    935 Jan 27 08:59 _redirects
+drwxr-xr-x@ 23 michaelpuchowezki  staff    736 Jan 18 17:50 assets
+-rw-r--r--@  1 michaelpuchowezki  staff    106 Jan 19 11:08 build-info.json
+drwxr-xr-x@  3 michaelpuchowezki  staff     96 Jan 18 17:50 config
+drwxr-xr-x@ 37 michaelpuchowezki  staff   1184 Feb  3 08:44 data
+drwxr-xr-x@ 12 michaelpuchowezki  staff    384 Feb  1 21:42 debug
+-rw-r--r--@  1 michaelpuchowezki  staff     42 Jan 23 09:25 deploy-probe-a6ee864-1769156714.txt
+-rw-r--r--@  1 michaelpuchowezki  staff  12930 Jan 18 18:30 diagnose.js
+-rw-r--r--@  1 michaelpuchowezki  staff  18588 Jan 30 16:54 elliott.html
+-rw-r--r--@  1 michaelpuchowezki  staff   4862 Jan 25 17:40 feature-registry.json
+-rw-r--r--@  1 michaelpuchowezki  staff  73417 Jan 30 19:24 index.html
+drwxr-xr-x@  3 michaelpuchowezki  staff     96 Jan 19 14:00 internal
+-rw-r--r--@  1 michaelpuchowezki  staff  56877 Jan 19 14:13 internal-dashboard
+-rw-r--r--@  1 michaelpuchowezki  staff  28376 Jan 27 09:08 internal-dashboard.html
+-rw-r--r--@  1 michaelpuchowezki  staff   1223 Jan 19 21:03 manifest.json
+-rw-r--r--@  1 michaelpuchowezki  staff   3158 Jan 18 18:30 market-clock.js
+-rw-r--r--@  1 michaelpuchowezki  staff   8110 Jan 22 16:51 market-stats.html
+drwxr-xr-x@  6 michaelpuchowezki  staff    192 Jan 18 17:50 mirror
+drwxr-xr-x@ 44 michaelpuchowezki  staff   1408 Jan 18 17:50 mirrors
+drwxr-xr-x@  3 michaelpuchowezki  staff     96 Jan 26 21:23 mission-control
+-rw-r--r--@  1 michaelpuchowezki  staff  14852 Jan 30 13:49 mission-control.html
+drwxr-xr-x@  4 michaelpuchowezki  staff    128 Jan 27 16:48 ops
+drwxr-xr-x@  3 michaelpuchowezki  staff     96 Jan 18 17:50 posts
+-rw-r--r--@  1 michaelpuchowezki  staff  31844 Jan 30 17:41 scientific.html
+-rw-r--r--@  1 michaelpuchowezki  staff   1123 Jan 22 19:09 search.css
+-rw-r--r--@  1 michaelpuchowezki  staff   7906 Jan 26 09:30 search.js
+-rw-r--r--@  1 michaelpuchowezki  staff   6440 Jan 19 20:20 service-worker.js
+-rw-r--r--@  1 michaelpuchowezki  staff  19463 Jan 22 19:11 stock.html
+-rw-r--r--@  1 michaelpuchowezki  staff  64979 Jan 26 09:52 style.css
+-- mirrors
+MISSING: mirrors
+-- scripts
+total 1032
+drwxr-xr-x@ 76 michaelpuchowezki  staff   2432 Feb  2 12:41 .
+drwxr-xr-x@ 59 michaelpuchowezki  staff   1888 Feb  3 12:25 ..
+-rw-r--r--@  1 michaelpuchowezki  staff   8196 Jan 29 19:38 .DS_Store
+drwxr-xr-x@ 10 michaelpuchowezki  staff    320 Jan 18 21:03 _lib
+drwxr-xr-x@  3 michaelpuchowezki  staff     96 Jan 21 14:38 aggregator
+-rw-r--r--@  1 michaelpuchowezki  staff    709 Jan 18 18:29 alpha-radar-debug.js
+drwxr-xr-x@  7 michaelpuchowezki  staff    224 Jan 25 17:40 audit
+-rw-r--r--@  1 michaelpuchowezki  staff  46642 Jan 25 17:40 audit-site.mjs
+-rw-r--r--@  1 michaelpuchowezki  staff   1833 Jan 18 17:50 build-mirrors-manifest.mjs
+-rw-r--r--@  1 michaelpuchowezki  staff   2466 Jan 25 17:40 check-registry-coverage.mjs
+drwxr-xr-x@  3 michaelpuchowezki  staff     96 Jan 21 14:53 ci
+-rwxr-xr-x@  1 michaelpuchowezki  staff   4591 Jan 19 21:20 cleanup-daily-snapshots.sh
+-rw-r--r--@  1 michaelpuchowezki  staff   8115 Feb  1 12:39 contract-smoke.js
+-rw-r--r--@  1 michaelpuchowezki  staff   3402 Jan 21 14:38 contract-smoke.mjs
+-rw-r--r--@  1 michaelpuchowezki  staff    539 Jan 25 17:40 copy-feature-registry.mjs
+drwxr-xr-x@  3 michaelpuchowezki  staff     96 Jan 19 10:54 core
+-rw-r--r--@  1 michaelpuchowezki  staff   2248 Jan 19 14:13 create-initial-provider-state.mjs
+-rwxr-xr-x@  1 michaelpuchowezki  staff   3838 Jan 18 17:50 dev-local.sh
+-rwxr-xr-x@  1 michaelpuchowezki  staff    326 Jan 18 17:50 dev-pages.sh
+drwxr-xr-x@  4 michaelpuchowezki  staff    128 Jan 30 12:45 eod
+-rw-r--r--@  1 michaelpuchowezki  staff   4586 Jan 25 17:40 export-blocks-from-snapshots.mjs
+-rw-r--r--@  1 michaelpuchowezki  staff   3590 Jan 19 17:10 fix-api-exports.mjs
+-rw-r--r--@  1 michaelpuchowezki  staff   3852 Jan 18 17:50 generate-crypto-snapshot.mjs
+-rw-r--r--@  1 michaelpuchowezki  staff   3808 Jan 18 17:50 generate-eod-market.mjs
+-rw-r--r--@  1 michaelpuchowezki  staff   2130 Jan 18 17:50 generate-eod-mirrors.mjs
+-rw-r--r--@  1 michaelpuchowezki  staff   7006 Jan 19 08:34 generate-event-mirrors.mjs
+-rw-r--r--@  1 michaelpuchowezki  staff   1733 Jan 26 14:56 generate-health-snapshot.mjs
+-rw-r--r--@  1 michaelpuchowezki  staff   5165 Jan 19 07:59 generate-health.mjs
+-rw-r--r--@  1 michaelpuchowezki  staff   6143 Jan 18 18:29 generate-posts.js
+-rw-r--r--@  1 michaelpuchowezki  staff     32 Jan 18 17:50 generate-snapshots.mjs
+-rw-r--r--@  1 michaelpuchowezki  staff   6353 Jan 18 17:50 generate-snapshots.mjs.bak
+-rw-r--r--@  1 michaelpuchowezki  staff   7065 Jan 18 17:50 generate-snapshots.mjs.bak.1768075080
+-rw-r--r--@  1 michaelpuchowezki  staff   7466 Jan 18 17:50 generate-snapshots.mjs.bak.1768075659
+-rw-r--r--@  1 michaelpuchowezki  staff   7466 Jan 18 17:50 generate-snapshots.mjs.bak.1768075753
+-rwxr-xr-x@  1 michaelpuchowezki  staff   2121 Jan 18 17:50 healthcheck.sh
+drwxr-xr-x@ 18 michaelpuchowezki  staff    576 Jan 30 16:47 lib
+-rwxr-xr-x@  1 michaelpuchowezki  staff   1574 Jan 18 17:50 llm-context.sh
+-rw-r--r--@  1 michaelpuchowezki  staff  11813 Jan 30 15:36 marketphase-core.mjs
+-rw-r--r--@  1 michaelpuchowezki  staff   8351 Jan 19 10:30 marketphase-generate.mjs
+-rw-r--r--@  1 michaelpuchowezki  staff   6090 Jan 18 17:50 marketphase-validate.mjs
+-rw-r--r--@  1 michaelpuchowezki  staff    658 Jan 18 17:50 metrics-ui-selection.mjs
+-rw-r--r--@  1 michaelpuchowezki  staff   4441 Jan 18 17:50 metrics-v5-gates.mjs
+-rw-r--r--@  1 michaelpuchowezki  staff   7100 Jan 18 17:50 mirror-breakout-energy.mjs
+-rw-r--r--@  1 michaelpuchowezki  staff    494 Jan 18 17:50 move-repo-out-of-cloud.sh
+drwxr-xr-x@ 23 michaelpuchowezki  staff    736 Feb  1 11:56 ops
+-rw-r--r--@  1 michaelpuchowezki  staff    775 Feb  2 12:34 ops_selfcheck.mjs
+drwxr-xr-x@  4 michaelpuchowezki  staff    128 Jan 30 12:45 pipeline
+drwxr-xr-x@ 18 michaelpuchowezki  staff    576 Jan 25 17:40 providers
+-rw-r--r--@  1 michaelpuchowezki  staff   7195 Feb  1 12:38 refresh-health-assets.mjs
+drwxr-xr-x@  3 michaelpuchowezki  staff     96 Jan  9 22:14 runners
+-rw-r--r--@  1 michaelpuchowezki  staff   1556 Jan 25 17:40 rv-dev.sh
+drwxr-xr-x@  3 michaelpuchowezki  staff     96 Jan 30 16:52 scientific-analyzer
+-rw-r--r--@  1 michaelpuchowezki  staff  41237 Jan 19 09:53 seed-mirrors.mjs
+-rw-r--r--@  1 michaelpuchowezki  staff  46885 Jan 26 08:01 seeder.js
+-rw-r--r--@  1 michaelpuchowezki  staff   1453 Jan 18 18:29 simulate-cost.js
+-rw-r--r--@  1 michaelpuchowezki  staff   1243 Jan 18 17:50 smoke-debug.mjs
+-rwxr-xr-x@  1 michaelpuchowezki  staff   1967 Jan 18 17:50 smoke-redirects.sh
+-rwxr-xr-x@  1 michaelpuchowezki  staff   6326 Jan 18 17:50 smoke-rvci.sh
+-rwxr-xr-x@  1 michaelpuchowezki  staff   1245 Jan 18 17:50 smoke-static-mime.sh
+-rwxr-xr-x@  1 michaelpuchowezki  staff   4356 Jan 25 17:40 test-api.sh
+-rw-r--r--@  1 michaelpuchowezki  staff   6390 Jan 29 21:32 test-envelope.mjs
+-rw-r--r--@  1 michaelpuchowezki  staff   5454 Feb  1 13:07 test-scheduler.mjs
+-rw-r--r--@  1 michaelpuchowezki  staff   6045 Feb  2 22:55 test-truth-chain.mjs
+drwxr-xr-x@  7 michaelpuchowezki  staff    224 Feb  2 12:57 truth-audit
+drwxr-xr-x@  5 michaelpuchowezki  staff    160 Feb  1 18:56 truth-chain
+drwxr-xr-x@  3 michaelpuchowezki  staff     96 Feb  1 21:43 ui-path
+-rw-r--r--@  1 michaelpuchowezki  staff  45419 Jan 18 21:03 update-macro-hub.v3.mjs
+-rw-r--r--@  1 michaelpuchowezki  staff  11648 Jan 18 17:50 update-news.mjs
+drwxr-xr-x@ 11 michaelpuchowezki  staff    352 Jan 21 14:38 utils
+drwxr-xr-x@  8 michaelpuchowezki  staff    256 Jan 22 18:11 validate
+-rwxr-xr-x@  1 michaelpuchowezki  staff   2024 Jan 25 17:40 validate-feature-registry.mjs
+-rw-r--r--@  1 michaelpuchowezki  staff   9486 Jan 26 16:01 validate-mirrors.mjs
+-rw-r--r--@  1 michaelpuchowezki  staff   1120 Jan 25 17:40 validate-public-registry.mjs
+-rw-r--r--@  1 michaelpuchowezki  staff   2511 Jan 18 18:29 validate-snapshots.js
+-rw-r--r--@  1 michaelpuchowezki  staff   2674 Jan 29 16:46 validate-symbols.mjs
+-rwxr-xr-x@  1 michaelpuchowezki  staff   2084 Jan 18 21:03 verify-api.sh
+-- docs
+total 120
+drwxr-xr-x@ 20 michaelpuchowezki  staff    640 Feb  3 12:25 .
+drwxr-xr-x@ 59 michaelpuchowezki  staff   1888 Feb  3 12:25 ..
+-rw-r--r--@  1 michaelpuchowezki  staff   6148 Jan 29 19:38 .DS_Store
+-rw-r--r--@  1 michaelpuchowezki  staff   2781 Jan 18 17:50 DEV_PAGES.md
+-rw-r--r--@  1 michaelpuchowezki  staff  11101 Jan 30 19:20 LOGIC_DOCUMENTATION.md
+-rw-r--r--@  1 michaelpuchowezki  staff   3474 Jan 27 20:45 OPS_WORKFLOW_SAFETY.md
+drwxr-xr-x@  4 michaelpuchowezki  staff    128 Feb  2 20:06 analysis
+drwxr-xr-x@  9 michaelpuchowezki  staff    288 Jan 27 16:48 architecture
+drwxr-xr-x@  4 michaelpuchowezki  staff    128 Feb  3 12:27 audit
+-rw-r--r--@  1 michaelpuchowezki  staff   4932 Feb  2 12:35 audit-answer.md
+drwxr-xr-x@  3 michaelpuchowezki  staff     96 Jan 18 17:50 incidents
+drwxr-xr-x@ 11 michaelpuchowezki  staff    352 Feb  2 12:35 ops
+drwxr-xr-x@  5 michaelpuchowezki  staff    160 Feb  1 11:59 ops-forensics
+-rw-r--r--@  1 michaelpuchowezki  staff   1155 Jan 31 21:56 ops-gate.md
+-rw-r--r--@  1 michaelpuchowezki  staff   1514 Feb  1 18:57 ops-truth-chain-checks.md
+drwxr-xr-x@  5 michaelpuchowezki  staff    160 Jan 22 09:27 phase1-prices
+drwxr-xr-x@  3 michaelpuchowezki  staff     96 Jan 18 17:50 runbooks
+-rw-r--r--@  1 michaelpuchowezki  staff     47 Jan 25 17:40 schema-versioning-policy.v6.md
+-rw-r--r--@  1 michaelpuchowezki  staff   4434 Feb  1 19:03 truth-chain-ui-to-origin.md
+-rw-r--r--@  1 michaelpuchowezki  staff   2445 Feb  1 21:48 ui-path-proof.md
+-- src
+total 16
+drwxr-xr-x@  4 michaelpuchowezki  staff   128 Jan 29 19:38 .
+drwxr-xr-x@ 59 michaelpuchowezki  staff  1888 Feb  3 12:25 ..
+-rw-r--r--@  1 michaelpuchowezki  staff  6148 Jan 29 19:38 .DS_Store
+drwxr-xr-x@  6 michaelpuchowezki  staff   192 Jan 29 16:49 lib
+-- functions
+total 72
+drwxr-xr-x@ 12 michaelpuchowezki  staff    384 Feb  2 12:25 .
+drwxr-xr-x@ 59 michaelpuchowezki  staff   1888 Feb  3 12:25 ..
+-rw-r--r--@  1 michaelpuchowezki  staff   6148 Jan 29 19:38 .DS_Store
+drwxr-xr-x@  3 michaelpuchowezki  staff     96 Jan 26 14:56 _lib
+drwxr-xr-x@  3 michaelpuchowezki  staff     96 Feb  2 12:25 _ops
+drwxr-xr-x@  6 michaelpuchowezki  staff    192 Jan 26 14:56 _shared
+drwxr-xr-x@ 73 michaelpuchowezki  staff   2336 Jan 30 15:56 api
+drwxr-xr-x@  4 michaelpuchowezki  staff    128 Jan 19 14:20 internal
+-rw-r--r--@  1 michaelpuchowezki  staff  12765 Jan 19 14:38 internal-health.js
+-rw-r--r--@  1 michaelpuchowezki  staff   1256 Jan 19 14:38 internal.js
+-rw-r--r--@  1 michaelpuchowezki  staff    133 Jan 18 17:50 package.json
+-rw-r--r--@  1 michaelpuchowezki  staff   2331 Jan 18 17:50 proxy.js
+
+## Config files
+./AI_README.md
+./AI_CONTEXT.md
+./node_modules/zod/README.md
+./node_modules/simple-swizzle/README.md
+./node_modules/ajv-cli/CODE_OF_CONDUCT.md
+./node_modules/ajv-cli/README.md
+./node_modules/xml2js/README.md
+./node_modules/path-is-absolute/readme.md
+./node_modules/median-quickselect/README.md
+./node_modules/rss-parser/README.md
+./node_modules/playwright-core/README.md
+./node_modules/miniflare/README.md
+./node_modules/commander/CHANGELOG.md
+./node_modules/commander/Readme.md
+./node_modules/workerd/README.md
+./node_modules/color-string/README.md
+./node_modules/detect-libc/README.md
+./node_modules/balanced-match/LICENSE.md
+./node_modules/balanced-match/README.md
+./node_modules/glob-to-regexp/README.md
+./node_modules/strnum/CHANGELOG.md
+./node_modules/strnum/README.md
+./node_modules/acorn/CHANGELOG.md
+./node_modules/acorn/README.md
+./node_modules/sax/LICENSE.md
+./node_modules/sax/README.md
+./node_modules/wrangler/README.md
+./node_modules/once/README.md
+./node_modules/ajv-formats/README.md
+./node_modules/argparse/CHANGELOG.md
+./node_modules/argparse/README.md
+./node_modules/fast-xml-parser/CHANGELOG.md
+./node_modules/fast-xml-parser/README.md
+./node_modules/ml-cart/CHANGELOG.md
+./node_modules/ml-cart/README.md
+./node_modules/color/README.md
+./node_modules/xmlbuilder/CHANGELOG.md
+./node_modules/xmlbuilder/README.md
+./node_modules/inherits/README.md
+./node_modules/iconv-lite/Changelog.md
+./node_modules/iconv-lite/README.md
+./node_modules/blake3-wasm/changelog.md
+./node_modules/blake3-wasm/readme.md
+./node_modules/unenv/README.md
+./node_modules/color-name/README.md
+./node_modules/undici/README.md
+./node_modules/exit-hook/readme.md
+./node_modules/js-yaml/README.md
+./node_modules/error-stack-parser-es/README.md
+./node_modules/path-to-regexp/Readme.md
+./node_modules/safer-buffer/Porting-Buffer.md
+./node_modules/safer-buffer/Readme.md
+./node_modules/random-js/CHANGELOG.md
+./node_modules/random-js/README.md
+./node_modules/json-schema-traverse/README.md
+./node_modules/minimist/CHANGELOG.md
+./node_modules/minimist/README.md
+./node_modules/playwright/README.md
+./node_modules/fast-json-patch/README.md
+./node_modules/json-schema-migrate/README.md
+./node_modules/esprima/README.md
+./node_modules/is-any-array/README.md
+./node_modules/supports-color/readme.md
+./node_modules/color-convert/CHANGELOG.md
+./node_modules/color-convert/README.md
+./node_modules/brace-expansion/README.md
+./node_modules/semver/README.md
+./node_modules/minimatch/README.md
+./node_modules/fast-uri/README.md
+./node_modules/ml-array-rescale/README.md
+./node_modules/ml-array-max/README.md
+./node_modules/fs.realpath/README.md
+./node_modules/ml-random-forest/CHANGELOG.md
+./node_modules/ml-random-forest/README.md
+./node_modules/json5/LICENSE.md
+./node_modules/json5/README.md
+./node_modules/stoppable/readme.md
+./node_modules/sprintf-js/README.md
+./node_modules/ml-array-median/README.md
+./node_modules/is-arrayish/README.md
+./node_modules/ml-array-sum/README.md
+./node_modules/mime/CHANGELOG.md
+./node_modules/mime/README.md
+./node_modules/glob/README.md
+./node_modules/youch/LICENSE.md
+./node_modules/youch/README.md
+./node_modules/cookie/README.md
+./node_modules/youch-core/LICENSE.md
+./node_modules/youch-core/README.md
+./node_modules/ml-array-min/README.md
+./node_modules/ml-matrix/README.md
+./node_modules/esbuild/LICENSE.md
+./node_modules/esbuild/README.md
+./node_modules/wrappy/README.md
+./node_modules/ml-logistic-regression/History.md
+./node_modules/ml-logistic-regression/README.md
+./node_modules/d3-dsv/README.md
+./node_modules/ml-array-mode/README.md
+./node_modules/pathe/README.md
+./node_modules/kleur/readme.md
+./node_modules/ajv/README.md
+./node_modules/sharp/README.md
+./node_modules/simple-statistics/README.md
+./node_modules/entities/readme.md
+./node_modules/fsevents/README.md
+./node_modules/ws/README.md
+./node_modules/fast-deep-equal/README.md
+./node_modules/ml-array-mean/README.md
+./node_modules/require-from-string/readme.md
+./node_modules/acorn-walk/CHANGELOG.md
+./node_modules/acorn-walk/README.md
+./node_modules/rw/README.md
+./node_modules/inflight/README.md
+./_redirects
+./docs/truth-chain-ui-to-origin.md
+./docs/analysis/repo_audit_answer_v2.md
+./docs/analysis/repo_audit_answer.md
+./docs/DEV_PAGES.md
+./docs/audit-answer.md
+./docs/ops-truth-chain-checks.md
+./docs/runbooks/smoke-tests.md
+./docs/OPS_WORKFLOW_SAFETY.md
+./docs/LOGIC_DOCUMENTATION.md
+./docs/architecture/masterplan-v2.md
+./docs/architecture/ops-trust-layer.md
+./docs/architecture/middleware-contract.md
+./docs/architecture/data-layout-law-v1.md
+./docs/architecture/blocks-13-25.md
+./docs/architecture/blocks-26-43.md
+./docs/architecture/blocks-1-30.md
+./docs/audit/00-inventory.md
+./docs/audit/00-tooling-gaps.md
+./docs/ops-forensics/report.md
+./docs/ops-forensics/fix-plan.md
+./docs/ops-gate.md
+./docs/schema-versioning-policy.v6.md
+./docs/ops/ops-shapes.ssot.md
+./docs/ops/architecture.md
+./docs/ops/indicators-chain.audit.md
+./docs/ops/price-indicator-truth.md
+./docs/ops/runbook.md
+./docs/ops/contract.md
+./docs/ops/OPS_PAGE_FIX_SUMMARY.md
+./docs/ops/prices-chain.audit.md
+./docs/ops/decisions.md
+./docs/phase1-prices/00-repo-map.md
+./docs/phase1-prices/01-universe-registry.md
+./docs/phase1-prices/02-prices-index-proxies.md
+./docs/incidents/2026-01-og-image-503.md
+./docs/ui-path-proof.md
+./_headers
+./README.md
+./public/DEBUG_README.md
+./public/BLOCK_ANALYSIS.md
+./public/RUNBOOK.md
+./public/_redirects
+./public/_headers
+./public/debug/CODEX_IDENTITY_PROOF.md
+./public/debug/CODEX_PROGRESS.md
+./public/debug/CODEX_PUSH_PROOF.md
+./scripts/audit/REALITY.md
+./scripts/ops/notes.md
+./.tmp/dev-slim/AI_README.md
+./.tmp/dev-slim/DEBUG_README.md
+./.tmp/dev-slim/RUNBOOK.md
+./.tmp/dev-slim/_redirects
+./.tmp/dev-slim/_headers
+./.tmp/dev-slim/README.md
+./.tmp/dev-slim/wrangler.toml
+./wrangler.toml
+./_local_trash/rubikvault-site.20260128-221342/AI_README.md
+./_local_trash/rubikvault-site.20260128-221342/AI_CONTEXT.md
+./_local_trash/rubikvault-site.20260128-221342/_redirects
+./_local_trash/rubikvault-site.20260128-221342/_headers
+./_local_trash/rubikvault-site.20260128-221342/README.md
+./_local_trash/rubikvault-site.20260128-221342/wrangler.toml
+./_local_trash/rubikvault-site.20260128-221342/COMPLIANCE_AUDIT.md
+./_local_trash/rubikvault-site.20260128-221342/NATIVE_APP_GUIDE.md
+./COMPLIANCE_AUDIT.md
+./NATIVE_APP_GUIDE.md
+
+## Tree
+.
+./.cursor
+./artifacts
+./artifacts/truth-audit
+./artifacts/truth-audit/2026-02-02
+./artifacts/truth-audit/2026-02-02/runtime
+./artifacts/truth-audit/2026-02-02/raw
+./artifacts/market-prices
+./artifacts/market-prices/stooq-cache
+./artifacts/market-stats
+./artifacts/ops
+./evidence
+./config
+./node_modules
+./node_modules/zod
+./node_modules/zod/lib
+./node_modules/zod/lib/locales
+./node_modules/zod/lib/__tests__
+./node_modules/zod/lib/benchmarks
+./node_modules/zod/lib/helpers
+./node_modules/simple-swizzle
+./node_modules/ajv-cli
+./node_modules/ajv-cli/test
+./node_modules/ajv-cli/test/meta
+./node_modules/ajv-cli/test/jtd
+./node_modules/ajv-cli/test/migrate
+./node_modules/ajv-cli/test/custom
+./node_modules/ajv-cli/dist
+./node_modules/ajv-cli/dist/commands
+./node_modules/ajv-cli/.github
+./node_modules/ajv-cli/.github/workflows
+./node_modules/ajv-cli/src
+./node_modules/ajv-cli/src/commands
+./node_modules/xml2js
+./node_modules/xml2js/lib
+./node_modules/path-is-absolute
+./node_modules/@playwright
+./node_modules/@playwright/test
+./node_modules/.bin
+./node_modules/median-quickselect
+./node_modules/median-quickselect/test
+./node_modules/median-quickselect/lib
+./node_modules/median-quickselect/src
+./node_modules/rss-parser
+./node_modules/rss-parser/dist
+./node_modules/rss-parser/scripts
+./node_modules/rss-parser/.github
+./node_modules/rss-parser/.github/workflows
+./node_modules/rss-parser/lib
+./node_modules/playwright-core
+./node_modules/playwright-core/types
+./node_modules/playwright-core/bin
+./node_modules/playwright-core/lib
+./node_modules/playwright-core/lib/generated
+./node_modules/playwright-core/lib/mcpBundleImpl
+./node_modules/playwright-core/lib/utilsBundleImpl
+./node_modules/playwright-core/lib/server
+./node_modules/playwright-core/lib/utils
+./node_modules/playwright-core/lib/protocol
+./node_modules/playwright-core/lib/cli
+./node_modules/playwright-core/lib/vite
+./node_modules/playwright-core/lib/third_party
+./node_modules/playwright-core/lib/client
+./node_modules/playwright-core/lib/remote
+./node_modules/miniflare
+./node_modules/miniflare/dist
+./node_modules/miniflare/dist/src
+./node_modules/commander
+./node_modules/commander/typings
+./node_modules/workerd
+./node_modules/workerd/bin
+./node_modules/workerd/lib
+./node_modules/color-string
+./node_modules/detect-libc
+./node_modules/detect-libc/lib
+./node_modules/balanced-match
+./node_modules/balanced-match/.github
+./node_modules/glob-to-regexp
+./node_modules/strnum
+./node_modules/strnum/.vscode
+./node_modules/acorn
+./node_modules/acorn/bin
+./node_modules/acorn/dist
+./node_modules/sax
+./node_modules/sax/lib
+./node_modules/@cloudflare
+./node_modules/@cloudflare/unenv-preset
+./node_modules/@cloudflare/unenv-preset/dist
+./node_modules/@cloudflare/kv-asset-handler
+./node_modules/@cloudflare/kv-asset-handler/dist
+./node_modules/@cloudflare/kv-asset-handler/src
+./node_modules/@cloudflare/workerd-darwin-arm64
+./node_modules/@cloudflare/workerd-darwin-arm64/bin
+./node_modules/wrangler
+./node_modules/wrangler/bin
+./node_modules/wrangler/templates
+./node_modules/wrangler/templates/middleware
+./node_modules/wrangler/templates/startDevWorker
+./node_modules/wrangler/templates/__tests__
+./node_modules/wrangler/templates/remoteBindings
+./node_modules/wrangler/templates/init-tests
+./node_modules/wrangler/wrangler-dist
+./node_modules/once
+./node_modules/ajv-formats
+./node_modules/ajv-formats/dist
+./node_modules/ajv-formats/src
+./node_modules/argparse
+./node_modules/argparse/lib
+./node_modules/argparse/lib/argument
+./node_modules/argparse/lib/action
+./node_modules/argparse/lib/help
+./node_modules/fast-xml-parser
+./node_modules/fast-xml-parser/src
+./node_modules/fast-xml-parser/src/v6
+./node_modules/fast-xml-parser/src/xmlbuilder
+./node_modules/fast-xml-parser/src/cli
+./node_modules/fast-xml-parser/src/v5
+./node_modules/fast-xml-parser/src/xmlparser
+./node_modules/ml-cart
+./node_modules/ml-cart/src
+./node_modules/color
+./node_modules/xmlbuilder
+./node_modules/xmlbuilder/typings
+./node_modules/xmlbuilder/lib
+./node_modules/inherits
+./node_modules/iconv-lite
+./node_modules/iconv-lite/encodings
+./node_modules/iconv-lite/encodings/tables
+./node_modules/iconv-lite/.github
+./node_modules/iconv-lite/lib
+./node_modules/iconv-lite/.idea
+./node_modules/iconv-lite/.idea/inspectionProfiles
+./node_modules/iconv-lite/.idea/codeStyles
+./node_modules/blake3-wasm
+./node_modules/blake3-wasm/dist
+./node_modules/blake3-wasm/dist/wasm
+./node_modules/blake3-wasm/dist/browser
+./node_modules/blake3-wasm/dist/build
+./node_modules/blake3-wasm/dist/node
+./node_modules/blake3-wasm/dist/node-native
+./node_modules/blake3-wasm/dist/base
+./node_modules/blake3-wasm/esm
+./node_modules/blake3-wasm/esm/browser
+./node_modules/blake3-wasm/esm/build
+./node_modules/blake3-wasm/esm/node
+./node_modules/blake3-wasm/esm/node-native
+./node_modules/blake3-wasm/esm/base
+./node_modules/unenv
+./node_modules/unenv/dist
+./node_modules/unenv/dist/runtime
+./node_modules/unenv/lib
+./node_modules/color-name
+./node_modules/@poppinss
+./node_modules/@poppinss/colors
+./node_modules/@poppinss/colors/build
+./node_modules/@poppinss/exception
+./node_modules/@poppinss/exception/build
+./node_modules/@poppinss/dumper
+./node_modules/@poppinss/dumper/build
+./node_modules/.mf
+./node_modules/undici
+./node_modules/undici/types
+./node_modules/undici/docs
+./node_modules/undici/docs/docs
+./node_modules/undici/scripts
+./node_modules/undici/lib
+./node_modules/undici/lib/handler
+./node_modules/undici/lib/llhttp
+./node_modules/undici/lib/core
+./node_modules/undici/lib/cache
+./node_modules/undici/lib/util
+./node_modules/undici/lib/web
+./node_modules/undici/lib/mock
+./node_modules/undici/lib/dispatcher
+./node_modules/undici/lib/api
+./node_modules/undici/lib/interceptor
+./node_modules/exit-hook
+./node_modules/js-yaml
+./node_modules/js-yaml/bin
+./node_modules/js-yaml/dist
+./node_modules/js-yaml/lib
+./node_modules/js-yaml/lib/js-yaml
+./node_modules/error-stack-parser-es
+./node_modules/error-stack-parser-es/dist
+./node_modules/@cspotcode
+./node_modules/@cspotcode/source-map-support
+./node_modules/path-to-regexp
+./node_modules/path-to-regexp/dist
+./node_modules/path-to-regexp/dist.es2015
+./node_modules/safer-buffer
+./node_modules/random-js
+./node_modules/random-js/dist
+./node_modules/random-js/dist/distribution
+./node_modules/random-js/dist/utils
+./node_modules/random-js/dist/engine
+./node_modules/json-schema-traverse
+./node_modules/json-schema-traverse/spec
+./node_modules/json-schema-traverse/spec/fixtures
+./node_modules/json-schema-traverse/.github
+./node_modules/json-schema-traverse/.github/workflows

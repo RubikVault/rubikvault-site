@@ -1,0 +1,134 @@
+{
+  "schema": "ui_surface_v1",
+  "routes": [
+    {
+      "route": "/",
+      "entrypoint": "public/index.html",
+      "scripts": [
+        "/market-clock.js"
+      ],
+      "api_endpoints": [
+        "/api/stock",
+        "/api/fundamentals"
+      ],
+      "artifact_paths": [
+        "/data/snapshots/stock-analysis.json",
+        "/data/marketphase/index.json",
+        "/data/universe/nasdaq100.json"
+      ],
+      "file_deps": [
+        "public/index.html",
+        "public/market-clock.js",
+        "public/style.css",
+        "public/search.css",
+        "public/manifest.json",
+        "functions/api/stock.js",
+        "functions/api/fundamentals.js",
+        "functions/api/_shared/static-only-v3.js"
+      ],
+      "confidence": 100,
+      "evidence": [
+        "public/index.html:1-1631",
+        "public/index.html:297: script src='/market-clock.js'",
+        "public/index.html:321: fetch('/data/snapshots/stock-analysis.json')",
+        "public/index.html:1466: fetchJson('/api/stock?ticker=...')"
+      ]
+    },
+    {
+      "route": "/analyze/:ticker",
+      "entrypoint": "public/index.html",
+      "scripts": [
+        "/market-clock.js"
+      ],
+      "api_endpoints": [
+        "/api/stock",
+        "/api/fundamentals"
+      ],
+      "artifact_paths": [
+        "/data/universe/nasdaq100.json",
+        "/data/marketphase/{ticker}.json"
+      ],
+      "file_deps": [
+        "public/index.html",
+        "public/market-clock.js",
+        "public/_redirects",
+        "functions/api/stock.js",
+        "functions/api/fundamentals.js",
+        "functions/api/_shared/static-only-v3.js"
+      ],
+      "confidence": 100,
+      "evidence": [
+        "public/index.html:1459: window.history.pushState({}, '', `/analyze/${ticker}`)",
+        "public/_redirects: deep link routing"
+      ]
+    },
+    {
+      "route": "/internal/health",
+      "entrypoint": "public/internal/health/index.html",
+      "scripts": [],
+      "api_endpoints": [],
+      "artifact_paths": [
+        "/data/provider-state.json",
+        "/data/manifest.json"
+      ],
+      "file_deps": [
+        "public/internal/health/index.html",
+        "public/data/provider-state.json",
+        "public/data/manifest.json"
+      ],
+      "confidence": 100,
+      "evidence": [
+        "public/internal/health/index.html:412: fetch('/data/provider-state.json')",
+        "public/internal/health/index.html:419: fetch('/data/manifest.json')"
+      ]
+    },
+    {
+      "route": "/elliott.html",
+      "entrypoint": "public/elliott.html",
+      "scripts": [],
+      "api_endpoints": [],
+      "artifact_paths": [],
+      "file_deps": [
+        "public/elliott.html"
+      ],
+      "confidence": 100,
+      "evidence": [
+        "public/elliott.html exists"
+      ]
+    },
+    {
+      "route": "/scientific.html",
+      "entrypoint": "public/scientific.html",
+      "scripts": [],
+      "api_endpoints": [],
+      "artifact_paths": [],
+      "file_deps": [
+        "public/scientific.html"
+      ],
+      "confidence": 100,
+      "evidence": [
+        "public/scientific.html exists"
+      ]
+    }
+  ],
+  "ui_critical_files": [
+    "public/index.html",
+    "public/market-clock.js",
+    "public/style.css",
+    "public/search.css",
+    "public/manifest.json",
+    "public/service-worker.js",
+    "public/_redirects",
+    "public/internal/health/index.html",
+    "functions/api/stock.js",
+    "functions/api/fundamentals.js",
+    "functions/api/_shared/static-only-v3.js",
+    "public/data/provider-state.json",
+    "public/data/manifest.json",
+    "public/data/registry/modules.json",
+    "public/data/snapshots/stock-analysis.json",
+    "public/data/universe/nasdaq100.json",
+    "public/data/marketphase/index.json"
+  ],
+  "protection_rule": "ANY ui_critical_files MUST be GREEN (100)."
+}

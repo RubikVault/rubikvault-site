@@ -1,0 +1,120 @@
+[
+  {
+    "type": "begin",
+    "data": {
+      "path": {
+        "text": "src/lib/envelope.ts"
+      }
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "src/lib/envelope.ts"
+      },
+      "lines": {
+        "text": "  assert(typeof meta.status === \"string\", \"Envelope.meta.status missing\");\n"
+      },
+      "line_number": 53,
+      "absolute_offset": 1355,
+      "submatches": [
+        {
+          "match": {
+            "text": "meta.status"
+          },
+          "start": 16,
+          "end": 27
+        },
+        {
+          "match": {
+            "text": "meta.status"
+          },
+          "start": 52,
+          "end": 63
+        }
+      ]
+    }
+  },
+  {
+    "type": "match",
+    "data": {
+      "path": {
+        "text": "src/lib/envelope.ts"
+      },
+      "lines": {
+        "text": "  assert(STATUS_SET.has(meta.status), `Envelope.meta.status invalid: ${meta.status}`);\n"
+      },
+      "line_number": 54,
+      "absolute_offset": 1430,
+      "submatches": [
+        {
+          "match": {
+            "text": "meta.status"
+          },
+          "start": 24,
+          "end": 35
+        },
+        {
+          "match": {
+            "text": "meta.status"
+          },
+          "start": 48,
+          "end": 59
+        },
+        {
+          "match": {
+            "text": "meta.status"
+          },
+          "start": 71,
+          "end": 82
+        }
+      ]
+    }
+  },
+  {
+    "type": "end",
+    "data": {
+      "path": {
+        "text": "src/lib/envelope.ts"
+      },
+      "binary_offset": null,
+      "stats": {
+        "elapsed": {
+          "secs": 0,
+          "nanos": 17917,
+          "human": "0.000018s"
+        },
+        "searches": 1,
+        "searches_with_match": 1,
+        "bytes_searched": 3858,
+        "bytes_printed": 775,
+        "matched_lines": 2,
+        "matches": 5
+      }
+    }
+  },
+  {
+    "data": {
+      "elapsed_total": {
+        "human": "0.002679s",
+        "nanos": 2679333,
+        "secs": 0
+      },
+      "stats": {
+        "bytes_printed": 775,
+        "bytes_searched": 5976,
+        "elapsed": {
+          "human": "0.000028s",
+          "nanos": 27917,
+          "secs": 0
+        },
+        "matched_lines": 2,
+        "matches": 5,
+        "searches": 2,
+        "searches_with_match": 1
+      }
+    },
+    "type": "summary"
+  }
+]

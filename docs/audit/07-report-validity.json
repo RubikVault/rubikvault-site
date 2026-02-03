@@ -1,0 +1,16 @@
+{
+  "schema": "report_validity_v1",
+  "thresholds": {
+    "ui_surface_complete": true,
+    "ui_critical_count": ">=1",
+    "ops_golden_path_present": true,
+    "primary_root_cause_confidence_min": 70,
+    "cleanup_red_count": ">=0",
+    "every_red_has_dependency_check": true
+  },
+  "pass": false,
+  "gaps": [
+    "RUNTIME_PROBES_MISSING: BASE_URL not set; evidence/06-*.json contain no probes."
+  ],
+  "abort_reason_if_fail": "Runtime probes missing; cannot confirm live contract paths and runtime-only fallbacks."
+}

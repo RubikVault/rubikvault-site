@@ -1,0 +1,144 @@
+{
+  "schema": "ui_surface_v1",
+  "routes": [
+    {
+      "route": "/",
+      "entrypoint": "public/index.html",
+      "scripts": ["/market-clock.js"],
+      "api_endpoints": ["/api/stock", "/api/fundamentals"],
+      "artifact_paths": [
+        "/data/universe/nasdaq100.json",
+        "/data/marketphase/index.json",
+        "/data/marketphase/<T>.json",
+        "/data/snapshots/stock-analysis.json"
+      ],
+      "file_deps": ["public/index.html", "public/market-clock.js"],
+      "confidence": 100,
+      "evidence": [
+        "public/index.html:1448-1468",
+        "public/index.html:931-934",
+        "public/index.html:321",
+        "public/index.html:351",
+        "public/index.html:546",
+        "public/index.html:1321"
+      ]
+    },
+    {
+      "route": "/ops/",
+      "entrypoint": "public/ops/index.html",
+      "scripts": [],
+      "api_endpoints": ["/api/mission-control/summary", "/api/mission-control/summary?live=1"],
+      "artifact_paths": [
+        "/data/build-info.json",
+        "/data/pipeline/nasdaq100.latest.json",
+        "/data/pipeline/nasdaq100.static-ready.json",
+        "/data/pipeline/nasdaq100.pipeline-truth.json",
+        "/data/pipeline/missing.json",
+        "/data/marketphase/missing.json"
+      ],
+      "file_deps": ["public/ops/index.html"],
+      "confidence": 100,
+      "evidence": [
+        "public/ops/index.html:1082-1096",
+        "public/ops/index.html:1187-1196",
+        "public/ops/index.html:870",
+        "public/ops/index.html:330-397"
+      ]
+    },
+    {
+      "route": "/mission-control.html",
+      "entrypoint": "public/mission-control.html",
+      "scripts": [],
+      "api_endpoints": ["/api/mission-control/summary"],
+      "artifact_paths": [],
+      "file_deps": ["public/mission-control.html"],
+      "confidence": 100,
+      "evidence": [
+        "public/mission-control.html:205-209"
+      ]
+    },
+    {
+      "route": "/elliott.html",
+      "entrypoint": "public/elliott.html",
+      "scripts": ["/market-clock.js"],
+      "api_endpoints": [],
+      "artifact_paths": [],
+      "file_deps": ["public/elliott.html", "public/market-clock.js"],
+      "confidence": 80,
+      "evidence": [
+        "public/elliott.html:325-326"
+      ]
+    },
+    {
+      "route": "/scientific.html",
+      "entrypoint": "public/scientific.html",
+      "scripts": [],
+      "api_endpoints": [],
+      "artifact_paths": ["/data/snapshots/stock-analysis.json"],
+      "file_deps": ["public/scientific.html"],
+      "confidence": 100,
+      "evidence": [
+        "public/scientific.html:686-688"
+      ]
+    },
+    {
+      "route": "/stock.html",
+      "entrypoint": "public/stock.html",
+      "scripts": [],
+      "api_endpoints": ["/api/stock"],
+      "artifact_paths": [],
+      "file_deps": ["public/stock.html"],
+      "confidence": 100,
+      "evidence": [
+        "public/stock.html:347-349"
+      ]
+    },
+    {
+      "route": "/market-stats.html",
+      "entrypoint": "public/market-stats.html",
+      "scripts": [],
+      "api_endpoints": [],
+      "artifact_paths": ["/data/snapshots/market-stats/latest.json"],
+      "file_deps": ["public/market-stats.html"],
+      "confidence": 100,
+      "evidence": [
+        "public/market-stats.html:157"
+      ]
+    },
+    {
+      "route": "/internal-dashboard.html",
+      "entrypoint": "public/internal-dashboard.html",
+      "scripts": [],
+      "api_endpoints": [],
+      "artifact_paths": [
+        "/data/system-health.json",
+        "/data/provider-state.json",
+        "/data/usage-report.json",
+        "/data/snapshots/macro-hub.json",
+        "/data/snapshots/alpha-radar.json",
+        "/data/snapshots/rvci-engine.json",
+        "/data/marketphase/index.json",
+        "/data/marketphase/<T>.json"
+      ],
+      "file_deps": ["public/internal-dashboard.html"],
+      "confidence": 100,
+      "evidence": [
+        "public/internal-dashboard.html:225-231",
+        "public/internal-dashboard.html:467",
+        "public/internal-dashboard.html:580-582"
+      ]
+    }
+  ],
+  "ui_critical_files": [
+    "public/index.html",
+    "public/ops/index.html",
+    "public/mission-control.html",
+    "public/elliott.html",
+    "public/scientific.html",
+    "public/stock.html",
+    "public/market-stats.html",
+    "public/internal-dashboard.html",
+    "public/market-clock.js"
+  ],
+  "protection_rule": "ANY ui_critical_files MUST be GREEN (100)."
+}

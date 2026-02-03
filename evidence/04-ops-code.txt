@@ -1,0 +1,32 @@
+# OPS Code Files
+# Collected: 2026-02-03
+
+=== functions/internal-health.js ===
+[File contains embedded HTML for Mission Control]
+Lines: 1-382
+Purpose: Serves Mission Control UI at /internal-health
+
+=== functions/api/_shared/static-only-v3.js ===
+[API handler with debug mode and proof chain evaluation]
+Lines: 1-388
+Purpose: Serves v3.0 snapshots with backward compatibility
+
+=== scripts/aggregator/finalize.mjs ===
+[Finalizer - atomic publisher]
+Lines: 1-908
+Purpose: Downloads artifacts, builds manifest, promotes data
+
+=== scripts/lib/provider-state.js ===
+[Provider state generator]
+Lines: 1-175
+Purpose: Generates provider-state.json for Mission Control
+
+=== scripts/lib/module-state.js ===
+[Module state writer]
+Lines: 1-243
+Purpose: Writes module state files for diagnostics
+
+=== public/internal/health/index.html ===
+[Mission Control UI]
+Lines: 1-589
+Purpose: Displays system health dashboard

@@ -1,0 +1,57 @@
+{
+  "schema": "ops_mismatch_v1",
+  "primary_root_cause": {
+    "category": "A_WRONG_INPUT_PATH",
+    "confidence": 80,
+    "evidence": [
+      "public/index.html:1448-1467",
+      "public/index.html:931-934",
+      "functions/api/stock.js:855-865",
+      "functions/api/mission-control/summary.js:1327-1345"
+    ],
+    "detail": "UI renders prices from /api/stock response data.latest_bar, while OPS price truth chain evaluates market-prices snapshot (mini universe) via mission-control summary."
+  },
+  "secondary_causes": [
+    {
+      "category": "D_PARALLEL_IMPLEMENTATION",
+      "confidence": 60,
+      "evidence": [
+        "functions/api/mission-control/summary.js:1201-1215",
+        "public/ops/index.html:686-709"
+      ],
+      "detail": "OPS pipeline health uses /data/pipeline/* artifacts which are not part of the UI price path (UI uses /api/stock)."
+    }
+  ],
+  "ui_ssot_reference": {
+    "canonical_paths": ["/api/stock?ticker=<T>", "data.latest_bar"],
+    "evidence": [
+      "public/index.html:1448-1467",
+      "public/index.html:931-934",
+      "functions/api/stock.js:855-865"
+    ]
+  },
+  "ops_paths_observed": {
+    "paths": [
+      "/data/snapshots/market-prices/latest.json",
+      "/data/pipeline/nasdaq100.*.json"
+    ],
+    "evidence": [
+      "functions/api/mission-control/summary.js:1201-1215",
+      "functions/api/mission-control/summary.js:1327-1333"
+    ]
+  },
+  "field_level_diff": [
+    {
+      "field": "price_truth_input",
+      "ui": "data.latest_bar from /api/stock",
+      "ops_expected": "/data/snapshots/market-prices/latest.json",
+      "ops_actual": "market-prices snapshot mini universe",
+      "evidence": [
+        "public/index.html:931-934",
+        "functions/api/mission-control/summary.js:1327-1345",
+        "public/data/snapshots/market-prices/latest.json:35-38"
+      ]
+    }
+  ],
+  "recommended_fix_target": "Align OPS price chain to /api/stock contract (data.latest_bar) and demote market-prices snapshot to informational cache only."
+}

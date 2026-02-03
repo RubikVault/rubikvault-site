@@ -1,0 +1,66 @@
+{
+  "schema": "ops_remediation_v1",
+  "current_ops_reads": [
+    {
+      "file": "functions/api/mission-control/summary.js",
+      "line": 1327,
+      "reads": "/data/snapshots/market-prices/latest.json",
+      "evidence": ["functions/api/mission-control/summary.js:1327-1333"]
+    },
+    {
+      "file": "functions/api/mission-control/summary.js",
+      "line": 1201,
+      "reads": "/data/pipeline/nasdaq100.*.json",
+      "evidence": ["functions/api/mission-control/summary.js:1201-1215"]
+    }
+  ],
+  "canonical_ssot": [
+    {
+      "concept": "prices",
+      "canonical_path": "/api/stock?ticker=<T> → data.latest_bar",
+      "field_mapping": "data.latest_bar.{date,close,volume}",
+      "evidence": [
+        "public/index.html:1448-1467",
+        "public/index.html:931-934",
+        "functions/api/stock.js:855-865"
+      ]
+    }
+  ],
+  "remediation_steps": [
+    {
+      "step": 1,
+      "file": "functions/api/mission-control/summary.js",
+      "line": 1339,
+      "change_type": "READ_PATH",
+      "from": "price truth uses market-prices snapshot for validation",
+      "to": "price truth validates /api/stock response at data.latest_bar",
+      "risk": "LOW",
+      "validation_commands": [
+        "curl -fsSL $BASE_URL/api/mission-control/summary?debug=1 | jq -r '.data.truthChains.prices.steps[] | select(.id==\"P6_API_CONTRACT\") | .evidence.checked_path'",
+        "curl -fsSL $BASE_URL/api/stock?ticker=UBER | jq -e '.data.latest_bar.close and .data.latest_bar.volume and .data.latest_bar.date'"
+      ],
+      "evidence": [
+        "functions/api/mission-control/summary.js:1339-1345",
+        "functions/api/mission-control/summary.js:413-447",
+        "public/index.html:931-934"
+      ]
+    },
+    {
+      "step": 2,
+      "file": "functions/api/mission-control/summary.js",
+      "line": 1499,
+      "change_type": "SCHEMA_EXPECTATION",
+      "from": "freshness health uses market-prices snapshot age for price status",
+      "to": "market-prices snapshot treated as cache-only informational; not a price blocker",
+      "risk": "LOW",
+      "validation_commands": [
+        "curl -fsSL $BASE_URL/api/mission-control/summary?debug=1 | jq -r '.data.health.prices.status'",
+        "curl -fsSL $BASE_URL/api/mission-control/summary?debug=1 | jq -r '.data.health.freshness.reason'"
+      ],
+      "evidence": [
+        "functions/api/mission-control/summary.js:1499-1500",
+        "public/ops/index.html:734-739"
+      ]
+    }
+  ]
+}

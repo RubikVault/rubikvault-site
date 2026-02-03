@@ -1,0 +1,48 @@
+{
+  "schema": "ssot_violations_v1",
+  "concepts": [
+    {
+      "concept": "prices",
+      "ssot": {
+        "path": "/api/stock?ticker=<T> → data.latest_bar",
+        "evidence": [
+          "public/index.html:1448-1467",
+          "public/index.html:931-934",
+          "functions/api/stock.js:855-865"
+        ]
+      },
+      "parallels": [
+        {
+          "path": "public/data/snapshots/market-prices/latest.json",
+          "type": "consumer_parallel",
+          "risk": "HIGH",
+          "evidence": [
+            "functions/api/mission-control/summary.js:1327-1345",
+            "public/data/snapshots/market-prices/latest.json:35-38"
+          ]
+        }
+      ]
+    },
+    {
+      "concept": "indicators/marketphase",
+      "ssot": {
+        "path": "/data/marketphase/index.json + /data/marketphase/<T>.json",
+        "evidence": [
+          "public/index.html:351-360",
+          "public/index.html:1321-1322"
+        ]
+      },
+      "parallels": [
+        {
+          "path": "public/data/pipeline/nasdaq100.*.json",
+          "type": "ops_parallel",
+          "risk": "MED",
+          "evidence": [
+            "functions/api/mission-control/summary.js:1201-1215",
+            "public/ops/index.html:686-713"
+          ]
+        }
+      ]
+    }
+  ]
+}
