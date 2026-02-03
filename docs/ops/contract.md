@@ -32,7 +32,7 @@
 - Extra fields are allowed (e.g. `cache`, `upstream`, `rateLimit`, `freshness`), but must not remove required keys.
 
 ## Meta Fields (Required)
-- `status`: `LIVE`, `STALE`, `ERROR`, or `EMPTY`.
+- `status`: `ok`, `degraded`, or `error` (lowercase).
 - `reason`: nullable string explaining status (examples: `MIRROR_FALLBACK`, `STALE`, error code).
 - `ts`: ISO timestamp for this response.
 - `schemaVersion`: integer schema version.
@@ -44,10 +44,10 @@
 - `ageMinutes`: nullable number (age of cached data).
 
 ## Status and Reason Mapping
-- `ok=true` and fresh data => `meta.status=LIVE`, `reason=null`.
-- Stale or Mirror Fallback => `meta.status=STALE`, `reason=STALE` or `MIRROR_FALLBACK`.
-- Upstream/error => `meta.status=ERROR`, `reason=error.code`.
-- Empty/no data but not an error => `meta.status=EMPTY`, `reason` describes why.
+- `ok=true` and fresh data => `meta.status=ok`, `reason=null`.
+- Stale or Mirror Fallback => `meta.status=degraded`, `reason=STALE` or `MIRROR_FALLBACK`.
+- Upstream/error => `meta.status=error`, `reason=error.code`.
+- Empty/no data but not an error => `meta.status=degraded`, `reason` describes why.
 
 ## Cache + Debug (Runblock C)
 - `/api/stock` and `/api/resolve` attach `meta.cache` with `{mode, hit, stale, age_s, ttl_s, swr}`.
@@ -58,7 +58,7 @@
 
 ## Scheduler Law (Runblock E)
 - Heartbeat keys: `meta:scheduler:last_ok`, `meta:scheduler:last_run`, and status payload at `meta:scheduler:status`.
-- Scheduler health: `/api/scheduler/health` returns `ok=true` + `meta.status=LIVE` when heartbeat is recent; otherwise `ok=false`, `meta.status=error`, `error.code=SCHEDULER_STALE`.
+- Scheduler health: `/api/scheduler/health` returns `ok=true` + `meta.status=ok` when heartbeat is recent; otherwise `ok=false`, `meta.status=error`, `error.code=SCHEDULER_STALE`.
 - Scheduler runs are chunked (default 50) with bounded concurrency (default 3); partial success is allowed.
 - Per-run cursor stored at `sched:cursor:<job>:<run_id>`; attempt markers at `sched:attempt:<job>:<asset_id>:<yyyymmdd>`.
 - Scheduler trigger requires `X-Admin-Token` (env `ADMIN_TOKEN` or `RV_ADMIN_TOKEN`).

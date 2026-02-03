@@ -308,7 +308,7 @@ function extractChangeFields(response) {
   };
 }
 
-function buildPriceTruthChain({ traces, apiSamples, marketPricesSnapshot, nowIso, pricesStaticRequired }) {
+function buildPriceTruthChain({ traces, apiSamples, marketPricesSnapshot, nowIso, pricesStaticRequired, isPreview }) {
   const steps = [];
   const traceList = traces
     .map((t) => {
@@ -356,7 +356,11 @@ function buildPriceTruthChain({ traces, apiSamples, marketPricesSnapshot, nowIso
   }));
 
   const missingTrace = PRICE_TRACE_TICKERS.filter((ticker) => !traceList.find((t) => t.ticker === ticker));
-  const p0Status = missingTrace.length === 0 ? 'OK' : hasTraces ? 'WARN' : 'UNKNOWN';
+  const p0Status = missingTrace.length === 0
+    ? 'OK'
+    : hasTraces
+      ? (isPreview ? 'INFO' : 'WARN')
+      : 'UNKNOWN';
   steps.push({
     id: 'P0_UI_START',
     title: 'User opens /analyze/<T> and the page JS loads.',
@@ -378,7 +382,7 @@ function buildPriceTruthChain({ traces, apiSamples, marketPricesSnapshot, nowIso
     }
     if (call.status !== 200) uiCallsBad.push(`${t.ticker}:${call.status}`);
   }
-  const p1Status = uiCallsBad.length ? 'FAIL' : uiCallsMissing.length ? 'WARN' : 'OK';
+  const p1Status = uiCallsBad.length ? 'FAIL' : uiCallsMissing.length ? (isPreview ? 'INFO' : 'WARN') : 'OK';
   steps.push({
     id: 'P1_UI_CALLS_API',
     title: 'The page triggers the winning request to /api/stock?ticker=<T>.',
@@ -547,7 +551,7 @@ function buildPriceTruthChain({ traces, apiSamples, marketPricesSnapshot, nowIso
     if (Number(uiDetected.volume) !== Number(t.latestBar.volume)) renderMismatch.push(`${t.ticker}: volume`);
     if (String(uiDetected.date) !== String(t.latestBar.date)) renderMismatch.push(`${t.ticker}: date`);
   }
-  const p7Status = renderMismatch.length ? 'FAIL' : (renderMissing.length ? 'WARN' : 'OK');
+  const p7Status = renderMismatch.length ? 'FAIL' : (renderMissing.length ? (isPreview ? 'INFO' : 'WARN') : 'OK');
   const p7Step = {
     id: 'P7_UI_RENDERS',
     title: 'The UI displays values matching the API response.',
@@ -725,7 +729,10 @@ async function fetchCloudflareWorkerRequests(env) {
   }
 }
 
-function computeVerdictFromBaseline(baseline) {
+function computeVerdictFromBaseline(baseline, expectedFlags = {}) {
+  if (expectedFlags?.pipeline === false) {
+    return { verdict: 'INFO', reason: 'NOT_EXPECTED' };
+  }
   const expected = baseline?.pipeline?.expected;
   const staticReady = baseline?.pipeline?.staticReady;
   const staleCount = baseline?.freshness?.staleCount;
@@ -938,8 +945,8 @@ async function fetchBuildInfo(requestUrl) {
     const res = await fetch(url.toString());
     if (!res.ok) return null;
     const json = await res.json();
-    const sha = json?.gitSha || json?.git_sha || json?.sha || json?.commit || null;
-    const ts = json?.buildTs || json?.build_ts || json?.builtAt || json?.built_at || json?.timestamp || null;
+    const sha = json?.gitSha || json?.git_sha || json?.sha || json?.commit || json?.commitSha || null;
+    const ts = json?.buildTs || json?.build_ts || json?.builtAt || json?.built_at || json?.timestamp || json?.generatedAt || null;
     return { gitSha: sha ? String(sha) : null, buildTs: ts ? String(ts) : null };
   } catch {
     return null;
@@ -1334,7 +1341,8 @@ export async function onRequestGet(context) {
     apiSamples,
     marketPricesSnapshot,
     nowIso: startedAtIso,
-    pricesStaticRequired
+    pricesStaticRequired,
+    isPreview: previewMode.isPreview
   });
   const pricesHealth = buildPricesHealth(priceTruth);
   const fundamentalsTruth = buildFundamentalsTruthChain(traceAssets, startedAtIso);
@@ -1404,7 +1412,7 @@ export async function onRequestGet(context) {
     };
   }
   const opsBaselineAsOf = typeof opsDaily?.asOf === 'string' ? opsDaily.asOf : null;
-  const baselineVerdict = computeVerdictFromBaseline(opsBaseline);
+  const baselineVerdict = computeVerdictFromBaseline(opsBaseline, expectedFlags);
   const baselineMissing = !opsDailyBaseline;
   const overall = {
     verdict: baselineMissing ? 'DEGRADED' : baselineVerdict.verdict,

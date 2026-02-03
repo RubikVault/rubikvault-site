@@ -1,0 +1,6 @@
+field,json_pointer,observed_live_value,live_endpoint,ui_file:lines,ops_file:lines,transform_file:lines,source_file:lines,format_notes,verdict,root_cause_short
+runtime.env,data.runtime.env,preview,api/ops,public/ops/index.html:638,functions/api/mission-control/summary.js:1619,functions/api/mission-control/summary.js:744,request.url,Lowercase enum,WRONG,Hostname logic does not support *.pages.dev production
+health.api.status,data.health.api.status,OK,api/ops,public/ops/index.html:628,functions/api/mission-control/summary.js:1510,-,-,Hardcoded OK,CORRECT,-
+health.platform.status,data.health.platform.status,OK,api/ops,public/ops/index.html:627,functions/api/mission-control/summary.js:1502,-,env.RV_KV,Derived from binding presence,CORRECT,-
+meta.status,meta.status,ok,api/ops,public/ops/index.html:36,functions/api/mission-control/summary.js:1597,functions/api/mission-control/summary.js:1540,-,Aggregated health,CORRECT,-
+budgets.workersRequests.usedToday,data.budgets.workersRequests.usedToday,18432 (sample),api/ops,public/ops/index.html:634,functions/api/mission-control/summary.js:1089,functions/api/mission-control/summary.js:1005,KV:dash.callsDay,Integer count,UNDECIDABLE,Missing specific SSOT for telemetry usage

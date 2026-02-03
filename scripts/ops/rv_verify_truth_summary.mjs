@@ -21,6 +21,10 @@ if (summary?.meta?.asOf === '—') {
 if (typeof summary?.meta?.status !== 'string') {
   fail('meta.status missing');
 }
+const allowedMetaStatus = new Set(['ok', 'degraded', 'error']);
+if (!allowedMetaStatus.has(String(summary?.meta?.status))) {
+  fail(`meta.status invalid: ${summary?.meta?.status}`);
+}
 
 const health = summary?.data?.health || {};
 for (const key of ['platform', 'api', 'prices', 'freshness', 'pipeline']) {
@@ -85,6 +89,27 @@ if (!sample || !Array.isArray(sample.missing_fields)) {
 const runtime = summary?.data?.runtime || {};
 if (runtime?.schedulerExpected === false && health?.pipeline?.status === 'CRITICAL') {
   fail('preview pipeline should not be CRITICAL solely due to cron absence');
+}
+const baselineVerdict = summary?.data?.opsBaseline?.overall?.verdict || null;
+const baselineReason = summary?.data?.opsBaseline?.overall?.reason || '';
+if (runtime?.pipelineExpected === false && baselineVerdict === 'RISK' && String(baselineReason).includes('PIPELINE_STATIC_READY=')) {
+  fail('baseline verdict should not be RISK from pipeline counts when pipelineExpected=false');
+}
+
+const p1Step = priceTruth?.steps?.find((s) => s.id === 'P1_UI_CALLS_API') || null;
+const p7Step = priceTruth?.steps?.find((s) => s.id === 'P7_UI_RENDERS') || null;
+if (runtime?.env === 'preview') {
+  if (p1Step?.status === 'WARN' && String(p1Step?.detail || '').includes('Missing ui-path trace')) {
+    fail('P1 should be INFO in preview when ui-path trace is missing');
+  }
+  if (p7Step?.status === 'WARN' && String(p7Step?.detail || '').includes('UI trace missing')) {
+    fail('P7 should be INFO in preview when ui-path trace is missing');
+  }
+}
+
+const deploy = summary?.data?.deploy || null;
+if (deploy && (deploy.gitSha == null || deploy.buildTs == null)) {
+  fail('deploy.gitSha/buildTs missing (build-info mapping)');
 }
 
 const latestRes = await fetchWithContext(latestUrl, {}, { name: 'pipeline-latest' });
