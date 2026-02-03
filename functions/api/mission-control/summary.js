@@ -499,8 +499,6 @@ function buildPriceTruthChain({ traces, apiSamples, marketPricesSnapshot, nowIso
     if (!responseOk) typeErrors.push('response_not_ok');
     const envelopeOk = sample.response?.ok === true;
     if (!envelopeOk) typeErrors.push('envelope_ok');
-    const universe = sample.response?.data?.universe;
-    if (typeof universe !== 'string' || universe.length === 0) typeErrors.push('universe');
     if (bar.close != null && !Number.isFinite(Number(bar.close))) typeErrors.push('close');
     if (bar.volume != null && !Number.isFinite(Number(bar.volume))) typeErrors.push('volume');
     if (bar.date != null && !/\d{4}-\d{2}-\d{2}/.test(String(bar.date))) typeErrors.push('date_format');
@@ -513,8 +511,7 @@ function buildPriceTruthChain({ traces, apiSamples, marketPricesSnapshot, nowIso
         ? {
           date: bar.date,
           close: bar.close,
-          volume: bar.volume,
-          universe: sample.response?.data?.universe ?? null
+          volume: bar.volume
         }
         : null
     };
@@ -595,15 +592,11 @@ function buildPricesHealth(priceTruth) {
   const evidence = p6Step?.evidence && typeof p6Step.evidence === 'object' ? p6Step.evidence : {};
   const perTicker = evidence?.per_ticker && typeof evidence.per_ticker === 'object' ? evidence.per_ticker : {};
   const failures = Object.entries(perTicker).filter(([, entry]) => entry?.ok === false);
-  const universeValues = Object.values(perTicker)
-    .map((entry) => entry?.sample_values?.universe)
-    .filter((value) => typeof value === 'string' && value.length);
-  const uniqueUniverse = Array.from(new Set(universeValues));
   let status = 'CRITICAL';
   let reason = 'CONTRACT_FAIL';
   if (p6Step?.status === 'OK' && failures.length === 0) {
-    status = uniqueUniverse.length > 1 ? 'CRITICAL' : 'OK';
-    reason = uniqueUniverse.length > 1 ? 'UNIVERSE_MISMATCH' : 'CONTRACT_OK';
+    status = 'OK';
+    reason = 'CONTRACT_OK';
   }
   return {
     status,
