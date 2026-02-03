@@ -23,7 +23,7 @@ if (typeof summary?.meta?.status !== 'string') {
 }
 
 const health = summary?.data?.health || {};
-for (const key of ['platform', 'api', 'freshness', 'pipeline']) {
+for (const key of ['platform', 'api', 'prices', 'freshness', 'pipeline']) {
   const status = health?.[key]?.status;
   if (!['OK', 'INFO', 'WARNING', 'CRITICAL'].includes(status)) {
     fail(`health.${key}.status invalid: ${status}`);

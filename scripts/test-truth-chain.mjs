@@ -28,6 +28,23 @@ global.fetch = async (input, init) => {
       return new Response('not found', { status: 404 });
     }
   }
+  if (url.pathname === '/api/stock') {
+    const ticker = url.searchParams.get('ticker') || 'TEST';
+    const payload = {
+      schema_version: '3.0',
+      meta: { status: 'ok', asOf: '2026-01-30T00:00:00.000Z' },
+      metadata: { status: 'OK', served_from: 'RUNTIME' },
+      data: {
+        universe: 'nasdaq100',
+        latest_bar: { date: '2026-01-30', close: 123.45, volume: 123456 },
+        change: { abs: 1.23, pct: 0.01 },
+        symbol: ticker
+      },
+      error: null,
+      ok: true
+    };
+    return new Response(JSON.stringify(payload), { status: 200, headers: { 'Content-Type': 'application/json' } });
+  }
   if (typeof originalFetch === 'function') {
     return originalFetch(input, init);
   }
@@ -39,6 +56,17 @@ const context = { request, env: {}, waitUntil() {} };
 
 const response = await onRequestGet(context);
 const payload = await response.json();
+
+const pricesHealth = payload?.data?.health?.prices;
+if (!pricesHealth || typeof pricesHealth.status !== 'string') {
+  fail('Missing health.prices.status');
+}
+if (pricesHealth.status !== 'OK') {
+  fail(`health.prices.status expected OK, got ${pricesHealth.status}`);
+}
+if (pricesHealth.reason !== 'CONTRACT_OK') {
+  fail(`health.prices.reason expected CONTRACT_OK, got ${pricesHealth.reason}`);
+}
 
 const truthChain = payload?.data?.opsBaseline?.truthChain?.nasdaq100;
 if (!truthChain || typeof truthChain !== 'object') {

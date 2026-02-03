@@ -5,6 +5,7 @@ This page documents the **separated** truth chains used by `/ops`:
 
 - **Prices**: only the proven UI → API path for price data.
 - **Indicators/Pipeline**: the NASDAQ-100 indicators pipeline (non-blocking for prices).
+- Market-prices snapshot is **cache only** (mini universe) and must not block Prices.
 
 Prices Chain (P0–P7)
 --------------------
@@ -26,7 +27,7 @@ P4_CANONICAL_FORMAT
 “Backend maps raw data into canonical latest_bar + change format.”
 
 P5_STATIC_PERSIST  
-“If configured, the canonical data is written to public/data and is fetchable as static; otherwise this is WARN.”
+“If configured, the canonical data is written to public/data and is fetchable as static; otherwise this is INFO.”
 
 P6_API_CONTRACT  
 “/api/stock returns JSON that satisfies the contract (latest_bar.close/volume/date present).”
@@ -42,7 +43,7 @@ Policy is defined in `public/data/ops/health-profiles.v1.json` as:
 - `profiles.preview.prices_static_required`
 
 Rules:
-1) If `prices_static_required = false`, P5 is **WARN** with reason “not required”.
+1) If `prices_static_required = false`, P5 is **INFO** with reason “not required”.
 2) If `prices_static_required = true`, P5 is **OK** only when static artifacts contain the sample tickers.
 3) P5 never affects Indicators/Pipeline status.
 

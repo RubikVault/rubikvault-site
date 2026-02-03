@@ -394,11 +394,6 @@ function buildPriceTruthChain({ traces, apiSamples, marketPricesSnapshot, nowIso
   });
 
   const apiMap = new Map((apiSamples || []).map((s) => [s.ticker, s]));
-  const snapshotData = Array.isArray(marketPricesSnapshot?.data) ? marketPricesSnapshot.data : null;
-  const snapshotContains = (ticker) => {
-    if (!snapshotData) return null;
-    return snapshotData.some((row) => String(row?.symbol || '').toUpperCase() === String(ticker).toUpperCase());
-  };
   const rawMissing = [];
   for (const sample of apiMap.values()) {
     if (!sample.response) rawMissing.push(sample.ticker);
@@ -410,8 +405,7 @@ function buildPriceTruthChain({ traces, apiSamples, marketPricesSnapshot, nowIso
     status: p2Status,
     evidence: {
       upstream: (apiSamples || []).map((s) => `${s.ticker}:${s.meta?.data_source || 'unknown'}`),
-      paths: (apiSamples || []).map((s) => `${s.ticker}:${s.meta?.data_source === 'snapshot' ? '/data/snapshots/market-prices/latest.json' : 'unknown'}`),
-      contains: (apiSamples || []).map((s) => `${s.ticker}:${snapshotContains(s.ticker) ?? 'unknown'}`)
+      responses: (apiSamples || []).map((s) => `${s.ticker}:${s.status ?? 'na'}`)
     },
     detail: rawMissing.length ? `Missing response bodies for ${rawMissing.join(', ')}` : 'Upstream/cache payloads recorded.'
   });
@@ -426,7 +420,7 @@ function buildPriceTruthChain({ traces, apiSamples, marketPricesSnapshot, nowIso
     if (bar.close != null && !Number.isFinite(Number(bar.close))) typeErrors.push('close');
     if (bar.volume != null && !Number.isFinite(Number(bar.volume))) typeErrors.push('volume');
     if (bar.volume != null && Number(bar.volume) < 0) typeErrors.push('volume_negative');
-    if (bar.date != null && !/\\d{4}-\\d{2}-\\d{2}/.test(String(bar.date))) typeErrors.push('date_format');
+    if (bar.date != null && !/\d{4}-\d{2}-\d{2}/.test(String(bar.date))) typeErrors.push('date_format');
     const ok = missing.length === 0 && typeErrors.length === 0;
     p3PerTicker[sample.ticker] = {
       ok,
@@ -472,9 +466,9 @@ function buildPriceTruthChain({ traces, apiSamples, marketPricesSnapshot, nowIso
   const staticContains = (apiSamples || []).map((s) => ({
     ticker: s.ticker,
     path: '/data/snapshots/market-prices/latest.json',
-    contains: snapshotContains(s.ticker)
+    contains: s.meta?.data_source === 'snapshot'
   }));
-  let p5Status = 'WARN';
+  let p5Status = 'INFO';
   let p5Detail = 'Static persistence not required by policy.';
   if (pricesStaticRequired) {
     const missingStatic = staticContains.filter((c) => c.contains !== true);
@@ -485,7 +479,7 @@ function buildPriceTruthChain({ traces, apiSamples, marketPricesSnapshot, nowIso
   }
   steps.push({
     id: 'P5_STATIC_PERSIST',
-    title: 'If configured, the canonical data is written to public/data and is fetchable as static; otherwise this is WARN.',
+    title: 'If configured, the canonical data is written to public/data and is fetchable as static; otherwise this is INFO.',
     status: p5Status,
     evidence: {
       required: pricesStaticRequired,
@@ -501,15 +495,28 @@ function buildPriceTruthChain({ traces, apiSamples, marketPricesSnapshot, nowIso
     const bar = sample.bar || {};
     const missing = requiredFields.filter((f) => bar[f] == null);
     const typeErrors = [];
+    const responseOk = sample.ok === true && sample.status === 200;
+    if (!responseOk) typeErrors.push('response_not_ok');
+    const envelopeOk = sample.response?.ok === true;
+    if (!envelopeOk) typeErrors.push('envelope_ok');
+    const universe = sample.response?.data?.universe;
+    if (typeof universe !== 'string' || universe.length === 0) typeErrors.push('universe');
     if (bar.close != null && !Number.isFinite(Number(bar.close))) typeErrors.push('close');
     if (bar.volume != null && !Number.isFinite(Number(bar.volume))) typeErrors.push('volume');
-    if (bar.date != null && !/\\d{4}-\\d{2}-\\d{2}/.test(String(bar.date))) typeErrors.push('date_format');
+    if (bar.date != null && !/\d{4}-\d{2}-\d{2}/.test(String(bar.date))) typeErrors.push('date_format');
     const ok = missing.length === 0 && typeErrors.length === 0;
     p6PerTicker[sample.ticker] = {
       ok,
       missing_fields: missing,
       type_errors: typeErrors,
-      sample_values: ok ? { date: bar.date, close: bar.close, volume: bar.volume } : null
+      sample_values: ok
+        ? {
+          date: bar.date,
+          close: bar.close,
+          volume: bar.volume,
+          universe: sample.response?.data?.universe ?? null
+        }
+        : null
     };
     if (!ok) {
       const issues = [...missing.map((m) => `${sample.ticker}: ${m}`), ...typeErrors.map((e) => `${sample.ticker}: ${e}`)];
@@ -579,6 +586,34 @@ function buildPriceTruthChain({ traces, apiSamples, marketPricesSnapshot, nowIso
         .map((t) => (t.uiTrace ? t.uiTracePath : t.truthPath))
         .filter(Boolean)
         .map((path) => ({ label: path.split('/').pop(), url: path }))
+    }
+  };
+}
+
+function buildPricesHealth(priceTruth) {
+  const p6Step = priceTruth?.steps?.find((step) => step?.id === 'P6_API_CONTRACT') || null;
+  const evidence = p6Step?.evidence && typeof p6Step.evidence === 'object' ? p6Step.evidence : {};
+  const perTicker = evidence?.per_ticker && typeof evidence.per_ticker === 'object' ? evidence.per_ticker : {};
+  const failures = Object.entries(perTicker).filter(([, entry]) => entry?.ok === false);
+  const universeValues = Object.values(perTicker)
+    .map((entry) => entry?.sample_values?.universe)
+    .filter((value) => typeof value === 'string' && value.length);
+  const uniqueUniverse = Array.from(new Set(universeValues));
+  let status = 'CRITICAL';
+  let reason = 'CONTRACT_FAIL';
+  if (p6Step?.status === 'OK' && failures.length === 0) {
+    status = uniqueUniverse.length > 1 ? 'CRITICAL' : 'OK';
+    reason = uniqueUniverse.length > 1 ? 'UNIVERSE_MISMATCH' : 'CONTRACT_OK';
+  }
+  return {
+    status,
+    reason,
+    checked_path: evidence?.checked_path || 'data.latest_bar',
+    required_fields: Array.isArray(evidence?.required_fields) ? evidence.required_fields : ['date', 'close', 'volume'],
+    per_ticker: perTicker,
+    action: {
+      url: '/api/stock?ticker=UBER',
+      howTo: 'Verify /api/stock contract for sample tickers'
     }
   };
 }
@@ -1308,6 +1343,7 @@ export async function onRequestGet(context) {
     nowIso: startedAtIso,
     pricesStaticRequired
   });
+  const pricesHealth = buildPricesHealth(priceTruth);
   const fundamentalsTruth = buildFundamentalsTruthChain(traceAssets, startedAtIso);
   const pricesSnapDate = (() => {
     const snap = marketPricesSnapshot;
@@ -1485,6 +1521,7 @@ export async function onRequestGet(context) {
         howTo: 'Inspect summary output'
       }
     },
+    prices: pricesHealth,
     freshness: {
       status: freshnessHealth.status,
       reason: freshnessHealth.reason,
@@ -1514,6 +1551,7 @@ export async function onRequestGet(context) {
     return 'ok';
   })();
   const metaReason =
+    health.prices?.reason ||
     health.pipeline?.reason ||
     health.freshness?.reason ||
     health.platform?.reason ||

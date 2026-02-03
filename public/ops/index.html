@@ -215,9 +215,9 @@
           <div class="small" id="health-api-reason">—</div>
         </div>
         <div class="card">
-          <div class="k">Freshness</div>
-          <div class="v" id="health-freshness">—</div>
-          <div class="small" id="health-freshness-reason">—</div>
+          <div class="k">Prices</div>
+          <div class="v" id="health-prices">—</div>
+          <div class="small" id="health-prices-reason">—</div>
         </div>
         <div class="card">
           <div class="k">Pipeline</div>
@@ -338,10 +338,12 @@
           style="margin-top: 10px; padding: 8px; border-radius: 6px; display: none;"></div>
         <div class="small" style="margin-top: 12px; color: #94a3b8;">
           Artifacts:
-          <a href="/data/pipeline/nasdaq100.pipeline-truth.json"
+          <a id="pipeline-truth-link" href="/data/pipeline/nasdaq100.pipeline-truth.json"
             style="color:#60a5fa; margin-left: 8px;">pipeline-truth.json</a>
-          <a href="/data/pipeline/missing.json" style="color:#60a5fa; margin-left: 8px;">missing.json</a>
-          <a href="/data/marketphase/missing.json" style="color:#60a5fa; margin-left: 8px;">marketphase missing</a>
+          <a id="pipeline-missing-link" href="/data/pipeline/missing.json"
+            style="color:#60a5fa; margin-left: 8px;">missing.json</a>
+          <a id="marketphase-missing-link" href="/data/marketphase/missing.json"
+            style="color:#60a5fa; margin-left: 8px;">marketphase missing</a>
         </div>
       </div>
 
@@ -497,7 +499,16 @@
       return v === 'OK' || v === 'HEALTHY' || v === 'GREEN';
     }
 
+    function statusToColor(status) {
+      if (status === 'CRITICAL') return 'red';
+      if (status === 'WARNING' || status === 'INFO') return 'yellow';
+      if (status === 'OK') return 'green';
+      return 'unknown';
+    }
+
     function computeHealthColor(health) {
+      const pricesStatus = health?.prices?.status;
+      if (pricesStatus) return statusToColor(pricesStatus);
       const statuses = Object.values(health || {}).map((h) => h?.status).filter(Boolean);
       if (statuses.includes('CRITICAL')) return 'red';
       if (statuses.includes('WARNING') || statuses.includes('INFO')) return 'yellow';
@@ -516,30 +527,23 @@
       if (typeof meta.status !== 'string') {
         return { ok: false, level: 'error', reason: 'MISSING_META' };
       }
-      const counts = payload?.data?.pipeline?.counts || {};
-      const coverage = payload?.data?.coverage || {};
-      const required = {
-        fetched: counts.fetched,
-        validated: counts.validated,
-        computed: coverage.computed,
-        missing: coverage.missing
-      };
-      for (const [key, value] of Object.entries(required)) {
-        if (!Number.isFinite(Number(value))) {
-          return { ok: false, level: 'error', reason: `MISSING_FIELDS:${key}` };
-        }
+      const prices = payload?.data?.health?.prices || null;
+      if (!prices || typeof prices.status !== 'string') {
+        return { ok: false, level: 'error', reason: 'MISSING_PRICES_HEALTH' };
       }
-      const overallVerdict =
-        payload?.data?.opsComputed?.overall?.verdict ||
-        payload?.data?.opsBaseline?.overall?.verdict ||
-        null;
+      const priceTruth = payload?.data?.truthChains?.prices || null;
+      if (!priceTruth || !Array.isArray(priceTruth.steps)) {
+        return { ok: false, level: 'error', reason: 'MISSING_PRICES_CHAIN' };
+      }
+      const p6 = priceTruth.steps.find((s) => s.id === 'P6_API_CONTRACT');
+      if (!p6?.evidence?.checked_path || !Array.isArray(p6?.evidence?.required_fields)) {
+        return { ok: false, level: 'error', reason: 'MISSING_PRICE_CONTRACT' };
+      }
+
+      const overallVerdict = prices.status || null;
       const baselineVerdict = payload?.data?.opsBaseline?.overall?.verdict || null;
-      const reason =
-        payload?.data?.opsBaseline?.overall?.reason ||
-        payload?.data?.opsComputed?.overall?.reason ||
-        meta.reason ||
-        '';
-      const level = isOkVerdict(overallVerdict) ? 'ok' : 'degraded';
+      const reason = prices.reason || meta.reason || '';
+      const level = overallVerdict === 'OK' ? 'ok' : overallVerdict === 'CRITICAL' ? 'error' : 'degraded';
       return { ok: true, level, reason, overallVerdict, baselineVerdict };
     }
 
@@ -622,7 +626,7 @@
       const health = data?.health || {};
       renderHealthTile('platform', health.platform);
       renderHealthTile('api', health.api);
-      renderHealthTile('freshness', health.freshness);
+      renderHealthTile('prices', health.prices);
       renderHealthTile('pipeline', health.pipeline);
 
       const workersToday = data?.budgets?.workersRequests?.usedToday ?? null;
@@ -728,7 +732,9 @@
       }
 
       document.getElementById('freshness-global').textContent =
-        health?.freshness?.asOf ? `Snapshot asOf: ${health.freshness.asOf}` : 'Snapshot asOf: unknown';
+        health?.freshness?.asOf
+          ? `Market-prices snapshot (mini) asOf: ${health.freshness.asOf} — cache only`
+          : 'Market-prices snapshot (mini) asOf: unknown — cache only';
       document.getElementById('freshness-stale').textContent =
         health?.freshness?.age_hours != null ? `Age (hours): ${health.freshness.age_hours}` : 'Age (hours): unknown';
       document.getElementById('freshness-list').textContent = '';
@@ -738,14 +744,30 @@
       renderFundamentalsTruthChain(data?.fundamentalsTruth || null);
       renderSchedulerStatus(runtime);
 
+      const pipelineTruthLink = document.getElementById('pipeline-truth-link');
+      if (pipelineTruthLink) {
+        pipelineTruthLink.style.display = data?.pipeline?.truth ? 'inline' : 'none';
+      }
+      const pipelineMissingLink = document.getElementById('pipeline-missing-link');
+      if (pipelineMissingLink) {
+        pipelineMissingLink.style.display = Array.isArray(data?.pipeline?.missing) ? 'inline' : 'none';
+      }
+      const marketphaseMissingLink = document.getElementById('marketphase-missing-link');
+      if (marketphaseMissingLink) {
+        marketphaseMissingLink.style.display = Array.isArray(data?.opsBaseline?.baseline?.pipeline?.missing) ? 'inline' : 'none';
+      }
+
       const validation = validateOpsSummary(payload);
       const healthStatus = computeHealthColor(payload?.data?.health);
       const baselineVerdict = validation?.baselineVerdict;
-      const baselineStatus = baselineVerdict == null
+      const pipelineExpected = runtime?.pipelineExpected ?? runtime?.expected?.pipeline;
+      const baselineStatus = pipelineExpected === false
         ? 'pending'
-        : isOkVerdict(baselineVerdict)
-          ? 'ok'
-          : 'fail';
+        : baselineVerdict == null
+          ? 'pending'
+          : isOkVerdict(baselineVerdict)
+            ? 'ok'
+            : 'fail';
       setOpsBridge({
         status: validation.level === 'ok' ? 'ok' : validation.level === 'degraded' ? 'degraded' : 'error',
         baseline: baselineStatus,
@@ -757,7 +779,7 @@
         reason: validation.reason || '',
         buildSha: buildInfoCache.sha || 'unknown',
         runtimeEnv: runtime?.env || 'unknown',
-        pipelineExpected: runtime?.pipelineExpected ?? runtime?.expected?.pipeline ?? 'unknown'
+        pipelineExpected: pipelineExpected ?? 'unknown'
       });
 
       const sourceEntries = data?.sourceMap?.entries || [];
@@ -774,7 +796,7 @@
         : '<tr><td colspan=\"3\" class=\"small\">No source-map entries</td></tr>';
 
       const actionItems = [];
-      for (const key of ['platform', 'api', 'freshness', 'pipeline']) {
+      for (const key of ['platform', 'api', 'prices', 'freshness', 'pipeline']) {
         const item = health?.[key];
         if (item?.action?.url) {
           actionItems.push(`<a href=\"${esc(item.action.url)}\" style=\"color:#60a5fa;\">${esc(key)}</a> — ${esc(item.action.howTo || '')}`);
