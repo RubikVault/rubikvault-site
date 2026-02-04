@@ -101,7 +101,7 @@ function buildOwnerFallback(moduleName) {
 /**
  * Evaluate Proof Chain for a snapshot
  */
-function evaluateProofChain(snapshot, moduleConfig) {
+function evaluateProofChain(snapshot, moduleConfig, moduleName) {
   const proofChain = {
     FILE: 'UNKNOWN',
     SCHEMA: 'UNKNOWN',
@@ -119,7 +119,9 @@ function evaluateProofChain(snapshot, moduleConfig) {
   proofChain.FILE = 'PASS';
   
   // SCHEMA Check
-  if (snapshot.schema_version === '3.0' && snapshot.metadata && Array.isArray(snapshot.data)) {
+  const isBuildInfo = moduleName === 'build-info';
+  const dataOk = Array.isArray(snapshot.data) || (isBuildInfo && snapshot.data && typeof snapshot.data === 'object');
+  if (snapshot.schema_version === '3.0' && snapshot.metadata && dataOk) {
     proofChain.SCHEMA = 'PASS';
   } else {
     proofChain.SCHEMA = 'FAIL';
@@ -213,7 +215,7 @@ function getFailureInfo(snapshot, proofChain) {
  * Build debug response
  */
 async function buildDebugResponse(moduleName, snapshot, moduleConfig, sourceInfo, url) {
-  const proofChain = evaluateProofChain(snapshot, moduleConfig);
+  const proofChain = evaluateProofChain(snapshot, moduleConfig, moduleName);
   const failureInfo = getFailureInfo(snapshot, proofChain);
   
   // Try to load module state

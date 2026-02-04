@@ -49,18 +49,20 @@ const snapshot = {
     validation: { passed: true }
   },
   meta: {
+    version: '3.0',
     status: 'ok',
-    provider: 'internal',
+    provider: 'build',
     data_date: now.slice(0, 10),
     generated_at: now
   },
-  data: [
-    {
-      git_sha: payload.git_sha,
-      build_time_utc: payload.build_time_utc,
-      env: payload.env
-    }
-  ],
+  data: {
+    commitSha: gitSha || null,
+    generatedAt: now,
+    branch,
+    env: payload.env,
+    git_sha: payload.git_sha,
+    build_time_utc: payload.build_time_utc
+  },
   error: null
 };
 fs.writeFileSync(SNAPSHOT_PATH, JSON.stringify(snapshot, null, 2));

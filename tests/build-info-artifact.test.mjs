@@ -23,15 +23,21 @@ if (doc.metadata.module !== 'build-info') {
 if (!doc.metadata.validation || doc.metadata.validation.passed !== true) {
   fail('build-info metadata.validation.passed must be true');
 }
-if (!Array.isArray(doc.data) || doc.data.length === 0) {
-  fail('build-info data must be a non-empty array');
+if (doc?.meta?.version !== '3.0') {
+  fail(`build-info meta.version expected 3.0, got ${doc?.meta?.version}`);
 }
-const entry = doc.data[0];
+if (doc?.meta?.provider !== 'build') {
+  fail(`build-info meta.provider expected build, got ${doc?.meta?.provider}`);
+}
+if (!doc.data || typeof doc.data !== 'object') {
+  fail('build-info data must be an object');
+}
+const entry = doc.data;
 if (!entry || typeof entry !== 'object') {
   fail('build-info data[0] missing');
 }
-if (entry.git_sha == null || entry.build_time_utc == null) {
-  fail('build-info data[0] must include git_sha and build_time_utc');
+if (entry.commitSha == null || entry.generatedAt == null) {
+  fail('build-info data must include commitSha and generatedAt');
 }
 
 process.stdout.write('OK: build-info artifact\n');

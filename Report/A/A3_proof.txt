@@ -1,35 +1,23 @@
-Commit: b3943134a38f9298828eb3f9e6df1988ca3aa08a
-Preview base: https://4f5145db.rubikvault-site.pages.dev
+Commit: (pending)
 Timestamp: 2026-02-04
 
-=== CURRENT PREVIEW (pre-deploy) ===
-# 1) build-info debug
-curl -fsS "https://4f5145db.rubikvault-site.pages.dev/api/build-info?debug=1" | jq '{ok,meta,error}'
-Result:
-{ "ok": false, "meta": {"status":"error","provider":"unknown","data_date":"2026-02-04","generated_at":"2026-02-04T08:42:33.426Z"}, "error": {"code":"PROOF_FAILED","message":"Update provider to v3.0 schema"} }
+Local proof:
+- node tests/build-info-artifact.test.mjs  => OK
+- npm run test:truth-chain                => OK
 
-# 2) mission-control summary (HEAD)
-curl -fsSI "https://4f5145db.rubikvault-site.pages.dev/api/mission-control/summary" | sed -n '1,20p'
-Result:
-HTTP/2 503
-x-rv-source: MAINTENANCE
-x-rv-kv: DISABLED
+Preview verification checklist (post-deploy):
+1) curl -fsS "https://6a19de31.rubikvault-site.pages.dev/data/snapshots/build-info/latest.json" | jq '{meta, data}'
+   Expected:
+   - meta.version == "3.0"
+   - meta.provider == "build"
+   - meta.data_date != null
+   - meta.generated_at != null
+   - data.commitSha != null
+   - data.generatedAt != null
 
-# 3) mission-control summary debug
-curl -fsS "https://4f5145db.rubikvault-site.pages.dev/api/mission-control/summary?debug=1" | jq '{ok,meta:(.meta//null), owner:(.data.owner//null), cards:(.data.cards//null)}'
-Result:
-{ "ok": true, "meta": {"status":"ok", ...}, "owner": null, "cards": null }
-
-# 4) market-prices snapshot meta
-curl -fsS "https://4f5145db.rubikvault-site.pages.dev/data/snapshots/market-prices/latest.json" | jq '{meta:(.meta//null), has_data_date:(.meta.data_date!=null), has_generated_at:(.meta.generated_at!=null)}'
-Result:
-{ "meta": {"asOf":"2026-01-23T21:36:09.857Z", ...}, "has_data_date": false, "has_generated_at": false }
-
-=== EXPECTED AFTER DEPLOY (PASS CONDITIONS) ===
-PASS: /api/build-info?debug=1 returns ok=true with no PROOF_FAILED
-PASS: /api/mission-control/summary returns HTTP 200 (no MAINTENANCE headers) and includes data.owner + data.cards
-PASS: /data/snapshots/market-prices/latest.json includes meta.data_date + meta.generated_at
-
-Local tests run:
-- node tests/build-info-artifact.test.mjs (OK)
-- npm run test:truth-chain (OK)
+2) curl -fsS "https://6a19de31.rubikvault-site.pages.dev/api/build-info?debug=1" | jq '{ok, meta, error, data}'
+   Expected:
+   - ok == true
+   - error == null or absent
+   - meta.status in {"ok","degraded","error"}
+   - NOT PROOF_FAILED
