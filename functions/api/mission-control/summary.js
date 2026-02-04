@@ -1782,7 +1782,11 @@ export async function onRequestGet(context) {
 
   const pricesContractOk = priceContractStep?.status === 'OK';
   const pointerIntegrityOk = marketPricesSnapshotCheck.valid;
-  const stalenessOk = freshnessHealth.status === 'OK' || freshnessHealth.status === 'INFO';
+  // NOTE: freshnessHealth computed at line ~2032. Use getters for safe deferred access.
+  let freshnessHealthRef = null;
+  const getStalenessOk = () => freshnessHealthRef && (freshnessHealthRef.status === 'OK' || freshnessHealthRef.status === 'INFO');
+  const getFreshnessStatus = () => freshnessHealthRef?.status || 'PENDING';
+  const getFreshnessReason = () => freshnessHealthRef?.reason || 'PENDING';
   const emergencyOff = true;
   const circuitOk = true;
 
@@ -1845,10 +1849,10 @@ export async function onRequestGet(context) {
       id: 'STALENESS_OK',
       label: 'Freshness within policy',
       required: true,
-      ok: stalenessOk,
-      reason: stalenessOk ? 'OK' : freshnessHealth.reason,
+      ok: getStalenessOk(),
+      reason: getStalenessOk() ? 'OK' : getFreshnessReason(),
       path: '/data/snapshots/market-prices/latest.json',
-      evidence: { status: freshnessHealth.status, reason: freshnessHealth.reason }
+      evidence: { status: getFreshnessStatus(), reason: getFreshnessReason() }
     })
   ];
 
@@ -1858,9 +1862,9 @@ export async function onRequestGet(context) {
   if (systemHardFails.length) {
     systemStatus = 'FAIL';
     systemReason = systemHardFails[0]?.reason || 'REQUIRED_CHECK_FAIL';
-  } else if (!stalenessOk) {
+  } else if (!getStalenessOk()) {
     systemStatus = 'STALE';
-    systemReason = freshnessHealth.reason || 'STALE';
+    systemReason = getFreshnessReason() || 'STALE';
   }
   const systemHealth = {
     status: systemStatus,
@@ -2033,6 +2037,8 @@ export async function onRequestGet(context) {
   if (expectedFlags.pipeline && !marketPricesSnapshotCheck.valid) {
     freshnessHealth = { status: 'CRITICAL', reason: 'SNAPSHOT_CONTRACT_INVALID' };
   }
+  // Assign to ref for deferred getter access in systemChecks
+  freshnessHealthRef = freshnessHealth;
 
   const platformStatus = expectedFlags.kv ? (hasKV ? 'OK' : 'CRITICAL') : toHealthStatus(profile.not_expected_status);
   const apiHealth = {
