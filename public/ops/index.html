@@ -220,7 +220,7 @@
           <div class="small" id="health-prices-reason">—</div>
         </div>
         <div class="card">
-          <div class="k">Pipeline</div>
+          <div class="k">Assets (SSOT)</div>
           <div class="v" id="health-pipeline">—</div>
           <div class="small" id="health-pipeline-reason">—</div>
         </div>
@@ -269,37 +269,37 @@
           </table>
         </div>
         <div class="card">
-          <div class="k" style="margin-bottom: 10px;">Indicators pipeline (NASDAQ-100)</div>
+          <div class="k" style="margin-bottom: 10px;">SSOT API checks (features)</div>
           <table>
             <thead>
               <tr>
-                <th>Stage</th>
-                <th>Count</th>
-                <th>Expected</th>
+                <th>Check</th>
+                <th>Required</th>
                 <th>Status</th>
+                <th>Reason</th>
               </tr>
             </thead>
-            <tbody id="pipeline-marketphase"></tbody>
+            <tbody id="ssot-api-checks"></tbody>
           </table>
-          <div id="pipeline-marketphase-note" class="small" style="margin-top: 10px;"></div>
+          <div id="ssot-api-note" class="small" style="margin-top: 10px;"></div>
 
         </div>
       </div>
 
-      <div class="card" id="eod-section" style="margin-bottom: 12px;">
-        <div class="k" style="margin-bottom: 10px;">EOD fetch pipeline (NASDAQ-100)</div>
+      <div class="card" id="ssot-assets-section" style="margin-bottom: 12px;">
+        <div class="k" style="margin-bottom: 10px;">SSOT asset checks</div>
         <table>
           <thead>
             <tr>
-              <th>Stage</th>
-              <th>Count</th>
-              <th>Expected</th>
+              <th>Asset</th>
+              <th>Required</th>
               <th>Status</th>
+              <th>Reason</th>
             </tr>
           </thead>
-          <tbody id="pipeline-eod"></tbody>
+          <tbody id="ssot-asset-checks"></tbody>
         </table>
-        <div id="pipeline-eod-note" class="small" style="margin-top: 10px;"></div>
+        <div id="ssot-asset-note" class="small" style="margin-top: 10px;"></div>
       </div>
 
       <div class="grid2" style="margin-bottom: 12px;">
@@ -332,18 +332,13 @@
       </div>
 
       <div class="card" style="margin-bottom: 12px;" id="truth-chain-section" data-testid="truth-chain">
-        <div class="k" style="margin-bottom: 10px;">Truth Chain (Indicators/Pipeline — Observability)</div>
+        <div class="k" style="margin-bottom: 10px;">Truth Chain (Indicators — Observability)</div>
         <div id="truth-chain-steps" style="display: flex; flex-direction: column; gap: 6px;"></div>
         <div id="truth-chain-blocker" class="small"
           style="margin-top: 10px; padding: 8px; border-radius: 6px; display: none;"></div>
         <div class="small" style="margin-top: 12px; color: #94a3b8;">
           Artifacts:
-          <a id="pipeline-truth-link" href="/data/pipeline/nasdaq100.pipeline-truth.json"
-            style="color:#60a5fa; margin-left: 8px;">pipeline-truth.json</a>
-          <a id="pipeline-missing-link" href="/data/pipeline/missing.json"
-            style="color:#60a5fa; margin-left: 8px;">missing.json</a>
-          <a id="marketphase-missing-link" href="/data/marketphase/missing.json"
-            style="color:#60a5fa; margin-left: 8px;">marketphase missing</a>
+          <a href="/data/marketphase/index.json" style="color:#60a5fa; margin-left: 8px;">marketphase index</a>
         </div>
       </div>
 
@@ -389,12 +384,11 @@
       </div>
       <div class="small" style="margin-top: 6px;">
         Static artifacts:
-        <a href="/data/pipeline/nasdaq100.latest.json" style="color:#60a5fa; margin-left: 4px;">latest</a>
-        <a href="/data/pipeline/nasdaq100.static-ready.json" style="color:#60a5fa; margin-left: 4px;">static-ready</a>
-        <a href="/data/pipeline/nasdaq100.pipeline-truth.json"
-          style="color:#60a5fa; margin-left: 4px;">pipeline-truth</a>
-        <a href="/data/pipeline/missing.json" style="color:#60a5fa; margin-left: 4px;">missing</a>
-        <a href="/data/marketphase/missing.json" style="color:#60a5fa; margin-left: 4px;">marketphase missing</a>
+        <a href="/data/universe/nasdaq100.json" style="color:#60a5fa; margin-left: 4px;">universe</a>
+        <a href="/data/snapshots/stock-analysis.json" style="color:#60a5fa; margin-left: 4px;">stock-analysis</a>
+        <a href="/data/eod/batches/eod.latest.000.json" style="color:#60a5fa; margin-left: 4px;">eod batch</a>
+        <a href="/data/marketphase/index.json" style="color:#60a5fa; margin-left: 4px;">marketphase index</a>
+        <a href="/data/snapshots/market-prices/latest.json" style="color:#60a5fa; margin-left: 4px;">market-prices snapshot</a>
       </div>
     </div>
   </div>
@@ -501,7 +495,8 @@
 
     function statusToColor(status) {
       if (status === 'CRITICAL') return 'red';
-      if (status === 'WARNING' || status === 'INFO') return 'yellow';
+      if (status === 'WARNING') return 'yellow';
+      if (status === 'INFO') return 'green';
       if (status === 'OK') return 'green';
       return 'unknown';
     }
@@ -511,8 +506,8 @@
       if (pricesStatus) return statusToColor(pricesStatus);
       const statuses = Object.values(health || {}).map((h) => h?.status).filter(Boolean);
       if (statuses.includes('CRITICAL')) return 'red';
-      if (statuses.includes('WARNING') || statuses.includes('INFO')) return 'yellow';
-      if (statuses.length) return 'green';
+      if (statuses.includes('WARNING')) return 'yellow';
+      if (statuses.includes('INFO') || statuses.length) return 'green';
       return 'unknown';
     }
 
@@ -535,6 +530,16 @@
       if (!priceTruth || !Array.isArray(priceTruth.steps)) {
         return { ok: false, level: 'error', reason: 'MISSING_PRICES_CHAIN' };
       }
+      const ssot = payload?.data?.ssot || null;
+      if (!ssot || typeof ssot !== 'object') {
+        return { ok: false, level: 'error', reason: 'MISSING_SSOT' };
+      }
+      if (!Array.isArray(ssot?.api?.checks)) {
+        return { ok: false, level: 'error', reason: 'MISSING_SSOT_API' };
+      }
+      if (!Array.isArray(ssot?.assets?.checks)) {
+        return { ok: false, level: 'error', reason: 'MISSING_SSOT_ASSETS' };
+      }
       const p6 = priceTruth.steps.find((s) => s.id === 'P6_API_CONTRACT');
       if (!p6?.evidence?.checked_path || !Array.isArray(p6?.evidence?.required_fields)) {
         return { ok: false, level: 'error', reason: 'MISSING_PRICE_CONTRACT' };
@@ -543,7 +548,14 @@
       const overallVerdict = prices.status || null;
       const baselineVerdict = payload?.data?.opsBaseline?.overall?.verdict || null;
       const reason = prices.reason || meta.reason || '';
-      const level = overallVerdict === 'OK' ? 'ok' : overallVerdict === 'CRITICAL' ? 'error' : 'degraded';
+      let level = overallVerdict === 'OK' ? 'ok' : overallVerdict === 'CRITICAL' ? 'error' : 'degraded';
+      const ssotApiStatus = ssot?.api?.status;
+      const ssotAssetStatus = ssot?.assets?.status;
+      if (ssotApiStatus === 'CRITICAL' || ssotAssetStatus === 'CRITICAL') {
+        level = 'error';
+      } else if (ssotApiStatus === 'WARNING' || ssotAssetStatus === 'WARNING') {
+        level = 'degraded';
+      }
       return { ok: true, level, reason, overallVerdict, baselineVerdict };
     }
 
@@ -683,53 +695,47 @@
         }).join('')
         : '<tr><td colspan=\"6\" class=\"small\">No provider budgets</td></tr>';
 
-      const counts = data?.pipeline?.counts || {};
-      const expected = Number.isFinite(Number(counts.expected)) ? Number(counts.expected) : null;
-      const fetched = Number.isFinite(Number(counts.fetched)) ? Number(counts.fetched) : null;
-      const validated = Number.isFinite(Number(counts.validated)) ? Number(counts.validated) : null;
-      const computed = Number.isFinite(Number(counts.computed)) ? Number(counts.computed) : null;
-      const staticReady = Number.isFinite(Number(counts.static_ready)) ? Number(counts.static_ready) : null;
-      const coverage = data?.coverage || {};
-      const coverageComputed = Number.isFinite(Number(coverage.computed)) ? Number(coverage.computed) : 0;
-      const coverageMissing = Number.isFinite(Number(coverage.missing)) ? Number(coverage.missing) : 0;
+      const ssot = data?.ssot || {};
+      const apiChecks = Array.isArray(ssot?.api?.checks) ? ssot.api.checks : [];
+      const assetChecks = Array.isArray(ssot?.assets?.checks) ? ssot.assets.checks : [];
 
-      const stageRow = (label, value, expectedValue, statusLabel) => {
+      const checkRow = (check) => {
+        const label = check?.label || check?.id || 'unknown';
+        const required = check?.required ? 'yes' : 'no';
+        const statusLabel = check?.status || 'UNKNOWN';
+        const reason = check?.reason || '';
         return '<tr>' +
           '<td>' + esc(label) + '</td>' +
-          '<td>' + esc(value == null ? '—' : String(value)) + '</td>' +
-          '<td>' + esc(expectedValue == null ? '—' : String(expectedValue)) + '</td>' +
-          '<td>' + pill(statusLabel || 'UNKNOWN', statusClass(statusLabel || 'UNKNOWN')) + '</td>' +
+          '<td>' + esc(required) + '</td>' +
+          '<td>' + pill(statusLabel, statusClass(statusLabel)) + '</td>' +
+          '<td class="small">' + esc(reason) + '</td>' +
           '</tr>';
       };
 
-      document.getElementById('pipeline-marketphase').innerHTML =
-        stageRow('Fetched', fetched, expected, health?.pipeline?.status) +
-        stageRow('Validated', validated, expected, health?.pipeline?.status) +
-        stageRow('Computed', computed, expected, health?.pipeline?.status) +
-        stageRow('Static-ready', staticReady, expected, health?.pipeline?.status);
-
-      document.getElementById('pipeline-marketphase-note').textContent =
-        health?.pipeline?.reason ? `Status: ${health.pipeline.status} • ${health.pipeline.reason}` : 'Status: UNKNOWN';
-
-      const eodSection = document.getElementById('eod-section');
-      const eodCounts = data?.eod?.counts || {};
-      const eodExpected = Number.isFinite(Number(eodCounts.expected)) ? Number(eodCounts.expected) : null;
-      const eodFetched = Number.isFinite(Number(eodCounts.fetched)) ? Number(eodCounts.fetched) : null;
-      const eodValidated = Number.isFinite(Number(eodCounts.validated)) ? Number(eodCounts.validated) : null;
-      if (eodSection) {
-        if (eodExpected != null && eodFetched != null && eodValidated != null) {
-          eodSection.style.display = 'block';
-          document.getElementById('pipeline-eod').innerHTML =
-            stageRow('Fetched', eodFetched, eodExpected, health?.pipeline?.status) +
-            stageRow('Validated', eodValidated, eodExpected, health?.pipeline?.status);
-          document.getElementById('pipeline-eod-note').textContent =
-            eodCounts && eodExpected != null
-              ? `Manifest expected ${eodExpected} symbols`
-              : 'EOD baseline unavailable';
-        } else {
-          eodSection.style.display = 'none';
-        }
+      const apiEl = document.getElementById('ssot-api-checks');
+      if (apiEl) {
+        apiEl.innerHTML = apiChecks.length
+          ? apiChecks.map((c) => checkRow(c)).join('')
+          : '<tr><td colspan="4" class="small">No SSOT API checks</td></tr>';
       }
+      const apiNote = document.getElementById('ssot-api-note');
+      if (apiNote) apiNote.textContent = ssot?.api?.reason ? `Status: ${ssot.api.status} • ${ssot.api.reason}` : 'Status: UNKNOWN';
+
+      const assetEl = document.getElementById('ssot-asset-checks');
+      if (assetEl) {
+        assetEl.innerHTML = assetChecks.length
+          ? assetChecks.map((c) => checkRow(c)).join('')
+          : '<tr><td colspan="4" class="small">No SSOT asset checks</td></tr>';
+      }
+      const assetNote = document.getElementById('ssot-asset-note');
+      if (assetNote) assetNote.textContent = ssot?.assets?.reason ? `Status: ${ssot.assets.status} • ${ssot.assets.reason}` : 'Status: UNKNOWN';
+
+      const apiRequired = apiChecks.filter((c) => c?.required);
+      const assetRequired = assetChecks.filter((c) => c?.required);
+      const apiOkCount = apiRequired.filter((c) => c?.status === 'OK').length;
+      const assetOkCount = assetRequired.filter((c) => c?.status === 'OK').length;
+      const coverageComputed = assetOkCount;
+      const coverageMissing = Math.max(0, assetRequired.length - assetOkCount);
 
       document.getElementById('freshness-global').textContent =
         health?.freshness?.asOf
@@ -740,46 +746,28 @@
       document.getElementById('freshness-list').textContent = '';
 
       renderPriceTruthChain(data?.truthChains?.prices || data?.priceTruth || null);
-      renderTruthChain(data?.truthChains?.indicators || data?.pipeline?.truth || null, runtime);
+      renderTruthChain(data?.truthChains?.indicators || null, runtime);
       renderFundamentalsTruthChain(data?.fundamentalsTruth || null);
       renderSchedulerStatus(runtime);
-
-      const pipelineTruthLink = document.getElementById('pipeline-truth-link');
-      if (pipelineTruthLink) {
-        pipelineTruthLink.style.display = data?.pipeline?.truth ? 'inline' : 'none';
-      }
-      const pipelineMissingLink = document.getElementById('pipeline-missing-link');
-      if (pipelineMissingLink) {
-        pipelineMissingLink.style.display = Array.isArray(data?.pipeline?.missing) ? 'inline' : 'none';
-      }
-      const marketphaseMissingLink = document.getElementById('marketphase-missing-link');
-      if (marketphaseMissingLink) {
-        marketphaseMissingLink.style.display = Array.isArray(data?.opsBaseline?.baseline?.pipeline?.missing) ? 'inline' : 'none';
-      }
 
       const validation = validateOpsSummary(payload);
       const healthStatus = computeHealthColor(payload?.data?.health);
       const baselineVerdict = validation?.baselineVerdict;
-      const pipelineExpected = runtime?.pipelineExpected ?? runtime?.expected?.pipeline;
-      const baselineStatus = pipelineExpected === false
-        ? 'pending'
-        : baselineVerdict == null
-          ? 'pending'
-          : isOkVerdict(baselineVerdict)
-            ? 'ok'
-            : 'fail';
+      const baselineStatus = validation.level === 'ok' ? 'ok' : 'fail';
+      const fetchedCount = apiOkCount;
+      const validatedCount = assetOkCount;
       setOpsBridge({
         status: validation.level === 'ok' ? 'ok' : validation.level === 'degraded' ? 'degraded' : 'error',
         baseline: baselineStatus,
         health: healthStatus,
-        countFetched: fetched ?? 0,
-        countValidated: validated ?? 0,
+        countFetched: fetchedCount ?? 0,
+        countValidated: validatedCount ?? 0,
         coverageComputed,
         coverageMissing,
         reason: validation.reason || '',
         buildSha: buildInfoCache.sha || 'unknown',
         runtimeEnv: runtime?.env || 'unknown',
-        pipelineExpected: pipelineExpected ?? 'unknown'
+        pipelineExpected: runtime?.pipelineExpected ?? runtime?.expected?.pipeline ?? 'unknown'
       });
 
       const sourceEntries = data?.sourceMap?.entries || [];

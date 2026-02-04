@@ -3,7 +3,6 @@ import { fetchWithContext } from './fetch-with-context.mjs';
 
 const base = getOpsBase();
 const summaryUrl = `${base}/api/mission-control/summary`;
-const latestUrl = `${base}/data/pipeline/nasdaq100.latest.json`;
 
 function fail(msg) {
   throw new Error(msg);
@@ -98,13 +97,19 @@ if (!sample || !Array.isArray(sample.missing_fields)) {
 }
 
 const runtime = summary?.data?.runtime || {};
-if (runtime?.schedulerExpected === false && health?.pipeline?.status === 'CRITICAL') {
-  fail('preview pipeline should not be CRITICAL solely due to cron absence');
+if (runtime?.pipelineExpected === false && health?.pipeline?.status === 'CRITICAL') {
+  fail('asset SSOT checks should not be CRITICAL solely due to preview pipeline expectation');
 }
-const baselineVerdict = summary?.data?.opsBaseline?.overall?.verdict || null;
-const baselineReason = summary?.data?.opsBaseline?.overall?.reason || '';
-if (runtime?.pipelineExpected === false && baselineVerdict === 'RISK' && String(baselineReason).includes('PIPELINE_STATIC_READY=')) {
-  fail('baseline verdict should not be RISK from pipeline counts when pipelineExpected=false');
+
+const ssot = summary?.data?.ssot;
+if (!ssot || typeof ssot !== 'object') {
+  fail('data.ssot missing');
+}
+if (!Array.isArray(ssot?.api?.checks)) {
+  fail('data.ssot.api.checks missing');
+}
+if (!Array.isArray(ssot?.assets?.checks)) {
+  fail('data.ssot.assets.checks missing');
 }
 
 const p1Step = priceTruth?.steps?.find((s) => s.id === 'P1_UI_CALLS_API') || null;
@@ -123,29 +128,4 @@ if (deploy && (deploy.gitSha == null || deploy.buildTs == null)) {
   fail('deploy.gitSha/buildTs missing (build-info mapping)');
 }
 
-const latestRes = await fetchWithContext(latestUrl, {}, { name: 'pipeline-latest' });
-const latest = await latestRes.json();
-const latestCounts = latest?.counts || {};
-const summaryCounts = summary?.data?.pipeline?.counts || {};
-for (const key of ['expected', 'fetched', 'validated', 'computed', 'static_ready']) {
-  if (latestCounts[key] != null) {
-    if (summaryCounts[key] == null) {
-      fail(`summary pipeline counts.${key} missing`);
-    }
-    if (Number(summaryCounts[key]) !== Number(latestCounts[key])) {
-      fail(`summary counts.${key} mismatch: ${summaryCounts[key]} vs ${latestCounts[key]}`);
-    }
-  }
-}
-
-const coverageMissing = summary?.data?.coverage?.missing;
-if (Number.isFinite(coverageMissing) && coverageMissing > 50) {
-  const msg = `Coverage degraded (${coverageMissing} missing)`;
-  if (process.env.CI === 'true' || process.env.GITHUB_ACTIONS === 'true') {
-    console.warn(`::warning::${msg}`);
-  } else {
-    console.warn(`WARN: ${msg}`);
-  }
-}
-
-console.log('OK: truth summary contract');
+console.log('OK: truth summary contract (SSOT checks present)');

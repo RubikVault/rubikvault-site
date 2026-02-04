@@ -2,54 +2,33 @@ import { getOpsBase } from './env.config.mjs';
 import { fetchWithContext } from './fetch-with-context.mjs';
 
 const base = getOpsBase();
-const latestUrl = `${base}/data/pipeline/nasdaq100.latest.json`;
-const truthUrl = `${base}/data/pipeline/nasdaq100.pipeline-truth.json`;
+const assets = [
+  { name: 'universe', url: `${base}/data/universe/nasdaq100.json`, check: (doc) => Array.isArray(doc) && doc.length > 0 },
+  { name: 'stock-analysis', url: `${base}/data/snapshots/stock-analysis.json`, check: (doc) => Boolean(doc?._meta) },
+  { name: 'eod-batch', url: `${base}/data/eod/batches/eod.latest.000.json`, check: (doc) => Array.isArray(doc?.symbols) && doc.symbols.length > 0 },
+  { name: 'marketphase-index', url: `${base}/data/marketphase/index.json`, check: (doc) => Array.isArray(doc?.data?.symbols) },
+  { name: 'market-prices', url: `${base}/data/snapshots/market-prices/latest.json`, check: (doc) => Array.isArray(doc?.data) }
+];
 
-const latestRes = await fetchWithContext(latestUrl, {}, { name: 'pipeline-latest' });
-const truthRes = await fetchWithContext(truthUrl, {}, { name: 'pipeline-truth' });
-
-const latest = await latestRes.json();
-const truth = await truthRes.json();
-
-const counts = latest?.counts || {};
-const expected = Number(counts.expected);
-const fetched = Number(counts.fetched);
-const validated = Number(counts.validated);
-const computed = Number(counts.computed);
-const staticReady = Number(counts.static_ready);
-
-if (!Number.isFinite(expected) || expected !== 100) {
-  throw new Error(`expected count must be 100, got ${counts.expected}`);
-}
-if (!Number.isFinite(fetched) || fetched <= 0) {
-  throw new Error(`fetched must be > 0, got ${counts.fetched}`);
-}
-if (!Number.isFinite(validated) || validated <= 0) {
-  throw new Error(`validated must be > 0, got ${counts.validated}`);
-}
-
-const firstBlockerId = truth?.first_blocker_id || truth?.first_blocker?.id;
-if (typeof firstBlockerId !== 'string' || firstBlockerId.trim().length === 0) {
-  throw new Error('truth.first_blocker_id must be a non-empty string');
-}
-
-const freshnessKeys = ['savedAt', 'publishedAt', 'asOf', 'timestamp'];
-const now = Date.now();
-for (const key of freshnessKeys) {
-  if (Object.prototype.hasOwnProperty.call(latest, key) && latest[key] != null) {
-    const value = latest[key];
-    const num = Number(value);
-    if (!Number.isFinite(num)) {
-      throw new Error(`latest.${key} must be a finite number, got ${value}`);
-    }
-    const cutoff = now - (48 * 60 * 60 * 1000);
-    if (num < cutoff) {
-      throw new Error(`latest.${key} is older than 48h (${num})`);
-    }
+for (const asset of assets) {
+  const res = await fetchWithContext(asset.url, {}, { name: `asset:${asset.name}` });
+  const doc = await res.json();
+  if (!asset.check(doc)) {
+    throw new Error(`asset ${asset.name} failed shape check at ${asset.url}`);
   }
 }
 
-console.log(
-  `OK ops-artifacts: expected=${expected} fetched=${fetched} validated=${validated} computed=${Number.isFinite(computed) ? computed : '—'} static_ready=${Number.isFinite(staticReady) ? staticReady : '—'} first_blocker_id=${firstBlockerId}`
-);
+const stockRes = await fetchWithContext(`${base}/api/stock?ticker=UBER`, {}, { name: 'api-stock' });
+const stockDoc = await stockRes.json();
+const bar = stockDoc?.data?.latest_bar;
+if (!bar || bar.close == null || bar.volume == null || bar.date == null) {
+  throw new Error('api/stock missing data.latest_bar fields');
+}
 
+const elliottRes = await fetchWithContext(`${base}/api/elliott-scanner`, {}, { name: 'api-elliott-scanner' });
+const elliottDoc = await elliottRes.json();
+if (!elliottDoc || elliottDoc.ok !== true || !Array.isArray(elliottDoc.setups)) {
+  throw new Error('api/elliott-scanner missing setups or ok flag');
+}
+
+console.log('OK ops-artifacts: SSOT assets + api/stock + api/elliott-scanner');

@@ -163,6 +163,70 @@ async function fetchApiStock(requestUrl, ticker) {
   }
 }
 
+async function fetchApiJson(requestUrl, path, params = {}) {
+  try {
+    const url = new URL(path, requestUrl);
+    for (const [key, value] of Object.entries(params || {})) {
+      if (value !== undefined && value !== null) url.searchParams.set(key, String(value));
+    }
+    const res = await fetch(url.toString(), { cache: 'no-store' });
+    let json = null;
+    try {
+      json = await res.json();
+    } catch {
+      json = null;
+    }
+    return {
+      ok: res.ok,
+      status: res.status,
+      url: `${url.pathname}?${url.searchParams.toString()}`,
+      response: json
+    };
+  } catch (err) {
+    return {
+      ok: false,
+      status: null,
+      url: path,
+      response: null,
+      error: String(err?.message || err)
+    };
+  }
+}
+
+function buildCheck({ id, label, required, ok, reason, path, evidence }) {
+  return {
+    id,
+    label,
+    required: Boolean(required),
+    status: ok ? 'OK' : (required ? 'FAIL' : 'INFO'),
+    reason: ok ? 'OK' : (reason || (required ? 'MISSING' : 'OPTIONAL_MISSING')),
+    path: path || null,
+    evidence: evidence || null
+  };
+}
+
+function summarizeChecks(checks = []) {
+  const requiredFails = checks.filter((c) => c.required && c.status !== 'OK');
+  if (requiredFails.length) {
+    return {
+      status: 'CRITICAL',
+      reason: requiredFails[0]?.reason || 'REQUIRED_CHECK_FAIL',
+      checks,
+      failures: requiredFails
+    };
+  }
+  const optionalFails = checks.filter((c) => !c.required && c.status !== 'OK');
+  if (optionalFails.length) {
+    return {
+      status: 'INFO',
+      reason: optionalFails[0]?.reason || 'OPTIONAL_CHECK_MISSING',
+      checks,
+      warnings: optionalFails
+    };
+  }
+  return { status: 'OK', reason: 'OK', checks };
+}
+
 function isPipelineTruthDoc(doc) {
   return doc && typeof doc === 'object' && typeof doc.universe === 'string' && 'expected' in doc && 'count' in doc && 'missing' in doc;
 }
@@ -629,15 +693,11 @@ function buildOwnerSummary(health) {
   }
   const hasCritical = issues.some((entry) => entry.code.includes('CRITICAL'));
   const hasWarning = issues.some((entry) => entry.code.includes('WARNING'));
-  const hasInfo = Object.values(health || {}).some((h) => h?.status === 'INFO');
   let verdict = 'OK';
   let reason = 'OK';
   if (hasCritical || hasWarning) {
     verdict = 'WARN';
     reason = issues[0]?.message || 'DEGRADED';
-  } else if (hasInfo) {
-    verdict = 'INFO';
-    reason = 'NOT_EXPECTED';
   }
   return {
     overall: { verdict, reason },
@@ -1084,8 +1144,9 @@ export async function onRequestGet(context) {
 
   const previewMode = detectPreviewMode(url, env);
   const profilePick = pickProfile(previewMode, healthProfiles?.profiles || {});
-  const profile = profilePick.profile || { expected: { scheduler: !previewMode.isPreview, kv: !previewMode.isPreview, pipeline: !previewMode.isPreview }, not_expected_status: 'INFO' };
-  const expectedFlags = profile.expected || { scheduler: !previewMode.isPreview, kv: !previewMode.isPreview, pipeline: !previewMode.isPreview };
+  const profile = profilePick.profile || { expected: { scheduler: !previewMode.isPreview, kv: !previewMode.isPreview, pipeline: false }, not_expected_status: 'INFO' };
+  const expectedFallback = { scheduler: !previewMode.isPreview, kv: !previewMode.isPreview, pipeline: false };
+  const expectedFlags = { ...expectedFallback, ...(profile.expected || {}), pipeline: false };
   const pricesStaticRequired = typeof profile.prices_static_required === 'boolean' ? profile.prices_static_required : false;
 
   let failuresDay = [];
@@ -1360,12 +1421,30 @@ export async function onRequestGet(context) {
     ? validateSnapshot(marketPricesSnapshot)
     : { valid: false, errors: ['artifact missing'] };
 
+  const ssotSampleTicker = PRICE_TRACE_TICKERS[0] || 'UBER';
+  const [
+    universeDoc,
+    stockAnalysisDoc,
+    eodBatchDoc,
+    marketphaseIndexDoc,
+    marketphaseSampleDoc
+  ] = await Promise.all([
+    fetchAssetJson(request.url, '/data/universe/nasdaq100.json', null),
+    fetchAssetJson(request.url, '/data/snapshots/stock-analysis.json', null),
+    fetchAssetJson(request.url, '/data/eod/batches/eod.latest.000.json', null),
+    fetchAssetJson(request.url, '/data/marketphase/index.json', null),
+    fetchAssetJson(request.url, `/data/marketphase/${encodeURIComponent(ssotSampleTicker)}.json`, null)
+  ]);
+
   const apiSamples = await Promise.all(
     PRICE_TRACE_TICKERS.map(async (ticker) => {
       const sample = await fetchApiStock(request.url, ticker);
       return { ticker, ...sample };
     })
   );
+
+  const fundamentalsSample = await fetchApiJson(request.url, '/api/fundamentals', { ticker: ssotSampleTicker });
+  const elliottSample = await fetchApiJson(request.url, '/api/elliott-scanner');
 
   const priceTruth = buildPriceTruthChain({
     traces: traceAssets,
@@ -1376,6 +1455,118 @@ export async function onRequestGet(context) {
     isPreview: previewMode.isPreview
   });
   const pricesHealth = buildPricesHealth(priceTruth);
+
+  const priceContractStep = priceTruth?.steps?.find((s) => s.id === 'P6_API_CONTRACT') || null;
+  const apiChecks = [
+    buildCheck({
+      id: 'API_STOCK',
+      label: '/api/stock?ticker=<T>',
+      required: true,
+      ok: priceContractStep?.status === 'OK',
+      reason: priceContractStep?.status === 'OK' ? 'OK' : 'CONTRACT_FAIL',
+      path: '/api/stock',
+      evidence: priceContractStep?.evidence || null
+    }),
+    buildCheck({
+      id: 'API_FUNDAMENTALS',
+      label: `/api/fundamentals?ticker=${ssotSampleTicker}`,
+      required: false,
+      ok: fundamentalsSample.ok && typeof fundamentalsSample.response?.schema_version === 'string',
+      reason: fundamentalsSample.ok ? 'SCHEMA_MISSING' : `HTTP_${fundamentalsSample.status ?? 'ERR'}`,
+      path: fundamentalsSample.url,
+      evidence: {
+        status: fundamentalsSample.status,
+        schema_version: fundamentalsSample.response?.schema_version || null,
+        meta_status: fundamentalsSample.response?.meta?.status || null,
+        error: fundamentalsSample.response?.error?.code || null
+      }
+    }),
+    buildCheck({
+      id: 'API_ELLIOTT_SCANNER',
+      label: '/api/elliott-scanner',
+      required: true,
+      ok: elliottSample.ok && elliottSample.response?.ok === true && Array.isArray(elliottSample.response?.setups),
+      reason: elliottSample.ok ? 'INVALID_RESPONSE' : `HTTP_${elliottSample.status ?? 'ERR'}`,
+      path: elliottSample.url,
+      evidence: {
+        status: elliottSample.status,
+        ok: elliottSample.response?.ok ?? null,
+        setups: Array.isArray(elliottSample.response?.setups) ? elliottSample.response.setups.length : null
+      }
+    })
+  ];
+  const ssotApiHealth = summarizeChecks(apiChecks);
+
+  const assetChecks = [
+    buildCheck({
+      id: 'ASSET_UNIVERSE',
+      label: '/data/universe/nasdaq100.json',
+      required: true,
+      ok: Array.isArray(universeDoc) && universeDoc.length > 0,
+      reason: 'UNIVERSE_MISSING',
+      path: '/data/universe/nasdaq100.json',
+      evidence: { count: Array.isArray(universeDoc) ? universeDoc.length : null }
+    }),
+    buildCheck({
+      id: 'ASSET_STOCK_ANALYSIS',
+      label: '/data/snapshots/stock-analysis.json',
+      required: true,
+      ok: stockAnalysisDoc && typeof stockAnalysisDoc === 'object' && Boolean(stockAnalysisDoc?._meta),
+      reason: 'STOCK_ANALYSIS_MISSING',
+      path: '/data/snapshots/stock-analysis.json',
+      evidence: {
+        has_meta: Boolean(stockAnalysisDoc?._meta),
+        symbols_processed: stockAnalysisDoc?._meta?.symbols_processed ?? null
+      }
+    }),
+    buildCheck({
+      id: 'ASSET_EOD_BATCH',
+      label: '/data/eod/batches/eod.latest.000.json',
+      required: true,
+      ok: Array.isArray(eodBatchDoc?.symbols) ? eodBatchDoc.symbols.length > 0 : Boolean(eodBatchDoc?.data),
+      reason: 'EOD_BATCH_MISSING',
+      path: '/data/eod/batches/eod.latest.000.json',
+      evidence: {
+        symbols: Array.isArray(eodBatchDoc?.symbols) ? eodBatchDoc.symbols.length : null,
+        has_data: Boolean(eodBatchDoc?.data)
+      }
+    }),
+    buildCheck({
+      id: 'ASSET_MARKETPHASE_INDEX',
+      label: '/data/marketphase/index.json',
+      required: true,
+      ok: Array.isArray(marketphaseIndexDoc?.data?.symbols) ? marketphaseIndexDoc.data.symbols.length > 0 : Array.isArray(marketphaseIndexDoc?.symbols),
+      reason: 'MARKETPHASE_INDEX_MISSING',
+      path: '/data/marketphase/index.json',
+      evidence: {
+        symbols: Array.isArray(marketphaseIndexDoc?.data?.symbols) ? marketphaseIndexDoc.data.symbols.length : (Array.isArray(marketphaseIndexDoc?.symbols) ? marketphaseIndexDoc.symbols.length : null)
+      }
+    }),
+    buildCheck({
+      id: 'ASSET_MARKETPHASE_SAMPLE',
+      label: `/data/marketphase/${ssotSampleTicker}.json`,
+      required: false,
+      ok: marketphaseSampleDoc?.ok === true,
+      reason: 'MARKETPHASE_SAMPLE_MISSING',
+      path: `/data/marketphase/${ssotSampleTicker}.json`,
+      evidence: {
+        ok: marketphaseSampleDoc?.ok ?? null
+      }
+    }),
+    buildCheck({
+      id: 'ASSET_MARKET_PRICES',
+      label: '/data/snapshots/market-prices/latest.json',
+      required: true,
+      ok: marketPricesSnapshotCheck.valid,
+      reason: 'MARKET_PRICES_INVALID',
+      path: '/data/snapshots/market-prices/latest.json',
+      evidence: {
+        recordCount: Array.isArray(marketPricesSnapshot?.data) ? marketPricesSnapshot.data.length : null,
+        errors: marketPricesSnapshotCheck.errors || []
+      }
+    })
+  ];
+  const ssotAssetHealth = summarizeChecks(assetChecks);
   const fundamentalsTruth = buildFundamentalsTruthChain(traceAssets, startedAtIso);
   const pricesSnapDate = (() => {
     const snap = marketPricesSnapshot;
@@ -1540,7 +1731,24 @@ export async function onRequestGet(context) {
   }
 
   const platformStatus = expectedFlags.kv ? (hasKV ? 'OK' : 'CRITICAL') : toHealthStatus(profile.not_expected_status);
-  const apiStatus = 'OK';
+  const apiHealth = {
+    status: ssotApiHealth.status,
+    reason: ssotApiHealth.reason,
+    checks: ssotApiHealth.checks,
+    action: {
+      url: '/api/stock?ticker=UBER',
+      howTo: 'Verify SSOT API endpoints'
+    }
+  };
+  const assetsHealth = {
+    status: ssotAssetHealth.status,
+    reason: ssotAssetHealth.reason,
+    checks: ssotAssetHealth.checks,
+    action: {
+      url: '/data/universe/nasdaq100.json',
+      howTo: 'Verify static feature inputs'
+    }
+  };
 
   const health = {
     platform: {
@@ -1551,14 +1759,7 @@ export async function onRequestGet(context) {
         howTo: expectedFlags.kv ? 'Verify KV binding for RV_KV' : 'Preview mode: KV not expected'
       }
     },
-    api: {
-      status: apiStatus,
-      reason: 'SUMMARY_OK',
-      action: {
-        url: '/api/mission-control/summary',
-        howTo: 'Inspect summary output'
-      }
-    },
+    api: apiHealth,
     prices: pricesHealth,
     freshness: {
       status: freshnessHealth.status,
@@ -1570,16 +1771,8 @@ export async function onRequestGet(context) {
         howTo: 'Refresh market-prices snapshot'
       }
     },
-    pipeline: {
-      status: pipelineHealth.status,
-      reason: pipelineHealth.reason,
-      counts: pipelineCounts,
-      first_blocker: pipelineTruth?.first_blocker_id || pipelineTruth?.first_blocker?.id || null,
-      action: {
-        url: '/data/pipeline/nasdaq100.latest.json',
-        howTo: expectedFlags.pipeline ? 'Run scheduler/pipeline jobs' : 'Preview mode: pipeline not expected'
-      }
-    }
+    pipeline: assetsHealth,
+    assets: assetsHealth
   };
 
   const owner = buildOwnerSummary(health);
@@ -1592,6 +1785,7 @@ export async function onRequestGet(context) {
   })();
   const metaReason =
     health.prices?.reason ||
+    health.api?.reason ||
     health.pipeline?.reason ||
     health.freshness?.reason ||
     health.platform?.reason ||
@@ -1618,8 +1812,7 @@ export async function onRequestGet(context) {
     healthProfilesCheck.valid &&
     thresholdsCheck.valid &&
     sourceMapCheck.valid &&
-    marketPricesSnapshotCheck.valid &&
-    pipelineContractOk;
+    marketPricesSnapshotCheck.valid;
   const contractCritical = previewMode.isProduction && !contractsOk;
 
   let opsLiveResolved = null;
@@ -1668,7 +1861,8 @@ export async function onRequestGet(context) {
         api: health.api,
         prices: health.prices,
         freshness: health.freshness,
-        pipeline: health.pipeline
+        pipeline: health.pipeline,
+        assets: health.assets
       },
       runtime: {
         env: profilePick.key,
@@ -1679,6 +1873,10 @@ export async function onRequestGet(context) {
         pipelineExpected: expectedFlags.pipeline,
         hostname: previewMode.hostname,
         pricesStaticRequired
+      },
+      ssot: {
+        api: ssotApiHealth,
+        assets: ssotAssetHealth
       },
       sourceMap,
       contracts,
