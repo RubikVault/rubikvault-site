@@ -203,28 +203,38 @@
     <div id="loading" class="card">No data loaded. Click Refresh (LIVE).</div>
 
     <div id="main" style="display:none;">
-      <div class="grid" style="margin-bottom: 12px;">
+      <div class="card" id="ops-verdict" style="margin-bottom: 12px;">
+        <div class="k">System verdict</div>
+        <div class="v" id="ops-verdict-status">—</div>
+        <div class="small" id="ops-verdict-reason">—</div>
+      </div>
+
+      <div class="grid" id="ops-gates" style="margin-bottom: 12px;">
         <div class="card">
-          <div class="k">Platform</div>
-          <div class="v" id="health-platform">—</div>
-          <div class="small" id="health-platform-reason">—</div>
+          <div class="k">Core product</div>
+          <div class="v" id="gate-core">—</div>
+          <div class="small" id="gate-core-reason">—</div>
         </div>
         <div class="card">
-          <div class="k">API</div>
-          <div class="v" id="health-api">—</div>
-          <div class="small" id="health-api-reason">—</div>
+          <div class="k">Data freshness</div>
+          <div class="v" id="gate-freshness">—</div>
+          <div class="small" id="gate-freshness-reason">—</div>
         </div>
         <div class="card">
-          <div class="k">Prices</div>
-          <div class="v" id="health-prices">—</div>
-          <div class="small" id="health-prices-reason">—</div>
+          <div class="k">Pipeline coverage</div>
+          <div class="v" id="gate-pipeline">—</div>
+          <div class="small" id="gate-pipeline-reason">—</div>
         </div>
         <div class="card">
-          <div class="k">Pipeline</div>
-          <div class="v" id="health-pipeline">—</div>
-          <div class="small" id="health-pipeline-reason">—</div>
+          <div class="k">Observability</div>
+          <div class="v" id="gate-observability">—</div>
+          <div class="small" id="gate-observability-reason">—</div>
         </div>
       </div>
+
+      <details id="ops-evidence" style="margin-bottom: 12px;">
+        <summary>Evidence &amp; drilldown</summary>
+        <div style="margin-top: 12px;">
 
       <div class="card" style="margin-bottom: 12px;">
         <div class="k">Render diagnostics</div>
@@ -396,6 +406,8 @@
         <a href="/data/pipeline/missing.json" style="color:#60a5fa; margin-left: 4px;">missing</a>
         <a href="/data/marketphase/missing.json" style="color:#60a5fa; margin-left: 4px;">marketphase missing</a>
       </div>
+        </div>
+      </details>
     </div>
   </div>
 
@@ -527,23 +539,21 @@
       if (typeof meta.status !== 'string') {
         return { ok: false, level: 'error', reason: 'MISSING_META' };
       }
-      const prices = payload?.data?.health?.prices || null;
-      if (!prices || typeof prices.status !== 'string') {
-        return { ok: false, level: 'error', reason: 'MISSING_PRICES_HEALTH' };
+      const gates = payload?.data?.gates || null;
+      if (!gates || typeof gates !== 'object') {
+        return { ok: false, level: 'error', reason: 'MISSING_GATES' };
       }
-      const priceTruth = payload?.data?.truthChains?.prices || null;
-      if (!priceTruth || !Array.isArray(priceTruth.steps)) {
-        return { ok: false, level: 'error', reason: 'MISSING_PRICES_CHAIN' };
+      if (typeof gates?.overall?.status !== 'string') {
+        return { ok: false, level: 'error', reason: 'MISSING_GATE_OVERALL' };
       }
-      const p6 = priceTruth.steps.find((s) => s.id === 'P6_API_CONTRACT');
-      if (!p6?.evidence?.checked_path || !Array.isArray(p6?.evidence?.required_fields)) {
-        return { ok: false, level: 'error', reason: 'MISSING_PRICE_CONTRACT' };
+      if (!Array.isArray(gates?.items)) {
+        return { ok: false, level: 'error', reason: 'MISSING_GATE_ITEMS' };
       }
 
-      const overallVerdict = prices.status || null;
+      const overallVerdict = gates.overall.status || null;
       const baselineVerdict = payload?.data?.opsBaseline?.overall?.verdict || null;
-      const reason = prices.reason || meta.reason || '';
-      const level = overallVerdict === 'OK' ? 'ok' : overallVerdict === 'CRITICAL' ? 'error' : 'degraded';
+      const reason = gates.overall.reason || meta.reason || '';
+      const level = overallVerdict === 'GREEN' ? 'ok' : overallVerdict === 'RED' ? 'error' : 'degraded';
       return { ok: true, level, reason, overallVerdict, baselineVerdict };
     }
 
@@ -591,20 +601,20 @@
 
 
     function statusClass(status) {
-      if (status === 'OK') return 'ok';
-      if (status === 'INFO') return 'ok';
-      if (status === 'WARNING') return 'warn';
-      if (status === 'CRITICAL') return 'bad';
+      if (status === 'GREEN' || status === 'OK') return 'ok';
+      if (status === 'YELLOW' || status === 'WARNING' || status === 'INFO') return 'warn';
+      if (status === 'RED' || status === 'CRITICAL') return 'bad';
       return 'warn';
     }
 
-    function renderHealthTile(id, item) {
-      const valueEl = document.getElementById(`health-${id}`);
-      const reasonEl = document.getElementById(`health-${id}-reason`);
+    function renderGateTile(id, gate) {
+      const valueEl = document.getElementById(`gate-${id}`);
+      const reasonEl = document.getElementById(`gate-${id}-reason`);
       if (!valueEl || !reasonEl) return;
-      const status = item?.status || 'UNKNOWN';
+      const status = gate?.status || 'UNKNOWN';
+      valueEl.dataset.status = status;
       valueEl.innerHTML = pill(status, statusClass(status));
-      reasonEl.textContent = item?.reason || '—';
+      reasonEl.textContent = gate?.reason || '—';
     }
 
     function renderSummary(payload) {
@@ -624,10 +634,20 @@
       if (liveAsOfEl) liveAsOfEl.textContent = meta?.asOf || data?.asOf || '';
 
       const health = data?.health || {};
-      renderHealthTile('platform', health.platform);
-      renderHealthTile('api', health.api);
-      renderHealthTile('prices', health.prices);
-      renderHealthTile('pipeline', health.pipeline);
+      const gates = data?.gates || {};
+      const gateItems = Array.isArray(gates.items) ? gates.items : [];
+      const gateMap = Object.fromEntries(gateItems.map((item) => [item.id, item]));
+      renderGateTile('core', gateMap.CORE_PRODUCT);
+      renderGateTile('freshness', gateMap.DATA_FRESHNESS);
+      renderGateTile('pipeline', gateMap.PIPELINE_COVERAGE);
+      renderGateTile('observability', gateMap.OBSERVABILITY);
+
+      const verdictEl = document.getElementById('ops-verdict-status');
+      const verdictReasonEl = document.getElementById('ops-verdict-reason');
+      const verdictStatus = gates?.overall?.status || 'UNKNOWN';
+      const verdictLabel = verdictStatus === 'GREEN' ? 'OK' : verdictStatus === 'YELLOW' ? 'DEGRADED' : verdictStatus === 'RED' ? 'FAIL' : 'UNKNOWN';
+      if (verdictEl) verdictEl.innerHTML = pill(verdictLabel, statusClass(verdictStatus));
+      if (verdictReasonEl) verdictReasonEl.textContent = gates?.overall?.reason || '—';
 
       const workersToday = data?.budgets?.workersRequests?.usedToday ?? null;
       const workersLast24h = data?.opsLive?.cloudflare?.requestsLast24h ?? null;
@@ -758,20 +778,36 @@
       }
 
       const validation = validateOpsSummary(payload);
-      const healthStatus = computeHealthColor(payload?.data?.health);
+      const overallGateStatus = gates?.overall?.status || 'UNKNOWN';
+      const bridgeStatus = overallGateStatus === 'GREEN'
+        ? 'ok'
+        : overallGateStatus === 'YELLOW'
+          ? 'degraded'
+          : overallGateStatus === 'RED'
+            ? 'error'
+            : validation.level === 'ok'
+              ? 'ok'
+              : validation.level === 'degraded'
+                ? 'degraded'
+                : 'error';
+      const gateColor = overallGateStatus === 'GREEN'
+        ? 'green'
+        : overallGateStatus === 'YELLOW'
+          ? 'yellow'
+          : overallGateStatus === 'RED'
+            ? 'red'
+            : 'unknown';
       const baselineVerdict = validation?.baselineVerdict;
       const pipelineExpected = runtime?.pipelineExpected ?? runtime?.expected?.pipeline;
-      const baselineStatus = pipelineExpected === false
+      const baselineStatus = baselineVerdict == null
         ? 'pending'
-        : baselineVerdict == null
-          ? 'pending'
-          : isOkVerdict(baselineVerdict)
-            ? 'ok'
-            : 'fail';
+        : isOkVerdict(baselineVerdict)
+          ? 'ok'
+          : 'fail';
       setOpsBridge({
-        status: validation.level === 'ok' ? 'ok' : validation.level === 'degraded' ? 'degraded' : 'error',
+        status: bridgeStatus,
         baseline: baselineStatus,
-        health: healthStatus,
+        health: gateColor,
         countFetched: fetched ?? 0,
         countValidated: validated ?? 0,
         coverageComputed,

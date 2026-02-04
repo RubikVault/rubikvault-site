@@ -1,0 +1,40 @@
+{
+  "schema_version": "ops.gates.v1",
+  "updatedAt": "2026-02-04T00:00:00Z",
+  "gates": [
+    {
+      "id": "CORE_PRODUCT",
+      "title": "Core product",
+      "checks": ["prices.contract", "prices.render"],
+      "severity": { "fail": "RED", "warn": "YELLOW", "info": "IGNORE" }
+    },
+    {
+      "id": "DATA_FRESHNESS",
+      "title": "Data freshness",
+      "checks": ["freshness.snapshot"],
+      "severity": { "fail": "RED", "warn": "YELLOW", "info": "IGNORE" }
+    },
+    {
+      "id": "PIPELINE_COVERAGE",
+      "title": "Pipeline coverage",
+      "checks": ["pipeline.coverage"],
+      "severity": { "fail": "RED", "warn": "YELLOW", "info": "IGNORE" }
+    },
+    {
+      "id": "OBSERVABILITY",
+      "title": "Observability",
+      "checks": ["contracts", "ui_trace"],
+      "severity": { "fail": "RED", "warn": "YELLOW", "info": "IGNORE" }
+    }
+  ],
+  "env_overrides": {
+    "preview": {
+      "ui_trace": "INFO",
+      "pipeline_expected": false,
+      "freshness_expected": false
+    },
+    "production": {
+      "ui_trace": "WARN"
+    }
+  }
+}

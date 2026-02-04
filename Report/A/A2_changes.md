@@ -1,32 +1,25 @@
-# A2 Changes — Build-info SSOT (Option A)
+# A2 Changes — OPS gate policy + single verdict
 
-## Files changed
-- `scripts/ops/build-build-info.mjs`
-  - Removed legacy `/public/data/build-info.json` writer; only writes canonical snapshot `public/data/snapshots/build-info/latest.json`.
-- `functions/api/mission-control/summary.js`
-  - Reads build-info from canonical snapshot and maps `data.commitSha` + `data.generatedAt`.
-- `public/ops/index.html`
-  - Ops UI “Build:” line reads canonical snapshot and parses `data.commitSha`/`data.generatedAt`.
-- `public/debug/diagnostics.js`
-  - Debug diagnostics build-info fetch now uses canonical snapshot.
-- `functions/api/_shared/static-only.js`
-  - For module `build-info`, only `/data/snapshots/build-info/latest.json` is considered (no legacy fallbacks).
-- `functions/api/_shared/static-only-v3.js`
-  - Same canonical-only path enforcement for build-info.
-- `scripts/ops/validate-truth.sh`
-  - Validates canonical build-info snapshot instead of `/data/build-info.json`.
-- `scripts/generate-eod-market.mjs`
-  - Removed legacy `public/build-info.json` writer to avoid parallel truth.
-- `public/DEBUG_README.md`
-  - Updated build-info path documentation.
-- `docs/ops/contract.md`
-  - Added build-info SSOT note (canonical path + fields).
+## New policy
+- **Added** `public/data/policies/ops-gates.json` (gate policy + env overrides).
+  - Reason: provide deterministic gating rules and preview overrides (UI trace INFO, pipeline/freshness NOT_EXPECTED).
 
-## Files removed
-- `public/data/build-info.json`
-- `public/build-info.json`
+## Summary API
+- **Updated** `functions/api/mission-control/summary.js`:
+  - Added policy fetch and fallback (`/data/policies/ops-gates.json`) and computed `gates` in response.
+  - `meta.status` now reflects **gate overall** (GREEN/ YELLOW/ RED → ok/degraded/error).
+  - Evidence: `functions/api/mission-control/summary.js:1227-1250`, `1778-1842`.
 
-## Tests
-- `node tests/build-info-artifact.test.mjs`
-- `npm run test:truth-chain`
+## OPS UI
+- **Updated** `public/ops/index.html`:
+  - Added **System verdict** card and **4 gate cards** (CORE_PRODUCT, DATA_FRESHNESS, PIPELINE_COVERAGE, OBSERVABILITY).
+  - Moved detailed tables + truth chains under **Evidence & drilldown** (details) section.
+  - UI now renders gate data from `data.gates` and sets `#ops-bridge` based on gate overall.
+  - Evidence: `public/ops/index.html:205-237`, `636-651`, `780-819`.
+
+## Contracts / tests
+- **Updated** `scripts/ops/rv_contract_asserts.jq`: mission-control asserts now require `data.gates.overall.status`.
+- **Updated** `scripts/ops/rv_verify_truth_summary.mjs`: verify `data.gates` structure.
+- **Updated** Playwright tests: `tests/e2e/ops.spec.mjs` now checks gate cards instead of truth-chain sections.
+- **Updated** Tier-3 ops UI test: `scripts/ops/test-ops-ui.mjs` validates gate cards (no truth-chain dependency).
 

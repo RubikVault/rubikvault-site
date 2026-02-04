@@ -20,6 +20,47 @@ const PRICE_TRACE_TICKERS = ['UBER', 'TEAM', 'WBD'];
 const PRICE_TRACE_PATH = (ticker) => `/debug/truth-chain/${ticker}.trace.json`;
 const PRICE_UI_TRACE_PATH = (ticker) => `/debug/ui-path/${ticker}.ui-path.trace.json`;
 const PRICE_CHAIN_VERSION = 'v2';
+const OPS_GATES_POLICY_PATH = '/data/policies/ops-gates.json';
+
+const DEFAULT_OPS_GATES = {
+  schema_version: 'ops.gates.v1',
+  gates: [
+    {
+      id: 'CORE_PRODUCT',
+      title: 'Core product',
+      checks: ['prices.contract', 'prices.render'],
+      severity: { fail: 'RED', warn: 'YELLOW', info: 'IGNORE' }
+    },
+    {
+      id: 'DATA_FRESHNESS',
+      title: 'Data freshness',
+      checks: ['freshness.snapshot'],
+      severity: { fail: 'RED', warn: 'YELLOW', info: 'IGNORE' }
+    },
+    {
+      id: 'PIPELINE_COVERAGE',
+      title: 'Pipeline coverage',
+      checks: ['pipeline.coverage'],
+      severity: { fail: 'RED', warn: 'YELLOW', info: 'IGNORE' }
+    },
+    {
+      id: 'OBSERVABILITY',
+      title: 'Observability',
+      checks: ['contracts', 'ui_trace'],
+      severity: { fail: 'RED', warn: 'YELLOW', info: 'IGNORE' }
+    }
+  ],
+  env_overrides: {
+    preview: {
+      ui_trace: 'INFO',
+      pipeline_expected: false,
+      freshness_expected: false
+    },
+    production: {
+      ui_trace: 'WARN'
+    }
+  }
+};
 
 let LAST_CACHE = null;
 let LAST_CACHE_AT_MS = 0;
@@ -157,7 +198,7 @@ async function fetchApiStock(requestUrl, ticker) {
       url: `/api/stock?ticker=${encodeURIComponent(ticker)}`,
       response: null,
       bar: null,
-      meta: null,
+      meta: {},
       error: String(err?.message || err)
     };
   }
@@ -615,6 +656,127 @@ function buildPricesHealth(priceTruth) {
   };
 }
 
+function healthToGateStatus(status, allowInfo = true) {
+  if (status === 'CRITICAL') return 'RED';
+  if (status === 'WARNING') return 'YELLOW';
+  if (status === 'INFO') return allowInfo ? 'GREEN' : 'YELLOW';
+  if (status === 'OK') return 'GREEN';
+  return 'YELLOW';
+}
+
+function computeOpsGates({ health, expectedFlags, previewMode, priceTruth, contractsOk, contractCritical, policy }) {
+  const envKey = previewMode?.isPreview ? 'preview' : 'production';
+  const overrides = policy?.env_overrides?.[envKey] || {};
+  const pipelineExpected = overrides.pipeline_expected != null
+    ? Boolean(overrides.pipeline_expected)
+    : expectedFlags?.pipeline === true;
+  const freshnessExpected = overrides.freshness_expected != null
+    ? Boolean(overrides.freshness_expected)
+    : expectedFlags?.pipeline === true;
+
+  const coreStatus = healthToGateStatus(health?.prices?.status, true);
+  const coreReason = health?.prices?.reason || 'CONTRACT_OK';
+
+  const freshnessStatus = freshnessExpected
+    ? healthToGateStatus(health?.freshness?.status, true)
+    : 'GREEN';
+  const freshnessReason = freshnessExpected
+    ? (health?.freshness?.reason || 'OK')
+    : 'NOT_EXPECTED';
+
+  const pipelineStatus = pipelineExpected
+    ? healthToGateStatus(health?.pipeline?.status, true)
+    : 'GREEN';
+  const pipelineReason = pipelineExpected
+    ? (health?.pipeline?.reason || 'OK')
+    : 'NOT_EXPECTED';
+
+  const traceSteps = Array.isArray(priceTruth?.steps)
+    ? priceTruth.steps.filter((s) => ['P0_UI_START', 'P1_UI_CALLS_API', 'P7_UI_RENDERS'].includes(s.id))
+    : [];
+  const traceHasFail = traceSteps.some((s) => s.status === 'FAIL');
+  const traceHasWarn = traceSteps.some((s) => s.status === 'WARN' || s.status === 'INFO' || s.status === 'UNKNOWN');
+  let uiTraceStatus = traceHasFail ? 'FAIL' : traceHasWarn ? 'WARN' : 'OK';
+  if (overrides.ui_trace === 'INFO') {
+    uiTraceStatus = uiTraceStatus === 'OK' ? 'OK' : 'INFO';
+  }
+
+  let observabilityStatus = 'GREEN';
+  let observabilityReason = 'OK';
+  if (contractCritical) {
+    observabilityStatus = 'RED';
+    observabilityReason = 'CONTRACT_INVALID';
+  } else if (!contractsOk) {
+    observabilityStatus = 'YELLOW';
+    observabilityReason = 'CONTRACT_WARN';
+  }
+  if (previewMode?.isPreview) {
+    // Preview: UI trace never gates
+  } else if (uiTraceStatus === 'FAIL' || uiTraceStatus === 'WARN') {
+    if (observabilityStatus === 'GREEN') observabilityStatus = 'YELLOW';
+    observabilityReason = 'UI_TRACE';
+  }
+
+  const items = [
+    {
+      id: 'CORE_PRODUCT',
+      title: 'Core product',
+      status: coreStatus,
+      reason: coreReason,
+      checks: [
+        { id: 'prices', status: health?.prices?.status || 'UNKNOWN', reason: health?.prices?.reason || null }
+      ],
+      evidence: { contract: health?.prices || null }
+    },
+    {
+      id: 'DATA_FRESHNESS',
+      title: 'Data freshness',
+      status: freshnessStatus,
+      reason: freshnessReason,
+      checks: [
+        { id: 'snapshot', status: health?.freshness?.status || 'UNKNOWN', reason: health?.freshness?.reason || null }
+      ],
+      evidence: { freshness: health?.freshness || null }
+    },
+    {
+      id: 'PIPELINE_COVERAGE',
+      title: 'Pipeline coverage',
+      status: pipelineStatus,
+      reason: pipelineReason,
+      checks: [
+        { id: 'pipeline', status: health?.pipeline?.status || 'UNKNOWN', reason: health?.pipeline?.reason || null }
+      ],
+      evidence: { pipeline: health?.pipeline || null }
+    },
+    {
+      id: 'OBSERVABILITY',
+      title: 'Observability',
+      status: observabilityStatus,
+      reason: observabilityReason,
+      checks: [
+        { id: 'contracts', status: contractsOk ? 'OK' : 'WARN', reason: contractsOk ? 'OK' : 'CONTRACT_INVALID' },
+        { id: 'ui_trace', status: uiTraceStatus, reason: uiTraceStatus === 'OK' ? 'OK' : 'TRACE' }
+      ],
+      evidence: {
+        contracts_ok: contractsOk,
+        ui_trace_status: uiTraceStatus
+      }
+    }
+  ];
+
+  const overall = (() => {
+    if (items.some((g) => g.status === 'RED')) return { status: 'RED', reason: items.find((g) => g.status === 'RED')?.reason || 'CRITICAL' };
+    if (items.some((g) => g.status === 'YELLOW')) return { status: 'YELLOW', reason: items.find((g) => g.status === 'YELLOW')?.reason || 'DEGRADED' };
+    return { status: 'GREEN', reason: 'OK' };
+  })();
+
+  return {
+    policy: policy?.schema_version ? { schema_version: policy.schema_version } : null,
+    overall,
+    items
+  };
+}
+
 function buildOwnerSummary(health) {
   const issues = [];
   for (const [key, item] of Object.entries(health || {})) {
@@ -1062,7 +1224,7 @@ export async function onRequestGet(context) {
     Object.entries(providersRaw).map(([k, v]) => [k, summarizeProviderStats(v)])
   );
 
-  const [opsDaily, usageReport, providerState, seedManifest, nasdaq100Universe, marketPhaseIndex, healthProfilesRaw, thresholdsRaw, sourceMapRaw, eodManifestRaw] = await Promise.all([
+  const [opsDaily, usageReport, providerState, seedManifest, nasdaq100Universe, marketPhaseIndex, healthProfilesRaw, thresholdsRaw, sourceMapRaw, opsGatesPolicyRaw, eodManifestRaw] = await Promise.all([
     fetchAssetJson(request.url, '/data/ops-daily.json', null),
     fetchAssetJson(request.url, '/data/usage-report.json', null),
     fetchAssetJson(request.url, '/data/provider-state.json', null),
@@ -1072,6 +1234,7 @@ export async function onRequestGet(context) {
     fetchAssetJson(request.url, '/data/ops/health-profiles.v1.json', null),
     fetchAssetJson(request.url, '/data/ops/thresholds.v1.json', null),
     fetchAssetJson(request.url, '/data/ops/source-map.v1.json', null),
+    fetchAssetJson(request.url, OPS_GATES_POLICY_PATH, null),
     fetchAssetJson(request.url, '/data/eod/manifest.latest.json', null)
   ]);
 
@@ -1081,6 +1244,9 @@ export async function onRequestGet(context) {
   const healthProfiles = healthProfilesCheck.valid ? healthProfilesRaw : null;
   const thresholds = thresholdsCheck.valid ? thresholdsRaw : null;
   const sourceMap = sourceMapCheck.valid ? sourceMapRaw : null;
+  const opsGatesPolicy = opsGatesPolicyRaw && typeof opsGatesPolicyRaw === 'object'
+    ? opsGatesPolicyRaw
+    : DEFAULT_OPS_GATES;
 
   const previewMode = detectPreviewMode(url, env);
   const profilePick = pickProfile(previewMode, healthProfiles?.profiles || {});
@@ -1159,7 +1325,7 @@ export async function onRequestGet(context) {
       const uiTraceRaw = uiRes.json && typeof uiRes.json === 'object' ? uiRes.json : null;
       const uiBase = uiTraceRaw?.base_url || null;
       const uiBaseMatch = !uiBase || uiBase === origin;
-      const uiTrace = uiBaseMatch ? uiTraceRaw : null;
+      const uiTrace = uiTraceRaw || null;
       const uiHash = uiRes.ok && typeof uiRes.text === 'string' ? sha256Hex(uiRes.text) : null;
 
       const truthPath = PRICE_TRACE_PATH(ticker);
@@ -1584,19 +1750,6 @@ export async function onRequestGet(context) {
 
   const owner = buildOwnerSummary(health);
 
-  const metaStatus = (() => {
-    const statuses = Object.values(health).map((h) => h?.status).filter(Boolean);
-    if (statuses.includes('CRITICAL')) return 'error';
-    if (statuses.includes('WARNING')) return 'degraded';
-    return 'ok';
-  })();
-  const metaReason =
-    health.prices?.reason ||
-    health.pipeline?.reason ||
-    health.freshness?.reason ||
-    health.platform?.reason ||
-    null;
-
   const contracts = {
     configs: {
       health_profiles: contractResult(healthProfilesCheck.valid, healthProfilesCheck.errors),
@@ -1621,6 +1774,29 @@ export async function onRequestGet(context) {
     marketPricesSnapshotCheck.valid &&
     pipelineContractOk;
   const contractCritical = previewMode.isProduction && !contractsOk;
+
+  const gates = computeOpsGates({
+    health,
+    expectedFlags,
+    previewMode,
+    priceTruth,
+    contractsOk,
+    contractCritical,
+    policy: opsGatesPolicy
+  });
+
+  const metaStatus = gates?.overall?.status === 'RED'
+    ? 'error'
+    : gates?.overall?.status === 'YELLOW'
+      ? 'degraded'
+      : 'ok';
+  const metaReason =
+    gates?.overall?.reason ||
+    health.prices?.reason ||
+    health.pipeline?.reason ||
+    health.freshness?.reason ||
+    health.platform?.reason ||
+    null;
 
   let opsLiveResolved = null;
   if (wantsLive) {
@@ -1662,6 +1838,7 @@ export async function onRequestGet(context) {
       asOf: startedAtIso,
       hasKV,
       health,
+      gates,
       owner,
       cards: {
         platform: health.platform,

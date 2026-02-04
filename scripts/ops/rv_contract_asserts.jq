@@ -14,6 +14,8 @@ def mission_control_assert:
   and .schema_version == "3.0"
   and (.meta.status | is_str)
   and (.data.opsBaseline | is_obj)
+  and (.data.gates | is_obj)
+  and (.data.gates.overall.status | is_str)
   and (.data.opsBaseline.truthChain | is_obj)
   and ((.data.opsBaseline.truthChain.nasdaq100.steps | type) == "array")
   and ((.data.opsBaseline.truthChain.nasdaq100.steps | length) >= 6)
