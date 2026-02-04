@@ -971,12 +971,13 @@ async function kvGetInt(env, key) {
 
 async function fetchBuildInfo(requestUrl) {
   try {
-    const url = new URL('/build-info.json', requestUrl);
+    const url = new URL('/data/snapshots/build-info/latest.json', requestUrl);
     const res = await fetch(url.toString());
     if (!res.ok) return null;
     const json = await res.json();
-    const sha = json?.gitSha || json?.git_sha || json?.sha || json?.commit || json?.commitSha || null;
-    const ts = json?.buildTs || json?.build_ts || json?.builtAt || json?.built_at || json?.timestamp || json?.generatedAt || null;
+    const data = json?.data || {};
+    const sha = data?.commitSha || data?.git_sha || null;
+    const ts = data?.generatedAt || data?.build_time_utc || null;
     return { gitSha: sha ? String(sha) : null, buildTs: ts ? String(ts) : null };
   } catch {
     return null;

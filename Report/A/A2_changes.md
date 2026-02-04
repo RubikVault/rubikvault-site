@@ -1,21 +1,32 @@
-# A2 Changes — Build-info v3 SSOT
+# A2 Changes — Build-info SSOT (Option A)
 
-## Changed files (with reason)
+## Files changed
 - `scripts/ops/build-build-info.mjs`
-  - Writes canonical v3 artifact at `public/data/snapshots/build-info/latest.json`.
-  - Data is an object with `commitSha` + `generatedAt` (SSOT fields) and compatibility fields.
-  - Adds `meta.version`, `meta.provider`, `meta.data_date`, `meta.generated_at`.
+  - Removed legacy `/public/data/build-info.json` writer; only writes canonical snapshot `public/data/snapshots/build-info/latest.json`.
+- `functions/api/mission-control/summary.js`
+  - Reads build-info from canonical snapshot and maps `data.commitSha` + `data.generatedAt`.
+- `public/ops/index.html`
+  - Ops UI “Build:” line reads canonical snapshot and parses `data.commitSha`/`data.generatedAt`.
+- `public/debug/diagnostics.js`
+  - Debug diagnostics build-info fetch now uses canonical snapshot.
 - `functions/api/_shared/static-only.js`
-  - Proof chain now accepts `data` object shape for module `build-info` (without weakening others).
+  - For module `build-info`, only `/data/snapshots/build-info/latest.json` is considered (no legacy fallbacks).
 - `functions/api/_shared/static-only-v3.js`
-  - Same module-specific schema acceptance for `build-info`.
-- `tests/build-info-artifact.test.mjs`
-  - Enforces v3 artifact shape + meta.version/provider + data fields.
+  - Same canonical-only path enforcement for build-info.
+- `scripts/ops/validate-truth.sh`
+  - Validates canonical build-info snapshot instead of `/data/build-info.json`.
+- `scripts/generate-eod-market.mjs`
+  - Removed legacy `public/build-info.json` writer to avoid parallel truth.
+- `public/DEBUG_README.md`
+  - Updated build-info path documentation.
+- `docs/ops/contract.md`
+  - Added build-info SSOT note (canonical path + fields).
 
-## Artifact updated
-- `public/data/snapshots/build-info/latest.json`
-  - Now v3 schema with object `data` as SSOT.
+## Files removed
+- `public/data/build-info.json`
+- `public/build-info.json`
 
-## Tests run
+## Tests
 - `node tests/build-info-artifact.test.mjs`
 - `npm run test:truth-chain`
+

@@ -123,7 +123,7 @@ market-cockpit
 market-health
 
 TREE_PUBLIC_MAXDEPTH3_FILES:
-public/build-info.json
+public/data/snapshots/build-info/latest.json
 public/index.html
 public/posts/.gitkeep
 public/.DS_Store

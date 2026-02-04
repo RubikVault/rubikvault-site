@@ -867,11 +867,12 @@
 
     async function loadBuildInfo() {
       try {
-        const res = await fetch('/data/build-info.json', { cache: 'no-store' });
+        const res = await fetch('/data/snapshots/build-info/latest.json', { cache: 'no-store' });
         if (!res.ok) throw new Error('build-info fetch failed');
         const payload = await res.json();
-        const sha = payload?.git_sha || payload?.env?.cf_pages_commit_sha || payload?.env?.github_sha || 'unknown';
-        const time = payload?.build_time_utc || null;
+        const data = payload?.data || {};
+        const sha = data?.commitSha || data?.git_sha || data?.env?.cf_pages_commit_sha || data?.env?.github_sha || 'unknown';
+        const time = data?.generatedAt || data?.build_time_utc || payload?.meta?.generated_at || null;
         buildInfoCache = { sha, time };
         const buildEl = document.getElementById('build-info');
         if (buildEl) {

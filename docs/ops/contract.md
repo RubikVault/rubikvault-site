@@ -72,3 +72,4 @@
 ## Owner Endpoints (Ops)
 - Owner endpoints (`/api/mission-control/summary`, `/api/build-info`) always return HTTP 200 with in-body status (`meta.status`) and owner verdicts; they never return 503 for maintenance/KV-disabled states.
 - Ops verifier base URL defaults to `http://127.0.0.1:8788` when OPS_BASE/RV_BASE/BASE_URL/BASE are not set.
+- Build-info SSOT: `/data/snapshots/build-info/latest.json` with `data.commitSha` + `data.generatedAt` (canonical).

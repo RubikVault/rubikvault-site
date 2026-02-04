@@ -12,12 +12,13 @@ if ! command -v jq >/dev/null 2>&1; then
   fail "jq not found"
 fi
 
-# build-info
-if [ ! -f "$DATA/build-info.json" ]; then
-  fail "missing public/data/build-info.json"
+# build-info (canonical snapshot)
+if [ ! -f "$DATA/snapshots/build-info/latest.json" ]; then
+  fail "missing public/data/snapshots/build-info/latest.json"
 fi
-jq -e '(.git_sha|type=="string" or .git_sha==null) and (.build_time_utc|type=="string")' "$DATA/build-info.json" >/dev/null
-pass "build-info.json present"
+jq -e '(.schema_version=="3.0") and (.meta.version=="3.0") and ((.data.commitSha|type=="string") or (.data.commitSha==null)) and (.data.generatedAt|type=="string")' \
+  "$DATA/snapshots/build-info/latest.json" >/dev/null
+pass "build-info snapshot present"
 
 # pipeline latest
 if [ ! -f "$DATA/pipeline/nasdaq100.latest.json" ]; then

@@ -39,7 +39,7 @@ Das Panel erscheint unten rechts und enthält Tabs:
 
 ## Build-Info
 
-Das Panel lädt `/build-info.json`. Wenn die Datei nicht existiert, nutzt es `RV_CONFIG.buildInfo`.
+Das Panel lädt `/data/snapshots/build-info/latest.json` (kanonische Build-Info). Wenn die Datei nicht existiert, nutzt es `RV_CONFIG.buildInfo`.
 
 ## Config Missing (API guard)
 

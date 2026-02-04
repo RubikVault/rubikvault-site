@@ -451,8 +451,11 @@ export async function serveStaticJson(req, envOrModule, ignored, ctxOrContext) {
     }
   }
 
-  // Try multiple paths
-  const pathsToTry = [
+  const buildInfoOnly = moduleName === "build-info";
+  // Try multiple paths (build-info is canonical snapshot only)
+  const pathsToTry = buildInfoOnly ? [
+    { path: `/data/snapshots/${moduleName}/latest.json`, type: "v3_directory" }
+  ] : [
     { path: `/data/snapshots/${moduleName}/latest.json`, type: "v3_directory" },
     { path: `/data/snapshots/${moduleName}.json`, type: "v3_flat" },
     { path: `/data/${moduleName}.json`, type: "legacy" }
