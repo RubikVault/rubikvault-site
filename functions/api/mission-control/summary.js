@@ -2163,6 +2163,8 @@ export async function onRequestGet(context) {
     data: {
       asOf: startedAtIso,
       hasKV,
+      // v2.1 contract: data.system is canonical root
+      system: systemHealth,
       health,
       owner,
       cards: {
