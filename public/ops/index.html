@@ -110,6 +110,11 @@
       color: #a7f3d0;
     }
 
+    .pill.info {
+      border-color: rgba(148, 163, 184, 0.35);
+      color: #cbd5f5;
+    }
+
     .pill.warn {
       border-color: rgba(251, 191, 36, 0.35);
       color: #fde68a;
@@ -205,7 +210,7 @@
     <div id="main" style="display:none;">
       <div class="grid" style="margin-bottom: 12px;">
         <div class="card">
-          <div class="k">Platform</div>
+          <div class="k">System</div>
           <div class="v" id="health-platform">—</div>
           <div class="small" id="health-platform-reason">—</div>
         </div>
@@ -553,18 +558,21 @@
     function statusToColor(status) {
       if (status === 'CRITICAL') return 'red';
       if (status === 'WARNING') return 'yellow';
-      if (status === 'INFO') return 'green';
+      if (status === 'INFO') return 'neutral';
+      if (status === 'N/A') return 'neutral';
       if (status === 'OK') return 'green';
       return 'unknown';
     }
 
     function computeHealthColor(health) {
+      const systemStatus = health?.system?.status;
+      if (systemStatus) return statusToColor(systemStatus);
       const pricesStatus = health?.prices?.status;
       if (pricesStatus) return statusToColor(pricesStatus);
       const statuses = Object.values(health || {}).map((h) => h?.status).filter(Boolean);
       if (statuses.includes('CRITICAL')) return 'red';
       if (statuses.includes('WARNING')) return 'yellow';
-      if (statuses.includes('INFO') || statuses.length) return 'green';
+      if (statuses.includes('INFO') || statuses.length) return 'neutral';
       return 'unknown';
     }
 
@@ -582,6 +590,10 @@
       const prices = payload?.data?.health?.prices || null;
       if (!prices || typeof prices.status !== 'string') {
         return { ok: false, level: 'error', reason: 'MISSING_PRICES_HEALTH' };
+      }
+      const system = payload?.data?.health?.system || null;
+      if (system && typeof system.status !== 'string') {
+        return { ok: false, level: 'error', reason: 'MISSING_SYSTEM_HEALTH' };
       }
       const priceTruth = payload?.data?.truthChains?.prices || null;
       if (!priceTruth || !Array.isArray(priceTruth.steps)) {
@@ -608,7 +620,7 @@
         return { ok: false, level: 'error', reason: 'MISSING_PRICE_CONTRACT' };
       }
 
-      const overallVerdict = prices.status || null;
+      const overallVerdict = system?.status || prices.status || null;
       const baselineVerdict = payload?.data?.opsBaseline?.overall?.verdict || null;
       const reason = prices.reason || meta.reason || '';
       let level = overallVerdict === 'OK' ? 'ok' : overallVerdict === 'CRITICAL' ? 'error' : 'degraded';
@@ -667,7 +679,8 @@
 
     function statusClass(status) {
       if (status === 'OK') return 'ok';
-      if (status === 'INFO') return 'ok';
+      if (status === 'INFO') return 'info';
+      if (status === 'N/A') return 'info';
       if (status === 'WARNING') return 'warn';
       if (status === 'CRITICAL') return 'bad';
       return 'warn';
@@ -708,10 +721,10 @@
       if (liveAsOfEl) liveAsOfEl.textContent = meta?.asOf || data?.asOf || '';
 
       const health = data?.health || {};
-      renderHealthTile('platform', health.platform);
+      renderHealthTile('platform', health.system || health.platform);
       renderHealthTile('api', health.api);
       renderHealthTile('prices', health.prices);
-      renderHealthTile('pipeline', health.pipeline);
+      renderHealthTile('pipeline', health.assets || health.pipeline);
       const enhStatus = enhApi?.status || enhAssets?.status || 'UNKNOWN';
       const enhReason = enhApi?.reason || enhAssets?.reason || '—';
       const enhEl = document.getElementById('enhancers-status');
@@ -876,7 +889,7 @@
         : '<tr><td colspan=\"3\" class=\"small\">No source-map entries</td></tr>';
 
       const actionItems = [];
-      for (const key of ['platform', 'api', 'prices', 'freshness', 'pipeline']) {
+      for (const key of ['system', 'api', 'prices', 'freshness', 'assets', 'platform']) {
         const item = health?.[key];
         if (item?.action?.url) {
           actionItems.push(`<a href=\"${esc(item.action.url)}\" style=\"color:#60a5fa;\">${esc(key)}</a> — ${esc(item.action.howTo || '')}`);

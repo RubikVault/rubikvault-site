@@ -24,12 +24,75 @@ const PRICE_CHAIN_VERSION = 'v2';
 const DEFAULT_OPS_POLICY = {
   version: '1.0',
   sample_ticker: 'UBER',
+  health: {
+    source_of_truth: {
+      root_status_path: '/data/status.json',
+      status_layout_policy_path: 'policies/status_layout.json'
+    },
+    required_checks: [
+      'ROOT_STATUS_PRESENT',
+      'ROOT_STATUS_VALID',
+      'ROOT_STATUS_SYSTEM_OK',
+      'MODULE_STATUSES_OK',
+      'SSOT_ASSETS_REQUIRED_OK',
+      'SSOT_APIS_REQUIRED_OK'
+    ],
+    verdict_order: ['EMERGENCY_STOP', 'CIRCUIT_OPEN', 'FAIL', 'STALE', 'PARTIAL', 'OK']
+  },
+  telemetry: {
+    non_blocking_checks: [
+      'P1_UI_CALLS_API',
+      'P5_STATIC_PERSIST',
+      'P7_UI_RENDERS',
+      'UI_TRACE_ORIGIN',
+      'PIPELINE_COVERAGE',
+      'INDICATORS_COVERAGE',
+      'SCHEDULER_EXPECTED',
+      'RUNTIME_BINDINGS'
+    ],
+    ui_treatment: {
+      INFO_is_neutral: true,
+      N_A_label: 'N/A',
+      INFO_label: 'INFO'
+    }
+  },
+  mode_matrix: {
+    preview: {
+      telemetry_expected: false,
+      scheduler_expected: false,
+      pipeline_expected: 'NOT_EXPECTED',
+      ui_trace_required: false,
+      static_persist_required: false,
+      kv_expected: false
+    },
+    prod: {
+      telemetry_expected: true,
+      scheduler_expected: true,
+      pipeline_expected: 'EXPECTED',
+      ui_trace_required: true,
+      static_persist_required: false,
+      kv_expected: true
+    }
+  },
   mode: {
     preview: { scheduler_expected: false, pipeline_expected: false, kv_expected: false },
     production: { scheduler_expected: true, pipeline_expected: false, kv_expected: true }
   },
-  core: { api: [], assets: [] },
-  enhancers: { api: [], assets: [], pipeline: [] }
+  core: {
+    api: ['API_STOCK', 'API_ELLIOTT_SCANNER'],
+    assets: [
+      'ASSET_UNIVERSE',
+      'ASSET_STOCK_ANALYSIS',
+      'ASSET_EOD_BATCH',
+      'ASSET_MARKETPHASE_INDEX',
+      'ASSET_MARKET_PRICES'
+    ]
+  },
+  enhancers: {
+    api: ['API_FUNDAMENTALS'],
+    assets: ['ASSET_MARKETPHASE_SAMPLE'],
+    pipeline: []
+  }
 };
 
 let LAST_CACHE = null;
@@ -243,6 +306,39 @@ function normalizeOpsPolicy(policy) {
   return {
     ...DEFAULT_OPS_POLICY,
     ...policy,
+    health: {
+      ...DEFAULT_OPS_POLICY.health,
+      ...(policy.health || {}),
+      source_of_truth: {
+        ...DEFAULT_OPS_POLICY.health.source_of_truth,
+        ...(policy?.health?.source_of_truth || {})
+      },
+      required_checks: Array.isArray(policy?.health?.required_checks) ? policy.health.required_checks : DEFAULT_OPS_POLICY.health.required_checks,
+      verdict_order: Array.isArray(policy?.health?.verdict_order) ? policy.health.verdict_order : DEFAULT_OPS_POLICY.health.verdict_order
+    },
+    telemetry: {
+      ...DEFAULT_OPS_POLICY.telemetry,
+      ...(policy.telemetry || {}),
+      non_blocking_checks: Array.isArray(policy?.telemetry?.non_blocking_checks)
+        ? policy.telemetry.non_blocking_checks
+        : DEFAULT_OPS_POLICY.telemetry.non_blocking_checks,
+      ui_treatment: {
+        ...DEFAULT_OPS_POLICY.telemetry.ui_treatment,
+        ...(policy?.telemetry?.ui_treatment || {})
+      }
+    },
+    mode_matrix: {
+      ...DEFAULT_OPS_POLICY.mode_matrix,
+      ...(policy.mode_matrix || {}),
+      preview: {
+        ...DEFAULT_OPS_POLICY.mode_matrix.preview,
+        ...(policy?.mode_matrix?.preview || {})
+      },
+      prod: {
+        ...DEFAULT_OPS_POLICY.mode_matrix.prod,
+        ...(policy?.mode_matrix?.prod || {})
+      }
+    },
     mode: {
       ...DEFAULT_OPS_POLICY.mode,
       ...(policy.mode || {})
@@ -256,6 +352,37 @@ function normalizeOpsPolicy(policy) {
       assets: Array.isArray(policy?.enhancers?.assets) ? policy.enhancers.assets : DEFAULT_OPS_POLICY.enhancers.assets,
       pipeline: Array.isArray(policy?.enhancers?.pipeline) ? policy.enhancers.pipeline : DEFAULT_OPS_POLICY.enhancers.pipeline
     }
+  };
+}
+
+function normalizePipelineExpected(value) {
+  if (value === 'EXPECTED') return true;
+  if (value === 'NOT_EXPECTED') return false;
+  if (typeof value === 'boolean') return value;
+  return null;
+}
+
+function normalizeRootStatus(raw) {
+  if (!raw || typeof raw !== 'object') {
+    return { status: null, raw: null, snapshots: null, failedModules: [], reason: 'MISSING' };
+  }
+  const rawStatus = raw?.system?.status ?? raw?.buildStatus ?? raw?.meta?.status ?? raw?.status ?? null;
+  const normalized = rawStatus ? String(rawStatus).toUpperCase() : null;
+  let status = null;
+  if (['OK', 'LIVE', 'HEALTHY', 'GREEN'].includes(normalized)) status = 'OK';
+  else if (['PARTIAL', 'WARN', 'WARNING', 'DEGRADED', 'STALE'].includes(normalized)) status = 'WARNING';
+  else if (['FAIL', 'ERROR', 'CRITICAL', 'DOWN', 'EMERGENCY_STOP', 'CIRCUIT_OPEN'].includes(normalized)) status = 'CRITICAL';
+
+  const snapshots = Array.isArray(raw?.snapshots) ? raw.snapshots : Array.isArray(raw?.modules) ? raw.modules : null;
+  const failedModules = Array.isArray(snapshots)
+    ? snapshots.filter((s) => String(s?.status || '').toUpperCase() === 'FAIL' || String(s?.status || '').toUpperCase() === 'CRITICAL')
+    : [];
+  return {
+    status,
+    raw: rawStatus,
+    snapshots,
+    failedModules,
+    reason: status || 'UNKNOWN_STATUS'
   };
 }
 
@@ -1203,27 +1330,30 @@ export async function onRequestGet(context) {
   const thresholds = thresholdsCheck.valid ? thresholdsRaw : null;
   const sourceMap = sourceMapCheck.valid ? sourceMapRaw : null;
   const opsPolicy = normalizeOpsPolicy(opsHealthPolicyRaw);
+  const rootStatusPath = opsPolicy?.health?.source_of_truth?.root_status_path || DEFAULT_OPS_POLICY.health.source_of_truth.root_status_path;
+  const rootStatusDoc = await fetchAssetJson(request.url, rootStatusPath, null);
+  const rootStatusInfo = normalizeRootStatus(rootStatusDoc);
 
   const previewMode = detectPreviewMode(url, env);
   const profilePick = pickProfile(previewMode, healthProfiles?.profiles || {});
   const profile = profilePick.profile || { expected: { scheduler: !previewMode.isPreview, kv: !previewMode.isPreview, pipeline: false }, not_expected_status: 'INFO' };
-  const modePolicy = previewMode.isProduction ? opsPolicy?.mode?.production : opsPolicy?.mode?.preview;
+  const modePolicy = previewMode.isProduction ? opsPolicy?.mode_matrix?.prod : opsPolicy?.mode_matrix?.preview;
   const expectedFallback = {
     scheduler: !previewMode.isPreview,
     kv: !previewMode.isPreview,
     pipeline: false
   };
+  const pipelineExpected = normalizePipelineExpected(modePolicy?.pipeline_expected);
   const expectedFlags = {
     ...expectedFallback,
     ...(profile.expected || {}),
-    ...(modePolicy ? {
-      scheduler: Boolean(modePolicy.scheduler_expected),
-      kv: Boolean(modePolicy.kv_expected),
-      pipeline: Boolean(modePolicy.pipeline_expected)
-    } : {}),
-    pipeline: false
+    scheduler: typeof modePolicy?.scheduler_expected === 'boolean' ? modePolicy.scheduler_expected : (profile.expected?.scheduler ?? expectedFallback.scheduler),
+    kv: typeof modePolicy?.kv_expected === 'boolean' ? modePolicy.kv_expected : (profile.expected?.kv ?? expectedFallback.kv),
+    pipeline: pipelineExpected ?? (profile.expected?.pipeline ?? expectedFallback.pipeline)
   };
-  const pricesStaticRequired = typeof profile.prices_static_required === 'boolean' ? profile.prices_static_required : false;
+  const pricesStaticRequired = typeof modePolicy?.static_persist_required === 'boolean'
+    ? modePolicy.static_persist_required
+    : (typeof profile.prices_static_required === 'boolean' ? profile.prices_static_required : false);
 
   let failuresDay = [];
   let snapshots = [];
@@ -1649,6 +1779,103 @@ export async function onRequestGet(context) {
   const enhancerAssetChecks = selectPolicyChecks(assetChecks, opsPolicy?.enhancers?.assets, false);
   const coreAssetHealth = summarizeChecks(coreAssetChecks);
   const enhancerAssetHealth = summarizeChecks(enhancerAssetChecks);
+
+  const rootStatusPresent = rootStatusDoc && typeof rootStatusDoc === 'object';
+  const rootStatusValid = rootStatusInfo.status != null;
+  const rootSystemOk = rootStatusInfo.status === 'OK' || rootStatusInfo.status === 'WARNING';
+  const moduleStatusesPresent = Array.isArray(rootStatusInfo.snapshots) && rootStatusInfo.snapshots.length > 0;
+  const rootChecks = {
+    ROOT_STATUS_PRESENT: buildCheck({
+      id: 'ROOT_STATUS_PRESENT',
+      label: rootStatusPath,
+      required: true,
+      ok: rootStatusPresent,
+      reason: rootStatusPresent ? 'OK' : 'MISSING',
+      path: rootStatusPath,
+      evidence: { has_root: rootStatusPresent }
+    }),
+    ROOT_STATUS_VALID: buildCheck({
+      id: 'ROOT_STATUS_VALID',
+      label: 'root status is valid',
+      required: true,
+      ok: rootStatusValid,
+      reason: rootStatusValid ? 'OK' : 'INVALID_STATUS',
+      path: rootStatusPath,
+      evidence: { status: rootStatusInfo.raw || null }
+    }),
+    ROOT_STATUS_SYSTEM_OK: buildCheck({
+      id: 'ROOT_STATUS_SYSTEM_OK',
+      label: 'root status indicates OK/PARTIAL',
+      required: true,
+      ok: rootSystemOk,
+      reason: rootSystemOk ? 'OK' : 'ROOT_STATUS_FAIL',
+      path: rootStatusPath,
+      evidence: { status: rootStatusInfo.raw || null }
+    }),
+    MODULE_STATUSES_OK: buildCheck({
+      id: 'MODULE_STATUSES_OK',
+      label: 'module statuses present',
+      required: true,
+      ok: moduleStatusesPresent,
+      reason: moduleStatusesPresent ? 'OK' : 'MODULES_MISSING',
+      path: rootStatusPath,
+      evidence: {
+        total: moduleStatusesPresent ? rootStatusInfo.snapshots.length : null,
+        failed: rootStatusInfo.failedModules.length
+      }
+    }),
+    SSOT_ASSETS_REQUIRED_OK: buildCheck({
+      id: 'SSOT_ASSETS_REQUIRED_OK',
+      label: 'SSOT assets required',
+      required: true,
+      ok: coreAssetHealth.status === 'OK',
+      reason: coreAssetHealth.status === 'OK' ? 'OK' : coreAssetHealth.reason,
+      path: '/data/*',
+      evidence: { status: coreAssetHealth.status }
+    }),
+    SSOT_APIS_REQUIRED_OK: buildCheck({
+      id: 'SSOT_APIS_REQUIRED_OK',
+      label: 'SSOT APIs required',
+      required: true,
+      ok: coreApiHealth.status === 'OK',
+      reason: coreApiHealth.status === 'OK' ? 'OK' : coreApiHealth.reason,
+      path: '/api/*',
+      evidence: { status: coreApiHealth.status }
+    })
+  };
+
+  const requiredHealthChecks = (opsPolicy?.health?.required_checks || DEFAULT_OPS_POLICY.health.required_checks)
+    .map((id) => rootChecks[id] || buildCheck({
+      id,
+      label: id,
+      required: true,
+      ok: false,
+      reason: 'CHECK_MISSING',
+      path: null,
+      evidence: null
+    }));
+  const requiredHealthFailures = requiredHealthChecks.filter((c) => c.status !== 'OK');
+  let systemStatus = 'OK';
+  let systemReason = 'OK';
+  if (requiredHealthFailures.length) {
+    systemStatus = 'CRITICAL';
+    systemReason = requiredHealthFailures[0]?.reason || 'REQUIRED_CHECK_FAIL';
+  } else if (rootStatusInfo.status === 'WARNING') {
+    systemStatus = 'WARNING';
+    systemReason = 'ROOT_STATUS_PARTIAL';
+  } else if (rootStatusInfo.status === 'CRITICAL') {
+    systemStatus = 'CRITICAL';
+    systemReason = 'ROOT_STATUS_CRITICAL';
+  }
+  const systemHealth = {
+    status: systemStatus,
+    reason: systemReason,
+    checks: requiredHealthChecks,
+    action: {
+      url: rootStatusPath,
+      howTo: 'Verify root status and required SSOT checks'
+    }
+  };
   const fundamentalsTruth = buildFundamentalsTruthChain(traceAssets, startedAtIso);
   const pricesSnapDate = (() => {
     const snap = marketPricesSnapshot;
@@ -1833,6 +2060,7 @@ export async function onRequestGet(context) {
   };
 
   const health = {
+    system: systemHealth,
     platform: {
       status: platformStatus,
       reason: expectedFlags.kv ? (hasKV ? 'KV_OK' : 'KV_MISSING') : 'NOT_EXPECTED',
@@ -1860,17 +2088,15 @@ export async function onRequestGet(context) {
   const owner = buildOwnerSummary(health);
 
   const metaStatus = (() => {
-    const statuses = Object.values(health).map((h) => h?.status).filter(Boolean);
-    if (statuses.includes('CRITICAL')) return 'error';
-    if (statuses.includes('WARNING')) return 'degraded';
+    if (health.system?.status === 'CRITICAL') return 'error';
+    if (health.system?.status === 'WARNING') return 'degraded';
     return 'ok';
   })();
   const metaReason =
+    health.system?.reason ||
     health.prices?.reason ||
     health.api?.reason ||
-    health.pipeline?.reason ||
-    health.freshness?.reason ||
-    health.platform?.reason ||
+    health.assets?.reason ||
     null;
 
   const contracts = {
@@ -1939,6 +2165,7 @@ export async function onRequestGet(context) {
       health,
       owner,
       cards: {
+        system: health.system,
         platform: health.platform,
         api: health.api,
         prices: health.prices,
@@ -2026,7 +2253,7 @@ export async function onRequestGet(context) {
     error: null
   };
 
-  if (!hasKV) {
+  if (!hasKV && expectedFlags.kv) {
     payload.metadata.status = 'PARTIAL';
   }
   if (contractCritical) {

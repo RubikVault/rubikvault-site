@@ -157,6 +157,7 @@ async function main() {
   const healthDirLatestPath = path.join(SNAPSHOTS_DIR, "health", "latest.json");
   const healthLatestPath = path.join(PUBLIC_DATA, "blocks", "health.latest.json");
   const systemHealthPath = path.join(PUBLIC_DATA, "system-health.json");
+  const statusPath = path.join(PUBLIC_DATA, "status.json");
   const seedManifestPath = path.join(PUBLIC_DATA, "seed-manifest.json");
 
   const seedManifest = await readJson(seedManifestPath);
@@ -216,6 +217,7 @@ async function main() {
 
   const legacySystemHealth = buildLegacySystemHealthFromSnapshots(allSnapshots, generatedAt);
   await writeJson(systemHealthPath, legacySystemHealth);
+  await writeJson(statusPath, legacySystemHealth);
 
   console.log(`[health-refresh] updated ${path.relative(ROOT, healthPath)}`);
   console.log(`[health-refresh] updated ${path.relative(ROOT, healthLatestPath)}`);

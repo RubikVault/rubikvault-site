@@ -21,5 +21,6 @@ requireStatus('ssot.core.api.status', coreApi?.status);
 requireStatus('ssot.core.assets.status', coreAssets?.status);
 requireStatus('health.api.status', health?.api?.status);
 requireStatus('health.assets.status', health?.assets?.status);
+requireStatus('health.system.status', health?.system?.status);
 
 console.log('OK: core SSOT checks are GREEN');

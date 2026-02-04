@@ -1,43 +1,51 @@
 {
-  "version": "1.0",
-  "sample_ticker": "UBER",
-  "mode": {
-    "preview": {
-      "scheduler_expected": false,
-      "pipeline_expected": false,
-      "kv_expected": false
+  "schema_version": "1.0",
+  "health": {
+    "source_of_truth": {
+      "root_status_path": "/data/status.json",
+      "status_layout_policy_path": "policies/status_layout.json"
     },
-    "production": {
-      "scheduler_expected": true,
-      "pipeline_expected": false,
-      "kv_expected": true
+    "required_checks": [
+      "ROOT_STATUS_PRESENT",
+      "ROOT_STATUS_VALID",
+      "ROOT_STATUS_SYSTEM_OK",
+      "MODULE_STATUSES_OK",
+      "SSOT_ASSETS_REQUIRED_OK",
+      "SSOT_APIS_REQUIRED_OK"
+    ],
+    "verdict_order": ["EMERGENCY_STOP", "CIRCUIT_OPEN", "FAIL", "STALE", "PARTIAL", "OK"]
+  },
+  "telemetry": {
+    "non_blocking_checks": [
+      "P1_UI_CALLS_API",
+      "P5_STATIC_PERSIST",
+      "P7_UI_RENDERS",
+      "UI_TRACE_ORIGIN",
+      "PIPELINE_COVERAGE",
+      "INDICATORS_COVERAGE",
+      "SCHEDULER_EXPECTED",
+      "RUNTIME_BINDINGS"
+    ],
+    "ui_treatment": {
+      "INFO_is_neutral": true,
+      "N_A_label": "N/A",
+      "INFO_label": "INFO"
     }
   },
-  "core": {
-    "api": [
-      "API_STOCK",
-      "API_ELLIOTT_SCANNER"
-    ],
-    "assets": [
-      "ASSET_UNIVERSE",
-      "ASSET_STOCK_ANALYSIS",
-      "ASSET_EOD_BATCH",
-      "ASSET_MARKETPHASE_INDEX",
-      "ASSET_MARKET_PRICES"
-    ]
-  },
-  "enhancers": {
-    "api": [
-      "API_FUNDAMENTALS"
-    ],
-    "assets": [
-      "ASSET_MARKETPHASE_SAMPLE"
-    ],
-    "pipeline": [
-      "PIPELINE_FETCHED",
-      "PIPELINE_VALIDATED",
-      "PIPELINE_COMPUTED",
-      "PIPELINE_STATIC_READY"
-    ]
+  "mode_matrix": {
+    "preview": {
+      "telemetry_expected": false,
+      "scheduler_expected": false,
+      "pipeline_expected": "NOT_EXPECTED",
+      "ui_trace_required": false,
+      "static_persist_required": false
+    },
+    "prod": {
+      "telemetry_expected": true,
+      "scheduler_expected": true,
+      "pipeline_expected": "EXPECTED",
+      "ui_trace_required": true,
+      "static_persist_required": false
+    }
   }
 }
