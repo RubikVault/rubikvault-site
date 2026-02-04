@@ -1,18 +1,60 @@
-PROOF — OPS gate policy + single verdict
-Timestamp: 2026-02-04
+# A3 Proof — Build-info SSOT (Option A)
 
-Local tests run:
-1) npm run test:contracts
-   RESULT: PASS
+## Local artifact proof (repo)
+$ cat public/data/snapshots/build-info/latest.json
+{
+  "schema_version": "3.0",
+  "metadata": {
+    "module": "build-info",
+    "tier": "system",
+    "domain": "system",
+    "source": "build",
+    "fetched_at": "2026-02-04T09:01:50.386Z",
+    "published_at": "2026-02-04T09:01:50.386Z",
+    "validation": {
+      "passed": true
+    }
+  },
+  "meta": {
+    "version": "3.0",
+    "status": "ok",
+    "provider": "build",
+    "data_date": "2026-02-04",
+    "generated_at": "2026-02-04T09:01:50.386Z"
+  },
+  "data": {
+    "commitSha": "12ac7e6e8403b5a22ec8e35bee38a25414556710",
+    "generatedAt": "2026-02-04T09:01:50.386Z",
+    "branch": "main",
+    "env": {
+      "node": "v25.2.1",
+      "ci": false,
+      "github_actions": false,
+      "cf_pages": false,
+      "cf_pages_commit_sha": null,
+      "github_sha": null,
+      "branch": "main"
+    },
+    "git_sha": "12ac7e6e8403b5a22ec8e35bee38a25414556710",
+    "build_time_utc": "2026-02-04T09:01:50.386Z"
+  },
+  "error": null
+}
 
-2) npx playwright test tests/e2e/ops.spec.mjs
-   RESULT: FAIL (baseURL defaults to https://rubikvault.com; new gate IDs not present pre-deploy)
-   NOTE: rerun after deploy with BASE_URL=<preview>.
+## Tests
+$ node tests/build-info-artifact.test.mjs
+OK: build-info artifact
 
-Suggested post-deploy verification (preview):
-- BASE_URL="https://<preview>.pages.dev" npx playwright test tests/e2e/ops.spec.mjs
-- curl -fsS "https://<preview>.pages.dev/api/mission-control/summary?debug=1" | jq '{metaStatus:.meta.status, gates:.data.gates.overall}'
+$ npm run test:truth-chain
+Truth chain test OK
+
+## Preview proof (NOT RUN)
+Root cause: preview base URL not provided in this runbook. Provide a preview base to run:
+
+1) curl -fsS "https://<PREVIEW>/data/snapshots/build-info/latest.json" | jq '{meta, data}'
+2) curl -fsS "https://<PREVIEW>/api/build-info?debug=1" | jq '{ok, meta, error, data}'
+
 Expected:
-- meta.status == "ok" or "degraded" (not "error" unless contract break)
-- data.gates.overall.status in ["GREEN","YELLOW","RED"]
+- artifact meta.version == "3.0", meta.provider == "build"
+- api ok:true, no PROOF_FAILED
 

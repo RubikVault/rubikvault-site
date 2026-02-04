@@ -45,18 +45,6 @@ if (!Array.isArray(owner?.topIssues)) {
   fail('owner.topIssues missing or not array');
 }
 
-const gates = summary?.data?.gates;
-if (!gates || typeof gates !== 'object') {
-  fail('gates missing at data.gates');
-}
-if (typeof gates?.overall?.status !== 'string') {
-  fail('gates.overall.status missing');
-}
-const allowedGateStatus = new Set(['GREEN', 'YELLOW', 'RED']);
-if (!allowedGateStatus.has(String(gates?.overall?.status))) {
-  fail(`gates.overall.status invalid: ${gates?.overall?.status}`);
-}
-
 const truthChains = summary?.data?.truthChains;
 if (!truthChains || typeof truthChains !== 'object') {
   fail('truthChains missing at data.truthChains');

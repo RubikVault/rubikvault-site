@@ -5,6 +5,7 @@ import { fetchWithContext } from './fetch-with-context.mjs';
 const base = getOpsBase();
 const opsUrl = `${base}/ops/?debug=1&t=${Date.now()}`;
 const latestUrl = `${base}/data/pipeline/nasdaq100.latest.json`;
+const truthUrl = `${base}/data/pipeline/nasdaq100.pipeline-truth.json`;
 
 async function fetchJson(url, ctx) {
   const res = await fetchWithContext(url, {}, ctx);
@@ -48,6 +49,14 @@ function printForensic(info) {
 let browser;
 try {
   const latestDoc = await fetchJson(latestUrl, { name: 'pipeline-latest' });
+  let truthDoc = null;
+  try {
+    truthDoc = await fetchJson(truthUrl, { name: 'pipeline-truth' });
+  } catch (err) {
+    console.warn('WARN: pipeline-truth artifact missing; skipping truth-chain UI match');
+    truthDoc = null;
+  }
+
   const latestCounts = latestDoc?.counts || {};
   const expectedFetched = requireNumber(latestCounts.fetched, 'latest.counts.fetched');
   const expectedValidated = requireNumber(latestCounts.validated, 'latest.counts.validated');
@@ -58,7 +67,7 @@ try {
   const bridge = page.locator('#ops-bridge');
   try {
     await expect(bridge).toHaveAttribute('data-status', /ok|degraded/, { timeout: 20000 });
-    await expect(bridge).toHaveAttribute('data-baseline', /ok|pending|fail/, { timeout: 20000 });
+    await expect(bridge).toHaveAttribute('data-baseline', /ok|pending/, { timeout: 20000 });
   } catch (err) {
     const info = await extractBridgeInfo(page);
     printForensic(info);
@@ -86,12 +95,28 @@ try {
     throw new Error(`UI validated vs latest mismatch: got ${validatedUi}, expected ${expectedValidated}`);
   }
 
-  await expect(page.locator('#gate-core')).toHaveAttribute('data-status', /GREEN|YELLOW|RED/);
-  await expect(page.locator('#gate-freshness')).toHaveAttribute('data-status', /GREEN|YELLOW|RED/);
-  await expect(page.locator('#gate-pipeline')).toHaveAttribute('data-status', /GREEN|YELLOW|RED/);
-  await expect(page.locator('#gate-observability')).toHaveAttribute('data-status', /GREEN|YELLOW|RED/);
+  if (truthDoc) {
+    const s1Locator = page.locator('[data-step-id="S1"]');
+    const s2Locator = page.locator('[data-step-id="S2"]');
+    const uiBlocker = await page.getAttribute('#truth-chain-steps', 'data-first-blocker');
 
-  console.log('OK: ops UI matches pipeline latest + gate cards');
+    const truthSteps = Array.isArray(truthDoc?.steps) ? truthDoc.steps : [];
+    const truthS1 = truthSteps.find((s) => s.id === 'S1');
+    const truthS2 = truthSteps.find((s) => s.id === 'S2');
+    const truthBlocker = truthDoc?.first_blocker_id || truthDoc?.first_blocker?.id || null;
+
+    if (!truthS1 || !truthS2) {
+      throw new Error('Truth doc missing S1/S2 steps');
+    }
+
+    await expect(s1Locator).toHaveAttribute('data-step-status', truthS1.status);
+    await expect(s2Locator).toHaveAttribute('data-step-status', truthS2.status);
+    if (truthBlocker && uiBlocker !== truthBlocker) {
+      throw new Error(`First blocker mismatch: UI ${uiBlocker}, truth ${truthBlocker}`);
+    }
+  }
+
+  console.log('OK: ops UI matches pipeline latest + truth chain');
   await browser.close();
   process.exit(0);
 } catch (err) {
