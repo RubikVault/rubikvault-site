@@ -1137,13 +1137,20 @@
       }).join('');
     }
 
+    function apiPath(path) {
+      if (typeof path !== 'string') return '/api/mission-control/summary';
+      if (path.startsWith('/api/')) return path;
+      if (path.startsWith('/')) return path;
+      return `/${path}`;
+    }
+
     async function refreshSummary(options = {}) {
       const statusEl = document.getElementById('loading');
       const last = document.getElementById('last-refresh');
       if (last) last.textContent = `Last action: ${new Date().toLocaleString()}`;
       const t = Date.now();
       const debugEnabled = new URLSearchParams(window.location.search).get('debug') === '1';
-      const summaryUrl = `/api/mission-control/summary${debugEnabled ? '?debug=1' : ''}${debugEnabled ? '&' : '?'}t=${t}`;
+      const summaryUrl = apiPath(`api/mission-control/summary${debugEnabled ? '?debug=1' : ''}${debugEnabled ? '&' : '?'}t=${t}`);
 
       try {
         setRenderStatus('boot', 'fetching');
@@ -1248,7 +1255,7 @@
 
     async function refreshLiveWithKey(key) {
       try {
-        const res = await fetch('/api/mission-control/summary?live=1', {
+        const res = await fetch(apiPath('api/mission-control/summary?live=1'), {
           cache: 'no-store',
           headers: {
             'X-OPS-KEY': key
