@@ -1,0 +1,55 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://rubikvault.com/schemas/policies/ops_health.schema.json",
+  "title": "ops_health policy",
+  "type": "object",
+  "required": ["version", "sample_ticker", "core", "enhancers"],
+  "properties": {
+    "version": { "type": "string" },
+    "sample_ticker": { "type": "string", "minLength": 1 },
+    "mode": {
+      "type": "object",
+      "properties": {
+        "preview": {
+          "type": "object",
+          "properties": {
+            "scheduler_expected": { "type": "boolean" },
+            "pipeline_expected": { "type": "boolean" },
+            "kv_expected": { "type": "boolean" }
+          },
+          "additionalProperties": false
+        },
+        "production": {
+          "type": "object",
+          "properties": {
+            "scheduler_expected": { "type": "boolean" },
+            "pipeline_expected": { "type": "boolean" },
+            "kv_expected": { "type": "boolean" }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "core": {
+      "type": "object",
+      "required": ["api", "assets"],
+      "properties": {
+        "api": { "type": "array", "items": { "type": "string" } },
+        "assets": { "type": "array", "items": { "type": "string" } }
+      },
+      "additionalProperties": false
+    },
+    "enhancers": {
+      "type": "object",
+      "required": ["api", "assets"],
+      "properties": {
+        "api": { "type": "array", "items": { "type": "string" } },
+        "assets": { "type": "array", "items": { "type": "string" } },
+        "pipeline": { "type": "array", "items": { "type": "string" } }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

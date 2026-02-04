@@ -1,0 +1,43 @@
+{
+  "version": "1.0",
+  "sample_ticker": "UBER",
+  "mode": {
+    "preview": {
+      "scheduler_expected": false,
+      "pipeline_expected": false,
+      "kv_expected": false
+    },
+    "production": {
+      "scheduler_expected": true,
+      "pipeline_expected": false,
+      "kv_expected": true
+    }
+  },
+  "core": {
+    "api": [
+      "API_STOCK",
+      "API_ELLIOTT_SCANNER"
+    ],
+    "assets": [
+      "ASSET_UNIVERSE",
+      "ASSET_STOCK_ANALYSIS",
+      "ASSET_EOD_BATCH",
+      "ASSET_MARKETPHASE_INDEX",
+      "ASSET_MARKET_PRICES"
+    ]
+  },
+  "enhancers": {
+    "api": [
+      "API_FUNDAMENTALS"
+    ],
+    "assets": [
+      "ASSET_MARKETPHASE_SAMPLE"
+    ],
+    "pipeline": [
+      "PIPELINE_FETCHED",
+      "PIPELINE_VALIDATED",
+      "PIPELINE_COMPUTED",
+      "PIPELINE_STATIC_READY"
+    ]
+  }
+}

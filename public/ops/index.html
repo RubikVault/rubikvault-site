@@ -304,6 +304,45 @@
 
       <div class="grid2" style="margin-bottom: 12px;">
         <div class="card">
+          <div class="k" style="margin-bottom: 10px;">Enhancers API (non-blocking)</div>
+          <table>
+            <thead>
+              <tr>
+                <th>Check</th>
+                <th>Required</th>
+                <th>Status</th>
+                <th>Reason</th>
+              </tr>
+            </thead>
+            <tbody id="enhancer-api-checks"></tbody>
+          </table>
+          <div id="enhancer-api-note" class="small" style="margin-top: 10px;"></div>
+        </div>
+        <div class="card">
+          <div class="k" style="margin-bottom: 10px;">Enhancers assets (non-blocking)</div>
+          <table>
+            <thead>
+              <tr>
+                <th>Asset</th>
+                <th>Required</th>
+                <th>Status</th>
+                <th>Reason</th>
+              </tr>
+            </thead>
+            <tbody id="enhancer-asset-checks"></tbody>
+          </table>
+          <div id="enhancer-asset-note" class="small" style="margin-top: 10px;"></div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-bottom: 12px;">
+        <div class="k">Enhancers status (non-blocking)</div>
+        <div class="v" id="enhancers-status">—</div>
+        <div class="small" id="enhancers-reason">—</div>
+      </div>
+
+      <div class="grid2" style="margin-bottom: 12px;">
+        <div class="card">
           <div class="k" style="margin-bottom: 10px;">Data freshness</div>
           <div class="small" id="freshness-global">—</div>
           <div class="small" id="freshness-stale" style="margin-top: 8px;">—</div>
@@ -534,11 +573,17 @@
       if (!ssot || typeof ssot !== 'object') {
         return { ok: false, level: 'error', reason: 'MISSING_SSOT' };
       }
-      if (!Array.isArray(ssot?.api?.checks)) {
-        return { ok: false, level: 'error', reason: 'MISSING_SSOT_API' };
+      if (!Array.isArray(ssot?.core?.api?.checks)) {
+        return { ok: false, level: 'error', reason: 'MISSING_SSOT_CORE_API' };
       }
-      if (!Array.isArray(ssot?.assets?.checks)) {
-        return { ok: false, level: 'error', reason: 'MISSING_SSOT_ASSETS' };
+      if (!Array.isArray(ssot?.core?.assets?.checks)) {
+        return { ok: false, level: 'error', reason: 'MISSING_SSOT_CORE_ASSETS' };
+      }
+      if (!Array.isArray(ssot?.enhancers?.api?.checks)) {
+        return { ok: false, level: 'error', reason: 'MISSING_SSOT_ENH_API' };
+      }
+      if (!Array.isArray(ssot?.enhancers?.assets?.checks)) {
+        return { ok: false, level: 'error', reason: 'MISSING_SSOT_ENH_ASSETS' };
       }
       const p6 = priceTruth.steps.find((s) => s.id === 'P6_API_CONTRACT');
       if (!p6?.evidence?.checked_path || !Array.isArray(p6?.evidence?.required_fields)) {
@@ -549,8 +594,8 @@
       const baselineVerdict = payload?.data?.opsBaseline?.overall?.verdict || null;
       const reason = prices.reason || meta.reason || '';
       let level = overallVerdict === 'OK' ? 'ok' : overallVerdict === 'CRITICAL' ? 'error' : 'degraded';
-      const ssotApiStatus = ssot?.api?.status;
-      const ssotAssetStatus = ssot?.assets?.status;
+      const ssotApiStatus = ssot?.core?.api?.status;
+      const ssotAssetStatus = ssot?.core?.assets?.status;
       if (ssotApiStatus === 'CRITICAL' || ssotAssetStatus === 'CRITICAL') {
         level = 'error';
       } else if (ssotApiStatus === 'WARNING' || ssotAssetStatus === 'WARNING') {
@@ -640,6 +685,12 @@
       renderHealthTile('api', health.api);
       renderHealthTile('prices', health.prices);
       renderHealthTile('pipeline', health.pipeline);
+      const enhStatus = enhApi?.status || enhAssets?.status || 'UNKNOWN';
+      const enhReason = enhApi?.reason || enhAssets?.reason || '—';
+      const enhEl = document.getElementById('enhancers-status');
+      const enhReasonEl = document.getElementById('enhancers-reason');
+      if (enhEl) enhEl.innerHTML = pill(enhStatus, statusClass(enhStatus));
+      if (enhReasonEl) enhReasonEl.textContent = enhReason;
 
       const workersToday = data?.budgets?.workersRequests?.usedToday ?? null;
       const workersLast24h = data?.opsLive?.cloudflare?.requestsLast24h ?? null;
@@ -696,8 +747,14 @@
         : '<tr><td colspan=\"6\" class=\"small\">No provider budgets</td></tr>';
 
       const ssot = data?.ssot || {};
-      const apiChecks = Array.isArray(ssot?.api?.checks) ? ssot.api.checks : [];
-      const assetChecks = Array.isArray(ssot?.assets?.checks) ? ssot.assets.checks : [];
+      const coreApi = ssot?.core?.api || ssot?.api || {};
+      const coreAssets = ssot?.core?.assets || ssot?.assets || {};
+      const enhApi = ssot?.enhancers?.api || {};
+      const enhAssets = ssot?.enhancers?.assets || {};
+      const apiChecks = Array.isArray(coreApi?.checks) ? coreApi.checks : [];
+      const assetChecks = Array.isArray(coreAssets?.checks) ? coreAssets.checks : [];
+      const enhApiChecks = Array.isArray(enhApi?.checks) ? enhApi.checks : [];
+      const enhAssetChecks = Array.isArray(enhAssets?.checks) ? enhAssets.checks : [];
 
       const checkRow = (check) => {
         const label = check?.label || check?.id || 'unknown';
@@ -719,7 +776,7 @@
           : '<tr><td colspan="4" class="small">No SSOT API checks</td></tr>';
       }
       const apiNote = document.getElementById('ssot-api-note');
-      if (apiNote) apiNote.textContent = ssot?.api?.reason ? `Status: ${ssot.api.status} • ${ssot.api.reason}` : 'Status: UNKNOWN';
+      if (apiNote) apiNote.textContent = coreApi?.reason ? `Status: ${coreApi.status} • ${coreApi.reason}` : 'Status: UNKNOWN';
 
       const assetEl = document.getElementById('ssot-asset-checks');
       if (assetEl) {
@@ -728,7 +785,25 @@
           : '<tr><td colspan="4" class="small">No SSOT asset checks</td></tr>';
       }
       const assetNote = document.getElementById('ssot-asset-note');
-      if (assetNote) assetNote.textContent = ssot?.assets?.reason ? `Status: ${ssot.assets.status} • ${ssot.assets.reason}` : 'Status: UNKNOWN';
+      if (assetNote) assetNote.textContent = coreAssets?.reason ? `Status: ${coreAssets.status} • ${coreAssets.reason}` : 'Status: UNKNOWN';
+
+      const enhApiEl = document.getElementById('enhancer-api-checks');
+      const enhApiNote = document.getElementById('enhancer-api-note');
+      if (enhApiEl) {
+        enhApiEl.innerHTML = enhApiChecks.length
+          ? enhApiChecks.map((c) => checkRow(c)).join('')
+          : '<tr><td colspan="4" class="small">No enhancer API checks</td></tr>';
+      }
+      if (enhApiNote) enhApiNote.textContent = enhApi?.reason ? `Status: ${enhApi.status} • ${enhApi.reason}` : 'Status: UNKNOWN';
+
+      const enhAssetEl = document.getElementById('enhancer-asset-checks');
+      const enhAssetNote = document.getElementById('enhancer-asset-note');
+      if (enhAssetEl) {
+        enhAssetEl.innerHTML = enhAssetChecks.length
+          ? enhAssetChecks.map((c) => checkRow(c)).join('')
+          : '<tr><td colspan="4" class="small">No enhancer asset checks</td></tr>';
+      }
+      if (enhAssetNote) enhAssetNote.textContent = enhAssets?.reason ? `Status: ${enhAssets.status} • ${enhAssets.reason}` : 'Status: UNKNOWN';
 
       const apiRequired = apiChecks.filter((c) => c?.required);
       const assetRequired = assetChecks.filter((c) => c?.required);

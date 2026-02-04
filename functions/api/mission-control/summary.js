@@ -9,6 +9,7 @@ import {
   trimErrors
 } from '../_shared/contracts.js';
 import { getBarNode } from '../../_ops/shape.js';
+import opsHealthPolicyRaw from '../../policies/ops_health.json' assert { type: 'json' };
 
 const MODULE_NAME = 'mission-control-summary';
 const SNAPSHOT_MODULES_HINT = ['universe', 'market-prices', 'market-stats', 'market-score'];
@@ -20,6 +21,16 @@ const PRICE_TRACE_TICKERS = ['UBER', 'TEAM', 'WBD'];
 const PRICE_TRACE_PATH = (ticker) => `/debug/truth-chain/${ticker}.trace.json`;
 const PRICE_UI_TRACE_PATH = (ticker) => `/debug/ui-path/${ticker}.ui-path.trace.json`;
 const PRICE_CHAIN_VERSION = 'v2';
+const DEFAULT_OPS_POLICY = {
+  version: '1.0',
+  sample_ticker: 'UBER',
+  mode: {
+    preview: { scheduler_expected: false, pipeline_expected: false, kv_expected: false },
+    production: { scheduler_expected: true, pipeline_expected: false, kv_expected: true }
+  },
+  core: { api: [], assets: [] },
+  enhancers: { api: [], assets: [], pipeline: [] }
+};
 
 let LAST_CACHE = null;
 let LAST_CACHE_AT_MS = 0;
@@ -225,6 +236,56 @@ function summarizeChecks(checks = []) {
     };
   }
   return { status: 'OK', reason: 'OK', checks };
+}
+
+function normalizeOpsPolicy(policy) {
+  if (!policy || typeof policy !== 'object') return DEFAULT_OPS_POLICY;
+  return {
+    ...DEFAULT_OPS_POLICY,
+    ...policy,
+    mode: {
+      ...DEFAULT_OPS_POLICY.mode,
+      ...(policy.mode || {})
+    },
+    core: {
+      api: Array.isArray(policy?.core?.api) ? policy.core.api : DEFAULT_OPS_POLICY.core.api,
+      assets: Array.isArray(policy?.core?.assets) ? policy.core.assets : DEFAULT_OPS_POLICY.core.assets
+    },
+    enhancers: {
+      api: Array.isArray(policy?.enhancers?.api) ? policy.enhancers.api : DEFAULT_OPS_POLICY.enhancers.api,
+      assets: Array.isArray(policy?.enhancers?.assets) ? policy.enhancers.assets : DEFAULT_OPS_POLICY.enhancers.assets,
+      pipeline: Array.isArray(policy?.enhancers?.pipeline) ? policy.enhancers.pipeline : DEFAULT_OPS_POLICY.enhancers.pipeline
+    }
+  };
+}
+
+function selectPolicyChecks(allChecks, ids, requiredDefault = false) {
+  const byId = new Map(allChecks.map((c) => [c.id, c]));
+  const out = [];
+  for (const id of ids || []) {
+    const found = byId.get(id);
+    if (found) {
+      out.push(found);
+    } else {
+      out.push(buildCheck({
+        id,
+        label: id,
+        required: requiredDefault,
+        ok: false,
+        reason: 'CHECK_MISSING',
+        path: null,
+        evidence: null
+      }));
+    }
+  }
+  return out;
+}
+
+function combineCoreStatus(items = []) {
+  const statuses = items.map((i) => i?.status).filter(Boolean);
+  if (statuses.includes('CRITICAL')) return { status: 'CRITICAL', reason: 'CORE_FAIL' };
+  if (statuses.includes('WARNING')) return { status: 'WARNING', reason: 'CORE_WARN' };
+  return { status: 'OK', reason: 'OK' };
 }
 
 function isPipelineTruthDoc(doc) {
@@ -1141,12 +1202,27 @@ export async function onRequestGet(context) {
   const healthProfiles = healthProfilesCheck.valid ? healthProfilesRaw : null;
   const thresholds = thresholdsCheck.valid ? thresholdsRaw : null;
   const sourceMap = sourceMapCheck.valid ? sourceMapRaw : null;
+  const opsPolicy = normalizeOpsPolicy(opsHealthPolicyRaw);
 
   const previewMode = detectPreviewMode(url, env);
   const profilePick = pickProfile(previewMode, healthProfiles?.profiles || {});
   const profile = profilePick.profile || { expected: { scheduler: !previewMode.isPreview, kv: !previewMode.isPreview, pipeline: false }, not_expected_status: 'INFO' };
-  const expectedFallback = { scheduler: !previewMode.isPreview, kv: !previewMode.isPreview, pipeline: false };
-  const expectedFlags = { ...expectedFallback, ...(profile.expected || {}), pipeline: false };
+  const modePolicy = previewMode.isProduction ? opsPolicy?.mode?.production : opsPolicy?.mode?.preview;
+  const expectedFallback = {
+    scheduler: !previewMode.isPreview,
+    kv: !previewMode.isPreview,
+    pipeline: false
+  };
+  const expectedFlags = {
+    ...expectedFallback,
+    ...(profile.expected || {}),
+    ...(modePolicy ? {
+      scheduler: Boolean(modePolicy.scheduler_expected),
+      kv: Boolean(modePolicy.kv_expected),
+      pipeline: Boolean(modePolicy.pipeline_expected)
+    } : {}),
+    pipeline: false
+  };
   const pricesStaticRequired = typeof profile.prices_static_required === 'boolean' ? profile.prices_static_required : false;
 
   let failuresDay = [];
@@ -1421,7 +1497,7 @@ export async function onRequestGet(context) {
     ? validateSnapshot(marketPricesSnapshot)
     : { valid: false, errors: ['artifact missing'] };
 
-  const ssotSampleTicker = PRICE_TRACE_TICKERS[0] || 'UBER';
+  const ssotSampleTicker = opsPolicy?.sample_ticker || PRICE_TRACE_TICKERS[0] || 'UBER';
   const [
     universeDoc,
     stockAnalysisDoc,
@@ -1495,7 +1571,10 @@ export async function onRequestGet(context) {
       }
     })
   ];
-  const ssotApiHealth = summarizeChecks(apiChecks);
+  const coreApiChecks = selectPolicyChecks(apiChecks, opsPolicy?.core?.api, true);
+  const enhancerApiChecks = selectPolicyChecks(apiChecks, opsPolicy?.enhancers?.api, false);
+  const coreApiHealth = summarizeChecks(coreApiChecks);
+  const enhancerApiHealth = summarizeChecks(enhancerApiChecks);
 
   const assetChecks = [
     buildCheck({
@@ -1566,7 +1645,10 @@ export async function onRequestGet(context) {
       }
     })
   ];
-  const ssotAssetHealth = summarizeChecks(assetChecks);
+  const coreAssetChecks = selectPolicyChecks(assetChecks, opsPolicy?.core?.assets, true);
+  const enhancerAssetChecks = selectPolicyChecks(assetChecks, opsPolicy?.enhancers?.assets, false);
+  const coreAssetHealth = summarizeChecks(coreAssetChecks);
+  const enhancerAssetHealth = summarizeChecks(enhancerAssetChecks);
   const fundamentalsTruth = buildFundamentalsTruthChain(traceAssets, startedAtIso);
   const pricesSnapDate = (() => {
     const snap = marketPricesSnapshot;
@@ -1732,18 +1814,18 @@ export async function onRequestGet(context) {
 
   const platformStatus = expectedFlags.kv ? (hasKV ? 'OK' : 'CRITICAL') : toHealthStatus(profile.not_expected_status);
   const apiHealth = {
-    status: ssotApiHealth.status,
-    reason: ssotApiHealth.reason,
-    checks: ssotApiHealth.checks,
+    status: coreApiHealth.status,
+    reason: coreApiHealth.reason,
+    checks: coreApiHealth.checks,
     action: {
       url: '/api/stock?ticker=UBER',
       howTo: 'Verify SSOT API endpoints'
     }
   };
   const assetsHealth = {
-    status: ssotAssetHealth.status,
-    reason: ssotAssetHealth.reason,
-    checks: ssotAssetHealth.checks,
+    status: coreAssetHealth.status,
+    reason: coreAssetHealth.reason,
+    checks: coreAssetHealth.checks,
     action: {
       url: '/data/universe/nasdaq100.json',
       howTo: 'Verify static feature inputs'
@@ -1875,8 +1957,20 @@ export async function onRequestGet(context) {
         pricesStaticRequired
       },
       ssot: {
-        api: ssotApiHealth,
-        assets: ssotAssetHealth
+        core: {
+          api: coreApiHealth,
+          assets: coreAssetHealth
+        },
+        enhancers: {
+          api: enhancerApiHealth,
+          assets: enhancerAssetHealth
+        },
+        api: coreApiHealth,
+        assets: coreAssetHealth
+      },
+      verdict: {
+        core: combineCoreStatus([coreApiHealth, coreAssetHealth]),
+        enhancers: combineCoreStatus([enhancerApiHealth, enhancerAssetHealth])
       },
       sourceMap,
       contracts,

@@ -97,19 +97,33 @@ if (!sample || !Array.isArray(sample.missing_fields)) {
 }
 
 const runtime = summary?.data?.runtime || {};
-if (runtime?.pipelineExpected === false && health?.pipeline?.status === 'CRITICAL') {
-  fail('asset SSOT checks should not be CRITICAL solely due to preview pipeline expectation');
-}
 
 const ssot = summary?.data?.ssot;
 if (!ssot || typeof ssot !== 'object') {
   fail('data.ssot missing');
 }
-if (!Array.isArray(ssot?.api?.checks)) {
-  fail('data.ssot.api.checks missing');
+if (!Array.isArray(ssot?.core?.api?.checks)) {
+  fail('data.ssot.core.api.checks missing');
 }
-if (!Array.isArray(ssot?.assets?.checks)) {
-  fail('data.ssot.assets.checks missing');
+if (!Array.isArray(ssot?.core?.assets?.checks)) {
+  fail('data.ssot.core.assets.checks missing');
+}
+if (!Array.isArray(ssot?.enhancers?.api?.checks)) {
+  fail('data.ssot.enhancers.api.checks missing');
+}
+if (!Array.isArray(ssot?.enhancers?.assets?.checks)) {
+  fail('data.ssot.enhancers.assets.checks missing');
+}
+
+const verdict = summary?.data?.verdict;
+if (!verdict || typeof verdict !== 'object') {
+  fail('data.verdict missing');
+}
+if (typeof verdict?.core?.status !== 'string') {
+  fail('data.verdict.core.status missing');
+}
+if (typeof verdict?.enhancers?.status !== 'string') {
+  fail('data.verdict.enhancers.status missing');
 }
 
 const p1Step = priceTruth?.steps?.find((s) => s.id === 'P1_UI_CALLS_API') || null;

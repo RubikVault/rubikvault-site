@@ -49,8 +49,12 @@ let browser;
 try {
   const summaryDoc = await fetchJson(summaryUrl, { name: 'mission-control-summary' });
   const ssot = summaryDoc?.data?.ssot || {};
-  const apiChecks = Array.isArray(ssot?.api?.checks) ? ssot.api.checks : [];
-  const assetChecks = Array.isArray(ssot?.assets?.checks) ? ssot.assets.checks : [];
+  const apiChecks = Array.isArray(ssot?.core?.api?.checks)
+    ? ssot.core.api.checks
+    : (Array.isArray(ssot?.api?.checks) ? ssot.api.checks : []);
+  const assetChecks = Array.isArray(ssot?.core?.assets?.checks)
+    ? ssot.core.assets.checks
+    : (Array.isArray(ssot?.assets?.checks) ? ssot.assets.checks : []);
   const apiRequired = apiChecks.filter((c) => c?.required);
   const assetRequired = assetChecks.filter((c) => c?.required);
   const expectedFetched = apiRequired.filter((c) => c?.status === 'OK').length;
@@ -70,6 +74,13 @@ try {
   }
 
   const info = await extractBridgeInfo(page);
+  const enhOk = await page.evaluate(() => {
+    return Boolean(document.querySelector('#enhancer-api-checks')) && Boolean(document.querySelector('#enhancer-asset-checks'));
+  });
+  if (!enhOk) {
+    printForensic(info);
+    throw new Error('Enhancer sections missing in OPS UI');
+  }
   const fetchedUi = parseFirstInt(info.bridge?.fetched);
   const validatedUi = parseFirstInt(info.bridge?.validated);
   if (!Number.isFinite(fetchedUi)) {
