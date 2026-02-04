@@ -108,6 +108,14 @@ const STOOQ_SYMBOL_MAP = {
   IWM: 'iwm.us'
 };
 
+function resolveStooqSymbol(symbol) {
+  if (!symbol || typeof symbol !== 'string') return null;
+  if (STOOQ_SYMBOL_MAP[symbol]) return STOOQ_SYMBOL_MAP[symbol];
+  const normalized = symbol.trim().toLowerCase();
+  if (!normalized) return null;
+  return `${normalized}.us`;
+}
+
 export function parseStooqLatestRow(text) {
   if (!text || typeof text !== 'string') return null;
   const lines = text
@@ -175,7 +183,7 @@ async function fetchStooqBars(symbols, outDir) {
   const sources = {};
 
   for (const symbol of symbols) {
-    const symbolKey = STOOQ_SYMBOL_MAP[symbol];
+    const symbolKey = resolveStooqSymbol(symbol);
     if (!symbolKey) {
       throw new Error(`STOOQ_SYMBOL_MAPPING_MISSING:${symbol}`);
     }
@@ -538,13 +546,17 @@ function computeAsOf(bars) {
   return dates.sort().slice(-1)[0];
 }
 
-async function loadUniverseIndexProxies() {
-  const universePath = join(BASE_DIR, 'public/data/registry/universe.v1.json');
+async function loadUniverseNasdaq100() {
+  const universePath = join(BASE_DIR, 'public/data/universe/nasdaq100.json');
   const content = await readFile(universePath, 'utf-8');
   const parsed = JSON.parse(content);
-  const symbols = parsed?.groups?.index_proxies?.symbols;
+  const symbols = Array.isArray(parsed)
+    ? parsed
+        .map((entry) => (typeof entry === 'string' ? entry : (entry?.ticker || entry?.symbol || null)))
+        .filter((value) => typeof value === 'string' && value.trim().length > 0)
+    : [];
   if (!Array.isArray(symbols) || symbols.length === 0) {
-    throw new Error('UNIVERSE_INDEX_PROXIES_MISSING');
+    throw new Error('UNIVERSE_NASDAQ100_MISSING');
   }
   return symbols;
 }
@@ -1148,7 +1160,7 @@ export async function main() {
 
   let providerLabel = mode === 'STUB' ? 'stub' : (useStooq ? 'stooq' : (primaryProvider?.id || 'unknown'));
 
-  const symbols = await loadUniverseIndexProxies();
+  const symbols = await loadUniverseNasdaq100();
   const config = await loadModuleConfig();
   const minCount = Number.isFinite(config.counts?.min) ? config.counts.min : symbols.length;
 
