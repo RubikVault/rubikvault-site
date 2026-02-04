@@ -1,0 +1,15 @@
+{
+    "schema_version": "hashing_v1",
+    "description": "Hashing policy for content integrity and deduplication",
+    "algorithm": "sha256",
+    "implementation": {
+        "path": "scripts/lib/digest.js",
+        "function": "computeDigest"
+    },
+    "format": "sha256:{hex64}",
+    "usage": {
+        "snapshots": "hash raw bytes before compression",
+        "records": "hash canonical JSON of record content",
+        "specs": "hash canonical JSON of spec object"
+    }
+}

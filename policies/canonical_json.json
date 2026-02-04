@@ -1,0 +1,14 @@
+{
+    "schema_version": "canonical_json_v1",
+    "description": "Canonical JSON serialization policy for deterministic hashing",
+    "implementation": {
+        "path": "scripts/lib/digest.js",
+        "function": "canonicalJSON"
+    },
+    "rules": {
+        "key_sort": "alphabetical",
+        "whitespace": "none",
+        "null_handling": "include",
+        "undefined_handling": "stringify_as_undefined"
+    }
+}

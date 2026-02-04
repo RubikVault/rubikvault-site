@@ -1,0 +1,145 @@
+{
+    "schema_version": "forecast_policy_v3",
+    "system": {
+        "id": "rv-forecast",
+        "version": "3.0.0"
+    },
+    "data_sources": {
+        "prices": {
+            "provider": "existing",
+            "adjustment": "provider_adjusted_close",
+            "corporate_actions": "provider_snapshot",
+            "max_missing_pct_daily": 2.0
+        },
+        "earnings_calendar": {
+            "provider": "existing",
+            "refresh": "weekly",
+            "min_lookahead_days": 30
+        },
+        "macro_calendar": {
+            "provider": "existing",
+            "events": [
+                "FOMC",
+                "CPI",
+                "NFP"
+            ],
+            "refresh": "monthly"
+        }
+    },
+    "ledger_partitioning": {
+        "mode": "monthly",
+        "max_months_to_scan_for_metrics": 6
+    },
+    "math_safety": {
+        "brier_baseline_floor": 0.001
+    },
+    "horizons": [
+        "1d",
+        "5d",
+        "20d"
+    ],
+    "neutral_policy": {
+        "neutral_band": 0.03,
+        "max_neutral_rate_increase_pct": 20.0
+    },
+    "anti_gaming": {
+        "max_sharpness_drop_pct": 20.0
+    },
+    "calibration": {
+        "method_default": "isotonic",
+        "allowed_methods": [
+            "none",
+            "platt",
+            "isotonic",
+            "rolling_conformal"
+        ],
+        "window_trading_days": 90,
+        "min_samples": 200,
+        "recalibrate_cadence": "weekly"
+    },
+    "feature_groups": {
+        "allowed": [
+            "basic",
+            "technical",
+            "trend_context",
+            "relative_strength",
+            "momentum",
+            "volume_flow",
+            "regime",
+            "events"
+        ],
+        "enabled_default": [
+            "basic",
+            "technical",
+            "trend_context",
+            "relative_strength",
+            "regime",
+            "events"
+        ]
+    },
+    "baseline": {
+        "method": "regime_adaptive_hit_rate",
+        "lookback_trading_days": 90,
+        "min_samples": 30,
+        "laplace_smoothing": {
+            "alpha": 1.0,
+            "beta": 1.0
+        },
+        "segments": [
+            "horizon",
+            "vol_regime",
+            "trend_regime",
+            "event_bucket"
+        ],
+        "fallback": "global"
+    },
+    "compute_budget": {
+        "challenger_training": {
+            "cadence": "weekly",
+            "max_runtime_minutes": 180,
+            "max_challengers_per_run": 4,
+            "parallelism": 4,
+            "early_stop": true
+        }
+    },
+    "exploration": {
+        "monthly_min_challengers": 8,
+        "weekly_max_challengers": 4,
+        "stagnation_months_threshold": 3
+    },
+    "maturity": {
+        "bootstrap_live_eval_days": 90,
+        "calibration_live_eval_days": 180
+    },
+    "promotion_gates": {
+        "primary_bucket": "normal_days",
+        "min_live_samples_30d": 300,
+        "min_improvement_skill_30d_pct": 1.0,
+        "max_degradation_other_bucket_pct": 1.0,
+        "reject_if_neutral_rate_increase_pct_gt": 20.0,
+        "reject_if_sharpness_drop_pct_gt": 20.0
+    },
+    "post_promotion_monitoring": {
+        "check_windows_days": [
+            7,
+            14
+        ],
+        "rollback_if_skill_delta_pct_lt": -1.0,
+        "consecutive_failures_to_rollback": 2
+    },
+    "circuit_breaker": {
+        "missing_price_data_pct_trigger": 5.0,
+        "action_on_trigger": "CIRCUIT_OPEN_PUBLISH_LAST_GOOD"
+    },
+    "backfill": {
+        "enabled": true,
+        "start_date": "2024-01-01",
+        "end_date": "2025-12-31",
+        "min_history_trading_days": 252,
+        "walk_forward_step": "monthly"
+    },
+    "universe": {
+        "default": "nasdaq100",
+        "source": "/data/universe/nasdaq100.json"
+    }
+}

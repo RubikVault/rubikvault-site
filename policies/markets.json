@@ -1,0 +1,28 @@
+{
+    "schema_version": "markets_v1",
+    "description": "Market calendar and trading date resolution policy",
+    "exchanges": {
+        "NYSE": {
+            "timezone": "America/New_York",
+            "calendar": "nyse",
+            "open_time": "09:30",
+            "close_time": "16:00"
+        },
+        "NASDAQ": {
+            "timezone": "America/New_York",
+            "calendar": "nyse",
+            "open_time": "09:30",
+            "close_time": "16:00"
+        }
+    },
+    "default_exchange": "NYSE",
+    "holidays": {
+        "source": "static",
+        "path": "/data/calendar/holidays.json"
+    },
+    "trading_date_resolution": {
+        "method": "exchange_timezone",
+        "cutoff_after_close_minutes": 0,
+        "weekend_handling": "previous_trading_day"
+    }
+}

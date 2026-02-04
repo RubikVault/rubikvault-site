@@ -1,0 +1,19 @@
+{
+    "schema_version": "pointers_v1",
+    "description": "Pointer and latest reference naming conventions",
+    "conventions": {
+        "latest_entry": "{module}/latest.json",
+        "last_good": "{module}/system/last_good.json",
+        "status": "{module}/system/status.json"
+    },
+    "atomicity": {
+        "method": "file_replace",
+        "temp_suffix": ".tmp",
+        "backup_suffix": ".bak"
+    },
+    "forecast": {
+        "latest": "public/data/forecast/latest.json",
+        "status": "public/data/forecast/system/status.json",
+        "last_good": "public/data/forecast/system/last_good.json"
+    }
+}
