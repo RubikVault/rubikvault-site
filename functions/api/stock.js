@@ -323,6 +323,46 @@ function aggregateSources(results) {
   return sources;
 }
 
+/**
+ * Fetch static EOD bar from batch artifact for preview mode fallback.
+ * Tries batches 000, then 001, etc. Returns null if not found.
+ */
+async function fetchStaticEodBar(ticker, request) {
+  const baseUrl = new URL(request.url);
+  const batchPaths = [
+    '/data/eod/batches/eod.latest.000.json',
+    '/data/eod/batches/eod.latest.001.json'
+  ];
+  for (const path of batchPaths) {
+    try {
+      const url = new URL(path, baseUrl);
+      const response = await fetch(url.toString());
+      if (!response.ok) continue;
+      const payload = await response.json();
+      const tickerData = payload?.data?.[ticker];
+      if (tickerData && tickerData.date && Number.isFinite(tickerData.close)) {
+        return {
+          bar: {
+            date: tickerData.date,
+            open: tickerData.open ?? null,
+            high: tickerData.high ?? null,
+            low: tickerData.low ?? null,
+            close: tickerData.close,
+            volume: tickerData.volume ?? null,
+            adjClose: tickerData.adjClose ?? tickerData.close
+          },
+          source: 'static-eod-batch',
+          path
+        };
+      }
+    } catch {
+      // continue to next batch
+    }
+  }
+  return null;
+}
+
+
 export async function onRequestGet(context) {
   const { request } = context;
   const env = context?.env || {};
@@ -534,39 +574,39 @@ export async function onRequestGet(context) {
       eodStatus = 'pending';
       qualityFlags.add('PENDING_REFRESH');
     } else {
-    const gotLock = await cache.acquireLock(cacheId, lockTtlSeconds);
-    if (!gotLock) {
-      cacheHit = true;
-      eodBars = cachedBars;
-      eodProvider = cachedProvider || 'tiingo';
-      eodStatus = 'pending';
-      qualityFlags.add('LOCKED_REFRESH');
-    } else {
-      try {
-        const result = await fetchProviderBars({ recordTiming: true });
-        if (result.ok) {
-          eodBars = result.bars;
-          eodProvider = result.provider || 'tiingo';
-          const latest = pickLatestBar(eodBars);
-          const dataDate = latest?.date || todayUtcDate();
-          eodStatus = computeStatusFromDataDate(dataDate, now, maxStaleDays, pendingWindowMinutes);
-          await cache.writeCached(cacheId, { bars: eodBars }, cacheTtlSeconds, {
-            provider: eodProvider,
-            data_date: dataDate
-          });
-        } else {
-          cacheHit = true;
-          eodBars = cachedBars;
-          eodProvider = cachedProvider || 'tiingo';
-          eodStatus = 'stale';
-          qualityFlags.add('PROVIDER_FAIL');
-          qualityFlags.add('CACHE_TOO_OLD');
-          eodError = null;
+      const gotLock = await cache.acquireLock(cacheId, lockTtlSeconds);
+      if (!gotLock) {
+        cacheHit = true;
+        eodBars = cachedBars;
+        eodProvider = cachedProvider || 'tiingo';
+        eodStatus = 'pending';
+        qualityFlags.add('LOCKED_REFRESH');
+      } else {
+        try {
+          const result = await fetchProviderBars({ recordTiming: true });
+          if (result.ok) {
+            eodBars = result.bars;
+            eodProvider = result.provider || 'tiingo';
+            const latest = pickLatestBar(eodBars);
+            const dataDate = latest?.date || todayUtcDate();
+            eodStatus = computeStatusFromDataDate(dataDate, now, maxStaleDays, pendingWindowMinutes);
+            await cache.writeCached(cacheId, { bars: eodBars }, cacheTtlSeconds, {
+              provider: eodProvider,
+              data_date: dataDate
+            });
+          } else {
+            cacheHit = true;
+            eodBars = cachedBars;
+            eodProvider = cachedProvider || 'tiingo';
+            eodStatus = 'stale';
+            qualityFlags.add('PROVIDER_FAIL');
+            qualityFlags.add('CACHE_TOO_OLD');
+            eodError = null;
+          }
+        } finally {
+          await cache.releaseLock(cacheId);
         }
-      } finally {
-        await cache.releaseLock(cacheId);
       }
-    }
     }
   } else if (normalizedTicker && cachedBars.length) {
     cacheHit = true;
@@ -599,10 +639,21 @@ export async function onRequestGet(context) {
     }
   } else if (normalizedTicker) {
     if (!canFetchProvider) {
-      reasons = ['EOD_KEYS_MISSING'];
-      qualityFlags.add('EOD_KEYS_MISSING');
-      eodStatus = 'error';
-      eodAttempted = false;
+      // No API keys available - try static EOD batch fallback
+      const staticResult = await fetchStaticEodBar(normalizedTicker, request);
+      if (staticResult && staticResult.bar) {
+        eodBars = [staticResult.bar];
+        eodProvider = staticResult.source;
+        eodStatus = computeStatusFromDataDate(staticResult.bar.date, now, maxStaleDays, pendingWindowMinutes);
+        eodAttempted = true;
+        qualityFlags.add('STATIC_FALLBACK');
+      } else {
+        reasons = ['EOD_KEYS_MISSING', 'NO_STATIC_DATA'];
+        qualityFlags.add('EOD_KEYS_MISSING');
+        qualityFlags.add('NO_STATIC_DATA');
+        eodStatus = 'stale';
+        eodAttempted = true;
+      }
     } else {
       eodAttempted = true;
       if (swrPending) {
@@ -629,9 +680,20 @@ export async function onRequestGet(context) {
                 data_date: dataDate
               });
             } else {
-              eodError = result.error || { code: 'EOD_FETCH_FAILED', message: 'Unable to fetch EOD history' };
-              eodStatus = eodError?.code === 'CB_OPEN' ? 'stale' : 'error';
-              qualityFlags.add(eodError?.code === 'CB_OPEN' ? 'CB_OPEN' : 'PROVIDER_FAIL');
+              // Provider fetch failed - try static EOD fallback
+              const staticResult = await fetchStaticEodBar(normalizedTicker, request);
+              if (staticResult && staticResult.bar) {
+                eodBars = [staticResult.bar];
+                eodProvider = staticResult.source;
+                eodStatus = computeStatusFromDataDate(staticResult.bar.date, now, maxStaleDays, pendingWindowMinutes);
+                qualityFlags.add('STATIC_FALLBACK');
+                qualityFlags.add('PROVIDER_FAIL');
+                eodError = null;
+              } else {
+                eodError = result.error || { code: 'EOD_FETCH_FAILED', message: 'Unable to fetch EOD history' };
+                eodStatus = eodError?.code === 'CB_OPEN' ? 'stale' : 'error';
+                qualityFlags.add(eodError?.code === 'CB_OPEN' ? 'CB_OPEN' : 'PROVIDER_FAIL');
+              }
             }
           } finally {
             await cache.releaseLock(cacheId);
