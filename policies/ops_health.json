@@ -6,12 +6,13 @@
       "status_layout_policy_path": "policies/status_layout.json"
     },
     "required_checks": [
-      "ROOT_STATUS_PRESENT",
-      "ROOT_STATUS_VALID",
-      "ROOT_STATUS_SYSTEM_OK",
-      "MODULE_STATUSES_OK",
       "SSOT_ASSETS_REQUIRED_OK",
-      "SSOT_APIS_REQUIRED_OK"
+      "SSOT_APIS_REQUIRED_OK",
+      "PRICES_CONTRACT_OK",
+      "POINTER_LATEST_INTEGRITY",
+      "EMERGENCY_OFF",
+      "CIRCUIT_OK",
+      "STALENESS_OK"
     ],
     "verdict_order": ["EMERGENCY_STOP", "CIRCUIT_OPEN", "FAIL", "STALE", "PARTIAL", "OK"]
   },

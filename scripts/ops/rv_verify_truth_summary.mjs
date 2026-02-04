@@ -28,7 +28,7 @@ if (!allowedMetaStatus.has(String(summary?.meta?.status))) {
 const health = summary?.data?.health || {};
 for (const key of ['system', 'api', 'prices', 'assets']) {
   const status = health?.[key]?.status;
-  if (!['OK', 'INFO', 'WARNING', 'CRITICAL'].includes(status)) {
+  if (!['OK', 'INFO', 'WARNING', 'CRITICAL', 'FAIL', 'STALE'].includes(status)) {
     fail(`health.${key}.status invalid: ${status}`);
   }
 }

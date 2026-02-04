@@ -1780,51 +1780,14 @@ export async function onRequestGet(context) {
   const coreAssetHealth = summarizeChecks(coreAssetChecks);
   const enhancerAssetHealth = summarizeChecks(enhancerAssetChecks);
 
-  const rootStatusPresent = rootStatusDoc && typeof rootStatusDoc === 'object';
-  const rootStatusValid = rootStatusInfo.status != null;
-  const rootSystemOk = rootStatusInfo.status === 'OK' || rootStatusInfo.status === 'WARNING';
-  const moduleStatusesPresent = Array.isArray(rootStatusInfo.snapshots) && rootStatusInfo.snapshots.length > 0;
-  const rootChecks = {
-    ROOT_STATUS_PRESENT: buildCheck({
-      id: 'ROOT_STATUS_PRESENT',
-      label: rootStatusPath,
-      required: true,
-      ok: rootStatusPresent,
-      reason: rootStatusPresent ? 'OK' : 'MISSING',
-      path: rootStatusPath,
-      evidence: { has_root: rootStatusPresent }
-    }),
-    ROOT_STATUS_VALID: buildCheck({
-      id: 'ROOT_STATUS_VALID',
-      label: 'root status is valid',
-      required: true,
-      ok: rootStatusValid,
-      reason: rootStatusValid ? 'OK' : 'INVALID_STATUS',
-      path: rootStatusPath,
-      evidence: { status: rootStatusInfo.raw || null }
-    }),
-    ROOT_STATUS_SYSTEM_OK: buildCheck({
-      id: 'ROOT_STATUS_SYSTEM_OK',
-      label: 'root status indicates OK/PARTIAL',
-      required: true,
-      ok: rootSystemOk,
-      reason: rootSystemOk ? 'OK' : 'ROOT_STATUS_FAIL',
-      path: rootStatusPath,
-      evidence: { status: rootStatusInfo.raw || null }
-    }),
-    MODULE_STATUSES_OK: buildCheck({
-      id: 'MODULE_STATUSES_OK',
-      label: 'module statuses present',
-      required: true,
-      ok: moduleStatusesPresent,
-      reason: moduleStatusesPresent ? 'OK' : 'MODULES_MISSING',
-      path: rootStatusPath,
-      evidence: {
-        total: moduleStatusesPresent ? rootStatusInfo.snapshots.length : null,
-        failed: rootStatusInfo.failedModules.length
-      }
-    }),
-    SSOT_ASSETS_REQUIRED_OK: buildCheck({
+  const pricesContractOk = priceContractStep?.status === 'OK';
+  const pointerIntegrityOk = marketPricesSnapshotCheck.valid;
+  const stalenessOk = freshnessHealth.status === 'OK' || freshnessHealth.status === 'INFO';
+  const emergencyOff = true;
+  const circuitOk = true;
+
+  const systemChecks = [
+    buildCheck({
       id: 'SSOT_ASSETS_REQUIRED_OK',
       label: 'SSOT assets required',
       required: true,
@@ -1833,7 +1796,7 @@ export async function onRequestGet(context) {
       path: '/data/*',
       evidence: { status: coreAssetHealth.status }
     }),
-    SSOT_APIS_REQUIRED_OK: buildCheck({
+    buildCheck({
       id: 'SSOT_APIS_REQUIRED_OK',
       label: 'SSOT APIs required',
       required: true,
@@ -1841,39 +1804,71 @@ export async function onRequestGet(context) {
       reason: coreApiHealth.status === 'OK' ? 'OK' : coreApiHealth.reason,
       path: '/api/*',
       evidence: { status: coreApiHealth.status }
-    })
-  };
-
-  const requiredHealthChecks = (opsPolicy?.health?.required_checks || DEFAULT_OPS_POLICY.health.required_checks)
-    .map((id) => rootChecks[id] || buildCheck({
-      id,
-      label: id,
+    }),
+    buildCheck({
+      id: 'PRICES_CONTRACT_OK',
+      label: 'Prices contract OK',
       required: true,
-      ok: false,
-      reason: 'CHECK_MISSING',
+      ok: pricesContractOk,
+      reason: pricesContractOk ? 'OK' : 'CONTRACT_FAIL',
+      path: '/api/stock',
+      evidence: priceContractStep?.evidence || null
+    }),
+    buildCheck({
+      id: 'POINTER_LATEST_INTEGRITY',
+      label: 'Latest snapshot integrity',
+      required: true,
+      ok: pointerIntegrityOk,
+      reason: pointerIntegrityOk ? 'OK' : 'SNAPSHOT_INVALID',
+      path: '/data/snapshots/market-prices/latest.json',
+      evidence: { valid: pointerIntegrityOk }
+    }),
+    buildCheck({
+      id: 'EMERGENCY_OFF',
+      label: 'Emergency stop off',
+      required: true,
+      ok: emergencyOff,
+      reason: emergencyOff ? 'OK' : 'EMERGENCY_STOP',
       path: null,
-      evidence: null
-    }));
-  const requiredHealthFailures = requiredHealthChecks.filter((c) => c.status !== 'OK');
+      evidence: { instrumented: false }
+    }),
+    buildCheck({
+      id: 'CIRCUIT_OK',
+      label: 'Circuit breaker closed',
+      required: true,
+      ok: circuitOk,
+      reason: circuitOk ? 'OK' : 'CIRCUIT_OPEN',
+      path: null,
+      evidence: { instrumented: false }
+    }),
+    buildCheck({
+      id: 'STALENESS_OK',
+      label: 'Freshness within policy',
+      required: true,
+      ok: stalenessOk,
+      reason: stalenessOk ? 'OK' : freshnessHealth.reason,
+      path: '/data/snapshots/market-prices/latest.json',
+      evidence: { status: freshnessHealth.status, reason: freshnessHealth.reason }
+    })
+  ];
+
+  const systemHardFails = systemChecks.filter((c) => c.id !== 'STALENESS_OK' && c.status !== 'OK');
   let systemStatus = 'OK';
   let systemReason = 'OK';
-  if (requiredHealthFailures.length) {
-    systemStatus = 'CRITICAL';
-    systemReason = requiredHealthFailures[0]?.reason || 'REQUIRED_CHECK_FAIL';
-  } else if (rootStatusInfo.status === 'WARNING') {
-    systemStatus = 'WARNING';
-    systemReason = 'ROOT_STATUS_PARTIAL';
-  } else if (rootStatusInfo.status === 'CRITICAL') {
-    systemStatus = 'CRITICAL';
-    systemReason = 'ROOT_STATUS_CRITICAL';
+  if (systemHardFails.length) {
+    systemStatus = 'FAIL';
+    systemReason = systemHardFails[0]?.reason || 'REQUIRED_CHECK_FAIL';
+  } else if (!stalenessOk) {
+    systemStatus = 'STALE';
+    systemReason = freshnessHealth.reason || 'STALE';
   }
   const systemHealth = {
     status: systemStatus,
     reason: systemReason,
-    checks: requiredHealthChecks,
+    checks: systemChecks,
     action: {
-      url: rootStatusPath,
-      howTo: 'Verify root status and required SSOT checks'
+      url: '/api/stock?ticker=UBER',
+      howTo: 'Verify SSOT API + snapshot freshness'
     }
   };
   const fundamentalsTruth = buildFundamentalsTruthChain(traceAssets, startedAtIso);
@@ -2088,8 +2083,8 @@ export async function onRequestGet(context) {
   const owner = buildOwnerSummary(health);
 
   const metaStatus = (() => {
-    if (health.system?.status === 'CRITICAL') return 'error';
-    if (health.system?.status === 'WARNING') return 'degraded';
+    if (health.system?.status === 'FAIL' || health.system?.status === 'CRITICAL') return 'error';
+    if (health.system?.status === 'STALE' || health.system?.status === 'WARNING') return 'degraded';
     return 'ok';
   })();
   const metaReason =

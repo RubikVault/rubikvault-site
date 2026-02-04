@@ -556,8 +556,8 @@
     }
 
     function statusToColor(status) {
-      if (status === 'CRITICAL') return 'red';
-      if (status === 'WARNING') return 'yellow';
+      if (status === 'FAIL' || status === 'CRITICAL') return 'red';
+      if (status === 'STALE' || status === 'WARNING') return 'yellow';
       if (status === 'INFO') return 'neutral';
       if (status === 'N/A') return 'neutral';
       if (status === 'OK') return 'green';
@@ -623,7 +623,11 @@
       const overallVerdict = system?.status || prices.status || null;
       const baselineVerdict = payload?.data?.opsBaseline?.overall?.verdict || null;
       const reason = prices.reason || meta.reason || '';
-      let level = overallVerdict === 'OK' ? 'ok' : overallVerdict === 'CRITICAL' ? 'error' : 'degraded';
+      let level = overallVerdict === 'OK'
+        ? 'ok'
+        : (overallVerdict === 'CRITICAL' || overallVerdict === 'FAIL')
+          ? 'error'
+          : 'degraded';
       const ssotApiStatus = ssot?.core?.api?.status;
       const ssotAssetStatus = ssot?.core?.assets?.status;
       if (ssotApiStatus === 'CRITICAL' || ssotAssetStatus === 'CRITICAL') {
@@ -679,10 +683,9 @@
 
     function statusClass(status) {
       if (status === 'OK') return 'ok';
-      if (status === 'INFO') return 'info';
-      if (status === 'N/A') return 'info';
-      if (status === 'WARNING') return 'warn';
-      if (status === 'CRITICAL') return 'bad';
+      if (status === 'INFO' || status === 'N/A') return 'info';
+      if (status === 'STALE' || status === 'WARNING') return 'warn';
+      if (status === 'FAIL' || status === 'CRITICAL') return 'bad';
       return 'warn';
     }
 
