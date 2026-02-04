@@ -1,7 +1,7 @@
 # OPS Field Inventory (LIVE_URL: https://638a1962.rubikvault-site.pages.dev)
 
 ## Evidence anchors (repo + live)
-- Repo state: `/Users/michaelpuchowezki/Dev/rubikvault-site` @ `6212e9971baf1312b0d49e4c7b4c6f2d63c4ca77` (branch `main`)
+- Repo state: `/Users/peterklein/Dev/rubikvault-site` @ `6212e9971baf1312b0d49e4c7b4c6f2d63c4ca77` (branch `main`)
 - OPS UI reads `/api/mission-control/summary` and `/data/build-info.json` (UI code: `public/ops/index.html:1082-1125`, `public/ops/index.html:868-883`).
 - Mission-control summary payload shape: `functions/api/mission-control/summary.js:1591-1678`.
 - SSOT for ops shapes (bars + truthChains): `docs/ops/ops-shapes.ssot.md:7-58`.
