@@ -1521,7 +1521,7 @@ export async function onRequestGet(context) {
     ? pipelineLatest.counts
     : null;
 
-  const pipelineExpected =
+  const pipelineExpectedCount =
     (Number.isFinite(Number(pipelineLatestCounts?.expected)) ? Number(pipelineLatestCounts.expected) : null) ??
     pipelineFetched?.expected ??
     pipelineValidated?.expected ??
@@ -1531,7 +1531,7 @@ export async function onRequestGet(context) {
 
   const ensureCount = (truthDoc) => {
     if (truthDoc && Number.isFinite(Number(truthDoc.count))) return Number(truthDoc.count);
-    if (expectedFlags.pipeline && Number.isFinite(Number(pipelineExpected))) return 0;
+    if (expectedFlags.pipeline && Number.isFinite(Number(pipelineExpectedCount))) return 0;
     return null;
   };
 
@@ -1548,7 +1548,7 @@ export async function onRequestGet(context) {
   };
 
   const pipelineCounts = {
-    expected: pipelineExpected,
+    expected: pipelineExpectedCount,
     fetched: resolveCount(pipelineLatestCounts?.fetched, fetched),
     validated: resolveCount(pipelineLatestCounts?.validated, validatedStored),
     computed: resolveCount(pipelineLatestCounts?.computed, computed),
@@ -1906,7 +1906,7 @@ export async function onRequestGet(context) {
   const opsComputed = {
     providers: opsProviders.sort((a, b) => String(a.name).localeCompare(String(b.name))),
     pipeline: {
-      expected: pipelineExpected,
+      expected: pipelineExpectedCount,
       fetched: pipelineCounts.fetched,
       validatedStored: pipelineCounts.validated,
       computed: pipelineCounts.computed,
@@ -2028,7 +2028,7 @@ export async function onRequestGet(context) {
   const ageHours = snapshotAsOfMs ? (Date.now() - snapshotAsOfMs) / (1000 * 60 * 60) : null;
   const thresholdProfile = thresholds?.[profilePick.key] || thresholds?.production || null;
 
-  let pipelineHealth = computePipelineStatus(pipelineCounts, pipelineExpected, expectedFlags.pipeline);
+  let pipelineHealth = computePipelineStatus(pipelineCounts, pipelineExpectedCount, expectedFlags.pipeline);
   const pipelineContractOk = pipelineFetchedCheck.valid && pipelineValidatedCheck.valid && pipelineComputedCheck.valid && pipelineStaticReadyCheck.valid;
   if (expectedFlags.pipeline && !pipelineContractOk) {
     pipelineHealth = { status: 'CRITICAL', reason: 'PIPELINE_CONTRACT_INVALID' };
