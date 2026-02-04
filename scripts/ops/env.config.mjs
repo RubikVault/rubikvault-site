@@ -13,11 +13,9 @@ export function getOpsBase() {
   });
 
   if (!chosenKey) {
-    const summary = Object.fromEntries(order.map((key) => [key, Boolean(candidates[key])]));
-    throw new Error(`OPS_BASE missing. Provide OPS_BASE/RV_BASE/BASE_URL/BASE. ${JSON.stringify(summary)}`);
+    return 'http://127.0.0.1:8788';
   }
 
   const value = String(candidates[chosenKey]).trim();
   return value.replace(/\/+$/, '');
 }
-

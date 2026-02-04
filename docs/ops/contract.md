@@ -68,3 +68,7 @@
 - `data.opsBaseline.runtime.schedulerExpectedReason`: short reason string (e.g., preview/static).
 - `data.opsBaseline.truthChain.nasdaq100`: ordered truth-chain steps with `id`, `title`, `status`, `evidence`, and `first_blocker` (object or null).
 - `public/data/marketphase/missing.json`: optional build artifact listing per-ticker missing reasons for MarketPhase (used to explain pipeline gaps).
+
+## Owner Endpoints (Ops)
+- Owner endpoints (`/api/mission-control/summary`, `/api/build-info`) always return HTTP 200 with in-body status (`meta.status`) and owner verdicts; they never return 503 for maintenance/KV-disabled states.
+- Ops verifier base URL defaults to `http://127.0.0.1:8788` when OPS_BASE/RV_BASE/BASE_URL/BASE are not set.

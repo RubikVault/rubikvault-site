@@ -615,6 +615,36 @@ function buildPricesHealth(priceTruth) {
   };
 }
 
+function buildOwnerSummary(health) {
+  const issues = [];
+  for (const [key, item] of Object.entries(health || {})) {
+    if (!item || typeof item !== 'object') continue;
+    if (item.status === 'CRITICAL' || item.status === 'WARNING') {
+      issues.push({
+        code: `${key.toUpperCase()}_${item.status}`,
+        message: `${key}: ${item.reason || item.status}`,
+        action: item.action?.url || null
+      });
+    }
+  }
+  const hasCritical = issues.some((entry) => entry.code.includes('CRITICAL'));
+  const hasWarning = issues.some((entry) => entry.code.includes('WARNING'));
+  const hasInfo = Object.values(health || {}).some((h) => h?.status === 'INFO');
+  let verdict = 'OK';
+  let reason = 'OK';
+  if (hasCritical || hasWarning) {
+    verdict = 'WARN';
+    reason = issues[0]?.message || 'DEGRADED';
+  } else if (hasInfo) {
+    verdict = 'INFO';
+    reason = 'NOT_EXPECTED';
+  }
+  return {
+    overall: { verdict, reason },
+    topIssues: issues.slice(0, 5)
+  };
+}
+
 function buildFundamentalsTruthChain(traces, nowIso) {
   const list = traces.filter((t) => t && t.trace);
   const statuses = list.map((t) => {
@@ -1482,11 +1512,17 @@ export async function onRequestGet(context) {
     pricesStaticRequired
   };
 
-  const snapshotAsOfIso =
+  const snapshotDataDate =
+    marketPricesSnapshot?.meta?.data_date ||
     marketPricesSnapshot?.meta?.asOf ||
+    marketPricesSnapshot?.metadata?.as_of ||
+    null;
+  const snapshotGeneratedAt =
+    marketPricesSnapshot?.meta?.generated_at ||
     marketPricesSnapshot?.metadata?.published_at ||
     marketPricesSnapshot?.metadata?.fetched_at ||
     null;
+  const snapshotAsOfIso = snapshotGeneratedAt || snapshotDataDate || null;
   const snapshotAsOfMs = parseIsoToMs(snapshotAsOfIso);
   const ageHours = snapshotAsOfMs ? (Date.now() - snapshotAsOfMs) / (1000 * 60 * 60) : null;
   const thresholdProfile = thresholds?.[profilePick.key] || thresholds?.production || null;
@@ -1527,7 +1563,7 @@ export async function onRequestGet(context) {
       status: freshnessHealth.status,
       reason: freshnessHealth.reason,
       age_hours: Number.isFinite(ageHours) ? Math.round(ageHours * 10) / 10 : null,
-      asOf: snapshotAsOfIso,
+      asOf: snapshotDataDate || snapshotAsOfIso,
       action: {
         url: '/data/snapshots/market-prices/latest.json',
         howTo: 'Refresh market-prices snapshot'
@@ -1544,6 +1580,8 @@ export async function onRequestGet(context) {
       }
     }
   };
+
+  const owner = buildOwnerSummary(health);
 
   const metaStatus = (() => {
     const statuses = Object.values(health).map((h) => h?.status).filter(Boolean);
@@ -1623,6 +1661,14 @@ export async function onRequestGet(context) {
       asOf: startedAtIso,
       hasKV,
       health,
+      owner,
+      cards: {
+        platform: health.platform,
+        api: health.api,
+        prices: health.prices,
+        freshness: health.freshness,
+        pipeline: health.pipeline
+      },
       runtime: {
         env: profilePick.key,
         expected: expectedFlags,

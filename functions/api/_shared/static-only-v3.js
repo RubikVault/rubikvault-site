@@ -55,6 +55,49 @@ function applyModuleTransformations(moduleName, parsed) {
   return result;
 }
 
+const OWNER_ENDPOINTS = new Set([
+  "mission-control/summary",
+  "mission-control",
+  "build-info",
+  "debug-bundle",
+  "ops"
+]);
+
+function buildOwnerFallback(moduleName) {
+  const now = new Date().toISOString();
+  return {
+    schema_version: "3.0",
+    metadata: {
+      module: moduleName,
+      served_from: "MAINTENANCE",
+      reason: "ASSET_FETCH_FAILED"
+    },
+    ok: true,
+    meta: {
+      status: "degraded",
+      provider: "internal",
+      data_date: now.slice(0, 10),
+      generated_at: now
+    },
+    data: {
+      owner: {
+        overall: { verdict: "WARN", reason: "ASSET_FETCH_FAILED" },
+        topIssues: [
+          {
+            code: "ASSET_FETCH_FAILED",
+            message: `${moduleName} unavailable`,
+            action: `/api/${moduleName}`
+          }
+        ]
+      },
+      cards: {},
+      health: {},
+      runtime: { env: "preview", schedulerExpected: false }
+    },
+    error: null
+  };
+}
+
 /**
  * Evaluate Proof Chain for a snapshot
  */
@@ -276,6 +319,7 @@ export async function serveStaticJson(req, env, ctx) {
   const url = new URL(req.url);
   const moduleName = url.pathname.replace(/^\/api\//, "").replace(/\/$/, "") || "bundle";
   const isDebug = url.searchParams.has("debug") || url.searchParams.get("debug") === "1";
+  const isOwnerEndpoint = OWNER_ENDPOINTS.has(moduleName);
   
   // Load module config
   let moduleConfig = null;
@@ -318,6 +362,17 @@ export async function serveStaticJson(req, env, ctx) {
   
   // DEBUG MODE
   if (isDebug) {
+    if (!snapshot && isOwnerEndpoint) {
+      const payload = buildOwnerFallback(moduleName);
+      return new Response(JSON.stringify(payload, null, 2), {
+        headers: {
+          "Content-Type": "application/json",
+          "Cache-Control": "no-store",
+          "X-RV-Debug": "true",
+          "X-RV-Source": "MAINTENANCE"
+        }
+      });
+    }
     const debugResponse = await buildDebugResponse(moduleName, snapshot, moduleConfig, sourceInfo, url);
     return new Response(JSON.stringify(debugResponse, null, 2), {
       headers: {
@@ -331,6 +386,17 @@ export async function serveStaticJson(req, env, ctx) {
   // NORMAL MODE
   if (!snapshot) {
     // Return maintenance envelope
+    if (isOwnerEndpoint) {
+      const payload = buildOwnerFallback(moduleName);
+      return new Response(JSON.stringify(payload), {
+        status: 200,
+        headers: {
+          "Content-Type": "application/json",
+          "Cache-Control": "no-store",
+          "X-RV-Source": "MAINTENANCE"
+        }
+      });
+    }
     return new Response(
       JSON.stringify({
         schema_version: "3.0",

@@ -316,8 +316,14 @@ async function main() {
 
   const pricesSnap = await readJson('public/data/snapshots/market-prices/latest.json', null);
   const pricesMeta = pricesSnap?.metadata || {};
+  const pricesMetaV3 = pricesSnap?.meta || {};
   const d0 = Array.isArray(pricesSnap?.data) && pricesSnap.data.length ? pricesSnap.data[0] : null;
-  const latestSnapshotDate = d0?.date || (typeof pricesMeta.fetched_at === 'string' ? pricesMeta.fetched_at.slice(0, 10) : null) || null;
+  const latestSnapshotDate =
+    pricesMetaV3.data_date ||
+    (typeof pricesMetaV3.asOf === 'string' ? pricesMetaV3.asOf.slice(0, 10) : null) ||
+    d0?.date ||
+    (typeof pricesMeta.fetched_at === 'string' ? pricesMeta.fetched_at.slice(0, 10) : null) ||
+    null;
 
   const expectedTradingDay = lastTradingDayIso(new Date());
 

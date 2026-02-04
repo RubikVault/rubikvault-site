@@ -35,7 +35,7 @@
     "test:ops-ui": "node scripts/ops/test-ops-ui.mjs",
     "test:ops-summary": "node scripts/ops/rv_verify_truth_summary.mjs",
     "verify:contracts": "bash ./scripts/ops/rv_verify_contracts.sh",
-    "test:contracts": "npm run validate:symbols && npm run test:envelope && npm run test:scheduler && node scripts/contract-smoke.js && npm run test:truth-chain && npm run test:missing-mirror",
+    "test:contracts": "npm run validate:symbols && npm run test:envelope && npm run test:scheduler && node scripts/contract-smoke.js && npm run test:truth-chain && npm run test:missing-mirror && node tests/build-info-artifact.test.mjs",
     "test:drop-threshold": "node tests/drop-threshold.test.mjs",
     "test:fetch-retry": "node tests/fetch-retry.test.mjs",
     "test:p2-build-id": "node tests/p2-build-id.test.mjs",

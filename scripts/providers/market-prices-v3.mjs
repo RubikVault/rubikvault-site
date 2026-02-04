@@ -1404,6 +1404,7 @@ export async function main() {
   }
   const fetchedAt = new Date().toISOString();
   const asOf = computeAsOf(validBars);
+  const dataDate = typeof asOf === 'string' ? asOf.slice(0, 10) : null;
   const envelope = buildEnvelope(validBars, {
     module: MODULE_NAME,
     tier: config.tier || 'standard',
@@ -1464,6 +1465,8 @@ export async function main() {
     provider: envelope.metadata.provider,
     source: envelope.metadata.source,
     asOf: envelope.metadata.as_of || null,
+    data_date: dataDate,
+    generated_at: fetchedAt,
     savedAt: envelope.metadata.published_at || envelope.metadata.fetched_at || new Date().toISOString(),
     error: envelope.error?.class || null,
     kind: isBootstrapMini ? 'bootstrap-mini' : 'full',

@@ -34,6 +34,17 @@ for (const key of ['platform', 'api', 'prices', 'freshness', 'pipeline']) {
   }
 }
 
+const owner = summary?.data?.owner;
+if (!owner || typeof owner !== 'object') {
+  fail('owner missing at data.owner');
+}
+if (typeof owner?.overall?.verdict !== 'string') {
+  fail('owner.overall.verdict missing');
+}
+if (!Array.isArray(owner?.topIssues)) {
+  fail('owner.topIssues missing or not array');
+}
+
 const truthChains = summary?.data?.truthChains;
 if (!truthChains || typeof truthChains !== 'object') {
   fail('truthChains missing at data.truthChains');

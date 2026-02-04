@@ -5,6 +5,7 @@ import { execSync } from 'node:child_process';
 
 const ROOT = process.cwd();
 const OUT_PATH = path.join(ROOT, 'public', 'data', 'build-info.json');
+const SNAPSHOT_PATH = path.join(ROOT, 'public', 'data', 'snapshots', 'build-info', 'latest.json');
 
 function safeExec(cmd) {
   try {
@@ -35,4 +36,33 @@ const payload = {
 
 fs.mkdirSync(path.dirname(OUT_PATH), { recursive: true });
 fs.writeFileSync(OUT_PATH, JSON.stringify(payload, null, 2));
+fs.mkdirSync(path.dirname(SNAPSHOT_PATH), { recursive: true });
+const snapshot = {
+  schema_version: '3.0',
+  metadata: {
+    module: 'build-info',
+    tier: 'system',
+    domain: 'system',
+    source: 'build',
+    fetched_at: now,
+    published_at: now,
+    validation: { passed: true }
+  },
+  meta: {
+    status: 'ok',
+    provider: 'internal',
+    data_date: now.slice(0, 10),
+    generated_at: now
+  },
+  data: [
+    {
+      git_sha: payload.git_sha,
+      build_time_utc: payload.build_time_utc,
+      env: payload.env
+    }
+  ],
+  error: null
+};
+fs.writeFileSync(SNAPSHOT_PATH, JSON.stringify(snapshot, null, 2));
 process.stdout.write(`OK: build-info written ${OUT_PATH}\n`);
+process.stdout.write(`OK: build-info snapshot written ${SNAPSHOT_PATH}\n`);
