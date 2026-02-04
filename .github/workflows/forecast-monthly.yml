@@ -1,0 +1,98 @@
+name: 'Forecast Monthly Report'
+
+on:
+  workflow_dispatch:
+    inputs:
+      month:
+        description: 'Month (YYYY-MM), empty for previous month'
+        required: false
+        type: string
+  schedule:
+    # Run 1st of each month at 08:00 UTC
+    - cron: '0 8 1 * *'
+
+defaults:
+  run:
+    shell: bash
+
+env:
+  NODE_VERSION: '20'
+
+jobs:
+  forecast-monthly:
+    name: 'Monthly Report Generation'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci --prefer-offline
+
+      - name: Determine month
+        id: month
+        run: |
+          if [ -n "${{ inputs.month }}" ]; then
+            echo "month=${{ inputs.month }}" >> $GITHUB_OUTPUT
+          else
+            # Previous month
+            PREV_MONTH=$(date -d "1 month ago" +%Y-%m || date -v-1m +%Y-%m)
+            echo "month=$PREV_MONTH" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Generate monthly report
+        id: report
+        run: |
+          node scripts/forecast/run_monthly.mjs --month=${{ steps.month.outputs.month }} 2>&1 | tee pipeline.log
+          
+          if grep -q "MONTHLY REPORT COMPLETE" pipeline.log; then
+            echo "status=success" >> $GITHUB_OUTPUT
+          else
+            echo "status=failed" >> $GITHUB_OUTPUT
+          fi
+        env:
+          TZ: America/New_York
+
+      - name: Commit monthly report
+        if: steps.report.outputs.status == 'success'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          
+          git add public/data/forecast/reports/monthly/ || true
+          
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "chore(forecast): monthly report ${{ steps.month.outputs.month }}"
+            git push
+          fi
+
+      - name: Upload pipeline log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: forecast-monthly-log
+          path: pipeline.log
+          retention-days: 90
+
+      - name: Summary
+        if: always()
+        run: |
+          echo "## Forecast Monthly Report: ${{ steps.month.outputs.month }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ steps.report.outputs.status }}" == "success" ]; then
+            echo "✅ Report generated successfully" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ Report generation failed" >> $GITHUB_STEP_SUMMARY
+          fi

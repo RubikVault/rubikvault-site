@@ -1,0 +1,99 @@
+name: 'Forecast Daily Pipeline'
+
+on:
+  workflow_dispatch:
+    inputs:
+      date:
+        description: 'Trading date (YYYY-MM-DD), empty for auto'
+        required: false
+        type: string
+  schedule:
+    # Run at 21:00 UTC (16:00 ET after market close)
+    - cron: '0 21 * * 1-5'
+
+defaults:
+  run:
+    shell: bash
+
+env:
+  NODE_VERSION: '20'
+
+jobs:
+  forecast-daily:
+    name: 'Daily Forecast Run'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci --prefer-offline
+
+      - name: Run daily pipeline
+        id: pipeline
+        run: |
+          DATE_ARG=""
+          if [ -n "${{ inputs.date }}" ]; then
+            DATE_ARG="--date=${{ inputs.date }}"
+          fi
+          
+          node scripts/forecast/run_daily.mjs $DATE_ARG 2>&1 | tee pipeline.log
+          
+          # Extract result for summary
+          if grep -q "PIPELINE COMPLETE" pipeline.log; then
+            echo "status=success" >> $GITHUB_OUTPUT
+          else
+            echo "status=failed" >> $GITHUB_OUTPUT
+          fi
+        env:
+          TZ: America/New_York
+
+      - name: Commit forecast artifacts
+        if: steps.pipeline.outputs.status == 'success'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          
+          # Add ledger and report files
+          git add mirrors/forecast/ledger/ || true
+          git add mirrors/forecast/snapshots/ || true
+          git add public/data/forecast/ || true
+          
+          # Check if there are changes
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "chore(forecast): daily pipeline $(date +%Y-%m-%d)"
+            git push
+          fi
+
+      - name: Upload pipeline log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: forecast-daily-log
+          path: pipeline.log
+          retention-days: 30
+
+      - name: Summary
+        if: always()
+        run: |
+          echo "## Forecast Daily Pipeline" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ steps.pipeline.outputs.status }}" == "success" ]; then
+            echo "✅ Pipeline completed successfully" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ Pipeline failed" >> $GITHUB_STEP_SUMMARY
+          fi
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "See pipeline.log artifact for details." >> $GITHUB_STEP_SUMMARY

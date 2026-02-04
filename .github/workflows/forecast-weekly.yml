@@ -1,0 +1,118 @@
+name: 'Forecast Weekly Training'
+
+on:
+  workflow_dispatch:
+    inputs:
+      date:
+        description: 'Trading date (YYYY-MM-DD), empty for auto'
+        required: false
+        type: string
+  schedule:
+    # Run Sundays at 06:00 UTC
+    - cron: '0 6 * * 0'
+
+defaults:
+  run:
+    shell: bash
+
+env:
+  NODE_VERSION: '20'
+
+jobs:
+  forecast-weekly:
+    name: 'Weekly Challenger Training'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci --prefer-offline
+
+      - name: Run weekly pipeline
+        id: pipeline
+        run: |
+          DATE_ARG=""
+          if [ -n "${{ inputs.date }}" ]; then
+            DATE_ARG="--date=${{ inputs.date }}"
+          fi
+          
+          node scripts/forecast/run_weekly.mjs $DATE_ARG 2>&1 | tee pipeline.log
+          
+          # Extract promotion status
+          if grep -q "Promotion: YES" pipeline.log; then
+            echo "promoted=true" >> $GITHUB_OUTPUT
+            NEW_CHAMPION=$(grep "New champion:" pipeline.log | awk '{print $NF}')
+            echo "new_champion=$NEW_CHAMPION" >> $GITHUB_OUTPUT
+          else
+            echo "promoted=false" >> $GITHUB_OUTPUT
+          fi
+          
+          if grep -q "WEEKLY PIPELINE COMPLETE" pipeline.log; then
+            echo "status=success" >> $GITHUB_OUTPUT
+          else
+            echo "status=failed" >> $GITHUB_OUTPUT
+          fi
+        env:
+          TZ: America/New_York
+
+      - name: Commit forecast artifacts
+        if: steps.pipeline.outputs.status == 'success'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          
+          # Add challenger specs and any promotions
+          git add mirrors/forecast/challengers/ || true
+          git add mirrors/forecast/champion/ || true
+          git add mirrors/forecast/ledger/promotions/ || true
+          git add public/data/forecast/ || true
+          
+          # Check if there are changes
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+          else
+            COMMIT_MSG="chore(forecast): weekly training $(date +%Y-%m-%d)"
+            if [ "${{ steps.pipeline.outputs.promoted }}" == "true" ]; then
+              COMMIT_MSG="feat(forecast): promoted ${{ steps.pipeline.outputs.new_champion }}"
+            fi
+            git commit -m "$COMMIT_MSG"
+            git push
+          fi
+
+      - name: Upload pipeline log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: forecast-weekly-log
+          path: pipeline.log
+          retention-days: 30
+
+      - name: Summary
+        if: always()
+        run: |
+          echo "## Forecast Weekly Training" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ steps.pipeline.outputs.status }}" == "success" ]; then
+            echo "✅ Pipeline completed successfully" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ Pipeline failed" >> $GITHUB_STEP_SUMMARY
+          fi
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ steps.pipeline.outputs.promoted }}" == "true" ]; then
+            echo "🎉 **New Champion Promoted:** ${{ steps.pipeline.outputs.new_champion }}" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "📊 No promotion this week" >> $GITHUB_STEP_SUMMARY
+          fi
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "See pipeline.log artifact for details." >> $GITHUB_STEP_SUMMARY
