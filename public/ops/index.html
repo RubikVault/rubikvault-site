@@ -467,6 +467,24 @@
     const opsBridgeEl = document.getElementById('ops-bridge');
     let buildInfoCache = { sha: 'unknown', time: null };
 
+    function reportRenderError(label, err) {
+      const message = err?.message ? String(err.message) : String(err);
+      const stack = err?.stack ? String(err.stack) : '';
+      const detail = `${label}: ${message}${stack ? '\n' + stack : ''}`;
+      setRenderStatus('error', `render_exception:${message}`);
+      if (renderErrorEl && renderErrorText) {
+        renderErrorEl.style.display = 'block';
+        renderErrorText.textContent = detail;
+      }
+    }
+
+    window.addEventListener('error', (event) => {
+      reportRenderError('error', event?.error || event?.message || 'unknown');
+    });
+    window.addEventListener('unhandledrejection', (event) => {
+      reportRenderError('unhandledrejection', event?.reason || 'unknown');
+    });
+
     function setRenderStatus(status, reason, asOf) {
       if (renderStatusEl) {
         renderStatusEl.dataset.status = status || 'unknown';
@@ -670,6 +688,15 @@
       const meta = payload?.meta || {};
       const metadata = payload?.metadata || {};
       const data = payload?.data || {};
+      const ssot = data?.ssot || {};
+      const coreApi = ssot?.core?.api || ssot?.api || {};
+      const coreAssets = ssot?.core?.assets || ssot?.assets || {};
+      const enhApi = ssot?.enhancers?.api || {};
+      const enhAssets = ssot?.enhancers?.assets || {};
+      const apiChecks = Array.isArray(coreApi?.checks) ? coreApi.checks : [];
+      const assetChecks = Array.isArray(coreAssets?.checks) ? coreAssets.checks : [];
+      const enhApiChecks = Array.isArray(enhApi?.checks) ? enhApi.checks : [];
+      const enhAssetChecks = Array.isArray(enhAssets?.checks) ? enhAssets.checks : [];
 
       const baselineAsOfEl = document.getElementById('baseline-asof');
       if (baselineAsOfEl) baselineAsOfEl.textContent = meta?.baselineAsOf || data?.opsBaseline?.asOf || '';
@@ -745,16 +772,6 @@
             '</tr>';
         }).join('')
         : '<tr><td colspan=\"6\" class=\"small\">No provider budgets</td></tr>';
-
-      const ssot = data?.ssot || {};
-      const coreApi = ssot?.core?.api || ssot?.api || {};
-      const coreAssets = ssot?.core?.assets || ssot?.assets || {};
-      const enhApi = ssot?.enhancers?.api || {};
-      const enhAssets = ssot?.enhancers?.assets || {};
-      const apiChecks = Array.isArray(coreApi?.checks) ? coreApi.checks : [];
-      const assetChecks = Array.isArray(coreAssets?.checks) ? coreAssets.checks : [];
-      const enhApiChecks = Array.isArray(enhApi?.checks) ? enhApi.checks : [];
-      const enhAssetChecks = Array.isArray(enhAssets?.checks) ? enhAssets.checks : [];
 
       const checkRow = (check) => {
         const label = check?.label || check?.id || 'unknown';
@@ -1216,7 +1233,8 @@
         }
       } catch (err) {
         if (statusEl) statusEl.textContent = 'Failed to load summary.';
-        setRenderStatus('error', 'json_invalid');
+        const msg = err?.message ? String(err.message) : 'unknown';
+        setRenderStatus('error', `render_exception:${msg}`);
         setOpsBridge({
           status: 'error',
           baseline: 'fail',
@@ -1225,7 +1243,7 @@
           countValidated: 0,
           coverageComputed: 0,
           coverageMissing: 0,
-          reason: 'EXCEPTION'
+          reason: `RENDER_EXCEPTION:${msg}`
         });
       }
     }
