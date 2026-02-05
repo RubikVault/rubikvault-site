@@ -1,0 +1,47 @@
+name: EOD History Refresh
+
+on:
+  schedule:
+    - cron: '20 21 * * 1-5' # 21:20 UTC, Mon-Fri (After market close)
+  workflow_dispatch:
+
+concurrency:
+  group: forecast-history-refresh
+  cancel-in-progress: false
+
+jobs:
+  refresh-history:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          
+      - name: Install dependencies (if any)
+        run: npm ci || npm install node-fetch
+
+      - name: Run Backfill (Nasdaq 100)
+        env:
+          EODHD_API_KEY: ${{ secrets.EODHD_API_KEY }}
+        run: |
+          # Use existing universe file or default
+          UNIVERSE_FILE="./public/data/universe/nasdaq100.json"
+          if [ ! -f "$UNIVERSE_FILE" ]; then
+             echo "Universe file not found, skipping."
+             exit 0
+          fi
+          node scripts/providers/eodhd-backfill-bars.mjs --universe "$UNIVERSE_FILE"
+          
+      - name: Commit Changes
+        run: |
+          git config --global user.name "rv-bot"
+          git config --global user.email "bot@rubikvault.com"
+          git add public/data/eod/bars
+          git commit -m "chore(data): refresh eod history [skip ci]" || echo "No changes to commit"
+          git push

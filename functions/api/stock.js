@@ -638,7 +638,41 @@ export async function onRequestGet(context) {
       qualityFlags.add('EOD_KEYS_MISSING');
     }
   } else if (normalizedTicker) {
-    if (!canFetchProvider) {
+    // 2. Try Internal Static Store (Cold Layer)
+    if (!eodAttempted) {
+      try {
+        const { getStaticBars } = await import('./_shared/history-store.mjs');
+        const staticBars = await getStaticBars(normalizedTicker, url.origin);
+
+        if (staticBars && staticBars.length > 0) {
+          // Check freshness (Basic check: is last bar within maxStaleDays?)
+          const lastBar = staticBars[staticBars.length - 1];
+          let isFresh = false;
+          if (lastBar && lastBar.date) {
+            const age = computeAgeSeconds(parseIsoDateToMs(lastBar.date));
+            // If age is less than maxStaleDays, we consider it usable. 
+            // Ideally we want *latest* data, but "Provider calls MUST NOT scale".
+            // We accept static data if it exists.
+            if (age < maxStaleDays * 86400) {
+              isFresh = true;
+            }
+          }
+
+          if (isFresh || !canFetchProvider) {
+            eodBars = staticBars;
+            eodProvider = 'static_store';
+            servedFrom = 'ASSET';
+            eodStatus = isFresh ? 'fresh' : 'stale';
+            eodAttempted = true;
+            if (!isFresh) qualityFlags.add('STATIC_STALE');
+          }
+        }
+      } catch (err) {
+        // Ignore static store error
+      }
+    }
+
+    if (!canFetchProvider && !eodAttempted) {
       // No API keys available - try static EOD batch fallback
       const staticResult = await fetchStaticEodBar(normalizedTicker, request);
       if (staticResult && staticResult.bar) {

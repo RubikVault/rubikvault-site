@@ -1,0 +1,81 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "required": [
+        "schema_version",
+        "system",
+        "universe",
+        "circuit_breaker"
+    ],
+    "properties": {
+        "schema_version": {
+            "type": "string"
+        },
+        "system": {
+            "type": "object",
+            "required": [
+                "id",
+                "version"
+            ],
+            "properties": {
+                "id": {
+                    "type": "string"
+                },
+                "version": {
+                    "type": "string"
+                }
+            }
+        },
+        "universe": {
+            "type": "object",
+            "required": [
+                "default",
+                "source"
+            ],
+            "properties": {
+                "default": {
+                    "type": "string"
+                },
+                "source": {
+                    "type": "string"
+                },
+                "refresh_strategy": {
+                    "type": "object",
+                    "properties": {
+                        "daily": {
+                            "type": "array",
+                            "items": {
+                                "type": "string"
+                            }
+                        },
+                        "weekly": {
+                            "type": "array",
+                            "items": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "circuit_breaker": {
+            "type": "object",
+            "required": [
+                "missing_price_data_pct_trigger",
+                "action_on_trigger"
+            ],
+            "properties": {
+                "missing_price_data_pct_trigger": {
+                    "type": "number"
+                },
+                "action_on_trigger": {
+                    "type": "string",
+                    "enum": [
+                        "CIRCUIT_OPEN_PUBLISH_LAST_GOOD",
+                        "CIRCUIT_OPEN_FAIL"
+                    ]
+                }
+            }
+        }
+    }
+}

@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Forecast Ops Dashboard</title>
+    <style>
+        body {
+            background: #0f172a;
+            color: #e2e8f0;
+            font-family: system-ui;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1rem;
+        }
+
+        .card {
+            background: #1e293b;
+            padding: 1.5rem;
+            border-radius: 8px;
+            border: 1px solid #334155;
+        }
+
+        .status-ok {
+            color: #4ade80;
+        }
+
+        .status-warn {
+            color: #facc15;
+        }
+
+        .status-err {
+            color: #f87171;
+        }
+
+        h2 {
+            margin-top: 0;
+            font-size: 1.25rem;
+            border-bottom: 1px solid #334155;
+            padding-bottom: 0.5rem;
+        }
+
+        .metric {
+            font-size: 2rem;
+            font-weight: bold;
+        }
+
+        .metric-label {
+            color: #94a3b8;
+            font-size: 0.875rem;
+        }
+
+        ul {
+            padding-left: 1.25rem;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: bold;
+        }
+
+        .badge-P0 {
+            background: #7f1d1d;
+            color: #fecaca;
+        }
+
+        .badge-P1 {
+            background: #991b1b;
+            color: #fecaca;
+        }
+
+        .badge-P2 {
+            background: #854d0e;
+            color: #fef08a;
+        }
+    </style>
+</head>
+
+<body>
+    <header style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+        <h1>🔭 Forecast Ops Dashboard</h1>
+        <div id="gen-date" style="color: #64748b;">Loading...</div>
+    </header>
+
+    <div class="grid">
+        <div class="card">
+            <h2>System Status</h2>
+            <div id="status-display" class="metric">--</div>
+            <div class="metric-label">Pipeline State</div>
+        </div>
+        <div class="card">
+            <h2>Data Coverage</h2>
+            <div id="coverage-display" class="metric">--</div>
+            <div class="metric-label">Symbols Processed</div>
+        </div>
+        <div class="card">
+            <h2>Provider Usage</h2>
+            <div>
+                <div>Primary: <strong id="provider-primary">--</strong></div>
+                <div>Store Hit Rate: <span id="store-rate">--%</span></div>
+            </div>
+        </div>
+    </div>
+
+    <div style="margin-top: 2rem;">
+        <div class="card">
+            <h2>🚨 Recommendations & Alerts</h2>
+            <ul id="rec-list">
+                <li>Loading...</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        async function load() {
+            try {
+                const res = await fetch('latest.json');
+                const data = await res.json();
+
+                document.getElementById('gen-date').textContent = new Date(data.generated_at).toLocaleString();
+
+                const statusEl = document.getElementById('status-display');
+                statusEl.textContent = data.status;
+                statusEl.className = `metric ${data.status === 'OK' ? 'status-ok' : data.status === 'BOOTSTRAP' ? 'status-warn' : 'status-err'}`;
+
+                document.getElementById('coverage-display').textContent = data.metrics?.universe_coverage?.total || 0;
+
+                document.getElementById('provider-primary').textContent = data.provider_chain?.primary || 'Unknown';
+                document.getElementById('store-rate').textContent = (data.provider_chain?.store_hit_rate || 0) + '%';
+
+                const recList = document.getElementById('rec-list');
+                recList.innerHTML = '';
+                if (data.recommendations && data.recommendations.length) {
+                    data.recommendations.forEach(r => {
+                        const li = document.createElement('li');
+                        li.innerHTML = `<span class="badge badge-${r.level}">${r.level}</span> ${r.message}`;
+                        recList.appendChild(li);
+                    });
+                } else {
+                    recList.innerHTML = '<li style="color: #64748b;">No active recommendations. System healthy.</li>';
+                }
+            } catch (e) {
+                console.error(e);
+                document.body.innerHTML += '<div style="color: red; padding: 2rem;">Failed to load Ops Report. Ensure scripts/forecast/ops_report.mjs has run.</div>';
+            }
+        }
+        load();
+    </script>
+</body>
+
+</html>

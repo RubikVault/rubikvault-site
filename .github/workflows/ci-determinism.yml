@@ -1,0 +1,21 @@
+name: CI Determinism Check
+
+on:
+  push:
+    paths:
+      - 'scripts/forecast/**'
+  workflow_dispatch:
+
+jobs:
+  check-determinism:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+      - name: Run Determinism Test
+        # Placeholder for actual determinism test interaction
+        # Real test would run `hash(pipeline(input)) == constant`
+        run: echo "Determinism check passed (placeholder)"

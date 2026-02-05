@@ -140,6 +140,18 @@
     },
     "universe": {
         "default": "nasdaq100",
-        "source": "/data/universe/nasdaq100.json"
+        "source": "/data/universe/nasdaq100.json",
+        "refresh_strategy": {
+            "daily": [
+                "nasdaq100",
+                "dowjones"
+            ],
+            "weekly": [
+                "sp500"
+            ],
+            "monthly": [
+                "russell2000"
+            ]
+        }
     }
 }

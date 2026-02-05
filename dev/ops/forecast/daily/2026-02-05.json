@@ -1,0 +1,38 @@
+{
+  "date": "2026-02-05",
+  "generated_at": "2026-02-05T15:48:08.101Z",
+  "status": "BOOTSTRAP",
+  "metrics": {
+    "universe_coverage": {
+      "total": 0,
+      "success": 0,
+      "failures": 0
+    },
+    "forecasting_uplift": {
+      "improved_pct": 0,
+      "mean_skill_delta": 0,
+      "champion_vs_baseline": "N/A"
+    },
+    "circuit": {
+      "state": "CLOSED",
+      "failures": 0,
+      "last_failure": null
+    }
+  },
+  "provider_chain": {
+    "primary": "eodhd",
+    "provider_used_pct": 0,
+    "store_hit_rate": 0
+  },
+  "alerts": [],
+  "recommendations": [
+    {
+      "level": "P1",
+      "message": "System is in BOOTSTRAP. Ensure daily pipeline runs successfully."
+    },
+    {
+      "level": "P1",
+      "message": "EOD Bar Store is empty. Run backfill script."
+    }
+  ]
+}
