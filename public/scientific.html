@@ -674,8 +674,8 @@
         </section>
 
         <div class="disclaimer-box">
-            <strong>⚠️ Research Simulation:</strong> Diese Analyse dient ausschließlich Bildungs- und Forschungszwecken.
-            Keine Anlageberatung. Setup/Trigger sind technische Indikatoren, keine Kauf-/Verkaufsempfehlungen.
+            <strong>⚠️ Research Simulation:</strong> This analysis is for educational and research purposes only.
+            Not investment advice. Setup/Trigger are technical indicators, not buy/sell recommendations.
         </div>
     </main>
 
@@ -707,7 +707,7 @@
                     <td>${Math.round(s.probability * 100)}%</td>
                     <td><span class="badge ${s.timeframe}">${s.timeframe.toUpperCase()}</span></td>
                 </tr>
-            `).join('') || '<tr><td colspan="5" style="color:#64748b;text-align:center;">Keine aktiven Trigger</td></tr>';
+            `).join('') || '<tr><td colspan="5" style="color:#64748b;text-align:center;">No active triggers</td></tr>';
 
             // Top setups
             const setups = analysisData._rankings?.top_setups || [];
@@ -719,7 +719,7 @@
                     <td>${s.trigger_score}%</td>
                     <td>${s.trigger_fulfilled ? '<span class="badge strong">TRIGGER</span>' : '<span class="badge moderate">WATCH</span>'}</td>
                 </tr>
-            `).join('') || '<tr><td colspan="5" style="color:#64748b;text-align:center;">Keine Setups</td></tr>';
+            `).join('') || '<tr><td colspan="5" style="color:#64748b;text-align:center;">No setups</td></tr>';
         }
 
         function populateSelector() {
@@ -733,25 +733,25 @@
             const moderate = symbols.filter(s => analysisData[s].signal_strength === 'MODERATE');
             const weak = symbols.filter(s => analysisData[s].signal_strength === 'WEAK');
 
-            select.innerHTML = '<option value="">Wähle eine Aktie...</option>';
+            select.innerHTML = '<option value="">Select a stock...</option>';
 
             if (strong.length > 0) {
                 const og1 = document.createElement('optgroup');
-                og1.label = '🚀 Triggered (Kauf-Signal)';
+                og1.label = '🚀 Triggered (Buy Signal)';
                 strong.forEach(s => { const o = document.createElement('option'); o.value = s; o.textContent = `${s} - ${analysisData[s].name}`; og1.appendChild(o); });
                 select.appendChild(og1);
             }
 
             if (moderate.length > 0) {
                 const og2 = document.createElement('optgroup');
-                og2.label = '👁️ Setup erfüllt (Watchlist)';
+                og2.label = '👁️ Setup fulfilled (Watchlist)';
                 moderate.forEach(s => { const o = document.createElement('option'); o.value = s; o.textContent = `${s} - ${analysisData[s].name}`; og2.appendChild(o); });
                 select.appendChild(og2);
             }
 
             if (weak.length > 0) {
                 const og3 = document.createElement('optgroup');
-                og3.label = '○ Kein Setup';
+                og3.label = '○ No Setup';
                 weak.forEach(s => { const o = document.createElement('option'); o.value = s; o.textContent = `${s} - ${analysisData[s].name}`; og3.appendChild(o); });
                 select.appendChild(og3);
             }
@@ -773,29 +773,29 @@
             const signalEl = document.getElementById('signal-indicator');
             signalEl.className = `signal-indicator ${data.signal_strength.toLowerCase()}`;
             signalEl.querySelector('.signal-text').textContent =
-                data.signal_strength === 'STRONG' ? '🚀 KAUF-SIGNAL: Setup + Trigger erfüllt!' :
-                    data.signal_strength === 'MODERATE' ? '👁️ WATCHLIST: Setup erfüllt, Trigger ausstehend' :
-                        '○ Kein aktives Setup';
+                data.signal_strength === 'STRONG' ? '🚀 BUY SIGNAL: Setup + Trigger fulfilled!' :
+                    data.signal_strength === 'MODERATE' ? '👁️ WATCHLIST: Setup fulfilled, Trigger pending' :
+                        '○ No active setup';
 
             // Setup Card
             const setupCard = document.getElementById('setup-card');
             setupCard.className = `setup-card ${data.setup.fulfilled ? 'fulfilled' : ''}`;
-            document.getElementById('setup-badge').textContent = data.setup.fulfilled ? '✓ ERFÜLLT' : '✗ NICHT ERFÜLLT';
+            document.getElementById('setup-badge').textContent = data.setup.fulfilled ? '✓ FULFILLED' : '✗ NOT FULFILLED';
             document.getElementById('setup-badge').className = `status-badge ${data.setup.fulfilled ? 'fulfilled' : 'not-fulfilled'}`;
             document.getElementById('setup-score-fill').style.width = `${data.setup.score}%`;
             document.getElementById('setup-score-fill').className = `score-fill ${data.setup.score >= 70 ? 'high' : data.setup.score >= 50 ? 'medium' : 'low'}`;
-            document.getElementById('setup-conditions').textContent = `${data.setup.conditions_met} Bedingungen erfüllt (Score: ${data.setup.score}%)`;
-            document.getElementById('setup-proofs').innerHTML = data.setup.proof_points.map(p => `<li>${p}</li>`).join('') || '<li class="missing">Keine Bedingungen erfüllt</li>';
+            document.getElementById('setup-conditions').textContent = `${data.setup.conditions_met} conditions fulfilled (Score: ${data.setup.score}%)`;
+            document.getElementById('setup-proofs').innerHTML = data.setup.proof_points.map(p => `<li>${p}</li>`).join('') || '<li class="missing">No conditions fulfilled</li>';
 
             // Trigger Card
             const triggerCard = document.getElementById('trigger-card');
             triggerCard.className = `trigger-card ${data.trigger.fulfilled ? 'fulfilled' : ''} ${data.trigger.pending ? 'pending' : ''}`;
-            document.getElementById('trigger-badge').textContent = data.trigger.pending ? '⏳ WARTE AUF SETUP' : data.trigger.fulfilled ? '✓ ERFÜLLT' : '✗ NICHT ERFÜLLT';
+            document.getElementById('trigger-badge').textContent = data.trigger.pending ? '⏳ WAITING FOR SETUP' : data.trigger.fulfilled ? '✓ FULFILLED' : '✗ NOT FULFILLED';
             document.getElementById('trigger-badge').className = `status-badge ${data.trigger.pending ? 'pending' : data.trigger.fulfilled ? 'fulfilled' : 'not-fulfilled'}`;
             document.getElementById('trigger-score-fill').style.width = `${data.trigger.score}%`;
             document.getElementById('trigger-score-fill').className = `score-fill ${data.trigger.score >= 70 ? 'high' : data.trigger.score >= 50 ? 'medium' : 'low'}`;
-            document.getElementById('trigger-conditions').textContent = data.trigger.pending ? 'Setup muss zuerst erfüllt sein' : `${data.trigger.conditions_met} Bedingungen erfüllt (Score: ${data.trigger.score}%)`;
-            document.getElementById('trigger-proofs').innerHTML = data.trigger.proof_points.map(p => `<li>${p}</li>`).join('') || (data.trigger.pending ? '<li class="missing">Warte auf Setup...</li>' : '<li class="missing">Keine Trigger-Bedingungen erfüllt</li>');
+            document.getElementById('trigger-conditions').textContent = data.trigger.pending ? 'Setup must be fulfilled first' : `${data.trigger.conditions_met} conditions fulfilled (Score: ${data.trigger.score}%)`;
+            document.getElementById('trigger-proofs').innerHTML = data.trigger.proof_points.map(p => `<li>${p}</li>`).join('') || (data.trigger.pending ? '<li class="missing">Waiting for setup...</li>' : '<li class="missing">No trigger conditions fulfilled</li>');
 
             // Probability
             const prob = data.probability;

@@ -314,7 +314,7 @@
   </nav>
 
   <div class="container">
-    <header style="border-bottom: none; padding-bottom: 0; margin-bottom: 1rem;">
+    <header style="border-bottom: none; padding-bottom: 0; margin-bottom: 1.5rem;">
       <div class="logo">
         <h1>🔮 Forecast System v3.4</h1>
       </div>
@@ -325,80 +325,15 @@
 
     <div id="error-container"></div>
 
-    <!-- Summary Cards -->
-    <div class="grid grid-3" style="margin-bottom: 2rem;">
-      <div class="card">
-        <div class="card-header">
-          <span class="card-title">Champion Model</span>
-        </div>
-        <div class="metric-value" id="champion-id">—</div>
-        <div class="metric-label" id="champion-created">Loading...</div>
+    <!-- PRIMARY: Stock Forecasts Table (Analysis-First) -->
+    <div class="card" style="margin-bottom: 1.5rem;">
+      <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+        <span class="card-title">📊 Stock Forecasts</span>
+        <span id="forecast-count" style="font-size: 0.85rem; color: var(--text-muted);">— stocks</span>
       </div>
-
-      <div class="card">
-        <div class="card-header">
-          <span class="card-title">Maturity Phase</span>
-        </div>
-        <div class="metric-value" id="maturity-phase">—</div>
-        <div class="metric-label" id="maturity-days">Loading...</div>
-      </div>
-
-      <div class="card">
-        <div class="card-header">
-          <span class="card-title">Circuit State</span>
-        </div>
-        <div class="metric-value" id="circuit-state">—</div>
-        <div class="metric-label" id="circuit-reason">Loading...</div>
-      </div>
-    </div>
-
-    <!-- Metrics Cards -->
-    <div class="grid grid-2" style="margin-bottom: 2rem;">
-      <div class="card">
-        <div class="card-header">
-          <span class="card-title">Brier Skill (30d)</span>
-        </div>
-        <div id="brier-metrics">
-          <div class="metric-row">
-            <span>1-Day Horizon</span>
-            <span class="metric-value" style="font-size: 1.25rem;" id="brier-1d">—</span>
-          </div>
-          <div class="metric-row">
-            <span>5-Day Horizon</span>
-            <span class="metric-value" style="font-size: 1.25rem;" id="brier-5d">—</span>
-          </div>
-          <div class="metric-row">
-            <span>20-Day Horizon</span>
-            <span class="metric-value" style="font-size: 1.25rem;" id="brier-20d">—</span>
-          </div>
-        </div>
-      </div>
-
-      <div class="card">
-        <div class="card-header">
-          <span class="card-title">Monthly Quota Progress</span>
-        </div>
-        <div id="quota-metrics">
-          <div class="metric-row">
-            <span>Challengers Tested</span>
-            <span id="challengers-tested">— / —</span>
-          </div>
-          <div class="progress-bar">
-            <div class="progress-fill progress-green" id="quota-progress" style="width: 0%;"></div>
-          </div>
-          <div class="metric-row">
-            <span>Quota Status</span>
-            <span id="quota-status" class="status-badge">—</span>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Stock Forecasts Table -->
-    <div class="card" style="margin-bottom: 2rem;">
-      <div class="card-header">
-        <span class="card-title">Stock Forecasts</span>
-        <span id="forecast-count" style="font-size: 0.8rem; color: var(--text-muted);">— stocks</span>
+      <div id="bootstrap-notice"
+        style="display: none; padding: 1rem; background: rgba(234, 179, 8, 0.1); border-radius: 8px; margin-bottom: 1rem; color: var(--accent-yellow); font-size: 0.9rem;">
+        ⏳ <strong>System Initializing:</strong> Forecasts will appear after the first pipeline run. Check back soon.
       </div>
       <table id="forecasts-table">
         <thead>
@@ -418,27 +353,96 @@
       </table>
     </div>
 
-    <!-- Recent Activity -->
-    <div class="card">
-      <div class="card-header">
-        <span class="card-title">Recent Promotions</span>
+    <!-- SECONDARY: Compact System Status (Supporting Info) -->
+    <div
+      style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
+      <div
+        style="background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; padding: 0.75rem 1rem;">
+        <div style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; margin-bottom: 0.25rem;">
+          Model</div>
+        <div style="font-size: 0.95rem; color: var(--text-primary);" id="champion-id">—</div>
       </div>
-      <table id="promotions-table">
-        <thead>
-          <tr>
-            <th>Date</th>
-            <th>From</th>
-            <th>To</th>
-            <th>Skill Δ</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td colspan="4" class="loading">Loading...</td>
-          </tr>
-        </tbody>
-      </table>
+      <div
+        style="background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; padding: 0.75rem 1rem;">
+        <div style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; margin-bottom: 0.25rem;">
+          Phase</div>
+        <div style="font-size: 0.95rem; color: var(--text-primary);" id="maturity-phase">—</div>
+      </div>
+      <div
+        style="background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; padding: 0.75rem 1rem;">
+        <div style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; margin-bottom: 0.25rem;">
+          Circuit</div>
+        <div style="font-size: 0.95rem; color: var(--text-primary);" id="circuit-state">—</div>
+      </div>
+      <div
+        style="background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; padding: 0.75rem 1rem;">
+        <div style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; margin-bottom: 0.25rem;">
+          Updated</div>
+        <div style="font-size: 0.95rem; color: var(--text-primary);" id="champion-created">—</div>
+      </div>
     </div>
+
+    <!-- TERTIARY: Performance Metrics (Collapsed by Default) -->
+    <details style="margin-bottom: 1.5rem;">
+      <summary
+        style="cursor: pointer; padding: 0.75rem 1rem; background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; color: var(--text-secondary); font-size: 0.9rem;">
+        📈 System Performance Metrics
+      </summary>
+      <div
+        style="margin-top: 0.5rem; display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem;">
+        <div class="card" style="padding: 1rem;">
+          <div class="card-header" style="margin-bottom: 0.75rem;">
+            <span class="card-title" style="font-size: 0.9rem;">Brier Skill (30d)</span>
+          </div>
+          <div style="display: flex; gap: 1.5rem; font-size: 0.85rem;">
+            <div><span style="color: var(--text-muted);">1d:</span> <span id="brier-1d">—</span></div>
+            <div><span style="color: var(--text-muted);">5d:</span> <span id="brier-5d">—</span></div>
+            <div><span style="color: var(--text-muted);">20d:</span> <span id="brier-20d">—</span></div>
+          </div>
+        </div>
+        <div class="card" style="padding: 1rem;">
+          <div class="card-header" style="margin-bottom: 0.75rem;">
+            <span class="card-title" style="font-size: 0.9rem;">Monthly Quota</span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 1rem; font-size: 0.85rem;">
+            <span id="challengers-tested">— / —</span>
+            <div class="progress-bar" style="flex: 1; height: 6px;">
+              <div class="progress-fill progress-green" id="quota-progress" style="width: 0%;"></div>
+            </div>
+            <span id="quota-status" class="status-badge" style="font-size: 0.7rem; padding: 0.2rem 0.5rem;">—</span>
+          </div>
+        </div>
+      </div>
+    </details>
+
+    <!-- Recent Activity (Keep but make smaller) -->
+    <details>
+      <summary
+        style="cursor: pointer; padding: 0.75rem 1rem; background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; color: var(--text-secondary); font-size: 0.9rem;">
+        🔄 Recent Model Promotions
+      </summary>
+      <div class="card" style="margin-top: 0.5rem; padding: 1rem;">
+        <table id="promotions-table" style="font-size: 0.85rem;">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>From</th>
+              <th>To</th>
+              <th>Skill Δ</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td colspan="4" class="loading">Loading...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </details>
+
+    <!-- Hidden elements for JS compatibility -->
+    <div id="maturity-days" style="display: none;"></div>
+    <div id="circuit-reason" style="display: none;"></div>
   </div>
 
   <script>
@@ -561,9 +565,11 @@
     function updateForecasts(forecasts) {
       const tbody = document.querySelector('#forecasts-table tbody');
       const countEl = document.getElementById('forecast-count');
+      const bootstrapNotice = document.getElementById('bootstrap-notice');
 
       if (!forecasts || forecasts.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--text-muted);">No forecasts available. System is initializing.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--text-muted);">—</td></tr>';
+        bootstrapNotice.style.display = 'block';
         countEl.textContent = '0 stocks';
         return;
       }
