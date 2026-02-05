@@ -57,6 +57,7 @@
             <a href="/" class="rv-page-nav-link" data-page="analyzer">Stock Analyzer</a>
             <a href="/elliott.html" class="rv-page-nav-link" data-page="elliott">Elliott Waves</a>
             <a href="/scientific.html" class="rv-page-nav-link active" data-page="scientific">Scientific Analyzer</a>
+            <a href="/forecast.html" class="rv-page-nav-link" data-page="forecast">Forecast System</a>
         </div>
     </nav>
 
@@ -695,7 +696,7 @@
         function populateRankings() {
             const triggeredTbody = document.querySelector('#triggered-table tbody');
             const setupsTbody = document.querySelector('#setups-table tbody');
-            
+
             // Triggered setups (Kauf-Kandidaten)
             const triggered = analysisData._rankings?.triggered_setups || [];
             triggeredTbody.innerHTML = triggered.slice(0, 8).map(s => `
@@ -726,28 +727,28 @@
             const symbols = Object.keys(analysisData)
                 .filter(k => !k.startsWith('_') && analysisData[k].probability !== null)
                 .sort();
-            
+
             // Group by signal strength
             const strong = symbols.filter(s => analysisData[s].signal_strength === 'STRONG');
             const moderate = symbols.filter(s => analysisData[s].signal_strength === 'MODERATE');
             const weak = symbols.filter(s => analysisData[s].signal_strength === 'WEAK');
 
             select.innerHTML = '<option value="">Wähle eine Aktie...</option>';
-            
+
             if (strong.length > 0) {
                 const og1 = document.createElement('optgroup');
                 og1.label = '🚀 Triggered (Kauf-Signal)';
                 strong.forEach(s => { const o = document.createElement('option'); o.value = s; o.textContent = `${s} - ${analysisData[s].name}`; og1.appendChild(o); });
                 select.appendChild(og1);
             }
-            
+
             if (moderate.length > 0) {
                 const og2 = document.createElement('optgroup');
                 og2.label = '👁️ Setup erfüllt (Watchlist)';
                 moderate.forEach(s => { const o = document.createElement('option'); o.value = s; o.textContent = `${s} - ${analysisData[s].name}`; og2.appendChild(o); });
                 select.appendChild(og2);
             }
-            
+
             if (weak.length > 0) {
                 const og3 = document.createElement('optgroup');
                 og3.label = '○ Kein Setup';
@@ -771,10 +772,10 @@
             // Signal Indicator
             const signalEl = document.getElementById('signal-indicator');
             signalEl.className = `signal-indicator ${data.signal_strength.toLowerCase()}`;
-            signalEl.querySelector('.signal-text').textContent = 
+            signalEl.querySelector('.signal-text').textContent =
                 data.signal_strength === 'STRONG' ? '🚀 KAUF-SIGNAL: Setup + Trigger erfüllt!' :
-                data.signal_strength === 'MODERATE' ? '👁️ WATCHLIST: Setup erfüllt, Trigger ausstehend' :
-                '○ Kein aktives Setup';
+                    data.signal_strength === 'MODERATE' ? '👁️ WATCHLIST: Setup erfüllt, Trigger ausstehend' :
+                        '○ Kein aktives Setup';
 
             // Setup Card
             const setupCard = document.getElementById('setup-card');
