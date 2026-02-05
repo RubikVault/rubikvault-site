@@ -1,69 +1,38 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Forecast System Dashboard | RubikVault</title>
+  <meta charset="UTF-8" />
+  <title>RubikVault – Forecast System v3.4</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+  <meta name="description" content="ML-powered stock forecast system with Brier Score tracking and model promotions." />
+
+  <meta name="theme-color" content="#3b82f6" />
+  <link rel="icon" type="image/png" sizes="32x32" href="/assets/rv-favicon.png" />
+  <link rel="apple-touch-icon" sizes="180x180" href="/assets/rv-apple-icon.png" />
+  <link rel="manifest" href="/manifest.json" />
   <link rel="stylesheet" href="/style.css" />
   <style>
-    :root {
-      --bg-primary: #0a0a0f;
-      --bg-secondary: #12121a;
-      --bg-card: #1a1a25;
-      --border: #2a2a3a;
-      --text-primary: #f0f0f5;
-      --text-secondary: #8888aa;
-      --text-muted: #555566;
-      --accent-blue: #4a90d9;
-      --accent-green: #22c55e;
-      --accent-red: #ef4444;
-      --accent-yellow: #eab308;
-      --accent-purple: #a855f7;
-      --gradient-1: linear-gradient(135deg, #4a90d9 0%, #a855f7 100%);
-    }
-
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
-
-    body {
-      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      background: var(--bg-primary);
-      color: var(--text-primary);
-      min-height: 100vh;
-      line-height: 1.6;
-    }
-
-    .container {
+    /* Forecast-specific component styles only */
+    .forecast-container {
       max-width: 1400px;
       margin: 0 auto;
       padding: 2rem;
     }
 
-    header {
+    .forecast-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
       margin-bottom: 2rem;
       padding-bottom: 1rem;
-      border-bottom: 1px solid var(--border);
+      border-bottom: 1px solid var(--rv-border);
     }
 
-    .logo {
-      display: flex;
-      align-items: center;
-      gap: 1rem;
-    }
-
-    .logo h1 {
+    .forecast-title {
       font-size: 1.5rem;
-      background: var(--gradient-1);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
+      font-weight: 600;
+      color: var(--rv-text);
     }
 
     .status-badge {
@@ -78,19 +47,19 @@
 
     .status-ok {
       background: rgba(34, 197, 94, 0.15);
-      color: var(--accent-green);
+      color: #22c55e;
       border: 1px solid rgba(34, 197, 94, 0.3);
     }
 
     .status-circuit-open {
       background: rgba(239, 68, 68, 0.15);
-      color: var(--accent-red);
+      color: #ef4444;
       border: 1px solid rgba(239, 68, 68, 0.3);
     }
 
     .status-bootstrap {
       background: rgba(234, 179, 8, 0.15);
-      color: var(--accent-yellow);
+      color: #eab308;
       border: 1px solid rgba(234, 179, 8, 0.3);
     }
 
@@ -108,9 +77,9 @@
     }
 
     .card {
-      background: var(--bg-card);
-      border: 1px solid var(--border);
-      border-radius: 12px;
+      background: var(--rv-bg-card);
+      border: 1px solid var(--rv-border);
+      border-radius: var(--rv-radius);
       padding: 1.5rem;
       transition: transform 0.2s, box-shadow 0.2s;
     }
@@ -130,7 +99,7 @@
     .card-title {
       font-size: 0.875rem;
       font-weight: 500;
-      color: var(--text-secondary);
+      color: var(--rv-text-muted);
       text-transform: uppercase;
       letter-spacing: 0.05em;
     }
@@ -143,20 +112,20 @@
 
     .metric-label {
       font-size: 0.875rem;
-      color: var(--text-secondary);
+      color: var(--rv-text-muted);
       margin-top: 0.25rem;
     }
 
     .metric-positive {
-      color: var(--accent-green);
+      color: #22c55e;
     }
 
     .metric-negative {
-      color: var(--accent-red);
+      color: #ef4444;
     }
 
     .metric-neutral {
-      color: var(--text-secondary);
+      color: var(--rv-text-muted);
     }
 
     .metric-row {
@@ -164,7 +133,7 @@
       justify-content: space-between;
       align-items: center;
       padding: 0.75rem 0;
-      border-bottom: 1px solid var(--border);
+      border-bottom: 1px solid var(--rv-border);
     }
 
     .metric-row:last-child {
@@ -174,7 +143,7 @@
     .progress-bar {
       width: 100%;
       height: 8px;
-      background: var(--bg-secondary);
+      background: var(--rv-bg-soft);
       border-radius: 4px;
       overflow: hidden;
       margin-top: 0.5rem;
@@ -187,33 +156,33 @@
     }
 
     .progress-green {
-      background: var(--accent-green);
+      background: #22c55e;
     }
 
     .progress-yellow {
-      background: var(--accent-yellow);
+      background: #eab308;
     }
 
     .progress-red {
-      background: var(--accent-red);
+      background: #ef4444;
     }
 
-    table {
+    .forecast-table {
       width: 100%;
       border-collapse: collapse;
     }
 
-    th,
-    td {
+    .forecast-table th,
+    .forecast-table td {
       padding: 0.75rem;
       text-align: left;
-      border-bottom: 1px solid var(--border);
+      border-bottom: 1px solid var(--rv-border);
     }
 
-    th {
+    .forecast-table th {
       font-size: 0.75rem;
       font-weight: 600;
-      color: var(--text-secondary);
+      color: var(--rv-text-muted);
       text-transform: uppercase;
       letter-spacing: 0.05em;
     }
@@ -223,7 +192,7 @@
       justify-content: center;
       align-items: center;
       min-height: 200px;
-      color: var(--text-secondary);
+      color: var(--rv-text-muted);
     }
 
     .error-box {
@@ -316,26 +285,27 @@
     </div>
   </nav>
 
-  <div class="container">
-    <header style="border-bottom: none; padding-bottom: 0; margin-bottom: 1.5rem;">
-      <div class="logo">
-        <h1>🔮 Forecast System v3.4</h1>
-      </div>
+  <section class="rv-section">
+    <div
+      style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; flex-wrap: wrap; gap: 1rem;">
+      <h1 style="font-size: 1.75rem; color: var(--rv-text);">🔮 Forecast System v3.4</h1>
       <div id="system-status" class="status-badge status-bootstrap">
         <span class="pulse">●</span> Loading...
       </div>
-    </header>
+    </div>
 
     <div id="error-container"></div>
 
     <!-- PRIMARY: Stock Forecasts Table (Analysis-First) -->
-    <div class="card" style="margin-bottom: 1.5rem;">
-      <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
-        <span class="card-title">📊 Stock Forecasts</span>
-        <span id="forecast-count" style="font-size: 0.85rem; color: var(--text-muted);">— stocks</span>
+    <div class="rv-card" style="margin-bottom: 1.5rem;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+        <span
+          style="font-size: 0.875rem; font-weight: 500; color: var(--rv-text-muted); text-transform: uppercase; letter-spacing: 0.05em;">📊
+          Stock Forecasts</span>
+        <span id="forecast-count" style="font-size: 0.85rem; color: var(--rv-text-muted);">— stocks</span>
       </div>
       <div id="bootstrap-notice"
-        style="display: none; padding: 1rem; background: rgba(234, 179, 8, 0.1); border-radius: 8px; margin-bottom: 1rem; color: var(--accent-yellow); font-size: 0.9rem;">
+        style="display: none; padding: 1rem; background: rgba(234, 179, 8, 0.1); border-radius: 8px; margin-bottom: 1rem; color: #eab308; font-size: 0.9rem;">
         ⏳ <strong>System Initializing:</strong> Forecasts will appear after the first pipeline run. Check back soon.
       </div>
       <table id="forecasts-table">
@@ -360,26 +330,26 @@
     <div
       style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
       <div
-        style="background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; padding: 0.75rem 1rem;">
-        <div style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; margin-bottom: 0.25rem;">
+        style="background: var(--rv-bg-card); border: 1px solid var(--rv-border); border-radius: 8px; padding: 0.75rem 1rem;">
+        <div style="font-size: 0.75rem; color: var(--rv-text-muted); text-transform: uppercase; margin-bottom: 0.25rem;">
           Model</div>
         <div style="font-size: 0.95rem; color: var(--text-primary);" id="champion-id">—</div>
       </div>
       <div
-        style="background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; padding: 0.75rem 1rem;">
-        <div style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; margin-bottom: 0.25rem;">
+        style="background: var(--rv-bg-card); border: 1px solid var(--rv-border); border-radius: 8px; padding: 0.75rem 1rem;">
+        <div style="font-size: 0.75rem; color: var(--rv-text-muted); text-transform: uppercase; margin-bottom: 0.25rem;">
           Phase</div>
         <div style="font-size: 0.95rem; color: var(--text-primary);" id="maturity-phase">—</div>
       </div>
       <div
-        style="background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; padding: 0.75rem 1rem;">
-        <div style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; margin-bottom: 0.25rem;">
+        style="background: var(--rv-bg-card); border: 1px solid var(--rv-border); border-radius: 8px; padding: 0.75rem 1rem;">
+        <div style="font-size: 0.75rem; color: var(--rv-text-muted); text-transform: uppercase; margin-bottom: 0.25rem;">
           Circuit</div>
         <div style="font-size: 0.95rem; color: var(--text-primary);" id="circuit-state">—</div>
       </div>
       <div
-        style="background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; padding: 0.75rem 1rem;">
-        <div style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; margin-bottom: 0.25rem;">
+        style="background: var(--rv-bg-card); border: 1px solid var(--rv-border); border-radius: 8px; padding: 0.75rem 1rem;">
+        <div style="font-size: 0.75rem; color: var(--rv-text-muted); text-transform: uppercase; margin-bottom: 0.25rem;">
           Updated</div>
         <div style="font-size: 0.95rem; color: var(--text-primary);" id="champion-created">—</div>
       </div>
@@ -388,22 +358,22 @@
     <!-- TERTIARY: Performance Metrics (Collapsed by Default) -->
     <details style="margin-bottom: 1.5rem;">
       <summary
-        style="cursor: pointer; padding: 0.75rem 1rem; background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; color: var(--text-secondary); font-size: 0.9rem;">
+        style="cursor: pointer; padding: 0.75rem 1rem; background: var(--rv-bg-card); border: 1px solid var(--rv-border); border-radius: 8px; color: var(--rv-text-muted); font-size: 0.9rem;">
         📈 System Performance Metrics
       </summary>
       <div
         style="margin-top: 0.5rem; display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem;">
-        <div class="card" style="padding: 1rem;">
+        <div class="rv-card" style="padding: 1rem;">
           <div class="card-header" style="margin-bottom: 0.75rem;">
             <span class="card-title" style="font-size: 0.9rem;">Brier Skill (30d)</span>
           </div>
           <div style="display: flex; gap: 1.5rem; font-size: 0.85rem;">
-            <div><span style="color: var(--text-muted);">1d:</span> <span id="brier-1d">—</span></div>
-            <div><span style="color: var(--text-muted);">5d:</span> <span id="brier-5d">—</span></div>
-            <div><span style="color: var(--text-muted);">20d:</span> <span id="brier-20d">—</span></div>
+            <div><span style="color: var(--rv-text-muted);">1d:</span> <span id="brier-1d">—</span></div>
+            <div><span style="color: var(--rv-text-muted);">5d:</span> <span id="brier-5d">—</span></div>
+            <div><span style="color: var(--rv-text-muted);">20d:</span> <span id="brier-20d">—</span></div>
           </div>
         </div>
-        <div class="card" style="padding: 1rem;">
+        <div class="rv-card" style="padding: 1rem;">
           <div class="card-header" style="margin-bottom: 0.75rem;">
             <span class="card-title" style="font-size: 0.9rem;">Monthly Quota</span>
           </div>
@@ -421,10 +391,10 @@
     <!-- Recent Activity (Keep but make smaller) -->
     <details>
       <summary
-        style="cursor: pointer; padding: 0.75rem 1rem; background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; color: var(--text-secondary); font-size: 0.9rem;">
+        style="cursor: pointer; padding: 0.75rem 1rem; background: var(--rv-bg-card); border: 1px solid var(--rv-border); border-radius: 8px; color: var(--rv-text-muted); font-size: 0.9rem;">
         🔄 Recent Model Promotions
       </summary>
-      <div class="card" style="margin-top: 0.5rem; padding: 1rem;">
+      <div class="rv-card" style="margin-top: 0.5rem; padding: 1rem;">
         <table id="promotions-table" style="font-size: 0.85rem;">
           <thead>
             <tr>
@@ -446,101 +416,101 @@
     <!-- Hidden elements for JS compatibility -->
     <div id="maturity-days" style="display: none;"></div>
     <div id="circuit-reason" style="display: none;"></div>
-  </div>
+    </div>
 
-  <script>
-    const API_BASE = '/data/forecast';
+    <script>
+      const API_BASE = '/data/forecast';
 
-    async function fetchData(path) {
-      try {
-        const response = await fetch(`${API_BASE}/${path}`);
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        return await response.json();
-      } catch (err) {
-        console.error(`Failed to fetch ${path}:`, err);
-        return null;
+      async function fetchData(path) {
+        try {
+          const response = await fetch(`${API_BASE}/${path}`);
+          if (!response.ok) throw new Error(`HTTP ${response.status}`);
+          return await response.json();
+        } catch (err) {
+          console.error(`Failed to fetch ${path}:`, err);
+          return null;
+        }
       }
-    }
 
-    function showError(message) {
-      const container = document.getElementById('error-container');
-      container.innerHTML = `
+      function showError(message) {
+        const container = document.getElementById('error-container');
+        container.innerHTML = `
         <div class="error-box">
           <strong>Error:</strong> ${message}
         </div>
       `;
-    }
-
-    function updateStatus(status) {
-      const badge = document.getElementById('system-status');
-      // Read circuit state from nested object (artifact schema: circuit.state)
-      const circuitState = status.circuit?.state?.toLowerCase() || 'closed';
-      const systemStatus = (status.status || '').toUpperCase();
-
-      if (circuitState === 'open') {
-        badge.className = 'status-badge status-circuit-open';
-        badge.innerHTML = '<span>●</span> Circuit Open';
-      } else if (systemStatus === 'BOOTSTRAP') {
-        badge.className = 'status-badge status-bootstrap';
-        badge.innerHTML = '<span class="pulse">●</span> Bootstrap';
-      } else {
-        badge.className = 'status-badge status-ok';
-        badge.innerHTML = '<span>●</span> Operational';
       }
 
-      document.getElementById('circuit-state').textContent =
-        circuitState === 'open' ? 'OPEN' : 'CLOSED';
-      document.getElementById('circuit-reason').textContent =
-        status.message || 'System healthy';
-    }
+      function updateStatus(status) {
+        const badge = document.getElementById('system-status');
+        // Read circuit state from nested object (artifact schema: circuit.state)
+        const circuitState = status.circuit?.state?.toLowerCase() || 'closed';
+        const systemStatus = (status.status || '').toUpperCase();
 
-    function updateLatest(latest) {
-      document.getElementById('maturity-phase').textContent =
-        latest.data?.maturity_phase || 'BOOTSTRAP';
-      document.getElementById('maturity-days').textContent =
-        latest.meta?.status || 'Initializing...';
-    }
-
-    function updateMetrics(report) {
-      if (!report) return;
-
-      const metrics = report.global_metrics?.by_horizon || {};
-
-      for (const horizon of ['1d', '5d', '20d']) {
-        const el = document.getElementById(`brier-${horizon}`);
-        const skill = metrics[horizon]?.combined?.brier_skill;
-        if (skill !== null && skill !== undefined) {
-          el.textContent = (skill * 100).toFixed(1) + '%';
-          el.className = skill > 0 ? 'metric-positive' : (skill < 0 ? 'metric-negative' : 'metric-neutral');
+        if (circuitState === 'open') {
+          badge.className = 'status-badge status-circuit-open';
+          badge.innerHTML = '<span>●</span> Circuit Open';
+        } else if (systemStatus === 'BOOTSTRAP') {
+          badge.className = 'status-badge status-bootstrap';
+          badge.innerHTML = '<span class="pulse">●</span> Bootstrap';
+        } else {
+          badge.className = 'status-badge status-ok';
+          badge.innerHTML = '<span>●</span> Operational';
         }
+
+        document.getElementById('circuit-state').textContent =
+          circuitState === 'open' ? 'OPEN' : 'CLOSED';
+        document.getElementById('circuit-reason').textContent =
+          status.message || 'System healthy';
       }
 
-      // Quota
-      const compute = report.meta?.compute || {};
-      const tested = compute.challengers_tested_this_period || 0;
-      const min = compute.quota_monthly_min_challengers || 8;
-
-      document.getElementById('challengers-tested').textContent = `${tested} / ${min}`;
-
-      const progress = Math.min(100, (tested / min) * 100);
-      const progressEl = document.getElementById('quota-progress');
-      progressEl.style.width = `${progress}%`;
-      progressEl.className = `progress-fill ${progress >= 100 ? 'progress-green' : (progress >= 50 ? 'progress-yellow' : 'progress-red')}`;
-
-      const quotaStatus = document.getElementById('quota-status');
-      quotaStatus.textContent = compute.quota_status === 'met' ? 'Met' : 'Pending';
-      quotaStatus.className = `status-badge ${compute.quota_status === 'met' ? 'status-ok' : 'status-bootstrap'}`;
-    }
-
-    function updatePromotions(promotions) {
-      const tbody = document.querySelector('#promotions-table tbody');
-
-      if (!promotions || promotions.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: var(--text-muted);">No promotions yet</td></tr>';
-        return;
+      function updateLatest(latest) {
+        document.getElementById('maturity-phase').textContent =
+          latest.data?.maturity_phase || 'BOOTSTRAP';
+        document.getElementById('maturity-days').textContent =
+          latest.meta?.status || 'Initializing...';
       }
 
-      tbody.innerHTML = promotions.slice(0, 5).map(p => `
+      function updateMetrics(report) {
+        if (!report) return;
+
+        const metrics = report.global_metrics?.by_horizon || {};
+
+        for (const horizon of ['1d', '5d', '20d']) {
+          const el = document.getElementById(`brier-${horizon}`);
+          const skill = metrics[horizon]?.combined?.brier_skill;
+          if (skill !== null && skill !== undefined) {
+            el.textContent = (skill * 100).toFixed(1) + '%';
+            el.className = skill > 0 ? 'metric-positive' : (skill < 0 ? 'metric-negative' : 'metric-neutral');
+          }
+        }
+
+        // Quota
+        const compute = report.meta?.compute || {};
+        const tested = compute.challengers_tested_this_period || 0;
+        const min = compute.quota_monthly_min_challengers || 8;
+
+        document.getElementById('challengers-tested').textContent = `${tested} / ${min}`;
+
+        const progress = Math.min(100, (tested / min) * 100);
+        const progressEl = document.getElementById('quota-progress');
+        progressEl.style.width = `${progress}%`;
+        progressEl.className = `progress-fill ${progress >= 100 ? 'progress-green' : (progress >= 50 ? 'progress-yellow' : 'progress-red')}`;
+
+        const quotaStatus = document.getElementById('quota-status');
+        quotaStatus.textContent = compute.quota_status === 'met' ? 'Met' : 'Pending';
+        quotaStatus.className = `status-badge ${compute.quota_status === 'met' ? 'status-ok' : 'status-bootstrap'}`;
+      }
+
+      function updatePromotions(promotions) {
+        const tbody = document.querySelector('#promotions-table tbody');
+
+        if (!promotions || promotions.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: var(--rv-text-muted);">No promotions yet</td></tr>';
+          return;
+        }
+
+        tbody.innerHTML = promotions.slice(0, 5).map(p => `
         <tr>
           <td>${p.as_of?.slice(0, 10) || '—'}</td>
           <td><code>${p.from_champion_id?.slice(-8) || '—'}</code></td>
@@ -550,77 +520,77 @@
           </td>
         </tr>
       `).join('');
-    }
-
-    function formatDirection(horizon) {
-      if (!horizon) return '<span style="color: var(--text-muted);">—</span>';
-      const dir = horizon.direction;
-      const prob = horizon.probability ? (horizon.probability * 100).toFixed(0) + '%' : '';
-      const colors = {
-        bullish: 'var(--accent-green)',
-        bearish: 'var(--accent-red)',
-        neutral: 'var(--text-secondary)'
-      };
-      const icons = { bullish: '↑', bearish: '↓', neutral: '→' };
-      return `<span style="color: ${colors[dir] || colors.neutral};">${icons[dir] || '→'} ${prob}</span>`;
-    }
-
-    function updateForecasts(forecasts) {
-      const tbody = document.querySelector('#forecasts-table tbody');
-      const countEl = document.getElementById('forecast-count');
-      const bootstrapNotice = document.getElementById('bootstrap-notice');
-
-      if (!forecasts || forecasts.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--text-muted);">—</td></tr>';
-        bootstrapNotice.style.display = 'block';
-        countEl.textContent = '0 stocks';
-        return;
       }
 
-      countEl.textContent = `${forecasts.length} stocks`;
-      tbody.innerHTML = forecasts.map(f => `
+      function formatDirection(horizon) {
+        if (!horizon) return '<span style="color: var(--rv-text-muted);">—</span>';
+        const dir = horizon.direction;
+        const prob = horizon.probability ? (horizon.probability * 100).toFixed(0) + '%' : '';
+        const colors = {
+          bullish: 'var(--accent-green)',
+          bearish: 'var(--accent-red)',
+          neutral: 'var(--rv-text-muted)'
+        };
+        const icons = { bullish: '↑', bearish: '↓', neutral: '→' };
+        return `<span style="color: ${colors[dir] || colors.neutral};">${icons[dir] || '→'} ${prob}</span>`;
+      }
+
+      function updateForecasts(forecasts) {
+        const tbody = document.querySelector('#forecasts-table tbody');
+        const countEl = document.getElementById('forecast-count');
+        const bootstrapNotice = document.getElementById('bootstrap-notice');
+
+        if (!forecasts || forecasts.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--rv-text-muted);">—</td></tr>';
+          bootstrapNotice.style.display = 'block';
+          countEl.textContent = '0 stocks';
+          return;
+        }
+
+        countEl.textContent = `${forecasts.length} stocks`;
+        tbody.innerHTML = forecasts.map(f => `
         <tr style="cursor: pointer;" onclick="window.location.href='/?ticker=${f.symbol}'">
           <td><strong style="color: var(--accent-blue);">${f.symbol}</strong></td>
-          <td style="color: var(--text-secondary);">${f.name || '—'}</td>
+          <td style="color: var(--rv-text-muted);">${f.name || '—'}</td>
           <td>${formatDirection(f.horizons?.['1d'])}</td>
           <td>${formatDirection(f.horizons?.['5d'])}</td>
           <td>${formatDirection(f.horizons?.['20d'])}</td>
         </tr>
       `).join('');
-    }
-
-    async function init() {
-      // Load status
-      const status = await fetchData('system/status.json');
-      if (status) updateStatus(status);
-
-      // Load latest
-      const latest = await fetchData('latest.json');
-      if (latest) {
-        updateLatest(latest);
-        document.getElementById('champion-id').textContent =
-          latest.data?.champion_id?.slice(-12) || 'v3.4-initial';
-        document.getElementById('champion-created').textContent =
-          latest.meta?.generated_at?.slice(0, 10) || 'System bootstrap';
-
-        // Update forecasts table
-        updateForecasts(latest.data?.forecasts || []);
       }
 
-      // Load latest daily report
-      const today = new Date().toISOString().slice(0, 10);
-      const report = await fetchData(`reports/daily/${today}.json`);
-      if (report) {
-        updateMetrics(report);
-        updatePromotions(report.recent_changes?.promotions || []);
+      async function init() {
+        // Load status
+        const status = await fetchData('system/status.json');
+        if (status) updateStatus(status);
+
+        // Load latest
+        const latest = await fetchData('latest.json');
+        if (latest) {
+          updateLatest(latest);
+          document.getElementById('champion-id').textContent =
+            latest.data?.champion_id?.slice(-12) || 'v3.4-initial';
+          document.getElementById('champion-created').textContent =
+            latest.meta?.generated_at?.slice(0, 10) || 'System bootstrap';
+
+          // Update forecasts table
+          updateForecasts(latest.data?.forecasts || []);
+        }
+
+        // Load latest daily report
+        const today = new Date().toISOString().slice(0, 10);
+        const report = await fetchData(`reports/daily/${today}.json`);
+        if (report) {
+          updateMetrics(report);
+          updatePromotions(report.recent_changes?.promotions || []);
+        }
       }
-    }
 
-    init();
+      init();
 
-    // Auto-refresh every 60 seconds
-    setInterval(init, 60000);
-  </script>
+      // Auto-refresh every 60 seconds
+      setInterval(init, 60000);
+    </script>
 </body>
 
 </html>
