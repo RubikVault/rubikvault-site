@@ -296,27 +296,23 @@
         </div>
         <div class="rv-market-clock">
           <span class="rv-clock-time" id="rv-ny-time">NY: --:--:--</span>
+          <span class="rv-clock-status">
+            <span class="rv-led" data-rv-led="closed"></span>
+            <span class="rv-market-label" data-rv-market-label>Closed</span>
+            <span class="rv-market-countdown" id="rv-market-countdown">opens in --:--:--</span>
+          </span>
         </div>
       </div>
     </div>
   </header>
 
   <!-- PAGE NAVIGATION -->
-  <nav
-    style="background: rgba(18, 18, 26, 0.9); border-bottom: 1px solid var(--border); padding: 0.6rem 0; position: sticky; top: 60px; z-index: 90; backdrop-filter: blur(8px);">
-    <div style="max-width: 1400px; margin: 0 auto; padding: 0 2rem; display: flex; gap: 2rem;">
-      <a href="/"
-        style="color: var(--text-secondary); text-decoration: none; font-size: 0.95rem; font-weight: 500; padding: 0.4rem 0;">Stock
-        Analyzer</a>
-      <a href="/elliott.html"
-        style="color: var(--text-secondary); text-decoration: none; font-size: 0.95rem; font-weight: 500; padding: 0.4rem 0;">Elliott
-        Waves</a>
-      <a href="/scientific.html"
-        style="color: var(--text-secondary); text-decoration: none; font-size: 0.95rem; font-weight: 500; padding: 0.4rem 0;">Scientific
-        Analyzer</a>
-      <a href="/forecast.html"
-        style="color: var(--accent-blue); text-decoration: none; font-size: 0.95rem; font-weight: 500; padding: 0.4rem 0; border-bottom: 2px solid var(--accent-blue);">Forecast
-        System</a>
+  <nav class="rv-page-nav">
+    <div class="rv-page-nav-inner">
+      <a href="/" class="rv-page-nav-link" data-page="analyzer">Stock Analyzer</a>
+      <a href="/elliott.html" class="rv-page-nav-link" data-page="elliott">Elliott Waves</a>
+      <a href="/scientific.html" class="rv-page-nav-link" data-page="scientific">Scientific Analyzer</a>
+      <a href="/forecast.html" class="rv-page-nav-link active" data-page="forecast">Forecast System</a>
     </div>
   </nav>
 
