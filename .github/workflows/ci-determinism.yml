@@ -6,9 +6,14 @@ on:
       - 'scripts/forecast/**'
   workflow_dispatch:
 
+concurrency:
+  group: forecast-system
+  cancel-in-progress: true
+
 jobs:
   check-determinism:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
       - name: Setup Node

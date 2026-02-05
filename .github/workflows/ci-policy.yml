@@ -4,16 +4,24 @@ on:
   push:
     paths:
       - 'policies/**'
+      - 'mirrors/forecast/**'
   workflow_dispatch:
+
+concurrency:
+  group: forecast-system
+  cancel-in-progress: true
 
 jobs:
   validate-policy:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: '18'
-      - name: Validate
-        run: node scripts/forecast/validate_policy.mjs
+      - name: Validate Policies
+        run: |
+          node scripts/forecast/validate_policy.mjs
+          echo "Policy validation passed"

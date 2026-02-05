@@ -661,7 +661,7 @@ export async function onRequestGet(context) {
           if (isFresh || !canFetchProvider) {
             eodBars = staticBars;
             eodProvider = 'static_store';
-            servedFrom = 'ASSET';
+            // Note: servedFrom is computed later from snapshots; we track via eodProvider
             eodStatus = isFresh ? 'fresh' : 'stale';
             eodAttempted = true;
             if (!isFresh) qualityFlags.add('STATIC_STALE');

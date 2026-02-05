@@ -1,5 +1,5 @@
 # Forecast System v3.4 — Implementation Plan
-**Status:** DRAFT (pending approval)
+**Status:** DEPLOYED
 **Goal:** Implement EODHD adapter, internal history store, and universe expansion.
 
 ## 1. Registry-Driven Provider Chain
