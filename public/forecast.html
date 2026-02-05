@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -20,13 +21,13 @@
       --accent-purple: #a855f7;
       --gradient-1: linear-gradient(135deg, #4a90d9 0%, #a855f7 100%);
     }
-    
+
     * {
       margin: 0;
       padding: 0;
       box-sizing: border-box;
     }
-    
+
     body {
       font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
       background: var(--bg-primary);
@@ -34,13 +35,13 @@
       min-height: 100vh;
       line-height: 1.6;
     }
-    
+
     .container {
       max-width: 1400px;
       margin: 0 auto;
       padding: 2rem;
     }
-    
+
     header {
       display: flex;
       justify-content: space-between;
@@ -49,13 +50,13 @@
       padding-bottom: 1rem;
       border-bottom: 1px solid var(--border);
     }
-    
+
     .logo {
       display: flex;
       align-items: center;
       gap: 1rem;
     }
-    
+
     .logo h1 {
       font-size: 1.5rem;
       background: var(--gradient-1);
@@ -63,7 +64,7 @@
       -webkit-text-fill-color: transparent;
       background-clip: text;
     }
-    
+
     .status-badge {
       display: inline-flex;
       align-items: center;
@@ -73,38 +74,38 @@
       font-size: 0.875rem;
       font-weight: 500;
     }
-    
+
     .status-ok {
       background: rgba(34, 197, 94, 0.15);
       color: var(--accent-green);
       border: 1px solid rgba(34, 197, 94, 0.3);
     }
-    
+
     .status-circuit-open {
       background: rgba(239, 68, 68, 0.15);
       color: var(--accent-red);
       border: 1px solid rgba(239, 68, 68, 0.3);
     }
-    
+
     .status-bootstrap {
       background: rgba(234, 179, 8, 0.15);
       color: var(--accent-yellow);
       border: 1px solid rgba(234, 179, 8, 0.3);
     }
-    
+
     .grid {
       display: grid;
       gap: 1.5rem;
     }
-    
+
     .grid-3 {
       grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
     }
-    
+
     .grid-2 {
       grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
     }
-    
+
     .card {
       background: var(--bg-card);
       border: 1px solid var(--border);
@@ -112,19 +113,19 @@
       padding: 1.5rem;
       transition: transform 0.2s, box-shadow 0.2s;
     }
-    
+
     .card:hover {
       transform: translateY(-2px);
       box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
     }
-    
+
     .card-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
       margin-bottom: 1rem;
     }
-    
+
     .card-title {
       font-size: 0.875rem;
       font-weight: 500;
@@ -132,23 +133,31 @@
       text-transform: uppercase;
       letter-spacing: 0.05em;
     }
-    
+
     .metric-value {
       font-size: 2.5rem;
       font-weight: 700;
       font-family: 'JetBrains Mono', monospace;
     }
-    
+
     .metric-label {
       font-size: 0.875rem;
       color: var(--text-secondary);
       margin-top: 0.25rem;
     }
-    
-    .metric-positive { color: var(--accent-green); }
-    .metric-negative { color: var(--accent-red); }
-    .metric-neutral { color: var(--text-secondary); }
-    
+
+    .metric-positive {
+      color: var(--accent-green);
+    }
+
+    .metric-negative {
+      color: var(--accent-red);
+    }
+
+    .metric-neutral {
+      color: var(--text-secondary);
+    }
+
     .metric-row {
       display: flex;
       justify-content: space-between;
@@ -156,11 +165,11 @@
       padding: 0.75rem 0;
       border-bottom: 1px solid var(--border);
     }
-    
+
     .metric-row:last-child {
       border-bottom: none;
     }
-    
+
     .progress-bar {
       width: 100%;
       height: 8px;
@@ -169,28 +178,37 @@
       overflow: hidden;
       margin-top: 0.5rem;
     }
-    
+
     .progress-fill {
       height: 100%;
       border-radius: 4px;
       transition: width 0.3s ease;
     }
-    
-    .progress-green { background: var(--accent-green); }
-    .progress-yellow { background: var(--accent-yellow); }
-    .progress-red { background: var(--accent-red); }
-    
+
+    .progress-green {
+      background: var(--accent-green);
+    }
+
+    .progress-yellow {
+      background: var(--accent-yellow);
+    }
+
+    .progress-red {
+      background: var(--accent-red);
+    }
+
     table {
       width: 100%;
       border-collapse: collapse;
     }
-    
-    th, td {
+
+    th,
+    td {
       padding: 0.75rem;
       text-align: left;
       border-bottom: 1px solid var(--border);
     }
-    
+
     th {
       font-size: 0.75rem;
       font-weight: 600;
@@ -198,7 +216,7 @@
       text-transform: uppercase;
       letter-spacing: 0.05em;
     }
-    
+
     .loading {
       display: flex;
       justify-content: center;
@@ -206,7 +224,7 @@
       min-height: 200px;
       color: var(--text-secondary);
     }
-    
+
     .error-box {
       background: rgba(239, 68, 68, 0.1);
       border: 1px solid rgba(239, 68, 68, 0.3);
@@ -214,30 +232,99 @@
       padding: 1rem;
       margin-bottom: 1rem;
     }
-    
+
     @keyframes pulse {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.5; }
+
+      0%,
+      100% {
+        opacity: 1;
+      }
+
+      50% {
+        opacity: 0.5;
+      }
     }
-    
+
     .pulse {
       animation: pulse 2s infinite;
     }
   </style>
 </head>
+
 <body>
+  <!-- HEADER -->
+  <header class="rv-header"
+    style="position: sticky; top: 0; z-index: 100; background: rgba(10, 10, 15, 0.95); backdrop-filter: blur(10px); border-bottom: 1px solid var(--border); padding: 1rem 2rem;">
+    <div style="max-width: 1400px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center;">
+      <a href="/" style="display: flex; align-items: center; gap: 0.75rem; text-decoration: none;">
+        <img src="/assets/rv-icon.png" alt="" style="width: 32px; height: 32px;" />
+        <span
+          style="font-size: 1.25rem; font-weight: 600; background: var(--gradient-1); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;">RubikVault</span>
+      </a>
+      <nav style="display: flex; gap: 1.5rem;">
+        <a href="https://www.youtube.com/@RubikVault" target="_blank" rel="noopener noreferrer"
+          style="color: var(--text-secondary); transition: color 0.2s;" aria-label="YouTube">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+            <path
+              d="M21.58 7.19a2.5 2.5 0 0 0-1.76-1.77C18.25 5 12 5 12 5s-6.25 0-7.82.42A2.5 2.5 0 0 0 2.42 7.2 26.6 26.6 0 0 0 2 12s0 2.55.42 4.81a2.5 2.5 0 0 0 1.76 1.77C5.75 19 12 19 12 19s6.25 0 7.82-.42a2.5 2.5 0 0 0 1.76-1.77C22 14.55 22 12 22 12s0-2.55-.42-4.81ZM10 15.5v-7l6 3.5-6 3.5Z" />
+          </svg>
+        </a>
+        <a href="https://x.com/RubikVault" target="_blank" rel="noopener noreferrer"
+          style="color: var(--text-secondary); transition: color 0.2s;" aria-label="X">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+            <path
+              d="M18.9 2H22l-6.79 7.76L23 22h-6.2l-4.86-6.02L6.66 22H3.5l7.26-8.3L3 2h6.35l4.4 5.52L18.9 2Zm-1.09 18h1.72L8.4 3.93H6.56L17.81 20Z" />
+          </svg>
+        </a>
+        <a href="https://www.tiktok.com/@rubikvault" target="_blank" rel="noopener noreferrer"
+          style="color: var(--text-secondary); transition: color 0.2s;" aria-label="TikTok">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+            <path
+              d="M16.7 5.2c.8 1.2 2.1 2 3.6 2.1v3.1c-1.7-.1-3.3-.7-4.6-1.7v7.4c0 3.4-2.8 6.2-6.2 6.2S3.3 19.5 3.3 16.1s2.8-6.2 6.2-6.2c.4 0 .8 0 1.2.1v3.3c-.4-.1-.8-.2-1.2-.2-1.7 0-3.1 1.4-3.1 3.1s1.4 3.1 3.1 3.1 3.1-1.4 3.1-3.1V2h3.1c0 1.2.3 2.3 1 3.2Z" />
+          </svg>
+        </a>
+        <a href="https://www.instagram.com/rubikvault" target="_blank" rel="noopener noreferrer"
+          style="color: var(--text-secondary); transition: color 0.2s;" aria-label="Instagram">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+            <path
+              d="M7 2h10a5 5 0 0 1 5 5v10a5 5 0 0 1-5 5H7a5 5 0 0 1-5-5V7a5 5 0 0 1 5-5Zm10 2H7a3 3 0 0 0-3 3v10a3 3 0 0 0 3 3h10a3 3 0 0 0 3-3V7a3 3 0 0 0-3-3Zm-5 3.5a4.5 4.5 0 1 1 0 9 4.5 4.5 0 0 1 0-9Zm0 2a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5ZM17.8 6.2a1 1 0 1 1 0 2 1 1 0 0 1 0-2Z" />
+          </svg>
+        </a>
+      </nav>
+    </div>
+  </header>
+
+  <!-- PAGE NAVIGATION -->
+  <nav
+    style="background: rgba(18, 18, 26, 0.9); border-bottom: 1px solid var(--border); padding: 0.6rem 0; position: sticky; top: 60px; z-index: 90; backdrop-filter: blur(8px);">
+    <div style="max-width: 1400px; margin: 0 auto; padding: 0 2rem; display: flex; gap: 2rem;">
+      <a href="/"
+        style="color: var(--text-secondary); text-decoration: none; font-size: 0.95rem; font-weight: 500; padding: 0.4rem 0;">Stock
+        Analyzer</a>
+      <a href="/elliott.html"
+        style="color: var(--text-secondary); text-decoration: none; font-size: 0.95rem; font-weight: 500; padding: 0.4rem 0;">Elliott
+        Waves</a>
+      <a href="/scientific.html"
+        style="color: var(--text-secondary); text-decoration: none; font-size: 0.95rem; font-weight: 500; padding: 0.4rem 0;">Scientific
+        Analyzer</a>
+      <a href="/forecast.html"
+        style="color: var(--accent-blue); text-decoration: none; font-size: 0.95rem; font-weight: 500; padding: 0.4rem 0; border-bottom: 2px solid var(--accent-blue);">Forecast
+        System</a>
+    </div>
+  </nav>
+
   <div class="container">
-    <header>
+    <header style="border-bottom: none; padding-bottom: 0; margin-bottom: 1rem;">
       <div class="logo">
-        <h1>🔮 Forecast System v3.0</h1>
+        <h1>🔮 Forecast System v3.4</h1>
       </div>
       <div id="system-status" class="status-badge status-bootstrap">
         <span class="pulse">●</span> Loading...
       </div>
     </header>
-    
+
     <div id="error-container"></div>
-    
+
     <!-- Summary Cards -->
     <div class="grid grid-3" style="margin-bottom: 2rem;">
       <div class="card">
@@ -247,7 +334,7 @@
         <div class="metric-value" id="champion-id">—</div>
         <div class="metric-label" id="champion-created">Loading...</div>
       </div>
-      
+
       <div class="card">
         <div class="card-header">
           <span class="card-title">Maturity Phase</span>
@@ -255,7 +342,7 @@
         <div class="metric-value" id="maturity-phase">—</div>
         <div class="metric-label" id="maturity-days">Loading...</div>
       </div>
-      
+
       <div class="card">
         <div class="card-header">
           <span class="card-title">Circuit State</span>
@@ -264,7 +351,7 @@
         <div class="metric-label" id="circuit-reason">Loading...</div>
       </div>
     </div>
-    
+
     <!-- Metrics Cards -->
     <div class="grid grid-2" style="margin-bottom: 2rem;">
       <div class="card">
@@ -286,7 +373,7 @@
           </div>
         </div>
       </div>
-      
+
       <div class="card">
         <div class="card-header">
           <span class="card-title">Monthly Quota Progress</span>
@@ -306,7 +393,31 @@
         </div>
       </div>
     </div>
-    
+
+    <!-- Stock Forecasts Table -->
+    <div class="card" style="margin-bottom: 2rem;">
+      <div class="card-header">
+        <span class="card-title">Stock Forecasts</span>
+        <span id="forecast-count" style="font-size: 0.8rem; color: var(--text-muted);">— stocks</span>
+      </div>
+      <table id="forecasts-table">
+        <thead>
+          <tr>
+            <th>Symbol</th>
+            <th>Name</th>
+            <th>1-Day</th>
+            <th>5-Day</th>
+            <th>20-Day</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td colspan="5" class="loading">Loading forecasts...</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
     <!-- Recent Activity -->
     <div class="card">
       <div class="card-header">
@@ -329,10 +440,10 @@
       </table>
     </div>
   </div>
-  
+
   <script>
     const API_BASE = '/data/forecast';
-    
+
     async function fetchData(path) {
       try {
         const response = await fetch(`${API_BASE}/${path}`);
@@ -343,7 +454,7 @@
         return null;
       }
     }
-    
+
     function showError(message) {
       const container = document.getElementById('error-container');
       container.innerHTML = `
@@ -352,7 +463,7 @@
         </div>
       `;
     }
-    
+
     function updateStatus(status) {
       const badge = document.getElementById('system-status');
       if (status.circuit_state === 'open') {
@@ -365,25 +476,25 @@
         badge.className = 'status-badge status-ok';
         badge.innerHTML = '<span>●</span> Operational';
       }
-      
-      document.getElementById('circuit-state').textContent = 
+
+      document.getElementById('circuit-state').textContent =
         status.circuit_state === 'open' ? 'OPEN' : 'CLOSED';
-      document.getElementById('circuit-reason').textContent = 
+      document.getElementById('circuit-reason').textContent =
         status.reason || 'System healthy';
     }
-    
+
     function updateLatest(latest) {
-      document.getElementById('maturity-phase').textContent = 
+      document.getElementById('maturity-phase').textContent =
         latest.data?.maturity_phase || 'BOOTSTRAP';
-      document.getElementById('maturity-days').textContent = 
+      document.getElementById('maturity-days').textContent =
         latest.meta?.status || 'Initializing...';
     }
-    
+
     function updateMetrics(report) {
       if (!report) return;
-      
+
       const metrics = report.global_metrics?.by_horizon || {};
-      
+
       for (const horizon of ['1d', '5d', '20d']) {
         const el = document.getElementById(`brier-${horizon}`);
         const skill = metrics[horizon]?.combined?.brier_skill;
@@ -392,32 +503,32 @@
           el.className = skill > 0 ? 'metric-positive' : (skill < 0 ? 'metric-negative' : 'metric-neutral');
         }
       }
-      
+
       // Quota
       const compute = report.meta?.compute || {};
       const tested = compute.challengers_tested_this_period || 0;
       const min = compute.quota_monthly_min_challengers || 8;
-      
+
       document.getElementById('challengers-tested').textContent = `${tested} / ${min}`;
-      
+
       const progress = Math.min(100, (tested / min) * 100);
       const progressEl = document.getElementById('quota-progress');
       progressEl.style.width = `${progress}%`;
       progressEl.className = `progress-fill ${progress >= 100 ? 'progress-green' : (progress >= 50 ? 'progress-yellow' : 'progress-red')}`;
-      
+
       const quotaStatus = document.getElementById('quota-status');
       quotaStatus.textContent = compute.quota_status === 'met' ? 'Met' : 'Pending';
       quotaStatus.className = `status-badge ${compute.quota_status === 'met' ? 'status-ok' : 'status-bootstrap'}`;
     }
-    
+
     function updatePromotions(promotions) {
       const tbody = document.querySelector('#promotions-table tbody');
-      
+
       if (!promotions || promotions.length === 0) {
         tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: var(--text-muted);">No promotions yet</td></tr>';
         return;
       }
-      
+
       tbody.innerHTML = promotions.slice(0, 5).map(p => `
         <tr>
           <td>${p.as_of?.slice(0, 10) || '—'}</td>
@@ -429,22 +540,60 @@
         </tr>
       `).join('');
     }
-    
+
+    function formatDirection(horizon) {
+      if (!horizon) return '<span style="color: var(--text-muted);">—</span>';
+      const dir = horizon.direction;
+      const prob = horizon.probability ? (horizon.probability * 100).toFixed(0) + '%' : '';
+      const colors = {
+        bullish: 'var(--accent-green)',
+        bearish: 'var(--accent-red)',
+        neutral: 'var(--text-secondary)'
+      };
+      const icons = { bullish: '↑', bearish: '↓', neutral: '→' };
+      return `<span style="color: ${colors[dir] || colors.neutral};">${icons[dir] || '→'} ${prob}</span>`;
+    }
+
+    function updateForecasts(forecasts) {
+      const tbody = document.querySelector('#forecasts-table tbody');
+      const countEl = document.getElementById('forecast-count');
+
+      if (!forecasts || forecasts.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--text-muted);">No forecasts available. System is initializing.</td></tr>';
+        countEl.textContent = '0 stocks';
+        return;
+      }
+
+      countEl.textContent = `${forecasts.length} stocks`;
+      tbody.innerHTML = forecasts.map(f => `
+        <tr style="cursor: pointer;" onclick="window.location.href='/?ticker=${f.symbol}'">
+          <td><strong style="color: var(--accent-blue);">${f.symbol}</strong></td>
+          <td style="color: var(--text-secondary);">${f.name || '—'}</td>
+          <td>${formatDirection(f.horizons?.['1d'])}</td>
+          <td>${formatDirection(f.horizons?.['5d'])}</td>
+          <td>${formatDirection(f.horizons?.['20d'])}</td>
+        </tr>
+      `).join('');
+    }
+
     async function init() {
       // Load status
       const status = await fetchData('system/status.json');
       if (status) updateStatus(status);
-      
+
       // Load latest
       const latest = await fetchData('latest.json');
       if (latest) {
         updateLatest(latest);
-        document.getElementById('champion-id').textContent = 
-          latest.data?.champion_id?.slice(-12) || 'v3.0-initial';
-        document.getElementById('champion-created').textContent = 
-          latest.generated_at?.slice(0, 10) || 'System bootstrap';
+        document.getElementById('champion-id').textContent =
+          latest.data?.champion_id?.slice(-12) || 'v3.4-initial';
+        document.getElementById('champion-created').textContent =
+          latest.meta?.generated_at?.slice(0, 10) || 'System bootstrap';
+
+        // Update forecasts table
+        updateForecasts(latest.data?.forecasts || []);
       }
-      
+
       // Load latest daily report
       const today = new Date().toISOString().slice(0, 10);
       const report = await fetchData(`reports/daily/${today}.json`);
@@ -453,11 +602,12 @@
         updatePromotions(report.recent_changes?.promotions || []);
       }
     }
-    
+
     init();
-    
+
     // Auto-refresh every 60 seconds
     setInterval(init, 60000);
   </script>
 </body>
+
 </html>

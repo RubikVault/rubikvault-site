@@ -192,7 +192,7 @@
           </button>
         </div>
         <div style="margin-top: 0.6rem; font-size: 0.9rem; color: #94a3b8; text-align: left; padding-left: 0.25rem;">
-          Searching: NASDAQ-100 (100 stocks)
+          Coverage: NASDAQ-100 + S&P 500 + Dow Jones + Russell 2000 (~3,600 stocks)
         </div>
       </div>
 
@@ -704,7 +704,7 @@
       typeahead.items = items;
       typeahead.activeIndex = -1;
       typeahead.open = items.length > 0;
-      typeahead.emptyMessage = items.length ? null : 'No matches in NASDAQ-100';
+      typeahead.emptyMessage = items.length ? null : 'No matches found in stock universe';
       renderTypeahead();
     }
 
@@ -1440,7 +1440,7 @@
       resultsContent.innerHTML = `
         <div style="padding: 1rem; border-radius: 10px; background: rgba(245, 158, 11, 0.10); border: 1px solid rgba(245, 158, 11, 0.35); margin-bottom: 1.5rem;">
           <div style="font-weight: 700; color: #fde68a;">This ticker is not in the supported universe.</div>
-          <div style="margin-top: 0.35rem; color: #fde68a;">Currently supported: NASDAQ-100 (100)</div>
+          <div style="margin-top: 0.35rem; color: #fde68a;">Supported: NASDAQ-100, S&P 500, Dow Jones, Russell 2000 (~3,600 stocks)</div>
         </div>
       `;
       resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
