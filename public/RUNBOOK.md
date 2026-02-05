@@ -107,7 +107,6 @@ curl -fsS -I "$BASE_URL/analyze/AAPL" | tr -d "\r" | sed -n '1,12p'
 - `functions/api/_shared/stooq.js` (keyless daily CSV fetch helper)
 - `functions/api/*` (phase 1–3 endpoints)
 - `features/rv-*` (phase 1–3 renderers)
-- `assets/js/us-universes.js` (offline universe merge/search)
 - `assets/js/rv-*.js` (thin wrappers)
 - `scripts/generate-posts.js` (social summary generator)
 - `public/posts/.gitkeep` (posts directory placeholder)
