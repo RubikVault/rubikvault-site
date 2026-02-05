@@ -555,12 +555,12 @@
             <div class="rankings-grid">
                 <!-- Triggered Setups (Buy Candidates) -->
                 <div class="ranking-card" style="border-color: rgba(34, 197, 94, 0.4);">
-                    <h3 class="ranking-title"><span class="icon">🚀</span> Triggered Setups (Kauf-Kandidaten)</h3>
+                    <h3 class="ranking-title"><span class="icon">🚀</span> Triggered Setups (Buy Candidates)</h3>
                     <table class="ranking-table" id="triggered-table">
                         <thead>
                             <tr>
                                 <th>Ticker</th>
-                                <th>Preis</th>
+                                <th>Price</th>
                                 <th>Signal</th>
                                 <th>Prob.</th>
                                 <th>Timeframe</th>
@@ -577,7 +577,7 @@
                         <thead>
                             <tr>
                                 <th>Ticker</th>
-                                <th>Preis</th>
+                                <th>Price</th>
                                 <th>Setup</th>
                                 <th>Trigger</th>
                                 <th>Status</th>
@@ -697,7 +697,7 @@
             const triggeredTbody = document.querySelector('#triggered-table tbody');
             const setupsTbody = document.querySelector('#setups-table tbody');
 
-            // Triggered setups (Kauf-Kandidaten)
+            // Triggered setups (Buy Candidates)
             const triggered = analysisData._rankings?.triggered_setups || [];
             triggeredTbody.innerHTML = triggered.slice(0, 8).map(s => `
                 <tr onclick="selectStock('${s.ticker}')">
