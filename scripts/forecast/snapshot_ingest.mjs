@@ -3,7 +3,7 @@
  * 
  * Ingests data from existing RubikVault sources:
  * - Universe from /data/universe/nasdaq100.json
- * - Prices from /data/eod/batches/eod.latest.*.json
+ * - Prices from /data/eod/bars/*.json (SSOT), with batch fallback only for low coverage
  * - Creates manifests in mirrors/forecast/snapshots/
  */
 
@@ -91,6 +91,61 @@ export function loadEodBatches(repoRoot) {
     }
 
     return allPrices;
+}
+
+/**
+ * Pick canonical bar fields used by snapshot ingest.
+ * @param {object} row - Raw bar row
+ * @returns {{date:string,open:any,high:any,low:any,close:any,volume:any}|null}
+ */
+export function pickBarFields(row) {
+    if (!row || typeof row !== 'object') return null;
+    const date = typeof row.date === 'string' ? row.date : null;
+    if (!date) return null;
+    return {
+        date,
+        open: row.open ?? null,
+        high: row.high ?? null,
+        low: row.low ?? null,
+        close: row.close ?? null,
+        volume: row.volume ?? 0
+    };
+}
+
+/**
+ * Load latest available prices from bars SSOT.
+ * @param {string} repoRoot - Repository root
+ * @param {string[]} universe - Universe tickers
+ * @param {string} asOf - As-of ISO timestamp/date
+ * @returns {object} Map of ticker -> latest bar fields
+ */
+export function loadPricesFromBars(repoRoot, universe, asOf) {
+    const prices = {};
+    const barsDir = path.join(repoRoot, 'public/data/eod/bars');
+    const asOfDate = String(asOf).slice(0, 10);
+
+    for (const sym of universe) {
+        const barPath = path.join(barsDir, `${sym}.json`);
+        if (!fs.existsSync(barPath)) continue;
+
+        try {
+            const bars = JSON.parse(fs.readFileSync(barPath, 'utf8'));
+            if (!Array.isArray(bars) || bars.length === 0) continue;
+
+            for (let i = bars.length - 1; i >= 0; i--) {
+                const picked = pickBarFields(bars[i]);
+                if (!picked) continue;
+                if (picked.date <= asOfDate && picked.close !== null && picked.close !== undefined) {
+                    prices[sym] = picked;
+                    break;
+                }
+            }
+        } catch (err) {
+            console.warn(`[Ingest] Error reading bars ${barPath}: ${err.message}`);
+        }
+    }
+
+    return prices;
 }
 
 /**
@@ -255,7 +310,13 @@ export async function ingestSnapshots(repoRoot, tradingDate, policy) {
     console.log(`[Ingest] Loaded universe: ${universe.length} tickers`);
 
     // Load prices
-    const prices = loadEodBatches(repoRoot);
+    const barsPrices = loadPricesFromBars(repoRoot, universe, asOf);
+    const barsCoverage = universe.length > 0 ? (Object.keys(barsPrices).length / universe.length) : 0;
+    let prices = barsPrices;
+    if (barsCoverage < 0.5) {
+        console.warn(`[Ingest] Low bars coverage ${(barsCoverage * 100).toFixed(1)}%; falling back to EOD batches`);
+        prices = loadEodBatches(repoRoot);
+    }
     const pricesCount = Object.keys(prices).length;
     console.log(`[Ingest] Loaded prices for ${pricesCount} tickers`);
 
