@@ -1,14 +1,14 @@
 {
-  "status": "BOOTSTRAP",
-  "message": "System initializing - waiting for first pipeline run",
-  "updated_at": "2026-02-05T15:47:52.088Z",
-  "circuit": {
-    "state": "CLOSED",
-    "failures": 0,
-    "last_failure": null
-  },
-  "pipeline": {
-    "last_run": null,
-    "next_run": "2026-02-05T21:00:00Z"
+  "schema": "forecast_status_v1",
+  "status": "ok",
+  "reason": null,
+  "generated_at": "2026-02-05T21:23:09.134Z",
+  "circuit_state": "closed",
+  "last_run": "2026-02-05",
+  "last_good": null,
+  "capabilities": {
+    "has_prices": true,
+    "has_earnings": false,
+    "has_macro": false
   }
 }
