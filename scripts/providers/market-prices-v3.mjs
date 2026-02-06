@@ -153,9 +153,9 @@ export function buildStooqBar(symbol, row) {
   if ([open, high, low, close].some((value) => !Number.isFinite(value) || value < 0)) {
     const field = !Number.isFinite(open) || open < 0 ? 'open' :
       !Number.isFinite(high) || high < 0 ? 'high' :
-      !Number.isFinite(low) || low < 0 ? 'low' :
-      !Number.isFinite(close) || close < 0 ? 'close' :
-      'unknown';
+        !Number.isFinite(low) || low < 0 ? 'low' :
+          !Number.isFinite(close) || close < 0 ? 'close' :
+            'unknown';
     throw new Error(`STOOQ_ROW_INVALID:${symbol}:${field}:${[date, openStr, highStr, lowStr, closeStr, volumeStr].join(',')}`);
   }
   const volume = Number.isFinite(toNumber(volumeStr)) ? Math.max(0, toNumber(volumeStr)) : null;
@@ -547,13 +547,13 @@ function computeAsOf(bars) {
 }
 
 async function loadUniverseNasdaq100() {
-  const universePath = join(BASE_DIR, 'public/data/universe/nasdaq100.json');
+  const universePath = join(BASE_DIR, 'public/data/universe/all.json');
   const content = await readFile(universePath, 'utf-8');
   const parsed = JSON.parse(content);
   const symbols = Array.isArray(parsed)
     ? parsed
-        .map((entry) => (typeof entry === 'string' ? entry : (entry?.ticker || entry?.symbol || null)))
-        .filter((value) => typeof value === 'string' && value.trim().length > 0)
+      .map((entry) => (typeof entry === 'string' ? entry : (entry?.ticker || entry?.symbol || null)))
+      .filter((value) => typeof value === 'string' && value.trim().length > 0)
     : [];
   if (!Array.isArray(symbols) || symbols.length === 0) {
     throw new Error('UNIVERSE_NASDAQ100_MISSING');
@@ -1036,8 +1036,8 @@ async function fetchBarWithRetries(symbol, providerConfig, options = {}) {
     providerConfig.kind === 'alpha_vantage_eod'
       ? fetchAlphaVantageBar
       : providerConfig.kind === 'twelve_data_eod'
-      ? fetchTwelveDataBar
-      : null;
+        ? fetchTwelveDataBar
+        : null;
 
   if (!fetcher) {
     throw new Error('PROVIDER_FETCHER_MISSING');
@@ -1105,8 +1105,8 @@ export async function main() {
   const outDir = process.env.RV_ARTIFACT_OUT_DIR
     ? String(process.env.RV_ARTIFACT_OUT_DIR)
     : (process.env.ARTIFACTS_DIR
-        ? join(String(process.env.ARTIFACTS_DIR), MODULE_NAME)
-        : DEFAULT_OUT_DIR);
+      ? join(String(process.env.ARTIFACTS_DIR), MODULE_NAME)
+      : DEFAULT_OUT_DIR);
 
   await mkdir(outDir, { recursive: true });
 
@@ -1438,13 +1438,13 @@ export async function main() {
     error: passed
       ? null
       : {
-          class: noValidBars ? 'NO_VALID_BARS' : (runClassification || 'VALIDATION_FAILED'),
-          message: noValidBars ? 'No valid bars after normalization' : 'One or more symbols failed hard validation',
-          details: {
-            dropped_records: droppedRecords,
-            errors
-          }
+        class: noValidBars ? 'NO_VALID_BARS' : (runClassification || 'VALIDATION_FAILED'),
+        message: noValidBars ? 'No valid bars after normalization' : 'One or more symbols failed hard validation',
+        details: {
+          dropped_records: droppedRecords,
+          errors
         }
+      }
   });
 
   envelope.metadata.upstream = { ...envelope.metadata.upstream, ...upstream };

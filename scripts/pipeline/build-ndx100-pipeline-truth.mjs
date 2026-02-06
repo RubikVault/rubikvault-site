@@ -118,7 +118,7 @@ async function main() {
   const asOf = isoNow();
   const universeName = 'nasdaq100';
 
-  const universe = await readJsonRel('public/data/universe/nasdaq100.json');
+  const universe = await readJsonRel('public/data/universe/all.json');
   if (universe?.__missing) {
     const reason = 'UNIVERSE_NOT_FOUND';
     const emptyUniverse = [];

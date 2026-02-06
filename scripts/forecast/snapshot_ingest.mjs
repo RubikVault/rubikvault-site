@@ -16,7 +16,7 @@ import { computeDigest } from '../lib/digest.js';
 // Path Constants
 // ─────────────────────────────────────────────────────────────────────────────
 
-const UNIVERSE_PATH = 'public/data/universe/nasdaq100.json';
+const UNIVERSE_PATH = 'public/data/universe/all.json';
 const EOD_BATCH_PATTERN = 'public/data/eod/batches/eod.latest.';
 const MIRRORS_SNAPSHOT_BASE = 'mirrors/forecast/snapshots';
 

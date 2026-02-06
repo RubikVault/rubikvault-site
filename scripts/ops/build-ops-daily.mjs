@@ -230,7 +230,7 @@ function buildProvidersBaseline(usageReport) {
 async function main() {
   const asOf = isoNow();
 
-  const nasdaq100 = await readJson('public/data/universe/nasdaq100.json', []);
+  const nasdaq100 = await readJson('public/data/universe/all.json', []);
   const expectedUniverse = Array.isArray(nasdaq100) ? nasdaq100.length : 100;
 
   const pipelineLatest = await readPipelineLatest('public/data/pipeline/nasdaq100.latest.json');

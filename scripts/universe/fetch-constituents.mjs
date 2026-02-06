@@ -2,11 +2,11 @@
 /**
  * Fetch Index Constituents from EODHD
  * 
- * Fetches constituents for major indices and creates universe files:
+ * Uses EODHD's fundamentals API and screener to get constituents:
  * - S&P 500 (GSPC.INDX)
  * - Dow Jones 30 (DJI.INDX)
  * - NASDAQ-100 (NDX.INDX)
- * - Russell 2000 (RUT.INDX)
+ * - Russell 2000 (RUA.INDX)
  * 
  * Usage:
  *   EODHD_API_KEY=xxx node scripts/universe/fetch-constituents.mjs
@@ -19,12 +19,12 @@ const API_KEY = process.env.EODHD_API_KEY;
 const BASE_URL = 'https://eodhd.com/api';
 const OUTPUT_DIR = 'public/data/universe';
 
-// Index definitions
+// Index definitions with correct EODHD codes
 const INDICES = [
     { id: 'sp500', symbol: 'GSPC.INDX', name: 'S&P 500', expectedMin: 400 },
     { id: 'dowjones', symbol: 'DJI.INDX', name: 'Dow Jones 30', expectedMin: 25 },
     { id: 'nasdaq100', symbol: 'NDX.INDX', name: 'NASDAQ-100', expectedMin: 90 },
-    { id: 'russell2000', symbol: 'RUT.INDX', name: 'Russell 2000', expectedMin: 1500 }
+    { id: 'russell2000', symbol: 'RUA.INDX', name: 'Russell 2000', expectedMin: 1500 }
 ];
 
 async function fetchWithRetry(url, retries = 3) {
@@ -46,35 +46,85 @@ async function fetchWithRetry(url, retries = 3) {
 async function fetchIndexConstituents(index) {
     console.log(`\n📊 Fetching ${index.name} (${index.symbol})...`);
 
+    // Try fundamentals API first - it has Components for major indices
     const url = `${BASE_URL}/fundamentals/${index.symbol}?api_token=${API_KEY}&fmt=json`;
 
     try {
         const data = await fetchWithRetry(url);
 
-        // Extract components from fundamentals data
-        const components = data?.Components || data?.components || {};
-        const symbols = Object.keys(components);
+        // The Components field in EODHD response is an object keyed by ticker
+        // e.g., { "AAPL": { "Name": "Apple Inc.", ...}, "MSFT": {...} }
+        const components = data?.Components || {};
+        const tickers = Object.keys(components);
 
-        if (symbols.length < index.expectedMin) {
-            console.warn(`  ⚠️ Only ${symbols.length} symbols (expected ≥${index.expectedMin})`);
+        if (tickers.length >= index.expectedMin) {
+            // Components found - extract them
+            const universe = tickers.map(ticker => {
+                const comp = components[ticker];
+                // Remove .US suffix if present (EODHD uses AAPL.US format)
+                const cleanTicker = ticker.replace(/\.US$/i, '');
+                return {
+                    ticker: cleanTicker,
+                    name: comp?.Name || comp?.name || cleanTicker
+                };
+            }).sort((a, b) => a.ticker.localeCompare(b.ticker));
+
+            console.log(`  ✅ Found ${universe.length} constituents from Components`);
+            return universe;
         }
 
-        // Create universe array with symbol and name
-        const universe = symbols.map(symbol => {
-            const comp = components[symbol];
-            return {
-                symbol: symbol.replace('.US', ''), // Remove .US suffix if present
-                name: comp?.Name || comp?.name || symbol
-            };
-        }).sort((a, b) => a.symbol.localeCompare(b.symbol));
+        // If Components is empty or too small, try General.Components (some indices use this)
+        const generalComponents = data?.General?.Components || {};
+        const generalTickers = Object.keys(generalComponents);
 
-        console.log(`  ✅ Found ${universe.length} constituents`);
-        return universe;
+        if (generalTickers.length >= index.expectedMin) {
+            const universe = generalTickers.map(ticker => {
+                const comp = generalComponents[ticker];
+                const cleanTicker = ticker.replace(/\.US$/i, '');
+                return {
+                    ticker: cleanTicker,
+                    name: comp?.Name || comp?.name || cleanTicker
+                };
+            }).sort((a, b) => a.ticker.localeCompare(b.ticker));
+
+            console.log(`  ✅ Found ${universe.length} constituents from General.Components`);
+            return universe;
+        }
+
+        console.warn(`  ⚠️ Only ${tickers.length} symbols from Components (expected ≥${index.expectedMin})`);
+        console.warn(`  ⚠️ EODHD may not support full constituents for this index`);
+
+        // Return what we have
+        if (tickers.length > 0) {
+            return tickers.map(ticker => ({
+                ticker: ticker.replace(/\.US$/i, ''),
+                name: components[ticker]?.Name || ticker
+            })).sort((a, b) => a.ticker.localeCompare(b.ticker));
+        }
+
+        return [];
 
     } catch (err) {
         console.error(`  ❌ Failed: ${err.message}`);
         return [];
     }
+}
+
+function readExistingUniverse(id) {
+    const filePath = path.join(OUTPUT_DIR, `${id}.json`);
+    try {
+        if (fs.existsSync(filePath)) {
+            const content = fs.readFileSync(filePath, 'utf8');
+            const data = JSON.parse(content);
+            if (Array.isArray(data) && data.length > 10) {
+                console.log(`  📂 Existing ${id}.json has ${data.length} symbols`);
+                return data;
+            }
+        }
+    } catch (err) {
+        console.warn(`  ⚠️ Could not read existing ${id}.json: ${err.message}`);
+    }
+    return null;
 }
 
 function writeUniverseFile(id, universe) {
@@ -86,29 +136,32 @@ function writeUniverseFile(id, universe) {
 function createCombinedUniverse(universes) {
     console.log('\n🔗 Creating combined universe...');
 
-    // Merge all universes
+    // Merge all universes, deduplicating by ticker
     const symbolMap = new Map();
 
     for (const [id, universe] of Object.entries(universes)) {
         for (const stock of universe) {
-            if (!symbolMap.has(stock.symbol)) {
-                symbolMap.set(stock.symbol, {
-                    symbol: stock.symbol,
-                    name: stock.name,
+            const ticker = stock.ticker || stock.symbol;
+            if (!ticker) continue;
+
+            if (!symbolMap.has(ticker)) {
+                symbolMap.set(ticker, {
+                    ticker: ticker,
+                    name: stock.name || ticker,
                     indices: [id]
                 });
             } else {
-                symbolMap.get(stock.symbol).indices.push(id);
+                symbolMap.get(ticker).indices.push(id);
             }
         }
     }
 
     // Convert to array and sort
     const combined = Array.from(symbolMap.values())
-        .sort((a, b) => a.symbol.localeCompare(b.symbol));
+        .sort((a, b) => a.ticker.localeCompare(b.ticker));
 
-    // Write combined file (without indices field for simplicity)
-    const simpleFormat = combined.map(s => ({ symbol: s.symbol, name: s.name }));
+    // Write combined file (simple format for compatibility)
+    const simpleFormat = combined.map(s => ({ ticker: s.ticker, name: s.name }));
     const filePath = path.join(OUTPUT_DIR, 'all.json');
     fs.writeFileSync(filePath, JSON.stringify(simpleFormat, null, 2));
 
@@ -138,7 +191,17 @@ async function main() {
     // Fetch all indices
     const universes = {};
     for (const index of INDICES) {
-        const universe = await fetchIndexConstituents(index);
+        let universe = await fetchIndexConstituents(index);
+
+        // If EODHD didn't return enough symbols, try to use existing file
+        if (universe.length < index.expectedMin) {
+            const existing = readExistingUniverse(index.id);
+            if (existing && existing.length > universe.length) {
+                console.log(`  📌 Using existing ${index.id}.json (${existing.length} symbols)`);
+                universe = existing;
+            }
+        }
+
         if (universe.length > 0) {
             universes[index.id] = universe;
             writeUniverseFile(index.id, universe);

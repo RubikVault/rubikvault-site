@@ -32,7 +32,7 @@ const REPO_ROOT = process.cwd();
 const MODELS_DIR = 'public/data/models';
 const SNAPSHOTS_DIR = 'public/data/snapshots';
 const MARKETPHASE_DIR = 'public/data/marketphase';
-const UNIVERSE_FILE = 'public/data/universe/nasdaq100.json';
+const UNIVERSE_FILE = 'public/data/universe/all.json';
 
 function isoNow() {
     return new Date().toISOString();
