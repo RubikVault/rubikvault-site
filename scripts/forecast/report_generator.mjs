@@ -299,6 +299,8 @@ export function updateLatest(repoRoot, latest) {
             last_good_ref: latest.last_good_ref ?? null
         },
         data: {
+            champion_id: latest.champion_id ?? null,
+            forecasts: latest.forecasts ?? [],
             latest_report_ref: latest.latest_report_ref ?? null,
             scorecards_ref: latest.scorecards_ref ?? null,
             maturity_phase: latest.maturity_phase ?? 'BOOTSTRAP'
@@ -306,7 +308,7 @@ export function updateLatest(repoRoot, latest) {
     };
 
     fs.writeFileSync(latestPath, JSON.stringify(latestDoc, null, 2));
-    console.log(`[Latest] Updated ${latestPath}`);
+    console.log(`[Latest] Updated ${latestPath} with ${(latest.forecasts ?? []).length} forecasts`);
 }
 
 /**

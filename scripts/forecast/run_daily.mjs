@@ -319,9 +319,48 @@ export async function runDailyPipeline(options = {}) {
         }
     });
 
+    // Build forecasts summary for UI consumption
+    // Helper to derive direction from probability
+    function deriveDirection(p_up, neutralFlag) {
+        if (neutralFlag) return 'neutral';
+        if (p_up > 0.53) return 'bullish';
+        if (p_up < 0.47) return 'bearish';
+        return 'neutral';
+    }
+
+    const seenTickers = new Set();
+    const forecastsSummary = forecasts
+        .filter(f => {
+            if (seenTickers.has(f.ticker)) return false;
+            seenTickers.add(f.ticker);
+            return true;
+        })
+        .map(f => {
+            const ticker1d = forecasts.find(x => x.ticker === f.ticker && x.horizon === '1d');
+            const ticker5d = forecasts.find(x => x.ticker === f.ticker && x.horizon === '5d');
+            const ticker20d = forecasts.find(x => x.ticker === f.ticker && x.horizon === '20d');
+
+            const buildHorizon = (fc) => fc ? {
+                direction: deriveDirection(fc.p_up, fc.neutral_flag),
+                probability: fc.p_up
+            } : null;
+
+            return {
+                symbol: f.ticker,
+                name: null,  // Name lookup not implemented yet
+                horizons: {
+                    '1d': buildHorizon(ticker1d),
+                    '5d': buildHorizon(ticker5d),
+                    '20d': buildHorizon(ticker20d)
+                }
+            };
+        });
+
     updateLatest(repoRoot, {
         ok: true,
         status: 'ok',
+        champion_id: champion.champion_id,
+        forecasts: forecastsSummary,
         latest_report_ref: `public/data/forecast/reports/daily/${tradingDate}.json`,
         scorecards_ref: 'public/data/forecast/scorecards/tickers.json.gz',
         maturity_phase: report.maturity_phase

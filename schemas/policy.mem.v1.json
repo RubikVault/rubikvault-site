@@ -1,0 +1,143 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://rubikvault.com/schemas/policy.mem.v1.json",
+    "title": "MEM Policy v1",
+    "description": "Schema for Minimal Evolving Model policy configuration",
+    "type": "object",
+    "required": [
+        "schema_version",
+        "system",
+        "horizons"
+    ],
+    "properties": {
+        "schema_version": {
+            "type": "string",
+            "const": "policy_mem_v1"
+        },
+        "system": {
+            "type": "object",
+            "required": [
+                "id",
+                "version"
+            ],
+            "properties": {
+                "id": {
+                    "type": "string"
+                },
+                "version": {
+                    "type": "string"
+                }
+            }
+        },
+        "horizons": {
+            "type": "array",
+            "items": {
+                "type": "string",
+                "enum": [
+                    "1d",
+                    "5d",
+                    "20d"
+                ]
+            },
+            "minItems": 1
+        },
+        "circuit_breaker": {
+            "type": "object",
+            "properties": {
+                "missing_price_data_pct_trigger": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 100
+                },
+                "missing_price_data_pct_recovery": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 100
+                }
+            }
+        },
+        "maturity": {
+            "type": "object",
+            "properties": {
+                "bootstrap_live_eval_days": {
+                    "type": "integer",
+                    "minimum": 1
+                },
+                "calibration_live_eval_days": {
+                    "type": "integer",
+                    "minimum": 1
+                }
+            }
+        },
+        "exploration": {
+            "type": "object",
+            "properties": {
+                "monthly_min_challengers": {
+                    "type": "integer",
+                    "minimum": 0
+                },
+                "random_challenger_rate_pct": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 100
+                }
+            }
+        },
+        "divergence": {
+            "type": "object",
+            "properties": {
+                "threshold_js": {
+                    "type": "number",
+                    "minimum": 0
+                },
+                "threshold_abs_diff_up": {
+                    "type": "number",
+                    "minimum": 0
+                },
+                "action_ui_banner": {
+                    "type": "boolean"
+                },
+                "action_github_issue": {
+                    "type": "boolean"
+                },
+                "issue_rate_limit_per_month": {
+                    "type": "integer",
+                    "minimum": 0
+                }
+            }
+        },
+        "backend_order": {
+            "type": "array",
+            "items": {
+                "type": "string",
+                "enum": [
+                    "faiss_exact",
+                    "sklearn_tree",
+                    "numpy_bruteforce_testonly"
+                ]
+            }
+        },
+        "numpy_bruteforce_max_cases": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Max cases for numpy brute force (test only)"
+        },
+        "determinism": {
+            "type": "object",
+            "properties": {
+                "omp_num_threads": {
+                    "type": "integer",
+                    "minimum": 1
+                },
+                "mkl_num_threads": {
+                    "type": "integer",
+                    "minimum": 1
+                },
+                "openblas_num_threads": {
+                    "type": "integer",
+                    "minimum": 1
+                }
+            }
+        }
+    }
+}

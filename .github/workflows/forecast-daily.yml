@@ -17,6 +17,10 @@ defaults:
 
 env:
   NODE_VERSION: '20'
+  # MEM v1.2 Determinism: Lock threads for reproducible runs
+  OMP_NUM_THREADS: '1'
+  MKL_NUM_THREADS: '1'
+  OPENBLAS_NUM_THREADS: '1'
 
 jobs:
   forecast-daily:

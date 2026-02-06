@@ -1,0 +1,96 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://rubikvault.com/schemas/ledger.mem.v1.json",
+    "title": "MEM Ledger Record v1",
+    "description": "Schema for individual forecast/outcome records in ledger",
+    "type": "object",
+    "required": [
+        "schema",
+        "ticker",
+        "trading_date",
+        "horizon",
+        "p_up",
+        "run_id"
+    ],
+    "properties": {
+        "schema": {
+            "type": "string",
+            "enum": [
+                "forecast_record_v1",
+                "outcome_record_v1"
+            ]
+        },
+        "ticker": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 10
+        },
+        "trading_date": {
+            "type": "string",
+            "format": "date"
+        },
+        "horizon": {
+            "type": "string",
+            "enum": [
+                "1d",
+                "5d",
+                "20d"
+            ]
+        },
+        "p_up": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+        },
+        "neutral_flag": {
+            "type": "boolean"
+        },
+        "conf": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+        },
+        "run_id": {
+            "type": "string"
+        },
+        "as_of": {
+            "type": "string",
+            "format": "date-time"
+        },
+        "provenance": {
+            "type": "string",
+            "enum": [
+                "live",
+                "backtest",
+                "synthetic"
+            ]
+        },
+        "champion_id": {
+            "type": "string"
+        },
+        "policy_hash": {
+            "type": "string",
+            "pattern": "^sha256:[a-f0-9]{64}$"
+        },
+        "code_hash": {
+            "type": "string"
+        },
+        "feature_snapshot_hash": {
+            "type": "string",
+            "pattern": "^sha256:[a-f0-9]{64}$"
+        },
+        "y": {
+            "type": "integer",
+            "enum": [
+                0,
+                1
+            ],
+            "description": "Outcome: 1=up, 0=down (only in outcome records)"
+        },
+        "outcome_trading_date": {
+            "type": "string",
+            "format": "date",
+            "description": "Date when outcome was observed"
+        }
+    }
+}

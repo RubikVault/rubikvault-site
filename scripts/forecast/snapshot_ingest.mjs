@@ -94,8 +94,8 @@ export function loadEodBatches(repoRoot) {
 }
 
 /**
- * Load full price history for tickers
- * Uses EOD batches for latest data
+ * Load full price history for tickers from individual bar files
+ * Uses EOD bars directory for full historical data
  * @param {string} repoRoot - Repository root
  * @param {string[]} tickers - Tickers to load
  * @param {string} asOfDate - As-of date
@@ -103,11 +103,49 @@ export function loadEodBatches(repoRoot) {
  */
 export async function loadPriceHistory(repoRoot, tickers, asOfDate) {
     const history = {};
-
-    // Load EOD batches for latest prices
-    const eodData = loadEodBatches(repoRoot);
+    const barsDir = path.join(repoRoot, 'public/data/eod/bars');
 
     for (const ticker of tickers) {
+        const barPath = path.join(barsDir, `${ticker}.json`);
+
+        if (!fs.existsSync(barPath)) {
+            // Fallback to batch data if bar file doesn't exist
+            continue;
+        }
+
+        try {
+            const content = fs.readFileSync(barPath, 'utf8');
+            const bars = JSON.parse(content);
+
+            if (!Array.isArray(bars) || bars.length === 0) continue;
+
+            // Sort by date descending, take most recent 500 trading days
+            const sorted = bars.sort((a, b) => b.date.localeCompare(a.date));
+
+            // Filter to bars at or before asOfDate
+            const validBars = sorted.filter(b => b.date <= asOfDate);
+            const recent = validBars.slice(0, 500).reverse(); // Chronological order
+
+            if (recent.length === 0) continue;
+
+            history[ticker] = {
+                dates: recent.map(b => b.date),
+                closes: recent.map(b => b.close ?? b.adjClose),
+                volumes: recent.map(b => b.volume ?? 0),
+                opens: recent.map(b => b.open),
+                highs: recent.map(b => b.high),
+                lows: recent.map(b => b.low)
+            };
+        } catch (err) {
+            console.warn(`[Ingest] Error reading ${ticker}: ${err.message}`);
+        }
+    }
+
+    // Supplement with EOD batches for any missing tickers
+    const eodData = loadEodBatches(repoRoot);
+    for (const ticker of tickers) {
+        if (history[ticker]) continue; // Already loaded from bars
+
         const tickerData = eodData[ticker];
         if (!tickerData) continue;
 
@@ -122,42 +160,9 @@ export async function loadPriceHistory(repoRoot, tickers, asOfDate) {
                 lows: [tickerData.low ?? tickerData.close]
             };
         }
-
-        // If array of bars (historical)
-        if (Array.isArray(tickerData)) {
-            history[ticker] = {
-                dates: tickerData.map(b => b.date),
-                closes: tickerData.map(b => b.close ?? b.adjClose),
-                volumes: tickerData.map(b => b.volume ?? 0),
-                opens: tickerData.map(b => b.open),
-                highs: tickerData.map(b => b.high),
-                lows: tickerData.map(b => b.low)
-            };
-        }
     }
 
-    // Supplement with historical data from snapshots if available
-    const historyPath = path.join(repoRoot, 'public/data/snapshots/market-prices/latest.json');
-    if (fs.existsSync(historyPath)) {
-        try {
-            const content = fs.readFileSync(historyPath, 'utf8');
-            const snapshot = JSON.parse(content);
-            const data = snapshot.data || snapshot;
-
-            for (const ticker of tickers) {
-                if (data[ticker] && !history[ticker]) {
-                    history[ticker] = {
-                        dates: [data[ticker].date || asOfDate],
-                        closes: [data[ticker].close || data[ticker].price],
-                        volumes: [data[ticker].volume ?? 0]
-                    };
-                }
-            }
-        } catch (err) {
-            // Ignore errors
-        }
-    }
-
+    console.log(`[Ingest] Loaded price history for ${Object.keys(history).length} tickers`);
     return history;
 }
 
