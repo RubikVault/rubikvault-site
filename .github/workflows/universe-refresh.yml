@@ -1,0 +1,49 @@
+name: Universe Refresh
+
+on:
+  workflow_dispatch:
+    inputs:
+      indices:
+        description: 'Which indices to fetch (all, sp500, nasdaq100, dowjones, russell2000)'
+        required: false
+        default: 'all'
+
+jobs:
+  fetch-constituents:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      
+      - name: Fetch Index Constituents
+        env:
+          EODHD_API_KEY: ${{ secrets.EODHD_API_KEY }}
+        run: node scripts/universe/fetch-constituents.mjs
+      
+      - name: Show Results
+        run: |
+          echo "Universe files created:"
+          ls -la public/data/universe/
+          echo ""
+          echo "Symbol counts:"
+          for f in public/data/universe/*.json; do
+            count=$(jq 'length' "$f")
+            echo "  $(basename $f): $count symbols"
+          done
+      
+      - name: Commit Changes
+        run: |
+          git config --global user.name "rv-bot"
+          git config --global user.email "bot@rubikvault.com"
+          git add public/data/universe/
+          git commit -m "chore(universe): refresh index constituents [skip ci]" || echo "No changes"
+          git push
