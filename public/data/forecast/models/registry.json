@@ -1,6 +1,10 @@
 {
     "schema_version": "registry_v1",
-    "generated_at": "2026-02-06T16:00:00Z",
+    "generated_at": "2026-02-06T18:15:00Z",
+    "champion": "forecast_knn_v3.0",
+    "champion_id": "forecast_knn_v3.0",
+    "champion_version": "v3.0.1",
+    "maturity_phase": "BOOTSTRAP",
     "models": [
         {
             "id": "forecast_knn_v3.0",
@@ -20,5 +24,11 @@
             "policy_hash": "sha256:c6fbf941a60e7cc5f0376c94df0730f6edbc0b33c4ab3a7a5cc76f9346c2f69b",
             "created_at": "2026-02-05T00:00:00Z"
         }
-    ]
+    ],
+    "_audit": {
+        "description": "MEM v1.2 Forecast Model Registry - Single Source of Truth",
+        "champion_selection_method": "manual_v1",
+        "last_promotion": null,
+        "challengers_count": 0
+    }
 }

@@ -27,7 +27,8 @@
         },
         "trading_date": {
             "type": "string",
-            "format": "date"
+            "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$",
+            "description": "ISO 8601 date (YYYY-MM-DD)"
         },
         "horizon": {
             "type": "string",
@@ -55,7 +56,8 @@
         },
         "as_of": {
             "type": "string",
-            "format": "date-time"
+            "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]+)?Z$",
+            "description": "ISO 8601 UTC timestamp"
         },
         "provenance": {
             "type": "string",
@@ -89,7 +91,7 @@
         },
         "outcome_trading_date": {
             "type": "string",
-            "format": "date",
+            "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$",
             "description": "Date when outcome was observed"
         }
     }

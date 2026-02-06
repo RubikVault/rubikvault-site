@@ -40,6 +40,12 @@ if (registry.schema_version !== 'registry_v1') {
 }
 pass('Schema version is registry_v1');
 
+// Validate top-level champion pointer (GAP 1 FIX)
+if (!registry.champion || typeof registry.champion !== 'string') {
+    fail('Registry must have top-level "champion" field pointing to champion model ID');
+}
+pass(`Champion pointer: ${registry.champion}`);
+
 // Validate models array
 if (!Array.isArray(registry.models) || registry.models.length === 0) {
     fail('Registry must have at least one model');
