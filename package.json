@@ -69,7 +69,6 @@
     "test:truth-artifacts": "bash ./scripts/ops/verify-truth-artifacts.sh",
     "build:scientific-analysis": "node scripts/scientific-analyzer/generate-analysis.mjs",
     "test:determinism": "node --test tests/determinism/forecast-determinism.test.mjs",
-    "forecast:overnight": "node scripts/forecast/run_overnight.mjs",
     "test:forecast": "npm run validate:forecast-schemas && npm run validate:forecast-registry",
     "validate:forecast-schemas": "npx ajv validate -s schemas/registry.v1.json -d public/data/forecast/models/registry.json --strict=false",
     "validate:forecast-registry": "node scripts/forecast/validate-registry.mjs",
