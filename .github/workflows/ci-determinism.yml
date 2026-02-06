@@ -4,23 +4,46 @@ on:
   push:
     paths:
       - 'scripts/forecast/**'
+      - 'tests/determinism/**'
+  pull_request:
+    paths:
+      - 'scripts/forecast/**'
+      - 'tests/determinism/**'
   workflow_dispatch:
 
 concurrency:
-  group: forecast-system
+  group: forecast-determinism-${{ github.ref }}
   cancel-in-progress: true
 
+env:
+  # MEM v1.2 Determinism: Lock threads for reproducible runs
+  OMP_NUM_THREADS: '1'
+  MKL_NUM_THREADS: '1'
+  OPENBLAS_NUM_THREADS: '1'
+
 jobs:
-  check-determinism:
+  determinism-check:
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
+      
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: '18'
-      - name: Run Determinism Test
-        # Placeholder for actual determinism test interaction
-        # Real test would run `hash(pipeline(input)) == constant`
-        run: echo "Determinism check passed (placeholder)"
+          node-version: '20'
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Run Determinism Tests
+        run: npm run test:determinism
+      
+      - name: Validate Forecast Registry
+        run: npm run validate:forecast-registry
+      
+      - name: Validate Registry Schema
+        run: npm run validate:forecast-schemas

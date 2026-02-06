@@ -1,0 +1,24 @@
+{
+    "schema_version": "registry_v1",
+    "generated_at": "2026-02-06T16:00:00Z",
+    "models": [
+        {
+            "id": "forecast_knn_v3.0",
+            "type": "knn",
+            "version": "v3.0.1",
+            "horizons": [
+                "1d",
+                "5d",
+                "20d"
+            ],
+            "status": "ACTIVE",
+            "is_champion": true,
+            "outputs": {
+                "ledger_path": "mirrors/forecast/ledger/forecasts/",
+                "latest_path": "public/data/forecast/latest.json"
+            },
+            "policy_hash": "sha256:c6fbf941a60e7cc5f0376c94df0730f6edbc0b33c4ab3a7a5cc76f9346c2f69b",
+            "created_at": "2026-02-05T00:00:00Z"
+        }
+    ]
+}

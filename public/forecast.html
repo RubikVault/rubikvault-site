@@ -553,6 +553,9 @@
         return;
       }
 
+      // GAP 1 FIX: Explicitly hide bootstrap notice when forecasts exist
+      bootstrapNotice.style.display = 'none';
+
       countEl.textContent = `${forecasts.length} stocks`;
       tbody.innerHTML = forecasts.map(f => `
         <tr style="cursor: pointer;" onclick="window.location.href='/?ticker=${f.symbol}'">

@@ -67,7 +67,11 @@
     "rv:ops": "node scripts/ops/build-ops-daily.mjs",
     "build:pipeline-truth": "node scripts/pipeline/build-ndx100-pipeline-truth.mjs",
     "test:truth-artifacts": "bash ./scripts/ops/verify-truth-artifacts.sh",
-    "build:scientific-analysis": "node scripts/scientific-analyzer/generate-analysis.mjs"
+    "build:scientific-analysis": "node scripts/scientific-analyzer/generate-analysis.mjs",
+    "test:determinism": "node --test tests/determinism/forecast-determinism.test.mjs",
+    "test:forecast": "npm run validate:forecast-schemas && npm run validate:forecast-registry",
+    "validate:forecast-schemas": "npx ajv validate -s schemas/registry.v1.json -d public/data/forecast/models/registry.json --strict=false",
+    "validate:forecast-registry": "node scripts/forecast/validate-registry.mjs"
   },
   "dependencies": {
     "d3-dsv": "^3.0.1",
