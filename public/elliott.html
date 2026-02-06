@@ -57,7 +57,7 @@
 
             <div class="rv-header-tools" aria-live="polite">
                 <div class="rv-data-updated" style="font-size: 12px; color: var(--rv-text-muted);">
-                    Data updated: <span id="rv-data-updated-date">Loading...</span> (daily snapshots)
+                    Data updated: 2026-02-06 (daily snapshots)
                 </div>
                 <div class="rv-market-clock">
                     <span class="rv-clock-time" id="rv-ny-time">NY: --:--:--</span>
@@ -82,43 +82,6 @@
     </nav>
 
     <style>
-        .rv-page-nav {
-            background: rgba(15, 23, 42, 0.8);
-            border-bottom: 1px solid rgba(100, 116, 139, 0.2);
-            padding: 0.6rem 0;
-            position: sticky;
-            top: 60px;
-            z-index: 90;
-            backdrop-filter: blur(8px);
-        }
-
-        .rv-page-nav-inner {
-            max-width: 1400px;
-            margin: 0 auto;
-            padding: 0 2rem;
-            display: flex;
-            gap: 2rem;
-        }
-
-        .rv-page-nav-link {
-            color: #94a3b8;
-            text-decoration: none;
-            font-size: 0.95rem;
-            font-weight: 500;
-            padding: 0.4rem 0;
-            border-bottom: 2px solid transparent;
-            transition: all 0.2s;
-        }
-
-        .rv-page-nav-link:hover {
-            color: #e5e7eb;
-        }
-
-        .rv-page-nav-link.active {
-            color: #3b82f6;
-            border-bottom-color: #3b82f6;
-        }
-
         .elliott-hero {
             text-align: center;
             padding: 2rem 0 1.5rem;
@@ -491,6 +454,7 @@
         // Load on page ready
         loadScanner();
     </script>
+    <script src="/market-clock.js" defer></script>
 </body>
 
 </html>
