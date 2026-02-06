@@ -433,7 +433,8 @@
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
         return await response.json();
       } catch (err) {
-        console.error(`Failed to fetch ${path}:`, err);
+        // Use warn instead of error - missing optional data (like reports) is non-fatal
+        console.warn(`Failed to fetch ${path}:`, err.message);
         return null;
       }
     }
@@ -586,12 +587,17 @@
         updateForecasts(latest.data?.forecasts || []);
       }
 
-      // Load latest daily report
-      const today = new Date().toISOString().slice(0, 10);
-      const report = await fetchData(`reports/daily/${today}.json`);
-      if (report) {
-        updateMetrics(report);
-        updatePromotions(report.recent_changes?.promotions || []);
+      // Load latest daily report using ref from latest.json (not today's date)
+      // This avoids 404s when today's report doesn't exist yet
+      const reportRef = latest?.data?.latest_report_ref;
+      if (reportRef) {
+        // Extract relative path from full ref (e.g., "public/data/forecast/reports/daily/2026-02-05.json" → "reports/daily/2026-02-05.json")
+        const reportPath = reportRef.replace(/^public\/data\/forecast\//, '');
+        const report = await fetchData(reportPath);
+        if (report) {
+          updateMetrics(report);
+          updatePromotions(report.recent_changes?.promotions || []);
+        }
       }
     }
 
