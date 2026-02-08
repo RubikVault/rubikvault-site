@@ -37,6 +37,8 @@ Command:
 ```bash
 npm run test:drop-threshold
 npm run test:fetch-retry
+npm run validate:forecast-registry
+npx --yes ajv-cli@5 validate -s schemas/snapshot-envelope.schema.json -d public/data/snapshots/market-prices/latest.json
 ```
 Output summary:
 ```text
@@ -45,6 +47,9 @@ All tests passed
 
 test:fetch-retry -> Passed: 10, Failed: 0
 All tests passed
+
+validate:forecast-registry -> FORECAST REGISTRY VALIDATION PASSED
+ajv snapshot-envelope -> market-prices/latest.json valid
 ```
 
 ### D) Market-prices publish guard

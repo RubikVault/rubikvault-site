@@ -1601,10 +1601,6 @@ export async function main() {
   envelope.metadata.upstream = { ...envelope.metadata.upstream, ...upstream };
   envelope.metadata.provider = providerLabel;
   envelope.metadata.as_of = asOf;
-  envelope.asof = asOf;
-  envelope.prices_count = typeof envelope.metadata.record_count === 'number'
-    ? envelope.metadata.record_count
-    : (Array.isArray(envelope.data) ? envelope.data.length : 0);
 
   envelope.metadata.source_chain = sourceChainMeta;
   const cooldownUntil =

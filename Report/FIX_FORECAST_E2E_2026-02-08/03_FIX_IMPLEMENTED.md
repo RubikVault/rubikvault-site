@@ -32,14 +32,12 @@ Files:
 - `scripts/providers/market-prices-v3.mjs:1457`
 - `scripts/providers/market-prices-v3.mjs:1470`
 - `scripts/providers/market-prices-v3.mjs:1564`
-- `scripts/providers/market-prices-v3.mjs:1604`
 
 Change:
 - Enforced coverage floor: `max(config.min, ceil(universe*0.95))`.
 - Added fallback chain for insufficient coverage:
   1. previously published `public/data/snapshots/market-prices/latest.json`
   2. `public/data/snapshots/stock-analysis.json` seed
-- Added top-level aliases `asof` and `prices_count` for semantic checks.
 - Added registry path fallback to `functions/api/_shared/registry/providers.v1.json` when `public/data/registry` is missing.
 
 ## 4) CI contract gate hardened (semantic invariants)
@@ -76,3 +74,12 @@ File:
 Change:
 - Guard now enforces `asof` and minimum coverage threshold (`RV_MIN_MARKET_PRICE_ROWS`, default 517).
 - Allows approved fallback sources (`stooq`, `last_good`, `stock-analysis-seed`) and still blocks stub/null provider.
+
+## 7) CI blockers resolved (determinism + schema validation)
+Files:
+- `public/data/forecast/models/registry.json`
+- `schemas/snapshot-envelope.schema.json`
+
+Change:
+- Added required forecast registry file for `validate:forecast-registry` in CI determinism workflow.
+- Extended snapshot envelope schema to allow optional top-level `meta`, matching current producer output.

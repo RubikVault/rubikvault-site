@@ -4,10 +4,10 @@
     "module": "market-prices",
     "tier": "standard",
     "domain": "stocks",
-    "source": "stock-analysis-seed",
-    "fetched_at": "2026-02-08T22:21:39.584Z",
-    "published_at": "2026-02-08T22:21:39.584Z",
-    "digest": "sha256:e35c771820fb7bf7e280649fb1a92b66dd2d2e70218433911537b653f7b3cc17",
+    "source": "last_good",
+    "fetched_at": "2026-02-08T22:31:01.294Z",
+    "published_at": "2026-02-08T22:31:01.294Z",
+    "digest": "sha256:697fe0e35277b11223045c092cd054dd254e53259282f48d6e941309f5307331",
     "record_count": 517,
     "expected_count": null,
     "validation": {
@@ -26,7 +26,7 @@
         "drop_threshold"
       ],
       "warnings": [
-        "USING_STOCK_ANALYSIS_SEED"
+        "USING_LAST_GOOD_MARKET_PRICES"
       ]
     },
     "freshness": {
@@ -37,13 +37,13 @@
       "next_expected_at": null
     },
     "upstream": {
-      "http_status": 200,
-      "latency_ms": 24730,
+      "http_status": null,
+      "latency_ms": 10,
       "rate_limit_remaining": null,
       "retry_count": 0,
       "rate_limited": false,
       "classification": "OK",
-      "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+      "note": "Missing API key (TWELVEDATA_API_KEY)",
       "error": null,
       "symbol_errors": {
         "A": {
@@ -3153,8 +3153,8 @@
         "A": [
           {
             "provider_id": "alphavantage",
-            "classification": "UPSTREAM_INFORMATION",
-            "http_status": 200,
+            "classification": "COOLDOWN_ACTIVE",
+            "http_status": null,
             "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
             "ok": false
           },
@@ -11429,11 +11429,11 @@
     "source_chain": {
       "primary": "alphavantage",
       "secondary": "twelvedata",
-      "selected": "stock-analysis-seed",
+      "selected": "last_good",
       "fallbackUsed": false,
       "fallbackProvider": null,
       "primaryFailure": {
-        "code": "UPSTREAM_INFORMATION",
+        "code": "COOLDOWN_ACTIVE",
         "message": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium"
       }
     },
@@ -11971,7 +11971,7 @@
           "enabled": true
         }
       ],
-      "reason_code": "USING_STOCK_ANALYSIS_SEED",
+      "reason_code": "USING_LAST_GOOD",
       "cooldown_until": "2026-02-08T22:51:39.559Z"
     }
   },
@@ -11987,7 +11987,7 @@
       "adj_close": 90.18,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.581Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "AAPL",
@@ -12000,7 +12000,7 @@
       "adj_close": 193.66,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.581Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "ABBV",
@@ -12013,7 +12013,7 @@
       "adj_close": 107.01,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.581Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "ABNB",
@@ -12026,7 +12026,7 @@
       "adj_close": 89.05,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.581Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "ABT",
@@ -12039,7 +12039,7 @@
       "adj_close": 39.96,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.581Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "ACGL",
@@ -12052,7 +12052,7 @@
       "adj_close": 157.11,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.581Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "ACN",
@@ -12065,7 +12065,7 @@
       "adj_close": 166.95,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.581Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "ADBE",
@@ -12078,7 +12078,7 @@
       "adj_close": 93.75,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.581Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "ADI",
@@ -12091,7 +12091,7 @@
       "adj_close": 71.02,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.581Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "ADM",
@@ -12104,7 +12104,7 @@
       "adj_close": 79.34,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.581Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "ADP",
@@ -12117,7 +12117,7 @@
       "adj_close": 160.58,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.581Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "ADSK",
@@ -12130,7 +12130,7 @@
       "adj_close": 77.2,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.581Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "AEE",
@@ -12143,7 +12143,7 @@
       "adj_close": 52.17,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.581Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "AEP",
@@ -12156,7 +12156,7 @@
       "adj_close": 150.04,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.581Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "AES",
@@ -12169,7 +12169,7 @@
       "adj_close": 81.28,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.581Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "AFL",
@@ -12182,7 +12182,7 @@
       "adj_close": 131.2,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.581Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "AIG",
@@ -12195,7 +12195,7 @@
       "adj_close": 164.2,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.581Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "AIZ",
@@ -12208,7 +12208,7 @@
       "adj_close": 128.72,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.581Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "AJG",
@@ -12221,7 +12221,7 @@
       "adj_close": 153.67,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.581Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "AKAM",
@@ -12234,7 +12234,7 @@
       "adj_close": 85.72,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.581Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "ALB",
@@ -12247,7 +12247,7 @@
       "adj_close": 47.21,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.581Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "ALGN",
@@ -12260,7 +12260,7 @@
       "adj_close": 73.15,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.581Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "ALL",
@@ -12273,7 +12273,7 @@
       "adj_close": 68.01,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.581Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "ALLE",
@@ -12286,7 +12286,7 @@
       "adj_close": 76.78,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.581Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "AMAT",
@@ -12299,7 +12299,7 @@
       "adj_close": 122.36,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.581Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "AMCR",
@@ -12312,7 +12312,7 @@
       "adj_close": 97.14,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.581Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "AMD",
@@ -12325,7 +12325,7 @@
       "adj_close": 94.46,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.581Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "AME",
@@ -12338,7 +12338,7 @@
       "adj_close": 117.92,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.581Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "AMGN",
@@ -12351,7 +12351,7 @@
       "adj_close": 46.7,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.581Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "AMP",
@@ -12364,7 +12364,7 @@
       "adj_close": 65.8,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.581Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "AMT",
@@ -12377,7 +12377,7 @@
       "adj_close": 74.12,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.581Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "AMZN",
@@ -12390,7 +12390,7 @@
       "adj_close": 460.96,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.581Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "ANET",
@@ -12403,7 +12403,7 @@
       "adj_close": 53.78,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.581Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "AON",
@@ -12416,7 +12416,7 @@
       "adj_close": 40.58,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.581Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "AOS",
@@ -12429,7 +12429,7 @@
       "adj_close": 125.98,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.581Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "APA",
@@ -12442,7 +12442,7 @@
       "adj_close": 78.01,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.581Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "APD",
@@ -12455,7 +12455,7 @@
       "adj_close": 159.25,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.581Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "APH",
@@ -12468,7 +12468,7 @@
       "adj_close": 167.57,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.581Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "APO",
@@ -12481,7 +12481,7 @@
       "adj_close": 107.13,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.581Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "APP",
@@ -12494,7 +12494,7 @@
       "adj_close": 34.21,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.581Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "APTV",
@@ -12507,7 +12507,7 @@
       "adj_close": 147.06,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.581Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "ARE",
@@ -12520,7 +12520,7 @@
       "adj_close": 65.27,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.581Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "ARM",
@@ -12533,7 +12533,7 @@
       "adj_close": 81.9,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.581Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "ASML",
@@ -12546,7 +12546,7 @@
       "adj_close": 120.61,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.581Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "ATO",
@@ -12559,7 +12559,7 @@
       "adj_close": 65,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.581Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "AVB",
@@ -12572,7 +12572,7 @@
       "adj_close": 91.9,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.581Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "AVGO",
@@ -12585,7 +12585,7 @@
       "adj_close": 165.11,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.581Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "AVY",
@@ -12598,7 +12598,7 @@
       "adj_close": 64.74,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.581Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "AWK",
@@ -12611,7 +12611,7 @@
       "adj_close": 175.09,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.581Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "AXON",
@@ -12624,7 +12624,7 @@
       "adj_close": 121.42,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.581Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "AXP",
@@ -12637,7 +12637,7 @@
       "adj_close": 99.96,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.581Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "AZN",
@@ -12650,7 +12650,7 @@
       "adj_close": 74.74,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.581Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "AZO",
@@ -12663,7 +12663,7 @@
       "adj_close": 151.82,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.581Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "BA",
@@ -12676,7 +12676,7 @@
       "adj_close": 145.14,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.581Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "BAC",
@@ -12689,7 +12689,7 @@
       "adj_close": 63.68,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.581Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "BALL",
@@ -12702,7 +12702,7 @@
       "adj_close": 87.2,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.581Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "BAX",
@@ -12715,7 +12715,7 @@
       "adj_close": 32.35,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.581Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "BBY",
@@ -12728,7 +12728,7 @@
       "adj_close": 98.9,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.581Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "BDX",
@@ -12741,7 +12741,7 @@
       "adj_close": 150.76,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.581Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "BEN",
@@ -12754,7 +12754,7 @@
       "adj_close": 119.43,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.581Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "BF.B",
@@ -12767,7 +12767,7 @@
       "adj_close": 100.05,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.581Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "BG",
@@ -12780,7 +12780,7 @@
       "adj_close": 157.62,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.581Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "BIIB",
@@ -12793,7 +12793,7 @@
       "adj_close": 36.34,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.581Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "BK",
@@ -12806,7 +12806,7 @@
       "adj_close": 165.94,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.581Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "BKNG",
@@ -12819,7 +12819,7 @@
       "adj_close": 166.17,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.581Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "BKR",
@@ -12832,7 +12832,7 @@
       "adj_close": 64.56,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.581Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "BLDR",
@@ -12845,7 +12845,7 @@
       "adj_close": 42.9,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "BLK",
@@ -12858,7 +12858,7 @@
       "adj_close": 114.47,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "BMY",
@@ -12871,7 +12871,7 @@
       "adj_close": 133.06,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "BR",
@@ -12884,7 +12884,7 @@
       "adj_close": 105.49,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "BRK.B",
@@ -12897,7 +12897,7 @@
       "adj_close": 40.1,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "BRO",
@@ -12910,7 +12910,7 @@
       "adj_close": 59.61,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "BSX",
@@ -12923,7 +12923,7 @@
       "adj_close": 142.79,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "BX",
@@ -12936,7 +12936,7 @@
       "adj_close": 117.97,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "BXP",
@@ -12949,7 +12949,7 @@
       "adj_close": 73.5,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "C",
@@ -12962,7 +12962,7 @@
       "adj_close": 94.34,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "CAG",
@@ -12975,7 +12975,7 @@
       "adj_close": 45.54,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "CAH",
@@ -12988,7 +12988,7 @@
       "adj_close": 122.62,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "CARR",
@@ -13001,7 +13001,7 @@
       "adj_close": 116.33,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "CAT",
@@ -13014,7 +13014,7 @@
       "adj_close": 147.57,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "CB",
@@ -13027,7 +13027,7 @@
       "adj_close": 61.69,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "CBOE",
@@ -13040,7 +13040,7 @@
       "adj_close": 169.43,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "CBRE",
@@ -13053,7 +13053,7 @@
       "adj_close": 137.84,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "CCEP",
@@ -13066,7 +13066,7 @@
       "adj_close": 46.16,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "CCI",
@@ -13079,7 +13079,7 @@
       "adj_close": 178.64,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "CCL",
@@ -13092,7 +13092,7 @@
       "adj_close": 109.87,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "CDNS",
@@ -13105,7 +13105,7 @@
       "adj_close": 156.16,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "CDW",
@@ -13118,7 +13118,7 @@
       "adj_close": 47.22,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "CEG",
@@ -13131,7 +13131,7 @@
       "adj_close": 153.41,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "CF",
@@ -13144,7 +13144,7 @@
       "adj_close": 70.01,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "CFG",
@@ -13157,7 +13157,7 @@
       "adj_close": 142.88,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "CHD",
@@ -13170,7 +13170,7 @@
       "adj_close": 40.58,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "CHRW",
@@ -13183,7 +13183,7 @@
       "adj_close": 166.53,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "CHTR",
@@ -13196,7 +13196,7 @@
       "adj_close": 60.07,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "CI",
@@ -13209,7 +13209,7 @@
       "adj_close": 151.25,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "CINF",
@@ -13222,7 +13222,7 @@
       "adj_close": 71.84,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "CL",
@@ -13235,7 +13235,7 @@
       "adj_close": 82.49,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "CLX",
@@ -13248,7 +13248,7 @@
       "adj_close": 40.05,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "CMCSA",
@@ -13261,7 +13261,7 @@
       "adj_close": 60.78,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "CME",
@@ -13274,7 +13274,7 @@
       "adj_close": 65.01,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "CMG",
@@ -13287,7 +13287,7 @@
       "adj_close": 69.17,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "CMI",
@@ -13300,7 +13300,7 @@
       "adj_close": 73.33,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "CMS",
@@ -13313,7 +13313,7 @@
       "adj_close": 94.12,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "CNC",
@@ -13326,7 +13326,7 @@
       "adj_close": 50.32,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "CNP",
@@ -13339,7 +13339,7 @@
       "adj_close": 152.35,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "COF",
@@ -13352,7 +13352,7 @@
       "adj_close": 121.03,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "COIN",
@@ -13365,7 +13365,7 @@
       "adj_close": 132.39,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "COO",
@@ -13378,7 +13378,7 @@
       "adj_close": 64.74,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "COP",
@@ -13391,7 +13391,7 @@
       "adj_close": 141.82,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "COR",
@@ -13404,7 +13404,7 @@
       "adj_close": 145.98,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "COST",
@@ -13417,7 +13417,7 @@
       "adj_close": 175.5,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "CPAY",
@@ -13430,7 +13430,7 @@
       "adj_close": 138.06,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "CPB",
@@ -13443,7 +13443,7 @@
       "adj_close": 102.18,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "CPRT",
@@ -13456,7 +13456,7 @@
       "adj_close": 173.64,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "CPT",
@@ -13469,7 +13469,7 @@
       "adj_close": 139.61,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "CRL",
@@ -13482,7 +13482,7 @@
       "adj_close": 101.91,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "CRM",
@@ -13495,7 +13495,7 @@
       "adj_close": 178.99,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "CRWD",
@@ -13508,7 +13508,7 @@
       "adj_close": 34.79,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "CSCO",
@@ -13521,7 +13521,7 @@
       "adj_close": 166.83,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "CSGP",
@@ -13534,7 +13534,7 @@
       "adj_close": 51.79,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "CSX",
@@ -13547,7 +13547,7 @@
       "adj_close": 116.34,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "CTAS",
@@ -13560,7 +13560,7 @@
       "adj_close": 169.75,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "CTRA",
@@ -13573,7 +13573,7 @@
       "adj_close": 103.3,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "CTSH",
@@ -13586,7 +13586,7 @@
       "adj_close": 32.32,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "CTVA",
@@ -13599,7 +13599,7 @@
       "adj_close": 61.17,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "CVS",
@@ -13612,7 +13612,7 @@
       "adj_close": 149.35,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "CVX",
@@ -13625,7 +13625,7 @@
       "adj_close": 84.74,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "CZR",
@@ -13638,7 +13638,7 @@
       "adj_close": 30.14,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "D",
@@ -13651,7 +13651,7 @@
       "adj_close": 171.42,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "DAL",
@@ -13664,7 +13664,7 @@
       "adj_close": 104.48,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "DASH",
@@ -13677,7 +13677,7 @@
       "adj_close": 164.84,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "DAY",
@@ -13690,7 +13690,7 @@
       "adj_close": 56.51,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "DD",
@@ -13703,7 +13703,7 @@
       "adj_close": 55.32,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "DDOG",
@@ -13716,7 +13716,7 @@
       "adj_close": 50.51,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "DE",
@@ -13729,7 +13729,7 @@
       "adj_close": 132.4,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "DECK",
@@ -13742,7 +13742,7 @@
       "adj_close": 158.75,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "DELL",
@@ -13755,7 +13755,7 @@
       "adj_close": 141.05,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "DG",
@@ -13768,7 +13768,7 @@
       "adj_close": 136.56,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "DGX",
@@ -13781,7 +13781,7 @@
       "adj_close": 66.25,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "DHI",
@@ -13794,7 +13794,7 @@
       "adj_close": 99.52,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "DHR",
@@ -13807,7 +13807,7 @@
       "adj_close": 43.24,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "DIS",
@@ -13820,7 +13820,7 @@
       "adj_close": 109.79,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "DLR",
@@ -13833,7 +13833,7 @@
       "adj_close": 151.12,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "DLTR",
@@ -13846,7 +13846,7 @@
       "adj_close": 34.08,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "DOC",
@@ -13859,7 +13859,7 @@
       "adj_close": 163.33,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "DOV",
@@ -13872,7 +13872,7 @@
       "adj_close": 127.84,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "DOW",
@@ -13885,7 +13885,7 @@
       "adj_close": 54.92,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "DPZ",
@@ -13898,7 +13898,7 @@
       "adj_close": 125.63,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "DRI",
@@ -13911,7 +13911,7 @@
       "adj_close": 144.22,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "DTE",
@@ -13924,7 +13924,7 @@
       "adj_close": 114.83,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "DUK",
@@ -13937,7 +13937,7 @@
       "adj_close": 116.78,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "DVA",
@@ -13950,7 +13950,7 @@
       "adj_close": 85.45,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "DVN",
@@ -13963,7 +13963,7 @@
       "adj_close": 37.49,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "DXCM",
@@ -13976,7 +13976,7 @@
       "adj_close": 110.22,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "EA",
@@ -13989,7 +13989,7 @@
       "adj_close": 113.55,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "EBAY",
@@ -14002,7 +14002,7 @@
       "adj_close": 68.13,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "ECL",
@@ -14015,7 +14015,7 @@
       "adj_close": 56.96,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "ED",
@@ -14028,7 +14028,7 @@
       "adj_close": 44.79,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "EFX",
@@ -14041,7 +14041,7 @@
       "adj_close": 50.32,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "EG",
@@ -14054,7 +14054,7 @@
       "adj_close": 126.03,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "EIX",
@@ -14067,7 +14067,7 @@
       "adj_close": 168.73,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "EL",
@@ -14080,7 +14080,7 @@
       "adj_close": 61.42,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "ELV",
@@ -14093,7 +14093,7 @@
       "adj_close": 132.98,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "EMN",
@@ -14106,7 +14106,7 @@
       "adj_close": 105.81,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "EMR",
@@ -14119,7 +14119,7 @@
       "adj_close": 114.13,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "ENPH",
@@ -14132,7 +14132,7 @@
       "adj_close": 82.33,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "EOG",
@@ -14145,7 +14145,7 @@
       "adj_close": 145.19,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "EPAM",
@@ -14158,7 +14158,7 @@
       "adj_close": 122.78,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "EQIX",
@@ -14171,7 +14171,7 @@
       "adj_close": 109.95,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "EQR",
@@ -14184,7 +14184,7 @@
       "adj_close": 72.01,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "EQT",
@@ -14197,7 +14197,7 @@
       "adj_close": 76.17,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "ERIE",
@@ -14210,7 +14210,7 @@
       "adj_close": 118.98,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "ES",
@@ -14223,7 +14223,7 @@
       "adj_close": 150.98,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "ESS",
@@ -14236,7 +14236,7 @@
       "adj_close": 128.02,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "ETN",
@@ -14249,7 +14249,7 @@
       "adj_close": 32.09,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "ETR",
@@ -14262,7 +14262,7 @@
       "adj_close": 40.41,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "EVRG",
@@ -14275,7 +14275,7 @@
       "adj_close": 72.53,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "EW",
@@ -14288,7 +14288,7 @@
       "adj_close": 159.3,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "EXC",
@@ -14301,7 +14301,7 @@
       "adj_close": 42.1,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "EXE",
@@ -14314,7 +14314,7 @@
       "adj_close": 46.25,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "EXPD",
@@ -14327,7 +14327,7 @@
       "adj_close": 109.44,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "EXPE",
@@ -14340,7 +14340,7 @@
       "adj_close": 36.52,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "EXR",
@@ -14353,7 +14353,7 @@
       "adj_close": 148.29,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "F",
@@ -14366,7 +14366,7 @@
       "adj_close": 175.58,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "FANG",
@@ -14379,7 +14379,7 @@
       "adj_close": 150.09,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "FAST",
@@ -14392,7 +14392,7 @@
       "adj_close": 49.47,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "FCX",
@@ -14405,7 +14405,7 @@
       "adj_close": 55.46,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "FDS",
@@ -14418,7 +14418,7 @@
       "adj_close": 109.53,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "FDX",
@@ -14431,7 +14431,7 @@
       "adj_close": 44.93,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "FE",
@@ -14444,7 +14444,7 @@
       "adj_close": 111.34,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "FFIV",
@@ -14457,7 +14457,7 @@
       "adj_close": 176.65,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "FI",
@@ -14470,7 +14470,7 @@
       "adj_close": 119.65,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "FICO",
@@ -14483,7 +14483,7 @@
       "adj_close": 70.91,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "FIS",
@@ -14496,7 +14496,7 @@
       "adj_close": 56.88,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "FITB",
@@ -14509,7 +14509,7 @@
       "adj_close": 89.85,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "FOX",
@@ -14522,7 +14522,7 @@
       "adj_close": 79.09,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "FOXA",
@@ -14535,7 +14535,7 @@
       "adj_close": 111.9,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "FRT",
@@ -14548,7 +14548,7 @@
       "adj_close": 39.18,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "FSLR",
@@ -14561,7 +14561,7 @@
       "adj_close": 92.8,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "FTNT",
@@ -14574,7 +14574,7 @@
       "adj_close": 49.44,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.293Z"
     },
     {
       "symbol": "FTV",
@@ -14587,7 +14587,7 @@
       "adj_close": 172.28,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "GD",
@@ -14600,7 +14600,7 @@
       "adj_close": 173.73,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "GDDY",
@@ -14613,7 +14613,7 @@
       "adj_close": 143.3,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "GE",
@@ -14626,7 +14626,7 @@
       "adj_close": 100.81,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "GEHC",
@@ -14639,7 +14639,7 @@
       "adj_close": 178.96,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "GEN",
@@ -14652,7 +14652,7 @@
       "adj_close": 137.14,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "GEV",
@@ -14665,7 +14665,7 @@
       "adj_close": 153.78,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "GFS",
@@ -14678,7 +14678,7 @@
       "adj_close": 62.01,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "GILD",
@@ -14691,7 +14691,7 @@
       "adj_close": 108.09,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "GIS",
@@ -14704,7 +14704,7 @@
       "adj_close": 30.42,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "GL",
@@ -14717,7 +14717,7 @@
       "adj_close": 40.36,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "GLW",
@@ -14730,7 +14730,7 @@
       "adj_close": 157.14,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "GM",
@@ -14743,7 +14743,7 @@
       "adj_close": 117.44,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "GNRC",
@@ -14756,7 +14756,7 @@
       "adj_close": 135.54,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "GOOG",
@@ -14769,7 +14769,7 @@
       "adj_close": 149,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "GOOGL",
@@ -14782,7 +14782,7 @@
       "adj_close": 408.42,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "GPC",
@@ -14795,7 +14795,7 @@
       "adj_close": 73.43,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "GPN",
@@ -14808,7 +14808,7 @@
       "adj_close": 171.3,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "GRMN",
@@ -14821,7 +14821,7 @@
       "adj_close": 30.24,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "GS",
@@ -14834,7 +14834,7 @@
       "adj_close": 129.92,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "GWW",
@@ -14847,7 +14847,7 @@
       "adj_close": 41.31,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "HAL",
@@ -14860,7 +14860,7 @@
       "adj_close": 148.65,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "HAS",
@@ -14873,7 +14873,7 @@
       "adj_close": 88.21,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "HBAN",
@@ -14886,7 +14886,7 @@
       "adj_close": 59.76,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "HCA",
@@ -14899,7 +14899,7 @@
       "adj_close": 179.71,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "HD",
@@ -14912,7 +14912,7 @@
       "adj_close": 163.19,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "HIG",
@@ -14925,7 +14925,7 @@
       "adj_close": 129.01,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "HII",
@@ -14938,7 +14938,7 @@
       "adj_close": 133.17,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "HLT",
@@ -14951,7 +14951,7 @@
       "adj_close": 49.45,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "HOLX",
@@ -14964,7 +14964,7 @@
       "adj_close": 70.78,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "HON",
@@ -14977,7 +14977,7 @@
       "adj_close": 155.38,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "HPE",
@@ -14990,7 +14990,7 @@
       "adj_close": 51.13,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "HPQ",
@@ -15003,7 +15003,7 @@
       "adj_close": 76.09,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "HRL",
@@ -15016,7 +15016,7 @@
       "adj_close": 119.63,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "HSIC",
@@ -15029,7 +15029,7 @@
       "adj_close": 177.87,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "HST",
@@ -15042,7 +15042,7 @@
       "adj_close": 125.73,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "HSY",
@@ -15055,7 +15055,7 @@
       "adj_close": 61.13,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "HUBB",
@@ -15068,7 +15068,7 @@
       "adj_close": 121.59,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "HUM",
@@ -15081,7 +15081,7 @@
       "adj_close": 165.11,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "HWM",
@@ -15094,7 +15094,7 @@
       "adj_close": 144.05,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "IBM",
@@ -15107,7 +15107,7 @@
       "adj_close": 38.74,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "ICE",
@@ -15120,7 +15120,7 @@
       "adj_close": 161.58,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "IDXX",
@@ -15133,7 +15133,7 @@
       "adj_close": 165.27,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "IEX",
@@ -15146,7 +15146,7 @@
       "adj_close": 105.03,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "IFF",
@@ -15159,7 +15159,7 @@
       "adj_close": 57.06,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "INCY",
@@ -15172,7 +15172,7 @@
       "adj_close": 48.93,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "INTC",
@@ -15185,7 +15185,7 @@
       "adj_close": 124.15,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "INTU",
@@ -15198,7 +15198,7 @@
       "adj_close": 161.59,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "INVH",
@@ -15211,7 +15211,7 @@
       "adj_close": 38.49,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "IP",
@@ -15224,7 +15224,7 @@
       "adj_close": 177.62,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "IPG",
@@ -15237,7 +15237,7 @@
       "adj_close": 178.83,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "IQV",
@@ -15250,7 +15250,7 @@
       "adj_close": 124.5,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "IR",
@@ -15263,7 +15263,7 @@
       "adj_close": 31.78,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "IRM",
@@ -15276,7 +15276,7 @@
       "adj_close": 170.25,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "ISRG",
@@ -15289,7 +15289,7 @@
       "adj_close": 171.25,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "IT",
@@ -15302,7 +15302,7 @@
       "adj_close": 35.94,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "ITW",
@@ -15315,7 +15315,7 @@
       "adj_close": 169.98,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "IVZ",
@@ -15328,7 +15328,7 @@
       "adj_close": 80.16,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "J",
@@ -15341,7 +15341,7 @@
       "adj_close": 33.89,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "JBHT",
@@ -15354,7 +15354,7 @@
       "adj_close": 158.2,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "JBL",
@@ -15367,7 +15367,7 @@
       "adj_close": 85.21,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "JCI",
@@ -15380,7 +15380,7 @@
       "adj_close": 143.44,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "JKHY",
@@ -15393,7 +15393,7 @@
       "adj_close": 155.48,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "JNJ",
@@ -15406,7 +15406,7 @@
       "adj_close": 104.68,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "JPM",
@@ -15419,7 +15419,7 @@
       "adj_close": 164.85,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "K",
@@ -15432,7 +15432,7 @@
       "adj_close": 110.97,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "KDP",
@@ -15445,7 +15445,7 @@
       "adj_close": 46.01,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "KEY",
@@ -15458,7 +15458,7 @@
       "adj_close": 129.19,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "KEYS",
@@ -15471,7 +15471,7 @@
       "adj_close": 52.56,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "KHC",
@@ -15484,7 +15484,7 @@
       "adj_close": 51.85,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "KIM",
@@ -15497,7 +15497,7 @@
       "adj_close": 62.11,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "KKR",
@@ -15510,7 +15510,7 @@
       "adj_close": 126.45,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "KLAC",
@@ -15523,7 +15523,7 @@
       "adj_close": 86.83,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "KMB",
@@ -15536,7 +15536,7 @@
       "adj_close": 72.11,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "KMI",
@@ -15549,7 +15549,7 @@
       "adj_close": 161.67,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "KMX",
@@ -15562,7 +15562,7 @@
       "adj_close": 117.87,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "KO",
@@ -15575,7 +15575,7 @@
       "adj_close": 79.48,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "KR",
@@ -15588,7 +15588,7 @@
       "adj_close": 160.72,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "KVUE",
@@ -15601,7 +15601,7 @@
       "adj_close": 65.8,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "L",
@@ -15614,7 +15614,7 @@
       "adj_close": 38.05,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "LDOS",
@@ -15627,7 +15627,7 @@
       "adj_close": 114.16,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "LEN",
@@ -15640,7 +15640,7 @@
       "adj_close": 154.86,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "LH",
@@ -15653,7 +15653,7 @@
       "adj_close": 129.39,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "LHX",
@@ -15666,7 +15666,7 @@
       "adj_close": 144.06,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "LII",
@@ -15679,7 +15679,7 @@
       "adj_close": 177.34,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "LIN",
@@ -15692,7 +15692,7 @@
       "adj_close": 112.74,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "LKQ",
@@ -15705,7 +15705,7 @@
       "adj_close": 172.91,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "LLY",
@@ -15718,7 +15718,7 @@
       "adj_close": 179.02,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "LMT",
@@ -15731,7 +15731,7 @@
       "adj_close": 83.09,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "LNT",
@@ -15744,7 +15744,7 @@
       "adj_close": 72.56,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "LOW",
@@ -15757,7 +15757,7 @@
       "adj_close": 143.27,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "LRCX",
@@ -15770,7 +15770,7 @@
       "adj_close": 105.53,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "LULU",
@@ -15783,7 +15783,7 @@
       "adj_close": 150.14,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "LUV",
@@ -15796,7 +15796,7 @@
       "adj_close": 153,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "LVS",
@@ -15809,7 +15809,7 @@
       "adj_close": 61.23,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "LW",
@@ -15822,7 +15822,7 @@
       "adj_close": 85.58,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "LYB",
@@ -15835,7 +15835,7 @@
       "adj_close": 69.29,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "LYV",
@@ -15848,7 +15848,7 @@
       "adj_close": 110.88,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "MA",
@@ -15861,7 +15861,7 @@
       "adj_close": 179.3,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "MAA",
@@ -15874,7 +15874,7 @@
       "adj_close": 68.49,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "MAR",
@@ -15887,7 +15887,7 @@
       "adj_close": 178.84,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "MAS",
@@ -15900,7 +15900,7 @@
       "adj_close": 105.92,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "MCD",
@@ -15913,7 +15913,7 @@
       "adj_close": 128.67,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "MCHP",
@@ -15926,7 +15926,7 @@
       "adj_close": 62.93,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "MCK",
@@ -15939,7 +15939,7 @@
       "adj_close": 68.23,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "MCO",
@@ -15952,7 +15952,7 @@
       "adj_close": 76.54,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "MDLZ",
@@ -15965,7 +15965,7 @@
       "adj_close": 165.15,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "MDT",
@@ -15978,7 +15978,7 @@
       "adj_close": 151.41,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "MELI",
@@ -15991,7 +15991,7 @@
       "adj_close": 178.33,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "MET",
@@ -16004,7 +16004,7 @@
       "adj_close": 140.88,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "META",
@@ -16017,7 +16017,7 @@
       "adj_close": 276.53,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "MGM",
@@ -16030,7 +16030,7 @@
       "adj_close": 30.26,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "MHK",
@@ -16043,7 +16043,7 @@
       "adj_close": 165.57,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "MKC",
@@ -16056,7 +16056,7 @@
       "adj_close": 117.34,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "MKTX",
@@ -16069,7 +16069,7 @@
       "adj_close": 41.54,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "MLM",
@@ -16082,7 +16082,7 @@
       "adj_close": 127.61,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "MMC",
@@ -16095,7 +16095,7 @@
       "adj_close": 96.28,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "MMM",
@@ -16108,7 +16108,7 @@
       "adj_close": 117.08,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "MNST",
@@ -16121,7 +16121,7 @@
       "adj_close": 114.38,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "MO",
@@ -16134,7 +16134,7 @@
       "adj_close": 58.42,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "MOH",
@@ -16147,7 +16147,7 @@
       "adj_close": 160.62,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "MOS",
@@ -16160,7 +16160,7 @@
       "adj_close": 108.49,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "MPC",
@@ -16173,7 +16173,7 @@
       "adj_close": 64.69,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "MPWR",
@@ -16186,7 +16186,7 @@
       "adj_close": 165.19,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "MRK",
@@ -16199,7 +16199,7 @@
       "adj_close": 60.26,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "MRNA",
@@ -16212,7 +16212,7 @@
       "adj_close": 96.7,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "MRVL",
@@ -16225,7 +16225,7 @@
       "adj_close": 110.33,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "MS",
@@ -16238,7 +16238,7 @@
       "adj_close": 66.73,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "MSCI",
@@ -16251,7 +16251,7 @@
       "adj_close": 52.72,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "MSFT",
@@ -16264,7 +16264,7 @@
       "adj_close": 198.67,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "MSI",
@@ -16277,7 +16277,7 @@
       "adj_close": 45.57,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "MSTR",
@@ -16290,7 +16290,7 @@
       "adj_close": 117.41,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "MTB",
@@ -16303,7 +16303,7 @@
       "adj_close": 95.48,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "MTCH",
@@ -16316,7 +16316,7 @@
       "adj_close": 99.18,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "MTD",
@@ -16329,7 +16329,7 @@
       "adj_close": 99.64,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "MU",
@@ -16342,7 +16342,7 @@
       "adj_close": 70.89,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "NCLH",
@@ -16355,7 +16355,7 @@
       "adj_close": 84,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "NDAQ",
@@ -16368,7 +16368,7 @@
       "adj_close": 117.1,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "NDSN",
@@ -16381,7 +16381,7 @@
       "adj_close": 146.31,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "NEE",
@@ -16394,7 +16394,7 @@
       "adj_close": 158.23,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "NEM",
@@ -16407,7 +16407,7 @@
       "adj_close": 174.87,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "NFLX",
@@ -16420,7 +16420,7 @@
       "adj_close": 171.09,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "NI",
@@ -16433,7 +16433,7 @@
       "adj_close": 35.41,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "NKE",
@@ -16446,7 +16446,7 @@
       "adj_close": 95.04,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "NOC",
@@ -16459,7 +16459,7 @@
       "adj_close": 48.76,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "NOW",
@@ -16472,7 +16472,7 @@
       "adj_close": 90.35,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "NRG",
@@ -16485,7 +16485,7 @@
       "adj_close": 175.49,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "NSC",
@@ -16498,7 +16498,7 @@
       "adj_close": 156.64,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "NTAP",
@@ -16511,7 +16511,7 @@
       "adj_close": 66.71,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "NTRS",
@@ -16524,7 +16524,7 @@
       "adj_close": 118.93,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "NUE",
@@ -16537,7 +16537,7 @@
       "adj_close": 139.74,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.582Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "NVDA",
@@ -16550,7 +16550,7 @@
       "adj_close": 274.68,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.583Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "NVR",
@@ -16563,7 +16563,7 @@
       "adj_close": 81.24,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.583Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "NWS",
@@ -16576,7 +16576,7 @@
       "adj_close": 147.79,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.583Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "NWSA",
@@ -16589,7 +16589,7 @@
       "adj_close": 141.59,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.583Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "NXPI",
@@ -16602,7 +16602,7 @@
       "adj_close": 163.37,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.583Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "O",
@@ -16615,7 +16615,7 @@
       "adj_close": 119.29,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.583Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "ODFL",
@@ -16628,7 +16628,7 @@
       "adj_close": 58.89,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.583Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "OKE",
@@ -16641,7 +16641,7 @@
       "adj_close": 68.59,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.583Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "OMC",
@@ -16654,7 +16654,7 @@
       "adj_close": 43.37,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.583Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "ON",
@@ -16667,7 +16667,7 @@
       "adj_close": 110.27,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.583Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "ORCL",
@@ -16680,7 +16680,7 @@
       "adj_close": 170.08,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.583Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "ORLY",
@@ -16693,7 +16693,7 @@
       "adj_close": 177.34,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.583Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "OTIS",
@@ -16706,7 +16706,7 @@
       "adj_close": 143.54,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.583Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "OXY",
@@ -16719,7 +16719,7 @@
       "adj_close": 123.28,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.583Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "PANW",
@@ -16732,7 +16732,7 @@
       "adj_close": 81.72,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.583Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "PAYC",
@@ -16745,7 +16745,7 @@
       "adj_close": 74.29,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.583Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "PAYX",
@@ -16758,7 +16758,7 @@
       "adj_close": 42.96,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.583Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "PCAR",
@@ -16771,7 +16771,7 @@
       "adj_close": 80.31,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.583Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "PCG",
@@ -16784,7 +16784,7 @@
       "adj_close": 130.54,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.583Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "PDD",
@@ -16797,7 +16797,7 @@
       "adj_close": 38.77,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.583Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "PEG",
@@ -16810,7 +16810,7 @@
       "adj_close": 109.47,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.583Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "PEP",
@@ -16823,7 +16823,7 @@
       "adj_close": 53.19,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.583Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "PFE",
@@ -16836,7 +16836,7 @@
       "adj_close": 94.78,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.583Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "PFG",
@@ -16849,7 +16849,7 @@
       "adj_close": 98.94,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.583Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "PG",
@@ -16862,7 +16862,7 @@
       "adj_close": 160.19,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.583Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "PGR",
@@ -16875,7 +16875,7 @@
       "adj_close": 36.29,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.583Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "PH",
@@ -16888,7 +16888,7 @@
       "adj_close": 87.27,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.583Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "PHM",
@@ -16901,7 +16901,7 @@
       "adj_close": 90.36,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.583Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "PKG",
@@ -16914,7 +16914,7 @@
       "adj_close": 46.29,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.583Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "PLD",
@@ -16927,7 +16927,7 @@
       "adj_close": 104.52,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.583Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "PLTR",
@@ -16940,7 +16940,7 @@
       "adj_close": 92.11,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.583Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "PM",
@@ -16953,7 +16953,7 @@
       "adj_close": 172.66,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.583Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "PNC",
@@ -16966,7 +16966,7 @@
       "adj_close": 156.38,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.583Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "PNR",
@@ -16979,7 +16979,7 @@
       "adj_close": 112.57,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.583Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "PNW",
@@ -16992,7 +16992,7 @@
       "adj_close": 47.97,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.583Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "PODD",
@@ -17005,7 +17005,7 @@
       "adj_close": 152.12,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.583Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "POOL",
@@ -17018,7 +17018,7 @@
       "adj_close": 52.92,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.583Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "PPG",
@@ -17031,7 +17031,7 @@
       "adj_close": 143.63,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.583Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "PPL",
@@ -17044,7 +17044,7 @@
       "adj_close": 79.03,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.583Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "PRU",
@@ -17057,7 +17057,7 @@
       "adj_close": 151.69,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.583Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "PSA",
@@ -17070,7 +17070,7 @@
       "adj_close": 99.56,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.583Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "PSKY",
@@ -17083,7 +17083,7 @@
       "adj_close": 91.25,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.583Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "PSX",
@@ -17096,7 +17096,7 @@
       "adj_close": 72.4,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.583Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "PTC",
@@ -17109,7 +17109,7 @@
       "adj_close": 93.19,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.583Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "PWR",
@@ -17122,7 +17122,7 @@
       "adj_close": 167.8,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.583Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "PYPL",
@@ -17135,7 +17135,7 @@
       "adj_close": 77.82,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.583Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "QCOM",
@@ -17148,7 +17148,7 @@
       "adj_close": 143.09,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.583Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "RCL",
@@ -17161,7 +17161,7 @@
       "adj_close": 163.02,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.583Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "REG",
@@ -17174,7 +17174,7 @@
       "adj_close": 56.56,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.583Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "REGN",
@@ -17187,7 +17187,7 @@
       "adj_close": 115.57,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.583Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "RF",
@@ -17200,7 +17200,7 @@
       "adj_close": 62.05,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.583Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "RJF",
@@ -17213,7 +17213,7 @@
       "adj_close": 76.83,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.583Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "RL",
@@ -17226,7 +17226,7 @@
       "adj_close": 74.52,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.583Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "RMD",
@@ -17239,7 +17239,7 @@
       "adj_close": 41.07,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.583Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "ROK",
@@ -17252,7 +17252,7 @@
       "adj_close": 109.57,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.583Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "ROL",
@@ -17265,7 +17265,7 @@
       "adj_close": 36.65,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.583Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "ROP",
@@ -17278,7 +17278,7 @@
       "adj_close": 44.97,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.583Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "ROST",
@@ -17291,7 +17291,7 @@
       "adj_close": 37.11,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.583Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "RSG",
@@ -17304,7 +17304,7 @@
       "adj_close": 59.13,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.583Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "RTX",
@@ -17317,7 +17317,7 @@
       "adj_close": 158.95,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.583Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "RVTY",
@@ -17330,7 +17330,7 @@
       "adj_close": 76.78,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.583Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "SBAC",
@@ -17343,7 +17343,7 @@
       "adj_close": 90.08,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.583Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "SBUX",
@@ -17356,7 +17356,7 @@
       "adj_close": 148.14,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.583Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "SCHW",
@@ -17369,7 +17369,7 @@
       "adj_close": 31.5,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.583Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "SHOP",
@@ -17382,7 +17382,7 @@
       "adj_close": 35.95,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.583Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "SHW",
@@ -17395,7 +17395,7 @@
       "adj_close": 31.79,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.583Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "SJM",
@@ -17408,7 +17408,7 @@
       "adj_close": 139.93,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.583Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "SLB",
@@ -17421,7 +17421,7 @@
       "adj_close": 170.99,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.583Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "SMCI",
@@ -17434,7 +17434,7 @@
       "adj_close": 90.47,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.583Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "SNA",
@@ -17447,7 +17447,7 @@
       "adj_close": 72.85,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.583Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "SNPS",
@@ -17460,7 +17460,7 @@
       "adj_close": 97.91,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.583Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "SO",
@@ -17473,7 +17473,7 @@
       "adj_close": 145.23,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.583Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "SOLV",
@@ -17486,7 +17486,7 @@
       "adj_close": 44.82,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.583Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "SPG",
@@ -17499,7 +17499,7 @@
       "adj_close": 64.26,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.583Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "SPGI",
@@ -17512,7 +17512,7 @@
       "adj_close": 118.98,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.583Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "SRE",
@@ -17525,7 +17525,7 @@
       "adj_close": 39.04,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.583Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "STE",
@@ -17538,7 +17538,7 @@
       "adj_close": 167.98,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.583Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "STLD",
@@ -17551,7 +17551,7 @@
       "adj_close": 175.1,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.583Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "STT",
@@ -17564,7 +17564,7 @@
       "adj_close": 124.18,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.583Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "STX",
@@ -17577,7 +17577,7 @@
       "adj_close": 132.49,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.583Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "STZ",
@@ -17590,7 +17590,7 @@
       "adj_close": 136.65,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.583Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "SW",
@@ -17603,7 +17603,7 @@
       "adj_close": 161.87,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.583Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "SWK",
@@ -17616,7 +17616,7 @@
       "adj_close": 148.87,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.583Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "SWKS",
@@ -17629,7 +17629,7 @@
       "adj_close": 62.46,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.583Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "SYF",
@@ -17642,7 +17642,7 @@
       "adj_close": 42.41,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.583Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "SYK",
@@ -17655,7 +17655,7 @@
       "adj_close": 127.81,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.583Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "SYY",
@@ -17668,7 +17668,7 @@
       "adj_close": 156.92,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.583Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "T",
@@ -17681,7 +17681,7 @@
       "adj_close": 54.69,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.583Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "TAP",
@@ -17694,7 +17694,7 @@
       "adj_close": 139.49,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.583Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "TDG",
@@ -17707,7 +17707,7 @@
       "adj_close": 164.18,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.583Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "TDY",
@@ -17720,7 +17720,7 @@
       "adj_close": 51.61,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.583Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "TEAM",
@@ -17733,7 +17733,7 @@
       "adj_close": 111.35,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.583Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "TECH",
@@ -17746,7 +17746,7 @@
       "adj_close": 154.89,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.583Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "TEL",
@@ -17759,7 +17759,7 @@
       "adj_close": 89.05,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.583Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "TER",
@@ -17772,7 +17772,7 @@
       "adj_close": 101.52,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.583Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "TFC",
@@ -17785,7 +17785,7 @@
       "adj_close": 134.8,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.583Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "TGT",
@@ -17798,7 +17798,7 @@
       "adj_close": 84.62,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.583Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "TJX",
@@ -17811,7 +17811,7 @@
       "adj_close": 61.35,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.583Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "TKO",
@@ -17824,7 +17824,7 @@
       "adj_close": 107.1,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.583Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "TMO",
@@ -17837,7 +17837,7 @@
       "adj_close": 86.04,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.583Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "TMUS",
@@ -17850,7 +17850,7 @@
       "adj_close": 151.55,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.583Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "TPL",
@@ -17863,7 +17863,7 @@
       "adj_close": 123.21,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.583Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "TPR",
@@ -17876,7 +17876,7 @@
       "adj_close": 135.68,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.583Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "TRGP",
@@ -17889,7 +17889,7 @@
       "adj_close": 85.46,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.583Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "TRI",
@@ -17902,7 +17902,7 @@
       "adj_close": 170.9,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.583Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "TRMB",
@@ -17915,7 +17915,7 @@
       "adj_close": 143.16,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.583Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "TROW",
@@ -17928,7 +17928,7 @@
       "adj_close": 90.77,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.583Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "TRV",
@@ -17941,7 +17941,7 @@
       "adj_close": 122.94,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.583Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "TSCO",
@@ -17954,7 +17954,7 @@
       "adj_close": 174.05,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.583Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "TSLA",
@@ -17967,7 +17967,7 @@
       "adj_close": 106.87,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.583Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "TSN",
@@ -17980,7 +17980,7 @@
       "adj_close": 95.77,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.583Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "TT",
@@ -17993,7 +17993,7 @@
       "adj_close": 70.1,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.583Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "TTD",
@@ -18006,7 +18006,7 @@
       "adj_close": 64.44,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.583Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "TTWO",
@@ -18019,7 +18019,7 @@
       "adj_close": 86.97,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.583Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "TXN",
@@ -18032,7 +18032,7 @@
       "adj_close": 43.12,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.583Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "TXT",
@@ -18045,7 +18045,7 @@
       "adj_close": 55.6,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.583Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "TYL",
@@ -18058,7 +18058,7 @@
       "adj_close": 178.43,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.583Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "UAL",
@@ -18071,7 +18071,7 @@
       "adj_close": 104.71,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.583Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "UBER",
@@ -18084,7 +18084,7 @@
       "adj_close": 163.83,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.583Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "UDR",
@@ -18097,7 +18097,7 @@
       "adj_close": 85.6,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.583Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "UHS",
@@ -18110,7 +18110,7 @@
       "adj_close": 120.55,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.583Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "ULTA",
@@ -18123,7 +18123,7 @@
       "adj_close": 80.94,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.583Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "UNH",
@@ -18136,7 +18136,7 @@
       "adj_close": 109.49,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.583Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "UNP",
@@ -18149,7 +18149,7 @@
       "adj_close": 126.13,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.583Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "UPS",
@@ -18162,7 +18162,7 @@
       "adj_close": 36.31,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.583Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "URI",
@@ -18175,7 +18175,7 @@
       "adj_close": 144.45,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.583Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "USB",
@@ -18188,7 +18188,7 @@
       "adj_close": 44.36,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.583Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "V",
@@ -18201,7 +18201,7 @@
       "adj_close": 58.85,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.583Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "VICI",
@@ -18214,7 +18214,7 @@
       "adj_close": 135.81,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.583Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "VLO",
@@ -18227,7 +18227,7 @@
       "adj_close": 43.65,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.583Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "VLTO",
@@ -18240,7 +18240,7 @@
       "adj_close": 39.89,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.583Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "VMC",
@@ -18253,7 +18253,7 @@
       "adj_close": 158.17,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.583Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "VRSK",
@@ -18266,7 +18266,7 @@
       "adj_close": 33.36,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.583Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "VRSN",
@@ -18279,7 +18279,7 @@
       "adj_close": 114.6,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.583Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "VRTX",
@@ -18292,7 +18292,7 @@
       "adj_close": 124.87,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.583Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "VST",
@@ -18305,7 +18305,7 @@
       "adj_close": 55.34,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.583Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "VTR",
@@ -18318,7 +18318,7 @@
       "adj_close": 40.65,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.583Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "VTRS",
@@ -18331,7 +18331,7 @@
       "adj_close": 157.62,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.583Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "VZ",
@@ -18344,7 +18344,7 @@
       "adj_close": 61.51,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.583Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "WAB",
@@ -18357,7 +18357,7 @@
       "adj_close": 31,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.583Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "WAT",
@@ -18370,7 +18370,7 @@
       "adj_close": 68.44,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.583Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "WBA",
@@ -18383,7 +18383,7 @@
       "adj_close": 93.39,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.583Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "WBD",
@@ -18396,7 +18396,7 @@
       "adj_close": 174.63,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.583Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "WDAY",
@@ -18409,7 +18409,7 @@
       "adj_close": 102.27,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.583Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "WDC",
@@ -18422,7 +18422,7 @@
       "adj_close": 76.49,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.583Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "WEC",
@@ -18435,7 +18435,7 @@
       "adj_close": 65.96,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.583Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "WELL",
@@ -18448,7 +18448,7 @@
       "adj_close": 157.94,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.583Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "WFC",
@@ -18461,7 +18461,7 @@
       "adj_close": 55.43,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.583Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "WM",
@@ -18474,7 +18474,7 @@
       "adj_close": 98.95,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.583Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "WMB",
@@ -18487,7 +18487,7 @@
       "adj_close": 54.63,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.583Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "WMT",
@@ -18500,7 +18500,7 @@
       "adj_close": 92.06,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.583Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "WRB",
@@ -18513,7 +18513,7 @@
       "adj_close": 151.98,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.583Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "WSM",
@@ -18526,7 +18526,7 @@
       "adj_close": 89.32,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.583Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "WST",
@@ -18539,7 +18539,7 @@
       "adj_close": 178.88,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.583Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "WTW",
@@ -18552,7 +18552,7 @@
       "adj_close": 99.59,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.583Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "WY",
@@ -18565,7 +18565,7 @@
       "adj_close": 123.9,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.583Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "WYNN",
@@ -18578,7 +18578,7 @@
       "adj_close": 61.9,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.583Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "XEL",
@@ -18591,7 +18591,7 @@
       "adj_close": 133.22,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.583Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "XOM",
@@ -18604,7 +18604,7 @@
       "adj_close": 104.99,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.583Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "XYL",
@@ -18617,7 +18617,7 @@
       "adj_close": 72.6,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.583Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "XYZ",
@@ -18630,7 +18630,7 @@
       "adj_close": 101.72,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.583Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "YUM",
@@ -18643,7 +18643,7 @@
       "adj_close": 165.35,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.583Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "ZBH",
@@ -18656,7 +18656,7 @@
       "adj_close": 103.58,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.583Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "ZBRA",
@@ -18669,7 +18669,7 @@
       "adj_close": 165.75,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.583Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "ZS",
@@ -18682,7 +18682,7 @@
       "adj_close": 79.83,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.583Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     },
     {
       "symbol": "ZTS",
@@ -18695,21 +18695,19 @@
       "adj_close": 161.9,
       "currency": "USD",
       "source_provider": "stock-analysis-seed",
-      "ingested_at": "2026-02-08T22:21:39.583Z"
+      "ingested_at": "2026-02-08T22:31:01.294Z"
     }
   ],
   "error": null,
-  "asof": "2026-02-07",
-  "prices_count": 517,
   "meta": {
     "status": "OK",
     "reason": "OK",
     "provider": "stock-analysis-seed",
-    "source": "stock-analysis-seed",
+    "source": "last_good",
     "asOf": "2026-02-07",
     "data_date": "2026-02-07",
-    "generated_at": "2026-02-08T22:21:39.584Z",
-    "savedAt": "2026-02-08T22:21:39.584Z",
+    "generated_at": "2026-02-08T22:31:01.294Z",
+    "savedAt": "2026-02-08T22:31:01.294Z",
     "error": null,
     "kind": "full",
     "expectedCount": 517,
