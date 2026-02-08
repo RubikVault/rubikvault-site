@@ -1,0 +1,58 @@
+name: Monitor Production Artifacts
+
+on:
+  schedule:
+    - cron: "0 6,18 * * *"
+  workflow_dispatch:
+
+jobs:
+  liveness:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check required artifact endpoints
+        env:
+          BASE_URL: https://rubikvault.com
+        run: |
+          set -euo pipefail
+          URLS=(
+            "$BASE_URL/data/snapshots/market-prices/latest.json"
+            "$BASE_URL/data/forecast/latest.json"
+          )
+
+          for url in "${URLS[@]}"; do
+            echo "Checking $url"
+            code=$(curl -sS -o /tmp/monitor_body.json -w "%{http_code}" "$url")
+            if [ "$code" -lt 200 ] || [ "$code" -ge 300 ]; then
+              echo "❌ Liveness check failed for $url (HTTP $code)"
+              head -c 400 /tmp/monitor_body.json || true
+              exit 1
+            fi
+            echo "✅ $url (HTTP $code)"
+          done
+
+      - name: Staleness warning (48h)
+        env:
+          BASE_URL: https://rubikvault.com
+        run: |
+          set -euo pipefail
+          curl -sS "$BASE_URL/data/forecast/latest.json" -o /tmp/forecast_latest.json
+          node -e '
+            const fs = require("fs");
+            const doc = JSON.parse(fs.readFileSync("/tmp/forecast_latest.json", "utf8"));
+            const generatedAt = doc.generated_at || doc.generatedAt || (doc.meta && doc.meta.generated_at) || null;
+            if (!generatedAt) {
+              console.log("::warning::forecast/latest.json missing generated_at; cannot compute staleness");
+              process.exit(0);
+            }
+            const generatedMs = Date.parse(generatedAt);
+            if (Number.isNaN(generatedMs)) {
+              console.log(`::warning::forecast/latest.json generated_at not parseable: ${generatedAt}`);
+              process.exit(0);
+            }
+            const ageHours = (Date.now() - generatedMs) / (1000 * 60 * 60);
+            const msg = `forecast/latest.json age=${ageHours.toFixed(1)}h generated_at=${generatedAt}`;
+            console.log(msg);
+            if (ageHours > 48) {
+              console.log(`::warning::staleness threshold exceeded (${msg})`);
+            }
+          '

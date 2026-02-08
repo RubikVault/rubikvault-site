@@ -450,13 +450,16 @@
 
     function updateStatus(status) {
       const badge = document.getElementById('system-status');
-      // Read circuit state from nested object (artifact schema: circuit.state)
-      const circuitState = status.circuit?.state?.toLowerCase() || 'closed';
-      const systemStatus = (status.status || '').toUpperCase();
+      const circuitState = (status.circuit?.state || status.circuit_state || 'closed').toLowerCase();
+      const systemStatus = String(status.status || status.meta?.status || '').toUpperCase();
+      const reason = status.reason || status.message || status.meta?.reason || 'System healthy';
 
-      if (circuitState === 'open') {
+      if (circuitState === 'open' || systemStatus === 'CIRCUIT_OPEN') {
         badge.className = 'status-badge status-circuit-open';
         badge.innerHTML = '<span>●</span> Circuit Open';
+      } else if (systemStatus === 'STALE') {
+        badge.className = 'status-badge status-bootstrap';
+        badge.innerHTML = '<span>●</span> Stale';
       } else if (systemStatus === 'BOOTSTRAP') {
         badge.className = 'status-badge status-bootstrap';
         badge.innerHTML = '<span class="pulse">●</span> Bootstrap';
@@ -466,9 +469,9 @@
       }
 
       document.getElementById('circuit-state').textContent =
-        circuitState === 'open' ? 'OPEN' : 'CLOSED';
+        circuitState === 'open' ? 'OPEN' : (systemStatus === 'STALE' ? 'STALE' : 'CLOSED');
       document.getElementById('circuit-reason').textContent =
-        status.message || 'System healthy';
+        reason;
     }
 
     function updateLatest(latest) {
@@ -542,13 +545,27 @@
       return `<span style="color: ${colors[dir] || colors.neutral};">${icons[dir] || '→'} ${prob}</span>`;
     }
 
-    function updateForecasts(forecasts) {
+    function updateForecasts(forecasts, state = 'BOOTSTRAP', reason = null) {
       const tbody = document.querySelector('#forecasts-table tbody');
       const countEl = document.getElementById('forecast-count');
       const bootstrapNotice = document.getElementById('bootstrap-notice');
 
       if (!forecasts || forecasts.length === 0) {
         tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--rv-text-muted);">—</td></tr>';
+        const stateUpper = String(state || 'BOOTSTRAP').toUpperCase();
+        let title = 'System Initializing';
+        let prefix = '⏳';
+        let detail = 'Forecasts will appear after the first pipeline run. Check back soon.';
+        if (stateUpper === 'CIRCUIT_OPEN') {
+          title = 'Circuit Open';
+          prefix = '⚠️';
+          detail = reason || 'Forecast publish paused due to failed data-quality gates.';
+        } else if (stateUpper === 'STALE') {
+          title = 'Data Stale';
+          prefix = '🕒';
+          detail = reason || 'Latest data is stale; refresh is pending.';
+        }
+        bootstrapNotice.textContent = `${prefix} ${title}: ${detail}`;
         bootstrapNotice.style.display = 'block';
         countEl.textContent = '0 stocks';
         return;
@@ -584,7 +601,11 @@
           latest.meta?.generated_at?.slice(0, 10) || 'System bootstrap';
 
         // Update forecasts table
-        updateForecasts(latest.data?.forecasts || []);
+        updateForecasts(
+          latest.data?.forecasts || [],
+          latest.meta?.status || status?.status || 'BOOTSTRAP',
+          latest.meta?.reason || status?.reason || null
+        );
       }
 
       // Load latest daily report using ref from latest.json (not today's date)

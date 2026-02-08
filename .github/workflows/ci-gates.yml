@@ -117,6 +117,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Verify critical published artifacts
+        run: node scripts/ci/verify-artifacts.mjs
+
       - name: "Repo policy: forbid KV writes in API"
         run: bash scripts/ci/forbid-kv-writes-in-api.sh
 
@@ -347,6 +350,14 @@ jobs:
           echo "🔍 Checking Repository Policies..."
           
           VIOLATIONS=0
+
+          # Check: No blanket ignores for public/data or mirrors
+          if grep -nE '^(public/data/|mirrors/)$' .gitignore; then
+            echo "❌ VIOLATION: .gitignore contains blanket ignore for public/data/ or mirrors/"
+            VIOLATIONS=$((VIOLATIONS + 1))
+          else
+            echo "✅ .gitignore blanket ignore guard OK"
+          fi
           
           # Check: No build/ directory committed
           if [ -d "build" ]; then

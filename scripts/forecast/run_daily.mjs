@@ -17,7 +17,7 @@ import { buildFeatureSnapshot } from './build_features.mjs';
 import { loadPolicy, loadChampion, computePolicyHash, generateForecast } from './forecast_engine.mjs';
 import { writeForecastRecords, writeOutcomeRecords, readLedgerRange } from './ledger_writer.mjs';
 import { computeOutcome, createOutcomeRecord } from './evaluator.mjs';
-import { generateDailyReport, writeReport, generateScorecards, writeScorecards, updateStatus, updateLatest, updateLastGood } from './report_generator.mjs';
+import { generateDailyReport, writeReport, generateScorecards, writeScorecards, updateStatus, updateLatest, updateLastGood, publishLatestFromLastGood } from './report_generator.mjs';
 import { ingestSnapshots, loadPriceHistory, loadUniverse } from './snapshot_ingest.mjs';
 import { resolveTradingDate, getHorizonOutcomeDate } from './trading_date.mjs';
 
@@ -225,18 +225,18 @@ export async function runDailyPipeline(options = {}) {
     if (!qualityResult.ok) {
         console.log(`  ❌ CIRCUIT OPEN: ${qualityResult.reason}`);
 
+        const fallbackLatest = publishLatestFromLastGood(repoRoot, {
+            reason: qualityResult.reason,
+            status: 'circuit_open'
+        });
+
         // Publish last_good and status
         updateStatus(repoRoot, {
             status: 'circuit_open',
             reason: qualityResult.reason,
             circuit_state: 'open',
-            last_run: tradingDate
-        });
-
-        updateLatest(repoRoot, {
-            ok: false,
-            status: 'circuit_open',
-            reason: qualityResult.reason
+            last_run: tradingDate,
+            last_good: fallbackLatest?.meta?.last_good_ref ?? null
         });
 
         console.log('  Pipeline stopped. Published last_good.');
@@ -356,7 +356,7 @@ export async function runDailyPipeline(options = {}) {
             };
         });
 
-    updateLatest(repoRoot, {
+    const latestDoc = updateLatest(repoRoot, {
         ok: true,
         status: 'ok',
         champion_id: champion.champion_id,
@@ -369,7 +369,8 @@ export async function runDailyPipeline(options = {}) {
     updateLastGood(repoRoot, {
         champion_id: champion.champion_id,
         report_ref: `public/data/forecast/reports/daily/${tradingDate}.json`,
-        as_of: new Date().toISOString()
+        as_of: new Date().toISOString(),
+        latest_envelope: latestDoc
     });
 
     console.log('\n═══════════════════════════════════════════════════════════════');
