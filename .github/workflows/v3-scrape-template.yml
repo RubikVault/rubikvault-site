@@ -241,6 +241,7 @@ jobs:
           node scripts/providers/market-stats-v3.mjs
 
 
+      - name: "WP16 DEBUG: dump market-prices artifacts"
         env:
           ARTIFACTS_DIR: ${{ runner.temp }}/artifacts
         run: |
