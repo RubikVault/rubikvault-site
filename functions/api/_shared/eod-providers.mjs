@@ -3,7 +3,7 @@ import { checkCircuit, recordFailure, recordSuccess, circuitSnapshotForMeta } fr
 import { fetchBarsViaAdapter } from './provider-adapters.mjs';
 // Backward compatibility exports - now just wrappers or re-exports
 export { fetchTiingoBarsRaw as fetchTiingoBars, fetchTwelveDataBarsRaw as fetchTwelveDataBars } from './raw-providers.mjs';
-import registry from '../../../public/data/registry/providers.v1.json';
+import registry from './registry/providers.v1.json';
 
 export function getForcedProvider(env) {
   const forced = String(env?.RV_FORCE_PROVIDER || '').trim().toLowerCase();
