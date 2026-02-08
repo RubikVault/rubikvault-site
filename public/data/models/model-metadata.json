@@ -1,0 +1,107 @@
+{
+    "schema_version": "9.0",
+    "type": "model.metadata",
+    "name": "Scientific Stock Analyzer",
+    "version": "9.0",
+    "description": "Explainable Quant AI Framework for academic stock analysis research",
+    "model_type": "logistic_regression_ensemble",
+    "feature_engineering": {
+        "total_features": 42,
+        "selected_features": 32,
+        "feature_categories": [
+            "momentum_trend",
+            "mean_reversion",
+            "volume_liquidity",
+            "volatility_risk",
+            "fundamental",
+            "macro",
+            "alternative_data",
+            "interaction",
+            "regime_aware"
+        ]
+    },
+    "training": {
+        "samples": 25000,
+        "date": "2026-01-15",
+        "data_range": {
+            "start": "2016-01-01",
+            "end": "2025-12-31"
+        },
+        "cross_validation": {
+            "method": "stratified_k_fold",
+            "folds": 5,
+            "auc_mean": 0.78,
+            "auc_std": 0.02
+        },
+        "regularization": {
+            "type": "L2",
+            "strength": 0.1
+        }
+    },
+    "performance_metrics": {
+        "auc": 0.78,
+        "accuracy": 0.68,
+        "precision": 0.71,
+        "recall": 0.65,
+        "f1_score": 0.68,
+        "log_loss": 0.52
+    },
+    "calibration_metrics": {
+        "ece": 0.02,
+        "mce": 0.04,
+        "brier_score": 0.18
+    },
+    "drift_monitoring": {
+        "psi_threshold": 0.25,
+        "kl_threshold": 0.10,
+        "ks_threshold": 0.20,
+        "last_check": "2026-01-30",
+        "status": "stable"
+    },
+    "top_features": [
+        {
+            "name": "return_20d",
+            "importance": 0.82,
+            "direction": "positive"
+        },
+        {
+            "name": "ma_distance_50_200",
+            "importance": 1.45,
+            "direction": "positive"
+        },
+        {
+            "name": "close_to_sma200_pct",
+            "importance": 0.95,
+            "direction": "positive"
+        },
+        {
+            "name": "volatility_20d",
+            "importance": 0.72,
+            "direction": "negative"
+        },
+        {
+            "name": "sentiment_score",
+            "importance": 0.65,
+            "direction": "positive"
+        }
+    ],
+    "label_definition": {
+        "description": "Binary label: 1 if 10-day forward return > 0, else 0",
+        "forward_period_days": 10,
+        "entry_point": "open_t+1",
+        "exit_point": "close_t+10"
+    },
+    "academic_notes": [
+        "Model trained for educational and research purposes only",
+        "No real trading recommendations implied",
+        "Survivorship bias present: uses current index components",
+        "Alternative data features are synthetic/simulated",
+        "Temporal integrity enforced: no look-ahead bias in features"
+    ],
+    "update_schedule": {
+        "training": "weekly_or_adaptive",
+        "inference": "daily",
+        "drift_check": "daily"
+    },
+    "legal_disclaimer": "This model is designed for academic research and educational purposes only. It does not provide financial advice or trading recommendations. All predictions are simulations based on historical patterns and should not be used for actual investment decisions."
+}
