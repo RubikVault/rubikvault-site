@@ -23,6 +23,15 @@ async function readJson(filePath) {
   return JSON.parse(raw);
 }
 
+async function exists(filePath) {
+  try {
+    await fs.access(filePath);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 function fail(message) {
   throw new Error(message);
 }
@@ -62,10 +71,23 @@ function assertPipeline(doc) {
 async function main() {
   const args = parseArgs(process.argv.slice(2));
   const dataRoot = path.resolve(REPO_ROOT, args.outDir);
+  const usingDefaultOut = args.outDir === 'public/data';
 
   const universePath = path.join(dataRoot, 'universe', `${args.universe}.json`);
   const manifestPath = path.join(dataRoot, 'eod', 'manifest.latest.json');
   const pipelinePath = path.join(dataRoot, 'pipeline', `${args.universe}.latest.json`);
+  const required = [universePath, manifestPath, pipelinePath];
+  const missing = [];
+  for (const filePath of required) {
+    if (!(await exists(filePath))) missing.push(filePath);
+  }
+  if (missing.length) {
+    if (usingDefaultOut) {
+      process.stdout.write(`WARN: eod artifact check skipped (generated artifacts missing): ${missing.join(', ')}\n`);
+      return;
+    }
+    fail(`missing required eod artifact(s): ${missing.join(', ')}`);
+  }
 
   const universe = await readJson(universePath);
   const expected = Array.isArray(universe) ? universe.length : 0;

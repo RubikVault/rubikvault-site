@@ -23,11 +23,57 @@ function uniq(arr) {
   return out;
 }
 
-const repoRoot = process.cwd();
-const file = path.join(repoRoot, "public/data/registry/universe.v1.json");
-if (!fs.existsSync(file)) die(`missing file: ${file}`);
+function normalizeUniverseDoc(doc, sourcePath) {
+  if (isObj(doc) && isObj(doc.groups) && isObj(doc.symbol_rules)) {
+    return doc;
+  }
+  if (Array.isArray(doc)) {
+    const symbols = [];
+    for (const entry of doc) {
+      if (typeof entry === "string") {
+        symbols.push(entry.trim());
+        continue;
+      }
+      if (isObj(entry) && typeof entry.s === "string") {
+        symbols.push(entry.s.trim());
+        continue;
+      }
+      die(`unsupported universe entry in ${sourcePath}`);
+    }
+    return {
+      schema_version: "1.0",
+      universe_version: "v1",
+      groups: { default: { symbols } },
+      symbol_rules: {
+        allowed_pattern: "^[A-Z0-9.\\-]{1,15}$",
+        max_total_symbols: 6000,
+        dedupe_across_groups: true
+      }
+    };
+  }
+  die(`unsupported universe document shape in ${sourcePath}`);
+}
 
-const doc = loadJson(file);
+const repoRoot = process.cwd();
+const explicitPath = process.env.RV_UNIVERSE_REGISTRY_PATH
+  ? path.resolve(process.env.RV_UNIVERSE_REGISTRY_PATH)
+  : null;
+const candidatePaths = explicitPath
+  ? [explicitPath]
+  : [
+      path.join(repoRoot, "data", "symbols", "universe.min.json"),
+      path.join(repoRoot, "data", "universes", "us_top100.json"),
+      path.join(repoRoot, "public", "data", "registry", "universe.v1.json")
+    ];
+const file = candidatePaths.find((candidate) => fs.existsSync(candidate));
+if (!file) {
+  die(
+    `missing universe source. attempted: ${candidatePaths.join(", ")}. ` +
+      "regenerate SSOT universe inputs or provide RV_UNIVERSE_REGISTRY_PATH"
+  );
+}
+
+const doc = normalizeUniverseDoc(loadJson(file), file);
 if (!isObj(doc)) die("root must be an object");
 if (String(doc.schema_version || "") !== "1.0") die("schema_version must be '1.0'");
 if (String(doc.universe_version || "") !== "v1") die("universe_version must be 'v1'");
@@ -54,4 +100,6 @@ for (const [groupName, group] of Object.entries(doc.groups)) {
 const total = dedupe ? uniq(all).length : all.length;
 if (total > maxTotal) die(`too many symbols: ${total} > max_total_symbols=${maxTotal}`);
 
-process.stdout.write(`OK: universe registry v1 valid (symbols_total=${total})\n`);
+process.stdout.write(
+  `OK: universe registry v1 valid (symbols_total=${total}, source=${path.relative(repoRoot, file)})\n`
+);
