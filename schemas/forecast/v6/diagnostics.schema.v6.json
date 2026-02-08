@@ -1,0 +1,37 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Forecast v6 Diagnostics Summary",
+  "type": "object",
+  "required": ["schema", "meta", "checks"],
+  "properties": {
+    "schema": { "const": "forecast_diagnostics_summary_v6" },
+    "meta": {
+      "type": "object",
+      "required": ["asof_date", "mode", "circuitOpen", "reason", "policy_hashes", "bars_manifest_hash", "outcome_revision", "last_good_date_used", "generated_at"],
+      "properties": {
+        "asof_date": { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}$" },
+        "mode": { "type": "string", "enum": ["LOCAL", "CI"] },
+        "circuitOpen": { "type": "boolean" },
+        "reason": { "type": ["string", "null"] },
+        "policy_hashes": { "type": "object" },
+        "bars_manifest_hash": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+        "outcome_revision": { "type": "string", "pattern": "^v6\\.0-r\\d+$" },
+        "last_good_date_used": { "type": ["string", "null"] },
+        "generated_at": { "type": "string" }
+      },
+      "additionalProperties": true
+    },
+    "checks": {
+      "type": "object",
+      "required": ["dq", "monitoring", "schema", "secrecy"],
+      "properties": {
+        "dq": { "type": "object" },
+        "monitoring": { "type": "object" },
+        "schema": { "type": "object" },
+        "secrecy": { "type": "object" }
+      },
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": true
+}

@@ -92,6 +92,10 @@ functions/api/_middleware.js.bak.*
 .venv-rvci/**
 # rubikvault: generated dirs (avoid privacy-guard false positives)
 mirrors/.locks/
+mirrors/forecast/cache/
+mirrors/forecast/cache/**
+mirrors/forecast/ledgers/features/by_symbol/
+mirrors/forecast/ledgers/features/by_symbol/**
 *.log
 *.tmp
 # standard noise (keep repo clean)
@@ -128,3 +132,24 @@ rubikvault-site/
 
 # Local environment (secrets)
 .env.local
+# --- AUTO (v6 hygiene) ---
+mirrors/forecast/ledger/**
+mirrors/forecast/ops/**
+mirrors/forecast/snapshots/**
+mirrors/forecast/ledger/outcomes/**
+mirrors/forecast/models/**
+dev/Report10/**
+public/data/marketphase/*.json
+public/data/eod/bars/*.json
+public/data/forecast/reports/**
+public/data/forecast/latest.json
+public/data/forecast/scorecards/tickers.json.gz
+public/data/forecast/system/status.json
+public/data/forecast/system/last_good.json
+public/data/snapshots/stock-analysis.json
+# v6 generated artifacts (do not commit)
+public/data/forecast/v6/
+mirrors/forecast/ledgers/
+mirrors/forecast/last_good/
+public/data/forecast/system/
+public/proof.html

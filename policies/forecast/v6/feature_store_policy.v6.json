@@ -1,0 +1,19 @@
+{
+  "schema_version": "v6.0",
+  "created_at": "2026-02-08T00:00:00Z",
+  "policy_hash": "sha256:45aacc1eb49201cf60313d76b6b1fa1a1141424627e755d896c43caf2b4addfe",
+  "ssot": "by_date",
+  "ssot_write": "mirrors/forecast/ledgers/features/by_date/YYYY-MM-DD.parquet.zst",
+  "derived_views": [
+    "by_symbol"
+  ],
+  "by_symbol_mode": "LOCAL_CACHE_ONLY",
+  "ci_write_forbidden_paths": [
+    "mirrors/forecast/cache/**",
+    "mirrors/forecast/ledgers/features/by_symbol/**"
+  ],
+  "compaction": {
+    "mode": "monthly_optional",
+    "required": false
+  }
+}

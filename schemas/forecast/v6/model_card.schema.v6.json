@@ -1,0 +1,30 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Forecast v6 Model Card",
+  "type": "object",
+  "required": ["model_id", "strategy", "horizon", "trained_on_window", "policy_hashes", "code_hash", "feature_set_hash", "weights_ref"],
+  "properties": {
+    "model_id": { "type": "string" },
+    "strategy": { "type": "string" },
+    "horizon": { "type": ["string", "integer"] },
+    "trained_on_window": { "type": "string" },
+    "policy_hashes": {
+      "type": "object",
+      "additionalProperties": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" }
+    },
+    "code_hash": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+    "feature_set_hash": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+    "weights_ref": {
+      "type": "object",
+      "required": ["type", "vault_key", "content_hash", "env_var"],
+      "properties": {
+        "type": { "const": "LOCAL_VAULT" },
+        "vault_key": { "type": "string" },
+        "content_hash": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+        "env_var": { "const": "RUBIKVAULT_MODELS_DIR" }
+      },
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": true
+}

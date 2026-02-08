@@ -1,0 +1,13 @@
+{
+  "schema_version": "v6.0",
+  "created_at": "2026-02-08T00:00:00Z",
+  "policy_hash": "sha256:f8c9357d8055f2d88249ecb234ca73b2b40ec46e2674cc09ebdbafd57128c0d2",
+  "immutable": true,
+  "maturity": {
+    "grace_trading_days": 5,
+    "max_missing_trading_days": 1
+  },
+  "bars_manifest_binding": true,
+  "outcome_stream_naming": "v6.0-r{revision}",
+  "revision_rule": "new_revision_if_bars_manifest_hash_changes_in_training_window_or_provider_adjustment_manifest_changes"
+}

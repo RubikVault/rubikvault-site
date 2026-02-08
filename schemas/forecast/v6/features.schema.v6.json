@@ -1,0 +1,33 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Forecast v6 Features",
+  "type": "object",
+  "required": ["schema", "asof_date", "rows"],
+  "properties": {
+    "schema": { "const": "forecast_features_v6" },
+    "asof_date": { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}$" },
+    "rows": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["symbol", "date", "features"],
+        "properties": {
+          "symbol": { "type": "string" },
+          "date": { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}$" },
+          "features": {
+            "type": "object",
+            "required": ["log_ret_1d", "log_ret_5d", "log_ret_20d"],
+            "properties": {
+              "log_ret_1d": { "type": "number" },
+              "log_ret_5d": { "type": "number" },
+              "log_ret_20d": { "type": "number" }
+            },
+            "additionalProperties": { "type": ["number", "string", "boolean", "null"] }
+          }
+        },
+        "additionalProperties": true
+      }
+    }
+  },
+  "additionalProperties": true
+}

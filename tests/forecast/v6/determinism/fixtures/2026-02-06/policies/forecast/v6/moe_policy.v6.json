@@ -1,0 +1,12 @@
+{
+  "schema_version": "v6.0",
+  "created_at": "2026-02-08T00:00:00Z",
+  "policy_hash": "sha256:273b22bc80fc1ab46994fcf2051d38360a5b424dde033808b49dab74be312743",
+  "used_soft_weights": true,
+  "logged_hard_expert": true,
+  "hysteresis": {
+    "window_trading_days": 3,
+    "min_confidence_threshold": 0.6,
+    "rule": "use_prev_logged_if_conf<min within window"
+  }
+}

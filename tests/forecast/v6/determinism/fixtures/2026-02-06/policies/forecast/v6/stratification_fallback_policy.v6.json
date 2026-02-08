@@ -1,0 +1,12 @@
+{
+  "schema_version": "v6.0",
+  "created_at": "2026-02-08T00:00:00Z",
+  "policy_hash": "sha256:bb880c93089810bc58d2572fc30cb17caca8ea59c47e5789584b4ea216464564",
+  "fallback_strategy": "HYBRID",
+  "hybrid_restrict_threshold_pct": 10,
+  "actions": {
+    "RESTRICT": "reduce_universe_to_symbols_with_history",
+    "CIRCUIT_OPEN": "publish_last_good",
+    "HYBRID": "RESTRICT_if_gap_lt_10pct_else_CIRCUIT_OPEN"
+  }
+}

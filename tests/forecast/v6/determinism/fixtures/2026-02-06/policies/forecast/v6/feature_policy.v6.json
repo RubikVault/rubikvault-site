@@ -1,0 +1,37 @@
+{
+  "schema_version": "v6.0",
+  "created_at": "2026-02-08T00:00:00Z",
+  "policy_hash": "sha256:b87f87cb01f2357311538b780e7d6ecc0c89c611b0d873e70ef803cd33d45073",
+  "forbidden_features": [
+    "close",
+    "open",
+    "high",
+    "low",
+    "volume",
+    "dollar_vol"
+  ],
+  "allowed_patterns": [
+    "ranks",
+    "zscores",
+    "ratios",
+    "pctiles",
+    "buckets",
+    "dist_*_atr",
+    "log_ret_*"
+  ],
+  "winsorize": {
+    "enabled": true,
+    "p_low": 0.01,
+    "p_high": 0.99
+  },
+  "enforce_step": "stage2",
+  "on_violation": {
+    "circuit_open": true,
+    "reason": "FEATURE_POLICY_VIOLATION"
+  },
+  "control_weights": {
+    "experts_loss_weight": 0.05,
+    "router_loss_weight": 1,
+    "calibration_loss_weight": 1
+  }
+}

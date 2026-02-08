@@ -1,0 +1,40 @@
+{
+  "schema_version": "v6.0",
+  "created_at": "2026-02-08T00:00:00Z",
+  "policy_hash": "sha256:fd620f078615504381c14daee769021fc3ad9a003c8096b7d4c697f09b374d9d",
+  "system": {
+    "id": "rv-forecast-v6",
+    "version": "6.0.0"
+  },
+  "horizons": [
+    10,
+    20
+  ],
+  "k_hold": 3,
+  "embargo_trading_days": 20,
+  "determinism": {
+    "global_seed": 42,
+    "float_precision": "f64",
+    "canonical_sort": [
+      "symbol",
+      "date"
+    ]
+  },
+  "run_modes": {
+    "local": {
+      "allow_weights": true
+    },
+    "ci": {
+      "allow_weights": false
+    }
+  },
+  "paths": {
+    "ssot": "mirrors/forecast",
+    "published": "public/data/forecast/v6"
+  },
+  "option_a_two_phase": true,
+  "defaults": {
+    "provider": "EODHD",
+    "universe": "all"
+  }
+}

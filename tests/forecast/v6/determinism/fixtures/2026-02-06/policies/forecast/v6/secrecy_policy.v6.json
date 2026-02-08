@@ -1,0 +1,26 @@
+{
+  "schema_version": "v6.0",
+  "created_at": "2026-02-08T00:00:00Z",
+  "policy_hash": "sha256:6cc4a4c782427f087a99e55d102df296e4be20867082593082868e1f106a44e1",
+  "forbid_patterns": [
+    "*.bin",
+    "*.pt",
+    "*.pth",
+    "*.ckpt",
+    "*.safetensors",
+    "*.onnx",
+    "*.pkl"
+  ],
+  "allowlist_exceptions": [
+    "node_modules/**/*.node",
+    "**/*.wasm",
+    "tests/fixtures/**",
+    "public/**"
+  ],
+  "scan_includes": [
+    "tracked",
+    "untracked"
+  ],
+  "ci_gate_before_publish": true,
+  "local_vault_env": "RUBIKVAULT_MODELS_DIR"
+}

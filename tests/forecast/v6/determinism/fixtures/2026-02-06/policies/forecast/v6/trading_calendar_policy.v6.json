@@ -1,0 +1,18 @@
+{
+  "schema_version": "v6.0",
+  "created_at": "2026-02-08T00:00:00Z",
+  "policy_hash": "sha256:850c3a0669becf0a23c630027398b469d9df3b21a34a8e0697ffca0514f389ea",
+  "exchange": "NYSE",
+  "holiday_source": "scripts/forecast/v6/lib/calendar/nyse_holidays.json",
+  "asof_date_resolution": "previous trading day if weekend/holiday",
+  "fail_mode": "deterministic fallback previous trading day else circuit_open CALENDAR_RESOLUTION_FAILED if data missing",
+  "coverage_years_required": [
+    2024,
+    2025,
+    2026,
+    2027,
+    2028,
+    2029,
+    2030
+  ]
+}

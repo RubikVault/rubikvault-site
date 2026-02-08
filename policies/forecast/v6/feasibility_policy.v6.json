@@ -1,0 +1,32 @@
+{
+  "schema_version": "v6.0",
+  "created_at": "2026-02-08T00:00:00Z",
+  "policy_hash": "sha256:844c9f6b61bfb95cfac46d3b9fd4cced8a4c0b6745f22a6e6df47cee8697af6d",
+  "training_time_max_minutes": 30,
+  "training_time_grace_days": 3,
+  "rollback_rate_max_per_week": 2,
+  "backlog_days_max": 7,
+  "memory_peak_mb_max": 20000,
+  "recommend_rules": [
+    {
+      "id": "R1_KEEP_A",
+      "condition": "training_time_minutes<=training_time_max_minutes AND rollback_rate_week<=rollback_rate_max_per_week",
+      "action": "KEEP_A"
+    },
+    {
+      "id": "R2_CONSIDER_B",
+      "condition": "training_time_grace_days_exceeded OR backlog_days>backlog_days_max",
+      "action": "CONSIDER_B"
+    },
+    {
+      "id": "R3_REQUIRE_B",
+      "condition": "memory_peak_mb>memory_peak_mb_max",
+      "action": "REQUIRE_B"
+    }
+  ],
+  "actions": [
+    "KEEP_A",
+    "CONSIDER_B",
+    "REQUIRE_B"
+  ]
+}
