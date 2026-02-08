@@ -15,7 +15,7 @@ concurrency:
 jobs:
   dry-run:
     name: Ops Daily Dry-Run (no secrets)
-    if: ${{ vars.RV_CI_MODE == 'dry' || secrets.CF_ACCOUNT_ID == '' || secrets.CF_API_TOKEN == '' }}
+    if: ${{ vars.RV_CI_MODE == 'dry' }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -31,7 +31,7 @@ jobs:
         run: npm run test:contracts
 
   run:
-    if: ${{ vars.RV_CI_MODE != 'dry' && secrets.CF_ACCOUNT_ID != '' && secrets.CF_API_TOKEN != '' }}
+    if: ${{ vars.RV_CI_MODE != 'dry' }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:

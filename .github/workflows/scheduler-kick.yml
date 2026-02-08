@@ -11,7 +11,7 @@ permissions:
 jobs:
   dry-run:
     name: Scheduler Kick Dry-Run (no secrets)
-    if: ${{ vars.RV_CI_MODE == 'dry' || secrets.RV_ADMIN_TOKEN == '' || vars.RV_PROD_BASE == '' }}
+    if: ${{ vars.RV_CI_MODE == 'dry' || vars.RV_PROD_BASE == '' }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -27,7 +27,7 @@ jobs:
         run: npm run test:contracts
 
   kick:
-    if: ${{ github.ref == 'refs/heads/main' && vars.RV_CI_MODE != 'dry' && secrets.RV_ADMIN_TOKEN != '' && vars.RV_PROD_BASE != '' }}
+    if: ${{ github.ref == 'refs/heads/main' && vars.RV_CI_MODE != 'dry' && vars.RV_PROD_BASE != '' }}
     runs-on: ubuntu-latest
     steps:
       - name: Trigger scheduler

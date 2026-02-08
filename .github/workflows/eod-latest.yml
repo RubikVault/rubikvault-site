@@ -20,7 +20,7 @@ concurrency:
 jobs:
   dry-run:
     name: EOD Latest Dry-Run (no secrets)
-    if: ${{ vars.RV_CI_MODE == 'dry' || (secrets.TIINGO_API_KEY == '' && secrets.TIIANGO_API_KEY == '') }}
+    if: ${{ vars.RV_CI_MODE == 'dry' }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -36,7 +36,7 @@ jobs:
         run: npm run test:contracts
 
   run:
-    if: ${{ vars.RV_CI_MODE != 'dry' && (secrets.TIINGO_API_KEY != '' || secrets.TIIANGO_API_KEY != '') }}
+    if: ${{ vars.RV_CI_MODE != 'dry' }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
