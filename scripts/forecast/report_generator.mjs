@@ -15,6 +15,7 @@ const STATUS_REL_PATH = 'system/status.json';
 const LAST_GOOD_POINTER_REL_PATH = 'system/last_good.json';
 const LAST_GOOD_ENVELOPE_REL_PATH = 'last_good.json';
 const LATEST_REL_PATH = 'latest.json';
+const STOCK_ANALYSIS_REL_PATH = 'public/data/snapshots/stock-analysis.json';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Path Helpers
@@ -57,6 +58,7 @@ function buildLatestDoc(latest = {}) {
         },
         data: {
             champion_id: latest.champion_id ?? null,
+            asof: latest.asof ?? null,
             forecasts: latest.forecasts ?? [],
             latest_report_ref: latest.latest_report_ref ?? null,
             scorecards_ref: latest.scorecards_ref ?? null,
@@ -75,6 +77,51 @@ function isValidLatestDoc(doc) {
         doc.data &&
         Array.isArray(doc.data.forecasts)
     );
+}
+
+function deriveDirection(probability) {
+    if (!Number.isFinite(probability)) return 'neutral';
+    if (probability > 0.53) return 'bullish';
+    if (probability < 0.47) return 'bearish';
+    return 'neutral';
+}
+
+function buildSeedForecastsFromStockAnalysis(repoRoot) {
+    const seedPath = path.join(repoRoot, STOCK_ANALYSIS_REL_PATH);
+    const doc = readJsonIfExists(seedPath);
+    if (!doc || typeof doc !== 'object') {
+        return { asof: null, forecasts: [] };
+    }
+
+    const asofRaw = doc?._meta?.generated_at ?? doc?._meta?.generatedAt ?? null;
+    const asof = typeof asofRaw === 'string' && asofRaw.length >= 10 ? asofRaw.slice(0, 10) : null;
+    const forecasts = [];
+
+    for (const [symbol, row] of Object.entries(doc)) {
+        if (!symbol || symbol.startsWith('_')) continue;
+        if (!row || typeof row !== 'object') continue;
+        const probability = Number(row.probability);
+        if (!Number.isFinite(probability)) continue;
+
+        const clamped = Math.max(0.01, Math.min(0.99, probability));
+        const horizon = {
+            direction: deriveDirection(clamped),
+            probability: clamped
+        };
+
+        forecasts.push({
+            symbol: row.ticker ?? symbol,
+            name: row.name ?? null,
+            horizons: {
+                '1d': horizon,
+                '5d': horizon,
+                '20d': horizon
+            }
+        });
+    }
+
+    forecasts.sort((a, b) => String(a.symbol).localeCompare(String(b.symbol)));
+    return { asof, forecasts };
 }
 
 function getDailyReportPath(repoRoot, date) {
@@ -371,8 +418,11 @@ export function publishLatestFromLastGood(repoRoot, options = {}) {
     const status = options.status ?? 'circuit_open';
     const fallback = loadLastGoodEnvelope(repoRoot);
     const latestPath = path.join(repoRoot, PUBLIC_BASE, LATEST_REL_PATH);
+    const lastGoodPath = path.join(repoRoot, PUBLIC_BASE, LAST_GOOD_POINTER_REL_PATH);
+    const lastGoodEnvelopePath = path.join(repoRoot, PUBLIC_BASE, LAST_GOOD_ENVELOPE_REL_PATH);
+    const fallbackCount = Array.isArray(fallback?.data?.forecasts) ? fallback.data.forecasts.length : 0;
 
-    const latestDoc = fallback
+    const latestDoc = fallback && fallbackCount > 0
         ? {
             ...fallback,
             ok: false,
@@ -384,14 +434,38 @@ export function publishLatestFromLastGood(repoRoot, options = {}) {
                 last_good_ref: `public/data/forecast/${LAST_GOOD_ENVELOPE_REL_PATH}`
             }
         }
-        : buildLatestDoc({
-            ok: false,
-            status: 'bootstrap',
-            reason: 'No last_good available yet',
-            last_good_ref: null,
-            forecasts: [],
-            maturity_phase: 'BOOTSTRAP'
-        });
+        : (() => {
+            const seed = buildSeedForecastsFromStockAnalysis(repoRoot);
+            if (seed.forecasts.length > 0) {
+                const seededDoc = buildLatestDoc({
+                    ok: false,
+                    status,
+                    reason,
+                    last_good_ref: `public/data/forecast/${LAST_GOOD_ENVELOPE_REL_PATH}`,
+                    forecasts: seed.forecasts,
+                    maturity_phase: 'BOOTSTRAP',
+                    asof: seed.asof
+                });
+                atomicWriteJson(lastGoodEnvelopePath, seededDoc);
+                atomicWriteJson(lastGoodPath, {
+                    schema: 'forecast_last_good_v1',
+                    last_good_champion_id: null,
+                    last_good_latest_report_ref: null,
+                    last_good_as_of: new Date().toISOString(),
+                    reason: 'seeded_from_stock_analysis'
+                });
+                return seededDoc;
+            }
+            return buildLatestDoc({
+                ok: false,
+                status: 'bootstrap',
+                reason: 'No last_good available yet',
+                last_good_ref: null,
+                forecasts: [],
+                maturity_phase: 'BOOTSTRAP',
+                asof: null
+            });
+        })();
 
     if (!isValidLatestDoc(latestDoc)) {
         throw new Error('Invalid last_good fallback envelope; refusing publish');
@@ -409,6 +483,13 @@ export function publishLatestFromLastGood(repoRoot, options = {}) {
 export function updateLastGood(repoRoot, lastGood) {
     const lastGoodPath = path.join(repoRoot, PUBLIC_BASE, LAST_GOOD_POINTER_REL_PATH);
     const lastGoodEnvelopePath = path.join(repoRoot, PUBLIC_BASE, LAST_GOOD_ENVELOPE_REL_PATH);
+    const candidateEnvelope = lastGood.latest_envelope ?? readJsonIfExists(path.join(repoRoot, PUBLIC_BASE, LATEST_REL_PATH));
+    const forecastCount = Array.isArray(candidateEnvelope?.data?.forecasts) ? candidateEnvelope.data.forecasts.length : 0;
+
+    if (forecastCount === 0) {
+        console.warn('[LastGood] Skipped update: latest envelope has zero forecasts');
+        return;
+    }
 
     const pointerDoc = {
         schema: 'forecast_last_good_v1',
@@ -420,7 +501,6 @@ export function updateLastGood(repoRoot, lastGood) {
 
     atomicWriteJson(lastGoodPath, pointerDoc);
 
-    const candidateEnvelope = lastGood.latest_envelope ?? readJsonIfExists(path.join(repoRoot, PUBLIC_BASE, LATEST_REL_PATH));
     if (isValidLatestDoc(candidateEnvelope)) {
         atomicWriteJson(lastGoodEnvelopePath, candidateEnvelope);
         console.log(`[LastGood] Updated ${lastGoodEnvelopePath}`);

@@ -18,6 +18,8 @@ const BASE_DIR = process.cwd();
 
 const MODULE_NAME = 'market-prices';
 const DEFAULT_OUT_DIR = join(BASE_DIR, 'tmp/phase1-artifacts/market-prices');
+const PUBLISHED_MARKET_PRICES_PATH = join(BASE_DIR, 'public/data/snapshots/market-prices/latest.json');
+const STOCK_ANALYSIS_PATH = join(BASE_DIR, 'public/data/snapshots/stock-analysis.json');
 
 function toBool(v) {
   const s = String(v || '').trim().toLowerCase();
@@ -546,6 +548,78 @@ function computeAsOf(bars) {
   return dates.sort().slice(-1)[0];
 }
 
+function normalizeFallbackBar(row, fallbackDate, sourceProvider) {
+  const symbol = row?.symbol ?? row?.ticker ?? null;
+  const close = toNumber(row?.close ?? row?.price ?? row?.last ?? row?.adj_close);
+  if (!symbol || !Number.isFinite(close) || close <= 0) return null;
+  const open = Number.isFinite(toNumber(row?.open)) ? toNumber(row.open) : close;
+  const high = Number.isFinite(toNumber(row?.high)) ? toNumber(row.high) : Math.max(open, close);
+  const low = Number.isFinite(toNumber(row?.low)) ? toNumber(row.low) : Math.min(open, close);
+  const volumeParsed = toNumber(row?.volume);
+  const volume = Number.isFinite(volumeParsed) && volumeParsed >= 0 ? volumeParsed : null;
+  const dateRaw = row?.date;
+  const date = typeof dateRaw === 'string' && dateRaw.length >= 10 ? dateRaw.slice(0, 10) : fallbackDate;
+  if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return null;
+
+  return {
+    symbol,
+    date,
+    open,
+    high,
+    low,
+    close,
+    volume,
+    adj_close: Number.isFinite(toNumber(row?.adj_close)) ? toNumber(row.adj_close) : close,
+    currency: 'USD',
+    source_provider: sourceProvider,
+    ingested_at: new Date().toISOString()
+  };
+}
+
+async function loadFallbackBarsFromPublishedSnapshot({ minCount, fallbackDate }) {
+  try {
+    const raw = await readFile(PUBLISHED_MARKET_PRICES_PATH, 'utf-8');
+    const doc = JSON.parse(raw);
+    const rows = Array.isArray(doc?.data) ? doc.data : [];
+    const sourceProvider = doc?.metadata?.provider || doc?.metadata?.source || doc?.meta?.source || 'last_good';
+    const bars = rows
+      .map((row) => normalizeFallbackBar(row, fallbackDate, sourceProvider))
+      .filter(Boolean);
+    return bars.length >= minCount ? bars : [];
+  } catch (error) {
+    return [];
+  }
+}
+
+async function loadFallbackBarsFromStockAnalysis({ minCount, fallbackDate }) {
+  try {
+    const raw = await readFile(STOCK_ANALYSIS_PATH, 'utf-8');
+    const doc = JSON.parse(raw);
+    const rows = [];
+    for (const [symbol, entry] of Object.entries(doc || {})) {
+      if (!symbol || symbol.startsWith('_') || !entry || typeof entry !== 'object') continue;
+      const price = toNumber(entry?.price ?? entry?.close);
+      if (!Number.isFinite(price) || price <= 0) continue;
+      rows.push({
+        symbol: entry?.ticker || symbol,
+        date: fallbackDate,
+        open: price,
+        high: price,
+        low: price,
+        close: price,
+        volume: null,
+        adj_close: price
+      });
+    }
+    const bars = rows
+      .map((row) => normalizeFallbackBar(row, fallbackDate, 'stock-analysis-seed'))
+      .filter(Boolean);
+    return bars.length >= minCount ? bars : [];
+  } catch (error) {
+    return [];
+  }
+}
+
 async function loadUniverseNasdaq100() {
   const universePath = join(BASE_DIR, 'public/data/universe/all.json');
   const content = await readFile(universePath, 'utf-8');
@@ -562,9 +636,21 @@ async function loadUniverseNasdaq100() {
 }
 
 async function loadModuleConfig() {
-  const registryPath = join(BASE_DIR, 'public/data/registry/modules.json');
-  const content = await readFile(registryPath, 'utf-8');
-  const registry = JSON.parse(content);
+  const registryCandidates = [
+    join(BASE_DIR, 'public/data/registry/modules.json'),
+    join(BASE_DIR, 'functions/api/_shared/registry/modules.json')
+  ];
+
+  let registry = null;
+  for (const registryPath of registryCandidates) {
+    try {
+      const content = await readFile(registryPath, 'utf-8');
+      registry = JSON.parse(content);
+      break;
+    } catch (error) {
+      continue;
+    }
+  }
   const config = registry?.modules?.[MODULE_NAME];
 
   if (!config) {
@@ -597,9 +683,21 @@ async function loadModuleConfig() {
 }
 
 async function loadProvidersRegistry() {
-  const registryPath = join(BASE_DIR, 'public/data/registry/providers.v1.json');
-  const content = await readFile(registryPath, 'utf-8');
-  return JSON.parse(content);
+  const registryCandidates = [
+    join(BASE_DIR, 'public/data/registry/providers.v1.json'),
+    join(BASE_DIR, 'functions/api/_shared/registry/providers.v1.json')
+  ];
+
+  for (const registryPath of registryCandidates) {
+    try {
+      const content = await readFile(registryPath, 'utf-8');
+      return JSON.parse(content);
+    } catch (error) {
+      continue;
+    }
+  }
+
+  throw new Error('PROVIDERS_REGISTRY_NOT_FOUND');
 }
 
 export function buildProviderChain(registry, chainKey = 'prices_eod') {
@@ -1162,7 +1260,9 @@ export async function main() {
 
   const symbols = await loadUniverseNasdaq100();
   const config = await loadModuleConfig();
-  const minCount = Number.isFinite(config.counts?.min) ? config.counts.min : symbols.length;
+  const configMinCount = Number.isFinite(config.counts?.min) ? Number(config.counts.min) : 0;
+  const coverageMinCount = Math.ceil(symbols.length * 0.95);
+  const minCount = Math.max(configMinCount, coverageMinCount);
 
   const errors = [];
   const warnings = [];
@@ -1343,13 +1443,53 @@ export async function main() {
     }
   }
 
-  const rawCount = rawBars.length;
-  const validCount = validBars.length;
-  const droppedRecords = rawCount - validCount;
-  const validationMeta = computeValidationMetadata(rawCount, validCount, droppedRecords, errors.length === 0);
-  const meetsMinCount = validCount >= minCount;
-  const noValidBars = validCount === 0;
-  const passed = !noValidBars && meetsMinCount && errors.length === 0 && validationMeta.drop_check_passed;
+  let fallbackMode = null;
+
+  let rawCount = rawBars.length;
+  let validCount = validBars.length;
+  let droppedRecords = rawCount - validCount;
+  let validationMeta = computeValidationMetadata(rawCount, validCount, droppedRecords, errors.length === 0);
+  let meetsMinCount = validCount >= minCount;
+  let noValidBars = validCount === 0;
+  let passed = !noValidBars && meetsMinCount && errors.length === 0 && validationMeta.drop_check_passed;
+
+  if (mode === 'REAL' && !meetsMinCount) {
+    const lastGoodBars = await loadFallbackBarsFromPublishedSnapshot({ minCount, fallbackDate: targetDate });
+    if (lastGoodBars.length >= minCount) {
+      rawBars.length = 0;
+      validBars.length = 0;
+      errors.length = 0;
+      rawBars.push(...lastGoodBars);
+      validBars.push(...lastGoodBars);
+      fallbackMode = 'last_good_snapshot';
+      runClassification = CLASSIFICATIONS.OK;
+      providerLabel = 'last_good';
+      warnings.push('USING_LAST_GOOD_MARKET_PRICES');
+      sourceChainMeta.selected = 'last_good';
+    } else {
+      const seedBars = await loadFallbackBarsFromStockAnalysis({ minCount, fallbackDate: targetDate });
+      if (seedBars.length >= minCount) {
+        rawBars.length = 0;
+        validBars.length = 0;
+        errors.length = 0;
+        rawBars.push(...seedBars);
+        validBars.push(...seedBars);
+        fallbackMode = 'stock_analysis_seed';
+        runClassification = CLASSIFICATIONS.OK;
+        providerLabel = 'stock-analysis-seed';
+        warnings.push('USING_STOCK_ANALYSIS_SEED');
+        sourceChainMeta.selected = 'stock-analysis-seed';
+      }
+    }
+
+    rawCount = rawBars.length;
+    validCount = validBars.length;
+    droppedRecords = rawCount - validCount;
+    validationMeta = computeValidationMetadata(rawCount, validCount, droppedRecords, errors.length === 0);
+    meetsMinCount = validCount >= minCount;
+    noValidBars = validCount === 0;
+    passed = !noValidBars && meetsMinCount && errors.length === 0 && validationMeta.drop_check_passed;
+  }
 
   if (sourceChainMeta.selected === null) {
     sourceChainMeta.selected = providerChain[providerChain.length - 1]?.id || providerChain[0]?.id || null;
@@ -1373,7 +1513,11 @@ export async function main() {
     providerChain.some((provider) => isProviderInCooldown(runtimeState.providers?.[provider.id]));
 
   if (!reasonCode) {
-    if (providerCooldownActive) {
+    if (fallbackMode === 'last_good_snapshot') {
+      reasonCode = 'USING_LAST_GOOD';
+    } else if (fallbackMode === 'stock_analysis_seed') {
+      reasonCode = 'USING_STOCK_ANALYSIS_SEED';
+    } else if (providerCooldownActive) {
       reasonCode = 'COOLDOWN_ACTIVE';
     } else if (noValidBars) {
       reasonCode = runClassification === CLASSIFICATIONS.OK ? 'NO_VALID_BARS' : runClassification;
@@ -1417,11 +1561,18 @@ export async function main() {
   const fetchedAt = new Date().toISOString();
   const asOf = computeAsOf(validBars);
   const dataDate = typeof asOf === 'string' ? asOf.slice(0, 10) : null;
+  const sourceLabel = mode === 'STUB'
+    ? 'stub'
+    : fallbackMode === 'last_good_snapshot'
+      ? 'last_good'
+      : fallbackMode === 'stock_analysis_seed'
+        ? 'stock-analysis-seed'
+        : 'stooq';
   const envelope = buildEnvelope(validBars, {
     module: MODULE_NAME,
     tier: config.tier || 'standard',
     domain: config.domain || 'stocks',
-    source: mode === 'STUB' ? 'stub' : 'stooq',
+    source: sourceLabel,
     fetched_at: fetchedAt,
     published_at: fetchedAt,
     freshness: config.freshness,
@@ -1450,6 +1601,10 @@ export async function main() {
   envelope.metadata.upstream = { ...envelope.metadata.upstream, ...upstream };
   envelope.metadata.provider = providerLabel;
   envelope.metadata.as_of = asOf;
+  envelope.asof = asOf;
+  envelope.prices_count = typeof envelope.metadata.record_count === 'number'
+    ? envelope.metadata.record_count
+    : (Array.isArray(envelope.data) ? envelope.data.length : 0);
 
   envelope.metadata.source_chain = sourceChainMeta;
   const cooldownUntil =

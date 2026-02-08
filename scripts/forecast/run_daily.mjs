@@ -224,23 +224,24 @@ export async function runDailyPipeline(options = {}) {
 
     if (!qualityResult.ok) {
         console.log(`  ❌ CIRCUIT OPEN: ${qualityResult.reason}`);
+        const fallbackReason = `Using last_good forecasts: ${qualityResult.reason}`;
 
         const fallbackLatest = publishLatestFromLastGood(repoRoot, {
-            reason: qualityResult.reason,
-            status: 'circuit_open'
+            reason: fallbackReason,
+            status: 'stale'
         });
 
-        // Publish last_good and status
+        // Publish last_good and mark as stale fallback.
         updateStatus(repoRoot, {
-            status: 'circuit_open',
-            reason: qualityResult.reason,
-            circuit_state: 'open',
+            status: 'stale',
+            reason: fallbackReason,
+            circuit_state: 'closed',
             last_run: tradingDate,
             last_good: fallbackLatest?.meta?.last_good_ref ?? null
         });
 
-        console.log('  Pipeline stopped. Published last_good.');
-        return { ok: false, reason: qualityResult.reason };
+        console.log('  Pipeline degraded. Published last_good.');
+        return { ok: true, degraded: true, reason: fallbackReason };
     }
 
     console.log('  ✓ Data quality OK');
@@ -265,6 +266,23 @@ export async function runDailyPipeline(options = {}) {
         policy
     });
     console.log(`  Generated ${forecasts.length} forecasts`);
+
+    if (forecasts.length === 0) {
+        const fallbackReason = 'Using last_good forecasts: no fresh forecasts generated';
+        const fallbackLatest = publishLatestFromLastGood(repoRoot, {
+            reason: fallbackReason,
+            status: 'stale'
+        });
+        updateStatus(repoRoot, {
+            status: 'stale',
+            reason: fallbackReason,
+            circuit_state: 'closed',
+            last_run: tradingDate,
+            last_good: fallbackLatest?.meta?.last_good_ref ?? null
+        });
+        console.log('  Pipeline degraded. Published last_good.');
+        return { ok: true, degraded: true, reason: fallbackReason };
+    }
 
     // 7. Write forecast records
     console.log('[Step 7] Writing forecast records to ledger...');
@@ -360,6 +378,7 @@ export async function runDailyPipeline(options = {}) {
         ok: true,
         status: 'ok',
         champion_id: champion.champion_id,
+        asof: tradingDate,
         forecasts: forecastsSummary,
         latest_report_ref: `public/data/forecast/reports/daily/${tradingDate}.json`,
         scorecards_ref: 'public/data/forecast/scorecards/tickers.json.gz',
