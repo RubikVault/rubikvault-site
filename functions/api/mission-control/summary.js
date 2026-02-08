@@ -231,7 +231,7 @@ async function fetchApiStock(requestUrl, ticker) {
       url: `/api/stock?ticker=${encodeURIComponent(ticker)}`,
       response: null,
       bar: null,
-      meta: null,
+      meta: {},
       error: String(err?.message || err)
     };
   }
