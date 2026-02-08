@@ -19,6 +19,36 @@ jobs:
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
     steps:
+      - name: "WP16 DEBUG: dump market-prices artifacts"
+        if: always()
+        env:
+          ARTIFACTS_DIR: ${{ runner.temp }}/artifacts
+        run: |
+          set -euo pipefail
+          echo "=== DEBUG: artifacts root ==="
+          ls -lah "$ARTIFACTS_DIR" || true
+          echo ""
+          echo "=== DEBUG: find snapshot.json/module-state.json ==="
+          find "$ARTIFACTS_DIR" -maxdepth 4 -type f \( -name "snapshot.json" -o -name "module-state.json" \) -print -exec wc -c {} \; || true
+          echo ""
+          echo "=== DEBUG: print market-prices snapshot.json (first 120 lines) ==="
+          if [ -f "$ARTIFACTS_DIR/market-prices/snapshot.json" ]; then
+            sed -n '1,120p' "$ARTIFACTS_DIR/market-prices/snapshot.json"
+            echo ""
+            echo "=== DEBUG: jq key fields ==="
+            jq -r '{
+              schema_version: (.schema_version // null),
+              meta_source: (.meta.source // null),
+              metadata_source: (.metadata.source // null),
+              metadata_provider: (.metadata.provider // null),
+              record_count: (.metadata.record_count // null),
+              data_len: (if ((.data|type)=="array") then (.data|length) else 0 end),
+              error: (.error // null)
+            }' "$ARTIFACTS_DIR/market-prices/snapshot.json"
+          else
+            echo "MISSING: $ARTIFACTS_DIR/market-prices/snapshot.json"
+          fi
+
       - name: Checkout
         uses: actions/checkout@v4
 
@@ -156,7 +186,6 @@ jobs:
           compression-level: 9  # Maximum compression
 
       - name: Summary
-        if: always()
         run: |
           MODULE="${{ matrix.module }}"
           STATUS="${{ job.status }}"
@@ -212,8 +241,7 @@ jobs:
           node scripts/providers/market-stats-v3.mjs
 
 
-      - name: WP16 DEBUG: dump market-prices artifacts
-        if: always()
+      - name: "WP16 DEBUG: dump market-prices artifacts"
         env:
           ARTIFACTS_DIR: ${{ runner.temp }}/artifacts
         run: |
@@ -259,7 +287,6 @@ jobs:
   trigger-finalizer:
     needs: scrape
     runs-on: ubuntu-latest
-    if: always()
     steps:
       - name: Summary
         run: |
