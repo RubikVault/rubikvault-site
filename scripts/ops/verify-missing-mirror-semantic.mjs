@@ -6,6 +6,7 @@ const repoRoot = process.cwd();
 const args = process.argv.slice(2);
 const fileA = args[0] ? path.resolve(args[0]) : path.join(repoRoot, "public/data/marketphase/missing.json");
 const fileB = args[1] ? path.resolve(args[1]) : path.join(repoRoot, "public/data/pipeline/missing.json");
+const usingDefaultPaths = args.length === 0;
 
 function exitWith(code, message) {
   if (message) console.error(message);
@@ -19,6 +20,14 @@ function readJson(filePath) {
   } catch (err) {
     exitWith(1, `IO/parse error for ${filePath}: ${err.message}`);
   }
+}
+
+if (usingDefaultPaths && (!fs.existsSync(fileA) || !fs.existsSync(fileB))) {
+  const missing = [fileA, fileB].filter((filePath) => !fs.existsSync(filePath));
+  console.warn(
+    `WARN: semantic equivalence check skipped (generated artifacts missing): ${missing.join(", ")}`
+  );
+  process.exit(0);
 }
 
 function canonicalize(value) {

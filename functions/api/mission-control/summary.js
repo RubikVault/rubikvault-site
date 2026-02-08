@@ -9,7 +9,7 @@ import {
   trimErrors
 } from '../_shared/contracts.js';
 import { getBarNode } from '../../_ops/shape.js';
-import opsHealthPolicyRaw from "../../../policies/ops_health.json" assert { type: "json" };
+import opsHealthPolicyRaw from "../../../policies/ops_health.json" with { type: "json" };
 
 const MODULE_NAME = 'mission-control-summary';
 const SNAPSHOT_MODULES_HINT = ['universe', 'market-prices', 'market-stats', 'market-score'];

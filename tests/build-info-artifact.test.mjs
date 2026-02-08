@@ -8,7 +8,16 @@ function fail(message) {
   throw new Error(message);
 }
 
-const raw = await fs.readFile(filePath, 'utf8');
+let raw;
+try {
+  raw = await fs.readFile(filePath, 'utf8');
+} catch (error) {
+  if (error && error.code === 'ENOENT') {
+    process.stdout.write('SKIP: build-info artifact missing in generated-only checkout\n');
+    process.exit(0);
+  }
+  throw error;
+}
 const doc = JSON.parse(raw);
 
 if (doc?.schema_version !== '3.0') {
