@@ -1,4 +1,5 @@
 import fs from "fs/promises";
+import fsSync from "fs"; // Added for synchronous universe read
 import path from "path";
 import { execSync } from "node:child_process";
 import {
@@ -9,15 +10,26 @@ import {
 } from "./marketphase-core.mjs";
 import { round6, round6Object, round6Array } from "./utils/scientific-math.mjs";
 
-const OUTPUT_ROOT = "mirrors/marketphase";
-const MIRROR_ROOT = "mirrors/marketphase";
+const OUTPUT_ROOT = "public/data/marketphase";
+const BARS_ROOT = "public/data/eod/bars";
+const UNIVERSE_PATH = "public/data/universe/all.json";
 
 function parseSymbols() {
-  const raw = process.env.SYMBOLS || "AAPL";
-  return raw
-    .split(",")
-    .map((s) => s.trim().toUpperCase())
-    .filter(Boolean);
+  if (process.env.SYMBOLS) {
+    return process.env.SYMBOLS
+      .split(",")
+      .map((s) => s.trim().toUpperCase())
+      .filter(Boolean);
+  }
+  // Default: load all.json
+  try {
+    const raw = fsSync.readFileSync(UNIVERSE_PATH, "utf8");
+    const universe = JSON.parse(raw);
+    return universe.map(u => u.ticker || u.symbol || u);
+  } catch (err) {
+    console.warn(`Could not load universe from ${UNIVERSE_PATH}, defaulting to AAPL`);
+    return ["AAPL"];
+  }
 }
 
 function clamp(min, max, value) {
@@ -47,15 +59,14 @@ function makeDummySeries(symbol, days = 220) {
 }
 
 async function loadMirrorSeries(symbol) {
-  const mirrorPath = path.join(MIRROR_ROOT, `${symbol}.json`);
+  const barPath = path.join(BARS_ROOT, `${symbol}.json`);
   try {
-    const raw = await fs.readFile(mirrorPath, "utf8");
-    const parsed = JSON.parse(raw);
-    const series = parsed?.data?.ohlc;
-    if (!Array.isArray(series) || !series.length) {
-      throw new Error("Mirror OHLC missing");
+    const raw = await fs.readFile(barPath, "utf8");
+    const bars = JSON.parse(raw);
+    if (!Array.isArray(bars) || !bars.length) {
+      throw new Error("Bars missing or empty");
     }
-    return series;
+    return bars;
   } catch (error) {
     return null;
   }
@@ -72,7 +83,7 @@ function getCommitHash() {
 function buildEnvelope(symbol, analysis, metaOverrides = {}) {
   const generatedAt = new Date().toISOString();
   const commitHash = getCommitHash();
-  
+
   // Apply round6 to all numeric values in analysis
   const normalizedAnalysis = {
     features: round6Object(analysis.features),
@@ -86,7 +97,7 @@ function buildEnvelope(symbol, analysis, metaOverrides = {}) {
     debug: analysis.debug,
     disclaimer: LEGAL_TEXT
   };
-  
+
   // Normalize fib ratios and price targets
   if (normalizedAnalysis.elliott.developingPattern?.fibLevels) {
     normalizedAnalysis.elliott.developingPattern.fibLevels = {
@@ -94,7 +105,7 @@ function buildEnvelope(symbol, analysis, metaOverrides = {}) {
       resistance: round6Array(normalizedAnalysis.elliott.developingPattern.fibLevels.resistance)
     };
   }
-  
+
   return {
     ok: true,
     feature: "marketphase",
@@ -144,7 +155,8 @@ async function generateSymbol(symbol, dummyMode) {
   } else {
     ohlc = await loadMirrorSeries(symbol);
     if (!ohlc) {
-      throw new Error(`Mirror data unavailable for ${symbol}.`);
+      console.warn(`WARN: Mirror data unavailable for ${symbol}, skipping.`);
+      return null;
     }
   }
 
@@ -162,8 +174,8 @@ async function generateSymbol(symbol, dummyMode) {
   envelope.data.elliott.developingPattern.disclaimer =
     "Reference levels only — no prediction";
 
-  const mirrorPath = path.join(MIRROR_ROOT, `${symbol}.json`);
-  await writeJson(mirrorPath, envelope);
+  const outputPath = path.join(OUTPUT_ROOT, `${symbol}.json`);
+  await writeJson(outputPath, envelope);
   return envelope;
 }
 
@@ -206,7 +218,9 @@ async function main() {
 
   for (const symbol of symbols) {
     const envelope = await generateSymbol(symbol, dummyMode);
-    envelopes.push(envelope);
+    if (envelope) {
+      envelopes.push(envelope);
+    }
   }
 
   const generatedAt = new Date().toISOString();

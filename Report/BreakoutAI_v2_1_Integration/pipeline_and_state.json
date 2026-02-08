@@ -1,0 +1,135 @@
+{
+  "workflows": [
+    {
+      "file": ".github/workflows/forecast-daily.yml",
+      "triggers": ["workflow_dispatch", "schedule: 0 21 * * 1-5"],
+      "jobs": ["forecast-daily"],
+      "outputs": ["mirrors/forecast/ledger/", "mirrors/forecast/snapshots/", "public/data/forecast/"],
+      "gates": ["Pipeline success (PIPELINE COMPLETE)"],
+      "evidence": ".github/workflows/forecast-daily.yml:L1-L90"
+    },
+    {
+      "file": ".github/workflows/forecast-weekly.yml",
+      "triggers": ["workflow_dispatch", "schedule: 0 6 * * 0"],
+      "jobs": ["forecast-weekly"],
+      "outputs": ["mirrors/forecast/challengers/", "mirrors/forecast/champion/", "mirrors/forecast/ledger/promotions/", "public/data/forecast/"],
+      "gates": ["Promotion detection (Promotion: YES)"],
+      "evidence": ".github/workflows/forecast-weekly.yml:L1-L118"
+    },
+    {
+      "file": ".github/workflows/forecast-monthly.yml",
+      "triggers": ["workflow_dispatch", "schedule: 0 8 1 * *"],
+      "jobs": ["forecast-monthly"],
+      "outputs": ["public/data/forecast/reports/monthly/"],
+      "gates": ["MONTHLY REPORT COMPLETE"],
+      "evidence": ".github/workflows/forecast-monthly.yml:L1-L88"
+    },
+    {
+      "file": ".github/workflows/forecast-rollback.yml",
+      "triggers": ["workflow_dispatch"],
+      "jobs": ["rollback"],
+      "outputs": ["public/data/forecast/system/status.json", "public/data/forecast/latest.json"],
+      "gates": ["Manual workflow input (reason)"],
+      "evidence": ".github/workflows/forecast-rollback.yml:L1-L68"
+    }
+  ],
+  "local_scripts": [
+    {
+      "script": "daily",
+      "command": "node scripts/forecast/run_daily.mjs --date=YYYY-MM-DD",
+      "writes": ["mirrors/forecast/ledger/forecasts", "public/data/forecast/reports/daily", "public/data/forecast/scorecards", "public/data/forecast/system"],
+      "evidence": "scripts/forecast/run_daily.mjs:L269-L373"
+    },
+    {
+      "script": "weekly",
+      "command": "node scripts/forecast/run_weekly.mjs --date=YYYY-MM-DD",
+      "writes": ["mirrors/forecast/challengers/specs", "mirrors/forecast/champion", "mirrors/forecast/ledger/promotions"],
+      "evidence": "scripts/forecast/run_weekly.mjs:L41-L74; scripts/forecast/challenger_generator.mjs:L247-L257; scripts/forecast/promotion_gates.mjs:L150-L176"
+    },
+    {
+      "script": "monthly",
+      "command": "node scripts/forecast/run_monthly.mjs --month=YYYY-MM",
+      "writes": ["public/data/forecast/reports/monthly"],
+      "evidence": "scripts/forecast/run_monthly.mjs:L134-L139"
+    }
+  ],
+  "providers": [
+    {
+      "name": "prices",
+      "fetch_path": "public/data/eod/batches/eod.latest.*.json",
+      "rate_limits": "NOT FOUND (2026-02-07T14:38:57Z rg -n \"rate limit|rate_limit|backoff|retry\" scripts/forecast)",
+      "fallbacks": ["Fallback to batch data when per-ticker bars are missing"],
+      "evidence": "scripts/forecast/snapshot_ingest.mjs:L19-L167"
+    },
+    {
+      "name": "universe",
+      "fetch_path": "public/data/universe/all.json",
+      "rate_limits": "NOT FOUND (2026-02-07T14:38:57Z rg -n \"rate limit|rate_limit|backoff|retry\" scripts/forecast)",
+      "fallbacks": ["Parse array, object.tickers, object.symbols, or data.data[]"],
+      "evidence": "scripts/forecast/snapshot_ingest.mjs:L19-L55"
+    },
+    {
+      "name": "policy.data_sources",
+      "fetch_path": "policies/forecast.v3.json",
+      "rate_limits": "NOT FOUND (policy uses provider: existing)",
+      "fallbacks": [],
+      "evidence": "policies/forecast.v3.json:L8-L27"
+    }
+  ],
+  "ledgers": [
+    {
+      "name": "forecasts",
+      "path": "mirrors/forecast/ledger/forecasts/<year>/<month>.ndjson.gz",
+      "format": "NDJSON.GZ",
+      "partitioning": "monthly",
+      "record_schema_keys": [
+        "as_of",
+        "capabilities",
+        "champion_id",
+        "champion_spec_hash",
+        "code_hash",
+        "conf",
+        "conf_components",
+        "enabled_feature_groups",
+        "event_flags",
+        "feature_snapshot_hash",
+        "forecast_id",
+        "horizon",
+        "neutral_band",
+        "neutral_flag",
+        "p_up",
+        "policy_hash",
+        "provenance",
+        "run_id",
+        "schema",
+        "snapshots",
+        "ticker",
+        "trading_date"
+      ],
+      "evidence": "scripts/forecast/ledger_writer.mjs:L1-L139; mirrors/forecast/ledger/forecasts/2026/02.ndjson.gz:L1"
+    }
+  ],
+  "state": {
+    "kv_bindings": ["RV_KV"],
+    "read_write_modes": {
+      "functions": "KV reads enabled; KV writes are read-only or disabled for APIs",
+      "forecast_pipeline": "writes to public/data and mirrors on disk"
+    },
+    "last_good_rules": {
+      "forecast_circuit_breaker": "On circuit open: update status + latest to last_good_ref; on close: update last_good and latest",
+      "evidence": "scripts/forecast/circuit_breaker.mjs:L120-L177; scripts/forecast/report_generator.mjs:L319-L333"
+    },
+    "preview_vs_prod_differences": [
+      "Preview or read-only mode uses mirror/last_good fallback instead of KV",
+      "Circuit open or preview triggers mirror fallback with meta.status=STALE"
+    ],
+    "evidence": "wrangler.toml:L8-L12; functions/api/_shared/resilience.js:L173-L300; functions/api/_shared/cache-law.js:L53-L72"
+  },
+  "trading_date_law": {
+    "source_of_truth": "resolveTradingDate (America/New_York timezone, weekend/holiday backoff)",
+    "path": "scripts/forecast/trading_date.mjs",
+    "lines": "L132-L165",
+    "notes": "Uses NY timezone and US holiday list; if non-trading day, previous trading day is used.",
+    "evidence": "scripts/forecast/trading_date.mjs:L12-L165"
+  }
+}

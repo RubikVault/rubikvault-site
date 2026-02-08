@@ -1,0 +1,162 @@
+{
+  "envelopes": [
+    {
+      "name": "forecast_latest_rv_envelope_v1",
+      "path": "scripts/forecast/report_generator.mjs",
+      "lines": "L287-L308",
+      "required_fields": ["schema", "ok", "feature", "generated_at", "meta", "data"],
+      "optional_fields": [
+        "meta.reason",
+        "meta.last_good_ref",
+        "data.champion_id",
+        "data.forecasts",
+        "data.latest_report_ref",
+        "data.scorecards_ref",
+        "data.maturity_phase"
+      ],
+      "meta_contract": {
+        "required": ["status"],
+        "optional": ["reason", "last_good_ref"]
+      },
+      "validation": {
+        "mechanism": "Constructed in updateLatest; no explicit schema validation in this function",
+        "on_fail": "Latest is still written; circuit breaker may set ok=false and last_good_ref"
+      },
+      "evidence": "scripts/forecast/report_generator.mjs:L287-L311; scripts/forecast/circuit_breaker.mjs:L120-L141"
+    },
+    {
+      "name": "forecast_status_v1",
+      "path": "scripts/forecast/report_generator.mjs",
+      "lines": "L263-L276",
+      "required_fields": ["schema", "status", "reason", "generated_at", "circuit_state", "last_run", "last_good", "capabilities"],
+      "optional_fields": ["reason", "last_run", "last_good"],
+      "meta_contract": {"required": [], "optional": []},
+      "validation": {
+        "mechanism": "Constructed in updateStatus; no explicit schema validation in this function",
+        "on_fail": "NOT_FOUND"
+      },
+      "evidence": "scripts/forecast/report_generator.mjs:L263-L279"
+    },
+    {
+      "name": "forecast_last_good_v1",
+      "path": "scripts/forecast/report_generator.mjs",
+      "lines": "L319-L328",
+      "required_fields": ["schema", "last_good_champion_id", "last_good_latest_report_ref", "last_good_as_of", "reason"],
+      "optional_fields": ["reason"],
+      "meta_contract": {"required": [], "optional": []},
+      "validation": {
+        "mechanism": "Constructed in updateLastGood; no explicit schema validation in this function",
+        "on_fail": "NOT_FOUND"
+      },
+      "evidence": "scripts/forecast/report_generator.mjs:L319-L333"
+    },
+    {
+      "name": "api_envelope",
+      "path": "schemas/api-envelope.schema.json",
+      "lines": "L1-L38",
+      "required_fields": ["ok", "feature", "meta", "data", "error"],
+      "optional_fields": [
+        "meta.reason",
+        "meta.ts",
+        "meta.traceId",
+        "meta.schemaVersion",
+        "meta.writeMode",
+        "meta.circuitOpen",
+        "meta.warnings",
+        "meta.savedAt",
+        "meta.ageMinutes"
+      ],
+      "meta_contract": {
+        "required": ["status"],
+        "optional": ["reason", "ts", "traceId", "schemaVersion", "writeMode", "circuitOpen", "warnings", "savedAt", "ageMinutes"]
+      },
+      "validation": {
+        "mechanism": "assertEnvelope enforces meta.status, generated_at, data_date, provider",
+        "on_fail": "throws error"
+      },
+      "evidence": "schemas/api-envelope.schema.json:L1-L38; functions/api/_shared/envelope.js:L167-L199"
+    }
+  ],
+  "schemas": [
+    {
+      "name": "snapshot-envelope",
+      "path": "schemas/snapshot-envelope.schema.json",
+      "version": "3.0",
+      "enforced_by": [".github/workflows/ci-gates.yml (ajv-cli validate)"],
+      "evidence": "schemas/snapshot-envelope.schema.json:L1-L80; .github/workflows/ci-gates.yml:L124-L148"
+    },
+    {
+      "name": "api-envelope",
+      "path": "schemas/api-envelope.schema.json",
+      "version": "NOT_SPECIFIED",
+      "enforced_by": ["scripts/contract-smoke.js (schema path referenced)"],
+      "evidence": "schemas/api-envelope.schema.json:L1-L38; scripts/contract-smoke.js:L110-L124"
+    },
+    {
+      "name": "forecast-registry",
+      "path": "schemas/registry.v1.json",
+      "version": "registry_v1",
+      "enforced_by": ["package.json validate:forecast-schemas", "scripts/forecast/validate-registry.mjs"],
+      "evidence": "schemas/registry.v1.json:L1-L122; package.json:L59-L83; scripts/forecast/validate-registry.mjs:L1-L82"
+    },
+    {
+      "name": "forecast-policy",
+      "path": "policies/forecast.schema.json",
+      "version": "forecast_policy_v3 (by schema_version pattern)",
+      "enforced_by": ["scripts/forecast/validate_policy.mjs"],
+      "evidence": "policies/forecast.schema.json:L1-L81; scripts/forecast/validate_policy.mjs:L11-L36"
+    }
+  ],
+  "sample_artifacts": [
+    {
+      "path": "public/data/forecast/latest.json",
+      "lines": "L1-L10",
+      "size_bytes": 44092,
+      "keys": ["schema", "ok", "feature", "generated_at", "meta", "data"],
+      "meta_keys": ["status", "reason", "last_good_ref"],
+      "trading_date_field": "generated_at",
+      "deterministic": "NOT DETERMINED",
+      "evidence": "2026-02-07T14:36:32.345233Z python artifact inventory"
+    },
+    {
+      "path": "public/data/forecast/reports/daily/2026-02-05.json",
+      "lines": "L1-L23",
+      "size_bytes": 1147,
+      "keys": ["schema", "period", "as_of", "maturity_phase", "meta", "global_metrics", "ticker_heatmap_summary", "top_movers", "recent_changes", "diagnostics"],
+      "meta_keys": ["status", "reason", "data_completeness", "compute"],
+      "trading_date_field": "period.id",
+      "deterministic": "NOT DETERMINED",
+      "evidence": "2026-02-07T14:36:32.345233Z python artifact inventory"
+    },
+    {
+      "path": "public/data/forecast/system/status.json",
+      "lines": "L1-L13",
+      "size_bytes": 295,
+      "keys": ["schema", "status", "reason", "generated_at", "circuit_state", "last_run", "last_good", "capabilities"],
+      "meta_keys": [],
+      "trading_date_field": "last_run",
+      "deterministic": "NOT DETERMINED",
+      "evidence": "2026-02-07T14:36:32.345233Z python artifact inventory"
+    },
+    {
+      "path": "public/data/forecast/system/last_good.json",
+      "lines": "L1-L6",
+      "size_bytes": 242,
+      "keys": ["schema", "last_good_champion_id", "last_good_latest_report_ref", "last_good_as_of", "reason"],
+      "meta_keys": [],
+      "trading_date_field": "last_good_as_of",
+      "deterministic": "NOT DETERMINED",
+      "evidence": "2026-02-07T14:36:32.345233Z python artifact inventory"
+    },
+    {
+      "path": "public/data/forecast/scorecards/tickers.json.gz",
+      "lines": "(gzip -dc ... | nl -ba) L1",
+      "size_bytes": 112,
+      "keys": ["schema", "generated_at", "ticker_count", "tickers"],
+      "meta_keys": [],
+      "trading_date_field": "generated_at",
+      "deterministic": "NOT DETERMINED",
+      "evidence": "2026-02-07T14:36:32.345233Z python artifact inventory"
+    }
+  ]
+}

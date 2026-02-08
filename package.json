@@ -4,6 +4,7 @@
     "prepare:data": "node scripts/copy-feature-registry.mjs && node scripts/ops/build-build-info.mjs",
     "dev": "npm run prepare:data && npm run dev:pages",
     "build": "npm run prepare:data",
+    "test": "npm run test:forecast && npm run forecast:v6:secrecy && npm run forecast:v6:determinism && npm run forecast:v6:validate-published && node --test tests/forecast/v6/unit/*.mjs",
     "dev:pages": "wrangler pages dev public --ip 127.0.0.1 --port 8788 --kv RV_KV --compatibility-date=2025-12-17 --inspector-port 0",
     "dev:pages:persist": "wrangler pages dev public --ip 127.0.0.1 --port 8788 --kv RV_KV --persist-to .wrangler/state --compatibility-date=2025-12-17 --inspector-port 0",
     "dev:pages:port": "PORT=${PORT:-8788} wrangler pages dev public --ip 127.0.0.1 --port $PORT --kv RV_KV --compatibility-date=2025-12-17 --inspector-port 0",
@@ -72,10 +73,17 @@
     "test:forecast": "npm run validate:forecast-schemas && npm run validate:forecast-registry",
     "validate:forecast-schemas": "npx ajv validate -s schemas/registry.v1.json -d public/data/forecast/models/registry.json --strict=false",
     "validate:forecast-registry": "node scripts/forecast/validate-registry.mjs",
-    "test:forecast-ui": "node tests/forecast-ui-smoke.test.mjs"
+    "test:forecast-ui": "node tests/forecast-ui-smoke.test.mjs",
+    "forecast:v6:run": "node scripts/forecast/v6/run_daily_v6.mjs",
+    "forecast:v6:dry": "node scripts/forecast/v6/run_daily_v6.mjs --mode=CI --dry-run",
+    "forecast:v6:secrecy": "node scripts/forecast/v6/lib/secrecy_scan.mjs --mode=CI",
+    "forecast:v6:fixture": "node scripts/forecast/v6/lib/make_determinism_fixture.mjs --date=${DATE:-2026-02-06}",
+    "forecast:v6:determinism": "node scripts/forecast/v6/lib/test_determinism.mjs --date=${DATE:-2026-02-06}",
+    "forecast:v6:validate-published": "node scripts/forecast/v6/lib/validate_published_v6.mjs --date=${DATE:-2026-02-06}"
   },
   "dependencies": {
     "d3-dsv": "^3.0.1",
+    "dotenv": "^17.2.4",
     "fast-xml-parser": "^4.5.3",
     "ml-cart": "^2.1.1",
     "ml-logistic-regression": "^2.0.0",

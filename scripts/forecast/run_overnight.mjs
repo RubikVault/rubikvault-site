@@ -25,6 +25,9 @@ import { execSync, spawn } from 'node:child_process';
 import crypto from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 
+import 'dotenv/config'; // Load .env
+import dotenv from 'dotenv';
+dotenv.config({ path: '.env.local' }); // Load .env.local override
 import RateLimiter from './helpers/rate_limiter.mjs';
 import { atomicWriteJson, createCheckpoint, hasCheckpoint, LockManager } from './helpers/atomic_ops.mjs';
 import tradingDate from './trading_date.mjs';
@@ -386,7 +389,9 @@ async function phaseBarsFill(universe, options) {
 
         try {
             // Build URL
-            let url = `${EODHD_BASE}/eod/${symbol}.US?api_token=${apiKey}&fmt=json&order=a`;
+            // EODHD expects 'BRK-B.US' for 'BRK.B'
+            const apiSymbol = symbol.replace(/\./g, '-');
+            let url = `${EODHD_BASE}/eod/${apiSymbol}.US?api_token=${apiKey}&fmt=json&order=a`;
             if (mode === 'incremental' && lastDate) {
                 // Fetch from day after last date
                 const fromDate = tradingDate.getNextTradingDay(lastDate);
@@ -598,6 +603,25 @@ async function phaseForecast(options) {
 
     try {
         // Run daily pipeline
+        // A) MarketPhase (Elliott Waves)
+        log('INFO', 'Running MarketPhase (Elliott Waves) generation...');
+        execSync('node scripts/marketphase-generate.mjs', {
+            cwd: REPO_ROOT,
+            stdio: 'inherit',
+            timeout: 600000 // 10 min timeout
+        });
+        log('INFO', '  MarketPhase generation complete');
+
+        // B) Scientific Analyzer
+        log('INFO', 'Running Scientific Analyzer generation...');
+        execSync('node scripts/scientific-analyzer/generate-analysis.mjs', {
+            cwd: REPO_ROOT,
+            stdio: 'inherit',
+            timeout: 600000 // 10 min timeout
+        });
+        log('INFO', '  Scientific Analyzer generation complete');
+
+        // C) Forecast System
         log('INFO', 'Running daily forecast pipeline...');
         execSync('node scripts/forecast/run_daily.mjs', {
             cwd: REPO_ROOT,
