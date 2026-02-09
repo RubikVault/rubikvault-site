@@ -1,0 +1,204 @@
+{
+  "schema_version": "ops.summary.v1",
+  "generated_at": "2026-02-09T08:01:25.023Z",
+  "asof": "2026-02-09T08:01:24.972Z",
+  "overall": {
+    "status": "UNKNOWN",
+    "reasons": [
+      "ROOT_FAILURE:NO_API_KEY"
+    ],
+    "stale_universes": [],
+    "stale_symbols_count": 0,
+    "expected_trading_day": "2026-02-09"
+  },
+  "universes": [
+    {
+      "id": "nasdaq100",
+      "generated_at": "2026-02-08T19:32:00.889Z",
+      "asof": "2026-02-08T19:32:00.889Z",
+      "expected": 100,
+      "fetched": 0,
+      "validated": 0,
+      "computed": 0,
+      "static_ready": 0,
+      "status": "UNKNOWN",
+      "refs": {
+        "pipeline": "/data/pipeline/nasdaq100.latest.json",
+        "manifest": "/data/eod/manifest.latest.json",
+        "batch0": "/data/eod/batches/eod.latest.000.json"
+      }
+    }
+  ],
+  "providers": {
+    "alphavantage": {
+      "configured": true,
+      "mode": "unknown",
+      "note": null,
+      "budget": {
+        "usedMonth": 0,
+        "limitMonth": 1000,
+        "remainingMonth": 1000,
+        "remainingPct": 100,
+        "resetDate": null,
+        "runtimeCallsToday": 0
+      }
+    },
+    "coingecko": {
+      "configured": true,
+      "mode": "unknown",
+      "note": null,
+      "budget": {
+        "usedMonth": 0,
+        "limitMonth": 4000,
+        "remainingMonth": 4000,
+        "remainingPct": 100,
+        "resetDate": null,
+        "runtimeCallsToday": 0
+      }
+    },
+    "ecb": {
+      "configured": true,
+      "mode": "unknown",
+      "note": null,
+      "budget": {
+        "usedMonth": 0,
+        "limitMonth": 4000,
+        "remainingMonth": 4000,
+        "remainingPct": 100,
+        "resetDate": null,
+        "runtimeCallsToday": 0
+      }
+    },
+    "finnhub": {
+      "configured": true,
+      "mode": "unknown",
+      "note": null,
+      "budget": {
+        "usedMonth": 0,
+        "limitMonth": 5000,
+        "remainingMonth": 5000,
+        "remainingPct": 100,
+        "resetDate": null,
+        "runtimeCallsToday": 0
+      }
+    },
+    "fmp": {
+      "configured": true,
+      "mode": "unknown",
+      "note": null,
+      "budget": {
+        "usedMonth": 0,
+        "limitMonth": 6000,
+        "remainingMonth": 6000,
+        "remainingPct": 100,
+        "resetDate": null,
+        "runtimeCallsToday": 0
+      }
+    },
+    "fred": {
+      "configured": true,
+      "mode": "unknown",
+      "note": null,
+      "budget": {
+        "usedMonth": 0,
+        "limitMonth": 4000,
+        "remainingMonth": 4000,
+        "remainingPct": 100,
+        "resetDate": null,
+        "runtimeCallsToday": 0
+      }
+    },
+    "internal": {
+      "configured": true,
+      "mode": "unknown",
+      "note": null,
+      "budget": {
+        "usedMonth": 0,
+        "limitMonth": 20000,
+        "remainingMonth": 20000,
+        "remainingPct": 100,
+        "resetDate": null,
+        "runtimeCallsToday": 0
+      }
+    },
+    "marketaux": {
+      "configured": true,
+      "mode": "unknown",
+      "note": null,
+      "budget": {
+        "usedMonth": 0,
+        "limitMonth": 2500,
+        "remainingMonth": 2500,
+        "remainingPct": 100,
+        "resetDate": null,
+        "runtimeCallsToday": 0
+      }
+    },
+    "rss": {
+      "configured": true,
+      "mode": "unknown",
+      "note": null,
+      "budget": {
+        "usedMonth": 0,
+        "limitMonth": 6000,
+        "remainingMonth": 6000,
+        "remainingPct": 100,
+        "resetDate": null,
+        "runtimeCallsToday": 0
+      }
+    },
+    "sec": {
+      "configured": true,
+      "mode": "unknown",
+      "note": null,
+      "budget": {
+        "usedMonth": 0,
+        "limitMonth": 1600,
+        "remainingMonth": 1600,
+        "remainingPct": 100,
+        "resetDate": null,
+        "runtimeCallsToday": 0
+      }
+    },
+    "stooq": {
+      "configured": true,
+      "mode": "unknown",
+      "note": null,
+      "budget": {
+        "usedMonth": 0,
+        "limitMonth": 16000,
+        "remainingMonth": 16000,
+        "remainingPct": 100,
+        "resetDate": null,
+        "runtimeCallsToday": 0
+      }
+    },
+    "tiingo": {
+      "configured": true,
+      "mode": "unknown",
+      "note": null,
+      "budget": {
+        "usedMonth": 0,
+        "limitMonth": 5000,
+        "remainingMonth": 5000,
+        "remainingPct": 100,
+        "resetDate": null,
+        "runtimeCallsToday": 0
+      }
+    }
+  },
+  "ops_daily": {
+    "generated_at": "2026-02-09T08:01:24.972Z",
+    "ref": "/data/ops-daily.json"
+  },
+  "costs": {
+    "workers": {
+      "requests_today": null,
+      "requests_last_24h": null
+    }
+  },
+  "safety": {
+    "kv_writes_today": 0,
+    "note": "No lock directory or empty; assuming no active locks"
+  }
+}
