@@ -8,7 +8,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { loadPolicy } from './forecast_engine.mjs';
-import { updateStatus, updateLatest, updateLastGood } from './report_generator.mjs';
+import { updateStatus, updateLatest, updateLastGood, publishLatestFromLastGood } from './report_generator.mjs';
 
 const STATUS_PATH = 'public/data/forecast/system/status.json';
 const LAST_GOOD_PATH = 'public/data/forecast/system/last_good.json';
@@ -122,6 +122,10 @@ export function openCircuit(repoRoot, reason) {
 
     // Get current last_good
     const lastGood = getLastGood(repoRoot);
+    const fallbackLatest = publishLatestFromLastGood(repoRoot, {
+        reason,
+        status: 'circuit_open'
+    });
 
     // Update status to circuit_open
     updateStatus(repoRoot, {
@@ -129,15 +133,7 @@ export function openCircuit(repoRoot, reason) {
         reason,
         circuit_state: 'open',
         last_run: new Date().toISOString().slice(0, 10),
-        last_good: lastGood?.last_good_as_of ?? null
-    });
-
-    // Update latest to point to last_good
-    updateLatest(repoRoot, {
-        ok: false,
-        status: 'circuit_open',
-        reason,
-        last_good_ref: lastGood?.last_good_latest_report_ref ?? null
+        last_good: fallbackLatest?.meta?.last_good_ref ?? (lastGood?.last_good_as_of ?? null)
     });
 
     console.log('[Circuit] Published last_good reference');

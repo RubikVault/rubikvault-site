@@ -58,18 +58,18 @@
               d="M18.9 2H22l-6.79 7.76L23 22h-6.2l-4.86-6.02L6.66 22H3.5l7.26-8.3L3 2h6.35l4.4 5.52L18.9 2Zm-1.09 18h1.72L8.4 3.93H6.56L17.81 20Z" />
           </svg>
         </a>
+        <a class="rv-social-link" href="https://www.instagram.com/rubikvault_official/" target="_blank"
+          rel="noopener noreferrer" aria-label="Instagram">
+          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+            <path
+              d="M7 2h10a5 5 0 0 1 5 5v10a5 5 0 0 1-5 5H7a5 5 0 0 1-5-5V7a5 5 0 0 1 5-5Zm10 2H7a3 3 0 0 0-3 3v10a3 3 0 0 0 3 3h10a3 3 0 0 0 3-3V7a3 3 0 0 0-3-3Zm-5 3.5a4.5 4.5 0 1 1 0 9 4.5 4.5 0 0 1 0-9Zm0 2a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5ZM17.8 6.2a1 1 0 1 1 0 2 1 1 0 0 1 0-2Z" />
+          </svg>
+        </a>
         <a class="rv-social-link" href="https://www.tiktok.com/@rubikvault" target="_blank" rel="noopener noreferrer"
           aria-label="TikTok">
           <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
             <path
               d="M16.7 5.2c.8 1.2 2.1 2 3.6 2.1v3.1c-1.7-.1-3.3-.7-4.6-1.7v7.4c0 3.4-2.8 6.2-6.2 6.2S3.3 19.5 3.3 16.1s2.8-6.2 6.2-6.2c.4 0 .8 0 1.2.1v3.3c-.4-.1-.8-.2-1.2-.2-1.7 0-3.1 1.4-3.1 3.1s1.4 3.1 3.1 3.1 3.1-1.4 3.1-3.1V2h3.1c0 1.2.3 2.3 1 3.2Z" />
-          </svg>
-        </a>
-        <a class="rv-social-link" href="https://www.instagram.com/rubikvault" target="_blank" rel="noopener noreferrer"
-          aria-label="Instagram">
-          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-            <path
-              d="M7 2h10a5 5 0 0 1 5 5v10a5 5 0 0 1-5 5H7a5 5 0 0 1-5-5V7a5 5 0 0 1 5-5Zm10 2H7a3 3 0 0 0-3 3v10a3 3 0 0 0 3 3h10a3 3 0 0 0 3-3V7a3 3 0 0 0-3-3Zm-5 3.5a4.5 4.5 0 1 1 0 9 4.5 4.5 0 0 1 0-9Zm0 2a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5ZM17.8 6.2a1 1 0 1 1 0 2 1 1 0 0 1 0-2Z" />
           </svg>
         </a>
       </nav>
@@ -121,7 +121,7 @@
       <!-- SEARCH BOX -->
       <div style="max-width: 700px; margin: 0 auto 3rem;">
         <div
-          style="position: relative; display: flex; align-items: center; gap: 0.85rem; padding: 0 1.1rem; background: rgba(30, 41, 59, 0.8); border: 2px solid rgba(100, 116, 139, 0.3); border-radius: 12px; transition: all 0.2s;">
+          style="position: relative; overflow: visible; display: flex; align-items: center; gap: 0.85rem; padding: 0 1.1rem; background: rgba(30, 41, 59, 0.8); border: 2px solid rgba(100, 116, 139, 0.3); border-radius: 12px; transition: all 0.2s;">
           <input type="text" id="stock-search-input" placeholder="Type Stock you want to check here...."
             autocomplete="off" style="
             width: 100%;
@@ -506,8 +506,10 @@
     const popularTickers = ['AAPL', 'MSFT', 'GOOGL', 'AMZN', 'TSLA', 'NVDA', 'META', 'NFLX', 'SPY', 'QQQ'];
 
     let lastResolved = { ticker: null, name: null };
+    let chartState = { range: '1Y' };
+    let lastChartData = null;
 
-    const UNIVERSE_URL = '/data/universe/nasdaq100.json';
+    const UNIVERSE_URL = '/data/universe/all.json';
     let universe = [];
     const universeByTicker = new Map();
     let universeReady = null;
@@ -529,25 +531,32 @@
     }
 
     async function loadUniverse() {
-      const res = await fetch(UNIVERSE_URL, { cache: 'no-store' });
-      if (!res.ok) throw new Error('universe_fetch_failed');
-      const entries = await res.json();
-      if (!Array.isArray(entries)) throw new Error('universe_invalid_shape');
+      try {
+        const res = await fetch(UNIVERSE_URL, { cache: 'no-store' });
+        if (!res.ok) throw new Error('universe_fetch_failed');
+        const entries = await res.json();
+        if (!Array.isArray(entries)) throw new Error('universe_invalid_shape');
 
-      const normalized = [];
-      universeByTicker.clear();
-      for (const entry of entries) {
-        if (!entry || typeof entry !== 'object') continue;
-        const ticker = normalizeTicker(entry.ticker);
-        if (!ticker) continue;
-        const name = typeof entry.name === 'string' ? entry.name.trim() : '';
-        normalized.push({ ticker, name });
-        universeByTicker.set(ticker, name || null);
+        const normalized = [];
+        universeByTicker.clear();
+        for (const entry of entries) {
+          if (!entry || typeof entry !== 'object') continue;
+          const ticker = normalizeTicker(entry.ticker);
+          if (!ticker) continue;
+          const name = typeof entry.name === 'string' ? entry.name.trim() : '';
+          normalized.push({ ticker, name });
+          universeByTicker.set(ticker, name || null);
+        }
+        universe = normalized;
+        return universe;
+      } catch (err) {
+        console.error('Universe load failed:', err);
+        // Retry once after delay? Or just return empty to not block
+        return [];
       }
-      universe = normalized;
-      return universe;
     }
 
+    // Ensure we start loading immediately, but handle errors
     universeReady = loadUniverse();
 
     function getUniverseSuggestions(query, limit = 12) {
@@ -620,7 +629,7 @@
       root.style.left = '0';
       root.style.right = '0';
       root.style.top = 'calc(100% + 10px)';
-      root.style.zIndex = '50';
+      root.style.zIndex = '9999'; // Increased z-index
       root.style.background = 'rgba(15, 23, 42, 0.98)';
       root.style.border = '1px solid rgba(100, 116, 139, 0.28)';
       root.style.borderRadius = '12px';
@@ -660,8 +669,12 @@
         clearSuggestions();
         return;
       }
-      if (!universeReady) universeReady = loadUniverse();
-      await universeReady;
+      try {
+        if (!universeReady) universeReady = loadUniverse();
+        await universeReady;
+      } catch (e) {
+        console.warn("Universe wait failed", e);
+      }
 
       const items = getUniverseSuggestions(query, 12);
       typeahead.items = items;
@@ -1038,21 +1051,179 @@
           <div style="margin-top: 1rem; padding: 1rem; background: rgba(15, 23, 42, 0.35); border: 1px solid rgba(100, 116, 139, 0.22); border-radius: 12px;">
             <div style="font-size: 0.85rem; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 0.5rem;">Up/Down Probability (Short / Medium / Long)</div>
             <div id="probability-content" style="color: #64748b; font-style: italic;">Loading probability summary...</div>
-          </div>
         </div>
       `;
 
-      // Render price chart using available data
-      renderPriceChart({
-        close,
-        high52w: indicatorById['high_52w']?.value,
-        low52w: indicatorById['low_52w']?.value,
-        sma20: indicatorById['sma20']?.value,
-        sma50: indicatorById['sma50']?.value,
-        sma200: indicatorById['sma200']?.value,
-        bb_upper: indicatorById['bb_upper']?.value,
-        bb_lower: indicatorById['bb_lower']?.value
+      // --- Chart State & Helpers ---
+      // chartState is global now (ensure it has new props)
+      // We initialize it in the script load if not present, or extend it here if needed.
+      if (!window.chartState) {
+        window.chartState = { range: '1Y', showSMA: true, showEMA: true };
+      } else {
+        // Ensure props exist
+        if (window.chartState.showSMA === undefined) window.chartState.showSMA = true;
+        if (window.chartState.showEMA === undefined) window.chartState.showEMA = true;
+      }
+
+      window.setChartRange = (range) => {
+        chartState.range = range;
+        if (lastChartData) renderPriceChart(lastChartData);
+        updateRangeButtons();
+      };
+
+      window.toggleIndicator = (type) => {
+        if (type === 'SMA') chartState.showSMA = !chartState.showSMA;
+        if (type === 'EMA') chartState.showEMA = !chartState.showEMA;
+        if (lastChartData) renderPriceChart(lastChartData);
+        updateRangeButtons();
+      }
+
+      function updateRangeButtons() {
+        // Range Buttons
+        const ranges = ['3D', '1W', '1M', '1Y', 'Max'];
+        const controls = document.getElementById('chart-controls');
+
+        // Toggle Buttons (Left)
+        // We'll create a separate container or put them in the same one
+
+        if (!controls) return;
+
+        // Helper for button style
+        const btnStyle = (active) => {
+          const bg = active ? 'rgba(56, 189, 248, 0.2)' : 'rgba(15, 23, 42, 0.35)';
+          const color = active ? '#38bdf8' : '#94a3b8';
+          const border = active ? '1px solid #38bdf8' : '1px solid rgba(100, 116, 139, 0.22)';
+          return `background:${bg}; color:${color}; border:${border}; padding:4px 12px; border-radius:6px; cursor:pointer; font-size:0.8rem; font-weight:600; transition:all 0.2s;`;
+        };
+
+        const togglesHtml = `
+            <div style="display:flex; gap:0.5rem; margin-right: 1.5rem; padding-right: 1.5rem; border-right: 1px solid rgba(100,116,139,0.2);">
+                <button onclick="toggleIndicator('SMA')" style="${btnStyle(chartState.showSMA)}">SMA</button>
+                <button onclick="toggleIndicator('EMA')" style="${btnStyle(chartState.showEMA)}">EMA</button>
+            </div>
+        `;
+
+        const rangesHtml = ranges.map(r => {
+          return `<button onclick="setChartRange('${r}')" style="${btnStyle(chartState.range === r)}">${r}</button>`;
+        }).join('');
+
+        controls.innerHTML = togglesHtml + rangesHtml;
+      }
+
+      function calculateSMA(data, period) {
+        if (!data || data.length < period) return new Array(data.length).fill(null);
+        const results = new Array(data.length).fill(null);
+        let sum = 0;
+        for (let i = 0; i < period; i++) sum += data[i].close;
+        results[period - 1] = sum / period;
+        for (let i = period; i < data.length; i++) {
+          sum += data[i].close - data[i - period].close;
+          results[i] = sum / period;
+        }
+        return results;
+      }
+
+      function calculateEMA(data, period) {
+        if (!data || data.length < period) return new Array(data.length).fill(null);
+        const results = new Array(data.length).fill(null);
+        const k = 2 / (period + 1);
+
+        // Standard EMA initialization: use SMA of first 'period' as seed? Or just first price?
+        // Using SMA seed is more accurate for early values.
+        let sum = 0;
+        for (let i = 0; i < period; i++) sum += data[i].close;
+        let ema = sum / period;
+        results[period - 1] = ema;
+
+        for (let i = period; i < data.length; i++) {
+          ema = (data[i].close - ema) * k + ema;
+          results[i] = ema;
+        }
+        return results;
+      }
+
+      function resampleWeekly(dailyBars) {
+        const weekly = [];
+        if (!dailyBars.length) return weekly;
+
+        let currentWeek = [];
+        for (const bar of dailyBars) {
+          const date = new Date(bar.date);
+          const day = date.getDay(); // 0=Sun, 6=Sat
+
+          // Check gap or new week (Monday=1)
+          if (currentWeek.length > 0) {
+            const prev = currentWeek[currentWeek.length - 1];
+            const prevDate = new Date(prev.date);
+            const diffDays = (date - prevDate) / (1000 * 3600 * 24);
+
+            // If gap > 3 days OR current day < prev day (new week started)
+            // NOTE: day < prevDay logic works for Mon(1) < Fri(5). 
+            if (diffDays > 3 || day < new Date(prev.date).getDay()) {
+              weekly.push(aggregate(currentWeek));
+              currentWeek = [];
+            }
+          }
+          currentWeek.push(bar);
+        }
+        if (currentWeek.length) weekly.push(aggregate(currentWeek));
+        return weekly;
+
+        function aggregate(bars) {
+          const open = bars[0].open;
+          const close = bars[bars.length - 1].close;
+          const high = Math.max(...bars.map(b => b.high));
+          const low = Math.min(...bars.map(b => b.low));
+          const vol = bars.reduce((s, b) => s + b.volume, 0);
+          return { date: bars[bars.length - 1].date, open, high, low, close, volume: vol };
+        }
+      }
+
+      // Populate Indicators
+      const bars = data.bars || [];
+      const weeklyBars = resampleWeekly(bars);
+
+      // Calculate Daily Indicators
+      const dailyInd = {};
+      [21, 50, 100, 200].forEach(p => {
+        dailyInd[`sma${p}`] = calculateSMA(bars, p);
+        dailyInd[`ema${p}`] = calculateEMA(bars, p);
       });
+
+      // Calculate Weekly Indicators (mapped back)
+      const weeklyIndRaw = {};
+      [21, 50, 100, 200].forEach(p => {
+        weeklyIndRaw[`sma${p}`] = calculateSMA(weeklyBars, p);
+        weeklyIndRaw[`ema${p}`] = calculateEMA(weeklyBars, p);
+      });
+
+      const weeklyIndDaily = {};
+      for (const key in weeklyIndRaw) {
+        const raw = weeklyIndRaw[key];
+        const mapped = new Array(bars.length).fill(null);
+        let wIdx = 0;
+        for (let i = 0; i < bars.length; i++) {
+          const dDate = bars[i].date;
+          while (wIdx < weeklyBars.length && weeklyBars[wIdx].date < dDate) {
+            wIdx++;
+          }
+          if (wIdx < weeklyBars.length) mapped[i] = raw[wIdx];
+        }
+        weeklyIndDaily[key] = mapped;
+      }
+
+      lastChartData = { ...data, bars, dailyInd, weeklyIndDaily };
+
+      // Render price chart using available data
+      renderPriceChart(lastChartData);
+
+      // Render Controls
+      const controlsHtml = '<div id="chart-controls" style="display:flex; align-items:center; justify-content:center; margin-top:1rem;"></div>';
+      const chartContainer = document.getElementById('price-chart-container');
+      if (chartContainer && !document.getElementById('chart-controls')) {
+        chartContainer.insertAdjacentHTML('afterend', controlsHtml);
+      }
+      updateRangeButtons();
 
       void updateAnalysisSections(effectiveTicker);
     }
@@ -1075,82 +1246,238 @@
 
       const w = rect.width;
       const h = rect.height;
-      const padding = { top: 30, right: 80, bottom: 40, left: 20 };
+      const padding = { top: 30, right: 100, bottom: 40, left: 20 }; // Increased right padding for labels
       const chartW = w - padding.left - padding.right;
       const chartH = h - padding.top - padding.bottom;
 
-      // Collect available price points
-      const points = [];
-      const labels = [];
+      // Filter Data based on Range
+      const allBars = Array.isArray(data.bars) ? data.bars : [];
+      let visibleBars = allBars;
+      let startIndex = 0;
 
-      if (Number.isFinite(data.low52w)) { points.push(data.low52w); labels.push({ value: data.low52w, label: '52w Low', color: '#f87171' }); }
-      if (Number.isFinite(data.sma200)) { points.push(data.sma200); labels.push({ value: data.sma200, label: 'SMA200', color: '#fbbf24' }); }
-      if (Number.isFinite(data.bb_lower)) { points.push(data.bb_lower); labels.push({ value: data.bb_lower, label: 'BB↓', color: '#94a3b8' }); }
-      if (Number.isFinite(data.sma50)) { points.push(data.sma50); labels.push({ value: data.sma50, label: 'SMA50', color: '#34d399' }); }
-      if (Number.isFinite(data.sma20)) { points.push(data.sma20); labels.push({ value: data.sma20, label: 'SMA20', color: '#60a5fa' }); }
-      if (Number.isFinite(data.close)) { points.push(data.close); labels.push({ value: data.close, label: 'Close', color: '#f1f5f9' }); }
-      if (Number.isFinite(data.bb_upper)) { points.push(data.bb_upper); labels.push({ value: data.bb_upper, label: 'BB↑', color: '#94a3b8' }); }
-      if (Number.isFinite(data.high52w)) { points.push(data.high52w); labels.push({ value: data.high52w, label: '52w High', color: '#34d399' }); }
+      const rangeMap = {
+        '3D': 3,
+        '1W': 5,
+        '1M': 21,
+        '1Y': 252,
+        'Max': allBars.length
+      };
 
-      if (points.length < 2) {
-        ctx.fillStyle = '#64748b';
-        ctx.font = '14px system-ui, sans-serif';
-        ctx.textAlign = 'center';
-        ctx.fillText('Insufficient price data for chart', w / 2, h / 2);
-        return;
+      const count = rangeMap[chartState.range] || 252;
+      if (allBars.length > count) {
+        startIndex = allBars.length - count;
+        visibleBars = allBars.slice(startIndex);
       }
 
-      // Calculate range
-      const minP = Math.min(...points) * 0.98;
-      const maxP = Math.max(...points) * 1.02;
+      // Collect points for scaling
+      const points = [];
+      const labels = []; // { y, text, color }
+
+      for (const b of visibleBars) {
+        if (b.close) points.push(b.close);
+      }
+
+      // Indicators
+      // Colors
+      const colors = { 21: '#22c55e', 50: '#3b82f6', 100: '#f59e0b', 200: '#ef4444' };
+
+      // Helper to collect points from active indicators
+      const collectPoints = (source, key) => {
+        const arr = source?.[key];
+        if (!arr) return;
+        for (let i = startIndex; i < arr.length; i++) {
+          if (arr[i] != null) points.push(arr[i]);
+        }
+      };
+
+      if (chartState.showSMA) {
+        [200, 100, 50, 21].forEach(p => {
+          collectPoints(data.dailyInd, `sma${p}`);
+          collectPoints(data.weeklyIndDaily, `sma${p}`);
+        });
+      }
+      if (chartState.showEMA) {
+        [200, 100, 50, 21].forEach(p => {
+          collectPoints(data.dailyInd, `ema${p}`);
+          collectPoints(data.weeklyIndDaily, `ema${p}`);
+        });
+      }
+
+      if (points.length < 2) {
+        points.push(data.close * 0.99, data.close * 1.01);
+      }
+
+      const minP = Math.min(...points) * 0.99; // tiny buffer
+      const maxP = Math.max(...points) * 1.01;
       const range = maxP - minP || 1;
 
       const toY = (val) => padding.top + chartH - ((val - minP) / range) * chartH;
+      const toX = (idx) => padding.left + (idx / (visibleBars.length - 1 || 1)) * chartW;
 
-      // Draw grid
+      // Grid
       ctx.strokeStyle = 'rgba(100, 116, 139, 0.15)';
       ctx.lineWidth = 1;
+      ctx.beginPath();
       for (let i = 0; i <= 4; i++) {
         const y = padding.top + (chartH / 4) * i;
-        ctx.beginPath();
         ctx.moveTo(padding.left, y);
         ctx.lineTo(w - padding.right, y);
-        ctx.stroke();
       }
+      ctx.stroke();
 
-      // Draw price levels as horizontal lines with labels
-      labels.sort((a, b) => a.value - b.value);
-      for (const item of labels) {
-        const y = toY(item.value);
+      // Draw Function
+      const drawLine = (source, key, width, dash, alpha, labelSuffix = '') => {
+        const arr = source?.[key];
+        if (!arr) return;
+        const slice = arr.slice(startIndex);
+        const color = colors[key.match(/\d+/)];
 
-        // Line
-        ctx.strokeStyle = item.color;
-        ctx.lineWidth = item.label === 'Close' ? 2 : 1;
-        ctx.setLineDash(item.label === 'Close' ? [] : [4, 4]);
         ctx.beginPath();
-        ctx.moveTo(padding.left, y);
-        ctx.lineTo(w - padding.right, y);
+        ctx.strokeStyle = color;
+        ctx.lineWidth = width;
+        ctx.setLineDash(dash);
+        ctx.globalAlpha = alpha;
+
+        let moved = false;
+        let lastY = 0;
+        for (let i = 0; i < slice.length; i++) {
+          if (slice[i] == null) continue;
+          const x = toX(i);
+          const y = toY(slice[i]);
+          if (!moved) { ctx.moveTo(x, y); moved = true; }
+          else ctx.lineTo(x, y);
+          lastY = y;
+        }
         ctx.stroke();
         ctx.setLineDash([]);
+        ctx.globalAlpha = 1.0;
 
-        // Label
-        ctx.fillStyle = item.color;
-        ctx.font = item.label === 'Close' ? 'bold 12px system-ui, sans-serif' : '11px system-ui, sans-serif';
-        ctx.textAlign = 'left';
-        ctx.fillText(`${item.label}: $${item.value.toFixed(2)}`, w - padding.right + 6, y + 4);
+        // Draw Label at the end
+        if (moved && slice.length > 0) {
+          const lastVal = slice[slice.length - 1];
+          if (lastVal != null) {
+            labels.push({
+              y: lastY,
+              text: `${key.toUpperCase()}${labelSuffix} ${lastVal.toFixed(2)}`,
+              color: color,
+              bg: alpha < 1 ? 'rgba(0,0,0,0.5)' : color
+            });
+          }
+        }
+      };
+
+      // Draw Weekly (Background)
+      if (chartState.showSMA) [200, 100, 50, 21].forEach(p => drawLine(data.weeklyIndDaily, `sma${p}`, 2, [5, 5], 0.4, ' W'));
+      if (chartState.showEMA) [200, 100, 50, 21].forEach(p => drawLine(data.weeklyIndDaily, `ema${p}`, 2, [2, 2], 0.4, ' W'));
+
+      // Draw Daily (Foreground)
+      if (chartState.showSMA) [200, 100, 50, 21].forEach(p => drawLine(data.dailyInd, `sma${p}`, 1.5, [], 1.0));
+      if (chartState.showEMA) [200, 100, 50, 21].forEach(p => drawLine(data.dailyInd, `ema${p}`, 1.5, [3, 3], 0.8));
+
+      // Draw Price
+      if (visibleBars.length > 0) {
+        ctx.beginPath();
+        ctx.strokeStyle = '#e5e7eb';
+        ctx.lineWidth = 2.5;
+        ctx.lineJoin = 'round';
+        for (let i = 0; i < visibleBars.length; i++) {
+          const b = visibleBars[i];
+          const x = toX(i);
+          const y = toY(b.close);
+          if (i === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+        }
+        ctx.stroke();
       }
 
-      // Title
+      // Draw Right Axis Labels
+      // We need to avoid overlap. Sort by Y.
+      labels.sort((a, b) => a.y - b.y);
+
+      // Simple anti-overlap: shift down if too close to prev
+      for (let i = 1; i < labels.length; i++) {
+        if (labels[i].y < labels[i - 1].y + 12) {
+          labels[i].y = labels[i - 1].y + 12;
+        }
+      }
+
+      ctx.font = '10px system-ui, sans-serif';
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'middle';
+
+      labels.forEach(l => {
+        ctx.fillStyle = l.color;
+        ctx.fillText(l.text, w - padding.right + 5, l.y);
+      });
+
+      // Title/Range (Top Left)
       ctx.fillStyle = '#94a3b8';
       ctx.font = '11px system-ui, sans-serif';
       ctx.textAlign = 'left';
-      ctx.fillText('Price Levels (52w range + SMAs + Bollinger)', padding.left, 18);
+      ctx.textBaseline = 'top';
+      ctx.fillText(`Price History (${chartState.range})`, padding.left, 5);
+
+      // --- X-Axis Time Labels ---
+      if (visibleBars.length > 1) {
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'top';
+        ctx.fillStyle = '#64748b';
+        ctx.font = '10px system-ui, sans-serif';
+
+        // Determine optimal number of labels
+        const maxLabels = Math.floor(chartW / 60); // Max labels that fit
+        const step = Math.ceil(visibleBars.length / maxLabels);
+
+        let lastX = -100;
+
+        for (let i = 0; i < visibleBars.length; i++) {
+          // Always draw first and last? Or just stepped?
+          // Stepped is cleaner.
+          if (i % step !== 0 && i !== visibleBars.length - 1) continue;
+
+          const bar = visibleBars[i];
+          if (!bar || !bar.date) continue;
+
+          const x = toX(i);
+
+          // Simple overlap avoidance
+          if (x - lastX < 50) continue;
+
+          const date = new Date(bar.date);
+          let label = '';
+          const r = chartState.range;
+
+          if (r === '3D' || r === '1W') {
+            const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+            label = `${days[date.getDay()]} ${date.getDate()}`;
+          } else if (r === '1M') {
+            const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+            label = `${date.getDate()} ${months[date.getMonth()]}`;
+          } else if (r === '1Y') {
+            const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+            label = months[date.getMonth()];
+            // Add Year if Jan
+            if (date.getMonth() === 0) label += ` '${date.getFullYear().toString().slice(2)}`;
+          } else {
+            label = date.getFullYear().toString();
+          }
+
+          // Draw Tick
+          ctx.strokeStyle = 'rgba(100, 116, 139, 0.3)';
+          ctx.beginPath();
+          ctx.moveTo(x, h - padding.bottom);
+          ctx.lineTo(x, h - padding.bottom + 4);
+          ctx.stroke();
+
+          // Draw Text
+          ctx.fillText(label, x, h - padding.bottom + 6);
+          lastX = x;
+        }
+      }
     }
 
     function getScientificEntry(ticker) {
       const t = normalizeTicker(ticker);
-      if (!t || !scientificAnalysisData) return null;
-      return scientificAnalysisData[t] || null;
     }
 
     function getTimeframeRow(ticker, timeframe) {

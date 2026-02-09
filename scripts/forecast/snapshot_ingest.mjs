@@ -18,6 +18,7 @@ import { computeDigest } from '../lib/digest.js';
 
 const UNIVERSE_PATH = 'public/data/universe/all.json';
 const EOD_BATCH_PATTERN = 'public/data/eod/batches/eod.latest.';
+const MARKET_PRICES_SNAPSHOT_PATH = 'public/data/snapshots/market-prices/latest.json';
 const MIRRORS_SNAPSHOT_BASE = 'mirrors/forecast/snapshots';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -91,6 +92,65 @@ export function loadEodBatches(repoRoot) {
     }
 
     return allPrices;
+}
+
+function toFiniteNumber(value) {
+    const num = Number(value);
+    return Number.isFinite(num) ? num : null;
+}
+
+/**
+ * Load published market-prices snapshot as fallback source.
+ * @param {string} repoRoot - Repository root
+ * @returns {object} Map of ticker -> latest bar-like object
+ */
+export function loadMarketPricesSnapshot(repoRoot) {
+    const snapshotPath = path.join(repoRoot, MARKET_PRICES_SNAPSHOT_PATH);
+    if (!fs.existsSync(snapshotPath)) return {};
+
+    try {
+        const raw = fs.readFileSync(snapshotPath, 'utf8');
+        const doc = JSON.parse(raw);
+        const asOf = doc?.asof ?? doc?.metadata?.as_of ?? doc?.meta?.asOf ?? doc?.meta?.data_date ?? null;
+        const inferredDate = typeof asOf === 'string' && asOf.length >= 10 ? asOf.slice(0, 10) : null;
+
+        const rows = Array.isArray(doc?.data)
+            ? doc.data
+            : Array.isArray(doc?.rows)
+                ? doc.rows
+                : [];
+
+        const prices = {};
+        for (const row of rows) {
+            const ticker = row?.symbol ?? row?.ticker ?? null;
+            if (!ticker || typeof ticker !== 'string') continue;
+
+            const close = toFiniteNumber(row?.close ?? row?.price ?? row?.last ?? row?.adj_close);
+            if (close === null) continue;
+
+            const open = toFiniteNumber(row?.open) ?? close;
+            const high = toFiniteNumber(row?.high) ?? close;
+            const low = toFiniteNumber(row?.low) ?? close;
+            const volume = toFiniteNumber(row?.volume) ?? 0;
+            const rowDate = typeof row?.date === 'string' && row.date.length >= 10
+                ? row.date.slice(0, 10)
+                : inferredDate;
+
+            prices[ticker] = {
+                date: rowDate,
+                open,
+                high,
+                low,
+                close,
+                volume
+            };
+        }
+
+        return prices;
+    } catch (err) {
+        console.warn(`[Ingest] Error reading market-prices snapshot ${snapshotPath}: ${err.message}`);
+        return {};
+    }
 }
 
 /**
@@ -254,10 +314,18 @@ export async function ingestSnapshots(repoRoot, tradingDate, policy) {
     const universe = loadUniverse(repoRoot);
     console.log(`[Ingest] Loaded universe: ${universe.length} tickers`);
 
-    // Load prices
-    const prices = loadEodBatches(repoRoot);
+    // Load prices (EOD batches primary; published market-prices snapshot fallback)
+    const batchPrices = loadEodBatches(repoRoot);
+    const snapshotPrices = loadMarketPricesSnapshot(repoRoot);
+    const prices = { ...batchPrices };
+    for (const [ticker, row] of Object.entries(snapshotPrices)) {
+        if (!prices[ticker]) {
+            prices[ticker] = row;
+        }
+    }
+
     const pricesCount = Object.keys(prices).length;
-    console.log(`[Ingest] Loaded prices for ${pricesCount} tickers`);
+    console.log(`[Ingest] Loaded prices for ${pricesCount} tickers (batches=${Object.keys(batchPrices).length}, market-prices-fallback=${Object.keys(snapshotPrices).length})`);
 
     // Calculate missing data percentage
     const missingCount = universe.filter(t => !prices[t]).length;
@@ -289,6 +357,7 @@ export async function ingestSnapshots(repoRoot, tradingDate, policy) {
 export default {
     loadUniverse,
     loadEodBatches,
+    loadMarketPricesSnapshot,
     loadPriceHistory,
     createManifest,
     writeSnapshot,

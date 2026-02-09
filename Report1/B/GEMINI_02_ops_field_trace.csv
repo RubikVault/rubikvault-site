@@ -1,7 +1,0 @@
-field,ui_location,api_endpoint,handler_path,source_artifact_path,observed_value,expected_value,verdict,root_cause,minimal_fix
-runtime.env,index.html:638,/api/mission-control/summary,functions/api/mission-control/summary.js,request.url,preview,production,WRONG,Strict hostname check excludes *.pages.dev,Update detectPreviewMode allowlist
-deploy.gitSha,index.html:641,/api/mission-control/summary,functions/api/mission-control/summary.js,/build-info.json,null,b68b50...,WRONG,Reader looks for gitSha/sha; Asset has commitSha,Add 'commitSha' alias to summary.js reader
-deploy.buildTs,index.html:642,/api/mission-control/summary,functions/api/mission-control/summary.js,/build-info.json,null,2026-01-19...,WRONG,Reader looks for buildTs/timestamp; Asset has generatedAt,Add 'generatedAt' alias to summary.js reader
-debug_bundle.status,index.html:warn,/api/debug-bundle,functions/api/debug-bundle.js,/data/debug-bundle.json,VALIDATION_FAILED_SCHEMA,OK,WRONG,Legacy asset schema (v1?) does not match v3 enforced by API,Update generator to emit v3 or relax API validation
-ops.status,index.html:warn,/api/ops,functions/api/_middleware.js (fallback),-,404 NOT_FOUND,200 OK,WRONG,Endpoint /api/ops does not exist or is not routed,Create /api/ops handler or remove from UI check
-health.platform.status,index.html:627,/api/mission-control/summary,functions/api/mission-control/summary.js,env.RV_KV,OK,OK,CORRECT,-,-

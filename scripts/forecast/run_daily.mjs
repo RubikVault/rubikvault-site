@@ -17,7 +17,7 @@ import { buildFeatureSnapshot } from './build_features.mjs';
 import { loadPolicy, loadChampion, computePolicyHash, generateForecast } from './forecast_engine.mjs';
 import { writeForecastRecords, writeOutcomeRecords, readLedgerRange } from './ledger_writer.mjs';
 import { computeOutcome, createOutcomeRecord } from './evaluator.mjs';
-import { generateDailyReport, writeReport, generateScorecards, writeScorecards, updateStatus, updateLatest, updateLastGood } from './report_generator.mjs';
+import { generateDailyReport, writeReport, generateScorecards, writeScorecards, updateStatus, updateLatest, updateLastGood, publishLatestFromLastGood } from './report_generator.mjs';
 import { ingestSnapshots, loadPriceHistory, loadUniverse } from './snapshot_ingest.mjs';
 import { resolveTradingDate, getHorizonOutcomeDate } from './trading_date.mjs';
 
@@ -224,23 +224,24 @@ export async function runDailyPipeline(options = {}) {
 
     if (!qualityResult.ok) {
         console.log(`  ❌ CIRCUIT OPEN: ${qualityResult.reason}`);
+        const fallbackReason = `Using last_good forecasts: ${qualityResult.reason}`;
 
-        // Publish last_good and status
+        const fallbackLatest = publishLatestFromLastGood(repoRoot, {
+            reason: fallbackReason,
+            status: 'stale'
+        });
+
+        // Publish last_good and mark as stale fallback.
         updateStatus(repoRoot, {
-            status: 'circuit_open',
-            reason: qualityResult.reason,
-            circuit_state: 'open',
-            last_run: tradingDate
+            status: 'stale',
+            reason: fallbackReason,
+            circuit_state: 'closed',
+            last_run: tradingDate,
+            last_good: fallbackLatest?.meta?.last_good_ref ?? null
         });
 
-        updateLatest(repoRoot, {
-            ok: false,
-            status: 'circuit_open',
-            reason: qualityResult.reason
-        });
-
-        console.log('  Pipeline stopped. Published last_good.');
-        return { ok: false, reason: qualityResult.reason };
+        console.log('  Pipeline degraded. Published last_good.');
+        return { ok: true, degraded: true, reason: fallbackReason };
     }
 
     console.log('  ✓ Data quality OK');
@@ -265,6 +266,23 @@ export async function runDailyPipeline(options = {}) {
         policy
     });
     console.log(`  Generated ${forecasts.length} forecasts`);
+
+    if (forecasts.length === 0) {
+        const fallbackReason = 'Using last_good forecasts: no fresh forecasts generated';
+        const fallbackLatest = publishLatestFromLastGood(repoRoot, {
+            reason: fallbackReason,
+            status: 'stale'
+        });
+        updateStatus(repoRoot, {
+            status: 'stale',
+            reason: fallbackReason,
+            circuit_state: 'closed',
+            last_run: tradingDate,
+            last_good: fallbackLatest?.meta?.last_good_ref ?? null
+        });
+        console.log('  Pipeline degraded. Published last_good.');
+        return { ok: true, degraded: true, reason: fallbackReason };
+    }
 
     // 7. Write forecast records
     console.log('[Step 7] Writing forecast records to ledger...');
@@ -356,10 +374,11 @@ export async function runDailyPipeline(options = {}) {
             };
         });
 
-    updateLatest(repoRoot, {
+    const latestDoc = updateLatest(repoRoot, {
         ok: true,
         status: 'ok',
         champion_id: champion.champion_id,
+        asof: tradingDate,
         forecasts: forecastsSummary,
         latest_report_ref: `public/data/forecast/reports/daily/${tradingDate}.json`,
         scorecards_ref: 'public/data/forecast/scorecards/tickers.json.gz',
@@ -369,7 +388,8 @@ export async function runDailyPipeline(options = {}) {
     updateLastGood(repoRoot, {
         champion_id: champion.champion_id,
         report_ref: `public/data/forecast/reports/daily/${tradingDate}.json`,
-        as_of: new Date().toISOString()
+        as_of: new Date().toISOString(),
+        latest_envelope: latestDoc
     });
 
     console.log('\n═══════════════════════════════════════════════════════════════');

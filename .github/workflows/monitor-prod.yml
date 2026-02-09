@@ -1,0 +1,90 @@
+name: Monitor Production Artifacts
+
+on:
+  schedule:
+    - cron: "0 6,18 * * *"
+  workflow_dispatch:
+
+jobs:
+  liveness:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ensure jq
+        run: |
+          if ! command -v jq >/dev/null 2>&1; then
+            sudo apt-get update
+            sudo apt-get install -y jq
+          fi
+          jq --version
+
+      - name: Check required artifact endpoints
+        env:
+          BASE_URL: https://rubikvault.com
+          MIN_MARKET_PRICE_ROWS: "517"
+        run: |
+          set -euo pipefail
+
+          fetch_json() {
+            local url="$1"
+            local out="$2"
+            echo "Checking $url"
+            curl -fsS "$url" -o "$out"
+            jq -e . "$out" >/dev/null
+            echo "✅ $url"
+          }
+
+          fetch_json "$BASE_URL/data/snapshots/market-prices/latest.json" /tmp/market_prices.json
+          fetch_json "$BASE_URL/data/forecast/latest.json" /tmp/forecast_latest.json
+          fetch_json "$BASE_URL/data/forecast/system/status.json" /tmp/forecast_status.json
+
+          jq -e --argjson minRows "$MIN_MARKET_PRICE_ROWS" '
+            ((.schema_version // .schemaVersion // .schema) != null) and
+            ((.asof // .metadata.as_of // .meta.asOf) != null) and
+            (((.metadata.record_count // 0) >= $minRows) or ((.data | length) >= $minRows))
+          ' /tmp/market_prices.json >/dev/null
+          echo "✅ market-prices semantic checks passed"
+
+          jq -e '
+            ((.schema_version // .schemaVersion // .schema) != null) and
+            ((.data.asof // .asof // .meta.asof // .meta.data_date) != null) and
+            ((.data.forecasts | length) > 0)
+          ' /tmp/forecast_latest.json >/dev/null
+          echo "✅ forecast/latest semantic checks passed"
+
+          jq -e '
+            ((.schema_version // .schemaVersion // .schema) != null) and
+            ((.status // .meta.status) != null) and
+            (if (((.status // .meta.status // "") | ascii_downcase) == "circuit_open" or
+                 (((.circuit_state // .circuit.state // "") | ascii_downcase) == "open"))
+             then ((.reason // .message // .meta.reason // "") | tostring | length) > 0
+             else true
+             end)
+          ' /tmp/forecast_status.json >/dev/null
+          echo "✅ forecast/system/status semantic checks passed"
+
+      - name: Staleness warning (48h)
+        env:
+          BASE_URL: https://rubikvault.com
+        run: |
+          set -euo pipefail
+          curl -sS "$BASE_URL/data/forecast/latest.json" -o /tmp/forecast_latest.json
+          node -e '
+            const fs = require("fs");
+            const doc = JSON.parse(fs.readFileSync("/tmp/forecast_latest.json", "utf8"));
+            const generatedAt = doc.generated_at || doc.generatedAt || (doc.meta && doc.meta.generated_at) || null;
+            if (!generatedAt) {
+              console.log("::warning::forecast/latest.json missing generated_at; cannot compute staleness");
+              process.exit(0);
+            }
+            const generatedMs = Date.parse(generatedAt);
+            if (Number.isNaN(generatedMs)) {
+              console.log(`::warning::forecast/latest.json generated_at not parseable: ${generatedAt}`);
+              process.exit(0);
+            }
+            const ageHours = (Date.now() - generatedMs) / (1000 * 60 * 60);
+            const msg = `forecast/latest.json age=${ageHours.toFixed(1)}h generated_at=${generatedAt}`;
+            console.log(msg);
+            if (ageHours > 48) {
+              console.log(`::warning::staleness threshold exceeded (${msg})`);
+            }
+          '
