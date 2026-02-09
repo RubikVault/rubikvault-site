@@ -16,7 +16,7 @@ export async function onRequest(context) {
 
     try {
         // Load universe
-        const universeRes = await fetch(`${baseUrl}/data/universe/nasdaq100.json`);
+        const universeRes = await fetch(`${baseUrl}/data/universe/all.json`);
         if (!universeRes.ok) {
             return jsonResponse({
                 ok: false,
