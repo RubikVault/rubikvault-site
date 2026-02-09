@@ -13,210 +13,216 @@
   <link rel="manifest" href="/manifest.json" />
   <link rel="stylesheet" href="/style.css" />
   <style>
-    /* Forecast-specific component styles only */
+    /* Premium Design System (Matches Scientific/Stock Analyzer) */
+    :root {
+      --glass-bg: rgba(15, 23, 42, 0.6);
+      --glass-border: rgba(100, 116, 139, 0.2);
+      --glass-blur: blur(12px);
+      --accent-gradient: linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%);
+    }
+
+    body {
+      background-color: #0b1120;
+      /* Ensure dark background matches others */
+      background-image:
+        radial-gradient(at 0% 0%, rgba(56, 189, 248, 0.1) 0px, transparent 50%),
+        radial-gradient(at 100% 0%, rgba(139, 92, 246, 0.1) 0px, transparent 50%);
+      background-attachment: fixed;
+    }
+
     .forecast-container {
       max-width: 1400px;
       margin: 0 auto;
       padding: 2rem;
     }
 
-    .forecast-header {
+    /* Hero Section */
+    .hero-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
       margin-bottom: 2rem;
-      padding-bottom: 1rem;
-      border-bottom: 1px solid var(--rv-border);
+      padding-bottom: 1.5rem;
+      border-bottom: 1px solid var(--glass-border);
     }
 
-    .forecast-title {
-      font-size: 1.5rem;
-      font-weight: 600;
-      color: var(--rv-text);
+    .hero-title {
+      font-size: 2rem;
+      font-weight: 700;
+      background: linear-gradient(to right, #f1f5f9, #94a3b8);
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+      letter-spacing: -0.02em;
     }
 
-    .status-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.5rem;
-      padding: 0.5rem 1rem;
-      border-radius: 9999px;
-      font-size: 0.875rem;
-      font-weight: 500;
-    }
-
-    .status-ok {
-      background: rgba(34, 197, 94, 0.15);
-      color: #22c55e;
-      border: 1px solid rgba(34, 197, 94, 0.3);
-    }
-
-    .status-circuit-open {
-      background: rgba(239, 68, 68, 0.15);
-      color: #ef4444;
-      border: 1px solid rgba(239, 68, 68, 0.3);
-    }
-
-    .status-bootstrap {
-      background: rgba(234, 179, 8, 0.15);
-      color: #eab308;
-      border: 1px solid rgba(234, 179, 8, 0.3);
-    }
-
-    .grid {
-      display: grid;
-      gap: 1.5rem;
-    }
-
-    .grid-3 {
-      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-    }
-
-    .grid-2 {
-      grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
-    }
-
-    .card {
-      background: var(--rv-bg-card);
-      border: 1px solid var(--rv-border);
-      border-radius: var(--rv-radius);
+    /* Glass Panels */
+    .glass-panel {
+      background: var(--glass-bg);
+      border: 1px solid var(--glass-border);
+      backdrop-filter: var(--glass-blur);
+      -webkit-backdrop-filter: var(--glass-blur);
+      border-radius: 12px;
       padding: 1.5rem;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
       transition: transform 0.2s, box-shadow 0.2s;
     }
 
-    .card:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
+    .glass-panel:hover {
+      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.2);
+      border-color: rgba(100, 116, 139, 0.4);
     }
 
-    .card-header {
+    /* Metrics Grid */
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 1.25rem;
+      margin-bottom: 2rem;
+    }
+
+    .metric-card {
       display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 1rem;
-    }
-
-    .card-title {
-      font-size: 0.875rem;
-      font-weight: 500;
-      color: var(--rv-text-muted);
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-    }
-
-    .metric-value {
-      font-size: 2.5rem;
-      font-weight: 700;
-      font-family: 'JetBrains Mono', monospace;
+      flex-direction: column;
     }
 
     .metric-label {
-      font-size: 0.875rem;
-      color: var(--rv-text-muted);
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #94a3b8;
+      margin-bottom: 0.5rem;
+    }
+
+    .metric-value-large {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: #f8fafc;
+      font-feature-settings: "tnum";
+    }
+
+    .metric-sub {
+      font-size: 0.85rem;
+      color: #64748b;
       margin-top: 0.25rem;
     }
 
-    .metric-positive {
-      color: #22c55e;
-    }
-
-    .metric-negative {
-      color: #ef4444;
-    }
-
-    .metric-neutral {
-      color: var(--rv-text-muted);
-    }
-
-    .metric-row {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 0.75rem 0;
-      border-bottom: 1px solid var(--rv-border);
-    }
-
-    .metric-row:last-child {
-      border-bottom: none;
-    }
-
-    .progress-bar {
-      width: 100%;
-      height: 8px;
-      background: var(--rv-bg-soft);
-      border-radius: 4px;
-      overflow: hidden;
-      margin-top: 0.5rem;
-    }
-
-    .progress-fill {
-      height: 100%;
-      border-radius: 4px;
-      transition: width 0.3s ease;
-    }
-
-    .progress-green {
-      background: #22c55e;
-    }
-
-    .progress-yellow {
-      background: #eab308;
-    }
-
-    .progress-red {
-      background: #ef4444;
-    }
-
+    /* Table Styling */
     .forecast-table {
       width: 100%;
-      border-collapse: collapse;
-    }
-
-    .forecast-table th,
-    .forecast-table td {
-      padding: 0.75rem;
-      text-align: left;
-      border-bottom: 1px solid var(--rv-border);
+      border-collapse: separate;
+      border-spacing: 0;
     }
 
     .forecast-table th {
+      text-align: left;
+      padding: 1rem;
       font-size: 0.75rem;
-      font-weight: 600;
-      color: var(--rv-text-muted);
       text-transform: uppercase;
       letter-spacing: 0.05em;
+      color: #94a3b8;
+      border-bottom: 1px solid var(--glass-border);
+      background: rgba(15, 23, 42, 0.4);
+    }
+
+    .forecast-table td {
+      padding: 1rem;
+      border-bottom: 1px solid var(--glass-border);
+      color: #e2e8f0;
+      transition: background 0.15s;
+    }
+
+    .forecast-table tr:last-child td {
+      border-bottom: none;
+    }
+
+    .forecast-table tr:hover td {
+      background: rgba(255, 255, 255, 0.03);
+    }
+
+    /* Badges */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      padding: 0.25rem 0.6rem;
+      border-radius: 6px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      line-height: 1;
+    }
+
+    .badge-bullish {
+      background: rgba(34, 197, 94, 0.1);
+      color: #4ade80;
+      border: 1px solid rgba(34, 197, 94, 0.2);
+    }
+
+    .badge-bearish {
+      background: rgba(239, 68, 68, 0.1);
+      color: #f87171;
+      border: 1px solid rgba(239, 68, 68, 0.2);
+    }
+
+    .badge-neutral {
+      background: rgba(148, 163, 184, 0.1);
+      color: #94a3b8;
+      border: 1px solid rgba(148, 163, 184, 0.2);
+    }
+
+    .badge-status-ok {
+      background: rgba(16, 185, 129, 0.1);
+      color: #10b981;
+      border: 1px solid rgba(16, 185, 129, 0.2);
+      padding: 0.5rem 1rem;
+      font-size: 0.85rem;
+      border-radius: 99px;
+    }
+
+    .badge-status-warn {
+      background: rgba(245, 158, 11, 0.1);
+      color: #fbbf24;
+      border: 1px solid rgba(245, 158, 11, 0.2);
+      padding: 0.5rem 1rem;
+      font-size: 0.85rem;
+      border-radius: 99px;
+    }
+
+    .ticker-symbol {
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 700;
+      color: #60a5fa;
     }
 
     .loading {
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      min-height: 200px;
-      color: var(--rv-text-muted);
+      padding: 3rem;
+      text-align: center;
+      color: #64748b;
     }
 
-    .error-box {
-      background: rgba(239, 68, 68, 0.1);
-      border: 1px solid rgba(239, 68, 68, 0.3);
-      border-radius: 8px;
-      padding: 1rem;
-      margin-bottom: 1rem;
-    }
-
-    @keyframes pulse {
+    /* Animation */
+    @keyframes pulse-glow {
 
       0%,
       100% {
         opacity: 1;
+        box-shadow: 0 0 10px rgba(16, 185, 129, 0.2);
       }
 
       50% {
-        opacity: 0.5;
+        opacity: 0.6;
+        box-shadow: 0 0 5px rgba(16, 185, 129, 0.1);
       }
     }
 
-    .pulse {
-      animation: pulse 2s infinite;
+    .pulse-dot {
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: currentColor;
+      margin-right: 6px;
+      animation: pulse-glow 2s infinite;
     }
   </style>
 </head>
@@ -245,18 +251,18 @@
               d="M18.9 2H22l-6.79 7.76L23 22h-6.2l-4.86-6.02L6.66 22H3.5l7.26-8.3L3 2h6.35l4.4 5.52L18.9 2Zm-1.09 18h1.72L8.4 3.93H6.56L17.81 20Z" />
           </svg>
         </a>
+        <a class="rv-social-link" href="https://www.instagram.com/rubikvault_official/" target="_blank"
+          rel="noopener noreferrer" aria-label="Instagram">
+          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+            <path
+              d="M7 2h10a5 5 0 0 1 5 5v10a5 5 0 0 1-5 5H7a5 5 0 0 1-5-5V7a5 5 0 0 1 5-5Zm10 2H7a3 3 0 0 0-3 3v10a3 3 0 0 0 3 3h10a3 3 0 0 0 3-3V7a3 3 0 0 0-3-3Zm-5 3.5a4.5 4.5 0 1 1 0 9 4.5 4.5 0 0 1 0-9Zm0 2a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5ZM17.8 6.2a1 1 0 1 1 0 2 1 1 0 0 1 0-2Z" />
+          </svg>
+        </a>
         <a class="rv-social-link" href="https://www.tiktok.com/@rubikvault" target="_blank" rel="noopener noreferrer"
           aria-label="TikTok">
           <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
             <path
               d="M16.7 5.2c.8 1.2 2.1 2 3.6 2.1v3.1c-1.7-.1-3.3-.7-4.6-1.7v7.4c0 3.4-2.8 6.2-6.2 6.2S3.3 19.5 3.3 16.1s2.8-6.2 6.2-6.2c.4 0 .8 0 1.2.1v3.3c-.4-.1-.8-.2-1.2-.2-1.7 0-3.1 1.4-3.1 3.1s1.4 3.1 3.1 3.1 3.1-1.4 3.1-3.1V2h3.1c0 1.2.3 2.3 1 3.2Z" />
-          </svg>
-        </a>
-        <a class="rv-social-link" href="https://www.instagram.com/rubikvault" target="_blank" rel="noopener noreferrer"
-          aria-label="Instagram">
-          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-            <path
-              d="M7 2h10a5 5 0 0 1 5 5v10a5 5 0 0 1-5 5H7a5 5 0 0 1-5-5V7a5 5 0 0 1 5-5Zm10 2H7a3 3 0 0 0-3 3v10a3 3 0 0 0 3 3h10a3 3 0 0 0 3-3V7a3 3 0 0 0-3-3Zm-5 3.5a4.5 4.5 0 1 1 0 9 4.5 4.5 0 0 1 0-9Zm0 2a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5ZM17.8 6.2a1 1 0 1 1 0 2 1 1 0 0 1 0-2Z" />
           </svg>
         </a>
       </nav>
@@ -287,145 +293,136 @@
     </div>
   </nav>
 
-  <main class="rv-main" style="max-width: 1400px; margin: 0 auto; padding: 2rem;">
-    <div
-      style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; flex-wrap: wrap; gap: 1rem;">
-      <h1 style="font-size: 1.75rem; color: var(--rv-text);">🔮 Forecast System v3.4</h1>
-      <div id="system-status" class="status-badge status-bootstrap">
-        <span class="pulse">●</span> Loading...
+  <main class="forecast-container">
+    <!-- Hero Header -->
+    <div class="hero-header">
+      <h1 class="hero-title">🔮 Forecast System v3.4</h1>
+      <div id="system-status" class="badge-status-warn">
+        <span class="pulse-dot"></span> Loading System...
       </div>
     </div>
 
     <div id="error-container"></div>
 
-    <!-- PRIMARY: Stock Forecasts Table (Analysis-First) -->
-    <div class="rv-card" style="margin-bottom: 1.5rem;">
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-        <span
-          style="font-size: 0.875rem; font-weight: 500; color: var(--rv-text-muted); text-transform: uppercase; letter-spacing: 0.05em;">📊
-          Stock Forecasts</span>
-        <span id="forecast-count" style="font-size: 0.85rem; color: var(--rv-text-muted);">— stocks</span>
+    <!-- Key Metrics Grid (Always Visible) -->
+    <div class="metrics-grid">
+      <!-- Card 1: Accuracy -->
+      <div class="glass-panel metric-card">
+        <div class="metric-label">Model Accuracy (30d)</div>
+        <div class="metric-value-large" id="brier-30d">—%</div>
+        <div class="metric-sub" style="color: #94a3b8;">Brier Skill Score</div>
       </div>
+
+      <!-- Card 2: Market Phase -->
+      <div class="glass-panel metric-card">
+        <div class="metric-label">Market Phase</div>
+        <div class="metric-value-large" id="maturity-phase" style="font-size: 1.25rem;">—</div>
+        <div class="metric-sub" id="maturity-days">Current Regime</div>
+      </div>
+
+      <!-- Card 3: Model Info -->
+      <div class="glass-panel metric-card">
+        <div class="metric-label">Active Model</div>
+        <div class="metric-value-large" id="champion-id"
+          style="font-size: 0.9rem; font-family: 'JetBrains Mono', monospace; word-break: break-all;">—</div>
+        <div class="metric-sub" id="champion-created">Updated: —</div>
+      </div>
+
+      <!-- Card 4: Quota/Health -->
+      <div class="glass-panel metric-card">
+        <div class="metric-label">Monthly Quota</div>
+        <div class="metric-value-large" id="challengers-tested" style="font-size: 1.25rem;">0 / 8</div>
+        <div class="progress-bar" style="height: 6px; margin-top: 0.75rem; background: rgba(255,255,255,0.1);">
+          <div class="progress-fill progress-green" id="quota-progress" style="width: 0%"></div>
+        </div>
+        <div class="metric-sub" id="quota-status">Status: Pending</div>
+      </div>
+    </div>
+
+    <!-- Main Forecast Table -->
+    <div class="glass-panel">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+        <div
+          style="font-size: 1.1rem; font-weight: 600; color: #f1f5f9; display: flex; align-items: center; gap: 0.5rem;">
+          📊 Active Forecasts
+        </div>
+        <div id="forecast-count"
+          style="color: #94a3b8; font-size: 0.9rem; background: rgba(255,255,255,0.05); padding: 0.25rem 0.75rem; border-radius: 99px;">
+          — stocks</div>
+      </div>
+
       <div id="bootstrap-notice"
-        style="display: none; padding: 1rem; background: rgba(234, 179, 8, 0.1); border-radius: 8px; margin-bottom: 1rem; color: #eab308; font-size: 0.9rem;">
+        style="display: none; padding: 1rem; background: rgba(234, 179, 8, 0.1); border-radius: 8px; margin-bottom: 1.5rem; color: #fbbf24; border: 1px solid rgba(234, 179, 8, 0.2);">
         ⏳ <strong>System Initializing:</strong> Forecasts will appear after the first pipeline run. Check back soon.
       </div>
-      <table id="forecasts-table">
-        <thead>
-          <tr>
-            <th>Symbol</th>
-            <th>Name</th>
-            <th>1-Day</th>
-            <th>5-Day</th>
-            <th>20-Day</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td colspan="5" class="loading">Loading forecasts...</td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
 
-    <!-- SECONDARY: Compact System Status (Supporting Info) -->
-    <div
-      style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
-      <div
-        style="background: var(--rv-bg-card); border: 1px solid var(--rv-border); border-radius: 8px; padding: 0.75rem 1rem;">
-        <div
-          style="font-size: 0.75rem; color: var(--rv-text-muted); text-transform: uppercase; margin-bottom: 0.25rem;">
-          Model</div>
-        <div style="font-size: 0.95rem; color: var(--text-primary);" id="champion-id">—</div>
-      </div>
-      <div
-        style="background: var(--rv-bg-card); border: 1px solid var(--rv-border); border-radius: 8px; padding: 0.75rem 1rem;">
-        <div
-          style="font-size: 0.75rem; color: var(--rv-text-muted); text-transform: uppercase; margin-bottom: 0.25rem;">
-          Phase</div>
-        <div style="font-size: 0.95rem; color: var(--text-primary);" id="maturity-phase">—</div>
-      </div>
-      <div
-        style="background: var(--rv-bg-card); border: 1px solid var(--rv-border); border-radius: 8px; padding: 0.75rem 1rem;">
-        <div
-          style="font-size: 0.75rem; color: var(--rv-text-muted); text-transform: uppercase; margin-bottom: 0.25rem;">
-          Circuit</div>
-        <div style="font-size: 0.95rem; color: var(--text-primary);" id="circuit-state">—</div>
-      </div>
-      <div
-        style="background: var(--rv-bg-card); border: 1px solid var(--rv-border); border-radius: 8px; padding: 0.75rem 1rem;">
-        <div
-          style="font-size: 0.75rem; color: var(--rv-text-muted); text-transform: uppercase; margin-bottom: 0.25rem;">
-          Updated</div>
-        <div style="font-size: 0.95rem; color: var(--text-primary);" id="champion-created">—</div>
+      <div style="overflow-x: auto;">
+        <table class="forecast-table" id="forecasts-table">
+          <thead>
+            <tr>
+              <th style="width: 100px; cursor: pointer;" onclick="sortTable('symbol')">Ticker <span id="sort-symbol"
+                  class="sort-icon"></span></th>
+              <th style="width: 250px; cursor: pointer;" onclick="sortTable('name')">Company Name <span id="sort-name"
+                  class="sort-icon"></span></th>
+              <th style="cursor: pointer;" onclick="sortTable('1d')">1-Day <span id="sort-1d" class="sort-icon"></span>
+              </th>
+              <th style="cursor: pointer;" onclick="sortTable('5d')">5-Day <span id="sort-5d" class="sort-icon"></span>
+              </th>
+              <th style="cursor: pointer;" onclick="sortTable('20d')">1 Month <span
+                  style="font-size:0.7em; color: #64748b;">(20d)</span> <span id="sort-20d" class="sort-icon"></span>
+              </th>
+              <th style="cursor: pointer;" onclick="sortTable('252d')">1 Year <span
+                  style="font-size:0.7em; color: #64748b;">(252d)</span> <span id="sort-252d" class="sort-icon"></span>
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td colspan="6" class="loading">
+                <span class="pulse-dot"></span> Loading market data...
+              </td>
+            </tr>
+          </tbody>
+        </table>
       </div>
     </div>
 
-    <!-- TERTIARY: Performance Metrics (Collapsed by Default) -->
-    <details style="margin-bottom: 1.5rem;">
-      <summary
-        style="cursor: pointer; padding: 0.75rem 1rem; background: var(--rv-bg-card); border: 1px solid var(--rv-border); border-radius: 8px; color: var(--rv-text-muted); font-size: 0.9rem;">
-        📈 System Performance Metrics
-      </summary>
-      <div
-        style="margin-top: 0.5rem; display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem;">
-        <div class="rv-card" style="padding: 1rem;">
-          <div class="card-header" style="margin-bottom: 0.75rem;">
-            <span class="card-title" style="font-size: 0.9rem;">Brier Skill (30d)</span>
-          </div>
-          <div style="display: flex; gap: 1.5rem; font-size: 0.85rem;">
-            <div><span style="color: var(--rv-text-muted);">1d:</span> <span id="brier-1d">—</span></div>
-            <div><span style="color: var(--rv-text-muted);">5d:</span> <span id="brier-5d">—</span></div>
-            <div><span style="color: var(--rv-text-muted);">20d:</span> <span id="brier-20d">—</span></div>
-          </div>
-        </div>
-        <div class="rv-card" style="padding: 1rem;">
-          <div class="card-header" style="margin-bottom: 0.75rem;">
-            <span class="card-title" style="font-size: 0.9rem;">Monthly Quota</span>
-          </div>
-          <div style="display: flex; align-items: center; gap: 1rem; font-size: 0.85rem;">
-            <span id="challengers-tested">— / —</span>
-            <div class="progress-bar" style="flex: 1; height: 6px;">
-              <div class="progress-fill progress-green" id="quota-progress" style="width: 0%;"></div>
-            </div>
-            <span id="quota-status" class="status-badge" style="font-size: 0.7rem; padding: 0.2rem 0.5rem;">—</span>
-          </div>
-        </div>
-      </div>
-    </details>
+    <!-- Hidden elements for JS compatibility -->
+    <div id="circuit-reason" style="display: none;"></div>
+    <div id="circuit-state" style="display: none;"></div>
 
-    <!-- Recent Activity (Keep but make smaller) -->
-    <details>
-      <summary
-        style="cursor: pointer; padding: 0.75rem 1rem; background: var(--rv-bg-card); border: 1px solid var(--rv-border); border-radius: 8px; color: var(--rv-text-muted); font-size: 0.9rem;">
-        🔄 Recent Model Promotions
-      </summary>
-      <div class="rv-card" style="margin-top: 0.5rem; padding: 1rem;">
-        <table id="promotions-table" style="font-size: 0.85rem;">
+    <!-- Promotions (Secondary) -->
+    <div style="margin-top: 3rem; opacity: 0.6; transition: opacity 0.2s;" onmouseover="this.style.opacity=1"
+      onmouseout="this.style.opacity=0.6">
+      <h3
+        style="font-size: 0.85rem; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 1rem;">
+        Recent Model Promotions</h3>
+      <div class="glass-panel" style="padding: 0;">
+        <table id="promotions-table" class="forecast-table" style="font-size: 0.85rem;">
           <thead>
             <tr>
               <th>Date</th>
-              <th>From</th>
-              <th>To</th>
+              <th>From ID</th>
+              <th>To ID</th>
               <th>Skill Δ</th>
             </tr>
           </thead>
           <tbody>
             <tr>
-              <td colspan="4" class="loading">Loading...</td>
+              <td colspan="4" style="padding: 1rem; text-align: center; color: #64748b;">No recent promotions</td>
             </tr>
           </tbody>
         </table>
       </div>
-    </details>
-
-    <!-- Hidden elements for JS compatibility -->
-    <div id="maturity-days" style="display: none;"></div>
-    <div id="circuit-reason" style="display: none;"></div>
+    </div>
   </main>
 
   <script>
     const API_BASE = '/data/forecast';
+
+    // State for local data and sorting
+    let activeForecasts = [];
+    let sortConfig = { key: 'symbol', dir: 'asc' }; // dir: 'asc' or 'desc'
 
     async function fetchData(path) {
       try {
@@ -433,7 +430,6 @@
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
         return await response.json();
       } catch (err) {
-        // Use warn instead of error - missing optional data (like reports) is non-fatal
         console.warn(`Failed to fetch ${path}:`, err.message);
         return null;
       }
@@ -442,7 +438,7 @@
     function showError(message) {
       const container = document.getElementById('error-container');
       container.innerHTML = `
-        <div class="error-box">
+        <div class="error-box" style="color: #f87171; border-color: #f87171; background: rgba(239, 68, 68, 0.1);">
           <strong>Error:</strong> ${message}
         </div>
       `;
@@ -454,31 +450,49 @@
       const systemStatus = String(status.status || status.meta?.status || '').toUpperCase();
       const reason = status.reason || status.message || status.meta?.reason || 'System healthy';
 
+      // Updates for new CSS classes (badge-status-*)
       if (circuitState === 'open' || systemStatus === 'CIRCUIT_OPEN') {
-        badge.className = 'status-badge status-circuit-open';
-        badge.innerHTML = '<span>●</span> Circuit Open';
+        badge.className = 'badge-status-warn'; // Red/Orange
+        badge.style.borderColor = 'rgba(239, 68, 68, 0.3)';
+        badge.style.color = '#ef4444';
+        badge.style.background = 'rgba(239, 68, 68, 0.1)';
+        badge.innerHTML = '<span class="pulse-dot"></span> Circuit Open';
       } else if (systemStatus === 'STALE') {
-        badge.className = 'status-badge status-bootstrap';
-        badge.innerHTML = '<span>●</span> Stale';
+        badge.className = 'badge-status-warn';
+        badge.style.borderColor = 'rgba(245, 158, 11, 0.3)';
+        badge.style.color = '#fbbf24';
+        badge.style.background = 'rgba(245, 158, 11, 0.1)';
+        badge.innerHTML = '<span class="pulse-dot"></span> Stale Data';
       } else if (systemStatus === 'BOOTSTRAP') {
-        badge.className = 'status-badge status-bootstrap';
-        badge.innerHTML = '<span class="pulse">●</span> Bootstrap';
+        badge.className = 'badge-status-warn';
+        badge.innerHTML = '<span class="pulse-dot"></span> Bootstrap';
       } else {
-        badge.className = 'status-badge status-ok';
-        badge.innerHTML = '<span>●</span> Operational';
+        badge.className = 'badge-status-ok';
+        badge.removeAttribute('style'); // Reset inline overrides
+        badge.innerHTML = '<span class="pulse-dot"></span> System Operational';
       }
 
-      document.getElementById('circuit-state').textContent =
-        circuitState === 'open' ? 'OPEN' : (systemStatus === 'STALE' ? 'STALE' : 'CLOSED');
-      document.getElementById('circuit-reason').textContent =
-        reason;
+      // Hidden fields for other logic
+      const circuitReason = document.getElementById('circuit-reason');
+      if (circuitReason) circuitReason.textContent = reason;
+
+      const circuitStateEl = document.getElementById('circuit-state');
+      if (circuitStateEl) circuitStateEl.textContent = circuitState;
     }
 
     function updateLatest(latest) {
-      document.getElementById('maturity-phase').textContent =
-        latest.data?.maturity_phase || 'BOOTSTRAP';
-      document.getElementById('maturity-days').textContent =
-        latest.meta?.status || 'Initializing...';
+      const phase = latest.data?.maturity_phase || 'BOOTSTRAP';
+      document.getElementById('maturity-phase').textContent = phase;
+
+      // Add days/progress if available, else descriptive text
+      const days = latest.data?.maturity_days_generated || 0;
+      const phaseMap = {
+        'BOOTSTRAP': 'Initializing History',
+        'GROWTH': 'Accumulating Data',
+        'MATURE': 'Full Confidence'
+      };
+      const subText = document.getElementById('maturity-days');
+      if (subText) subText.textContent = `${phaseMap[phase] || 'Unknown Regime'} (${days} days)`;
     }
 
     function updateMetrics(report) {
@@ -486,13 +500,17 @@
 
       const metrics = report.global_metrics?.by_horizon || {};
 
-      for (const horizon of ['1d', '5d', '20d']) {
-        const el = document.getElementById(`brier-${horizon}`);
-        const skill = metrics[horizon]?.combined?.brier_skill;
-        if (skill !== null && skill !== undefined) {
-          el.textContent = (skill * 100).toFixed(1) + '%';
-          el.className = skill > 0 ? 'metric-positive' : (skill < 0 ? 'metric-negative' : 'metric-neutral');
-        }
+      // Update Brier Score (focus on 20d as "Monthly Accuracy" proxy for the card)
+      // Or use 5d if 20d is null
+      const skill20d = metrics['20d']?.combined?.brier_skill;
+      const skill5d = metrics['5d']?.combined?.brier_skill;
+      const primarySkill = skill20d !== undefined ? skill20d : skill5d;
+
+      const brierEl = document.getElementById('brier-30d');
+      if (brierEl && primarySkill !== undefined && primarySkill !== null) {
+        const val = (primarySkill * 100).toFixed(1);
+        brierEl.textContent = (primarySkill > 0 ? '+' : '') + val + '%';
+        brierEl.style.color = primarySkill > 0 ? '#4ade80' : '#f87171';
       }
 
       // Quota
@@ -504,28 +522,34 @@
 
       const progress = Math.min(100, (tested / min) * 100);
       const progressEl = document.getElementById('quota-progress');
-      progressEl.style.width = `${progress}%`;
-      progressEl.className = `progress-fill ${progress >= 100 ? 'progress-green' : (progress >= 50 ? 'progress-yellow' : 'progress-red')}`;
+      if (progressEl) {
+        progressEl.style.width = `${progress}%`;
+        // Class updates handled by CSS, but we can force color if needed
+        progressEl.className = `progress-fill ${progress >= 100 ? 'progress-green' : (progress >= 50 ? 'progress-yellow' : 'progress-red')}`;
+      }
 
       const quotaStatus = document.getElementById('quota-status');
-      quotaStatus.textContent = compute.quota_status === 'met' ? 'Met' : 'Pending';
-      quotaStatus.className = `status-badge ${compute.quota_status === 'met' ? 'status-ok' : 'status-bootstrap'}`;
+      if (quotaStatus) {
+        quotaStatus.textContent = compute.quota_status === 'met' ? 'Status: Met ✅' : 'Status: Pending';
+        quotaStatus.style.color = compute.quota_status === 'met' ? '#4ade80' : '#94a3b8';
+      }
     }
 
     function updatePromotions(promotions) {
       const tbody = document.querySelector('#promotions-table tbody');
+      if (!tbody) return;
 
       if (!promotions || promotions.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: var(--rv-text-muted);">No promotions yet</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="4" style="padding: 1rem; text-align: center; color: #64748b;">No recent promotions found</td></tr>';
         return;
       }
 
       tbody.innerHTML = promotions.slice(0, 5).map(p => `
         <tr>
           <td>${p.as_of?.slice(0, 10) || '—'}</td>
-          <td><code>${p.from_champion_id?.slice(-8) || '—'}</code></td>
-          <td><code>${p.to_champion_id?.slice(-8) || '—'}</code></td>
-          <td class="${p.skill_delta > 0 ? 'metric-positive' : 'metric-negative'}">
+          <td style="font-family: monospace; color: #94a3b8;">${p.from_champion_id?.slice(-8) || '—'}</td>
+          <td style="font-family: monospace; color: #f1f5f9;">${p.to_champion_id?.slice(-8) || '—'}</td>
+          <td style="font-weight: 700; color: ${p.skill_delta > 0 ? '#4ade80' : '#f87171'};">
             ${p.skill_delta ? (p.skill_delta > 0 ? '+' : '') + p.skill_delta.toFixed(2) + '%' : '—'}
           </td>
         </tr>
@@ -533,29 +557,118 @@
     }
 
     function formatDirection(horizon) {
-      if (!horizon) return '<span style="color: var(--rv-text-muted);">—</span>';
+      if (!horizon) return '<span style="color: #64748b;">—</span>';
+
       const dir = horizon.direction;
       const prob = horizon.probability ? (horizon.probability * 100).toFixed(0) + '%' : '';
-      const colors = {
-        bullish: 'var(--accent-green)',
-        bearish: 'var(--accent-red)',
-        neutral: 'var(--rv-text-muted)'
-      };
-      const icons = { bullish: '↑', bearish: '↓', neutral: '→' };
-      return `<span style="color: ${colors[dir] || colors.neutral};">${icons[dir] || '→'} ${prob}</span>`;
+
+      let badgeClass = 'badge-neutral';
+      let icon = '→';
+
+      if (dir === 'bullish') {
+        badgeClass = 'badge-bullish';
+        icon = '↑';
+      } else if (dir === 'bearish') {
+        badgeClass = 'badge-bearish';
+        icon = '↓';
+      }
+
+      return `<span class="badge ${badgeClass}">${icon} ${prob}</span>`;
+    }
+
+    // --- SORTING LOGIC ---
+
+    // Helper to get a sortable score from a horizon object
+    // Bullish = +prob, Bearish = -prob, Neutral = 0
+    function getHorizonScore(horizon) {
+      if (!horizon) return -999; // Missing data goes to bottom
+      const prob = horizon.probability || 0;
+      if (horizon.direction === 'bullish') return prob;
+      if (horizon.direction === 'bearish') return -prob;
+      return 0; // Neutral
+    }
+
+    function sortTable(key) {
+      // Toggle direction if clicking same key
+      if (sortConfig.key === key) {
+        sortConfig.dir = sortConfig.dir === 'asc' ? 'desc' : 'asc';
+      } else {
+        sortConfig.key = key;
+        sortConfig.dir = 'desc'; // Default to desc (high values first) for new columns
+        if (key === 'symbol' || key === 'name') sortConfig.dir = 'asc'; // Default asc for text
+      }
+
+      // Update Icons
+      document.querySelectorAll('.sort-icon').forEach(el => el.textContent = '');
+      const arrow = sortConfig.dir === 'asc' ? '↑' : '↓';
+      const iconEl = document.getElementById(`sort-${key}`);
+      if (iconEl) iconEl.textContent = arrow;
+
+      renderForecastTable();
+    }
+
+    function renderForecastTable() {
+      const tbody = document.querySelector('#forecasts-table tbody');
+      const countEl = document.getElementById('forecast-count');
+
+      if (!activeForecasts || activeForecasts.length === 0) {
+        // Empty state handling handled in updateForecasts wrapper, but here for safety
+        tbody.innerHTML = '<tr><td colspan="6" style="padding: 2rem; text-align: center; color: #64748b;">No active forecasts available</td></tr>';
+        return;
+      }
+
+      // Sort data
+      const sorted = [...activeForecasts].sort((a, b) => {
+        let valA, valB;
+
+        // Fetch comparison values
+        if (sortConfig.key === 'symbol') {
+          valA = a.symbol;
+          valB = b.symbol;
+        } else if (sortConfig.key === 'name') {
+          valA = a.name || '';
+          valB = b.name || '';
+        } else {
+          // Horizon sorting (1d, 5d, 20d, 252d)
+          valA = getHorizonScore(a.horizons?.[sortConfig.key]);
+          valB = getHorizonScore(b.horizons?.[sortConfig.key]);
+        }
+
+        // Compare
+        if (valA < valB) return sortConfig.dir === 'asc' ? -1 : 1;
+        if (valA > valB) return sortConfig.dir === 'asc' ? 1 : -1;
+        return 0;
+      });
+
+      tbody.innerHTML = sorted.map(f => `
+        <tr style="cursor: pointer;" onclick="window.location.href='/?ticker=${f.symbol}'">
+          <td><strong class="ticker-symbol">${f.symbol}</strong></td>
+          <td style="color: #94a3b8; font-size: 0.85rem;">${f.name || '—'}</td>
+          <td>${formatDirection(f.horizons?.['1d'])}</td>
+          <td>${formatDirection(f.horizons?.['5d'])}</td>
+          <td>${formatDirection(f.horizons?.['20d'])}</td>
+          <td>${formatDirection(f.horizons?.['252d'])}</td> <!-- 1 Year (Likely Empty) -->
+        </tr>
+      `).join('');
     }
 
     function updateForecasts(forecasts, state = 'BOOTSTRAP', reason = null) {
-      const tbody = document.querySelector('#forecasts-table tbody');
-      const countEl = document.getElementById('forecast-count');
-      const bootstrapNotice = document.getElementById('bootstrap-notice');
+      // Update global state
+      activeForecasts = forecasts || [];
 
-      if (!forecasts || forecasts.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--rv-text-muted);">—</td></tr>';
+      const bootstrapNotice = document.getElementById('bootstrap-notice');
+      const countEl = document.getElementById('forecast-count');
+
+      if (!activeForecasts || activeForecasts.length === 0) {
+        // Show empty/loading state logic
+        const tbody = document.querySelector('#forecasts-table tbody');
+        tbody.innerHTML = '<tr><td colspan="6" style="padding: 2rem; text-align: center; color: #64748b;">No active forecasts available</td></tr>';
+
         const stateUpper = String(state || 'BOOTSTRAP').toUpperCase();
         let title = 'System Initializing';
         let prefix = '⏳';
         let detail = 'Forecasts will appear after the first pipeline run. Check back soon.';
+
         if (stateUpper === 'CIRCUIT_OPEN') {
           title = 'Circuit Open';
           prefix = '⚠️';
@@ -565,25 +678,24 @@
           prefix = '🕒';
           detail = reason || 'Latest data is stale; refresh is pending.';
         }
-        bootstrapNotice.textContent = `${prefix} ${title}: ${detail}`;
-        bootstrapNotice.style.display = 'block';
-        countEl.textContent = '0 stocks';
+
+        if (bootstrapNotice) {
+          bootstrapNotice.innerHTML = `${prefix} <strong>${title}:</strong> ${detail}`;
+          bootstrapNotice.style.display = 'block';
+        }
+        if (countEl) countEl.textContent = '0 stocks';
         return;
       }
 
-      // GAP 1 FIX: Explicitly hide bootstrap notice when forecasts exist
-      bootstrapNotice.style.display = 'none';
+      // Hide notice if we have data
+      if (bootstrapNotice) bootstrapNotice.style.display = 'none';
+      if (countEl) countEl.textContent = `${activeForecasts.length} stocks`;
 
-      countEl.textContent = `${forecasts.length} stocks`;
-      tbody.innerHTML = forecasts.map(f => `
-        <tr style="cursor: pointer;" onclick="window.location.href='/?ticker=${f.symbol}'">
-          <td><strong style="color: var(--accent-blue);">${f.symbol}</strong></td>
-          <td style="color: var(--rv-text-muted);">${f.name || '—'}</td>
-          <td>${formatDirection(f.horizons?.['1d'])}</td>
-          <td>${formatDirection(f.horizons?.['5d'])}</td>
-          <td>${formatDirection(f.horizons?.['20d'])}</td>
-        </tr>
-      `).join('');
+      // Default Sort (if not set)
+      if (!sortConfig.key) sortConfig = { key: 'symbol', dir: 'asc' };
+
+      // Render
+      renderForecastTable();
     }
 
     async function init() {
@@ -598,7 +710,7 @@
         document.getElementById('champion-id').textContent =
           latest.data?.champion_id?.slice(-12) || 'v3.4-initial';
         document.getElementById('champion-created').textContent =
-          latest.meta?.generated_at?.slice(0, 10) || 'System bootstrap';
+          latest.meta?.generated_at ? new Date(latest.meta.generated_at).toLocaleString() : 'System bootstrap';
 
         // Update forecasts table
         updateForecasts(
@@ -608,11 +720,9 @@
         );
       }
 
-      // Load latest daily report using ref from latest.json (not today's date)
-      // This avoids 404s when today's report doesn't exist yet
+      // Load latest daily report using ref from latest.json
       const reportRef = latest?.data?.latest_report_ref;
       if (reportRef) {
-        // Extract relative path from full ref (e.g., "public/data/forecast/reports/daily/2026-02-05.json" → "reports/daily/2026-02-05.json")
         const reportPath = reportRef.replace(/^public\/data\/forecast\//, '');
         const report = await fetchData(reportPath);
         if (report) {

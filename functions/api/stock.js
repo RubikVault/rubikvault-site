@@ -639,10 +639,11 @@ export async function onRequestGet(context) {
     }
   } else if (normalizedTicker) {
     // 2. Try Internal Static Store (Cold Layer)
+    let staticBars = null;
     if (!eodAttempted) {
       try {
         const { getStaticBars } = await import('./_shared/history-store.mjs');
-        const staticBars = await getStaticBars(normalizedTicker, url.origin);
+        staticBars = await getStaticBars(normalizedTicker, url.origin);
 
         if (staticBars && staticBars.length > 0) {
           // Check freshness (Basic check: is last bar within maxStaleDays?)
@@ -714,19 +715,29 @@ export async function onRequestGet(context) {
                 data_date: dataDate
               });
             } else {
-              // Provider fetch failed - try static EOD fallback
-              const staticResult = await fetchStaticEodBar(normalizedTicker, request);
-              if (staticResult && staticResult.bar) {
-                eodBars = [staticResult.bar];
-                eodProvider = staticResult.source;
-                eodStatus = computeStatusFromDataDate(staticResult.bar.date, now, maxStaleDays, pendingWindowMinutes);
-                qualityFlags.add('STATIC_FALLBACK');
+              // Provider fetch failed - try static EOD fallback (preferred: 30Y history, then 1-day batch)
+              if (staticBars && staticBars.length > 0) {
+                eodBars = staticBars;
+                eodProvider = 'static_store_fallback';
+                const last = pickLatestBar(eodBars);
+                eodStatus = computeStatusFromDataDate(last?.date, now, maxStaleDays, pendingWindowMinutes);
+                qualityFlags.add('STATIC_FALLBACK_HISTORY');
                 qualityFlags.add('PROVIDER_FAIL');
                 eodError = null;
               } else {
-                eodError = result.error || { code: 'EOD_FETCH_FAILED', message: 'Unable to fetch EOD history' };
-                eodStatus = eodError?.code === 'CB_OPEN' ? 'stale' : 'error';
-                qualityFlags.add(eodError?.code === 'CB_OPEN' ? 'CB_OPEN' : 'PROVIDER_FAIL');
+                const staticResult = await fetchStaticEodBar(normalizedTicker, request);
+                if (staticResult && staticResult.bar) {
+                  eodBars = [staticResult.bar];
+                  eodProvider = staticResult.source;
+                  eodStatus = computeStatusFromDataDate(staticResult.bar.date, now, maxStaleDays, pendingWindowMinutes);
+                  qualityFlags.add('STATIC_FALLBACK');
+                  qualityFlags.add('PROVIDER_FAIL');
+                  eodError = null;
+                } else {
+                  eodError = result.error || { code: 'EOD_FETCH_FAILED', message: 'Unable to fetch EOD history' };
+                  eodStatus = eodError?.code === 'CB_OPEN' ? 'stale' : 'error';
+                  qualityFlags.add(eodError?.code === 'CB_OPEN' ? 'CB_OPEN' : 'PROVIDER_FAIL');
+                }
               }
             }
           } finally {
