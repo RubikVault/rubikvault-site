@@ -48,6 +48,12 @@ jobs:
       - name: Install deps
         run: npm ci
 
+      - name: Preflight (blocking checks)
+        env:
+          CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+          CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
+        run: node scripts/ops/preflight-check.mjs --mode ops-daily
+
       - name: Build MarketPhase from KV (NASDAQ-100)
         env:
           CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
@@ -69,8 +75,16 @@ jobs:
       - name: Build ops summary
         run: node scripts/ops/build-mission-control-summary.mjs
 
+      - name: Build ops pulse
+        run: node scripts/ops/build-ops-pulse.mjs
+
       - name: Validate ops summary
         run: node scripts/ops/validate-ops-summary.mjs
+
+      - name: Mission-control blocking gate
+        env:
+          MC_GATE_STRICT: "1"
+        run: node scripts/ci/assert-mission-control-gate.mjs
 
       - name: Commit + push (if changed)
         run: |

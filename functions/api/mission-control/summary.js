@@ -10,6 +10,7 @@ import {
 } from '../_shared/contracts.js';
 import { getBarNode } from '../../_ops/shape.js';
 import opsHealthPolicyRaw from "../../../policies/ops_health.json" assert { type: 'json' };
+import missionControlSeverityPolicyRaw from "../../../policies/mission-control-severity.json" assert { type: 'json' };
 
 const MODULE_NAME = 'mission-control-summary';
 const SNAPSHOT_MODULES_HINT = ['universe', 'market-prices', 'market-stats', 'market-score'];
@@ -93,6 +94,12 @@ const DEFAULT_OPS_POLICY = {
     assets: ['ASSET_MARKETPHASE_SAMPLE'],
     pipeline: []
   }
+};
+
+const DEFAULT_SEVERITY_POLICY = {
+  blocking_codes: ['NO_API_KEY', 'KV_UNAVAILABLE', 'INVALID_CONFIG'],
+  degrading_codes: ['EOD_BATCH_MISSING', 'DATA_STALE', 'CACHE_MISS'],
+  meta_status_allowed: ['ok', 'degraded', 'error']
 };
 
 let LAST_CACHE = null;
@@ -301,6 +308,76 @@ function summarizeChecks(checks = []) {
   return { status: 'OK', reason: 'OK', checks };
 }
 
+function normalizeSeverityPolicy(policy) {
+  if (!policy || typeof policy !== 'object') return DEFAULT_SEVERITY_POLICY;
+  const readList = (value, fallback) => Array.isArray(value)
+    ? value.map((item) => String(item || '').trim().toUpperCase()).filter(Boolean)
+    : fallback;
+  return {
+    blocking_codes: readList(policy.blocking_codes, DEFAULT_SEVERITY_POLICY.blocking_codes),
+    degrading_codes: readList(policy.degrading_codes, DEFAULT_SEVERITY_POLICY.degrading_codes),
+    meta_status_allowed: readList(policy.meta_status_allowed, DEFAULT_SEVERITY_POLICY.meta_status_allowed)
+      .map((value) => value.toLowerCase())
+  };
+}
+
+function normalizeCode(value) {
+  if (!value) return null;
+  const raw = String(value).trim();
+  if (!raw) return null;
+  const noPrefix = raw.includes(':') ? raw.slice(raw.lastIndexOf(':') + 1) : raw;
+  return noPrefix.replace(/[^A-Za-z0-9_]/g, '_').toUpperCase();
+}
+
+function collectSeverityCodes({ checks, pipelineLatest, eodManifest, hasKV, kvExpected, configContracts, freshnessHealth }) {
+  const out = new Set();
+  const push = (value) => {
+    const normalized = normalizeCode(value);
+    if (normalized) out.add(normalized);
+  };
+
+  for (const check of checks || []) {
+    if (!check || check.status === 'OK') continue;
+    push(check.reason);
+  }
+
+  push(pipelineLatest?.root_failure?.class);
+
+  const errorsByClass = eodManifest?.errors_by_class && typeof eodManifest.errors_by_class === 'object'
+    ? eodManifest.errors_by_class
+    : {};
+  for (const [code, count] of Object.entries(errorsByClass)) {
+    if (Number(count) > 0) push(code);
+  }
+
+  if (kvExpected && !hasKV) push('KV_UNAVAILABLE');
+
+  if (configContracts && (
+    configContracts.health_profiles?.valid === false ||
+    configContracts.thresholds?.valid === false ||
+    configContracts.source_map?.valid === false
+  )) {
+    push('INVALID_CONFIG');
+  }
+
+  if (freshnessHealth?.status === 'CRITICAL' || freshnessHealth?.status === 'WARNING') {
+    push('DATA_STALE');
+  }
+
+  return Array.from(out);
+}
+
+function computeBuildMeta(env, deploy, startedAtIso) {
+  const commit = (deploy?.gitSha || env?.CF_PAGES_COMMIT_SHA || env?.GITHUB_SHA || '').trim() || null;
+  const shortCommit = commit ? commit.slice(0, 8) : 'unknown';
+  const sequence = String(env?.GITHUB_RUN_NUMBER || env?.CF_PAGES_DEPLOYMENT_ID || 'runtime');
+  const stamp = startedAtIso.replace(/[-:]/g, '').slice(0, 13);
+  return {
+    commit,
+    build_id: `${shortCommit}-${stamp}-${sequence}`
+  };
+}
+
 function normalizeOpsPolicy(policy) {
   if (!policy || typeof policy !== 'object') return DEFAULT_OPS_POLICY;
   return {
@@ -467,10 +544,14 @@ function normalizeEodManifest(doc) {
   const chunks = Array.isArray(doc.chunks) ? doc.chunks : [];
   const count = chunks.reduce((sum, chunk) => sum + (toIntOrNull(chunk?.count) ?? 0), 0);
   const ok = chunks.reduce((sum, chunk) => sum + (toIntOrNull(chunk?.ok) ?? 0), 0);
+  const errors_by_class = doc.errors_by_class && typeof doc.errors_by_class === 'object'
+    ? doc.errors_by_class
+    : {};
   return {
     total,
     count,
     ok,
+    errors_by_class,
     generated_at: typeof doc.generated_at === 'string' ? doc.generated_at : null,
     source: '/data/eod/manifest.latest.json'
   };
@@ -1330,6 +1411,7 @@ export async function onRequestGet(context) {
   const thresholds = thresholdsCheck.valid ? thresholdsRaw : null;
   const sourceMap = sourceMapCheck.valid ? sourceMapRaw : null;
   const opsPolicy = normalizeOpsPolicy(opsHealthPolicyRaw);
+  const severityPolicy = normalizeSeverityPolicy(missionControlSeverityPolicyRaw);
   const rootStatusPath = opsPolicy?.health?.source_of_truth?.root_status_path || DEFAULT_OPS_POLICY.health.source_of_truth.root_status_path;
   const rootStatusDoc = await fetchAssetJson(request.url, rootStatusPath, null);
   const rootStatusInfo = normalizeRootStatus(rootStatusDoc);
@@ -1409,6 +1491,7 @@ export async function onRequestGet(context) {
   };
 
   const deploy = await fetchBuildInfo(request.url);
+  const buildMeta = computeBuildMeta(env, deploy, startedAtIso);
 
   const nasdaqExpected = Array.isArray(nasdaq100Universe) ? nasdaq100Universe.length : 100;
   const expectedTradingDay = lastTradingDayIso(now);
@@ -2088,12 +2171,12 @@ export async function onRequestGet(context) {
 
   const owner = buildOwnerSummary(health);
 
-  const metaStatus = (() => {
+  const legacyMetaStatus = (() => {
     if (health.system?.status === 'FAIL' || health.system?.status === 'CRITICAL') return 'error';
     if (health.system?.status === 'STALE' || health.system?.status === 'WARNING') return 'degraded';
     return 'ok';
   })();
-  const metaReason =
+  const legacyMetaReason =
     health.system?.reason ||
     health.prices?.reason ||
     health.api?.reason ||
@@ -2124,6 +2207,33 @@ export async function onRequestGet(context) {
     marketPricesSnapshotCheck.valid;
   const contractCritical = previewMode.isProduction && !contractsOk;
 
+  const severityCodes = collectSeverityCodes({
+    checks: [
+      ...(systemChecks || []),
+      ...(coreAssetHealth?.checks || []),
+      ...(coreApiHealth?.checks || [])
+    ],
+    pipelineLatest,
+    eodManifest,
+    hasKV,
+    kvExpected: expectedFlags.kv,
+    configContracts: contracts?.configs || null,
+    freshnessHealth
+  });
+  const blockingSet = new Set((severityPolicy?.blocking_codes || []).map((value) => String(value).toUpperCase()));
+  const degradingSet = new Set((severityPolicy?.degrading_codes || []).map((value) => String(value).toUpperCase()));
+  const blockingCodes = severityCodes.filter((code) => blockingSet.has(code));
+  const degradingCodes = severityCodes.filter((code) => !blockingSet.has(code) && degradingSet.has(code));
+  let metaStatus = blockingCodes.length
+    ? 'error'
+    : (degradingCodes.length ? 'degraded' : legacyMetaStatus);
+  const allowedMetaStatuses = new Set((severityPolicy?.meta_status_allowed || DEFAULT_SEVERITY_POLICY.meta_status_allowed).map((value) => String(value).toLowerCase()));
+  if (!allowedMetaStatuses.has(metaStatus)) {
+    metaStatus = legacyMetaStatus;
+  }
+  const metaReason = blockingCodes[0] || degradingCodes[0] || legacyMetaReason;
+  const metaCircuitOpen = metaStatus !== 'ok';
+
   let opsLiveResolved = null;
   if (wantsLive) {
     const cf = await fetchCloudflareWorkerRequests(env);
@@ -2143,8 +2253,14 @@ export async function onRequestGet(context) {
       asOf: startedAtIso,
       baselineAsOf: opsBaselineAsOf,
       liveAsOf: startedAtIso,
+      generatedAt: startedAtIso,
+      build_id: buildMeta.build_id,
+      commit: buildMeta.commit,
       status: metaStatus,
-      reason: metaReason
+      reason: metaReason,
+      circuitOpen: metaCircuitOpen,
+      blockingCodes,
+      degradingCodes
     },
     metadata: {
       module: MODULE_NAME,
@@ -2204,6 +2320,13 @@ export async function onRequestGet(context) {
       },
       sourceMap,
       contracts,
+      severity: {
+        blocking_codes: severityPolicy.blocking_codes,
+        degrading_codes: severityPolicy.degrading_codes,
+        observed_codes: severityCodes,
+        blocking_hits: blockingCodes,
+        degrading_hits: degradingCodes
+      },
       priceTruth,
       fundamentalsTruth,
       truthChains: {
@@ -2256,6 +2379,11 @@ export async function onRequestGet(context) {
     error: null
   };
 
+  if (metaStatus === 'error') {
+    payload.metadata.status = 'ERROR';
+  } else if (metaStatus === 'degraded') {
+    payload.metadata.status = 'PARTIAL';
+  }
   if (!hasKV && expectedFlags.kv) {
     payload.metadata.status = 'PARTIAL';
   }
