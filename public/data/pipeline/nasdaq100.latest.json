@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0",
   "type": "pipeline.truth",
-  "generated_at": "2026-02-08T19:32:00.889Z",
+  "generated_at": "2026-02-10T22:57:53.723Z",
   "universe": "nasdaq100",
   "refs": {
     "universe_ref": "/data/universe/nasdaq100.json",
@@ -9,199 +9,18 @@
   },
   "counts": {
     "expected": 100,
-    "fetched": 0,
-    "validated": 0,
+    "fetched": 100,
+    "validated": 100,
     "computed": 0,
     "static_ready": 0
   },
-  "root_failure": {
-    "class": "NO_API_KEY",
-    "hint": "Missing upstream API key"
-  },
+  "root_failure": null,
   "degraded_summary": {
-    "count": 100,
-    "classes": {
-      "NO_API_KEY": 100
-    },
-    "sample": [
-      {
-        "symbol": "AAPL",
-        "stage": "fetch",
-        "class": "NO_API_KEY",
-        "hint": "Missing upstream API key",
-        "since": "2026-02-08T19:32:00.889Z"
-      },
-      {
-        "symbol": "ABNB",
-        "stage": "fetch",
-        "class": "NO_API_KEY",
-        "hint": "Missing upstream API key",
-        "since": "2026-02-08T19:32:00.889Z"
-      },
-      {
-        "symbol": "ADBE",
-        "stage": "fetch",
-        "class": "NO_API_KEY",
-        "hint": "Missing upstream API key",
-        "since": "2026-02-08T19:32:00.889Z"
-      },
-      {
-        "symbol": "ADI",
-        "stage": "fetch",
-        "class": "NO_API_KEY",
-        "hint": "Missing upstream API key",
-        "since": "2026-02-08T19:32:00.889Z"
-      },
-      {
-        "symbol": "ADP",
-        "stage": "fetch",
-        "class": "NO_API_KEY",
-        "hint": "Missing upstream API key",
-        "since": "2026-02-08T19:32:00.889Z"
-      },
-      {
-        "symbol": "ADSK",
-        "stage": "fetch",
-        "class": "NO_API_KEY",
-        "hint": "Missing upstream API key",
-        "since": "2026-02-08T19:32:00.889Z"
-      },
-      {
-        "symbol": "AEP",
-        "stage": "fetch",
-        "class": "NO_API_KEY",
-        "hint": "Missing upstream API key",
-        "since": "2026-02-08T19:32:00.889Z"
-      },
-      {
-        "symbol": "AMAT",
-        "stage": "fetch",
-        "class": "NO_API_KEY",
-        "hint": "Missing upstream API key",
-        "since": "2026-02-08T19:32:00.889Z"
-      },
-      {
-        "symbol": "AMD",
-        "stage": "fetch",
-        "class": "NO_API_KEY",
-        "hint": "Missing upstream API key",
-        "since": "2026-02-08T19:32:00.889Z"
-      },
-      {
-        "symbol": "AMGN",
-        "stage": "fetch",
-        "class": "NO_API_KEY",
-        "hint": "Missing upstream API key",
-        "since": "2026-02-08T19:32:00.889Z"
-      },
-      {
-        "symbol": "AMZN",
-        "stage": "fetch",
-        "class": "NO_API_KEY",
-        "hint": "Missing upstream API key",
-        "since": "2026-02-08T19:32:00.889Z"
-      },
-      {
-        "symbol": "APP",
-        "stage": "fetch",
-        "class": "NO_API_KEY",
-        "hint": "Missing upstream API key",
-        "since": "2026-02-08T19:32:00.889Z"
-      },
-      {
-        "symbol": "ARM",
-        "stage": "fetch",
-        "class": "NO_API_KEY",
-        "hint": "Missing upstream API key",
-        "since": "2026-02-08T19:32:00.889Z"
-      },
-      {
-        "symbol": "ASML",
-        "stage": "fetch",
-        "class": "NO_API_KEY",
-        "hint": "Missing upstream API key",
-        "since": "2026-02-08T19:32:00.889Z"
-      },
-      {
-        "symbol": "AVGO",
-        "stage": "fetch",
-        "class": "NO_API_KEY",
-        "hint": "Missing upstream API key",
-        "since": "2026-02-08T19:32:00.889Z"
-      },
-      {
-        "symbol": "AXON",
-        "stage": "fetch",
-        "class": "NO_API_KEY",
-        "hint": "Missing upstream API key",
-        "since": "2026-02-08T19:32:00.889Z"
-      },
-      {
-        "symbol": "AZN",
-        "stage": "fetch",
-        "class": "NO_API_KEY",
-        "hint": "Missing upstream API key",
-        "since": "2026-02-08T19:32:00.889Z"
-      },
-      {
-        "symbol": "BIIB",
-        "stage": "fetch",
-        "class": "NO_API_KEY",
-        "hint": "Missing upstream API key",
-        "since": "2026-02-08T19:32:00.889Z"
-      },
-      {
-        "symbol": "BKNG",
-        "stage": "fetch",
-        "class": "NO_API_KEY",
-        "hint": "Missing upstream API key",
-        "since": "2026-02-08T19:32:00.889Z"
-      },
-      {
-        "symbol": "BKR",
-        "stage": "fetch",
-        "class": "NO_API_KEY",
-        "hint": "Missing upstream API key",
-        "since": "2026-02-08T19:32:00.889Z"
-      },
-      {
-        "symbol": "CCEP",
-        "stage": "fetch",
-        "class": "NO_API_KEY",
-        "hint": "Missing upstream API key",
-        "since": "2026-02-08T19:32:00.889Z"
-      },
-      {
-        "symbol": "CDNS",
-        "stage": "fetch",
-        "class": "NO_API_KEY",
-        "hint": "Missing upstream API key",
-        "since": "2026-02-08T19:32:00.889Z"
-      },
-      {
-        "symbol": "CDW",
-        "stage": "fetch",
-        "class": "NO_API_KEY",
-        "hint": "Missing upstream API key",
-        "since": "2026-02-08T19:32:00.889Z"
-      },
-      {
-        "symbol": "CHTR",
-        "stage": "fetch",
-        "class": "NO_API_KEY",
-        "hint": "Missing upstream API key",
-        "since": "2026-02-08T19:32:00.889Z"
-      },
-      {
-        "symbol": "CMCSA",
-        "stage": "fetch",
-        "class": "NO_API_KEY",
-        "hint": "Missing upstream API key",
-        "since": "2026-02-08T19:32:00.889Z"
-      }
-    ]
+    "count": 0,
+    "classes": {},
+    "sample": []
   },
   "metadata": {
-    "computed_not_applicable": true
+    "computed_not_applicable": false
   }
 }
