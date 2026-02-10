@@ -1610,9 +1610,9 @@
       if (!t) return null;
       if (elliottWavesData.has(t)) return elliottWavesData.get(t);
       const { payload } = await fetchJson(`/data/marketphase/${encodeURIComponent(t)}.json`);
-      if (!payload || payload.ok !== true) return null;
+      if (!payload) return null;
       elliottWavesData.set(t, payload);
-      if (!elliottSupportByTicker.has(t)) {
+      if (payload.ok === true && !elliottSupportByTicker.has(t)) {
         elliottSupportByTicker.set(t, computeElliottSupport(payload));
       }
       return payload;
@@ -1620,7 +1620,11 @@
 
     function renderElliottSummary(payload) {
       if (!payload || payload.ok !== true) {
-        return '<div style="color:#64748b;">Elliott Waves data not available for this ticker.</div>';
+        const reason = payload?.meta?.reason || payload?.error?.code || null;
+        const isCircuitOpen = payload?.meta?.circuitOpen === true;
+        const heading = isCircuitOpen ? 'Elliott Circuit Open' : 'Elliott Waves data unavailable';
+        const detail = reason ? ` (${escapeHtml(String(reason))})` : '';
+        return `<div style="color:#f59e0b;">${heading}${detail}</div>`;
       }
       const data = payload?.data || {};
       const elliott = data?.elliott || {};
