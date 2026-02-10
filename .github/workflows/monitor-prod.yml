@@ -36,6 +36,10 @@ jobs:
           fetch_json "$BASE_URL/data/snapshots/market-prices/latest.json" /tmp/market_prices.json
           fetch_json "$BASE_URL/data/forecast/latest.json" /tmp/forecast_latest.json
           fetch_json "$BASE_URL/data/forecast/system/status.json" /tmp/forecast_status.json
+          fetch_json "$BASE_URL/data/marketphase/index.json" /tmp/marketphase_index.json
+          fetch_json "$BASE_URL/api/elliott-scanner" /tmp/elliott_scanner.json
+          fetch_json "$BASE_URL/api/mission-control/summary?debug=1" /tmp/mission_control.json
+          fetch_json "$BASE_URL/data/ops/pulse.json" /tmp/ops_pulse.json
 
           jq -e --argjson minRows "$MIN_MARKET_PRICE_ROWS" '
             ((.schema_version // .schemaVersion // .schema) != null) and
@@ -61,6 +65,72 @@ jobs:
              end)
           ' /tmp/forecast_status.json >/dev/null
           echo "✅ forecast/system/status semantic checks passed"
+
+          jq -e '
+            (if ((.ok // false) == true)
+             then ((.data.symbols | type) == "array")
+             else ((.meta.circuitOpen == true) and ((.meta.reason // .error.code // "") | tostring | length) > 0)
+             end)
+          ' /tmp/marketphase_index.json >/dev/null
+          echo "✅ marketphase/index semantic checks passed"
+
+          jq -e '
+            ((.ok // false) == true) and
+            ((.meta.mode // "") | tostring | length > 0) and
+            ((.meta.universeSource // "") | tostring | length > 0) and
+            ((.meta.universeCount // 0) >= (.meta.returnedCount // 0)) and
+            (if ((.meta.returnedCount // 0) < (.meta.universeCount // 0))
+             then ((.meta.filtered == true) and ((.meta.filterReason // "") | tostring | length > 0))
+             else true
+             end)
+          ' /tmp/elliott_scanner.json >/dev/null
+          echo "✅ /api/elliott-scanner semantic checks passed"
+
+          jq -e '
+            ((.schema_version // "") == "3.0") and
+            ((.meta.status // "") | tostring | length > 0) and
+            (.meta.circuitOpen | type == "boolean")
+          ' /tmp/mission_control.json >/dev/null
+          echo "✅ /api/mission-control semantic checks passed"
+
+          jq -e '
+            ((.schema_version // "") | tostring | length > 0) and
+            ((.meta.build_id // "") | tostring | length > 0) and
+            ((.meta.generatedAt // "") | tostring | length > 0) and
+            (.pipelineOk == true)
+          ' /tmp/ops_pulse.json >/dev/null
+          echo "✅ /data/ops/pulse semantic checks passed"
+
+      - name: Cohesion check (core build_id parity)
+        env:
+          BASE_URL: https://rubikvault.com
+        run: |
+          set -euo pipefail
+          curl -fsS "$BASE_URL/api/mission-control/summary?debug=1" -o /tmp/mission_control.json
+          curl -fsS "$BASE_URL/api/elliott-scanner" -o /tmp/elliott_scanner.json
+          curl -fsS "$BASE_URL/data/ops/pulse.json" -o /tmp/ops_pulse.json
+          node -e '
+            const fs = require("fs");
+            const mc = JSON.parse(fs.readFileSync("/tmp/mission_control.json", "utf8"));
+            const es = JSON.parse(fs.readFileSync("/tmp/elliott_scanner.json", "utf8"));
+            const pulse = JSON.parse(fs.readFileSync("/tmp/ops_pulse.json", "utf8"));
+            const ids = {
+              mission_control: mc?.meta?.build_id || null,
+              elliott_scanner: es?.meta?.build_id || null,
+              ops_pulse: pulse?.meta?.build_id || null
+            };
+            const values = Object.values(ids).filter(Boolean);
+            if (values.length !== 3) {
+              console.error("Missing build_id in core artifacts:", ids);
+              process.exit(1);
+            }
+            const unique = Array.from(new Set(values));
+            if (unique.length !== 1) {
+              console.error("Cohesion mismatch: core artifacts expose different build_id values:", ids);
+              process.exit(1);
+            }
+            console.log("✅ core artifact cohesion OK build_id=" + unique[0]);
+          '
 
       - name: Staleness warning (48h)
         env:
