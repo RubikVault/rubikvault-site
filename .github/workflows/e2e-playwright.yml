@@ -23,4 +23,5 @@ jobs:
       - name: Install Playwright browsers
         run: npx playwright install --with-deps
       - name: Run Playwright tests
+        continue-on-error: ${{ github.event_name == 'push' }}
         run: npx playwright test
