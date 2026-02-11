@@ -29,7 +29,7 @@ export function shouldSkipKvWrite() {
 export function createOptionalCloudflareRestKVFromEnv() {
   const accountId = envString("CF_ACCOUNT_ID");
   const namespaceId = envString("CF_KV_NAMESPACE_ID");
-  const apiToken = envString("CF_API_TOKEN");
+  const apiToken = envString("CF_API_TOKEN") || envString("CF_API_KEY");
 
   if (!accountId || !namespaceId || !apiToken) {
     return null;

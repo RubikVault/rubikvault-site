@@ -353,7 +353,7 @@ async function main() {
 
   const cf = await fetchCloudflareWorkerRequests({
     accountId: process.env.CF_ACCOUNT_ID,
-    apiToken: process.env.CF_API_TOKEN
+    apiToken: process.env.CF_API_TOKEN || process.env.CF_API_KEY
   });
 
   const cfFallback = usageReport?.cloudflare || null;

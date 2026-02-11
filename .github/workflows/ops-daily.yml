@@ -51,13 +51,15 @@ jobs:
       - name: Preflight (blocking checks)
         env:
           CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
-          CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
+          CF_API_TOKEN: ${{ secrets.CF_API_TOKEN || secrets.CF_API_KEY }}
+          CF_API_KEY: ${{ secrets.CF_API_KEY }}
         run: node scripts/ops/preflight-check.mjs --mode ops-daily
 
       - name: Build MarketPhase from KV (NASDAQ-100)
         env:
           CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
-          CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
+          CF_API_TOKEN: ${{ secrets.CF_API_TOKEN || secrets.CF_API_KEY }}
+          CF_API_KEY: ${{ secrets.CF_API_KEY }}
         run: node scripts/pipeline/build-marketphase-from-kv.mjs --universe nasdaq100
 
       - name: Build pipeline truth (NASDAQ-100)
@@ -69,7 +71,8 @@ jobs:
       - name: Build ops-daily snapshot
         env:
           CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
-          CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
+          CF_API_TOKEN: ${{ secrets.CF_API_TOKEN || secrets.CF_API_KEY }}
+          CF_API_KEY: ${{ secrets.CF_API_KEY }}
         run: node scripts/ops/build-ops-daily.mjs
 
       - name: Build ops summary

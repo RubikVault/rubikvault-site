@@ -83,11 +83,26 @@ function buildPreflightErrors(mode) {
       );
     }
   } else if (mode === "ops-daily") {
+    const hasCfToken = Boolean(String(process.env.CF_API_TOKEN || "").trim());
+    const hasCfApiKeyAlias = Boolean(String(process.env.CF_API_KEY || "").trim());
     if (!String(process.env.CF_ACCOUNT_ID || "").trim()) {
       pushError(errors, "KV_UNAVAILABLE", "CF_ACCOUNT_ID is missing for KV/API access.", "blocking");
     }
-    if (!String(process.env.CF_API_TOKEN || "").trim()) {
-      pushError(errors, "KV_UNAVAILABLE", "CF_API_TOKEN is missing for KV/API access.", "blocking");
+    if (!hasCfToken && !hasCfApiKeyAlias) {
+      pushError(
+        errors,
+        "KV_UNAVAILABLE",
+        "CF_API_TOKEN is missing for KV/API access (fallback alias: CF_API_KEY).",
+        "blocking"
+      );
+    }
+    if (hasCfApiKeyAlias && !hasCfToken) {
+      pushError(
+        errors,
+        "INVALID_CONFIG",
+        "Using deprecated CF_API_KEY alias without CF_API_TOKEN. Migrate to CF_API_TOKEN.",
+        "degrading"
+      );
     }
   } else {
     pushError(errors, "INVALID_CONFIG", `Unknown preflight mode: ${mode}`, "blocking");
@@ -101,6 +116,7 @@ async function main() {
   const now = isoNow();
   const errors = buildPreflightErrors(args.mode);
   const blocking = errors.filter((entry) => entry.severity === "blocking");
+  const degrading = errors.filter((entry) => entry.severity === "degrading");
   const meta = buildMeta(now);
 
   const pulsePayload = {
@@ -113,6 +129,10 @@ async function main() {
   };
 
   await atomicWriteJson("public/data/ops/pulse.json", pulsePayload);
+
+  for (const entry of degrading) {
+    process.stderr.write(`WARN ${entry.code}: ${entry.message}\n`);
+  }
 
   if (blocking.length > 0) {
     for (const entry of blocking) {
