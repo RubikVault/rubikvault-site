@@ -246,7 +246,8 @@ jobs:
         env:
           ARTIFACTS_DIR: ${{ runner.temp }}/artifacts
           BARS_ARTIFACTS_DIR: ${{ runner.temp }}/artifacts
-          RV_PRICES_FORCE_REAL: '1'
+          RV_PRICES_FORCE_REAL: '0'
+          RV_FORCE_PROVIDER: stooq
         run: |
           echo "Building market-prices..."
           node scripts/providers/market-prices-v3.mjs
