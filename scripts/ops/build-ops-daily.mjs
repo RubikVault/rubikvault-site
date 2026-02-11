@@ -231,7 +231,10 @@ async function main() {
   const asOf = isoNow();
 
   // --- Phase 3A: Write shared build-meta SSOT ---
-  const commitRaw = String(process.env.CF_PAGES_COMMIT_SHA || process.env.GITHUB_SHA || '').trim() || null;
+  let commitRaw = String(process.env.CF_PAGES_COMMIT_SHA || process.env.GITHUB_SHA || '').trim() || null;
+  if (!commitRaw) {
+    try { commitRaw = (await import('node:child_process')).execSync('git rev-parse HEAD', { encoding: 'utf8' }).trim() || null; } catch { /* no git */ }
+  }
   const shortCommit = commitRaw ? commitRaw.slice(0, 8) : 'unknown';
   const stamp = asOf.replace(/[-:]/g, '').slice(0, 13);
   const sequence = String(process.env.GITHUB_RUN_NUMBER || 'local');
