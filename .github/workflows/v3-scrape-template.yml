@@ -60,17 +60,30 @@ jobs:
       - name: Generate module matrix
         id: set-matrix
         run: |
-          # Read enabled modules from registry
+          # Read enabled modules from registry (fallback-safe)
           MODULES=$(node -e "
-            const registry = require('./public/data/registry/modules.json');
-            const modules = Object.entries(registry.modules || registry)
-              .filter(([name, config]) => {
-                // Skip schema_version and metadata fields
-                if (name === 'schema_version' || name === 'generated_at' || name === 'modules' || name === 'tiers' || name === 'policies') return false;
-                // Only include enabled modules
-                return config.enabled !== false;
-              })
-              .map(([name]) => name);
+            const fs = require('fs');
+            const path = require('path');
+            const candidates = [
+              path.join(process.cwd(), 'public/data/registry/modules.json'),
+              path.join(process.cwd(), 'functions/api/_shared/registry/modules.json')
+            ];
+            let modules = [];
+            for (const file of candidates) {
+              try {
+                const doc = JSON.parse(fs.readFileSync(file, 'utf8'));
+                modules = Object.entries(doc.modules || doc)
+                  .filter(([name, config]) => {
+                    if (name === 'schema_version' || name === 'generated_at' || name === 'modules' || name === 'tiers' || name === 'policies') return false;
+                    return config && config.enabled !== false;
+                  })
+                  .map(([name]) => name);
+                if (modules.length > 0) break;
+              } catch (_) {}
+            }
+            if (modules.length === 0) {
+              modules = ['market-prices'];
+            }
             console.log(JSON.stringify(modules));
           ")
           

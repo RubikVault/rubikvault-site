@@ -185,7 +185,7 @@ jobs:
         id: market-prices-guard
         run: |
           set -euo pipefail
-            node scripts/wp16/guard-market-prices.mjs
+          node scripts/wp16/guard-market-prices.mjs
 
       - name: Check for changes
         id: changes

@@ -34,7 +34,10 @@ const BASE_DIR = process.cwd();
 const ARTIFACTS_DIR = process.env.ARTIFACTS_DIR || join(BASE_DIR, 'artifacts');
 const TMP_DIR = join(BASE_DIR, 'public/data/.tmp');
 const PUBLIC_DIR = join(BASE_DIR, 'public/data');
-const REGISTRY_PATH = join(PUBLIC_DIR, 'registry/modules.json');
+const REGISTRY_CANDIDATES = [
+  join(PUBLIC_DIR, 'registry/modules.json'),
+  join(BASE_DIR, 'functions/api/_shared/registry/modules.json')
+];
 const CORE_MODULES = ['universe', 'market-prices', 'market-stats', 'market-score'];
 
 async function hasNonZeroFile(filePath) {
@@ -115,13 +118,33 @@ async function ensureCoreSnapshots(artifacts) {
  * Load module registry
  */
 async function loadRegistry() {
-  try {
-    const content = await readFile(REGISTRY_PATH, 'utf-8');
-    return JSON.parse(content);
-  } catch (err) {
-    console.error(`ERROR: Failed to load registry: ${err.message}`);
-    process.exit(1);
+  for (const registryPath of REGISTRY_CANDIDATES) {
+    try {
+      const content = await readFile(registryPath, 'utf-8');
+      const doc = JSON.parse(content);
+      if (doc && typeof doc === 'object' && doc.modules && typeof doc.modules === 'object') {
+        return doc;
+      }
+    } catch {
+      // try next candidate
+    }
   }
+
+  const fallbackModules = {};
+  for (const moduleName of CORE_MODULES) {
+    fallbackModules[moduleName] = {
+      enabled: true,
+      tier: moduleName === 'universe' || moduleName === 'market-prices' ? 'critical' : 'standard',
+      domain: 'stocks',
+      counts: { expected: null, min: 1 }
+    };
+  }
+  return {
+    schema_version: '3.0',
+    generated_at: new Date().toISOString(),
+    modules: fallbackModules,
+    _fallback: true
+  };
 }
 
 /**
@@ -582,7 +605,7 @@ async function main() {
   console.log(`  BASE_DIR: ${BASE_DIR}`);
   console.log(`  TMP_DIR: ${TMP_DIR}`);
   console.log(`  PUBLIC_DIR: ${PUBLIC_DIR}`);
-  console.log(`  REGISTRY_PATH: ${REGISTRY_PATH}\n`);
+  console.log(`  REGISTRY_PATHS: ${REGISTRY_CANDIDATES.join(', ')}\n`);
   const skipInvalidArtifacts = String(process.env.RV_FINALIZER_SKIP_INVALID || '').trim() === '1';
   if (skipInvalidArtifacts) {
     console.warn('⚠ RV_FINALIZER_SKIP_INVALID=1 (invalid artifacts will be skipped)');
@@ -591,9 +614,12 @@ async function main() {
   try {
     // Load registry
     console.log('📋 Step 1: Loading registry...');
-    console.log(`  Looking for registry at: ${REGISTRY_PATH}`);
+    console.log(`  Looking for registry at: ${REGISTRY_CANDIDATES.join(' | ')}`);
     const registry = await loadRegistry();
     console.log(`  ✓ Registry loaded successfully`);
+    if (registry._fallback) {
+      console.log('  ⚠ Using fallback registry (no modules.json found)');
+    }
     console.log(`  ✓ Found ${Object.keys(registry.modules).length} module(s) in registry: ${Object.keys(registry.modules).join(', ')}\n`);
     
     // Load artifacts
