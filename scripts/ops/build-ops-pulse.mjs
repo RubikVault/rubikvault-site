@@ -71,7 +71,13 @@ async function atomicWriteJson(relPath, payload) {
 
 async function main() {
   const now = isoNow();
-  const meta = buildMeta(now);
+
+  // --- Phase 3B: Prefer shared build-meta.json for cohesion ---
+  const buildMetaDoc = await readJson('public/data/ops/build-meta.json');
+  const meta = (buildMetaDoc?.meta?.build_id && buildMetaDoc?.meta?.commit !== undefined)
+    ? { build_id: buildMetaDoc.meta.build_id, commit: buildMetaDoc.meta.commit, generatedAt: now }
+    : buildMeta(now);
+
   const summary = await readJson(SUMMARY_PATH);
   const severityPolicyRaw = await readJson(SEVERITY_POLICY_PATH);
   const { blocking, degrading } = severitySets(severityPolicyRaw);

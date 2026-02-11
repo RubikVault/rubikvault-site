@@ -367,7 +367,17 @@ function collectSeverityCodes({ checks, pipelineLatest, eodManifest, hasKV, kvEx
   return Array.from(out);
 }
 
-function computeBuildMeta(env, deploy, startedAtIso) {
+async function computeBuildMeta(env, deploy, startedAtIso, requestUrl) {
+  // --- Phase 3C: Prefer shared build-meta.json for cohesion ---
+  if (requestUrl) {
+    const buildMetaDoc = await fetchAssetJson(requestUrl, '/data/ops/build-meta.json', null);
+    if (buildMetaDoc?.meta?.build_id) {
+      return {
+        commit: buildMetaDoc.meta.commit || null,
+        build_id: buildMetaDoc.meta.build_id
+      };
+    }
+  }
   const commit = (deploy?.gitSha || env?.CF_PAGES_COMMIT_SHA || env?.GITHUB_SHA || '').trim() || null;
   const shortCommit = commit ? commit.slice(0, 8) : 'unknown';
   const sequence = String(env?.GITHUB_RUN_NUMBER || env?.CF_PAGES_DEPLOYMENT_ID || 'runtime');
@@ -1491,7 +1501,7 @@ export async function onRequestGet(context) {
   };
 
   const deploy = await fetchBuildInfo(request.url);
-  const buildMeta = computeBuildMeta(env, deploy, startedAtIso);
+  const buildMeta = await computeBuildMeta(env, deploy, startedAtIso, request.url);
 
   const nasdaqExpected = Array.isArray(nasdaq100Universe) ? nasdaq100Universe.length : 100;
   const expectedTradingDay = lastTradingDayIso(now);

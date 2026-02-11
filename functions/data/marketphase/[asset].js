@@ -58,6 +58,7 @@ export async function onRequestGet(context) {
       feature: "marketphase",
       meta: {
         generatedAt: asOf,
+        url: `/data/marketphase/${rawAsset || ''}`,
         status: "error",
         circuitOpen: true,
         reason: "UNSUPPORTED_MARKETPHASE_PATH",
@@ -74,6 +75,9 @@ export async function onRequestGet(context) {
   const staticPath = `/data/marketphase/${rawAsset}`;
   const staticDoc = await readStaticAssetJson(request, env, staticPath);
   if (staticDoc) {
+    if (staticDoc.meta && typeof staticDoc.meta === 'object') {
+      staticDoc.meta.url = staticDoc.meta.url || `/data/marketphase/${rawAsset}`;
+    }
     return jsonResponse(staticDoc, 200);
   }
 
@@ -84,6 +88,7 @@ export async function onRequestGet(context) {
       feature: "marketphase",
       meta: {
         generatedAt: asOf,
+        url: `/data/marketphase/${rawAsset}`,
         status: "error",
         circuitOpen: true,
         reason: "MARKETPHASE_INDEX_MISSING",
@@ -108,6 +113,7 @@ export async function onRequestGet(context) {
     meta: {
       symbol,
       generatedAt: asOf,
+      url: `/data/marketphase/${rawAsset}`,
       status: "error",
       circuitOpen: true,
       reason: "MARKETPHASE_SYMBOL_MISSING",

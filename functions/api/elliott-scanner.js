@@ -185,7 +185,16 @@ export async function onRequest(context) {
     const policy = normalizePolicy(universePolicyRaw);
     const resolved = resolveMode(policy, context.request.url);
     const baseUrl = new URL(context.request.url).origin;
-    const runtimeMeta = buildRuntimeMeta(context, generatedAt);
+    let runtimeMeta = buildRuntimeMeta(context, generatedAt);
+
+    // --- Phase 3C: Prefer shared build-meta.json for cohesion ---
+    const buildMetaRes = await fetchJsonSafe(`${baseUrl}/data/ops/build-meta.json`);
+    if (buildMetaRes.ok && buildMetaRes.body?.meta?.build_id) {
+        runtimeMeta = {
+            commit: buildMetaRes.body.meta.commit || runtimeMeta.commit,
+            buildId: buildMetaRes.body.meta.build_id
+        };
+    }
 
     try {
         const universePath = universePathForMode(resolved.mode);
