@@ -197,11 +197,11 @@ async function fetchStooqBars(symbols, outDir) {
         url,
         {
           headers: { 'User-Agent': 'RubikVault/3.0 market-prices' },
-          timeoutMs: 20000
+          timeoutMs: 7000
         },
         {
-          maxRetries: 2,
-          baseDelayMs: 1500,
+          maxRetries: 1,
+          baseDelayMs: 800,
           sleep
         }
       );
@@ -258,7 +258,7 @@ async function fetchStooqBars(symbols, outDir) {
         retry_count: result?.upstream?.retry_count ?? 0
       });
     }
-    await sleep(400);
+    await sleep(150);
   }
 
   return {
