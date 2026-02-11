@@ -625,7 +625,7 @@ async function main() {
     // Load artifacts
     console.log('📦 Step 2: Loading artifacts...');
     console.log(`  ARTIFACTS_DIR: ${ARTIFACTS_DIR}`);
-    const artifacts = await loadArtifacts();
+    let artifacts = await loadArtifacts();
     console.log(`  ✓ Artifact loading complete`);
     console.log(`  ✓ Found ${artifacts.size} artifact(s)\n`);
     
@@ -863,7 +863,7 @@ async function main() {
     console.error(`  BASE_DIR: ${BASE_DIR}`);
     console.error(`  TMP_DIR: ${TMP_DIR}`);
     console.error(`  PUBLIC_DIR: ${PUBLIC_DIR}`);
-    console.error(`  REGISTRY_PATH: ${REGISTRY_PATH}`);
+    console.error(`  REGISTRY_PATHS: ${REGISTRY_CANDIDATES.join(', ')}`);
     
     // Check if directories exist
     try {
