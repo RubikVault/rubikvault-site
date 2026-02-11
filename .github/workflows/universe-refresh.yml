@@ -8,6 +8,10 @@ on:
         required: false
         default: 'all'
 
+concurrency:
+  group: universe-refresh-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   fetch-constituents:
     runs-on: ubuntu-latest

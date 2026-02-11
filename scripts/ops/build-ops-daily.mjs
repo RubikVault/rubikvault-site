@@ -230,6 +230,22 @@ function buildProvidersBaseline(usageReport) {
 async function main() {
   const asOf = isoNow();
 
+  // --- Phase 3A: Write shared build-meta SSOT ---
+  let commitRaw = String(process.env.CF_PAGES_COMMIT_SHA || process.env.GITHUB_SHA || '').trim() || null;
+  if (!commitRaw) {
+    try { commitRaw = (await import('node:child_process')).execSync('git rev-parse HEAD', { encoding: 'utf8' }).trim() || null; } catch { /* no git */ }
+  }
+  const shortCommit = commitRaw ? commitRaw.slice(0, 8) : 'unknown';
+  const stamp = asOf.replace(/[-:]/g, '').slice(0, 13);
+  const sequence = String(process.env.GITHUB_RUN_NUMBER || 'local');
+  const buildId = `${shortCommit}-${stamp}-${sequence}`;
+  const buildMetaDoc = {
+    meta: { build_id: buildId, commit: commitRaw, generatedAt: asOf },
+    data: { build_id: buildId, commit: commitRaw, deploy_target: process.env.GITHUB_RUN_NUMBER ? 'ci' : 'local' }
+  };
+  await atomicWriteJson('public/data/ops/build-meta.json', buildMetaDoc);
+  console.log(`build-meta.json written (build_id=${buildId})`);
+
   const nasdaq100 = await readJson('public/data/universe/all.json', []);
   const expectedUniverse = Array.isArray(nasdaq100) ? nasdaq100.length : 100;
 
@@ -312,7 +328,22 @@ async function main() {
     };
   })();
 
-  const marketphaseIndex = await readJson('public/data/marketphase/index.json', null);
+  let marketphaseIndex = await readJson('public/data/marketphase/index.json', null);
+
+  // --- Phase 1A: Generate marketphase index.json if missing ---
+  if (!marketphaseIndex || !Array.isArray(marketphaseIndex?.data?.symbols)) {
+    const universeSymbols = Array.isArray(nasdaq100)
+      ? nasdaq100.map(r => String(r?.ticker || r?.symbol || '').trim().toUpperCase()).filter(Boolean)
+      : [];
+    marketphaseIndex = {
+      ok: true,
+      feature: 'marketphase',
+      meta: { generatedAt: asOf, source: 'build-ops-daily', status: 'ok', build_id: buildId },
+      data: { symbols: universeSymbols }
+    };
+    await atomicWriteJson('public/data/marketphase/index.json', marketphaseIndex);
+    console.log(`marketphase/index.json generated (${universeSymbols.length} symbols)`);
+  }
 
   const pricesSnap = await readJson('public/data/snapshots/market-prices/latest.json', null);
   const pricesMeta = pricesSnap?.metadata || {};
@@ -353,7 +384,7 @@ async function main() {
 
   const cf = await fetchCloudflareWorkerRequests({
     accountId: process.env.CF_ACCOUNT_ID,
-    apiToken: process.env.CF_API_TOKEN
+    apiToken: process.env.CF_API_TOKEN || process.env.CF_API_KEY
   });
 
   const cfFallback = usageReport?.cloudflare || null;

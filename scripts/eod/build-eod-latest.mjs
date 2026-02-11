@@ -113,6 +113,19 @@ function normalizeTiingoRow(symbol, row) {
   };
 }
 
+function normalizeEodhdRow(symbol, row) {
+  if (!row || typeof row !== 'object') return null;
+  return {
+    symbol,
+    date: toIsoDate(row?.date),
+    open: toNumber(row?.open),
+    high: toNumber(row?.high),
+    low: toNumber(row?.low),
+    close: toNumber(row?.close),
+    volume: toNumber(row?.volume)
+  };
+}
+
 function pickLatestRow(rows) {
   if (!Array.isArray(rows) || rows.length === 0) return null;
   const sorted = rows
@@ -125,7 +138,7 @@ function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-async function fetchLatestEodOnce(symbol, token) {
+async function fetchLatestTiingoOnce(symbol, token) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
   const startDate = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
@@ -174,6 +187,54 @@ async function fetchLatestEodOnce(symbol, token) {
   }
 }
 
+async function fetchLatestEodhdOnce(symbol, apiKey) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
+  const startDate = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  const querySymbol = symbol.includes('.') ? symbol : `${symbol}.US`;
+  const url = new URL(`https://eodhd.com/api/eod/${encodeURIComponent(querySymbol)}`);
+  url.searchParams.set('api_token', apiKey);
+  url.searchParams.set('fmt', 'json');
+  url.searchParams.set('order', 'd');
+  url.searchParams.set('from', startDate);
+
+  try {
+    const res = await fetch(url.toString(), {
+      method: 'GET',
+      headers: { Accept: 'application/json' },
+      signal: controller.signal
+    });
+
+    if (!res.ok) {
+      const error = new Error(`HTTP ${res.status}`);
+      error.status = res.status;
+      return { ok: false, error, httpStatus: res.status };
+    }
+
+    const payload = await res.json();
+    if (!Array.isArray(payload) || payload.length === 0) {
+      const error = new Error('empty_payload');
+      error.status = res.status;
+      return { ok: false, error, httpStatus: res.status };
+    }
+
+    const latest = pickLatestRow(
+      payload
+        .map((row) => normalizeEodhdRow(symbol, row))
+        .filter(Boolean)
+    );
+    if (!latest) {
+      const error = new Error('no_latest_row');
+      error.status = res.status;
+      return { ok: false, error, httpStatus: res.status };
+    }
+
+    return { ok: true, record: latest, httpStatus: res.status };
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 function isTransientClass(cls) {
   return cls === 'UPSTREAM_TIMEOUT' || cls === 'UPSTREAM_5XX' || cls === 'RATE_LIMIT';
 }
@@ -184,7 +245,12 @@ async function fetchLatestEodWithRetry(symbol, token) {
 
   for (let attempt = 0; attempt <= MAX_RETRIES; attempt += 1) {
     try {
-      const result = await fetchLatestEodOnce(symbol, token);
+      let result;
+      if (token?.id === 'eodhd') {
+        result = await fetchLatestEodhdOnce(symbol, token.key);
+      } else {
+        result = await fetchLatestTiingoOnce(symbol, token.key);
+      }
       if (result.ok) return result;
       lastError = result.error;
       lastStatus = result.httpStatus;
@@ -207,6 +273,44 @@ async function fetchLatestEodWithRetry(symbol, token) {
 
   const fallback = classifyError(lastError || new Error('retry_exhausted'), { httpStatus: lastStatus });
   return { ok: false, error: lastError, httpStatus: lastStatus, classification: fallback };
+}
+
+function resolveProvidersFromEnv() {
+  const providers = [];
+  const eodhd = String(process.env.EODHD_API_KEY || '').trim();
+  const tiingo = String(process.env.TIINGO_API_KEY || process.env.TIIANGO_API_KEY || '').trim();
+
+  if (eodhd) providers.push({ id: 'eodhd', key: eodhd });
+  if (tiingo) providers.push({ id: 'tiingo', key: tiingo });
+
+  return providers;
+}
+
+async function fetchLatestFromProviderChain(symbol, providers) {
+  let lastFailure = null;
+  for (const provider of providers) {
+    const result = await fetchLatestEodWithRetry(symbol, provider);
+    if (result.ok) {
+      return { ...result, provider: provider.id };
+    }
+    lastFailure = { ...result, provider: provider.id };
+  }
+  return {
+    ok: false,
+    provider: lastFailure?.provider || null,
+    error: lastFailure?.error || new Error('all_providers_failed'),
+    httpStatus: lastFailure?.httpStatus ?? null,
+    classification: lastFailure?.classification || classifyError(new Error('all_providers_failed'), {})
+  };
+}
+
+async function readExistingPipelineLatest(outRoot, universe) {
+  const filePath = path.join(outRoot, 'pipeline', `${universe}.latest.json`);
+  try {
+    return await readJson(filePath);
+  } catch {
+    return null;
+  }
 }
 
 async function mapWithConcurrency(items, limit, worker) {
@@ -246,12 +350,16 @@ async function main() {
   const outRoot = path.resolve(REPO_ROOT, args.outDir);
   const staticReadyTruthCount = await readStaticReadyCount(outRoot, args.universe);
   const computedTruthCount = await readComputedCount(outRoot, args.universe);
+  const previousPipeline = await readExistingPipelineLatest(outRoot, args.universe);
 
   const universePath = path.join(outRoot, 'universe', `${args.universe}.json`);
   const universePayload = await readJson(universePath);
   const symbols = extractUniverseSymbols(universePayload);
+  if (args.universe === 'nasdaq100' && (symbols.length < 90 || symbols.length > 200)) {
+    throw new Error(`UNIVERSE_CONTRACT_VIOLATION:nasdaq100 expected 90..200 symbols, got ${symbols.length}`);
+  }
 
-  const token = process.env.TIINGO_API_KEY ?? process.env.TIIANGO_API_KEY;
+  const providers = resolveProvidersFromEnv();
   const failures = [];
   const errorsByClass = {};
 
@@ -259,7 +367,11 @@ async function main() {
     errorsByClass[cls] = (errorsByClass[cls] || 0) + 1;
   };
 
-  if (!token) {
+  process.stdout.write(
+    `EOD latest start: universe=${args.universe} symbols=${symbols.length} providers=${providers.map((p) => p.id).join('->') || 'none'} sample=${symbols.slice(0, 3).join(',')}\n`
+  );
+
+  if (providers.length === 0) {
     const classification = classifyError({ code: 'NO_API_KEY' }, { missingApiKey: true });
     const degraded = symbols.map((symbol) => ({
       symbol,
@@ -315,7 +427,9 @@ async function main() {
       },
       degraded_summary: degradedSummary,
       metadata: {
-        computed_not_applicable: !Number.isInteger(computedTruthCount)
+        computed_not_applicable: !Number.isInteger(computedTruthCount),
+        provider_chain: [],
+        fallback_used: false
       }
     };
 
@@ -327,14 +441,14 @@ async function main() {
   }
 
   const results = await mapWithConcurrency(symbols, CONCURRENCY, async (symbol) => {
-    const result = await fetchLatestEodWithRetry(symbol, token);
+    const result = await fetchLatestFromProviderChain(symbol, providers);
     if (!result.ok) {
       const classification = result.classification || classifyError(result.error, { httpStatus: result.httpStatus });
       failures.push({
         symbol,
         stage: 'fetch',
         class: classification.class,
-        hint: classification.hint,
+        hint: `${classification.hint} (provider=${result.provider || 'unknown'})`,
         since: startedAt
       });
       bumpClass(classification.class);
@@ -355,7 +469,7 @@ async function main() {
       return { symbol, fetchedOk: true, record: null };
     }
 
-    return { symbol, fetchedOk: true, record: result.record };
+    return { symbol, fetchedOk: true, record: result.record, provider: result.provider };
   });
 
   const recordsBySymbol = {};
@@ -368,6 +482,57 @@ async function main() {
       recordsBySymbol[entry.symbol] = entry.record;
       validatedCount += 1;
     }
+  }
+
+  if (symbols.length > 0 && validatedCount === 0) {
+    const degradedSummary = {
+      count: failures.length,
+      classes: errorsByClass,
+      sample: buildDegradedSample(failures)
+    };
+    const previousCounts = previousPipeline?.counts || {};
+    const fallbackStaticReady = Number.isInteger(staticReadyTruthCount)
+      ? staticReadyTruthCount
+      : (Number.isFinite(Number(previousCounts.static_ready)) ? Number(previousCounts.static_ready) : 0);
+    const fallbackComputed = Number.isInteger(computedTruthCount)
+      ? computedTruthCount
+      : (Number.isFinite(Number(previousCounts.computed)) ? Number(previousCounts.computed) : 0);
+
+    const pipelineTruth = {
+      schema_version: '1.0',
+      type: 'pipeline.truth',
+      generated_at: startedAt,
+      universe: args.universe,
+      refs: {
+        universe_ref: `/data/universe/${args.universe}.json`,
+        eod_manifest_ref: '/data/eod/manifest.latest.json'
+      },
+      counts: {
+        expected: symbols.length,
+        fetched: fetchedCount,
+        validated: 0,
+        computed: fallbackComputed,
+        static_ready: fallbackStaticReady
+      },
+      root_failure: {
+        class: 'PROVIDER_EMPTY',
+        hint: 'All providers returned empty/invalid rows; keeping last_good artifacts.'
+      },
+      degraded_summary: degradedSummary,
+      metadata: {
+        computed_not_applicable: !Number.isInteger(computedTruthCount),
+        provider_chain: providers.map((provider) => provider.id),
+        fallback_used: true,
+        last_good_pipeline_ref: `/data/pipeline/${args.universe}.latest.json`
+      }
+    };
+
+    const pipelinePath = path.join(outRoot, 'pipeline', `${args.universe}.latest.json`);
+    await writeJsonAtomic(pipelinePath, pipelineTruth);
+    process.stdout.write(
+      `WARN: provider_empty expected=${symbols.length} fetched=${fetchedCount} validated=0 fallback_static_ready=${fallbackStaticReady}\n`
+    );
+    return;
   }
 
   const chunkSize = Math.max(1, Math.trunc(args.chunkSize) || DEFAULT_CHUNK_SIZE);
@@ -487,7 +652,9 @@ async function main() {
       : null,
     degraded_summary: degradedSummary,
     metadata: {
-      computed_not_applicable: !Number.isInteger(computedTruthCount)
+      computed_not_applicable: !Number.isInteger(computedTruthCount),
+      provider_chain: providers.map((provider) => provider.id),
+      fallback_used: false
     }
   };
 

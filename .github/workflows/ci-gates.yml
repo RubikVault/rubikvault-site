@@ -120,6 +120,15 @@ jobs:
       - name: Verify critical published artifacts
         run: node scripts/ci/verify-artifacts.mjs
 
+      - name: Mission-control blocking gate (artifact-level)
+        run: node scripts/ci/assert-mission-control-gate.mjs
+
+      - name: Elliott preview/prod parity (policy gate)
+        env:
+          RV_PARITY_PROD_BASE: https://rubikvault.com
+          RV_PARITY_PREVIEW_BASE: ${{ vars.RV_PARITY_PREVIEW_BASE }}
+        run: node scripts/ci/check-elliott-parity.mjs
+
       - name: "Repo policy: forbid KV writes in API"
         run: bash scripts/ci/forbid-kv-writes-in-api.sh
 

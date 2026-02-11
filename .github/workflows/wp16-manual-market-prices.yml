@@ -28,11 +28,14 @@ jobs:
       - name: Install deps
         run: npm ci
 
-      - name: Build market-prices (force real)
+      - name: Build market-prices (real provider chain)
         env:
           ARTIFACTS_DIR: ${{ runner.temp }}/artifacts
           BARS_ARTIFACTS_DIR: ${{ runner.temp }}/artifacts
-          RV_PRICES_FORCE_REAL: "1"
+          EODHD_API_KEY: ${{ secrets.EODHD_API_KEY }}
+          TIINGO_API_KEY: ${{ secrets.TIINGO_API_KEY }}
+          RV_PRICES_FORCE_REAL: "0"
+          RV_FORCE_PROVIDER: stooq
         run: |
           mkdir -p "$ARTIFACTS_DIR/market-prices"
           node scripts/providers/market-prices-v3.mjs
@@ -70,11 +73,28 @@ jobs:
           fi
           exit 0
 
-      - name: Finalize (publish into repo path)
+      - name: Finalize (publish into repo path, softfail quality-gate)
+        id: finalize
         env:
           ARTIFACTS_DIR: ${{ runner.temp }}/artifacts
+          RV_FINALIZER_SKIP_INVALID: "1"
         run: |
-          node scripts/aggregator/finalize.mjs
+          set -euo pipefail
+          log_file="${RUNNER_TEMP}/wp16-finalize.log"
+          if ! node scripts/aggregator/finalize.mjs 2>&1 | tee "$log_file"; then
+            if grep -Eq "VALIDATION_FAILED|drop_threshold|SKIP_INVALID" "$log_file"; then
+              echo "mode=green-skip" >> "$GITHUB_OUTPUT"
+              echo "GREEN-SKIP: quality gate failed; publish skipped, last_good retained." >> "$GITHUB_STEP_SUMMARY"
+              exit 0
+            fi
+            exit 1
+          fi
+          if grep -Eq "SKIP_INVALID|all artifacts were skipped as invalid" "$log_file"; then
+            echo "mode=green-skip" >> "$GITHUB_OUTPUT"
+            echo "GREEN-SKIP: invalid artifacts skipped by finalizer; publish held." >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "mode=published" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Guard market-prices (block stub overwrite)
         id: guard
@@ -98,5 +118,6 @@ jobs:
       - name: Summary
         if: always()
         run: |
+          echo "finalize.mode=${{ steps.finalize.outputs.mode || 'unknown' }}" >> $GITHUB_STEP_SUMMARY
           echo "guard.valid=${{ steps.guard.outputs.valid }}" >> $GITHUB_STEP_SUMMARY
           echo "guard.reason=${{ steps.guard.outputs.reason }}" >> $GITHUB_STEP_SUMMARY

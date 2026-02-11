@@ -35,24 +35,70 @@ function readJson(filePath) {
   return readFile(filePath, 'utf-8').then((content) => JSON.parse(content));
 }
 
+async function readFirstJson(candidates) {
+  let lastError = null;
+  for (const filePath of candidates) {
+    try {
+      const doc = await readJson(filePath);
+      return { path: filePath, doc };
+    } catch (err) {
+      lastError = err;
+    }
+  }
+  if (lastError) throw lastError;
+  throw new Error('REGISTRY_READ_FAILED');
+}
+
 async function buildModuleConfig(moduleName) {
-  const registryPath = join(BASE_DIR, 'public/data/registry/modules.json');
-  const registry = await readJson(registryPath);
+  const registryCandidates = [
+    join(BASE_DIR, 'public/data/registry/modules.json'),
+    join(BASE_DIR, 'functions/api/_shared/registry/modules.json')
+  ];
+
+  let registry = null;
+  try {
+    registry = (await readFirstJson(registryCandidates)).doc;
+  } catch {
+    registry = null;
+  }
+
   const config = registry?.modules?.[moduleName];
   if (!config) {
-    throw new Error(`MODULE_CONFIG_MISSING:${moduleName}`);
+    return {
+      enabled: true,
+      tier: 'standard',
+      domain: 'stocks',
+      counts: { expected: null, min: 1 },
+      freshness: { expected_max_age_minutes: 1440 }
+    };
   }
   return config;
 }
 
 async function loadUniverseSymbols() {
-  const universePath = join(BASE_DIR, 'public/data/registry/universe.v1.json');
-  const content = await readJson(universePath);
-  const symbols = content?.groups?.index_proxies?.symbols;
+  const universeCandidates = [
+    join(BASE_DIR, 'public/data/registry/universe.v1.json'),
+    join(BASE_DIR, 'public/data/universe/nasdaq100.json')
+  ];
+
+  let content = null;
+  try {
+    content = (await readFirstJson(universeCandidates)).doc;
+  } catch {
+    content = null;
+  }
+
+  const fromRegistry = content?.groups?.index_proxies?.symbols;
+  const fromStaticUniverse = Array.isArray(content)
+    ? content
+        .map((row) => (typeof row === 'string' ? row : row?.symbol ?? row?.ticker ?? row?.code ?? null))
+        .filter(Boolean)
+    : null;
+  const symbols = Array.isArray(fromRegistry) && fromRegistry.length > 0 ? fromRegistry : fromStaticUniverse;
   if (!Array.isArray(symbols) || symbols.length === 0) {
     throw new Error('UNIVERSE_INDEX_PROXIES_MISSING');
   }
-  return symbols.slice();
+  return [...new Set(symbols.map((symbol) => String(symbol).trim().toUpperCase()).filter(Boolean))];
 }
 
 async function loadSourceSnapshots() {

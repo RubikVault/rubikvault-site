@@ -1,0 +1,20 @@
+{
+  "schema_version": "1.0",
+  "defaultMode": "full",
+  "allowedModes": [
+    "full",
+    "ndx100",
+    "sp500",
+    "top100"
+  ],
+  "parityRules": {
+    "production": {
+      "mode": "full",
+      "locked": true
+    },
+    "preview": {
+      "mode": "full",
+      "allowDrift": false
+    }
+  }
+}

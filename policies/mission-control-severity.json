@@ -1,0 +1,21 @@
+{
+  "schema_version": "1.0",
+  "blocking_codes": [
+    "NO_API_KEY",
+    "KV_UNAVAILABLE",
+    "INVALID_CONFIG"
+  ],
+  "degrading_codes": [
+    "EOD_BATCH_MISSING",
+    "DATA_STALE",
+    "CACHE_MISS",
+    "MARKETPHASE_INDEX_MISSING",
+    "MARKET_PRICES_INVALID",
+    "SNAPSHOT_CONTRACT_INVALID"
+  ],
+  "meta_status_allowed": [
+    "ok",
+    "degraded",
+    "error"
+  ]
+}

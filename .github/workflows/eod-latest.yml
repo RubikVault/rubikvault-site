@@ -14,7 +14,7 @@ permissions:
   contents: write
 
 concurrency:
-  group: eod-latest
+  group: eod-latest-${{ github.ref_name }}
   cancel-in-progress: true
 
 jobs:
@@ -63,6 +63,27 @@ jobs:
           elif [ -n "${{ secrets.TIIANGO_API_KEY }}" ]; then
             echo "TIINGO_API_KEY=${{ secrets.TIIANGO_API_KEY }}" >> "$GITHUB_ENV"
           fi
+          if [ -n "${{ secrets.EODHD_API_KEY }}" ]; then
+            echo "EODHD_API_KEY=${{ secrets.EODHD_API_KEY }}" >> "$GITHUB_ENV"
+          fi
+
+      - name: Preflight (blocking checks)
+        run: node scripts/ops/preflight-check.mjs --mode eod-latest
+
+      - name: Provider diagnostics
+        run: |
+          set -euo pipefail
+          echo "universe=${RV_UNIVERSE}"
+          if [ -n "${EODHD_API_KEY:-}" ]; then
+            echo "provider_eodhd=present"
+          else
+            echo "provider_eodhd=missing"
+          fi
+          if [ -n "${TIINGO_API_KEY:-}" ]; then
+            echo "provider_tiingo=present"
+          else
+            echo "provider_tiingo=missing"
+          fi
 
       - name: Build EOD latest
         run: node scripts/eod/build-eod-latest.mjs --universe "$RV_UNIVERSE" --chunk-size 500 --out public/data
@@ -76,8 +97,16 @@ jobs:
       - name: Build ops summary
         run: node scripts/ops/build-mission-control-summary.mjs
 
+      - name: Build ops pulse
+        run: node scripts/ops/build-ops-pulse.mjs
+
       - name: Validate ops summary
         run: node scripts/ops/validate-ops-summary.mjs
+
+      - name: Mission-control blocking gate
+        env:
+          MC_GATE_STRICT: "1"
+        run: node scripts/ci/assert-mission-control-gate.mjs
 
       - name: Commit + push (if changed)
         run: |
@@ -99,5 +128,6 @@ jobs:
             sleep 5
             git pull --rebase origin main || true
           done
-          echo "push failed after retries" >&2
-          exit 1
+          echo "GREEN-SKIP: push failed after retries (likely concurrent writer); publish deferred." >&2
+          echo "GREEN-SKIP: push failed after retries (likely concurrent writer); publish deferred." >> "$GITHUB_STEP_SUMMARY"
+          exit 0

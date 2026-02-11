@@ -183,63 +183,88 @@ async function fetchStooqBars(symbols, outDir) {
   const upstreams = [];
   const attempts = {};
   const sources = {};
+  const warnings = [];
 
   for (const symbol of symbols) {
-    const symbolKey = resolveStooqSymbol(symbol);
-    if (!symbolKey) {
-      throw new Error(`STOOQ_SYMBOL_MAPPING_MISSING:${symbol}`);
-    }
-    const url = `${STOOQ_BASE_URL}?s=${symbolKey}&i=d`;
-    const result = await fetchWithRetry(
-      url,
-      {
-        headers: { 'User-Agent': 'RubikVault/3.0 market-prices' },
-        timeoutMs: 20000
-      },
-      {
-        maxRetries: 2,
-        baseDelayMs: 1500,
-        sleep
+    let result = null;
+    try {
+      const symbolKey = resolveStooqSymbol(symbol);
+      if (!symbolKey) {
+        throw new Error(`STOOQ_SYMBOL_MAPPING_MISSING:${symbol}`);
       }
-    );
+      const url = `${STOOQ_BASE_URL}?s=${symbolKey}&i=d`;
+      result = await fetchWithRetry(
+        url,
+        {
+          headers: { 'User-Agent': 'RubikVault/3.0 market-prices' },
+          timeoutMs: 7000
+        },
+        {
+          maxRetries: 1,
+          baseDelayMs: 800,
+          sleep
+        }
+      );
 
-    if (!result.ok) {
-      throw new Error(`STOOQ_FETCH_FAILED:${symbol}:${result.upstream?.http_status ?? 'unknown'}`);
-    }
-
-    const csvPath = join(stooqCacheDir, `${symbol}.csv`);
-    await writeFile(csvPath, result.text, 'utf-8');
-    const row = parseStooqLatestRow(result.text);
-    if (!row) {
-      throw new Error(`STOOQ_NO_DATA:${symbol}`);
-    }
-    const bar = buildStooqBar(symbol, row);
-    bars.push(bar);
-    const upstreamEntry = {
-      symbol,
-      http_status: result.upstream?.http_status ?? null,
-      latency_ms: result.upstream?.latency_ms ?? null,
-      rate_limited: Boolean(result.upstream?.rate_limited),
-      retry_count: result.upstream?.retry_count ?? 0
-    };
-    upstreams.push(upstreamEntry);
-    attempts[symbol] = [
-      {
-        provider_id: 'stooq',
-        classification: CLASSIFICATIONS.OK,
-        http_status: upstreamEntry.http_status,
-        note: null,
-        ok: true
+      if (!result.ok) {
+        throw new Error(`STOOQ_FETCH_FAILED:${symbol}:${result.upstream?.http_status ?? 'unknown'}`);
       }
-    ];
-    sources[symbol] = 'stooq';
-    await sleep(400);
+
+      const csvPath = join(stooqCacheDir, `${symbol}.csv`);
+      await writeFile(csvPath, result.text, 'utf-8');
+      const row = parseStooqLatestRow(result.text);
+      if (!row) {
+        throw new Error(`STOOQ_NO_DATA:${symbol}`);
+      }
+      const bar = buildStooqBar(symbol, row);
+      bars.push(bar);
+      const upstreamEntry = {
+        symbol,
+        http_status: result.upstream?.http_status ?? null,
+        latency_ms: result.upstream?.latency_ms ?? null,
+        rate_limited: Boolean(result.upstream?.rate_limited),
+        retry_count: result.upstream?.retry_count ?? 0
+      };
+      upstreams.push(upstreamEntry);
+      attempts[symbol] = [
+        {
+          provider_id: 'stooq',
+          classification: CLASSIFICATIONS.OK,
+          http_status: upstreamEntry.http_status,
+          note: null,
+          ok: true
+        }
+      ];
+      sources[symbol] = 'stooq';
+    } catch (error) {
+      const note = String(error?.message || error);
+      warnings.push(note);
+      attempts[symbol] = [
+        {
+          provider_id: 'stooq',
+          classification: CLASSIFICATIONS.NETWORK_ERROR,
+          http_status: result?.upstream?.http_status ?? null,
+          note,
+          ok: false
+        }
+      ];
+      sources[symbol] = 'stooq';
+      bars.push(buildMissingBar(symbol, 'stooq'));
+      upstreams.push({
+        symbol,
+        http_status: result?.upstream?.http_status ?? null,
+        latency_ms: result?.upstream?.latency_ms ?? null,
+        rate_limited: Boolean(result?.upstream?.rate_limited),
+        retry_count: result?.upstream?.retry_count ?? 0
+      });
+    }
+    await sleep(150);
   }
 
   return {
     bars,
     upstreams,
-    warnings: [],
+    warnings,
     attempts,
     sources
   };

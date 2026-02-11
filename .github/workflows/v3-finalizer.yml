@@ -45,7 +45,22 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Precheck upstream status
+        id: precheck
+        run: |
+          set -euo pipefail
+          skip="false"
+          reason="ok"
+          if [ "${{ github.event_name }}" = "workflow_run" ] && [ "${{ github.event.workflow_run.conclusion }}" != "success" ]; then
+            skip="true"
+            reason="upstream_${{ github.event.workflow_run.conclusion }}"
+            echo "GREEN-SKIP: upstream workflow conclusion=${{ github.event.workflow_run.conclusion }}; finalizer publish skipped." >> "$GITHUB_STEP_SUMMARY"
+          fi
+          echo "skip=${skip}" >> "$GITHUB_OUTPUT"
+          echo "reason=${reason}" >> "$GITHUB_OUTPUT"
+
       - name: Download artifacts from v3-pilot-market
+        if: steps.precheck.outputs.skip != 'true'
         uses: dawidd6/action-download-artifact@v6
         with:
           workflow: v3-pilot-market.yml
@@ -55,6 +70,7 @@ jobs:
         continue-on-error: true
 
       - name: Download artifacts from v3-scrape-template
+        if: steps.precheck.outputs.skip != 'true'
         uses: dawidd6/action-download-artifact@v6
         with:
           workflow: v3-scrape-template.yml
@@ -65,6 +81,7 @@ jobs:
         continue-on-error: true
 
       - name: Organize artifacts
+        if: steps.precheck.outputs.skip != 'true'
         run: |
           set +e  # Disable exit on error for this step
           
@@ -133,9 +150,13 @@ jobs:
           exit 0
 
       - name: Run Finalizer
+        if: steps.precheck.outputs.skip != 'true'
+        id: run-finalizer
         env:
           ARTIFACTS_DIR: artifacts-organized
+          RV_FINALIZER_SKIP_INVALID: "1"
         run: |
+          set -euo pipefail
           echo "Running finalizer with ARTIFACTS_DIR=$ARTIFACTS_DIR"
           echo "Current directory: $(pwd)"
           echo "Artifacts directory contents:"
@@ -148,22 +169,37 @@ jobs:
           find $ARTIFACTS_DIR -name "*.json" -type f 2>&1 || echo "No JSON files found"
           echo ""
           echo "=== RUNNING FINALIZER ==="
-          node scripts/aggregator/finalize.mjs 2>&1
+          log_file="${RUNNER_TEMP}/v3-finalizer.log"
+          set +e
+          node scripts/aggregator/finalize.mjs 2>&1 | tee "$log_file"
           FINALIZER_EXIT=$?
+          set -e
           echo ""
           echo "=== FINALIZER COMPLETED ==="
           echo "Exit code: $FINALIZER_EXIT"
           
           if [ $FINALIZER_EXIT -ne 0 ]; then
+            if grep -Eq "VALIDATION_FAILED|drop_threshold|SKIP_INVALID" "$log_file"; then
+              echo "mode=green-skip" >> "$GITHUB_OUTPUT"
+              echo "GREEN-SKIP: quality gate failed; publish skipped, last_good retained." >> "$GITHUB_STEP_SUMMARY"
+              exit 0
+            fi
             echo ""
             echo "❌ ERROR: Finalizer failed with exit code $FINALIZER_EXIT"
             echo "Check the logs above for detailed error information"
             exit $FINALIZER_EXIT
           else
             echo "✅ Finalizer completed successfully"
+            if grep -Eq "SKIP_INVALID|all artifacts were skipped as invalid" "$log_file"; then
+              echo "mode=green-skip" >> "$GITHUB_OUTPUT"
+              echo "GREEN-SKIP: invalid artifacts skipped by finalizer; publish held." >> "$GITHUB_STEP_SUMMARY"
+            else
+              echo "mode=published" >> "$GITHUB_OUTPUT"
+            fi
           fi
 
       - name: Verify core snapshots
+        if: steps.precheck.outputs.skip != 'true'
         run: |
           set -euo pipefail
           missing=false
@@ -182,12 +218,14 @@ jobs:
           fi
 
       - name: Guard market-prices snapshot
+        if: steps.precheck.outputs.skip != 'true'
         id: market-prices-guard
         run: |
           set -euo pipefail
-            node scripts/wp16/guard-market-prices.mjs
+          node scripts/wp16/guard-market-prices.mjs
 
       - name: Check for changes
+        if: steps.precheck.outputs.skip != 'true'
         id: changes
         run: |
           if git diff --quiet public/data; then
@@ -200,7 +238,7 @@ jobs:
           fi
 
       - name: Commit and push
-        if: steps.changes.outputs.changed == 'true' && steps.market-prices-guard.outputs.valid == 'true'
+        if: steps.precheck.outputs.skip != 'true' && steps.changes.outputs.changed == 'true' && steps.market-prices-guard.outputs.valid == 'true'
         run: |
           git config user.name "RubikVault Bot"
           git config user.email "bot@rubikvault.com"
@@ -239,6 +277,9 @@ jobs:
           echo "## Finalizer v3.0" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "- Status: ${{ job.status }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Precheck skip: ${{ steps.precheck.outputs.skip }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Precheck reason: ${{ steps.precheck.outputs.reason }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Finalizer mode: ${{ steps.run-finalizer.outputs.mode || 'n/a' }}" >> $GITHUB_STEP_SUMMARY
           echo "- Changes: ${{ steps.changes.outputs.changed }}" >> $GITHUB_STEP_SUMMARY
           if [ -f public/data/manifest.json ]; then
             echo "- Manifest: ✓" >> $GITHUB_STEP_SUMMARY
