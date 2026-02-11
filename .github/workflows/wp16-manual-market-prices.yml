@@ -34,8 +34,8 @@ jobs:
           BARS_ARTIFACTS_DIR: ${{ runner.temp }}/artifacts
           EODHD_API_KEY: ${{ secrets.EODHD_API_KEY }}
           TIINGO_API_KEY: ${{ secrets.TIINGO_API_KEY }}
-          RV_PRICES_FORCE_REAL: "1"
-          RV_FORCE_PROVIDER: eodhd
+          RV_PRICES_FORCE_REAL: "0"
+          RV_FORCE_PROVIDER: stooq
         run: |
           mkdir -p "$ARTIFACTS_DIR/market-prices"
           node scripts/providers/market-prices-v3.mjs
