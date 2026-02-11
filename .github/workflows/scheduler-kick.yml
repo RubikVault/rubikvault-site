@@ -4,9 +4,19 @@ on:
   schedule:
     - cron: "15 * * * *"
   workflow_dispatch:
+    inputs:
+      workflows:
+        description: "Comma-separated workflow files to dispatch (manual only)"
+        required: false
+        default: "eod-latest.yml,ops-daily.yml,forecast-daily.yml"
 
 permissions:
+  actions: write
   contents: read
+
+concurrency:
+  group: scheduler-kick-${{ github.ref_name }}
+  cancel-in-progress: false
 
 jobs:
   dry-run:
@@ -27,40 +37,72 @@ jobs:
         run: npm run test:contracts
 
   kick:
-    if: ${{ github.ref == 'refs/heads/main' && vars.RV_CI_MODE != 'dry' && vars.RV_PROD_BASE != '' }}
+    if: ${{ github.ref == 'refs/heads/main' && vars.RV_CI_MODE != 'dry' }}
     runs-on: ubuntu-latest
     steps:
-      - name: Trigger scheduler
+      - name: Dispatch downstream workflows (GitHub-native, no WAF)
         env:
-          RV_PROD_BASE: ${{ vars.RV_PROD_BASE }}
-          RV_ADMIN_TOKEN: ${{ secrets.RV_ADMIN_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          INPUT_WORKFLOWS: ${{ github.event.inputs.workflows }}
         run: |
           set -euo pipefail
 
-          if [ -z "${RV_PROD_BASE:-}" ]; then
-            echo "RV_PROD_BASE is not set (GitHub Actions variable)" >&2
-            exit 1
-          fi
-          if [ -z "${RV_ADMIN_TOKEN:-}" ]; then
-            echo "RV_ADMIN_TOKEN is not set" >&2
+          if [ -z "${GH_TOKEN:-}" ]; then
+            echo "MISSING_SECRET:GITHUB_TOKEN (required for workflow dispatch)" >&2
             exit 1
           fi
 
-          payload='{"job":"eod_stock","mode":"s2","universe":"nasdaq100"}'
-          status=$(curl -sS -o /tmp/scheduler.json -w "%{http_code}" \
-            -X POST "${RV_PROD_BASE%/}/api/scheduler/run" \
-            -H "Content-Type: application/json" \
-            -H "Authorization: Bearer ${RV_ADMIN_TOKEN}" \
-            --data "$payload")
-
-          if [ "$status" -lt 200 ] || [ "$status" -ge 300 ]; then
-            echo "Scheduler kick failed (HTTP $status)" >&2
-            cat /tmp/scheduler.json >&2 || true
+          if ! command -v gh >/dev/null 2>&1; then
+            echo "gh CLI missing on runner" >&2
             exit 1
           fi
 
-          jq -e '.ok | type == "boolean"' /tmp/scheduler.json >/dev/null
-          jq -e '.meta.status | type == "string"' /tmp/scheduler.json >/dev/null
-          jq -e '.meta.data_date | type == "string"' /tmp/scheduler.json >/dev/null
+          event_name="${GITHUB_EVENT_NAME:-unknown}"
+          hour_utc="$(date -u +%H)"
+          weekday_utc="$(date -u +%u)" # 1..7 (Mon..Sun)
+          workflows=""
 
-          jq -r '{ok, meta_status:.meta.status, job:(.data.job // null), run_id:(.data.run_id // null)}' /tmp/scheduler.json
+          if [ "$event_name" = "schedule" ]; then
+            if [ "$weekday_utc" -gt 5 ]; then
+              echo "Weekend schedule: no dispatch (weekday=${weekday_utc})"
+              exit 0
+            fi
+            case "$hour_utc" in
+              07) workflows="ops-daily.yml" ;;
+              21) workflows="forecast-daily.yml" ;;
+              22) workflows="eod-latest.yml" ;;
+              *) workflows="" ;;
+            esac
+            if [ -z "$workflows" ]; then
+              echo "No dispatch window configured for hour=${hour_utc} UTC; exiting cleanly."
+              exit 0
+            fi
+          else
+            workflows="${INPUT_WORKFLOWS:-eod-latest.yml,ops-daily.yml,forecast-daily.yml}"
+          fi
+
+          echo "dispatch_target_raw=${workflows}"
+          IFS=',' read -r -a wf_list <<< "$workflows"
+
+          dispatched=0
+          for wf in "${wf_list[@]}"; do
+            wf="$(echo "$wf" | xargs)"
+            if [ -z "$wf" ]; then
+              continue
+            fi
+            if [ "$wf" = "eod-latest.yml" ]; then
+              gh workflow run "$wf" --ref main -f universe=nasdaq100
+            else
+              gh workflow run "$wf" --ref main
+            fi
+            run_url="$(gh run list --workflow "$wf" --limit 1 --json url,createdAt,headBranch | jq -r '.[0].url // empty')"
+            echo "dispatched_workflow=${wf} run=${run_url:-unknown}"
+            dispatched=$((dispatched + 1))
+            sleep 1
+          done
+
+          if [ "$dispatched" -eq 0 ]; then
+            echo "No workflows dispatched (empty target list)." >&2
+            exit 1
+          fi
+          echo "dispatch_count=${dispatched}"
