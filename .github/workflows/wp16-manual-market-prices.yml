@@ -28,12 +28,14 @@ jobs:
       - name: Install deps
         run: npm ci
 
-      - name: Build market-prices (stooq real)
+      - name: Build market-prices (real provider chain)
         env:
           ARTIFACTS_DIR: ${{ runner.temp }}/artifacts
           BARS_ARTIFACTS_DIR: ${{ runner.temp }}/artifacts
-          RV_PRICES_FORCE_REAL: "0"
-          RV_FORCE_PROVIDER: stooq
+          EODHD_API_KEY: ${{ secrets.EODHD_API_KEY }}
+          TIINGO_API_KEY: ${{ secrets.TIINGO_API_KEY }}
+          RV_PRICES_FORCE_REAL: "1"
+          RV_FORCE_PROVIDER: eodhd
         run: |
           mkdir -p "$ARTIFACTS_DIR/market-prices"
           node scripts/providers/market-prices-v3.mjs
