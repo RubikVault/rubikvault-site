@@ -84,12 +84,27 @@ jobs:
       - name: Validate ops summary
         run: node scripts/ops/validate-ops-summary.mjs
 
-      - name: Mission-control blocking gate
-        env:
-          MC_GATE_STRICT: "1"
-        run: node scripts/ci/assert-mission-control-gate.mjs
+      - name: Mission-control gate (softfail config-blocked)
+        id: mc-gate
+        run: |
+          set -euo pipefail
+          gate_log="${RUNNER_TEMP}/ops-mc-gate.log"
+          set +e
+          MC_GATE_STRICT=1 node scripts/ci/assert-mission-control-gate.mjs 2>&1 | tee "$gate_log"
+          gate_exit=$?
+          set -e
+          if [ "$gate_exit" -ne 0 ]; then
+            if grep -Eq 'NO_API_KEY' "$gate_log"; then
+              echo "skip_publish=true" >> "$GITHUB_OUTPUT"
+              echo "GREEN-SKIP: Mission-control blocked on NO_API_KEY; publish skipped, last_good preserved." >> "$GITHUB_STEP_SUMMARY"
+              exit 0
+            fi
+            exit "$gate_exit"
+          fi
+          echo "skip_publish=false" >> "$GITHUB_OUTPUT"
 
       - name: Commit + push (if changed)
+        if: steps.mc-gate.outputs.skip_publish != 'true'
         run: |
           set -euo pipefail
           git config user.name "RubikVault Bot"
