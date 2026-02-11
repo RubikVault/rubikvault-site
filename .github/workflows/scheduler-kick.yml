@@ -37,7 +37,7 @@ jobs:
         run: npm run test:contracts
 
   kick:
-    if: ${{ github.ref == 'refs/heads/main' && vars.RV_CI_MODE != 'dry' }}
+    if: ${{ (github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch') && vars.RV_CI_MODE != 'dry' }}
     runs-on: ubuntu-latest
     steps:
       - name: Dispatch downstream workflows (GitHub-native, no WAF)
