@@ -11,6 +11,10 @@ on:
         required: false
         default: 'all'
 
+concurrency:
+  group: v3-scrape-template-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   # Determine which modules to scrape
   prepare:

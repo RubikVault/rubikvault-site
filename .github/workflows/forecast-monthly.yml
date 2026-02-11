@@ -18,6 +18,13 @@ defaults:
 env:
   NODE_VERSION: '20'
 
+permissions:
+  contents: write
+
+concurrency:
+  group: forecast-monthly-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   forecast-monthly:
     name: 'Monthly Report Generation'
