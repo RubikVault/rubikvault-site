@@ -246,16 +246,19 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Build market-prices and market-stats
+      - name: Download market-prices artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: module-market-prices
+          path: ${{ runner.temp }}/artifacts/market-prices
+
+      - name: Build market-stats from artifact
         env:
           ARTIFACTS_DIR: ${{ runner.temp }}/artifacts
           BARS_ARTIFACTS_DIR: ${{ runner.temp }}/artifacts
-          RV_PRICES_FORCE_REAL: '0'
-          RV_FORCE_PROVIDER: stooq
         run: |
-          echo "Building market-prices..."
-          node scripts/providers/market-prices-v3.mjs
-          echo "Building market-stats..."
+          test -f "${ARTIFACTS_DIR}/market-prices/snapshot.json"
+          echo "Building market-stats from downloaded market-prices artifact..."
           node scripts/providers/market-stats-v3.mjs
 
 
