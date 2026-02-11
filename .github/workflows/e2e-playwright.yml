@@ -6,6 +6,13 @@ on:
     branches:
       - main
 
+permissions:
+  contents: read
+
+concurrency:
+  group: e2e-playwright-${{ github.ref_name }}
+  cancel-in-progress: true
+
 jobs:
   ops-e2e:
     runs-on: ubuntu-latest
@@ -18,9 +25,25 @@ jobs:
         with:
           node-version: '20'
           cache: 'npm'
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-${{ hashFiles('package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-playwright-
       - name: Install dependencies
         run: npm ci
       - name: Install Playwright browsers
-        run: npx playwright install --with-deps
+        run: npx playwright install --with-deps chromium
       - name: Run Playwright tests
-        run: npx playwright test
+        run: npx playwright test --retries=2 --trace=on-first-retry --reporter=line
+      - name: Upload Playwright artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-results
+          path: |
+            playwright-report
+            test-results
+          if-no-files-found: ignore
