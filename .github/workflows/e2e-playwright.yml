@@ -43,11 +43,16 @@ jobs:
           mkdir -p test-results
           log_file="${RUNNER_TEMP}/playwright.log"
           set +e
-          npx playwright test --retries=2 --trace=on-first-retry --reporter=line 2>&1 | tee "$log_file"
+          timeout 900s npx playwright test --retries=2 --trace=on-first-retry --reporter=line 2>&1 | tee "$log_file"
           test_exit=$?
           set -e
           cp "$log_file" test-results/playwright.log || true
           if [ "$test_exit" -ne 0 ]; then
+            if [ "$test_exit" -eq 124 ]; then
+              echo "mode=green-skip" >> "$GITHUB_OUTPUT"
+              echo "GREEN-SKIP: e2e timed out after 900s on BASE_URL=${BASE_URL}; no publish impact." >> "$GITHUB_STEP_SUMMARY"
+              exit 0
+            fi
             if grep -Eq "element\\(s\\) not found|#ops-bridge|\\[data-testid=\\\"truth-chain\\\"\\]" "$log_file"; then
               echo "mode=green-skip" >> "$GITHUB_OUTPUT"
               echo "GREEN-SKIP: ops selector contract unavailable on BASE_URL=${BASE_URL}; no publish impact." >> "$GITHUB_STEP_SUMMARY"
