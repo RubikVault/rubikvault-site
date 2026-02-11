@@ -40,6 +40,9 @@ jobs:
     if: ${{ (github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch') && vars.RV_CI_MODE != 'dry' }}
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
       - name: Dispatch downstream workflows (GitHub-native, no WAF)
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
