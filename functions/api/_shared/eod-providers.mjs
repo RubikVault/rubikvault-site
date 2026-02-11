@@ -47,8 +47,8 @@ export async function fetchBarsWithProviderChain(symbol, env, options = {}) {
   const allowFailover = providerMode === 'FAILOVER_ALLOWED' && options.allowFailover === true;
 
   // Load chain config from registry or fallback
-  let primary = 'tiingo';
-  let secondary = 'twelvedata';
+  let primary = 'eodhd';
+  let secondary = 'eodhd';
 
   if (registry && registry.eod_chain) {
     primary = registry.eod_chain.primary || primary;

@@ -3,7 +3,7 @@ import { resolveSymbol, normalizeTicker as normalizeTickerStrict } from './_shar
 import { fetchBarsWithProviderChain } from './_shared/eod-providers.mjs';
 import { recordFailure } from './_shared/circuit.js';
 import { computeIndicators } from './_shared/eod-indicators.mjs';
-import { getTiingoKeyInfo } from './_shared/tiingo-key.mjs';
+// EODHD is the sole equity EOD provider (v13.1) — no tiingo-key import needed
 import {
   DEFAULT_TTL_SECONDS,
   SWR_MARK_TTL_SECONDS,
@@ -50,8 +50,8 @@ function normalizeTicker(raw) {
 function buildSourceChainMetadata(chain) {
   if (!chain || typeof chain !== 'object') {
     return {
-      primary: 'tiingo',
-      secondary: 'twelvedata',
+      primary: 'eodhd',
+      secondary: 'eodhd',
       forced: null,
       selected: null,
       fallbackUsed: false,
@@ -61,8 +61,8 @@ function buildSourceChainMetadata(chain) {
     };
   }
   return {
-    primary: chain.primary || 'tiingo',
-    secondary: chain.secondary || 'twelvedata',
+    primary: chain.primary || 'eodhd',
+    secondary: chain.secondary || 'eodhd',
     forced: chain.forced || null,
     selected: chain.selected || null,
     fallbackUsed: Boolean(chain.fallbackUsed),
@@ -485,7 +485,7 @@ export async function onRequestGet(context) {
   }
 
   const forcedProvider = String(env?.RV_FORCE_PROVIDER || '').trim();
-  const hasEodKeys = Boolean(getTiingoKeyInfo(env).key || env?.TWELVEDATA_API_KEY);
+  const hasEodKeys = Boolean(env?.EODHD_API_KEY);
   const canFetchProvider = Boolean(forcedProvider || hasEodKeys);
 
   async function fetchProviderBars({ flagSet = qualityFlags, recordTiming = false } = {}) {
@@ -503,7 +503,7 @@ export async function onRequestGet(context) {
     const bars = Array.isArray(chainResult.bars) ? chainResult.bars : [];
     const quality = evaluateQuality({ bars }, env);
     if (quality.reject) {
-      const provider = chainResult.provider || sourceChain?.selected || 'tiingo';
+      const provider = chainResult.provider || sourceChain?.selected || 'eodhd';
       await recordFailure(env, provider, 'QUALITY_REJECT');
       return { ok: false, error: { code: 'QUALITY_REJECT', message: quality.reject.message, details: quality.reject } };
     }
@@ -525,7 +525,7 @@ export async function onRequestGet(context) {
         const latest = pickLatestBar(result.bars);
         const dataDate = latest?.date || todayUtcDate();
         await cache.writeCached(cacheId, { bars: result.bars }, cacheTtlSeconds, {
-          provider: result.provider || 'tiingo',
+          provider: result.provider || 'eodhd',
           data_date: dataDate
         });
       }
@@ -562,7 +562,7 @@ export async function onRequestGet(context) {
   if (normalizedTicker && cachedBars.length && !cachedStale) {
     cacheHit = true;
     eodBars = cachedBars;
-    eodProvider = cachedProvider || 'tiingo';
+    eodProvider = cachedProvider || 'eodhd';
     eodStatus = 'fresh';
     eodAttempted = true;
   } else if (normalizedTicker && cachedBars.length && cachedStatus === 'error' && canFetchProvider) {
@@ -570,7 +570,7 @@ export async function onRequestGet(context) {
     if (swrPending) {
       cacheHit = true;
       eodBars = cachedBars;
-      eodProvider = cachedProvider || 'tiingo';
+      eodProvider = cachedProvider || 'eodhd';
       eodStatus = 'pending';
       qualityFlags.add('PENDING_REFRESH');
     } else {
@@ -578,7 +578,7 @@ export async function onRequestGet(context) {
       if (!gotLock) {
         cacheHit = true;
         eodBars = cachedBars;
-        eodProvider = cachedProvider || 'tiingo';
+        eodProvider = cachedProvider || 'eodhd';
         eodStatus = 'pending';
         qualityFlags.add('LOCKED_REFRESH');
       } else {
@@ -586,7 +586,7 @@ export async function onRequestGet(context) {
           const result = await fetchProviderBars({ recordTiming: true });
           if (result.ok) {
             eodBars = result.bars;
-            eodProvider = result.provider || 'tiingo';
+            eodProvider = result.provider || 'eodhd';
             const latest = pickLatestBar(eodBars);
             const dataDate = latest?.date || todayUtcDate();
             eodStatus = computeStatusFromDataDate(dataDate, now, maxStaleDays, pendingWindowMinutes);
@@ -597,7 +597,7 @@ export async function onRequestGet(context) {
           } else {
             cacheHit = true;
             eodBars = cachedBars;
-            eodProvider = cachedProvider || 'tiingo';
+            eodProvider = cachedProvider || 'eodhd';
             eodStatus = 'stale';
             qualityFlags.add('PROVIDER_FAIL');
             qualityFlags.add('CACHE_TOO_OLD');
@@ -611,7 +611,7 @@ export async function onRequestGet(context) {
   } else if (normalizedTicker && cachedBars.length) {
     cacheHit = true;
     eodBars = cachedBars;
-    eodProvider = cachedProvider || 'tiingo';
+    eodProvider = cachedProvider || 'eodhd';
     eodStatus = cachedStatus === 'pending' ? 'pending' : 'stale';
     if (cachedStatus === 'error') {
       qualityFlags.add('CACHE_TOO_OLD');
@@ -706,7 +706,7 @@ export async function onRequestGet(context) {
             const result = await fetchProviderBars({ recordTiming: true });
             if (result.ok) {
               eodBars = result.bars;
-              eodProvider = result.provider || 'tiingo';
+              eodProvider = result.provider || 'eodhd';
               const latest = pickLatestBar(eodBars);
               const dataDate = latest?.date || todayUtcDate();
               eodStatus = computeStatusFromDataDate(dataDate, now, maxStaleDays, pendingWindowMinutes);
@@ -832,7 +832,7 @@ export async function onRequestGet(context) {
         source_chain: sourceChain,
         telemetry: {
           provider: {
-            primary: sourceChain?.primary || 'tiingo',
+            primary: sourceChain?.primary || 'eodhd',
             selected: sourceChain?.selected || null,
             forced: Boolean(sourceChain?.forced),
             fallbackUsed: Boolean(sourceChain?.fallbackUsed),
@@ -1058,7 +1058,7 @@ export async function onRequestGet(context) {
       source_chain: sourceChain,
       telemetry: {
         provider: {
-          primary: sourceChain?.primary || 'tiingo',
+          primary: sourceChain?.primary || 'eodhd',
           selected: envelopeProvider || sourceChain?.selected || null,
           forced: Boolean(sourceChain?.forced),
           fallbackUsed: Boolean(sourceChain?.fallbackUsed),
