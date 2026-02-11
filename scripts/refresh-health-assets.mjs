@@ -22,6 +22,21 @@ function nowIso() {
   return new Date().toISOString();
 }
 
+function buildSeedManifestFallback(generatedAt, reason = "SEED_MANIFEST_MISSING") {
+  return {
+    generatedAt,
+    blocks: [
+      {
+        blockId: "system",
+        status: "ERROR",
+        reason,
+        stale: true,
+        staleReason: reason
+      }
+    ]
+  };
+}
+
 function downgradeStatus(status, reason) {
   const s = String(status || "").toUpperCase();
   const r = String(reason || "").toUpperCase();
@@ -160,7 +175,12 @@ async function main() {
   const statusPath = path.join(PUBLIC_DATA, "status.json");
   const seedManifestPath = path.join(PUBLIC_DATA, "seed-manifest.json");
 
-  const seedManifest = await readJson(seedManifestPath);
+  let seedManifest = null;
+  try {
+    seedManifest = await readJson(seedManifestPath);
+  } catch {
+    seedManifest = buildSeedManifestFallback(generatedAt, "SEED_MANIFEST_MISSING");
+  }
 
   let existingHealth = null;
   try {

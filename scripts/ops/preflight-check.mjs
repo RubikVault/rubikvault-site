@@ -56,13 +56,22 @@ function buildPreflightErrors(mode) {
 
   if (mode === "eod-latest") {
     const hasTiingo = Boolean(String(process.env.TIINGO_API_KEY || "").trim());
+    const hasTiingoAlias = Boolean(String(process.env.TIIANGO_API_KEY || "").trim());
     const hasEodhd = Boolean(String(process.env.EODHD_API_KEY || "").trim());
-    if (!hasTiingo && !hasEodhd) {
+    if (!hasTiingo && !hasTiingoAlias && !hasEodhd) {
       pushError(
         errors,
         "NO_API_KEY",
         "Neither TIINGO_API_KEY nor EODHD_API_KEY is configured.",
         "blocking"
+      );
+    }
+    if (hasTiingoAlias && !hasTiingo) {
+      pushError(
+        errors,
+        "INVALID_CONFIG",
+        "Using deprecated TIIANGO_API_KEY alias without TIINGO_API_KEY. Migrate to TIINGO_API_KEY.",
+        "degrading"
       );
     }
     if (!String(process.env.RV_UNIVERSE || "").trim()) {

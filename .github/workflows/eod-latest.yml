@@ -55,9 +55,6 @@ jobs:
       - name: Install deps
         run: npm ci
 
-      - name: Preflight (blocking checks)
-        run: node scripts/ops/preflight-check.mjs --mode eod-latest
-
       - name: Export Tiingo token (typo-safe)
         run: |
           set -euo pipefail
@@ -65,6 +62,27 @@ jobs:
             echo "TIINGO_API_KEY=${{ secrets.TIINGO_API_KEY }}" >> "$GITHUB_ENV"
           elif [ -n "${{ secrets.TIIANGO_API_KEY }}" ]; then
             echo "TIINGO_API_KEY=${{ secrets.TIIANGO_API_KEY }}" >> "$GITHUB_ENV"
+          fi
+          if [ -n "${{ secrets.EODHD_API_KEY }}" ]; then
+            echo "EODHD_API_KEY=${{ secrets.EODHD_API_KEY }}" >> "$GITHUB_ENV"
+          fi
+
+      - name: Preflight (blocking checks)
+        run: node scripts/ops/preflight-check.mjs --mode eod-latest
+
+      - name: Provider diagnostics
+        run: |
+          set -euo pipefail
+          echo "universe=${RV_UNIVERSE}"
+          if [ -n "${EODHD_API_KEY:-}" ]; then
+            echo "provider_eodhd=present"
+          else
+            echo "provider_eodhd=missing"
+          fi
+          if [ -n "${TIINGO_API_KEY:-}" ]; then
+            echo "provider_tiingo=present"
+          else
+            echo "provider_tiingo=missing"
           fi
 
       - name: Build EOD latest
