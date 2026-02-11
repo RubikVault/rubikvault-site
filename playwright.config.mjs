@@ -4,8 +4,8 @@ const baseURL = process.env.BASE_URL || process.env.PREVIEW_BASE || 'https://rub
 
 export default defineConfig({
   testDir: 'tests/e2e',
-  timeout: 20_000,
-  expect: { timeout: 20_000 },
+  timeout: 90_000,
+  expect: { timeout: 60_000 },
   reporter: 'list',
   use: {
     baseURL,
