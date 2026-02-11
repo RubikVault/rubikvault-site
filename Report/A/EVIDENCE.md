@@ -1,56 +1,115 @@
-# P0/P1 Hardening — Evidence
+# P0/P1 Hardening — Evidence Bundle (v2)
+
+**Preview**: `https://a1ab9e1c.rubikvault-site.pages.dev`
+**Prod**: `https://rubikvault.com`
+**Main HEAD**: `7a67d63d`
 
 ## Phase 0: Reality Check
 
 ```
-Branch: codex/workflow-green-finalizer-v12
-HEAD: 86565007
-Worktree: Modified pulse.json + untracked audit dirs (expected)
-Required commits in history: aeee8a4e, 69daf238, 5e3bb449, 87fe721b
-Changed files vs merge-base to origin/main: 39
+Branch: main (after merge)
+HEAD: 7a67d63d (merge of codex/workflow-green-finalizer-v12)
+origin/main: 7a67d63d
+is-ancestor: 0 (HEAD IS ancestor of origin/main)
+Worktree: clean (tracked)
 ```
 
-## Phase 1: MarketPhase index.json
-
-**File evidence:**
-- Generator: `scripts/ops/build-ops-daily.mjs:327-343` — generates `public/data/marketphase/index.json` from universe when missing
-- Runtime fallback: `functions/data/marketphase/[asset].js:84-101` — returns `MARKETPHASE_INDEX_MISSING` envelope
-
-**Local verification:**
-```
-$ node scripts/ops/build-ops-daily.mjs
-build-meta.json written (build_id=unknown-20260211T2119-local)
-marketphase/index.json generated (517 symbols)
-
-$ node -e "const d=require('./public/data/marketphase/index.json'); console.log(d.data.symbols.length, d.ok)"
-517 true
-```
-
-## Phase 2: meta.url Fix
-
-**File evidence:**
-- `functions/data/marketphase/[asset].js:61` — url in UNSUPPORTED_MARKETPHASE_PATH
-- `functions/data/marketphase/[asset].js:79-81` — url injected on static pass-through
-- `functions/data/marketphase/[asset].js:89` — url in MARKETPHASE_INDEX_MISSING
-- `functions/data/marketphase/[asset].js:112` — url in MARKETPHASE_SYMBOL_MISSING
-
-## Phase 3: Build_id Cohesion
-
-**SSOT:** `scripts/ops/build-ops-daily.mjs:233-245` writes `public/data/ops/build-meta.json`
-**Consumers:**
-- `scripts/ops/build-ops-pulse.mjs:76-78` — reads build-meta, prefers its build_id
-- `functions/api/mission-control/summary.js:373-382` — async fetch of build-meta.json
-- `functions/api/elliott-scanner.js:191-197` — fetchJsonSafe of build-meta.json
-
-**Local verification:**
-```
-$ node -e "const bm=require('./public/data/ops/build-meta.json'); const p=require('./public/data/ops/pulse.json'); console.log('match:', bm.meta.build_id === p.meta.build_id)"
-match: true
-```
-
-## Phase 4: Report/A Files
+## Phase 2: Root Cause Proof
 
 ```
-$ ls Report/A/
-DIFF_SUMMARY.md  EVIDENCE.md  FIX_REPORT.md
+$ git grep -n "build-meta.json" origin/main~1 -- scripts/ops
+(no results — code did not exist in origin/main before merge)
+
+$ git grep -n "marketphase/index.json" origin/main~1 -- scripts/ops
+origin/main~1:scripts/ops/build-ops-daily.mjs:315:  const marketphaseIndex = await readJson(...)
+(reads only, no generation logic)
 ```
+
+**Conclusion**: Prod was old because fix branch was not merged into main.
+
+## Deployed Evidence
+
+### PROD build-meta.json (Issue #1)
+```
+$ curl -fsS https://rubikvault.com/data/ops/build-meta.json
+{
+  "meta": {
+    "build_id": "89855798-20260211T2145-local",
+    "commit": "89855798c96ad95505495bd83ffbd52d75e13f30",
+    "generatedAt": "2026-02-11T21:45:25.227Z"
+  },
+  "data": {
+    "build_id": "89855798-20260211T2145-local",
+    "commit": "89855798c96ad95505495bd83ffbd52d75e13f30",
+    "deploy_target": "local"
+  }
+}
+```
+
+### PROD marketphase index.json (Issue #2)
+```
+$ curl -fsSI https://rubikvault.com/data/marketphase/index.json
+HTTP/2 200
+content-type: application/json
+
+ok: True symbols: 517
+```
+
+### PROD marketphase missing asset meta.url (Issue #2b)
+```
+$ curl -fsS https://rubikvault.com/data/marketphase/does-not-exist.json | python3 -c "..."
+meta.url: /data/marketphase/does-not-exist.json
+ok: False
+```
+
+### PROD elliott meta contract (Issue #3A)
+```
+mode: full
+universeSource: /data/universe/all.json
+universeCount: 517
+buildId: 89855798-20260211T2145-local
+ALL_PRESENT: True
+```
+
+### PROD MC meta contract (Issue #3B)
+```
+build_id: 89855798-20260211T2145-local
+commit: 89855798c96ad95505495bd83ffbd52d75e13f30
+BUILD_ID_PRESENT: True
+```
+
+### PROD cohesion
+```
+MC:      89855798-20260211T2145-local
+Elliott: 89855798-20260211T2145-local
+Pulse:   89855798-20260211T2145-local
+COHESION: PASS
+```
+
+### PREVIEW cohesion
+```
+MC:      unknown-20260211T2119-local
+Elliott: unknown-20260211T2119-local
+Pulse:   unknown-20260211T2119-local
+COHESION: PASS
+```
+
+## GATES TABLE
+
+| Gate | Local | Preview | Prod |
+|---|---|---|---|
+| `build-meta.json` 200 JSON | ✅ PASS | ✅ PASS | ✅ PASS |
+| `build-meta` meta.build_id present | ✅ PASS | ✅ PASS | ✅ PASS |
+| `build-meta` meta.commit non-null | ✅ PASS | ❌ null* | ✅ PASS |
+| `marketphase/index.json` 200 JSON | ✅ PASS | ✅ PASS | ✅ PASS |
+| `marketphase/index.json` ok:true + symbols>100 | ✅ PASS (517) | ✅ PASS (517) | ✅ PASS (517) |
+| Missing asset `meta.url` present | ✅ (code) | ✅ PASS | ✅ PASS |
+| Elliott `meta.mode` present | ✅ (code) | ✅ PASS | ✅ PASS |
+| Elliott `meta.universeSource` present | ✅ (code) | ✅ PASS | ✅ PASS |
+| Elliott `meta.universeCount` present | ✅ (code) | ✅ PASS | ✅ PASS |
+| MC `meta.build_id` present (string) | ✅ PASS | ✅ PASS | ✅ PASS |
+| Cohesion (MC=Elliott=Pulse build_id) | ✅ PASS | ✅ PASS | ✅ PASS |
+| `verify-artifacts.mjs` | ✅ PASS | — | — |
+| `assert-mission-control-gate.mjs` | ✅ PASS | — | — |
+
+*Preview `build-meta` commit=null because Preview deployed from an earlier commit before the git-fallback fix. Next deploy will fix this.

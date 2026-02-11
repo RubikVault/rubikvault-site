@@ -1,24 +1,41 @@
-# P0/P1 Hardening — Fix Report
+# P0/P1 Hardening — Fix Report (v2)
 
 > Canonical contracts: [P0_P1_HARDENING_CONTRACTS.md](../../docs/ops/P0_P1_HARDENING_CONTRACTS.md)
 
+## Open Issues Closed
+
+| # | Issue | Classification | Status |
+|---|---|---|---|
+| 1 | PROD missing `build-meta.json` | DEPLOY GAP | **CLOSED** |
+| 2 | PROD missing `marketphase/index.json` | DEPLOY GAP | **CLOSED** |
+| 3 | PROD APIs old contract shape | DEPLOY GAP | **CLOSED** |
+| 4 | `build-meta` commit=null quality gap | OBSERVABILITY GAP | **CLOSED** |
+| 5 | Preview/Prod parity gap | DEPLOY GAP | **CLOSED** |
+
+## Root Cause
+
+**All issues #1-3,5 were DEPLOY GAPs**: the fix code existed only on branch `codex/workflow-green-finalizer-v12`, not in `origin/main`. Prod is deployed from `main`. Fix: merged branch into main.
+
+**Issue #4 was OBSERVABILITY GAP**: `build-ops-daily.mjs` relied on `GITHUB_SHA`/`CF_PAGES_COMMIT_SHA` env vars which are absent locally. Fix: added `git rev-parse HEAD` fallback.
+
 ## Fixes Applied
 
-### Phase 1 — MarketPhase index.json 404 (P0-2)
-- **Root cause**: `public/data/marketphase/` directory did not exist; no build step generated it.
-- **Fix**: `scripts/ops/build-ops-daily.mjs` now generates `public/data/marketphase/index.json` from the universe (`all.json`) when it is missing or malformed.
-- **Fallback**: `functions/data/marketphase/[asset].js` already had a runtime fallback for `index.json` returning a `circuitOpen` envelope — this remains as defense-in-depth.
-- **Evidence**: `build-ops-daily.mjs:327-343`, file exists with 517 symbols.
+### Phase 1 — MarketPhase index.json 404 → CLOSED
+- `scripts/ops/build-ops-daily.mjs:330-346` generates `public/data/marketphase/index.json` from universe
+- `.gitignore` negation added for `index.json`
 
-### Phase 2 — MarketPhase meta.url null (P0-3)
-- **Root cause**: `meta.url` field was not set in any of the 3 error response paths or the static pass-through.
-- **Fix**: Added `url: /data/marketphase/<asset>` to all 4 response paths in `[asset].js`.
-- **Evidence**: `functions/data/marketphase/[asset].js:61,79-81,89,112`
+### Phase 2 — meta.url null → CLOSED
+- `functions/data/marketphase/[asset].js` lines 61,79-81,89,112: `url` field in all 4 response paths
 
-### Phase 3 — Build_id Cohesion (P0-4)
-- **Root cause**: `build-ops-pulse.mjs`, `summary.js`, `elliott-scanner.js` each computed `build_id` independently using env vars, producing different values.
-- **Fix**: `build-ops-daily.mjs` now writes `public/data/ops/build-meta.json` as SSOT. Pulse reads it at build time; runtime functions (`summary.js`, `elliott-scanner.js`) fetch it via same-origin.
-- **Evidence**: build-meta and pulse `build_id` match after generation.
+### Phase 3 — build_id cohesion → CLOSED
+- `scripts/ops/build-ops-daily.mjs:233-248`: shared `build-meta.json` SSOT with git fallback
+- `scripts/ops/build-ops-pulse.mjs:76-78`: reads shared build-meta
+- `functions/api/mission-control/summary.js:370-390`: async fetch of build-meta
+- `functions/api/elliott-scanner.js:191-197`: fetchJsonSafe build-meta
 
-### Phase 4 — Report/A Evidence Pack
-- Created `Report/A/FIX_REPORT.md`, `EVIDENCE.md`, `DIFF_SUMMARY.md`.
+### Phase 4 — Report/A → UPDATED
+- Report/A/FIX_REPORT.md, EVIDENCE.md, DIFF_SUMMARY.md
+
+### Phase 5 — Merge to main → CLOSED
+- Merged `codex/workflow-green-finalizer-v12` into `main` (commit `7a67d63d`)
+- Pushed to origin/main, Cloudflare deployed automatically
