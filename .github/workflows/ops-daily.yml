@@ -9,7 +9,7 @@ permissions:
   contents: write
 
 concurrency:
-  group: ops-daily
+  group: ops-daily-${{ github.ref_name }}
   cancel-in-progress: true
 
 jobs:
