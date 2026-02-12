@@ -63,14 +63,13 @@ jobs:
           git commit -m "data(scientific): refresh stock-analysis snapshot" || exit 0
 
           for i in 1 2 3; do
-            if git push origin HEAD:main; then
+            if git push origin HEAD:${{ github.ref_name }}; then
               exit 0
             fi
             echo "push failed (attempt $i); retrying in 5s" >&2
             sleep 5
-            git pull --rebase origin main || true
+            git pull --rebase origin "${{ github.ref_name }}" || true
           done
           echo "GREEN-SKIP: push failed after retries (likely concurrent writer); publish deferred." >&2
           echo "GREEN-SKIP: push failed after retries (likely concurrent writer); publish deferred." >> "$GITHUB_STEP_SUMMARY"
           exit 0
-
