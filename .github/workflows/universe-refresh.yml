@@ -49,5 +49,19 @@ jobs:
           git config --global user.name "rv-bot"
           git config --global user.email "bot@rubikvault.com"
           git add public/data/universe/
-          git commit -m "chore(universe): refresh index constituents [skip ci]" || echo "No changes"
-          git push
+          if git diff --cached --quiet; then
+            echo "No universe changes to commit."
+            exit 0
+          fi
+          git commit -m "chore(universe): refresh index constituents [skip ci]"
+          for i in 1 2 3; do
+            git pull --rebase origin "${GITHUB_REF_NAME:-main}" || true
+            if git push origin "HEAD:${GITHUB_REF_NAME:-main}"; then
+              echo "Push succeeded on attempt $i."
+              exit 0
+            fi
+            echo "Push failed on attempt $i; retrying..."
+            sleep 2
+          done
+          echo "::error::Failed to push universe refresh after retries."
+          exit 1
