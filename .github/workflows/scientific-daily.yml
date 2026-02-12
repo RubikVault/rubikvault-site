@@ -1,0 +1,76 @@
+name: Scientific Daily Snapshot
+
+on:
+  schedule:
+    - cron: "15 23 * * 1-5"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: scientific-daily-${{ github.ref_name }}
+  cancel-in-progress: true
+
+jobs:
+  build-scientific-snapshot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Validate required inputs
+        run: |
+          set -euo pipefail
+          test -s public/data/universe/all.json
+          test -s public/data/models/weights-v9.json
+
+      - name: Generate scientific snapshot
+        run: |
+          set -euo pipefail
+          node scripts/scientific-analyzer/generate-analysis.mjs
+
+      - name: Validate stock-analysis output
+        run: |
+          set -euo pipefail
+          FILE="public/data/snapshots/stock-analysis.json"
+          test -s "$FILE"
+          jq -e '.["_meta"]["symbols_processed"] > 0' "$FILE" >/dev/null
+          jq -e '.["_rankings"]["top_setups"] != null' "$FILE" >/dev/null
+
+      - name: Commit + push (if changed)
+        run: |
+          set -euo pipefail
+          git config user.name "RubikVault Bot"
+          git config user.email "bot@rubikvault.com"
+          git add public/data/snapshots/stock-analysis.json
+          if git diff --cached --quiet; then
+            echo "No staged changes"
+            exit 0
+          fi
+          git commit -m "data(scientific): refresh stock-analysis snapshot" || exit 0
+
+          for i in 1 2 3; do
+            if git push origin HEAD:main; then
+              exit 0
+            fi
+            echo "push failed (attempt $i); retrying in 5s" >&2
+            sleep 5
+            git pull --rebase origin main || true
+          done
+          echo "GREEN-SKIP: push failed after retries (likely concurrent writer); publish deferred." >&2
+          echo "GREEN-SKIP: push failed after retries (likely concurrent writer); publish deferred." >> "$GITHUB_STEP_SUMMARY"
+          exit 0
+

@@ -8,8 +8,8 @@ on:
         required: false
         type: string
   schedule:
-    # Run at 21:00 UTC (16:00 ET after market close)
-    - cron: '0 21 * * 1-5'
+    # Run after EOD + scientific snapshot pipelines
+    - cron: '30 23 * * 1-5'
 
 permissions:
   contents: write

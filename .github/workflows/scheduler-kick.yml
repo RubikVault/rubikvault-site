@@ -8,7 +8,7 @@ on:
       workflows:
         description: "Comma-separated workflow files to dispatch (manual only)"
         required: false
-        default: "eod-latest.yml,ops-daily.yml,forecast-daily.yml"
+        default: "eod-latest.yml,scientific-daily.yml,ops-daily.yml,forecast-daily.yml"
 
 permissions:
   actions: write
@@ -72,8 +72,8 @@ jobs:
             fi
             case "$hour_utc" in
               07) workflows="ops-daily.yml" ;;
-              21) workflows="forecast-daily.yml" ;;
               22) workflows="eod-latest.yml" ;;
+              23) workflows="scientific-daily.yml" ;;
               *) workflows="" ;;
             esac
             if [ -z "$workflows" ]; then
@@ -81,7 +81,7 @@ jobs:
               exit 0
             fi
           else
-            workflows="${INPUT_WORKFLOWS:-eod-latest.yml,ops-daily.yml,forecast-daily.yml}"
+            workflows="${INPUT_WORKFLOWS:-eod-latest.yml,scientific-daily.yml,ops-daily.yml,forecast-daily.yml}"
           fi
 
           echo "dispatch_target_raw=${workflows}"
