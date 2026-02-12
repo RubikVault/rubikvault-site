@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0",
   "type": "pipeline.truth",
-  "generated_at": "2026-02-11T21:15:52.464Z",
+  "generated_at": "2026-02-12T15:09:35.687Z",
   "universe": "nasdaq100",
   "refs": {
     "universe_ref": "/data/universe/nasdaq100.json",
@@ -21,6 +21,11 @@
     "sample": []
   },
   "metadata": {
-    "computed_not_applicable": false
+    "computed_not_applicable": false,
+    "provider_chain": [
+      "eodhd",
+      "tiingo"
+    ],
+    "fallback_used": false
   }
 }
