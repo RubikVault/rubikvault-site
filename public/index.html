@@ -1417,6 +1417,46 @@
       ctx.textBaseline = 'top';
       ctx.fillText(`Price History (${chartState.range})`, padding.left, 5);
 
+      // --- Y-Axis Price Labels (Right Side) ---
+      // Determine optimal number of price ticks (aim for ~5-8)
+      const yTicks = 6;
+      const yStep = range / yTicks;
+      
+      ctx.textAlign = 'right';
+      ctx.textBaseline = 'middle';
+      ctx.font = '11px system-ui, sans-serif'; // Reduced font size
+      ctx.fillStyle = '#64748b'; // Muted color for axis labels
+      
+      for (let i = 0; i <= yTicks; i++) {
+        const value = minP + (yStep * i);
+        const y = toY(value);
+        
+        // Dynamic formatting based on price range
+        let labelText;
+        if (range < 1) labelText = value.toFixed(4);      // Micro-caps/crypto
+        else if (range < 10) labelText = value.toFixed(3); // Penny stocks
+        else if (range < 100) labelText = value.toFixed(2);
+        else labelText = Math.round(value).toLocaleString(); // Large caps
+        
+        // Draw grid line (very subtle)
+        ctx.beginPath();
+        ctx.strokeStyle = 'rgba(100, 116, 139, 0.1)';
+        ctx.lineWidth = 1;
+        ctx.moveTo(padding.left, y);
+        ctx.lineTo(w - padding.right, y); // Extend to right padding edge
+        ctx.stroke();
+
+        // Draw tick mark on right axis
+        ctx.beginPath();
+        ctx.strokeStyle = 'rgba(100, 116, 139, 0.3)';
+        ctx.moveTo(w - padding.right, y);
+        ctx.lineTo(w - padding.right + 4, y);
+        ctx.stroke();
+        
+        // Draw label
+        ctx.fillText(labelText, w - 10, y); // Position near right edge
+      }
+
       // --- X-Axis Time Labels ---
       if (visibleBars.length > 1) {
         ctx.textAlign = 'center';

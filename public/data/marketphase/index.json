@@ -1,531 +1,1609 @@
 {
   "ok": true,
-  "feature": "marketphase",
   "meta": {
-    "generatedAt": "2026-02-11T21:19:24.694Z",
-    "source": "build-ops-daily",
-    "status": "ok",
-    "build_id": "unknown-20260211T2119-local"
+    "generatedAt": "2026-02-12T16:05:43.727Z",
+    "status": "OK",
+    "version": "8.0",
+    "methodologyVersion": "8.0",
+    "precision": "IEEE754-Double-Round6",
+    "auditTrail": {
+      "generatedBy": "MarketPhase-v8-Engine",
+      "commitHash": "42a09c17",
+      "reviewDate": "2026-02-12T16:05:43.727Z",
+      "standards": [
+        "ISO-8000",
+        "IEEE-7000"
+      ]
+    },
+    "legal": "MarketPhase AI — Scientific Elliott Research (v8.0)\nprovides deterministic, rule-based historical analysis only.\nIt does not forecast future prices or offer financial advice.\nUse solely for educational and research purposes.\nISO 8000 / IEEE 7000 Compliant - Bit-exact reproducibility guaranteed."
   },
   "data": {
     "symbols": [
-      "A",
-      "AAPL",
-      "ABBV",
-      "ABNB",
-      "ABT",
-      "ACGL",
-      "ACN",
-      "ADBE",
-      "ADI",
-      "ADM",
-      "ADP",
-      "ADSK",
-      "AEE",
-      "AEP",
-      "AES",
-      "AFL",
-      "AIG",
-      "AIZ",
-      "AJG",
-      "AKAM",
-      "ALB",
-      "ALGN",
-      "ALL",
-      "ALLE",
-      "AMAT",
-      "AMCR",
-      "AMD",
-      "AME",
-      "AMGN",
-      "AMP",
-      "AMT",
-      "AMZN",
-      "ANET",
-      "AON",
-      "AOS",
-      "APA",
-      "APD",
-      "APH",
-      "APO",
-      "APP",
-      "APTV",
-      "ARE",
-      "ARM",
-      "ASML",
-      "ATO",
-      "AVB",
-      "AVGO",
-      "AVY",
-      "AWK",
-      "AXON",
-      "AXP",
-      "AZN",
-      "AZO",
-      "BA",
-      "BAC",
-      "BALL",
-      "BAX",
-      "BBY",
-      "BDX",
-      "BEN",
-      "BF.B",
-      "BG",
-      "BIIB",
-      "BK",
-      "BKNG",
-      "BKR",
-      "BLDR",
-      "BLK",
-      "BMY",
-      "BR",
-      "BRK.B",
-      "BRO",
-      "BSX",
-      "BX",
-      "BXP",
-      "C",
-      "CAG",
-      "CAH",
-      "CARR",
-      "CAT",
-      "CB",
-      "CBOE",
-      "CBRE",
-      "CCEP",
-      "CCI",
-      "CCL",
-      "CDNS",
-      "CDW",
-      "CEG",
-      "CF",
-      "CFG",
-      "CHD",
-      "CHRW",
-      "CHTR",
-      "CI",
-      "CINF",
-      "CL",
-      "CLX",
-      "CMCSA",
-      "CME",
-      "CMG",
-      "CMI",
-      "CMS",
-      "CNC",
-      "CNP",
-      "COF",
-      "COIN",
-      "COO",
-      "COP",
-      "COR",
-      "COST",
-      "CPAY",
-      "CPB",
-      "CPRT",
-      "CPT",
-      "CRL",
-      "CRM",
-      "CRWD",
-      "CSCO",
-      "CSGP",
-      "CSX",
-      "CTAS",
-      "CTRA",
-      "CTSH",
-      "CTVA",
-      "CVS",
-      "CVX",
-      "CZR",
-      "D",
-      "DAL",
-      "DASH",
-      "DAY",
-      "DD",
-      "DDOG",
-      "DE",
-      "DECK",
-      "DELL",
-      "DG",
-      "DGX",
-      "DHI",
-      "DHR",
-      "DIS",
-      "DLR",
-      "DLTR",
-      "DOC",
-      "DOV",
-      "DOW",
-      "DPZ",
-      "DRI",
-      "DTE",
-      "DUK",
-      "DVA",
-      "DVN",
-      "DXCM",
-      "EA",
-      "EBAY",
-      "ECL",
-      "ED",
-      "EFX",
-      "EG",
-      "EIX",
-      "EL",
-      "ELV",
-      "EMN",
-      "EMR",
-      "ENPH",
-      "EOG",
-      "EPAM",
-      "EQIX",
-      "EQR",
-      "EQT",
-      "ERIE",
-      "ES",
-      "ESS",
-      "ETN",
-      "ETR",
-      "EVRG",
-      "EW",
-      "EXC",
-      "EXE",
-      "EXPD",
-      "EXPE",
-      "EXR",
-      "F",
-      "FANG",
-      "FAST",
-      "FCX",
-      "FDS",
-      "FDX",
-      "FE",
-      "FFIV",
-      "FI",
-      "FICO",
-      "FIS",
-      "FITB",
-      "FOX",
-      "FOXA",
-      "FRT",
-      "FSLR",
-      "FTNT",
-      "FTV",
-      "GD",
-      "GDDY",
-      "GE",
-      "GEHC",
-      "GEN",
-      "GEV",
-      "GFS",
-      "GILD",
-      "GIS",
-      "GL",
-      "GLW",
-      "GM",
-      "GNRC",
-      "GOOG",
-      "GOOGL",
-      "GPC",
-      "GPN",
-      "GRMN",
-      "GS",
-      "GWW",
-      "HAL",
-      "HAS",
-      "HBAN",
-      "HCA",
-      "HD",
-      "HIG",
-      "HII",
-      "HLT",
-      "HOLX",
-      "HON",
-      "HPE",
-      "HPQ",
-      "HRL",
-      "HSIC",
-      "HST",
-      "HSY",
-      "HUBB",
-      "HUM",
-      "HWM",
-      "IBM",
-      "ICE",
-      "IDXX",
-      "IEX",
-      "IFF",
-      "INCY",
-      "INTC",
-      "INTU",
-      "INVH",
-      "IP",
-      "IPG",
-      "IQV",
-      "IR",
-      "IRM",
-      "ISRG",
-      "IT",
-      "ITW",
-      "IVZ",
-      "J",
-      "JBHT",
-      "JBL",
-      "JCI",
-      "JKHY",
-      "JNJ",
-      "JPM",
-      "K",
-      "KDP",
-      "KEY",
-      "KEYS",
-      "KHC",
-      "KIM",
-      "KKR",
-      "KLAC",
-      "KMB",
-      "KMI",
-      "KMX",
-      "KO",
-      "KR",
-      "KVUE",
-      "L",
-      "LDOS",
-      "LEN",
-      "LH",
-      "LHX",
-      "LII",
-      "LIN",
-      "LKQ",
-      "LLY",
-      "LMT",
-      "LNT",
-      "LOW",
-      "LRCX",
-      "LULU",
-      "LUV",
-      "LVS",
-      "LW",
-      "LYB",
-      "LYV",
-      "MA",
-      "MAA",
-      "MAR",
-      "MAS",
-      "MCD",
-      "MCHP",
-      "MCK",
-      "MCO",
-      "MDLZ",
-      "MDT",
-      "MELI",
-      "MET",
-      "META",
-      "MGM",
-      "MHK",
-      "MKC",
-      "MKTX",
-      "MLM",
-      "MMC",
-      "MMM",
-      "MNST",
-      "MO",
-      "MOH",
-      "MOS",
-      "MPC",
-      "MPWR",
-      "MRK",
-      "MRNA",
-      "MRVL",
-      "MS",
-      "MSCI",
-      "MSFT",
-      "MSI",
-      "MSTR",
-      "MTB",
-      "MTCH",
-      "MTD",
-      "MU",
-      "NCLH",
-      "NDAQ",
-      "NDSN",
-      "NEE",
-      "NEM",
-      "NFLX",
-      "NI",
-      "NKE",
-      "NOC",
-      "NOW",
-      "NRG",
-      "NSC",
-      "NTAP",
-      "NTRS",
-      "NUE",
-      "NVDA",
-      "NVR",
-      "NWS",
-      "NWSA",
-      "NXPI",
-      "O",
-      "ODFL",
-      "OKE",
-      "OMC",
-      "ON",
-      "ORCL",
-      "ORLY",
-      "OTIS",
-      "OXY",
-      "PANW",
-      "PAYC",
-      "PAYX",
-      "PCAR",
-      "PCG",
-      "PDD",
-      "PEG",
-      "PEP",
-      "PFE",
-      "PFG",
-      "PG",
-      "PGR",
-      "PH",
-      "PHM",
-      "PKG",
-      "PLD",
-      "PLTR",
-      "PM",
-      "PNC",
-      "PNR",
-      "PNW",
-      "PODD",
-      "POOL",
-      "PPG",
-      "PPL",
-      "PRU",
-      "PSA",
-      "PSKY",
-      "PSX",
-      "PTC",
-      "PWR",
-      "PYPL",
-      "QCOM",
-      "RCL",
-      "REG",
-      "REGN",
-      "RF",
-      "RJF",
-      "RL",
-      "RMD",
-      "ROK",
-      "ROL",
-      "ROP",
-      "ROST",
-      "RSG",
-      "RTX",
-      "RVTY",
-      "SBAC",
-      "SBUX",
-      "SCHW",
-      "SHOP",
-      "SHW",
-      "SJM",
-      "SLB",
-      "SMCI",
-      "SNA",
-      "SNPS",
-      "SO",
-      "SOLV",
-      "SPG",
-      "SPGI",
-      "SRE",
-      "STE",
-      "STLD",
-      "STT",
-      "STX",
-      "STZ",
-      "SW",
-      "SWK",
-      "SWKS",
-      "SYF",
-      "SYK",
-      "SYY",
-      "T",
-      "TAP",
-      "TDG",
-      "TDY",
-      "TEAM",
-      "TECH",
-      "TEL",
-      "TER",
-      "TFC",
-      "TGT",
-      "TJX",
-      "TKO",
-      "TMO",
-      "TMUS",
-      "TPL",
-      "TPR",
-      "TRGP",
-      "TRI",
-      "TRMB",
-      "TROW",
-      "TRV",
-      "TSCO",
-      "TSLA",
-      "TSN",
-      "TT",
-      "TTD",
-      "TTWO",
-      "TXN",
-      "TXT",
-      "TYL",
-      "UAL",
-      "UBER",
-      "UDR",
-      "UHS",
-      "ULTA",
-      "UNH",
-      "UNP",
-      "UPS",
-      "URI",
-      "USB",
-      "V",
-      "VICI",
-      "VLO",
-      "VLTO",
-      "VMC",
-      "VRSK",
-      "VRSN",
-      "VRTX",
-      "VST",
-      "VTR",
-      "VTRS",
-      "VZ",
-      "WAB",
-      "WAT",
-      "WBA",
-      "WBD",
-      "WDAY",
-      "WDC",
-      "WEC",
-      "WELL",
-      "WFC",
-      "WM",
-      "WMB",
-      "WMT",
-      "WRB",
-      "WSM",
-      "WST",
-      "WTW",
-      "WY",
-      "WYNN",
-      "XEL",
-      "XOM",
-      "XYL",
-      "XYZ",
-      "YUM",
-      "ZBH",
-      "ZBRA",
-      "ZS",
-      "ZTS"
+      {
+        "symbol": "A",
+        "path": "/data/marketphase/A.json",
+        "updatedAt": "2026-02-12T16:02:05.260Z"
+      },
+      {
+        "symbol": "AAPL",
+        "path": "/data/marketphase/AAPL.json",
+        "updatedAt": "2026-02-12T16:02:07.352Z"
+      },
+      {
+        "symbol": "ABBV",
+        "path": "/data/marketphase/ABBV.json",
+        "updatedAt": "2026-02-12T16:02:04.832Z"
+      },
+      {
+        "symbol": "ABNB",
+        "path": "/data/marketphase/ABNB.json",
+        "updatedAt": "2026-02-12T16:02:05.351Z"
+      },
+      {
+        "symbol": "ABT",
+        "path": "/data/marketphase/ABT.json",
+        "updatedAt": "2026-02-12T16:02:04.621Z"
+      },
+      {
+        "symbol": "ACGL",
+        "path": "/data/marketphase/ACGL.json",
+        "updatedAt": "2026-02-12T16:02:07.583Z"
+      },
+      {
+        "symbol": "ACN",
+        "path": "/data/marketphase/ACN.json",
+        "updatedAt": "2026-02-12T16:02:04.956Z"
+      },
+      {
+        "symbol": "ADBE",
+        "path": "/data/marketphase/ADBE.json",
+        "updatedAt": "2026-02-12T16:02:04.870Z"
+      },
+      {
+        "symbol": "ADI",
+        "path": "/data/marketphase/ADI.json",
+        "updatedAt": "2026-02-12T16:02:06.980Z"
+      },
+      {
+        "symbol": "ADM",
+        "path": "/data/marketphase/ADM.json",
+        "updatedAt": "2026-02-12T16:02:07.751Z"
+      },
+      {
+        "symbol": "ADP",
+        "path": "/data/marketphase/ADP.json",
+        "updatedAt": "2026-02-12T16:02:08.255Z"
+      },
+      {
+        "symbol": "ADSK",
+        "path": "/data/marketphase/ADSK.json",
+        "updatedAt": "2026-02-12T16:02:08.239Z"
+      },
+      {
+        "symbol": "AEE",
+        "path": "/data/marketphase/AEE.json",
+        "updatedAt": "2026-02-12T16:02:06.313Z"
+      },
+      {
+        "symbol": "AEP",
+        "path": "/data/marketphase/AEP.json",
+        "updatedAt": "2026-02-12T16:02:06.329Z"
+      },
+      {
+        "symbol": "AES",
+        "path": "/data/marketphase/AES.json",
+        "updatedAt": "2026-02-12T16:02:05.064Z"
+      },
+      {
+        "symbol": "AFL",
+        "path": "/data/marketphase/AFL.json",
+        "updatedAt": "2026-02-12T16:02:05.163Z"
+      },
+      {
+        "symbol": "AIG",
+        "path": "/data/marketphase/AIG.json",
+        "updatedAt": "2026-02-12T16:02:06.524Z"
+      },
+      {
+        "symbol": "AIZ",
+        "path": "/data/marketphase/AIZ.json",
+        "updatedAt": "2026-02-12T16:02:07.951Z"
+      },
+      {
+        "symbol": "AJG",
+        "path": "/data/marketphase/AJG.json",
+        "updatedAt": "2026-02-12T16:02:07.782Z"
+      },
+      {
+        "symbol": "AKAM",
+        "path": "/data/marketphase/AKAM.json",
+        "updatedAt": "2026-02-12T16:02:05.482Z"
+      },
+      {
+        "symbol": "ALB",
+        "path": "/data/marketphase/ALB.json",
+        "updatedAt": "2026-02-12T16:02:05.472Z"
+      },
+      {
+        "symbol": "ALGN",
+        "path": "/data/marketphase/ALGN.json",
+        "updatedAt": "2026-02-12T16:02:05.665Z"
+      },
+      {
+        "symbol": "ALL",
+        "path": "/data/marketphase/ALL.json",
+        "updatedAt": "2026-02-12T16:02:05.858Z"
+      },
+      {
+        "symbol": "ALLE",
+        "path": "/data/marketphase/ALLE.json",
+        "updatedAt": "2026-02-12T16:02:05.684Z"
+      },
+      {
+        "symbol": "AMAT",
+        "path": "/data/marketphase/AMAT.json",
+        "updatedAt": "2026-02-12T16:02:07.572Z"
+      },
+      {
+        "symbol": "AMCR",
+        "path": "/data/marketphase/AMCR.json",
+        "updatedAt": "2026-02-12T16:02:06.117Z"
+      },
+      {
+        "symbol": "AMD",
+        "path": "/data/marketphase/AMD.json",
+        "updatedAt": "2026-02-12T16:02:05.042Z"
+      },
+      {
+        "symbol": "AME",
+        "path": "/data/marketphase/AME.json",
+        "updatedAt": "2026-02-12T16:02:06.765Z"
+      },
+      {
+        "symbol": "AMGN",
+        "path": "/data/marketphase/AMGN.json",
+        "updatedAt": "2026-02-12T16:02:06.794Z"
+      },
+      {
+        "symbol": "AMP",
+        "path": "/data/marketphase/AMP.json",
+        "updatedAt": "2026-02-12T16:02:06.746Z"
+      },
+      {
+        "symbol": "AMT",
+        "path": "/data/marketphase/AMT.json",
+        "updatedAt": "2026-02-12T16:02:06.596Z"
+      },
+      {
+        "symbol": "AMZN",
+        "path": "/data/marketphase/AMZN.json",
+        "updatedAt": "2026-02-12T16:02:06.128Z"
+      },
+      {
+        "symbol": "ANET",
+        "path": "/data/marketphase/ANET.json",
+        "updatedAt": "2026-02-12T16:02:07.791Z"
+      },
+      {
+        "symbol": "AON",
+        "path": "/data/marketphase/AON.json",
+        "updatedAt": "2026-02-12T16:02:06.990Z"
+      },
+      {
+        "symbol": "AOS",
+        "path": "/data/marketphase/AOS.json",
+        "updatedAt": "2026-02-12T16:02:04.609Z"
+      },
+      {
+        "symbol": "APA",
+        "path": "/data/marketphase/APA.json",
+        "updatedAt": "2026-02-12T16:02:07.316Z"
+      },
+      {
+        "symbol": "APD",
+        "path": "/data/marketphase/APD.json",
+        "updatedAt": "2026-02-12T16:02:05.275Z"
+      },
+      {
+        "symbol": "APH",
+        "path": "/data/marketphase/APH.json",
+        "updatedAt": "2026-02-12T16:02:06.965Z"
+      },
+      {
+        "symbol": "APO",
+        "path": "/data/marketphase/APO.json",
+        "updatedAt": "2026-02-12T16:02:07.337Z"
+      },
+      {
+        "symbol": "APP",
+        "path": "/data/marketphase/APP.json",
+        "updatedAt": "2026-02-12T15:58:42.723Z"
+      },
+      {
+        "symbol": "APTV",
+        "path": "/data/marketphase/APTV.json",
+        "updatedAt": "2026-02-12T16:02:07.551Z"
+      },
+      {
+        "symbol": "ARE",
+        "path": "/data/marketphase/ARE.json",
+        "updatedAt": "2026-02-12T16:02:05.546Z"
+      },
+      {
+        "symbol": "ARM",
+        "path": "/data/marketphase/ARM.json",
+        "updatedAt": "2026-02-12T15:58:42.781Z"
+      },
+      {
+        "symbol": "ASML",
+        "path": "/data/marketphase/ASML.json",
+        "updatedAt": "2026-02-12T15:58:42.799Z"
+      },
+      {
+        "symbol": "ATO",
+        "path": "/data/marketphase/ATO.json",
+        "updatedAt": "2026-02-12T16:02:08.011Z"
+      },
+      {
+        "symbol": "AVB",
+        "path": "/data/marketphase/AVB.json",
+        "updatedAt": "2026-02-12T16:02:08.472Z"
+      },
+      {
+        "symbol": "AVGO",
+        "path": "/data/marketphase/AVGO.json",
+        "updatedAt": "2026-02-12T16:02:09.869Z"
+      },
+      {
+        "symbol": "AVY",
+        "path": "/data/marketphase/AVY.json",
+        "updatedAt": "2026-02-12T16:02:08.491Z"
+      },
+      {
+        "symbol": "AWK",
+        "path": "/data/marketphase/AWK.json",
+        "updatedAt": "2026-02-12T16:02:06.541Z"
+      },
+      {
+        "symbol": "AXON",
+        "path": "/data/marketphase/AXON.json",
+        "updatedAt": "2026-02-12T16:02:08.506Z"
+      },
+      {
+        "symbol": "AXP",
+        "path": "/data/marketphase/AXP.json",
+        "updatedAt": "2026-02-12T16:02:06.337Z"
+      },
+      {
+        "symbol": "AZN",
+        "path": "/data/marketphase/AZN.json",
+        "updatedAt": "2026-02-12T15:58:42.977Z"
+      },
+      {
+        "symbol": "AZO",
+        "path": "/data/marketphase/AZO.json",
+        "updatedAt": "2026-02-12T16:02:08.265Z"
+      },
+      {
+        "symbol": "BA",
+        "path": "/data/marketphase/BA.json",
+        "updatedAt": "2026-02-12T16:02:09.630Z"
+      },
+      {
+        "symbol": "BAC",
+        "path": "/data/marketphase/BAC.json",
+        "updatedAt": "2026-02-12T16:02:08.730Z"
+      },
+      {
+        "symbol": "BALL",
+        "path": "/data/marketphase/BALL.json",
+        "updatedAt": "2026-02-12T16:02:08.698Z"
+      },
+      {
+        "symbol": "BAX",
+        "path": "/data/marketphase/BAX.json",
+        "updatedAt": "2026-02-12T16:02:08.924Z"
+      },
+      {
+        "symbol": "BBY",
+        "path": "/data/marketphase/BBY.json",
+        "updatedAt": "2026-02-12T16:02:09.129Z"
+      },
+      {
+        "symbol": "BDX",
+        "path": "/data/marketphase/BDX.json",
+        "updatedAt": "2026-02-12T16:02:08.908Z"
+      },
+      {
+        "symbol": "BEN",
+        "path": "/data/marketphase/BEN.json",
+        "updatedAt": "2026-02-12T16:02:19.912Z"
+      },
+      {
+        "symbol": "BG",
+        "path": "/data/marketphase/BG.json",
+        "updatedAt": "2026-02-12T16:02:10.311Z"
+      },
+      {
+        "symbol": "BIIB",
+        "path": "/data/marketphase/BIIB.json",
+        "updatedAt": "2026-02-12T16:02:09.172Z"
+      },
+      {
+        "symbol": "BK",
+        "path": "/data/marketphase/BK.json",
+        "updatedAt": "2026-02-12T16:02:09.642Z"
+      },
+      {
+        "symbol": "BKNG",
+        "path": "/data/marketphase/BKNG.json",
+        "updatedAt": "2026-02-12T16:02:09.654Z"
+      },
+      {
+        "symbol": "BKR",
+        "path": "/data/marketphase/BKR.json",
+        "updatedAt": "2026-02-12T16:02:08.683Z"
+      },
+      {
+        "symbol": "BLDR",
+        "path": "/data/marketphase/BLDR.json",
+        "updatedAt": "2026-02-12T16:02:10.286Z"
+      },
+      {
+        "symbol": "BLK",
+        "path": "/data/marketphase/BLK.json",
+        "updatedAt": "2026-02-12T16:02:09.415Z"
+      },
+      {
+        "symbol": "BMY",
+        "path": "/data/marketphase/BMY.json",
+        "updatedAt": "2026-02-12T16:02:09.883Z"
+      },
+      {
+        "symbol": "BR",
+        "path": "/data/marketphase/BR.json",
+        "updatedAt": "2026-02-12T16:02:10.075Z"
+      },
+      {
+        "symbol": "BRO",
+        "path": "/data/marketphase/BRO.json",
+        "updatedAt": "2026-02-12T16:02:10.098Z"
+      },
+      {
+        "symbol": "BSX",
+        "path": "/data/marketphase/BSX.json",
+        "updatedAt": "2026-02-12T16:02:09.847Z"
+      },
+      {
+        "symbol": "BX",
+        "path": "/data/marketphase/BX.json",
+        "updatedAt": "2026-02-12T16:02:09.390Z"
+      },
+      {
+        "symbol": "BXP",
+        "path": "/data/marketphase/BXP.json",
+        "updatedAt": "2026-02-12T16:02:10.332Z"
+      },
+      {
+        "symbol": "C",
+        "path": "/data/marketphase/C.json",
+        "updatedAt": "2026-02-12T16:02:12.777Z"
+      },
+      {
+        "symbol": "CAG",
+        "path": "/data/marketphase/CAG.json",
+        "updatedAt": "2026-02-12T16:02:13.485Z"
+      },
+      {
+        "symbol": "CAH",
+        "path": "/data/marketphase/CAH.json",
+        "updatedAt": "2026-02-12T16:02:11.021Z"
+      },
+      {
+        "symbol": "CARR",
+        "path": "/data/marketphase/CARR.json",
+        "updatedAt": "2026-02-12T16:02:11.310Z"
+      },
+      {
+        "symbol": "CAT",
+        "path": "/data/marketphase/CAT.json",
+        "updatedAt": "2026-02-12T16:02:11.353Z"
+      },
+      {
+        "symbol": "CB",
+        "path": "/data/marketphase/CB.json",
+        "updatedAt": "2026-02-12T16:02:12.301Z"
+      },
+      {
+        "symbol": "CBOE",
+        "path": "/data/marketphase/CBOE.json",
+        "updatedAt": "2026-02-12T16:02:11.335Z"
+      },
+      {
+        "symbol": "CBRE",
+        "path": "/data/marketphase/CBRE.json",
+        "updatedAt": "2026-02-12T16:02:11.540Z"
+      },
+      {
+        "symbol": "CCEP",
+        "path": "/data/marketphase/CCEP.json",
+        "updatedAt": "2026-02-12T15:58:43.353Z"
+      },
+      {
+        "symbol": "CCI",
+        "path": "/data/marketphase/CCI.json",
+        "updatedAt": "2026-02-12T16:02:14.487Z"
+      },
+      {
+        "symbol": "CCL",
+        "path": "/data/marketphase/CCL.json",
+        "updatedAt": "2026-02-12T16:02:11.036Z"
+      },
+      {
+        "symbol": "CDNS",
+        "path": "/data/marketphase/CDNS.json",
+        "updatedAt": "2026-02-12T16:02:10.524Z"
+      },
+      {
+        "symbol": "CDW",
+        "path": "/data/marketphase/CDW.json",
+        "updatedAt": "2026-02-12T16:02:11.560Z"
+      },
+      {
+        "symbol": "CEG",
+        "path": "/data/marketphase/CEG.json",
+        "updatedAt": "2026-02-12T16:02:13.845Z"
+      },
+      {
+        "symbol": "CF",
+        "path": "/data/marketphase/CF.json",
+        "updatedAt": "2026-02-12T16:02:11.799Z"
+      },
+      {
+        "symbol": "CFG",
+        "path": "/data/marketphase/CFG.json",
+        "updatedAt": "2026-02-12T16:02:12.875Z"
+      },
+      {
+        "symbol": "CHD",
+        "path": "/data/marketphase/CHD.json",
+        "updatedAt": "2026-02-12T16:02:12.387Z"
+      },
+      {
+        "symbol": "CHRW",
+        "path": "/data/marketphase/CHRW.json",
+        "updatedAt": "2026-02-12T16:02:10.546Z"
+      },
+      {
+        "symbol": "CHTR",
+        "path": "/data/marketphase/CHTR.json",
+        "updatedAt": "2026-02-12T16:02:11.999Z"
+      },
+      {
+        "symbol": "CI",
+        "path": "/data/marketphase/CI.json",
+        "updatedAt": "2026-02-12T16:02:12.545Z"
+      },
+      {
+        "symbol": "CINF",
+        "path": "/data/marketphase/CINF.json",
+        "updatedAt": "2026-02-12T16:02:12.525Z"
+      },
+      {
+        "symbol": "CL",
+        "path": "/data/marketphase/CL.json",
+        "updatedAt": "2026-02-12T16:02:13.408Z"
+      },
+      {
+        "symbol": "CLX",
+        "path": "/data/marketphase/CLX.json",
+        "updatedAt": "2026-02-12T16:02:12.969Z"
+      },
+      {
+        "symbol": "CMCSA",
+        "path": "/data/marketphase/CMCSA.json",
+        "updatedAt": "2026-02-12T16:02:13.427Z"
+      },
+      {
+        "symbol": "CME",
+        "path": "/data/marketphase/CME.json",
+        "updatedAt": "2026-02-12T16:02:12.954Z"
+      },
+      {
+        "symbol": "CMG",
+        "path": "/data/marketphase/CMG.json",
+        "updatedAt": "2026-02-12T16:02:12.269Z"
+      },
+      {
+        "symbol": "CMI",
+        "path": "/data/marketphase/CMI.json",
+        "updatedAt": "2026-02-12T16:02:14.632Z"
+      },
+      {
+        "symbol": "CMS",
+        "path": "/data/marketphase/CMS.json",
+        "updatedAt": "2026-02-12T16:02:13.074Z"
+      },
+      {
+        "symbol": "CNC",
+        "path": "/data/marketphase/CNC.json",
+        "updatedAt": "2026-02-12T16:02:11.768Z"
+      },
+      {
+        "symbol": "CNP",
+        "path": "/data/marketphase/CNP.json",
+        "updatedAt": "2026-02-12T16:02:11.786Z"
+      },
+      {
+        "symbol": "COF",
+        "path": "/data/marketphase/COF.json",
+        "updatedAt": "2026-02-12T16:02:10.808Z"
+      },
+      {
+        "symbol": "COIN",
+        "path": "/data/marketphase/COIN.json",
+        "updatedAt": "2026-02-12T16:02:13.278Z"
+      },
+      {
+        "symbol": "COO",
+        "path": "/data/marketphase/COO.json",
+        "updatedAt": "2026-02-12T16:02:13.859Z"
+      },
+      {
+        "symbol": "COP",
+        "path": "/data/marketphase/COP.json",
+        "updatedAt": "2026-02-12T16:02:13.633Z"
+      },
+      {
+        "symbol": "COR",
+        "path": "/data/marketphase/COR.json",
+        "updatedAt": "2026-02-12T16:02:11.575Z"
+      },
+      {
+        "symbol": "COST",
+        "path": "/data/marketphase/COST.json",
+        "updatedAt": "2026-02-12T16:02:14.275Z"
+      },
+      {
+        "symbol": "CPAY",
+        "path": "/data/marketphase/CPAY.json",
+        "updatedAt": "2026-02-12T16:02:14.069Z"
+      },
+      {
+        "symbol": "CPB",
+        "path": "/data/marketphase/CPB.json",
+        "updatedAt": "2026-02-12T16:02:10.766Z"
+      },
+      {
+        "symbol": "CPRT",
+        "path": "/data/marketphase/CPRT.json",
+        "updatedAt": "2026-02-12T16:02:13.890Z"
+      },
+      {
+        "symbol": "CPT",
+        "path": "/data/marketphase/CPT.json",
+        "updatedAt": "2026-02-12T16:02:10.790Z"
+      },
+      {
+        "symbol": "CRL",
+        "path": "/data/marketphase/CRL.json",
+        "updatedAt": "2026-02-12T16:02:11.974Z"
+      },
+      {
+        "symbol": "CRWD",
+        "path": "/data/marketphase/CRWD.json",
+        "updatedAt": "2026-02-12T16:02:14.432Z"
+      },
+      {
+        "symbol": "CSCO",
+        "path": "/data/marketphase/CSCO.json",
+        "updatedAt": "2026-02-12T16:02:12.760Z"
+      },
+      {
+        "symbol": "CSGP",
+        "path": "/data/marketphase/CSGP.json",
+        "updatedAt": "2026-02-12T16:02:14.235Z"
+      },
+      {
+        "symbol": "CSX",
+        "path": "/data/marketphase/CSX.json",
+        "updatedAt": "2026-02-12T16:02:14.496Z"
+      },
+      {
+        "symbol": "CTAS",
+        "path": "/data/marketphase/CTAS.json",
+        "updatedAt": "2026-02-12T16:02:12.590Z"
+      },
+      {
+        "symbol": "CTRA",
+        "path": "/data/marketphase/CTRA.json",
+        "updatedAt": "2026-02-12T16:02:14.292Z"
+      },
+      {
+        "symbol": "CTSH",
+        "path": "/data/marketphase/CTSH.json",
+        "updatedAt": "2026-02-12T16:02:13.196Z"
+      },
+      {
+        "symbol": "CTVA",
+        "path": "/data/marketphase/CTVA.json",
+        "updatedAt": "2026-02-12T16:02:14.084Z"
+      },
+      {
+        "symbol": "CVS",
+        "path": "/data/marketphase/CVS.json",
+        "updatedAt": "2026-02-12T16:02:14.722Z"
+      },
+      {
+        "symbol": "CVX",
+        "path": "/data/marketphase/CVX.json",
+        "updatedAt": "2026-02-12T16:02:12.197Z"
+      },
+      {
+        "symbol": "CZR",
+        "path": "/data/marketphase/CZR.json",
+        "updatedAt": "2026-02-12T16:02:10.563Z"
+      },
+      {
+        "symbol": "D",
+        "path": "/data/marketphase/D.json",
+        "updatedAt": "2026-02-12T16:02:15.797Z"
+      },
+      {
+        "symbol": "DAL",
+        "path": "/data/marketphase/DAL.json",
+        "updatedAt": "2026-02-12T16:02:15.344Z"
+      },
+      {
+        "symbol": "DASH",
+        "path": "/data/marketphase/DASH.json",
+        "updatedAt": "2026-02-12T16:02:15.937Z"
+      },
+      {
+        "symbol": "DAY",
+        "path": "/data/marketphase/DAY.json",
+        "updatedAt": "2026-02-12T16:02:15.059Z"
+      },
+      {
+        "symbol": "DD",
+        "path": "/data/marketphase/DD.json",
+        "updatedAt": "2026-02-12T16:02:16.328Z"
+      },
+      {
+        "symbol": "DDOG",
+        "path": "/data/marketphase/DDOG.json",
+        "updatedAt": "2026-02-12T16:02:14.910Z"
+      },
+      {
+        "symbol": "DE",
+        "path": "/data/marketphase/DE.json",
+        "updatedAt": "2026-02-12T16:02:15.147Z"
+      },
+      {
+        "symbol": "DECK",
+        "path": "/data/marketphase/DECK.json",
+        "updatedAt": "2026-02-12T16:02:15.111Z"
+      },
+      {
+        "symbol": "DELL",
+        "path": "/data/marketphase/DELL.json",
+        "updatedAt": "2026-02-12T16:02:15.256Z"
+      },
+      {
+        "symbol": "DG",
+        "path": "/data/marketphase/DG.json",
+        "updatedAt": "2026-02-12T16:02:15.646Z"
+      },
+      {
+        "symbol": "DHI",
+        "path": "/data/marketphase/DHI.json",
+        "updatedAt": "2026-02-12T16:02:16.119Z"
+      },
+      {
+        "symbol": "DHR",
+        "path": "/data/marketphase/DHR.json",
+        "updatedAt": "2026-02-12T16:02:14.707Z"
+      },
+      {
+        "symbol": "DLR",
+        "path": "/data/marketphase/DLR.json",
+        "updatedAt": "2026-02-12T16:02:15.607Z"
+      },
+      {
+        "symbol": "DLTR",
+        "path": "/data/marketphase/DLTR.json",
+        "updatedAt": "2026-02-12T16:02:15.734Z"
+      },
+      {
+        "symbol": "DOC",
+        "path": "/data/marketphase/DOC.json",
+        "updatedAt": "2026-02-12T16:02:21.490Z"
+      },
+      {
+        "symbol": "DOV",
+        "path": "/data/marketphase/DOV.json",
+        "updatedAt": "2026-02-12T16:02:15.994Z"
+      },
+      {
+        "symbol": "DOW",
+        "path": "/data/marketphase/DOW.json",
+        "updatedAt": "2026-02-12T16:02:16.035Z"
+      },
+      {
+        "symbol": "DPZ",
+        "path": "/data/marketphase/DPZ.json",
+        "updatedAt": "2026-02-12T16:02:15.836Z"
+      },
+      {
+        "symbol": "DRI",
+        "path": "/data/marketphase/DRI.json",
+        "updatedAt": "2026-02-12T16:02:14.830Z"
+      },
+      {
+        "symbol": "DTE",
+        "path": "/data/marketphase/DTE.json",
+        "updatedAt": "2026-02-12T16:02:16.212Z"
+      },
+      {
+        "symbol": "DUK",
+        "path": "/data/marketphase/DUK.json",
+        "updatedAt": "2026-02-12T16:02:16.240Z"
+      },
+      {
+        "symbol": "DVA",
+        "path": "/data/marketphase/DVA.json",
+        "updatedAt": "2026-02-12T16:02:14.928Z"
+      },
+      {
+        "symbol": "DVN",
+        "path": "/data/marketphase/DVN.json",
+        "updatedAt": "2026-02-12T16:02:15.391Z"
+      },
+      {
+        "symbol": "DXCM",
+        "path": "/data/marketphase/DXCM.json",
+        "updatedAt": "2026-02-12T16:02:15.470Z"
+      },
+      {
+        "symbol": "EA",
+        "path": "/data/marketphase/EA.json",
+        "updatedAt": "2026-02-12T16:02:16.864Z"
+      },
+      {
+        "symbol": "EBAY",
+        "path": "/data/marketphase/EBAY.json",
+        "updatedAt": "2026-02-12T16:02:16.507Z"
+      },
+      {
+        "symbol": "ECL",
+        "path": "/data/marketphase/ECL.json",
+        "updatedAt": "2026-02-12T16:02:16.649Z"
+      },
+      {
+        "symbol": "ED",
+        "path": "/data/marketphase/ED.json",
+        "updatedAt": "2026-02-12T16:02:13.661Z"
+      },
+      {
+        "symbol": "EFX",
+        "path": "/data/marketphase/EFX.json",
+        "updatedAt": "2026-02-12T16:02:17.308Z"
+      },
+      {
+        "symbol": "EG",
+        "path": "/data/marketphase/EG.json",
+        "updatedAt": "2026-02-12T16:02:17.960Z"
+      },
+      {
+        "symbol": "EIX",
+        "path": "/data/marketphase/EIX.json",
+        "updatedAt": "2026-02-12T16:02:16.670Z"
+      },
+      {
+        "symbol": "EL",
+        "path": "/data/marketphase/EL.json",
+        "updatedAt": "2026-02-12T16:02:17.952Z"
+      },
+      {
+        "symbol": "ELV",
+        "path": "/data/marketphase/ELV.json",
+        "updatedAt": "2026-02-12T16:02:16.880Z"
+      },
+      {
+        "symbol": "EMN",
+        "path": "/data/marketphase/EMN.json",
+        "updatedAt": "2026-02-12T16:02:16.444Z"
+      },
+      {
+        "symbol": "EMR",
+        "path": "/data/marketphase/EMR.json",
+        "updatedAt": "2026-02-12T16:02:16.889Z"
+      },
+      {
+        "symbol": "ENPH",
+        "path": "/data/marketphase/ENPH.json",
+        "updatedAt": "2026-02-12T16:02:17.083Z"
+      },
+      {
+        "symbol": "EOG",
+        "path": "/data/marketphase/EOG.json",
+        "updatedAt": "2026-02-12T16:02:17.103Z"
+      },
+      {
+        "symbol": "EPAM",
+        "path": "/data/marketphase/EPAM.json",
+        "updatedAt": "2026-02-12T16:02:17.282Z"
+      },
+      {
+        "symbol": "EQIX",
+        "path": "/data/marketphase/EQIX.json",
+        "updatedAt": "2026-02-12T16:02:17.728Z"
+      },
+      {
+        "symbol": "EQR",
+        "path": "/data/marketphase/EQR.json",
+        "updatedAt": "2026-02-12T16:02:17.743Z"
+      },
+      {
+        "symbol": "EQT",
+        "path": "/data/marketphase/EQT.json",
+        "updatedAt": "2026-02-12T16:02:17.298Z"
+      },
+      {
+        "symbol": "ERIE",
+        "path": "/data/marketphase/ERIE.json",
+        "updatedAt": "2026-02-12T16:02:17.752Z"
+      },
+      {
+        "symbol": "ES",
+        "path": "/data/marketphase/ES.json",
+        "updatedAt": "2026-02-12T16:02:18.153Z"
+      },
+      {
+        "symbol": "ESS",
+        "path": "/data/marketphase/ESS.json",
+        "updatedAt": "2026-02-12T16:02:17.936Z"
+      },
+      {
+        "symbol": "ETN",
+        "path": "/data/marketphase/ETN.json",
+        "updatedAt": "2026-02-12T16:02:16.467Z"
+      },
+      {
+        "symbol": "ETR",
+        "path": "/data/marketphase/ETR.json",
+        "updatedAt": "2026-02-12T16:02:17.074Z"
+      },
+      {
+        "symbol": "EVRG",
+        "path": "/data/marketphase/EVRG.json",
+        "updatedAt": "2026-02-12T16:02:18.131Z"
+      },
+      {
+        "symbol": "EW",
+        "path": "/data/marketphase/EW.json",
+        "updatedAt": "2026-02-12T16:02:16.688Z"
+      },
+      {
+        "symbol": "EXC",
+        "path": "/data/marketphase/EXC.json",
+        "updatedAt": "2026-02-12T16:02:18.173Z"
+      },
+      {
+        "symbol": "EXE",
+        "path": "/data/marketphase/EXE.json",
+        "updatedAt": "2026-02-12T16:02:18.320Z"
+      },
+      {
+        "symbol": "EXPD",
+        "path": "/data/marketphase/EXPD.json",
+        "updatedAt": "2026-02-12T16:02:18.372Z"
+      },
+      {
+        "symbol": "EXPE",
+        "path": "/data/marketphase/EXPE.json",
+        "updatedAt": "2026-02-12T16:02:18.344Z"
+      },
+      {
+        "symbol": "EXR",
+        "path": "/data/marketphase/EXR.json",
+        "updatedAt": "2026-02-12T16:02:18.515Z"
+      },
+      {
+        "symbol": "F",
+        "path": "/data/marketphase/F.json",
+        "updatedAt": "2026-02-12T16:02:19.663Z"
+      },
+      {
+        "symbol": "FANG",
+        "path": "/data/marketphase/FANG.json",
+        "updatedAt": "2026-02-12T16:02:15.532Z"
+      },
+      {
+        "symbol": "FAST",
+        "path": "/data/marketphase/FAST.json",
+        "updatedAt": "2026-02-12T16:02:18.747Z"
+      },
+      {
+        "symbol": "FCX",
+        "path": "/data/marketphase/FCX.json",
+        "updatedAt": "2026-02-12T16:02:20.084Z"
+      },
+      {
+        "symbol": "FDS",
+        "path": "/data/marketphase/FDS.json",
+        "updatedAt": "2026-02-12T16:02:18.717Z"
+      },
+      {
+        "symbol": "FDX",
+        "path": "/data/marketphase/FDX.json",
+        "updatedAt": "2026-02-12T16:02:19.292Z"
+      },
+      {
+        "symbol": "FE",
+        "path": "/data/marketphase/FE.json",
+        "updatedAt": "2026-02-12T16:02:19.496Z"
+      },
+      {
+        "symbol": "FFIV",
+        "path": "/data/marketphase/FFIV.json",
+        "updatedAt": "2026-02-12T16:02:18.554Z"
+      },
+      {
+        "symbol": "FI",
+        "path": "/data/marketphase/FI.json",
+        "updatedAt": "2026-02-12T16:02:19.531Z"
+      },
+      {
+        "symbol": "FICO",
+        "path": "/data/marketphase/FICO.json",
+        "updatedAt": "2026-02-12T16:02:18.756Z"
+      },
+      {
+        "symbol": "FIS",
+        "path": "/data/marketphase/FIS.json",
+        "updatedAt": "2026-02-12T16:02:19.250Z"
+      },
+      {
+        "symbol": "FITB",
+        "path": "/data/marketphase/FITB.json",
+        "updatedAt": "2026-02-12T16:02:19.313Z"
+      },
+      {
+        "symbol": "FOX",
+        "path": "/data/marketphase/FOX.json",
+        "updatedAt": "2026-02-12T16:02:19.872Z"
+      },
+      {
+        "symbol": "FOXA",
+        "path": "/data/marketphase/FOXA.json",
+        "updatedAt": "2026-02-12T16:02:19.860Z"
+      },
+      {
+        "symbol": "FRT",
+        "path": "/data/marketphase/FRT.json",
+        "updatedAt": "2026-02-12T16:02:19.131Z"
+      },
+      {
+        "symbol": "FSLR",
+        "path": "/data/marketphase/FSLR.json",
+        "updatedAt": "2026-02-12T16:02:19.464Z"
+      },
+      {
+        "symbol": "FTNT",
+        "path": "/data/marketphase/FTNT.json",
+        "updatedAt": "2026-02-12T16:02:19.688Z"
+      },
+      {
+        "symbol": "FTV",
+        "path": "/data/marketphase/FTV.json",
+        "updatedAt": "2026-02-12T16:02:19.727Z"
+      },
+      {
+        "symbol": "GD",
+        "path": "/data/marketphase/GD.json",
+        "updatedAt": "2026-02-12T16:02:20.546Z"
+      },
+      {
+        "symbol": "GDDY",
+        "path": "/data/marketphase/GDDY.json",
+        "updatedAt": "2026-02-12T16:02:21.097Z"
+      },
+      {
+        "symbol": "GE",
+        "path": "/data/marketphase/GE.json",
+        "updatedAt": "2026-02-12T16:02:20.269Z"
+      },
+      {
+        "symbol": "GEHC",
+        "path": "/data/marketphase/GEHC.json",
+        "updatedAt": "2026-02-12T16:02:20.297Z"
+      },
+      {
+        "symbol": "GEN",
+        "path": "/data/marketphase/GEN.json",
+        "updatedAt": "2026-02-12T16:02:20.498Z"
+      },
+      {
+        "symbol": "GEV",
+        "path": "/data/marketphase/GEV.json",
+        "updatedAt": "2026-02-12T16:02:20.312Z"
+      },
+      {
+        "symbol": "GFS",
+        "path": "/data/marketphase/GFS.json",
+        "updatedAt": "2026-02-12T15:58:44.964Z"
+      },
+      {
+        "symbol": "GILD",
+        "path": "/data/marketphase/GILD.json",
+        "updatedAt": "2026-02-12T16:02:20.918Z"
+      },
+      {
+        "symbol": "GIS",
+        "path": "/data/marketphase/GIS.json",
+        "updatedAt": "2026-02-12T16:02:20.712Z"
+      },
+      {
+        "symbol": "GL",
+        "path": "/data/marketphase/GL.json",
+        "updatedAt": "2026-02-12T16:02:20.936Z"
+      },
+      {
+        "symbol": "GLW",
+        "path": "/data/marketphase/GLW.json",
+        "updatedAt": "2026-02-12T16:02:14.030Z"
+      },
+      {
+        "symbol": "GM",
+        "path": "/data/marketphase/GM.json",
+        "updatedAt": "2026-02-12T16:02:20.696Z"
+      },
+      {
+        "symbol": "GNRC",
+        "path": "/data/marketphase/GNRC.json",
+        "updatedAt": "2026-02-12T16:02:20.509Z"
+      },
+      {
+        "symbol": "GOOG",
+        "path": "/data/marketphase/GOOG.json",
+        "updatedAt": "2026-02-12T16:02:05.891Z"
+      },
+      {
+        "symbol": "GOOGL",
+        "path": "/data/marketphase/GOOGL.json",
+        "updatedAt": "2026-02-12T16:02:05.873Z"
+      },
+      {
+        "symbol": "GPC",
+        "path": "/data/marketphase/GPC.json",
+        "updatedAt": "2026-02-12T16:02:20.734Z"
+      },
+      {
+        "symbol": "GPN",
+        "path": "/data/marketphase/GPN.json",
+        "updatedAt": "2026-02-12T16:02:20.902Z"
+      },
+      {
+        "symbol": "GRMN",
+        "path": "/data/marketphase/GRMN.json",
+        "updatedAt": "2026-02-12T16:02:20.054Z"
+      },
+      {
+        "symbol": "GS",
+        "path": "/data/marketphase/GS.json",
+        "updatedAt": "2026-02-12T16:02:21.121Z"
+      },
+      {
+        "symbol": "HAL",
+        "path": "/data/marketphase/HAL.json",
+        "updatedAt": "2026-02-12T16:02:21.135Z"
+      },
+      {
+        "symbol": "HAS",
+        "path": "/data/marketphase/HAS.json",
+        "updatedAt": "2026-02-12T16:02:21.318Z"
+      },
+      {
+        "symbol": "HBAN",
+        "path": "/data/marketphase/HBAN.json",
+        "updatedAt": "2026-02-12T16:02:22.352Z"
+      },
+      {
+        "symbol": "HCA",
+        "path": "/data/marketphase/HCA.json",
+        "updatedAt": "2026-02-12T16:02:21.333Z"
+      },
+      {
+        "symbol": "HD",
+        "path": "/data/marketphase/HD.json",
+        "updatedAt": "2026-02-12T16:02:21.888Z"
+      },
+      {
+        "symbol": "HIG",
+        "path": "/data/marketphase/HIG.json",
+        "updatedAt": "2026-02-12T16:02:21.292Z"
+      },
+      {
+        "symbol": "HII",
+        "path": "/data/marketphase/HII.json",
+        "updatedAt": "2026-02-12T16:02:22.528Z"
+      },
+      {
+        "symbol": "HLT",
+        "path": "/data/marketphase/HLT.json",
+        "updatedAt": "2026-02-12T16:02:21.725Z"
+      },
+      {
+        "symbol": "HOLX",
+        "path": "/data/marketphase/HOLX.json",
+        "updatedAt": "2026-02-12T16:02:21.757Z"
+      },
+      {
+        "symbol": "HON",
+        "path": "/data/marketphase/HON.json",
+        "updatedAt": "2026-02-12T16:02:21.923Z"
+      },
+      {
+        "symbol": "HPE",
+        "path": "/data/marketphase/HPE.json",
+        "updatedAt": "2026-02-12T16:02:21.695Z"
+      },
+      {
+        "symbol": "HPQ",
+        "path": "/data/marketphase/HPQ.json",
+        "updatedAt": "2026-02-12T16:02:22.148Z"
+      },
+      {
+        "symbol": "HRL",
+        "path": "/data/marketphase/HRL.json",
+        "updatedAt": "2026-02-12T16:02:21.946Z"
+      },
+      {
+        "symbol": "HSIC",
+        "path": "/data/marketphase/HSIC.json",
+        "updatedAt": "2026-02-12T16:02:21.529Z"
+      },
+      {
+        "symbol": "HST",
+        "path": "/data/marketphase/HST.json",
+        "updatedAt": "2026-02-12T16:02:22.109Z"
+      },
+      {
+        "symbol": "HSY",
+        "path": "/data/marketphase/HSY.json",
+        "updatedAt": "2026-02-12T16:02:21.548Z"
+      },
+      {
+        "symbol": "HUBB",
+        "path": "/data/marketphase/HUBB.json",
+        "updatedAt": "2026-02-12T16:02:22.315Z"
+      },
+      {
+        "symbol": "HUM",
+        "path": "/data/marketphase/HUM.json",
+        "updatedAt": "2026-02-12T16:02:22.334Z"
+      },
+      {
+        "symbol": "HWM",
+        "path": "/data/marketphase/HWM.json",
+        "updatedAt": "2026-02-12T16:02:22.129Z"
+      },
+      {
+        "symbol": "IBM",
+        "path": "/data/marketphase/IBM.json",
+        "updatedAt": "2026-02-12T16:02:22.548Z"
+      },
+      {
+        "symbol": "ICE",
+        "path": "/data/marketphase/ICE.json",
+        "updatedAt": "2026-02-12T16:02:23.381Z"
+      },
+      {
+        "symbol": "IDXX",
+        "path": "/data/marketphase/IDXX.json",
+        "updatedAt": "2026-02-12T16:02:22.922Z"
+      },
+      {
+        "symbol": "IEX",
+        "path": "/data/marketphase/IEX.json",
+        "updatedAt": "2026-02-12T16:02:22.563Z"
+      },
+      {
+        "symbol": "IFF",
+        "path": "/data/marketphase/IFF.json",
+        "updatedAt": "2026-02-12T16:02:23.406Z"
+      },
+      {
+        "symbol": "INCY",
+        "path": "/data/marketphase/INCY.json",
+        "updatedAt": "2026-02-12T16:02:22.957Z"
+      },
+      {
+        "symbol": "INTC",
+        "path": "/data/marketphase/INTC.json",
+        "updatedAt": "2026-02-12T16:02:23.185Z"
+      },
+      {
+        "symbol": "INTU",
+        "path": "/data/marketphase/INTU.json",
+        "updatedAt": "2026-02-12T16:02:23.629Z"
+      },
+      {
+        "symbol": "INVH",
+        "path": "/data/marketphase/INVH.json",
+        "updatedAt": "2026-02-12T16:02:23.862Z"
+      },
+      {
+        "symbol": "IP",
+        "path": "/data/marketphase/IP.json",
+        "updatedAt": "2026-02-12T16:02:23.422Z"
+      },
+      {
+        "symbol": "IPG",
+        "path": "/data/marketphase/IPG.json",
+        "updatedAt": "2026-02-12T16:02:23.688Z"
+      },
+      {
+        "symbol": "IQV",
+        "path": "/data/marketphase/IQV.json",
+        "updatedAt": "2026-02-12T16:02:23.876Z"
+      },
+      {
+        "symbol": "IR",
+        "path": "/data/marketphase/IR.json",
+        "updatedAt": "2026-02-12T16:02:23.148Z"
+      },
+      {
+        "symbol": "IRM",
+        "path": "/data/marketphase/IRM.json",
+        "updatedAt": "2026-02-12T16:02:24.081Z"
+      },
+      {
+        "symbol": "ISRG",
+        "path": "/data/marketphase/ISRG.json",
+        "updatedAt": "2026-02-12T16:02:23.639Z"
+      },
+      {
+        "symbol": "IT",
+        "path": "/data/marketphase/IT.json",
+        "updatedAt": "2026-02-12T16:02:20.096Z"
+      },
+      {
+        "symbol": "ITW",
+        "path": "/data/marketphase/ITW.json",
+        "updatedAt": "2026-02-12T16:02:22.943Z"
+      },
+      {
+        "symbol": "IVZ",
+        "path": "/data/marketphase/IVZ.json",
+        "updatedAt": "2026-02-12T16:02:23.843Z"
+      },
+      {
+        "symbol": "J",
+        "path": "/data/marketphase/J.json",
+        "updatedAt": "2026-02-12T16:02:24.299Z"
+      },
+      {
+        "symbol": "JBHT",
+        "path": "/data/marketphase/JBHT.json",
+        "updatedAt": "2026-02-12T16:02:24.106Z"
+      },
+      {
+        "symbol": "JBL",
+        "path": "/data/marketphase/JBL.json",
+        "updatedAt": "2026-02-12T16:02:24.097Z"
+      },
+      {
+        "symbol": "JKHY",
+        "path": "/data/marketphase/JKHY.json",
+        "updatedAt": "2026-02-12T16:02:24.284Z"
+      },
+      {
+        "symbol": "JNJ",
+        "path": "/data/marketphase/JNJ.json",
+        "updatedAt": "2026-02-12T16:02:24.322Z"
+      },
+      {
+        "symbol": "KDP",
+        "path": "/data/marketphase/KDP.json",
+        "updatedAt": "2026-02-12T15:58:45.565Z"
+      },
+      {
+        "symbol": "KHC",
+        "path": "/data/marketphase/KHC.json",
+        "updatedAt": "2026-02-12T15:58:45.579Z"
+      },
+      {
+        "symbol": "KLAC",
+        "path": "/data/marketphase/KLAC.json",
+        "updatedAt": "2026-02-12T15:58:45.806Z"
+      },
+      {
+        "symbol": "KMX",
+        "path": "/data/marketphase/KMX.json",
+        "updatedAt": "2026-02-12T16:02:10.997Z"
+      },
+      {
+        "symbol": "KO",
+        "path": "/data/marketphase/KO.json",
+        "updatedAt": "2026-02-12T16:02:13.177Z"
+      },
+      {
+        "symbol": "LIN",
+        "path": "/data/marketphase/LIN.json",
+        "updatedAt": "2026-02-12T15:58:46.021Z"
+      },
+      {
+        "symbol": "LNT",
+        "path": "/data/marketphase/LNT.json",
+        "updatedAt": "2026-02-12T16:02:05.720Z"
+      },
+      {
+        "symbol": "LRCX",
+        "path": "/data/marketphase/LRCX.json",
+        "updatedAt": "2026-02-12T15:58:45.786Z"
+      },
+      {
+        "symbol": "LULU",
+        "path": "/data/marketphase/LULU.json",
+        "updatedAt": "2026-02-12T15:58:45.828Z"
+      },
+      {
+        "symbol": "MAR",
+        "path": "/data/marketphase/MAR.json",
+        "updatedAt": "2026-02-12T15:58:45.997Z"
+      },
+      {
+        "symbol": "MCHP",
+        "path": "/data/marketphase/MCHP.json",
+        "updatedAt": "2026-02-12T15:58:46.040Z"
+      },
+      {
+        "symbol": "MDLZ",
+        "path": "/data/marketphase/MDLZ.json",
+        "updatedAt": "2026-02-12T15:58:46.265Z"
+      },
+      {
+        "symbol": "MELI",
+        "path": "/data/marketphase/MELI.json",
+        "updatedAt": "2026-02-12T15:58:46.253Z"
+      },
+      {
+        "symbol": "META",
+        "path": "/data/marketphase/META.json",
+        "updatedAt": "2026-02-12T15:58:46.233Z"
+      },
+      {
+        "symbol": "MMM",
+        "path": "/data/marketphase/MMM.json",
+        "updatedAt": "2026-02-12T16:02:04.587Z"
+      },
+      {
+        "symbol": "MNST",
+        "path": "/data/marketphase/MNST.json",
+        "updatedAt": "2026-02-12T15:58:46.472Z"
+      },
+      {
+        "symbol": "MO",
+        "path": "/data/marketphase/MO.json",
+        "updatedAt": "2026-02-12T16:02:06.101Z"
+      },
+      {
+        "symbol": "MRVL",
+        "path": "/data/marketphase/MRVL.json",
+        "updatedAt": "2026-02-12T15:58:46.454Z"
+      },
+      {
+        "symbol": "MSFT",
+        "path": "/data/marketphase/MSFT.json",
+        "updatedAt": "2026-02-12T15:58:46.489Z"
+      },
+      {
+        "symbol": "MSTR",
+        "path": "/data/marketphase/MSTR.json",
+        "updatedAt": "2026-02-12T15:58:46.670Z"
+      },
+      {
+        "symbol": "MU",
+        "path": "/data/marketphase/MU.json",
+        "updatedAt": "2026-02-12T15:58:46.710Z"
+      },
+      {
+        "symbol": "NVDA",
+        "path": "/data/marketphase/NVDA.json",
+        "updatedAt": "2026-02-12T15:58:46.697Z"
+      },
+      {
+        "symbol": "NXPI",
+        "path": "/data/marketphase/NXPI.json",
+        "updatedAt": "2026-02-12T15:58:46.869Z"
+      },
+      {
+        "symbol": "ODFL",
+        "path": "/data/marketphase/ODFL.json",
+        "updatedAt": "2026-02-12T15:58:46.911Z"
+      },
+      {
+        "symbol": "ON",
+        "path": "/data/marketphase/ON.json",
+        "updatedAt": "2026-02-12T15:58:46.897Z"
+      },
+      {
+        "symbol": "ORLY",
+        "path": "/data/marketphase/ORLY.json",
+        "updatedAt": "2026-02-12T15:58:47.064Z"
+      },
+      {
+        "symbol": "PANW",
+        "path": "/data/marketphase/PANW.json",
+        "updatedAt": "2026-02-12T15:58:47.107Z"
+      },
+      {
+        "symbol": "PAYX",
+        "path": "/data/marketphase/PAYX.json",
+        "updatedAt": "2026-02-12T15:58:47.125Z"
+      },
+      {
+        "symbol": "PCAR",
+        "path": "/data/marketphase/PCAR.json",
+        "updatedAt": "2026-02-12T15:58:47.265Z"
+      },
+      {
+        "symbol": "PDD",
+        "path": "/data/marketphase/PDD.json",
+        "updatedAt": "2026-02-12T15:58:47.303Z"
+      },
+      {
+        "symbol": "PEP",
+        "path": "/data/marketphase/PEP.json",
+        "updatedAt": "2026-02-12T15:58:47.332Z"
+      },
+      {
+        "symbol": "PLTR",
+        "path": "/data/marketphase/PLTR.json",
+        "updatedAt": "2026-02-12T15:58:47.483Z"
+      },
+      {
+        "symbol": "PODD",
+        "path": "/data/marketphase/PODD.json",
+        "updatedAt": "2026-02-12T16:02:23.169Z"
+      },
+      {
+        "symbol": "PYPL",
+        "path": "/data/marketphase/PYPL.json",
+        "updatedAt": "2026-02-12T15:58:47.506Z"
+      },
+      {
+        "symbol": "QCOM",
+        "path": "/data/marketphase/QCOM.json",
+        "updatedAt": "2026-02-12T15:58:47.532Z"
+      },
+      {
+        "symbol": "REGN",
+        "path": "/data/marketphase/REGN.json",
+        "updatedAt": "2026-02-12T15:58:47.700Z"
+      },
+      {
+        "symbol": "ROP",
+        "path": "/data/marketphase/ROP.json",
+        "updatedAt": "2026-02-12T15:58:47.726Z"
+      },
+      {
+        "symbol": "ROST",
+        "path": "/data/marketphase/ROST.json",
+        "updatedAt": "2026-02-12T15:58:47.741Z"
+      },
+      {
+        "symbol": "SBUX",
+        "path": "/data/marketphase/SBUX.json",
+        "updatedAt": "2026-02-12T15:58:47.922Z"
+      },
+      {
+        "symbol": "SCHW",
+        "path": "/data/marketphase/SCHW.json",
+        "updatedAt": "2026-02-12T16:02:12.020Z"
+      },
+      {
+        "symbol": "SHOP",
+        "path": "/data/marketphase/SHOP.json",
+        "updatedAt": "2026-02-12T15:58:47.941Z"
+      },
+      {
+        "symbol": "SNPS",
+        "path": "/data/marketphase/SNPS.json",
+        "updatedAt": "2026-02-12T15:58:47.954Z"
+      },
+      {
+        "symbol": "STZ",
+        "path": "/data/marketphase/STZ.json",
+        "updatedAt": "2026-02-12T16:02:13.680Z"
+      },
+      {
+        "symbol": "T",
+        "path": "/data/marketphase/T.json",
+        "updatedAt": "2026-02-12T16:02:07.998Z"
+      },
+      {
+        "symbol": "TDY",
+        "path": "/data/marketphase/TDY.json",
+        "updatedAt": "2026-02-12T16:05:43.706Z"
+      },
+      {
+        "symbol": "TEAM",
+        "path": "/data/marketphase/TEAM.json",
+        "updatedAt": "2026-02-12T15:58:48.145Z"
+      },
+      {
+        "symbol": "TECH",
+        "path": "/data/marketphase/TECH.json",
+        "updatedAt": "2026-02-12T16:02:09.155Z"
+      },
+      {
+        "symbol": "TMUS",
+        "path": "/data/marketphase/TMUS.json",
+        "updatedAt": "2026-02-12T15:58:48.167Z"
+      },
+      {
+        "symbol": "TRI",
+        "path": "/data/marketphase/TRI.json",
+        "updatedAt": "2026-02-12T15:58:48.184Z"
+      },
+      {
+        "symbol": "TSLA",
+        "path": "/data/marketphase/TSLA.json",
+        "updatedAt": "2026-02-12T15:58:48.367Z"
+      },
+      {
+        "symbol": "TTD",
+        "path": "/data/marketphase/TTD.json",
+        "updatedAt": "2026-02-12T15:58:48.387Z"
+      },
+      {
+        "symbol": "TTWO",
+        "path": "/data/marketphase/TTWO.json",
+        "updatedAt": "2026-02-12T15:58:48.404Z"
+      },
+      {
+        "symbol": "TXN",
+        "path": "/data/marketphase/TXN.json",
+        "updatedAt": "2026-02-12T15:58:48.648Z"
+      },
+      {
+        "symbol": "UBER",
+        "path": "/data/marketphase/UBER.json",
+        "updatedAt": "2026-02-12T15:58:48.634Z"
+      },
+      {
+        "symbol": "VRSK",
+        "path": "/data/marketphase/VRSK.json",
+        "updatedAt": "2026-02-12T15:58:48.861Z"
+      },
+      {
+        "symbol": "VRTX",
+        "path": "/data/marketphase/VRTX.json",
+        "updatedAt": "2026-02-12T15:58:48.610Z"
+      },
+      {
+        "symbol": "WBD",
+        "path": "/data/marketphase/WBD.json",
+        "updatedAt": "2026-02-12T15:58:48.888Z"
+      },
+      {
+        "symbol": "WDAY",
+        "path": "/data/marketphase/WDAY.json",
+        "updatedAt": "2026-02-12T15:58:48.906Z"
+      },
+      {
+        "symbol": "XOM",
+        "path": "/data/marketphase/XOM.json",
+        "updatedAt": "2026-02-12T16:02:18.545Z"
+      },
+      {
+        "symbol": "XYZ",
+        "path": "/data/marketphase/XYZ.json",
+        "updatedAt": "2026-02-12T16:02:09.432Z"
+      }
     ]
   }
 }
