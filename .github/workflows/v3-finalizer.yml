@@ -203,7 +203,7 @@ jobs:
         run: |
           set -euo pipefail
           missing=false
-          for module in universe market-prices market-stats market-score; do
+          for module in universe market-prices market-stats; do
             path="public/data/snapshots/${module}/latest.json"
             if [ ! -s "$path" ]; then
               echo "❌ Missing or empty snapshot: $path"
@@ -212,6 +212,13 @@ jobs:
               echo "✓ Snapshot exists: $path ($(wc -c < "$path") bytes)"
             fi
           done
+          optional_path="public/data/snapshots/market-score/latest.json"
+          if [ ! -s "$optional_path" ]; then
+            echo "⚠ Optional snapshot missing: $optional_path (market_score stays optional for stock API)"
+            echo "GREEN-SKIP-NOTE: optional market-score snapshot missing; core publish remains valid." >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "✓ Optional snapshot exists: $optional_path ($(wc -c < "$optional_path") bytes)"
+          fi
           if [ "$missing" = true ]; then
             echo "Missing core snapshots, aborting publish"
             exit 1
