@@ -1154,13 +1154,129 @@ async function fetchTwelveDataBar(symbol, providerConfig, { apiKey, targetDate }
   };
 }
 
+async function fetchEodhdBar(symbol, providerConfig, { apiKey, targetDate }) {
+  if (providerConfig?.kind !== 'eodhd_eod') {
+    throw new Error('PROVIDER_KIND_UNSUPPORTED');
+  }
+
+  const baseUrl = String(providerConfig.base_url || '').replace(/\/$/, '');
+  const normalizedSymbol = symbol.includes('.') ? symbol : `${symbol}.US`;
+  const fromDate = (() => {
+    if (typeof targetDate === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(targetDate)) {
+      const dt = new Date(`${targetDate}T00:00:00Z`);
+      if (!Number.isNaN(dt.getTime())) {
+        dt.setUTCDate(dt.getUTCDate() - 14);
+        return formatDateYYYYMMDD(dt);
+      }
+    }
+    return getYesterdayUTCString();
+  })();
+
+  const params = new URLSearchParams({
+    api_token: apiKey,
+    fmt: 'json',
+    order: 'd',
+    from: fromDate
+  });
+  const url = `${baseUrl}/eod/${encodeURIComponent(normalizedSymbol)}?${params.toString()}`;
+  const timeoutMs = Number.isFinite(Number(providerConfig.timeout_ms))
+    ? Number(providerConfig.timeout_ms)
+    : 10000;
+
+  const result = await fetchWithRetry(url, {
+    headers: {
+      'user-agent': 'RubikVault/3.0 (market-prices)',
+      accept: 'application/json'
+    },
+    timeoutMs
+  });
+
+  const upstream = result.upstream || {
+    http_status: null,
+    latency_ms: 0,
+    retry_count: 0,
+    rate_limited: false
+  };
+
+  if (!result.ok) {
+    const classification =
+      upstream.http_status === 429 ? CLASSIFICATIONS.HTTP_429 : CLASSIFICATIONS.NETWORK_ERROR;
+    return {
+      ok: false,
+      classification,
+      note: truncateNote(result.text),
+      http_status: upstream.http_status,
+      upstream
+    };
+  }
+
+  let payload;
+  try {
+    payload = JSON.parse(result.text || '[]');
+  } catch (_) {
+    return {
+      ok: false,
+      classification: CLASSIFICATIONS.NETWORK_ERROR,
+      note: 'failed_json_parse',
+      http_status: upstream.http_status,
+      upstream
+    };
+  }
+
+  if (!Array.isArray(payload) || payload.length === 0) {
+    return {
+      ok: false,
+      classification: CLASSIFICATIONS.NETWORK_ERROR,
+      note: 'empty_payload',
+      http_status: upstream.http_status,
+      upstream
+    };
+  }
+
+  const selected = payload.find((row) => !targetDate || String(row?.date || '') <= String(targetDate)) || payload[0];
+  const open = Number.parseFloat(selected?.open);
+  const high = Number.parseFloat(selected?.high);
+  const low = Number.parseFloat(selected?.low);
+  const close = Number.parseFloat(selected?.close);
+  const volumeRaw = Number.parseInt(selected?.volume, 10);
+  const volume = Number.isFinite(volumeRaw) ? volumeRaw : Number.NaN;
+  const adjRaw = selected?.adjusted_close ?? selected?.adj_close ?? selected?.close;
+  const adjParsed = Number.parseFloat(adjRaw);
+  const adjClose = Number.isFinite(adjParsed) && adjParsed > 0 ? adjParsed : null;
+  const date = typeof selected?.date === 'string' ? selected.date.slice(0, 10) : null;
+
+  const bar = {
+    symbol,
+    date,
+    open,
+    high,
+    low,
+    close,
+    volume,
+    adj_close: adjClose,
+    currency: 'USD',
+    source_provider: providerConfig.id || 'eodhd',
+    ingested_at: new Date().toISOString()
+  };
+
+  return {
+    ok: true,
+    bar,
+    warnings: [],
+    classification: CLASSIFICATIONS.OK,
+    upstream
+  };
+}
+
 async function fetchBarWithRetries(symbol, providerConfig, options = {}) {
   const fetcher =
-    providerConfig.kind === 'alpha_vantage_eod'
-      ? fetchAlphaVantageBar
-      : providerConfig.kind === 'twelve_data_eod'
-        ? fetchTwelveDataBar
-        : null;
+    providerConfig.kind === 'eodhd_eod'
+      ? fetchEodhdBar
+      : providerConfig.kind === 'alpha_vantage_eod'
+        ? fetchAlphaVantageBar
+        : providerConfig.kind === 'twelve_data_eod'
+          ? fetchTwelveDataBar
+          : null;
 
   if (!fetcher) {
     throw new Error('PROVIDER_FETCHER_MISSING');
