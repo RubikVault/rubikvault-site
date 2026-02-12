@@ -1,0 +1,26 @@
+{
+  "schema": "forecast_challenger_spec_v3",
+  "challenger_id": "2026-02-12_feature_ablation_67je",
+  "created_at": "2026-02-12T15:28:57.770Z",
+  "parent_champion_id": "v3.0-champion-0001",
+  "seed": 42,
+  "model_family": "logistic",
+  "enabled_feature_groups": [
+    "basic",
+    "trend_context",
+    "relative_strength",
+    "regime",
+    "events"
+  ],
+  "calibration_method": "isotonic",
+  "neutral_band": 0.03,
+  "action_type": "feature_ablation",
+  "hypothesis": "Remove technical group to test if it adds noise",
+  "origin": {
+    "type": "rule_based",
+    "prompt_hash": null,
+    "response_hash": null,
+    "model_id": null,
+    "temperature": null
+  }
+}
