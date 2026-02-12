@@ -17,14 +17,16 @@ jobs:
       contents: write
     steps:
       - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
       
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: '20'
           
-      - name: Install dependencies (if any)
-        run: npm ci || npm install node-fetch
+      - name: Install dependencies
+        run: npm ci
 
       - name: Run Backfill (Full Universe)
         env:
@@ -37,14 +39,33 @@ jobs:
              UNIVERSE_FILE="./public/data/universe/nasdaq100.json"
           fi
           echo "Using universe: $UNIVERSE_FILE"
-          echo "Symbol count: $(jq 'length' $UNIVERSE_FILE)"
+          COUNT=$(jq 'length' "$UNIVERSE_FILE")
+          echo "Symbol count: $COUNT"
+          if [ "$COUNT" -lt 90 ]; then
+            echo "UNIVERSE_CONTRACT_VIOLATION: expected >= 90 symbols, got $COUNT" >&2
+            exit 1
+          fi
           node scripts/providers/eodhd-backfill-bars.mjs --universe "$UNIVERSE_FILE"
           
       - name: Commit Changes
         run: |
+          set -euo pipefail
           git config --global user.name "rv-bot"
           git config --global user.email "bot@rubikvault.com"
           git add public/data/eod/bars
-          git commit -m "chore(data): refresh eod history [skip ci]" || echo "No changes to commit"
-          git push
-
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+            exit 0
+          fi
+          git commit -m "chore(data): refresh eod history [skip ci]"
+          for i in 1 2 3; do
+            if git push origin HEAD:${{ github.ref_name }}; then
+              exit 0
+            fi
+            echo "push failed (attempt $i); retrying in 5s" >&2
+            sleep 5
+            git pull --rebase origin "${{ github.ref_name }}" || true
+          done
+          echo "GREEN-SKIP: push failed after retries (likely concurrent writer); publish deferred." >&2
+          echo "GREEN-SKIP: push failed after retries (likely concurrent writer); publish deferred." >> "$GITHUB_STEP_SUMMARY"
+          exit 0

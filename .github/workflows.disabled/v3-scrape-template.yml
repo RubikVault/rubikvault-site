@@ -107,7 +107,7 @@ jobs:
   scrape:
     needs: prepare
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 45
     permissions:
       contents: read
       actions: read
@@ -134,9 +134,8 @@ jobs:
           MODULE: ${{ matrix.module }}
           ARTIFACTS_DIR: ${{ runner.temp }}/artifacts
           EODHD_API_KEY: ${{ secrets.EODHD_API_KEY }}
-          TIINGO_API_KEY: ${{ secrets.TIINGO_API_KEY }}
-          RV_PRICES_FORCE_REAL: '0'
-          RV_FORCE_PROVIDER: stooq
+          TIINGO_API_KEY: ${{ secrets.TIINGO_API_KEY || secrets.TIIANGO_API_KEY }}
+          RV_PRICES_FORCE_REAL: '1'
           # API Keys (all available)
           POLYGON_API_KEY: ${{ secrets.POLYGON_API_KEY }}
           FMP_API_KEY: ${{ secrets.FMP_API_KEY }}

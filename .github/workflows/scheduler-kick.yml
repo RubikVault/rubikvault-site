@@ -8,7 +8,7 @@ on:
       workflows:
         description: "Comma-separated workflow files to dispatch (manual only)"
         required: false
-        default: "eod-latest.yml,ops-daily.yml,forecast-daily.yml"
+        default: "eod-latest.yml,scientific-daily.yml,ops-daily.yml,forecast-daily.yml"
 
 permissions:
   actions: write
@@ -63,6 +63,7 @@ jobs:
           event_name="${GITHUB_EVENT_NAME:-unknown}"
           hour_utc="$(date -u +%H)"
           weekday_utc="$(date -u +%u)" # 1..7 (Mon..Sun)
+          target_ref="main"
           workflows=""
 
           if [ "$event_name" = "schedule" ]; then
@@ -72,8 +73,8 @@ jobs:
             fi
             case "$hour_utc" in
               07) workflows="ops-daily.yml" ;;
-              21) workflows="forecast-daily.yml" ;;
               22) workflows="eod-latest.yml" ;;
+              23) workflows="scientific-daily.yml" ;;
               *) workflows="" ;;
             esac
             if [ -z "$workflows" ]; then
@@ -81,10 +82,12 @@ jobs:
               exit 0
             fi
           else
-            workflows="${INPUT_WORKFLOWS:-eod-latest.yml,ops-daily.yml,forecast-daily.yml}"
+            workflows="${INPUT_WORKFLOWS:-eod-latest.yml,scientific-daily.yml,ops-daily.yml,forecast-daily.yml}"
+            target_ref="${GITHUB_REF_NAME:-main}"
           fi
 
           echo "dispatch_target_raw=${workflows}"
+          echo "dispatch_target_ref=${target_ref}"
           IFS=',' read -r -a wf_list <<< "$workflows"
 
           dispatched=0
@@ -94,9 +97,9 @@ jobs:
               continue
             fi
             if [ "$wf" = "eod-latest.yml" ]; then
-              gh workflow run "$wf" --ref main -f universe=nasdaq100
+              gh workflow run "$wf" --ref "$target_ref" -f universe=nasdaq100
             else
-              gh workflow run "$wf" --ref main
+              gh workflow run "$wf" --ref "$target_ref"
             fi
             run_url="$(gh run list --workflow "$wf" --limit 1 --json url,createdAt,headBranch | jq -r '.[0].url // empty')"
             echo "dispatched_workflow=${wf} run=${run_url:-unknown}"
