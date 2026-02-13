@@ -754,6 +754,156 @@ export async function onRequestGet(context) {
     MODULE_PATHS.map((moduleName, index) => [moduleName, moduleResults[index]])
   );
 
+
+  /**
+   * Helper to fetch v3 data (EOD + Indicators)
+   */
+  async function fetchV3Data(env, request, ticker) {
+    try {
+      const v3Exchange = 'US'; // TODO: derive
+      // Use env.ASSETS.fetch if available (Pages/Workers) to avoid loopback deadlock
+      const fetchFn = (env?.ASSETS && typeof env.ASSETS.fetch === 'function')
+        ? (u) => env.ASSETS.fetch(new Request(u))
+        : fetch;
+
+      const v3EodUrl = new URL(`/data/v3/eod/${v3Exchange}/latest.ndjson.gz`, request.url);
+      const v3IndicatorsUrl = new URL(`/data/v3/derived/indicators/${v3Exchange}__${ticker}.json`, request.url);
+
+      const [eodRes, indRes] = await Promise.all([
+        fetchFn(v3EodUrl.toString()),
+        fetchFn(v3IndicatorsUrl.toString())
+      ]);
+
+      if (!eodRes.ok || !indRes.ok) return null;
+
+      const indData = await indRes.json();
+      const eodText = await eodRes.text();
+      const eodLines = eodText.split('\n');
+      let eodRecord = null;
+
+      for (const line of eodLines) {
+        if (!line) continue;
+        try {
+          const rec = JSON.parse(line);
+          if (rec.ticker === ticker) {
+            eodRecord = rec;
+            break;
+          }
+        } catch (e) { }
+      }
+
+      if (!eodRecord || !indData) return null;
+
+      return {
+        eod: eodRecord,
+        indicators: indData,
+        sources: {
+          eod: v3EodUrl.pathname,
+          indicators: v3IndicatorsUrl.pathname
+        }
+      };
+    } catch (err) {
+      console.error('V3_FETCH_ERROR', err);
+      return null;
+    }
+  }
+
+  async function compareV2V3(v2Payload, v3Data, env) {
+    if (!v3Data || !v2Payload) return;
+
+    const v2Price = v2Payload.data?.market_prices?.close;
+    const v3Price = v3Data.eod?.bar?.close;
+
+    // Simple drift check
+    if (v2Price && v3Price && Math.abs(v2Price - v3Price) > 0.001) {
+      const drift = {
+        ticker: v2Payload.data.ticker,
+        v2: v2Price,
+        v3: v3Price,
+        diff: Math.abs(v2Price - v3Price),
+        ts: new Date().toISOString()
+      };
+      console.warn('V3_DRIFT_DETECTED', JSON.stringify(drift));
+      // In a real system, we'd write this to a KV/Queue or metrics service
+    }
+  }
+
+  // --- V3 CANARY & SHADOW START ---
+  let v3Meta = null;
+  const useV3 = url.searchParams.get('v3') === 'true' || request.headers.get('x-rv-version') === '3';
+
+  // 1. FOREGROUND: Canary Mode (User explicitly requested v3)
+  if (useV3 && normalizedTicker) {
+    const v3Data = await fetchV3Data(env, request, normalizedTicker);
+    if (v3Data) {
+      // Overlay Logic
+      snapshots['market-prices'] = {
+        snapshot: {
+          data: [{
+            symbol: normalizedTicker,
+            date: v3Data.eod.bar.date,
+            close: v3Data.eod.bar.close,
+            volume: v3Data.eod.bar.volume,
+            open: v3Data.eod.bar.open,
+            high: v3Data.eod.bar.high,
+            low: v3Data.eod.bar.low,
+            source_provider: v3Data.eod.provider + ' (v3)',
+          }],
+          served_from: 'V3_CANARY'
+        },
+        status: 200,
+        path: v3Data.sources.eod
+      };
+
+      snapshots['market-stats'] = {
+        snapshot: {
+          data: [{
+            symbol: normalizedTicker,
+            as_of: v3Data.indicators.as_of,
+            stats: v3Data.indicators.indicators
+          }],
+          served_from: 'V3_CANARY'
+        },
+        status: 200,
+        path: v3Data.sources.indicators
+      };
+
+      v3Meta = {
+        enabled: true,
+        eod_provider: v3Data.eod.provider,
+        generated_at: v3Data.indicators.meta?.generated_at
+      };
+    } else {
+      v3Meta = { enabled: false, error: 'FETCH_FAILED' };
+    }
+  }
+
+  // 2. BACKGROUND: Shadow Mode (Run for everyone else)
+  // Only run if NOT privileged/debug to avoid noise, but for now we run it always for verification.
+  else if (normalizedTicker && context.waitUntil) {
+    const shadowCheck = async () => {
+      try {
+        const v3Data = await fetchV3Data(env, request, normalizedTicker);
+        // We need v2 payload to compare. 
+        // Since we can't easily access the final JSON here before it's built, 
+        // we can verify against the *snapshots* object which holds the v2 data source.
+
+        const v2Close = findRecord(snapshots['market-prices']?.snapshot, normalizedTicker)?.close;
+        const v3Close = v3Data?.eod?.bar?.close;
+
+        if (v2Close && v3Close && Math.abs(v2Close - v3Close) > 0.001) {
+          console.warn(`[V3_SHADOW_DRIFT] ${normalizedTicker}: v2=${v2Close} v3=${v3Close}`);
+        } else if (v2Close && v3Close) {
+          // console.log(`[V3_SHADOW_MATCH] ${normalizedTicker}`);
+        }
+      } catch (e) {
+        console.error('V3_SHADOW_ERROR', e);
+      }
+    };
+    context.waitUntil(shadowCheck());
+  }
+  // --- V3 CANARY & SHADOW END ---
+
   const servedFrom = Object.values(snapshots).some((result) => result.snapshot) ? 'ASSET' : 'MISSING';
   const sources = aggregateSources(snapshots);
 
@@ -797,6 +947,7 @@ export async function onRequestGet(context) {
         quality_flags: ['INVALID_TICKER'],
         data_source: 'unknown',
         mode: 'DEGRADED',
+        v3: v3Meta || undefined,
         asOf: null,
         freshness: 'unknown',
         cache: cacheMeta,
@@ -1021,6 +1172,7 @@ export async function onRequestGet(context) {
       quality_flags: Array.from(qualityFlags),
       data_source: dataSource,
       mode,
+      v3: v3Meta || undefined,
       asOf: metaAsOf,
       freshness,
       circuit: sourceChain?.circuit || null,
