@@ -120,6 +120,15 @@ jobs:
       - name: Verify critical published artifacts
         run: node scripts/ci/verify-artifacts.mjs
 
+      - name: Build stock UI support artifacts
+        run: |
+          node scripts/ui/build-benchmarks-latest.mjs
+          node scripts/ui/build-peers-latest.mjs
+          node scripts/ui/build-correlations-latest.mjs
+
+      - name: Verify stock UI support artifacts
+        run: node scripts/ci/verify-stock-ui-artifacts.mjs
+
       - name: Mission-control blocking gate (artifact-level)
         run: node scripts/ci/assert-mission-control-gate.mjs
 
@@ -138,6 +147,7 @@ jobs:
           npm run test:fetch-retry
           npm run test:p2-build-id
           npm run test:p3-kv-write
+          node scripts/test/stock-ui-extras.test.mjs
 
           npm run test:universe-registry
 

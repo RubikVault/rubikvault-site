@@ -42,6 +42,13 @@ jobs:
           set -euo pipefail
           node scripts/scientific-analyzer/generate-analysis.mjs
 
+      - name: Build stock UI support artifacts
+        run: |
+          set -euo pipefail
+          node scripts/ui/build-benchmarks-latest.mjs
+          node scripts/ui/build-peers-latest.mjs
+          node scripts/ui/build-correlations-latest.mjs
+
       - name: Validate stock-analysis output
         run: |
           set -euo pipefail
@@ -49,13 +56,18 @@ jobs:
           test -s "$FILE"
           jq -e '.["_meta"]["symbols_processed"] > 0' "$FILE" >/dev/null
           jq -e '.["_rankings"]["top_setups"] != null' "$FILE" >/dev/null
+          node scripts/ci/verify-stock-ui-artifacts.mjs
 
       - name: Commit + push (if changed)
         run: |
           set -euo pipefail
           git config user.name "RubikVault Bot"
           git config user.email "bot@rubikvault.com"
-          git add public/data/snapshots/stock-analysis.json
+          git add \
+            public/data/snapshots/stock-analysis.json \
+            public/data/ui/benchmarks/latest.json \
+            public/data/ui/peers/latest.json \
+            public/data/ui/correlations/latest.json
           if git diff --cached --quiet; then
             echo "No staged changes"
             exit 0
