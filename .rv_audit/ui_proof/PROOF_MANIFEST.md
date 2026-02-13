@@ -1,0 +1,48 @@
+# UI Proof Manifest
+
+- B0: PASS
+  - Baseline inventory: `.rv_audit/ui_proof/BASELINE_ANALYZE_DETAIL.md`
+  - Desktop screen: `.rv_audit/ui_proof/screens/BASELINE_analyze_detail_desktop.png`
+  - Mobile screen: `.rv_audit/ui_proof/screens/BASELINE_analyze_detail_mobile.png`
+  - DOM proof: `.rv_audit/ui_proof/dom/baseline_analyze_detail_dom.json`
+  - Console proof: `.rv_audit/ui_proof/console/baseline_analyze_detail_console.json`
+- P1.1: PASS
+  - DOM proof: `.rv_audit/ui_proof/dom/p1_nav_routes.json`
+  - Screens: `.rv_audit/ui_proof/screens/P1_1_route_analyze.png`, `.rv_audit/ui_proof/screens/P1_1_route_market.png`, `.rv_audit/ui_proof/screens/P1_1_route_ideas.png`
+- P1.2: PASS
+  - DOM proof: `.rv_audit/ui_proof/dom/p1_2_sticky_search.json`
+  - Route proof: sticky search from `/market` to `/analyze/MSFT`
+- P1.3: PASS
+  - DOM proof: `.rv_audit/ui_proof/dom/p1_3_analyze_home.json`
+  - Screens: `.rv_audit/ui_proof/screens/P1_3_analyze_home_desktop.png`, `.rv_audit/ui_proof/screens/P1_3_analyze_home_mobile.png`
+- P2.1: PASS
+  - Compare report: `.rv_audit/ui_proof/P2_1_no_feature_loss.md`
+  - DOM proof: `.rv_audit/ui_proof/dom/p2_1_after_sections.json`
+  - Screens: `.rv_audit/ui_proof/screens/P2_1_after_analyze_detail_desktop.png`, `.rv_audit/ui_proof/screens/P2_1_after_analyze_detail_mobile.png`
+- P3: PASS
+  - Artifact: `public/data/v3/derived/top-setups/latest.json`
+  - Thresholds: `public/data/v3/derived/config/scoring-thresholds.json`
+  - DOM proof: `.rv_audit/ui_proof/dom/p3_top_setups.json`
+  - Console proof: `.rv_audit/ui_proof/console/p3_top_setups_console.json`
+  - Screen: `.rv_audit/ui_proof/screens/P3_analyze_top_setups.png`
+- P4: PASS
+  - Artifact: `public/data/v3/derived/market/latest.json`
+  - DOM proof: `.rv_audit/ui_proof/dom/p4_market_dom.json`
+  - Console proof: `.rv_audit/ui_proof/console/p4_market_console.json`
+  - Screens: `.rv_audit/ui_proof/screens/P4_market_desktop.png`, `.rv_audit/ui_proof/screens/P4_market_mobile.png`
+- P5: PASS
+  - Artifact: `public/data/v3/derived/ideas/latest.json`
+  - MOAT content: `public/content/moat.md`
+  - DOM proof: `.rv_audit/ui_proof/dom/p5_ideas_dom.json`
+  - Console proof: `.rv_audit/ui_proof/console/p5_ideas_console.json`
+  - Screens: `.rv_audit/ui_proof/screens/P5_ideas_desktop.png`, `.rv_audit/ui_proof/screens/P5_ideas_mobile.png`
+- P6: PASS
+  - Dry run log: `.rv_audit/ui_proof/p6_local_dry_run.log`
+  - DOM proof: `.rv_audit/ui_proof/dom/p6_fresh_generation_views.json`
+  - Console proof: `.rv_audit/ui_proof/console/p6_fresh_generation_console.json`
+  - Screens: `.rv_audit/ui_proof/screens/P6_fresh_analyze.png`, `.rv_audit/ui_proof/screens/P6_fresh_market.png`, `.rv_audit/ui_proof/screens/P6_fresh_ideas.png`
+- P7: PASS
+  - Compare report: `.rv_audit/ui_proof/P7_final_no_feature_loss.md`
+  - DOM proof: `.rv_audit/ui_proof/dom/p7_final_sections.json`
+  - Console proof: `.rv_audit/ui_proof/console/p7_final_console.json`
+  - Screens: `.rv_audit/ui_proof/screens/P7_final_analyze_detail_desktop.png`, `.rv_audit/ui_proof/screens/P7_final_analyze_detail_mobile.png`

@@ -31,6 +31,78 @@
   <!-- Styles -->
   <link rel="stylesheet" href="/style.css" />
   <link rel="stylesheet" href="/search.css" />
+  <style>
+    #rv-sticky-search {
+      position: sticky;
+      top: 0;
+      z-index: 1200;
+      backdrop-filter: blur(8px);
+      background: rgba(2, 6, 23, 0.85);
+      border-bottom: 1px solid rgba(100, 116, 139, 0.25);
+    }
+
+    .rv-sticky-search-inner {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 0.65rem 1rem;
+      display: grid;
+      grid-template-columns: minmax(200px, 1fr) auto auto;
+      gap: 0.65rem;
+      align-items: center;
+    }
+
+    .rv-sticky-input,
+    .rv-sticky-select {
+      border: 1px solid rgba(100, 116, 139, 0.35);
+      border-radius: 10px;
+      background: rgba(15, 23, 42, 0.5);
+      color: #e5e7eb;
+      padding: 0.55rem 0.75rem;
+      font-size: 0.92rem;
+      min-height: 40px;
+    }
+
+    .rv-sticky-btn {
+      border: 1px solid rgba(100, 116, 139, 0.35);
+      border-radius: 10px;
+      background: rgba(30, 41, 59, 0.7);
+      color: #e5e7eb;
+      padding: 0.55rem 1rem;
+      font-weight: 700;
+      font-size: 0.86rem;
+      cursor: pointer;
+      min-height: 40px;
+    }
+
+    #best-setups-cards-wrap {
+      display: none;
+    }
+
+    .best-setup-link {
+      color: #93c5fd;
+      font-weight: 700;
+      text-decoration: none;
+    }
+
+    .best-setup-link:hover {
+      text-decoration: underline;
+    }
+
+    @media (max-width: 900px) {
+      .rv-sticky-search-inner {
+        grid-template-columns: 1fr;
+      }
+
+      #best-setups-table-wrap {
+        display: none;
+      }
+
+      #best-setups-cards-wrap {
+        display: grid;
+        gap: 0.65rem;
+      }
+    }
+  </style>
 </head>
 
 <body>
@@ -93,16 +165,35 @@
   <!-- PAGE NAVIGATION -->
   <nav class="rv-page-nav">
     <div class="rv-page-nav-inner">
-      <a href="/" class="rv-page-nav-link active" data-page="analyzer">Stock Analyzer</a>
-      <a href="/elliott.html" class="rv-page-nav-link" data-page="elliott">Elliott Waves</a>
-      <a href="/scientific.html" class="rv-page-nav-link" data-page="scientific">Scientific Analyzer</a>
-      <a href="/forecast.html" class="rv-page-nav-link" data-page="forecast">Forecast System</a>
+      <a href="/analyze" class="rv-page-nav-link active" data-top-route="analyze">ANALYZE</a>
+      <a href="/market" class="rv-page-nav-link" data-top-route="market">MARKET</a>
+      <a href="/ideas" class="rv-page-nav-link" data-top-route="ideas">IDEAS</a>
     </div>
   </nav>
+
+  <section id="rv-sticky-search" aria-label="Sticky stock search">
+    <div class="rv-sticky-search-inner">
+      <input
+        id="sticky-search-input"
+        class="rv-sticky-input"
+        type="text"
+        autocomplete="off"
+        placeholder="Search ticker (e.g. AAPL, MSFT, F)"
+      />
+      <select id="sticky-engine-filter" class="rv-sticky-select" aria-label="Engine filter">
+        <option value="all">All</option>
+        <option value="scientific">Scientific</option>
+        <option value="elliott">Elliott</option>
+        <option value="forecast">Forecast</option>
+      </select>
+      <button id="sticky-search-btn" class="rv-sticky-btn" type="button">Analyze</button>
+    </div>
+  </section>
 
 
   <!-- MAIN CONTENT -->
   <main class="rv-main" style="max-width: 1400px; margin: 0 auto; padding: 3rem 2rem;">
+    <div id="analyze-home-shell">
 
     <!-- HERO SECTION: Stock Analyzer -->
     <section style="text-align: center; margin-bottom: 4rem;">
@@ -198,6 +289,45 @@
       <p style="font-size: 0.875rem; color: #64748b; font-style: italic;">
         Enter a stock name or ticker to start the analysis
       </p>
+
+      <div id="best-setups-home" style="margin-top: 2.2rem; text-align: left; background: rgba(15, 23, 42, 0.35); border: 1px solid rgba(100, 116, 139, 0.22); border-radius: 12px; padding: 1rem;">
+        <div style="display:flex; justify-content:space-between; gap:0.8rem; align-items:center; flex-wrap:wrap; margin-bottom:0.8rem;">
+          <div>
+            <div style="font-size: 1rem; font-weight: 700; color: #e5e7eb;">Best Setups Today</div>
+            <div id="best-setups-meta" style="font-size: 0.8rem; color: #94a3b8;">Loading top setups…</div>
+          </div>
+          <div style="display:flex; gap:0.5rem; align-items:center;">
+            <label for="analyze-engine-filter" style="font-size:0.8rem; color:#94a3b8;">Engine</label>
+            <select id="analyze-engine-filter" class="rv-sticky-select" aria-label="Analyze home engine filter">
+              <option value="all">All</option>
+              <option value="scientific">Scientific</option>
+              <option value="elliott">Elliott</option>
+              <option value="forecast">Forecast</option>
+            </select>
+          </div>
+        </div>
+        <div id="best-setups-table-wrap" style="overflow-x:auto;">
+          <table id="best-setups-table" style="width:100%; border-collapse:collapse; font-size:0.9rem;">
+            <thead>
+              <tr>
+                <th style="text-align:left; color:#94a3b8; padding:0.45rem;">Ticker</th>
+                <th style="text-align:left; color:#94a3b8; padding:0.45rem;">Name</th>
+                <th style="text-align:right; color:#94a3b8; padding:0.45rem;">Composite</th>
+                <th style="text-align:right; color:#94a3b8; padding:0.45rem;">Consensus</th>
+                <th style="text-align:right; color:#94a3b8; padding:0.45rem;">Signals</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td colspan="5" style="padding:0.65rem; color:#64748b;">Loading top setups…</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div id="best-setups-cards-wrap">
+          <div style="padding:0.7rem; border:1px solid rgba(100,116,139,0.22); border-radius:10px; color:#64748b;">Loading top setups…</div>
+        </div>
+      </div>
     </section>
 
     <!-- RESULTS SECTION (Hidden by default) -->
@@ -221,6 +351,51 @@
       <div id="results-content" class="rv-card" style="padding: 2rem;">
         <!-- Results will be loaded here -->
       </div>
+    </section>
+    </div>
+
+    <section id="market-view" style="display:none;">
+      <div style="display:flex; justify-content:space-between; gap:0.8rem; align-items:flex-end; flex-wrap:wrap; margin-bottom:1.2rem;">
+        <div>
+          <h1 style="font-size:2.1rem; color:#e5e7eb; margin:0;">Market</h1>
+          <div style="font-size:0.95rem; color:#94a3b8;">Static-first market cockpit</div>
+        </div>
+        <div id="market-view-meta" style="font-size:0.8rem; color:#94a3b8;">Loading market snapshot…</div>
+      </div>
+      <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); gap:1rem;">
+        <article style="padding:1rem; background:rgba(15,23,42,0.35); border:1px solid rgba(100,116,139,0.22); border-radius:12px;">
+          <div style="font-size:0.85rem; color:#94a3b8; text-transform:uppercase; letter-spacing:0.08em; margin-bottom:0.5rem;">Pulse</div>
+          <div id="market-pulse-block" style="color:#64748b;">Loading pulse…</div>
+        </article>
+        <article style="padding:1rem; background:rgba(15,23,42,0.35); border:1px solid rgba(100,116,139,0.22); border-radius:12px;">
+          <div style="font-size:0.85rem; color:#94a3b8; text-transform:uppercase; letter-spacing:0.08em; margin-bottom:0.5rem;">Rotation</div>
+          <div id="market-rotation-block" style="color:#64748b;">Loading sector rotation…</div>
+        </article>
+        <article style="padding:1rem; background:rgba(15,23,42,0.35); border:1px solid rgba(100,116,139,0.22); border-radius:12px;">
+          <div style="font-size:0.85rem; color:#94a3b8; text-transform:uppercase; letter-spacing:0.08em; margin-bottom:0.5rem;">Movers</div>
+          <div id="market-movers-block" style="color:#64748b;">Loading movers…</div>
+        </article>
+      </div>
+    </section>
+
+    <section id="ideas-view" style="display:none;">
+      <div style="display:flex; justify-content:space-between; gap:0.8rem; align-items:flex-end; flex-wrap:wrap; margin-bottom:1.2rem;">
+        <div>
+          <h1 style="font-size:2.1rem; color:#e5e7eb; margin:0;">Ideas</h1>
+          <div style="font-size:0.95rem; color:#94a3b8;">MOAT + curated idea lists</div>
+        </div>
+        <div id="ideas-view-meta" style="font-size:0.8rem; color:#94a3b8;">Loading ideas snapshot…</div>
+      </div>
+
+      <article style="padding:1rem; background:rgba(15,23,42,0.35); border:1px solid rgba(100,116,139,0.22); border-radius:12px; margin-bottom:1rem;">
+        <div style="font-size:0.85rem; color:#94a3b8; text-transform:uppercase; letter-spacing:0.08em; margin-bottom:0.5rem;">MOAT</div>
+        <div id="ideas-moat-content" style="color:#cbd5e1;">Loading MOAT content…</div>
+      </article>
+
+      <article style="padding:1rem; background:rgba(15,23,42,0.35); border:1px solid rgba(100,116,139,0.22); border-radius:12px;">
+        <div style="font-size:0.85rem; color:#94a3b8; text-transform:uppercase; letter-spacing:0.08em; margin-bottom:0.5rem;">Curated Lists</div>
+        <div id="ideas-list-content" style="color:#64748b;">Loading idea lists…</div>
+      </article>
     </section>
 
   </main>
@@ -271,6 +446,9 @@
     })();
   </script>
 
+  <!-- Stock UI extras adapter -->
+  <script src="/js/rv-stock-ui-extras.js"></script>
+
   <!-- Load Scientific Analysis Data -->
   <script>
     // Global data stores
@@ -287,6 +465,11 @@
         scientificAnalysisData = await res.json();
         buildScientificMaps();
         updateBuySignalsStats();
+        if (!topSetupsDoc || topSetupsDoc?.meta?.source === 'fallback_scientific_rankings') {
+          topSetupsDoc = null;
+          await loadTopSetupsDoc();
+          renderBestSetups();
+        }
         loadElliottSupportIndex().then(updateBuySignalsStats);
       } catch (e) {
         console.warn('Scientific analysis data not available:', e);
@@ -490,24 +673,50 @@
       if (e.key === 'Escape') closeSignalModal();
     });
 
-    // Load on page ready
-    loadScientificData();
+    // Scientific data is loaded lazily by route/section handlers.
   </script>
 
 
   <!-- STOCK SEARCH LOGIC -->
   <script>
     const searchInput = document.getElementById('stock-search-input');
+    const stickySearchInput = document.getElementById('sticky-search-input');
+    const stickySearchBtn = document.getElementById('sticky-search-btn');
+    const stickyEngineFilter = document.getElementById('sticky-engine-filter');
+    const analyzeEngineFilter = document.getElementById('analyze-engine-filter');
     const resultsSection = document.getElementById('search-results');
     const resultsContent = document.getElementById('results-content');
     const resultsTitle = document.getElementById('results-title');
+    const analyzeHomeShell = document.getElementById('analyze-home-shell');
+    const marketView = document.getElementById('market-view');
+    const ideasView = document.getElementById('ideas-view');
+    const bestSetupsMeta = document.getElementById('best-setups-meta');
+    const bestSetupsTable = document.getElementById('best-setups-table');
+    const bestSetupsCardsWrap = document.getElementById('best-setups-cards-wrap');
+    const marketViewMeta = document.getElementById('market-view-meta');
+    const ideasViewMeta = document.getElementById('ideas-view-meta');
+    const marketPulseBlock = document.getElementById('market-pulse-block');
+    const marketRotationBlock = document.getElementById('market-rotation-block');
+    const marketMoversBlock = document.getElementById('market-movers-block');
+    const ideasMoatContent = document.getElementById('ideas-moat-content');
+    const ideasListContent = document.getElementById('ideas-list-content');
+    const topNavLinks = Array.from(document.querySelectorAll('.rv-page-nav-link[data-top-route]'));
 
     // Popular tickers for quick suggestions (can be expanded)
     const popularTickers = ['AAPL', 'MSFT', 'GOOGL', 'AMZN', 'TSLA', 'NVDA', 'META', 'NFLX', 'SPY', 'QQQ'];
 
     let lastResolved = { ticker: null, name: null };
+    let currentTopRoute = 'analyze';
+    let topSetupsDoc = null;
+    let marketDoc = null;
+    let ideasDoc = null;
     let chartState = { range: '1Y' };
     let lastChartData = null;
+    let lastNormalizedEnvelope = null;
+    let lastSelfReturns = null;
+    const stockUiExtras = window.RVStockUIExtras || {};
+    const uiArtifactCache = new Map();
+    const uiGzipCache = new Map();
 
     const UNIVERSE_URL = '/data/universe/all.json';
     let universe = [];
@@ -528,6 +737,60 @@
         .replace(/[^a-z0-9\s]/g, ' ')
         .replace(/\s+/g, ' ')
         .trim();
+    }
+
+    function syncSearchInputs(value, source = 'main') {
+      const next = String(value || '');
+      if (source !== 'main' && searchInput && searchInput.value !== next) searchInput.value = next;
+      if (source !== 'sticky' && stickySearchInput && stickySearchInput.value !== next) stickySearchInput.value = next;
+    }
+
+    function syncEngineFilters(value, source = 'sticky') {
+      const normalized = ['all', 'scientific', 'elliott', 'forecast'].includes(String(value || '').toLowerCase())
+        ? String(value || '').toLowerCase()
+        : 'all';
+      if (source !== 'sticky' && stickyEngineFilter) stickyEngineFilter.value = normalized;
+      if (source !== 'analyze' && analyzeEngineFilter) analyzeEngineFilter.value = normalized;
+      return normalized;
+    }
+
+    function getActiveEngineFilter() {
+      const value = (stickyEngineFilter?.value || analyzeEngineFilter?.value || 'all').toLowerCase();
+      return ['all', 'scientific', 'elliott', 'forecast'].includes(value) ? value : 'all';
+    }
+
+    function setTopNavActive(route) {
+      const normalized = route === 'market' || route === 'ideas' ? route : 'analyze';
+      topNavLinks.forEach((link) => {
+        if (!link) return;
+        const isActive = link.dataset.topRoute === normalized;
+        link.classList.toggle('active', isActive);
+      });
+    }
+
+    function setMainView(route) {
+      const normalized = route === 'market' || route === 'ideas' ? route : 'analyze';
+      currentTopRoute = normalized;
+      if (analyzeHomeShell) analyzeHomeShell.style.display = normalized === 'analyze' ? 'block' : 'none';
+      if (marketView) marketView.style.display = normalized === 'market' ? 'block' : 'none';
+      if (ideasView) ideasView.style.display = normalized === 'ideas' ? 'block' : 'none';
+      setTopNavActive(normalized);
+    }
+
+    function parseTopRoute(pathname) {
+      const path = String(pathname || '/');
+      const deep = path.match(/^\/analyze\/([A-Z0-9.\-]+)$/i);
+      if (deep) return { route: 'analyze', ticker: normalizeTicker(deep[1]) };
+      if (path === '/market') return { route: 'market', ticker: null };
+      if (path === '/ideas') return { route: 'ideas', ticker: null };
+      if (path === '/analyze' || path === '/' || path === '/index.html') return { route: 'analyze', ticker: null };
+      return { route: 'analyze', ticker: null };
+    }
+
+    function routePathFor(route) {
+      if (route === 'market') return '/market';
+      if (route === 'ideas') return '/ideas';
+      return '/analyze';
     }
 
     async function loadUniverse() {
@@ -619,6 +882,341 @@
       }
     }
 
+    function formatDecimalPct(value, digits = 2) {
+      const num = Number(value);
+      if (!Number.isFinite(num)) return '—';
+      const pct = num * 100;
+      const sign = pct > 0 ? '+' : '';
+      return `${sign}${pct.toFixed(digits)}%`;
+    }
+
+    function formatSignedValue(value, digits = 2) {
+      const num = Number(value);
+      if (!Number.isFinite(num)) return '—';
+      const sign = num > 0 ? '+' : '';
+      return `${sign}${num.toFixed(digits)}`;
+    }
+
+    function getIndicatorValue(indicatorMap, key) {
+      if (!indicatorMap || typeof indicatorMap !== 'object') return null;
+      const value = indicatorMap[key];
+      const num = Number(value);
+      return Number.isFinite(num) ? num : null;
+    }
+
+    async function loadUiArtifact(path) {
+      if (uiArtifactCache.has(path)) return uiArtifactCache.get(path);
+      const { response, payload } = await fetchJson(path);
+      const doc = response?.ok && payload && typeof payload === 'object' ? payload : null;
+      uiArtifactCache.set(path, doc);
+      return doc;
+    }
+
+    async function loadGzipNdjson(path) {
+      if (uiGzipCache.has(path)) return uiGzipCache.get(path);
+      if (typeof DecompressionStream === 'undefined') {
+        uiGzipCache.set(path, null);
+        return null;
+      }
+      try {
+        const res = await fetch(path);
+        if (!res.ok || !res.body) {
+          uiGzipCache.set(path, null);
+          return null;
+        }
+        const stream = res.body.pipeThrough(new DecompressionStream('gzip'));
+        const text = await new Response(stream).text();
+        const rows = text
+          .split('\n')
+          .map((line) => line.trim())
+          .filter(Boolean)
+          .map((line) => {
+            try { return JSON.parse(line); } catch { return null; }
+          })
+          .filter(Boolean);
+        uiGzipCache.set(path, rows);
+        return rows;
+      } catch (error) {
+        console.warn(`gzip artifact load failed for ${path}:`, error);
+        uiGzipCache.set(path, null);
+        return null;
+      }
+    }
+
+    function getRecentActionRows(allRows, ticker, maxItems = 6) {
+      if (!Array.isArray(allRows)) return [];
+      const symbol = normalizeTicker(ticker);
+      const rows = allRows
+        .filter((row) => normalizeTicker(row?.ticker || row?.symbol || '') === symbol)
+        .map((row) => ({
+          type: String(row?.type || '').toLowerCase(),
+          event_date: String(row?.event_date || row?.date || '').slice(0, 10),
+          value: Number(row?.value)
+        }))
+        .filter((row) => row.event_date);
+      rows.sort((a, b) => a.event_date.localeCompare(b.event_date));
+      return rows.slice(Math.max(0, rows.length - maxItems));
+    }
+
+    function formatPctOrDash(value, digits = 1) {
+      const num = Number(value);
+      if (!Number.isFinite(num)) return '—';
+      return `${num > 0 ? '+' : ''}${(num * 100).toFixed(digits)}%`;
+    }
+
+    function fallbackTopSetupsRows() {
+      const byTimeframe = scientificAnalysisData?._rankings?.by_timeframe || {};
+      const buckets = ['short', 'medium', 'long'];
+      const map = new Map();
+
+      for (const tf of buckets) {
+        const rows = Array.isArray(byTimeframe[tf]) ? byTimeframe[tf] : [];
+        for (const row of rows) {
+          const ticker = normalizeTicker(row?.ticker || '');
+          if (!ticker) continue;
+          if (!map.has(ticker)) {
+            map.set(ticker, {
+              ticker,
+              name: row?.name || universeByTicker.get(ticker) || null,
+              scientific: null,
+              elliott: null,
+              forecast: null
+            });
+          }
+          const entry = map.get(ticker);
+          const score = Number(row?.score ?? row?.probability ?? row?.confidence);
+          if (Number.isFinite(score)) {
+            if (tf === 'short') entry.scientific = score;
+            if (tf === 'medium') entry.elliott = score;
+            if (tf === 'long') entry.forecast = score;
+          }
+        }
+      }
+
+      return Array.from(map.values())
+        .map((row) => {
+          const scoreList = [row.scientific, row.elliott, row.forecast].filter((v) => Number.isFinite(Number(v)));
+          const bullishCount = [row.scientific, row.elliott, row.forecast].filter((v) => Number(v) >= 0.6).length;
+          const enginesAvailable = scoreList.length || 0;
+          const composite = enginesAvailable ? scoreList.reduce((a, b) => a + b, 0) / enginesAvailable : null;
+          const consensus = enginesAvailable ? bullishCount / enginesAvailable : null;
+          return { ...row, composite, consensus, bullish_count: bullishCount, engines_available: enginesAvailable };
+        })
+        .sort((a, b) => (Number(b.composite || -1) - Number(a.composite || -1)) || a.ticker.localeCompare(b.ticker))
+        .slice(0, 50);
+    }
+
+    async function loadTopSetupsDoc() {
+      if (topSetupsDoc) return topSetupsDoc;
+      const { response, payload } = await fetchJson('/data/v3/derived/top-setups/latest.json');
+      if (response?.ok && payload && typeof payload === 'object') {
+        topSetupsDoc = payload;
+        return topSetupsDoc;
+      }
+      const fallbackRows = fallbackTopSetupsRows();
+      if (!fallbackRows.length) return null;
+      topSetupsDoc = {
+        meta: {
+          generated_at: null,
+          source: 'fallback_scientific_rankings'
+        },
+        data: {
+          rows: fallbackRows
+        }
+      };
+      return topSetupsDoc;
+    }
+
+    function filterTopSetupsRows(rows, filterKey) {
+      const key = ['all', 'scientific', 'elliott', 'forecast'].includes(filterKey) ? filterKey : 'all';
+      if (!Array.isArray(rows)) return [];
+      if (key === 'all') return rows;
+      return rows.filter((row) => Number.isFinite(Number(row[key])));
+    }
+
+    function renderBestSetups() {
+      if (!bestSetupsTable || !bestSetupsCardsWrap || !bestSetupsMeta) return;
+      const rows = Array.isArray(topSetupsDoc?.data?.rows) ? topSetupsDoc.data.rows : [];
+      const filterKey = getActiveEngineFilter();
+      const filtered = filterTopSetupsRows(rows, filterKey).slice(0, 20);
+      const generatedAt = topSetupsDoc?.meta?.generated_at || 'fallback';
+      bestSetupsMeta.textContent = `Filter=${filterKey.toUpperCase()} • rows=${filtered.length} • generatedAt=${generatedAt}`;
+
+      if (!filtered.length) {
+        bestSetupsTable.querySelector('tbody').innerHTML = '<tr><td colspan=\"5\" style=\"padding:0.65rem; color:#64748b;\">No setups available for this filter.</td></tr>';
+        bestSetupsCardsWrap.innerHTML = '<div style=\"padding:0.7rem; border:1px solid rgba(100,116,139,0.22); border-radius:10px; color:#64748b;\">No setups available for this filter.</div>';
+        return;
+      }
+
+      bestSetupsTable.querySelector('tbody').innerHTML = filtered.map((row) => `
+        <tr>
+          <td style=\"padding:0.45rem; border-top:1px solid rgba(100,116,139,0.18);\"><a class=\"best-setup-link\" href=\"/analyze/${encodeURIComponent(row.ticker)}\" data-open-ticker=\"${escapeHtml(row.ticker)}\">${escapeHtml(row.ticker)}</a></td>
+          <td style=\"padding:0.45rem; border-top:1px solid rgba(100,116,139,0.18); color:#cbd5e1;\">${escapeHtml(row.name || '—')}</td>
+          <td style=\"padding:0.45rem; border-top:1px solid rgba(100,116,139,0.18); text-align:right; color:#e5e7eb; font-weight:600;\">${Number.isFinite(Number(row.composite)) ? Number(row.composite).toFixed(3) : '—'}</td>
+          <td style=\"padding:0.45rem; border-top:1px solid rgba(100,116,139,0.18); text-align:right; color:#e5e7eb; font-weight:600;\">${formatPctOrDash(row.consensus, 0)}</td>
+          <td style=\"padding:0.45rem; border-top:1px solid rgba(100,116,139,0.18); text-align:right; color:#94a3b8;\">${row.bullish_count ?? 0}/${row.engines_available ?? 0}</td>
+        </tr>
+      `).join('');
+
+      bestSetupsCardsWrap.innerHTML = filtered.map((row) => `
+        <article style=\"padding:0.7rem; border:1px solid rgba(100,116,139,0.22); border-radius:10px; background:rgba(15,23,42,0.35);\">
+          <div style=\"display:flex; justify-content:space-between; gap:0.5rem; align-items:flex-end;\">
+            <a class=\"best-setup-link\" href=\"/analyze/${encodeURIComponent(row.ticker)}\" data-open-ticker=\"${escapeHtml(row.ticker)}\">${escapeHtml(row.ticker)}</a>
+            <span style=\"font-size:0.8rem; color:#94a3b8;\">Composite ${Number.isFinite(Number(row.composite)) ? Number(row.composite).toFixed(3) : '—'}</span>
+          </div>
+          <div style=\"margin-top:0.2rem; color:#cbd5e1; font-size:0.86rem;\">${escapeHtml(row.name || '—')}</div>
+          <div style=\"margin-top:0.4rem; display:flex; justify-content:space-between; gap:0.5rem; font-size:0.82rem;\">
+            <span style=\"color:#94a3b8;\">Consensus ${formatPctOrDash(row.consensus, 0)}</span>
+            <span style=\"color:#94a3b8;\">Signals ${row.bullish_count ?? 0}/${row.engines_available ?? 0}</span>
+          </div>
+        </article>
+      `).join('');
+
+      document.querySelectorAll('[data-open-ticker]').forEach((link) => {
+        link.addEventListener('click', async (ev) => {
+          ev.preventDefault();
+          const ticker = link.getAttribute('data-open-ticker');
+          if (!ticker) return;
+          await selectSymbol(ticker, universeByTicker.get(ticker) || null, { push: true });
+        });
+      });
+    }
+
+    async function loadMarketDoc() {
+      if (marketDoc) return marketDoc;
+      const { response, payload } = await fetchJson('/data/v3/derived/market/latest.json');
+      if (response?.ok && payload && typeof payload === 'object') {
+        marketDoc = payload;
+        return marketDoc;
+      }
+      marketDoc = null;
+      return null;
+    }
+
+    function renderMarketView() {
+      if (!marketPulseBlock || !marketRotationBlock || !marketMoversBlock || !marketViewMeta) return;
+      const doc = marketDoc;
+      const generatedAt = doc?.meta?.generated_at || 'pending';
+      marketViewMeta.textContent = `generatedAt=${generatedAt}`;
+      const pulse = doc?.data?.pulse || doc?.pulse || null;
+      const rotation = doc?.data?.rotation || doc?.rotation || null;
+      const movers = Array.isArray(doc?.data?.movers) ? doc.data.movers : Array.isArray(doc?.movers) ? doc.movers : [];
+
+      if (!doc) {
+        marketPulseBlock.innerHTML = '<span style=\"color:#64748b;\">Content pending. Run dp8 market builder.</span>';
+        marketRotationBlock.innerHTML = '<span style=\"color:#64748b;\">Content pending. Run dp8 market builder.</span>';
+        marketMoversBlock.innerHTML = '<span style=\"color:#64748b;\">Content pending. Run dp8 market builder.</span>';
+        return;
+      }
+
+      marketPulseBlock.innerHTML = `
+        <div style="display:grid; gap:0.4rem;">
+          <div style="display:flex; justify-content:space-between;"><span style="color:#94a3b8;">Risk mode</span><span style="color:#e5e7eb; font-weight:600;">${escapeHtml(pulse?.risk_mode || pulse?.risk_on_off || '—')}</span></div>
+          <div style="display:flex; justify-content:space-between;"><span style="color:#94a3b8;">Breadth up/down</span><span style="color:#e5e7eb; font-weight:600;">${escapeHtml(String(pulse?.up || pulse?.breadth_up || '—'))}/${escapeHtml(String(pulse?.down || pulse?.breadth_down || '—'))}</span></div>
+        </div>
+      `;
+
+      const rotationRows = Array.isArray(rotation?.leaders) ? rotation.leaders.slice(0, 6) : Array.isArray(doc?.data?.sectors) ? doc.data.sectors.slice(0, 6) : [];
+      marketRotationBlock.innerHTML = rotationRows.length
+        ? rotationRows.map((row) => `<div style=\"display:flex; justify-content:space-between; gap:0.5rem; padding:0.2rem 0; border-bottom:1px solid rgba(100,116,139,0.12);\"><span style=\"color:#94a3b8;\">${escapeHtml(row.sector || row.symbol || '—')}</span><span style=\"color:#e5e7eb; font-weight:600;\">${formatSignedValue(row.change_pct || row.change || 0, 2)}%</span></div>`).join('')
+        : '<span style=\"color:#64748b;\">No rotation rows available.</span>';
+
+      marketMoversBlock.innerHTML = movers.length
+        ? movers.slice(0, 8).map((row) => `<div style=\"display:flex; justify-content:space-between; gap:0.5rem; padding:0.2rem 0; border-bottom:1px solid rgba(100,116,139,0.12);\"><a class=\"best-setup-link\" href=\"/analyze/${encodeURIComponent(row.ticker || row.symbol || '')}\" data-open-ticker=\"${escapeHtml(normalizeTicker(row.ticker || row.symbol || ''))}\">${escapeHtml(normalizeTicker(row.ticker || row.symbol || '—'))}</a><span style=\"color:${Number(row.change_pct || row.change || 0) >= 0 ? '#34d399' : '#f87171'}; font-weight:600;\">${formatSignedValue(Number(row.change_pct || row.change || 0), 2)}%</span></div>`).join('')
+        : '<span style=\"color:#64748b;\">No movers available.</span>';
+
+      document.querySelectorAll('#market-view [data-open-ticker]').forEach((link) => {
+        link.addEventListener('click', async (ev) => {
+          ev.preventDefault();
+          const ticker = link.getAttribute('data-open-ticker');
+          if (!ticker) return;
+          await selectSymbol(ticker, universeByTicker.get(ticker) || null, { push: true });
+        });
+      });
+    }
+
+    async function loadIdeasDoc() {
+      if (ideasDoc) return ideasDoc;
+      const { response, payload } = await fetchJson('/data/v3/derived/ideas/latest.json');
+      if (response?.ok && payload && typeof payload === 'object') {
+        ideasDoc = payload;
+        return ideasDoc;
+      }
+      ideasDoc = null;
+      return null;
+    }
+
+    async function renderIdeasView() {
+      if (!ideasMoatContent || !ideasListContent || !ideasViewMeta) return;
+      const [doc, moatRes] = await Promise.all([
+        loadIdeasDoc(),
+        fetch('/content/moat.md').catch(() => null)
+      ]);
+
+      const moatText = moatRes && moatRes.ok ? await moatRes.text() : '';
+      const moatLines = String(moatText || '')
+        .split(/\r?\n/)
+        .map((line) => line.trim())
+        .filter(Boolean)
+        .slice(0, 12);
+
+      ideasMoatContent.innerHTML = moatLines.length
+        ? moatLines.map((line) => `<p style=\"margin:0 0 0.55rem;\">${escapeHtml(line.replace(/^#+\\s*/, ''))}</p>`).join('')
+        : '<p style=\"margin:0; color:#64748b;\">Content pending.</p>';
+
+      const generatedAt = doc?.meta?.generated_at || 'pending';
+      ideasViewMeta.textContent = `generatedAt=${generatedAt}`;
+      const lists = Array.isArray(doc?.data?.lists) ? doc.data.lists : [];
+      if (!lists.length) {
+        ideasListContent.innerHTML = '<span style=\"color:#64748b;\">No curated lists available yet.</span>';
+        return;
+      }
+
+      ideasListContent.innerHTML = lists.map((list, idx) => {
+        const panelId = `idea-details-${idx}`;
+        const items = Array.isArray(list?.items) ? list.items : [];
+        const rows = items.slice(0, 12).map((item) => {
+          const ticker = normalizeTicker(item?.ticker || item?.symbol || '');
+          const rationale = escapeHtml(item?.rationale || item?.note || '—');
+          return `
+            <div style="display:flex; justify-content:space-between; gap:0.6rem; padding:0.25rem 0; border-bottom:1px solid rgba(100,116,139,0.12);">
+              <a class="best-setup-link" href="/analyze/${encodeURIComponent(ticker)}" data-open-ticker="${escapeHtml(ticker)}">${escapeHtml(ticker || '—')}</a>
+              <span style="color:#94a3b8; font-size:0.8rem; text-align:right;">${rationale}</span>
+            </div>
+          `;
+        }).join('');
+        return `
+          <article style="padding:0.8rem; border:1px solid rgba(100,116,139,0.22); border-radius:10px; background:rgba(15,23,42,0.35); margin-bottom:0.7rem;">
+            <div style="display:flex; justify-content:space-between; gap:0.6rem; align-items:center;">
+              <div style="font-weight:700; color:#e5e7eb;">${escapeHtml(list?.name || 'Curated list')}</div>
+              <button type="button" data-idea-toggle="${panelId}" style="border:1px solid rgba(100,116,139,0.35); border-radius:8px; background:rgba(30,41,59,0.65); color:#e5e7eb; padding:0.25rem 0.6rem; font-size:0.78rem; cursor:pointer;">Details</button>
+            </div>
+            <div style="margin-top:0.25rem; color:#94a3b8; font-size:0.82rem;">${escapeHtml(list?.summary || '')}</div>
+            <div id="${panelId}" style="display:none; margin-top:0.6rem;">${rows || '<span style=\"color:#64748b;\">No items.</span>'}</div>
+          </article>
+        `;
+      }).join('');
+
+      document.querySelectorAll('#ideas-view [data-idea-toggle]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const id = btn.getAttribute('data-idea-toggle');
+          const panel = id ? document.getElementById(id) : null;
+          if (!panel) return;
+          const open = panel.style.display === 'block';
+          panel.style.display = open ? 'none' : 'block';
+        });
+      });
+
+      document.querySelectorAll('#ideas-view [data-open-ticker]').forEach((link) => {
+        link.addEventListener('click', async (ev) => {
+          ev.preventDefault();
+          const ticker = link.getAttribute('data-open-ticker');
+          if (!ticker) return;
+          await selectSymbol(ticker, universeByTicker.get(ticker) || null, { push: true });
+        });
+      });
+    }
+
     function ensureTypeaheadRoot() {
       if (typeahead.root) return typeahead.root;
       const parent = searchInput?.parentElement;
@@ -704,8 +1302,9 @@
 
       const resolvedName = universeByTicker.get(s) || null;
       lastResolved = { ticker: s, name: resolvedName };
-      searchInput.value = s;
+      syncSearchInputs(s, 'main');
       closeTypeahead();
+      setMainView('analyze');
       if (push) window.history.pushState({}, '', `/analyze/${encodeURIComponent(s)}`);
       await loadAnalyze(s, { push: false, fallback: lastResolved });
     }
@@ -824,6 +1423,132 @@
       `;
     }
 
+    function renderProvenanceBadge(normalizedEnvelope) {
+      const meta = normalizedEnvelope?.meta || {};
+      const provider = escapeHtml(meta.provider || 'unknown');
+      const asOf = escapeHtml(meta.as_of || meta.data_date || '—');
+      const status = escapeHtml(meta.status || 'UNKNOWN');
+      const freshness = escapeHtml(meta.freshness || 'unknown');
+      return `
+        <div style="margin-top: 0.6rem; display: inline-flex; flex-wrap: wrap; gap: 0.45rem; align-items: center; justify-content: flex-end;">
+          <span style="padding: 0.25rem 0.55rem; border-radius: 999px; border: 1px solid rgba(148, 163, 184, 0.32); color: #cbd5e1; background: rgba(15, 23, 42, 0.35); font-size: 0.78rem;">
+            Data as of ${asOf}
+          </span>
+          <span style="padding: 0.25rem 0.55rem; border-radius: 999px; border: 1px solid rgba(148, 163, 184, 0.32); color: #cbd5e1; background: rgba(15, 23, 42, 0.35); font-size: 0.78rem;">
+            Provider ${provider}
+          </span>
+          <span style="padding: 0.25rem 0.55rem; border-radius: 999px; border: 1px solid rgba(148, 163, 184, 0.32); color: #cbd5e1; background: rgba(15, 23, 42, 0.35); font-size: 0.78rem;">
+            ${status} • ${freshness}
+          </span>
+        </div>
+      `;
+    }
+
+    function buildAnomalyChips(indicatorMap, bars, gapStats, support) {
+      const chips = [];
+      const volumeRatio = getIndicatorValue(indicatorMap, 'volume_ratio_20d');
+      if (Number.isFinite(volumeRatio) && volumeRatio >= 1.5) {
+        chips.push({ label: `Volume spike ${volumeRatio.toFixed(2)}x`, color: '#fbbf24' });
+      }
+
+      const latestGap = Array.isArray(gapStats?.recent_gaps) && gapStats.recent_gaps.length
+        ? gapStats.recent_gaps[gapStats.recent_gaps.length - 1]
+        : null;
+      if (latestGap && Number.isFinite(Number(latestGap.gap_pct)) && Math.abs(Number(latestGap.gap_pct)) >= 0.02) {
+        chips.push({
+          label: `${latestGap.direction === 'up' ? 'Gap up' : 'Gap down'} ${formatDecimalPct(latestGap.gap_pct, 1)}`,
+          color: latestGap.direction === 'up' ? '#34d399' : '#f87171'
+        });
+      }
+
+      if (Array.isArray(bars) && bars.length && support) {
+        const latest = bars[bars.length - 1];
+        const high52w = Number(support.high_52w);
+        const low52w = Number(support.low_52w);
+        if (Number.isFinite(latest?.close) && Number.isFinite(high52w) && high52w > 0) {
+          const distHigh = (high52w - latest.close) / high52w;
+          if (distHigh >= 0 && distHigh <= 0.03) chips.push({ label: 'Near 52W high', color: '#10b981' });
+        }
+        if (Number.isFinite(latest?.close) && Number.isFinite(low52w) && low52w > 0) {
+          const distLow = (latest.close - low52w) / low52w;
+          if (distLow >= 0 && distLow <= 0.03) chips.push({ label: 'Near 52W low', color: '#ef4444' });
+        }
+      }
+
+      if (!chips.length) return '<span style="color:#64748b; font-size:0.85rem;">No unusual activity signals today.</span>';
+      return chips.map((chip) => `
+        <span style="display:inline-flex; align-items:center; gap:0.35rem; padding:0.25rem 0.6rem; border-radius:999px; border:1px solid rgba(148,163,184,0.25); color:${chip.color}; background:rgba(15,23,42,0.35); font-size:0.8rem; font-weight:600;">${escapeHtml(chip.label)}</span>
+      `).join('');
+    }
+
+    function renderRiskLiquidityBlock(risk) {
+      return `
+        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(140px, 1fr)); gap:0.6rem;">
+          <div style="padding:0.7rem; border:1px solid rgba(100,116,139,0.22); border-radius:10px; background:rgba(15,23,42,0.35);">
+            <div style="font-size:0.75rem; color:#94a3b8;">Typical daily move</div>
+            <div style="margin-top:0.2rem; color:#e5e7eb; font-weight:700;">${formatDecimalPct(risk.typicalMove, 2)}</div>
+          </div>
+          <div style="padding:0.7rem; border:1px solid rgba(100,116,139,0.22); border-radius:10px; background:rgba(15,23,42,0.35);">
+            <div style="font-size:0.75rem; color:#94a3b8;">Volume vs 20d avg</div>
+            <div style="margin-top:0.2rem; color:#e5e7eb; font-weight:700;">${risk.volumeRatio == null ? '—' : `${risk.volumeRatio.toFixed(2)}x`}</div>
+          </div>
+          <div style="padding:0.7rem; border:1px solid rgba(100,116,139,0.22); border-radius:10px; background:rgba(15,23,42,0.35);">
+            <div style="font-size:0.75rem; color:#94a3b8;">From 52W high</div>
+            <div style="margin-top:0.2rem; color:#e5e7eb; font-weight:700;">${formatDecimalPct(risk.drawdownFromHigh, 2)}</div>
+          </div>
+          <div style="padding:0.7rem; border:1px solid rgba(100,116,139,0.22); border-radius:10px; background:rgba(15,23,42,0.35);">
+            <div style="font-size:0.75rem; color:#94a3b8;">To 52W low</div>
+            <div style="margin-top:0.2rem; color:#e5e7eb; font-weight:700;">${formatDecimalPct(risk.distanceToLow, 2)}</div>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderPerformanceTableRows(selfReturns, benchmarkRows) {
+      const windows = [
+        ['YTD', selfReturns?.ytd, 'ytd'],
+        ['1Y', selfReturns?.y1, 'y1'],
+        ['5Y', selfReturns?.y5, 'y5']
+      ];
+      const safeBenchmarks = Array.isArray(benchmarkRows) ? benchmarkRows : [];
+      const benchmarkCols = safeBenchmarks.slice(0, 2);
+      const headerCols = benchmarkCols.map((row) => `<th style="text-align:right; color:#94a3b8; padding:0.35rem 0.45rem;">${escapeHtml(row.symbol)}</th>`).join('');
+
+      const rows = windows.map(([label, selfValue, key]) => {
+        const benchCells = benchmarkCols.map((row) => `<td style=\"text-align:right; color:#cbd5e1; padding:0.35rem 0.45rem;\">${formatDecimalPct(row?.returns?.[key], 2)}</td>`).join('');
+        return `
+          <tr>
+            <td style="padding:0.35rem 0.45rem; color:#94a3b8;">${label}</td>
+            <td style="text-align:right; padding:0.35rem 0.45rem; color:#e5e7eb; font-weight:600;">${formatDecimalPct(selfValue, 2)}</td>
+            ${benchCells}
+          </tr>
+        `;
+      }).join('');
+
+      if (!benchmarkCols.length) {
+        return `
+          <div style="color:#94a3b8; font-size:0.85rem; margin-bottom:0.5rem;">Benchmark unavailable. Showing ticker-only performance.</div>
+          <table style="width:100%; border-collapse:collapse; font-size:0.88rem;">
+            <thead><tr><th style="text-align:left; color:#94a3b8; padding:0.35rem 0.45rem;">Window</th><th style="text-align:right; color:#94a3b8; padding:0.35rem 0.45rem;">Ticker</th></tr></thead>
+            <tbody>${rows}</tbody>
+          </table>
+        `;
+      }
+
+      return `
+        <table style="width:100%; border-collapse:collapse; font-size:0.88rem;">
+          <thead>
+            <tr>
+              <th style="text-align:left; color:#94a3b8; padding:0.35rem 0.45rem;">Window</th>
+              <th style="text-align:right; color:#94a3b8; padding:0.35rem 0.45rem;">Ticker</th>
+              ${headerCols}
+            </tr>
+          </thead>
+          <tbody>${rows}</tbody>
+        </table>
+      `;
+    }
+
     function renderFundamentalsBlock(payload) {
       const meta = payload?.metadata || {};
       const data = payload?.data || {};
@@ -894,25 +1619,45 @@
     function renderStock(payload, fallback = {}) {
       const data = payload?.data || {};
       const meta = payload?.metadata || {};
+      const envelopeMeta = payload?.meta || {};
       const error = payload?.error || null;
+      const normalizedEnvelope = stockUiExtras?.normalizeStockEnvelope
+        ? stockUiExtras.normalizeStockEnvelope(payload)
+        : {
+          ok: !error,
+          meta: {
+            status: envelopeMeta?.status || meta?.status || 'UNKNOWN',
+            as_of: envelopeMeta?.asOf || meta?.as_of || null,
+            data_date: envelopeMeta?.data_date || null,
+            provider: envelopeMeta?.provider || null,
+            freshness: envelopeMeta?.freshness || null
+          },
+          data: {
+            bars: Array.isArray(data?.bars) ? data.bars : [],
+            latest_bar: data?.latest_bar || null,
+            indicators: Array.isArray(data?.indicators) ? data.indicators : []
+          }
+        };
 
       const effectiveTicker = normalizeTicker(fallback?.ticker || '');
       const universeName = effectiveTicker ? (universeByTicker.get(effectiveTicker) || null) : null;
       const effectiveName = universeName || '—';
-      const showBanner = Boolean(error) || (meta?.status && meta?.status !== 'OK');
+      const stockStatus = String(envelopeMeta?.status || meta?.status || '').toUpperCase();
+      const showBanner = Boolean(error) || (stockStatus && stockStatus !== 'OK' && stockStatus !== 'FRESH' && stockStatus !== 'PARTIAL' && stockStatus !== 'PENDING' && stockStatus !== 'STALE');
       const bannerError = error || {
-        code: meta?.status && meta?.status !== 'OK' ? 'UPSTREAM_ERROR' : 'ERROR',
-        message: meta?.status && meta?.status !== 'OK' ? 'Stock data unavailable' : 'Unable to load stock data'
+        code: stockStatus && stockStatus !== 'OK' ? 'UPSTREAM_ERROR' : 'ERROR',
+        message: stockStatus && stockStatus !== 'OK' ? 'Stock data unavailable' : 'Unable to load stock data'
       };
 
-      const bar = data?.latest_bar || null;
+      const bars = Array.isArray(normalizedEnvelope?.data?.bars) ? normalizedEnvelope.data.bars : (Array.isArray(data?.bars) ? data.bars : []);
+      const bar = normalizedEnvelope?.data?.latest_bar || data?.latest_bar || (bars.length ? bars[bars.length - 1] : null);
       const close = bar?.close;
       const volume = bar?.volume;
       const date = bar?.date || '—';
       const changeAbs = data?.change?.abs;
       const changePct = data?.change?.pct;
 
-      const indicators = Array.isArray(data?.indicators) ? data.indicators : [];
+      const indicators = Array.isArray(normalizedEnvelope?.data?.indicators) ? normalizedEnvelope.data.indicators : (Array.isArray(data?.indicators) ? data.indicators : []);
       const computedNullCount = indicators.reduce((acc, item) => {
         const value = item?.value;
         if (value == null) return acc + 1;
@@ -926,6 +1671,30 @@
         : computedNullCount;
       const expectedIndicatorCount = 32;
       const indicatorsValidated = indicatorCount === expectedIndicatorCount && nullIndicatorCount === 0;
+      const indicatorMap = stockUiExtras?.toIndicatorMap ? stockUiExtras.toIndicatorMap(indicators) : Object.fromEntries(indicators.map((item) => [item?.id, item?.value]));
+      const selfReturns = stockUiExtras?.computeReturns
+        ? stockUiExtras.computeReturns(bars, { d1: 1, w1: 5, m1: 21, m3: 63, y1: 252, y5: 1260 })
+        : { d1: null, w1: null, m1: null, m3: null, ytd: null, y1: null, y5: null };
+      const supportSnapshot = stockUiExtras?.computeSupportResistance
+        ? stockUiExtras.computeSupportResistance(bars, 252)
+        : {};
+      const gapSnapshot = stockUiExtras?.computeGapStats
+        ? stockUiExtras.computeGapStats(bars, 0.02, 252)
+        : { recent_gaps: [] };
+      const riskSnapshot = {
+        typicalMove: getIndicatorValue(indicatorMap, 'atr14') && Number.isFinite(close) && Number(close) !== 0
+          ? getIndicatorValue(indicatorMap, 'atr14') / Number(close)
+          : null,
+        volumeRatio: getIndicatorValue(indicatorMap, 'volume_ratio_20d'),
+        drawdownFromHigh: supportSnapshot?.drawdown_from_52w_high ?? null,
+        distanceToLow: supportSnapshot?.distance_to_52w_low ?? null
+      };
+      const anomalyChipsHtml = buildAnomalyChips(indicatorMap, bars, gapSnapshot, supportSnapshot);
+      const riskLiquidityHtml = renderRiskLiquidityBlock(riskSnapshot);
+      const seasonality = stockUiExtras?.computeSeasonality ? stockUiExtras.computeSeasonality(bars, 5) : { monthly: [] };
+      const distribution = stockUiExtras?.computeDistribution ? stockUiExtras.computeDistribution(bars, 90) : { win_rate: null, avg_up: null, avg_down: null };
+      lastNormalizedEnvelope = normalizedEnvelope;
+      lastSelfReturns = selfReturns;
 
       // Group indicators by category for compact display
       const indicatorGroups = {
@@ -972,7 +1741,7 @@
         `;
       }).join('');
 
-      const statusChipColor = meta?.status === 'OK' ? '#10b981' : meta?.status === 'PARTIAL' ? '#f59e0b' : '#ef4444';
+      const statusChipColor = stockStatus === 'OK' || stockStatus === 'FRESH' ? '#10b981' : stockStatus === 'PARTIAL' || stockStatus === 'PENDING' || stockStatus === 'STALE' ? '#f59e0b' : '#ef4444';
 
       // Format date as DD-MM-YYYY
       const formatDateDDMMYYYY = (d) => {
@@ -1006,10 +1775,15 @@
           <div style="text-align: right;">
             <div style="padding: 0.35rem 0.75rem; border-radius: 999px; border: 1px solid rgba(100,116,139,0.35); color: #e5e7eb; background: rgba(15,23,42,0.35); display: inline-block;">
               <span style="display:inline-block; width: 8px; height: 8px; border-radius: 999px; background:${statusChipColor}; margin-right: 8px;"></span>
-              ${escapeHtml(meta?.status || 'UNKNOWN')}
+              ${escapeHtml(stockStatus || 'UNKNOWN')}
             </div>
             <div style="margin-top: 0.5rem; font-size: 0.95rem; color: #94a3b8;">${escapeHtml(formattedDate)}</div>
+            ${renderProvenanceBadge(normalizedEnvelope)}
           </div>
+        </div>
+
+        <div style="margin-top: 0.9rem; display:flex; flex-wrap:wrap; gap:0.5rem;">
+          ${anomalyChipsHtml}
         </div>
 
         ${renderSourceChain(meta?.source_chain)}
@@ -1024,6 +1798,11 @@
           </div>
         </div>
 
+        <div style="margin-top: 0.8rem; padding: 0.85rem 1rem; background: rgba(15, 23, 42, 0.35); border: 1px solid rgba(100, 116, 139, 0.22); border-radius: 12px;">
+          <div style="font-size: 0.78rem; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 0.45rem;">Corporate Actions</div>
+          <div id="actions-content" style="color:#64748b; font-style: italic;">Loading corporate actions...</div>
+        </div>
+
         <div style="margin-top: 2rem; display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; flex-wrap: wrap;">
           <h3 style="margin: 0; font-size: 1.25rem; color: #e5e7eb;">Indicators (${indicatorCount})</h3>
           <div style="display:flex; gap: 0.6rem; align-items: baseline; flex-wrap: wrap; justify-content: flex-end;">
@@ -1033,6 +1812,45 @@
 
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem; margin-top: 1rem; padding: 1rem; background: rgba(15, 23, 42, 0.35); border: 1px solid rgba(100, 116, 139, 0.22); border-radius: 12px;">
           ${indicatorsHtml || '<div style="color:#94a3b8;">No indicators available.</div>'}
+        </div>
+
+        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem; margin-top: 1rem;">
+          <div style="padding: 1rem; background: rgba(15, 23, 42, 0.35); border: 1px solid rgba(100, 116, 139, 0.22); border-radius: 12px;">
+            <div style="font-size: 0.85rem; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 0.5rem;">Performance vs Benchmark</div>
+            <div id="performance-content">${renderPerformanceTableRows(selfReturns, [])}</div>
+          </div>
+          <div style="padding: 1rem; background: rgba(15, 23, 42, 0.35); border: 1px solid rgba(100, 116, 139, 0.22); border-radius: 12px;">
+            <div style="font-size: 0.85rem; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 0.5rem;">Risk & Liquidity</div>
+            <div id="risk-liquidity-content">${riskLiquidityHtml}</div>
+          </div>
+        </div>
+
+        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem; margin-top: 1rem;">
+          <div style="padding: 1rem; background: rgba(15, 23, 42, 0.35); border: 1px solid rgba(100, 116, 139, 0.22); border-radius: 12px;">
+            <div style="font-size: 0.85rem; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 0.5rem;">Seasonality (5Y)</div>
+            <div id="seasonality-content" style="color:#cbd5e1; font-size:0.88rem;">
+              ${Array.isArray(seasonality?.monthly) && seasonality.monthly.length
+          ? seasonality.monthly.map((row) => `<div style=\"display:flex; justify-content:space-between; gap:0.8rem; padding:0.18rem 0; border-bottom:1px solid rgba(100,116,139,0.12);\"><span style=\"color:#94a3b8;\">${escapeHtml(row.month)}</span><span style=\"font-weight:600;\">${formatDecimalPct(row.avg_return, 2)}</span></div>`).join('')
+          : '<span style=\"color:#64748b;\">Seasonality unavailable.</span>'}
+            </div>
+          </div>
+          <div style="padding: 1rem; background: rgba(15, 23, 42, 0.35); border: 1px solid rgba(100, 116, 139, 0.22); border-radius: 12px;">
+            <div style="font-size: 0.85rem; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 0.5rem;">Return Distribution (90d)</div>
+            <div id="distribution-content" style="color:#cbd5e1; font-size:0.88rem;">
+              <div style="display:flex; justify-content:space-between; gap:0.8rem; margin-bottom:0.35rem;">
+                <span style="color:#94a3b8;">Win rate</span>
+                <span style="font-weight:600;">${formatDecimalPct(distribution?.win_rate, 1)}</span>
+              </div>
+              <div style="display:flex; justify-content:space-between; gap:0.8rem; margin-bottom:0.35rem;">
+                <span style="color:#94a3b8;">Avg up</span>
+                <span style="font-weight:600;">${formatDecimalPct(distribution?.avg_up, 2)}</span>
+              </div>
+              <div style="display:flex; justify-content:space-between; gap:0.8rem; margin-bottom:0.35rem;">
+                <span style="color:#94a3b8;">Avg down</span>
+                <span style="font-weight:600;">${formatDecimalPct(distribution?.avg_down, 2)}</span>
+              </div>
+            </div>
+          </div>
         </div>
         
         <!-- Analysis Summary -->
@@ -1047,10 +1865,23 @@
               <div style="font-size: 0.85rem; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 0.5rem;">Scientific Analyzer</div>
               <div id="scientific-content" style="color: #64748b; font-style: italic;">Loading scientific analysis...</div>
             </div>
+            <div style="padding: 1rem; background: rgba(15, 23, 42, 0.35); border: 1px solid rgba(100, 116, 139, 0.22); border-radius: 12px;">
+              <div style="font-size: 0.85rem; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 0.5rem;">Market Pulse</div>
+              <div id="market-pulse-content" style="color: #64748b; font-style: italic;">Loading market pulse...</div>
+            </div>
+            <div style="padding: 1rem; background: rgba(15, 23, 42, 0.35); border: 1px solid rgba(100, 116, 139, 0.22); border-radius: 12px;">
+              <div style="font-size: 0.85rem; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 0.5rem;">Peer Snapshot</div>
+              <div id="peer-content" style="color: #64748b; font-style: italic;">Loading peers...</div>
+            </div>
+            <div style="padding: 1rem; background: rgba(15, 23, 42, 0.35); border: 1px solid rgba(100, 116, 139, 0.22); border-radius: 12px;">
+              <div style="font-size: 0.85rem; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 0.5rem;">Correlation (90d)</div>
+              <div id="correlation-content" style="color: #64748b; font-style: italic;">Loading correlations...</div>
+            </div>
           </div>
           <div style="margin-top: 1rem; padding: 1rem; background: rgba(15, 23, 42, 0.35); border: 1px solid rgba(100, 116, 139, 0.22); border-radius: 12px;">
             <div style="font-size: 0.85rem; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 0.5rem;">Up/Down Probability (Short / Medium / Long)</div>
             <div id="probability-content" style="color: #64748b; font-style: italic;">Loading probability summary...</div>
+          </div>
         </div>
       `;
 
@@ -1080,7 +1911,7 @@
 
       function updateRangeButtons() {
         // Range Buttons
-        const ranges = ['3D', '1W', '1M', '1Y', 'Max'];
+        const ranges = ['3D', '1W', '1M', '3M', '1Y', 'Max'];
         const controls = document.getElementById('chart-controls');
 
         // Toggle Buttons (Left)
@@ -1180,7 +2011,6 @@
       }
 
       // Populate Indicators
-      const bars = data.bars || [];
       const weeklyBars = resampleWeekly(bars);
 
       // Calculate Daily Indicators
@@ -1259,6 +2089,7 @@
         '3D': 3,
         '1W': 5,
         '1M': 21,
+        '3M': 63,
         '1Y': 252,
         'Max': allBars.length
       };
@@ -1490,9 +2321,9 @@
           if (r === '3D' || r === '1W') {
             const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
             label = `${days[date.getDay()]} ${date.getDate()}`;
-          } else if (r === '1M') {
+          } else if (r === '1M' || r === '3M') {
             const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-            label = `${date.getDate()} ${months[date.getMonth()]}`;
+            label = r === '3M' ? `${months[date.getMonth()]} ${date.getDate()}` : `${date.getDate()} ${months[date.getMonth()]}`;
           } else if (r === '1Y') {
             const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
             label = months[date.getMonth()];
@@ -1518,6 +2349,10 @@
 
     function getScientificEntry(ticker) {
       const t = normalizeTicker(ticker);
+      if (!t || !scientificAnalysisData || typeof scientificAnalysisData !== 'object') return null;
+      const direct = scientificAnalysisData[t];
+      if (direct && typeof direct === 'object') return direct;
+      return null;
     }
 
     function getTimeframeRow(ticker, timeframe) {
@@ -1747,6 +2582,11 @@
       const sciEl = document.getElementById('scientific-content');
       const elliottEl = document.getElementById('elliott-content');
       const probEl = document.getElementById('probability-content');
+      const marketPulseEl = document.getElementById('market-pulse-content');
+      const peerEl = document.getElementById('peer-content');
+      const corrEl = document.getElementById('correlation-content');
+      const performanceEl = document.getElementById('performance-content');
+      const actionsEl = document.getElementById('actions-content');
       if (!sciEl || !elliottEl || !probEl) return;
 
       if (!scientificAnalysisData) {
@@ -1760,6 +2600,105 @@
       elliottEl.innerHTML = '<div style="color:#64748b; font-style: italic;">Loading Elliott Waves analysis...</div>';
       const elliottPayload = await getElliottPayload(ticker);
       elliottEl.innerHTML = renderElliottSummary(elliottPayload);
+
+      const [pulseHealth, pulseMovers, peersDoc, corrDoc, benchmarkDoc, splitRows, dividendRows] = await Promise.all([
+        loadUiArtifact('/data/v3/pulse/market-health/latest.json'),
+        loadUiArtifact('/data/v3/pulse/top-movers/latest.json'),
+        loadUiArtifact('/data/ui/peers/latest.json'),
+        loadUiArtifact('/data/ui/correlations/latest.json'),
+        loadUiArtifact('/data/ui/benchmarks/latest.json'),
+        loadGzipNdjson('/data/v3/actions/splits/latest.ndjson.gz'),
+        loadGzipNdjson('/data/v3/actions/dividends/latest.ndjson.gz')
+      ]);
+
+      if (marketPulseEl) {
+        const breadth = pulseHealth?.breadth || {};
+        const movers = Array.isArray(pulseMovers?.top_movers) ? pulseMovers.top_movers : [];
+        const moverIndex = movers.findIndex((item) => normalizeTicker(item?.ticker || '') === normalizeTicker(ticker));
+        const mover = moverIndex >= 0 ? movers[moverIndex] : null;
+        if (pulseHealth && typeof pulseHealth === 'object') {
+          marketPulseEl.innerHTML = `
+            <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(120px, 1fr)); gap:0.5rem;">
+              <div><span style="color:#94a3b8;">As of</span><div style="color:#e5e7eb; font-weight:600;">${escapeHtml(pulseHealth.as_of || '—')}</div></div>
+              <div><span style="color:#94a3b8;">Breadth</span><div style="color:#e5e7eb; font-weight:600;">${Number(breadth.up || 0)}↑ / ${Number(breadth.down || 0)}↓</div></div>
+              <div><span style="color:#94a3b8;">Avg change</span><div style="color:#e5e7eb; font-weight:600;">${formatSignedValue(Number(pulseHealth.average_change_pct), 2)}%</div></div>
+            </div>
+            <div style="margin-top:0.6rem; color:#94a3b8; font-size:0.85rem;">
+              ${mover ? `${escapeHtml(ticker)} is #${moverIndex + 1} in movers (${formatSignedValue(Number(mover.change_pct), 2)}%).` : `${escapeHtml(ticker)} is not in today's top movers list.`}
+            </div>
+          `;
+        } else {
+          marketPulseEl.innerHTML = '<span style="color:#64748b;">Market pulse unavailable.</span>';
+        }
+      }
+
+      if (performanceEl) {
+        const selfReturns = lastSelfReturns || (stockUiExtras?.computeReturns ? stockUiExtras.computeReturns(lastNormalizedEnvelope?.data?.bars || [], { d1: 1, w1: 5, m1: 21, m3: 63, y1: 252, y5: 1260 }) : {});
+        const benchmarkRows = benchmarkDoc?.data?.benchmarks && typeof benchmarkDoc.data.benchmarks === 'object'
+          ? Object.entries(benchmarkDoc.data.benchmarks).map(([symbol, row]) => ({ symbol, returns: row?.returns || {} }))
+          : [];
+        performanceEl.innerHTML = renderPerformanceTableRows(selfReturns, benchmarkRows);
+      }
+
+      if (peerEl) {
+        const peerList = Array.isArray(peersDoc?.data?.peers?.[ticker]) ? peersDoc.data.peers[ticker] : [];
+        const corrBySymbol = new Map((corrDoc?.data?.correlations?.[ticker]?.items || []).map((row) => [normalizeTicker(row?.symbol || ''), row]));
+        if (!peerList.length) {
+          peerEl.innerHTML = '<span style="color:#64748b;">Peer mapping unavailable for this ticker.</span>';
+        } else {
+          peerEl.innerHTML = `
+            <div style="display:grid; gap:0.45rem;">
+              ${peerList.map((peer) => {
+            const corr = Number(corrBySymbol.get(normalizeTicker(peer))?.corr);
+            return `<a href="/analyze/${encodeURIComponent(peer)}" style="display:flex; justify-content:space-between; align-items:center; padding:0.45rem 0.55rem; border-radius:8px; border:1px solid rgba(100,116,139,0.22); color:#cbd5e1; text-decoration:none;">
+                  <span>${escapeHtml(peer)}</span>
+                  <span style="color:#94a3b8; font-size:0.82rem;">corr ${Number.isFinite(corr) ? corr.toFixed(2) : '—'}</span>
+                </a>`;
+          }).join('')}
+            </div>
+          `;
+        }
+      }
+
+      if (corrEl) {
+        const corrItems = Array.isArray(corrDoc?.data?.correlations?.[ticker]?.items) ? corrDoc.data.correlations[ticker].items : [];
+        if (!corrItems.length) {
+          corrEl.innerHTML = '<span style="color:#64748b;">Correlation data unavailable.</span>';
+        } else {
+          corrEl.innerHTML = `
+            <div style="display:grid; gap:0.4rem;">
+              ${corrItems.slice(0, 6).map((row) => `
+                <div style="display:flex; justify-content:space-between; gap:0.6rem; padding:0.25rem 0;">
+                  <span style="color:#cbd5e1;">${escapeHtml(row.symbol)}</span>
+                  <span style="font-family:'SF Mono','Monaco',monospace; color:${Number(row.corr) >= 0 ? '#34d399' : '#f87171'};">${Number(row.corr).toFixed(2)}</span>
+                </div>
+              `).join('')}
+            </div>
+          `;
+        }
+      }
+
+      if (actionsEl) {
+        if (!splitRows && !dividendRows) {
+          actionsEl.innerHTML = '<span style="color:#64748b;">No actions data (gzip unavailable in this browser).</span>';
+        } else {
+          const merged = [
+            ...getRecentActionRows(splitRows || [], ticker),
+            ...getRecentActionRows(dividendRows || [], ticker)
+          ].sort((a, b) => a.event_date.localeCompare(b.event_date));
+          if (!merged.length) {
+            actionsEl.innerHTML = '<span style="color:#64748b;">No recent split/dividend events for this ticker.</span>';
+          } else {
+            actionsEl.innerHTML = merged.map((row) => `
+              <span style="display:inline-flex; align-items:center; gap:0.35rem; margin:0.15rem 0.35rem 0.15rem 0; padding:0.25rem 0.55rem; border-radius:999px; border:1px solid rgba(100,116,139,0.3); color:#cbd5e1; background:rgba(15,23,42,0.35);">
+                <strong style="font-size:0.75rem; color:${row.type === 'split' ? '#fbbf24' : '#60a5fa'};">${escapeHtml((row.type || 'event').toUpperCase())}</strong>
+                <span style="font-size:0.78rem;">${escapeHtml(row.event_date)}</span>
+                <span style="font-size:0.78rem; color:#94a3b8;">${Number.isFinite(row.value) ? row.value : '—'}</span>
+              </span>
+            `).join('');
+          }
+        }
+      }
     }
 
     function showLoading(label) {
@@ -1804,6 +2743,7 @@
         window.history.pushState({}, '', `/analyze/${encodeURIComponent(upperTicker)}`);
       }
 
+      setMainView('analyze');
       showLoading(`Analyzing ${upperTicker}...`);
       resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
       const fallback = options.fallback || { ticker: upperTicker, name: universeByTicker.get(upperTicker) || null };
@@ -1875,6 +2815,7 @@
 
     searchInput.addEventListener('input', () => {
       const value = String(searchInput.value || '').trim();
+      syncSearchInputs(value, 'main');
       if (value.length < 1) {
         clearSuggestions();
         return;
@@ -1900,38 +2841,28 @@
       const root = typeahead.root;
       if (!root) return;
       const target = ev.target;
-      if (target === searchInput || root.contains(target)) return;
+      if (target === searchInput || target === stickySearchInput || root.contains(target)) return;
       closeTypeahead();
     });
 
     // Clear search and return to hero
-    function clearSearch() {
-      searchInput.value = '';
+    function clearSearch(options = {}) {
+      const push = options.push !== false;
+      const keepInput = options.keepInput === true;
+      const focus = options.focus !== false;
+      if (!keepInput) {
+        searchInput.value = '';
+        if (stickySearchInput) stickySearchInput.value = '';
+      }
       resultsSection.style.display = 'none';
-      searchInput.focus();
+      if (push) {
+        window.history.pushState({}, '', '/analyze');
+      }
+      if (focus) {
+        (stickySearchInput || searchInput)?.focus();
+      }
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
-
-    // Auto-focus search on page load
-    document.addEventListener('DOMContentLoaded', async () => {
-      if (!universeReady) universeReady = loadUniverse();
-      await universeReady;
-      // Check for deep link: /analyze/TICKER
-      const path = window.location.pathname;
-      const match = path.match(/^\/analyze\/([A-Z]+)$/i);
-
-      if (match) {
-        const ticker = normalizeTicker(match[1]);
-        searchInput.value = ticker;
-        if (!ticker || !universeByTicker.has(ticker)) {
-          renderUnsupported(ticker);
-          return;
-        }
-        await selectSymbol(ticker, null, { push: false });
-      } else {
-        searchInput.focus();
-      }
-    });
 
     const searchBtn = document.getElementById('stock-search-btn');
     if (searchBtn) {
@@ -1941,23 +2872,112 @@
       });
     }
 
-    // Handle browser back button
-    window.addEventListener('popstate', () => {
-      const path = window.location.pathname;
-      const match = path.match(/^\/analyze\/([A-Z]+)$/i);
-      if (match) {
-        const ticker = normalizeTicker(match[1]);
-        searchInput.value = ticker;
-        if (!ticker || !universeByTicker.has(ticker)) {
-          renderUnsupported(ticker);
+    if (stickySearchInput) {
+      stickySearchInput.addEventListener('input', () => {
+        syncSearchInputs(stickySearchInput.value, 'sticky');
+      });
+      stickySearchInput.addEventListener('keydown', async (ev) => {
+        if (ev.key !== 'Enter') return;
+        ev.preventDefault();
+        await resolveAndAnalyze(stickySearchInput.value);
+      });
+    }
+
+    if (stickySearchBtn) {
+      stickySearchBtn.addEventListener('click', async () => {
+        await resolveAndAnalyze(stickySearchInput?.value || searchInput.value);
+      });
+    }
+
+    if (stickyEngineFilter) {
+      stickyEngineFilter.addEventListener('change', () => {
+        syncEngineFilters(stickyEngineFilter.value, 'sticky');
+        renderBestSetups();
+      });
+    }
+
+    if (analyzeEngineFilter) {
+      analyzeEngineFilter.addEventListener('change', () => {
+        syncEngineFilters(analyzeEngineFilter.value, 'analyze');
+        renderBestSetups();
+      });
+    }
+
+    topNavLinks.forEach((link) => {
+      link.addEventListener('click', async (ev) => {
+        ev.preventDefault();
+        const route = link.dataset.topRoute || 'analyze';
+        const nextPath = routePathFor(route);
+        window.history.pushState({}, '', nextPath);
+        setMainView(route);
+        if (route === 'analyze') {
+          await loadScientificData();
+          clearSearch({ push: false, keepInput: true, focus: false });
+          await loadTopSetupsDoc();
+          renderBestSetups();
+        } else if (route === 'market') {
+          await loadMarketDoc();
+          renderMarketView();
+        } else if (route === 'ideas') {
+          await renderIdeasView();
+        }
+      });
+    });
+
+    // Auto-route on page load
+    document.addEventListener('DOMContentLoaded', async () => {
+      if (!universeReady) universeReady = loadUniverse();
+      await universeReady;
+      syncEngineFilters('all', 'sticky');
+      await loadTopSetupsDoc();
+      renderBestSetups();
+      const route = parseTopRoute(window.location.pathname);
+      setMainView(route.route);
+      if (route.route === 'analyze' && route.ticker) {
+        await loadScientificData();
+        syncSearchInputs(route.ticker, 'main');
+        if (!route.ticker || !universeByTicker.has(route.ticker)) {
+          renderUnsupported(route.ticker);
           return;
         }
-        selectSymbol(ticker, null, { push: false });
+        await selectSymbol(route.ticker, null, { push: false });
+      } else if (route.route === 'market') {
+        await loadMarketDoc();
+        renderMarketView();
+      } else if (route.route === 'ideas') {
+        await renderIdeasView();
+      } else {
+        await loadScientificData();
+        clearSearch({ push: false, keepInput: true, focus: true });
+      }
+    });
+
+    // Handle browser back button
+    window.addEventListener('popstate', async () => {
+      const route = parseTopRoute(window.location.pathname);
+      setMainView(route.route);
+      if (route.route === 'analyze' && route.ticker) {
+        syncSearchInputs(route.ticker, 'main');
+        if (!route.ticker || !universeByTicker.has(route.ticker)) {
+          renderUnsupported(route.ticker);
+          return;
+        }
+        await selectSymbol(route.ticker, null, { push: false });
         return;
       }
-      if (path === '/' || path === '/index.html') {
-        clearSearch();
+      if (route.route === 'market') {
+        await loadMarketDoc();
+        renderMarketView();
+        return;
       }
+      if (route.route === 'ideas') {
+        await renderIdeasView();
+        return;
+      }
+      await loadScientificData();
+      clearSearch({ push: false, keepInput: true, focus: false });
+      await loadTopSetupsDoc();
+      renderBestSetups();
     });
 
     /*

@@ -1,0 +1,238 @@
+{
+  "desktop": {
+    "view": "desktop",
+    "viewport": "1512x1960",
+    "url": "http://127.0.0.1:8792/analyze/AAPL",
+    "checks": {
+      "path": "/analyze/AAPL",
+      "title": "RubikVault – Stock Analyzer",
+      "heading": "Apple Inc. (AAPL)",
+      "statusChipText": "Close\n              $2,256.89\n            \n            \n              Day\n              -14.01\n              (-0.62%)\n  ",
+      "sections": [
+        {
+          "id": "1_header_back",
+          "present": true,
+          "where": "#results-title + Back to Search button",
+          "anchor": "Apple Inc. (AAPL)"
+        },
+        {
+          "id": "2_kpis_badges",
+          "present": true,
+          "where": "results header KPI row + provenance chips",
+          "anchor": "Close\n              $2,256.89\n            \n            \n              Day\n              -14.01\n              (-0.62%)\n  "
+        },
+        {
+          "id": "3_gap_chip",
+          "present": true,
+          "where": "anomaly chip row below provenance",
+          "anchor": "No unusual activity signals today."
+        },
+        {
+          "id": "4_fundamentals",
+          "present": true,
+          "where": "fundamentals_html block under source chain",
+          "anchor": "Fundamentals"
+        },
+        {
+          "id": "5_price_history",
+          "present": true,
+          "where": "#price-chart + #chart-controls buttons",
+          "anchor": "Price History + range controls"
+        },
+        {
+          "id": "6_corporate_actions",
+          "present": true,
+          "where": "#actions-content",
+          "anchor": "No recent split/dividend events for this ticker."
+        },
+        {
+          "id": "7_indicators_validated",
+          "present": true,
+          "where": "Indicators header + validated chip",
+          "anchor": "Indicators + Validated"
+        },
+        {
+          "id": "8_performance_vs_benchmark",
+          "present": true,
+          "where": "#performance-content",
+          "anchor": "Performance vs Benchmark"
+        },
+        {
+          "id": "9_risk_liquidity",
+          "present": true,
+          "where": "#risk-liquidity-content",
+          "anchor": "Risk & Liquidity"
+        },
+        {
+          "id": "10_seasonality",
+          "present": true,
+          "where": "#seasonality-content",
+          "anchor": "Seasonality (5Y)"
+        },
+        {
+          "id": "11_distribution",
+          "present": true,
+          "where": "#distribution-content",
+          "anchor": "Return Distribution (90d)"
+        },
+        {
+          "id": "12_analysis_elliott",
+          "present": true,
+          "where": "#elliott-content",
+          "anchor": "Elliott Waves"
+        },
+        {
+          "id": "13_analysis_scientific",
+          "present": true,
+          "where": "#scientific-content",
+          "anchor": "Scientific Analyzer"
+        },
+        {
+          "id": "14_analysis_market_pulse",
+          "present": true,
+          "where": "#market-pulse-content",
+          "anchor": "Market Pulse"
+        },
+        {
+          "id": "15_analysis_peer_snapshot",
+          "present": true,
+          "where": "#peer-content",
+          "anchor": "Peer Snapshot"
+        },
+        {
+          "id": "16_analysis_correlation",
+          "present": true,
+          "where": "#correlation-content",
+          "anchor": "Correlation (90d)"
+        },
+        {
+          "id": "17_probability",
+          "present": true,
+          "where": "#probability-content",
+          "anchor": "Up/Down Probability (Short / Medium / Long)"
+        }
+      ]
+    },
+    "consoleErrors": [],
+    "pageErrors": [],
+    "screenshotPath": ".rv_audit/ui_proof/screens/BASELINE_analyze_detail_desktop.png"
+  },
+  "mobile": {
+    "view": "mobile",
+    "viewport": "iPhone 13",
+    "url": "http://127.0.0.1:8792/analyze/AAPL",
+    "checks": {
+      "path": "/analyze/AAPL",
+      "title": "RubikVault – Stock Analyzer",
+      "heading": "Apple Inc. (AAPL)",
+      "statusChipText": "Close\n              $2,256.89\n            \n            \n              Day\n              -14.01\n              (-0.62%)\n  ",
+      "sections": [
+        {
+          "id": "1_header_back",
+          "present": true,
+          "where": "#results-title + Back to Search button",
+          "anchor": "Apple Inc. (AAPL)"
+        },
+        {
+          "id": "2_kpis_badges",
+          "present": true,
+          "where": "results header KPI row + provenance chips",
+          "anchor": "Close\n              $2,256.89\n            \n            \n              Day\n              -14.01\n              (-0.62%)\n  "
+        },
+        {
+          "id": "3_gap_chip",
+          "present": true,
+          "where": "anomaly chip row below provenance",
+          "anchor": "No unusual activity signals today."
+        },
+        {
+          "id": "4_fundamentals",
+          "present": true,
+          "where": "fundamentals_html block under source chain",
+          "anchor": "Fundamentals"
+        },
+        {
+          "id": "5_price_history",
+          "present": true,
+          "where": "#price-chart + #chart-controls buttons",
+          "anchor": "Price History + range controls"
+        },
+        {
+          "id": "6_corporate_actions",
+          "present": true,
+          "where": "#actions-content",
+          "anchor": "No recent split/dividend events for this ticker."
+        },
+        {
+          "id": "7_indicators_validated",
+          "present": true,
+          "where": "Indicators header + validated chip",
+          "anchor": "Indicators + Validated"
+        },
+        {
+          "id": "8_performance_vs_benchmark",
+          "present": true,
+          "where": "#performance-content",
+          "anchor": "Performance vs Benchmark"
+        },
+        {
+          "id": "9_risk_liquidity",
+          "present": true,
+          "where": "#risk-liquidity-content",
+          "anchor": "Risk & Liquidity"
+        },
+        {
+          "id": "10_seasonality",
+          "present": true,
+          "where": "#seasonality-content",
+          "anchor": "Seasonality (5Y)"
+        },
+        {
+          "id": "11_distribution",
+          "present": true,
+          "where": "#distribution-content",
+          "anchor": "Return Distribution (90d)"
+        },
+        {
+          "id": "12_analysis_elliott",
+          "present": true,
+          "where": "#elliott-content",
+          "anchor": "Elliott Waves"
+        },
+        {
+          "id": "13_analysis_scientific",
+          "present": true,
+          "where": "#scientific-content",
+          "anchor": "Scientific Analyzer"
+        },
+        {
+          "id": "14_analysis_market_pulse",
+          "present": true,
+          "where": "#market-pulse-content",
+          "anchor": "Market Pulse"
+        },
+        {
+          "id": "15_analysis_peer_snapshot",
+          "present": true,
+          "where": "#peer-content",
+          "anchor": "Peer Snapshot"
+        },
+        {
+          "id": "16_analysis_correlation",
+          "present": true,
+          "where": "#correlation-content",
+          "anchor": "Correlation (90d)"
+        },
+        {
+          "id": "17_probability",
+          "present": true,
+          "where": "#probability-content",
+          "anchor": "Up/Down Probability (Short / Medium / Long)"
+        }
+      ]
+    },
+    "consoleErrors": [],
+    "pageErrors": [],
+    "screenshotPath": ".rv_audit/ui_proof/screens/BASELINE_analyze_detail_mobile.png"
+  }
+}

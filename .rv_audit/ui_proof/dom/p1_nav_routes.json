@@ -1,0 +1,71 @@
+{
+  "/analyze": {
+    "pathname": "/analyze",
+    "links": [
+      {
+        "text": "ANALYZE",
+        "href": "/analyze",
+        "active": true
+      },
+      {
+        "text": "MARKET",
+        "href": "/market",
+        "active": false
+      },
+      {
+        "text": "IDEAS",
+        "href": "/ideas",
+        "active": false
+      }
+    ],
+    "stickyExists": true,
+    "stickyInput": true,
+    "stickyFilter": true
+  },
+  "/market": {
+    "pathname": "/market",
+    "links": [
+      {
+        "text": "ANALYZE",
+        "href": "/analyze",
+        "active": false
+      },
+      {
+        "text": "MARKET",
+        "href": "/market",
+        "active": true
+      },
+      {
+        "text": "IDEAS",
+        "href": "/ideas",
+        "active": false
+      }
+    ],
+    "stickyExists": true,
+    "stickyInput": true,
+    "stickyFilter": true
+  },
+  "/ideas": {
+    "pathname": "/ideas",
+    "links": [
+      {
+        "text": "ANALYZE",
+        "href": "/analyze",
+        "active": false
+      },
+      {
+        "text": "MARKET",
+        "href": "/market",
+        "active": false
+      },
+      {
+        "text": "IDEAS",
+        "href": "/ideas",
+        "active": true
+      }
+    ],
+    "stickyExists": true,
+    "stickyInput": true,
+    "stickyFilter": true
+  }
+}

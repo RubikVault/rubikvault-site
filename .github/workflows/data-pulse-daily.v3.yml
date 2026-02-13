@@ -40,6 +40,12 @@ jobs:
           TIINGO_API_KEY: ${{ secrets.TIINGO_API_KEY }}
         run: npm run build:v3:daily
 
+      - name: Build v3 derived experience packs
+        run: |
+          npm run dp7:top-setups
+          npm run dp8:market-hub
+          npm run dp9:ideas-hub
+
       - name: Contract validate produced artifacts
         run: npm run test:v3:contracts
 

@@ -1,0 +1,96 @@
+{
+  "desktop": {
+    "pathname": "/analyze/AAPL",
+    "sections": [
+      {
+        "id": "1_header_back",
+        "present": true,
+        "where": "#results-title + button"
+      },
+      {
+        "id": "2_kpis_badges",
+        "present": true,
+        "where": "kpi row + provenance"
+      },
+      {
+        "id": "3_gap_chip",
+        "present": true,
+        "where": "anomaly row"
+      },
+      {
+        "id": "4_fundamentals",
+        "present": true,
+        "where": "fundamentals_html"
+      },
+      {
+        "id": "5_price_history",
+        "present": true,
+        "where": "#price-chart + controls"
+      },
+      {
+        "id": "6_corporate_actions",
+        "present": true,
+        "where": "#actions-content"
+      },
+      {
+        "id": "7_indicators_validated",
+        "present": true,
+        "where": "indicators block"
+      },
+      {
+        "id": "8_performance_vs_benchmark",
+        "present": true,
+        "where": "#performance-content"
+      },
+      {
+        "id": "9_risk_liquidity",
+        "present": true,
+        "where": "#risk-liquidity-content"
+      },
+      {
+        "id": "10_seasonality",
+        "present": true,
+        "where": "#seasonality-content"
+      },
+      {
+        "id": "11_distribution",
+        "present": true,
+        "where": "#distribution-content"
+      },
+      {
+        "id": "12_analysis_elliott",
+        "present": true,
+        "where": "#elliott-content"
+      },
+      {
+        "id": "13_analysis_scientific",
+        "present": true,
+        "where": "#scientific-content"
+      },
+      {
+        "id": "14_analysis_market_pulse",
+        "present": true,
+        "where": "#market-pulse-content"
+      },
+      {
+        "id": "15_analysis_peer_snapshot",
+        "present": true,
+        "where": "#peer-content"
+      },
+      {
+        "id": "16_analysis_correlation",
+        "present": true,
+        "where": "#correlation-content"
+      },
+      {
+        "id": "17_probability",
+        "present": true,
+        "where": "#probability-content"
+      }
+    ]
+  },
+  "mobile": {
+    "pathname": "/analyze/AAPL",
+    "sectionsAllPresent": true
+  }
+}

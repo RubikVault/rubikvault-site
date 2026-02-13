@@ -40,6 +40,9 @@ jobs:
           RV_MIN_FORECAST_ROWS: "1"
         run: node scripts/ci/verify-artifacts.mjs
 
+      - name: Verify stock UI support artifacts
+        run: node scripts/ci/verify-stock-ui-artifacts.mjs
+
       - name: Validate mission-control gate from committed summary
         env:
           MC_GATE_STRICT: "0"
