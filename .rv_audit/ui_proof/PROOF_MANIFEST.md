@@ -25,7 +25,24 @@
   - DOM proof: `.rv_audit/ui_proof/dom/p3_top_setups.json`
   - Console proof: `.rv_audit/ui_proof/console/p3_top_setups_console.json`
   - Screen: `.rv_audit/ui_proof/screens/P3_analyze_top_setups.png`
-- P4: FAIL (pending)
-- P5: FAIL (pending)
-- P6: FAIL (pending)
-- P7: FAIL (pending)
+- P4: PASS
+  - Artifact: `public/data/v3/derived/market/latest.json`
+  - DOM proof: `.rv_audit/ui_proof/dom/p4_market_dom.json`
+  - Console proof: `.rv_audit/ui_proof/console/p4_market_console.json`
+  - Screens: `.rv_audit/ui_proof/screens/P4_market_desktop.png`, `.rv_audit/ui_proof/screens/P4_market_mobile.png`
+- P5: PASS
+  - Artifact: `public/data/v3/derived/ideas/latest.json`
+  - MOAT content: `public/content/moat.md`
+  - DOM proof: `.rv_audit/ui_proof/dom/p5_ideas_dom.json`
+  - Console proof: `.rv_audit/ui_proof/console/p5_ideas_console.json`
+  - Screens: `.rv_audit/ui_proof/screens/P5_ideas_desktop.png`, `.rv_audit/ui_proof/screens/P5_ideas_mobile.png`
+- P6: PASS
+  - Dry run log: `.rv_audit/ui_proof/p6_local_dry_run.log`
+  - DOM proof: `.rv_audit/ui_proof/dom/p6_fresh_generation_views.json`
+  - Console proof: `.rv_audit/ui_proof/console/p6_fresh_generation_console.json`
+  - Screens: `.rv_audit/ui_proof/screens/P6_fresh_analyze.png`, `.rv_audit/ui_proof/screens/P6_fresh_market.png`, `.rv_audit/ui_proof/screens/P6_fresh_ideas.png`
+- P7: PASS
+  - Compare report: `.rv_audit/ui_proof/P7_final_no_feature_loss.md`
+  - DOM proof: `.rv_audit/ui_proof/dom/p7_final_sections.json`
+  - Console proof: `.rv_audit/ui_proof/console/p7_final_console.json`
+  - Screens: `.rv_audit/ui_proof/screens/P7_final_analyze_detail_desktop.png`, `.rv_audit/ui_proof/screens/P7_final_analyze_detail_mobile.png`

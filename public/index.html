@@ -673,8 +673,7 @@
       if (e.key === 'Escape') closeSignalModal();
     });
 
-    // Load on page ready
-    loadScientificData();
+    // Scientific data is loaded lazily by route/section handlers.
   </script>
 
 
@@ -2912,6 +2911,7 @@
         window.history.pushState({}, '', nextPath);
         setMainView(route);
         if (route === 'analyze') {
+          await loadScientificData();
           clearSearch({ push: false, keepInput: true, focus: false });
           await loadTopSetupsDoc();
           renderBestSetups();
@@ -2934,6 +2934,7 @@
       const route = parseTopRoute(window.location.pathname);
       setMainView(route.route);
       if (route.route === 'analyze' && route.ticker) {
+        await loadScientificData();
         syncSearchInputs(route.ticker, 'main');
         if (!route.ticker || !universeByTicker.has(route.ticker)) {
           renderUnsupported(route.ticker);
@@ -2946,6 +2947,7 @@
       } else if (route.route === 'ideas') {
         await renderIdeasView();
       } else {
+        await loadScientificData();
         clearSearch({ push: false, keepInput: true, focus: true });
       }
     });
@@ -2972,6 +2974,7 @@
         await renderIdeasView();
         return;
       }
+      await loadScientificData();
       clearSearch({ push: false, keepInput: true, focus: false });
       await loadTopSetupsDoc();
       renderBestSetups();
