@@ -1,0 +1,41 @@
+{
+  "schema_version": "v3",
+  "taxonomy": {
+    "transient": [
+      "http_429",
+      "http_5xx",
+      "timeout",
+      "network"
+    ],
+    "permanent": [
+      "auth_missing",
+      "auth_invalid",
+      "policy_violation",
+      "endpoint_blocked"
+    ],
+    "data_quality": [
+      "schema_violation",
+      "stale_data",
+      "adjustment_error",
+      "coverage_gap"
+    ]
+  },
+  "circuit_rules": {
+    "open_after": {
+      "permanent": 1,
+      "data_quality": 2,
+      "transient": 5
+    },
+    "close_after": {
+      "successful_runs": 2,
+      "cooldown_minutes": 30
+    }
+  },
+  "actions": {
+    "schema_violation": "discard_batch_use_last_good",
+    "coverage_gap": "publish_with_partial_flag",
+    "stale_data": "publish_with_stale_flag",
+    "adjustment_error": "discard_symbol_use_last_good",
+    "auth_missing": "circuit_open"
+  }
+}

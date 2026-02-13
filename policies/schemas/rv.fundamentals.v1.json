@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "rv.fundamentals.v1.json",
+  "type": "object",
+  "required": ["meta", "sectors"],
+  "properties": {
+    "meta": {"type": "object"},
+    "sectors": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["canonical_id", "sector"],
+        "properties": {
+          "canonical_id": {"type": "string"},
+          "ticker": {"type": "string"},
+          "sector": {"type": "string"},
+          "source": {"type": "string"}
+        },
+        "additionalProperties": true
+      }
+    }
+  },
+  "additionalProperties": true
+}

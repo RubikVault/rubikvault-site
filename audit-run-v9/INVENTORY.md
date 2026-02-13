@@ -1,0 +1,49 @@
+# INVENTORY
+
+Generated: 2026-02-11T18:36:43Z
+
+| Workflow | Name | Triggers | Schedule | Scripts (line:path) | Writes (line:path) | Secrets | permissions | concurrency | actions mutable refs |
+|---|---|---|---|---|---|---:|---|---|---:|
+| `.github/workflows/ci-determinism.yml` | CI Determinism Check | push,pull_request,workflow_dispatch | none | none | none | 0 | no | yes | 2 |
+| `.github/workflows/ci-gates.yml` | CI Gates - Quality & Budget Checks | pull_request,push | none | L121:scripts/ci/verify-artifacts.mjs; L124:scripts/ci/assert-mission-control-gate.mjs; L130:scripts/ci/check-elliott-parity.mjs; L133:scripts/ci/forbid-kv-writes-in-api.sh; L148:scripts/eod/check-eod-artifacts.mjs; L427:scripts/ops/validate-truth.sh | L6:public/data/**; L13:public/data/**; L27:public/data; L28:public/data; L29:public/data/.budget_sentinel.json; L34:public/data; L37:public/data; L38:public/data; L53:public/data; L57:public/data; L64:public/data/snapshots/*/;; L78:public/data; L80:public/data; L154:public/data/manifest.json; L156:public/data/manifest.json; L160:public/data/provider-state.json; L162:public/data/provider-state.json; L168:public/data/snapshots/*/latest.json;; L186:public/data/manifest.json; L187:public/data/manifest.json; L194:public/data/manifest.json); L200:public/data/manifest.json); L209:public/data/provider-state.json; L210:public/data/provider-state.json; L221:public/data/snapshots/*/latest.json;; L289:public/data/manifest.json; L295:public/data/manifest.json); L308:public/data/manifest.json); L311:public/data/snapshots/$module/latest.json; L363:public/data; L364:public/data/|mirrors/)$; L365:public/data; L365:mirrors/ | 0 | no | no | 7 |
+| `.github/workflows/ci-policy.yml` | CI Policy Check | push,workflow_dispatch | none | L26:scripts/forecast/validate_policy.mjs | L7:mirrors/forecast/** | 0 | no | yes | 2 |
+| `.github/workflows/cleanup-daily-snapshots.yml` | Cleanup Daily Snapshots | schedule,workflow_dispatch | L6:0 2 * * 0 | none | L46:public/data; L52:public/data; L61:public/data | 0 | yes | no | 1 |
+| `.github/workflows/e2e-playwright.yml` | e2e-playwright | workflow_dispatch,push | none | none | none | 0 | no | no | 2 |
+| `.github/workflows/eod-history-refresh.yml` | EOD History Refresh | schedule,workflow_dispatch | L5:20 21 * * 1-5 | L41:scripts/providers/eodhd-backfill-bars.mjs | L34:public/data/universe/all.json; L37:public/data/universe/nasdaq100.json; L47:public/data/eod/bars | 1 | yes | yes | 2 |
+| `.github/workflows/eod-latest.yml` | EOD Latest (NASDAQ-100) | schedule,workflow_dispatch | L5:10 22 * * 1-5 | L59:scripts/ops/preflight-check.mjs; L71:scripts/eod/build-eod-latest.mjs; L74:scripts/ops/build-safety-snapshot.mjs; L80:scripts/ops/build-mission-control-summary.mjs; L83:scripts/ops/build-ops-pulse.mjs; L86:scripts/ops/validate-ops-summary.mjs; L91:scripts/ci/assert-mission-control-gate.mjs | L71:public/data; L98:public/data/eod; L98:public/data/pipeline; L98:public/data/ops; L98:public/data/ops-daily.json | 5 | yes | yes | 4 |
+| `.github/workflows/forecast-daily.yml` | 'Forecast Daily Pipeline' | workflow_dispatch,schedule | L12:0 21 * * 1-5 | L54:scripts/forecast/run_daily.mjs | L72:mirrors/forecast/ledger/; L73:mirrors/forecast/snapshots/; L74:public/data/forecast/ | 0 | no | no | 3 |
+| `.github/workflows/forecast-monthly.yml` | 'Forecast Monthly Report' | workflow_dispatch,schedule | L12:0 8 1 * * | L56:scripts/forecast/run_monthly.mjs | L72:public/data/forecast/reports/monthly/ | 0 | no | no | 3 |
+| `.github/workflows/forecast-rollback.yml` | Forecast Rollback | workflow_dispatch | none | none | L43:public/data/forecast/system/status.json; L58:public/data/forecast/latest.json; L65:public/data/forecast | 0 | yes | yes | 3 |
+| `.github/workflows/forecast-weekly.yml` | 'Forecast Weekly Training' | workflow_dispatch,schedule | L12:0 6 * * 0 | L50:scripts/forecast/run_weekly.mjs | L76:mirrors/forecast/challengers/; L77:mirrors/forecast/champion/; L78:mirrors/forecast/ledger/promotions/; L79:public/data/forecast/ | 0 | no | no | 3 |
+| `.github/workflows/monitor-prod.yml` | Monitor Production Artifacts | schedule,workflow_dispatch | L5:0 6,18 * * * | none | none | 0 | no | no | 0 |
+| `.github/workflows/ops-auto-alerts.yml` | Ops Auto-Alerts | schedule,workflow_dispatch | L5:0 22 * * 1-5 | none | none | 0 | yes | yes | 3 |
+| `.github/workflows/ops-daily.yml` | Ops Daily Snapshot | schedule,workflow_dispatch | L5:5 7 * * * | L55:scripts/ops/preflight-check.mjs; L61:scripts/pipeline/build-marketphase-from-kv.mjs; L64:scripts/pipeline/build-ndx100-pipeline-truth.mjs; L67:scripts/ops/build-safety-snapshot.mjs; L73:scripts/ops/build-ops-daily.mjs; L76:scripts/ops/build-mission-control-summary.mjs; L79:scripts/ops/build-ops-pulse.mjs; L82:scripts/ops/validate-ops-summary.mjs; L87:scripts/ci/assert-mission-control-gate.mjs | L94:public/data/pipeline/*.json; L94:public/data/ops; L94:public/data/ops-daily.json | 7 | yes | yes | 4 |
+| `.github/workflows/refresh-health-assets.yml` | Refresh Health Assets | schedule,workflow_dispatch | L5:17 6 * * * | L29:scripts/refresh-health-assets.mjs | L34:public/data; L40:public/data/system-health.json; L40:public/data/blocks/health.latest.json; L40:public/data/snapshots/health.json; L40:public/data/snapshots/health/latest.json | 1 | yes | no | 2 |
+| `.github/workflows/scheduler-kick.yml` | Scheduler Kick | schedule,workflow_dispatch | L5:15 * * * * | none | none | 1 | yes | no | 2 |
+| `.github/workflows/universe-refresh.yml` | Universe Refresh | workflow_dispatch | none | L30:scripts/universe/fetch-constituents.mjs | L35:public/data/universe/; L38:public/data/universe/*.json;; L47:public/data/universe/ | 1 | yes | no | 2 |
+| `.github/workflows/v3-finalizer.yml` | v3 Finalizer | workflow_run,workflow_dispatch | none | L151:scripts/aggregator/finalize.mjs; L188:scripts/wp16/guard-market-prices.mjs | L171:public/data/snapshots/${module}/latest.json; L193:public/data; L199:public/data; L209:public/data/snapshots; L210:public/data/state/modules/*.json; L211:public/data/manifest.json; L212:public/data/provider-state.json; L243:public/data/manifest.json | 1 | yes | yes | 4 |
+| `.github/workflows/v3-scrape-template.yml` | v3 Scrape Template | schedule,workflow_dispatch | L6:30 22 * * 1-5 | L239:scripts/providers/market-prices-v3.mjs; L241:scripts/providers/market-stats-v3.mjs; L277:scripts/aggregator/finalize.mjs | L65:public/data/registry/modules.json | 6 | yes | no | 7 |
+| `.github/workflows/wp16-manual-market-prices.yml` | WP16 Manual - Market Prices (Stooq) | workflow_dispatch | none | L38:scripts/providers/market-prices-v3.mjs; L77:scripts/aggregator/finalize.mjs; L83:scripts/wp16/guard-market-prices.mjs | L89:public/data/snapshots/market-prices/latest.json; L89:public/data/snapshots/market-prices/; L90:public/data/snapshots; L90:public/data/state/modules/*.json; L90:public/data/manifest.json; L90:public/data/provider-state.json | 1 | yes | yes | 2 |
+
+## Workflow Purpose Hypothesis (evidence-derived)
+
+- `.github/workflows/ci-determinism.yml`: Determinism and schema consistency checks (hypothesis from filename + scripts + write-path evidence)
+- `.github/workflows/ci-gates.yml`: Quality/policy/schema gates before merge/deploy (hypothesis from filename + scripts + write-path evidence)
+- `.github/workflows/ci-policy.yml`: Policy validation gate (hypothesis from filename + scripts + write-path evidence)
+- `.github/workflows/cleanup-daily-snapshots.yml`: Cleanup stale snapshot artifacts (hypothesis from filename + scripts + write-path evidence)
+- `.github/workflows/e2e-playwright.yml`: E2E UI/API regression checks (hypothesis from filename + scripts + write-path evidence)
+- `.github/workflows/eod-history-refresh.yml`: Historical EOD refresh/backfill (hypothesis from filename + scripts + write-path evidence)
+- `.github/workflows/eod-latest.yml`: Core latest EOD ingestion feeding downstream market data (hypothesis from filename + scripts + write-path evidence)
+- `.github/workflows/forecast-daily.yml`: Daily forecast publish orchestration (hypothesis from filename + scripts + write-path evidence)
+- `.github/workflows/forecast-monthly.yml`: Monthly forecast maintenance/reporting (hypothesis from filename + scripts + write-path evidence)
+- `.github/workflows/forecast-rollback.yml`: Manual rollback utility for forecast artifacts (hypothesis from filename + scripts + write-path evidence)
+- `.github/workflows/forecast-weekly.yml`: Weekly forecast maintenance/reporting (hypothesis from filename + scripts + write-path evidence)
+- `.github/workflows/monitor-prod.yml`: Production endpoint liveness/contract monitoring (hypothesis from filename + scripts + write-path evidence)
+- `.github/workflows/ops-auto-alerts.yml`: Automated ops alert checks (hypothesis from filename + scripts + write-path evidence)
+- `.github/workflows/ops-daily.yml`: Daily ops snapshot and operational pulse generation (hypothesis from filename + scripts + write-path evidence)
+- `.github/workflows/refresh-health-assets.yml`: Refresh health-related static assets (hypothesis from filename + scripts + write-path evidence)
+- `.github/workflows/scheduler-kick.yml`: Scheduled trigger bridge for forecast/ops pipeline kick (hypothesis from filename + scripts + write-path evidence)
+- `.github/workflows/universe-refresh.yml`: Universe list regeneration (hypothesis from filename + scripts + write-path evidence)
+- `.github/workflows/v3-finalizer.yml`: Legacy v3 scrape/finalize snapshot pipeline (hypothesis from filename + scripts + write-path evidence)
+- `.github/workflows/v3-scrape-template.yml`: Legacy v3 scrape/finalize snapshot pipeline (hypothesis from filename + scripts + write-path evidence)
+- `.github/workflows/wp16-manual-market-prices.yml`: Manual WP16 market-prices utility pipeline (hypothesis from filename + scripts + write-path evidence)

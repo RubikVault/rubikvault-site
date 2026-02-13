@@ -1,0 +1,55 @@
+name: archive-mirrors-release
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag (optional)"
+        required: false
+
+permissions:
+  contents: write
+
+jobs:
+  archive:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Package mirrors
+        run: |
+          tar -czf mirrors-v3.tar.gz mirrors
+
+      - name: Create or update release with mirrors archive
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="${{ github.event.inputs.tag }}"
+          if [ -z "$TAG" ]; then
+            TAG="v3-mirrors-$(date -u +%Y%m%d)"
+          fi
+          gh release view "$TAG" >/dev/null 2>&1 || gh release create "$TAG" --title "$TAG" --notes "Automated mirrors archive"
+          gh release upload "$TAG" mirrors-v3.tar.gz --clobber
+
+      - name: Update archive index
+        run: |
+          mkdir -p public/data/v3/system
+          cat > public/data/v3/system/archive-index.json <<JSON
+          {
+            "meta": {
+              "generated_at": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+              "tag": "${{ github.event.inputs.tag || '' }}"
+            },
+            "strategy": "B",
+            "asset": "mirrors-v3.tar.gz"
+          }
+          JSON
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add public/data/v3/system/archive-index.json
+          if git diff --cached --quiet; then
+            exit 0
+          fi
+          git commit -m "chore(v3): update archive index"
+          git push

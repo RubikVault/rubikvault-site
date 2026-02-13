@@ -1,0 +1,71 @@
+name: contracts-gate-v3
+
+on:
+  pull_request:
+    branches: [ main ]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: contracts-gate-v3-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  contracts:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Block v2 artifact edits unless allowlisted
+        run: |
+          BASE_REF="origin/${{ github.base_ref }}"
+          git fetch origin "${{ github.base_ref }}" --depth=1
+          mapfile -t CHANGED < <(git diff --name-only "$BASE_REF...HEAD" | grep '^public/data/v2/' || true)
+          if [ "${#CHANGED[@]}" -eq 0 ]; then
+            echo "No v2 artifact changes detected"
+            exit 0
+          fi
+
+          ALLOW_FILE=".github/v3-ui-allowlist.txt"
+          VIOLATIONS=0
+          for file in "${CHANGED[@]}"; do
+            if [ -f "$ALLOW_FILE" ] && grep -Fxq "$file" "$ALLOW_FILE"; then
+              echo "ALLOWLISTED: $file"
+            else
+              echo "FORBIDDEN v2 change: $file"
+              VIOLATIONS=$((VIOLATIONS + 1))
+            fi
+          done
+
+          if [ "$VIOLATIONS" -gt 0 ]; then
+            echo "v2 paths changed without allowlist"
+            exit 1
+          fi
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Validate policies
+        run: npm run validate:policies:v3
+
+      - name: Validate schema fixtures
+        run: npm run test:v3:fixtures
+
+      - name: Unit tests (v3 libs)
+        run: npm run test:v3:unit
+
+      - name: Determinism check
+        run: npm run check:v3:determinism
+
+      - name: Forensics + collision check
+        run: npm run build:v3:forensics && npm run check:v3:collisions

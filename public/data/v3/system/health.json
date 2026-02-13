@@ -1,0 +1,154 @@
+{
+  "dp": {
+    "dp0_universe": {
+      "bytes": null,
+      "coverage": {
+        "policy": 517,
+        "source": 517
+      },
+      "last_run": "2026-02-13T11:35:26.028Z",
+      "manifest": "public/data/v3/universe/manifest.json",
+      "partial": false,
+      "reason": null,
+      "stale": false,
+      "status": "ok",
+      "trading_date": null
+    },
+    "dp1_5_fx": {
+      "bytes": null,
+      "coverage": null,
+      "last_run": "2026-02-13T11:35:32.441Z",
+      "manifest": "public/data/v3/fx/rates/manifest.json",
+      "partial": false,
+      "reason": null,
+      "stale": false,
+      "status": "ok",
+      "trading_date": null
+    },
+    "dp1_eod": {
+      "bytes": null,
+      "coverage": {
+        "expected": 517,
+        "observed": 517,
+        "ratio": 1
+      },
+      "last_run": "2026-02-13T11:35:32.170Z",
+      "manifest": "public/data/v3/eod/US/manifest.json",
+      "partial": false,
+      "reason": null,
+      "stale": true,
+      "status": "ok",
+      "trading_date": "2026-02-13"
+    },
+    "dp2_actions": {
+      "bytes": null,
+      "coverage": {
+        "dividends": 0,
+        "splits": 0
+      },
+      "last_run": "2026-02-13T11:35:37.809Z",
+      "manifest": "public/data/v3/actions/manifest.json",
+      "partial": false,
+      "reason": null,
+      "stale": false,
+      "status": "ok",
+      "trading_date": null
+    },
+    "dp3_adjusted": {
+      "bytes": null,
+      "coverage": {
+        "failed_lineage": 0,
+        "symbols": 517
+      },
+      "last_run": "2026-02-13T11:35:49.125Z",
+      "manifest": "public/data/v3/series/manifest.json",
+      "partial": false,
+      "reason": null,
+      "stale": false,
+      "status": "ok",
+      "trading_date": null
+    },
+    "dp4_pulse": {
+      "bytes": null,
+      "coverage": {
+        "symbols": 517
+      },
+      "last_run": "2026-02-13T11:35:49.417Z",
+      "manifest": "public/data/v3/pulse/manifest.json",
+      "partial": false,
+      "reason": null,
+      "stale": false,
+      "status": "ok",
+      "trading_date": null
+    },
+    "dp5_news": {
+      "bytes": null,
+      "coverage": {
+        "signals": 0,
+        "triggers": 6
+      },
+      "last_run": "2026-02-13T11:36:03.009Z",
+      "manifest": "public/data/v3/news/manifest.json",
+      "partial": true,
+      "reason": "PROVIDER_FETCH_FAILED:HTTP_401:Unauthenticated",
+      "stale": true,
+      "status": "degraded",
+      "trading_date": null
+    },
+    "dp6_indicators": {
+      "bytes": null,
+      "coverage": {
+        "expected": 517,
+        "produced": 517,
+        "ratio": 1
+      },
+      "last_run": "2026-02-13T11:36:09.020Z",
+      "manifest": "public/data/v3/derived/manifest.json",
+      "partial": false,
+      "reason": null,
+      "stale": false,
+      "status": "ok",
+      "trading_date": null
+    },
+    "dp7_fundamentals": {
+      "bytes": null,
+      "coverage": {
+        "refreshed": 0,
+        "total": 517
+      },
+      "last_run": "2026-02-13T11:36:09.301Z",
+      "manifest": "public/data/v3/fundamentals/manifest.json",
+      "partial": true,
+      "reason": "MISSING_SECRET:TIINGO_API_KEY",
+      "stale": true,
+      "status": "degraded",
+      "trading_date": null
+    }
+  },
+  "meta": {
+    "commit": "8ac83291e9e64cd63af32eb5978c1976e5539533",
+    "generated_at": "2026-02-13T11:36:09.220Z",
+    "policy_commit": "454562f7fd37932a0a4495c52d6e33e0f3d99558",
+    "run_id": "8ac83291-20260213T1136-1770982569",
+    "schema": "rv.health.v3"
+  },
+  "system": {
+    "budget": {
+      "hard_cap": 900,
+      "reserve": 120,
+      "used_calls": 0
+    },
+    "circuits": {},
+    "drift_latest": {
+      "universe": "public/data/v3/system/drift/universe-drift-2026-02-13.json"
+    },
+    "manifests": {
+      "universe": "public/data/v3/universe/manifest.json"
+    },
+    "retention": {
+      "hot_window_days": 45,
+      "strategy": "A"
+    },
+    "status": "degraded"
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "schemas": {
+    "rv.health": {"current": "v3", "supported": ["v3"], "deprecated": []},
+    "rv.manifest": {"current": "v3", "supported": ["v3"], "deprecated": []},
+    "rv.eod": {"current": "v3", "supported": ["v3"], "deprecated": []},
+    "rv.fx": {"current": "v1", "supported": ["v1"], "deprecated": []},
+    "rv.actions": {"current": "v3", "supported": ["v3"], "deprecated": []},
+    "rv.series": {"current": "v3", "supported": ["v3"], "deprecated": []},
+    "rv.pulse": {"current": "v3", "supported": ["v3"], "deprecated": []},
+    "rv.news": {"current": "v2", "supported": ["v2"], "deprecated": []},
+    "rv.fundamentals": {"current": "v1", "supported": ["v1"], "deprecated": []},
+    "rv.calendar": {"current": "v1", "supported": ["v1"], "deprecated": []}
+  },
+  "migration_policy": {
+    "requires_contract_tests": true,
+    "requires_release_notes": true,
+    "requires_backfill_plan": true
+  }
+}

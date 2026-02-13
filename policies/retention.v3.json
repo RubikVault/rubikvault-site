@@ -1,0 +1,21 @@
+{
+  "schema_version": "v3",
+  "active_strategy": "A",
+  "strategy_a": {
+    "name": "data_branch_orphan_snapshots",
+    "branch": "data",
+    "orphan_reset_cadence": "monthly"
+  },
+  "strategy_b": {
+    "name": "github_releases_archive",
+    "enabled": false
+  },
+  "hot_window_days": 45,
+  "mirrors_retention_days": 180,
+  "ops_ledger_retention_days": 365,
+  "cleanup_cadence": "weekly",
+  "safeguards": {
+    "never_remove_last_good": true,
+    "lineage_resolver_required": true
+  }
+}

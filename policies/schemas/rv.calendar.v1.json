@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "rv.calendar.v1.json",
+  "type": "object",
+  "required": ["meta", "events"],
+  "properties": {
+    "meta": {"type": "object"},
+    "events": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["date", "canonical_id", "event_type"],
+        "properties": {
+          "date": {"type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"},
+          "canonical_id": {"type": "string"},
+          "event_type": {"type": "string"}
+        },
+        "additionalProperties": true
+      }
+    }
+  },
+  "additionalProperties": true
+}

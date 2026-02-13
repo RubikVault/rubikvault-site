@@ -1,0 +1,22 @@
+{
+  "schema_version": "v3",
+  "allowed_parallel": [
+    {
+      "name": "dp1_by_exchange",
+      "rule": "dp1 jobs may run in parallel only when outputs are exchange-partitioned"
+    },
+    {
+      "name": "dp5_batched_news",
+      "rule": "dp5 fetch batches may run in parallel with max_parallel=3"
+    }
+  ],
+  "forbidden_parallel": [
+    "same_output_path",
+    "shared_manifest_without_lock",
+    "shared_health_without_atomic_writer"
+  ],
+  "locks": {
+    "publish_root": "public/data/v3",
+    "health_file": "public/data/v3/system/health.json"
+  }
+}

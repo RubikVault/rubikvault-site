@@ -1,0 +1,2131 @@
+=== ci-determinism.yml ===
+TRIGGERS:
+on:
+  push:
+    paths:
+      - 'scripts/forecast/**'
+      - 'tests/determinism/**'
+  pull_request:
+    paths:
+      - 'scripts/forecast/**'
+      - 'tests/determinism/**'
+  workflow_dispatch:
+
+concurrency:
+  group: forecast-determinism-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # MEM v1.2 Determinism: Lock threads for reproducible runs
+  OMP_NUM_THREADS: '1'
+  MKL_NUM_THREADS: '1'
+  OPENBLAS_NUM_THREADS: '1'
+
+SCRIPTS:
+        run: npm ci
+        run: npm run test:determinism
+        run: npm run validate:forecast-registry
+        run: npm run validate:forecast-schemas
+PERMISSIONS:
+SECRETS:
+CONCURRENCY:
+concurrency:
+  group: forecast-determinism-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+PUBLISHES:
+
+=== ci-gates.yml ===
+TRIGGERS:
+on:
+  pull_request:
+    paths:
+      - 'public/data/**'
+      - 'scripts/**'
+      - '.github/workflows/**'
+  push:
+    branches:
+      - main
+    paths:
+      - 'public/data/**'
+      - 'scripts/**'
+
+jobs:
+  asset-budget:
+    name: Asset Budget Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+SCRIPTS:
+        run: npm ci
+        run: node scripts/ci/verify-artifacts.mjs
+        run: node scripts/ci/assert-mission-control-gate.mjs
+        run: node scripts/ci/check-elliott-parity.mjs
+        run: bash scripts/ci/forbid-kv-writes-in-api.sh
+        run: npm run test:contracts
+        run: node scripts/eod/check-eod-artifacts.mjs
+        run: npm ci
+        run: bash scripts/ops/validate-truth.sh
+PERMISSIONS:
+SECRETS:
+CONCURRENCY:
+PUBLISHES:
+      - 'public/data/**'
+      - 'public/data/**'
+          mkdir -p public/data
+          if ! find public/data -type f -name "*.json" -print -quit | grep -q .; then
+            SENTINEL_PATH="public/data/.budget_sentinel.json"
+            echo "ℹ️ Created budget sentinel at $SENTINEL_PATH (no tracked public/data json artifacts in checkout)"
+          # Count files in public/data
+          TOTAL_FILES=$(find public/data -type f -name "*.json" | wc -l | tr -d ' ')
+          LARGE_FILES=$(find public/data -type f -name "*.json" -size +${MAX_SIZE_MB}M || true)
+            find public/data -type f -name "*.json" -size +${MAX_SIZE_MB}M -exec ls -lh {} \;
+          for module_dir in public/data/snapshots/*/; do
+          TOTAL_SIZE=$(du -sb public/data 2>/dev/null | cut -f1 || true)
+            TOTAL_SIZE=$(du -sk public/data 2>/dev/null | awk '{print $1 * 1024}' || true)
+          if [ -f public/data/manifest.json ] && [ -f schemas/manifest.schema.json ]; then
+            npx --yes ajv-cli@5 validate -s schemas/manifest.schema.json -d public/data/manifest.json
+          if [ -f public/data/provider-state.json ] && [ -f schemas/provider-state.schema.json ]; then
+            npx --yes ajv-cli@5 validate -s schemas/provider-state.schema.json -d public/data/provider-state.json
+            for snapshot in public/data/snapshots/*/latest.json; do
+          if [ -f public/data/manifest.json ]; then
+            if ! jq empty public/data/manifest.json 2>/dev/null; then
+              SCHEMA_VERSION=$(jq -r '.schema_version // "missing"' public/data/manifest.json)
+              ACTIVE_BUILD_ID=$(jq -r '.active_build_id // "missing"' public/data/manifest.json)
+          if [ -f public/data/provider-state.json ]; then
+            if ! jq empty public/data/provider-state.json 2>/dev/null; then
+          for snapshot in public/data/snapshots/*/latest.json; do
+          if [ ! -f public/data/manifest.json ]; then
+          PUBLISHED_MODULES=$(jq -r '.modules | to_entries | .[] | select(.value.published == true) | .key' public/data/manifest.json)
+            MANIFEST_DIGEST=$(jq -r ".modules[\"$module\"].digest" public/data/manifest.json)
+            SNAPSHOT_PATH="public/data/snapshots/$module/latest.json"
+          # Check: No blanket ignores for public/data or mirrors
+          if grep -nE '^(public/data/|mirrors/)$' .gitignore; then
+            echo "❌ VIOLATION: .gitignore contains blanket ignore for public/data/ or mirrors/"
+
+=== ci-policy.yml ===
+TRIGGERS:
+on:
+  push:
+    paths:
+      - 'policies/**'
+      - 'mirrors/forecast/**'
+  workflow_dispatch:
+
+concurrency:
+  group: forecast-system
+  cancel-in-progress: true
+
+jobs:
+  validate-policy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+SCRIPTS:
+PERMISSIONS:
+SECRETS:
+CONCURRENCY:
+concurrency:
+  group: forecast-system
+  cancel-in-progress: true
+
+jobs:
+PUBLISHES:
+      - 'mirrors/forecast/**'
+
+=== cleanup-daily-snapshots.yml ===
+TRIGGERS:
+on:
+  schedule:
+    # Run weekly on Sundays at 02:00 UTC
+    - cron: "0 2 * * 0"
+  workflow_dispatch:
+    inputs:
+      days_to_keep:
+        description: 'Days to keep (default: 7)'
+        required: false
+        default: '7'
+      dry_run:
+        description: 'Dry run (true/false)'
+        required: false
+        default: 'false'
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+SCRIPTS:
+PERMISSIONS:
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run Cleanup Script
+        env:
+          DAYS_TO_KEEP: ${{ github.event.inputs.days_to_keep || '7' }}
+SECRETS:
+CONCURRENCY:
+PUBLISHES:
+          if git diff --quiet public/data; then
+            git diff --stat public/data
+          git add public/data
+
+=== e2e-playwright.yml ===
+TRIGGERS:
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+jobs:
+  ops-e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      BASE_URL: ${{ vars.PREVIEW_BASE || vars.RV_PROD_BASE || 'https://rubikvault.com' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - name: Install dependencies
+        run: npm ci
+      - name: Install Playwright browsers
+SCRIPTS:
+        run: npm ci
+PERMISSIONS:
+SECRETS:
+CONCURRENCY:
+PUBLISHES:
+
+=== eod-history-refresh.yml ===
+TRIGGERS:
+on:
+  schedule:
+    - cron: '20 21 * * 1-5' # 21:20 UTC, Mon-Fri (After market close)
+  workflow_dispatch:
+
+concurrency:
+  group: forecast-system
+  cancel-in-progress: false
+
+jobs:
+  refresh-history:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120  # Increased for ~520 symbols
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+SCRIPTS:
+        run: npm ci || npm install node-fetch
+PERMISSIONS:
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+SECRETS:
+          EODHD_API_KEY: ${{ secrets.EODHD_API_KEY }}
+CONCURRENCY:
+concurrency:
+  group: forecast-system
+  cancel-in-progress: false
+
+jobs:
+PUBLISHES:
+          UNIVERSE_FILE="./public/data/universe/all.json"
+             UNIVERSE_FILE="./public/data/universe/nasdaq100.json"
+          git add public/data/eod/bars
+
+=== eod-latest.yml ===
+TRIGGERS:
+on:
+  schedule:
+    - cron: "10 22 * * 1-5"
+  workflow_dispatch:
+    inputs:
+      universe:
+        description: "Universe"
+        default: "nasdaq100"
+        required: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: eod-latest
+  cancel-in-progress: true
+
+jobs:
+  dry-run:
+    name: EOD Latest Dry-Run (no secrets)
+    if: ${{ vars.RV_CI_MODE == 'dry' }}
+SCRIPTS:
+        run: npm ci
+        run: npm run test:contracts
+        run: npm ci
+        run: node scripts/ops/preflight-check.mjs --mode eod-latest
+        run: node scripts/eod/build-eod-latest.mjs --universe "$RV_UNIVERSE" --chunk-size 500 --out public/data
+        run: node scripts/ops/build-safety-snapshot.mjs
+        run: npm run rv:ops
+        run: node scripts/ops/build-mission-control-summary.mjs
+        run: node scripts/ops/build-ops-pulse.mjs
+        run: node scripts/ops/validate-ops-summary.mjs
+        run: node scripts/ci/assert-mission-control-gate.mjs
+PERMISSIONS:
+permissions:
+  contents: write
+
+concurrency:
+  group: eod-latest
+  cancel-in-progress: true
+
+jobs:
+  dry-run:
+SECRETS:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          if [ -n "${{ secrets.TIINGO_API_KEY }}" ]; then
+            echo "TIINGO_API_KEY=${{ secrets.TIINGO_API_KEY }}" >> "$GITHUB_ENV"
+          elif [ -n "${{ secrets.TIIANGO_API_KEY }}" ]; then
+            echo "TIINGO_API_KEY=${{ secrets.TIIANGO_API_KEY }}" >> "$GITHUB_ENV"
+CONCURRENCY:
+concurrency:
+  group: eod-latest
+  cancel-in-progress: true
+
+jobs:
+PUBLISHES:
+        run: node scripts/eod/build-eod-latest.mjs --universe "$RV_UNIVERSE" --chunk-size 500 --out public/data
+          git add public/data/eod public/data/pipeline public/data/ops public/data/ops-daily.json docs/architecture/data-layout-law-v1.md
+
+=== forecast-daily.yml ===
+TRIGGERS:
+on:
+  workflow_dispatch:
+    inputs:
+      date:
+        description: 'Trading date (YYYY-MM-DD), empty for auto'
+        required: false
+        type: string
+  schedule:
+    # Run at 21:00 UTC (16:00 ET after market close)
+    - cron: '0 21 * * 1-5'
+
+defaults:
+  run:
+    shell: bash
+
+env:
+  NODE_VERSION: '20'
+  # MEM v1.2 Determinism: Lock threads for reproducible runs
+  OMP_NUM_THREADS: '1'
+  MKL_NUM_THREADS: '1'
+  OPENBLAS_NUM_THREADS: '1'
+SCRIPTS:
+        run: npm ci --prefer-offline
+PERMISSIONS:
+SECRETS:
+CONCURRENCY:
+PUBLISHES:
+          git add mirrors/forecast/ledger/ || true
+          git add mirrors/forecast/snapshots/ || true
+          git add public/data/forecast/ || true
+        uses: actions/upload-artifact@v4
+
+=== forecast-monthly.yml ===
+TRIGGERS:
+on:
+  workflow_dispatch:
+    inputs:
+      month:
+        description: 'Month (YYYY-MM), empty for previous month'
+        required: false
+        type: string
+  schedule:
+    # Run 1st of each month at 08:00 UTC
+    - cron: '0 8 1 * *'
+
+defaults:
+  run:
+    shell: bash
+
+env:
+  NODE_VERSION: '20'
+
+jobs:
+  forecast-monthly:
+    name: 'Monthly Report Generation'
+SCRIPTS:
+        run: npm ci --prefer-offline
+PERMISSIONS:
+SECRETS:
+CONCURRENCY:
+PUBLISHES:
+          git add public/data/forecast/reports/monthly/ || true
+        uses: actions/upload-artifact@v4
+
+=== forecast-rollback.yml ===
+TRIGGERS:
+on:
+  workflow_dispatch:
+    inputs:
+      reason:
+        description: 'Reason for rollback (required)'
+        required: true
+        type: string
+      target_commit:
+        description: 'Target commit SHA to rollback to (optional, defaults to last_good)'
+        required: false
+        type: string
+
+concurrency:
+  group: forecast-system
+  cancel-in-progress: false
+
+jobs:
+  rollback:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+SCRIPTS:
+PERMISSIONS:
+    permissions:
+      contents: write
+      issues: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Setup Node
+SECRETS:
+CONCURRENCY:
+concurrency:
+  group: forecast-system
+  cancel-in-progress: false
+
+jobs:
+PUBLISHES:
+          cat > public/data/forecast/system/status.json << EOF
+            git checkout ${{ inputs.target_commit }} -- public/data/forecast/latest.json || echo "Could not restore latest.json"
+          git add public/data/forecast
+
+=== forecast-weekly.yml ===
+TRIGGERS:
+on:
+  workflow_dispatch:
+    inputs:
+      date:
+        description: 'Trading date (YYYY-MM-DD), empty for auto'
+        required: false
+        type: string
+  schedule:
+    # Run Sundays at 06:00 UTC
+    - cron: '0 6 * * 0'
+
+defaults:
+  run:
+    shell: bash
+
+env:
+  NODE_VERSION: '20'
+
+jobs:
+  forecast-weekly:
+    name: 'Weekly Challenger Training'
+SCRIPTS:
+        run: npm ci --prefer-offline
+PERMISSIONS:
+SECRETS:
+CONCURRENCY:
+PUBLISHES:
+          git add mirrors/forecast/challengers/ || true
+          git add mirrors/forecast/champion/ || true
+          git add mirrors/forecast/ledger/promotions/ || true
+          git add public/data/forecast/ || true
+        uses: actions/upload-artifact@v4
+
+=== monitor-prod.yml ===
+TRIGGERS:
+on:
+  schedule:
+    - cron: "0 6,18 * * *"
+  workflow_dispatch:
+
+jobs:
+  liveness:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ensure jq
+        run: |
+          if ! command -v jq >/dev/null 2>&1; then
+            sudo apt-get update
+            sudo apt-get install -y jq
+          fi
+          jq --version
+
+      - name: Check required artifact endpoints
+        env:
+          BASE_URL: https://rubikvault.com
+          MIN_MARKET_PRICE_ROWS: "517"
+SCRIPTS:
+PERMISSIONS:
+SECRETS:
+CONCURRENCY:
+PUBLISHES:
+          fetch_json "$BASE_URL/data/snapshots/market-prices/latest.json" /tmp/market_prices.json
+          fetch_json "$BASE_URL/data/forecast/latest.json" /tmp/forecast_latest.json
+          fetch_json "$BASE_URL/data/forecast/system/status.json" /tmp/forecast_status.json
+          fetch_json "$BASE_URL/data/marketphase/index.json" /tmp/marketphase_index.json
+          fetch_json "$BASE_URL/data/ops/pulse.json" /tmp/ops_pulse.json
+          echo "✅ /data/ops/pulse semantic checks passed"
+          curl -fsS "$BASE_URL/data/ops/pulse.json" -o /tmp/ops_pulse.json
+          curl -sS "$BASE_URL/data/forecast/latest.json" -o /tmp/forecast_latest.json
+
+=== ops-auto-alerts.yml ===
+TRIGGERS:
+on:
+  schedule:
+    - cron: '0 22 * * 1-5' # Daily after market close
+  workflow_dispatch:
+
+concurrency:
+  group: forecast-system
+  cancel-in-progress: false
+
+jobs:
+  check-alerts:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      issues: write
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+SCRIPTS:
+PERMISSIONS:
+    permissions:
+      issues: write
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+SECRETS:
+CONCURRENCY:
+concurrency:
+  group: forecast-system
+  cancel-in-progress: false
+
+jobs:
+PUBLISHES:
+
+=== ops-daily.yml ===
+TRIGGERS:
+on:
+  schedule:
+    - cron: "5 7 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: ops-daily
+  cancel-in-progress: true
+
+jobs:
+  dry-run:
+    name: Ops Daily Dry-Run (no secrets)
+    if: ${{ vars.RV_CI_MODE == 'dry' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+SCRIPTS:
+        run: npm ci
+        run: npm run test:contracts
+        run: npm ci
+        run: node scripts/ops/preflight-check.mjs --mode ops-daily
+        run: node scripts/pipeline/build-marketphase-from-kv.mjs --universe nasdaq100
+        run: node scripts/pipeline/build-ndx100-pipeline-truth.mjs
+        run: node scripts/ops/build-safety-snapshot.mjs
+        run: node scripts/ops/build-ops-daily.mjs
+        run: node scripts/ops/build-mission-control-summary.mjs
+        run: node scripts/ops/build-ops-pulse.mjs
+        run: node scripts/ops/validate-ops-summary.mjs
+        run: node scripts/ci/assert-mission-control-gate.mjs
+PERMISSIONS:
+permissions:
+  contents: write
+
+concurrency:
+  group: ops-daily
+  cancel-in-progress: true
+
+jobs:
+  dry-run:
+SECRETS:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+          CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
+          CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+          CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
+          CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+          CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
+CONCURRENCY:
+concurrency:
+  group: ops-daily
+  cancel-in-progress: true
+
+jobs:
+PUBLISHES:
+          git add public/data/pipeline/*.json public/data/ops public/data/ops-daily.json
+
+=== refresh-health-assets.yml ===
+TRIGGERS:
+on:
+  schedule:
+    - cron: "17 6 * * *"
+  workflow_dispatch:
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          token: "${{ secrets.GITHUB_TOKEN }}"
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+SCRIPTS:
+        run: npm ci
+        run: node scripts/refresh-health-assets.mjs
+PERMISSIONS:
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          token: "${{ secrets.GITHUB_TOKEN }}"
+
+      - name: Setup Node
+SECRETS:
+          token: "${{ secrets.GITHUB_TOKEN }}"
+CONCURRENCY:
+PUBLISHES:
+          if git diff --quiet public/data; then
+          git add public/data/system-health.json public/data/blocks/health.latest.json public/data/snapshots/health.json public/data/snapshots/health/latest.json
+
+=== scheduler-kick.yml ===
+TRIGGERS:
+on:
+  schedule:
+    - cron: "15 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  dry-run:
+    name: Scheduler Kick Dry-Run (no secrets)
+    if: ${{ vars.RV_CI_MODE == 'dry' || vars.RV_PROD_BASE == '' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+SCRIPTS:
+        run: npm ci
+        run: npm run test:contracts
+PERMISSIONS:
+permissions:
+  contents: read
+
+jobs:
+  dry-run:
+    name: Scheduler Kick Dry-Run (no secrets)
+    if: ${{ vars.RV_CI_MODE == 'dry' || vars.RV_PROD_BASE == '' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+SECRETS:
+          RV_ADMIN_TOKEN: ${{ secrets.RV_ADMIN_TOKEN }}
+CONCURRENCY:
+PUBLISHES:
+
+=== universe-refresh.yml ===
+TRIGGERS:
+on:
+  workflow_dispatch:
+    inputs:
+      indices:
+        description: 'Which indices to fetch (all, sp500, nasdaq100, dowjones, russell2000)'
+        required: false
+        default: 'all'
+
+jobs:
+  fetch-constituents:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      
+      - name: Setup Node
+        uses: actions/setup-node@v4
+SCRIPTS:
+        run: node scripts/universe/fetch-constituents.mjs
+PERMISSIONS:
+    permissions:
+      contents: write
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      
+      - name: Setup Node
+        uses: actions/setup-node@v4
+SECRETS:
+          EODHD_API_KEY: ${{ secrets.EODHD_API_KEY }}
+CONCURRENCY:
+PUBLISHES:
+          ls -la public/data/universe/
+          for f in public/data/universe/*.json; do
+          git add public/data/universe/
+
+=== v3-finalizer.yml ===
+TRIGGERS:
+on:
+  workflow_run:
+    workflows: 
+      - "v3 Pilot - Market Health"
+      - "v3 Scrape Template"
+    types:
+      - completed
+  workflow_dispatch:
+    inputs:
+      artifact_name:
+        description: 'Artifact name to finalize (default: all)'
+        required: false
+        default: ''
+      skip_kv_write:
+        description: 'Skip KV writes (for testing)'
+        required: false
+        default: 'false'
+
+jobs:
+  finalize:
+    runs-on: ubuntu-latest
+SCRIPTS:
+        run: npm ci
+PERMISSIONS:
+    permissions:
+      contents: write
+      actions: read
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+SECRETS:
+          token: ${{ secrets.GITHUB_TOKEN }}
+CONCURRENCY:
+    concurrency:
+      group: rv-finalizer
+      cancel-in-progress: true
+    
+    permissions:
+PUBLISHES:
+            path="public/data/snapshots/${module}/latest.json"
+          if git diff --quiet public/data; then
+            git diff --stat public/data
+          git add public/data/snapshots 2>/dev/null || echo "No snapshot files to add"
+          git add public/data/state/modules/*.json 2>/dev/null || echo "No module state files to add"
+          git add public/data/manifest.json 2>/dev/null || echo "No manifest to add"
+          git add public/data/provider-state.json 2>/dev/null || echo "No provider-state to add"
+          if [ -f public/data/manifest.json ]; then
+
+=== v3-scrape-template.yml ===
+TRIGGERS:
+on:
+  schedule:
+    # Run at 22:30 UTC on market days
+    - cron: "30 22 * * 1-5"
+  workflow_dispatch:
+    inputs:
+      modules:
+        description: 'Modules to scrape (comma-separated, or "all")'
+        required: false
+        default: 'all'
+
+jobs:
+  # Determine which modules to scrape
+  prepare:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - name: "WP16 DEBUG: dump market-prices artifacts"
+        if: always()
+SCRIPTS:
+        run: npm ci
+        run: npm ci
+PERMISSIONS:
+    permissions:
+      contents: read
+      actions: read
+    
+    strategy:
+      matrix: ${{ fromJson(needs.prepare.outputs.matrix) }}
+      fail-fast: false  # Continue even if one module fails
+      max-parallel: 5   # Limit parallel jobs to avoid rate limits
+    
+SECRETS:
+          POLYGON_API_KEY: ${{ secrets.POLYGON_API_KEY }}
+          FMP_API_KEY: ${{ secrets.FMP_API_KEY }}
+          ALPHAVANTAGE_API_KEY: ${{ secrets.ALPHAVANTAGE_API_KEY }}
+          FINNHUB_API_KEY: ${{ secrets.FINNHUB_API_KEY }}
+          FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
+          TWELVEDATA_API_KEY: ${{ secrets.TWELVEDATA_API_KEY }}
+CONCURRENCY:
+PUBLISHES:
+            const registry = require('./public/data/registry/modules.json');
+        uses: actions/upload-artifact@v4
+
+=== wp16-manual-market-prices.yml ===
+TRIGGERS:
+SCRIPTS:
+        run: npm ci
+PERMISSIONS:
+permissions:
+  contents: write
+
+concurrency:
+  group: wp16-manual-market-prices
+  cancel-in-progress: true
+
+jobs:
+  run:
+SECRETS:
+          token: ${{ secrets.GITHUB_TOKEN }}
+CONCURRENCY:
+concurrency:
+  group: wp16-manual-market-prices
+  cancel-in-progress: true
+
+jobs:
+PUBLISHES:
+          git add public/data/snapshots/market-prices/latest.json public/data/snapshots/market-prices/ || true
+          git add public/data/snapshots public/data/state/modules/*.json public/data/manifest.json public/data/provider-state.json 2>/dev/null || true
+
+=== ci-determinism.yml ===
+TRIGGERS:
+on:
+  push:
+    paths:
+      - 'scripts/forecast/**'
+      - 'tests/determinism/**'
+  pull_request:
+    paths:
+      - 'scripts/forecast/**'
+      - 'tests/determinism/**'
+  workflow_dispatch:
+
+SCRIPTS:
+        run: npm ci
+        run: npm run test:determinism
+        run: npm run validate:forecast-registry
+        run: npm run validate:forecast-schemas
+PERMISSIONS:
+SECRETS:
+CONCURRENCY:
+concurrency:
+  group: forecast-determinism-${{ github.ref }}
+  cancel-in-progress: true
+
+PUBLISHES:
+
+=== ci-gates.yml ===
+TRIGGERS:
+on:
+  pull_request:
+    paths:
+      - 'public/data/**'
+      - 'scripts/**'
+      - '.github/workflows/**'
+  push:
+    branches:
+      - main
+    paths:
+      - 'public/data/**'
+SCRIPTS:
+        run: npm ci
+        run: node scripts/ci/verify-artifacts.mjs
+        run: node scripts/ci/assert-mission-control-gate.mjs
+        run: node scripts/ci/check-elliott-parity.mjs
+        run: bash scripts/ci/forbid-kv-writes-in-api.sh
+        run: npm run test:contracts
+        run: node scripts/eod/check-eod-artifacts.mjs
+        run: npm ci
+        run: bash scripts/ops/validate-truth.sh
+PERMISSIONS:
+SECRETS:
+CONCURRENCY:
+PUBLISHES:
+      - 'public/data/**'
+      - 'public/data/**'
+          mkdir -p public/data
+          if ! find public/data -type f -name "*.json" -print -quit | grep -q .; then
+            SENTINEL_PATH="public/data/.budget_sentinel.json"
+            echo "ℹ️ Created budget sentinel at $SENTINEL_PATH (no tracked public/data json artifacts in checkout)"
+          # Count files in public/data
+          TOTAL_FILES=$(find public/data -type f -name "*.json" | wc -l | tr -d ' ')
+          LARGE_FILES=$(find public/data -type f -name "*.json" -size +${MAX_SIZE_MB}M || true)
+            find public/data -type f -name "*.json" -size +${MAX_SIZE_MB}M -exec ls -lh {} \;
+          for module_dir in public/data/snapshots/*/; do
+          TOTAL_SIZE=$(du -sb public/data 2>/dev/null | cut -f1 || true)
+            TOTAL_SIZE=$(du -sk public/data 2>/dev/null | awk '{print $1 * 1024}' || true)
+          if [ -f public/data/manifest.json ] && [ -f schemas/manifest.schema.json ]; then
+            npx --yes ajv-cli@5 validate -s schemas/manifest.schema.json -d public/data/manifest.json
+          if [ -f public/data/provider-state.json ] && [ -f schemas/provider-state.schema.json ]; then
+            npx --yes ajv-cli@5 validate -s schemas/provider-state.schema.json -d public/data/provider-state.json
+            for snapshot in public/data/snapshots/*/latest.json; do
+          if [ -f public/data/manifest.json ]; then
+            if ! jq empty public/data/manifest.json 2>/dev/null; then
+              SCHEMA_VERSION=$(jq -r '.schema_version // "missing"' public/data/manifest.json)
+              ACTIVE_BUILD_ID=$(jq -r '.active_build_id // "missing"' public/data/manifest.json)
+          if [ -f public/data/provider-state.json ]; then
+            if ! jq empty public/data/provider-state.json 2>/dev/null; then
+          for snapshot in public/data/snapshots/*/latest.json; do
+          if [ ! -f public/data/manifest.json ]; then
+          PUBLISHED_MODULES=$(jq -r '.modules | to_entries | .[] | select(.value.published == true) | .key' public/data/manifest.json)
+            MANIFEST_DIGEST=$(jq -r ".modules[\"$module\"].digest" public/data/manifest.json)
+            SNAPSHOT_PATH="public/data/snapshots/$module/latest.json"
+          # Check: No blanket ignores for public/data or mirrors
+          if grep -nE '^(public/data/|mirrors/)$' .gitignore; then
+            echo "❌ VIOLATION: .gitignore contains blanket ignore for public/data/ or mirrors/"
+
+=== ci-policy.yml ===
+TRIGGERS:
+on:
+  push:
+    paths:
+      - 'policies/**'
+      - 'mirrors/forecast/**'
+  workflow_dispatch:
+
+concurrency:
+  group: forecast-system
+  cancel-in-progress: true
+
+SCRIPTS:
+PERMISSIONS:
+SECRETS:
+CONCURRENCY:
+concurrency:
+  group: forecast-system
+  cancel-in-progress: true
+
+PUBLISHES:
+      - 'mirrors/forecast/**'
+
+=== cleanup-daily-snapshots.yml ===
+TRIGGERS:
+on:
+  schedule:
+    # Run weekly on Sundays at 02:00 UTC
+    - cron: "0 2 * * 0"
+  workflow_dispatch:
+    inputs:
+      days_to_keep:
+        description: 'Days to keep (default: 7)'
+        required: false
+        default: '7'
+      dry_run:
+SCRIPTS:
+PERMISSIONS:
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+SECRETS:
+CONCURRENCY:
+PUBLISHES:
+          if git diff --quiet public/data; then
+            git diff --stat public/data
+          git add public/data
+
+=== e2e-playwright.yml ===
+TRIGGERS:
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+jobs:
+  ops-e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+SCRIPTS:
+        run: npm ci
+PERMISSIONS:
+SECRETS:
+CONCURRENCY:
+PUBLISHES:
+
+=== eod-history-refresh.yml ===
+TRIGGERS:
+on:
+  schedule:
+    - cron: '20 21 * * 1-5' # 21:20 UTC, Mon-Fri (After market close)
+  workflow_dispatch:
+
+concurrency:
+  group: forecast-system
+  cancel-in-progress: false
+
+jobs:
+  refresh-history:
+SCRIPTS:
+        run: npm ci || npm install node-fetch
+PERMISSIONS:
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node
+SECRETS:
+          EODHD_API_KEY: ${{ secrets.EODHD_API_KEY }}
+CONCURRENCY:
+concurrency:
+  group: forecast-system
+  cancel-in-progress: false
+
+PUBLISHES:
+          UNIVERSE_FILE="./public/data/universe/all.json"
+             UNIVERSE_FILE="./public/data/universe/nasdaq100.json"
+          git add public/data/eod/bars
+
+=== eod-latest.yml ===
+TRIGGERS:
+on:
+  schedule:
+    - cron: "10 22 * * 1-5"
+  workflow_dispatch:
+    inputs:
+      universe:
+        description: "Universe"
+        default: "nasdaq100"
+        required: false
+
+permissions:
+SCRIPTS:
+        run: npm ci
+        run: npm run test:contracts
+        run: npm ci
+        run: node scripts/ops/preflight-check.mjs --mode eod-latest
+        run: node scripts/eod/build-eod-latest.mjs --universe "$RV_UNIVERSE" --chunk-size 500 --out public/data
+        run: node scripts/ops/build-safety-snapshot.mjs
+        run: npm run rv:ops
+        run: node scripts/ops/build-mission-control-summary.mjs
+        run: node scripts/ops/build-ops-pulse.mjs
+        run: node scripts/ops/validate-ops-summary.mjs
+        run: node scripts/ci/assert-mission-control-gate.mjs
+PERMISSIONS:
+permissions:
+  contents: write
+
+concurrency:
+  group: eod-latest
+  cancel-in-progress: true
+SECRETS:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          if [ -n "${{ secrets.TIINGO_API_KEY }}" ]; then
+            echo "TIINGO_API_KEY=${{ secrets.TIINGO_API_KEY }}" >> "$GITHUB_ENV"
+          elif [ -n "${{ secrets.TIIANGO_API_KEY }}" ]; then
+            echo "TIINGO_API_KEY=${{ secrets.TIIANGO_API_KEY }}" >> "$GITHUB_ENV"
+CONCURRENCY:
+concurrency:
+  group: eod-latest
+  cancel-in-progress: true
+
+PUBLISHES:
+        run: node scripts/eod/build-eod-latest.mjs --universe "$RV_UNIVERSE" --chunk-size 500 --out public/data
+          git add public/data/eod public/data/pipeline public/data/ops public/data/ops-daily.json docs/architecture/data-layout-law-v1.md
+
+=== forecast-daily.yml ===
+TRIGGERS:
+on:
+  workflow_dispatch:
+    inputs:
+      date:
+        description: 'Trading date (YYYY-MM-DD), empty for auto'
+        required: false
+        type: string
+  schedule:
+    # Run at 21:00 UTC (16:00 ET after market close)
+    - cron: '0 21 * * 1-5'
+
+SCRIPTS:
+        run: npm ci --prefer-offline
+PERMISSIONS:
+SECRETS:
+CONCURRENCY:
+PUBLISHES:
+          git add mirrors/forecast/ledger/ || true
+          git add mirrors/forecast/snapshots/ || true
+          git add public/data/forecast/ || true
+        uses: actions/upload-artifact@v4
+
+=== forecast-monthly.yml ===
+TRIGGERS:
+on:
+  workflow_dispatch:
+    inputs:
+      month:
+        description: 'Month (YYYY-MM), empty for previous month'
+        required: false
+        type: string
+  schedule:
+    # Run 1st of each month at 08:00 UTC
+    - cron: '0 8 1 * *'
+
+SCRIPTS:
+        run: npm ci --prefer-offline
+PERMISSIONS:
+SECRETS:
+CONCURRENCY:
+PUBLISHES:
+          git add public/data/forecast/reports/monthly/ || true
+        uses: actions/upload-artifact@v4
+
+=== forecast-rollback.yml ===
+TRIGGERS:
+on:
+  workflow_dispatch:
+    inputs:
+      reason:
+        description: 'Reason for rollback (required)'
+        required: true
+        type: string
+      target_commit:
+        description: 'Target commit SHA to rollback to (optional, defaults to last_good)'
+        required: false
+        type: string
+SCRIPTS:
+PERMISSIONS:
+    permissions:
+      contents: write
+      issues: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+SECRETS:
+CONCURRENCY:
+concurrency:
+  group: forecast-system
+  cancel-in-progress: false
+
+PUBLISHES:
+          cat > public/data/forecast/system/status.json << EOF
+            git checkout ${{ inputs.target_commit }} -- public/data/forecast/latest.json || echo "Could not restore latest.json"
+          git add public/data/forecast
+
+=== forecast-weekly.yml ===
+TRIGGERS:
+on:
+  workflow_dispatch:
+    inputs:
+      date:
+        description: 'Trading date (YYYY-MM-DD), empty for auto'
+        required: false
+        type: string
+  schedule:
+    # Run Sundays at 06:00 UTC
+    - cron: '0 6 * * 0'
+
+SCRIPTS:
+        run: npm ci --prefer-offline
+PERMISSIONS:
+SECRETS:
+CONCURRENCY:
+PUBLISHES:
+          git add mirrors/forecast/challengers/ || true
+          git add mirrors/forecast/champion/ || true
+          git add mirrors/forecast/ledger/promotions/ || true
+          git add public/data/forecast/ || true
+        uses: actions/upload-artifact@v4
+
+=== monitor-prod.yml ===
+TRIGGERS:
+on:
+  schedule:
+    - cron: "0 6,18 * * *"
+  workflow_dispatch:
+
+jobs:
+  liveness:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ensure jq
+        run: |
+SCRIPTS:
+PERMISSIONS:
+SECRETS:
+CONCURRENCY:
+PUBLISHES:
+          fetch_json "$BASE_URL/data/snapshots/market-prices/latest.json" /tmp/market_prices.json
+          fetch_json "$BASE_URL/data/forecast/latest.json" /tmp/forecast_latest.json
+          fetch_json "$BASE_URL/data/forecast/system/status.json" /tmp/forecast_status.json
+          fetch_json "$BASE_URL/data/marketphase/index.json" /tmp/marketphase_index.json
+          fetch_json "$BASE_URL/data/ops/pulse.json" /tmp/ops_pulse.json
+          echo "✅ /data/ops/pulse semantic checks passed"
+          curl -fsS "$BASE_URL/data/ops/pulse.json" -o /tmp/ops_pulse.json
+          curl -sS "$BASE_URL/data/forecast/latest.json" -o /tmp/forecast_latest.json
+
+=== ops-auto-alerts.yml ===
+TRIGGERS:
+on:
+  schedule:
+    - cron: '0 22 * * 1-5' # Daily after market close
+  workflow_dispatch:
+
+concurrency:
+  group: forecast-system
+  cancel-in-progress: false
+
+jobs:
+  check-alerts:
+SCRIPTS:
+PERMISSIONS:
+    permissions:
+      issues: write
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node
+SECRETS:
+CONCURRENCY:
+concurrency:
+  group: forecast-system
+  cancel-in-progress: false
+
+PUBLISHES:
+
+=== ops-daily.yml ===
+TRIGGERS:
+on:
+  schedule:
+    - cron: "5 7 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: ops-daily
+  cancel-in-progress: true
+SCRIPTS:
+        run: npm ci
+        run: npm run test:contracts
+        run: npm ci
+        run: node scripts/ops/preflight-check.mjs --mode ops-daily
+        run: node scripts/pipeline/build-marketphase-from-kv.mjs --universe nasdaq100
+        run: node scripts/pipeline/build-ndx100-pipeline-truth.mjs
+        run: node scripts/ops/build-safety-snapshot.mjs
+        run: node scripts/ops/build-ops-daily.mjs
+        run: node scripts/ops/build-mission-control-summary.mjs
+        run: node scripts/ops/build-ops-pulse.mjs
+        run: node scripts/ops/validate-ops-summary.mjs
+        run: node scripts/ci/assert-mission-control-gate.mjs
+PERMISSIONS:
+permissions:
+  contents: write
+
+concurrency:
+  group: ops-daily
+  cancel-in-progress: true
+SECRETS:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+          CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
+          CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+          CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
+          CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+          CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
+CONCURRENCY:
+concurrency:
+  group: ops-daily
+  cancel-in-progress: true
+
+PUBLISHES:
+          git add public/data/pipeline/*.json public/data/ops public/data/ops-daily.json
+
+=== refresh-health-assets.yml ===
+TRIGGERS:
+on:
+  schedule:
+    - cron: "17 6 * * *"
+  workflow_dispatch:
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+SCRIPTS:
+        run: npm ci
+        run: node scripts/refresh-health-assets.mjs
+PERMISSIONS:
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+SECRETS:
+          token: "${{ secrets.GITHUB_TOKEN }}"
+CONCURRENCY:
+PUBLISHES:
+          if git diff --quiet public/data; then
+          git add public/data/system-health.json public/data/blocks/health.latest.json public/data/snapshots/health.json public/data/snapshots/health/latest.json
+
+=== scheduler-kick.yml ===
+TRIGGERS:
+on:
+  schedule:
+    - cron: "15 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  dry-run:
+    name: Scheduler Kick Dry-Run (no secrets)
+SCRIPTS:
+        run: npm ci
+        run: npm run test:contracts
+PERMISSIONS:
+permissions:
+  contents: read
+
+jobs:
+  dry-run:
+    name: Scheduler Kick Dry-Run (no secrets)
+SECRETS:
+          RV_ADMIN_TOKEN: ${{ secrets.RV_ADMIN_TOKEN }}
+CONCURRENCY:
+PUBLISHES:
+
+=== universe-refresh.yml ===
+TRIGGERS:
+on:
+  workflow_dispatch:
+    inputs:
+      indices:
+        description: 'Which indices to fetch (all, sp500, nasdaq100, dowjones, russell2000)'
+        required: false
+        default: 'all'
+
+jobs:
+  fetch-constituents:
+    runs-on: ubuntu-latest
+SCRIPTS:
+        run: node scripts/universe/fetch-constituents.mjs
+PERMISSIONS:
+    permissions:
+      contents: write
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+SECRETS:
+          EODHD_API_KEY: ${{ secrets.EODHD_API_KEY }}
+CONCURRENCY:
+PUBLISHES:
+          ls -la public/data/universe/
+          for f in public/data/universe/*.json; do
+          git add public/data/universe/
+
+=== v3-finalizer.yml ===
+TRIGGERS:
+on:
+  workflow_run:
+    workflows: 
+      - "v3 Pilot - Market Health"
+      - "v3 Scrape Template"
+    types:
+      - completed
+  workflow_dispatch:
+    inputs:
+      artifact_name:
+        description: 'Artifact name to finalize (default: all)'
+SCRIPTS:
+        run: npm ci
+PERMISSIONS:
+    permissions:
+      contents: write
+      actions: read
+    
+    steps:
+      - name: Checkout
+SECRETS:
+          token: ${{ secrets.GITHUB_TOKEN }}
+CONCURRENCY:
+    concurrency:
+      group: rv-finalizer
+      cancel-in-progress: true
+    
+PUBLISHES:
+            path="public/data/snapshots/${module}/latest.json"
+          if git diff --quiet public/data; then
+            git diff --stat public/data
+          git add public/data/snapshots 2>/dev/null || echo "No snapshot files to add"
+          git add public/data/state/modules/*.json 2>/dev/null || echo "No module state files to add"
+          git add public/data/manifest.json 2>/dev/null || echo "No manifest to add"
+          git add public/data/provider-state.json 2>/dev/null || echo "No provider-state to add"
+          if [ -f public/data/manifest.json ]; then
+
+=== v3-scrape-template.yml ===
+TRIGGERS:
+on:
+  schedule:
+    # Run at 22:30 UTC on market days
+    - cron: "30 22 * * 1-5"
+  workflow_dispatch:
+    inputs:
+      modules:
+        description: 'Modules to scrape (comma-separated, or "all")'
+        required: false
+        default: 'all'
+
+SCRIPTS:
+        run: npm ci
+        run: npm ci
+PERMISSIONS:
+    permissions:
+      contents: read
+      actions: read
+    
+    strategy:
+      matrix: ${{ fromJson(needs.prepare.outputs.matrix) }}
+SECRETS:
+          POLYGON_API_KEY: ${{ secrets.POLYGON_API_KEY }}
+          FMP_API_KEY: ${{ secrets.FMP_API_KEY }}
+          ALPHAVANTAGE_API_KEY: ${{ secrets.ALPHAVANTAGE_API_KEY }}
+          FINNHUB_API_KEY: ${{ secrets.FINNHUB_API_KEY }}
+          FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
+          TWELVEDATA_API_KEY: ${{ secrets.TWELVEDATA_API_KEY }}
+CONCURRENCY:
+PUBLISHES:
+            const registry = require('./public/data/registry/modules.json');
+        uses: actions/upload-artifact@v4
+
+=== wp16-manual-market-prices.yml ===
+TRIGGERS:
+SCRIPTS:
+        run: npm ci
+PERMISSIONS:
+permissions:
+  contents: write
+
+concurrency:
+  group: wp16-manual-market-prices
+  cancel-in-progress: true
+SECRETS:
+          token: ${{ secrets.GITHUB_TOKEN }}
+CONCURRENCY:
+concurrency:
+  group: wp16-manual-market-prices
+  cancel-in-progress: true
+
+PUBLISHES:
+          git add public/data/snapshots/market-prices/latest.json public/data/snapshots/market-prices/ || true
+          git add public/data/snapshots public/data/state/modules/*.json public/data/manifest.json public/data/provider-state.json 2>/dev/null || true
+
+=== ci-determinism.yml ===
+TRIGGERS:
+on:
+  push:
+    paths:
+      - 'scripts/forecast/**'
+      - 'tests/determinism/**'
+  pull_request:
+    paths:
+      - 'scripts/forecast/**'
+      - 'tests/determinism/**'
+  workflow_dispatch:
+
+SCRIPTS:
+        run: npm ci
+        run: npm run test:determinism
+        run: npm run validate:forecast-registry
+        run: npm run validate:forecast-schemas
+PERMISSIONS:
+SECRETS:
+CONCURRENCY:
+concurrency:
+  group: forecast-determinism-${{ github.ref }}
+  cancel-in-progress: true
+
+PUBLISHES:
+
+=== ci-gates.yml ===
+TRIGGERS:
+on:
+  pull_request:
+    paths:
+      - 'public/data/**'
+      - 'scripts/**'
+      - '.github/workflows/**'
+  push:
+    branches:
+      - main
+    paths:
+      - 'public/data/**'
+SCRIPTS:
+        run: npm ci
+        run: node scripts/ci/verify-artifacts.mjs
+        run: node scripts/ci/assert-mission-control-gate.mjs
+        run: node scripts/ci/check-elliott-parity.mjs
+        run: bash scripts/ci/forbid-kv-writes-in-api.sh
+        run: npm run test:contracts
+        run: node scripts/eod/check-eod-artifacts.mjs
+        run: npm ci
+        run: bash scripts/ops/validate-truth.sh
+PERMISSIONS:
+SECRETS:
+CONCURRENCY:
+PUBLISHES:
+      - 'public/data/**'
+      - 'public/data/**'
+          mkdir -p public/data
+          if ! find public/data -type f -name "*.json" -print -quit | grep -q .; then
+            SENTINEL_PATH="public/data/.budget_sentinel.json"
+            echo "ℹ️ Created budget sentinel at $SENTINEL_PATH (no tracked public/data json artifacts in checkout)"
+          # Count files in public/data
+          TOTAL_FILES=$(find public/data -type f -name "*.json" | wc -l | tr -d ' ')
+          LARGE_FILES=$(find public/data -type f -name "*.json" -size +${MAX_SIZE_MB}M || true)
+            find public/data -type f -name "*.json" -size +${MAX_SIZE_MB}M -exec ls -lh {} \;
+          for module_dir in public/data/snapshots/*/; do
+          TOTAL_SIZE=$(du -sb public/data 2>/dev/null | cut -f1 || true)
+            TOTAL_SIZE=$(du -sk public/data 2>/dev/null | awk '{print $1 * 1024}' || true)
+          if [ -f public/data/manifest.json ] && [ -f schemas/manifest.schema.json ]; then
+            npx --yes ajv-cli@5 validate -s schemas/manifest.schema.json -d public/data/manifest.json
+          if [ -f public/data/provider-state.json ] && [ -f schemas/provider-state.schema.json ]; then
+            npx --yes ajv-cli@5 validate -s schemas/provider-state.schema.json -d public/data/provider-state.json
+            for snapshot in public/data/snapshots/*/latest.json; do
+          if [ -f public/data/manifest.json ]; then
+            if ! jq empty public/data/manifest.json 2>/dev/null; then
+              SCHEMA_VERSION=$(jq -r '.schema_version // "missing"' public/data/manifest.json)
+              ACTIVE_BUILD_ID=$(jq -r '.active_build_id // "missing"' public/data/manifest.json)
+          if [ -f public/data/provider-state.json ]; then
+            if ! jq empty public/data/provider-state.json 2>/dev/null; then
+          for snapshot in public/data/snapshots/*/latest.json; do
+          if [ ! -f public/data/manifest.json ]; then
+          PUBLISHED_MODULES=$(jq -r '.modules | to_entries | .[] | select(.value.published == true) | .key' public/data/manifest.json)
+            MANIFEST_DIGEST=$(jq -r ".modules[\"$module\"].digest" public/data/manifest.json)
+            SNAPSHOT_PATH="public/data/snapshots/$module/latest.json"
+          # Check: No blanket ignores for public/data or mirrors
+          if grep -nE '^(public/data/|mirrors/)$' .gitignore; then
+            echo "❌ VIOLATION: .gitignore contains blanket ignore for public/data/ or mirrors/"
+
+=== ci-policy.yml ===
+TRIGGERS:
+on:
+  push:
+    paths:
+      - 'policies/**'
+      - 'mirrors/forecast/**'
+  workflow_dispatch:
+
+concurrency:
+  group: forecast-system
+  cancel-in-progress: true
+
+SCRIPTS:
+PERMISSIONS:
+SECRETS:
+CONCURRENCY:
+concurrency:
+  group: forecast-system
+  cancel-in-progress: true
+
+PUBLISHES:
+      - 'mirrors/forecast/**'
+
+=== cleanup-daily-snapshots.yml ===
+TRIGGERS:
+on:
+  schedule:
+    # Run weekly on Sundays at 02:00 UTC
+    - cron: "0 2 * * 0"
+  workflow_dispatch:
+    inputs:
+      days_to_keep:
+        description: 'Days to keep (default: 7)'
+        required: false
+        default: '7'
+      dry_run:
+SCRIPTS:
+PERMISSIONS:
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+SECRETS:
+CONCURRENCY:
+PUBLISHES:
+          if git diff --quiet public/data; then
+            git diff --stat public/data
+          git add public/data
+
+=== e2e-playwright.yml ===
+TRIGGERS:
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+jobs:
+  ops-e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+SCRIPTS:
+        run: npm ci
+PERMISSIONS:
+SECRETS:
+CONCURRENCY:
+PUBLISHES:
+
+=== eod-history-refresh.yml ===
+TRIGGERS:
+on:
+  schedule:
+    - cron: '20 21 * * 1-5' # 21:20 UTC, Mon-Fri (After market close)
+  workflow_dispatch:
+
+concurrency:
+  group: forecast-system
+  cancel-in-progress: false
+
+jobs:
+  refresh-history:
+SCRIPTS:
+        run: npm ci || npm install node-fetch
+PERMISSIONS:
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node
+SECRETS:
+          EODHD_API_KEY: ${{ secrets.EODHD_API_KEY }}
+CONCURRENCY:
+concurrency:
+  group: forecast-system
+  cancel-in-progress: false
+
+PUBLISHES:
+          UNIVERSE_FILE="./public/data/universe/all.json"
+             UNIVERSE_FILE="./public/data/universe/nasdaq100.json"
+          git add public/data/eod/bars
+
+=== eod-latest.yml ===
+TRIGGERS:
+on:
+  schedule:
+    - cron: "10 22 * * 1-5"
+  workflow_dispatch:
+    inputs:
+      universe:
+        description: "Universe"
+        default: "nasdaq100"
+        required: false
+
+permissions:
+SCRIPTS:
+        run: npm ci
+        run: npm run test:contracts
+        run: npm ci
+        run: node scripts/ops/preflight-check.mjs --mode eod-latest
+        run: node scripts/eod/build-eod-latest.mjs --universe "$RV_UNIVERSE" --chunk-size 500 --out public/data
+        run: node scripts/ops/build-safety-snapshot.mjs
+        run: npm run rv:ops
+        run: node scripts/ops/build-mission-control-summary.mjs
+        run: node scripts/ops/build-ops-pulse.mjs
+        run: node scripts/ops/validate-ops-summary.mjs
+        run: node scripts/ci/assert-mission-control-gate.mjs
+PERMISSIONS:
+permissions:
+  contents: write
+
+concurrency:
+  group: eod-latest
+  cancel-in-progress: true
+SECRETS:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          if [ -n "${{ secrets.TIINGO_API_KEY }}" ]; then
+            echo "TIINGO_API_KEY=${{ secrets.TIINGO_API_KEY }}" >> "$GITHUB_ENV"
+          elif [ -n "${{ secrets.TIIANGO_API_KEY }}" ]; then
+            echo "TIINGO_API_KEY=${{ secrets.TIIANGO_API_KEY }}" >> "$GITHUB_ENV"
+CONCURRENCY:
+concurrency:
+  group: eod-latest
+  cancel-in-progress: true
+
+PUBLISHES:
+        run: node scripts/eod/build-eod-latest.mjs --universe "$RV_UNIVERSE" --chunk-size 500 --out public/data
+          git add public/data/eod public/data/pipeline public/data/ops public/data/ops-daily.json docs/architecture/data-layout-law-v1.md
+
+=== forecast-daily.yml ===
+TRIGGERS:
+on:
+  workflow_dispatch:
+    inputs:
+      date:
+        description: 'Trading date (YYYY-MM-DD), empty for auto'
+        required: false
+        type: string
+  schedule:
+    # Run at 21:00 UTC (16:00 ET after market close)
+    - cron: '0 21 * * 1-5'
+
+SCRIPTS:
+        run: npm ci --prefer-offline
+PERMISSIONS:
+SECRETS:
+CONCURRENCY:
+PUBLISHES:
+          git add mirrors/forecast/ledger/ || true
+          git add mirrors/forecast/snapshots/ || true
+          git add public/data/forecast/ || true
+        uses: actions/upload-artifact@v4
+
+=== forecast-monthly.yml ===
+TRIGGERS:
+on:
+  workflow_dispatch:
+    inputs:
+      month:
+        description: 'Month (YYYY-MM), empty for previous month'
+        required: false
+        type: string
+  schedule:
+    # Run 1st of each month at 08:00 UTC
+    - cron: '0 8 1 * *'
+
+SCRIPTS:
+        run: npm ci --prefer-offline
+PERMISSIONS:
+SECRETS:
+CONCURRENCY:
+PUBLISHES:
+          git add public/data/forecast/reports/monthly/ || true
+        uses: actions/upload-artifact@v4
+
+=== forecast-rollback.yml ===
+TRIGGERS:
+on:
+  workflow_dispatch:
+    inputs:
+      reason:
+        description: 'Reason for rollback (required)'
+        required: true
+        type: string
+      target_commit:
+        description: 'Target commit SHA to rollback to (optional, defaults to last_good)'
+        required: false
+        type: string
+SCRIPTS:
+PERMISSIONS:
+    permissions:
+      contents: write
+      issues: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+SECRETS:
+CONCURRENCY:
+concurrency:
+  group: forecast-system
+  cancel-in-progress: false
+
+PUBLISHES:
+          cat > public/data/forecast/system/status.json << EOF
+            git checkout ${{ inputs.target_commit }} -- public/data/forecast/latest.json || echo "Could not restore latest.json"
+          git add public/data/forecast
+
+=== forecast-weekly.yml ===
+TRIGGERS:
+on:
+  workflow_dispatch:
+    inputs:
+      date:
+        description: 'Trading date (YYYY-MM-DD), empty for auto'
+        required: false
+        type: string
+  schedule:
+    # Run Sundays at 06:00 UTC
+    - cron: '0 6 * * 0'
+
+SCRIPTS:
+        run: npm ci --prefer-offline
+PERMISSIONS:
+SECRETS:
+CONCURRENCY:
+PUBLISHES:
+          git add mirrors/forecast/challengers/ || true
+          git add mirrors/forecast/champion/ || true
+          git add mirrors/forecast/ledger/promotions/ || true
+          git add public/data/forecast/ || true
+        uses: actions/upload-artifact@v4
+
+=== monitor-prod.yml ===
+TRIGGERS:
+on:
+  schedule:
+    - cron: "0 6,18 * * *"
+  workflow_dispatch:
+
+jobs:
+  liveness:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ensure jq
+        run: |
+SCRIPTS:
+PERMISSIONS:
+SECRETS:
+CONCURRENCY:
+PUBLISHES:
+          fetch_json "$BASE_URL/data/snapshots/market-prices/latest.json" /tmp/market_prices.json
+          fetch_json "$BASE_URL/data/forecast/latest.json" /tmp/forecast_latest.json
+          fetch_json "$BASE_URL/data/forecast/system/status.json" /tmp/forecast_status.json
+          fetch_json "$BASE_URL/data/marketphase/index.json" /tmp/marketphase_index.json
+          fetch_json "$BASE_URL/data/ops/pulse.json" /tmp/ops_pulse.json
+          echo "✅ /data/ops/pulse semantic checks passed"
+          curl -fsS "$BASE_URL/data/ops/pulse.json" -o /tmp/ops_pulse.json
+          curl -sS "$BASE_URL/data/forecast/latest.json" -o /tmp/forecast_latest.json
+
+=== ops-auto-alerts.yml ===
+TRIGGERS:
+on:
+  schedule:
+    - cron: '0 22 * * 1-5' # Daily after market close
+  workflow_dispatch:
+
+concurrency:
+  group: forecast-system
+  cancel-in-progress: false
+
+jobs:
+  check-alerts:
+SCRIPTS:
+PERMISSIONS:
+    permissions:
+      issues: write
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node
+SECRETS:
+CONCURRENCY:
+concurrency:
+  group: forecast-system
+  cancel-in-progress: false
+
+PUBLISHES:
+
+=== ops-daily.yml ===
+TRIGGERS:
+on:
+  schedule:
+    - cron: "5 7 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: ops-daily
+  cancel-in-progress: true
+SCRIPTS:
+        run: npm ci
+        run: npm run test:contracts
+        run: npm ci
+        run: node scripts/ops/preflight-check.mjs --mode ops-daily
+        run: node scripts/pipeline/build-marketphase-from-kv.mjs --universe nasdaq100
+        run: node scripts/pipeline/build-ndx100-pipeline-truth.mjs
+        run: node scripts/ops/build-safety-snapshot.mjs
+        run: node scripts/ops/build-ops-daily.mjs
+        run: node scripts/ops/build-mission-control-summary.mjs
+        run: node scripts/ops/build-ops-pulse.mjs
+        run: node scripts/ops/validate-ops-summary.mjs
+        run: node scripts/ci/assert-mission-control-gate.mjs
+PERMISSIONS:
+permissions:
+  contents: write
+
+concurrency:
+  group: ops-daily
+  cancel-in-progress: true
+SECRETS:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+          CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
+          CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+          CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
+          CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+          CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
+CONCURRENCY:
+concurrency:
+  group: ops-daily
+  cancel-in-progress: true
+
+PUBLISHES:
+          git add public/data/pipeline/*.json public/data/ops public/data/ops-daily.json
+
+=== refresh-health-assets.yml ===
+TRIGGERS:
+on:
+  schedule:
+    - cron: "17 6 * * *"
+  workflow_dispatch:
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+SCRIPTS:
+        run: npm ci
+        run: node scripts/refresh-health-assets.mjs
+PERMISSIONS:
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+SECRETS:
+          token: "${{ secrets.GITHUB_TOKEN }}"
+CONCURRENCY:
+PUBLISHES:
+          if git diff --quiet public/data; then
+          git add public/data/system-health.json public/data/blocks/health.latest.json public/data/snapshots/health.json public/data/snapshots/health/latest.json
+
+=== scheduler-kick.yml ===
+TRIGGERS:
+on:
+  schedule:
+    - cron: "15 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  dry-run:
+    name: Scheduler Kick Dry-Run (no secrets)
+SCRIPTS:
+        run: npm ci
+        run: npm run test:contracts
+PERMISSIONS:
+permissions:
+  contents: read
+
+jobs:
+  dry-run:
+    name: Scheduler Kick Dry-Run (no secrets)
+SECRETS:
+          RV_ADMIN_TOKEN: ${{ secrets.RV_ADMIN_TOKEN }}
+CONCURRENCY:
+PUBLISHES:
+
+=== universe-refresh.yml ===
+TRIGGERS:
+on:
+  workflow_dispatch:
+    inputs:
+      indices:
+        description: 'Which indices to fetch (all, sp500, nasdaq100, dowjones, russell2000)'
+        required: false
+        default: 'all'
+
+jobs:
+  fetch-constituents:
+    runs-on: ubuntu-latest
+SCRIPTS:
+        run: node scripts/universe/fetch-constituents.mjs
+PERMISSIONS:
+    permissions:
+      contents: write
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+SECRETS:
+          EODHD_API_KEY: ${{ secrets.EODHD_API_KEY }}
+CONCURRENCY:
+PUBLISHES:
+          ls -la public/data/universe/
+          for f in public/data/universe/*.json; do
+          git add public/data/universe/
+
+=== v3-finalizer.yml ===
+TRIGGERS:
+on:
+  workflow_run:
+    workflows: 
+      - "v3 Pilot - Market Health"
+      - "v3 Scrape Template"
+    types:
+      - completed
+  workflow_dispatch:
+    inputs:
+      artifact_name:
+        description: 'Artifact name to finalize (default: all)'
+SCRIPTS:
+        run: npm ci
+PERMISSIONS:
+    permissions:
+      contents: write
+      actions: read
+    
+    steps:
+      - name: Checkout
+SECRETS:
+          token: ${{ secrets.GITHUB_TOKEN }}
+CONCURRENCY:
+    concurrency:
+      group: rv-finalizer
+      cancel-in-progress: true
+    
+PUBLISHES:
+            path="public/data/snapshots/${module}/latest.json"
+          if git diff --quiet public/data; then
+            git diff --stat public/data
+          git add public/data/snapshots 2>/dev/null || echo "No snapshot files to add"
+          git add public/data/state/modules/*.json 2>/dev/null || echo "No module state files to add"
+          git add public/data/manifest.json 2>/dev/null || echo "No manifest to add"
+          git add public/data/provider-state.json 2>/dev/null || echo "No provider-state to add"
+          if [ -f public/data/manifest.json ]; then
+
+=== v3-scrape-template.yml ===
+TRIGGERS:
+on:
+  schedule:
+    # Run at 22:30 UTC on market days
+    - cron: "30 22 * * 1-5"
+  workflow_dispatch:
+    inputs:
+      modules:
+        description: 'Modules to scrape (comma-separated, or "all")'
+        required: false
+        default: 'all'
+
+SCRIPTS:
+        run: npm ci
+        run: npm ci
+PERMISSIONS:
+    permissions:
+      contents: read
+      actions: read
+    
+    strategy:
+      matrix: ${{ fromJson(needs.prepare.outputs.matrix) }}
+SECRETS:
+          POLYGON_API_KEY: ${{ secrets.POLYGON_API_KEY }}
+          FMP_API_KEY: ${{ secrets.FMP_API_KEY }}
+          ALPHAVANTAGE_API_KEY: ${{ secrets.ALPHAVANTAGE_API_KEY }}
+          FINNHUB_API_KEY: ${{ secrets.FINNHUB_API_KEY }}
+          FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
+          TWELVEDATA_API_KEY: ${{ secrets.TWELVEDATA_API_KEY }}
+CONCURRENCY:
+PUBLISHES:
+            const registry = require('./public/data/registry/modules.json');
+        uses: actions/upload-artifact@v4
+
+=== wp16-manual-market-prices.yml ===
+TRIGGERS:
+SCRIPTS:
+        run: npm ci
+PERMISSIONS:
+permissions:
+  contents: write
+
+concurrency:
+  group: wp16-manual-market-prices
+  cancel-in-progress: true
+SECRETS:
+          token: ${{ secrets.GITHUB_TOKEN }}
+CONCURRENCY:
+concurrency:
+  group: wp16-manual-market-prices
+  cancel-in-progress: true
+
+PUBLISHES:
+          git add public/data/snapshots/market-prices/latest.json public/data/snapshots/market-prices/ || true
+          git add public/data/snapshots public/data/state/modules/*.json public/data/manifest.json public/data/provider-state.json 2>/dev/null || true
+

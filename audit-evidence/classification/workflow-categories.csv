@@ -1,0 +1,21 @@
+WORKFLOW,CATEGORY,PRIORITY,REASON
+ci-determinism,ACTIVE_BROKEN,P0,Runs regularly but fails >20% of time
+ci-gates,DANGEROUS,P0,Broken + writes prod paths without concurrency
+ci-policy,STALE,P2,Low activity or unclear status
+cleanup-daily-snapshots,ACTIVE_HEALTHY,P3,"High success rate, recent runs"
+e2e-playwright,ACTIVE_BROKEN,P0,Runs regularly but fails >20% of time
+eod-history-refresh,ACTIVE_HEALTHY,P3,"High success rate, recent runs"
+eod-latest,ACTIVE_BROKEN,P0,Runs regularly but fails >20% of time
+forecast-daily,DANGEROUS,P0,Broken + writes prod paths without concurrency
+forecast-monthly,STALE,P2,No runs in 30+ days
+forecast-rollback,MANUAL_TOOL,P3,"Manual-only, infrequent use"
+forecast-weekly,ACTIVE_HEALTHY,P3,"High success rate, recent runs"
+monitor-prod,ACTIVE_BROKEN,P0,Runs regularly but fails >20% of time
+ops-auto-alerts,ACTIVE_HEALTHY,P3,"High success rate, recent runs"
+ops-daily,ACTIVE_BROKEN,P0,Runs regularly but fails >20% of time
+refresh-health-assets,STALE,P2,Low activity or unclear status
+scheduler-kick,ACTIVE_BROKEN,P0,Runs regularly but fails >20% of time
+universe-refresh,ACTIVE_HEALTHY,P3,"High success rate, recent runs"
+v3-finalizer,ACTIVE_BROKEN,P0,Runs regularly but fails >20% of time
+v3-scrape-template,DANGEROUS,P0,Broken + writes prod paths without concurrency
+wp16-manual-market-prices,ACTIVE_BROKEN,P0,Runs regularly but fails >20% of time

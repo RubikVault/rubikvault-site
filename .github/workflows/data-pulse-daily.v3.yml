@@ -1,0 +1,63 @@
+name: data-pulse-daily.v3
+
+on:
+  schedule:
+    - cron: '15 23 * * 1-5'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: data-pulse-daily-v3-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  pulse:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Build forensics + collisions
+        run: npm run build:v3:forensics && npm run check:v3:collisions
+
+      - name: Validate policies
+        run: npm run validate:policies:v3
+
+      - name: Run v3 daily data plane
+        env:
+          EODHD_API_KEY: ${{ secrets.EODHD_API_KEY }}
+          TIINGO_API_KEY: ${{ secrets.TIINGO_API_KEY }}
+        run: npm run build:v3:daily
+
+      - name: Contract validate produced artifacts
+        run: npm run test:v3:contracts
+
+      - name: Commit v3 artifacts
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add public/data/v3 mirrors/eodhd mirrors/ops reports/v3/forensics || true
+          if git diff --cached --quiet; then
+            echo "No v3 artifact updates"
+            exit 0
+          fi
+          git commit -m "chore(v3): daily pulse artifacts"
+          git push
+
+      - name: Alert on failure
+        if: failure()
+        env:
+          RV_ALERT_WEBHOOK: ${{ secrets.RV_ALERT_WEBHOOK }}
+          RV_HEALTH_URL: https://rubikvault.com/data/v3/system/health.json
+        run: node scripts/ops/notify-v3-alert.mjs circuit_open dp1_eod

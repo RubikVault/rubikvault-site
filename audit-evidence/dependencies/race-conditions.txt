@@ -1,0 +1,55 @@
+=== POTENTIAL RACE CONDITIONS ===
+PATH: public/data/forecast/
+.github/workflows/forecast-daily.yml
+.github/workflows/forecast-monthly.yml
+.github/workflows/forecast-rollback.yml
+.github/workflows/forecast-weekly.yml
+  ⚠️ NO CONCURRENCY: forecast-daily.yml
+  ⚠️ NO CONCURRENCY: forecast-monthly.yml
+  ⚠️ NO CONCURRENCY: forecast-weekly.yml
+
+PATH: public/data/manifest.json
+.github/workflows/ci-gates.yml
+.github/workflows/v3-finalizer.yml
+.github/workflows/wp16-manual-market-prices.yml
+  ⚠️ NO CONCURRENCY: ci-gates.yml
+
+PATH: public/data/ops
+.github/workflows/eod-latest.yml
+.github/workflows/ops-daily.yml
+
+PATH: public/data/ops-daily.json
+.github/workflows/eod-latest.yml
+.github/workflows/ops-daily.yml
+
+PATH: public/data/provider-state.json
+.github/workflows/ci-gates.yml
+.github/workflows/v3-finalizer.yml
+.github/workflows/wp16-manual-market-prices.yml
+  ⚠️ NO CONCURRENCY: ci-gates.yml
+
+PATH: public/data/snapshots
+.github/workflows/ci-gates.yml
+.github/workflows/refresh-health-assets.yml
+.github/workflows/v3-finalizer.yml
+.github/workflows/wp16-manual-market-prices.yml
+  ⚠️ NO CONCURRENCY: ci-gates.yml
+  ⚠️ NO CONCURRENCY: refresh-health-assets.yml
+
+PATH: public/data/snapshots/
+.github/workflows/ci-gates.yml
+.github/workflows/refresh-health-assets.yml
+.github/workflows/v3-finalizer.yml
+.github/workflows/wp16-manual-market-prices.yml
+  ⚠️ NO CONCURRENCY: ci-gates.yml
+  ⚠️ NO CONCURRENCY: refresh-health-assets.yml
+
+PATH: public/data/state/modules/
+.github/workflows/v3-finalizer.yml
+.github/workflows/wp16-manual-market-prices.yml
+
+PATH: public/data/universe/
+.github/workflows/eod-history-refresh.yml
+.github/workflows/universe-refresh.yml
+  ⚠️ NO CONCURRENCY: universe-refresh.yml
+

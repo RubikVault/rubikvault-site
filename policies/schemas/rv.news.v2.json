@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "rv.news.v2.json",
+  "type": "object",
+  "required": ["meta", "signals"],
+  "properties": {
+    "meta": {"type": "object"},
+    "signals": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "headline", "published_at"],
+        "properties": {
+          "id": {"type": "string"},
+          "headline": {"type": "string"},
+          "published_at": {"type": "string"},
+          "url": {"type": "string"}
+        },
+        "additionalProperties": true
+      }
+    }
+  },
+  "additionalProperties": true
+}

@@ -360,6 +360,26 @@
         </div>
       </div>
 
+      <div class="card" style="margin-bottom: 12px;" id="v3-system-card" data-testid="v3-system-card">
+        <div class="k" style="margin-bottom: 10px;">V3 Data Health (debug)</div>
+        <div class="small" id="v3-status-line">Not loaded.</div>
+        <div class="small" id="v3-budget-line" style="margin-top: 6px;">Budget: —</div>
+        <div class="small" id="v3-retention-line" style="margin-top: 6px;">Retention: —</div>
+        <div class="small" id="v3-manifest-links" style="margin-top: 8px;">
+          Manifests:
+          <a href="/data/v3/universe/manifest.json" style="color:#60a5fa; margin-left: 4px;">universe</a>
+          <a href="/data/v3/eod/US/manifest.json" style="color:#60a5fa; margin-left: 4px;">eod</a>
+          <a href="/data/v3/pulse/manifest.json" style="color:#60a5fa; margin-left: 4px;">pulse</a>
+          <a href="/data/v3/news/manifest.json" style="color:#60a5fa; margin-left: 4px;">news</a>
+          <a href="/data/v3/fundamentals/manifest.json" style="color:#60a5fa; margin-left: 4px;">fundamentals</a>
+        </div>
+        <div class="small" id="v3-drift-links" style="margin-top: 8px;">
+          Drift:
+          <a href="/data/v3/system/drift/" style="color:#60a5fa; margin-left: 4px;">drift folder</a>
+          <a href="/data/v3/system/health.json" style="color:#60a5fa; margin-left: 4px;">health.json</a>
+        </div>
+      </div>
+
       <div class="card" style="margin-bottom: 12px;" id="truth-chain-prices-section" data-testid="truth-chain-prices">
         <div class="k" style="margin-bottom: 10px;">Truth Chain (Prices — Product Path)</div>
         <div id="truth-chain-prices-steps" style="display: flex; flex-direction: column; gap: 6px;"></div>
@@ -1177,6 +1197,44 @@
       return `/${path}`;
     }
 
+    async function refreshV3System() {
+      const statusEl = document.getElementById('v3-status-line');
+      const budgetEl = document.getElementById('v3-budget-line');
+      const retentionEl = document.getElementById('v3-retention-line');
+      if (!statusEl || !budgetEl || !retentionEl) return;
+
+      try {
+        const res = await fetch(`/data/v3/system/health.json?t=${Date.now()}`, { cache: 'no-store' });
+        if (!res.ok) {
+          statusEl.innerHTML = `${pill('MISSING', 'warn')} health.json unavailable (HTTP ${res.status})`;
+          budgetEl.textContent = 'Budget: unavailable';
+          retentionEl.textContent = 'Retention: unavailable';
+          return;
+        }
+
+        const health = await res.json();
+        const status = String(health?.system?.status || 'unknown').toUpperCase();
+        const statusPillClass = status === 'OK' ? 'ok' : (status === 'DEGRADED' ? 'warn' : 'bad');
+        const dpStates = health?.dp || {};
+        const dpEntries = Object.entries(dpStates);
+        const degraded = dpEntries.filter(([, v]) => String(v?.status || '').toLowerCase() !== 'ok').length;
+        statusEl.innerHTML = `${pill(status, statusPillClass)} • run=${esc(health?.meta?.run_id || 'unknown')} • dp=${dpEntries.length} • non-ok=${degraded}`;
+
+        const budget = health?.system?.budget || {};
+        const used = budget.used_calls ?? 'n/a';
+        const hardCap = budget.hard_cap ?? 'n/a';
+        const reserve = budget.reserve ?? 'n/a';
+        budgetEl.textContent = `Budget: used=${used}, hard_cap=${hardCap}, reserve=${reserve}`;
+
+        const retention = health?.system?.retention || {};
+        retentionEl.textContent = `Retention: strategy=${retention.strategy || 'unknown'}, last_cleanup=${retention.last_cleanup || 'n/a'}`;
+      } catch (err) {
+        statusEl.innerHTML = `${pill('ERROR', 'bad')} ${esc(err?.message || 'failed to load v3 health')}`;
+        budgetEl.textContent = 'Budget: error';
+        retentionEl.textContent = 'Retention: error';
+      }
+    }
+
     async function refreshSummary(options = {}) {
       const statusEl = document.getElementById('loading');
       const last = document.getElementById('last-refresh');
@@ -1239,6 +1297,7 @@
 
         setSourceLabel(options.sourceLabel || 'static');
         const validation = renderSummary(payload);
+        refreshV3System();
         updateRawJson(payload, debugEnabled);
         const status = validation?.level === 'error' ? 'error' : 'ok';
         const reason = validation?.level === 'error' ? (validation?.reason || 'contract_invalid') : 'rendered';
@@ -1307,6 +1366,7 @@
         const servedFromEl = document.getElementById('served-from');
         if (servedFromEl) servedFromEl.textContent = payload?.metadata?.served_from || '—';
         renderSummary(payload);
+        refreshV3System();
         renderSchedulerStatus(payload?.data?.runtime);
         const debugEnabled = new URLSearchParams(window.location.search).get('debug') === '1';
         updateRawJson(payload, debugEnabled);

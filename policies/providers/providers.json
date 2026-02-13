@@ -1,0 +1,55 @@
+{
+  "schema_version": "v3",
+  "policy": {
+    "equities_primary": "eodhd",
+    "fallbacks": [
+      "tiingo"
+    ],
+    "forbidden_primary": [
+      "stooq",
+      "polygon",
+      "fmp",
+      "alphavantage",
+      "finnhub",
+      "twelvedata",
+      "fred"
+    ]
+  },
+  "providers": {
+    "eodhd": {
+      "enabled": true,
+      "role": "primary",
+      "auth_env": "EODHD_API_KEY",
+      "max_calls_per_day": 900,
+      "reserve_calls": 120,
+      "allowed_endpoints": [
+        "eod",
+        "splits",
+        "dividends",
+        "exchanges-list",
+        "news"
+      ],
+      "blocked_endpoints": [
+        "technical",
+        "fundamentals",
+        "calendar",
+        "tick",
+        "exchange-details"
+      ]
+    },
+    "tiingo": {
+      "enabled": true,
+      "role": "fallback",
+      "auth_env": "TIINGO_API_KEY",
+      "max_calls_per_day": 250,
+      "reserve_calls": 40,
+      "allowed_endpoints": [
+        "daily",
+        "fundamentals-metadata"
+      ],
+      "blocked_endpoints": [
+        "tick"
+      ]
+    }
+  }
+}

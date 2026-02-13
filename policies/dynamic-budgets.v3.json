@@ -1,0 +1,25 @@
+{
+  "schema_version": "v3",
+  "rules": [
+    {
+      "name": "news_boost_on_volatility",
+      "if": {
+        "pulse.market_health.volatility_state": "high"
+      },
+      "then": {
+        "dp5_news.multiplier": 1.5
+      }
+    },
+    {
+      "name": "news_throttle_on_budget_pressure",
+      "if": {
+        "budget.remaining_ratio_lt": 0.25
+      },
+      "then": {
+        "dp5_news.multiplier": 0.5
+      }
+    }
+  ],
+  "deterministic": true,
+  "manual_override_allowed": false
+}

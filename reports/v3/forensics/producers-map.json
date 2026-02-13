@@ -1,0 +1,391 @@
+{
+  "generatedAt": "2026-02-13T11:35:25.753Z",
+  "workflowScripts": {
+    ".github/workflows/ci-gates.yml": [
+      {
+        "script": "scripts/ci/verify-artifacts.mjs",
+        "line": 121
+      },
+      {
+        "script": "scripts/ci/assert-mission-control-gate.mjs",
+        "line": 124
+      },
+      {
+        "script": "scripts/ci/check-elliott-parity.mjs",
+        "line": 130
+      },
+      {
+        "script": "scripts/ci/forbid-kv-writes-in-api.sh",
+        "line": 133
+      },
+      {
+        "script": "scripts/eod/check-eod-artifacts.mjs",
+        "line": 148
+      },
+      {
+        "script": "scripts/ops/validate-truth.sh",
+        "line": 427
+      }
+    ],
+    ".github/workflows/data-brain-weekly.v3.yml": [
+      {
+        "script": "scripts/validators/check-exchange-drift.v3.mjs",
+        "line": 39
+      }
+    ],
+    ".github/workflows/data-pulse-daily.v3.yml": [
+      {
+        "script": "scripts/ops/notify-v3-alert.mjs",
+        "line": 63
+      }
+    ],
+    ".github/workflows/eod-history-refresh.yml": [
+      {
+        "script": "scripts/providers/eodhd-backfill-bars.mjs",
+        "line": 48
+      }
+    ],
+    ".github/workflows/eod-latest.yml": [
+      {
+        "script": "scripts/ops/preflight-check.mjs",
+        "line": 71
+      },
+      {
+        "script": "scripts/eod/build-eod-latest.mjs",
+        "line": 89
+      },
+      {
+        "script": "scripts/ops/build-safety-snapshot.mjs",
+        "line": 92
+      },
+      {
+        "script": "scripts/ops/build-mission-control-summary.mjs",
+        "line": 98
+      },
+      {
+        "script": "scripts/ops/build-ops-pulse.mjs",
+        "line": 101
+      },
+      {
+        "script": "scripts/ops/validate-ops-summary.mjs",
+        "line": 104
+      },
+      {
+        "script": "scripts/ci/assert-mission-control-gate.mjs",
+        "line": 109
+      }
+    ],
+    ".github/workflows/forecast-daily.yml": [
+      {
+        "script": "scripts/forecast/run_daily.mjs",
+        "line": 62
+      }
+    ],
+    ".github/workflows/forecast-weekly.yml": [
+      {
+        "script": "scripts/forecast/run_weekly.mjs",
+        "line": 58
+      }
+    ],
+    ".github/workflows/monitor-prod.yml": [
+      {
+        "script": "scripts/ci/verify-artifacts.mjs",
+        "line": 41
+      },
+      {
+        "script": "scripts/ci/assert-mission-control-gate.mjs",
+        "line": 46
+      }
+    ],
+    ".github/workflows/ops-daily.yml": [
+      {
+        "script": "scripts/ops/preflight-check.mjs",
+        "line": 56
+      },
+      {
+        "script": "scripts/pipeline/build-marketphase-from-kv.mjs",
+        "line": 63
+      },
+      {
+        "script": "scripts/pipeline/build-ndx100-pipeline-truth.mjs",
+        "line": 66
+      },
+      {
+        "script": "scripts/ops/build-safety-snapshot.mjs",
+        "line": 69
+      },
+      {
+        "script": "scripts/ops/build-ops-daily.mjs",
+        "line": 76
+      },
+      {
+        "script": "scripts/ops/build-mission-control-summary.mjs",
+        "line": 79
+      },
+      {
+        "script": "scripts/ops/build-ops-pulse.mjs",
+        "line": 82
+      },
+      {
+        "script": "scripts/ops/validate-ops-summary.mjs",
+        "line": 85
+      },
+      {
+        "script": "scripts/ci/assert-mission-control-gate.mjs",
+        "line": 93
+      }
+    ],
+    ".github/workflows/policy-drift-check.yml": [
+      {
+        "script": "scripts/validators/check-exchange-drift.v3.mjs",
+        "line": 40
+      }
+    ],
+    ".github/workflows/retention-cleanup.yml": [
+      {
+        "script": "scripts/ops/retention-cleanup.v3.mjs",
+        "line": 28
+      }
+    ],
+    ".github/workflows/scientific-daily.yml": [
+      {
+        "script": "scripts/scientific-analyzer/generate-analysis.mjs",
+        "line": 43
+      }
+    ],
+    ".github/workflows/universe-refresh.yml": [
+      {
+        "script": "scripts/universe/fetch-constituents.mjs",
+        "line": 34
+      }
+    ]
+  },
+  "workflowInlinePublicDataRefs": {
+    ".github/workflows/data-branch-sync.yml": [
+      {
+        "path": "public/data/v3/system",
+        "line": 38
+      }
+    ]
+  },
+  "scriptWrites": {
+    "scripts/dp0/universe-sync.v3.mjs": [
+      "public/data/v3/universe/exchanges.json",
+      "public/data/v3/universe/manifest.json",
+      "public/data/v3/universe/symbol-mapping.json",
+      "public/data/v3/universe/universe.json"
+    ],
+    "scripts/dp1_5_fx/fx-rates.v3.mjs": [
+      "public/data/v3/fx/rates/latest.json",
+      "public/data/v3/fx/rates/manifest.json"
+    ],
+    "scripts/dp1/eod-snapshot.v3.mjs": [
+      "public/data/v3/eod"
+    ],
+    "scripts/dp2/actions.v3.mjs": [
+      "public/data/v3/actions/dividends/latest.ndjson.gz",
+      "public/data/v3/actions/manifest.json",
+      "public/data/v3/actions/splits/latest.ndjson.gz"
+    ],
+    "scripts/dp3/adjusted-series.v3.mjs": [
+      "public/data/v3/series/manifest.json"
+    ],
+    "scripts/dp4/pulse.v3.mjs": [
+      "public/data/v3/pulse/manifest.json",
+      "public/data/v3/pulse/market-health/latest.json",
+      "public/data/v3/pulse/top-movers/latest.json"
+    ],
+    "scripts/dp5/news-signals.v3.mjs": [
+      "public/data/v3/news/manifest.json",
+      "public/data/v3/news/signals/latest.json"
+    ],
+    "scripts/dp6/indicators.v3.mjs": [
+      "public/data/v3/derived/manifest.json"
+    ],
+    "scripts/dp7/sector-mapping.v3.mjs": [
+      "public/data/v3/fundamentals/manifest.json",
+      "public/data/v3/system/drift/sector-drift-",
+      "public/data/v3/universe/sector-mapping/latest.json"
+    ],
+    "scripts/ops/retention-cleanup.v3.mjs": [
+      "public/data/v3/system/retention-cleanup.latest.json"
+    ],
+    "scripts/pipeline/build-marketphase-from-kv.mjs": [
+      "public/data/pipeline/missing.json"
+    ],
+    "scripts/validators/check-exchange-drift.v3.mjs": [
+      "public/data/v3/system/drift/exchanges-drift-"
+    ]
+  },
+  "pathToProducers": {
+    "public/data/pipeline/missing.json": [
+      {
+        "kind": "script",
+        "file": "scripts/pipeline/build-marketphase-from-kv.mjs"
+      },
+      {
+        "kind": "workflow-script",
+        "file": ".github/workflows/ops-daily.yml",
+        "line": 63,
+        "script": "scripts/pipeline/build-marketphase-from-kv.mjs"
+      }
+    ],
+    "public/data/v3/actions/dividends/latest.ndjson.gz": [
+      {
+        "kind": "script",
+        "file": "scripts/dp2/actions.v3.mjs"
+      }
+    ],
+    "public/data/v3/actions/manifest.json": [
+      {
+        "kind": "script",
+        "file": "scripts/dp2/actions.v3.mjs"
+      }
+    ],
+    "public/data/v3/actions/splits/latest.ndjson.gz": [
+      {
+        "kind": "script",
+        "file": "scripts/dp2/actions.v3.mjs"
+      }
+    ],
+    "public/data/v3/derived/manifest.json": [
+      {
+        "kind": "script",
+        "file": "scripts/dp6/indicators.v3.mjs"
+      }
+    ],
+    "public/data/v3/eod": [
+      {
+        "kind": "script",
+        "file": "scripts/dp1/eod-snapshot.v3.mjs"
+      }
+    ],
+    "public/data/v3/fundamentals/manifest.json": [
+      {
+        "kind": "script",
+        "file": "scripts/dp7/sector-mapping.v3.mjs"
+      }
+    ],
+    "public/data/v3/fx/rates/latest.json": [
+      {
+        "kind": "script",
+        "file": "scripts/dp1_5_fx/fx-rates.v3.mjs"
+      }
+    ],
+    "public/data/v3/fx/rates/manifest.json": [
+      {
+        "kind": "script",
+        "file": "scripts/dp1_5_fx/fx-rates.v3.mjs"
+      }
+    ],
+    "public/data/v3/news/manifest.json": [
+      {
+        "kind": "script",
+        "file": "scripts/dp5/news-signals.v3.mjs"
+      }
+    ],
+    "public/data/v3/news/signals/latest.json": [
+      {
+        "kind": "script",
+        "file": "scripts/dp5/news-signals.v3.mjs"
+      }
+    ],
+    "public/data/v3/pulse/manifest.json": [
+      {
+        "kind": "script",
+        "file": "scripts/dp4/pulse.v3.mjs"
+      }
+    ],
+    "public/data/v3/pulse/market-health/latest.json": [
+      {
+        "kind": "script",
+        "file": "scripts/dp4/pulse.v3.mjs"
+      }
+    ],
+    "public/data/v3/pulse/top-movers/latest.json": [
+      {
+        "kind": "script",
+        "file": "scripts/dp4/pulse.v3.mjs"
+      }
+    ],
+    "public/data/v3/series/manifest.json": [
+      {
+        "kind": "script",
+        "file": "scripts/dp3/adjusted-series.v3.mjs"
+      }
+    ],
+    "public/data/v3/system": [
+      {
+        "kind": "workflow-inline",
+        "file": ".github/workflows/data-branch-sync.yml",
+        "line": 38
+      }
+    ],
+    "public/data/v3/system/drift/exchanges-drift-": [
+      {
+        "kind": "script",
+        "file": "scripts/validators/check-exchange-drift.v3.mjs"
+      },
+      {
+        "kind": "workflow-script",
+        "file": ".github/workflows/data-brain-weekly.v3.yml",
+        "line": 39,
+        "script": "scripts/validators/check-exchange-drift.v3.mjs"
+      },
+      {
+        "kind": "workflow-script",
+        "file": ".github/workflows/policy-drift-check.yml",
+        "line": 40,
+        "script": "scripts/validators/check-exchange-drift.v3.mjs"
+      }
+    ],
+    "public/data/v3/system/drift/sector-drift-": [
+      {
+        "kind": "script",
+        "file": "scripts/dp7/sector-mapping.v3.mjs"
+      }
+    ],
+    "public/data/v3/system/retention-cleanup.latest.json": [
+      {
+        "kind": "script",
+        "file": "scripts/ops/retention-cleanup.v3.mjs"
+      },
+      {
+        "kind": "workflow-script",
+        "file": ".github/workflows/retention-cleanup.yml",
+        "line": 28,
+        "script": "scripts/ops/retention-cleanup.v3.mjs"
+      }
+    ],
+    "public/data/v3/universe/exchanges.json": [
+      {
+        "kind": "script",
+        "file": "scripts/dp0/universe-sync.v3.mjs"
+      }
+    ],
+    "public/data/v3/universe/manifest.json": [
+      {
+        "kind": "script",
+        "file": "scripts/dp0/universe-sync.v3.mjs"
+      }
+    ],
+    "public/data/v3/universe/sector-mapping/latest.json": [
+      {
+        "kind": "script",
+        "file": "scripts/dp7/sector-mapping.v3.mjs"
+      }
+    ],
+    "public/data/v3/universe/symbol-mapping.json": [
+      {
+        "kind": "script",
+        "file": "scripts/dp0/universe-sync.v3.mjs"
+      }
+    ],
+    "public/data/v3/universe/universe.json": [
+      {
+        "kind": "script",
+        "file": "scripts/dp0/universe-sync.v3.mjs"
+      }
+    ]
+  }
+}

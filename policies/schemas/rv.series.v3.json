@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "rv.series.v3.json",
+  "type": "object",
+  "required": ["canonical_id", "trading_date", "close", "lineage"],
+  "properties": {
+    "canonical_id": {"type": "string"},
+    "trading_date": {"type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"},
+    "close": {"type": "number"},
+    "lineage": {
+      "type": "object",
+      "required": ["sources"],
+      "properties": {
+        "sources": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["path", "sha256"],
+            "properties": {
+              "path": {"type": "string"},
+              "sha256": {"type": "string"}
+            },
+            "additionalProperties": true
+          }
+        }
+      },
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": true
+}

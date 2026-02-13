@@ -1,0 +1,34 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "rv.manifest.v3.json",
+  "type": "object",
+  "required": ["meta", "artifacts"],
+  "properties": {
+    "meta": {
+      "type": "object",
+      "required": ["schema", "generated_at", "run_id", "commit"],
+      "properties": {
+        "schema": {"type": "string"},
+        "generated_at": {"type": "string", "format": "date-time"},
+        "run_id": {"type": "string"},
+        "commit": {"type": "string"},
+        "quality": {"type": "object"}
+      },
+      "additionalProperties": true
+    },
+    "artifacts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["path", "sha256", "bytes"],
+        "properties": {
+          "path": {"type": "string"},
+          "sha256": {"type": "string"},
+          "bytes": {"type": "number"}
+        },
+        "additionalProperties": true
+      }
+    }
+  },
+  "additionalProperties": true
+}

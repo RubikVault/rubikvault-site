@@ -1,0 +1,40 @@
+name: retention-cleanup
+
+on:
+  schedule:
+    - cron: '45 1 * * 0'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: retention-cleanup-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Cleanup by policy
+        run: node scripts/ops/retention-cleanup.v3.mjs
+
+      - name: Commit cleanup report
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add public/data/v3/system/retention-cleanup.latest.json mirrors || true
+          if git diff --cached --quiet; then
+            echo "No cleanup changes"
+            exit 0
+          fi
+          git commit -m "chore(v3): retention cleanup"
+          git push

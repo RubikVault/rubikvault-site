@@ -1,0 +1,271 @@
+{
+  "generatedAt": "2026-02-13T11:35:25.753Z",
+  "totalPaths": 24,
+  "paths": [
+    {
+      "path": "public/data/pipeline/missing.json",
+      "producerCount": 2,
+      "producers": [
+        {
+          "kind": "script",
+          "file": "scripts/pipeline/build-marketphase-from-kv.mjs"
+        },
+        {
+          "kind": "workflow-script",
+          "file": ".github/workflows/ops-daily.yml",
+          "line": 63,
+          "script": "scripts/pipeline/build-marketphase-from-kv.mjs"
+        }
+      ]
+    },
+    {
+      "path": "public/data/v3/actions/dividends/latest.ndjson.gz",
+      "producerCount": 1,
+      "producers": [
+        {
+          "kind": "script",
+          "file": "scripts/dp2/actions.v3.mjs"
+        }
+      ]
+    },
+    {
+      "path": "public/data/v3/actions/manifest.json",
+      "producerCount": 1,
+      "producers": [
+        {
+          "kind": "script",
+          "file": "scripts/dp2/actions.v3.mjs"
+        }
+      ]
+    },
+    {
+      "path": "public/data/v3/actions/splits/latest.ndjson.gz",
+      "producerCount": 1,
+      "producers": [
+        {
+          "kind": "script",
+          "file": "scripts/dp2/actions.v3.mjs"
+        }
+      ]
+    },
+    {
+      "path": "public/data/v3/derived/manifest.json",
+      "producerCount": 1,
+      "producers": [
+        {
+          "kind": "script",
+          "file": "scripts/dp6/indicators.v3.mjs"
+        }
+      ]
+    },
+    {
+      "path": "public/data/v3/eod",
+      "producerCount": 1,
+      "producers": [
+        {
+          "kind": "script",
+          "file": "scripts/dp1/eod-snapshot.v3.mjs"
+        }
+      ]
+    },
+    {
+      "path": "public/data/v3/fundamentals/manifest.json",
+      "producerCount": 1,
+      "producers": [
+        {
+          "kind": "script",
+          "file": "scripts/dp7/sector-mapping.v3.mjs"
+        }
+      ]
+    },
+    {
+      "path": "public/data/v3/fx/rates/latest.json",
+      "producerCount": 1,
+      "producers": [
+        {
+          "kind": "script",
+          "file": "scripts/dp1_5_fx/fx-rates.v3.mjs"
+        }
+      ]
+    },
+    {
+      "path": "public/data/v3/fx/rates/manifest.json",
+      "producerCount": 1,
+      "producers": [
+        {
+          "kind": "script",
+          "file": "scripts/dp1_5_fx/fx-rates.v3.mjs"
+        }
+      ]
+    },
+    {
+      "path": "public/data/v3/news/manifest.json",
+      "producerCount": 1,
+      "producers": [
+        {
+          "kind": "script",
+          "file": "scripts/dp5/news-signals.v3.mjs"
+        }
+      ]
+    },
+    {
+      "path": "public/data/v3/news/signals/latest.json",
+      "producerCount": 1,
+      "producers": [
+        {
+          "kind": "script",
+          "file": "scripts/dp5/news-signals.v3.mjs"
+        }
+      ]
+    },
+    {
+      "path": "public/data/v3/pulse/manifest.json",
+      "producerCount": 1,
+      "producers": [
+        {
+          "kind": "script",
+          "file": "scripts/dp4/pulse.v3.mjs"
+        }
+      ]
+    },
+    {
+      "path": "public/data/v3/pulse/market-health/latest.json",
+      "producerCount": 1,
+      "producers": [
+        {
+          "kind": "script",
+          "file": "scripts/dp4/pulse.v3.mjs"
+        }
+      ]
+    },
+    {
+      "path": "public/data/v3/pulse/top-movers/latest.json",
+      "producerCount": 1,
+      "producers": [
+        {
+          "kind": "script",
+          "file": "scripts/dp4/pulse.v3.mjs"
+        }
+      ]
+    },
+    {
+      "path": "public/data/v3/series/manifest.json",
+      "producerCount": 1,
+      "producers": [
+        {
+          "kind": "script",
+          "file": "scripts/dp3/adjusted-series.v3.mjs"
+        }
+      ]
+    },
+    {
+      "path": "public/data/v3/system",
+      "producerCount": 1,
+      "producers": [
+        {
+          "kind": "workflow-inline",
+          "file": ".github/workflows/data-branch-sync.yml",
+          "line": 38
+        }
+      ]
+    },
+    {
+      "path": "public/data/v3/system/drift/exchanges-drift-",
+      "producerCount": 3,
+      "producers": [
+        {
+          "kind": "script",
+          "file": "scripts/validators/check-exchange-drift.v3.mjs"
+        },
+        {
+          "kind": "workflow-script",
+          "file": ".github/workflows/data-brain-weekly.v3.yml",
+          "line": 39,
+          "script": "scripts/validators/check-exchange-drift.v3.mjs"
+        },
+        {
+          "kind": "workflow-script",
+          "file": ".github/workflows/policy-drift-check.yml",
+          "line": 40,
+          "script": "scripts/validators/check-exchange-drift.v3.mjs"
+        }
+      ]
+    },
+    {
+      "path": "public/data/v3/system/drift/sector-drift-",
+      "producerCount": 1,
+      "producers": [
+        {
+          "kind": "script",
+          "file": "scripts/dp7/sector-mapping.v3.mjs"
+        }
+      ]
+    },
+    {
+      "path": "public/data/v3/system/retention-cleanup.latest.json",
+      "producerCount": 2,
+      "producers": [
+        {
+          "kind": "script",
+          "file": "scripts/ops/retention-cleanup.v3.mjs"
+        },
+        {
+          "kind": "workflow-script",
+          "file": ".github/workflows/retention-cleanup.yml",
+          "line": 28,
+          "script": "scripts/ops/retention-cleanup.v3.mjs"
+        }
+      ]
+    },
+    {
+      "path": "public/data/v3/universe/exchanges.json",
+      "producerCount": 1,
+      "producers": [
+        {
+          "kind": "script",
+          "file": "scripts/dp0/universe-sync.v3.mjs"
+        }
+      ]
+    },
+    {
+      "path": "public/data/v3/universe/manifest.json",
+      "producerCount": 1,
+      "producers": [
+        {
+          "kind": "script",
+          "file": "scripts/dp0/universe-sync.v3.mjs"
+        }
+      ]
+    },
+    {
+      "path": "public/data/v3/universe/sector-mapping/latest.json",
+      "producerCount": 1,
+      "producers": [
+        {
+          "kind": "script",
+          "file": "scripts/dp7/sector-mapping.v3.mjs"
+        }
+      ]
+    },
+    {
+      "path": "public/data/v3/universe/symbol-mapping.json",
+      "producerCount": 1,
+      "producers": [
+        {
+          "kind": "script",
+          "file": "scripts/dp0/universe-sync.v3.mjs"
+        }
+      ]
+    },
+    {
+      "path": "public/data/v3/universe/universe.json",
+      "producerCount": 1,
+      "producers": [
+        {
+          "kind": "script",
+          "file": "scripts/dp0/universe-sync.v3.mjs"
+        }
+      ]
+    }
+  ]
+}

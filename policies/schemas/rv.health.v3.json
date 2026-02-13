@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "rv.health.v3.json",
+  "type": "object",
+  "required": ["meta", "system", "dp"],
+  "properties": {
+    "meta": {
+      "type": "object",
+      "required": ["schema", "generated_at", "run_id", "commit"],
+      "properties": {
+        "schema": {"type": "string"},
+        "generated_at": {"type": "string", "format": "date-time"},
+        "run_id": {"type": "string"},
+        "commit": {"type": "string"}
+      },
+      "additionalProperties": true
+    },
+    "system": {
+      "type": "object",
+      "required": ["status", "budget", "retention"],
+      "properties": {
+        "status": {"type": "string"},
+        "budget": {"type": "object"},
+        "retention": {"type": "object"},
+        "circuits": {"type": "object"}
+      },
+      "additionalProperties": true
+    },
+    "dp": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "required": ["status", "last_run"],
+        "properties": {
+          "status": {"type": "string"},
+          "last_run": {"type": "string", "format": "date-time"}
+        },
+        "additionalProperties": true
+      }
+    }
+  },
+  "additionalProperties": true
+}

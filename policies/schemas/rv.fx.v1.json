@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "rv.fx.v1.json",
+  "type": "object",
+  "required": ["meta", "base", "rates"],
+  "properties": {
+    "meta": {"type": "object"},
+    "base": {"type": "string"},
+    "rates": {
+      "type": "object",
+      "additionalProperties": {"type": "number"}
+    }
+  },
+  "additionalProperties": true
+}

@@ -1,0 +1,25 @@
+{
+  "schema_version": "v3",
+  "allowed_codes": [
+    "US"
+  ],
+  "alias_map": {
+    "XNAS": "US",
+    "NASDAQ": "US",
+    "XNYS": "US",
+    "NYSE": "US"
+  },
+  "expected": {
+    "US": {
+      "currency": "USD",
+      "timezone": "America/New_York"
+    }
+  },
+  "delisted_policy": {
+    "allowed_status": [
+      "active",
+      "delisted"
+    ],
+    "exclude_from_daily": true
+  }
+}

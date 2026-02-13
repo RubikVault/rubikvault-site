@@ -1,0 +1,21 @@
+workflow,decision,reason
+v3 Finalizer,ARCHIVE,legacy_v3_with_fail_or_no_usage total=16 fail=16 sig=ENOENT_MODULES
+v3 Scrape Template,ARCHIVE,legacy_v3_with_fail_or_no_usage total=17 fail=17 sig=ENOENT_MODULES
+CI Gates - Quality & Budget Checks,REPAIR,failures_detected total=26 fail=8 sig=HTTP_403
+Cleanup Daily Snapshots,KEEP,no_recent_failures total=0 fail=0 sig=NO_FAILURE_SIGNATURE
+WP16 Manual - Market Prices (Stooq),REPAIR,failures_detected total=11 fail=11 sig=LOG_CAPTURE_FAILED
+Refresh Health Assets,REPAIR,failures_detected total=3 fail=3 sig=ENOENT_SEED
+Ops Daily Snapshot,REPAIR,failures_detected total=18 fail=15 sig=NO_FAILURE_SIGNATURE
+EOD Latest (NASDAQ-100),REPAIR,failures_detected total=18 fail=17 sig=NO_FAILURE_SIGNATURE
+Scheduler Kick,REPAIR,failures_detected total=62 fail=62 sig=WAF_CHALLENGE
+e2e-playwright,REPAIR,failures_detected total=4 fail=4 sig=EXIT_CODE_1
+Forecast Daily Pipeline,KEEP,no_recent_failures total=2 fail=0 sig=CIRCUIT_OPEN
+Forecast Monthly Report,KEEP,no_recent_failures total=1 fail=0 sig=UNKNOWN
+Forecast Weekly Training,KEEP,no_recent_failures total=0 fail=0 sig=NO_FAILURE_SIGNATURE
+CI Determinism Check,REPAIR,failures_detected total=9 fail=4 sig=NO_FAILURE_SIGNATURE
+CI Policy Check,KEEP,no_recent_failures total=6 fail=0 sig=NO_FAILURE_SIGNATURE
+EOD History Refresh,KEEP,no_recent_failures total=2 fail=0 sig=NO_FAILURE_SIGNATURE
+Forecast Rollback,ARCHIVE,manual_only_no_recent_runs
+Ops Auto-Alerts,KEEP,no_recent_failures total=2 fail=0 sig=HTTP_403
+Universe Refresh,ARCHIVE,manual_only_no_recent_runs
+Monitor Production Artifacts,REPAIR,failures_detected total=3 fail=3 sig=HTTP_403

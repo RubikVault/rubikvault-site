@@ -1,0 +1,41 @@
+{
+  "errors": [
+    {
+      "error": "HTTP_401:Unauthenticated",
+      "ticker": "SRE"
+    },
+    {
+      "error": "HTTP_401:Unauthenticated",
+      "ticker": "BDX"
+    },
+    {
+      "error": "HTTP_401:Unauthenticated",
+      "ticker": "WMB"
+    },
+    {
+      "error": "HTTP_401:Unauthenticated",
+      "ticker": "GEV"
+    },
+    {
+      "error": "HTTP_401:Unauthenticated",
+      "ticker": "AZO"
+    },
+    {
+      "error": "HTTP_401:Unauthenticated",
+      "ticker": "DHR"
+    }
+  ],
+  "meta": {
+    "commit": "8ac83291e9e64cd63af32eb5978c1976e5539533",
+    "dynamic_budget_rules": [
+      "news_boost_on_volatility",
+      "news_throttle_on_budget_pressure"
+    ],
+    "generated_at": "2026-02-13T11:35:49.523Z",
+    "reason": "PROVIDER_FETCH_FAILED:HTTP_401:Unauthenticated",
+    "run_id": "8ac83291-20260213T1135-1770982549",
+    "schema": "rv.news.v2",
+    "status": "degraded"
+  },
+  "signals": []
+}
