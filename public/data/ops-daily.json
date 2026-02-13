@@ -1,14 +1,14 @@
 {
   "schema_version": "1.0",
-  "asOf": "2026-02-13T07:56:12.049Z",
+  "asOf": "2026-02-13T22:49:54.265Z",
   "baseline": {
     "expectedUniverse": 517,
     "pipeline": {
       "expected": 517,
       "fetched": 100,
       "validatedStored": 100,
-      "computed": 0,
-      "staticReady": 0,
+      "computed": 318,
+      "staticReady": 318,
       "missing": [
         {
           "ticker": "BF.B",
@@ -1245,7 +1245,7 @@
     "cloudflare": {
       "requestsToday": null,
       "requestsLast24h": null,
-      "notes": "ok"
+      "notes": "CF analytics not configured"
     },
     "safety": {
       "kvWritesToday": 0,
@@ -1259,8 +1259,8 @@
         "expected": 100,
         "fetched": 100,
         "validated": 100,
-        "computed": 0,
-        "static_ready": 0
+        "computed": 318,
+        "static_ready": 318
       },
       "degraded_summary": {
         "count": 0,
@@ -1268,7 +1268,7 @@
         "sample": []
       },
       "root_failure": null,
-      "generated_at": "2026-02-12T22:49:51.369Z"
+      "generated_at": "2026-02-13T22:49:53.111Z"
     }
   }
 }
