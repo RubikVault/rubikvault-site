@@ -1,0 +1,843 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+
+<head>
+    <meta charset="UTF-8" />
+    <title>RubikVault – Scientific Stock Analyzer v9.1</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+    <meta name="description"
+        content="Scientific Setup/Trigger Scanner. See which stocks are about to break out with clear Setup and Trigger indicators." />
+
+    <meta name="theme-color" content="#3b82f6" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/assets/rv-favicon.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/assets/rv-apple-icon.png" />
+    <link rel="manifest" href="/manifest.json" />
+    <link rel="stylesheet" href="/style.css" />
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+</head>
+
+<body>
+    <!-- HEADER -->
+    <header class="rv-header">
+        <div class="rv-header-inner">
+            <a class="rv-brand" href="/" aria-label="RubikVault">
+                <img class="rv-brand-icon" src="/assets/rv-icon.png" alt="" />
+                <span class="rv-brand-text">RubikVault</span>
+            </a>
+
+            <nav class="rv-nav">
+                <a class="rv-social-link" href="https://www.youtube.com/@RubikVault" target="_blank"
+                    rel="noopener noreferrer" aria-label="YouTube">
+                    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                        <path
+                            d="M21.58 7.19a2.5 2.5 0 0 0-1.76-1.77C18.25 5 12 5 12 5s-6.25 0-7.82.42A2.5 2.5 0 0 0 2.42 7.2 26.6 26.6 0 0 0 2 12s0 2.55.42 4.81a2.5 2.5 0 0 0 1.76 1.77C5.75 19 12 19 12 19s6.25 0 7.82-.42a2.5 2.5 0 0 0 1.76-1.77C22 14.55 22 12 22 12s0-2.55-.42-4.81ZM10 15.5v-7l6 3.5-6 3.5Z" />
+                    </svg>
+                </a>
+                <a class="rv-social-link" href="https://x.com/RubikVault" target="_blank" rel="noopener noreferrer"
+                    aria-label="X">
+                    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                        <path
+                            d="M18.9 2H22l-6.79 7.76L23 22h-6.2l-4.86-6.02L6.66 22H3.5l7.26-8.3L3 2h6.35l4.4 5.52L18.9 2Zm-1.09 18h1.72L8.4 3.93H6.56L17.81 20Z" />
+                    </svg>
+                </a>
+                <a class="rv-social-link" href="https://www.instagram.com/rubikvault_official/" target="_blank"
+                    rel="noopener noreferrer" aria-label="Instagram">
+                    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                        <path
+                            d="M7 2h10a5 5 0 0 1 5 5v10a5 5 0 0 1-5 5H7a5 5 0 0 1-5-5V7a5 5 0 0 1 5-5Zm10 2H7a3 3 0 0 0-3 3v10a3 3 0 0 0 3 3h10a3 3 0 0 0 3-3V7a3 3 0 0 0-3-3Zm-5 3.5a4.5 4.5 0 1 1 0 9 4.5 4.5 0 0 1 0-9Zm0 2a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5ZM17.8 6.2a1 1 0 1 1 0 2 1 1 0 0 1 0-2Z" />
+                    </svg>
+                </a>
+                <a class="rv-social-link" href="https://www.tiktok.com/@rubikvault" target="_blank"
+                    rel="noopener noreferrer" aria-label="TikTok">
+                    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                        <path
+                            d="M16.7 5.2c.8 1.2 2.1 2 3.6 2.1v3.1c-1.7-.1-3.3-.7-4.6-1.7v7.4c0 3.4-2.8 6.2-6.2 6.2S3.3 19.5 3.3 16.1s2.8-6.2 6.2-6.2c.4 0 .8 0 1.2.1v3.3c-.4-.1-.8-.2-1.2-.2-1.7 0-3.1 1.4-3.1 3.1s1.4 3.1 3.1 3.1 3.1-1.4 3.1-3.1V2h3.1c0 1.2.3 2.3 1 3.2Z" />
+                    </svg>
+                </a>
+            </nav>
+
+            <div class="rv-header-tools" aria-live="polite">
+                <div class="rv-data-updated" style="font-size: 12px; color: var(--rv-text-muted);">
+                    Data updated: 2026-02-06 (daily snapshots)
+                </div>
+                <div class="rv-market-clock">
+                    <span class="rv-clock-time" id="rv-ny-time">NY: --:--:--</span>
+                    <span class="rv-clock-status">
+                        <span class="rv-led" data-rv-led="closed"></span>
+                        <span class="rv-market-label" data-rv-market-label>Closed</span>
+                        <span class="rv-market-countdown" id="rv-market-countdown">opens in --:--:--</span>
+                    </span>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- PAGE NAVIGATION -->
+    <nav class="rv-page-nav">
+        <div class="rv-page-nav-inner">
+            <a href="/" class="rv-page-nav-link" data-page="analyzer">Stock Analyzer</a>
+            <a href="/elliott.html" class="rv-page-nav-link" data-page="elliott">Elliott Waves</a>
+            <a href="/scientific.html" class="rv-page-nav-link active" data-page="scientific">Scientific Analyzer</a>
+            <a href="/forecast.html" class="rv-page-nav-link" data-page="forecast">Forecast System</a>
+        </div>
+    </nav>
+
+    <style>
+        .scientific-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .scientific-header {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+            margin-bottom: 1.5rem;
+            flex-wrap: wrap;
+        }
+
+        .scientific-title {
+            font-size: 1.75rem;
+            font-weight: 700;
+            color: #f1f5f9;
+            margin: 0;
+        }
+
+        /* Rankings Section */
+        .rankings-section {
+            margin-bottom: 2rem;
+        }
+
+        .rankings-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .ranking-card {
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid rgba(100, 116, 139, 0.25);
+            border-radius: 12px;
+            padding: 1.25rem;
+        }
+
+        .ranking-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #e5e7eb;
+            margin: 0 0 1rem 0;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .ranking-title .icon {
+            font-size: 1.25rem;
+        }
+
+        .ranking-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.85rem;
+        }
+
+        .ranking-table th {
+            text-align: left;
+            padding: 0.5rem;
+            color: #94a3b8;
+            font-weight: 500;
+            border-bottom: 1px solid rgba(100, 116, 139, 0.2);
+        }
+
+        .ranking-table td {
+            padding: 0.5rem;
+            color: #e5e7eb;
+            border-bottom: 1px solid rgba(100, 116, 139, 0.1);
+        }
+
+        .ranking-table tr:hover {
+            background: rgba(59, 130, 246, 0.1);
+            cursor: pointer;
+        }
+
+        .ranking-table .ticker {
+            font-weight: 600;
+            color: #60a5fa;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 0.15rem 0.5rem;
+            border-radius: 999px;
+            font-size: 0.7rem;
+            font-weight: 600;
+        }
+
+        .badge.strong {
+            background: rgba(34, 197, 94, 0.2);
+            color: #22c55e;
+        }
+
+        .badge.moderate {
+            background: rgba(251, 191, 36, 0.2);
+            color: #fbbf24;
+        }
+
+        .badge.short {
+            background: rgba(34, 197, 94, 0.15);
+            color: #34d399;
+        }
+
+        .badge.medium {
+            background: rgba(59, 130, 246, 0.15);
+            color: #60a5fa;
+        }
+
+        .badge.long {
+            background: rgba(139, 92, 246, 0.15);
+            color: #a78bfa;
+        }
+
+        /* Stock Selector */
+        .stock-selector {
+            display: flex;
+            gap: 0.75rem;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .stock-selector select {
+            padding: 0.5rem 0.75rem;
+            border-radius: 8px;
+            border: 1px solid rgba(100, 116, 139, 0.3);
+            background: rgba(15, 23, 42, 0.8);
+            color: #e5e7eb;
+            font-size: 0.95rem;
+            min-width: 180px;
+        }
+
+        /* Detail Section */
+        .detail-section {
+            margin-top: 2rem;
+        }
+
+        .analysis-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.25rem;
+        }
+
+        .analysis-card {
+            background: rgba(15, 23, 42, 0.5);
+            border: 1px solid rgba(100, 116, 139, 0.2);
+            border-radius: 12px;
+            padding: 1.25rem;
+        }
+
+        .card-title {
+            font-size: 1rem;
+            font-weight: 600;
+            color: #e5e7eb;
+            margin: 0 0 1rem 0;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        /* Setup/Trigger Cards */
+        .setup-trigger-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.25rem;
+            margin-bottom: 1.25rem;
+        }
+
+        @media (max-width: 768px) {
+            .setup-trigger-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .setup-card,
+        .trigger-card {
+            background: rgba(15, 23, 42, 0.6);
+            border-radius: 12px;
+            padding: 1.25rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .setup-card {
+            border: 2px solid rgba(59, 130, 246, 0.4);
+        }
+
+        .setup-card.fulfilled {
+            border-color: rgba(34, 197, 94, 0.6);
+            background: linear-gradient(135deg, rgba(34, 197, 94, 0.08) 0%, rgba(15, 23, 42, 0.6) 100%);
+        }
+
+        .trigger-card {
+            border: 2px solid rgba(251, 191, 36, 0.4);
+        }
+
+        .trigger-card.fulfilled {
+            border-color: rgba(34, 197, 94, 0.6);
+            background: linear-gradient(135deg, rgba(34, 197, 94, 0.08) 0%, rgba(15, 23, 42, 0.6) 100%);
+        }
+
+        .trigger-card.pending {
+            border-color: rgba(100, 116, 139, 0.3);
+            opacity: 0.7;
+        }
+
+        .status-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .status-label {
+            font-size: 1rem;
+            font-weight: 600;
+            color: #e5e7eb;
+        }
+
+        .status-badge {
+            padding: 0.3rem 0.75rem;
+            border-radius: 999px;
+            font-size: 0.8rem;
+            font-weight: 700;
+        }
+
+        .status-badge.fulfilled {
+            background: rgba(34, 197, 94, 0.2);
+            color: #22c55e;
+        }
+
+        .status-badge.not-fulfilled {
+            background: rgba(239, 68, 68, 0.2);
+            color: #f87171;
+        }
+
+        .status-badge.pending {
+            background: rgba(100, 116, 139, 0.2);
+            color: #94a3b8;
+        }
+
+        .score-bar {
+            height: 8px;
+            background: rgba(100, 116, 139, 0.2);
+            border-radius: 4px;
+            margin-bottom: 0.75rem;
+            overflow: hidden;
+        }
+
+        .score-fill {
+            height: 100%;
+            border-radius: 4px;
+            transition: width 0.3s ease;
+        }
+
+        .score-fill.high {
+            background: linear-gradient(90deg, #22c55e 0%, #34d399 100%);
+        }
+
+        .score-fill.medium {
+            background: linear-gradient(90deg, #fbbf24 0%, #fcd34d 100%);
+        }
+
+        .score-fill.low {
+            background: linear-gradient(90deg, #f87171 0%, #fca5a5 100%);
+        }
+
+        .proof-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .proof-list li {
+            padding: 0.4rem 0;
+            font-size: 0.85rem;
+            color: #94a3b8;
+            display: flex;
+            align-items: flex-start;
+            gap: 0.5rem;
+        }
+
+        .proof-list li::before {
+            content: "✓";
+            color: #22c55e;
+            font-weight: 600;
+        }
+
+        .proof-list.missing li::before {
+            content: "○";
+            color: #64748b;
+        }
+
+        .conditions-count {
+            font-size: 0.85rem;
+            color: #64748b;
+            margin-bottom: 0.5rem;
+        }
+
+        /* Probability Gauge */
+        .probability-section {
+            text-align: center;
+            padding: 1rem 0;
+        }
+
+        .prob-value {
+            font-size: 2.5rem;
+            font-weight: 700;
+        }
+
+        .prob-value.high {
+            color: #22c55e;
+        }
+
+        .prob-value.medium {
+            color: #fbbf24;
+        }
+
+        .prob-value.low {
+            color: #f87171;
+        }
+
+        .prob-label {
+            font-size: 0.9rem;
+            color: #94a3b8;
+            margin-top: 0.25rem;
+        }
+
+        .prob-ci {
+            font-size: 0.8rem;
+            color: #64748b;
+        }
+
+        /* Signal Strength */
+        .signal-indicator {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            padding: 0.75rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+        }
+
+        .signal-indicator.strong {
+            background: rgba(34, 197, 94, 0.15);
+            color: #22c55e;
+        }
+
+        .signal-indicator.moderate {
+            background: rgba(251, 191, 36, 0.15);
+            color: #fbbf24;
+        }
+
+        .signal-indicator.weak {
+            background: rgba(100, 116, 139, 0.15);
+            color: #94a3b8;
+        }
+
+        .signal-text {
+            font-size: 0.9rem;
+            font-weight: 600;
+        }
+
+        /* Risk Metrics */
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 0.75rem;
+        }
+
+        .metric-box {
+            background: rgba(30, 41, 59, 0.5);
+            padding: 0.75rem;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .metric-value {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: #f1f5f9;
+        }
+
+        .metric-label {
+            font-size: 0.75rem;
+            color: #94a3b8;
+            margin-top: 0.15rem;
+        }
+
+        /* Indicator Panel */
+        .indicator-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 0.5rem;
+        }
+
+        .indicator-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.4rem 0;
+            border-bottom: 1px solid rgba(100, 116, 139, 0.1);
+        }
+
+        .indicator-name {
+            color: #94a3b8;
+            font-size: 0.85rem;
+        }
+
+        .indicator-value {
+            color: #e5e7eb;
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+
+        #shap-chart {
+            width: 100%;
+            height: 220px;
+        }
+
+        .disclaimer-box {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-top: 1.5rem;
+            font-size: 0.85rem;
+            color: #fca5a5;
+        }
+
+        .loading-state {
+            text-align: center;
+            padding: 3rem;
+            color: #64748b;
+        }
+    </style>
+
+    <!-- MAIN CONTENT -->
+    <main class="scientific-container">
+        <div class="scientific-header">
+            <h1 class="scientific-title">🧬 Scientific Stock Analyzer</h1>
+            <div class="stock-selector">
+                <select id="stock-select">
+                    <option value="">Select a stock...</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- TOP RANKINGS -->
+        <section class="rankings-section">
+            <div class="rankings-grid">
+                <!-- Triggered Setups (Buy Candidates) -->
+                <div class="ranking-card" style="border-color: rgba(34, 197, 94, 0.4);">
+                    <h3 class="ranking-title"><span class="icon">🚀</span> Triggered Setups (Buy Candidates)</h3>
+                    <table class="ranking-table" id="triggered-table">
+                        <thead>
+                            <tr>
+                                <th>Ticker</th>
+                                <th>Price</th>
+                                <th>Signal</th>
+                                <th>Prob.</th>
+                                <th>Timeframe</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+
+                <!-- Top Setups (Watchlist) -->
+                <div class="ranking-card" style="border-color: rgba(59, 130, 246, 0.4);">
+                    <h3 class="ranking-title"><span class="icon">👁️</span> Top Setups (Watchlist)</h3>
+                    <table class="ranking-table" id="setups-table">
+                        <thead>
+                            <tr>
+                                <th>Ticker</th>
+                                <th>Price</th>
+                                <th>Setup</th>
+                                <th>Trigger</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- DETAIL SECTION -->
+        <section class="detail-section" id="detail-section" style="display: none;">
+            <h2 id="detail-title" style="color: #e5e7eb; margin-bottom: 1rem;">Analyse: <span></span></h2>
+
+            <!-- Signal Strength -->
+            <div class="signal-indicator" id="signal-indicator">
+                <span class="signal-text"></span>
+            </div>
+
+            <!-- SETUP / TRIGGER -->
+            <div class="setup-trigger-grid">
+                <div class="setup-card" id="setup-card">
+                    <div class="status-header">
+                        <span class="status-label">📋 SETUP</span>
+                        <span class="status-badge" id="setup-badge"></span>
+                    </div>
+                    <div class="score-bar">
+                        <div class="score-fill" id="setup-score-fill"></div>
+                    </div>
+                    <div class="conditions-count" id="setup-conditions"></div>
+                    <ul class="proof-list" id="setup-proofs"></ul>
+                </div>
+
+                <div class="trigger-card" id="trigger-card">
+                    <div class="status-header">
+                        <span class="status-label">⚡ TRIGGER</span>
+                        <span class="status-badge" id="trigger-badge"></span>
+                    </div>
+                    <div class="score-bar">
+                        <div class="score-fill" id="trigger-score-fill"></div>
+                    </div>
+                    <div class="conditions-count" id="trigger-conditions"></div>
+                    <ul class="proof-list" id="trigger-proofs"></ul>
+                </div>
+            </div>
+
+            <div class="analysis-grid">
+                <!-- Probability -->
+                <div class="analysis-card">
+                    <h3 class="card-title">📊 Wahrscheinlichkeit</h3>
+                    <div class="probability-section">
+                        <div class="prob-value" id="prob-value">--%</div>
+                        <div class="prob-label">Positive Return (10 Tage)</div>
+                        <div class="prob-ci" id="prob-ci"></div>
+                    </div>
+                </div>
+
+                <!-- Risk Metrics -->
+                <div class="analysis-card">
+                    <h3 class="card-title">⚠️ Risiko-Metriken</h3>
+                    <div class="metrics-grid">
+                        <div class="metric-box">
+                            <div class="metric-value" id="sharpe-value">--</div>
+                            <div class="metric-label">Sharpe Proxy</div>
+                        </div>
+                        <div class="metric-box">
+                            <div class="metric-value" id="var-value">--</div>
+                            <div class="metric-label">VaR 95%</div>
+                        </div>
+                        <div class="metric-box">
+                            <div class="metric-value" id="return-value">--</div>
+                            <div class="metric-label">Expected Return</div>
+                        </div>
+                        <div class="metric-box">
+                            <div class="metric-value" id="timeframe-value">--</div>
+                            <div class="metric-label">Timeframe</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Indicators -->
+                <div class="analysis-card">
+                    <h3 class="card-title">📈 Indikatoren</h3>
+                    <div class="indicator-grid" id="indicator-grid"></div>
+                </div>
+
+                <!-- SHAP Chart -->
+                <div class="analysis-card">
+                    <h3 class="card-title">🧠 Feature Importance</h3>
+                    <div id="shap-chart"></div>
+                </div>
+            </div>
+        </section>
+
+        <div class="disclaimer-box">
+            <strong>⚠️ Research Simulation:</strong> This analysis is for educational and research purposes only.
+            Not investment advice. Setup/Trigger are technical indicators, not buy/sell recommendations.
+        </div>
+    </main>
+
+    <script>
+        let analysisData = null;
+
+        async function loadData() {
+            try {
+                const response = await fetch('/data/snapshots/stock-analysis.json');
+                analysisData = await response.json();
+                populateRankings();
+                populateSelector();
+            } catch (err) {
+                console.error('Error loading data:', err);
+            }
+        }
+
+        function populateRankings() {
+            const triggeredTbody = document.querySelector('#triggered-table tbody');
+            const setupsTbody = document.querySelector('#setups-table tbody');
+
+            // Triggered setups (Buy Candidates)
+            const triggered = analysisData._rankings?.triggered_setups || [];
+            triggeredTbody.innerHTML = triggered.slice(0, 8).map(s => `
+                <tr onclick="selectStock('${s.ticker}')">
+                    <td class="ticker">${s.ticker}</td>
+                    <td>$${s.price.toFixed(0)}</td>
+                    <td><span class="badge strong">STRONG</span></td>
+                    <td>${Math.round(s.probability * 100)}%</td>
+                    <td><span class="badge ${s.timeframe}">${s.timeframe.toUpperCase()}</span></td>
+                </tr>
+            `).join('') || '<tr><td colspan="5" style="color:#64748b;text-align:center;">No active triggers</td></tr>';
+
+            // Top setups
+            const setups = analysisData._rankings?.top_setups || [];
+            setupsTbody.innerHTML = setups.slice(0, 8).map(s => `
+                <tr onclick="selectStock('${s.ticker}')">
+                    <td class="ticker">${s.ticker}</td>
+                    <td>$${s.price.toFixed(0)}</td>
+                    <td>${s.setup_score}%</td>
+                    <td>${s.trigger_score}%</td>
+                    <td>${s.trigger_fulfilled ? '<span class="badge strong">TRIGGER</span>' : '<span class="badge moderate">WATCH</span>'}</td>
+                </tr>
+            `).join('') || '<tr><td colspan="5" style="color:#64748b;text-align:center;">No setups</td></tr>';
+        }
+
+        function populateSelector() {
+            const select = document.getElementById('stock-select');
+            const symbols = Object.keys(analysisData)
+                .filter(k => !k.startsWith('_') && analysisData[k].probability !== null)
+                .sort();
+
+            // Group by signal strength
+            const strong = symbols.filter(s => analysisData[s].signal_strength === 'STRONG');
+            const moderate = symbols.filter(s => analysisData[s].signal_strength === 'MODERATE');
+            const weak = symbols.filter(s => analysisData[s].signal_strength === 'WEAK');
+
+            select.innerHTML = '<option value="">Select a stock...</option>';
+
+            if (strong.length > 0) {
+                const og1 = document.createElement('optgroup');
+                og1.label = '🚀 Triggered (Buy Signal)';
+                strong.forEach(s => { const o = document.createElement('option'); o.value = s; o.textContent = `${s} - ${analysisData[s].name}`; og1.appendChild(o); });
+                select.appendChild(og1);
+            }
+
+            if (moderate.length > 0) {
+                const og2 = document.createElement('optgroup');
+                og2.label = '👁️ Setup fulfilled (Watchlist)';
+                moderate.forEach(s => { const o = document.createElement('option'); o.value = s; o.textContent = `${s} - ${analysisData[s].name}`; og2.appendChild(o); });
+                select.appendChild(og2);
+            }
+
+            if (weak.length > 0) {
+                const og3 = document.createElement('optgroup');
+                og3.label = '○ No Setup';
+                weak.forEach(s => { const o = document.createElement('option'); o.value = s; o.textContent = `${s} - ${analysisData[s].name}`; og3.appendChild(o); });
+                select.appendChild(og3);
+            }
+        }
+
+        function selectStock(ticker) {
+            document.getElementById('stock-select').value = ticker;
+            renderDetail(ticker);
+        }
+
+        function renderDetail(ticker) {
+            const data = analysisData[ticker];
+            if (!data || data.probability === null) return;
+
+            document.getElementById('detail-section').style.display = 'block';
+            document.querySelector('#detail-title span').textContent = `${ticker} - ${data.name}`;
+
+            // Signal Indicator
+            const signalEl = document.getElementById('signal-indicator');
+            signalEl.className = `signal-indicator ${data.signal_strength.toLowerCase()}`;
+            signalEl.querySelector('.signal-text').textContent =
+                data.signal_strength === 'STRONG' ? '🚀 BUY SIGNAL: Setup + Trigger fulfilled!' :
+                    data.signal_strength === 'MODERATE' ? '👁️ WATCHLIST: Setup fulfilled, Trigger pending' :
+                        '○ No active setup';
+
+            // Setup Card
+            const setupCard = document.getElementById('setup-card');
+            setupCard.className = `setup-card ${data.setup.fulfilled ? 'fulfilled' : ''}`;
+            document.getElementById('setup-badge').textContent = data.setup.fulfilled ? '✓ FULFILLED' : '✗ NOT FULFILLED';
+            document.getElementById('setup-badge').className = `status-badge ${data.setup.fulfilled ? 'fulfilled' : 'not-fulfilled'}`;
+            document.getElementById('setup-score-fill').style.width = `${data.setup.score}%`;
+            document.getElementById('setup-score-fill').className = `score-fill ${data.setup.score >= 70 ? 'high' : data.setup.score >= 50 ? 'medium' : 'low'}`;
+            document.getElementById('setup-conditions').textContent = `${data.setup.conditions_met} conditions fulfilled (Score: ${data.setup.score}%)`;
+            document.getElementById('setup-proofs').innerHTML = data.setup.proof_points.map(p => `<li>${p}</li>`).join('') || '<li class="missing">No conditions fulfilled</li>';
+
+            // Trigger Card
+            const triggerCard = document.getElementById('trigger-card');
+            triggerCard.className = `trigger-card ${data.trigger.fulfilled ? 'fulfilled' : ''} ${data.trigger.pending ? 'pending' : ''}`;
+            document.getElementById('trigger-badge').textContent = data.trigger.pending ? '⏳ WAITING FOR SETUP' : data.trigger.fulfilled ? '✓ FULFILLED' : '✗ NOT FULFILLED';
+            document.getElementById('trigger-badge').className = `status-badge ${data.trigger.pending ? 'pending' : data.trigger.fulfilled ? 'fulfilled' : 'not-fulfilled'}`;
+            document.getElementById('trigger-score-fill').style.width = `${data.trigger.score}%`;
+            document.getElementById('trigger-score-fill').className = `score-fill ${data.trigger.score >= 70 ? 'high' : data.trigger.score >= 50 ? 'medium' : 'low'}`;
+            document.getElementById('trigger-conditions').textContent = data.trigger.pending ? 'Setup must be fulfilled first' : `${data.trigger.conditions_met} conditions fulfilled (Score: ${data.trigger.score}%)`;
+            document.getElementById('trigger-proofs').innerHTML = data.trigger.proof_points.map(p => `<li>${p}</li>`).join('') || (data.trigger.pending ? '<li class="missing">Waiting for setup...</li>' : '<li class="missing">No trigger conditions fulfilled</li>');
+
+            // Probability
+            const prob = data.probability;
+            const probEl = document.getElementById('prob-value');
+            probEl.textContent = `${Math.round(prob * 100)}%`;
+            probEl.className = `prob-value ${prob >= 0.6 ? 'high' : prob >= 0.45 ? 'medium' : 'low'}`;
+            document.getElementById('prob-ci').textContent = `95% CI: [${Math.round(data.metadata.confidence_interval[0] * 100)}% – ${Math.round(data.metadata.confidence_interval[1] * 100)}%]`;
+
+            // Risk Metrics
+            document.getElementById('sharpe-value').textContent = data.risk_metrics.sharpe_proxy.toFixed(2);
+            document.getElementById('sharpe-value').style.color = data.risk_metrics.sharpe_proxy >= 0 ? '#22c55e' : '#f87171';
+            document.getElementById('var-value').textContent = `${data.risk_metrics.var95.toFixed(1)}%`;
+            document.getElementById('return-value').textContent = `${data.expected_return_10d >= 0 ? '+' : ''}${data.expected_return_10d}%`;
+            document.getElementById('return-value').style.color = data.expected_return_10d >= 0 ? '#22c55e' : '#f87171';
+            document.getElementById('timeframe-value').textContent = data.timeframe ? data.timeframe.toUpperCase() : '-';
+
+            // Indicators
+            const indGrid = document.getElementById('indicator-grid');
+            const ind = data.indicators;
+            indGrid.innerHTML = Object.entries(ind).map(([k, v]) => `
+                <div class="indicator-item">
+                    <span class="indicator-name">${k.replace(/_/g, ' ').toUpperCase()}</span>
+                    <span class="indicator-value">${typeof v === 'number' ? v.toFixed(2) : v}</span>
+                </div>
+            `).join('');
+
+            // SHAP Chart
+            renderSHAPChart(data.explainability.shap_values);
+
+            // Scroll to detail
+            document.getElementById('detail-section').scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+        function renderSHAPChart(shapValues) {
+            const chartDiv = document.getElementById('shap-chart');
+            const entries = Object.entries(shapValues || {}).sort((a, b) => b[1] - a[1]).slice(0, 8);
+            const features = entries.map(e => e[0].replace(/_/g, ' '));
+            const values = entries.map(e => e[1]);
+            const colors = values.map(v => v >= 0 ? 'rgba(52, 211, 153, 0.8)' : 'rgba(248, 113, 113, 0.8)');
+
+            Plotly.newPlot(chartDiv, [{
+                type: 'bar', x: values, y: features, orientation: 'h', marker: { color: colors }
+            }], {
+                margin: { l: 100, r: 20, t: 10, b: 30 },
+                paper_bgcolor: 'transparent', plot_bgcolor: 'transparent',
+                font: { color: '#94a3b8', size: 10 },
+                xaxis: { gridcolor: 'rgba(100, 116, 139, 0.2)' },
+                yaxis: { automargin: true }
+            }, { responsive: true, displayModeBar: false });
+        }
+
+        document.getElementById('stock-select').addEventListener('change', e => {
+            if (e.target.value) renderDetail(e.target.value);
+        });
+
+        loadData();
+    </script>
+    <script src="/market-clock.js" defer></script>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9cbd8fc6793f579e',t:'MTc3MDc0NzAwOQ=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+
+</html>

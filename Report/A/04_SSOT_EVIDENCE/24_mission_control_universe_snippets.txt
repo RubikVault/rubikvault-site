@@ -1,0 +1,179 @@
+  1308	  const providersRaw = providersRes.value && typeof providersRes.value === 'object' ? providersRes.value : {};
+  1309	  const providersDay = Object.fromEntries(
+  1310	    Object.entries(providersRaw).map(([k, v]) => [k, summarizeProviderStats(v)])
+  1311	  );
+  1312	
+  1313	  const [opsDaily, usageReport, providerState, seedManifest, nasdaq100Universe, marketPhaseIndex, healthProfilesRaw, thresholdsRaw, sourceMapRaw, eodManifestRaw] = await Promise.all([
+  1314	    fetchAssetJson(request.url, '/data/ops-daily.json', null),
+  1315	    fetchAssetJson(request.url, '/data/usage-report.json', null),
+  1316	    fetchAssetJson(request.url, '/data/provider-state.json', null),
+  1317	    fetchAssetJson(request.url, '/data/seed-manifest.json', null),
+  1318	    fetchAssetJson(request.url, '/data/universe/nasdaq100.json', []),
+  1319	    fetchAssetJson(request.url, '/data/marketphase/index.json', null),
+  1320	    fetchAssetJson(request.url, '/data/ops/health-profiles.v1.json', null),
+  1321	    fetchAssetJson(request.url, '/data/ops/thresholds.v1.json', null),
+  1322	    fetchAssetJson(request.url, '/data/ops/source-map.v1.json', null),
+  1323	    fetchAssetJson(request.url, '/data/eod/manifest.latest.json', null)
+  1324	  ]);
+  1325	
+  1326	  const healthProfilesCheck = validateHealthProfiles(healthProfilesRaw);
+  1327	  const thresholdsCheck = validateThresholds(thresholdsRaw);
+  1328	  const sourceMapCheck = validateSourceMap(sourceMapRaw);
+  1329	  const healthProfiles = healthProfilesCheck.valid ? healthProfilesRaw : null;
+  1330	  const thresholds = thresholdsCheck.valid ? thresholdsRaw : null;
+  1331	  const sourceMap = sourceMapCheck.valid ? sourceMapRaw : null;
+  1332	  const opsPolicy = normalizeOpsPolicy(opsHealthPolicyRaw);
+  1333	  const rootStatusPath = opsPolicy?.health?.source_of_truth?.root_status_path || DEFAULT_OPS_POLICY.health.source_of_truth.root_status_path;
+  1334	  const rootStatusDoc = await fetchAssetJson(request.url, rootStatusPath, null);
+
+  1408	    }
+  1409	  };
+  1410	
+  1411	  const deploy = await fetchBuildInfo(request.url);
+  1412	
+  1413	  const nasdaqExpected = Array.isArray(nasdaq100Universe) ? nasdaq100Universe.length : 100;
+  1414	  const expectedTradingDay = lastTradingDayIso(now);
+  1415	
+  1416	  const universeAsset = await fetchAssetText(request.url, '/data/universe/nasdaq100.json', []);
+  1417	  const universeHash = universeAsset.ok && typeof universeAsset.text === 'string' ? sha256Hex(universeAsset.text) : null;
+  1418	  const universeCount = Array.isArray(universeAsset.json) ? universeAsset.json.length : nasdaqExpected;
+  1419	
+  1420	  const origin = new URL(request.url).origin;
+  1421	
+  1422	  const traceAssets = await Promise.all(
+  1423	    PRICE_TRACE_TICKERS.map(async (ticker) => {
+  1424	      const uiPath = PRICE_UI_TRACE_PATH(ticker);
+  1425	      const uiRes = await fetchAssetText(request.url, uiPath, null);
+  1426	      const uiTraceRaw = uiRes.json && typeof uiRes.json === 'object' ? uiRes.json : null;
+  1427	      const uiBase = uiTraceRaw?.base_url || null;
+  1428	      const uiBaseMatch = !uiBase || uiBase === origin;
+  1429	      const uiTrace = uiBaseMatch ? uiTraceRaw : null;
+  1430	      const uiHash = uiRes.ok && typeof uiRes.text === 'string' ? sha256Hex(uiRes.text) : null;
+
+  1628	    : { valid: false, errors: ['artifact missing'] };
+  1629	
+  1630	  const ssotSampleTicker = opsPolicy?.sample_ticker || PRICE_TRACE_TICKERS[0] || 'UBER';
+  1631	  const [
+  1632	    universeDoc,
+  1633	    stockAnalysisDoc,
+  1634	    eodBatchDoc,
+  1635	    marketphaseIndexDoc,
+  1636	    marketphaseSampleDoc
+  1637	  ] = await Promise.all([
+  1638	    fetchAssetJson(request.url, '/data/universe/nasdaq100.json', null),
+  1639	    fetchAssetJson(request.url, '/data/snapshots/stock-analysis.json', null),
+  1640	    fetchAssetJson(request.url, '/data/eod/batches/eod.latest.000.json', null),
+  1641	    fetchAssetJson(request.url, '/data/marketphase/index.json', null),
+  1642	    fetchAssetJson(request.url, `/data/marketphase/${encodeURIComponent(ssotSampleTicker)}.json`, null)
+  1643	  ]);
+  1644	
+  1645	  const apiSamples = await Promise.all(
+  1646	    PRICE_TRACE_TICKERS.map(async (ticker) => {
+  1647	      const sample = await fetchApiStock(request.url, ticker);
+  1648	      return { ticker, ...sample };
+  1649	    })
+  1650	  );
+  1651	
+  1652	  const fundamentalsSample = await fetchApiJson(request.url, '/api/fundamentals', { ticker: ssotSampleTicker });
+  1653	  const elliottSample = await fetchApiJson(request.url, '/api/elliott-scanner');
+  1654	
+  1655	  const priceTruth = buildPriceTruthChain({
+  1656	    traces: traceAssets,
+  1657	    apiSamples,
+  1658	    marketPricesSnapshot,
+  1659	    nowIso: startedAtIso,
+  1660	    pricesStaticRequired,
+  1661	    isPreview: previewMode.isPreview
+  1662	  });
+  1663	  const pricesHealth = buildPricesHealth(priceTruth);
+  1664	
+  1665	  const priceContractStep = priceTruth?.steps?.find((s) => s.id === 'P6_API_CONTRACT') || null;
+  1666	  const apiChecks = [
+  1667	    buildCheck({
+  1668	      id: 'API_STOCK',
+  1669	      label: '/api/stock?ticker=<T>',
+  1670	      required: true,
+  1671	      ok: priceContractStep?.status === 'OK',
+  1672	      reason: priceContractStep?.status === 'OK' ? 'OK' : 'CONTRACT_FAIL',
+  1673	      path: '/api/stock',
+  1674	      evidence: priceContractStep?.evidence || null
+  1675	    }),
+  1676	    buildCheck({
+  1677	      id: 'API_FUNDAMENTALS',
+  1678	      label: `/api/fundamentals?ticker=${ssotSampleTicker}`,
+  1679	      required: false,
+  1680	      ok: fundamentalsSample.ok && typeof fundamentalsSample.response?.schema_version === 'string',
+  1681	      reason: fundamentalsSample.ok ? 'SCHEMA_MISSING' : `HTTP_${fundamentalsSample.status ?? 'ERR'}`,
+  1682	      path: fundamentalsSample.url,
+  1683	      evidence: {
+  1684	        status: fundamentalsSample.status,
+  1685	        schema_version: fundamentalsSample.response?.schema_version || null,
+  1686	        meta_status: fundamentalsSample.response?.meta?.status || null,
+  1687	        error: fundamentalsSample.response?.error?.code || null
+  1688	      }
+  1689	    }),
+  1690	    buildCheck({
+  1691	      id: 'API_ELLIOTT_SCANNER',
+  1692	      label: '/api/elliott-scanner',
+  1693	      required: true,
+  1694	      ok: elliottSample.ok && elliottSample.response?.ok === true && Array.isArray(elliottSample.response?.setups),
+  1695	      reason: elliottSample.ok ? 'INVALID_RESPONSE' : `HTTP_${elliottSample.status ?? 'ERR'}`,
+  1696	      path: elliottSample.url,
+  1697	      evidence: {
+  1698	        status: elliottSample.status,
+  1699	        ok: elliottSample.response?.ok ?? null,
+  1700	        setups: Array.isArray(elliottSample.response?.setups) ? elliottSample.response.setups.length : null
+  1701	      }
+  1702	    })
+  1703	  ];
+  1704	  const coreApiChecks = selectPolicyChecks(apiChecks, opsPolicy?.core?.api, true);
+  1705	  const enhancerApiChecks = selectPolicyChecks(apiChecks, opsPolicy?.enhancers?.api, false);
+  1706	  const coreApiHealth = summarizeChecks(coreApiChecks);
+  1707	  const enhancerApiHealth = summarizeChecks(enhancerApiChecks);
+  1708	
+  1709	  const assetChecks = [
+  1710	    buildCheck({
+  1711	      id: 'ASSET_UNIVERSE',
+  1712	      label: '/data/universe/nasdaq100.json',
+  1713	      required: true,
+  1714	      ok: Array.isArray(universeDoc) && universeDoc.length > 0,
+  1715	      reason: 'UNIVERSE_MISSING',
+  1716	      path: '/data/universe/nasdaq100.json',
+  1717	      evidence: { count: Array.isArray(universeDoc) ? universeDoc.length : null }
+  1718	    }),
+  1719	    buildCheck({
+  1720	      id: 'ASSET_STOCK_ANALYSIS',
+  1721	      label: '/data/snapshots/stock-analysis.json',
+  1722	      required: true,
+  1723	      ok: stockAnalysisDoc && typeof stockAnalysisDoc === 'object' && Boolean(stockAnalysisDoc?._meta),
+  1724	      reason: 'STOCK_ANALYSIS_MISSING',
+  1725	      path: '/data/snapshots/stock-analysis.json',
+  1726	      evidence: {
+  1727	        has_meta: Boolean(stockAnalysisDoc?._meta),
+  1728	        symbols_processed: stockAnalysisDoc?._meta?.symbols_processed ?? null
+  1729	      }
+  1730	    }),
+  1731	    buildCheck({
+  1732	      id: 'ASSET_EOD_BATCH',
+
+  2048	    action: {
+  2049	      url: '/api/stock?ticker=UBER',
+  2050	      howTo: 'Verify SSOT API endpoints'
+  2051	    }
+  2052	  };
+  2053	  const assetsHealth = {
+  2054	    status: coreAssetHealth.status,
+  2055	    reason: coreAssetHealth.reason,
+  2056	    checks: coreAssetHealth.checks,
+  2057	    action: {
+  2058	      url: '/data/universe/nasdaq100.json',
+  2059	      howTo: 'Verify static feature inputs'
+  2060	    }
+  2061	  };
+  2062	
+  2063	  const health = {
+  2064	    system: systemHealth,
+  2065	    platform: {
+  2066	      status: platformStatus,
+  2067	      reason: expectedFlags.kv ? (hasKV ? 'KV_OK' : 'KV_MISSING') : 'NOT_EXPECTED',
+  2068	      action: {

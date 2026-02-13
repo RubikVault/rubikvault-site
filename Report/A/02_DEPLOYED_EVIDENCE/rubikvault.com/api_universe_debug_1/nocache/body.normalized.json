@@ -1,0 +1,57 @@
+{
+  "asset_latency_ms": null,
+  "asset_status": "MISS",
+  "build_id": null,
+  "config": null,
+  "data": null,
+  "data_preview": null,
+  "debug": true,
+  "error": {
+    "code": "NOT_FOUND",
+    "message": "Check Cloudflare Pages deployment"
+  },
+  "failure": {
+    "class": "ASSET_FETCH_FAILED",
+    "hint": "Check Cloudflare Pages deployment"
+  },
+  "kv_backend": "BOUND",
+  "kv_latency_ms": null,
+  "kv_status": "DISABLED",
+  "links": {
+    "manifest": "/data/manifest.json",
+    "probe": "/api/probe/universe",
+    "snapshot": "/data/snapshots/universe/latest.json",
+    "state": "/data/state/modules/universe.json"
+  },
+  "manifest": null,
+  "manifest_ref": null,
+  "meta": {
+    "data_date": "2026-02-10",
+    "generated_at": "2026-02-10T18:04:40.186Z",
+    "provider": "unknown",
+    "status": "error"
+  },
+  "metadata": null,
+  "module": "universe",
+  "module_state": null,
+  "ok": false,
+  "proof_chain": {
+    "DELIVERY": "PASS",
+    "FILE": "FAIL",
+    "FRESH": "UNKNOWN",
+    "PLAUS": "UNKNOWN",
+    "SCHEMA": "UNKNOWN",
+    "UI": "UNKNOWN"
+  },
+  "proof_summary": "FAILED",
+  "schema_version": null,
+  "served_from": "ASSET",
+  "source": {
+    "file_path": null,
+    "file_present": false,
+    "last_error": null,
+    "type": null
+  },
+  "suggested_action": "Check Cloudflare Pages deployment",
+  "timestamp": "2026-02-10T18:04:40.186Z"
+}

@@ -1,0 +1,516 @@
+$ rg -n "elliott|wave|scanner|setups|signals|pattern" -S scripts/ functions/ public/ mirrors/ policies/ 2>/dev/null || true
+mirrors/congress-trading.json:46:        "signals": [],
+mirrors/central-bank-watch.json:46:        "signals": [],
+mirrors/arb-breadth-lite.json:46:        "signals": [],
+mirrors/crypto-snapshot.json:46:        "signals": [],
+mirrors/alpha-radar.json:46:        "signals": [],
+mirrors/quotes.json:46:        "signals": [],
+mirrors/earnings-calendar.json:46:        "signals": [],
+mirrors/price-snapshot.json:46:        "signals": [],
+mirrors/earnings-reality.json:46:        "signals": [],
+mirrors/market-cockpit.json:46:        "signals": [],
+scripts/fix-api-exports.mjs:34:  // Pattern 1: export default { fetch: serveStaticJson };
+scripts/fix-api-exports.mjs:49:  // Pattern 2: Other export default { fetch: ... }
+scripts/fix-api-exports.mjs:54:  return { status: 'skip', reason: 'no_pattern_match' };
+mirrors/volume-anomaly.json:46:        "signals": [],
+mirrors/market-regime.json:46:        "signals": [],
+mirrors/analyst-stampede.json:46:        "signals": [],
+mirrors/sp500-sectors.json:46:        "signals": [],
+functions/_shared/cache.js:6:    value?.data?.signals ||
+functions/_shared/cache.js:7:    value?.signals ||
+mirrors/sector-rotation.json:46:        "signals": [],
+scripts/healthcheck.sh:12:  "/api/tech-signals"
+mirrors/alpha-performance.json:46:        "signals": [],
+mirrors/market-health.json:46:        "signals": [],
+mirrors/breakout-energy.json:46:        "signals": [],
+mirrors/smart-money.json:46:        "signals": [],
+mirrors/arb-risk-regime.json:46:        "signals": [],
+scripts/marketphase-validate.mjs:71:  const elliott = data.elliott || {};
+scripts/marketphase-validate.mjs:72:  const completed = elliott.completedPattern || {};
+scripts/marketphase-validate.mjs:74:    pushError(errors, `${symbol}: completedPattern.valid missing.`);
+scripts/marketphase-validate.mjs:76:  if (!completed.direction) pushError(errors, `${symbol}: completedPattern.direction missing.`);
+scripts/marketphase-validate.mjs:78:    pushError(errors, `${symbol}: completedPattern.confidence0_100 missing.`);
+scripts/marketphase-validate.mjs:81:    pushError(errors, `${symbol}: completedPattern.rules missing.`);
+scripts/marketphase-validate.mjs:84:  const developing = elliott.developingPattern || {};
+scripts/marketphase-validate.mjs:85:  if (!developing.possibleWave) pushError(errors, `${symbol}: developingPattern.possibleWave missing.`);
+scripts/marketphase-validate.mjs:86:  if (!isNumber(developing.confidence)) pushError(errors, `${symbol}: developingPattern.confidence missing.`);
+scripts/marketphase-validate.mjs:88:    pushError(errors, `${symbol}: developingPattern.fibLevels missing.`);
+scripts/marketphase-validate.mjs:91:  const uncertainty = elliott.uncertainty || {};
+scripts/marketphase-validate.mjs:102:  const fib = data.fib || elliott.fib || {};
+mirrors/macro-rates.json:46:        "signals": [],
+scripts/core/alpha-radar-core.mjs:25:  // CRITICAL FIX: Only derive setupScore/triggerScore if they are NOT already present
+scripts/core/alpha-radar-core.mjs:27:  let setupScore = parseNumber(pick.setupScore);
+scripts/core/alpha-radar-core.mjs:30:  if (setupScore === null && triggerScore === null && totalScore !== null) {
+scripts/core/alpha-radar-core.mjs:31:    setupScore = Math.min(40, Math.round(totalScore * 0.4));
+scripts/core/alpha-radar-core.mjs:32:    triggerScore = Math.max(0, Math.round(totalScore - setupScore));
+scripts/core/alpha-radar-core.mjs:33:  } else if (setupScore === null && totalScore !== null) {
+scripts/core/alpha-radar-core.mjs:34:    // If only setupScore is missing, derive it but keep triggerScore
+scripts/core/alpha-radar-core.mjs:35:      setupScore = Math.min(40, Math.round(totalScore * 0.4));
+scripts/core/alpha-radar-core.mjs:37:      triggerScore = Math.max(0, Math.round(totalScore - setupScore));
+scripts/core/alpha-radar-core.mjs:39:  } else if (triggerScore === null && totalScore !== null && setupScore !== null) {
+scripts/core/alpha-radar-core.mjs:40:    // If only triggerScore is missing, derive it from totalScore - setupScore
+scripts/core/alpha-radar-core.mjs:41:    triggerScore = Math.max(0, Math.round(totalScore - setupScore));
+scripts/core/alpha-radar-core.mjs:50:    setupScore,
+mirrors/tech-signals.json:6:    "feature": "tech-signals",
+mirrors/tech-signals.json:46:        "signals": [],
+mirrors/sentiment.json:46:        "signals": [],
+scripts/ui-path/prove_ui_path.mjs:21:function findLineRef(filePath, pattern) {
+scripts/ui-path/prove_ui_path.mjs:24:  const rx = pattern instanceof RegExp ? pattern : new RegExp(pattern.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+mirrors/insider-cluster.json:46:        "signals": [],
+mirrors/news.json:46:        "signals": [],
+mirrors/metrics.json:46:        "signals": [],
+mirrors/top-movers.json:46:        "signals": [],
+mirrors/why-moved.json:46:        "signals": [],
+mirrors/news-intelligence.json:46:        "signals": [],
+mirrors/yield-curve.json:46:        "signals": [],
+mirrors/hype-divergence.json:46:        "signals": [],
+functions/api/mission-control/summary.js:82:    api: ['API_STOCK', 'API_ELLIOTT_SCANNER'],
+functions/api/mission-control/summary.js:1653:  const elliottSample = await fetchApiJson(request.url, '/api/elliott-scanner');
+functions/api/mission-control/summary.js:1691:      id: 'API_ELLIOTT_SCANNER',
+functions/api/mission-control/summary.js:1692:      label: '/api/elliott-scanner',
+functions/api/mission-control/summary.js:1694:      ok: elliottSample.ok && elliottSample.response?.ok === true && Array.isArray(elliottSample.response?.setups),
+functions/api/mission-control/summary.js:1695:      reason: elliottSample.ok ? 'INVALID_RESPONSE' : `HTTP_${elliottSample.status ?? 'ERR'}`,
+functions/api/mission-control/summary.js:1696:      path: elliottSample.url,
+functions/api/mission-control/summary.js:1698:        status: elliottSample.status,
+functions/api/mission-control/summary.js:1699:        ok: elliottSample.response?.ok ?? null,
+functions/api/mission-control/summary.js:1700:        setups: Array.isArray(elliottSample.response?.setups) ? elliottSample.response.setups.length : null
+public/config/ui-layouts.json:6:    "A": { "name":"Executive Bento","sectionsOrder":["Header","Summary","Signals","Groups"],
+public/config/ui-layouts.json:11:    "B": { "name":"Classic Cards","sectionsOrder":["Header","Groups","Signals"],
+public/config/ui-layouts.json:16:    "C": { "name":"Dense Table","sectionsOrder":["Header","Groups","Signals"],
+public/config/ui-layouts.json:22:    "D": { "name":"Two-Column Analyst","sectionsOrder":["Header","Signals","Groups"],
+public/config/ui-layouts.json:27:    "E": { "name":"Signals-First Inbox","sectionsOrder":["Header","Signals","Groups"],
+public/config/ui-layouts.json:30:      "notes":"Signals prominent; groups collapsible."
+public/config/ui-layouts.json:32:    "F": { "name":"Minimal KPI Strip","sectionsOrder":["Header","Groups","Signals"],
+public/config/ui-layouts.json:37:    "G": { "name":"Dashboard Tiles","sectionsOrder":["Header","Groups","Signals"],
+public/config/ui-layouts.json:42:    "H": { "name":"Print-Friendly Report","sectionsOrder":["Header","Signals","Groups"],
+scripts/validate/universe-registry.v1.mjs:48:        allowed_pattern: "^[A-Z0-9.\\-]{1,15}$",
+scripts/validate/universe-registry.v1.mjs:83:const pat = new RegExp(doc.symbol_rules.allowed_pattern || "^[A-Z0-9.\\-]{1,15}$");
+scripts/validate/universe-registry.v1.mjs:95:    if (!pat.test(s)) die(`symbol '${s}' in '${groupName}' does not match allowed_pattern`);
+public/forecast.html:290:      <a href="/elliott.html" class="rv-page-nav-link" data-page="elliott">Elliott Waves</a>
+mirrors/arb-liquidity-pulse.json:46:        "signals": [],
+scripts/validate-mirrors.mjs:206:          "setupScore",
+scripts/validate-mirrors.mjs:230:    if (mirrorId === "tech-signals") {
+scripts/validate-mirrors.mjs:237:      const signals = normalized.mirror?.data?.signals;
+scripts/validate-mirrors.mjs:239:      if (!Array.isArray(signals) && !Array.isArray(rows)) {
+scripts/validate-mirrors.mjs:240:        failures.push({ mirrorId, error: "signals_or_rows_missing" });
+public/mirrors/central-bank-watch.json:46:        "signals": [],
+public/mirrors/market-cockpit.json:17:  "whyUnique": "Summary cockpit for benchmarks and signals.",
+scripts/metrics-v5-gates.mjs:64:  assert(Array.isArray(data.signals), "data.signals missing");
+public/mirrors/system-health.json:72:      "id": "tech-signals",
+functions/api/_shared/universe.js:1:export const TECH_SIGNALS_UNIVERSE = [
+public/mirrors/daily-digest.json:8:  "actionableSignals": [],
+public/mirrors/daily-digest.json:16:    "tech-signals",
+public/index.html:97:      <a href="/elliott.html" class="rv-page-nav-link" data-page="elliott">Elliott Waves</a>
+public/index.html:162:      <!-- BUY SIGNALS BY TIMEFRAME -->
+public/index.html:163:      <div id="buy-signals-stats"
+public/index.html:171:          <div style="font-size: 1rem; color: #94a3b8;">Short-Term Buy Signals</div>
+public/index.html:180:          <div style="font-size: 1rem; color: #94a3b8;">Medium-Term Buy Signals</div>
+public/index.html:189:          <div style="font-size: 1rem; color: #94a3b8;">Long-Term Buy Signals</div>
+public/index.html:194:      <p id="buy-signals-note" style="font-size: 0.8rem; color: #64748b; margin: 0 0 1rem;">
+public/index.html:195:        Best buy signals: Setup + Trigger fulfilled. Click a number to see the stocks.
+public/index.html:235:        <h3 id="signal-modal-title" style="margin:0; font-size:1.35rem; color:#e5e7eb;">Buy Signals</h3>
+public/index.html:279:    const elliottWavesData = new Map();
+public/index.html:280:    const elliottSupportByTicker = new Map();
+public/index.html:281:    let elliottIndexLoaded = false;
+public/index.html:289:        updateBuySignalsStats();
+public/index.html:290:        loadElliottSupportIndex().then(updateBuySignalsStats);
+public/index.html:311:    async function loadElliottSupportIndex() {
+public/index.html:312:      if (elliottIndexLoaded) return;
+public/index.html:313:      elliottIndexLoaded = true;
+public/index.html:326:            elliottSupportByTicker.set(t, null);
+public/index.html:329:          elliottWavesData.set(t, mpPayload);
+public/index.html:330:          const support = computeElliottSupport(mpPayload);
+public/index.html:331:          elliottSupportByTicker.set(t, support);
+public/index.html:334:        console.warn('Elliott Waves index not available:', e);
+public/index.html:338:    function computeElliottSupport(payload) {
+public/index.html:340:      const elliott = data?.elliott || {};
+public/index.html:342:      const direction = elliott?.completedPattern?.direction || features?.SMATrend || null;
+public/index.html:343:      const confidence = Number(elliott?.developingPattern?.confidence ?? elliott?.completedPattern?.confidence0_100);
+public/index.html:349:    function updateBuySignalsStats() {
+public/index.html:372:            // Check Elliott support (if available) - only veto if explicitly false
+public/index.html:373:            const elliottSupport = elliottSupportByTicker.get(ticker);
+public/index.html:374:            if (elliottSupport !== false) {
+public/index.html:384:      const noteEl = document.getElementById('buy-signals-note');
+public/index.html:390:        const coverage = elliottSupportByTicker.size;
+public/index.html:391:        const coverageNote = coverage ? ` Elliott coverage: ${coverage} symbol${coverage === 1 ? '' : 's'}.` : '';
+public/index.html:392:        noteEl.textContent = `Best buy signals: Setup + Trigger fulfilled. Click a number to see the stocks.${coverageNote}`;
+public/index.html:396:    // Modal functions for buy signals
+public/index.html:410:      titleEl.innerHTML = `<span style="color:${tfColors[timeframe] || '#e5e7eb'}">●</span> ${tfLabels[timeframe] || 'Buy Signals'}`;
+public/index.html:421:        const elliottSupport = elliottSupportByTicker.get(ticker);
+public/index.html:422:        return setupOk && triggerOk && elliottSupport !== false;
+public/index.html:438:        const setupScore = s.setup_score ?? '—';
+public/index.html:448:            <td style="padding:0.75rem 1rem; text-align:center;"><span style="background:rgba(16,185,129,0.15); color:#34d399; padding:0.2rem 0.5rem; border-radius:4px; font-size:0.85rem;">${setupScore}</span></td>
+public/index.html:1043:              <div style="font-size: 0.85rem; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 0.5rem;">Elliott Waves</div>
+public/index.html:1044:              <div id="elliott-content" style="color: #64748b; font-style: italic;">Loading Elliott Waves analysis...</div>
+public/index.html:1510:      const setupScore = Number(entry?.setup?.score);
+public/index.html:1515:      const signalStrength = entry?.signal_strength || 'WEAK';
+public/index.html:1544:      const signalColor = signalColors[signalStrength] || '#64748b';
+public/index.html:1558:          ${badge(setupOk, 'Setup', setupScore, setupConditions)}
+public/index.html:1567:            <span style="background:${signalColor}; padding:0.15rem 0.5rem; border-radius:4px; font-size:0.75rem; color:#0f172a; font-weight:700;">${signalStrength}</span>
+public/index.html:1608:    async function getElliottPayload(ticker) {
+public/index.html:1611:      if (elliottWavesData.has(t)) return elliottWavesData.get(t);
+public/index.html:1614:      elliottWavesData.set(t, payload);
+public/index.html:1615:      if (!elliottSupportByTicker.has(t)) {
+public/index.html:1616:        elliottSupportByTicker.set(t, computeElliottSupport(payload));
+public/index.html:1621:    function renderElliottSummary(payload) {
+public/index.html:1623:        return '<div style="color:#64748b;">Elliott Waves data not available for this ticker.</div>';
+public/index.html:1626:      const elliott = data?.elliott || {};
+public/index.html:1628:      const direction = elliott?.completedPattern?.direction || features?.SMATrend || null;
+public/index.html:1629:      const wave = elliott?.developingPattern?.possibleWave || '—';
+public/index.html:1630:      const confidence = Number(elliott?.developingPattern?.confidence ?? elliott?.completedPattern?.confidence0_100);
+public/index.html:1632:      const fibLevels = elliott?.developingPattern?.fibLevels || {};
+public/index.html:1674:            Wave <span style="color:#e5e7eb; font-weight:700;">${escapeHtml(wave)}</span>
+public/index.html:1678:        ${progressBar(confPct, confColor, 'Wave Confidence', Number.isFinite(confidence) ? Math.round(confidence) + '%' : '—')}
+public/index.html:1694:      const elliottEl = document.getElementById('elliott-content');
+public/index.html:1696:      if (!sciEl || !elliottEl || !probEl) return;
+public/index.html:1706:      elliottEl.innerHTML = '<div style="color:#64748b; font-style: italic;">Loading Elliott Waves analysis...</div>';
+public/index.html:1707:      const elliottPayload = await getElliottPayload(ticker);
+public/index.html:1708:      elliottEl.innerHTML = renderElliottSummary(elliottPayload);
+scripts/pipeline/build-marketphase-from-kv.mjs:122:    elliott: round6Object(analysis.elliott),
+scripts/pipeline/build-marketphase-from-kv.mjs:129:  if (normalizedAnalysis.elliott?.developingPattern?.fibLevels) {
+scripts/pipeline/build-marketphase-from-kv.mjs:130:    normalizedAnalysis.elliott.developingPattern.fibLevels = {
+scripts/pipeline/build-marketphase-from-kv.mjs:131:      support: round6Array(normalizedAnalysis.elliott.developingPattern.fibLevels.support),
+scripts/pipeline/build-marketphase-from-kv.mjs:132:      resistance: round6Array(normalizedAnalysis.elliott.developingPattern.fibLevels.resistance)
+scripts/pipeline/build-marketphase-from-kv.mjs:165:  const dailyValid = daily?.elliott?.completedPattern?.valid;
+scripts/pipeline/build-marketphase-from-kv.mjs:166:  const weeklyValid = weekly?.elliott?.completedPattern?.valid;
+scripts/pipeline/build-marketphase-from-kv.mjs:168:  return daily.elliott.completedPattern.direction === weekly.elliott.completedPattern.direction;
+scripts/pipeline/build-marketphase-from-kv.mjs:173:    .map((env) => env?.data?.elliott?.completedPattern?.confidence0_100)
+scripts/pipeline/build-marketphase-from-kv.mjs:180:  const ruleStats = envelopes.map((env) => env?.data?.elliott?.completedPattern?.rules || {});
+scripts/pipeline/build-marketphase-from-kv.mjs:187:    patternFrequency: Number((0.031).toFixed(3)),
+scripts/pipeline/build-marketphase-from-kv.mjs:190:      wave2: fibRatios.map((r) => Number((r.wave2 || 0).toFixed(2))).slice(0, 3),
+scripts/pipeline/build-marketphase-from-kv.mjs:191:      wave3: fibRatios.map((r) => Number((r.wave3 || 0).toFixed(2))).slice(0, 3),
+scripts/pipeline/build-marketphase-from-kv.mjs:192:      wave4: fibRatios.map((r) => Number((r.wave4 || 0).toFixed(2))).slice(0, 3),
+scripts/pipeline/build-marketphase-from-kv.mjs:193:      wave5: fibRatios.map((r) => Number((r.wave5 || 0).toFixed(2))).slice(0, 3)
+scripts/pipeline/build-marketphase-from-kv.mjs:376:    envelope.data.elliott.developingPattern.disclaimer = "Reference levels only -- no prediction";
+scripts/truth-chain/lib/line-ref.mjs:3:export function findLineRefs(filePath, pattern, { context = 0, limit = 5 } = {}) {
+scripts/truth-chain/lib/line-ref.mjs:6:  const regex = pattern instanceof RegExp ? pattern : new RegExp(pattern.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+scripts/truth-chain/lib/line-ref.mjs:24:export function firstLineRef(filePath, pattern) {
+scripts/truth-chain/lib/line-ref.mjs:25:  const matches = findLineRefs(filePath, pattern, { context: 0, limit: 1 });
+scripts/truth-chain/lib/line-ref.mjs:27:    const p = pattern instanceof RegExp ? pattern.toString() : String(pattern);
+public/BLOCK_ANALYSIS.md:9:2. **Tech Signals** (`rv-tech-signals`) - ✅ OK
+public/BLOCK_ANALYSIS.md:135:2. ✅ Tech Signals
+public/scientific.html:9:        content="Scientific Setup/Trigger Scanner. See which stocks are about to break out with clear Setup and Trigger indicators." />
+public/scientific.html:79:            <a href="/elliott.html" class="rv-page-nav-link" data-page="elliott">Elliott Waves</a>
+public/scientific.html:540:                <!-- Triggered Setups (Buy Candidates) -->
+public/scientific.html:542:                    <h3 class="ranking-title"><span class="icon">🚀</span> Triggered Setups (Buy Candidates)</h3>
+public/scientific.html:557:                <!-- Top Setups (Watchlist) -->
+public/scientific.html:559:                    <h3 class="ranking-title"><span class="icon">👁️</span> Top Setups (Watchlist)</h3>
+public/scientific.html:560:                    <table class="ranking-table" id="setups-table">
+public/scientific.html:682:            const setupsTbody = document.querySelector('#setups-table tbody');
+public/scientific.html:684:            // Triggered setups (Buy Candidates)
+public/scientific.html:685:            const triggered = analysisData._rankings?.triggered_setups || [];
+public/scientific.html:696:            // Top setups
+public/scientific.html:697:            const setups = analysisData._rankings?.top_setups || [];
+public/scientific.html:698:            setupsTbody.innerHTML = setups.slice(0, 8).map(s => `
+public/scientific.html:706:            `).join('') || '<tr><td colspan="5" style="color:#64748b;text-align:center;">No setups</td></tr>';
+functions/api/_shared/telemetry.mjs:121:  const patterns = [
+functions/api/_shared/telemetry.mjs:128:  for (const re of patterns) {
+public/mirrors/macro-rates.json:46:        "signals": [],
+public/mirrors/sentiment.json:46:        "signals": [],
+public/mirrors/alpha-radar.json:184:          "setupScore": 34,
+public/mirrors/alpha-radar.json:212:          "setupScore": 34,
+public/mirrors/alpha-radar.json:240:          "setupScore": 34,
+public/mirrors/alpha-radar.json:270:          "setupScore": 34,
+public/mirrors/alpha-radar.json:298:          "setupScore": 34,
+public/mirrors/alpha-radar.json:326:          "setupScore": 34,
+public/mirrors/alpha-radar.json:356:          "setupScore": 28,
+public/mirrors/alpha-radar.json:384:          "setupScore": 26,
+public/mirrors/alpha-radar.json:412:          "setupScore": 26,
+public/mirrors/news-intelligence.json:46:        "signals": [],
+scripts/audit-site.mjs:764:      details: "dynamic_path_detected, skipped dynamic patterns",
+public/mirrors/earnings-calendar.json:46:        "signals": [],
+public/elliott.html:6:    <title>RubikVault – Elliott Waves Scanner</title>
+public/elliott.html:9:        content="Deterministic Fractal Market Structure Scanner. Find stocks at Wave 3, Wave 5, or Wave 1 setups." />
+public/elliott.html:78:            <a href="/elliott.html" class="rv-page-nav-link active" data-page="elliott">Elliott Waves</a>
+public/elliott.html:85:        .elliott-hero {
+public/elliott.html:90:        .elliott-hero h1 {
+public/elliott.html:97:        .elliott-hero p {
+public/elliott.html:103:        .elliott-filters {
+public/elliott.html:111:        .elliott-filter-btn {
+public/elliott.html:122:        .elliott-filter-btn:hover {
+public/elliott.html:126:        .elliott-filter-btn.active {
+public/elliott.html:132:        .elliott-table {
+public/elliott.html:138:        .elliott-table th {
+public/elliott.html:152:        .elliott-table th:hover {
+public/elliott.html:156:        .elliott-table th .sort-arrow {
+public/elliott.html:161:        .elliott-table th.sorted .sort-arrow {
+public/elliott.html:165:        .elliott-table td {
+public/elliott.html:171:        .elliott-table tr:hover td {
+public/elliott.html:175:        .wave-badge {
+public/elliott.html:183:        .wave-badge.wave3 {
+public/elliott.html:189:        .wave-badge.wave5 {
+public/elliott.html:195:        .wave-badge.wave1 {
+public/elliott.html:201:        .wave-badge.correction {
+public/elliott.html:230:        <section class="elliott-hero">
+public/elliott.html:231:            <h1>Elliott Waves Scanner</h1>
+public/elliott.html:239:            <div class="elliott-filters">
+public/elliott.html:240:                <button class="elliott-filter-btn active" data-filter="all">All Setups</button>
+public/elliott.html:241:                <button class="elliott-filter-btn" data-filter="wave1">Wave 1 Start</button>
+public/elliott.html:242:                <button class="elliott-filter-btn" data-filter="wave3">Pre Wave 3</button>
+public/elliott.html:243:                <button class="elliott-filter-btn" data-filter="wave5">Pre Wave 5</button>
+public/elliott.html:244:                <button class="elliott-filter-btn" data-filter="correction">In Correction</button>
+public/elliott.html:247:                    Found: <span id="setup-count">—</span> setups
+public/elliott.html:251:            <div id="scanner-loading" class="loading-spinner">
+public/elliott.html:256:            <div id="scanner-results" style="display: none;">
+public/elliott.html:257:                <table class="elliott-table">
+public/elliott.html:262:                            <th data-sort="wavePosition">Wave Position <span class="sort-arrow">↕</span></th>
+public/elliott.html:269:                    <tbody id="scanner-tbody"></tbody>
+public/elliott.html:273:            <div id="scanner-error" style="display: none; padding: 2rem; text-align: center;">
+public/elliott.html:274:                <div style="color: #f87171; font-weight: 600;">Scanner Error</div>
+public/elliott.html:275:                <div id="scanner-error-msg" style="color: #94a3b8; margin-top: 0.5rem;">—</div>
+public/elliott.html:283:                It does NOT predict future prices. Wave labels are for educational research only.
+public/elliott.html:310:        // Scanner state
+public/elliott.html:311:        let allSetups = [];
+public/elliott.html:320:        function getWaveBadge(position) {
+public/elliott.html:322:                'pre-wave-3': { class: 'wave3', label: 'Pre Wave 3' },
+public/elliott.html:323:                'pre-wave-5': { class: 'wave5', label: 'Pre Wave 5' },
+public/elliott.html:324:                'wave-1-start': { class: 'wave1', label: 'Wave 1 Start' },
+public/elliott.html:329:            return `<span class="wave-badge ${info.class}">${info.label}</span>`;
+public/elliott.html:345:        function renderTable(setups) {
+public/elliott.html:347:                ? setups
+public/elliott.html:348:                : setups.filter(s => {
+public/elliott.html:349:                    if (currentFilter === 'wave3') return s.wavePosition === 'pre-wave-3';
+public/elliott.html:350:                    if (currentFilter === 'wave5') return s.wavePosition === 'pre-wave-5';
+public/elliott.html:351:                    if (currentFilter === 'wave1') return s.wavePosition === 'wave-1-start';
+public/elliott.html:352:                    if (currentFilter === 'correction') return s.wavePosition === 'in-correction';
+public/elliott.html:380:            document.querySelectorAll('.elliott-table th[data-sort]').forEach(th => {
+public/elliott.html:385:            const sortedTh = document.querySelector(`.elliott-table th[data-sort="${sortColumn}"]`);
+public/elliott.html:393:            const tbody = document.getElementById('scanner-tbody');
+public/elliott.html:396:                tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: #64748b; padding: 2rem;">No setups found for this filter</td></tr>';
+public/elliott.html:404:          <td>${getWaveBadge(s.wavePosition)}</td>
+public/elliott.html:413:        async function loadScanner() {
+public/elliott.html:415:                const res = await fetch('/api/elliott-scanner');
+public/elliott.html:419:                allSetups = data.setups || [];
+public/elliott.html:420:                document.getElementById('scanner-loading').style.display = 'none';
+public/elliott.html:421:                document.getElementById('scanner-results').style.display = 'block';
+public/elliott.html:422:                renderTable(allSetups);
+public/elliott.html:424:                document.getElementById('scanner-loading').style.display = 'none';
+public/elliott.html:425:                document.getElementById('scanner-error').style.display = 'block';
+public/elliott.html:426:                document.getElementById('scanner-error-msg').textContent = err.message;
+public/elliott.html:431:        document.querySelectorAll('.elliott-filter-btn').forEach(btn => {
+public/elliott.html:433:                document.querySelectorAll('.elliott-filter-btn').forEach(b => b.classList.remove('active'));
+public/elliott.html:436:                renderTable(allSetups);
+public/elliott.html:441:        document.querySelectorAll('.elliott-table th[data-sort]').forEach(th => {
+public/elliott.html:450:                renderTable(allSetups);
+public/elliott.html:455:        loadScanner();
+public/mirrors/tech-signals.json:3:  "mirrorId": "tech-signals",
+public/mirrors/tech-signals.json:216:    "signals": [
+public/mirrors/_health.json:393:    "tech-signals": {
+public/mirrors/_health.json:399:        "file": "mirrors/tech-signals.json",
+scripts/forecast/snapshot_ingest.mjs:20:const EOD_BATCH_PATTERN = 'public/data/eod/batches/eod.latest.';
+scripts/forecast/snapshot_ingest.mjs:73:        const batchPath = path.join(repoRoot, `${EOD_BATCH_PATTERN}${String(i).padStart(3, '0')}.json`);
+scripts/generate-eod-mirrors.mjs:7:const EXTRA_ENDPOINTS = ["quotes", "tech-signals"];
+scripts/generate-eod-mirrors.mjs:50:        signals: [],
+public/mirrors/manifest.json:231:      "id": "tech-signals",
+public/mirrors/manifest.json:232:      "file": "mirrors/tech-signals.json",
+functions/api/_shared/feature-contract.js:1:export function calculateConfidence(availableSignals, totalSignals) {
+functions/api/_shared/feature-contract.js:2:  if (!totalSignals) return 0;
+functions/api/_shared/feature-contract.js:3:  const raw = availableSignals / totalSignals;
+public/mirrors/sp500-sectors.json:46:        "signals": [],
+public/data/models/model-metadata.json:106:    "legal_disclaimer": "This model is designed for academic research and educational purposes only. It does not provide financial advice or trading recommendations. All predictions are simulations based on historical patterns and should not be used for actual investment decisions."
+scripts/ci/forbid-kv-writes-in-api.sh:5:# Allowlist: none by default. If you *must* allow something, add explicit patterns below.
+scripts/runners/package3/42-alpha-radar-lite.js:16:  const signals = Array.from(new Set([...hot, ...strongTrend])).slice(0, 6);
+scripts/runners/package3/42-alpha-radar-lite.js:17:  const items = signals.map((symbol) => ({ symbol }));
+scripts/forecast/acceptance_tests.mjs:205:    test('A7: Ledger path follows monthly partition pattern', () => {
+scripts/forecast/acceptance_tests.mjs:210:        assertEqual(path1.includes('2026/02.ndjson.gz'), true, 'Path should contain year/month pattern');
+scripts/test-envelope.mjs:84:  // Note: We use a variable to avoid triggering contract-smoke.js pattern guard
+scripts/test-envelope.mjs:87:  testCase.meta = nullValue; // Assign meta separately to avoid pattern match
+scripts/generate-eod-market.mjs:24:  "tech-signals": 3,
+scripts/generate-eod-market.mjs:100:  signals: mirrors["breakout-energy"].items.slice(0, 3).map((item) => `${item.symbol} breakout energy`),
+scripts/generate-posts.js:21:  { id: "tech-signals", label: "Tech Signals", endpoint: "/api/tech-signals" },
+scripts/generate-posts.js:58:      return data.signals?.[0]
+scripts/generate-posts.js:59:        ? `${data.signals[0].symbol}: ${data.signals[0].signal}`
+scripts/generate-posts.js:60:        : "No signals";
+scripts/generate-posts.js:62:      return data.signals?.[0]
+scripts/generate-posts.js:63:        ? `${data.signals[0].symbol}: ${data.signals[0].signal}`
+scripts/generate-posts.js:64:        : "No signals";
+scripts/audit/REALITY.md:153:public/mirrors/tech-signals.json
+functions/api/tech-signals.js:4:  return serveStaticJson(context.request, "tech-signals", null, context);
+scripts/marketphase-generate.mjs:83:    elliott: round6Object(analysis.elliott),
+scripts/marketphase-generate.mjs:91:  if (normalizedAnalysis.elliott.developingPattern?.fibLevels) {
+scripts/marketphase-generate.mjs:92:    normalizedAnalysis.elliott.developingPattern.fibLevels = {
+scripts/marketphase-generate.mjs:93:      support: round6Array(normalizedAnalysis.elliott.developingPattern.fibLevels.support),
+scripts/marketphase-generate.mjs:94:      resistance: round6Array(normalizedAnalysis.elliott.developingPattern.fibLevels.resistance)
+scripts/marketphase-generate.mjs:128:  const dailyValid = daily?.elliott?.completedPattern?.valid;
+scripts/marketphase-generate.mjs:129:  const weeklyValid = weekly?.elliott?.completedPattern?.valid;
+scripts/marketphase-generate.mjs:131:  return daily.elliott.completedPattern.direction === weekly.elliott.completedPattern.direction;
+scripts/marketphase-generate.mjs:162:  envelope.data.elliott.developingPattern.disclaimer =
+scripts/marketphase-generate.mjs:172:    .map((env) => env?.data?.elliott?.completedPattern?.confidence0_100)
+scripts/marketphase-generate.mjs:179:  const ruleStats = envelopes.map((env) => env?.data?.elliott?.completedPattern?.rules || {});
+scripts/marketphase-generate.mjs:186:    patternFrequency: Number((0.031).toFixed(3)),
+scripts/marketphase-generate.mjs:189:      wave2: fibRatios.map((r) => Number((r.wave2 || 0).toFixed(2))).slice(0, 3),
+scripts/marketphase-generate.mjs:190:      wave3: fibRatios.map((r) => Number((r.wave3 || 0).toFixed(2))).slice(0, 3),
+scripts/marketphase-generate.mjs:191:      wave4: fibRatios.map((r) => Number((r.wave4 || 0).toFixed(2))).slice(0, 3),
+scripts/marketphase-generate.mjs:192:      wave5: fibRatios.map((r) => Number((r.wave5 || 0).toFixed(2))).slice(0, 3)
+scripts/ops/test-ops-artifacts.mjs:28:const elliottRes = await fetchWithContext(`${base}/api/elliott-scanner`, {}, { name: 'api-elliott-scanner' });
+scripts/ops/test-ops-artifacts.mjs:29:const elliottDoc = await elliottRes.json();
+scripts/ops/test-ops-artifacts.mjs:30:if (!elliottDoc || elliottDoc.ok !== true || !Array.isArray(elliottDoc.setups)) {
+scripts/ops/test-ops-artifacts.mjs:31:  throw new Error('api/elliott-scanner missing setups or ok flag');
+scripts/ops/test-ops-artifacts.mjs:34:console.log('OK ops-artifacts: SSOT assets + api/stock + api/elliott-scanner');
+scripts/scientific-analyzer/generate-analysis.mjs:327:    const topSetups = [];
+scripts/scientific-analyzer/generate-analysis.mjs:328:    const triggeredSetups = [];
+scripts/scientific-analyzer/generate-analysis.mjs:463:            // Track top setups and triggered setups
+scripts/scientific-analyzer/generate-analysis.mjs:465:                topSetups.push({
+scripts/scientific-analyzer/generate-analysis.mjs:479:                triggeredSetups.push({
+scripts/scientific-analyzer/generate-analysis.mjs:505:    topSetups.sort((a, b) => {
+scripts/scientific-analyzer/generate-analysis.mjs:510:    triggeredSetups.sort((a, b) => b.probability - a.probability);
+scripts/scientific-analyzer/generate-analysis.mjs:524:            top_setups: topSetups.slice(0, 20),
+scripts/scientific-analyzer/generate-analysis.mjs:525:            triggered_setups: triggeredSetups.slice(0, 15),
+scripts/scientific-analyzer/generate-analysis.mjs:527:                short: triggeredSetups.filter(s => s.timeframe === 'short').slice(0, 10),
+scripts/scientific-analyzer/generate-analysis.mjs:528:                medium: triggeredSetups.filter(s => s.timeframe === 'medium').slice(0, 10),
+scripts/scientific-analyzer/generate-analysis.mjs:529:                long: topSetups.filter(s => s.timeframe === 'long').slice(0, 10)
+scripts/scientific-analyzer/generate-analysis.mjs:539:    console.log(`  Top Setups: ${topSetups.length}`);
+scripts/scientific-analyzer/generate-analysis.mjs:540:    console.log(`  Triggered Setups: ${triggeredSetups.length}`);
+scripts/contract-smoke.mjs:32:function selectTechSignalsRows(data) {
+scripts/contract-smoke.mjs:33:  const signals = Array.isArray(data?.signals) ? data.signals : [];
+scripts/contract-smoke.mjs:35:  return signals.length ? signals : items.length ? items : [];
+scripts/contract-smoke.mjs:52:  const required = ["rv-tech-signals", "rv-alpha-radar"];
+scripts/contract-smoke.mjs:72:  const techSignals = selectTechSignalsRows({ signals: [1], items: [] });
+scripts/contract-smoke.mjs:73:  if (techSignals.length !== 1) fail("tech-signals does not prefer signals array");
+scripts/contract-smoke.mjs:75:  const techFallback = selectTechSignalsRows({ signals: [], items: [1] });
+scripts/contract-smoke.mjs:76:  if (techFallback.length !== 1) fail("tech-signals does not fallback to items array");
+scripts/contract-smoke.mjs:85:  if (!emptyValidTech) fail("empty-valid rule failed for tech-signals");
+scripts/contract-smoke.js:56:    throw new Error(`Forbidden meta null pattern found in:\n${offenders.map((p) => `- ${p}`).join("\n")}`);
+scripts/contract-smoke.js:79:async function validateTechSignalsPayloads(root) {
+scripts/contract-smoke.js:80:  const mirrorPath = path.join(root, "public", "mirrors", "tech-signals.json");
+scripts/contract-smoke.js:81:  const snapshotPath = path.join(root, "public", "data", "snapshots", "tech-signals.json");
+scripts/contract-smoke.js:83:    console.warn("WARN: tech-signals contract check skipped (missing mirror or snapshot artifact)");
+scripts/contract-smoke.js:90:  if (!hasArray(mirrorData.signals) && !hasArray(mirrorData.rows)) {
+scripts/contract-smoke.js:91:    throw new Error("Tech Signals mirror missing data.signals/data.rows arrays");
+scripts/contract-smoke.js:93:  if (!hasArray(snapshotData.signals) && !hasArray(snapshotData.items) && !hasArray(snapshotData.rows)) {
+scripts/contract-smoke.js:94:    throw new Error("Tech Signals snapshot missing signals/items/rows arrays");
+scripts/contract-smoke.js:132:  await validateTechSignalsPayloads(root);
+scripts/contract-smoke.js:134:  // --- SNAPSHOT>=MIRROR guard (tech-signals + alpha-radar) ---
+scripts/contract-smoke.js:136:  const mirrorPath = path.join(root, "public", "mirrors", "tech-signals.json");
+scripts/contract-smoke.js:137:  const snapshotPath = path.join(root, "public", "data", "snapshots", "tech-signals.json");
+scripts/contract-smoke.js:141:    console.warn("WARN: SNAPSHOT>=MIRROR tech-signals guard skipped (missing mirror or snapshot artifact)");
+scripts/contract-smoke.js:150:    const tech_m_sig = Array.isArray(techMirror?.data?.signals) ? techMirror.data.signals.length : 0;
+scripts/contract-smoke.js:151:    const tech_s_sig = Array.isArray(techSnap?.data?.signals) ? techSnap.data.signals.length : 0;
+scripts/contract-smoke.js:154:      fail("SNAPSHOT>=MIRROR guard: tech-signals snapshot missing rows/items while mirror has rows[]");
+scripts/contract-smoke.js:157:      fail("SNAPSHOT>=MIRROR guard: tech-signals snapshot missing signals/items while mirror has signals[]");
+scripts/utils/eod-market-mirrors.mjs:72:    mirrorId: "tech-signals",
+scripts/utils/eod-market-mirrors.mjs:91:      signals: data.itemsTech,
+scripts/utils/eod-market-mirrors.mjs:138:    whyUnique: "Summary cockpit for benchmarks and signals.",
+scripts/utils/eod-market-mirrors.mjs:241:      "tech-signals": techMirror,
+scripts/utils/mirror-builders.mjs:46:export function buildDigest({ highlights, signals, changes, sources }) {
+scripts/utils/mirror-builders.mjs:53:    actionableSignals: signals || [],
+scripts/utils/market-indicators.mjs:108:  let setupScore = 0;
+scripts/utils/market-indicators.mjs:117:      setupScore += 10;
+scripts/utils/market-indicators.mjs:121:      setupScore += 5;
+scripts/utils/market-indicators.mjs:125:      setupScore += 5;
+scripts/utils/market-indicators.mjs:138:      setupScore += 8;
+scripts/utils/market-indicators.mjs:145:    setupScore += 7;
+scripts/utils/market-indicators.mjs:188:  setupScore = clamp(setupScore, 0, 40);
+scripts/utils/market-indicators.mjs:191:  // CRITICAL FIX: totalScore should be the sum of setupScore + triggerScore
+scripts/utils/market-indicators.mjs:194:  const totalScore = clamp(setupScore + triggerScore, 0, 100);
+scripts/utils/market-indicators.mjs:199:    setupScore, 
+scripts/utils/eod-market-symbols.mjs:120:      setupScore: alpha.setupScore,
+scripts/utils/scientific-math.mjs:6: * for Elliott Wave analysis and statistical testing.
+functions/api/metrics.js:78:      signals: [],
+scripts/lib/scientific-analyzer/features.mjs:9: * - Mean Reversion: RSI, Bollinger %B, deep value signals
+functions/api/elliott-scanner.js:2: * Elliott Waves Scanner API
+functions/api/elliott-scanner.js:6: * Scans NASDAQ-100 for Elliott Wave setups using:
+functions/api/elliott-scanner.js:24:                setups: []
+functions/api/elliott-scanner.js:44:        const setups = [];
+functions/api/elliott-scanner.js:55:                        const elliott = mp?.data?.elliott;
+functions/api/elliott-scanner.js:57:                        if (elliott) {
+functions/api/elliott-scanner.js:58:                            const setup = extractSetupFromMarketphase(ticker, name, elliott, eod);
+functions/api/elliott-scanner.js:59:                            setups.push(setup);
+functions/api/elliott-scanner.js:69:            const setup = estimateWaveFromEOD(ticker, name, eod);
+functions/api/elliott-scanner.js:70:            setups.push(setup);
+functions/api/elliott-scanner.js:74:        setups.sort((a, b) => (b.confidence || 0) - (a.confidence || 0));
+functions/api/elliott-scanner.js:81:                count: setups.length,
+functions/api/elliott-scanner.js:85:            setups
+functions/api/elliott-scanner.js:91:            error: { code: 'SCANNER_ERROR', message: err.message || String(err) },
+functions/api/elliott-scanner.js:92:            setups: []
+functions/api/elliott-scanner.js:107:function extractSetupFromMarketphase(ticker, name, elliott, eod) {
+functions/api/elliott-scanner.js:108:    const completed = elliott?.completedPattern || {};
+functions/api/elliott-scanner.js:109:    const developing = elliott?.developingPattern || {};
+functions/api/elliott-scanner.js:110:    const fib = elliott?.fib || {};
+functions/api/elliott-scanner.js:111:    const uncertainty = elliott?.uncertainty || {};
+functions/api/elliott-scanner.js:113:    // Determine wave position from developing pattern
+functions/api/elliott-scanner.js:114:    let wavePosition = 'unknown';
+functions/api/elliott-scanner.js:115:    const possibleWave = developing.possibleWave || '';
+functions/api/elliott-scanner.js:117:    if (possibleWave.includes('4') || possibleWave.includes('ABC')) {
+functions/api/elliott-scanner.js:118:        wavePosition = completed.valid ? 'pre-wave-5' : 'in-correction';
+functions/api/elliott-scanner.js:120:        wavePosition = 'wave-1-start';
+functions/api/elliott-scanner.js:122:        wavePosition = 'pre-wave-3';
+functions/api/elliott-scanner.js:127:        wavePosition = 'pre-wave-3';
+functions/api/elliott-scanner.js:135:        wavePosition,
+functions/api/elliott-scanner.js:139:        validPattern: completed.valid ?? false,
+functions/api/elliott-scanner.js:144:function estimateWaveFromEOD(ticker, name, eod) {
+functions/api/elliott-scanner.js:149:            wavePosition: 'unknown',
+functions/api/elliott-scanner.js:153:            validPattern: false,
+functions/api/elliott-scanner.js:167:            wavePosition: 'unknown',
+functions/api/elliott-scanner.js:171:            validPattern: false,
+functions/api/elliott-scanner.js:201:    // Heuristic wave position
+functions/api/elliott-scanner.js:202:    let wavePosition;
+functions/api/elliott-scanner.js:206:        wavePosition = direction === 'bullish' ? 'in-correction' : 'pre-wave-3';
+functions/api/elliott-scanner.js:209:        wavePosition = direction === 'bearish' ? 'in-correction' : 'pre-wave-3';
+functions/api/elliott-scanner.js:212:        wavePosition = 'pre-wave-5';
+functions/api/elliott-scanner.js:215:        wavePosition = 'wave-1-start';
+functions/api/elliott-scanner.js:222:        wavePosition,
+functions/api/elliott-scanner.js:226:        validPattern: false,
+public/data/snapshots/stock-analysis.json:12:    "top_setups": [
+public/data/snapshots/stock-analysis.json:234:    "triggered_setups": [
+scripts/_lib/sanitize-public.mjs:12:function buildPatterns() {
+scripts/_lib/sanitize-public.mjs:41:  for (const { rx, replace } of buildPatterns()) out = out.replace(rx, replace);
+scripts/marketphase-core.mjs:2:  "MarketPhase AI — Scientific Elliott Research (v8.0)\n" +
+scripts/marketphase-core.mjs:186:export function evaluateElliott(swings) {
+scripts/marketphase-core.mjs:189:      completedPattern: { valid: false, direction: "neutral", endedAt: null, confidence0_100: 0, rules: {} },
+scripts/marketphase-core.mjs:190:      developingPattern: {
+scripts/marketphase-core.mjs:191:        possibleWave: "Insufficient swings",
+scripts/marketphase-core.mjs:220:    wave2: w2a / w1a,
+scripts/marketphase-core.mjs:221:    wave3: w3a / w1a,
+scripts/marketphase-core.mjs:222:    wave4: w4a / w3a,
+scripts/marketphase-core.mjs:223:    wave5: w5a / w1a
+scripts/marketphase-core.mjs:226:  const g4 = nearestRatioScore(ratios.wave3, [1.618]);
+scripts/marketphase-core.mjs:227:  const g5 = nearestRatioScore(ratios.wave5, [0.618, 1, 1.618]);
+scripts/marketphase-core.mjs:229:    (ratios.wave2 < 0.5 && ratios.wave4 > 0.5) || (ratios.wave2 > 0.5 && ratios.wave4 < 0.5);
+scripts/marketphase-core.mjs:234:  const conformanceScore = (nearestRatioScore(ratios.wave2, [0.382, 0.5, 0.618, 0.786]) +
+scripts/marketphase-core.mjs:235:    nearestRatioScore(ratios.wave3, [1.618, 2.618, 4.236]) +
+scripts/marketphase-core.mjs:236:    nearestRatioScore(ratios.wave4, [0.236, 0.382, 0.5]) +
+scripts/marketphase-core.mjs:237:    nearestRatioScore(ratios.wave5, [0.618, 1, 1.618])) / 4;
+scripts/marketphase-core.mjs:239:  const completedPattern = {
+scripts/marketphase-core.mjs:252:  const developingPattern = {
+scripts/marketphase-core.mjs:253:    possibleWave: "Wave 4 or ABC",
+scripts/marketphase-core.mjs:268:  const alternativeCounts = completedPattern.valid ? 1 : 2;
+scripts/marketphase-core.mjs:278:    completedPattern,
+scripts/marketphase-core.mjs:279:    developingPattern,
+scripts/marketphase-core.mjs:283:        wave2: round6(ratios.wave2),
+scripts/marketphase-core.mjs:284:        wave3: round6(ratios.wave3),
+scripts/marketphase-core.mjs:285:        wave4: round6(ratios.wave4),
+scripts/marketphase-core.mjs:286:        wave5: round6(ratios.wave5)
+scripts/marketphase-core.mjs:349:  const elliott = evaluateElliott(swingSet);
+scripts/marketphase-core.mjs:351:    elliott.uncertainty.lastSwingConfirmed = false;
+scripts/marketphase-core.mjs:365:    elliott,
+scripts/marketphase-core.mjs:366:    fib: elliott.fib,
+scripts/mirror-breakout-energy.mjs:78:    signals: [provider],
+public/feature-registry.json:32:  { "idx": 30, "id": "rv-tech-signals", "title": "Tech Signals", "api": "/api/tech-signals", "kind": "feature", "enabled": true },
+public/internal-dashboard:756:      const tech = await fetchJSON('/data/snapshots/tech-signals.json');
+public/internal-dashboard:757:      const techFirst = tech?.data?.items?.[0] || tech?.data?.signals?.[0] || null;
+public/internal-dashboard:760:        itemsCount: tech?.data?.items?.length || tech?.data?.signals?.length || 0,
+public/internal-dashboard:767:      const alphaScores = alphaTop.map((p) => `${p.setupScore}-${p.triggerScore}-${p.totalScore}`);
+public/internal-dashboard:772:        sampleScores: alphaTop.slice(0, 3).map((p) => ({ symbol: p.symbol, setupScore: p.setupScore, triggerScore: p.triggerScore, totalScore: p.totalScore }))
+public/internal-dashboard:801:      const tech = await fetchJSON('/data/snapshots/tech-signals.json');
+public/internal-dashboard:802:      const techFirst = tech?.data?.items?.[0] || tech?.data?.signals?.[0] || null;
+public/internal-dashboard:805:        itemsCount: tech?.data?.items?.length || tech?.data?.signals?.length || 0,
+public/internal-dashboard:812:      const alphaScores = alphaTop.map((p) => `${p.setupScore}-${p.triggerScore}-${p.totalScore}`);
+public/internal-dashboard:817:        sampleScores: alphaTop.slice(0, 3).map((p) => ({ symbol: p.symbol, setupScore: p.setupScore, triggerScore: p.triggerScore, totalScore: p.totalScore }))
+public/internal-dashboard:1062:        { label: 'Tech Signals', path: '/data/snapshots/tech-signals.json', maxHours: 36 },
+public/internal-dashboard.html:228:      { id: 'rv-tech-signals', name: 'Tech Signals', snapshotPath: '/data/snapshots/tech-signals.json' },
+public/internal-dashboard.html:309:            if (p.setupScore !== undefined && p.triggerScore !== undefined && p.totalScore !== undefined) {
+public/internal-dashboard.html:310:              uniqueScores.add(`${p.setupScore}-${p.triggerScore}-${p.totalScore}`);
+public/internal-dashboard.html:322:              reason: `❌ DUMMY DATA: All ${picksTop.length} picks have identical scores (Setup ${firstPick.setupScore}, Trigger ${firstPick.triggerScore}, Total ${firstPick.totalScore}). This is invalid - different assets should have different scores. UI cannot render meaningful data. Fix: Check alphaScore calculation in market-indicators.mjs.`,
+public/internal-dashboard.html:328:        // Also check items for old dummy pattern
+public/internal-dashboard.html:331:          if (firstItem.setupScore === 34 && firstItem.triggerScore === 51 && firstItem.totalScore === 85) {
+public/internal-dashboard.html:338:              reason: `❌ DUMMY DATA: Contains old dummy pattern (Setup 34, Trigger 51, Total 85). UI cannot render this. Fix: Check alphaScore calculation.`,
+public/internal-dashboard.html:386:      } else if (blockId === 'rv-tech-signals' || blockId === 'tech-signals') {
+public/internal-dashboard.html:388:        const signals = data.signals || []; // UI can use either items or signals
+public/internal-dashboard.html:389:        itemsCount = items.length || signals.length;
+public/internal-dashboard.html:393:          const firstItem = items[0] || signals[0];
+public/internal-dashboard.html:406:          const hasSignals = firstItem.rsi !== undefined || firstItem.macd !== undefined || firstItem.rsiWeekly !== undefined || firstItem.macdHist !== undefined || firstItem.stochRsi !== undefined;
+public/internal-dashboard.html:408:          if (!hasSignals || !hasSymbol) {
+public/manifest.json:45:    "deep_link_patterns": [
+public/style.css:883:  animation: rv-native-wave 1.4s ease-in-out infinite;
+public/style.css:2572:@keyframes rv-native-wave {

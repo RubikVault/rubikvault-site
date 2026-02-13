@@ -1,0 +1,30 @@
+$ rg -n "static-only-v3|static-only-backup" -S --glob "!Report/**" --glob "!evidence/**" --glob "!node_modules/**" .
+./README.md:194:│   └── _shared/              # Middleware (static-only-v3.js)
+./docs/audit/02-artifact-registry.json:19:          "handler": "functions/api/_shared/static-only-v3.js",
+./docs/audit/02-artifact-registry.json:21:          "evidence": "functions/api/_shared/static-only-v3.js:191-196"
+./docs/audit/02-artifact-registry.json:91:          "handler": "functions/api/_shared/static-only-v3.js",
+./docs/audit/02-artifact-registry.json:93:          "evidence": "functions/api/_shared/static-only-v3.js:294-317"
+./docs/audit/02-artifact-registry.json:98:          "file": "functions/api/_shared/static-only-v3.js",
+./docs/audit/02-artifact-registry.json:100:          "evidence": "functions/api/_shared/static-only-v3.js:294"
+./docs/audit/02-artifact-registry.json:124:          "handler": "functions/api/_shared/static-only-v3.js",
+./docs/audit/02-artifact-registry.json:126:          "evidence": "functions/api/_shared/static-only-v3.js:179-186"
+./docs/audit/02-artifact-registry.json:131:          "file": "functions/api/_shared/static-only-v3.js",
+./docs/audit/02-artifact-registry.json:133:          "evidence": "functions/api/_shared/static-only-v3.js:179"
+./docs/audit/01.5-ui-surface.md:48:11. `functions/api/_shared/static-only-v3.js`
+./docs/audit/00-inventory.md:11:- **API Handlers:** functions/api/_shared/static-only-v3.js (primary), functions/api/_shared/static-only.js (imported by 59 handlers)
+./docs/audit/01-golden-path-ui.json:81:          "functions/api/_shared/static-only-v3.js:294-317"
+./docs/audit/01-golden-path-ui.json:91:          "functions/api/_shared/static-only-v3.js:294-317"
+./docs/audit/01-golden-path-ui.json:113:        "used_by": "functions/api/_shared/static-only-v3.js:294",
+./docs/audit/01.5-ui-surface.json:27:        "functions/api/_shared/static-only-v3.js"
+./docs/audit/01.5-ui-surface.json:57:        "functions/api/_shared/static-only-v3.js"
+./docs/audit/01.5-ui-surface.json:125:    "functions/api/_shared/static-only-v3.js",
+./docs/audit/01-golden-path-ui.md:51:    E --> F[functions/api/_shared/static-only-v3.js]
+./docs/audit/03-ops-golden-path.md:17:   - Entry: `functions/api/_shared/static-only-v3.js`
+./docs/audit/03-ops-golden-path.md:19:   - Evidence: `functions/api/_shared/static-only-v3.js:172-199`
+./docs/audit/03-ops-golden-path.md:76:- `functions/api/_shared/static-only-v3.js:294-317` - Reads snapshots
+./docs/audit/03-ops-mismatch.json:7:      "functions/api/_shared/static-only-v3.js:294-297: Tries multiple paths including legacy fallbacks",
+./docs/audit/03-ops-mismatch.json:28:        "functions/api/_shared/static-only-v3.js:294-297: Fallback path order may serve legacy files",
+./docs/audit/03-ops-mismatch.json:38:      "functions/api/_shared/static-only-v3.js:294: First path tried is v3.0 directory structure",
+./docs/audit/03-ops-mismatch.json:49:      "functions/api/_shared/static-only-v3.js:294-297: pathsToTry array includes all three"
+./docs/audit/03-ops-mismatch.json:59:        "functions/api/_shared/static-only-v3.js:361-367: Transforms v3.0 to legacy format for UI",
+./docs/audit/03-ops-mismatch.json:69:        "functions/api/_shared/static-only-v3.js:16-35: transformV3ToLegacy converts metadata to meta"

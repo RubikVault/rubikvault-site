@@ -1,0 +1,1494 @@
+$ find . -maxdepth 3 -type f \( -name "wrangler.toml" -o -name "wrangler.*.toml" -o -name "*.yml" -o -name "*.yaml" -o -name "package.json" \) | sort
+./.github/workflows/ci-determinism.yml
+./.github/workflows/ci-gates.yml
+./.github/workflows/ci-policy.yml
+./.github/workflows/cleanup-daily-snapshots.yml
+./.github/workflows/e2e-playwright.yml
+./.github/workflows/eod-history-refresh.yml
+./.github/workflows/eod-latest.yml
+./.github/workflows/forecast-daily.yml
+./.github/workflows/forecast-monthly.yml
+./.github/workflows/forecast-rollback.yml
+./.github/workflows/forecast-weekly.yml
+./.github/workflows/monitor-prod.yml
+./.github/workflows/ops-auto-alerts.yml
+./.github/workflows/ops-daily.yml
+./.github/workflows/refresh-health-assets.yml
+./.github/workflows/scheduler-kick.yml
+./.github/workflows/universe-refresh.yml
+./.github/workflows/v3-finalizer.yml
+./.github/workflows/v3-scrape-template.yml
+./.github/workflows/wp16-manual-market-prices.yml
+./.tmp/dev-slim/package.json
+./.tmp/dev-slim/wrangler.toml
+./_local_trash/rubikvault-site.20260128-221342/package.json
+./_local_trash/rubikvault-site.20260128-221342/wrangler.toml
+./functions/package.json
+./node_modules/acorn-walk/package.json
+./node_modules/acorn/package.json
+./node_modules/ajv-cli/package.json
+./node_modules/ajv-formats/package.json
+./node_modules/ajv/package.json
+./node_modules/argparse/package.json
+./node_modules/balanced-match/package.json
+./node_modules/blake3-wasm/package.json
+./node_modules/brace-expansion/package.json
+./node_modules/color-convert/package.json
+./node_modules/color-name/package.json
+./node_modules/color-string/package.json
+./node_modules/color/package.json
+./node_modules/commander/package.json
+./node_modules/concat-map/.travis.yml
+./node_modules/concat-map/package.json
+./node_modules/cookie/package.json
+./node_modules/d3-dsv/package.json
+./node_modules/detect-libc/package.json
+./node_modules/entities/package.json
+./node_modules/error-stack-parser-es/package.json
+./node_modules/esbuild/package.json
+./node_modules/esprima/package.json
+./node_modules/exit-hook/package.json
+./node_modules/fast-deep-equal/package.json
+./node_modules/fast-json-patch/package.json
+./node_modules/fast-uri/package.json
+./node_modules/fast-xml-parser/package.json
+./node_modules/fs.realpath/package.json
+./node_modules/fsevents/package.json
+./node_modules/glob-to-regexp/.travis.yml
+./node_modules/glob-to-regexp/package.json
+./node_modules/glob/package.json
+./node_modules/iconv-lite/package.json
+./node_modules/inflight/package.json
+./node_modules/inherits/package.json
+./node_modules/is-any-array/package.json
+./node_modules/is-arrayish/package.json
+./node_modules/js-yaml/package.json
+./node_modules/json-schema-migrate/package.json
+./node_modules/json-schema-traverse/.eslintrc.yml
+./node_modules/json-schema-traverse/package.json
+./node_modules/json5/package.json
+./node_modules/kleur/package.json
+./node_modules/median-quickselect/package.json
+./node_modules/mime/package.json
+./node_modules/miniflare/package.json
+./node_modules/minimatch/package.json
+./node_modules/minimist/package.json
+./node_modules/ml-array-max/package.json
+./node_modules/ml-array-mean/package.json
+./node_modules/ml-array-median/package.json
+./node_modules/ml-array-min/package.json
+./node_modules/ml-array-mode/package.json
+./node_modules/ml-array-rescale/package.json
+./node_modules/ml-array-sum/package.json
+./node_modules/ml-cart/package.json
+./node_modules/ml-logistic-regression/package.json
+./node_modules/ml-matrix/package.json
+./node_modules/ml-random-forest/package.json
+./node_modules/once/package.json
+./node_modules/path-is-absolute/package.json
+./node_modules/path-to-regexp/package.json
+./node_modules/pathe/package.json
+./node_modules/playwright-core/package.json
+./node_modules/playwright/package.json
+./node_modules/random-js/package.json
+./node_modules/require-from-string/package.json
+./node_modules/rss-parser/.travis.yml
+./node_modules/rss-parser/package.json
+./node_modules/rw/package.json
+./node_modules/safer-buffer/package.json
+./node_modules/sax/package.json
+./node_modules/semver/package.json
+./node_modules/sharp/package.json
+./node_modules/simple-statistics/package.json
+./node_modules/simple-swizzle/package.json
+./node_modules/sprintf-js/package.json
+./node_modules/stoppable/package.json
+./node_modules/strnum/package.json
+./node_modules/supports-color/package.json
+./node_modules/undici/package.json
+./node_modules/unenv/package.json
+./node_modules/workerd/package.json
+./node_modules/wrangler/package.json
+./node_modules/wrappy/package.json
+./node_modules/ws/package.json
+./node_modules/xml2js/package.json
+./node_modules/xmlbuilder/appveyor.yml
+./node_modules/xmlbuilder/package.json
+./node_modules/youch-core/package.json
+./node_modules/youch/package.json
+./node_modules/zod/package.json
+./package.json
+./wrangler.toml
+
+$ rg -n "process\.env\.|import\.meta\.env|Deno\.env\.get|env\(" -S .
+./scripts/fix-api-exports.mjs:14:const DRY_RUN = process.env.DRY_RUN === '1';
+./tests/market-prices-source.test.mjs:19:const expectRealPrices = /^(1|true)$/i.test(String(process.env.RV_EXPECT_REAL_PRICES ?? '').trim());
+./scripts/marketphase-validate.mjs:119:  const envSymbols = process.env.SYMBOLS;
+./tests/market-prices-real-mode.test.mjs:96:const config = JSON.parse(process.env.RV_TEST_FETCH_CONFIG || '[]');
+./scripts/universe/fetch-constituents.mjs:18:const API_KEY = process.env.EODHD_API_KEY;
+./scripts/metrics-v5-gates.mjs:7:const baseUrl = process.env.BASE_URL || "http://127.0.0.1:8788";
+./scripts/truth-chain/trace_ui_to_origin.mjs:18:const base = process.env.BASE_URL || process.env.TRACE_BASE || process.env.RV_BASE || process.env.OPS_BASE;
+./scripts/truth-chain/snapshot_ui_values.mjs:10:const base = process.env.BASE_URL || process.env.TRACE_BASE || process.env.RV_BASE || process.env.OPS_BASE;
+./Report/A/04_SSOT_EVIDENCE/02_base_construction_rg.txt:2:scripts/ui-path/prove_ui_path.mjs:12:const base = process.env.BASE_URL || 'https://rubikvault.com';
+./Report/A/04_SSOT_EVIDENCE/02_base_construction_rg.txt:3:scripts/fix-api-exports.mjs:14:const DRY_RUN = process.env.DRY_RUN === '1';
+./Report/A/04_SSOT_EVIDENCE/02_base_construction_rg.txt:9:scripts/ops/env.config.mjs:3:    OPS_BASE: process.env.OPS_BASE,
+./Report/A/04_SSOT_EVIDENCE/02_base_construction_rg.txt:10:scripts/ops/env.config.mjs:4:    RV_BASE: process.env.RV_BASE,
+./Report/A/04_SSOT_EVIDENCE/02_base_construction_rg.txt:11:scripts/ops/env.config.mjs:5:    BASE_URL: process.env.BASE_URL,
+./Report/A/04_SSOT_EVIDENCE/02_base_construction_rg.txt:12:scripts/ops/env.config.mjs:6:    BASE: process.env.BASE
+./Report/A/04_SSOT_EVIDENCE/02_base_construction_rg.txt:16:scripts/smoke-debug.mjs:1:const host = process.env.HOST || "http://127.0.0.1:8788";
+./Report/A/04_SSOT_EVIDENCE/02_base_construction_rg.txt:17:scripts/smoke-debug.mjs:2:const token = process.env.RV_DEBUG_TOKEN || "";
+./Report/A/04_SSOT_EVIDENCE/02_base_construction_rg.txt:19:scripts/aggregator/finalize.mjs:34:const ARTIFACTS_DIR = process.env.ARTIFACTS_DIR || join(BASE_DIR, 'artifacts');
+./Report/A/04_SSOT_EVIDENCE/02_base_construction_rg.txt:20:scripts/aggregator/finalize.mjs:586:  const skipInvalidArtifacts = String(process.env.RV_FINALIZER_SKIP_INVALID || '').trim() === '1';
+./Report/A/04_SSOT_EVIDENCE/02_base_construction_rg.txt:27:scripts/update-news.mjs:381:    const commit = process.env.GITHUB_SHA || "local";
+./Report/A/04_SSOT_EVIDENCE/02_base_construction_rg.txt:28:scripts/update-news.mjs:382:    const runId = process.env.GITHUB_RUN_ID || null;
+./Report/A/04_SSOT_EVIDENCE/02_base_construction_rg.txt:29:scripts/update-news.mjs:399:  const commit = process.env.GITHUB_SHA || "local";
+./Report/A/04_SSOT_EVIDENCE/02_base_construction_rg.txt:30:scripts/update-news.mjs:400:  const runId = process.env.GITHUB_RUN_ID || null;
+./Report/A/04_SSOT_EVIDENCE/02_base_construction_rg.txt:37:scripts/universe/fetch-constituents.mjs:18:const API_KEY = process.env.EODHD_API_KEY;
+./Report/A/04_SSOT_EVIDENCE/02_base_construction_rg.txt:40:scripts/marketphase-generate.mjs:16:  const raw = process.env.SYMBOLS || "AAPL";
+./Report/A/04_SSOT_EVIDENCE/02_base_construction_rg.txt:41:scripts/marketphase-generate.mjs:66:    return process.env.COMMIT_HASH || execSync("git rev-parse --short HEAD", { encoding: "utf8" }).trim();
+./Report/A/04_SSOT_EVIDENCE/02_base_construction_rg.txt:42:scripts/marketphase-generate.mjs:204:  const dummyMode = process.env.DUMMY === "1";
+./Report/A/04_SSOT_EVIDENCE/02_base_construction_rg.txt:45:scripts/providers/marketaux.js:7:  const apiKey = process.env.MARKETAUX_API_KEY || "";
+./Report/A/04_SSOT_EVIDENCE/02_base_construction_rg.txt:48:scripts/validate/market-stats-artifact.v1.mjs:16:  const baseDir = process.env.RV_ARTIFACT_OUT_DIR
+./Report/A/04_SSOT_EVIDENCE/02_base_construction_rg.txt:49:scripts/validate/market-stats-artifact.v1.mjs:17:    ? String(process.env.RV_ARTIFACT_OUT_DIR)
+./Report/A/04_SSOT_EVIDENCE/02_base_construction_rg.txt:50:scripts/marketphase-validate.mjs:119:  const envSymbols = process.env.SYMBOLS;
+./Report/A/04_SSOT_EVIDENCE/02_base_construction_rg.txt:53:scripts/providers/fred.js:42:  const apiKey = process.env.FRED_API_KEY || "";
+./Report/A/04_SSOT_EVIDENCE/02_base_construction_rg.txt:55:scripts/eod/build-eod-history.mjs:169:    const token = process.env.TIINGO_API_KEY;
+./Report/A/04_SSOT_EVIDENCE/02_base_construction_rg.txt:57:scripts/providers/sec_edgar.js:7:  const apiKey = process.env.SEC_API_KEY || "";
+./Report/A/04_SSOT_EVIDENCE/02_base_construction_rg.txt:59:scripts/metrics-v5-gates.mjs:7:const baseUrl = process.env.BASE_URL || "http://127.0.0.1:8788";
+./Report/A/04_SSOT_EVIDENCE/02_base_construction_rg.txt:62:scripts/eod/build-eod-latest.mjs:254:  const token = process.env.TIINGO_API_KEY ?? process.env.TIIANGO_API_KEY;
+./Report/A/04_SSOT_EVIDENCE/02_base_construction_rg.txt:64:scripts/providers/alphavantage.js:25:  const apiKey = process.env.AV_API_KEY || "";
+./Report/A/04_SSOT_EVIDENCE/02_base_construction_rg.txt:67:scripts/ops/build-ops-daily.mjs:355:    accountId: process.env.CF_ACCOUNT_ID,
+./Report/A/04_SSOT_EVIDENCE/02_base_construction_rg.txt:68:scripts/ops/build-ops-daily.mjs:356:    apiToken: process.env.CF_API_TOKEN
+./Report/A/04_SSOT_EVIDENCE/02_base_construction_rg.txt:69:scripts/validate/market-prices-artifact.v1.mjs:20:  const baseDir = process.env.RV_ARTIFACT_OUT_DIR
+./Report/A/04_SSOT_EVIDENCE/02_base_construction_rg.txt:70:scripts/validate/market-prices-artifact.v1.mjs:21:    ? String(process.env.RV_ARTIFACT_OUT_DIR)
+./Report/A/04_SSOT_EVIDENCE/02_base_construction_rg.txt:74:scripts/providers/market-prices-v3.mjs:1203:  const outDir = process.env.RV_ARTIFACT_OUT_DIR
+./Report/A/04_SSOT_EVIDENCE/02_base_construction_rg.txt:75:scripts/providers/market-prices-v3.mjs:1204:    ? String(process.env.RV_ARTIFACT_OUT_DIR)
+./Report/A/04_SSOT_EVIDENCE/02_base_construction_rg.txt:76:scripts/providers/market-prices-v3.mjs:1205:    : (process.env.ARTIFACTS_DIR
+./Report/A/04_SSOT_EVIDENCE/02_base_construction_rg.txt:77:scripts/providers/market-prices-v3.mjs:1206:      ? join(String(process.env.ARTIFACTS_DIR), MODULE_NAME)
+./Report/A/04_SSOT_EVIDENCE/02_base_construction_rg.txt:78:scripts/providers/market-prices-v3.mjs:1211:  const forcedStub = toBool(process.env.RV_PRICES_STUB);
+./Report/A/04_SSOT_EVIDENCE/02_base_construction_rg.txt:79:scripts/providers/market-prices-v3.mjs:1212:  const forcedReal = toBool(process.env.RV_PRICES_FORCE_REAL);
+./Report/A/04_SSOT_EVIDENCE/02_base_construction_rg.txt:80:scripts/providers/market-prices-v3.mjs:1213:  const forcedProviderRaw = process.env.RV_FORCE_PROVIDER ? String(process.env.RV_FORCE_PROVIDER) : '';
+./Report/A/04_SSOT_EVIDENCE/02_base_construction_rg.txt:81:scripts/validate/providers-registry.v1.mjs:19:const registryPath = process.env.RV_PROVIDERS_REGISTRY_PATH
+./Report/A/04_SSOT_EVIDENCE/02_base_construction_rg.txt:82:scripts/validate/providers-registry.v1.mjs:20:  ? path.resolve(process.env.RV_PROVIDERS_REGISTRY_PATH)
+./Report/A/04_SSOT_EVIDENCE/02_base_construction_rg.txt:83:scripts/ops/fetch-with-context.mjs:36:        OPS_BASE: process.env.OPS_BASE || null,
+./Report/A/04_SSOT_EVIDENCE/02_base_construction_rg.txt:84:scripts/ops/fetch-with-context.mjs:37:        RV_BASE: process.env.RV_BASE || null,
+./Report/A/04_SSOT_EVIDENCE/02_base_construction_rg.txt:85:scripts/ops/fetch-with-context.mjs:38:        BASE_URL: process.env.BASE_URL || null,
+./Report/A/04_SSOT_EVIDENCE/02_base_construction_rg.txt:86:scripts/ops/fetch-with-context.mjs:39:        BASE: process.env.BASE || null,
+./Report/A/04_SSOT_EVIDENCE/02_base_construction_rg.txt:87:scripts/ops/fetch-with-context.mjs:40:        CI: process.env.CI || null
+./Report/A/04_SSOT_EVIDENCE/02_base_construction_rg.txt:88:scripts/ops/fetch-with-context.mjs:45:    const jsonLog = process.env.CI === 'true' || process.env.CI === '1' || process.env.RV_LOG_JSON === '1';
+./Report/A/04_SSOT_EVIDENCE/02_base_construction_rg.txt:90:scripts/providers/market-score-v3.mjs:159:  const artifactsDir = process.env.ARTIFACTS_DIR ? join(String(process.env.ARTIFACTS_DIR), SOURCE_MODULE) : null;
+./Report/A/04_SSOT_EVIDENCE/02_base_construction_rg.txt:91:scripts/providers/market-score-v3.mjs:161:  if (process.env.BARS_ARTIFACTS_DIR) {
+./Report/A/04_SSOT_EVIDENCE/02_base_construction_rg.txt:92:scripts/providers/market-score-v3.mjs:162:    candidates.push(join(String(process.env.BARS_ARTIFACTS_DIR), SOURCE_MODULE, 'snapshot.json'));
+./Report/A/04_SSOT_EVIDENCE/02_base_construction_rg.txt:93:scripts/providers/market-score-v3.mjs:208:  const artifactsOutDir = process.env.RV_ARTIFACT_OUT_DIR
+./Report/A/04_SSOT_EVIDENCE/02_base_construction_rg.txt:94:scripts/providers/market-score-v3.mjs:209:    ? String(process.env.RV_ARTIFACT_OUT_DIR)
+./Report/A/04_SSOT_EVIDENCE/02_base_construction_rg.txt:95:scripts/providers/market-score-v3.mjs:210:    : process.env.ARTIFACTS_DIR
+./Report/A/04_SSOT_EVIDENCE/02_base_construction_rg.txt:96:scripts/providers/market-score-v3.mjs:211:    ? join(String(process.env.ARTIFACTS_DIR), MODULE_NAME)
+./Report/A/04_SSOT_EVIDENCE/02_base_construction_rg.txt:97:scripts/validate/universe-registry.v1.mjs:58:const explicitPath = process.env.RV_UNIVERSE_REGISTRY_PATH
+./Report/A/04_SSOT_EVIDENCE/02_base_construction_rg.txt:98:scripts/validate/universe-registry.v1.mjs:59:  ? path.resolve(process.env.RV_UNIVERSE_REGISTRY_PATH)
+./Report/A/04_SSOT_EVIDENCE/02_base_construction_rg.txt:102:scripts/providers/market-health-v3.mjs:464:      last_run_url: process.env.GITHUB_SERVER_URL && process.env.GITHUB_RUN_ID
+./Report/A/04_SSOT_EVIDENCE/02_base_construction_rg.txt:103:scripts/providers/market-health-v3.mjs:465:        ? `${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}`
+./Report/A/04_SSOT_EVIDENCE/02_base_construction_rg.txt:104:scripts/providers/market-health-v3.mjs:471:  const artifactsBaseDir = process.env.ARTIFACTS_DIR || join(BASE_DIR, 'artifacts');
+./Report/A/04_SSOT_EVIDENCE/02_base_construction_rg.txt:105:scripts/validate/universe-artifact.v2.mjs:24:  const baseDir = process.env.RV_ARTIFACT_OUT_DIR
+./Report/A/04_SSOT_EVIDENCE/02_base_construction_rg.txt:106:scripts/validate/universe-artifact.v2.mjs:25:    ? String(process.env.RV_ARTIFACT_OUT_DIR)
+./Report/A/04_SSOT_EVIDENCE/02_base_construction_rg.txt:107:scripts/truth-chain/trace_ui_to_origin.mjs:18:const base = process.env.BASE_URL || process.env.TRACE_BASE || process.env.RV_BASE || process.env.OPS_BASE;
+./Report/A/04_SSOT_EVIDENCE/02_base_construction_rg.txt:113:scripts/providers/universe-v2.mjs:228:  const artifactsDir = process.env.RV_ARTIFACT_OUT_DIR
+./Report/A/04_SSOT_EVIDENCE/02_base_construction_rg.txt:114:scripts/providers/universe-v2.mjs:229:    ? String(process.env.RV_ARTIFACT_OUT_DIR)
+./Report/A/04_SSOT_EVIDENCE/02_base_construction_rg.txt:115:scripts/providers/universe-v2.mjs:230:    : process.env.ARTIFACTS_DIR
+./Report/A/04_SSOT_EVIDENCE/02_base_construction_rg.txt:116:scripts/providers/universe-v2.mjs:231:    ? join(String(process.env.ARTIFACTS_DIR), MODULE_NAME)
+./Report/A/04_SSOT_EVIDENCE/02_base_construction_rg.txt:117:scripts/providers/universe-v2.mjs:234:  const forcedStub = toBool(process.env.RV_UNIVERSE_STUB);
+./Report/A/04_SSOT_EVIDENCE/02_base_construction_rg.txt:118:scripts/providers/universe-v2.mjs:235:  const forcedReal = toBool(process.env.RV_UNIVERSE_FORCE_REAL);
+./Report/A/04_SSOT_EVIDENCE/02_base_construction_rg.txt:119:scripts/validate/market-score-artifact.v1.mjs:25:  const baseDir = process.env.RV_ARTIFACT_OUT_DIR
+./Report/A/04_SSOT_EVIDENCE/02_base_construction_rg.txt:120:scripts/validate/market-score-artifact.v1.mjs:26:    ? String(process.env.RV_ARTIFACT_OUT_DIR)
+./Report/A/04_SSOT_EVIDENCE/02_base_construction_rg.txt:122:scripts/truth-chain/snapshot_ui_values.mjs:10:const base = process.env.BASE_URL || process.env.TRACE_BASE || process.env.RV_BASE || process.env.OPS_BASE;
+./Report/A/04_SSOT_EVIDENCE/02_base_construction_rg.txt:124:scripts/validate-mirrors.mjs:145:const isEventMirrorsContext = process.env.VALIDATE_EVENT_MIRRORS_ONLY === "1" || 
+./Report/A/04_SSOT_EVIDENCE/02_base_construction_rg.txt:134:scripts/providers/market-stats-v3.mjs:59:  const barsDir = process.env.BARS_ARTIFACTS_DIR
+./Report/A/04_SSOT_EVIDENCE/02_base_construction_rg.txt:135:scripts/providers/market-stats-v3.mjs:60:    ? join(String(process.env.BARS_ARTIFACTS_DIR), SOURCE_MODULE)
+./Report/A/04_SSOT_EVIDENCE/02_base_construction_rg.txt:136:scripts/providers/market-stats-v3.mjs:413:  const artifactsOutDir = process.env.RV_ARTIFACT_OUT_DIR
+./Report/A/04_SSOT_EVIDENCE/02_base_construction_rg.txt:137:scripts/providers/market-stats-v3.mjs:414:    ? String(process.env.RV_ARTIFACT_OUT_DIR)
+./Report/A/04_SSOT_EVIDENCE/02_base_construction_rg.txt:138:scripts/providers/market-stats-v3.mjs:415:    : process.env.ARTIFACTS_DIR
+./Report/A/04_SSOT_EVIDENCE/02_base_construction_rg.txt:139:scripts/providers/market-stats-v3.mjs:416:      ? join(String(process.env.ARTIFACTS_DIR), MODULE_NAME)
+./Report/A/04_SSOT_EVIDENCE/02_base_construction_rg.txt:191:scripts/providers/finnhub.js:4:const MAX_OPTION_CHAIN_BYTES = Number(process.env.FINNHUB_OPTION_CHAIN_MAX_BYTES || 750000);
+./Report/A/04_SSOT_EVIDENCE/02_base_construction_rg.txt:192:scripts/providers/finnhub.js:8:  const apiKey = process.env.FINNHUB_API_KEY || "";
+./Report/A/04_SSOT_EVIDENCE/02_base_construction_rg.txt:194:scripts/ops/verify-ops-pipeline.mjs:5:const BASE_URL = process.env.VERIFY_BASE_URL || 'http://localhost:8788';
+./Report/A/04_SSOT_EVIDENCE/02_base_construction_rg.txt:198:scripts/providers/fmp.js:6:  const apiKey = process.env.FMP_API_KEY || "";
+./Report/A/04_SSOT_EVIDENCE/02_base_construction_rg.txt:203:scripts/pipeline/build-marketphase-from-kv.mjs:106:    return process.env.COMMIT_HASH || execSync("git rev-parse --short HEAD", { encoding: "utf8" }).trim();
+./Report/A/04_SSOT_EVIDENCE/02_base_construction_rg.txt:204:scripts/pipeline/build-marketphase-from-kv.mjs:248:  if (process.env.CF_KV_NAMESPACE_ID) return;
+./Report/A/04_SSOT_EVIDENCE/02_base_construction_rg.txt:205:scripts/pipeline/build-marketphase-from-kv.mjs:250:  if (id) process.env.CF_KV_NAMESPACE_ID = id;
+./Report/A/04_SSOT_EVIDENCE/02_base_construction_rg.txt:206:scripts/pipeline/build-marketphase-from-kv.mjs:276:  const allowProviderFallback = args.allowProviderFallback || toBool(process.env.ALLOW_PROVIDER_FETCH) || toBool(process.env.MARKETPHASE_PROVIDER_FALLBACK);
+./Report/A/04_SSOT_EVIDENCE/02_base_construction_rg.txt:207:scripts/pipeline/build-marketphase-from-kv.mjs:277:  const writeBackKv = args.writeBackKv || toBool(process.env.MARKETPHASE_WRITE_BACK_KV);
+./Report/A/04_SSOT_EVIDENCE/02_base_construction_rg.txt:229:scripts/generate-posts.js:5:const baseUrl = process.argv[2] || process.env.RV_BASE_URL || "http://localhost:8788";
+./Report/A/04_SSOT_EVIDENCE/02_base_construction_rg.txt:230:scripts/seed-mirrors.mjs:13:const QUOTES_PROVIDER = String(process.env.QUOTES_PROVIDER || "").toLowerCase();
+./Report/A/04_SSOT_EVIDENCE/02_base_construction_rg.txt:231:scripts/seed-mirrors.mjs:14:const FINNHUB_API_KEY = process.env.FINNHUB_API_KEY || "";
+./Report/A/04_SSOT_EVIDENCE/02_base_construction_rg.txt:232:scripts/seed-mirrors.mjs:15:const FMP_API_KEY = process.env.FMP_API_KEY || "";
+./Report/A/04_SSOT_EVIDENCE/02_base_construction_rg.txt:233:scripts/seed-mirrors.mjs:16:const FRED_API_KEY = process.env.FRED_API_KEY || "";
+./Report/A/04_SSOT_EVIDENCE/02_base_construction_rg.txt:234:scripts/seed-mirrors.mjs:17:const ALPHAVANTAGE_API_KEY = process.env.ALPHAVANTAGE_API_KEY || "";
+./Report/A/04_SSOT_EVIDENCE/02_base_construction_rg.txt:235:scripts/seed-mirrors.mjs:18:const MARKETAUX_KEY = process.env.MARKETAUX_KEY || "";
+./Report/A/04_SSOT_EVIDENCE/02_base_construction_rg.txt:236:scripts/seed-mirrors.mjs:19:const ALLOW_YAHOO = process.env.ALLOW_YAHOO === "1";
+./Report/A/04_SSOT_EVIDENCE/02_base_construction_rg.txt:237:scripts/seed-mirrors.mjs:20:const ALLOW_TREASURY = process.env.ALLOW_TREASURY === "1";
+./Report/A/04_SSOT_EVIDENCE/02_base_construction_rg.txt:238:scripts/seed-mirrors.mjs:21:const MIN_OK_FEATURES = Number(process.env.MIN_OK_FEATURES || 2);
+./Report/A/04_SSOT_EVIDENCE/02_base_construction_rg.txt:239:scripts/seed-mirrors.mjs:22:const MAX_FAIL_FEATURES = Number(process.env.MAX_FAIL_FEATURES || 2);
+./Report/A/04_SSOT_EVIDENCE/02_base_construction_rg.txt:240:scripts/seed-mirrors.mjs:24:  String(process.env.CRITICAL_FEATURES || "")
+./Report/A/04_SSOT_EVIDENCE/02_base_construction_rg.txt:253:scripts/providers/eodhd-backfill-bars.mjs:16:const API_KEY = process.env.EODHD_API_KEY;
+./Report/A/04_SSOT_EVIDENCE/02_base_construction_rg.txt:258:scripts/audit-site.mjs:222:  const envSha = process.env.GITHUB_SHA || process.env.CI_COMMIT_SHA || null;
+./Report/A/04_SSOT_EVIDENCE/02_base_construction_rg.txt:266:scripts/ops/build-build-info.mjs:17:const envSha = process.env.CF_PAGES_COMMIT_SHA || process.env.GITHUB_SHA || null;
+./Report/A/04_SSOT_EVIDENCE/02_base_construction_rg.txt:267:scripts/ops/build-build-info.mjs:27:    ci: Boolean(process.env.CI),
+./Report/A/04_SSOT_EVIDENCE/02_base_construction_rg.txt:268:scripts/ops/build-build-info.mjs:28:    github_actions: Boolean(process.env.GITHUB_ACTIONS),
+./Report/A/04_SSOT_EVIDENCE/02_base_construction_rg.txt:269:scripts/ops/build-build-info.mjs:29:    cf_pages: Boolean(process.env.CF_PAGES),
+./Report/A/04_SSOT_EVIDENCE/02_base_construction_rg.txt:270:scripts/ops/build-build-info.mjs:30:    cf_pages_commit_sha: process.env.CF_PAGES_COMMIT_SHA || null,
+./Report/A/04_SSOT_EVIDENCE/02_base_construction_rg.txt:271:scripts/ops/build-build-info.mjs:31:    github_sha: process.env.GITHUB_SHA || null,
+./Report/A/04_SSOT_EVIDENCE/02_base_construction_rg.txt:272:scripts/wp16/guard-market-prices.mjs:4:const out = process.env.GITHUB_OUTPUT;
+./Report/A/04_SSOT_EVIDENCE/02_base_construction_rg.txt:273:scripts/wp16/guard-market-prices.mjs:5:const minRows = Number(process.env.RV_MIN_MARKET_PRICE_ROWS || 517);
+./Report/A/04_SSOT_EVIDENCE/02_base_construction_rg.txt:279:scripts/dev/smoke-api-stock.mjs:12:    EODHD_API_KEY: process.env.EODHD_API_KEY || 'mock_key',
+./Report/A/04_SSOT_EVIDENCE/02_base_construction_rg.txt:280:scripts/dev/smoke-api-stock.mjs:13:    TIINGO_API_KEY: process.env.TIINGO_API_KEY || 'mock_key',
+./Report/A/04_SSOT_EVIDENCE/02_base_construction_rg.txt:281:scripts/dev/smoke-api-stock.mjs:14:    TWELVEDATA_API_KEY: process.env.TWELVEDATA_API_KEY || 'mock_key'
+./Report/A/04_SSOT_EVIDENCE/02_base_construction_rg.txt:282:scripts/ci/verify-artifacts.mjs:6:const MIN_MARKET_PRICE_ROWS = Number(process.env.RV_MIN_MARKET_PRICE_ROWS || 517);
+./Report/A/04_SSOT_EVIDENCE/02_base_construction_rg.txt:283:scripts/ci/verify-artifacts.mjs:7:const MIN_FORECAST_ROWS = Number(process.env.RV_MIN_FORECAST_ROWS || 1);
+./Report/A/04_SSOT_EVIDENCE/02_base_construction_rg.txt:289:scripts/truth-audit/config.mjs:5:const DATE = process.env.TRUTH_AUDIT_DATE || new Date().toISOString().slice(0, 10);
+./Report/A/04_SSOT_EVIDENCE/02_base_construction_rg.txt:290:scripts/truth-audit/config.mjs:11:  const base = process.env.BASE_URL;
+./Report/A/04_SSOT_EVIDENCE/02_base_construction_rg.txt:293:scripts/forecast/artifact_resolver.mjs:110:        this.token = options.token || process.env.GITHUB_TOKEN;
+./Report/A/04_SSOT_EVIDENCE/02_base_construction_rg.txt:296:scripts/lib/kv-write.js:24:  if (toBool(process.env.SKIP_KV_WRITE)) return true;
+./Report/A/04_SSOT_EVIDENCE/02_base_construction_rg.txt:297:scripts/lib/kv-write.js:25:  if (toBool(process.env.INPUT_SKIP_KV_WRITE)) return true;
+./Report/A/04_SSOT_EVIDENCE/02_base_construction_rg.txt:303:scripts/lib/build-id.js:103:  if (process.env.BUILD_ID) {
+./Report/A/04_SSOT_EVIDENCE/02_base_construction_rg.txt:304:scripts/lib/build-id.js:104:    return process.env.BUILD_ID;
+./Report/A/04_SSOT_EVIDENCE/02_base_construction_rg.txt:341:scripts/update-macro-hub.v3.mjs:552:  const fredKey = process.env.FRED_API_KEY || "";
+./Report/A/04_SSOT_EVIDENCE/02_base_construction_rg.txt:342:scripts/update-macro-hub.v3.mjs:553:  const finnhubKey = process.env.FINNHUB_API_KEY || "";
+./Report/A/04_SSOT_EVIDENCE/02_base_construction_rg.txt:343:scripts/update-macro-hub.v3.mjs:554:  const fmpKey = process.env.FMP_API_KEY || "";
+./Report/A/04_SSOT_EVIDENCE/02_base_construction_rg.txt:344:scripts/update-macro-hub.v3.mjs:555:  const alphaKey = process.env.ALPHAVANTAGE_API_KEY || "";
+./Report/A/04_SSOT_EVIDENCE/02_base_construction_rg.txt:345:scripts/update-macro-hub.v3.mjs:556:  const coingeckoKey = process.env.COINGECKO_DEMO_KEY || "";
+./Report/A/04_SSOT_EVIDENCE/02_base_construction_rg.txt:366:scripts/mirror-breakout-energy.mjs:9:const CF_ACCOUNT_ID = process.env.CF_ACCOUNT_ID || "";
+./Report/A/04_SSOT_EVIDENCE/02_base_construction_rg.txt:367:scripts/mirror-breakout-energy.mjs:10:const CF_KV_NAMESPACE_ID = process.env.CF_KV_NAMESPACE_ID || "";
+./Report/A/04_SSOT_EVIDENCE/02_base_construction_rg.txt:368:scripts/mirror-breakout-energy.mjs:11:const CF_API_TOKEN = process.env.CF_API_TOKEN || "";
+./Report/A/04_SSOT_EVIDENCE/02_base_construction_rg.txt:369:scripts/mirror-breakout-energy.mjs:12:const IS_CI = process.env.GITHUB_ACTIONS === "true";
+./Report/A/04_SSOT_EVIDENCE/02_base_construction_rg.txt:370:scripts/mirror-breakout-energy.mjs:14:const LIMIT = Number.parseInt(process.env.MIRROR_LIMIT || "35", 10);
+./Report/A/04_SSOT_EVIDENCE/02_base_construction_rg.txt:372:scripts/alpha-radar-debug.js:3:const base = process.argv[3] || process.env.RV_BASE_URL || "http://localhost:8788";
+./evidence/02-mirrors-refs-run04.json:26849:        "text": "    candidates.push(join(String(process.env.BARS_ARTIFACTS_DIR), SOURCE_MODULE, 'snapshot.json'));\n"
+./scripts/generate-posts.js:5:const baseUrl = process.argv[2] || process.env.RV_BASE_URL || "http://localhost:8788";
+./scripts/ops/env.config.mjs:3:    OPS_BASE: process.env.OPS_BASE,
+./scripts/ops/env.config.mjs:4:    RV_BASE: process.env.RV_BASE,
+./scripts/ops/env.config.mjs:5:    BASE_URL: process.env.BASE_URL,
+./scripts/ops/env.config.mjs:6:    BASE: process.env.BASE
+./scripts/ops/build-ops-daily.mjs:355:    accountId: process.env.CF_ACCOUNT_ID,
+./scripts/ops/build-ops-daily.mjs:356:    apiToken: process.env.CF_API_TOKEN
+./scripts/ops/fetch-with-context.mjs:36:        OPS_BASE: process.env.OPS_BASE || null,
+./scripts/ops/fetch-with-context.mjs:37:        RV_BASE: process.env.RV_BASE || null,
+./scripts/ops/fetch-with-context.mjs:38:        BASE_URL: process.env.BASE_URL || null,
+./scripts/ops/fetch-with-context.mjs:39:        BASE: process.env.BASE || null,
+./scripts/ops/fetch-with-context.mjs:40:        CI: process.env.CI || null
+./scripts/ops/fetch-with-context.mjs:45:    const jsonLog = process.env.CI === 'true' || process.env.CI === '1' || process.env.RV_LOG_JSON === '1';
+./scripts/ops/verify-ops-pipeline.mjs:5:const BASE_URL = process.env.VERIFY_BASE_URL || 'http://localhost:8788';
+./evidence/02.5-kv-reads-run01.json:135:        "text": "const DRY_RUN = process.env.DRY_RUN === '1';\n"
+./evidence/02.5-kv-reads-run01.json:187:        "text": "  const envSymbols = process.env.SYMBOLS;\n"
+./evidence/02.5-kv-reads-run01.json:239:        "text": "  const fredKey = process.env.FRED_API_KEY || \"\";\n"
+./evidence/02.5-kv-reads-run01.json:261:        "text": "  const finnhubKey = process.env.FINNHUB_API_KEY || \"\";\n"
+./evidence/02.5-kv-reads-run01.json:283:        "text": "  const fmpKey = process.env.FMP_API_KEY || \"\";\n"
+./evidence/02.5-kv-reads-run01.json:305:        "text": "  const alphaKey = process.env.ALPHAVANTAGE_API_KEY || \"\";\n"
+./evidence/02.5-kv-reads-run01.json:327:        "text": "  const coingeckoKey = process.env.COINGECKO_DEMO_KEY || \"\";\n"
+./evidence/02.5-kv-reads-run01.json:379:        "text": "const baseUrl = process.env.BASE_URL || \"http://127.0.0.1:8788\";\n"
+./evidence/02.5-kv-reads-run01.json:431:        "text": "const base = process.argv[3] || process.env.RV_BASE_URL || \"http://localhost:8788\";\n"
+./evidence/02.5-kv-reads-run01.json:483:        "text": "const CF_ACCOUNT_ID = process.env.CF_ACCOUNT_ID || \"\";\n"
+./evidence/02.5-kv-reads-run01.json:505:        "text": "const CF_KV_NAMESPACE_ID = process.env.CF_KV_NAMESPACE_ID || \"\";\n"
+./evidence/02.5-kv-reads-run01.json:527:        "text": "const CF_API_TOKEN = process.env.CF_API_TOKEN || \"\";\n"
+./evidence/02.5-kv-reads-run01.json:549:        "text": "const IS_CI = process.env.GITHUB_ACTIONS === \"true\";\n"
+./evidence/02.5-kv-reads-run01.json:571:        "text": "const LIMIT = Number.parseInt(process.env.MIRROR_LIMIT || \"35\", 10);\n"
+./evidence/02.5-kv-reads-run01.json:719:        "text": "const base = process.env.BASE_URL || process.env.TRACE_BASE || process.env.RV_BASE || process.env.OPS_BASE;\n"
+./evidence/02.5-kv-reads-run01.json:792:        "text": "let commitSha = process.env.GITHUB_SHA || process.env.COMMIT_SHA || process.env.BUILD_SHA || \"\";\n"
+./evidence/02.5-kv-reads-run01.json:858:        "text": "const base = process.env.BASE_URL || process.env.TRACE_BASE || process.env.RV_BASE || process.env.OPS_BASE;\n"
+./evidence/02.5-kv-reads-run01.json:1049:        "text": "  const envSha = process.env.GITHUB_SHA || process.env.CI_COMMIT_SHA || null;\n"
+./evidence/02.5-kv-reads-run01.json:1270:        "text": "const QUOTES_PROVIDER = String(process.env.QUOTES_PROVIDER || \"\").toLowerCase();\n"
+./evidence/02.5-kv-reads-run01.json:1292:        "text": "const FINNHUB_API_KEY = process.env.FINNHUB_API_KEY || \"\";\n"
+./evidence/02.5-kv-reads-run01.json:1314:        "text": "const FMP_API_KEY = process.env.FMP_API_KEY || \"\";\n"
+./evidence/02.5-kv-reads-run01.json:1336:        "text": "const FRED_API_KEY = process.env.FRED_API_KEY || \"\";\n"
+./evidence/02.5-kv-reads-run01.json:1358:        "text": "const ALPHAVANTAGE_API_KEY = process.env.ALPHAVANTAGE_API_KEY || \"\";\n"
+./evidence/02.5-kv-reads-run01.json:1380:        "text": "const MARKETAUX_KEY = process.env.MARKETAUX_KEY || \"\";\n"
+./evidence/02.5-kv-reads-run01.json:1402:        "text": "const ALLOW_YAHOO = process.env.ALLOW_YAHOO === \"1\";\n"
+./evidence/02.5-kv-reads-run01.json:1424:        "text": "const ALLOW_TREASURY = process.env.ALLOW_TREASURY === \"1\";\n"
+./evidence/02.5-kv-reads-run01.json:1446:        "text": "const MIN_OK_FEATURES = Number(process.env.MIN_OK_FEATURES || 2);\n"
+./evidence/02.5-kv-reads-run01.json:1468:        "text": "const MAX_FAIL_FEATURES = Number(process.env.MAX_FAIL_FEATURES || 2);\n"
+./evidence/02.5-kv-reads-run01.json:1490:        "text": "  String(process.env.CRITICAL_FEATURES || \"\")\n"
+./evidence/02.5-kv-reads-run01.json:1542:        "text": "  const raw = process.env.SYMBOLS || \"AAPL\";\n"
+./evidence/02.5-kv-reads-run01.json:1564:        "text": "    return process.env.COMMIT_HASH || execSync(\"git rev-parse --short HEAD\", { encoding: \"utf8\" }).trim();\n"
+./evidence/02.5-kv-reads-run01.json:1586:        "text": "  const dummyMode = process.env.DUMMY === \"1\";\n"
+./evidence/02.5-kv-reads-run01.json:1638:        "text": "    return process.env.COMMIT_HASH || execSync(\"git rev-parse --short HEAD\", { encoding: \"utf8\" }).trim();\n"
+./evidence/02.5-kv-reads-run01.json:1660:        "text": "  if (process.env.CF_KV_NAMESPACE_ID) return;\n"
+./evidence/02.5-kv-reads-run01.json:1682:        "text": "  if (id) process.env.CF_KV_NAMESPACE_ID = id;\n"
+./evidence/02.5-kv-reads-run01.json:1704:        "text": "  const allowProviderFallback = args.allowProviderFallback || toBool(process.env.ALLOW_PROVIDER_FETCH) || toBool(process.env.MARKETPHASE_PROVIDER_FALLBACK);\n"
+./evidence/02.5-kv-reads-run01.json:1733:        "text": "  const writeBackKv = args.writeBackKv || toBool(process.env.MARKETPHASE_WRITE_BACK_KV);\n"
+./evidence/02.5-kv-reads-run01.json:1785:        "text": "const base = process.env.BASE_URL || 'https://rubikvault.com';\n"
+./evidence/02.5-kv-reads-run01.json:1837:        "text": "const host = process.env.HOST || \"http://127.0.0.1:8788\";\n"
+./evidence/02.5-kv-reads-run01.json:1859:        "text": "const token = process.env.RV_DEBUG_TOKEN || \"\";\n"
+./evidence/02.5-kv-reads-run01.json:1911:        "text": "const baseUrl = process.argv[2] || process.env.RV_BASE_URL || \"http://localhost:8788\";\n"
+./evidence/02.5-kv-reads-run01.json:1963:        "text": "  const token = process.env.TIINGO_API_KEY ?? process.env.TIIANGO_API_KEY;\n"
+./evidence/02.5-kv-reads-run01.json:2022:        "text": "    const commit = process.env.GITHUB_SHA || \"local\";\n"
+./evidence/02.5-kv-reads-run01.json:2044:        "text": "    const runId = process.env.GITHUB_RUN_ID || null;\n"
+./evidence/02.5-kv-reads-run01.json:2066:        "text": "  const commit = process.env.GITHUB_SHA || \"local\";\n"
+./evidence/02.5-kv-reads-run01.json:2088:        "text": "  const runId = process.env.GITHUB_RUN_ID || null;\n"
+./evidence/02.5-kv-reads-run01.json:2140:        "text": "  const baseDir = process.env.RV_ARTIFACT_OUT_DIR\n"
+./evidence/02.5-kv-reads-run01.json:2162:        "text": "    ? String(process.env.RV_ARTIFACT_OUT_DIR)\n"
+./evidence/02.5-kv-reads-run01.json:2214:        "text": "const ARTIFACTS_DIR = process.env.ARTIFACTS_DIR || join(BASE_DIR, 'artifacts');\n"
+./evidence/02.5-kv-reads-run01.json:2236:        "text": "  const skipInvalidArtifacts = String(process.env.RV_FINALIZER_SKIP_INVALID || '').trim() === '1';\n"
+./evidence/02.5-kv-reads-run01.json:2288:        "text": "  const baseDir = process.env.RV_ARTIFACT_OUT_DIR\n"
+./evidence/02.5-kv-reads-run01.json:2310:        "text": "    ? String(process.env.RV_ARTIFACT_OUT_DIR)\n"
+./evidence/02.5-kv-reads-run01.json:2362:        "text": "    OPS_BASE: process.env.OPS_BASE,\n"
+./evidence/02.5-kv-reads-run01.json:2384:        "text": "    RV_BASE: process.env.RV_BASE,\n"
+./evidence/02.5-kv-reads-run01.json:2406:        "text": "    BASE_URL: process.env.BASE_URL,\n"
+./evidence/02.5-kv-reads-run01.json:2428:        "text": "    BASE: process.env.BASE\n"
+./evidence/02.5-kv-reads-run01.json:2480:        "text": "  if (process.env.BUILD_ID) {\n"
+./evidence/02.5-kv-reads-run01.json:2502:        "text": "    return process.env.BUILD_ID;\n"
+./evidence/02.5-kv-reads-run01.json:2554:        "text": "  const apiKey = process.env.MARKETAUX_API_KEY || \"\";\n"
+./evidence/02.5-kv-reads-run01.json:2606:        "text": "  const apiKey = process.env.FRED_API_KEY || \"\";\n"
+./evidence/02.5-kv-reads-run01.json:2658:        "text": "    accountId: process.env.CF_ACCOUNT_ID,\n"
+./evidence/02.5-kv-reads-run01.json:2680:        "text": "    apiToken: process.env.CF_API_TOKEN\n"
+./evidence/02.5-kv-reads-run01.json:2732:        "text": "  const apiKey = process.env.SEC_API_KEY || \"\";\n"
+./evidence/02.5-kv-reads-run01.json:2784:        "text": "  const apiKey = process.env.AV_API_KEY || \"\";\n"
+./evidence/02.5-kv-reads-run01.json:2836:        "text": "const DATE = process.env.TRUTH_AUDIT_DATE || new Date().toISOString().slice(0, 10);\n"
+./evidence/02.5-kv-reads-run01.json:2858:        "text": "  const base = process.env.BASE_URL;\n"
+./evidence/02.5-kv-reads-run01.json:2910:        "text": "  const baseDir = process.env.RV_ARTIFACT_OUT_DIR\n"
+./evidence/02.5-kv-reads-run01.json:2932:        "text": "    ? String(process.env.RV_ARTIFACT_OUT_DIR)\n"
+./evidence/02.5-kv-reads-run01.json:2984:        "text": "        OPS_BASE: process.env.OPS_BASE || null,\n"
+./evidence/02.5-kv-reads-run01.json:3006:        "text": "        RV_BASE: process.env.RV_BASE || null,\n"
+./evidence/02.5-kv-reads-run01.json:3028:        "text": "        BASE_URL: process.env.BASE_URL || null,\n"
+./evidence/02.5-kv-reads-run01.json:3050:        "text": "        BASE: process.env.BASE || null,\n"
+./evidence/02.5-kv-reads-run01.json:3072:        "text": "        CI: process.env.CI || null\n"
+./evidence/02.5-kv-reads-run01.json:3094:        "text": "    const jsonLog = process.env.CI === 'true' || process.env.CI === '1' || process.env.RV_LOG_JSON === '1';\n"
+./evidence/02.5-kv-reads-run01.json:3160:        "text": "  if (toBool(process.env.SKIP_KV_WRITE)) return true;\n"
+./evidence/02.5-kv-reads-run01.json:3182:        "text": "  if (toBool(process.env.INPUT_SKIP_KV_WRITE)) return true;\n"
+./evidence/02.5-kv-reads-run01.json:3234:        "text": "const isEventMirrorsContext = process.env.VALIDATE_EVENT_MIRRORS_ONLY === \"1\" || \n"
+./evidence/02.5-kv-reads-run01.json:3286:        "text": "  const outDir = process.env.RV_ARTIFACT_OUT_DIR\n"
+./evidence/02.5-kv-reads-run01.json:3308:        "text": "    ? String(process.env.RV_ARTIFACT_OUT_DIR)\n"
+./evidence/02.5-kv-reads-run01.json:3330:        "text": "    : (process.env.ARTIFACTS_DIR\n"
+./evidence/02.5-kv-reads-run01.json:3352:        "text": "        ? join(String(process.env.ARTIFACTS_DIR), MODULE_NAME)\n"
+./evidence/02.5-kv-reads-run01.json:3374:        "text": "  const forcedStub = toBool(process.env.RV_PRICES_STUB);\n"
+./evidence/02.5-kv-reads-run01.json:3396:        "text": "  const forcedReal = toBool(process.env.RV_PRICES_FORCE_REAL);\n"
+./evidence/02.5-kv-reads-run01.json:3418:        "text": "  const forcedProviderRaw = process.env.RV_FORCE_PROVIDER ? String(process.env.RV_FORCE_PROVIDER) : '';\n"
+./evidence/02.5-kv-reads-run01.json:3477:        "text": "  const baseDir = process.env.RV_ARTIFACT_OUT_DIR\n"
+./evidence/02.5-kv-reads-run01.json:3499:        "text": "    ? String(process.env.RV_ARTIFACT_OUT_DIR)\n"
+./evidence/02.5-kv-reads-run01.json:3551:        "text": "  if (process.env.CI === 'true' || process.env.GITHUB_ACTIONS === 'true') {\n"
+./evidence/02.5-kv-reads-run01.json:3610:        "text": "  const artifactsDir = process.env.ARTIFACTS_DIR ? join(String(process.env.ARTIFACTS_DIR), SOURCE_MODULE) : null;\n"
+./evidence/02.5-kv-reads-run01.json:3639:        "text": "  if (process.env.BARS_ARTIFACTS_DIR) {\n"
+./evidence/02.5-kv-reads-run01.json:3661:        "text": "    candidates.push(join(String(process.env.BARS_ARTIFACTS_DIR), SOURCE_MODULE, 'snapshot.json'));\n"
+./evidence/02.5-kv-reads-run01.json:3683:        "text": "  const artifactsOutDir = process.env.RV_ARTIFACT_OUT_DIR\n"
+./evidence/02.5-kv-reads-run01.json:3705:        "text": "    ? String(process.env.RV_ARTIFACT_OUT_DIR)\n"
+./evidence/02.5-kv-reads-run01.json:3727:        "text": "    : process.env.ARTIFACTS_DIR\n"
+./evidence/02.5-kv-reads-run01.json:3749:        "text": "    ? join(String(process.env.ARTIFACTS_DIR), MODULE_NAME)\n"
+./evidence/02.5-kv-reads-run01.json:3801:        "text": "      last_run_url: process.env.GITHUB_SERVER_URL && process.env.GITHUB_RUN_ID\n"
+./evidence/02.5-kv-reads-run01.json:3830:        "text": "        ? `${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}`\n"
+./evidence/02.5-kv-reads-run01.json:3866:        "text": "  const artifactsBaseDir = process.env.ARTIFACTS_DIR || join(BASE_DIR, 'artifacts');\n"
+./evidence/02.5-kv-reads-run01.json:3918:        "text": "const BASE_URL = process.env.VERIFY_BASE_URL || 'http://localhost:8788';\n"
+./evidence/02.5-kv-reads-run01.json:3970:        "text": "  const artifactsDir = process.env.RV_ARTIFACT_OUT_DIR\n"
+./evidence/02.5-kv-reads-run01.json:3992:        "text": "    ? String(process.env.RV_ARTIFACT_OUT_DIR)\n"
+./evidence/02.5-kv-reads-run01.json:4014:        "text": "    : process.env.ARTIFACTS_DIR\n"
+./evidence/02.5-kv-reads-run01.json:4036:        "text": "    ? join(String(process.env.ARTIFACTS_DIR), MODULE_NAME)\n"
+./evidence/02.5-kv-reads-run01.json:4058:        "text": "  const forcedStub = toBool(process.env.RV_UNIVERSE_STUB);\n"
+./evidence/02.5-kv-reads-run01.json:4080:        "text": "  const forcedReal = toBool(process.env.RV_UNIVERSE_FORCE_REAL);\n"
+./evidence/02.5-kv-reads-run01.json:4132:        "text": "const MAX_OPTION_CHAIN_BYTES = Number(process.env.FINNHUB_OPTION_CHAIN_MAX_BYTES || 750000);\n"
+./evidence/02.5-kv-reads-run01.json:4154:        "text": "  const apiKey = process.env.FINNHUB_API_KEY || \"\";\n"
+./evidence/02.5-kv-reads-run01.json:4206:        "text": "const registryPath = process.env.RV_PROVIDERS_REGISTRY_PATH\n"
+./evidence/02.5-kv-reads-run01.json:4228:        "text": "  ? path.resolve(process.env.RV_PROVIDERS_REGISTRY_PATH)\n"
+./evidence/02.5-kv-reads-run01.json:4280:        "text": "const envSha = process.env.CF_PAGES_COMMIT_SHA || process.env.GITHUB_SHA || null;\n"
+./evidence/02.5-kv-reads-run01.json:4309:        "text": "    ci: Boolean(process.env.CI),\n"
+./evidence/02.5-kv-reads-run01.json:4331:        "text": "    github_actions: Boolean(process.env.GITHUB_ACTIONS),\n"
+./evidence/02.5-kv-reads-run01.json:4353:        "text": "    cf_pages: Boolean(process.env.CF_PAGES),\n"
+./evidence/02.5-kv-reads-run01.json:4375:        "text": "    cf_pages_commit_sha: process.env.CF_PAGES_COMMIT_SHA || null,\n"
+./evidence/02.5-kv-reads-run01.json:4397:        "text": "    github_sha: process.env.GITHUB_SHA || null,\n"
+./evidence/02.5-kv-reads-run01.json:4449:        "text": "  const apiKey = process.env.FMP_API_KEY || \"\";\n"
+./evidence/02.5-kv-reads-run01.json:4501:        "text": "  const barsDir = process.env.BARS_ARTIFACTS_DIR\n"
+./evidence/02.5-kv-reads-run01.json:4523:        "text": "    ? join(String(process.env.BARS_ARTIFACTS_DIR), SOURCE_MODULE)\n"
+./evidence/02.5-kv-reads-run01.json:4545:        "text": "  const artifactsOutDir = process.env.RV_ARTIFACT_OUT_DIR\n"
+./evidence/02.5-kv-reads-run01.json:4567:        "text": "    ? String(process.env.RV_ARTIFACT_OUT_DIR)\n"
+./evidence/02.5-kv-reads-run01.json:4589:        "text": "    : process.env.ARTIFACTS_DIR\n"
+./evidence/02.5-kv-reads-run01.json:4611:        "text": "      ? join(String(process.env.ARTIFACTS_DIR), MODULE_NAME)\n"
+./scripts/ops/build-build-info.mjs:17:const envSha = process.env.CF_PAGES_COMMIT_SHA || process.env.GITHUB_SHA || null;
+./scripts/ops/build-build-info.mjs:27:    ci: Boolean(process.env.CI),
+./scripts/ops/build-build-info.mjs:28:    github_actions: Boolean(process.env.GITHUB_ACTIONS),
+./scripts/ops/build-build-info.mjs:29:    cf_pages: Boolean(process.env.CF_PAGES),
+./scripts/ops/build-build-info.mjs:30:    cf_pages_commit_sha: process.env.CF_PAGES_COMMIT_SHA || null,
+./scripts/ops/build-build-info.mjs:31:    github_sha: process.env.GITHUB_SHA || null,
+./scripts/dev/smoke-api-stock.mjs:12:    EODHD_API_KEY: process.env.EODHD_API_KEY || 'mock_key',
+./scripts/dev/smoke-api-stock.mjs:13:    TIINGO_API_KEY: process.env.TIINGO_API_KEY || 'mock_key',
+./scripts/dev/smoke-api-stock.mjs:14:    TWELVEDATA_API_KEY: process.env.TWELVEDATA_API_KEY || 'mock_key'
+./scripts/lib/build-id.js:103:  if (process.env.BUILD_ID) {
+./scripts/lib/build-id.js:104:    return process.env.BUILD_ID;
+./scripts/lib/kv-write.js:24:  if (toBool(process.env.SKIP_KV_WRITE)) return true;
+./scripts/lib/kv-write.js:25:  if (toBool(process.env.INPUT_SKIP_KV_WRITE)) return true;
+./scripts/update-macro-hub.v3.mjs:552:  const fredKey = process.env.FRED_API_KEY || "";
+./scripts/update-macro-hub.v3.mjs:553:  const finnhubKey = process.env.FINNHUB_API_KEY || "";
+./scripts/update-macro-hub.v3.mjs:554:  const fmpKey = process.env.FMP_API_KEY || "";
+./scripts/update-macro-hub.v3.mjs:555:  const alphaKey = process.env.ALPHAVANTAGE_API_KEY || "";
+./scripts/update-macro-hub.v3.mjs:556:  const coingeckoKey = process.env.COINGECKO_DEMO_KEY || "";
+./scripts/alpha-radar-debug.js:3:const base = process.argv[3] || process.env.RV_BASE_URL || "http://localhost:8788";
+./scripts/mirror-breakout-energy.mjs:9:const CF_ACCOUNT_ID = process.env.CF_ACCOUNT_ID || "";
+./scripts/mirror-breakout-energy.mjs:10:const CF_KV_NAMESPACE_ID = process.env.CF_KV_NAMESPACE_ID || "";
+./scripts/mirror-breakout-energy.mjs:11:const CF_API_TOKEN = process.env.CF_API_TOKEN || "";
+./scripts/mirror-breakout-energy.mjs:12:const IS_CI = process.env.GITHUB_ACTIONS === "true";
+./scripts/mirror-breakout-energy.mjs:14:const LIMIT = Number.parseInt(process.env.MIRROR_LIMIT || "35", 10);
+./scripts/marketphase-generate.mjs:16:  const raw = process.env.SYMBOLS || "AAPL";
+./scripts/marketphase-generate.mjs:66:    return process.env.COMMIT_HASH || execSync("git rev-parse --short HEAD", { encoding: "utf8" }).trim();
+./scripts/marketphase-generate.mjs:204:  const dummyMode = process.env.DUMMY === "1";
+./scripts/eod/build-eod-history.mjs:169:    const token = process.env.TIINGO_API_KEY;
+./scripts/eod/build-eod-latest.mjs:254:  const token = process.env.TIINGO_API_KEY ?? process.env.TIIANGO_API_KEY;
+./tests/forecast-ui-smoke.test.mjs:15:const BASE_URL = process.env.TEST_URL || 'http://localhost:8788';
+./scripts/ui-path/prove_ui_path.mjs:12:const base = process.env.BASE_URL || 'https://rubikvault.com';
+./scripts/aggregator/finalize.mjs:34:const ARTIFACTS_DIR = process.env.ARTIFACTS_DIR || join(BASE_DIR, 'artifacts');
+./scripts/aggregator/finalize.mjs:586:  const skipInvalidArtifacts = String(process.env.RV_FINALIZER_SKIP_INVALID || '').trim() === '1';
+./scripts/providers/marketaux.js:7:  const apiKey = process.env.MARKETAUX_API_KEY || "";
+./scripts/providers/fred.js:42:  const apiKey = process.env.FRED_API_KEY || "";
+./scripts/providers/sec_edgar.js:7:  const apiKey = process.env.SEC_API_KEY || "";
+./scripts/providers/alphavantage.js:25:  const apiKey = process.env.AV_API_KEY || "";
+./scripts/providers/market-prices-v3.mjs:1203:  const outDir = process.env.RV_ARTIFACT_OUT_DIR
+./scripts/providers/market-prices-v3.mjs:1204:    ? String(process.env.RV_ARTIFACT_OUT_DIR)
+./scripts/providers/market-prices-v3.mjs:1205:    : (process.env.ARTIFACTS_DIR
+./scripts/providers/market-prices-v3.mjs:1206:      ? join(String(process.env.ARTIFACTS_DIR), MODULE_NAME)
+./scripts/providers/market-prices-v3.mjs:1211:  const forcedStub = toBool(process.env.RV_PRICES_STUB);
+./scripts/providers/market-prices-v3.mjs:1212:  const forcedReal = toBool(process.env.RV_PRICES_FORCE_REAL);
+./scripts/providers/market-prices-v3.mjs:1213:  const forcedProviderRaw = process.env.RV_FORCE_PROVIDER ? String(process.env.RV_FORCE_PROVIDER) : '';
+./scripts/providers/market-score-v3.mjs:159:  const artifactsDir = process.env.ARTIFACTS_DIR ? join(String(process.env.ARTIFACTS_DIR), SOURCE_MODULE) : null;
+./scripts/providers/market-score-v3.mjs:161:  if (process.env.BARS_ARTIFACTS_DIR) {
+./scripts/providers/market-score-v3.mjs:162:    candidates.push(join(String(process.env.BARS_ARTIFACTS_DIR), SOURCE_MODULE, 'snapshot.json'));
+./scripts/providers/market-score-v3.mjs:208:  const artifactsOutDir = process.env.RV_ARTIFACT_OUT_DIR
+./scripts/providers/market-score-v3.mjs:209:    ? String(process.env.RV_ARTIFACT_OUT_DIR)
+./scripts/providers/market-score-v3.mjs:210:    : process.env.ARTIFACTS_DIR
+./scripts/providers/market-score-v3.mjs:211:    ? join(String(process.env.ARTIFACTS_DIR), MODULE_NAME)
+./scripts/providers/market-health-v3.mjs:464:      last_run_url: process.env.GITHUB_SERVER_URL && process.env.GITHUB_RUN_ID
+./scripts/providers/market-health-v3.mjs:465:        ? `${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}`
+./scripts/providers/market-health-v3.mjs:471:  const artifactsBaseDir = process.env.ARTIFACTS_DIR || join(BASE_DIR, 'artifacts');
+./scripts/providers/universe-v2.mjs:228:  const artifactsDir = process.env.RV_ARTIFACT_OUT_DIR
+./scripts/providers/universe-v2.mjs:229:    ? String(process.env.RV_ARTIFACT_OUT_DIR)
+./scripts/providers/universe-v2.mjs:230:    : process.env.ARTIFACTS_DIR
+./scripts/providers/universe-v2.mjs:231:    ? join(String(process.env.ARTIFACTS_DIR), MODULE_NAME)
+./scripts/providers/universe-v2.mjs:234:  const forcedStub = toBool(process.env.RV_UNIVERSE_STUB);
+./scripts/providers/universe-v2.mjs:235:  const forcedReal = toBool(process.env.RV_UNIVERSE_FORCE_REAL);
+./scripts/providers/market-stats-v3.mjs:59:  const barsDir = process.env.BARS_ARTIFACTS_DIR
+./scripts/providers/market-stats-v3.mjs:60:    ? join(String(process.env.BARS_ARTIFACTS_DIR), SOURCE_MODULE)
+./scripts/providers/market-stats-v3.mjs:413:  const artifactsOutDir = process.env.RV_ARTIFACT_OUT_DIR
+./scripts/providers/market-stats-v3.mjs:414:    ? String(process.env.RV_ARTIFACT_OUT_DIR)
+./scripts/providers/market-stats-v3.mjs:415:    : process.env.ARTIFACTS_DIR
+./scripts/providers/market-stats-v3.mjs:416:      ? join(String(process.env.ARTIFACTS_DIR), MODULE_NAME)
+./scripts/providers/finnhub.js:4:const MAX_OPTION_CHAIN_BYTES = Number(process.env.FINNHUB_OPTION_CHAIN_MAX_BYTES || 750000);
+./scripts/providers/finnhub.js:8:  const apiKey = process.env.FINNHUB_API_KEY || "";
+./scripts/providers/fmp.js:6:  const apiKey = process.env.FMP_API_KEY || "";
+./scripts/providers/eodhd-backfill-bars.mjs:16:const API_KEY = process.env.EODHD_API_KEY;
+./scripts/wp16/guard-market-prices.mjs:4:const out = process.env.GITHUB_OUTPUT;
+./scripts/wp16/guard-market-prices.mjs:5:const minRows = Number(process.env.RV_MIN_MARKET_PRICE_ROWS || 517);
+./scripts/ci/verify-artifacts.mjs:6:const MIN_MARKET_PRICE_ROWS = Number(process.env.RV_MIN_MARKET_PRICE_ROWS || 517);
+./scripts/ci/verify-artifacts.mjs:7:const MIN_FORECAST_ROWS = Number(process.env.RV_MIN_FORECAST_ROWS || 1);
+./scripts/truth-audit/config.mjs:5:const DATE = process.env.TRUTH_AUDIT_DATE || new Date().toISOString().slice(0, 10);
+./scripts/truth-audit/config.mjs:11:  const base = process.env.BASE_URL;
+./scripts/pipeline/build-marketphase-from-kv.mjs:106:    return process.env.COMMIT_HASH || execSync("git rev-parse --short HEAD", { encoding: "utf8" }).trim();
+./scripts/pipeline/build-marketphase-from-kv.mjs:248:  if (process.env.CF_KV_NAMESPACE_ID) return;
+./scripts/pipeline/build-marketphase-from-kv.mjs:250:  if (id) process.env.CF_KV_NAMESPACE_ID = id;
+./scripts/pipeline/build-marketphase-from-kv.mjs:276:  const allowProviderFallback = args.allowProviderFallback || toBool(process.env.ALLOW_PROVIDER_FETCH) || toBool(process.env.MARKETPHASE_PROVIDER_FALLBACK);
+./scripts/pipeline/build-marketphase-from-kv.mjs:277:  const writeBackKv = args.writeBackKv || toBool(process.env.MARKETPHASE_WRITE_BACK_KV);
+./scripts/smoke-debug.mjs:1:const host = process.env.HOST || "http://127.0.0.1:8788";
+./scripts/smoke-debug.mjs:2:const token = process.env.RV_DEBUG_TOKEN || "";
+./scripts/seed-mirrors.mjs:13:const QUOTES_PROVIDER = String(process.env.QUOTES_PROVIDER || "").toLowerCase();
+./scripts/seed-mirrors.mjs:14:const FINNHUB_API_KEY = process.env.FINNHUB_API_KEY || "";
+./scripts/seed-mirrors.mjs:15:const FMP_API_KEY = process.env.FMP_API_KEY || "";
+./scripts/seed-mirrors.mjs:16:const FRED_API_KEY = process.env.FRED_API_KEY || "";
+./scripts/seed-mirrors.mjs:17:const ALPHAVANTAGE_API_KEY = process.env.ALPHAVANTAGE_API_KEY || "";
+./scripts/seed-mirrors.mjs:18:const MARKETAUX_KEY = process.env.MARKETAUX_KEY || "";
+./scripts/seed-mirrors.mjs:19:const ALLOW_YAHOO = process.env.ALLOW_YAHOO === "1";
+./scripts/seed-mirrors.mjs:20:const ALLOW_TREASURY = process.env.ALLOW_TREASURY === "1";
+./scripts/seed-mirrors.mjs:21:const MIN_OK_FEATURES = Number(process.env.MIN_OK_FEATURES || 2);
+./scripts/seed-mirrors.mjs:22:const MAX_FAIL_FEATURES = Number(process.env.MAX_FAIL_FEATURES || 2);
+./scripts/seed-mirrors.mjs:24:  String(process.env.CRITICAL_FEATURES || "")
+./scripts/update-news.mjs:381:    const commit = process.env.GITHUB_SHA || "local";
+./scripts/update-news.mjs:382:    const runId = process.env.GITHUB_RUN_ID || null;
+./scripts/update-news.mjs:399:  const commit = process.env.GITHUB_SHA || "local";
+./scripts/update-news.mjs:400:  const runId = process.env.GITHUB_RUN_ID || null;
+./scripts/audit-site.mjs:222:  const envSha = process.env.GITHUB_SHA || process.env.CI_COMMIT_SHA || null;
+./scripts/validate/market-stats-artifact.v1.mjs:16:  const baseDir = process.env.RV_ARTIFACT_OUT_DIR
+./scripts/validate/market-stats-artifact.v1.mjs:17:    ? String(process.env.RV_ARTIFACT_OUT_DIR)
+./scripts/validate/market-prices-artifact.v1.mjs:20:  const baseDir = process.env.RV_ARTIFACT_OUT_DIR
+./scripts/validate/market-prices-artifact.v1.mjs:21:    ? String(process.env.RV_ARTIFACT_OUT_DIR)
+./scripts/validate/providers-registry.v1.mjs:19:const registryPath = process.env.RV_PROVIDERS_REGISTRY_PATH
+./scripts/validate/providers-registry.v1.mjs:20:  ? path.resolve(process.env.RV_PROVIDERS_REGISTRY_PATH)
+./scripts/validate/universe-registry.v1.mjs:58:const explicitPath = process.env.RV_UNIVERSE_REGISTRY_PATH
+./scripts/validate/universe-registry.v1.mjs:59:  ? path.resolve(process.env.RV_UNIVERSE_REGISTRY_PATH)
+./scripts/forecast/artifact_resolver.mjs:110:        this.token = options.token || process.env.GITHUB_TOKEN;
+./scripts/validate/universe-artifact.v2.mjs:24:  const baseDir = process.env.RV_ARTIFACT_OUT_DIR
+./scripts/validate/universe-artifact.v2.mjs:25:    ? String(process.env.RV_ARTIFACT_OUT_DIR)
+./evidence/02-mirrors-refs-run05.json:23070:        "text": "    candidates.push(join(String(process.env.BARS_ARTIFACTS_DIR), SOURCE_MODULE, 'snapshot.json'));\n"
+./scripts/validate/market-score-artifact.v1.mjs:25:  const baseDir = process.env.RV_ARTIFACT_OUT_DIR
+./scripts/validate/market-score-artifact.v1.mjs:26:    ? String(process.env.RV_ARTIFACT_OUT_DIR)
+./scripts/validate-mirrors.mjs:145:const isEventMirrorsContext = process.env.VALIDATE_EVENT_MIRRORS_ONLY === "1" || 
+./backend/rvci/run_daily.py:165:    force = os.getenv("RVCI_FORCE", "").strip() == "1"
+./playwright.config.mjs:3:const baseURL = process.env.BASE_URL || process.env.PREVIEW_BASE || 'https://rubikvault.com';
+./evidence/02.5-kv-reads-run03.json:135:        "text": "const DRY_RUN = process.env.DRY_RUN === '1';\n"
+./evidence/02.5-kv-reads-run03.json:187:        "text": "  const envSymbols = process.env.SYMBOLS;\n"
+./evidence/02.5-kv-reads-run03.json:239:        "text": "const baseUrl = process.env.BASE_URL || \"http://127.0.0.1:8788\";\n"
+./evidence/02.5-kv-reads-run03.json:291:        "text": "let commitSha = process.env.GITHUB_SHA || process.env.COMMIT_SHA || process.env.BUILD_SHA || \"\";\n"
+./evidence/02.5-kv-reads-run03.json:357:        "text": "const base = process.env.BASE_URL || 'https://rubikvault.com';\n"
+./evidence/02.5-kv-reads-run03.json:409:        "text": "const base = process.argv[3] || process.env.RV_BASE_URL || \"http://localhost:8788\";\n"
+./evidence/02.5-kv-reads-run03.json:461:        "text": "const ARTIFACTS_DIR = process.env.ARTIFACTS_DIR || join(BASE_DIR, 'artifacts');\n"
+./evidence/02.5-kv-reads-run03.json:483:        "text": "  const skipInvalidArtifacts = String(process.env.RV_FINALIZER_SKIP_INVALID || '').trim() === '1';\n"
+./evidence/02.5-kv-reads-run03.json:749:        "text": "const CF_ACCOUNT_ID = process.env.CF_ACCOUNT_ID || \"\";\n"
+./evidence/02.5-kv-reads-run03.json:771:        "text": "const CF_KV_NAMESPACE_ID = process.env.CF_KV_NAMESPACE_ID || \"\";\n"
+./evidence/02.5-kv-reads-run03.json:793:        "text": "const CF_API_TOKEN = process.env.CF_API_TOKEN || \"\";\n"
+./evidence/02.5-kv-reads-run03.json:815:        "text": "const IS_CI = process.env.GITHUB_ACTIONS === \"true\";\n"
+./evidence/02.5-kv-reads-run03.json:837:        "text": "const LIMIT = Number.parseInt(process.env.MIRROR_LIMIT || \"35\", 10);\n"
+./evidence/02.5-kv-reads-run03.json:889:        "text": "  const apiKey = process.env.MARKETAUX_API_KEY || \"\";\n"
+./evidence/02.5-kv-reads-run03.json:941:        "text": "  const apiKey = process.env.FRED_API_KEY || \"\";\n"
+./evidence/02.5-kv-reads-run03.json:993:        "text": "const host = process.env.HOST || \"http://127.0.0.1:8788\";\n"
+./evidence/02.5-kv-reads-run03.json:1015:        "text": "const token = process.env.RV_DEBUG_TOKEN || \"\";\n"
+./evidence/02.5-kv-reads-run03.json:1229:        "text": "  const apiKey = process.env.SEC_API_KEY || \"\";\n"
+./evidence/02.5-kv-reads-run03.json:1281:        "text": "  const apiKey = process.env.AV_API_KEY || \"\";\n"
+./evidence/02.5-kv-reads-run03.json:1333:        "text": "    const commit = process.env.GITHUB_SHA || \"local\";\n"
+./evidence/02.5-kv-reads-run03.json:1355:        "text": "    const runId = process.env.GITHUB_RUN_ID || null;\n"
+./evidence/02.5-kv-reads-run03.json:1377:        "text": "  const commit = process.env.GITHUB_SHA || \"local\";\n"
+./evidence/02.5-kv-reads-run03.json:1399:        "text": "  const runId = process.env.GITHUB_RUN_ID || null;\n"
+./evidence/02.5-kv-reads-run03.json:1451:        "text": "  const outDir = process.env.RV_ARTIFACT_OUT_DIR\n"
+./evidence/02.5-kv-reads-run03.json:1473:        "text": "    ? String(process.env.RV_ARTIFACT_OUT_DIR)\n"
+./evidence/02.5-kv-reads-run03.json:1495:        "text": "    : (process.env.ARTIFACTS_DIR\n"
+./evidence/02.5-kv-reads-run03.json:1517:        "text": "        ? join(String(process.env.ARTIFACTS_DIR), MODULE_NAME)\n"
+./evidence/02.5-kv-reads-run03.json:1539:        "text": "  const forcedStub = toBool(process.env.RV_PRICES_STUB);\n"
+./evidence/02.5-kv-reads-run03.json:1561:        "text": "  const forcedReal = toBool(process.env.RV_PRICES_FORCE_REAL);\n"
+./evidence/02.5-kv-reads-run03.json:1583:        "text": "  const forcedProviderRaw = process.env.RV_FORCE_PROVIDER ? String(process.env.RV_FORCE_PROVIDER) : '';\n"
+./evidence/02.5-kv-reads-run03.json:1642:        "text": "  const artifactsDir = process.env.ARTIFACTS_DIR ? join(String(process.env.ARTIFACTS_DIR), SOURCE_MODULE) : null;\n"
+./evidence/02.5-kv-reads-run03.json:1671:        "text": "  if (process.env.BARS_ARTIFACTS_DIR) {\n"
+./evidence/02.5-kv-reads-run03.json:1693:        "text": "    candidates.push(join(String(process.env.BARS_ARTIFACTS_DIR), SOURCE_MODULE, 'snapshot.json'));\n"
+./evidence/02.5-kv-reads-run03.json:1715:        "text": "  const artifactsOutDir = process.env.RV_ARTIFACT_OUT_DIR\n"
+./evidence/02.5-kv-reads-run03.json:1737:        "text": "    ? String(process.env.RV_ARTIFACT_OUT_DIR)\n"
+./evidence/02.5-kv-reads-run03.json:1759:        "text": "    : process.env.ARTIFACTS_DIR\n"
+./evidence/02.5-kv-reads-run03.json:1781:        "text": "    ? join(String(process.env.ARTIFACTS_DIR), MODULE_NAME)\n"
+./evidence/02.5-kv-reads-run03.json:1833:        "text": "      last_run_url: process.env.GITHUB_SERVER_URL && process.env.GITHUB_RUN_ID\n"
+./evidence/02.5-kv-reads-run03.json:1862:        "text": "        ? `${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}`\n"
+./evidence/02.5-kv-reads-run03.json:1898:        "text": "  const artifactsBaseDir = process.env.ARTIFACTS_DIR || join(BASE_DIR, 'artifacts');\n"
+./evidence/02.5-kv-reads-run03.json:1950:        "text": "  const artifactsDir = process.env.RV_ARTIFACT_OUT_DIR\n"
+./evidence/02.5-kv-reads-run03.json:1972:        "text": "    ? String(process.env.RV_ARTIFACT_OUT_DIR)\n"
+./evidence/02.5-kv-reads-run03.json:1994:        "text": "    : process.env.ARTIFACTS_DIR\n"
+./evidence/02.5-kv-reads-run03.json:2016:        "text": "    ? join(String(process.env.ARTIFACTS_DIR), MODULE_NAME)\n"
+./evidence/02.5-kv-reads-run03.json:2038:        "text": "  const forcedStub = toBool(process.env.RV_UNIVERSE_STUB);\n"
+./evidence/02.5-kv-reads-run03.json:2060:        "text": "  const forcedReal = toBool(process.env.RV_UNIVERSE_FORCE_REAL);\n"
+./evidence/02.5-kv-reads-run03.json:2112:        "text": "  const baseDir = process.env.RV_ARTIFACT_OUT_DIR\n"
+./evidence/02.5-kv-reads-run03.json:2134:        "text": "    ? String(process.env.RV_ARTIFACT_OUT_DIR)\n"
+./evidence/02.5-kv-reads-run03.json:2186:        "text": "const baseUrl = process.argv[2] || process.env.RV_BASE_URL || \"http://localhost:8788\";\n"
+./evidence/02.5-kv-reads-run03.json:2238:        "text": "  const barsDir = process.env.BARS_ARTIFACTS_DIR\n"
+./evidence/02.5-kv-reads-run03.json:2260:        "text": "    ? join(String(process.env.BARS_ARTIFACTS_DIR), SOURCE_MODULE)\n"
+./evidence/02.5-kv-reads-run03.json:2282:        "text": "  const artifactsOutDir = process.env.RV_ARTIFACT_OUT_DIR\n"
+./evidence/02.5-kv-reads-run03.json:2304:        "text": "    ? String(process.env.RV_ARTIFACT_OUT_DIR)\n"
+./evidence/02.5-kv-reads-run03.json:2326:        "text": "    : process.env.ARTIFACTS_DIR\n"
+./evidence/02.5-kv-reads-run03.json:2348:        "text": "      ? join(String(process.env.ARTIFACTS_DIR), MODULE_NAME)\n"
+./evidence/02.5-kv-reads-run03.json:2400:        "text": "const MAX_OPTION_CHAIN_BYTES = Number(process.env.FINNHUB_OPTION_CHAIN_MAX_BYTES || 750000);\n"
+./evidence/02.5-kv-reads-run03.json:2422:        "text": "  const apiKey = process.env.FINNHUB_API_KEY || \"\";\n"
+./evidence/02.5-kv-reads-run03.json:2474:        "text": "  const baseDir = process.env.RV_ARTIFACT_OUT_DIR\n"
+./evidence/02.5-kv-reads-run03.json:2496:        "text": "    ? String(process.env.RV_ARTIFACT_OUT_DIR)\n"
+./evidence/02.5-kv-reads-run03.json:2548:        "text": "  const apiKey = process.env.FMP_API_KEY || \"\";\n"
+./evidence/02.5-kv-reads-run03.json:2600:        "text": "const registryPath = process.env.RV_PROVIDERS_REGISTRY_PATH\n"
+./evidence/02.5-kv-reads-run03.json:2622:        "text": "  ? path.resolve(process.env.RV_PROVIDERS_REGISTRY_PATH)\n"
+./evidence/02.5-kv-reads-run03.json:2674:        "text": "    OPS_BASE: process.env.OPS_BASE,\n"
+./evidence/02.5-kv-reads-run03.json:2696:        "text": "    RV_BASE: process.env.RV_BASE,\n"
+./evidence/02.5-kv-reads-run03.json:2718:        "text": "    BASE_URL: process.env.BASE_URL,\n"
+./evidence/02.5-kv-reads-run03.json:2740:        "text": "    BASE: process.env.BASE\n"
+./evidence/02.5-kv-reads-run03.json:2792:        "text": "const BASE_URL = process.env.VERIFY_BASE_URL || 'http://localhost:8788';\n"
+./evidence/02.5-kv-reads-run03.json:2844:        "text": "  const baseDir = process.env.RV_ARTIFACT_OUT_DIR\n"
+./evidence/02.5-kv-reads-run03.json:2866:        "text": "    ? String(process.env.RV_ARTIFACT_OUT_DIR)\n"
+./evidence/02.5-kv-reads-run03.json:2918:        "text": "    accountId: process.env.CF_ACCOUNT_ID,\n"
+./evidence/02.5-kv-reads-run03.json:2940:        "text": "    apiToken: process.env.CF_API_TOKEN\n"
+./evidence/02.5-kv-reads-run03.json:2992:        "text": "  const baseDir = process.env.RV_ARTIFACT_OUT_DIR\n"
+./evidence/02.5-kv-reads-run03.json:3014:        "text": "    ? String(process.env.RV_ARTIFACT_OUT_DIR)\n"
+./evidence/02.5-kv-reads-run03.json:3066:        "text": "  const raw = process.env.SYMBOLS || \"AAPL\";\n"
+./evidence/02.5-kv-reads-run03.json:3088:        "text": "    return process.env.COMMIT_HASH || execSync(\"git rev-parse --short HEAD\", { encoding: \"utf8\" }).trim();\n"
+./evidence/02.5-kv-reads-run03.json:3110:        "text": "  const dummyMode = process.env.DUMMY === \"1\";\n"
+./evidence/02.5-kv-reads-run03.json:3162:        "text": "const isEventMirrorsContext = process.env.VALIDATE_EVENT_MIRRORS_ONLY === \"1\" || \n"
+./evidence/02.5-kv-reads-run03.json:3214:        "text": "        OPS_BASE: process.env.OPS_BASE || null,\n"
+./evidence/02.5-kv-reads-run03.json:3236:        "text": "        RV_BASE: process.env.RV_BASE || null,\n"
+./evidence/02.5-kv-reads-run03.json:3258:        "text": "        BASE_URL: process.env.BASE_URL || null,\n"
+./evidence/02.5-kv-reads-run03.json:3280:        "text": "        BASE: process.env.BASE || null,\n"
+./evidence/02.5-kv-reads-run03.json:3302:        "text": "        CI: process.env.CI || null\n"
+./evidence/02.5-kv-reads-run03.json:3324:        "text": "    const jsonLog = process.env.CI === 'true' || process.env.CI === '1' || process.env.RV_LOG_JSON === '1';\n"
+./evidence/02.5-kv-reads-run03.json:3390:        "text": "const DATE = process.env.TRUTH_AUDIT_DATE || new Date().toISOString().slice(0, 10);\n"
+./evidence/02.5-kv-reads-run03.json:3412:        "text": "  const base = process.env.BASE_URL;\n"
+./evidence/02.5-kv-reads-run03.json:3464:        "text": "const envSha = process.env.CF_PAGES_COMMIT_SHA || process.env.GITHUB_SHA || null;\n"
+./evidence/02.5-kv-reads-run03.json:3493:        "text": "    ci: Boolean(process.env.CI),\n"
+./evidence/02.5-kv-reads-run03.json:3515:        "text": "    github_actions: Boolean(process.env.GITHUB_ACTIONS),\n"
+./evidence/02.5-kv-reads-run03.json:3537:        "text": "    cf_pages: Boolean(process.env.CF_PAGES),\n"
+./evidence/02.5-kv-reads-run03.json:3559:        "text": "    cf_pages_commit_sha: process.env.CF_PAGES_COMMIT_SHA || null,\n"
+./evidence/02.5-kv-reads-run03.json:3581:        "text": "    github_sha: process.env.GITHUB_SHA || null,\n"
+./evidence/02.5-kv-reads-run03.json:3633:        "text": "  if (process.env.CI === 'true' || process.env.GITHUB_ACTIONS === 'true') {\n"
+./evidence/02.5-kv-reads-run03.json:3692:        "text": "const base = process.env.BASE_URL || process.env.TRACE_BASE || process.env.RV_BASE || process.env.OPS_BASE;\n"
+./evidence/02.5-kv-reads-run03.json:3765:        "text": "    return process.env.COMMIT_HASH || execSync(\"git rev-parse --short HEAD\", { encoding: \"utf8\" }).trim();\n"
+./evidence/02.5-kv-reads-run03.json:3787:        "text": "  if (process.env.CF_KV_NAMESPACE_ID) return;\n"
+./evidence/02.5-kv-reads-run03.json:3809:        "text": "  if (id) process.env.CF_KV_NAMESPACE_ID = id;\n"
+./evidence/02.5-kv-reads-run03.json:3831:        "text": "  const allowProviderFallback = args.allowProviderFallback || toBool(process.env.ALLOW_PROVIDER_FETCH) || toBool(process.env.MARKETPHASE_PROVIDER_FALLBACK);\n"
+./evidence/02.5-kv-reads-run03.json:3860:        "text": "  const writeBackKv = args.writeBackKv || toBool(process.env.MARKETPHASE_WRITE_BACK_KV);\n"
+./evidence/02.5-kv-reads-run03.json:3912:        "text": "const base = process.env.BASE_URL || process.env.TRACE_BASE || process.env.RV_BASE || process.env.OPS_BASE;\n"
+./evidence/02.5-kv-reads-run03.json:3985:        "text": "const QUOTES_PROVIDER = String(process.env.QUOTES_PROVIDER || \"\").toLowerCase();\n"
+./evidence/02.5-kv-reads-run03.json:4007:        "text": "const FINNHUB_API_KEY = process.env.FINNHUB_API_KEY || \"\";\n"
+./evidence/02.5-kv-reads-run03.json:4029:        "text": "const FMP_API_KEY = process.env.FMP_API_KEY || \"\";\n"
+./evidence/02.5-kv-reads-run03.json:4051:        "text": "const FRED_API_KEY = process.env.FRED_API_KEY || \"\";\n"
+./evidence/02.5-kv-reads-run03.json:4073:        "text": "const ALPHAVANTAGE_API_KEY = process.env.ALPHAVANTAGE_API_KEY || \"\";\n"
+./evidence/02.5-kv-reads-run03.json:4095:        "text": "const MARKETAUX_KEY = process.env.MARKETAUX_KEY || \"\";\n"
+./evidence/02.5-kv-reads-run03.json:4117:        "text": "const ALLOW_YAHOO = process.env.ALLOW_YAHOO === \"1\";\n"
+./evidence/02.5-kv-reads-run03.json:4139:        "text": "const ALLOW_TREASURY = process.env.ALLOW_TREASURY === \"1\";\n"
+./evidence/02.5-kv-reads-run03.json:4161:        "text": "const MIN_OK_FEATURES = Number(process.env.MIN_OK_FEATURES || 2);\n"
+./evidence/02.5-kv-reads-run03.json:4183:        "text": "const MAX_FAIL_FEATURES = Number(process.env.MAX_FAIL_FEATURES || 2);\n"
+./evidence/02.5-kv-reads-run03.json:4205:        "text": "  String(process.env.CRITICAL_FEATURES || \"\")\n"
+./evidence/02.5-kv-reads-run03.json:4257:        "text": "  const envSha = process.env.GITHUB_SHA || process.env.CI_COMMIT_SHA || null;\n"
+./evidence/02.5-kv-reads-run03.json:4316:        "text": "  if (toBool(process.env.SKIP_KV_WRITE)) return true;\n"
+./evidence/02.5-kv-reads-run03.json:4338:        "text": "  if (toBool(process.env.INPUT_SKIP_KV_WRITE)) return true;\n"
+./evidence/02.5-kv-reads-run03.json:4390:        "text": "  if (process.env.BUILD_ID) {\n"
+./evidence/02.5-kv-reads-run03.json:4412:        "text": "    return process.env.BUILD_ID;\n"
+./evidence/02.5-kv-reads-run03.json:4464:        "text": "  const token = process.env.TIINGO_API_KEY ?? process.env.TIIANGO_API_KEY;\n"
+./evidence/02.5-kv-reads-run03.json:4523:        "text": "  const fredKey = process.env.FRED_API_KEY || \"\";\n"
+./evidence/02.5-kv-reads-run03.json:4545:        "text": "  const finnhubKey = process.env.FINNHUB_API_KEY || \"\";\n"
+./evidence/02.5-kv-reads-run03.json:4567:        "text": "  const fmpKey = process.env.FMP_API_KEY || \"\";\n"
+./evidence/02.5-kv-reads-run03.json:4589:        "text": "  const alphaKey = process.env.ALPHAVANTAGE_API_KEY || \"\";\n"
+./evidence/02.5-kv-reads-run03.json:4611:        "text": "  const coingeckoKey = process.env.COINGECKO_DEMO_KEY || \"\";\n"
+./evidence/02.5-kv-reads-run02.json:17:        "text": "const DRY_RUN = process.env.DRY_RUN === '1';\n"
+./evidence/02.5-kv-reads-run02.json:187:        "text": "  const envSymbols = process.env.SYMBOLS;\n"
+./evidence/02.5-kv-reads-run02.json:239:        "text": "const baseUrl = process.env.BASE_URL || \"http://127.0.0.1:8788\";\n"
+./evidence/02.5-kv-reads-run02.json:291:        "text": "const base = process.env.BASE_URL || process.env.TRACE_BASE || process.env.RV_BASE || process.env.OPS_BASE;\n"
+./evidence/02.5-kv-reads-run02.json:364:        "text": "const base = process.env.BASE_URL || process.env.TRACE_BASE || process.env.RV_BASE || process.env.OPS_BASE;\n"
+./evidence/02.5-kv-reads-run02.json:437:        "text": "const base = process.argv[3] || process.env.RV_BASE_URL || \"http://localhost:8788\";\n"
+./evidence/02.5-kv-reads-run02.json:489:        "text": "const CF_ACCOUNT_ID = process.env.CF_ACCOUNT_ID || \"\";\n"
+./evidence/02.5-kv-reads-run02.json:511:        "text": "const CF_KV_NAMESPACE_ID = process.env.CF_KV_NAMESPACE_ID || \"\";\n"
+./evidence/02.5-kv-reads-run02.json:533:        "text": "const CF_API_TOKEN = process.env.CF_API_TOKEN || \"\";\n"
+./evidence/02.5-kv-reads-run02.json:555:        "text": "const IS_CI = process.env.GITHUB_ACTIONS === \"true\";\n"
+./evidence/02.5-kv-reads-run02.json:577:        "text": "const LIMIT = Number.parseInt(process.env.MIRROR_LIMIT || \"35\", 10);\n"
+./evidence/02.5-kv-reads-run02.json:629:        "text": "const base = process.env.BASE_URL || 'https://rubikvault.com';\n"
+./evidence/02.5-kv-reads-run02.json:681:        "text": "const ARTIFACTS_DIR = process.env.ARTIFACTS_DIR || join(BASE_DIR, 'artifacts');\n"
+./evidence/02.5-kv-reads-run02.json:703:        "text": "  const skipInvalidArtifacts = String(process.env.RV_FINALIZER_SKIP_INVALID || '').trim() === '1';\n"
+./evidence/02.5-kv-reads-run02.json:851:        "text": "const baseUrl = process.argv[2] || process.env.RV_BASE_URL || \"http://localhost:8788\";\n"
+./evidence/02.5-kv-reads-run02.json:1021:        "text": "  const apiKey = process.env.MARKETAUX_API_KEY || \"\";\n"
+./evidence/02.5-kv-reads-run02.json:1073:        "text": "    OPS_BASE: process.env.OPS_BASE,\n"
+./evidence/02.5-kv-reads-run02.json:1095:        "text": "    RV_BASE: process.env.RV_BASE,\n"
+./evidence/02.5-kv-reads-run02.json:1117:        "text": "    BASE_URL: process.env.BASE_URL,\n"
+./evidence/02.5-kv-reads-run02.json:1139:        "text": "    BASE: process.env.BASE\n"
+./evidence/02.5-kv-reads-run02.json:1191:        "text": "  const apiKey = process.env.FRED_API_KEY || \"\";\n"
+./evidence/02.5-kv-reads-run02.json:1243:        "text": "  const apiKey = process.env.SEC_API_KEY || \"\";\n"
+./evidence/02.5-kv-reads-run02.json:1295:        "text": "  const apiKey = process.env.AV_API_KEY || \"\";\n"
+./evidence/02.5-kv-reads-run02.json:1347:        "text": "  const outDir = process.env.RV_ARTIFACT_OUT_DIR\n"
+./evidence/02.5-kv-reads-run02.json:1369:        "text": "    ? String(process.env.RV_ARTIFACT_OUT_DIR)\n"
+./evidence/02.5-kv-reads-run02.json:1391:        "text": "    : (process.env.ARTIFACTS_DIR\n"
+./evidence/02.5-kv-reads-run02.json:1413:        "text": "        ? join(String(process.env.ARTIFACTS_DIR), MODULE_NAME)\n"
+./evidence/02.5-kv-reads-run02.json:1435:        "text": "  const forcedStub = toBool(process.env.RV_PRICES_STUB);\n"
+./evidence/02.5-kv-reads-run02.json:1457:        "text": "  const forcedReal = toBool(process.env.RV_PRICES_FORCE_REAL);\n"
+./evidence/02.5-kv-reads-run02.json:1479:        "text": "  const forcedProviderRaw = process.env.RV_FORCE_PROVIDER ? String(process.env.RV_FORCE_PROVIDER) : '';\n"
+./evidence/02.5-kv-reads-run02.json:1700:        "text": "  const artifactsDir = process.env.ARTIFACTS_DIR ? join(String(process.env.ARTIFACTS_DIR), SOURCE_MODULE) : null;\n"
+./evidence/02.5-kv-reads-run02.json:1729:        "text": "  if (process.env.BARS_ARTIFACTS_DIR) {\n"
+./evidence/02.5-kv-reads-run02.json:1751:        "text": "    candidates.push(join(String(process.env.BARS_ARTIFACTS_DIR), SOURCE_MODULE, 'snapshot.json'));\n"
+./evidence/02.5-kv-reads-run02.json:1773:        "text": "  const artifactsOutDir = process.env.RV_ARTIFACT_OUT_DIR\n"
+./evidence/02.5-kv-reads-run02.json:1795:        "text": "    ? String(process.env.RV_ARTIFACT_OUT_DIR)\n"
+./evidence/02.5-kv-reads-run02.json:1817:        "text": "    : process.env.ARTIFACTS_DIR\n"
+./evidence/02.5-kv-reads-run02.json:1839:        "text": "    ? join(String(process.env.ARTIFACTS_DIR), MODULE_NAME)\n"
+./evidence/02.5-kv-reads-run02.json:1891:        "text": "      last_run_url: process.env.GITHUB_SERVER_URL && process.env.GITHUB_RUN_ID\n"
+./evidence/02.5-kv-reads-run02.json:1920:        "text": "        ? `${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}`\n"
+./evidence/02.5-kv-reads-run02.json:1956:        "text": "  const artifactsBaseDir = process.env.ARTIFACTS_DIR || join(BASE_DIR, 'artifacts');\n"
+./evidence/02.5-kv-reads-run02.json:2008:        "text": "  const artifactsDir = process.env.RV_ARTIFACT_OUT_DIR\n"
+./evidence/02.5-kv-reads-run02.json:2030:        "text": "    ? String(process.env.RV_ARTIFACT_OUT_DIR)\n"
+./evidence/02.5-kv-reads-run02.json:2052:        "text": "    : process.env.ARTIFACTS_DIR\n"
+./evidence/02.5-kv-reads-run02.json:2074:        "text": "    ? join(String(process.env.ARTIFACTS_DIR), MODULE_NAME)\n"
+./evidence/02.5-kv-reads-run02.json:2096:        "text": "  const forcedStub = toBool(process.env.RV_UNIVERSE_STUB);\n"
+./evidence/02.5-kv-reads-run02.json:2118:        "text": "  const forcedReal = toBool(process.env.RV_UNIVERSE_FORCE_REAL);\n"
+./evidence/02.5-kv-reads-run02.json:2170:        "text": "let commitSha = process.env.GITHUB_SHA || process.env.COMMIT_SHA || process.env.BUILD_SHA || \"\";\n"
+./evidence/02.5-kv-reads-run02.json:2236:        "text": "  const barsDir = process.env.BARS_ARTIFACTS_DIR\n"
+./evidence/02.5-kv-reads-run02.json:2258:        "text": "    ? join(String(process.env.BARS_ARTIFACTS_DIR), SOURCE_MODULE)\n"
+./evidence/02.5-kv-reads-run02.json:2280:        "text": "  const artifactsOutDir = process.env.RV_ARTIFACT_OUT_DIR\n"
+./evidence/02.5-kv-reads-run02.json:2302:        "text": "    ? String(process.env.RV_ARTIFACT_OUT_DIR)\n"
+./evidence/02.5-kv-reads-run02.json:2324:        "text": "    : process.env.ARTIFACTS_DIR\n"
+./evidence/02.5-kv-reads-run02.json:2346:        "text": "      ? join(String(process.env.ARTIFACTS_DIR), MODULE_NAME)\n"
+./evidence/02.5-kv-reads-run02.json:2398:        "text": "  const raw = process.env.SYMBOLS || \"AAPL\";\n"
+./evidence/02.5-kv-reads-run02.json:2420:        "text": "    return process.env.COMMIT_HASH || execSync(\"git rev-parse --short HEAD\", { encoding: \"utf8\" }).trim();\n"
+./evidence/02.5-kv-reads-run02.json:2442:        "text": "  const dummyMode = process.env.DUMMY === \"1\";\n"
+./evidence/02.5-kv-reads-run02.json:2494:        "text": "  const apiKey = process.env.FMP_API_KEY || \"\";\n"
+./evidence/02.5-kv-reads-run02.json:2546:        "text": "const MAX_OPTION_CHAIN_BYTES = Number(process.env.FINNHUB_OPTION_CHAIN_MAX_BYTES || 750000);\n"
+./evidence/02.5-kv-reads-run02.json:2568:        "text": "  const apiKey = process.env.FINNHUB_API_KEY || \"\";\n"
+./evidence/02.5-kv-reads-run02.json:2620:        "text": "const DATE = process.env.TRUTH_AUDIT_DATE || new Date().toISOString().slice(0, 10);\n"
+./evidence/02.5-kv-reads-run02.json:2642:        "text": "  const base = process.env.BASE_URL;\n"
+./evidence/02.5-kv-reads-run02.json:2694:        "text": "const BASE_URL = process.env.VERIFY_BASE_URL || 'http://localhost:8788';\n"
+./evidence/02.5-kv-reads-run02.json:2746:        "text": "  const token = process.env.TIINGO_API_KEY ?? process.env.TIIANGO_API_KEY;\n"
+./evidence/02.5-kv-reads-run02.json:2805:        "text": "const host = process.env.HOST || \"http://127.0.0.1:8788\";\n"
+./evidence/02.5-kv-reads-run02.json:2827:        "text": "const token = process.env.RV_DEBUG_TOKEN || \"\";\n"
+./evidence/02.5-kv-reads-run02.json:2879:        "text": "  if (process.env.CI === 'true' || process.env.GITHUB_ACTIONS === 'true') {\n"
+./evidence/02.5-kv-reads-run02.json:2938:        "text": "        OPS_BASE: process.env.OPS_BASE || null,\n"
+./evidence/02.5-kv-reads-run02.json:2960:        "text": "        RV_BASE: process.env.RV_BASE || null,\n"
+./evidence/02.5-kv-reads-run02.json:2982:        "text": "        BASE_URL: process.env.BASE_URL || null,\n"
+./evidence/02.5-kv-reads-run02.json:3004:        "text": "        BASE: process.env.BASE || null,\n"
+./evidence/02.5-kv-reads-run02.json:3026:        "text": "        CI: process.env.CI || null\n"
+./evidence/02.5-kv-reads-run02.json:3048:        "text": "    const jsonLog = process.env.CI === 'true' || process.env.CI === '1' || process.env.RV_LOG_JSON === '1';\n"
+./evidence/02.5-kv-reads-run02.json:3114:        "text": "    accountId: process.env.CF_ACCOUNT_ID,\n"
+./evidence/02.5-kv-reads-run02.json:3136:        "text": "    apiToken: process.env.CF_API_TOKEN\n"
+./evidence/02.5-kv-reads-run02.json:3188:        "text": "    const commit = process.env.GITHUB_SHA || \"local\";\n"
+./evidence/02.5-kv-reads-run02.json:3210:        "text": "    const runId = process.env.GITHUB_RUN_ID || null;\n"
+./evidence/02.5-kv-reads-run02.json:3232:        "text": "  const commit = process.env.GITHUB_SHA || \"local\";\n"
+./evidence/02.5-kv-reads-run02.json:3254:        "text": "  const runId = process.env.GITHUB_RUN_ID || null;\n"
+./evidence/02.5-kv-reads-run02.json:3306:        "text": "  const envSha = process.env.GITHUB_SHA || process.env.CI_COMMIT_SHA || null;\n"
+./evidence/02.5-kv-reads-run02.json:3365:        "text": "const isEventMirrorsContext = process.env.VALIDATE_EVENT_MIRRORS_ONLY === \"1\" || \n"
+./evidence/02.5-kv-reads-run02.json:3417:        "text": "const envSha = process.env.CF_PAGES_COMMIT_SHA || process.env.GITHUB_SHA || null;\n"
+./evidence/02.5-kv-reads-run02.json:3446:        "text": "    ci: Boolean(process.env.CI),\n"
+./evidence/02.5-kv-reads-run02.json:3468:        "text": "    github_actions: Boolean(process.env.GITHUB_ACTIONS),\n"
+./evidence/02.5-kv-reads-run02.json:3490:        "text": "    cf_pages: Boolean(process.env.CF_PAGES),\n"
+./evidence/02.5-kv-reads-run02.json:3512:        "text": "    cf_pages_commit_sha: process.env.CF_PAGES_COMMIT_SHA || null,\n"
+./evidence/02.5-kv-reads-run02.json:3534:        "text": "    github_sha: process.env.GITHUB_SHA || null,\n"
+./evidence/02.5-kv-reads-run02.json:3586:        "text": "const QUOTES_PROVIDER = String(process.env.QUOTES_PROVIDER || \"\").toLowerCase();\n"
+./evidence/02.5-kv-reads-run02.json:3608:        "text": "const FINNHUB_API_KEY = process.env.FINNHUB_API_KEY || \"\";\n"
+./evidence/02.5-kv-reads-run02.json:3630:        "text": "const FMP_API_KEY = process.env.FMP_API_KEY || \"\";\n"
+./evidence/02.5-kv-reads-run02.json:3652:        "text": "const FRED_API_KEY = process.env.FRED_API_KEY || \"\";\n"
+./evidence/02.5-kv-reads-run02.json:3674:        "text": "const ALPHAVANTAGE_API_KEY = process.env.ALPHAVANTAGE_API_KEY || \"\";\n"
+./evidence/02.5-kv-reads-run02.json:3696:        "text": "const MARKETAUX_KEY = process.env.MARKETAUX_KEY || \"\";\n"
+./evidence/02.5-kv-reads-run02.json:3718:        "text": "const ALLOW_YAHOO = process.env.ALLOW_YAHOO === \"1\";\n"
+./evidence/02.5-kv-reads-run02.json:3740:        "text": "const ALLOW_TREASURY = process.env.ALLOW_TREASURY === \"1\";\n"
+./evidence/02.5-kv-reads-run02.json:3762:        "text": "const MIN_OK_FEATURES = Number(process.env.MIN_OK_FEATURES || 2);\n"
+./evidence/02.5-kv-reads-run02.json:3784:        "text": "const MAX_FAIL_FEATURES = Number(process.env.MAX_FAIL_FEATURES || 2);\n"
+./evidence/02.5-kv-reads-run02.json:3806:        "text": "  String(process.env.CRITICAL_FEATURES || \"\")\n"
+./evidence/02.5-kv-reads-run02.json:3858:        "text": "    return process.env.COMMIT_HASH || execSync(\"git rev-parse --short HEAD\", { encoding: \"utf8\" }).trim();\n"
+./evidence/02.5-kv-reads-run02.json:3880:        "text": "  if (process.env.CF_KV_NAMESPACE_ID) return;\n"
+./evidence/02.5-kv-reads-run02.json:3902:        "text": "  if (id) process.env.CF_KV_NAMESPACE_ID = id;\n"
+./evidence/02.5-kv-reads-run02.json:3924:        "text": "  const allowProviderFallback = args.allowProviderFallback || toBool(process.env.ALLOW_PROVIDER_FETCH) || toBool(process.env.MARKETPHASE_PROVIDER_FALLBACK);\n"
+./evidence/02.5-kv-reads-run02.json:3953:        "text": "  const writeBackKv = args.writeBackKv || toBool(process.env.MARKETPHASE_WRITE_BACK_KV);\n"
+./evidence/02.5-kv-reads-run02.json:4005:        "text": "  const fredKey = process.env.FRED_API_KEY || \"\";\n"
+./evidence/02.5-kv-reads-run02.json:4027:        "text": "  const finnhubKey = process.env.FINNHUB_API_KEY || \"\";\n"
+./evidence/02.5-kv-reads-run02.json:4049:        "text": "  const fmpKey = process.env.FMP_API_KEY || \"\";\n"
+./evidence/02.5-kv-reads-run02.json:4071:        "text": "  const alphaKey = process.env.ALPHAVANTAGE_API_KEY || \"\";\n"
+./evidence/02.5-kv-reads-run02.json:4093:        "text": "  const coingeckoKey = process.env.COINGECKO_DEMO_KEY || \"\";\n"
+./evidence/02.5-kv-reads-run02.json:4145:        "text": "  const baseDir = process.env.RV_ARTIFACT_OUT_DIR\n"
+./evidence/02.5-kv-reads-run02.json:4167:        "text": "    ? String(process.env.RV_ARTIFACT_OUT_DIR)\n"
+./evidence/02.5-kv-reads-run02.json:4219:        "text": "  const baseDir = process.env.RV_ARTIFACT_OUT_DIR\n"
+./evidence/02.5-kv-reads-run02.json:4241:        "text": "    ? String(process.env.RV_ARTIFACT_OUT_DIR)\n"
+./evidence/02.5-kv-reads-run02.json:4293:        "text": "  const baseDir = process.env.RV_ARTIFACT_OUT_DIR\n"
+./evidence/02.5-kv-reads-run02.json:4315:        "text": "    ? String(process.env.RV_ARTIFACT_OUT_DIR)\n"
+./evidence/02.5-kv-reads-run02.json:4367:        "text": "  const baseDir = process.env.RV_ARTIFACT_OUT_DIR\n"
+./evidence/02.5-kv-reads-run02.json:4389:        "text": "    ? String(process.env.RV_ARTIFACT_OUT_DIR)\n"
+./evidence/02.5-kv-reads-run02.json:4441:        "text": "const registryPath = process.env.RV_PROVIDERS_REGISTRY_PATH\n"
+./evidence/02.5-kv-reads-run02.json:4463:        "text": "  ? path.resolve(process.env.RV_PROVIDERS_REGISTRY_PATH)\n"
+./evidence/02.5-kv-reads-run02.json:4515:        "text": "  if (toBool(process.env.SKIP_KV_WRITE)) return true;\n"
+./evidence/02.5-kv-reads-run02.json:4537:        "text": "  if (toBool(process.env.INPUT_SKIP_KV_WRITE)) return true;\n"
+./evidence/02.5-kv-reads-run02.json:4589:        "text": "  if (process.env.BUILD_ID) {\n"
+./evidence/02.5-kv-reads-run02.json:4611:        "text": "    return process.env.BUILD_ID;\n"
+./evidence/04-ops-code-run05.txt:4989:    34	const ARTIFACTS_DIR = process.env.ARTIFACTS_DIR || join(BASE_DIR, 'artifacts');
+./evidence/04-ops-code-run05.txt:6938:    14	const DRY_RUN = process.env.DRY_RUN === '1';
+./evidence/04-ops-code-run05.txt:7261:   107	let commitSha = process.env.GITHUB_SHA || process.env.COMMIT_SHA || process.env.BUILD_SHA || "";
+./evidence/04-ops-code-run05.txt:7771:     5	const baseUrl = process.argv[2] || process.env.RV_BASE_URL || "http://localhost:8788";
+./evidence/04-ops-code-run05.txt:8311:   103	  if (process.env.BUILD_ID) {
+./evidence/04-ops-code-run05.txt:8312:   104	    return process.env.BUILD_ID;
+./evidence/04-ops-code-run05.txt:9079:    24	  if (toBool(process.env.SKIP_KV_WRITE)) return true;
+./evidence/04-ops-code-run05.txt:9080:    25	  if (toBool(process.env.INPUT_SKIP_KV_WRITE)) return true;
+./evidence/04-ops-code-run05.txt:10066:    16	  const raw = process.env.SYMBOLS || "AAPL";
+./evidence/04-ops-code-run05.txt:10116:    66	    return process.env.COMMIT_HASH || execSync("git rev-parse --short HEAD", { encoding: "utf8" }).trim();
+./evidence/04-ops-code-run05.txt:10371:   119	  const envSymbols = process.env.SYMBOLS;
+./evidence/04-ops-code-run05.txt:10421:     7	const baseUrl = process.env.BASE_URL || "http://127.0.0.1:8788";
+./evidence/04-ops-code-run05.txt:10534:     9	const CF_ACCOUNT_ID = process.env.CF_ACCOUNT_ID || "";
+./evidence/04-ops-code-run05.txt:10535:    10	const CF_KV_NAMESPACE_ID = process.env.CF_KV_NAMESPACE_ID || "";
+./evidence/04-ops-code-run05.txt:10536:    11	const CF_API_TOKEN = process.env.CF_API_TOKEN || "";
+./evidence/04-ops-code-run05.txt:10537:    12	const IS_CI = process.env.GITHUB_ACTIONS === "true";
+./evidence/04-ops-code-run05.txt:10539:    14	const LIMIT = Number.parseInt(process.env.MIRROR_LIMIT || "35", 10);
+./evidence/04-ops-code-run05.txt:11199:     3	    OPS_BASE: process.env.OPS_BASE,
+./evidence/04-ops-code-run05.txt:11200:     4	    RV_BASE: process.env.RV_BASE,
+./evidence/04-ops-code-run05.txt:11201:     5	    BASE_URL: process.env.BASE_URL,
+./evidence/04-ops-code-run05.txt:11202:     6	    BASE: process.env.BASE
+./evidence/04-ops-code-run05.txt:11257:    36	        OPS_BASE: process.env.OPS_BASE || null,
+./evidence/04-ops-code-run05.txt:11258:    37	        RV_BASE: process.env.RV_BASE || null,
+./evidence/04-ops-code-run05.txt:11259:    38	        BASE_URL: process.env.BASE_URL || null,
+./evidence/04-ops-code-run05.txt:11260:    39	        BASE: process.env.BASE || null,
+./evidence/04-ops-code-run05.txt:11261:    40	        CI: process.env.CI || null
+./evidence/04-ops-code-run05.txt:11266:    45	    const jsonLog = process.env.CI === 'true' || process.env.CI === '1' || process.env.RV_LOG_JSON === '1';
+./evidence/04-ops-code-run05.txt:11681:   108	  if (process.env.CI === 'true' || process.env.GITHUB_ACTIONS === 'true') {
+./evidence/04-ops-code-run05.txt:12054:     5	const BASE_URL = process.env.VERIFY_BASE_URL || 'http://localhost:8788';
+./evidence/04-ops-code-run05.txt:12694:   106	    return process.env.COMMIT_HASH || execSync("git rev-parse --short HEAD", { encoding: "utf8" }).trim();
+./evidence/04-ops-code-run05.txt:13062:    25	  const apiKey = process.env.AV_API_KEY || "";
+./evidence/04-ops-code-run05.txt:13194:     4	const MAX_OPTION_CHAIN_BYTES = Number(process.env.FINNHUB_OPTION_CHAIN_MAX_BYTES || 750000);
+./evidence/04-ops-code-run05.txt:13198:     8	  const apiKey = process.env.FINNHUB_API_KEY || "";
+./evidence/04-ops-code-run05.txt:13264:     6	  const apiKey = process.env.FMP_API_KEY || "";
+./evidence/04-ops-code-run05.txt:13913:   159	  const artifactsDir = process.env.ARTIFACTS_DIR ? join(String(process.env.ARTIFACTS_DIR), SOURCE_MODULE) : null;
+./evidence/04-ops-code-run05.txt:13915:   161	  if (process.env.BARS_ARTIFACTS_DIR) {
+./evidence/04-ops-code-run05.txt:13916:   162	    candidates.push(join(String(process.env.BARS_ARTIFACTS_DIR), SOURCE_MODULE, 'snapshot.json'));
+./evidence/04-ops-code-run05.txt:14015:    59	  const barsDir = process.env.BARS_ARTIFACTS_DIR
+./evidence/04-ops-code-run05.txt:14016:    60	    ? join(String(process.env.BARS_ARTIFACTS_DIR), SOURCE_MODULE)
+./evidence/04-ops-code-run05.txt:14165:     7	  const apiKey = process.env.MARKETAUX_API_KEY || "";
+./evidence/04-ops-code-run05.txt:14295:     7	  const apiKey = process.env.SEC_API_KEY || "";
+./evidence/04-ops-code-run05.txt:15122:    13	const QUOTES_PROVIDER = String(process.env.QUOTES_PROVIDER || "").toLowerCase();
+./evidence/04-ops-code-run05.txt:15123:    14	const FINNHUB_API_KEY = process.env.FINNHUB_API_KEY || "";
+./evidence/04-ops-code-run05.txt:15124:    15	const FMP_API_KEY = process.env.FMP_API_KEY || "";
+./evidence/04-ops-code-run05.txt:15125:    16	const FRED_API_KEY = process.env.FRED_API_KEY || "";
+./evidence/04-ops-code-run05.txt:15126:    17	const ALPHAVANTAGE_API_KEY = process.env.ALPHAVANTAGE_API_KEY || "";
+./evidence/04-ops-code-run05.txt:15127:    18	const MARKETAUX_KEY = process.env.MARKETAUX_KEY || "";
+./evidence/04-ops-code-run05.txt:15128:    19	const ALLOW_YAHOO = process.env.ALLOW_YAHOO === "1";
+./evidence/04-ops-code-run05.txt:15129:    20	const ALLOW_TREASURY = process.env.ALLOW_TREASURY === "1";
+./evidence/04-ops-code-run05.txt:15130:    21	const MIN_OK_FEATURES = Number(process.env.MIN_OK_FEATURES || 2);
+./evidence/04-ops-code-run05.txt:15131:    22	const MAX_FAIL_FEATURES = Number(process.env.MAX_FAIL_FEATURES || 2);
+./evidence/04-ops-code-run05.txt:15133:    24	  String(process.env.CRITICAL_FEATURES || "")
+./evidence/04-ops-code-run05.txt:15514:     1	const host = process.env.HOST || "http://127.0.0.1:8788";
+./evidence/04-ops-code-run05.txt:15515:     2	const token = process.env.RV_DEBUG_TOKEN || "";
+./evidence/04-ops-code-run05.txt:16704:    10	const base = process.env.BASE_URL || process.env.TRACE_BASE || process.env.RV_BASE || process.env.OPS_BASE;
+./evidence/04-ops-code-run05.txt:16755:    18	const base = process.env.BASE_URL || process.env.TRACE_BASE || process.env.RV_BASE || process.env.OPS_BASE;
+./evidence/04-ops-code-run05.txt:16951:    12	const base = process.env.BASE_URL || 'https://rubikvault.com';
+./evidence/04-ops-code-run05.txt:18222:   145	const isEventMirrorsContext = process.env.VALIDATE_EVENT_MIRRORS_ONLY === "1" || 
+./evidence/04-ops-code-run05.txt:18480:    25	  const baseDir = process.env.RV_ARTIFACT_OUT_DIR
+./evidence/04-ops-code-run05.txt:18481:    26	    ? String(process.env.RV_ARTIFACT_OUT_DIR)
+./evidence/04-ops-code-run05.txt:18545:    16	  const baseDir = process.env.RV_ARTIFACT_OUT_DIR
+./evidence/04-ops-code-run05.txt:18546:    17	    ? String(process.env.RV_ARTIFACT_OUT_DIR)
+./evidence/04-ops-code-run04.txt:4989:    34	const ARTIFACTS_DIR = process.env.ARTIFACTS_DIR || join(BASE_DIR, 'artifacts');
+./evidence/04-ops-code-run04.txt:6938:    14	const DRY_RUN = process.env.DRY_RUN === '1';
+./evidence/04-ops-code-run04.txt:7261:   107	let commitSha = process.env.GITHUB_SHA || process.env.COMMIT_SHA || process.env.BUILD_SHA || "";
+./evidence/04-ops-code-run04.txt:7771:     5	const baseUrl = process.argv[2] || process.env.RV_BASE_URL || "http://localhost:8788";
+./evidence/04-ops-code-run04.txt:8311:   103	  if (process.env.BUILD_ID) {
+./evidence/04-ops-code-run04.txt:8312:   104	    return process.env.BUILD_ID;
+./evidence/04-ops-code-run04.txt:9079:    24	  if (toBool(process.env.SKIP_KV_WRITE)) return true;
+./evidence/04-ops-code-run04.txt:9080:    25	  if (toBool(process.env.INPUT_SKIP_KV_WRITE)) return true;
+./evidence/04-ops-code-run04.txt:10066:    16	  const raw = process.env.SYMBOLS || "AAPL";
+./evidence/04-ops-code-run04.txt:10116:    66	    return process.env.COMMIT_HASH || execSync("git rev-parse --short HEAD", { encoding: "utf8" }).trim();
+./evidence/04-ops-code-run04.txt:10371:   119	  const envSymbols = process.env.SYMBOLS;
+./evidence/04-ops-code-run04.txt:10421:     7	const baseUrl = process.env.BASE_URL || "http://127.0.0.1:8788";
+./evidence/04-ops-code-run04.txt:10534:     9	const CF_ACCOUNT_ID = process.env.CF_ACCOUNT_ID || "";
+./evidence/04-ops-code-run04.txt:10535:    10	const CF_KV_NAMESPACE_ID = process.env.CF_KV_NAMESPACE_ID || "";
+./evidence/04-ops-code-run04.txt:10536:    11	const CF_API_TOKEN = process.env.CF_API_TOKEN || "";
+./evidence/04-ops-code-run04.txt:10537:    12	const IS_CI = process.env.GITHUB_ACTIONS === "true";
+./evidence/04-ops-code-run04.txt:10539:    14	const LIMIT = Number.parseInt(process.env.MIRROR_LIMIT || "35", 10);
+./evidence/04-ops-code-run04.txt:11199:     3	    OPS_BASE: process.env.OPS_BASE,
+./evidence/04-ops-code-run04.txt:11200:     4	    RV_BASE: process.env.RV_BASE,
+./evidence/04-ops-code-run04.txt:11201:     5	    BASE_URL: process.env.BASE_URL,
+./evidence/04-ops-code-run04.txt:11202:     6	    BASE: process.env.BASE
+./evidence/04-ops-code-run04.txt:11257:    36	        OPS_BASE: process.env.OPS_BASE || null,
+./evidence/04-ops-code-run04.txt:11258:    37	        RV_BASE: process.env.RV_BASE || null,
+./evidence/04-ops-code-run04.txt:11259:    38	        BASE_URL: process.env.BASE_URL || null,
+./evidence/04-ops-code-run04.txt:11260:    39	        BASE: process.env.BASE || null,
+./evidence/04-ops-code-run04.txt:11261:    40	        CI: process.env.CI || null
+./evidence/04-ops-code-run04.txt:11266:    45	    const jsonLog = process.env.CI === 'true' || process.env.CI === '1' || process.env.RV_LOG_JSON === '1';
+./evidence/04-ops-code-run04.txt:11681:   108	  if (process.env.CI === 'true' || process.env.GITHUB_ACTIONS === 'true') {
+./evidence/04-ops-code-run04.txt:12054:     5	const BASE_URL = process.env.VERIFY_BASE_URL || 'http://localhost:8788';
+./evidence/04-ops-code-run04.txt:12694:   106	    return process.env.COMMIT_HASH || execSync("git rev-parse --short HEAD", { encoding: "utf8" }).trim();
+./evidence/04-ops-code-run04.txt:13062:    25	  const apiKey = process.env.AV_API_KEY || "";
+./evidence/04-ops-code-run04.txt:13194:     4	const MAX_OPTION_CHAIN_BYTES = Number(process.env.FINNHUB_OPTION_CHAIN_MAX_BYTES || 750000);
+./evidence/04-ops-code-run04.txt:13198:     8	  const apiKey = process.env.FINNHUB_API_KEY || "";
+./evidence/04-ops-code-run04.txt:13264:     6	  const apiKey = process.env.FMP_API_KEY || "";
+./evidence/04-ops-code-run04.txt:13913:   159	  const artifactsDir = process.env.ARTIFACTS_DIR ? join(String(process.env.ARTIFACTS_DIR), SOURCE_MODULE) : null;
+./evidence/04-ops-code-run04.txt:13915:   161	  if (process.env.BARS_ARTIFACTS_DIR) {
+./evidence/04-ops-code-run04.txt:13916:   162	    candidates.push(join(String(process.env.BARS_ARTIFACTS_DIR), SOURCE_MODULE, 'snapshot.json'));
+./evidence/04-ops-code-run04.txt:14015:    59	  const barsDir = process.env.BARS_ARTIFACTS_DIR
+./evidence/04-ops-code-run04.txt:14016:    60	    ? join(String(process.env.BARS_ARTIFACTS_DIR), SOURCE_MODULE)
+./evidence/04-ops-code-run04.txt:14165:     7	  const apiKey = process.env.MARKETAUX_API_KEY || "";
+./evidence/04-ops-code-run04.txt:14295:     7	  const apiKey = process.env.SEC_API_KEY || "";
+./evidence/04-ops-code-run04.txt:15122:    13	const QUOTES_PROVIDER = String(process.env.QUOTES_PROVIDER || "").toLowerCase();
+./evidence/04-ops-code-run04.txt:15123:    14	const FINNHUB_API_KEY = process.env.FINNHUB_API_KEY || "";
+./evidence/04-ops-code-run04.txt:15124:    15	const FMP_API_KEY = process.env.FMP_API_KEY || "";
+./evidence/04-ops-code-run04.txt:15125:    16	const FRED_API_KEY = process.env.FRED_API_KEY || "";
+./evidence/04-ops-code-run04.txt:15126:    17	const ALPHAVANTAGE_API_KEY = process.env.ALPHAVANTAGE_API_KEY || "";
+./evidence/04-ops-code-run04.txt:15127:    18	const MARKETAUX_KEY = process.env.MARKETAUX_KEY || "";
+./evidence/04-ops-code-run04.txt:15128:    19	const ALLOW_YAHOO = process.env.ALLOW_YAHOO === "1";
+./evidence/04-ops-code-run04.txt:15129:    20	const ALLOW_TREASURY = process.env.ALLOW_TREASURY === "1";
+./evidence/04-ops-code-run04.txt:15130:    21	const MIN_OK_FEATURES = Number(process.env.MIN_OK_FEATURES || 2);
+./evidence/04-ops-code-run04.txt:15131:    22	const MAX_FAIL_FEATURES = Number(process.env.MAX_FAIL_FEATURES || 2);
+./evidence/04-ops-code-run04.txt:15133:    24	  String(process.env.CRITICAL_FEATURES || "")
+./evidence/04-ops-code-run04.txt:15514:     1	const host = process.env.HOST || "http://127.0.0.1:8788";
+./evidence/04-ops-code-run04.txt:15515:     2	const token = process.env.RV_DEBUG_TOKEN || "";
+./evidence/04-ops-code-run04.txt:16704:    10	const base = process.env.BASE_URL || process.env.TRACE_BASE || process.env.RV_BASE || process.env.OPS_BASE;
+./evidence/04-ops-code-run04.txt:16755:    18	const base = process.env.BASE_URL || process.env.TRACE_BASE || process.env.RV_BASE || process.env.OPS_BASE;
+./evidence/04-ops-code-run04.txt:16951:    12	const base = process.env.BASE_URL || 'https://rubikvault.com';
+./evidence/04-ops-code-run04.txt:18222:   145	const isEventMirrorsContext = process.env.VALIDATE_EVENT_MIRRORS_ONLY === "1" || 
+./evidence/04-ops-code-run04.txt:18480:    25	  const baseDir = process.env.RV_ARTIFACT_OUT_DIR
+./evidence/04-ops-code-run04.txt:18481:    26	    ? String(process.env.RV_ARTIFACT_OUT_DIR)
+./evidence/04-ops-code-run04.txt:18545:    16	  const baseDir = process.env.RV_ARTIFACT_OUT_DIR
+./evidence/04-ops-code-run04.txt:18546:    17	    ? String(process.env.RV_ARTIFACT_OUT_DIR)
+./evidence/02-mirrors-refs-run02.json:32522:        "text": "    candidates.push(join(String(process.env.BARS_ARTIFACTS_DIR), SOURCE_MODULE, 'snapshot.json'));\n"
+./evidence/02-mirrors-refs-run03.json:11256:        "text": "    candidates.push(join(String(process.env.BARS_ARTIFACTS_DIR), SOURCE_MODULE, 'snapshot.json'));\n"
+./evidence/04-ops-code-run01.txt:4989:    34	const ARTIFACTS_DIR = process.env.ARTIFACTS_DIR || join(BASE_DIR, 'artifacts');
+./evidence/04-ops-code-run01.txt:6938:    14	const DRY_RUN = process.env.DRY_RUN === '1';
+./evidence/04-ops-code-run01.txt:7261:   107	let commitSha = process.env.GITHUB_SHA || process.env.COMMIT_SHA || process.env.BUILD_SHA || "";
+./evidence/04-ops-code-run01.txt:7771:     5	const baseUrl = process.argv[2] || process.env.RV_BASE_URL || "http://localhost:8788";
+./evidence/04-ops-code-run01.txt:8311:   103	  if (process.env.BUILD_ID) {
+./evidence/04-ops-code-run01.txt:8312:   104	    return process.env.BUILD_ID;
+./evidence/04-ops-code-run01.txt:9079:    24	  if (toBool(process.env.SKIP_KV_WRITE)) return true;
+./evidence/04-ops-code-run01.txt:9080:    25	  if (toBool(process.env.INPUT_SKIP_KV_WRITE)) return true;
+./evidence/04-ops-code-run01.txt:10066:    16	  const raw = process.env.SYMBOLS || "AAPL";
+./evidence/04-ops-code-run01.txt:10116:    66	    return process.env.COMMIT_HASH || execSync("git rev-parse --short HEAD", { encoding: "utf8" }).trim();
+./evidence/04-ops-code-run01.txt:10371:   119	  const envSymbols = process.env.SYMBOLS;
+./evidence/04-ops-code-run01.txt:10421:     7	const baseUrl = process.env.BASE_URL || "http://127.0.0.1:8788";
+./evidence/04-ops-code-run01.txt:10534:     9	const CF_ACCOUNT_ID = process.env.CF_ACCOUNT_ID || "";
+./evidence/04-ops-code-run01.txt:10535:    10	const CF_KV_NAMESPACE_ID = process.env.CF_KV_NAMESPACE_ID || "";
+./evidence/04-ops-code-run01.txt:10536:    11	const CF_API_TOKEN = process.env.CF_API_TOKEN || "";
+./evidence/04-ops-code-run01.txt:10537:    12	const IS_CI = process.env.GITHUB_ACTIONS === "true";
+./evidence/04-ops-code-run01.txt:10539:    14	const LIMIT = Number.parseInt(process.env.MIRROR_LIMIT || "35", 10);
+./evidence/04-ops-code-run01.txt:11199:     3	    OPS_BASE: process.env.OPS_BASE,
+./evidence/04-ops-code-run01.txt:11200:     4	    RV_BASE: process.env.RV_BASE,
+./evidence/04-ops-code-run01.txt:11201:     5	    BASE_URL: process.env.BASE_URL,
+./evidence/04-ops-code-run01.txt:11202:     6	    BASE: process.env.BASE
+./evidence/04-ops-code-run01.txt:11257:    36	        OPS_BASE: process.env.OPS_BASE || null,
+./evidence/04-ops-code-run01.txt:11258:    37	        RV_BASE: process.env.RV_BASE || null,
+./evidence/04-ops-code-run01.txt:11259:    38	        BASE_URL: process.env.BASE_URL || null,
+./evidence/04-ops-code-run01.txt:11260:    39	        BASE: process.env.BASE || null,
+./evidence/04-ops-code-run01.txt:11261:    40	        CI: process.env.CI || null
+./evidence/04-ops-code-run01.txt:11266:    45	    const jsonLog = process.env.CI === 'true' || process.env.CI === '1' || process.env.RV_LOG_JSON === '1';
+./evidence/04-ops-code-run01.txt:11681:   108	  if (process.env.CI === 'true' || process.env.GITHUB_ACTIONS === 'true') {
+./evidence/04-ops-code-run01.txt:12054:     5	const BASE_URL = process.env.VERIFY_BASE_URL || 'http://localhost:8788';
+./evidence/04-ops-code-run01.txt:12694:   106	    return process.env.COMMIT_HASH || execSync("git rev-parse --short HEAD", { encoding: "utf8" }).trim();
+./evidence/04-ops-code-run01.txt:13062:    25	  const apiKey = process.env.AV_API_KEY || "";
+./evidence/04-ops-code-run01.txt:13194:     4	const MAX_OPTION_CHAIN_BYTES = Number(process.env.FINNHUB_OPTION_CHAIN_MAX_BYTES || 750000);
+./evidence/04-ops-code-run01.txt:13198:     8	  const apiKey = process.env.FINNHUB_API_KEY || "";
+./evidence/04-ops-code-run01.txt:13264:     6	  const apiKey = process.env.FMP_API_KEY || "";
+./evidence/04-ops-code-run01.txt:13913:   159	  const artifactsDir = process.env.ARTIFACTS_DIR ? join(String(process.env.ARTIFACTS_DIR), SOURCE_MODULE) : null;
+./evidence/04-ops-code-run01.txt:13915:   161	  if (process.env.BARS_ARTIFACTS_DIR) {
+./evidence/04-ops-code-run01.txt:13916:   162	    candidates.push(join(String(process.env.BARS_ARTIFACTS_DIR), SOURCE_MODULE, 'snapshot.json'));
+./evidence/04-ops-code-run01.txt:14015:    59	  const barsDir = process.env.BARS_ARTIFACTS_DIR
+./evidence/04-ops-code-run01.txt:14016:    60	    ? join(String(process.env.BARS_ARTIFACTS_DIR), SOURCE_MODULE)
+./evidence/04-ops-code-run01.txt:14165:     7	  const apiKey = process.env.MARKETAUX_API_KEY || "";
+./evidence/04-ops-code-run01.txt:14295:     7	  const apiKey = process.env.SEC_API_KEY || "";
+./evidence/04-ops-code-run01.txt:15122:    13	const QUOTES_PROVIDER = String(process.env.QUOTES_PROVIDER || "").toLowerCase();
+./evidence/04-ops-code-run01.txt:15123:    14	const FINNHUB_API_KEY = process.env.FINNHUB_API_KEY || "";
+./evidence/04-ops-code-run01.txt:15124:    15	const FMP_API_KEY = process.env.FMP_API_KEY || "";
+./evidence/04-ops-code-run01.txt:15125:    16	const FRED_API_KEY = process.env.FRED_API_KEY || "";
+./evidence/04-ops-code-run01.txt:15126:    17	const ALPHAVANTAGE_API_KEY = process.env.ALPHAVANTAGE_API_KEY || "";
+./evidence/04-ops-code-run01.txt:15127:    18	const MARKETAUX_KEY = process.env.MARKETAUX_KEY || "";
+./evidence/04-ops-code-run01.txt:15128:    19	const ALLOW_YAHOO = process.env.ALLOW_YAHOO === "1";
+./evidence/04-ops-code-run01.txt:15129:    20	const ALLOW_TREASURY = process.env.ALLOW_TREASURY === "1";
+./evidence/04-ops-code-run01.txt:15130:    21	const MIN_OK_FEATURES = Number(process.env.MIN_OK_FEATURES || 2);
+./evidence/04-ops-code-run01.txt:15131:    22	const MAX_FAIL_FEATURES = Number(process.env.MAX_FAIL_FEATURES || 2);
+./evidence/04-ops-code-run01.txt:15133:    24	  String(process.env.CRITICAL_FEATURES || "")
+./evidence/04-ops-code-run01.txt:15514:     1	const host = process.env.HOST || "http://127.0.0.1:8788";
+./evidence/04-ops-code-run01.txt:15515:     2	const token = process.env.RV_DEBUG_TOKEN || "";
+./evidence/04-ops-code-run01.txt:16704:    10	const base = process.env.BASE_URL || process.env.TRACE_BASE || process.env.RV_BASE || process.env.OPS_BASE;
+./evidence/04-ops-code-run01.txt:16755:    18	const base = process.env.BASE_URL || process.env.TRACE_BASE || process.env.RV_BASE || process.env.OPS_BASE;
+./evidence/04-ops-code-run01.txt:16951:    12	const base = process.env.BASE_URL || 'https://rubikvault.com';
+./evidence/04-ops-code-run01.txt:18222:   145	const isEventMirrorsContext = process.env.VALIDATE_EVENT_MIRRORS_ONLY === "1" || 
+./evidence/04-ops-code-run01.txt:18480:    25	  const baseDir = process.env.RV_ARTIFACT_OUT_DIR
+./evidence/04-ops-code-run01.txt:18481:    26	    ? String(process.env.RV_ARTIFACT_OUT_DIR)
+./evidence/04-ops-code-run01.txt:18545:    16	  const baseDir = process.env.RV_ARTIFACT_OUT_DIR
+./evidence/04-ops-code-run01.txt:18546:    17	    ? String(process.env.RV_ARTIFACT_OUT_DIR)
+./evidence/04-ops-code-run02.txt:4989:    34	const ARTIFACTS_DIR = process.env.ARTIFACTS_DIR || join(BASE_DIR, 'artifacts');
+./evidence/04-ops-code-run02.txt:6938:    14	const DRY_RUN = process.env.DRY_RUN === '1';
+./evidence/04-ops-code-run02.txt:7261:   107	let commitSha = process.env.GITHUB_SHA || process.env.COMMIT_SHA || process.env.BUILD_SHA || "";
+./evidence/04-ops-code-run02.txt:7771:     5	const baseUrl = process.argv[2] || process.env.RV_BASE_URL || "http://localhost:8788";
+./evidence/04-ops-code-run02.txt:9119:   103	  if (process.env.BUILD_ID) {
+./evidence/04-ops-code-run02.txt:9120:   104	    return process.env.BUILD_ID;
+./evidence/04-ops-code-run02.txt:9887:    24	  if (toBool(process.env.SKIP_KV_WRITE)) return true;
+./evidence/04-ops-code-run02.txt:9888:    25	  if (toBool(process.env.INPUT_SKIP_KV_WRITE)) return true;
+./evidence/04-ops-code-run02.txt:10874:    16	  const raw = process.env.SYMBOLS || "AAPL";
+./evidence/04-ops-code-run02.txt:10924:    66	    return process.env.COMMIT_HASH || execSync("git rev-parse --short HEAD", { encoding: "utf8" }).trim();
+./evidence/04-ops-code-run02.txt:11179:   119	  const envSymbols = process.env.SYMBOLS;
+./evidence/04-ops-code-run02.txt:11229:     7	const baseUrl = process.env.BASE_URL || "http://127.0.0.1:8788";
+./evidence/04-ops-code-run02.txt:11342:     9	const CF_ACCOUNT_ID = process.env.CF_ACCOUNT_ID || "";
+./evidence/04-ops-code-run02.txt:11343:    10	const CF_KV_NAMESPACE_ID = process.env.CF_KV_NAMESPACE_ID || "";
+./evidence/04-ops-code-run02.txt:11344:    11	const CF_API_TOKEN = process.env.CF_API_TOKEN || "";
+./evidence/04-ops-code-run02.txt:11345:    12	const IS_CI = process.env.GITHUB_ACTIONS === "true";
+./evidence/04-ops-code-run02.txt:11347:    14	const LIMIT = Number.parseInt(process.env.MIRROR_LIMIT || "35", 10);
+./evidence/04-ops-code-run02.txt:12007:     3	    OPS_BASE: process.env.OPS_BASE,
+./evidence/04-ops-code-run02.txt:12008:     4	    RV_BASE: process.env.RV_BASE,
+./evidence/04-ops-code-run02.txt:12009:     5	    BASE_URL: process.env.BASE_URL,
+./evidence/04-ops-code-run02.txt:12010:     6	    BASE: process.env.BASE
+./evidence/04-ops-code-run02.txt:12065:    36	        OPS_BASE: process.env.OPS_BASE || null,
+./evidence/04-ops-code-run02.txt:12066:    37	        RV_BASE: process.env.RV_BASE || null,
+./evidence/04-ops-code-run02.txt:12067:    38	        BASE_URL: process.env.BASE_URL || null,
+./evidence/04-ops-code-run02.txt:12068:    39	        BASE: process.env.BASE || null,
+./evidence/04-ops-code-run02.txt:12069:    40	        CI: process.env.CI || null
+./evidence/04-ops-code-run02.txt:12074:    45	    const jsonLog = process.env.CI === 'true' || process.env.CI === '1' || process.env.RV_LOG_JSON === '1';
+./evidence/04-ops-code-run02.txt:12489:   108	  if (process.env.CI === 'true' || process.env.GITHUB_ACTIONS === 'true') {
+./evidence/04-ops-code-run02.txt:12862:     5	const BASE_URL = process.env.VERIFY_BASE_URL || 'http://localhost:8788';
+./evidence/04-ops-code-run02.txt:13502:   106	    return process.env.COMMIT_HASH || execSync("git rev-parse --short HEAD", { encoding: "utf8" }).trim();
+./evidence/04-ops-code-run02.txt:13870:    25	  const apiKey = process.env.AV_API_KEY || "";
+./evidence/04-ops-code-run02.txt:14002:     4	const MAX_OPTION_CHAIN_BYTES = Number(process.env.FINNHUB_OPTION_CHAIN_MAX_BYTES || 750000);
+./evidence/04-ops-code-run02.txt:14006:     8	  const apiKey = process.env.FINNHUB_API_KEY || "";
+./evidence/04-ops-code-run02.txt:14072:     6	  const apiKey = process.env.FMP_API_KEY || "";
+./evidence/04-ops-code-run02.txt:14721:   159	  const artifactsDir = process.env.ARTIFACTS_DIR ? join(String(process.env.ARTIFACTS_DIR), SOURCE_MODULE) : null;
+./evidence/04-ops-code-run02.txt:14723:   161	  if (process.env.BARS_ARTIFACTS_DIR) {
+./evidence/04-ops-code-run02.txt:14724:   162	    candidates.push(join(String(process.env.BARS_ARTIFACTS_DIR), SOURCE_MODULE, 'snapshot.json'));
+./evidence/04-ops-code-run02.txt:14823:    59	  const barsDir = process.env.BARS_ARTIFACTS_DIR
+./evidence/04-ops-code-run02.txt:14824:    60	    ? join(String(process.env.BARS_ARTIFACTS_DIR), SOURCE_MODULE)
+./evidence/04-ops-code-run02.txt:14973:     7	  const apiKey = process.env.MARKETAUX_API_KEY || "";
+./evidence/04-ops-code-run02.txt:15103:     7	  const apiKey = process.env.SEC_API_KEY || "";
+./evidence/04-ops-code-run02.txt:15930:    13	const QUOTES_PROVIDER = String(process.env.QUOTES_PROVIDER || "").toLowerCase();
+./evidence/04-ops-code-run02.txt:15931:    14	const FINNHUB_API_KEY = process.env.FINNHUB_API_KEY || "";
+./evidence/04-ops-code-run02.txt:15932:    15	const FMP_API_KEY = process.env.FMP_API_KEY || "";
+./evidence/04-ops-code-run02.txt:15933:    16	const FRED_API_KEY = process.env.FRED_API_KEY || "";
+./evidence/04-ops-code-run02.txt:15934:    17	const ALPHAVANTAGE_API_KEY = process.env.ALPHAVANTAGE_API_KEY || "";
+./evidence/04-ops-code-run02.txt:15935:    18	const MARKETAUX_KEY = process.env.MARKETAUX_KEY || "";
+./evidence/04-ops-code-run02.txt:15936:    19	const ALLOW_YAHOO = process.env.ALLOW_YAHOO === "1";
+./evidence/04-ops-code-run02.txt:15937:    20	const ALLOW_TREASURY = process.env.ALLOW_TREASURY === "1";
+./evidence/04-ops-code-run02.txt:15938:    21	const MIN_OK_FEATURES = Number(process.env.MIN_OK_FEATURES || 2);
+./evidence/04-ops-code-run02.txt:15939:    22	const MAX_FAIL_FEATURES = Number(process.env.MAX_FAIL_FEATURES || 2);
+./evidence/04-ops-code-run02.txt:15941:    24	  String(process.env.CRITICAL_FEATURES || "")
+./evidence/04-ops-code-run02.txt:16322:     1	const host = process.env.HOST || "http://127.0.0.1:8788";
+./evidence/04-ops-code-run02.txt:16323:     2	const token = process.env.RV_DEBUG_TOKEN || "";
+./evidence/04-ops-code-run02.txt:17512:    10	const base = process.env.BASE_URL || process.env.TRACE_BASE || process.env.RV_BASE || process.env.OPS_BASE;
+./evidence/04-ops-code-run02.txt:17563:    18	const base = process.env.BASE_URL || process.env.TRACE_BASE || process.env.RV_BASE || process.env.OPS_BASE;
+./evidence/04-ops-code-run02.txt:17759:    12	const base = process.env.BASE_URL || 'https://rubikvault.com';
+./evidence/04-ops-code-run02.txt:19030:   145	const isEventMirrorsContext = process.env.VALIDATE_EVENT_MIRRORS_ONLY === "1" || 
+./evidence/04-ops-code-run02.txt:19288:    25	  const baseDir = process.env.RV_ARTIFACT_OUT_DIR
+./evidence/04-ops-code-run02.txt:19289:    26	    ? String(process.env.RV_ARTIFACT_OUT_DIR)
+./evidence/04-ops-code-run02.txt:19353:    16	  const baseDir = process.env.RV_ARTIFACT_OUT_DIR
+./evidence/04-ops-code-run02.txt:19354:    17	    ? String(process.env.RV_ARTIFACT_OUT_DIR)
+./evidence/02.5-kv-reads-run05.json:135:        "text": "const DRY_RUN = process.env.DRY_RUN === '1';\n"
+./evidence/02.5-kv-reads-run05.json:187:        "text": "  const envSymbols = process.env.SYMBOLS;\n"
+./evidence/02.5-kv-reads-run05.json:239:        "text": "const baseUrl = process.env.BASE_URL || \"http://127.0.0.1:8788\";\n"
+./evidence/02.5-kv-reads-run05.json:291:        "text": "const base = process.env.BASE_URL || process.env.TRACE_BASE || process.env.RV_BASE || process.env.OPS_BASE;\n"
+./evidence/02.5-kv-reads-run05.json:364:        "text": "const base = process.env.BASE_URL || process.env.TRACE_BASE || process.env.RV_BASE || process.env.OPS_BASE;\n"
+./evidence/02.5-kv-reads-run05.json:437:        "text": "const baseUrl = process.argv[2] || process.env.RV_BASE_URL || \"http://localhost:8788\";\n"
+./evidence/02.5-kv-reads-run05.json:489:        "text": "const CF_ACCOUNT_ID = process.env.CF_ACCOUNT_ID || \"\";\n"
+./evidence/02.5-kv-reads-run05.json:511:        "text": "const CF_KV_NAMESPACE_ID = process.env.CF_KV_NAMESPACE_ID || \"\";\n"
+./evidence/02.5-kv-reads-run05.json:533:        "text": "const CF_API_TOKEN = process.env.CF_API_TOKEN || \"\";\n"
+./evidence/02.5-kv-reads-run05.json:555:        "text": "const IS_CI = process.env.GITHUB_ACTIONS === \"true\";\n"
+./evidence/02.5-kv-reads-run05.json:577:        "text": "const LIMIT = Number.parseInt(process.env.MIRROR_LIMIT || \"35\", 10);\n"
+./evidence/02.5-kv-reads-run05.json:629:        "text": "  const fredKey = process.env.FRED_API_KEY || \"\";\n"
+./evidence/02.5-kv-reads-run05.json:651:        "text": "  const finnhubKey = process.env.FINNHUB_API_KEY || \"\";\n"
+./evidence/02.5-kv-reads-run05.json:673:        "text": "  const fmpKey = process.env.FMP_API_KEY || \"\";\n"
+./evidence/02.5-kv-reads-run05.json:695:        "text": "  const alphaKey = process.env.ALPHAVANTAGE_API_KEY || \"\";\n"
+./evidence/02.5-kv-reads-run05.json:717:        "text": "  const coingeckoKey = process.env.COINGECKO_DEMO_KEY || \"\";\n"
+./evidence/02.5-kv-reads-run05.json:769:        "text": "  const raw = process.env.SYMBOLS || \"AAPL\";\n"
+./evidence/02.5-kv-reads-run05.json:791:        "text": "    return process.env.COMMIT_HASH || execSync(\"git rev-parse --short HEAD\", { encoding: \"utf8\" }).trim();\n"
+./evidence/02.5-kv-reads-run05.json:813:        "text": "  const dummyMode = process.env.DUMMY === \"1\";\n"
+./evidence/02.5-kv-reads-run05.json:865:        "text": "const base = process.env.BASE_URL || 'https://rubikvault.com';\n"
+./evidence/02.5-kv-reads-run05.json:917:        "text": "  const token = process.env.TIINGO_API_KEY ?? process.env.TIIANGO_API_KEY;\n"
+./evidence/02.5-kv-reads-run05.json:976:        "text": "const base = process.argv[3] || process.env.RV_BASE_URL || \"http://localhost:8788\";\n"
+./evidence/02.5-kv-reads-run05.json:1124:        "text": "const ARTIFACTS_DIR = process.env.ARTIFACTS_DIR || join(BASE_DIR, 'artifacts');\n"
+./evidence/02.5-kv-reads-run05.json:1146:        "text": "  const skipInvalidArtifacts = String(process.env.RV_FINALIZER_SKIP_INVALID || '').trim() === '1';\n"
+./evidence/02.5-kv-reads-run05.json:1316:        "text": "  if (toBool(process.env.SKIP_KV_WRITE)) return true;\n"
+./evidence/02.5-kv-reads-run05.json:1338:        "text": "  if (toBool(process.env.INPUT_SKIP_KV_WRITE)) return true;\n"
+./evidence/02.5-kv-reads-run05.json:1390:        "text": "  const apiKey = process.env.MARKETAUX_API_KEY || \"\";\n"
+./evidence/02.5-kv-reads-run05.json:1442:        "text": "    OPS_BASE: process.env.OPS_BASE,\n"
+./evidence/02.5-kv-reads-run05.json:1464:        "text": "    RV_BASE: process.env.RV_BASE,\n"
+./evidence/02.5-kv-reads-run05.json:1486:        "text": "    BASE_URL: process.env.BASE_URL,\n"
+./evidence/02.5-kv-reads-run05.json:1508:        "text": "    BASE: process.env.BASE\n"
+./evidence/02.5-kv-reads-run05.json:1560:        "text": "  const apiKey = process.env.FRED_API_KEY || \"\";\n"
+./evidence/02.5-kv-reads-run05.json:1612:        "text": "  const apiKey = process.env.SEC_API_KEY || \"\";\n"
+./evidence/02.5-kv-reads-run05.json:1664:        "text": "  if (process.env.BUILD_ID) {\n"
+./evidence/02.5-kv-reads-run05.json:1686:        "text": "    return process.env.BUILD_ID;\n"
+./evidence/02.5-kv-reads-run05.json:1738:        "text": "    accountId: process.env.CF_ACCOUNT_ID,\n"
+./evidence/02.5-kv-reads-run05.json:1760:        "text": "    apiToken: process.env.CF_API_TOKEN\n"
+./evidence/02.5-kv-reads-run05.json:1812:        "text": "  const apiKey = process.env.AV_API_KEY || \"\";\n"
+./evidence/02.5-kv-reads-run05.json:2026:        "text": "        OPS_BASE: process.env.OPS_BASE || null,\n"
+./evidence/02.5-kv-reads-run05.json:2048:        "text": "        RV_BASE: process.env.RV_BASE || null,\n"
+./evidence/02.5-kv-reads-run05.json:2070:        "text": "        BASE_URL: process.env.BASE_URL || null,\n"
+./evidence/02.5-kv-reads-run05.json:2092:        "text": "        BASE: process.env.BASE || null,\n"
+./evidence/02.5-kv-reads-run05.json:2114:        "text": "        CI: process.env.CI || null\n"
+./evidence/02.5-kv-reads-run05.json:2136:        "text": "    const jsonLog = process.env.CI === 'true' || process.env.CI === '1' || process.env.RV_LOG_JSON === '1';\n"
+./evidence/02.5-kv-reads-run05.json:2202:        "text": "  const outDir = process.env.RV_ARTIFACT_OUT_DIR\n"
+./evidence/02.5-kv-reads-run05.json:2224:        "text": "    ? String(process.env.RV_ARTIFACT_OUT_DIR)\n"
+./evidence/02.5-kv-reads-run05.json:2246:        "text": "    : (process.env.ARTIFACTS_DIR\n"
+./evidence/02.5-kv-reads-run05.json:2268:        "text": "        ? join(String(process.env.ARTIFACTS_DIR), MODULE_NAME)\n"
+./evidence/02.5-kv-reads-run05.json:2290:        "text": "  const forcedStub = toBool(process.env.RV_PRICES_STUB);\n"
+./evidence/02.5-kv-reads-run05.json:2312:        "text": "  const forcedReal = toBool(process.env.RV_PRICES_FORCE_REAL);\n"
+./evidence/02.5-kv-reads-run05.json:2334:        "text": "  const forcedProviderRaw = process.env.RV_FORCE_PROVIDER ? String(process.env.RV_FORCE_PROVIDER) : '';\n"
+./evidence/02.5-kv-reads-run05.json:2393:        "text": "const envSha = process.env.CF_PAGES_COMMIT_SHA || process.env.GITHUB_SHA || null;\n"
+./evidence/02.5-kv-reads-run05.json:2422:        "text": "    ci: Boolean(process.env.CI),\n"
+./evidence/02.5-kv-reads-run05.json:2444:        "text": "    github_actions: Boolean(process.env.GITHUB_ACTIONS),\n"
+./evidence/02.5-kv-reads-run05.json:2466:        "text": "    cf_pages: Boolean(process.env.CF_PAGES),\n"
+./evidence/02.5-kv-reads-run05.json:2488:        "text": "    cf_pages_commit_sha: process.env.CF_PAGES_COMMIT_SHA || null,\n"
+./evidence/02.5-kv-reads-run05.json:2510:        "text": "    github_sha: process.env.GITHUB_SHA || null,\n"
+./evidence/02.5-kv-reads-run05.json:2562:        "text": "  const artifactsDir = process.env.ARTIFACTS_DIR ? join(String(process.env.ARTIFACTS_DIR), SOURCE_MODULE) : null;\n"
+./evidence/02.5-kv-reads-run05.json:2591:        "text": "  if (process.env.BARS_ARTIFACTS_DIR) {\n"
+./evidence/02.5-kv-reads-run05.json:2613:        "text": "    candidates.push(join(String(process.env.BARS_ARTIFACTS_DIR), SOURCE_MODULE, 'snapshot.json'));\n"
+./evidence/02.5-kv-reads-run05.json:2635:        "text": "  const artifactsOutDir = process.env.RV_ARTIFACT_OUT_DIR\n"
+./evidence/02.5-kv-reads-run05.json:2657:        "text": "    ? String(process.env.RV_ARTIFACT_OUT_DIR)\n"
+./evidence/02.5-kv-reads-run05.json:2679:        "text": "    : process.env.ARTIFACTS_DIR\n"
+./evidence/02.5-kv-reads-run05.json:2701:        "text": "    ? join(String(process.env.ARTIFACTS_DIR), MODULE_NAME)\n"
+./evidence/02.5-kv-reads-run05.json:2753:        "text": "      last_run_url: process.env.GITHUB_SERVER_URL && process.env.GITHUB_RUN_ID\n"
+./evidence/02.5-kv-reads-run05.json:2782:        "text": "        ? `${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}`\n"
+./evidence/02.5-kv-reads-run05.json:2818:        "text": "  const artifactsBaseDir = process.env.ARTIFACTS_DIR || join(BASE_DIR, 'artifacts');\n"
+./evidence/02.5-kv-reads-run05.json:2870:        "text": "  const artifactsDir = process.env.RV_ARTIFACT_OUT_DIR\n"
+./evidence/02.5-kv-reads-run05.json:2892:        "text": "    ? String(process.env.RV_ARTIFACT_OUT_DIR)\n"
+./evidence/02.5-kv-reads-run05.json:2914:        "text": "    : process.env.ARTIFACTS_DIR\n"
+./evidence/02.5-kv-reads-run05.json:2936:        "text": "    ? join(String(process.env.ARTIFACTS_DIR), MODULE_NAME)\n"
+./evidence/02.5-kv-reads-run05.json:2958:        "text": "  const forcedStub = toBool(process.env.RV_UNIVERSE_STUB);\n"
+./evidence/02.5-kv-reads-run05.json:2980:        "text": "  const forcedReal = toBool(process.env.RV_UNIVERSE_FORCE_REAL);\n"
+./evidence/02.5-kv-reads-run05.json:3032:        "text": "const BASE_URL = process.env.VERIFY_BASE_URL || 'http://localhost:8788';\n"
+./evidence/02.5-kv-reads-run05.json:3084:        "text": "  const barsDir = process.env.BARS_ARTIFACTS_DIR\n"
+./evidence/02.5-kv-reads-run05.json:3106:        "text": "    ? join(String(process.env.BARS_ARTIFACTS_DIR), SOURCE_MODULE)\n"
+./evidence/02.5-kv-reads-run05.json:3128:        "text": "  const artifactsOutDir = process.env.RV_ARTIFACT_OUT_DIR\n"
+./evidence/02.5-kv-reads-run05.json:3150:        "text": "    ? String(process.env.RV_ARTIFACT_OUT_DIR)\n"
+./evidence/02.5-kv-reads-run05.json:3172:        "text": "    : process.env.ARTIFACTS_DIR\n"
+./evidence/02.5-kv-reads-run05.json:3194:        "text": "      ? join(String(process.env.ARTIFACTS_DIR), MODULE_NAME)\n"
+./evidence/02.5-kv-reads-run05.json:3246:        "text": "const MAX_OPTION_CHAIN_BYTES = Number(process.env.FINNHUB_OPTION_CHAIN_MAX_BYTES || 750000);\n"
+./evidence/02.5-kv-reads-run05.json:3268:        "text": "  const apiKey = process.env.FINNHUB_API_KEY || \"\";\n"
+./evidence/02.5-kv-reads-run05.json:3320:        "text": "  const apiKey = process.env.FMP_API_KEY || \"\";\n"
+./evidence/02.5-kv-reads-run05.json:3372:        "text": "  const envSha = process.env.GITHUB_SHA || process.env.CI_COMMIT_SHA || null;\n"
+./evidence/02.5-kv-reads-run05.json:3431:        "text": "    return process.env.COMMIT_HASH || execSync(\"git rev-parse --short HEAD\", { encoding: \"utf8\" }).trim();\n"
+./evidence/02.5-kv-reads-run05.json:3453:        "text": "  if (process.env.CF_KV_NAMESPACE_ID) return;\n"
+./evidence/02.5-kv-reads-run05.json:3475:        "text": "  if (id) process.env.CF_KV_NAMESPACE_ID = id;\n"
+./evidence/02.5-kv-reads-run05.json:3497:        "text": "  const allowProviderFallback = args.allowProviderFallback || toBool(process.env.ALLOW_PROVIDER_FETCH) || toBool(process.env.MARKETPHASE_PROVIDER_FALLBACK);\n"
+./evidence/02.5-kv-reads-run05.json:3526:        "text": "  const writeBackKv = args.writeBackKv || toBool(process.env.MARKETPHASE_WRITE_BACK_KV);\n"
+./evidence/02.5-kv-reads-run05.json:3578:        "text": "const QUOTES_PROVIDER = String(process.env.QUOTES_PROVIDER || \"\").toLowerCase();\n"
+./evidence/02.5-kv-reads-run05.json:3600:        "text": "const FINNHUB_API_KEY = process.env.FINNHUB_API_KEY || \"\";\n"
+./evidence/02.5-kv-reads-run05.json:3622:        "text": "const FMP_API_KEY = process.env.FMP_API_KEY || \"\";\n"
+./evidence/02.5-kv-reads-run05.json:3644:        "text": "const FRED_API_KEY = process.env.FRED_API_KEY || \"\";\n"
+./evidence/02.5-kv-reads-run05.json:3666:        "text": "const ALPHAVANTAGE_API_KEY = process.env.ALPHAVANTAGE_API_KEY || \"\";\n"
+./evidence/02.5-kv-reads-run05.json:3688:        "text": "const MARKETAUX_KEY = process.env.MARKETAUX_KEY || \"\";\n"
+./evidence/02.5-kv-reads-run05.json:3710:        "text": "const ALLOW_YAHOO = process.env.ALLOW_YAHOO === \"1\";\n"
+./evidence/02.5-kv-reads-run05.json:3732:        "text": "const ALLOW_TREASURY = process.env.ALLOW_TREASURY === \"1\";\n"
+./evidence/02.5-kv-reads-run05.json:3754:        "text": "const MIN_OK_FEATURES = Number(process.env.MIN_OK_FEATURES || 2);\n"
+./evidence/02.5-kv-reads-run05.json:3776:        "text": "const MAX_FAIL_FEATURES = Number(process.env.MAX_FAIL_FEATURES || 2);\n"
+./evidence/02.5-kv-reads-run05.json:3798:        "text": "  String(process.env.CRITICAL_FEATURES || \"\")\n"
+./evidence/02.5-kv-reads-run05.json:3850:        "text": "const host = process.env.HOST || \"http://127.0.0.1:8788\";\n"
+./evidence/02.5-kv-reads-run05.json:3872:        "text": "const token = process.env.RV_DEBUG_TOKEN || \"\";\n"
+./evidence/02.5-kv-reads-run05.json:3924:        "text": "  if (process.env.CI === 'true' || process.env.GITHUB_ACTIONS === 'true') {\n"
+./evidence/02.5-kv-reads-run05.json:3983:        "text": "    const commit = process.env.GITHUB_SHA || \"local\";\n"
+./evidence/02.5-kv-reads-run05.json:4005:        "text": "    const runId = process.env.GITHUB_RUN_ID || null;\n"
+./evidence/02.5-kv-reads-run05.json:4027:        "text": "  const commit = process.env.GITHUB_SHA || \"local\";\n"
+./evidence/02.5-kv-reads-run05.json:4049:        "text": "  const runId = process.env.GITHUB_RUN_ID || null;\n"
+./evidence/02.5-kv-reads-run05.json:4101:        "text": "let commitSha = process.env.GITHUB_SHA || process.env.COMMIT_SHA || process.env.BUILD_SHA || \"\";\n"
+./evidence/02.5-kv-reads-run05.json:4167:        "text": "const DATE = process.env.TRUTH_AUDIT_DATE || new Date().toISOString().slice(0, 10);\n"
+./evidence/02.5-kv-reads-run05.json:4189:        "text": "  const base = process.env.BASE_URL;\n"
+./evidence/02.5-kv-reads-run05.json:4241:        "text": "  const baseDir = process.env.RV_ARTIFACT_OUT_DIR\n"
+./evidence/02.5-kv-reads-run05.json:4263:        "text": "    ? String(process.env.RV_ARTIFACT_OUT_DIR)\n"
+./evidence/02.5-kv-reads-run05.json:4315:        "text": "  const baseDir = process.env.RV_ARTIFACT_OUT_DIR\n"
+./evidence/02.5-kv-reads-run05.json:4337:        "text": "    ? String(process.env.RV_ARTIFACT_OUT_DIR)\n"
+./evidence/02.5-kv-reads-run05.json:4389:        "text": "  const baseDir = process.env.RV_ARTIFACT_OUT_DIR\n"
+./evidence/02.5-kv-reads-run05.json:4411:        "text": "    ? String(process.env.RV_ARTIFACT_OUT_DIR)\n"
+./evidence/02.5-kv-reads-run05.json:4463:        "text": "const registryPath = process.env.RV_PROVIDERS_REGISTRY_PATH\n"
+./evidence/02.5-kv-reads-run05.json:4485:        "text": "  ? path.resolve(process.env.RV_PROVIDERS_REGISTRY_PATH)\n"
+./evidence/02.5-kv-reads-run05.json:4537:        "text": "  const baseDir = process.env.RV_ARTIFACT_OUT_DIR\n"
+./evidence/02.5-kv-reads-run05.json:4559:        "text": "    ? String(process.env.RV_ARTIFACT_OUT_DIR)\n"
+./evidence/02.5-kv-reads-run05.json:4611:        "text": "const isEventMirrorsContext = process.env.VALIDATE_EVENT_MIRRORS_ONLY === \"1\" || \n"
+./evidence/02.5-kv-reads.json:17:        "text": "const DRY_RUN = process.env.DRY_RUN === '1';\n"
+./evidence/02.5-kv-reads.json:187:        "text": "  const envSymbols = process.env.SYMBOLS;\n"
+./evidence/02.5-kv-reads.json:239:        "text": "  const fredKey = process.env.FRED_API_KEY || \"\";\n"
+./evidence/02.5-kv-reads.json:261:        "text": "  const finnhubKey = process.env.FINNHUB_API_KEY || \"\";\n"
+./evidence/02.5-kv-reads.json:283:        "text": "  const fmpKey = process.env.FMP_API_KEY || \"\";\n"
+./evidence/02.5-kv-reads.json:305:        "text": "  const alphaKey = process.env.ALPHAVANTAGE_API_KEY || \"\";\n"
+./evidence/02.5-kv-reads.json:327:        "text": "  const coingeckoKey = process.env.COINGECKO_DEMO_KEY || \"\";\n"
+./evidence/02.5-kv-reads.json:379:        "text": "const baseUrl = process.argv[2] || process.env.RV_BASE_URL || \"http://localhost:8788\";\n"
+./evidence/02.5-kv-reads.json:431:        "text": "  const apiKey = process.env.MARKETAUX_API_KEY || \"\";\n"
+./evidence/02.5-kv-reads.json:483:        "text": "const DATE = process.env.TRUTH_AUDIT_DATE || new Date().toISOString().slice(0, 10);\n"
+./evidence/02.5-kv-reads.json:505:        "text": "  const base = process.env.BASE_URL;\n"
+./evidence/02.5-kv-reads.json:557:        "text": "  const apiKey = process.env.FRED_API_KEY || \"\";\n"
+./evidence/02.5-kv-reads.json:609:        "text": "  const apiKey = process.env.SEC_API_KEY || \"\";\n"
+./evidence/02.5-kv-reads.json:661:        "text": "let commitSha = process.env.GITHUB_SHA || process.env.COMMIT_SHA || process.env.BUILD_SHA || \"\";\n"
+./evidence/02.5-kv-reads.json:727:        "text": "const base = process.argv[3] || process.env.RV_BASE_URL || \"http://localhost:8788\";\n"
+./evidence/02.5-kv-reads.json:779:        "text": "const base = process.env.BASE_URL || process.env.TRACE_BASE || process.env.RV_BASE || process.env.OPS_BASE;\n"
+./evidence/02.5-kv-reads.json:852:        "text": "const base = process.env.BASE_URL || process.env.TRACE_BASE || process.env.RV_BASE || process.env.OPS_BASE;\n"
+./evidence/02.5-kv-reads.json:925:        "text": "const CF_ACCOUNT_ID = process.env.CF_ACCOUNT_ID || \"\";\n"
+./evidence/02.5-kv-reads.json:947:        "text": "const CF_KV_NAMESPACE_ID = process.env.CF_KV_NAMESPACE_ID || \"\";\n"
+./evidence/02.5-kv-reads.json:969:        "text": "const CF_API_TOKEN = process.env.CF_API_TOKEN || \"\";\n"
+./evidence/02.5-kv-reads.json:991:        "text": "const IS_CI = process.env.GITHUB_ACTIONS === \"true\";\n"
+./evidence/02.5-kv-reads.json:1013:        "text": "const LIMIT = Number.parseInt(process.env.MIRROR_LIMIT || \"35\", 10);\n"
+./evidence/02.5-kv-reads.json:1065:        "text": "  const artifactsDir = process.env.RV_ARTIFACT_OUT_DIR\n"
+./evidence/02.5-kv-reads.json:1087:        "text": "    ? String(process.env.RV_ARTIFACT_OUT_DIR)\n"
+./evidence/02.5-kv-reads.json:1109:        "text": "    : process.env.ARTIFACTS_DIR\n"
+./evidence/02.5-kv-reads.json:1131:        "text": "    ? join(String(process.env.ARTIFACTS_DIR), MODULE_NAME)\n"
+./evidence/02.5-kv-reads.json:1153:        "text": "  const forcedStub = toBool(process.env.RV_UNIVERSE_STUB);\n"
+./evidence/02.5-kv-reads.json:1175:        "text": "  const forcedReal = toBool(process.env.RV_UNIVERSE_FORCE_REAL);\n"
+./evidence/02.5-kv-reads.json:1227:        "text": "  const barsDir = process.env.BARS_ARTIFACTS_DIR\n"
+./evidence/02.5-kv-reads.json:1249:        "text": "    ? join(String(process.env.BARS_ARTIFACTS_DIR), SOURCE_MODULE)\n"
+./evidence/02.5-kv-reads.json:1271:        "text": "  const artifactsOutDir = process.env.RV_ARTIFACT_OUT_DIR\n"
+./evidence/02.5-kv-reads.json:1293:        "text": "    ? String(process.env.RV_ARTIFACT_OUT_DIR)\n"
+./evidence/02.5-kv-reads.json:1315:        "text": "    : process.env.ARTIFACTS_DIR\n"
+./evidence/02.5-kv-reads.json:1337:        "text": "      ? join(String(process.env.ARTIFACTS_DIR), MODULE_NAME)\n"
+./evidence/02.5-kv-reads.json:1389:        "text": "const MAX_OPTION_CHAIN_BYTES = Number(process.env.FINNHUB_OPTION_CHAIN_MAX_BYTES || 750000);\n"
+./evidence/02.5-kv-reads.json:1411:        "text": "  const apiKey = process.env.FINNHUB_API_KEY || \"\";\n"
+./evidence/02.5-kv-reads.json:1463:        "text": "  const raw = process.env.SYMBOLS || \"AAPL\";\n"
+./evidence/02.5-kv-reads.json:1485:        "text": "    return process.env.COMMIT_HASH || execSync(\"git rev-parse --short HEAD\", { encoding: \"utf8\" }).trim();\n"
+./evidence/02.5-kv-reads.json:1507:        "text": "  const dummyMode = process.env.DUMMY === \"1\";\n"
+./evidence/02.5-kv-reads.json:1559:        "text": "  const apiKey = process.env.FMP_API_KEY || \"\";\n"
+./evidence/02.5-kv-reads.json:1611:        "text": "  const artifactsDir = process.env.ARTIFACTS_DIR ? join(String(process.env.ARTIFACTS_DIR), SOURCE_MODULE) : null;\n"
+./evidence/02.5-kv-reads.json:1640:        "text": "  if (process.env.BARS_ARTIFACTS_DIR) {\n"
+./evidence/02.5-kv-reads.json:1662:        "text": "    candidates.push(join(String(process.env.BARS_ARTIFACTS_DIR), SOURCE_MODULE, 'snapshot.json'));\n"
+./evidence/02.5-kv-reads.json:1684:        "text": "  const artifactsOutDir = process.env.RV_ARTIFACT_OUT_DIR\n"
+./evidence/02.5-kv-reads.json:1706:        "text": "    ? String(process.env.RV_ARTIFACT_OUT_DIR)\n"
+./evidence/02.5-kv-reads.json:1728:        "text": "    : process.env.ARTIFACTS_DIR\n"
+./evidence/02.5-kv-reads.json:1750:        "text": "    ? join(String(process.env.ARTIFACTS_DIR), MODULE_NAME)\n"
+./evidence/02.5-kv-reads.json:1802:        "text": "    OPS_BASE: process.env.OPS_BASE,\n"
+./evidence/02.5-kv-reads.json:1824:        "text": "    RV_BASE: process.env.RV_BASE,\n"
+./evidence/02.5-kv-reads.json:1846:        "text": "    BASE_URL: process.env.BASE_URL,\n"
+./evidence/02.5-kv-reads.json:1868:        "text": "    BASE: process.env.BASE\n"
+./evidence/02.5-kv-reads.json:1920:        "text": "  const apiKey = process.env.AV_API_KEY || \"\";\n"
+./evidence/02.5-kv-reads.json:1972:        "text": "const host = process.env.HOST || \"http://127.0.0.1:8788\";\n"
+./evidence/02.5-kv-reads.json:1994:        "text": "const token = process.env.RV_DEBUG_TOKEN || \"\";\n"
+./evidence/02.5-kv-reads.json:2046:        "text": "      last_run_url: process.env.GITHUB_SERVER_URL && process.env.GITHUB_RUN_ID\n"
+./evidence/02.5-kv-reads.json:2075:        "text": "        ? `${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}`\n"
+./evidence/02.5-kv-reads.json:2111:        "text": "  const artifactsBaseDir = process.env.ARTIFACTS_DIR || join(BASE_DIR, 'artifacts');\n"
+./evidence/02.5-kv-reads.json:2163:        "text": "const baseUrl = process.env.BASE_URL || \"http://127.0.0.1:8788\";\n"
+./evidence/02.5-kv-reads.json:2215:        "text": "  const outDir = process.env.RV_ARTIFACT_OUT_DIR\n"
+./evidence/02.5-kv-reads.json:2237:        "text": "    ? String(process.env.RV_ARTIFACT_OUT_DIR)\n"
+./evidence/02.5-kv-reads.json:2259:        "text": "    : (process.env.ARTIFACTS_DIR\n"
+./evidence/02.5-kv-reads.json:2281:        "text": "        ? join(String(process.env.ARTIFACTS_DIR), MODULE_NAME)\n"
+./evidence/02.5-kv-reads.json:2303:        "text": "  const forcedStub = toBool(process.env.RV_PRICES_STUB);\n"
+./evidence/02.5-kv-reads.json:2325:        "text": "  const forcedReal = toBool(process.env.RV_PRICES_FORCE_REAL);\n"
+./evidence/02.5-kv-reads.json:2347:        "text": "  const forcedProviderRaw = process.env.RV_FORCE_PROVIDER ? String(process.env.RV_FORCE_PROVIDER) : '';\n"
+./evidence/02.5-kv-reads.json:2406:        "text": "    accountId: process.env.CF_ACCOUNT_ID,\n"
+./evidence/02.5-kv-reads.json:2428:        "text": "    apiToken: process.env.CF_API_TOKEN\n"
+./evidence/02.5-kv-reads.json:2480:        "text": "        OPS_BASE: process.env.OPS_BASE || null,\n"
+./evidence/02.5-kv-reads.json:2502:        "text": "        RV_BASE: process.env.RV_BASE || null,\n"
+./evidence/02.5-kv-reads.json:2524:        "text": "        BASE_URL: process.env.BASE_URL || null,\n"
+./evidence/02.5-kv-reads.json:2546:        "text": "        BASE: process.env.BASE || null,\n"
+./evidence/02.5-kv-reads.json:2568:        "text": "        CI: process.env.CI || null\n"
+./evidence/02.5-kv-reads.json:2590:        "text": "    const jsonLog = process.env.CI === 'true' || process.env.CI === '1' || process.env.RV_LOG_JSON === '1';\n"
+./evidence/02.5-kv-reads.json:2752:        "text": "const BASE_URL = process.env.VERIFY_BASE_URL || 'http://localhost:8788';\n"
+./evidence/02.5-kv-reads.json:2804:        "text": "    const commit = process.env.GITHUB_SHA || \"local\";\n"
+./evidence/02.5-kv-reads.json:2826:        "text": "    const runId = process.env.GITHUB_RUN_ID || null;\n"
+./evidence/02.5-kv-reads.json:2848:        "text": "  const commit = process.env.GITHUB_SHA || \"local\";\n"
+./evidence/02.5-kv-reads.json:2870:        "text": "  const runId = process.env.GITHUB_RUN_ID || null;\n"
+./evidence/02.5-kv-reads.json:2922:        "text": "  if (process.env.CI === 'true' || process.env.GITHUB_ACTIONS === 'true') {\n"
+./evidence/02.5-kv-reads.json:2981:        "text": "  const token = process.env.TIINGO_API_KEY ?? process.env.TIIANGO_API_KEY;\n"
+./evidence/02.5-kv-reads.json:3320:        "text": "  const baseDir = process.env.RV_ARTIFACT_OUT_DIR\n"
+./evidence/02.5-kv-reads.json:3342:        "text": "    ? String(process.env.RV_ARTIFACT_OUT_DIR)\n"
+./evidence/02.5-kv-reads.json:3394:        "text": "  const baseDir = process.env.RV_ARTIFACT_OUT_DIR\n"
+./evidence/02.5-kv-reads.json:3416:        "text": "    ? String(process.env.RV_ARTIFACT_OUT_DIR)\n"
+./evidence/02.5-kv-reads.json:3468:        "text": "const registryPath = process.env.RV_PROVIDERS_REGISTRY_PATH\n"
+./evidence/02.5-kv-reads.json:3490:        "text": "  ? path.resolve(process.env.RV_PROVIDERS_REGISTRY_PATH)\n"
+./evidence/02.5-kv-reads.json:3542:        "text": "const envSha = process.env.CF_PAGES_COMMIT_SHA || process.env.GITHUB_SHA || null;\n"
+./evidence/02.5-kv-reads.json:3571:        "text": "    ci: Boolean(process.env.CI),\n"
+./evidence/02.5-kv-reads.json:3593:        "text": "    github_actions: Boolean(process.env.GITHUB_ACTIONS),\n"
+./evidence/02.5-kv-reads.json:3615:        "text": "    cf_pages: Boolean(process.env.CF_PAGES),\n"
+./evidence/02.5-kv-reads.json:3637:        "text": "    cf_pages_commit_sha: process.env.CF_PAGES_COMMIT_SHA || null,\n"
+./evidence/02.5-kv-reads.json:3659:        "text": "    github_sha: process.env.GITHUB_SHA || null,\n"
+./evidence/02.5-kv-reads.json:3711:        "text": "  const baseDir = process.env.RV_ARTIFACT_OUT_DIR\n"
+./evidence/02.5-kv-reads.json:3733:        "text": "    ? String(process.env.RV_ARTIFACT_OUT_DIR)\n"
+./evidence/02.5-kv-reads.json:3785:        "text": "  const baseDir = process.env.RV_ARTIFACT_OUT_DIR\n"
+./evidence/02.5-kv-reads.json:3807:        "text": "    ? String(process.env.RV_ARTIFACT_OUT_DIR)\n"
+./evidence/02.5-kv-reads.json:3859:        "text": "const isEventMirrorsContext = process.env.VALIDATE_EVENT_MIRRORS_ONLY === \"1\" || \n"
+./evidence/02.5-kv-reads.json:3911:        "text": "    return process.env.COMMIT_HASH || execSync(\"git rev-parse --short HEAD\", { encoding: \"utf8\" }).trim();\n"
+./evidence/02.5-kv-reads.json:3933:        "text": "  if (process.env.CF_KV_NAMESPACE_ID) return;\n"
+./evidence/02.5-kv-reads.json:3955:        "text": "  if (id) process.env.CF_KV_NAMESPACE_ID = id;\n"
+./evidence/02.5-kv-reads.json:3977:        "text": "  const allowProviderFallback = args.allowProviderFallback || toBool(process.env.ALLOW_PROVIDER_FETCH) || toBool(process.env.MARKETPHASE_PROVIDER_FALLBACK);\n"
+./evidence/02.5-kv-reads.json:4006:        "text": "  const writeBackKv = args.writeBackKv || toBool(process.env.MARKETPHASE_WRITE_BACK_KV);\n"
+./evidence/02.5-kv-reads.json:4058:        "text": "  const envSha = process.env.GITHUB_SHA || process.env.CI_COMMIT_SHA || null;\n"
+./evidence/02.5-kv-reads.json:4117:        "text": "const QUOTES_PROVIDER = String(process.env.QUOTES_PROVIDER || \"\").toLowerCase();\n"
+./evidence/02.5-kv-reads.json:4139:        "text": "const FINNHUB_API_KEY = process.env.FINNHUB_API_KEY || \"\";\n"
+./evidence/02.5-kv-reads.json:4161:        "text": "const FMP_API_KEY = process.env.FMP_API_KEY || \"\";\n"
+./evidence/02.5-kv-reads.json:4183:        "text": "const FRED_API_KEY = process.env.FRED_API_KEY || \"\";\n"
+./evidence/02.5-kv-reads.json:4205:        "text": "const ALPHAVANTAGE_API_KEY = process.env.ALPHAVANTAGE_API_KEY || \"\";\n"
+./evidence/02.5-kv-reads.json:4227:        "text": "const MARKETAUX_KEY = process.env.MARKETAUX_KEY || \"\";\n"
+./evidence/02.5-kv-reads.json:4249:        "text": "const ALLOW_YAHOO = process.env.ALLOW_YAHOO === \"1\";\n"
+./evidence/02.5-kv-reads.json:4271:        "text": "const ALLOW_TREASURY = process.env.ALLOW_TREASURY === \"1\";\n"
+./evidence/02.5-kv-reads.json:4293:        "text": "const MIN_OK_FEATURES = Number(process.env.MIN_OK_FEATURES || 2);\n"
+./evidence/02.5-kv-reads.json:4315:        "text": "const MAX_FAIL_FEATURES = Number(process.env.MAX_FAIL_FEATURES || 2);\n"
+./evidence/02.5-kv-reads.json:4337:        "text": "  String(process.env.CRITICAL_FEATURES || \"\")\n"
+./evidence/02.5-kv-reads.json:4389:        "text": "  if (process.env.BUILD_ID) {\n"
+./evidence/02.5-kv-reads.json:4411:        "text": "    return process.env.BUILD_ID;\n"
+./evidence/02.5-kv-reads.json:4463:        "text": "  if (toBool(process.env.SKIP_KV_WRITE)) return true;\n"
+./evidence/02.5-kv-reads.json:4485:        "text": "  if (toBool(process.env.INPUT_SKIP_KV_WRITE)) return true;\n"
+./evidence/02.5-kv-reads.json:4537:        "text": "const ARTIFACTS_DIR = process.env.ARTIFACTS_DIR || join(BASE_DIR, 'artifacts');\n"
+./evidence/02.5-kv-reads.json:4559:        "text": "  const skipInvalidArtifacts = String(process.env.RV_FINALIZER_SKIP_INVALID || '').trim() === '1';\n"
+./evidence/02.5-kv-reads.json:4611:        "text": "const base = process.env.BASE_URL || 'https://rubikvault.com';\n"
+./evidence/04-ops-code-run03.txt:4989:    34	const ARTIFACTS_DIR = process.env.ARTIFACTS_DIR || join(BASE_DIR, 'artifacts');
+./evidence/04-ops-code-run03.txt:6938:    14	const DRY_RUN = process.env.DRY_RUN === '1';
+./evidence/04-ops-code-run03.txt:7261:   107	let commitSha = process.env.GITHUB_SHA || process.env.COMMIT_SHA || process.env.BUILD_SHA || "";
+./evidence/04-ops-code-run03.txt:7771:     5	const baseUrl = process.argv[2] || process.env.RV_BASE_URL || "http://localhost:8788";
+./evidence/04-ops-code-run03.txt:8311:   103	  if (process.env.BUILD_ID) {
+./evidence/04-ops-code-run03.txt:8312:   104	    return process.env.BUILD_ID;
+./evidence/04-ops-code-run03.txt:9079:    24	  if (toBool(process.env.SKIP_KV_WRITE)) return true;
+./evidence/04-ops-code-run03.txt:9080:    25	  if (toBool(process.env.INPUT_SKIP_KV_WRITE)) return true;
+./evidence/04-ops-code-run03.txt:10066:    16	  const raw = process.env.SYMBOLS || "AAPL";
+./evidence/04-ops-code-run03.txt:10116:    66	    return process.env.COMMIT_HASH || execSync("git rev-parse --short HEAD", { encoding: "utf8" }).trim();
+./evidence/04-ops-code-run03.txt:10371:   119	  const envSymbols = process.env.SYMBOLS;
+./evidence/04-ops-code-run03.txt:10421:     7	const baseUrl = process.env.BASE_URL || "http://127.0.0.1:8788";
+./evidence/04-ops-code-run03.txt:10534:     9	const CF_ACCOUNT_ID = process.env.CF_ACCOUNT_ID || "";
+./evidence/04-ops-code-run03.txt:10535:    10	const CF_KV_NAMESPACE_ID = process.env.CF_KV_NAMESPACE_ID || "";
+./evidence/04-ops-code-run03.txt:10536:    11	const CF_API_TOKEN = process.env.CF_API_TOKEN || "";
+./evidence/04-ops-code-run03.txt:10537:    12	const IS_CI = process.env.GITHUB_ACTIONS === "true";
+./evidence/04-ops-code-run03.txt:10539:    14	const LIMIT = Number.parseInt(process.env.MIRROR_LIMIT || "35", 10);
+./evidence/04-ops-code-run03.txt:11199:     3	    OPS_BASE: process.env.OPS_BASE,
+./evidence/04-ops-code-run03.txt:11200:     4	    RV_BASE: process.env.RV_BASE,
+./evidence/04-ops-code-run03.txt:11201:     5	    BASE_URL: process.env.BASE_URL,
+./evidence/04-ops-code-run03.txt:11202:     6	    BASE: process.env.BASE
+./evidence/04-ops-code-run03.txt:11257:    36	        OPS_BASE: process.env.OPS_BASE || null,
+./evidence/04-ops-code-run03.txt:11258:    37	        RV_BASE: process.env.RV_BASE || null,
+./evidence/04-ops-code-run03.txt:11259:    38	        BASE_URL: process.env.BASE_URL || null,
+./evidence/04-ops-code-run03.txt:11260:    39	        BASE: process.env.BASE || null,
+./evidence/04-ops-code-run03.txt:11261:    40	        CI: process.env.CI || null
+./evidence/04-ops-code-run03.txt:11266:    45	    const jsonLog = process.env.CI === 'true' || process.env.CI === '1' || process.env.RV_LOG_JSON === '1';
+./evidence/04-ops-code-run03.txt:11681:   108	  if (process.env.CI === 'true' || process.env.GITHUB_ACTIONS === 'true') {
+./evidence/04-ops-code-run03.txt:12054:     5	const BASE_URL = process.env.VERIFY_BASE_URL || 'http://localhost:8788';
+./evidence/04-ops-code-run03.txt:12694:   106	    return process.env.COMMIT_HASH || execSync("git rev-parse --short HEAD", { encoding: "utf8" }).trim();
+./evidence/04-ops-code-run03.txt:13062:    25	  const apiKey = process.env.AV_API_KEY || "";
+./evidence/04-ops-code-run03.txt:13194:     4	const MAX_OPTION_CHAIN_BYTES = Number(process.env.FINNHUB_OPTION_CHAIN_MAX_BYTES || 750000);
+./evidence/04-ops-code-run03.txt:13198:     8	  const apiKey = process.env.FINNHUB_API_KEY || "";
+./evidence/04-ops-code-run03.txt:13264:     6	  const apiKey = process.env.FMP_API_KEY || "";
+./evidence/04-ops-code-run03.txt:13913:   159	  const artifactsDir = process.env.ARTIFACTS_DIR ? join(String(process.env.ARTIFACTS_DIR), SOURCE_MODULE) : null;
+./evidence/04-ops-code-run03.txt:13915:   161	  if (process.env.BARS_ARTIFACTS_DIR) {
+./evidence/04-ops-code-run03.txt:13916:   162	    candidates.push(join(String(process.env.BARS_ARTIFACTS_DIR), SOURCE_MODULE, 'snapshot.json'));
+./evidence/04-ops-code-run03.txt:14015:    59	  const barsDir = process.env.BARS_ARTIFACTS_DIR
+./evidence/04-ops-code-run03.txt:14016:    60	    ? join(String(process.env.BARS_ARTIFACTS_DIR), SOURCE_MODULE)
+./evidence/04-ops-code-run03.txt:14165:     7	  const apiKey = process.env.MARKETAUX_API_KEY || "";
+./evidence/04-ops-code-run03.txt:14295:     7	  const apiKey = process.env.SEC_API_KEY || "";
+./evidence/04-ops-code-run03.txt:15122:    13	const QUOTES_PROVIDER = String(process.env.QUOTES_PROVIDER || "").toLowerCase();
+./evidence/04-ops-code-run03.txt:15123:    14	const FINNHUB_API_KEY = process.env.FINNHUB_API_KEY || "";
+./evidence/04-ops-code-run03.txt:15124:    15	const FMP_API_KEY = process.env.FMP_API_KEY || "";
+./evidence/04-ops-code-run03.txt:15125:    16	const FRED_API_KEY = process.env.FRED_API_KEY || "";
+./evidence/04-ops-code-run03.txt:15126:    17	const ALPHAVANTAGE_API_KEY = process.env.ALPHAVANTAGE_API_KEY || "";
+./evidence/04-ops-code-run03.txt:15127:    18	const MARKETAUX_KEY = process.env.MARKETAUX_KEY || "";
+./evidence/04-ops-code-run03.txt:15128:    19	const ALLOW_YAHOO = process.env.ALLOW_YAHOO === "1";
+./evidence/04-ops-code-run03.txt:15129:    20	const ALLOW_TREASURY = process.env.ALLOW_TREASURY === "1";
+./evidence/04-ops-code-run03.txt:15130:    21	const MIN_OK_FEATURES = Number(process.env.MIN_OK_FEATURES || 2);
+./evidence/04-ops-code-run03.txt:15131:    22	const MAX_FAIL_FEATURES = Number(process.env.MAX_FAIL_FEATURES || 2);
+./evidence/04-ops-code-run03.txt:15133:    24	  String(process.env.CRITICAL_FEATURES || "")
+./evidence/04-ops-code-run03.txt:15514:     1	const host = process.env.HOST || "http://127.0.0.1:8788";
+./evidence/04-ops-code-run03.txt:15515:     2	const token = process.env.RV_DEBUG_TOKEN || "";
+./evidence/04-ops-code-run03.txt:16704:    10	const base = process.env.BASE_URL || process.env.TRACE_BASE || process.env.RV_BASE || process.env.OPS_BASE;
+./evidence/04-ops-code-run03.txt:16755:    18	const base = process.env.BASE_URL || process.env.TRACE_BASE || process.env.RV_BASE || process.env.OPS_BASE;
+./evidence/04-ops-code-run03.txt:16951:    12	const base = process.env.BASE_URL || 'https://rubikvault.com';
+./evidence/04-ops-code-run03.txt:18222:   145	const isEventMirrorsContext = process.env.VALIDATE_EVENT_MIRRORS_ONLY === "1" || 
+./evidence/04-ops-code-run03.txt:18480:    25	  const baseDir = process.env.RV_ARTIFACT_OUT_DIR
+./evidence/04-ops-code-run03.txt:18481:    26	    ? String(process.env.RV_ARTIFACT_OUT_DIR)
+./evidence/04-ops-code-run03.txt:18545:    16	  const baseDir = process.env.RV_ARTIFACT_OUT_DIR
+./evidence/04-ops-code-run03.txt:18546:    17	    ? String(process.env.RV_ARTIFACT_OUT_DIR)
+./evidence/02.5-kv-reads-run04.json:135:        "text": "const DRY_RUN = process.env.DRY_RUN === '1';\n"
+./evidence/02.5-kv-reads-run04.json:187:        "text": "  const envSymbols = process.env.SYMBOLS;\n"
+./evidence/02.5-kv-reads-run04.json:239:        "text": "const baseUrl = process.env.BASE_URL || \"http://127.0.0.1:8788\";\n"
+./evidence/02.5-kv-reads-run04.json:291:        "text": "const base = process.env.BASE_URL || process.env.TRACE_BASE || process.env.RV_BASE || process.env.OPS_BASE;\n"
+./evidence/02.5-kv-reads-run04.json:364:        "text": "const base = process.env.BASE_URL || process.env.TRACE_BASE || process.env.RV_BASE || process.env.OPS_BASE;\n"
+./evidence/02.5-kv-reads-run04.json:437:        "text": "const CF_ACCOUNT_ID = process.env.CF_ACCOUNT_ID || \"\";\n"
+./evidence/02.5-kv-reads-run04.json:459:        "text": "const CF_KV_NAMESPACE_ID = process.env.CF_KV_NAMESPACE_ID || \"\";\n"
+./evidence/02.5-kv-reads-run04.json:481:        "text": "const CF_API_TOKEN = process.env.CF_API_TOKEN || \"\";\n"
+./evidence/02.5-kv-reads-run04.json:503:        "text": "const IS_CI = process.env.GITHUB_ACTIONS === \"true\";\n"
+./evidence/02.5-kv-reads-run04.json:525:        "text": "const LIMIT = Number.parseInt(process.env.MIRROR_LIMIT || \"35\", 10);\n"
+./evidence/02.5-kv-reads-run04.json:577:        "text": "const base = process.argv[3] || process.env.RV_BASE_URL || \"http://localhost:8788\";\n"
+./evidence/02.5-kv-reads-run04.json:629:        "text": "const base = process.env.BASE_URL || 'https://rubikvault.com';\n"
+./evidence/02.5-kv-reads-run04.json:681:        "text": "  const fredKey = process.env.FRED_API_KEY || \"\";\n"
+./evidence/02.5-kv-reads-run04.json:703:        "text": "  const finnhubKey = process.env.FINNHUB_API_KEY || \"\";\n"
+./evidence/02.5-kv-reads-run04.json:725:        "text": "  const fmpKey = process.env.FMP_API_KEY || \"\";\n"
+./evidence/02.5-kv-reads-run04.json:747:        "text": "  const alphaKey = process.env.ALPHAVANTAGE_API_KEY || \"\";\n"
+./evidence/02.5-kv-reads-run04.json:769:        "text": "  const coingeckoKey = process.env.COINGECKO_DEMO_KEY || \"\";\n"
+./evidence/02.5-kv-reads-run04.json:821:        "text": "  const raw = process.env.SYMBOLS || \"AAPL\";\n"
+./evidence/02.5-kv-reads-run04.json:843:        "text": "    return process.env.COMMIT_HASH || execSync(\"git rev-parse --short HEAD\", { encoding: \"utf8\" }).trim();\n"
+./evidence/02.5-kv-reads-run04.json:865:        "text": "  const dummyMode = process.env.DUMMY === \"1\";\n"
+./evidence/02.5-kv-reads-run04.json:1035:        "text": "const ARTIFACTS_DIR = process.env.ARTIFACTS_DIR || join(BASE_DIR, 'artifacts');\n"
+./evidence/02.5-kv-reads-run04.json:1057:        "text": "  const skipInvalidArtifacts = String(process.env.RV_FINALIZER_SKIP_INVALID || '').trim() === '1';\n"
+./evidence/02.5-kv-reads-run04.json:1109:        "text": "  const apiKey = process.env.MARKETAUX_API_KEY || \"\";\n"
+./evidence/02.5-kv-reads-run04.json:1161:        "text": "  const apiKey = process.env.FRED_API_KEY || \"\";\n"
+./evidence/02.5-kv-reads-run04.json:1213:        "text": "  const apiKey = process.env.SEC_API_KEY || \"\";\n"
+./evidence/02.5-kv-reads-run04.json:1265:        "text": "const baseUrl = process.argv[2] || process.env.RV_BASE_URL || \"http://localhost:8788\";\n"
+./evidence/02.5-kv-reads-run04.json:1317:        "text": "  const apiKey = process.env.AV_API_KEY || \"\";\n"
+./evidence/02.5-kv-reads-run04.json:1369:        "text": "  const outDir = process.env.RV_ARTIFACT_OUT_DIR\n"
+./evidence/02.5-kv-reads-run04.json:1391:        "text": "    ? String(process.env.RV_ARTIFACT_OUT_DIR)\n"
+./evidence/02.5-kv-reads-run04.json:1413:        "text": "    : (process.env.ARTIFACTS_DIR\n"
+./evidence/02.5-kv-reads-run04.json:1435:        "text": "        ? join(String(process.env.ARTIFACTS_DIR), MODULE_NAME)\n"
+./evidence/02.5-kv-reads-run04.json:1457:        "text": "  const forcedStub = toBool(process.env.RV_PRICES_STUB);\n"
+./evidence/02.5-kv-reads-run04.json:1479:        "text": "  const forcedReal = toBool(process.env.RV_PRICES_FORCE_REAL);\n"
+./evidence/02.5-kv-reads-run04.json:1501:        "text": "  const forcedProviderRaw = process.env.RV_FORCE_PROVIDER ? String(process.env.RV_FORCE_PROVIDER) : '';\n"
+./evidence/02.5-kv-reads-run04.json:1560:        "text": "  const artifactsDir = process.env.ARTIFACTS_DIR ? join(String(process.env.ARTIFACTS_DIR), SOURCE_MODULE) : null;\n"
+./evidence/02.5-kv-reads-run04.json:1589:        "text": "  if (process.env.BARS_ARTIFACTS_DIR) {\n"
+./evidence/02.5-kv-reads-run04.json:1611:        "text": "    candidates.push(join(String(process.env.BARS_ARTIFACTS_DIR), SOURCE_MODULE, 'snapshot.json'));\n"
+./evidence/02.5-kv-reads-run04.json:1633:        "text": "  const artifactsOutDir = process.env.RV_ARTIFACT_OUT_DIR\n"
+./evidence/02.5-kv-reads-run04.json:1655:        "text": "    ? String(process.env.RV_ARTIFACT_OUT_DIR)\n"
+./evidence/02.5-kv-reads-run04.json:1677:        "text": "    : process.env.ARTIFACTS_DIR\n"
+./evidence/02.5-kv-reads-run04.json:1699:        "text": "    ? join(String(process.env.ARTIFACTS_DIR), MODULE_NAME)\n"
+./evidence/02.5-kv-reads-run04.json:1847:        "text": "      last_run_url: process.env.GITHUB_SERVER_URL && process.env.GITHUB_RUN_ID\n"
+./evidence/02.5-kv-reads-run04.json:1876:        "text": "        ? `${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}`\n"
+./evidence/02.5-kv-reads-run04.json:1912:        "text": "  const artifactsBaseDir = process.env.ARTIFACTS_DIR || join(BASE_DIR, 'artifacts');\n"
+./evidence/02.5-kv-reads-run04.json:1964:        "text": "  const artifactsDir = process.env.RV_ARTIFACT_OUT_DIR\n"
+./evidence/02.5-kv-reads-run04.json:1986:        "text": "    ? String(process.env.RV_ARTIFACT_OUT_DIR)\n"
+./evidence/02.5-kv-reads-run04.json:2008:        "text": "    : process.env.ARTIFACTS_DIR\n"
+./evidence/02.5-kv-reads-run04.json:2030:        "text": "    ? join(String(process.env.ARTIFACTS_DIR), MODULE_NAME)\n"
+./evidence/02.5-kv-reads-run04.json:2052:        "text": "  const forcedStub = toBool(process.env.RV_UNIVERSE_STUB);\n"
+./evidence/02.5-kv-reads-run04.json:2074:        "text": "  const forcedReal = toBool(process.env.RV_UNIVERSE_FORCE_REAL);\n"
+./evidence/02.5-kv-reads-run04.json:2126:        "text": "    OPS_BASE: process.env.OPS_BASE,\n"
+./evidence/02.5-kv-reads-run04.json:2148:        "text": "    RV_BASE: process.env.RV_BASE,\n"
+./evidence/02.5-kv-reads-run04.json:2170:        "text": "    BASE_URL: process.env.BASE_URL,\n"
+./evidence/02.5-kv-reads-run04.json:2192:        "text": "    BASE: process.env.BASE\n"
+./evidence/02.5-kv-reads-run04.json:2244:        "text": "  const barsDir = process.env.BARS_ARTIFACTS_DIR\n"
+./evidence/02.5-kv-reads-run04.json:2266:        "text": "    ? join(String(process.env.BARS_ARTIFACTS_DIR), SOURCE_MODULE)\n"
+./evidence/02.5-kv-reads-run04.json:2288:        "text": "  const artifactsOutDir = process.env.RV_ARTIFACT_OUT_DIR\n"
+./evidence/02.5-kv-reads-run04.json:2310:        "text": "    ? String(process.env.RV_ARTIFACT_OUT_DIR)\n"
+./evidence/02.5-kv-reads-run04.json:2332:        "text": "    : process.env.ARTIFACTS_DIR\n"
+./evidence/02.5-kv-reads-run04.json:2354:        "text": "      ? join(String(process.env.ARTIFACTS_DIR), MODULE_NAME)\n"
+./evidence/02.5-kv-reads-run04.json:2406:        "text": "const MAX_OPTION_CHAIN_BYTES = Number(process.env.FINNHUB_OPTION_CHAIN_MAX_BYTES || 750000);\n"
+./evidence/02.5-kv-reads-run04.json:2428:        "text": "  const apiKey = process.env.FINNHUB_API_KEY || \"\";\n"
+./evidence/02.5-kv-reads-run04.json:2480:        "text": "  const apiKey = process.env.FMP_API_KEY || \"\";\n"
+./evidence/02.5-kv-reads-run04.json:2532:        "text": "  const token = process.env.TIINGO_API_KEY ?? process.env.TIIANGO_API_KEY;\n"
+./evidence/02.5-kv-reads-run04.json:2591:        "text": "  if (process.env.BUILD_ID) {\n"
+./evidence/02.5-kv-reads-run04.json:2613:        "text": "    return process.env.BUILD_ID;\n"
+./evidence/02.5-kv-reads-run04.json:2665:        "text": "    accountId: process.env.CF_ACCOUNT_ID,\n"
+./evidence/02.5-kv-reads-run04.json:2687:        "text": "    apiToken: process.env.CF_API_TOKEN\n"
+./evidence/02.5-kv-reads-run04.json:2739:        "text": "const host = process.env.HOST || \"http://127.0.0.1:8788\";\n"
+./evidence/02.5-kv-reads-run04.json:2761:        "text": "const token = process.env.RV_DEBUG_TOKEN || \"\";\n"
+./evidence/02.5-kv-reads-run04.json:2813:        "text": "        OPS_BASE: process.env.OPS_BASE || null,\n"
+./evidence/02.5-kv-reads-run04.json:2835:        "text": "        RV_BASE: process.env.RV_BASE || null,\n"
+./evidence/02.5-kv-reads-run04.json:2857:        "text": "        BASE_URL: process.env.BASE_URL || null,\n"
+./evidence/02.5-kv-reads-run04.json:2879:        "text": "        BASE: process.env.BASE || null,\n"
+./evidence/02.5-kv-reads-run04.json:2901:        "text": "        CI: process.env.CI || null\n"
+./evidence/02.5-kv-reads-run04.json:2923:        "text": "    const jsonLog = process.env.CI === 'true' || process.env.CI === '1' || process.env.RV_LOG_JSON === '1';\n"
+./evidence/02.5-kv-reads-run04.json:2989:        "text": "    const commit = process.env.GITHUB_SHA || \"local\";\n"
+./evidence/02.5-kv-reads-run04.json:3011:        "text": "    const runId = process.env.GITHUB_RUN_ID || null;\n"
+./evidence/02.5-kv-reads-run04.json:3033:        "text": "  const commit = process.env.GITHUB_SHA || \"local\";\n"
+./evidence/02.5-kv-reads-run04.json:3055:        "text": "  const runId = process.env.GITHUB_RUN_ID || null;\n"
+./evidence/02.5-kv-reads-run04.json:3107:        "text": "    return process.env.COMMIT_HASH || execSync(\"git rev-parse --short HEAD\", { encoding: \"utf8\" }).trim();\n"
+./evidence/02.5-kv-reads-run04.json:3129:        "text": "  if (process.env.CF_KV_NAMESPACE_ID) return;\n"
+./evidence/02.5-kv-reads-run04.json:3151:        "text": "  if (id) process.env.CF_KV_NAMESPACE_ID = id;\n"
+./evidence/02.5-kv-reads-run04.json:3173:        "text": "  const allowProviderFallback = args.allowProviderFallback || toBool(process.env.ALLOW_PROVIDER_FETCH) || toBool(process.env.MARKETPHASE_PROVIDER_FALLBACK);\n"
+./evidence/02.5-kv-reads-run04.json:3202:        "text": "  const writeBackKv = args.writeBackKv || toBool(process.env.MARKETPHASE_WRITE_BACK_KV);\n"
+./evidence/02.5-kv-reads-run04.json:3254:        "text": "  if (process.env.CI === 'true' || process.env.GITHUB_ACTIONS === 'true') {\n"
+./evidence/02.5-kv-reads-run04.json:3313:        "text": "  const baseDir = process.env.RV_ARTIFACT_OUT_DIR\n"
+./evidence/02.5-kv-reads-run04.json:3335:        "text": "    ? String(process.env.RV_ARTIFACT_OUT_DIR)\n"
+./evidence/02.5-kv-reads-run04.json:3387:        "text": "const QUOTES_PROVIDER = String(process.env.QUOTES_PROVIDER || \"\").toLowerCase();\n"
+./evidence/02.5-kv-reads-run04.json:3409:        "text": "const FINNHUB_API_KEY = process.env.FINNHUB_API_KEY || \"\";\n"
+./evidence/02.5-kv-reads-run04.json:3431:        "text": "const FMP_API_KEY = process.env.FMP_API_KEY || \"\";\n"
+./evidence/02.5-kv-reads-run04.json:3453:        "text": "const FRED_API_KEY = process.env.FRED_API_KEY || \"\";\n"
+./evidence/02.5-kv-reads-run04.json:3475:        "text": "const ALPHAVANTAGE_API_KEY = process.env.ALPHAVANTAGE_API_KEY || \"\";\n"
+./evidence/02.5-kv-reads-run04.json:3497:        "text": "const MARKETAUX_KEY = process.env.MARKETAUX_KEY || \"\";\n"
+./evidence/02.5-kv-reads-run04.json:3519:        "text": "const ALLOW_YAHOO = process.env.ALLOW_YAHOO === \"1\";\n"
+./evidence/02.5-kv-reads-run04.json:3541:        "text": "const ALLOW_TREASURY = process.env.ALLOW_TREASURY === \"1\";\n"
+./evidence/02.5-kv-reads-run04.json:3563:        "text": "const MIN_OK_FEATURES = Number(process.env.MIN_OK_FEATURES || 2);\n"
+./evidence/02.5-kv-reads-run04.json:3585:        "text": "const MAX_FAIL_FEATURES = Number(process.env.MAX_FAIL_FEATURES || 2);\n"
+./evidence/02.5-kv-reads-run04.json:3607:        "text": "  String(process.env.CRITICAL_FEATURES || \"\")\n"
+./evidence/02.5-kv-reads-run04.json:3659:        "text": "const isEventMirrorsContext = process.env.VALIDATE_EVENT_MIRRORS_ONLY === \"1\" || \n"
+./evidence/02.5-kv-reads-run04.json:3711:        "text": "  const baseDir = process.env.RV_ARTIFACT_OUT_DIR\n"
+./evidence/02.5-kv-reads-run04.json:3733:        "text": "    ? String(process.env.RV_ARTIFACT_OUT_DIR)\n"
+./evidence/02.5-kv-reads-run04.json:3785:        "text": "const BASE_URL = process.env.VERIFY_BASE_URL || 'http://localhost:8788';\n"
+./evidence/02.5-kv-reads-run04.json:3837:        "text": "  const baseDir = process.env.RV_ARTIFACT_OUT_DIR\n"
+./evidence/02.5-kv-reads-run04.json:3859:        "text": "    ? String(process.env.RV_ARTIFACT_OUT_DIR)\n"
+./evidence/02.5-kv-reads-run04.json:3911:        "text": "const registryPath = process.env.RV_PROVIDERS_REGISTRY_PATH\n"
+./evidence/02.5-kv-reads-run04.json:3933:        "text": "  ? path.resolve(process.env.RV_PROVIDERS_REGISTRY_PATH)\n"
+./evidence/02.5-kv-reads-run04.json:3985:        "text": "  const envSha = process.env.GITHUB_SHA || process.env.CI_COMMIT_SHA || null;\n"
+./evidence/02.5-kv-reads-run04.json:4044:        "text": "  const baseDir = process.env.RV_ARTIFACT_OUT_DIR\n"
+./evidence/02.5-kv-reads-run04.json:4066:        "text": "    ? String(process.env.RV_ARTIFACT_OUT_DIR)\n"
+./evidence/02.5-kv-reads-run04.json:4118:        "text": "const DATE = process.env.TRUTH_AUDIT_DATE || new Date().toISOString().slice(0, 10);\n"
+./evidence/02.5-kv-reads-run04.json:4140:        "text": "  const base = process.env.BASE_URL;\n"
+./evidence/02.5-kv-reads-run04.json:4192:        "text": "let commitSha = process.env.GITHUB_SHA || process.env.COMMIT_SHA || process.env.BUILD_SHA || \"\";\n"
+./evidence/02.5-kv-reads-run04.json:4258:        "text": "const envSha = process.env.CF_PAGES_COMMIT_SHA || process.env.GITHUB_SHA || null;\n"
+./evidence/02.5-kv-reads-run04.json:4287:        "text": "    ci: Boolean(process.env.CI),\n"
+./evidence/02.5-kv-reads-run04.json:4309:        "text": "    github_actions: Boolean(process.env.GITHUB_ACTIONS),\n"
+./evidence/02.5-kv-reads-run04.json:4331:        "text": "    cf_pages: Boolean(process.env.CF_PAGES),\n"
+./evidence/02.5-kv-reads-run04.json:4353:        "text": "    cf_pages_commit_sha: process.env.CF_PAGES_COMMIT_SHA || null,\n"
+./evidence/02.5-kv-reads-run04.json:4375:        "text": "    github_sha: process.env.GITHUB_SHA || null,\n"
+./evidence/02.5-kv-reads-run04.json:4589:        "text": "  if (toBool(process.env.SKIP_KV_WRITE)) return true;\n"
+./evidence/02.5-kv-reads-run04.json:4611:        "text": "  if (toBool(process.env.INPUT_SKIP_KV_WRITE)) return true;\n"
+./evidence/02-mirrors-refs-run01.json:21568:        "text": "    candidates.push(join(String(process.env.BARS_ARTIFACTS_DIR), SOURCE_MODULE, 'snapshot.json'));\n"
+./evidence/02-mirrors-refs.json:20780:        "text": "    candidates.push(join(String(process.env.BARS_ARTIFACTS_DIR), SOURCE_MODULE, 'snapshot.json'));\n"
+
+$ rg -n "env:|secrets\.|vars\." -S .github/workflows
+.github/workflows/v3-finalizer.yml:38:          token: ${{ secrets.GITHUB_TOKEN }}
+.github/workflows/v3-finalizer.yml:136:        env:
+.github/workflows/wp16-manual-market-prices.yml:21:          token: ${{ secrets.GITHUB_TOKEN }}
+.github/workflows/wp16-manual-market-prices.yml:32:        env:
+.github/workflows/wp16-manual-market-prices.yml:41:        env:
+.github/workflows/wp16-manual-market-prices.yml:74:        env:
+.github/workflows/ops-daily.yml:18:    if: ${{ vars.RV_CI_MODE == 'dry' }}
+.github/workflows/ops-daily.yml:34:    if: ${{ vars.RV_CI_MODE != 'dry' }}
+.github/workflows/ops-daily.yml:41:          token: ${{ secrets.GITHUB_TOKEN }}
+.github/workflows/ops-daily.yml:52:        env:
+.github/workflows/ops-daily.yml:53:          CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+.github/workflows/ops-daily.yml:54:          CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
+.github/workflows/ops-daily.yml:64:        env:
+.github/workflows/ops-daily.yml:65:          CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+.github/workflows/ops-daily.yml:66:          CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
+.github/workflows/monitor-prod.yml:21:        env:
+.github/workflows/monitor-prod.yml:66:        env:
+.github/workflows/cleanup-daily-snapshots.yml:29:        env:
+.github/workflows/eod-latest.yml:23:    if: ${{ vars.RV_CI_MODE == 'dry' }}
+.github/workflows/eod-latest.yml:39:    if: ${{ vars.RV_CI_MODE != 'dry' }}
+.github/workflows/eod-latest.yml:42:    env:
+.github/workflows/eod-latest.yml:48:          token: ${{ secrets.GITHUB_TOKEN }}
+.github/workflows/eod-latest.yml:61:          if [ -n "${{ secrets.TIINGO_API_KEY }}" ]; then
+.github/workflows/eod-latest.yml:62:            echo "TIINGO_API_KEY=${{ secrets.TIINGO_API_KEY }}" >> "$GITHUB_ENV"
+.github/workflows/eod-latest.yml:63:          elif [ -n "${{ secrets.TIIANGO_API_KEY }}" ]; then
+.github/workflows/eod-latest.yml:64:            echo "TIINGO_API_KEY=${{ secrets.TIIANGO_API_KEY }}" >> "$GITHUB_ENV"
+.github/workflows/forecast-weekly.yml:18:env:
+.github/workflows/forecast-weekly.yml:66:        env:
+.github/workflows/ci-determinism.yml:18:env:
+.github/workflows/universe-refresh.yml:28:        env:
+.github/workflows/universe-refresh.yml:29:          EODHD_API_KEY: ${{ secrets.EODHD_API_KEY }}
+.github/workflows/forecast-daily.yml:18:env:
+.github/workflows/forecast-daily.yml:62:        env:
+.github/workflows/forecast-monthly.yml:18:env:
+.github/workflows/forecast-monthly.yml:63:        env:
+.github/workflows/refresh-health-assets.yml:18:          token: "${{ secrets.GITHUB_TOKEN }}"
+.github/workflows/scheduler-kick.yml:14:    if: ${{ vars.RV_CI_MODE == 'dry' || vars.RV_PROD_BASE == '' }}
+.github/workflows/scheduler-kick.yml:30:    if: ${{ github.ref == 'refs/heads/main' && vars.RV_CI_MODE != 'dry' && vars.RV_PROD_BASE != '' }}
+.github/workflows/scheduler-kick.yml:34:        env:
+.github/workflows/scheduler-kick.yml:35:          RV_PROD_BASE: ${{ vars.RV_PROD_BASE }}
+.github/workflows/scheduler-kick.yml:36:          RV_ADMIN_TOKEN: ${{ secrets.RV_ADMIN_TOKEN }}
+.github/workflows/v3-scrape-template.yml:24:        env:
+.github/workflows/v3-scrape-template.yml:116:        env:
+.github/workflows/v3-scrape-template.yml:120:          POLYGON_API_KEY: ${{ secrets.POLYGON_API_KEY }}
+.github/workflows/v3-scrape-template.yml:121:          FMP_API_KEY: ${{ secrets.FMP_API_KEY }}
+.github/workflows/v3-scrape-template.yml:122:          ALPHAVANTAGE_API_KEY: ${{ secrets.ALPHAVANTAGE_API_KEY }}
+.github/workflows/v3-scrape-template.yml:123:          FINNHUB_API_KEY: ${{ secrets.FINNHUB_API_KEY }}
+.github/workflows/v3-scrape-template.yml:124:          FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
+.github/workflows/v3-scrape-template.yml:125:          TWELVEDATA_API_KEY: ${{ secrets.TWELVEDATA_API_KEY }}
+.github/workflows/v3-scrape-template.yml:127:          ALLOW_YAHOO: ${{ vars.ALLOW_YAHOO || '0' }}
+.github/workflows/v3-scrape-template.yml:128:          YAHOO_MARKET_URL: ${{ vars.YAHOO_MARKET_URL || '' }}
+.github/workflows/v3-scrape-template.yml:233:        env:
+.github/workflows/v3-scrape-template.yml:245:        env:
+.github/workflows/v3-scrape-template.yml:273:        env:
+.github/workflows/e2e-playwright.yml:13:    env:
+.github/workflows/e2e-playwright.yml:14:      BASE_URL: ${{ vars.PREVIEW_BASE || vars.RV_PROD_BASE || 'https://rubikvault.com' }}
+.github/workflows/eod-history-refresh.yml:30:        env:
+.github/workflows/eod-history-refresh.yml:31:          EODHD_API_KEY: ${{ secrets.EODHD_API_KEY }}

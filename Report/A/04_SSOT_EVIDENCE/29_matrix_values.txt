@@ -1,0 +1,27 @@
+# MATRIX VALUES
+
+## hash_equivalence_critical
+universe local=2672904ce07ec8bf26adcc87e654788c34f1aef79cca22a09d5cf14d3831252f preview=2672904ce07ec8bf26adcc87e654788c34f1aef79cca22a09d5cf14d3831252f prod=2672904ce07ec8bf26adcc87e654788c34f1aef79cca22a09d5cf14d3831252f
+market_prices local=2f6e9eaf9de92bf415d215ce9d0a202c474b9f59e76323e15c77e8a6e3cb2cb3 preview=2f6e9eaf9de92bf415d215ce9d0a202c474b9f59e76323e15c77e8a6e3cb2cb3 prod=2f6e9eaf9de92bf415d215ce9d0a202c474b9f59e76323e15c77e8a6e3cb2cb3
+forecast_latest local=85659fdbe55ba9d4e243de33f9d7f05eba0893f3ccb02ce4397d00baed39b2d1 preview=85659fdbe55ba9d4e243de33f9d7f05eba0893f3ccb02ce4397d00baed39b2d1 prod=85659fdbe55ba9d4e243de33f9d7f05eba0893f3ccb02ce4397d00baed39b2d1
+forecast_status local=4b1cb4227f0abccc5a73b89064aedbe945976f0f6986d1f8d20ec862d2984f3e preview=4b1cb4227f0abccc5a73b89064aedbe945976f0f6986d1f8d20ec862d2984f3e prod=4b1cb4227f0abccc5a73b89064aedbe945976f0f6986d1f8d20ec862d2984f3e
+
+## parity_semantics_preview_vs_prod
+universe_preview={"len":517,"KO":true,"BRK_B":true}
+universe_prod={"len":517,"KO":true,"BRK_B":true}
+market_prices_preview={"asof":"2026-02-07","count":517,"status":"OK"}
+market_prices_prod={"asof":"2026-02-07","count":517,"status":"OK"}
+forecast_latest_preview={"asof":"2026-02-08","forecasts":517,"status":"stale"}
+forecast_latest_prod={"asof":"2026-02-08","forecasts":517,"status":"stale"}
+forecast_status_preview={"status":"stale","circuit_state":"closed","reason":"Using last_good forecasts: no fresh forecasts generated","generated_at":"2026-02-08T22:24:04.097Z"}
+forecast_status_prod={"status":"stale","circuit_state":"closed","reason":"Using last_good forecasts: no fresh forecasts generated","generated_at":"2026-02-08T22:24:04.097Z"}
+elliott_preview={"ok":true,"count":100,"setups":100}
+elliott_prod={"ok":true,"count":517,"setups":517}
+
+## cohesion_fields
+prices_generated_preview=2026-02-08T22:31:01.294Z
+prices_generated_prod=2026-02-08T22:31:01.294Z
+forecast_generated_preview=2026-02-08T22:24:04.092Z
+forecast_generated_prod=2026-02-08T22:24:04.092Z
+elliott_generated_preview=2026-02-10T18:04:26.272Z
+elliott_generated_prod=2026-02-10T18:04:38.624Z

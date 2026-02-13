@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+
+<head>
+  <meta charset="UTF-8" />
+  <title>RubikVault – Forecast System v3.4</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+  <meta name="description" content="ML-powered stock forecast system with Brier Score tracking and model promotions." />
+
+  <meta name="theme-color" content="#3b82f6" />
+  <link rel="icon" type="image/png" sizes="32x32" href="/assets/rv-favicon.png" />
+  <link rel="apple-touch-icon" sizes="180x180" href="/assets/rv-apple-icon.png" />
+  <link rel="manifest" href="/manifest.json" />
+  <link rel="stylesheet" href="/style.css" />
+  <style>
+    /* Premium Design System (Matches Scientific/Stock Analyzer) */
+    :root {
+      --glass-bg: rgba(15, 23, 42, 0.6);
+      --glass-border: rgba(100, 116, 139, 0.2);
+      --glass-blur: blur(12px);
+      --accent-gradient: linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%);
+    }
+
+    body {
+      background-color: #0b1120;
+      /* Ensure dark background matches others */
+      background-image:
+        radial-gradient(at 0% 0%, rgba(56, 189, 248, 0.1) 0px, transparent 50%),
+        radial-gradient(at 100% 0%, rgba(139, 92, 246, 0.1) 0px, transparent 50%);
+      background-attachment: fixed;
+    }
+
+    .forecast-container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 2rem;
+    }
+
+    /* Hero Section */
+    .hero-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 2rem;
+      padding-bottom: 1.5rem;
+      border-bottom: 1px solid var(--glass-border);
+    }
+
+    .hero-title {
+      font-size: 2rem;
+      font-weight: 700;
+      background: linear-gradient(to right, #f1f5f9, #94a3b8);
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+      letter-spacing: -0.02em;
+    }
+
+    /* Glass Panels */
+    .glass-panel {
+      background: var(--glass-bg);
+      border: 1px solid

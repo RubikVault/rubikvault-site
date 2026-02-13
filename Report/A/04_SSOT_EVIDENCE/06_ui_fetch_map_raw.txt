@@ -1,0 +1,355 @@
+$ rg -n "fetch\(|/api/|/data/" -S public/
+public/debug/rv-debug-console.js:195:      nextAction: "Upstream returned HTML/invalid JSON; check /api/diag and upstream feeds."
+public/debug/rv-debug-console.js:201:      nextAction: "Upstream error detected; use /api/diag to identify failing endpoints."
+public/debug/rv-debug-console.js:484:function recordFetch(state, entry) {
+public/debug/rv-debug-console.js:818:function patchFetch(state) {
+public/debug/rv-debug-console.js:852:        isApi: url.includes("/api/")
+public/debug/rv-debug-console.js:854:      recordFetch(state, entry);
+public/debug/rv-debug-console.js:857:        recordBlockFetch(state, block.id, block.name, block.endpoint, entry);
+public/debug/rv-debug-console.js:875:        isApi: url.includes("/api/")
+public/debug/rv-debug-console.js:877:      recordFetch(state, entry);
+public/debug/rv-debug-console.js:879:        recordBlockFetch(state, state.currentBlock.id, state.currentBlock.name, state.currentBlock.endpoint, entry);
+public/debug/rv-debug-console.js:887:function recordBlockFetch(state, blockId, blockName, endpoint, entry) {
+public/debug/rv-debug-console.js:931:      patchFetch(state);
+public/debug/rv-debug-console.js:1015:      const res = await fetch(url, {
+public/debug/rv-debug-console.js:1046:  state.diag.message = "Checking /api/health";
+public/debug/rv-debug-console.js:1051:  state.diag.message = "Checking /api/diag";
+public/debug/rv-debug-console.js:1100:    const response = await fetch(bundleUrl, {
+public/debug/rv-debug-console.js:1132:    await fetch(`${apiBase}/debug/ingest`, {
+public/debug/rv-debug-console.js:1158:      patchFetch(state);
+public/debug/rv-debug-console.js:1169:    patchFetch(state);
+public/debug/CODEX_PROGRESS.md:10:- Chunk 1: functions/api/_shared.js, functions/api/_middleware.js, functions/api/health.js, debug/CODEX_PROGRESS.md
+public/debug/CODEX_PROGRESS.md:11:- Chunk 2: functions/api/quotes.js, features/utils/api.js, features/utils/store.js
+public/debug/CODEX_PROGRESS.md:13:- Chunk 4: functions/api/market-health.js, functions/api/price-snapshot.js, functions/api/top-movers.js, functions/api/news.js, functions/api/earnings-calendar.js, functions/api/macro-rates.js
+public/debug/CODEX_PROGRESS.md:14:- Chunk 5: functions/api/crypto-snapshot.js, functions/api/sentiment.js, functions/api/tech-signals.js
+public/debug/CODEX_PROGRESS.md:23:- [x] 5) /api/quotes bulk endpoint
+public/market-stats.html:157:        const response = await fetch('/data/snapshots/market-stats/latest.json');
+public/debug/truth-chain/WBD.trace.json:15:        "text": "        fetchJson(`/api/stock?ticker=${encodeURIComponent(upperTicker)}`),",
+public/debug/truth-chain/WBD.trace.json:16:        "snippet": "        fetchJson(`/api/stock?ticker=${encodeURIComponent(upperTicker)}`),"
+public/debug/truth-chain/WBD.trace.json:20:        "text": "        fetchJson(`/api/fundamentals?ticker=${encodeURIComponent(upperTicker)}${pageDebug ? '&debug=1' : ''}`)",
+public/debug/truth-chain/WBD.trace.json:21:        "snippet": "        fetchJson(`/api/fundamentals?ticker=${encodeURIComponent(upperTicker)}${pageDebug ? '&debug=1' : ''}`)"
+public/debug/truth-chain/WBD.trace.json:84:      "url": "https://rubikvault.com/api/stock?ticker=WBD",
+public/debug/truth-chain/WBD.trace.json:89:      "url": "https://rubikvault.com/api/fundamentals?ticker=WBD",
+public/debug/truth-chain/WBD.trace.json:94:      "url": "https://rubikvault.com/data/marketphase/WBD.json",
+public/debug/truth-chain/WBD.trace.json:99:      "url": "https://rubikvault.com/data/snapshots/stock-analysis.json",
+public/debug/truth-chain/WBD.trace.json:104:      "url": "https://rubikvault.com/data/marketphase/index.json",
+public/debug/truth-chain/WBD.trace.json:111:      "file": "/Users/michaelpuchowezki/Dev/rubikvault-site/functions/api/stock.js",
+public/debug/truth-chain/WBD.trace.json:147:      "file": "/Users/michaelpuchowezki/Dev/rubikvault-site/functions/api/fundamentals.js",
+public/debug/truth-chain/WBD.trace.json:167:        "path": "/data/snapshots/universe/latest.json",
+public/debug/truth-chain/WBD.trace.json:168:        "local_path": "/Users/michaelpuchowezki/Dev/rubikvault-site/public/data/snapshots/universe/latest.json",
+public/debug/truth-chain/WBD.trace.json:182:        "path": "/data/snapshots/market-prices/latest.json",
+public/debug/truth-chain/WBD.trace.json:183:        "local_path": "/Users/michaelpuchowezki/Dev/rubikvault-site/public/data/snapshots/market-prices/latest.json",
+public/debug/truth-chain/WBD.trace.json:197:        "path": "/data/snapshots/market-stats/latest.json",
+public/debug/truth-chain/WBD.trace.json:198:        "local_path": "/Users/michaelpuchowezki/Dev/rubikvault-site/public/data/snapshots/market-stats/latest.json",
+public/debug/truth-chain/WBD.trace.json:212:        "path": "/data/snapshots/market-score/latest.json",
+public/debug/truth-chain/WBD.trace.json:213:        "local_path": "/Users/michaelpuchowezki/Dev/rubikvault-site/public/data/snapshots/market-score/latest.json",
+public/debug/truth-chain/WBD.trace.json:227:      "path": "/data/universe/nasdaq100.json",
+public/debug/truth-chain/WBD.trace.json:228:      "local_path": "/Users/michaelpuchowezki/Dev/rubikvault-site/public/data/universe/nasdaq100.json",
+public/debug/truth-chain/WBD.trace.json:235:      "path": "/data/marketphase/WBD.json",
+public/debug/truth-chain/WBD.trace.json:236:      "local_path": "/Users/michaelpuchowezki/Dev/rubikvault-site/public/data/marketphase/WBD.json",
+public/debug/truth-chain/WBD.trace.json:240:      "path": "/data/marketphase/index.json",
+public/debug/truth-chain/WBD.trace.json:241:      "local_path": "/Users/michaelpuchowezki/Dev/rubikvault-site/public/data/marketphase/index.json",
+public/debug/truth-chain/WBD.trace.json:250:            "path": "/data/marketphase/AAPL.json",
+public/debug/truth-chain/WBD.trace.json:255:            "path": "/data/marketphase/MSFT.json",
+public/debug/truth-chain/WBD.trace.json:262:      "path": "/data/snapshots/stock-analysis.json",
+public/debug/truth-chain/WBD.trace.json:263:      "local_path": "/Users/michaelpuchowezki/Dev/rubikvault-site/public/data/snapshots/stock-analysis.json",
+public/debug/truth-chain/WBD.trace.json:272:      "file": "/Users/michaelpuchowezki/Dev/rubikvault-site/functions/api/stock.js",
+public/debug/truth-chain/WBD.trace.json:277:      "file": "/Users/michaelpuchowezki/Dev/rubikvault-site/functions/api/stock.js",
+public/debug/truth-chain/WBD.trace.json:282:      "file": "/Users/michaelpuchowezki/Dev/rubikvault-site/functions/api/stock.js",
+public/debug/ui-path/UBER.ui-path.trace.json:19:      "path": "/api/stock?ticker=UBER",
+public/debug/ui-path/UBER.ui-path.trace.json:43:        "url": "https://cf4b6652.rubikvault-site.pages.dev/api/fundamentals?ticker=UBER",
+public/debug/ui-path/UBER.ui-path.trace.json:76:        "url": "https://cf4b6652.rubikvault-site.pages.dev/api/stock?ticker=UBER",
+public/debug/ui-path/UBER.ui-path.trace.json:142:        "url": "https://cf4b6652.rubikvault-site.pages.dev/data/marketphase/AAPL.json",
+public/debug/ui-path/UBER.ui-path.trace.json:170:        "url": "https://cf4b6652.rubikvault-site.pages.dev/data/marketphase/index.json",
+public/debug/ui-path/UBER.ui-path.trace.json:195:        "url": "https://cf4b6652.rubikvault-site.pages.dev/data/marketphase/MSFT.json",
+public/debug/ui-path/UBER.ui-path.trace.json:223:        "url": "https://cf4b6652.rubikvault-site.pages.dev/data/marketphase/UBER.json",
+public/debug/ui-path/UBER.ui-path.trace.json:234:        "url": "https://cf4b6652.rubikvault-site.pages.dev/data/snapshots/stock-analysis.json",
+public/debug/ui-path/UBER.ui-path.trace.json:350:        "url": "https://cf4b6652.rubikvault-site.pages.dev/data/universe/nasdaq100.json",
+public/debug/ui-path/UBER.ui-path.trace.json:466:    "endpoint": "/api/stock?ticker=UBER",
+public/debug/ui-path/UBER.ui-path.trace.json:467:    "handler_file": "/Users/michaelpuchowezki/Dev/rubikvault-site/functions/api/stock.js",
+public/debug/ui-path/UBER.ui-path.trace.json:469:      "file": "/Users/michaelpuchowezki/Dev/rubikvault-site/functions/api/stock.js",
+public/debug/ui-path/UBER.ui-path.trace.json:475:        "file": "/Users/michaelpuchowezki/Dev/rubikvault-site/functions/api/stock.js",
+public/debug/ui-path/UBER.ui-path.trace.json:480:        "file": "/Users/michaelpuchowezki/Dev/rubikvault-site/functions/api/stock.js",
+public/debug/ui-path/UBER.ui-path.trace.json:488:    "key_or_path": "/data/snapshots/market-prices/latest.json",
+public/debug/ui-path/UBER.ui-path.trace.json:493:      "url": "https://cf4b6652.rubikvault-site.pages.dev/data/snapshots/market-prices/latest.json"
+public/debug/ui-path/UBER.ui-path.trace.json:498:    "path": "/api/stock?ticker=UBER",
+public/debug/diagnostics.js:76:    const response = await fetch("/data/snapshots/build-info/latest.json", { cache: "no-store" });
+public/debug/diagnostics.js:186:      const response = await fetch(path, { cache: "no-store" });
+public/debug/diagnostics.js:237:      const response = await fetch(path, { headers: { Accept: "application/json" } });
+public/debug/truth-chain/TEAM.trace.json:15:        "text": "        fetchJson(`/api/stock?ticker=${encodeURIComponent(upperTicker)}`),",
+public/debug/truth-chain/TEAM.trace.json:16:        "snippet": "        fetchJson(`/api/stock?ticker=${encodeURIComponent(upperTicker)}`),"
+public/debug/truth-chain/TEAM.trace.json:20:        "text": "        fetchJson(`/api/fundamentals?ticker=${encodeURIComponent(upperTicker)}${pageDebug ? '&debug=1' : ''}`)",
+public/debug/truth-chain/TEAM.trace.json:21:        "snippet": "        fetchJson(`/api/fundamentals?ticker=${encodeURIComponent(upperTicker)}${pageDebug ? '&debug=1' : ''}`)"
+public/debug/truth-chain/TEAM.trace.json:84:      "url": "https://rubikvault.com/api/stock?ticker=TEAM",
+public/debug/truth-chain/TEAM.trace.json:89:      "url": "https://rubikvault.com/api/fundamentals?ticker=TEAM",
+public/debug/truth-chain/TEAM.trace.json:94:      "url": "https://rubikvault.com/data/marketphase/TEAM.json",
+public/debug/truth-chain/TEAM.trace.json:99:      "url": "https://rubikvault.com/data/snapshots/stock-analysis.json",
+public/debug/truth-chain/TEAM.trace.json:104:      "url": "https://rubikvault.com/data/marketphase/index.json",
+public/debug/truth-chain/TEAM.trace.json:111:      "file": "/Users/michaelpuchowezki/Dev/rubikvault-site/functions/api/stock.js",
+public/debug/truth-chain/TEAM.trace.json:147:      "file": "/Users/michaelpuchowezki/Dev/rubikvault-site/functions/api/fundamentals.js",
+public/debug/truth-chain/TEAM.trace.json:167:        "path": "/data/snapshots/universe/latest.json",
+public/debug/truth-chain/TEAM.trace.json:168:        "local_path": "/Users/michaelpuchowezki/Dev/rubikvault-site/public/data/snapshots/universe/latest.json",
+public/debug/truth-chain/TEAM.trace.json:182:        "path": "/data/snapshots/market-prices/latest.json",
+public/debug/truth-chain/TEAM.trace.json:183:        "local_path": "/Users/michaelpuchowezki/Dev/rubikvault-site/public/data/snapshots/market-prices/latest.json",
+public/debug/truth-chain/TEAM.trace.json:197:        "path": "/data/snapshots/market-stats/latest.json",
+public/debug/truth-chain/TEAM.trace.json:198:        "local_path": "/Users/michaelpuchowezki/Dev/rubikvault-site/public/data/snapshots/market-stats/latest.json",
+public/debug/truth-chain/TEAM.trace.json:212:        "path": "/data/snapshots/market-score/latest.json",
+public/debug/truth-chain/TEAM.trace.json:213:        "local_path": "/Users/michaelpuchowezki/Dev/rubikvault-site/public/data/snapshots/market-score/latest.json",
+public/debug/truth-chain/TEAM.trace.json:227:      "path": "/data/universe/nasdaq100.json",
+public/debug/truth-chain/TEAM.trace.json:228:      "local_path": "/Users/michaelpuchowezki/Dev/rubikvault-site/public/data/universe/nasdaq100.json",
+public/debug/truth-chain/TEAM.trace.json:235:      "path": "/data/marketphase/TEAM.json",
+public/debug/truth-chain/TEAM.trace.json:236:      "local_path": "/Users/michaelpuchowezki/Dev/rubikvault-site/public/data/marketphase/TEAM.json",
+public/debug/truth-chain/TEAM.trace.json:240:      "path": "/data/marketphase/index.json",
+public/debug/truth-chain/TEAM.trace.json:241:      "local_path": "/Users/michaelpuchowezki/Dev/rubikvault-site/public/data/marketphase/index.json",
+public/debug/truth-chain/TEAM.trace.json:250:            "path": "/data/marketphase/AAPL.json",
+public/debug/truth-chain/TEAM.trace.json:255:            "path": "/data/marketphase/MSFT.json",
+public/debug/truth-chain/TEAM.trace.json:262:      "path": "/data/snapshots/stock-analysis.json",
+public/debug/truth-chain/TEAM.trace.json:263:      "local_path": "/Users/michaelpuchowezki/Dev/rubikvault-site/public/data/snapshots/stock-analysis.json",
+public/debug/truth-chain/TEAM.trace.json:272:      "file": "/Users/michaelpuchowezki/Dev/rubikvault-site/functions/api/stock.js",
+public/debug/truth-chain/TEAM.trace.json:277:      "file": "/Users/michaelpuchowezki/Dev/rubikvault-site/functions/api/stock.js",
+public/debug/truth-chain/TEAM.trace.json:282:      "file": "/Users/michaelpuchowezki/Dev/rubikvault-site/functions/api/stock.js",
+public/search.js:2:  const response = await fetch(url);
+public/search.js:115:  async function doFetch(q) {
+public/search.js:122:    const url = `/api/universe?q=${encodeURIComponent(raw)}&t=${Date.now()}`;
+public/search.js:200:  function scheduleFetch(q) {
+public/search.js:202:    debounceTimer = setTimeout(() => doFetch(q), 150);
+public/search.js:224:    scheduleFetch(q);
+public/search.js:236:      scheduleFetch(input.value.trim());
+public/search.js:274:    scheduleFetch(prefill);
+public/stock.html:347:        const response = await fetch(`/api/stock?ticker=${encodeURIComponent(ticker)}${debugQuery}`);
+public/stock.html:353:        errorBox.textContent = 'Network error while contacting /api/stock.';
+public/internal-dashboard.html:225:      { id: 'rv-market-cockpit', name: 'Market Snapshot (Global Macro Hub)', snapshotPath: '/data/snapshots/macro-hub.json' },
+public/internal-dashboard.html:226:      { id: 'rv-news-headlines', name: 'News Headlines', snapshotPath: '/data/snapshots/news-headlines.json' },
+public/internal-dashboard.html:227:      { id: 'rv-sp500-sectors', name: 'S&P 500 Sectors', snapshotPath: '/data/snapshots/sp500-sectors.json' },
+public/internal-dashboard.html:228:      { id: 'rv-tech-signals', name: 'Tech Signals', snapshotPath: '/data/snapshots/tech-signals.json' },
+public/internal-dashboard.html:229:      { id: 'rv-rvci-engine', name: 'RVCI Engine', snapshotPath: '/data/snapshots/rvci-engine.json', altPath: '/data/rvci_latest.json' },
+public/internal-dashboard.html:230:      { id: 'rv-alpha-radar', name: 'Alpha Radar', snapshotPath: '/data/snapshots/alpha-radar.json' },
+public/internal-dashboard.html:231:      { id: 'rv-marketphase', name: 'MarketPhase AI', snapshotPath: '/data/marketphase/index.json', note: 'Loads individual symbol files (AAPL.json, MSFT.json, etc.)' },
+public/internal-dashboard.html:237:        const res = await fetch(url, { cache: 'no-store' });
+public/internal-dashboard.html:467:      const systemHealth = await fetchJSON('/data/system-health.json');
+public/internal-dashboard.html:580:      const usageReport = await fetchJSON('/data/usage-report.json');
+public/internal-dashboard.html:581:      const providerState = await fetchJSON('/data/provider-state.json');
+public/internal-dashboard.html:582:      const macroHub = await fetchJSON('/data/snapshots/macro-hub.json');
+public/internal-dashboard.html:659:          <div class="label">All data served from CDN (public/data/*)</div>
+public/internal-dashboard.html:670:        { path: '/data/system-health.json', hint: 'Static build health snapshot' },
+public/internal-dashboard.html:671:        { path: '/data/provider-state.json', hint: 'Circuit + lock state' },
+public/internal-dashboard.html:672:        { path: '/data/usage-report.json', hint: 'Budget usage and remaining' },
+public/internal-dashboard.html:673:        { path: '/data/snapshots/macro-hub.json', hint: 'Macro hub snapshot' },
+public/internal-dashboard.html:674:        { path: '/data/snapshots/alpha-radar.json', hint: 'Alpha radar snapshot' },
+public/internal-dashboard.html:675:        { path: '/data/snapshots/rvci-engine.json', hint: 'RVCI engine snapshot' }
+public/internal-dashboard.html:680:          const res = await fetch(t.path, { method: 'HEAD', cache: 'no-store' });
+public/internal-dashboard:412:        <span class="badge" style="background:rgba(56,189,248,0.15);color:#cbd5f5;border:1px solid rgba(56,189,248,0.25);">/data/system-health.json</span>
+public/internal-dashboard:469:        <span class="badge" style="background:rgba(16,185,129,0.15);color:#cbd5f5;border:1px solid rgba(16,185,129,0.25);">/data/provider-state.json</span>
+public/internal-dashboard:656:        const res = await fetch(withTokenTo(origin, path), { headers: { Accept: 'application/json' } });
+public/internal-dashboard:675:      const thisHealth = await fetchJSONFromOrigin(originThis, '/data/system-health.json');
+public/internal-dashboard:676:      const thisDiag = await fetchJSONFromOrigin(originThis, '/data/error-summary.json');
+public/internal-dashboard:693:      const prodHealth = await fetchJSONFromOrigin(prodOrigin, '/data/system-health.json');
+public/internal-dashboard:694:      const prodDiag = await fetchJSONFromOrigin(prodOrigin, '/data/error-summary.json');
+public/internal-dashboard:714:        const res = await fetch(path, { cache: 'no-store' });
+public/internal-dashboard:729:        const res = await fetch(withToken(url), { headers: { Accept: 'application/json' } });
+public/internal-dashboard:746:      const sp500 = await fetchJSON('/data/snapshots/sp500-sectors.json');
+public/internal-dashboard:756:      const tech = await fetchJSON('/data/snapshots/tech-signals.json');
+public/internal-dashboard:765:      const alpha = await fetchJSON('/data/snapshots/alpha-radar.json');
+public/internal-dashboard:775:      const marketphase = await fetchJSON('/data/marketphase/index.json');
+public/internal-dashboard:781:      const rvciLatest = await fetchJSON('/data/rvci_latest.json');
+public/internal-dashboard:791:      const sp500 = await fetchJSON('/data/snapshots/sp500-sectors.json');
+public/internal-dashboard:801:      const tech = await fetchJSON('/data/snapshots/tech-signals.json');
+public/internal-dashboard:810:      const alpha = await fetchJSON('/data/snapshots/alpha-radar.json');
+public/internal-dashboard:820:      const marketphase = await fetchJSON('/data/marketphase/index.json');
+public/internal-dashboard:826:      const rvciLatest = await fetchJSON('/data/rvci_latest.json');
+public/internal-dashboard:1046:        const res = await fetch(path, { cache: 'no-store' });
+public/internal-dashboard:1060:        { label: 'Market Cockpit', path: '/data/snapshots/market-cockpit.json', maxHours: 36 },
+public/internal-dashboard:1061:        { label: 'S&P 500 Sectors', path: '/data/snapshots/sp500-sectors.json', maxHours: 36 },
+public/internal-dashboard:1062:        { label: 'Tech Signals', path: '/data/snapshots/tech-signals.json', maxHours: 36 },
+public/internal-dashboard:1063:        { label: 'Alpha Radar', path: '/data/snapshots/alpha-radar.json', maxHours: 36 },
+public/internal-dashboard:1064:        { label: 'News Headlines', path: '/data/snapshots/news-headlines.json', maxHours: 6 },
+public/internal-dashboard:1065:        { label: 'RVCI Latest', path: '/data/rvci_latest.json', maxHours: 36 }
+public/internal-dashboard:1107:      const report = await fetchJSON('/data/system-health.json');
+public/internal-dashboard:1139:            <td><code>${safeText(`/data/snapshots/${blockId}.json`)}</code></td>
+public/internal-dashboard:1161:      const res = await fetchJSON('/data/provider-state.json');
+public/internal-dashboard:1184:        const res = await fetch(withToken(path), {
+public/internal-dashboard:1200:        { path: '/data/system-health.json', hint: 'Static build health snapshot' },
+public/internal-dashboard:1201:        { path: '/data/provider-state.json', hint: 'Circuit + lock state' },
+public/internal-dashboard:1202:        { path: '/data/usage-report.json', hint: 'Budget usage and remaining' }
+public/internal-dashboard:1225:      const health = await fetchJSON('/data/system-health.json');
+public/internal-dashboard:1226:      const usage = await fetchJSON('/data/usage-report.json');
+public/internal-dashboard:1274:      const health = await fetchJSON('/data/system-health.json');
+public/internal-dashboard:1275:      const errors = await fetchJSON('/data/error-summary.json');
+public/internal-dashboard:1346:      const diag = await fetchJSON('/data/system-health.json');
+public/internal-dashboard:1376:      const diag = await fetchJSON('/data/usage-report.json');
+public/internal-dashboard:1440:      const diag = await fetchJSON('/data/error-summary.json');
+public/service-worker.js:29:  '/data/manifest.json',
+public/service-worker.js:30:  '/data/provider-state.json',
+public/service-worker.js:31:  '/data/snapshots/market-health/latest.json',
+public/service-worker.js:32:  '/data/snapshots/stocks/latest.json'
+public/service-worker.js:54:            fetch(url)
+public/service-worker.js:97:  // 1) API REQUESTS (/api/*)
+public/service-worker.js:98:  if (url.pathname.startsWith('/api/')) {
+public/service-worker.js:103:  // 2) DATA REQUESTS (/data/*)
+public/service-worker.js:104:  if (url.pathname.startsWith('/data/')) {
+public/service-worker.js:124:    const response = await fetch(request);
+public/service-worker.js:176:      fetch(request).then(response => {
+public/service-worker.js:188:    const response = await fetch(request);
+public/service-worker.js:208:    const response = await fetch(request);
+public/service-worker.js:218:    return caches.match('/index.html') || fetch('/index.html');
+public/service-worker.js:232:    const response = await fetch(request);
+public/ops/usage.html:87:            fetch("/data/usage-report.json", { cache: "no-store" }),
+public/ops/usage.html:88:            fetch("/data/seed-manifest.json", { cache: "no-store" }),
+public/ops/usage.html:89:            fetch("/data/provider-state.json", { cache: "no-store" })
+public/feature-registry.json:2:  { "idx": 0, "id": "rv-market-cockpit", "title": "Market Cockpit", "api": "/api/bundle", "kind": "cockpit", "enabled": true, "_comment": "UI runtime registry (array schema). Canonical path: /feature-registry.json. Build/Audit/CI registry lives at /data/feature-registry.v1.json (object schema)." },
+public/feature-registry.json:3:  { "idx": 1, "id": "rv-yield-curve", "title": "Yield Curve", "api": "/api/yield-curve", "kind": "feature", "enabled": true },
+public/feature-registry.json:4:  { "idx": 2, "id": "rv-sector-rotation", "title": "Sector Rotation", "api": "/api/sector-rotation", "kind": "feature", "enabled": true },
+public/feature-registry.json:5:  { "idx": 3, "id": "rv-central-bank-watch", "title": "Central Bank Watch", "api": "/api/central-bank-watch", "kind": "feature", "enabled": true },
+public/feature-registry.json:6:  { "idx": 4, "id": "rv-market-health", "title": "Market Health", "api": "/api/market-health", "kind": "feature", "enabled": true },
+public/feature-registry.json:7:  { "idx": 5, "id": "rv-price-snapshot", "title": "Price Snapshot", "api": "/api/price-snapshot", "kind": "feature", "enabled": true },
+public/feature-registry.json:8:  { "idx": 6, "id": "rv-top-movers", "title": "Volume Top Movers", "api": "/api/top-movers", "kind": "feature", "enabled": true },
+public/feature-registry.json:9:  { "idx": 7, "id": "rv-earnings-calendar", "title": "Earnings Calendar", "api": "/api/earnings-calendar", "kind": "feature", "enabled": true },
+public/feature-registry.json:10:  { "idx": 8, "id": "rv-news-headlines", "title": "News Headlines", "api": "/api/news", "kind": "feature", "enabled": true },
+public/feature-registry.json:11:  { "idx": 9, "id": "rv-news-intelligence", "title": "News Intelligence", "api": "/api/news-intelligence", "kind": "feature", "enabled": true },
+public/feature-registry.json:14:  { "idx": 12, "id": "rv-macro-rates", "title": "Macro & Rates", "api": "/api/macro-rates", "kind": "feature", "enabled": true },
+public/feature-registry.json:15:  { "idx": 13, "id": "rv-sp500-sectors", "title": "S&P 500 Sectors", "api": "/api/sp500-sectors", "kind": "feature", "enabled": true },
+public/feature-registry.json:16:  { "idx": 14, "id": "rv-market-regime", "title": "Market Regime Radar", "api": "/api/market-regime", "kind": "feature", "enabled": true },
+public/feature-registry.json:17:  { "idx": 15, "id": "rv-arb-risk-regime", "title": "ARB Risk Regime", "api": "/api/arb-risk-regime", "kind": "feature", "enabled": true },
+public/feature-registry.json:18:  { "idx": 16, "id": "rv-arb-liquidity-pulse", "title": "ARB Liquidity Pulse", "api": "/api/arb-liquidity-pulse", "kind": "feature", "enabled": true },
+public/feature-registry.json:19:  { "idx": 17, "id": "rv-arb-breadth-lite", "title": "ARB Breadth Lite", "api": "/api/arb-breadth-lite", "kind": "feature", "enabled": true },
+public/feature-registry.json:20:  { "idx": 18, "id": "rv-why-moved", "title": "Why This Stock Moved", "api": "/api/why-moved", "kind": "feature", "enabled": true },
+public/feature-registry.json:21:  { "idx": 19, "id": "rv-volume-anomaly", "title": "Volume Anomaly", "api": "/api/volume-anomaly", "kind": "feature", "enabled": true },
+public/feature-registry.json:22:  { "idx": 20, "id": "rv-breakout-energy", "title": "Breakout Energy Radar", "api": "/api/breakout-energy", "kind": "feature", "enabled": true },
+public/feature-registry.json:23:  { "idx": 21, "id": "rv-hype-divergence", "title": "Inverse Hype Detector", "api": "/api/hype-divergence", "kind": "feature", "enabled": true },
+public/feature-registry.json:24:  { "idx": 22, "id": "rv-congress-trading", "title": "Congress Trading Tracker", "api": "/api/congress-trading", "kind": "feature", "enabled": true },
+public/feature-registry.json:25:  { "idx": 23, "id": "rv-insider-cluster", "title": "Insider Cluster Buy Alarm", "api": "/api/insider-cluster", "kind": "feature", "enabled": true },
+public/feature-registry.json:26:  { "idx": 24, "id": "rv-analyst-stampede", "title": "Analyst Stampede", "api": "/api/analyst-stampede", "kind": "feature", "enabled": true },
+public/feature-registry.json:27:  { "idx": 25, "id": "rv-smart-money", "title": "Smart Money Score", "api": "/api/smart-money", "kind": "feature", "enabled": true },
+public/feature-registry.json:28:  { "idx": 26, "id": "rv-alpha-performance", "title": "Alpha Consistency Monitor", "api": "/api/alpha-performance", "kind": "feature", "enabled": true },
+public/feature-registry.json:29:  { "idx": 27, "id": "rv-earnings-reality", "title": "Earnings Reality Check", "api": "/api/earnings-reality", "kind": "feature", "enabled": true },
+public/feature-registry.json:30:  { "idx": 28, "id": "rv-crypto-snapshot", "title": "Crypto Snapshot", "api": "/api/crypto-snapshot", "kind": "feature", "enabled": true },
+public/feature-registry.json:31:  { "idx": 29, "id": "rv-sentiment-barometer", "title": "Sentiment Barometer", "api": "/api/sentiment", "kind": "feature", "enabled": true },
+public/feature-registry.json:32:  { "idx": 30, "id": "rv-tech-signals", "title": "Tech Signals", "api": "/api/tech-signals", "kind": "feature", "enabled": true },
+public/feature-registry.json:33:  { "idx": 31, "id": "rv-alpha-radar", "title": "Alpha Radar", "api": "/api/alpha-radar", "kind": "feature", "enabled": true },
+public/feature-registry.json:35:  { "idx": 33, "id": "rv-metrics-dashboard", "title": "Metrics Dashboard (V5)", "api": "/api/metrics", "kind": "feature", "enabled": true }
+public/ops/index.html:374:          <a href="/api/debug/prove-ui-path?ticker=UBER" style="color:#60a5fa; margin-left: 8px;">UBER</a>
+public/ops/index.html:385:          <a href="/data/marketphase/index.json" style="color:#60a5fa; margin-left: 8px;">marketphase index</a>
+public/ops/index.html:426:        Source: <a href="/api/mission-control/summary" style="color:#60a5fa;">/api/mission-control/summary</a>
+public/ops/index.html:431:        <a href="/data/universe/nasdaq100.json" style="color:#60a5fa; margin-left: 4px;">universe</a>
+public/ops/index.html:432:        <a href="/data/snapshots/stock-analysis.json" style="color:#60a5fa; margin-left: 4px;">stock-analysis</a>
+public/ops/index.html:433:        <a href="/data/eod/batches/eod.latest.000.json" style="color:#60a5fa; margin-left: 4px;">eod batch</a>
+public/ops/index.html:434:        <a href="/data/marketphase/index.json" style="color:#60a5fa; margin-left: 4px;">marketphase index</a>
+public/ops/index.html:435:        <a href="/data/snapshots/market-prices/latest.json" style="color:#60a5fa; margin-left: 4px;">market-prices snapshot</a>
+public/ops/index.html:966:        const res = await fetch('/data/snapshots/build-info/latest.json', { cache: 'no-store' });
+public/ops/index.html:1174:      if (typeof path !== 'string') return '/api/mission-control/summary';
+public/ops/index.html:1175:      if (path.startsWith('/api/')) return path;
+public/ops/index.html:1200:        const summaryRes = await fetch(summaryUrl, { cache: 'no-store' });
+public/ops/index.html:1292:        const res = await fetch(apiPath('api/mission-control/summary?live=1'), {
+public/diagnose.js:9:  NO_SERVER_BLOCK_MATCH: "Block not found in /api/health-report. Check featureId wiring.",
+public/diagnose.js:331:  const server = await fetch("/data/system-health.json")
+public/mission-control/index.html:156:        API: <a href="/api/mission-control/summary" style="color:#60a5fa;">/api/mission-control/summary</a>
+public/mission-control/index.html:205:      const summaryUrl = isDebug ? '/api/mission-control/summary?debug=1' : '/api/mission-control/summary';
+public/mission-control/index.html:208:        const res = await fetch(summaryUrl, { cache: 'no-store' });
+public/data/pipeline/nasdaq100.latest.json:7:    "universe_ref": "/data/universe/nasdaq100.json",
+public/data/pipeline/nasdaq100.latest.json:8:    "eod_manifest_ref": "/data/eod/manifest.latest.json"
+public/data/forecast/system/status.json:8:  "last_good": "public/data/forecast/last_good.json",
+public/data/pipeline/missing.json:410:    "from": "/data/marketphase/missing.json"
+public/data/pipeline/nasdaq100.pipeline-truth.json:87:    "latest": "/data/pipeline/nasdaq100.latest.json",
+public/data/pipeline/nasdaq100.pipeline-truth.json:88:    "truth_static_ready": "/data/pipeline/nasdaq100.static-ready.json",
+public/data/pipeline/nasdaq100.pipeline-truth.json:89:    "missing_marketphase": "/data/marketphase/missing.json",
+public/data/pipeline/nasdaq100.pipeline-truth.json:90:    "missing_pipeline": "/data/pipeline/missing.json"
+public/data/forecast/last_good.json:9:    "last_good_ref": "public/data/forecast/last_good.json"
+public/data/forecast/latest.json:9:    "last_good_ref": "public/data/forecast/last_good.json"
+public/debug/truth-chain/UBER.trace.json:15:        "text": "        fetchJson(`/api/stock?ticker=${encodeURIComponent(upperTicker)}`),",
+public/debug/truth-chain/UBER.trace.json:16:        "snippet": "        fetchJson(`/api/stock?ticker=${encodeURIComponent(upperTicker)}`),"
+public/debug/truth-chain/UBER.trace.json:20:        "text": "        fetchJson(`/api/fundamentals?ticker=${encodeURIComponent(upperTicker)}${pageDebug ? '&debug=1' : ''}`)",
+public/debug/truth-chain/UBER.trace.json:21:        "snippet": "        fetchJson(`/api/fundamentals?ticker=${encodeURIComponent(upperTicker)}${pageDebug ? '&debug=1' : ''}`)"
+public/debug/truth-chain/UBER.trace.json:84:      "url": "https://rubikvault.com/api/stock?ticker=UBER",
+public/debug/truth-chain/UBER.trace.json:89:      "url": "https://rubikvault.com/api/fundamentals?ticker=UBER",
+public/debug/truth-chain/UBER.trace.json:94:      "url": "https://rubikvault.com/data/marketphase/UBER.json",
+public/debug/truth-chain/UBER.trace.json:99:      "url": "https://rubikvault.com/data/snapshots/stock-analysis.json",
+public/debug/truth-chain/UBER.trace.json:104:      "url": "https://rubikvault.com/data/marketphase/index.json",
+public/debug/truth-chain/UBER.trace.json:111:      "file": "/Users/michaelpuchowezki/Dev/rubikvault-site/functions/api/stock.js",
+public/debug/truth-chain/UBER.trace.json:147:      "file": "/Users/michaelpuchowezki/Dev/rubikvault-site/functions/api/fundamentals.js",
+public/debug/truth-chain/UBER.trace.json:167:        "path": "/data/snapshots/universe/latest.json",
+public/debug/truth-chain/UBER.trace.json:168:        "local_path": "/Users/michaelpuchowezki/Dev/rubikvault-site/public/data/snapshots/universe/latest.json",
+public/debug/truth-chain/UBER.trace.json:182:        "path": "/data/snapshots/market-prices/latest.json",
+public/debug/truth-chain/UBER.trace.json:183:        "local_path": "/Users/michaelpuchowezki/Dev/rubikvault-site/public/data/snapshots/market-prices/latest.json",
+public/debug/truth-chain/UBER.trace.json:197:        "path": "/data/snapshots/market-stats/latest.json",
+public/debug/truth-chain/UBER.trace.json:198:        "local_path": "/Users/michaelpuchowezki/Dev/rubikvault-site/public/data/snapshots/market-stats/latest.json",
+public/debug/truth-chain/UBER.trace.json:212:        "path": "/data/snapshots/market-score/latest.json",
+public/debug/truth-chain/UBER.trace.json:213:        "local_path": "/Users/michaelpuchowezki/Dev/rubikvault-site/public/data/snapshots/market-score/latest.json",
+public/debug/truth-chain/UBER.trace.json:227:      "path": "/data/universe/nasdaq100.json",
+public/debug/truth-chain/UBER.trace.json:228:      "local_path": "/Users/michaelpuchowezki/Dev/rubikvault-site/public/data/universe/nasdaq100.json",
+public/debug/truth-chain/UBER.trace.json:235:      "path": "/data/marketphase/UBER.json",
+public/debug/truth-chain/UBER.trace.json:236:      "local_path": "/Users/michaelpuchowezki/Dev/rubikvault-site/public/data/marketphase/UBER.json",
+public/debug/truth-chain/UBER.trace.json:240:      "path": "/data/marketphase/index.json",
+public/debug/truth-chain/UBER.trace.json:241:      "local_path": "/Users/michaelpuchowezki/Dev/rubikvault-site/public/data/marketphase/index.json",
+public/debug/truth-chain/UBER.trace.json:250:            "path": "/data/marketphase/AAPL.json",
+public/debug/truth-chain/UBER.trace.json:255:            "path": "/data/marketphase/MSFT.json",
+public/debug/truth-chain/UBER.trace.json:262:      "path": "/data/snapshots/stock-analysis.json",
+public/debug/truth-chain/UBER.trace.json:263:      "local_path": "/Users/michaelpuchowezki/Dev/rubikvault-site/public/data/snapshots/stock-analysis.json",
+public/debug/truth-chain/UBER.trace.json:272:      "file": "/Users/michaelpuchowezki/Dev/rubikvault-site/functions/api/stock.js",
+public/debug/truth-chain/UBER.trace.json:277:      "file": "/Users/michaelpuchowezki/Dev/rubikvault-site/functions/api/stock.js",
+public/debug/truth-chain/UBER.trace.json:282:      "file": "/Users/michaelpuchowezki/Dev/rubikvault-site/functions/api/stock.js",
+public/_headers:1:/data/snapshots/*
+public/data/ops/summary.latest.json:26:        "pipeline": "/data/pipeline/nasdaq100.latest.json",
+public/data/ops/summary.latest.json:27:        "manifest": "/data/eod/manifest.latest.json",
+public/data/ops/summary.latest.json:28:        "batch0": "/data/eod/batches/eod.latest.000.json"
+public/data/ops/summary.latest.json:192:    "ref": "/data/ops-daily.json"
+public/mission-control.html:156:        API: <a href="/api/mission-control/summary" style="color:#60a5fa;">/api/mission-control/summary</a>
+public/mission-control.html:205:      const summaryUrl = isDebug ? '/api/mission-control/summary?debug=1' : '/api/mission-control/summary';
+public/mission-control.html:208:        const res = await fetch(summaryUrl, { cache: 'no-store' });
+public/DEBUG_README.md:8:2. Öffne die DevTools → Network und filtere nach `/api/`.
+public/DEBUG_README.md:42:Das Panel lädt `/data/snapshots/build-info/latest.json` (kanonische Build-Info). Wenn die Datei nicht existiert, nutzt es `RV_CONFIG.buildInfo`.
+public/DEBUG_README.md:60:4. Deploy erneut, dann `/api/health` prüfen.
+public/DEBUG_README.md:65:1. Preview-URL öffnen, dann `/api/health` prüfen → `bindings.RV_KV` und `envHint`.
+public/DEBUG_README.md:66:2. DevTools → Network → filter `/api/` → Schema-Felder (`ok`, `feature`, `ts`, `traceId`, `schemaVersion`) prüfen.
+public/DEBUG_README.md:93:- `CROSS_ORIGIN` (optional - enables CORS via `functions/api/_middleware.js`).
+public/DEBUG_README.md:112:   - `/api/health` → `ok=false`, `error.code=BINDING_MISSING`.
+public/DEBUG_README.md:117:   - `/api/quotes` liefert `RATE_LIMITED`, UI zeigt Backoff + Countdown.
+public/forecast.html:421:    const API_BASE = '/data/forecast';
+public/forecast.html:429:        const response = await fetch(`${API_BASE}/${path}`);
+public/elliott.html:415:                const res = await fetch('/api/elliott-scanner');
+public/RUNBOOK.md:15:- `/api/yield-curve` and `/api/sector-rotation` should return numbers or `isStale: true`.
+public/RUNBOOK.md:16:- `/api/news` and `/api/news-intelligence` should always return JSON (never HTML).
+public/RUNBOOK.md:18:  - `/api/market-regime`
+public/RUNBOOK.md:19:  - `/api/why-moved`
+public/RUNBOOK.md:20:  - `/api/volume-anomaly`
+public/RUNBOOK.md:21:  - `/api/hype-divergence`
+public/RUNBOOK.md:22:  - `/api/congress-trading`
+public/RUNBOOK.md:23:  - `/api/insider-cluster`
+public/RUNBOOK.md:24:  - `/api/analyst-stampede`
+public/RUNBOOK.md:25:  - `/api/smart-money`
+public/RUNBOOK.md:26:  - `/api/alpha-performance`
+public/RUNBOOK.md:27:  - `/api/earnings-reality`
+public/RUNBOOK.md:35:curl -fsS "$BASE_URL/mission-control.html" | rg -n 'setInterval\(|Polling: OFF|/api/mission-control/summary' | head -n 40
+public/RUNBOOK.md:38:curl -fsS "$BASE_URL/api/mission-control/summary" | jq '{schema_version, metaStatus:(.metadata.status//null), hasKV:(.data.hasKV//null), asOf:(.data.asOf//null), budgets:(.data.budgets//null)}'
+public/RUNBOOK.md:41:curl -fsS "$BASE_URL/api/mission-control/summary" | jq '{hasFailures:(.data.failures.day|length), hasLive:(.data.liveApis.items|length)}'
+public/RUNBOOK.md:42:curl -fsS "$BASE_URL/api/mission-control/summary?debug=1" | jq '{hasFailures:(.data.failures.day|length), hasLive:(.data.liveApis.items|length)}'
+public/RUNBOOK.md:45:curl -fsS -I "$BASE_URL/api/mission-control/summary" | tr -d "\r" | rg -n 'cache-control|etag|cf-cache-status' || true
+public/RUNBOOK.md:79:    code="$(curl -sS -o /dev/null -w '%{http_code}' --max-time 2 "$base/api/health" || true)"
+public/RUNBOOK.md:81:      echo "health OK ($base/api/health)"
+public/RUNBOOK.md:87:  echo "health did not become ready: $base/api/health"
+public/RUNBOOK.md:95:curl -fsS "$BASE_URL/api/resolve?q=Apple" | jq '{ok:(.error==null), data:.data, error:.error, metaStatus:(.metadata.status//null)}'
+public/RUNBOOK.md:96:curl -fsS "$BASE_URL/api/stock?ticker=AAPL" | jq '{ok:(.error==null), status:(.metadata.status//null), source_chain:(.metadata.source_chain//null), latest_bar:(.data.latest_bar//null), indicatorsCount:(.data.indicators|length), error:(.error//null)}'
+public/RUNBOOK.md:106:- `functions/api/_shared/feature-contract.js` (dataQuality + confidence helpers)
+public/RUNBOOK.md:107:- `functions/api/_shared/stooq.js` (keyless daily CSV fetch helper)
+public/RUNBOOK.md:108:- `functions/api/*` (phase 1–3 endpoints)
+public/scientific.html:671:                const response = await fetch('/data/snapshots/stock-analysis.json');
+public/index.html:285:        const res = await fetch('/data/snapshots/stock-analysis.json');
+public/index.html:315:        const res = await fetch('/data/marketphase/index.json', { cache: 'no-store' });
+public/index.html:512:    const UNIVERSE_URL = '/data/universe/all.json';
+public/index.html:535:        const res = await fetch(UNIVERSE_URL, { cache: 'no-store' });
+public/index.html:614:        const response = await fetch(url);
+public/index.html:666:    async function doFetch(q) {
+public/index.html:687:    function scheduleFetch(q) {
+public/index.html:689:      typeahead.debounceTimer = setTimeout(() => doFetch(q), typeahead.debounceMs);
+public/index.html:1612:      const { payload } = await fetchJson(`/data/marketphase/${encodeURIComponent(t)}.json`);
+public/index.html:1757:        fetchJson(`/api/stock?ticker=${encodeURIComponent(upperTicker)}`),
+public/index.html:1758:        fetchJson(`/api/fundamentals?ticker=${encodeURIComponent(upperTicker)}${pageDebug ? '&debug=1' : ''}`)
+public/index.html:1766:          { error: { code: 'NETWORK_ERROR', message: 'Unable to reach /api/stock' }, metadata: { status: 'ERROR' } },
+public/index.html:1772:      const safePayload = payload || { error: { code: 'NETWORK_ERROR', message: 'Unable to reach /api/stock' }, metadata: { status: 'ERROR' }, data: {} };
+public/index.html:1828:      scheduleFetch(value);
+public/_redirects:2:/api/*          /api/:splat      200
+public/_redirects:9:/data/snapshots/rv-:splat.json /data/snapshots/:splat.json 200
+public/_redirects:10:/data/blocks/rv-:splat.latest.json /data/blocks/:splat.latest.json 200
+public/internal/health/index.html:412:        let response = await fetch('/data/provider-state.json');
+public/internal/health/index.html:419:          response = await fetch('/data/manifest.json');
+public/internal/health/index.html:526:              <a href="/api/${m.module}?debug=1" class="action-btn" target="_blank">Debug</a>
+public/internal/health/index.html:527:              <a href="/api/probe/${m.module}" class="action-btn" target="_blank">Probe</a>

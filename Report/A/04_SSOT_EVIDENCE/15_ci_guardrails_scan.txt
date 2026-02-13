@@ -1,0 +1,284 @@
+$ ls -la .github/workflows 2>/dev/null || true
+total 224
+drwxr-xr-x@ 22 michaelpuchowezki  staff    704 Feb  9 15:46 .
+drwxr-xr-x@  4 michaelpuchowezki  staff    128 Jan  7 12:31 ..
+-rw-r--r--@  1 michaelpuchowezki  staff   1069 Feb  6 18:01 ci-determinism.yml
+-rw-r--r--@  1 michaelpuchowezki  staff  17306 Feb  9 15:46 ci-gates.yml
+-rw-r--r--@  1 michaelpuchowezki  staff    551 Feb  5 17:01 ci-policy.yml
+-rw-r--r--@  1 michaelpuchowezki  staff   2404 Jan 30 14:05 cleanup-daily-snapshots.yml
+-rw-r--r--@  1 michaelpuchowezki  staff    610 Feb  8 20:25 e2e-playwright.yml
+-rw-r--r--@  1 michaelpuchowezki  staff   1576 Feb  6 21:58 eod-history-refresh.yml
+-rw-r--r--@  1 michaelpuchowezki  staff   2913 Feb  8 20:12 eod-latest.yml
+-rw-r--r--@  1 michaelpuchowezki  staff   2959 Feb  6 11:49 forecast-daily.yml
+-rw-r--r--@  1 michaelpuchowezki  staff   2803 Feb  5 00:38 forecast-monthly.yml
+-rw-r--r--@  1 michaelpuchowezki  staff   2734 Feb  5 17:01 forecast-rollback.yml
+-rw-r--r--@  1 michaelpuchowezki  staff   3798 Feb  5 00:38 forecast-weekly.yml
+-rw-r--r--@  1 michaelpuchowezki  staff   3615 Feb  9 15:46 monitor-prod.yml
+-rw-r--r--@  1 michaelpuchowezki  staff   2868 Feb  5 17:02 ops-auto-alerts.yml
+-rw-r--r--@  1 michaelpuchowezki  staff   2651 Feb  8 20:12 ops-daily.yml
+-rw-r--r--@  1 michaelpuchowezki  staff   1171 Jan 30 14:05 refresh-health-assets.yml
+-rw-r--r--@  1 michaelpuchowezki  staff   2128 Feb  8 20:12 scheduler-kick.yml
+-rw-r--r--@  1 michaelpuchowezki  staff   1347 Feb  6 20:37 universe-refresh.yml
+-rw-r--r--@  1 michaelpuchowezki  staff   8871 Feb  8 20:12 v3-finalizer.yml
+-rw-r--r--@  1 michaelpuchowezki  staff  10979 Feb  8 20:12 v3-scrape-template.yml
+-rw-r--r--@  1 michaelpuchowezki  staff   3543 Feb  8 20:12 wp16-manual-market-prices.yml
+
+$ rg -n "deploy|pages|wrangler|public/data|mirrors|policies|curl|jq|node|npm|pnpm" -S .github/workflows 2>/dev/null || true
+.github/workflows/v3-finalizer.yml:40:      - name: Setup Node
+.github/workflows/v3-finalizer.yml:41:        uses: actions/setup-node@v4
+.github/workflows/v3-finalizer.yml:43:          node-version: "20"
+.github/workflows/v3-finalizer.yml:46:        run: npm ci
+.github/workflows/v3-finalizer.yml:151:          node scripts/aggregator/finalize.mjs 2>&1
+.github/workflows/v3-finalizer.yml:171:            path="public/data/snapshots/${module}/latest.json"
+.github/workflows/v3-finalizer.yml:188:            node scripts/wp16/guard-market-prices.mjs
+.github/workflows/v3-finalizer.yml:193:          if git diff --quiet public/data; then
+.github/workflows/v3-finalizer.yml:199:            git diff --stat public/data
+.github/workflows/v3-finalizer.yml:209:          git add public/data/snapshots 2>/dev/null || echo "No snapshot files to add"
+.github/workflows/v3-finalizer.yml:210:          git add public/data/state/modules/*.json 2>/dev/null || echo "No module state files to add"
+.github/workflows/v3-finalizer.yml:211:          git add public/data/manifest.json 2>/dev/null || echo "No manifest to add"
+.github/workflows/v3-finalizer.yml:212:          git add public/data/provider-state.json 2>/dev/null || echo "No provider-state to add"
+.github/workflows/v3-finalizer.yml:243:          if [ -f public/data/manifest.json ]; then
+.github/workflows/eod-history-refresh.yml:21:      - name: Setup Node
+.github/workflows/eod-history-refresh.yml:22:        uses: actions/setup-node@v4
+.github/workflows/eod-history-refresh.yml:24:          node-version: '20'
+.github/workflows/eod-history-refresh.yml:27:        run: npm ci || npm install node-fetch
+.github/workflows/eod-history-refresh.yml:34:          UNIVERSE_FILE="./public/data/universe/all.json"
+.github/workflows/eod-history-refresh.yml:37:             UNIVERSE_FILE="./public/data/universe/nasdaq100.json"
+.github/workflows/eod-history-refresh.yml:40:          echo "Symbol count: $(jq 'length' $UNIVERSE_FILE)"
+.github/workflows/eod-history-refresh.yml:41:          node scripts/providers/eodhd-backfill-bars.mjs --universe "$UNIVERSE_FILE"
+.github/workflows/eod-history-refresh.yml:47:          git add public/data/eod/bars
+.github/workflows/monitor-prod.yml:12:      - name: Ensure jq
+.github/workflows/monitor-prod.yml:14:          if ! command -v jq >/dev/null 2>&1; then
+.github/workflows/monitor-prod.yml:16:            sudo apt-get install -y jq
+.github/workflows/monitor-prod.yml:18:          jq --version
+.github/workflows/monitor-prod.yml:31:            curl -fsS "$url" -o "$out"
+.github/workflows/monitor-prod.yml:32:            jq -e . "$out" >/dev/null
+.github/workflows/monitor-prod.yml:40:          jq -e --argjson minRows "$MIN_MARKET_PRICE_ROWS" '
+.github/workflows/monitor-prod.yml:47:          jq -e '
+.github/workflows/monitor-prod.yml:54:          jq -e '
+.github/workflows/monitor-prod.yml:70:          curl -sS "$BASE_URL/data/forecast/latest.json" -o /tmp/forecast_latest.json
+.github/workflows/monitor-prod.yml:71:          node -e '
+.github/workflows/ci-determinism.yml:33:      - name: Setup Node
+.github/workflows/ci-determinism.yml:34:        uses: actions/setup-node@v4
+.github/workflows/ci-determinism.yml:36:          node-version: '20'
+.github/workflows/ci-determinism.yml:37:          cache: 'npm'
+.github/workflows/ci-determinism.yml:40:        run: npm ci
+.github/workflows/ci-determinism.yml:43:        run: npm run test:determinism
+.github/workflows/ci-determinism.yml:46:        run: npm run validate:forecast-registry
+.github/workflows/ci-determinism.yml:49:        run: npm run validate:forecast-schemas
+.github/workflows/forecast-daily.yml:19:  NODE_VERSION: '20'
+.github/workflows/forecast-daily.yml:37:      - name: Setup Node.js
+.github/workflows/forecast-daily.yml:38:        uses: actions/setup-node@v4
+.github/workflows/forecast-daily.yml:40:          node-version: ${{ env.NODE_VERSION }}
+.github/workflows/forecast-daily.yml:41:          cache: 'npm'
+.github/workflows/forecast-daily.yml:44:        run: npm ci --prefer-offline
+.github/workflows/forecast-daily.yml:54:          node scripts/forecast/run_daily.mjs $DATE_ARG 2>&1 | tee pipeline.log
+.github/workflows/forecast-daily.yml:72:          git add mirrors/forecast/ledger/ || true
+.github/workflows/forecast-daily.yml:73:          git add mirrors/forecast/snapshots/ || true
+.github/workflows/forecast-daily.yml:74:          git add public/data/forecast/ || true
+.github/workflows/scheduler-kick.yml:20:      - name: Setup Node
+.github/workflows/scheduler-kick.yml:21:        uses: actions/setup-node@v4
+.github/workflows/scheduler-kick.yml:23:          node-version: '20'
+.github/workflows/scheduler-kick.yml:25:        run: npm ci
+.github/workflows/scheduler-kick.yml:27:        run: npm run test:contracts
+.github/workflows/scheduler-kick.yml:50:          status=$(curl -sS -o /tmp/scheduler.json -w "%{http_code}" \
+.github/workflows/scheduler-kick.yml:62:          jq -e '.ok | type == "boolean"' /tmp/scheduler.json >/dev/null
+.github/workflows/scheduler-kick.yml:63:          jq -e '.meta.status | type == "string"' /tmp/scheduler.json >/dev/null
+.github/workflows/scheduler-kick.yml:64:          jq -e '.meta.data_date | type == "string"' /tmp/scheduler.json >/dev/null
+.github/workflows/scheduler-kick.yml:66:          jq -r '{ok, meta_status:.meta.status, job:(.data.job // null), run_id:(.data.run_id // null)}' /tmp/scheduler.json
+.github/workflows/ops-daily.yml:24:      - name: Setup Node
+.github/workflows/ops-daily.yml:25:        uses: actions/setup-node@v4
+.github/workflows/ops-daily.yml:27:          node-version: "20"
+.github/workflows/ops-daily.yml:29:        run: npm ci
+.github/workflows/ops-daily.yml:31:        run: npm run test:contracts
+.github/workflows/ops-daily.yml:43:      - name: Setup Node
+.github/workflows/ops-daily.yml:44:        uses: actions/setup-node@v4
+.github/workflows/ops-daily.yml:46:          node-version: "20"
+.github/workflows/ops-daily.yml:49:        run: npm ci
+.github/workflows/ops-daily.yml:55:        run: node scripts/pipeline/build-marketphase-from-kv.mjs --universe nasdaq100
+.github/workflows/ops-daily.yml:58:        run: node scripts/pipeline/build-ndx100-pipeline-truth.mjs
+.github/workflows/ops-daily.yml:61:        run: node scripts/ops/build-safety-snapshot.mjs
+.github/workflows/ops-daily.yml:67:        run: node scripts/ops/build-ops-daily.mjs
+.github/workflows/ops-daily.yml:70:        run: node scripts/ops/build-mission-control-summary.mjs
+.github/workflows/ops-daily.yml:73:        run: node scripts/ops/validate-ops-summary.mjs
+.github/workflows/ops-daily.yml:80:          git add public/data/pipeline/*.json public/data/ops public/data/ops-daily.json
+.github/workflows/v3-scrape-template.yml:38:            echo "=== DEBUG: jq key fields ==="
+.github/workflows/v3-scrape-template.yml:39:            jq -r '{
+.github/workflows/v3-scrape-template.yml:55:      - name: Setup Node
+.github/workflows/v3-scrape-template.yml:56:        uses: actions/setup-node@v4
+.github/workflows/v3-scrape-template.yml:58:          node-version: "20"
+.github/workflows/v3-scrape-template.yml:64:          MODULES=$(node -e "
+.github/workflows/v3-scrape-template.yml:65:            const registry = require('./public/data/registry/modules.json');
+.github/workflows/v3-scrape-template.yml:69:                if (name === 'schema_version' || name === 'generated_at' || name === 'modules' || name === 'tiers' || name === 'policies') return false;
+.github/workflows/v3-scrape-template.yml:83:            MODULES=$(echo "$INPUT_MODULES" | jq -R 'split(",") | map(gsub("^\\s+|\\s+$";""))')
+.github/workflows/v3-scrape-template.yml:107:      - name: Setup Node
+.github/workflows/v3-scrape-template.yml:108:        uses: actions/setup-node@v4
+.github/workflows/v3-scrape-template.yml:110:          node-version: "20"
+.github/workflows/v3-scrape-template.yml:113:        run: npm ci
+.github/workflows/v3-scrape-template.yml:147:          node "$PROVIDER_SCRIPT"
+.github/workflows/v3-scrape-template.yml:202:              RECORD_COUNT=$(jq -r '.metadata.record_count // .meta.record_count // "unknown"' "$ARTIFACT_DIR/snapshot.json")
+.github/workflows/v3-scrape-template.yml:203:              FETCHED_AT=$(jq -r '.metadata.fetched_at // .meta.fetchedAt // "unknown"' "$ARTIFACT_DIR/snapshot.json")
+.github/workflows/v3-scrape-template.yml:209:              STATE_STATUS=$(jq -r '.status // "unknown"' "$ARTIFACT_DIR/module-state.json")
+.github/workflows/v3-scrape-template.yml:210:              PUBLISHED=$(jq -r '.published // false' "$ARTIFACT_DIR/module-state.json")
+.github/workflows/v3-scrape-template.yml:224:      - name: Setup Node
+.github/workflows/v3-scrape-template.yml:225:        uses: actions/setup-node@v4
+.github/workflows/v3-scrape-template.yml:227:          node-version: "20"
+.github/workflows/v3-scrape-template.yml:230:        run: npm ci
+.github/workflows/v3-scrape-template.yml:239:          node scripts/providers/market-prices-v3.mjs
+.github/workflows/v3-scrape-template.yml:241:          node scripts/providers/market-stats-v3.mjs
+.github/workflows/v3-scrape-template.yml:259:            echo "=== DEBUG: jq key fields ==="
+.github/workflows/v3-scrape-template.yml:260:            jq -r '{
+.github/workflows/v3-scrape-template.yml:277:          node scripts/aggregator/finalize.mjs
+.github/workflows/forecast-weekly.yml:19:  NODE_VERSION: '20'
+.github/workflows/forecast-weekly.yml:33:      - name: Setup Node.js
+.github/workflows/forecast-weekly.yml:34:        uses: actions/setup-node@v4
+.github/workflows/forecast-weekly.yml:36:          node-version: ${{ env.NODE_VERSION }}
+.github/workflows/forecast-weekly.yml:37:          cache: 'npm'
+.github/workflows/forecast-weekly.yml:40:        run: npm ci --prefer-offline
+.github/workflows/forecast-weekly.yml:50:          node scripts/forecast/run_weekly.mjs $DATE_ARG 2>&1 | tee pipeline.log
+.github/workflows/forecast-weekly.yml:76:          git add mirrors/forecast/challengers/ || true
+.github/workflows/forecast-weekly.yml:77:          git add mirrors/forecast/champion/ || true
+.github/workflows/forecast-weekly.yml:78:          git add mirrors/forecast/ledger/promotions/ || true
+.github/workflows/forecast-weekly.yml:79:          git add public/data/forecast/ || true
+.github/workflows/wp16-manual-market-prices.yml:23:      - name: Setup Node
+.github/workflows/wp16-manual-market-prices.yml:24:        uses: actions/setup-node@v4
+.github/workflows/wp16-manual-market-prices.yml:26:          node-version: "20"
+.github/workflows/wp16-manual-market-prices.yml:29:        run: npm ci
+.github/workflows/wp16-manual-market-prices.yml:38:          node scripts/providers/market-prices-v3.mjs
+.github/workflows/wp16-manual-market-prices.yml:56:            jq -r '{
+.github/workflows/wp16-manual-market-prices.yml:77:          node scripts/aggregator/finalize.mjs
+.github/workflows/wp16-manual-market-prices.yml:83:          node scripts/wp16/guard-market-prices.mjs
+.github/workflows/wp16-manual-market-prices.yml:89:          git add public/data/snapshots/market-prices/latest.json public/data/snapshots/market-prices/ || true
+.github/workflows/wp16-manual-market-prices.yml:90:          git add public/data/snapshots public/data/state/modules/*.json public/data/manifest.json public/data/provider-state.json 2>/dev/null || true
+.github/workflows/e2e-playwright.yml:17:      - uses: actions/setup-node@v4
+.github/workflows/e2e-playwright.yml:19:          node-version: '20'
+.github/workflows/e2e-playwright.yml:20:          cache: 'npm'
+.github/workflows/e2e-playwright.yml:22:        run: npm ci
+.github/workflows/forecast-monthly.yml:19:  NODE_VERSION: '20'
+.github/workflows/forecast-monthly.yml:33:      - name: Setup Node.js
+.github/workflows/forecast-monthly.yml:34:        uses: actions/setup-node@v4
+.github/workflows/forecast-monthly.yml:36:          node-version: ${{ env.NODE_VERSION }}
+.github/workflows/forecast-monthly.yml:37:          cache: 'npm'
+.github/workflows/forecast-monthly.yml:40:        run: npm ci --prefer-offline
+.github/workflows/forecast-monthly.yml:56:          node scripts/forecast/run_monthly.mjs --month=${{ steps.month.outputs.month }} 2>&1 | tee pipeline.log
+.github/workflows/forecast-monthly.yml:72:          git add public/data/forecast/reports/monthly/ || true
+.github/workflows/ci-policy.yml:6:      - 'policies/**'
+.github/workflows/ci-policy.yml:7:      - 'mirrors/forecast/**'
+.github/workflows/ci-policy.yml:20:      - name: Setup Node
+.github/workflows/ci-policy.yml:21:        uses: actions/setup-node@v4
+.github/workflows/ci-policy.yml:23:          node-version: '18'
+.github/workflows/ci-policy.yml:24:      - name: Validate Policies
+.github/workflows/ci-policy.yml:26:          node scripts/forecast/validate_policy.mjs
+.github/workflows/forecast-rollback.yml:31:      - name: Setup Node
+.github/workflows/forecast-rollback.yml:32:        uses: actions/setup-node@v4
+.github/workflows/forecast-rollback.yml:34:          node-version: '18'
+.github/workflows/forecast-rollback.yml:43:          cat > public/data/forecast/system/status.json << EOF
+.github/workflows/forecast-rollback.yml:58:            git checkout ${{ inputs.target_commit }} -- public/data/forecast/latest.json || echo "Could not restore latest.json"
+.github/workflows/forecast-rollback.yml:65:          git add public/data/forecast
+.github/workflows/refresh-health-assets.yml:20:      - name: Setup Node
+.github/workflows/refresh-health-assets.yml:21:        uses: actions/setup-node@v4
+.github/workflows/refresh-health-assets.yml:23:          node-version: "20"
+.github/workflows/refresh-health-assets.yml:26:        run: npm ci
+.github/workflows/refresh-health-assets.yml:29:        run: node scripts/refresh-health-assets.mjs
+.github/workflows/refresh-health-assets.yml:34:          if git diff --quiet public/data; then
+.github/workflows/refresh-health-assets.yml:40:          git add public/data/system-health.json public/data/blocks/health.latest.json public/data/snapshots/health.json public/data/snapshots/health/latest.json
+.github/workflows/ops-auto-alerts.yml:21:      - name: Setup Node
+.github/workflows/ops-auto-alerts.yml:22:        uses: actions/setup-node@v4
+.github/workflows/ops-auto-alerts.yml:24:          node-version: '18'
+.github/workflows/ops-auto-alerts.yml:31:            STATUS=$(jq -r '.status // "UNKNOWN"' dev/ops/forecast/latest.json)
+.github/workflows/ops-auto-alerts.yml:32:            RECS=$(jq -r '.recommendations | length' dev/ops/forecast/latest.json)
+.github/workflows/ops-auto-alerts.yml:33:            P1_COUNT=$(jq -r '[.recommendations[] | select(.level == "P1")] | length' dev/ops/forecast/latest.json)
+.github/workflows/eod-latest.yml:29:      - name: Setup Node
+.github/workflows/eod-latest.yml:30:        uses: actions/setup-node@v4
+.github/workflows/eod-latest.yml:32:          node-version: "20"
+.github/workflows/eod-latest.yml:34:        run: npm ci
+.github/workflows/eod-latest.yml:36:        run: npm run test:contracts
+.github/workflows/eod-latest.yml:50:      - name: Setup Node
+.github/workflows/eod-latest.yml:51:        uses: actions/setup-node@v4
+.github/workflows/eod-latest.yml:53:          node-version: "20"
+.github/workflows/eod-latest.yml:56:        run: npm ci
+.github/workflows/eod-latest.yml:68:        run: node scripts/eod/build-eod-latest.mjs --universe "$RV_UNIVERSE" --chunk-size 500 --out public/data
+.github/workflows/eod-latest.yml:71:        run: node scripts/ops/build-safety-snapshot.mjs
+.github/workflows/eod-latest.yml:74:        run: npm run rv:ops
+.github/workflows/eod-latest.yml:77:        run: node scripts/ops/build-mission-control-summary.mjs
+.github/workflows/eod-latest.yml:80:        run: node scripts/ops/validate-ops-summary.mjs
+.github/workflows/eod-latest.yml:87:          git add public/data/eod public/data/pipeline public/data/ops public/data/ops-daily.json docs/architecture/data-layout-law-v1.md
+.github/workflows/universe-refresh.yml:22:      - name: Setup Node
+.github/workflows/universe-refresh.yml:23:        uses: actions/setup-node@v4
+.github/workflows/universe-refresh.yml:25:          node-version: '20'
+.github/workflows/universe-refresh.yml:30:        run: node scripts/universe/fetch-constituents.mjs
+.github/workflows/universe-refresh.yml:35:          ls -la public/data/universe/
+.github/workflows/universe-refresh.yml:38:          for f in public/data/universe/*.json; do
+.github/workflows/universe-refresh.yml:39:            count=$(jq 'length' "$f")
+.github/workflows/universe-refresh.yml:47:          git add public/data/universe/
+.github/workflows/cleanup-daily-snapshots.yml:46:          if git diff --quiet public/data; then
+.github/workflows/cleanup-daily-snapshots.yml:52:            git diff --stat public/data
+.github/workflows/cleanup-daily-snapshots.yml:61:          git add public/data
+.github/workflows/ci-gates.yml:6:      - 'public/data/**'
+.github/workflows/ci-gates.yml:13:      - 'public/data/**'
+.github/workflows/ci-gates.yml:27:          mkdir -p public/data
+.github/workflows/ci-gates.yml:28:          if ! find public/data -type f -name "*.json" -print -quit | grep -q .; then
+.github/workflows/ci-gates.yml:29:            SENTINEL_PATH="public/data/.budget_sentinel.json"
+.github/workflows/ci-gates.yml:34:            echo "ℹ️ Created budget sentinel at $SENTINEL_PATH (no tracked public/data json artifacts in checkout)"
+.github/workflows/ci-gates.yml:37:          # Count files in public/data
+.github/workflows/ci-gates.yml:38:          TOTAL_FILES=$(find public/data -type f -name "*.json" | wc -l | tr -d ' ')
+.github/workflows/ci-gates.yml:41:          # Check total file count (Cloudflare Pages limit: 20k files, we use 15k as safety)
+.github/workflows/ci-gates.yml:53:          LARGE_FILES=$(find public/data -type f -name "*.json" -size +${MAX_SIZE_MB}M || true)
+.github/workflows/ci-gates.yml:57:            find public/data -type f -name "*.json" -size +${MAX_SIZE_MB}M -exec ls -lh {} \;
+.github/workflows/ci-gates.yml:64:          for module_dir in public/data/snapshots/*/; do
+.github/workflows/ci-gates.yml:78:          TOTAL_SIZE=$(du -sb public/data 2>/dev/null | cut -f1 || true)
+.github/workflows/ci-gates.yml:80:            TOTAL_SIZE=$(du -sk public/data 2>/dev/null | awk '{print $1 * 1024}' || true)
+.github/workflows/ci-gates.yml:104:      - name: Setup Node
+.github/workflows/ci-gates.yml:105:        uses: actions/setup-node@v4
+.github/workflows/ci-gates.yml:107:          node-version: "20"
+.github/workflows/ci-gates.yml:109:      - name: Ensure jq
+.github/workflows/ci-gates.yml:111:          if ! command -v jq >/dev/null 2>&1; then
+.github/workflows/ci-gates.yml:113:            sudo apt-get install -y jq
+.github/workflows/ci-gates.yml:115:          jq --version
+.github/workflows/ci-gates.yml:118:        run: npm ci
+.github/workflows/ci-gates.yml:121:        run: node scripts/ci/verify-artifacts.mjs
+.github/workflows/ci-gates.yml:128:          npm run test:drop-threshold
+.github/workflows/ci-gates.yml:129:          npm run test:fetch-retry
+.github/workflows/ci-gates.yml:130:          npm run test:p2-build-id
+.github/workflows/ci-gates.yml:131:          npm run test:p3-kv-write
+.github/workflows/ci-gates.yml:133:          npm run test:universe-registry
+.github/workflows/ci-gates.yml:136:        run: npm run test:contracts
+.github/workflows/ci-gates.yml:139:        run: node scripts/eod/check-eod-artifacts.mjs
+.github/workflows/ci-gates.yml:145:          if [ -f public/data/manifest.json ] && [ -f schemas/manifest.schema.json ]; then
+.github/workflows/ci-gates.yml:147:            npx --yes ajv-cli@5 validate -s schemas/manifest.schema.json -d public/data/manifest.json
+.github/workflows/ci-gates.yml:151:          if [ -f public/data/provider-state.json ] && [ -f schemas/provider-state.schema.json ]; then
+.github/workflows/ci-gates.yml:153:            npx --yes ajv-cli@5 validate -s schemas/provider-state.schema.json -d public/data/provider-state.json
+.github/workflows/ci-gates.yml:159:            for snapshot in public/data/snapshots/*/latest.json; do
+.github/workflows/ci-gates.yml:177:          if [ -f public/data/manifest.json ]; then
+.github/workflows/ci-gates.yml:178:            if ! jq empty public/data/manifest.json 2>/dev/null; then
+.github/workflows/ci-gates.yml:185:              SCHEMA_VERSION=$(jq -r '.schema_version // "missing"' public/data/manifest.json)
+.github/workflows/ci-gates.yml:191:              ACTIVE_BUILD_ID=$(jq -r '.active_build_id // "missing"' public/data/manifest.json)
+.github/workflows/ci-gates.yml:200:          if [ -f public/data/provider-state.json ]; then
+.github/workflows/ci-gates.yml:201:            if ! jq empty public/data/provider-state.json 2>/dev/null; then
+.github/workflows/ci-gates.yml:212:          for snapshot in public/data/snapshots/*/latest.json; do
+.github/workflows/ci-gates.yml:217:              if ! jq empty "$snapshot" 2>/dev/null; then
+.github/workflows/ci-gates.yml:222:                SCHEMA_VERSION=$(jq -r '.schema_version // "missing"' "$snapshot")
+.github/workflows/ci-gates.yml:228:                HAS_METADATA=$(jq 'has("metadata")' "$snapshot")
+.github/workflows/ci-gates.yml:235:                HAS_DATA=$(jq 'has("data")' "$snapshot")
+.github/workflows/ci-gates.yml:268:      - name: Setup Node
+.github/workflows/ci-gates.yml:269:        uses: actions/setup-node@v4
+.github/workflows/ci-gates.yml:271:          node-version: "20"
+.github/workflows/ci-gates.yml:274:        run: npm ci
+.github/workflows/ci-gates.yml:280:          if [ ! -f public/data/manifest.json ]; then
+.github/workflows/ci-gates.yml:286:          PUBLISHED_MODULES=$(jq -r '.modules | to_entries | .[] | select(.value.published == true) | .key' public/data/manifest.json)
+.github/workflows/ci-gates.yml:299:            MANIFEST_DIGEST=$(jq -r ".modules[\"$module\"].digest" public/data/manifest.json)
+.github/workflows/ci-gates.yml:302:            SNAPSHOT_PATH="public/data/snapshots/$module/latest.json"
+.github/workflows/ci-gates.yml:310:            SNAPSHOT_DIGEST=$(jq -r '.metadata.digest' "$SNAPSHOT_PATH")
+.github/workflows/ci-gates.yml:334:            echo "DO NOT DEPLOY until fixed!"
+.github/workflows/ci-gates.yml:341:  repo-policies:
+.github/workflows/ci-gates.yml:350:          echo "🔍 Checking Repository Policies..."
+.github/workflows/ci-gates.yml:354:          # Check: No blanket ignores for public/data or mirrors
+.github/workflows/ci-gates.yml:355:          if grep -nE '^(public/data/|mirrors/)$' .gitignore; then
+.github/workflows/ci-gates.yml:356:            echo "❌ VIOLATION: .gitignore contains blanket ignore for public/data/ or mirrors/"
+.github/workflows/ci-gates.yml:390:          echo "       REPOSITORY POLICIES"
+.github/workflows/ci-gates.yml:409:      - name: Ensure jq
+.github/workflows/ci-gates.yml:411:          if ! command -v jq >/dev/null 2>&1; then
+.github/workflows/ci-gates.yml:413:            sudo apt-get install -y jq
+.github/workflows/ci-gates.yml:415:          jq --version
+.github/workflows/ci-gates.yml:423:    needs: [asset-budget, schema-validation, manifest-integrity, repo-policies, truth-gates]
+.github/workflows/ci-gates.yml:433:          echo "- Repo Policies: ${{ needs.repo-policies.result }}" >> $GITHUB_STEP_SUMMARY

@@ -1,0 +1,2901 @@
+{
+  "data": {
+    "asOf": "2026-02-10T18:04:32.415Z",
+    "budgets": {
+      "asOf": "2026-02-10T18:04:32.415Z",
+      "kvReads": {
+        "limitToday": 20000,
+        "pctUsed": null,
+        "usedToday": null
+      },
+      "kvWrites": {
+        "limitToday": 20000,
+        "pctUsed": null,
+        "usedToday": null
+      },
+      "workersRequests": {
+        "limitToday": 100000,
+        "pctRemaining": 100,
+        "pctUsed": 0,
+        "usedToday": 0
+      }
+    },
+    "calls": {
+      "day": 0,
+      "month": 0,
+      "week": 0
+    },
+    "cards": {
+      "api": {
+        "action": {
+          "howTo": "Verify SSOT API endpoints",
+          "url": "/api/stock?ticker=UBER"
+        },
+        "checks": [
+          {
+            "evidence": {
+              "checked_path": "data.latest_bar",
+              "issues": [],
+              "per_ticker": {
+                "TEAM": {
+                  "missing_fields": [],
+                  "ok": true,
+                  "sample_values": {
+                    "close": 91.23,
+                    "date": "2026-02-09",
+                    "volume": 8779270
+                  },
+                  "type_errors": []
+                },
+                "UBER": {
+                  "missing_fields": [],
+                  "ok": true,
+                  "sample_values": {
+                    "close": 73.91,
+                    "date": "2026-02-09",
+                    "volume": 17959072
+                  },
+                  "type_errors": []
+                },
+                "WBD": {
+                  "missing_fields": [],
+                  "ok": true,
+                  "sample_values": {
+                    "close": 27.21,
+                    "date": "2026-02-09",
+                    "volume": 16493478
+                  },
+                  "type_errors": []
+                }
+              },
+              "required_fields": [
+                "date",
+                "close",
+                "volume"
+              ]
+            },
+            "id": "API_STOCK",
+            "label": "/api/stock?ticker=<T>",
+            "path": "/api/stock",
+            "reason": "OK",
+            "required": true,
+            "status": "OK"
+          },
+          {
+            "evidence": {
+              "ok": true,
+              "setups": 100,
+              "status": 200
+            },
+            "id": "API_ELLIOTT_SCANNER",
+            "label": "/api/elliott-scanner",
+            "path": "/api/elliott-scanner?",
+            "reason": "OK",
+            "required": true,
+            "status": "OK"
+          }
+        ],
+        "reason": "OK",
+        "status": "OK"
+      },
+      "assets": {
+        "action": {
+          "howTo": "Verify static feature inputs",
+          "url": "/data/universe/nasdaq100.json"
+        },
+        "checks": [
+          {
+            "evidence": {
+              "count": 100
+            },
+            "id": "ASSET_UNIVERSE",
+            "label": "/data/universe/nasdaq100.json",
+            "path": "/data/universe/nasdaq100.json",
+            "reason": "OK",
+            "required": true,
+            "status": "OK"
+          },
+          {
+            "evidence": {
+              "has_meta": true,
+              "symbols_processed": 517
+            },
+            "id": "ASSET_STOCK_ANALYSIS",
+            "label": "/data/snapshots/stock-analysis.json",
+            "path": "/data/snapshots/stock-analysis.json",
+            "reason": "OK",
+            "required": true,
+            "status": "OK"
+          },
+          {
+            "evidence": {
+              "has_data": false,
+              "symbols": null
+            },
+            "id": "ASSET_EOD_BATCH",
+            "label": "/data/eod/batches/eod.latest.000.json",
+            "path": "/data/eod/batches/eod.latest.000.json",
+            "reason": "EOD_BATCH_MISSING",
+            "required": true,
+            "status": "FAIL"
+          },
+          {
+            "evidence": {
+              "symbols": null
+            },
+            "id": "ASSET_MARKETPHASE_INDEX",
+            "label": "/data/marketphase/index.json",
+            "path": "/data/marketphase/index.json",
+            "reason": "MARKETPHASE_INDEX_MISSING",
+            "required": true,
+            "status": "FAIL"
+          },
+          {
+            "evidence": {
+              "errors": [],
+              "recordCount": 517
+            },
+            "id": "ASSET_MARKET_PRICES",
+            "label": "/data/snapshots/market-prices/latest.json",
+            "path": "/data/snapshots/market-prices/latest.json",
+            "reason": "OK",
+            "required": true,
+            "status": "OK"
+          }
+        ],
+        "reason": "EOD_BATCH_MISSING",
+        "status": "CRITICAL"
+      },
+      "freshness": {
+        "action": {
+          "howTo": "Refresh market-prices snapshot",
+          "url": "/data/snapshots/market-prices/latest.json"
+        },
+        "age_hours": 43.6,
+        "asOf": "2026-02-07",
+        "reason": "NOT_EXPECTED",
+        "status": "INFO"
+      },
+      "pipeline": {
+        "action": {
+          "howTo": "Verify static feature inputs",
+          "url": "/data/universe/nasdaq100.json"
+        },
+        "checks": [
+          {
+            "evidence": {
+              "count": 100
+            },
+            "id": "ASSET_UNIVERSE",
+            "label": "/data/universe/nasdaq100.json",
+            "path": "/data/universe/nasdaq100.json",
+            "reason": "OK",
+            "required": true,
+            "status": "OK"
+          },
+          {
+            "evidence": {
+              "has_meta": true,
+              "symbols_processed": 517
+            },
+            "id": "ASSET_STOCK_ANALYSIS",
+            "label": "/data/snapshots/stock-analysis.json",
+            "path": "/data/snapshots/stock-analysis.json",
+            "reason": "OK",
+            "required": true,
+            "status": "OK"
+          },
+          {
+            "evidence": {
+              "has_data": false,
+              "symbols": null
+            },
+            "id": "ASSET_EOD_BATCH",
+            "label": "/data/eod/batches/eod.latest.000.json",
+            "path": "/data/eod/batches/eod.latest.000.json",
+            "reason": "EOD_BATCH_MISSING",
+            "required": true,
+            "status": "FAIL"
+          },
+          {
+            "evidence": {
+              "symbols": null
+            },
+            "id": "ASSET_MARKETPHASE_INDEX",
+            "label": "/data/marketphase/index.json",
+            "path": "/data/marketphase/index.json",
+            "reason": "MARKETPHASE_INDEX_MISSING",
+            "required": true,
+            "status": "FAIL"
+          },
+          {
+            "evidence": {
+              "errors": [],
+              "recordCount": 517
+            },
+            "id": "ASSET_MARKET_PRICES",
+            "label": "/data/snapshots/market-prices/latest.json",
+            "path": "/data/snapshots/market-prices/latest.json",
+            "reason": "OK",
+            "required": true,
+            "status": "OK"
+          }
+        ],
+        "reason": "EOD_BATCH_MISSING",
+        "status": "CRITICAL"
+      },
+      "platform": {
+        "action": {
+          "howTo": "Preview mode: KV not expected",
+          "url": "/data/ops/health-profiles.v1.json"
+        },
+        "reason": "NOT_EXPECTED",
+        "status": "INFO"
+      },
+      "prices": {
+        "action": {
+          "howTo": "Verify /api/stock contract for sample tickers",
+          "url": "/api/stock?ticker=UBER"
+        },
+        "checked_path": "data.latest_bar",
+        "per_ticker": {
+          "TEAM": {
+            "missing_fields": [],
+            "ok": true,
+            "sample_values": {
+              "close": 91.23,
+              "date": "2026-02-09",
+              "volume": 8779270
+            },
+            "type_errors": []
+          },
+          "UBER": {
+            "missing_fields": [],
+            "ok": true,
+            "sample_values": {
+              "close": 73.91,
+              "date": "2026-02-09",
+              "volume": 17959072
+            },
+            "type_errors": []
+          },
+          "WBD": {
+            "missing_fields": [],
+            "ok": true,
+            "sample_values": {
+              "close": 27.21,
+              "date": "2026-02-09",
+              "volume": 16493478
+            },
+            "type_errors": []
+          }
+        },
+        "reason": "CONTRACT_OK",
+        "required_fields": [
+          "date",
+          "close",
+          "volume"
+        ],
+        "status": "OK"
+      },
+      "system": {
+        "action": {
+          "howTo": "Verify SSOT API + snapshot freshness",
+          "url": "/api/stock?ticker=UBER"
+        },
+        "checks": [
+          {
+            "evidence": {
+              "status": "CRITICAL"
+            },
+            "id": "SSOT_ASSETS_REQUIRED_OK",
+            "label": "SSOT assets required",
+            "path": "/data/*",
+            "reason": "EOD_BATCH_MISSING",
+            "required": true,
+            "status": "FAIL"
+          },
+          {
+            "evidence": {
+              "status": "OK"
+            },
+            "id": "SSOT_APIS_REQUIRED_OK",
+            "label": "SSOT APIs required",
+            "path": "/api/*",
+            "reason": "OK",
+            "required": true,
+            "status": "OK"
+          },
+          {
+            "evidence": {
+              "checked_path": "data.latest_bar",
+              "issues": [],
+              "per_ticker": {
+                "TEAM": {
+                  "missing_fields": [],
+                  "ok": true,
+                  "sample_values": {
+                    "close": 91.23,
+                    "date": "2026-02-09",
+                    "volume": 8779270
+                  },
+                  "type_errors": []
+                },
+                "UBER": {
+                  "missing_fields": [],
+                  "ok": true,
+                  "sample_values": {
+                    "close": 73.91,
+                    "date": "2026-02-09",
+                    "volume": 17959072
+                  },
+                  "type_errors": []
+                },
+                "WBD": {
+                  "missing_fields": [],
+                  "ok": true,
+                  "sample_values": {
+                    "close": 27.21,
+                    "date": "2026-02-09",
+                    "volume": 16493478
+                  },
+                  "type_errors": []
+                }
+              },
+              "required_fields": [
+                "date",
+                "close",
+                "volume"
+              ]
+            },
+            "id": "PRICES_CONTRACT_OK",
+            "label": "Prices contract OK",
+            "path": "/api/stock",
+            "reason": "OK",
+            "required": true,
+            "status": "OK"
+          },
+          {
+            "evidence": {
+              "valid": true
+            },
+            "id": "POINTER_LATEST_INTEGRITY",
+            "label": "Latest snapshot integrity",
+            "path": "/data/snapshots/market-prices/latest.json",
+            "reason": "OK",
+            "required": true,
+            "status": "OK"
+          },
+          {
+            "evidence": {
+              "instrumented": false
+            },
+            "id": "EMERGENCY_OFF",
+            "label": "Emergency stop off",
+            "path": null,
+            "reason": "OK",
+            "required": true,
+            "status": "OK"
+          },
+          {
+            "evidence": {
+              "instrumented": false
+            },
+            "id": "CIRCUIT_OK",
+            "label": "Circuit breaker closed",
+            "path": null,
+            "reason": "OK",
+            "required": true,
+            "status": "OK"
+          },
+          {
+            "evidence": {
+              "reason": "PENDING",
+              "status": "PENDING"
+            },
+            "id": "STALENESS_OK",
+            "label": "Freshness within policy",
+            "path": "/data/snapshots/market-prices/latest.json",
+            "reason": "PENDING",
+            "required": true,
+            "status": "FAIL"
+          }
+        ],
+        "reason": "EOD_BATCH_MISSING",
+        "status": "FAIL"
+      }
+    },
+    "contracts": {
+      "configs": {
+        "health_profiles": {
+          "errors": [
+            "profiles: not an object"
+          ],
+          "valid": false
+        },
+        "source_map": {
+          "errors": [
+            "source-map: not an object"
+          ],
+          "valid": false
+        },
+        "thresholds": {
+          "errors": [
+            "thresholds: not an object"
+          ],
+          "valid": false
+        }
+      },
+      "pipeline": {
+        "computed": {
+          "errors": [
+            "artifact missing"
+          ],
+          "valid": false
+        },
+        "fetched": {
+          "errors": [
+            "artifact missing"
+          ],
+          "valid": false
+        },
+        "static_ready": {
+          "errors": [
+            "artifact missing"
+          ],
+          "valid": false
+        },
+        "validated": {
+          "errors": [
+            "artifact missing"
+          ],
+          "valid": false
+        }
+      },
+      "snapshots": {
+        "market_prices": {
+          "errors": [],
+          "valid": true
+        }
+      }
+    },
+    "coverage": {
+      "computed": 0,
+      "missing": 0
+    },
+    "deploy": null,
+    "endpoints": {
+      "dayTop": []
+    },
+    "eod": {
+      "counts": {
+        "expected": 100,
+        "fetched": 0,
+        "validated": 0
+      },
+      "manifest": {
+        "count": 0,
+        "generated_at": "2026-02-08T19:32:00.889Z",
+        "ok": 0,
+        "source": "/data/eod/manifest.latest.json",
+        "total": 100
+      }
+    },
+    "failures": {
+      "day": []
+    },
+    "fundamentalsTruth": {
+      "asOf": "2026-02-10T18:04:32.415Z",
+      "chain_version": "v1",
+      "domain": "fundamentals",
+      "status": "INFO",
+      "steps": [
+        {
+          "detail": "All sample fundamentals responses returned 200.",
+          "evidence": {
+            "statuses": [
+              {
+                "status": 200,
+                "ticker": "UBER"
+              },
+              {
+                "status": 200,
+                "ticker": "TEAM"
+              },
+              {
+                "status": 200,
+                "ticker": "WBD"
+              }
+            ]
+          },
+          "id": "F0_API_RESPONSE",
+          "status": "OK",
+          "title": "Fundamentals API response"
+        }
+      ]
+    },
+    "hasKV": true,
+    "health": {
+      "api": {
+        "action": {
+          "howTo": "Verify SSOT API endpoints",
+          "url": "/api/stock?ticker=UBER"
+        },
+        "checks": [
+          {
+            "evidence": {
+              "checked_path": "data.latest_bar",
+              "issues": [],
+              "per_ticker": {
+                "TEAM": {
+                  "missing_fields": [],
+                  "ok": true,
+                  "sample_values": {
+                    "close": 91.23,
+                    "date": "2026-02-09",
+                    "volume": 8779270
+                  },
+                  "type_errors": []
+                },
+                "UBER": {
+                  "missing_fields": [],
+                  "ok": true,
+                  "sample_values": {
+                    "close": 73.91,
+                    "date": "2026-02-09",
+                    "volume": 17959072
+                  },
+                  "type_errors": []
+                },
+                "WBD": {
+                  "missing_fields": [],
+                  "ok": true,
+                  "sample_values": {
+                    "close": 27.21,
+                    "date": "2026-02-09",
+                    "volume": 16493478
+                  },
+                  "type_errors": []
+                }
+              },
+              "required_fields": [
+                "date",
+                "close",
+                "volume"
+              ]
+            },
+            "id": "API_STOCK",
+            "label": "/api/stock?ticker=<T>",
+            "path": "/api/stock",
+            "reason": "OK",
+            "required": true,
+            "status": "OK"
+          },
+          {
+            "evidence": {
+              "ok": true,
+              "setups": 100,
+              "status": 200
+            },
+            "id": "API_ELLIOTT_SCANNER",
+            "label": "/api/elliott-scanner",
+            "path": "/api/elliott-scanner?",
+            "reason": "OK",
+            "required": true,
+            "status": "OK"
+          }
+        ],
+        "reason": "OK",
+        "status": "OK"
+      },
+      "assets": {
+        "action": {
+          "howTo": "Verify static feature inputs",
+          "url": "/data/universe/nasdaq100.json"
+        },
+        "checks": [
+          {
+            "evidence": {
+              "count": 100
+            },
+            "id": "ASSET_UNIVERSE",
+            "label": "/data/universe/nasdaq100.json",
+            "path": "/data/universe/nasdaq100.json",
+            "reason": "OK",
+            "required": true,
+            "status": "OK"
+          },
+          {
+            "evidence": {
+              "has_meta": true,
+              "symbols_processed": 517
+            },
+            "id": "ASSET_STOCK_ANALYSIS",
+            "label": "/data/snapshots/stock-analysis.json",
+            "path": "/data/snapshots/stock-analysis.json",
+            "reason": "OK",
+            "required": true,
+            "status": "OK"
+          },
+          {
+            "evidence": {
+              "has_data": false,
+              "symbols": null
+            },
+            "id": "ASSET_EOD_BATCH",
+            "label": "/data/eod/batches/eod.latest.000.json",
+            "path": "/data/eod/batches/eod.latest.000.json",
+            "reason": "EOD_BATCH_MISSING",
+            "required": true,
+            "status": "FAIL"
+          },
+          {
+            "evidence": {
+              "symbols": null
+            },
+            "id": "ASSET_MARKETPHASE_INDEX",
+            "label": "/data/marketphase/index.json",
+            "path": "/data/marketphase/index.json",
+            "reason": "MARKETPHASE_INDEX_MISSING",
+            "required": true,
+            "status": "FAIL"
+          },
+          {
+            "evidence": {
+              "errors": [],
+              "recordCount": 517
+            },
+            "id": "ASSET_MARKET_PRICES",
+            "label": "/data/snapshots/market-prices/latest.json",
+            "path": "/data/snapshots/market-prices/latest.json",
+            "reason": "OK",
+            "required": true,
+            "status": "OK"
+          }
+        ],
+        "reason": "EOD_BATCH_MISSING",
+        "status": "CRITICAL"
+      },
+      "freshness": {
+        "action": {
+          "howTo": "Refresh market-prices snapshot",
+          "url": "/data/snapshots/market-prices/latest.json"
+        },
+        "age_hours": 43.6,
+        "asOf": "2026-02-07",
+        "reason": "NOT_EXPECTED",
+        "status": "INFO"
+      },
+      "pipeline": {
+        "action": {
+          "howTo": "Verify static feature inputs",
+          "url": "/data/universe/nasdaq100.json"
+        },
+        "checks": [
+          {
+            "evidence": {
+              "count": 100
+            },
+            "id": "ASSET_UNIVERSE",
+            "label": "/data/universe/nasdaq100.json",
+            "path": "/data/universe/nasdaq100.json",
+            "reason": "OK",
+            "required": true,
+            "status": "OK"
+          },
+          {
+            "evidence": {
+              "has_meta": true,
+              "symbols_processed": 517
+            },
+            "id": "ASSET_STOCK_ANALYSIS",
+            "label": "/data/snapshots/stock-analysis.json",
+            "path": "/data/snapshots/stock-analysis.json",
+            "reason": "OK",
+            "required": true,
+            "status": "OK"
+          },
+          {
+            "evidence": {
+              "has_data": false,
+              "symbols": null
+            },
+            "id": "ASSET_EOD_BATCH",
+            "label": "/data/eod/batches/eod.latest.000.json",
+            "path": "/data/eod/batches/eod.latest.000.json",
+            "reason": "EOD_BATCH_MISSING",
+            "required": true,
+            "status": "FAIL"
+          },
+          {
+            "evidence": {
+              "symbols": null
+            },
+            "id": "ASSET_MARKETPHASE_INDEX",
+            "label": "/data/marketphase/index.json",
+            "path": "/data/marketphase/index.json",
+            "reason": "MARKETPHASE_INDEX_MISSING",
+            "required": true,
+            "status": "FAIL"
+          },
+          {
+            "evidence": {
+              "errors": [],
+              "recordCount": 517
+            },
+            "id": "ASSET_MARKET_PRICES",
+            "label": "/data/snapshots/market-prices/latest.json",
+            "path": "/data/snapshots/market-prices/latest.json",
+            "reason": "OK",
+            "required": true,
+            "status": "OK"
+          }
+        ],
+        "reason": "EOD_BATCH_MISSING",
+        "status": "CRITICAL"
+      },
+      "platform": {
+        "action": {
+          "howTo": "Preview mode: KV not expected",
+          "url": "/data/ops/health-profiles.v1.json"
+        },
+        "reason": "NOT_EXPECTED",
+        "status": "INFO"
+      },
+      "prices": {
+        "action": {
+          "howTo": "Verify /api/stock contract for sample tickers",
+          "url": "/api/stock?ticker=UBER"
+        },
+        "checked_path": "data.latest_bar",
+        "per_ticker": {
+          "TEAM": {
+            "missing_fields": [],
+            "ok": true,
+            "sample_values": {
+              "close": 91.23,
+              "date": "2026-02-09",
+              "volume": 8779270
+            },
+            "type_errors": []
+          },
+          "UBER": {
+            "missing_fields": [],
+            "ok": true,
+            "sample_values": {
+              "close": 73.91,
+              "date": "2026-02-09",
+              "volume": 17959072
+            },
+            "type_errors": []
+          },
+          "WBD": {
+            "missing_fields": [],
+            "ok": true,
+            "sample_values": {
+              "close": 27.21,
+              "date": "2026-02-09",
+              "volume": 16493478
+            },
+            "type_errors": []
+          }
+        },
+        "reason": "CONTRACT_OK",
+        "required_fields": [
+          "date",
+          "close",
+          "volume"
+        ],
+        "status": "OK"
+      },
+      "system": {
+        "action": {
+          "howTo": "Verify SSOT API + snapshot freshness",
+          "url": "/api/stock?ticker=UBER"
+        },
+        "checks": [
+          {
+            "evidence": {
+              "status": "CRITICAL"
+            },
+            "id": "SSOT_ASSETS_REQUIRED_OK",
+            "label": "SSOT assets required",
+            "path": "/data/*",
+            "reason": "EOD_BATCH_MISSING",
+            "required": true,
+            "status": "FAIL"
+          },
+          {
+            "evidence": {
+              "status": "OK"
+            },
+            "id": "SSOT_APIS_REQUIRED_OK",
+            "label": "SSOT APIs required",
+            "path": "/api/*",
+            "reason": "OK",
+            "required": true,
+            "status": "OK"
+          },
+          {
+            "evidence": {
+              "checked_path": "data.latest_bar",
+              "issues": [],
+              "per_ticker": {
+                "TEAM": {
+                  "missing_fields": [],
+                  "ok": true,
+                  "sample_values": {
+                    "close": 91.23,
+                    "date": "2026-02-09",
+                    "volume": 8779270
+                  },
+                  "type_errors": []
+                },
+                "UBER": {
+                  "missing_fields": [],
+                  "ok": true,
+                  "sample_values": {
+                    "close": 73.91,
+                    "date": "2026-02-09",
+                    "volume": 17959072
+                  },
+                  "type_errors": []
+                },
+                "WBD": {
+                  "missing_fields": [],
+                  "ok": true,
+                  "sample_values": {
+                    "close": 27.21,
+                    "date": "2026-02-09",
+                    "volume": 16493478
+                  },
+                  "type_errors": []
+                }
+              },
+              "required_fields": [
+                "date",
+                "close",
+                "volume"
+              ]
+            },
+            "id": "PRICES_CONTRACT_OK",
+            "label": "Prices contract OK",
+            "path": "/api/stock",
+            "reason": "OK",
+            "required": true,
+            "status": "OK"
+          },
+          {
+            "evidence": {
+              "valid": true
+            },
+            "id": "POINTER_LATEST_INTEGRITY",
+            "label": "Latest snapshot integrity",
+            "path": "/data/snapshots/market-prices/latest.json",
+            "reason": "OK",
+            "required": true,
+            "status": "OK"
+          },
+          {
+            "evidence": {
+              "instrumented": false
+            },
+            "id": "EMERGENCY_OFF",
+            "label": "Emergency stop off",
+            "path": null,
+            "reason": "OK",
+            "required": true,
+            "status": "OK"
+          },
+          {
+            "evidence": {
+              "instrumented": false
+            },
+            "id": "CIRCUIT_OK",
+            "label": "Circuit breaker closed",
+            "path": null,
+            "reason": "OK",
+            "required": true,
+            "status": "OK"
+          },
+          {
+            "evidence": {
+              "reason": "PENDING",
+              "status": "PENDING"
+            },
+            "id": "STALENESS_OK",
+            "label": "Freshness within policy",
+            "path": "/data/snapshots/market-prices/latest.json",
+            "reason": "PENDING",
+            "required": true,
+            "status": "FAIL"
+          }
+        ],
+        "reason": "EOD_BATCH_MISSING",
+        "status": "FAIL"
+      }
+    },
+    "kvOps": {
+      "day": null
+    },
+    "liveApis": {
+      "items": []
+    },
+    "opsBaseline": {
+      "asOf": null,
+      "baseline": {
+        "cloudflare": {
+          "notes": "CF analytics not configured",
+          "requestsLast24h": null,
+          "requestsToday": null
+        },
+        "expectedUniverse": 100,
+        "freshness": {
+          "expectedTradingDay": "2026-02-10",
+          "latestSnapshotDate": "2026-02-07",
+          "staleCount": 0,
+          "staleList": []
+        },
+        "pipeline": {
+          "computed": 0,
+          "expected": 100,
+          "fetched": 0,
+          "missing": [],
+          "staticReady": 0,
+          "validatedStored": 0
+        },
+        "providers": [
+          {
+            "limitMonth": 5000,
+            "name": "tiingo",
+            "remainingMonth": 5000,
+            "remainingPct": 100,
+            "resetDate": null,
+            "runtimeCallsToday": 0,
+            "usedMonth": 0
+          }
+        ],
+        "safety": {
+          "kvWritesToday": null,
+          "pollingDefaultOff": true,
+          "runtimeWritesDisabled": true
+        }
+      },
+      "overall": {
+        "reason": "OPS_DAILY_MISSING",
+        "verdict": "DEGRADED"
+      },
+      "pipelineLatest": {
+        "counts": {
+          "computed": 0,
+          "expected": 100,
+          "fetched": 0,
+          "static_ready": 0,
+          "validated": 0
+        },
+        "degraded_summary": {
+          "classes": {
+            "NO_API_KEY": 100
+          },
+          "count": 100,
+          "sample": [
+            {
+              "class": "NO_API_KEY",
+              "hint": "Missing upstream API key",
+              "since": "2026-02-08T19:32:00.889Z",
+              "stage": "fetch",
+              "symbol": "AAPL"
+            },
+            {
+              "class": "NO_API_KEY",
+              "hint": "Missing upstream API key",
+              "since": "2026-02-08T19:32:00.889Z",
+              "stage": "fetch",
+              "symbol": "ABNB"
+            },
+            {
+              "class": "NO_API_KEY",
+              "hint": "Missing upstream API key",
+              "since": "2026-02-08T19:32:00.889Z",
+              "stage": "fetch",
+              "symbol": "ADBE"
+            },
+            {
+              "class": "NO_API_KEY",
+              "hint": "Missing upstream API key",
+              "since": "2026-02-08T19:32:00.889Z",
+              "stage": "fetch",
+              "symbol": "ADI"
+            },
+            {
+              "class": "NO_API_KEY",
+              "hint": "Missing upstream API key",
+              "since": "2026-02-08T19:32:00.889Z",
+              "stage": "fetch",
+              "symbol": "ADP"
+            },
+            {
+              "class": "NO_API_KEY",
+              "hint": "Missing upstream API key",
+              "since": "2026-02-08T19:32:00.889Z",
+              "stage": "fetch",
+              "symbol": "ADSK"
+            },
+            {
+              "class": "NO_API_KEY",
+              "hint": "Missing upstream API key",
+              "since": "2026-02-08T19:32:00.889Z",
+              "stage": "fetch",
+              "symbol": "AEP"
+            },
+            {
+              "class": "NO_API_KEY",
+              "hint": "Missing upstream API key",
+              "since": "2026-02-08T19:32:00.889Z",
+              "stage": "fetch",
+              "symbol": "AMAT"
+            },
+            {
+              "class": "NO_API_KEY",
+              "hint": "Missing upstream API key",
+              "since": "2026-02-08T19:32:00.889Z",
+              "stage": "fetch",
+              "symbol": "AMD"
+            },
+            {
+              "class": "NO_API_KEY",
+              "hint": "Missing upstream API key",
+              "since": "2026-02-08T19:32:00.889Z",
+              "stage": "fetch",
+              "symbol": "AMGN"
+            },
+            {
+              "class": "NO_API_KEY",
+              "hint": "Missing upstream API key",
+              "since": "2026-02-08T19:32:00.889Z",
+              "stage": "fetch",
+              "symbol": "AMZN"
+            },
+            {
+              "class": "NO_API_KEY",
+              "hint": "Missing upstream API key",
+              "since": "2026-02-08T19:32:00.889Z",
+              "stage": "fetch",
+              "symbol": "APP"
+            },
+            {
+              "class": "NO_API_KEY",
+              "hint": "Missing upstream API key",
+              "since": "2026-02-08T19:32:00.889Z",
+              "stage": "fetch",
+              "symbol": "ARM"
+            },
+            {
+              "class": "NO_API_KEY",
+              "hint": "Missing upstream API key",
+              "since": "2026-02-08T19:32:00.889Z",
+              "stage": "fetch",
+              "symbol": "ASML"
+            },
+            {
+              "class": "NO_API_KEY",
+              "hint": "Missing upstream API key",
+              "since": "2026-02-08T19:32:00.889Z",
+              "stage": "fetch",
+              "symbol": "AVGO"
+            },
+            {
+              "class": "NO_API_KEY",
+              "hint": "Missing upstream API key",
+              "since": "2026-02-08T19:32:00.889Z",
+              "stage": "fetch",
+              "symbol": "AXON"
+            },
+            {
+              "class": "NO_API_KEY",
+              "hint": "Missing upstream API key",
+              "since": "2026-02-08T19:32:00.889Z",
+              "stage": "fetch",
+              "symbol": "AZN"
+            },
+            {
+              "class": "NO_API_KEY",
+              "hint": "Missing upstream API key",
+              "since": "2026-02-08T19:32:00.889Z",
+              "stage": "fetch",
+              "symbol": "BIIB"
+            },
+            {
+              "class": "NO_API_KEY",
+              "hint": "Missing upstream API key",
+              "since": "2026-02-08T19:32:00.889Z",
+              "stage": "fetch",
+              "symbol": "BKNG"
+            },
+            {
+              "class": "NO_API_KEY",
+              "hint": "Missing upstream API key",
+              "since": "2026-02-08T19:32:00.889Z",
+              "stage": "fetch",
+              "symbol": "BKR"
+            },
+            {
+              "class": "NO_API_KEY",
+              "hint": "Missing upstream API key",
+              "since": "2026-02-08T19:32:00.889Z",
+              "stage": "fetch",
+              "symbol": "CCEP"
+            },
+            {
+              "class": "NO_API_KEY",
+              "hint": "Missing upstream API key",
+              "since": "2026-02-08T19:32:00.889Z",
+              "stage": "fetch",
+              "symbol": "CDNS"
+            },
+            {
+              "class": "NO_API_KEY",
+              "hint": "Missing upstream API key",
+              "since": "2026-02-08T19:32:00.889Z",
+              "stage": "fetch",
+              "symbol": "CDW"
+            },
+            {
+              "class": "NO_API_KEY",
+              "hint": "Missing upstream API key",
+              "since": "2026-02-08T19:32:00.889Z",
+              "stage": "fetch",
+              "symbol": "CHTR"
+            },
+            {
+              "class": "NO_API_KEY",
+              "hint": "Missing upstream API key",
+              "since": "2026-02-08T19:32:00.889Z",
+              "stage": "fetch",
+              "symbol": "CMCSA"
+            }
+          ]
+        },
+        "generated_at": "2026-02-08T19:32:00.889Z",
+        "root_failure": {
+          "class": "NO_API_KEY",
+          "hint": "Missing upstream API key"
+        },
+        "source": "/data/pipeline/nasdaq100.latest.json",
+        "type": "pipeline.truth",
+        "universe": "nasdaq100"
+      },
+      "runtime": {
+        "hasKV": true,
+        "hostname": "71d62877.rubikvault-site.pages.dev",
+        "isPreview": true,
+        "isProduction": false,
+        "kvExpected": false,
+        "pipelineExpected": false,
+        "pricesStaticRequired": false,
+        "schedulerExpected": false,
+        "schedulerExpectedReason": "Preview/Static: cron not expected"
+      },
+      "truthChain": {
+        "nasdaq100": {
+          "asOf": "2026-02-10T18:04:32.415Z",
+          "chain_version": "v1",
+          "first_blocker": null,
+          "first_blocker_id": null,
+          "steps": [
+            {
+              "details": "NOT_EXPECTED",
+              "evidence": {
+                "count": 0,
+                "expected": 100,
+                "path": "/data/pipeline/nasdaq100.fetched.json"
+              },
+              "id": "I0_PIPELINE_INPUTS",
+              "status": "INFO",
+              "title": "The NASDAQ-100 universe and EOD inputs for 100 tickers are present for the run."
+            },
+            {
+              "details": "NOT_EXPECTED",
+              "evidence": {
+                "count": 0,
+                "expected": 100,
+                "path": "/data/pipeline/nasdaq100.validated.json"
+              },
+              "id": "I1_EOD_VALIDATED",
+              "status": "INFO",
+              "title": "All tickers have validated EOD fields required to compute indicators."
+            },
+            {
+              "details": "NOT_EXPECTED",
+              "evidence": {
+                "count": 0,
+                "expected": 100,
+                "missingCount": 0,
+                "path": "/data/pipeline/nasdaq100.computed.json"
+              },
+              "id": "I2_INDICATORS_COMPUTED",
+              "status": "INFO",
+              "title": "Indicators (40+) are computed and validated per ticker."
+            },
+            {
+              "details": "NOT_EXPECTED",
+              "evidence": {
+                "count": 0,
+                "expected": 100,
+                "path": "/data/pipeline/nasdaq100.computed.json"
+              },
+              "id": "I3_STATIC_PERSIST_INDICATORS",
+              "status": "INFO",
+              "title": "Indicator outputs are written to public/data and are UI-readable anytime."
+            },
+            {
+              "details": "NOT_EXPECTED",
+              "evidence": {
+                "count": 0,
+                "expected": 100,
+                "path": "/data/pipeline/nasdaq100.static-ready.json"
+              },
+              "id": "I4_STATIC_READY_INDEX",
+              "status": "INFO",
+              "title": "A static-ready index reports how many tickers have complete static indicator artifacts."
+            },
+            {
+              "details": "NOT_EXPECTED",
+              "evidence": {
+                "hasKV": true,
+                "hostname": "71d62877.rubikvault-site.pages.dev",
+                "isPreview": true
+              },
+              "id": "I5_RUNTIME_BINDINGS",
+              "status": "INFO",
+              "title": "Runtime bindings (KV/scheduler) are reported but do not affect Prices verdict."
+            }
+          ]
+        }
+      }
+    },
+    "opsComputed": {
+      "asOf": "2026-02-10T18:04:32.415Z",
+      "baseline": {
+        "freshness": {
+          "expectedTradingDay": "2026-02-10",
+          "latestSnapshotDate": "2026-02-07",
+          "staleCount": 0,
+          "staleList": []
+        },
+        "pipeline": {
+          "computed": 0,
+          "expected": 100,
+          "fetched": 0,
+          "missing": [],
+          "staticReady": 0,
+          "validatedStored": 0
+        },
+        "pipelineLatest": {
+          "counts": {
+            "computed": 0,
+            "expected": 100,
+            "fetched": 0,
+            "static_ready": 0,
+            "validated": 0
+          },
+          "degraded_summary": {
+            "classes": {
+              "NO_API_KEY": 100
+            },
+            "count": 100,
+            "sample": [
+              {
+                "class": "NO_API_KEY",
+                "hint": "Missing upstream API key",
+                "since": "2026-02-08T19:32:00.889Z",
+                "stage": "fetch",
+                "symbol": "AAPL"
+              },
+              {
+                "class": "NO_API_KEY",
+                "hint": "Missing upstream API key",
+                "since": "2026-02-08T19:32:00.889Z",
+                "stage": "fetch",
+                "symbol": "ABNB"
+              },
+              {
+                "class": "NO_API_KEY",
+                "hint": "Missing upstream API key",
+                "since": "2026-02-08T19:32:00.889Z",
+                "stage": "fetch",
+                "symbol": "ADBE"
+              },
+              {
+                "class": "NO_API_KEY",
+                "hint": "Missing upstream API key",
+                "since": "2026-02-08T19:32:00.889Z",
+                "stage": "fetch",
+                "symbol": "ADI"
+              },
+              {
+                "class": "NO_API_KEY",
+                "hint": "Missing upstream API key",
+                "since": "2026-02-08T19:32:00.889Z",
+                "stage": "fetch",
+                "symbol": "ADP"
+              },
+              {
+                "class": "NO_API_KEY",
+                "hint": "Missing upstream API key",
+                "since": "2026-02-08T19:32:00.889Z",
+                "stage": "fetch",
+                "symbol": "ADSK"
+              },
+              {
+                "class": "NO_API_KEY",
+                "hint": "Missing upstream API key",
+                "since": "2026-02-08T19:32:00.889Z",
+                "stage": "fetch",
+                "symbol": "AEP"
+              },
+              {
+                "class": "NO_API_KEY",
+                "hint": "Missing upstream API key",
+                "since": "2026-02-08T19:32:00.889Z",
+                "stage": "fetch",
+                "symbol": "AMAT"
+              },
+              {
+                "class": "NO_API_KEY",
+                "hint": "Missing upstream API key",
+                "since": "2026-02-08T19:32:00.889Z",
+                "stage": "fetch",
+                "symbol": "AMD"
+              },
+              {
+                "class": "NO_API_KEY",
+                "hint": "Missing upstream API key",
+                "since": "2026-02-08T19:32:00.889Z",
+                "stage": "fetch",
+                "symbol": "AMGN"
+              },
+              {
+                "class": "NO_API_KEY",
+                "hint": "Missing upstream API key",
+                "since": "2026-02-08T19:32:00.889Z",
+                "stage": "fetch",
+                "symbol": "AMZN"
+              },
+              {
+                "class": "NO_API_KEY",
+                "hint": "Missing upstream API key",
+                "since": "2026-02-08T19:32:00.889Z",
+                "stage": "fetch",
+                "symbol": "APP"
+              },
+              {
+                "class": "NO_API_KEY",
+                "hint": "Missing upstream API key",
+                "since": "2026-02-08T19:32:00.889Z",
+                "stage": "fetch",
+                "symbol": "ARM"
+              },
+              {
+                "class": "NO_API_KEY",
+                "hint": "Missing upstream API key",
+                "since": "2026-02-08T19:32:00.889Z",
+                "stage": "fetch",
+                "symbol": "ASML"
+              },
+              {
+                "class": "NO_API_KEY",
+                "hint": "Missing upstream API key",
+                "since": "2026-02-08T19:32:00.889Z",
+                "stage": "fetch",
+                "symbol": "AVGO"
+              },
+              {
+                "class": "NO_API_KEY",
+                "hint": "Missing upstream API key",
+                "since": "2026-02-08T19:32:00.889Z",
+                "stage": "fetch",
+                "symbol": "AXON"
+              },
+              {
+                "class": "NO_API_KEY",
+                "hint": "Missing upstream API key",
+                "since": "2026-02-08T19:32:00.889Z",
+                "stage": "fetch",
+                "symbol": "AZN"
+              },
+              {
+                "class": "NO_API_KEY",
+                "hint": "Missing upstream API key",
+                "since": "2026-02-08T19:32:00.889Z",
+                "stage": "fetch",
+                "symbol": "BIIB"
+              },
+              {
+                "class": "NO_API_KEY",
+                "hint": "Missing upstream API key",
+                "since": "2026-02-08T19:32:00.889Z",
+                "stage": "fetch",
+                "symbol": "BKNG"
+              },
+              {
+                "class": "NO_API_KEY",
+                "hint": "Missing upstream API key",
+                "since": "2026-02-08T19:32:00.889Z",
+                "stage": "fetch",
+                "symbol": "BKR"
+              },
+              {
+                "class": "NO_API_KEY",
+                "hint": "Missing upstream API key",
+                "since": "2026-02-08T19:32:00.889Z",
+                "stage": "fetch",
+                "symbol": "CCEP"
+              },
+              {
+                "class": "NO_API_KEY",
+                "hint": "Missing upstream API key",
+                "since": "2026-02-08T19:32:00.889Z",
+                "stage": "fetch",
+                "symbol": "CDNS"
+              },
+              {
+                "class": "NO_API_KEY",
+                "hint": "Missing upstream API key",
+                "since": "2026-02-08T19:32:00.889Z",
+                "stage": "fetch",
+                "symbol": "CDW"
+              },
+              {
+                "class": "NO_API_KEY",
+                "hint": "Missing upstream API key",
+                "since": "2026-02-08T19:32:00.889Z",
+                "stage": "fetch",
+                "symbol": "CHTR"
+              },
+              {
+                "class": "NO_API_KEY",
+                "hint": "Missing upstream API key",
+                "since": "2026-02-08T19:32:00.889Z",
+                "stage": "fetch",
+                "symbol": "CMCSA"
+              }
+            ]
+          },
+          "generated_at": "2026-02-08T19:32:00.889Z",
+          "root_failure": {
+            "class": "NO_API_KEY",
+            "hint": "Missing upstream API key"
+          },
+          "source": "/data/pipeline/nasdaq100.latest.json",
+          "type": "pipeline.truth",
+          "universe": "nasdaq100"
+        },
+        "providers": [
+          {
+            "limitMonth": 5000,
+            "name": "tiingo",
+            "remainingMonth": 5000,
+            "remainingPct": 100,
+            "resetDate": null,
+            "runtimeCallsToday": 0,
+            "usedMonth": 0
+          }
+        ],
+        "safety": {
+          "kvWritesToday": null,
+          "pollingDefaultOff": true,
+          "runtimeWritesDisabled": true
+        }
+      },
+      "overall": {
+        "reason": "OPS_DAILY_MISSING",
+        "verdict": "DEGRADED"
+      }
+    },
+    "opsLive": null,
+    "owner": {
+      "overall": {
+        "reason": "pipeline: EOD_BATCH_MISSING",
+        "verdict": "WARN"
+      },
+      "topIssues": [
+        {
+          "action": "/data/universe/nasdaq100.json",
+          "code": "PIPELINE_CRITICAL",
+          "message": "pipeline: EOD_BATCH_MISSING"
+        },
+        {
+          "action": "/data/universe/nasdaq100.json",
+          "code": "ASSETS_CRITICAL",
+          "message": "assets: EOD_BATCH_MISSING"
+        }
+      ]
+    },
+    "pipeline": {
+      "countSources": {
+        "computed": {
+          "latestRaw": 0,
+          "reason": "latest_non_null",
+          "resolved": 0,
+          "stageRaw": null,
+          "used": "latest"
+        },
+        "fetched": {
+          "latestRaw": 0,
+          "reason": "latest_non_null",
+          "resolved": 0,
+          "stageRaw": null,
+          "used": "latest"
+        },
+        "static_ready": {
+          "latestRaw": 0,
+          "reason": "latest_non_null",
+          "resolved": 0,
+          "stageRaw": null,
+          "used": "latest"
+        },
+        "validated": {
+          "latestRaw": 0,
+          "reason": "latest_non_null",
+          "resolved": 0,
+          "stageRaw": null,
+          "used": "latest"
+        }
+      },
+      "counts": {
+        "computed": 0,
+        "expected": 100,
+        "fetched": 0,
+        "static_ready": 0,
+        "validated": 0
+      },
+      "latest": {
+        "counts": {
+          "computed": 0,
+          "expected": 100,
+          "fetched": 0,
+          "static_ready": 0,
+          "validated": 0
+        },
+        "degraded_summary": {
+          "classes": {
+            "NO_API_KEY": 100
+          },
+          "count": 100,
+          "sample": [
+            {
+              "class": "NO_API_KEY",
+              "hint": "Missing upstream API key",
+              "since": "2026-02-08T19:32:00.889Z",
+              "stage": "fetch",
+              "symbol": "AAPL"
+            },
+            {
+              "class": "NO_API_KEY",
+              "hint": "Missing upstream API key",
+              "since": "2026-02-08T19:32:00.889Z",
+              "stage": "fetch",
+              "symbol": "ABNB"
+            },
+            {
+              "class": "NO_API_KEY",
+              "hint": "Missing upstream API key",
+              "since": "2026-02-08T19:32:00.889Z",
+              "stage": "fetch",
+              "symbol": "ADBE"
+            },
+            {
+              "class": "NO_API_KEY",
+              "hint": "Missing upstream API key",
+              "since": "2026-02-08T19:32:00.889Z",
+              "stage": "fetch",
+              "symbol": "ADI"
+            },
+            {
+              "class": "NO_API_KEY",
+              "hint": "Missing upstream API key",
+              "since": "2026-02-08T19:32:00.889Z",
+              "stage": "fetch",
+              "symbol": "ADP"
+            },
+            {
+              "class": "NO_API_KEY",
+              "hint": "Missing upstream API key",
+              "since": "2026-02-08T19:32:00.889Z",
+              "stage": "fetch",
+              "symbol": "ADSK"
+            },
+            {
+              "class": "NO_API_KEY",
+              "hint": "Missing upstream API key",
+              "since": "2026-02-08T19:32:00.889Z",
+              "stage": "fetch",
+              "symbol": "AEP"
+            },
+            {
+              "class": "NO_API_KEY",
+              "hint": "Missing upstream API key",
+              "since": "2026-02-08T19:32:00.889Z",
+              "stage": "fetch",
+              "symbol": "AMAT"
+            },
+            {
+              "class": "NO_API_KEY",
+              "hint": "Missing upstream API key",
+              "since": "2026-02-08T19:32:00.889Z",
+              "stage": "fetch",
+              "symbol": "AMD"
+            },
+            {
+              "class": "NO_API_KEY",
+              "hint": "Missing upstream API key",
+              "since": "2026-02-08T19:32:00.889Z",
+              "stage": "fetch",
+              "symbol": "AMGN"
+            },
+            {
+              "class": "NO_API_KEY",
+              "hint": "Missing upstream API key",
+              "since": "2026-02-08T19:32:00.889Z",
+              "stage": "fetch",
+              "symbol": "AMZN"
+            },
+            {
+              "class": "NO_API_KEY",
+              "hint": "Missing upstream API key",
+              "since": "2026-02-08T19:32:00.889Z",
+              "stage": "fetch",
+              "symbol": "APP"
+            },
+            {
+              "class": "NO_API_KEY",
+              "hint": "Missing upstream API key",
+              "since": "2026-02-08T19:32:00.889Z",
+              "stage": "fetch",
+              "symbol": "ARM"
+            },
+            {
+              "class": "NO_API_KEY",
+              "hint": "Missing upstream API key",
+              "since": "2026-02-08T19:32:00.889Z",
+              "stage": "fetch",
+              "symbol": "ASML"
+            },
+            {
+              "class": "NO_API_KEY",
+              "hint": "Missing upstream API key",
+              "since": "2026-02-08T19:32:00.889Z",
+              "stage": "fetch",
+              "symbol": "AVGO"
+            },
+            {
+              "class": "NO_API_KEY",
+              "hint": "Missing upstream API key",
+              "since": "2026-02-08T19:32:00.889Z",
+              "stage": "fetch",
+              "symbol": "AXON"
+            },
+            {
+              "class": "NO_API_KEY",
+              "hint": "Missing upstream API key",
+              "since": "2026-02-08T19:32:00.889Z",
+              "stage": "fetch",
+              "symbol": "AZN"
+            },
+            {
+              "class": "NO_API_KEY",
+              "hint": "Missing upstream API key",
+              "since": "2026-02-08T19:32:00.889Z",
+              "stage": "fetch",
+              "symbol": "BIIB"
+            },
+            {
+              "class": "NO_API_KEY",
+              "hint": "Missing upstream API key",
+              "since": "2026-02-08T19:32:00.889Z",
+              "stage": "fetch",
+              "symbol": "BKNG"
+            },
+            {
+              "class": "NO_API_KEY",
+              "hint": "Missing upstream API key",
+              "since": "2026-02-08T19:32:00.889Z",
+              "stage": "fetch",
+              "symbol": "BKR"
+            },
+            {
+              "class": "NO_API_KEY",
+              "hint": "Missing upstream API key",
+              "since": "2026-02-08T19:32:00.889Z",
+              "stage": "fetch",
+              "symbol": "CCEP"
+            },
+            {
+              "class": "NO_API_KEY",
+              "hint": "Missing upstream API key",
+              "since": "2026-02-08T19:32:00.889Z",
+              "stage": "fetch",
+              "symbol": "CDNS"
+            },
+            {
+              "class": "NO_API_KEY",
+              "hint": "Missing upstream API key",
+              "since": "2026-02-08T19:32:00.889Z",
+              "stage": "fetch",
+              "symbol": "CDW"
+            },
+            {
+              "class": "NO_API_KEY",
+              "hint": "Missing upstream API key",
+              "since": "2026-02-08T19:32:00.889Z",
+              "stage": "fetch",
+              "symbol": "CHTR"
+            },
+            {
+              "class": "NO_API_KEY",
+              "hint": "Missing upstream API key",
+              "since": "2026-02-08T19:32:00.889Z",
+              "stage": "fetch",
+              "symbol": "CMCSA"
+            }
+          ]
+        },
+        "generated_at": "2026-02-08T19:32:00.889Z",
+        "root_failure": {
+          "class": "NO_API_KEY",
+          "hint": "Missing upstream API key"
+        },
+        "source": "/data/pipeline/nasdaq100.latest.json",
+        "type": "pipeline.truth",
+        "universe": "nasdaq100"
+      },
+      "missing": [],
+      "truth": null
+    },
+    "priceTruth": {
+      "artifacts": {
+        "links": [
+          {
+            "label": "UBER.trace.json",
+            "url": "/debug/truth-chain/UBER.trace.json"
+          },
+          {
+            "label": "TEAM.trace.json",
+            "url": "/debug/truth-chain/TEAM.trace.json"
+          },
+          {
+            "label": "WBD.trace.json",
+            "url": "/debug/truth-chain/WBD.trace.json"
+          }
+        ],
+        "traces": [
+          {
+            "base_match": false,
+            "base_url": "https://cf4b6652.rubikvault-site.pages.dev",
+            "path": "/debug/truth-chain/UBER.trace.json",
+            "sha256": "1b8ed6a147a5cf7d73b6faefd29ac807c48ea6e53e83ec90223028e04e7b13e3",
+            "source": "truth-chain",
+            "status": 200,
+            "ticker": "UBER"
+          },
+          {
+            "base_match": true,
+            "base_url": null,
+            "path": "/debug/truth-chain/TEAM.trace.json",
+            "sha256": "be774a8efe3df39c25077d7715d807351eb92f35b599f34816f7aa480ce650f3",
+            "source": "truth-chain",
+            "status": 200,
+            "ticker": "TEAM"
+          },
+          {
+            "base_match": true,
+            "base_url": null,
+            "path": "/debug/truth-chain/WBD.trace.json",
+            "sha256": "0eab2c524d491eb55cf9163c3959864d1cb0fcc284ca9bf48dd1e0871e72b9b4",
+            "source": "truth-chain",
+            "status": 200,
+            "ticker": "WBD"
+          }
+        ]
+      },
+      "asOf": "2026-02-10T18:04:32.415Z",
+      "chain_version": "v2",
+      "domain": "prices",
+      "first_blocker_id": null,
+      "status": "OK",
+      "steps": [
+        {
+          "detail": "Trace artifacts recorded.",
+          "evidence": {
+            "samples": [
+              "UBER",
+              "TEAM",
+              "WBD"
+            ],
+            "sources": [
+              "UBER:truth-chain",
+              "TEAM:truth-chain",
+              "WBD:truth-chain"
+            ]
+          },
+          "id": "P0_UI_START",
+          "status": "OK",
+          "title": "User opens /analyze/<T> and the page JS loads."
+        },
+        {
+          "detail": "Missing ui-path trace for UBER, TEAM, WBD",
+          "evidence": {
+            "calls": [
+              "UBER:no_trace",
+              "TEAM:no_trace",
+              "WBD:no_trace"
+            ],
+            "handlers": []
+          },
+          "id": "P1_UI_CALLS_API",
+          "status": "INFO",
+          "title": "The page triggers the winning request to /api/stock?ticker=<T>."
+        },
+        {
+          "detail": "Upstream/cache payloads recorded.",
+          "evidence": {
+            "responses": [
+              "UBER:200",
+              "TEAM:200",
+              "WBD:200"
+            ],
+            "upstream": [
+              "UBER:snapshot",
+              "TEAM:snapshot",
+              "WBD:snapshot"
+            ]
+          },
+          "id": "P2_API_RECEIVES_RAW",
+          "status": "OK",
+          "title": "The backend receives upstream/cache data (HTTP ok + body) before any validation."
+        },
+        {
+          "detail": "Required fields parsed and valid.",
+          "evidence": {
+            "checked_path": "data.latest_bar",
+            "issues": [],
+            "per_ticker": {
+              "TEAM": {
+                "missing_fields": [],
+                "ok": true,
+                "sample_values": {
+                  "close": 91.23,
+                  "date": "2026-02-09",
+                  "volume": 8779270
+                },
+                "type_errors": []
+              },
+              "UBER": {
+                "missing_fields": [],
+                "ok": true,
+                "sample_values": {
+                  "close": 73.91,
+                  "date": "2026-02-09",
+                  "volume": 17959072
+                },
+                "type_errors": []
+              },
+              "WBD": {
+                "missing_fields": [],
+                "ok": true,
+                "sample_values": {
+                  "close": 27.21,
+                  "date": "2026-02-09",
+                  "volume": 16493478
+                },
+                "type_errors": []
+              }
+            },
+            "required_fields": [
+              "date",
+              "close",
+              "volume"
+            ]
+          },
+          "id": "P3_API_PARSES_VALIDATES",
+          "status": "OK",
+          "title": "Backend parses and validates required fields (close, volume, date) for sanity."
+        },
+        {
+          "detail": "Canonical fields present.",
+          "evidence": {
+            "samples": [
+              "UBER",
+              "TEAM",
+              "WBD"
+            ]
+          },
+          "id": "P4_CANONICAL_FORMAT",
+          "status": "OK",
+          "title": "Backend maps raw data into canonical latest_bar + change format."
+        },
+        {
+          "detail": "Static persistence not required by policy.",
+          "evidence": {
+            "path": "/data/snapshots/market-prices/latest.json",
+            "required": false,
+            "samples": [
+              "UBER:true",
+              "TEAM:true",
+              "WBD:true"
+            ]
+          },
+          "id": "P5_STATIC_PERSIST",
+          "status": "INFO",
+          "title": "If configured, the canonical data is written to public/data and is fetchable as static; otherwise this is INFO."
+        },
+        {
+          "detail": "Contract fields present.",
+          "evidence": {
+            "checked_path": "data.latest_bar",
+            "issues": [],
+            "per_ticker": {
+              "TEAM": {
+                "missing_fields": [],
+                "ok": true,
+                "sample_values": {
+                  "close": 91.23,
+                  "date": "2026-02-09",
+                  "volume": 8779270
+                },
+                "type_errors": []
+              },
+              "UBER": {
+                "missing_fields": [],
+                "ok": true,
+                "sample_values": {
+                  "close": 73.91,
+                  "date": "2026-02-09",
+                  "volume": 17959072
+                },
+                "type_errors": []
+              },
+              "WBD": {
+                "missing_fields": [],
+                "ok": true,
+                "sample_values": {
+                  "close": 27.21,
+                  "date": "2026-02-09",
+                  "volume": 16493478
+                },
+                "type_errors": []
+              }
+            },
+            "required_fields": [
+              "date",
+              "close",
+              "volume"
+            ]
+          },
+          "id": "P6_API_CONTRACT",
+          "status": "OK",
+          "title": "/api/stock returns JSON that satisfies the contract (latest_bar.close/volume/date present)."
+        },
+        {
+          "detail": "UI trace missing for current origin.",
+          "evidence": {
+            "mismatch": [],
+            "missing": [
+              "UBER: ui_missing",
+              "TEAM: ui_missing",
+              "WBD: ui_missing"
+            ]
+          },
+          "id": "P7_UI_RENDERS",
+          "status": "INFO",
+          "title": "The UI displays values matching the API response."
+        }
+      ]
+    },
+    "providers": {
+      "day": {}
+    },
+    "runtime": {
+      "env": "preview",
+      "expected": {
+        "kv": false,
+        "pipeline": false,
+        "scheduler": false
+      },
+      "hostname": "71d62877.rubikvault-site.pages.dev",
+      "kvExpected": false,
+      "pipelineExpected": false,
+      "pricesStaticRequired": false,
+      "schedulerExpected": false,
+      "schedulerExpectedReason": "Preview/Static: cron not expected"
+    },
+    "snapshots": {
+      "items": [
+        {
+          "asOf": "2026-02-07",
+          "module": "market-prices",
+          "note": null,
+          "ok": true,
+          "records": 517,
+          "status": null,
+          "type": "snapshot"
+        }
+      ]
+    },
+    "sourceMap": null,
+    "ssot": {
+      "api": {
+        "checks": [
+          {
+            "evidence": {
+              "checked_path": "data.latest_bar",
+              "issues": [],
+              "per_ticker": {
+                "TEAM": {
+                  "missing_fields": [],
+                  "ok": true,
+                  "sample_values": {
+                    "close": 91.23,
+                    "date": "2026-02-09",
+                    "volume": 8779270
+                  },
+                  "type_errors": []
+                },
+                "UBER": {
+                  "missing_fields": [],
+                  "ok": true,
+                  "sample_values": {
+                    "close": 73.91,
+                    "date": "2026-02-09",
+                    "volume": 17959072
+                  },
+                  "type_errors": []
+                },
+                "WBD": {
+                  "missing_fields": [],
+                  "ok": true,
+                  "sample_values": {
+                    "close": 27.21,
+                    "date": "2026-02-09",
+                    "volume": 16493478
+                  },
+                  "type_errors": []
+                }
+              },
+              "required_fields": [
+                "date",
+                "close",
+                "volume"
+              ]
+            },
+            "id": "API_STOCK",
+            "label": "/api/stock?ticker=<T>",
+            "path": "/api/stock",
+            "reason": "OK",
+            "required": true,
+            "status": "OK"
+          },
+          {
+            "evidence": {
+              "ok": true,
+              "setups": 100,
+              "status": 200
+            },
+            "id": "API_ELLIOTT_SCANNER",
+            "label": "/api/elliott-scanner",
+            "path": "/api/elliott-scanner?",
+            "reason": "OK",
+            "required": true,
+            "status": "OK"
+          }
+        ],
+        "reason": "OK",
+        "status": "OK"
+      },
+      "assets": {
+        "checks": [
+          {
+            "evidence": {
+              "count": 100
+            },
+            "id": "ASSET_UNIVERSE",
+            "label": "/data/universe/nasdaq100.json",
+            "path": "/data/universe/nasdaq100.json",
+            "reason": "OK",
+            "required": true,
+            "status": "OK"
+          },
+          {
+            "evidence": {
+              "has_meta": true,
+              "symbols_processed": 517
+            },
+            "id": "ASSET_STOCK_ANALYSIS",
+            "label": "/data/snapshots/stock-analysis.json",
+            "path": "/data/snapshots/stock-analysis.json",
+            "reason": "OK",
+            "required": true,
+            "status": "OK"
+          },
+          {
+            "evidence": {
+              "has_data": false,
+              "symbols": null
+            },
+            "id": "ASSET_EOD_BATCH",
+            "label": "/data/eod/batches/eod.latest.000.json",
+            "path": "/data/eod/batches/eod.latest.000.json",
+            "reason": "EOD_BATCH_MISSING",
+            "required": true,
+            "status": "FAIL"
+          },
+          {
+            "evidence": {
+              "symbols": null
+            },
+            "id": "ASSET_MARKETPHASE_INDEX",
+            "label": "/data/marketphase/index.json",
+            "path": "/data/marketphase/index.json",
+            "reason": "MARKETPHASE_INDEX_MISSING",
+            "required": true,
+            "status": "FAIL"
+          },
+          {
+            "evidence": {
+              "errors": [],
+              "recordCount": 517
+            },
+            "id": "ASSET_MARKET_PRICES",
+            "label": "/data/snapshots/market-prices/latest.json",
+            "path": "/data/snapshots/market-prices/latest.json",
+            "reason": "OK",
+            "required": true,
+            "status": "OK"
+          }
+        ],
+        "failures": [
+          {
+            "evidence": {
+              "has_data": false,
+              "symbols": null
+            },
+            "id": "ASSET_EOD_BATCH",
+            "label": "/data/eod/batches/eod.latest.000.json",
+            "path": "/data/eod/batches/eod.latest.000.json",
+            "reason": "EOD_BATCH_MISSING",
+            "required": true,
+            "status": "FAIL"
+          },
+          {
+            "evidence": {
+              "symbols": null
+            },
+            "id": "ASSET_MARKETPHASE_INDEX",
+            "label": "/data/marketphase/index.json",
+            "path": "/data/marketphase/index.json",
+            "reason": "MARKETPHASE_INDEX_MISSING",
+            "required": true,
+            "status": "FAIL"
+          }
+        ],
+        "reason": "EOD_BATCH_MISSING",
+        "status": "CRITICAL"
+      },
+      "core": {
+        "api": {
+          "checks": [
+            {
+              "evidence": {
+                "checked_path": "data.latest_bar",
+                "issues": [],
+                "per_ticker": {
+                  "TEAM": {
+                    "missing_fields": [],
+                    "ok": true,
+                    "sample_values": {
+                      "close": 91.23,
+                      "date": "2026-02-09",
+                      "volume": 8779270
+                    },
+                    "type_errors": []
+                  },
+                  "UBER": {
+                    "missing_fields": [],
+                    "ok": true,
+                    "sample_values": {
+                      "close": 73.91,
+                      "date": "2026-02-09",
+                      "volume": 17959072
+                    },
+                    "type_errors": []
+                  },
+                  "WBD": {
+                    "missing_fields": [],
+                    "ok": true,
+                    "sample_values": {
+                      "close": 27.21,
+                      "date": "2026-02-09",
+                      "volume": 16493478
+                    },
+                    "type_errors": []
+                  }
+                },
+                "required_fields": [
+                  "date",
+                  "close",
+                  "volume"
+                ]
+              },
+              "id": "API_STOCK",
+              "label": "/api/stock?ticker=<T>",
+              "path": "/api/stock",
+              "reason": "OK",
+              "required": true,
+              "status": "OK"
+            },
+            {
+              "evidence": {
+                "ok": true,
+                "setups": 100,
+                "status": 200
+              },
+              "id": "API_ELLIOTT_SCANNER",
+              "label": "/api/elliott-scanner",
+              "path": "/api/elliott-scanner?",
+              "reason": "OK",
+              "required": true,
+              "status": "OK"
+            }
+          ],
+          "reason": "OK",
+          "status": "OK"
+        },
+        "assets": {
+          "checks": [
+            {
+              "evidence": {
+                "count": 100
+              },
+              "id": "ASSET_UNIVERSE",
+              "label": "/data/universe/nasdaq100.json",
+              "path": "/data/universe/nasdaq100.json",
+              "reason": "OK",
+              "required": true,
+              "status": "OK"
+            },
+            {
+              "evidence": {
+                "has_meta": true,
+                "symbols_processed": 517
+              },
+              "id": "ASSET_STOCK_ANALYSIS",
+              "label": "/data/snapshots/stock-analysis.json",
+              "path": "/data/snapshots/stock-analysis.json",
+              "reason": "OK",
+              "required": true,
+              "status": "OK"
+            },
+            {
+              "evidence": {
+                "has_data": false,
+                "symbols": null
+              },
+              "id": "ASSET_EOD_BATCH",
+              "label": "/data/eod/batches/eod.latest.000.json",
+              "path": "/data/eod/batches/eod.latest.000.json",
+              "reason": "EOD_BATCH_MISSING",
+              "required": true,
+              "status": "FAIL"
+            },
+            {
+              "evidence": {
+                "symbols": null
+              },
+              "id": "ASSET_MARKETPHASE_INDEX",
+              "label": "/data/marketphase/index.json",
+              "path": "/data/marketphase/index.json",
+              "reason": "MARKETPHASE_INDEX_MISSING",
+              "required": true,
+              "status": "FAIL"
+            },
+            {
+              "evidence": {
+                "errors": [],
+                "recordCount": 517
+              },
+              "id": "ASSET_MARKET_PRICES",
+              "label": "/data/snapshots/market-prices/latest.json",
+              "path": "/data/snapshots/market-prices/latest.json",
+              "reason": "OK",
+              "required": true,
+              "status": "OK"
+            }
+          ],
+          "failures": [
+            {
+              "evidence": {
+                "has_data": false,
+                "symbols": null
+              },
+              "id": "ASSET_EOD_BATCH",
+              "label": "/data/eod/batches/eod.latest.000.json",
+              "path": "/data/eod/batches/eod.latest.000.json",
+              "reason": "EOD_BATCH_MISSING",
+              "required": true,
+              "status": "FAIL"
+            },
+            {
+              "evidence": {
+                "symbols": null
+              },
+              "id": "ASSET_MARKETPHASE_INDEX",
+              "label": "/data/marketphase/index.json",
+              "path": "/data/marketphase/index.json",
+              "reason": "MARKETPHASE_INDEX_MISSING",
+              "required": true,
+              "status": "FAIL"
+            }
+          ],
+          "reason": "EOD_BATCH_MISSING",
+          "status": "CRITICAL"
+        }
+      },
+      "enhancers": {
+        "api": {
+          "checks": [
+            {
+              "evidence": {
+                "error": "HTTP_ERROR",
+                "meta_status": "error",
+                "schema_version": "3.0",
+                "status": 200
+              },
+              "id": "API_FUNDAMENTALS",
+              "label": "/api/fundamentals?ticker=UBER",
+              "path": "/api/fundamentals?ticker=UBER",
+              "reason": "OK",
+              "required": false,
+              "status": "OK"
+            }
+          ],
+          "reason": "OK",
+          "status": "OK"
+        },
+        "assets": {
+          "checks": [
+            {
+              "evidence": {
+                "ok": null
+              },
+              "id": "ASSET_MARKETPHASE_SAMPLE",
+              "label": "/data/marketphase/UBER.json",
+              "path": "/data/marketphase/UBER.json",
+              "reason": "MARKETPHASE_SAMPLE_MISSING",
+              "required": false,
+              "status": "INFO"
+            }
+          ],
+          "reason": "MARKETPHASE_SAMPLE_MISSING",
+          "status": "INFO",
+          "warnings": [
+            {
+              "evidence": {
+                "ok": null
+              },
+              "id": "ASSET_MARKETPHASE_SAMPLE",
+              "label": "/data/marketphase/UBER.json",
+              "path": "/data/marketphase/UBER.json",
+              "reason": "MARKETPHASE_SAMPLE_MISSING",
+              "required": false,
+              "status": "INFO"
+            }
+          ]
+        }
+      }
+    },
+    "system": {
+      "action": {
+        "howTo": "Verify SSOT API + snapshot freshness",
+        "url": "/api/stock?ticker=UBER"
+      },
+      "checks": [
+        {
+          "evidence": {
+            "status": "CRITICAL"
+          },
+          "id": "SSOT_ASSETS_REQUIRED_OK",
+          "label": "SSOT assets required",
+          "path": "/data/*",
+          "reason": "EOD_BATCH_MISSING",
+          "required": true,
+          "status": "FAIL"
+        },
+        {
+          "evidence": {
+            "status": "OK"
+          },
+          "id": "SSOT_APIS_REQUIRED_OK",
+          "label": "SSOT APIs required",
+          "path": "/api/*",
+          "reason": "OK",
+          "required": true,
+          "status": "OK"
+        },
+        {
+          "evidence": {
+            "checked_path": "data.latest_bar",
+            "issues": [],
+            "per_ticker": {
+              "TEAM": {
+                "missing_fields": [],
+                "ok": true,
+                "sample_values": {
+                  "close": 91.23,
+                  "date": "2026-02-09",
+                  "volume": 8779270
+                },
+                "type_errors": []
+              },
+              "UBER": {
+                "missing_fields": [],
+                "ok": true,
+                "sample_values": {
+                  "close": 73.91,
+                  "date": "2026-02-09",
+                  "volume": 17959072
+                },
+                "type_errors": []
+              },
+              "WBD": {
+                "missing_fields": [],
+                "ok": true,
+                "sample_values": {
+                  "close": 27.21,
+                  "date": "2026-02-09",
+                  "volume": 16493478
+                },
+                "type_errors": []
+              }
+            },
+            "required_fields": [
+              "date",
+              "close",
+              "volume"
+            ]
+          },
+          "id": "PRICES_CONTRACT_OK",
+          "label": "Prices contract OK",
+          "path": "/api/stock",
+          "reason": "OK",
+          "required": true,
+          "status": "OK"
+        },
+        {
+          "evidence": {
+            "valid": true
+          },
+          "id": "POINTER_LATEST_INTEGRITY",
+          "label": "Latest snapshot integrity",
+          "path": "/data/snapshots/market-prices/latest.json",
+          "reason": "OK",
+          "required": true,
+          "status": "OK"
+        },
+        {
+          "evidence": {
+            "instrumented": false
+          },
+          "id": "EMERGENCY_OFF",
+          "label": "Emergency stop off",
+          "path": null,
+          "reason": "OK",
+          "required": true,
+          "status": "OK"
+        },
+        {
+          "evidence": {
+            "instrumented": false
+          },
+          "id": "CIRCUIT_OK",
+          "label": "Circuit breaker closed",
+          "path": null,
+          "reason": "OK",
+          "required": true,
+          "status": "OK"
+        },
+        {
+          "evidence": {
+            "reason": "PENDING",
+            "status": "PENDING"
+          },
+          "id": "STALENESS_OK",
+          "label": "Freshness within policy",
+          "path": "/data/snapshots/market-prices/latest.json",
+          "reason": "PENDING",
+          "required": true,
+          "status": "FAIL"
+        }
+      ],
+      "reason": "EOD_BATCH_MISSING",
+      "status": "FAIL"
+    },
+    "truthChains": {
+      "indicators": {
+        "asOf": "2026-02-10T18:04:32.415Z",
+        "chain_version": "v1",
+        "first_blocker": null,
+        "first_blocker_id": null,
+        "steps": [
+          {
+            "details": "NOT_EXPECTED",
+            "evidence": {
+              "count": 0,
+              "expected": 100,
+              "path": "/data/pipeline/nasdaq100.fetched.json"
+            },
+            "id": "I0_PIPELINE_INPUTS",
+            "status": "INFO",
+            "title": "The NASDAQ-100 universe and EOD inputs for 100 tickers are present for the run."
+          },
+          {
+            "details": "NOT_EXPECTED",
+            "evidence": {
+              "count": 0,
+              "expected": 100,
+              "path": "/data/pipeline/nasdaq100.validated.json"
+            },
+            "id": "I1_EOD_VALIDATED",
+            "status": "INFO",
+            "title": "All tickers have validated EOD fields required to compute indicators."
+          },
+          {
+            "details": "NOT_EXPECTED",
+            "evidence": {
+              "count": 0,
+              "expected": 100,
+              "missingCount": 0,
+              "path": "/data/pipeline/nasdaq100.computed.json"
+            },
+            "id": "I2_INDICATORS_COMPUTED",
+            "status": "INFO",
+            "title": "Indicators (40+) are computed and validated per ticker."
+          },
+          {
+            "details": "NOT_EXPECTED",
+            "evidence": {
+              "count": 0,
+              "expected": 100,
+              "path": "/data/pipeline/nasdaq100.computed.json"
+            },
+            "id": "I3_STATIC_PERSIST_INDICATORS",
+            "status": "INFO",
+            "title": "Indicator outputs are written to public/data and are UI-readable anytime."
+          },
+          {
+            "details": "NOT_EXPECTED",
+            "evidence": {
+              "count": 0,
+              "expected": 100,
+              "path": "/data/pipeline/nasdaq100.static-ready.json"
+            },
+            "id": "I4_STATIC_READY_INDEX",
+            "status": "INFO",
+            "title": "A static-ready index reports how many tickers have complete static indicator artifacts."
+          },
+          {
+            "details": "NOT_EXPECTED",
+            "evidence": {
+              "hasKV": true,
+              "hostname": "71d62877.rubikvault-site.pages.dev",
+              "isPreview": true
+            },
+            "id": "I5_RUNTIME_BINDINGS",
+            "status": "INFO",
+            "title": "Runtime bindings (KV/scheduler) are reported but do not affect Prices verdict."
+          }
+        ]
+      },
+      "prices": {
+        "artifacts": {
+          "links": [
+            {
+              "label": "UBER.trace.json",
+              "url": "/debug/truth-chain/UBER.trace.json"
+            },
+            {
+              "label": "TEAM.trace.json",
+              "url": "/debug/truth-chain/TEAM.trace.json"
+            },
+            {
+              "label": "WBD.trace.json",
+              "url": "/debug/truth-chain/WBD.trace.json"
+            }
+          ],
+          "traces": [
+            {
+              "base_match": false,
+              "base_url": "https://cf4b6652.rubikvault-site.pages.dev",
+              "path": "/debug/truth-chain/UBER.trace.json",
+              "sha256": "1b8ed6a147a5cf7d73b6faefd29ac807c48ea6e53e83ec90223028e04e7b13e3",
+              "source": "truth-chain",
+              "status": 200,
+              "ticker": "UBER"
+            },
+            {
+              "base_match": true,
+              "base_url": null,
+              "path": "/debug/truth-chain/TEAM.trace.json",
+              "sha256": "be774a8efe3df39c25077d7715d807351eb92f35b599f34816f7aa480ce650f3",
+              "source": "truth-chain",
+              "status": 200,
+              "ticker": "TEAM"
+            },
+            {
+              "base_match": true,
+              "base_url": null,
+              "path": "/debug/truth-chain/WBD.trace.json",
+              "sha256": "0eab2c524d491eb55cf9163c3959864d1cb0fcc284ca9bf48dd1e0871e72b9b4",
+              "source": "truth-chain",
+              "status": 200,
+              "ticker": "WBD"
+            }
+          ]
+        },
+        "asOf": "2026-02-10T18:04:32.415Z",
+        "chain_version": "v2",
+        "domain": "prices",
+        "first_blocker_id": null,
+        "status": "OK",
+        "steps": [
+          {
+            "detail": "Trace artifacts recorded.",
+            "evidence": {
+              "samples": [
+                "UBER",
+                "TEAM",
+                "WBD"
+              ],
+              "sources": [
+                "UBER:truth-chain",
+                "TEAM:truth-chain",
+                "WBD:truth-chain"
+              ]
+            },
+            "id": "P0_UI_START",
+            "status": "OK",
+            "title": "User opens /analyze/<T> and the page JS loads."
+          },
+          {
+            "detail": "Missing ui-path trace for UBER, TEAM, WBD",
+            "evidence": {
+              "calls": [
+                "UBER:no_trace",
+                "TEAM:no_trace",
+                "WBD:no_trace"
+              ],
+              "handlers": []
+            },
+            "id": "P1_UI_CALLS_API",
+            "status": "INFO",
+            "title": "The page triggers the winning request to /api/stock?ticker=<T>."
+          },
+          {
+            "detail": "Upstream/cache payloads recorded.",
+            "evidence": {
+              "responses": [
+                "UBER:200",
+                "TEAM:200",
+                "WBD:200"
+              ],
+              "upstream": [
+                "UBER:snapshot",
+                "TEAM:snapshot",
+                "WBD:snapshot"
+              ]
+            },
+            "id": "P2_API_RECEIVES_RAW",
+            "status": "OK",
+            "title": "The backend receives upstream/cache data (HTTP ok + body) before any validation."
+          },
+          {
+            "detail": "Required fields parsed and valid.",
+            "evidence": {
+              "checked_path": "data.latest_bar",
+              "issues": [],
+              "per_ticker": {
+                "TEAM": {
+                  "missing_fields": [],
+                  "ok": true,
+                  "sample_values": {
+                    "close": 91.23,
+                    "date": "2026-02-09",
+                    "volume": 8779270
+                  },
+                  "type_errors": []
+                },
+                "UBER": {
+                  "missing_fields": [],
+                  "ok": true,
+                  "sample_values": {
+                    "close": 73.91,
+                    "date": "2026-02-09",
+                    "volume": 17959072
+                  },
+                  "type_errors": []
+                },
+                "WBD": {
+                  "missing_fields": [],
+                  "ok": true,
+                  "sample_values": {
+                    "close": 27.21,
+                    "date": "2026-02-09",
+                    "volume": 16493478
+                  },
+                  "type_errors": []
+                }
+              },
+              "required_fields": [
+                "date",
+                "close",
+                "volume"
+              ]
+            },
+            "id": "P3_API_PARSES_VALIDATES",
+            "status": "OK",
+            "title": "Backend parses and validates required fields (close, volume, date) for sanity."
+          },
+          {
+            "detail": "Canonical fields present.",
+            "evidence": {
+              "samples": [
+                "UBER",
+                "TEAM",
+                "WBD"
+              ]
+            },
+            "id": "P4_CANONICAL_FORMAT",
+            "status": "OK",
+            "title": "Backend maps raw data into canonical latest_bar + change format."
+          },
+          {
+            "detail": "Static persistence not required by policy.",
+            "evidence": {
+              "path": "/data/snapshots/market-prices/latest.json",
+              "required": false,
+              "samples": [
+                "UBER:true",
+                "TEAM:true",
+                "WBD:true"
+              ]
+            },
+            "id": "P5_STATIC_PERSIST",
+            "status": "INFO",
+            "title": "If configured, the canonical data is written to public/data and is fetchable as static; otherwise this is INFO."
+          },
+          {
+            "detail": "Contract fields present.",
+            "evidence": {
+              "checked_path": "data.latest_bar",
+              "issues": [],
+              "per_ticker": {
+                "TEAM": {
+                  "missing_fields": [],
+                  "ok": true,
+                  "sample_values": {
+                    "close": 91.23,
+                    "date": "2026-02-09",
+                    "volume": 8779270
+                  },
+                  "type_errors": []
+                },
+                "UBER": {
+                  "missing_fields": [],
+                  "ok": true,
+                  "sample_values": {
+                    "close": 73.91,
+                    "date": "2026-02-09",
+                    "volume": 17959072
+                  },
+                  "type_errors": []
+                },
+                "WBD": {
+                  "missing_fields": [],
+                  "ok": true,
+                  "sample_values": {
+                    "close": 27.21,
+                    "date": "2026-02-09",
+                    "volume": 16493478
+                  },
+                  "type_errors": []
+                }
+              },
+              "required_fields": [
+                "date",
+                "close",
+                "volume"
+              ]
+            },
+            "id": "P6_API_CONTRACT",
+            "status": "OK",
+            "title": "/api/stock returns JSON that satisfies the contract (latest_bar.close/volume/date present)."
+          },
+          {
+            "detail": "UI trace missing for current origin.",
+            "evidence": {
+              "mismatch": [],
+              "missing": [
+                "UBER: ui_missing",
+                "TEAM: ui_missing",
+                "WBD: ui_missing"
+              ]
+            },
+            "id": "P7_UI_RENDERS",
+            "status": "INFO",
+            "title": "The UI displays values matching the API response."
+          }
+        ]
+      }
+    },
+    "verdict": {
+      "core": {
+        "reason": "CORE_FAIL",
+        "status": "CRITICAL"
+      },
+      "enhancers": {
+        "reason": "OK",
+        "status": "OK"
+      }
+    }
+  },
+  "error": null,
+  "meta": {
+    "asOf": "2026-02-10T18:04:32.415Z",
+    "baselineAsOf": null,
+    "data_date": "2026-02-10",
+    "generated_at": "2026-02-10T18:04:34.441Z",
+    "liveAsOf": "2026-02-10T18:04:32.415Z",
+    "provider": "mission-control",
+    "reason": "EOD_BATCH_MISSING",
+    "status": "error",
+    "version": "3.0"
+  },
+  "metadata": {
+    "digest": "sha256:54f4cb60e2dd30eaf1b19aa39635dabf47d97e58dc8d886842351da1a3a9d830",
+    "domain": "system",
+    "fetched_at": "2026-02-10T18:04:32.415Z",
+    "module": "mission-control-summary",
+    "published_at": "2026-02-10T18:04:32.415Z",
+    "request": {
+      "debug": true
+    },
+    "schema_version": "3.0",
+    "served_from": "RUNTIME",
+    "source": "mission-control",
+    "status": "OK",
+    "tier": "standard",
+    "warnings": []
+  },
+  "ok": true,
+  "schema_version": "3.0"
+}

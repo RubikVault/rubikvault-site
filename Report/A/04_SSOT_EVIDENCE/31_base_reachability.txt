@@ -1,0 +1,10 @@
+$ for b in https://71d62877.rubikvault-site.pages.dev https://00656f57.rubikvault-site.pages.dev https://dece36c6.rubikvault-site.pages.dev https://rubikvault.com; do echo "=== BASE $b"; curl -sS -o /dev/null -w "status=%{http_code} time=%{time_total}
+" "$b/"; done
+=== BASE https://71d62877.rubikvault-site.pages.dev
+status=200 time=0.211417
+=== BASE https://00656f57.rubikvault-site.pages.dev
+status=200 time=0.730002
+=== BASE https://dece36c6.rubikvault-site.pages.dev
+status=200 time=0.246351
+=== BASE https://rubikvault.com
+status=200 time=0.287677

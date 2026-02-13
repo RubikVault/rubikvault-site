@@ -1,0 +1,80 @@
+     1	/**
+     2	 * Forecast System v3.0 — Snapshot Ingest
+     3	 * 
+     4	 * Ingests data from existing RubikVault sources:
+     5	 * - Universe from /data/universe/nasdaq100.json
+     6	 * - Prices from /data/eod/batches/eod.latest.*.json
+     7	 * - Creates manifests in mirrors/forecast/snapshots/
+     8	 */
+     9	
+    10	import fs from 'node:fs';
+    11	import path from 'node:path';
+    12	import zlib from 'node:zlib';
+    13	import { computeDigest } from '../lib/digest.js';
+    14	
+    15	// ─────────────────────────────────────────────────────────────────────────────
+    16	// Path Constants
+    17	// ─────────────────────────────────────────────────────────────────────────────
+    18	
+    19	const UNIVERSE_PATH = 'public/data/universe/all.json';
+    20	const EOD_BATCH_PATTERN = 'public/data/eod/batches/eod.latest.';
+    21	const MARKET_PRICES_SNAPSHOT_PATH = 'public/data/snapshots/market-prices/latest.json';
+    22	const MIRRORS_SNAPSHOT_BASE = 'mirrors/forecast/snapshots';
+    23	
+    24	// ─────────────────────────────────────────────────────────────────────────────
+    25	// Universe Loading
+    26	// ─────────────────────────────────────────────────────────────────────────────
+    27	
+    28	/**
+    29	 * Load universe (ticker list) from existing data
+    30	 * @param {string} repoRoot - Repository root
+    31	 * @returns {string[]} Array of tickers
+    32	 */
+    33	export function loadUniverse(repoRoot) {
+    34	    const universePath = path.join(repoRoot, UNIVERSE_PATH);
+    35	
+    36	    if (!fs.existsSync(universePath)) {
+    37	        console.warn(`[Ingest] Universe not found at ${universePath}`);
+    38	        return [];
+    39	    }
+    40	
+    41	    const content = fs.readFileSync(universePath, 'utf8');
+    42	    const data = JSON.parse(content);
+    43	
+    44	    // Handle both array and object formats
+    45	    if (Array.isArray(data)) {
+    46	        return data.map(item => typeof item === 'string' ? item : item.ticker || item.symbol);
+    47	    }
+    48	
+    49	    if (data.tickers) return data.tickers;
+    50	    if (data.symbols) return data.symbols;
+    51	    if (data.data && Array.isArray(data.data)) {
+    52	        return data.data.map(item => item.ticker || item.symbol || item);
+    53	    }
+    54	
+    55	    // If object with ticker keys
+    56	    return Object.keys(data).filter(k => !['schema', 'metadata', 'generated_at', 'data'].includes(k));
+    57	}
+    58	
+    59	// ─────────────────────────────────────────────────────────────────────────────
+    60	// Price Data Loading
+    61	// ─────────────────────────────────────────────────────────────────────────────
+    62	
+    63	/**
+    64	 * Load EOD batch data from all available batches
+    65	 * @param {string} repoRoot - Repository root
+    66	 * @returns {object} Map of ticker -> price data
+    67	 */
+    68	export function loadEodBatches(repoRoot) {
+    69	    const allPrices = {};
+    70	
+    71	    // Try batches 000-009
+    72	    for (let i = 0; i < 10; i++) {
+    73	        const batchPath = path.join(repoRoot, `${EOD_BATCH_PATTERN}${String(i).padStart(3, '0')}.json`);
+    74	
+    75	        if (!fs.existsSync(batchPath)) continue;
+    76	
+    77	        try {
+    78	            const content = fs.readFileSync(batchPath, 'utf8');
+    79	            const batch = JSON.parse(content);
+    80	            const data = batch.data || batch;

@@ -1,0 +1,728 @@
+### public/forecast.html fetch + contracts
+391:    <div id="circuit-reason" style="display: none;"></div>
+392:    <div id="circuit-state" style="display: none;"></div>
+421:    const API_BASE = '/data/forecast';
+429:        const response = await fetch(`${API_BASE}/${path}`);
+449:      const circuitState = (status.circuit?.state || status.circuit_state || 'closed').toLowerCase();
+454:      if (circuitState === 'open' || systemStatus === 'CIRCUIT_OPEN') {
+476:      const circuitReason = document.getElementById('circuit-reason');
+477:      if (circuitReason) circuitReason.textContent = reason;
+479:      const circuitStateEl = document.getElementById('circuit-state');
+480:      if (circuitStateEl) circuitStateEl.textContent = circuitState;
+615:        // Empty state handling handled in updateForecasts wrapper, but here for safety
+655:    function updateForecasts(forecasts, state = 'BOOTSTRAP', reason = null) {
+703:      const status = await fetchData('system/status.json');
+707:      const latest = await fetchData('latest.json');
+716:        updateForecasts(
+723:      // Load latest daily report using ref from latest.json
+   420	  <script>
+   421	    const API_BASE = '/data/forecast';
+   422	
+   423	    // State for local data and sorting
+   424	    let activeForecasts = [];
+   425	    let sortConfig = { key: 'symbol', dir: 'asc' }; // dir: 'asc' or 'desc'
+   426	
+   427	    async function fetchData(path) {
+   428	      try {
+   429	        const response = await fetch(`${API_BASE}/${path}`);
+   430	        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+   431	        return await response.json();
+   432	      } catch (err) {
+   433	        console.warn(`Failed to fetch ${path}:`, err.message);
+   434	        return null;
+   435	      }
+   436	    }
+   437	
+   438	    function showError(message) {
+   439	      const container = document.getElementById('error-container');
+   440	      container.innerHTML = `
+   441	        <div class="error-box" style="color: #f87171; border-color: #f87171; background: rgba(239, 68, 68, 0.1);">
+   442	          <strong>Error:</strong> ${message}
+   443	        </div>
+   444	      `;
+   445	    }
+   446	
+   447	    function updateStatus(status) {
+   448	      const badge = document.getElementById('system-status');
+   449	      const circuitState = (status.circuit?.state || status.circuit_state || 'closed').toLowerCase();
+   450	      const systemStatus = String(status.status || status.meta?.status || '').toUpperCase();
+   451	      const reason = status.reason || status.message || status.meta?.reason || 'System healthy';
+   452	
+   453	      // Updates for new CSS classes (badge-status-*)
+   454	      if (circuitState === 'open' || systemStatus === 'CIRCUIT_OPEN') {
+   455	        badge.className = 'badge-status-warn'; // Red/Orange
+   456	        badge.style.borderColor = 'rgba(239, 68, 68, 0.3)';
+   457	        badge.style.color = '#ef4444';
+   458	        badge.style.background = 'rgba(239, 68, 68, 0.1)';
+   459	        badge.innerHTML = '<span class="pulse-dot"></span> Circuit Open';
+   460	      } else if (systemStatus === 'STALE') {
+   461	        badge.className = 'badge-status-warn';
+   462	        badge.style.borderColor = 'rgba(245, 158, 11, 0.3)';
+   463	        badge.style.color = '#fbbf24';
+   464	        badge.style.background = 'rgba(245, 158, 11, 0.1)';
+   465	        badge.innerHTML = '<span class="pulse-dot"></span> Stale Data';
+   466	      } else if (systemStatus === 'BOOTSTRAP') {
+   467	        badge.className = 'badge-status-warn';
+   468	        badge.innerHTML = '<span class="pulse-dot"></span> Bootstrap';
+   469	      } else {
+   470	        badge.className = 'badge-status-ok';
+   471	        badge.removeAttribute('style'); // Reset inline overrides
+   472	        badge.innerHTML = '<span class="pulse-dot"></span> System Operational';
+   473	      }
+   474	
+   475	      // Hidden fields for other logic
+   476	      const circuitReason = document.getElementById('circuit-reason');
+   477	      if (circuitReason) circuitReason.textContent = reason;
+   478	
+   479	      const circuitStateEl = document.getElementById('circuit-state');
+   480	      if (circuitStateEl) circuitStateEl.textContent = circuitState;
+   481	    }
+   482	
+   483	    function updateLatest(latest) {
+   484	      const phase = latest.data?.maturity_phase || 'BOOTSTRAP';
+   485	      document.getElementById('maturity-phase').textContent = phase;
+   486	
+   487	      // Add days/progress if available, else descriptive text
+   488	      const days = latest.data?.maturity_days_generated || 0;
+   489	      const phaseMap = {
+   490	        'BOOTSTRAP': 'Initializing History',
+   491	        'GROWTH': 'Accumulating Data',
+   492	        'MATURE': 'Full Confidence'
+   493	      };
+   494	      const subText = document.getElementById('maturity-days');
+   495	      if (subText) subText.textContent = `${phaseMap[phase] || 'Unknown Regime'} (${days} days)`;
+   496	    }
+   497	
+   498	    function updateMetrics(report) {
+   499	      if (!report) return;
+   500	
+   501	      const metrics = report.global_metrics?.by_horizon || {};
+   502	
+   503	      // Update Brier Score (focus on 20d as "Monthly Accuracy" proxy for the card)
+   504	      // Or use 5d if 20d is null
+   505	      const skill20d = metrics['20d']?.combined?.brier_skill;
+   506	      const skill5d = metrics['5d']?.combined?.brier_skill;
+   507	      const primarySkill = skill20d !== undefined ? skill20d : skill5d;
+   508	
+   509	      const brierEl = document.getElementById('brier-30d');
+   510	      if (brierEl && primarySkill !== undefined && primarySkill !== null) {
+   511	        const val = (primarySkill * 100).toFixed(1);
+   512	        brierEl.textContent = (primarySkill > 0 ? '+' : '') + val + '%';
+   513	        brierEl.style.color = primarySkill > 0 ? '#4ade80' : '#f87171';
+   514	      }
+   515	
+   516	      // Quota
+   517	      const compute = report.meta?.compute || {};
+   518	      const tested = compute.challengers_tested_this_period || 0;
+   519	      const min = compute.quota_monthly_min_challengers || 8;
+   520	
+   540	      if (!tbody) return;
+   541	
+   542	      if (!promotions || promotions.length === 0) {
+   543	        tbody.innerHTML = '<tr><td colspan="4" style="padding: 1rem; text-align: center; color: #64748b;">No recent promotions found</td></tr>';
+   544	        return;
+   545	      }
+   546	
+   547	      tbody.innerHTML = promotions.slice(0, 5).map(p => `
+   548	        <tr>
+   549	          <td>${p.as_of?.slice(0, 10) || '—'}</td>
+   550	          <td style="font-family: monospace; color: #94a3b8;">${p.from_champion_id?.slice(-8) || '—'}</td>
+   551	          <td style="font-family: monospace; color: #f1f5f9;">${p.to_champion_id?.slice(-8) || '—'}</td>
+   552	          <td style="font-weight: 700; color: ${p.skill_delta > 0 ? '#4ade80' : '#f87171'};">
+   553	            ${p.skill_delta ? (p.skill_delta > 0 ? '+' : '') + p.skill_delta.toFixed(2) + '%' : '—'}
+   554	          </td>
+   555	        </tr>
+   556	      `).join('');
+   557	    }
+   558	
+   559	    function formatDirection(horizon) {
+   560	      if (!horizon) return '<span style="color: #64748b;">—</span>';
+   561	
+   562	      const dir = horizon.direction;
+   563	      const prob = horizon.probability ? (horizon.probability * 100).toFixed(0) + '%' : '';
+   564	
+   565	      let badgeClass = 'badge-neutral';
+   566	      let icon = '→';
+   567	
+   568	      if (dir === 'bullish') {
+   569	        badgeClass = 'badge-bullish';
+   570	        icon = '↑';
+   571	      } else if (dir === 'bearish') {
+   572	        badgeClass = 'badge-bearish';
+   573	        icon = '↓';
+   574	      }
+   575	
+   576	      return `<span class="badge ${badgeClass}">${icon} ${prob}</span>`;
+   577	    }
+   578	
+   579	    // --- SORTING LOGIC ---
+   580	
+   581	    // Helper to get a sortable score from a horizon object
+   582	    // Bullish = +prob, Bearish = -prob, Neutral = 0
+   583	    function getHorizonScore(horizon) {
+   584	      if (!horizon) return -999; // Missing data goes to bottom
+   585	      const prob = horizon.probability || 0;
+   586	      if (horizon.direction === 'bullish') return prob;
+   587	      if (horizon.direction === 'bearish') return -prob;
+   588	      return 0; // Neutral
+   589	    }
+   590	
+   591	    function sortTable(key) {
+   592	      // Toggle direction if clicking same key
+   593	      if (sortConfig.key === key) {
+   594	        sortConfig.dir = sortConfig.dir === 'asc' ? 'desc' : 'asc';
+   595	      } else {
+   596	        sortConfig.key = key;
+   597	        sortConfig.dir = 'desc'; // Default to desc (high values first) for new columns
+   598	        if (key === 'symbol' || key === 'name') sortConfig.dir = 'asc'; // Default asc for text
+   599	      }
+   600	
+   601	      // Update Icons
+   602	      document.querySelectorAll('.sort-icon').forEach(el => el.textContent = '');
+   603	      const arrow = sortConfig.dir === 'asc' ? '↑' : '↓';
+   604	      const iconEl = document.getElementById(`sort-${key}`);
+   605	      if (iconEl) iconEl.textContent = arrow;
+   606	
+   607	      renderForecastTable();
+   608	    }
+   609	
+   610	    function renderForecastTable() {
+   611	      const tbody = document.querySelector('#forecasts-table tbody');
+   612	      const countEl = document.getElementById('forecast-count');
+   613	
+   614	      if (!activeForecasts || activeForecasts.length === 0) {
+   615	        // Empty state handling handled in updateForecasts wrapper, but here for safety
+   616	        tbody.innerHTML = '<tr><td colspan="6" style="padding: 2rem; text-align: center; color: #64748b;">No active forecasts available</td></tr>';
+   617	        return;
+   618	      }
+   619	
+   620	      // Sort data
+   621	      const sorted = [...activeForecasts].sort((a, b) => {
+   622	        let valA, valB;
+   623	
+   624	        // Fetch comparison values
+   625	        if (sortConfig.key === 'symbol') {
+   626	          valA = a.symbol;
+   627	          valB = b.symbol;
+   628	        } else if (sortConfig.key === 'name') {
+   629	          valA = a.name || '';
+   630	          valB = b.name || '';
+   631	        } else {
+   632	          // Horizon sorting (1d, 5d, 20d, 252d)
+   633	          valA = getHorizonScore(a.horizons?.[sortConfig.key]);
+   634	          valB = getHorizonScore(b.horizons?.[sortConfig.key]);
+   635	        }
+   636	
+   637	        // Compare
+   638	        if (valA < valB) return sortConfig.dir === 'asc' ? -1 : 1;
+   639	        if (valA > valB) return sortConfig.dir === 'asc' ? 1 : -1;
+   640	        return 0;
+
+### public/elliott.html fetch + contracts
+9:        content="Deterministic Fractal Market Structure Scanner. Find stocks at Wave 3, Wave 5, or Wave 1 setups." />
+64:                    <span class="rv-clock-status">
+78:            <a href="/elliott.html" class="rv-page-nav-link active" data-page="elliott">Elliott Waves</a>
+85:        .elliott-hero {
+90:        .elliott-hero h1 {
+97:        .elliott-hero p {
+103:        .elliott-filters {
+111:        .elliott-filter-btn {
+122:        .elliott-filter-btn:hover {
+126:        .elliott-filter-btn.active {
+132:        .elliott-table {
+138:        .elliott-table th {
+152:        .elliott-table th:hover {
+156:        .elliott-table th .sort-arrow {
+161:        .elliott-table th.sorted .sort-arrow {
+165:        .elliott-table td {
+171:        .elliott-table tr:hover td {
+230:        <section class="elliott-hero">
+239:            <div class="elliott-filters">
+240:                <button class="elliott-filter-btn active" data-filter="all">All Setups</button>
+241:                <button class="elliott-filter-btn" data-filter="wave1">Wave 1 Start</button>
+242:                <button class="elliott-filter-btn" data-filter="wave3">Pre Wave 3</button>
+243:                <button class="elliott-filter-btn" data-filter="wave5">Pre Wave 5</button>
+244:                <button class="elliott-filter-btn" data-filter="correction">In Correction</button>
+247:                    Found: <span id="setup-count">—</span> setups
+257:                <table class="elliott-table">
+345:        function renderTable(setups) {
+347:                ? setups
+348:                : setups.filter(s => {
+380:            document.querySelectorAll('.elliott-table th[data-sort]').forEach(th => {
+385:            const sortedTh = document.querySelector(`.elliott-table th[data-sort="${sortColumn}"]`);
+396:                tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: #64748b; padding: 2rem;">No setups found for this filter</td></tr>';
+415:                const res = await fetch('/api/elliott-scanner');
+416:                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+419:                allSetups = data.setups || [];
+431:        document.querySelectorAll('.elliott-filter-btn').forEach(btn => {
+433:                document.querySelectorAll('.elliott-filter-btn').forEach(b => b.classList.remove('active'));
+441:        document.querySelectorAll('.elliott-table th[data-sort]').forEach(th => {
+   300	        <p>&copy; 2026 RubikVault. All rights reserved.</p>
+   301	    </footer>
+   302	
+   303	    <script src="/market-clock.js"></script>
+   304	    <script>
+   305	        (function () {
+   306	            const el = document.getElementById("rv-data-updated-date");
+   307	            if (el) el.textContent = new Date().toISOString().split("T")[0];
+   308	        })();
+   309	
+   310	        // Scanner state
+   311	        let allSetups = [];
+   312	        let currentFilter = 'all';
+   313	        let sortColumn = 'confidence';
+   314	        let sortDirection = 'desc';
+   315	
+   316	        function escapeHtml(text) {
+   317	            return String(text || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+   318	        }
+   319	
+   320	        function getWaveBadge(position) {
+   321	            const map = {
+   322	                'pre-wave-3': { class: 'wave3', label: 'Pre Wave 3' },
+   323	                'pre-wave-5': { class: 'wave5', label: 'Pre Wave 5' },
+   324	                'wave-1-start': { class: 'wave1', label: 'Wave 1 Start' },
+   325	                'in-correction': { class: 'correction', label: 'In Correction' },
+   326	                'unknown': { class: 'correction', label: 'Unknown' }
+   327	            };
+   328	            const info = map[position] || map['unknown'];
+   329	            return `<span class="wave-badge ${info.class}">${info.label}</span>`;
+   330	        }
+   331	
+   332	        function getConfidenceBar(confidence) {
+   333	            const pct = Math.min(100, Math.max(0, confidence || 0));
+   334	            const color = pct >= 70 ? '#34d399' : pct >= 50 ? '#fbbf24' : '#f87171';
+   335	            return `
+   336	        <div style="display: flex; align-items: center; gap: 8px;">
+   337	          <div class="confidence-bar">
+   338	            <div class="confidence-bar-fill" style="width: ${pct}%; background: ${color};"></div>
+   339	          </div>
+   340	          <span style="font-size: 0.85rem; color: #94a3b8;">${pct}%</span>
+   341	        </div>
+   342	      `;
+   343	        }
+   344	
+   345	        function renderTable(setups) {
+   346	            let filtered = currentFilter === 'all'
+   347	                ? setups
+   348	                : setups.filter(s => {
+   349	                    if (currentFilter === 'wave3') return s.wavePosition === 'pre-wave-3';
+   350	                    if (currentFilter === 'wave5') return s.wavePosition === 'pre-wave-5';
+   351	                    if (currentFilter === 'wave1') return s.wavePosition === 'wave-1-start';
+   352	                    if (currentFilter === 'correction') return s.wavePosition === 'in-correction';
+   353	                    return true;
+   354	                });
+   355	
+   356	            // Sort by current column
+   357	            filtered = [...filtered].sort((a, b) => {
+   358	                let aVal = a[sortColumn];
+   359	                let bVal = b[sortColumn];
+   360	
+   361	                // Handle null values
+   362	                if (aVal == null) aVal = '';
+   363	                if (bVal == null) bVal = '';
+   364	
+   365	                // Numeric comparison
+   366	                if (typeof aVal === 'number' && typeof bVal === 'number') {
+   367	                    return sortDirection === 'asc' ? aVal - bVal : bVal - aVal;
+   368	                }
+   369	
+   370	                // String comparison
+   371	                const strA = String(aVal).toLowerCase();
+   372	                const strB = String(bVal).toLowerCase();
+   373	                if (sortDirection === 'asc') {
+   374	                    return strA.localeCompare(strB);
+   375	                }
+   376	                return strB.localeCompare(strA);
+   377	            });
+   378	
+   379	            // Update header classes
+   380	            document.querySelectorAll('.elliott-table th[data-sort]').forEach(th => {
+   381	                th.classList.remove('sorted');
+   382	                const arrow = th.querySelector('.sort-arrow');
+   383	                if (arrow) arrow.textContent = '↕';
+   384	            });
+   385	            const sortedTh = document.querySelector(`.elliott-table th[data-sort="${sortColumn}"]`);
+   386	            if (sortedTh) {
+   387	                sortedTh.classList.add('sorted');
+   388	                const arrow = sortedTh.querySelector('.sort-arrow');
+   389	                if (arrow) arrow.textContent = sortDirection === 'asc' ? '↑' : '↓';
+   390	            }
+   391	
+   392	            document.getElementById('setup-count').textContent = filtered.length;
+   393	            const tbody = document.getElementById('scanner-tbody');
+   394	
+   395	            if (!filtered.length) {
+   396	                tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: #64748b; padding: 2rem;">No setups found for this filter</td></tr>';
+   397	                return;
+   398	            }
+   399	
+   400	            tbody.innerHTML = filtered.map(s => `
+   401	        <tr>
+   402	          <td style="font-weight: 700;">${escapeHtml(s.ticker)}</td>
+   403	          <td style="color: #94a3b8;">${escapeHtml(s.name || '—')}</td>
+   404	          <td>${getWaveBadge(s.wavePosition)}</td>
+   405	          <td>${getConfidenceBar(s.confidence)}</td>
+   406	          <td style="color: ${s.direction === 'bullish' ? '#34d399' : '#f87171'};">${escapeHtml(s.direction)}</td>
+   407	          <td style="font-family: 'SF Mono', monospace; color: #94a3b8;">${s.fibConformance?.toFixed(1) ?? '—'}%</td>
+   408	          <td><a href="/analyze/${encodeURIComponent(s.ticker)}" style="color: #60a5fa;">View →</a></td>
+   409	        </tr>
+   410	      `).join('');
+   411	        }
+   412	
+   413	        async function loadScanner() {
+   414	            try {
+   415	                const res = await fetch('/api/elliott-scanner');
+   416	                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+   417	                const data = await res.json();
+   418	
+   419	                allSetups = data.setups || [];
+   420	                document.getElementById('scanner-loading').style.display = 'none';
+   421	                document.getElementById('scanner-results').style.display = 'block';
+   422	                renderTable(allSetups);
+   423	            } catch (err) {
+   424	                document.getElementById('scanner-loading').style.display = 'none';
+   425	                document.getElementById('scanner-error').style.display = 'block';
+   426	                document.getElementById('scanner-error-msg').textContent = err.message;
+   427	            }
+   428	        }
+   429	
+   430	        // Filter buttons
+
+### public/index.html fetch + contracts
+285:        const res = await fetch('/data/snapshots/stock-analysis.json');
+315:        const res = await fetch('/data/marketphase/index.json', { cache: 'no-store' });
+512:    const UNIVERSE_URL = '/data/universe/all.json';
+514:    const universeByTicker = new Map();
+535:        const res = await fetch(UNIVERSE_URL, { cache: 'no-store' });
+541:        universeByTicker.clear();
+548:          universeByTicker.set(ticker, name || null);
+574:          out.push({ symbol: t, name: universeByTicker.get(t) || null });
+614:        const response = await fetch(url);
+683:      typeahead.emptyMessage = items.length ? null : 'No matches found in stock universe';
+699:      if (!universeByTicker.has(s)) {
+705:      const resolvedName = universeByTicker.get(s) || null;
+900:      const universeName = effectiveTicker ? (universeByTicker.get(effectiveTicker) || null) : null;
+1744:      if (!universeByTicker.has(upperTicker)) {
+1755:      const fallback = options.fallback || { ticker: upperTicker, name: universeByTicker.get(upperTicker) || null };
+1757:        fetchJson(`/api/stock?ticker=${encodeURIComponent(upperTicker)}`),
+1758:        fetchJson(`/api/fundamentals?ticker=${encodeURIComponent(upperTicker)}${pageDebug ? '&debug=1' : ''}`)
+1766:          { error: { code: 'NETWORK_ERROR', message: 'Unable to reach /api/stock' }, metadata: { status: 'ERROR' } },
+1772:      const safePayload = payload || { error: { code: 'NETWORK_ERROR', message: 'Unable to reach /api/stock' }, metadata: { status: 'ERROR' }, data: {} };
+1784:      if (!universeByTicker.has(t)) {
+1788:      await selectSymbol(t, universeByTicker.get(t) || null, { push: true });
+1872:        if (!ticker || !universeByTicker.has(ticker)) {
+1897:        if (!ticker || !universeByTicker.has(ticker)) {
+   512	    const UNIVERSE_URL = '/data/universe/all.json';
+   513	    let universe = [];
+   514	    const universeByTicker = new Map();
+   515	    let universeReady = null;
+   516	
+   517	    function normalizeTicker(raw) {
+   518	      const s = String(raw || '').trim().toUpperCase();
+   519	      if (!s) return '';
+   520	      if (!/^[A-Z0-9\-\.]{1,15}$/.test(s)) return '';
+   521	      return s;
+   522	    }
+   523	
+   524	    function normalizeUniverseName(raw) {
+   525	      return String(raw || '')
+   526	        .trim()
+   527	        .toLowerCase()
+   528	        .replace(/[^a-z0-9\s]/g, ' ')
+   529	        .replace(/\s+/g, ' ')
+   530	        .trim();
+   531	    }
+   532	
+   533	    async function loadUniverse() {
+   534	      try {
+   535	        const res = await fetch(UNIVERSE_URL, { cache: 'no-store' });
+   536	        if (!res.ok) throw new Error('universe_fetch_failed');
+   537	        const entries = await res.json();
+   538	        if (!Array.isArray(entries)) throw new Error('universe_invalid_shape');
+   539	
+   540	        const normalized = [];
+   541	        universeByTicker.clear();
+   542	        for (const entry of entries) {
+   543	          if (!entry || typeof entry !== 'object') continue;
+   544	          const ticker = normalizeTicker(entry.ticker);
+   545	          if (!ticker) continue;
+   546	          const name = typeof entry.name === 'string' ? entry.name.trim() : '';
+   547	          normalized.push({ ticker, name });
+   548	          universeByTicker.set(ticker, name || null);
+   549	        }
+   550	        universe = normalized;
+   551	        return universe;
+   552	      } catch (err) {
+   553	        console.error('Universe load failed:', err);
+   554	        // Retry once after delay? Or just return empty to not block
+   555	        return [];
+   556	      }
+   557	    }
+   558	
+   559	    // Ensure we start loading immediately, but handle errors
+   560	    universeReady = loadUniverse();
+   561	
+   562	    function getUniverseSuggestions(query, limit = 12) {
+   563	      const q = String(query || '').trim().toLowerCase();
+   564	      if (!q) return [];
+   565	      const qName = normalizeUniverseName(q);
+   566	      const out = [];
+   567	
+   568	      for (const entry of universe) {
+   569	        const t = entry.ticker;
+   570	        const n = entry.name;
+   571	        const tLower = String(t || '').toLowerCase();
+   572	        const nNorm = normalizeUniverseName(n);
+   573	        if (tLower.startsWith(q) || (qName && nNorm.startsWith(qName))) {
+   574	          out.push({ symbol: t, name: universeByTicker.get(t) || null });
+   575	          if (out.length >= limit) break;
+   576	        }
+   577	      }
+   578	
+   579	      return out;
+   580	    }
+   581	
+   582	    const pageDebug = (() => {
+   583	      try {
+   584	        const params = new URLSearchParams(window.location.search || '');
+   585	        return params.get('debug') === '1';
+   586	      } catch {
+   587	        return false;
+   588	      }
+   589	    })();
+   590	
+   591	
+   592	
+   593	    // Analyze-route CSS isolation (prevents global CSS leaks)
+   594	    try {
+   595	      if (window.location.pathname && window.location.pathname.startsWith("/analyze/")) {
+   596	        document.body.classList.add("rv-analyze");
+   597	      }
+   598	    } catch { }
+   599	
+   600	    const typeahead = {
+   601	      root: null,
+   602	      items: [],
+   603	      open: false,
+   604	      activeIndex: -1,
+   605	      debounceMs: 150,
+   606	      debounceTimer: null,
+   607	      blurTimer: null,
+   608	      requestSeq: 0,
+   609	      emptyMessage: null
+   610	    };
+   611	
+   612	    async function fetchJson(url) {
+   613	      try {
+   614	        const response = await fetch(url);
+   615	        const payload = await response.json().catch(() => null);
+   616	        return { response, payload, networkError: null };
+   617	      } catch (error) {
+   618	        return { response: null, payload: null, networkError: error };
+   619	      }
+   620	    }
+   621	
+   622	    function ensureTypeaheadRoot() {
+   623	      if (typeahead.root) return typeahead.root;
+   624	      const parent = searchInput?.parentElement;
+   625	      if (!parent) return null;
+   626	      const root = document.createElement('div');
+   627	      root.id = 'rv-typeahead';
+   628	      root.style.position = 'absolute';
+   629	      root.style.left = '0';
+   630	      root.style.right = '0';
+   631	      root.style.top = 'calc(100% + 10px)';
+   632	      root.style.zIndex = '9999'; // Increased z-index
+   633	      root.style.background = 'rgba(15, 23, 42, 0.98)';
+   634	      root.style.border = '1px solid rgba(100, 116, 139, 0.28)';
+   635	      root.style.borderRadius = '12px';
+   636	      root.style.boxShadow = '0 18px 40px rgba(0,0,0,0.35)';
+   637	      root.style.overflow = 'hidden';
+   638	      root.style.display = 'none';
+   639	      parent.appendChild(root);
+   640	      typeahead.root = root;
+   641	      return root;
+   642	    }
+   643	
+   644	    function closeTypeahead() {
+   645	      typeahead.open = false;
+   646	      typeahead.items = [];
+   647	      typeahead.activeIndex = -1;
+   648	      typeahead.emptyMessage = null;
+   649	      if (typeahead.root) typeahead.root.style.display = 'none';
+   650	    }
+   651	
+   652	    function openTypeahead(items) {
+   653	      const root = ensureTypeaheadRoot();
+   654	      if (!root) return;
+   655	      typeahead.items = Array.isArray(items) ? items : [];
+   656	      typeahead.open = typeahead.items.length > 0;
+   657	      typeahead.activeIndex = -1;
+   658	      typeahead.emptyMessage = null;
+   659	      renderTypeahead();
+   660	    }
+   661	
+   662	    function clearSuggestions() {
+   663	      closeTypeahead();
+   664	    }
+   665	
+   666	    async function doFetch(q) {
+   667	      const query = String(q || '').trim();
+   668	      if (!query) {
+   669	        clearSuggestions();
+   670	        return;
+   671	      }
+   672	      try {
+   673	        if (!universeReady) universeReady = loadUniverse();
+   674	        await universeReady;
+   675	      } catch (e) {
+   676	        console.warn("Universe wait failed", e);
+   677	      }
+   678	
+   679	      const items = getUniverseSuggestions(query, 12);
+   680	      typeahead.items = items;
+   681	      typeahead.activeIndex = -1;
+   682	      typeahead.open = items.length > 0;
+   683	      typeahead.emptyMessage = items.length ? null : 'No matches found in stock universe';
+   684	      renderTypeahead();
+   685	    }
+   686	
+   687	    function scheduleFetch(q) {
+   688	      if (typeahead.debounceTimer) clearTimeout(typeahead.debounceTimer);
+   689	      typeahead.debounceTimer = setTimeout(() => doFetch(q), typeahead.debounceMs);
+   690	    }
+   691	
+   692	    async function selectSymbol(symbol, name, { push = true } = {}) {
+   693	      const s = String(symbol || '').trim().toUpperCase();
+   694	      if (!s) return;
+   695	
+   696	      if (!universeReady) universeReady = loadUniverse();
+   697	      await universeReady;
+   698	
+   699	      if (!universeByTicker.has(s)) {
+   700	        closeTypeahead();
+   701	        renderUnsupported(s);
+   702	        return;
+   703	      }
+   704	
+   705	      const resolvedName = universeByTicker.get(s) || null;
+   706	      lastResolved = { ticker: s, name: resolvedName };
+
+### public/elliott.html loader + count usage
+   392	            document.getElementById('setup-count').textContent = filtered.length;
+   393	            const tbody = document.getElementById('scanner-tbody');
+   394	
+   395	            if (!filtered.length) {
+   396	                tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: #64748b; padding: 2rem;">No setups found for this filter</td></tr>';
+   397	                return;
+   398	            }
+   399	
+   400	            tbody.innerHTML = filtered.map(s => `
+   401	        <tr>
+   402	          <td style="font-weight: 700;">${escapeHtml(s.ticker)}</td>
+   403	          <td style="color: #94a3b8;">${escapeHtml(s.name || '—')}</td>
+   404	          <td>${getWaveBadge(s.wavePosition)}</td>
+   405	          <td>${getConfidenceBar(s.confidence)}</td>
+   406	          <td style="color: ${s.direction === 'bullish' ? '#34d399' : '#f87171'};">${escapeHtml(s.direction)}</td>
+   407	          <td style="font-family: 'SF Mono', monospace; color: #94a3b8;">${s.fibConformance?.toFixed(1) ?? '—'}%</td>
+   408	          <td><a href="/analyze/${encodeURIComponent(s.ticker)}" style="color: #60a5fa;">View →</a></td>
+   409	        </tr>
+   410	      `).join('');
+   411	        }
+   412	
+   413	        async function loadScanner() {
+   414	            try {
+   415	                const res = await fetch('/api/elliott-scanner');
+   416	                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+   417	                const data = await res.json();
+   418	
+   419	                allSetups = data.setups || [];
+   420	                document.getElementById('scanner-loading').style.display = 'none';
+   421	                document.getElementById('scanner-results').style.display = 'block';
+   422	                renderTable(allSetups);
+   423	            } catch (err) {
+   424	                document.getElementById('scanner-loading').style.display = 'none';
+   425	                document.getElementById('scanner-error').style.display = 'block';
+   426	                document.getElementById('scanner-error-msg').textContent = err.message;
+   427	            }
+   428	        }
+
+### public/forecast.html updateForecasts empty-state messaging
+   648	          <td>${formatDirection(f.horizons?.['5d'])}</td>
+   649	          <td>${formatDirection(f.horizons?.['20d'])}</td>
+   650	          <td>${formatDirection(f.horizons?.['252d'])}</td> <!-- 1 Year (Likely Empty) -->
+   651	        </tr>
+   652	      `).join('');
+   653	    }
+   654	
+   655	    function updateForecasts(forecasts, state = 'BOOTSTRAP', reason = null) {
+   656	      // Update global state
+   657	      activeForecasts = forecasts || [];
+   658	
+   659	      const bootstrapNotice = document.getElementById('bootstrap-notice');
+   660	      const countEl = document.getElementById('forecast-count');
+   661	
+   662	      if (!activeForecasts || activeForecasts.length === 0) {
+   663	        // Show empty/loading state logic
+   664	        const tbody = document.querySelector('#forecasts-table tbody');
+   665	        tbody.innerHTML = '<tr><td colspan="6" style="padding: 2rem; text-align: center; color: #64748b;">No active forecasts available</td></tr>';
+   666	
+   667	        const stateUpper = String(state || 'BOOTSTRAP').toUpperCase();
+   668	        let title = 'System Initializing';
+   669	        let prefix = '⏳';
+   670	        let detail = 'Forecasts will appear after the first pipeline run. Check back soon.';
+   671	
+   672	        if (stateUpper === 'CIRCUIT_OPEN') {
+   673	          title = 'Circuit Open';
+   674	          prefix = '⚠️';
+   675	          detail = reason || 'Forecast publish paused due to failed data-quality gates.';
+   676	        } else if (stateUpper === 'STALE') {
+   677	          title = 'Data Stale';
+   678	          prefix = '🕒';
+   679	          detail = reason || 'Latest data is stale; refresh is pending.';
+   680	        }
+   681	
+   682	        if (bootstrapNotice) {
+   683	          bootstrapNotice.innerHTML = `${prefix} <strong>${title}:</strong> ${detail}`;
+   684	          bootstrapNotice.style.display = 'block';
+   685	        }
+   686	        if (countEl) countEl.textContent = '0 stocks';
+   687	        return;
+   688	      }
+   689	
+   690	      // Hide notice if we have data
+   691	      if (bootstrapNotice) bootstrapNotice.style.display = 'none';
+   692	      if (countEl) countEl.textContent = `${activeForecasts.length} stocks`;
+   693	
+   694	      // Default Sort (if not set)
+   695	      if (!sortConfig.key) sortConfig = { key: 'symbol', dir: 'asc' };
+   696	
+   697	      // Render
+   698	      renderForecastTable();
+   699	    }
+   700	
+   701	    async function init() {
+   702	      // Load status
+   703	      const status = await fetchData('system/status.json');
+   704	      if (status) updateStatus(status);
+   705	
+   706	      // Load latest
+   707	      const latest = await fetchData('latest.json');
+   708	      if (latest) {
+   709	        updateLatest(latest);
+   710	        document.getElementById('champion-id').textContent =
+   711	          latest.data?.champion_id?.slice(-12) || 'v3.4-initial';
+   712	        document.getElementById('champion-created').textContent =
+   713	          latest.meta?.generated_at ? new Date(latest.meta.generated_at).toLocaleString() : 'System bootstrap';
+   714	
+   715	        // Update forecasts table
+   716	        updateForecasts(
+   717	          latest.data?.forecasts || [],
+   718	          latest.meta?.status || status?.status || 'BOOTSTRAP',
+   719	          latest.meta?.reason || status?.reason || null
+   720	        );
+   721	      }
+   722	
+   723	      // Load latest daily report using ref from latest.json
+   724	      const reportRef = latest?.data?.latest_report_ref;

@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+
+<head>
+    <meta charset="UTF-8" />
+    <title>RubikVault – Elliott Waves Scanner</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+    <meta name="description"
+        content="Deterministic Fractal Market Structure Scanner. Find stocks at Wave 3, Wave 5, or Wave 1 setups." />
+
+    <meta name="theme-color" content="#3b82f6" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/assets/rv-favicon.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/assets/rv-apple-icon.png" />
+    <link rel="manifest" href="/manifest.json" />
+    <link rel="stylesheet" href="/style.css" />
+</head>
+
+<body>
+    <!-- HEADER -->
+    <header class="rv-header">
+        <div class="rv-header-inner">
+            <a class="rv-brand" href="/" aria-label="RubikVault">
+                <img class="rv-brand-icon" src="/assets/rv-icon.png" alt="" />
+                <span class="rv-brand-text">RubikVault</span>
+            </a>
+
+            <nav class="rv-nav">
+                <a class="rv-social-link" href="https://www.youtube.com/@RubikVault" target="_blank"
+                    rel="noopener noreferrer" aria-label="YouTube">
+                    <svg viewBox="0 0 24 24">
+                        <path
+                            d="M21.58 7.19a2.5 2.5 0 0 0-1.76-1.77C18.25 5 12 5 12 5s-6.25 0-7.82.42A2.5 2.5 0 0 0 2.42 7.2 26.6 26.6 0 0 0 2 12s0 2.55.42 4.81a2.5 2.5 0 0 0 1.76 1.77C5.75 19 12 19 12 19s6.25 0 7.82-.42a2.5 2.5 0 0 0 1.76-1.77C22 14.55 22 12 22 12s0-2.55-.42-4.81ZM10 15.5v-7l6 3.5-6 3.5Z" />
+                    </svg>
+                </a>
+                <a class="rv-social-link" href="https://x.com/RubikVault" target="_blank" rel="noopener noreferrer"
+                    aria-label="X">
+                    <svg viewBox="0 0 24 24">
+                        <path
+                            d="M18.9 2H22l-6.79 7.76L23 22h-6.2l-4.86-6.02L6.66 22H3.5l7.26-8.3L3 2h6.35l4.4 5.52L18.9 2Zm-1.09 18h1.72L8.4 3.93H6.56L17.81 20Z" />
+                    </svg>
+                </a>
+                <a class="rv-social-link" href="https://www.instagram.com/rubikvault_official/" target="_blank"
+                    rel="noopener noreferrer" aria-label="Instagram">
+                    <svg viewBox="0 0 24 24">
+                        <path
+                            d="M7 2h10a5 5 0 0 1 5 5v10a5 5 0 0 1-5 5H7a5 5 0 0 1-5-5V7a5 5 0 0 1 5-5Zm10 2H7a3 3 0 0 0-3 3v10a3 3 0 0 0 3 3h10a3 3 0 0 0 3-3V7a3 3 0 0 0-3-3Zm-5 3.5a4.5 4.5 0 1 1 0 9 4.5 4.5 0 0 1 0-9Zm0 2a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5ZM17.8 6.2a1 1 0 1 1 0 2 1 1 0 0 1 0-2Z" />
+                    </svg>
+                </a>
+                <a class="rv-social-link" href="https://www.tiktok.com/@rubikvault" target="_blank"
+                    rel="noopener noreferrer" aria-label="TikTok">
+                    <svg viewBox="0 0 24 24">
+                        <path
+                            d="M16.7 5.2c.8 1.2 2.1 2 3.6 2.1v3.1c-1.7-.1-3.3-.7-4.6-1.7v7.4c0 3.4-2.8 6.2-6.2 6.2S3.3 19.5 3.3 16.1s2.8-6.2 6.2-6.2c.4 0 .8 0 1.2.1v3.3c-.4-.1-.8-.2-1.2-.2-1.7 0-3.1 1.4-3.1 3.1s1.4 3.1 3.1 3.1 3.1-1.4 3.1-3.1V2h3.1c0 1.2.3 2.3 1 3.2Z" />
+                    </svg>
+                </a>
+            </nav>
+
+            <div class="rv-header-tools" aria-live="polite">
+                <div class="rv-data-updated" style="font-size: 12px; color: var(--rv-text-muted);">
+                    Data updated: 2026-02-06 (daily snapshots)
+                </div>
+                <div class="rv-market-clock">
+                    <span class="rv-clock-time" id="rv-ny-time">NY: --:--:--</span>
+                    <span class="rv-clock-status">
+                        <span class="rv-led" data-rv-led="closed"></span>
+                        <span class="rv-market-label" data-rv-market-label>Closed</span>
+                        <span class="rv-market-countdown" id="rv-market-countdown">opens in --:--:--</span>
+                    </span>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- PAGE NAVIGATION -->
+    <nav class="rv-page-nav">
+        <div class="rv-page-nav-inner">
+            <a href="/" class="rv-page-nav-link" data-page="analyzer">Stock Analyzer</a>
+            <a href="/elliott.html" class="rv-page-nav-link active" data-page="elliott">Elliott Waves</a>
+            <a href="/scientific.html" class="rv-page-nav-link" data-page="scientific">Scientific Analyzer</a>
+            <a href="/forecast.html" class="rv-page-nav-link" data-page="forecast">Forecast System</a>
+        </div>
+    </nav>
+
+    <style>
+        .elliott-hero {
+            text-align: center;
+            padding: 2rem 0 1.5rem;
+        }
+
+        .elliott-hero h1 {
+            font-size: 2.5rem;
+            font-weight: 800;
+            color: #f1f5f9;
+            margin: 0 0 0.5rem;
+        }
+
+        .elliott-hero p {
+            color: #94a3b8;
+            font-size: 1rem;
+            margin: 0;
+        }
+
+        .elliott-filters {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            margin-bottom: 1.5rem;
+            align-items: center;
+        }
+
+        .elliott-filter-btn {
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            border: 1px solid rgba(100, 116, 139, 0.3);
+            background: rgba(15, 23, 42, 0.5);
+            color: #94a3b8;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.2s;
+        }
+
+        .elliott-filter-btn:hover {
+            background: rgba(59, 130, 246, 0.15);
+        }
+
+        .elliott-filter-btn.active {
+            background: rgba(59, 130, 246, 0.2);
+            border-color: rgba(59, 130, 246, 0.4);
+            color: #60a5fa;
+        }
+
+        .elliott-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9rem;
+        }
+
+        .elliott-table th {
+            text-align: left;
+            padding: 0.75rem 1rem;
+            border-bottom: 1px solid rgba(100, 116, 139, 0.25);
+            color: #64748b;
+            font-weight: 600;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            cursor: pointer;
+            user-select: none;
+            transition: color 0.2s;
+        }
+
+        .elliott-table th:hover {
+            color: #e5e7eb;
+        }
+
+        .elliott-table th .sort-arrow {
+            margin-left: 4px;
+            opacity: 0.5;
+        }
+
+        .elliott-table th.sorted .sort-arrow {
+            opacity: 1;
+        }
+
+        .elliott-table td {
+            padding: 0.75rem 1rem;
+            border-bottom: 1px solid rgba(100, 116, 139, 0.12);
+            color: #e5e7eb;
+        }
+
+        .elliott-table tr:hover td {
+            background: rgba(59, 130, 246, 0.05);
+        }
+
+        .wave-badge {
+            display: inline-block;
+            padding: 0.25rem 0.6rem;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 0.8rem;
+        }
+
+        .wave-badge.wave3 {
+            background: rgba(16, 185, 129, 0.2);
+            color: #34d399;
+            border: 1px solid rgba(16, 185, 129, 0.35);
+        }
+
+        .wave-badge.wave5 {
+            background: rgba(245, 158, 11, 0.2);
+            color: #fbbf24;
+            border: 1px solid rgba(245, 158, 11, 0.35);
+        }
+
+        .wave-badge.wave1 {
+            background: rgba(59, 130, 246, 0.2);
+            color: #60a5fa;
+            border: 1px solid rgba(59, 130, 246, 0.35);
+        }
+
+        .wave-badge.correction {
+            background: rgba(239, 68, 68, 0.15);
+            color: #f87171;
+            border: 1px solid rgba(239, 68, 68, 0.3);
+        }
+
+        .confidence-bar {
+            width: 60px;
+            height: 6px;
+            background: rgba(100, 116, 139, 0.2);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+
+        .confidence-bar-fill {
+            height: 100%;
+            border-radius: 3px;
+        }
+
+        .loading-spinner {
+            text-align: center;
+            padding: 3rem;
+            color: #64748b;
+        }
+    </style>
+
+    <!-- MAIN CONTENT -->
+    <main class="rv-main" style="max-width: 1400px; margin: 0 auto; padding: 2rem;">
+
+        <section class="elliott-hero">
+            <h1>Elliott Waves Scanner</h1>
+            <p>Deterministic Fractal Market Structure Inference (DFMSIF v1.0)</p>
+            <p style="font-size: 0.85rem; color: #64748b; margin-top: 0.5rem;">
+                Scientific, rule-based structure detection — not prediction
+            </p>
+        </section>
+
+        <div class="rv-card" style="padding: 1.5rem;">
+            <div class="elliott-filters">
+                <button class="elliott-filter-btn active" data-filter="all">All Setups</button>
+                <button class="elliott-filter-btn" data-filter="wave1">Wave 1 Start</button>
+                <button class="elliott-filter-btn" data-filter="wave3">Pre Wave 3</button>
+                <button class="elliott-filter-btn" data-filter="wave5">Pre Wave 5</button>
+                <button class="elliott-filter-btn" data-filter="correction">In Correction</button>
+                <div style="flex: 1;"></div>
+                <div style="color: #64748b; font-size: 0.85rem;">
+                    Found: <span id="setup-count">—</span> setups
+                </div>
+            </div>
+
+            <div id="scanner-loading" class="loading-spinner">
+                <div>Scanning stock universe...</div>
+                <div style="margin-top: 0.5rem; font-size: 0.85rem;">Analyzing fractal structures</div>
+            </div>
+
+            <div id="scanner-results" style="display: none;">
+                <table class="elliott-table">
+                    <thead>
+                        <tr>
+                            <th data-sort="ticker">Ticker <span class="sort-arrow">↕</span></th>
+                            <th data-sort="name">Name <span class="sort-arrow">↕</span></th>
+                            <th data-sort="wavePosition">Wave Position <span class="sort-arrow">↕</span></th>
+                            <th data-sort="confidence">Confidence <span class="sort-arrow">↕</span></th>
+                            <th data-sort="direction">Direction <span class="sort-arrow">↕</span></th>
+                            <th data-sort="fibConformance">Fib Conformance <span class="sort-arrow">↕</span></th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="scanner-tbody"></tbody>
+                </table>
+            </div>
+
+            <div id="scanner-error" style="display: none; padding: 2rem; text-align: center;">
+                <div style="color: #f87171; font-weight: 600;">Scanner Error</div>
+                <div id="scanner-error-msg" style="color: #94a3b8; margin-top: 0.5rem;">—</div>
+            </div>
+        </div>
+
+        <div
+            style="margin-top: 1.5rem; padding: 1rem; background: rgba(15, 23, 42, 0.4); border-radius: 10px; border: 1px solid rgba(100, 116, 139, 0.15);">
+            <div style="font-size: 0.8rem; color: #64748b;">
+                <strong>Disclaimer:</strong> Structure detection is deterministic and rule-based.
+                It does NOT predict future prices. Wave labels are for educational research only.
+                ISO 8000 / IEEE 7000 Compliant — Bit-exact reproducibility guaranteed.
+            </div>
+        </div>
+    </main>
+
+    <!-- FOOTER -->
+    <footer class="rv-footer">
+        <div class="rv-footer-inner">
+            <div class="rv-footer-brand">RubikVault</div>
+            <div class="rv-footer-links">
+                <a href="/imprint.html">Imprint</a>
+                <a href="/privacy.html">Privacy</a>
+                <a href="/disclaimer.html">Disclaimer</a>
+            </div>
+        </div>
+        <p>RubikVault provides educational content only and does not offer financial advice.</p>
+        <p>&copy; 2026 RubikVault. All rights reserved.</p>
+    </footer>
+
+    <script src="/market-clock.js"></script>
+    <script>
+        (function () {
+            const el = document.getElementById("rv-data-updated-date");
+            if (el) el.textContent = new Date().toISOString().split("T")[0];
+        })();
+
+        // Scanner state
+        let allSetups = [];
+        let currentFilter = 'all';
+        let sortColumn = 'confidence';
+        let sortDirection = 'desc';
+
+        function escapeHtml(text) {
+            return String(text || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        }
+
+        function getWaveBadge(position) {
+            const map = {
+                'pre-wave-3': { class: 'wave3', label: 'Pre Wave 3' },
+                'pre-wave-5': { class: 'wave5', label: 'Pre Wave 5' },
+                'wave-1-start': { class: 'wave1', label: 'Wave 1 Start' },
+                'in-correction': { class: 'correction', label: 'In Correction' },
+                'unknown': { class: 'correction', label: 'Unknown' }
+            };
+            const info = map[position] || map['unknown'];
+            return `<span class="wave-badge ${info.class}">${info.label}</span>`;
+        }
+
+        function getConfidenceBar(confidence) {
+            const pct = Math.min(100, Math.max(0, confidence || 0));
+            const color = pct >= 70 ? '#34d399' : pct >= 50 ? '#fbbf24' : '#f87171';
+            return `
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <div class="confidence-bar">
+            <div class="confidence-bar-fill" style="width: ${pct}%; background: ${color};"></div>
+          </div>
+          <span style="font-size: 0.85rem; color: #94a3b8;">${pct}%</span>
+        </div>
+      `;
+        }
+
+        function renderTable(setups) {
+            let filtered = currentFilter === 'all'
+                ? setups
+                : setups.filter(s => {
+                    if (currentFilter === 'wave3') return s.wavePosition === 'pre-wave-3';
+                    if (currentFilter === 'wave5') return s.wavePosition === 'pre-wave-5';
+                    if (currentFilter === 'wave1') return s.wavePosition === 'wave-1-start';
+                    if (currentFilter === 'correction') return s.wavePosition === 'in-correction';
+                    return true;
+                });
+
+            // Sort by current column
+            filtered = [...filtered].sort((a, b) => {
+                let aVal = a[sortColumn];
+                let bVal = b[sortColumn];
+
+                // Handle null values
+                if (aVal == null) aVal = '';
+                if (bVal == null) bVal = '';
+
+                // Numeric comparison
+                if (typeof aVal === 'number' && typeof bVal === 'number') {
+                    return sortDirection === 'asc' ? aVal - bVal : bVal - aVal;
+                }
+
+                // String comparison
+                const strA = String(aVal).toLowerCase();
+                const strB = String(bVal).toLowerCase();
+                if (sortDirection === 'asc') {
+                    return strA.localeCompare(strB);
+                }
+                return strB.localeCompare(strA);
+            });
+
+            // Update header classes
+            document.querySelectorAll('.elliott-table th[data-sort]').forEach(th => {
+                th.classList.remove('sorted');
+                const arrow = th.querySelector('.sort-arrow');
+                if (arrow) arrow.textContent = '↕';
+            });
+            const sortedTh = document.querySelector(`.elliott-table th[data-sort="${sortColumn}"]`);
+            if (sortedTh) {
+                sortedTh.classList.add('sorted');
+                const arrow = sortedTh.querySelector('.sort-arrow');
+                if (arrow) arrow.textContent = sortDirection === 'asc' ? '↑' : '↓';
+            }
+
+            document.getElementById('setup-count').textContent = filtered.length;
+            const tbody = document.getElementById('scanner-tbody');
+
+            if (!filtered.length) {
+                tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: #64748b; padding: 2rem;">No setups found for this filter</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = filtered.map(s => `
+        <tr>
+          <td style="font-weight: 700;">${escapeHtml(s.ticker)}</td>
+          <td style="color: #94a3b8;">${escapeHtml(s.name || '—')}</td>
+          <td>${getWaveBadge(s.wavePosition)}</td>
+          <td>${getConfidenceBar(s.confidence)}</td>
+          <td style="color: ${s.direction === 'bullish' ? '#34d399' : '#f87171'};">${escapeHtml(s.direction)}</td>
+          <td style="font-family: 'SF Mono', monospace; color: #94a3b8;">${s.fibConformance?.toFixed(1) ?? '—'}%</td>
+          <td><a href="/analyze/${encodeURIComponent(s.ticker)}" style="color: #60a5fa;">View →</a></td>
+        </tr>
+      `).join('');
+        }
+
+        async function loadScanner() {
+            try {
+                const res = await fetch('/api/elliott-scanner');
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                const data = await res.json();
+
+                allSetups = data.setups || [];
+                document.getElementById('scanner-loading').style.display = 'none';
+                document.getElementById('scanner-results').style.display = 'block';
+                renderTable(allSetups);
+            } catch (err) {
+                document.getElementById('scanner-loading').style.display = 'none';
+                document.getElementById('scanner-error').style.display = 'block';
+                document.getElementById('scanner-error-msg').textContent = err.message;
+            }
+        }
+
+        // Filter buttons
+        document.querySelectorAll('.elliott-filter-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.elliott-filter-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                currentFilter = btn.dataset.filter;
+                renderTable(allSetups);
+            });
+        });
+
+        // Sortable table headers
+        document.querySelectorAll('.elliott-table th[data-sort]').forEach(th => {
+            th.addEventListener('click', () => {
+                const column = th.dataset.sort;
+                if (sortColumn === column) {
+                    sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
+                } else {
+                    sortColumn = column;
+                    sortDirection = 'desc';
+                }
+                renderTable(allSetups);
+            });
+        });
+
+        // Load on page ready
+        loadScanner();
+    </script>
+    <script src="/market-clock.js" defer></script>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9cbd8fc8ffc39406',t:'MTc3MDc0NzAwOQ=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+
+</html>

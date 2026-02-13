@@ -1,0 +1,11 @@
+BASE=https://rubikvault.com URL=https://rubikvault.com/data/snapshots/market-prices/latest.json
+http_code=200
+time_total=0.323616
+content_type=application/json
+size_download=607501
+-- validations --
+header_content_type=content-type: application/json
+content_type_json=PASS
+html_prefix=PASS
+jq_parse=PASS
+body_non_empty=PASS

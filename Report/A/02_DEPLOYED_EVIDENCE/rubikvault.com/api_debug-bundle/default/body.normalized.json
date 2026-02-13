@@ -1,0 +1,37 @@
+{
+  "data": {
+    "cards": {},
+    "health": {},
+    "owner": {
+      "overall": {
+        "reason": "ASSET_FETCH_FAILED",
+        "verdict": "WARN"
+      },
+      "topIssues": [
+        {
+          "action": "/api/debug-bundle",
+          "code": "ASSET_FETCH_FAILED",
+          "message": "debug-bundle unavailable"
+        }
+      ]
+    },
+    "runtime": {
+      "env": "preview",
+      "schedulerExpected": false
+    }
+  },
+  "error": null,
+  "meta": {
+    "data_date": "2026-02-10",
+    "generated_at": "2026-02-10T18:04:40.596Z",
+    "provider": "internal",
+    "status": "fresh"
+  },
+  "metadata": {
+    "module": "debug-bundle",
+    "reason": "ASSET_FETCH_FAILED",
+    "served_from": "MAINTENANCE"
+  },
+  "ok": true,
+  "schema_version": "3.0"
+}

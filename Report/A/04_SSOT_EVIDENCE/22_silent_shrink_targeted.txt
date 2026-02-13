@@ -1,0 +1,16 @@
+$ rg -n "slice\(0, ?100\)|limit\s*[:=]\s*100|nasdaq100\.json|TOP_100|MAX_100|perPage\s*=\s*100" -S public/ scripts/ functions/
+functions/api/_shared/us-universes.js:1:export const US_TOP_100 = [
+functions/api/mission-control/summary.js:1318:    fetchAssetJson(request.url, '/data/universe/nasdaq100.json', []),
+functions/api/mission-control/summary.js:1416:  const universeAsset = await fetchAssetText(request.url, '/data/universe/nasdaq100.json', []);
+functions/api/mission-control/summary.js:1638:    fetchAssetJson(request.url, '/data/universe/nasdaq100.json', null),
+functions/api/mission-control/summary.js:1712:      label: '/data/universe/nasdaq100.json',
+functions/api/mission-control/summary.js:1716:      path: '/data/universe/nasdaq100.json',
+functions/api/mission-control/summary.js:2058:      url: '/data/universe/nasdaq100.json',
+scripts/forecast/snapshot_ingest.mjs:5: * - Universe from /data/universe/nasdaq100.json
+scripts/providers/eodhd-backfill-bars.mjs:2:// Usage: node scripts/providers/eodhd-backfill-bars.mjs --universe ./public/data/universe/nasdaq100.json
+scripts/mirror-breakout-energy.mjs:3:import { US_TOP_100 } from "../functions/api/_shared/us-universes.js";
+scripts/mirror-breakout-energy.mjs:102:  const symbols = US_TOP_100.map((item) => item.s).filter(Boolean).slice(0, MAX_SYMBOLS);
+scripts/truth-chain/trace_ui_to_origin.mjs:164:    ui_universe_local: localArtifact('/data/universe/nasdaq100.json'),
+scripts/ops/test-ops-artifacts.mjs:6:  { name: 'universe', url: `${base}/data/universe/nasdaq100.json`, check: (doc) => Array.isArray(doc) && doc.length > 0 },
+public/ops/index.html:431:        <a href="/data/universe/nasdaq100.json" style="color:#60a5fa; margin-left: 4px;">universe</a>
+public/data/pipeline/nasdaq100.latest.json:7:    "universe_ref": "/data/universe/nasdaq100.json",

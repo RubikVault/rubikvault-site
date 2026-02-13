@@ -1,0 +1,892 @@
+$ rg -n "https?://|API_BASE|BASE_URL|PAGES_BASE|PREVIEW_BASE|PROD_BASE|import\.meta\.env|process\.env|Deno\.env\.get" -S public/ functions/ scripts/
+scripts/ui-path/prove_ui_path.mjs:12:const base = process.env.BASE_URL || 'https://rubikvault.com';
+scripts/fix-api-exports.mjs:14:const DRY_RUN = process.env.DRY_RUN === '1';
+scripts/test-scheduler.mjs:41:  const request = new Request("https://example.com/api/scheduler/health");
+scripts/test-scheduler.mjs:58:  const request = new Request("https://example.com/api/scheduler/run", {
+scripts/test-scheduler.mjs:73:  const request = new Request("https://example.com/api/scheduler/run", {
+scripts/test-scheduler.mjs:87:  const healthReq = new Request("https://example.com/api/scheduler/health");
+scripts/test-scheduler.mjs:105:  const request = new Request("https://example.com/api/scheduler/run", {
+scripts/ops/env.config.mjs:3:    OPS_BASE: process.env.OPS_BASE,
+scripts/ops/env.config.mjs:4:    RV_BASE: process.env.RV_BASE,
+scripts/ops/env.config.mjs:5:    BASE_URL: process.env.BASE_URL,
+scripts/ops/env.config.mjs:6:    BASE: process.env.BASE
+scripts/ops/env.config.mjs:9:  const order = ['OPS_BASE', 'RV_BASE', 'BASE_URL', 'BASE'];
+scripts/ops/env.config.mjs:16:    return 'http://127.0.0.1:8788';
+scripts/llm-context.sh:37:PREVIEW="https://<preview>.pages.dev"
+scripts/smoke-debug.mjs:1:const host = process.env.HOST || "http://127.0.0.1:8788";
+scripts/smoke-debug.mjs:2:const token = process.env.RV_DEBUG_TOKEN || "";
+scripts/ops/verify-truth-artifacts.sh:59:    echo "Example: BASE=https://d90a2286.rubikvault-site.pages.dev ./scripts/ops/verify-truth-artifacts.sh --live"
+scripts/aggregator/finalize.mjs:34:const ARTIFACTS_DIR = process.env.ARTIFACTS_DIR || join(BASE_DIR, 'artifacts');
+scripts/aggregator/finalize.mjs:586:  const skipInvalidArtifacts = String(process.env.RV_FINALIZER_SKIP_INVALID || '').trim() === '1';
+scripts/update-news.mjs:27:    url: "https://www.finanzen.net/rss/news"
+scripts/update-news.mjs:32:    url: "https://www.finanzen.net/rss/analysen"
+scripts/update-news.mjs:37:    url: "https://news.onvista.de/rss/woche"
+scripts/update-news.mjs:42:    url: "https://www.handelsblatt.com/contentexport/feed/finanzen"
+scripts/update-news.mjs:47:    url: "https://news.google.com/rss/search?q=Aktien%20B%C3%B6rse%20DAX&hl=de&gl=DE&ceid=DE:de"
+scripts/update-news.mjs:52:    url: "https://www.tagesschau.de/xml/rss2/"
+scripts/update-news.mjs:381:    const commit = process.env.GITHUB_SHA || "local";
+scripts/update-news.mjs:382:    const runId = process.env.GITHUB_RUN_ID || null;
+scripts/update-news.mjs:399:  const commit = process.env.GITHUB_SHA || "local";
+scripts/update-news.mjs:400:  const runId = process.env.GITHUB_RUN_ID || null;
+scripts/test-truth-chain.mjs:54:const request = new Request('http://localhost/api/mission-control/summary?debug=1');
+scripts/seeder.js:1059:  return required.filter((name) => !process.env[name]);
+scripts/smoke-rvci.sh:4:BASE_DEFAULT="https://b2f2d030.rubikvault-site.pages.dev"
+scripts/healthcheck.sh:4:BASE_URL="${1:-${BASE_URL:-http://localhost:8788}}"
+scripts/healthcheck.sh:22:echo "Running healthcheck against: ${BASE_URL}"
+scripts/healthcheck.sh:25:  url="${BASE_URL}${endpoint}"
+scripts/universe/fetch-constituents.mjs:18:const API_KEY = process.env.EODHD_API_KEY;
+scripts/universe/fetch-constituents.mjs:19:const BASE_URL = 'https://eodhd.com/api';
+scripts/universe/fetch-constituents.mjs:50:    const url = `${BASE_URL}/fundamentals/${index.symbol}?api_token=${API_KEY}&fmt=json`;
+scripts/marketphase-generate.mjs:16:  const raw = process.env.SYMBOLS || "AAPL";
+scripts/marketphase-generate.mjs:66:    return process.env.COMMIT_HASH || execSync("git rev-parse --short HEAD", { encoding: "utf8" }).trim();
+scripts/marketphase-generate.mjs:204:  const dummyMode = process.env.DUMMY === "1";
+scripts/ops/rv_verify_count_provenance.mjs:20:    throw new Error('Missing base URL. Provide as args or set OPS_BASE/RV_BASE/BASE_URL/BASE.');
+scripts/providers/marketaux.js:3:const BASE_URL = "https://api.marketaux.com/v1/news/all";
+scripts/providers/marketaux.js:7:  const apiKey = process.env.MARKETAUX_API_KEY || "";
+scripts/providers/marketaux.js:21:  const url = `${BASE_URL}?${params.toString()}`;
+scripts/universe/fetch-from-public.mjs:20:    sp500: 'https://raw.githubusercontent.com/datasets/s-and-p-500-companies/main/data/constituents.csv',
+scripts/validate/market-stats-artifact.v1.mjs:16:  const baseDir = process.env.RV_ARTIFACT_OUT_DIR
+scripts/validate/market-stats-artifact.v1.mjs:17:    ? String(process.env.RV_ARTIFACT_OUT_DIR)
+scripts/marketphase-validate.mjs:119:  const envSymbols = process.env.SYMBOLS;
+scripts/providers/fred.js:3:const FRED_BASE = "https://api.stlouisfed.org/fred/series/observations";
+scripts/providers/fred.js:4:const FRED_GRAPH_BASE = "https://fred.stlouisfed.org/graph/fredgraph.csv";
+scripts/providers/fred.js:42:  const apiKey = process.env.FRED_API_KEY || "";
+scripts/eod/build-eod-history.mjs:107:    const url = new URL(`https://api.tiingo.com/tiingo/daily/${encodeURIComponent(symbol)}/prices`);
+scripts/eod/build-eod-history.mjs:169:    const token = process.env.TIINGO_API_KEY;
+scripts/providers/sec_edgar.js:3:const BASE_URL = "https://data.sec.gov";
+scripts/providers/sec_edgar.js:7:  const apiKey = process.env.SEC_API_KEY || "";
+scripts/providers/sec_edgar.js:16:  const url = `${BASE_URL}/submissions/CIK${cik}.json`;
+scripts/metrics-v5-gates.mjs:7:const baseUrl = process.env.BASE_URL || "http://127.0.0.1:8788";
+scripts/metrics-v5-gates.mjs:31:    const hint = `Fetch failed. Is the dev server running? Try: npm run dev (or set BASE_URL).`;
+scripts/eod/build-eod-latest.mjs:132:  const url = new URL(`https://api.tiingo.com/tiingo/daily/${encodeURIComponent(symbol)}/prices`);
+scripts/eod/build-eod-latest.mjs:254:  const token = process.env.TIINGO_API_KEY ?? process.env.TIIANGO_API_KEY;
+scripts/providers/alphavantage.js:3:const BASE_URL = "https://www.alphavantage.co/query";
+scripts/providers/alphavantage.js:25:  const apiKey = process.env.AV_API_KEY || "";
+scripts/providers/alphavantage.js:34:  const url = `${BASE_URL}?function=TIME_SERIES_DAILY_ADJUSTED&symbol=${encodeURIComponent(
+scripts/ops/build-ops-daily.mjs:112:  const endpoint = 'https://api.cloudflare.com/client/v4/graphql';
+scripts/ops/build-ops-daily.mjs:355:    accountId: process.env.CF_ACCOUNT_ID,
+scripts/ops/build-ops-daily.mjs:356:    apiToken: process.env.CF_API_TOKEN
+scripts/validate/market-prices-artifact.v1.mjs:20:  const baseDir = process.env.RV_ARTIFACT_OUT_DIR
+scripts/validate/market-prices-artifact.v1.mjs:21:    ? String(process.env.RV_ARTIFACT_OUT_DIR)
+scripts/providers/market-prices-v3.mjs:105:const STOOQ_BASE_URL = 'https://stooq.pl/q/d/l/';
+scripts/providers/market-prices-v3.mjs:192:    const url = `${STOOQ_BASE_URL}?s=${symbolKey}&i=d`;
+scripts/providers/market-prices-v3.mjs:791:  const raw = process.env[envVar];
+scripts/providers/market-prices-v3.mjs:1203:  const outDir = process.env.RV_ARTIFACT_OUT_DIR
+scripts/providers/market-prices-v3.mjs:1204:    ? String(process.env.RV_ARTIFACT_OUT_DIR)
+scripts/providers/market-prices-v3.mjs:1205:    : (process.env.ARTIFACTS_DIR
+scripts/providers/market-prices-v3.mjs:1206:      ? join(String(process.env.ARTIFACTS_DIR), MODULE_NAME)
+scripts/providers/market-prices-v3.mjs:1211:  const forcedStub = toBool(process.env.RV_PRICES_STUB);
+scripts/providers/market-prices-v3.mjs:1212:  const forcedReal = toBool(process.env.RV_PRICES_FORCE_REAL);
+scripts/providers/market-prices-v3.mjs:1213:  const forcedProviderRaw = process.env.RV_FORCE_PROVIDER ? String(process.env.RV_FORCE_PROVIDER) : '';
+scripts/validate/providers-registry.v1.mjs:19:const registryPath = process.env.RV_PROVIDERS_REGISTRY_PATH
+scripts/validate/providers-registry.v1.mjs:20:  ? path.resolve(process.env.RV_PROVIDERS_REGISTRY_PATH)
+scripts/ops/fetch-with-context.mjs:36:        OPS_BASE: process.env.OPS_BASE || null,
+scripts/ops/fetch-with-context.mjs:37:        RV_BASE: process.env.RV_BASE || null,
+scripts/ops/fetch-with-context.mjs:38:        BASE_URL: process.env.BASE_URL || null,
+scripts/ops/fetch-with-context.mjs:39:        BASE: process.env.BASE || null,
+scripts/ops/fetch-with-context.mjs:40:        CI: process.env.CI || null
+scripts/ops/fetch-with-context.mjs:45:    const jsonLog = process.env.CI === 'true' || process.env.CI === '1' || process.env.RV_LOG_JSON === '1';
+scripts/test-api.sh:6:  echo "Usage: bash scripts/test-api.sh <BASE_URL>"
+scripts/providers/market-score-v3.mjs:159:  const artifactsDir = process.env.ARTIFACTS_DIR ? join(String(process.env.ARTIFACTS_DIR), SOURCE_MODULE) : null;
+scripts/providers/market-score-v3.mjs:161:  if (process.env.BARS_ARTIFACTS_DIR) {
+scripts/providers/market-score-v3.mjs:162:    candidates.push(join(String(process.env.BARS_ARTIFACTS_DIR), SOURCE_MODULE, 'snapshot.json'));
+scripts/providers/market-score-v3.mjs:208:  const artifactsOutDir = process.env.RV_ARTIFACT_OUT_DIR
+scripts/providers/market-score-v3.mjs:209:    ? String(process.env.RV_ARTIFACT_OUT_DIR)
+scripts/providers/market-score-v3.mjs:210:    : process.env.ARTIFACTS_DIR
+scripts/providers/market-score-v3.mjs:211:    ? join(String(process.env.ARTIFACTS_DIR), MODULE_NAME)
+scripts/validate/universe-registry.v1.mjs:58:const explicitPath = process.env.RV_UNIVERSE_REGISTRY_PATH
+scripts/validate/universe-registry.v1.mjs:59:  ? path.resolve(process.env.RV_UNIVERSE_REGISTRY_PATH)
+scripts/providers/market-health-v3.mjs:27:const FNG_URL = "https://api.alternative.me/fng/?limit=1&format=json";
+scripts/providers/market-health-v3.mjs:28:const FNG_STOCKS_URL = "https://production.dataviz.cnn.io/index/fearandgreed/graphdata";
+scripts/providers/market-health-v3.mjs:29:const COINGECKO_URL = "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,solana,ripple&vs_currencies=usd&include_24hr_change=true";
+scripts/providers/market-health-v3.mjs:464:      last_run_url: process.env.GITHUB_SERVER_URL && process.env.GITHUB_RUN_ID
+scripts/providers/market-health-v3.mjs:465:        ? `${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}`
+scripts/providers/market-health-v3.mjs:471:  const artifactsBaseDir = process.env.ARTIFACTS_DIR || join(BASE_DIR, 'artifacts');
+scripts/validate/universe-artifact.v2.mjs:24:  const baseDir = process.env.RV_ARTIFACT_OUT_DIR
+scripts/validate/universe-artifact.v2.mjs:25:    ? String(process.env.RV_ARTIFACT_OUT_DIR)
+scripts/truth-chain/trace_ui_to_origin.mjs:18:const base = process.env.BASE_URL || process.env.TRACE_BASE || process.env.RV_BASE || process.env.OPS_BASE;
+scripts/truth-chain/trace_ui_to_origin.mjs:20:  fail('Missing BASE_URL/TRACE_BASE/RV_BASE/OPS_BASE for API fetch.');
+scripts/providers/universe-v2.mjs:105:    url: 'https://datahub.io/core/dow-30/r/dow-30.csv',
+scripts/providers/universe-v2.mjs:117:    url: 'https://datahub.io/core/s-and-p-500-companies/r/constituents.csv',
+scripts/providers/universe-v2.mjs:129:    url: 'https://datahub.io/core/nasdaq-100/r/nasdaq-100.csv',
+scripts/providers/universe-v2.mjs:141:    url: 'https://raw.githubusercontent.com/datasets/russell-2000/main/data/russell2000.csv',
+scripts/providers/universe-v2.mjs:228:  const artifactsDir = process.env.RV_ARTIFACT_OUT_DIR
+scripts/providers/universe-v2.mjs:229:    ? String(process.env.RV_ARTIFACT_OUT_DIR)
+scripts/providers/universe-v2.mjs:230:    : process.env.ARTIFACTS_DIR
+scripts/providers/universe-v2.mjs:231:    ? join(String(process.env.ARTIFACTS_DIR), MODULE_NAME)
+scripts/providers/universe-v2.mjs:234:  const forcedStub = toBool(process.env.RV_UNIVERSE_STUB);
+scripts/providers/universe-v2.mjs:235:  const forcedReal = toBool(process.env.RV_UNIVERSE_FORCE_REAL);
+scripts/validate/market-score-artifact.v1.mjs:25:  const baseDir = process.env.RV_ARTIFACT_OUT_DIR
+scripts/validate/market-score-artifact.v1.mjs:26:    ? String(process.env.RV_ARTIFACT_OUT_DIR)
+functions/api/mission-control/summary.js:942:  const endpoint = 'https://api.cloudflare.com/client/v4/graphql';
+scripts/truth-chain/snapshot_ui_values.mjs:10:const base = process.env.BASE_URL || process.env.TRACE_BASE || process.env.RV_BASE || process.env.OPS_BASE;
+scripts/truth-chain/snapshot_ui_values.mjs:12:  console.error('Missing BASE_URL/TRACE_BASE/RV_BASE/OPS_BASE for API fetch.');
+scripts/validate-mirrors.mjs:145:const isEventMirrorsContext = process.env.VALIDATE_EVENT_MIRRORS_ONLY === "1" || 
+scripts/ops/verify-runblock1.zsh:17:PREVIEW_BASE="${PREVIEW_BASE:-https://1e178517.rubikvault-site.pages.dev}"
+scripts/ops/verify-runblock1.zsh:145:  local url="${PREVIEW_BASE}${endpoint}"
+scripts/ops/verify-runblock1.zsh:228:  local url="${PREVIEW_BASE}${endpoint}"
+scripts/ops/verify-runblock1.zsh:290:  local url="${PREVIEW_BASE}${endpoint}"
+scripts/ops/verify-runblock1.zsh:325:  local url="${PREVIEW_BASE}${endpoint}"
+scripts/ops/verify-runblock1.zsh:363:  log_info "Preview base URL: $PREVIEW_BASE"
+scripts/ops/verify-runblock1.zsh:375:  health_result=$(curl -sS -o /dev/null -w "%{http_code}" --max-time 10 "${PREVIEW_BASE}/api/health" 2>&1)
+scripts/ops/verify-runblock1.zsh:398:  local url="${PREVIEW_BASE}${endpoint}"
+scripts/ops/verify-runblock1.zsh:424:  log_info "Preview URL: $PREVIEW_BASE"
+scripts/providers/market-stats-v3.mjs:59:  const barsDir = process.env.BARS_ARTIFACTS_DIR
+scripts/providers/market-stats-v3.mjs:60:    ? join(String(process.env.BARS_ARTIFACTS_DIR), SOURCE_MODULE)
+scripts/providers/market-stats-v3.mjs:413:  const artifactsOutDir = process.env.RV_ARTIFACT_OUT_DIR
+scripts/providers/market-stats-v3.mjs:414:    ? String(process.env.RV_ARTIFACT_OUT_DIR)
+scripts/providers/market-stats-v3.mjs:415:    : process.env.ARTIFACTS_DIR
+scripts/providers/market-stats-v3.mjs:416:      ? join(String(process.env.ARTIFACTS_DIR), MODULE_NAME)
+public/mirrors/news.json:28:      "url": "https://www.wsj.com/articles/nikkei-may-rise-as-weak-yen-raises-earnings-hopes-776a8056?mod=rss_markets_main",
+public/mirrors/news.json:34:      "url": "https://www.wsj.com/articles/gold-edges-lower-feds-rate-decision-in-focus-09dbfceb?mod=rss_markets_main",
+public/mirrors/news.json:40:      "url": "https://www.wsj.com/articles/deepseek-us-ai-stocks-nvidia-broadcom-6cdfae81?mod=rss_markets_main",
+public/mirrors/news.json:46:      "url": "https://www.wsj.com/articles/financial-services-roundup-market-talk-94f52cba?mod=rss_markets_main",
+public/mirrors/news.json:52:      "url": "https://www.wsj.com/articles/arabica-coffee-prices-hit-new-high-on-u-s-colombia-tariff-spat-582446fe?mod=rss_markets_main",
+public/mirrors/news.json:58:      "url": "https://www.wsj.com/articles/safe-haven-currencies-strengthen-amid-fears-over-global-tariffs-9964e17a?mod=rss_markets_main",
+public/mirrors/news.json:64:      "url": "https://www.wsj.com/articles/u-s-natural-gas-futures-fall-on-shifting-weather-forecasts-1ef3e457?mod=rss_markets_main",
+public/mirrors/news.json:70:      "url": "https://www.wsj.com/articles/building-products-distributor-qxo-launching-hostile-bid-for-beacon-de024410?mod=rss_markets_main",
+public/mirrors/news.json:76:      "url": "https://www.wsj.com/articles/natural-gas-firm-diversified-energy-nears-deal-for-permian-basin-player-4c1c5ff5?mod=rss_markets_main",
+public/mirrors/news.json:82:      "url": "https://www.wsj.com/articles/tax-season-2024-irs-filing-dates-explained-628a8b37?mod=rss_markets_main",
+public/mirrors/news.json:88:      "url": "https://www.wsj.com/articles/chinese-investors-with-few-options-turn-to-dividends-ad31dcc4?mod=rss_markets_main",
+public/mirrors/news.json:94:      "url": "https://www.wsj.com/articles/jgbs-consolidate-supported-by-u-s-treasurys-gains-7edccc7d?mod=rss_markets_main",
+public/mirrors/news.json:100:      "url": "https://www.wsj.com/articles/oil-futures-fall-after-trump-calls-for-tariffs-on-colombia-5b2a178c?mod=rss_markets_main",
+public/mirrors/news.json:106:      "url": "https://www.wsj.com/articles/the-extra-reward-for-owning-stocks-over-bonds-has-disappeared-c3f9c223?mod=rss_markets_main",
+public/mirrors/news.json:112:      "url": "https://www.wsj.com/articles/heard-on-the-streets-stock-picking-series-98f04640?mod=rss_markets_main",
+public/mirrors/news.json:118:      "url": "https://www.wsj.com/articles/what-will-it-take-for-home-buyers-to-start-asking-for-a-disaster-discount-c662cb96?mod=rss_markets_main",
+public/mirrors/news.json:124:      "url": "https://www.wsj.com/articles/now-wanted-in-silicon-valley-ho-hum-businesses-with-thin-profit-margins-ab07de5f?mod=rss_markets_main",
+public/mirrors/news.json:130:      "url": "https://www.wsj.com/articles/china-cryptocurrency-market-trading-restrictions-3e050cd9?mod=rss_markets_main",
+public/mirrors/news.json:136:      "url": "https://www.wsj.com/articles/rising-house-mortgage-costs-north-carolina-home-468a46e5?mod=rss_markets_main",
+public/mirrors/news.json:142:      "url": "https://www.wsj.com/articles/trump-big-bank-conservative-bias-accusations-168abb27?mod=rss_markets_main",
+public/mirrors/news.json:148:      "url": "https://www.cnbc.com/2026/01/17/trump-greenland-tariffs-nato.html",
+public/mirrors/news.json:154:      "url": "https://www.cnbc.com/2026/01/18/trump-davos.html",
+public/mirrors/news.json:160:      "url": "https://www.cnbc.com/2026/01/17/trump-jpmorgan-chase-debanking.html",
+public/mirrors/news.json:166:      "url": "https://www.cnbc.com/2026/01/18/uk-australia-style-under-16s-social-media-ban.html",
+public/mirrors/news.json:172:      "url": "https://www.cnbc.com/2026/01/17/warren-buffett-on-parenting-horse-betting-and-why-he-stopped-talking-politics.html",
+public/mirrors/news.json:178:      "url": "https://www.cnbc.com/2026/01/17/warren-buffett-to-maximize-your-potential-ask-yourself-this-question.html",
+public/mirrors/news.json:184:      "url": "https://www.cnbc.com/2026/01/17/retirees-emergency-savings.html",
+public/mirrors/news.json:190:      "url": "https://www.cnbc.com/2026/01/17/ai-power-demand-markets-investor-risk.html",
+public/mirrors/news.json:196:      "url": "https://www.cnbc.com/2026/01/17/disney-dominated-2025-box-office.html",
+public/mirrors/news.json:202:      "url": "https://www.cnbc.com/2026/01/17/texas-us-states-budgets-bitcoin-crypto-strategic-reserve.html",
+public/mirrors/news.json:208:      "url": "https://www.cnbc.com/2026/01/17/week-in-review-stocks-battled-a-flood-of-news-and-we-booked-some-profits.html",
+public/mirrors/news.json:214:      "url": "https://www.cnbc.com/2026/01/16/white-house-hassett-trump-cards-credit-card-battle.html",
+public/mirrors/news.json:220:      "url": "https://www.cnbc.com/2026/01/17/activist-irenic-takes-a-stake-in-integer-heres-what-could-be-next-for-the-company.html",
+public/mirrors/news.json:226:      "url": "https://www.cnbc.com/2026/01/17/billion-dollar-ai-startup-founders-are-getting-younger-heres-why.html",
+public/mirrors/news.json:232:      "url": "https://www.cnbc.com/2026/01/17/james-clear-how-to-create-better-habits-without-relying-on-discipline.html",
+public/mirrors/news.json:238:      "url": "https://www.cnbc.com/2026/01/16/cramers-week-ahead-earnings-from-netflix-intel-capital-one-mccormick.html",
+public/mirrors/news.json:244:      "url": "https://www.cnbc.com/2026/01/15/trump-direct-payments-health-care.html",
+public/mirrors/news.json:250:      "url": "https://www.cnbc.com/2026/01/16/trump-labor-nazi-slogan-social-media.html",
+public/mirrors/news.json:256:      "url": "https://www.cnbc.com/2026/01/16/warsh-sprints-ahead-in-fed-chair-race-following-trump-comments-on-hassett-prediction-markets-show.html",
+public/mirrors/news.json:262:      "url": "https://www.cnbc.com/2026/01/16/musks-xai-faces-tougher-road-expanding-memphis-area-after-epa-update.html",
+public/mirrors/news.json:268:      "url": "https://www.cnbc.com/2026/01/16/child-and-dependent-care-tax-credit.html",
+public/mirrors/news.json:274:      "url": "https://www.cnbc.com/2026/01/16/google-files-to-appeal-search-monopoly-case.html",
+public/mirrors/news.json:280:      "url": "https://www.cnbc.com/2026/01/16/openai-chip-deal-with-cerebras-adds-to-roster-of-nvidia-amd-broadcom.html",
+public/mirrors/news.json:286:      "url": "https://www.cnbc.com/2026/01/16/student-loan-collections-paused.html",
+public/mirrors/news.json:292:      "url": "https://www.cnbc.com/2026/01/16/biggest-offshore-wind-project-in-us-to-resume-construction-after-judge-lifts-trump-suspension.html",
+public/mirrors/news.json:298:      "url": "https://www.cnbc.com/2026/01/15/trump-congress-aca-subsidies-health-care.html",
+public/mirrors/news.json:304:      "url": "https://www.cnbc.com/2026/01/16/open-ai-chatgpt-ads-us.html",
+public/mirrors/news.json:310:      "url": "https://www.cnbc.com/2026/01/16/micron-stock-climbs-as-ceo-highlights-ai-demand-for-memory.html",
+public/mirrors/news.json:316:      "url": "https://www.cnbc.com/2026/01/16/novo-nordisk-shares-wegovy-obesity-pill-launch.html",
+public/mirrors/news.json:322:      "url": "https://www.cnbc.com/2026/01/16/employers-focusing-more-on-employee-financial-wellbeing-study-shows.html",
+scripts/providers/finnhub.js:3:const BASE_URL = "https://finnhub.io/api/v1";
+scripts/providers/finnhub.js:4:const MAX_OPTION_CHAIN_BYTES = Number(process.env.FINNHUB_OPTION_CHAIN_MAX_BYTES || 750000);
+scripts/providers/finnhub.js:8:  const apiKey = process.env.FINNHUB_API_KEY || "";
+scripts/providers/finnhub.js:18:  const url = `${BASE_URL}/stock/option-chain?${params.toString()}`;
+scripts/ops/verify-ops-pipeline.mjs:5:const BASE_URL = process.env.VERIFY_BASE_URL || 'http://localhost:8788';
+scripts/ops/verify-ops-pipeline.mjs:114:    `${BASE_URL}/data/ops/summary.latest.json`,
+scripts/ops/verify-ops-pipeline.mjs:115:    `${BASE_URL}/api/mission-control/summary`
+scripts/providers/fmp.js:3:const BASE_URL = "https://financialmodelingprep.com/api";
+scripts/providers/fmp.js:6:  const apiKey = process.env.FMP_API_KEY || "";
+scripts/providers/fmp.js:16:  const url = `${BASE_URL}${path}?${search.toString()}`;
+scripts/ops/verify-runblock-e-operational.zsh:4:BASE_URL="${PROD_BASE:-${BASE_URL:-https://rubikvault.com}}"
+scripts/ops/verify-runblock-e-operational.zsh:23:curl -fsS "${BASE_URL%/}/api/scheduler/health" > "$health_tmp" || fail "scheduler health fetch failed"
+scripts/ops/verify-runblock-e-operational.zsh:37:curl -fsS "${BASE_URL%/}/data/pipeline/nasdaq100.static-ready.json" > "$pipeline_tmp" || fail "pipeline static-ready fetch failed"
+scripts/pipeline/build-marketphase-from-kv.mjs:106:    return process.env.COMMIT_HASH || execSync("git rev-parse --short HEAD", { encoding: "utf8" }).trim();
+scripts/pipeline/build-marketphase-from-kv.mjs:248:  if (process.env.CF_KV_NAMESPACE_ID) return;
+scripts/pipeline/build-marketphase-from-kv.mjs:250:  if (id) process.env.CF_KV_NAMESPACE_ID = id;
+scripts/pipeline/build-marketphase-from-kv.mjs:276:  const allowProviderFallback = args.allowProviderFallback || toBool(process.env.ALLOW_PROVIDER_FETCH) || toBool(process.env.MARKETPHASE_PROVIDER_FALLBACK);
+scripts/pipeline/build-marketphase-from-kv.mjs:277:  const writeBackKv = args.writeBackKv || toBool(process.env.MARKETPHASE_WRITE_BACK_KV);
+scripts/pipeline/build-marketphase-from-kv.mjs:324:      const result = await fetchBarsWithProviderChain(ticker, process.env, {
+scripts/test-envelope.mjs:120:        provider_url: "https://provider.example.com?token=secret"
+scripts/test-envelope.mjs:135:  const url = new URL("https://example.com/api/stock?debug=1");
+scripts/test-envelope.mjs:137:  const req = new Request("https://example.com/api/stock", {
+scripts/providers/coingecko.js:3:const BASE_URL = "https://api.coingecko.com/api/v3/simple/price";
+scripts/providers/coingecko.js:22:  const url = `${BASE_URL}?${params.toString()}`;
+functions/api/fundamentals.js:121:    const apiUrl = new URL(`https://api.tiingo.com/tiingo/fundamentals/${encodeURIComponent(ticker)}/daily`);
+scripts/ops/rv_verify_contracts.sh:4:PROD_BASE="${PROD_BASE:-https://rubikvault.com}"
+scripts/ops/rv_verify_contracts.sh:5:PREVIEW_BASE="${PREVIEW_BASE:-}"
+scripts/ops/rv_verify_contracts.sh:68:run_checks "$PROD_BASE" "PROD"
+scripts/ops/rv_verify_contracts.sh:69:if OPS_BASE="${PROD_BASE%/}" node scripts/ops/rv_verify_truth_summary.mjs >/dev/null 2>&1; then
+scripts/ops/rv_verify_contracts.sh:75:if [ -n "$PREVIEW_BASE" ]; then
+scripts/ops/rv_verify_contracts.sh:76:  run_checks "$PREVIEW_BASE" "PREVIEW"
+scripts/ops/rv_verify_contracts.sh:77:  if OPS_BASE="${PREVIEW_BASE%/}" node scripts/ops/rv_verify_truth_summary.mjs >/dev/null 2>&1; then
+scripts/ops/rv_verify_contracts.sh:83:  warn "PREVIEW_BASE not set; skipping preview checks"
+scripts/ops/rv_verify_contracts.sh:88:if [ -n "$PREVIEW_BASE" ]; then
+scripts/ops/rv_verify_contracts.sh:89:  prod_manifest=$(fetch_json "${PROD_BASE%/}/data/manifest.json") || prod_manifest='{}'
+scripts/ops/rv_verify_contracts.sh:90:  prev_manifest=$(fetch_json "${PREVIEW_BASE%/}/data/manifest.json") || prev_manifest='{}'
+scripts/ops/rv_verify_contracts.sh:99:  prod_mc=$(fetch_json "${PROD_BASE%/}/api/mission-control/summary" || echo '{}')
+scripts/ops/rv_verify_contracts.sh:100:  prev_mc=$(fetch_json "${PREVIEW_BASE%/}/api/mission-control/summary" || echo '{}')
+scripts/ops/rv_verify_contracts.sh:110:  warn "DIFF skipped (PREVIEW_BASE not set)"
+scripts/generate-posts.js:5:const baseUrl = process.argv[2] || process.env.RV_BASE_URL || "http://localhost:8788";
+scripts/seed-mirrors.mjs:13:const QUOTES_PROVIDER = String(process.env.QUOTES_PROVIDER || "").toLowerCase();
+scripts/seed-mirrors.mjs:14:const FINNHUB_API_KEY = process.env.FINNHUB_API_KEY || "";
+scripts/seed-mirrors.mjs:15:const FMP_API_KEY = process.env.FMP_API_KEY || "";
+scripts/seed-mirrors.mjs:16:const FRED_API_KEY = process.env.FRED_API_KEY || "";
+scripts/seed-mirrors.mjs:17:const ALPHAVANTAGE_API_KEY = process.env.ALPHAVANTAGE_API_KEY || "";
+scripts/seed-mirrors.mjs:18:const MARKETAUX_KEY = process.env.MARKETAUX_KEY || "";
+scripts/seed-mirrors.mjs:19:const ALLOW_YAHOO = process.env.ALLOW_YAHOO === "1";
+scripts/seed-mirrors.mjs:20:const ALLOW_TREASURY = process.env.ALLOW_TREASURY === "1";
+scripts/seed-mirrors.mjs:21:const MIN_OK_FEATURES = Number(process.env.MIN_OK_FEATURES || 2);
+scripts/seed-mirrors.mjs:22:const MAX_FAIL_FEATURES = Number(process.env.MAX_FAIL_FEATURES || 2);
+scripts/seed-mirrors.mjs:24:  String(process.env.CRITICAL_FEATURES || "")
+scripts/seed-mirrors.mjs:55:const YAHOO_URL = `https://query1.finance.yahoo.com/v7/finance/quote?symbols=${encodeURIComponent(
+scripts/seed-mirrors.mjs:58:const FMP_QUOTE_URL = "https://financialmodelingprep.com/api/v3/quote";
+scripts/seed-mirrors.mjs:59:const FINNHUB_QUOTE_URL = "https://finnhub.io/api/v1/quote";
+scripts/seed-mirrors.mjs:61:  "https://home.treasury.gov/resource-center/data-chart-center/interest-rates/DailyTreasuryYieldCurveRateData.csv";
+scripts/seed-mirrors.mjs:74:  "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,solana,ripple&vs_currencies=usd&include_24hr_change=true";
+scripts/seed-mirrors.mjs:75:const FNG_URL = "https://api.alternative.me/fng/?limit=1&format=json";
+scripts/seed-mirrors.mjs:76:const FNG_STOCKS_URL = "https://production.dataviz.cnn.io/index/fearandgreed/graphdata";
+scripts/seed-mirrors.mjs:99:const YAHOO_MARKET_URL = `https://query1.finance.yahoo.com/v7/finance/quote?symbols=${encodeURIComponent(
+scripts/seed-mirrors.mjs:119:  if (provider.enabledEnv && process.env[provider.enabledEnv] !== "1") {
+scripts/seed-mirrors.mjs:122:  if (provider.keyEnv && !process.env[provider.keyEnv]) {
+scripts/seed-mirrors.mjs:581:  const url = `https://www.alphavantage.co/query?function=TOP_GAINERS_LOSERS&apikey=${ALPHAVANTAGE_API_KEY}`;
+scripts/seed-mirrors.mjs:729:    const url = `https://api.stlouisfed.org/fred/series/observations?series_id=${seriesId}&api_key=${FRED_API_KEY}&file_type=json&sort_order=desc&limit=1`;
+scripts/providers/eodhd-backfill-bars.mjs:16:const API_KEY = process.env.EODHD_API_KEY;
+scripts/providers/eodhd-backfill-bars.mjs:56:    const url = `https://eodhd.com/api/eod/${encodeURIComponent(querySymbol)}?api_token=${API_KEY}&fmt=json&order=a`;
+scripts/providers/ecb_sdmx.js:4:const ECB_BASE = "https://data-api.ecb.europa.eu/service/data";
+scripts/audit-site.mjs:84:  "BASE_URL_MISCONFIG",
+scripts/audit-site.mjs:94:  BASE_URL_MISCONFIG: "CRITICAL",
+scripts/audit-site.mjs:222:  const envSha = process.env.GITHUB_SHA || process.env.CI_COMMIT_SHA || null;
+scripts/audit-site.mjs:1007:          meta: { error: "BASE_URL_MISCONFIG" },
+scripts/audit-site.mjs:1010:            "BASE_URL_MISCONFIG",
+scripts/audit-site.mjs:1025:        meta: { error: "BASE_URL_MISCONFIG" },
+scripts/audit-site.mjs:1028:          "BASE_URL_MISCONFIG",
+scripts/audit-site.mjs:1043:        meta: { error: "BASE_URL_MISCONFIG" },
+scripts/audit-site.mjs:1046:          "BASE_URL_MISCONFIG",
+scripts/providers/stooq.js:3:const STOOQ_BASE = "https://stooq.com/q/d/l/?s=";
+scripts/ops/build-build-info.mjs:17:const envSha = process.env.CF_PAGES_COMMIT_SHA || process.env.GITHUB_SHA || null;
+scripts/ops/build-build-info.mjs:27:    ci: Boolean(process.env.CI),
+scripts/ops/build-build-info.mjs:28:    github_actions: Boolean(process.env.GITHUB_ACTIONS),
+scripts/ops/build-build-info.mjs:29:    cf_pages: Boolean(process.env.CF_PAGES),
+scripts/ops/build-build-info.mjs:30:    cf_pages_commit_sha: process.env.CF_PAGES_COMMIT_SHA || null,
+scripts/ops/build-build-info.mjs:31:    github_sha: process.env.GITHUB_SHA || null,
+scripts/wp16/guard-market-prices.mjs:4:const out = process.env.GITHUB_OUTPUT;
+scripts/wp16/guard-market-prices.mjs:5:const minRows = Number(process.env.RV_MIN_MARKET_PRICE_ROWS || 517);
+scripts/smoke-redirects.sh:4:if [ -n "${BASE_URL:-}" ]; then
+scripts/smoke-redirects.sh:5:  BASE="$BASE_URL"
+scripts/smoke-redirects.sh:13:  BASE="http://127.0.0.1:${DEFAULT_PORT}"
+functions/api/_shared/raw-providers.mjs:49:    const url = new URL(`https://api.tiingo.com/tiingo/daily/${encodeURIComponent(symbol)}/prices`);
+functions/api/_shared/raw-providers.mjs:118:    const url = new URL('https://api.twelvedata.com/time_series');
+scripts/dev/smoke-api-stock.mjs:12:    EODHD_API_KEY: process.env.EODHD_API_KEY || 'mock_key',
+scripts/dev/smoke-api-stock.mjs:13:    TIINGO_API_KEY: process.env.TIINGO_API_KEY || 'mock_key',
+scripts/dev/smoke-api-stock.mjs:14:    TWELVEDATA_API_KEY: process.env.TWELVEDATA_API_KEY || 'mock_key'
+scripts/ci/verify-artifacts.mjs:6:const MIN_MARKET_PRICE_ROWS = Number(process.env.RV_MIN_MARKET_PRICE_ROWS || 517);
+scripts/ci/verify-artifacts.mjs:7:const MIN_FORECAST_ROWS = Number(process.env.RV_MIN_FORECAST_ROWS || 1);
+functions/api/_shared/registry/providers.v1.json:16:      "base_url": "https://www.alphavantage.co/query",
+functions/api/_shared/registry/providers.v1.json:38:      "base_url": "https://api.twelvedata.com",
+functions/api/_shared/fundamentals-fmp.mjs:28:        const apiUrl = `https://financialmodelingprep.com/api/v3/profile/${encodeURIComponent(ticker)}?apikey=${encodeURIComponent(apiKey)}`;
+scripts/smoke-static-mime.sh:6:  echo "Usage: PREVIEW_URL=https://<preview>.pages.dev bash scripts/smoke-static-mime.sh"
+scripts/smoke-static-mime.sh:7:  echo "   or: bash scripts/smoke-static-mime.sh https://<preview>.pages.dev"
+scripts/truth-audit/config.mjs:5:const DATE = process.env.TRUTH_AUDIT_DATE || new Date().toISOString().slice(0, 10);
+scripts/truth-audit/config.mjs:11:  const base = process.env.BASE_URL;
+scripts/truth-audit/config.mjs:13:    throw new Error('BASE_URL is required (e.g. BASE_URL="https://rubikvault.com")');
+scripts/truth-audit/config.mjs:25:    BASE_URL: getBaseUrl(),
+scripts/forecast/artifact_resolver.mjs:110:        this.token = options.token || process.env.GITHUB_TOKEN;
+functions/api/diagnostics/tiingo.js:52:      const tiingoUrl = new URL('https://api.tiingo.com/tiingo/daily/AAPL/prices');
+scripts/lib/kv-write.js:14:  const v = process.env[name];
+scripts/lib/kv-write.js:24:  if (toBool(process.env.SKIP_KV_WRITE)) return true;
+scripts/lib/kv-write.js:25:  if (toBool(process.env.INPUT_SKIP_KV_WRITE)) return true;
+scripts/lib/kv-write.js:38:  const base = `https://api.cloudflare.com/client/v4/accounts/${accountId}/storage/kv/namespaces/${namespaceId}/values/`;
+public/elliott.html:28:                <a class="rv-social-link" href="https://www.youtube.com/@RubikVault" target="_blank"
+public/elliott.html:35:                <a class="rv-social-link" href="https://x.com/RubikVault" target="_blank" rel="noopener noreferrer"
+public/elliott.html:42:                <a class="rv-social-link" href="https://www.instagram.com/rubikvault_official/" target="_blank"
+public/elliott.html:49:                <a class="rv-social-link" href="https://www.tiktok.com/@rubikvault" target="_blank"
+scripts/lib/build-id.js:103:  if (process.env.BUILD_ID) {
+scripts/lib/build-id.js:104:    return process.env.BUILD_ID;
+scripts/truth-audit/run_scenarios.mjs:8:const BASE_URL = getBaseUrl();
+scripts/truth-audit/run_scenarios.mjs:41:    const s0_uber = await fetchJson(`${BASE_URL}/api/stock?ticker=UBER`);
+scripts/truth-audit/run_scenarios.mjs:42:    const s0_summary = await fetchJson(`${BASE_URL}/api/mission-control/summary?debug=1`);
+scripts/truth-audit/run_scenarios.mjs:43:    const s0_trace = await fetchJson(`${BASE_URL}/debug/ui-path/UBER.ui-path.trace.json`);
+scripts/truth-audit/run_scenarios.mjs:51:    const s1_uber = await fetchJson(`${BASE_URL}/api/stock?ticker=UBER&debug=1`);
+scripts/truth-audit/run_scenarios.mjs:59:    const baseOk = traceBase ? traceBase === BASE_URL : false;
+scripts/truth-audit/fetch_raw.mjs:7:const BASE_URL = getBaseUrl();
+scripts/truth-audit/fetch_raw.mjs:29:    const fullUrl = `${BASE_URL}${target.url}`;
+public/RUNBOOK.md:31:BASE_URL="http://127.0.0.1:${PORT:-8788}"
+public/RUNBOOK.md:34:curl -fsS -I "$BASE_URL/mission-control" | tr -d "\r" | sed -n '1,15p'
+public/RUNBOOK.md:35:curl -fsS "$BASE_URL/mission-control.html" | rg -n 'setInterval\(|Polling: OFF|/api/mission-control/summary' | head -n 40
+public/RUNBOOK.md:38:curl -fsS "$BASE_URL/api/mission-control/summary" | jq '{schema_version, metaStatus:(.metadata.status//null), hasKV:(.data.hasKV//null), asOf:(.data.asOf//null), budgets:(.data.budgets//null)}'
+public/RUNBOOK.md:41:curl -fsS "$BASE_URL/api/mission-control/summary" | jq '{hasFailures:(.data.failures.day|length), hasLive:(.data.liveApis.items|length)}'
+public/RUNBOOK.md:42:curl -fsS "$BASE_URL/api/mission-control/summary?debug=1" | jq '{hasFailures:(.data.failures.day|length), hasLive:(.data.liveApis.items|length)}'
+public/RUNBOOK.md:45:curl -fsS -I "$BASE_URL/api/mission-control/summary" | tr -d "\r" | rg -n 'cache-control|etag|cf-cache-status' || true
+public/RUNBOOK.md:50:BASE_URL="http://127.0.0.1:${PORT:-8788}"
+public/RUNBOOK.md:73:  local base="${1:-$BASE_URL}"
+public/RUNBOOK.md:93:rv_wait_health "$BASE_URL"
+public/RUNBOOK.md:95:curl -fsS "$BASE_URL/api/resolve?q=Apple" | jq '{ok:(.error==null), data:.data, error:.error, metaStatus:(.metadata.status//null)}'
+public/RUNBOOK.md:96:curl -fsS "$BASE_URL/api/stock?ticker=AAPL" | jq '{ok:(.error==null), status:(.metadata.status//null), source_chain:(.metadata.source_chain//null), latest_bar:(.data.latest_bar//null), indicatorsCount:(.data.indicators|length), error:(.error//null)}'
+public/RUNBOOK.md:97:curl -fsS -I "$BASE_URL/analyze/AAPL" | tr -d "\r" | sed -n '1,12p'
+public/RUNBOOK.md:102:  - `node scripts/generate-posts.js http://localhost:8788`
+scripts/verify-api.sh:5:#   ./scripts/verify-api.sh https://<pages>.pages.dev
+scripts/verify-api.sh:6:# or BASE=https://... ./scripts/verify-api.sh
+scripts/verify-api.sh:10:  BASE="https://rubikvault.com"
+public/DEBUG_README.md:90:- `EARNINGS_API_BASE` (optional - required only for Block 04 Earnings Calendar).
+functions/api/_shared/eodhd-adapter.mjs:27:    // EODHD standard endpoint: https://eodhd.com/api/eod/{SYMBOL}.US
+functions/api/_shared/eodhd-adapter.mjs:40:    const url = new URL(`https://eodhd.com/api/eod/${encodeURIComponent(querySymbol)}`);
+scripts/update-macro-hub.v3.mjs:22:const FRED_BASE = "https://api.stlouisfed.org/fred/series/observations";
+scripts/update-macro-hub.v3.mjs:23:const FINNHUB_BASE = "https://finnhub.io/api/v1/quote";
+scripts/update-macro-hub.v3.mjs:24:const FMP_BASE = "https://financialmodelingprep.com/api/v3";
+scripts/update-macro-hub.v3.mjs:25:const ALPHAVANTAGE_BASE = "https://www.alphavantage.co/query";
+scripts/update-macro-hub.v3.mjs:26:const COINGECKO_BASE = "https://api.coingecko.com/api/v3";
+scripts/update-macro-hub.v3.mjs:27:const DEFILLAMA_BASE = "https://stablecoins.llama.fi";
+scripts/update-macro-hub.v3.mjs:143:    const daily = Number(process.env[`RV_BUDGET_${id.toUpperCase()}_DAILY`] || "");
+scripts/update-macro-hub.v3.mjs:144:    const monthly = Number(process.env[`RV_BUDGET_${id.toUpperCase()}_MONTHLY`] || "");
+scripts/update-macro-hub.v3.mjs:552:  const fredKey = process.env.FRED_API_KEY || "";
+scripts/update-macro-hub.v3.mjs:553:  const finnhubKey = process.env.FINNHUB_API_KEY || "";
+scripts/update-macro-hub.v3.mjs:554:  const fmpKey = process.env.FMP_API_KEY || "";
+scripts/update-macro-hub.v3.mjs:555:  const alphaKey = process.env.ALPHAVANTAGE_API_KEY || "";
+scripts/update-macro-hub.v3.mjs:556:  const coingeckoKey = process.env.COINGECKO_DEMO_KEY || "";
+public/scientific.html:16:    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+public/scientific.html:29:                <a class="rv-social-link" href="https://www.youtube.com/@RubikVault" target="_blank"
+public/scientific.html:36:                <a class="rv-social-link" href="https://x.com/RubikVault" target="_blank" rel="noopener noreferrer"
+public/scientific.html:43:                <a class="rv-social-link" href="https://www.instagram.com/rubikvault_official/" target="_blank"
+public/scientific.html:50:                <a class="rv-social-link" href="https://www.tiktok.com/@rubikvault" target="_blank"
+scripts/generate-event-mirrors.mjs:17:  { url: "https://feeds.a.dj.com/rss/RSSMarketsMain.xml", source: "WSJ" },
+scripts/generate-event-mirrors.mjs:18:  { url: "https://www.cnbc.com/id/100003114/device/rss/rss.html", source: "CNBC" },
+scripts/generate-event-mirrors.mjs:19:  { url: "https://finance.yahoo.com/rss/", source: "YH" }
+scripts/dev-local.sh:109:echo "Ready on http://${IP}:${PORT}"
+public/forecast.html:240:        <a class="rv-social-link" href="https://www.youtube.com/@RubikVault" target="_blank" rel="noopener noreferrer"
+public/forecast.html:247:        <a class="rv-social-link" href="https://x.com/RubikVault" target="_blank" rel="noopener noreferrer"
+public/forecast.html:254:        <a class="rv-social-link" href="https://www.instagram.com/rubikvault_official/" target="_blank"
+public/forecast.html:261:        <a class="rv-social-link" href="https://www.tiktok.com/@rubikvault" target="_blank" rel="noopener noreferrer"
+public/forecast.html:421:    const API_BASE = '/data/forecast';
+public/forecast.html:429:        const response = await fetch(`${API_BASE}/${path}`);
+public/index.html:24:  <meta property="al:web:url" content="https://rubikvault.com" />
+public/index.html:47:        <a class="rv-social-link" href="https://www.youtube.com/@RubikVault" target="_blank" rel="noopener noreferrer"
+public/index.html:54:        <a class="rv-social-link" href="https://x.com/RubikVault" target="_blank" rel="noopener noreferrer"
+public/index.html:61:        <a class="rv-social-link" href="https://www.instagram.com/rubikvault_official/" target="_blank"
+public/index.html:68:        <a class="rv-social-link" href="https://www.tiktok.com/@rubikvault" target="_blank" rel="noopener noreferrer"
+scripts/mirror-breakout-energy.mjs:9:const CF_ACCOUNT_ID = process.env.CF_ACCOUNT_ID || "";
+scripts/mirror-breakout-energy.mjs:10:const CF_KV_NAMESPACE_ID = process.env.CF_KV_NAMESPACE_ID || "";
+scripts/mirror-breakout-energy.mjs:11:const CF_API_TOKEN = process.env.CF_API_TOKEN || "";
+scripts/mirror-breakout-energy.mjs:12:const IS_CI = process.env.GITHUB_ACTIONS === "true";
+scripts/mirror-breakout-energy.mjs:14:const LIMIT = Number.parseInt(process.env.MIRROR_LIMIT || "35", 10);
+scripts/mirror-breakout-energy.mjs:170:  const kvUrl = `https://api.cloudflare.com/client/v4/accounts/${CF_ACCOUNT_ID}/storage/kv/namespaces/${CF_KV_NAMESPACE_ID}/values/${key}`;
+scripts/alpha-radar-debug.js:3:const base = process.argv[3] || process.env.RV_BASE_URL || "http://localhost:8788";
+public/internal-dashboard:310:            <input id="origin-prod" class="token-input" style="min-width:260px;" placeholder="https://rubikvault.com" />
+public/internal-dashboard:577:    const API_BASE = '/data';
+public/data/snapshots/market-prices/latest.json:3158:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:3174:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:3190:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:3206:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:3222:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:3238:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:3254:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:3270:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:3286:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:3302:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:3318:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:3334:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:3350:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:3366:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:3382:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:3398:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:3414:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:3430:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:3446:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:3462:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:3478:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:3494:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:3510:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:3526:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:3542:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:3558:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:3574:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:3590:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:3606:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:3622:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:3638:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:3654:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:3670:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:3686:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:3702:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:3718:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:3734:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:3750:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:3766:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:3782:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:3798:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:3814:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:3830:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:3846:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:3862:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:3878:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:3894:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:3910:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:3926:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:3942:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:3958:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:3974:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:3990:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:4006:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:4022:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:4038:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:4054:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:4070:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:4086:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:4102:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:4118:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:4134:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:4150:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:4166:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:4182:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:4198:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:4214:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:4230:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:4246:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:4262:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:4278:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:4294:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:4310:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:4326:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:4342:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:4358:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:4374:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:4390:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:4406:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:4422:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:4438:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:4454:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:4470:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:4486:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:4502:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:4518:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:4534:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:4550:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:4566:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:4582:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:4598:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:4614:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:4630:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:4646:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:4662:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:4678:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:4694:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:4710:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:4726:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:4742:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:4758:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:4774:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:4790:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:4806:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:4822:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:4838:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:4854:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:4870:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:4886:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:4902:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:4918:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:4934:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:4950:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:4966:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:4982:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:4998:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:5014:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:5030:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:5046:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:5062:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:5078:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:5094:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:5110:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:5126:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:5142:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:5158:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:5174:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:5190:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:5206:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:5222:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:5238:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:5254:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:5270:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:5286:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:5302:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:5318:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:5334:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:5350:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:5366:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:5382:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:5398:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:5414:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:5430:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:5446:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:5462:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:5478:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:5494:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:5510:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:5526:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:5542:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:5558:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:5574:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:5590:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:5606:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:5622:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:5638:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:5654:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:5670:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:5686:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:5702:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:5718:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:5734:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:5750:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:5766:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:5782:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:5798:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:5814:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:5830:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:5846:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:5862:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:5878:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:5894:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:5910:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:5926:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:5942:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:5958:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:5974:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:5990:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:6006:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:6022:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:6038:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:6054:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:6070:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:6086:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:6102:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:6118:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:6134:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:6150:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:6166:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:6182:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:6198:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:6214:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:6230:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:6246:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:6262:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:6278:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:6294:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:6310:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:6326:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:6342:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:6358:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:6374:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:6390:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:6406:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:6422:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:6438:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:6454:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:6470:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:6486:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:6502:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:6518:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:6534:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:6550:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:6566:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:6582:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:6598:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:6614:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:6630:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:6646:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:6662:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:6678:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:6694:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:6710:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:6726:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:6742:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:6758:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:6774:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:6790:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:6806:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:6822:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:6838:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:6854:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:6870:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:6886:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:6902:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:6918:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:6934:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:6950:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:6966:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:6982:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:6998:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:7014:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:7030:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:7046:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:7062:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:7078:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:7094:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:7110:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:7126:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:7142:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:7158:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:7174:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:7190:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:7206:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:7222:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:7238:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:7254:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:7270:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:7286:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:7302:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:7318:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:7334:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:7350:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:7366:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:7382:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:7398:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:7414:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:7430:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:7446:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:7462:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:7478:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:7494:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:7510:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:7526:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:7542:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:7558:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:7574:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:7590:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:7606:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:7622:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:7638:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:7654:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:7670:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:7686:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:7702:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:7718:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:7734:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:7750:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:7766:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:7782:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:7798:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:7814:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:7830:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:7846:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:7862:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:7878:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:7894:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:7910:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:7926:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:7942:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:7958:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:7974:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:7990:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:8006:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:8022:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:8038:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:8054:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:8070:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:8086:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:8102:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:8118:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:8134:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:8150:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:8166:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:8182:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:8198:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:8214:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:8230:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:8246:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:8262:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:8278:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:8294:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:8310:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:8326:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:8342:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:8358:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:8374:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:8390:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:8406:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:8422:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:8438:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:8454:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:8470:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:8486:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:8502:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:8518:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:8534:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:8550:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:8566:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:8582:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:8598:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:8614:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:8630:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:8646:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:8662:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:8678:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:8694:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:8710:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:8726:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:8742:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:8758:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:8774:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:8790:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:8806:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:8822:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:8838:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:8854:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:8870:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:8886:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:8902:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:8918:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:8934:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:8950:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:8966:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:8982:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:8998:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:9014:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:9030:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:9046:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:9062:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:9078:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:9094:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:9110:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:9126:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:9142:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:9158:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:9174:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:9190:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:9206:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:9222:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:9238:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:9254:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:9270:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:9286:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:9302:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:9318:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:9334:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:9350:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:9366:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:9382:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:9398:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:9414:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:9430:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:9446:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:9462:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:9478:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:9494:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:9510:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:9526:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:9542:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:9558:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:9574:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:9590:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:9606:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:9622:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:9638:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:9654:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:9670:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:9686:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:9702:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:9718:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:9734:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:9750:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:9766:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:9782:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:9798:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:9814:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:9830:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:9846:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:9862:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:9878:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:9894:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:9910:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:9926:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:9942:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:9958:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:9974:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:9990:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:10006:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:10022:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:10038:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:10054:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:10070:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:10086:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:10102:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:10118:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:10134:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:10150:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:10166:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:10182:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:10198:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:10214:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:10230:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:10246:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:10262:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:10278:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:10294:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:10310:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:10326:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:10342:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:10358:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:10374:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:10390:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:10406:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:10422:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:10438:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:10454:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:10470:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:10486:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:10502:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:10518:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:10534:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:10550:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:10566:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:10582:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:10598:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:10614:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:10630:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:10646:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:10662:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:10678:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:10694:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:10710:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:10726:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:10742:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:10758:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:10774:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:10790:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:10806:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:10822:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:10838:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:10854:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:10870:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:10886:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:10902:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:10918:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:10934:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:10950:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:10966:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:10982:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:10998:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:11014:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:11030:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:11046:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:11062:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:11078:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:11094:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:11110:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:11126:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:11142:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:11158:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:11174:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:11190:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:11206:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:11222:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:11238:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:11254:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:11270:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:11286:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:11302:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:11318:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:11334:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:11350:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:11366:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:11382:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:11398:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:11414:            "note": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium",
+public/data/snapshots/market-prices/latest.json:11437:        "message": "Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium"

@@ -1,0 +1,733 @@
+{
+  "generated_at": "2026-02-12T14:34:45.244Z",
+  "policy": {
+    "provider_primary": "EODHD",
+    "provider_fallback": [
+      "TIINGO"
+    ],
+    "universe_expected": 517
+  },
+  "features": {
+    "stock": {
+      "reads": [
+        "/api/stock",
+        "/api/fundamentals",
+        "/data/universe/all.json",
+        "/data/snapshots/stock-analysis.json",
+        "/data/marketphase/<ticker>.json"
+      ],
+      "producers": [
+        "universe-refresh.yml",
+        "v3-scrape-template.yml",
+        "v3-finalizer.yml",
+        "ops-daily.yml",
+        "UNPROVABLE_WORKFLOW_FOR_stock-analysis.json"
+      ],
+      "universe_source": "/data/universe/all.json"
+    },
+    "elliott": {
+      "reads": [
+        "/api/elliott-scanner",
+        "/data/universe/all.json",
+        "/data/eod/batches/eod.latest.000.json",
+        "/data/marketphase/index.json",
+        "/data/marketphase/<ticker>.json"
+      ],
+      "producers": [
+        "universe-refresh.yml",
+        "eod-latest.yml",
+        "ops-daily.yml"
+      ],
+      "universe_source": "/data/universe/all.json"
+    },
+    "scientific": {
+      "reads": [
+        "/data/snapshots/stock-analysis.json"
+      ],
+      "producers": [
+        "UNPROVABLE_WORKFLOW_FOR_stock-analysis.json"
+      ],
+      "universe_source": "/data/universe/all.json (via generator script)"
+    },
+    "forecast": {
+      "reads": [
+        "/data/forecast/system/status.json",
+        "/data/forecast/latest.json",
+        "/data/forecast/reports/daily/<date>.json (via latest_report_ref)"
+      ],
+      "producers": [
+        "forecast-daily.yml",
+        "forecast-weekly.yml",
+        "eod-latest.yml",
+        "eod-history-refresh.yml",
+        "universe-refresh.yml",
+        "v3-scrape-template.yml",
+        "v3-finalizer.yml"
+      ],
+      "universe_source": "/data/universe/all.json"
+    }
+  },
+  "workflows": {
+    "ci-determinism.yml": {
+      "purpose": "Forecast determinism and registry/schema tests.",
+      "value_if_perfect": "MEDIUM",
+      "feature_dependencies": [
+        "forecast"
+      ],
+      "provider_compliance": "UNKNOWN",
+      "decision": "KEEP",
+      "evidence": [
+        {
+          "file": ".github/workflows/ci-determinism.yml",
+          "lines": "43-49",
+          "excerpt": "test:determinism + forecast registry/schema validation"
+        }
+      ],
+      "writes": [],
+      "invokes": [
+        "npm run test:determinism",
+        "npm run validate:forecast-registry",
+        "npm run validate:forecast-schemas"
+      ],
+      "merge_candidate_with": [],
+      "notes": []
+    },
+    "ci-gates.yml": {
+      "purpose": "Semantic artifact contract gates and parity checks.",
+      "value_if_perfect": "HIGH",
+      "feature_dependencies": [
+        "stock",
+        "elliott",
+        "forecast"
+      ],
+      "provider_compliance": "UNKNOWN",
+      "decision": "KEEP",
+      "evidence": [
+        {
+          "file": ".github/workflows/ci-gates.yml",
+          "lines": "121-130",
+          "excerpt": "verify-artifacts + mission-control gate + elliott parity"
+        }
+      ],
+      "writes": [
+        "public/data/.budget_sentinel.json (ephemeral in CI)"
+      ],
+      "invokes": [
+        "scripts/ci/verify-artifacts.mjs",
+        "scripts/ci/assert-mission-control-gate.mjs",
+        "scripts/ci/check-elliott-parity.mjs"
+      ],
+      "merge_candidate_with": [],
+      "notes": []
+    },
+    "ci-policy.yml": {
+      "purpose": "Forecast policy validation.",
+      "value_if_perfect": "MEDIUM",
+      "feature_dependencies": [
+        "forecast"
+      ],
+      "provider_compliance": "UNKNOWN",
+      "decision": "KEEP",
+      "evidence": [
+        {
+          "file": ".github/workflows/ci-policy.yml",
+          "lines": "24-27",
+          "excerpt": "node scripts/forecast/validate_policy.mjs"
+        }
+      ],
+      "writes": [],
+      "invokes": [
+        "scripts/forecast/validate_policy.mjs"
+      ],
+      "merge_candidate_with": [],
+      "notes": []
+    },
+    "cleanup-daily-snapshots.yml": {
+      "purpose": "Periodic cleanup of old public/data snapshots.",
+      "value_if_perfect": "LOW",
+      "feature_dependencies": [],
+      "provider_compliance": "UNKNOWN",
+      "decision": "ARCHIVE",
+      "evidence": [
+        {
+          "file": ".github/workflows/cleanup-daily-snapshots.yml",
+          "lines": "41-42,61-64",
+          "excerpt": "runs cleanup script and commits public/data deletions"
+        }
+      ],
+      "writes": [
+        "public/data/** (deletion/cleanup)"
+      ],
+      "invokes": [
+        "scripts/cleanup-daily-snapshots.sh"
+      ],
+      "merge_candidate_with": [],
+      "notes": [
+        "Not required to produce runtime data for 4 target features."
+      ]
+    },
+    "e2e-playwright.yml": {
+      "purpose": "Browser E2E checks.",
+      "value_if_perfect": "LOW",
+      "feature_dependencies": [],
+      "provider_compliance": "UNKNOWN",
+      "decision": "ARCHIVE",
+      "evidence": [
+        {
+          "file": "tests/e2e/ops.spec.mjs",
+          "lines": "16-18,30-33",
+          "excerpt": "tests target /ops/, not stock/elliott/scientific/forecast pages"
+        }
+      ],
+      "writes": [],
+      "invokes": [
+        "npx playwright test"
+      ],
+      "merge_candidate_with": [],
+      "notes": [
+        "Repurpose if desired to directly test 4 target feature pages."
+      ]
+    },
+    "eod-history-refresh.yml": {
+      "purpose": "Backfill/refresh EOD bars history.",
+      "value_if_perfect": "HIGH",
+      "feature_dependencies": [
+        "forecast"
+      ],
+      "provider_compliance": "COMPLIANT",
+      "decision": "KEEP",
+      "evidence": [
+        {
+          "file": ".github/workflows/eod-history-refresh.yml",
+          "lines": "31-42,47",
+          "excerpt": "EODHD backfill writes public/data/eod/bars"
+        },
+        {
+          "file": "scripts/forecast/run_daily.mjs",
+          "lines": "81-84",
+          "excerpt": "skips tickers with <200 bars"
+        }
+      ],
+      "writes": [
+        "public/data/eod/bars/**"
+      ],
+      "invokes": [
+        "scripts/providers/eodhd-backfill-bars.mjs"
+      ],
+      "merge_candidate_with": [],
+      "notes": []
+    },
+    "eod-latest.yml": {
+      "purpose": "Generate latest EOD batch and ops snapshots.",
+      "value_if_perfect": "HIGH",
+      "feature_dependencies": [
+        "elliott",
+        "forecast"
+      ],
+      "provider_compliance": "COMPLIANT",
+      "decision": "KEEP",
+      "evidence": [
+        {
+          "file": ".github/workflows/eod-latest.yml",
+          "lines": "58-68,88-90",
+          "excerpt": "provider env export and build-eod-latest invocation"
+        },
+        {
+          "file": "scripts/eod/build-eod-latest.mjs",
+          "lines": "278-287",
+          "excerpt": "provider chain EODHD first then TIINGO fallback"
+        }
+      ],
+      "writes": [
+        "public/data/eod/**",
+        "public/data/pipeline/**",
+        "public/data/ops/**"
+      ],
+      "invokes": [
+        "scripts/eod/build-eod-latest.mjs",
+        "scripts/ops/build-ops-daily.mjs"
+      ],
+      "merge_candidate_with": [],
+      "notes": []
+    },
+    "forecast-daily.yml": {
+      "purpose": "Publish daily forecast latest/status/report artifacts.",
+      "value_if_perfect": "HIGH",
+      "feature_dependencies": [
+        "forecast"
+      ],
+      "provider_compliance": "UNKNOWN",
+      "decision": "KEEP",
+      "evidence": [
+        {
+          "file": ".github/workflows/forecast-daily.yml",
+          "lines": "54-63,80-82",
+          "excerpt": "run_daily pipeline and commits forecast outputs"
+        },
+        {
+          "file": "public/forecast.html",
+          "lines": "703-707",
+          "excerpt": "UI reads status.json and latest.json"
+        }
+      ],
+      "writes": [
+        "public/data/forecast/**",
+        "mirrors/forecast/**"
+      ],
+      "invokes": [
+        "scripts/forecast/run_daily.mjs"
+      ],
+      "merge_candidate_with": [],
+      "notes": []
+    },
+    "forecast-monthly.yml": {
+      "purpose": "Generate monthly forecast report files.",
+      "value_if_perfect": "LOW",
+      "feature_dependencies": [],
+      "provider_compliance": "UNKNOWN",
+      "decision": "ARCHIVE",
+      "evidence": [
+        {
+          "file": ".github/workflows/forecast-monthly.yml",
+          "lines": "63,79",
+          "excerpt": "run_monthly and commit monthly report path only"
+        },
+        {
+          "file": "public/forecast.html",
+          "lines": "723-728",
+          "excerpt": "UI follows latest_report_ref from latest.json (daily pointer)"
+        }
+      ],
+      "writes": [
+        "public/data/forecast/reports/monthly/**"
+      ],
+      "invokes": [
+        "scripts/forecast/run_monthly.mjs"
+      ],
+      "merge_candidate_with": [],
+      "notes": []
+    },
+    "forecast-rollback.yml": {
+      "purpose": "Manual rollback of forecast status/latest with audit issue.",
+      "value_if_perfect": "MEDIUM",
+      "feature_dependencies": [
+        "forecast"
+      ],
+      "provider_compliance": "UNKNOWN",
+      "decision": "KEEP",
+      "evidence": [
+        {
+          "file": ".github/workflows/forecast-rollback.yml",
+          "lines": "43-59,65-67",
+          "excerpt": "writes status/latest rollback and commits public/data/forecast"
+        }
+      ],
+      "writes": [
+        "public/data/forecast/**"
+      ],
+      "invokes": [],
+      "merge_candidate_with": [],
+      "notes": [
+        "Operational control path; not a normal producer."
+      ]
+    },
+    "forecast-weekly.yml": {
+      "purpose": "Weekly challenger training and promotion updates.",
+      "value_if_perfect": "MEDIUM",
+      "feature_dependencies": [
+        "forecast"
+      ],
+      "provider_compliance": "UNKNOWN",
+      "decision": "KEEP",
+      "evidence": [
+        {
+          "file": ".github/workflows/forecast-weekly.yml",
+          "lines": "58,84-87",
+          "excerpt": "weekly run + champion/challenger/public forecast writes"
+        },
+        {
+          "file": "scripts/forecast/run_daily.mjs",
+          "lines": "202-204",
+          "excerpt": "daily pipeline loads champion spec"
+        }
+      ],
+      "writes": [
+        "mirrors/forecast/champion/**",
+        "mirrors/forecast/challengers/**",
+        "public/data/forecast/**"
+      ],
+      "invokes": [
+        "scripts/forecast/run_weekly.mjs"
+      ],
+      "merge_candidate_with": [],
+      "notes": []
+    },
+    "monitor-prod.yml": {
+      "purpose": "Monitoring contracts for production/repo artifacts.",
+      "value_if_perfect": "MEDIUM",
+      "feature_dependencies": [
+        "stock",
+        "elliott",
+        "forecast"
+      ],
+      "provider_compliance": "UNKNOWN",
+      "decision": "KEEP",
+      "evidence": [
+        {
+          "file": ".github/workflows/monitor-prod.yml",
+          "lines": "37-47",
+          "excerpt": "repo contract verification + mission-control gate"
+        },
+        {
+          "file": ".github/workflows/monitor-prod.yml",
+          "lines": "105-110",
+          "excerpt": "optional remote probes include elliott/forecast endpoints"
+        }
+      ],
+      "writes": [],
+      "invokes": [
+        "scripts/ci/verify-artifacts.mjs",
+        "scripts/ci/assert-mission-control-gate.mjs"
+      ],
+      "merge_candidate_with": [],
+      "notes": []
+    },
+    "ops-auto-alerts.yml": {
+      "purpose": "Create GH issues from dev ops report.",
+      "value_if_perfect": "NONE",
+      "feature_dependencies": [],
+      "provider_compliance": "UNKNOWN",
+      "decision": "ARCHIVE",
+      "evidence": [
+        {
+          "file": ".github/workflows/ops-auto-alerts.yml",
+          "lines": "30-33,45-46",
+          "excerpt": "reads dev/ops/forecast/latest.json and opens issue"
+        }
+      ],
+      "writes": [
+        "GitHub issues"
+      ],
+      "invokes": [],
+      "merge_candidate_with": [],
+      "notes": [
+        "No direct runtime dependency for target 4 features."
+      ]
+    },
+    "ops-daily.yml": {
+      "purpose": "Build marketphase + ops snapshots and gates.",
+      "value_if_perfect": "HIGH",
+      "feature_dependencies": [
+        "stock",
+        "elliott"
+      ],
+      "provider_compliance": "UNKNOWN",
+      "decision": "KEEP",
+      "evidence": [
+        {
+          "file": ".github/workflows/ops-daily.yml",
+          "lines": "58-64,71-82",
+          "excerpt": "build marketphase and ops artifacts"
+        },
+        {
+          "file": "functions/api/elliott-scanner.js",
+          "lines": "230-242",
+          "excerpt": "elliott endpoint reads marketphase index and per-symbol files"
+        }
+      ],
+      "writes": [
+        "public/data/marketphase/**",
+        "public/data/ops/**",
+        "public/data/pipeline/**"
+      ],
+      "invokes": [
+        "scripts/pipeline/build-marketphase-from-kv.mjs",
+        "scripts/ops/build-ops-daily.mjs"
+      ],
+      "merge_candidate_with": [],
+      "notes": []
+    },
+    "refresh-health-assets.yml": {
+      "purpose": "Refresh system health snapshots.",
+      "value_if_perfect": "NONE",
+      "feature_dependencies": [],
+      "provider_compliance": "UNKNOWN",
+      "decision": "ARCHIVE",
+      "evidence": [
+        {
+          "file": ".github/workflows/refresh-health-assets.yml",
+          "lines": "33,44",
+          "excerpt": "writes system-health and health snapshot files"
+        },
+        {
+          "file": "public/internal-dashboard.html",
+          "lines": "467-471",
+          "excerpt": "health files consumed by internal dashboard, not target feature pages"
+        }
+      ],
+      "writes": [
+        "public/data/system-health.json",
+        "public/data/blocks/health.latest.json",
+        "public/data/snapshots/health/**"
+      ],
+      "invokes": [
+        "scripts/refresh-health-assets.mjs"
+      ],
+      "merge_candidate_with": [],
+      "notes": []
+    },
+    "scheduler-kick.yml": {
+      "purpose": "Hourly dispatcher for downstream workflows using GH API.",
+      "value_if_perfect": "LOW",
+      "feature_dependencies": [
+        "stock",
+        "elliott",
+        "forecast"
+      ],
+      "provider_compliance": "UNKNOWN",
+      "decision": "MERGE",
+      "evidence": [
+        {
+          "file": ".github/workflows/scheduler-kick.yml",
+          "lines": "73-77,96-100",
+          "excerpt": "dispatches ops-daily/forecast-daily/eod-latest by hour"
+        },
+        {
+          "file": ".github/workflows/eod-latest.yml",
+          "lines": "4-6",
+          "excerpt": "eod-latest has own schedule already"
+        },
+        {
+          "file": ".github/workflows/ops-daily.yml",
+          "lines": "4-6",
+          "excerpt": "ops-daily has own schedule already"
+        },
+        {
+          "file": ".github/workflows/forecast-daily.yml",
+          "lines": "10-13",
+          "excerpt": "forecast-daily has own schedule already"
+        }
+      ],
+      "writes": [],
+      "invokes": [
+        "gh workflow run eod-latest.yml",
+        "gh workflow run ops-daily.yml",
+        "gh workflow run forecast-daily.yml"
+      ],
+      "merge_candidate_with": [
+        "eod-latest.yml",
+        "ops-daily.yml",
+        "forecast-daily.yml"
+      ],
+      "notes": [
+        "Consolidate to one scheduling strategy to remove overlap/noise."
+      ]
+    },
+    "universe-refresh.yml": {
+      "purpose": "Refresh canonical universe files including all.json.",
+      "value_if_perfect": "HIGH",
+      "feature_dependencies": [
+        "stock",
+        "elliott",
+        "scientific",
+        "forecast"
+      ],
+      "provider_compliance": "COMPLIANT",
+      "decision": "KEEP",
+      "evidence": [
+        {
+          "file": ".github/workflows/universe-refresh.yml",
+          "lines": "31-34",
+          "excerpt": "runs fetch-constituents with EODHD_API_KEY"
+        },
+        {
+          "file": "scripts/universe/fetch-constituents.mjs",
+          "lines": "165-167",
+          "excerpt": "writes public/data/universe/all.json"
+        }
+      ],
+      "writes": [
+        "public/data/universe/*.json"
+      ],
+      "invokes": [
+        "scripts/universe/fetch-constituents.mjs"
+      ],
+      "merge_candidate_with": [],
+      "notes": []
+    },
+    "v3-finalizer.yml": {
+      "purpose": "Atomic promotion of scraped artifacts to public snapshots and state.",
+      "value_if_perfect": "HIGH",
+      "feature_dependencies": [
+        "stock",
+        "forecast"
+      ],
+      "provider_compliance": "UNKNOWN",
+      "decision": "KEEP",
+      "evidence": [
+        {
+          "file": ".github/workflows/v3-finalizer.yml",
+          "lines": "152-175,247-250",
+          "excerpt": "runs finalizer and commits snapshots/manifest/provider-state"
+        },
+        {
+          "file": "scripts/aggregator/finalize.mjs",
+          "lines": "550-552,584-586",
+          "excerpt": "promotes snapshots and manifest into public/data"
+        }
+      ],
+      "writes": [
+        "public/data/snapshots/**",
+        "public/data/manifest.json",
+        "public/data/provider-state.json",
+        "public/data/state/modules/*.json"
+      ],
+      "invokes": [
+        "scripts/aggregator/finalize.mjs",
+        "scripts/wp16/guard-market-prices.mjs"
+      ],
+      "merge_candidate_with": [],
+      "notes": []
+    },
+    "v3-scrape-template.yml": {
+      "purpose": "Scrape market modules and feed finalizer publish path.",
+      "value_if_perfect": "HIGH",
+      "feature_dependencies": [
+        "stock",
+        "forecast"
+      ],
+      "provider_compliance": "NON-COMPLIANT",
+      "decision": "REPAIR",
+      "evidence": [
+        {
+          "file": ".github/workflows/v3-scrape-template.yml",
+          "lines": "136-139",
+          "excerpt": "sets RV_FORCE_PROVIDER: stooq"
+        },
+        {
+          "file": ".github/workflows/v3-scrape-template.yml",
+          "lines": "264-266,297-307",
+          "excerpt": "builds market-stats and finalizes artifacts"
+        },
+        {
+          "file": "functions/api/stock.js",
+          "lines": "28-34",
+          "excerpt": "stock endpoint consumes market-prices/market-stats snapshots"
+        }
+      ],
+      "writes": [
+        "artifacts consumed by finalizer -> public/data/snapshots/**"
+      ],
+      "invokes": [
+        "scripts/providers/market-prices-v3.mjs (matrix default/fallback)",
+        "scripts/providers/market-stats-v3.mjs",
+        "scripts/aggregator/finalize.mjs"
+      ],
+      "merge_candidate_with": [
+        "wp16-manual-market-prices.yml"
+      ],
+      "notes": [
+        "Must remove forced stooq and align to EODHD primary policy."
+      ]
+    },
+    "wp16-manual-market-prices.yml": {
+      "purpose": "Manual market-prices publish path.",
+      "value_if_perfect": "LOW",
+      "feature_dependencies": [
+        "stock",
+        "forecast"
+      ],
+      "provider_compliance": "NON-COMPLIANT",
+      "decision": "ARCHIVE",
+      "evidence": [
+        {
+          "file": ".github/workflows/wp16-manual-market-prices.yml",
+          "lines": "31-42,76-85",
+          "excerpt": "manual producer and finalizer path duplicates v3 chain"
+        },
+        {
+          "file": ".github/workflows/wp16-manual-market-prices.yml",
+          "lines": "38",
+          "excerpt": "RV_FORCE_PROVIDER: stooq"
+        }
+      ],
+      "writes": [
+        "public/data/snapshots/market-prices/latest.json (+ finalizer outputs)"
+      ],
+      "invokes": [
+        "scripts/providers/market-prices-v3.mjs",
+        "scripts/aggregator/finalize.mjs"
+      ],
+      "merge_candidate_with": [
+        "v3-scrape-template.yml"
+      ],
+      "notes": [
+        "Overlap producer; archive after single compliant path is retained."
+      ]
+    }
+  },
+  "merge_plan": [
+    {
+      "name": "Consolidate scheduling strategy",
+      "workflows_involved": [
+        "scheduler-kick.yml",
+        "eod-latest.yml",
+        "ops-daily.yml",
+        "forecast-daily.yml"
+      ],
+      "duplicate_outputs": [
+        "duplicate trigger windows for same producer workflows"
+      ],
+      "proposed_consolidation": "Use either direct schedules on producer workflows OR centralized dispatcher, not both."
+    },
+    {
+      "name": "Single market-prices producer path",
+      "workflows_involved": [
+        "v3-scrape-template.yml",
+        "wp16-manual-market-prices.yml"
+      ],
+      "duplicate_outputs": [
+        "/data/snapshots/market-prices/latest.json"
+      ],
+      "proposed_consolidation": "Keep one compliant producer (EODHD primary, TIINGO fallback only), archive manual stooq-forced path."
+    }
+  ],
+  "archive_then_delete_plan": [
+    {
+      "workflow": "cleanup-daily-snapshots.yml",
+      "disable_triggers_first": true,
+      "observe_days": 30,
+      "delete_after_observed": true
+    },
+    {
+      "workflow": "e2e-playwright.yml",
+      "disable_triggers_first": true,
+      "observe_days": 30,
+      "delete_after_observed": true
+    },
+    {
+      "workflow": "ops-auto-alerts.yml",
+      "disable_triggers_first": true,
+      "observe_days": 30,
+      "delete_after_observed": true
+    },
+    {
+      "workflow": "refresh-health-assets.yml",
+      "disable_triggers_first": true,
+      "observe_days": 30,
+      "delete_after_observed": true
+    },
+    {
+      "workflow": "forecast-monthly.yml",
+      "disable_triggers_first": true,
+      "observe_days": 30,
+      "delete_after_observed": true
+    },
+    {
+      "workflow": "wp16-manual-market-prices.yml",
+      "disable_triggers_first": true,
+      "observe_days": 30,
+      "delete_after_observed": true
+    }
+  ]
+}

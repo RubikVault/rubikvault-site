@@ -1,0 +1,630 @@
+### public/index.html (universe source)
+   506	    const popularTickers = ['AAPL', 'MSFT', 'GOOGL', 'AMZN', 'TSLA', 'NVDA', 'META', 'NFLX', 'SPY', 'QQQ'];
+   507	
+   508	    let lastResolved = { ticker: null, name: null };
+   509	    let chartState = { range: '1Y' };
+   510	    let lastChartData = null;
+   511	
+   512	    const UNIVERSE_URL = '/data/universe/all.json';
+   513	    let universe = [];
+   514	    const universeByTicker = new Map();
+   515	    let universeReady = null;
+   516	
+   517	    function normalizeTicker(raw) {
+   518	      const s = String(raw || '').trim().toUpperCase();
+   519	      if (!s) return '';
+   520	      if (!/^[A-Z0-9\-\.]{1,15}$/.test(s)) return '';
+   521	      return s;
+   522	    }
+   523	
+   524	    function normalizeUniverseName(raw) {
+   525	      return String(raw || '')
+   526	        .trim()
+   527	        .toLowerCase()
+   528	        .replace(/[^a-z0-9\s]/g, ' ')
+   529	        .replace(/\s+/g, ' ')
+   530	        .trim();
+   531	    }
+   532	
+   533	    async function loadUniverse() {
+   534	      try {
+   535	        const res = await fetch(UNIVERSE_URL, { cache: 'no-store' });
+   536	        if (!res.ok) throw new Error('universe_fetch_failed');
+   537	        const entries = await res.json();
+   538	        if (!Array.isArray(entries)) throw new Error('universe_invalid_shape');
+   539	
+   540	        const normalized = [];
+   541	        universeByTicker.clear();
+   542	        for (const entry of entries) {
+
+### functions/api/elliott-scanner.js (universe load + meta count)
+    14	    const startMs = Date.now();
+    15	    const baseUrl = new URL(context.request.url).origin;
+    16	
+    17	    try {
+    18	        // Load universe
+    19	        const universeRes = await fetch(`${baseUrl}/data/universe/all.json`);
+    20	        if (!universeRes.ok) {
+    21	            return jsonResponse({
+    22	                ok: false,
+    23	                error: { code: 'UNIVERSE_UNAVAILABLE', message: 'Unable to load universe' },
+    24	                setups: []
+    25	            }, 503);
+    26	        }
+    27	
+    28	        const universe = await universeRes.json();
+    29	        const symbols = Array.isArray(universe)
+    30	            ? universe.map(e => ({ ticker: e.ticker?.toUpperCase(), name: e.name })).filter(e => e.ticker)
+    31	            : [];
+    32	
+    73	        // Sort by confidence descending
+    74	        setups.sort((a, b) => (b.confidence || 0) - (a.confidence || 0));
+    75	
+    76	        return jsonResponse({
+    77	            ok: true,
+    78	            meta: {
+    79	                asOf: new Date().toISOString(),
+    80	                durationMs: Date.now() - startMs,
+    81	                count: setups.length,
+    82	                analyzedFull: mpSymbols.size,
+    83	                version: 'DFMSIF_v1.0'
+    84	            },
+    85	            setups
+    86	        });
+
+### policies/forecast.v3.json (universe source)
+   138	        "min_history_trading_days": 252,
+   139	        "walk_forward_step": "monthly"
+   140	    },
+   141	    "universe": {
+   142	        "default": "nasdaq100",
+   143	        "source": "/data/universe/all.json",
+   144	        "refresh_strategy": {
+   145	            "daily": [
+   146	                "nasdaq100",
+   147	                "dowjones"
+   148	            ],
+   149	            "weekly": [
+
+### scripts/forecast/run_daily.mjs (stale fallback behavior)
+   220	
+   221	    // 4. Data quality gates
+   222	    console.log('[Step 4] Running data quality gates...');
+   223	    const qualityResult = runDataQualityGates(snapshot, policy);
+   224	
+   225	    if (!qualityResult.ok) {
+   226	        console.log(`  ❌ CIRCUIT OPEN: ${qualityResult.reason}`);
+   227	        const fallbackReason = `Using last_good forecasts: ${qualityResult.reason}`;
+   228	
+   229	        const fallbackLatest = publishLatestFromLastGood(repoRoot, {
+   230	            reason: fallbackReason,
+   231	            status: 'stale'
+   232	        });
+   233	
+   234	        // Publish last_good and mark as stale fallback.
+   235	        updateStatus(repoRoot, {
+   236	            status: 'stale',
+   237	            reason: fallbackReason,
+   238	            circuit_state: 'closed',
+   239	            last_run: tradingDate,
+   240	            last_good: fallbackLatest?.meta?.last_good_ref ?? null
+   241	        });
+   242	
+   243	        console.log('  Pipeline degraded. Published last_good.');
+   244	        return { ok: true, degraded: true, reason: fallbackReason };
+   245	    }
+   246	
+   247	    console.log('  ✓ Data quality OK');
+   248	
+   249	    // 5. Load price history
+   250	    console.log('[Step 5] Loading price history...');
+   251	    const priceHistory = await loadPriceHistory(repoRoot, snapshot.universe, tradingDate);
+   252	    const spyPrices = priceHistory['SPY'] ?? null;
+   253	    console.log(`  Loaded history for ${Object.keys(priceHistory).length} tickers`);
+   254	
+   255	    // 6. Generate forecasts
+   256	    console.log('[Step 6] Generating forecasts...');
+   257	    const forecasts = await generateAllForecasts({
+   258	        tradingDate,
+   259	        universe: snapshot.universe,
+   260	        priceHistory,
+   261	        spyPrices,
+   262	        championSpec: champion,
+   263	        policyHash,
+   264	        codeHash,
+   265	        snapshotsManifest: snapshot.manifest,
+   266	        policy
+   267	    });
+   268	    console.log(`  Generated ${forecasts.length} forecasts`);
+   269	
+   270	    if (forecasts.length === 0) {
+   271	        const fallbackReason = 'Using last_good forecasts: no fresh forecasts generated';
+   272	        const fallbackLatest = publishLatestFromLastGood(repoRoot, {
+   273	            reason: fallbackReason,
+   274	            status: 'stale'
+   275	        });
+   276	        updateStatus(repoRoot, {
+   277	            status: 'stale',
+   278	            reason: fallbackReason,
+   279	            circuit_state: 'closed',
+   280	            last_run: tradingDate,
+   281	            last_good: fallbackLatest?.meta?.last_good_ref ?? null
+   282	        });
+   283	        console.log('  Pipeline degraded. Published last_good.');
+   284	        return { ok: true, degraded: true, reason: fallbackReason };
+   285	    }
+   286	
+   370	                    '1d': buildHorizon(ticker1d),
+   371	                    '5d': buildHorizon(ticker5d),
+   372	                    '20d': buildHorizon(ticker20d)
+   373	                }
+   374	            };
+   375	        });
+   376	
+   377	    const latestDoc = updateLatest(repoRoot, {
+   378	        ok: true,
+   379	        status: 'ok',
+   380	        champion_id: champion.champion_id,
+   381	        asof: tradingDate,
+   382	        forecasts: forecastsSummary,
+   383	        latest_report_ref: `public/data/forecast/reports/daily/${tradingDate}.json`,
+   384	        scorecards_ref: 'public/data/forecast/scorecards/tickers.json.gz',
+   385	        maturity_phase: report.maturity_phase
+   386	    });
+   387	
+   388	    updateLastGood(repoRoot, {
+   389	        champion_id: champion.champion_id,
+   390	        report_ref: `public/data/forecast/reports/daily/${tradingDate}.json`,
+
+### scripts/forecast/report_generator.mjs (publishLatestFromLastGood / last_good gating)
+   406	    if (isValidLatestDoc(doc)) return doc;
+   407	    return null;
+   408	}
+   409	
+   410	/**
+   411	 * Publish latest from last_good fallback (or bootstrap if last_good missing)
+   412	 * @param {string} repoRoot - Repository root
+   413	 * @param {object} options - Fallback options
+   414	 * @returns {object} Latest envelope written
+   415	 */
+   416	export function publishLatestFromLastGood(repoRoot, options = {}) {
+   417	    const reason = options.reason ?? 'Fallback to last_good';
+   418	    const status = options.status ?? 'circuit_open';
+   419	    const fallback = loadLastGoodEnvelope(repoRoot);
+   420	    const latestPath = path.join(repoRoot, PUBLIC_BASE, LATEST_REL_PATH);
+   421	    const lastGoodPath = path.join(repoRoot, PUBLIC_BASE, LAST_GOOD_POINTER_REL_PATH);
+   422	    const lastGoodEnvelopePath = path.join(repoRoot, PUBLIC_BASE, LAST_GOOD_ENVELOPE_REL_PATH);
+   423	    const fallbackCount = Array.isArray(fallback?.data?.forecasts) ? fallback.data.forecasts.length : 0;
+   424	
+   425	    const latestDoc = fallback && fallbackCount > 0
+   426	        ? {
+   427	            ...fallback,
+   428	            ok: false,
+   429	            generated_at: new Date().toISOString(),
+   430	            meta: {
+   431	                ...(fallback.meta ?? {}),
+   432	                status,
+   433	                reason,
+   434	                last_good_ref: `public/data/forecast/${LAST_GOOD_ENVELOPE_REL_PATH}`
+   435	            }
+   436	        }
+   437	        : (() => {
+   438	            const seed = buildSeedForecastsFromStockAnalysis(repoRoot);
+   439	            if (seed.forecasts.length > 0) {
+   440	                const seededDoc = buildLatestDoc({
+   441	                    ok: false,
+   442	                    status,
+   443	                    reason,
+   444	                    last_good_ref: `public/data/forecast/${LAST_GOOD_ENVELOPE_REL_PATH}`,
+   445	                    forecasts: seed.forecasts,
+   446	                    maturity_phase: 'BOOTSTRAP',
+   447	                    asof: seed.asof
+   448	                });
+   449	                atomicWriteJson(lastGoodEnvelopePath, seededDoc);
+   450	                atomicWriteJson(lastGoodPath, {
+   451	                    schema: 'forecast_last_good_v1',
+   452	                    last_good_champion_id: null,
+   453	                    last_good_latest_report_ref: null,
+   454	                    last_good_as_of: new Date().toISOString(),
+   455	                    reason: 'seeded_from_stock_analysis'
+   456	                });
+   457	                return seededDoc;
+   458	            }
+   459	            return buildLatestDoc({
+   460	                ok: false,
+   461	                status: 'bootstrap',
+   462	                reason: 'No last_good available yet',
+   463	                last_good_ref: null,
+   464	                forecasts: [],
+   465	                maturity_phase: 'BOOTSTRAP',
+   466	                asof: null
+   467	            });
+   468	        })();
+   469	
+   470	    if (!isValidLatestDoc(latestDoc)) {
+   471	        throw new Error('Invalid last_good fallback envelope; refusing publish');
+   472	    }
+   473	    atomicWriteJson(latestPath, latestDoc);
+   474	    console.log(`[Latest] Fallback published to ${latestPath}`);
+   475	    return latestDoc;
+   476	}
+   477	
+   478	/**
+   479	 * Update last_good.json pointer
+   480	 * @param {string} repoRoot - Repository root
+   481	 * @param {object} lastGood - Last good data
+   482	 */
+   483	export function updateLastGood(repoRoot, lastGood) {
+   484	    const lastGoodPath = path.join(repoRoot, PUBLIC_BASE, LAST_GOOD_POINTER_REL_PATH);
+   485	    const lastGoodEnvelopePath = path.join(repoRoot, PUBLIC_BASE, LAST_GOOD_ENVELOPE_REL_PATH);
+   486	    const candidateEnvelope = lastGood.latest_envelope ?? readJsonIfExists(path.join(repoRoot, PUBLIC_BASE, LATEST_REL_PATH));
+   487	    const forecastCount = Array.isArray(candidateEnvelope?.data?.forecasts) ? candidateEnvelope.data.forecasts.length : 0;
+   488	
+   489	    if (forecastCount === 0) {
+   490	        console.warn('[LastGood] Skipped update: latest envelope has zero forecasts');
+   490	        console.warn('[LastGood] Skipped update: latest envelope has zero forecasts');
+   491	        return;
+   492	    }
+   493	
+   494	    const pointerDoc = {
+   495	        schema: 'forecast_last_good_v1',
+   496	        last_good_champion_id: lastGood.champion_id ?? null,
+   497	        last_good_latest_report_ref: lastGood.report_ref ?? null,
+   498	        last_good_as_of: lastGood.as_of ?? new Date().toISOString(),
+   499	        reason: lastGood.reason ?? null
+   500	    };
+   501	
+   502	    atomicWriteJson(lastGoodPath, pointerDoc);
+   503	
+   504	    if (isValidLatestDoc(candidateEnvelope)) {
+   505	        atomicWriteJson(lastGoodEnvelopePath, candidateEnvelope);
+   506	        console.log(`[LastGood] Updated ${lastGoodEnvelopePath}`);
+   507	    } else {
+   508	        console.warn(`[LastGood] Skipped ${lastGoodEnvelopePath}: latest envelope missing/invalid`);
+   509	    }
+   510	
+   511	    console.log(`[LastGood] Updated ${lastGoodPath}`);
+   512	}
+   513	
+   514	export default {
+   515	    generateDailyReport,
+   516	    writeReport,
+   517	    generateScorecards,
+   518	    writeScorecards,
+   519	    updateStatus,
+   520	    updateLatest,
+   521	    updateLastGood,
+   522	    loadLastGoodEnvelope,
+   523	    publishLatestFromLastGood
+   524	};
+
+### scripts/forecast/snapshot_ingest.mjs (market-prices snapshot fallback)
+    96	
+    97	function toFiniteNumber(value) {
+    98	    const num = Number(value);
+    99	    return Number.isFinite(num) ? num : null;
+   100	}
+   101	
+   102	/**
+   103	 * Load published market-prices snapshot as fallback source.
+   104	 * @param {string} repoRoot - Repository root
+   105	 * @returns {object} Map of ticker -> latest bar-like object
+   106	 */
+   107	export function loadMarketPricesSnapshot(repoRoot) {
+   108	    const snapshotPath = path.join(repoRoot, MARKET_PRICES_SNAPSHOT_PATH);
+   109	    if (!fs.existsSync(snapshotPath)) return {};
+   110	
+   111	    try {
+   112	        const raw = fs.readFileSync(snapshotPath, 'utf8');
+   113	        const doc = JSON.parse(raw);
+   114	        const asOf = doc?.asof ?? doc?.metadata?.as_of ?? doc?.meta?.asOf ?? doc?.meta?.data_date ?? null;
+   115	        const inferredDate = typeof asOf === 'string' && asOf.length >= 10 ? asOf.slice(0, 10) : null;
+   116	
+   117	        const rows = Array.isArray(doc?.data)
+   118	            ? doc.data
+   119	            : Array.isArray(doc?.rows)
+   120	                ? doc.rows
+   121	                : [];
+   122	
+   123	        const prices = {};
+   124	        for (const row of rows) {
+   125	            const ticker = row?.symbol ?? row?.ticker ?? null;
+   126	            if (!ticker || typeof ticker !== 'string') continue;
+   127	
+   128	            const close = toFiniteNumber(row?.close ?? row?.price ?? row?.last ?? row?.adj_close);
+   129	            if (close === null) continue;
+   130	
+   131	            const open = toFiniteNumber(row?.open) ?? close;
+   132	            const high = toFiniteNumber(row?.high) ?? close;
+   300	// Main Ingest Function
+   301	// ─────────────────────────────────────────────────────────────────────────────
+   302	
+   303	/**
+   304	 * Ingest all snapshots for a trading date
+   305	 * @param {string} repoRoot - Repository root
+   306	 * @param {string} tradingDate - Trading date
+   307	 * @param {object} policy - Forecast policy
+   308	 * @returns {object} Ingested data summary
+   309	 */
+   310	export async function ingestSnapshots(repoRoot, tradingDate, policy) {
+   311	    const asOf = new Date().toISOString();
+   312	
+   313	    // Load universe
+   314	    const universe = loadUniverse(repoRoot);
+   315	    console.log(`[Ingest] Loaded universe: ${universe.length} tickers`);
+   316	
+   317	    // Load prices (EOD batches primary; published market-prices snapshot fallback)
+   318	    const batchPrices = loadEodBatches(repoRoot);
+   319	    const snapshotPrices = loadMarketPricesSnapshot(repoRoot);
+   320	    const prices = { ...batchPrices };
+   321	    for (const [ticker, row] of Object.entries(snapshotPrices)) {
+   322	        if (!prices[ticker]) {
+   323	            prices[ticker] = row;
+   324	        }
+   325	    }
+   326	
+   327	    const pricesCount = Object.keys(prices).length;
+   328	    console.log(`[Ingest] Loaded prices for ${pricesCount} tickers (batches=${Object.keys(batchPrices).length}, market-prices-fallback=${Object.keys(snapshotPrices).length})`);
+   329	
+   330	    // Calculate missing data percentage
+   331	    const missingCount = universe.filter(t => !prices[t]).length;
+   332	    const missingPricePct = universe.length > 0 ? (missingCount / universe.length) * 100 : 0;
+   333	
+   334	    // Create snapshots
+   335	    const snapshots = {
+   336	        prices,
+
+### scripts/providers/market-prices-v3.mjs (95% minimum + fallback chain)
+  1258	
+  1259	  let providerLabel = mode === 'STUB' ? 'stub' : (useStooq ? 'stooq' : (primaryProvider?.id || 'unknown'));
+  1260	
+  1261	  const symbols = await loadUniverseNasdaq100();
+  1262	  const config = await loadModuleConfig();
+  1263	  const configMinCount = Number.isFinite(config.counts?.min) ? Number(config.counts.min) : 0;
+  1264	  const coverageMinCount = Math.ceil(symbols.length * 0.95);
+  1265	  const minCount = Math.max(configMinCount, coverageMinCount);
+  1266	
+  1267	  const errors = [];
+  1268	  const warnings = [];
+  1269	  const rawBars = [];
+  1270	  const validBars = [];
+  1271	  const upstreamResults = [];
+  1272	  const symbolErrors = {};
+  1448	  let rawCount = rawBars.length;
+  1449	  let validCount = validBars.length;
+  1450	  let droppedRecords = rawCount - validCount;
+  1451	  let validationMeta = computeValidationMetadata(rawCount, validCount, droppedRecords, errors.length === 0);
+  1452	  let meetsMinCount = validCount >= minCount;
+  1453	  let noValidBars = validCount === 0;
+  1454	  let passed = !noValidBars && meetsMinCount && errors.length === 0 && validationMeta.drop_check_passed;
+  1455	
+  1456	  if (mode === 'REAL' && !meetsMinCount) {
+  1457	    const lastGoodBars = await loadFallbackBarsFromPublishedSnapshot({ minCount, fallbackDate: targetDate });
+  1458	    if (lastGoodBars.length >= minCount) {
+  1459	      rawBars.length = 0;
+  1460	      validBars.length = 0;
+  1461	      errors.length = 0;
+  1462	      rawBars.push(...lastGoodBars);
+  1463	      validBars.push(...lastGoodBars);
+  1464	      fallbackMode = 'last_good_snapshot';
+  1465	      runClassification = CLASSIFICATIONS.OK;
+  1466	      providerLabel = 'last_good';
+  1467	      warnings.push('USING_LAST_GOOD_MARKET_PRICES');
+  1468	      sourceChainMeta.selected = 'last_good';
+  1469	    } else {
+  1470	      const seedBars = await loadFallbackBarsFromStockAnalysis({ minCount, fallbackDate: targetDate });
+  1471	      if (seedBars.length >= minCount) {
+  1472	        rawBars.length = 0;
+  1473	        validBars.length = 0;
+  1474	        errors.length = 0;
+  1475	        rawBars.push(...seedBars);
+  1476	        validBars.push(...seedBars);
+  1477	        fallbackMode = 'stock_analysis_seed';
+  1478	        runClassification = CLASSIFICATIONS.OK;
+  1479	        providerLabel = 'stock-analysis-seed';
+  1480	        warnings.push('USING_STOCK_ANALYSIS_SEED');
+  1481	        sourceChainMeta.selected = 'stock-analysis-seed';
+  1482	      }
+  1483	    }
+  1484	
+
+### wrangler.toml (KV binding)
+     1	name = "rubikvault-site"
+     2	compatibility_date = "2025-12-17"
+     3	compatibility_flags = ["nodejs_compat"]
+     4	
+     5	# Cloudflare Pages output folder (must match Pages settings)
+     6	pages_build_output_dir = "public"
+     7	
+     8	# KV binding for Pages Functions + local dev
+     9	[[kv_namespaces]]
+    10	binding = "RV_KV"
+    11	id = "323d53e7392e42ff9089daf8977dfde3"
+    12	preview_id = "30c57392d8f04dfbaeb71fd8bedea15f"
+    13	
+    14	# Optional: put ONLY non-secret values here (never API keys)
+    15	# [vars]
+    16	# PROD_URL = "https://rubikvault.com"
+    17	# MIRROR_BASE_URL = "https://rubikvault.com"
+
+### functions/api/_shared/cache-law.js (KV writes disabled)
+    53	export async function getJsonKV(env, key) {
+    54	  if (!key) return null;
+    55	  if (typeof kvGetJson === "function") {
+    56	    const result = await kvGetJson(env, key);
+    57	    return { value: result?.value ?? null, meta: result };
+    58	  }
+    59	  const kv = env?.RV_KV || null;
+    60	  if (!kv || typeof kv.get !== "function") return null;
+    61	  try {
+    62	    const value = await kv.get(key, { type: "json" });
+    63	    return { value, meta: { hit: value != null } };
+    64	  } catch {
+    65	    return null;
+    66	  }
+    67	}
+    68	
+    69	export async function putJsonKV(env, key, value, ttlSeconds) {
+    70	  // KV writes are disabled in functions; keep cache read-only.
+    71	  return false;
+    72	}
+    73	
+    74	export async function tryMarkSWR(env, swrKey, ttlSeconds) {
+    75	  if (!swrKey) return false;
+    76	  // best-effort, not strict mutex
+    77	  const existing = await getJsonKV(env, swrKey);
+    78	  if (existing?.meta?.hit) return false;
+    79	  // No write; allow refresh to proceed without lock.
+    80	  return true;
+    81	}
+    82	
+    83	export function buildCacheMeta({ mode, key_kind, hit, stale, age_s, ttl_s, swr_marked } = {}) {
+    84	  const swr =
+
+### functions/api/_shared/resilience.js (BINDING_MISSING/MIRROR_FALLBACK semantics)
+   184	  const readOnly = !allowWrites;
+   185	  const KV = env?.RV_KV || null;
+   186	  const hasKV = KV && typeof KV.get === "function";
+   187	  const featureId = cfg.featureId || "unknown";
+   188	  const version = cfg.version || "v1";
+   189	  const allowEmptyData =
+   190	    cfg.allowEmptyData === true || ALLOW_EMPTY_FEATURES.has(featureId);
+   191	  const lastGoodKey = cfg.lastGoodKey || `rv:lastgood:${featureId}:${version}`;
+   192	  const circuitKey = cfg.circuitKey || `rv:circuit:${featureId}:${version}`;
+   193	  const nowMs = Date.now();
+   194	  const timings = { kv: 0, fetch: 0, total: 0 };
+   195	
+   196	  let lastGood = null;
+   197	  let circuitOpen = false;
+   198	  let lastGoodValid = false;
+   199	  let lastGoodQuality = { passed: false, failReason: "NO_DATA_YET" };
+   200	  let savedAtMs = null;
+   201	
+   202	  const kvStart = Date.now();
+   203	  if (hasKV) {
+   204	    try {
+   205	      lastGood = await KV.get(lastGoodKey, { type: "json" });
+   206	      circuitOpen = (await KV.get(circuitKey)) != null;
+   207	    } catch (error) {
+   208	      lastGood = null;
+   209	      circuitOpen = false;
+   210	    }
+   211	  }
+   212	  timings.kv = Date.now() - kvStart;
+   213	
+   214	  if (lastGood?.data) {
+   215	    const validator = cfg.validator || defaultValidator;
+   216	    lastGoodQuality = validator(lastGood.data);
+   217	    lastGoodValid = Boolean(lastGoodQuality?.passed);
+   218	    savedAtMs = parseSavedAt(lastGood?.meta?.savedAt);
+   219	  }
+   220	
+   221	  const meta = {
+   222	    status: "EMPTY",
+   223	    savedAt: savedAtMs ? new Date(savedAtMs).toISOString() : null,
+   224	    ageMinutes: ageMinutes(savedAtMs),
+   225	    traceId,
+   226	    circuitOpen: Boolean(circuitOpen),
+   227	    reason: null,
+   228	    writeMode: allowWrites ? "WRITE" : "READONLY"
+   229	  };
+   230	  let retryOnce = false;
+   231	  const buildDebugInfo = ({ upstreamStatus, quality, cacheLayer, cacheHit, fetchMs } = {}) => ({
+   232	    upstreamStatus: upstreamStatus ?? null,
+   233	    quality: quality || null,
+   234	    timingsMs: {
+   235	      kv: timings.kv,
+   236	      fetch: fetchMs ?? 0,
+   237	      total: Date.now() - nowMs
+   238	    },
+   239	    keyUsed: lastGoodKey,
+   240	    hasKV: Boolean(hasKV),
+   241	    readMode: readOnly ? "READONLY" : "WRITE",
+   242	    cache: { layer: cacheLayer || "none", hit: Boolean(cacheHit) },
+   243	    reason: meta.reason || "",
+   244	    attempts: { retried: Boolean(retryOnce) }
+   245	  });
+   246	
+   247	  if (isPreview || circuitOpen || readOnly) {
+   248	    const reason = !hasKV
+   249	      ? "BINDING_MISSING"
+   250	      : isPreview
+   251	        ? "PREVIEW"
+   252	        : circuitOpen
+   253	          ? "CIRCUIT_OPEN"
+   254	          : "READONLY";
+   255	    const mirrorPayload =
+   256	      !lastGoodValid || isPreview || !hasKV || readOnly
+   257	        ? await loadMirrorPayload(url.origin, featureId)
+   258	        : null;
+   259	    if (mirrorPayload) {
+   260	      const mirrorData = extractMirrorData(mirrorPayload);
+   261	      const mirrorQuality = (cfg.validator || defaultValidator)(mirrorData);
+   262	      if (mirrorQuality?.passed) {
+   263	        meta.status = "STALE";
+   264	        meta.reason = !hasKV ? "BINDING_MISSING" : "MIRROR_FALLBACK";
+   265	        const payload = makeJson({
+   266	          ok: true,
+
+### .github/workflows/monitor-prod.yml (semantic deploy assertions)
+    30	            echo "Checking $url"
+    31	            curl -fsS "$url" -o "$out"
+    32	            jq -e . "$out" >/dev/null
+    33	            echo "✅ $url"
+    34	          }
+    35	
+    36	          fetch_json "$BASE_URL/data/snapshots/market-prices/latest.json" /tmp/market_prices.json
+    37	          fetch_json "$BASE_URL/data/forecast/latest.json" /tmp/forecast_latest.json
+    38	          fetch_json "$BASE_URL/data/forecast/system/status.json" /tmp/forecast_status.json
+    39	
+    40	          jq -e --argjson minRows "$MIN_MARKET_PRICE_ROWS" '
+    41	            ((.schema_version // .schemaVersion // .schema) != null) and
+    42	            ((.asof // .metadata.as_of // .meta.asOf) != null) and
+    43	            (((.metadata.record_count // 0) >= $minRows) or ((.data | length) >= $minRows))
+    44	          ' /tmp/market_prices.json >/dev/null
+    45	          echo "✅ market-prices semantic checks passed"
+    46	
+    47	          jq -e '
+    48	            ((.schema_version // .schemaVersion // .schema) != null) and
+    49	            ((.data.asof // .asof // .meta.asof // .meta.data_date) != null) and
+    50	            ((.data.forecasts | length) > 0)
+    51	          ' /tmp/forecast_latest.json >/dev/null
+    52	          echo "✅ forecast/latest semantic checks passed"
+    53	
+    54	          jq -e '
+    55	            ((.schema_version // .schemaVersion // .schema) != null) and
+    56	            ((.status // .meta.status) != null) and
+    57	            (if (((.status // .meta.status // "") | ascii_downcase) == "circuit_open" or
+    58	                 (((.circuit_state // .circuit.state // "") | ascii_downcase) == "open"))
+    59	             then ((.reason // .message // .meta.reason // "") | tostring | length) > 0
+    60	             else true
+    61	             end)
+    62	          ' /tmp/forecast_status.json >/dev/null
+    63	          echo "✅ forecast/system/status semantic checks passed"
+    64	
+    65	      - name: Staleness warning (48h)
+    66	        env:
+    67	          BASE_URL: https://rubikvault.com
+    68	        run: |
+    69	          set -euo pipefail
+    70	          curl -sS "$BASE_URL/data/forecast/latest.json" -o /tmp/forecast_latest.json
+    71	          node -e '
+    72	            const fs = require("fs");
+    73	            const doc = JSON.parse(fs.readFileSync("/tmp/forecast_latest.json", "utf8"));
+    74	            const generatedAt = doc.generated_at || doc.generatedAt || (doc.meta && doc.meta.generated_at) || null;
+    75	            if (!generatedAt) {
+    76	              console.log("::warning::forecast/latest.json missing generated_at; cannot compute staleness");
+    77	              process.exit(0);
+    78	            }
+    79	            const generatedMs = Date.parse(generatedAt);
+    80	            if (Number.isNaN(generatedMs)) {
+    81	              console.log(`::warning::forecast/latest.json generated_at not parseable: ${generatedAt}`);
+    82	              process.exit(0);
+    83	            }
+    84	            const ageHours = (Date.now() - generatedMs) / (1000 * 60 * 60);
+    85	            const msg = `forecast/latest.json age=${ageHours.toFixed(1)}h generated_at=${generatedAt}`;
+    86	            console.log(msg);
+    87	            if (ageHours > 48) {
+    88	              console.log(`::warning::staleness threshold exceeded (${msg})`);
+    89	            }
+    90	          '

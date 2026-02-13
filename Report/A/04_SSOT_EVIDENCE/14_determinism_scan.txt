@@ -1,0 +1,446 @@
+$ rg -n "Math\.random|Date\.now|randomUUID|performance\.now|new\s+Date\(\)" -S scripts/ functions/ public/ 2>/dev/null || true
+functions/_shared/provider_budget.js:1:function isoDay(date = new Date()) {
+functions/_shared/provider_budget.js:5:function isoMonth(date = new Date()) {
+functions/_shared/provider_budget.js:9:function isoWeek(date = new Date()) {
+functions/_shared/provider_budget.js:95:      JSON.stringify({ used: next, max: limit, ts: new Date().toISOString() }),
+functions/_shared/provider_budget.js:102:  const rollupInitPayload = JSON.stringify({ used: 1, max: limit, ts: new Date().toISOString() });
+public/debug/rv-debug-console.js:12:  return new Date().toISOString();
+public/debug/rv-debug-console.js:822:    const started = performance.now();
+public/debug/rv-debug-console.js:843:        durationMs: Math.round(performance.now() - started),
+public/debug/rv-debug-console.js:867:        durationMs: Math.round(performance.now() - started),
+public/debug/rv-debug-console.js:990:  link.download = `rv-debug-${Date.now()}.json`;
+public/debug/rv-debug-console.js:1013:    const started = performance.now();
+public/debug/rv-debug-console.js:1026:        durationMs: Math.round(performance.now() - started),
+public/debug/rv-debug-console.js:1035:        durationMs: Math.round(performance.now() - started),
+public/debug/rv-debug.js:29:  return Math.random().toString(36).slice(2, 10);
+public/debug/rv-debug.js:32:function formatTime(ts = Date.now()) {
+functions/api/diag.js:11:    const now = new Date().toISOString();
+functions/api/stock.js:96:  const ms = Date.now() - days * 24 * 60 * 60 * 1000;
+functions/api/stock.js:102:function isoDay(date = new Date()) {
+functions/api/stock.js:181:    const ageSeconds = ms ? Math.floor((Date.now() - ms) / 1000) : null;
+functions/api/stock.js:375:  const requestStart = Date.now();
+functions/api/stock.js:405:  const now = new Date();
+functions/api/stock.js:434:    const kvStart = Date.now();
+functions/api/stock.js:455:    timings.t_kv_ms = Date.now() - kvStart;
+functions/api/stock.js:492:    const originStart = recordTiming ? Date.now() : null;
+functions/api/stock.js:514:      timings.t_origin_ms = Date.now() - originStart;
+functions/api/stock.js:760:  const schedulerStart = Date.now();
+functions/api/stock.js:762:  const schedulerMs = Date.now() - schedulerStart;
+functions/api/stock.js:788:    const buildStart = Date.now();
+functions/api/stock.js:862:    timings.t_build_ms = Date.now() - buildStart;
+functions/api/stock.js:863:    timings.t_total_ms = Date.now() - requestStart;
+functions/api/stock.js:1013:  const buildStart = Date.now();
+functions/api/stock.js:1083:  timings.t_build_ms = Date.now() - buildStart;
+functions/api/stock.js:1084:  timings.t_total_ms = Date.now() - requestStart;
+scripts/refresh-health-assets.mjs:22:  return new Date().toISOString();
+functions/api/scheduler/health.js:44:  const ageSeconds = lastOkMs ? Math.floor((Date.now() - lastOkMs) / 1000) : null;
+public/debug/diagnostics.js:211:    const startedAt = performance.now();
+public/debug/diagnostics.js:217:        durationMs: Math.round(performance.now() - startedAt)
+public/debug/diagnostics.js:223:        durationMs: Math.round(performance.now() - startedAt),
+public/debug/diagnostics.js:235:    const startedAt = performance.now();
+public/debug/diagnostics.js:248:        durationMs: Math.round(performance.now() - startedAt),
+public/debug/diagnostics.js:259:        durationMs: Math.round(performance.now() - startedAt),
+functions/api/probe/[module].js:128:  const startTime = Date.now();
+functions/api/probe/[module].js:165:  const latencyMs = Date.now() - startTime;
+functions/api/probe/[module].js:199:      timestamp: new Date().toISOString(),
+functions/api/elliott-scanner.js:14:    const startMs = Date.now();
+functions/api/elliott-scanner.js:79:                asOf: new Date().toISOString(),
+functions/api/elliott-scanner.js:80:                durationMs: Date.now() - startMs,
+functions/api/resolve.js:72:    const ageSeconds = ms ? Math.floor((Date.now() - ms) / 1000) : null;
+functions/api/resolve.js:104:  const requestStart = Date.now();
+functions/api/resolve.js:133:    const kvStart = Date.now();
+functions/api/resolve.js:154:    timings.t_kv_ms = Date.now() - kvStart;
+functions/api/resolve.js:254:          const originStart = Date.now();
+functions/api/resolve.js:256:          timings.t_origin_ms = Date.now() - originStart;
+functions/api/resolve.js:281:        const originStart = Date.now();
+functions/api/resolve.js:283:        timings.t_origin_ms = Date.now() - originStart;
+functions/api/resolve.js:299:  const schedulerStart = Date.now();
+functions/api/resolve.js:301:  const schedulerMs = Date.now() - schedulerStart;
+functions/api/resolve.js:326:  const buildStart = Date.now();
+functions/api/resolve.js:360:  timings.t_build_ms = Date.now() - buildStart;
+functions/api/resolve.js:361:  timings.t_total_ms = Date.now() - requestStart;
+functions/api/_middleware.js:15:    const todayUtc = new Date().toISOString().slice(0, 10);
+functions/api/_middleware.js:32:      const todayUtc = new Date().toISOString().slice(0, 10);
+public/search.js:122:    const url = `/api/universe?q=${encodeURIComponent(raw)}&t=${Date.now()}`;
+scripts/seeder.js:233:  const safeGeneratedAt = generatedAt || new Date().toISOString();
+scripts/seeder.js:1007:  const started = Date.now();
+scripts/seeder.js:1017:  const latencyMs = Date.now() - started;
+scripts/seeder.js:1027:    generatedAt: new Date().toISOString(),
+scripts/seeder.js:1048:  const day = new Date().toISOString().slice(0, 10);
+scripts/seeder.js:1076:    at: details.at || new Date().toISOString(),
+scripts/seeder.js:1105:    runId: new Date().toISOString(),
+scripts/seeder.js:1106:    generatedAt: new Date().toISOString(),
+scripts/seeder.js:1115:      const started = Date.now();
+scripts/seeder.js:1121:          const generatedAt = new Date().toISOString();
+scripts/seeder.js:1142:            durationMs: Date.now() - started
+scripts/seeder.js:1151:          const generatedAt = new Date().toISOString();
+scripts/seeder.js:1175:            durationMs: Date.now() - started
+scripts/seeder.js:1186:            const generatedAt = new Date().toISOString();
+scripts/seeder.js:1207:              durationMs: Date.now() - started
+scripts/seeder.js:1232:            durationMs: Date.now() - started
+scripts/seeder.js:1276:            durationMs: Date.now() - started
+scripts/seeder.js:1285:        const generatedAt = new Date().toISOString();
+scripts/seeder.js:1306:          durationMs: Date.now() - started
+functions/api/fundamentals.js:115:  const started = Date.now();
+functions/api/fundamentals.js:119:    const startDate = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+functions/api/fundamentals.js:120:    const endDate = new Date().toISOString().slice(0, 10);
+functions/api/fundamentals.js:133:    const latencyMs = Date.now() - started;
+functions/api/fundamentals.js:172:    const latencyMs = Date.now() - started;
+functions/api/fundamentals.js:195:  const startedAtIso = new Date().toISOString();
+functions/api/debug-matrix.js:11:    const now = new Date().toISOString();
+functions/api/_shared/cache-law.js:8:  return new Date().toISOString();
+functions/api/_shared/cache-law.js:12:  return new Date().toISOString().slice(0, 10);
+functions/api/_shared/cache-law.js:26:  return Math.max(0, Math.floor((Date.now() - ms) / 1000));
+functions/api/_shared/fundamentals-fmp.mjs:24:    const started = Date.now();
+functions/api/_shared/fundamentals-fmp.mjs:36:        const latencyMs = Date.now() - started;
+functions/api/_shared/fundamentals-fmp.mjs:79:        const latencyMs = Date.now() - started;
+functions/api/_shared/fundamentals-fmp.mjs:116:        updatedAt: new Date().toISOString().slice(0, 10)
+functions/api/_shared/static-only.js:28:      updatedAt: metadata.published_at || metadata.fetched_at || new Date().toISOString(),
+functions/api/_shared/static-only.js:180:  const todayUtc = new Date().toISOString().slice(0, 10);
+functions/api/_shared/static-only.js:225:    timestamp: new Date().toISOString(),
+functions/api/_shared/static-only.js:301:      generated_at: new Date().toISOString()
+functions/api/_shared/static-only.js:322:  const started = Date.now();
+functions/api/_shared/static-only.js:325:    return { value, hit: value !== null && value !== undefined, latency_ms: Date.now() - started, error: null };
+functions/api/_shared/static-only.js:327:    return { value: null, hit: false, latency_ms: Date.now() - started, error };
+functions/api/_shared/static-only.js:350:  const now = new Date().toISOString();
+functions/api/_shared/static-only.js:493:  const assetStarted = Date.now();
+functions/api/_shared/static-only.js:518:            asset_latency_ms: Date.now() - assetStarted
+functions/api/_shared/static-only.js:528:      sourceInfo.asset_latency_ms = Date.now() - assetStarted;
+functions/api/_shared/static-only.js:590:          data_date: new Date().toISOString().slice(0, 10),
+functions/api/_shared/static-only.js:591:          generated_at: new Date().toISOString()
+functions/api/metrics.js:10:  const now = new Date();
+functions/api/metrics.js:63:      requestId: `rv-${now.getTime()}-${Math.random().toString(16).slice(2)}`,
+functions/api/_shared/telemetry.mjs:5:export function isoDay(date = new Date()) {
+functions/api/_shared/telemetry.mjs:9:export function isoMonth(date = new Date()) {
+functions/api/_shared/telemetry.mjs:13:export function isoWeek(date = new Date()) {
+functions/api/_shared/telemetry.mjs:42:export function buildDashKeys(now = new Date()) {
+functions/api/_shared/telemetry.mjs:152:    ts: ts || new Date().toISOString(),
+public/elliott.html:307:            if (el) el.textContent = new Date().toISOString().split("T")[0];
+functions/_lib/kv-safe.js:18:  return Date.now() < getWriteDisabledUntil();
+functions/_lib/kv-safe.js:36:  const until = Date.now() + cooldownMs;
+functions/_lib/kv-safe.js:65:  cache.set(key, { value, ts: Date.now() });
+functions/_lib/kv-safe.js:92:  const started = Date.now();
+functions/_lib/kv-safe.js:100:      durationMs: Date.now() - started,
+functions/_lib/kv-safe.js:110:      durationMs: Date.now() - started
+functions/_lib/kv-safe.js:118:      durationMs: Date.now() - started,
+functions/_lib/kv-safe.js:125:  const started = Date.now();
+functions/_lib/kv-safe.js:129:    durationMs: Date.now() - started,
+functions/api/debug-bundle.js:11:    const now = new Date().toISOString();
+functions/api/_shared/scheduler-law.js:228:  const startedAt = Date.now();
+functions/api/_shared/scheduler-law.js:229:  const runId = `${job || "job"}:${Date.now().toString(36)}`;
+functions/api/_shared/scheduler-law.js:266:      timing_ms: Date.now() - startedAt
+functions/api/_shared/scheduler-law.js:284:      timing_ms: Date.now() - startedAt
+functions/api/_shared/scheduler-law.js:302:      timing_ms: Date.now() - startedAt
+functions/api/_shared/scheduler-law.js:306:  const startDate = new Date(Date.now() - 365 * 3 * 24 * 60 * 60 * 1000)
+functions/api/_shared/scheduler-law.js:369:    timing_ms: Date.now() - startedAt
+functions/api/_shared/observability.js:77:  const started = Date.now();
+functions/api/_shared/observability.js:89:  timings.t_total_ms = Date.now() - started;
+functions/api/_shared/feature-contract.js:65:  const now = new Date().toISOString();
+functions/api/_shared/feature-contract.js:125:    updatedAt: updatedAt || new Date().toISOString(),
+functions/api/diagnostics/tiingo.js:35:  const startedAtIso = new Date().toISOString();
+functions/api/diagnostics/tiingo.js:48:    const started = Date.now();
+functions/api/diagnostics/tiingo.js:51:      const startDate = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+functions/api/diagnostics/tiingo.js:64:      latencyMs = Date.now() - started;
+functions/api/diagnostics/tiingo.js:69:      latencyMs = Date.now() - started;
+functions/api/mission-control/summary.js:116:function isoDay(date = new Date()) {
+functions/api/mission-control/summary.js:120:function isoMonth(date = new Date()) {
+functions/api/mission-control/summary.js:124:function isoWeek(date = new Date()) {
+functions/api/mission-control/summary.js:147:      asOf: new Date().toISOString(),
+functions/api/mission-control/summary.js:156:      fetched_at: new Date().toISOString(),
+functions/api/mission-control/summary.js:157:      published_at: new Date().toISOString(),
+functions/api/mission-control/summary.js:923:function lastTradingDayIso(date = new Date()) {
+functions/api/mission-control/summary.js:943:  const now = new Date();
+functions/api/mission-control/summary.js:1267:  const startedAtIso = new Date().toISOString();
+functions/api/mission-control/summary.js:1268:  const now = new Date();
+functions/api/mission-control/summary.js:1278:  if (!wantsLive && !isDebug && LAST_CACHE && Date.now() - LAST_CACHE_AT_MS < CACHE_TTL_MS) {
+functions/api/mission-control/summary.js:2027:  const ageHours = snapshotAsOfMs ? (Date.now() - snapshotAsOfMs) / (1000 * 60 * 60) : null;
+functions/api/mission-control/summary.js:2273:    LAST_CACHE_AT_MS = Date.now();
+functions/api/_shared/static-only-v3.js:26:      updatedAt: metadata.published_at || metadata.fetched_at || new Date().toISOString(),
+functions/api/_shared/static-only-v3.js:67:  const now = new Date().toISOString();
+functions/api/_shared/static-only-v3.js:250:    timestamp: new Date().toISOString(),
+functions/api/_shared/static-handler.js:2:  return new Date().toISOString();
+functions/api/_shared/circuit.js:5:  return Date.now();
+functions/api/_shared/profiler.mjs:10:        this.currentStage = { name, start: Date.now() };
+functions/api/_shared/profiler.mjs:17:        const duration = Date.now() - this.currentStage.start;
+functions/api/_shared/profiler.mjs:25:        const total = this.startTime ? Date.now() - this.startTime : 0;
+functions/api/_shared/profiler.mjs:36:        const start = Date.now();
+functions/api/_shared/profiler.mjs:40:            console.log(`[Profiler] ${name} took ${Date.now() - start}ms`);
+scripts/ui-path/prove_ui_path.mjs:195:  generated_at: new Date().toISOString(),
+public/market-clock.js:30:function getNyParts(date = new Date()) {
+scripts/generate-crypto-snapshot.mjs:79:    asOf: new Date().toISOString()
+scripts/generate-crypto-snapshot.mjs:96:    lastRunAt: new Date().toISOString(),
+scripts/generate-crypto-snapshot.mjs:97:    lastSuccessAt: new Date().toISOString(),
+functions/api/_shared/static-only-backup.js:24:      updatedAt: metadata.published_at || metadata.fetched_at || new Date().toISOString(),
+scripts/aggregator/finalize.mjs:51:  const now = new Date().toISOString();
+scripts/aggregator/finalize.mjs:105:        timestamp: new Date().toISOString()
+scripts/aggregator/finalize.mjs:373:    published_at: publishedAt || new Date().toISOString(),
+scripts/aggregator/finalize.mjs:387:  const now = new Date();
+scripts/aggregator/finalize.mjs:450:  const runId = `finalize-${Date.now()}`;
+scripts/aggregator/finalize.mjs:619:          published_at: new Date().toISOString(),
+scripts/aggregator/finalize.mjs:718:        published_at: new Date().toISOString(),
+scripts/aggregator/finalize.mjs:743:    const publishedAt = new Date().toISOString();
+scripts/pipeline/build-marketphase-from-kv.mjs:25:  return new Date().toISOString();
+scripts/pipeline/build-marketphase-from-kv.mjs:323:      const startDate = new Date(Date.now() - 365 * 3 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+scripts/pipeline/build-marketphase-from-kv.mjs:364:    const t0 = Date.now();
+scripts/pipeline/build-marketphase-from-kv.mjs:371:      daily.debug.durationMs = Date.now() - t0;
+functions/api/_shared/envelope.js:18:  return new Date().toISOString();
+functions/api/_shared/envelope.js:70:  return new Date().toISOString().slice(0, 10);
+functions/api/_shared/envelope.js:291:      { provider: "unknown", data_date: new Date().toISOString().slice(0, 10) },
+scripts/validate-mirrors.mjs:8:const now = Date.now();
+scripts/validate-mirrors.mjs:90:  const nowIso = new Date().toISOString();
+scripts/pipeline/build-ndx100-pipeline-truth.mjs:8:  return new Date().toISOString();
+scripts/pipeline/build-ndx100-pipeline-truth.mjs:29:  const tmp = `${abs}.tmp-${Date.now()}`;
+scripts/seed-mirrors.mjs:110:  const now = Date.now();
+scripts/seed-mirrors.mjs:115:  ALPHAVANTAGE_THROTTLE.lastCall = Date.now();
+scripts/seed-mirrors.mjs:399:    timestamp: timestamp || new Date().toISOString()
+scripts/seed-mirrors.mjs:492:  const ts = new Date().toISOString();
+scripts/seed-mirrors.mjs:542:      ts: new Date().toISOString(),
+scripts/seed-mirrors.mjs:592:    ts: new Date().toISOString(),
+scripts/seed-mirrors.mjs:602:      updatedAt: new Date().toISOString(),
+scripts/seed-mirrors.mjs:631:      updatedAt: new Date().toISOString(),
+scripts/seed-mirrors.mjs:657:      updatedAt: new Date().toISOString(),
+scripts/seed-mirrors.mjs:674:      updatedAt: new Date().toISOString(),
+scripts/seed-mirrors.mjs:693:  const date = row.date ? new Date(row.date).toISOString() : new Date().toISOString();
+scripts/seed-mirrors.mjs:738:  const updatedAt = observedAt ? new Date(observedAt).toISOString() : new Date().toISOString();
+scripts/seed-mirrors.mjs:818:      updatedAt: new Date().toISOString(),
+scripts/seed-mirrors.mjs:856:      updatedAt: new Date().toISOString(),
+scripts/seed-mirrors.mjs:874:    timestamp: Number.isFinite(timestamp) ? timestamp : Date.now()
+scripts/seed-mirrors.mjs:885:  const timestamp = Number.isFinite(Number(timestampRaw)) ? Number(timestampRaw) : Date.now();
+scripts/seed-mirrors.mjs:907:      ts: new Date().toISOString(),
+scripts/seed-mirrors.mjs:925:      ts: new Date().toISOString(),
+scripts/seed-mirrors.mjs:971:    updatedAt: new Date().toISOString(),
+scripts/seed-mirrors.mjs:1037:    savedAt: new Date().toISOString(),
+scripts/seed-mirrors.mjs:1048:    const timestamp = new Date().toISOString();
+functions/api/_shared/resilience.js:6:  return new Date().toISOString();
+functions/api/_shared/resilience.js:11:    if (globalThis.crypto && typeof globalThis.crypto.randomUUID === "function") {
+functions/api/_shared/resilience.js:12:      return globalThis.crypto.randomUUID();
+functions/api/_shared/resilience.js:17:  return Math.random().toString(36).slice(2, 10);
+functions/api/_shared/resilience.js:102:  const diffMs = Date.now() - savedAtMs;
+functions/api/_shared/resilience.js:193:  const nowMs = Date.now();
+functions/api/_shared/resilience.js:202:  const kvStart = Date.now();
+functions/api/_shared/resilience.js:212:  timings.kv = Date.now() - kvStart;
+functions/api/_shared/resilience.js:237:      total: Date.now() - nowMs
+functions/api/_shared/resilience.js:290:          durationMs: Date.now() - nowMs,
+functions/api/_shared/resilience.js:333:        durationMs: Date.now() - nowMs,
+functions/api/_shared/resilience.js:379:      durationMs: Date.now() - nowMs,
+functions/api/_shared/resilience.js:416:  const fetchStart = Date.now();
+functions/api/_shared/resilience.js:439:  timings.fetch = Date.now() - fetchStart;
+functions/api/_shared/resilience.js:478:        durationMs: Date.now() - nowMs,
+functions/api/_shared/resilience.js:521:      durationMs: Date.now() - nowMs,
+functions/api/_shared/resilience.js:569:        durationMs: Date.now() - nowMs,
+functions/api/_shared/resilience.js:612:      durationMs: Date.now() - nowMs,
+functions/api/_shared/resilience.js:664:    durationMs: Date.now() - nowMs,
+scripts/update-news.mjs:57:  return new Date().toISOString();
+scripts/update-news.mjs:183:  const tmpPath = path.join(tmpDir, `${path.basename(targetPath)}.${Date.now()}.tmp`);
+scripts/update-news.mjs:189:  const ageSeconds = lastSuccess ? Math.max(0, Math.floor((Date.now() - Date.parse(lastSuccess)) / 1000)) : 0;
+scripts/update-news.mjs:259:      const started = Date.now();
+scripts/update-news.mjs:321:            backoffUntil = new Date(Date.now() + backoffSec * 1000).toISOString();
+scripts/update-news.mjs:338:        latMs: Date.now() - started,
+scripts/truth-audit/config.mjs:5:const DATE = process.env.TRUTH_AUDIT_DATE || new Date().toISOString().slice(0, 10);
+scripts/truth-audit/config.mjs:27:    generated_at: new Date().toISOString(),
+scripts/audit-site.mjs:176:  return new Date().toISOString();
+scripts/audit-site.mjs:365:        const futureLimit = Date.now() + 5 * 60 * 1000;
+scripts/audit-site.mjs:375:          const ageMs = Date.now() - parsed;
+scripts/audit-site.mjs:513:      const ageMs = Number.isFinite(parsed) ? Date.now() - parsed : NaN;
+scripts/audit-site.mjs:1067:  const auditStart = Date.now();
+scripts/audit-site.mjs:1074:    if (Date.now() - auditStart > args.maxAuditTimeMs) {
+scripts/audit-site.mjs:1194:      if (totalFailures >= 5 || Date.now() - auditStart > args.maxAuditTimeMs) {
+scripts/audit-site.mjs:1203:                Date.now() - auditStart > args.maxAuditTimeMs ? "LIMIT_EXCEEDED" : "CIRCUIT_OPEN",
+scripts/audit-site.mjs:1204:                Date.now() - auditStart > args.maxAuditTimeMs
+scripts/audit-site.mjs:1210:                    Date.now() - auditStart > args.maxAuditTimeMs ? "timer" : "circuit",
+scripts/audit-site.mjs:1211:                    Date.now() - auditStart > args.maxAuditTimeMs ? "timeout" : "open",
+scripts/audit-site.mjs:1212:                    Date.now() - auditStart > args.maxAuditTimeMs
+scripts/audit-site.mjs:1318:  const start = Date.now();
+scripts/audit-site.mjs:1363:    const auditStart = Date.now();
+scripts/audit-site.mjs:1366:      if (Date.now() - auditStart > args.maxAuditTimeMs) {
+scripts/audit-site.mjs:1423:        meta: { ...meta, durationMs: Date.now() - start },
+scripts/audit-site.mjs:1448:    meta: { ...meta, durationMs: Date.now() - start, source },
+scripts/generate-health.mjs:14:  return new Date().toISOString().slice(0, 10);
+scripts/generate-health.mjs:50:  const generatedAt = new Date().toISOString();
+scripts/generate-health.mjs:118:        generatedAt: new Date().toISOString(),
+scripts/generate-health.mjs:120:        dataAsOf: new Date().toISOString(),
+scripts/generate-eod-market.mjs:49:const asOfIso = data.latestAsOf ? new Date(`${data.latestAsOf}T21:00:00Z`).toISOString() : new Date().toISOString();
+scripts/generate-eod-market.mjs:82:      lastRunAt: new Date().toISOString(),
+scripts/generate-eod-market.mjs:83:      lastSuccessAt: new Date().toISOString(),
+scripts/generate-event-mirrors.mjs:118:    asOf: new Date().toISOString()
+scripts/generate-event-mirrors.mjs:137:    asOf: new Date().toISOString()
+scripts/generate-event-mirrors.mjs:188:    lastRunAt: new Date().toISOString(),
+scripts/generate-event-mirrors.mjs:189:    lastSuccessAt: new Date().toISOString(),
+functions/api/_shared/quality.js:10:  return new Date().toISOString().slice(0, 10);
+scripts/generate-eod-mirrors.mjs:6:const NOW = new Date().toISOString();
+scripts/forecast/snapshot_ingest.mjs:311:    const asOf = new Date().toISOString();
+scripts/generate-posts.js:7:const dateTag = new Date().toISOString().slice(0, 10);
+scripts/generate-posts.js:116:    generatedAt: new Date().toISOString(),
+scripts/forecast/promotion_gates.mjs:140:        created_at: new Date().toISOString(),
+scripts/forecast/promotion_gates.mjs:158:        promotion_id: computeDigest(`${currentChampion.champion_id}|${newChampion.champion_id}|${new Date().toISOString()}`),
+scripts/forecast/promotion_gates.mjs:159:        as_of: new Date().toISOString(),
+scripts/forecast/promotion_gates.mjs:234:    promotionRecord.post_change_impact.rollback_at = new Date().toISOString();
+scripts/providers/coingecko.js:62:  return { data: payload, dataAt: new Date().toISOString() };
+scripts/providers/rss.js:52:  return { data: text, dataAt: new Date().toISOString() };
+scripts/providers/_shared.js:24:  return { httpStatus, retryAfterSec, snippet, urlHost, at: new Date().toISOString() };
+scripts/forecast/forecast_engine.mjs:233:    asOf = new Date().toISOString(),
+scripts/providers/universe-v2.mjs:29:function formatDate(date = new Date()) {
+scripts/providers/universe-v2.mjs:268:  const now = new Date().toISOString();
+scripts/providers/market-prices-v3.mjs:68:  const now = new Date();
+scripts/providers/market-prices-v3.mjs:175:    ingested_at: new Date().toISOString()
+scripts/providers/market-prices-v3.mjs:575:    ingested_at: new Date().toISOString()
+scripts/providers/market-prices-v3.mjs:804:function isProviderInCooldown(entry, nowMs = Date.now()) {
+scripts/providers/market-prices-v3.mjs:813:  const until = new Date(Date.now() + cooldownMs).toISOString();
+scripts/providers/market-prices-v3.mjs:822:  const ingestedAt = options.ingestedAt || new Date().toISOString();
+scripts/providers/market-prices-v3.mjs:926:    ingested_at: options.ingestedAt || new Date().toISOString()
+scripts/providers/market-prices-v3.mjs:944:    ingested_at: new Date().toISOString()
+scripts/providers/market-prices-v3.mjs:1017:    ingestedAt: new Date().toISOString()
+scripts/providers/market-prices-v3.mjs:1110:    ingestedAt: new Date().toISOString()
+scripts/providers/market-prices-v3.mjs:1195:    const jitter = Math.floor(Math.random() * Math.min(1000, Math.max(1, throttleMs * 0.1)));
+scripts/providers/market-prices-v3.mjs:1277:  const realStart = Date.now();
+scripts/providers/market-prices-v3.mjs:1537:    latency_ms: Date.now() - realStart,
+scripts/providers/market-prices-v3.mjs:1561:  const fetchedAt = new Date().toISOString();
+scripts/providers/market-prices-v3.mjs:1633:    savedAt: envelope.metadata.published_at || envelope.metadata.fetched_at || new Date().toISOString(),
+scripts/providers/market-prices-v3.mjs:1678:    const nowIso = new Date().toISOString();
+public/index.html:268:        const today = new Date();
+scripts/providers/eodhd-backfill-bars.mjs:134:                updated_at: new Date().toISOString()
+scripts/providers/eodhd-backfill-bars.mjs:147:    manifest.updated_at = new Date().toISOString();
+scripts/providers/market-score-v3.mjs:234:  const now = new Date().toISOString();
+scripts/providers/market-health-v3.mjs:309:  const startTime = Date.now();
+scripts/providers/market-health-v3.mjs:319:  const latencyMs = Date.now() - startTime;
+scripts/providers/market-health-v3.mjs:415:  const fetchedAt = new Date();
+public/diagnose.js:323:    generatedAt: new Date().toISOString(),
+scripts/ops/build-mission-control-summary.mjs:9:  return new Date().toISOString();
+scripts/ops/build-mission-control-summary.mjs:26:  const tmp = `${full}.tmp-${Date.now()}`;
+scripts/ops/build-safety-snapshot.mjs:11:  return new Date().toISOString();
+scripts/ops/build-safety-snapshot.mjs:38:  const nowMs = Date.now();
+scripts/forecast/bootstrap_init.mjs:14:const now = new Date().toISOString();
+scripts/marketphase-generate.mjs:73:  const generatedAt = new Date().toISOString();
+scripts/marketphase-generate.mjs:140:  const t0 = Date.now();
+scripts/marketphase-generate.mjs:156:  dailyAnalysis.debug.durationMs = Date.now() - t0;
+scripts/marketphase-generate.mjs:159:    generatedAt: new Date().toISOString()
+scripts/marketphase-generate.mjs:212:  const generatedAt = new Date().toISOString();
+scripts/ops/verify-ops-pipeline.mjs:18:  const t = Date.now();
+scripts/lib/envelope-builder.mjs:7:function isoNow() { return new Date().toISOString(); }
+scripts/ops/build-build-info.mjs:20:const now = new Date().toISOString();
+scripts/forecast/challenger_generator.mjs:159:    const challengerId = `${date}_${action.action_type}_${Date.now().toString(36).slice(-4)}`;
+scripts/forecast/challenger_generator.mjs:164:        created_at: new Date().toISOString(),
+scripts/forecast/challenger_generator.mjs:196:    const date = options.date || new Date().toISOString().slice(0, 10);
+public/internal-dashboard:586:    const RV_DASH_RUN_ID = `dash-${Date.now().toString(36)}`;
+public/internal-dashboard:683:      if (stThis) stThis.textContent = `Updated: ${new Date().toLocaleString()}`;
+public/internal-dashboard:704:          ? `Updated: ${new Date().toLocaleString()} (note: status 0 may indicate CORS blocked)`
+public/internal-dashboard:705:          : `Updated: ${new Date().toLocaleString()}`;
+public/internal-dashboard:1058:      const now = Date.now();
+public/internal-dashboard:1110:        if (ts) ts.textContent = `Last updated: ${new Date().toLocaleString()}`;
+public/internal-dashboard:1153:      if (ts) ts.textContent = `Last updated: ${new Date().toLocaleString()}`;
+public/internal-dashboard:1179:      if (ts) ts.textContent = `Last updated: ${new Date().toLocaleString()}`;
+public/internal-dashboard:1270:      document.getElementById('health-timestamp').textContent = `Last updated: ${new Date().toLocaleString()}`;
+public/internal-dashboard:1287:        if (ts) ts.textContent = `Last updated: ${new Date().toLocaleString()}`;
+public/internal-dashboard:1342:      if (ts) ts.textContent = `Last updated: ${new Date().toLocaleString()}`;
+scripts/providers/market-stats-v3.mjs:376:  const freshnessDays = daysBetween(new Date(), new Date(latestBar.date));
+scripts/providers/market-stats-v3.mjs:447:  const nowIso = new Date().toISOString();
+scripts/ops/fetch-with-context.mjs:14:  const start = Date.now();
+scripts/ops/fetch-with-context.mjs:21:      const ms = Date.now() - start;
+scripts/ops/fetch-with-context.mjs:29:    const ms = Date.now() - start;
+scripts/lib/envelope.js:27:  const now = new Date().toISOString();
+scripts/lib/envelope.js:348:  const now = new Date();
+scripts/eod/build-eod-history.mjs:11:    return new Date().toISOString();
+scripts/eod/build-eod-history.mjs:64:    const now = new Date();
+scripts/eod/build-eod-history.mjs:69:    let currentPrice = 50 + Math.random() * 150;
+scripts/eod/build-eod-history.mjs:76:            const changePct = (Math.random() * 0.041) - 0.02;
+scripts/eod/build-eod-history.mjs:79:            const high = Math.max(open, close) * (1 + Math.random() * 0.01);
+scripts/eod/build-eod-history.mjs:80:            const low = Math.min(open, close) * (1 - Math.random() * 0.01);
+scripts/eod/build-eod-history.mjs:81:            const volume = Math.floor(1000000 + Math.random() * 5000000);
+scripts/eod/build-eod-history.mjs:106:    const startDate = new Date(new Date().getFullYear() - HISTORY_YEARS, 0, 1).toISOString().slice(0, 10);
+scripts/ops/build-ops-daily.mjs:7:  return new Date().toISOString();
+scripts/ops/build-ops-daily.mjs:10:function lastTradingDayIso(date = new Date()) {
+scripts/ops/build-ops-daily.mjs:36:  const tmp = `${full}.tmp-${Date.now()}`;
+scripts/ops/build-ops-daily.mjs:113:  const now = new Date();
+scripts/ops/build-ops-daily.mjs:328:  const expectedTradingDay = lastTradingDayIso(new Date());
+scripts/forecast/run_weekly.mjs:38:    const tradingDate = forceDate ?? resolveTradingDate(new Date(), policy);
+scripts/lib/audit-log.js:45:        generated_at: new Date().toISOString(),
+scripts/lib/audit-log.js:65:    event.ts = new Date().toISOString();
+scripts/lib/audit-log.js:77:  auditLog.generated_at = new Date().toISOString();
+scripts/eod/build-eod-latest.mjs:15:  return new Date().toISOString();
+scripts/eod/build-eod-latest.mjs:131:  const startDate = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+scripts/lib/kv-dedupe.js:63:  const ageMs = Date.now() - new Date(cached.last_write_at).getTime();
+scripts/lib/kv-dedupe.js:85:    last_write_at: new Date().toISOString()
+scripts/lib/kv-dedupe.js:97:  const now = new Date();
+public/internal-dashboard.html:502:      document.getElementById('health-timestamp').textContent = `Last updated: ${new Date().toLocaleString()}`;
+scripts/lib/provider-state.js:41:  const now = new Date().toISOString();
+scripts/forecast/run_monthly.mjs:54:        as_of: new Date().toISOString(),
+scripts/forecast/run_monthly.mjs:104:        const now = new Date();
+scripts/create-initial-provider-state.mjs:43:    const now = new Date().toISOString();
+public/ops/index.html:1183:      if (last) last.textContent = `Last action: ${new Date().toLocaleString()}`;
+public/ops/index.html:1184:      const t = Date.now();
+public/ops/index.html:1346:      const now = new Date().toLocaleString();
+scripts/ops/test-ops-ui.mjs:6:const opsUrl = `${base}/ops/?debug=1&t=${Date.now()}`;
+scripts/forecast/verify_archive.mjs:94:    generated_at: new Date().toISOString(),
+scripts/utils/mirror-io.mjs:133:  const now = new Date().toISOString();
+scripts/utils/mirror-io.mjs:185:  const now = new Date().toISOString();
+scripts/utils/mirror-io.mjs:223:  const now = new Date().toISOString();
+scripts/forecast/run_daily.mjs:73:    const runId = `${tradingDate}_${Date.now().toString(36)}`;
+scripts/forecast/run_daily.mjs:74:    const asOf = new Date().toISOString();
+scripts/forecast/run_daily.mjs:212:    const tradingDate = forceDate ?? resolveTradingDate(new Date(), policy);
+scripts/forecast/run_daily.mjs:391:        as_of: new Date().toISOString(),
+scripts/update-macro-hub.v3.mjs:20:const RUN_ID = new Date().toISOString();
+scripts/update-macro-hub.v3.mjs:80:function toDateString(date = new Date()) {
+scripts/update-macro-hub.v3.mjs:126:        const jitter = base * (0.8 + Math.random() * 0.4);
+scripts/update-macro-hub.v3.mjs:333:  const ageMs = Date.now() - new Date(observedAt).getTime();
+scripts/update-macro-hub.v3.mjs:367:    return { value, prev, observedAt: toDateString(new Date()) };
+scripts/update-macro-hub.v3.mjs:503:  const ageMinutes = Number.isFinite(asOf) ? Math.floor((Date.now() - asOf) / 60000) : null;
+scripts/update-macro-hub.v3.mjs:1027:  const generatedAt = new Date().toISOString();
+scripts/update-macro-hub.v3.mjs:1056:    nextPlannedFetchAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+scripts/update-macro-hub.v3.mjs:1216:      generatedAt: new Date().toISOString(),
+scripts/update-macro-hub.v3.mjs:1251:        lastSeen: new Date().toISOString()
+scripts/update-macro-hub.v3.mjs:1256:    providerState.generatedAt = new Date().toISOString();
+scripts/forecast/circuit_breaker.mjs:135:        last_run: new Date().toISOString().slice(0, 10),
+scripts/forecast/circuit_breaker.mjs:162:        as_of: new Date().toISOString()
+scripts/lib/build-id.js:28:export function generateBuildId(timestamp = new Date(), gitSha = null) {
+scripts/lib/build-id.js:143:export function getBuildIdAge(buildId, now = new Date()) {
+scripts/forecast/ops_report.mjs:19:    const today = new Date().toISOString().split('T')[0];
+scripts/forecast/ops_report.mjs:55:        generated_at: new Date().toISOString(),
+scripts/forecast/report_generator.mjs:33:    const tmpPath = `${filePath}.tmp-${process.pid}-${Date.now()}`;
+scripts/forecast/report_generator.mjs:53:        generated_at: new Date().toISOString(),
+scripts/forecast/report_generator.mjs:198:        as_of: new Date().toISOString(),
+scripts/forecast/report_generator.mjs:302:        const now = new Date();
+scripts/forecast/report_generator.mjs:327:            last_updated: new Date().toISOString()
+scripts/forecast/report_generator.mjs:333:        generated_at: new Date().toISOString(),
+scripts/forecast/report_generator.mjs:371:        generated_at: new Date().toISOString(),
+scripts/forecast/report_generator.mjs:429:            generated_at: new Date().toISOString(),
+scripts/forecast/report_generator.mjs:454:                    last_good_as_of: new Date().toISOString(),
+scripts/forecast/report_generator.mjs:498:        last_good_as_of: lastGood.as_of ?? new Date().toISOString(),
+scripts/forecast/acceptance_tests.mjs:126:        const mockCloses = Array(250).fill(0).map((_, i) => 100 + Math.random() * 10);
+scripts/utils/mirror-builders.mjs:4:  const now = new Date().toISOString();
+scripts/utils/mirror-builders.mjs:32:  const now = new Date().toISOString();
+scripts/utils/mirror-builders.mjs:47:  const now = new Date().toISOString();
+scripts/mirror-breakout-energy.mjs:209:  const now = new Date().toISOString();
+scripts/_lib/lock.js:6:  return new Date().toISOString();
+scripts/_lib/lock.js:16:  const dayBucket = new Date().toISOString().slice(0, 10);
+scripts/_lib/lock.js:19:  const now = Date.now();
+scripts/build-mirrors-manifest.mjs:63:  generated_at: new Date().toISOString(),
+scripts/scientific-analyzer/generate-analysis.mjs:38:    return new Date().toISOString();
+scripts/scientific-analyzer/generate-analysis.mjs:305:    const startTime = Date.now();
+scripts/scientific-analyzer/generate-analysis.mjs:521:            duration_ms: Date.now() - startTime
+scripts/scientific-analyzer/generate-analysis.mjs:541:    console.log(`  Duration: ${Date.now() - startTime}ms`);
+scripts/_lib/with-meta.mjs:2:  const now = new Date().toISOString();
+scripts/lib/fetch.js:24:  const started = Date.now();
+scripts/lib/fetch.js:29:    const latencyMs = Date.now() - started;
+scripts/lib/fetch.js:49:  const overallStarted = Date.now();
+scripts/lib/fetch.js:53:    const attemptStart = Date.now();
+scripts/lib/fetch.js:68:            latency_ms: Date.now() - overallStarted,
+scripts/lib/fetch.js:93:            latency_ms: Date.now() - overallStarted,
+scripts/lib/fetch.js:100:      const retryAfterSec = parseRetryAfter(res.headers.get("retry-after"), Date.now());
+scripts/lib/fetch.js:106:      lastAttemptLatencyMs = Date.now() - attemptStart;
+scripts/lib/fetch.js:118:            latency_ms: Date.now() - overallStarted,
+scripts/lib/fetch.js:139:      latency_ms: Date.now() - overallStarted,
+scripts/lib/fs-atomic.mjs:7:  const tmp = `${filePath}.tmp.${process.pid}.${Date.now()}`;
+scripts/forecast/feature_drift.mjs:45:        const u1 = Math.random();
+scripts/forecast/feature_drift.mjs:46:        const u2 = Math.random();
+scripts/forecast/feature_drift.mjs:97:        checked_at: new Date().toISOString(),
+scripts/audit/generate-stub-mirrors.mjs:10:  return new Date().toISOString();
+scripts/audit/build-feature-registry.mjs:10:  return new Date().toISOString();
+scripts/lib/module-state.js:67:  const now = new Date();
+scripts/lib/module-state.js:117:  const now = new Date().toISOString();
+scripts/lib/module-state.js:192:  const now = new Date().toISOString();
+scripts/audit/build-artifacts.mjs:13:  return new Date().toISOString();
+scripts/audit/build-artifacts.mjs:87:    const ageMs = Date.now() - Date.parse(updatedAt);
+scripts/_lib/provider-state.js:15:  return new Date().toISOString();
+scripts/_lib/provider-state.js:65:    const until = new Date(Date.now() + durationMs).toISOString();
+scripts/_lib/provider-state.js:73:    const now = Date.now();
+scripts/_lib/provider-state.js:143:      entry.cooldownUntil = new Date(Date.now() + details.retryAfterSec * 1000).toISOString();

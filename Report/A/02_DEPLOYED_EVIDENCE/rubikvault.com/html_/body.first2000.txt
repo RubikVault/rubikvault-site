@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+
+<head>
+  <meta charset="UTF-8" />
+  <title>RubikVault – Stock Analyzer</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+  <meta name="description"
+    content="Find the best stocks to invest in. Analyze stocks by name or ticker symbol with RubikVault Stock Analyzer." />
+
+  <!-- PWA Meta Tags -->
+  <meta name="theme-color" content="#3b82f6" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="RubikVault" />
+
+  <!-- Deep Links for Mobile Apps -->
+  <meta property="al:ios:url" content="rubikvault://analyze" />
+  <meta property="al:ios:app_store_id" content="YOUR_APP_STORE_ID" />
+  <meta property="al:ios:app_name" content="RubikVault" />
+  <meta property="al:android:url" content="rubikvault://analyze" />
+  <meta property="al:android:package" content="com.rubikvault.app" />
+  <meta property="al:android:app_name" content="RubikVault" />
+  <meta property="al:web:url" content="https://rubikvault.com" />
+
+  <!-- Icons -->
+  <link rel="icon" type="image/png" sizes="32x32" href="/assets/rv-favicon.png" />
+  <link rel="apple-touch-icon" sizes="180x180" href="/assets/rv-apple-icon.png" />
+  <link rel="manifest" href="/manifest.json" />
+
+  <!-- Styles -->
+  <link rel="stylesheet" href="/style.css" />
+  <link rel="stylesheet" href="/search.css" />
+</head>
+
+<body>
+  <div id="rv-search-root"></div>
+  <!-- HEADER -->
+  <header class="rv-header">
+    <div class="rv-header-inner">
+      <a class="rv-brand" href="/" aria-label="RubikVault">
+        <img class="rv-brand-icon" src="/assets/rv-icon.png" alt="" />
+        <span class="rv-brand-text">RubikVault</span>
+      </a>
+
+      <nav class="rv-nav">
+        <a class="rv-social-link" href="https://www.youtube.com/@RubikVault" target="_blank" rel="noopener noreferrer"
+          aria-label="Y

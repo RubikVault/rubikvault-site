@@ -1,0 +1,86 @@
+$ rg -n "static-only-backup|static-only-v3|static-only\.js" -S functions scripts public .github/workflows
+scripts/fix-api-exports.mjs:38:      `import { serveStaticJson } from "./_shared/static-only.js";\n\nexport async function onRequestGet(context) {\n  return serveStaticJson(context.request, "${fileName.replace('.js', '')}", null, context);\n}`
+functions/api/earnings-reality.js:1:import { serveStaticJson } from "./_shared/static-only.js";
+functions/api/diag.js:1:import { serveStaticJson } from "./_shared/static-only.js";
+functions/api/hype-divergence.js:1:import { serveStaticJson } from "./_shared/static-only.js";
+functions/api/arb-risk-regime.js:1:import { serveStaticJson } from "./_shared/static-only.js";
+functions/api/probe/[module].js:18:import { serveStaticJson } from '../_shared/static-only.js';
+functions/api/market-score.js:1:import { serveStaticJson } from './_shared/static-only.js';
+functions/api/earnings-calendar.js:1:import { serveStaticJson } from "./_shared/static-only.js";
+functions/api/debug-matrix.js:1:import { serveStaticJson } from "./_shared/static-only.js";
+functions/api/debug-bundle.js:1:import { serveStaticJson } from "./_shared/static-only.js";
+functions/api/dashboard.js:1:import { serveStaticJson } from "./_shared/static-only.js";
+functions/api/crypto.js:1:import { serveStaticJson } from "./_shared/static-only.js";
+functions/api/universe.js:1:import { serveStaticJson } from "./_shared/static-only.js";
+functions/api/market-cockpit.js:1:import { serveStaticJson } from "./_shared/static-only.js";
+functions/api/_middleware.js:1:import { serveStaticJson } from "./_shared/static-only.js";
+functions/api/_env.js:1:import { serveStaticJson } from "./_shared/static-only.js";
+functions/api/macro.js:1:import { serveStaticJson } from "./_shared/static-only.js";
+functions/api/news.js:1:import { serveStaticJson } from "./_shared/static-only.js";
+functions/api/alpha-performance.js:1:import { serveStaticJson } from "./_shared/static-only.js";
+functions/api/_debug-trace.js:1:import { serveStaticJson } from "./_shared/static-only.js";
+functions/api/market-stats.js:1:import { serveStaticJson } from './_shared/static-only.js';
+functions/api/breakout-energy.js:1:import { serveStaticJson } from "./_shared/static-only.js";
+functions/api/system-health.js:1:import { serveStaticJson } from "./_shared/static-only.js";
+functions/api/quotes.js:1:import { serveStaticJson } from "./_shared/static-only.js";
+functions/api/analyst-stampede.js:1:import { serveStaticJson } from "./_shared/static-only.js";
+functions/api/market-prices.js:1:import { serveStaticJson } from "./_shared/static-only.js";
+functions/api/crypto-snapshot.js:1:import { serveStaticJson } from "./_shared/static-only.js";
+functions/api/health-report.js:1:import { serveStaticJson } from "./_shared/static-only.js";
+functions/api/sector-rotation.js:1:import { serveStaticJson } from "./_shared/static-only.js";
+functions/api/rvci-2.js:6:import { serveStaticJson } from './_shared/static-only.js';
+functions/api/congress-trading.js:1:import { serveStaticJson } from "./_shared/static-only.js";
+functions/api/render-plan.js:1:import { serveStaticJson } from "./_shared/static-only.js";
+functions/api/og-image.js:1:import { serveStaticJson } from "./_shared/static-only.js";
+functions/api/insider-cluster.js:1:import { serveStaticJson } from "./_shared/static-only.js";
+functions/api/price-snapshot.js:1:import { serveStaticJson } from "./_shared/static-only.js";
+functions/api/tech-signals.js:1:import { serveStaticJson } from "./_shared/static-only.js";
+functions/api/sp500-sectors.js:1:import { serveStaticJson } from "./_shared/static-only.js";
+functions/api/yield-curve.js:1:import { serveStaticJson } from "./_shared/static-only.js";
+functions/api/_circuit.js:1:import { serveStaticJson } from "./_shared/static-only.js";
+functions/api/market-regime.js:1:import { serveStaticJson } from "./_shared/static-only.js";
+functions/api/news-intelligence.js:1:import { serveStaticJson } from "./_shared/static-only.js";
+functions/api/rvci-engine.js:1:import { serveStaticJson } from "./_shared/static-only.js";
+functions/api/volume-anomaly.js:1:import { serveStaticJson } from "./_shared/static-only.js";
+functions/api/sentiment.js:1:import { serveStaticJson } from "./_shared/static-only.js";
+functions/api/bundle.js:1:import { serveStaticJson } from "./_shared/static-only.js";
+functions/api/metrics.js:1:import { serveStaticJson } from "./_shared/static-only.js";
+functions/api/arb-liquidity-pulse.js:1:import { serveStaticJson } from "./_shared/static-only.js";
+functions/api/arb-breadth-lite.js:1:import { serveStaticJson } from "./_shared/static-only.js";
+functions/api/social-runner.js:1:import { serveStaticJson } from "./_shared/static-only.js";
+functions/api/snapshots/[id].js:1:import { serveStaticJson } from "../_shared/static-only.js";
+functions/api/smart-money.js:1:import { serveStaticJson } from "./_shared/static-only.js";
+functions/api/central-bank-watch.js:1:import { serveStaticJson } from "./_shared/static-only.js";
+functions/api/_shared.js:1:import { serveStaticJson } from "./_shared/static-only.js";
+functions/api/alpha-radar.js:1:import { serveStaticJson } from "./_shared/static-only.js";
+functions/api/health.js:1:import { serveStaticJson } from "./_shared/static-only.js";
+functions/api/_diag.js:1:import { serveStaticJson } from "./_shared/static-only.js";
+functions/api/social-daily-brief.js:1:import { serveStaticJson } from "./_shared/static-only.js";
+functions/api/why-moved.js:1:import { serveStaticJson } from "./_shared/static-only.js";
+functions/api/market-health.js:1:import { serveStaticJson } from "./_shared/static-only.js";
+functions/api/top-movers.js:1:import { serveStaticJson } from "./_shared/static-only.js";
+functions/api/macro-rates.js:1:import { serveStaticJson } from "./_shared/static-only.js";
+
+$ rg -n "debug-matrix|debug-bundle|api/debug-matrix|api/debug-bundle" -S functions scripts public .github/workflows
+scripts/test-api.sh:10:ENDPOINTS="health diag debug-bundle debug-matrix arb-risk-regime arb-liquidity-pulse arb-breadth-lite"
+scripts/test-api.sh:36:  if [[ "$p" == "debug-bundle" ]]; then
+scripts/test-api.sh:38:      printf "%s" "$body" | jq -e '(.ok==true) or (has("schema")) or (has("schemaVersion")) or (has("schema_version") and has("metadata"))' >/dev/null || fail "debug-bundle missing ok/schema/schemaVersion/schema_version+metadata for $url"
+scripts/test-api.sh:40:      printf "%s" "$body" | grep -Eq '"ok"[[:space:]]*:[[:space:]]*true|"schema"|\"schemaVersion\"|"schema_version"|"metadata"' || fail "debug-bundle missing ok/schema/schemaVersion/schema_version+metadata for $url"
+public/debug/rv-debug-console.js:1095:  const bundleUrl = `${apiBase}/debug-bundle?limit=200`;
+functions/api/debug-matrix.js:5:    const res = await serveStaticJson(context.request, "debug-matrix", null, context);
+functions/api/debug-bundle.js:5:    const res = await serveStaticJson(context.request, "debug-bundle", null, context);
+public/internal-dashboard:322:        <button class="secondary-btn" id="load-debug-bundle">Load Debug Bundle</button>
+public/internal-dashboard:470:        <button class="secondary-btn" id="load-debug-matrix">Load Debug Matrix</button>
+public/internal-dashboard:473:      <div class="timestamp" id="debug-matrix-timestamp"></div>
+public/internal-dashboard:475:        <table id="debug-matrix-table">
+public/internal-dashboard:947:    const loadBundleBtn = document.getElementById('load-debug-bundle');
+public/internal-dashboard:953:    const loadMatrixBtn = document.getElementById('load-debug-matrix');
+public/internal-dashboard:1157:      const tbody = document.querySelector('#debug-matrix-table tbody');
+public/internal-dashboard:1158:      const ts = document.getElementById('debug-matrix-timestamp');
+scripts/smoke-debug.mjs:3:const url = `${host.replace(/\/$/, "")}/api/debug-bundle?limit=50`;
+scripts/smoke-debug.mjs:9:  console.error("FAIL: debug-bundle fetch", res.status);
+scripts/smoke-debug.mjs:38:console.log("OK: debug-bundle smoke checks passed");
+functions/api/_shared/static-only-v3.js:62:  "debug-bundle",
+functions/api/_shared/static-only.js:345:  "debug-bundle",
+scripts/llm-context.sh:43:# Debug-bundle KV truthiness
+scripts/llm-context.sh:44:curl -fsS "$PREVIEW/api/debug-bundle" | jq '{hasKV:.infra.kv.hasKV, bindingPresent:.infra.kv.bindingPresent, opsWorking:.infra.kv.opsWorking, errors:.infra.kv.errors}'

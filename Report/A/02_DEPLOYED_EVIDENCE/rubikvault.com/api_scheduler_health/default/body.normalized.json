@@ -1,0 +1,28 @@
+{
+  "data": {
+    "age_s": null,
+    "key": "meta:scheduler:last_ok",
+    "last_ok": null,
+    "last_run": null,
+    "max_age_s": 86400,
+    "note": "no_heartbeat_recorded",
+    "now": "2026-02-10T18:04:49.222Z",
+    "scheduler": null,
+    "status": "never_ran"
+  },
+  "error": {
+    "code": "SCHEDULER_STALE",
+    "details": {
+      "age_s": null,
+      "max_age_s": 86400
+    },
+    "message": "Scheduler heartbeat not recorded"
+  },
+  "meta": {
+    "data_date": "2026-02-10",
+    "generated_at": "2026-02-10T18:04:49.222Z",
+    "provider": "scheduler",
+    "status": "error"
+  },
+  "ok": false
+}

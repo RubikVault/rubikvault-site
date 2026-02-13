@@ -1,0 +1,93 @@
+   648	          <td>${formatDirection(f.horizons?.['5d'])}</td>
+   649	          <td>${formatDirection(f.horizons?.['20d'])}</td>
+   650	          <td>${formatDirection(f.horizons?.['252d'])}</td> <!-- 1 Year (Likely Empty) -->
+   651	        </tr>
+   652	      `).join('');
+   653	    }
+   654	
+   655	    function updateForecasts(forecasts, state = 'BOOTSTRAP', reason = null) {
+   656	      // Update global state
+   657	      activeForecasts = forecasts || [];
+   658	
+   659	      const bootstrapNotice = document.getElementById('bootstrap-notice');
+   660	      const countEl = document.getElementById('forecast-count');
+   661	
+   662	      if (!activeForecasts || activeForecasts.length === 0) {
+   663	        // Show empty/loading state logic
+   664	        const tbody = document.querySelector('#forecasts-table tbody');
+   665	        tbody.innerHTML = '<tr><td colspan="6" style="padding: 2rem; text-align: center; color: #64748b;">No active forecasts available</td></tr>';
+   666	
+   667	        const stateUpper = String(state || 'BOOTSTRAP').toUpperCase();
+   668	        let title = 'System Initializing';
+   669	        let prefix = '⏳';
+   670	        let detail = 'Forecasts will appear after the first pipeline run. Check back soon.';
+   671	
+   672	        if (stateUpper === 'CIRCUIT_OPEN') {
+   673	          title = 'Circuit Open';
+   674	          prefix = '⚠️';
+   675	          detail = reason || 'Forecast publish paused due to failed data-quality gates.';
+   676	        } else if (stateUpper === 'STALE') {
+   677	          title = 'Data Stale';
+   678	          prefix = '🕒';
+   679	          detail = reason || 'Latest data is stale; refresh is pending.';
+   680	        }
+   681	
+   682	        if (bootstrapNotice) {
+   683	          bootstrapNotice.innerHTML = `${prefix} <strong>${title}:</strong> ${detail}`;
+   684	          bootstrapNotice.style.display = 'block';
+   685	        }
+   686	        if (countEl) countEl.textContent = '0 stocks';
+   687	        return;
+   688	      }
+   689	
+   690	      // Hide notice if we have data
+   691	      if (bootstrapNotice) bootstrapNotice.style.display = 'none';
+   692	      if (countEl) countEl.textContent = `${activeForecasts.length} stocks`;
+   693	
+   694	      // Default Sort (if not set)
+   695	      if (!sortConfig.key) sortConfig = { key: 'symbol', dir: 'asc' };
+   696	
+   697	      // Render
+   698	      renderForecastTable();
+   699	    }
+   700	
+   701	    async function init() {
+   702	      // Load status
+   703	      const status = await fetchData('system/status.json');
+   704	      if (status) updateStatus(status);
+   705	
+   706	      // Load latest
+   701	    async function init() {
+   702	      // Load status
+   703	      const status = await fetchData('system/status.json');
+   704	      if (status) updateStatus(status);
+   705	
+   706	      // Load latest
+   707	      const latest = await fetchData('latest.json');
+   708	      if (latest) {
+   709	        updateLatest(latest);
+   710	        document.getElementById('champion-id').textContent =
+   711	          latest.data?.champion_id?.slice(-12) || 'v3.4-initial';
+   712	        document.getElementById('champion-created').textContent =
+   713	          latest.meta?.generated_at ? new Date(latest.meta.generated_at).toLocaleString() : 'System bootstrap';
+   714	
+   715	        // Update forecasts table
+   716	        updateForecasts(
+   717	          latest.data?.forecasts || [],
+   718	          latest.meta?.status || status?.status || 'BOOTSTRAP',
+   719	          latest.meta?.reason || status?.reason || null
+   720	        );
+   721	      }
+   722	
+   723	      // Load latest daily report using ref from latest.json
+   724	      const reportRef = latest?.data?.latest_report_ref;
+   725	      if (reportRef) {
+   726	        const reportPath = reportRef.replace(/^public\/data\/forecast\//, '');
+   727	        const report = await fetchData(reportPath);
+   728	        if (report) {
+   729	          updateMetrics(report);
+   730	          updatePromotions(report.recent_changes?.promotions || []);
+   731	        }
+   732	      }
+   733	    }
+   734	

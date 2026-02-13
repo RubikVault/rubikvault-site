@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+
+<head>
+  <meta charset="UTF-8" />
+  <title>RubikVault – Forecast System v3.4</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+  <meta name="description" content="ML-powered stock forecast system with Brier Score tracking and model promotions." />
+
+  <meta name="theme-color" content="#3b82f6" />
+  <link rel="icon" type="image/png" sizes="32x32" href="/assets/rv-favicon.png" />
+  <link rel="apple-touch-icon" sizes="180x180" href="/assets/rv-apple-icon.png" />
+  <link rel="manifest" href="/manifest.json" />
+  <link rel="stylesheet" href="/style.css" />
+  <style>
+    /* Forecast-specific component styles only */
+    .forecast-container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 2rem;
+    }
+
+    .forecast-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 2rem;
+      padding-bottom: 1rem;
+      border-bottom: 1px solid var(--rv-border);
+    }
+
+    .forecast-title {
+      font-size: 1.5rem;
+      font-weight: 600;
+      color: var(--rv-text);
+    }
+
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.5rem 1rem;
+      border-radius: 9999px;
+      font-size: 0.875rem;
+      font-weight: 500;
+    }
+
+    .status-ok {
+      background: rgba(34, 197, 94, 0.15);
+      color: #22c55e;
+      border: 1px solid rgba(34, 197, 94, 0.3);
+    }
+
+    .status-circuit-open {
+      background: rgba(239, 68, 68, 0.15);
+      color: #ef4444;
+      border: 1px solid rgba(239, 68, 68, 0.3);
+    }
+
+    .status-bootstrap {
+      background: rgba(234, 179, 8, 0.15);
+      color: #eab308;
+      border: 1px solid rgba(234, 179, 8, 0.3);
+    }
+
+    .grid {
+      display: grid;
+      gap: 1.5rem;
+    }
+
+    .grid-3 {
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    }
+
+    .grid-2 {
+      grid-template-columns: repeat(auto-fit, minmax(4

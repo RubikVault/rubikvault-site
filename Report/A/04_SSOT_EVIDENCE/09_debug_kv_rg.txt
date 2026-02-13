@@ -1,0 +1,174 @@
+functions/api/diagnostics/tiingo.js:34:  const isDebug = url.searchParams.get('debug') === '1';
+functions/api/diagnostics/tiingo.js:93:        debug: isDebug
+functions/api/probe/[module].js:8: * - Test delivery chain (ASSET → KV → Maintenance)
+functions/api/probe/[module].js:221:      debug: `/api/${module}?debug=1`,
+functions/api/stock.js:14:  getJsonKV,
+functions/api/stock.js:178:    const result = await getJsonKV(env, key);
+functions/api/stock.js:196:  const result = await getJsonKV(env, swrKey);
+functions/api/stock.js:442:      const aliasData = await getJsonKV(env, aliasKey);
+functions/api/stock.js:448:        const aliasMeta = await getJsonKV(env, aliasMetaKey);
+functions/api/fundamentals.js:192:  const isDebug = url.searchParams.get('debug') === '1';
+functions/api/fundamentals.js:238:    const servedFrom = cached.layer === 'kv' ? 'KV' : 'MEM';
+functions/api/fundamentals.js:378:    const servedFrom = lastGood.layer === 'kv' ? 'KV' : 'MEM';
+functions/api/resolve.js:10:  getJsonKV,
+functions/api/resolve.js:69:    const result = await getJsonKV(env, key);
+functions/api/resolve.js:87:  const result = await getJsonKV(env, swrKey);
+functions/api/resolve.js:141:      const aliasData = await getJsonKV(env, aliasKey);
+functions/api/resolve.js:147:        const aliasMeta = await getJsonKV(env, aliasMetaKey);
+functions/api/scheduler/health.js:1:import { getJsonKV, nowUtcIso, parseIsoDateToMs, todayUtcDate } from "../_shared/cache-law.js";
+functions/api/scheduler/health.js:22:async function readFirstKV(env, keys) {
+functions/api/scheduler/health.js:25:    const result = await getJsonKV(env, key);
+functions/api/scheduler/health.js:37:  const lastOk = await readFirstKV(env, ["meta:scheduler:last_ok", "rv:scheduler:last_ok"]);
+functions/api/scheduler/health.js:38:  const lastRun = await readFirstKV(env, ["meta:scheduler:last_run", "rv:scheduler:last_run"]);
+functions/api/_shared/cache-law.js:53:export async function getJsonKV(env, key) {
+functions/api/_shared/cache-law.js:59:  const kv = env?.RV_KV || null;
+functions/api/_shared/cache-law.js:69:export async function putJsonKV(env, key, value, ttlSeconds) {
+functions/api/_shared/cache-law.js:70:  // KV writes are disabled in functions; keep cache read-only.
+functions/api/_shared/cache-law.js:77:  const existing = await getJsonKV(env, swrKey);
+functions/api/_shared/cache-law.js:99:  const kv = env?.RV_KV || null;
+functions/api/_shared/cache-law.js:108:      const data = await getJsonKV(env, dataKey(uuid));
+functions/api/_shared/cache-law.js:110:      const metaLike = (await getJsonKV(env, metaKey(uuid)))?.value || null;
+functions/api/_shared/cache-law.js:120:        putJsonKV(env, dataKey(uuid), payload, ttlSeconds),
+functions/api/_shared/cache-law.js:121:        putJsonKV(env, metaKey(uuid), metaOut, ttlSeconds)
+functions/api/_shared/cache-law.js:123:      return { ok: false, reason: "KV_WRITES_DISABLED" };
+functions/api/_shared/cache-law.js:129:      const existing = await getJsonKV(env, key);
+functions/api/mission-control/summary.js:2:import { buildDashKeys, kvGetJsonKVSafe, computeBudgets, summarizeProviderStats } from '../_shared/telemetry.mjs';
+functions/api/mission-control/summary.js:21:const PRICE_TRACE_PATH = (ticker) => `/debug/truth-chain/${ticker}.trace.json`;
+functions/api/mission-control/summary.js:22:const PRICE_UI_TRACE_PATH = (ticker) => `/debug/ui-path/${ticker}.ui-path.trace.json`;
+functions/api/mission-control/summary.js:160:      request: { debug: false },
+functions/api/mission-control/summary.js:1154:  const hasKV = runtimeInfo?.hasKV ?? false;
+functions/api/mission-control/summary.js:1155:  const i5Status = expectedFlags?.kv ? (hasKV ? 'OK' : 'WARN') : notExpectedStatus;
+functions/api/mission-control/summary.js:1156:  steps.push(buildTruthChainStep('I5_RUNTIME_BINDINGS', 'Runtime bindings (KV/scheduler) are reported but do not affect Prices verdict.', i5Status, {
+functions/api/mission-control/summary.js:1157:    hasKV,
+functions/api/mission-control/summary.js:1160:  }, expectedFlags?.kv ? (hasKV ? null : 'KV binding not available') : 'NOT_EXPECTED'));
+functions/api/mission-control/summary.js:1209:  const kv = env?.RV_KV;
+functions/api/mission-control/summary.js:1210:  const hasKV = kv && typeof kv.get === 'function';
+functions/api/mission-control/summary.js:1211:  if (!hasKV) return { ok: false, value: 0, reason: 'BINDING_MISSING' };
+functions/api/mission-control/summary.js:1216:    return { ok: false, value: 0, reason: 'KV_ERROR' };
+functions/api/mission-control/summary.js:1265:  const isDebug = url.searchParams.get('debug') === '1';
+functions/api/mission-control/summary.js:1287:  const kv = env?.RV_KV || null;
+functions/api/mission-control/summary.js:1288:  const hasKV = kv && typeof kv.get === 'function';
+functions/api/mission-control/summary.js:1297:  const endpointsMapRes = await kvGetJsonKVSafe(env, dash.endpointsDay, {});
+functions/api/mission-control/summary.js:1304:  const kvOpsRes = await kvGetJsonKVSafe(env, dash.kvOpsDay, null);
+functions/api/mission-control/summary.js:1307:  const providersRes = await kvGetJsonKVSafe(env, dash.providersDay, {});
+functions/api/mission-control/summary.js:1362:    const failuresRes = await kvGetJsonKVSafe(env, dash.failuresRingDay, []);
+functions/api/mission-control/summary.js:1964:        'This is expected during the initial ramp-up until KV bars and ops-daily build analyses for all tickers. ' +
+functions/api/mission-control/summary.js:1977:    hasKV,
+functions/api/mission-control/summary.js:2004:    hasKV,
+functions/api/mission-control/summary.js:2043:  const platformStatus = expectedFlags.kv ? (hasKV ? 'OK' : 'CRITICAL') : toHealthStatus(profile.not_expected_status);
+functions/api/mission-control/summary.js:2067:      reason: expectedFlags.kv ? (hasKV ? 'KV_OK' : 'KV_MISSING') : 'NOT_EXPECTED',
+functions/api/mission-control/summary.js:2070:        howTo: expectedFlags.kv ? 'Verify KV binding for RV_KV' : 'Preview mode: KV not expected'
+functions/api/mission-control/summary.js:2159:      request: { debug: isDebug },
+functions/api/mission-control/summary.js:2165:      hasKV,
+functions/api/mission-control/summary.js:2259:  if (!hasKV && expectedFlags.kv) {
+functions/api/_shared/observability.js:54:    return parsed.searchParams.get("debug") === "1";
+functions/api/_shared/scheduler-law.js:6:  getJsonKV,
+functions/api/_shared/scheduler-law.js:8:  putJsonKV,
+functions/api/_shared/scheduler-law.js:155:    await putJsonKV(env, "meta:scheduler:last_run", lastRun, HEARTBEAT_TTL_SECONDS);
+functions/api/_shared/scheduler-law.js:158:    await putJsonKV(env, "meta:scheduler:last_ok", lastOk, HEARTBEAT_TTL_SECONDS);
+functions/api/_shared/scheduler-law.js:161:    await putJsonKV(env, "meta:scheduler:status", status, STATUS_TTL_SECONDS);
+functions/api/_shared/scheduler-law.js:173:  await putJsonKV(env, `sched:cursor:${job}:${runId}`, payload, CURSOR_TTL_SECONDS);
+functions/api/_shared/scheduler-law.js:179:  await putJsonKV(env, key, { attempted_at: nowUtcIso() }, ATTEMPT_TTL_SECONDS);
+functions/api/_shared/scheduler-law.js:374:  const status = await getJsonKV(env, "meta:scheduler:status");
+functions/api/debug-bundle.js:5:    const res = await serveStaticJson(context.request, "debug-bundle", null, context);
+functions/api/_shared/static-only.js:9: * - ?debug=1 full diagnostic mode
+functions/api/_shared/static-only.js:174: * Build debug response
+functions/api/_shared/static-only.js:185:    suggestedAction = 'KV backend is unavailable. Ensure Cloudflare Pages KV binding RV_KV is configured and enabled for this environment.';
+functions/api/_shared/static-only.js:197:    // Module state optional for debug
+functions/api/_shared/static-only.js:210:    // Manifest optional for debug
+functions/api/_shared/static-only.js:215:    debug: true,
+functions/api/_shared/static-only.js:284:    // Actual Data (truncated in debug)
+functions/api/_shared/static-only.js:345:  "debug-bundle",
+functions/api/_shared/static-only.js:393:  const isDebug = url.searchParams.has("debug") || url.searchParams.get("debug") === "1";
+functions/api/_shared/static-only.js:416:  const kv = env?.RV_KV || null;
+functions/api/_shared/static-only.js:417:  const hasKV = kv && typeof kv.get === "function";
+functions/api/_shared/static-only.js:418:  const kvBackend = hasKV ? 'BOUND' : 'MISSING';
+functions/api/_shared/static-only.js:433:  // Optional KV read-only (500ms)
+functions/api/_shared/static-only.js:439:    if (!hasKV) {
+functions/api/_shared/static-only.js:481:  // Serve order: KV HIT → serve from KV
+functions/api/_shared/static-only.js:484:    servedFrom = "KV";
+functions/api/_shared/static-only.js:486:    sourceInfo.type = "KV";
+functions/api/_shared/static-only.js:487:    sourceInfo.path = "RV_KV";
+functions/api/_shared/static-only.js:488:    sourceInfo.served_from = "KV";
+functions/api/_shared/static-only.js:492:  // KV MISS/ERROR → serve asset snapshot
+functions/api/_shared/static-only.js:545:    const debugResponse = await buildDebugResponse(moduleName, snapshot, moduleConfig, sourceInfo, url);
+functions/api/_shared/static-only.js:546:    const payload = isPrivileged ? debugResponse : redact(debugResponse);
+functions/api/_shared/static-only.js:559:    const kvForMaintenance = kvEnabled ? (hasKV ? kvStatus : "ERROR") : "DISABLED";
+functions/api/_shared/static-only.js:569:          "X-RV-KV": kvForMaintenance
+functions/api/_shared/static-only.js:600:          "X-RV-KV": kvForMaintenance
+functions/api/debug-matrix.js:5:    const res = await serveStaticJson(context.request, "debug-matrix", null, context);
+functions/api/_shared/kv_guard.js:1:export function createKVGuard(env, { debugMode = false, debugKind = "", allowPrefixes = [] } = {}) {
+functions/api/_shared/kv_guard.js:2:  const kv = env?.RV_KV || null;
+functions/api/_shared/kv_guard.js:3:  const simulateKv429 = env?.RV_SIMULATE_KV_429 === "1";
+functions/api/_shared/kv_guard.js:4:  const SIM_FLAG = "__RV_SIMULATE_KV_429_FIRED";
+functions/api/_shared/kv_guard.js:5:  const isGlobalWriteDisabled = () => Boolean(env?.__RV_KV_WRITE_DISABLED__);
+functions/api/_shared/kv_guard.js:31:  const bypassReads = debugKind === "fresh";
+functions/api/_shared/kv_guard.js:51:    addWarning("KV_WRITE_DISABLED", metrics.writeDisabledReason);
+functions/api/_shared/kv_guard.js:58:    const err = new Error("SIMULATED_KV_429");
+functions/api/_shared/kv_guard.js:68:    if (!debugMode) return;
+functions/api/_shared/kv_guard.js:81:    console.warn(`[KV-GUARD] forbidden ${op}`, key);
+functions/api/_shared/kv_guard.js:82:    addWarning(`KV_${op.toUpperCase()}_BLOCKED`, key);
+functions/api/_shared/kv_guard.js:92:        addWarning("KV_READ_BYPASSED", key);
+functions/api/_shared/kv_guard.js:121:      return `reads=${metrics.reads};writes=${metrics.writes};deletes=${metrics.deletes};lists=${metrics.lists};writeDisabled=${metrics.writeDisabled ? 1 : 0};writesBypassed=${metrics.writesBypassed};globalWriteDisabled=${isGlobalWriteDisabled() ? 1 : 0};allowWriteOnView=${allowWriteOnView ? 1 : 0};simulateKv429=${flagOn(env?.RV_SIMULATE_KV_429) ? 1 : 0};keys=${keys}`;
+functions/api/_shared/kv_guard.js:136:      globalWriteDisabledReason: env?.__RV_KV_WRITE_DISABLED_REASON__ || "",
+functions/api/_shared/kv_guard.js:137:      globalWriteDisabledUntil: env?.__RV_KV_WRITE_DISABLED_UNTIL__ || null,
+functions/api/_shared/kv_guard.js:139:      simulateKv429: flagOn(env?.RV_SIMULATE_KV_429),
+functions/api/_shared/kv_guard.js:140:      debugKind
+functions/api/_shared/static-only-backup.js:75:  const isDebug = url.searchParams.has("debug");
+functions/api/_shared/static-only-backup.js:123:          const debugResponse = {
+functions/api/_shared/static-only-backup.js:124:            debug: true,
+functions/api/_shared/static-only-backup.js:130:          return new Response(JSON.stringify(debugResponse, null, 2), { headers });
+functions/api/_shared/telemetry.mjs:22:function hasKV(env) {
+functions/api/_shared/telemetry.mjs:23:  const kv = env?.RV_KV;
+functions/api/_shared/telemetry.mjs:55:    kvOpsDay: `DASH:KVOPS:DAY:${day}`,
+functions/api/_shared/telemetry.mjs:67:export async function kvGetJsonKVSafe(env, key, fallback) {
+functions/api/_shared/telemetry.mjs:68:  const kv = env?.RV_KV;
+functions/api/_shared/telemetry.mjs:69:  if (!hasKV(env)) {
+functions/api/_shared/telemetry.mjs:70:    return { ok: false, hasKV: false, value: fallback, error: { code: 'BINDING_MISSING' } };
+functions/api/_shared/telemetry.mjs:75:    return { ok: true, hasKV: true, value, error: null };
+functions/api/_shared/telemetry.mjs:77:    return { ok: false, hasKV: true, value: fallback, error: { code: 'KV_READ_ERROR' } };
+functions/api/_shared/telemetry.mjs:81:export async function kvPutJsonKVSafe(env, key, value, ttlSeconds) {
+functions/api/_shared/telemetry.mjs:82:  return { ok: false, hasKV: hasKV(env), error: { code: 'KV_WRITES_DISABLED' } };
+functions/api/_shared/telemetry.mjs:86:  return { ok: false, hasKV: hasKV(env), value: 0, error: { code: 'KV_WRITES_DISABLED' } };
+functions/api/_shared/telemetry.mjs:90:  return { ok: false, hasKV: hasKV(env), value: 0, error: { code: 'KV_WRITES_DISABLED' } };
+functions/api/_shared/telemetry.mjs:94:  return { ok: false, hasKV: hasKV(env), value: null, error: { code: 'KV_WRITES_DISABLED' } };
+functions/api/_shared/telemetry.mjs:165:  return { ok: false, hasKV: hasKV(env), value: null, error: { code: 'KV_WRITES_DISABLED' } };
+functions/api/_shared/telemetry.mjs:212:  return { ok: false, hasKV: hasKV(env), value: null, error: { code: 'KV_WRITES_DISABLED' } };
+functions/api/_shared/circuit.js:33:  const kv = env?.RV_KV;
+functions/api/_shared/circuit.js:47:  // KV writes are disabled in functions; keep state ephemeral.
+functions/api/_shared/resilience.js:182:  const isDebug = url.searchParams.get("debug") === "1";
+functions/api/_shared/resilience.js:185:  const KV = env?.RV_KV || null;
+functions/api/_shared/resilience.js:186:  const hasKV = KV && typeof KV.get === "function";
+functions/api/_shared/resilience.js:203:  if (hasKV) {
+functions/api/_shared/resilience.js:205:      lastGood = await KV.get(lastGoodKey, { type: "json" });
+functions/api/_shared/resilience.js:206:      circuitOpen = (await KV.get(circuitKey)) != null;
+functions/api/_shared/resilience.js:240:    hasKV: Boolean(hasKV),
+functions/api/_shared/resilience.js:248:    const reason = !hasKV
+functions/api/_shared/resilience.js:256:      !lastGoodValid || isPreview || !hasKV || readOnly
+functions/api/_shared/resilience.js:264:        meta.reason = !hasKV ? "BINDING_MISSING" : "MIRROR_FALLBACK";
+functions/api/_shared/resilience.js:277:          response.debug = buildDebugInfo({
+functions/api/_shared/resilience.js:320:        response.debug = buildDebugInfo({
+functions/api/_shared/resilience.js:348:    meta.reason = !hasKV ? "BINDING_MISSING" : "LASTGOOD_MISSING";
+functions/api/_shared/resilience.js:351:      message: !hasKV
+functions/api/_shared/resilience.js:352:        ? "KV binding missing and no mirror fallback available"
+functions/api/_shared/resilience.js:366:      response.debug = buildDebugInfo({
+functions/api/_shared/resilience.js:443:    if (KV && circuitStatus && allowWrites) {
+functions/api/_shared/resilience.js:465:        response.debug = buildDebugInfo({
+functions/api/_shared/resilience.js:493:    meta.reason = !hasKV ? "BINDING_MISSING" : "LASTGOOD_MISSING";
+functions/api/_shared/resilience.js:508:      response.debug = buildDebugInfo({
+functions/api/_shared/resilience.js:556:        response.debug = buildDebugInfo({
+functions/api/_shared/resilience.js:584:    meta.reason = !hasKV ? "BINDING_MISSING" : "LASTGOOD_MISSING";
+functions/api/_shared/resilience.js:599:      response.debug = buildDebugInfo({
+functions/api/_shared/resilience.js:631:  if (KV && shouldWrite && allowWrites) {
+functions/api/_shared/resilience.js:651:    response.debug = buildDebugInfo({
+functions/api/universe.js:9:  if (url.searchParams.get("debug") === "1") {
+functions/api/_shared/static-only-v3.js:7: * - ?debug=1 full diagnostic mode
+functions/api/_shared/static-only-v3.js:62:  "debug-bundle",
+functions/api/_shared/static-only-v3.js:215: * Build debug response
+functions/api/_shared/static-only-v3.js:230:    // Module state optional for debug
+functions/api/_shared/static-only-v3.js:243:    // Manifest optional for debug
+functions/api/_shared/static-only-v3.js:247:    debug: true,
+functions/api/_shared/static-only-v3.js:309:    // Actual Data (truncated in debug)
+functions/api/_shared/static-only-v3.js:323:  const isDebug = url.searchParams.has("debug") || url.searchParams.get("debug") === "1";
+functions/api/_shared/static-only-v3.js:381:    const debugResponse = await buildDebugResponse(moduleName, snapshot, moduleConfig, sourceInfo, url);
+functions/api/_shared/static-only-v3.js:382:    return new Response(JSON.stringify(debugResponse, null, 2), {

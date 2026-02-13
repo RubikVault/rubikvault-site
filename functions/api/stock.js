@@ -761,17 +761,15 @@ export async function onRequestGet(context) {
   async function fetchV3Data(env, request, ticker) {
     try {
       const v3Exchange = 'US'; // TODO: derive
-      // Use env.ASSETS.fetch if available (Pages/Workers) to avoid loopback deadlock
-      const fetchFn = (env?.ASSETS && typeof env.ASSETS.fetch === 'function')
-        ? (u) => env.ASSETS.fetch(new Request(u))
-        : fetch;
+      // Use standard fetch to avoid local deadlock issues with env.ASSETS in some environments
+      const fetchFn = fetch;
 
       const v3EodUrl = new URL(`/data/v3/eod/${v3Exchange}/latest.ndjson.gz`, request.url);
       const v3IndicatorsUrl = new URL(`/data/v3/derived/indicators/${v3Exchange}__${ticker}.json`, request.url);
 
       const [eodRes, indRes] = await Promise.all([
-        fetchFn(v3EodUrl.toString()),
-        fetchFn(v3IndicatorsUrl.toString())
+        fetchFn(v3EodUrl.toString(), { signal: AbortSignal.timeout(1500) }),
+        fetchFn(v3IndicatorsUrl.toString(), { signal: AbortSignal.timeout(1500) })
       ]);
 
       if (!eodRes.ok || !indRes.ok) return null;
@@ -830,9 +828,10 @@ export async function onRequestGet(context) {
 
   // --- V3 CANARY & SHADOW START ---
   let v3Meta = null;
-  const useV3 = url.searchParams.get('v3') === 'true' || request.headers.get('x-rv-version') === '3';
+  // Phase 3: v3 is DEFAULT (true). Opt-out via v3=false or Header version 2.
+  const useV3 = url.searchParams.get('v3') !== 'false' && request.headers.get('x-rv-version') !== '2';
 
-  // 1. FOREGROUND: Canary Mode (User explicitly requested v3)
+  // 1. FOREGROUND: Hybrid Mode (Default)
   if (useV3 && normalizedTicker) {
     const v3Data = await fetchV3Data(env, request, normalizedTicker);
     if (v3Data) {

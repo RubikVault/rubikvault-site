@@ -1,0 +1,11 @@
+BASE=https://71d62877.rubikvault-site.pages.dev URL=https://71d62877.rubikvault-site.pages.dev/data/forecast/system/status.json
+http_code=200
+time_total=0.175096
+content_type=application/json
+size_download=307
+-- validations --
+header_content_type=content-type: application/json
+content_type_json=PASS
+html_prefix=PASS
+jq_parse=PASS
+body_non_empty=PASS

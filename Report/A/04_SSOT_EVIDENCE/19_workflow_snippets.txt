@@ -1,0 +1,414 @@
+### .github/workflows/ci-gates.yml
+     1	name: CI Gates - Quality & Budget Checks
+     2	
+     3	on:
+     4	  pull_request:
+     5	    paths:
+     6	      - 'public/data/**'
+     7	      - 'scripts/**'
+     8	      - '.github/workflows/**'
+     9	  push:
+    10	    branches:
+    11	      - main
+    12	    paths:
+    13	      - 'public/data/**'
+    14	      - 'scripts/**'
+    15	
+    16	jobs:
+    17	  asset-budget:
+    18	    name: Asset Budget Check
+    19	    runs-on: ubuntu-latest
+    20	    steps:
+    21	      - name: Checkout
+    22	        uses: actions/checkout@v4
+    23	
+    24	      - name: Check Asset Budget
+    25	        run: |
+    26	          echo "🔍 Checking Asset Budget..."
+    27	          mkdir -p public/data
+    28	          if ! find public/data -type f -name "*.json" -print -quit | grep -q .; then
+    29	            SENTINEL_PATH="public/data/.budget_sentinel.json"
+    30	            SENTINEL_TS=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+    31	            cat > "$SENTINEL_PATH" <<EOF
+    32	          {"meta":{"type":"asset_budget_sentinel","sha":"${GITHUB_SHA:-local}","created_at":"${SENTINEL_TS}"}}
+    33	          EOF
+    34	            echo "ℹ️ Created budget sentinel at $SENTINEL_PATH (no tracked public/data json artifacts in checkout)"
+    35	          fi
+    36	          
+    37	          # Count files in public/data
+    38	          TOTAL_FILES=$(find public/data -type f -name "*.json" | wc -l | tr -d ' ')
+    39	          echo "Total JSON files: $TOTAL_FILES"
+    40	          
+    41	          # Check total file count (Cloudflare Pages limit: 20k files, we use 15k as safety)
+    42	          MAX_FILES=15000
+    43	          if [ $TOTAL_FILES -gt $MAX_FILES ]; then
+    44	            echo "❌ ERROR: Total files ($TOTAL_FILES) exceeds limit ($MAX_FILES)"
+    45	            echo "Clean up old files or adjust rolling window!"
+    46	            exit 1
+    47	          fi
+    48	          echo "✅ Total file count OK ($TOTAL_FILES/$MAX_FILES)"
+    49	          
+    50	          # Check individual file sizes (max 25MB, we use 10MB as safety)
+    51	          MAX_SIZE_MB=10
+    52	          MAX_SIZE_BYTES=$((MAX_SIZE_MB * 1024 * 1024))
+    53	          LARGE_FILES=$(find public/data -type f -name "*.json" -size +${MAX_SIZE_MB}M || true)
+    54	          if [ ! -z "$LARGE_FILES" ]; then
+    55	            echo "❌ ERROR: Files exceed ${MAX_SIZE_MB}MB:"
+    56	            echo "$LARGE_FILES"
+    57	            find public/data -type f -name "*.json" -size +${MAX_SIZE_MB}M -exec ls -lh {} \;
+    58	            exit 1
+    59	          fi
+    60	          echo "✅ Individual file sizes OK (all < ${MAX_SIZE_MB}MB)"
+    61	          
+    62	          # Check per-module file count (max 500 files per module)
+    63	          MAX_FILES_PER_MODULE=500
+    64	          for module_dir in public/data/snapshots/*/; do
+    65	            if [ -d "$module_dir" ]; then
+    66	              MODULE_NAME=$(basename "$module_dir")
+    67	              MODULE_FILES=$(find "$module_dir" -type f -name "*.json" | wc -l)
+    68	              if [ $MODULE_FILES -gt $MAX_FILES_PER_MODULE ]; then
+    69	                echo "❌ ERROR: Module $MODULE_NAME has $MODULE_FILES files (max $MAX_FILES_PER_MODULE)"
+    70	                exit 1
+    71	              fi
+    72	              echo "  ✓ $MODULE_NAME: $MODULE_FILES files"
+    73	            fi
+    74	          done
+    75	          echo "✅ Per-module file count OK"
+    76	          
+    77	          # Calculate total size
+    78	          TOTAL_SIZE=$(du -sb public/data 2>/dev/null | cut -f1 || true)
+    79	          if [ -z "$TOTAL_SIZE" ]; then
+    80	            TOTAL_SIZE=$(du -sk public/data 2>/dev/null | awk '{print $1 * 1024}' || true)
+    81	          fi
+    82	          TOTAL_SIZE=${TOTAL_SIZE:-0}
+    83	          TOTAL_SIZE_MB=$((TOTAL_SIZE / 1024 / 1024))
+    84	          echo "Total size: ${TOTAL_SIZE_MB}MB"
+    85	          
+    86	          # Budget summary
+    87	          echo ""
+    88	          echo "═══════════════════════════════════════"
+    89	          echo "         ASSET BUDGET SUMMARY"
+    90	          echo "═══════════════════════════════════════"
+    91	          echo "Total files:     $TOTAL_FILES / $MAX_FILES"
+    92	          echo "Total size:      ${TOTAL_SIZE_MB}MB"
+    93	          echo "Max file size:   < ${MAX_SIZE_MB}MB"
+    94	          echo "Status:          ✅ PASS"
+    95	          echo "═══════════════════════════════════════"
+    96	
+    97	  schema-validation:
+    98	    name: JSON Schema Validation
+    99	    runs-on: ubuntu-latest
+   100	    steps:
+   101	      - name: Checkout
+   102	        uses: actions/checkout@v4
+   103	
+   104	      - name: Setup Node
+   105	        uses: actions/setup-node@v4
+   106	        with:
+   107	          node-version: "20"
+   108	
+   109	      - name: Ensure jq
+   110	        run: |
+   111	          if ! command -v jq >/dev/null 2>&1; then
+   112	            sudo apt-get update
+   113	            sudo apt-get install -y jq
+   114	          fi
+   115	          jq --version
+   116	
+   117	      - name: Install dependencies
+   118	        run: npm ci
+   119	
+   120	      - name: Verify critical published artifacts
+   121	        run: node scripts/ci/verify-artifacts.mjs
+   122	
+   123	      - name: "Repo policy: forbid KV writes in API"
+   124	        run: bash scripts/ci/forbid-kv-writes-in-api.sh
+   125	
+   126	      - name: Run unit tests
+   127	        run: |
+   128	          npm run test:drop-threshold
+   129	          npm run test:fetch-retry
+   130	          npm run test:p2-build-id
+   131	          npm run test:p3-kv-write
+   132	
+   133	          npm run test:universe-registry
+   134	
+   135	      - name: Run contract tests
+   136	        run: npm run test:contracts
+   137	
+   138	      - name: Check EOD artifacts
+   139	        run: node scripts/eod/check-eod-artifacts.mjs
+   140	      - name: Validate Against JSON Schemas
+   141	        run: |
+   142	          echo "🔍 Validating against JSON Schemas..."
+   143	          
+   144	          # Validate manifest
+   145	          if [ -f public/data/manifest.json ] && [ -f schemas/manifest.schema.json ]; then
+   146	            echo "Validating manifest.json..."
+   147	            npx --yes ajv-cli@5 validate -s schemas/manifest.schema.json -d public/data/manifest.json
+   148	          fi
+   149	          
+   150	          # Validate provider-state
+   151	          if [ -f public/data/provider-state.json ] && [ -f schemas/provider-state.schema.json ]; then
+   152	            echo "Validating provider-state.json..."
+   153	            npx --yes ajv-cli@5 validate -s schemas/provider-state.schema.json -d public/data/provider-state.json
+   154	          fi
+   155	          
+   156	          # Validate snapshots
+   157	          if [ -f schemas/snapshot-envelope.schema.json ]; then
+   158	            echo "Validating snapshot envelopes..."
+   159	            for snapshot in public/data/snapshots/*/latest.json; do
+   160	              if [ -f "$snapshot" ]; then
+   161	                echo "  Validating $snapshot..."
+   162	                npx --yes ajv-cli@5 validate -s schemas/snapshot-envelope.schema.json -d "$snapshot"
+   163	              fi
+   164	            done
+   165	          fi
+   166	          
+   167	          echo "✅ JSON Schema validation complete"
+   168	
+   169	      - name: Validate JSON Schemas
+   170	        run: |
+   171	          echo "🔍 Validating JSON Schemas..."
+   172	          
+   173	          # Check if files are valid JSON
+   174	          INVALID_COUNT=0
+   175	          
+   176	          echo "Checking manifest.json..."
+   177	          if [ -f public/data/manifest.json ]; then
+   178	            if ! jq empty public/data/manifest.json 2>/dev/null; then
+   179	              echo "❌ manifest.json is invalid JSON"
+   180	              INVALID_COUNT=$((INVALID_COUNT + 1))
+   181	            else
+   182	              echo "✅ manifest.json valid"
+   183	              
+   184	              # Check required fields
+   185	              SCHEMA_VERSION=$(jq -r '.schema_version // "missing"' public/data/manifest.json)
+   186	              if [ "$SCHEMA_VERSION" != "3.0" ]; then
+   187	                echo "❌ manifest.json: schema_version should be '3.0', got '$SCHEMA_VERSION'"
+   188	                INVALID_COUNT=$((INVALID_COUNT + 1))
+   189	              fi
+   190	              
+   191	              ACTIVE_BUILD_ID=$(jq -r '.active_build_id // "missing"' public/data/manifest.json)
+   192	              if [ "$ACTIVE_BUILD_ID" = "missing" ]; then
+   193	                echo "⚠️ manifest.json: active_build_id is missing (optional for now)"
+   194	              fi
+   195	            fi
+   196	          fi
+   197	          
+   198	          echo ""
+   199	          echo "Checking provider-state.json..."
+   200	          if [ -f public/data/provider-state.json ]; then
+   201	            if ! jq empty public/data/provider-state.json 2>/dev/null; then
+   202	              echo "❌ provider-state.json is invalid JSON"
+   203	              INVALID_COUNT=$((INVALID_COUNT + 1))
+   204	            else
+   205	              echo "✅ provider-state.json valid"
+   206	            fi
+   207	          fi
+   208	          
+   209	          echo ""
+   210	          echo "Checking module snapshots..."
+   211	          SNAPSHOT_COUNT=0
+   212	          for snapshot in public/data/snapshots/*/latest.json; do
+   213	            if [ -f "$snapshot" ]; then
+   214	              SNAPSHOT_COUNT=$((SNAPSHOT_COUNT + 1))
+   215	              MODULE_NAME=$(basename $(dirname "$snapshot"))
+   216	              
+   217	              if ! jq empty "$snapshot" 2>/dev/null; then
+   218	                echo "❌ $MODULE_NAME: latest.json is invalid JSON"
+   219	                INVALID_COUNT=$((INVALID_COUNT + 1))
+   220	              else
+   221	                # Check required envelope fields
+   222	                SCHEMA_VERSION=$(jq -r '.schema_version // "missing"' "$snapshot")
+   223	                if [ "$SCHEMA_VERSION" != "3.0" ]; then
+   224	                  echo "⚠️ $MODULE_NAME: schema_version is '$SCHEMA_VERSION' (expected '3.0')"
+   225	                fi
+   226	                
+   227	                # Check metadata exists
+   228	                HAS_METADATA=$(jq 'has("metadata")' "$snapshot")
+   229	                if [ "$HAS_METADATA" != "true" ]; then
+   230	                  echo "❌ $MODULE_NAME: missing 'metadata' field"
+   231	                  INVALID_COUNT=$((INVALID_COUNT + 1))
+   232	                fi
+   233	                
+   234	                # Check data field exists
+   235	                HAS_DATA=$(jq 'has("data")' "$snapshot")
+   236	                if [ "$HAS_DATA" != "true" ]; then
+   237	                  echo "❌ $MODULE_NAME: missing 'data' field"
+   238	                  INVALID_COUNT=$((INVALID_COUNT + 1))
+   239	                fi
+   240	                
+
+### .github/workflows/monitor-prod.yml
+     1	name: Monitor Production Artifacts
+     2	
+     3	on:
+     4	  schedule:
+     5	    - cron: "0 6,18 * * *"
+     6	  workflow_dispatch:
+     7	
+     8	jobs:
+     9	  liveness:
+    10	    runs-on: ubuntu-latest
+    11	    steps:
+    12	      - name: Ensure jq
+    13	        run: |
+    14	          if ! command -v jq >/dev/null 2>&1; then
+    15	            sudo apt-get update
+    16	            sudo apt-get install -y jq
+    17	          fi
+    18	          jq --version
+    19	
+    20	      - name: Check required artifact endpoints
+    21	        env:
+    22	          BASE_URL: https://rubikvault.com
+    23	          MIN_MARKET_PRICE_ROWS: "517"
+    24	        run: |
+    25	          set -euo pipefail
+    26	
+    27	          fetch_json() {
+    28	            local url="$1"
+    29	            local out="$2"
+    30	            echo "Checking $url"
+    31	            curl -fsS "$url" -o "$out"
+    32	            jq -e . "$out" >/dev/null
+    33	            echo "✅ $url"
+    34	          }
+    35	
+    36	          fetch_json "$BASE_URL/data/snapshots/market-prices/latest.json" /tmp/market_prices.json
+    37	          fetch_json "$BASE_URL/data/forecast/latest.json" /tmp/forecast_latest.json
+    38	          fetch_json "$BASE_URL/data/forecast/system/status.json" /tmp/forecast_status.json
+    39	
+    40	          jq -e --argjson minRows "$MIN_MARKET_PRICE_ROWS" '
+    41	            ((.schema_version // .schemaVersion // .schema) != null) and
+    42	            ((.asof // .metadata.as_of // .meta.asOf) != null) and
+    43	            (((.metadata.record_count // 0) >= $minRows) or ((.data | length) >= $minRows))
+    44	          ' /tmp/market_prices.json >/dev/null
+    45	          echo "✅ market-prices semantic checks passed"
+    46	
+    47	          jq -e '
+    48	            ((.schema_version // .schemaVersion // .schema) != null) and
+    49	            ((.data.asof // .asof // .meta.asof // .meta.data_date) != null) and
+    50	            ((.data.forecasts | length) > 0)
+    51	          ' /tmp/forecast_latest.json >/dev/null
+    52	          echo "✅ forecast/latest semantic checks passed"
+    53	
+    54	          jq -e '
+    55	            ((.schema_version // .schemaVersion // .schema) != null) and
+    56	            ((.status // .meta.status) != null) and
+    57	            (if (((.status // .meta.status // "") | ascii_downcase) == "circuit_open" or
+    58	                 (((.circuit_state // .circuit.state // "") | ascii_downcase) == "open"))
+    59	             then ((.reason // .message // .meta.reason // "") | tostring | length) > 0
+    60	             else true
+    61	             end)
+    62	          ' /tmp/forecast_status.json >/dev/null
+    63	          echo "✅ forecast/system/status semantic checks passed"
+    64	
+    65	      - name: Staleness warning (48h)
+    66	        env:
+    67	          BASE_URL: https://rubikvault.com
+    68	        run: |
+    69	          set -euo pipefail
+    70	          curl -sS "$BASE_URL/data/forecast/latest.json" -o /tmp/forecast_latest.json
+    71	          node -e '
+    72	            const fs = require("fs");
+    73	            const doc = JSON.parse(fs.readFileSync("/tmp/forecast_latest.json", "utf8"));
+    74	            const generatedAt = doc.generated_at || doc.generatedAt || (doc.meta && doc.meta.generated_at) || null;
+    75	            if (!generatedAt) {
+    76	              console.log("::warning::forecast/latest.json missing generated_at; cannot compute staleness");
+    77	              process.exit(0);
+    78	            }
+    79	            const generatedMs = Date.parse(generatedAt);
+    80	            if (Number.isNaN(generatedMs)) {
+    81	              console.log(`::warning::forecast/latest.json generated_at not parseable: ${generatedAt}`);
+    82	              process.exit(0);
+    83	            }
+    84	            const ageHours = (Date.now() - generatedMs) / (1000 * 60 * 60);
+    85	            const msg = `forecast/latest.json age=${ageHours.toFixed(1)}h generated_at=${generatedAt}`;
+    86	            console.log(msg);
+    87	            if (ageHours > 48) {
+    88	              console.log(`::warning::staleness threshold exceeded (${msg})`);
+    89	            }
+    90	          '
+
+### .github/workflows/forecast-rollback.yml
+     1	name: Forecast Rollback
+     2	
+     3	on:
+     4	  workflow_dispatch:
+     5	    inputs:
+     6	      reason:
+     7	        description: 'Reason for rollback (required)'
+     8	        required: true
+     9	        type: string
+    10	      target_commit:
+    11	        description: 'Target commit SHA to rollback to (optional, defaults to last_good)'
+    12	        required: false
+    13	        type: string
+    14	
+    15	concurrency:
+    16	  group: forecast-system
+    17	  cancel-in-progress: false
+    18	
+    19	jobs:
+    20	  rollback:
+    21	    runs-on: ubuntu-latest
+    22	    timeout-minutes: 15
+    23	    permissions:
+    24	      contents: write
+    25	      issues: write
+    26	    steps:
+    27	      - uses: actions/checkout@v4
+    28	        with:
+    29	          fetch-depth: 0
+    30	      
+    31	      - name: Setup Node
+    32	        uses: actions/setup-node@v4
+    33	        with:
+    34	          node-version: '18'
+    35	          
+    36	      - name: Execute Rollback
+    37	        run: |
+    38	          echo "Rollback initiated by: ${{ github.actor }}"
+    39	          echo "Reason: ${{ inputs.reason }}"
+    40	          echo "Target: ${{ inputs.target_commit || 'last_good reference' }}"
+    41	          
+    42	          # Update status
+    43	          cat > public/data/forecast/system/status.json << EOF
+    44	          {
+    45	            "status": "ROLLBACK",
+    46	            "message": "Manual rollback: ${{ inputs.reason }}",
+    47	            "updated_at": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+    48	            "rollback": {
+    49	              "initiated_by": "${{ github.actor }}",
+    50	              "reason": "${{ inputs.reason }}",
+    51	              "target": "${{ inputs.target_commit || 'last_good' }}"
+    52	            }
+    53	          }
+    54	          EOF
+    55	          
+    56	          # If target commit specified, checkout forecast data from that commit
+    57	          if [ -n "${{ inputs.target_commit }}" ]; then
+    58	            git checkout ${{ inputs.target_commit }} -- public/data/forecast/latest.json || echo "Could not restore latest.json"
+    59	          fi
+    60	          
+    61	      - name: Commit Rollback
+    62	        run: |
+    63	          git config --global user.name "rv-bot"
+    64	          git config --global user.email "bot@rubikvault.com"
+    65	          git add public/data/forecast
+    66	          git commit -m "ops(forecast): rollback - ${{ inputs.reason }}" || echo "No changes"
+    67	          git push
+    68	          
+    69	      - name: Create Issue
+    70	        uses: actions/github-script@v7
+    71	        with:
+    72	          script: |
+    73	            github.rest.issues.create({
+    74	              owner: context.repo.owner,
+    75	              repo: context.repo.repo,
+    76	              title: '🔄 Forecast System Rollback Executed',
+    77	              body: `## Rollback Details\n\n- **Initiated by:** ${{ github.actor }}\n- **Reason:** ${{ inputs.reason }}\n- **Target:** ${{ inputs.target_commit || 'last_good reference' }}\n- **Workflow Run:** ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}`,
+    78	              labels: ['ops', 'forecast', 'rollback']
+    79	            })

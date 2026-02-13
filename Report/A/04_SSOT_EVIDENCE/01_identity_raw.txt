@@ -1,0 +1,26 @@
+$ pwd
+/Users/michaelpuchowezki/Dev/rubikvault-site
+
+$ git rev-parse --show-toplevel
+/Users/michaelpuchowezki/Dev/rubikvault-site
+
+$ git remote -v
+origin	https://github.com/RubikVault/rubikvault-site.git (fetch)
+origin	https://github.com/RubikVault/rubikvault-site.git (push)
+
+$ git status -sb
+## main...origin/main
+?? Report/A/
+
+$ git rev-parse HEAD
+166a15246fc75b11da12b0f8504ef8fb77a01229
+
+$ git log -1 --oneline --decorate
+166a1524 (HEAD -> main, origin/main, origin/HEAD, fix/block-numbering) Merge branch 'fix/hardening-never-empty-deploy'
+
+$ git branch --show-current
+main
+
+$ date
+Tue Feb 10 19:03:11 CET 2026
+

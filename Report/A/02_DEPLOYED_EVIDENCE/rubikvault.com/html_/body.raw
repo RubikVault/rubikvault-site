@@ -1,0 +1,1922 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+
+<head>
+  <meta charset="UTF-8" />
+  <title>RubikVault – Stock Analyzer</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+  <meta name="description"
+    content="Find the best stocks to invest in. Analyze stocks by name or ticker symbol with RubikVault Stock Analyzer." />
+
+  <!-- PWA Meta Tags -->
+  <meta name="theme-color" content="#3b82f6" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="RubikVault" />
+
+  <!-- Deep Links for Mobile Apps -->
+  <meta property="al:ios:url" content="rubikvault://analyze" />
+  <meta property="al:ios:app_store_id" content="YOUR_APP_STORE_ID" />
+  <meta property="al:ios:app_name" content="RubikVault" />
+  <meta property="al:android:url" content="rubikvault://analyze" />
+  <meta property="al:android:package" content="com.rubikvault.app" />
+  <meta property="al:android:app_name" content="RubikVault" />
+  <meta property="al:web:url" content="https://rubikvault.com" />
+
+  <!-- Icons -->
+  <link rel="icon" type="image/png" sizes="32x32" href="/assets/rv-favicon.png" />
+  <link rel="apple-touch-icon" sizes="180x180" href="/assets/rv-apple-icon.png" />
+  <link rel="manifest" href="/manifest.json" />
+
+  <!-- Styles -->
+  <link rel="stylesheet" href="/style.css" />
+  <link rel="stylesheet" href="/search.css" />
+</head>
+
+<body>
+  <div id="rv-search-root"></div>
+  <!-- HEADER -->
+  <header class="rv-header">
+    <div class="rv-header-inner">
+      <a class="rv-brand" href="/" aria-label="RubikVault">
+        <img class="rv-brand-icon" src="/assets/rv-icon.png" alt="" />
+        <span class="rv-brand-text">RubikVault</span>
+      </a>
+
+      <nav class="rv-nav">
+        <a class="rv-social-link" href="https://www.youtube.com/@RubikVault" target="_blank" rel="noopener noreferrer"
+          aria-label="YouTube">
+          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+            <path
+              d="M21.58 7.19a2.5 2.5 0 0 0-1.76-1.77C18.25 5 12 5 12 5s-6.25 0-7.82.42A2.5 2.5 0 0 0 2.42 7.2 26.6 26.6 0 0 0 2 12s0 2.55.42 4.81a2.5 2.5 0 0 0 1.76 1.77C5.75 19 12 19 12 19s6.25 0 7.82-.42a2.5 2.5 0 0 0 1.76-1.77C22 14.55 22 12 22 12s0-2.55-.42-4.81ZM10 15.5v-7l6 3.5-6 3.5Z" />
+          </svg>
+        </a>
+        <a class="rv-social-link" href="https://x.com/RubikVault" target="_blank" rel="noopener noreferrer"
+          aria-label="X">
+          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+            <path
+              d="M18.9 2H22l-6.79 7.76L23 22h-6.2l-4.86-6.02L6.66 22H3.5l7.26-8.3L3 2h6.35l4.4 5.52L18.9 2Zm-1.09 18h1.72L8.4 3.93H6.56L17.81 20Z" />
+          </svg>
+        </a>
+        <a class="rv-social-link" href="https://www.instagram.com/rubikvault_official/" target="_blank"
+          rel="noopener noreferrer" aria-label="Instagram">
+          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+            <path
+              d="M7 2h10a5 5 0 0 1 5 5v10a5 5 0 0 1-5 5H7a5 5 0 0 1-5-5V7a5 5 0 0 1 5-5Zm10 2H7a3 3 0 0 0-3 3v10a3 3 0 0 0 3 3h10a3 3 0 0 0 3-3V7a3 3 0 0 0-3-3Zm-5 3.5a4.5 4.5 0 1 1 0 9 4.5 4.5 0 0 1 0-9Zm0 2a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5ZM17.8 6.2a1 1 0 1 1 0 2 1 1 0 0 1 0-2Z" />
+          </svg>
+        </a>
+        <a class="rv-social-link" href="https://www.tiktok.com/@rubikvault" target="_blank" rel="noopener noreferrer"
+          aria-label="TikTok">
+          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+            <path
+              d="M16.7 5.2c.8 1.2 2.1 2 3.6 2.1v3.1c-1.7-.1-3.3-.7-4.6-1.7v7.4c0 3.4-2.8 6.2-6.2 6.2S3.3 19.5 3.3 16.1s2.8-6.2 6.2-6.2c.4 0 .8 0 1.2.1v3.3c-.4-.1-.8-.2-1.2-.2-1.7 0-3.1 1.4-3.1 3.1s1.4 3.1 3.1 3.1 3.1-1.4 3.1-3.1V2h3.1c0 1.2.3 2.3 1 3.2Z" />
+          </svg>
+        </a>
+      </nav>
+
+      <div class="rv-header-tools" aria-live="polite">
+        <div class="rv-data-updated" style="font-size: 12px; color: var(--rv-text-muted);">
+          Data updated: <span id="rv-data-updated-date">Loading...</span> (daily snapshots)
+        </div>
+        <div class="rv-market-clock">
+          <span class="rv-clock-time" id="rv-ny-time">NY: --:--:--</span>
+          <span class="rv-clock-status">
+            <span class="rv-led" data-rv-led="closed"></span>
+            <span class="rv-market-label" data-rv-market-label>Closed</span>
+            <span class="rv-market-countdown" id="rv-market-countdown">opens in --:--:--</span>
+          </span>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- PAGE NAVIGATION -->
+  <nav class="rv-page-nav">
+    <div class="rv-page-nav-inner">
+      <a href="/" class="rv-page-nav-link active" data-page="analyzer">Stock Analyzer</a>
+      <a href="/elliott.html" class="rv-page-nav-link" data-page="elliott">Elliott Waves</a>
+      <a href="/scientific.html" class="rv-page-nav-link" data-page="scientific">Scientific Analyzer</a>
+      <a href="/forecast.html" class="rv-page-nav-link" data-page="forecast">Forecast System</a>
+    </div>
+  </nav>
+
+
+  <!-- MAIN CONTENT -->
+  <main class="rv-main" style="max-width: 1400px; margin: 0 auto; padding: 3rem 2rem;">
+
+    <!-- HERO SECTION: Stock Analyzer -->
+    <section style="text-align: center; margin-bottom: 4rem;">
+      <h1 style="font-size: 4rem; font-weight: 800; margin-bottom: 1rem; color: #f1f5f9; letter-spacing: -0.02em;">
+        Stock Analyzer
+      </h1>
+
+      <p style="font-size: 1.5rem; color: #e5e7eb; margin-bottom: 0.5rem;">
+        Find the best stocks to invest in
+      </p>
+
+      <p style="font-size: 1.125rem; color: #94a3b8; margin-bottom: 3rem;">
+        Analyze stocks by name or ticker symbol
+      </p>
+
+      <!-- SEARCH BOX -->
+      <div style="max-width: 700px; margin: 0 auto 3rem;">
+        <div
+          style="position: relative; overflow: visible; display: flex; align-items: center; gap: 0.85rem; padding: 0 1.1rem; background: rgba(30, 41, 59, 0.8); border: 2px solid rgba(100, 116, 139, 0.3); border-radius: 12px; transition: all 0.2s;">
+          <input type="text" id="stock-search-input" placeholder="Type Stock you want to check here...."
+            autocomplete="off" style="
+            width: 100%;
+            flex: 1;
+            padding: 1.25rem 0;
+            font-size: 1.125rem;
+            background: transparent;
+            border: none;
+            color: #e5e7eb;
+            transition: all 0.2s;
+          " onfocus="this.parentElement.style.borderColor='rgba(59, 130, 246, 0.6)'; this.parentElement.style.background='rgba(30, 41, 59, 1)';"
+            onblur="this.parentElement.style.borderColor='rgba(100, 116, 139, 0.3)'; this.parentElement.style.background='rgba(30, 41, 59, 0.8)';" />
+          <button id="stock-search-btn" type="button" aria-label="Analyze" style="
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            flex: 0 0 auto;
+            width: 44px;
+            height: 44px;
+            border-radius: 10px;
+            border: 1px solid rgba(100, 116, 139, 0.35);
+            background: rgba(15, 23, 42, 0.35);
+            color: #e5e7eb;
+            cursor: pointer;
+          ">
+            <svg style="display:block; width: 22px; height: 22px;" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+              stroke-width="2" aria-hidden="true" focusable="false">
+              <circle cx="11" cy="11" r="8"></circle>
+              <path d="m21 21-4.35-4.35"></path>
+            </svg>
+          </button>
+        </div>
+        <div style="margin-top: 0.6rem; font-size: 0.9rem; color: #94a3b8; text-align: left; padding-left: 0.25rem;">
+          Coverage: NASDAQ-100 + S&P 500 + Dow Jones + Russell 2000 (~3,600 stocks)
+        </div>
+      </div>
+
+      <!-- BUY SIGNALS BY TIMEFRAME -->
+      <div id="buy-signals-stats"
+        style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 2rem; max-width: 700px; margin: 0 auto 2rem;">
+        <div style="text-align: center;">
+          <div id="signal-short" onclick="showSignalModal('short')" title="Click to see stocks"
+            style="font-size: 3rem; font-weight: 700; color: #10b981; margin-bottom: 0.5rem; cursor: pointer; transition: transform 0.15s, opacity 0.15s;"
+            onmouseover="this.style.transform='scale(1.08)';this.style.opacity='0.85'"
+            onmouseout="this.style.transform='scale(1)';this.style.opacity='1'">-
+          </div>
+          <div style="font-size: 1rem; color: #94a3b8;">Short-Term Buy Signals</div>
+          <div style="font-size: 0.75rem; color: #64748b;">(1-5 days)</div>
+        </div>
+        <div style="text-align: center;">
+          <div id="signal-medium" onclick="showSignalModal('medium')" title="Click to see stocks"
+            style="font-size: 3rem; font-weight: 700; color: #3b82f6; margin-bottom: 0.5rem; cursor: pointer; transition: transform 0.15s, opacity 0.15s;"
+            onmouseover="this.style.transform='scale(1.08)';this.style.opacity='0.85'"
+            onmouseout="this.style.transform='scale(1)';this.style.opacity='1'">-
+          </div>
+          <div style="font-size: 1rem; color: #94a3b8;">Medium-Term Buy Signals</div>
+          <div style="font-size: 0.75rem; color: #64748b;">(5-20 days)</div>
+        </div>
+        <div style="text-align: center;">
+          <div id="signal-long" onclick="showSignalModal('long')" title="Click to see stocks"
+            style="font-size: 3rem; font-weight: 700; color: #a78bfa; margin-bottom: 0.5rem; cursor: pointer; transition: transform 0.15s, opacity 0.15s;"
+            onmouseover="this.style.transform='scale(1.08)';this.style.opacity='0.85'"
+            onmouseout="this.style.transform='scale(1)';this.style.opacity='1'">-
+          </div>
+          <div style="font-size: 1rem; color: #94a3b8;">Long-Term Buy Signals</div>
+          <div style="font-size: 0.75rem; color: #64748b;">(20-60 days)</div>
+        </div>
+      </div>
+
+      <p id="buy-signals-note" style="font-size: 0.8rem; color: #64748b; margin: 0 0 1rem;">
+        Best buy signals: Setup + Trigger fulfilled. Click a number to see the stocks.
+      </p>
+
+      <p style="font-size: 0.875rem; color: #64748b; font-style: italic;">
+        Enter a stock name or ticker to start the analysis
+      </p>
+    </section>
+
+    <!-- RESULTS SECTION (Hidden by default) -->
+    <section id="search-results" style="display: none; margin-top: 3rem;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+        <h2 id="results-title" style="font-size: 2rem; color: #e5e7eb;">Analysis Results</h2>
+        <button onclick="clearSearch()" style="
+            padding: 0.75rem 1.5rem;
+            background: rgba(100, 116, 139, 0.2);
+            border: 1px solid rgba(100, 116, 139, 0.3);
+            border-radius: 8px;
+            color: #e5e7eb;
+            cursor: pointer;
+            transition: all 0.2s;
+          " onmouseover="this.style.background='rgba(100, 116, 139, 0.3)'"
+          onmouseout="this.style.background='rgba(100, 116, 139, 0.2)'">
+          ← Back to Search
+        </button>
+      </div>
+
+      <div id="results-content" class="rv-card" style="padding: 2rem;">
+        <!-- Results will be loaded here -->
+      </div>
+    </section>
+
+  </main>
+
+  <!-- SIGNAL MODAL -->
+  <div id="signal-modal" onclick="if(event.target===this)closeSignalModal()"
+    style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.75); z-index:9999; backdrop-filter:blur(4px); animation: fadeIn 0.2s;">
+    <div
+      style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); width:95%; max-width:900px; max-height:85vh; overflow:auto; background:linear-gradient(135deg, rgba(30,41,59,0.98), rgba(15,23,42,0.98)); border:1px solid rgba(100,116,139,0.35); border-radius:16px; box-shadow:0 25px 50px -12px rgba(0,0,0,0.5);">
+      <div
+        style="display:flex; justify-content:space-between; align-items:center; padding:1.5rem 2rem; border-bottom:1px solid rgba(100,116,139,0.22);">
+        <h3 id="signal-modal-title" style="margin:0; font-size:1.35rem; color:#e5e7eb;">Buy Signals</h3>
+        <button onclick="closeSignalModal()"
+          style="background:none; border:none; color:#94a3b8; font-size:1.75rem; cursor:pointer; line-height:1;"
+          title="Close">&times;</button>
+      </div>
+      <div id="signal-modal-content" style="padding:1.5rem 2rem;">
+        <!-- Stock table will be inserted here -->
+      </div>
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <footer class="rv-footer">
+    <div class="rv-footer-inner">
+      <div class="rv-footer-brand">RubikVault</div>
+      <div class="rv-footer-links">
+        <a href="/imprint.html">Imprint</a>
+        <a href="/privacy.html">Privacy</a>
+        <a href="/disclaimer.html">Disclaimer</a>
+      </div>
+    </div>
+    <p>RubikVault provides educational content only and does not offer financial advice or brokerage services.</p>
+    <p>&copy; 2026 RubikVault. All rights reserved.</p>
+  </footer>
+
+  <!-- Market Clock Script -->
+  <script src="/market-clock.js"></script>
+
+  <!-- Update Date -->
+  <script>
+    (function () {
+      const el = document.getElementById("rv-data-updated-date");
+      if (el) {
+        const today = new Date();
+        el.textContent = today.toISOString().split("T")[0];
+      }
+    })();
+  </script>
+
+  <!-- Load Scientific Analysis Data -->
+  <script>
+    // Global data stores
+    let scientificAnalysisData = null;
+    const scientificByTimeframe = { short: new Map(), medium: new Map(), long: new Map() };
+    const elliottWavesData = new Map();
+    const elliottSupportByTicker = new Map();
+    let elliottIndexLoaded = false;
+
+    async function loadScientificData() {
+      try {
+        const res = await fetch('/data/snapshots/stock-analysis.json');
+        if (!res.ok) return;
+        scientificAnalysisData = await res.json();
+        buildScientificMaps();
+        updateBuySignalsStats();
+        loadElliottSupportIndex().then(updateBuySignalsStats);
+      } catch (e) {
+        console.warn('Scientific analysis data not available:', e);
+      }
+    }
+
+    function buildScientificMaps() {
+      scientificByTimeframe.short.clear();
+      scientificByTimeframe.medium.clear();
+      scientificByTimeframe.long.clear();
+      const byTimeframe = scientificAnalysisData?._rankings?.by_timeframe || {};
+      ['short', 'medium', 'long'].forEach((tf) => {
+        const rows = Array.isArray(byTimeframe[tf]) ? byTimeframe[tf] : [];
+        for (const row of rows) {
+          const t = normalizeTicker(row?.ticker || '');
+          if (!t) continue;
+          scientificByTimeframe[tf].set(t, row);
+        }
+      });
+    }
+
+    async function loadElliottSupportIndex() {
+      if (elliottIndexLoaded) return;
+      elliottIndexLoaded = true;
+      try {
+        const res = await fetch('/data/marketphase/index.json', { cache: 'no-store' });
+        if (!res.ok) return;
+        const payload = await res.json();
+        const symbols = payload?.data?.symbols || [];
+        if (!Array.isArray(symbols) || !symbols.length) return;
+        for (const item of symbols) {
+          const t = normalizeTicker(item?.symbol || '');
+          const path = item?.path;
+          if (!t || !path) continue;
+          const { payload: mpPayload } = await fetchJson(path);
+          if (!mpPayload || mpPayload.ok !== true) {
+            elliottSupportByTicker.set(t, null);
+            continue;
+          }
+          elliottWavesData.set(t, mpPayload);
+          const support = computeElliottSupport(mpPayload);
+          elliottSupportByTicker.set(t, support);
+        }
+      } catch (e) {
+        console.warn('Elliott Waves index not available:', e);
+      }
+    }
+
+    function computeElliottSupport(payload) {
+      const data = payload?.data || {};
+      const elliott = data?.elliott || {};
+      const features = data?.features || {};
+      const direction = elliott?.completedPattern?.direction || features?.SMATrend || null;
+      const confidence = Number(elliott?.developingPattern?.confidence ?? elliott?.completedPattern?.confidence0_100);
+      if (!direction) return null;
+      if (!Number.isFinite(confidence)) return direction === 'bullish';
+      return direction === 'bullish' && confidence >= 55;
+    }
+
+    function updateBuySignalsStats() {
+      if (!scientificAnalysisData?._rankings) return;
+      if (!scientificByTimeframe.short.size) buildScientificMaps();
+
+      // Use the pre-computed by_timeframe rankings from the stock analysis
+      const byTimeframe = scientificAnalysisData?._rankings?.by_timeframe || {};
+
+      // Count stocks per timeframe where BOTH setup and trigger are fulfilled
+      const counts = { short: 0, medium: 0, long: 0 };
+
+      for (const tf of ['short', 'medium', 'long']) {
+        const stocks = Array.isArray(byTimeframe[tf]) ? byTimeframe[tf] : [];
+        for (const stock of stocks) {
+          const ticker = normalizeTicker(stock?.ticker || '');
+          if (!ticker) continue;
+
+          // Check if this stock has Setup + Trigger fulfilled
+          const entry = scientificAnalysisData?.[ticker];
+          const setupOk = entry?.setup?.fulfilled === true;
+          const triggerOk = entry?.trigger?.fulfilled === true;
+
+          // Only count if both setup and trigger are fulfilled
+          if (setupOk && triggerOk) {
+            // Check Elliott support (if available) - only veto if explicitly false
+            const elliottSupport = elliottSupportByTicker.get(ticker);
+            if (elliottSupport !== false) {
+              counts[tf] += 1;
+            }
+          }
+        }
+      }
+
+      const shortEl = document.getElementById('signal-short');
+      const mediumEl = document.getElementById('signal-medium');
+      const longEl = document.getElementById('signal-long');
+      const noteEl = document.getElementById('buy-signals-note');
+
+      if (shortEl) shortEl.textContent = counts.short;
+      if (mediumEl) mediumEl.textContent = counts.medium;
+      if (longEl) longEl.textContent = counts.long;
+      if (noteEl) {
+        const coverage = elliottSupportByTicker.size;
+        const coverageNote = coverage ? ` Elliott coverage: ${coverage} symbol${coverage === 1 ? '' : 's'}.` : '';
+        noteEl.textContent = `Best buy signals: Setup + Trigger fulfilled. Click a number to see the stocks.${coverageNote}`;
+      }
+    }
+
+    // Modal functions for buy signals
+    function showSignalModal(timeframe) {
+      const modal = document.getElementById('signal-modal');
+      const titleEl = document.getElementById('signal-modal-title');
+      const contentEl = document.getElementById('signal-modal-content');
+      if (!modal || !titleEl || !contentEl) return;
+
+      const tfLabels = {
+        short: 'Short-Term (1-5 days)',
+        medium: 'Medium-Term (5-20 days)',
+        long: 'Long-Term (20-60 days)'
+      };
+      const tfColors = { short: '#10b981', medium: '#3b82f6', long: '#a78bfa' };
+
+      titleEl.innerHTML = `<span style="color:${tfColors[timeframe] || '#e5e7eb'}">●</span> ${tfLabels[timeframe] || 'Buy Signals'}`;
+
+      const byTimeframe = scientificAnalysisData?._rankings?.by_timeframe || {};
+      const stocks = Array.isArray(byTimeframe[timeframe]) ? byTimeframe[timeframe] : [];
+
+      // Filter to only include stocks with Setup + Trigger fulfilled
+      const filtered = stocks.filter(s => {
+        const ticker = normalizeTicker(s?.ticker || '');
+        const entry = scientificAnalysisData?.[ticker];
+        const setupOk = entry?.setup?.fulfilled === true;
+        const triggerOk = entry?.trigger?.fulfilled === true;
+        const elliottSupport = elliottSupportByTicker.get(ticker);
+        return setupOk && triggerOk && elliottSupport !== false;
+      });
+
+      if (!filtered.length) {
+        contentEl.innerHTML = '<div style="text-align:center; color:#64748b; padding:2rem;">No stocks match the criteria for this timeframe.</div>';
+        modal.style.display = 'block';
+        document.body.style.overflow = 'hidden';
+        return;
+      }
+
+      const rows = filtered.map((s, i) => {
+        const ticker = s.ticker || '—';
+        const name = s.name || '—';
+        const price = Number(s.price);
+        const prob = Number(s.probability);
+        const er = Number(s.expected_return);
+        const setupScore = s.setup_score ?? '—';
+        const triggerScore = s.trigger_score ?? '—';
+        const bgColor = i % 2 === 0 ? 'rgba(30,41,59,0.4)' : 'rgba(15,23,42,0.4)';
+        const probColor = prob >= 0.6 ? '#34d399' : prob >= 0.4 ? '#fbbf24' : '#f87171';
+        const erColor = er > 0 ? '#34d399' : er < 0 ? '#f87171' : '#94a3b8';
+        return `
+          <tr style="background:${bgColor};">
+            <td style="padding:0.75rem 1rem; font-weight:600; color:#60a5fa; cursor:pointer;" onclick="closeSignalModal();selectSymbol('${ticker}', '${name.replace(/'/g, "\\'")}', {push:true})">${ticker}</td>
+            <td style="padding:0.75rem 1rem; color:#e5e7eb;">${name}</td>
+            <td style="padding:0.75rem 1rem; color:#94a3b8; text-align:right;">$${Number.isFinite(price) ? price.toFixed(2) : '—'}</td>
+            <td style="padding:0.75rem 1rem; text-align:center;"><span style="background:rgba(16,185,129,0.15); color:#34d399; padding:0.2rem 0.5rem; border-radius:4px; font-size:0.85rem;">${setupScore}</span></td>
+            <td style="padding:0.75rem 1rem; text-align:center;"><span style="background:rgba(59,130,246,0.15); color:#60a5fa; padding:0.2rem 0.5rem; border-radius:4px; font-size:0.85rem;">${triggerScore}</span></td>
+            <td style="padding:0.75rem 1rem; text-align:right; color:${probColor}; font-weight:600;">${Number.isFinite(prob) ? Math.round(prob * 100) + '%' : '—'}</td>
+            <td style="padding:0.75rem 1rem; text-align:right; color:${erColor}; font-weight:600;">${Number.isFinite(er) ? (er > 0 ? '+' : '') + er.toFixed(1) + '%' : '—'}</td>
+          </tr>
+        `;
+      }).join('');
+
+      contentEl.innerHTML = `
+        <div style="overflow-x:auto;">
+          <table style="width:100%; border-collapse:collapse; font-size:0.95rem;">
+            <thead>
+              <tr style="border-bottom:1px solid rgba(100,116,139,0.35);">
+                <th style="padding:0.75rem 1rem; text-align:left; color:#94a3b8; font-weight:600;">Ticker</th>
+                <th style="padding:0.75rem 1rem; text-align:left; color:#94a3b8; font-weight:600;">Name</th>
+                <th style="padding:0.75rem 1rem; text-align:right; color:#94a3b8; font-weight:600;">Price</th>
+                <th style="padding:0.75rem 1rem; text-align:center; color:#94a3b8; font-weight:600;">Setup</th>
+                <th style="padding:0.75rem 1rem; text-align:center; color:#94a3b8; font-weight:600;">Trigger</th>
+                <th style="padding:0.75rem 1rem; text-align:right; color:#94a3b8; font-weight:600;">Prob ↑</th>
+                <th style="padding:0.75rem 1rem; text-align:right; color:#94a3b8; font-weight:600;">Exp.Ret 10d</th>
+              </tr>
+            </thead>
+            <tbody>${rows}</tbody>
+          </table>
+        </div>
+        <div style="margin-top:1rem; font-size:0.8rem; color:#64748b; text-align:center;">
+          Click on a ticker to view the full analysis
+        </div>
+      `;
+
+      modal.style.display = 'block';
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closeSignalModal() {
+      const modal = document.getElementById('signal-modal');
+      if (modal) modal.style.display = 'none';
+      document.body.style.overflow = '';
+    }
+
+    // Close modal on Escape key
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') closeSignalModal();
+    });
+
+    // Load on page ready
+    loadScientificData();
+  </script>
+
+
+  <!-- STOCK SEARCH LOGIC -->
+  <script>
+    const searchInput = document.getElementById('stock-search-input');
+    const resultsSection = document.getElementById('search-results');
+    const resultsContent = document.getElementById('results-content');
+    const resultsTitle = document.getElementById('results-title');
+
+    // Popular tickers for quick suggestions (can be expanded)
+    const popularTickers = ['AAPL', 'MSFT', 'GOOGL', 'AMZN', 'TSLA', 'NVDA', 'META', 'NFLX', 'SPY', 'QQQ'];
+
+    let lastResolved = { ticker: null, name: null };
+    let chartState = { range: '1Y' };
+    let lastChartData = null;
+
+    const UNIVERSE_URL = '/data/universe/all.json';
+    let universe = [];
+    const universeByTicker = new Map();
+    let universeReady = null;
+
+    function normalizeTicker(raw) {
+      const s = String(raw || '').trim().toUpperCase();
+      if (!s) return '';
+      if (!/^[A-Z0-9\-\.]{1,15}$/.test(s)) return '';
+      return s;
+    }
+
+    function normalizeUniverseName(raw) {
+      return String(raw || '')
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z0-9\s]/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+    }
+
+    async function loadUniverse() {
+      try {
+        const res = await fetch(UNIVERSE_URL, { cache: 'no-store' });
+        if (!res.ok) throw new Error('universe_fetch_failed');
+        const entries = await res.json();
+        if (!Array.isArray(entries)) throw new Error('universe_invalid_shape');
+
+        const normalized = [];
+        universeByTicker.clear();
+        for (const entry of entries) {
+          if (!entry || typeof entry !== 'object') continue;
+          const ticker = normalizeTicker(entry.ticker);
+          if (!ticker) continue;
+          const name = typeof entry.name === 'string' ? entry.name.trim() : '';
+          normalized.push({ ticker, name });
+          universeByTicker.set(ticker, name || null);
+        }
+        universe = normalized;
+        return universe;
+      } catch (err) {
+        console.error('Universe load failed:', err);
+        // Retry once after delay? Or just return empty to not block
+        return [];
+      }
+    }
+
+    // Ensure we start loading immediately, but handle errors
+    universeReady = loadUniverse();
+
+    function getUniverseSuggestions(query, limit = 12) {
+      const q = String(query || '').trim().toLowerCase();
+      if (!q) return [];
+      const qName = normalizeUniverseName(q);
+      const out = [];
+
+      for (const entry of universe) {
+        const t = entry.ticker;
+        const n = entry.name;
+        const tLower = String(t || '').toLowerCase();
+        const nNorm = normalizeUniverseName(n);
+        if (tLower.startsWith(q) || (qName && nNorm.startsWith(qName))) {
+          out.push({ symbol: t, name: universeByTicker.get(t) || null });
+          if (out.length >= limit) break;
+        }
+      }
+
+      return out;
+    }
+
+    const pageDebug = (() => {
+      try {
+        const params = new URLSearchParams(window.location.search || '');
+        return params.get('debug') === '1';
+      } catch {
+        return false;
+      }
+    })();
+
+
+
+    // Analyze-route CSS isolation (prevents global CSS leaks)
+    try {
+      if (window.location.pathname && window.location.pathname.startsWith("/analyze/")) {
+        document.body.classList.add("rv-analyze");
+      }
+    } catch { }
+
+    const typeahead = {
+      root: null,
+      items: [],
+      open: false,
+      activeIndex: -1,
+      debounceMs: 150,
+      debounceTimer: null,
+      blurTimer: null,
+      requestSeq: 0,
+      emptyMessage: null
+    };
+
+    async function fetchJson(url) {
+      try {
+        const response = await fetch(url);
+        const payload = await response.json().catch(() => null);
+        return { response, payload, networkError: null };
+      } catch (error) {
+        return { response: null, payload: null, networkError: error };
+      }
+    }
+
+    function ensureTypeaheadRoot() {
+      if (typeahead.root) return typeahead.root;
+      const parent = searchInput?.parentElement;
+      if (!parent) return null;
+      const root = document.createElement('div');
+      root.id = 'rv-typeahead';
+      root.style.position = 'absolute';
+      root.style.left = '0';
+      root.style.right = '0';
+      root.style.top = 'calc(100% + 10px)';
+      root.style.zIndex = '9999'; // Increased z-index
+      root.style.background = 'rgba(15, 23, 42, 0.98)';
+      root.style.border = '1px solid rgba(100, 116, 139, 0.28)';
+      root.style.borderRadius = '12px';
+      root.style.boxShadow = '0 18px 40px rgba(0,0,0,0.35)';
+      root.style.overflow = 'hidden';
+      root.style.display = 'none';
+      parent.appendChild(root);
+      typeahead.root = root;
+      return root;
+    }
+
+    function closeTypeahead() {
+      typeahead.open = false;
+      typeahead.items = [];
+      typeahead.activeIndex = -1;
+      typeahead.emptyMessage = null;
+      if (typeahead.root) typeahead.root.style.display = 'none';
+    }
+
+    function openTypeahead(items) {
+      const root = ensureTypeaheadRoot();
+      if (!root) return;
+      typeahead.items = Array.isArray(items) ? items : [];
+      typeahead.open = typeahead.items.length > 0;
+      typeahead.activeIndex = -1;
+      typeahead.emptyMessage = null;
+      renderTypeahead();
+    }
+
+    function clearSuggestions() {
+      closeTypeahead();
+    }
+
+    async function doFetch(q) {
+      const query = String(q || '').trim();
+      if (!query) {
+        clearSuggestions();
+        return;
+      }
+      try {
+        if (!universeReady) universeReady = loadUniverse();
+        await universeReady;
+      } catch (e) {
+        console.warn("Universe wait failed", e);
+      }
+
+      const items = getUniverseSuggestions(query, 12);
+      typeahead.items = items;
+      typeahead.activeIndex = -1;
+      typeahead.open = items.length > 0;
+      typeahead.emptyMessage = items.length ? null : 'No matches found in stock universe';
+      renderTypeahead();
+    }
+
+    function scheduleFetch(q) {
+      if (typeahead.debounceTimer) clearTimeout(typeahead.debounceTimer);
+      typeahead.debounceTimer = setTimeout(() => doFetch(q), typeahead.debounceMs);
+    }
+
+    async function selectSymbol(symbol, name, { push = true } = {}) {
+      const s = String(symbol || '').trim().toUpperCase();
+      if (!s) return;
+
+      if (!universeReady) universeReady = loadUniverse();
+      await universeReady;
+
+      if (!universeByTicker.has(s)) {
+        closeTypeahead();
+        renderUnsupported(s);
+        return;
+      }
+
+      const resolvedName = universeByTicker.get(s) || null;
+      lastResolved = { ticker: s, name: resolvedName };
+      searchInput.value = s;
+      closeTypeahead();
+      if (push) window.history.pushState({}, '', `/analyze/${encodeURIComponent(s)}`);
+      await loadAnalyze(s, { push: false, fallback: lastResolved });
+    }
+
+    function renderTypeahead() {
+      const root = ensureTypeaheadRoot();
+      if (!root) return;
+      if (!typeahead.open || (!typeahead.items.length && !typeahead.emptyMessage)) {
+        root.style.display = 'none';
+        return;
+      }
+      root.style.display = 'block';
+
+      if (!typeahead.items.length && typeahead.emptyMessage) {
+        root.innerHTML = `<div style="padding: 0.8rem 1rem; color: #94a3b8;">${escapeHtml(typeahead.emptyMessage)}</div>`;
+        return;
+      }
+
+      const html = typeahead.items
+        .map((item, idx) => {
+          const active = idx === typeahead.activeIndex;
+          const bg = active ? 'rgba(59, 130, 246, 0.18)' : 'transparent';
+          const border = active ? 'rgba(59, 130, 246, 0.35)' : 'transparent';
+          return `
+            <div data-idx="${idx}" class="${active ? 'is-active' : ''}" style="padding: 0.8rem 1rem; cursor: pointer; background: ${bg}; border-left: 3px solid ${border};">
+              <div style="display:flex; justify-content: space-between; gap: 1rem; align-items: baseline;">
+                <div style="font-weight: 800; color: #e5e7eb;">${escapeHtml(item.symbol)}</div>
+                <div style="font-size: 0.85rem; color: #94a3b8; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width: 420px;">${escapeHtml(item.name || '—')}</div>
+              </div>
+            </div>
+          `;
+        })
+        .join('');
+      root.innerHTML = html;
+
+      root.querySelectorAll('[data-idx]').forEach((el) => {
+        el.addEventListener('mousedown', (ev) => {
+          ev.preventDefault();
+          const idx = Number(el.getAttribute('data-idx'));
+          const item = typeahead.items[idx];
+          if (!item?.symbol) return;
+          selectSymbol(item.symbol, item.name, { push: true });
+        });
+      });
+    }
+
+    function formatNumber(value, options = {}) {
+      const num = Number(value);
+      if (!Number.isFinite(num)) return '—';
+      const digits = Number.isFinite(options.digits) ? options.digits : 2;
+      return num.toLocaleString(undefined, { minimumFractionDigits: digits, maximumFractionDigits: digits });
+    }
+
+    function formatPercent(value, digits = 2) {
+      const num = Number(value);
+      if (!Number.isFinite(num)) return '—';
+      const pct = num * 100;
+      const sign = pct > 0 ? '+' : '';
+      return `${sign}${pct.toFixed(digits)}%`;
+    }
+
+    function escapeHtml(text) {
+      return String(text || '')
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#39;');
+    }
+
+    function renderErrorBanner(error, meta) {
+      const code = escapeHtml(error?.code || 'ERROR');
+      const message = escapeHtml(error?.message || 'Unable to load stock data');
+      const status = escapeHtml(meta?.status || 'ERROR');
+      return `
+        <div style="padding: 1rem; border-radius: 10px; background: rgba(239, 68, 68, 0.12); border: 1px solid rgba(239, 68, 68, 0.35); margin-bottom: 1.5rem;">
+          <div style="font-weight: 700; color: #fecaca;">${code}</div>
+          <div style="color: #fca5a5; margin-top: 0.25rem;">${message}</div>
+          <div style="color: #94a3b8; font-size: 0.875rem; margin-top: 0.5rem;">status=${status}</div>
+        </div>
+      `;
+    }
+
+    function renderSourceChain(chain) {
+      if (!pageDebug) return '';
+      if (!chain) return '';
+      const primary = escapeHtml(chain?.primary || '—');
+      const selected = escapeHtml(chain?.selected || '—');
+      const forced = chain?.forced ? 'true' : 'false';
+      const fallbackUsed = chain?.fallbackUsed ? 'true' : 'false';
+      const failureReason = escapeHtml(chain?.failureReason || '');
+      const primaryCode = escapeHtml(chain?.primaryFailure?.code || '');
+      const secondaryCode = escapeHtml(chain?.secondaryFailure?.code || '');
+
+      const primaryFailureProvider = escapeHtml(chain?.primaryFailure?.provider || chain?.primary || '');
+      const primaryFailureMessage = escapeHtml(chain?.primaryFailure?.message || '');
+
+      const extra = [
+        failureReason ? `failureReason=${failureReason}` : null,
+        primaryCode ? `primaryFailure=${primaryCode}` : null,
+        secondaryCode ? `secondaryFailure=${secondaryCode}` : null
+      ].filter(Boolean).join(' • ');
+
+      const primaryFailureHint =
+        chain?.fallbackUsed && (primaryCode || primaryFailureMessage)
+          ? `primary=${primary} failed: ${primaryFailureProvider || primary}${primaryCode ? ` (${primaryCode})` : ''}${primaryFailureMessage ? ` — ${primaryFailureMessage}` : ''}`
+          : '';
+
+      return `
+        <div style="margin-top: 1rem; padding: 0.9rem 1rem; border-radius: 10px; background: rgba(15, 23, 42, 0.35); border: 1px solid rgba(100, 116, 139, 0.22);">
+          <div style="font-size: 0.8rem; color: #94a3b8;">Data source</div>
+          <div style="margin-top: 0.25rem; color: #e5e7eb; font-weight: 600;">selected=${selected} • primary=${primary} • forced=${forced} • fallbackUsed=${fallbackUsed}</div>
+          ${primaryFailureHint ? `<div style="margin-top: 0.35rem; color: #94a3b8; font-size: 0.85rem;">${primaryFailureHint}</div>` : ''}
+          ${extra ? `<div style="margin-top: 0.35rem; color: #94a3b8; font-size: 0.85rem;">${extra}</div>` : ''}
+        </div>
+      `;
+    }
+
+    function renderFundamentalsBlock(payload) {
+      const meta = payload?.metadata || {};
+      const data = payload?.data || {};
+      const error = payload?.error || null;
+
+      const marketCap = data?.marketCap;
+      const pe = data?.pe_ttm;
+      const ps = data?.ps_ttm;
+      const eps = data?.eps_ttm;
+      const nextEarnings = data?.nextEarningsDate;
+      const gross = data?.grossMargin;
+      const op = data?.operatingMargin;
+      const net = data?.netMargin;
+
+      const line = (label, value) => `
+        <div style="padding: 0.75rem 0.9rem; background: rgba(15, 23, 42, 0.35); border: 1px solid rgba(100, 116, 139, 0.22); border-radius: 10px;">
+          <div style="font-size: 0.8rem; color: #94a3b8;">${escapeHtml(label)}</div>
+          <div style="margin-top: 0.25rem; font-weight: 700; color: #e5e7eb;">${value == null ? '—' : escapeHtml(String(value))}</div>
+        </div>
+      `;
+
+      const fmtMarketCap = (v) => {
+        const n = Number(v);
+        if (!Number.isFinite(n)) return null;
+        if (n >= 1e12) return `${formatNumber(n / 1e12, { digits: 2 })}T`;
+        if (n >= 1e9) return `${formatNumber(n / 1e9, { digits: 2 })}B`;
+        if (n >= 1e6) return `${formatNumber(n / 1e6, { digits: 2 })}M`;
+        return formatNumber(n, { digits: 0 });
+      };
+
+      const fmtRatio = (v) => {
+        const n = Number(v);
+        return Number.isFinite(n) ? formatNumber(n, { digits: 2 }) : null;
+      };
+
+      const fmtPct = (v) => {
+        const n = Number(v);
+        return Number.isFinite(n) ? `${formatNumber(n * 100, { digits: 1 })}%` : null;
+      };
+
+      const providerLine = pageDebug
+        ? `<div style="margin-top: 0.75rem; color: #94a3b8; font-size: 0.85rem;">provider=${escapeHtml(meta?.provider?.selected || '')} • fallbackUsed=${meta?.provider?.fallbackUsed ? 'true' : 'false'} • keySource=${escapeHtml(meta?.provider?.keySource || '')}</div>`
+        : '';
+
+      if (meta?.status === 'ERROR' && error && !pageDebug) {
+        // Hide fundamentals section entirely when unavailable
+        return '';
+      }
+
+      return `
+        <div style="margin-top: 1.5rem;">
+          <h3 style="margin: 0 0 0.75rem; font-size: 1.25rem; color: #e5e7eb;">Fundamentals</h3>
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 0.75rem;">
+            ${line('Market cap', fmtMarketCap(marketCap))}
+            ${line('P/E (TTM)', fmtRatio(pe))}
+            ${line('P/S (TTM)', fmtRatio(ps))}
+            ${line('EPS (TTM)', fmtRatio(eps))}
+            ${line('Next earnings', nextEarnings || null)}
+            ${line('Gross margin', fmtPct(gross))}
+            ${line('Operating margin', fmtPct(op))}
+            ${line('Net margin', fmtPct(net))}
+          </div>
+          ${providerLine}
+        </div>
+      `;
+    }
+
+    function renderStock(payload, fallback = {}) {
+      const data = payload?.data || {};
+      const meta = payload?.metadata || {};
+      const error = payload?.error || null;
+
+      const effectiveTicker = normalizeTicker(fallback?.ticker || '');
+      const universeName = effectiveTicker ? (universeByTicker.get(effectiveTicker) || null) : null;
+      const effectiveName = universeName || '—';
+      const showBanner = Boolean(error) || (meta?.status && meta?.status !== 'OK');
+      const bannerError = error || {
+        code: meta?.status && meta?.status !== 'OK' ? 'UPSTREAM_ERROR' : 'ERROR',
+        message: meta?.status && meta?.status !== 'OK' ? 'Stock data unavailable' : 'Unable to load stock data'
+      };
+
+      const bar = data?.latest_bar || null;
+      const close = bar?.close;
+      const volume = bar?.volume;
+      const date = bar?.date || '—';
+      const changeAbs = data?.change?.abs;
+      const changePct = data?.change?.pct;
+
+      const indicators = Array.isArray(data?.indicators) ? data.indicators : [];
+      const computedNullCount = indicators.reduce((acc, item) => {
+        const value = item?.value;
+        if (value == null) return acc + 1;
+        const num = Number(value);
+        if (!Number.isFinite(num)) return acc + 1;
+        return acc;
+      }, 0);
+      const indicatorCount = Number.isFinite(Number(meta?.indicators?.count)) ? Number(meta.indicators.count) : indicators.length;
+      const nullIndicatorCount = Number.isFinite(Number(meta?.indicators?.nullCount))
+        ? Number(meta.indicators.nullCount)
+        : computedNullCount;
+      const expectedIndicatorCount = 32;
+      const indicatorsValidated = indicatorCount === expectedIndicatorCount && nullIndicatorCount === 0;
+
+      // Group indicators by category for compact display
+      const indicatorGroups = {
+        'Price & Averages': ['sma20', 'sma50', 'sma200', 'ema12', 'ema26'],
+        'Volatility & Scale': ['atr14', 'volatility_20d', 'rolling_std_20', 'volatility_percentile'],
+        'Trend & Direction': ['log_return_1d', 'lag1_autocorrelation'],
+        'Bollinger Bands': ['bb_mid', 'bb_upper', 'bb_lower'],
+        'Momentum': ['rsi14', 'macd', 'macd_signal', 'macd_hist'],
+        'Returns': ['ret_1d_abs', 'ret_1d_pct', 'ret_5d_abs', 'ret_5d_pct', 'ret_20d_abs', 'ret_20d_pct'],
+        '52-Week Range': ['high_52w', 'low_52w', 'range_52w_pct'],
+        'Volume': ['avg_volume_20d', 'volume_ma_20', 'volume_ratio_20d'],
+        'Distance to SMAs': ['close_to_sma20_pct', 'close_to_sma200_pct']
+      };
+
+      const indicatorById = Object.fromEntries(indicators.map(i => [i.id, i]));
+
+      const formatIndicatorValue = (id, value) => {
+        if (value == null || !Number.isFinite(Number(value))) return '—';
+        const num = Number(value);
+        if (id.includes('pct') || id.includes('percentile')) return `${num >= 0 ? '+' : ''}${num.toFixed(2)}%`;
+        if (id.includes('volume') && !id.includes('ratio')) return Math.round(num).toLocaleString();
+        if (id.includes('autocorrelation')) return num.toFixed(4);
+        if (Math.abs(num) >= 1000) return num.toLocaleString(undefined, { maximumFractionDigits: 2 });
+        return num.toFixed(4);
+      };
+
+      const indicatorsHtml = Object.entries(indicatorGroups).map(([groupName, ids]) => {
+        const rows = ids.map(id => {
+          const item = indicatorById[id];
+          const value = item?.value;
+          const display = formatIndicatorValue(id, value);
+          const isNull = value == null || !Number.isFinite(Number(value));
+          const color = isNull ? '#64748b' : '#e5e7eb';
+          return `<div style="display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px solid rgba(100, 116, 139, 0.12);">
+            <span style="color: #94a3b8; font-size: 0.85rem;">${escapeHtml(id)}</span>
+            <span style="color: ${color}; font-weight: 600; font-size: 0.85rem; font-family: 'SF Mono', 'Monaco', monospace;">${display}</span>
+          </div>`;
+        }).join('');
+        return `
+          <div style="margin-bottom: 1rem;">
+            <div style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; margin-bottom: 6px; font-weight: 600;">${escapeHtml(groupName)}</div>
+            ${rows}
+          </div>
+        `;
+      }).join('');
+
+      const statusChipColor = meta?.status === 'OK' ? '#10b981' : meta?.status === 'PARTIAL' ? '#f59e0b' : '#ef4444';
+
+      // Format date as DD-MM-YYYY
+      const formatDateDDMMYYYY = (d) => {
+        if (!d || d === '—') return '—';
+        const parts = d.split('-');
+        if (parts.length === 3) return `${parts[2]}-${parts[1]}-${parts[0]}`;
+        return d;
+      };
+      const formattedDate = formatDateDDMMYYYY(date);
+
+      resultsTitle.textContent = `${effectiveName} (${effectiveTicker || '—'})`;
+      const fundamentalsHtml = data?.fundamentals_html || '';
+      resultsContent.innerHTML = `
+        ${showBanner ? renderErrorBanner(bannerError, meta) : ''}
+        <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; flex-wrap: wrap;">
+          <div style="display: flex; gap: 1.5rem; flex-wrap: wrap; align-items: baseline;">
+            <div style="display: flex; align-items: baseline; gap: 0.5rem;">
+              <span style="font-size: 0.95rem; color: #94a3b8;">Close</span>
+              <span style="font-size: 1.5rem; font-weight: 800; color: #60a5fa;">${close == null ? '—' : '$' + formatNumber(close, { digits: 2 })}</span>
+            </div>
+            <div style="display: flex; align-items: baseline; gap: 0.5rem;">
+              <span style="font-size: 0.95rem; color: #94a3b8;">Day</span>
+              <span style="font-size: 1.5rem; font-weight: 800; color: ${changeAbs >= 0 ? '#34d399' : '#f87171'};">${formatNumber(changeAbs, { digits: 2 })}</span>
+              <span style="font-size: 1.1rem; color: ${changePct >= 0 ? '#34d399' : '#f87171'};">(${formatPercent(changePct, 2)})</span>
+            </div>
+            <div style="display: flex; align-items: baseline; gap: 0.5rem;">
+              <span style="font-size: 0.95rem; color: #94a3b8;">Volume</span>
+              <span style="font-size: 1.5rem; font-weight: 800; color: #fbbf24;">${volume == null ? '—' : Number(volume).toLocaleString()}</span>
+            </div>
+          </div>
+          <div style="text-align: right;">
+            <div style="padding: 0.35rem 0.75rem; border-radius: 999px; border: 1px solid rgba(100,116,139,0.35); color: #e5e7eb; background: rgba(15,23,42,0.35); display: inline-block;">
+              <span style="display:inline-block; width: 8px; height: 8px; border-radius: 999px; background:${statusChipColor}; margin-right: 8px;"></span>
+              ${escapeHtml(meta?.status || 'UNKNOWN')}
+            </div>
+            <div style="margin-top: 0.5rem; font-size: 0.95rem; color: #94a3b8;">${escapeHtml(formattedDate)}</div>
+          </div>
+        </div>
+
+        ${renderSourceChain(meta?.source_chain)}
+
+        ${fundamentalsHtml}
+
+        <!-- Price Chart Section -->
+        <div style="margin-top: 2rem;">
+          <h3 style="margin: 0 0 1rem; font-size: 1.25rem; color: #e5e7eb;">Price History</h3>
+          <div id="price-chart-container" style="width: 100%; height: 280px; background: rgba(15, 23, 42, 0.35); border: 1px solid rgba(100, 116, 139, 0.22); border-radius: 12px; position: relative;">
+            <canvas id="price-chart" style="width: 100%; height: 100%;"></canvas>
+          </div>
+        </div>
+
+        <div style="margin-top: 2rem; display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; flex-wrap: wrap;">
+          <h3 style="margin: 0; font-size: 1.25rem; color: #e5e7eb;">Indicators (${indicatorCount})</h3>
+          <div style="display:flex; gap: 0.6rem; align-items: baseline; flex-wrap: wrap; justify-content: flex-end;">
+            ${indicatorsValidated ? '<span style="display:inline-flex; align-items:center; gap:0.35rem; padding: 0.2rem 0.55rem; border-radius: 999px; border: 1px solid rgba(16, 185, 129, 0.35); background: rgba(16, 185, 129, 0.12); color: #a7f3d0; font-size: 0.85rem; font-weight: 700;">Validated</span>' : ''}
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem; margin-top: 1rem; padding: 1rem; background: rgba(15, 23, 42, 0.35); border: 1px solid rgba(100, 116, 139, 0.22); border-radius: 12px;">
+          ${indicatorsHtml || '<div style="color:#94a3b8;">No indicators available.</div>'}
+        </div>
+        
+        <!-- Analysis Summary -->
+        <div id="analysis-summary" style="margin-top: 2rem;">
+          <h3 style="margin: 0 0 1rem; font-size: 1.25rem; color: #e5e7eb;">Analysis Summary</h3>
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1rem;">
+            <div style="padding: 1rem; background: rgba(15, 23, 42, 0.35); border: 1px solid rgba(100, 116, 139, 0.22); border-radius: 12px;">
+              <div style="font-size: 0.85rem; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 0.5rem;">Elliott Waves</div>
+              <div id="elliott-content" style="color: #64748b; font-style: italic;">Loading Elliott Waves analysis...</div>
+            </div>
+            <div style="padding: 1rem; background: rgba(15, 23, 42, 0.35); border: 1px solid rgba(100, 116, 139, 0.22); border-radius: 12px;">
+              <div style="font-size: 0.85rem; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 0.5rem;">Scientific Analyzer</div>
+              <div id="scientific-content" style="color: #64748b; font-style: italic;">Loading scientific analysis...</div>
+            </div>
+          </div>
+          <div style="margin-top: 1rem; padding: 1rem; background: rgba(15, 23, 42, 0.35); border: 1px solid rgba(100, 116, 139, 0.22); border-radius: 12px;">
+            <div style="font-size: 0.85rem; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 0.5rem;">Up/Down Probability (Short / Medium / Long)</div>
+            <div id="probability-content" style="color: #64748b; font-style: italic;">Loading probability summary...</div>
+        </div>
+      `;
+
+      // --- Chart State & Helpers ---
+      // chartState is global now (ensure it has new props)
+      // We initialize it in the script load if not present, or extend it here if needed.
+      if (!window.chartState) {
+        window.chartState = { range: '1Y', showSMA: true, showEMA: true };
+      } else {
+        // Ensure props exist
+        if (window.chartState.showSMA === undefined) window.chartState.showSMA = true;
+        if (window.chartState.showEMA === undefined) window.chartState.showEMA = true;
+      }
+
+      window.setChartRange = (range) => {
+        chartState.range = range;
+        if (lastChartData) renderPriceChart(lastChartData);
+        updateRangeButtons();
+      };
+
+      window.toggleIndicator = (type) => {
+        if (type === 'SMA') chartState.showSMA = !chartState.showSMA;
+        if (type === 'EMA') chartState.showEMA = !chartState.showEMA;
+        if (lastChartData) renderPriceChart(lastChartData);
+        updateRangeButtons();
+      }
+
+      function updateRangeButtons() {
+        // Range Buttons
+        const ranges = ['3D', '1W', '1M', '1Y', 'Max'];
+        const controls = document.getElementById('chart-controls');
+
+        // Toggle Buttons (Left)
+        // We'll create a separate container or put them in the same one
+
+        if (!controls) return;
+
+        // Helper for button style
+        const btnStyle = (active) => {
+          const bg = active ? 'rgba(56, 189, 248, 0.2)' : 'rgba(15, 23, 42, 0.35)';
+          const color = active ? '#38bdf8' : '#94a3b8';
+          const border = active ? '1px solid #38bdf8' : '1px solid rgba(100, 116, 139, 0.22)';
+          return `background:${bg}; color:${color}; border:${border}; padding:4px 12px; border-radius:6px; cursor:pointer; font-size:0.8rem; font-weight:600; transition:all 0.2s;`;
+        };
+
+        const togglesHtml = `
+            <div style="display:flex; gap:0.5rem; margin-right: 1.5rem; padding-right: 1.5rem; border-right: 1px solid rgba(100,116,139,0.2);">
+                <button onclick="toggleIndicator('SMA')" style="${btnStyle(chartState.showSMA)}">SMA</button>
+                <button onclick="toggleIndicator('EMA')" style="${btnStyle(chartState.showEMA)}">EMA</button>
+            </div>
+        `;
+
+        const rangesHtml = ranges.map(r => {
+          return `<button onclick="setChartRange('${r}')" style="${btnStyle(chartState.range === r)}">${r}</button>`;
+        }).join('');
+
+        controls.innerHTML = togglesHtml + rangesHtml;
+      }
+
+      function calculateSMA(data, period) {
+        if (!data || data.length < period) return new Array(data.length).fill(null);
+        const results = new Array(data.length).fill(null);
+        let sum = 0;
+        for (let i = 0; i < period; i++) sum += data[i].close;
+        results[period - 1] = sum / period;
+        for (let i = period; i < data.length; i++) {
+          sum += data[i].close - data[i - period].close;
+          results[i] = sum / period;
+        }
+        return results;
+      }
+
+      function calculateEMA(data, period) {
+        if (!data || data.length < period) return new Array(data.length).fill(null);
+        const results = new Array(data.length).fill(null);
+        const k = 2 / (period + 1);
+
+        // Standard EMA initialization: use SMA of first 'period' as seed? Or just first price?
+        // Using SMA seed is more accurate for early values.
+        let sum = 0;
+        for (let i = 0; i < period; i++) sum += data[i].close;
+        let ema = sum / period;
+        results[period - 1] = ema;
+
+        for (let i = period; i < data.length; i++) {
+          ema = (data[i].close - ema) * k + ema;
+          results[i] = ema;
+        }
+        return results;
+      }
+
+      function resampleWeekly(dailyBars) {
+        const weekly = [];
+        if (!dailyBars.length) return weekly;
+
+        let currentWeek = [];
+        for (const bar of dailyBars) {
+          const date = new Date(bar.date);
+          const day = date.getDay(); // 0=Sun, 6=Sat
+
+          // Check gap or new week (Monday=1)
+          if (currentWeek.length > 0) {
+            const prev = currentWeek[currentWeek.length - 1];
+            const prevDate = new Date(prev.date);
+            const diffDays = (date - prevDate) / (1000 * 3600 * 24);
+
+            // If gap > 3 days OR current day < prev day (new week started)
+            // NOTE: day < prevDay logic works for Mon(1) < Fri(5). 
+            if (diffDays > 3 || day < new Date(prev.date).getDay()) {
+              weekly.push(aggregate(currentWeek));
+              currentWeek = [];
+            }
+          }
+          currentWeek.push(bar);
+        }
+        if (currentWeek.length) weekly.push(aggregate(currentWeek));
+        return weekly;
+
+        function aggregate(bars) {
+          const open = bars[0].open;
+          const close = bars[bars.length - 1].close;
+          const high = Math.max(...bars.map(b => b.high));
+          const low = Math.min(...bars.map(b => b.low));
+          const vol = bars.reduce((s, b) => s + b.volume, 0);
+          return { date: bars[bars.length - 1].date, open, high, low, close, volume: vol };
+        }
+      }
+
+      // Populate Indicators
+      const bars = data.bars || [];
+      const weeklyBars = resampleWeekly(bars);
+
+      // Calculate Daily Indicators
+      const dailyInd = {};
+      [21, 50, 100, 200].forEach(p => {
+        dailyInd[`sma${p}`] = calculateSMA(bars, p);
+        dailyInd[`ema${p}`] = calculateEMA(bars, p);
+      });
+
+      // Calculate Weekly Indicators (mapped back)
+      const weeklyIndRaw = {};
+      [21, 50, 100, 200].forEach(p => {
+        weeklyIndRaw[`sma${p}`] = calculateSMA(weeklyBars, p);
+        weeklyIndRaw[`ema${p}`] = calculateEMA(weeklyBars, p);
+      });
+
+      const weeklyIndDaily = {};
+      for (const key in weeklyIndRaw) {
+        const raw = weeklyIndRaw[key];
+        const mapped = new Array(bars.length).fill(null);
+        let wIdx = 0;
+        for (let i = 0; i < bars.length; i++) {
+          const dDate = bars[i].date;
+          while (wIdx < weeklyBars.length && weeklyBars[wIdx].date < dDate) {
+            wIdx++;
+          }
+          if (wIdx < weeklyBars.length) mapped[i] = raw[wIdx];
+        }
+        weeklyIndDaily[key] = mapped;
+      }
+
+      lastChartData = { ...data, bars, dailyInd, weeklyIndDaily };
+
+      // Render price chart using available data
+      renderPriceChart(lastChartData);
+
+      // Render Controls
+      const controlsHtml = '<div id="chart-controls" style="display:flex; align-items:center; justify-content:center; margin-top:1rem;"></div>';
+      const chartContainer = document.getElementById('price-chart-container');
+      if (chartContainer && !document.getElementById('chart-controls')) {
+        chartContainer.insertAdjacentHTML('afterend', controlsHtml);
+      }
+      updateRangeButtons();
+
+      void updateAnalysisSections(effectiveTicker);
+    }
+
+    function renderPriceChart(data) {
+      const canvas = document.getElementById('price-chart');
+      const container = document.getElementById('price-chart-container');
+      if (!canvas || !container) return;
+
+      const ctx = canvas.getContext('2d');
+      const dpr = window.devicePixelRatio || 1;
+
+      // Set actual canvas size
+      const rect = container.getBoundingClientRect();
+      canvas.width = rect.width * dpr;
+      canvas.height = rect.height * dpr;
+      canvas.style.width = rect.width + 'px';
+      canvas.style.height = rect.height + 'px';
+      ctx.scale(dpr, dpr);
+
+      const w = rect.width;
+      const h = rect.height;
+      const padding = { top: 30, right: 100, bottom: 40, left: 20 }; // Increased right padding for labels
+      const chartW = w - padding.left - padding.right;
+      const chartH = h - padding.top - padding.bottom;
+
+      // Filter Data based on Range
+      const allBars = Array.isArray(data.bars) ? data.bars : [];
+      let visibleBars = allBars;
+      let startIndex = 0;
+
+      const rangeMap = {
+        '3D': 3,
+        '1W': 5,
+        '1M': 21,
+        '1Y': 252,
+        'Max': allBars.length
+      };
+
+      const count = rangeMap[chartState.range] || 252;
+      if (allBars.length > count) {
+        startIndex = allBars.length - count;
+        visibleBars = allBars.slice(startIndex);
+      }
+
+      // Collect points for scaling
+      const points = [];
+      const labels = []; // { y, text, color }
+
+      for (const b of visibleBars) {
+        if (b.close) points.push(b.close);
+      }
+
+      // Indicators
+      // Colors
+      const colors = { 21: '#22c55e', 50: '#3b82f6', 100: '#f59e0b', 200: '#ef4444' };
+
+      // Helper to collect points from active indicators
+      const collectPoints = (source, key) => {
+        const arr = source?.[key];
+        if (!arr) return;
+        for (let i = startIndex; i < arr.length; i++) {
+          if (arr[i] != null) points.push(arr[i]);
+        }
+      };
+
+      if (chartState.showSMA) {
+        [200, 100, 50, 21].forEach(p => {
+          collectPoints(data.dailyInd, `sma${p}`);
+          collectPoints(data.weeklyIndDaily, `sma${p}`);
+        });
+      }
+      if (chartState.showEMA) {
+        [200, 100, 50, 21].forEach(p => {
+          collectPoints(data.dailyInd, `ema${p}`);
+          collectPoints(data.weeklyIndDaily, `ema${p}`);
+        });
+      }
+
+      if (points.length < 2) {
+        points.push(data.close * 0.99, data.close * 1.01);
+      }
+
+      const minP = Math.min(...points) * 0.99; // tiny buffer
+      const maxP = Math.max(...points) * 1.01;
+      const range = maxP - minP || 1;
+
+      const toY = (val) => padding.top + chartH - ((val - minP) / range) * chartH;
+      const toX = (idx) => padding.left + (idx / (visibleBars.length - 1 || 1)) * chartW;
+
+      // Grid
+      ctx.strokeStyle = 'rgba(100, 116, 139, 0.15)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      for (let i = 0; i <= 4; i++) {
+        const y = padding.top + (chartH / 4) * i;
+        ctx.moveTo(padding.left, y);
+        ctx.lineTo(w - padding.right, y);
+      }
+      ctx.stroke();
+
+      // Draw Function
+      const drawLine = (source, key, width, dash, alpha, labelSuffix = '') => {
+        const arr = source?.[key];
+        if (!arr) return;
+        const slice = arr.slice(startIndex);
+        const color = colors[key.match(/\d+/)];
+
+        ctx.beginPath();
+        ctx.strokeStyle = color;
+        ctx.lineWidth = width;
+        ctx.setLineDash(dash);
+        ctx.globalAlpha = alpha;
+
+        let moved = false;
+        let lastY = 0;
+        for (let i = 0; i < slice.length; i++) {
+          if (slice[i] == null) continue;
+          const x = toX(i);
+          const y = toY(slice[i]);
+          if (!moved) { ctx.moveTo(x, y); moved = true; }
+          else ctx.lineTo(x, y);
+          lastY = y;
+        }
+        ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.globalAlpha = 1.0;
+
+        // Draw Label at the end
+        if (moved && slice.length > 0) {
+          const lastVal = slice[slice.length - 1];
+          if (lastVal != null) {
+            labels.push({
+              y: lastY,
+              text: `${key.toUpperCase()}${labelSuffix} ${lastVal.toFixed(2)}`,
+              color: color,
+              bg: alpha < 1 ? 'rgba(0,0,0,0.5)' : color
+            });
+          }
+        }
+      };
+
+      // Draw Weekly (Background)
+      if (chartState.showSMA) [200, 100, 50, 21].forEach(p => drawLine(data.weeklyIndDaily, `sma${p}`, 2, [5, 5], 0.4, ' W'));
+      if (chartState.showEMA) [200, 100, 50, 21].forEach(p => drawLine(data.weeklyIndDaily, `ema${p}`, 2, [2, 2], 0.4, ' W'));
+
+      // Draw Daily (Foreground)
+      if (chartState.showSMA) [200, 100, 50, 21].forEach(p => drawLine(data.dailyInd, `sma${p}`, 1.5, [], 1.0));
+      if (chartState.showEMA) [200, 100, 50, 21].forEach(p => drawLine(data.dailyInd, `ema${p}`, 1.5, [3, 3], 0.8));
+
+      // Draw Price
+      if (visibleBars.length > 0) {
+        ctx.beginPath();
+        ctx.strokeStyle = '#e5e7eb';
+        ctx.lineWidth = 2.5;
+        ctx.lineJoin = 'round';
+        for (let i = 0; i < visibleBars.length; i++) {
+          const b = visibleBars[i];
+          const x = toX(i);
+          const y = toY(b.close);
+          if (i === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+        }
+        ctx.stroke();
+      }
+
+      // Draw Right Axis Labels
+      // We need to avoid overlap. Sort by Y.
+      labels.sort((a, b) => a.y - b.y);
+
+      // Simple anti-overlap: shift down if too close to prev
+      for (let i = 1; i < labels.length; i++) {
+        if (labels[i].y < labels[i - 1].y + 12) {
+          labels[i].y = labels[i - 1].y + 12;
+        }
+      }
+
+      ctx.font = '10px system-ui, sans-serif';
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'middle';
+
+      labels.forEach(l => {
+        ctx.fillStyle = l.color;
+        ctx.fillText(l.text, w - padding.right + 5, l.y);
+      });
+
+      // Title/Range (Top Left)
+      ctx.fillStyle = '#94a3b8';
+      ctx.font = '11px system-ui, sans-serif';
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'top';
+      ctx.fillText(`Price History (${chartState.range})`, padding.left, 5);
+
+      // --- X-Axis Time Labels ---
+      if (visibleBars.length > 1) {
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'top';
+        ctx.fillStyle = '#64748b';
+        ctx.font = '10px system-ui, sans-serif';
+
+        // Determine optimal number of labels
+        const maxLabels = Math.floor(chartW / 60); // Max labels that fit
+        const step = Math.ceil(visibleBars.length / maxLabels);
+
+        let lastX = -100;
+
+        for (let i = 0; i < visibleBars.length; i++) {
+          // Always draw first and last? Or just stepped?
+          // Stepped is cleaner.
+          if (i % step !== 0 && i !== visibleBars.length - 1) continue;
+
+          const bar = visibleBars[i];
+          if (!bar || !bar.date) continue;
+
+          const x = toX(i);
+
+          // Simple overlap avoidance
+          if (x - lastX < 50) continue;
+
+          const date = new Date(bar.date);
+          let label = '';
+          const r = chartState.range;
+
+          if (r === '3D' || r === '1W') {
+            const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+            label = `${days[date.getDay()]} ${date.getDate()}`;
+          } else if (r === '1M') {
+            const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+            label = `${date.getDate()} ${months[date.getMonth()]}`;
+          } else if (r === '1Y') {
+            const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+            label = months[date.getMonth()];
+            // Add Year if Jan
+            if (date.getMonth() === 0) label += ` '${date.getFullYear().toString().slice(2)}`;
+          } else {
+            label = date.getFullYear().toString();
+          }
+
+          // Draw Tick
+          ctx.strokeStyle = 'rgba(100, 116, 139, 0.3)';
+          ctx.beginPath();
+          ctx.moveTo(x, h - padding.bottom);
+          ctx.lineTo(x, h - padding.bottom + 4);
+          ctx.stroke();
+
+          // Draw Text
+          ctx.fillText(label, x, h - padding.bottom + 6);
+          lastX = x;
+        }
+      }
+    }
+
+    function getScientificEntry(ticker) {
+      const t = normalizeTicker(ticker);
+    }
+
+    function getTimeframeRow(ticker, timeframe) {
+      const t = normalizeTicker(ticker);
+      if (!t) return null;
+      const map = scientificByTimeframe?.[timeframe];
+      if (!map) return null;
+      return map.get(t) || null;
+    }
+
+    function formatProbability(prob) {
+      const n = Number(prob);
+      if (!Number.isFinite(n)) return '—';
+      return `${Math.round(n * 100)}%`;
+    }
+
+    function formatSignedPercent(value, digits = 1) {
+      const n = Number(value);
+      if (!Number.isFinite(n)) return '—';
+      const sign = n > 0 ? '+' : '';
+      return `${sign}${n.toFixed(digits)}%`;
+    }
+
+    function renderScientificSummary(entry) {
+      if (!entry) {
+        return '<div style="color:#64748b;">Scientific analysis not available for this ticker.</div>';
+      }
+      const setupOk = entry?.setup?.fulfilled === true;
+      const triggerOk = entry?.trigger?.fulfilled === true;
+      const setupScore = Number(entry?.setup?.score);
+      const triggerScore = Number(entry?.trigger?.score);
+      const setupConditions = entry?.setup?.conditions_met || '—';
+      const triggerConditions = entry?.trigger?.conditions_met || '—';
+      const timeframe = entry?.timeframe || null;
+      const signalStrength = entry?.signal_strength || 'WEAK';
+      const prob = entry?.probability;
+      const expectedReturn = entry?.expected_return_10d;
+
+      // Visual elements
+      const checkIcon = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg>';
+      const xIcon = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M18 6L6 18M6 6l12 12"/></svg>';
+
+      const badge = (ok, label, score, conditions) => {
+        const bgColor = ok ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.1)';
+        const borderColor = ok ? 'rgba(16,185,129,0.4)' : 'rgba(239,68,68,0.3)';
+        const iconColor = ok ? '#34d399' : '#f87171';
+        const icon = ok ? checkIcon : xIcon;
+        const scoreStr = Number.isFinite(score) ? `${score}/100` : '—';
+        return `
+          <div style="padding:0.75rem; border-radius:10px; background:${bgColor}; border:1px solid ${borderColor};">
+            <div style="display:flex; align-items:center; gap:0.5rem; margin-bottom:0.4rem;">
+              <span style="color:${iconColor}; display:flex; align-items:center;">${icon}</span>
+              <span style="font-weight:700; color:#e5e7eb; font-size:0.95rem;">${label}</span>
+            </div>
+            <div style="display:flex; justify-content:space-between; font-size:0.8rem; color:#94a3b8;">
+              <span>Score: <span style="color:#e5e7eb; font-weight:600;">${scoreStr}</span></span>
+              <span>${conditions}</span>
+            </div>
+          </div>
+        `;
+      };
+
+      const signalColors = { STRONG: '#10b981', MODERATE: '#fbbf24', WEAK: '#ef4444' };
+      const signalColor = signalColors[signalStrength] || '#64748b';
+      const tfColors = { short: '#10b981', medium: '#3b82f6', long: '#a78bfa' };
+      const tfLabels = { short: 'Short (1-5d)', medium: 'Medium (5-20d)', long: 'Long (20-60d)' };
+      const tfColor = tfColors[timeframe] || '#64748b';
+      const tfLabel = tfLabels[timeframe] || timeframe || 'N/A';
+
+      const probNum = Number(prob);
+      const erNum = Number(expectedReturn);
+      const probPct = Number.isFinite(probNum) ? Math.round(probNum * 100) : null;
+      const probColor = probPct >= 60 ? '#34d399' : probPct >= 40 ? '#fbbf24' : '#f87171';
+      const erColor = erNum > 0 ? '#34d399' : erNum < 0 ? '#f87171' : '#94a3b8';
+
+      return `
+        <div style="display:grid; grid-template-columns: repeat(2, 1fr); gap:0.75rem; margin-bottom:1rem;">
+          ${badge(setupOk, 'Setup', setupScore, setupConditions)}
+          ${badge(triggerOk, 'Trigger', triggerScore, triggerConditions)}
+        </div>
+        <div style="display:flex; flex-wrap:wrap; gap:1rem; align-items:center;">
+          <div style="display:flex; align-items:center; gap:0.4rem;">
+            <span style="background:${tfColor}; width:10px; height:10px; border-radius:50%;"></span>
+            <span style="color:#e5e7eb; font-weight:600; font-size:0.9rem;">${tfLabel}</span>
+          </div>
+          <div style="display:flex; align-items:center; gap:0.4rem;">
+            <span style="background:${signalColor}; padding:0.15rem 0.5rem; border-radius:4px; font-size:0.75rem; color:#0f172a; font-weight:700;">${signalStrength}</span>
+          </div>
+          <div style="color:#94a3b8; font-size:0.9rem;">
+            Prob ↑ <span style="color:${probColor}; font-weight:700;">${probPct != null ? probPct + '%' : '—'}</span>
+          </div>
+          <div style="color:#94a3b8; font-size:0.9rem;">
+            Exp.Ret <span style="color:${erColor}; font-weight:700;">${Number.isFinite(erNum) ? (erNum > 0 ? '+' : '') + erNum.toFixed(1) + '%' : '—'}</span>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderProbabilitySummary(ticker, entry) {
+      const timeframes = [
+        { key: 'short', label: 'Short-term (1-5d)' },
+        { key: 'medium', label: 'Medium-term (5-20d)' },
+        { key: 'long', label: 'Long-term (20-60d)' }
+      ];
+
+      const cards = timeframes.map(({ key, label }) => {
+        const row = getTimeframeRow(ticker, key);
+        let prob = Number(row?.probability);
+        if (!Number.isFinite(prob) && entry?.timeframe === key) {
+          prob = Number(entry?.probability);
+        }
+        const up = Number.isFinite(prob) ? Math.round(prob * 100) : null;
+        const down = Number.isFinite(prob) ? 100 - up : null;
+        return `
+          <div style="padding: 0.5rem 0.75rem; border-radius: 10px; border: 1px solid rgba(100, 116, 139, 0.18); background: rgba(15, 23, 42, 0.35);">
+            <div style="font-size: 0.8rem; color:#94a3b8; margin-bottom: 0.35rem;">${escapeHtml(label)}</div>
+            <div style="display:flex; justify-content: space-between; gap: 1rem;">
+              <span style="color:#34d399; font-weight:700;">Up ${up == null ? '—' : `${up}%`}</span>
+              <span style="color:#f87171; font-weight:700;">Down ${down == null ? '—' : `${down}%`}</span>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      return `<div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 0.75rem;">${cards}</div>`;
+    }
+
+    async function getElliottPayload(ticker) {
+      const t = normalizeTicker(ticker);
+      if (!t) return null;
+      if (elliottWavesData.has(t)) return elliottWavesData.get(t);
+      const { payload } = await fetchJson(`/data/marketphase/${encodeURIComponent(t)}.json`);
+      if (!payload || payload.ok !== true) return null;
+      elliottWavesData.set(t, payload);
+      if (!elliottSupportByTicker.has(t)) {
+        elliottSupportByTicker.set(t, computeElliottSupport(payload));
+      }
+      return payload;
+    }
+
+    function renderElliottSummary(payload) {
+      if (!payload || payload.ok !== true) {
+        return '<div style="color:#64748b;">Elliott Waves data not available for this ticker.</div>';
+      }
+      const data = payload?.data || {};
+      const elliott = data?.elliott || {};
+      const features = data?.features || {};
+      const direction = elliott?.completedPattern?.direction || features?.SMATrend || null;
+      const wave = elliott?.developingPattern?.possibleWave || '—';
+      const confidence = Number(elliott?.developingPattern?.confidence ?? elliott?.completedPattern?.confidence0_100);
+      const conformance = Number(data?.fib?.conformanceScore);
+      const fibLevels = elliott?.developingPattern?.fibLevels || {};
+      const supportLevels = Array.isArray(fibLevels.support) ? fibLevels.support.map(v => Number(v).toFixed(2)) : [];
+      const resistanceLevels = Array.isArray(fibLevels.resistance) ? fibLevels.resistance.map(v => Number(v).toFixed(2)) : [];
+
+      // Direction badge
+      const dirColor = direction === 'bullish' ? '#10b981' : direction === 'bearish' ? '#ef4444' : '#64748b';
+      const dirBg = direction === 'bullish' ? 'rgba(16,185,129,0.15)' : direction === 'bearish' ? 'rgba(239,68,68,0.1)' : 'rgba(100,116,139,0.15)';
+      const dirArrow = direction === 'bullish' ? '↑' : direction === 'bearish' ? '↓' : '–';
+      const dirLabel = direction ? direction.charAt(0).toUpperCase() + direction.slice(1) : 'Unknown';
+
+      // Confidence bar
+      const confPct = Number.isFinite(confidence) ? Math.min(100, Math.max(0, confidence)) : 0;
+      const confColor = confPct >= 70 ? '#10b981' : confPct >= 40 ? '#fbbf24' : '#ef4444';
+
+      // Conformance bar
+      const conformPct = Number.isFinite(conformance) ? Math.min(100, Math.max(0, conformance)) : 0;
+      const conformColor = conformPct >= 70 ? '#10b981' : conformPct >= 40 ? '#fbbf24' : '#ef4444';
+
+      const progressBar = (pct, color, label, value) => `
+        <div style="margin-bottom:0.6rem;">
+          <div style="display:flex; justify-content:space-between; font-size:0.8rem; color:#94a3b8; margin-bottom:0.25rem;">
+            <span>${label}</span>
+            <span style="color:#e5e7eb; font-weight:600;">${value}</span>
+          </div>
+          <div style="height:6px; background:rgba(100,116,139,0.2); border-radius:3px; overflow:hidden;">
+            <div style="height:100%; width:${pct}%; background:${color}; border-radius:3px; transition:width 0.3s;"></div>
+          </div>
+        </div>
+      `;
+
+      const levelPills = (levels, color, label) => {
+        if (!levels.length) return `<span style="color:#64748b;">—</span>`;
+        return levels.map(l => `<span style="display:inline-block; background:${color}; color:#0f172a; padding:0.15rem 0.5rem; border-radius:4px; font-size:0.75rem; font-weight:700; margin:0.15rem;">$${l}</span>`).join('');
+      };
+
+      return `
+        <div style="display:flex; align-items:center; gap:1rem; margin-bottom:1rem;">
+          <div style="padding:0.5rem 1rem; border-radius:10px; background:${dirBg}; display:flex; align-items:center; gap:0.5rem;">
+            <span style="font-size:1.5rem; color:${dirColor};">${dirArrow}</span>
+            <span style="color:${dirColor}; font-weight:700; font-size:1rem;">${dirLabel}</span>
+          </div>
+          <div style="color:#94a3b8; font-size:0.9rem;">
+            Wave <span style="color:#e5e7eb; font-weight:700;">${escapeHtml(wave)}</span>
+          </div>
+        </div>
+        
+        ${progressBar(confPct, confColor, 'Wave Confidence', Number.isFinite(confidence) ? Math.round(confidence) + '%' : '—')}
+        ${progressBar(conformPct, conformColor, 'Fib Conformance', Number.isFinite(conformance) ? conformance.toFixed(1) + '%' : '—')}
+        
+        <div style="margin-top:0.75rem;">
+          <div style="font-size:0.8rem; color:#94a3b8; margin-bottom:0.3rem;">Support Levels</div>
+          <div>${levelPills(supportLevels, 'rgba(16,185,129,0.8)', 'Support')}</div>
+        </div>
+        <div style="margin-top:0.5rem;">
+          <div style="font-size:0.8rem; color:#94a3b8; margin-bottom:0.3rem;">Resistance Levels</div>
+          <div>${levelPills(resistanceLevels, 'rgba(239,68,68,0.8)', 'Resistance')}</div>
+        </div>
+      `;
+    }
+
+    async function updateAnalysisSections(ticker) {
+      const sciEl = document.getElementById('scientific-content');
+      const elliottEl = document.getElementById('elliott-content');
+      const probEl = document.getElementById('probability-content');
+      if (!sciEl || !elliottEl || !probEl) return;
+
+      if (!scientificAnalysisData) {
+        await loadScientificData();
+      }
+
+      const entry = getScientificEntry(ticker);
+      sciEl.innerHTML = renderScientificSummary(entry);
+      probEl.innerHTML = renderProbabilitySummary(ticker, entry);
+
+      elliottEl.innerHTML = '<div style="color:#64748b; font-style: italic;">Loading Elliott Waves analysis...</div>';
+      const elliottPayload = await getElliottPayload(ticker);
+      elliottEl.innerHTML = renderElliottSummary(elliottPayload);
+    }
+
+    function showLoading(label) {
+      // Show results section
+      resultsSection.style.display = 'block';
+      resultsTitle.textContent = label;
+      resultsContent.innerHTML = `
+        <div style="text-align: center; padding: 3rem; color: #64748b;">
+          <div>Loading...</div>
+        </div>
+      `;
+
+      // Scroll to results
+      resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+    }
+
+    function renderUnsupported(symbol) {
+      const s = normalizeTicker(symbol);
+      resultsSection.style.display = 'block';
+      resultsTitle.textContent = 'Not supported';
+      resultsContent.innerHTML = `
+        <div style="padding: 1rem; border-radius: 10px; background: rgba(245, 158, 11, 0.10); border: 1px solid rgba(245, 158, 11, 0.35); margin-bottom: 1.5rem;">
+          <div style="font-weight: 700; color: #fde68a;">This ticker is not in the supported universe.</div>
+          <div style="margin-top: 0.35rem; color: #fde68a;">Supported: NASDAQ-100, S&P 500, Dow Jones, Russell 2000 (~3,600 stocks)</div>
+        </div>
+      `;
+      resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    async function loadAnalyze(ticker, options = {}) {
+      if (!universeReady) universeReady = loadUniverse();
+      await universeReady;
+      const upperTicker = normalizeTicker(ticker);
+      if (!upperTicker) return;
+      if (!universeByTicker.has(upperTicker)) {
+        renderUnsupported(upperTicker);
+        return;
+      }
+      const push = options.push !== false;
+      if (push) {
+        window.history.pushState({}, '', `/analyze/${encodeURIComponent(upperTicker)}`);
+      }
+
+      showLoading(`Analyzing ${upperTicker}...`);
+      resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      const fallback = options.fallback || { ticker: upperTicker, name: universeByTicker.get(upperTicker) || null };
+      const [stockRes, fundRes] = await Promise.all([
+        fetchJson(`/api/stock?ticker=${encodeURIComponent(upperTicker)}`),
+        fetchJson(`/api/fundamentals?ticker=${encodeURIComponent(upperTicker)}${pageDebug ? '&debug=1' : ''}`)
+      ]);
+
+      const { payload, networkError } = stockRes;
+      const fundamentalsPayload = fundRes?.payload || null;
+
+      if (networkError) {
+        renderStock(
+          { error: { code: 'NETWORK_ERROR', message: 'Unable to reach /api/stock' }, metadata: { status: 'ERROR' } },
+          fallback
+        );
+        return;
+      }
+
+      const safePayload = payload || { error: { code: 'NETWORK_ERROR', message: 'Unable to reach /api/stock' }, metadata: { status: 'ERROR' }, data: {} };
+      safePayload.data = safePayload.data || {};
+      safePayload.data.fundamentals_html = renderFundamentalsBlock(fundamentalsPayload);
+      renderStock(safePayload, fallback);
+    }
+
+    async function resolveAndAnalyze(query) {
+      if (!universeReady) universeReady = loadUniverse();
+      await universeReady;
+      const trimmed = String(query || '').trim();
+      const t = normalizeTicker(trimmed);
+      if (!t) return;
+      if (!universeByTicker.has(t)) {
+        renderUnsupported(t);
+        return;
+      }
+      await selectSymbol(t, universeByTicker.get(t) || null, { push: true });
+    }
+
+    // Search on Enter key
+    searchInput.addEventListener('keydown', async (e) => {
+      if (e.key === 'ArrowDown' && typeahead.open) {
+        e.preventDefault();
+        typeahead.activeIndex = Math.min(typeahead.items.length - 1, typeahead.activeIndex + 1);
+        renderTypeahead();
+        return;
+      }
+      if (e.key === 'ArrowUp' && typeahead.open) {
+        e.preventDefault();
+        typeahead.activeIndex = Math.max(0, typeahead.activeIndex - 1);
+        renderTypeahead();
+        return;
+      }
+      if (e.key === 'Escape' && typeahead.open) {
+        e.preventDefault();
+        closeTypeahead();
+        return;
+      }
+      if (e.key === 'Enter') {
+        if (typeahead.open && typeahead.items.length) {
+          e.preventDefault();
+          const pick = typeahead.activeIndex >= 0 ? typeahead.items[typeahead.activeIndex] : typeahead.items[0];
+          await selectSymbol(pick.symbol, pick.name, { push: true });
+          return;
+        }
+        closeTypeahead();
+        await resolveAndAnalyze(searchInput.value);
+      }
+    });
+
+    searchInput.addEventListener('input', () => {
+      const value = String(searchInput.value || '').trim();
+      if (value.length < 1) {
+        clearSuggestions();
+        return;
+      }
+      scheduleFetch(value);
+    });
+
+    searchInput.addEventListener('blur', () => {
+      if (typeahead.blurTimer) clearTimeout(typeahead.blurTimer);
+      typeahead.blurTimer = setTimeout(() => closeTypeahead(), 120);
+    });
+
+    searchInput.addEventListener('focus', () => {
+      if (typeahead.blurTimer) clearTimeout(typeahead.blurTimer);
+      if (searchInput.value.trim() && typeahead.items.length) {
+        typeahead.open = true;
+        renderTypeahead();
+      }
+    });
+
+    document.addEventListener('click', (ev) => {
+      if (!typeahead.open) return;
+      const root = typeahead.root;
+      if (!root) return;
+      const target = ev.target;
+      if (target === searchInput || root.contains(target)) return;
+      closeTypeahead();
+    });
+
+    // Clear search and return to hero
+    function clearSearch() {
+      searchInput.value = '';
+      resultsSection.style.display = 'none';
+      searchInput.focus();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    // Auto-focus search on page load
+    document.addEventListener('DOMContentLoaded', async () => {
+      if (!universeReady) universeReady = loadUniverse();
+      await universeReady;
+      // Check for deep link: /analyze/TICKER
+      const path = window.location.pathname;
+      const match = path.match(/^\/analyze\/([A-Z]+)$/i);
+
+      if (match) {
+        const ticker = normalizeTicker(match[1]);
+        searchInput.value = ticker;
+        if (!ticker || !universeByTicker.has(ticker)) {
+          renderUnsupported(ticker);
+          return;
+        }
+        await selectSymbol(ticker, null, { push: false });
+      } else {
+        searchInput.focus();
+      }
+    });
+
+    const searchBtn = document.getElementById('stock-search-btn');
+    if (searchBtn) {
+      searchBtn.addEventListener('click', async () => {
+        closeTypeahead();
+        await resolveAndAnalyze(searchInput.value);
+      });
+    }
+
+    // Handle browser back button
+    window.addEventListener('popstate', () => {
+      const path = window.location.pathname;
+      const match = path.match(/^\/analyze\/([A-Z]+)$/i);
+      if (match) {
+        const ticker = normalizeTicker(match[1]);
+        searchInput.value = ticker;
+        if (!ticker || !universeByTicker.has(ticker)) {
+          renderUnsupported(ticker);
+          return;
+        }
+        selectSymbol(ticker, null, { push: false });
+        return;
+      }
+      if (path === '/' || path === '/index.html') {
+        clearSearch();
+      }
+    });
+
+    /*
+    Manual verification checklist:
+    - Type "Apple" -> shows "Apple Inc. (AAPL)"
+    - ArrowDown + Enter navigates to /analyze/AAPL
+    - Type "aap" -> shows AAP + AAPL
+    - Esc closes suggestions
+    - Clicking suggestion navigates
+    - With ?debug=1, console logs request URL + ok + count
+    */
+  </script>
+
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9cbd87fb293e6370',t:'MTc3MDc0NjY4OQ=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+
+</html>

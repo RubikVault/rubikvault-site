@@ -1,0 +1,61 @@
+   300	      const byTimeframe = scientificAnalysisData?._rankings?.by_timeframe || {};
+   301	      ['short', 'medium', 'long'].forEach((tf) => {
+   302	        const rows = Array.isArray(byTimeframe[tf]) ? byTimeframe[tf] : [];
+   303	        for (const row of rows) {
+   304	          const t = normalizeTicker(row?.ticker || '');
+   305	          if (!t) continue;
+   306	          scientificByTimeframe[tf].set(t, row);
+   307	        }
+   308	      });
+   309	    }
+   310	
+   311	    async function loadElliottSupportIndex() {
+   312	      if (elliottIndexLoaded) return;
+   313	      elliottIndexLoaded = true;
+   314	      try {
+   315	        const res = await fetch('/data/marketphase/index.json', { cache: 'no-store' });
+   316	        if (!res.ok) return;
+   317	        const payload = await res.json();
+   318	        const symbols = payload?.data?.symbols || [];
+   319	        if (!Array.isArray(symbols) || !symbols.length) return;
+   320	        for (const item of symbols) {
+   321	          const t = normalizeTicker(item?.symbol || '');
+   322	          const path = item?.path;
+   323	          if (!t || !path) continue;
+   324	          const { payload: mpPayload } = await fetchJson(path);
+   325	          if (!mpPayload || mpPayload.ok !== true) {
+   326	            elliottSupportByTicker.set(t, null);
+   327	            continue;
+   328	          }
+   329	          elliottWavesData.set(t, mpPayload);
+   330	          const support = computeElliottSupport(mpPayload);
+   331	          elliottSupportByTicker.set(t, support);
+   332	        }
+   333	      } catch (e) {
+   334	        console.warn('Elliott Waves index not available:', e);
+   335	      }
+   336	    }
+   337	
+   338	    function computeElliottSupport(payload) {
+   339	      const data = payload?.data || {};
+   340	      const elliott = data?.elliott || {};
+   341	      const features = data?.features || {};
+   342	      const direction = elliott?.completedPattern?.direction || features?.SMATrend || null;
+   343	      const confidence = Number(elliott?.developingPattern?.confidence ?? elliott?.completedPattern?.confidence0_100);
+   344	      if (!direction) return null;
+   345	      if (!Number.isFinite(confidence)) return direction === 'bullish';
+   346	      return direction === 'bullish' && confidence >= 55;
+   347	    }
+   348	
+   349	    function updateBuySignalsStats() {
+   350	      if (!scientificAnalysisData?._rankings) return;
+   351	      if (!scientificByTimeframe.short.size) buildScientificMaps();
+   352	
+   353	      // Use the pre-computed by_timeframe rankings from the stock analysis
+   354	      const byTimeframe = scientificAnalysisData?._rankings?.by_timeframe || {};
+   355	
+   356	      // Count stocks per timeframe where BOTH setup and trigger are fulfilled
+   357	      const counts = { short: 0, medium: 0, long: 0 };
+   358	
+   359	      for (const tf of ['short', 'medium', 'long']) {
+   360	        const stocks = Array.isArray(byTimeframe[tf]) ? byTimeframe[tf] : [];
