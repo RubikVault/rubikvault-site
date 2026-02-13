@@ -19,7 +19,12 @@
   - Compare report: `.rv_audit/ui_proof/P2_1_no_feature_loss.md`
   - DOM proof: `.rv_audit/ui_proof/dom/p2_1_after_sections.json`
   - Screens: `.rv_audit/ui_proof/screens/P2_1_after_analyze_detail_desktop.png`, `.rv_audit/ui_proof/screens/P2_1_after_analyze_detail_mobile.png`
-- P3: FAIL (pending)
+- P3: PASS
+  - Artifact: `public/data/v3/derived/top-setups/latest.json`
+  - Thresholds: `public/data/v3/derived/config/scoring-thresholds.json`
+  - DOM proof: `.rv_audit/ui_proof/dom/p3_top_setups.json`
+  - Console proof: `.rv_audit/ui_proof/console/p3_top_setups_console.json`
+  - Screen: `.rv_audit/ui_proof/screens/P3_analyze_top_setups.png`
 - P4: FAIL (pending)
 - P5: FAIL (pending)
 - P6: FAIL (pending)
