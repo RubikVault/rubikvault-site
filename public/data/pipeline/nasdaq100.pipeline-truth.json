@@ -1,40 +1,25 @@
 {
   "type": "pipeline.truth",
   "universe": "nasdaq100",
-  "asof": "2026-02-13T07:56:11.826Z",
+  "asof": "2026-02-14T07:44:42.560Z",
   "counts": {
     "expected": 100,
     "fetched": 100,
     "validated": 100,
-    "computed": 0,
-    "static_ready": 0
+    "computed": 318,
+    "static_ready": 318
   },
   "first_blocker": {
-    "id": "S3",
-    "title": "Indicators computed",
-    "status": "FAIL"
+    "id": "S1",
+    "title": "Provider fetched",
+    "status": "WARN"
   },
-  "first_blocker_id": "S3",
+  "first_blocker_id": "S1",
   "blockers": [
     {
       "id": "S1",
       "status": "WARN",
       "detail": "100/517 symbols fetched"
-    },
-    {
-      "id": "S3",
-      "status": "FAIL",
-      "detail": "0/100 indicators computed"
-    },
-    {
-      "id": "S4",
-      "status": "FAIL",
-      "detail": "0 marketphase files generated"
-    },
-    {
-      "id": "S7",
-      "status": "FAIL",
-      "detail": "No static files available"
     }
   ],
   "steps": [
@@ -53,20 +38,20 @@
     {
       "id": "S3",
       "title": "Indicators computed",
-      "status": "FAIL",
-      "detail": "0/100 indicators computed"
+      "status": "OK",
+      "detail": "318/100 indicators computed"
     },
     {
       "id": "S4",
       "title": "MarketPhase generated",
-      "status": "FAIL",
-      "detail": "0 marketphase files generated"
+      "status": "OK",
+      "detail": "318 marketphase files generated"
     },
     {
       "id": "S5",
       "title": "Static ready",
       "status": "OK",
-      "detail": "0/0 static ready"
+      "detail": "318/318 static ready"
     },
     {
       "id": "S6",
@@ -77,8 +62,8 @@
     {
       "id": "S7",
       "title": "Site serves data",
-      "status": "FAIL",
-      "detail": "No static files available"
+      "status": "OK",
+      "detail": "Static files deployed"
     }
   ],
   "source": {
