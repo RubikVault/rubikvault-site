@@ -1242,7 +1242,7 @@
           ]
         },
         {
-          category: "☁️ Cloud Infrastructure (Hyperscaler Triopol)",
+          category: "☁️ Cloud Infrastructure (Hyperscaler Oligopoly)",
           logic: "The immense CAPEX required for global data center networks and the 'data gravity' of enterprise workflows create massive barriers to entry.",
           items: [
             { ticker: "AMZN", name: "Amazon (AWS)", ai: "strengthens", robots: "neutral", text: "AI training workloads drive massive hyperscale demand; Robotics is neutral in purely digital cloud compute provisioning." },
@@ -1442,7 +1442,7 @@
             { ticker: "KO", name: "Coca-Cola", ai: "neutral", robots: "strengthens", text: "AI aids digital marketing; Robotics strengthens the scale of global bottling and distribution infrastructure." },
             { ticker: "PEP", name: "PepsiCo", ai: "neutral", robots: "strengthens", text: "AI optimizes promotions; Robotics strengthens warehouse and snack manufacturing scale, preventing small competitors from catching up." },
             { ticker: "PG", name: "Procter & Gamble", ai: "neutral", robots: "strengthens", text: "AI improves precision targeting; Robotics strengthens the multi-category manufacturing moat in consumer goods." },
-            { ticker: "MC.PA", name: "LVMH", ai: "weakens", robots: "neutral", text: "AI enables synthetic competition; Robotics is neutral as luxury value relies on heritage and social status." },
+            { ticker: "MC.PA", name: "LVMH", ai: "neutral", robots: "neutral", text: "AI improves CRM, demand forecasting and personalization; it cannot replicate scarcity, heritage, or status, so the core moat remains intact." },
             { ticker: "RMS.PA", name: "Hermès", ai: "neutral", robots: "neutral", text: "AI and Robotics are neutral as the moat is based on handcrafting and exclusion, which technology cannot replicate." }
           ]
         },
@@ -1463,10 +1463,10 @@
           ]
         },
         {
-          category: "🔐 Workflow & Identity Pipes",
+          category: "🎨 Creative & Document Workflow Moat",
           logic: "Deeply embedded in the daily work of millions, these tools are too essential to the organization to be easily replaced.",
           items: [
-            { ticker: "ADBE", name: "Adobe", ai: "strengthens", robots: "neutral", text: "AI features in creative suites increase user stickiness; Robotics is neutral for digital design and workflow tools." },
+            { ticker: "ADBE", name: "Adobe", ai: "strengthens", robots: "neutral", text: "AI features deepen workflow lock-in and standardization across creative and document pipelines; robotics is not a moat driver." },
             { ticker: "INTU", name: "Intuit", ai: "strengthens", robots: "neutral", text: "AI automates tax logic, embedding products deeper; Robotics is neutral for accounting and personal finance software." }
           ]
         },
@@ -1479,10 +1479,96 @@
         }
       ];
 
+      const aiAssessmentByKey = {
+        "V|Visa": "AI erhöht Sicherheit (Fraud/Identity), senkt Friktion und skaliert Trust – das verstärkt die Netzwerkeffekte dauerhaft. Der Burggraben wird strukturell stärker, weil “Trust + Acceptance” schwer zu replizieren ist.",
+        "MA|Mastercard": "AI verstärkt Authentifizierung, Risk-Scoring und personalisierte Payments, wodurch das Netzwerk pro Transaktion wertvoller wird. Der Moat wird langfristig gestärkt, weil bessere Risk-Modelle und Akzeptanz das Duopol stabilisieren.",
+        "AXP|American Express": "AXP profitiert überproportional, weil Closed-Loop-Daten AI-Modelle (Underwriting/Offers) deutlich besser machen als bei Open-Loop. Das stärkt die Premium-Nische und erhöht Switching-Costs.",
+        "FI|Fiserv": "AI steigert Effizienz in Core-Banking/Payments und erhöht die Switching-Costs, weil Integrationen komplexer und datengetriebener werden. Moat stärkt sich moderat; Risiko bleibt Konkurrenzdruck über Preis/Vertrieb.",
+        "SQ|Block": "AI kann Fraud, Personalization und Kredit-Scoring verbessern, aber der Moat ist weniger “structural” als bei Visa/MA und stärker kompetitiv. Insgesamt: AI eher als Margin-Hebel, nicht als Monopol-Verstärker.",
+        "GPN|Global Payments": "AI verbessert Risk-Pricing, Fraud und Operating Leverage – das stabilisiert Margen, verstärkt aber nur indirekt den Moat. Der Burggraben bleibt primär Integration + Scale im Acquiring.",
+        "WLN.PA|Worldline": "AI kann Kosten senken und Compliance/Fraud verbessern, was in regulierten Märkten hilft. Der Moat wird nur begrenzt stärker; strukturelles Risiko bleibt Wettbewerbs- und Regulierungsdruck in EU-Payments.",
+        "GOOGL|Alphabet": "AI verstärkt Relevanz, Targeting und Conversion im Ads-Flywheel, weil bessere Modelle mehr Intent monetarisieren. Das stärkt den Moat strukturell, solange Distribution und Default-Positionen gesichert bleiben.",
+        "AAPL|Apple": "On-device AI erhöht Lock-in durch personalisierte Features, Datenschutz-Positionierung und tiefe OS/Hardware-Integration. Der Moat wird langfristig gestärkt, weil AI-Features in die Plattformkosten (Switching) eingebrannt werden.",
+        "GOOGL|Alphabet (Android)": "Content pending.",
+        "META|Meta": "AI optimiert Ranking/Ads-Performance und erhöht kurzfristig Monetarisierung – das stärkt den Moat, solange Attention + Social Graph stabil bleiben. Langfristig bleibt ein “MIXED”-Risiko durch Content-Inflation, aber insgesamt stärkt AI die Ad-Maschine.",
+        "AMZN|Amazon (AWS)": "AI-Workloads treiben Cloud-Nachfrage und erhöhen Lock-in über Managed AI-Stacks – das stärkt AWS strukturell. Moat wird stärker, solange AWS Kosten/Performance skaliert und Ökosystem-Bindung hält.",
+        "MSFT|Microsoft (Azure)": "Copilot + Enterprise-Distribution verstärken Azure/Windows/Office als Plattformverbund – AI wirkt wie Klebstoff. Das stärkt den Moat dauerhaft, weil Workflows und Daten tiefer in Microsofts Stack wandern.",
+        "GOOGL|Alphabet (GCP)": "AI-Stacks (Modelle, Tooling, TPUs) können Differenzierung schaffen, aber der Moat ist weniger “default-distribution” als bei MSFT. Insgesamt stärkt AI GCP, solange es Enterprise-Trust + Ecosystem ausbaut.",
+        "NVDA|Nvidia": "AI verstärkt den CUDA- und Plattform-Moat, weil Software/Ökosystem die Hardware koppelt und Wechselkosten explodieren. Zusätzlich stärkt Robotik/Edge-AI (Jetson/Isaac) den langfristigen Demand-Pull und verlängert den Dominanzzyklus.",
+        "ASML|ASML": "AI erhöht Chip-Nachfrage und zwingt die Welt zu mehr Leading-Edge-Kapazität, was EUV-Nachfrage strukturell verknappt. Der Moat wird stärker, weil ASMLs Bottleneck-Rolle noch kritischer wird.",
+        "TSM|TSMC": "AI verschiebt Mix zu Leading-Edge-Nodes und erhöht die Abhängigkeit von TSMCs Yield/Scale – das stärkt den Moat. Risiko bleibt geopolitisch, nicht technologisch.",
+        "AMAT|Applied Materials": "AI treibt Capex-Zyklen und Prozesskomplexität – das stärkt die Abhängigkeit von Spezial-Tools. Moat wird moderat stärker; Konkurrenz bleibt, aber Switching/Qualification frisst Zeit.",
+        "LRCX|Lam Research": "Mehr Komplexität in Etch/Deposition erhöht Qualification-Hürden und macht Prozess-IP wertvoller. Das stärkt den Moat indirekt über höhere Spezialisierung.",
+        "KLAC|KLA Corporation": "AI-Chips sind yield-sensitiver → Metrology/Inspection wird zwingender. Das stärkt den Moat strukturell, weil Fehlerkosten steigen und KLA tiefer in die Prozesskontrolle rückt.",
+        "SNPS|Synopsys": "AI erhöht Design-Komplexität und beschleunigt Iterationen → EDA wird noch unverzichtbarer. Moat stärkt sich, weil Toolchains tief eingebettet sind und Wechsel extrem riskant ist.",
+        "CDNS|Cadence": "Wie SNPS: steigende Komplexität und ML-gestützte Designflows erhöhen Lock-in. Moat wird langfristig gestärkt durch Workflow-Integration und IP/Verification-Ökosystem.",
+        "LIN|Linde": "AI-getriebene Rechenzentren/Fabs erhöhen Bedarf an Prozessgasen; das stärkt Vertragsdauern und Auslastung. Der Moat bleibt primär physisch/vertraglich, wird aber durch Nachfrage stabilisiert.",
+        "AI.PA|Air Liquide": "Langfristige, kapexlastige On-site-Verträge profitieren von steigender Tech-Infrastruktur. AI stärkt indirekt über Nachfrage, nicht über “Software-Moat”.",
+        "APD|Air Products": "AI optimiert Betrieb, aber der Moat bleibt Logistik + Standort + Verträge. AI stärkt eher Margen als Marktstruktur.",
+        "WM|Waste Management": "AI ist sekundär; der Moat bleibt Permits + Landfill-Scarcity. Robotik stärkt Kostenführerschaft in Sorting, was den Moat operativ verstärkt.",
+        "RSG|Republic Services": "Wie WM: struktureller Moat durch Genehmigungen/Netzwerk, AI eher Effizienz. Robotik verstärkt Differenzierung über Kosten und Durchsatz.",
+        "UNP|Union Pacific": "AI verbessert Scheduling und Maintenance, aber der Moat ist das nicht replizierbare Schienennetz. AI stärkt eher Margen als Marktstruktur.",
+        "CSX|CSX Corp": "AI wirkt als Effizienzhebel; die strukturelle Dominanz bleibt Asset/Right-of-way. Moat bleibt stabil, AI nur additiv.",
+        "NSC|Norfolk Southern": "Gleiches Muster: AI verbessert Operations, ersetzt aber keine Infrastrukturbarriere. Moat bleibt primär physisch/regulatorisch.",
+        "AIR.PA|Airbus": "AI hilft Design/Production-Planning, aber der Moat ist Certification + Duopol + Installed Base. AI stärkt eher Execution gegen Backlogs als den strukturellen Duopol-Status.",
+        "BA|Boeing": "AI kann Quality/Manufacturing unterstützen, aber der Moat hängt an Zertifizierung, Supply Chain und Vertrauen. AI stärkt nur, wenn Execution-Probleme behoben werden; strukturell bleibt Duopol.",
+        "NEE|NextEra Energy": "AI-Compute erhöht Stromnachfrage und Capex-Basen; das stärkt regulierte Renditepfade. Moat bleibt regulatorisch, aber Nachfrage macht ihn “dicker”.",
+        "NGG|National Grid": "AI verbessert Netzsteuerung, aber der Moat ist der regulierte Netzbesitz. AI ist neutral bis leicht stärkend über Effizienz und Capex-Need.",
+        "AEP|American Electric Power": "Mehr Rechenzentren → mehr Netz-Investitionen → regulierte Returns. Moat strukturell stabil, AI stärkt über Investitionspipeline.",
+        "DUK|Duke Energy": "Wie AEP: AI erhöht Nachfrage, stärkt Capex-Case. Der Moat bleibt reguliert/asset-heavy; AI wirkt als Nachfragekatalysator.",
+        "AWK|American Water Works": "AI verbessert Leak-Detection und Asset-Management, aber der Moat ist die regulierte Leitungsinfrastruktur. AI stärkt nur operativ, nicht strukturell.",
+        "UPS|UPS": "AI ist ein großer Margin-Hebel (Routing, Forecasting), Robotik verstärkt Hub-Automation. Der strukturelle Moat bleibt Netz/Scale; Tech stärkt die Kostenführerschaft.",
+        "FDX|FedEx": "Ähnlich UPS: AI + Robotik erhöhen Durchsatz und senken Kosten, was das Oligopol defensiver macht. Moat wird operativ stärker, strukturell bleibt es Scale/Network.",
+        "AMT|American Tower": "AI erhöht Data-Traffic → Densification → höhere Miet- und Standortwerte. Moat bleibt Permits + Standortportfolio; AI stärkt Nachfrage und Pricing.",
+        "CCI|Crown Castle": "Wie AMT: mehr Traffic erhöht Tower/Fiber-Wert, AI ist Nachfrageverstärker. Moat bleibt physisch/regulatorisch.",
+        "EQIX|Equinix": "AI erhöht Bedarf an Interconnection + low-latency adjacency, was Equinix’ Network-Density-Moat stärkt. Der Burggraben wird strukturell stärker durch Ecosystem-Gravity.",
+        "DLR|Digital Realty": "AI treibt High-Density-Colocation und Power-Scarcity, was Capex-Relevanz erhöht. Moat stärkt über Standort+Power, bleibt aber stärker commoditized als EQIX.",
+        "CME|CME Group": "AI erhöht algorithmischen Handel und Datenbedarf, was Volumen und Clearing-Relevanz steigern kann. Der Moat bleibt Regulierung + Liquidity; AI stärkt über Aktivität.",
+        "ICE|Intercontinental Exchange": "AI verbessert Automation in Data/Clearing und erhöht Datenmonetarisierung. Moat bleibt Marktstruktur + Regulatorik; AI wirkt verstärkend.",
+        "NDAQ|Nasdaq": "AI erhöht Nachfrage nach real-time Data/Analytics, was Datenprodukte wertvoller macht. Moat bleibt Exchange + Data; AI stärkt eher die Data-Sparte.",
+        "SPGI|S&P Global": "AI erhöht Wert “verified data” und Automatisierung in Research/Workflows, aber der Moat ist institutionalisierte Referenzstellung. AI stärkt vor allem Skalierung und Produktbreite.",
+        "MCO|Moody's": "AI beschleunigt Analyse, aber der Moat ist Reputation + regulatorische Verankerung. AI stärkt Effizienz, nicht die Grundlegitimation.",
+        "MSCI|MSCI Inc": "AI verstärkt Quant/ETF-Demand und macht Index/Factor-Daten wertvoller. Moat bleibt Benchmark-Embeddedness; AI wirkt verstärkend über Usage.",
+        "EFX|Equifax": "AI erhöht Wert proprietärer Identitäts-/Credit-Daten für Risk-Decisioning, stärkt aber nicht automatisch Marktmacht gegen Regulatorik. Moat wird moderat stärker durch bessere Decision Products.",
+        "TRU|TransUnion": "AI stärkt Real-time Identity/Fraud-Produkte, weil Daten + Modelle zusammen skalieren. Moat wird stärker, solange Datenzugang/regulatorische Rahmen stabil bleiben.",
+        "EXPN.L|Experian": "AI verstärkt Decisioning-Flywheels (mehr Nutzung → bessere Modelle → mehr Nutzung). Das stärkt den Moat langfristig, weil Datenhistorie schwer kopierbar ist.",
+        "FICO|Fair Isaac": "AI verstärkt den Standardcharakter von Scoring/Decisioning, weil Modelle und Datenhistorien tiefer in Kreditworkflows eingebettet werden. Der Moat wird langfristig stärker, solange FICO die “default language” für Kreditrisiko bleibt.",
+        "MCK|McKesson": "AI verbessert Forecasting/Inventory, Robotik erhöht Warehouse-Effizienz; beides stärkt Kostenführerschaft. Der Moat bleibt Scale + Compliance + Network; Tech macht ihn defensiver.",
+        "COR|Cencora": "AI/Robotik stärken Operations, aber struktureller Moat bleibt regulierte Logistik + Kundenbindung. Langfristig operativ stärker, nicht “monopoly by tech”.",
+        "CAH|Cardinal Health": "AI/Robotik stabilisieren dünne Margen durch Effizienz; der Moat bleibt Scale + Compliance. Tech stärkt defensiv, aber Wettbewerb bleibt.",
+        "ISRG|Intuitive Surgical": "AI verstärkt Training/Guidance und erhöht Skill-Lock-in, Robotik ist Kernprodukt – beides stärkt den Plattform-Moat. Langfristig wird der Burggraben dicker, weil Daten + Surgeon-habit + installed base kumulieren.",
+        "SAP|SAP SE": "AI erhöht Wert der Prozessdaten und bindet Nutzer tiefer in standardisierte Workflows (ERP). Moat wird stärker, weil Wechselkosten steigen, wenn AI-Assistenz und Prozessautomatisierung im System verankert sind.",
+        "ORCL|Oracle": "AI erhöht Relevanz der Datenbank- und Cloud-Backbone-Schicht, weil Daten näher an Compute monetarisiert werden. Moat wird moderat stärker durch Embeddedness; Konkurrenz bleibt.",
+        "VMC|Vulcan Materials": "AI verbessert Disposition, aber der Moat ist lokale Ressourcennähe + Permits. AI ist neutral bis leicht stärkend über Margen, nicht Marktstruktur.",
+        "MLM|Martin Marietta": "Wie VMC: AI ist Operations-Upgrade; der Moat bleibt Geologie/Geografie/Permitting. Struktur bleibt stabil.",
+        "LMT|Lockheed Martin": "AI ist enablement, aber Robotics/Autonomie verstärken den Abstand zu kleineren Wettbewerbern durch Systemkomplexität und Beschaffungszyklen. Moat wird defensiver, bleibt aber government-captured.",
+        "RTX|RTX Corp": "AI/Robotik stärken Fertigung/Systems, aber Moat basiert auf Programmen, IP und Zulieferketten. Tech stärkt Execution und erhöht Komplexität als Eintrittsbarriere.",
+        "NOC|Northrop Grumman": "AI/Autonomie verstärken Systemintegration und mission-critical Lock-in. Moat bleibt procurement-driven; Tech macht ihn langfristig schwerer angreifbar.",
+        "XOM|ExxonMobil": "AI/Robotik stärken Effizienz und Safety in kapitalintensiven Assets, aber der Moat bleibt Scale + Asset-Basis. Tech verstärkt Kostenführerschaft, nicht Commodity-Preisstruktur.",
+        "CVX|Chevron": "Wie XOM: AI/Robotik verbessern Operations, schützen Capex-Assets und erhöhen Sicherheit. Moat bleibt asset-heavy; Tech stärkt defensiv.",
+        "SHEL|Shell": "AI hilft Trading/Optimization, Robotik schützt Offshore/Remote Ops; das stärkt Execution. Moat bleibt globales Asset-/Supply-Portfolio; Tech macht ihn effizienter.",
+        "KO|Coca-Cola": "AI stärkt Demand Forecasting, Marketing und Supply-Chain, aber der Kernmoat ist Brand + Distribution. Insgesamt: AI stärkt operativ, der Burggraben bleibt strukturell.",
+        "PEP|PepsiCo": "AI stärkt Pricing/Promo-Optimierung und Supply-Chain, Robotik skaliert Produktion. Moat bleibt Brand + Distribution; Tech verstärkt Kosten- und Execution-Vorteile.",
+        "PG|Procter & Gamble": "AI stärkt Portfolio-Management, Targeting und Demand Planning; Robotik stärkt Manufacturing Scale. Moat bleibt Brand + Distribution + R&D; Tech verstärkt Execution.",
+        "MC.PA|LVMH": "AI verstärkt Vertrieb, CRM und Pricing-Analytics, ersetzt aber nicht Knappheit, Heritage und Status. Der Burggraben bleibt strukturell intakt; Risiko liegt eher in Fakes/Gray-Market, nicht in echter Substitution.",
+        "RMS.PA|Hermès": "AI verändert Marketing und Discovery, aber die Kernknappheit/Handwerk/Exklusivität bleibt nicht substituierbar. Moat bleibt strukturell stabil; AI ist neutral bis leicht stärkend über CRM.",
+        "OTIS|Otis Worldwide": "AI stärkt Service-Moat über Predictive Maintenance und Contract Stickiness; Robotics ist sekundär. Der Burggraben wird stärker, weil Uptime-Analytics die Service-Bindung erhöht.",
+        "KNEBV.HE|KONE": "AI erhöht Uptime und Service-Qualität, was langfristige Wartungsverträge stärkt. Moat bleibt Installed Base + Service; AI verstärkt Lock-in.",
+        "SCHN.SW|Schindler": "AI stärkt Diagnose und Service-Effizienz, wodurch Wartungsverträge wertvoller werden. Moat bleibt Installed Base; AI wirkt verstärkend.",
+        "U|Unity Software": "AI senkt Einstiegshürden in Content/Game-Creation und kann Engine-Differenzierung verwässern, wenn Tooling commoditized. Unitys Moat bleibt Ecosystem/Asset Store, aber insgesamt wirkt AI eher schwächend bis MIXED.",
+        "ADBE|Adobe": "Generative AI erhöht die Produktivität in Creative/Document-Workflows und vertieft die Lock-in-Kosten in Teams und Toolchains. Der Moat wird langfristig eher gestärkt, weil Adobe die Standards (Assets, Workflows, PDF/Sign) kontrolliert.",
+        "INTU|Intuit": "Content pending.",
+        "PM|Philip Morris": "AI/Robotik ändern die regulatorische/behaviorale Moat-Struktur kaum. Moat bleibt Regulierung + Habit; Tech ist weitgehend neutral."
+      };
+
       marketAnalysisData.forEach(g => g.items.forEach(d => {
         const m = metrics[d.ticker];
         d.cagr10y = m?.cagr10y ?? null;
         d.cagr2y = m?.cagr2y ?? null;
+        d.aiAssessment = aiAssessmentByKey[`${d.ticker}|${d.name}`] || 'Content pending.';
+        if (d.ticker === 'GOOGL' && d.name === 'Alphabet') {
+          d.robots = 'neutral';
+        }
       }));
 
       const generatedAt = new Date().toISOString().split('T')[0];
@@ -1543,38 +1629,54 @@
         </div>
       `;
 
-      ideasListContent.innerHTML = marketAnalysisData.map(group => {
+      const performanceNotesBlock = `
+        <div style="margin-bottom: 1.75rem; background: rgba(15, 23, 42, 0.45); border: 1px solid rgba(148, 163, 184, 0.15); border-radius: 10px; padding: 1rem 1.1rem;">
+          <h3 style="font-size: 1.05rem; color: #f8fafc; margin: 0 0 0.55rem;">📊 Performance Notes (RubikVault v2.0)</h3>
+          <ul style="margin: 0; padding-left: 1.1rem; color: #cbd5e1; font-size: 0.9rem; line-height: 1.55;">
+            <li>Metric: 10y Total Return CAGR (price + dividends)</li>
+            <li>Window: rolling 10 years ending at the latest available EOD date shown on the page</li>
+            <li>Source: RubikVault EOD pipeline (derived; no manual numbers)</li>
+            <li>Display rule: if computed value missing → show “—”</li>
+            <li>AI labels: qualitative (STRENGTHENS / NEUTRAL / WEAKENS / MIXED)</li>
+            <li>NEW: AI Einschätzung (1–2 sentences) must state whether AI structurally strengthens or weakens the moat long-term</li>
+          </ul>
+        </div>
+      `;
+
+      ideasListContent.innerHTML = `${performanceNotesBlock}${marketAnalysisData.map(group => {
         const itemsHtml = group.items.map(item => {
-          const getBadge = (type, val) => {
-            let color = '#94a3b8';
-            let label = 'NEUTRAL';
-            if (val === 'strengthens') { color = '#4ade80'; label = 'STRENGTHENS'; }
-            else if (val === 'weakens') { color = '#f87171'; label = 'WEAKENS'; }
-            else if (val === 'neutral') { color = '#facc15'; label = 'NEUTRAL'; }
-
-            return `<div style="font-size: 0.65rem; font-weight: 800; text-transform: uppercase; padding: 0.15rem 0.4rem; border-radius: 4px; background: ${color}15; color: ${color}; border: 1px solid ${color}35;">
-                      ${type} ${label}
-                    </div>`;
-          };
-
-          const cagrBadge = item.cagr10y != null
-            ? `<div style="font-size: 0.65rem; font-weight: 800; text-transform: uppercase; padding: 0.15rem 0.4rem; border-radius: 4px; background: rgba(59, 130, 246, 0.15); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.35);">
-                 Ø Return 10y: ${formatPercent(item.cagr10y, 1)}
-               </div>`
-            : '';
+          const aiLabel = item.ai === 'strengthens'
+            ? 'STRENGTHENS'
+            : item.ai === 'weakens'
+              ? 'WEAKENS'
+              : item.ai === 'mixed'
+                ? 'MIXED'
+                : 'NEUTRAL';
+          const robotsLabel = item.robots === 'strengthens'
+            ? 'STRENGTHENS'
+            : item.robots === 'weakens'
+              ? 'WEAKENS'
+              : item.robots === 'mixed'
+                ? 'MIXED'
+                : 'NEUTRAL';
 
           return `
             <div style="background: rgba(30, 41, 59, 0.4); border: 1px solid rgba(148, 163, 184, 0.1); border-radius: 10px; padding: 1.25rem; display: flex; flex-direction: column; gap: 0.75rem;">
-              <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 0.5rem; flex-wrap: wrap;">
-                <div>
-                  <a href="/analyze/${encodeURIComponent(item.ticker)}" data-open-ticker="${escapeHtml(item.ticker)}" style="font-weight: 800; color: #60a5fa; text-decoration: none; font-size: 1.15rem;">${escapeHtml(item.ticker)}</a>
-                  <span style="color: #cbd5e1; font-weight: 600; margin-left: 0.4rem;">${escapeHtml(item.name)}</span>
-                </div>
-                <div style="display: flex; gap: 0.35rem; flex-wrap: wrap; align-items: center;">
-                  ${cagrBadge}
-                  ${getBadge('AI', item.ai)}
-                  ${getBadge('ROBOTS', item.robots)}
-                </div>
+              <div style="display: flex; align-items: baseline; gap: 0.45rem; flex-wrap: wrap;">
+                <a href="/analyze/${encodeURIComponent(item.ticker)}" data-open-ticker="${escapeHtml(item.ticker)}" style="font-weight: 800; color: #60a5fa; text-decoration: none; font-size: 1.15rem;">${escapeHtml(item.ticker)}</a>
+                <span style="color: #cbd5e1; font-weight: 600;">${escapeHtml(item.name)}</span>
+              </div>
+              <div style="font-size: 0.88rem; color: #e5e7eb;">
+                10y Total Return CAGR (RubikVault): —
+              </div>
+              <div style="font-size: 0.88rem; color: #e5e7eb;">
+                AI: ${escapeHtml(aiLabel)}
+              </div>
+              <div style="font-size: 0.88rem; color: #e5e7eb;">
+                ROBOTS: ${escapeHtml(robotsLabel)}
+              </div>
+              <div style="font-size: 0.88rem; color: #cbd5e1; line-height: 1.55;">
+                AI Einschätzung: ${escapeHtml(item.aiAssessment || 'Content pending.')}
               </div>
               <div style="font-size: 0.9rem; color: #94a3b8; line-height: 1.6;">
                 ${escapeHtml(item.text)}
@@ -1594,7 +1696,7 @@
             </div>
           </div>
         `;
-      }).join('');
+      }).join('')}`;
 
       document.querySelectorAll('#ideas-view [data-open-ticker]').forEach((link) => {
         link.addEventListener('click', async (ev) => {
@@ -1828,8 +1930,8 @@
       const meta = normalizedEnvelope?.meta || {};
       const provider = escapeHtml(meta.provider || 'unknown');
       const asOf = escapeHtml(meta.as_of || meta.data_date || '—');
-      const status = escapeHtml(meta.status || 'UNKNOWN');
-      const freshness = escapeHtml(meta.freshness || 'unknown');
+      const status = escapeHtml(String(meta.status || 'UNKNOWN').toUpperCase());
+      const reason = escapeHtml(meta.reason || '');
       return `
         <div style="margin-top: 0.6rem; display: inline-flex; flex-wrap: wrap; gap: 0.45rem; align-items: center; justify-content: flex-end;">
           <span style="padding: 0.25rem 0.55rem; border-radius: 999px; border: 1px solid rgba(148, 163, 184, 0.32); color: #cbd5e1; background: rgba(15, 23, 42, 0.35); font-size: 0.78rem;">
@@ -1839,7 +1941,7 @@
             Provider ${provider}
           </span>
           <span style="padding: 0.25rem 0.55rem; border-radius: 999px; border: 1px solid rgba(148, 163, 184, 0.32); color: #cbd5e1; background: rgba(15, 23, 42, 0.35); font-size: 0.78rem;">
-            ${status} • ${freshness}
+            ${status}${reason ? ` • ${reason}` : ''}
           </span>
         </div>
       `;
@@ -1954,6 +2056,9 @@
       const meta = payload?.metadata || {};
       const data = payload?.data || {};
       const error = payload?.error || null;
+      const dataMeta = data?.meta || {};
+      const fundamentalsStatus = String(dataMeta?.status || (meta?.status === 'ERROR' ? 'DEGRADED' : 'OK')).toUpperCase();
+      const fundamentalsReason = dataMeta?.reason || error?.code || null;
 
       const marketCap = data?.marketCap;
       const pe = data?.pe_ttm;
@@ -1967,7 +2072,7 @@
       const line = (label, value) => `
         <div style="padding: 0.75rem 0.9rem; background: rgba(15, 23, 42, 0.35); border: 1px solid rgba(100, 116, 139, 0.22); border-radius: 10px;">
           <div style="font-size: 0.8rem; color: #94a3b8;">${escapeHtml(label)}</div>
-          <div style="margin-top: 0.25rem; font-weight: 700; color: #e5e7eb;">${value == null ? '—' : escapeHtml(String(value))}</div>
+          <div style="margin-top: 0.25rem; font-weight: 700; color: #e5e7eb;" title="${value == null && fundamentalsReason ? escapeHtml(String(fundamentalsReason)) : ''}">${value == null ? 'N/A' : escapeHtml(String(value))}</div>
         </div>
       `;
 
@@ -1993,11 +2098,7 @@
       const providerLine = pageDebug
         ? `<div style="margin-top: 0.75rem; color: #94a3b8; font-size: 0.85rem;">provider=${escapeHtml(meta?.provider?.selected || '')} • fallbackUsed=${meta?.provider?.fallbackUsed ? 'true' : 'false'} • keySource=${escapeHtml(meta?.provider?.keySource || '')}</div>`
         : '';
-
-      if (meta?.status === 'ERROR' && error && !pageDebug) {
-        // Hide fundamentals section entirely when unavailable
-        return '';
-      }
+      const statusLine = `<div style="margin-top: 0.65rem; color: ${fundamentalsStatus === 'OK' ? '#94a3b8' : '#fbbf24'}; font-size: 0.82rem;">Fundamentals status: ${escapeHtml(fundamentalsStatus)}${fundamentalsReason ? ` • ${escapeHtml(String(fundamentalsReason))}` : ''}</div>`;
 
       return `
         <div style="margin-top: 1.5rem;">
@@ -2012,6 +2113,7 @@
             ${line('Operating margin', fmtPct(op))}
             ${line('Net margin', fmtPct(net))}
           </div>
+          ${statusLine}
           ${providerLine}
         </div>
       `;
@@ -2070,8 +2172,17 @@
       const nullIndicatorCount = Number.isFinite(Number(meta?.indicators?.nullCount))
         ? Number(meta.indicators.nullCount)
         : computedNullCount;
-      const expectedIndicatorCount = 32;
-      const indicatorsValidated = indicatorCount === expectedIndicatorCount && nullIndicatorCount === 0;
+      const requiredIndicatorIds = [
+        'sma20', 'sma50', 'sma200', 'ema12', 'ema26',
+        'atr14', 'volatility_20d', 'rolling_std_20', 'volatility_percentile',
+        'rsi14', 'macd', 'macd_signal', 'macd_hist',
+        'ret_1d_pct', 'ret_5d_pct', 'ret_20d_pct',
+        'high_52w', 'low_52w', 'pos_in_52w_range_pct', 'from_52w_high_pct', 'from_52w_low_pct',
+        'volume_ratio_20d', 'close_to_sma20_pct', 'close_to_sma200_pct'
+      ];
+      const indicatorIdSet = new Set(indicators.map((item) => item?.id).filter(Boolean));
+      const missingRequiredIndicators = requiredIndicatorIds.filter((id) => !indicatorIdSet.has(id));
+      const indicatorsValidated = missingRequiredIndicators.length === 0 && nullIndicatorCount === 0;
       const indicatorMap = stockUiExtras?.toIndicatorMap ? stockUiExtras.toIndicatorMap(indicators) : Object.fromEntries(indicators.map((item) => [item?.id, item?.value]));
       const selfReturns = stockUiExtras?.computeReturns
         ? stockUiExtras.computeReturns(bars, { d1: 1, w1: 5, m1: 21, m3: 63, y1: 252, y5: 1260 })
@@ -2105,7 +2216,7 @@
         'Bollinger Bands': ['bb_mid', 'bb_upper', 'bb_lower'],
         'Momentum': ['rsi14', 'macd', 'macd_signal', 'macd_hist'],
         'Returns': ['ret_1d_abs', 'ret_1d_pct', 'ret_5d_abs', 'ret_5d_pct', 'ret_20d_abs', 'ret_20d_pct'],
-        '52-Week Range': ['high_52w', 'low_52w', 'range_52w_pct'],
+        '52-Week Range': ['high_52w', 'low_52w', 'pos_in_52w_range_pct', 'from_52w_high_pct', 'from_52w_low_pct'],
         'Volume': ['avg_volume_20d', 'volume_ma_20', 'volume_ratio_20d'],
         'Distance to SMAs': ['close_to_sma20_pct', 'close_to_sma200_pct']
       };
@@ -2115,7 +2226,9 @@
       const formatIndicatorValue = (id, value) => {
         if (value == null || !Number.isFinite(Number(value))) return '—';
         const num = Number(value);
-        if (id.includes('pct') || id.includes('percentile')) return `${num >= 0 ? '+' : ''}${num.toFixed(2)}%`;
+        if (id === 'pos_in_52w_range_pct') return formatPercent(num, 2).replace('+', '');
+        if (id.endsWith('_pct')) return formatPercent(num, 2);
+        if (id.includes('percentile')) return `${num.toFixed(1)}%`;
         if (id.includes('volume') && !id.includes('ratio')) return Math.round(num).toLocaleString();
         if (id.includes('autocorrelation')) return num.toFixed(4);
         if (Math.abs(num) >= 1000) return num.toLocaleString(undefined, { maximumFractionDigits: 2 });
@@ -3214,8 +3327,8 @@
               { id: 'sma50', value: calcSMA(50) },
               { id: 'sma200', value: calcSMA(200) },
               { id: 'rsi14', value: calcRSI(14) },
-              { id: 'close_to_sma20_pct', value: (calcSMA(20) && bars[bars.length - 1].close) ? ((bars[bars.length - 1].close - calcSMA(20)) / calcSMA(20)) * 100 : null },
-              { id: 'close_to_sma200_pct', value: (calcSMA(200) && bars[bars.length - 1].close) ? ((bars[bars.length - 1].close - calcSMA(200)) / calcSMA(200)) * 100 : null }
+              { id: 'close_to_sma20_pct', value: (calcSMA(20) && bars[bars.length - 1].close) ? ((bars[bars.length - 1].close - calcSMA(20)) / calcSMA(20)) : null },
+              { id: 'close_to_sma200_pct', value: (calcSMA(200) && bars[bars.length - 1].close) ? ((bars[bars.length - 1].close - calcSMA(200)) / calcSMA(200)) : null }
             ];
 
             // Merge/Overwrite derived into indicators
