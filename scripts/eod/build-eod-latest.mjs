@@ -109,7 +109,10 @@ function normalizeTiingoRow(symbol, row) {
     high: toNumber(row?.high),
     low: toNumber(row?.low),
     close: toNumber(row?.close),
-    volume: toNumber(row?.volume)
+    volume: toNumber(row?.volume),
+    adjClose: toNumber(row?.adjClose ?? row?.adj_close ?? row?.close),
+    dividend: toNumber(row?.divCash ?? row?.dividend ?? 0),
+    split: toNumber(row?.splitFactor ?? row?.split ?? 1)
   };
 }
 
@@ -122,7 +125,10 @@ function normalizeEodhdRow(symbol, row) {
     high: toNumber(row?.high),
     low: toNumber(row?.low),
     close: toNumber(row?.close),
-    volume: toNumber(row?.volume)
+    volume: toNumber(row?.volume),
+    adjClose: toNumber(row?.adjusted_close ?? row?.adj_close ?? row?.close),
+    dividend: toNumber(row?.dividend ?? row?.dividend_value ?? 0),
+    split: toNumber(row?.split ?? row?.split_factor ?? 1)
   };
 }
 
@@ -191,7 +197,13 @@ async function fetchLatestEodhdOnce(symbol, apiKey) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
   const startDate = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
-  const querySymbol = symbol.includes('.') ? symbol : `${symbol}.US`;
+  let querySymbol = String(symbol || '').trim().toUpperCase();
+  const classShare = querySymbol.match(/^([A-Z0-9]+)\.([A-Z])$/);
+  if (classShare) {
+    querySymbol = `${classShare[1]}-${classShare[2]}.US`;
+  } else if (!querySymbol.includes('.')) {
+    querySymbol = `${querySymbol}.US`;
+  }
   const url = new URL(`https://eodhd.com/api/eod/${encodeURIComponent(querySymbol)}`);
   url.searchParams.set('api_token', apiKey);
   url.searchParams.set('fmt', 'json');

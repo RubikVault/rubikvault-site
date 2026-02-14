@@ -153,8 +153,8 @@ async function mapWithConcurrency(items, limit, worker) {
 }
 
 async function main() {
-    const args = parseArgs(process.argv.slice(2));
-    if (!args.universe) throw new Error('Missing --universe');
+  const args = parseArgs(process.argv.slice(2));
+  if (!args.universe) throw new Error('Missing --universe');
 
     const outRoot = path.resolve(REPO_ROOT, args.outDir);
     const universePath = path.join(outRoot, 'universe', `${args.universe}.json`);
@@ -165,36 +165,51 @@ async function main() {
         process.exit(1);
     }
 
-    const symbols = extractUniverseSymbols(universePayload);
-    const token = process.env.TIINGO_API_KEY;
-    let useSynthetic = !token;
+  const symbols = extractUniverseSymbols(universePayload);
+  const token = process.env.TIINGO_API_KEY;
+  const allowSynthetic = process.env.ALLOW_SYNTHETIC_HISTORY === '1';
+  let useSynthetic = !token && allowSynthetic;
 
-    console.log(`Generating history for ${symbols.length} symbols (Universe: ${args.universe})...`);
-    if (useSynthetic) console.log('⚠️  No API Key found. Using SYNTHETIC data for all symbols.');
+  console.log(`Generating history for ${symbols.length} symbols (Universe: ${args.universe})...`);
+  if (!token && !allowSynthetic) {
+    console.error('MISSING_SECRET:TIINGO_API_KEY (set ALLOW_SYNTHETIC_HISTORY=1 only for explicit local tests)');
+    process.exit(1);
+  }
+  if (useSynthetic) console.log('⚠️  ALLOW_SYNTHETIC_HISTORY=1 active. Using synthetic data.');
 
-    const barsDir = path.join(outRoot, 'eod', 'bars');
-    await fs.mkdir(barsDir, { recursive: true });
+  const barsDir = path.join(outRoot, 'eod', 'bars');
+  await fs.mkdir(barsDir, { recursive: true });
 
-    let successCount = 0;
-    let syntheticCount = 0;
+  let successCount = 0;
+  let syntheticCount = 0;
+  let failedCount = 0;
 
-    await mapWithConcurrency(symbols, CONCURRENCY, async (symbol) => {
-        let bars = null;
+  await mapWithConcurrency(symbols, CONCURRENCY, async (symbol) => {
+    let bars = null;
 
         if (!useSynthetic) {
             try {
                 bars = await fetchHistory(symbol, token);
             } catch (err) {
                 if (err.message === 'RATE_LIMIT') {
-                    console.warn('⚠️  Rate limit hit. Switching to synthetic data for remaining symbols.');
-                    useSynthetic = true;
+                    if (allowSynthetic) {
+                        console.warn('⚠️  Rate limit hit. Switching to synthetic data for remaining symbols due to ALLOW_SYNTHETIC_HISTORY=1.');
+                        useSynthetic = true;
+                    } else {
+                        console.error(`RATE_LIMIT:${symbol}`);
+                    }
                 }
             }
         }
 
         if (!bars) {
-            bars = generateSyntheticHistory(symbol, HISTORY_YEARS);
-            syntheticCount++;
+            if (useSynthetic) {
+                bars = generateSyntheticHistory(symbol, HISTORY_YEARS);
+                syntheticCount++;
+            } else {
+                failedCount++;
+                return;
+            }
         }
 
         if (bars && bars.length > 0) {
@@ -206,9 +221,13 @@ async function main() {
     });
 
     console.log('\n');
-    console.log(`✅ Completed: ${successCount} symbols processed.`);
-    console.log(`📊 Real Data: ${successCount - syntheticCount}`);
-    console.log(`🤖 Synthetic Data: ${syntheticCount}`);
+  console.log(`✅ Completed: ${successCount} symbols processed.`);
+  console.log(`📊 Real Data: ${successCount - syntheticCount}`);
+  console.log(`🤖 Synthetic Data: ${syntheticCount}`);
+  console.log(`❌ Failed: ${failedCount}`);
+  if (failedCount > 0) {
+    process.exit(1);
+  }
 }
 
 await main();

@@ -6,18 +6,19 @@ export async function getStaticBars(symbol, baseUrl) {
 
     try {
         const cleanSymbol = symbol.replace(/[^a-zA-Z0-9.\-]/g, '').toUpperCase();
-        const path = `/data/eod/bars/${cleanSymbol}.json`;
+        const candidates = [
+            `/data/eod/bars/${cleanSymbol}.json`,
+            `/public/data/eod/bars/${cleanSymbol}.json`
+        ];
 
-        // Construct full URL if baseUrl provided, otherwise relative (works in some envs, fails in others)
-        const url = baseUrl ? new URL(path, baseUrl).toString() : path;
-
-        const response = await fetch(url);
-        if (!response.ok) return null;
-
-        const data = await response.json();
-        if (!Array.isArray(data)) return null;
-
-        return data;
+        for (const path of candidates) {
+            const url = baseUrl ? new URL(path, baseUrl).toString() : path;
+            const response = await fetch(url);
+            if (!response.ok) continue;
+            const data = await response.json();
+            if (Array.isArray(data)) return data;
+        }
+        return null;
     } catch (err) {
         // Silent fail -> fallback to provider
         return null;

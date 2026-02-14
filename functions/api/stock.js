@@ -27,7 +27,9 @@ const TICKER_MAX_LENGTH = 12;
 const VALID_TICKER_REGEX = /^[A-Z0-9.\-]+$/;
 const SNAPSHOT_PATH_TEMPLATES = [
   '/data/snapshots/{module}/latest.json',
+  '/public/data/snapshots/{module}/latest.json',
   '/data/snapshots/{module}.json',
+  '/public/data/snapshots/{module}.json',
   '/data/{module}.json'
 ];
 const MODULE_PATHS = ['universe', 'market-prices', 'market-stats', 'market-score'];
@@ -83,11 +85,13 @@ function computeDayChange(bars) {
   }
   const latest = bars[bars.length - 1];
   const prev = bars[bars.length - 2];
-  if (!Number.isFinite(latest?.close) || !Number.isFinite(prev?.close) || prev.close === 0) {
+  const latestClose = Number.isFinite(latest?.adjClose) ? latest.adjClose : latest?.close;
+  const prevClose = Number.isFinite(prev?.adjClose) ? prev.adjClose : prev?.close;
+  if (!Number.isFinite(latestClose) || !Number.isFinite(prevClose) || prevClose === 0) {
     return { abs: null, pct: null };
   }
-  const abs = latest.close - prev.close;
-  return { abs, pct: abs / prev.close };
+  const abs = latestClose - prevClose;
+  return { abs, pct: abs / prevClose };
 }
 
 function computeStartDateISO(daysBack) {
@@ -302,6 +306,45 @@ function buildMarketStatsPayload(statsEntry, symbol) {
   };
 }
 
+function buildMarketPricesFromLatestBar(latestBar, symbol, providerHint) {
+  if (!latestBar || !Number.isFinite(latestBar?.close)) return null;
+  return {
+    symbol,
+    date: latestBar?.date || null,
+    close: Number.isFinite(latestBar?.close) ? Number(latestBar.close) : null,
+    volume: Number.isFinite(latestBar?.volume) ? Number(latestBar.volume) : null,
+    currency: 'USD',
+    source_provider: providerHint || null,
+    raw: {
+      symbol,
+      date: latestBar?.date || null,
+      open: Number.isFinite(latestBar?.open) ? Number(latestBar.open) : null,
+      high: Number.isFinite(latestBar?.high) ? Number(latestBar.high) : null,
+      low: Number.isFinite(latestBar?.low) ? Number(latestBar.low) : null,
+      close: Number.isFinite(latestBar?.close) ? Number(latestBar.close) : null,
+      volume: Number.isFinite(latestBar?.volume) ? Number(latestBar.volume) : null,
+      adj_close: Number.isFinite(latestBar?.adjClose) ? Number(latestBar.adjClose) : Number(latestBar?.close),
+      source_provider: providerHint || null
+    }
+  };
+}
+
+function buildMarketStatsFromIndicators(indicators, symbol, asOf) {
+  if (!Array.isArray(indicators) || indicators.length === 0) return null;
+  const stats = {};
+  for (const item of indicators) {
+    if (!item || typeof item.id !== 'string') continue;
+    stats[item.id] = item.value;
+  }
+  return {
+    symbol,
+    as_of: asOf || null,
+    stats,
+    coverage: null,
+    warnings: []
+  };
+}
+
 function buildErrorPayload(code, message, details = {}) {
   return {
     code,
@@ -331,7 +374,9 @@ async function fetchStaticEodBar(ticker, request) {
   const baseUrl = new URL(request.url);
   const batchPaths = [
     '/data/eod/batches/eod.latest.000.json',
-    '/data/eod/batches/eod.latest.001.json'
+    '/data/eod/batches/eod.latest.001.json',
+    '/public/data/eod/batches/eod.latest.000.json',
+    '/public/data/eod/batches/eod.latest.001.json'
   ];
   for (const path of batchPaths) {
     try {
@@ -764,18 +809,33 @@ export async function onRequestGet(context) {
       // Use standard fetch to avoid local deadlock issues with env.ASSETS in some environments
       const fetchFn = fetch;
 
-      const v3EodUrl = new URL(`/data/v3/eod/${v3Exchange}/latest.ndjson.gz`, request.url);
-      const v3IndicatorsUrl = new URL(`/data/v3/derived/indicators/${v3Exchange}__${ticker}.json`, request.url);
+      const eodCandidates = [
+        `/data/v3/eod/${v3Exchange}/latest.ndjson.gz`,
+        `/public/data/v3/eod/${v3Exchange}/latest.ndjson.gz`
+      ];
+      const indicatorsCandidates = [
+        `/data/v3/derived/indicators/${v3Exchange}__${ticker}.json`,
+        `/public/data/v3/derived/indicators/${v3Exchange}__${ticker}.json`
+      ];
 
-      const [eodRes, indRes] = await Promise.all([
-        fetchFn(v3EodUrl.toString(), { signal: AbortSignal.timeout(1500) }),
-        fetchFn(v3IndicatorsUrl.toString(), { signal: AbortSignal.timeout(1500) })
+      async function fetchFirst(paths) {
+        for (const path of paths) {
+          const url = new URL(path, request.url);
+          const res = await fetchFn(url.toString(), { signal: AbortSignal.timeout(1500) });
+          if (res.ok) return { res, path: url.pathname };
+        }
+        return null;
+      }
+
+      const [eodHit, indHit] = await Promise.all([
+        fetchFirst(eodCandidates),
+        fetchFirst(indicatorsCandidates)
       ]);
 
-      if (!eodRes.ok || !indRes.ok) return null;
+      if (!eodHit || !indHit) return null;
 
-      const indData = await indRes.json();
-      const eodText = await eodRes.text();
+      const indData = await indHit.res.json();
+      const eodText = await eodHit.res.text();
       const eodLines = eodText.split('\n');
       let eodRecord = null;
 
@@ -796,8 +856,8 @@ export async function onRequestGet(context) {
         eod: eodRecord,
         indicators: indData,
         sources: {
-          eod: v3EodUrl.pathname,
-          indicators: v3IndicatorsUrl.pathname
+          eod: eodHit.path,
+          indicators: indHit.path
         }
       };
     } catch (err) {
@@ -828,8 +888,9 @@ export async function onRequestGet(context) {
 
   // --- V3 CANARY & SHADOW START ---
   let v3Meta = null;
-  // Phase 3: v3 is DEFAULT (true). Opt-out via v3=false or Header version 2.
-  const useV3 = url.searchParams.get('v3') !== 'false' && request.headers.get('x-rv-version') !== '2';
+  // v3 overlay/shadow is opt-in only to keep stock endpoint deterministic under load.
+  const useV3 = url.searchParams.get('v3') === 'true' && request.headers.get('x-rv-version') !== '2';
+  const useV3Shadow = url.searchParams.get('v3_shadow') === '1';
 
   // 1. FOREGROUND: Hybrid Mode (Default)
   if (useV3 && normalizedTicker) {
@@ -879,7 +940,7 @@ export async function onRequestGet(context) {
 
   // 2. BACKGROUND: Shadow Mode (Run for everyone else)
   // Only run if NOT privileged/debug to avoid noise, but for now we run it always for verification.
-  else if (normalizedTicker && context.waitUntil) {
+  else if (useV3Shadow && normalizedTicker && context.waitUntil) {
     const shadowCheck = async () => {
       try {
         const v3Data = await fetchV3Data(env, request, normalizedTicker);
@@ -1039,12 +1100,12 @@ export async function onRequestGet(context) {
   }
 
   const universePayload = buildUniversePayload(universeEntry, normalizedTicker);
-  const marketPricesPayload = buildMarketPricesPayload(priceEntry, normalizedTicker);
-  const marketStatsPayload = buildMarketStatsPayload(statsEntry, normalizedTicker);
+  const marketPricesSnapshotPayload = buildMarketPricesPayload(priceEntry, normalizedTicker);
+  const marketStatsSnapshotPayload = buildMarketStatsPayload(statsEntry, normalizedTicker);
 
   const missingSections = [];
-  if (snapshots['market-prices'].snapshot && !marketPricesPayload) missingSections.push('market_prices');
-  if (snapshots['market-stats'].snapshot && !marketStatsPayload) missingSections.push('market_stats');
+  if (snapshots['market-prices'].snapshot && !marketPricesSnapshotPayload) missingSections.push('market_prices');
+  if (snapshots['market-stats'].snapshot && !marketStatsSnapshotPayload) missingSections.push('market_stats');
   if (!snapshots['market-prices'].snapshot) missingSections.push('market_prices');
   if (!snapshots['market-stats'].snapshot) missingSections.push('market_stats');
 
@@ -1109,6 +1170,10 @@ export async function onRequestGet(context) {
     return acc;
   }, 0);
 
+  const providerHint = eodProvider || sourceChain?.selected || sourceChain?.primary || null;
+  const marketPricesPayload = buildMarketPricesFromLatestBar(latestBar, normalizedTicker, providerHint) || marketPricesSnapshotPayload;
+  const marketStatsPayload = buildMarketStatsFromIndicators(indicatorOut.indicators, normalizedTicker, latestBar?.date) || marketStatsSnapshotPayload;
+
   const data = {
     ticker: normalizedTicker,
     name: resolvedName || universePayload?.name || null,
@@ -1140,7 +1205,13 @@ export async function onRequestGet(context) {
     : errorPayload
       ? 'error'
       : 'fresh';
-  const envelopeStatus = eodStatus || derivedStatus;
+  let envelopeStatus = eodStatus || derivedStatus;
+  if (envelopeStatus === 'error' && !errorPayload && latestBar) {
+    // Keep legacy/delisted symbols viewable as stale data instead of hard erroring the whole page.
+    envelopeStatus = 'stale';
+    qualityFlags.add('DATA_TOO_OLD');
+    reasons = [...new Set([...(Array.isArray(reasons) ? reasons : []), 'DATA_TOO_OLD'])];
+  }
 
   const validationPassed = !errorPayload;
   const status = errorPayload

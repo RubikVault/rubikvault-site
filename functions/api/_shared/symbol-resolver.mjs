@@ -28,15 +28,22 @@ function normalizeNameKey(input) {
 
 async function fetchResolveIndex(request) {
   const baseUrl = new URL(request.url);
-  const url = new URL('/data/symbol-resolve.v1.json', baseUrl);
-  const response = await fetch(url.toString());
-  if (!response.ok) {
-    const error = new Error(`HTTP ${response.status}`);
-    error.code = 'RESOLVE_INDEX_UNAVAILABLE';
-    throw error;
+  const candidates = [
+    '/data/symbol-resolve.v1.json',
+    '/public/data/symbol-resolve.v1.json'
+  ];
+  for (const candidate of candidates) {
+    const url = new URL(candidate, baseUrl);
+    const response = await fetch(url.toString());
+    if (!response.ok) {
+      continue;
+    }
+    const payload = await response.json();
+    return payload;
   }
-  const payload = await response.json();
-  return payload;
+  const error = new Error('symbol-resolve index not found');
+  error.code = 'RESOLVE_INDEX_UNAVAILABLE';
+  throw error;
 }
 
 function buildNameMap(indexPayload) {

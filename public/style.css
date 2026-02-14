@@ -613,15 +613,18 @@ section[data-rv-deprecated="true"] {
   max-width: 1200px;
   margin: 0 auto 20px;
   display: flex;
-  align-items: center;
-  justify-content: space-between;
+  flex-direction: column;
+  align-items: center !important;
+  justify-content: center !important;
   flex-wrap: wrap;
-  gap: 12px;
+  gap: 20px;
+  text-align: center !important;
 }
 
 .rv-footer-links {
   display: flex;
-  gap: 16px;
+  justify-content: center !important;
+  gap: 24px;
   flex-wrap: wrap;
 }
 
@@ -637,9 +640,10 @@ section[data-rv-deprecated="true"] {
 .rv-footer-disclaimer,
 .rv-footer-copy {
   max-width: 1200px;
-  margin: 8px auto 0;
+  margin: 16px auto 0;
   color: var(--rv-text-muted);
   font-size: 13px;
+  text-align: center;
 }
 
 /* =========================
