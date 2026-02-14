@@ -37,14 +37,25 @@
     for (var i = 0; i < input.length; i += 1) {
       var row = input[i] || {};
       var date = parseIsoDate(row.date);
-      var close = toNumber(row.close);
-      if (!date || close == null) continue;
+      var rawClose = toNumber(row.close);
+      var adjClose = toNumber(row.adjClose);
+      if (adjClose == null) {
+        adjClose = toNumber(row.adj_close);
+      }
+      var calcClose = adjClose != null ? adjClose : rawClose;
+      if (!date || calcClose == null) continue;
+      var factor = rawClose != null && rawClose !== 0 ? calcClose / rawClose : 1;
+      var openRaw = toNumber(row.open);
+      var highRaw = toNumber(row.high);
+      var lowRaw = toNumber(row.low);
       rows.push({
         date: date,
-        open: toNumber(row.open),
-        high: toNumber(row.high),
-        low: toNumber(row.low),
-        close: close,
+        open: openRaw == null ? null : openRaw * factor,
+        high: highRaw == null ? null : highRaw * factor,
+        low: lowRaw == null ? null : lowRaw * factor,
+        close: calcClose,
+        raw_close: rawClose,
+        adj_close: calcClose,
         volume: toNumber(row.volume),
         dividend: toNumber(row.dividend),
         split: toNumber(row.split)

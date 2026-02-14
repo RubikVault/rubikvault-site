@@ -32,8 +32,11 @@ export async function fetchEodhdBarsRaw(symbol, env, options = {}) {
     // Let's assume input symbol is correct but EODHD often requires exchange code (e.g. AAPL.US).
     // Use heuristic: if no dot, append .US
 
-    let querySymbol = symbol;
-    if (!querySymbol.includes('.')) {
+    let querySymbol = String(symbol || '').trim().toUpperCase();
+    const classShare = querySymbol.match(/^([A-Z0-9]+)\.([A-Z])$/);
+    if (classShare) {
+        querySymbol = `${classShare[1]}-${classShare[2]}.US`;
+    } else if (!querySymbol.includes('.')) {
         querySymbol = `${querySymbol}.US`;
     }
 
@@ -88,10 +91,23 @@ export async function fetchEodhdBarsRaw(symbol, env, options = {}) {
                 const high = toNumber(row?.high);
                 const low = toNumber(row?.low);
                 const volume = toNumber(row?.volume);
+                const adjClose = toNumber(row?.adjusted_close ?? row?.adj_close ?? row?.close);
+                const dividend = toNumber(row?.dividend ?? row?.dividend_value ?? 0);
+                const split = toNumber(row?.split ?? row?.split_factor ?? 1);
                 if (!date) return null;
                 // Basic integrity check: OHLC must exist
                 if (close === null || open === null || high === null || low === null) return null;
-                return { date, open, high, low, close, volume };
+                return {
+                    date,
+                    open,
+                    high,
+                    low,
+                    close,
+                    volume,
+                    adjClose: adjClose ?? close,
+                    dividend: dividend ?? 0,
+                    split: split ?? 1
+                };
             })
             .filter(Boolean)
             .sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));

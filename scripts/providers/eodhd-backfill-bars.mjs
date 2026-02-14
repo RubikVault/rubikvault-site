@@ -1,23 +1,24 @@
-// Node.js script for backfilling bars
-// Usage: node scripts/providers/eodhd-backfill-bars.mjs --universe ./public/data/universe/nasdaq100.json
+// Node.js script for backfilling bars from EODHD
+// Usage: node scripts/providers/eodhd-backfill-bars.mjs --universe ./public/data/universe/all.json
 
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
-// Simple polyfill if fetch not global (Node 18+ has it)
 const _fetch = global.fetch || (await import('node-fetch')).default;
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '../../');
 const DATA_DIR = path.join(ROOT, 'public/data/eod/bars');
-const DELAY_MS = 1000; // Throttle
+const DELAY_MS = Number.isFinite(Number(process.env.EODHD_BACKFILL_DELAY_MS))
+  ? Number(process.env.EODHD_BACKFILL_DELAY_MS)
+  : 250;
+const RETRIES = 3;
 
-const API_KEY = process.env.EODHD_API_KEY;
-
+const API_KEY = String(process.env.EODHD_API_KEY || '').trim();
 if (!API_KEY) {
-    console.error("Missing EODHD_API_KEY");
-    process.exit(1);
+  console.error('Missing EODHD_API_KEY');
+  process.exit(1);
 }
 
 const args = process.argv.slice(2);
@@ -25,128 +26,183 @@ const universeArgIndex = args.indexOf('--universe');
 const universePath = universeArgIndex > -1 ? args[universeArgIndex + 1] : null;
 
 if (!universePath) {
-    console.log("Usage: node scripts/providers/eodhd-backfill-bars.mjs --universe <path>");
-    process.exit(1);
+  console.log('Usage: node scripts/providers/eodhd-backfill-bars.mjs --universe <path>');
+  process.exit(1);
 }
 
 function sleep(ms) {
-    return new Promise(resolve => setTimeout(resolve, ms));
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 function loadUniverse(p) {
-    try {
-        const content = fs.readFileSync(p, 'utf8');
-        const data = JSON.parse(content);
-        // Supports array of strings or objects with symbol property (Forecast style or simple list)
-        if (Array.isArray(data)) {
-            return data.map(item => (typeof item === 'string' ? item : item.symbol || item.ticker)).filter(Boolean);
-        }
-        return [];
-    } catch (e) {
-        console.error(`Failed to load universe ${p}:`, e.message);
-        return [];
-    }
+  try {
+    const content = fs.readFileSync(p, 'utf8');
+    const data = JSON.parse(content);
+    if (!Array.isArray(data)) return [];
+    const symbols = data
+      .map((item) => (typeof item === 'string' ? item : item?.symbol || item?.ticker))
+      .filter(Boolean)
+      .map((s) => String(s).trim().toUpperCase());
+    return [...new Set(symbols)].sort();
+  } catch (e) {
+    console.error(`Failed to load universe ${p}:`, e.message);
+    return [];
+  }
 }
 
-async function fetchEodhd(symbol) {
-    let querySymbol = symbol;
-    if (!querySymbol.includes('.')) {
-        querySymbol = `${querySymbol}.US`;
-    }
-    const url = `https://eodhd.com/api/eod/${encodeURIComponent(querySymbol)}?api_token=${API_KEY}&fmt=json&order=a`;
-    try {
-        const res = await _fetch(url);
-        if (!res.ok) {
-            return { ok: false, status: res.status };
-        }
-        const data = await res.json();
-        return { ok: true, data };
-    } catch (e) {
-        return { ok: false, error: e.message };
-    }
+function toNumber(value) {
+  const n = Number(value);
+  return Number.isFinite(n) ? n : null;
 }
 
 function normalizeBars(rawBars) {
-    if (!Array.isArray(rawBars)) return [];
-    return rawBars.map(b => ({
-        date: b.date,
-        open: Number(b.open) || null,
-        high: Number(b.high) || null,
-        low: Number(b.low) || null,
-        close: Number(b.close) || null,
-        volume: Number(b.volume) || null
-    })).filter(b => b.date && b.close !== null).sort((a, b) => a.date.localeCompare(b.date));
+  if (!Array.isArray(rawBars)) return [];
+  return rawBars
+    .map((b) => {
+      const close = toNumber(b?.close);
+      const adjClose = toNumber(b?.adjusted_close ?? b?.adj_close ?? b?.close);
+      const split = toNumber(b?.split ?? b?.split_factor ?? 1);
+      const dividend = toNumber(b?.dividend ?? b?.dividend_value ?? 0);
+      const volume = toNumber(b?.volume);
+      return {
+        date: typeof b?.date === 'string' ? b.date.slice(0, 10) : null,
+        open: toNumber(b?.open),
+        high: toNumber(b?.high),
+        low: toNumber(b?.low),
+        close,
+        volume,
+        adjClose: adjClose ?? close,
+        dividend: dividend ?? 0,
+        split: split ?? 1
+      };
+    })
+    .filter((b) => b.date && b.close !== null)
+    .sort((a, b) => a.date.localeCompare(b.date));
+}
+
+async function fetchEodhd(symbol) {
+  let querySymbol = String(symbol || '').trim().toUpperCase();
+  if (!querySymbol) {
+    return { ok: false, error: 'empty_symbol' };
+  }
+  // Class shares in this repo use dot form (e.g. BRK.B), EODHD expects dash (BRK-B.US).
+  const classShare = querySymbol.match(/^([A-Z0-9]+)\.([A-Z])$/);
+  if (classShare) {
+    querySymbol = `${classShare[1]}-${classShare[2]}.US`;
+  } else if (!querySymbol.includes('.')) {
+    querySymbol = `${querySymbol}.US`;
+  }
+  const url = new URL(`https://eodhd.com/api/eod/${encodeURIComponent(querySymbol)}`);
+  url.searchParams.set('api_token', API_KEY);
+  url.searchParams.set('fmt', 'json');
+  url.searchParams.set('order', 'a');
+
+  let lastErr = null;
+  for (let attempt = 1; attempt <= RETRIES; attempt += 1) {
+    try {
+      const res = await _fetch(url.toString(), {
+        headers: { accept: 'application/json' }
+      });
+      if (!res.ok) {
+        const body = await res.text();
+        if (res.status === 401 || res.status === 403) {
+          return { ok: false, fatal: true, status: res.status, error: body || `HTTP ${res.status}` };
+        }
+        lastErr = `${res.status}:${body || 'upstream_error'}`;
+        if (res.status === 429 && attempt < RETRIES) {
+          await sleep(600 * attempt);
+          continue;
+        }
+        return { ok: false, status: res.status, error: lastErr };
+      }
+      const data = await res.json();
+      if (!Array.isArray(data) || data.length === 0) {
+        return { ok: false, status: res.status, error: 'empty_payload' };
+      }
+      return { ok: true, data };
+    } catch (e) {
+      lastErr = e?.message || String(e);
+      if (attempt < RETRIES) {
+        await sleep(500 * attempt);
+        continue;
+      }
+    }
+  }
+  return { ok: false, error: lastErr || 'unknown_fetch_error' };
 }
 
 async function run() {
-    const symbols = loadUniverse(universePath);
-    console.log(`Loaded ${symbols.length} symbols from ${universePath}`);
+  const symbols = loadUniverse(universePath);
+  if (!symbols.length) {
+    console.error(`Universe empty: ${universePath}`);
+    process.exit(1);
+  }
+  console.log(`Loaded ${symbols.length} symbols from ${universePath}`);
 
-    // Load Manifest
-    const manifestPath = path.join(DATA_DIR, 'manifest.json');
-    let manifest = { symbols: {}, stats: { total: 0, success: 0, failures: 0 } };
-    if (fs.existsSync(manifestPath)) {
-        try {
-            manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
-        } catch { }
+  const manifestPath = path.join(DATA_DIR, 'manifest.json');
+  let manifest = { symbols: {}, stats: { total: 0, success: 0, failures: 0 } };
+  if (fs.existsSync(manifestPath)) {
+    try {
+      manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+    } catch {
+      manifest = { symbols: {}, stats: { total: 0, success: 0, failures: 0 } };
+    }
+  }
+
+  if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
+
+  const failureSymbols = [];
+
+  for (const symbol of symbols) {
+    process.stdout.write(`Processing ${symbol}... `);
+    const filePath = path.join(DATA_DIR, `${symbol}.json`);
+    const res = await fetchEodhd(symbol);
+
+    if (!res.ok) {
+      manifest.stats.failures += 1;
+      failureSymbols.push({ symbol, status: res.status || null, error: res.error || 'unknown' });
+      process.stdout.write(`FAILED (${res.status || 'ERR'})\n`);
+      if (res.fatal) {
+        console.error('Fatal auth error from EODHD. Stopping to avoid writing corrupted data.');
+        break;
+      }
+      await sleep(DELAY_MS);
+      continue;
     }
 
-    if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
-
-    for (const symbol of symbols) {
-        console.log(`Processing ${symbol}...`);
-
-        // Check if we have existing file? 
-        // Logic: merge? For "backfill/refresh", we usually want latest. 
-        // EODHD full history fetch is cheap enough for 100 symbols daily.
-        // Or fetch "from" latest date.
-
-        const filePath = path.join(DATA_DIR, `${symbol}.json`);
-        let existingBars = [];
-        let startDate = null;
-
-        if (fs.existsSync(filePath)) {
-            try {
-                existingBars = JSON.parse(fs.readFileSync(filePath, 'utf8'));
-                if (existingBars.length > 0) {
-                    const lastDate = existingBars[existingBars.length - 1].date;
-                    // Start next day
-                    // Simplistic logic: Just request full history to be safe and merge? 
-                    // EODHD full history is one call.
-                }
-            } catch { }
-        }
-
-        const res = await fetchEodhd(symbol);
-        if (res.ok) {
-            const newBars = normalizeBars(res.data);
-            // Merge logic: Map by date
-            const mergedMap = new Map();
-            existingBars.forEach(b => mergedMap.set(b.date, b));
-            newBars.forEach(b => mergedMap.set(b.date, b));
-
-            const finalBars = Array.from(mergedMap.values()).sort((a, b) => a.date.localeCompare(b.date));
-
-            fs.writeFileSync(filePath, JSON.stringify(finalBars, null, 2));
-            manifest.symbols[symbol] = {
-                count: finalBars.length,
-                last_date: finalBars.length > 0 ? finalBars[finalBars.length - 1].date : null,
-                updated_at: new Date().toISOString()
-            };
-            manifest.stats.success++;
-            console.log(`  Saved ${finalBars.length} bars.`);
-        } else {
-            console.error(`  Failed: ${res.status || res.error}`);
-            manifest.stats.failures++;
-        }
-
-        await sleep(DELAY_MS);
+    const finalBars = normalizeBars(res.data);
+    if (!finalBars.length) {
+      manifest.stats.failures += 1;
+      failureSymbols.push({ symbol, status: null, error: 'normalized_empty' });
+      process.stdout.write('FAILED (normalized_empty)\n');
+      await sleep(DELAY_MS);
+      continue;
     }
 
-    manifest.stats.total = symbols.length;
-    manifest.updated_at = new Date().toISOString();
-    fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2));
-    console.log("Done.");
+    fs.writeFileSync(filePath, JSON.stringify(finalBars, null, 2));
+    manifest.symbols[symbol] = {
+      count: finalBars.length,
+      last_date: finalBars[finalBars.length - 1]?.date || null,
+      updated_at: new Date().toISOString()
+    };
+    manifest.stats.success += 1;
+    process.stdout.write(`OK (${finalBars.length} bars)\n`);
+    await sleep(DELAY_MS);
+  }
+
+  manifest.stats.total = symbols.length;
+  manifest.updated_at = new Date().toISOString();
+  manifest.failures = failureSymbols;
+  fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2));
+
+  if (failureSymbols.length) {
+    console.error(`Backfill finished with ${failureSymbols.length} failures.`);
+    process.exit(1);
+  }
+  console.log('Backfill completed successfully.');
 }
 
-run().catch(console.error);
+run().catch((err) => {
+  console.error(err?.stack || err?.message || String(err));
+  process.exit(1);
+});

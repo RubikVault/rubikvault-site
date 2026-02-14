@@ -106,6 +106,26 @@ function volatility(closes, period = 20) {
   return stddev(rets);
 }
 
+function adjustedBarForIndicators(bar) {
+  const close = Number.isFinite(bar?.close) ? Number(bar.close) : null;
+  const adjClose = Number.isFinite(bar?.adjClose) ? Number(bar.adjClose) : close;
+  if (!Number.isFinite(adjClose)) return null;
+
+  // Preserve split-adjusted geometry using the close -> adjClose ratio when available.
+  const factor = Number.isFinite(close) && close !== 0 ? adjClose / close : 1;
+  const open = Number.isFinite(bar?.open) ? Number(bar.open) * factor : null;
+  const high = Number.isFinite(bar?.high) ? Number(bar.high) * factor : null;
+  const low = Number.isFinite(bar?.low) ? Number(bar.low) * factor : null;
+
+  return {
+    ...bar,
+    close: adjClose,
+    open,
+    high,
+    low
+  };
+}
+
 export function computeIndicators(bars) {
   const issues = [];
   const cleanBars = Array.isArray(bars) ? bars.filter(Boolean) : [];
@@ -113,9 +133,11 @@ export function computeIndicators(bars) {
     issues.push('INSUFFICIENT_HISTORY');
   }
 
-  const closes = cleanBars.map((b) => b.close).filter((v) => Number.isFinite(v));
+  const barsForCalc = cleanBars.map(adjustedBarForIndicators).filter(Boolean);
+  const closes = barsForCalc.map((b) => b.close).filter((v) => Number.isFinite(v));
   const volumes = cleanBars.map((b) => b.volume).filter((v) => Number.isFinite(v));
-  const latest = cleanBars.length ? cleanBars[cleanBars.length - 1] : null;
+  const latest = barsForCalc.length ? barsForCalc[barsForCalc.length - 1] : null;
+  const latestRaw = cleanBars.length ? cleanBars[cleanBars.length - 1] : null;
 
   const sma20 = sma(closes, 20);
   const sma50 = sma(closes, 50);
@@ -125,15 +147,15 @@ export function computeIndicators(bars) {
   const rsi14 = rsi(closes, 14);
   const macdOut = macd(closes, 12, 26, 9);
   const bb = bollinger(closes, 20, 2);
-  const atr14 = atr(cleanBars, 14);
+  const atr14 = atr(barsForCalc, 14);
   const ret1 = returns(closes, 1);
   const ret5 = returns(closes, 5);
   const ret20 = returns(closes, 20);
   const vol20 = volatility(closes, 20);
 
-  const lookback252 = cleanBars.slice(Math.max(0, cleanBars.length - 252));
-  const highs = lookback252.map((b) => b.high).filter((v) => Number.isFinite(v));
-  const lows = lookback252.map((b) => b.low).filter((v) => Number.isFinite(v));
+  const lookback252 = barsForCalc.slice(Math.max(0, barsForCalc.length - 252));
+  const highs = lookback252.map((b) => Number.isFinite(b.high) ? b.high : b.close).filter((v) => Number.isFinite(v));
+  const lows = lookback252.map((b) => Number.isFinite(b.low) ? b.low : b.close).filter((v) => Number.isFinite(v));
   const high52w = highs.length ? Math.max(...highs) : null;
   const low52w = lows.length ? Math.min(...lows) : null;
   const range52wPct =
@@ -141,7 +163,7 @@ export function computeIndicators(bars) {
 
   const avgVol20 = sma(volumes, 20);
   const volumeRatio20 =
-    Number.isFinite(latest?.volume) && Number.isFinite(avgVol20) && avgVol20 !== 0 ? latest.volume / avgVol20 : null;
+    Number.isFinite(latestRaw?.volume) && Number.isFinite(avgVol20) && avgVol20 !== 0 ? latestRaw.volume / avgVol20 : null;
 
   const closeToSma20Pct =
     Number.isFinite(latest?.close) && Number.isFinite(sma20) && sma20 !== 0 ? (latest.close - sma20) / sma20 : null;
@@ -200,7 +222,7 @@ export function computeIndicators(bars) {
     if (!Number.isFinite(atr14) || cleanBars.length < 60) return null;
     const atrValues = [];
     for (let i = 14; i < Math.min(cleanBars.length, 252); i++) {
-      const atrVal = atr(cleanBars.slice(0, i + 1), 14);
+      const atrVal = atr(barsForCalc.slice(0, i + 1), 14);
       if (Number.isFinite(atrVal)) atrValues.push(atrVal);
     }
     if (atrValues.length < 30) return null;
