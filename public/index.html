@@ -743,6 +743,9 @@
     const stockUiExtras = window.RVStockUIExtras || {};
     const uiArtifactCache = new Map();
     const uiGzipCache = new Map();
+    const ideasBarsCache = new Map();
+    let ideasBarsSymbols = null;
+    let ideasBarsManifestPromise = null;
 
     const UNIVERSE_URL = '/data/universe/all.json';
     let universe = [];
@@ -919,6 +922,145 @@
         }
       }
       return { response: null, payload: null, networkError: lastNetworkError };
+    }
+
+    function normalizeBarsPayload(payload) {
+      if (Array.isArray(payload)) return payload;
+      if (Array.isArray(payload?.bars)) return payload.bars;
+      if (Array.isArray(payload?.data?.bars)) return payload.data.bars;
+      return [];
+    }
+
+    function getBarDateMs(value) {
+      const ts = Date.parse(String(value || ''));
+      return Number.isFinite(ts) ? ts : null;
+    }
+
+    function getBarPrice(row) {
+      const adj = Number(row?.adjClose);
+      if (Number.isFinite(adj) && adj > 0) return adj;
+      const close = Number(row?.close);
+      if (Number.isFinite(close) && close > 0) return close;
+      return null;
+    }
+
+    function normalizeBarsSeries(rawBars) {
+      if (!Array.isArray(rawBars)) return [];
+      return rawBars
+        .map((row) => {
+          const date = String(row?.date || row?.trading_date || '').slice(0, 10);
+          const ts = getBarDateMs(date);
+          const price = getBarPrice(row);
+          if (ts == null || price == null) return null;
+          return { date, ts, price };
+        })
+        .filter(Boolean)
+        .sort((a, b) => a.ts - b.ts);
+    }
+
+    function computeTenYearPerf(rawBars) {
+      const series = normalizeBarsSeries(rawBars);
+      if (series.length < 2) return { pct: null, fromDate: null, toDate: null };
+      const latest = series[series.length - 1];
+      const target = new Date(latest.ts);
+      target.setUTCFullYear(target.getUTCFullYear() - 10);
+      const targetTs = target.getTime();
+      if (series[0].ts > targetTs) return { pct: null, fromDate: null, toDate: latest.date };
+
+      let base = series[0];
+      let bestDelta = Math.abs(base.ts - targetTs);
+      for (const row of series) {
+        const delta = Math.abs(row.ts - targetTs);
+        if (delta < bestDelta) {
+          bestDelta = delta;
+          base = row;
+        }
+      }
+
+      if (!Number.isFinite(base.price) || !Number.isFinite(latest.price) || base.price <= 0) {
+        return { pct: null, fromDate: base?.date || null, toDate: latest.date };
+      }
+      return {
+        pct: latest.price / base.price - 1,
+        fromDate: base.date,
+        toDate: latest.date
+      };
+    }
+
+    function computeAthAndDrawdown(rawBars) {
+      const series = normalizeBarsSeries(rawBars);
+      if (!series.length) return { latestPrice: null, ath: null, drawdownPct: null };
+      const latest = series[series.length - 1];
+      let ath = -Infinity;
+      for (const row of series) {
+        if (row.price > ath) ath = row.price;
+      }
+      if (!Number.isFinite(ath) || ath <= 0 || !Number.isFinite(latest.price)) {
+        return { latestPrice: latest?.price ?? null, ath: null, drawdownPct: null };
+      }
+      return {
+        latestPrice: latest.price,
+        ath,
+        drawdownPct: ((ath - latest.price) / ath) * 100
+      };
+    }
+
+    async function loadIdeasBarsManifest() {
+      if (ideasBarsSymbols) return ideasBarsSymbols;
+      if (ideasBarsManifestPromise) return ideasBarsManifestPromise;
+      ideasBarsManifestPromise = (async () => {
+        const { response, payload } = await fetchJson('/data/eod/bars/manifest.json');
+        if (!response?.ok || !payload || typeof payload !== 'object') {
+          ideasBarsSymbols = new Set();
+          return ideasBarsSymbols;
+        }
+        const symbolMap = payload?.symbols && typeof payload.symbols === 'object' ? payload.symbols : {};
+        ideasBarsSymbols = new Set(
+          Object.keys(symbolMap)
+            .map((value) => normalizeTicker(value))
+            .filter(Boolean)
+        );
+        return ideasBarsSymbols;
+      })()
+        .catch(() => {
+          ideasBarsSymbols = new Set();
+          return ideasBarsSymbols;
+        })
+        .finally(() => {
+          ideasBarsManifestPromise = null;
+        });
+      return ideasBarsManifestPromise;
+    }
+
+    async function loadIdeasBarsForTicker(ticker) {
+      const symbol = normalizeTicker(ticker);
+      if (!symbol) return null;
+      if (ideasBarsCache.has(symbol)) return ideasBarsCache.get(symbol);
+      const promise = (async () => {
+        const symbolsInManifest = await loadIdeasBarsManifest();
+        if (symbolsInManifest?.size && !symbolsInManifest.has(symbol)) return null;
+        const { response, payload } = await fetchJson(`/data/eod/bars/${encodeURIComponent(symbol)}.json`);
+        if (!response?.ok || !payload) return null;
+        const bars = normalizeBarsPayload(payload);
+        return Array.isArray(bars) && bars.length ? bars : null;
+      })();
+      ideasBarsCache.set(symbol, promise);
+      return promise;
+    }
+
+    async function mapWithConcurrency(items, limit, mapper) {
+      const out = new Array(items.length);
+      let cursor = 0;
+      async function worker() {
+        while (true) {
+          const idx = cursor++;
+          if (idx >= items.length) return;
+          out[idx] = await mapper(items[idx], idx);
+        }
+      }
+      const workers = Array.from({ length: Math.max(1, Math.min(limit, items.length || 1)) }, () => worker());
+      await Promise.all(workers);
+      return out;
     }
 
     function formatDecimalPct(value, digits = 2) {
@@ -1191,13 +1333,7 @@
     async function renderIdeasView() {
       if (!ideasMoatContent || !ideasListContent || !ideasViewMeta) return;
 
-      let metrics = {};
-      try {
-        const res = await fetch('/data/ideas-metrics.json');
-        if (res.ok) metrics = await res.json();
-      } catch (e) {
-        console.warn('Metrics failed', e);
-      }
+      const metrics = {};
 
       const marketAnalysisData = [
         {
@@ -1497,17 +1633,33 @@
         }
       }));
 
+      const moatUniverse = [];
+      const moatSeen = new Set();
+      marketAnalysisData.forEach((group) => {
+        group.items.forEach((item) => {
+          const ticker = normalizeTicker(item.ticker);
+          if (!ticker || moatSeen.has(ticker)) return;
+          moatSeen.add(ticker);
+          moatUniverse.push({ ticker, name: item.name || '' });
+        });
+      });
+
+      const moatComputedRows = await mapWithConcurrency(moatUniverse, 8, async (entry) => {
+        const bars = await loadIdeasBarsForTicker(entry.ticker);
+        return {
+          ...entry,
+          tenYear: computeTenYearPerf(bars),
+          ath: computeAthAndDrawdown(bars)
+        };
+      });
+      const moatComputedByTicker = new Map(moatComputedRows.map((row) => [row.ticker, row]));
+      const cheapMoatRows = moatComputedRows
+        .filter((row) => Number.isFinite(Number(row?.ath?.drawdownPct)))
+        .sort((a, b) => (Number(b.ath.drawdownPct) - Number(a.ath.drawdownPct)) || a.ticker.localeCompare(b.ticker))
+        .slice(0, 6);
+
       const generatedAt = new Date().toISOString().split('T')[0];
       ideasViewMeta.textContent = `Strategic MOAT Analysis • ${generatedAt}`;
-
-      const winners = [];
-      marketAnalysisData.forEach(g => g.items.forEach(i => {
-        if ((i.ai === 'strengthens' || i.robots === 'strengthens') && i.cagr2y != null) winners.push(i);
-      }));
-      // Sort winners by 2y CAGR descending
-      const topWinners = winners
-        .sort((a, b) => (b.cagr2y || -Infinity) - (a.cagr2y || -Infinity))
-        .slice(0, 6);
 
       ideasMoatContent.innerHTML = `
         <div style="margin-bottom: 2rem;">
@@ -1536,19 +1688,36 @@
               </div>
             </div>
 
-            <!-- Top Winners Table -->
+            <!-- Cheap Moat Table -->
             <div style="flex: 1; min-width: 320px; background: rgba(15, 23, 42, 0.45); border: 1px solid rgba(148, 163, 184, 0.15); border-radius: 10px; padding: 1.25rem;">
-              <div style="font-size: 0.85rem; font-weight: 700; color: #cbd5e1; text-transform: uppercase; margin-bottom: 0.75rem; border-bottom: 1px solid rgba(148,163,184,0.1); padding-bottom: 0.5rem;">TOP AI and Robotics Winners</div>
-              <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.5rem;">
-                ${topWinners.map(w => `
-                  <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(30, 41, 59, 0.3); padding: 0.4rem 0.6rem; border-radius: 6px; border: 1px solid rgba(148,163,184,0.05);">
-                    <div style="display: flex; align-items: center; gap: 0.5rem;">
-                      <span style="font-weight: 800; color: #60a5fa; font-size: 0.85rem;">${escapeHtml(w.ticker)}</span>
-                      <span style="color: #94a3b8; font-size: 0.75rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100px;">${escapeHtml(w.name)}</span>
-                    </div>
-                    <span style="font-size: 0.75rem; font-weight: 700;">${formatColoredPercent(w.cagr2y, 1)} YoY</span>
-                  </div>
-                `).join('')}
+              <div style="font-size: 0.85rem; font-weight: 700; color: #cbd5e1; text-transform: uppercase; margin-bottom: 0.75rem; border-bottom: 1px solid rgba(148,163,184,0.1); padding-bottom: 0.5rem;">TOP Cheap MOAT Stocks</div>
+              <div style="overflow-x:auto;">
+                <table style="width:100%; border-collapse:collapse; font-size:0.78rem;">
+                  <thead>
+                    <tr>
+                      <th style="text-align:left; color:#94a3b8; padding:0.35rem 0.4rem;">#</th>
+                      <th style="text-align:left; color:#94a3b8; padding:0.35rem 0.4rem;">Symbol</th>
+                      <th style="text-align:left; color:#94a3b8; padding:0.35rem 0.4rem;">Company</th>
+                      <th style="text-align:right; color:#94a3b8; padding:0.35rem 0.4rem;">Price</th>
+                      <th style="text-align:right; color:#94a3b8; padding:0.35rem 0.4rem;">ATH</th>
+                      <th style="text-align:right; color:#94a3b8; padding:0.35rem 0.4rem;">% below ATH</th>
+                      <th style="text-align:right; color:#94a3b8; padding:0.35rem 0.4rem;">10Y</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    ${cheapMoatRows.length ? cheapMoatRows.map((row, idx) => `
+                      <tr>
+                        <td style="padding:0.35rem 0.4rem; border-top:1px solid rgba(100,116,139,0.18); color:#94a3b8;">${idx + 1}</td>
+                        <td style="padding:0.35rem 0.4rem; border-top:1px solid rgba(100,116,139,0.18);"><a href="/analyze/${encodeURIComponent(row.ticker)}" data-open-ticker="${escapeHtml(row.ticker)}" style="font-weight:700; color:#60a5fa; text-decoration:none;">${escapeHtml(row.ticker)}</a></td>
+                        <td style="padding:0.35rem 0.4rem; border-top:1px solid rgba(100,116,139,0.18); color:#cbd5e1;">${escapeHtml(row.name || '')}</td>
+                        <td style="padding:0.35rem 0.4rem; border-top:1px solid rgba(100,116,139,0.18); text-align:right; color:#e5e7eb;">${formatNumber(row?.ath?.latestPrice, { digits: 2 })}</td>
+                        <td style="padding:0.35rem 0.4rem; border-top:1px solid rgba(100,116,139,0.18); text-align:right; color:#e5e7eb;">${formatNumber(row?.ath?.ath, { digits: 2 })}</td>
+                        <td style="padding:0.35rem 0.4rem; border-top:1px solid rgba(100,116,139,0.18); text-align:right; color:#e5e7eb; font-weight:700;">${Number(row?.ath?.drawdownPct).toFixed(1)}%</td>
+                        <td style="padding:0.35rem 0.4rem; border-top:1px solid rgba(100,116,139,0.18); text-align:right;">${row?.tenYear?.pct == null ? '—' : formatColoredPercent(row.tenYear.pct, 1)}</td>
+                      </tr>
+                    `).join('') : `<tr><td colspan="7" style="padding:0.45rem; border-top:1px solid rgba(100,116,139,0.18); color:#64748b;">No price history available for cheap-moat ranking.</td></tr>`}
+                  </tbody>
+                </table>
               </div>
             </div>
           </div>
@@ -1556,16 +1725,31 @@
       `;
 
       // Generate Shortcuts Block
+      const shortcutEntriesRaw = marketAnalysisData.map((group, idx) => {
+        const label = String(group.category || '')
+          .split(':')[0]
+          .replace(/[\u{1F300}-\u{1F9FF}]/gu, '')
+          .trim();
+        return { idx, label };
+      });
+      let paymentsSeen = 0;
+      const shortcutEntries = shortcutEntriesRaw.filter((entry) => {
+        if (entry.label.toLowerCase() === 'payments') {
+          paymentsSeen += 1;
+          return paymentsSeen > 1; // remove first, keep second
+        }
+        return true;
+      });
       const shortcutsBlock = `
         <div style="margin-bottom: 1.75rem; background: rgba(15, 23, 42, 0.45); border: 1px solid rgba(148, 163, 184, 0.15); border-radius: 10px; padding: 1rem 1.1rem;">
           <h3 style="font-size: 0.95rem; color: #94a3b8; margin: 0 0 0.75rem; text-transform:uppercase; letter-spacing:0.05em;">Industry Shortcuts</h3>
           <div style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
-            ${marketAnalysisData.map((g, i) => `
-              <a href="#industry-${i}" 
+            ${shortcutEntries.map((entry) => `
+              <a href="#industry-${entry.idx}" 
                  style="font-size: 0.82rem; color: #cbd5e1; background: rgba(30, 41, 59, 0.6); border: 1px solid rgba(100, 116, 139, 0.3); padding: 0.3rem 0.6rem; border-radius: 6px; text-decoration: none; transition: all 0.2s;"
                  onmouseover="this.style.background='rgba(59, 130, 246, 0.2)'; this.style.borderColor='rgba(59, 130, 246, 0.4)';"
                  onmouseout="this.style.background='rgba(30, 41, 59, 0.6)'; this.style.borderColor='rgba(100, 116, 139, 0.3)';">
-                ${escapeHtml(g.category.split(':')[0].replace(/[\u{1F300}-\u{1F9FF}]/gu, '').trim())}
+                ${escapeHtml(entry.label)}
               </a>
             `).join('')}
           </div>
@@ -1599,6 +1783,14 @@
                 <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
                   ${aiBadge}
                   ${robotsBadge}
+                </div>
+                <div style="font-size: 0.82rem; color: #94a3b8;">
+                  10Y: ${(() => {
+                    const computed = moatComputedByTicker.get(normalizeTicker(item.ticker));
+                    const tenYearPct = computed?.tenYear?.pct;
+                    if (tenYearPct == null) return '—';
+                    return formatColoredPercent(tenYearPct, 1);
+                  })()}
                 </div>
               </div>
               
