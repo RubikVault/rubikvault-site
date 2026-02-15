@@ -3187,13 +3187,14 @@ body.rv-analyze #rv-debug-root {
    PAGE NAVIGATION (Extracted from index.html)
    ========================= */
 .rv-page-nav {
-  background: rgba(15, 23, 42, 0.8);
-  border-bottom: 1px solid rgba(100, 116, 139, 0.2);
+  background: rgba(15, 23, 42, 0.85); /* Slightly darker for better contrast */
+  border-bottom: 1px solid rgba(100, 116, 139, 0.25);
   padding: 0.6rem 0;
   position: sticky;
-  top: 60px;
-  z-index: 90;
-  backdrop-filter: blur(8px);
+  top: 0;
+  z-index: 1300;
+  backdrop-filter: blur(12px);
+  width: 100%;
 }
 
 .rv-page-nav-inner {
