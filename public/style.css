@@ -3187,7 +3187,8 @@ body.rv-analyze #rv-debug-root {
    PAGE NAVIGATION (Extracted from index.html)
    ========================= */
 .rv-page-nav {
-  background: rgba(15, 23, 42, 0.85); /* Slightly darker for better contrast */
+  background: rgba(15, 23, 42, 0.85);
+  /* Slightly darker for better contrast */
   border-bottom: 1px solid rgba(100, 116, 139, 0.25);
   padding: 0.6rem 0;
   position: sticky;
@@ -3202,6 +3203,7 @@ body.rv-analyze #rv-debug-root {
   margin: 0 auto;
   padding: 0 2rem;
   display: flex;
+  justify-content: center;
   gap: 2rem;
 }
 
