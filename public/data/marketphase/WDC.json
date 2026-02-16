@@ -1,0 +1,129 @@
+{
+  "ok": true,
+  "feature": "marketphase",
+  "meta": {
+    "symbol": "WDC",
+    "generatedAt": "2026-02-16T09:15:04.263Z",
+    "fetchedAt": "2026-02-16T09:15:04.263Z",
+    "ttlSeconds": 86400,
+    "provider": "internal",
+    "dataset": "WDC",
+    "source": "marketphase",
+    "status": "OK",
+    "version": "8.0",
+    "methodologyVersion": "8.0",
+    "precision": "IEEE754-Double-Round6",
+    "auditTrail": {
+      "generatedBy": "MarketPhase-v8-Engine",
+      "commitHash": "c973da3",
+      "reviewDate": "2026-02-16T09:15:04.263Z",
+      "standards": [
+        "ISO-8000",
+        "IEEE-7000"
+      ]
+    },
+    "legal": "MarketPhase AI — Scientific Elliott Research (v8.0)\nprovides deterministic, rule-based historical analysis only.\nIt does not forecast future prices or offer financial advice.\nUse solely for educational and research purposes.\nISO 8000 / IEEE 7000 Compliant - Bit-exact reproducibility guaranteed."
+  },
+  "data": {
+    "features": {
+      "RSI": 60.503837,
+      "MACDHist": -1.138462,
+      "ATR%": 4.110616,
+      "SMA50": 215.16,
+      "SMA200": 122.044968,
+      "SMATrend": "bullish",
+      "lastClose": 281.58
+    },
+    "swings": {
+      "raw": [
+        {
+          "index": 43,
+          "date": "2025-04-04",
+          "price": 30.4233,
+          "type": "low"
+        },
+        {
+          "index": 123,
+          "date": "2025-07-31",
+          "price": 78.5354,
+          "type": "high"
+        },
+        {
+          "index": 168,
+          "date": "2025-10-03",
+          "price": 131.2045,
+          "type": "high"
+        },
+        {
+          "index": 194,
+          "date": "2025-11-10",
+          "price": 174.08,
+          "type": "high"
+        },
+        {
+          "index": 203,
+          "date": "2025-11-21",
+          "price": 139.0782,
+          "type": "low"
+        }
+      ],
+      "confirmed": [
+        {
+          "index": 43,
+          "date": "2025-04-04",
+          "price": 30.4233,
+          "type": "low"
+        },
+        {
+          "index": 203,
+          "date": "2025-11-21",
+          "price": 139.0782,
+          "type": "low"
+        }
+      ]
+    },
+    "elliott": {
+      "completedPattern": {
+        "valid": false,
+        "direction": "neutral",
+        "endedAt": null,
+        "confidence0_100": 0,
+        "rules": {}
+      },
+      "developingPattern": {
+        "possibleWave": "Insufficient swings",
+        "confidence": 0,
+        "fibLevels": {
+          "support": [],
+          "resistance": []
+        },
+        "disclaimer": "Reference levels only -- no prediction"
+      },
+      "uncertainty": {
+        "lastSwingConfirmed": false,
+        "alternativeCounts": 2,
+        "confidenceDecay": {
+          "base": 0,
+          "adjusted": 0
+        }
+      },
+      "fib": {
+        "ratios": {},
+        "conformanceScore": 0
+      }
+    },
+    "fib": {
+      "ratios": {},
+      "conformanceScore": 0
+    },
+    "multiTimeframeAgreement": null,
+    "debug": {
+      "symbol": "WDC",
+      "window": 15,
+      "candidateCount": 5,
+      "durationMs": 1
+    },
+    "disclaimer": "MarketPhase AI — Scientific Elliott Research (v8.0)\nprovides deterministic, rule-based historical analysis only.\nIt does not forecast future prices or offer financial advice.\nUse solely for educational and research purposes.\nISO 8000 / IEEE 7000 Compliant - Bit-exact reproducibility guaranteed."
+  },
+  "error": null
+}

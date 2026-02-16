@@ -1,0 +1,247 @@
+{
+  "ok": true,
+  "feature": "marketphase",
+  "meta": {
+    "symbol": "WRBY",
+    "generatedAt": "2026-02-16T09:15:04.506Z",
+    "fetchedAt": "2026-02-16T09:15:04.506Z",
+    "ttlSeconds": 86400,
+    "provider": "internal",
+    "dataset": "WRBY",
+    "source": "marketphase",
+    "status": "OK",
+    "version": "8.0",
+    "methodologyVersion": "8.0",
+    "precision": "IEEE754-Double-Round6",
+    "auditTrail": {
+      "generatedBy": "MarketPhase-v8-Engine",
+      "commitHash": "c973da3",
+      "reviewDate": "2026-02-16T09:15:04.506Z",
+      "standards": [
+        "ISO-8000",
+        "IEEE-7000"
+      ]
+    },
+    "legal": "MarketPhase AI — Scientific Elliott Research (v8.0)\nprovides deterministic, rule-based historical analysis only.\nIt does not forecast future prices or offer financial advice.\nUse solely for educational and research purposes.\nISO 8000 / IEEE 7000 Compliant - Bit-exact reproducibility guaranteed."
+  },
+  "data": {
+    "features": {
+      "RSI": 41.093032,
+      "MACDHist": -0.587391,
+      "ATR%": 4.506799,
+      "SMA50": 25.3292,
+      "SMA200": 23.1092,
+      "SMATrend": "bullish",
+      "lastClose": 22.46
+    },
+    "swings": {
+      "raw": [
+        {
+          "index": 30,
+          "date": "2025-03-18",
+          "price": 17.82,
+          "type": "low"
+        },
+        {
+          "index": 53,
+          "date": "2025-04-21",
+          "price": 14,
+          "type": "low"
+        },
+        {
+          "index": 89,
+          "date": "2025-06-11",
+          "price": 22.6,
+          "type": "high"
+        },
+        {
+          "index": 105,
+          "date": "2025-07-07",
+          "price": 21.37,
+          "type": "low"
+        },
+        {
+          "index": 116,
+          "date": "2025-07-22",
+          "price": 24.58,
+          "type": "high"
+        },
+        {
+          "index": 130,
+          "date": "2025-08-11",
+          "price": 23.22,
+          "type": "low"
+        },
+        {
+          "index": 135,
+          "date": "2025-08-18",
+          "price": 27.34,
+          "type": "high"
+        },
+        {
+          "index": 146,
+          "date": "2025-09-03",
+          "price": 25.26,
+          "type": "low"
+        },
+        {
+          "index": 159,
+          "date": "2025-09-22",
+          "price": 28.56,
+          "type": "high"
+        },
+        {
+          "index": 199,
+          "date": "2025-11-17",
+          "price": 16.49,
+          "type": "low"
+        },
+        {
+          "index": 216,
+          "date": "2025-12-11",
+          "price": 30.23,
+          "type": "high"
+        },
+        {
+          "index": 229,
+          "date": "2025-12-31",
+          "price": 21.79,
+          "type": "low"
+        },
+        {
+          "index": 237,
+          "date": "2026-01-13",
+          "price": 29.09,
+          "type": "high"
+        }
+      ],
+      "confirmed": [
+        {
+          "index": 53,
+          "date": "2025-04-21",
+          "price": 14,
+          "type": "low"
+        },
+        {
+          "index": 89,
+          "date": "2025-06-11",
+          "price": 22.6,
+          "type": "high"
+        },
+        {
+          "index": 105,
+          "date": "2025-07-07",
+          "price": 21.37,
+          "type": "low"
+        },
+        {
+          "index": 130,
+          "date": "2025-08-11",
+          "price": 23.22,
+          "type": "low"
+        },
+        {
+          "index": 146,
+          "date": "2025-09-03",
+          "price": 25.26,
+          "type": "low"
+        },
+        {
+          "index": 159,
+          "date": "2025-09-22",
+          "price": 28.56,
+          "type": "high"
+        },
+        {
+          "index": 199,
+          "date": "2025-11-17",
+          "price": 16.49,
+          "type": "low"
+        },
+        {
+          "index": 216,
+          "date": "2025-12-11",
+          "price": 30.23,
+          "type": "high"
+        },
+        {
+          "index": 229,
+          "date": "2025-12-31",
+          "price": 21.79,
+          "type": "low"
+        },
+        {
+          "index": 237,
+          "date": "2026-01-13",
+          "price": 29.09,
+          "type": "high"
+        }
+      ]
+    },
+    "elliott": {
+      "completedPattern": {
+        "valid": false,
+        "direction": "bullish",
+        "endedAt": "2026-01-13",
+        "confidence0_100": 81,
+        "rules": {
+          "r1": false,
+          "r2": true,
+          "r3": false
+        },
+        "guidelineScore": 38,
+        "rulePasses": 1
+      },
+      "developingPattern": {
+        "possibleWave": "Wave 4 or ABC",
+        "confidence": 49,
+        "fibLevels": {
+          "support": [
+            22.6514,
+            20.9286
+          ],
+          "resistance": [
+            28.2286,
+            29.9514
+          ]
+        },
+        "disclaimer": "Reference levels only -- no prediction"
+      },
+      "uncertainty": {
+        "lastSwingConfirmed": true,
+        "alternativeCounts": 2,
+        "confidenceDecay": {
+          "base": 81,
+          "adjusted": 57
+        }
+      },
+      "fib": {
+        "ratios": {
+          "wave2": 3.657576,
+          "wave3": 4.163636,
+          "wave4": 0.614265,
+          "wave5": 2.212121
+        },
+        "conformanceScore": 59.679808
+      }
+    },
+    "fib": {
+      "ratios": {
+        "wave2": 3.657576,
+        "wave3": 4.163636,
+        "wave4": 0.614265,
+        "wave5": 2.212121
+      },
+      "conformanceScore": 59.679808
+    },
+    "multiTimeframeAgreement": null,
+    "debug": {
+      "symbol": "WRBY",
+      "window": 9,
+      "candidateCount": 13,
+      "durationMs": 1
+    },
+    "disclaimer": "MarketPhase AI — Scientific Elliott Research (v8.0)\nprovides deterministic, rule-based historical analysis only.\nIt does not forecast future prices or offer financial advice.\nUse solely for educational and research purposes.\nISO 8000 / IEEE 7000 Compliant - Bit-exact reproducibility guaranteed."
+  },
+  "error": null
+}
