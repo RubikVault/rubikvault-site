@@ -331,23 +331,25 @@ async function main() {
     let bars = [];
     let provider = null;
     let usedProviderFallback = false;
+    let kvReadFailure = null;
 
     if (kv && typeof kv.get === "function") {
       let raw = null;
       try {
         raw = await kv.get(key);
       } catch (err) {
-        missing.push({ ticker, reason: "KV_READ_FAILED", details: { message: err?.message || String(err) } });
-        return null;
+        kvReadFailure = { message: err?.message || String(err) };
       }
       if (raw) {
         try {
           parsed = JSON.parse(raw);
         } catch {
-          missing.push({ ticker, reason: "INVALID_EOD_JSON" });
-          return null;
+          kvReadFailure = { message: "INVALID_EOD_JSON" };
+          parsed = null;
         }
-        bars = normalizeBars(parsed?.bars || parsed?.data?.bars || parsed?.data || []);
+        if (parsed) {
+          bars = normalizeBars(parsed?.bars || parsed?.data?.bars || parsed?.data || []);
+        }
       }
     }
 
@@ -390,10 +392,10 @@ async function main() {
     }
 
     if (!bars.length) {
-      const reason = !kv
-        ? "KV_BACKEND_UNAVAILABLE"
-        : "NO_EOD_BARS";
-      missing.push({ ticker, reason });
+      const reason = kvReadFailure
+        ? "KV_READ_FAILED"
+        : (!kv ? "KV_BACKEND_UNAVAILABLE" : "NO_EOD_BARS");
+      missing.push({ ticker, reason, ...(kvReadFailure ? { details: kvReadFailure } : {}) });
       return null;
     }
 
