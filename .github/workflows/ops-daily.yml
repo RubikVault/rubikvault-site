@@ -109,6 +109,7 @@ jobs:
           set -euo pipefail
           git config user.name "RubikVault Bot"
           git config user.email "bot@rubikvault.com"
+          git add public/data/marketphase/*.json
           git add public/data/pipeline/*.json public/data/ops public/data/ops-daily.json
           if git diff --cached --quiet; then
             echo "No staged changes"
