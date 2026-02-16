@@ -31,6 +31,7 @@ jobs:
       - name: Run Backfill (Full Universe)
         env:
           EODHD_API_KEY: ${{ secrets.EODHD_API_KEY }}
+          TIINGO_API_KEY: ${{ secrets.TIINGO_API_KEY }}
           EODHD_BACKFILL_MAX_FAILURE_PCT: "12"
         run: |
           set -euo pipefail
@@ -50,6 +51,9 @@ jobs:
           node scripts/providers/eodhd-backfill-bars.mjs --universe "$UNIVERSE_FILE"
 
       - name: Rebuild v3 EOD + adjusted series
+        env:
+          EODHD_API_KEY: ${{ secrets.EODHD_API_KEY }}
+          TIINGO_API_KEY: ${{ secrets.TIINGO_API_KEY }}
         run: |
           set -euo pipefail
           node scripts/dp1/eod-snapshot.v3.mjs --exchange US

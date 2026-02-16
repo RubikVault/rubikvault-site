@@ -11,6 +11,7 @@ import {
 
 const WINDOW = 90;
 const MIN_OVERLAP = 30;
+const MIN_BARS_REQUIRED = MIN_OVERLAP + 2;
 
 function pickLatestIso(values) {
   const list = values.filter((v) => typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v));
@@ -46,10 +47,26 @@ async function main() {
 
   const correlations = {};
   let usedPeerFallback = false;
+  const statusCounts = {
+    computed: 0,
+    missing: 0,
+    not_supported: 0
+  };
 
   for (const ticker of tickers) {
     const tickerBars = await getBars(ticker);
-    if (tickerBars.length < MIN_OVERLAP + 2) continue;
+    if (tickerBars.length < MIN_BARS_REQUIRED) {
+      correlations[ticker] = {
+        window: WINDOW,
+        status: 'not_supported',
+        reason: 'INSUFFICIENT_BARS',
+        bars: tickerBars.length,
+        min_bars: MIN_BARS_REQUIRED,
+        items: []
+      };
+      statusCounts.not_supported += 1;
+      continue;
+    }
 
     let refs = benchmarkSymbols.filter((sym) => sym !== ticker);
     if (!refs.length) {
@@ -85,9 +102,20 @@ async function main() {
     if (items.length) {
       correlations[ticker] = {
         window: WINDOW,
+        status: 'computed',
         items
       };
+      statusCounts.computed += 1;
+      continue;
     }
+
+    correlations[ticker] = {
+      window: WINDOW,
+      status: 'missing',
+      reason: refs.length ? 'NO_VALID_OVERLAP' : 'NO_REFERENCES',
+      items: []
+    };
+    statusCounts.missing += 1;
   }
 
   const dataDate = pickLatestIso(latestDates);
@@ -112,7 +140,8 @@ async function main() {
       min_overlap: MIN_OVERLAP,
       coverage: {
         symbols: coverageCount,
-        universe: tickers.length
+        universe: tickers.length,
+        status_counts: statusCounts
       }
     },
     data: {

@@ -60,6 +60,11 @@ jobs:
           CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
           CF_API_TOKEN: ${{ secrets.CF_API_TOKEN || secrets.CF_API_KEY }}
           CF_API_KEY: ${{ secrets.CF_API_KEY }}
+          EODHD_API_KEY: ${{ secrets.EODHD_API_KEY }}
+          TIINGO_API_KEY: ${{ secrets.TIINGO_API_KEY }}
+          MARKETPHASE_PROVIDER_FALLBACK: "1"
+          MARKETPHASE_KV_GET_RETRIES: "6"
+          MARKETPHASE_KV_BACKOFF_MS: "450"
         run: node scripts/pipeline/build-marketphase-from-kv.mjs --universe all --min-coverage 0.90
 
       - name: Build pipeline truth (NASDAQ-100)

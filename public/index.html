@@ -482,7 +482,9 @@
     const scientificByTimeframe = { short: new Map(), medium: new Map(), long: new Map() };
     const elliottWavesData = new Map();
     const elliottSupportByTicker = new Map();
+    const marketphaseMissingByTicker = new Map();
     let elliottIndexLoaded = false;
+    let marketphaseMissingLoaded = false;
 
     async function loadScientificData() {
       try {
@@ -497,6 +499,7 @@
           renderBestSetups();
         }
         loadElliottSupportIndex().then(updateBuySignalsStats);
+        loadMarketphaseMissingIndex();
       } catch (e) {
         console.warn('Scientific analysis data not available:', e);
       }
@@ -542,6 +545,33 @@
       } catch (e) {
         console.warn('Elliott Waves index not available:', e);
       }
+    }
+
+    async function loadMarketphaseMissingIndex() {
+      if (marketphaseMissingLoaded) return;
+      marketphaseMissingLoaded = true;
+      try {
+        const res = await fetch('/data/marketphase/missing.json', { cache: 'no-store' });
+        if (!res.ok) return;
+        const payload = await res.json();
+        const rows = Array.isArray(payload?.missing) ? payload.missing : [];
+        for (const row of rows) {
+          const t = normalizeTicker(row?.ticker || '');
+          if (!t) continue;
+          marketphaseMissingByTicker.set(t, row);
+        }
+      } catch (e) {
+        console.warn('MarketPhase missing index not available:', e);
+      }
+    }
+
+    function classifyElliottAvailability(reason) {
+      const text = String(reason || '').toUpperCase();
+      if (!text) return 'missing';
+      if (text.includes('NOT_SUPPORTED') || text.includes('INSUFFICIENT_BARS')) return 'not_supported';
+      if (text.includes('KV_READ_FAILED') || text.includes('PROVIDER_')) return 'error';
+      if (text.includes('NO_EOD_BARS') || text.includes('NO_REFERENCES')) return 'missing';
+      return 'missing';
     }
 
     function computeElliottSupport(payload) {
@@ -3197,7 +3227,25 @@
       if (!t) return null;
       if (elliottWavesData.has(t)) return elliottWavesData.get(t);
       const { payload } = await fetchJson(`/data/marketphase/${encodeURIComponent(t)}.json`);
-      if (!payload) return null;
+      if (!payload) {
+        await loadMarketphaseMissingIndex();
+        const missing = marketphaseMissingByTicker.get(t);
+        if (missing) {
+          const reason = missing?.reason || 'MISSING_MARKETPHASE';
+          const fallback = {
+            ok: false,
+            meta: {
+              status: classifyElliottAvailability(reason),
+              reason,
+              details: missing?.details || null
+            },
+            error: { code: reason }
+          };
+          elliottWavesData.set(t, fallback);
+          return fallback;
+        }
+        return null;
+      }
       elliottWavesData.set(t, payload);
       if (payload.ok === true && !elliottSupportByTicker.has(t)) {
         elliottSupportByTicker.set(t, computeElliottSupport(payload));
@@ -3208,10 +3256,21 @@
     function renderElliottSummary(payload) {
       if (!payload || payload.ok !== true) {
         const reason = payload?.meta?.reason || payload?.error?.code || null;
+        const status = payload?.meta?.status || classifyElliottAvailability(reason);
         const isCircuitOpen = payload?.meta?.circuitOpen === true;
-        const heading = isCircuitOpen ? 'Elliott Circuit Open' : 'Elliott Waves data unavailable';
+        const heading = isCircuitOpen
+          ? 'Elliott Circuit Open'
+          : (status === 'not_supported' ? 'Elliott currently not supported for this ticker' : 'Elliott Waves data unavailable');
+        const badgeColor = status === 'not_supported' ? '#fbbf24' : (status === 'error' ? '#ef4444' : '#64748b');
         const detail = reason ? ` (${escapeHtml(String(reason))})` : '';
-        return `<div style="color:#f59e0b;">${heading}${detail}</div>`;
+        return `
+          <div style="display:flex; align-items:center; gap:0.55rem; color:#f59e0b;">
+            <span style="display:inline-flex; align-items:center; padding:0.12rem 0.45rem; border-radius:999px; border:1px solid ${badgeColor}; color:${badgeColor}; font-size:0.7rem; font-weight:700; letter-spacing:0.02em;">
+              ${escapeHtml(String(status || 'missing').toUpperCase())}
+            </span>
+            <span>${heading}${detail}</span>
+          </div>
+        `;
       }
       const data = payload?.data || {};
       const elliott = data?.elliott || {};

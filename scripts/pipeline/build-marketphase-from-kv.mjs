@@ -15,8 +15,11 @@ const REPO_ROOT = process.cwd();
 const DEFAULT_UNIVERSE = "all";
 const DEFAULT_CONCURRENCY = 3;
 const DEFAULT_MIN_BARS = 200;
+const DEFAULT_MIN_SUPPORTED_BARS = Number(process.env.MARKETPHASE_MIN_SUPPORTED_BARS || 100);
 const DEFAULT_OUTPUTSIZE = 300;
 const DEFAULT_MIN_COVERAGE = Number(process.env.MARKETPHASE_MIN_COVERAGE_RATIO || 0.9);
+const DEFAULT_KV_GET_RETRIES = Number(process.env.MARKETPHASE_KV_GET_RETRIES || 4);
+const DEFAULT_KV_BACKOFF_MS = Number(process.env.MARKETPHASE_KV_BACKOFF_MS || 350);
 
 function toBool(value) {
   const s = String(value || "").trim().toLowerCase();
@@ -29,6 +32,51 @@ function isoNow() {
 
 function normalizeTicker(value) {
   return String(value || "").trim().toUpperCase();
+}
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, Math.max(0, Number(ms) || 0)));
+}
+
+function shouldRetryKvError(error) {
+  const message = String(error?.message || error || "").toLowerCase();
+  if (!message) return false;
+  if (message.includes("429")) return true;
+  if (message.includes("please wait")) return true;
+  if (message.includes("timeout")) return true;
+  if (message.includes("rate")) return true;
+  if (message.includes("econnreset")) return true;
+  if (message.includes("temporar")) return true;
+  return false;
+}
+
+async function readKvBarsWithRetry(kv, key, retries, baseBackoffMs) {
+  if (!kv || typeof kv.get !== "function") {
+    return { raw: null, error: null, attempts: 0 };
+  }
+  const maxAttempts = Math.max(1, Number(retries) || DEFAULT_KV_GET_RETRIES);
+  const baseDelay = Math.max(50, Number(baseBackoffMs) || DEFAULT_KV_BACKOFF_MS);
+  let lastError = null;
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    try {
+      const raw = await kv.get(key);
+      return { raw, error: null, attempts: attempt };
+    } catch (error) {
+      lastError = error;
+      if (attempt >= maxAttempts || !shouldRetryKvError(error)) break;
+      const jitter = Math.floor(Math.random() * 120);
+      const delay = baseDelay * attempt + jitter;
+      await sleep(delay);
+    }
+  }
+  return {
+    raw: null,
+    error: {
+      message: lastError?.message || String(lastError),
+      attempts: maxAttempts
+    },
+    attempts: maxAttempts
+  };
 }
 
 function parseNdjson(text) {
@@ -94,8 +142,11 @@ function parseArgs(argv) {
     outDir: "public/data/marketphase",
     concurrency: DEFAULT_CONCURRENCY,
     minBars: DEFAULT_MIN_BARS,
+    minSupportedBars: DEFAULT_MIN_SUPPORTED_BARS,
     outputsize: DEFAULT_OUTPUTSIZE,
     minCoverage: DEFAULT_MIN_COVERAGE,
+    kvGetRetries: DEFAULT_KV_GET_RETRIES,
+    kvBackoffMs: DEFAULT_KV_BACKOFF_MS,
     allowProviderFallback: false,
     writeBackKv: false
   };
@@ -113,12 +164,21 @@ function parseArgs(argv) {
     } else if (arg === "--min-bars") {
       out.minBars = Number(argv[i + 1]) || out.minBars;
       i += 1;
+    } else if (arg === "--min-supported-bars") {
+      out.minSupportedBars = Number(argv[i + 1]) || out.minSupportedBars;
+      i += 1;
     } else if (arg === "--outputsize") {
       out.outputsize = Number(argv[i + 1]) || out.outputsize;
       i += 1;
     } else if (arg === "--min-coverage") {
       const parsed = Number(argv[i + 1]);
       if (Number.isFinite(parsed)) out.minCoverage = parsed;
+      i += 1;
+    } else if (arg === "--kv-get-retries") {
+      out.kvGetRetries = Number(argv[i + 1]) || out.kvGetRetries;
+      i += 1;
+    } else if (arg === "--kv-backoff-ms") {
+      out.kvBackoffMs = Number(argv[i + 1]) || out.kvBackoffMs;
       i += 1;
     } else if (arg === "--allow-provider" || arg === "--provider-fallback") {
       out.allowProviderFallback = true;
@@ -324,6 +384,8 @@ async function main() {
   const outRoot = args.outDir;
   const missing = [];
   const generated = [];
+  const effectiveMinBars = Math.max(2, Number(args.minBars) || DEFAULT_MIN_BARS);
+  const effectiveMinSupportedBars = Math.max(2, Math.min(effectiveMinBars, Number(args.minSupportedBars) || DEFAULT_MIN_SUPPORTED_BARS));
 
   const results = await mapWithConcurrency(tickers, args.concurrency, async (ticker) => {
     const key = `eod:${ticker}`;
@@ -334,12 +396,9 @@ async function main() {
     let kvReadFailure = null;
 
     if (kv && typeof kv.get === "function") {
-      let raw = null;
-      try {
-        raw = await kv.get(key);
-      } catch (err) {
-        kvReadFailure = { message: err?.message || String(err) };
-      }
+      const kvRead = await readKvBarsWithRetry(kv, key, args.kvGetRetries, args.kvBackoffMs);
+      const raw = kvRead.raw;
+      if (kvRead.error) kvReadFailure = kvRead.error;
       if (raw) {
         try {
           parsed = JSON.parse(raw);
@@ -354,7 +413,7 @@ async function main() {
     }
 
     let hasBars = bars.length > 0;
-    let barsSufficient = bars.length >= args.minBars;
+    let barsSufficient = bars.length >= effectiveMinBars;
 
     if (!hasBars || !barsSufficient) {
       const repoBars = await readAdjustedBarsFromRepo(ticker);
@@ -362,7 +421,7 @@ async function main() {
         bars = repoBars;
         provider = "local-adjusted-series";
         hasBars = true;
-        barsSufficient = bars.length >= args.minBars;
+        barsSufficient = bars.length >= effectiveMinBars;
       }
     }
 
@@ -399,8 +458,17 @@ async function main() {
       return null;
     }
 
-    if (bars.length < args.minBars) {
-      missing.push({ ticker, reason: "INSUFFICIENT_BARS", details: { bars: bars.length, minBars: args.minBars } });
+    if (bars.length < effectiveMinBars) {
+      const details = {
+        bars: bars.length,
+        minBars: effectiveMinBars,
+        minSupportedBars: effectiveMinSupportedBars
+      };
+      if (bars.length >= effectiveMinSupportedBars) {
+        missing.push({ ticker, reason: "NOT_SUPPORTED_SHORT_HISTORY", status: "not_supported", details });
+      } else {
+        missing.push({ ticker, reason: "INSUFFICIENT_BARS", details });
+      }
       return null;
     }
 

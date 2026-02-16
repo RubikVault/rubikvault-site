@@ -19,8 +19,9 @@ const MAX_FAILURE_PCT = Number.isFinite(Number(process.env.EODHD_BACKFILL_MAX_FA
 const RETRIES = 3;
 
 const API_KEY = String(process.env.EODHD_API_KEY || '').trim();
-if (!API_KEY) {
-  console.error('Missing EODHD_API_KEY');
+const TIINGO_API_KEY = String(process.env.TIINGO_API_KEY || '').trim();
+if (!API_KEY && !TIINGO_API_KEY) {
+  console.error('Missing provider keys (EODHD_API_KEY or TIINGO_API_KEY)');
   process.exit(1);
 }
 
@@ -84,6 +85,9 @@ function normalizeBars(rawBars) {
 }
 
 async function fetchEodhd(symbol) {
+  if (!API_KEY) {
+    return { ok: false, error: 'eodhd_key_missing', status: null, provider: 'eodhd' };
+  }
   let querySymbol = String(symbol || '').trim().toUpperCase();
   if (!querySymbol) {
     return { ok: false, error: 'empty_symbol' };
@@ -109,20 +113,20 @@ async function fetchEodhd(symbol) {
       if (!res.ok) {
         const body = await res.text();
         if (res.status === 401 || res.status === 403) {
-          return { ok: false, fatal: true, status: res.status, error: body || `HTTP ${res.status}` };
+          return { ok: false, fatal: true, status: res.status, error: body || `HTTP ${res.status}`, provider: 'eodhd' };
         }
         lastErr = `${res.status}:${body || 'upstream_error'}`;
         if (res.status === 429 && attempt < RETRIES) {
           await sleep(600 * attempt);
           continue;
         }
-        return { ok: false, status: res.status, error: lastErr };
+        return { ok: false, status: res.status, error: lastErr, provider: 'eodhd' };
       }
       const data = await res.json();
       if (!Array.isArray(data) || data.length === 0) {
         return { ok: false, status: res.status, error: 'empty_payload' };
       }
-      return { ok: true, data };
+      return { ok: true, data, provider: 'eodhd' };
     } catch (e) {
       lastErr = e?.message || String(e);
       if (attempt < RETRIES) {
@@ -131,7 +135,76 @@ async function fetchEodhd(symbol) {
       }
     }
   }
-  return { ok: false, error: lastErr || 'unknown_fetch_error' };
+  return { ok: false, error: lastErr || 'unknown_fetch_error', provider: 'eodhd' };
+}
+
+function normalizeTiingoBars(rawBars) {
+  if (!Array.isArray(rawBars)) return [];
+  return rawBars
+    .map((b) => {
+      const close = toNumber(b?.close);
+      const adjClose = toNumber(b?.adjClose ?? b?.adj_close ?? b?.close);
+      const split = toNumber(b?.splitFactor ?? b?.split_factor ?? 1);
+      const dividend = toNumber(b?.divCash ?? b?.dividend ?? 0);
+      const volume = toNumber(b?.volume);
+      const dateRaw = typeof b?.date === 'string' ? b.date.slice(0, 10) : null;
+      return {
+        date: dateRaw,
+        open: toNumber(b?.open),
+        high: toNumber(b?.high),
+        low: toNumber(b?.low),
+        close,
+        volume,
+        adjClose: adjClose ?? close,
+        dividend: dividend ?? 0,
+        split: split ?? 1
+      };
+    })
+    .filter((b) => b.date && b.close !== null)
+    .sort((a, b) => a.date.localeCompare(b.date));
+}
+
+async function fetchTiingo(symbol) {
+  if (!TIINGO_API_KEY) {
+    return { ok: false, error: 'tiingo_key_missing', status: null, provider: 'tiingo' };
+  }
+  const ticker = String(symbol || '').trim().toUpperCase();
+  if (!ticker) return { ok: false, error: 'empty_symbol', status: null, provider: 'tiingo' };
+  const url = new URL(`https://api.tiingo.com/tiingo/daily/${encodeURIComponent(ticker)}/prices`);
+  url.searchParams.set('token', TIINGO_API_KEY);
+  url.searchParams.set('startDate', '2010-01-01');
+  url.searchParams.set('resampleFreq', 'daily');
+  url.searchParams.set('format', 'json');
+
+  let lastErr = null;
+  for (let attempt = 1; attempt <= RETRIES; attempt += 1) {
+    try {
+      const res = await _fetch(url.toString(), {
+        headers: { accept: 'application/json' }
+      });
+      if (!res.ok) {
+        const body = await res.text();
+        lastErr = `${res.status}:${body || 'upstream_error'}`;
+        if (res.status === 429 && attempt < RETRIES) {
+          await sleep(700 * attempt);
+          continue;
+        }
+        return { ok: false, status: res.status, error: lastErr, provider: 'tiingo' };
+      }
+      const data = await res.json();
+      if (!Array.isArray(data) || data.length === 0) {
+        return { ok: false, status: res.status, error: 'empty_payload', provider: 'tiingo' };
+      }
+      return { ok: true, data, provider: 'tiingo' };
+    } catch (e) {
+      lastErr = e?.message || String(e);
+      if (attempt < RETRIES) {
+        await sleep(600 * attempt);
+        continue;
+      }
+    }
+  }
+  return { ok: false, error: lastErr || 'unknown_fetch_error', provider: 'tiingo' };
 }
 
 async function run() {
@@ -167,14 +240,35 @@ async function run() {
     runStats.processed += 1;
     process.stdout.write(`Processing ${symbol}... `);
     const filePath = path.join(DATA_DIR, `${symbol}.json`);
-    const res = await fetchEodhd(symbol);
+    const eodRes = await fetchEodhd(symbol);
+    let res = eodRes;
+    let providerUsed = 'eodhd';
+    let finalBars = [];
+
+    if (res.ok) {
+      finalBars = normalizeBars(res.data);
+    } else if (TIINGO_API_KEY) {
+      const tiingoRes = await fetchTiingo(symbol);
+      if (tiingoRes.ok) {
+        res = tiingoRes;
+        providerUsed = 'tiingo';
+        finalBars = normalizeTiingoBars(tiingoRes.data);
+      } else {
+        res = {
+          ok: false,
+          status: tiingoRes.status ?? eodRes.status ?? null,
+          error: `eodhd=${eodRes.error || 'failed'}; tiingo=${tiingoRes.error || 'failed'}`,
+          provider: 'provider_chain'
+        };
+      }
+    }
 
     if (!res.ok) {
       runStats.failures += 1;
-      failureSymbols.push({ symbol, status: res.status || null, error: res.error || 'unknown' });
-      process.stdout.write(`FAILED (${res.status || 'ERR'})\n`);
-      if (res.fatal) {
-        fatalAuthError = res.error || `HTTP ${res.status || 'unknown'}`;
+      failureSymbols.push({ symbol, status: res.status || null, provider: res.provider || 'unknown', error: res.error || 'unknown' });
+      process.stdout.write(`FAILED (${res.provider || 'ERR'}:${res.status || 'ERR'})\n`);
+      if (eodRes?.fatal && !TIINGO_API_KEY) {
+        fatalAuthError = eodRes.error || `HTTP ${eodRes.status || 'unknown'}`;
         console.error('Fatal auth error from EODHD. Stopping to avoid writing corrupted data.');
         break;
       }
@@ -182,10 +276,9 @@ async function run() {
       continue;
     }
 
-    const finalBars = normalizeBars(res.data);
     if (!finalBars.length) {
       runStats.failures += 1;
-      failureSymbols.push({ symbol, status: null, error: 'normalized_empty' });
+      failureSymbols.push({ symbol, status: null, provider: providerUsed, error: 'normalized_empty' });
       process.stdout.write('FAILED (normalized_empty)\n');
       await sleep(DELAY_MS);
       continue;
@@ -195,10 +288,11 @@ async function run() {
     manifest.symbols[symbol] = {
       count: finalBars.length,
       last_date: finalBars[finalBars.length - 1]?.date || null,
+      provider: providerUsed,
       updated_at: new Date().toISOString()
     };
     runStats.success += 1;
-    process.stdout.write(`OK (${finalBars.length} bars)\n`);
+    process.stdout.write(`OK (${providerUsed}, ${finalBars.length} bars)\n`);
     await sleep(DELAY_MS);
   }
 

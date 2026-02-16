@@ -6,7 +6,7 @@ import zlib from 'node:zlib';
 const root = process.cwd();
 const MOVERS_PRICE_TOLERANCE = Number(process.env.RV_MOVERS_PRICE_TOLERANCE || 1e-6);
 const MIN_CORRELATIONS_COVERAGE = Number(process.env.RV_MIN_CORRELATIONS_COVERAGE || 0);
-const MIN_CORRELATIONS_COVERAGE_RATIO = Number(process.env.RV_MIN_CORRELATIONS_COVERAGE_RATIO || 0.9);
+const MIN_CORRELATIONS_COVERAGE_RATIO = Number(process.env.RV_MIN_CORRELATIONS_COVERAGE_RATIO || 1);
 const MIN_PEERS_COVERAGE_RATIO = Number(process.env.RV_MIN_PEERS_COVERAGE_RATIO || 0.95);
 const SAMPLE_LIMIT = Number(process.env.RV_UI_COVERAGE_SAMPLE_LIMIT || 20);
 
