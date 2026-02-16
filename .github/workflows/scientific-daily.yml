@@ -45,6 +45,8 @@ jobs:
       - name: Build stock UI support artifacts
         run: |
           set -euo pipefail
+          node scripts/dp4/pulse.v3.mjs
+          node scripts/dp8/market-hub.v3.mjs
           node scripts/ui/build-benchmarks-latest.mjs
           node scripts/ui/build-peers-latest.mjs
           node scripts/ui/build-correlations-latest.mjs
@@ -65,6 +67,9 @@ jobs:
           git config user.email "bot@rubikvault.com"
           git add \
             public/data/snapshots/stock-analysis.json \
+            public/data/v3/pulse/market-health/latest.json \
+            public/data/v3/pulse/top-movers/latest.json \
+            public/data/v3/derived/market/latest.json \
             public/data/ui/benchmarks/latest.json \
             public/data/ui/peers/latest.json \
             public/data/ui/correlations/latest.json
