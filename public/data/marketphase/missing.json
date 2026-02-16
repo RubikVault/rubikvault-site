@@ -1,102 +1,44 @@
 {
   "type": "marketphase.missing",
-  "asOf": "2026-02-16T09:19:12.480Z",
+  "asOf": "2026-02-16T11:37:46.573Z",
   "universe": "all",
   "expected": 2453,
-  "generated": 2420,
-  "coverage": 0.986547,
+  "generated": 2440,
+  "coverage": 0.9947,
   "minCoverage": 0.9,
   "missing": [
-    {
-      "ticker": "AEBI",
-      "reason": "INSUFFICIENT_BARS",
-      "details": {
-        "bars": 157,
-        "minBars": 200
-      }
-    },
-    {
-      "ticker": "AHL",
-      "reason": "INSUFFICIENT_BARS",
-      "details": {
-        "bars": 194,
-        "minBars": 200
-      }
-    },
-    {
-      "ticker": "AII",
-      "reason": "INSUFFICIENT_BARS",
-      "details": {
-        "bars": 194,
-        "minBars": 200
-      }
-    },
-    {
-      "ticker": "AIRO",
-      "reason": "INSUFFICIENT_BARS",
-      "details": {
-        "bars": 170,
-        "minBars": 200
-      }
-    },
     {
       "ticker": "AKE",
       "reason": "NO_EOD_BARS"
     },
     {
       "ticker": "ALH",
-      "reason": "INSUFFICIENT_BARS",
+      "reason": "NOT_SUPPORTED_SHORT_HISTORY",
+      "status": "not_supported",
       "details": {
         "bars": 88,
-        "minBars": 200
-      }
-    },
-    {
-      "ticker": "AMBQ",
-      "reason": "INSUFFICIENT_BARS",
-      "details": {
-        "bars": 139,
-        "minBars": 200
-      }
-    },
-    {
-      "ticker": "ASIC",
-      "reason": "INSUFFICIENT_BARS",
-      "details": {
-        "bars": 171,
-        "minBars": 200
+        "minBars": 120,
+        "minSupportedBars": 60
       }
     },
     {
       "ticker": "BRCB",
-      "reason": "INSUFFICIENT_BARS",
+      "reason": "NOT_SUPPORTED_SHORT_HISTORY",
+      "status": "not_supported",
       "details": {
         "bars": 107,
-        "minBars": 200
-      }
-    },
-    {
-      "ticker": "CARL",
-      "reason": "INSUFFICIENT_BARS",
-      "details": {
-        "bars": 144,
-        "minBars": 200
+        "minBars": 120,
+        "minSupportedBars": 60
       }
     },
     {
       "ticker": "CBK",
-      "reason": "INSUFFICIENT_BARS",
+      "reason": "NOT_SUPPORTED_SHORT_HISTORY",
+      "status": "not_supported",
       "details": {
         "bars": 93,
-        "minBars": 200
-      }
-    },
-    {
-      "ticker": "CMDB",
-      "reason": "INSUFFICIENT_BARS",
-      "details": {
-        "bars": 199,
-        "minBars": 200
+        "minBars": 120,
+        "minSupportedBars": 60
       }
     },
     {
@@ -104,161 +46,71 @@
       "reason": "NO_EOD_BARS"
     },
     {
-      "ticker": "CV",
-      "reason": "INSUFFICIENT_BARS",
-      "details": {
-        "bars": 157,
-        "minBars": 200
-      }
-    },
-    {
-      "ticker": "FLY",
-      "reason": "INSUFFICIENT_BARS",
-      "details": {
-        "bars": 133,
-        "minBars": 200
-      }
-    },
-    {
-      "ticker": "HTFL",
-      "reason": "INSUFFICIENT_BARS",
-      "details": {
-        "bars": 132,
-        "minBars": 200
-      }
-    },
-    {
-      "ticker": "JCAP",
-      "reason": "INSUFFICIENT_BARS",
-      "details": {
-        "bars": 161,
-        "minBars": 200
-      }
-    },
-    {
       "ticker": "LBRX",
-      "reason": "INSUFFICIENT_BARS",
+      "reason": "NOT_SUPPORTED_SHORT_HISTORY",
+      "status": "not_supported",
       "details": {
         "bars": 108,
-        "minBars": 200
+        "minBars": 120,
+        "minSupportedBars": 60
       }
     },
     {
       "ticker": "LGN",
-      "reason": "INSUFFICIENT_BARS",
+      "reason": "NOT_SUPPORTED_SHORT_HISTORY",
+      "status": "not_supported",
       "details": {
         "bars": 107,
-        "minBars": 200
-      }
-    },
-    {
-      "ticker": "MH",
-      "reason": "INSUFFICIENT_BARS",
-      "details": {
-        "bars": 143,
-        "minBars": 200
-      }
-    },
-    {
-      "ticker": "MIAX",
-      "reason": "INSUFFICIENT_BARS",
-      "details": {
-        "bars": 127,
-        "minBars": 200
+        "minBars": 120,
+        "minSupportedBars": 60
       }
     },
     {
       "ticker": "MOGA",
-      "reason": "KV_READ_FAILED",
-      "details": {
-        "message": "KV_GET_FAIL 429 {\"success\":false,\"errors\":[{\"code\":971,\"message\":\"Please wait and consider throttling your request speed\"}],\"messages\":[],\"result\":null}"
-      }
+      "reason": "NO_EOD_BARS"
     },
     {
       "ticker": "MPLT",
-      "reason": "INSUFFICIENT_BARS",
+      "reason": "NOT_SUPPORTED_SHORT_HISTORY",
+      "status": "not_supported",
       "details": {
         "bars": 76,
-        "minBars": 200
+        "minBars": 120,
+        "minSupportedBars": 60
       }
     },
     {
       "ticker": "NAVN",
-      "reason": "INSUFFICIENT_BARS",
+      "reason": "NOT_SUPPORTED_SHORT_HISTORY",
+      "status": "not_supported",
       "details": {
         "bars": 73,
-        "minBars": 200
-      }
-    },
-    {
-      "ticker": "OMDA",
-      "reason": "INSUFFICIENT_BARS",
-      "details": {
-        "bars": 175,
-        "minBars": 200
+        "minBars": 120,
+        "minSupportedBars": 60
       }
     },
     {
       "ticker": "P5N994",
-      "reason": "KV_READ_FAILED",
-      "details": {
-        "message": "KV_GET_FAIL 429 {\"success\":false,\"errors\":[{\"code\":971,\"message\":\"Please wait and consider throttling your request speed\"}],\"messages\":[],\"result\":null}"
-      }
+      "reason": "NO_EOD_BARS"
     },
     {
       "ticker": "PXED",
-      "reason": "INSUFFICIENT_BARS",
+      "reason": "NOT_SUPPORTED_SHORT_HISTORY",
+      "status": "not_supported",
       "details": {
         "bars": 88,
-        "minBars": 200
-      }
-    },
-    {
-      "ticker": "SI",
-      "reason": "INSUFFICIENT_BARS",
-      "details": {
-        "bars": 137,
-        "minBars": 200
-      }
-    },
-    {
-      "ticker": "SLDE",
-      "reason": "INSUFFICIENT_BARS",
-      "details": {
-        "bars": 167,
-        "minBars": 200
-      }
-    },
-    {
-      "ticker": "STRZ",
-      "reason": "INSUFFICIENT_BARS",
-      "details": {
-        "bars": 195,
-        "minBars": 200
+        "minBars": 120,
+        "minSupportedBars": 60
       }
     },
     {
       "ticker": "VIA",
-      "reason": "INSUFFICIENT_BARS",
+      "reason": "NOT_SUPPORTED_SHORT_HISTORY",
+      "status": "not_supported",
       "details": {
         "bars": 107,
-        "minBars": 200
-      }
-    },
-    {
-      "ticker": "VOYG",
-      "reason": "INSUFFICIENT_BARS",
-      "details": {
-        "bars": 172,
-        "minBars": 200
-      }
-    },
-    {
-      "ticker": "WYFI",
-      "reason": "INSUFFICIENT_BARS",
-      "details": {
-        "bars": 132,
-        "minBars": 200
+        "minBars": 120,
+        "minSupportedBars": 60
       }
     }
   ]

@@ -1,6 +1,6 @@
 {
   "schema_version": "1.0",
-  "asOf": "2026-02-16T09:19:13.389Z",
+  "asOf": "2026-02-16T11:37:47.531Z",
   "baseline": {
     "expectedUniverse": 2453,
     "pipeline": {
@@ -11,136 +11,56 @@
       "staticReady": 318,
       "missing": [
         {
-          "ticker": "AEBI",
-          "reason": "INSUFFICIENT_BARS"
-        },
-        {
-          "ticker": "AHL",
-          "reason": "INSUFFICIENT_BARS"
-        },
-        {
-          "ticker": "AII",
-          "reason": "INSUFFICIENT_BARS"
-        },
-        {
-          "ticker": "AIRO",
-          "reason": "INSUFFICIENT_BARS"
-        },
-        {
           "ticker": "AKE",
           "reason": "NO_EOD_BARS"
         },
         {
           "ticker": "ALH",
-          "reason": "INSUFFICIENT_BARS"
-        },
-        {
-          "ticker": "AMBQ",
-          "reason": "INSUFFICIENT_BARS"
-        },
-        {
-          "ticker": "ASIC",
-          "reason": "INSUFFICIENT_BARS"
+          "reason": "NOT_SUPPORTED_SHORT_HISTORY"
         },
         {
           "ticker": "BRCB",
-          "reason": "INSUFFICIENT_BARS"
-        },
-        {
-          "ticker": "CARL",
-          "reason": "INSUFFICIENT_BARS"
+          "reason": "NOT_SUPPORTED_SHORT_HISTORY"
         },
         {
           "ticker": "CBK",
-          "reason": "INSUFFICIENT_BARS"
-        },
-        {
-          "ticker": "CMDB",
-          "reason": "INSUFFICIENT_BARS"
+          "reason": "NOT_SUPPORTED_SHORT_HISTORY"
         },
         {
           "ticker": "CRDA",
           "reason": "NO_EOD_BARS"
         },
         {
-          "ticker": "CV",
-          "reason": "INSUFFICIENT_BARS"
-        },
-        {
-          "ticker": "FLY",
-          "reason": "INSUFFICIENT_BARS"
-        },
-        {
-          "ticker": "HTFL",
-          "reason": "INSUFFICIENT_BARS"
-        },
-        {
-          "ticker": "JCAP",
-          "reason": "INSUFFICIENT_BARS"
-        },
-        {
           "ticker": "LBRX",
-          "reason": "INSUFFICIENT_BARS"
+          "reason": "NOT_SUPPORTED_SHORT_HISTORY"
         },
         {
           "ticker": "LGN",
-          "reason": "INSUFFICIENT_BARS"
-        },
-        {
-          "ticker": "MH",
-          "reason": "INSUFFICIENT_BARS"
-        },
-        {
-          "ticker": "MIAX",
-          "reason": "INSUFFICIENT_BARS"
+          "reason": "NOT_SUPPORTED_SHORT_HISTORY"
         },
         {
           "ticker": "MOGA",
-          "reason": "KV_READ_FAILED"
+          "reason": "NO_EOD_BARS"
         },
         {
           "ticker": "MPLT",
-          "reason": "INSUFFICIENT_BARS"
+          "reason": "NOT_SUPPORTED_SHORT_HISTORY"
         },
         {
           "ticker": "NAVN",
-          "reason": "INSUFFICIENT_BARS"
-        },
-        {
-          "ticker": "OMDA",
-          "reason": "INSUFFICIENT_BARS"
+          "reason": "NOT_SUPPORTED_SHORT_HISTORY"
         },
         {
           "ticker": "P5N994",
-          "reason": "KV_READ_FAILED"
+          "reason": "NO_EOD_BARS"
         },
         {
           "ticker": "PXED",
-          "reason": "INSUFFICIENT_BARS"
-        },
-        {
-          "ticker": "SI",
-          "reason": "INSUFFICIENT_BARS"
-        },
-        {
-          "ticker": "SLDE",
-          "reason": "INSUFFICIENT_BARS"
-        },
-        {
-          "ticker": "STRZ",
-          "reason": "INSUFFICIENT_BARS"
+          "reason": "NOT_SUPPORTED_SHORT_HISTORY"
         },
         {
           "ticker": "VIA",
-          "reason": "INSUFFICIENT_BARS"
-        },
-        {
-          "ticker": "VOYG",
-          "reason": "INSUFFICIENT_BARS"
-        },
-        {
-          "ticker": "WYFI",
-          "reason": "INSUFFICIENT_BARS"
+          "reason": "NOT_SUPPORTED_SHORT_HISTORY"
         }
       ]
     },
@@ -263,7 +183,7 @@
     "cloudflare": {
       "requestsToday": null,
       "requestsLast24h": null,
-      "notes": "CF analytics query failed (HTTP 429)"
+      "notes": "ok"
     },
     "safety": {
       "kvWritesToday": 0,
