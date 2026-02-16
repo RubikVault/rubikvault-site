@@ -53,17 +53,24 @@ async function readAdjustedBarsFromRepo(ticker) {
   try {
     const gz = await fs.readFile(file);
     const rows = parseNdjson(zlib.gunzipSync(gz).toString("utf8"));
-    const bars = rows
-      .map((row) => ({
-        date: String(row?.trading_date || row?.date || "").slice(0, 10),
-        open: Number(row?.open),
-        high: Number(row?.high),
-        low: Number(row?.low),
-        close: Number(row?.adjusted_close ?? row?.adj_close ?? row?.close),
-        volume: Number(row?.volume)
-      }))
-      .filter((row) => row.date && Number.isFinite(row.close));
-    return normalizeBars(bars);
+    return rows
+      .map((row) => {
+        const date = String(row?.trading_date || row?.date || "").slice(0, 10);
+        const close = Number(row?.adjusted_close ?? row?.adj_close ?? row?.close);
+        if (!date || !Number.isFinite(close)) return null;
+        const openRaw = Number(row?.open);
+        const highRaw = Number(row?.high);
+        const lowRaw = Number(row?.low);
+        return {
+          date,
+          open: Number.isFinite(openRaw) ? openRaw : close,
+          high: Number.isFinite(highRaw) ? highRaw : close,
+          low: Number.isFinite(lowRaw) ? lowRaw : close,
+          close
+        };
+      })
+      .filter(Boolean)
+      .sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
   } catch {
     return [];
   }
