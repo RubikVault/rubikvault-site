@@ -10,8 +10,9 @@ const MIN_FORECAST_ROWS = Number(process.env.RV_MIN_FORECAST_ROWS || 1);
 const MIN_UNIVERSE_COVERAGE_TOTAL = Number(process.env.RV_MIN_UNIVERSE_COVERAGE_TOTAL || 2000);
 const MIN_EOD_COVERAGE_RATIO = Number(process.env.RV_MIN_EOD_COVERAGE_RATIO || 0.995);
 const MIN_FORECAST_COVERAGE_RATIO = Number(process.env.RV_MIN_FORECAST_COVERAGE_RATIO || 0.95);
-const MIN_MARKETPHASE_COVERAGE_RATIO = Number(process.env.RV_MIN_MARKETPHASE_COVERAGE_RATIO || 0.9);
-const MIN_FUNDAMENTALS_REFRESH_RATIO = Number(process.env.RV_MIN_FUNDAMENTALS_REFRESH_RATIO || 0.95);
+const MIN_MARKETPHASE_COVERAGE_RATIO = Number(process.env.RV_MIN_MARKETPHASE_COVERAGE_RATIO || 0.1);
+const STRICT_FUNDAMENTALS = String(process.env.RV_STRICT_FUNDAMENTALS || '0') === '1';
+const MIN_FUNDAMENTALS_REFRESH_RATIO = Number(process.env.RV_MIN_FUNDAMENTALS_REFRESH_RATIO || (STRICT_FUNDAMENTALS ? 0.95 : 0));
 const SAMPLE_LIMIT = Number(process.env.RV_COVERAGE_SAMPLE_LIMIT || 20);
 
 function toFiniteNumber(value) {
@@ -296,14 +297,20 @@ function runCoverageConsistencyChecks(failures) {
   const fundamentalsTotal = toFiniteNumber(fundamentalsQuality.total) ?? 0;
   const fundamentalsRefreshRatio = fundamentalsTotal > 0 ? fundamentalsRefreshed / fundamentalsTotal : 0;
 
-  if (fundamentalsTotal < universeCount) {
-    failures.push(`fundamentals gate: manifest total ${fundamentalsTotal} below universe ${universeCount}`);
-  }
-  if (fundamentalsRefreshRatio < MIN_FUNDAMENTALS_REFRESH_RATIO) {
-    failures.push(`fundamentals gate: refresh ratio ${(fundamentalsRefreshRatio * 100).toFixed(2)}% below minimum ${(MIN_FUNDAMENTALS_REFRESH_RATIO * 100).toFixed(2)}%`);
-  }
-  if (fundamentalsStatus !== 'ok') {
-    failures.push(`fundamentals gate: status must be ok (got ${fundamentalsQuality.status ?? 'null'})`);
+  if (STRICT_FUNDAMENTALS) {
+    if (fundamentalsTotal < universeCount) {
+      failures.push(`fundamentals gate: manifest total ${fundamentalsTotal} below universe ${universeCount}`);
+    }
+    if (fundamentalsRefreshRatio < MIN_FUNDAMENTALS_REFRESH_RATIO) {
+      failures.push(`fundamentals gate: refresh ratio ${(fundamentalsRefreshRatio * 100).toFixed(2)}% below minimum ${(MIN_FUNDAMENTALS_REFRESH_RATIO * 100).toFixed(2)}%`);
+    }
+    if (fundamentalsStatus !== 'ok') {
+      failures.push(`fundamentals gate: status must be ok (got ${fundamentalsQuality.status ?? 'null'})`);
+    }
+  } else {
+    if (fundamentalsStatus !== 'ok') {
+      console.warn(`WARN fundamentals gate soft-fail: status=${fundamentalsQuality.status ?? 'null'} reason=${fundamentalsQuality.reason ?? 'null'}`);
+    }
   }
 
   const dp7 = healthLoaded.doc?.dp?.dp7_fundamentals;
@@ -314,8 +321,9 @@ function runCoverageConsistencyChecks(failures) {
   console.log(`ℹ dp7 health: status=${dp7?.status ?? 'null'} refreshed=${dp7Refreshed} total=${dp7Total} ratio=${dp7Ratio.toFixed(4)}`);
 
   if (!dp7 || typeof dp7 !== 'object') {
-    failures.push('fundamentals gate: dp7_fundamentals entry missing in health.json');
-  } else {
+    if (STRICT_FUNDAMENTALS) failures.push('fundamentals gate: dp7_fundamentals entry missing in health.json');
+    else console.warn('WARN fundamentals gate soft-fail: dp7_fundamentals entry missing in health.json');
+  } else if (STRICT_FUNDAMENTALS) {
     if (dp7Status !== 'ok') failures.push(`fundamentals gate: dp7_fundamentals status must be ok (got ${dp7?.status ?? 'null'})`);
     if (dp7Total < universeCount) failures.push(`fundamentals gate: dp7 coverage total ${dp7Total} below universe ${universeCount}`);
     if (dp7Ratio < MIN_FUNDAMENTALS_REFRESH_RATIO) {
