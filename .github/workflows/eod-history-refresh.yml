@@ -52,7 +52,6 @@ jobs:
 
       - name: Rebuild v3 EOD + adjusted series
         env:
-          EODHD_API_KEY: ${{ secrets.EODHD_API_KEY }}
           TIINGO_API_KEY: ${{ secrets.TIINGO_API_KEY }}
         run: |
           set -euo pipefail

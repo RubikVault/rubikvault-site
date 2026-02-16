@@ -63,8 +63,8 @@ jobs:
           EODHD_API_KEY: ${{ secrets.EODHD_API_KEY }}
           TIINGO_API_KEY: ${{ secrets.TIINGO_API_KEY }}
           MARKETPHASE_PROVIDER_FALLBACK: "1"
-          MARKETPHASE_KV_GET_RETRIES: "6"
-          MARKETPHASE_KV_BACKOFF_MS: "450"
+          MARKETPHASE_KV_GET_RETRIES: "10"
+          MARKETPHASE_KV_BACKOFF_MS: "500"
         run: node scripts/pipeline/build-marketphase-from-kv.mjs --universe all --min-coverage 0.90
 
       - name: Build pipeline truth (NASDAQ-100)
