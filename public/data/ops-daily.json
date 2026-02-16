@@ -1,14 +1,14 @@
 {
   "schema_version": "1.0",
-  "asOf": "2026-02-16T11:37:47.531Z",
+  "asOf": "2026-02-16T22:46:37.422Z",
   "baseline": {
     "expectedUniverse": 2453,
     "pipeline": {
       "expected": 2453,
       "fetched": 100,
       "validatedStored": 100,
-      "computed": 318,
-      "staticReady": 318,
+      "computed": 2440,
+      "staticReady": 2440,
       "missing": [
         {
           "ticker": "AKE",
@@ -183,7 +183,7 @@
     "cloudflare": {
       "requestsToday": null,
       "requestsLast24h": null,
-      "notes": "ok"
+      "notes": "CF analytics not configured"
     },
     "safety": {
       "kvWritesToday": 0,
@@ -197,8 +197,8 @@
         "expected": 100,
         "fetched": 100,
         "validated": 100,
-        "computed": 318,
-        "static_ready": 318
+        "computed": 2440,
+        "static_ready": 2440
       },
       "degraded_summary": {
         "count": 0,
@@ -206,7 +206,7 @@
         "sample": []
       },
       "root_failure": null,
-      "generated_at": "2026-02-13T22:53:31.798Z"
+      "generated_at": "2026-02-16T22:46:36.175Z"
     }
   }
 }
