@@ -14,12 +14,12 @@ import { fetchBarsWithProviderChain } from "../../functions/api/_shared/eod-prov
 const REPO_ROOT = process.cwd();
 const DEFAULT_UNIVERSE = "all";
 const DEFAULT_CONCURRENCY = 3;
-const DEFAULT_MIN_BARS = 200;
-const DEFAULT_MIN_SUPPORTED_BARS = Number(process.env.MARKETPHASE_MIN_SUPPORTED_BARS || 100);
+const DEFAULT_MIN_BARS = 120; // Lowered from 200 to capture shorter history stocks
+const DEFAULT_MIN_SUPPORTED_BARS = Number(process.env.MARKETPHASE_MIN_SUPPORTED_BARS || 60);
 const DEFAULT_OUTPUTSIZE = 300;
 const DEFAULT_MIN_COVERAGE = Number(process.env.MARKETPHASE_MIN_COVERAGE_RATIO || 0.9);
-const DEFAULT_KV_GET_RETRIES = Number(process.env.MARKETPHASE_KV_GET_RETRIES || 4);
-const DEFAULT_KV_BACKOFF_MS = Number(process.env.MARKETPHASE_KV_BACKOFF_MS || 350);
+const DEFAULT_KV_GET_RETRIES = Number(process.env.MARKETPHASE_KV_GET_RETRIES || 10); // Increased from 4 for robustness
+const DEFAULT_KV_BACKOFF_MS = Number(process.env.MARKETPHASE_KV_BACKOFF_MS || 500); // Increased from 350
 
 function toBool(value) {
   const s = String(value || "").trim().toLowerCase();
@@ -45,6 +45,8 @@ function shouldRetryKvError(error) {
   if (message.includes("please wait")) return true;
   if (message.includes("timeout")) return true;
   if (message.includes("rate")) return true;
+  if (message.includes("limit")) return true; // Added for robustness
+  if (message.includes("exceeded")) return true; // Added for robustness
   if (message.includes("econnreset")) return true;
   if (message.includes("temporar")) return true;
   return false;
