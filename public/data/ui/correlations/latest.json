@@ -1,7 +1,7 @@
 {
   "schema_version": "ui.correlations.v1",
   "meta": {
-    "generated_at": "2026-02-16T10:57:42.780Z",
+    "generated_at": "2026-02-16T23:44:53.748Z",
     "data_date": "2026-02-13",
     "as_of": "2026-02-13",
     "provider": "local-artifacts",
@@ -19,8 +19,8 @@
       "universe": 2453,
       "status_counts": {
         "computed": 2444,
-        "missing": 5,
-        "not_supported": 4
+        "missing": 7,
+        "not_supported": 2
       }
     }
   },
@@ -14394,10 +14394,8 @@
       },
       "CRDA": {
         "window": 90,
-        "status": "not_supported",
-        "reason": "INSUFFICIENT_BARS",
-        "bars": 0,
-        "min_bars": 32,
+        "status": "missing",
+        "reason": "NO_VALID_OVERLAP",
         "items": []
       },
       "CRDF": {
@@ -31552,12 +31550,12 @@
         "items": [
           {
             "symbol": "AMZN",
-            "corr": -0.185394,
+            "corr": -0.185393,
             "overlap_days": 90
           },
           {
             "symbol": "AAPL",
-            "corr": 0.165303,
+            "corr": 0.165304,
             "overlap_days": 90
           },
           {
@@ -31567,7 +31565,7 @@
           },
           {
             "symbol": "INTC",
-            "corr": -0.024971,
+            "corr": -0.02497,
             "overlap_days": 90
           }
         ]
@@ -34266,12 +34264,12 @@
           },
           {
             "symbol": "FSLY",
-            "corr": -0.039468,
+            "corr": -0.039464,
             "overlap_days": 90
           },
           {
             "symbol": "RIG",
-            "corr": 0.015199,
+            "corr": 0.015198,
             "overlap_days": 90
           }
         ]
@@ -37606,10 +37604,8 @@
       },
       "MOGA": {
         "window": 90,
-        "status": "not_supported",
-        "reason": "INSUFFICIENT_BARS",
-        "bars": 0,
-        "min_bars": 32,
+        "status": "missing",
+        "reason": "NO_VALID_OVERLAP",
         "items": []
       },
       "MOH": {
@@ -48983,7 +48979,7 @@
           },
           {
             "symbol": "NVDA",
-            "corr": -0.031786,
+            "corr": -0.031787,
             "overlap_days": 90
           }
         ]
@@ -61511,17 +61507,17 @@
           },
           {
             "symbol": "NVDA",
-            "corr": -0.314069,
+            "corr": -0.314076,
             "overlap_days": 90
           },
           {
             "symbol": "INTC",
-            "corr": -0.072285,
+            "corr": -0.072282,
             "overlap_days": 90
           },
           {
             "symbol": "F",
-            "corr": 0.029954,
+            "corr": 0.029963,
             "overlap_days": 90
           }
         ]
