@@ -1,37 +1,52 @@
 {
   "artifacts": [
     {
-      "bytes": 51680,
+      "bytes": 258930,
       "path": "public/data/v3/universe/universe.json",
-      "sha256": "bbe5056187e14e6e84df2636687b4ab16ed793f96ed7fd95ebc2491dbe3d501b"
+      "sha256": "70ffcb6dceec6426d79a708bb601c1572389ffa09bd46304aebe06f32a691085"
     },
     {
-      "bytes": 106022,
+      "bytes": 506116,
       "path": "public/data/v3/universe/symbol-mapping.json",
-      "sha256": "17a239c9290681fd9f87604676112628f8cf4bbf08dac21f34260d269df37fdb"
+      "sha256": "0d2805ea895629788b51aadff0586410ebf1f52a5143ed9f2fe7e33ab2dbcd59"
     },
     {
       "bytes": 306,
       "path": "public/data/v3/universe/exchanges.json",
-      "sha256": "dc13d40f8d2f9f77451c7ad5adf0f7faef65f5a85f4150cea8a1ddd14fcc16b4"
+      "sha256": "7acf43a9843a3c37717d574421f707cfbf0901f6436569ffd089edce4c358e63"
     },
     {
-      "bytes": 322,
-      "path": "public/data/v3/system/drift/universe-drift-2026-02-13.json",
-      "sha256": "1805e447c4a0f8156328c1726b8bca94a8e8ecd1913f0e98fde1426541d7d032"
+      "bytes": 324,
+      "path": "public/data/v3/system/drift/universe-drift-2026-02-15.json",
+      "sha256": "a554f518245e4c4d483773944bb2f396067b045ce62a3fedadbeedb6034d301a"
     }
   ],
+  "coverage": {
+    "by_index": {
+      "dow": 32,
+      "nasdaq100": 100,
+      "russell2000": 1936,
+      "sp500": 503
+    },
+    "freshness": "2026-02-15T18:51:43.347Z",
+    "health": "ok",
+    "run_id": "8dde0a37-20260215T1851-1771181503",
+    "total": 2453
+  },
   "meta": {
-    "commit": "149b0d6eadb4943f8e57fcbd2de485cae11e22ba",
-    "generated_at": "2026-02-13T11:37:24.662Z",
+    "commit": "8dde0a379bd23d2a4ac3b6f770ea4a51f0a21436",
+    "generated_at": "2026-02-15T18:51:43.347Z",
     "lineage": {},
     "policy_commit": "fc1a9f20bee59000b8aeddbbc2ad2ae0eb273d32",
     "quality": {
+      "coverage_health": "ok",
+      "coverage_total": 2453,
       "extra_in_policy": 0,
       "mapping_coverage_percent": 100,
       "missing_in_policy": 0
     },
-    "run_id": "149b0d6e-20260213T1137-1770982644",
+    "run_id": "8dde0a37-20260215T1851-1771181503",
     "schema": "rv.manifest.v3"
-  }
+  },
+  "run_id": "8dde0a37-20260215T1851-1771181503"
 }

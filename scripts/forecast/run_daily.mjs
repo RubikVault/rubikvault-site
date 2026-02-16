@@ -73,13 +73,28 @@ async function generateAllForecasts({
     const runId = `${tradingDate}_${Date.now().toString(36)}`;
     const asOf = new Date().toISOString();
     const enabledGroups = championSpec.enabled_feature_groups || policy?.feature_groups?.enabled_default || [];
+    const skipStats = {
+        insufficient_history: 0,
+        missing_features: 0
+    };
+    const skipSamples = {
+        insufficient_history: [],
+        missing_features: []
+    };
+
+    function pushSkipSample(bucket, value) {
+        if (!Array.isArray(skipSamples[bucket])) return;
+        if (skipSamples[bucket].length >= 12) return;
+        skipSamples[bucket].push(value);
+    }
 
     for (const ticker of universe) {
         const closes = priceHistory[ticker]?.closes ?? [];
         const volumes = priceHistory[ticker]?.volumes ?? [];
 
         if (closes.length < 200) {
-            console.log(`[Forecast] Skipping ${ticker}: insufficient history (${closes.length} days)`);
+            skipStats.insufficient_history += 1;
+            pushSkipSample('insufficient_history', `${ticker}(${closes.length})`);
             continue;
         }
 
@@ -96,7 +111,8 @@ async function generateAllForecasts({
 
         // Skip if too many missing features
         if (featureSnapshot.missing_features.length > enabledGroups.length * 0.3) {
-            console.log(`[Forecast] Skipping ${ticker}: too many missing features`);
+            skipStats.missing_features += 1;
+            pushSkipSample('missing_features', ticker);
             continue;
         }
 
@@ -117,6 +133,18 @@ async function generateAllForecasts({
             });
 
             forecasts.push(forecast);
+        }
+    }
+
+    if (skipStats.insufficient_history > 0 || skipStats.missing_features > 0) {
+        console.log(
+            `[Forecast] Skip summary: insufficient_history=${skipStats.insufficient_history}, missing_features=${skipStats.missing_features}`
+        );
+        if (skipSamples.insufficient_history.length > 0) {
+            console.log(`[Forecast] Sample insufficient_history: ${skipSamples.insufficient_history.join(', ')}`);
+        }
+        if (skipSamples.missing_features.length > 0) {
+            console.log(`[Forecast] Sample missing_features: ${skipSamples.missing_features.join(', ')}`);
         }
     }
 
@@ -346,38 +374,57 @@ export async function runDailyPipeline(options = {}) {
         return 'neutral';
     }
 
-    const seenTickers = new Set();
-    const forecastsSummary = forecasts
-        .filter(f => {
-            if (seenTickers.has(f.ticker)) return false;
-            seenTickers.add(f.ticker);
-            return true;
-        })
-        .map(f => {
-            const ticker1d = forecasts.find(x => x.ticker === f.ticker && x.horizon === '1d');
-            const ticker5d = forecasts.find(x => x.ticker === f.ticker && x.horizon === '5d');
-            const ticker20d = forecasts.find(x => x.ticker === f.ticker && x.horizon === '20d');
+    const byTicker = new Map();
+    for (const forecast of forecasts) {
+        if (!byTicker.has(forecast.ticker)) {
+            byTicker.set(forecast.ticker, {});
+        }
+        byTicker.get(forecast.ticker)[forecast.horizon] = forecast;
+    }
 
-            const buildHorizon = (fc) => fc ? {
-                direction: deriveDirection(fc.p_up, fc.neutral_flag),
-                probability: fc.p_up
-            } : null;
+    const buildHorizon = (fc) => fc ? {
+        direction: deriveDirection(fc.p_up, fc.neutral_flag),
+        probability: fc.p_up
+    } : null;
 
-            return {
-                symbol: f.ticker,
-                name: null,  // Name lookup not implemented yet
-                horizons: {
-                    '1d': buildHorizon(ticker1d),
-                    '5d': buildHorizon(ticker5d),
-                    '20d': buildHorizon(ticker20d)
-                }
-            };
-        });
+    const forecastsSummary = Array.from(byTicker.entries())
+        .sort((a, b) => a[0].localeCompare(b[0]))
+        .map(([ticker, horizons]) => ({
+            symbol: ticker,
+            name: null,  // Name lookup not implemented yet
+            horizons: {
+                '1d': buildHorizon(horizons['1d']),
+                '5d': buildHorizon(horizons['5d']),
+                '20d': buildHorizon(horizons['20d'])
+            }
+        }));
+
+    const accuracySummary = outcomes.length > 0
+        ? {
+            directional: Number(
+                (
+                    outcomes.filter((o) => {
+                        const predicted = Number(o?.p_up) >= 0.5 ? 1 : 0;
+                        return predicted === Number(o?.y);
+                    }).length / outcomes.length
+                ).toFixed(4)
+            ),
+            brier: Number(
+                (
+                    outcomes.reduce((sum, o) => sum + Number(o?.metrics?.brier || 0), 0) / outcomes.length
+                ).toFixed(6)
+            ),
+            sample_count: outcomes.length
+        }
+        : null;
 
     const latestDoc = updateLatest(repoRoot, {
         ok: true,
         status: 'ok',
         champion_id: champion.champion_id,
+        trained_at: champion.created_at ?? null,
+        freshness: tradingDate,
+        accuracy: accuracySummary,
         asof: tradingDate,
         forecasts: forecastsSummary,
         latest_report_ref: `public/data/forecast/reports/daily/${tradingDate}.json`,

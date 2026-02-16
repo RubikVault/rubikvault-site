@@ -18,6 +18,9 @@ import path from 'node:path';
 const API_KEY = process.env.EODHD_API_KEY;
 const BASE_URL = 'https://eodhd.com/api';
 const OUTPUT_DIR = 'public/data/universe';
+const POLICY_UNIVERSE_PATH = 'policies/universe/universe.v3.json';
+const POLICY_MAPPING_PATH = 'policies/universe/symbol-mapping.v3.json';
+const ISHARES_IWM_HOLDINGS_URL = 'https://www.ishares.com/us/products/239710/ishares-russell-2000-etf/1467271812596.ajax?fileType=csv&fileName=IWM_holdings&dataType=fund';
 
 // Index definitions with correct EODHD codes
 const INDICES = [
@@ -40,6 +43,72 @@ async function fetchWithRetry(url, retries = 3) {
             if (i === retries - 1) throw err;
             await new Promise(r => setTimeout(r, 1000 * (i + 1)));
         }
+    }
+}
+
+function parseCsvLine(line) {
+    const out = [];
+    let value = '';
+    let inQuotes = false;
+    for (let i = 0; i < line.length; i += 1) {
+        const ch = line[i];
+        if (ch === '"') {
+            if (inQuotes && line[i + 1] === '"') {
+                value += '"';
+                i += 1;
+            } else {
+                inQuotes = !inQuotes;
+            }
+            continue;
+        }
+        if (ch === ',' && !inQuotes) {
+            out.push(value.trim());
+            value = '';
+            continue;
+        }
+        value += ch;
+    }
+    out.push(value.trim());
+    return out;
+}
+
+async function fetchRussell2000FromIshares() {
+    console.log('  ↪️  Russell fallback: iShares IWM holdings');
+    try {
+        const response = await fetch(ISHARES_IWM_HOLDINGS_URL);
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const csv = await response.text();
+        const lines = csv.split(/\r?\n/).filter(Boolean);
+        const headerIdx = lines.findIndex((line) => /^Ticker,Name,Sector,Asset Class,/i.test(line));
+        if (headerIdx < 0) {
+            throw new Error('CSV header not found');
+        }
+
+        const headers = parseCsvLine(lines[headerIdx]).map((h) => String(h || '').trim().toLowerCase());
+        const tickerIdx = headers.indexOf('ticker');
+        const nameIdx = headers.indexOf('name');
+        const assetClassIdx = headers.indexOf('asset class');
+        if (tickerIdx < 0 || nameIdx < 0) throw new Error('ticker/name columns missing');
+
+        const map = new Map();
+        for (let i = headerIdx + 1; i < lines.length; i += 1) {
+            const row = parseCsvLine(lines[i]);
+            if (!row.length) continue;
+            const ticker = String(row[tickerIdx] || '').trim().toUpperCase();
+            const name = String(row[nameIdx] || '').trim();
+            const assetClass = assetClassIdx >= 0 ? String(row[assetClassIdx] || '').trim().toLowerCase() : '';
+            if (!ticker || ticker === '-' || ticker === 'N/A') continue;
+            if (!/^[A-Z0-9.\-]{1,15}$/.test(ticker)) continue;
+            if (assetClass && assetClass !== 'equity') continue;
+            if (!map.has(ticker)) map.set(ticker, { ticker, name: name || ticker });
+        }
+
+        const universe = Array.from(map.values()).sort((a, b) => a.ticker.localeCompare(b.ticker));
+        console.log(`  ✅ Russell fallback loaded ${universe.length} symbols from iShares`);
+        return universe;
+    } catch (err) {
+        console.warn(`  ⚠️ Russell fallback failed: ${err.message}`);
+        return [];
     }
 }
 
@@ -175,14 +244,57 @@ function createCombinedUniverse(universes) {
     return combined;
 }
 
+function writeV3PolicyUniverse(combined) {
+    const symbols = combined.map((row) => ({
+        canonical_id: `US:${row.ticker}`,
+        ticker: row.ticker,
+        name: row.name || row.ticker
+    }));
+    const universeDoc = {
+        schema_version: 'v3',
+        universe_id: 'all-us',
+        expected_count: symbols.length,
+        canonical_id_format: 'US:{ticker}',
+        symbols
+    };
+    const mappingDoc = {
+        schema_version: 'v3',
+        generated_from: 'public/data/universe/all.json',
+        coverage: {
+            expected: symbols.length,
+            mapped: symbols.length,
+            percent: 100
+        },
+        mappings: Object.fromEntries(
+            symbols.map((row) => [
+                row.canonical_id,
+                {
+                    ticker: row.ticker,
+                    exchange: 'US',
+                    currency: 'USD',
+                    provider_ids: {
+                        eodhd: `${row.ticker}.US`,
+                        tiingo: row.ticker
+                    },
+                    status: 'active'
+                }
+            ])
+        )
+    };
+
+    fs.writeFileSync(POLICY_UNIVERSE_PATH, JSON.stringify(universeDoc, null, 2));
+    fs.writeFileSync(POLICY_MAPPING_PATH, JSON.stringify(mappingDoc, null, 2));
+    console.log(`  📁 Wrote ${POLICY_UNIVERSE_PATH} (${symbols.length} symbols)`);
+    console.log(`  📁 Wrote ${POLICY_MAPPING_PATH} (${symbols.length} mappings)`);
+}
+
 async function main() {
     console.log('═'.repeat(50));
     console.log('🌐 EODHD Index Constituents Fetcher');
     console.log('═'.repeat(50));
 
     if (!API_KEY) {
-        console.error('❌ EODHD_API_KEY environment variable not set');
-        process.exit(1);
+        console.warn('⚠️ EODHD_API_KEY not set; using fallbacks + existing files where available.');
     }
 
     // Ensure output directory exists
@@ -191,7 +303,14 @@ async function main() {
     // Fetch all indices
     const universes = {};
     for (const index of INDICES) {
-        let universe = await fetchIndexConstituents(index);
+        let universe = API_KEY ? await fetchIndexConstituents(index) : [];
+
+        if (index.id === 'russell2000' && universe.length < index.expectedMin) {
+            const fromIshares = await fetchRussell2000FromIshares();
+            if (fromIshares.length > universe.length) {
+                universe = fromIshares;
+            }
+        }
 
         // If EODHD didn't return enough symbols, try to use existing file
         if (universe.length < index.expectedMin) {
@@ -210,7 +329,8 @@ async function main() {
 
     // Create combined universe
     if (Object.keys(universes).length > 0) {
-        createCombinedUniverse(universes);
+        const combined = createCombinedUniverse(universes);
+        writeV3PolicyUniverse(combined);
     }
 
     console.log('\n═'.repeat(50));

@@ -13,6 +13,9 @@ const DATA_DIR = path.join(ROOT, 'public/data/eod/bars');
 const DELAY_MS = Number.isFinite(Number(process.env.EODHD_BACKFILL_DELAY_MS))
   ? Number(process.env.EODHD_BACKFILL_DELAY_MS)
   : 250;
+const MAX_FAILURE_PCT = Number.isFinite(Number(process.env.EODHD_BACKFILL_MAX_FAILURE_PCT))
+  ? Number(process.env.EODHD_BACKFILL_MAX_FAILURE_PCT)
+  : 10;
 const RETRIES = 3;
 
 const API_KEY = String(process.env.EODHD_API_KEY || '').trim();
@@ -152,17 +155,26 @@ async function run() {
   if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
 
   const failureSymbols = [];
+  const runStats = {
+    total: symbols.length,
+    processed: 0,
+    success: 0,
+    failures: 0
+  };
+  let fatalAuthError = null;
 
   for (const symbol of symbols) {
+    runStats.processed += 1;
     process.stdout.write(`Processing ${symbol}... `);
     const filePath = path.join(DATA_DIR, `${symbol}.json`);
     const res = await fetchEodhd(symbol);
 
     if (!res.ok) {
-      manifest.stats.failures += 1;
+      runStats.failures += 1;
       failureSymbols.push({ symbol, status: res.status || null, error: res.error || 'unknown' });
       process.stdout.write(`FAILED (${res.status || 'ERR'})\n`);
       if (res.fatal) {
+        fatalAuthError = res.error || `HTTP ${res.status || 'unknown'}`;
         console.error('Fatal auth error from EODHD. Stopping to avoid writing corrupted data.');
         break;
       }
@@ -172,7 +184,7 @@ async function run() {
 
     const finalBars = normalizeBars(res.data);
     if (!finalBars.length) {
-      manifest.stats.failures += 1;
+      runStats.failures += 1;
       failureSymbols.push({ symbol, status: null, error: 'normalized_empty' });
       process.stdout.write('FAILED (normalized_empty)\n');
       await sleep(DELAY_MS);
@@ -185,19 +197,39 @@ async function run() {
       last_date: finalBars[finalBars.length - 1]?.date || null,
       updated_at: new Date().toISOString()
     };
-    manifest.stats.success += 1;
+    runStats.success += 1;
     process.stdout.write(`OK (${finalBars.length} bars)\n`);
     await sleep(DELAY_MS);
   }
 
-  manifest.stats.total = symbols.length;
+  const failurePct = runStats.total > 0 ? (runStats.failures / runStats.total) * 100 : 0;
+  manifest.stats = {
+    total: runStats.total,
+    processed: runStats.processed,
+    success: runStats.success,
+    failures: runStats.failures,
+    failure_pct: Number(failurePct.toFixed(3)),
+    max_failure_pct: MAX_FAILURE_PCT
+  };
   manifest.updated_at = new Date().toISOString();
   manifest.failures = failureSymbols;
   fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2));
 
-  if (failureSymbols.length) {
-    console.error(`Backfill finished with ${failureSymbols.length} failures.`);
+  if (fatalAuthError) {
+    console.error(`Backfill aborted due to fatal auth error: ${fatalAuthError}`);
     process.exit(1);
+  }
+
+  if (failureSymbols.length && failurePct > MAX_FAILURE_PCT) {
+    console.error(
+      `Backfill finished with ${failureSymbols.length} failures (${failurePct.toFixed(2)}%), above threshold ${MAX_FAILURE_PCT.toFixed(2)}%.`
+    );
+    process.exit(1);
+  }
+  if (failureSymbols.length) {
+    console.warn(
+      `Backfill finished with tolerated failures: ${failureSymbols.length} (${failurePct.toFixed(2)}% <= ${MAX_FAILURE_PCT.toFixed(2)}%).`
+    );
   }
   console.log('Backfill completed successfully.');
 }

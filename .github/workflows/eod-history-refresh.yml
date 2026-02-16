@@ -12,7 +12,7 @@ concurrency:
 jobs:
   refresh-history:
     runs-on: ubuntu-latest
-    timeout-minutes: 120  # Increased for ~520 symbols
+    timeout-minutes: 360
     permissions:
       contents: write
     steps:
@@ -31,33 +31,45 @@ jobs:
       - name: Run Backfill (Full Universe)
         env:
           EODHD_API_KEY: ${{ secrets.EODHD_API_KEY }}
+          EODHD_BACKFILL_MAX_FAILURE_PCT: "12"
         run: |
-          # Use combined universe file (S&P 500 + NASDAQ-100 + Dow 30)
+          set -euo pipefail
+
           UNIVERSE_FILE="./public/data/universe/all.json"
           if [ ! -f "$UNIVERSE_FILE" ]; then
-             echo "Universe file not found, falling back to nasdaq100."
-             UNIVERSE_FILE="./public/data/universe/nasdaq100.json"
+            echo "UNIVERSE_FILE_MISSING: $UNIVERSE_FILE" >&2
+            exit 1
           fi
           echo "Using universe: $UNIVERSE_FILE"
           COUNT=$(jq 'length' "$UNIVERSE_FILE")
           echo "Symbol count: $COUNT"
-          if [ "$COUNT" -lt 90 ]; then
-            echo "UNIVERSE_CONTRACT_VIOLATION: expected >= 90 symbols, got $COUNT" >&2
+          if [ "$COUNT" -lt 2000 ]; then
+            echo "UNIVERSE_CONTRACT_VIOLATION: expected >= 2000 symbols, got $COUNT" >&2
             exit 1
           fi
           node scripts/providers/eodhd-backfill-bars.mjs --universe "$UNIVERSE_FILE"
-          
+
+      - name: Rebuild v3 EOD + adjusted series
+        env:
+          EODHD_API_KEY: ${{ secrets.EODHD_API_KEY }}
+          TIINGO_API_KEY: ${{ secrets.TIINGO_API_KEY || secrets.TIIANGO_API_KEY }}
+        run: |
+          set -euo pipefail
+          node scripts/dp1/eod-snapshot.v3.mjs --exchange US
+          node scripts/dp3/adjusted-series.v3.mjs
+
       - name: Commit Changes
         run: |
           set -euo pipefail
           git config --global user.name "rv-bot"
           git config --global user.email "bot@rubikvault.com"
           git add public/data/eod/bars
+          git add public/data/v3/eod public/data/v3/series public/data/v3/system/health.json
           if git diff --cached --quiet; then
             echo "No changes to commit"
             exit 0
           fi
-          git commit -m "chore(data): refresh eod history [skip ci]"
+          git commit -m "chore(data): refresh eod history + v3 series [skip ci]"
           for i in 1 2 3; do
             if git push origin HEAD:${{ github.ref_name }}; then
               exit 0

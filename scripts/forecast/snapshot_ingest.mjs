@@ -1,9 +1,9 @@
 /**
  * Forecast System v3.0 — Snapshot Ingest
  * 
- * Ingests data from existing RubikVault sources:
- * - Universe from /data/universe/nasdaq100.json
- * - Prices from /data/eod/batches/eod.latest.*.json
+ * Ingests data from RubikVault SSOT artifacts:
+ * - Universe from /data/v3/universe/universe.json (fallback: /data/universe/all.json)
+ * - Prices from /data/v3/eod/US/latest.ndjson.gz
  * - Creates manifests in mirrors/forecast/snapshots/
  */
 
@@ -16,9 +16,12 @@ import { computeDigest } from '../lib/digest.js';
 // Path Constants
 // ─────────────────────────────────────────────────────────────────────────────
 
-const UNIVERSE_PATH = 'public/data/universe/all.json';
+const V3_UNIVERSE_PATH = 'public/data/v3/universe/universe.json';
+const LEGACY_UNIVERSE_PATH = 'public/data/universe/all.json';
 const EOD_BATCH_PATTERN = 'public/data/eod/batches/eod.latest.';
 const MARKET_PRICES_SNAPSHOT_PATH = 'public/data/snapshots/market-prices/latest.json';
+const V3_EOD_LATEST_PATH = 'public/data/v3/eod/US/latest.ndjson.gz';
+const V3_ADJUSTED_SERIES_DIR = 'public/data/v3/series/adjusted';
 const MIRRORS_SNAPSHOT_BASE = 'mirrors/forecast/snapshots';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -31,29 +34,73 @@ const MIRRORS_SNAPSHOT_BASE = 'mirrors/forecast/snapshots';
  * @returns {string[]} Array of tickers
  */
 export function loadUniverse(repoRoot) {
-    const universePath = path.join(repoRoot, UNIVERSE_PATH);
+    function normalizeTicker(value) {
+        const ticker = String(value || '').trim().toUpperCase();
+        return ticker || null;
+    }
 
-    if (!fs.existsSync(universePath)) {
-        console.warn(`[Ingest] Universe not found at ${universePath}`);
+    function tickerFromRow(row) {
+        if (typeof row === 'string') return normalizeTicker(row);
+        if (!row || typeof row !== 'object') return null;
+        const direct = row.ticker ?? row.symbol ?? row.code ?? null;
+        if (direct) return normalizeTicker(direct);
+        const canonical = String(row.canonical_id ?? row.canonicalId ?? '').trim();
+        if (!canonical) return null;
+        const parts = canonical.split(':');
+        return normalizeTicker(parts[parts.length - 1]);
+    }
+
+    function dedupeTickers(rows) {
+        const out = [];
+        const seen = new Set();
+        for (const row of rows) {
+            const ticker = tickerFromRow(row);
+            if (!ticker || seen.has(ticker)) continue;
+            seen.add(ticker);
+            out.push(ticker);
+        }
+        return out;
+    }
+
+    function extractTickers(payload) {
+        if (Array.isArray(payload)) {
+            return dedupeTickers(payload);
+        }
+        if (!payload || typeof payload !== 'object') {
+            return [];
+        }
+        if (Array.isArray(payload.symbols)) {
+            return dedupeTickers(payload.symbols);
+        }
+        if (Array.isArray(payload.tickers)) {
+            return dedupeTickers(payload.tickers);
+        }
+        if (Array.isArray(payload.data)) {
+            return dedupeTickers(payload.data);
+        }
         return [];
     }
 
-    const content = fs.readFileSync(universePath, 'utf8');
-    const data = JSON.parse(content);
-
-    // Handle both array and object formats
-    if (Array.isArray(data)) {
-        return data.map(item => typeof item === 'string' ? item : item.ticker || item.symbol);
+    const candidates = [V3_UNIVERSE_PATH, LEGACY_UNIVERSE_PATH];
+    for (const relPath of candidates) {
+        const absPath = path.join(repoRoot, relPath);
+        if (!fs.existsSync(absPath)) continue;
+        try {
+            const content = fs.readFileSync(absPath, 'utf8');
+            const parsed = JSON.parse(content);
+            const tickers = extractTickers(parsed);
+            if (tickers.length > 0) {
+                console.log(`[Ingest] Universe loaded from ${relPath} (${tickers.length} tickers)`);
+                return tickers;
+            }
+            console.warn(`[Ingest] Universe file has no tickers: ${relPath}`);
+        } catch (err) {
+            console.warn(`[Ingest] Failed to parse universe file ${relPath}: ${err.message}`);
+        }
     }
 
-    if (data.tickers) return data.tickers;
-    if (data.symbols) return data.symbols;
-    if (data.data && Array.isArray(data.data)) {
-        return data.data.map(item => item.ticker || item.symbol || item);
-    }
-
-    // If object with ticker keys
-    return Object.keys(data).filter(k => !['schema', 'metadata', 'generated_at', 'data'].includes(k));
+    console.warn('[Ingest] No valid universe artifact found');
+    return [];
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -97,6 +144,47 @@ export function loadEodBatches(repoRoot) {
 function toFiniteNumber(value) {
     const num = Number(value);
     return Number.isFinite(num) ? num : null;
+}
+
+function parseGzipNdjsonFile(absPath) {
+    if (!fs.existsSync(absPath)) return [];
+    try {
+        const gz = fs.readFileSync(absPath);
+        const text = zlib.gunzipSync(gz).toString('utf8');
+        return text
+            .split(/\r?\n/)
+            .map(line => line.trim())
+            .filter(Boolean)
+            .map(line => {
+                try {
+                    return JSON.parse(line);
+                } catch {
+                    return null;
+                }
+            })
+            .filter(Boolean);
+    } catch (err) {
+        console.warn(`[Ingest] Error reading gzip NDJSON ${absPath}: ${err.message}`);
+        return [];
+    }
+}
+
+export function loadV3LatestPrices(repoRoot) {
+    const latestPath = path.join(repoRoot, V3_EOD_LATEST_PATH);
+    const rows = parseGzipNdjsonFile(latestPath);
+    const prices = {};
+    for (const row of rows) {
+        const ticker = String(row?.ticker || row?.symbol || '').trim().toUpperCase();
+        const date = String(row?.trading_date || row?.date || '').slice(0, 10);
+        const close = toFiniteNumber(row?.close ?? row?.adj_close ?? row?.adjusted_close);
+        if (!ticker || !date || close === null) continue;
+        const open = toFiniteNumber(row?.open) ?? close;
+        const high = toFiniteNumber(row?.high) ?? close;
+        const low = toFiniteNumber(row?.low) ?? close;
+        const volume = toFiniteNumber(row?.volume) ?? 0;
+        prices[ticker] = { date, open, high, low, close, volume };
+    }
+    return prices;
 }
 
 /**
@@ -154,8 +242,7 @@ export function loadMarketPricesSnapshot(repoRoot) {
 }
 
 /**
- * Load full price history for tickers from individual bar files
- * Uses EOD bars directory for full historical data
+ * Load full price history for tickers from v3 adjusted series.
  * @param {string} repoRoot - Repository root
  * @param {string[]} tickers - Tickers to load
  * @param {string} asOfDate - As-of date
@@ -163,53 +250,49 @@ export function loadMarketPricesSnapshot(repoRoot) {
  */
 export async function loadPriceHistory(repoRoot, tickers, asOfDate) {
     const history = {};
-    const barsDir = path.join(repoRoot, 'public/data/eod/bars');
+    const latestPrices = loadV3LatestPrices(repoRoot);
+    const seriesDir = path.join(repoRoot, V3_ADJUSTED_SERIES_DIR);
 
     for (const ticker of tickers) {
-        const barPath = path.join(barsDir, `${ticker}.json`);
+        const seriesPath = path.join(seriesDir, `US__${ticker}.ndjson.gz`);
+        const rows = parseGzipNdjsonFile(seriesPath);
+        if (!rows.length) continue;
 
-        if (!fs.existsSync(barPath)) {
-            // Fallback to batch data if bar file doesn't exist
+        const normalized = rows
+            .map((row) => {
+                const date = String(row?.trading_date || row?.date || '').slice(0, 10);
+                const close = toFiniteNumber(row?.adjusted_close ?? row?.adj_close ?? row?.close);
+                if (!date || close === null) return null;
+                return { date, close };
+            })
+            .filter(Boolean)
+            .sort((a, b) => a.date.localeCompare(b.date));
+
+        const recent = normalized
+            .filter((row) => row.date <= asOfDate)
+            .slice(Math.max(0, normalized.length - 500));
+
+        if (!recent.length) {
             continue;
         }
 
-        try {
-            const content = fs.readFileSync(barPath, 'utf8');
-            const bars = JSON.parse(content);
-
-            if (!Array.isArray(bars) || bars.length === 0) continue;
-
-            // Sort by date descending, take most recent 500 trading days
-            const sorted = bars.sort((a, b) => b.date.localeCompare(a.date));
-
-            // Filter to bars at or before asOfDate
-            const validBars = sorted.filter(b => b.date <= asOfDate);
-            const recent = validBars.slice(0, 500).reverse(); // Chronological order
-
-            if (recent.length === 0) continue;
-
-            history[ticker] = {
-                dates: recent.map(b => b.date),
-                closes: recent.map(b => b.close ?? b.adjClose),
-                volumes: recent.map(b => b.volume ?? 0),
-                opens: recent.map(b => b.open),
-                highs: recent.map(b => b.high),
-                lows: recent.map(b => b.low)
-            };
-        } catch (err) {
-            console.warn(`[Ingest] Error reading ${ticker}: ${err.message}`);
-        }
+        history[ticker] = {
+            dates: recent.map(row => row.date),
+            closes: recent.map(row => row.close),
+            volumes: recent.map(() => 0),
+            opens: recent.map(row => row.close),
+            highs: recent.map(row => row.close),
+            lows: recent.map(row => row.close)
+        };
     }
 
-    // Supplement with EOD batches for any missing tickers
-    const eodData = loadEodBatches(repoRoot);
+    // Supplement with latest v3 EOD snapshot for any missing tickers
     for (const ticker of tickers) {
-        if (history[ticker]) continue; // Already loaded from bars
+        if (history[ticker]) continue;
 
-        const tickerData = eodData[ticker];
+        const tickerData = latestPrices[ticker];
         if (!tickerData) continue;
 
-        // If single bar (latest), create minimal history
         if (tickerData.date && tickerData.close !== undefined) {
             history[ticker] = {
                 dates: [tickerData.date],
@@ -314,18 +397,10 @@ export async function ingestSnapshots(repoRoot, tradingDate, policy) {
     const universe = loadUniverse(repoRoot);
     console.log(`[Ingest] Loaded universe: ${universe.length} tickers`);
 
-    // Load prices (EOD batches primary; published market-prices snapshot fallback)
-    const batchPrices = loadEodBatches(repoRoot);
-    const snapshotPrices = loadMarketPricesSnapshot(repoRoot);
-    const prices = { ...batchPrices };
-    for (const [ticker, row] of Object.entries(snapshotPrices)) {
-        if (!prices[ticker]) {
-            prices[ticker] = row;
-        }
-    }
-
+    // Load prices from canonical v3 EOD latest snapshot
+    const prices = loadV3LatestPrices(repoRoot);
     const pricesCount = Object.keys(prices).length;
-    console.log(`[Ingest] Loaded prices for ${pricesCount} tickers (batches=${Object.keys(batchPrices).length}, market-prices-fallback=${Object.keys(snapshotPrices).length})`);
+    console.log(`[Ingest] Loaded prices for ${pricesCount} tickers from ${V3_EOD_LATEST_PATH}`);
 
     // Calculate missing data percentage
     const missingCount = universe.filter(t => !prices[t]).length;
@@ -357,6 +432,7 @@ export async function ingestSnapshots(repoRoot, tradingDate, policy) {
 export default {
     loadUniverse,
     loadEodBatches,
+    loadV3LatestPrices,
     loadMarketPricesSnapshot,
     loadPriceHistory,
     createManifest,

@@ -48,7 +48,7 @@ jobs:
         run: |
           git config --global user.name "rv-bot"
           git config --global user.email "bot@rubikvault.com"
-          git add public/data/universe/
+          git add public/data/universe/ policies/universe/
           if git diff --cached --quiet; then
             echo "No universe changes to commit."
             exit 0

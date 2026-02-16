@@ -6,6 +6,27 @@ import { loadV3Policies } from "../lib/v3/policy-loader.mjs";
 import { writeJsonArtifact, createManifest, writeManifest } from "../lib/v3/artifact-writer.mjs";
 import { updateHealth, buildDpHealthEntry } from "../lib/health-writer.v3.mjs";
 
+const COVERAGE_EXPECTED_BY_INDEX = {
+  nasdaq100: 100,
+  sp500: 500,
+  dow: 30,
+  russell2000: 2000
+};
+
+function normalizeTicker(raw) {
+  return String(raw || "").trim().toUpperCase();
+}
+
+function buildTickerSet(rows) {
+  if (!Array.isArray(rows)) return new Set();
+  const set = new Set();
+  for (const row of rows) {
+    const ticker = normalizeTicker(typeof row === "string" ? row : row?.ticker || row?.symbol);
+    if (ticker) set.add(ticker);
+  }
+  return set;
+}
+
 async function main() {
   const runContext = createRunContext();
   const rootDir = runContext.rootDir;
@@ -21,15 +42,34 @@ async function main() {
     await fs.readFile(path.join(rootDir, "public/data/universe/all.json"), "utf8")
   );
 
-  const sourceTickers = new Set(
-    sourceUniverse
-      .map((item) => (typeof item === "string" ? item : item?.ticker))
-      .filter(Boolean)
-  );
+  const sourceTickers = buildTickerSet(sourceUniverse);
   const policyTickers = new Set((universeDoc.symbols || []).map((item) => item.ticker));
+
+  const indexDefs = [
+    ["nasdaq100", "public/data/universe/nasdaq100.json"],
+    ["sp500", "public/data/universe/sp500.json"],
+    ["dow", "public/data/universe/dowjones.json"],
+    ["russell2000", "public/data/universe/russell2000.json"]
+  ];
+  const byIndex = {};
+  for (const [indexName, relPath] of indexDefs) {
+    try {
+      const rows = JSON.parse(await fs.readFile(path.join(rootDir, relPath), "utf8"));
+      byIndex[indexName] = buildTickerSet(rows).size;
+    } catch {
+      byIndex[indexName] = 0;
+    }
+  }
 
   const missingInPolicy = [...sourceTickers].filter((ticker) => !policyTickers.has(ticker)).sort();
   const extraInPolicy = [...policyTickers].filter((ticker) => !sourceTickers.has(ticker)).sort();
+
+  const minIndexRatio = Number(process.env.RV_COVERAGE_INDEX_MIN_RATIO || 0.8);
+  const expectedTotalMin = Number(process.env.RV_COVERAGE_TOTAL_MIN || 2000);
+  const degradedIndexes = Object.entries(COVERAGE_EXPECTED_BY_INDEX)
+    .filter(([name, expected]) => Number(byIndex[name] || 0) < Math.floor(expected * minIndexRatio))
+    .map(([name]) => name);
+  const coverageHealth = sourceTickers.size >= expectedTotalMin && degradedIndexes.length === 0 ? "ok" : "degraded";
 
   const date = new Date().toISOString().slice(0, 10);
   const driftDoc = {
@@ -73,15 +113,25 @@ async function main() {
     quality: {
       missing_in_policy: missingInPolicy.length,
       extra_in_policy: extraInPolicy.length,
-      mapping_coverage_percent: mappingDoc.coverage?.percent ?? null
+      mapping_coverage_percent: mappingDoc.coverage?.percent ?? null,
+      coverage_total: sourceTickers.size,
+      coverage_health: coverageHealth
     },
     artifacts
   });
+  manifest.run_id = runContext.runId;
+  manifest.coverage = {
+    total: sourceTickers.size,
+    by_index: byIndex,
+    freshness: runContext.generatedAt,
+    run_id: runContext.runId,
+    health: coverageHealth
+  };
   artifacts.push(await writeManifest(rootDir, "public/data/v3/universe/manifest.json", manifest));
 
   await updateHealth(rootDir, runContext, {
     system: {
-      status: missingInPolicy.length === 0 ? "ok" : "degraded",
+      status: missingInPolicy.length === 0 && coverageHealth === "ok" ? "ok" : "degraded",
       budget: {
         hard_cap: Number(budgetPolicy.hard_cap || 0),
         reserve: Number(budgetPolicy.reserve || 0)
@@ -99,12 +149,13 @@ async function main() {
     },
     dp: {
       dp0_universe: buildDpHealthEntry({
-        status: missingInPolicy.length === 0 ? "ok" : "degraded",
+        status: missingInPolicy.length === 0 && coverageHealth === "ok" ? "ok" : "degraded",
         coverage: {
           source: sourceTickers.size,
-          policy: policyTickers.size
+          policy: policyTickers.size,
+          by_index: byIndex
         },
-        partial: missingInPolicy.length > 0,
+        partial: missingInPolicy.length > 0 || coverageHealth !== "ok",
         manifest: "public/data/v3/universe/manifest.json"
       })
     }
