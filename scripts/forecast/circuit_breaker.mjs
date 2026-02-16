@@ -166,6 +166,10 @@ export function closeCircuit(repoRoot, runResult) {
     updateLatest(repoRoot, {
         ok: true,
         status: 'ok',
+        champion_id: runResult.championId ?? null,
+        trained_at: runResult.trainedAt ?? null,
+        freshness: runResult.tradingDate ?? null,
+        accuracy: runResult.accuracy ?? null,
         latest_report_ref: runResult.reportRef,
         scorecards_ref: runResult.scorecardsRef ?? 'public/data/forecast/scorecards/tickers.json.gz',
         maturity_phase: runResult.maturityPhase ?? 'BOOTSTRAP'

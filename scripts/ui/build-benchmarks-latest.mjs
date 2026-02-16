@@ -1,10 +1,9 @@
 #!/usr/bin/env node
 import {
   nowIso,
-  readJson,
   writeJson,
   computeReturnsFromBars,
-  normalizeBars
+  loadAdjustedSeries
 } from './lib-stock-ui.mjs';
 
 const BENCHMARKS = ['SPY', 'QQQ', 'DIA', 'IWM'];
@@ -18,24 +17,17 @@ function pickLatestIso(values) {
 
 async function main() {
   const generatedAt = nowIso();
-  const mirrorHealth = await readJson('public/mirrors/market-health.json', null);
-  const mirrorItems = Array.isArray(mirrorHealth?.items) ? mirrorHealth.items : [];
-  const mirrorBySymbol = new Map(mirrorItems.map((item) => [String(item?.symbol || '').toUpperCase(), item]));
-
   const benchmarks = {};
   const dataDates = [];
 
   for (const symbol of BENCHMARKS) {
-    const rel = `public/data/eod/bars/${symbol}.json`;
-    const barsRaw = await readJson(rel, null);
-    const bars = normalizeBars(barsRaw);
-    const returns = computeReturnsFromBars(bars);
-
-    if (bars.length >= 20) {
+    const series = await loadAdjustedSeries(symbol, 'US');
+    const returns = computeReturnsFromBars(series);
+    if (series.length >= 20) {
       benchmarks[symbol] = {
-        bars_ref: `/data/eod/bars/${symbol}.json`,
+        series_ref: `/data/v3/series/adjusted/US__${symbol}.ndjson.gz`,
         as_of: returns.as_of,
-        source: 'eod-bars',
+        source: 'v3-series-adjusted',
         returns: {
           d1: returns.d1,
           ytd: returns.ytd,
@@ -47,26 +39,8 @@ async function main() {
       continue;
     }
 
-    const mirror = mirrorBySymbol.get(symbol);
-    if (mirror) {
-      const lastBarDate = typeof mirror.lastBarDate === 'string' ? mirror.lastBarDate : null;
-      benchmarks[symbol] = {
-        bars_ref: null,
-        as_of: lastBarDate,
-        source: 'mirror-market-health',
-        returns: {
-          d1: Number.isFinite(Number(mirror.changePct)) ? Number(mirror.changePct) / 100 : null,
-          ytd: null,
-          y1: null,
-          y5: null
-        }
-      };
-      if (lastBarDate) dataDates.push(lastBarDate);
-      continue;
-    }
-
     benchmarks[symbol] = {
-      bars_ref: null,
+      series_ref: null,
       as_of: null,
       source: 'missing',
       returns: {
@@ -79,9 +53,7 @@ async function main() {
   }
 
   const dataDate = pickLatestIso(dataDates);
-  const sourceChain = [];
-  if (BENCHMARKS.some((symbol) => benchmarks[symbol]?.source === 'eod-bars')) sourceChain.push('public/data/eod/bars/*.json');
-  if (BENCHMARKS.some((symbol) => benchmarks[symbol]?.source === 'mirror-market-health')) sourceChain.push('public/mirrors/market-health.json');
+  const sourceChain = ['public/data/v3/series/adjusted/*.ndjson.gz'];
 
   const doc = {
     schema_version: 'ui.benchmarks.v1',

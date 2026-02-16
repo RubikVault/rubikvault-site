@@ -4,7 +4,7 @@ import {
   readJson,
   writeJson,
   loadUniverse,
-  normalizeBars,
+  loadAdjustedSeries,
   overlapReturnSeries,
   pearsonCorrelation
 } from './lib-stock-ui.mjs';
@@ -32,14 +32,13 @@ async function main() {
     ? benchmarksDoc.data.benchmarks
     : {};
 
-  const benchmarkSymbols = Object.keys(benchmarkEntries).filter((symbol) => benchmarkEntries[symbol]?.bars_ref);
+  const benchmarkSymbols = Object.keys(benchmarkEntries).filter((symbol) => benchmarkEntries[symbol]?.series_ref);
   const barsCache = new Map();
   const latestDates = [];
 
   async function getBars(symbol) {
     if (barsCache.has(symbol)) return barsCache.get(symbol);
-    const raw = await readJson(`public/data/eod/bars/${symbol}.json`, null);
-    const bars = normalizeBars(raw);
+    const bars = await loadAdjustedSeries(symbol, 'US');
     barsCache.set(symbol, bars);
     if (bars.length) latestDates.push(bars[bars.length - 1].date);
     return bars;
@@ -92,7 +91,12 @@ async function main() {
   }
 
   const dataDate = pickLatestIso(latestDates);
-  const sourceChain = ['public/data/eod/bars/*.json', 'public/data/ui/benchmarks/latest.json', 'public/data/ui/peers/latest.json'];
+  const coverageCount = Object.keys(correlations).length;
+  const sourceChain = [
+    'public/data/v3/series/adjusted/*.ndjson.gz',
+    'public/data/ui/benchmarks/latest.json',
+    'public/data/ui/peers/latest.json'
+  ];
   if (usedPeerFallback) sourceChain.push('fallback:peer-based-references');
 
   const doc = {
@@ -105,7 +109,11 @@ async function main() {
       source_chain: sourceChain,
       schema_version: 'ui.correlations.v1',
       window: WINDOW,
-      min_overlap: MIN_OVERLAP
+      min_overlap: MIN_OVERLAP,
+      coverage: {
+        symbols: coverageCount,
+        universe: tickers.length
+      }
     },
     data: {
       correlations
@@ -113,7 +121,7 @@ async function main() {
   };
 
   await writeJson('public/data/ui/correlations/latest.json', doc);
-  console.log(`OK: wrote public/data/ui/correlations/latest.json correlations=${Object.keys(correlations).length}`);
+  console.log(`OK: wrote public/data/ui/correlations/latest.json correlations=${coverageCount}`);
 }
 
 main().catch((error) => {

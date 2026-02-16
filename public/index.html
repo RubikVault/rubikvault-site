@@ -246,8 +246,8 @@
               </svg>
             </button>
           </div>
-          <div style="margin-top: 0.6rem; font-size: 0.9rem; color: #94a3b8; text-align: left; padding-left: 0.25rem;">
-            Coverage: NASDAQ-100 + S&P 500 + Dow Jones + Russell 2000 (~3,600 stocks)
+          <div id="coverage-summary-text" style="margin-top: 0.6rem; font-size: 0.9rem; color: #94a3b8; text-align: left; padding-left: 0.25rem;">
+            Coverage: loading...
           </div>
         </div>
 
@@ -744,13 +744,15 @@
     const uiArtifactCache = new Map();
     const uiGzipCache = new Map();
     const ideasBarsCache = new Map();
-    let ideasBarsSymbols = null;
-    let ideasBarsManifestPromise = null;
+    const coverageSummaryEl = document.getElementById('coverage-summary-text');
 
     const UNIVERSE_URL = '/data/universe/all.json';
+    const V3_UNIVERSE_MANIFEST_URL = '/data/v3/universe/manifest.json';
     let universe = [];
     const universeByTicker = new Map();
     let universeReady = null;
+    let coveragePromise = null;
+    let coverageInfo = null;
 
     function normalizeTicker(raw) {
       const s = String(raw || '').trim().toUpperCase();
@@ -766,6 +768,68 @@
         .replace(/[^a-z0-9\s]/g, ' ')
         .replace(/\s+/g, ' ')
         .trim();
+    }
+
+    function formatCoverageByIndex(byIndex) {
+      if (!byIndex || typeof byIndex !== 'object') return '';
+      const order = ['nasdaq100', 'sp500', 'dow', 'russell2000'];
+      const labels = {
+        nasdaq100: 'NASDAQ-100',
+        sp500: 'S&P 500',
+        dow: 'Dow',
+        russell2000: 'Russell 2000'
+      };
+      return order
+        .filter((key) => Number.isFinite(Number(byIndex[key])))
+        .map((key) => `${labels[key]}: ${Number(byIndex[key]).toLocaleString('en-US')}`)
+        .join(' | ');
+    }
+
+    function formatCoverageSummary(coverage) {
+      const total = Number(coverage?.total);
+      if (!Number.isFinite(total) || total <= 0) return 'Coverage: unavailable';
+      const breakdown = formatCoverageByIndex(coverage?.by_index);
+      const base = `Coverage: ${total.toLocaleString('en-US')} stocks`;
+      return breakdown ? `${base} (${breakdown})` : base;
+    }
+
+    async function loadCoverageInfo() {
+      if (coverageInfo) return coverageInfo;
+      if (coveragePromise) return coveragePromise;
+      coveragePromise = (async () => {
+        const { response, payload } = await fetchJson(V3_UNIVERSE_MANIFEST_URL);
+        if (!response?.ok || !payload || typeof payload !== 'object') {
+          coverageInfo = null;
+          return null;
+        }
+        const coverage = payload.coverage && typeof payload.coverage === 'object' ? payload.coverage : null;
+        if (!coverage) {
+          coverageInfo = null;
+          return null;
+        }
+        coverageInfo = {
+          total: Number(coverage.total),
+          by_index: coverage.by_index && typeof coverage.by_index === 'object' ? coverage.by_index : {},
+          freshness: coverage.freshness || null,
+          health: coverage.health || null,
+          run_id: coverage.run_id || payload.run_id || payload?.meta?.run_id || null
+        };
+        return coverageInfo;
+      })()
+        .catch(() => {
+          coverageInfo = null;
+          return null;
+        })
+        .finally(() => {
+          coveragePromise = null;
+        });
+      return coveragePromise;
+    }
+
+    async function renderCoverageSummary() {
+      const coverage = await loadCoverageInfo();
+      if (!coverageSummaryEl) return;
+      coverageSummaryEl.textContent = formatCoverageSummary(coverage);
     }
 
     function syncSearchInputs(value, source = 'main') {
@@ -925,10 +989,35 @@
     }
 
     function normalizeBarsPayload(payload) {
-      if (Array.isArray(payload)) return payload;
-      if (Array.isArray(payload?.bars)) return payload.bars;
-      if (Array.isArray(payload?.data?.bars)) return payload.data.bars;
-      return [];
+      const rows = Array.isArray(payload)
+        ? payload
+        : Array.isArray(payload?.bars)
+          ? payload.bars
+          : Array.isArray(payload?.data?.bars)
+            ? payload.data.bars
+            : [];
+      return rows
+        .map((row) => {
+          const date = String(row?.date || row?.trading_date || row?.d || '').slice(0, 10);
+          if (!date) return null;
+          const close = Number(row?.close ?? row?.adjClose ?? row?.adjusted_close ?? row?.adj_close);
+          if (!Number.isFinite(close)) return null;
+          const open = Number(row?.open ?? row?.o);
+          const high = Number(row?.high ?? row?.h);
+          const low = Number(row?.low ?? row?.l);
+          const volume = Number(row?.volume ?? row?.v);
+          return {
+            date,
+            open: Number.isFinite(open) ? open : close,
+            high: Number.isFinite(high) ? high : close,
+            low: Number.isFinite(low) ? low : close,
+            close,
+            adjClose: close,
+            volume: Number.isFinite(volume) ? volume : 0
+          };
+        })
+        .filter(Boolean)
+        .sort((a, b) => a.date.localeCompare(b.date));
     }
 
     function getBarDateMs(value) {
@@ -1005,43 +1094,13 @@
       };
     }
 
-    async function loadIdeasBarsManifest() {
-      if (ideasBarsSymbols) return ideasBarsSymbols;
-      if (ideasBarsManifestPromise) return ideasBarsManifestPromise;
-      ideasBarsManifestPromise = (async () => {
-        const { response, payload } = await fetchJson('/data/eod/bars/manifest.json');
-        if (!response?.ok || !payload || typeof payload !== 'object') {
-          ideasBarsSymbols = new Set();
-          return ideasBarsSymbols;
-        }
-        const symbolMap = payload?.symbols && typeof payload.symbols === 'object' ? payload.symbols : {};
-        ideasBarsSymbols = new Set(
-          Object.keys(symbolMap)
-            .map((value) => normalizeTicker(value))
-            .filter(Boolean)
-        );
-        return ideasBarsSymbols;
-      })()
-        .catch(() => {
-          ideasBarsSymbols = new Set();
-          return ideasBarsSymbols;
-        })
-        .finally(() => {
-          ideasBarsManifestPromise = null;
-        });
-      return ideasBarsManifestPromise;
-    }
-
     async function loadIdeasBarsForTicker(ticker) {
       const symbol = normalizeTicker(ticker);
       if (!symbol) return null;
       if (ideasBarsCache.has(symbol)) return ideasBarsCache.get(symbol);
       const promise = (async () => {
-        const symbolsInManifest = await loadIdeasBarsManifest();
-        if (symbolsInManifest?.size && !symbolsInManifest.has(symbol)) return null;
-        const { response, payload } = await fetchJson(`/data/eod/bars/${encodeURIComponent(symbol)}.json`);
-        if (!response?.ok || !payload) return null;
-        const bars = normalizeBarsPayload(payload);
+        const rows = await loadGzipNdjson(`/data/v3/series/adjusted/US__${encodeURIComponent(symbol)}.ndjson.gz`);
+        const bars = normalizeBarsPayload(rows);
         return Array.isArray(bars) && bars.length ? bars : null;
       })();
       ideasBarsCache.set(symbol, promise);
@@ -3371,12 +3430,13 @@
 
     function renderUnsupported(symbol) {
       const s = normalizeTicker(symbol);
+      const coverageLine = formatCoverageSummary(coverageInfo);
       resultsSection.style.display = 'block';
       resultsTitle.textContent = 'Not supported';
       resultsContent.innerHTML = `
         <div style="padding: 1rem; border-radius: 10px; background: rgba(245, 158, 11, 0.10); border: 1px solid rgba(245, 158, 11, 0.35); margin-bottom: 1.5rem;">
           <div style="font-weight: 700; color: #fde68a;">This ticker is not in the supported universe.</div>
-          <div style="margin-top: 0.35rem; color: #fde68a;">Supported: NASDAQ-100, S&P 500, Dow Jones, Russell 2000 (~3,600 stocks)</div>
+          <div style="margin-top: 0.35rem; color: #fde68a;">${escapeHtml(coverageLine)}</div>
         </div>
       `;
       resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -3410,14 +3470,42 @@
       // Fallback: If network error or 404 (local static server w/o API), try static files
       if (stockRes.networkError || !stockRes.response?.ok) {
         console.warn('API fetch failed, attempting static fallback for verification...');
-        const [barsRes, indRes1, indRes2] = await Promise.all([
-          fetchJson(`/data/eod/bars/${upperTicker}.json`),
+        const [seriesRows, latestRows, indRes1, indRes2] = await Promise.all([
+          loadGzipNdjson(`/data/v3/series/adjusted/US__${upperTicker}.ndjson.gz`),
+          loadGzipNdjson('/data/v3/eod/US/latest.ndjson.gz'),
           fetchJson(`/data/v3/derived/indicators/${upperTicker}.json`),
           fetchJson(`/data/v3/derived/indicators/US__${upperTicker}.json`)
         ]);
 
-        if (barsRes.payload || indRes1.payload || indRes2.payload) {
-          const bars = Array.isArray(barsRes.payload) ? barsRes.payload : [];
+        if (seriesRows || latestRows || indRes1.payload || indRes2.payload) {
+          const bars = normalizeBarsPayload(seriesRows || []);
+          const latestRow = Array.isArray(latestRows)
+            ? latestRows.find((row) => normalizeTicker(row?.ticker || row?.symbol || '') === upperTicker)
+            : null;
+
+          if (latestRow) {
+            const latestDate = String(latestRow?.trading_date || latestRow?.date || '').slice(0, 10);
+            const latestClose = Number(latestRow?.close ?? latestRow?.adjusted_close ?? latestRow?.adj_close);
+            const latestOpen = Number(latestRow?.open);
+            const latestHigh = Number(latestRow?.high);
+            const latestLow = Number(latestRow?.low);
+            const latestVolume = Number(latestRow?.volume);
+            const normalizedLatest = {
+              date: latestDate,
+              open: Number.isFinite(latestOpen) ? latestOpen : latestClose,
+              high: Number.isFinite(latestHigh) ? latestHigh : latestClose,
+              low: Number.isFinite(latestLow) ? latestLow : latestClose,
+              close: Number.isFinite(latestClose) ? latestClose : null,
+              adjClose: Number.isFinite(latestClose) ? latestClose : null,
+              volume: Number.isFinite(latestVolume) ? latestVolume : 0
+            };
+            if (normalizedLatest.date && Number.isFinite(normalizedLatest.close)) {
+              const existingIdx = bars.findIndex((row) => row.date === normalizedLatest.date);
+              if (existingIdx >= 0) bars[existingIdx] = normalizedLatest;
+              else bars.push(normalizedLatest);
+              bars.sort((a, b) => a.date.localeCompare(b.date));
+            }
+          }
 
           let indicatorsMap = indRes1.payload?.indicators || indRes2.payload?.indicators || {};
 
@@ -3726,7 +3814,10 @@
     // Auto-route on page load
     document.addEventListener('DOMContentLoaded', async () => {
       if (!universeReady) universeReady = loadUniverse();
-      await universeReady;
+      await Promise.all([
+        universeReady,
+        renderCoverageSummary()
+      ]);
       syncEngineFilters('all', 'sticky');
       await loadTopSetupsDoc();
       renderBestSetups();

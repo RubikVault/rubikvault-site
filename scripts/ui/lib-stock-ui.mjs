@@ -1,8 +1,12 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import zlib from 'node:zlib';
 import { writeJsonAtomic } from '../lib/fs-atomic.mjs';
 
 export const ROOT_DIR = process.cwd();
+const gzipNdjsonCache = new Map();
+const eodLatestCache = new Map();
+const adjustedSeriesCache = new Map();
 
 export function nowIso() {
   return new Date().toISOString();
@@ -22,10 +26,97 @@ export async function readJson(relPath, fallback = null) {
   }
 }
 
+function parseNdjson(text) {
+  return String(text || '')
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((line) => {
+      try {
+        return JSON.parse(line);
+      } catch {
+        return null;
+      }
+    })
+    .filter(Boolean);
+}
+
+export async function readGzipNdjson(relPath, fallback = null) {
+  if (gzipNdjsonCache.has(relPath)) return gzipNdjsonCache.get(relPath);
+  const abs = path.join(ROOT_DIR, relPath);
+  try {
+    const gz = await fs.readFile(abs);
+    const rows = parseNdjson(zlib.gunzipSync(gz).toString('utf8'));
+    gzipNdjsonCache.set(relPath, rows);
+    return rows;
+  } catch {
+    gzipNdjsonCache.set(relPath, fallback);
+    return fallback;
+  }
+}
+
 export async function writeJson(relPath, doc) {
   const abs = path.join(ROOT_DIR, relPath);
   await writeJsonAtomic(abs, doc);
   return relPath;
+}
+
+function toFinite(value) {
+  const num = Number(value);
+  return Number.isFinite(num) ? num : null;
+}
+
+export async function loadEodLatestMap(relPath = 'public/data/v3/eod/US/latest.ndjson.gz') {
+  if (eodLatestCache.has(relPath)) return eodLatestCache.get(relPath);
+  const rows = await readGzipNdjson(relPath, []);
+  const map = new Map();
+  for (const row of Array.isArray(rows) ? rows : []) {
+    const ticker = normalizeTicker(row?.ticker || row?.symbol || row?.canonical_id?.split(':')?.[1] || '');
+    if (!ticker) continue;
+    const date = String(row?.trading_date || row?.date || '').slice(0, 10);
+    const close = toFinite(row?.close ?? row?.adjusted_close ?? row?.adj_close);
+    if (!date || close == null) continue;
+    map.set(ticker, {
+      ticker,
+      date,
+      open: toFinite(row?.open),
+      high: toFinite(row?.high),
+      low: toFinite(row?.low),
+      close,
+      volume: toFinite(row?.volume)
+    });
+  }
+  eodLatestCache.set(relPath, map);
+  return map;
+}
+
+export async function loadAdjustedSeries(ticker, exchange = 'US') {
+  const symbol = normalizeTicker(ticker);
+  if (!symbol) return [];
+  const key = `${exchange}__${symbol}`;
+  if (adjustedSeriesCache.has(key)) return adjustedSeriesCache.get(key);
+  const relPath = `public/data/v3/series/adjusted/${key}.ndjson.gz`;
+  const rows = await readGzipNdjson(relPath, []);
+  const out = Array.isArray(rows)
+    ? rows
+      .map((row) => {
+        const date = String(row?.trading_date || row?.date || '').slice(0, 10);
+        const close = toFinite(row?.adjusted_close ?? row?.adj_close ?? row?.close);
+        if (!date || close == null) return null;
+        return {
+          date,
+          open: toFinite(row?.open),
+          high: toFinite(row?.high),
+          low: toFinite(row?.low),
+          close,
+          volume: toFinite(row?.volume)
+        };
+      })
+      .filter(Boolean)
+      .sort((a, b) => a.date.localeCompare(b.date))
+    : [];
+  adjustedSeriesCache.set(key, out);
+  return out;
 }
 
 export function normalizeBars(rows) {

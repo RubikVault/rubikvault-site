@@ -6,8 +6,8 @@ import {
   loadUniverse,
   loadIndexUniverseMap,
   getPrimaryIndex,
-  averageVolume20,
-  normalizeBars
+  loadAdjustedSeries,
+  loadEodLatestMap
 } from './lib-stock-ui.mjs';
 
 const PEER_COUNT = 4;
@@ -36,6 +36,7 @@ async function main() {
 
   const sectorDoc = await readJson('public/data/v3/universe/sector-mapping/latest.json', null);
   const sectorRows = Array.isArray(sectorDoc?.sectors) ? sectorDoc.sectors : [];
+  const latestByTicker = await loadEodLatestMap('public/data/v3/eod/US/latest.ndjson.gz');
   const sectorByTicker = new Map();
   const membersBySector = new Map();
 
@@ -52,11 +53,13 @@ async function main() {
   const avgVolumeByTicker = new Map();
   const latestDates = [];
   for (const ticker of tickers) {
-    const barsRaw = await readJson(`public/data/eod/bars/${ticker}.json`, null);
-    const bars = normalizeBars(barsRaw);
-    const avgVol = averageVolume20(bars);
-    if (avgVol != null) avgVolumeByTicker.set(ticker, avgVol);
-    if (bars.length) latestDates.push(bars[bars.length - 1].date);
+    const series = await loadAdjustedSeries(ticker, 'US');
+    const avgVol = Number(latestByTicker.get(ticker)?.volume);
+    if (Number.isFinite(avgVol)) avgVolumeByTicker.set(ticker, avgVol);
+    const seriesDate = series.length ? series[series.length - 1].date : null;
+    const latestDate = latestByTicker.get(ticker)?.date || null;
+    if (seriesDate) latestDates.push(seriesDate);
+    else if (latestDate) latestDates.push(latestDate);
   }
 
   const peers = {};
@@ -141,7 +144,8 @@ async function main() {
       source_chain: [
         'public/data/universe/all.json',
         'public/data/universe/*.json',
-        'public/data/eod/bars/*.json',
+        'public/data/v3/eod/US/latest.ndjson.gz',
+        'public/data/v3/series/adjusted/*.ndjson.gz',
         'public/data/v3/universe/sector-mapping/latest.json'
       ],
       schema_version: 'ui.peers.v1'

@@ -28,9 +28,11 @@ async function generateReport() {
     // Load Universe Stats (from manifest if exists)
     let universeStats = { total: 0 };
     try {
-        // Assuming EOD manifest tracks universe coverage (from Step 3 - internal store)
-        const manifest = JSON.parse(fs.readFileSync(path.join(ROOT, 'public/data/eod/bars/manifest.json'), 'utf8'));
-        universeStats = manifest.stats || { total: 0 };
+        const manifest = JSON.parse(fs.readFileSync(path.join(ROOT, 'public/data/v3/universe/manifest.json'), 'utf8'));
+        const coverageTotal = Number(manifest?.coverage?.total);
+        universeStats = Number.isFinite(coverageTotal)
+            ? { total: coverageTotal }
+            : { total: Number(manifest?.meta?.quality?.source_symbols || 0) };
     } catch { }
 
     // Mock/Calc uplift (Placeholder logic as we don't have historical run data yet)
@@ -46,7 +48,7 @@ async function generateReport() {
         recommendations.push({ level: 'P1', message: 'System is in BOOTSTRAP. Ensure daily pipeline runs successfully.' });
     }
     if (universeStats.total === 0) {
-        recommendations.push({ level: 'P1', message: 'EOD Bar Store is empty. Run backfill script.' });
+        recommendations.push({ level: 'P1', message: 'Universe coverage appears empty. Run v3 universe pipeline.' });
     }
 
     // 3. Assemble Report

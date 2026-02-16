@@ -7,6 +7,19 @@ import { writeJsonArtifact } from '../lib/v3/artifact-writer.mjs';
 
 const INDEX_PROXIES = ['SPY', 'QQQ', 'DIA', 'IWM'];
 const SECTOR_ETFS = ['XLK', 'XLF', 'XLE', 'XLY', 'XLI', 'XLP', 'XLV', 'XLU', 'XLB', 'XLRE', 'XLC'];
+const SECTOR_META = {
+  XLK: { display_name: 'Technology', labels: ['Technology'], order: 1, color: '#0ea5e9' },
+  XLF: { display_name: 'Financials', labels: ['Financial Services', 'Financial'], order: 2, color: '#22c55e' },
+  XLV: { display_name: 'Health Care', labels: ['Healthcare', 'Health Care'], order: 3, color: '#ef4444' },
+  XLE: { display_name: 'Energy', labels: ['Energy'], order: 4, color: '#f59e0b' },
+  XLI: { display_name: 'Industrials', labels: ['Industrials', 'Industrial'], order: 5, color: '#64748b' },
+  XLY: { display_name: 'Consumer Discretionary', labels: ['Consumer Cyclical', 'Consumer Discretionary'], order: 6, color: '#a855f7' },
+  XLP: { display_name: 'Consumer Staples', labels: ['Consumer Defensive', 'Consumer Staples'], order: 7, color: '#84cc16' },
+  XLU: { display_name: 'Utilities', labels: ['Utilities'], order: 8, color: '#06b6d4' },
+  XLB: { display_name: 'Materials', labels: ['Basic Materials', 'Materials'], order: 9, color: '#b45309' },
+  XLRE: { display_name: 'Real Estate', labels: ['Real Estate'], order: 10, color: '#14b8a6' },
+  XLC: { display_name: 'Communication Services', labels: ['Communication Services'], order: 11, color: '#f43f5e' }
+};
 
 async function readJsonSafe(filePath, fallback) {
   try {
@@ -31,26 +44,6 @@ function normalizeTicker(raw) {
   return /^[A-Z0-9.\-]{1,15}$/.test(value) ? value : '';
 }
 
-function latestBarMetrics(doc) {
-  const bars = Array.isArray(doc) ? doc : Array.isArray(doc?.bars) ? doc.bars : Array.isArray(doc?.data) ? doc.data : [];
-  if (bars.length < 2) return null;
-  const prev = bars[bars.length - 2];
-  const curr = bars[bars.length - 1];
-  const prevClose = Number(prev?.close ?? prev?.c);
-  const close = Number(curr?.close ?? curr?.c);
-  const open = Number(curr?.open ?? curr?.o);
-  const volume = Number(curr?.volume ?? curr?.v);
-  if (!Number.isFinite(prevClose) || !Number.isFinite(close) || prevClose === 0) return null;
-  const changePct = ((close - prevClose) / prevClose) * 100;
-  return {
-    close,
-    open: Number.isFinite(open) ? open : null,
-    volume: Number.isFinite(volume) ? volume : null,
-    change_pct: Number(changePct.toFixed(4)),
-    as_of: String(curr?.date ?? curr?.d ?? '').slice(0, 10) || null
-  };
-}
-
 function metricsFromNdjsonRow(row) {
   if (!row || typeof row !== 'object') return null;
   const open = Number(row.open);
@@ -61,18 +54,15 @@ function metricsFromNdjsonRow(row) {
     open,
     volume: Number.isFinite(Number(row.volume)) ? Number(row.volume) : null,
     change_pct: Number((((close - open) / open) * 100).toFixed(4)),
-    as_of: null
+    as_of: String(row.trading_date || row.date || '').slice(0, 10) || null
   };
 }
 
-async function collectProxyRows(rootDir, symbols, ndjsonMap = new Map(), defaultAsOf = null) {
+async function collectProxyRows(symbols, ndjsonMap = new Map(), defaultAsOf = null) {
   const rows = [];
   for (const symbol of symbols) {
-    const file = path.join(rootDir, 'public/data/eod/bars', `${symbol}.json`);
-    const doc = await readJsonSafe(file, null);
-    const fromBars = doc ? latestBarMetrics(doc) : null;
     const fromNdjson = metricsFromNdjsonRow(ndjsonMap.get(symbol));
-    const metrics = fromBars || fromNdjson;
+    const metrics = fromNdjson;
     if (!metrics) {
       rows.push({
         symbol,
@@ -96,13 +86,40 @@ function avg(values) {
   return nums.reduce((sum, n) => sum + n, 0) / nums.length;
 }
 
+function buildSectorCounts(rows) {
+  const counts = new Map();
+  for (const row of Array.isArray(rows) ? rows : []) {
+    const sector = String(row?.sector || '').trim();
+    if (!sector || sector.toLowerCase() === 'unknown') continue;
+    counts.set(sector, Number(counts.get(sector) || 0) + 1);
+  }
+  return counts;
+}
+
+function enrichSectorRows(rows, sectorCounts) {
+  return rows.map((row) => {
+    const meta = SECTOR_META[row.symbol] || null;
+    if (!meta) return row;
+    const matched = (meta.labels || []).find((label) => sectorCounts.has(label)) || null;
+    const displayName = matched || meta.display_name || row.symbol;
+    return {
+      ...row,
+      sector: displayName,
+      display_name: displayName,
+      order: Number(meta.order || 999),
+      ...(meta.color ? { color: meta.color } : {})
+    };
+  });
+}
+
 async function main() {
   const runContext = createRunContext();
   const rootDir = runContext.rootDir;
 
-  const [healthDoc, moversDoc, eodGz] = await Promise.all([
+  const [healthDoc, moversDoc, sectorMapDoc, eodGz] = await Promise.all([
     readJsonSafe(path.join(rootDir, 'public/data/v3/pulse/market-health/latest.json'), {}),
     readJsonSafe(path.join(rootDir, 'public/data/v3/pulse/top-movers/latest.json'), {}),
+    readJsonSafe(path.join(rootDir, 'public/data/v3/universe/sector-mapping/latest.json'), {}),
     fs.readFile(path.join(rootDir, 'public/data/v3/eod/US/latest.ndjson.gz')).catch(() => null)
   ]);
 
@@ -114,16 +131,23 @@ async function main() {
   );
 
   const defaultAsOf = String(runContext.generatedAt).slice(0, 10);
-  const proxyRows = await collectProxyRows(rootDir, INDEX_PROXIES, ndjsonMap, defaultAsOf);
-  const sectorRows = await collectProxyRows(rootDir, SECTOR_ETFS, ndjsonMap, defaultAsOf);
-  sectorRows.sort((a, b) => Number(b.change_pct || -999) - Number(a.change_pct || -999) || a.symbol.localeCompare(b.symbol));
+  const proxyRows = await collectProxyRows(INDEX_PROXIES, ndjsonMap, defaultAsOf);
+  const rawSectorRows = await collectProxyRows(SECTOR_ETFS, ndjsonMap, defaultAsOf);
+  const sectorCounts = buildSectorCounts(sectorMapDoc?.sectors || []);
+  const sectorRows = enrichSectorRows(rawSectorRows, sectorCounts)
+    .sort((a, b) => Number(b.change_pct || -999) - Number(a.change_pct || -999) || a.symbol.localeCompare(b.symbol));
 
   const movers = Array.isArray(moversDoc?.top_movers)
     ? moversDoc.top_movers.slice(0, 25).map((row) => ({
         ticker: normalizeTicker(row?.ticker || row?.symbol || ''),
         change_pct: Number(row?.change_pct ?? 0),
         close: Number(row?.close ?? 0),
-        volume: Number(row?.volume ?? 0)
+        volume: Number(row?.volume ?? 0),
+        name: typeof row?.name === 'string' ? row.name : null,
+        sector: typeof row?.sector === 'string' ? row.sector : null,
+        in_universe: Boolean(row?.in_universe),
+        as_of: String(row?.as_of || defaultAsOf || '').slice(0, 10) || null,
+        lineage: row?.lineage && typeof row.lineage === 'object' ? row.lineage : null
       }))
     : [];
 
@@ -155,8 +179,8 @@ async function main() {
       source_chain: [
         '/data/v3/pulse/market-health/latest.json',
         '/data/v3/pulse/top-movers/latest.json',
-        '/data/v3/eod/US/latest.ndjson.gz',
-        '/data/eod/bars/*.json'
+        '/data/v3/universe/sector-mapping/latest.json',
+        '/data/v3/eod/US/latest.ndjson.gz'
       ],
       run_id: runContext.runId,
       commit: runContext.commit

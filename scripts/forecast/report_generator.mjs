@@ -46,23 +46,39 @@ function readJsonIfExists(filePath) {
 }
 
 function buildLatestDoc(latest = {}) {
+    const status = latest.status ?? 'ok';
+    const championId = latest.champion_id ?? null;
+    const trainedAt = latest.trained_at ?? null;
+    const freshness = latest.freshness ?? latest.asof ?? null;
+    const accuracy = latest.accuracy ?? null;
     return {
         schema: 'rv_envelope_v1',
         ok: latest.ok ?? true,
         feature: 'forecast',
         generated_at: new Date().toISOString(),
+        status,
+        champion_id: championId,
+        trained_at: trainedAt,
+        freshness,
+        accuracy,
         meta: {
-            status: latest.status ?? 'ok',
+            status,
             reason: latest.reason ?? null,
-            last_good_ref: latest.last_good_ref ?? null
+            last_good_ref: latest.last_good_ref ?? null,
+            freshness,
+            trained_at: trainedAt,
+            accuracy
         },
         data: {
-            champion_id: latest.champion_id ?? null,
+            champion_id: championId,
             asof: latest.asof ?? null,
             forecasts: latest.forecasts ?? [],
             latest_report_ref: latest.latest_report_ref ?? null,
             scorecards_ref: latest.scorecards_ref ?? null,
-            maturity_phase: latest.maturity_phase ?? 'BOOTSTRAP'
+            maturity_phase: latest.maturity_phase ?? 'BOOTSTRAP',
+            trained_at: trainedAt,
+            freshness,
+            accuracy
         }
     };
 }
@@ -427,11 +443,19 @@ export function publishLatestFromLastGood(repoRoot, options = {}) {
             ...fallback,
             ok: false,
             generated_at: new Date().toISOString(),
+            status,
+            champion_id: fallback?.champion_id ?? fallback?.data?.champion_id ?? null,
+            trained_at: fallback?.trained_at ?? fallback?.meta?.trained_at ?? fallback?.data?.trained_at ?? null,
+            freshness: fallback?.freshness ?? fallback?.meta?.freshness ?? fallback?.data?.asof ?? null,
+            accuracy: fallback?.accuracy ?? fallback?.meta?.accuracy ?? fallback?.data?.accuracy ?? null,
             meta: {
                 ...(fallback.meta ?? {}),
                 status,
                 reason,
-                last_good_ref: `public/data/forecast/${LAST_GOOD_ENVELOPE_REL_PATH}`
+                last_good_ref: `public/data/forecast/${LAST_GOOD_ENVELOPE_REL_PATH}`,
+                trained_at: fallback?.trained_at ?? fallback?.meta?.trained_at ?? fallback?.data?.trained_at ?? null,
+                freshness: fallback?.freshness ?? fallback?.meta?.freshness ?? fallback?.data?.asof ?? null,
+                accuracy: fallback?.accuracy ?? fallback?.meta?.accuracy ?? fallback?.data?.accuracy ?? null
             }
         }
         : (() => {

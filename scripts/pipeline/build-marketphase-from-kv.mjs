@@ -11,10 +11,11 @@ import { createOptionalCloudflareRestKVFromEnv } from "../lib/kv-write.js";
 import { fetchBarsWithProviderChain } from "../../functions/api/_shared/eod-providers.mjs";
 
 const REPO_ROOT = process.cwd();
-const DEFAULT_UNIVERSE = "nasdaq100";
+const DEFAULT_UNIVERSE = "all";
 const DEFAULT_CONCURRENCY = 3;
 const DEFAULT_MIN_BARS = 200;
 const DEFAULT_OUTPUTSIZE = 300;
+const DEFAULT_MIN_COVERAGE = Number(process.env.MARKETPHASE_MIN_COVERAGE_RATIO || 0.9);
 
 function toBool(value) {
   const s = String(value || "").trim().toLowerCase();
@@ -35,23 +36,6 @@ async function readJson(relPath) {
   return JSON.parse(raw);
 }
 
-async function readJsonOptional(relPath) {
-  try {
-    return await readJson(relPath);
-  } catch {
-    return null;
-  }
-}
-
-async function fileExists(absPath) {
-  try {
-    await fs.stat(absPath);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
 async function writeJson(relPath, payload) {
   const abs = path.join(REPO_ROOT, relPath);
   await fs.mkdir(path.dirname(abs), { recursive: true });
@@ -65,6 +49,7 @@ function parseArgs(argv) {
     concurrency: DEFAULT_CONCURRENCY,
     minBars: DEFAULT_MIN_BARS,
     outputsize: DEFAULT_OUTPUTSIZE,
+    minCoverage: DEFAULT_MIN_COVERAGE,
     allowProviderFallback: false,
     writeBackKv: false
   };
@@ -84,6 +69,10 @@ function parseArgs(argv) {
       i += 1;
     } else if (arg === "--outputsize") {
       out.outputsize = Number(argv[i + 1]) || out.outputsize;
+      i += 1;
+    } else if (arg === "--min-coverage") {
+      const parsed = Number(argv[i + 1]);
+      if (Number.isFinite(parsed)) out.minCoverage = parsed;
       i += 1;
     } else if (arg === "--allow-provider" || arg === "--provider-fallback") {
       out.allowProviderFallback = true;
@@ -385,23 +374,16 @@ async function main() {
   const generatedAt = isoNow();
   const commitHash = getCommitHash();
 
-  const existingIndex = await readJsonOptional(path.join(outRoot, "index.json"));
-  const existingSymbols = Array.isArray(existingIndex?.data?.symbols) ? existingIndex.data.symbols : [];
-  const symbolMap = new Map();
-  for (const entry of existingSymbols) {
-    const sym = normalizeTicker(entry?.symbol);
-    if (!sym) continue;
-    symbolMap.set(sym, entry);
-  }
-  for (const env of envelopes) {
-    if (!env?.meta?.symbol) continue;
-    symbolMap.set(env.meta.symbol, {
+  const generatedSymbols = envelopes
+    .filter((env) => env?.meta?.symbol)
+    .map((env) => ({
       symbol: env.meta.symbol,
       path: `/data/marketphase/${env.meta.symbol}.json`,
       updatedAt: env.meta.generatedAt
-    });
-  }
-  const mergedSymbols = Array.from(symbolMap.values()).sort((a, b) => String(a.symbol).localeCompare(String(b.symbol)));
+    }))
+    .sort((a, b) => String(a.symbol).localeCompare(String(b.symbol)));
+  const coverageRatio = tickers.length > 0 ? generatedSymbols.length / tickers.length : 1;
+  const minCoverage = Math.max(0, Math.min(1, Number(args.minCoverage)));
 
   const index = {
     ok: true,
@@ -420,13 +402,13 @@ async function main() {
       legal: LEGAL_TEXT
     },
     data: {
-      symbols: mergedSymbols
+      symbols: generatedSymbols
     }
   };
 
   const indexMeta = {
     generatedAt,
-    symbols: mergedSymbols.map((entry) => entry.symbol),
+    symbols: generatedSymbols.map((entry) => entry.symbol),
     version: "8.0",
     commitHash
   };
@@ -439,22 +421,31 @@ async function main() {
     commitHash
   };
 
-  const existingIndexPath = path.join(REPO_ROOT, outRoot, "index.json");
-  const shouldWriteIndex = generated.length > 0 || !(await fileExists(existingIndexPath));
-  if (shouldWriteIndex) {
-    await writeJson(path.join(outRoot, "index.json"), index);
-    await writeJson(path.join(outRoot, "index.meta.json"), indexMeta);
-    await writeJson(path.join(outRoot, "batch-analysis.json"), batchPayload);
-  }
   const missingPayload = {
     type: "marketphase.missing",
     asOf: generatedAt,
     universe: args.universe,
     expected: tickers.length,
-    generated: mergedSymbols.length,
-    missing: missing.filter((entry) => !symbolMap.has(normalizeTicker(entry?.ticker || "")))
+    generated: generatedSymbols.length,
+    coverage: Number(coverageRatio.toFixed(6)),
+    minCoverage: Number(minCoverage.toFixed(6)),
+    missing
   };
   await writeJson(path.join(outRoot, "missing.json"), missingPayload);
+
+  if (coverageRatio < minCoverage) {
+    const sampleMissing = missing
+      .map((entry) => normalizeTicker(entry?.ticker || ""))
+      .filter(Boolean)
+      .slice(0, 25);
+    throw new Error(
+      `MARKETPHASE_COVERAGE_BELOW_THRESHOLD generated=${generatedSymbols.length} expected=${tickers.length} ratio=${coverageRatio.toFixed(4)} min=${minCoverage.toFixed(4)} sample_missing=${sampleMissing.join(",")}`
+    );
+  }
+
+  await writeJson(path.join(outRoot, "index.json"), index);
+  await writeJson(path.join(outRoot, "index.meta.json"), indexMeta);
+  await writeJson(path.join(outRoot, "batch-analysis.json"), batchPayload);
 
   // Mirror missing.json to pipeline directory for audit compliance
   const pipelineMirrorPayload = {

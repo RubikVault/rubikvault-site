@@ -22,16 +22,46 @@ function cmpMovers(a, b) {
   return a.canonical_id.localeCompare(b.canonical_id);
 }
 
+function normalizeTicker(raw) {
+  return String(raw || "").trim().toUpperCase();
+}
+
 async function main() {
   const runContext = createRunContext();
   const rootDir = runContext.rootDir;
 
   const eodPath = path.join(rootDir, "public/data/v3/eod/US/latest.ndjson.gz");
   const fxPath = path.join(rootDir, "public/data/v3/fx/rates/latest.json");
+  const universePath = path.join(rootDir, "public/data/universe/all.json");
+  const sectorPath = path.join(rootDir, "public/data/v3/universe/sector-mapping/latest.json");
 
-  const eodRows = parseNdjsonGz(await fs.readFile(eodPath));
-  const fxDoc = JSON.parse(await fs.readFile(fxPath, "utf8"));
+  const [eodBuf, fxRaw, universeRaw, sectorRaw] = await Promise.all([
+    fs.readFile(eodPath),
+    fs.readFile(fxPath, "utf8"),
+    fs.readFile(universePath, "utf8").catch(() => "[]"),
+    fs.readFile(sectorPath, "utf8").catch(() => "{}")
+  ]);
+  const eodRows = parseNdjsonGz(eodBuf);
+  const fxDoc = JSON.parse(fxRaw);
+  const universeRows = JSON.parse(universeRaw);
+  const sectorDoc = JSON.parse(sectorRaw);
   const rates = fxDoc.rates || { USD: 1 };
+
+  const universeByTicker = new Map();
+  const universeSet = new Set();
+  for (const row of Array.isArray(universeRows) ? universeRows : []) {
+    const ticker = normalizeTicker(typeof row === "string" ? row : row?.ticker || row?.symbol);
+    if (!ticker) continue;
+    universeSet.add(ticker);
+    if (!universeByTicker.has(ticker)) {
+      universeByTicker.set(ticker, String(typeof row === "string" ? "" : row?.name || "").trim() || null);
+    }
+  }
+  const sectorByTicker = new Map(
+    (Array.isArray(sectorDoc?.sectors) ? sectorDoc.sectors : [])
+      .map((row) => [normalizeTicker(row?.ticker), String(row?.sector || "").trim() || null])
+      .filter(([ticker]) => ticker)
+  );
 
   const movers = eodRows
     .map((row) => {
@@ -40,9 +70,11 @@ async function main() {
       const currency = row.currency || "USD";
       const fx = Number(rates[currency] || 1);
       const changePct = open > 0 ? ((close - open) / open) * 100 : 0;
+      const ticker = normalizeTicker(row.ticker);
+      const asOf = String(row.trading_date || row.date || runContext.generatedAt.slice(0, 10)).slice(0, 10);
       return {
         canonical_id: row.canonical_id,
-        ticker: row.ticker,
+        ticker,
         exchange: row.exchange,
         currency,
         fx_rate: fx,
@@ -50,7 +82,17 @@ async function main() {
         close,
         normalized_close_usd: close / fx,
         change_pct: Number(changePct.toFixed(6)),
-        volume: Number(row.volume || 0)
+        volume: Number(row.volume || 0),
+        name: universeByTicker.get(ticker) || null,
+        sector: sectorByTicker.get(ticker) || null,
+        in_universe: universeSet.has(ticker),
+        as_of: asOf,
+        lineage: {
+          price_source: "public/data/v3/eod/US/latest.ndjson.gz",
+          universe_source: "public/data/universe/all.json",
+          sector_source: "public/data/v3/universe/sector-mapping/latest.json",
+          fx_source: "public/data/v3/fx/rates/latest.json"
+        }
       };
     })
     .sort(cmpMovers);
@@ -68,7 +110,14 @@ async function main() {
       schema: "rv.pulse.v3",
       generated_at: runContext.generatedAt,
       run_id: runContext.runId,
-      commit: runContext.commit
+      commit: runContext.commit,
+      freshness: runContext.generatedAt,
+      source_chain: [
+        "/data/v3/eod/US/latest.ndjson.gz",
+        "/data/v3/fx/rates/latest.json",
+        "/data/universe/all.json",
+        "/data/v3/universe/sector-mapping/latest.json"
+      ]
     },
     as_of: runContext.generatedAt.slice(0, 10),
     coverage: {
@@ -88,7 +137,14 @@ async function main() {
       schema: "rv.pulse.v3",
       generated_at: runContext.generatedAt,
       run_id: runContext.runId,
-      commit: runContext.commit
+      commit: runContext.commit,
+      freshness: runContext.generatedAt,
+      source_chain: [
+        "/data/v3/eod/US/latest.ndjson.gz",
+        "/data/v3/fx/rates/latest.json",
+        "/data/universe/all.json",
+        "/data/v3/universe/sector-mapping/latest.json"
+      ]
     },
     as_of: runContext.generatedAt.slice(0, 10),
     coverage: {

@@ -1,8 +1,49 @@
 #!/usr/bin/env node
 import fs from 'node:fs';
 import path from 'node:path';
+import zlib from 'node:zlib';
 
 const root = process.cwd();
+const MOVERS_PRICE_TOLERANCE = Number(process.env.RV_MOVERS_PRICE_TOLERANCE || 1e-6);
+const MIN_CORRELATIONS_COVERAGE = Number(process.env.RV_MIN_CORRELATIONS_COVERAGE || 0);
+const MIN_CORRELATIONS_COVERAGE_RATIO = Number(process.env.RV_MIN_CORRELATIONS_COVERAGE_RATIO || 0.9);
+const MIN_PEERS_COVERAGE_RATIO = Number(process.env.RV_MIN_PEERS_COVERAGE_RATIO || 0.95);
+const SAMPLE_LIMIT = Number(process.env.RV_UI_COVERAGE_SAMPLE_LIMIT || 20);
+
+function normalizeTicker(value) {
+  return String(value || '').trim().toUpperCase();
+}
+
+function readUniverseSet(relPath = 'public/data/universe/all.json') {
+  const loaded = readJson(relPath);
+  if (!loaded.ok) return { ok: false, errors: loaded.errors, set: new Set() };
+  if (!Array.isArray(loaded.doc)) return { ok: false, errors: [`invalid universe array: ${relPath}`], set: new Set() };
+  const set = new Set();
+  for (const row of loaded.doc) {
+    const ticker = normalizeTicker(typeof row === 'string' ? row : row?.ticker || row?.symbol);
+    if (ticker) set.add(ticker);
+  }
+  return { ok: true, errors: [], set };
+}
+
+function readAdjustedSeriesSet(relDir = 'public/data/v3/series/adjusted') {
+  const abs = path.join(root, relDir);
+  if (!fs.existsSync(abs)) return { ok: false, errors: [`missing directory: ${relDir}`], set: new Set() };
+  if (!fs.statSync(abs).isDirectory()) return { ok: false, errors: [`not a directory: ${relDir}`], set: new Set() };
+  try {
+    const names = fs.readdirSync(abs);
+    const set = new Set();
+    for (const name of names) {
+      const m = /^US__(.+)\.ndjson\.gz$/i.exec(String(name || '').trim());
+      if (!m) continue;
+      const ticker = normalizeTicker(m[1]);
+      if (ticker) set.add(ticker);
+    }
+    return { ok: true, errors: [], set };
+  } catch (error) {
+    return { ok: false, errors: [`failed to read ${relDir}: ${error.message}`], set: new Set() };
+  }
+}
 
 function readJson(relPath) {
   const abs = path.join(root, relPath);
@@ -15,6 +56,23 @@ function readJson(relPath) {
     return { ok: true, errors: [], doc: JSON.parse(raw) };
   } catch (error) {
     return { ok: false, errors: [`invalid JSON: ${relPath} (${error.message})`], doc: null };
+  }
+}
+
+function readNdjsonGz(relPath) {
+  const abs = path.join(root, relPath);
+  if (!fs.existsSync(abs)) return { ok: false, errors: [`missing file: ${relPath}`], rows: [] };
+  try {
+    const gz = fs.readFileSync(abs);
+    const text = zlib.gunzipSync(gz).toString('utf8');
+    const rows = text
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter(Boolean)
+      .map((line) => JSON.parse(line));
+    return { ok: true, errors: [], rows };
+  } catch (error) {
+    return { ok: false, errors: [`invalid NDJSON GZ: ${relPath} (${error.message})`], rows: [] };
   }
 }
 
@@ -85,6 +143,16 @@ function validatePeers(doc, relPath) {
     }
   }
 
+  if (universeSet.size > 0) {
+    const peerTickerSet = new Set(keys.map((ticker) => normalizeTicker(ticker)).filter(Boolean));
+    const inUniverse = [...peerTickerSet].filter((ticker) => universeSet.has(ticker)).length;
+    const ratio = inUniverse / universeSet.size;
+    if (ratio < MIN_PEERS_COVERAGE_RATIO) {
+      const missing = [...universeSet].filter((ticker) => !peerTickerSet.has(ticker)).sort().slice(0, SAMPLE_LIMIT);
+      errors.push(`${relPath}: peers coverage ${(ratio * 100).toFixed(2)}% below minimum ${(MIN_PEERS_COVERAGE_RATIO * 100).toFixed(2)}% (sample missing=${missing.join(',')})`);
+    }
+  }
+
   return errors;
 }
 
@@ -118,7 +186,85 @@ function validateCorrelations(doc, relPath) {
     }
   }
 
+  const coverage = Object.keys(correlations).length;
+  const byAbsolute = Math.max(0, MIN_CORRELATIONS_COVERAGE);
+  const correlationBase = adjustedSeriesSet.size > 0 ? adjustedSeriesSet.size : universeSet.size;
+  const byRatio = correlationBase > 0 ? Math.ceil(correlationBase * Math.max(0, MIN_CORRELATIONS_COVERAGE_RATIO)) : 0;
+  const required = Math.max(byAbsolute, byRatio);
+  if (coverage < required) {
+    errors.push(`${relPath}: correlations coverage ${coverage} below minimum ${required} (base=${correlationBase})`);
+  }
+
   return errors;
+}
+
+function validateMovers(doc, relPath) {
+  const errors = [];
+  const meta = doc?.meta;
+  if (!meta || typeof meta !== 'object') {
+    errors.push(`${relPath}: missing meta`);
+  } else {
+    if (!meta.generated_at) errors.push(`${relPath}: meta.generated_at missing`);
+    if (!meta.schema && !meta.schema_version) errors.push(`${relPath}: meta.schema/schema_version missing`);
+  }
+  const movers = Array.isArray(doc?.top_movers) ? doc.top_movers : [];
+  if (!Array.isArray(doc?.top_movers)) {
+    errors.push(`${relPath}: top_movers missing`);
+    return errors;
+  }
+  if (movers.length === 0) {
+    errors.push(`${relPath}: top_movers must be non-empty`);
+    return errors;
+  }
+
+  for (const row of movers) {
+    const ticker = normalizeTicker(row?.ticker || row?.symbol);
+    if (!ticker) {
+      errors.push(`${relPath}: mover ticker missing`);
+      continue;
+    }
+    if (typeof row?.name !== 'string' || !row.name.trim()) errors.push(`${relPath}: ${ticker} missing name`);
+    if (typeof row?.sector !== 'string' || !row.sector.trim()) errors.push(`${relPath}: ${ticker} missing sector`);
+    if (typeof row?.in_universe !== 'boolean') errors.push(`${relPath}: ${ticker} missing boolean in_universe`);
+    if (typeof row?.as_of !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(row.as_of)) errors.push(`${relPath}: ${ticker} missing valid as_of`);
+    if (!row?.lineage || typeof row.lineage !== 'object') errors.push(`${relPath}: ${ticker} missing lineage`);
+  }
+
+  return errors;
+}
+
+function validateMarket(doc, relPath) {
+  const errors = validateMeta(doc, relPath);
+  const data = doc?.data;
+  if (!data || typeof data !== 'object') {
+    errors.push(`${relPath}: data missing`);
+    return errors;
+  }
+  if (!Array.isArray(data.indices)) errors.push(`${relPath}: data.indices missing`);
+  if (!Array.isArray(data.sectors)) errors.push(`${relPath}: data.sectors missing`);
+  if (!Array.isArray(data.movers)) errors.push(`${relPath}: data.movers missing`);
+  return errors;
+}
+
+function detectPriceSourceKind(value) {
+  const src = String(value || '');
+  if (!src) return null;
+  if (src.includes('/data/eod/bars/') || src.includes('/data/eod/bars*.') || src.includes('public/data/eod/bars/')) return 'legacy-bars';
+  if (src.includes('/data/eod/batches/') || src.includes('public/data/eod/batches/')) return 'legacy-batches';
+  if (src.includes('/mirrors/market-health.json') || src.includes('public/mirrors/market-health.json')) return 'mirror-market-health';
+  if (src.includes('/data/v3/eod/US/latest.ndjson.gz') || src.includes('public/data/v3/eod/US/latest.ndjson.gz')) return 'v3-canonical';
+  if (src.includes('/data/v3/series/adjusted/') || src.includes('public/data/v3/series/adjusted/')) return 'v3-canonical';
+  return null;
+}
+
+function collectPriceSourceKinds(doc) {
+  const chain = Array.isArray(doc?.meta?.source_chain) ? doc.meta.source_chain : [];
+  const kinds = new Set();
+  for (const entry of chain) {
+    const kind = detectPriceSourceKind(entry);
+    if (kind) kinds.add(kind);
+  }
+  return kinds;
 }
 
 const checks = [
@@ -136,10 +282,32 @@ const checks = [
     relPath: 'public/data/ui/correlations/latest.json',
     label: 'correlations',
     validate: validateCorrelations
+  },
+  {
+    relPath: 'public/data/v3/pulse/top-movers/latest.json',
+    label: 'movers',
+    validate: validateMovers
+  },
+  {
+    relPath: 'public/data/v3/derived/market/latest.json',
+    label: 'market',
+    validate: validateMarket
   }
 ];
 
 const failures = [];
+const globalPriceSourceKinds = new Set();
+const universeLoaded = readUniverseSet();
+const universeSet = universeLoaded.set;
+if (!universeLoaded.ok) {
+  for (const err of universeLoaded.errors) failures.push(err);
+}
+const adjustedSeriesLoaded = readAdjustedSeriesSet();
+const adjustedSeriesSet = adjustedSeriesLoaded.set;
+if (!adjustedSeriesLoaded.ok) {
+  for (const err of adjustedSeriesLoaded.errors) failures.push(err);
+}
+let moversDoc = null;
 for (const check of checks) {
   const loaded = readJson(check.relPath);
   if (!loaded.ok) {
@@ -161,7 +329,58 @@ for (const check of checks) {
     continue;
   }
 
+  const kinds = collectPriceSourceKinds(loaded.doc);
+  for (const kind of kinds) globalPriceSourceKinds.add(kind);
+  if (check.label === 'movers') moversDoc = loaded.doc;
+
   console.log(`✅ ${check.label}: ${check.relPath}`);
+}
+
+if (moversDoc && typeof moversDoc === 'object') {
+  const eodLoaded = readNdjsonGz('public/data/v3/eod/US/latest.ndjson.gz');
+  if (!eodLoaded.ok) {
+    for (const err of eodLoaded.errors) failures.push(err);
+  } else {
+    const closeByTicker = new Map();
+    for (const row of eodLoaded.rows) {
+      const ticker = String(row?.ticker || row?.symbol || '').toUpperCase();
+      const close = Number(row?.close);
+      if (!ticker || !Number.isFinite(close)) continue;
+      closeByTicker.set(ticker, close);
+    }
+    const movers = Array.isArray(moversDoc?.top_movers) ? moversDoc.top_movers : [];
+    for (const row of movers) {
+      const ticker = normalizeTicker(row?.ticker || row?.symbol);
+      const moverClose = Number(row?.close);
+      const canonicalClose = closeByTicker.get(ticker);
+      if (!ticker || !Number.isFinite(moverClose)) {
+        failures.push(`movers consistency: invalid mover row for ticker=${ticker || 'unknown'}`);
+        continue;
+      }
+      if (!Number.isFinite(canonicalClose)) {
+        failures.push(`movers consistency: ${ticker} missing in canonical latest.ndjson.gz`);
+        continue;
+      }
+      if (Math.abs(moverClose - canonicalClose) > MOVERS_PRICE_TOLERANCE) {
+        failures.push(`movers consistency: ${ticker} close mismatch mover=${moverClose} canonical=${canonicalClose}`);
+      }
+    }
+  }
+}
+
+const forbiddenKinds = ['legacy-bars', 'legacy-batches', 'mirror-market-health'];
+for (const kind of forbiddenKinds) {
+  if (globalPriceSourceKinds.has(kind)) {
+    failures.push(`forbidden price source detected: ${kind}`);
+  }
+}
+
+if (globalPriceSourceKinds.has('v3-canonical') && globalPriceSourceKinds.size > 1) {
+  failures.push(`multiple price source families detected: ${[...globalPriceSourceKinds].sort().join(', ')}`);
+}
+
+if (!globalPriceSourceKinds.has('v3-canonical')) {
+  failures.push('canonical v3 price source not detected in source_chain');
 }
 
 if (failures.length) {
