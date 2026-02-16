@@ -84,7 +84,7 @@ async function main() {
         change_pct: Number(changePct.toFixed(6)),
         volume: Number(row.volume || 0),
         name: universeByTicker.get(ticker) || null,
-        sector: sectorByTicker.get(ticker) || null,
+        sector: sectorByTicker.get(ticker) || "Unknown",
         in_universe: universeSet.has(ticker),
         as_of: asOf,
         lineage: {

@@ -1,6 +1,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { execSync } from "node:child_process";
+import zlib from "node:zlib";
 import {
   LEGAL_TEXT,
   analyzeMarketPhase,
@@ -28,6 +29,44 @@ function isoNow() {
 
 function normalizeTicker(value) {
   return String(value || "").trim().toUpperCase();
+}
+
+function parseNdjson(text) {
+  return String(text || "")
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((line) => {
+      try {
+        return JSON.parse(line);
+      } catch {
+        return null;
+      }
+    })
+    .filter(Boolean);
+}
+
+async function readAdjustedBarsFromRepo(ticker) {
+  const symbol = normalizeTicker(ticker);
+  if (!symbol) return [];
+  const file = path.join(REPO_ROOT, "public/data/v3/series/adjusted", `US__${symbol}.ndjson.gz`);
+  try {
+    const gz = await fs.readFile(file);
+    const rows = parseNdjson(zlib.gunzipSync(gz).toString("utf8"));
+    const bars = rows
+      .map((row) => ({
+        date: String(row?.trading_date || row?.date || "").slice(0, 10),
+        open: Number(row?.open),
+        high: Number(row?.high),
+        low: Number(row?.low),
+        close: Number(row?.adjusted_close ?? row?.adj_close ?? row?.close),
+        volume: Number(row?.volume)
+      }))
+      .filter((row) => row.date && Number.isFinite(row.close));
+    return normalizeBars(bars);
+  } catch {
+    return [];
+  }
 }
 
 async function readJson(relPath) {
@@ -305,8 +344,18 @@ async function main() {
       }
     }
 
-    const hasBars = bars.length > 0;
-    const barsSufficient = bars.length >= args.minBars;
+    let hasBars = bars.length > 0;
+    let barsSufficient = bars.length >= args.minBars;
+
+    if (!hasBars || !barsSufficient) {
+      const repoBars = await readAdjustedBarsFromRepo(ticker);
+      if (repoBars.length) {
+        bars = repoBars;
+        provider = "local-adjusted-series";
+        hasBars = true;
+        barsSufficient = bars.length >= args.minBars;
+      }
+    }
 
     if ((!hasBars || !barsSufficient) && allowProviderFallback) {
       const startDate = new Date(Date.now() - 365 * 3 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
