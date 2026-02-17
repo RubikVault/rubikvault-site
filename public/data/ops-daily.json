@@ -1,6 +1,6 @@
 {
   "schema_version": "1.0",
-  "asOf": "2026-02-16T22:50:16.280Z",
+  "asOf": "2026-02-17T07:23:00.463Z",
   "baseline": {
     "expectedUniverse": 2453,
     "pipeline": {
@@ -27,20 +27,12 @@
           "reason": "NOT_SUPPORTED_SHORT_HISTORY"
         },
         {
-          "ticker": "CRDA",
-          "reason": "NO_EOD_BARS"
-        },
-        {
           "ticker": "LBRX",
           "reason": "NOT_SUPPORTED_SHORT_HISTORY"
         },
         {
           "ticker": "LGN",
           "reason": "NOT_SUPPORTED_SHORT_HISTORY"
-        },
-        {
-          "ticker": "MOGA",
-          "reason": "NO_EOD_BARS"
         },
         {
           "ticker": "MPLT",
@@ -66,7 +58,7 @@
     },
     "freshness": {
       "latestSnapshotDate": "2026-02-07",
-      "expectedTradingDay": "2026-02-16",
+      "expectedTradingDay": "2026-02-17",
       "staleCount": 0,
       "staleList": []
     },
@@ -183,7 +175,7 @@
     "cloudflare": {
       "requestsToday": null,
       "requestsLast24h": null,
-      "notes": "CF analytics not configured"
+      "notes": "ok"
     },
     "safety": {
       "kvWritesToday": 0,
