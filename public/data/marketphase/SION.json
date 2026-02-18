@@ -3,8 +3,8 @@
   "feature": "marketphase",
   "meta": {
     "symbol": "SION",
-    "generatedAt": "2026-02-17T08:00:39.226Z",
-    "fetchedAt": "2026-02-17T08:00:39.226Z",
+    "generatedAt": "2026-02-18T07:22:11.536Z",
+    "fetchedAt": "2026-02-18T07:22:11.536Z",
     "ttlSeconds": 86400,
     "provider": "internal",
     "dataset": "SION",
@@ -15,8 +15,8 @@
     "precision": "IEEE754-Double-Round6",
     "auditTrail": {
       "generatedBy": "MarketPhase-v8-Engine",
-      "commitHash": "5ab86b1",
-      "reviewDate": "2026-02-17T08:00:39.226Z",
+      "commitHash": "7fa73ae",
+      "reviewDate": "2026-02-18T07:22:11.536Z",
       "standards": [
         "ISO-8000",
         "IEEE-7000"
@@ -26,13 +26,13 @@
   },
   "data": {
     "features": {
-      "RSI": 44.377525,
-      "MACDHist": -0.463867,
-      "ATR%": 3.845764,
-      "SMA50": 40.7665,
-      "SMA200": 28.070625,
+      "RSI": 45.849775,
+      "MACDHist": -0.352525,
+      "ATR%": 3.618966,
+      "SMA50": 40.7039,
+      "SMA200": 28.200625,
       "SMATrend": "bullish",
-      "lastClose": 37.52
+      "lastClose": 38.03
     },
     "swings": {
       "raw": [
@@ -121,6 +121,12 @@
           "type": "low"
         },
         {
+          "index": 165,
+          "date": "2025-10-03",
+          "price": 30.01,
+          "type": "high"
+        },
+        {
           "index": 169,
           "date": "2025-10-09",
           "price": 28.35,
@@ -161,9 +167,21 @@
           "date": "2026-02-03",
           "price": 44.48,
           "type": "high"
+        },
+        {
+          "index": 250,
+          "date": "2026-02-05",
+          "price": 35.25,
+          "type": "low"
         }
       ],
       "confirmed": [
+        {
+          "index": 15,
+          "date": "2025-02-28",
+          "price": 13.77,
+          "type": "low"
+        },
         {
           "index": 23,
           "date": "2025-03-12",
@@ -181,6 +199,12 @@
           "date": "2025-05-14",
           "price": 12,
           "type": "low"
+        },
+        {
+          "index": 85,
+          "date": "2025-06-10",
+          "price": 18.26,
+          "type": "high"
         },
         {
           "index": 90,
@@ -205,6 +229,12 @@
           "date": "2025-07-31",
           "price": 16.76,
           "type": "low"
+        },
+        {
+          "index": 140,
+          "date": "2025-08-28",
+          "price": 25.72,
+          "type": "high"
         },
         {
           "index": 146,
@@ -309,8 +339,8 @@
     "multiTimeframeAgreement": null,
     "debug": {
       "symbol": "SION",
-      "window": 8,
-      "candidateCount": 21,
+      "window": 7,
+      "candidateCount": 23,
       "durationMs": 1
     },
     "disclaimer": "MarketPhase AI — Scientific Elliott Research (v8.0)\nprovides deterministic, rule-based historical analysis only.\nIt does not forecast future prices or offer financial advice.\nUse solely for educational and research purposes.\nISO 8000 / IEEE 7000 Compliant - Bit-exact reproducibility guaranteed."

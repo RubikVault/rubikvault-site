@@ -3,8 +3,8 @@
   "feature": "marketphase",
   "meta": {
     "symbol": "LUNR",
-    "generatedAt": "2026-02-17T07:59:06.913Z",
-    "fetchedAt": "2026-02-17T07:59:06.913Z",
+    "generatedAt": "2026-02-18T07:20:35.911Z",
+    "fetchedAt": "2026-02-18T07:20:35.911Z",
     "ttlSeconds": 86400,
     "provider": "internal",
     "dataset": "LUNR",
@@ -15,8 +15,8 @@
     "precision": "IEEE754-Double-Round6",
     "auditTrail": {
       "generatedBy": "MarketPhase-v8-Engine",
-      "commitHash": "5ab86b1",
-      "reviewDate": "2026-02-17T07:59:06.913Z",
+      "commitHash": "7fa73ae",
+      "reviewDate": "2026-02-18T07:20:35.911Z",
       "standards": [
         "ISO-8000",
         "IEEE-7000"
@@ -26,110 +26,116 @@
   },
   "data": {
     "features": {
-      "RSI": 45.564059,
-      "MACDHist": -0.546824,
-      "ATR%": 8.783088,
-      "SMA50": 16.5824,
-      "SMA200": 12.03635,
+      "RSI": 46.974819,
+      "MACDHist": -0.491932,
+      "ATR%": 8.125862,
+      "SMA50": 16.7108,
+      "SMA200": 12.07845,
       "SMATrend": "bullish",
-      "lastClose": 16.13
+      "lastClose": 16.62
     },
     "swings": {
       "raw": [
         {
-          "index": 25,
+          "index": 24,
           "date": "2025-03-11",
           "price": 6.48,
           "type": "low"
         },
         {
-          "index": 43,
+          "index": 42,
           "date": "2025-04-04",
           "price": 6.87,
           "type": "low"
         },
         {
-          "index": 78,
+          "index": 77,
           "date": "2025-05-27",
           "price": 12.64,
           "type": "high"
         },
         {
-          "index": 96,
+          "index": 95,
           "date": "2025-06-23",
           "price": 10,
           "type": "low"
         },
         {
-          "index": 117,
+          "index": 116,
           "date": "2025-07-23",
           "price": 13.37,
           "type": "high"
         },
         {
-          "index": 151,
+          "index": 150,
           "date": "2025-09-10",
           "price": 8.3,
           "type": "low"
         },
         {
-          "index": 175,
+          "index": 174,
           "date": "2025-10-14",
           "price": 13.85,
           "type": "high"
         },
         {
-          "index": 202,
+          "index": 201,
           "date": "2025-11-20",
           "price": 8.05,
           "type": "low"
+        },
+        {
+          "index": 246,
+          "date": "2026-01-28",
+          "price": 22.81,
+          "type": "high"
         }
       ],
       "confirmed": [
         {
-          "index": 25,
+          "index": 24,
           "date": "2025-03-11",
           "price": 6.48,
           "type": "low"
         },
         {
-          "index": 43,
+          "index": 42,
           "date": "2025-04-04",
           "price": 6.87,
           "type": "low"
         },
         {
-          "index": 78,
+          "index": 77,
           "date": "2025-05-27",
           "price": 12.64,
           "type": "high"
         },
         {
-          "index": 96,
+          "index": 95,
           "date": "2025-06-23",
           "price": 10,
           "type": "low"
         },
         {
-          "index": 117,
+          "index": 116,
           "date": "2025-07-23",
           "price": 13.37,
           "type": "high"
         },
         {
-          "index": 151,
+          "index": 150,
           "date": "2025-09-10",
           "price": 8.3,
           "type": "low"
         },
         {
-          "index": 175,
+          "index": 174,
           "date": "2025-10-14",
           "price": 13.85,
           "type": "high"
         },
         {
-          "index": 202,
+          "index": 201,
           "date": "2025-11-20",
           "price": 8.05,
           "type": "low"
@@ -195,8 +201,8 @@
     "multiTimeframeAgreement": null,
     "debug": {
       "symbol": "LUNR",
-      "window": 13,
-      "candidateCount": 8,
+      "window": 12,
+      "candidateCount": 9,
       "durationMs": 0
     },
     "disclaimer": "MarketPhase AI — Scientific Elliott Research (v8.0)\nprovides deterministic, rule-based historical analysis only.\nIt does not forecast future prices or offer financial advice.\nUse solely for educational and research purposes.\nISO 8000 / IEEE 7000 Compliant - Bit-exact reproducibility guaranteed."
