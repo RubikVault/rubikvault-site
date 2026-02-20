@@ -3,8 +3,8 @@
   "feature": "marketphase",
   "meta": {
     "symbol": "RHLD",
-    "generatedAt": "2026-02-19T08:00:09.245Z",
-    "fetchedAt": "2026-02-19T08:00:09.245Z",
+    "generatedAt": "2026-02-20T07:19:40.941Z",
+    "fetchedAt": "2026-02-20T07:19:40.941Z",
     "ttlSeconds": 86400,
     "provider": "internal",
     "dataset": "RHLD",
@@ -15,8 +15,8 @@
     "precision": "IEEE754-Double-Round6",
     "auditTrail": {
       "generatedBy": "MarketPhase-v8-Engine",
-      "commitHash": "ab7b032",
-      "reviewDate": "2026-02-19T08:00:09.245Z",
+      "commitHash": "0aeb867",
+      "reviewDate": "2026-02-20T07:19:40.941Z",
       "standards": [
         "ISO-8000",
         "IEEE-7000"
@@ -26,16 +26,28 @@
   },
   "data": {
     "features": {
-      "RSI": 40.39189,
-      "MACDHist": -2.008754,
-      "ATR%": 3.714774,
-      "SMA50": 202.83,
-      "SMA200": 102.32575,
+      "RSI": 45.801367,
+      "MACDHist": -1.316746,
+      "ATR%": 3.361395,
+      "SMA50": 202.4846,
+      "SMA200": 103.9397,
       "SMATrend": "bullish",
-      "lastClose": 179.59
+      "lastClose": 188.21
     },
     "swings": {
       "raw": [
+        {
+          "index": 15,
+          "date": "2025-03-13",
+          "price": 31.87,
+          "type": "low"
+        },
+        {
+          "index": 17,
+          "date": "2025-03-17",
+          "price": 44.19,
+          "type": "high"
+        },
         {
           "index": 41,
           "date": "2025-04-21",
@@ -117,10 +129,22 @@
       ],
       "confirmed": [
         {
+          "index": 17,
+          "date": "2025-03-17",
+          "price": 44.19,
+          "type": "high"
+        },
+        {
           "index": 41,
           "date": "2025-04-21",
           "price": 24.91,
           "type": "low"
+        },
+        {
+          "index": 77,
+          "date": "2025-06-11",
+          "price": 39.83,
+          "type": "high"
         },
         {
           "index": 84,
@@ -219,8 +243,8 @@
     "multiTimeframeAgreement": null,
     "debug": {
       "symbol": "RHLD",
-      "window": 10,
-      "candidateCount": 13,
+      "window": 9,
+      "candidateCount": 15,
       "durationMs": 0
     },
     "disclaimer": "MarketPhase AI — Scientific Elliott Research (v8.0)\nprovides deterministic, rule-based historical analysis only.\nIt does not forecast future prices or offer financial advice.\nUse solely for educational and research purposes.\nISO 8000 / IEEE 7000 Compliant - Bit-exact reproducibility guaranteed."

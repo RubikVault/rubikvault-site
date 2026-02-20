@@ -3,8 +3,8 @@
   "feature": "marketphase",
   "meta": {
     "symbol": "KMTS",
-    "generatedAt": "2026-02-19T07:58:36.426Z",
-    "fetchedAt": "2026-02-19T07:58:36.426Z",
+    "generatedAt": "2026-02-20T07:18:15.128Z",
+    "fetchedAt": "2026-02-20T07:18:15.128Z",
     "ttlSeconds": 86400,
     "provider": "internal",
     "dataset": "KMTS",
@@ -15,8 +15,8 @@
     "precision": "IEEE754-Double-Round6",
     "auditTrail": {
       "generatedBy": "MarketPhase-v8-Engine",
-      "commitHash": "ab7b032",
-      "reviewDate": "2026-02-19T07:58:36.426Z",
+      "commitHash": "0aeb867",
+      "reviewDate": "2026-02-20T07:18:15.128Z",
       "standards": [
         "ISO-8000",
         "IEEE-7000"
@@ -26,13 +26,13 @@
   },
   "data": {
     "features": {
-      "RSI": 52.44209,
-      "MACDHist": 0.206321,
-      "ATR%": 2.231509,
-      "SMA50": 25.478,
-      "SMA200": 22.077575,
+      "RSI": 53.746543,
+      "MACDHist": 0.057151,
+      "ATR%": 2.249089,
+      "SMA50": 25.544,
+      "SMA200": 22.103375,
       "SMATrend": "bullish",
-      "lastClose": 26.08
+      "lastClose": 26.32
     },
     "swings": {
       "raw": [
@@ -275,6 +275,12 @@
           "date": "2026-01-30",
           "price": 24.67,
           "type": "low"
+        },
+        {
+          "index": 235,
+          "date": "2026-02-11",
+          "price": 27.85,
+          "type": "high"
         }
       ],
       "confirmed": [
@@ -514,7 +520,7 @@
     "debug": {
       "symbol": "KMTS",
       "window": 4,
-      "candidateCount": 40,
+      "candidateCount": 41,
       "durationMs": 0
     },
     "disclaimer": "MarketPhase AI — Scientific Elliott Research (v8.0)\nprovides deterministic, rule-based historical analysis only.\nIt does not forecast future prices or offer financial advice.\nUse solely for educational and research purposes.\nISO 8000 / IEEE 7000 Compliant - Bit-exact reproducibility guaranteed."
