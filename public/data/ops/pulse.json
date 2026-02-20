@@ -1,12 +1,18 @@
 {
   "schema_version": "ops.pulse.v1",
   "meta": {
-    "build_id": "4e6dfc07-20260220T0758-107",
-    "commit": "4e6dfc0784a16b1497d6a0a057c0f48ff0e9627b",
-    "generatedAt": "2026-02-20T07:58:58.719Z"
+    "build_id": "dc1a277d-20260220T2245-101",
+    "commit": "dc1a277dc64e1ef9313b12f30105b1c1e7aa3416",
+    "generatedAt": "2026-02-20T22:45:30.227Z"
   },
   "pipelineOk": true,
-  "lastRunAt": "2026-02-20T07:58:58.719Z",
+  "lastRunAt": "2026-02-20T22:45:30.227Z",
   "asOfTradingDay": "2026-02-20",
-  "errors": []
+  "errors": [
+    {
+      "code": "PROVIDER_EMPTY",
+      "message": "ROOT_FAILURE:PROVIDER_EMPTY",
+      "severity": "degrading"
+    }
+  ]
 }

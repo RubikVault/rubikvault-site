@@ -1,10 +1,12 @@
 {
   "schema_version": "ops.summary.v1",
-  "generated_at": "2026-02-20T07:58:58.677Z",
-  "asof": "2026-02-20T07:58:58.328Z",
+  "generated_at": "2026-02-20T22:45:30.185Z",
+  "asof": "2026-02-20T22:45:30.107Z",
   "overall": {
     "status": "OK",
-    "reasons": [],
+    "reasons": [
+      "ROOT_FAILURE:PROVIDER_EMPTY"
+    ],
     "stale_universes": [],
     "stale_symbols_count": 0,
     "expected_trading_day": "2026-02-20"
@@ -12,11 +14,11 @@
   "universes": [
     {
       "id": "nasdaq100",
-      "generated_at": "2026-02-19T22:52:16.415Z",
-      "asof": "2026-02-19T22:52:16.415Z",
+      "generated_at": "2026-02-20T22:44:55.476Z",
+      "asof": "2026-02-20T22:44:55.476Z",
       "expected": 100,
-      "fetched": 100,
-      "validated": 100,
+      "fetched": 0,
+      "validated": 0,
       "computed": 2442,
       "static_ready": 2442,
       "status": "OK",
@@ -186,7 +188,7 @@
     }
   },
   "ops_daily": {
-    "generated_at": "2026-02-20T07:58:58.328Z",
+    "generated_at": "2026-02-20T22:45:30.107Z",
     "ref": "/data/ops-daily.json"
   },
   "costs": {
