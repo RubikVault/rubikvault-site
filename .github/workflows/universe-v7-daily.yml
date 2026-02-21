@@ -1,0 +1,57 @@
+name: Universe v7 Daily
+on:
+  schedule:
+    - cron: '0 6 * * *'  # 06:00 UTC daily
+  workflow_dispatch: {}
+
+concurrency:
+  group: universe-v7
+  cancel-in-progress: false
+
+jobs:
+  v7-run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Orphan Guard
+        run: node scripts/universe-v7/gates/orphan-guard.mjs
+
+      - name: Registry Mirror Audit
+        run: node scripts/audit/registry-mirror-check.mjs --strict --max-critical 0
+
+      - name: Mirror Envelope Validator
+        run: node scripts/validators/mirror-envelope-validator.mjs --strict --max-critical 0
+
+      - name: Run v7 Daily Stack
+        env:
+          EODHD_API_KEY: ${{ secrets.EODHD_API_KEY }}
+          RV_V7_DAILY_CAP_CALLS: '95000'
+          RV_V7_BACKFILL_FROM_DATE: '1990-01-01'
+        run: node scripts/universe-v7/run-daily-stack.mjs --buckets stocks,etfs,rest --max-runs-per-bucket 50 --max-no-progress-runs 2 --backfill-max 2000 --sleep-ms 1000 --min-bars 200 --feature marketphase
+
+      - name: Upload Reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: v7-reports-${{ github.run_number }}
+          path: public/data/universe/v7/reports/
+          retention-days: 30
+
+      - name: Commit Results
+        if: success()
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add public/data/universe/v7/
+          git add public/data/forecast/
+          git diff --cached --quiet || git commit -m "chore(v7): daily update [skip ci]"
+          git push
