@@ -11,6 +11,7 @@ const COMPLETION_GATE_PATH = path.join(REPO_ROOT, 'public/data/universe/v7/repor
 const FEATURE_REPORT_PATH = path.join(REPO_ROOT, 'public/data/universe/v7/ssot/feature_stock_universe_report.json');
 const PARITY_REPORT_PATH = path.join(REPO_ROOT, 'public/data/universe/v7/reports/feature_universe_parity_report.json');
 const SCI_SNAPSHOT_PATH = path.join(REPO_ROOT, 'public/data/snapshots/stock-analysis.json');
+const DROPOUT_SUMMARY_PATH = path.join(REPO_ROOT, 'public/data/universe/v7/reports/dropout_summary.json');
 
 const REVALIDATION_PATH = path.join(REPO_ROOT, 'mirrors/universe-v7/revalidation/revalidation_snapshot.json');
 const SYSTEM_STATUS_LATEST_PATH = path.join(REPO_ROOT, 'mirrors/system/run_status/latest.json');
@@ -86,6 +87,21 @@ function maybeRefreshTrulyMissingReport() {
   };
 }
 
+function maybeEmitDropoutLedgerFromGapReports() {
+  const script = path.join(REPO_ROOT, 'scripts/universe-v7/emit-dropout-ledger-from-gap-reports.mjs');
+  const res = spawnSync('node', [script, '--reset'], {
+    cwd: REPO_ROOT,
+    encoding: 'utf8',
+    stdio: ['ignore', 'pipe', 'pipe']
+  });
+  return {
+    ok: res.status === 0,
+    code: res.status ?? 1,
+    stdout: (res.stdout || '').trim(),
+    stderr: (res.stderr || '').trim()
+  };
+}
+
 async function main() {
   const startedAt = nowIso();
   let gitSha = null;
@@ -95,6 +111,7 @@ async function main() {
   const runId = `phase0_${compactStamp()}_${gitSha || 'nogit'}`;
 
   const refresh = maybeRefreshTrulyMissingReport();
+  const dropoutEmit = maybeEmitDropoutLedgerFromGapReports();
 
   const [
     packCoverage,
@@ -169,7 +186,8 @@ async function main() {
       forecast_missing_in_pack_found_elsewhere: path.relative(REPO_ROOT, MISSING_WHERE_REPORT_PATH),
       stocks_history_completion_gate: path.relative(REPO_ROOT, COMPLETION_GATE_PATH),
       feature_stock_universe_report: path.relative(REPO_ROOT, FEATURE_REPORT_PATH),
-      feature_universe_parity_report: path.relative(REPO_ROOT, PARITY_REPORT_PATH)
+      feature_universe_parity_report: path.relative(REPO_ROOT, PARITY_REPORT_PATH),
+      dropout_summary_report: path.relative(REPO_ROOT, DROPOUT_SUMMARY_PATH)
     }
   };
 
@@ -228,6 +246,13 @@ async function main() {
           synthetic_count: synthetic.synthetic_count
         },
         artifacts_written: [path.relative(REPO_ROOT, REVALIDATION_PATH)]
+      },
+      {
+        stage_name: 'emit_dropout_ledger_from_gap_reports',
+        ok: dropoutEmit.ok,
+        reason_codes: dropoutEmit.ok ? [] : ['DROPOUT_LEDGER_EMIT_FAILED'],
+        counts: null,
+        artifacts_written: dropoutEmit.ok ? [path.relative(REPO_ROOT, DROPOUT_SUMMARY_PATH)] : []
       }
     ],
     gates: gateRows,
