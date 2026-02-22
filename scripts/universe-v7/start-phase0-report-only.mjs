@@ -55,7 +55,7 @@ function countSyntheticInScientific(doc) {
   for (const [key, value] of Object.entries(doc)) {
     if (String(key).startsWith('_')) continue;
     out.total_entries += 1;
-    const ds = String(value?.data_source || '').toLowerCase();
+    const ds = String(value?.data_source || value?.metadata?.data_source || '').toLowerCase();
     if (ds === 'synthetic' || ds === 'synthetic_demo') out.synthetic_count += 1;
     if (String(value?.status || '').toUpperCase() === 'DATA_UNAVAILABLE') out.data_unavailable_count += 1;
   }

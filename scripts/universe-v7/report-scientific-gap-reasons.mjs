@@ -6,6 +6,7 @@ const REPO_ROOT = process.cwd();
 const SSOT_ROWS_PATH = path.join(REPO_ROOT, 'public/data/universe/v7/ssot/stocks.max.rows.json');
 const SCI_SNAPSHOT_PATH = path.join(REPO_ROOT, 'public/data/snapshots/stock-analysis.json');
 const FEATURE_GAP_REPORT_PATH = path.join(REPO_ROOT, 'public/data/universe/v7/reports/feature_gap_reasons_report.json');
+const MARKETPHASE_DEEP_SUMMARY_PATH = path.join(REPO_ROOT, 'public/data/universe/v7/read_models/marketphase_deep_summary.json');
 const OUT_REPORT_PATH = path.join(REPO_ROOT, 'public/data/universe/v7/reports/scientific_gap_reasons_report.json');
 const OUT_SUMMARY_PATH = path.join(REPO_ROOT, 'public/data/universe/v7/reports/scientific_gap_reasons_summary.json');
 
@@ -29,10 +30,11 @@ function norm(v) {
 }
 
 async function main() {
-  const [ssot, sci, featureGap] = await Promise.all([
+  const [ssot, sci, featureGap, deepSummary] = await Promise.all([
     readJson(SSOT_ROWS_PATH),
     readJson(SCI_SNAPSHOT_PATH),
-    readJson(FEATURE_GAP_REPORT_PATH)
+    readJson(FEATURE_GAP_REPORT_PATH),
+    readJson(MARKETPHASE_DEEP_SUMMARY_PATH)
   ]);
 
   const ssotRows = Array.isArray(ssot?.items) ? ssot.items : [];
@@ -46,6 +48,11 @@ async function main() {
   const marketphaseMissing = new Set(
     (featureGap?.marketphase_elliott?.missing || []).map((r) => norm(r?.symbol)).filter(Boolean)
   );
+  const deepBySymbol = new Map(
+    (Array.isArray(deepSummary?.items) ? deepSummary.items : [])
+      .map((r) => [norm(r?.symbol), r])
+      .filter(([symbol]) => Boolean(symbol))
+  );
 
   const reasonCounts = new Map();
   const overlapCounts = {
@@ -54,7 +61,14 @@ async function main() {
     scientific_du_ge200: 0,
     scientific_du_in_marketphase_gap: 0,
     scientific_du_not_in_marketphase_gap: 0,
-    scientific_du_invalid_legacy_payload_but_ge200: 0
+    scientific_du_invalid_legacy_payload_but_ge200: 0,
+    scientific_du_invalid_with_deep_nonpositive_close_or_sma50: 0
+  };
+  const invalidPayloadSubreasons = {
+    deep_row_missing: 0,
+    deep_features_missing: 0,
+    nonpositive_lastClose_and_sma50: 0,
+    other: 0
   };
 
   const samples = {
@@ -97,6 +111,20 @@ async function main() {
       if (samples.insufficient_history.length < 25) samples.insufficient_history.push(rec);
     } else if (/Invalid marketphase feature payload/i.test(reason)) {
       if (barsCount >= 200) overlapCounts.scientific_du_invalid_legacy_payload_but_ge200 += 1;
+      const deepRow = deepBySymbol.get(ticker);
+      const deepFeatures = deepRow?.features && typeof deepRow.features === 'object' ? deepRow.features : null;
+      if (!deepRow) invalidPayloadSubreasons.deep_row_missing += 1;
+      else if (!deepFeatures) invalidPayloadSubreasons.deep_features_missing += 1;
+      else {
+        const lc = Number(deepFeatures.lastClose);
+        const s50 = Number(deepFeatures.SMA50);
+        if ((Number.isFinite(lc) ? lc <= 0 : true) && (Number.isFinite(s50) ? s50 <= 0 : true)) {
+          invalidPayloadSubreasons.nonpositive_lastClose_and_sma50 += 1;
+          overlapCounts.scientific_du_invalid_with_deep_nonpositive_close_or_sma50 += 1;
+        } else {
+          invalidPayloadSubreasons.other += 1;
+        }
+      }
       if (samples.invalid_marketphase_payload.length < 25) samples.invalid_marketphase_payload.push(rec);
     } else if (samples.unexpected.length < 25) {
       samples.unexpected.push(rec);
@@ -122,15 +150,18 @@ async function main() {
       top_reasons: sortedReasons
     },
     overlap: overlapCounts,
+    invalid_payload_subreasons: invalidPayloadSubreasons,
     interpretation: {
       scientific_du_explained_by_same_lt200_history_gap_pct:
         overlapCounts.total_data_unavailable > 0
           ? Number(((overlapCounts.scientific_du_in_marketphase_gap / overlapCounts.total_data_unavailable) * 100).toFixed(2))
           : 0,
       note:
-        overlapCounts.scientific_du_invalid_legacy_payload_but_ge200 > 0
-          ? 'A subset has enough history but fails due to invalid legacy marketphase payload shape; v7-deep fallback should eliminate these.'
-          : 'All DATA_UNAVAILABLE cases are currently explained by the same marketphase/history gap.'
+        overlapCounts.scientific_du_invalid_with_deep_nonpositive_close_or_sma50 > 0
+          ? 'Most remaining >=200-bar Scientific dropouts are non-positive lastClose/SMA50 in marketphase features (data-quality / feature generation issue, not history coverage).'
+          : (overlapCounts.scientific_du_invalid_legacy_payload_but_ge200 > 0
+            ? 'A subset has enough history but still fails due to invalid marketphase payload/features.'
+            : 'All DATA_UNAVAILABLE cases are currently explained by the same marketphase/history gap.')
     },
     samples
   };
@@ -143,6 +174,7 @@ async function main() {
     scientific_data_unavailable_count: report.summary.scientific_data_unavailable_count,
     top_reasons: report.summary.top_reasons.slice(0, 5),
     overlap: overlapCounts,
+    invalid_payload_subreasons: invalidPayloadSubreasons,
     interpretation: report.interpretation
   };
 
@@ -163,4 +195,3 @@ main().catch((error) => {
   console.error(JSON.stringify({ ok: false, reason: error?.message || String(error) }));
   process.exit(1);
 });
-
