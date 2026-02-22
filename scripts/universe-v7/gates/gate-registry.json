@@ -1,0 +1,15 @@
+{
+  "schema": "rv_v7_gate_registry_v1",
+  "generated_for": "v7.1",
+  "checks": [
+    {"id": "legacy_contract_gate", "script": "scripts/universe-v7/phase0-archeology.mjs"},
+    {"id": "law_coverage_gate", "script": "scripts/universe-v7/gates/check-law-coverage.mjs"},
+    {"id": "single_ingestor_gate", "script": "scripts/universe-v7/gates/single-ingestor-guard.mjs"},
+    {"id": "ui_safety_gate", "script": "scripts/universe-v7/gates/ui-safety-check.mjs"},
+    {"id": "license_leak_gate", "script": "scripts/universe-v7/gates/license-leak-scan.mjs"},
+    {"id": "budget_kill_gate", "script": "scripts/universe-v7/run-v7.mjs"},
+    {"id": "two_phase_publish_gate", "script": "scripts/universe-v7/publish-two-phase.mjs"},
+    {"id": "checkpoint_integrity_gate", "script": "scripts/universe-v7/run-v7.mjs"},
+    {"id": "determinism_gate", "script": "scripts/universe-v7/run-v7.mjs"}
+  ]
+}

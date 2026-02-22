@@ -1,0 +1,193 @@
+{
+  "version": "7.1",
+  "run": {
+    "mode": "shadow",
+    "tmp_dir": "tmp/v7-build",
+    "publish_dir": "public/data/universe/v7",
+    "atomic_publish": true,
+    "max_parallel_runs": 1,
+    "universe_source_mode": "hybrid",
+    "publish_regression_min_ratio": 0.9,
+    "publish_regression_stock_ratio": 0.9
+  },
+  "laws": {
+    "registry_path": "policies/universe/law_registry.json",
+    "change_log_path": "policies/universe/law_changes.ndjson",
+    "require_applied_laws_log": true,
+    "require_law_coverage_gate": true
+  },
+  "legacy_core": {
+    "contract_path": "policies/universe/core_legacy_contract.json",
+    "compare_mode": "contract_identical",
+    "ignore_fields": [
+      "generated_at",
+      "run_id",
+      "updated_at"
+    ],
+    "epsilon_float_rel": 0.0001
+  },
+  "identity": {
+    "canonical_id_format": "MIC:SYMBOL",
+    "identity_bridge_path": "policies/universe/identity_bridge.json.gz",
+    "collision_policy_path": "policies/universe/collision_policy.json",
+    "no_exchange_guessing": true
+  },
+  "ui": {
+    "initial_payload_max_mb": 2,
+    "max_rows_initial_render": 200,
+    "max_parse_time_ms_ci": 1500,
+    "search_timeout_ms": 1200,
+    "forbid_full_universe_fetch": true,
+    "require_search_adapter": true,
+    "enforce_strict_full_fetch_block": false
+  },
+  "public_limits": {
+    "max_total_files": 20000,
+    "max_symbol_files": 5000,
+    "max_single_artifact_mb": 50,
+    "max_total_public_mb": 2048
+  },
+  "packs": {
+    "max_pack_symbols": 2000,
+    "max_pack_mb_gz": 1800,
+    "tail_storage_mode": "packs_only",
+    "pack_naming": "history/{exchange}/{bucket}/{pack_id}.ndjson.gz",
+    "random_access_gzip": "forbidden"
+  },
+  "read_models": {
+    "page_size": 100,
+    "max_items": {
+      "marketphase": 12000,
+      "scientific": 10000,
+      "forecast": 5000
+    }
+  },
+  "discovery": {
+    "include_legacy_universe": true,
+    "shadow_exchange_limit": 0,
+    "full_exchange_limit": 0,
+    "exchange_allowlist": [],
+    "exchange_denylist": [
+      "MONEY"
+    ]
+  },
+  "daily_sweep": {
+    "use_bulk_endpoint": true,
+    "max_exchanges_per_run": 0
+  },
+  "backfill": {
+    "enabled": true,
+    "max_symbols_per_run": 2000,
+    "hard_cap_symbols_per_run": 2000,
+    "incremental_pack_write": false,
+    "incremental_pack_buffer_symbols": 4000,
+    "from_date": "1990-01-01",
+    "checkpoint_every_symbols": 500,
+    "max_empty_retries": 2,
+    "type_priority": [
+      "STOCK",
+      "ETF",
+      "FUND",
+      "INDEX",
+      "FOREX",
+      "CRYPTO",
+      "BOND",
+      "OTHER"
+    ]
+  },
+  "rate_limit": {
+    "concurrency": 8
+  },
+  "resume": {
+    "checkpoint_every_symbols": 1000,
+    "checkpoint_storage": "github_artifact",
+    "checkpoint_hash_required": true,
+    "checkpoint_path": "mirrors/universe-v7/state/checkpoint.json"
+  },
+  "budget": {
+    "daily_cap_calls": 95000,
+    "max_7d_avg_calls": 22000,
+    "max_7d_slope_pct": 15,
+    "reserve_calls_floor": 10000,
+    "check_every_n_calls": 500,
+    "state_path": "mirrors/universe-v7/state/budget_state.json",
+    "calls_ledger_path": "mirrors/universe-v7/state/calls_ledger.ndjson",
+    "kill_switches": {
+      "trend_kill": {
+        "enabled": true,
+        "slope_pct_threshold": 15,
+        "min_history_days": 3,
+        "min_baseline_calls": 100
+      },
+      "burst_kill": {
+        "enabled": true,
+        "run_calls_cap_ratio_threshold": 0.65,
+        "min_ingestible_gain_ratio": 0.002,
+        "min_eligible_gain_ratio": 0.001
+      },
+      "waste_kill": {
+        "enabled": true,
+        "dead_calls_ratio_threshold": 0.35
+      }
+    }
+  },
+  "staleness": {
+    "algorithm": "weekend_adjusted",
+    "weekend_adjust_factor": 5,
+    "weekend_adjust_divisor": 7,
+    "use_us_holidays_for_us_mic": true,
+    "us_holidays_path": "public/data/universe/v7/config/us_holidays_2020_2030.json"
+  },
+  "volume": {
+    "min_avg_volume_10d_equity": 10000,
+    "min_avg_volume_30d_equity": 20000,
+    "near_zero_volume": 100
+  },
+  "eligibility": {
+    "freshness_max_days": 180,
+    "weights": {
+      "history_depth": 0.4,
+      "ohlcv_completeness": 0.25,
+      "volume_quality": 0.2,
+      "freshness": 0.15
+    },
+    "layer_thresholds": {
+      "L1_FULL": 85,
+      "L2_PARTIAL": 65,
+      "L3_MINIMAL": 40,
+      "L4_DEAD": 0
+    }
+  },
+  "drift": {
+    "bars_count_pct_threshold": 0.05,
+    "staleness_bd_abs_threshold": 5,
+    "last_trade_date_changed_threshold_days": 2,
+    "max_yellow_per_day": 2000,
+    "max_info_per_day": 50000
+  },
+  "promotion": {
+    "enabled": false,
+    "min_sample_size_trades": 200,
+    "min_regimes_covered": 2,
+    "required_windows": [
+      "30d",
+      "90d"
+    ],
+    "improvement_epsilon": 0.02,
+    "max_drawdown_worse_tolerance": 0.01,
+    "require_calibration_pass": true
+  },
+  "license": {
+    "whitelist_path": "public/data/universe/v7/config/license_publish_whitelist.json",
+    "public_raw_ohlc_allowed": false,
+    "risk_classes_allowed_public": [
+      "SAFE_DERIVED"
+    ]
+  },
+  "network_guard": {
+    "default_network_allowed": false,
+    "authorized_ingestor_paths": [
+      "scripts/universe-v7/ingestor"
+    ]
+  }
+}
