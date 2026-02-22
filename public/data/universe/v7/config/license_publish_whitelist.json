@@ -1,0 +1,14 @@
+{
+  "schema": "rv_v7_license_publish_whitelist_v1",
+  "default_risk_class": "BORDERLINE",
+  "rules": [
+    { "prefix": "publish_complete.json", "risk_class": "SAFE_DERIVED" },
+    { "prefix": "config/", "risk_class": "SAFE_DERIVED" },
+    { "prefix": "reports/", "risk_class": "SAFE_DERIVED" },
+    { "prefix": "search/", "risk_class": "SAFE_DERIVED" },
+    { "prefix": "read_models/", "risk_class": "SAFE_DERIVED" },
+    { "prefix": "core/", "risk_class": "SAFE_DERIVED" },
+    { "prefix": "registry/", "risk_class": "SAFE_DERIVED" },
+    { "prefix": "history/", "risk_class": "NEVER_PUBLIC" }
+  ]
+}

@@ -1,0 +1,26 @@
+{
+  "schema": "rv_ohlcv_policy_v1",
+  "version": "v1",
+  "timezone": "UTC",
+  "corporate_actions": {
+    "adjusted_close_field": "adjusted_close",
+    "use_adjusted_close": false,
+    "notes": "v2.0 phase1 scaffold: no automatic OHLC back-adjustment yet; preserve raw OHLC and expose contract checks."
+  },
+  "validation": {
+    "allow_future_dates": false,
+    "allow_zero_or_negative_prices": false,
+    "allow_negative_volume": false,
+    "drop_nan_rows": true,
+    "require_monotonic_dates": true,
+    "dedupe_by_date": true
+  },
+  "feature_min_bars": {
+    "stock_analyzer": 1,
+    "scientific": 200,
+    "forecast": 200,
+    "marketphase": 200,
+    "elliott": 200,
+    "quant": 500
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "schema": "rv_v7_evaluation_policy_v1",
+  "truth_provider": "EODHD",
+  "price_field": "adjusted_close",
+  "corporate_action_handling": "provider_adjusted_only",
+  "missing_bar_rule": "skip_with_flag",
+  "delisting_rule": "finalize_if_last_price_available_else_flag",
+  "horizon_semantics": "T_PLUS_N_TRADING_DAYS"
+}
