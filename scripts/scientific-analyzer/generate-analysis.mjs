@@ -32,7 +32,11 @@ const REPO_ROOT = process.cwd();
 const MODELS_DIR = 'public/data/models';
 const SNAPSHOTS_DIR = 'public/data/snapshots';
 const MARKETPHASE_DIR = 'public/data/marketphase';
-const UNIVERSE_FILE = 'public/data/universe/all.json';
+const LEGACY_UNIVERSE_FILE = 'public/data/universe/all.json';
+const V7_STOCK_ROWS_FILE = 'public/data/universe/v7/ssot/stocks.max.rows.json';
+const V7_STOCK_SYMBOLS_FILE = 'public/data/universe/v7/ssot/stocks.max.symbols.json';
+const MARKETPHASE_INDEX_FILE = 'public/data/marketphase/index.json';
+const MARKETPHASE_DEEP_SUMMARY_FILE = 'public/data/universe/v7/read_models/marketphase_deep_summary.json';
 
 function isoNow() {
     return new Date().toISOString();
@@ -56,89 +60,91 @@ async function writeJsonAtomic(relPath, data) {
     await fs.rename(tmpPath, abs);
 }
 
-// Seeded random for reproducible synthetic data
-function seededRandom(seed) {
-    let s = seed;
-    return function () {
-        s = (s * 1103515245 + 12345) & 0x7fffffff;
-        return s / 0x7fffffff;
-    };
+function normalizeTicker(value) {
+    return String(value || '').trim().toUpperCase();
 }
 
-// Hash ticker to number for consistent random seed
-function hashTicker(ticker) {
-    let hash = 0;
-    for (let i = 0; i < ticker.length; i++) {
-        hash = ((hash << 5) - hash) + ticker.charCodeAt(i);
-        hash = hash & hash;
+function toTickerRows(values) {
+    if (!Array.isArray(values)) return [];
+    const out = [];
+    const seen = new Set();
+    for (const value of values) {
+        const ticker = normalizeTicker(value?.ticker || value?.symbol || value?.code || value);
+        if (!ticker || seen.has(ticker)) continue;
+        seen.add(ticker);
+        out.push({ ticker, name: value?.name || null });
     }
-    return Math.abs(hash);
+    return out;
 }
 
-// Generate synthetic but consistent indicator data based on ticker
-function generateSyntheticIndicators(ticker, name) {
-    const seed = hashTicker(ticker);
-    const rand = seededRandom(seed);
+async function loadScientificUniverse() {
+    const preferredSource = String(process.env.SCIENTIFIC_UNIVERSE_SOURCE || 'v7').trim().toLowerCase();
+    const requireV7 = String(process.env.SCIENTIFIC_REQUIRE_V7 || 'true').trim().toLowerCase() !== 'false';
+    const v7Candidates = [V7_STOCK_ROWS_FILE, V7_STOCK_SYMBOLS_FILE];
+    const legacyCandidates = [LEGACY_UNIVERSE_FILE];
+    const candidates = requireV7
+        ? v7Candidates
+        : (preferredSource === 'legacy'
+            ? [...legacyCandidates, ...v7Candidates]
+            : [...v7Candidates, ...legacyCandidates]);
 
-    // Base price simulation (different ranges for different sectors)
-    const isHighPrice = ['GOOGL', 'AMZN', 'AVGO', 'COST', 'META', 'NFLX'].includes(ticker);
-    const isMidPrice = ['AAPL', 'MSFT', 'NVDA', 'TSLA', 'AMD', 'QCOM'].includes(ticker);
+    for (const source of candidates) {
+        const doc = await readJson(source);
+        if (!doc) continue;
 
-    let basePrice;
-    if (isHighPrice) {
-        basePrice = 150 + rand() * 400;
-    } else if (isMidPrice) {
-        basePrice = 80 + rand() * 200;
-    } else {
-        basePrice = 30 + rand() * 150;
+        let rows = [];
+        if (Array.isArray(doc)) {
+            rows = toTickerRows(doc);
+        } else if (Array.isArray(doc?.items)) {
+            rows = toTickerRows(doc.items);
+        } else if (Array.isArray(doc?.symbols)) {
+            rows = toTickerRows(doc.symbols);
+        }
+
+        if (rows.length > 0) {
+            return { source, rows };
+        }
     }
 
-    const close = Math.round(basePrice * 100) / 100;
+    if (requireV7) {
+        throw new Error('SCIENTIFIC_V7_SSOT_REQUIRED_MISSING');
+    }
 
-    // SMA relationships (determines trend structure)
-    const trendStrength = rand();
-    const isBullish = trendStrength > 0.35;
-    const isStrongBullish = trendStrength > 0.65;
+    return { source: null, rows: [] };
+}
 
-    const sma20 = isBullish ? close * (0.97 + rand() * 0.02) : close * (1.01 + rand() * 0.03);
-    const sma50 = isBullish ? close * (0.94 + rand() * 0.03) : close * (1.02 + rand() * 0.05);
-    const sma200 = isStrongBullish ? close * (0.85 + rand() * 0.08) : close * (0.95 + rand() * 0.12);
+async function loadMarketphaseSymbolSet() {
+    const doc = await readJson(MARKETPHASE_INDEX_FILE);
+    const symbols = new Set();
+    const rows = Array.isArray(doc?.data?.symbols) ? doc.data.symbols : [];
+    for (const row of rows) {
+        const ticker = normalizeTicker(typeof row === 'string' ? row : row?.symbol);
+        if (ticker) symbols.add(ticker);
+    }
+    return symbols;
+}
 
-    // Oscillators
-    const rsi = 30 + rand() * 50; // 30-80 range
-    const macdHist = (rand() - 0.4) * 3; // -1.2 to +1.8 range
-
-    // Volatility (ATR%)
-    const atrPct = 1 + rand() * 3; // 1-4% daily volatility
-
-    // Volume characteristics
-    const volumeRatio = 0.6 + rand() * 1.0; // 0.6-1.6
-
-    // 52-week range position
-    const high52w = close * (1.05 + rand() * 0.25);
-    const low52w = close * (0.60 + rand() * 0.25);
-
-    // Bollinger position
-    const bbWidth = close * atrPct * 0.02;
-    const bbUpper = sma20 + bbWidth * 2;
-    const bbLower = sma20 - bbWidth * 2;
-
-    return {
-        close,
-        sma20,
-        sma50,
-        sma200,
-        rsi,
-        macdHist,
-        atrPct,
-        volumeRatio,
-        high52w,
-        low52w,
-        bbUpper,
-        bbLower,
-        isBullish,
-        isStrongBullish
-    };
+async function loadMarketphaseDeepFeatureMap() {
+    const doc = await readJson(MARKETPHASE_DEEP_SUMMARY_FILE);
+    const rows = Array.isArray(doc?.items) ? doc.items : [];
+    const byTicker = new Map();
+    for (const row of rows) {
+        const ticker = normalizeTicker(row?.symbol);
+        const f = row?.features && typeof row.features === 'object' ? row.features : null;
+        if (!ticker || !f) continue;
+        if (!Number.isFinite(Number(f.SMA50)) || !Number.isFinite(Number(f.SMA200))) continue;
+        if (!Number.isFinite(Number(f.RSI)) || !Number.isFinite(Number(f.MACDHist))) continue;
+        byTicker.set(ticker, {
+            RSI: Number(f.RSI),
+            MACDHist: Number(f.MACDHist),
+            'ATR%': Number.isFinite(Number(f['ATR%'])) ? Number(f['ATR%']) : 2,
+            SMA50: Number(f.SMA50),
+            SMA200: Number(f.SMA200),
+            SMATrend: typeof f.SMATrend === 'string' ? f.SMATrend : 'unknown',
+            lastClose: Number.isFinite(Number(f.lastClose)) ? Number(f.lastClose) : null
+        });
+    }
+    return byTicker;
 }
 
 // Evaluate Setup conditions
@@ -314,14 +320,16 @@ async function main() {
     const { weights, bias, calibration, feature_means, metrics: modelMetrics } = modelData;
 
     // Load universe
-    const universe = await readJson(UNIVERSE_FILE);
-    if (!Array.isArray(universe)) {
+    const universeLoad = await loadScientificUniverse();
+    if (!Array.isArray(universeLoad.rows) || universeLoad.rows.length === 0) {
         console.error('ERROR: Universe file not found or invalid');
         process.exit(1);
     }
 
-    const tickers = universe.map(e => ({ ticker: e.ticker?.toUpperCase(), name: e.name })).filter(e => e.ticker);
-    console.log(`Processing ${tickers.length} symbols...`);
+    const tickers = universeLoad.rows;
+    const marketphaseSymbols = await loadMarketphaseSymbolSet();
+    const marketphaseDeepFeatures = await loadMarketphaseDeepFeatureMap();
+    console.log(`Processing ${tickers.length} symbols (source: ${universeLoad.source || 'unknown'})...`);
 
     const analyses = {};
     const topSetups = [];
@@ -330,32 +338,75 @@ async function main() {
 
     for (const { ticker, name } of tickers) {
         try {
-            // Try to load real marketphase data first, fall back to synthetic
-            const mpData = await readJson(`${MARKETPHASE_DIR}/${ticker}.json`);
+            // Try legacy marketphase payload first, then v7 deep-summary features (both real data).
+            const mpData = marketphaseSymbols.has(ticker)
+                ? await readJson(`${MARKETPHASE_DIR}/${ticker}.json`)
+                : null;
             let ind;
+            let mp = null;
+            let mpSource = null;
 
-            if (mpData?.data?.features) {
-                // Use real data
-                const mp = mpData.data.features;
+            const legacyFeatures = mpData?.data?.features && typeof mpData.data.features === 'object'
+                ? mpData.data.features
+                : null;
+            const deepFeatures = marketphaseDeepFeatures.has(ticker)
+                ? marketphaseDeepFeatures.get(ticker)
+                : null;
+            if (legacyFeatures) {
+                mp = legacyFeatures;
+                mpSource = 'real_legacy_marketphase';
+            } else if (deepFeatures) {
+                mp = deepFeatures;
+                mpSource = 'real_v7_deep';
+            }
+
+            if (mp) {
+                let lastClose = (Number.isFinite(Number(mp.lastClose)) && Number(mp.lastClose) > 0)
+                    ? Number(mp.lastClose)
+                    : ((Number.isFinite(Number(mp.SMA50)) && Number(mp.SMA50) > 0) ? Number(mp.SMA50) : null);
+                // Some legacy marketphase payloads are missing lastClose/SMA50 even though v7 deep features exist.
+                if ((!Number.isFinite(lastClose) || lastClose <= 0) && mpSource === 'real_legacy_marketphase' && deepFeatures) {
+                    mp = deepFeatures;
+                    mpSource = 'real_v7_deep';
+                    lastClose = (Number.isFinite(Number(mp.lastClose)) && Number(mp.lastClose) > 0)
+                        ? Number(mp.lastClose)
+                        : ((Number.isFinite(Number(mp.SMA50)) && Number(mp.SMA50) > 0) ? Number(mp.SMA50) : null);
+                }
+                if (!Number.isFinite(lastClose) || lastClose <= 0) {
+                    analyses[ticker] = {
+                        ticker,
+                        name,
+                        status: 'DATA_UNAVAILABLE',
+                        reason: 'Invalid marketphase feature payload (missing lastClose/SMA50)',
+                        academic_disclaimer: modelData.disclaimer
+                    };
+                    continue;
+                }
                 ind = {
-                    close: mp.lastClose,
-                    sma20: mp.SMA50 * 0.98, // Approximate SMA20
-                    sma50: mp.SMA50,
-                    sma200: mp.SMA200,
-                    rsi: mp.RSI,
-                    macdHist: mp.MACDHist,
-                    atrPct: mp['ATR%'] || 2,
+                    close: lastClose,
+                    sma20: Number(mp.SMA50) * 0.98, // Approximate SMA20
+                    sma50: Number(mp.SMA50),
+                    sma200: Number(mp.SMA200),
+                    rsi: Number(mp.RSI),
+                    macdHist: Number(mp.MACDHist),
+                    atrPct: Number.isFinite(Number(mp['ATR%'])) ? Number(mp['ATR%']) : 2,
                     volumeRatio: 1.0,
-                    high52w: mp.lastClose * 1.15,
-                    low52w: mp.lastClose * 0.75,
-                    bbUpper: mp.lastClose * 1.04,
-                    bbLower: mp.lastClose * 0.96,
+                    high52w: lastClose * 1.15,
+                    low52w: lastClose * 0.75,
+                    bbUpper: lastClose * 1.04,
+                    bbLower: lastClose * 0.96,
                     isBullish: mp.SMATrend === 'bullish',
-                    isStrongBullish: mp.SMATrend === 'bullish' && mp.RSI > 50
+                    isStrongBullish: mp.SMATrend === 'bullish' && Number(mp.RSI) > 50
                 };
             } else {
-                // Generate synthetic data
-                ind = generateSyntheticIndicators(ticker, name);
+                analyses[ticker] = {
+                    ticker,
+                    name,
+                    status: 'DATA_UNAVAILABLE',
+                    reason: 'Insufficient real marketphase data to generate scientific analysis',
+                    academic_disclaimer: modelData.disclaimer
+                };
+                continue;
             }
 
             // Evaluate Setup and Trigger
@@ -453,7 +504,7 @@ async function main() {
                     calibration_error: modelMetrics.ECE,
                     drift_status: 'stable',
                     confidence_interval: ci.map(v => Math.round(v * 100) / 100),
-                    data_source: mpData?.data?.features ? 'real' : 'synthetic'
+                    data_source: mpSource || 'real'
                 },
                 academic_disclaimer: modelData.disclaimer
             };
@@ -516,6 +567,7 @@ async function main() {
             version: '9.1',
             generated_at: isoNow(),
             model_version: 'v9.1',
+            universe_source: universeLoad.source || 'unknown',
             symbols_processed: processed,
             symbols_failed: tickers.length - processed,
             duration_ms: Date.now() - startTime
