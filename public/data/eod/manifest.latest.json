@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0",
   "type": "eod.latest.manifest",
-  "generated_at": "2026-02-23T22:57:17.325Z",
+  "generated_at": "2026-02-24T22:50:10.952Z",
   "universe": "nasdaq100",
   "total_symbols": 100,
   "chunk_size": 500,
@@ -10,9 +10,11 @@
       "chunk_id": "000",
       "file": "eod/batches/eod.latest.000.json",
       "count": 100,
-      "ok": 100,
-      "errors": 0
+      "ok": 99,
+      "errors": 1
     }
   ],
-  "errors_by_class": {}
+  "errors_by_class": {
+    "VALIDATION_FAILED": 1
+  }
 }

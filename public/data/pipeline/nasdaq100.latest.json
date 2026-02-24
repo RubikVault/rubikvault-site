@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0",
   "type": "pipeline.truth",
-  "generated_at": "2026-02-23T22:57:17.325Z",
+  "generated_at": "2026-02-24T22:50:10.952Z",
   "universe": "nasdaq100",
   "refs": {
     "universe_ref": "/data/universe/nasdaq100.json",
@@ -10,15 +10,25 @@
   "counts": {
     "expected": 100,
     "fetched": 100,
-    "validated": 100,
+    "validated": 99,
     "computed": 2442,
     "static_ready": 2442
   },
   "root_failure": null,
   "degraded_summary": {
-    "count": 0,
-    "classes": {},
-    "sample": []
+    "count": 1,
+    "classes": {
+      "VALIDATION_FAILED": 1
+    },
+    "sample": [
+      {
+        "symbol": "AZN",
+        "stage": "validate",
+        "class": "VALIDATION_FAILED",
+        "hint": "close_outside_range",
+        "since": "2026-02-24T22:50:10.952Z"
+      }
+    ]
   },
   "metadata": {
     "computed_not_applicable": false,
