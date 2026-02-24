@@ -3,8 +3,8 @@
   "feature": "marketphase",
   "meta": {
     "symbol": "CMDB",
-    "generatedAt": "2026-02-23T08:01:10.777Z",
-    "fetchedAt": "2026-02-23T08:01:10.777Z",
+    "generatedAt": "2026-02-24T07:17:58.506Z",
+    "fetchedAt": "2026-02-24T07:17:58.506Z",
     "ttlSeconds": 86400,
     "provider": "internal",
     "dataset": "CMDB",
@@ -15,8 +15,8 @@
     "precision": "IEEE754-Double-Round6",
     "auditTrail": {
       "generatedBy": "MarketPhase-v8-Engine",
-      "commitHash": "6fedc57",
-      "reviewDate": "2026-02-23T08:01:10.777Z",
+      "commitHash": "c53bdc9",
+      "reviewDate": "2026-02-24T07:17:58.506Z",
       "standards": [
         "ISO-8000",
         "IEEE-7000"
@@ -26,13 +26,13 @@
   },
   "data": {
     "features": {
-      "RSI": 71.69968,
-      "MACDHist": 0.134467,
-      "ATR%": 2.008204,
-      "SMA50": 16.3816,
-      "SMA200": 12.60015,
+      "RSI": 52.65439,
+      "MACDHist": -0.062657,
+      "ATR%": 2.597206,
+      "SMA50": 16.46,
+      "SMA200": 12.6654,
       "SMATrend": "bullish",
-      "lastClose": 19.86
+      "lastClose": 18.03
     },
     "swings": {
       "raw": [
@@ -55,18 +55,6 @@
           "type": "low"
         },
         {
-          "index": 48,
-          "date": "2025-07-11",
-          "price": 9.59,
-          "type": "high"
-        },
-        {
-          "index": 56,
-          "date": "2025-07-23",
-          "price": 9.61,
-          "type": "high"
-        },
-        {
           "index": 62,
           "date": "2025-07-31",
           "price": 9,
@@ -85,12 +73,6 @@
           "type": "low"
         },
         {
-          "index": 97,
-          "date": "2025-09-19",
-          "price": 11.77,
-          "type": "low"
-        },
-        {
           "index": 109,
           "date": "2025-10-07",
           "price": 14.6,
@@ -103,12 +85,6 @@
           "type": "low"
         },
         {
-          "index": 122,
-          "date": "2025-10-24",
-          "price": 13.13,
-          "type": "high"
-        },
-        {
           "index": 132,
           "date": "2025-11-07",
           "price": 12.66,
@@ -119,12 +95,6 @@
           "date": "2025-11-24",
           "price": 17.24,
           "type": "high"
-        },
-        {
-          "index": 166,
-          "date": "2025-12-29",
-          "price": 15.15,
-          "type": "low"
         },
         {
           "index": 173,
@@ -162,12 +132,6 @@
           "index": 73,
           "date": "2025-08-15",
           "price": 8.91,
-          "type": "low"
-        },
-        {
-          "index": 97,
-          "date": "2025-09-19",
-          "price": 11.77,
           "type": "low"
         },
         {
@@ -213,7 +177,7 @@
           "r2": false,
           "r3": true
         },
-        "guidelineScore": 45,
+        "guidelineScore": 56,
         "rulePasses": 2
       },
       "developingPattern": {
@@ -241,28 +205,28 @@
       },
       "fib": {
         "ratios": {
-          "wave2": 0.720848,
-          "wave3": 0.035336,
+          "wave2": 0.358524,
+          "wave3": 0.017575,
           "wave4": 45.8,
-          "wave5": 0.823322
+          "wave5": 0.40949
         },
-        "conformanceScore": 44.056754
+        "conformanceScore": 40.300287
       }
     },
     "fib": {
       "ratios": {
-        "wave2": 0.720848,
-        "wave3": 0.035336,
+        "wave2": 0.358524,
+        "wave3": 0.017575,
         "wave4": 45.8,
-        "wave5": 0.823322
+        "wave5": 0.40949
       },
-      "conformanceScore": 44.056754
+      "conformanceScore": 40.300287
     },
     "multiTimeframeAgreement": null,
     "debug": {
       "symbol": "CMDB",
-      "window": 7,
-      "candidateCount": 17,
+      "window": 8,
+      "candidateCount": 12,
       "durationMs": 1
     },
     "disclaimer": "MarketPhase AI — Scientific Elliott Research (v8.0)\nprovides deterministic, rule-based historical analysis only.\nIt does not forecast future prices or offer financial advice.\nUse solely for educational and research purposes.\nISO 8000 / IEEE 7000 Compliant - Bit-exact reproducibility guaranteed."

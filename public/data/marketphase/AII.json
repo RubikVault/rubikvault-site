@@ -3,8 +3,8 @@
   "feature": "marketphase",
   "meta": {
     "symbol": "AII",
-    "generatedAt": "2026-02-23T08:00:21.549Z",
-    "fetchedAt": "2026-02-23T08:00:21.549Z",
+    "generatedAt": "2026-02-24T07:16:55.418Z",
+    "fetchedAt": "2026-02-24T07:16:55.418Z",
     "ttlSeconds": 86400,
     "provider": "internal",
     "dataset": "AII",
@@ -15,8 +15,8 @@
     "precision": "IEEE754-Double-Round6",
     "auditTrail": {
       "generatedBy": "MarketPhase-v8-Engine",
-      "commitHash": "6fedc57",
-      "reviewDate": "2026-02-23T08:00:21.549Z",
+      "commitHash": "c53bdc9",
+      "reviewDate": "2026-02-24T07:16:55.418Z",
       "standards": [
         "ISO-8000",
         "IEEE-7000"
@@ -26,13 +26,13 @@
   },
   "data": {
     "features": {
-      "RSI": 37.435551,
-      "MACDHist": 0.021252,
-      "ATR%": 1.402089,
-      "SMA50": 19.3694,
+      "RSI": 37.781478,
+      "MACDHist": 0.030002,
+      "ATR%": 1.463344,
+      "SMA50": 19.2952,
       "SMA200": null,
       "SMATrend": "unknown",
-      "lastClose": 17.8
+      "lastClose": 17.69
     },
     "swings": {
       "raw": [
@@ -239,6 +239,12 @@
           "date": "2026-02-09",
           "price": 17.73,
           "type": "low"
+        },
+        {
+          "index": 194,
+          "date": "2026-02-17",
+          "price": 18.25,
+          "type": "high"
         }
       ],
       "confirmed": [
@@ -397,71 +403,77 @@
           "date": "2026-02-02",
           "price": 19,
           "type": "high"
+        },
+        {
+          "index": 189,
+          "date": "2026-02-09",
+          "price": 17.73,
+          "type": "low"
         }
       ]
     },
     "elliott": {
       "completedPattern": {
-        "valid": false,
+        "valid": true,
         "direction": "bearish",
-        "endedAt": "2026-02-02",
+        "endedAt": "2026-02-09",
         "confidence0_100": 100,
         "rules": {
           "r1": true,
-          "r2": false,
+          "r2": true,
           "r3": true
         },
-        "guidelineScore": 56,
-        "rulePasses": 2
+        "guidelineScore": 80,
+        "rulePasses": 3
       },
       "developingPattern": {
         "possibleWave": "Wave 4 or ABC",
         "confidence": 60,
         "fibLevels": {
           "support": [
-            18.3826,
-            18.2174
+            17.87986,
+            17.58014
           ],
           "resistance": [
-            18.9174,
-            19.0826
+            18.85014,
+            19.14986
           ]
         },
         "disclaimer": "Reference levels only -- no prediction"
       },
       "uncertainty": {
         "lastSwingConfirmed": true,
-        "alternativeCounts": 2,
+        "alternativeCounts": 1,
         "confidenceDecay": {
           "base": 100,
-          "adjusted": 76
+          "adjusted": 88
         }
       },
       "fib": {
         "ratios": {
-          "wave2": 0.913043,
-          "wave3": 0.641304,
-          "wave4": 2.254237,
-          "wave5": 0.76087
+          "wave2": 0.702381,
+          "wave3": 1.583333,
+          "wave4": 0.526316,
+          "wave5": 1.511905
         },
-        "conformanceScore": 50.088569
+        "conformanceScore": 93.849635
       }
     },
     "fib": {
       "ratios": {
-        "wave2": 0.913043,
-        "wave3": 0.641304,
-        "wave4": 2.254237,
-        "wave5": 0.76087
+        "wave2": 0.702381,
+        "wave3": 1.583333,
+        "wave4": 0.526316,
+        "wave5": 1.511905
       },
-      "conformanceScore": 50.088569
+      "conformanceScore": 93.849635
     },
     "multiTimeframeAgreement": null,
     "debug": {
       "symbol": "AII",
       "window": 4,
-      "candidateCount": 34,
-      "durationMs": 1
+      "candidateCount": 35,
+      "durationMs": 0
     },
     "disclaimer": "MarketPhase AI — Scientific Elliott Research (v8.0)\nprovides deterministic, rule-based historical analysis only.\nIt does not forecast future prices or offer financial advice.\nUse solely for educational and research purposes.\nISO 8000 / IEEE 7000 Compliant - Bit-exact reproducibility guaranteed."
   },

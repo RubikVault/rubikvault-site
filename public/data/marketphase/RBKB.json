@@ -3,8 +3,8 @@
   "feature": "marketphase",
   "meta": {
     "symbol": "RBKB",
-    "generatedAt": "2026-02-23T08:03:50.314Z",
-    "fetchedAt": "2026-02-23T08:03:50.314Z",
+    "generatedAt": "2026-02-24T07:21:10.392Z",
+    "fetchedAt": "2026-02-24T07:21:10.392Z",
     "ttlSeconds": 86400,
     "provider": "internal",
     "dataset": "RBKB",
@@ -15,8 +15,8 @@
     "precision": "IEEE754-Double-Round6",
     "auditTrail": {
       "generatedBy": "MarketPhase-v8-Engine",
-      "commitHash": "6fedc57",
-      "reviewDate": "2026-02-23T08:03:50.314Z",
+      "commitHash": "c53bdc9",
+      "reviewDate": "2026-02-24T07:21:10.392Z",
       "standards": [
         "ISO-8000",
         "IEEE-7000"
@@ -26,84 +26,84 @@
   },
   "data": {
     "features": {
-      "RSI": 72.951803,
-      "MACDHist": 0.315057,
-      "ATR%": 2.265638,
-      "SMA50": 12.5126,
-      "SMA200": 11.881616,
+      "RSI": 69.265486,
+      "MACDHist": 0.198384,
+      "ATR%": 2.090161,
+      "SMA50": 12.6406,
+      "SMA200": 11.920516,
       "SMATrend": "bullish",
-      "lastClose": 15.36
+      "lastClose": 15.12
     },
     "swings": {
       "raw": [
         {
-          "index": 30,
+          "index": 28,
           "date": "2025-03-21",
           "price": 10.49,
           "type": "high"
         },
         {
-          "index": 40,
+          "index": 38,
           "date": "2025-04-04",
           "price": 9.64,
           "type": "low"
         },
         {
-          "index": 59,
+          "index": 57,
           "date": "2025-05-02",
           "price": 11.42,
           "type": "high"
         },
         {
-          "index": 70,
+          "index": 68,
           "date": "2025-05-19",
           "price": 10.9,
           "type": "low"
         },
         {
-          "index": 88,
+          "index": 86,
           "date": "2025-06-13",
           "price": 12.41,
           "type": "high"
         },
         {
-          "index": 92,
+          "index": 90,
           "date": "2025-06-20",
           "price": 11.53,
           "type": "low"
         },
         {
-          "index": 118,
+          "index": 116,
           "date": "2025-07-29",
           "price": 13.03,
           "type": "high"
         },
         {
-          "index": 121,
+          "index": 119,
           "date": "2025-08-01",
           "price": 12.4,
           "type": "low"
         },
         {
-          "index": 136,
+          "index": 134,
           "date": "2025-08-22",
           "price": 13.75,
           "type": "high"
         },
         {
-          "index": 182,
+          "index": 180,
           "date": "2025-10-28",
           "price": 9.62,
           "type": "low"
         },
         {
-          "index": 216,
+          "index": 214,
           "date": "2025-12-16",
           "price": 12.5,
           "type": "high"
         },
         {
-          "index": 246,
+          "index": 244,
           "date": "2026-01-30",
           "price": 11.64,
           "type": "low"
@@ -111,49 +111,55 @@
       ],
       "confirmed": [
         {
-          "index": 30,
+          "index": 28,
           "date": "2025-03-21",
           "price": 10.49,
           "type": "high"
         },
         {
-          "index": 40,
+          "index": 38,
           "date": "2025-04-04",
           "price": 9.64,
           "type": "low"
         },
         {
-          "index": 70,
+          "index": 68,
           "date": "2025-05-19",
           "price": 10.9,
           "type": "low"
         },
         {
-          "index": 92,
+          "index": 86,
+          "date": "2025-06-13",
+          "price": 12.41,
+          "type": "high"
+        },
+        {
+          "index": 90,
           "date": "2025-06-20",
           "price": 11.53,
           "type": "low"
         },
         {
-          "index": 121,
+          "index": 119,
           "date": "2025-08-01",
           "price": 12.4,
           "type": "low"
         },
         {
-          "index": 136,
+          "index": 134,
           "date": "2025-08-22",
           "price": 13.75,
           "type": "high"
         },
         {
-          "index": 182,
+          "index": 180,
           "date": "2025-10-28",
           "price": 9.62,
           "type": "low"
         },
         {
-          "index": 216,
+          "index": 214,
           "date": "2025-12-16",
           "price": 12.5,
           "type": "high"
@@ -165,18 +171,18 @@
         "valid": false,
         "direction": "bullish",
         "endedAt": "2025-12-16",
-        "confidence0_100": 82,
+        "confidence0_100": 100,
         "rules": {
-          "r1": false,
+          "r1": true,
           "r2": true,
           "r3": false
         },
-        "guidelineScore": 39,
-        "rulePasses": 1
+        "guidelineScore": 48,
+        "rulePasses": 2
       },
       "developingPattern": {
         "possibleWave": "Wave 4 or ABC",
-        "confidence": 49,
+        "confidence": 60,
         "fibLevels": {
           "support": [
             9.95984,
@@ -193,33 +199,33 @@
         "lastSwingConfirmed": true,
         "alternativeCounts": 2,
         "confidenceDecay": {
-          "base": 82,
-          "adjusted": 58
+          "base": 100,
+          "adjusted": 76
         }
       },
       "fib": {
         "ratios": {
-          "wave2": 1.380952,
-          "wave3": 2.142857,
+          "wave2": 0.988636,
+          "wave3": 1.534091,
           "wave4": 3.059259,
-          "wave5": 4.571429
+          "wave5": 3.272727
         },
-        "conformanceScore": 26.539309
+        "conformanceScore": 42.258329
       }
     },
     "fib": {
       "ratios": {
-        "wave2": 1.380952,
-        "wave3": 2.142857,
+        "wave2": 0.988636,
+        "wave3": 1.534091,
         "wave4": 3.059259,
-        "wave5": 4.571429
+        "wave5": 3.272727
       },
-      "conformanceScore": 26.539309
+      "conformanceScore": 42.258329
     },
     "multiTimeframeAgreement": null,
     "debug": {
       "symbol": "RBKB",
-      "window": 11,
+      "window": 10,
       "candidateCount": 12,
       "durationMs": 0
     },

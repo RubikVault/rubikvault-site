@@ -3,8 +3,8 @@
   "feature": "marketphase",
   "meta": {
     "symbol": "AIRO",
-    "generatedAt": "2026-02-23T08:00:22.387Z",
-    "fetchedAt": "2026-02-23T08:00:22.387Z",
+    "generatedAt": "2026-02-24T07:16:56.441Z",
+    "fetchedAt": "2026-02-24T07:16:56.441Z",
     "ttlSeconds": 86400,
     "provider": "internal",
     "dataset": "AIRO",
@@ -15,8 +15,8 @@
     "precision": "IEEE754-Double-Round6",
     "auditTrail": {
       "generatedBy": "MarketPhase-v8-Engine",
-      "commitHash": "6fedc57",
-      "reviewDate": "2026-02-23T08:00:22.387Z",
+      "commitHash": "c53bdc9",
+      "reviewDate": "2026-02-24T07:16:56.441Z",
       "standards": [
         "ISO-8000",
         "IEEE-7000"
@@ -26,13 +26,13 @@
   },
   "data": {
     "features": {
-      "RSI": 50.441545,
-      "MACDHist": -0.048261,
-      "ATR%": 4.326479,
-      "SMA50": 10.1345,
+      "RSI": 46.555969,
+      "MACDHist": -0.009966,
+      "ATR%": 4.817223,
+      "SMA50": 10.1275,
       "SMA200": null,
       "SMATrend": "unknown",
-      "lastClose": 10.21
+      "lastClose": 9.65
     },
     "swings": {
       "raw": [
@@ -343,64 +343,70 @@
           "date": "2026-02-09",
           "price": 10.1,
           "type": "high"
+        },
+        {
+          "index": 168,
+          "date": "2026-02-12",
+          "price": 9.11,
+          "type": "low"
         }
       ]
     },
     "elliott": {
       "completedPattern": {
-        "valid": true,
+        "valid": false,
         "direction": "bullish",
-        "endedAt": "2026-02-09",
+        "endedAt": "2026-02-12",
         "confidence0_100": 100,
         "rules": {
-          "r1": true,
+          "r1": false,
           "r2": true,
           "r3": true
         },
-        "guidelineScore": 82,
-        "rulePasses": 3
+        "guidelineScore": 61,
+        "rulePasses": 2
       },
       "developingPattern": {
         "possibleWave": "Wave 4 or ABC",
         "confidence": 60,
         "fibLevels": {
           "support": [
-            8.67116,
-            8.28884
+            9.22682,
+            8.99318
           ],
           "resistance": [
-            9.90884,
-            10.29116
+            9.98318,
+            10.21682
           ]
         },
         "disclaimer": "Reference levels only -- no prediction"
       },
       "uncertainty": {
         "lastSwingConfirmed": true,
-        "alternativeCounts": 1,
+        "alternativeCounts": 2,
         "confidenceDecay": {
           "base": 100,
-          "adjusted": 88
+          "adjusted": 76
         }
       },
       "fib": {
         "ratios": {
-          "wave2": 0.319654,
-          "wave3": 2.25486,
-          "wave4": 0.936782,
-          "wave5": 0.699784
+          "wave2": 7.054054,
+          "wave3": 6.608108,
+          "wave4": 0.331288,
+          "wave5": 1.337838
         },
-        "conformanceScore": 67.30457
+        "conformanceScore": 53.352646
       }
     },
     "fib": {
       "ratios": {
-        "wave2": 0.319654,
-        "wave3": 2.25486,
-        "wave4": 0.936782,
-        "wave5": 0.699784
+        "wave2": 7.054054,
+        "wave3": 6.608108,
+        "wave4": 0.331288,
+        "wave5": 1.337838
       },
-      "conformanceScore": 67.30457
+      "conformanceScore": 53.352646
     },
     "multiTimeframeAgreement": null,
     "debug": {
