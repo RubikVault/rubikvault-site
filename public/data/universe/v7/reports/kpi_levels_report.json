@@ -1,27 +1,36 @@
 {
   "schema": "rv_v7_kpi_levels_report_v1",
-  "generated_at": "2026-02-25T19:33:57.808Z",
-  "run_id": "v7_20260225193357_fa46e7",
-  "discovered_count": 0,
-  "active_ingestible_count": 0,
+  "generated_at": "2026-02-25T19:45:40.657Z",
+  "run_id": "v7_20260225194509_0f02c0",
+  "discovered_count": 193938,
+  "active_ingestible_count": 192473,
   "feature_eligible_count": {
-    "analyzer": 0,
-    "forecast": 0,
-    "marketphase": 0,
-    "scientific": 0
+    "analyzer": 100272,
+    "forecast": 47764,
+    "marketphase": 128026,
+    "scientific": 100272
   },
   "feature_eligible_pct_of_ingestible": {
-    "analyzer": 0,
-    "forecast": 0,
-    "marketphase": 0,
-    "scientific": 0
+    "analyzer": 0.521,
+    "forecast": 0.2482,
+    "marketphase": 0.6652,
+    "scientific": 0.521
   },
   "by_layer": {
-    "L0_LEGACY_CORE": 0,
-    "L1_FULL": 0,
-    "L2_PARTIAL": 0,
-    "L3_MINIMAL": 0,
-    "L4_DEAD": 0
+    "L0_LEGACY_CORE": 2453,
+    "L1_FULL": 45311,
+    "L2_PARTIAL": 52508,
+    "L3_MINIMAL": 27754,
+    "L4_DEAD": 65912
   },
-  "by_type_norm": {}
+  "by_type_norm": {
+    "FUND": 94047,
+    "ETF": 20312,
+    "STOCK": 74841,
+    "INDEX": 65,
+    "OTHER": 1482,
+    "CRYPTO": 2087,
+    "FOREX": 989,
+    "BOND": 115
+  }
 }

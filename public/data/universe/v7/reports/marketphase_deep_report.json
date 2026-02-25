@@ -1,7 +1,7 @@
 {
   "schema": "rv_v7_marketphase_deep_report_v1",
-  "started_at": "2026-02-25T19:33:58.184Z",
-  "finished_at": "2026-02-25T19:33:58.193Z",
+  "started_at": "2026-02-25T19:46:10.739Z",
+  "finished_at": "2026-02-25T19:46:12.460Z",
   "args": {
     "minBars": 200,
     "maxSymbols": null,
@@ -15,20 +15,621 @@
     "history_root": "mirrors/universe-v7"
   },
   "scan": {
-    "rows_total": 0,
-    "stock_rows": 0,
-    "stock_rows_in_target": 0,
-    "stock_rows_with_pack": 0,
-    "stock_rows_with_min_bars": 0,
-    "selected_candidates": 0,
-    "selected_candidate_variants": 0
+    "rows_total": 193938,
+    "stock_rows": 74841,
+    "stock_rows_in_target": 74841,
+    "stock_rows_with_pack": 74837,
+    "stock_rows_with_min_bars": 71456,
+    "selected_candidates": 52936,
+    "selected_candidate_variants": 71189
   },
   "output": {
     "summary_path": "public/data/universe/v7/read_models/marketphase_deep_summary.json",
     "count": 0
   },
   "errors": {
-    "count": 0,
-    "sample": []
+    "count": 71189,
+    "sample": [
+      {
+        "symbol": "AGN",
+        "canonical_id": "AS:AGN",
+        "reason": "history_pack_missing",
+        "pack": "history/AS/a/pack_0001.ndjson.gz"
+      },
+      {
+        "symbol": "ACOMO",
+        "canonical_id": "AS:ACOMO",
+        "reason": "history_pack_missing",
+        "pack": "history/AS/a/pack_0001.ndjson.gz"
+      },
+      {
+        "symbol": "ALX",
+        "canonical_id": "AS:ALX",
+        "reason": "history_pack_missing",
+        "pack": "history/AS/a/pack_0001.ndjson.gz"
+      },
+      {
+        "symbol": "AD",
+        "canonical_id": "AS:AD",
+        "reason": "history_pack_missing",
+        "pack": "history/AS/a/pack_0001.ndjson.gz"
+      },
+      {
+        "symbol": "AKZA",
+        "canonical_id": "AS:AKZA",
+        "reason": "history_pack_missing",
+        "pack": "history/AS/a/pack_0001.ndjson.gz"
+      },
+      {
+        "symbol": "AALB",
+        "canonical_id": "AS:AALB",
+        "reason": "history_pack_missing",
+        "pack": "history/AS/a/pack_0001.ndjson.gz"
+      },
+      {
+        "symbol": "ASML",
+        "canonical_id": "AS:ASML",
+        "reason": "history_pack_missing",
+        "pack": "history/AS/a/pack_0001.ndjson.gz"
+      },
+      {
+        "symbol": "ARCAD",
+        "canonical_id": "AS:ARCAD",
+        "reason": "history_pack_missing",
+        "pack": "history/AS/a/pack_0001.ndjson.gz"
+      },
+      {
+        "symbol": "ASM",
+        "canonical_id": "AS:ASM",
+        "reason": "history_pack_missing",
+        "pack": "history/AS/a/pack_0001.ndjson.gz"
+      },
+      {
+        "symbol": "AJAX",
+        "canonical_id": "AS:AJAX",
+        "reason": "history_pack_missing",
+        "pack": "history/AS/a/pack_0001.ndjson.gz"
+      },
+      {
+        "symbol": "AXS",
+        "canonical_id": "AS:AXS",
+        "reason": "history_pack_missing",
+        "pack": "history/AS/a/pack_0001.ndjson.gz"
+      },
+      {
+        "symbol": "AMUND",
+        "canonical_id": "AS:AMUND",
+        "reason": "history_pack_missing",
+        "pack": "history/AS/a/pack_0001.ndjson.gz"
+      },
+      {
+        "symbol": "APAM",
+        "canonical_id": "AS:APAM",
+        "reason": "history_pack_missing",
+        "pack": "history/AS/a/pack_0001.ndjson.gz"
+      },
+      {
+        "symbol": "ABN",
+        "canonical_id": "AS:ABN",
+        "reason": "history_pack_missing",
+        "pack": "history/AS/a/pack_0001.ndjson.gz"
+      },
+      {
+        "symbol": "AVTX",
+        "canonical_id": "AS:AVTX",
+        "reason": "history_pack_missing",
+        "pack": "history/AS/a/pack_0001.ndjson.gz"
+      },
+      {
+        "symbol": "ASRNL",
+        "canonical_id": "AS:ASRNL",
+        "reason": "history_pack_missing",
+        "pack": "history/AS/a/pack_0001.ndjson.gz"
+      },
+      {
+        "symbol": "ALFEN",
+        "canonical_id": "AS:ALFEN",
+        "reason": "history_pack_missing",
+        "pack": "history/AS/a/pack_0001.ndjson.gz"
+      },
+      {
+        "symbol": "ADYEN",
+        "canonical_id": "AS:ADYEN",
+        "reason": "history_pack_missing",
+        "pack": "history/AS/a/pack_0001.ndjson.gz"
+      },
+      {
+        "symbol": "ALLFG",
+        "canonical_id": "AS:ALLFG",
+        "reason": "history_pack_missing",
+        "pack": "history/AS/a/pack_0001.ndjson.gz"
+      },
+      {
+        "symbol": "AZRN",
+        "canonical_id": "AS:AZRN",
+        "reason": "history_pack_missing",
+        "pack": "history/AS/a/pack_0001.ndjson.gz"
+      },
+      {
+        "symbol": "BAMNB",
+        "canonical_id": "AS:BAMNB",
+        "reason": "history_pack_missing",
+        "pack": "history/AS/b/pack_0001.ndjson.gz"
+      },
+      {
+        "symbol": "BESI",
+        "canonical_id": "AS:BESI",
+        "reason": "history_pack_missing",
+        "pack": "history/AS/b/pack_0001.ndjson.gz"
+      },
+      {
+        "symbol": "BRNL",
+        "canonical_id": "AS:BRNL",
+        "reason": "history_pack_missing",
+        "pack": "history/AS/b/pack_0001.ndjson.gz"
+      },
+      {
+        "symbol": "BEVER",
+        "canonical_id": "AS:BEVER",
+        "reason": "history_pack_missing",
+        "pack": "history/AS/b/pack_0001.ndjson.gz"
+      },
+      {
+        "symbol": "BFIT",
+        "canonical_id": "AS:BFIT",
+        "reason": "history_pack_missing",
+        "pack": "history/AS/b/pack_0001.ndjson.gz"
+      },
+      {
+        "symbol": "BNJ",
+        "canonical_id": "AS:BNJ",
+        "reason": "history_pack_missing",
+        "pack": "history/AS/b/pack_0001.ndjson.gz"
+      },
+      {
+        "symbol": "CVC",
+        "canonical_id": "AS:CVC",
+        "reason": "history_pack_missing",
+        "pack": "history/AS/c/pack_0001.ndjson.gz"
+      },
+      {
+        "symbol": "CCEP",
+        "canonical_id": "AS:CCEP",
+        "reason": "history_pack_missing",
+        "pack": "history/AS/c/pack_0001.ndjson.gz"
+      },
+      {
+        "symbol": "CRBN",
+        "canonical_id": "AS:CRBN",
+        "reason": "history_pack_missing",
+        "pack": "history/AS/c/pack_0001.ndjson.gz"
+      },
+      {
+        "symbol": "CTAC",
+        "canonical_id": "AS:CTAC",
+        "reason": "history_pack_missing",
+        "pack": "history/AS/c/pack_0001.ndjson.gz"
+      },
+      {
+        "symbol": "CMCOM",
+        "canonical_id": "AS:CMCOM",
+        "reason": "history_pack_missing",
+        "pack": "history/AS/c/pack_0001.ndjson.gz"
+      },
+      {
+        "symbol": "CABKA",
+        "canonical_id": "AS:CABKA",
+        "reason": "history_pack_missing",
+        "pack": "history/AS/c/pack_0001.ndjson.gz"
+      },
+      {
+        "symbol": "CTPNV",
+        "canonical_id": "AS:CTPNV",
+        "reason": "history_pack_missing",
+        "pack": "history/AS/c/pack_0001.ndjson.gz"
+      },
+      {
+        "symbol": "DSFIR",
+        "canonical_id": "AS:DSFIR",
+        "reason": "history_pack_missing",
+        "pack": "history/AS/d/pack_0001.ndjson.gz"
+      },
+      {
+        "symbol": "ECT",
+        "canonical_id": "AS:ECT",
+        "reason": "history_pack_missing",
+        "pack": "history/AS/e/run_v7_20260222090811_11626e_0001.ndjson.gz"
+      },
+      {
+        "symbol": "ECMPA",
+        "canonical_id": "AS:ECMPA",
+        "reason": "history_pack_missing",
+        "pack": "history/AS/e/run_v7_20260222090811_11626e_0001.ndjson.gz"
+      },
+      {
+        "symbol": "EAS2P",
+        "canonical_id": "AS:EAS2P",
+        "reason": "history_pack_missing",
+        "pack": "history/AS/e/run_v7_20260222090811_11626e_0001.ndjson.gz"
+      },
+      {
+        "symbol": "ENVI",
+        "canonical_id": "AS:ENVI",
+        "reason": "history_pack_missing",
+        "pack": "history/AS/e/run_v7_20260222090811_11626e_0001.ndjson.gz"
+      },
+      {
+        "symbol": "EXO",
+        "canonical_id": "AS:EXO",
+        "reason": "history_pack_missing",
+        "pack": "history/AS/e/run_v7_20260222090811_11626e_0001.ndjson.gz"
+      },
+      {
+        "symbol": "EBUS",
+        "canonical_id": "AS:EBUS",
+        "reason": "history_pack_missing",
+        "pack": "history/AS/e/run_v7_20260222090811_11626e_0001.ndjson.gz"
+      },
+      {
+        "symbol": "FAST",
+        "canonical_id": "AS:FAST",
+        "reason": "history_pack_missing",
+        "pack": "history/AS/f/pack_0001.ndjson.gz"
+      },
+      {
+        "symbol": "FUR",
+        "canonical_id": "AS:FUR",
+        "reason": "history_pack_missing",
+        "pack": "history/AS/f/pack_0001.ndjson.gz"
+      },
+      {
+        "symbol": "FER",
+        "canonical_id": "AS:FER",
+        "reason": "history_pack_missing",
+        "pack": "history/AS/f/pack_0001.ndjson.gz"
+      },
+      {
+        "symbol": "FLOW",
+        "canonical_id": "AS:FLOW",
+        "reason": "history_pack_missing",
+        "pack": "history/AS/f/pack_0001.ndjson.gz"
+      },
+      {
+        "symbol": "FFARM",
+        "canonical_id": "AS:FFARM",
+        "reason": "history_pack_missing",
+        "pack": "history/AS/f/pack_0001.ndjson.gz"
+      },
+      {
+        "symbol": "FERGR",
+        "canonical_id": "AS:FERGR",
+        "reason": "history_pack_missing",
+        "pack": "history/AS/f/pack_0001.ndjson.gz"
+      },
+      {
+        "symbol": "GLPG",
+        "canonical_id": "AS:GLPG",
+        "reason": "history_pack_missing",
+        "pack": "history/AS/g/run_v7_20260222090811_11626e_0001.ndjson.gz"
+      },
+      {
+        "symbol": "GOLD",
+        "canonical_id": "AS:GOLD",
+        "reason": "history_pack_missing",
+        "pack": "history/AS/g/run_v7_20260222090811_11626e_0001.ndjson.gz"
+      },
+      {
+        "symbol": "HAL",
+        "canonical_id": "AS:HAL",
+        "reason": "history_pack_missing",
+        "pack": "history/AS/h/pack_0001.ndjson.gz"
+      },
+      {
+        "symbol": "HEIA",
+        "canonical_id": "AS:HEIA",
+        "reason": "history_pack_missing",
+        "pack": "history/AS/h/pack_0001.ndjson.gz"
+      },
+      {
+        "symbol": "HOLCO",
+        "canonical_id": "AS:HOLCO",
+        "reason": "history_pack_missing",
+        "pack": "history/AS/h/pack_0001.ndjson.gz"
+      },
+      {
+        "symbol": "HEIJM",
+        "canonical_id": "AS:HEIJM",
+        "reason": "history_pack_missing",
+        "pack": "history/AS/h/pack_0001.ndjson.gz"
+      },
+      {
+        "symbol": "HEIO",
+        "canonical_id": "AS:HEIO",
+        "reason": "history_pack_missing",
+        "pack": "history/AS/h/pack_0001.ndjson.gz"
+      },
+      {
+        "symbol": "HYDRA",
+        "canonical_id": "AS:HYDRA",
+        "reason": "history_pack_missing",
+        "pack": "history/AS/h/pack_0001.ndjson.gz"
+      },
+      {
+        "symbol": "HAVAS",
+        "canonical_id": "AS:HAVAS",
+        "reason": "history_pack_missing",
+        "pack": "history/AS/h/pack_0001.ndjson.gz"
+      },
+      {
+        "symbol": "IEX",
+        "canonical_id": "AS:IEX",
+        "reason": "history_pack_missing",
+        "pack": "history/AS/i/run_v7_20260222090811_11626e_0001.ndjson.gz"
+      },
+      {
+        "symbol": "INGA",
+        "canonical_id": "AS:INGA",
+        "reason": "history_pack_missing",
+        "pack": "history/AS/i/run_v7_20260222090811_11626e_0001.ndjson.gz"
+      },
+      {
+        "symbol": "IMCD",
+        "canonical_id": "AS:IMCD",
+        "reason": "history_pack_missing",
+        "pack": "history/AS/i/run_v7_20260222090811_11626e_0001.ndjson.gz"
+      },
+      {
+        "symbol": "INPST",
+        "canonical_id": "AS:INPST",
+        "reason": "history_pack_missing",
+        "pack": "history/AS/i/run_v7_20260222090811_11626e_0001.ndjson.gz"
+      },
+      {
+        "symbol": "JDEP",
+        "canonical_id": "AS:JDEP",
+        "reason": "history_pack_missing",
+        "pack": "history/AS/j/pack_0001.ndjson.gz"
+      },
+      {
+        "symbol": "KENDR",
+        "canonical_id": "AS:KENDR",
+        "reason": "history_pack_missing",
+        "pack": "history/AS/k/pack_0001.ndjson.gz"
+      },
+      {
+        "symbol": "KPN",
+        "canonical_id": "AS:KPN",
+        "reason": "history_pack_missing",
+        "pack": "history/AS/k/pack_0001.ndjson.gz"
+      },
+      {
+        "symbol": "LVIDE",
+        "canonical_id": "AS:LVIDE",
+        "reason": "history_pack_missing",
+        "pack": "history/AS/l/pack_0001.ndjson.gz"
+      },
+      {
+        "symbol": "LIGHT",
+        "canonical_id": "AS:LIGHT",
+        "reason": "history_pack_missing",
+        "pack": "history/AS/l/pack_0001.ndjson.gz"
+      },
+      {
+        "symbol": "MT",
+        "canonical_id": "AS:MT",
+        "reason": "history_pack_missing",
+        "pack": "history/AS/m/pack_0001.ndjson.gz"
+      },
+      {
+        "symbol": "MORE",
+        "canonical_id": "AS:MORE",
+        "reason": "history_pack_missing",
+        "pack": "history/AS/m/pack_0001.ndjson.gz"
+      },
+      {
+        "symbol": "MTRK",
+        "canonical_id": "AS:MTRK",
+        "reason": "history_pack_missing",
+        "pack": "history/AS/m/pack_0001.ndjson.gz"
+      },
+      {
+        "symbol": "NEDAP",
+        "canonical_id": "AS:NEDAP",
+        "reason": "history_pack_missing",
+        "pack": "history/AS/n/pack_0001.ndjson.gz"
+      },
+      {
+        "symbol": "NSE",
+        "canonical_id": "AS:NSE",
+        "reason": "history_pack_missing",
+        "pack": "history/AS/n/pack_0001.ndjson.gz"
+      },
+      {
+        "symbol": "NSI",
+        "canonical_id": "AS:NSI",
+        "reason": "history_pack_missing",
+        "pack": "history/AS/n/pack_0001.ndjson.gz"
+      },
+      {
+        "symbol": "NEDSE",
+        "canonical_id": "AS:NEDSE",
+        "reason": "history_pack_missing",
+        "pack": "history/AS/n/pack_0001.ndjson.gz"
+      },
+      {
+        "symbol": "NRP",
+        "canonical_id": "AS:NRP",
+        "reason": "history_pack_missing",
+        "pack": "history/AS/n/pack_0001.ndjson.gz"
+      },
+      {
+        "symbol": "NN",
+        "canonical_id": "AS:NN",
+        "reason": "history_pack_missing",
+        "pack": "history/AS/n/pack_0001.ndjson.gz"
+      },
+      {
+        "symbol": "NXFIL",
+        "canonical_id": "AS:NXFIL",
+        "reason": "history_pack_missing",
+        "pack": "history/AS/n/pack_0001.ndjson.gz"
+      },
+      {
+        "symbol": "OCI",
+        "canonical_id": "AS:OCI",
+        "reason": "history_pack_missing",
+        "pack": "history/AS/o/pack_0001.ndjson.gz"
+      },
+      {
+        "symbol": "PRX",
+        "canonical_id": "AS:PRX",
+        "reason": "history_pack_missing",
+        "pack": "history/AS/p/pack_0001.ndjson.gz"
+      },
+      {
+        "symbol": "PORF",
+        "canonical_id": "AS:PORF",
+        "reason": "history_pack_missing",
+        "pack": "history/AS/p/pack_0001.ndjson.gz"
+      },
+      {
+        "symbol": "PNL",
+        "canonical_id": "AS:PNL",
+        "reason": "history_pack_missing",
+        "pack": "history/AS/p/pack_0001.ndjson.gz"
+      },
+      {
+        "symbol": "PHIA",
+        "canonical_id": "AS:PHIA",
+        "reason": "history_pack_missing",
+        "pack": "history/AS/p/pack_0001.ndjson.gz"
+      },
+      {
+        "symbol": "PBH",
+        "canonical_id": "AS:PBH",
+        "reason": "history_pack_missing",
+        "pack": "history/AS/p/pack_0001.ndjson.gz"
+      },
+      {
+        "symbol": "PHARM",
+        "canonical_id": "AS:PHARM",
+        "reason": "history_pack_missing",
+        "pack": "history/AS/p/pack_0001.ndjson.gz"
+      },
+      {
+        "symbol": "PREVA",
+        "canonical_id": "AS:PREVA",
+        "reason": "history_pack_missing",
+        "pack": "history/AS/p/pack_0001.ndjson.gz"
+      },
+      {
+        "symbol": "PSH",
+        "canonical_id": "AS:PSH",
+        "reason": "history_pack_missing",
+        "pack": "history/AS/p/run_v7_20260222090811_11626e_0001.ndjson.gz"
+      },
+      {
+        "symbol": "QEV",
+        "canonical_id": "AS:QEV",
+        "reason": "history_pack_missing",
+        "pack": "history/AS/q/pack_0001.ndjson.gz"
+      },
+      {
+        "symbol": "REN",
+        "canonical_id": "AS:REN",
+        "reason": "history_pack_missing",
+        "pack": "history/AS/r/pack_0001.ndjson.gz"
+      },
+      {
+        "symbol": "RAND",
+        "canonical_id": "AS:RAND",
+        "reason": "history_pack_missing",
+        "pack": "history/AS/r/pack_0001.ndjson.gz"
+      },
+      {
+        "symbol": "REINA",
+        "canonical_id": "AS:REINA",
+        "reason": "history_pack_missing",
+        "pack": "history/AS/r/pack_0001.ndjson.gz"
+      },
+      {
+        "symbol": "SLIGR",
+        "canonical_id": "AS:SLIGR",
+        "reason": "history_pack_missing",
+        "pack": "history/AS/s/run_v7_20260222090811_11626e_0001.ndjson.gz"
+      },
+      {
+        "symbol": "SHELL",
+        "canonical_id": "AS:SHELL",
+        "reason": "history_pack_missing",
+        "pack": "history/AS/s/run_v7_20260222090811_11626e_0001.ndjson.gz"
+      },
+      {
+        "symbol": "SBMO",
+        "canonical_id": "AS:SBMO",
+        "reason": "history_pack_missing",
+        "pack": "history/AS/s/run_v7_20260222090811_11626e_0001.ndjson.gz"
+      },
+      {
+        "symbol": "SIFG",
+        "canonical_id": "AS:SIFG",
+        "reason": "history_pack_missing",
+        "pack": "history/AS/s/run_v7_20260222090811_11626e_0001.ndjson.gz"
+      },
+      {
+        "symbol": "TWEKA",
+        "canonical_id": "AS:TWEKA",
+        "reason": "history_pack_missing",
+        "pack": "history/AS/t/pack_0001.ndjson.gz"
+      },
+      {
+        "symbol": "TFG",
+        "canonical_id": "AS:TFG",
+        "reason": "history_pack_missing",
+        "pack": "history/AS/t/pack_0001.ndjson.gz"
+      },
+      {
+        "symbol": "TOM2",
+        "canonical_id": "AS:TOM2",
+        "reason": "history_pack_missing",
+        "pack": "history/AS/t/pack_0001.ndjson.gz"
+      },
+      {
+        "symbol": "THEON",
+        "canonical_id": "AS:THEON",
+        "reason": "history_pack_missing",
+        "pack": "history/AS/t/pack_0001.ndjson.gz"
+      },
+      {
+        "symbol": "UNA",
+        "canonical_id": "AS:UNA",
+        "reason": "history_pack_missing",
+        "pack": "history/AS/u/run_v7_20260222090811_11626e_0001.ndjson.gz"
+      },
+      {
+        "symbol": "UMG",
+        "canonical_id": "AS:UMG",
+        "reason": "history_pack_missing",
+        "pack": "history/AS/u/run_v7_20260222090811_11626e_0001.ndjson.gz"
+      },
+      {
+        "symbol": "VPK",
+        "canonical_id": "AS:VPK",
+        "reason": "history_pack_missing",
+        "pack": "history/AS/v/pack_0001.ndjson.gz"
+      },
+      {
+        "symbol": "VALUE",
+        "canonical_id": "AS:VALUE",
+        "reason": "history_pack_missing",
+        "pack": "history/AS/v/pack_0001.ndjson.gz"
+      },
+      {
+        "symbol": "VLK",
+        "canonical_id": "AS:VLK",
+        "reason": "history_pack_missing",
+        "pack": "history/AS/v/pack_0001.ndjson.gz"
+      }
+    ]
   }
 }

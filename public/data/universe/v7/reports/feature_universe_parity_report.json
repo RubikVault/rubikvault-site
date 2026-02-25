@@ -1,69 +1,128 @@
 {
   "schema": "rv_v7_feature_universe_parity_report_v1",
-  "generated_at": "2026-02-25T19:34:03.161Z",
+  "generated_at": "2026-02-25T19:46:19.252Z",
   "enforce": false,
   "ssot": {
-    "symbols_count": 0,
+    "symbols_count": 55986,
     "symbols_path": "public/data/universe/v7/ssot/stocks.max.symbols.json",
     "by_feature_path": "public/data/universe/v7/ssot/stocks.by_feature.json"
   },
   "set_parity": {
     "analyzer": {
-      "ok": true,
-      "count": 0,
-      "ssot_count": 0,
+      "ok": false,
+      "count": 56607,
+      "ssot_count": 55986,
       "missing_from_feature_count": 0,
-      "extra_in_feature_count": 0,
+      "extra_in_feature_count": 621,
       "sample_missing_from_feature": [],
-      "sample_extra_in_feature": []
+      "sample_extra_in_feature": [
+        "006208",
+        "00631L",
+        "00632R",
+        "00633L",
+        "00635U",
+        "00637L",
+        "00639",
+        "00641R",
+        "00642U",
+        "00643"
+      ]
     },
     "scientific": {
-      "ok": true,
-      "count": 0,
-      "ssot_count": 0,
+      "ok": false,
+      "count": 56607,
+      "ssot_count": 55986,
       "missing_from_feature_count": 0,
-      "extra_in_feature_count": 0,
+      "extra_in_feature_count": 621,
       "sample_missing_from_feature": [],
-      "sample_extra_in_feature": []
+      "sample_extra_in_feature": [
+        "006208",
+        "00631L",
+        "00632R",
+        "00633L",
+        "00635U",
+        "00637L",
+        "00639",
+        "00641R",
+        "00642U",
+        "00643"
+      ]
     },
     "forecast": {
-      "ok": true,
-      "count": 0,
-      "ssot_count": 0,
+      "ok": false,
+      "count": 56281,
+      "ssot_count": 55986,
       "missing_from_feature_count": 0,
-      "extra_in_feature_count": 0,
+      "extra_in_feature_count": 295,
       "sample_missing_from_feature": [],
-      "sample_extra_in_feature": []
+      "sample_extra_in_feature": [
+        "006208",
+        "00632R",
+        "00633L",
+        "00637L",
+        "00641R",
+        "00642U",
+        "00643",
+        "00650L",
+        "00663L",
+        "00664R"
+      ]
     },
     "marketphase": {
-      "ok": true,
-      "count": 0,
-      "ssot_count": 0,
+      "ok": false,
+      "count": 56764,
+      "ssot_count": 55986,
       "missing_from_feature_count": 0,
-      "extra_in_feature_count": 0,
+      "extra_in_feature_count": 778,
       "sample_missing_from_feature": [],
-      "sample_extra_in_feature": []
+      "sample_extra_in_feature": [
+        "0061",
+        "006206",
+        "006208",
+        "00631L",
+        "00632R",
+        "00633L",
+        "00635U",
+        "00636",
+        "00637L",
+        "00638R"
+      ]
     },
     "elliott": {
-      "ok": true,
-      "count": 0,
-      "ssot_count": 0,
+      "ok": false,
+      "count": 56764,
+      "ssot_count": 55986,
       "missing_from_feature_count": 0,
-      "extra_in_feature_count": 0,
+      "extra_in_feature_count": 778,
       "sample_missing_from_feature": [],
-      "sample_extra_in_feature": []
+      "sample_extra_in_feature": [
+        "0061",
+        "006206",
+        "006208",
+        "00631L",
+        "00632R",
+        "00633L",
+        "00635U",
+        "00636",
+        "00637L",
+        "00638R"
+      ]
     }
   },
   "live_coverage": {
     "scientific_count": 2453,
     "forecast_count": 2425,
     "marketphase_count": 2442,
-    "scientific_ratio_to_ssot": null,
-    "forecast_ratio_to_ssot": null,
-    "marketphase_ratio_to_ssot": null
+    "scientific_ratio_to_ssot": 0.043815,
+    "forecast_ratio_to_ssot": 0.043314,
+    "marketphase_ratio_to_ssot": 0.043618
   },
   "violations": [
-    "SSOT_EMPTY_OR_MISSING"
+    "SET_MISMATCH:analyzer",
+    "SET_MISMATCH:scientific",
+    "SET_MISMATCH:forecast",
+    "SET_MISMATCH:marketphase",
+    "SET_MISMATCH:elliott"
   ],
   "status": "WARN"
 }

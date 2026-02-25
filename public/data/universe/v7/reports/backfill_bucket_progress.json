@@ -1,0 +1,133 @@
+{
+  "schema": "rv_v7_backfill_bucket_progress_v1",
+  "generated_at": "2026-02-25T19:46:07.521Z",
+  "env_file": null,
+  "skip_archeology": false,
+  "backfill_max": 2000,
+  "max_runs_per_bucket": 50,
+  "max_no_progress_runs": 3,
+  "strict_bucket_order": true,
+  "max_throttle_stops": 3,
+  "throttle_cooldown_ms": 120000,
+  "backfill_waivers": {
+    "path": "mirrors/universe-v7/state/backfill_waivers.json",
+    "exists": false,
+    "count": 0
+  },
+  "budget_stopped": false,
+  "fatal": null,
+  "blocked_by_incomplete_bucket": {
+    "bucket": "stocks",
+    "remaining": 4,
+    "reason": "bucket_incomplete_strict_order"
+  },
+  "buckets": [
+    {
+      "id": "stocks",
+      "priority": 1,
+      "allowlist": [
+        "STOCK"
+      ],
+      "runs": [
+        {
+          "run": 1,
+          "status": 0,
+          "code": 0,
+          "run_id": "v7_20260225194308_a3c77d",
+          "reason": null,
+          "remaining_global": 4,
+          "before": {
+            "total": 74841,
+            "backfill_real": 74837,
+            "with_bars": 74839,
+            "remaining": 4,
+            "checkpoint_done": 0,
+            "checkpoint_pending": 0,
+            "progress_units": 74837
+          },
+          "after": {
+            "total": 74841,
+            "backfill_real": 74837,
+            "with_bars": 74839,
+            "remaining": 4,
+            "checkpoint_done": 0,
+            "checkpoint_pending": 4,
+            "progress_units": 74837
+          },
+          "delta_backfill_real": 0,
+          "delta_progress_units": 0,
+          "delta_with_bars": 0
+        },
+        {
+          "run": 2,
+          "status": 0,
+          "code": 0,
+          "run_id": "v7_20260225194407_d6d2c2",
+          "reason": null,
+          "remaining_global": 0,
+          "before": {
+            "total": 74841,
+            "backfill_real": 74837,
+            "with_bars": 74839,
+            "remaining": 4,
+            "checkpoint_done": 0,
+            "checkpoint_pending": 4,
+            "progress_units": 74837
+          },
+          "after": {
+            "total": 74841,
+            "backfill_real": 74837,
+            "with_bars": 74839,
+            "remaining": 4,
+            "checkpoint_done": 4,
+            "checkpoint_pending": 0,
+            "progress_units": 74837
+          },
+          "delta_backfill_real": 0,
+          "delta_progress_units": 0,
+          "delta_with_bars": 0
+        },
+        {
+          "run": 3,
+          "status": 0,
+          "code": 0,
+          "run_id": "v7_20260225194509_0f02c0",
+          "reason": null,
+          "remaining_global": 4,
+          "before": {
+            "total": 74841,
+            "backfill_real": 74837,
+            "with_bars": 74839,
+            "remaining": 4,
+            "checkpoint_done": 4,
+            "checkpoint_pending": 0,
+            "progress_units": 74837
+          },
+          "after": {
+            "total": 74841,
+            "backfill_real": 74837,
+            "with_bars": 74839,
+            "remaining": 4,
+            "checkpoint_done": 0,
+            "checkpoint_pending": 4,
+            "progress_units": 74837
+          },
+          "delta_backfill_real": 0,
+          "delta_progress_units": 0,
+          "delta_with_bars": 0
+        }
+      ],
+      "throttled_stops": 0,
+      "completed": false,
+      "last_progress": {
+        "total": 74841,
+        "backfill_real": 74837,
+        "with_bars": 74839,
+        "remaining": 4,
+        "checkpoint_done": 0,
+        "checkpoint_pending": 4,
+        "progress_units": 74837
+      }
+    }
+  ]
+}
