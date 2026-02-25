@@ -1,0 +1,29 @@
+{
+  "schema": "rv_v7_ui_safety_report_v1",
+  "generated_at": "2026-02-25T20:03:52.198Z",
+  "run_id": "v7_20260225200147_4b0466",
+  "mode": "shadow",
+  "strict": false,
+  "metrics": {
+    "max_json_download_mb_on_route": 2,
+    "max_parse_time_ms_ci": 1500,
+    "max_dom_rows_initial": 200
+  },
+  "violations": [],
+  "warnings": [
+    {
+      "file": "public/index.html",
+      "pattern": "\\/data\\/universe\\/all\\.json",
+      "occurrences": 1,
+      "reason": "SHADOW_MODE_LEGACY_ALLOWED_TEMPORARILY"
+    },
+    {
+      "file": "public/index.html",
+      "pattern": "UNIVERSE_URL\\s*=\\s*['\"]\\/data\\/universe\\/all\\.json['\"]",
+      "occurrences": 1,
+      "reason": "SHADOW_MODE_LEGACY_ALLOWED_TEMPORARILY"
+    }
+  ],
+  "search_adapter_refs": 2,
+  "status": "PASS"
+}
