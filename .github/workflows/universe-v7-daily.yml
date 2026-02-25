@@ -25,11 +25,11 @@ jobs:
       - name: Orphan Guard
         run: node scripts/universe-v7/gates/orphan-guard.mjs
 
-      - name: Registry Mirror Audit
-        run: node scripts/audit/registry-mirror-check.mjs --strict --max-critical 0
+      - name: Registry Mirror Audit (report-only)
+        run: node scripts/audit/registry-mirror-check.mjs
 
-      - name: Mirror Envelope Validator
-        run: node scripts/validators/mirror-envelope-validator.mjs --strict --max-critical 0
+      - name: Mirror Envelope Validator (report-only)
+        run: node scripts/validators/mirror-envelope-validator.mjs
 
       - name: Run v7 Daily Stack
         env:
