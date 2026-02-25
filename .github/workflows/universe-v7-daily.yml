@@ -41,7 +41,7 @@ jobs:
         # 2) etfs
         # 3) rest (forex/bonds/etc.)
         # Conservative pacing reduces false stops / retry waste.
-        run: node scripts/universe-v7/run-daily-stack.mjs --buckets stocks,etfs,rest --max-runs-per-bucket 50 --max-no-progress-runs 3 --backfill-max 2000 --sleep-ms 2000 --min-bars 200 --feature marketphase
+        run: node scripts/universe-v7/run-daily-stack.mjs --buckets stocks,etfs,rest --max-runs-per-bucket 50 --max-no-progress-runs 3 --backfill-max 2000 --sleep-ms 2000 --min-bars 200 --feature marketphase --allow-next-bucket-on-incomplete
 
       - name: Upload Reports
         if: always()
