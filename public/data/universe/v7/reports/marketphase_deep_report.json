@@ -1,0 +1,34 @@
+{
+  "schema": "rv_v7_marketphase_deep_report_v1",
+  "started_at": "2026-02-25T19:33:58.184Z",
+  "finished_at": "2026-02-25T19:33:58.193Z",
+  "args": {
+    "minBars": 200,
+    "maxSymbols": null,
+    "asOf": null,
+    "feature": "marketphase",
+    "idMode": "symbol"
+  },
+  "sources": {
+    "registry": "public/data/universe/v7/registry/registry.ndjson.gz",
+    "by_feature": "public/data/universe/v7/ssot/stocks.by_feature.json",
+    "history_root": "mirrors/universe-v7"
+  },
+  "scan": {
+    "rows_total": 0,
+    "stock_rows": 0,
+    "stock_rows_in_target": 0,
+    "stock_rows_with_pack": 0,
+    "stock_rows_with_min_bars": 0,
+    "selected_candidates": 0,
+    "selected_candidate_variants": 0
+  },
+  "output": {
+    "summary_path": "public/data/universe/v7/read_models/marketphase_deep_summary.json",
+    "count": 0
+  },
+  "errors": {
+    "count": 0,
+    "sample": []
+  }
+}

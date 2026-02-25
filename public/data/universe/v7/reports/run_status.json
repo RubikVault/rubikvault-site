@@ -1,0 +1,107 @@
+{
+  "schema": "rv_v7_run_status_v1",
+  "generated_at": "2026-02-25T19:33:58.038Z",
+  "run_id": "v7_20260225193357_fa46e7",
+  "exit_code": 0,
+  "reason": "ok",
+  "steps": [
+    {
+      "step": "phase0_archeology",
+      "ok": true,
+      "code": 0,
+      "output": {
+        "status": "OK",
+        "phase": "phase0_archeology",
+        "contract_path": "policies/universe/core_legacy_contract.json",
+        "baseline_path": "mirrors/universe-v7/baseline/baseline_architecture_snapshot.json",
+        "legacy_counts": {
+          "universe_count": 2453,
+          "market_prices_count": 517,
+          "forecast_count": 2425,
+          "marketphase_count": 2442
+        },
+        "contract_hash": "0e7249ec75173819704178ada129b053f2a0aa72587172b5965bc2922b61d4b4"
+      }
+    },
+    {
+      "step": "preflight",
+      "ok": true,
+      "code": 0,
+      "output": {
+        "status": "OK",
+        "code": 0,
+        "phase": "preflight",
+        "run_id": "v7_20260225193357_fa46e7",
+        "tmp_dir": "tmp/v7-build/v7_20260225193357_fa46e7",
+        "run_dir": "mirrors/universe-v7/runs/v7_20260225193357_fa46e7",
+        "lock_path": "mirrors/universe-v7/state/run.lock",
+        "lock_held": true
+      }
+    },
+    {
+      "step": "law_coverage",
+      "ok": true,
+      "code": 0,
+      "output": {
+        "status": "OK",
+        "code": 0,
+        "report": "public/data/universe/v7/reports/law_coverage_report.json"
+      }
+    },
+    {
+      "step": "single_ingestor",
+      "ok": true,
+      "code": 0,
+      "output": {
+        "status": "OK",
+        "code": 0,
+        "violations": 0
+      }
+    },
+    {
+      "step": "pipeline_v7",
+      "ok": true,
+      "code": 0,
+      "exit_code": 0,
+      "reason": "ok",
+      "output": {
+        "status": "OK",
+        "code": 0,
+        "run_id": "v7_20260225193357_fa46e7",
+        "run_dir": "tmp/v7-build/v7_20260225193357_fa46e7",
+        "publish_payload": "tmp/v7-build/v7_20260225193357_fa46e7/publish_payload"
+      }
+    },
+    {
+      "step": "ui_safety",
+      "ok": true,
+      "code": 0,
+      "output": {
+        "status": "OK",
+        "code": 0,
+        "warnings": 2
+      }
+    },
+    {
+      "step": "license_leak",
+      "ok": true,
+      "code": 0,
+      "output": {
+        "status": "OK",
+        "code": 0,
+        "scanned_files": 24
+      }
+    },
+    {
+      "step": "publish_two_phase",
+      "ok": true,
+      "code": 0,
+      "output": {
+        "status": "OK",
+        "code": 0,
+        "run_id": "v7_20260225193357_fa46e7",
+        "publish_dir": "public/data/universe/v7"
+      }
+    }
+  ]
+}

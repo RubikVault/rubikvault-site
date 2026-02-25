@@ -1,0 +1,67 @@
+{
+  "schema": "rv_v7_feature_stock_universe_report_v1",
+  "generated_at": "2026-02-25T19:34:03.015Z",
+  "sources": {
+    "ssot_symbols": "public/data/universe/v7/ssot/stocks.max.symbols.json",
+    "by_feature": "public/data/universe/v7/ssot/stocks.by_feature.json",
+    "shared_features": "public/data/universe/v7/ssot/stocks.shared.features.json",
+    "scientific_snapshot": "public/data/snapshots/stock-analysis.json",
+    "forecast_latest": "public/data/forecast/latest.json",
+    "marketphase_index": "public/data/marketphase/index.json",
+    "marketphase_deep_summary": "public/data/universe/v7/read_models/marketphase_deep_summary.json",
+    "marketphase_deep_canonical_summary": "public/data/universe/v7/read_models/marketphase_deep_canonical_summary.json"
+  },
+  "counts": {
+    "ssot_stocks_max": 0,
+    "ssot_stocks_history_200_cap": 0,
+    "ssot_stocks_lt200_or_no_pack_gap": 0,
+    "ssot_stocks_lt200_no_pack": 0,
+    "ssot_stocks_canonical_max": 0,
+    "stock_analyzer_effective": 0,
+    "by_feature_scientific": 0,
+    "by_feature_forecast": 0,
+    "by_feature_marketphase": 0,
+    "by_feature_elliott": 0,
+    "by_feature_scientific_canonical": 0,
+    "by_feature_forecast_canonical": 0,
+    "by_feature_marketphase_canonical": 0,
+    "by_feature_elliott_canonical": 0,
+    "shared_features": 0,
+    "scientific_raw": 2453,
+    "forecast_raw": 2425,
+    "marketphase_raw": 2442,
+    "marketphase_deep_raw": 0,
+    "marketphase_deep_raw_canonical": 0,
+    "elliott_raw": 2442,
+    "scientific_effective": 0,
+    "forecast_effective": 0,
+    "marketphase_effective": 0,
+    "elliott_effective": 0,
+    "scientific_raw_canonical": 0,
+    "forecast_raw_canonical": 0,
+    "marketphase_raw_canonical": 0,
+    "elliott_raw_canonical": 0,
+    "scientific_effective_canonical": 0,
+    "forecast_effective_canonical": 0,
+    "marketphase_effective_canonical": 0,
+    "elliott_effective_canonical": 0
+  },
+  "parity": {
+    "effective_equal_scientific_forecast_elliott": true,
+    "effective_equal_all_four": true,
+    "effective_equal_forecast_marketphase_elliott": true,
+    "effective_equal_forecast_marketphase_elliott_to_history200_cap": true
+  },
+  "derivation": {
+    "marketphase_raw_effective_source": "marketphase_index",
+    "marketphase_raw_canonical_source": "projected_from_symbol_sets",
+    "forecast_raw_canonical_source": "projected_from_symbol_set",
+    "elliott_raw_source": "marketphase_index"
+  },
+  "notes": [
+    "Stock Analyzer can query the full v7 stock SSOT via /api/stock + v7 fallback.",
+    "Scientific/Forecast/Marketphase/Elliott should target the v7 stocks.by_feature universe.",
+    "Raw/effective counts show current pipeline coverage against target universes.",
+    "ssot_stocks_history_200_cap is the practical cap for features that require >=200 valid bars."
+  ]
+}

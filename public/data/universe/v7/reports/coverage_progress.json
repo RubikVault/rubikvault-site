@@ -1,0 +1,88 @@
+{
+  "schema": "rv_v7_coverage_progress_v1",
+  "generated_at": "2026-02-25T19:34:03.076Z",
+  "sources": {
+    "ssot_symbols": "public/data/universe/v7/ssot/stocks.max.symbols.json",
+    "registry": "public/data/universe/v7/registry/registry.ndjson.gz",
+    "forecast_latest": "public/data/forecast/latest.json",
+    "marketphase_index": "public/data/marketphase/index.json",
+    "feature_stock_universe_report": "public/data/universe/v7/ssot/feature_stock_universe_report.json"
+  },
+  "targets": {
+    "stock_universe_target": 0,
+    "forecast_symbol_target": 0,
+    "marketphase_symbol_target": 0,
+    "elliott_deep_symbol_target": 0
+  },
+  "coverage": {
+    "forecast_symbols_current": 2425,
+    "marketphase_symbols_current": 2442,
+    "marketphase_deep_symbols_current": 0,
+    "registry_stock_unique_with_200": 0,
+    "registry_stock_unique_with_bars": 0,
+    "registry_stock_unique_with_history_pack": 0,
+    "registry_stock_unique_total": 0
+  },
+  "progress_pct": {
+    "forecast_vs_target_pct": 0,
+    "marketphase_vs_target_pct": 0,
+    "marketphase_deep_vs_target_pct": 0,
+    "precondition_200bars_vs_target_pct": 0
+  },
+  "gaps": {
+    "forecast_gap_to_target": 0,
+    "marketphase_gap_to_target": 0,
+    "marketphase_deep_gap_to_target": 0,
+    "precondition_200bars_gap_to_target": 0
+  },
+  "row_level_registry": {
+    "stock_rows_total": 0,
+    "stock_rows_with_bars": 0,
+    "stock_rows_with_200": 0,
+    "stock_rows_with_history_pack": 0,
+    "stock_rows_with_bars_pct": 0,
+    "stock_rows_with_200_pct": 0,
+    "stock_rows_with_history_pack_pct": 0
+  },
+  "notes": [
+    "Forecast requires sufficient per-symbol history (>=200 bars in current pipeline).",
+    "Marketphase coverage uses deep summary when available; index.json is legacy fallback.",
+    "Elliott deep coverage depends on marketphase artifact coverage, not only universe target size.",
+    "Feature universe target can be met before data preconditions are met."
+  ],
+  "previous_feature_report_snapshot": {
+    "ssot_stocks_max": 0,
+    "ssot_stocks_history_200_cap": 0,
+    "ssot_stocks_lt200_or_no_pack_gap": 0,
+    "ssot_stocks_lt200_no_pack": 0,
+    "ssot_stocks_canonical_max": 0,
+    "stock_analyzer_effective": 0,
+    "by_feature_scientific": 0,
+    "by_feature_forecast": 0,
+    "by_feature_marketphase": 0,
+    "by_feature_elliott": 0,
+    "by_feature_scientific_canonical": 0,
+    "by_feature_forecast_canonical": 0,
+    "by_feature_marketphase_canonical": 0,
+    "by_feature_elliott_canonical": 0,
+    "shared_features": 0,
+    "scientific_raw": 2453,
+    "forecast_raw": 2425,
+    "marketphase_raw": 2442,
+    "marketphase_deep_raw": 0,
+    "marketphase_deep_raw_canonical": 0,
+    "elliott_raw": 2442,
+    "scientific_effective": 0,
+    "forecast_effective": 0,
+    "marketphase_effective": 0,
+    "elliott_effective": 0,
+    "scientific_raw_canonical": 0,
+    "forecast_raw_canonical": 0,
+    "marketphase_raw_canonical": 0,
+    "elliott_raw_canonical": 0,
+    "scientific_effective_canonical": 0,
+    "forecast_effective_canonical": 0,
+    "marketphase_effective_canonical": 0,
+    "elliott_effective_canonical": 0
+  }
+}
