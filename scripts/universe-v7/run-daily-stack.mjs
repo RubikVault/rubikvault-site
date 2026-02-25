@@ -1,5 +1,11 @@
 #!/usr/bin/env node
+import fs from 'node:fs';
+import path from 'node:path';
 import { spawnSync } from 'node:child_process';
+
+
+const REPO_ROOT = process.cwd();
+const REGISTRY_GZ = path.join(REPO_ROOT, 'public/data/universe/v7/registry/registry.ndjson.gz');
 
 function parseArgs(argv = process.argv.slice(2)) {
   const out = {
@@ -74,6 +80,19 @@ function main() {
         '--backfill-max', args.backfillMax,
         '--sleep-ms', args.sleepMs
       ]
+    );
+  }
+
+  if (!fs.existsSync(REGISTRY_GZ)) {
+    runStep(
+      'Bootstrap v7 Publish (registry missing)',
+      'node',
+      ['scripts/universe-v7/run-v7.mjs'],
+      {
+        ...process.env,
+        RV_V7_BACKFILL_FAST_MODE: process.env.RV_V7_BACKFILL_FAST_MODE || 'true',
+        RV_V7_SKIP_SSOT_BUILD: 'true'
+      }
     );
   }
 
