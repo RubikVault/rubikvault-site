@@ -22,7 +22,8 @@ function parseArgs(argv = process.argv.slice(2)) {
     sleepMs: '2000',
     minBars: '200',
     feature: 'marketphase',
-    enforceFeatureParity: false
+    enforceFeatureParity: false,
+    allowNextBucketOnIncomplete: false
   };
 
   for (let i = 0; i < argv.length; i += 1) {
@@ -41,6 +42,7 @@ function parseArgs(argv = process.argv.slice(2)) {
     else if (token === '--min-bars') out.minBars = String(argv[++i] || out.minBars);
     else if (token === '--feature') out.feature = String(argv[++i] || out.feature);
     else if (token === '--enforce-feature-parity') out.enforceFeatureParity = true;
+    else if (token === '--allow-next-bucket-on-incomplete') out.allowNextBucketOnIncomplete = true;
   }
 
   return out;
@@ -78,7 +80,8 @@ function main() {
         '--max-throttle-stops', args.maxThrottleStops,
         '--throttle-cooldown-ms', args.throttleCooldownMs,
         '--backfill-max', args.backfillMax,
-        '--sleep-ms', args.sleepMs
+        '--sleep-ms', args.sleepMs,
+        ...(args.allowNextBucketOnIncomplete ? ['--allow-next-bucket-on-incomplete'] : [])
       ]
     );
   }
