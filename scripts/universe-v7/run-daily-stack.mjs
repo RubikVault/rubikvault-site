@@ -87,7 +87,7 @@ function main() {
     runStep(
       'Bootstrap v7 Publish (registry missing)',
       'node',
-      ['scripts/universe-v7/run-v7.mjs'],
+      ['scripts/universe-v7/run-v7.mjs', '--publish'],
       {
         ...process.env,
         RV_V7_BACKFILL_FAST_MODE: process.env.RV_V7_BACKFILL_FAST_MODE || 'true',
