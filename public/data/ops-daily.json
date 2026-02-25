@@ -1,12 +1,12 @@
 {
   "schema_version": "1.0",
-  "asOf": "2026-02-25T08:05:52.542Z",
+  "asOf": "2026-02-25T22:50:15.284Z",
   "baseline": {
     "expectedUniverse": 2453,
     "pipeline": {
       "expected": 2453,
       "fetched": 100,
-      "validatedStored": 99,
+      "validatedStored": 100,
       "computed": 2442,
       "staticReady": 2442,
       "missing": [
@@ -175,7 +175,7 @@
     "cloudflare": {
       "requestsToday": null,
       "requestsLast24h": null,
-      "notes": "ok"
+      "notes": "CF analytics not configured"
     },
     "safety": {
       "kvWritesToday": 0,
@@ -188,27 +188,17 @@
       "counts": {
         "expected": 100,
         "fetched": 100,
-        "validated": 99,
+        "validated": 100,
         "computed": 2442,
         "static_ready": 2442
       },
       "degraded_summary": {
-        "count": 1,
-        "classes": {
-          "VALIDATION_FAILED": 1
-        },
-        "sample": [
-          {
-            "symbol": "AZN",
-            "stage": "validate",
-            "class": "VALIDATION_FAILED",
-            "hint": "close_outside_range",
-            "since": "2026-02-24T22:53:46.712Z"
-          }
-        ]
+        "count": 0,
+        "classes": {},
+        "sample": []
       },
       "root_failure": null,
-      "generated_at": "2026-02-24T22:53:46.712Z"
+      "generated_at": "2026-02-25T22:50:12.780Z"
     }
   }
 }
