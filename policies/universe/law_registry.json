@@ -1,0 +1,24 @@
+{
+  "schema": "rv_v7_law_registry_v1",
+  "version": "7.1",
+  "generated_at": "2026-02-18T00:00:00.000Z",
+  "laws": [
+    {"law_id":"LAW-L0","title":"Legacy SSOT Contract","severity":"critical","exit_code":90,"enforced_by_checks":["legacy_contract_gate"],"required_reports":["run_status.json"],"owner":"universe-v7","version_hash":"l0_v1"},
+    {"law_id":"LAW-L1","title":"No Feature Rewrite","severity":"critical","exit_code":92,"enforced_by_checks":["ui_safety_gate"],"required_reports":["ui_safety_report.json"],"owner":"universe-v7","version_hash":"l1_v1"},
+    {"law_id":"LAW-L2","title":"No Random Access Gzip","severity":"high","exit_code":62,"enforced_by_checks":["determinism_gate"],"required_reports":["run_status.json"],"owner":"universe-v7","version_hash":"l2_v1"},
+    {"law_id":"LAW-L3","title":"Static First Pipeline","severity":"high","exit_code":62,"enforced_by_checks":["determinism_gate"],"required_reports":["run_status.json"],"owner":"universe-v7","version_hash":"l3_v1"},
+    {"law_id":"LAW-L4","title":"Budget Governor Always On","severity":"critical","exit_code":97,"enforced_by_checks":["budget_kill_gate"],"required_reports":["budget_report.json"],"owner":"universe-v7","version_hash":"l4_v1"},
+    {"law_id":"LAW-L5","title":"Resume Mandatory","severity":"critical","exit_code":31,"enforced_by_checks":["checkpoint_integrity_gate"],"required_reports":["run_status.json"],"owner":"universe-v7","version_hash":"l5_v1"},
+    {"law_id":"LAW-L6","title":"Atomic Publish","severity":"critical","exit_code":96,"enforced_by_checks":["two_phase_publish_gate"],"required_reports":["run_status.json"],"owner":"universe-v7","version_hash":"l6_v1"},
+    {"law_id":"LAW-L7","title":"Canonical Identity SSOT","severity":"critical","exit_code":91,"enforced_by_checks":["determinism_gate"],"required_reports":["run_status.json"],"owner":"universe-v7","version_hash":"l7_v1"},
+    {"law_id":"LAW-L8","title":"Tiering Tail Packs Only","severity":"critical","exit_code":91,"enforced_by_checks":["license_leak_gate"],"required_reports":["license_leak_scan_report.json"],"owner":"universe-v7","version_hash":"l8_v1"},
+    {"law_id":"LAW-L9","title":"UI Memory Law","severity":"critical","exit_code":92,"enforced_by_checks":["ui_safety_gate"],"required_reports":["ui_safety_report.json"],"owner":"universe-v7","version_hash":"l9_v1"},
+    {"law_id":"LAW-L10","title":"Single Ingestor Law","severity":"critical","exit_code":94,"enforced_by_checks":["single_ingestor_gate"],"required_reports":["single_ingestor_guard_report.json"],"owner":"universe-v7","version_hash":"l10_v1"},
+    {"law_id":"LAW-L11","title":"License Gate Law","severity":"critical","exit_code":95,"enforced_by_checks":["license_leak_gate"],"required_reports":["license_leak_scan_report.json"],"owner":"universe-v7","version_hash":"l11_v1"},
+    {"law_id":"LAW-L12","title":"Determinism Law","severity":"critical","exit_code":62,"enforced_by_checks":["determinism_gate"],"required_reports":["run_status.json"],"owner":"universe-v7","version_hash":"l12_v1"},
+    {"law_id":"LAW-L13","title":"Law Registry Required","severity":"critical","exit_code":93,"enforced_by_checks":["law_coverage_gate"],"required_reports":["law_coverage_report.json"],"owner":"universe-v7","version_hash":"l13_v1"},
+    {"law_id":"LAW-L14","title":"Law Coverage Required","severity":"critical","exit_code":93,"enforced_by_checks":["law_coverage_gate"],"required_reports":["law_coverage_report.json"],"owner":"universe-v7","version_hash":"l14_v1"},
+    {"law_id":"LAW-L15","title":"Law Change Log Required","severity":"high","exit_code":93,"enforced_by_checks":["law_coverage_gate"],"required_reports":["law_coverage_report.json"],"owner":"universe-v7","version_hash":"l15_v1"},
+    {"law_id":"LAW-L16","title":"No Silent Partial Publish","severity":"critical","exit_code":96,"enforced_by_checks":["two_phase_publish_gate"],"required_reports":["run_status.json"],"owner":"universe-v7","version_hash":"l16_v1"}
+  ]
+}
