@@ -75,6 +75,11 @@ PHASEA_REAL_DELTA_TEST_MODE="${Q1_DAILY_PHASEA_REAL_DELTA_TEST_MODE:-0}"
 PHASEA_REAL_DELTA_MIN_ROWS="${Q1_DAILY_PHASEA_REAL_DELTA_MIN_ROWS:-1}"
 PHASEA_REAL_DELTA_LIMIT_PACKS="${Q1_DAILY_PHASEA_REAL_DELTA_LIMIT_PACKS:-2}"
 PHASEA_REAL_DELTA_MAX_ROWS="${Q1_DAILY_PHASEA_REAL_DELTA_MAX_ROWS:-100000}"
+RUN_STAGEB_Q1="${Q1_DAILY_RUN_STAGEB_Q1:-0}"
+RUN_REGISTRY_Q1="${Q1_DAILY_RUN_REGISTRY_Q1:-0}"
+STAGEB_Q1_STRICT_SURVIVORS_MAX="${Q1_DAILY_STAGEB_Q1_STRICT_SURVIVORS_MAX:-8}"
+REGISTRY_SCORE_EPSILON="${Q1_DAILY_REGISTRY_SCORE_EPSILON:-0.01}"
+USE_LEGACY_SHELL_POST_STEPS="${Q1_DAILY_USE_LEGACY_SHELL_POST_STEPS:-0}"
 
 LOG_DIR="$QUANT_ROOT/logs"
 mkdir -p "$LOG_DIR"
@@ -128,6 +133,13 @@ if [[ "$RUN_PHASEA_BACKBONE" == "1" ]]; then
   fi
 fi
 
+if [[ "$RUN_STAGEB_Q1" == "1" ]]; then
+  CMD+=(--run-stageb-q1 --stageb-q1-strict-survivors-max "$STAGEB_Q1_STRICT_SURVIVORS_MAX")
+fi
+if [[ "$RUN_REGISTRY_Q1" == "1" ]]; then
+  CMD+=(--run-registry-q1 --registry-score-epsilon "$REGISTRY_SCORE_EPSILON")
+fi
+
 if [[ "$PRINT_ONLY" -eq 1 ]]; then
   printf 'snapshot_id=%s\n' "$SNAPSHOT_ID"
   printf 'log_file=%s\n' "$LOG_FILE"
@@ -145,6 +157,7 @@ fi
   echo "[q1-daily-local] panel_output_tag=$PANEL_OUTPUT_TAG"
   echo "[q1-daily-local] panel_max_assets=$PANEL_MAX_ASSETS top_liquid_n=$TOP_LIQUID_N"
   echo "[q1-daily-local] phasea_backbone=$RUN_PHASEA_BACKBONE phasea_real_delta_test=$PHASEA_REAL_DELTA_TEST_MODE"
+  echo "[q1-daily-local] stageb_q1=$RUN_STAGEB_Q1 registry_q1=$RUN_REGISTRY_Q1 legacy_shell_post_steps=$USE_LEGACY_SHELL_POST_STEPS"
   printf '[q1-daily-local] cmd='
   printf '%q ' "${CMD[@]}"
   printf '\n'
@@ -155,7 +168,7 @@ set +e
 RC=${PIPESTATUS[0]}
 set -e
 
-if [[ "$RC" -eq 0 && "${Q1_DAILY_RUN_STAGEB_PREP:-0}" == "1" ]]; then
+if [[ "$RC" -eq 0 && "$USE_LEGACY_SHELL_POST_STEPS" == "1" && "${Q1_DAILY_RUN_STAGEB_PREP:-0}" == "1" ]]; then
   STAGEB_PY="${Q1_STAGEB_PYTHON_BIN:-$PYTHON_BIN}"
   STAGEB_SCRIPT="$REPO_ROOT/scripts/quantlab/prepare_stage_b_q1.py"
   STAGEA_RUN_ID="$(
@@ -193,7 +206,7 @@ PY
   fi
 fi
 
-if [[ "$RC" -eq 0 && "${Q1_DAILY_RUN_STAGEB_Q1:-0}" == "1" ]]; then
+if [[ "$RC" -eq 0 && "$USE_LEGACY_SHELL_POST_STEPS" == "1" && "${Q1_DAILY_RUN_STAGEB_Q1:-0}" == "1" ]]; then
   STAGEB_Q1_PY="${Q1_STAGEB_Q1_PYTHON_BIN:-$PYTHON_BIN}"
   STAGEB_Q1_SCRIPT="$REPO_ROOT/scripts/quantlab/run_stage_b_q1.py"
   STAGEA_RUN_ID="$(
@@ -231,7 +244,7 @@ PY
   fi
 fi
 
-if [[ "$RC" -eq 0 && "${Q1_DAILY_RUN_REGISTRY_Q1:-0}" == "1" ]]; then
+if [[ "$RC" -eq 0 && "$USE_LEGACY_SHELL_POST_STEPS" == "1" && "${Q1_DAILY_RUN_REGISTRY_Q1:-0}" == "1" ]]; then
   REG_PY="${Q1_REGISTRY_Q1_PYTHON_BIN:-$PYTHON_BIN}"
   REG_SCRIPT="$REPO_ROOT/scripts/quantlab/run_registry_update_q1.py"
   STAGEB_RUN_ID="$(

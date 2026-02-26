@@ -44,6 +44,10 @@ def parse_args(argv: Iterable[str]) -> argparse.Namespace:
     p.add_argument("--min-train-days", type=int, default=8)
     p.add_argument("--survivors-max", type=int, default=24)
     p.add_argument("--asof-end-date", default="")
+    p.add_argument("--run-stageb-q1", action="store_true")
+    p.add_argument("--run-registry-q1", action="store_true")
+    p.add_argument("--stageb-q1-strict-survivors-max", type=int, default=8)
+    p.add_argument("--registry-score-epsilon", type=float, default=0.01)
     return p.parse_args(list(argv))
 
 
@@ -63,6 +67,8 @@ def main(argv: Iterable[str]) -> int:
     py = args.python
     orchestrator = REPO_ROOT / "scripts" / "quantlab" / "run_q1_panel_stage_a_pipeline.py"
     phasea_runner = REPO_ROOT / "scripts" / "quantlab" / "run_q1_daily_data_backbone_q1.py"
+    stageb_runner = REPO_ROOT / "scripts" / "quantlab" / "run_stage_b_q1.py"
+    registry_runner = REPO_ROOT / "scripts" / "quantlab" / "run_registry_update_q1.py"
 
     phasea_report_path: Path | None = None
     phasea_stdout = ""
@@ -224,6 +230,8 @@ def main(argv: Iterable[str]) -> int:
             "panel_output_tag": args.panel_output_tag,
             "asset_classes": args.asset_classes,
             "run_phasea_backbone": bool(args.run_phasea_backbone),
+            "run_stageb_q1": bool(args.run_stageb_q1),
+            "run_registry_q1": bool(args.run_registry_q1),
             "panel_max_assets": args.panel_max_assets,
             "top_liquid_n": args.top_liquid_n,
             "fold_count": args.fold_count,
@@ -299,13 +307,152 @@ def main(argv: Iterable[str]) -> int:
             "phasea_backbone_run_report_hash": stable_hash_file(phasea_report_path),
         }
 
+    # Optional Stage-B/Registry steps integrated into the same run status (preferred over shell-only post-steps).
+    stage_a_run_id = None
+    if (args.run_stageb_q1 or args.run_registry_q1) and (status.get("references") or {}).get("cheap_gate_report"):
+        cheap_path = str((status.get("references") or {}).get("cheap_gate_report") or "")
+        if "/runs/run_id=" in cheap_path:
+            frag = cheap_path.split("/runs/run_id=", 1)[1]
+            stage_a_run_id = frag.split("/", 1)[0]
+
+    stage_b_run_id = None
+    if args.run_stageb_q1:
+        if not stage_a_run_id:
+            status["ok"] = False
+            status["exit_code"] = 93
+            status["steps"].append(
+                {
+                    "name": "run_stage_b_q1",
+                    "ok": False,
+                    "exit_code": 93,
+                    "elapsed_sec": 0.0,
+                    "cmd": [],
+                    "stderr_tail": ["STAGE_B_Q1_SKIPPED_MISSING_STAGE_A_RUN_ID"],
+                }
+            )
+        else:
+            stageb_cmd = [
+                py, str(stageb_runner),
+                "--quant-root", str(quant_root),
+                "--stage-a-run-id", stage_a_run_id,
+                "--strict-survivors-max", str(args.stageb_q1_strict_survivors_max),
+            ]
+            t0_stageb = time.time()
+            stageb_proc = subprocess.run(stageb_cmd, cwd=REPO_ROOT, capture_output=True, text=True)
+            stageb_elapsed = round(time.time() - t0_stageb, 3)
+            stageb_stdout = stageb_proc.stdout or ""
+            stageb_stderr = stageb_proc.stderr or ""
+            stageb_kv = {}
+            for line in stageb_stdout.splitlines():
+                if "=" in line and not line.startswith("["):
+                    k, v = line.split("=", 1)
+                    if k and v:
+                        stageb_kv[k.strip()] = v.strip()
+            stage_b_report_path = Path(stageb_kv["report"]) if stageb_kv.get("report") else None
+            stage_b_run_id = stageb_kv.get("run_id")
+            status["steps"].append(
+                {
+                    "name": "run_stage_b_q1",
+                    "ok": stageb_proc.returncode == 0,
+                    "exit_code": int(stageb_proc.returncode),
+                    "elapsed_sec": stageb_elapsed,
+                    "cmd": stageb_cmd,
+                    "stdout_tail": stageb_stdout.splitlines()[-20:],
+                    "stderr_tail": stageb_stderr.splitlines()[-20:],
+                }
+            )
+            if stage_b_report_path and stage_b_report_path.exists():
+                status["artifacts"]["stage_b_q1_run_report"] = str(stage_b_report_path)
+                status.setdefault("hashes", {})["stage_b_q1_run_report_hash"] = stable_hash_file(stage_b_report_path)
+                try:
+                    sb = read_json(stage_b_report_path)
+                    status.setdefault("references", {})["stage_b_q1"] = {
+                        "run_id": sb.get("run_id"),
+                        "ok": sb.get("ok"),
+                        "counts": sb.get("counts") or {},
+                        "stage_b_q1_final": sb.get("stage_b_q1_final") or {},
+                        "artifacts": sb.get("artifacts") or {},
+                    }
+                    if not stage_b_run_id:
+                        stage_b_run_id = str(sb.get("run_id") or "")
+                except Exception:
+                    pass
+            if stageb_proc.returncode != 0:
+                status["ok"] = False
+                status["exit_code"] = int(stageb_proc.returncode)
+
+    if args.run_registry_q1 and status.get("ok", True):
+        if not stage_b_run_id and stage_a_run_id:
+            stage_b_run_id = f"q1stageb_{stage_a_run_id}"
+        if not stage_b_run_id:
+            status["ok"] = False
+            status["exit_code"] = 94
+            status["steps"].append(
+                {
+                    "name": "run_registry_update_q1",
+                    "ok": False,
+                    "exit_code": 94,
+                    "elapsed_sec": 0.0,
+                    "cmd": [],
+                    "stderr_tail": ["REGISTRY_Q1_SKIPPED_MISSING_STAGE_B_RUN_ID"],
+                }
+            )
+        else:
+            reg_cmd = [
+                py, str(registry_runner),
+                "--quant-root", str(quant_root),
+                "--stage-b-run-id", stage_b_run_id,
+                "--score-epsilon", str(args.registry_score_epsilon),
+            ]
+            t0_reg = time.time()
+            reg_proc = subprocess.run(reg_cmd, cwd=REPO_ROOT, capture_output=True, text=True)
+            reg_elapsed = round(time.time() - t0_reg, 3)
+            reg_stdout = reg_proc.stdout or ""
+            reg_stderr = reg_proc.stderr or ""
+            reg_kv = {}
+            for line in reg_stdout.splitlines():
+                if "=" in line and not line.startswith("["):
+                    k, v = line.split("=", 1)
+                    if k and v:
+                        reg_kv[k.strip()] = v.strip()
+            reg_report_path = Path(reg_kv["report"]) if reg_kv.get("report") else None
+            status["steps"].append(
+                {
+                    "name": "run_registry_update_q1",
+                    "ok": reg_proc.returncode == 0,
+                    "exit_code": int(reg_proc.returncode),
+                    "elapsed_sec": reg_elapsed,
+                    "cmd": reg_cmd,
+                    "stdout_tail": reg_stdout.splitlines()[-20:],
+                    "stderr_tail": reg_stderr.splitlines()[-20:],
+                }
+            )
+            if reg_report_path and reg_report_path.exists():
+                status["artifacts"]["q1_registry_update_report"] = str(reg_report_path)
+                status.setdefault("hashes", {})["q1_registry_update_report_hash"] = stable_hash_file(reg_report_path)
+                try:
+                    rr = read_json(reg_report_path)
+                    status.setdefault("references", {})["q1_registry"] = {
+                        "ok": rr.get("ok"),
+                        "stage_b_run_id": rr.get("stage_b_run_id"),
+                        "decision": ((rr.get("decision") or {}).get("decision")),
+                        "reason_codes": ((rr.get("decision") or {}).get("reason_codes") or []),
+                        "counts": rr.get("counts") or {},
+                        "artifacts": rr.get("artifacts") or {},
+                    }
+                except Exception:
+                    pass
+            if reg_proc.returncode != 0:
+                status["ok"] = False
+                status["exit_code"] = int(reg_proc.returncode)
+
     atomic_write_json(status_path, status)
     print(f"run_id={run_id}")
     print(f"status={status_path}")
     if orch_report_path:
         print(f"orchestrator_report={orch_report_path}")
     print(f"ok={status['ok']}")
-    return 0 if proc.returncode == 0 else proc.returncode
+    return 0 if status["ok"] else int(status["exit_code"])
 
 
 if __name__ == "__main__":

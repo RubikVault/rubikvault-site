@@ -6,8 +6,11 @@ import shutil
 import subprocess
 import sys
 import time
+from typing import Any
 from pathlib import Path
-from typing import Iterable, Any
+from typing import Iterable
+
+import polars as pl
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(REPO_ROOT) not in sys.path:
@@ -101,19 +104,87 @@ def main(argv: Iterable[str]) -> int:
             hashes[f"{name}_hash"] = stable_hash_file(dst)
 
     counts: dict[str, Any] = {}
+    prep_report_obj: dict[str, Any] | None = None
+    light_report_obj: dict[str, Any] | None = None
     if prep_report_path and prep_report_path.exists():
         try:
             prep = read_json(prep_report_path)
+            prep_report_obj = prep
             counts["stage_b_prep"] = prep.get("counts") or {}
         except Exception:
             pass
     if light_report_path and light_report_path.exists():
         try:
             light = read_json(light_report_path)
+            light_report_obj = light
             counts["stage_b_light"] = light.get("counts") or {}
             counts["stage_b_light_fail_reason_counts"] = light.get("fail_reason_counts") or {}
         except Exception:
             pass
+
+    # Q1 stricter orchestration: final Stage-B survivors are the intersection of
+    # Stage-B prep strict survivors and Stage-B light survivors. This reduces the
+    # chance that a light-only survivor bypasses stricter prep robustness gates.
+    stage_b_final_meta: dict[str, Any] = {
+        "selection_mode": "light_only",
+        "survivors_B_q1_total": 0,
+        "intersection_with_prep_strict_total": None,
+        "intersection_with_prep_shortlist_total": None,
+        "warnings": [],
+    }
+    survivors_b_q1_path: Path | None = None
+    if light_report_obj:
+        try:
+            light_artifacts = (light_report_obj.get("artifacts") or {})
+            light_survivors_path = Path(str(light_artifacts.get("survivors_B_light") or ""))
+            if light_survivors_path.exists():
+                survivors_light_df = pl.read_parquet(light_survivors_path)
+                survivors_q1_df = survivors_light_df
+                stage_b_final_meta["survivors_B_light_total"] = int(survivors_light_df.height)
+                if prep_report_obj:
+                    prep_artifacts = (prep_report_obj.get("artifacts") or {})
+                    prep_strict_path = Path(str(prep_artifacts.get("stage_b_prep_strict_survivors") or ""))
+                    prep_shortlist_path = Path(str(prep_artifacts.get("stage_b_prep_shortlist") or ""))
+                    prep_strict_ids = None
+                    prep_shortlist_ids = None
+                    if prep_strict_path.exists():
+                        prep_strict_df = pl.read_parquet(prep_strict_path)
+                        prep_strict_ids = set(
+                            str(x) for x in (
+                                prep_strict_df.get_column("candidate_id").to_list()
+                                if "candidate_id" in prep_strict_df.columns else []
+                            )
+                        )
+                        stage_b_final_meta["prep_strict_total"] = int(prep_strict_df.height)
+                    else:
+                        stage_b_final_meta["warnings"].append("prep_strict_survivors_missing")
+                    if prep_shortlist_path.exists():
+                        prep_shortlist_df = pl.read_parquet(prep_shortlist_path)
+                        prep_shortlist_ids = set(
+                            str(x) for x in (
+                                prep_shortlist_df.get_column("candidate_id").to_list()
+                                if "candidate_id" in prep_shortlist_df.columns else []
+                            )
+                        )
+                        stage_b_final_meta["prep_shortlist_total"] = int(prep_shortlist_df.height)
+                    if prep_strict_ids is not None:
+                        stage_b_final_meta["selection_mode"] = "intersection_prep_strict_and_light"
+                        survivors_q1_df = survivors_light_df.filter(
+                            pl.col("candidate_id").cast(pl.Utf8).is_in(sorted(prep_strict_ids))
+                        )
+                        stage_b_final_meta["intersection_with_prep_strict_total"] = int(survivors_q1_df.height)
+                    if prep_shortlist_ids is not None:
+                        inter_short = survivors_light_df.filter(
+                            pl.col("candidate_id").cast(pl.Utf8).is_in(sorted(prep_shortlist_ids))
+                        )
+                        stage_b_final_meta["intersection_with_prep_shortlist_total"] = int(inter_short.height)
+                stage_b_final_meta["survivors_B_q1_total"] = int(survivors_q1_df.height)
+                survivors_b_q1_path = artifacts_dir / "survivors_B_q1.parquet"
+                survivors_q1_df.write_parquet(survivors_b_q1_path)
+                copied["survivors_B_q1"] = str(survivors_b_q1_path)
+                hashes["survivors_B_q1_hash"] = stable_hash_file(survivors_b_q1_path)
+        except Exception as exc:
+            stage_b_final_meta["warnings"].append(f"failed_to_build_survivors_B_q1:{exc}")
 
     report_out = {
         "schema": "quantlab_stage_b_q1_run_report_v1",
@@ -137,6 +208,7 @@ def main(argv: Iterable[str]) -> int:
             "source_stage_a_outputs_dir": str(quant_root / 'runs' / f'run_id={stage_a_run_id}' / args.outputs_subdir),
         },
         "counts": counts,
+        "stage_b_q1_final": stage_b_final_meta,
         "hashes": hashes,
     }
     report_path = run_dir / "stage_b_q1_run_report.json"

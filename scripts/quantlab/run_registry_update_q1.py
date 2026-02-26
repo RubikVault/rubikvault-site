@@ -128,6 +128,18 @@ def _ensure_schema(conn: sqlite3.Connection) -> None:
           delta_metrics_json TEXT NOT NULL,
           artifacts_json TEXT NOT NULL
         );
+
+        CREATE TABLE IF NOT EXISTS candidate_state_events_q1 (
+          event_id TEXT PRIMARY KEY,
+          ts TEXT NOT NULL,
+          stage_b_run_id TEXT NOT NULL,
+          candidate_id TEXT NOT NULL,
+          family TEXT,
+          prev_state TEXT,
+          new_state TEXT NOT NULL,
+          reason_codes_json TEXT NOT NULL,
+          details_json TEXT NOT NULL
+        );
         """
     )
     conn.commit()
@@ -204,6 +216,33 @@ def _load_current_champion(conn: sqlite3.Connection) -> dict[str, Any] | None:
     }
 
 
+def _load_candidate_states(conn: sqlite3.Connection) -> dict[str, dict[str, Any]]:
+    cur = conn.execute(
+        "SELECT candidate_id,family,state,source_stage_b_run_id,updated_at,reason_codes_json,q1_registry_score,champion_id "
+        "FROM candidate_registry_state_q1"
+    )
+    out: dict[str, dict[str, Any]] = {}
+    for row in cur.fetchall():
+        cid = str(row[0] or "")
+        if not cid:
+            continue
+        try:
+            reasons = json.loads(row[5]) if row[5] else []
+        except Exception:
+            reasons = []
+        out[cid] = {
+            "candidate_id": cid,
+            "family": row[1],
+            "state": row[2],
+            "source_stage_b_run_id": row[3],
+            "updated_at": row[4],
+            "reason_codes": reasons,
+            "q1_registry_score": row[6],
+            "champion_id": row[7],
+        }
+    return out
+
+
 def _write_promotion_index(registry_root: Path, decisions_path: Path, events_path: Path) -> Path:
     def _scan(path: Path) -> list[dict[str, Any]]:
         rows = []
@@ -269,7 +308,16 @@ def main(argv: Iterable[str]) -> int:
         raise SystemExit(f"FATAL: missing stage_b_light_report: {stage_b_light_report_path}")
     stage_b_light_report = read_json(stage_b_light_report_path)
 
-    candidates_df, survivors_df = _read_stage_b_candidates(stage_b_light_report)
+    candidates_df, survivors_light_df = _read_stage_b_candidates(stage_b_light_report)
+    survivors_df = survivors_light_df
+    selected_survivors_source = "stage_b_light"
+    stage_b_q1_survivors_path = Path(str((artifacts.get("survivors_B_q1") or "")))
+    if stage_b_q1_survivors_path.exists():
+        try:
+            survivors_df = pl.read_parquet(stage_b_q1_survivors_path)
+            selected_survivors_source = "stage_b_q1_final"
+        except Exception:
+            selected_survivors_source = "stage_b_light_fallback_read_error"
     if "q1_registry_score" not in candidates_df.columns:
         candidates_df = candidates_df.with_columns(
             pl.struct(pl.all()).map_elements(lambda r: _candidate_score(r), return_dtype=pl.Float64).alias("q1_registry_score")
@@ -348,6 +396,7 @@ def main(argv: Iterable[str]) -> int:
         )
 
     current = _load_current_champion(conn)
+    prev_candidate_states = _load_candidate_states(conn)
     top_survivor = survivors_df.head(1).to_dicts()[0] if survivors_df.height > 0 else None
 
     decision = "NO_PROMOTION"
@@ -559,14 +608,85 @@ def main(argv: Iterable[str]) -> int:
                 srow["metrics_json"],
             ),
         )
+    # Candidate state transition events (audit trail for demotions/promotions/retirements).
+    candidate_state_events: list[dict[str, Any]] = []
+    for srow in state_rows:
+        cid = str(srow["candidate_id"])
+        prev = prev_candidate_states.get(cid)
+        prev_state = str(prev.get("state")) if prev else None
+        new_state = str(srow["state"])
+        if prev_state == new_state:
+            continue
+        transition_reason_codes = []
+        try:
+            transition_reason_codes.extend(json.loads(srow["reason_codes_json"]))
+        except Exception:
+            pass
+        if prev_state is None:
+            event_type = "STATE_DISCOVERED"
+            transition_reason_codes.append("FIRST_OBSERVED_IN_CANDIDATE_REGISTRY")
+        elif prev_state == "live" and new_state == "shadow":
+            event_type = "DEMOTION_TO_SHADOW"
+            transition_reason_codes.append("LIVE_CANDIDATE_NOT_RESELECTED_AS_CHAMPION")
+        elif prev_state == "live" and new_state == "retired":
+            event_type = "DEMOTION_TO_RETIRED"
+            transition_reason_codes.append("LIVE_CANDIDATE_FAILED_OR_NOT_SURVIVOR")
+        elif prev_state == "shadow" and new_state == "live":
+            event_type = "PROMOTION_TO_LIVE"
+            transition_reason_codes.append("SELECTED_AS_LIVE_CHAMPION")
+        elif prev_state == "retired" and new_state == "shadow":
+            event_type = "REVIVED_TO_SHADOW"
+            transition_reason_codes.append("REENTERED_STAGE_B_SURVIVORS")
+        else:
+            event_type = "STATE_TRANSITION"
+        ev = {
+            "schema": "quantlab_q1_candidate_state_event_v1",
+            "event_id": f"csev_{stable_hash_obj({'cid': cid, 'ts': now, 'from': prev_state, 'to': new_state, 'run': stage_b_run_id})[:20]}",
+            "ts": now,
+            "stage_b_run_id": stage_b_run_id,
+            "event_type": event_type,
+            "candidate_id": cid,
+            "family": srow.get("family"),
+            "prev_state": prev_state,
+            "new_state": new_state,
+            "reason_codes": sorted(set(str(x) for x in transition_reason_codes if x)),
+            "details": {
+                "source_stage_b_run_id": stage_b_run_id,
+                "q1_registry_score": srow.get("q1_registry_score"),
+                "champion_id": srow.get("champion_id"),
+                "prev_source_stage_b_run_id": (prev or {}).get("source_stage_b_run_id"),
+            },
+        }
+        candidate_state_events.append(ev)
+        conn.execute(
+            """
+            INSERT OR REPLACE INTO candidate_state_events_q1
+            (event_id, ts, stage_b_run_id, candidate_id, family, prev_state, new_state, reason_codes_json, details_json)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                ev["event_id"],
+                ev["ts"],
+                ev["stage_b_run_id"],
+                ev["candidate_id"],
+                ev.get("family"),
+                ev.get("prev_state"),
+                ev["new_state"],
+                json.dumps(ev.get("reason_codes") or [], sort_keys=True, ensure_ascii=False),
+                json.dumps(ev.get("details") or {}, sort_keys=True, ensure_ascii=False),
+            ),
+        )
     conn.commit()
 
     ledgers_dir = registry_root / "ledgers"
     decisions_path = ledgers_dir / "promotion_decisions.ndjson"
     events_path = ledgers_dir / "promotion_events.ndjson"
+    candidate_state_events_path = ledgers_dir / "candidate_state_events.ndjson"
     _append_jsonl(decisions_path, decision_rec)
     if event:
         _append_jsonl(events_path, event)
+    for ev in candidate_state_events:
+        _append_jsonl(candidate_state_events_path, ev)
     promotion_index_path = _write_promotion_index(registry_root, decisions_path, events_path)
 
     out_dir = quant_root / "runs" / f"run_id=q1registry_{stage_b_run_id}"
@@ -581,21 +701,30 @@ def main(argv: Iterable[str]) -> int:
         "event_written": bool(event),
         "counts": {
             "stage_b_candidates_total": int(candidates_df.height),
-            "stage_b_survivors_B_light_total": int(survivors_df.height),
+            "stage_b_survivors_B_light_total": int(survivors_light_df.height),
+            "stage_b_survivors_selected_total": int(survivors_df.height),
+            "stage_b_survivors_selected_source": selected_survivors_source,
             "candidate_registry_states_written": int(len(state_rows)),
+            "candidate_state_events_written": int(len(candidate_state_events)),
             "candidate_registry_state_counts": {
                 "live": sum(1 for r in state_rows if r["state"] == "live"),
                 "shadow": sum(1 for r in state_rows if r["state"] == "shadow"),
                 "retired": sum(1 for r in state_rows if r["state"] == "retired"),
+            },
+            "candidate_state_event_type_counts": {
+                k: sum(1 for e in candidate_state_events if e["event_type"] == k)
+                for k in sorted({e["event_type"] for e in candidate_state_events})
             },
         },
         "artifacts": {
             "registry_db": str(db_path),
             "promotion_decisions_ndjson": str(decisions_path),
             "promotion_events_ndjson": str(events_path),
+            "candidate_state_events_ndjson": str(candidate_state_events_path),
             "promotion_index": str(promotion_index_path),
             "stage_b_q1_run_report": str(stage_b_run_report_path),
             "stage_b_light_report": str(stage_b_light_report_path),
+            "stage_b_survivors_selected": str(stage_b_q1_survivors_path if stage_b_q1_survivors_path.exists() else Path(str((stage_b_light_report.get('artifacts') or {}).get('survivors_B_light') or ''))),
         },
         "hashes": {
             "stage_b_q1_run_report_hash": stable_hash_file(stage_b_run_report_path),

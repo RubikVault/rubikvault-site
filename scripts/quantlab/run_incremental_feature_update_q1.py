@@ -203,6 +203,7 @@ def main(argv: Iterable[str]) -> int:
         (pl.col("low_raw") - prev_close).abs(),
     )
     dollar_vol = pl.col("close_raw") * pl.col("volume_raw")
+    vol_sum_20 = pl.col("volume_raw").rolling_sum(20).over("asset_id")
 
     feat = (
         lf.with_columns(
@@ -216,10 +217,12 @@ def main(argv: Iterable[str]) -> int:
                 pl.col("close_raw").rolling_mean(200).over("asset_id").alias("sma_200"),
                 pl.col("close_raw").ewm_mean(span=12, adjust=False).over("asset_id").alias("ema_12"),
                 pl.col("close_raw").ewm_mean(span=26, adjust=False).over("asset_id").alias("ema_26"),
-                gain.rolling_mean(14).over("asset_id").alias("_avg_gain_14"),
-                loss.rolling_mean(14).over("asset_id").alias("_avg_loss_14"),
+                gain.ewm_mean(alpha=1.0 / 14.0, adjust=False).over("asset_id").alias("_avg_gain_14"),
+                loss.ewm_mean(alpha=1.0 / 14.0, adjust=False).over("asset_id").alias("_avg_loss_14"),
                 tr.rolling_mean(14).over("asset_id").alias("atr_14"),
                 dollar_vol.rolling_mean(20).over("asset_id").alias("adv20_dollar"),
+                (dollar_vol.rolling_sum(20).over("asset_id")).alias("_vwap_num_20"),
+                vol_sum_20.alias("_vwap_den_20"),
                 ((pl.col("high_raw") - pl.col("low_raw")) / pl.col("close_raw")).alias("range_pct"),
                 (pl.col("open_raw") / prev_close - 1.0).alias("gap_open"),
                 pl.col("volume_raw").rolling_mean(20).over("asset_id").alias("_vol_ma20"),
@@ -239,7 +242,16 @@ def main(argv: Iterable[str]) -> int:
             [
                 (pl.col("macd") - pl.col("macd_signal")).alias("macd_hist"),
                 ((pl.col("close_raw") - pl.col("sma_20")) / (pl.col("close_raw").rolling_std(20).over("asset_id"))).alias("boll_z_20"),
-                ((pl.col("close_raw") / pl.col("sma_50")) - 1.0).alias("dist_vwap_20"),
+                (
+                    (
+                        pl.col("close_raw")
+                        / (
+                            pl.col("_vwap_num_20")
+                            / pl.when(pl.col("_vwap_den_20") > 0).then(pl.col("_vwap_den_20")).otherwise(None)
+                        )
+                    )
+                    - 1.0
+                ).alias("dist_vwap_20"),
                 (pl.col("atr_14") / pl.col("close_raw")).alias("atr_pct_14"),
                 (pl.col("_vol_ma20") / pl.col("volume_raw").rolling_mean(60).over("asset_id")).alias("turnover_ratio"),
                 pl.col("close_raw").rolling_std(20).over("asset_id").alias("_px_vol_20"),
@@ -248,11 +260,27 @@ def main(argv: Iterable[str]) -> int:
         )
         .with_columns(
             [
-                pl.col("_px_vol_20").rolling_std(20).over("asset_id").alias("vov_20"),
                 (pl.col("close_raw") <= 0).alias("_bad_close"),
                 (pl.col("date").is_null()).alias("_bad_date"),
-                pl.col("logret_1d").rolling_std(20).over("asset_id").alias("ewma_vol_20"),
-                pl.col("logret_1d").rolling_std(60).over("asset_id").alias("ewma_vol_60"),
+                (
+                    pl.col("logret_1d")
+                    .pow(2)
+                    .ewm_mean(alpha=(2.0 / (20.0 + 1.0)), adjust=False)
+                    .over("asset_id")
+                    .sqrt()
+                ).alias("ewma_vol_20"),
+                (
+                    pl.col("logret_1d")
+                    .pow(2)
+                    .ewm_mean(alpha=(2.0 / (60.0 + 1.0)), adjust=False)
+                    .over("asset_id")
+                    .sqrt()
+                ).alias("ewma_vol_60"),
+            ]
+        )
+        .with_columns(
+            [
+                pl.col("ewma_vol_20").rolling_std(20).over("asset_id").alias("vov_20"),
             ]
         )
         .with_columns(
