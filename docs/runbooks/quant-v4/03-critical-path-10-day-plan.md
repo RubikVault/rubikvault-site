@@ -11,7 +11,20 @@ Goal of this 10-day block:
 
 This is the fastest path to "mostly training/iteration" mode.
 
-## Day 1 - Daily delta ingest skeleton (Stocks+ETFs)
+## Progress status (as of current local state)
+
+- Day 1: implemented (delta ingest skeleton + smoke run)
+- Day 2: implemented as Q1 sidecar incremental snapshot updater (smoke/no-op path verified)
+- Day 3: implemented as Q1 latest-only changed-assets incremental feature updater (smoke/no-op path verified)
+- Day 4: implemented as Q1 reconciliation checks (smoke verified)
+- Day 5-7: partially advanced ahead of schedule (Stage B prep + Stage B light + orchestrated Stage-B Q1 runner exist)
+
+Remaining critical path focus:
+- move Phase A from skeleton/no-op validation to real daily deltas
+- tighten Stage B toward real CPCV/DSR/PSR
+- registry/champion governance
+
+## Day 1 - Daily delta ingest skeleton (Stocks+ETFs) ✅
 
 Deliverables:
 - new local runner for daily delta ingest (v7 -> Quant raw)
@@ -22,7 +35,12 @@ DoD:
 - one dry-run over a small subset writes no duplicates
 - manifest/log written for the delta ingest run
 
-## Day 2 - Incremental snapshot update (not full rebuild)
+Status:
+- Implemented: `/Users/michaelpuchowezki/Dev/rubikvault-site/scripts/quantlab/run_daily_delta_ingest_q1.py`
+- Smoke verified (2 packs, no-op delta):
+  - `/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab/jobs/q1_daily_delta_smoke_20260226/manifest.json`
+
+## Day 2 - Incremental snapshot update (not full rebuild) ✅ (Q1 sidecar mode)
 
 Deliverables:
 - snapshot updater that applies only changed assets/time ranges
@@ -32,7 +50,11 @@ DoD:
 - incremental run finishes faster than full rebuild on same delta
 - snapshot counts reconcile (`rows_before + inserts - drops == rows_after`)
 
-## Day 3 - Incremental feature update (rolling windows)
+Q1 scope note:
+- Implemented sidecar incremental snapshot manifest (`changed_assets` + `delta_files`) without rewriting materialized bars yet.
+- This is the correct bridge step before a true physical incremental bars merge.
+
+## Day 3 - Incremental feature update (rolling windows) ✅ (Q1 latest-only changed-assets)
 
 Deliverables:
 - feature updater that recalculates only affected assets and window ranges
@@ -42,7 +64,10 @@ DoD:
 - new day append reflected in feature store
 - no full panel rebuild required for daily path
 
-## Day 4 - Reconciliation and runtime assertions
+Q1 scope note:
+- Implemented latest-only changed-assets update path first (not full multi-asof rolling-window delta yet).
+
+## Day 4 - Reconciliation and runtime assertions ✅ (Q1 first pass)
 
 Deliverables:
 - checks for:
@@ -55,6 +80,10 @@ Deliverables:
 DoD:
 - broken test fixture triggers fail-fast
 - clean run emits "all checks passed"
+
+Status:
+- Reconciliation runner implemented and smoke-verified on no-op delta chain.
+- Next upgrade: add stronger thresholds/assertions for real non-zero deltas and integrate into daily wrapper.
 
 ## Day 5 - Stage B real foundations (fold artifacts + stricter split policy)
 
@@ -139,4 +168,3 @@ DoD:
 - Do not push generated data stores to `main`.
 - Keep website/UI edits isolated from Quant pipeline changes.
 - Update `02-current-state-and-implementation-log.md` at the end of each day.
-

@@ -9,11 +9,11 @@ Update this file whenever a meaningful Quant milestone is completed.
 ## 1. Current completion estimate (simple)
 
 Approximate v4.0 progress (overall):
-- `35-45%` complete (overall v4.0 target architecture)
+- `40-50%` complete (overall v4.0 target architecture)
 
 Breakdown (rough):
 - Data format + storage foundation (Stocks+ETFs): `75-85%`
-- Q1 quant backbone (panels + Stage A + Stage B prep/light): `60-70%`
+- Q1 quant backbone (panels + Stage A + Stage B prep/light + Stage-B orchestration): `70-80%`
 - Full v4.0 governance/data truth/portfolio/testing stack: much lower (still ahead)
 
 ## 2. Current data/storage topology (active)
@@ -227,7 +227,134 @@ Important:
 - This is not full v4.0 Stage B yet.
 - It is a stronger Q1 bridge (PSR/DSR proxies + combinational robustness proxy).
 
-## 9. Q1 local daily runner status
+### 8.3 Stage B Q1 orchestrated runner (single entrypoint)
+Script:
+- `/Users/michaelpuchowezki/Dev/rubikvault-site/scripts/quantlab/run_stage_b_q1.py`
+
+Purpose:
+- Runs `prepare_stage_b_q1.py` + `run_stage_b_q1_light.py` as a single auditable Stage-B entrypoint.
+- Writes a consolidated run report with hashes and artifact refs.
+
+Example run report:
+- `/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab/runs/run_id=q1stageb_cheapgateA_tsplits_2026-02-17/stage_b_q1_run_report.json`
+
+Observed result (current top50k Stage-A context):
+- `ok = true`
+- `stage_b_prep_strict_survivors_total = 1`
+- `survivors_B_light_total = 1`
+- Stage-B-light fail pressure dominated by:
+  - `g_sharpe_mean`, `g_bootstrap_neg_sharpe`
+  - `g_cpcv_light_neg_share`, `g_cpcv_light_sharpe_min`
+  - `g_psr_proxy`, `g_dsr_proxy`
+
+Interpretation:
+- This is still Q1-light (not final CPCV/DSR/PSR), but it is now a **real Stage-B run step**, not just an isolated prep script.
+
+## 9. Phase A (Daily Data Backbone) status
+
+### 9.1 Daily delta ingest (Q1 skeleton, implemented)
+Script:
+- `/Users/michaelpuchowezki/Dev/rubikvault-site/scripts/quantlab/run_daily_delta_ingest_q1.py`
+
+Capabilities (implemented):
+- v7 history packs -> Quant raw delta append
+- idempotent append by `(asset_id, date)` vs latest-known-date cache
+- pack-state cache (changed packs only)
+- run status + manifest + packs manifest + latest success pointer
+
+Persistent caches:
+- `/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab/ops/cache/q1_daily_delta_latest_date_index.stock_etf.json`
+- `/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab/ops/cache/q1_daily_delta_v7_pack_state.stock_etf.json`
+
+First cache build (observed):
+- `files_total = 3099`
+- `assets_total = 95149`
+- `rows_scanned = 292062009`
+
+Smoke run artifacts:
+- Job manifest:
+  - `/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab/jobs/q1_daily_delta_smoke_20260226/manifest.json`
+- Run status:
+  - `/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab/runs/run_id=q1delta_20260226T163508Z/q1_daily_delta_ingest_run_status.json`
+
+Smoke result:
+- `selected_packs_total = 2`
+- `packs_done = 2`
+- `packs_failed = 0`
+- `bars_rows_emitted_delta = 0` (expected no-op)
+- `rows_skipped_old_or_known = 4238`
+- `rows_emitted_matches_keys = true`
+
+### 9.2 Incremental snapshot update (Q1 sidecar manifest mode, implemented)
+Script:
+- `/Users/michaelpuchowezki/Dev/rubikvault-site/scripts/quantlab/run_incremental_snapshot_update_q1.py`
+
+Current mode:
+- `delta_sidecar_snapshot_increment`
+- writes changed-assets + delta-files manifests into snapshot `increments/ingest_date=...`
+- does **not** rewrite the materialized bars dataset yet (intentional Q1 step)
+
+Example artifact:
+- `/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab/data/snapshots/snapshot_id=2026-02-26_670417f6fae7_q1step2bars/increments/ingest_date=2026-02-26/incremental_snapshot_manifest.json`
+
+Current smoke result:
+- `delta_files_total = 0`
+- `changed_assets_total = 0`
+- `rows_declared_matches_scanned = true`
+
+### 9.3 Incremental feature update (Q1 latest-only changed-assets mode, implemented)
+Script:
+- `/Users/michaelpuchowezki/Dev/rubikvault-site/scripts/quantlab/run_incremental_feature_update_q1.py`
+
+Current mode:
+- `incremental_latest_only_changed_assets`
+- reads changed-assets from incremental snapshot sidecar
+- computes latest-only features for changed assets
+- writes delta feature manifest + latest success pointer
+
+Example artifact:
+- `/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab/features/store/feature_store_version=v4_q1inc/asof_date=2026-02-26/feature_manifest.delta_2026-02-26.json`
+
+Current smoke result:
+- `changed_assets_total = 0`
+- `feature_rows_total = 0`
+- no-op path verified
+
+### 9.4 Reconciliation checks (Q1, implemented)
+Script:
+- `/Users/michaelpuchowezki/Dev/rubikvault-site/scripts/quantlab/run_reconciliation_checks_q1.py`
+
+Checks include:
+- delta rows/keys reconciliation
+- duplicate `(asset_id,date)` in delta outputs
+- future dates in delta outputs
+- invalid OHLCV in delta outputs
+- cross-manifest consistency (delta -> incremental snapshot -> incremental feature)
+
+Example report:
+- `/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab/runs/run_id=q1recon_20260226T165924Z/q1_reconciliation_report.json`
+
+Current smoke result:
+- `ok = true`
+
+### 9.5 Phase A backbone orchestrator (Q1, implemented)
+Script:
+- `/Users/michaelpuchowezki/Dev/rubikvault-site/scripts/quantlab/run_q1_daily_data_backbone_q1.py`
+
+Chain:
+- `daily_delta_ingest -> incremental_snapshot_update -> incremental_feature_update -> reconciliation_checks`
+
+Verified smoke run:
+- `/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab/runs/run_id=q1backbone_1772125159/q1_daily_data_backbone_run_report.json`
+- `ok = true`
+
+Observed step timings (no-op delta scenario):
+- delta ingest ~`4.239s` (cache hits, `selected_packs_total = 0`)
+- incremental snapshot ~`0.655s`
+- incremental feature ~`0.264s`
+- reconciliation ~`0.155s`
+
+## 10. Q1 local daily runner status
 
 Python orchestrator:
 - `/Users/michaelpuchowezki/Dev/rubikvault-site/scripts/quantlab/run_q1_panel_stage_a_daily_local.py`
@@ -248,6 +375,7 @@ Wrapper env defaults (current template):
 - `Q1_DAILY_PANEL_MAX_ASSETS=0` (full panel)
 - `Q1_DAILY_TOP_LIQUID_N=20000`
 - `Q1_DAILY_RUN_STAGEB_PREP=1`
+- `Q1_DAILY_RUN_STAGEB_Q1=1`
 
 Logs:
 - `/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab/logs/`
@@ -255,7 +383,7 @@ Logs:
 Run status example:
 - `/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab/runs/run_id=q1panel_daily_local_1772118921/q1_panel_stagea_daily_run_status.json`
 
-## 10. Alt-assets pointer coverage (why non-stock/ETF is still thin)
+## 11. Alt-assets pointer coverage (why non-stock/ETF is still thin)
 
 Quant-side report script:
 - `/Users/michaelpuchowezki/Dev/rubikvault-site/scripts/quantlab/report_alt_assets_pointer_coverage_q1.py`

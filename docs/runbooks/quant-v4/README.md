@@ -26,3 +26,8 @@ Quant work status policy (important):
 - Do not assume Quant files are merge-ready for `main`.
 - Website/UI work and Quant work must remain separated unless explicitly bridged by small reviewed PRs.
 
+Update discipline (mandatory):
+- After each meaningful Quant change, update:
+  - `02-current-state-and-implementation-log.md` (facts, paths, counts, new artifacts)
+  - `03-critical-path-10-day-plan.md` (what moved from planned -> done/in-progress)
+- Keep exact artifact paths absolute so other AIs can continue without repo archaeology.
