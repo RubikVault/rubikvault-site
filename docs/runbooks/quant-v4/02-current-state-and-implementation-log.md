@@ -235,6 +235,9 @@ Script:
 Purpose:
 - Runs `prepare_stage_b_q1.py` + `run_stage_b_q1_light.py` as a single auditable Stage-B entrypoint.
 - Writes a consolidated run report with hashes and artifact refs.
+- Computes a stricter Q1 final survivor set (`survivors_B_q1`) as the intersection of:
+  - `stage_b_prep_strict_survivors`
+  - `survivors_B_light`
 
 Example run report:
 - `/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab/runs/run_id=q1stageb_cheapgateA_tsplits_2026-02-17/stage_b_q1_run_report.json`
@@ -243,6 +246,8 @@ Observed result (current top50k Stage-A context):
 - `ok = true`
 - `stage_b_prep_strict_survivors_total = 1`
 - `survivors_B_light_total = 1`
+- `stage_b_q1_final.selection_mode = intersection_prep_strict_and_light`
+- `stage_b_q1_final.survivors_B_q1_total = 1`
 - Stage-B-light fail pressure dominated by:
   - `g_sharpe_mean`, `g_bootstrap_neg_sharpe`
   - `g_cpcv_light_neg_share`, `g_cpcv_light_sharpe_min`
@@ -257,6 +262,7 @@ Scripts:
 
 Purpose:
 - Reads Stage-B Q1 outputs (`stage_b_q1_run_report` + Stage-B-light candidates/survivors)
+- Prefers `survivors_B_q1` (strict final intersection) when present; falls back to `survivors_B_light`
 - Writes:
   - SQLite registry base tables
 
@@ -326,6 +332,33 @@ Implemented now:
 - Evidence:
   - `/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab/runs/run_id=q1stageb_cheapgateA_tsplits_2026-02-17/artifacts/stage_b_light_report.json`
   - `method.cpcv_light_combo_policy = "all_combo_sizes_from_ceil_half_to_n_minus_1"`
+
+2. Registry/governance auditability expansion (Q1)
+- File:
+  - `/Users/michaelpuchowezki/Dev/rubikvault-site/scripts/quantlab/run_registry_update_q1.py`
+- Changes:
+  - `candidate_state_events_q1` SQLite table
+  - `candidate_state_events.ndjson` append-only ledger
+  - richer state transition reason codes and `state_before/state_after` tracking
+  - registry now prefers `survivors_B_q1` (strict final Stage-B survivors) over `survivors_B_light`
+
+3. Reconciliation strengthening for real-delta path
+- File:
+  - `/Users/michaelpuchowezki/Dev/rubikvault-site/scripts/quantlab/run_reconciliation_checks_q1.py`
+- Changes:
+  - non-zero delta expectations
+  - delta scan/accounting consistency checks
+  - stronger delta stats in report
+
+4. Feature math consistency propagated beyond panel builder
+- Files:
+  - `/Users/michaelpuchowezki/Dev/rubikvault-site/scripts/quantlab/build_feature_store_q1_min.py`
+  - `/Users/michaelpuchowezki/Dev/rubikvault-site/scripts/quantlab/run_incremental_feature_update_q1.py`
+- Changes aligned with panel builder:
+  - Wilder RSI smoothing
+  - EWMA volatility proxies
+  - `vov_20` from volatility series
+  - 20d EOD volume-weighted `dist_vwap_20` proxy
 
 Backlog (valid but not yet implemented here):
 - Stage-A Spearman IC Python-loop -> Polars/native vectorized path (performance)
@@ -426,10 +459,13 @@ Verified outcomes:
 Current observed counts (latest report / DB):
 - `stage_b_candidates_total = 8`
 - `stage_b_survivors_B_light_total = 1`
+- `stage_b_survivors_selected_total = 1`
+- `stage_b_survivors_selected_source = stage_b_q1_final`
 - `candidate_registry_state_counts`:
   - `live = 1`
   - `shadow = 0`
   - `retired = 7`
+- `candidate_state_events_written = 0` (latest no-change rerun)
 
 Registry DB:
 - `/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab/registry/experiments.db`
@@ -498,6 +534,39 @@ Observed:
 Interpretation:
 - Single local daily entrypoint now covers the data backbone plus panel/screening chain.
 - This closes the earlier Day-10 wrapper wiring gap at Q1 level.
+
+### 12.2 Daily local runner with integrated Phase A + Stage B + Registry (verification)
+
+Python runner now optionally integrates:
+- `run_stage_b_q1`
+- `run_registry_update_q1`
+
+Wrapper defaults now support integrated mode while disabling legacy shell post-steps:
+- `Q1_DAILY_USE_LEGACY_SHELL_POST_STEPS=0`
+- `Q1_DAILY_RUN_STAGEB_Q1=1`
+- `Q1_DAILY_RUN_REGISTRY_Q1=1`
+
+Verified full integrated local run (production-like local settings, `top_liquid_n=20000`):
+- `/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab/runs/run_id=q1panel_daily_local_1772133770/q1_panel_stagea_daily_run_status.json`
+
+Observed:
+- `ok = true`
+- `steps` include:
+  - `run_q1_daily_data_backbone_q1`
+  - `run_q1_panel_stage_a_pipeline`
+  - `run_stage_b_q1`
+  - `run_registry_update_q1`
+- `artifacts` include:
+  - `phasea_backbone_run_report`
+  - `orchestrator_run_report`
+  - `stage_b_q1_run_report`
+  - `q1_registry_update_report`
+- `references.stage_b_q1.stage_b_q1_final.survivors_B_q1_total = 1`
+- `references.q1_registry.counts.stage_b_survivors_selected_source = stage_b_q1_final`
+- `references.q1_registry.decision = NO_PROMOTION`
+
+Note:
+- An earlier integrated run failed at Stage B because `run_stage_b_q1.py` was being edited during execution (path briefly unavailable during save). The subsequent rerun above completed successfully with the finalized code.
 
 Registry root (local, private):
 - `/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab/registry`

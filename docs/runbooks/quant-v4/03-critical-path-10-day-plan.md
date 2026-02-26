@@ -19,6 +19,10 @@ This is the fastest path to "mostly training/iteration" mode.
 - Day 4: implemented as Q1 reconciliation checks (smoke verified)
 - Day 5-7: partially advanced ahead of schedule (Stage B prep + Stage B light + orchestrated Stage-B Q1 runner exist)
 - Day 8-9: partially advanced ahead of schedule (Q1 registry base + decision/event ledgers + first promotion record exist)
+- Post-Day10 hardening already added:
+  - Stage-B Q1 final survivor intersection (`survivors_B_q1` = prep-strict ∩ light)
+  - registry candidate state transition events (`candidate_state_events_q1` + NDJSON ledger)
+  - integrated Python daily runner now includes Stage B + Registry (not shell-only)
 
 Remaining critical path focus:
 - promote integrated Phase A mode from scratch validation to regular daily operation (with thresholds/guards)
@@ -182,9 +186,11 @@ Status (current):
   - panel build
   - Stage A
   - Stage B prep
-  - Stage B Q1 (light)
-  - registry update (optional, now enabled in launchd template)
+  - Stage B Q1 (light + stricter final `survivors_B_q1` selection)
+  - registry update (optional, now enabled in launchd template and integrated in Python runner)
 - Day-10 integration gap is closed at Q1 level.
+- Verified integrated success run (all steps green):
+  - `/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab/runs/run_id=q1panel_daily_local_1772133770/q1_panel_stagea_daily_run_status.json`
 - Remaining follow-up (next block, not Day-10 blocker):
   - promote scratch-tested real-delta mode to production-like scheduled mode with tuned thresholds
   - continue de-proxying Stage B

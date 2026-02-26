@@ -5,8 +5,9 @@ Status: local working documentation for the Quant v4.0 buildout (private/local-f
 Current focus (as of latest update):
 - Stocks+ETFs Q1 backbone is running (full panels, Stage A, Stage B Q1-light).
 - Q1 registry/champion base (SQLite + decision/event ledgers) now exists locally.
-- Phase A is now wired into the local daily wrapper (optional/guardrailed) and validated end-to-end on scratch.
-- Next critical path: promote Phase A real-delta mode into regular daily use + continue Stage B de-proxying.
+- Phase A is wired into the local daily wrapper (optional/guardrailed) and now verified in a full integrated run.
+- Stage-B Q1 now writes a stricter final survivor set (`survivors_B_q1`) via prep/light intersection and Registry consumes it.
+- Next critical path: promote Phase A real-delta mode into regular scheduled use + continue Stage B de-proxying (CPCV/DSR/PSR).
 
 Purpose:
 - Preserve target architecture, current implementation status, and exact next steps.
