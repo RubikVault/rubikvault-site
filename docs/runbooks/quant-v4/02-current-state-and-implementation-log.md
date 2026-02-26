@@ -898,3 +898,32 @@ Result:
   - `run_registry_update_q1`
 
 This confirms the new Q1 hardening changes did not break the end-to-end local daily orchestration.
+
+## 20. Overnight Q1 training sweep (local, resumable) — runner added
+
+Purpose:
+- use overnight compute on the Mac efficiently without touching API providers
+- run repeated heavy Q1 slices (`panel -> Stage A -> Stage B Q1 -> registry`) over multiple `asof_date`, `panel_days`, and `top_liquid_n` combinations
+- preserve resume state and per-task logs for morning review
+
+Script:
+- `/Users/michaelpuchowezki/Dev/rubikvault-site/scripts/quantlab/run_overnight_q1_training_sweep.py`
+
+What it does:
+- builds a deterministic task queue from recent panel `asof_date`s
+- runs tasks sequentially (heaviest-first) with a global time budget (`--max-hours`)
+- persists job state in:
+  - `jobs/<job>/state.json`
+- writes per-task logs and a driver log:
+  - `jobs/<job>/logs/*.log`
+- supports resume and retry:
+  - `--resume-from`
+  - `--retry-failed`
+- includes robustness features:
+  - per-job lock file (prevents accidental duplicate orchestrators)
+  - resume recovery for `running` tasks (reset to pending on restart)
+  - per-task timeout (`--task-timeout-minutes`) to avoid overnight hangs
+
+Notes:
+- Run via a persistent session (not shell background `nohup` in tool-managed shells), because tool wrappers may reap detached child processes.
+- This is a compute/orchestration layer; it does not alter provider data or call external APIs.
