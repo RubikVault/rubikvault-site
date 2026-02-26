@@ -21,8 +21,8 @@ This is the fastest path to "mostly training/iteration" mode.
 - Day 8-9: partially advanced ahead of schedule (Q1 registry base + decision/event ledgers + first promotion record exist)
 
 Remaining critical path focus:
-- move Phase A from skeleton/no-op validation to real daily deltas
-- tighten Stage B toward real CPCV/DSR/PSR
+- wire Phase A real-delta path into the same daily wrapper (it is now validated in scratch mode)
+- tighten Stage B toward real CPCV/DSR/PSR (current Stage-B Q1 is stricter but still proxy/light)
 - expand registry/champion governance from Q1 base to full live/shadow/demotion model
 
 ## Day 1 - Daily delta ingest skeleton (Stocks+ETFs) ✅
@@ -83,8 +83,9 @@ DoD:
 - clean run emits "all checks passed"
 
 Status:
-- Reconciliation runner implemented and smoke-verified on no-op delta chain.
-- Next upgrade: add stronger thresholds/assertions for real non-zero deltas and integrate into daily wrapper.
+- Reconciliation runner implemented and now verified on a real non-zero delta scratch run.
+- Stronger expectations added (`expect_nonzero_delta`, minimum emitted rows, delta scan accounting consistency).
+- Next upgrade: wire this real-delta path into the single daily wrapper (not only scratch mode).
 
 ## Day 5 - Stage B real foundations (fold artifacts + stricter split policy)
 
@@ -132,6 +133,7 @@ Status:
   - SQLite registry schema + insert path from Stage-B Q1 outputs
   - candidate metrics table
   - current champion state table
+  - candidate registry state table (`live/shadow/retired`) with reason codes
 - Script:
   - `/Users/michaelpuchowezki/Dev/rubikvault-site/scripts/quantlab/run_registry_update_q1.py`
 
@@ -146,10 +148,11 @@ DoD:
 - "no promotion" and "promotion" both produce auditable records
 
 Status:
-- Implemented (Q1 first pass):
+- Implemented (Q1 first pass, now expanded):
   - decision ledger (always writes)
   - event ledger (promotion events)
   - promotion index helper
+  - richer decision reason codes (e.g. champion present / survivor present)
 - Verified both paths:
   - `PROMOTE` with reason `NO_EXISTING_CHAMPION`
   - `NO_PROMOTION` with reason `CHAMPION_ALREADY_TOP_SURVIVOR`
@@ -181,7 +184,7 @@ Status (current):
   - registry update (optional, now enabled in launchd template)
 - Still missing for Day 10 full DoD:
   - wiring Phase A backbone (`delta/snapshot/features/reconciliation`) into the same single daily wrapper
-  - stronger real-delta assertions and non-no-op validation path
+  - promoting scratch-tested real-delta mode to production-like daily mode
 
 ## Out of scope for this 10-day block (but next)
 

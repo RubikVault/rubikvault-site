@@ -77,8 +77,10 @@ def _psr_proxy(sharpes: list[float]) -> float:
     return float(max(0.0, min(1.0, _norm_cdf(z))))
 
 
-def _dsr_proxy(psr_proxy: float, candidate_count: int, baseline: int = 8) -> float:
+def _dsr_proxy(psr_proxy: float, candidate_count: int, baseline: int | None = None) -> float:
     # Simple multiple-testing penalty proxy. Conservative but deterministic.
+    if baseline is None:
+        baseline = max(2, int(candidate_count))
     penalty = 0.0
     if candidate_count > 1:
         penalty = min(0.30, 0.05 * math.log2(max(candidate_count, baseline)))
@@ -86,19 +88,22 @@ def _dsr_proxy(psr_proxy: float, candidate_count: int, baseline: int = 8) -> flo
 
 
 def _cpcv_light_metrics(sharpes: list[float]) -> dict:
-    # Q1-light proxy: evaluate all non-trivial combinations of folds (size n-1 and n//2 rounded up)
+    # Q1-light proxy: evaluate all non-trivial combinations from ceil(n/2) to n-1 on fold metrics.
     n = len(sharpes)
     if n <= 1:
         val = sharpes[0] if sharpes else 0.0
         return {
             "paths_total": 1 if sharpes else 0,
             "combo_sizes": [1] if sharpes else [],
+            "combo_policy": "single_fold_or_trivial",
             "mean_sharpe_across_paths": float(val),
             "min_sharpe_across_paths": float(val),
             "neg_share_across_paths": 1.0 if val < 0 else 0.0,
             "std_sharpe_across_paths": 0.0,
         }
-    combo_sizes = sorted(set([max(1, n - 1), max(1, (n + 1) // 2)]))
+    combo_sizes = list(range(max(1, (n + 1) // 2), n))
+    if not combo_sizes:
+        combo_sizes = [1]
     vals: list[float] = []
     for k in combo_sizes:
         for idxs in itertools.combinations(range(n), k):
@@ -112,6 +117,7 @@ def _cpcv_light_metrics(sharpes: list[float]) -> dict:
     return {
         "paths_total": len(vals),
         "combo_sizes": combo_sizes,
+        "combo_policy": "all_combo_sizes_from_ceil_half_to_n_minus_1",
         "mean_sharpe_across_paths": float(mean_v),
         "min_sharpe_across_paths": float(min(vals)),
         "neg_share_across_paths": float(neg_share),
@@ -285,6 +291,7 @@ def main(argv: Iterable[str]) -> int:
         "method": {
             "type": "q1_stage_b_light",
             "fold_policy": "reuses Stage-A anchored folds; CPCV-light combinations on fold metrics only (proxy)",
+            "cpcv_light_combo_policy": "all_combo_sizes_from_ceil_half_to_n_minus_1",
             "notes": [
                 "This is a Q1-light Stage B approximation, not full CPCV with per-path re-scoring.",
                 "Adds stricter gates plus PSR/DSR proxies and combinational fold robustness proxy.",
@@ -335,4 +342,3 @@ def main(argv: Iterable[str]) -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main(sys.argv[1:]))
-

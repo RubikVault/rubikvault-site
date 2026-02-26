@@ -203,7 +203,8 @@ Script:
 - `/Users/michaelpuchowezki/Dev/rubikvault-site/scripts/quantlab/run_stage_b_q1_light.py`
 
 Artifacts:
-- `/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab/runs/run_id=cheapgateA_tsplits_2026-02-17/outputs/stage_b_light/stage_b_light_report.json`
+- `/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab/runs/run_id=q1stageb_cheapgateA_tsplits_2026-02-17/artifacts/stage_b_light_report.json`
+- Stage-B-light candidate artifacts are referenced via the Stage-B Q1 run outputs/artifacts layer
 - `stage_b_light_candidates.parquet`
 - `survivors_B_light.parquet`
 - `fold_summary.parquet`
@@ -258,6 +259,206 @@ Purpose:
 - Reads Stage-B Q1 outputs (`stage_b_q1_run_report` + Stage-B-light candidates/survivors)
 - Writes:
   - SQLite registry base tables
+
+## 9. Quant V4 code correctness audit (2026-02-26) - validation of external review
+
+External LLM feedback was reviewed against the actual local codebase and current artifacts.
+
+### 9.1 Outcome summary
+
+- Several reported feature-builder correctness issues were **already fixed** in the current code (stale feedback).
+- One real correctness issue was valid and is now fixed:
+  - `build_regime_q1_min.py` statefulness (`days_in_state`, `regime_flip_flag`) + timeseries overwrite behavior.
+- Some optimization notes were valid; one was implemented immediately (`Stage-B-light DSR baseline / stricter CPCV-light combo policy`), others remain backlog items.
+
+### 9.2 Findings that were stale (already fixed in code before this audit pass)
+
+The following points from the external audit are not current anymore:
+
+1. RSI "SMA not Wilder"
+- Current builder uses Wilder-style EWM smoothing (not simple rolling mean) in:
+  - `/Users/michaelpuchowezki/Dev/rubikvault-site/scripts/quantlab/build_feature_store_q1_panel.py`
+
+2. `ewma_vol_20/60` naming mismatch vs rolling std
+- Current builder computes EWMA-style volatility proxies (not plain `rolling_std`) in:
+  - `/Users/michaelpuchowezki/Dev/rubikvault-site/scripts/quantlab/build_feature_store_q1_panel.py`
+
+3. `vov_20` based on price-vol instead of vol-of-vol
+- Current builder computes `vov_20` from volatility series (not nested price std) in:
+  - `/Users/michaelpuchowezki/Dev/rubikvault-site/scripts/quantlab/build_feature_store_q1_panel.py`
+
+4. `dist_vwap_20` being a mislabeled SMA proxy
+- Current builder uses a 20-day EOD volume-weighted close proxy (Q1 approximation), not SMA50.
+
+5. `fwd_ret_5d` filter in feature store removing latest days
+- Current panel builder no longer drops rows globally on `fwd_ret_5d.is_not_null()`.
+- Forward-return null handling is done in Stage-A evaluation scope.
+
+### 9.3 Valid issue that required a code fix (now fixed)
+
+#### Regime engine was stateless (hardcoded `days_in_state`, `regime_flip_flag`)
+
+File fixed:
+- `/Users/michaelpuchowezki/Dev/rubikvault-site/scripts/quantlab/build_regime_q1_min.py`
+
+What changed:
+- Regime timeseries is now appended/updated by `date` (dedup on date, keep latest row).
+- `days_in_state` is derived from persisted regime history.
+- `regime_flip_flag` and `regime_flips_lookback10` are derived from the last 10 observations.
+
+Why it matters:
+- Regime output is now a true stateful timeseries foundation (still Q1-minimal), instead of a stateless snapshot with placeholder state fields.
+
+Verification:
+- Re-running the regime builder twice for the same `asof_date` produces one deduped row for that date and valid state fields in:
+  - `/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab/ops/regime_timeseries_q1.parquet`
+
+### 9.4 Valid optimization/quality notes (partially implemented)
+
+Implemented now:
+
+1. Stage-B-light DSR/CPCV-light robustness tightening
+- File:
+  - `/Users/michaelpuchowezki/Dev/rubikvault-site/scripts/quantlab/run_stage_b_q1_light.py`
+- Changes:
+  - `_dsr_proxy()` baseline now scales with candidate count (instead of fixed `8`)
+  - CPCV-light combo policy broadened to all combo sizes from `ceil(n/2)` to `n-1`
+- Evidence:
+  - `/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab/runs/run_id=q1stageb_cheapgateA_tsplits_2026-02-17/artifacts/stage_b_light_report.json`
+  - `method.cpcv_light_combo_policy = "all_combo_sizes_from_ceil_half_to_n_minus_1"`
+
+Backlog (valid but not yet implemented here):
+- Stage-A Spearman IC Python-loop -> Polars/native vectorized path (performance)
+- utility function dedup (`utc_now_iso`, `atomic_write_json`, `stable_hash_obj`) -> centralize in `q1_common.py`
+- feature-store partition append/write strategy for true multi-file incremental append semantics
+
+## 10. Phase A backbone (real-delta path) status
+
+### 10.1 Real-delta non-no-op test mode (implemented)
+
+Runner updated:
+- `/Users/michaelpuchowezki/Dev/rubikvault-site/scripts/quantlab/run_q1_daily_data_backbone_q1.py`
+
+New capabilities:
+- `--real-delta-test-mode`
+- `--real-delta-min-emitted-rows`
+- real-delta run fail-fast if emitted rows are below expected threshold
+- stronger reconciliation expectations passed through automatically
+
+Reconciliation runner upgraded:
+- `/Users/michaelpuchowezki/Dev/rubikvault-site/scripts/quantlab/run_reconciliation_checks_q1.py`
+
+Added checks:
+- `delta_scan_accounting_consistent`
+- `delta_rows_emitted_nonzero_when_expected`
+- `delta_assets_emitted_nonzero_when_expected`
+- plus explicit scan/accounting stats in report
+
+### 10.2 Real-delta test run (successful, scratch quant-root)
+
+Scratch root used (isolated from main quant root):
+- `/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab-scratch-realtest`
+
+Backbone run report:
+- `/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab-scratch-realtest/runs/run_id=q1backbone_1772127976/q1_daily_data_backbone_run_report.json`
+
+Result:
+- `ok = true`
+- `real_delta_test_mode = true`
+- `expected_min_rows = 1000`
+- `bars_rows_emitted_delta = 1437` (PASS)
+
+Step status:
+- `daily_delta_ingest` ✅
+- `incremental_snapshot_update` ✅
+- `incremental_feature_update` ✅
+- `reconciliation_checks` ✅
+
+Reconciliation report:
+- `/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab-scratch-realtest/runs/run_id=q1recon_20260226T175020Z/q1_reconciliation_report.json`
+
+Key checks all `true`:
+- duplicate-key check
+- no-future-date check
+- invalid-OHLCV check
+- delta scan accounting consistency
+- non-zero delta expectations
+
+Observed delta stats:
+- `selected_packs_total = 1`
+- `bars_rows_emitted_delta = 1437`
+- `assets_emitted_delta = 3`
+- `bars_rows_scanned_in_selected_packs = 1437`
+
+Interpretation:
+- Phase A is no longer only smoke/no-op validated.
+- A real non-zero delta path now runs end-to-end with strict reconciliation in an isolated scratch quant-root.
+
+## 11. Q1 registry/champion governance status (extended)
+
+### 11.1 Registry schema expansion (Q1)
+
+Updated script:
+- `/Users/michaelpuchowezki/Dev/rubikvault-site/scripts/quantlab/run_registry_update_q1.py`
+
+New/expanded behavior:
+- `candidate_registry_state_q1` table populated per candidate with state:
+  - `live`
+  - `shadow`
+  - `retired`
+- stores reason codes / score / metrics JSON for auditability
+
+Decision/event reason code improvements:
+- decisions now persist richer `reason_codes`, e.g.:
+  - `STAGE_B_SURVIVOR_PRESENT`
+  - `CURRENT_CHAMPION_PRESENT`
+  - `CHAMPION_ALREADY_TOP_SURVIVOR`
+
+### 11.2 Verified registry paths (both promotion + no-promotion)
+
+Registry update report (current):
+- `/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab/runs/run_id=q1registry_q1stageb_cheapgateA_tsplits_2026-02-17/q1_registry_update_report.json`
+
+Verified outcomes:
+- `PROMOTE` path exists (first run, no existing champion)
+- `NO_PROMOTION` path exists (same top survivor remains champion)
+
+Current observed counts (latest report / DB):
+- `stage_b_candidates_total = 8`
+- `stage_b_survivors_B_light_total = 1`
+- `candidate_registry_state_counts`:
+  - `live = 1`
+  - `shadow = 0`
+  - `retired = 7`
+
+Registry DB:
+- `/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab/registry/experiments.db`
+
+## 12. Daily local runner (Q1) - current production-like local wiring
+
+Daily runner wrapper:
+- `/Users/michaelpuchowezki/Dev/rubikvault-site/scripts/quantlab/run_q1_panel_stage_a_daily_local.sh`
+
+LaunchAgent template:
+- `/Users/michaelpuchowezki/Dev/rubikvault-site/scripts/quantlab/launchd/com.rubikvault.quantlab.q1panel-stagea.daily.plist.template`
+
+Current local LaunchAgent install:
+- `/Users/michaelpuchowezki/Library/LaunchAgents/com.rubikvault.quantlab.q1panel-stagea.daily.plist`
+
+Current env flags enabled in launchd:
+- `Q1_DAILY_RUN_STAGEB_PREP=1`
+- `Q1_DAILY_RUN_STAGEB_Q1=1`
+- `Q1_DAILY_RUN_REGISTRY_Q1=1`
+- `Q1_DAILY_TOP_LIQUID_N=20000`
+
+Meaning:
+- local daily run can now execute:
+  - panel build
+  - Stage A
+  - Stage B prep
+  - Stage B Q1
+  - registry update
+- Phase A (`delta/snapshot/features/reconciliation`) still needs to be wired into the same wrapper for full Day-10 DoD.
   - promotion decision ledger (always)
   - promotion event ledger (events only)
   - promotion index helper
@@ -293,9 +494,9 @@ Current registry table counts (after promotion + no-promotion verification):
 - `promotion_decisions_q1 = 2`
 - `promotion_events_q1 = 1`
 
-## 9. Phase A (Daily Data Backbone) status
+## 13. Phase A (Daily Data Backbone) status [historical baseline entries]
 
-### 9.1 Daily delta ingest (Q1 skeleton, implemented)
+### 13.1 Daily delta ingest (Q1 skeleton, implemented)
 Script:
 - `/Users/michaelpuchowezki/Dev/rubikvault-site/scripts/quantlab/run_daily_delta_ingest_q1.py`
 
@@ -328,7 +529,7 @@ Smoke result:
 - `rows_skipped_old_or_known = 4238`
 - `rows_emitted_matches_keys = true`
 
-### 9.2 Incremental snapshot update (Q1 sidecar manifest mode, implemented)
+### 13.2 Incremental snapshot update (Q1 sidecar manifest mode, implemented)
 Script:
 - `/Users/michaelpuchowezki/Dev/rubikvault-site/scripts/quantlab/run_incremental_snapshot_update_q1.py`
 
@@ -345,7 +546,7 @@ Current smoke result:
 - `changed_assets_total = 0`
 - `rows_declared_matches_scanned = true`
 
-### 9.3 Incremental feature update (Q1 latest-only changed-assets mode, implemented)
+### 13.3 Incremental feature update (Q1 latest-only changed-assets mode, implemented)
 Script:
 - `/Users/michaelpuchowezki/Dev/rubikvault-site/scripts/quantlab/run_incremental_feature_update_q1.py`
 
@@ -363,7 +564,7 @@ Current smoke result:
 - `feature_rows_total = 0`
 - no-op path verified
 
-### 9.4 Reconciliation checks (Q1, implemented)
+### 13.4 Reconciliation checks (Q1, implemented)
 Script:
 - `/Users/michaelpuchowezki/Dev/rubikvault-site/scripts/quantlab/run_reconciliation_checks_q1.py`
 
@@ -380,7 +581,7 @@ Example report:
 Current smoke result:
 - `ok = true`
 
-### 9.5 Phase A backbone orchestrator (Q1, implemented)
+### 13.5 Phase A backbone orchestrator (Q1, implemented)
 Script:
 - `/Users/michaelpuchowezki/Dev/rubikvault-site/scripts/quantlab/run_q1_daily_data_backbone_q1.py`
 
@@ -397,7 +598,7 @@ Observed step timings (no-op delta scenario):
 - incremental feature ~`0.264s`
 - reconciliation ~`0.155s`
 
-## 10. Q1 local daily runner status
+## 14. Q1 local daily runner status [historical baseline entries]
 
 Python orchestrator:
 - `/Users/michaelpuchowezki/Dev/rubikvault-site/scripts/quantlab/run_q1_panel_stage_a_daily_local.py`
@@ -427,7 +628,7 @@ Logs:
 Run status example:
 - `/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab/runs/run_id=q1panel_daily_local_1772118921/q1_panel_stagea_daily_run_status.json`
 
-## 11. Alt-assets pointer coverage (why non-stock/ETF is still thin)
+## 15. Alt-assets pointer coverage (why non-stock/ETF is still thin)
 
 Quant-side report script:
 - `/Users/michaelpuchowezki/Dev/rubikvault-site/scripts/quantlab/report_alt_assets_pointer_coverage_q1.py`
@@ -443,7 +644,7 @@ Examples (see `totals` / `by_type` in report):
 - `FOREX/BOND/INDEX` similar problem
 - `FUND` dominates non-stock/ETF counts and has mixed pointer coverage
 
-## 12. What is done vs. not done (v4.0 checklist)
+## 16. What is done vs. not done (v4.0 checklist)
 
 ### Done (Q1/Q1.5)
 - v7 history -> T9 Parquet exporter
@@ -472,7 +673,7 @@ Examples (see `totals` / `by_type` in report):
 - invalidation engine
 - full test/invariant suite and red-flag reporting contract
 
-## 13. Update protocol (must follow)
+## 17. Update protocol (must follow)
 
 Whenever a meaningful Quant milestone is completed:
 1. Append/change this file with:
@@ -483,7 +684,7 @@ Whenever a meaningful Quant milestone is completed:
 2. Update `03-critical-path-10-day-plan.md` if priorities shift
 3. Do not write vague summaries without file paths
 
-## 14. Known constraints / cautions
+## 18. Known constraints / cautions
 
 - Quant artifacts are local/private and should not be pushed to `main`.
 - Website/UI experimental changes (Ideas tabs, live news/search) are separate and should stay isolated.

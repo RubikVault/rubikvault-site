@@ -5,7 +5,8 @@ Status: local working documentation for the Quant v4.0 buildout (private/local-f
 Current focus (as of latest update):
 - Stocks+ETFs Q1 backbone is running (full panels, Stage A, Stage B Q1-light).
 - Q1 registry/champion base (SQLite + decision/event ledgers) now exists locally.
-- Next critical path: Phase A real daily deltas + Stage B de-proxying.
+- Phase A real non-zero delta path is now validated in scratch mode (with strict reconciliation).
+- Next critical path: wire Phase A into the daily wrapper + Stage B de-proxying.
 
 Purpose:
 - Preserve target architecture, current implementation status, and exact next steps.
@@ -35,4 +36,5 @@ Update discipline (mandatory):
 - After each meaningful Quant change, update:
   - `02-current-state-and-implementation-log.md` (facts, paths, counts, new artifacts)
   - `03-critical-path-10-day-plan.md` (what moved from planned -> done/in-progress)
+- If an external LLM/code review audit is evaluated, record verdict + fixes/deferred items in `02-current-state-and-implementation-log.md`.
 - Keep exact artifact paths absolute so other AIs can continue without repo archaeology.

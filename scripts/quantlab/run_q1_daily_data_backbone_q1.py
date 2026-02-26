@@ -12,7 +12,7 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-from scripts.quantlab.q1_common import DEFAULT_QUANT_ROOT, atomic_write_json, stable_hash_file, utc_now_iso  # noqa: E402
+from scripts.quantlab.q1_common import DEFAULT_QUANT_ROOT, atomic_write_json, read_json, stable_hash_file, utc_now_iso  # noqa: E402
 
 
 def parse_args(argv: Iterable[str]) -> argparse.Namespace:
@@ -27,6 +27,10 @@ def parse_args(argv: Iterable[str]) -> argparse.Namespace:
     p.add_argument("--delta-max-emitted-rows", type=int, default=0)
     p.add_argument("--feature-store-version", default="v4_q1inc")
     p.add_argument("--feature-output-tag", default="")
+    p.add_argument("--real-delta-test-mode", action="store_true", help="Require non-zero delta rows and tighten reconciliation checks")
+    p.add_argument("--real-delta-min-emitted-rows", type=int, default=1)
+    p.add_argument("--real-delta-limit-packs", type=int, default=2)
+    p.add_argument("--real-delta-max-emitted-rows", type=int, default=100000)
     return p.parse_args(list(argv))
 
 
@@ -76,13 +80,32 @@ def main(argv: Iterable[str]) -> int:
         delta_cmd += ["--full-scan-packs"]
     if args.delta_max_emitted_rows and args.delta_max_emitted_rows > 0:
         delta_cmd += ["--max-emitted-rows", str(args.delta_max_emitted_rows)]
+    if args.real_delta_test_mode:
+        if not args.delta_full_scan_packs:
+            delta_cmd += ["--full-scan-packs"]
+        if not (args.delta_limit_packs and args.delta_limit_packs > 0):
+            delta_cmd += ["--limit-packs", str(max(1, int(args.real_delta_limit_packs)))]
+        if not (args.delta_max_emitted_rows and args.delta_max_emitted_rows > 0):
+            delta_cmd += ["--max-emitted-rows", str(max(1, int(args.real_delta_max_emitted_rows)))]
+        if not args.delta_job_name:
+            delta_cmd += ["--job-name", f"q1_daily_delta_realtest_{int(time.time())}"]
 
-    for step_name, cmd in [
+    step_specs = [
         ("daily_delta_ingest", delta_cmd),
         ("incremental_snapshot_update", [py, str(scripts["snap_inc"]), "--quant-root", str(quant_root)]),
         ("incremental_feature_update", [py, str(scripts["feat_inc"]), "--quant-root", str(quant_root), "--feature-store-version", args.feature_store_version] + (["--output-tag", args.feature_output_tag] if args.feature_output_tag else [])),
-        ("reconciliation_checks", [py, str(scripts["recon"]), "--quant-root", str(quant_root)]),
-    ]:
+        (
+            "reconciliation_checks",
+            [py, str(scripts["recon"]), "--quant-root", str(quant_root)]
+            + (
+                ["--expect-nonzero-delta", "--expected-min-delta-rows", str(max(1, int(args.real_delta_min_emitted_rows)))]
+                if args.real_delta_test_mode
+                else []
+            ),
+        ),
+    ]
+
+    for step_name, cmd in step_specs:
         rc, elapsed, out, err = _run(cmd)
         kv = _parse_kv(out)
         step = {
@@ -106,6 +129,29 @@ def main(argv: Iterable[str]) -> int:
                 pp = Path(p)
                 if pp.exists() and pp.is_file():
                     hashes[f"{step_name}.{key}_hash"] = stable_hash_file(pp)
+        if step_name == "daily_delta_ingest" and rc == 0 and args.real_delta_test_mode:
+            dm_path = kv.get("manifest")
+            if dm_path:
+                try:
+                    dm = read_json(Path(dm_path))
+                    emitted = int(((dm.get("stats") or {}).get("bars_rows_emitted_delta")) or 0)
+                    step["real_delta_test"] = {
+                        "expected_min_rows": int(max(1, args.real_delta_min_emitted_rows)),
+                        "bars_rows_emitted_delta": emitted,
+                        "ok": emitted >= int(max(1, args.real_delta_min_emitted_rows)),
+                    }
+                    if emitted < int(max(1, args.real_delta_min_emitted_rows)):
+                        step["ok"] = False
+                        step["exit_code"] = 91
+                        step["stderr_tail"] = (step.get("stderr_tail") or []) + [
+                            f"REAL_DELTA_TEST_FAILED emitted={emitted} expected_min={int(max(1, args.real_delta_min_emitted_rows))}"
+                        ]
+                        rc = 91
+                except Exception as exc:
+                    step["ok"] = False
+                    step["exit_code"] = 92
+                    step["stderr_tail"] = (step.get("stderr_tail") or []) + [f"REAL_DELTA_TEST_READ_MANIFEST_FAILED {exc}"]
+                    rc = 92
         if rc != 0:
             break
 
@@ -122,7 +168,12 @@ def main(argv: Iterable[str]) -> int:
         "notes": [
             "Phase A daily data backbone orchestrator (Q1): delta ingest -> incremental snapshot -> incremental feature -> reconciliation.",
             "Designed for local/private operation on Stocks+ETFs first.",
+            "real-delta-test-mode enforces non-zero delta rows and tighter reconciliation expectations.",
         ],
+        "config": {
+            "real_delta_test_mode": bool(args.real_delta_test_mode),
+            "real_delta_min_emitted_rows": int(args.real_delta_min_emitted_rows),
+        },
     }
     atomic_write_json(report_path, report)
     print(f"run_id={run_id}")

@@ -24,6 +24,8 @@ def parse_args(argv: Iterable[str]) -> argparse.Namespace:
     p.add_argument("--increment-snapshot-manifest", default="")
     p.add_argument("--increment-feature-manifest", default="")
     p.add_argument("--max-delta-files", type=int, default=0)
+    p.add_argument("--expect-nonzero-delta", action="store_true")
+    p.add_argument("--expected-min-delta-rows", type=int, default=1)
     return p.parse_args(list(argv))
 
 
@@ -140,6 +142,16 @@ def main(argv: Iterable[str]) -> int:
     feat_counts = (inc_feat_manifest.get("counts") or {})
     feat_recon = (inc_feat_manifest.get("reconciliation") or {})
 
+    delta_rows_emitted = int(delta_stats.get("bars_rows_emitted_delta") or 0)
+    delta_assets_emitted = int(delta_stats.get("assets_emitted_delta") or 0)
+    delta_rows_scanned_manifest = int(delta_stats.get("bars_rows_scanned_in_selected_packs") or 0)
+    delta_rows_skipped_old_or_known = int(delta_stats.get("rows_skipped_old_or_known") or 0)
+    delta_rows_skipped_duplicate_in_run = int(delta_stats.get("rows_skipped_duplicate_in_run") or 0)
+    delta_scan_accounting_sum = delta_rows_emitted + delta_rows_skipped_old_or_known + delta_rows_skipped_duplicate_in_run
+
+    expect_nonzero = bool(args.expect_nonzero_delta)
+    expected_min_rows = int(args.expected_min_delta_rows or 1)
+
     checks = {
         "delta_rows_emitted_matches_keys": bool(delta_recon.get("rows_emitted_matches_keys", False)),
         "snapshot_rows_declared_matches_scanned": bool(snap_recon.get("rows_declared_matches_scanned", False)),
@@ -149,6 +161,11 @@ def main(argv: Iterable[str]) -> int:
         "no_invalid_ohlcv_in_delta": int(quality.get("invalid_ohlcv_rows_detected", 0)) == 0,
         "feature_changed_assets_not_exceed_snapshot_changed": int(feat_counts.get("changed_assets_total", 0)) <= int(snap_counts.get("changed_assets_total", 0)),
         "feature_reconciliation_ok": bool(feat_recon.get("ok", False)),
+        "delta_scan_accounting_consistent": (
+            delta_rows_scanned_manifest == 0 or delta_scan_accounting_sum == delta_rows_scanned_manifest
+        ),
+        "delta_rows_emitted_nonzero_when_expected": (delta_rows_emitted >= expected_min_rows) if expect_nonzero else True,
+        "delta_assets_emitted_nonzero_when_expected": (delta_assets_emitted > 0) if expect_nonzero else True,
     }
     all_ok = all(checks.values())
 
@@ -170,10 +187,23 @@ def main(argv: Iterable[str]) -> int:
                 "bars_rows_emitted_delta": delta_stats.get("bars_rows_emitted_delta"),
                 "assets_emitted_delta": delta_stats.get("assets_emitted_delta"),
                 "rows_skipped_old_or_known": delta_stats.get("rows_skipped_old_or_known"),
+                "rows_skipped_duplicate_in_run": delta_stats.get("rows_skipped_duplicate_in_run"),
+                "bars_rows_scanned_in_selected_packs": delta_stats.get("bars_rows_scanned_in_selected_packs"),
             },
             "delta_quality_scan": quality,
             "increment_snapshot_counts": snap_counts,
             "increment_feature_counts": feat_counts,
+            "delta_scan_accounting": {
+                "rows_emitted": delta_rows_emitted,
+                "rows_skipped_old_or_known": delta_rows_skipped_old_or_known,
+                "rows_skipped_duplicate_in_run": delta_rows_skipped_duplicate_in_run,
+                "sum_emitted_plus_skipped": delta_scan_accounting_sum,
+                "rows_scanned_manifest": delta_rows_scanned_manifest,
+            },
+        },
+        "expectations": {
+            "expect_nonzero_delta": expect_nonzero,
+            "expected_min_delta_rows": expected_min_rows if expect_nonzero else None,
         },
         "hashes": {
             "delta_manifest_hash": stable_hash_file(delta_manifest_path),

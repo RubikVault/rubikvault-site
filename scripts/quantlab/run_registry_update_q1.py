@@ -92,6 +92,18 @@ def _ensure_schema(conn: sqlite3.Connection) -> None:
           metrics_json TEXT NOT NULL
         );
 
+        CREATE TABLE IF NOT EXISTS candidate_registry_state_q1 (
+          candidate_id TEXT PRIMARY KEY,
+          family TEXT,
+          state TEXT NOT NULL,
+          source_stage_b_run_id TEXT NOT NULL,
+          updated_at TEXT NOT NULL,
+          reason_codes_json TEXT NOT NULL,
+          q1_registry_score REAL,
+          champion_id TEXT,
+          metrics_json TEXT NOT NULL
+        );
+
         CREATE TABLE IF NOT EXISTS promotion_decisions_q1 (
           decision_id TEXT PRIMARY KEY,
           ts TEXT NOT NULL,
@@ -346,14 +358,16 @@ def main(argv: Iterable[str]) -> int:
     challenger_candidate_id = str(top_survivor.get("candidate_id")) if top_survivor else None
 
     if top_survivor is None:
-        reason_codes.append("NO_STAGE_B_SURVIVORS")
+        reason_codes.extend(["STAGE_B_SURVIVORS_EMPTY", "NO_STAGE_B_SURVIVORS"])
     elif current is None:
+        reason_codes.append("STAGE_B_SURVIVOR_PRESENT")
         if args.promote_on_empty:
             decision = "PROMOTE"
             reason_codes.append("NO_EXISTING_CHAMPION")
         else:
             reason_codes.append("NO_EXISTING_CHAMPION_PROMOTION_DISABLED")
     else:
+        reason_codes.extend(["STAGE_B_SURVIVOR_PRESENT", "CURRENT_CHAMPION_PRESENT"])
         challenger_score = float(top_survivor.get("q1_registry_score") or 0.0)
         champion_score = float(current.get("q1_registry_score") or 0.0)
         if str(current.get("candidate_id")) == str(top_survivor.get("candidate_id")):
@@ -361,10 +375,10 @@ def main(argv: Iterable[str]) -> int:
             reason_codes.append("CHAMPION_ALREADY_TOP_SURVIVOR")
         elif challenger_score >= champion_score + float(args.score_epsilon):
             decision = "PROMOTE"
-            reason_codes.append("Q1_REGISTRY_SCORE_IMPROVED")
+            reason_codes.extend(["Q1_REGISTRY_SCORE_IMPROVED", "SCORE_EPSILON_MET"])
         else:
             decision = "NO_PROMOTION"
-            reason_codes.append("SCORE_IMPROVEMENT_BELOW_EPSILON")
+            reason_codes.extend(["SCORE_IMPROVEMENT_BELOW_EPSILON", "SCORE_EPSILON_NOT_MET"])
 
     if decision == "PROMOTE" and top_survivor is not None:
         champ_payload = {
@@ -410,6 +424,7 @@ def main(argv: Iterable[str]) -> int:
             "old_champion_id": champion_before_id,
             "new_champion_id": champion_after_id,
             "candidate_id": champ_payload["candidate_id"],
+            "reason_codes": list(reason_codes),
             "delta_metrics": {
                 "old_q1_registry_score": float(current.get("q1_registry_score") or 0.0) if current else None,
                 "new_q1_registry_score": float(champ_payload["q1_registry_score"]),
@@ -433,10 +448,10 @@ def main(argv: Iterable[str]) -> int:
                 event.get("old_champion_id"),
                 event.get("new_champion_id"),
                 event.get("candidate_id"),
-                json.dumps(event.get("delta_metrics") or {}, sort_keys=True, ensure_ascii=False),
-                json.dumps(event.get("artifacts") or {}, sort_keys=True, ensure_ascii=False),
-            ),
-        )
+                    json.dumps(event.get("delta_metrics") or {}, sort_keys=True, ensure_ascii=False),
+                    json.dumps(event.get("artifacts") or {}, sort_keys=True, ensure_ascii=False),
+                ),
+            )
 
     decision_rec = {
         "schema": "quantlab_q1_promotion_decision_v1",
@@ -454,6 +469,8 @@ def main(argv: Iterable[str]) -> int:
             "challenger_q1_registry_score": (float(top_survivor.get("q1_registry_score")) if top_survivor else None),
             "champion_q1_registry_score_before": (float(current.get("q1_registry_score")) if current else None),
             "score_epsilon": float(args.score_epsilon),
+            "state_before": (str(current.get("state")) if current else None),
+            "state_after": ("live" if decision == "PROMOTE" and top_survivor is not None else (str(current.get("state")) if current else None)),
         },
         "artifacts": {
             "stage_b_q1_run_report": str(stage_b_run_report_path),
@@ -481,6 +498,67 @@ def main(argv: Iterable[str]) -> int:
             json.dumps(decision_rec.get("artifacts") or {}, sort_keys=True, ensure_ascii=False),
         ),
     )
+
+    # Candidate registry state (Q1): maintain live/shadow/retired view for the latest observed Stage-B candidate set.
+    live_candidate_id = None
+    live_champion_id = None
+    if decision == "PROMOTE" and top_survivor is not None:
+        live_candidate_id = str(top_survivor.get("candidate_id") or "")
+        live_champion_id = champion_after_id
+    elif current is not None:
+        live_candidate_id = str(current.get("candidate_id") or "")
+        live_champion_id = str(current.get("champion_id") or "")
+
+    survivor_ids = set(str(x) for x in (survivors_df.get_column("candidate_id").to_list() if "candidate_id" in survivors_df.columns else []))
+    state_rows: list[dict[str, Any]] = []
+    for row in candidates_df.to_dicts():
+        cid = str(row.get("candidate_id") or "")
+        if not cid:
+            continue
+        is_stage_b_pass = bool(row.get("stage_b_q1_light_pass"))
+        if live_candidate_id and cid == live_candidate_id:
+            state = "live"
+            state_reasons = ["CURRENT_LIVE_CHAMPION"]
+            if decision == "PROMOTE":
+                state_reasons.append("PROMOTED_IN_THIS_RUN")
+        elif cid in survivor_ids:
+            state = "shadow"
+            state_reasons = ["STAGE_B_LIGHT_SURVIVOR"]
+        else:
+            state = "retired"
+            state_reasons = ["STAGE_B_LIGHT_FAIL" if not is_stage_b_pass else "NOT_SELECTED_IN_SURVIVOR_CAP"]
+        state_rows.append(
+            {
+                "candidate_id": cid,
+                "family": str(row.get("family") or ""),
+                "state": state,
+                "source_stage_b_run_id": stage_b_run_id,
+                "updated_at": now,
+                "reason_codes_json": json.dumps(state_reasons, sort_keys=True, ensure_ascii=False),
+                "q1_registry_score": float(row.get("q1_registry_score") or 0.0),
+                "champion_id": live_champion_id if state == "live" else None,
+                "metrics_json": json.dumps(row, sort_keys=True, ensure_ascii=False),
+            }
+        )
+    for srow in state_rows:
+        conn.execute(
+            """
+            INSERT OR REPLACE INTO candidate_registry_state_q1
+            (candidate_id, family, state, source_stage_b_run_id, updated_at, reason_codes_json, q1_registry_score, champion_id, metrics_json)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                srow["candidate_id"],
+                srow["family"],
+                srow["state"],
+                srow["source_stage_b_run_id"],
+                srow["updated_at"],
+                srow["reason_codes_json"],
+                srow["q1_registry_score"],
+                srow["champion_id"],
+                srow["metrics_json"],
+            ),
+        )
     conn.commit()
 
     ledgers_dir = registry_root / "ledgers"
@@ -504,6 +582,12 @@ def main(argv: Iterable[str]) -> int:
         "counts": {
             "stage_b_candidates_total": int(candidates_df.height),
             "stage_b_survivors_B_light_total": int(survivors_df.height),
+            "candidate_registry_states_written": int(len(state_rows)),
+            "candidate_registry_state_counts": {
+                "live": sum(1 for r in state_rows if r["state"] == "live"),
+                "shadow": sum(1 for r in state_rows if r["state"] == "shadow"),
+                "retired": sum(1 for r in state_rows if r["state"] == "retired"),
+            },
         },
         "artifacts": {
             "registry_db": str(db_path),
@@ -532,4 +616,3 @@ def main(argv: Iterable[str]) -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main(sys.argv[1:]))
-
