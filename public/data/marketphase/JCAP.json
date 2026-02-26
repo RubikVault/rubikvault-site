@@ -3,8 +3,8 @@
   "feature": "marketphase",
   "meta": {
     "symbol": "JCAP",
-    "generatedAt": "2026-02-25T08:02:26.334Z",
-    "fetchedAt": "2026-02-25T08:02:26.334Z",
+    "generatedAt": "2026-02-26T07:21:50.390Z",
+    "fetchedAt": "2026-02-26T07:21:50.390Z",
     "ttlSeconds": 86400,
     "provider": "internal",
     "dataset": "JCAP",
@@ -15,8 +15,8 @@
     "precision": "IEEE754-Double-Round6",
     "auditTrail": {
       "generatedBy": "MarketPhase-v8-Engine",
-      "commitHash": "c8b119b",
-      "reviewDate": "2026-02-25T08:02:26.334Z",
+      "commitHash": "aeeedc1",
+      "reviewDate": "2026-02-26T07:21:50.390Z",
       "standards": [
         "ISO-8000",
         "IEEE-7000"
@@ -26,13 +26,13 @@
   },
   "data": {
     "features": {
-      "RSI": 34.872294,
-      "MACDHist": -0.169036,
-      "ATR%": 1.785237,
-      "SMA50": 21.989,
+      "RSI": 40.73075,
+      "MACDHist": -0.147308,
+      "ATR%": 1.780741,
+      "SMA50": 21.9584,
       "SMA200": null,
       "SMATrend": "unknown",
-      "lastClose": 20.05
+      "lastClose": 20.51
     },
     "swings": {
       "raw": [
@@ -217,71 +217,77 @@
           "date": "2026-02-05",
           "price": 21.02,
           "type": "low"
+        },
+        {
+          "index": 157,
+          "date": "2026-02-10",
+          "price": 22.48,
+          "type": "high"
         }
       ]
     },
     "elliott": {
       "completedPattern": {
-        "valid": false,
+        "valid": true,
         "direction": "bullish",
-        "endedAt": "2026-02-05",
+        "endedAt": "2026-02-10",
         "confidence0_100": 100,
         "rules": {
           "r1": true,
-          "r2": false,
+          "r2": true,
           "r3": true
         },
-        "guidelineScore": 62,
-        "rulePasses": 2
+        "guidelineScore": 95,
+        "rulePasses": 3
       },
       "developingPattern": {
         "possibleWave": "Wave 4 or ABC",
         "confidence": 60,
         "fibLevels": {
           "support": [
-            21.2973,
-            20.7427
+            21.19228,
+            20.84772
           ],
           "resistance": [
-            23.0927,
-            23.6473
+            22.30772,
+            22.65228
           ]
         },
         "disclaimer": "Reference levels only -- no prediction"
       },
       "uncertainty": {
         "lastSwingConfirmed": true,
-        "alternativeCounts": 2,
+        "alternativeCounts": 1,
         "confidenceDecay": {
           "base": 100,
-          "adjusted": 76
+          "adjusted": 88
         }
       },
       "fib": {
         "ratios": {
-          "wave2": 0.33604,
-          "wave3": 0.054141,
-          "wave4": 11.08,
-          "wave5": 0.508922
+          "wave2": 0.161114,
+          "wave3": 1.785139,
+          "wave4": 0.848375,
+          "wave5": 0.940904
         },
-        "conformanceScore": 43.416183
+        "conformanceScore": 64.065409
       }
     },
     "fib": {
       "ratios": {
-        "wave2": 0.33604,
-        "wave3": 0.054141,
-        "wave4": 11.08,
-        "wave5": 0.508922
+        "wave2": 0.161114,
+        "wave3": 1.785139,
+        "wave4": 0.848375,
+        "wave5": 0.940904
       },
-      "conformanceScore": 43.416183
+      "conformanceScore": 64.065409
     },
     "multiTimeframeAgreement": null,
     "debug": {
       "symbol": "JCAP",
       "window": 5,
       "candidateCount": 19,
-      "durationMs": 1
+      "durationMs": 0
     },
     "disclaimer": "MarketPhase AI — Scientific Elliott Research (v8.0)\nprovides deterministic, rule-based historical analysis only.\nIt does not forecast future prices or offer financial advice.\nUse solely for educational and research purposes.\nISO 8000 / IEEE 7000 Compliant - Bit-exact reproducibility guaranteed."
   },

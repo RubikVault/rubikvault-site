@@ -3,8 +3,8 @@
   "feature": "marketphase",
   "meta": {
     "symbol": "LASR",
-    "generatedAt": "2026-02-25T08:02:38.598Z",
-    "fetchedAt": "2026-02-25T08:02:38.598Z",
+    "generatedAt": "2026-02-26T07:22:02.186Z",
+    "fetchedAt": "2026-02-26T07:22:02.186Z",
     "ttlSeconds": 86400,
     "provider": "internal",
     "dataset": "LASR",
@@ -15,8 +15,8 @@
     "precision": "IEEE754-Double-Round6",
     "auditTrail": {
       "generatedBy": "MarketPhase-v8-Engine",
-      "commitHash": "c8b119b",
-      "reviewDate": "2026-02-25T08:02:38.598Z",
+      "commitHash": "aeeedc1",
+      "reviewDate": "2026-02-26T07:22:02.186Z",
       "standards": [
         "ISO-8000",
         "IEEE-7000"
@@ -26,54 +26,48 @@
   },
   "data": {
     "features": {
-      "RSI": 66.23828,
-      "MACDHist": 0.249927,
-      "ATR%": 3.210829,
-      "SMA50": 44.3731,
-      "SMA200": 29.961425,
+      "RSI": 69.936909,
+      "MACDHist": 0.44813,
+      "ATR%": 3.184746,
+      "SMA50": 44.8205,
+      "SMA200": 30.221375,
       "SMATrend": "bullish",
-      "lastClose": 57.64
+      "lastClose": 60.6
     },
     "swings": {
       "raw": [
         {
-          "index": 13,
-          "date": "2025-03-03",
-          "price": 8.3,
-          "type": "low"
-        },
-        {
-          "index": 39,
+          "index": 38,
           "date": "2025-04-08",
           "price": 6.44,
           "type": "low"
         },
         {
-          "index": 137,
+          "index": 136,
           "date": "2025-08-28",
           "price": 29.83,
           "type": "high"
         },
         {
-          "index": 153,
+          "index": 152,
           "date": "2025-09-22",
           "price": 31.55,
           "type": "high"
         },
         {
-          "index": 156,
+          "index": 155,
           "date": "2025-09-25",
           "price": 28.04,
           "type": "low"
         },
         {
-          "index": 188,
+          "index": 187,
           "date": "2025-11-10",
           "price": 36.47,
           "type": "high"
         },
         {
-          "index": 194,
+          "index": 193,
           "date": "2025-11-18",
           "price": 28.6,
           "type": "low"
@@ -81,19 +75,19 @@
       ],
       "confirmed": [
         {
-          "index": 39,
+          "index": 38,
           "date": "2025-04-08",
           "price": 6.44,
           "type": "low"
         },
         {
-          "index": 156,
+          "index": 155,
           "date": "2025-09-25",
           "price": 28.04,
           "type": "low"
         },
         {
-          "index": 194,
+          "index": 193,
           "date": "2025-11-18",
           "price": 28.6,
           "type": "low"
@@ -160,7 +154,7 @@
     "debug": {
       "symbol": "LASR",
       "window": 13,
-      "candidateCount": 7,
+      "candidateCount": 6,
       "durationMs": 0
     },
     "disclaimer": "MarketPhase AI — Scientific Elliott Research (v8.0)\nprovides deterministic, rule-based historical analysis only.\nIt does not forecast future prices or offer financial advice.\nUse solely for educational and research purposes.\nISO 8000 / IEEE 7000 Compliant - Bit-exact reproducibility guaranteed."

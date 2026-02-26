@@ -3,8 +3,8 @@
   "feature": "marketphase",
   "meta": {
     "symbol": "VIAV",
-    "generatedAt": "2026-02-25T08:05:30.630Z",
-    "fetchedAt": "2026-02-25T08:05:30.630Z",
+    "generatedAt": "2026-02-26T07:24:53.694Z",
+    "fetchedAt": "2026-02-26T07:24:53.694Z",
     "ttlSeconds": 86400,
     "provider": "internal",
     "dataset": "VIAV",
@@ -15,8 +15,8 @@
     "precision": "IEEE754-Double-Round6",
     "auditTrail": {
       "generatedBy": "MarketPhase-v8-Engine",
-      "commitHash": "c8b119b",
-      "reviewDate": "2026-02-25T08:05:30.630Z",
+      "commitHash": "aeeedc1",
+      "reviewDate": "2026-02-26T07:24:53.694Z",
       "standards": [
         "ISO-8000",
         "IEEE-7000"
@@ -26,78 +26,78 @@
   },
   "data": {
     "features": {
-      "RSI": 77.527306,
-      "MACDHist": 0.00691,
-      "ATR%": 2.178211,
-      "SMA50": 21.2808,
-      "SMA200": 14.4362,
+      "RSI": 81.404758,
+      "MACDHist": 0.154925,
+      "ATR%": 2.308096,
+      "SMA50": 21.5064,
+      "SMA200": 14.5446,
       "SMATrend": "bullish",
-      "lastClose": 29.13
+      "lastClose": 30.85
     },
     "swings": {
       "raw": [
         {
-          "index": 18,
+          "index": 17,
           "date": "2025-03-10",
           "price": 10.71,
           "type": "low"
         },
         {
-          "index": 28,
+          "index": 27,
           "date": "2025-03-24",
           "price": 11.77,
           "type": "high"
         },
         {
-          "index": 39,
+          "index": 38,
           "date": "2025-04-08",
           "price": 9.61,
           "type": "low"
         },
         {
-          "index": 55,
+          "index": 54,
           "date": "2025-05-01",
           "price": 10.65,
           "type": "high"
         },
         {
-          "index": 58,
+          "index": 57,
           "date": "2025-05-06",
           "price": 8.99,
           "type": "low"
         },
         {
-          "index": 98,
+          "index": 97,
           "date": "2025-07-03",
           "price": 10.44,
           "type": "high"
         },
         {
-          "index": 118,
+          "index": 117,
           "date": "2025-08-01",
           "price": 9.76,
           "type": "low"
         },
         {
-          "index": 188,
+          "index": 187,
           "date": "2025-11-10",
           "price": 18.16,
           "type": "high"
         },
         {
-          "index": 196,
+          "index": 195,
           "date": "2025-11-20",
           "price": 15.92,
           "type": "low"
         },
         {
-          "index": 210,
+          "index": 209,
           "date": "2025-12-11",
           "price": 19.57,
           "type": "high"
         },
         {
-          "index": 228,
+          "index": 227,
           "date": "2026-01-08",
           "price": 17.11,
           "type": "low"
@@ -105,43 +105,37 @@
       ],
       "confirmed": [
         {
-          "index": 28,
+          "index": 27,
           "date": "2025-03-24",
           "price": 11.77,
           "type": "high"
         },
         {
-          "index": 55,
+          "index": 54,
           "date": "2025-05-01",
           "price": 10.65,
           "type": "high"
         },
         {
-          "index": 58,
+          "index": 57,
           "date": "2025-05-06",
           "price": 8.99,
           "type": "low"
         },
         {
-          "index": 118,
+          "index": 117,
           "date": "2025-08-01",
           "price": 9.76,
           "type": "low"
         },
         {
-          "index": 196,
+          "index": 195,
           "date": "2025-11-20",
           "price": 15.92,
           "type": "low"
         },
         {
-          "index": 210,
-          "date": "2025-12-11",
-          "price": 19.57,
-          "type": "high"
-        },
-        {
-          "index": 228,
+          "index": 227,
           "date": "2026-01-08",
           "price": 17.11,
           "type": "low"
@@ -150,66 +144,66 @@
     },
     "elliott": {
       "completedPattern": {
-        "valid": true,
+        "valid": false,
         "direction": "bullish",
         "endedAt": "2026-01-08",
-        "confidence0_100": 100,
+        "confidence0_100": 89,
         "rules": {
-          "r1": true,
-          "r2": true,
+          "r1": false,
+          "r2": false,
           "r3": true
         },
-        "guidelineScore": 64,
-        "rulePasses": 3
+        "guidelineScore": 62,
+        "rulePasses": 1
       },
       "developingPattern": {
         "possibleWave": "Wave 4 or ABC",
-        "confidence": 60,
+        "confidence": 53,
         "fibLevels": {
           "support": [
-            17.40028,
-            16.81972
+            16.06042,
+            15.77958
           ],
           "resistance": [
-            19.27972,
-            19.86028
+            16.96958,
+            17.25042
           ]
         },
         "disclaimer": "Reference levels only -- no prediction"
       },
       "uncertainty": {
         "lastSwingConfirmed": true,
-        "alternativeCounts": 1,
+        "alternativeCounts": 2,
         "confidenceDecay": {
-          "base": 100,
-          "adjusted": 88
+          "base": 89,
+          "adjusted": 65
         }
       },
       "fib": {
         "ratios": {
-          "wave2": 0.463855,
-          "wave3": 3.710843,
-          "wave4": 0.592532,
-          "wave5": 1.481928
+          "wave2": 1.482143,
+          "wave3": 0.6875,
+          "wave4": 8,
+          "wave5": 1.0625
         },
-        "conformanceScore": 88.364305
+        "conformanceScore": 36.918234
       }
     },
     "fib": {
       "ratios": {
-        "wave2": 0.463855,
-        "wave3": 3.710843,
-        "wave4": 0.592532,
-        "wave5": 1.481928
+        "wave2": 1.482143,
+        "wave3": 0.6875,
+        "wave4": 8,
+        "wave5": 1.0625
       },
-      "conformanceScore": 88.364305
+      "conformanceScore": 36.918234
     },
     "multiTimeframeAgreement": null,
     "debug": {
       "symbol": "VIAV",
-      "window": 14,
+      "window": 15,
       "candidateCount": 11,
-      "durationMs": 1
+      "durationMs": 0
     },
     "disclaimer": "MarketPhase AI — Scientific Elliott Research (v8.0)\nprovides deterministic, rule-based historical analysis only.\nIt does not forecast future prices or offer financial advice.\nUse solely for educational and research purposes.\nISO 8000 / IEEE 7000 Compliant - Bit-exact reproducibility guaranteed."
   },

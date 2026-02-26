@@ -3,8 +3,8 @@
   "feature": "marketphase",
   "meta": {
     "symbol": "VOYG",
-    "generatedAt": "2026-02-25T08:05:32.653Z",
-    "fetchedAt": "2026-02-25T08:05:32.653Z",
+    "generatedAt": "2026-02-26T07:24:56.187Z",
+    "fetchedAt": "2026-02-26T07:24:56.187Z",
     "ttlSeconds": 86400,
     "provider": "internal",
     "dataset": "VOYG",
@@ -15,8 +15,8 @@
     "precision": "IEEE754-Double-Round6",
     "auditTrail": {
       "generatedBy": "MarketPhase-v8-Engine",
-      "commitHash": "c8b119b",
-      "reviewDate": "2026-02-25T08:05:32.653Z",
+      "commitHash": "aeeedc1",
+      "reviewDate": "2026-02-26T07:24:56.187Z",
       "standards": [
         "ISO-8000",
         "IEEE-7000"
@@ -26,13 +26,13 @@
   },
   "data": {
     "features": {
-      "RSI": 47.326264,
-      "MACDHist": -0.076055,
-      "ATR%": 4.799968,
-      "SMA50": 29.0962,
+      "RSI": 47.509417,
+      "MACDHist": -0.011999,
+      "ATR%": 4.46295,
+      "SMA50": 29.0816,
       "SMA200": null,
       "SMATrend": "unknown",
-      "lastClose": 27.55
+      "lastClose": 27.61
     },
     "swings": {
       "raw": [
@@ -191,6 +191,12 @@
           "date": "2026-02-12",
           "price": 25.58,
           "type": "low"
+        },
+        {
+          "index": 174,
+          "date": "2026-02-19",
+          "price": 28.59,
+          "type": "high"
         }
       ],
       "confirmed": [
@@ -295,71 +301,77 @@
           "date": "2026-02-05",
           "price": 24.17,
           "type": "low"
+        },
+        {
+          "index": 170,
+          "date": "2026-02-12",
+          "price": 25.58,
+          "type": "low"
         }
       ]
     },
     "elliott": {
       "completedPattern": {
-        "valid": false,
-        "direction": "bearish",
-        "endedAt": "2026-02-05",
-        "confidence0_100": 90,
+        "valid": true,
+        "direction": "bullish",
+        "endedAt": "2026-02-12",
+        "confidence0_100": 100,
         "rules": {
           "r1": true,
-          "r2": false,
-          "r3": false
+          "r2": true,
+          "r3": true
         },
-        "guidelineScore": 66,
-        "rulePasses": 1
+        "guidelineScore": 53,
+        "rulePasses": 3
       },
       "developingPattern": {
         "possibleWave": "Wave 4 or ABC",
-        "confidence": 54,
+        "confidence": 60,
         "fibLevels": {
           "support": [
-            25.69456,
-            22.64544
+            24.33638,
+            24.00362
           ],
           "resistance": [
-            35.56544,
-            38.61456
+            25.41362,
+            25.74638
           ]
         },
         "disclaimer": "Reference levels only -- no prediction"
       },
       "uncertainty": {
         "lastSwingConfirmed": true,
-        "alternativeCounts": 2,
+        "alternativeCounts": 1,
         "confidenceDecay": {
-          "base": 90,
-          "adjusted": 66
+          "base": 100,
+          "adjusted": 88
         }
       },
       "fib": {
         "ratios": {
-          "wave2": 0.265284,
-          "wave3": 0.167996,
-          "wave4": 3.46519,
-          "wave5": 0.686869
+          "wave2": 0.633267,
+          "wave3": 2.194389,
+          "wave4": 1.179909,
+          "wave5": 0.282565
         },
-        "conformanceScore": 42.171327
+        "conformanceScore": 56.76787
       }
     },
     "fib": {
       "ratios": {
-        "wave2": 0.265284,
-        "wave3": 0.167996,
-        "wave4": 3.46519,
-        "wave5": 0.686869
+        "wave2": 0.633267,
+        "wave3": 2.194389,
+        "wave4": 1.179909,
+        "wave5": 0.282565
       },
-      "conformanceScore": 42.171327
+      "conformanceScore": 56.76787
     },
     "multiTimeframeAgreement": null,
     "debug": {
       "symbol": "VOYG",
       "window": 4,
-      "candidateCount": 26,
-      "durationMs": 0
+      "candidateCount": 27,
+      "durationMs": 1
     },
     "disclaimer": "MarketPhase AI — Scientific Elliott Research (v8.0)\nprovides deterministic, rule-based historical analysis only.\nIt does not forecast future prices or offer financial advice.\nUse solely for educational and research purposes.\nISO 8000 / IEEE 7000 Compliant - Bit-exact reproducibility guaranteed."
   },

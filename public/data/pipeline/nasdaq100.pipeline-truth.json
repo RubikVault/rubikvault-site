@@ -1,11 +1,11 @@
 {
   "type": "pipeline.truth",
   "universe": "nasdaq100",
-  "asof": "2026-02-25T08:05:51.772Z",
+  "asof": "2026-02-26T07:25:20.840Z",
   "counts": {
     "expected": 100,
     "fetched": 100,
-    "validated": 99,
+    "validated": 100,
     "computed": 2442,
     "static_ready": 2442
   },
@@ -20,11 +20,6 @@
       "id": "S1",
       "status": "WARN",
       "detail": "100/2453 symbols fetched"
-    },
-    {
-      "id": "S2",
-      "status": "WARN",
-      "detail": "99/100 passed validation"
     }
   ],
   "steps": [
@@ -37,14 +32,14 @@
     {
       "id": "S2",
       "title": "OHLC validated",
-      "status": "WARN",
-      "detail": "99/100 passed validation"
+      "status": "OK",
+      "detail": "100/100 passed validation"
     },
     {
       "id": "S3",
       "title": "Indicators computed",
       "status": "OK",
-      "detail": "2442/99 indicators computed"
+      "detail": "2442/100 indicators computed"
     },
     {
       "id": "S4",
