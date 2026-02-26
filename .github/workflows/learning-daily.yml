@@ -1,0 +1,48 @@
+name: Learning Report Daily
+
+on:
+  schedule:
+    # Run daily at 07:30 UTC (after forecast-daily and universe-v7-daily)
+    - cron: '30 7 * * 1-5'
+  workflow_dispatch:
+    inputs:
+      date:
+        description: 'Override date (YYYY-MM-DD)'
+        required: false
+
+concurrency:
+  group: learning-report-daily
+  cancel-in-progress: false
+
+jobs:
+  learning-cycle:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Run daily learning cycle
+        run: |
+          DATE_ARG=""
+          if [ -n "${{ inputs.date }}" ]; then
+            DATE_ARG="--date=${{ inputs.date }}"
+          fi
+          node scripts/learning/run-daily-learning-cycle.mjs $DATE_ARG
+
+      - name: Commit learning report
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add mirrors/learning/ public/data/reports/learning-report-latest.json
+          if git diff --cached --quiet; then
+            echo "No learning data changes to commit"
+          else
+            git commit -m "chore(learning): daily learning report $(date +%Y-%m-%d)"
+            git push
+          fi
