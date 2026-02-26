@@ -446,6 +446,9 @@ Current local LaunchAgent install:
 - `/Users/michaelpuchowezki/Library/LaunchAgents/com.rubikvault.quantlab.q1panel-stagea.daily.plist`
 
 Current env flags enabled in launchd:
+- `Q1_DAILY_RUN_PHASEA_BACKBONE=1`
+- `Q1_DAILY_PHASEA_INCLUDE_TYPES=STOCK,ETF`
+- `Q1_DAILY_PHASEA_REAL_DELTA_TEST_MODE=0`
 - `Q1_DAILY_RUN_STAGEB_PREP=1`
 - `Q1_DAILY_RUN_STAGEB_Q1=1`
 - `Q1_DAILY_RUN_REGISTRY_Q1=1`
@@ -453,16 +456,48 @@ Current env flags enabled in launchd:
 
 Meaning:
 - local daily run can now execute:
+  - Phase A backbone (`delta ingest -> incremental snapshot -> incremental feature -> reconciliation`)
   - panel build
   - Stage A
   - Stage B prep
   - Stage B Q1
   - registry update
-- Phase A (`delta/snapshot/features/reconciliation`) still needs to be wired into the same wrapper for full Day-10 DoD.
+- Phase A is now wired into the same wrapper (optional/guardrailed) and enabled in the local launchd config.
+- Real-delta mode remains configurable (`Q1_DAILY_PHASEA_REAL_DELTA_TEST_MODE=1`) and is recommended for explicit validation runs rather than every scheduled run.
   - promotion decision ledger (always)
   - promotion event ledger (events only)
   - promotion index helper
   - current champion state (Q1 local)
+
+### 12.1 Daily local runner with integrated Phase A (verification)
+
+Python runner:
+- `/Users/michaelpuchowezki/Dev/rubikvault-site/scripts/quantlab/run_q1_panel_stage_a_daily_local.py`
+
+What changed:
+- optional `--run-phasea-backbone` step added before panel/Stage A pipeline
+- status JSON now stores:
+  - `artifacts.phasea_backbone_run_report`
+  - `hashes.phasea_backbone_run_report_hash`
+  - `references.phasea` summary (nested Phase-A refs/config)
+
+Scratch verification (strict real-delta expected fail path):
+- `/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab-scratch-realtest/runs/run_id=q1panel_daily_local_1772129396/q1_panel_stagea_daily_run_status.json`
+- `ok = false`, `exit_code = 91` (guard correctly blocked low/nonzero delta expectation miss)
+
+Scratch verification (integrated success path):
+- `/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab-scratch-realtest/runs/run_id=q1panel_daily_local_1772129464/q1_panel_stagea_daily_run_status.json`
+
+Observed:
+- `ok = true`
+- `steps` include:
+  - `run_q1_daily_data_backbone_q1`
+  - `run_q1_panel_stage_a_pipeline`
+- `phasea_backbone_run_report` reference + hash populated
+
+Interpretation:
+- Single local daily entrypoint now covers the data backbone plus panel/screening chain.
+- This closes the earlier Day-10 wrapper wiring gap at Q1 level.
 
 Registry root (local, private):
 - `/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab/registry`
@@ -660,6 +695,7 @@ Examples (see `totals` / `by_type` in report):
 - Stage B light
 - Stage B -> Registry/Champion bridge (Q1 local governance base)
 - local daily runner + launchd activation
+- Phase A backbone integrated into local daily runner (guardrailed, launchd-enabled)
 
 ### Not done yet (critical for true v4.0)
 - daily delta ingest + incremental snapshot update (production-grade)

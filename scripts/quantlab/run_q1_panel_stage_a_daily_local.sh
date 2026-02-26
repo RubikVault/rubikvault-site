@@ -65,6 +65,16 @@ TEST_DAYS="${Q1_DAILY_TEST_DAYS:-5}"
 EMBARGO_DAYS="${Q1_DAILY_EMBARGO_DAYS:-2}"
 MIN_TRAIN_DAYS="${Q1_DAILY_MIN_TRAIN_DAYS:-8}"
 SURVIVORS_MAX="${Q1_DAILY_SURVIVORS_MAX:-24}"
+RUN_PHASEA_BACKBONE="${Q1_DAILY_RUN_PHASEA_BACKBONE:-0}"
+PHASEA_INCLUDE_TYPES="${Q1_DAILY_PHASEA_INCLUDE_TYPES:-STOCK,ETF}"
+PHASEA_INGEST_DATE="${Q1_DAILY_PHASEA_INGEST_DATE:-}"
+PHASEA_DELTA_JOB_NAME="${Q1_DAILY_PHASEA_DELTA_JOB_NAME:-}"
+PHASEA_FEATURE_STORE_VERSION="${Q1_DAILY_PHASEA_FEATURE_STORE_VERSION:-}"
+PHASEA_FEATURE_OUTPUT_TAG="${Q1_DAILY_PHASEA_FEATURE_OUTPUT_TAG:-}"
+PHASEA_REAL_DELTA_TEST_MODE="${Q1_DAILY_PHASEA_REAL_DELTA_TEST_MODE:-0}"
+PHASEA_REAL_DELTA_MIN_ROWS="${Q1_DAILY_PHASEA_REAL_DELTA_MIN_ROWS:-1}"
+PHASEA_REAL_DELTA_LIMIT_PACKS="${Q1_DAILY_PHASEA_REAL_DELTA_LIMIT_PACKS:-2}"
+PHASEA_REAL_DELTA_MAX_ROWS="${Q1_DAILY_PHASEA_REAL_DELTA_MAX_ROWS:-100000}"
 
 LOG_DIR="$QUANT_ROOT/logs"
 mkdir -p "$LOG_DIR"
@@ -91,6 +101,33 @@ CMD=(
   --survivors-max "$SURVIVORS_MAX"
 )
 
+if [[ "$RUN_PHASEA_BACKBONE" == "1" ]]; then
+  CMD+=(
+    --run-phasea-backbone
+    --phasea-include-types "$PHASEA_INCLUDE_TYPES"
+  )
+  if [[ -n "$PHASEA_INGEST_DATE" ]]; then
+    CMD+=(--phasea-ingest-date "$PHASEA_INGEST_DATE")
+  fi
+  if [[ -n "$PHASEA_DELTA_JOB_NAME" ]]; then
+    CMD+=(--phasea-delta-job-name "$PHASEA_DELTA_JOB_NAME")
+  fi
+  if [[ -n "$PHASEA_FEATURE_STORE_VERSION" ]]; then
+    CMD+=(--phasea-feature-store-version "$PHASEA_FEATURE_STORE_VERSION")
+  fi
+  if [[ -n "$PHASEA_FEATURE_OUTPUT_TAG" ]]; then
+    CMD+=(--phasea-feature-output-tag "$PHASEA_FEATURE_OUTPUT_TAG")
+  fi
+  if [[ "$PHASEA_REAL_DELTA_TEST_MODE" == "1" ]]; then
+    CMD+=(
+      --phasea-real-delta-test-mode
+      --phasea-real-delta-min-emitted-rows "$PHASEA_REAL_DELTA_MIN_ROWS"
+      --phasea-real-delta-limit-packs "$PHASEA_REAL_DELTA_LIMIT_PACKS"
+      --phasea-real-delta-max-emitted-rows "$PHASEA_REAL_DELTA_MAX_ROWS"
+    )
+  fi
+fi
+
 if [[ "$PRINT_ONLY" -eq 1 ]]; then
   printf 'snapshot_id=%s\n' "$SNAPSHOT_ID"
   printf 'log_file=%s\n' "$LOG_FILE"
@@ -107,6 +144,7 @@ fi
   echo "[q1-daily-local] feature_store_version=$FEATURE_STORE_VERSION"
   echo "[q1-daily-local] panel_output_tag=$PANEL_OUTPUT_TAG"
   echo "[q1-daily-local] panel_max_assets=$PANEL_MAX_ASSETS top_liquid_n=$TOP_LIQUID_N"
+  echo "[q1-daily-local] phasea_backbone=$RUN_PHASEA_BACKBONE phasea_real_delta_test=$PHASEA_REAL_DELTA_TEST_MODE"
   printf '[q1-daily-local] cmd='
   printf '%q ' "${CMD[@]}"
   printf '\n'

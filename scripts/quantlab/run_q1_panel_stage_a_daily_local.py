@@ -19,6 +19,16 @@ def parse_args(argv: Iterable[str]) -> argparse.Namespace:
     p = argparse.ArgumentParser()
     p.add_argument("--quant-root", default=DEFAULT_QUANT_ROOT)
     p.add_argument("--python", default=str(Path.cwd() / "quantlab" / ".venv" / "bin" / "python"))
+    p.add_argument("--run-phasea-backbone", action="store_true")
+    p.add_argument("--phasea-include-types", default="STOCK,ETF")
+    p.add_argument("--phasea-ingest-date", default="")
+    p.add_argument("--phasea-delta-job-name", default="")
+    p.add_argument("--phasea-feature-store-version", default="")
+    p.add_argument("--phasea-feature-output-tag", default="")
+    p.add_argument("--phasea-real-delta-test-mode", action="store_true")
+    p.add_argument("--phasea-real-delta-min-emitted-rows", type=int, default=1)
+    p.add_argument("--phasea-real-delta-limit-packs", type=int, default=2)
+    p.add_argument("--phasea-real-delta-max-emitted-rows", type=int, default=100000)
     p.add_argument("--snapshot-id", required=True)
     p.add_argument("--feature-store-version", default="v4_q1panel_daily_local")
     p.add_argument("--panel-output-tag", default="daily")
@@ -52,6 +62,99 @@ def main(argv: Iterable[str]) -> int:
     quant_root = Path(args.quant_root).resolve()
     py = args.python
     orchestrator = REPO_ROOT / "scripts" / "quantlab" / "run_q1_panel_stage_a_pipeline.py"
+    phasea_runner = REPO_ROOT / "scripts" / "quantlab" / "run_q1_daily_data_backbone_q1.py"
+
+    phasea_report_path: Path | None = None
+    phasea_stdout = ""
+    phasea_stderr = ""
+    phasea_elapsed = 0.0
+    phasea_cmd: list[str] | None = None
+    if args.run_phasea_backbone:
+        phasea_rc = 0
+        phasea_cmd = [
+            py,
+            str(phasea_runner),
+            "--quant-root",
+            str(quant_root),
+            "--include-types",
+            args.phasea_include_types,
+            "--feature-store-version",
+            (args.phasea_feature_store_version or args.feature_store_version),
+        ]
+        if args.phasea_ingest_date:
+            phasea_cmd += ["--ingest-date", args.phasea_ingest_date]
+        if args.phasea_delta_job_name:
+            phasea_cmd += ["--delta-job-name", args.phasea_delta_job_name]
+        if args.phasea_feature_output_tag:
+            phasea_cmd += ["--feature-output-tag", args.phasea_feature_output_tag]
+        if args.phasea_real_delta_test_mode:
+            phasea_cmd += [
+                "--real-delta-test-mode",
+                "--real-delta-min-emitted-rows",
+                str(args.phasea_real_delta_min_emitted_rows),
+                "--real-delta-limit-packs",
+                str(args.phasea_real_delta_limit_packs),
+                "--real-delta-max-emitted-rows",
+                str(args.phasea_real_delta_max_emitted_rows),
+            ]
+        t0_phasea = time.time()
+        phasea_proc = subprocess.run(phasea_cmd, cwd=REPO_ROOT, capture_output=True, text=True)
+        phasea_elapsed = round(time.time() - t0_phasea, 3)
+        phasea_stdout = phasea_proc.stdout or ""
+        phasea_stderr = phasea_proc.stderr or ""
+        phasea_kv: dict[str, str] = {}
+        for line in phasea_stdout.splitlines():
+            if "=" in line and not line.startswith("["):
+                k, v = line.split("=", 1)
+                if k and v:
+                    phasea_kv[k.strip()] = v.strip()
+        if "report" in phasea_kv:
+            phasea_report_path = Path(phasea_kv["report"])
+        phasea_rc = int(phasea_proc.returncode)
+        if phasea_proc.returncode != 0:
+            # Write a minimal status file for failed phase-A invocation and return.
+            run_id = f"q1panel_daily_local_{int(time.time())}"
+            out_dir = quant_root / "runs" / f"run_id={run_id}"
+            out_dir.mkdir(parents=True, exist_ok=True)
+            status_path = out_dir / "q1_panel_stagea_daily_run_status.json"
+            status = {
+                "schema": "quantlab_q1_panel_stagea_daily_local_run_status_v1",
+                "generated_at": utc_now_iso(),
+                "run_id": run_id,
+                "git_sha": _git_sha(REPO_ROOT),
+                "ok": False,
+                "exit_code": int(phasea_proc.returncode),
+                "mode": "local_daily_q1_panel_stageA",
+                "inputs": {
+                    "snapshot_id": args.snapshot_id,
+                    "feature_store_version": args.feature_store_version,
+                    "panel_output_tag": args.panel_output_tag,
+                    "run_phasea_backbone": True,
+                },
+                "steps": [
+                    {
+                        "name": "run_q1_daily_data_backbone_q1",
+                        "ok": False,
+                        "exit_code": phasea_rc,
+                        "elapsed_sec": phasea_elapsed,
+                        "cmd": phasea_cmd,
+                        "stdout_tail": phasea_stdout.splitlines()[-20:],
+                        "stderr_tail": phasea_stderr.splitlines()[-20:],
+                    }
+                ],
+                "artifacts": {
+                    "phasea_backbone_run_report": str(phasea_report_path) if phasea_report_path else None,
+                },
+                "stdout_tail": phasea_stdout.splitlines()[-20:],
+                "stderr_tail": phasea_stderr.splitlines()[-20:],
+            }
+            if phasea_report_path and phasea_report_path.exists():
+                status["hashes"] = {"phasea_backbone_run_report_hash": stable_hash_file(phasea_report_path)}
+            atomic_write_json(status_path, status)
+            print(f"run_id={run_id}")
+            print(f"status={status_path}")
+            print("ok=False")
+            return int(phasea_proc.returncode)
 
     cmd = [
         py,
@@ -120,6 +223,7 @@ def main(argv: Iterable[str]) -> int:
             "feature_store_version": args.feature_store_version,
             "panel_output_tag": args.panel_output_tag,
             "asset_classes": args.asset_classes,
+            "run_phasea_backbone": bool(args.run_phasea_backbone),
             "panel_max_assets": args.panel_max_assets,
             "top_liquid_n": args.top_liquid_n,
             "fold_count": args.fold_count,
@@ -127,20 +231,35 @@ def main(argv: Iterable[str]) -> int:
             "embargo_days": args.embargo_days,
             "min_train_days": args.min_train_days,
         },
-        "steps": [
-            {
-                "name": "run_q1_panel_stage_a_pipeline",
-                "ok": proc.returncode == 0,
-                "elapsed_sec": elapsed,
-                "cmd": cmd,
-            }
-        ],
+        "steps": [],
         "artifacts": {
             "orchestrator_run_report": str(orch_report_path) if orch_report_path else None,
         },
         "stdout_tail": orchestrator_stdout.splitlines()[-20:],
         "stderr_tail": orchestrator_stderr.splitlines()[-20:],
     }
+    if args.run_phasea_backbone:
+        status["steps"].append(
+            {
+                "name": "run_q1_daily_data_backbone_q1",
+                "ok": True,
+                "exit_code": int(phasea_rc),
+                "elapsed_sec": phasea_elapsed,
+                "cmd": phasea_cmd,
+                "stdout_tail": phasea_stdout.splitlines()[-20:],
+                "stderr_tail": phasea_stderr.splitlines()[-20:],
+            }
+        )
+        status["artifacts"]["phasea_backbone_run_report"] = str(phasea_report_path) if phasea_report_path else None
+    status["steps"].append(
+        {
+            "name": "run_q1_panel_stage_a_pipeline",
+            "ok": proc.returncode == 0,
+            "exit_code": int(proc.returncode),
+            "elapsed_sec": elapsed,
+            "cmd": cmd,
+        }
+    )
 
     if orch_report_path and orch_report_path.exists():
         orch = read_json(orch_report_path)
@@ -156,6 +275,18 @@ def main(argv: Iterable[str]) -> int:
         status["hashes"] = {
             "orchestrator_run_report_hash": stable_hash_file(orch_report_path),
         }
+        if args.run_phasea_backbone and phasea_report_path and phasea_report_path.exists():
+            status["hashes"]["phasea_backbone_run_report_hash"] = stable_hash_file(phasea_report_path)
+            phasea = read_json(phasea_report_path)
+            status["references"]["phasea"] = {
+                "run_id": phasea.get("run_id"),
+                "ok": phasea.get("ok"),
+                "exit_code": phasea.get("exit_code"),
+                "real_delta_test_mode": ((phasea.get("config") or {}).get("real_delta_test_mode")),
+                "real_delta_min_emitted_rows": ((phasea.get("config") or {}).get("real_delta_min_emitted_rows")),
+                "step_names": [str((s or {}).get("name")) for s in (phasea.get("steps") or [])],
+                "phasea_references": phasea.get("references") or {},
+            }
         for key in ("panel_manifest", "cheap_gate_report", "folds_manifest"):
             ref_value = status["references"].get(key)
             if not ref_value:
@@ -163,6 +294,10 @@ def main(argv: Iterable[str]) -> int:
             p = Path(str(ref_value))
             if p.exists() and p.is_file():
                 status["hashes"][f"{key}_hash"] = stable_hash_file(p)
+    elif args.run_phasea_backbone and phasea_report_path and phasea_report_path.exists():
+        status["hashes"] = {
+            "phasea_backbone_run_report_hash": stable_hash_file(phasea_report_path),
+        }
 
     atomic_write_json(status_path, status)
     print(f"run_id={run_id}")

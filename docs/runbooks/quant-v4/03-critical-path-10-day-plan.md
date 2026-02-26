@@ -21,7 +21,7 @@ This is the fastest path to "mostly training/iteration" mode.
 - Day 8-9: partially advanced ahead of schedule (Q1 registry base + decision/event ledgers + first promotion record exist)
 
 Remaining critical path focus:
-- wire Phase A real-delta path into the same daily wrapper (it is now validated in scratch mode)
+- promote integrated Phase A mode from scratch validation to regular daily operation (with thresholds/guards)
 - tighten Stage B toward real CPCV/DSR/PSR (current Stage-B Q1 is stricter but still proxy/light)
 - expand registry/champion governance from Q1 base to full live/shadow/demotion model
 
@@ -85,7 +85,8 @@ DoD:
 Status:
 - Reconciliation runner implemented and now verified on a real non-zero delta scratch run.
 - Stronger expectations added (`expect_nonzero_delta`, minimum emitted rows, delta scan accounting consistency).
-- Next upgrade: wire this real-delta path into the single daily wrapper (not only scratch mode).
+- Phase A is now integrated into the single local daily wrapper (optional/guardrailed) and launchd-enabled.
+- Next upgrade: run regular scheduled Phase A with production-like delta expectations and monitor drift/failure rates.
 
 ## Day 5 - Stage B real foundations (fold artifacts + stricter split policy)
 
@@ -157,7 +158,7 @@ Status:
   - `PROMOTE` with reason `NO_EXISTING_CHAMPION`
   - `NO_PROMOTION` with reason `CHAMPION_ALREADY_TOP_SURVIVOR`
 
-## Day 10 - End-to-end daily local quant backbone (Stocks+ETFs) 🔶 (partially advanced)
+## Day 10 - End-to-end daily local quant backbone (Stocks+ETFs) ✅ (Q1 integrated)
 
 Deliverables:
 - single local batch runner:
@@ -177,14 +178,16 @@ DoD:
 
 Status (current):
 - Daily local runner executes:
+  - Phase A backbone (`delta/snapshot/features/reconciliation`) [optional/guardrailed, now integrated]
   - panel build
   - Stage A
   - Stage B prep
   - Stage B Q1 (light)
   - registry update (optional, now enabled in launchd template)
-- Still missing for Day 10 full DoD:
-  - wiring Phase A backbone (`delta/snapshot/features/reconciliation`) into the same single daily wrapper
-  - promoting scratch-tested real-delta mode to production-like daily mode
+- Day-10 integration gap is closed at Q1 level.
+- Remaining follow-up (next block, not Day-10 blocker):
+  - promote scratch-tested real-delta mode to production-like scheduled mode with tuned thresholds
+  - continue de-proxying Stage B
 
 ## Out of scope for this 10-day block (but next)
 

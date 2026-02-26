@@ -5,8 +5,8 @@ Status: local working documentation for the Quant v4.0 buildout (private/local-f
 Current focus (as of latest update):
 - Stocks+ETFs Q1 backbone is running (full panels, Stage A, Stage B Q1-light).
 - Q1 registry/champion base (SQLite + decision/event ledgers) now exists locally.
-- Phase A real non-zero delta path is now validated in scratch mode (with strict reconciliation).
-- Next critical path: wire Phase A into the daily wrapper + Stage B de-proxying.
+- Phase A is now wired into the local daily wrapper (optional/guardrailed) and validated end-to-end on scratch.
+- Next critical path: promote Phase A real-delta mode into regular daily use + continue Stage B de-proxying.
 
 Purpose:
 - Preserve target architecture, current implementation status, and exact next steps.
