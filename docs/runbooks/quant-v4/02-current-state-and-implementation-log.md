@@ -137,7 +137,23 @@ Implemented:
 
 Cache behavior:
 - Helper-level verified: `built -> hit`
-- Manifest-level proof for both caches should be refreshed after a dedicated cache-hit build (see pending tasks below).
+- Manifest-level proof for both caches is now available (see 6.1 below).
+
+### 6.1 Explicit manifest proof (`cache = hit` for both caches)
+Probe build manifest (full mode, short panel range, cache verification run):
+- `/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab/features/store/feature_store_version=v4_q1panel_fullchunk_cachehitproof10/feature_panel_manifest.json`
+
+Verified in `scan_plan`:
+- `registry_packkey_cache.status = "hit"`
+- `bars_pack_file_index.status = "hit"`
+- sample preprune modes:
+  - `registry_lookup_mode = "registry_packkey_cache"`
+  - `bars_file_lookup_mode = "pack_index"`
+
+Probe counts (`counts.*`):
+- `rows_total = 7542`
+- `files_total = 14`
+- `asof_dates_total = 2`
 
 ## 7. Stage A (temporal folds) status
 
@@ -196,6 +212,16 @@ Current observed result (top50k stage-A context):
 - `stage_a_candidates_total = 8`
 - `stage_a_survivors_A_total = 1`
 - `survivors_B_light_total = 1`
+
+Observed Stage-B-light fail pressure (same report, top50k context):
+- strongest fail reasons are dominated by strict Sharpe / PSR / DSR / CPCV-light robustness gates
+- examples include:
+  - `g_sharpe_mean`
+  - `g_bootstrap_neg_sharpe`
+  - `g_cpcv_light_neg_share`
+  - `g_cpcv_light_sharpe_min`
+  - `g_psr_proxy`
+  - `g_dsr_proxy`
 
 Important:
 - This is not full v4.0 Stage B yet.
@@ -289,4 +315,3 @@ Whenever a meaningful Quant milestone is completed:
 - Quant artifacts are local/private and should not be pushed to `main`.
 - Website/UI experimental changes (Ideas tabs, live news/search) are separate and should stay isolated.
 - Large generated datasets should stay off repo history (use T9/NAS and manifests).
-
