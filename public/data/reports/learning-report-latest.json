@@ -1,0 +1,111 @@
+{
+  "schema": "rubikvault_daily_learning_report_v2",
+  "date": "2026-02-26",
+  "generated_at": "2026-02-26T19:38:26.113Z",
+  "start_date": "2026-02-26",
+  "days_active": 1,
+  "summary": {
+    "features_tracked": 4,
+    "total_predictions_today": 78,
+    "overall_status": "BOOTSTRAP — Noch keine Outcome-Daten"
+  },
+  "features": {
+    "forecast": {
+      "name": "Forecast System v3.0",
+      "type": "price_direction_probability",
+      "predictions_total": 0,
+      "outcomes_resolved": 0,
+      "accuracy_all": null,
+      "brier_all": null,
+      "hit_rate_all": null,
+      "accuracy_7d": null,
+      "brier_7d": null,
+      "hit_rate_7d": null,
+      "trend_accuracy": "no_data",
+      "trend_brier": "no_data",
+      "predictions_today": 0
+    },
+    "scientific": {
+      "name": "Scientific Analyzer v9.1",
+      "type": "setup_trigger_breakout",
+      "predictions_total": 0,
+      "outcomes_resolved": 0,
+      "accuracy_all": null,
+      "brier_all": null,
+      "hit_rate_all": null,
+      "accuracy_7d": null,
+      "brier_7d": null,
+      "hit_rate_7d": null,
+      "trend_accuracy": "no_data",
+      "trend_brier": "no_data",
+      "predictions_today": 0
+    },
+    "elliott": {
+      "name": "Elliott Waves DFMSIF v1.0",
+      "type": "wave_direction_forecast",
+      "predictions_total": 0,
+      "outcomes_resolved": 0,
+      "accuracy_all": null,
+      "brier_all": null,
+      "hit_rate_all": null,
+      "accuracy_7d": null,
+      "brier_7d": null,
+      "hit_rate_7d": null,
+      "trend_accuracy": "no_data",
+      "trend_brier": "no_data",
+      "predictions_today": 78
+    },
+    "stock_analyzer": {
+      "name": "Stock Analyzer",
+      "type": "ranking_stability",
+      "stability": null,
+      "churn": null,
+      "rankings_today": 200
+    }
+  },
+  "weekly_comparison": {
+    "forecast": {
+      "this_week": null,
+      "last_week": null
+    },
+    "scientific": {
+      "this_week": null,
+      "last_week": null
+    },
+    "elliott": {
+      "this_week": null,
+      "last_week": null
+    }
+  },
+  "history": [
+    {
+      "date": "2026-02-26",
+      "forecast_accuracy_7d": null,
+      "forecast_brier_7d": null,
+      "scientific_accuracy_7d": null,
+      "scientific_hit_rate_7d": null,
+      "elliott_accuracy_7d": null,
+      "stock_stability": null
+    }
+  ],
+  "metrics": {
+    "forecast_accuracy_7d": null,
+    "forecast_brier_7d": null,
+    "scientific_accuracy_7d": null,
+    "scientific_hit_rate_7d": null,
+    "elliott_accuracy_7d": null,
+    "stock_stability": null
+  },
+  "conviction_scores": [],
+  "stock_forward_returns": null,
+  "improvements_active": [
+    "forecast_calibration_feedback",
+    "forecast_adaptive_confidence",
+    "scientific_signal_threshold_60",
+    "scientific_setup_decay_10d",
+    "elliott_quality_filter_top500",
+    "stock_ema_smoothing_alpha03",
+    "cross_feature_conviction",
+    "scientific_atr_breakout_threshold"
+  ]
+}
