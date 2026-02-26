@@ -2,6 +2,11 @@
 
 Status: local working documentation for the Quant v4.0 buildout (private/local-first).
 
+Current focus (as of latest update):
+- Stocks+ETFs Q1 backbone is running (full panels, Stage A, Stage B Q1-light).
+- Q1 registry/champion base (SQLite + decision/event ledgers) now exists locally.
+- Next critical path: Phase A real daily deltas + Stage B de-proxying.
+
 Purpose:
 - Preserve target architecture, current implementation status, and exact next steps.
 - Allow continuation without chat context.

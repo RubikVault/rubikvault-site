@@ -18,11 +18,12 @@ This is the fastest path to "mostly training/iteration" mode.
 - Day 3: implemented as Q1 latest-only changed-assets incremental feature updater (smoke/no-op path verified)
 - Day 4: implemented as Q1 reconciliation checks (smoke verified)
 - Day 5-7: partially advanced ahead of schedule (Stage B prep + Stage B light + orchestrated Stage-B Q1 runner exist)
+- Day 8-9: partially advanced ahead of schedule (Q1 registry base + decision/event ledgers + first promotion record exist)
 
 Remaining critical path focus:
 - move Phase A from skeleton/no-op validation to real daily deltas
 - tighten Stage B toward real CPCV/DSR/PSR
-- registry/champion governance
+- expand registry/champion governance from Q1 base to full live/shadow/demotion model
 
 ## Day 1 - Daily delta ingest skeleton (Stocks+ETFs) ✅
 
@@ -117,7 +118,7 @@ DoD:
 - Stage B report includes DSR/PSR fields per candidate
 - gates can hard-pass/fail on DSR/PSR thresholds
 
-## Day 8 - Registry/champion base schema (SQLite)
+## Day 8 - Registry/champion base schema (SQLite) ✅ (Q1 base implemented)
 
 Deliverables:
 - registry schema for runs / candidates / champions / events
@@ -126,7 +127,15 @@ Deliverables:
 DoD:
 - one end-to-end run inserts rows for candidate + result + run metadata
 
-## Day 9 - Promotion/decision trail (auditable)
+Status:
+- Implemented (Q1 local base):
+  - SQLite registry schema + insert path from Stage-B Q1 outputs
+  - candidate metrics table
+  - current champion state table
+- Script:
+  - `/Users/michaelpuchowezki/Dev/rubikvault-site/scripts/quantlab/run_registry_update_q1.py`
+
+## Day 9 - Promotion/decision trail (auditable) ✅ (Q1 first pass implemented)
 
 Deliverables:
 - decision ledger (always writes)
@@ -136,7 +145,16 @@ Deliverables:
 DoD:
 - "no promotion" and "promotion" both produce auditable records
 
-## Day 10 - End-to-end daily local quant backbone (Stocks+ETFs)
+Status:
+- Implemented (Q1 first pass):
+  - decision ledger (always writes)
+  - event ledger (promotion events)
+  - promotion index helper
+- Verified both paths:
+  - `PROMOTE` with reason `NO_EXISTING_CHAMPION`
+  - `NO_PROMOTION` with reason `CHAMPION_ALREADY_TOP_SURVIVOR`
+
+## Day 10 - End-to-end daily local quant backbone (Stocks+ETFs) 🔶 (partially advanced)
 
 Deliverables:
 - single local batch runner:
@@ -153,6 +171,17 @@ DoD:
 - one full local daily run completes on Mac
 - all artifact references are written and inspectable
 - no silent failures
+
+Status (current):
+- Daily local runner executes:
+  - panel build
+  - Stage A
+  - Stage B prep
+  - Stage B Q1 (light)
+  - registry update (optional, now enabled in launchd template)
+- Still missing for Day 10 full DoD:
+  - wiring Phase A backbone (`delta/snapshot/features/reconciliation`) into the same single daily wrapper
+  - stronger real-delta assertions and non-no-op validation path
 
 ## Out of scope for this 10-day block (but next)
 

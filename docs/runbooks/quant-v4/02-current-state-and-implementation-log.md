@@ -250,6 +250,49 @@ Observed result (current top50k Stage-A context):
 Interpretation:
 - This is still Q1-light (not final CPCV/DSR/PSR), but it is now a **real Stage-B run step**, not just an isolated prep script.
 
+### 8.4 Stage B -> Registry/Champion bridge (Q1 local governance base)
+Scripts:
+- `/Users/michaelpuchowezki/Dev/rubikvault-site/scripts/quantlab/run_registry_update_q1.py`
+
+Purpose:
+- Reads Stage-B Q1 outputs (`stage_b_q1_run_report` + Stage-B-light candidates/survivors)
+- Writes:
+  - SQLite registry base tables
+  - promotion decision ledger (always)
+  - promotion event ledger (events only)
+  - promotion index helper
+  - current champion state (Q1 local)
+
+Registry root (local, private):
+- `/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab/registry`
+
+Artifacts:
+- `experiments.db`
+- `ledgers/promotion_decisions.ndjson`
+- `ledgers/promotion_events.ndjson`
+- `promotion_index.json`
+- `champions/current_champion.json`
+- `champions/history/*.json`
+
+Verified runs (promotion + no-promotion):
+- `/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab/runs/run_id=q1registry_q1stageb_cheapgateA_tsplits_2026-02-17/q1_registry_update_report.json`
+
+Observed results:
+- First run:
+  - `decision = PROMOTE`
+  - `reason_codes = ["NO_EXISTING_CHAMPION"]`
+  - first live champion created from current Stage-B-light survivor
+- Second run (same Stage-B input, idempotent decision path):
+  - `decision = NO_PROMOTION`
+  - `reason_codes = ["CHAMPION_ALREADY_TOP_SURVIVOR"]`
+
+Current registry table counts (after promotion + no-promotion verification):
+- `runs_stage_b_q1 = 1`
+- `stage_b_candidates_q1 = 8`
+- `champion_state_q1 = 1`
+- `promotion_decisions_q1 = 2`
+- `promotion_events_q1 = 1`
+
 ## 9. Phase A (Daily Data Backbone) status
 
 ### 9.1 Daily delta ingest (Q1 skeleton, implemented)
@@ -376,6 +419,7 @@ Wrapper env defaults (current template):
 - `Q1_DAILY_TOP_LIQUID_N=20000`
 - `Q1_DAILY_RUN_STAGEB_PREP=1`
 - `Q1_DAILY_RUN_STAGEB_Q1=1`
+- `Q1_DAILY_RUN_REGISTRY_Q1=1`
 
 Logs:
 - `/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab/logs/`
@@ -399,7 +443,7 @@ Examples (see `totals` / `by_type` in report):
 - `FOREX/BOND/INDEX` similar problem
 - `FUND` dominates non-stock/ETF counts and has mixed pointer coverage
 
-## 11. What is done vs. not done (v4.0 checklist)
+## 12. What is done vs. not done (v4.0 checklist)
 
 ### Done (Q1/Q1.5)
 - v7 history -> T9 Parquet exporter
@@ -413,6 +457,7 @@ Examples (see `totals` / `by_type` in report):
 - Stage A scaling to 50k top-liquid
 - Stage B prep
 - Stage B light
+- Stage B -> Registry/Champion bridge (Q1 local governance base)
 - local daily runner + launchd activation
 
 ### Not done yet (critical for true v4.0)
@@ -422,12 +467,12 @@ Examples (see `totals` / `by_type` in report):
 - real delistings integration
 - TRI_accounting and TRI_signal
 - full Stage B (CPCV/Purging/Embargo + strict DSR/PSR)
-- registry/champion governance (live/shadow/retired)
+- full registry/champion governance (live/shadow/retired/demotion ladder)
 - portfolio/risk layer
 - invalidation engine
 - full test/invariant suite and red-flag reporting contract
 
-## 12. Update protocol (must follow)
+## 13. Update protocol (must follow)
 
 Whenever a meaningful Quant milestone is completed:
 1. Append/change this file with:
@@ -438,7 +483,7 @@ Whenever a meaningful Quant milestone is completed:
 2. Update `03-critical-path-10-day-plan.md` if priorities shift
 3. Do not write vague summaries without file paths
 
-## 13. Known constraints / cautions
+## 14. Known constraints / cautions
 
 - Quant artifacts are local/private and should not be pushed to `main`.
 - Website/UI experimental changes (Ideas tabs, live news/search) are separate and should stay isolated.

@@ -193,6 +193,46 @@ PY
   fi
 fi
 
+if [[ "$RC" -eq 0 && "${Q1_DAILY_RUN_REGISTRY_Q1:-0}" == "1" ]]; then
+  REG_PY="${Q1_REGISTRY_Q1_PYTHON_BIN:-$PYTHON_BIN}"
+  REG_SCRIPT="$REPO_ROOT/scripts/quantlab/run_registry_update_q1.py"
+  STAGEB_RUN_ID="$(
+    "$REG_PY" - <<'PY'
+import json
+from pathlib import Path
+root = Path("/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab/runs")
+cands = sorted([p for p in root.iterdir() if p.is_dir() and p.name.startswith("run_id=q1panel_daily_local_")], key=lambda p: p.stat().st_mtime_ns)
+if not cands:
+    raise SystemExit(1)
+status = json.loads((cands[-1] / "q1_panel_stagea_daily_run_status.json").read_text())
+refs = status.get("references") or {}
+cheap_path = str(refs.get("cheap_gate_report") or "")
+stage_a_run_id = ""
+if "/runs/run_id=" in cheap_path:
+    frag = cheap_path.split("/runs/run_id=", 1)[1]
+    stage_a_run_id = frag.split("/", 1)[0]
+if not stage_a_run_id:
+    raise SystemExit(2)
+print(f"q1stageb_{stage_a_run_id}")
+PY
+  )"
+  if [[ -n "$STAGEB_RUN_ID" && -f "$REG_SCRIPT" ]]; then
+    {
+      echo "[q1-daily-local] registry_q1=1 stage_b_run_id=$STAGEB_RUN_ID"
+      echo "[q1-daily-local] registry_q1_cmd=$REG_PY $REG_SCRIPT --quant-root $QUANT_ROOT --stage-b-run-id $STAGEB_RUN_ID"
+    } | tee -a "$LOG_FILE"
+    set +e
+    "$REG_PY" "$REG_SCRIPT" --quant-root "$QUANT_ROOT" --stage-b-run-id "$STAGEB_RUN_ID" 2>&1 | tee -a "$LOG_FILE"
+    REG_RC=${PIPESTATUS[0]}
+    set -e
+    if [[ "$REG_RC" -ne 0 ]]; then
+      RC="$REG_RC"
+    fi
+  else
+    echo "[q1-daily-local] registry_q1 skipped (missing stage_b_run_id or script)" | tee -a "$LOG_FILE"
+  fi
+fi
+
 {
   echo "[q1-daily-local] exit_code=$RC"
   echo "[q1-daily-local] finished_utc=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
