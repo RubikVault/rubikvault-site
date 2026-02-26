@@ -180,6 +180,16 @@
         <input id="sticky-search-input" class="rv-sticky-input" type="text" autocomplete="off"
           placeholder="Search ticker (e.g. AAPL, MSFT, F)" style="width: 100%;" />
       </div>
+      <select id="sticky-asset-filter" class="rv-sticky-select" aria-label="Asset class filter">
+        <option value="all">All Assets</option>
+        <option value="stock">Stocks</option>
+        <option value="etf">ETFs</option>
+        <option value="fund">Funds</option>
+        <option value="crypto">Crypto</option>
+        <option value="forex">Forex</option>
+        <option value="bond">Bonds</option>
+        <option value="index">Indices</option>
+      </select>
 
       <select id="sticky-engine-filter" class="rv-sticky-select" aria-label="Engine filter">
         <option value="all">All</option>
@@ -245,8 +255,20 @@
                 <path d="m21 21-4.35-4.35"></path>
               </svg>
             </button>
+            <select id="analyze-asset-filter" class="rv-sticky-select" aria-label="Analyze asset class filter"
+              style="max-width: 145px; flex: 0 0 auto; margin-left: 0.25rem;">
+              <option value="all">All Assets</option>
+              <option value="stock">Stocks</option>
+              <option value="etf">ETFs</option>
+              <option value="fund">Funds</option>
+              <option value="crypto">Crypto</option>
+              <option value="forex">Forex</option>
+              <option value="bond">Bonds</option>
+              <option value="index">Indices</option>
+            </select>
           </div>
-          <div id="coverage-summary-text" style="margin-top: 0.6rem; font-size: 0.9rem; color: #94a3b8; text-align: left; padding-left: 0.25rem;">
+          <div id="coverage-summary-text"
+            style="margin-top: 0.6rem; font-size: 0.9rem; color: #94a3b8; text-align: left; padding-left: 0.25rem;">
             Coverage: loading...
           </div>
         </div>
@@ -390,35 +412,839 @@
           <div id="market-movers-block" style="color:#64748b;">Loading movers…</div>
         </article>
       </div>
+      <article
+        style="margin-top:1rem; padding:1rem; background:rgba(15,23,42,0.35); border:1px solid rgba(100,116,139,0.22); border-radius:12px;">
+        <div style="display:flex; justify-content:space-between; gap:0.6rem; align-items:flex-end; flex-wrap:wrap;">
+          <div>
+            <div
+              style="font-size:0.85rem; color:#94a3b8; text-transform:uppercase; letter-spacing:0.08em; margin-bottom:0.3rem;">
+              Expanded Universe (v7)
+            </div>
+            <div id="market-v7-summary" style="font-size:0.88rem; color:#cbd5e1;">Loading coverage…</div>
+            <div id="market-v7-feature" style="font-size:0.8rem; color:#94a3b8; margin-top:0.25rem;">Loading
+              eligibility…</div>
+            <div id="market-v7-types" style="font-size:0.76rem; color:#64748b; margin-top:0.25rem;">Loading asset
+              classes…</div>
+            <div id="market-v7-exchanges" style="font-size:0.76rem; color:#64748b; margin-top:0.25rem;">Loading
+              exchanges…</div>
+          </div>
+          <div style="display:flex; gap:0.45rem; align-items:center; flex-wrap:wrap;">
+            <label for="market-v7-class-filter" style="font-size:0.78rem; color:#94a3b8;">Asset class</label>
+            <select id="market-v7-class-filter" class="rv-sticky-select" style="min-width:130px;">
+              <option value="all">All</option>
+              <option value="stock">Stock</option>
+              <option value="etf">ETF</option>
+              <option value="fund">Fund</option>
+              <option value="crypto">Crypto</option>
+              <option value="forex">Forex</option>
+              <option value="bond">Bond</option>
+              <option value="index">Index</option>
+              <option value="other">Other</option>
+            </select>
+            <button id="market-v7-page-prev" class="rv-sticky-btn" type="button"
+              style="padding:0.35rem 0.7rem;">Prev</button>
+            <div id="market-v7-page-label"
+              style="font-size:0.78rem; color:#94a3b8; min-width:110px; text-align:center;">Page 1 / 1</div>
+            <button id="market-v7-page-next" class="rv-sticky-btn" type="button"
+              style="padding:0.35rem 0.7rem;">Next</button>
+          </div>
+        </div>
+        <div id="market-v7-meta" style="margin-top:0.45rem; font-size:0.75rem; color:#64748b;">Loading rows…</div>
+        <div style="margin-top:0.65rem; overflow:auto;">
+          <table style="width:100%; border-collapse:collapse; min-width:860px; font-size:0.86rem;">
+            <thead>
+              <tr>
+                <th
+                  style="padding:0.45rem; text-align:left; color:#94a3b8; border-bottom:1px solid rgba(100,116,139,0.22);">
+                  Symbol</th>
+                <th
+                  style="padding:0.45rem; text-align:left; color:#94a3b8; border-bottom:1px solid rgba(100,116,139,0.22);">
+                  Name</th>
+                <th
+                  style="padding:0.45rem; text-align:left; color:#94a3b8; border-bottom:1px solid rgba(100,116,139,0.22);">
+                  Class</th>
+                <th
+                  style="padding:0.45rem; text-align:left; color:#94a3b8; border-bottom:1px solid rgba(100,116,139,0.22);">
+                  Exchange</th>
+                <th
+                  style="padding:0.45rem; text-align:left; color:#94a3b8; border-bottom:1px solid rgba(100,116,139,0.22);">
+                  Status</th>
+                <th
+                  style="padding:0.45rem; text-align:right; color:#94a3b8; border-bottom:1px solid rgba(100,116,139,0.22);">
+                  Bars</th>
+                <th
+                  style="padding:0.45rem; text-align:left; color:#94a3b8; border-bottom:1px solid rgba(100,116,139,0.22);">
+                  Last Trade</th>
+              </tr>
+            </thead>
+            <tbody id="market-v7-tbody">
+              <tr>
+                <td colspan="7" style="padding:0.9rem; color:#64748b;">Loading v7 market rows…</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </article>
+      <article
+        style="margin-top:1rem; padding:1rem; background:rgba(15,23,42,0.35); border:1px solid rgba(100,116,139,0.22); border-radius:12px;">
+        <div
+          style="font-size:0.85rem; color:#94a3b8; text-transform:uppercase; letter-spacing:0.08em; margin-bottom:0.5rem;">
+          Category Views
+        </div>
+        <div style="font-size:0.8rem; color:#64748b; margin-bottom:0.8rem;">
+          Separate tables for Crypto, ETFs and Forex (no mixed list).
+        </div>
+        <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); gap:0.8rem;">
+          <section
+            style="padding:0.75rem; border:1px solid rgba(100,116,139,0.2); border-radius:10px; background:rgba(15,23,42,0.25);">
+            <div
+              style="display:flex; justify-content:space-between; align-items:center; gap:0.5rem; margin-bottom:0.45rem;">
+              <div style="font-weight:700; color:#e5e7eb;">Crypto</div>
+              <div id="market-cat-crypto-meta" style="font-size:0.75rem; color:#94a3b8;">Loading…</div>
+            </div>
+            <div style="overflow:auto; max-height:300px;">
+              <table style="width:100%; border-collapse:collapse; font-size:0.8rem;">
+                <thead>
+                  <tr>
+                    <th
+                      style="padding:0.35rem; text-align:left; color:#94a3b8; border-bottom:1px solid rgba(100,116,139,0.22);">
+                      Symbol</th>
+                    <th
+                      style="padding:0.35rem; text-align:left; color:#94a3b8; border-bottom:1px solid rgba(100,116,139,0.22);">
+                      Name</th>
+                    <th
+                      style="padding:0.35rem; text-align:left; color:#94a3b8; border-bottom:1px solid rgba(100,116,139,0.22);">
+                      Exchange</th>
+                  </tr>
+                </thead>
+                <tbody id="market-cat-crypto-tbody">
+                  <tr>
+                    <td colspan="3" style="padding:0.45rem; color:#64748b;">Loading…</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div style="display:flex; justify-content:flex-end; align-items:center; gap:0.4rem; margin-top:0.55rem;">
+              <button id="market-cat-crypto-prev" class="rv-sticky-btn" type="button"
+                style="padding:0.3rem 0.6rem;">Prev</button>
+              <div id="market-cat-crypto-page"
+                style="font-size:0.74rem; color:#94a3b8; min-width:72px; text-align:center;">1 / 1</div>
+              <button id="market-cat-crypto-next" class="rv-sticky-btn" type="button"
+                style="padding:0.3rem 0.6rem;">Next</button>
+            </div>
+          </section>
+
+          <section
+            style="padding:0.75rem; border:1px solid rgba(100,116,139,0.2); border-radius:10px; background:rgba(15,23,42,0.25);">
+            <div
+              style="display:flex; justify-content:space-between; align-items:center; gap:0.5rem; margin-bottom:0.45rem;">
+              <div style="font-weight:700; color:#e5e7eb;">ETF</div>
+              <div id="market-cat-etf-meta" style="font-size:0.75rem; color:#94a3b8;">Loading…</div>
+            </div>
+            <div style="overflow:auto; max-height:300px;">
+              <table style="width:100%; border-collapse:collapse; font-size:0.8rem;">
+                <thead>
+                  <tr>
+                    <th
+                      style="padding:0.35rem; text-align:left; color:#94a3b8; border-bottom:1px solid rgba(100,116,139,0.22);">
+                      Symbol</th>
+                    <th
+                      style="padding:0.35rem; text-align:left; color:#94a3b8; border-bottom:1px solid rgba(100,116,139,0.22);">
+                      Name</th>
+                    <th
+                      style="padding:0.35rem; text-align:left; color:#94a3b8; border-bottom:1px solid rgba(100,116,139,0.22);">
+                      Exchange</th>
+                  </tr>
+                </thead>
+                <tbody id="market-cat-etf-tbody">
+                  <tr>
+                    <td colspan="3" style="padding:0.45rem; color:#64748b;">Loading…</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div style="display:flex; justify-content:flex-end; align-items:center; gap:0.4rem; margin-top:0.55rem;">
+              <button id="market-cat-etf-prev" class="rv-sticky-btn" type="button"
+                style="padding:0.3rem 0.6rem;">Prev</button>
+              <div id="market-cat-etf-page"
+                style="font-size:0.74rem; color:#94a3b8; min-width:72px; text-align:center;">1 / 1</div>
+              <button id="market-cat-etf-next" class="rv-sticky-btn" type="button"
+                style="padding:0.3rem 0.6rem;">Next</button>
+            </div>
+          </section>
+
+          <section
+            style="padding:0.75rem; border:1px solid rgba(100,116,139,0.2); border-radius:10px; background:rgba(15,23,42,0.25);">
+            <div
+              style="display:flex; justify-content:space-between; align-items:center; gap:0.5rem; margin-bottom:0.45rem;">
+              <div style="font-weight:700; color:#e5e7eb;">Forex</div>
+              <div id="market-cat-forex-meta" style="font-size:0.75rem; color:#94a3b8;">Loading…</div>
+            </div>
+            <div style="overflow:auto; max-height:300px;">
+              <table style="width:100%; border-collapse:collapse; font-size:0.8rem;">
+                <thead>
+                  <tr>
+                    <th
+                      style="padding:0.35rem; text-align:left; color:#94a3b8; border-bottom:1px solid rgba(100,116,139,0.22);">
+                      Symbol</th>
+                    <th
+                      style="padding:0.35rem; text-align:left; color:#94a3b8; border-bottom:1px solid rgba(100,116,139,0.22);">
+                      Name</th>
+                    <th
+                      style="padding:0.35rem; text-align:left; color:#94a3b8; border-bottom:1px solid rgba(100,116,139,0.22);">
+                      Exchange</th>
+                  </tr>
+                </thead>
+                <tbody id="market-cat-forex-tbody">
+                  <tr>
+                    <td colspan="3" style="padding:0.45rem; color:#64748b;">Loading…</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div style="display:flex; justify-content:flex-end; align-items:center; gap:0.4rem; margin-top:0.55rem;">
+              <button id="market-cat-forex-prev" class="rv-sticky-btn" type="button"
+                style="padding:0.3rem 0.6rem;">Prev</button>
+              <div id="market-cat-forex-page"
+                style="font-size:0.74rem; color:#94a3b8; min-width:72px; text-align:center;">1 / 1</div>
+              <button id="market-cat-forex-next" class="rv-sticky-btn" type="button"
+                style="padding:0.3rem 0.6rem;">Next</button>
+            </div>
+          </section>
+        </div>
+      </article>
+
+      <article id="market-universe-explorer-shell"
+        style="margin-top:1rem; padding:1rem; background:rgba(15,23,42,0.35); border:1px solid rgba(100,116,139,0.22); border-radius:12px;">
+        <div
+          style="font-size:0.85rem; color:#94a3b8; text-transform:uppercase; letter-spacing:0.08em; margin-bottom:0.5rem;">
+          Markets → Universe (v7)
+        </div>
+        <div id="universe-explorer-root">
+          <div style="padding:0.8rem; border:1px solid rgba(100,116,139,0.22); border-radius:10px; color:#64748b;">
+            Loading Universe Explorer…
+          </div>
+        </div>
+      </article>
     </section>
 
     <section id="ideas-view" style="display:none;">
+      <!-- ═══ Ideas Header with Top-Level Tab Navigation ═══ -->
       <div
         style="display:flex; justify-content:space-between; gap:0.8rem; align-items:flex-end; flex-wrap:wrap; margin-bottom:1.2rem;">
         <div>
           <h1 style="font-size:2.1rem; color:#e5e7eb; margin:0;">Ideas</h1>
-          <div style="font-size:0.95rem; color:#94a3b8;">MOAT + curated idea lists</div>
+          <div id="sm-staleness" style="font-size:0.78rem; color:#64748b; margin-top:2px;"></div>
         </div>
-        <div id="ideas-view-meta" style="font-size:0.8rem; color:#94a3b8;">Loading ideas snapshot…</div>
+        <div id="ideas-view-meta" style="font-size:0.8rem; color:#94a3b8; display:flex; gap:8px; align-items:center;">
+          <span
+            style="background:rgba(59, 130, 246, 0.15); color:#60a5fa; padding:4px 10px; border-radius:12px; font-weight:600; border:1px solid rgba(59, 130, 246, 0.3);">v7
+            SSOT Stocks: 55,986</span>
+          <span
+            style="background:rgba(100, 116, 139, 0.15); color:#cbd5e1; padding:4px 10px; border-radius:12px; border:1px solid rgba(100, 116, 139, 0.3);">local
+            snapshot</span>
+        </div>
       </div>
 
-      <article
-        style="padding:1rem; background:rgba(15,23,42,0.35); border:1px solid rgba(100,116,139,0.22); border-radius:12px; margin-bottom:1rem;">
-        <div
-          style="font-size:0.85rem; color:#94a3b8; text-transform:uppercase; letter-spacing:0.08em; margin-bottom:0.5rem;">
-          MOAT</div>
-        <div id="ideas-moat-content" style="color:#cbd5e1;">Loading MOAT content…</div>
-      </article>
+      <!-- Tab Bar -->
+      <div style="display:flex; gap:6px; margin-bottom:1.2rem; flex-wrap:wrap;">
+        <button onclick="switchIdeasPage('moat')" id="ideas-tab-moat" class="ideas-page-tab ideas-tab-active"
+          style="padding:7px 16px; border-radius:9px; font-size:0.82rem; cursor:pointer; border:1px solid rgba(100,116,139,0.3); font-weight:600; transition:all 0.2s;">
+          📈 MOAT</button>
+        <button onclick="switchIdeasPage('risk')" id="ideas-tab-risk" class="ideas-page-tab"
+          style="padding:7px 16px; border-radius:9px; font-size:0.82rem; cursor:pointer; border:1px solid rgba(100,116,139,0.3); font-weight:600; transition:all 0.2s;">
+          🛡️ Risk &amp; Resilience</button>
+        <button onclick="switchIdeasPage('forecast')" id="ideas-tab-forecast" class="ideas-page-tab"
+          style="padding:7px 16px; border-radius:9px; font-size:0.82rem; cursor:pointer; border:1px solid rgba(100,116,139,0.3); font-weight:600; transition:all 0.2s;">
+          🔮 Forecast</button>
+        <button onclick="switchIdeasPage('scientific')" id="ideas-tab-scientific" class="ideas-page-tab"
+          style="padding:7px 16px; border-radius:9px; font-size:0.82rem; cursor:pointer; border:1px solid rgba(100,116,139,0.3); font-weight:600; transition:all 0.2s;">
+          🔬 Scientific</button>
+        <button onclick="switchIdeasPage('macro')" id="ideas-tab-macro" class="ideas-page-tab"
+          style="padding:7px 16px; border-radius:9px; font-size:0.82rem; cursor:pointer; border:1px solid rgba(100,116,139,0.3); font-weight:600; transition:all 0.2s;">
+          🌍 Macro OS</button>
+        <button onclick="switchIdeasPage('truth')" id="ideas-tab-truth" class="ideas-page-tab"
+          style="padding:7px 16px; border-radius:9px; font-size:0.82rem; cursor:pointer; border:1px solid rgba(100,116,139,0.3); font-weight:600; transition:all 0.2s;">
+          📊 Fundamental Truth</button>
+        <button onclick="switchIdeasPage('etfrow')" id="ideas-tab-etfrow" class="ideas-page-tab"
+          style="padding:7px 16px; border-radius:9px; font-size:0.82rem; cursor:pointer; border:1px solid rgba(100,116,139,0.3); font-weight:600; transition:all 0.2s;">
+          📊 ETF Rotation</button>
+        <button onclick="switchIdeasPage('cryptopulse')" id="ideas-tab-cryptopulse" class="ideas-page-tab"
+          style="padding:7px 16px; border-radius:9px; font-size:0.82rem; cursor:pointer; border:1px solid rgba(100,116,139,0.3); font-weight:600; transition:all 0.2s;">
+          🪙 Crypto Pulse</button>
+        <button onclick="switchIdeasPage('macrobonds')" id="ideas-tab-macrobonds" class="ideas-page-tab"
+          style="padding:7px 16px; border-radius:9px; font-size:0.82rem; cursor:pointer; border:1px solid rgba(100,116,139,0.3); font-weight:600; transition:all 0.2s;">
+          🌐 Macro & Bonds</button>
+        <button onclick="switchIdeasPage('flight')" id="ideas-tab-flight" class="ideas-page-tab"
+          style="padding:7px 16px; border-radius:9px; font-size:0.82rem; cursor:pointer; border:1px solid rgba(100,116,139,0.3); font-weight:600; transition:all 0.2s;">
+          🛡️ Flight to Safety</button>
+      </div>
 
-      <article
-        style="padding:1rem; background:rgba(15,23,42,0.35); border:1px solid rgba(100,116,139,0.22); border-radius:12px;">
+      <!-- ═══ PAGE: MOAT (default) ═══ -->
+      <div id="ideas-page-moat" class="ideas-page-panel">
+        <article
+          style="padding:1rem; background:rgba(15,23,42,0.35); border:1px solid rgba(100,116,139,0.22); border-radius:12px; margin-bottom:1rem;">
+          <div
+            style="font-size:0.85rem; color:#94a3b8; text-transform:uppercase; letter-spacing:0.08em; margin-bottom:0.5rem;">
+            MOAT</div>
+          <div id="ideas-moat-content" style="color:#cbd5e1;">Loading MOAT content…</div>
+        </article>
+        <article
+          style="padding:1rem; background:rgba(15,23,42,0.35); border:1px solid rgba(100,116,139,0.22); border-radius:12px;">
+          <div
+            style="font-size:0.85rem; color:#94a3b8; text-transform:uppercase; letter-spacing:0.08em; margin-bottom:0.5rem;">
+            Curated Lists</div>
+          <div id="ideas-list-content" style="color:#64748b;">Loading idea lists…</div>
+        </article>
+      </div>
+
+      <!-- ═══ PAGE: Risk & Resilience ═══ -->
+      <div id="ideas-page-risk" class="ideas-page-panel" style="display:none;">
         <div
-          style="font-size:0.85rem; color:#94a3b8; text-transform:uppercase; letter-spacing:0.08em; margin-bottom:0.5rem;">
-          Curated Lists</div>
-        <div id="ideas-list-content" style="color:#64748b;">Loading idea lists…</div>
-      </article>
+          style="padding:0.8rem 1rem; background:rgba(15,23,42,0.3); border:1px solid rgba(100,116,139,0.15); border-radius:10px; margin-bottom:1rem;">
+          <div style="font-size:0.88rem; color:#e2e8f0; font-weight:600; margin-bottom:4px;">🛡️ Risk & Resilience
+            Score</div>
+          <div style="font-size:0.78rem; color:#94a3b8; line-height:1.5;">Risk scores (0–100) combining max drawdown,
+            annualized volatility, and Sharpe ratio across the full price history. Higher score = higher risk. Click
+            any ticker to see the full analysis.</div>
+        </div>
+        <div id="sm-content-risk" class="sm-panel"></div>
+      </div>
+
+      <!-- ═══ PAGE: Forecast ═══ -->
+      <div id="ideas-page-forecast" class="ideas-page-panel" style="display:none;">
+        <div
+          style="padding:0.8rem 1rem; background:rgba(15,23,42,0.3); border:1px solid rgba(100,116,139,0.15); border-radius:10px; margin-bottom:1rem;">
+          <div style="font-size:0.88rem; color:#e2e8f0; font-weight:600; margin-bottom:4px;">🔮 ML Direction Forecast
+          </div>
+          <div style="font-size:0.78rem; color:#94a3b8; line-height:1.5;">Machine-learning direction predictions
+            (bullish/bearish) with calibrated probabilities for 1-day, 5-day, and 20-day horizons. The model uses 19
+            technical features including momentum, volatility, and volume signals. Click any ticker to see the full
+            analysis.</div>
+        </div>
+        <div id="sm-content-forecast" class="sm-panel"></div>
+      </div>
+
+      <!-- ═══ PAGE: Scientific Analyzer ═══ -->
+      <div id="ideas-page-scientific" class="ideas-page-panel" style="display:none;">
+        <div
+          style="padding:0.8rem 1rem; background:rgba(15,23,42,0.3); border:1px solid rgba(100,116,139,0.15); border-radius:10px; margin-bottom:1rem;">
+          <div style="font-size:0.88rem; color:#e2e8f0; font-weight:600; margin-bottom:4px;">🔬 Scientific Setup &
+            Trigger Analyzer</div>
+          <div style="font-size:0.78rem; color:#94a3b8; line-height:1.5;">5-condition setup screen (RSI range, SMA
+            trend, price above SMA200, SMA50 > SMA200, volume confirmation) + 4-condition trigger confirmation (RSI
+            breakout, price above SMA20, volume spike, MACD signal). Stocks passing both Setup + Trigger are
+            actionable. Click any ticker to see the full analysis.</div>
+        </div>
+        <div id="sm-content-scientific" class="sm-panel"></div>
+      </div>
+
+      <!-- ═══ PAGE: Macro OS ═══ -->
+      <div id="ideas-page-macro" class="ideas-page-panel" style="display:none;">
+        <div
+          style="padding:0.8rem 1rem; background:rgba(15,23,42,0.3); border:1px solid rgba(100,116,139,0.15); border-radius:10px; margin-bottom:1rem;">
+          <div style="font-size:0.88rem; color:#e2e8f0; font-weight:600; margin-bottom:4px;">🌍 Macro Operating System
+          </div>
+          <div style="font-size:0.78rem; color:#94a3b8; line-height:1.5;">Macro regime classification derived from
+            FRED economic indicators — yield curve, credit spreads, VIX, PMI, unemployment. Determines whether the
+            market environment is Risk-On or Risk-Off to inform position sizing and sector allocation.</div>
+        </div>
+        <div id="sm-content-macro" class="sm-panel"></div>
+      </div>
+
+      <!-- ═══ PAGE: Fundamental Truth ═══ -->
+      <div id="ideas-page-truth" class="ideas-page-panel" style="display:none;">
+        <div
+          style="padding:0.8rem 1rem; background:rgba(15,23,42,0.3); border:1px solid rgba(100,116,139,0.15); border-radius:10px; margin-bottom:1rem;">
+          <div style="font-size:0.88rem; color:#e2e8f0; font-weight:600; margin-bottom:4px;">📊 Fundamental Truth
+          </div>
+          <div style="font-size:0.78rem; color:#94a3b8; line-height:1.5;">Earnings quality, gross margins, PE ratios,
+            and balance-sheet strength from EODHD fundamental data. Flags high-quality compounders vs. fragile
+            balance sheets. Click any ticker to see the full analysis.</div>
+        </div>
+        <div id="sm-content-truth" class="sm-panel"></div>
+      </div>
+
+      <!-- ═══ PAGE: ETF Rotation (20k+ ETFs) ═══ -->
+      <div id="ideas-page-etfrow" class="ideas-page-panel" style="display:none;">
+        <div
+          style="padding:0.8rem 1rem; background:rgba(15,23,42,0.3); border:1px solid rgba(100,116,139,0.15); border-radius:10px; margin-bottom:1rem;">
+          <div style="font-size:0.88rem; color:#e2e8f0; font-weight:600; margin-bottom:4px;">📊 ETF Sector & Global
+            Rotation
+          </div>
+          <div style="font-size:0.78rem; color:#94a3b8; line-height:1.5;">Top-down view across <strong>20.000+
+              ETFs</strong>. Identifying money flow into specific sectors (Tech, Utilities) and countries via breakout
+            models and marketphase shifts. Know where the broader market is heading before picking single stocks.</div>
+        </div>
+        <div id="sm-content-etfrow" class="sm-panel"></div>
+      </div>
+
+      <!-- ═══ PAGE: Crypto Pulse ═══ -->
+      <div id="ideas-page-cryptopulse" class="ideas-page-panel" style="display:none;">
+        <div
+          style="padding:0.8rem 1rem; background:rgba(15,23,42,0.3); border:1px solid rgba(100,116,139,0.15); border-radius:10px; margin-bottom:1rem;">
+          <div style="font-size:0.88rem; color:#e2e8f0; font-weight:600; margin-bottom:4px;">🪙 Crypto Momentum Pulse
+          </div>
+          <div style="font-size:0.78rem; color:#94a3b8; line-height:1.5;">Dedicated 24/7 scanning across <strong>2.000+
+              Crypto assets</strong>. Since crypto cycles faster, this isolates volume spikes and trend breaks
+            independently from the equity logic. Catch altcoin momentum early.</div>
+        </div>
+        <div id="sm-content-cryptopulse" class="sm-panel"></div>
+      </div>
+
+      <!-- ═══ PAGE: Macro & Bonds ═══ -->
+      <div id="ideas-page-macrobonds" class="ideas-page-panel" style="display:none;">
+        <div
+          style="padding:0.8rem 1rem; background:rgba(15,23,42,0.3); border:1px solid rgba(100,116,139,0.15); border-radius:10px; margin-bottom:1rem;">
+          <div style="font-size:0.88rem; color:#e2e8f0; font-weight:600; margin-bottom:4px;">🌐 Macro OS & Forex / Bonds
+          </div>
+          <div style="font-size:0.78rem; color:#94a3b8; line-height:1.5;">The ultimate big picture. Extending the Macro
+            OS regime models closely to the <strong>980 Forex pairs and 115 Sovereign bonds</strong> in our database.
+            Watch FIAT weakness, yield curve inversions, and institutional bond rotation.</div>
+        </div>
+        <div id="sm-content-macrobonds" class="sm-panel"></div>
+      </div>
+
+      <!-- ═══ PAGE: Flight to Safety ═══ -->
+      <div id="ideas-page-flight" class="ideas-page-panel" style="display:none;">
+        <div
+          style="padding:0.8rem 1rem; background:rgba(15,23,42,0.3); border:1px solid rgba(100,116,139,0.15); border-radius:10px; margin-bottom:1rem;">
+          <div style="font-size:0.88rem; color:#e2e8f0; font-weight:600; margin-bottom:4px;">🛡️ Flight to Safety
+          </div>
+          <div style="font-size:0.78rem; color:#94a3b8; line-height:1.5;">When the market panics, where does money go?
+            Screening all <strong>94.000+ mutual funds and conservative value stocks</strong> for minimum drawdown,
+            lowest volatility, and highest Sharpe stability. The bunker for Risk-Off regimes.</div>
+        </div>
+        <div id="sm-content-flight" class="sm-panel"></div>
+      </div>
+
+      <style>
+        .ideas-page-tab {
+          background: rgba(30, 41, 59, 0.6);
+          color: #94a3b8;
+        }
+
+        .ideas-page-tab:hover {
+          background: rgba(51, 65, 85, 0.7);
+          color: #e2e8f0;
+        }
+
+        .ideas-tab-active {
+          background: rgba(59, 130, 246, 0.2) !important;
+          color: #60a5fa !important;
+          border-color: rgba(59, 130, 246, 0.4) !important;
+        }
+
+        .sm-card {
+          padding: 0.8rem;
+          background: rgba(15, 23, 42, 0.5);
+          border: 1px solid rgba(100, 116, 139, 0.18);
+          border-radius: 10px;
+          transition: transform 0.15s, border-color 0.2s;
+        }
+
+        .sm-card:hover {
+          transform: translateY(-1px);
+          border-color: rgba(59, 130, 246, 0.3);
+        }
+
+        .sm-score-badge {
+          display: inline-flex;
+          align-items: center;
+          gap: 3px;
+          padding: 2px 8px;
+          border-radius: 6px;
+          font-size: 0.75rem;
+          font-weight: 600;
+        }
+
+        .sm-flag {
+          display: inline-block;
+          padding: 1px 6px;
+          border-radius: 4px;
+          font-size: 0.65rem;
+          background: rgba(100, 116, 139, 0.15);
+          color: #94a3b8;
+          margin: 1px;
+        }
+
+        .sm-regime-badge {
+          padding: 6px 14px;
+          border-radius: 8px;
+          font-size: 0.95rem;
+          font-weight: 600;
+          display: inline-block;
+        }
+
+        .sm-metric-row {
+          display: flex;
+          justify-content: space-between;
+          padding: 4px 0;
+          border-bottom: 1px solid rgba(100, 116, 139, 0.08);
+          font-size: 0.8rem;
+        }
+
+        .sm-metric-label {
+          color: #94a3b8;
+        }
+
+        .sm-metric-value {
+          color: #e2e8f0;
+          font-weight: 500;
+          font-variant-numeric: tabular-nums;
+        }
+
+        .sm-sym-link {
+          color: #60a5fa;
+          text-decoration: none;
+          font-weight: 600;
+          font-size: 0.85rem;
+          transition: color 0.15s;
+        }
+
+        .sm-sym-link:hover {
+          color: #93c5fd;
+          text-shadow: 0 0 8px rgba(96, 165, 250, 0.3);
+        }
+
+        .sm-dir-badge {
+          padding: 2px 8px;
+          border-radius: 6px;
+          font-size: 0.72rem;
+          font-weight: 600;
+          text-transform: uppercase;
+          letter-spacing: 0.04em;
+        }
+      </style>
+
+      <script>
+        /* ═══ Ideas Page Tab Switching + All Module Renderers ═══ */
+        (function () {
+          const SM_BASE = '/data/supermodules/';
+          let smManifest = null;
+          let smCache = {};
+          let v7UniverseReport = null; // Global variable for v7 universe report
+          let scientificGapReasonsSummary = null; // Global variable for scientific gap reasons
+
+          function fmtNum(v, d = 1) { return v === null || v === undefined ? '—' : Number(v).toFixed(d); }
+          function fmtPct(v, d = 1) { return v === null || v === undefined ? '—' : Number(v).toFixed(d) + '%'; }
+          function symLink(sym) { return '<a href="/analyze/' + encodeURIComponent(sym) + '" class="sm-sym-link">' + sym + '</a>'; }
+
+          function scoreColor(score) {
+            if (score >= 75) return '#22c55e';
+            if (score >= 50) return '#eab308';
+            if (score >= 25) return '#f97316';
+            return '#ef4444';
+          }
+
+          function riskColor(score) {
+            if (score >= 75) return '#ef4444';
+            if (score >= 50) return '#f97316';
+            if (score >= 25) return '#eab308';
+            return '#22c55e';
+          }
+
+          // ── Top-level page switching ──
+          window.switchIdeasPage = function (page) {
+            document.querySelectorAll('.ideas-page-panel').forEach(function (p) { p.style.display = 'none'; });
+            document.querySelectorAll('.ideas-page-tab').forEach(function (b) { b.classList.remove('ideas-tab-active'); });
+            var panel = document.getElementById('ideas-page-' + page);
+            var btn = document.getElementById('ideas-tab-' + page);
+            if (panel) panel.style.display = 'block';
+            if (btn) btn.classList.add('ideas-tab-active');
+            if (page !== 'moat') loadSMModule(page);
+          };
+
+          async function fetchJson(url) {
+            try { var r = await fetch(url); return r.ok ? await r.json() : null; } catch (e) { return null; }
+          }
+
+          async function loadSMManifest() {
+            smManifest = await fetchJson(SM_BASE + 'manifest.supermodules.json');
+            if (smManifest && smManifest.meta && smManifest.meta.generated_at) {
+              var el = document.getElementById('sm-staleness');
+              if (el) {
+                var age = Math.round((Date.now() - new Date(smManifest.meta.generated_at).getTime()) / 3600000);
+                el.textContent = 'Super-Modules updated ' + age + 'h ago';
+              }
+            }
+
+            // Fetch v7 universe report
+            v7UniverseReport = await fetchJson('/data/universe/v7/ssot/feature_stock_universe_report.json');
+            if (v7UniverseReport && v7UniverseReport.counts && v7UniverseReport.counts.ssot_stocks_max) {
+              const metaEl = document.getElementById('ideas-view-meta');
+              if (metaEl) {
+                metaEl.innerHTML = `
+                        <span style="background:rgba(59, 130, 246, 0.15); color:#60a5fa; padding:4px 10px; border-radius:12px; font-weight:600; border:1px solid rgba(59, 130, 246, 0.3);">v7 SSOT Stocks: ${v7UniverseReport.counts.ssot_stocks_max.toLocaleString()}</span>
+                        <span style="background:rgba(100, 116, 139, 0.15); color:#cbd5e1; padding:4px 10px; border-radius:12px; border:1px solid rgba(100, 116, 139, 0.3);">local snapshot</span>
+                    `;
+              }
+            }
+
+            // Fetch scientific gap reasons summary
+            scientificGapReasonsSummary = await fetchJson('/data/universe/v7/reports/scientific_gap_reasons_summary.json');
+
+            return smManifest;
+          }
+
+          async function loadSMModule(tab) {
+            if (smCache[tab]) return;
+            var panel = document.getElementById('sm-content-' + tab);
+            if (!panel) return;
+            panel.innerHTML = '<div style="color:#64748b; padding:1rem;">Loading…</div>';
+
+            // Forecast and Scientific have their own data sources
+            if (tab === 'forecast') { return loadForecast(panel); }
+            if (tab === 'scientific') { return loadScientific(panel); }
+
+            // --- NEW MOCK TABS (No real data source yet, just UI placehoder) ---
+            if (tab === 'etfrow') {
+              panel.innerHTML = '<div style="padding:1rem; color:#94a3b8; border:1px dashed rgba(100,116,139,0.3); border-radius:8px; text-align:center;">' +
+                '<div style="font-size:1.5rem; margin-bottom:0.5rem;">📊</div>' +
+                '<div style="font-size:1rem; color:#e2e8f0; font-weight:600; margin-bottom:0.3rem;">ETF Sector Flow Engine</div>' +
+                '<div style="font-size:0.85rem; max-width:400px; margin:0 auto;">Analyzing capital rotation across 20,312 index/sector funds.<br/>(UI Mockup - Engine incoming)</div>' +
+                '</div>';
+              return;
+            }
+            if (tab === 'cryptopulse') {
+              panel.innerHTML = '<div style="padding:1rem; color:#94a3b8; border:1px dashed rgba(100,116,139,0.3); border-radius:8px; text-align:center;">' +
+                '<div style="font-size:1.5rem; margin-bottom:0.5rem;">🪙</div>' +
+                '<div style="font-size:1rem; color:#e2e8f0; font-weight:600; margin-bottom:0.3rem;">Crypto Pulse Monitor</div>' +
+                '<div style="font-size:0.85rem; max-width:400px; margin:0 auto;">Real-time volume anomalies across 2,087 crypto assets.<br/>(UI Mockup - Engine incoming)</div>' +
+                '</div>';
+              return;
+            }
+            if (tab === 'macrobonds') {
+              panel.innerHTML = '<div style="padding:1rem; color:#94a3b8; border:1px dashed rgba(100,116,139,0.3); border-radius:8px; text-align:center;">' +
+                '<div style="font-size:1.5rem; margin-bottom:0.5rem;">🌐</div>' +
+                '<div style="font-size:1rem; color:#e2e8f0; font-weight:600; margin-bottom:0.3rem;">Macro & Sovereign Bonds</div>' +
+                '<div style="font-size:0.85rem; max-width:400px; margin:0 auto;">Mapping fiat strength matrix across 989 pairs and 115 sovereign bonds.<br/>(UI Mockup - Engine incoming)</div>' +
+                '</div>';
+              return;
+            }
+            if (tab === 'flight') {
+              panel.innerHTML = '<div style="padding:1rem; color:#94a3b8; border:1px dashed rgba(100,116,139,0.3); border-radius:8px; text-align:center;">' +
+                '<div style="font-size:1.5rem; margin-bottom:0.5rem;">🛡️</div>' +
+                '<div style="font-size:1rem; color:#e2e8f0; font-weight:600; margin-bottom:0.3rem;">Risk-Off Safe Havens</div>' +
+                '<div style="font-size:0.85rem; max-width:400px; margin:0 auto;">Screening 94,000+ mutual funds for minimum historical drawdowns.<br/>(UI Mockup - Engine incoming)</div>' +
+                '</div>';
+              return;
+            }
+
+            // Super-module tabs use the manifest
+            if (!smManifest) await loadSMManifest();
+            if (!smManifest || !smManifest.artifacts || !smManifest.artifacts.length) {
+              panel.innerHTML = '<div style="color:#64748b; padding:1rem;">No super-module data available yet. Run <code>npm run build:supermodules</code> to generate.</div>';
+              return;
+            }
+
+            var moduleMap = { risk: 'risk-resilience', macro: 'macro-os', truth: 'fundamental-truth' };
+            var prefix = moduleMap[tab];
+            var artifact = smManifest.artifacts.find(function (a) { return a.path && a.path.includes(prefix); });
+            if (!artifact) {
+              panel.innerHTML = '<div style="color:#64748b; padding:1rem;">Module not built yet.</div>';
+              return;
+            }
+
+            var data = await fetchJson('/' + artifact.path.replace(/^public\//, ''));
+            if (!data) { panel.innerHTML = '<div style="color:#ef4444; padding:1rem;">Failed to load module data.</div>'; return; }
+            smCache[tab] = data;
+            if (tab === 'risk') renderRisk(panel, data);
+            else if (tab === 'macro') renderMacro(panel, data);
+            else if (tab === 'truth') renderTruth(panel, data);
+          }
+
+          // ── Risk & Resilience ──
+          function renderRisk(panel, data) {
+            var rows = data.rows || [];
+            if (!rows.length) { panel.innerHTML = '<div style="color:#64748b;">No risk data.</div>'; return; }
+            var stats = data.universe_stats || {};
+            var topSafe = rows.slice().sort(function (a, b) { return a.scores.risk_score - b.scores.risk_score; }).slice(0, 10);
+            var topRisky = rows.slice(0, 10);
+            var cardHtml = function (r) {
+              return '<div class="sm-card" style="margin-bottom:6px; display:flex; justify-content:space-between; align-items:center;">' +
+                '<div>' + symLink(r.symbol) +
+                '<div style="font-size:0.7rem; color:#64748b;">MaxDD ' + fmtPct(r.scores.max_drawdown_full) + ' · Vol ' + fmtPct(r.scores.volatility_ann) + '</div></div>' +
+                '<span class="sm-score-badge" style="background:' + riskColor(r.scores.risk_score) + '22; color:' + riskColor(r.scores.risk_score) + ';">' + r.scores.risk_score + '</span></div>';
+            };
+            var highRisk = rows.filter(function (r) { return r.scores && r.scores.risk_score >= 75; }).length;
+            var lowRisk = rows.filter(function (r) { return r.scores && r.scores.risk_score <= 25; }).length;
+            panel.innerHTML =
+              '<div style="display:flex; gap:0.5rem; margin-bottom:1rem; flex-wrap:wrap;">' +
+              '<div class="sm-card" style="flex:1; min-width:140px; text-align:center;"><div style="font-size:0.7rem; color:#94a3b8;">Stocks Scored</div><div style="font-size:1.5rem; color:#e2e8f0; font-weight:700;">' + (stats.with_scores || rows.length) + '</div></div>' +
+              '<div class="sm-card" style="flex:1; min-width:140px; text-align:center;"><div style="font-size:0.7rem; color:#94a3b8;">High Risk (75+)</div><div style="font-size:1.5rem; color:#ef4444; font-weight:700;">' + highRisk + '</div></div>' +
+              '<div class="sm-card" style="flex:1; min-width:140px; text-align:center;"><div style="font-size:0.7rem; color:#94a3b8;">Low Risk (≤25)</div><div style="font-size:1.5rem; color:#22c55e; font-weight:700;">' + lowRisk + '</div></div>' +
+              '</div>' +
+              '<div style="display:grid; grid-template-columns:1fr 1fr; gap:0.8rem;">' +
+              '<div><div style="font-size:0.78rem; color:#ef4444; font-weight:600; margin-bottom:0.5rem;">⚠️ Highest Risk</div>' + topRisky.map(cardHtml).join('') + '</div>' +
+              '<div><div style="font-size:0.78rem; color:#22c55e; font-weight:600; margin-bottom:0.5rem;">🛡️ Lowest Risk</div>' + topSafe.map(cardHtml).join('') + '</div>' +
+              '</div>';
+          }
+
+          // ── Forecast ──
+          async function loadForecast(panel) {
+            var data = await fetchJson('/data/forecast/latest.json');
+            if (!data || !data.data || !data.data.forecasts || !data.data.forecasts.length) {
+              panel.innerHTML = '<div style="color:#64748b; padding:1rem;">No forecast data available.</div>';
+              return;
+            }
+            smCache['forecast'] = data;
+            var fc = data.data.forecasts;
+            var usFilter = function (s) { return /^[A-Z]{1,5}(-[A-Z])?$/.test(s.symbol); };
+            var usFC = fc.filter(usFilter);
+            var bullish = usFC.filter(function (f) { return f.horizons && f.horizons['20d'] && f.horizons['20d'].direction === 'bullish'; });
+            var bearish = usFC.filter(function (f) { return f.horizons && f.horizons['20d'] && f.horizons['20d'].direction === 'bearish'; });
+            var topBull = bullish.slice().sort(function (a, b) { return (b.horizons['20d'].probability || 0) - (a.horizons['20d'].probability || 0); }).slice(0, 15);
+            var topBear = bearish.slice().sort(function (a, b) { return (b.horizons['20d'].probability || 0) - (a.horizons['20d'].probability || 0); }).slice(0, 15);
+
+            var fcCard = function (f) {
+              var h = f.horizons || {};
+              var dir = h['20d'] ? h['20d'].direction : 'unknown';
+              var isBull = dir === 'bullish';
+              var prob = h['20d'] ? h['20d'].probability : null;
+              var probPct = prob != null ? (prob * 100).toFixed(1) + '%' : '—';
+              var p1d = h['1d'] && h['1d'].probability != null ? (h['1d'].probability * 100).toFixed(0) + '%' : '—';
+              var p5d = h['5d'] && h['5d'].probability != null ? (h['5d'].probability * 100).toFixed(0) + '%' : '—';
+              var p20d = h['20d'] && h['20d'].probability != null ? (h['20d'].probability * 100).toFixed(0) + '%' : '—';
+              return '<div class="sm-card" style="margin-bottom:6px;">' +
+                '<div style="display:flex; justify-content:space-between; align-items:center;">' +
+                symLink(f.symbol) +
+                '<span class="sm-dir-badge" style="background:' + (isBull ? 'rgba(34,197,94,0.15)' : 'rgba(239,68,68,0.15)') + '; color:' + (isBull ? '#22c55e' : '#ef4444') + ';">' + dir + ' ' + probPct + '</span>' +
+                '</div>' +
+                '<div style="font-size:0.68rem; color:#64748b; margin-top:4px; display:flex; gap:8px;">' +
+                '<span>1d: ' + p1d + '</span><span>5d: ' + p5d + '</span><span>20d: ' + p20d + '</span></div></div>';
+            };
+
+            panel.innerHTML =
+              '<div style="display:flex; gap:0.5rem; margin-bottom:1rem; flex-wrap:wrap;">' +
+              '<div class="sm-card" style="flex:1; min-width:130px; text-align:center;"><div style="font-size:0.7rem; color:#94a3b8;">Total Forecasts</div><div style="font-size:1.5rem; color:#e2e8f0; font-weight:700;">' + usFC.length + '</div></div>' +
+              '<div class="sm-card" style="flex:1; min-width:130px; text-align:center;"><div style="font-size:0.7rem; color:#94a3b8;">Bullish (20d)</div><div style="font-size:1.5rem; color:#22c55e; font-weight:700;">' + bullish.length + '</div></div>' +
+              '<div class="sm-card" style="flex:1; min-width:130px; text-align:center;"><div style="font-size:0.7rem; color:#94a3b8;">Bearish (20d)</div><div style="font-size:1.5rem; color:#ef4444; font-weight:700;">' + bearish.length + '</div></div>' +
+              '<div class="sm-card" style="flex:1; min-width:130px; text-align:center;"><div style="font-size:0.7rem; color:#94a3b8;">Freshness</div><div style="font-size:1rem; color:#e2e8f0; font-weight:600;">' + (data.data.asof || '—') + '</div></div>' +
+              '</div>' +
+              '<div style="display:grid; grid-template-columns:1fr 1fr; gap:0.8rem;">' +
+              '<div><div style="font-size:0.78rem; color:#22c55e; font-weight:600; margin-bottom:0.5rem;">📈 Top Bullish (highest conviction)</div>' + topBull.map(fcCard).join('') + '</div>' +
+              '<div><div style="font-size:0.78rem; color:#ef4444; font-weight:600; margin-bottom:0.5rem;">📉 Top Bearish (highest conviction)</div>' + topBear.map(fcCard).join('') + '</div>' +
+              '</div>' +
+              '<div style="font-size:0.68rem; color:#475569; margin-top:1rem; font-style:italic;">Model: ' + (data.champion_id || '—') + ' · Trained: ' + ((data.trained_at || '').slice(0, 10) || '—') + ' · Research simulation only, not financial advice.</div>';
+          }
+
+          // ── Scientific Analyzer ──
+          async function loadScientific(panel) {
+            var data = await fetchJson(SM_BASE + 'scientific-summary.json');
+            var v7GapData = scientificGapReasonsSummary; // Use the globally loaded data
+
+            if (!data || data._status === 'NO_SOURCE_DATA' || ((!data.strong_signals || !data.strong_signals.length) && (!data.best_setups || !data.best_setups.length))) {
+              panel.innerHTML = '<div style="color:#64748b; padding:1rem;">Scientific analysis data not available. Run <code>npm run build:scientific</code> to generate.</div>';
+              return;
+            }
+            smCache['scientific'] = data;
+            var stats = data.universe_stats || {};
+            var realScientificCount = v7GapData ? v7GapData.scientific_ready_count : (stats.total || 0);
+            var realDUCount = v7GapData ? v7GapData.scientific_data_unavailable_count : 0;
+
+            var sigColors = { STRONG: '#22c55e', MODERATE: '#eab308', WEAK: '#64748b' };
+
+            var sigCard = function (s) {
+              var setupColor = s.setup.fulfilled ? '#22c55e' : '#64748b';
+              var triggerColor = s.trigger.fulfilled ? '#22c55e' : '#64748b';
+              var sc = sigColors[s.signal_strength] || '#64748b';
+              return '<div class="sm-card" style="margin-bottom:6px;">' +
+                '<div style="display:flex; justify-content:space-between; align-items:center;">' +
+                '<div>' + symLink(s.symbol) + (s.name ? '<div style="font-size:0.65rem; color:#64748b; margin-top:1px;">' + s.name + '</div>' : '') + '</div>' +
+                '<span class="sm-score-badge" style="background:' + sc + '22; color:' + sc + ';">' + s.signal_strength + '</span></div>' +
+                '<div style="display:flex; gap:8px; margin-top:5px; font-size:0.72rem;">' +
+                '<span style="color:' + setupColor + ';">Setup ' + s.setup.conditions_met + ' (' + s.setup.score + ')</span>' +
+                '<span style="color:' + triggerColor + ';">Trigger ' + s.trigger.conditions_met + ' (' + s.trigger.score + ')</span></div>' +
+                (s.trigger.proof_points && s.trigger.proof_points.length ? '<div style="margin-top:3px;">' + s.trigger.proof_points.slice(0, 2).map(function (p) { return '<span class="sm-flag">' + p + '</span>'; }).join('') + '</div>' : '') +
+                '</div>';
+            };
+
+            panel.innerHTML =
+              '<div style="display:flex; gap:0.5rem; margin-bottom:1rem; flex-wrap:wrap;">' +
+              '<div class="sm-card" style="flex:1; min-width:130px; text-align:center;"><div style="font-size:0.7rem; color:#94a3b8;">Scientific Ready</div><div style="font-size:1.5rem; color:#e2e8f0; font-weight:700;">' + realScientificCount.toLocaleString() + '</div>' +
+              (realDUCount > 0 ? '<div style="font-size:0.65rem; color:#ef4444; margin-top:2px;">' + realDUCount.toLocaleString() + ' Data Unavailable</div>' : '') + '</div>' +
+              '<div class="sm-card" style="flex:1; min-width:130px; text-align:center;"><div style="font-size:0.7rem; color:#94a3b8;">Setup Fulfilled</div><div style="font-size:1.5rem; color:#eab308; font-weight:700;">' + (stats.setups_fulfilled || 0).toLocaleString() + '</div></div>' +
+              '<div class="sm-card" style="flex:1; min-width:130px; text-align:center;"><div style="font-size:0.7rem; color:#94a3b8;">Trigger Fulfilled</div><div style="font-size:1.5rem; color:#22c55e; font-weight:700;">' + (stats.triggers_fulfilled || 0).toLocaleString() + '</div></div>' +
+              '<div class="sm-card" style="flex:1; min-width:130px; text-align:center;"><div style="font-size:0.7rem; color:#94a3b8;">Strong Signals</div><div style="font-size:1.5rem; color:#60a5fa; font-weight:700;">' + (stats.strong_signals || 0).toLocaleString() + '</div></div>' +
+              '</div>' +
+              '<div style="display:grid; grid-template-columns:1fr 1fr; gap:0.8rem;">' +
+              '<div><div style="font-size:0.78rem; color:#22c55e; font-weight:600; margin-bottom:0.5rem;">🎯 Setup + Trigger Active</div>' + (data.strong_signals || []).map(sigCard).join('') + '</div>' +
+              '<div><div style="font-size:0.78rem; color:#eab308; font-weight:600; margin-bottom:0.5rem;">📋 Best Setups (awaiting trigger)</div>' + (data.best_setups || []).map(sigCard).join('') + '</div>' +
+              '</div>' +
+              '<div style="font-size:0.68rem; color:#475569; margin-top:1rem; font-style:italic;">Research simulation only — model trained for educational purposes. Not financial advice.</div>';
+          }
+
+          // ── Macro OS ──
+          function renderMacro(panel, data) {
+            var d = data.data;
+            if (!d || data._status === 'NO_SOURCE_DATA') {
+              panel.innerHTML = '<div style="color:#64748b; padding:1rem;">Macro hub data not available. Run <code>node scripts/update-macro-hub.v3.mjs</code> to seed FRED data, then <code>npm run build:supermodules:macro</code>.</div>';
+              return;
+            }
+            var regime = d.regime || {};
+            var signals = d.signals || [];
+            var cats = d.categories || {};
+            var meta = d.meta || {};
+            var regimeColors = { 'RISK_OFF': '#ef4444', 'CAUTIOUS': '#f97316', 'NEUTRAL': '#eab308', 'CONSTRUCTIVE': '#22c55e', 'RISK_ON': '#10b981' };
+            var rc = regimeColors[regime.current] || '#94a3b8';
+            panel.innerHTML =
+              '<div style="display:flex; gap:1rem; margin-bottom:1rem; flex-wrap:wrap; align-items:center;">' +
+              '<div class="sm-regime-badge" style="background:' + rc + '22; color:' + rc + '; border:1px solid ' + rc + '44;">' + (regime.label || regime.current || 'Unknown') + '</div>' +
+              '<div style="flex:1;"><div style="font-size:0.75rem; color:#94a3b8;">Regime Score</div><div style="font-size:1.3rem; color:#e2e8f0; font-weight:700;">' + (regime.score != null ? regime.score : '—') + '<span style="font-size:0.75rem; color:#64748b;">/100</span></div></div>' +
+              '<div class="sm-card" style="text-align:center; min-width:100px;"><div style="font-size:0.7rem; color:#94a3b8;">Coverage</div><div style="font-size:1.1rem; color:#e2e8f0;">' + (meta.coverage_pct != null ? meta.coverage_pct : '—') + '%</div></div>' +
+              '</div>' +
+              (signals.length ? '<div style="margin-bottom:1rem;"><div style="font-size:0.78rem; color:#f59e0b; font-weight:600; margin-bottom:0.4rem;">⚡ Active Signals</div><div style="display:flex; gap:4px; flex-wrap:wrap;">' + signals.map(function (s) { return '<span class="sm-flag" style="background:' + rc + '15; color:' + rc + ';">' + s.signal + ' (' + s.metric + ': ' + fmtNum(s.value) + ')</span>'; }).join('') + '</div></div>' : '') +
+              '<div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(200px, 1fr)); gap:0.6rem;">' +
+              Object.entries(cats).map(function (entry) { var cat = entry[0]; var metrics = entry[1]; return '<div class="sm-card"><div style="font-size:0.72rem; color:#94a3b8; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:6px;">' + cat.replace(/_/g, ' ') + '</div>' + metrics.slice(0, 5).map(function (m) { return '<div class="sm-metric-row"><span class="sm-metric-label">' + m.id + '</span><span class="sm-metric-value">' + fmtNum(m.value, 2) + (m.change !== null ? ' <span style="color:' + (m.change >= 0 ? '#22c55e' : '#ef4444') + '; font-size:0.7rem;">' + (m.change >= 0 ? '+' : '') + fmtNum(m.change, 2) + '</span>' : '') + '</span></div>'; }).join('') + '</div>'; }).join('') +
+              '</div>';
+          }
+
+          // ── Fundamental Truth ──
+          function renderTruth(panel, data) {
+            var rows = data.rows || [];
+            if (!rows.length) {
+              var reason = data._status || (data.universe_stats ? data.universe_stats.reason : '') || '';
+              panel.innerHTML = '<div style="color:#64748b; padding:1rem;">No fundamental data available' + (reason ? ': ' + reason : '') + '. Set EODHD_API_KEY and run <code>npm run build:supermodules:truth</code>.</div>';
+              return;
+            }
+            var topF = rows.slice(0, 10);
+            var weakest = rows.slice().sort(function (a, b) { return (a.scores ? a.scores.fundamental_score : 0) - (b.scores ? b.scores.fundamental_score : 0); }).slice(0, 10);
+            var fCard = function (r) {
+              return '<div class="sm-card" style="margin-bottom:6px;">' +
+                '<div style="display:flex; justify-content:space-between; align-items:center;">' +
+                symLink(r.symbol) +
+                '<span class="sm-score-badge" style="background:' + scoreColor(r.scores.fundamental_score) + '22; color:' + scoreColor(r.scores.fundamental_score) + ';">' + r.scores.fundamental_score + '</span></div>' +
+                '<div style="font-size:0.7rem; color:#64748b; margin-top:3px;">EQ ' + fmtNum(r.scores.earnings_quality) + ' · GM ' + fmtPct(r.scores.gross_margin) + ' · PE ' + fmtNum(r.scores.pe_ttm) + '</div>' +
+                '<div style="margin-top:3px;">' + (r.flags || []).slice(0, 3).map(function (f) { return '<span class="sm-flag">' + f.replace(/_/g, ' ') + '</span>'; }).join('') + '</div></div>';
+            };
+            var strongF = rows.filter(function (r) { return r.scores && r.scores.fundamental_score >= 75; }).length;
+            var highEQ = rows.filter(function (r) { return r.flags && r.flags.includes('HIGH_EARNINGS_QUALITY'); }).length;
+            panel.innerHTML =
+              '<div style="display:flex; gap:0.5rem; margin-bottom:1rem; flex-wrap:wrap;">' +
+              '<div class="sm-card" style="flex:1; min-width:140px; text-align:center;"><div style="font-size:0.7rem; color:#94a3b8;">Stocks Analyzed</div><div style="font-size:1.5rem; color:#e2e8f0; font-weight:700;">' + rows.length + '</div></div>' +
+              '<div class="sm-card" style="flex:1; min-width:140px; text-align:center;"><div style="font-size:0.7rem; color:#94a3b8;">Strong Fundamental (75+)</div><div style="font-size:1.5rem; color:#22c55e; font-weight:700;">' + strongF + '</div></div>' +
+              '<div class="sm-card" style="flex:1; min-width:140px; text-align:center;"><div style="font-size:0.7rem; color:#94a3b8;">High Earnings Quality</div><div style="font-size:1.5rem; color:#60a5fa; font-weight:700;">' + highEQ + '</div></div>' +
+              '</div>' +
+              '<div style="display:grid; grid-template-columns:1fr 1fr; gap:0.8rem;">' +
+              '<div><div style="font-size:0.78rem; color:#22c55e; font-weight:600; margin-bottom:0.5rem;">🏆 Strongest Fundamentals</div>' + topF.map(fCard).join('') + '</div>' +
+              '<div><div style="font-size:0.78rem; color:#ef4444; font-weight:600; margin-bottom:0.5rem;">⚠️ Weakest Fundamentals</div>' + weakest.map(fCard).join('') + '</div>' +
+              '</div>';
+          }
+
+          // Load manifest on Ideas view open
+          var observer = new MutationObserver(function () {
+            var ideas = document.getElementById('ideas-view');
+            if (ideas && ideas.style.display !== 'none') {
+              loadSMManifest();
+              observer.disconnect();
+            }
+          });
+          observer.observe(document.body, { subtree: true, attributes: true, attributeFilter: ['style'] });
+          setTimeout(function () { var iv = document.getElementById('ideas-view'); if (iv && iv.style.display !== 'none') loadSMManifest(); }, 2000);
+        })();
+      </script>
     </section>
-
   </main>
 
   <!-- SIGNAL MODAL -->
@@ -474,6 +1300,7 @@
 
   <!-- Stock UI extras adapter -->
   <script src="/js/rv-stock-ui-extras.js"></script>
+  <script src="/js/universe-explorer-v7.js"></script>
 
   <!-- Load Scientific Analysis Data -->
   <script>
@@ -529,7 +1356,11 @@
         const payload = await res.json();
         const symbols = payload?.data?.symbols || [];
         if (!Array.isArray(symbols) || !symbols.length) return;
-        for (const item of symbols) {
+        const prefetchLimit = symbols.length > 2000 ? 200 : symbols.length;
+        if (prefetchLimit < symbols.length) {
+          console.info(`Elliott index prefetch capped at ${prefetchLimit}/${symbols.length}; remaining symbols load on-demand.`);
+        }
+        for (const item of symbols.slice(0, prefetchLimit)) {
           const t = normalizeTicker(item?.symbol || '');
           const path = item?.path;
           if (!t || !path) continue;
@@ -738,6 +1569,8 @@
     const searchInput = document.getElementById('stock-search-input');
     const stickySearchInput = document.getElementById('sticky-search-input');
     const stickySearchBtn = document.getElementById('sticky-search-btn');
+    const stickyAssetFilter = document.getElementById('sticky-asset-filter');
+    const analyzeAssetFilter = document.getElementById('analyze-asset-filter');
     const stickyEngineFilter = document.getElementById('sticky-engine-filter');
     const analyzeEngineFilter = document.getElementById('analyze-engine-filter');
     const resultsSection = document.getElementById('search-results');
@@ -754,6 +1587,45 @@
     const marketPulseBlock = document.getElementById('market-pulse-block');
     const marketRotationBlock = document.getElementById('market-rotation-block');
     const marketMoversBlock = document.getElementById('market-movers-block');
+    const marketV7SummaryEl = document.getElementById('market-v7-summary');
+    const marketV7FeatureEl = document.getElementById('market-v7-feature');
+    const marketV7TypesEl = document.getElementById('market-v7-types');
+    const marketV7ExchangesEl = document.getElementById('market-v7-exchanges');
+    const marketV7MetaEl = document.getElementById('market-v7-meta');
+    const marketV7ClassFilterEl = document.getElementById('market-v7-class-filter');
+    const marketV7PrevBtn = document.getElementById('market-v7-page-prev');
+    const marketV7NextBtn = document.getElementById('market-v7-page-next');
+    const marketV7PageLabelEl = document.getElementById('market-v7-page-label');
+    const marketV7TbodyEl = document.getElementById('market-v7-tbody');
+    const marketCategoryPanels = {
+      crypto: {
+        tbody: document.getElementById('market-cat-crypto-tbody'),
+        meta: document.getElementById('market-cat-crypto-meta'),
+        pageLabel: document.getElementById('market-cat-crypto-page'),
+        prevBtn: document.getElementById('market-cat-crypto-prev'),
+        nextBtn: document.getElementById('market-cat-crypto-next'),
+        page: 0,
+        totalPages: 1
+      },
+      etf: {
+        tbody: document.getElementById('market-cat-etf-tbody'),
+        meta: document.getElementById('market-cat-etf-meta'),
+        pageLabel: document.getElementById('market-cat-etf-page'),
+        prevBtn: document.getElementById('market-cat-etf-prev'),
+        nextBtn: document.getElementById('market-cat-etf-next'),
+        page: 0,
+        totalPages: 1
+      },
+      forex: {
+        tbody: document.getElementById('market-cat-forex-tbody'),
+        meta: document.getElementById('market-cat-forex-meta'),
+        pageLabel: document.getElementById('market-cat-forex-page'),
+        prevBtn: document.getElementById('market-cat-forex-prev'),
+        nextBtn: document.getElementById('market-cat-forex-next'),
+        page: 0,
+        totalPages: 1
+      }
+    };
     const ideasMoatContent = document.getElementById('ideas-moat-content');
     const ideasListContent = document.getElementById('ideas-list-content');
     const topNavLinks = Array.from(document.querySelectorAll('.rv-page-nav-link[data-top-route]'));
@@ -777,12 +1649,21 @@
     const coverageSummaryEl = document.getElementById('coverage-summary-text');
 
     const UNIVERSE_URL = '/data/universe/all.json';
-    const V3_UNIVERSE_MANIFEST_URL = '/data/v3/universe/manifest.json';
+    const V7_KPI_REPORT_URL = '/data/universe/v7/reports/kpi_levels_report.json';
+    const V7_MARKET_CATALOG_MANIFEST_URL = '/data/universe/v7/read_models/market_catalog_manifest.json';
+    const V7_MARKET_CATALOG_PAGE_BASE = '/data/universe/v7/read_models/market_catalog_pages';
+    const V7_MARKET_CATALOG_CLASS_BASE = '/data/universe/v7/read_models/market_catalog_by_class';
     let universe = [];
     const universeByTicker = new Map();
+    const universeMetaByTicker = new Map();
     let universeReady = null;
     let coveragePromise = null;
     let coverageInfo = null;
+    let marketCatalogManifestPromise = null;
+    let marketCatalogManifest = null;
+    let marketV7Page = 0;
+    let marketV7TotalPages = 1;
+    let marketV7AssetClass = 'all';
 
     function normalizeTicker(raw) {
       const s = String(raw || '').trim().toUpperCase();
@@ -800,26 +1681,27 @@
         .trim();
     }
 
-    function formatCoverageByIndex(byIndex) {
-      if (!byIndex || typeof byIndex !== 'object') return '';
-      const order = ['nasdaq100', 'sp500', 'dow', 'russell2000'];
+    function formatCoverageByFeatures(byFeature) {
+      if (!byFeature || typeof byFeature !== 'object') return '';
       const labels = {
-        nasdaq100: 'NASDAQ-100',
-        sp500: 'S&P 500',
-        dow: 'Dow',
-        russell2000: 'Russell 2000'
+        analyzer: 'Analyzer',
+        scientific: 'Scientific',
+        elliott: 'Elliott',
+        marketphase: 'Market',
+        forecast: 'Forecast'
       };
-      return order
-        .filter((key) => Number.isFinite(Number(byIndex[key])))
-        .map((key) => `${labels[key]}: ${Number(byIndex[key]).toLocaleString('en-US')}`)
+      return Object.entries(labels)
+        .filter(([key]) => Number.isFinite(Number(byFeature[key])))
+        .map(([key, label]) => `${label}: ${Number(byFeature[key]).toLocaleString('en-US')}`)
         .join(' | ');
     }
 
     function formatCoverageSummary(coverage) {
-      const total = Number(coverage?.total);
-      if (!Number.isFinite(total) || total <= 0) return 'Coverage: unavailable';
-      const breakdown = formatCoverageByIndex(coverage?.by_index);
-      const base = `Coverage: ${total.toLocaleString('en-US')} stocks`;
+      const discovered = Number(coverage?.discovered_count);
+      const ingestible = Number(coverage?.active_ingestible_count);
+      if (!Number.isFinite(discovered) || discovered <= 0) return 'Coverage: unavailable';
+      const breakdown = formatCoverageByFeatures(coverage?.feature_eligible_count);
+      const base = `Universe: ${discovered.toLocaleString('en-US')} discovered | ${Number.isFinite(ingestible) ? ingestible.toLocaleString('en-US') : '—'} ingestible`;
       return breakdown ? `${base} (${breakdown})` : base;
     }
 
@@ -827,22 +1709,21 @@
       if (coverageInfo) return coverageInfo;
       if (coveragePromise) return coveragePromise;
       coveragePromise = (async () => {
-        const { response, payload } = await fetchJson(V3_UNIVERSE_MANIFEST_URL);
+        const { response, payload } = await fetchJson(V7_KPI_REPORT_URL);
         if (!response?.ok || !payload || typeof payload !== 'object') {
           coverageInfo = null;
           return null;
         }
-        const coverage = payload.coverage && typeof payload.coverage === 'object' ? payload.coverage : null;
-        if (!coverage) {
-          coverageInfo = null;
-          return null;
-        }
         coverageInfo = {
-          total: Number(coverage.total),
-          by_index: coverage.by_index && typeof coverage.by_index === 'object' ? coverage.by_index : {},
-          freshness: coverage.freshness || null,
-          health: coverage.health || null,
-          run_id: coverage.run_id || payload.run_id || payload?.meta?.run_id || null
+          discovered_count: Number(payload.discovered_count),
+          active_ingestible_count: Number(payload.active_ingestible_count),
+          feature_eligible_count: payload.feature_eligible_count && typeof payload.feature_eligible_count === 'object'
+            ? payload.feature_eligible_count
+            : {},
+          by_type_norm: payload.by_type_norm && typeof payload.by_type_norm === 'object'
+            ? payload.by_type_norm
+            : {},
+          run_id: payload.run_id || payload?.meta?.run_id || null
         };
         return coverageInfo;
       })()
@@ -866,6 +1747,27 @@
       const next = String(value || '');
       if (source !== 'main' && searchInput && searchInput.value !== next) searchInput.value = next;
       if (source !== 'sticky' && stickySearchInput && stickySearchInput.value !== next) stickySearchInput.value = next;
+    }
+
+    function normalizeAssetClass(value) {
+      const normalized = String(value || 'all').trim().toLowerCase();
+      const allowed = new Set(['all', 'stock', 'etf', 'fund', 'crypto', 'forex', 'bond', 'index']);
+      return allowed.has(normalized) ? normalized : 'all';
+    }
+
+    function syncAssetFilters(value, source = 'sticky') {
+      const normalized = normalizeAssetClass(value);
+      if (source !== 'sticky' && stickyAssetFilter) stickyAssetFilter.value = normalized;
+      if (source !== 'analyze' && analyzeAssetFilter) analyzeAssetFilter.value = normalized;
+      return normalized;
+    }
+
+    function getActiveAssetFilter() {
+      const stickyValue = stickyAssetFilter ? normalizeAssetClass(stickyAssetFilter.value) : 'all';
+      const analyzeValue = analyzeAssetFilter ? normalizeAssetClass(analyzeAssetFilter.value) : 'all';
+      if (activeSearchInput === stickySearchInput) return stickyValue;
+      if (activeSearchInput === searchInput) return analyzeValue;
+      return stickyValue !== 'all' ? stickyValue : analyzeValue;
     }
 
     function syncEngineFilters(value, source = 'sticky') {
@@ -918,26 +1820,39 @@
 
     async function loadUniverse() {
       try {
+        const warmup = await fetchUniverseMatches('A', { limit: 100 });
+        if (warmup.length > 0) {
+          universe = warmup.map((entry) => ({ ticker: entry.symbol, name: entry.name || '' }));
+          return universe;
+        }
+      } catch (err) {
+        console.warn('v7 universe warmup failed, falling back to legacy list:', err);
+      }
+      try {
         const res = await fetch(UNIVERSE_URL, { cache: 'no-store' });
         if (!res.ok) throw new Error('universe_fetch_failed');
         const entries = await res.json();
         if (!Array.isArray(entries)) throw new Error('universe_invalid_shape');
-
         const normalized = [];
-        universeByTicker.clear();
         for (const entry of entries) {
           if (!entry || typeof entry !== 'object') continue;
-          const ticker = normalizeTicker(entry.ticker);
+          const ticker = normalizeTicker(entry.ticker || entry.symbol);
           if (!ticker) continue;
           const name = typeof entry.name === 'string' ? entry.name.trim() : '';
           normalized.push({ ticker, name });
           universeByTicker.set(ticker, name || null);
+          universeMetaByTicker.set(ticker, {
+            symbol: ticker,
+            name: name || null,
+            type_norm: 'STOCK',
+            layer: null,
+            score_0_100: null
+          });
         }
         universe = normalized;
         return universe;
       } catch (err) {
         console.error('Universe load failed:', err);
-        // Retry once after delay? Or just return empty to not block
         return [];
       }
     }
@@ -1016,6 +1931,209 @@
         }
       }
       return { response: null, payload: null, networkError: lastNetworkError };
+    }
+
+    async function fetchJsonGz(url) {
+      const attempts = withPublicDataFallback(url);
+      for (const candidate of attempts) {
+        try {
+          const response = await fetch(candidate, { cache: 'no-store' });
+          if (!response.ok) continue;
+          const contentType = String(response.headers.get('content-type') || '').toLowerCase();
+          const isGzipPayload = candidate.endsWith('.gz')
+            || contentType.includes('application/gzip')
+            || contentType.includes('application/x-gzip')
+            || contentType.includes('gzip');
+          if (!isGzipPayload) {
+            return await response.json();
+          }
+          if (typeof DecompressionStream === 'function' && response.body) {
+            const decompressed = response.body.pipeThrough(new DecompressionStream('gzip'));
+            const text = await new Response(decompressed).text();
+            return JSON.parse(text);
+          }
+          return await response.json();
+        } catch {
+          // Try next candidate path.
+        }
+      }
+      return null;
+    }
+
+    function parseDateScore(raw) {
+      const date = String(raw || '').slice(0, 10);
+      if (!date) return 0;
+      const ts = Date.parse(`${date}T00:00:00Z`);
+      return Number.isFinite(ts) ? ts : 0;
+    }
+
+    function qualityBasisRank(raw) {
+      const q = String(raw || '').toLowerCase();
+      if (q === 'backfill_real') return 3;
+      if (q === 'daily_bulk_estimate') return 2;
+      if (q === 'estimate') return 1;
+      return 0;
+    }
+
+    function universeLayerRank(raw) {
+      const layer = String(raw || '').toUpperCase();
+      if (layer === 'L0_LEGACY_CORE') return 5;
+      if (layer === 'L1_FULL') return 4;
+      if (layer === 'L2_PARTIAL') return 3;
+      if (layer === 'L3_MINIMAL') return 2;
+      return 1;
+    }
+
+    function normalizeUniverseMetaRow(input = {}) {
+      const symbol = normalizeTicker(input?.symbol || input?.ticker);
+      if (!symbol) return null;
+      const name = typeof input?.name === 'string' ? input.name.trim() : '';
+      const canonicalId = typeof input?.canonical_id === 'string' ? input.canonical_id.trim().toUpperCase() : null;
+      const layer = input?.layer ? String(input.layer).toUpperCase() : null;
+      const score = Number(input?.score_0_100);
+      const bars = Number(input?.bars_count);
+      const avgVol = Number(input?.avg_volume_30d);
+      return {
+        symbol,
+        name: name || null,
+        canonical_id: canonicalId || null,
+        type_norm: input?.type_norm ? String(input.type_norm).toUpperCase() : null,
+        layer,
+        score_0_100: Number.isFinite(score) ? score : null,
+        bars_count: Number.isFinite(bars) ? bars : null,
+        avg_volume_30d: Number.isFinite(avgVol) ? avgVol : null,
+        last_trade_date: input?.last_trade_date ? String(input.last_trade_date).slice(0, 10) : null,
+        quality_basis: input?.quality_basis ? String(input.quality_basis) : null
+      };
+    }
+
+    function compareUniverseMeta(a, b) {
+      const layer = universeLayerRank(a?.layer) - universeLayerRank(b?.layer);
+      if (layer !== 0) return layer;
+
+      const q = qualityBasisRank(a?.quality_basis) - qualityBasisRank(b?.quality_basis);
+      if (q !== 0) return q;
+
+      const d = parseDateScore(a?.last_trade_date) - parseDateScore(b?.last_trade_date);
+      if (d !== 0) return d;
+
+      const bars = (Number(a?.bars_count) || 0) - (Number(b?.bars_count) || 0);
+      if (bars !== 0) return bars;
+
+      const score = (Number(a?.score_0_100) || 0) - (Number(b?.score_0_100) || 0);
+      if (score !== 0) return score;
+
+      const vol = (Number(a?.avg_volume_30d) || 0) - (Number(b?.avg_volume_30d) || 0);
+      if (vol !== 0) return vol;
+
+      const ac = String(a?.canonical_id || '');
+      const bc = String(b?.canonical_id || '');
+      if (ac === bc) return 0;
+      return ac < bc ? 1 : -1;
+    }
+
+    function cacheUniverseRows(rows) {
+      if (!Array.isArray(rows)) return;
+      for (const row of rows) {
+        const candidate = normalizeUniverseMetaRow(row);
+        if (!candidate) continue;
+        const ticker = candidate.symbol;
+        const current = universeMetaByTicker.get(ticker) || null;
+        const better = !current || compareUniverseMeta(candidate, current) > 0;
+        if (!better) continue;
+        universeByTicker.set(ticker, candidate.name || null);
+        universeMetaByTicker.set(ticker, candidate);
+      }
+    }
+
+    async function fetchUniverseMatches(query, options = {}) {
+      const q = String(query || '').trim();
+      if (!q) return [];
+      const params = new URLSearchParams();
+      params.set('q', q);
+      params.set('limit', String(Math.max(1, Math.min(100, Number(options.limit) || 12))));
+      params.set('t', String(Date.now()));
+      const assetClass = normalizeAssetClass(options.assetClass || 'all');
+      if (assetClass !== 'all') params.set('asset_class', assetClass);
+      if (options.exact === true) params.set('exact', '1');
+      const { response, payload } = await fetchJson(`/api/universe?${params.toString()}`);
+      if (!response?.ok || !Array.isArray(payload?.data?.symbols)) return [];
+      const out = payload.data.symbols
+        .map((item) => ({
+          symbol: normalizeTicker(item?.symbol),
+          name: typeof item?.name === 'string' ? item.name : '',
+          canonical_id: item?.canonical_id ? String(item.canonical_id).toUpperCase() : null,
+          type_norm: typeof item?.type_norm === 'string' ? item.type_norm.toUpperCase() : null,
+          layer: item?.layer || null,
+          score_0_100: Number.isFinite(Number(item?.score_0_100)) ? Number(item.score_0_100) : null,
+          bars_count: Number.isFinite(Number(item?.bars_count)) ? Number(item.bars_count) : null,
+          avg_volume_30d: Number.isFinite(Number(item?.avg_volume_30d)) ? Number(item.avg_volume_30d) : null,
+          last_trade_date: item?.last_trade_date ? String(item.last_trade_date).slice(0, 10) : null,
+          quality_basis: item?.quality_basis ? String(item.quality_basis) : null
+        }))
+        .filter((item) => item.symbol);
+      cacheUniverseRows(out);
+      return out;
+    }
+
+    async function ensureSymbolInUniverse(symbol, options = {}) {
+      const ticker = normalizeTicker(symbol);
+      if (!ticker) return { ok: false, ticker: '', name: null };
+      if (universeMetaByTicker.has(ticker)) {
+        const meta = universeMetaByTicker.get(ticker) || {};
+        return {
+          ok: true,
+          ticker,
+          name: meta.name || universeByTicker.get(ticker) || null,
+          canonical_id: meta.canonical_id || null,
+          type_norm: meta.type_norm || null,
+          layer: meta.layer || null,
+          score_0_100: Number.isFinite(Number(meta.score_0_100)) ? Number(meta.score_0_100) : null,
+          bars_count: Number.isFinite(Number(meta.bars_count)) ? Number(meta.bars_count) : null,
+          avg_volume_30d: Number.isFinite(Number(meta.avg_volume_30d)) ? Number(meta.avg_volume_30d) : null,
+          last_trade_date: meta.last_trade_date || null,
+          quality_basis: meta.quality_basis || null
+        };
+      }
+      if (universeByTicker.has(ticker)) {
+        return {
+          ok: true,
+          ticker,
+          name: universeByTicker.get(ticker) || null,
+          canonical_id: null,
+          type_norm: null,
+          layer: null,
+          score_0_100: null,
+          bars_count: null,
+          avg_volume_30d: null,
+          last_trade_date: null,
+          quality_basis: null
+        };
+      }
+      const rows = await fetchUniverseMatches(ticker, {
+        limit: 10,
+        exact: true,
+        assetClass: options.assetClass || 'all'
+      });
+      const match = rows.find((row) => row.symbol === ticker);
+      if (match) {
+        cacheUniverseRows([match]);
+        const nextMeta = universeMetaByTicker.get(ticker) || {};
+        return {
+          ok: true,
+          ticker,
+          name: nextMeta.name || match.name || null,
+          canonical_id: nextMeta.canonical_id || match.canonical_id || null,
+          type_norm: nextMeta.type_norm || match.type_norm || null,
+          layer: nextMeta.layer || match.layer || null,
+          score_0_100: Number.isFinite(Number(nextMeta.score_0_100)) ? Number(nextMeta.score_0_100) : Number(match.score_0_100 || 0),
+          bars_count: Number.isFinite(Number(nextMeta.bars_count)) ? Number(nextMeta.bars_count) : Number(match.bars_count || 0),
+          avg_volume_30d: Number.isFinite(Number(nextMeta.avg_volume_30d)) ? Number(nextMeta.avg_volume_30d) : Number(match.avg_volume_30d || 0),
+          last_trade_date: nextMeta.last_trade_date || match.last_trade_date || null,
+          quality_basis: nextMeta.quality_basis || match.quality_basis || null
+        };
+      }
+      return { ok: false, ticker, name: null };
     }
 
     function normalizeBarsPayload(payload) {
@@ -1366,7 +2484,213 @@
       return null;
     }
 
-    function renderMarketView() {
+    function statusColor(status) {
+      const s = String(status || '').toUpperCase();
+      if (s === 'ACTIVE_RECENT') return '#34d399';
+      if (s === 'PARTIAL_HISTORY') return '#f59e0b';
+      if (s === 'EOD_ONLY') return '#60a5fa';
+      return '#94a3b8';
+    }
+
+    function statusLabel(status) {
+      const s = String(status || '').toUpperCase();
+      if (s === 'ACTIVE_RECENT') return 'Active';
+      if (s === 'PARTIAL_HISTORY') return 'Backfill Partial';
+      if (s === 'EOD_ONLY') return 'EOD Only';
+      return 'Metadata';
+    }
+
+    async function loadMarketCatalogManifest() {
+      if (marketCatalogManifest) return marketCatalogManifest;
+      if (marketCatalogManifestPromise) return marketCatalogManifestPromise;
+      marketCatalogManifestPromise = (async () => {
+        const { response, payload } = await fetchJson(V7_MARKET_CATALOG_MANIFEST_URL);
+        if (!response?.ok || !payload || typeof payload !== 'object') return null;
+        marketCatalogManifest = payload;
+        return marketCatalogManifest;
+      })().finally(() => { marketCatalogManifestPromise = null; });
+      return marketCatalogManifestPromise;
+    }
+
+    async function loadMarketCatalogPage(pageIndex, assetClass = 'all') {
+      const page = Math.max(0, Number(pageIndex) || 0);
+      const cls = normalizeAssetClass(assetClass);
+      const rel = cls === 'all'
+        ? `${V7_MARKET_CATALOG_PAGE_BASE}/page_${String(page).padStart(3, '0')}.json.gz`
+        : `${V7_MARKET_CATALOG_CLASS_BASE}/${cls}/pages/page_${String(page).padStart(3, '0')}.json.gz`;
+      return await fetchJsonGz(rel);
+    }
+
+    function renderMarketV7Rows(items) {
+      if (!marketV7TbodyEl) return;
+      if (!Array.isArray(items) || items.length === 0) {
+        marketV7TbodyEl.innerHTML = '<tr><td colspan=\"7\" style=\"padding:0.9rem; color:#64748b;\">No rows for selected class/page.</td></tr>';
+        return;
+      }
+      marketV7TbodyEl.innerHTML = items.map((row) => {
+        const symbol = normalizeTicker(row?.symbol || row?.ticker || '');
+        const bars = Number.isFinite(Number(row?.bars_count)) ? Number(row.bars_count).toLocaleString('en-US') : '—';
+        const lastTrade = row?.last_trade_date ? escapeHtml(String(row.last_trade_date).slice(0, 10)) : '—';
+        const exchange = escapeHtml(String(row?.exchange || row?.mic || '—').toUpperCase());
+        const status = String(row?.status || 'METADATA_ONLY').toUpperCase();
+        return `
+          <tr>
+            <td style=\"padding:0.45rem; border-top:1px solid rgba(100,116,139,0.18);\"><a class=\"best-setup-link\" href=\"/analyze/${encodeURIComponent(symbol)}\" data-open-ticker=\"${escapeHtml(symbol)}\">${escapeHtml(symbol || '—')}</a></td>
+            <td style=\"padding:0.45rem; border-top:1px solid rgba(100,116,139,0.18); color:#cbd5e1;\">${escapeHtml(row?.name || '—')}</td>
+            <td style=\"padding:0.45rem; border-top:1px solid rgba(100,116,139,0.18);\">${escapeHtml(String(row?.type_norm || '—').toUpperCase())}</td>
+            <td style=\"padding:0.45rem; border-top:1px solid rgba(100,116,139,0.18); color:#94a3b8;\">${exchange}</td>
+            <td style=\"padding:0.45rem; border-top:1px solid rgba(100,116,139,0.18); color:${statusColor(status)}; font-weight:600;\">${escapeHtml(statusLabel(status))}</td>
+            <td style=\"padding:0.45rem; border-top:1px solid rgba(100,116,139,0.18); text-align:right;\">${bars}</td>
+            <td style=\"padding:0.45rem; border-top:1px solid rgba(100,116,139,0.18); color:#94a3b8;\">${lastTrade}</td>
+          </tr>
+        `;
+      }).join('');
+
+      marketV7TbodyEl.querySelectorAll('[data-open-ticker]').forEach((link) => {
+        link.addEventListener('click', async (ev) => {
+          ev.preventDefault();
+          const ticker = link.getAttribute('data-open-ticker');
+          if (!ticker) return;
+          await selectSymbol(ticker, universeByTicker.get(ticker) || null, { push: true });
+        });
+      });
+    }
+
+    function renderMarketV7Coverage(coverage, catalogManifest) {
+      if (!marketV7SummaryEl || !marketV7FeatureEl || !marketV7TypesEl || !marketV7ExchangesEl) return;
+      if (!coverage || typeof coverage !== 'object') {
+        marketV7SummaryEl.textContent = 'Coverage unavailable';
+        marketV7FeatureEl.textContent = 'Eligibility unavailable';
+        marketV7TypesEl.textContent = 'Asset classes unavailable';
+        marketV7ExchangesEl.textContent = 'Exchanges unavailable';
+        return;
+      }
+      const discovered = Number(coverage.discovered_count);
+      const ingestible = Number(coverage.active_ingestible_count);
+      const marketEligible = Number(coverage?.feature_eligible_count?.marketphase);
+      marketV7SummaryEl.textContent = `Discovered ${Number.isFinite(discovered) ? discovered.toLocaleString('en-US') : '—'} | Ingestible ${Number.isFinite(ingestible) ? ingestible.toLocaleString('en-US') : '—'}`;
+      marketV7FeatureEl.textContent = `Eligible Market (Marketphase Gate): ${Number.isFinite(marketEligible) ? marketEligible.toLocaleString('en-US') : '—'}`;
+
+      const byType = catalogManifest?.by_type_norm && typeof catalogManifest.by_type_norm === 'object'
+        ? catalogManifest.by_type_norm
+        : (coverage.by_type_norm && typeof coverage.by_type_norm === 'object' ? coverage.by_type_norm : {});
+      const typeRows = Object.entries(byType)
+        .map(([type, count]) => ({ type, count: Number(count) }))
+        .filter((row) => Number.isFinite(row.count) && row.count > 0)
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 8)
+        .map((row) => `${row.type}: ${row.count.toLocaleString('en-US')}`);
+      marketV7TypesEl.textContent = typeRows.length ? `Types: ${typeRows.join(' | ')}` : 'Types unavailable';
+
+      const byExchange = catalogManifest?.by_exchange_top30 && typeof catalogManifest.by_exchange_top30 === 'object'
+        ? catalogManifest.by_exchange_top30
+        : {};
+      const exchangeRows = Object.entries(byExchange)
+        .map(([ex, count]) => ({ ex, count: Number(count) }))
+        .filter((row) => Number.isFinite(row.count) && row.count > 0)
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 10)
+        .map((row) => `${row.ex}: ${row.count.toLocaleString('en-US')}`);
+      marketV7ExchangesEl.textContent = exchangeRows.length ? `Top Exchanges: ${exchangeRows.join(' | ')}` : 'Top Exchanges unavailable';
+    }
+
+    async function refreshMarketV7Panel({ resetPage = false } = {}) {
+      if (resetPage) marketV7Page = 0;
+      const [coverage, catalogManifest] = await Promise.all([
+        loadCoverageInfo(),
+        loadMarketCatalogManifest()
+      ]);
+      renderMarketV7Coverage(coverage, catalogManifest);
+
+      let pageDoc = await loadMarketCatalogPage(marketV7Page, marketV7AssetClass);
+      let totalPages = Number(pageDoc?.total_pages);
+      if ((!Number.isFinite(totalPages) || totalPages <= 0) && marketV7Page > 0) {
+        marketV7Page = 0;
+        pageDoc = await loadMarketCatalogPage(marketV7Page, marketV7AssetClass);
+        totalPages = Number(pageDoc?.total_pages);
+      }
+      marketV7TotalPages = Number.isFinite(totalPages) && totalPages > 0 ? totalPages : 1;
+
+      const rows = Array.isArray(pageDoc?.items) ? pageDoc.items : [];
+      renderMarketV7Rows(rows);
+
+      const totalItems = Number(pageDoc?.total_items);
+      const pageSize = Number(pageDoc?.page_size);
+      const classLabel = marketV7AssetClass === 'all' ? 'ALL' : marketV7AssetClass.toUpperCase();
+      if (marketV7MetaEl) {
+        marketV7MetaEl.textContent = `Class=${classLabel} | Rows on page=${rows.length} | page_size=${Number.isFinite(pageSize) ? pageSize : 100} | total_items=${Number.isFinite(totalItems) ? totalItems.toLocaleString('en-US') : '—'}`;
+      }
+      if (marketV7PageLabelEl) marketV7PageLabelEl.textContent = `Page ${marketV7Page + 1} / ${marketV7TotalPages}`;
+      if (marketV7PrevBtn) marketV7PrevBtn.disabled = marketV7Page <= 0;
+      if (marketV7NextBtn) marketV7NextBtn.disabled = marketV7Page >= (marketV7TotalPages - 1);
+    }
+
+    function renderMarketCategoryPanelRows(panel, items) {
+      if (!panel?.tbody) return;
+      if (!Array.isArray(items) || items.length === 0) {
+        panel.tbody.innerHTML = '<tr><td colspan=\"3\" style=\"padding:0.45rem; color:#64748b;\">No rows on this page.</td></tr>';
+        return;
+      }
+      panel.tbody.innerHTML = items.map((row) => {
+        const symbol = normalizeTicker(row?.symbol || '');
+        const exchange = String(row?.exchange || row?.mic || '—').toUpperCase();
+        return `
+          <tr>
+            <td style=\"padding:0.35rem; border-top:1px solid rgba(100,116,139,0.16);\"><a class=\"best-setup-link\" href=\"/analyze/${encodeURIComponent(symbol)}\" data-open-ticker=\"${escapeHtml(symbol)}\">${escapeHtml(symbol || '—')}</a></td>
+            <td style=\"padding:0.35rem; border-top:1px solid rgba(100,116,139,0.16); color:#cbd5e1;\">${escapeHtml(row?.name || '—')}</td>
+            <td style=\"padding:0.35rem; border-top:1px solid rgba(100,116,139,0.16); color:#94a3b8;\">${escapeHtml(exchange)}</td>
+          </tr>
+        `;
+      }).join('');
+
+      panel.tbody.querySelectorAll('[data-open-ticker]').forEach((link) => {
+        link.addEventListener('click', async (ev) => {
+          ev.preventDefault();
+          const ticker = link.getAttribute('data-open-ticker');
+          if (!ticker) return;
+          await selectSymbol(ticker, universeByTicker.get(ticker) || null, { push: true });
+        });
+      });
+    }
+
+    async function refreshMarketCategoryPanel(assetClass, { resetPage = false } = {}) {
+      const key = String(assetClass || '').toLowerCase();
+      const panel = marketCategoryPanels[key];
+      if (!panel) return;
+      if (resetPage) panel.page = 0;
+
+      let pageDoc = await loadMarketCatalogPage(panel.page, key);
+      let totalPages = Number(pageDoc?.total_pages);
+      if ((!Number.isFinite(totalPages) || totalPages <= 0) && panel.page > 0) {
+        panel.page = 0;
+        pageDoc = await loadMarketCatalogPage(panel.page, key);
+        totalPages = Number(pageDoc?.total_pages);
+      }
+      panel.totalPages = Number.isFinite(totalPages) && totalPages > 0 ? totalPages : 1;
+
+      const rows = Array.isArray(pageDoc?.items) ? pageDoc.items.slice(0, 15) : [];
+      renderMarketCategoryPanelRows(panel, rows);
+
+      const totalItems = Number(pageDoc?.total_items);
+      if (panel.meta) {
+        panel.meta.textContent = `${Number.isFinite(totalItems) ? totalItems.toLocaleString('en-US') : '—'} items`;
+      }
+      if (panel.pageLabel) {
+        panel.pageLabel.textContent = `${panel.page + 1} / ${panel.totalPages}`;
+      }
+      if (panel.prevBtn) panel.prevBtn.disabled = panel.page <= 0;
+      if (panel.nextBtn) panel.nextBtn.disabled = panel.page >= (panel.totalPages - 1);
+    }
+
+    async function refreshAllMarketCategoryPanels({ resetPage = false } = {}) {
+      await Promise.all([
+        refreshMarketCategoryPanel('crypto', { resetPage }),
+        refreshMarketCategoryPanel('etf', { resetPage }),
+        refreshMarketCategoryPanel('forex', { resetPage })
+      ]);
+    }
+
+    async function renderMarketView() {
       if (!marketPulseBlock || !marketRotationBlock || !marketMoversBlock || !marketViewMeta) return;
       const doc = marketDoc;
       const generatedAt = doc?.meta?.generated_at || 'pending';
@@ -1379,33 +2703,35 @@
         marketPulseBlock.innerHTML = '<span style=\"color:#64748b;\">Content pending. Run dp8 market builder.</span>';
         marketRotationBlock.innerHTML = '<span style=\"color:#64748b;\">Content pending. Run dp8 market builder.</span>';
         marketMoversBlock.innerHTML = '<span style=\"color:#64748b;\">Content pending. Run dp8 market builder.</span>';
-        return;
+      } else {
+        marketPulseBlock.innerHTML = `
+          <div style="display:grid; gap:0.4rem;">
+            <div style="display:flex; justify-content:space-between;"><span style="color:#94a3b8;">Risk mode</span><span style="color:#e5e7eb; font-weight:600;">${escapeHtml(pulse?.risk_mode || pulse?.risk_on_off || '—')}</span></div>
+            <div style="display:flex; justify-content:space-between;"><span style="color:#94a3b8;">Breadth up/down</span><span style="color:#e5e7eb; font-weight:600;">${escapeHtml(String(pulse?.up || pulse?.breadth_up || '—'))}/${escapeHtml(String(pulse?.down || pulse?.breadth_down || '—'))}</span></div>
+          </div>
+        `;
+
+        const rotationRows = Array.isArray(rotation?.leaders) ? rotation.leaders.slice(0, 6) : Array.isArray(doc?.data?.sectors) ? doc.data.sectors.slice(0, 6) : [];
+        marketRotationBlock.innerHTML = rotationRows.length
+          ? rotationRows.map((row) => `<div style=\"display:flex; justify-content:space-between; gap:0.5rem; padding:0.2rem 0; border-bottom:1px solid rgba(100,116,139,0.12);\"><span style=\"color:#94a3b8;\">${escapeHtml(row.sector || row.symbol || '—')}</span><span style=\"color:#e5e7eb; font-weight:600;\">${formatSignedValue(row.change_pct || row.change || 0, 2)}%</span></div>`).join('')
+          : '<span style=\"color:#64748b;\">No rotation rows available.</span>';
+
+        marketMoversBlock.innerHTML = movers.length
+          ? movers.slice(0, 8).map((row) => `<div style=\"display:flex; justify-content:space-between; gap:0.5rem; padding:0.2rem 0; border-bottom:1px solid rgba(100,116,139,0.12);\"><a class=\"best-setup-link\" href=\"/analyze/${encodeURIComponent(row.ticker || row.symbol || '')}\" data-open-ticker=\"${escapeHtml(normalizeTicker(row.ticker || row.symbol || ''))}\">${escapeHtml(normalizeTicker(row.ticker || row.symbol || '—'))}</a><span style=\"color:${Number(row.change_pct || row.change || 0) >= 0 ? '#34d399' : '#f87171'}; font-weight:600;\">${formatSignedValue(Number(row.change_pct || row.change || 0), 2)}%</span></div>`).join('')
+          : '<span style=\"color:#64748b;\">No movers available.</span>';
+
+        document.querySelectorAll('#market-view [data-open-ticker]').forEach((link) => {
+          link.addEventListener('click', async (ev) => {
+            ev.preventDefault();
+            const ticker = link.getAttribute('data-open-ticker');
+            if (!ticker) return;
+            await selectSymbol(ticker, universeByTicker.get(ticker) || null, { push: true });
+          });
+        });
       }
 
-      marketPulseBlock.innerHTML = `
-        <div style="display:grid; gap:0.4rem;">
-          <div style="display:flex; justify-content:space-between;"><span style="color:#94a3b8;">Risk mode</span><span style="color:#e5e7eb; font-weight:600;">${escapeHtml(pulse?.risk_mode || pulse?.risk_on_off || '—')}</span></div>
-          <div style="display:flex; justify-content:space-between;"><span style="color:#94a3b8;">Breadth up/down</span><span style="color:#e5e7eb; font-weight:600;">${escapeHtml(String(pulse?.up || pulse?.breadth_up || '—'))}/${escapeHtml(String(pulse?.down || pulse?.breadth_down || '—'))}</span></div>
-        </div>
-      `;
-
-      const rotationRows = Array.isArray(rotation?.leaders) ? rotation.leaders.slice(0, 6) : Array.isArray(doc?.data?.sectors) ? doc.data.sectors.slice(0, 6) : [];
-      marketRotationBlock.innerHTML = rotationRows.length
-        ? rotationRows.map((row) => `<div style=\"display:flex; justify-content:space-between; gap:0.5rem; padding:0.2rem 0; border-bottom:1px solid rgba(100,116,139,0.12);\"><span style=\"color:#94a3b8;\">${escapeHtml(row.sector || row.symbol || '—')}</span><span style=\"color:#e5e7eb; font-weight:600;\">${formatSignedValue(row.change_pct || row.change || 0, 2)}%</span></div>`).join('')
-        : '<span style=\"color:#64748b;\">No rotation rows available.</span>';
-
-      marketMoversBlock.innerHTML = movers.length
-        ? movers.slice(0, 8).map((row) => `<div style=\"display:flex; justify-content:space-between; gap:0.5rem; padding:0.2rem 0; border-bottom:1px solid rgba(100,116,139,0.12);\"><a class=\"best-setup-link\" href=\"/analyze/${encodeURIComponent(row.ticker || row.symbol || '')}\" data-open-ticker=\"${escapeHtml(normalizeTicker(row.ticker || row.symbol || ''))}\">${escapeHtml(normalizeTicker(row.ticker || row.symbol || '—'))}</a><span style=\"color:${Number(row.change_pct || row.change || 0) >= 0 ? '#34d399' : '#f87171'}; font-weight:600;\">${formatSignedValue(Number(row.change_pct || row.change || 0), 2)}%</span></div>`).join('')
-        : '<span style=\"color:#64748b;\">No movers available.</span>';
-
-      document.querySelectorAll('#market-view [data-open-ticker]').forEach((link) => {
-        link.addEventListener('click', async (ev) => {
-          ev.preventDefault();
-          const ticker = link.getAttribute('data-open-ticker');
-          if (!ticker) return;
-          await selectSymbol(ticker, universeByTicker.get(ticker) || null, { push: true });
-        });
-      });
+      await refreshMarketV7Panel();
+      await refreshAllMarketCategoryPanels();
     }
 
     async function loadIdeasDoc() {
@@ -1875,11 +3201,11 @@
                 </div>
                 <div style="font-size: 0.82rem; color: #94a3b8;">
                   10Y: ${(() => {
-                    const computed = moatComputedByTicker.get(normalizeTicker(item.ticker));
-                    const tenYearPct = computed?.tenYear?.pct;
-                    if (tenYearPct == null) return '—';
-                    return formatColoredPercent(tenYearPct, 1);
-                  })()}
+              const computed = moatComputedByTicker.get(normalizeTicker(item.ticker));
+              const tenYearPct = computed?.tenYear?.pct;
+              if (tenYearPct == null) return '—';
+              return formatColoredPercent(tenYearPct, 1);
+            })()}
                 </div>
               </div>
               
@@ -1973,18 +3299,18 @@
         clearSuggestions();
         return;
       }
-      try {
-        if (!universeReady) universeReady = loadUniverse();
-        await universeReady;
-      } catch (e) {
-        console.warn("Universe wait failed", e);
-      }
-
-      const items = getUniverseSuggestions(query, 12);
-      typeahead.items = items;
+      const assetClass = getActiveAssetFilter();
+      const rows = await fetchUniverseMatches(query, { limit: 12, assetClass });
+      typeahead.items = rows.map((row) => ({
+        symbol: row.symbol,
+        name: row.name || null,
+        type_norm: row.type_norm || null,
+        layer: row.layer || null,
+        score_0_100: row.score_0_100
+      }));
       typeahead.activeIndex = -1;
-      typeahead.open = items.length > 0;
-      typeahead.emptyMessage = items.length ? null : 'No matches found in stock universe';
+      typeahead.open = typeahead.items.length > 0;
+      typeahead.emptyMessage = typeahead.items.length ? null : 'No matches found in v7 universe';
       renderTypeahead();
     }
 
@@ -1997,22 +3323,19 @@
       const s = String(symbol || '').trim().toUpperCase();
       if (!s) return;
 
-      if (!universeReady) universeReady = loadUniverse();
-      await universeReady;
-
-      if (!universeByTicker.has(s)) {
+      const support = await ensureSymbolInUniverse(s, { assetClass: getActiveAssetFilter() });
+      if (!support.ok) {
         closeTypeahead();
         renderUnsupported(s);
         return;
       }
-
-      const resolvedName = universeByTicker.get(s) || null;
+      const resolvedName = support.name || universeByTicker.get(s) || null;
       lastResolved = { ticker: s, name: resolvedName };
       syncSearchInputs(s, 'main');
       closeTypeahead();
       setMainView('analyze');
       if (push) window.history.pushState({}, '', `/analyze/${encodeURIComponent(s)}`);
-      await loadAnalyze(s, { push: false, fallback: lastResolved });
+      await loadAnalyze(s, { push: false, fallback: lastResolved, support });
     }
 
     function renderTypeahead() {
@@ -2039,6 +3362,9 @@
               <div style="display:flex; justify-content: space-between; gap: 1rem; align-items: baseline;">
                 <div style="font-weight: 800; color: #e5e7eb;">${escapeHtml(item.symbol)}</div>
                 <div style="font-size: 0.85rem; color: #94a3b8; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width: 420px;">${escapeHtml(item.name || '—')}</div>
+              </div>
+              <div style="margin-top:0.2rem; font-size:0.72rem; color:#94a3b8;">
+                ${item.type_norm ? escapeHtml(item.type_norm) : '—'}${item.layer ? ` | ${escapeHtml(item.layer)}` : ''}
               </div>
             </div>
           `;
@@ -3501,15 +4827,46 @@
       resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
 
+    function renderBackfillPending(support = {}) {
+      const ticker = normalizeTicker(support?.ticker || support?.symbol);
+      const coverageLine = formatCoverageSummary(coverageInfo);
+      const typeNorm = String(support?.type_norm || 'UNKNOWN').toUpperCase();
+      const layer = String(support?.layer || 'L4_DEAD');
+      const scoreText = Number.isFinite(Number(support?.score_0_100)) ? Number(support.score_0_100) : '—';
+      resultsSection.style.display = 'block';
+      resultsTitle.textContent = `Data Pending: ${ticker || 'Symbol'}`;
+      resultsContent.innerHTML = `
+        <div style="padding: 1rem; border-radius: 10px; background: rgba(56, 189, 248, 0.08); border: 1px solid rgba(56, 189, 248, 0.35); margin-bottom: 1.5rem;">
+          <div style="font-weight: 700; color: #bae6fd;">This symbol is in the v7 universe, but full analysis data is still backfill-pending.</div>
+          <div style="margin-top: 0.35rem; color: #bae6fd;">Type: ${escapeHtml(typeNorm)} | Layer: ${escapeHtml(layer)} | Score: ${escapeHtml(String(scoreText))}</div>
+          <div style="margin-top: 0.35rem; color: #94a3b8;">${escapeHtml(coverageLine)}</div>
+          <div style="margin-top: 0.45rem; color: #94a3b8;">Try again after the next backfill runs (tomorrow/overmorrow).</div>
+        </div>
+      `;
+      resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    function hasUsableLatestBar(payload) {
+      const data = payload?.data || {};
+      const bars = Array.isArray(data?.bars) ? data.bars : [];
+      const latest = data?.latest_bar || (bars.length ? bars[bars.length - 1] : null);
+      if (!latest || typeof latest !== 'object') return false;
+      const date = String(latest?.date || '').slice(0, 10);
+      const close = Number(latest?.close);
+      return Boolean(date) && Number.isFinite(close);
+    }
+
     async function loadAnalyze(ticker, options = {}) {
-      if (!universeReady) universeReady = loadUniverse();
-      await universeReady;
       const upperTicker = normalizeTicker(ticker);
       if (!upperTicker) return;
+      let support = options.support || null;
       // Allow SPY/QQQ for verification even if not in universe file
-      if (!universeByTicker.has(upperTicker) && upperTicker !== 'SPY' && upperTicker !== 'QQQ') {
-        renderUnsupported(upperTicker);
-        return;
+      if (upperTicker !== 'SPY' && upperTicker !== 'QQQ') {
+        if (!support) support = await ensureSymbolInUniverse(upperTicker, { assetClass: getActiveAssetFilter() });
+        if (!support.ok) {
+          renderUnsupported(upperTicker);
+          return;
+        }
       }
       const push = options.push !== false;
       if (push) {
@@ -3657,6 +5014,11 @@
         return;
       }
 
+      if (upperTicker !== 'SPY' && upperTicker !== 'QQQ' && !hasUsableLatestBar(payload)) {
+        renderBackfillPending({ ...(support || {}), ticker: upperTicker });
+        return;
+      }
+
       const safePayload = payload || { error: { code: 'NETWORK_ERROR', message: 'Unable to reach /api/stock' }, metadata: { status: 'ERROR' }, data: {} };
       safePayload.data = safePayload.data || {};
       safePayload.data.fundamentals_html = renderFundamentalsBlock(fundamentalsPayload);
@@ -3664,14 +5026,15 @@
     }
 
     async function resolveAndAnalyze(query) {
-      if (!universeReady) universeReady = loadUniverse();
-      await universeReady;
       const trimmed = String(query || '').trim();
       const t = normalizeTicker(trimmed);
       if (!t) return;
-      if (!universeByTicker.has(t) && t !== 'SPY' && t !== 'QQQ') {
-        renderUnsupported(t);
-        return;
+      if (t !== 'SPY' && t !== 'QQQ') {
+        const support = await ensureSymbolInUniverse(t, { assetClass: getActiveAssetFilter() });
+        if (!support.ok) {
+          renderUnsupported(t);
+          return;
+        }
       }
       await selectSymbol(t, universeByTicker.get(t) || null, { push: true });
     }
@@ -3831,7 +5194,30 @@
 
     if (stickySearchBtn) {
       stickySearchBtn.addEventListener('click', async () => {
+        activeSearchInput = stickySearchInput || searchInput;
         await resolveAndAnalyze(stickySearchInput?.value || searchInput.value);
+      });
+    }
+
+    if (stickyAssetFilter) {
+      stickyAssetFilter.addEventListener('change', () => {
+        syncAssetFilters(stickyAssetFilter.value, 'sticky');
+        const value = String(stickySearchInput?.value || '').trim();
+        if (value) {
+          activeSearchInput = stickySearchInput;
+          scheduleFetch(value);
+        }
+      });
+    }
+
+    if (analyzeAssetFilter) {
+      analyzeAssetFilter.addEventListener('change', () => {
+        syncAssetFilters(analyzeAssetFilter.value, 'analyze');
+        const value = String(searchInput?.value || '').trim();
+        if (value) {
+          activeSearchInput = searchInput;
+          scheduleFetch(value);
+        }
       });
     }
 
@@ -3849,6 +5235,46 @@
       });
     }
 
+    if (marketV7ClassFilterEl) {
+      marketV7ClassFilterEl.addEventListener('change', async () => {
+        marketV7AssetClass = normalizeAssetClass(marketV7ClassFilterEl.value);
+        await refreshMarketV7Panel({ resetPage: true });
+      });
+    }
+
+    if (marketV7PrevBtn) {
+      marketV7PrevBtn.addEventListener('click', async () => {
+        if (marketV7Page <= 0) return;
+        marketV7Page -= 1;
+        await refreshMarketV7Panel();
+      });
+    }
+
+    if (marketV7NextBtn) {
+      marketV7NextBtn.addEventListener('click', async () => {
+        if (marketV7Page >= (marketV7TotalPages - 1)) return;
+        marketV7Page += 1;
+        await refreshMarketV7Panel();
+      });
+    }
+
+    Object.entries(marketCategoryPanels).forEach(([assetClass, panel]) => {
+      if (panel.prevBtn) {
+        panel.prevBtn.addEventListener('click', async () => {
+          if (panel.page <= 0) return;
+          panel.page -= 1;
+          await refreshMarketCategoryPanel(assetClass);
+        });
+      }
+      if (panel.nextBtn) {
+        panel.nextBtn.addEventListener('click', async () => {
+          if (panel.page >= (panel.totalPages - 1)) return;
+          panel.page += 1;
+          await refreshMarketCategoryPanel(assetClass);
+        });
+      }
+    });
+
     topNavLinks.forEach((link) => {
       link.addEventListener('click', async (ev) => {
         ev.preventDefault();
@@ -3863,7 +5289,7 @@
           renderBestSetups();
         } else if (route === 'market') {
           await loadMarketDoc();
-          renderMarketView();
+          await renderMarketView();
         } else if (route === 'ideas') {
           await renderIdeasView();
         }
@@ -3877,6 +5303,7 @@
         universeReady,
         renderCoverageSummary()
       ]);
+      syncAssetFilters('all', 'sticky');
       syncEngineFilters('all', 'sticky');
       await loadTopSetupsDoc();
       renderBestSetups();
@@ -3885,14 +5312,17 @@
       if (route.route === 'analyze' && route.ticker) {
         await loadScientificData();
         syncSearchInputs(route.ticker, 'main');
-        if (!route.ticker || (!universeByTicker.has(route.ticker) && route.ticker !== 'SPY' && route.ticker !== 'QQQ')) {
-          renderUnsupported(route.ticker);
-          return;
+        if (route.ticker && route.ticker !== 'SPY' && route.ticker !== 'QQQ') {
+          const support = await ensureSymbolInUniverse(route.ticker, { assetClass: getActiveAssetFilter() });
+          if (!support.ok) {
+            renderUnsupported(route.ticker);
+            return;
+          }
         }
         await selectSymbol(route.ticker, null, { push: false });
       } else if (route.route === 'market') {
         await loadMarketDoc();
-        renderMarketView();
+        await renderMarketView();
       } else if (route.route === 'ideas') {
         await renderIdeasView();
       } else {
@@ -3907,16 +5337,19 @@
       setMainView(route.route);
       if (route.route === 'analyze' && route.ticker) {
         syncSearchInputs(route.ticker, 'main');
-        if (!route.ticker || (!universeByTicker.has(route.ticker) && route.ticker !== 'SPY' && route.ticker !== 'QQQ')) {
-          renderUnsupported(route.ticker);
-          return;
+        if (route.ticker && route.ticker !== 'SPY' && route.ticker !== 'QQQ') {
+          const support = await ensureSymbolInUniverse(route.ticker, { assetClass: getActiveAssetFilter() });
+          if (!support.ok) {
+            renderUnsupported(route.ticker);
+            return;
+          }
         }
         await selectSymbol(route.ticker, null, { push: false });
         return;
       }
       if (route.route === 'market') {
         await loadMarketDoc();
-        renderMarketView();
+        await renderMarketView();
         return;
       }
       if (route.route === 'ideas') {
