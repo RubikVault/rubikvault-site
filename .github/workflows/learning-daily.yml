@@ -27,6 +27,9 @@ jobs:
         with:
           node-version: '20'
 
+      - name: Install dependencies
+        run: npm ci
+
       - name: Run daily learning cycle
         run: |
           DATE_ARG=""
@@ -34,6 +37,16 @@ jobs:
             DATE_ARG="--date=${{ inputs.date }}"
           fi
           node scripts/learning/run-daily-learning-cycle.mjs $DATE_ARG
+
+      - name: Generate PDF and send email
+        env:
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+        run: |
+          DATE_ARG=""
+          if [ -n "${{ inputs.date }}" ]; then
+            DATE_ARG="--date=${{ inputs.date }}"
+          fi
+          node scripts/learning/email-pdf-report.mjs $DATE_ARG
 
       - name: Commit learning report
         run: |
