@@ -2,8 +2,8 @@ name: Learning Report Daily
 
 on:
   schedule:
-    # Run daily at 07:30 UTC (after forecast-daily and universe-v7-daily)
-    - cron: '30 7 * * 1-5'
+    # Run daily at 19:00 UTC = 20:00 CET (after all daily pipelines)
+    - cron: '0 19 * * 1-5'
   workflow_dispatch:
     inputs:
       date:
