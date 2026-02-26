@@ -927,3 +927,40 @@ What it does:
 Notes:
 - Run via a persistent session (not shell background `nohup` in tool-managed shells), because tool wrappers may reap detached child processes.
 - This is a compute/orchestration layer; it does not alter provider data or call external APIs.
+
+### 20.1 Overnight sweep safe-mode hardening (freeze prevention)
+
+Reason:
+- the MacBook froze during a heavy overnight task (`p90/top50k`) and the original runner started with the heaviest task first.
+
+Safety improvements added to:
+- `/Users/michaelpuchowezki/Dev/rubikvault-site/scripts/quantlab/run_overnight_q1_training_sweep.py`
+
+Added safe controls:
+- safer task ordering (`safe_light_first`) to warm caches before heavy tasks
+- per-task niceness (`task_nice`) to reduce UI contention
+- thread caps (`POLARS_MAX_THREADS`, BLAS/OpenMP caps)
+- process-tree RSS watchdog (`max_rss_gib`) with kill-on-exceed
+- periodic metrics logging (`rss_gib`, `peak_rss_gib`, elapsed)
+- optional cooldown between tasks
+- stop after consecutive failures
+
+Validation:
+- smoke test with forced timeout proved real RSS monitoring (not wrapper-process RSS):
+  - `/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab/jobs/overnight_q1_training_sweep_smoketest_safe3/state.json`
+  - `monitor.peak_rss_gib = 8.441`
+
+Current overnight run (safe mode, started):
+- job dir:
+  - `/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab/jobs/overnight_q1_training_sweep_safe_20260226_2159`
+- initial task:
+  - `asof2026-02-17_p60_top20000` (safe-light-first)
+
+Configured safe mode (current run):
+- `task_order = safe_light_first`
+- `threads_cap = 4`
+- `max_rss_gib = 11.5`
+- `task_nice = 15`
+- `sleep_between_tasks_sec = 25`
+- `stop_after_consecutive_failures = 2`
+- `task_timeout_minutes = 210`
