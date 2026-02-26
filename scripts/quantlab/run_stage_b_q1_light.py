@@ -4,7 +4,9 @@ from __future__ import annotations
 import argparse
 import itertools
 import math
+import random
 import sys
+from datetime import date
 from pathlib import Path
 from typing import Iterable
 
@@ -33,8 +35,16 @@ def parse_args(argv: Iterable[str]) -> argparse.Namespace:
     p.add_argument("--bootstrap-neg-sharpe-share-max", type=float, default=0.5)
     p.add_argument("--psr-proxy-min", type=float, default=0.60)
     p.add_argument("--dsr-proxy-min", type=float, default=0.50)
+    p.add_argument("--psr-bootstrap-proxy-min", type=float, default=0.55)
+    p.add_argument("--dsr-bootstrap-proxy-min", type=float, default=0.45)
+    p.add_argument("--bootstrap-resamples", type=int, default=512)
     p.add_argument("--cpcv-light-sharpe-min", type=float, default=0.00)
     p.add_argument("--cpcv-light-neg-share-max", type=float, default=0.50)
+    p.add_argument("--stress-lite-sharpe-mean-min", type=float, default=-0.05)
+    p.add_argument("--stress-lite-maxdd-mean-max", type=float, default=28.0)
+    p.add_argument("--stress-lite-fail-share-max", type=float, default=0.34)
+    p.add_argument("--require-fold-policy-valid", action="store_true", default=True)
+    p.add_argument("--skip-fold-policy-valid", dest="require_fold_policy_valid", action="store_false")
     return p.parse_args(list(argv))
 
 
@@ -77,6 +87,32 @@ def _psr_proxy(sharpes: list[float]) -> float:
     return float(max(0.0, min(1.0, _norm_cdf(z))))
 
 
+def _seed_from_key(key: str) -> int:
+    # Deterministic small seed derived from string content (portable across runs).
+    acc = 2166136261
+    for ch in key:
+        acc ^= ord(ch)
+        acc = (acc * 16777619) & 0xFFFFFFFF
+    return int(acc or 1)
+
+
+def _psr_bootstrap_proxy(sharpes: list[float], *, resamples: int, seed_key: str) -> float:
+    n = len(sharpes)
+    if n <= 0:
+        return 0.0
+    if n == 1:
+        return 1.0 if float(sharpes[0]) > 0 else 0.0
+    rnd = random.Random(_seed_from_key(seed_key))
+    pos = 0
+    vals = [float(x) for x in sharpes]
+    rs_n = max(32, int(resamples))
+    for _ in range(rs_n):
+        sample = [vals[rnd.randrange(n)] for _ in range(n)]
+        if (sum(sample) / n) > 0:
+            pos += 1
+    return float(pos / rs_n)
+
+
 def _dsr_proxy(psr_proxy: float, candidate_count: int, baseline: int | None = None) -> float:
     # Simple multiple-testing penalty proxy. Conservative but deterministic.
     if baseline is None:
@@ -85,6 +121,69 @@ def _dsr_proxy(psr_proxy: float, candidate_count: int, baseline: int | None = No
     if candidate_count > 1:
         penalty = min(0.30, 0.05 * math.log2(max(candidate_count, baseline)))
     return float(max(0.0, min(1.0, psr_proxy - penalty)))
+
+
+def _parse_day(s: str) -> date | None:
+    try:
+        return date.fromisoformat(str(s)[:10])
+    except Exception:
+        return None
+
+
+def _validate_folds_manifest(folds_manifest: dict) -> dict:
+    cfg = folds_manifest.get("config") or {}
+    folds = list(folds_manifest.get("folds") or [])
+    errors: list[str] = []
+    warnings: list[str] = []
+    built = int(cfg.get("fold_count_built") or len(folds) or 0)
+    if built != len(folds):
+        warnings.append(f"fold_count_built_mismatch:{built}!={len(folds)}")
+    if len(folds) <= 0:
+        errors.append("NO_FOLDS")
+    prev_test_end = None
+    anchor_train_start = None
+    seen_fold_ids: set[str] = set()
+    for idx, f in enumerate(folds, start=1):
+        fid = str(f.get("fold_id") or f"fold_{idx}")
+        if fid in seen_fold_ids:
+            errors.append(f"DUPLICATE_FOLD_ID:{fid}")
+        seen_fold_ids.add(fid)
+        train_start = _parse_day(f.get("train_start"))
+        train_end = _parse_day(f.get("train_end"))
+        test_start = _parse_day(f.get("test_start"))
+        test_end = _parse_day(f.get("test_end"))
+        if not all([train_start, train_end, test_start, test_end]):
+            errors.append(f"MISSING_OR_INVALID_DATES:{fid}")
+            continue
+        if not (train_start <= train_end < test_start <= test_end):
+            errors.append(f"NON_MONOTONIC_WINDOWS:{fid}")
+        if anchor_train_start is None:
+            anchor_train_start = train_start
+        elif train_start != anchor_train_start:
+            warnings.append(f"ANCHOR_DRIFT:{fid}")
+        if prev_test_end is not None and test_start <= prev_test_end:
+            errors.append(f"TEST_WINDOW_OVERLAP:{fid}")
+        prev_test_end = test_end
+        cfg_test_days = int(cfg.get("test_days") or 0)
+        if cfg_test_days and int(f.get("test_days") or 0) != cfg_test_days:
+            warnings.append(f"TEST_DAYS_MISMATCH:{fid}")
+        cfg_emb = int(cfg.get("embargo_days") or 0)
+        if cfg_emb and int(f.get("embargo_days") or 0) != cfg_emb:
+            warnings.append(f"EMBARGO_DAYS_MISMATCH:{fid}")
+        # Calendar-day gap is a lower-confidence proxy because folds are as-of trading dates.
+        cal_gap = (test_start - train_end).days - 1
+        if cfg_emb and cal_gap < 0:
+            errors.append(f"NEGATIVE_EMBARGO_GAP:{fid}")
+    return {
+        "ok": len(errors) == 0,
+        "errors": errors,
+        "warnings": warnings,
+        "counts": {
+            "folds_total": len(folds),
+            "fold_ids_unique": len(seen_fold_ids),
+        },
+        "config": cfg,
+    }
 
 
 def _cpcv_light_metrics(sharpes: list[float]) -> dict:
@@ -125,6 +224,51 @@ def _cpcv_light_metrics(sharpes: list[float]) -> dict:
     }
 
 
+def _stress_lite_metrics(fold_sharpes: list[float], fold_turnovers: list[float], fold_maxdds: list[float]) -> dict:
+    n = len(fold_sharpes)
+    if n <= 0:
+        return {
+            "scenario_count": 0,
+            "worst_mean_sharpe": 0.0,
+            "worst_mean_maxdd": 0.0,
+            "fail_share": 1.0,
+            "scenario_failures": [],
+        }
+    sharpes = [float(x) for x in fold_sharpes]
+    turnovers = [float(x) for x in fold_turnovers[:n]] + [0.0] * max(0, n - len(fold_turnovers))
+    maxdds = [float(x) for x in fold_maxdds[:n]] + [0.0] * max(0, n - len(fold_maxdds))
+    scenarios = [
+        {"id": "slippage_x2", "sharpe_penalty_base": 0.03, "turnover_mult": 8.0, "maxdd_mult": 1.15},
+        {"id": "slippage_x3_spreadfloor", "sharpe_penalty_base": 0.06, "turnover_mult": 14.0, "maxdd_mult": 1.30},
+        {"id": "liquidity_shock_adv50", "sharpe_penalty_base": 0.08, "turnover_mult": 18.0, "maxdd_mult": 1.45},
+    ]
+    failures: list[str] = []
+    worst_mean_sharpe = None
+    worst_mean_maxdd = None
+    scenario_rows = []
+    for sc in scenarios:
+        stressed_sharpes = []
+        stressed_maxdds = []
+        for sh, to, dd in zip(sharpes, turnovers, maxdds):
+            penalty = float(sc["sharpe_penalty_base"] + sc["turnover_mult"] * max(0.0, to))
+            stressed_sharpes.append(float(sh - penalty))
+            stressed_maxdds.append(float(dd * float(sc["maxdd_mult"])))
+        mean_sh = sum(stressed_sharpes) / len(stressed_sharpes)
+        mean_dd = sum(stressed_maxdds) / len(stressed_maxdds)
+        scenario_rows.append({"scenario_id": sc["id"], "mean_sharpe": mean_sh, "mean_maxdd": mean_dd})
+        if worst_mean_sharpe is None or mean_sh < worst_mean_sharpe:
+            worst_mean_sharpe = mean_sh
+        if worst_mean_maxdd is None or mean_dd > worst_mean_maxdd:
+            worst_mean_maxdd = mean_dd
+    return {
+        "scenario_count": len(scenarios),
+        "worst_mean_sharpe": float(worst_mean_sharpe or 0.0),
+        "worst_mean_maxdd": float(worst_mean_maxdd or 0.0),
+        "fail_share": 0.0,  # filled by caller after thresholds are known
+        "scenario_rows": scenario_rows,
+    }
+
+
 def main(argv: Iterable[str]) -> int:
     args = parse_args(argv)
     quant_root = Path(args.quant_root).resolve()
@@ -144,9 +288,12 @@ def main(argv: Iterable[str]) -> int:
 
     report = read_json(report_path)
     folds_manifest = read_json(folds_manifest_path)
+    fold_policy_validation = _validate_folds_manifest(folds_manifest)
     fold_metrics = pl.read_parquet(fold_metrics_path)
     candidates = pl.read_parquet(candidates_path)
     survivors_a = pl.read_parquet(survivors_a_path)
+    if args.require_fold_policy_valid and not bool(fold_policy_validation.get("ok")):
+        raise SystemExit(f"FATAL: invalid folds manifest policy: {fold_policy_validation.get('errors')}")
 
     # Candidate-level fold lists from fold metrics
     per_candidate: dict[str, dict] = {}
@@ -157,27 +304,49 @@ def main(argv: Iterable[str]) -> int:
             continue
         bucket = per_candidate.setdefault(
             cid,
-            {"candidate_id": cid, "family": fam, "fold_sharpes": [], "fold_ics": [], "fold_ids": []},
+            {
+                "candidate_id": cid,
+                "family": fam,
+                "fold_sharpes": [],
+                "fold_ics": [],
+                "fold_ids": [],
+                "fold_turnovers": [],
+                "fold_maxdds": [],
+            },
         )
         bucket["fold_ids"].append(str(row.get("fold_id") or ""))
         bucket["fold_sharpes"].append(_safe_float(row.get("oos_sharpe_proxy")))
         bucket["fold_ics"].append(_safe_float(row.get("ic_5d")))
+        bucket["fold_turnovers"].append(_safe_float(row.get("turnover_proxy")))
+        bucket["fold_maxdds"].append(_safe_float(row.get("maxdd_proxy_pct")))
 
     cand_count = max(1, int(candidates.height))
     rows = []
+    stress_rows = []
     for row in candidates.to_dicts():
         cid = str(row.get("candidate_id") or "")
-        extra = per_candidate.get(cid) or {"fold_sharpes": [], "fold_ics": [], "fold_ids": []}
+        extra = per_candidate.get(cid) or {"fold_sharpes": [], "fold_ics": [], "fold_ids": [], "fold_turnovers": [], "fold_maxdds": []}
         fold_sharpes = [float(x) for x in extra.get("fold_sharpes", [])]
         fold_ics = [float(x) for x in extra.get("fold_ics", [])]
+        fold_turnovers = [float(x) for x in extra.get("fold_turnovers", [])]
+        fold_maxdds = [float(x) for x in extra.get("fold_maxdds", [])]
         psr = _psr_proxy(fold_sharpes)
         dsr = _dsr_proxy(psr, cand_count)
+        psr_boot = _psr_bootstrap_proxy(
+            fold_sharpes,
+            resamples=max(32, int(args.bootstrap_resamples)),
+            seed_key=f"{stage_a_run_id}:{cid}:psr_boot",
+        )
+        dsr_boot = _dsr_proxy(psr_boot, cand_count)
         cpcv = _cpcv_light_metrics(fold_sharpes)
+        stress = _stress_lite_metrics(fold_sharpes, fold_turnovers, fold_maxdds)
         rows.append(
             {
                 **row,
                 "psr_proxy": psr,
                 "dsr_proxy": dsr,
+                "psr_bootstrap_proxy": psr_boot,
+                "dsr_bootstrap_proxy": dsr_boot,
                 "cpcv_light_paths_total": int(cpcv["paths_total"]),
                 "cpcv_light_sharpe_mean": float(cpcv["mean_sharpe_across_paths"]),
                 "cpcv_light_sharpe_min": float(cpcv["min_sharpe_across_paths"]),
@@ -185,8 +354,21 @@ def main(argv: Iterable[str]) -> int:
                 "cpcv_light_sharpe_std": float(cpcv["std_sharpe_across_paths"]),
                 "ic_fold_std_proxy": float(0.0 if len(fold_ics) <= 1 else pl.Series(fold_ics).std(ddof=1) or 0.0),
                 "folds_observed_from_metrics": int(len(fold_sharpes)),
+                "stress_lite_scenarios_total": int(stress["scenario_count"]),
+                "stress_lite_worst_mean_sharpe": float(stress["worst_mean_sharpe"]),
+                "stress_lite_worst_mean_maxdd": float(stress["worst_mean_maxdd"]),
             }
         )
+        for sr in stress.get("scenario_rows", []):
+            stress_rows.append(
+                {
+                    "candidate_id": cid,
+                    "family": str(row.get("family") or ""),
+                    "scenario_id": str(sr.get("scenario_id") or ""),
+                    "mean_sharpe": float(sr.get("mean_sharpe") or 0.0),
+                    "mean_maxdd": float(sr.get("mean_maxdd") or 0.0),
+                }
+            )
 
     stageb_df = pl.DataFrame(rows)
     strict_cfg = {
@@ -200,10 +382,48 @@ def main(argv: Iterable[str]) -> int:
         "bootstrap_neg_sharpe_share_proxy_max": float(args.bootstrap_neg_sharpe_share_max),
         "psr_proxy_min": float(args.psr_proxy_min),
         "dsr_proxy_min": float(args.dsr_proxy_min),
+        "psr_bootstrap_proxy_min": float(args.psr_bootstrap_proxy_min),
+        "dsr_bootstrap_proxy_min": float(args.dsr_bootstrap_proxy_min),
         "cpcv_light_sharpe_min_min": float(args.cpcv_light_sharpe_min),
         "cpcv_light_neg_sharpe_share_max": float(args.cpcv_light_neg_share_max),
+        "stress_lite_sharpe_mean_min": float(args.stress_lite_sharpe_mean_min),
+        "stress_lite_maxdd_mean_max": float(args.stress_lite_maxdd_mean_max),
     }
+    if stress_rows:
+        stress_df = pl.DataFrame(stress_rows)
+        stress_summary = (
+            stress_df.group_by("candidate_id")
+            .agg(
+                pl.col("family").first().alias("family"),
+                pl.len().alias("stress_lite_scenarios_total"),
+                pl.col("mean_sharpe").min().alias("stress_lite_worst_mean_sharpe"),
+                pl.col("mean_maxdd").max().alias("stress_lite_worst_mean_maxdd"),
+                (pl.col("mean_sharpe") < strict_cfg["stress_lite_sharpe_mean_min"]).sum().alias("_stress_fail_sharpe"),
+                (pl.col("mean_maxdd") > strict_cfg["stress_lite_maxdd_mean_max"]).sum().alias("_stress_fail_maxdd"),
+            )
+            .with_columns(
+                (pl.col("_stress_fail_sharpe") + pl.col("_stress_fail_maxdd")).alias("_stress_fail_any"),
+                (
+                    (pl.col("_stress_fail_sharpe") + pl.col("_stress_fail_maxdd")).cast(pl.Float64)
+                    / (2.0 * pl.col("stress_lite_scenarios_total").clip(lower_bound=1))
+                ).alias("stress_lite_fail_share"),
+            )
+            .drop(["_stress_fail_sharpe", "_stress_fail_maxdd", "_stress_fail_any"])
+        )
+        stageb_df = stageb_df.join(stress_summary, on="candidate_id", how="left", suffix="_stress")
+    else:
+        stress_df = pl.DataFrame(
+            schema={"candidate_id": pl.Utf8, "family": pl.Utf8, "scenario_id": pl.Utf8, "mean_sharpe": pl.Float64, "mean_maxdd": pl.Float64}
+        )
+        stageb_df = stageb_df.with_columns(
+            pl.lit(0).alias("stress_lite_scenarios_total"),
+            pl.lit(0.0).alias("stress_lite_fail_share"),
+            pl.lit(0.0).alias("stress_lite_worst_mean_sharpe"),
+            pl.lit(0.0).alias("stress_lite_worst_mean_maxdd"),
+        )
+    fold_policy_gate_ok = bool(fold_policy_validation.get("ok")) or (not bool(args.require_fold_policy_valid))
     gate_cols = [
+        ("g_fold_policy_valid", pl.lit(fold_policy_gate_ok)),
         ("g_folds_used", pl.col("folds_used") >= strict_cfg["folds_used_min"]),
         ("g_ic_mean", pl.col("ic_5d_oos_mean") >= strict_cfg["ic_5d_oos_mean_min"]),
         ("g_ic_min", pl.col("ic_5d_oos_min") >= strict_cfg["ic_5d_oos_min_min"]),
@@ -217,11 +437,16 @@ def main(argv: Iterable[str]) -> int:
         ),
         ("g_psr_proxy", pl.col("psr_proxy") >= strict_cfg["psr_proxy_min"]),
         ("g_dsr_proxy", pl.col("dsr_proxy") >= strict_cfg["dsr_proxy_min"]),
+        ("g_psr_bootstrap_proxy", pl.col("psr_bootstrap_proxy") >= strict_cfg["psr_bootstrap_proxy_min"]),
+        ("g_dsr_bootstrap_proxy", pl.col("dsr_bootstrap_proxy") >= strict_cfg["dsr_bootstrap_proxy_min"]),
         ("g_cpcv_light_sharpe_min", pl.col("cpcv_light_sharpe_min") >= strict_cfg["cpcv_light_sharpe_min_min"]),
         (
             "g_cpcv_light_neg_share",
             pl.col("cpcv_light_neg_sharpe_share") <= strict_cfg["cpcv_light_neg_sharpe_share_max"],
         ),
+        ("g_stress_lite_sharpe", pl.col("stress_lite_worst_mean_sharpe") >= strict_cfg["stress_lite_sharpe_mean_min"]),
+        ("g_stress_lite_maxdd", pl.col("stress_lite_worst_mean_maxdd") <= strict_cfg["stress_lite_maxdd_mean_max"]),
+        ("g_stress_lite_fail_share", pl.col("stress_lite_fail_share") <= float(args.stress_lite_fail_share_max)),
     ]
     stageb_df = stageb_df.with_columns([expr.alias(name) for name, expr in gate_cols])
     stageb_df = stageb_df.with_columns(
@@ -279,10 +504,25 @@ def main(argv: Iterable[str]) -> int:
     candidates_out = stageb_dir / "stage_b_light_candidates.parquet"
     survivors_out = stageb_dir / "survivors_B_light.parquet"
     fold_summary_out = stageb_dir / "fold_summary.parquet"
+    stress_candidates_out = stageb_dir / "stress_lite_candidate_summary.parquet"
+    stress_folds_out = stageb_dir / "stress_lite_fold_scenarios.parquet"
+    fold_policy_validation_out = stageb_dir / "fold_policy_validation.json"
     report_out_path = stageb_dir / "stage_b_light_report.json"
     stageb_sorted.write_parquet(candidates_out)
     survivors_b.write_parquet(survivors_out)
     fold_summary.write_parquet(fold_summary_out)
+    stageb_sorted.select(
+        [
+            "candidate_id",
+            "family",
+            "stress_lite_scenarios_total",
+            "stress_lite_fail_share",
+            "stress_lite_worst_mean_sharpe",
+            "stress_lite_worst_mean_maxdd",
+        ]
+    ).write_parquet(stress_candidates_out)
+    stress_df.write_parquet(stress_folds_out)
+    atomic_write_json(fold_policy_validation_out, fold_policy_validation)
 
     report_out = {
         "schema": "quantlab_stage_b_light_q1_v1",
@@ -292,9 +532,10 @@ def main(argv: Iterable[str]) -> int:
             "type": "q1_stage_b_light",
             "fold_policy": "reuses Stage-A anchored folds; CPCV-light combinations on fold metrics only (proxy)",
             "cpcv_light_combo_policy": "all_combo_sizes_from_ceil_half_to_n_minus_1",
+            "bootstrap_resamples": int(max(32, args.bootstrap_resamples)),
             "notes": [
                 "This is a Q1-light Stage B approximation, not full CPCV with per-path re-scoring.",
-                "Adds stricter gates plus PSR/DSR proxies and combinational fold robustness proxy.",
+                "Adds stricter gates plus proxy PSR/DSR, bootstrap-based PSR/DSR proxies, CPCV-light robustness, and stress-lite summaries.",
             ],
         },
         "inputs": {
@@ -316,6 +557,11 @@ def main(argv: Iterable[str]) -> int:
             "folds_config": folds_manifest.get("config"),
             "folds": fold_summary.to_dicts(),
         },
+        "fold_policy_validation": fold_policy_validation,
+        "stress_lite_summary": {
+            "scenarios_total": int(stress_df.get_column("scenario_id").n_unique() if stress_df.height else 0),
+            "rows_total": int(stress_df.height),
+        },
         "fail_reason_counts": dict(sorted(fail_reason_counts.items(), key=lambda kv: (-kv[1], kv[0]))),
         "failed_examples": examples,
         "artifacts": {
@@ -323,6 +569,9 @@ def main(argv: Iterable[str]) -> int:
             "stage_b_light_candidates": str(candidates_out),
             "survivors_B_light": str(survivors_out),
             "fold_summary": str(fold_summary_out),
+            "fold_policy_validation": str(fold_policy_validation_out),
+            "stress_lite_candidate_summary": str(stress_candidates_out),
+            "stress_lite_fold_scenarios": str(stress_folds_out),
         },
         "hashes": {
             "stage_a_report_hash": stable_hash_file(report_path),
@@ -330,6 +579,9 @@ def main(argv: Iterable[str]) -> int:
             "fold_metrics_hash": stable_hash_file(fold_metrics_path),
             "candidates_hash": stable_hash_file(candidates_path),
             "survivors_A_hash": stable_hash_file(survivors_a_path),
+            "fold_policy_validation_hash": stable_hash_file(fold_policy_validation_out),
+            "stress_lite_candidate_summary_hash": stable_hash_file(stress_candidates_out),
+            "stress_lite_fold_scenarios_hash": stable_hash_file(stress_folds_out),
         },
     }
     atomic_write_json(report_out_path, report_out)

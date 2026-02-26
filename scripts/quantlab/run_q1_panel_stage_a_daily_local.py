@@ -29,6 +29,12 @@ def parse_args(argv: Iterable[str]) -> argparse.Namespace:
     p.add_argument("--phasea-real-delta-min-emitted-rows", type=int, default=1)
     p.add_argument("--phasea-real-delta-limit-packs", type=int, default=2)
     p.add_argument("--phasea-real-delta-max-emitted-rows", type=int, default=100000)
+    p.add_argument("--phasea-warn-min-delta-rows", type=int, default=0)
+    p.add_argument("--phasea-warn-max-delta-rows", type=int, default=0)
+    p.add_argument("--phasea-fail-min-delta-rows", type=int, default=0)
+    p.add_argument("--phasea-fail-max-delta-rows", type=int, default=0)
+    p.add_argument("--phasea-ops-ledger-path", default="")
+    p.add_argument("--phasea-ops-ledger-disabled", action="store_true")
     p.add_argument("--snapshot-id", required=True)
     p.add_argument("--feature-store-version", default="v4_q1panel_daily_local")
     p.add_argument("--panel-output-tag", default="daily")
@@ -103,6 +109,18 @@ def main(argv: Iterable[str]) -> int:
                 "--real-delta-max-emitted-rows",
                 str(args.phasea_real_delta_max_emitted_rows),
             ]
+        for flag_name, val in [
+            ("--warn-min-delta-rows", args.phasea_warn_min_delta_rows),
+            ("--warn-max-delta-rows", args.phasea_warn_max_delta_rows),
+            ("--fail-min-delta-rows", args.phasea_fail_min_delta_rows),
+            ("--fail-max-delta-rows", args.phasea_fail_max_delta_rows),
+        ]:
+            if int(val or 0) > 0:
+                phasea_cmd += [flag_name, str(int(val))]
+        if args.phasea_ops_ledger_path:
+            phasea_cmd += ["--ops-ledger-path", args.phasea_ops_ledger_path]
+        if args.phasea_ops_ledger_disabled:
+            phasea_cmd += ["--ops-ledger-disabled"]
         t0_phasea = time.time()
         phasea_proc = subprocess.run(phasea_cmd, cwd=REPO_ROOT, capture_output=True, text=True)
         phasea_elapsed = round(time.time() - t0_phasea, 3)
@@ -135,8 +153,12 @@ def main(argv: Iterable[str]) -> int:
                     "snapshot_id": args.snapshot_id,
                     "feature_store_version": args.feature_store_version,
                     "panel_output_tag": args.panel_output_tag,
-                    "run_phasea_backbone": True,
-                },
+                "run_phasea_backbone": True,
+                "phasea_warn_min_delta_rows": int(args.phasea_warn_min_delta_rows),
+                "phasea_warn_max_delta_rows": int(args.phasea_warn_max_delta_rows),
+                "phasea_fail_min_delta_rows": int(args.phasea_fail_min_delta_rows),
+                "phasea_fail_max_delta_rows": int(args.phasea_fail_max_delta_rows),
+            },
                 "steps": [
                     {
                         "name": "run_q1_daily_data_backbone_q1",
@@ -292,6 +314,9 @@ def main(argv: Iterable[str]) -> int:
                 "exit_code": phasea.get("exit_code"),
                 "real_delta_test_mode": ((phasea.get("config") or {}).get("real_delta_test_mode")),
                 "real_delta_min_emitted_rows": ((phasea.get("config") or {}).get("real_delta_min_emitted_rows")),
+                "warnings": phasea.get("warnings") or [],
+                "threshold_failures": phasea.get("threshold_failures") or [],
+                "metrics_summary": phasea.get("metrics_summary") or {},
                 "step_names": [str((s or {}).get("name")) for s in (phasea.get("steps") or [])],
                 "phasea_references": phasea.get("references") or {},
             }

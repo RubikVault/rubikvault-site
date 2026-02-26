@@ -24,6 +24,31 @@ from scripts.quantlab.q1_common import (  # noqa: E402
     utc_now_iso,
 )
 
+RC = {
+    "stage_b_survivor_present": "STAGE_B_SURVIVOR_PRESENT",
+    "no_stage_b_survivors": "NO_STAGE_B_SURVIVORS",
+    "current_champion_present": "CURRENT_CHAMPION_PRESENT",
+    "no_existing_champion": "NO_EXISTING_CHAMPION",
+    "no_existing_champion_promotion_disabled": "NO_EXISTING_CHAMPION_PROMOTION_DISABLED",
+    "champion_already_top_survivor": "CHAMPION_ALREADY_TOP_SURVIVOR",
+    "score_improved": "Q1_REGISTRY_SCORE_IMPROVED",
+    "score_eps_met": "SCORE_EPSILON_MET",
+    "score_eps_not_met": "SCORE_EPSILON_NOT_MET",
+    "score_improvement_below_epsilon": "SCORE_IMPROVEMENT_BELOW_EPSILON",
+    "current_live_champion_missing_in_stage_b_candidates": "CURRENT_LIVE_CHAMPION_MISSING_IN_STAGE_B_CANDIDATES",
+    "current_live_champion_demoted_to_shadow": "CURRENT_LIVE_CHAMPION_DEMOTED_TO_SHADOW",
+    "current_live_champion_demoted_to_retired": "CURRENT_LIVE_CHAMPION_DEMOTED_TO_RETIRED",
+    "first_observed": "FIRST_OBSERVED_IN_CANDIDATE_REGISTRY",
+    "stage_b_selected_survivor": "STAGE_B_SELECTED_SURVIVOR",
+    "stage_b_fail": "STAGE_B_FAIL",
+    "survivor_cap_not_selected": "NOT_SELECTED_IN_SURVIVOR_CAP",
+    "not_present_current_stage_b": "NOT_PRESENT_IN_CURRENT_STAGE_B_RUN",
+}
+
+
+def _uniq_reason_codes(values: Iterable[str]) -> list[str]:
+    return sorted({str(v) for v in values if str(v)})
+
 
 def parse_args(argv: Iterable[str]) -> argparse.Namespace:
     p = argparse.ArgumentParser()
@@ -407,27 +432,27 @@ def main(argv: Iterable[str]) -> int:
     challenger_candidate_id = str(top_survivor.get("candidate_id")) if top_survivor else None
 
     if top_survivor is None:
-        reason_codes.extend(["STAGE_B_SURVIVORS_EMPTY", "NO_STAGE_B_SURVIVORS"])
+        reason_codes.extend(["STAGE_B_SURVIVORS_EMPTY", RC["no_stage_b_survivors"]])
     elif current is None:
-        reason_codes.append("STAGE_B_SURVIVOR_PRESENT")
+        reason_codes.append(RC["stage_b_survivor_present"])
         if args.promote_on_empty:
             decision = "PROMOTE"
-            reason_codes.append("NO_EXISTING_CHAMPION")
+            reason_codes.append(RC["no_existing_champion"])
         else:
-            reason_codes.append("NO_EXISTING_CHAMPION_PROMOTION_DISABLED")
+            reason_codes.append(RC["no_existing_champion_promotion_disabled"])
     else:
-        reason_codes.extend(["STAGE_B_SURVIVOR_PRESENT", "CURRENT_CHAMPION_PRESENT"])
+        reason_codes.extend([RC["stage_b_survivor_present"], RC["current_champion_present"]])
         challenger_score = float(top_survivor.get("q1_registry_score") or 0.0)
         champion_score = float(current.get("q1_registry_score") or 0.0)
         if str(current.get("candidate_id")) == str(top_survivor.get("candidate_id")):
             decision = "NO_PROMOTION"
-            reason_codes.append("CHAMPION_ALREADY_TOP_SURVIVOR")
+            reason_codes.append(RC["champion_already_top_survivor"])
         elif challenger_score >= champion_score + float(args.score_epsilon):
             decision = "PROMOTE"
-            reason_codes.extend(["Q1_REGISTRY_SCORE_IMPROVED", "SCORE_EPSILON_MET"])
+            reason_codes.extend([RC["score_improved"], RC["score_eps_met"]])
         else:
             decision = "NO_PROMOTION"
-            reason_codes.extend(["SCORE_IMPROVEMENT_BELOW_EPSILON", "SCORE_EPSILON_NOT_MET"])
+            reason_codes.extend([RC["score_improvement_below_epsilon"], RC["score_eps_not_met"]])
 
     if decision == "PROMOTE" and top_survivor is not None:
         champ_payload = {
@@ -511,7 +536,7 @@ def main(argv: Iterable[str]) -> int:
         "champion_before_id": champion_before_id,
         "challenger_candidate_id": challenger_candidate_id,
         "champion_after_id": champion_after_id,
-        "reason_codes": reason_codes,
+        "reason_codes": _uniq_reason_codes(reason_codes),
         "summary_metrics": {
             "stage_b_candidates_total": int(candidates_df.height),
             "stage_b_survivors_B_light_total": int(survivors_df.height),
@@ -559,6 +584,7 @@ def main(argv: Iterable[str]) -> int:
         live_champion_id = str(current.get("champion_id") or "")
 
     survivor_ids = set(str(x) for x in (survivors_df.get_column("candidate_id").to_list() if "candidate_id" in survivors_df.columns else []))
+    current_candidate_ids = set(str(x) for x in (candidates_df.get_column("candidate_id").to_list() if "candidate_id" in candidates_df.columns else []))
     state_rows: list[dict[str, Any]] = []
     for row in candidates_df.to_dicts():
         cid = str(row.get("candidate_id") or "")
@@ -572,10 +598,10 @@ def main(argv: Iterable[str]) -> int:
                 state_reasons.append("PROMOTED_IN_THIS_RUN")
         elif cid in survivor_ids:
             state = "shadow"
-            state_reasons = ["STAGE_B_LIGHT_SURVIVOR"]
+            state_reasons = [RC["stage_b_selected_survivor"]]
         else:
             state = "retired"
-            state_reasons = ["STAGE_B_LIGHT_FAIL" if not is_stage_b_pass else "NOT_SELECTED_IN_SURVIVOR_CAP"]
+            state_reasons = [RC["stage_b_fail"] if not is_stage_b_pass else RC["survivor_cap_not_selected"]]
         state_rows.append(
             {
                 "candidate_id": cid,
@@ -583,10 +609,28 @@ def main(argv: Iterable[str]) -> int:
                 "state": state,
                 "source_stage_b_run_id": stage_b_run_id,
                 "updated_at": now,
-                "reason_codes_json": json.dumps(state_reasons, sort_keys=True, ensure_ascii=False),
+                "reason_codes_json": json.dumps(_uniq_reason_codes(state_reasons), sort_keys=True, ensure_ascii=False),
                 "q1_registry_score": float(row.get("q1_registry_score") or 0.0),
                 "champion_id": live_champion_id if state == "live" else None,
                 "metrics_json": json.dumps(row, sort_keys=True, ensure_ascii=False),
+            }
+        )
+    # Emit explicit retired rows for previously tracked candidates not present in current Stage-B run.
+    # This closes a correctness gap where old live/shadow candidates could silently persist.
+    missing_prev_ids = sorted(set(prev_candidate_states.keys()) - current_candidate_ids)
+    for cid in missing_prev_ids:
+        prev = prev_candidate_states.get(cid) or {}
+        state_rows.append(
+            {
+                "candidate_id": cid,
+                "family": str(prev.get("family") or ""),
+                "state": "retired",
+                "source_stage_b_run_id": stage_b_run_id,
+                "updated_at": now,
+                "reason_codes_json": json.dumps([RC["not_present_current_stage_b"]], sort_keys=True, ensure_ascii=False),
+                "q1_registry_score": float(prev.get("q1_registry_score") or 0.0),
+                "champion_id": None,
+                "metrics_json": json.dumps({"candidate_id": cid, "family": prev.get("family"), "source": "prev_state_only"}, sort_keys=True, ensure_ascii=False),
             }
         )
     for srow in state_rows:
@@ -608,6 +652,52 @@ def main(argv: Iterable[str]) -> int:
                 srow["metrics_json"],
             ),
         )
+    state_rows_by_id = {str(r["candidate_id"]): r for r in state_rows if str(r.get("candidate_id") or "")}
+    champion_slot_state_transition: dict[str, Any] | None = None
+    # Keep champion_state_q1 consistent with candidate state transitions, even on no-promotion runs.
+    if current is not None and decision != "PROMOTE":
+        curr_cid = str(current.get("candidate_id") or "")
+        curr_state_row = state_rows_by_id.get(curr_cid)
+        if curr_state_row:
+            new_slot_state = str(curr_state_row.get("state") or current.get("state") or "live")
+            if new_slot_state != str(current.get("state") or "live"):
+                if new_slot_state == "shadow":
+                    reason_codes.append(RC["current_live_champion_demoted_to_shadow"])
+                elif new_slot_state == "retired":
+                    reason_codes.append(RC["current_live_champion_demoted_to_retired"])
+                conn.execute(
+                    """
+                    UPDATE champion_state_q1
+                    SET state=?, q1_registry_score=?, source_stage_b_run_id=?, metrics_json=?
+                    WHERE slot='default'
+                    """,
+                    (
+                        new_slot_state,
+                        float(curr_state_row.get("q1_registry_score") or current.get("q1_registry_score") or 0.0),
+                        stage_b_run_id,
+                        str(curr_state_row.get("metrics_json") or json.dumps(current.get("metrics") or {}, sort_keys=True, ensure_ascii=False)),
+                    ),
+                )
+                champion_slot_state_transition = {
+                    "champion_id": str(current.get("champion_id") or ""),
+                    "candidate_id": curr_cid,
+                    "prev_state": str(current.get("state") or "live"),
+                    "new_state": new_slot_state,
+                }
+                current_champion_json_path = registry_root / "champions" / "current_champion.json"
+                if current_champion_json_path.exists():
+                    try:
+                        champ_obj = read_json(current_champion_json_path)
+                        champ_obj["state"] = new_slot_state
+                        champ_obj["source_stage_b_run_id"] = stage_b_run_id
+                        champ_obj["updated_at"] = now
+                        if curr_state_row.get("q1_registry_score") is not None:
+                            champ_obj["q1_registry_score"] = float(curr_state_row.get("q1_registry_score") or 0.0)
+                        atomic_write_json(current_champion_json_path, champ_obj)
+                    except Exception:
+                        pass
+        else:
+            reason_codes.append(RC["current_live_champion_missing_in_stage_b_candidates"])
     # Candidate state transition events (audit trail for demotions/promotions/retirements).
     candidate_state_events: list[dict[str, Any]] = []
     for srow in state_rows:
@@ -617,14 +707,14 @@ def main(argv: Iterable[str]) -> int:
         new_state = str(srow["state"])
         if prev_state == new_state:
             continue
-        transition_reason_codes = []
+        transition_reason_codes: list[str] = []
         try:
             transition_reason_codes.extend(json.loads(srow["reason_codes_json"]))
         except Exception:
             pass
         if prev_state is None:
             event_type = "STATE_DISCOVERED"
-            transition_reason_codes.append("FIRST_OBSERVED_IN_CANDIDATE_REGISTRY")
+            transition_reason_codes.append(RC["first_observed"])
         elif prev_state == "live" and new_state == "shadow":
             event_type = "DEMOTION_TO_SHADOW"
             transition_reason_codes.append("LIVE_CANDIDATE_NOT_RESELECTED_AS_CHAMPION")
@@ -649,7 +739,7 @@ def main(argv: Iterable[str]) -> int:
             "family": srow.get("family"),
             "prev_state": prev_state,
             "new_state": new_state,
-            "reason_codes": sorted(set(str(x) for x in transition_reason_codes if x)),
+            "reason_codes": _uniq_reason_codes(transition_reason_codes),
             "details": {
                 "source_stage_b_run_id": stage_b_run_id,
                 "q1_registry_score": srow.get("q1_registry_score"),
@@ -676,6 +766,64 @@ def main(argv: Iterable[str]) -> int:
                 json.dumps(ev.get("details") or {}, sort_keys=True, ensure_ascii=False),
             ),
         )
+    # If the champion slot was demoted without a replacement, emit an explicit governance event.
+    if champion_slot_state_transition is not None and decision != "PROMOTE":
+        demotion_ev = {
+            "schema": "quantlab_q1_promotion_event_v1",
+            "event_id": f"ev_{stable_hash_obj({'stage_b_run_id': stage_b_run_id, 'decision': 'DEMOTION', 'ts': now, 'cid': champion_slot_state_transition['candidate_id']})[:16]}",
+            "ts": now,
+            "event_type": "DEMOTION",
+            "stage_b_run_id": stage_b_run_id,
+            "old_champion_id": champion_before_id,
+            "new_champion_id": champion_before_id,
+            "candidate_id": champion_slot_state_transition["candidate_id"],
+            "reason_codes": _uniq_reason_codes([
+                champion_slot_state_transition["new_state"] == "shadow" and RC["current_live_champion_demoted_to_shadow"] or RC["current_live_champion_demoted_to_retired"]
+            ]),
+            "delta_metrics": {
+                "champion_state_before": champion_slot_state_transition["prev_state"],
+                "champion_state_after": champion_slot_state_transition["new_state"],
+            },
+            "artifacts": {
+                "stage_b_q1_run_report": str(stage_b_run_report_path),
+                "stage_b_light_report": str(stage_b_light_report_path),
+            },
+        }
+        conn.execute(
+            """
+            INSERT OR REPLACE INTO promotion_events_q1
+            (event_id, ts, event_type, stage_b_run_id, old_champion_id, new_champion_id, candidate_id, delta_metrics_json, artifacts_json)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                demotion_ev["event_id"],
+                demotion_ev["ts"],
+                demotion_ev["event_type"],
+                demotion_ev["stage_b_run_id"],
+                demotion_ev.get("old_champion_id"),
+                demotion_ev.get("new_champion_id"),
+                demotion_ev.get("candidate_id"),
+                json.dumps(demotion_ev.get("delta_metrics") or {}, sort_keys=True, ensure_ascii=False),
+                json.dumps(demotion_ev.get("artifacts") or {}, sort_keys=True, ensure_ascii=False),
+            ),
+        )
+        # Reuse event ledger append path later by piggybacking on a list in locals.
+        extra_promotion_events = [demotion_ev]
+    else:
+        extra_promotion_events = []
+    # Refresh decision ledger payload if demotion-related reason codes/state-after changed post state-eval.
+    decision_rec["reason_codes"] = _uniq_reason_codes(reason_codes)
+    if champion_slot_state_transition is not None:
+        decision_rec.setdefault("summary_metrics", {})
+        decision_rec["summary_metrics"]["state_after"] = champion_slot_state_transition.get("new_state")
+    conn.execute(
+        "UPDATE promotion_decisions_q1 SET reason_codes_json=?, summary_metrics_json=? WHERE decision_id=?",
+        (
+            json.dumps(decision_rec.get("reason_codes") or [], sort_keys=True, ensure_ascii=False),
+            json.dumps(decision_rec.get("summary_metrics") or {}, sort_keys=True, ensure_ascii=False),
+            decision_rec["decision_id"],
+        ),
+    )
     conn.commit()
 
     ledgers_dir = registry_root / "ledgers"
@@ -685,6 +833,8 @@ def main(argv: Iterable[str]) -> int:
     _append_jsonl(decisions_path, decision_rec)
     if event:
         _append_jsonl(events_path, event)
+    for ev in extra_promotion_events:
+        _append_jsonl(events_path, ev)
     for ev in candidate_state_events:
         _append_jsonl(candidate_state_events_path, ev)
     promotion_index_path = _write_promotion_index(registry_root, decisions_path, events_path)
@@ -699,13 +849,16 @@ def main(argv: Iterable[str]) -> int:
         "stage_b_run_id": stage_b_run_id,
         "decision": decision_rec,
         "event_written": bool(event),
+        "extra_events_written": int(len(extra_promotion_events)),
+        "champion_slot_state_transition": champion_slot_state_transition,
         "counts": {
             "stage_b_candidates_total": int(candidates_df.height),
             "stage_b_survivors_B_light_total": int(survivors_light_df.height),
             "stage_b_survivors_selected_total": int(survivors_df.height),
             "stage_b_survivors_selected_source": selected_survivors_source,
             "candidate_registry_states_written": int(len(state_rows)),
-            "candidate_state_events_written": int(len(candidate_state_events)),
+                "candidate_state_events_written": int(len(candidate_state_events)),
+                "candidate_prev_missing_rows_retired": int(len(missing_prev_ids)),
             "candidate_registry_state_counts": {
                 "live": sum(1 for r in state_rows if r["state"] == "live"),
                 "shadow": sum(1 for r in state_rows if r["state"] == "shadow"),

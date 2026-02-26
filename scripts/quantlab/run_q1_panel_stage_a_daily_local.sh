@@ -75,6 +75,12 @@ PHASEA_REAL_DELTA_TEST_MODE="${Q1_DAILY_PHASEA_REAL_DELTA_TEST_MODE:-0}"
 PHASEA_REAL_DELTA_MIN_ROWS="${Q1_DAILY_PHASEA_REAL_DELTA_MIN_ROWS:-1}"
 PHASEA_REAL_DELTA_LIMIT_PACKS="${Q1_DAILY_PHASEA_REAL_DELTA_LIMIT_PACKS:-2}"
 PHASEA_REAL_DELTA_MAX_ROWS="${Q1_DAILY_PHASEA_REAL_DELTA_MAX_ROWS:-100000}"
+PHASEA_WARN_MIN_DELTA_ROWS="${Q1_DAILY_PHASEA_WARN_MIN_DELTA_ROWS:-0}"
+PHASEA_WARN_MAX_DELTA_ROWS="${Q1_DAILY_PHASEA_WARN_MAX_DELTA_ROWS:-0}"
+PHASEA_FAIL_MIN_DELTA_ROWS="${Q1_DAILY_PHASEA_FAIL_MIN_DELTA_ROWS:-0}"
+PHASEA_FAIL_MAX_DELTA_ROWS="${Q1_DAILY_PHASEA_FAIL_MAX_DELTA_ROWS:-0}"
+PHASEA_OPS_LEDGER_PATH="${Q1_DAILY_PHASEA_OPS_LEDGER_PATH:-}"
+PHASEA_OPS_LEDGER_DISABLED="${Q1_DAILY_PHASEA_OPS_LEDGER_DISABLED:-0}"
 RUN_STAGEB_Q1="${Q1_DAILY_RUN_STAGEB_Q1:-0}"
 RUN_REGISTRY_Q1="${Q1_DAILY_RUN_REGISTRY_Q1:-0}"
 STAGEB_Q1_STRICT_SURVIVORS_MAX="${Q1_DAILY_STAGEB_Q1_STRICT_SURVIVORS_MAX:-8}"
@@ -131,6 +137,24 @@ if [[ "$RUN_PHASEA_BACKBONE" == "1" ]]; then
       --phasea-real-delta-max-emitted-rows "$PHASEA_REAL_DELTA_MAX_ROWS"
     )
   fi
+  if [[ "$PHASEA_WARN_MIN_DELTA_ROWS" != "0" ]]; then
+    CMD+=(--phasea-warn-min-delta-rows "$PHASEA_WARN_MIN_DELTA_ROWS")
+  fi
+  if [[ "$PHASEA_WARN_MAX_DELTA_ROWS" != "0" ]]; then
+    CMD+=(--phasea-warn-max-delta-rows "$PHASEA_WARN_MAX_DELTA_ROWS")
+  fi
+  if [[ "$PHASEA_FAIL_MIN_DELTA_ROWS" != "0" ]]; then
+    CMD+=(--phasea-fail-min-delta-rows "$PHASEA_FAIL_MIN_DELTA_ROWS")
+  fi
+  if [[ "$PHASEA_FAIL_MAX_DELTA_ROWS" != "0" ]]; then
+    CMD+=(--phasea-fail-max-delta-rows "$PHASEA_FAIL_MAX_DELTA_ROWS")
+  fi
+  if [[ -n "$PHASEA_OPS_LEDGER_PATH" ]]; then
+    CMD+=(--phasea-ops-ledger-path "$PHASEA_OPS_LEDGER_PATH")
+  fi
+  if [[ "$PHASEA_OPS_LEDGER_DISABLED" == "1" ]]; then
+    CMD+=(--phasea-ops-ledger-disabled)
+  fi
 fi
 
 if [[ "$RUN_STAGEB_Q1" == "1" ]]; then
@@ -157,6 +181,7 @@ fi
   echo "[q1-daily-local] panel_output_tag=$PANEL_OUTPUT_TAG"
   echo "[q1-daily-local] panel_max_assets=$PANEL_MAX_ASSETS top_liquid_n=$TOP_LIQUID_N"
   echo "[q1-daily-local] phasea_backbone=$RUN_PHASEA_BACKBONE phasea_real_delta_test=$PHASEA_REAL_DELTA_TEST_MODE"
+  echo "[q1-daily-local] phasea_delta_thresholds warn_min=$PHASEA_WARN_MIN_DELTA_ROWS warn_max=$PHASEA_WARN_MAX_DELTA_ROWS fail_min=$PHASEA_FAIL_MIN_DELTA_ROWS fail_max=$PHASEA_FAIL_MAX_DELTA_ROWS"
   echo "[q1-daily-local] stageb_q1=$RUN_STAGEB_Q1 registry_q1=$RUN_REGISTRY_Q1 legacy_shell_post_steps=$USE_LEGACY_SHELL_POST_STEPS"
   printf '[q1-daily-local] cmd='
   printf '%q ' "${CMD[@]}"

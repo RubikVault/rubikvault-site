@@ -794,3 +794,107 @@ Whenever a meaningful Quant milestone is completed:
 - Quant artifacts are local/private and should not be pushed to `main`.
 - Website/UI experimental changes (Ideas tabs, live news/search) are separate and should stay isolated.
 - Large generated datasets should stay off repo history (use T9/NAS and manifests).
+
+## 19. External audit feedback (2026-02-26) — validation result and fixes
+
+An external LLM audit flagged 6 correctness issues and 4 optimization items. We re-checked each claim against the current repo state.
+
+### 19.1 Audit verdict (what was valid vs stale)
+
+Result:
+- `5/6` reported "correctness bugs" were **stale findings** (already fixed in current code).
+- `1/6` was valid (Regime engine statefulness) and is now fixed in the active codebase.
+- Several optimization/hardening suggestions were valid and have been incorporated into Q1 flows.
+
+Stale findings (already fixed in current `build_feature_store_q1_panel.py`):
+- RSI already uses Wilder-style EWM smoothing (not SMA)
+- `ewma_vol_20/60` are EWM variance-based proxies (not plain rolling std)
+- `vov_20` is based on `ewma_vol_20` (not price std)
+- `dist_vwap_20` is an EOD volume-weighted proxy, not `sma_50`
+- `fwd_ret_5d` null filtering is handled in Stage A, not globally in the panel builder
+
+Valid finding (fixed):
+- Regime engine was effectively stateless (`days_in_state`, `regime_flip_flag` placeholders)
+
+### 19.2 Regime statefulness fix (applied)
+
+Script:
+- `/Users/michaelpuchowezki/Dev/rubikvault-site/scripts/quantlab/build_regime_q1_min.py`
+
+What changed:
+- Timeseries now merges/updates by `date` (dedup-safe)
+- `days_in_state` is computed from the historical sequence
+- `regime_flips_lookback10` and `regime_flip_flag` are computed from the recent sequence
+- report reflects true state values instead of hardcoded placeholders
+
+### 19.3 Stage B de-proxy hardening (Q1 light, improved)
+
+Script:
+- `/Users/michaelpuchowezki/Dev/rubikvault-site/scripts/quantlab/run_stage_b_q1_light.py`
+
+Added/changed:
+- fold policy validation artifact (`fold_policy_validation.json`)
+- stress-lite candidate/fold scenario summaries
+- bootstrap-based PSR/DSR proxy metrics (`psr_bootstrap_proxy`, `dsr_bootstrap_proxy`)
+- stronger gate set (fold policy + stress-lite + bootstrap proxies)
+- broader CPCV-light combinations (not just a single combo width)
+
+Verified output (example):
+- `/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab/runs/run_id=cheapgateA_tsplits_2026-02-23/outputs/stage_b_light/stage_b_light_report.json`
+
+Observed fields present:
+- `fold_policy_validation.ok = true`
+- `stress_lite_summary`
+- artifacts for fold/stress summaries are persisted and hash-referenced
+
+### 19.4 Phase A backbone hardening (thresholds + ops metrics ledger)
+
+Script:
+- `/Users/michaelpuchowezki/Dev/rubikvault-site/scripts/quantlab/run_q1_daily_data_backbone_q1.py`
+
+Added:
+- warning/fail thresholds for daily delta rows
+- stronger reconciliation/accounting summary in backbone report
+- append-only ops ledger for daily backbone metrics
+
+Example behavior (expected strict fail on no-op delta):
+- `/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab-scratch-realtest/runs/run_id=q1backbone_1772136573/q1_daily_data_backbone_run_report.json`
+- `ok = false`, `exit_code = 91`
+- `warnings = ['WARN_MIN_DELTA_ROWS:0<1000']`
+
+Interpretation:
+- the backbone no longer silently reports green under strict real-delta expectations.
+
+### 19.5 Registry / governance auditability expansion (Q1)
+
+Script:
+- `/Users/michaelpuchowezki/Dev/rubikvault-site/scripts/quantlab/run_registry_update_q1.py`
+
+Added:
+- `candidate_state_events_q1` SQLite table
+- `candidate_state_events.ndjson` ledger
+- `live/shadow/retired` state writes with standardized reason codes
+- champion-slot demotion handling without promotion (audit event path)
+- post-state-eval decision ledger refresh (reason codes / summary metrics corrected after demotion logic)
+
+Verified example:
+- `/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab/runs/run_id=q1registry_q1stageb_cheapgateA_tsplits_2026-02-23/q1_registry_update_report.json`
+
+Notes:
+- In the current run, no demotion event was emitted (`extra_events_written = 0`) because the champion remained `live`.
+- The code path is implemented and exercised via integrated runner without runtime errors.
+
+### 19.6 Integrated daily local runner (Phase A + Panel + Stage B + Registry) re-verified
+
+Integrated success run after the registry state-event fix:
+- `/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab-scratch-realtest/runs/run_id=q1panel_daily_local_1772136778/q1_panel_stagea_daily_run_status.json`
+
+Result:
+- `ok = true`
+- steps green:
+  - `run_q1_daily_data_backbone_q1`
+  - `run_q1_panel_stage_a_pipeline`
+  - `run_stage_b_q1`
+  - `run_registry_update_q1`
+
+This confirms the new Q1 hardening changes did not break the end-to-end local daily orchestration.

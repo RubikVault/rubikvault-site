@@ -203,6 +203,28 @@ Status (current):
 - full red-flag dashboard and complete test suite
 - broad alt-assets (`crypto/forex/bond/fund`) until v7 pointer coverage is improved
 
+## Next block after Day 10 (current active priorities)
+
+These are the highest-leverage follow-ups after the Q1 integrated daily runner milestone:
+
+1. Stage B de-proxying (continue)
+- strengthen CPCV / purging / embargo policy (beyond Q1-light)
+- replace proxy-heavy DSR/PSR pieces with less proxy / more statistically grounded implementations
+- standardize robust fold + stress reports as first-class Stage B artifacts
+
+2. Phase A hardening in scheduled mode
+- calibrate production-like delta thresholds (warn/fail) for real daily behavior
+- collect drift/failure metrics over multiple runs (not only scratch verification)
+- tune launchd defaults based on observed deltas and false-positive rates
+
+3. Registry/governance expansion
+- evolve Q1 registry state into fuller `live/shadow/retired` transitions with demotion ladder semantics
+- keep reason-code sets standardized and append-only across decision + event ledgers
+- prepare champion lifecycle hooks for future Stage B (non-Q1) upgrades
+
+Operational rule:
+- every change in this block must update `02-current-state-and-implementation-log.md` with exact artifact paths and observed outputs.
+
 ## Operator notes (important)
 
 - Keep Quant artifacts local/private.
