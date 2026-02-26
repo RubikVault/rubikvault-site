@@ -2,547 +2,1138 @@
 <html lang="de">
 
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>RubikVault — Learning Dashboard</title>
-    <meta name="description"
-        content="Tägliches Learning-Dashboard: Wie effektiv lernen die 4 RubikVault-Features bei Vorhersagen?">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <style>
-        :root {
-            --bg: #0a0e1a;
-            --surface: #111827;
-            --card: #1a2035;
-            --card-hover: #1f2847;
-            --border: #1e293b;
-            --text: #e2e8f0;
-            --text-dim: #94a3b8;
-            --accent: #3b82f6;
-            --accent-glow: rgba(59, 130, 246, 0.15);
-            --green: #22c55e;
-            --green-bg: rgba(34, 197, 94, 0.12);
-            --red: #ef4444;
-            --red-bg: rgba(239, 68, 68, 0.12);
-            --yellow: #eab308;
-            --yellow-bg: rgba(234, 179, 8, 0.12);
-            --gray: #6b7280;
-            --radius: 12px;
-        }
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RubikVault — Learning Dashboard</title>
+  <meta name="description"
+    content="Tägliches Learning-Dashboard: Wie effektiv lernen die 4 RubikVault-Features bei Vorhersagen?">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0a0e1a;
+      --surface: #111827;
+      --card: #1a2035;
+      --card-hover: #1f2847;
+      --border: #1e293b;
+      --text: #e2e8f0;
+      --text-dim: #94a3b8;
+      --accent: #3b82f6;
+      --accent-glow: rgba(59, 130, 246, 0.15);
+      --green: #22c55e;
+      --green-bg: rgba(34, 197, 94, 0.12);
+      --red: #ef4444;
+      --red-bg: rgba(239, 68, 68, 0.12);
+      --yellow: #eab308;
+      --yellow-bg: rgba(234, 179, 8, 0.12);
+      --gray: #6b7280;
+      --radius: 12px;
+    }
 
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
 
-        body {
-            font-family: 'Inter', -apple-system, sans-serif;
-            background: var(--bg);
-            color: var(--text);
-            min-height: 100vh;
-            line-height: 1.5;
-        }
+    body {
+      font-family: 'Inter', -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      line-height: 1.5;
+    }
 
-        .container {
-            max-width: 1100px;
-            margin: 0 auto;
-            padding: 24px 20px;
-        }
+    .container {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 24px 20px;
+    }
 
-        /* Header */
-        .header {
-            text-align: center;
-            margin-bottom: 32px;
-        }
+    /* Header */
+    .header {
+      text-align: center;
+      margin-bottom: 28px;
+    }
 
-        .header-badge {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            background: var(--accent-glow);
-            border: 1px solid rgba(59, 130, 246, 0.25);
-            border-radius: 20px;
-            padding: 4px 14px;
-            font-size: 12px;
-            font-weight: 600;
-            color: var(--accent);
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            margin-bottom: 12px;
-        }
+    .header-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--accent-glow);
+      border: 1px solid rgba(59, 130, 246, 0.25);
+      border-radius: 20px;
+      padding: 4px 14px;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--accent);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 12px;
+    }
 
-        .header h1 {
-            font-size: 28px;
-            font-weight: 800;
-            background: linear-gradient(135deg, #fff 0%, var(--accent) 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            margin-bottom: 6px;
-        }
+    .header h1 {
+      font-size: 28px;
+      font-weight: 800;
+      background: linear-gradient(135deg, #fff 0%, var(--accent) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 6px;
+    }
 
-        .header .subtitle {
-            color: var(--text-dim);
-            font-size: 14px;
-        }
+    .header .subtitle {
+      color: var(--text-dim);
+      font-size: 14px;
+    }
 
-        /* Status Banner */
-        .status-banner {
-            background: var(--card);
-            border: 1px solid var(--border);
-            border-radius: var(--radius);
-            padding: 16px 24px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 24px;
-            flex-wrap: wrap;
-            gap: 12px;
-        }
+    /* Status Banner */
+    .status-banner {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 14px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
 
-        .status-banner .status-text {
-            font-size: 16px;
-            font-weight: 700;
-        }
+    .status-banner .status-text {
+      font-size: 16px;
+      font-weight: 700;
+    }
 
-        .status-banner .status-meta {
-            display: flex;
-            gap: 20px;
-            font-size: 13px;
-            color: var(--text-dim);
-        }
+    .status-banner .status-meta {
+      display: flex;
+      gap: 16px;
+      font-size: 12px;
+      color: var(--text-dim);
+      flex-wrap: wrap;
+    }
 
-        .status-banner .status-meta span {
-            white-space: nowrap;
-        }
+    .status-banner .status-meta span {
+      white-space: nowrap;
+    }
 
-        /* Feature Cards Grid */
-        .cards-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-            gap: 16px;
-            margin-bottom: 28px;
-        }
+    /* Feature Cards Grid */
+    .cards-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 14px;
+      margin-bottom: 20px;
+    }
 
-        .feature-card {
-            background: var(--card);
-            border: 1px solid var(--border);
-            border-radius: var(--radius);
-            padding: 20px;
-            transition: all 0.25s ease;
-            position: relative;
-            overflow: hidden;
-        }
+    .feature-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 18px;
+      transition: all 0.25s ease;
+      position: relative;
+      overflow: hidden;
+    }
 
-        .feature-card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 3px;
-            background: var(--accent);
-            opacity: 0.6;
-            transition: opacity 0.25s;
-        }
+    .feature-card:hover {
+      background: var(--card-hover);
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+    }
 
-        .feature-card:hover {
-            background: var(--card-hover);
-            transform: translateY(-2px);
-            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
-        }
+    .card-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
 
-        .feature-card:hover::before {
-            opacity: 1;
-        }
+    .card-icon {
+      font-size: 20px;
+    }
 
-        .card-icon {
-            font-size: 22px;
-            margin-bottom: 8px;
-        }
+    .card-title {
+      font-size: 14px;
+      font-weight: 700;
+    }
 
-        .card-title {
-            font-size: 14px;
-            font-weight: 700;
-            color: var(--text);
-            margin-bottom: 4px;
-        }
+    .card-type {
+      font-size: 11px;
+      color: var(--text-dim);
+    }
 
-        .card-type {
-            font-size: 11px;
-            color: var(--text-dim);
-            margin-bottom: 14px;
-        }
+    .card-phase {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 8px;
+      font-size: 10px;
+      font-weight: 600;
+      margin-left: auto;
+    }
 
-        .metric-row {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 6px 0;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.04);
-        }
+    .phase-bootstrap {
+      background: var(--accent-glow);
+      color: var(--accent);
+    }
 
-        .metric-row:last-child {
-            border-bottom: none;
-        }
+    .phase-learning {
+      background: var(--green-bg);
+      color: var(--green);
+    }
 
-        .metric-label {
-            font-size: 12px;
-            color: var(--text-dim);
-        }
+    .phase-active {
+      background: var(--green-bg);
+      color: var(--green);
+    }
 
-        .metric-value {
-            font-size: 13px;
-            font-weight: 600;
-            font-variant-numeric: tabular-nums;
-        }
+    .phase-stagnant {
+      background: var(--yellow-bg);
+      color: var(--yellow);
+    }
 
-        .trend-badge {
-            display: inline-flex;
-            align-items: center;
-            gap: 3px;
-            padding: 2px 8px;
-            border-radius: 10px;
-            font-size: 11px;
-            font-weight: 600;
-        }
+    .metric-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 5px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+    }
 
-        .trend-improving {
-            background: var(--green-bg);
-            color: var(--green);
-        }
+    .metric-row:last-child {
+      border-bottom: none;
+    }
 
-        .trend-declining {
-            background: var(--red-bg);
-            color: var(--red);
-        }
+    .metric-label {
+      font-size: 12px;
+      color: var(--text-dim);
+    }
 
-        .trend-stable {
-            background: var(--yellow-bg);
-            color: var(--yellow);
-        }
+    .metric-value {
+      font-size: 13px;
+      font-weight: 600;
+      font-variant-numeric: tabular-nums;
+    }
 
-        .trend-nodata {
-            background: rgba(107, 114, 128, 0.12);
-            color: var(--gray);
-        }
+    .trend-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+      padding: 2px 8px;
+      border-radius: 10px;
+      font-size: 11px;
+      font-weight: 600;
+    }
 
-        /* Self-Critical Section */
-        .analysis-section {
-            background: var(--card);
-            border: 1px solid var(--border);
-            border-radius: var(--radius);
-            padding: 20px 24px;
-            margin-bottom: 24px;
-        }
+    .trend-improving {
+      background: var(--green-bg);
+      color: var(--green);
+    }
 
-        .analysis-section h2 {
-            font-size: 15px;
-            font-weight: 700;
-            margin-bottom: 14px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
+    .trend-declining {
+      background: var(--red-bg);
+      color: var(--red);
+    }
 
-        .analysis-item {
-            padding: 10px 14px;
-            background: rgba(255, 255, 255, 0.02);
-            border-radius: 8px;
-            margin-bottom: 8px;
-            border-left: 3px solid var(--accent);
-        }
+    .trend-stable {
+      background: var(--yellow-bg);
+      color: var(--yellow);
+    }
 
-        .analysis-item:last-child {
-            margin-bottom: 0;
-        }
+    .trend-nodata {
+      background: rgba(107, 114, 128, 0.12);
+      color: var(--gray);
+    }
 
-        .analysis-item .feature-name {
-            font-size: 12px;
-            font-weight: 700;
-            color: var(--accent);
-            margin-bottom: 3px;
-        }
+    /* Sparkline */
+    .sparkline-container {
+      margin-top: 10px;
+      height: 40px;
+      width: 100%;
+    }
 
-        .analysis-item .analysis-text {
-            font-size: 12px;
-            color: var(--text-dim);
-            line-height: 1.6;
-        }
+    .sparkline-container svg {
+      width: 100%;
+      height: 40px;
+    }
 
-        /* Progress Bars */
-        .progress-container {
-            margin-top: 10px;
-        }
+    .sparkline-empty {
+      height: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--gray);
+      font-size: 10px;
+      background: rgba(255, 255, 255, 0.02);
+      border-radius: 6px;
+      margin-top: 10px;
+    }
 
-        .progress-bar-bg {
-            height: 6px;
-            background: rgba(255, 255, 255, 0.06);
-            border-radius: 3px;
-            overflow: hidden;
-        }
+    /* Progress Bar */
+    .progress-bar-bg {
+      height: 5px;
+      background: rgba(255, 255, 255, 0.06);
+      border-radius: 3px;
+      overflow: hidden;
+      margin-top: 8px;
+    }
 
-        .progress-bar-fill {
-            height: 100%;
-            border-radius: 3px;
-            transition: width 1s ease;
-        }
+    .progress-bar-fill {
+      height: 100%;
+      border-radius: 3px;
+      transition: width 1s ease;
+    }
 
-        .progress-label {
-            font-size: 10px;
-            color: var(--text-dim);
-            margin-top: 3px;
-        }
+    /* Trend Chart Section */
+    .chart-section {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+      margin-bottom: 20px;
+    }
 
-        /* Loading / Error states */
-        .loading {
-            text-align: center;
-            padding: 80px 20px;
-            color: var(--text-dim);
-        }
+    .chart-section h2 {
+      font-size: 15px;
+      font-weight: 700;
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
 
-        .loading .spinner {
-            width: 36px;
-            height: 36px;
-            border: 3px solid var(--border);
-            border-top-color: var(--accent);
-            border-radius: 50%;
-            animation: spin 0.8s linear infinite;
-            margin: 0 auto 16px;
-        }
+    .chart-area {
+      height: 160px;
+      position: relative;
+    }
 
-        @keyframes spin {
-            to {
-                transform: rotate(360deg);
-            }
-        }
+    .chart-area svg {
+      width: 100%;
+      height: 100%;
+    }
 
-        .error-state {
-            text-align: center;
-            padding: 60px 20px;
-            color: var(--red);
-        }
+    .chart-legend {
+      display: flex;
+      gap: 16px;
+      margin-top: 10px;
+      flex-wrap: wrap;
+    }
 
-        /* Footer */
-        .footer {
-            text-align: center;
-            padding: 16px;
-            font-size: 11px;
-            color: var(--gray);
-        }
+    .chart-legend-item {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 11px;
+      color: var(--text-dim);
+    }
 
-        /* Responsive */
-        @media (max-width: 600px) {
-            .header h1 {
-                font-size: 22px;
-            }
+    .chart-legend-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+    }
 
-            .cards-grid {
-                grid-template-columns: 1fr;
-            }
+    .chart-empty {
+      height: 160px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      color: var(--gray);
+      font-size: 13px;
+    }
 
-            .status-banner {
-                flex-direction: column;
-                align-items: flex-start;
-            }
-        }
-    </style>
+    .chart-empty .chart-icon {
+      font-size: 32px;
+      margin-bottom: 8px;
+      opacity: 0.5;
+    }
+
+    /* Weekly Comparison */
+    .comparison-section {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+
+    .comparison-section h2 {
+      font-size: 15px;
+      font-weight: 700;
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .comparison-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+
+    .comparison-table th {
+      text-align: left;
+      padding: 8px 12px;
+      color: var(--text-dim);
+      font-weight: 600;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .comparison-table td {
+      padding: 10px 12px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+    }
+
+    .comparison-table tr:last-child td {
+      border-bottom: none;
+    }
+
+    .delta-positive {
+      color: var(--green);
+      font-weight: 600;
+    }
+
+    .delta-negative {
+      color: var(--red);
+      font-weight: 600;
+    }
+
+    .delta-neutral {
+      color: var(--gray);
+    }
+
+    /* Diagnose Section */
+    .diagnose-section {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+
+    .diagnose-section h2 {
+      font-size: 15px;
+      font-weight: 700;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .diagnose-feature {
+      margin-bottom: 20px;
+    }
+
+    .diagnose-feature:last-child {
+      margin-bottom: 0;
+    }
+
+    .diagnose-feature-header {
+      font-size: 14px;
+      font-weight: 700;
+      margin-bottom: 10px;
+      padding-bottom: 6px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .diagnose-card {
+      padding: 12px 16px;
+      border-radius: 8px;
+      margin-bottom: 8px;
+      border-left: 3px solid;
+    }
+
+    .diagnose-card.sev-critical {
+      border-left-color: var(--red);
+      background: var(--red-bg);
+    }
+
+    .diagnose-card.sev-warning {
+      border-left-color: var(--yellow);
+      background: var(--yellow-bg);
+    }
+
+    .diagnose-card.sev-info {
+      border-left-color: var(--accent);
+      background: var(--accent-glow);
+    }
+
+    .diagnose-card.sev-ok {
+      border-left-color: var(--green);
+      background: var(--green-bg);
+    }
+
+    .diagnose-title {
+      font-size: 13px;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+
+    .diagnose-text {
+      font-size: 12px;
+      color: var(--text-dim);
+      line-height: 1.6;
+      margin-bottom: 8px;
+    }
+
+    .fix-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+
+    .fix-item {
+      padding: 6px 0;
+      border-top: 1px solid rgba(255, 255, 255, 0.04);
+      font-size: 12px;
+    }
+
+    .fix-item:first-child {
+      border-top: none;
+    }
+
+    .fix-what {
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 2px;
+    }
+
+    .fix-how {
+      color: var(--text-dim);
+      line-height: 1.5;
+    }
+
+    .fix-file {
+      font-family: 'SF Mono', Consolas, monospace;
+      font-size: 10px;
+      color: var(--accent);
+      opacity: 0.8;
+      margin-top: 2px;
+      display: block;
+    }
+
+    .loading {
+      text-align: center;
+      padding: 80px 20px;
+      color: var(--text-dim);
+    }
+
+    .loading .spinner {
+      width: 36px;
+      height: 36px;
+      border: 3px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin: 0 auto 16px;
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    .error-state {
+      text-align: center;
+      padding: 60px 20px;
+      color: var(--red);
+    }
+
+    .footer {
+      text-align: center;
+      padding: 16px;
+      font-size: 11px;
+      color: var(--gray);
+    }
+
+    @media (max-width: 700px) {
+      .header h1 {
+        font-size: 22px;
+      }
+
+      .cards-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .status-banner {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+    }
+  </style>
 </head>
 
 <body>
-    <div class="container">
-        <div class="header">
-            <div class="header-badge">🧠 Machine Learning Monitor</div>
-            <h1>Learning Dashboard</h1>
-            <p class="subtitle">Wie effektiv lernen die 4 Features bei Vorhersagen?</p>
-        </div>
-
-        <div id="app">
-            <div class="loading">
-                <div class="spinner"></div>
-                <p>Lade Learning Report...</p>
-            </div>
-        </div>
-
-        <div class="footer">
-            RubikVault Learning System — Report wird täglich um 20:00 CET aktualisiert
-        </div>
+  <div class="container">
+    <div class="header">
+      <div class="header-badge">🧠 Machine Learning Monitor</div>
+      <h1>Learning Dashboard</h1>
+      <p class="subtitle">Wie effektiv lernen die 4 Features bei Vorhersagen?</p>
     </div>
+    <div id="app">
+      <div class="loading">
+        <div class="spinner"></div>
+        <p>Lade Learning Report...</p>
+      </div>
+    </div>
+    <div class="footer">RubikVault Learning System — Report wird täglich um 20:00 CET aktualisiert</div>
+  </div>
 
-    <script>
-        const REPORT_URL = '/data/reports/learning-report-latest.json';
+  <script>
+    const REPORT_URL = '/data/reports/learning-report-latest.json';
+    const FEATURE_META = {
+      forecast: { icon: '📈', color: '#3b82f6', label: 'Kursrichtung + Wahrscheinlichkeit', metricKey: 'forecast_accuracy_7d' },
+      scientific: { icon: '🔬', color: '#8b5cf6', label: 'Setup/Trigger → Breakout', metricKey: 'scientific_hit_rate_7d' },
+      elliott: { icon: '🌊', color: '#06b6d4', label: 'Wave-Richtung (bullish/bearish)', metricKey: 'elliott_accuracy_7d' },
+      stock_analyzer: { icon: '📊', color: '#f59e0b', label: 'Ranking-Stabilität', metricKey: 'stock_stability' },
+    };
 
-        const FEATURE_META = {
-            forecast: { icon: '📈', accent: '#3b82f6', label: 'Kursrichtung + Wahrscheinlichkeit' },
-            scientific: { icon: '🔬', accent: '#8b5cf6', label: 'Setup/Trigger → Breakout' },
-            elliott: { icon: '🌊', accent: '#06b6d4', label: 'Wave-Richtung (bullish/bearish)' },
-            stock_analyzer: { icon: '📊', accent: '#f59e0b', label: 'Ranking-Stabilität' },
-        };
+    function pct(v) { return v != null ? `${(v * 100).toFixed(1)}%` : '—'; }
+    function num(v) { return v != null ? v.toFixed(4) : '—'; }
+    function trendBadge(t) {
+      const m = { improving: ['↑ Besser', 'trend-improving'], declining: ['↓ Schlechter', 'trend-declining'], stable: ['→ Stabil', 'trend-stable'] };
+      const [text, cls] = m[t] || ['— Keine Daten', 'trend-nodata'];
+      return `<span class="trend-badge ${cls}">${text}</span>`;
+    }
 
-        function pct(v) { return v != null ? `${(v * 100).toFixed(1)}%` : '—'; }
-        function num(v) { return v != null ? v.toFixed(4) : '—'; }
+    function learningPhase(feat, daysActive) {
+      if (feat.accuracy_7d == null && feat.hit_rate_7d == null && feat.stability == null) {
+        return `<span class="card-phase phase-bootstrap">📡 Sammelt Daten (Tag ${daysActive})</span>`;
+      }
+      const trend = feat.trend_accuracy || feat.trend_brier;
+      if (trend === 'improving') return `<span class="card-phase phase-learning">🚀 Lernt aktiv</span>`;
+      if (trend === 'declining') return `<span class="card-phase phase-stagnant">⚠️ Rückgang</span>`;
+      return `<span class="card-phase phase-active">✅ Aktiv</span>`;
+    }
 
-        function trendBadge(t) {
-            const map = {
-                improving: ['↑ Besser', 'trend-improving'],
-                declining: ['↓ Schlechter', 'trend-declining'],
-                stable: ['→ Stabil', 'trend-stable'],
-            };
-            const [text, cls] = map[t] || ['— Keine Daten', 'trend-nodata'];
-            return `<span class="trend-badge ${cls}">${text}</span>`;
+    // ─── SVG Sparkline ──────────────────────────────────────────────────────────
+    function sparklineSVG(values, color, w = 200, h = 36) {
+      const valid = values.filter(v => v != null);
+      if (valid.length < 2) return '';
+      const min = Math.min(...valid) * 0.95;
+      const max = Math.max(...valid) * 1.05 || 1;
+      const range = max - min || 1;
+      const step = w / (values.length - 1);
+      const points = [];
+      let lastY = h / 2;
+      values.forEach((v, i) => {
+        if (v != null) {
+          lastY = h - ((v - min) / range) * h;
+          points.push(`${i * step},${lastY}`);
+        }
+      });
+      if (points.length < 2) return '';
+      const linePoints = points.join(' ');
+      // Gradient fill
+      const areaPoints = `0,${h} ${linePoints} ${(values.length - 1) * step},${h}`;
+      return `<div class="sparkline-container">
+    <svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none">
+      <defs>
+        <linearGradient id="grad-${color.replace('#', '')}" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="${color}" stop-opacity="0.3"/>
+          <stop offset="100%" stop-color="${color}" stop-opacity="0"/>
+        </linearGradient>
+      </defs>
+      <polygon points="${areaPoints}" fill="url(#grad-${color.replace('#', '')})" />
+      <polyline points="${linePoints}" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      <circle cx="${points[points.length - 1].split(',')[0]}" cy="${points[points.length - 1].split(',')[1]}" r="3" fill="${color}"/>
+    </svg>
+  </div>`;
+    }
+
+    // ─── Large Trend Chart ──────────────────────────────────────────────────────
+    function trendChartSVG(history, keys, colors, w = 1000, h = 140) {
+      // Find all valid values across all keys
+      let allVals = [];
+      keys.forEach(k => history.forEach(h => { if (h[k] != null) allVals.push(h[k]); }));
+      if (!allVals.length) return '';
+
+      const min = Math.min(...allVals) * 0.9;
+      const max = Math.max(...allVals) * 1.1 || 1;
+      const range = max - min || 1;
+      const step = w / Math.max(1, history.length - 1);
+      const pad = 4;
+
+      let lines = '';
+      keys.forEach((key, ki) => {
+        const points = [];
+        history.forEach((h, i) => {
+          if (h[key] != null) {
+            const x = i * step;
+            const y = pad + (h - pad) - ((h[key] - min) / range) * (h - 2 * pad);
+            points.push(`${x},${pad + (140 - 2 * pad) - ((h[key] - min) / range) * (140 - 2 * pad)}`);
+          }
+        });
+        if (points.length >= 2) {
+          const lastPt = points[points.length - 1].split(',');
+          lines += `<polyline points="${points.join(' ')}" fill="none" stroke="${colors[ki]}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" opacity="0.9"/>`;
+          lines += `<circle cx="${lastPt[0]}" cy="${lastPt[1]}" r="4" fill="${colors[ki]}"/>`;
+        }
+      });
+
+      // Y-axis labels
+      const yLabels = `
+    <text x="${w - 5}" y="${pad + 8}" fill="#666" font-size="10" text-anchor="end">${(max * 100).toFixed(0)}%</text>
+    <text x="${w - 5}" y="${h - pad}" fill="#666" font-size="10" text-anchor="end">${(min * 100).toFixed(0)}%</text>
+  `;
+      // Grid lines
+      const grid = `
+    <line x1="0" y1="${h / 2}" x2="${w}" y2="${h / 2}" stroke="#1e293b" stroke-width="1" stroke-dasharray="4"/>
+    <line x1="0" y1="${pad}" x2="${w}" y2="${pad}" stroke="#1e293b" stroke-width="0.5"/>
+    <line x1="0" y1="${h - pad}" x2="${w}" y2="${h - pad}" stroke="#1e293b" stroke-width="0.5"/>
+  `;
+
+      return `<svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none">${grid}${lines}${yLabels}</svg>`;
+    }
+
+    // ─── Deep Feature Diagnosis ─────────────────────────────────────────────────
+    // Returns thorough, feature-specific analysis with concrete fix steps
+    function deepDiagnosis(key, feat, daysActive, history) {
+      const preds = feat.predictions_today ?? feat.rankings_today ?? 0;
+      const acc = feat.accuracy_7d;
+      const brier = feat.brier_7d;
+      const hr = feat.hit_rate_7d;
+      const trendAcc = feat.trend_accuracy;
+
+      // Compute trend from history data
+      const metricKey = FEATURE_META[key].metricKey;
+      const histVals = (history || []).map(h => h[metricKey]).filter(v => v != null);
+      const weekVals = histVals.slice(-5); // last 5 trading days
+      const monthVals = histVals.slice(-22); // last ~month
+      const weekTrend = weekVals.length >= 2 ? weekVals[weekVals.length - 1] - weekVals[0] : null;
+      const monthTrend = monthVals.length >= 5 ? monthVals[monthVals.length - 1] - monthVals[0] : null;
+
+      const sections = []; // {title, severity, text, fixes[]}
+
+      // ──────────────── FORECAST ────────────────
+      if (key === 'forecast') {
+        if (preds === 0) {
+          sections.push({
+            title: '🔴 Keine Predictions heute',
+            severity: 'critical',
+            text: 'Die Forecast-Pipeline hat heute keine Vorhersagen geliefert. Das System kann nur lernen, wenn täglich Predictions geschrieben werden.',
+            fixes: [
+              { what: 'Pipeline-Zeitplan prüfen', how: 'GitHub Actions → forecast-daily.yml muss VOR dem Learning-Cycle (19:00 UTC) laufen', file: '.github/workflows/forecast-daily.yml' },
+              { what: 'Ledger-Pfad verifizieren', how: 'Prüfen ob mirrors/forecast/ledger/forecasts/YYYY/MM.ndjson.gz existiert und aktuell ist', file: 'scripts/forecast/ledger_writer.mjs' },
+              { what: 'EODHD API-Limit prüfen', how: 'Wenn API-Limit erreicht, werden keine Forecast-Daten generiert. Budget-Ledger prüfen', file: 'public/data/v3/system/budget-ledger.json' },
+            ]
+          });
+        }
+        if (acc != null && acc < 0.50) {
+          sections.push({
+            title: '🔴 Accuracy unter 50% — Schlechter als Münzwurf',
+            severity: 'critical',
+            text: `Aktuelle Accuracy: ${pct(acc)}. Das Modell trifft weniger als die Hälfte der Richtungs-Vorhersagen. Wahrscheinliche Ursache: Die Champion-Selektion im forecast_engine.mjs wählt ein Modell, das auf vergangene Marktphasen überangepasst ist.`,
+            fixes: [
+              { what: 'Champion-Selektion überarbeiten', how: 'Die Funktion selectChampion() nutzt aktuell nur historische Backtest-Scores. Ersetze durch Walk-Forward-Validation mit Out-of-Sample-Fenster der letzten 5 Tage', file: 'scripts/forecast/forecast_engine.mjs → selectChampion()' },
+              { what: 'Feature-Drift erkennen', how: 'Vergleiche die Feature-Verteilung der Trainings-Daten mit den aktuellen Live-Daten. Bei Drift > 2σ: Modell-Retrain triggern', file: 'scripts/forecast/evaluator.mjs' },
+              { what: 'Marktregime-Filter einbauen', how: 'Wenn VIX > 25 oder SPY-Drawdown > 3%, Forecast-Confidence automatisch auf 0.50 setzen (kein Signal)', file: 'scripts/forecast/forecast_engine.mjs → applyRegimeFilter()' },
+              { what: 'Probability-Calibration aktivieren', how: 'Isotonic Regression auf die letzten 30 Tage Predictions vs. Outcomes anwenden. Aktuell gibt das Modell systematisch über/unter-konfidente Wahrscheinlichkeiten aus', file: 'scripts/learning/lib/metrics.mjs → calibrate()' },
+            ]
+          });
+        } else if (acc != null && acc < 0.55) {
+          sections.push({
+            title: '🟡 Accuracy 50-55% — Kaum besser als Zufall',
+            severity: 'warning',
+            text: `Accuracy: ${pct(acc)}. Das System hat minimale Vorhersagekraft. Die Wahrscheinlichkeits-Outputs sind wahrscheinlich schlecht kalibriert.`,
+            fixes: [
+              { what: 'Platt Scaling aktivieren', how: 'Logistic Regression auf Raw-Scores trainieren (sigmoid fit). Confidence-Output wird dadurch zuverlässiger', file: 'scripts/forecast/forecast_engine.mjs → calibrateOutput()' },
+              { what: 'Sector-spezifische Modelle testen', how: 'Tech-Aktien und Commodities haben unterschiedliche Momentum-Profile. Separate Modelle pro GICS-Sektor trainieren', file: 'scripts/forecast/forecast_engine.mjs' },
+            ]
+          });
+        } else if (acc != null && acc >= 0.60) {
+          sections.push({
+            title: '🟢 Accuracy über 60% — Gute Performance',
+            severity: 'ok',
+            text: `Accuracy: ${pct(acc)}. Das Modell arbeitet signifikant besser als Zufall. Fokus auf Stabilität und Brier-Score-Optimierung.`,
+            fixes: []
+          });
+        }
+        if (brier != null && brier > 0.25) {
+          sections.push({
+            title: '🟡 Brier Score zu hoch — Wahrscheinlichkeiten unzuverlässig',
+            severity: 'warning',
+            text: `Brier Score: ${num(brier)} (Ziel: < 0.20). Das Modell sagt zwar oft die richtige Richtung, aber die ausgegebenen Wahrscheinlichkeiten spiegeln nicht die tatsächliche Trefferquote wider. Bei p_up=0.80 treffen Vorhersagen nicht 80% der Fälle.`,
+            fixes: [
+              { what: 'Calibration-Kurve berechnen', how: 'Vorhersagen in 10 Bins (0.0-0.1, 0.1-0.2, ...) gruppieren und tatsächliche Trefferquote pro Bin berechnen. Abweichung > 5% zeigt Fehlkalibration', file: 'scripts/learning/lib/metrics.mjs → buildCalibrationCurve()' },
+              { what: 'Temperature Scaling', how: 'Einen einzigen Parameter T (Temperature) lernen, der alle Logits durch T teilt. Minimiert Brier Score auf Validierungsdaten', file: 'scripts/forecast/forecast_engine.mjs' },
+            ]
+          });
+        }
+        if (trendAcc === 'declining') {
+          sections.push({
+            title: '🔴 Accuracy-Trend fallend — Feature verschlechtert sich',
+            severity: 'critical',
+            text: 'Die 7d-Accuracy sinkt im Vergleich zum Vorzeitraum. Das deutet auf Feature-Drift oder einen Marktregimewechsel hin.',
+            fixes: [
+              { what: 'Regime-Detektion implementieren', how: 'HMM (Hidden Markov Model) oder Bollinger-Band-Regime-Klassifikation einbauen. Bei Regime-Wechsel: Modell-Ensemble umschalten', file: 'scripts/forecast/forecast_engine.mjs' },
+              { what: 'Rolling-Retrain aktivieren', how: 'Modell alle 5 Tage auf den letzten 60 Tagen neu trainieren statt statisches Modell zu verwenden', file: 'scripts/forecast/run_daily.mjs' },
+            ]
+          });
+        }
+        // Bootstrap state
+        if (!acc && preds > 0) {
+          sections.push({
+            title: '📡 Bootstrap-Phase — Daten werden gesammelt',
+            severity: 'info',
+            text: `${preds.toLocaleString()} Predictions heute geloggt. Erste Accuracy-Metriken erscheinen morgen (Horizont 1 Tag). Bis dahin wird der Ledger gefüllt.`,
+            fixes: [
+              { what: 'Nächster Schritt', how: 'Morgen nach dem nächsten Learning-Cycle-Lauf prüfen, ob Accuracy-Werte erscheinen. Falls nicht: outcome-Resolution in run-daily-learning-cycle.mjs debuggen', file: 'scripts/learning/run-daily-learning-cycle.mjs → resolveOutcomes()' },
+            ]
+          });
+        }
+      }
+
+      // ──────────────── SCIENTIFIC ────────────────
+      if (key === 'scientific') {
+        if (preds === 0) {
+          sections.push({
+            title: '🔴 Keine Scientific-Predictions',
+            severity: 'critical',
+            text: 'Keine Setup/Trigger-Signale aus dem Scientific Analyzer extrahiert.',
+            fixes: [
+              { what: 'Datenquelle prüfen', how: 'Prüfen ob public/data/supermodules/scientific-summary.json existiert und aktuell ist (Timestamp < 24h)', file: 'public/data/supermodules/scientific-summary.json' },
+              { what: 'Supermodule-Pipeline prüfen', how: 'build-supermodules.mjs muss vor dem Learning-Cycle laufen', file: 'scripts/build-supermodules.mjs' },
+            ]
+          });
+        }
+        if (hr != null && hr < 0.30) {
+          sections.push({
+            title: '🔴 Hit Rate unter 30% — Setup/Trigger zu freizügig',
+            severity: 'critical',
+            text: `Hit Rate: ${pct(hr)}. Weniger als ein Drittel der Setups führt zu einem ≥2% Breakout in der vorhergesagten Richtung. Die Signal-Schwellen filtern zu wenig.`,
+            fixes: [
+              { what: 'Signal-Strength-Schwelle erhöhen', how: 'In scientific-summary.json haben strong_signals ein signal_strength-Feld. Aktuell werden alle mit strength > 0 genommen. Schwelle auf > 70 erhöhen', file: 'scripts/build-scientific-summary.mjs → filterSignals()' },
+              { what: 'Trigger-Bedingungen verschärfen', how: 'Trigger-Status (trigger.met=true) nur setzen wenn Volume > 1.5x Avg UND Price > Resistance. Aktuell reicht nur eines der Kriterien', file: 'scripts/supermodules/ → trigger-evaluation' },
+              { what: 'Breakout-Threshold dynamisch machen', how: '2%-Threshold ist fix. Besser: ATR(14)-basierter Threshold, da volatile Aktien andere Schwellen brauchen als low-vol Aktien', file: 'scripts/learning/run-daily-learning-cycle.mjs → resolveOutcomes()' },
+              { what: 'Sector-Filter einbauen', how: 'Biotech/Small-Cap Setups haben fundamental andere Breakout-Raten als Large-Cap. Separate Trigger-Schwellen pro Sektor definieren', file: 'scripts/build-scientific-summary.mjs' },
+            ]
+          });
+        } else if (hr != null && hr < 0.40) {
+          sections.push({
+            title: '🟡 Hit Rate 30-40% — Verbesserungspotenzial',
+            severity: 'warning',
+            text: `Hit Rate: ${pct(hr)}. Ordentlich, aber noch weit von 50%+ entfernt.`,
+            fixes: [
+              { what: 'Multi-Timeframe-Bestätigung', how: 'Setup nur triggern wenn Signal auf Daily UND Weekly Chart konsistent ist. Aktuell nur Daily', file: 'scripts/supermodules/' },
+              { what: 'Volume-Bestätigung hinzufügen', how: 'Breakouts ohne erhöhtes Volumen scheitern häufiger. Volume > 2x 20d-Avg als Pflichtkriterium', file: 'scripts/build-scientific-summary.mjs' },
+            ]
+          });
+        } else if (hr != null && hr >= 0.40) {
+          sections.push({
+            title: '🟢 Hit Rate über 40% — Setup/Trigger filtert effektiv',
+            severity: 'ok',
+            text: `Hit Rate: ${pct(hr)}. Die Kombination aus Setup + Trigger produziert überdurchschnittliche Breakout-Signale.`,
+            fixes: []
+          });
+        }
+        if (!hr && preds > 0) {
+          sections.push({
+            title: '📡 Bootstrap-Phase — Warten auf Outcomes',
+            severity: 'info',
+            text: `${preds.toLocaleString()} Setup/Trigger-Signale geloggt. Hit Rate erscheint nach 5 Trading-Tagen, da Breakouts mit 5d-Horizont gemessen werden.`,
+            fixes: [
+              { what: 'Nächster Schritt', how: 'Nach 5 Trading-Tagen prüfen ob Hit Rate-Werte erscheinen. 40%+ = gut, < 30% = Trigger-Logik zu permissiv', file: 'scripts/learning/run-daily-learning-cycle.mjs → resolveOutcomes()' },
+            ]
+          });
+        }
+      }
+
+      // ──────────────── ELLIOTT ────────────────
+      if (key === 'elliott') {
+        if (acc != null && acc < 0.50) {
+          sections.push({
+            title: '🔴 Elliott-Accuracy unter 50% — Wave-Counts unzuverlässig',
+            severity: 'critical',
+            text: `Accuracy: ${pct(acc)}. Die Elliott-Wave-Richtungsvorhersagen sind schlechter als Zufall. Hauptproblem: Die automatische Wave-Zählung ist mehrdeutig — verschiedene Counts sind gleichzeitig valide.`,
+            fixes: [
+              { what: 'Confidence-Filter einbauen', how: 'Nur Predictions mit wave_confidence > 0.6 verwenden. Aktuell werden alle Wave-Counts als gleichwertig behandelt', file: 'scripts/learning/run-daily-learning-cycle.mjs → extractElliottPredictions()' },
+              { what: 'Alternative-Count-Logik', how: 'Wenn bullisher UND bearischer Count gleichzeitig valide sind → Signal als "neutral" markieren statt willkürlich einen zu wählen', file: 'functions/api/elliott-scanner.js' },
+              { what: 'Zeitrahmen-Gewichtung', how: 'Daily-Waves geben kurzfristige Signale, Monthly-Waves langfristige. Für 5d-Horizont nur Daily/Weekly Counts verwenden, Monthly ignorieren', file: 'scripts/learning/run-daily-learning-cycle.mjs → extractElliottPredictions()' },
+              { what: 'Invalidation-Levels nutzen', how: 'Jeder Wave-Count hat ein Invalidation-Level. Wenn Preis > Invalidation → Count sofort als "falsch" werten und alternative Zählung aktivieren', file: 'functions/api/elliott-scanner.js' },
+            ]
+          });
+        } else if (acc != null && acc < 0.55) {
+          sections.push({
+            title: '🟡 Elliott-Accuracy 50-55% — Minimale Edge',
+            severity: 'warning',
+            text: `Accuracy: ${pct(acc)}. Leicht über Zufall, aber nicht signifikant. Das Volume an Predictions (${(feat.predictions_today || 0).toLocaleString()}) dilutiert wahrscheinlich die Qualität.`,
+            fixes: [
+              { what: 'Top-Confidence-Filter', how: 'Statt alle 50k+ Wave-Counts zu werten: nur Top 200 mit höchster Confidence auswählen. Qualität > Quantität', file: 'scripts/learning/run-daily-learning-cycle.mjs → extractElliottPredictions()' },
+              { what: 'Wave-Completion-Score', how: 'Waves in fortgeschrittenem Stadium (Wave 3, Wave 5) haben klarere Richtung als Wave 1/2. Completion-Score als Gewicht nutzen', file: 'functions/api/elliott-scanner.js' },
+            ]
+          });
+        }
+        if (preds > 10000) {
+          sections.push({
+            title: '⚠️ Zu viele Predictions — Qualität leidet',
+            severity: 'warning',
+            text: `${preds.toLocaleString()} Predictions ist extrem viel. Die meisten sind wahrscheinlich Low-Confidence Wave-Counts. Das verwässert die Accuracy-Metrik.`,
+            fixes: [
+              { what: 'Prediction-Count reduzieren', how: 'Nur Ticker/Timeframe-Kombinationen mit wave_quality > 70 in das Ledger schreiben. Das reduziert auf ~500-2000 hochwertige Predictions', file: 'scripts/learning/run-daily-learning-cycle.mjs → extractElliottPredictions()' },
+            ]
+          });
+        }
+        if (!acc && preds > 0) {
+          sections.push({
+            title: '📡 Bootstrap-Phase — Warten auf 5d-Outcomes',
+            severity: 'info',
+            text: `${preds.toLocaleString()} Wave-Direction-Predictions geloggt. Accuracy erscheint nach 5 Trading-Tagen. Bei so vielen Predictions: sofort Top-Confidence-Filter einbauen.`,
+            fixes: [
+              { what: 'DRINGEND: Volume reduzieren', how: 'Vor dem nächsten Cycle: extractElliottPredictions() um Confidence-Filter erweitern, sonst werden 50k+ Outcomes berechnet was extrem langsam ist', file: 'scripts/learning/run-daily-learning-cycle.mjs → extractElliottPredictions()' },
+            ]
+          });
+        }
+      }
+
+      // ──────────────── STOCK ANALYZER ────────────────
+      if (key === 'stock_analyzer') {
+        if (feat.stability != null && feat.stability < 0.70) {
+          sections.push({
+            title: '🔴 Ranking instabil — Top-50 wechselt zu stark',
+            severity: 'critical',
+            text: `Stabilität: ${pct(feat.stability)}. Weniger als 70% der Top-50-Aktien von gestern sind heute noch in den Top 50. Das deutet auf rauschende Scores hin.`,
+            fixes: [
+              { what: 'Score-Smoothing einbauen', how: 'Exponential Moving Average (α=0.3) über score_0_100 der letzten 5 Tage anwenden. Jeet-Wechsel werden geglättet', file: 'scripts/universe-v7/build-stock-ssot.mjs' },
+              { what: 'Minimum-Halteperiode', how: 'Aktie muss 3 Tage in Folge Score > Threshold haben bevor sie in Top-50 aufsteigt. Verhindert One-Day-Spikes', file: 'scripts/universe-v7/build-stock-ssot.mjs' },
+              { what: 'Score-Komponenten analysieren', how: 'Prüfen welche Teilscores am meisten flickern (Momentum? Volume? Earnings?). Den instabilsten Teilscore mit geringerem Gewicht versehen', file: 'scripts/universe-v7/build-stock-ssot.mjs → computeScore()' },
+            ]
+          });
+        } else if (feat.stability != null && feat.stability < 0.85) {
+          sections.push({
+            title: '🟡 Ranking-Stabilität akzeptabel aber verbesserbar',
+            severity: 'warning',
+            text: `Stabilität: ${pct(feat.stability)}. Normaler Bereich, aber höhere Stabilität (>85%) wäre für Portfolio-Tauglichkeit wünschenswert.`,
+            fixes: [
+              { what: 'Hysterese-Band einbauen', how: 'Aktie fällt erst aus Top-50 wenn Score unter Rang 65 fällt (nicht 51). Vermeidet Flip-Flopping an der Grenze', file: 'scripts/universe-v7/build-stock-ssot.mjs' },
+            ]
+          });
+        } else if (feat.stability != null && feat.stability >= 0.85) {
+          sections.push({
+            title: '🟢 Ranking stabil — Scores sind konsistent',
+            severity: 'ok',
+            text: `Stabilität: ${pct(feat.stability)}. Die Rankings sind über Tage hinweg konsistent. Portfolio auf Basis dieser Rankings wäre handelbar.`,
+            fixes: []
+          });
+        }
+        if (feat.stability == null) {
+          sections.push({
+            title: '📡 Ranking-Stabilität noch nicht messbar',
+            severity: 'info',
+            text: `${preds} Rankings geloggt. Stabilität wird ab Tag 2 berechnet (Vergleich: heutige Top-50 vs. gestrige Top-50). Morgen erscheint der erste Wert.`,
+            fixes: [
+              { what: 'Nächster Schritt', how: 'Morgen prüfen ob Stabilität erscheint. Zielwert: > 85%. Bei < 70%: Score-Smoothing implementieren', file: 'scripts/learning/run-daily-learning-cycle.mjs → computeRankingStability()' },
+            ]
+          });
+        }
+      }
+
+      // ──── General period-based analysis ────
+      if (weekTrend != null && weekTrend < -0.02) {
+        sections.push({
+          title: `📉 Wochentrend: ${(weekTrend * 100).toFixed(1)}% Rückgang`,
+          severity: 'warning',
+          text: `Die Hauptmetrik hat sich diese Woche um ${(Math.abs(weekTrend) * 100).toFixed(1)} Prozentpunkte verschlechtert.`,
+          fixes: [
+            { what: 'Markt-Kontext prüfen', how: 'Wurde das Marktregime gewechselt (Risk-On → Risk-Off)? Bei ja: Feature-Parameter für neues Regime adjustieren', file: '' },
+            { what: 'Overfitting-Check', how: 'Wenn die letzte Woche die erste Woche mit Live-Daten war: Backtest-Overfit wahrscheinlich. Walk-Forward-Validation einbauen', file: '' },
+          ]
+        });
+      }
+      if (monthTrend != null && monthTrend < -0.03) {
+        sections.push({
+          title: `📉 Monatstrend: ${(monthTrend * 100).toFixed(1)}% Rückgang über 30 Tage`,
+          severity: 'critical',
+          text: `Anhaltender Rückgang über den gesamten Monat. Das Feature lernt nicht effektiv oder verschlechtert sich aktiv.`,
+          fixes: [
+            { what: 'Fundamentales Redesign nötig', how: 'Bei > 30 Tagen Rückgang: Feature-Logik grundlegend überdenken. Historische Analyse der fehlgeschlagenen Predictions auf Muster prüfen', file: '' },
+          ]
+        });
+      }
+
+      return sections;
+    }
+
+    // ─── Render ─────────────────────────────────────────────────────────────────
+    function render(report) {
+      const r = report;
+      const daysActive = r.days_active || 1;
+      const history = r.history || [];
+
+      const statusColor = r.summary.overall_status.includes('BESSER') ? 'var(--green)' :
+        r.summary.overall_status.includes('SCHLECHTER') ? 'var(--red)' :
+          r.summary.overall_status.includes('BOOTSTRAP') ? 'var(--accent)' : 'var(--yellow)';
+
+      // Data freshness
+      const genTime = new Date(r.generated_at);
+      const ageMin = Math.round((Date.now() - genTime) / 60000);
+      const freshness = ageMin < 60 ? `vor ${ageMin} Min` : ageMin < 1440 ? `vor ${Math.round(ageMin / 60)} Std` : `vor ${Math.round(ageMin / 1440)} Tagen`;
+
+      // Feature Cards
+      const featureOrder = ['forecast', 'scientific', 'elliott', 'stock_analyzer'];
+      const cardsHTML = featureOrder.map(key => {
+        const feat = r.features[key];
+        if (!feat) return '';
+        const meta = FEATURE_META[key];
+        const isStock = key === 'stock_analyzer';
+
+        // Sparkline data from history
+        const sparkData = history.map(h => h[meta.metricKey]);
+        const sparkHTML = sparkData.some(v => v != null) ? sparklineSVG(sparkData, meta.color)
+          : `<div class="sparkline-empty">📊 Trend erscheint nach ersten Outcomes</div>`;
+
+        let metricsHTML = '';
+        if (!isStock) {
+          metricsHTML += metricRow('Accuracy (7d)', pct(feat.accuracy_7d), trendBadge(feat.trend_accuracy));
+          metricsHTML += metricRow('Accuracy (30d)', pct(feat.accuracy_all));
+          if (feat.brier_7d != null) metricsHTML += metricRow('Brier Score', num(feat.brier_7d), trendBadge(feat.trend_brier));
+          if (feat.hit_rate_7d != null) metricsHTML += metricRow('Hit Rate (7d)', pct(feat.hit_rate_7d));
+          metricsHTML += metricRow('Predictions', (feat.predictions_today ?? 0).toLocaleString());
+        } else {
+          metricsHTML += metricRow('Stabilität', pct(feat.stability));
+          metricsHTML += metricRow('Churn', feat.churn != null ? String(feat.churn) : '—');
+          metricsHTML += metricRow('Rankings', (feat.rankings_today ?? 0).toLocaleString());
         }
 
-        function progressBar(value, color) {
-            if (value == null) return '';
-            const width = Math.min(100, Math.max(0, value * 100));
-            return `
-        <div class="progress-container">
-          <div class="progress-bar-bg">
-            <div class="progress-bar-fill" style="width:${width}%;background:${color}"></div>
-          </div>
-          <div class="progress-label">${pct(value)} Trefferquote</div>
-        </div>`;
-        }
+        const accVal = feat.accuracy_7d ?? feat.accuracy_all ?? feat.stability;
+        const progressHTML = accVal != null ? `<div class="progress-bar-bg"><div class="progress-bar-fill" style="width:${Math.min(100, accVal * 100)}%;background:${meta.color}"></div></div>` : '';
 
-        function selfCriticism(key, feat) {
-            const predsToday = feat.predictions_today ?? feat.rankings_today ?? 0;
-            const acc = feat.accuracy_7d;
-            const brier = feat.brier_7d;
-            const hitRate = feat.hit_rate_7d;
-            const trend = feat.trend_accuracy;
+        return `<div class="feature-card">
+      <div style="position:absolute;top:0;left:0;right:0;height:3px;background:${meta.color};opacity:0.7"></div>
+      <div class="card-header">
+        <span class="card-icon">${meta.icon}</span>
+        <div><div class="card-title">${feat.name}</div><div class="card-type">${meta.label}</div></div>
+        ${learningPhase(feat, daysActive)}
+      </div>
+      ${metricsHTML}${progressHTML}${sparkHTML}
+    </div>`;
+      }).join('');
 
-            if (!acc && !hitRate && feat.stability == null) {
-                if (predsToday === 0) {
-                    return 'Keine Predictions extrahiert. Die Datenpipeline hat heute keine Daten erzeugt. → Pipeline (Workflow/Cron) prüfen.';
-                }
-                const horizon = key === 'forecast' ? '1' : '5';
-                return `${predsToday.toLocaleString()} Predictions geloggt. Outcomes werden nach ${horizon} Trading-Tag(en) aufgelöst. Erste Metriken erscheinen dann.`;
-            }
+      // Trend Chart
+      const hasHistoryData = history.some(h =>
+        h.forecast_accuracy_7d != null || h.scientific_hit_rate_7d != null || h.elliott_accuracy_7d != null
+      );
+      const chartKeys = ['forecast_accuracy_7d', 'scientific_hit_rate_7d', 'elliott_accuracy_7d'];
+      const chartColors = ['#3b82f6', '#8b5cf6', '#06b6d4'];
+      const chartSVG = hasHistoryData ? trendChartSVG(history, chartKeys, chartColors) : '';
 
-            const lines = [];
-            if (acc != null) {
-                if (acc < 0.50) lines.push(`Accuracy ${pct(acc)} unter 50% — schlechter als Zufall. Feature-Gewichtung muss überarbeitet werden.`);
-                else if (acc < 0.55) lines.push(`Accuracy ${pct(acc)} knapp über Baseline. Potenzial bei Feature-Selektion und Calibration.`);
-                else if (acc >= 0.60) lines.push(`Accuracy ${pct(acc)} — Gute Performance.`);
-                else lines.push(`Accuracy ${pct(acc)} — Akzeptabel.`);
-            }
-            if (brier != null) {
-                if (brier > 0.25) lines.push(`Brier ${num(brier)} zu hoch — Calibration nötig.`);
-                else if (brier < 0.20) lines.push(`Brier ${num(brier)} — Gut kalibriert.`);
-            }
-            if (hitRate != null && key === 'scientific') {
-                if (hitRate < 0.30) lines.push(`Hit Rate ${pct(hitRate)} niedrig. Trigger-Logik zu permissiv.`);
-                else if (hitRate >= 0.40) lines.push(`Hit Rate ${pct(hitRate)} — Effektiver Filter.`);
-            }
-            if (trend === 'declining') lines.push('⚠ Trend fallend. Mögliche Ursache: Marktregime-Wechsel oder Feature-Drift.');
-            if (trend === 'improving') lines.push('✓ Trend positiv, Calibrationsdaten akkumulieren sich.');
-            if (predsToday > 0) lines.push(`${predsToday.toLocaleString()} Predictions heute.`);
+      const chartSection = `<div class="chart-section">
+    <h2>📉 Entwicklung über Zeit (30 Tage)</h2>
+    ${chartSVG ? `<div class="chart-area">${chartSVG}</div>
+      <div class="chart-legend">
+        <div class="chart-legend-item"><div class="chart-legend-dot" style="background:#3b82f6"></div> Forecast Accuracy</div>
+        <div class="chart-legend-item"><div class="chart-legend-dot" style="background:#8b5cf6"></div> Scientific Hit Rate</div>
+        <div class="chart-legend-item"><div class="chart-legend-dot" style="background:#06b6d4"></div> Elliott Accuracy</div>
+      </div>` :
+          `<div class="chart-empty"><div class="chart-icon">📈</div>
+        <div>Trend-Chart erscheint nach den ersten Outcome-Daten</div>
+        <div style="font-size:11px;margin-top:4px;color:var(--text-dim)">Forecast: nach 1 Tag · Scientific/Elliott: nach 5 Tagen</div>
+      </div>`}
+  </div>`;
 
-            return lines.length ? lines.join(' ') : 'Daten werden gesammelt.';
-        }
+      // Weekly Comparison
+      const wc = r.weekly_comparison || {};
+      const compRows = [
+        { name: '📈 Forecast', ...wc.forecast },
+        { name: '🔬 Scientific', ...wc.scientific },
+        { name: '🌊 Elliott', ...wc.elliott },
+      ].map(row => {
+        const tw = row.this_week, lw = row.last_week;
+        const delta = (tw != null && lw != null) ? tw - lw : null;
+        const deltaClass = delta == null ? 'delta-neutral' : delta > 0.005 ? 'delta-positive' : delta < -0.005 ? 'delta-negative' : 'delta-neutral';
+        const deltaText = delta != null ? `${delta > 0 ? '+' : ''}${(delta * 100).toFixed(1)}%` : '—';
+        return `<tr>
+      <td>${row.name}</td>
+      <td style="text-align:center;font-weight:600">${pct(tw)}</td>
+      <td style="text-align:center">${pct(lw)}</td>
+      <td style="text-align:center" class="${deltaClass}">${deltaText}</td>
+    </tr>`;
+      }).join('');
 
-        function renderFeatureCard(key, feat) {
-            const meta = FEATURE_META[key] || { icon: '📋', accent: '#6b7280', label: '' };
-            const isStock = key === 'stock_analyzer';
+      const compSection = `<div class="comparison-section">
+    <h2>📊 Woche-über-Woche Vergleich</h2>
+    <table class="comparison-table">
+      <tr><th>Feature</th><th>Diese Woche</th><th>Letzte Woche</th><th>Veränderung</th></tr>
+      ${compRows}
+    </table>
+  </div>`;
 
-            let metricsHTML = '';
-            if (!isStock) {
-                metricsHTML += metricRow('Accuracy (7d)', pct(feat.accuracy_7d), trendBadge(feat.trend_accuracy));
-                metricsHTML += metricRow('Accuracy (30d)', pct(feat.accuracy_all));
-                if (feat.brier_7d != null) metricsHTML += metricRow('Brier Score (7d)', num(feat.brier_7d), trendBadge(feat.trend_brier));
-                if (feat.hit_rate_7d != null) metricsHTML += metricRow('Hit Rate (7d)', pct(feat.hit_rate_7d));
-                metricsHTML += metricRow('Predictions', String((feat.predictions_today ?? 0).toLocaleString()));
-                const accValue = feat.accuracy_7d ?? feat.accuracy_all;
-                metricsHTML += progressBar(accValue, meta.accent);
-            } else {
-                metricsHTML += metricRow('Stabilität', pct(feat.stability));
-                metricsHTML += metricRow('Churn', feat.churn != null ? String(feat.churn) : '—');
-                metricsHTML += metricRow('Rankings', String((feat.rankings_today ?? 0).toLocaleString()));
-                metricsHTML += progressBar(feat.stability, meta.accent);
-            }
+      // Deep Diagnosis per Feature
+      const diagHTML = featureOrder.map(key => {
+        const feat = r.features[key];
+        if (!feat) return '';
+        const meta = FEATURE_META[key];
+        const sections = deepDiagnosis(key, feat, daysActive, history);
+        if (!sections.length) return '';
 
-            return `
-        <div class="feature-card" style="--card-accent:${meta.accent}">
-          <div style="position:absolute;top:0;left:0;right:0;height:3px;background:${meta.accent};opacity:0.7"></div>
-          <div class="card-icon">${meta.icon}</div>
-          <div class="card-title">${feat.name}</div>
-          <div class="card-type">${meta.label}</div>
-          ${metricsHTML}
-        </div>`;
-        }
-
-        function metricRow(label, value, extra = '') {
-            return `<div class="metric-row">
-        <span class="metric-label">${label}</span>
-        <span class="metric-value">${value} ${extra}</span>
+        const cardsHTML = sections.map(s => {
+          const fixesHTML = s.fixes.length ? `<ul class="fix-list">${s.fixes.map(f =>
+            `<li class="fix-item">
+          <div class="fix-what">→ ${f.what}</div>
+          <div class="fix-how">${f.how}</div>
+          ${f.file ? `<span class="fix-file">📁 ${f.file}</span>` : ''}
+        </li>`).join('')}</ul>` : '';
+          return `<div class="diagnose-card sev-${s.severity}">
+        <div class="diagnose-title">${s.title}</div>
+        <div class="diagnose-text">${s.text}</div>
+        ${fixesHTML}
       </div>`;
-        }
+        }).join('');
 
-        function formatDate(dateStr) {
-            const months = ['Jan', 'Feb', 'Mär', 'Apr', 'Mai', 'Jun', 'Jul', 'Aug', 'Sep', 'Okt', 'Nov', 'Dez'];
-            const [y, m, d] = dateStr.split('-');
-            return `${parseInt(d)}. ${months[parseInt(m) - 1]} ${y}`;
-        }
+        return `<div class="diagnose-feature">
+      <div class="diagnose-feature-header" style="color:${meta.color}">${meta.icon} ${feat.name}</div>
+      ${cardsHTML}
+    </div>`;
+      }).join('');
 
-        async function loadAndRender() {
-            try {
-                const res = await fetch(REPORT_URL);
-                if (!res.ok) throw new Error(`HTTP ${res.status}`);
-                const report = await res.json();
+      document.getElementById('app').innerHTML = `
+    <div class="status-banner">
+      <div><div class="status-text" style="color:${statusColor}">${r.summary.overall_status}</div></div>
+      <div class="status-meta">
+        <span>📅 ${formatDate(r.date)}</span>
+        <span>📡 Tag ${daysActive}</span>
+        <span>🔮 ${r.summary.total_predictions_today.toLocaleString()} Vorhersagen</span>
+        <span>🕐 ${freshness}</span>
+      </div>
+    </div>
+    <div class="cards-grid">${cardsHTML}</div>
+    ${chartSection}
+    ${compSection}
+    <div class="diagnose-section">
+      <h2>🔍 Diagnose & Konkrete Nachbesserungen pro Feature</h2>
+      ${diagHTML}
+    </div>`;
+    }
 
-                const statusColor = report.summary.overall_status.includes('BESSER') ? 'var(--green)' :
-                    report.summary.overall_status.includes('SCHLECHTER') ? 'var(--red)' :
-                        report.summary.overall_status.includes('BOOTSTRAP') ? 'var(--accent)' : 'var(--yellow)';
+    function metricRow(label, value, extra = '') {
+      return `<div class="metric-row"><span class="metric-label">${label}</span><span class="metric-value">${value} ${extra}</span></div>`;
+    }
 
-                const cardsHTML = ['forecast', 'scientific', 'elliott', 'stock_analyzer']
-                    .map(k => report.features[k] ? renderFeatureCard(k, report.features[k]) : '')
-                    .join('');
+    function formatDate(ds) {
+      const m = ['Jan', 'Feb', 'Mär', 'Apr', 'Mai', 'Jun', 'Jul', 'Aug', 'Sep', 'Okt', 'Nov', 'Dez'];
+      const [y, mo, d] = ds.split('-');
+      return `${parseInt(d)}. ${m[parseInt(mo) - 1]} ${y}`;
+    }
 
-                const analysisHTML = ['forecast', 'scientific', 'elliott', 'stock_analyzer']
-                    .map(k => {
-                        const feat = report.features[k];
-                        if (!feat) return '';
-                        const meta = FEATURE_META[k];
-                        return `<div class="analysis-item" style="border-left-color:${meta.accent}">
-              <div class="feature-name" style="color:${meta.accent}">${meta.icon} ${feat.name}</div>
-              <div class="analysis-text">${selfCriticism(k, feat)}</div>
-            </div>`;
-                    }).join('');
-
-                document.getElementById('app').innerHTML = `
-          <div class="status-banner">
-            <div>
-              <div class="status-text" style="color:${statusColor}">${report.summary.overall_status}</div>
-            </div>
-            <div class="status-meta">
-              <span>📅 ${formatDate(report.date)}</span>
-              <span>🔮 ${report.summary.total_predictions_today.toLocaleString()} Vorhersagen</span>
-              <span>⏰ ${new Date(report.generated_at).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })}</span>
-            </div>
-          </div>
-
-          <div class="cards-grid">${cardsHTML}</div>
-
-          <div class="analysis-section">
-            <h2>🔍 Selbstkritische Analyse</h2>
-            ${analysisHTML}
-          </div>
-        `;
-            } catch (err) {
-                document.getElementById('app').innerHTML = `
-          <div class="error-state">
-            <p style="font-size:18px;margin-bottom:8px">⚠️ Report nicht verfügbar</p>
-            <p style="font-size:13px;color:var(--text-dim)">
-              Starte den Learning Cycle zuerst:<br>
-              <code style="background:var(--card);padding:4px 8px;border-radius:4px;margin-top:8px;display:inline-block">
-                node scripts/learning/run-daily-learning-cycle.mjs
-              </code>
-            </p>
-          </div>`;
-            }
-        }
-
-        loadAndRender();
-    </script>
+    async function loadAndRender() {
+      try {
+        const res = await fetch(REPORT_URL);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        render(await res.json());
+      } catch {
+        document.getElementById('app').innerHTML = `<div class="error-state">
+      <p style="font-size:18px;margin-bottom:8px">⚠️ Report nicht verfügbar</p>
+      <p style="font-size:13px;color:var(--text-dim)">Starte zuerst:<br>
+        <code style="background:var(--card);padding:4px 8px;border-radius:4px;margin-top:8px;display:inline-block">
+          node scripts/learning/run-daily-learning-cycle.mjs</code></p></div>`;
+      }
+    }
+    loadAndRender();
+  </script>
 </body>
 
 </html>

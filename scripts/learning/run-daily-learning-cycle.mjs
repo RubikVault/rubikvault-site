@@ -413,10 +413,59 @@ function computeFeatureMetrics(feature, date, lookbackDays = 30) {
 
 // ─── Report Builder ─────────────────────────────────────────────────────────
 function buildReport(date, forecastMetrics, scientificMetrics, elliottMetrics, stockStability, predCounts) {
+    // Build history from past reports (last 30 days)
+    const history = [];
+    for (let i = 29; i >= 0; i--) {
+        const d = daysAgo(date, i);
+        const pastReport = readJson(reportPath(d));
+        if (pastReport?.metrics) {
+            history.push({ date: d, ...pastReport.metrics });
+        }
+    }
+    // Add today's metrics to history
+    const todayMetrics = {
+        date,
+        forecast_accuracy_7d: forecastMetrics.accuracy_7d,
+        forecast_brier_7d: forecastMetrics.brier_7d,
+        scientific_accuracy_7d: scientificMetrics.accuracy_7d,
+        scientific_hit_rate_7d: scientificMetrics.hit_rate_7d,
+        elliott_accuracy_7d: elliottMetrics.accuracy_7d,
+        stock_stability: stockStability.stability,
+    };
+    history.push(todayMetrics);
+
+    // Compute weekly comparison (this week vs last week)
+    const thisWeekMetrics = history.filter(h => h.date >= daysAgo(date, 7));
+    const lastWeekMetrics = history.filter(h => h.date >= daysAgo(date, 14) && h.date < daysAgo(date, 7));
+
+    function weekAvg(arr, key) {
+        const vals = arr.map(h => h[key]).filter(v => v != null);
+        return vals.length ? round(vals.reduce((a, b) => a + b, 0) / vals.length) : null;
+    }
+
+    const weeklyComparison = {
+        forecast: { this_week: weekAvg(thisWeekMetrics, 'forecast_accuracy_7d'), last_week: weekAvg(lastWeekMetrics, 'forecast_accuracy_7d') },
+        scientific: { this_week: weekAvg(thisWeekMetrics, 'scientific_hit_rate_7d'), last_week: weekAvg(lastWeekMetrics, 'scientific_hit_rate_7d') },
+        elliott: { this_week: weekAvg(thisWeekMetrics, 'elliott_accuracy_7d'), last_week: weekAvg(lastWeekMetrics, 'elliott_accuracy_7d') },
+    };
+
+    // Detect start date (first report ever)
+    let startDate = date;
+    for (let i = 365; i >= 0; i--) {
+        const d = daysAgo(date, i);
+        if (readJson(reportPath(d))) { startDate = d; break; }
+    }
+    // Simpler: check oldest in history
+    if (history.length) startDate = history[0].date;
+
+    const daysActive = Math.max(1, Math.round((new Date(date) - new Date(startDate)) / 86400000) + 1);
+
     return {
-        schema: 'rubikvault_daily_learning_report_v1',
+        schema: 'rubikvault_daily_learning_report_v2',
         date,
         generated_at: new Date().toISOString(),
+        start_date: startDate,
+        days_active: daysActive,
         summary: {
             features_tracked: 4,
             total_predictions_today: (predCounts.forecast || 0) + (predCounts.scientific || 0) + (predCounts.elliott || 0),
@@ -448,9 +497,12 @@ function buildReport(date, forecastMetrics, scientificMetrics, elliottMetrics, s
                 rankings_today: predCounts.stock || 0,
             }
         },
+        weekly_comparison: weeklyComparison,
+        history,
         metrics: {
             forecast_accuracy_7d: forecastMetrics.accuracy_7d,
             forecast_brier_7d: forecastMetrics.brier_7d,
+            scientific_accuracy_7d: scientificMetrics.accuracy_7d,
             scientific_hit_rate_7d: scientificMetrics.hit_rate_7d,
             elliott_accuracy_7d: elliottMetrics.accuracy_7d,
             stock_stability: stockStability.stability,
