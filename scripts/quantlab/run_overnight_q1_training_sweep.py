@@ -66,6 +66,7 @@ def parse_args(argv: Iterable[str]) -> argparse.Namespace:
     p.add_argument("--plan-only", action="store_true")
     p.add_argument("--resume-from", default="")
     p.add_argument("--retry-failed", action="store_true")
+    p.add_argument("--global-lock-name", default="overnight_q1_training_sweep")
     return p.parse_args(list(argv))
 
 
@@ -182,6 +183,44 @@ def _acquire_job_lock(job_dir: Path) -> Path:
         "pid": os.getpid(),
         "acquired_at": utc_now_iso(),
         "job_dir": str(job_dir),
+    }
+    atomic_write_json(lock_path, lock_obj)
+
+    def _release() -> None:
+        try:
+            if not lock_path.exists():
+                return
+            curr = json.loads(lock_path.read_text())
+            if int(curr.get("pid") or 0) == os.getpid():
+                lock_path.unlink(missing_ok=True)
+        except Exception:
+            pass
+
+    atexit.register(_release)
+    return lock_path
+
+
+def _acquire_named_lock(quant_root: Path, lock_name: str) -> Path:
+    safe = "".join(ch if (ch.isalnum() or ch in {"_", "-", "."}) else "_" for ch in str(lock_name or "").strip())
+    if not safe:
+        safe = "overnight_q1_training_sweep"
+    lock_dir = quant_root / "jobs" / "_locks"
+    lock_dir.mkdir(parents=True, exist_ok=True)
+    lock_path = lock_dir / f"{safe}.lock.json"
+    if lock_path.exists():
+        try:
+            lock = json.loads(lock_path.read_text())
+        except Exception:
+            lock = {}
+        pid = int(lock.get("pid") or 0)
+        if pid > 0 and _pid_alive(pid):
+            raise RuntimeError(f"named_lock_active name={safe} pid={pid} path={lock_path}")
+    lock_obj = {
+        "schema": "quantlab_q1_named_lock_v1",
+        "name": safe,
+        "pid": os.getpid(),
+        "acquired_at": utc_now_iso(),
+        "quant_root": str(quant_root),
     }
     atomic_write_json(lock_path, lock_obj)
 
@@ -496,6 +535,7 @@ def main(argv: Iterable[str]) -> int:
         job_dir = quant_root / "jobs" / job_name
     job_dir.mkdir(parents=True, exist_ok=True)
     _acquire_job_lock(job_dir)
+    _acquire_named_lock(quant_root, args.global_lock_name)
     logs_dir = job_dir / "logs"
     logs_dir.mkdir(parents=True, exist_ok=True)
     state_path = job_dir / "state.json"
@@ -518,6 +558,7 @@ def main(argv: Iterable[str]) -> int:
         "stop_after_consecutive_failures": int(args.stop_after_consecutive_failures),
         "task_timeout_minutes": float(args.task_timeout_minutes),
         "max_hours": float(args.max_hours),
+        "global_lock_name": str(args.global_lock_name),
     }
     if args.resume_from and state_path.exists():
         state = json.loads(state_path.read_text())

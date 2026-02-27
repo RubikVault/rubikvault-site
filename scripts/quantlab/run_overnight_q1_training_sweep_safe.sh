@@ -45,4 +45,5 @@ exec "$PYTHON_BIN" scripts/quantlab/run_overnight_q1_training_sweep.py \
   --sleep-between-tasks-sec 25 \
   --stop-after-consecutive-failures 2 \
   --max-hours "$MAX_HOURS" \
-  --job-name "$JOB_NAME"
+  --job-name "$JOB_NAME" \
+  --global-lock-name overnight_q1_training_sweep_safe

@@ -31,7 +31,9 @@ Remaining critical path focus:
 
 Latest progress update (2026-02-27):
 - Overnight orchestrator hardened with stale-heartbeat watchdog + auto-retry and safe nightly wrapper script.
+- Added named global lock for overnight jobs (prevents duplicate parallel runs).
 - Stage-B Q1-light hardened with stricter fold-policy minima and additional CPCV/stability gates (`cpcv_light_sharpe_p25`, `ic_fold_std_proxy`).
+- Contract-layer materializer now preserves existing corp-actions/delistings by default (no implicit empty overwrite).
 
 ## Day 1 - Daily delta ingest skeleton (Stocks+ETFs) ✅
 

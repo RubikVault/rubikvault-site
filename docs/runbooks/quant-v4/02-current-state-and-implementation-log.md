@@ -1039,3 +1039,42 @@ Validation run:
 - output report:
   - `/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab/runs/run_id=cheapgateA_tsplits_2026-02-12/outputs/stage_b_light/stage_b_light_report.json`
 - runtime status: command succeeded, stricter gates active, survivors in this sample run = `0` (expected with stricter thresholds).
+
+### 20.5 Overnight orchestration guardrail: global lock (no parallel duplicates)
+
+Updated:
+- `/Users/michaelpuchowezki/Dev/rubikvault-site/scripts/quantlab/run_overnight_q1_training_sweep.py`
+- `/Users/michaelpuchowezki/Dev/rubikvault-site/scripts/quantlab/run_overnight_q1_training_sweep_safe.sh`
+
+Change:
+- new runner arg: `--global-lock-name` (default: `overnight_q1_training_sweep`)
+- lock path:
+  - `/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab/jobs/_locks/<name>.lock.json`
+- behavior:
+  - blocks startup if another live PID already holds the same named lock
+  - prevents duplicate parallel overnight jobs with identical logical purpose
+- safe wrapper now always uses:
+  - `--global-lock-name overnight_q1_training_sweep_safe`
+
+### 20.6 Data-Truth contract-layer fix (no accidental overwrite to empty)
+
+Updated:
+- `/Users/michaelpuchowezki/Dev/rubikvault-site/scripts/quantlab/materialize_snapshot_contract_layers_q1.py`
+
+Issue fixed:
+- previous default behavior could overwrite existing `corp_actions.parquet` and `delistings.parquet` with empty placeholders.
+
+New behavior:
+- default is preserve-existing contract layers if files already exist.
+- explicit empty rewrite is now opt-in only:
+  - `--force-empty`
+- contract manifest now records:
+  - `source_mode` (`preserved_existing_snapshot_layer`, `empty_contracted_placeholder`, `repaired_to_empty_placeholder`)
+  - actual row counts written into snapshot manifest.
+
+Validation:
+- run:
+  - `quantlab/.venv/bin/python scripts/quantlab/materialize_snapshot_contract_layers_q1.py --quant-root /Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab --snapshot-id 2026-02-26_670417f6fae7_q1step2bars`
+- observed:
+  - `corp_actions_rows=0 mode=preserved_existing_snapshot_layer`
+  - `delistings_rows=0 mode=preserved_existing_snapshot_layer`

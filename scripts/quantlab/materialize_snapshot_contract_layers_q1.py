@@ -20,7 +20,7 @@ def parse_args(argv: Iterable[str]) -> argparse.Namespace:
     p = argparse.ArgumentParser()
     p.add_argument("--quant-root", default=DEFAULT_QUANT_ROOT)
     p.add_argument("--snapshot-id", default="")
-    p.add_argument("--force-empty", action="store_true", default=True)
+    p.add_argument("--force-empty", action="store_true", default=False)
     return p.parse_args(list(argv))
 
 
@@ -65,26 +65,68 @@ def main(argv: Iterable[str]) -> int:
 
     corp_path = snap_dir / "corp_actions.parquet"
     delist_path = snap_dir / "delistings.parquet"
-    _write_empty_parquet(corp_path, corp_schema)
-    _write_empty_parquet(delist_path, delist_schema)
+    corp_rows = 0
+    delist_rows = 0
+    corp_mode = "empty_contracted_placeholder"
+    delist_mode = "empty_contracted_placeholder"
+    if args.force_empty:
+        _write_empty_parquet(corp_path, corp_schema)
+        _write_empty_parquet(delist_path, delist_schema)
+    else:
+        if corp_path.exists():
+            try:
+                corp_pf = pq.ParquetFile(corp_path)
+                corp_rows = int(corp_pf.metadata.num_rows or 0)
+                corp_mode = "preserved_existing_snapshot_layer"
+            except Exception:
+                _write_empty_parquet(corp_path, corp_schema)
+                corp_rows = 0
+                corp_mode = "repaired_to_empty_placeholder"
+        else:
+            _write_empty_parquet(corp_path, corp_schema)
+            corp_rows = 0
+            corp_mode = "empty_contracted_placeholder"
+
+        if delist_path.exists():
+            try:
+                delist_pf = pq.ParquetFile(delist_path)
+                delist_rows = int(delist_pf.metadata.num_rows or 0)
+                delist_mode = "preserved_existing_snapshot_layer"
+            except Exception:
+                _write_empty_parquet(delist_path, delist_schema)
+                delist_rows = 0
+                delist_mode = "repaired_to_empty_placeholder"
+        else:
+            _write_empty_parquet(delist_path, delist_schema)
+            delist_rows = 0
+            delist_mode = "empty_contracted_placeholder"
 
     contract_info = {
         "schema": "quantlab_contract_layers_q1_v1",
         "generated_at": utc_now_iso(),
         "snapshot_id": manifest.get("snapshot_id"),
+        "force_empty": bool(args.force_empty),
         "corp_actions": {
             "path": str(corp_path),
-            "rows": 0,
+            "rows": int(corp_rows),
             "schema": [{"name": f.name, "type": str(f.type)} for f in corp_schema],
-            "source_mode": "empty_contracted_placeholder",
-            "reason": "EODHD plan coverage for corp actions not integrated into Q1 snapshot pipeline yet",
+            "source_mode": corp_mode,
+            "reason": (
+                "Preserved existing snapshot contract layer."
+                if corp_mode == "preserved_existing_snapshot_layer"
+                else "EODHD plan coverage for corp actions not integrated into Q1 snapshot pipeline yet"
+            ),
         },
         "delistings": {
             "path": str(delist_path),
-            "rows": 0,
+            "rows": int(delist_rows),
             "schema": [{"name": f.name, "type": str(f.type)} for f in delist_schema],
-            "source_mode": "empty_contracted_placeholder",
-            "reason": "Delisting feed integration deferred; contract established in Q1",
+            "source_mode": delist_mode,
+            "reason": (
+                "Preserved existing snapshot contract layer."
+                if delist_mode == "preserved_existing_snapshot_layer"
+                else "Delisting feed integration deferred; contract established in Q1"
+            ),
         },
     }
     contract_path = snap_dir / "contract_layers_manifest.json"
@@ -99,8 +141,8 @@ def main(argv: Iterable[str]) -> int:
         }
     )
     manifest.setdefault("counts", {})
-    manifest["counts"]["corp_actions_rows_total"] = 0
-    manifest["counts"]["delistings_rows_total"] = 0
+    manifest["counts"]["corp_actions_rows_total"] = int(corp_rows)
+    manifest["counts"]["delistings_rows_total"] = int(delist_rows)
     manifest.setdefault("hashes", {})
     manifest["hashes"]["contract_layers_manifest_hash"] = stable_hash_file(contract_path)
     manifest["hashes"]["corp_actions_hash"] = stable_hash_file(corp_path)
@@ -108,8 +150,8 @@ def main(argv: Iterable[str]) -> int:
     atomic_write_json(manifest_path, manifest)
 
     print(f"snapshot_id={manifest.get('snapshot_id')}")
-    print(f"corp_actions_rows=0 path={corp_path}")
-    print(f"delistings_rows=0 path={delist_path}")
+    print(f"corp_actions_rows={corp_rows} mode={corp_mode} path={corp_path}")
+    print(f"delistings_rows={delist_rows} mode={delist_mode} path={delist_path}")
     return 0
 
 
