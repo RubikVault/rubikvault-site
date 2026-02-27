@@ -1053,6 +1053,9 @@ Change:
 - behavior:
   - blocks startup if another live PID already holds the same named lock
   - prevents duplicate parallel overnight jobs with identical logical purpose
+- resume semantics hardened:
+  - when resuming with `--retry-failed`, failed tasks are reset to `attempts=0` before retry scheduling
+  - avoids misleading `attempt=3/2` style counters after long-running resumes
 - safe wrapper now always uses:
   - `--global-lock-name overnight_q1_training_sweep_safe`
 

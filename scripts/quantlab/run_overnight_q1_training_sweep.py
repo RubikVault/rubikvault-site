@@ -301,7 +301,7 @@ def _subprocess_env(args: argparse.Namespace) -> dict[str, str]:
 
 def _rss_kib_for_pid(pid: int) -> int | None:
     try:
-        out = subprocess.check_output(["ps", "-o", "rss=", "-p", str(pid)], text=True).strip()
+        out = subprocess.check_output(["ps", "-o", "rss=", "-p", str(pid)], text=True, timeout=2.0).strip()
         if not out:
             return None
         return int(out.splitlines()[0].strip())
@@ -311,7 +311,7 @@ def _rss_kib_for_pid(pid: int) -> int | None:
 
 def _cpu_pct_for_pid(pid: int) -> float:
     try:
-        out = subprocess.check_output(["ps", "-o", "%cpu=", "-p", str(pid)], text=True).strip()
+        out = subprocess.check_output(["ps", "-o", "%cpu=", "-p", str(pid)], text=True, timeout=2.0).strip()
         if not out:
             return 0.0
         return float(out.splitlines()[0].strip())
@@ -328,7 +328,7 @@ def _child_pids_recursive(pid: int) -> list[int]:
             continue
         seen.add(parent)
         try:
-            out = subprocess.check_output(["pgrep", "-P", str(parent)], text=True).strip()
+            out = subprocess.check_output(["pgrep", "-P", str(parent)], text=True, timeout=2.0).strip()
         except Exception:
             out = ""
         for line in out.splitlines():
@@ -574,6 +574,7 @@ def main(argv: Iterable[str]) -> int:
                 row["finished_at"] = None
                 row["rc"] = None
                 row["ok"] = None
+                row["attempts"] = 0
                 row.setdefault("recovered_notes", []).append("reset_from_failed_on_retry_resume")
         # Recompute summary after recovery.
         pending = sum(1 for t in state["tasks"] if t["status"] == "pending")
