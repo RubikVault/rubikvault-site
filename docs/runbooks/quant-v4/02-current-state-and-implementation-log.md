@@ -964,3 +964,23 @@ Configured safe mode (current run):
 - `sleep_between_tasks_sec = 25`
 - `stop_after_consecutive_failures = 2`
 - `task_timeout_minutes = 210`
+
+### 20.2 Morning check (2026-02-27 CET)
+
+Overnight safe run status (current):
+- job dir:
+  - `/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab/jobs/overnight_q1_training_sweep_safe_20260226_2159`
+- progress snapshot:
+  - `done = 38`
+  - `pending = 26`
+  - `failed = 0`
+
+Observed runtime issue:
+- one running task (`asof2026-02-12_p90_top40000`) appears stalled (worker process alive, but no fresh monitor heartbeat for an extended period).
+- this is an orchestration robustness issue, not a data-integrity failure.
+
+Follow-up hardening target:
+- add stale-heartbeat watchdog to the overnight runner (kill/retry task if monitor heartbeat exceeds a hard threshold).
+
+Note:
+- a state-summary consistency fix was added to the runner code so future resumes correctly reset stop flags and keep `running` counters accurate while tasks are active.

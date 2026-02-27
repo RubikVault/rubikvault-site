@@ -473,7 +473,16 @@ def main(argv: Iterable[str]) -> int:
         running = sum(1 for t in state["tasks"] if t["status"] == "running")
         done = sum(1 for t in state["tasks"] if t["status"] == "done")
         failed = sum(1 for t in state["tasks"] if t["status"] == "failed")
-        state["summary"].update({"pending": pending, "running": running, "done": done, "failed": failed, "stopped_due_to_time_limit": False})
+        state["summary"].update(
+            {
+                "pending": pending,
+                "running": running,
+                "done": done,
+                "failed": failed,
+                "stopped_due_to_time_limit": False,
+                "stopped_due_to_consecutive_failures": False,
+            }
+        )
         state["updated_at"] = utc_now_iso()
         atomic_write_json(state_path, state)
     else:
@@ -545,6 +554,12 @@ def main(argv: Iterable[str]) -> int:
             row["status"] = "running"
             row["attempts"] = int(row.get("attempts") or 0) + 1
             row["started_at"] = utc_now_iso()
+            # Keep summary counters truthful while a task is active.
+            pending = sum(1 for t in state["tasks"] if t["status"] == "pending")
+            running = sum(1 for t in state["tasks"] if t["status"] == "running")
+            done = sum(1 for t in state["tasks"] if t["status"] == "done")
+            failed = sum(1 for t in state["tasks"] if t["status"] == "failed")
+            state["summary"].update({"pending": pending, "running": running, "done": done, "failed": failed})
             state["updated_at"] = utc_now_iso()
             atomic_write_json(state_path, state)
 
