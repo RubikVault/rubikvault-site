@@ -54,7 +54,13 @@ def parse_args(argv: Iterable[str]) -> argparse.Namespace:
     p.add_argument("--max-rss-gib", type=float, default=12.0)
     p.add_argument("--monitor-interval-sec", type=float, default=5.0)
     p.add_argument("--metrics-log-interval-sec", type=float, default=30.0)
+    p.add_argument("--stale-heartbeat-minutes", type=float, default=45.0)
+    p.add_argument("--stale-min-elapsed-minutes", type=float, default=20.0)
+    p.add_argument("--stale-cpu-pct-max", type=float, default=1.0)
     p.add_argument("--sleep-between-tasks-sec", type=float, default=20.0)
+    p.add_argument("--retry-cooldown-sec", type=float, default=30.0)
+    p.add_argument("--max-retries-per-task", type=int, default=1)
+    p.add_argument("--retryable-exit-codes", default="124,137,142")
     p.add_argument("--stop-after-consecutive-failures", type=int, default=3)
     p.add_argument("--job-name", default="")
     p.add_argument("--plan-only", action="store_true")
@@ -87,6 +93,10 @@ def _parse_csv_ints(value: str) -> list[int]:
             continue
         out.append(int(s))
     return out
+
+
+def _parse_csv_int_set(value: str) -> set[int]:
+    return {int(v) for v in _parse_csv_ints(value)}
 
 
 def _recent_asof_dates_from_existing_panel(quant_root: Path, count: int) -> list[str]:
@@ -260,6 +270,16 @@ def _rss_kib_for_pid(pid: int) -> int | None:
         return None
 
 
+def _cpu_pct_for_pid(pid: int) -> float:
+    try:
+        out = subprocess.check_output(["ps", "-o", "%cpu=", "-p", str(pid)], text=True).strip()
+        if not out:
+            return 0.0
+        return float(out.splitlines()[0].strip())
+    except Exception:
+        return 0.0
+
+
 def _child_pids_recursive(pid: int) -> list[int]:
     seen: set[int] = set()
     queue = [pid]
@@ -292,6 +312,13 @@ def _rss_kib_for_pid_tree(pid: int) -> int:
     return total
 
 
+def _cpu_pct_for_pid_tree(pid: int) -> float:
+    total = 0.0
+    for p in _child_pids_recursive(pid):
+        total += _cpu_pct_for_pid(p)
+    return total
+
+
 def _child_preexec_nice(task_nice: int):
     def _fn() -> None:
         try:
@@ -313,13 +340,32 @@ def _run_task_with_monitor(
     monitor_interval = max(1.0, float(args.monitor_interval_sec))
     metrics_interval = max(monitor_interval, float(args.metrics_log_interval_sec))
     timeout_sec = max(60.0, float(args.task_timeout_minutes) * 60.0)
+    stale_heartbeat_sec = max(300.0, float(args.stale_heartbeat_minutes) * 60.0)
+    stale_min_elapsed_sec = max(120.0, float(args.stale_min_elapsed_minutes) * 60.0)
+    stale_cpu_pct_max = max(0.0, float(args.stale_cpu_pct_max))
 
     peak_rss_kib = 0
+    peak_cpu_pct = 0.0
     samples = 0
     timed_out = False
     killed_for_rss = False
+    killed_for_stale_heartbeat = False
+    stale_last_output_age_sec = 0.0
     start = time.monotonic()
     next_metrics_log = start + metrics_interval
+
+    def _terminate_process_group(pid: int) -> None:
+        try:
+            os.killpg(pid, signal.SIGTERM)
+        except Exception:
+            pass
+        try:
+            proc.wait(timeout=15)
+        except subprocess.TimeoutExpired:
+            try:
+                os.killpg(pid, signal.SIGKILL)
+            except Exception:
+                pass
 
     with task_log.open("a") as tlog:
         proc = subprocess.Popen(
@@ -331,28 +377,41 @@ def _run_task_with_monitor(
             preexec_fn=_child_preexec_nice(int(args.task_nice)),
             start_new_session=True,
         )
-        tlog.write(
-            f"[{utc_now_iso()}] MONITOR start pid={proc.pid} "
-            f"task_nice={args.task_nice} threads_cap={args.threads_cap} max_rss_gib={args.max_rss_gib}\n"
+        last_child_output_mtime = float(task_log.stat().st_mtime if task_log.exists() else time.time())
+        driver.write(
+            f"[{utc_now_iso()}] MONITOR start pid={proc.pid} task_nice={args.task_nice} "
+            f"threads_cap={args.threads_cap} max_rss_gib={args.max_rss_gib} "
+            f"stale_heartbeat_minutes={args.stale_heartbeat_minutes}\n"
         )
-        tlog.flush()
+        driver.flush()
 
         rc: int | None = None
         while True:
             rc = proc.poll()
             now = time.monotonic()
             rss_kib = _rss_kib_for_pid_tree(proc.pid)
+            cpu_pct = _cpu_pct_for_pid_tree(proc.pid)
             if rss_kib > peak_rss_kib:
                 peak_rss_kib = rss_kib
+            if cpu_pct > peak_cpu_pct:
+                peak_cpu_pct = cpu_pct
             samples += 1
+
+            try:
+                curr_mtime = float(task_log.stat().st_mtime)
+                if curr_mtime > last_child_output_mtime:
+                    last_child_output_mtime = curr_mtime
+            except Exception:
+                pass
+            stale_last_output_age_sec = max(0.0, time.time() - last_child_output_mtime)
 
             if now >= next_metrics_log:
                 msg = (
                     f"[{utc_now_iso()}] MONITOR rss_gib={rss_kib / (1024*1024):.3f} "
-                    f"peak_rss_gib={peak_rss_kib / (1024*1024):.3f} elapsed_sec={round(now-start,1)}"
+                    f"cpu_pct={cpu_pct:.2f} peak_cpu_pct={peak_cpu_pct:.2f} "
+                    f"peak_rss_gib={peak_rss_kib / (1024*1024):.3f} "
+                    f"elapsed_sec={round(now-start,1)} stale_output_age_sec={round(stale_last_output_age_sec,1)}"
                 )
-                tlog.write(msg + "\n")
-                tlog.flush()
                 driver.write(msg + "\n")
                 driver.flush()
                 next_metrics_log = now + metrics_interval
@@ -362,40 +421,36 @@ def _run_task_with_monitor(
 
             if rss_kib > 0 and rss_kib > max_rss_kib:
                 killed_for_rss = True
-                tlog.write(
+                driver.write(
                     f"[{utc_now_iso()}] MONITOR kill reason=max_rss_exceeded "
                     f"rss_gib={rss_kib/(1024*1024):.3f} limit_gib={args.max_rss_gib}\n"
                 )
-                tlog.flush()
-                try:
-                    os.killpg(proc.pid, signal.SIGTERM)
-                except Exception:
-                    pass
-                try:
-                    proc.wait(timeout=15)
-                except subprocess.TimeoutExpired:
-                    try:
-                        os.killpg(proc.pid, signal.SIGKILL)
-                    except Exception:
-                        pass
+                driver.flush()
+                _terminate_process_group(proc.pid)
                 rc = proc.poll()
                 break
 
             if (now - start) > timeout_sec:
                 timed_out = True
-                tlog.write(f"[{utc_now_iso()}] TIMEOUT task_timeout_minutes={args.task_timeout_minutes}\n")
-                tlog.flush()
-                try:
-                    os.killpg(proc.pid, signal.SIGTERM)
-                except Exception:
-                    pass
-                try:
-                    proc.wait(timeout=15)
-                except subprocess.TimeoutExpired:
-                    try:
-                        os.killpg(proc.pid, signal.SIGKILL)
-                    except Exception:
-                        pass
+                driver.write(f"[{utc_now_iso()}] TIMEOUT task_timeout_minutes={args.task_timeout_minutes}\n")
+                driver.flush()
+                _terminate_process_group(proc.pid)
+                rc = proc.poll()
+                break
+
+            if (
+                (now - start) > stale_min_elapsed_sec
+                and stale_last_output_age_sec > stale_heartbeat_sec
+                and cpu_pct <= stale_cpu_pct_max
+            ):
+                killed_for_stale_heartbeat = True
+                driver.write(
+                    f"[{utc_now_iso()}] MONITOR kill reason=stale_heartbeat "
+                    f"stale_output_age_sec={round(stale_last_output_age_sec,1)} "
+                    f"stale_heartbeat_sec={round(stale_heartbeat_sec,1)} cpu_pct={cpu_pct:.2f}\n"
+                )
+                driver.flush()
+                _terminate_process_group(proc.pid)
                 rc = proc.poll()
                 break
 
@@ -405,14 +460,19 @@ def _run_task_with_monitor(
             final_rc = 124
         elif killed_for_rss:
             final_rc = 137
+        elif killed_for_stale_heartbeat:
+            final_rc = 142
         else:
             final_rc = int(rc or 0)
         return final_rc, {
             "peak_rss_kib": peak_rss_kib,
             "peak_rss_gib": round(peak_rss_kib / (1024 * 1024), 3),
+            "peak_cpu_pct": round(float(peak_cpu_pct), 3),
             "samples": samples,
             "timed_out": timed_out,
             "killed_for_rss": killed_for_rss,
+            "killed_for_stale_heartbeat": killed_for_stale_heartbeat,
+            "stale_last_output_age_sec": round(float(stale_last_output_age_sec), 3),
             "threads_cap": int(args.threads_cap),
             "task_nice": int(args.task_nice),
         }
@@ -448,7 +508,13 @@ def main(argv: Iterable[str]) -> int:
         "max_rss_gib": float(args.max_rss_gib),
         "monitor_interval_sec": float(args.monitor_interval_sec),
         "metrics_log_interval_sec": float(args.metrics_log_interval_sec),
+        "stale_heartbeat_minutes": float(args.stale_heartbeat_minutes),
+        "stale_min_elapsed_minutes": float(args.stale_min_elapsed_minutes),
+        "stale_cpu_pct_max": float(args.stale_cpu_pct_max),
         "sleep_between_tasks_sec": float(args.sleep_between_tasks_sec),
+        "retry_cooldown_sec": float(args.retry_cooldown_sec),
+        "max_retries_per_task": int(args.max_retries_per_task),
+        "retryable_exit_codes": sorted(_parse_csv_int_set(args.retryable_exit_codes)),
         "stop_after_consecutive_failures": int(args.stop_after_consecutive_failures),
         "task_timeout_minutes": float(args.task_timeout_minutes),
         "max_hours": float(args.max_hours),
@@ -538,87 +604,136 @@ def main(argv: Iterable[str]) -> int:
 
     start_monotonic = time.monotonic()
     consecutive_failures = 0
+    retryable_exit_codes = _parse_csv_int_set(args.retryable_exit_codes)
+    max_retries_per_task = max(0, int(args.max_retries_per_task))
+    max_attempts_per_task = 1 + max_retries_per_task
     with stdout_log.open("a") as driver:
         driver.write(f"[{utc_now_iso()}] start snapshot_id={snapshot_id} tasks={len(state['tasks'])} max_hours={args.max_hours}\n")
         driver.flush()
         for row in state["tasks"]:
             if row["status"] == "done":
                 continue
-            elapsed_hours = (time.monotonic() - start_monotonic) / 3600.0
-            if elapsed_hours >= args.max_hours:
-                state["summary"]["stopped_due_to_time_limit"] = True
-                break
-            if int(args.stop_after_consecutive_failures) > 0 and consecutive_failures >= int(args.stop_after_consecutive_failures):
-                state["summary"]["stopped_due_to_consecutive_failures"] = True
-                break
-            row["status"] = "running"
-            row["attempts"] = int(row.get("attempts") or 0) + 1
-            row["started_at"] = utc_now_iso()
-            # Keep summary counters truthful while a task is active.
-            pending = sum(1 for t in state["tasks"] if t["status"] == "pending")
-            running = sum(1 for t in state["tasks"] if t["status"] == "running")
-            done = sum(1 for t in state["tasks"] if t["status"] == "done")
-            failed = sum(1 for t in state["tasks"] if t["status"] == "failed")
-            state["summary"].update({"pending": pending, "running": running, "done": done, "failed": failed})
-            state["updated_at"] = utc_now_iso()
-            atomic_write_json(state_path, state)
+            while True:
+                elapsed_hours = (time.monotonic() - start_monotonic) / 3600.0
+                if elapsed_hours >= args.max_hours:
+                    state["summary"]["stopped_due_to_time_limit"] = True
+                    break
+                if int(args.stop_after_consecutive_failures) > 0 and consecutive_failures >= int(args.stop_after_consecutive_failures):
+                    state["summary"]["stopped_due_to_consecutive_failures"] = True
+                    break
 
-            task = Task(
-                task_id=row["task_id"],
-                asof_end_date=row["asof_end_date"],
-                panel_days=int(row["panel_days"]),
-                top_liquid_n=int(row["top_liquid_n"]),
-            )
-            cmd = _task_cmd(args, task, quant_root, snapshot_id)
-            task_log = logs_dir / f"{task.task_id}.log"
-            row["log_file"] = str(task_log)
-            atomic_write_json(state_path, state)
-            row_start = time.monotonic()
-            driver.write(f"[{utc_now_iso()}] START {task.task_id} cmd={shlex.join(cmd)}\n")
-            driver.flush()
-            lines: list[str] = []
-            with task_log.open("a") as tlog:
-                tlog.write(f"[{utc_now_iso()}] START {task.task_id}\n")
-                tlog.flush()
-            rc, monitor_meta = _run_task_with_monitor(cmd, task_log, args, driver)
-            with task_log.open("a") as tlog:
-                tlog.write(f"[{utc_now_iso()}] END rc={rc}\n")
-                tlog.flush()
-            try:
-                # Parse stdout markers from the task log after completion.
-                lines = task_log.read_text(errors="replace").splitlines()[-400:]
-            except Exception:
-                lines = []
-            parsed = _parse_runner_stdout(lines)
-            row["rc"] = rc
-            row["finished_at"] = utc_now_iso()
-            row["elapsed_sec"] = round(time.monotonic() - row_start, 3)
-            row["runner_run_id"] = parsed.get("run_id")
-            row["status_path"] = parsed.get("status")
-            row["orchestrator_report"] = parsed.get("orchestrator_report")
-            row["ok"] = (parsed.get("ok", "").lower() == "true")
-            row["monitor"] = monitor_meta
-            row["peak_rss_gib"] = monitor_meta.get("peak_rss_gib")
-            row["status"] = "done" if rc == 0 and row["ok"] is not False else "failed"
-            if row["status"] == "failed":
-                consecutive_failures += 1
-            else:
-                consecutive_failures = 0
-            state["updated_at"] = utc_now_iso()
-            # recompute summary
-            pending = sum(1 for t in state["tasks"] if t["status"] == "pending")
-            running = sum(1 for t in state["tasks"] if t["status"] == "running")
-            done = sum(1 for t in state["tasks"] if t["status"] == "done")
-            failed = sum(1 for t in state["tasks"] if t["status"] == "failed")
-            state["summary"].update({"pending": pending, "running": running, "done": done, "failed": failed})
-            atomic_write_json(state_path, state)
-            driver.write(
-                f"[{utc_now_iso()}] END {task.task_id} rc={rc} ok={row['ok']} elapsed_sec={row['elapsed_sec']} "
-                f"done={done} failed={failed} pending={pending}\n"
-            )
-            driver.flush()
-            if float(args.sleep_between_tasks_sec) > 0 and row["status"] == "done":
-                time.sleep(float(args.sleep_between_tasks_sec))
+                row["status"] = "running"
+                row["attempts"] = int(row.get("attempts") or 0) + 1
+                attempt_no = int(row["attempts"])
+                row["started_at"] = utc_now_iso()
+                pending = sum(1 for t in state["tasks"] if t["status"] == "pending")
+                running = sum(1 for t in state["tasks"] if t["status"] == "running")
+                done = sum(1 for t in state["tasks"] if t["status"] == "done")
+                failed = sum(1 for t in state["tasks"] if t["status"] == "failed")
+                state["summary"].update({"pending": pending, "running": running, "done": done, "failed": failed})
+                state["updated_at"] = utc_now_iso()
+                atomic_write_json(state_path, state)
+
+                task = Task(
+                    task_id=row["task_id"],
+                    asof_end_date=row["asof_end_date"],
+                    panel_days=int(row["panel_days"]),
+                    top_liquid_n=int(row["top_liquid_n"]),
+                )
+                cmd = _task_cmd(args, task, quant_root, snapshot_id)
+                log_suffix = "" if attempt_no == 1 else f".attempt{attempt_no:02d}"
+                task_log = logs_dir / f"{task.task_id}{log_suffix}.log"
+                row["log_file"] = str(task_log)
+                row.setdefault("attempt_logs", [])
+                if str(task_log) not in row["attempt_logs"]:
+                    row["attempt_logs"].append(str(task_log))
+                atomic_write_json(state_path, state)
+
+                row_start = time.monotonic()
+                driver.write(f"[{utc_now_iso()}] START {task.task_id} attempt={attempt_no}/{max_attempts_per_task} cmd={shlex.join(cmd)}\n")
+                driver.flush()
+                lines: list[str] = []
+                with task_log.open("a") as tlog:
+                    tlog.write(f"[{utc_now_iso()}] START {task.task_id} attempt={attempt_no}\n")
+                    tlog.flush()
+                rc, monitor_meta = _run_task_with_monitor(cmd, task_log, args, driver)
+                with task_log.open("a") as tlog:
+                    tlog.write(f"[{utc_now_iso()}] END rc={rc}\n")
+                    tlog.flush()
+                try:
+                    lines = task_log.read_text(errors="replace").splitlines()[-400:]
+                except Exception:
+                    lines = []
+                parsed = _parse_runner_stdout(lines)
+                row["rc"] = rc
+                row["finished_at"] = utc_now_iso()
+                row["elapsed_sec"] = round(time.monotonic() - row_start, 3)
+                row["runner_run_id"] = parsed.get("run_id")
+                row["status_path"] = parsed.get("status")
+                row["orchestrator_report"] = parsed.get("orchestrator_report")
+                row["ok"] = (parsed.get("ok", "").lower() == "true")
+                row["monitor"] = monitor_meta
+                row["peak_rss_gib"] = monitor_meta.get("peak_rss_gib")
+
+                attempt_failed = (rc != 0) or (row["ok"] is False)
+                retryable = bool(attempt_failed and int(rc) in retryable_exit_codes and attempt_no < max_attempts_per_task)
+                row.setdefault("attempt_history", [])
+                row["attempt_history"].append(
+                    {
+                        "attempt_no": attempt_no,
+                        "started_at": row.get("started_at"),
+                        "finished_at": row.get("finished_at"),
+                        "elapsed_sec": row.get("elapsed_sec"),
+                        "rc": int(rc),
+                        "ok": bool(row.get("ok")),
+                        "retryable": bool(retryable),
+                        "monitor": monitor_meta,
+                        "log_file": str(task_log),
+                    }
+                )
+                if attempt_failed and retryable:
+                    row["status"] = "pending"
+                    row["retry_scheduled"] = True
+                    row["retry_reason"] = f"retryable_exit_code_{rc}"
+                    state["updated_at"] = utc_now_iso()
+                    pending = sum(1 for t in state["tasks"] if t["status"] == "pending")
+                    running = sum(1 for t in state["tasks"] if t["status"] == "running")
+                    done = sum(1 for t in state["tasks"] if t["status"] == "done")
+                    failed = sum(1 for t in state["tasks"] if t["status"] == "failed")
+                    state["summary"].update({"pending": pending, "running": running, "done": done, "failed": failed})
+                    atomic_write_json(state_path, state)
+                    driver.write(
+                        f"[{utc_now_iso()}] RETRY {task.task_id} attempt={attempt_no} rc={rc} "
+                        f"cooldown_sec={args.retry_cooldown_sec}\n"
+                    )
+                    driver.flush()
+                    if float(args.retry_cooldown_sec) > 0:
+                        time.sleep(float(args.retry_cooldown_sec))
+                    continue
+
+                row["status"] = "done" if not attempt_failed else "failed"
+                if row["status"] == "failed":
+                    consecutive_failures += 1
+                else:
+                    consecutive_failures = 0
+                state["updated_at"] = utc_now_iso()
+                pending = sum(1 for t in state["tasks"] if t["status"] == "pending")
+                running = sum(1 for t in state["tasks"] if t["status"] == "running")
+                done = sum(1 for t in state["tasks"] if t["status"] == "done")
+                failed = sum(1 for t in state["tasks"] if t["status"] == "failed")
+                state["summary"].update({"pending": pending, "running": running, "done": done, "failed": failed})
+                atomic_write_json(state_path, state)
+                driver.write(
+                    f"[{utc_now_iso()}] END {task.task_id} attempt={attempt_no} rc={rc} ok={row['ok']} elapsed_sec={row['elapsed_sec']} "
+                    f"done={done} failed={failed} pending={pending}\n"
+                )
+                driver.flush()
+                if float(args.sleep_between_tasks_sec) > 0 and row["status"] == "done":
+                    time.sleep(float(args.sleep_between_tasks_sec))
+                break
+
+            if state["summary"].get("stopped_due_to_time_limit") or state["summary"].get("stopped_due_to_consecutive_failures"):
+                break
         # final summary
         state["updated_at"] = utc_now_iso()
         pending = sum(1 for t in state["tasks"] if t["status"] == "pending")

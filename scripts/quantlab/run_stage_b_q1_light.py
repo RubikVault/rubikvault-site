@@ -43,6 +43,13 @@ def parse_args(argv: Iterable[str]) -> argparse.Namespace:
     p.add_argument("--stress-lite-sharpe-mean-min", type=float, default=-0.05)
     p.add_argument("--stress-lite-maxdd-mean-max", type=float, default=28.0)
     p.add_argument("--stress-lite-fail-share-max", type=float, default=0.34)
+    p.add_argument("--fold-count-min", type=int, default=3)
+    p.add_argument("--embargo-days-min", type=int, default=2)
+    p.add_argument("--test-days-min", type=int, default=5)
+    p.add_argument("--min-train-days-min", type=int, default=8)
+    p.add_argument("--ic-fold-std-max", type=float, default=0.20)
+    p.add_argument("--cpcv-light-p25-min", type=float, default=-0.02)
+    p.add_argument("--cpcv-light-min-combo-size", type=int, default=1)
     p.add_argument("--require-fold-policy-valid", action="store_true", default=True)
     p.add_argument("--skip-fold-policy-valid", dest="require_fold_policy_valid", action="store_false")
     return p.parse_args(list(argv))
@@ -130,7 +137,14 @@ def _parse_day(s: str) -> date | None:
         return None
 
 
-def _validate_folds_manifest(folds_manifest: dict) -> dict:
+def _validate_folds_manifest(
+    folds_manifest: dict,
+    *,
+    fold_count_min: int,
+    embargo_days_min: int,
+    test_days_min: int,
+    min_train_days_min: int,
+) -> dict:
     cfg = folds_manifest.get("config") or {}
     folds = list(folds_manifest.get("folds") or [])
     errors: list[str] = []
@@ -140,6 +154,17 @@ def _validate_folds_manifest(folds_manifest: dict) -> dict:
         warnings.append(f"fold_count_built_mismatch:{built}!={len(folds)}")
     if len(folds) <= 0:
         errors.append("NO_FOLDS")
+    if built < int(fold_count_min):
+        errors.append(f"FOLD_COUNT_BELOW_MIN:{built}<{int(fold_count_min)}")
+    cfg_test_days = int(cfg.get("test_days") or 0)
+    if cfg_test_days and cfg_test_days < int(test_days_min):
+        errors.append(f"TEST_DAYS_BELOW_MIN:{cfg_test_days}<{int(test_days_min)}")
+    cfg_emb = int(cfg.get("embargo_days") or 0)
+    if cfg_emb and cfg_emb < int(embargo_days_min):
+        errors.append(f"EMBARGO_DAYS_BELOW_MIN:{cfg_emb}<{int(embargo_days_min)}")
+    cfg_min_train = int(cfg.get("min_train_days") or 0)
+    if cfg_min_train and cfg_min_train < int(min_train_days_min):
+        errors.append(f"MIN_TRAIN_DAYS_BELOW_MIN:{cfg_min_train}<{int(min_train_days_min)}")
     prev_test_end = None
     anchor_train_start = None
     seen_fold_ids: set[str] = set()
@@ -167,13 +192,21 @@ def _validate_folds_manifest(folds_manifest: dict) -> dict:
         cfg_test_days = int(cfg.get("test_days") or 0)
         if cfg_test_days and int(f.get("test_days") or 0) != cfg_test_days:
             warnings.append(f"TEST_DAYS_MISMATCH:{fid}")
+        if int(f.get("test_days") or 0) < int(test_days_min):
+            errors.append(f"TEST_DAYS_BELOW_MIN_PER_FOLD:{fid}")
+        if int(f.get("train_days") or 0) < int(min_train_days_min):
+            errors.append(f"TRAIN_DAYS_BELOW_MIN_PER_FOLD:{fid}")
         cfg_emb = int(cfg.get("embargo_days") or 0)
         if cfg_emb and int(f.get("embargo_days") or 0) != cfg_emb:
             warnings.append(f"EMBARGO_DAYS_MISMATCH:{fid}")
+        if int(f.get("embargo_days") or 0) < int(embargo_days_min):
+            errors.append(f"EMBARGO_DAYS_BELOW_MIN_PER_FOLD:{fid}")
         # Calendar-day gap is a lower-confidence proxy because folds are as-of trading dates.
         cal_gap = (test_start - train_end).days - 1
         if cfg_emb and cal_gap < 0:
             errors.append(f"NEGATIVE_EMBARGO_GAP:{fid}")
+        if cal_gap < int(embargo_days_min):
+            warnings.append(f"LOW_CALENDAR_EMBARGO_GAP:{fid}:{cal_gap}")
     return {
         "ok": len(errors) == 0,
         "errors": errors,
@@ -183,11 +216,28 @@ def _validate_folds_manifest(folds_manifest: dict) -> dict:
             "fold_ids_unique": len(seen_fold_ids),
         },
         "config": cfg,
+        "requirements": {
+            "fold_count_min": int(fold_count_min),
+            "embargo_days_min": int(embargo_days_min),
+            "test_days_min": int(test_days_min),
+            "min_train_days_min": int(min_train_days_min),
+        },
     }
 
 
-def _cpcv_light_metrics(sharpes: list[float]) -> dict:
-    # Q1-light proxy: evaluate all non-trivial combinations from ceil(n/2) to n-1 on fold metrics.
+def _quantile(sorted_values: list[float], q: float) -> float:
+    if not sorted_values:
+        return 0.0
+    q = max(0.0, min(1.0, float(q)))
+    if len(sorted_values) == 1:
+        return float(sorted_values[0])
+    idx = int(round(q * (len(sorted_values) - 1)))
+    idx = max(0, min(len(sorted_values) - 1, idx))
+    return float(sorted_values[idx])
+
+
+def _cpcv_light_metrics(sharpes: list[float], *, min_combo_size: int = 1) -> dict:
+    # Q1-light proxy: evaluate combinations from min_combo_size to n-1 on fold metrics.
     n = len(sharpes)
     if n <= 1:
         val = sharpes[0] if sharpes else 0.0
@@ -197,10 +247,12 @@ def _cpcv_light_metrics(sharpes: list[float]) -> dict:
             "combo_policy": "single_fold_or_trivial",
             "mean_sharpe_across_paths": float(val),
             "min_sharpe_across_paths": float(val),
+            "p25_sharpe_across_paths": float(val),
+            "p10_sharpe_across_paths": float(val),
             "neg_share_across_paths": 1.0 if val < 0 else 0.0,
             "std_sharpe_across_paths": 0.0,
         }
-    combo_sizes = list(range(max(1, (n + 1) // 2), n))
+    combo_sizes = list(range(max(1, int(min_combo_size)), n))
     if not combo_sizes:
         combo_sizes = [1]
     vals: list[float] = []
@@ -210,15 +262,18 @@ def _cpcv_light_metrics(sharpes: list[float]) -> dict:
             vals.append(float(avg))
     if not vals:
         vals = [sum(sharpes) / n]
+    vals_sorted = sorted(vals)
     mean_v = sum(vals) / len(vals)
     neg_share = sum(1 for v in vals if v < 0) / len(vals)
     std_v = 0.0 if len(vals) <= 1 else math.sqrt(sum((v - mean_v) ** 2 for v in vals) / (len(vals) - 1))
     return {
         "paths_total": len(vals),
         "combo_sizes": combo_sizes,
-        "combo_policy": "all_combo_sizes_from_ceil_half_to_n_minus_1",
+        "combo_policy": "all_combo_sizes_from_min_combo_size_to_n_minus_1",
         "mean_sharpe_across_paths": float(mean_v),
-        "min_sharpe_across_paths": float(min(vals)),
+        "min_sharpe_across_paths": float(min(vals_sorted)),
+        "p25_sharpe_across_paths": _quantile(vals_sorted, 0.25),
+        "p10_sharpe_across_paths": _quantile(vals_sorted, 0.10),
         "neg_share_across_paths": float(neg_share),
         "std_sharpe_across_paths": float(std_v),
     }
@@ -241,6 +296,7 @@ def _stress_lite_metrics(fold_sharpes: list[float], fold_turnovers: list[float],
         {"id": "slippage_x2", "sharpe_penalty_base": 0.03, "turnover_mult": 8.0, "maxdd_mult": 1.15},
         {"id": "slippage_x3_spreadfloor", "sharpe_penalty_base": 0.06, "turnover_mult": 14.0, "maxdd_mult": 1.30},
         {"id": "liquidity_shock_adv50", "sharpe_penalty_base": 0.08, "turnover_mult": 18.0, "maxdd_mult": 1.45},
+        {"id": "correlation_spike", "sharpe_penalty_base": 0.05, "turnover_mult": 10.0, "maxdd_mult": 1.35},
     ]
     failures: list[str] = []
     worst_mean_sharpe = None
@@ -288,7 +344,13 @@ def main(argv: Iterable[str]) -> int:
 
     report = read_json(report_path)
     folds_manifest = read_json(folds_manifest_path)
-    fold_policy_validation = _validate_folds_manifest(folds_manifest)
+    fold_policy_validation = _validate_folds_manifest(
+        folds_manifest,
+        fold_count_min=int(args.fold_count_min),
+        embargo_days_min=int(args.embargo_days_min),
+        test_days_min=int(args.test_days_min),
+        min_train_days_min=int(args.min_train_days_min),
+    )
     fold_metrics = pl.read_parquet(fold_metrics_path)
     candidates = pl.read_parquet(candidates_path)
     survivors_a = pl.read_parquet(survivors_a_path)
@@ -338,7 +400,10 @@ def main(argv: Iterable[str]) -> int:
             seed_key=f"{stage_a_run_id}:{cid}:psr_boot",
         )
         dsr_boot = _dsr_proxy(psr_boot, cand_count)
-        cpcv = _cpcv_light_metrics(fold_sharpes)
+        cpcv = _cpcv_light_metrics(
+            fold_sharpes,
+            min_combo_size=max(1, int(args.cpcv_light_min_combo_size)),
+        )
         stress = _stress_lite_metrics(fold_sharpes, fold_turnovers, fold_maxdds)
         rows.append(
             {
@@ -350,6 +415,8 @@ def main(argv: Iterable[str]) -> int:
                 "cpcv_light_paths_total": int(cpcv["paths_total"]),
                 "cpcv_light_sharpe_mean": float(cpcv["mean_sharpe_across_paths"]),
                 "cpcv_light_sharpe_min": float(cpcv["min_sharpe_across_paths"]),
+                "cpcv_light_sharpe_p25": float(cpcv["p25_sharpe_across_paths"]),
+                "cpcv_light_sharpe_p10": float(cpcv["p10_sharpe_across_paths"]),
                 "cpcv_light_neg_sharpe_share": float(cpcv["neg_share_across_paths"]),
                 "cpcv_light_sharpe_std": float(cpcv["std_sharpe_across_paths"]),
                 "ic_fold_std_proxy": float(0.0 if len(fold_ics) <= 1 else pl.Series(fold_ics).std(ddof=1) or 0.0),
@@ -372,9 +439,14 @@ def main(argv: Iterable[str]) -> int:
 
     stageb_df = pl.DataFrame(rows)
     strict_cfg = {
-        "folds_used_min": int(max(1, ((folds_manifest.get("config") or {}).get("fold_count_built") or 1))),
+        "folds_used_min": int(max(int(args.fold_count_min), ((folds_manifest.get("config") or {}).get("fold_count_built") or 1))),
+        "fold_count_min": int(args.fold_count_min),
+        "embargo_days_min": int(args.embargo_days_min),
+        "test_days_min": int(args.test_days_min),
+        "min_train_days_min": int(args.min_train_days_min),
         "ic_5d_oos_mean_min": float(args.ic_mean_min),
         "ic_5d_oos_min_min": float(args.ic_min_min),
+        "ic_fold_std_proxy_max": float(args.ic_fold_std_max),
         "oos_sharpe_proxy_mean_min": float(args.sharpe_mean_min),
         "oos_sharpe_proxy_min_min": float(args.sharpe_min_min),
         "turnover_proxy_mean_max": float(args.turnover_mean_max),
@@ -385,6 +457,7 @@ def main(argv: Iterable[str]) -> int:
         "psr_bootstrap_proxy_min": float(args.psr_bootstrap_proxy_min),
         "dsr_bootstrap_proxy_min": float(args.dsr_bootstrap_proxy_min),
         "cpcv_light_sharpe_min_min": float(args.cpcv_light_sharpe_min),
+        "cpcv_light_sharpe_p25_min": float(args.cpcv_light_p25_min),
         "cpcv_light_neg_sharpe_share_max": float(args.cpcv_light_neg_share_max),
         "stress_lite_sharpe_mean_min": float(args.stress_lite_sharpe_mean_min),
         "stress_lite_maxdd_mean_max": float(args.stress_lite_maxdd_mean_max),
@@ -427,6 +500,7 @@ def main(argv: Iterable[str]) -> int:
         ("g_folds_used", pl.col("folds_used") >= strict_cfg["folds_used_min"]),
         ("g_ic_mean", pl.col("ic_5d_oos_mean") >= strict_cfg["ic_5d_oos_mean_min"]),
         ("g_ic_min", pl.col("ic_5d_oos_min") >= strict_cfg["ic_5d_oos_min_min"]),
+        ("g_ic_fold_std", pl.col("ic_fold_std_proxy") <= strict_cfg["ic_fold_std_proxy_max"]),
         ("g_sharpe_mean", pl.col("oos_sharpe_proxy_mean") >= strict_cfg["oos_sharpe_proxy_mean_min"]),
         ("g_sharpe_min", pl.col("oos_sharpe_proxy_min") >= strict_cfg["oos_sharpe_proxy_min_min"]),
         ("g_turnover", pl.col("turnover_proxy_mean") <= strict_cfg["turnover_proxy_mean_max"]),
@@ -440,6 +514,7 @@ def main(argv: Iterable[str]) -> int:
         ("g_psr_bootstrap_proxy", pl.col("psr_bootstrap_proxy") >= strict_cfg["psr_bootstrap_proxy_min"]),
         ("g_dsr_bootstrap_proxy", pl.col("dsr_bootstrap_proxy") >= strict_cfg["dsr_bootstrap_proxy_min"]),
         ("g_cpcv_light_sharpe_min", pl.col("cpcv_light_sharpe_min") >= strict_cfg["cpcv_light_sharpe_min_min"]),
+        ("g_cpcv_light_sharpe_p25", pl.col("cpcv_light_sharpe_p25") >= strict_cfg["cpcv_light_sharpe_p25_min"]),
         (
             "g_cpcv_light_neg_share",
             pl.col("cpcv_light_neg_sharpe_share") <= strict_cfg["cpcv_light_neg_sharpe_share_max"],
@@ -495,6 +570,7 @@ def main(argv: Iterable[str]) -> int:
                     "psr_proxy": _safe_float(row.get("psr_proxy")),
                     "dsr_proxy": _safe_float(row.get("dsr_proxy")),
                     "cpcv_light_sharpe_min": _safe_float(row.get("cpcv_light_sharpe_min")),
+                    "cpcv_light_sharpe_p25": _safe_float(row.get("cpcv_light_sharpe_p25")),
                     "cpcv_light_neg_sharpe_share": _safe_float(row.get("cpcv_light_neg_sharpe_share")),
                 }
             )
@@ -530,12 +606,13 @@ def main(argv: Iterable[str]) -> int:
         "stage_a_run_id": stage_a_run_id,
         "method": {
             "type": "q1_stage_b_light",
-            "fold_policy": "reuses Stage-A anchored folds; CPCV-light combinations on fold metrics only (proxy)",
-            "cpcv_light_combo_policy": "all_combo_sizes_from_ceil_half_to_n_minus_1",
+            "fold_policy": "reuses Stage-A anchored folds with stricter fold-policy minima and CPCV-light combinations on fold metrics",
+            "cpcv_light_combo_policy": "all_combo_sizes_from_min_combo_size_to_n_minus_1",
+            "cpcv_light_min_combo_size": int(max(1, args.cpcv_light_min_combo_size)),
             "bootstrap_resamples": int(max(32, args.bootstrap_resamples)),
             "notes": [
-                "This is a Q1-light Stage B approximation, not full CPCV with per-path re-scoring.",
-                "Adds stricter gates plus proxy PSR/DSR, bootstrap-based PSR/DSR proxies, CPCV-light robustness, and stress-lite summaries.",
+                "This is still a Q1-light Stage B approximation, but with stricter fold-policy requirements and stronger CPCV-light gates.",
+                "Adds bootstrap-based PSR/DSR proxies, CPCV-light robustness quantiles, and stress-lite summaries.",
             ],
         },
         "inputs": {

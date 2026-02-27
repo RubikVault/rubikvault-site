@@ -984,3 +984,58 @@ Follow-up hardening target:
 
 Note:
 - a state-summary consistency fix was added to the runner code so future resumes correctly reset stop flags and keep `running` counters accurate while tasks are active.
+
+### 20.3 Overnight runner hardening v2 (stale heartbeat + auto-retry)
+
+Updated script:
+- `/Users/michaelpuchowezki/Dev/rubikvault-site/scripts/quantlab/run_overnight_q1_training_sweep.py`
+
+New robustness controls:
+- stale-heartbeat watchdog per task:
+  - `--stale-heartbeat-minutes`
+  - `--stale-min-elapsed-minutes`
+  - `--stale-cpu-pct-max`
+  - kills stale low-CPU tasks with exit code `142`
+- auto-retry policy:
+  - `--max-retries-per-task`
+  - `--retry-cooldown-sec`
+  - `--retryable-exit-codes` (default `124,137,142`)
+- monitor now logs `cpu_pct`, `peak_cpu_pct`, and stale output age in driver log
+- task attempt history persisted into `state.json` (`attempt_history`, `attempt_logs`)
+
+Nightly repeatable launch wrapper added:
+- `/Users/michaelpuchowezki/Dev/rubikvault-site/scripts/quantlab/run_overnight_q1_training_sweep_safe.sh`
+- behavior:
+  - auto-picks latest snapshot if `SNAPSHOT_ID` is not set
+  - uses safe defaults (nice/thread cap/RSS cap/stale watchdog/retry)
+  - suitable as standard nightly entry command
+
+Nightly scheduler template added:
+- `/Users/michaelpuchowezki/Dev/rubikvault-site/scripts/quantlab/launchd/com.rubikvault.quantlab.q1panel.overnight.safe.plist.template`
+
+Smoke validation:
+- plan mode:
+  - `quantlab/.venv/bin/python scripts/quantlab/run_overnight_q1_training_sweep.py --quant-root /Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab --snapshot-id 2026-02-26_670417f6fae7_q1step2bars --asof-dates-count 2 --panel-days-list 60 --top-liquid-list 20000 --plan-only`
+  - result: tasks planned successfully (`tasks_total=2`)
+
+### 20.4 Stage B de-proxy hardening (Q1 light stricter policy)
+
+Updated script:
+- `/Users/michaelpuchowezki/Dev/rubikvault-site/scripts/quantlab/run_stage_b_q1_light.py`
+
+Changes:
+- stricter fold-policy validation gates:
+  - `fold_count_min`, `embargo_days_min`, `test_days_min`, `min_train_days_min`
+- stronger CPCV-light robustness metrics:
+  - supports `cpcv_light_min_combo_size`
+  - adds `cpcv_light_sharpe_p25` and `cpcv_light_sharpe_p10`
+- stricter gating additions:
+  - `g_ic_fold_std`
+  - `g_cpcv_light_sharpe_p25`
+- stress-lite now includes `correlation_spike` scenario
+
+Validation run:
+- `quantlab/.venv/bin/python scripts/quantlab/run_stage_b_q1_light.py --quant-root /Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab --stage-a-run-id cheapgateA_tsplits_2026-02-12 --strict-survivors-max 6`
+- output report:
+  - `/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab/runs/run_id=cheapgateA_tsplits_2026-02-12/outputs/stage_b_light/stage_b_light_report.json`
+- runtime status: command succeeded, stricter gates active, survivors in this sample run = `0` (expected with stricter thresholds).

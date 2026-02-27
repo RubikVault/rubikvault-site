@@ -1,6 +1,6 @@
 # Quant v4.0 Critical Path Plan (10 Days) - Stocks+ETFs First
 
-Last updated: 2026-02-26 (local)
+Last updated: 2026-02-27 (local)
 
 Goal of this 10-day block:
 - Move from "strong Q1 backbone" to "daily-updating, trustable quant engine core" for Stocks+ETFs.
@@ -26,8 +26,12 @@ This is the fastest path to "mostly training/iteration" mode.
 
 Remaining critical path focus:
 - promote integrated Phase A mode from scratch validation to regular daily operation (with thresholds/guards)
-- tighten Stage B toward real CPCV/DSR/PSR (current Stage-B Q1 is stricter but still proxy/light)
+- tighten Stage B further toward real CPCV/DSR/PSR (latest pass added stricter fold minima + CPCV quantile gates; still Q1-light)
 - expand registry/champion governance from Q1 base to full live/shadow/demotion model
+
+Latest progress update (2026-02-27):
+- Overnight orchestrator hardened with stale-heartbeat watchdog + auto-retry and safe nightly wrapper script.
+- Stage-B Q1-light hardened with stricter fold-policy minima and additional CPCV/stability gates (`cpcv_light_sharpe_p25`, `ic_fold_std_proxy`).
 
 ## Day 1 - Daily delta ingest skeleton (Stocks+ETFs) ✅
 

@@ -9,6 +9,8 @@ Current focus (as of latest update):
 - Stage-B Q1 now writes a stricter final survivor set (`survivors_B_q1`) via prep/light intersection and Registry consumes it.
 - Next critical path: promote Phase A real-delta mode into regular scheduled use + continue Stage B de-proxying (CPCV/DSR/PSR).
 - Overnight compute sweeps are now supported via a resumable local orchestrator (`run_overnight_q1_training_sweep.py`).
+- Default nightly start command is now wrapped in `scripts/quantlab/run_overnight_q1_training_sweep_safe.sh` (safe-first profile).
+- A launchd template for nightly scheduling exists at `scripts/quantlab/launchd/com.rubikvault.quantlab.q1panel.overnight.safe.plist.template`.
 
 Purpose:
 - Preserve target architecture, current implementation status, and exact next steps.
