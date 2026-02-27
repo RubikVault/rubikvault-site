@@ -1,12 +1,12 @@
 {
   "schema": "rubikvault_daily_learning_report_v2",
-  "date": "2026-02-26",
-  "generated_at": "2026-02-26T19:38:26.113Z",
+  "date": "2026-02-27",
+  "generated_at": "2026-02-27T19:27:56.228Z",
   "start_date": "2026-02-26",
-  "days_active": 1,
+  "days_active": 2,
   "summary": {
     "features_tracked": 4,
-    "total_predictions_today": 78,
+    "total_predictions_today": 55,
     "overall_status": "BOOTSTRAP — Noch keine Outcome-Daten"
   },
   "features": {
@@ -53,13 +53,13 @@
       "hit_rate_7d": null,
       "trend_accuracy": "no_data",
       "trend_brier": "no_data",
-      "predictions_today": 78
+      "predictions_today": 55
     },
     "stock_analyzer": {
       "name": "Stock Analyzer",
       "type": "ranking_stability",
-      "stability": null,
-      "churn": null,
+      "stability": 1,
+      "churn": 0,
       "rankings_today": 200
     }
   },
@@ -86,6 +86,15 @@
       "scientific_hit_rate_7d": null,
       "elliott_accuracy_7d": null,
       "stock_stability": null
+    },
+    {
+      "date": "2026-02-27",
+      "forecast_accuracy_7d": null,
+      "forecast_brier_7d": null,
+      "scientific_accuracy_7d": null,
+      "scientific_hit_rate_7d": null,
+      "elliott_accuracy_7d": null,
+      "stock_stability": 1
     }
   ],
   "metrics": {
@@ -94,7 +103,7 @@
     "scientific_accuracy_7d": null,
     "scientific_hit_rate_7d": null,
     "elliott_accuracy_7d": null,
-    "stock_stability": null
+    "stock_stability": 1
   },
   "conviction_scores": [],
   "stock_forward_returns": null,
