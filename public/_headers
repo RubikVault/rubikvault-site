@@ -1,6 +1,18 @@
 /data/snapshots/*
   Cache-Control: max-age=300, must-revalidate
 
+/service-worker.js
+  Cache-Control: no-store
+
+/analyze/*
+  Cache-Control: no-store
+
+/stock
+  Cache-Control: no-store
+
+/stock.html
+  Cache-Control: no-store
+
  /internal-dashboard
   Content-Type: text/html; charset=utf-8
   Cache-Control: no-store

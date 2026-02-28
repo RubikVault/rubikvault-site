@@ -1,5 +1,5 @@
 /**
- * RubikVault Service Worker v3.0
+ * RubikVault Service Worker v3.1
  * 
  * Features:
  * - Offline-first for critical data
@@ -8,7 +8,7 @@
  * - Background sync ready
  */
 
-const CACHE_VERSION = 'rv-v3.0';
+const CACHE_VERSION = 'rv-v3.1';
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const DATA_CACHE = `${CACHE_VERSION}-data`;
 const API_CACHE = `${CACHE_VERSION}-api`;
@@ -18,6 +18,8 @@ const STATIC_ASSETS = [
   '/',
   '/index.html',
   '/style.css',
+  '/stock',
+  '/stock.html',
   '/market-clock.js',
   '/manifest.json',
   '/assets/rv-icon.png',
@@ -36,7 +38,7 @@ const CRITICAL_DATA = [
  * Install: Pre-cache critical assets
  */
 self.addEventListener('install', (event) => {
-  console.log('[SW] Installing v3.0...');
+  console.log('[SW] Installing v3.1...');
   
   event.waitUntil(
     Promise.all([
@@ -68,7 +70,7 @@ self.addEventListener('install', (event) => {
  * Activate: Clean old caches
  */
 self.addEventListener('activate', (event) => {
-  console.log('[SW] Activating v3.0...');
+  console.log('[SW] Activating v3.1...');
   
   event.waitUntil(
     caches.keys().then(cacheNames => {
@@ -204,18 +206,23 @@ async function handleDataRequest(request) {
  * Handle navigation: Network-first with fallback
  */
 async function handleNavigationRequest(request) {
+  const url = new URL(request.url);
   try {
-    const response = await fetch(request);
+    const response = await fetch(request, { cache: 'no-store' });
     const cache = await caches.open(STATIC_CACHE);
-    cache.put(request, response.clone()).catch(() => {});
+    if (response.ok && !url.pathname.startsWith('/analyze/')) {
+      cache.put(request, response.clone()).catch(() => {});
+    }
     return response;
   } catch (error) {
     const cached = await caches.match(request);
     if (cached) {
       return cached;
     }
-    // Fallback to index
-    return caches.match('/index.html') || fetch('/index.html');
+    if (url.pathname.startsWith('/analyze/')) {
+      return caches.match('/stock') || caches.match('/stock.html') || fetch('/stock', { cache: 'no-store' });
+    }
+    return caches.match('/index.html') || fetch('/index.html', { cache: 'no-store' });
   }
 }
 
@@ -257,4 +264,4 @@ self.addEventListener('message', (event) => {
   }
 });
 
-console.log('[SW] RubikVault Service Worker v3.0 loaded!');
+console.log('[SW] RubikVault Service Worker v3.1 loaded!');
