@@ -3,8 +3,8 @@
   "feature": "marketphase",
   "meta": {
     "symbol": "MITK",
-    "generatedAt": "2026-02-27T08:07:31.993Z",
-    "fetchedAt": "2026-02-27T08:07:31.993Z",
+    "generatedAt": "2026-02-28T07:41:20.713Z",
+    "fetchedAt": "2026-02-28T07:41:20.713Z",
     "ttlSeconds": 86400,
     "provider": "internal",
     "dataset": "MITK",
@@ -15,8 +15,8 @@
     "precision": "IEEE754-Double-Round6",
     "auditTrail": {
       "generatedBy": "MarketPhase-v8-Engine",
-      "commitHash": "8089f8a",
-      "reviewDate": "2026-02-27T08:07:31.993Z",
+      "commitHash": "970ea88",
+      "reviewDate": "2026-02-28T07:41:20.713Z",
       "standards": [
         "ISO-8000",
         "IEEE-7000"
@@ -26,66 +26,78 @@
   },
   "data": {
     "features": {
-      "RSI": 72.19978,
-      "MACDHist": 0.237305,
-      "ATR%": 3.13067,
-      "SMA50": 11.0016,
-      "SMA200": 9.948475,
+      "RSI": 71.127594,
+      "MACDHist": 0.232053,
+      "ATR%": 2.969087,
+      "SMA50": 11.1002,
+      "SMA200": 9.972525,
       "SMATrend": "bullish",
-      "lastClose": 14.67
+      "lastClose": 14.58
     },
     "swings": {
       "raw": [
         {
-          "index": 37,
+          "index": 36,
           "date": "2025-04-08",
           "price": 7.11,
           "type": "low"
         },
         {
-          "index": 79,
+          "index": 71,
+          "date": "2025-05-29",
+          "price": 9.18,
+          "type": "low"
+        },
+        {
+          "index": 78,
           "date": "2025-06-09",
           "price": 10.34,
           "type": "high"
         },
         {
-          "index": 96,
+          "index": 95,
           "date": "2025-07-03",
           "price": 10.35,
           "type": "high"
         },
         {
-          "index": 116,
+          "index": 115,
           "date": "2025-08-01",
           "price": 8.8,
           "type": "low"
         },
         {
-          "index": 131,
+          "index": 130,
           "date": "2025-08-22",
           "price": 10.55,
           "type": "high"
         },
         {
-          "index": 139,
+          "index": 138,
           "date": "2025-09-04",
           "price": 9.66,
           "type": "low"
         },
         {
-          "index": 169,
+          "index": 168,
           "date": "2025-10-16",
           "price": 8.98,
           "type": "low"
         },
         {
-          "index": 191,
+          "index": 190,
           "date": "2025-11-17",
           "price": 8.65,
           "type": "low"
         },
         {
-          "index": 243,
+          "index": 212,
+          "date": "2025-12-18",
+          "price": 10.59,
+          "type": "high"
+        },
+        {
+          "index": 242,
           "date": "2026-02-03",
           "price": 9.63,
           "type": "low"
@@ -93,31 +105,37 @@
       ],
       "confirmed": [
         {
-          "index": 37,
+          "index": 36,
           "date": "2025-04-08",
           "price": 7.11,
           "type": "low"
         },
         {
-          "index": 96,
+          "index": 71,
+          "date": "2025-05-29",
+          "price": 9.18,
+          "type": "low"
+        },
+        {
+          "index": 95,
           "date": "2025-07-03",
           "price": 10.35,
           "type": "high"
         },
         {
-          "index": 116,
+          "index": 115,
           "date": "2025-08-01",
           "price": 8.8,
           "type": "low"
         },
         {
-          "index": 131,
+          "index": 130,
           "date": "2025-08-22",
           "price": 10.55,
           "type": "high"
         },
         {
-          "index": 191,
+          "index": 190,
           "date": "2025-11-17",
           "price": 8.65,
           "type": "low"
@@ -128,63 +146,63 @@
       "completedPattern": {
         "valid": false,
         "direction": "bullish",
-        "endedAt": "2026-02-03",
-        "confidence0_100": 91,
+        "endedAt": "2025-11-17",
+        "confidence0_100": 100,
         "rules": {
           "r1": true,
           "r2": false,
-          "r3": false
+          "r3": true
         },
-        "guidelineScore": 72,
-        "rulePasses": 1
+        "guidelineScore": 63,
+        "rulePasses": 2
       },
       "developingPattern": {
         "possibleWave": "Wave 4 or ABC",
-        "confidence": 55,
+        "confidence": 60,
         "fibLevels": {
           "support": [
-            8.76564,
-            8.53436
+            8.8742,
+            8.4258
           ],
           "resistance": [
-            9.51436,
-            9.74564
+            10.3258,
+            10.7742
           ]
         },
         "disclaimer": "Reference levels only -- no prediction"
       },
       "uncertainty": {
-        "lastSwingConfirmed": false,
+        "lastSwingConfirmed": true,
         "alternativeCounts": 2,
         "confidenceDecay": {
-          "base": 91,
-          "adjusted": 67
+          "base": 100,
+          "adjusted": 76
         }
       },
       "fib": {
         "ratios": {
-          "wave2": 0.508571,
-          "wave3": 0.388571,
-          "wave4": 0.485294,
-          "wave5": 0.56
+          "wave2": 0.565217,
+          "wave3": 0.748792,
+          "wave4": 1.129032,
+          "wave5": 0.917874
         },
-        "conformanceScore": 77.493741
+        "conformanceScore": 57.381361
       }
     },
     "fib": {
       "ratios": {
-        "wave2": 0.508571,
-        "wave3": 0.388571,
-        "wave4": 0.485294,
-        "wave5": 0.56
+        "wave2": 0.565217,
+        "wave3": 0.748792,
+        "wave4": 1.129032,
+        "wave5": 0.917874
       },
-      "conformanceScore": 77.493741
+      "conformanceScore": 57.381361
     },
     "multiTimeframeAgreement": null,
     "debug": {
       "symbol": "MITK",
-      "window": 14,
-      "candidateCount": 9,
+      "window": 13,
+      "candidateCount": 11,
       "durationMs": 0
     },
     "disclaimer": "MarketPhase AI — Scientific Elliott Research (v8.0)\nprovides deterministic, rule-based historical analysis only.\nIt does not forecast future prices or offer financial advice.\nUse solely for educational and research purposes.\nISO 8000 / IEEE 7000 Compliant - Bit-exact reproducibility guaranteed."
