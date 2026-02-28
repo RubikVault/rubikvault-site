@@ -2008,6 +2008,20 @@
       typeahead.debounceTimer = setTimeout(() => doFetch(q), typeahead.debounceMs);
     }
 
+    function navigateToStockDetail(symbol, { replace = false } = {}) {
+      const s = String(symbol || '').trim().toUpperCase();
+      if (!s) return false;
+      const target = new URL('/stock', window.location.origin);
+      target.searchParams.set('ticker', s);
+      if (pageDebug) target.searchParams.set('debug', '1');
+      const next = `${target.pathname}${target.search}`;
+      const current = `${window.location.pathname}${window.location.search}`;
+      if (current === next) return false;
+      if (replace) window.location.replace(next);
+      else window.location.assign(next);
+      return true;
+    }
+
     async function selectSymbol(symbol, name, { push = true } = {}) {
       const s = String(symbol || '').trim().toUpperCase();
       if (!s) return;
@@ -2025,9 +2039,7 @@
       lastResolved = { ticker: s, name: resolvedName };
       syncSearchInputs(s, 'main');
       closeTypeahead();
-      setMainView('analyze');
-      if (push) window.history.pushState({}, '', `/analyze/${encodeURIComponent(s)}`);
-      await loadAnalyze(s, { push: false, fallback: lastResolved });
+      navigateToStockDetail(s, { replace: !push });
     }
 
     function renderTypeahead() {
@@ -3896,16 +3908,12 @@
       await loadTopSetupsDoc();
       renderBestSetups();
       const route = parseTopRoute(window.location.pathname);
-      setMainView(route.route);
       if (route.route === 'analyze' && route.ticker) {
-        await loadScientificData();
-        syncSearchInputs(route.ticker, 'main');
-        if (!route.ticker || (!universeByTicker.has(route.ticker) && route.ticker !== 'SPY' && route.ticker !== 'QQQ')) {
-          renderUnsupported(route.ticker);
-          return;
-        }
-        await selectSymbol(route.ticker, null, { push: false });
-      } else if (route.route === 'market') {
+        navigateToStockDetail(route.ticker, { replace: true });
+        return;
+      }
+      setMainView(route.route);
+      if (route.route === 'market') {
         await loadMarketDoc();
         renderMarketView();
       } else if (route.route === 'ideas') {
@@ -3919,16 +3927,11 @@
     // Handle browser back button
     window.addEventListener('popstate', async () => {
       const route = parseTopRoute(window.location.pathname);
-      setMainView(route.route);
       if (route.route === 'analyze' && route.ticker) {
-        syncSearchInputs(route.ticker, 'main');
-        if (!route.ticker || (!universeByTicker.has(route.ticker) && route.ticker !== 'SPY' && route.ticker !== 'QQQ')) {
-          renderUnsupported(route.ticker);
-          return;
-        }
-        await selectSymbol(route.ticker, null, { push: false });
+        navigateToStockDetail(route.ticker, { replace: true });
         return;
       }
+      setMainView(route.route);
       if (route.route === 'market') {
         await loadMarketDoc();
         renderMarketView();
