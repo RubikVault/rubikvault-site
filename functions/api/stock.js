@@ -37,6 +37,13 @@ const DEFAULT_EOD_CACHE_TTL_SECONDS = DEFAULT_TTL_SECONDS;
 const DEFAULT_EOD_LOCK_TTL_SECONDS = 60;
 const DEFAULT_MAX_STALE_DAYS = 14;
 const DEFAULT_PENDING_WINDOW_MINUTES = 120;
+const V7_STOCK_SSOT_TTL_MS = 10 * 60 * 1000;
+const V7_SEARCH_EXACT_TTL_MS = 10 * 60 * 1000;
+
+let v7StockSetCache = null;
+let v7StockSetCachedAt = 0;
+let v7SearchExactCache = null;
+let v7SearchExactCachedAt = 0;
 
 function normalizeTicker(raw) {
   if (typeof raw !== 'string') return null;
@@ -239,6 +246,89 @@ async function fetchSnapshot(moduleName, request) {
     served_from: null,
     error: lastError ? lastError.message : 'snapshot_missing',
     attempted: attempts
+  };
+}
+
+async function fetchV7StockSet(request) {
+  const now = Date.now();
+  if (v7StockSetCache && (now - v7StockSetCachedAt) < V7_STOCK_SSOT_TTL_MS) {
+    return v7StockSetCache;
+  }
+
+  try {
+    const baseUrl = new URL(request.url);
+    const url = new URL('/data/universe/v7/ssot/stocks.max.symbols.json', baseUrl);
+    const response = await fetch(url.toString(), { cf: { cacheTtl: 120, cacheEverything: true } });
+    if (!response.ok) return null;
+    const payload = await response.json();
+    const symbols = Array.isArray(payload?.symbols) ? payload.symbols : [];
+    const set = new Set(
+      symbols
+        .map((sym) => normalizeTicker(String(sym || '')))
+        .filter(Boolean)
+    );
+    if (!set.size) return null;
+    v7StockSetCache = set;
+    v7StockSetCachedAt = now;
+    return set;
+  } catch {
+    return null;
+  }
+}
+
+async function fetchJsonMaybeGzip(url) {
+  try {
+    const response = await fetch(url.toString(), { cf: { cacheTtl: 120, cacheEverything: true } });
+    if (!response.ok) return null;
+    const contentType = String(response.headers.get('content-type') || '').toLowerCase();
+    const contentEncoding = String(response.headers.get('content-encoding') || '').toLowerCase();
+    const isGzip =
+      contentEncoding.includes('gzip') ||
+      url.pathname.endsWith('.gz') ||
+      contentType.includes('application/gzip') ||
+      contentType.includes('application/x-gzip');
+
+    if (!isGzip) {
+      return await response.json();
+    }
+
+    if (typeof DecompressionStream === 'function' && response.body) {
+      const clone = response.clone();
+      try {
+        const decompressed = response.body.pipeThrough(new DecompressionStream('gzip'));
+        const text = await new Response(decompressed).text();
+        return JSON.parse(text);
+      } catch {
+        return await clone.json();
+      }
+    }
+    return await response.json();
+  } catch {
+    return null;
+  }
+}
+
+async function fetchV7SearchExactEntry(request, symbol) {
+  const now = Date.now();
+  if (!v7SearchExactCache || (now - v7SearchExactCachedAt) > V7_SEARCH_EXACT_TTL_MS) {
+    const baseUrl = new URL(request.url);
+    const url = new URL('/data/universe/v7/search/search_exact_by_symbol.json.gz', baseUrl);
+    const payload = await fetchJsonMaybeGzip(url);
+    if (payload && typeof payload === 'object') {
+      v7SearchExactCache = payload;
+      v7SearchExactCachedAt = now;
+    }
+  }
+  const bySymbol = v7SearchExactCache?.by_symbol;
+  if (!bySymbol || typeof bySymbol !== 'object') return null;
+  const row = bySymbol[String(symbol || '').toUpperCase()];
+  if (!row || typeof row !== 'object') return null;
+  const canonical = typeof row.canonical_id === 'string' ? row.canonical_id : null;
+  const canonicalExchange = canonical && canonical.includes(':') ? canonical.split(':')[0] : null;
+  return {
+    name: typeof row.name === 'string' && row.name.trim() ? row.name.trim() : null,
+    exchange: typeof row.exchange === 'string' && row.exchange.trim() ? row.exchange : (canonicalExchange || null),
+    country: typeof row.country === 'string' && row.country.trim() ? row.country : null
   };
 }
 
@@ -530,7 +620,7 @@ export async function onRequestGet(context) {
   }
 
   const forcedProvider = String(env?.RV_FORCE_PROVIDER || '').trim();
-  const hasEodKeys = Boolean(env?.EODHD_API_KEY);
+  const hasEodKeys = Boolean(env?.EODHD_API_KEY || env?.EODHD_API_TOKEN);
   const canFetchProvider = Boolean(forcedProvider || hasEodKeys);
 
   async function fetchProviderBars({ flagSet = qualityFlags, recordTiming = false } = {}) {
@@ -1078,6 +1168,26 @@ export async function onRequestGet(context) {
   }
 
   const universeEntry = findRecord(snapshots['universe']?.snapshot, normalizedTicker);
+  let universeFallback = null;
+  if (!universeEntry) {
+    const v7StockSet = await fetchV7StockSet(request);
+    if (v7StockSet?.has(normalizedTicker)) {
+      const v7ExactMeta = await fetchV7SearchExactEntry(request, normalizedTicker);
+      universeFallback = {
+        symbol: normalizedTicker,
+        name: v7ExactMeta?.name || null,
+        exchange: v7ExactMeta?.exchange || null,
+        currency: null,
+        country: v7ExactMeta?.country || null,
+        sector: null,
+        industry: null,
+        indexes: [],
+        updated_at: null,
+        source: 'v7_stock_ssot'
+      };
+    }
+  }
+
   const priceEntry = findRecord(snapshots['market-prices']?.snapshot, normalizedTicker);
   const statsEntry = findRecord(snapshots['market-stats']?.snapshot, normalizedTicker);
   const scoreEntry = findRecord(snapshots['market-score']?.snapshot, normalizedTicker);
@@ -1088,6 +1198,9 @@ export async function onRequestGet(context) {
     sources[moduleName].lookup_key = normalizedTicker;
   }
   sources.universe.record_found = Boolean(universeEntry);
+  if (universeFallback) {
+    sources.universe.note = 'v7_stock_ssot_fallback';
+  }
   sources['market-prices'].record_found = Boolean(priceEntry);
   sources['market-stats'].record_found = Boolean(statsEntry);
   sources['market-score'].record_found = Boolean(scoreEntry);
@@ -1099,7 +1212,7 @@ export async function onRequestGet(context) {
     sources['market-prices'].note = 'entry_not_found_for_symbol';
   }
 
-  const universePayload = buildUniversePayload(universeEntry, normalizedTicker);
+  const universePayload = buildUniversePayload(universeEntry || universeFallback, normalizedTicker);
   const marketPricesSnapshotPayload = buildMarketPricesPayload(priceEntry, normalizedTicker);
   const marketStatsSnapshotPayload = buildMarketStatsPayload(statsEntry, normalizedTicker);
 
@@ -1110,12 +1223,13 @@ export async function onRequestGet(context) {
   if (!snapshots['market-stats'].snapshot) missingSections.push('market_stats');
 
   let errorPayload = null;
-  if (!universeEntry && !eodAttempted) {
+  const universeKnown = Boolean(universeEntry || universeFallback);
+  if (!universeKnown && !eodAttempted) {
     errorPayload = buildErrorPayload('UNKNOWN_TICKER', `Ticker ${normalizedTicker} is not in the universe`, {
       membership: universePayload.membership
     });
   }
-  if (!errorPayload && !eodAttempted && universeEntry && missingSections.length) {
+  if (!errorPayload && !eodAttempted && universeKnown && missingSections.length) {
     errorPayload = buildErrorPayload('DATA_NOT_READY', 'Market prices/stats are not available yet', {
       missing: [...new Set(missingSections)]
     });

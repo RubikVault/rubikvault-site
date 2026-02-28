@@ -1,545 +1,1644 @@
 <!DOCTYPE html>
 <html lang="en" data-theme="dark">
+
 <head>
   <meta charset="UTF-8" />
-  <title>Stock page · RubikVault</title>
+  <title>Stock Analysis · RubikVault</title>
   <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
-  <meta name="description" content="Join universe, market-prices, and market-stats for a single ticker." />
+  <meta name="description"
+    content="Comprehensive technical analysis dashboard for any stock — Moving Averages, RSI, MACD, Bollinger Bands, and more." />
   <link rel="icon" type="image/png" sizes="32x32" href="/assets/rv-favicon.png" />
   <link rel="stylesheet" href="/style.css" />
   <link rel="stylesheet" href="/search.css" />
   <style>
+    :root {
+      --bg: #020617;
+      --card: rgba(15, 23, 42, 0.92);
+      --card-hover: rgba(15, 23, 42, 0.98);
+      --border: rgba(148, 163, 184, 0.15);
+      --border-bright: rgba(148, 163, 184, 0.3);
+      --text: #f1f5f9;
+      --text-dim: #94a3b8;
+      --text-muted: #64748b;
+      --accent: #06b6d4;
+      --accent-glow: rgba(6, 182, 212, 0.12);
+      --green: #10b981;
+      --green-bg: rgba(16, 185, 129, 0.08);
+      --red: #f87171;
+      --red-bg: rgba(248, 113, 113, 0.08);
+      --yellow: #fbbf24;
+      --yellow-bg: rgba(251, 191, 36, 0.08);
+      --radius: 16px;
+      --radius-sm: 10px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
     body {
       margin: 0;
-      font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
-      background: #020617;
-      color: #e2e8f0;
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
     }
+
     .rv-main {
       max-width: 980px;
       margin: 0 auto;
-      padding: 2.5rem 1.5rem 4rem;
+      padding: 2rem 1.25rem 3rem;
     }
-    .stock-card {
-      background: rgba(15, 23, 42, 0.95);
-      border-radius: 20px;
-      border: 1px solid rgba(148, 163, 184, 0.2);
-      padding: 2rem;
-      box-shadow: 0 30px 80px rgba(2, 6, 23, 0.65);
+
+    /* ─── Header Card ─── */
+    .header-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.5rem 1.75rem;
+      margin-bottom: 1rem;
     }
-    .stock-header {
+
+    .header-top {
       display: flex;
       align-items: center;
       justify-content: space-between;
       flex-wrap: wrap;
       gap: 1rem;
     }
-    .stock-banner {
+
+    .header-left {
       display: flex;
       flex-direction: column;
-      gap: 0.25rem;
+      gap: 0.15rem;
     }
+
     .stock-title {
-      font-size: 2rem;
+      font-size: 1.75rem;
+      font-weight: 800;
       margin: 0;
+      letter-spacing: -0.02em;
     }
-    .ticker-flag {
-      padding: 0.25rem 0.75rem;
-      border-radius: 12px;
-      border: 1px solid rgba(59, 130, 246, 0.6);
-      font-size: 0.9rem;
-      color: #93c5fd;
-      background: rgba(59, 130, 246, 0.08);
-      text-transform: uppercase;
+
+    .stock-subtitle {
+      font-size: 0.85rem;
+      color: var(--text-dim);
     }
+
     .stock-form {
       display: flex;
       gap: 0.5rem;
-      flex-wrap: wrap;
       align-items: center;
+      flex-wrap: wrap;
     }
+
     .stock-form input {
-      padding: 0.75rem 1rem;
+      padding: 0.6rem 1rem;
       border-radius: 999px;
-      border: 1px solid rgba(148, 163, 184, 0.4);
-      background: rgba(15, 23, 42, 0.8);
-      color: #f8fafc;
-      font-size: 1rem;
-      width: 160px;
+      border: 1px solid var(--border);
+      background: rgba(15, 23, 42, 0.6);
+      color: var(--text);
+      font-size: 0.95rem;
+      width: 140px;
+      outline: none;
     }
+
+    .stock-form input:focus {
+      border-color: var(--accent);
+    }
+
     .stock-form button {
-      padding: 0.75rem 1.25rem;
+      padding: 0.6rem 1.25rem;
       border-radius: 999px;
       border: none;
       background: linear-gradient(135deg, #14b8a6, #06b6d4);
       color: #0f172a;
-      font-weight: 600;
+      font-weight: 700;
       cursor: pointer;
+      font-size: 0.9rem;
     }
-    .badge-row {
+
+    .badges {
       display: flex;
-      gap: 0.5rem;
+      gap: 0.4rem;
+      flex-wrap: wrap;
+      margin-top: 0.5rem;
+    }
+
+    .badge {
+      padding: 0.2rem 0.6rem;
+      border-radius: 6px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      border: 1px solid var(--border);
+      color: var(--text-dim);
+      background: rgba(255, 255, 255, 0.03);
+    }
+
+    .badge.unknown {
+      border-color: rgba(248, 113, 113, 0.4);
+      color: var(--red);
+    }
+
+    /* ─── Price Block ─── */
+    .price-block {
+      display: flex;
+      align-items: baseline;
+      gap: 1rem;
       flex-wrap: wrap;
       margin-top: 0.75rem;
     }
-    .badge {
-      padding: 0.35rem 0.8rem;
-      border-radius: 999px;
-      border: 1px solid rgba(226, 232, 240, 0.4);
-      font-size: 0.85rem;
-      color: #e2e8f0;
+
+    .price-big {
+      font-size: 2.5rem;
+      font-weight: 800;
+      letter-spacing: -0.03em;
     }
-    .badge.unknown {
-      border-color: rgba(248, 113, 113, 0.5);
-      color: #fecaca;
-      background: rgba(248, 113, 113, 0.1);
-    }
-    .status-line {
-      margin-top: 0.5rem;
-      font-size: 0.85rem;
-      color: #94a3b8;
-    }
-    .panel {
-      margin-top: 1.5rem;
-      display: grid;
-      gap: 1rem;
-    }
-    .price-panel,
-    .card {
-      padding: 1.5rem;
-      border-radius: 16px;
-      border: 1px solid rgba(148, 163, 184, 0.2);
-      background: rgba(15, 23, 42, 0.9);
-    }
-    .price-value {
-      font-size: 2.3rem;
+
+    .price-change {
+      font-size: 1.1rem;
       font-weight: 700;
-      margin: 0;
+      padding: 0.25rem 0.6rem;
+      border-radius: 8px;
     }
-    .price-meta {
-      font-size: 0.95rem;
-      color: #94a3b8;
-      margin-top: 0.25rem;
+
+    .price-change.up {
+      color: var(--green);
+      background: var(--green-bg);
     }
-    .metric-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-      gap: 0.75rem;
+
+    .price-change.down {
+      color: var(--red);
+      background: var(--red-bg);
     }
-    .metric {
-      padding: 0.9rem;
-      border-radius: 12px;
-      background: rgba(15, 23, 42, 0.75);
-      border: 1px solid rgba(148, 163, 184, 0.2);
+
+    .price-date {
+      font-size: 0.8rem;
+      color: var(--text-muted);
     }
-    .metric-title {
-      font-size: 0.85rem;
-      color: #94a3b8;
+
+    /* ─── 52W Range ─── */
+    .range-52w {
+      margin-top: 0.75rem;
     }
-    .metric-value {
-      font-size: 1.25rem;
-      font-weight: 600;
-      color: #f8fafc;
+
+    .range-bar {
+      height: 6px;
+      background: rgba(148, 163, 184, 0.15);
+      border-radius: 3px;
+      position: relative;
     }
+
+    .range-dot {
+      position: absolute;
+      top: -3px;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: var(--accent);
+      border: 2px solid var(--bg);
+      transform: translateX(-50%);
+    }
+
+    .range-labels {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      margin-top: 0.2rem;
+    }
+
+    .range-labels .range-pct {
+      font-size: 0.7rem;
+      color: var(--text-dim);
+    }
+
+    /* ─── Error ─── */
     .error-box {
-      margin-top: 1rem;
-      padding: 1rem 1.25rem;
-      border-radius: 12px;
-      background: rgba(248, 113, 113, 0.12);
-      border: 1px solid rgba(248, 113, 113, 0.5);
-      color: #fecaca;
-      font-size: 0.95rem;
+      padding: 0.75rem 1rem;
+      border-radius: var(--radius-sm);
+      background: var(--red-bg);
+      border: 1px solid rgba(248, 113, 113, 0.4);
+      color: var(--red);
+      font-size: 0.85rem;
+      margin-bottom: 1rem;
     }
-    .quality-grid {
+
+    /* ─── Grid layout ─── */
+    .sections-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
       gap: 1rem;
+      grid-template-columns: 1fr 1fr;
     }
-    .score-card {
-      padding: 1.5rem;
-      border-radius: 16px;
-      border: 1px solid rgba(148, 163, 184, 0.2);
-      background: rgba(15, 23, 42, 0.9);
+
+    .section-full {
+      grid-column: 1 / -1;
     }
+
+    /* ─── Section Card ─── */
+    .section {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.25rem 1.5rem;
+      overflow: hidden;
+    }
+
+    .section h2 {
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin: 0 0 0.75rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    /* ─── Metric Grid ─── */
+    .m-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+      gap: 0.5rem;
+    }
+
+    .m-item {
+      padding: 0.6rem 0.75rem;
+      border-radius: var(--radius-sm);
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid rgba(255, 255, 255, 0.04);
+    }
+
+    .m-label {
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      margin-bottom: 0.15rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .m-val {
+      font-size: 1rem;
+      font-weight: 700;
+    }
+
+    .m-sub {
+      font-size: 0.7rem;
+      color: var(--text-dim);
+      margin-top: 0.1rem;
+    }
+
+    /* ─── MA Table ─── */
+    .ma-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.85rem;
+    }
+
+    .ma-table th {
+      text-align: left;
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      padding: 0.4rem 0.5rem;
+      border-bottom: 1px solid var(--border);
+      font-weight: 600;
+    }
+
+    .ma-table td {
+      padding: 0.5rem 0.5rem;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+    }
+
+    .ma-table tr:last-child td {
+      border-bottom: none;
+    }
+
+    .ma-pos {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.3rem;
+      font-weight: 700;
+      font-size: 0.8rem;
+    }
+
+    .ma-pos.above {
+      color: var(--green);
+    }
+
+    .ma-pos.below {
+      color: var(--red);
+    }
+
+    /* ─── Stack Badge ─── */
+    .stack-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.4rem 0.8rem;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      font-weight: 700;
+      margin-bottom: 0.75rem;
+    }
+
+    .stack-badge.bullish {
+      background: var(--green-bg);
+      color: var(--green);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+    }
+
+    .stack-badge.bearish {
+      background: var(--red-bg);
+      color: var(--red);
+      border: 1px solid rgba(248, 113, 113, 0.3);
+    }
+
+    .stack-badge.mixed {
+      background: var(--yellow-bg);
+      color: var(--yellow);
+      border: 1px solid rgba(251, 191, 36, 0.3);
+    }
+
+    /* ─── Gauge ─── */
+    .gauge {
+      margin-bottom: 0.75rem;
+    }
+
+    .gauge:last-child {
+      margin-bottom: 0;
+    }
+
+    .gauge-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      margin-bottom: 0.3rem;
+    }
+
+    .gauge-label {
+      font-size: 0.8rem;
+      font-weight: 600;
+    }
+
+    .gauge-value {
+      font-size: 0.85rem;
+      font-weight: 700;
+    }
+
+    .gauge-bar {
+      height: 8px;
+      background: rgba(148, 163, 184, 0.1);
+      border-radius: 4px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .gauge-fill {
+      height: 100%;
+      border-radius: 4px;
+      transition: width 0.3s;
+    }
+
+    .gauge-zones {
+      display: flex;
+      gap: 0;
+      height: 100%;
+    }
+
+    .gauge-zone {
+      height: 100%;
+    }
+
+    .gauge-marker {
+      position: absolute;
+      top: -2px;
+      width: 3px;
+      height: 12px;
+      background: white;
+      border-radius: 1px;
+      transform: translateX(-50%);
+      box-shadow: 0 0 4px rgba(0, 0, 0, 0.5);
+    }
+
+    .gauge-ticks {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.65rem;
+      color: var(--text-muted);
+      margin-top: 0.15rem;
+    }
+
+    /* ─── Signal chip ─── */
+    .signal-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.3rem;
+      padding: 0.3rem 0.7rem;
+      border-radius: 6px;
+      font-size: 0.78rem;
+      font-weight: 700;
+    }
+
+    .signal-chip.buy {
+      background: var(--green-bg);
+      color: var(--green);
+    }
+
+    .signal-chip.sell {
+      background: var(--red-bg);
+      color: var(--red);
+    }
+
+    .signal-chip.neutral {
+      background: rgba(148, 163, 184, 0.08);
+      color: var(--text-dim);
+    }
+
+    /* ─── Signal Table ─── */
+    .sig-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.85rem;
+    }
+
+    .sig-table th {
+      text-align: left;
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      padding: 0.4rem 0.5rem;
+      border-bottom: 1px solid var(--border);
+      font-weight: 600;
+    }
+
+    .sig-table td {
+      padding: 0.45rem 0.5rem;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+    }
+
+    .sig-table tr:last-child td {
+      border-bottom: none;
+    }
+
+    /* ─── Perf bars ─── */
+    .perf-item {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.35rem 0;
+    }
+
+    .perf-label {
+      font-size: 0.8rem;
+      color: var(--text-dim);
+      width: 50px;
+      text-align: right;
+      flex-shrink: 0;
+    }
+
+    .perf-bar-container {
+      flex: 1;
+      height: 20px;
+      position: relative;
+      border-radius: 4px;
+      overflow: hidden;
+      background: rgba(148, 163, 184, 0.05);
+    }
+
+    .perf-bar {
+      height: 100%;
+      position: absolute;
+      top: 0;
+      border-radius: 4px;
+      min-width: 2px;
+    }
+
+    .perf-bar.positive {
+      background: linear-gradient(90deg, rgba(16, 185, 129, 0.4), rgba(16, 185, 129, 0.7));
+      right: 50%;
+    }
+
+    .perf-bar.negative {
+      background: linear-gradient(270deg, rgba(248, 113, 113, 0.4), rgba(248, 113, 113, 0.7));
+      left: 50%;
+    }
+
+    .perf-center {
+      position: absolute;
+      left: 50%;
+      top: 0;
+      bottom: 0;
+      width: 1px;
+      background: rgba(148, 163, 184, 0.2);
+    }
+
+    .perf-val {
+      font-size: 0.8rem;
+      font-weight: 700;
+      width: 65px;
+      flex-shrink: 0;
+    }
+
+    .perf-val.positive {
+      color: var(--green);
+    }
+
+    .perf-val.negative {
+      color: var(--red);
+    }
+
+    /* ─── Levels ─── */
+    .levels-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.3rem;
+    }
+
+    .level-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.4rem 0.6rem;
+      border-radius: 6px;
+      border-left: 3px solid;
+      font-size: 0.85rem;
+      background: rgba(255, 255, 255, 0.02);
+    }
+
+    .level-item.support {
+      border-left-color: var(--green);
+    }
+
+    .level-item.resistance {
+      border-left-color: var(--red);
+    }
+
+    .level-item.current {
+      border-left-color: var(--accent);
+      background: var(--accent-glow);
+    }
+
+    .level-name {
+      font-weight: 600;
+      font-size: 0.8rem;
+    }
+
+    .level-price {
+      font-weight: 700;
+    }
+
+    .level-dist {
+      font-size: 0.75rem;
+      color: var(--text-dim);
+      margin-left: 0.5rem;
+    }
+
+    /* ─── Verdict ─── */
+    .verdict-box {
+      text-align: center;
+      padding: 1rem;
+      border-radius: var(--radius-sm);
+      margin-bottom: 0.75rem;
+      font-size: 1.1rem;
+      font-weight: 800;
+      letter-spacing: 0.04em;
+    }
+
+    .verdict-box.bullish {
+      background: var(--green-bg);
+      color: var(--green);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+    }
+
+    .verdict-box.bearish {
+      background: var(--red-bg);
+      color: var(--red);
+      border: 1px solid rgba(248, 113, 113, 0.3);
+    }
+
+    .verdict-box.neutral {
+      background: var(--yellow-bg);
+      color: var(--yellow);
+      border: 1px solid rgba(251, 191, 36, 0.3);
+    }
+
+    .verdict-detail {
+      font-size: 0.8rem;
+      color: var(--text-dim);
+      text-align: center;
+    }
+
+    /* ─── Score card ─── */
     .score-chips {
       display: flex;
       gap: 0.5rem;
       flex-wrap: wrap;
       margin-bottom: 0.5rem;
     }
+
     .score-chip {
-      border-radius: 999px;
-      padding: 0.35rem 0.8rem;
-      border: 1px solid rgba(99, 102, 241, 0.6);
-      background: rgba(99, 102, 241, 0.1);
-      font-size: 0.9rem;
-      font-weight: 600;
-    }
-    .score-chip span {
-      font-weight: 400;
-      margin-left: 0.25rem;
-    }
-    .score-chip.positive {
-      border-color: rgba(16, 185, 129, 0.6);
-      background: rgba(16, 185, 129, 0.1);
-    }
-    .score-chip.neutral {
-      border-color: rgba(148, 163, 184, 0.6);
-    }
-    .score-chip.negative {
-      border-color: rgba(248, 113, 113, 0.6);
-      background: rgba(248, 113, 113, 0.1);
-    }
-    .score-confidence {
+      border-radius: 8px;
+      padding: 0.3rem 0.7rem;
+      border: 1px solid var(--border);
       font-size: 0.85rem;
-      color: #94a3b8;
-      margin-bottom: 0.75rem;
+      font-weight: 700;
     }
+
+    .score-chip.positive {
+      border-color: rgba(16, 185, 129, 0.5);
+      background: var(--green-bg);
+      color: var(--green);
+    }
+
+    .score-chip.negative {
+      border-color: rgba(248, 113, 113, 0.5);
+      background: var(--red-bg);
+      color: var(--red);
+    }
+
+    .score-chip.n {
+      border-color: var(--border);
+      color: var(--text-dim);
+    }
+
     .score-reasons {
       display: grid;
-      gap: 1rem;
+      gap: 0.5rem;
+      margin-top: 0.5rem;
     }
+
     .score-reason-group {
-      border-top: 1px solid rgba(148, 163, 184, 0.2);
-      padding-top: 0.75rem;
+      border-top: 1px solid var(--border);
+      padding-top: 0.5rem;
     }
+
     .score-reason-group h3 {
-      margin: 0 0 0.35rem;
-      font-size: 0.9rem;
-      color: #cbd5f5;
+      margin: 0 0 0.25rem;
+      font-size: 0.8rem;
+      color: var(--text-dim);
     }
+
     .score-reason {
-      font-size: 0.85rem;
-      color: #e2e8f0;
+      font-size: 0.8rem;
+      color: var(--text);
+    }
+
+    /* ─── Loading ─── */
+    .loading-state {
+      text-align: center;
+      padding: 3rem;
+      color: var(--text-dim);
+    }
+
+    /* ─── Responsive ─── */
+    @media (max-width: 700px) {
+      .sections-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .header-top {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+
+      .stock-title {
+        font-size: 1.4rem;
+      }
+
+      .price-big {
+        font-size: 2rem;
+      }
     }
   </style>
 </head>
+
 <body>
   <div id="rv-stock-search-root"></div>
   <main class="rv-main">
-    <section class="stock-card">
-      <header class="stock-header">
-        <div class="stock-banner">
-          <h1 class="stock-title">Stock page</h1>
-          <div class="status-line" id="stock-status">Loading data...</div>
-          <div class="badge-row" id="stock-membership"></div>
+    <div class="header-card" id="header-card">
+      <div class="header-top">
+        <div class="header-left">
+          <h1 class="stock-title" id="stock-title">Stock Analysis</h1>
+          <div class="stock-subtitle" id="stock-subtitle">Loading…</div>
         </div>
-        <form id="stock-form" class="stock-form">
-          <label>
-            Ticker
-            <input id="stock-ticker" name="ticker" type="text" placeholder="SPY" autocomplete="off" />
-          </label>
-          <button type="submit">Load</button>
+        <form id="stock-form" class="stock-form" style="position:relative">
+          <input id="stock-ticker" name="ticker" type="text" placeholder="AAPL" autocomplete="off" />
+          <div id="stock-ac-dropdown" class="rv-search-dd"
+            style="display:none;position:absolute;top:100%;left:0;right:0;margin-top:4px;z-index:9999;max-height:300px;overflow-y:auto;background:var(--card, #0f172a);border:1px solid #334155;border-radius:8px;box-shadow:0 10px 25px rgba(0,0,0,0.8)">
+          </div>
+          <button type="submit">Analyze</button>
         </form>
-      </header>
-      <div id="stock-error" class="error-box" style="display:none;"></div>
-      <div class="panel">
-        <div class="price-panel" id="price-panel">
-          <div class="price-label">Latest price</div>
-          <p class="price-value" id="price-value">—</p>
-          <div class="price-meta" id="price-meta">Awaiting data</div>
+      </div>
+      <div class="badges" id="stock-badges"></div>
+      <div class="price-block" id="price-block" style="display:none;">
+        <span class="price-big" id="price-big">—</span>
+        <span class="price-change" id="price-change"></span>
+        <span class="price-date" id="price-date"></span>
+      </div>
+      <div class="range-52w" id="range-52w" style="display:none;">
+        <div class="range-bar">
+          <div class="range-dot" id="range-dot"></div>
         </div>
-        <div class="card">
-          <h2>Returns &amp; momentum</h2>
-          <div class="metric-grid" id="returns-grid"></div>
-        </div>
-        <div class="card">
-          <h2>Volatility &amp; risk</h2>
-          <div class="metric-grid" id="volatility-grid"></div>
-        </div>
-        <div class="card">
-          <h2>Trend</h2>
-          <div class="metric-grid" id="trend-grid"></div>
-        </div>
-        <div class="card">
-          <h2>Data quality</h2>
-          <div class="metric-grid" id="quality-grid"></div>
-        </div>
-        <div class="card score-card" id="score-card">
-          <h2>Market score</h2>
-          <div class="score-chips">
-            <span class="score-chip" id="score-short">Short: —</span>
-            <span class="score-chip" id="score-mid">Mid: —</span>
-            <span class="score-chip" id="score-long">Long: —</span>
-          </div>
-          <div class="score-confidence" id="score-confidence">Confidence: —</div>
-          <div class="score-reasons" id="score-reasons">
-            <div class="score-reason-group" id="score-reasons-short"></div>
-            <div class="score-reason-group" id="score-reasons-mid"></div>
-            <div class="score-reason-group" id="score-reasons-long"></div>
-          </div>
+        <div class="range-labels">
+          <span>52W Low: <strong id="range-low">—</strong></span>
+          <span class="range-pct" id="range-pct"></span>
+          <span>52W High: <strong id="range-high">—</strong></span>
         </div>
       </div>
-    </section>
+    </div>
+    <div id="stock-error" class="error-box" style="display:none;"></div>
+    <div id="app">
+      <div class="loading-state">Enter a ticker above to begin the analysis.</div>
+    </div>
   </main>
 
+  <script src="/js/stock-features.js"></script>
   <script>
+    // ─── State ────────────────────────────────────────────────────────────────────
     const form = document.getElementById('stock-form');
     const tickerInput = document.getElementById('stock-ticker');
-    const statusEl = document.getElementById('stock-status');
-    const membershipEl = document.getElementById('stock-membership');
     const errorBox = document.getElementById('stock-error');
-    const priceValue = document.getElementById('price-value');
-    const priceMeta = document.getElementById('price-meta');
-    const returnsGrid = document.getElementById('returns-grid');
-    const volatilityGrid = document.getElementById('volatility-grid');
-    const trendGrid = document.getElementById('trend-grid');
-    const qualityGrid = document.getElementById('quality-grid');
+    const app = document.getElementById('app');
     const params = new URLSearchParams(window.location.search);
-    const debugParam = params.has('debug');
 
-    const metricsGroups = {
-      returns: [
-        { key: 'returns_1d', label: '1d log return', format: formatPercent },
-        { key: 'returns_5d', label: '5d log return', format: formatPercent },
-        { key: 'returns_21d', label: '21d log return', format: formatPercent },
-        { key: 'momentum_21d', label: '21d momentum %', format: formatPercent },
-        { key: 'momentum_63d', label: '63d momentum %', format: formatPercent },
-        { key: 'momentum_252d', label: '252d momentum %', format: formatPercent }
-      ],
-      volatility: [
-        { key: 'volatility_21d', label: '21d volatility', format: formatPercent },
-        { key: 'volatility_63d', label: '63d volatility', format: formatPercent },
-        { key: 'atr_14', label: 'ATR 14', format: formatNumber },
-        { key: 'drawdown_max_252d', label: 'Max drawdown', format: formatPercent },
-        { key: 'drawdown_current_252d', label: 'Current drawdown', format: formatPercent },
-        { key: 'rsi_14', label: 'RSI 14', format: formatNumber }
-      ],
-      trend: [
-        { key: 'sma_20', label: 'SMA 20', format: formatNumber },
-        { key: 'sma_50', label: 'SMA 50', format: formatNumber },
-        { key: 'sma_200', label: 'SMA 200', format: formatNumber },
-        { key: 'distance_to_sma_20', label: 'Distance to SMA20 %', format: formatPercent },
-        { key: 'distance_to_sma_50', label: 'Distance to SMA50 %', format: formatPercent },
-        { key: 'distance_to_sma_200', label: 'Distance to SMA200 %', format: formatPercent }
-      ]
-    };
+    form.addEventListener('submit', e => { e.preventDefault(); const t = tickerInput.value.trim(); if (t) loadTicker(t); });
+    if (params.has('ticker')) { const t = params.get('ticker'); tickerInput.value = t; loadTicker(t); }
 
-    const scoreShortChip = document.getElementById('score-short');
-    const scoreMidChip = document.getElementById('score-mid');
-    const scoreLongChip = document.getElementById('score-long');
-    const scoreConfidenceEl = document.getElementById('score-confidence');
-    const scoreReasonsShort = document.getElementById('score-reasons-short');
-    const scoreReasonsMid = document.getElementById('score-reasons-mid');
-    const scoreReasonsLong = document.getElementById('score-reasons-long');
+    // ─── Ticker Autocomplete (re-uses /api/universe) ──────────────────────────────
+    const acDropdown = document.getElementById('stock-ac-dropdown');
+    let acTimer = null, acSuggestions = [], acIndex = -1, acOpen = false;
+    function acPriority(item, query) {
+      const ticker = String(item?.ticker || '').toUpperCase();
+      const exchange = String(item?.exchange || '').toUpperCase();
+      const name = String(item?.name || '').trim().toLowerCase();
+      const qTicker = String(query || '').trim().toUpperCase();
+      const qName = String(query || '').trim().toLowerCase();
+      const rank = ticker === qTicker ? 0 : ticker.startsWith(qTicker) ? 1 : name.startsWith(qName) ? 2 : 3;
+      const usRank = exchange === 'US' ? 0 : 1;
+      return [rank, usRank, ticker.length || 99, ticker];
+    }
+    function acCompare(a, b, query) {
+      const pa = acPriority(a, query), pb = acPriority(b, query);
+      for (let i = 0; i < pa.length; i++) {
+        if (pa[i] < pb[i]) return -1;
+        if (pa[i] > pb[i]) return 1;
+      }
+      return 0;
+    }
+    function acDedupeKey(item) {
+      const name = String(item?.name || '').trim().toLowerCase();
+      if (name && name.length >= 3) return `name:${name}`;
+      return `ticker:${String(item?.ticker || '').toUpperCase()}`;
+    }
 
-    form.addEventListener('submit', (event) => {
-      event.preventDefault();
-      const ticker = tickerInput.value.trim();
-      if (!ticker) return;
-      loadTicker(ticker);
+    function renderAC() {
+      if (!acSuggestions.length) { acDropdown.style.display = 'none'; acOpen = false; return; }
+      acDropdown.innerHTML = '';
+      acSuggestions.forEach((item, idx) => {
+        const div = document.createElement('div');
+        div.className = 'rv-dd-item' + (idx === acIndex ? ' rv-dd-item--highlighted' : '');
+        div.style.padding = '8px 12px'; div.style.cursor = 'pointer'; div.style.borderBottom = '1px solid rgba(255,255,255,0.05)';
+        div.innerHTML = `<strong>${item.name ? `${item.name} (${item.ticker}${item.exchange ? ` · ${item.exchange}` : ''})` : `${item.ticker}${item.exchange ? ` · ${item.exchange}` : ''}`}</strong>`;
+        div.addEventListener('mousedown', (e) => { e.preventDefault(); selectAC(idx); });
+        acDropdown.appendChild(div);
+      });
+      acDropdown.style.display = 'block'; acOpen = true;
+    }
+
+    function selectAC(idx) {
+      if (!acSuggestions[idx]) return;
+      tickerInput.value = acSuggestions[idx].ticker;
+      acDropdown.style.display = 'none'; acOpen = false;
+      loadTicker(acSuggestions[idx].ticker);
+    }
+
+    let acActiveController = null;
+    tickerInput.addEventListener('input', () => {
+      const q = tickerInput.value.trim();
+      if (!q) { acSuggestions = []; renderAC(); return; }
+      if (acActiveController) acActiveController.abort();
+
+      clearTimeout(acTimer);
+      acTimer = setTimeout(async () => {
+        acActiveController = new AbortController();
+        const { signal } = acActiveController;
+        try {
+          const res = await fetch(`/api/universe?q=${encodeURIComponent(q)}&limit=8&t=${Date.now()}`, { signal });
+          if (!res.ok) return;
+          const data = await res.json();
+          const deduped = new Map();
+          (data?.data?.symbols || [])
+            .map(s => ({
+              ticker: s.symbol,
+              name: s.name,
+              exchange: s.exchange || (typeof s.canonical_id === 'string' && s.canonical_id.includes(':') ? s.canonical_id.split(':')[0] : null)
+            }))
+            .filter(s => s.ticker)
+            .forEach((s) => {
+              const key = acDedupeKey(s);
+              const prev = deduped.get(key);
+              if (!prev || acCompare(s, prev, q) < 0) {
+                deduped.set(key, s);
+              }
+            });
+          acSuggestions = Array.from(deduped.values()).sort((a, b) => acCompare(a, b, q)).slice(0, 8);
+          acIndex = -1; renderAC();
+        } catch (e) {
+          if (e.name !== 'AbortError') console.error('AC fetch err', e);
+        }
+      }, 150);
     });
 
-    if (params.has('ticker')) {
-      const queued = params.get('ticker');
-      tickerInput.value = queued;
-      loadTicker(queued);
-    } else {
-      tickerInput.value = 'SPY';
-      loadTicker('SPY');
-    }
+    tickerInput.addEventListener('keydown', e => {
+      if (!acOpen || !acSuggestions.length) return;
+      if (e.key === 'ArrowDown') { e.preventDefault(); acIndex = Math.min(acSuggestions.length - 1, acIndex + 1); renderAC(); }
+      else if (e.key === 'ArrowUp') { e.preventDefault(); acIndex = Math.max(0, acIndex - 1); renderAC(); }
+      else if (e.key === 'Enter') { e.preventDefault(); selectAC(Math.max(0, acIndex)); }
+      else if (e.key === 'Escape') { acDropdown.style.display = 'none'; acOpen = false; }
+    });
 
+    tickerInput.addEventListener('focus', () => { if (tickerInput.value.trim() && acSuggestions.length) { acDropdown.style.display = 'block'; acOpen = true; } });
+    tickerInput.addEventListener('blur', () => { setTimeout(() => { acDropdown.style.display = 'none'; acOpen = false; }, 200); });
+
+    // ─── Formatters ───────────────────────────────────────────────────────────────
+    const fmt = (v, d = 2) => v == null || !isFinite(v) ? '—' : v.toFixed(d);
+    const fmtPct = v => v == null || !isFinite(v) ? '—' : `${(v * 100).toFixed(2)}%`;
+    const fmtPctSigned = v => { if (v == null || !isFinite(v)) return '—'; const pv = (v * 100).toFixed(2); return v >= 0 ? `+${pv}%` : `${pv}%`; };
+    const fmtCur = (v, c = 'USD') => v == null || !isFinite(v) ? '—' : new Intl.NumberFormat('en-US', { style: 'currency', currency: c }).format(v);
+    const fmtVol = v => v == null || !isFinite(v) ? '—' : v >= 1e6 ? `${(v / 1e6).toFixed(1)}M` : v >= 1e3 ? `${(v / 1e3).toFixed(0)}K` : v.toFixed(0);
+    const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+
+    // ─── Load Ticker ──────────────────────────────────────────────────────────────
     async function loadTicker(ticker) {
-      statusEl.textContent = `Looking up ${ticker.toUpperCase()}...`;
+      document.getElementById('stock-subtitle').textContent = `Loading ${ticker.toUpperCase()}…`;
+      document.getElementById('price-block').style.display = 'none';
+      document.getElementById('range-52w').style.display = 'none';
       errorBox.style.display = 'none';
-      const debugQuery = debugParam ? '&debug=1' : '';
+      app.innerHTML = '<div class="loading-state">⏳ Fetching data…</div>';
+
       try {
-        const response = await fetch(`/api/stock?ticker=${encodeURIComponent(ticker)}${debugQuery}`);
-        const payload = await response.json();
-        renderPayload(payload);
-      } catch (error) {
-        statusEl.textContent = 'Unable to reach stock API yet.';
+        const res = await fetch(`/api/stock?ticker=${encodeURIComponent(ticker)}`);
+        const payload = await res.json();
+        render(payload);
+      } catch (err) {
         errorBox.style.display = 'block';
-        errorBox.textContent = 'Network error while contacting /api/stock.';
-        clearContent();
+        errorBox.textContent = `Network error: ${err.message}`;
       }
     }
 
-    function renderPayload(payload) {
+    // ─── Main Render ──────────────────────────────────────────────────────────────
+    function render(payload) {
       const { data, error, metadata } = payload;
-      const normalized = metadata?.request?.normalized_ticker || '—';
+      window._rvMetadata = metadata; // expose for features
+      const ticker = metadata?.request?.normalized_ticker || data?.ticker || '—';
+      const stats = data?.market_stats?.stats || {};
+      const prices = data?.market_prices || {};
+      const universe = data?.universe || {};
+      const score = data?.market_score || {};
+      const bars = data?.bars || [];
+      const change = data?.change || {};
+      const close = prices.close ?? bars[bars.length - 1]?.close ?? null;
 
-      statusEl.textContent = `Ticker ${normalized}`;
-      renderMembership(data?.universe);
-      renderPrice(data?.market_prices, data?.market_stats);
-      renderMetrics(data?.market_stats?.stats);
-      renderTrend(data?.market_stats?.stats);
-      renderVolatility(data?.market_stats?.stats);
-      renderQuality(data?.market_stats?.coverage, metadata);
-      renderScore(data?.market_score);
+      // ── Header ──
+      document.getElementById('stock-title').textContent = universe.name || ticker;
+      document.getElementById('stock-subtitle').textContent = universe.name ? `${ticker} · ${universe.exchange || ''} · ${universe.sector || ''}`.replace(/· $/, '') : ticker;
+      document.title = `${ticker} — Stock Analysis · RubikVault`;
 
+      // Badges
+      const badgesEl = document.getElementById('stock-badges');
+      badgesEl.innerHTML = '';
+      const indexes = universe.indexes || [];
+      if (indexes.length) {
+        indexes.forEach(idx => { badgesEl.innerHTML += `<span class="badge">${idx}</span>`; });
+      } else if (!universe.exists_in_universe) {
+        badgesEl.innerHTML = '<span class="badge unknown">Not in universe</span>';
+      }
+
+      // Price block
+      if (close != null) {
+        document.getElementById('price-block').style.display = 'flex';
+        document.getElementById('price-big').textContent = fmtCur(close, prices.currency || 'USD');
+        const chg = change.pct ?? stats.ret_1d_pct;
+        const chgAbs = change.abs ?? stats.ret_1d_abs;
+        const changeEl = document.getElementById('price-change');
+        if (chg != null) {
+          const sign = chg >= 0 ? '+' : '';
+          changeEl.textContent = `${sign}${fmtCur(chgAbs, prices.currency || 'USD')} (${sign}${(chg * 100).toFixed(2)}%)`;
+          changeEl.className = `price-change ${chg >= 0 ? 'up' : 'down'}`;
+        } else { changeEl.textContent = ''; }
+        document.getElementById('price-date').textContent = prices.date ? `as of ${prices.date}` : '';
+      }
+
+      // 52W Range
+      const h52 = stats.high_52w, l52 = stats.low_52w;
+      if (h52 != null && l52 != null && close != null && h52 > l52) {
+        document.getElementById('range-52w').style.display = 'block';
+        const pct = ((close - l52) / (h52 - l52)) * 100;
+        document.getElementById('range-dot').style.left = `${clamp(pct, 2, 98)}%`;
+        document.getElementById('range-low').textContent = fmtCur(l52);
+        document.getElementById('range-high').textContent = fmtCur(h52);
+        const fromHigh = ((close - h52) / h52 * 100).toFixed(1);
+        document.getElementById('range-pct').textContent = `${fromHigh}% from high`;
+      }
+
+      // ── Error ──
       if (error) {
         errorBox.style.display = 'block';
-        errorBox.innerHTML = `<strong>${error.code}</strong>: ${error.message}` +
-          (error.details?.missing ? `<div>Missing: ${error.details.missing.join(', ')}</div>` : '');
-      } else {
-        errorBox.style.display = 'none';
+        errorBox.innerHTML = `<strong>${error.code}</strong>: ${error.message}`;
       }
+
+      // ── Sections ──
+      app.innerHTML = buildSections(ticker, close, stats, score, bars, universe);
+      // Load async integrations (Scientific, Forecast, Elliott)
+      loadAsyncInsights(ticker);
     }
 
-    function renderMembership(universe) {
-      membershipEl.innerHTML = '';
-      if (!universe?.exists_in_universe) {
-        const badge = document.createElement('span');
-        badge.className = 'badge unknown';
-        badge.textContent = 'Unknown ticker';
-        membershipEl.appendChild(badge);
-        return;
-      }
-      const indexes = universe?.indexes || [];
-      if (!indexes.length) {
-        const badge = document.createElement('span');
-        badge.className = 'badge';
-        badge.textContent = 'Universe entry present';
-        membershipEl.appendChild(badge);
-        return;
-      }
-      indexes.forEach((index) => {
-        const badge = document.createElement('span');
-        badge.className = 'badge';
-        badge.textContent = index;
-        membershipEl.appendChild(badge);
-      });
+    // ─── Build All Sections ───────────────────────────────────────────────────────
+    function buildSections(ticker, close, s, score, bars, universe) {
+      const md = window._rvMetadata || {};
+      return `<div class="sections-grid">
+      ${buildExecutiveSummary(ticker, close, s, bars, universe)}
+      ${buildDataProvenance(md, {}, bars)}
+      ${buildOHLCVStrip(close, s, bars)}
+      ${buildVerdict(close, s)}
+      ${buildTrendMomentum(close, s, bars)}
+      <div id="rv-scientific-slot"><div class="section section-full" style="opacity:.5"><h2>🔬 Scientific Analyzer</h2><div class="placeholder-card">Loading scientific analysis…</div></div></div>
+      <div id="rv-forecast-slot"><div class="section" style="opacity:.5"><h2>🔮 ML Forecast</h2><div class="placeholder-card">Loading forecast…</div></div></div>
+      <div id="rv-elliott-slot"><div class="section" style="opacity:.5"><h2>🌊 Elliott Wave</h2><div class="placeholder-card">Loading wave analysis…</div></div></div>
+      ${buildMASection(close, s)}
+      ${buildOscillators(close, s)}
+      ${buildPerformance(s)}
+      ${buildEarningsShockProxy(bars)}
+      ${buildVolatility(close, s)}
+      ${buildDrawdownAnatomy(bars)}
+      ${buildVolTermStructure(bars)}
+      ${buildMonteCarlo(bars)}
+      ${buildLiquidityScore(s, bars)}
+      ${buildVolume(s, bars)}
+      ${buildSeasonality(bars)}
+      ${buildCorrelations(ticker, bars)}
+      ${buildFactorCorrelation(ticker, bars)}
+      ${buildLevels(close, s)}
+      ${buildATRBands(close, s)}
+      ${buildRiskBudget(close, s)}
+      ${buildSignals(close, s)}
+      ${buildStressScenarios(bars)}
+      ${buildMacroRegime()}
+      ${buildFundamentalsPlaceholder(ticker)}
+      ${buildPeersPlaceholder(ticker, universe)}
+      ${buildCrossAssetRadar()}
+      ${buildMarketIntelligence(ticker)}
+      ${buildScore(score)}
+      ${buildPriceConclusion(ticker, close, s, bars, universe)}
+      ${buildCorporateActions(bars)}
+      ${buildInfrastructure(md)}
+    </div>`;
     }
 
-    function renderPrice(price, stats) {
-      if (!price) {
-        priceValue.textContent = '—';
-        priceMeta.textContent = 'Market prices unavailable';
-        return;
-      }
-      priceValue.textContent = formatCurrency(price.close, price.currency);
-      const dateLabel = price.date ? `as of ${price.date}` : 'date unknown';
-      const momentum = stats?.stats?.returns_1d;
-      const extra = momentum !== undefined && momentum !== null ? `· 1d return ${formatPercent(momentum)}` : '';
-      priceMeta.textContent = `${dateLabel} ${extra}`;
-    }
-
-    function renderMetrics(stats) {
-      fillMetricGrid(returnsGrid, stats, metricsGroups.returns);
-    }
-
-    function renderVolatility(stats) {
-      fillMetricGrid(volatilityGrid, stats, metricsGroups.volatility);
-    }
-
-    function renderTrend(stats) {
-      fillMetricGrid(trendGrid, stats, metricsGroups.trend);
-    }
-
-    function renderQuality(coverage, metadata) {
-      qualityGrid.innerHTML = '';
-      const moduleSource = metadata?.served_from || 'unknown';
-      const runQuality = coverage ? (coverage.coverage_ratio >= 0.95 ? 'OK' : coverage.coverage_ratio >= 0.5 ? 'DEGRADED' : 'FAILED') : 'UNKNOWN';
-      const metrics = [
-        { title: 'Run quality', value: runQuality },
-        { title: 'Coverage ratio', value: coverage ? formatPercent(coverage.coverage_ratio) : '—' },
-        { title: 'Bars used', value: coverage ? coverage.bars_used : '—' },
-        { title: 'Freshness days', value: coverage ? coverage.freshness_days : '—' },
-        { title: 'Served from', value: moduleSource }
+    // ─── Async Integration Loader ────────────────────────────────────────────────
+    async function loadAsyncInsights(ticker) {
+      const slots = [
+        { id: 'rv-scientific-slot', fn: () => buildScientificInsight(ticker) },
+        { id: 'rv-forecast-slot', fn: () => buildForecastInsight(ticker) },
+        { id: 'rv-elliott-slot', fn: () => buildElliottInsight(ticker) },
       ];
-      metrics.forEach(({ title, value }) => {
-        const el = document.createElement('div');
-        el.className = 'metric';
-        el.innerHTML = `<div class="metric-title">${title}</div><div class="metric-value">${value}</div>`;
-        qualityGrid.appendChild(el);
-      });
+      await Promise.allSettled(slots.map(async ({ id, fn }) => {
+        try {
+          const html = await fn();
+          const el = document.getElementById(id);
+          if (el && html) el.innerHTML = html;
+          else if (el && !html) el.remove();
+        } catch (e) { console.warn('Async insight error:', id, e); }
+      }));
     }
 
-    function fillMetricGrid(container, stats, definitions) {
-      container.innerHTML = '';
-      definitions.forEach(({ key, label, format }) => {
-        const value = stats?.[key];
-        const metric = document.createElement('div');
-        metric.className = 'metric';
-        metric.innerHTML = `
-          <div class="metric-title">${label}</div>
-          <div class="metric-value">${format(value)}</div>
-        `;
-        container.appendChild(metric);
-      });
+    // ─── 1. TECHNICAL VERDICT ────────────────────────────────────────────────────
+    function buildVerdict(close, s) {
+      if (close == null) return '';
+      let bullCount = 0, bearCount = 0;
+      // MA stack
+      if (s.sma20 > s.sma50 && s.sma50 > s.sma200) bullCount += 2;
+      else if (s.sma20 < s.sma50 && s.sma50 < s.sma200) bearCount += 2;
+      // Price vs MAs
+      if (close > s.sma20) bullCount++; else bearCount++;
+      if (close > s.sma50) bullCount++; else bearCount++;
+      if (close > s.sma200) bullCount++; else bearCount++;
+      // RSI
+      if (s.rsi14 > 60) bullCount++; else if (s.rsi14 < 40) bearCount++;
+      // MACD
+      if (s.macd_hist > 0) bullCount++; else if (s.macd_hist < 0) bearCount++;
+      // BB position
+      if (close > s.bb_mid) bullCount++; else bearCount++;
+
+      const total = bullCount + bearCount;
+      const ratio = total > 0 ? bullCount / total : 0.5;
+      let verdict, cls;
+      if (ratio >= 0.65) { verdict = '▲ BULLISH'; cls = 'bullish'; }
+      else if (ratio <= 0.35) { verdict = '▼ BEARISH'; cls = 'bearish'; }
+      else { verdict = '◆ NEUTRAL'; cls = 'neutral'; }
+
+      return `<div class="section section-full">
+      <h2>🎯 Technical Verdict</h2>
+      <div class="verdict-box ${cls}">${verdict}</div>
+      <div class="verdict-detail">${bullCount} bullish signals, ${bearCount} bearish signals from MA, RSI, MACD, and Bollinger analysis</div>
+    </div>`;
     }
 
-    function formatNumber(value) {
-      if (value === null || value === undefined || Number.isNaN(value)) return '—';
-      return new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value);
+    // ─── 2. MOVING AVERAGE RADAR ─────────────────────────────────────────────────
+    function buildMASection(close, s) {
+      if (close == null) return '';
+      const mas = [
+        { name: 'SMA 20', val: s.sma20, key: 'sma20' },
+        { name: 'SMA 50', val: s.sma50, key: 'sma50' },
+        { name: 'SMA 200', val: s.sma200, key: 'sma200' },
+        { name: 'EMA 12', val: s.ema12, key: 'ema12' },
+        { name: 'EMA 26', val: s.ema26, key: 'ema26' },
+      ];
+
+      // Stack detection
+      let stackLabel, stackCls;
+      if (s.sma20 > s.sma50 && s.sma50 > s.sma200) { stackLabel = '▲ Bullish Stack (20 > 50 > 200)'; stackCls = 'bullish'; }
+      else if (s.sma20 < s.sma50 && s.sma50 < s.sma200) { stackLabel = '▼ Bearish Stack (20 < 50 < 200)'; stackCls = 'bearish'; }
+      else { stackLabel = '◆ Mixed Alignment'; stackCls = 'mixed'; }
+
+      // EMA crossover
+      const emaCross = s.ema12 != null && s.ema26 != null
+        ? (s.ema12 > s.ema26 ? '🟢 EMA 12 > 26 (Short-term bullish)' : '🔴 EMA 12 < 26 (Short-term bearish)')
+        : '';
+
+      const rows = mas.map(m => {
+        if (m.val == null) return '';
+        const above = close >= m.val;
+        const dist = ((close - m.val) / m.val * 100).toFixed(2);
+        return `<tr>
+        <td style="font-weight:600">${m.name}</td>
+        <td>${fmtCur(m.val)}</td>
+        <td><span class="ma-pos ${above ? 'above' : 'below'}">${above ? '▲ Above' : '▼ Below'}</span></td>
+        <td style="color:${above ? 'var(--green)' : 'var(--red)'}; font-weight:700">${dist > 0 ? '+' : ''}${dist}%</td>
+      </tr>`;
+      }).join('');
+
+      return `<div class="section section-full">
+      <h2>📐 Moving Average Radar</h2>
+      <div class="stack-badge ${stackCls}">${stackLabel}</div>
+      ${emaCross ? `<div style="font-size:0.85rem;margin-bottom:0.75rem;color:var(--text-dim)">${emaCross}</div>` : ''}
+      <table class="ma-table">
+        <tr><th>Moving Average</th><th>Value</th><th>Position</th><th>Distance</th></tr>
+        ${rows}
+      </table>
+    </div>`;
     }
 
-    function formatPercent(value) {
-      if (value === null || value === undefined || Number.isNaN(value)) return '—';
-      return `${(value * 100).toFixed(2)}%`;
-    }
+    // ─── 3. OSCILLATORS & MOMENTUM ───────────────────────────────────────────────
+    function buildOscillators(close, s) {
+      // RSI Gauge
+      const rsi = s.rsi14;
+      const rsiZone = rsi < 30 ? 'Oversold' : rsi > 70 ? 'Overbought' : rsi > 50 ? 'Bullish' : 'Bearish';
+      const rsiColor = rsi < 30 ? 'var(--green)' : rsi > 70 ? 'var(--red)' : 'var(--text)';
+      const rsiGauge = rsi != null ? `
+      <div class="gauge">
+        <div class="gauge-header">
+          <span class="gauge-label">RSI (14)</span>
+          <span class="gauge-value" style="color:${rsiColor}">${fmt(rsi, 1)} — ${rsiZone}</span>
+        </div>
+        <div class="gauge-bar">
+          <div class="gauge-zones">
+            <div class="gauge-zone" style="width:30%;background:rgba(16,185,129,0.15)"></div>
+            <div class="gauge-zone" style="width:40%;background:rgba(148,163,184,0.05)"></div>
+            <div class="gauge-zone" style="width:30%;background:rgba(248,113,113,0.15)"></div>
+          </div>
+          <div class="gauge-marker" style="left:${clamp(rsi, 0, 100)}%"></div>
+        </div>
+        <div class="gauge-ticks"><span>0 (Oversold)</span><span>30</span><span>50</span><span>70</span><span>100 (Overbought)</span></div>
+      </div>` : '';
 
-    function formatCurrency(value, currency = 'USD') {
-      if (value === null || value === undefined || Number.isNaN(value)) return '—';
-      return new Intl.NumberFormat('en-US', { style: 'currency', currency }).format(value);
-    }
+      // MACD
+      const macdOk = s.macd != null;
+      const macdDir = s.macd_hist > 0 ? 'Bullish' : 'Bearish';
+      const macdCross = s.macd > s.macd_signal ? '🟢 MACD above Signal' : '🔴 MACD below Signal';
+      const macdHist = `<div class="gauge">
+      <div class="gauge-header">
+        <span class="gauge-label">MACD</span>
+        <span class="gauge-value">${macdOk ? `${fmt(s.macd, 3)} — ${macdDir}` : '—'}</span>
+      </div>
+      ${macdOk ? `<div class="m-grid" style="margin-top:0.5rem;">
+        <div class="m-item"><div class="m-label">MACD Line</div><div class="m-val">${fmt(s.macd, 3)}</div></div>
+        <div class="m-item"><div class="m-label">Signal Line</div><div class="m-val">${fmt(s.macd_signal, 3)}</div></div>
+        <div class="m-item"><div class="m-label">Histogram</div><div class="m-val" style="color:${s.macd_hist >= 0 ? 'var(--green)' : 'var(--red)'}">${fmt(s.macd_hist, 3)}</div></div>
+        <div class="m-item"><div class="m-label">Crossover</div><div class="m-val" style="font-size:0.85rem">${macdCross}</div></div>
+      </div>` : ''}
+    </div>`;
 
-    function clearContent() {
-      priceValue.textContent = '—';
-      priceMeta.textContent = '';
-      returnsGrid.innerHTML = '';
-      volatilityGrid.innerHTML = '';
-      trendGrid.innerHTML = '';
-      qualityGrid.innerHTML = '';
-      membershipEl.innerHTML = '';
-      clearScore();
-    }
-
-    function renderScore(score) {
-      if (!score) {
-        clearScore();
-        return;
+      // Bollinger Bands
+      let bbHTML = '';
+      if (s.bb_upper != null && close != null) {
+        const bbWidth = s.bb_upper - s.bb_lower;
+        const bbPos = bbWidth > 0 ? ((close - s.bb_lower) / bbWidth) * 100 : 50;
+        const pctB = bbWidth > 0 ? ((close - s.bb_lower) / bbWidth).toFixed(2) : '—';
+        const bbZone = bbPos > 80 ? 'Near Upper (Overbought)' : bbPos < 20 ? 'Near Lower (Oversold)' : 'Mid Range';
+        bbHTML = `<div class="gauge">
+        <div class="gauge-header">
+          <span class="gauge-label">Bollinger Bands</span>
+          <span class="gauge-value">%B: ${pctB} — ${bbZone}</span>
+        </div>
+        <div class="gauge-bar">
+          <div class="gauge-zones">
+            <div class="gauge-zone" style="width:20%;background:rgba(16,185,129,0.15)"></div>
+            <div class="gauge-zone" style="width:60%;background:rgba(148,163,184,0.05)"></div>
+            <div class="gauge-zone" style="width:20%;background:rgba(248,113,113,0.15)"></div>
+          </div>
+          <div class="gauge-marker" style="left:${clamp(bbPos, 2, 98)}%"></div>
+        </div>
+        <div class="gauge-ticks"><span>Lower ${fmtCur(s.bb_lower)}</span><span>Mid ${fmtCur(s.bb_mid)}</span><span>Upper ${fmtCur(s.bb_upper)}</span></div>
+      </div>`;
       }
-      scoreShortChip.textContent = `Short: ${score.score_short ?? '—'}`;
-      scoreMidChip.textContent = `Mid: ${score.score_mid ?? '—'}`;
-      scoreLongChip.textContent = `Long: ${score.score_long ?? '—'}`;
-      scoreConfidenceEl.textContent = `Confidence: ${score.confidence ?? '—'}`;
 
-      scoreShortChip.className = `score-chip ${score.score_short >= 70 ? 'positive' : score.score_short <= 40 ? 'negative' : 'neutral'}`;
-      scoreMidChip.className = `score-chip ${score.score_mid >= 70 ? 'positive' : score.score_mid <= 40 ? 'negative' : 'neutral'}`;
-      scoreLongChip.className = `score-chip ${score.score_long >= 70 ? 'positive' : score.score_long <= 40 ? 'negative' : 'neutral'}`;
-
-      renderReasons(scoreReasonsShort, 'Short horizon', score.reasons_top?.short || []);
-      renderReasons(scoreReasonsMid, 'Mid horizon', score.reasons_top?.mid || []);
-      renderReasons(scoreReasonsLong, 'Long horizon', score.reasons_top?.long || []);
+      return `<div class="section section-full">
+      <h2>📊 Oscillators & Momentum</h2>
+      ${rsiGauge}
+      ${macdHist}
+      ${bbHTML}
+    </div>`;
     }
 
-    function renderReasons(container, title, contributions) {
-      container.innerHTML = `<h3>${title}</h3>`;
-      if (!contributions.length) {
-        container.innerHTML += '<div class="score-reason">No contributors recorded</div>';
-        return;
+    // ─── 4. PERFORMANCE TIMELINE ─────────────────────────────────────────────────
+    function buildPerformance(s) {
+      const periods = [
+        { label: '1 Day', val: s.ret_1d_pct },
+        { label: '5 Day', val: s.ret_5d_pct },
+        { label: '20 Day', val: s.ret_20d_pct },
+      ];
+
+      const maxAbs = Math.max(...periods.map(p => Math.abs(p.val || 0)), 0.01);
+      const rows = periods.map(p => {
+        if (p.val == null) return '';
+        const isPos = p.val >= 0;
+        const barWidth = Math.abs(p.val) / maxAbs * 50; // 50% max width
+        const barStyle = isPos
+          ? `right:50%; width:${barWidth}%; border-radius: 4px 0 0 4px;`
+          : `left:50%; width:${barWidth}%; border-radius: 0 4px 4px 0;`;
+        return `<div class="perf-item">
+        <span class="perf-label">${p.label}</span>
+        <div class="perf-bar-container">
+          <div class="perf-center"></div>
+          <div class="perf-bar ${isPos ? 'positive' : 'negative'}" style="${barStyle}"></div>
+        </div>
+        <span class="perf-val ${isPos ? 'positive' : 'negative'}">${fmtPctSigned(p.val)}</span>
+      </div>`;
+      }).join('');
+
+      // Autocorrelation
+      const ac = s.lag1_autocorrelation;
+      const acText = ac != null ? (ac > 0.1 ? '🔄 Momentum trending (positive autocorrelation)' :
+        ac < -0.1 ? '↩️ Mean-reverting (negative autocorrelation)' : '➡️ No significant trend persistence') : '';
+
+      return `<div class="section">
+      <h2>📈 Performance</h2>
+      ${rows}
+      ${acText ? `<div style="font-size:0.78rem;color:var(--text-dim);margin-top:0.5rem">${acText}</div>` : ''}
+    </div>`;
+    }
+
+    // ─── 5. VOLATILITY & RISK ────────────────────────────────────────────────────
+    function buildVolatility(close, s) {
+      const vp = s.volatility_percentile;
+      const vpLabel = vp != null ? (vp > 80 ? 'High volatility' : vp > 50 ? 'Normal volatility' : 'Low volatility') : '';
+      const vpColor = vp > 80 ? 'var(--red)' : vp > 50 ? 'var(--yellow)' : 'var(--green)';
+
+      const vpGauge = vp != null ? `<div class="gauge">
+      <div class="gauge-header">
+        <span class="gauge-label">Volatility Percentile</span>
+        <span class="gauge-value" style="color:${vpColor}">${fmt(vp, 0)}th — ${vpLabel}</span>
+      </div>
+      <div class="gauge-bar">
+        <div class="gauge-fill" style="width:${clamp(vp, 0, 100)}%;background:linear-gradient(90deg,var(--green),var(--yellow),var(--red))"></div>
+      </div>
+      <div class="gauge-ticks"><span>Low</span><span>Moderate</span><span>High</span></div>
+    </div>` : '';
+
+      const atrPct = close > 0 && s.atr14 ? (s.atr14 / close * 100).toFixed(2) : null;
+      const metrics = [
+        { label: 'ATR (14)', val: fmtCur(s.atr14), sub: atrPct ? `${atrPct}% of price` : '' },
+        { label: '20d Volatility', val: fmtPct(s.volatility_20d), sub: '' },
+        { label: '20d Std Dev', val: fmtCur(s.rolling_std_20), sub: '' },
+        { label: '52W Range %', val: fmtPct(s.range_52w_pct), sub: '' },
+      ];
+
+      return `<div class="section">
+      <h2>⚡ Volatility & Risk</h2>
+      ${vpGauge}
+      <div class="m-grid" style="margin-top:0.5rem;">
+        ${metrics.map(m => `<div class="m-item"><div class="m-label">${m.label}</div><div class="m-val">${m.val}</div>${m.sub ? `<div class="m-sub">${m.sub}</div>` : ''}</div>`).join('')}
+      </div>
+    </div>`;
+    }
+
+    // ─── 6. VOLUME ANALYSIS ──────────────────────────────────────────────────────
+    function buildVolume(s, bars) {
+      const ratio = s.volume_ratio_20d;
+      const avgVol = s.avg_volume_20d;
+      const hasVolume = ratio != null && ratio > 0;
+
+      // Volume trend from last bars
+      let volTrend = '';
+      if (bars.length >= 10) {
+        const recent5 = bars.slice(-5).reduce((a, b) => a + (b.volume || 0), 0) / 5;
+        const prior5 = bars.slice(-10, -5).reduce((a, b) => a + (b.volume || 0), 0) / 5;
+        if (recent5 > 0 && prior5 > 0) {
+          const chg = ((recent5 - prior5) / prior5 * 100).toFixed(0);
+          volTrend = recent5 > prior5 ? `📈 Volume rising (${chg > 0 ? '+' : ''}${chg}% vs prior 5d)` : `📉 Volume dropping (${chg}% vs prior 5d)`;
+        }
       }
-      contributions.forEach((entry) => {
-        const el = document.createElement('div');
-        el.className = 'score-reason';
-        el.textContent = `${entry.metric}: ${formatPoints(entry.points)}`;
-        container.appendChild(el);
+
+      if (!hasVolume && !volTrend) return '';
+
+      const ratioBar = hasVolume ? `<div class="gauge">
+      <div class="gauge-header">
+        <span class="gauge-label">Volume vs 20d Average</span>
+        <span class="gauge-value" style="color:${ratio > 1.5 ? 'var(--green)' : ratio < 0.5 ? 'var(--red)' : 'var(--text)'}">${fmt(ratio, 2)}x</span>
+      </div>
+      <div class="gauge-bar">
+        <div class="gauge-fill" style="width:${clamp(ratio / 3 * 100, 2, 100)}%;background:${ratio > 1.5 ? 'var(--green)' : ratio < 0.5 ? 'var(--red)' : 'var(--accent)'}"></div>
+      </div>
+      <div class="gauge-ticks"><span>0x</span><span>1x Avg</span><span>2x</span><span>3x+</span></div>
+    </div>` : '';
+
+      return `<div class="section">
+      <h2>📊 Volume</h2>
+      ${ratioBar}
+      ${avgVol ? `<div style="font-size:0.8rem;color:var(--text-dim);margin-top:0.25rem">20d Average: ${fmtVol(avgVol)}</div>` : ''}
+      ${volTrend ? `<div style="font-size:0.8rem;color:var(--text-dim);margin-top:0.5rem">${volTrend}</div>` : ''}
+    </div>`;
+    }
+
+    // ─── 7. SUPPORT & RESISTANCE LEVELS ──────────────────────────────────────────
+    function buildLevels(close, s) {
+      if (close == null) return '';
+      const levels = [];
+      if (s.high_52w != null) levels.push({ name: '52W High', price: s.high_52w, type: 'resistance' });
+      if (s.bb_upper != null) levels.push({ name: 'BB Upper', price: s.bb_upper, type: 'resistance' });
+      if (s.sma20 != null) levels.push({ name: 'SMA 20', price: s.sma20, type: close > s.sma20 ? 'support' : 'resistance' });
+      levels.push({ name: 'Current Price', price: close, type: 'current' });
+      if (s.sma50 != null) levels.push({ name: 'SMA 50', price: s.sma50, type: close > s.sma50 ? 'support' : 'resistance' });
+      if (s.bb_lower != null) levels.push({ name: 'BB Lower', price: s.bb_lower, type: 'support' });
+      if (s.sma200 != null) levels.push({ name: 'SMA 200', price: s.sma200, type: close > s.sma200 ? 'support' : 'resistance' });
+      if (s.low_52w != null) levels.push({ name: '52W Low', price: s.low_52w, type: 'support' });
+
+      // Sort descending by price
+      levels.sort((a, b) => b.price - a.price);
+
+      const html = levels.map(l => {
+        const dist = l.type === 'current' ? '' : `${((l.price - close) / close * 100).toFixed(1)}%`;
+        return `<div class="level-item ${l.type}">
+        <span class="level-name">${l.name}</span>
+        <span><span class="level-price">${fmtCur(l.price)}</span><span class="level-dist">${dist}</span></span>
+      </div>`;
+      }).join('');
+
+      return `<div class="section">
+      <h2>🎚️ Key Levels</h2>
+      <div class="levels-list">${html}</div>
+    </div>`;
+    }
+
+    // ─── 8. SIGNAL SUMMARY TABLE ─────────────────────────────────────────────────
+    function buildSignals(close, s) {
+      if (close == null) return '';
+      const signals = [];
+
+      // MA signals
+      if (s.sma20 != null) signals.push({ name: 'Price vs SMA 20', sig: close > s.sma20 ? 'Buy' : 'Sell', detail: `${close > s.sma20 ? 'Above' : 'Below'} (${((close - s.sma20) / s.sma20 * 100).toFixed(1)}%)` });
+      if (s.sma50 != null) signals.push({ name: 'Price vs SMA 50', sig: close > s.sma50 ? 'Buy' : 'Sell', detail: `${close > s.sma50 ? 'Above' : 'Below'} (${((close - s.sma50) / s.sma50 * 100).toFixed(1)}%)` });
+      if (s.sma200 != null) signals.push({ name: 'Price vs SMA 200', sig: close > s.sma200 ? 'Buy' : 'Sell', detail: `${close > s.sma200 ? 'Above' : 'Below'} (${((close - s.sma200) / s.sma200 * 100).toFixed(1)}%)` });
+
+      // MA Stack
+      if (s.sma20 != null && s.sma50 != null && s.sma200 != null) {
+        const stack = s.sma20 > s.sma50 && s.sma50 > s.sma200 ? 'Buy' : s.sma20 < s.sma50 && s.sma50 < s.sma200 ? 'Sell' : 'Neutral';
+        signals.push({ name: 'MA Alignment', sig: stack, detail: stack === 'Buy' ? 'Bullish stack' : stack === 'Sell' ? 'Bearish stack' : 'Mixed order' });
+      }
+
+      // EMA cross
+      if (s.ema12 != null && s.ema26 != null) {
+        signals.push({ name: 'EMA 12/26 Cross', sig: s.ema12 > s.ema26 ? 'Buy' : 'Sell', detail: s.ema12 > s.ema26 ? 'Bullish crossover' : 'Bearish crossover' });
+      }
+
+      // RSI
+      if (s.rsi14 != null) {
+        const rsiSig = s.rsi14 < 30 ? 'Buy' : s.rsi14 > 70 ? 'Sell' : 'Neutral';
+        signals.push({ name: 'RSI (14)', sig: rsiSig, detail: `${s.rsi14.toFixed(1)}` });
+      }
+
+      // MACD
+      if (s.macd_hist != null) {
+        signals.push({ name: 'MACD Histogram', sig: s.macd_hist > 0 ? 'Buy' : 'Sell', detail: `${s.macd_hist.toFixed(3)}` });
+      }
+
+      // Bollinger
+      if (s.bb_upper != null && s.bb_lower != null) {
+        const bbPct = (close - s.bb_lower) / (s.bb_upper - s.bb_lower);
+        const bbSig = bbPct < 0.2 ? 'Buy' : bbPct > 0.8 ? 'Sell' : 'Neutral';
+        signals.push({ name: 'Bollinger %B', sig: bbSig, detail: `${bbPct.toFixed(2)}` });
+      }
+
+      const rows = signals.map(sig => {
+        const cls = sig.sig === 'Buy' ? 'buy' : sig.sig === 'Sell' ? 'sell' : 'neutral';
+        return `<tr>
+        <td style="font-weight:600">${sig.name}</td>
+        <td><span class="signal-chip ${cls}">${sig.sig}</span></td>
+        <td style="color:var(--text-dim);font-size:0.8rem">${sig.detail}</td>
+      </tr>`;
+      }).join('');
+
+      const buyCount = signals.filter(s => s.sig === 'Buy').length;
+      const sellCount = signals.filter(s => s.sig === 'Sell').length;
+      const neutralCount = signals.filter(s => s.sig === 'Neutral').length;
+
+      return `<div class="section section-full">
+      <h2>📋 Signal Summary</h2>
+      <div style="display:flex;gap:0.5rem;margin-bottom:0.75rem;flex-wrap:wrap;">
+        <span class="signal-chip buy">Buy: ${buyCount}</span>
+        <span class="signal-chip sell">Sell: ${sellCount}</span>
+        <span class="signal-chip neutral">Neutral: ${neutralCount}</span>
+      </div>
+      <table class="sig-table">
+        <tr><th>Indicator</th><th>Signal</th><th>Detail</th></tr>
+        ${rows}
+      </table>
+    </div>`;
+    }
+
+    // ─── 9. MARKET SCORE ─────────────────────────────────────────────────────────
+    function buildScore(score) {
+      if (!score || Object.keys(score).length === 0) return '';
+
+      const chipClass = v => v >= 70 ? 'positive' : v <= 40 ? 'negative' : 'n';
+
+      const reasonsHTML = (list, title) => {
+        if (!list || !list.length) return '';
+        const items = list.map(e => `<div class="score-reason">${e.metric}: ${fmtPctSigned(e.points)}</div>`).join('');
+        return `<div class="score-reason-group"><h3>${title}</h3>${items}</div>`;
+      };
+
+      return `<div class="section section-full">
+      <h2>🏆 Market Score</h2>
+      <div class="score-chips">
+        <span class="score-chip ${chipClass(score.score_short)}">Short: ${score.score_short ?? '—'}</span>
+        <span class="score-chip ${chipClass(score.score_mid)}">Mid: ${score.score_mid ?? '—'}</span>
+        <span class="score-chip ${chipClass(score.score_long)}">Long: ${score.score_long ?? '—'}</span>
+      </div>
+      ${score.confidence != null ? `<div style="font-size:0.8rem;color:var(--text-dim);margin-bottom:0.5rem">Confidence: ${score.confidence}</div>` : ''}
+      <div class="score-reasons">
+        ${reasonsHTML(score.reasons_top?.short, 'Short horizon')}
+        ${reasonsHTML(score.reasons_top?.mid, 'Mid horizon')}
+        ${reasonsHTML(score.reasons_top?.long, 'Long horizon')}
+      </div>
+    </div>`;
+    }
+
+    // ─── Helper: prefer adjClose over raw close ─────────────────────────────────
+    const adjC = (bar) => bar?.adjClose ?? bar?.close ?? null;
+
+    // ─── 10. SEASONALITY ────────────────────────────────────────────────────────
+    function buildSeasonality(bars) {
+      if (!bars || bars.length < 252) return ''; // Need at least 1 year
+      const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      const monthReturns = {};
+      monthNames.forEach((_, i) => { monthReturns[i] = []; });
+
+      for (let i = 1; i < bars.length; i++) {
+        const prev = bars[i - 1];
+        const cur = bars[i];
+        const prevC = adjC(prev), curC = adjC(cur);
+        if (!cur.date || !prevC || !curC || prevC <= 0) continue;
+        const d = new Date(cur.date);
+        if (isNaN(d)) continue;
+        const ret = (curC - prevC) / prevC;
+        monthReturns[d.getMonth()].push(ret);
+      }
+
+      const rows = monthNames.map((name, i) => {
+        const rets = monthReturns[i];
+        if (!rets.length) return `<div style="display:flex;justify-content:space-between;padding:0.3rem 0;border-bottom:1px solid rgba(255,255,255,0.03);"><span style="color:var(--text-dim);width:40px;">${name}</span><span style="color:var(--text-muted)">—</span></div>`;
+        const avg = rets.reduce((a, b) => a + b, 0) / rets.length;
+        const pct = (avg * 100).toFixed(2);
+        const color = avg >= 0 ? 'var(--green)' : 'var(--red)';
+        const sign = avg >= 0 ? '+' : '';
+        const barW = Math.min(Math.abs(avg) * 1000, 60);
+        return `<div style="display:flex;align-items:center;gap:0.5rem;padding:0.3rem 0;border-bottom:1px solid rgba(255,255,255,0.03);">
+          <span style="color:var(--text-dim);width:40px;font-size:0.8rem;">${name}</span>
+          <div style="flex:1;height:14px;position:relative;background:rgba(148,163,184,0.04);border-radius:3px;">
+            <div style="position:absolute;${avg >= 0 ? 'left:50%' : 'right:50%'};width:${barW}%;height:100%;background:${color};opacity:0.5;border-radius:3px;"></div>
+            <div style="position:absolute;left:50%;top:0;bottom:0;width:1px;background:rgba(148,163,184,0.15);"></div>
+          </div>
+          <span style="color:${color};font-weight:700;font-size:0.8rem;width:60px;text-align:right;">${sign}${pct}%</span>
+        </div>`;
+      }).join('');
+
+      // Best/worst month
+      let bestMonth = '', worstMonth = '', bestAvg = -Infinity, worstAvg = Infinity;
+      monthNames.forEach((name, i) => {
+        const rets = monthReturns[i];
+        if (!rets.length) return;
+        const avg = rets.reduce((a, b) => a + b, 0) / rets.length;
+        if (avg > bestAvg) { bestAvg = avg; bestMonth = name; }
+        if (avg < worstAvg) { worstAvg = avg; worstMonth = name; }
       });
+
+      return `<div class="section">
+      <h2>📅 Seasonality</h2>
+      <div style="font-size:0.78rem;color:var(--text-dim);margin-bottom:0.6rem;">Average monthly returns over available history (${Math.floor(bars.length / 252)} years)</div>
+      ${rows}
+      <div style="display:flex;gap:1rem;margin-top:0.6rem;font-size:0.78rem;">
+        <span style="color:var(--green);">🏆 Best: ${bestMonth} (${bestAvg > 0 ? '+' : ''}${(bestAvg * 100).toFixed(2)}%)</span>
+        <span style="color:var(--red);">⚠️ Worst: ${worstMonth} (${(worstAvg * 100).toFixed(2)}%)</span>
+      </div>
+      ${typeof buildWeekdaySeasonality === 'function' ? buildWeekdaySeasonality(bars) : ''}
+    </div>`;
     }
 
-    function formatPoints(points) {
-      if (points === null || points === undefined) return '0.00';
-      const sign = points >= 0 ? '+' : '';
-      return `${sign}${points.toFixed(2)}`;
+    // ─── 11. CORRELATIONS & BENCHMARKS ──────────────────────────────────────────
+    function buildCorrelations(ticker, bars) {
+      if (!bars || bars.length < 60) return ''; // Need at minimum 60 bars
+
+      // We compute "self-correlation" metrics: autocorrelation and momentum persistence
+      const returns = [];
+      for (let i = 1; i < bars.length; i++) {
+        const prev = adjC(bars[i - 1]);
+        const cur = adjC(bars[i]);
+        if (prev > 0 && cur > 0) returns.push((cur - prev) / prev);
+      }
+      if (returns.length < 30) return '';
+
+      // Compute rolling 20d returns stats
+      const recent20 = returns.slice(-20);
+      const recent60 = returns.slice(-60);
+      const avgRet20 = recent20.reduce((a, b) => a + b, 0) / recent20.length;
+      const avgRet60 = recent60.reduce((a, b) => a + b, 0) / recent60.length;
+      const winRate20 = (recent20.filter(r => r > 0).length / recent20.length * 100).toFixed(1);
+      const winRate60 = (recent60.filter(r => r > 0).length / recent60.length * 100).toFixed(1);
+
+      // Compute simple volatility
+      const vol20 = Math.sqrt(recent20.reduce((a, r) => a + (r - avgRet20) ** 2, 0) / (recent20.length - 1)) * Math.sqrt(252);
+      const vol60 = Math.sqrt(recent60.reduce((a, r) => a + (r - avgRet60) ** 2, 0) / (recent60.length - 1)) * Math.sqrt(252);
+
+      // Autocorrelation (lag-1)
+      let autoCorr = 0;
+      if (returns.length > 2) {
+        const n = Math.min(returns.length - 1, 60);
+        const slice = returns.slice(-n - 1);
+        const mean = slice.reduce((a, b) => a + b, 0) / slice.length;
+        let num = 0, den = 0;
+        for (let i = 1; i < slice.length; i++) {
+          num += (slice[i] - mean) * (slice[i - 1] - mean);
+          den += (slice[i] - mean) ** 2;
+        }
+        autoCorr = den > 0 ? num / den : 0;
+      }
+      const acLabel = autoCorr > 0.1 ? '🔄 Trending (momentum)' : autoCorr < -0.1 ? '↩️ Mean-reverting' : '➡️ Random walk';
+
+      // Benchmark comparison note
+      const benchmarks = ['SPY', 'QQQ', 'DIA', 'IWM'];
+      const benchNote = benchmarks.includes(ticker.toUpperCase())
+        ? `<div style="font-size:0.78rem;color:var(--accent);margin-top:0.5rem;">ℹ️ ${ticker} is itself a major benchmark index ETF.</div>`
+        : `<div style="font-size:0.78rem;color:var(--text-muted);margin-top:0.5rem;">💡 For live cross-correlations to SPY, QQQ, DIA, and IWM, visit the full analysis on the main analyzer page.</div>`;
+
+      return `<div class="section">
+      <h2>🔗 Return Profile & Regime</h2>
+      <table class="ma-table">
+        <tr><th>Metric</th><th>20-Day</th><th>60-Day</th></tr>
+        <tr><td style="font-weight:600">Avg Daily Return</td><td style="color:${avgRet20 >= 0 ? 'var(--green)' : 'var(--red)'}">${avgRet20 >= 0 ? '+' : ''}${(avgRet20 * 100).toFixed(3)}%</td><td style="color:${avgRet60 >= 0 ? 'var(--green)' : 'var(--red)'}">${avgRet60 >= 0 ? '+' : ''}${(avgRet60 * 100).toFixed(3)}%</td></tr>
+        <tr><td style="font-weight:600">Win Rate</td><td>${winRate20}%</td><td>${winRate60}%</td></tr>
+        <tr><td style="font-weight:600">Annualized Vol</td><td>${(vol20 * 100).toFixed(1)}%</td><td>${(vol60 * 100).toFixed(1)}%</td></tr>
+      </table>
+      <div style="margin-top:0.75rem;padding:0.5rem;background:rgba(255,255,255,0.02);border-radius:6px;border-left:3px solid var(--accent);">
+        <div style="font-size:0.78rem;color:var(--text-dim);margin-bottom:0.2rem;">Autocorrelation (lag-1, 60d)</div>
+        <div style="font-weight:700;font-size:0.9rem;">${autoCorr.toFixed(3)} ${acLabel}</div>
+      </div>
+      ${benchNote}
+    </div>`;
     }
 
-    function clearScore() {
-      scoreShortChip.textContent = 'Short: —';
-      scoreMidChip.textContent = 'Mid: —';
-      scoreLongChip.textContent = 'Long: —';
-      scoreConfidenceEl.textContent = 'Confidence: —';
-      scoreReasonsShort.innerHTML = '<h3>Short horizon</h3><div class="score-reason">Score not available</div>';
-      scoreReasonsMid.innerHTML = '<h3>Mid horizon</h3><div class="score-reason">Score not available</div>';
-      scoreReasonsLong.innerHTML = '<h3>Long horizon</h3><div class="score-reason">Score not available</div>';
+    // ─── 12. PRICE CONCLUSION ───────────────────────────────────────────────────
+    function buildPriceConclusion(ticker, close, s, bars, universe) {
+      if (close == null) return '';
+      const points = [];
+      let bullScore = 0, bearScore = 0;
+
+      // MA Analysis
+      if (s.sma200 != null) {
+        const distSMA200 = ((close - s.sma200) / s.sma200 * 100);
+        if (close > s.sma200) {
+          points.push(`✅ Price is <strong>${distSMA200.toFixed(1)}% above SMA200</strong> — long-term uptrend intact.`);
+          bullScore += 2;
+        } else {
+          points.push(`⚠️ Price is <strong>${Math.abs(distSMA200).toFixed(1)}% below SMA200</strong> — long-term trend is bearish.`);
+          bearScore += 2;
+        }
+      }
+      if (s.sma20 != null && s.sma50 != null && s.sma200 != null) {
+        if (s.sma20 > s.sma50 && s.sma50 > s.sma200) {
+          points.push('✅ All moving averages are in <strong>bullish alignment</strong> (20 > 50 > 200).');
+          bullScore += 2;
+        } else if (s.sma20 < s.sma50 && s.sma50 < s.sma200) {
+          points.push('🔴 Moving averages show <strong>bearish death cross</strong> alignment (20 < 50 < 200).');
+          bearScore += 2;
+        } else {
+          points.push('◆ Moving average alignment is <strong>mixed</strong> — no clear directional signal.');
+        }
+      }
+
+      // RSI
+      if (s.rsi14 != null) {
+        if (s.rsi14 < 30) {
+          points.push(`🟢 RSI at <strong>${s.rsi14.toFixed(1)}</strong> — oversold territory, potential bounce setup.`);
+          bullScore += 1;
+        } else if (s.rsi14 > 70) {
+          points.push(`🔴 RSI at <strong>${s.rsi14.toFixed(1)}</strong> — overbought, caution for pullback.`);
+          bearScore += 1;
+        } else {
+          points.push(`➡️ RSI at <strong>${s.rsi14.toFixed(1)}</strong> — neutral zone, no extreme signal.`);
+        }
+      }
+
+      // 52W Range
+      if (s.high_52w != null && s.low_52w != null) {
+        const fromHigh = ((close - s.high_52w) / s.high_52w * 100);
+        const fromLow = ((close - s.low_52w) / s.low_52w * 100);
+        if (fromHigh > -5) {
+          points.push(`🏔️ Trading near <strong>52-week high</strong> (${fromHigh.toFixed(1)}% from peak) — momentum intact but elevated risk.`);
+          bullScore += 1;
+        } else if (fromLow < 20) {
+          points.push(`🕳️ Trading near <strong>52-week low</strong> (${fromLow.toFixed(1)}% from bottom) — potential value but falling knife risk.`);
+          bearScore += 1;
+        }
+      }
+
+      // Volatility
+      if (s.volatility_percentile != null) {
+        if (s.volatility_percentile > 80) {
+          points.push(`⚡ Volatility is in the <strong>${s.volatility_percentile.toFixed(0)}th percentile</strong> — unusually high, expect large swings.`);
+        } else if (s.volatility_percentile < 20) {
+          points.push(`🧊 Volatility is in the <strong>${s.volatility_percentile.toFixed(0)}th percentile</strong> — quiet period, breakout may be imminent.`);
+        }
+      }
+
+      // Volume
+      if (s.volume_ratio_20d != null) {
+        if (s.volume_ratio_20d > 2) {
+          points.push(`📢 Volume is <strong>${s.volume_ratio_20d.toFixed(1)}x</strong> the 20-day average — significant institutional activity.`);
+        } else if (s.volume_ratio_20d < 0.5) {
+          points.push(`🔇 Volume is only <strong>${s.volume_ratio_20d.toFixed(1)}x</strong> the average — low conviction in current move.`);
+        }
+      }
+
+      // Seasonality hint
+      if (bars && bars.length >= 252) {
+        const now = new Date();
+        const curMonth = now.getMonth();
+        const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+        const monthRets = [];
+        for (let i = 1; i < bars.length; i++) {
+          const prevC = adjC(bars[i - 1]), curC = adjC(bars[i]);
+          if (!bars[i].date || !prevC || !curC || prevC <= 0) continue;
+          const d = new Date(bars[i].date);
+          if (!isNaN(d) && d.getMonth() === curMonth) {
+            monthRets.push((curC - prevC) / prevC);
+          }
+        }
+        if (monthRets.length > 10) {
+          const avg = monthRets.reduce((a, b) => a + b, 0) / monthRets.length;
+          const pct = (avg * 100).toFixed(2);
+          if (avg > 0.001) points.push(`📅 Historically, <strong>${monthNames[curMonth]}</strong> has been a positive month (avg: +${pct}%).`);
+          else if (avg < -0.001) points.push(`📅 Historically, <strong>${monthNames[curMonth]}</strong> tends to be weak (avg: ${pct}%).`);
+        }
+      }
+
+      // Overall conclusion
+      const total = bullScore + bearScore;
+      const ratio = total > 0 ? bullScore / total : 0.5;
+      let overallVerdict, verdictCls;
+      if (ratio >= 0.65) { overallVerdict = 'The overall technical picture is <strong>BULLISH</strong>. Price is in an uptrend with favorable momentum indicators.'; verdictCls = 'bullish'; }
+      else if (ratio <= 0.35) { overallVerdict = 'The overall technical picture is <strong>BEARISH</strong>. Price faces headwinds with negative momentum signals.'; verdictCls = 'bearish'; }
+      else { overallVerdict = 'The technical picture is <strong>MIXED</strong>. Conflicting signals suggest a wait-and-see approach.'; verdictCls = 'neutral'; }
+
+      return `<div class="section section-full">
+      <h2>📝 Price Conclusion</h2>
+      <div class="verdict-box ${verdictCls}" style="font-size:0.95rem;padding:0.75rem;margin-bottom:0.75rem;">${overallVerdict}</div>
+      <div style="display:flex;flex-direction:column;gap:0.4rem;">
+        ${points.map(p => `<div style="font-size:0.82rem;color:var(--text);line-height:1.5;padding:0.3rem 0;border-bottom:1px solid rgba(255,255,255,0.03);">${p}</div>`).join('')}
+      </div>
+      <div style="font-size:0.7rem;color:var(--text-muted);margin-top:0.75rem;text-align:center;">⚠️ This is a technical summary, not financial advice. Always conduct your own research.</div>
+    </div>`;
     }
   </script>
+
   <script type="module">
     import { attachSearchUI } from '/search.js';
     const root = document.getElementById('rv-stock-search-root');
-    const params = new URLSearchParams(window.location.search);
-    const ticker = params.get('ticker') || '';
+    const searchParams = new URLSearchParams(window.location.search);
+    const ticker = searchParams.get('ticker') || '';
     if (root) {
       attachSearchUI(root, {
         placeholder: 'Search ticker or company',
@@ -549,4 +1648,5 @@
     }
   </script>
 </body>
+
 </html>

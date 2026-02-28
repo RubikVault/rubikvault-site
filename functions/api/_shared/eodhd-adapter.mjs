@@ -15,12 +15,12 @@ function toNumber(value) {
 }
 
 export async function fetchEodhdBarsRaw(symbol, env, options = {}) {
-    const apiKey = env?.EODHD_API_KEY;
+    const apiKey = env?.EODHD_API_KEY || env?.EODHD_API_TOKEN;
     if (!apiKey) {
         return {
             ok: false,
             provider: 'eodhd',
-            error: { code: 'MISSING_API_KEY', message: 'Missing EODHD_API_KEY' }
+            error: { code: 'MISSING_API_KEY', message: 'Missing EODHD_API_KEY or EODHD_API_TOKEN' }
         };
     }
 
