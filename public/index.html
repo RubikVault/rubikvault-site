@@ -109,6 +109,21 @@
 </head>
 
 <body>
+  <script>
+    (function guardAnalyzeDetailRoute() {
+      const match = String(window.location.pathname || '').match(/^\/analyze\/([^/?#]+)/i);
+      if (!match || !match[1]) return;
+      const params = new URLSearchParams(window.location.search);
+      let ticker = match[1];
+      try { ticker = decodeURIComponent(ticker); } catch (_) {}
+      const target = new URL('/stock', window.location.origin);
+      target.searchParams.set('ticker', String(ticker).trim().toUpperCase());
+      params.forEach((value, key) => {
+        if (key !== 'ticker' && key !== 'rv_stock_shell') target.searchParams.set(key, value);
+      });
+      window.location.replace(`${target.pathname}${target.search}`);
+    })();
+  </script>
   <div id="rv-search-root"></div>
   <!-- HEADER -->
   <header class="rv-header">
