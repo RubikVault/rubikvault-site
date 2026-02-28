@@ -185,8 +185,7 @@ export async function attachSearchUI(rootElement, options = {}) {
   const onSelect =
     options.onSelect ||
     ((item) => {
-      const targetUrl = new URL('/stock.html', window.location.origin);
-      targetUrl.searchParams.set('ticker', item.ticker);
+      const targetUrl = new URL(`/analyze/${encodeURIComponent(item.ticker)}`, window.location.origin);
       if (debug) targetUrl.searchParams.set('debug', '1');
       window.location.assign(targetUrl.toString());
     });

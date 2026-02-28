@@ -763,8 +763,45 @@
     const app = document.getElementById('app');
     const params = new URLSearchParams(window.location.search);
 
-    form.addEventListener('submit', e => { e.preventDefault(); const t = tickerInput.value.trim(); if (t) loadTicker(t); });
-    if (params.has('ticker')) { const t = params.get('ticker'); tickerInput.value = t; loadTicker(t); }
+    function getTickerFromRoute() {
+      const match = String(window.location.pathname || '').match(/^\/analyze\/([^/?#]+)/i);
+      if (!match || !match[1]) return '';
+      try { return decodeURIComponent(match[1]); } catch { return match[1]; }
+    }
+
+    function getInitialTicker() {
+      return getTickerFromRoute() || params.get('ticker') || '';
+    }
+
+    function buildAnalyzeUrl(ticker) {
+      const url = new URL(`/analyze/${encodeURIComponent(String(ticker || '').trim().toUpperCase())}`, window.location.origin);
+      const debug = params.get('debug');
+      if (debug === '1') url.searchParams.set('debug', '1');
+      return url;
+    }
+
+    function syncAnalyzeUrl(ticker, replace = false) {
+      const normalized = String(ticker || '').trim().toUpperCase();
+      if (!normalized) return;
+      const target = buildAnalyzeUrl(normalized);
+      const current = `${window.location.pathname}${window.location.search}`;
+      const next = `${target.pathname}${target.search}`;
+      if (current === next) return;
+      const method = replace ? 'replaceState' : 'pushState';
+      window.history[method]({}, '', next);
+    }
+
+    form.addEventListener('submit', e => {
+      e.preventDefault();
+      const t = tickerInput.value.trim();
+      if (t) loadTicker(t);
+    });
+
+    const initialTicker = getInitialTicker();
+    if (initialTicker) {
+      tickerInput.value = initialTicker;
+      loadTicker(initialTicker, { replaceUrl: true });
+    }
 
     // ─── Ticker Autocomplete (re-uses /api/universe) ──────────────────────────────
     const acDropdown = document.getElementById('stock-ac-dropdown');
@@ -871,15 +908,18 @@
     const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
 
     // ─── Load Ticker ──────────────────────────────────────────────────────────────
-    async function loadTicker(ticker) {
-      document.getElementById('stock-subtitle').textContent = `Loading ${ticker.toUpperCase()}…`;
+    async function loadTicker(ticker, options = {}) {
+      const normalizedTicker = String(ticker || '').trim().toUpperCase();
+      if (!normalizedTicker) return;
+      syncAnalyzeUrl(normalizedTicker, options.replaceUrl === true);
+      document.getElementById('stock-subtitle').textContent = `Loading ${normalizedTicker}…`;
       document.getElementById('price-block').style.display = 'none';
       document.getElementById('range-52w').style.display = 'none';
       errorBox.style.display = 'none';
       app.innerHTML = '<div class="loading-state">⏳ Fetching data…</div>';
 
       try {
-        const res = await fetch(`/api/stock?ticker=${encodeURIComponent(ticker)}`);
+        const res = await fetch(`/api/stock?ticker=${encodeURIComponent(normalizedTicker)}`);
         const payload = await res.json();
         render(payload);
       } catch (err) {
@@ -1637,8 +1677,10 @@
   <script type="module">
     import { attachSearchUI } from '/search.js';
     const root = document.getElementById('rv-stock-search-root');
+    const routeMatch = String(window.location.pathname || '').match(/^\/analyze\/([^/?#]+)/i);
+    const routeTicker = routeMatch && routeMatch[1] ? decodeURIComponent(routeMatch[1]) : '';
     const searchParams = new URLSearchParams(window.location.search);
-    const ticker = searchParams.get('ticker') || '';
+    const ticker = routeTicker || searchParams.get('ticker') || '';
     if (root) {
       attachSearchUI(root, {
         placeholder: 'Search ticker or company',

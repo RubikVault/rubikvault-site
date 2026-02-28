@@ -17,6 +17,9 @@
 /ops /internal-dashboard 301
 /dev/internal-dashboard /internal-dashboard 301
 /dev/ops /internal-dashboard 301
+# Stock detail route should bypass the legacy SPA fallback.
+/analyze /stock 200
+/analyze/* /stock 200
 # Explicit index route to avoid rewrite loop warnings
 /index.html     /index.html      200
 # SPA fallback (last)
