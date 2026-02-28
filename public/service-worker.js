@@ -8,7 +8,7 @@
  * - Background sync ready
  */
 
-const CACHE_VERSION = 'rv-v3.1';
+const CACHE_VERSION = 'rv-v3.2';
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const DATA_CACHE = `${CACHE_VERSION}-data`;
 const API_CACHE = `${CACHE_VERSION}-api`;
