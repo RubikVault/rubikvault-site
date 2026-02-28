@@ -52,7 +52,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add mirrors/learning/ public/data/reports/learning-report-latest.json
+          git add mirrors/learning/ public/data/reports/learning-report-latest.json public/data/reports/learning-report-latest.js
           if git diff --cached --quiet; then
             echo "No learning data changes to commit"
           else

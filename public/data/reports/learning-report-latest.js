@@ -1,4 +1,4 @@
-{
+window.__RV_LEARNING_REPORT__ = {
   "schema": "rubikvault_daily_learning_report_v2",
   "date": "2026-02-28",
   "generated_at": "2026-02-28T19:01:19.295Z",
@@ -751,4 +751,4 @@
     "cross_feature_conviction",
     "scientific_atr_breakout_threshold"
   ]
-}
+};

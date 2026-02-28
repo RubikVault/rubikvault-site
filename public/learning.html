@@ -575,14 +575,30 @@
       <p class="subtitle">Wie effektiv lernen die 4 Features bei Vorhersagen?</p>
     </div>
     <div id="app">
+      <div class="status-banner">
+        <div><div class="status-text" style="color:var(--accent)">Initialisiere Daily Learning Report…</div></div>
+        <div class="status-meta">
+          <span>📅 Werktags nach den Tages-Pipelines</span>
+          <span>🧾 /data/reports/learning-report-latest.json</span>
+        </div>
+      </div>
       <div class="loading">
         <div class="spinner"></div>
         <p>Lade Learning Report...</p>
       </div>
     </div>
+    <noscript>
+      <div class="status-banner" style="margin-top:16px">
+        <div><div class="status-text" style="color:var(--yellow)">JavaScript ist deaktiviert</div></div>
+        <div class="status-meta">
+          <span><a href="/data/reports/learning-report-latest.json" style="color:var(--accent)">Rohreport öffnen</a></span>
+        </div>
+      </div>
+    </noscript>
     <div class="footer">RubikVault Learning System — Report wird täglich um 20:00 CET aktualisiert</div>
   </div>
 
+  <script src="/data/reports/learning-report-latest.js"></script>
   <script>
     const REPORT_URL = '/data/reports/learning-report-latest.json';
     const FEATURE_META = {
@@ -608,6 +624,15 @@
       if (trend === 'improving') return `<span class="card-phase phase-learning">🚀 Lernt aktiv</span>`;
       if (trend === 'declining') return `<span class="card-phase phase-stagnant">⚠️ Rückgang</span>`;
       return `<span class="card-phase phase-active">✅ Aktiv</span>`;
+    }
+
+    function sourceMetaText(meta) {
+      if (!meta) return 'Quelle unbekannt';
+      const parts = [meta.source || 'unknown'];
+      if (meta.asof) parts.push(`as of ${meta.asof}`);
+      if (meta.fresh === true) parts.push('fresh');
+      if (meta.fresh === false && Number.isFinite(meta.stale_days)) parts.push(`stale ${meta.stale_days}d`);
+      return parts.join(' · ');
     }
 
     // ─── SVG Sparkline ──────────────────────────────────────────────────────────
@@ -998,6 +1023,7 @@
           metricsHTML += metricRow('Churn', feat.churn != null ? String(feat.churn) : '—');
           metricsHTML += metricRow('Rankings', (feat.rankings_today ?? 0).toLocaleString());
         }
+        metricsHTML += metricRow('Quelle', sourceMetaText(feat.source_meta));
 
         const accVal = feat.accuracy_7d ?? feat.accuracy_all ?? feat.stability;
         const progressHTML = accVal != null ? `<div class="progress-bar-bg"><div class="progress-bar-fill" style="width:${Math.min(100, accVal * 100)}%;background:${meta.color}"></div></div>` : '';
@@ -1062,6 +1088,17 @@
     </table>
   </div>`;
 
+      const bootstrapDetail = r.summary.overall_status.includes('BOOTSTRAP') ? `<div class="comparison-section">
+    <h2>📦 Bootstrap-Status</h2>
+    <table class="comparison-table">
+      <tr><th>Feature</th><th>Heute geloggt</th><th>Quelle</th><th>Erste Outcomes</th></tr>
+      <tr><td>📈 Forecast</td><td>${(r.features?.forecast?.predictions_today ?? 0).toLocaleString()}</td><td>${sourceMetaText(r.features?.forecast?.source_meta)}</td><td>nach 1 Handelstag</td></tr>
+      <tr><td>🔬 Scientific</td><td>${(r.features?.scientific?.predictions_today ?? 0).toLocaleString()}</td><td>${sourceMetaText(r.features?.scientific?.source_meta)}</td><td>nach 5 Handelstagen</td></tr>
+      <tr><td>🌊 Elliott</td><td>${(r.features?.elliott?.predictions_today ?? 0).toLocaleString()}</td><td>${sourceMetaText(r.features?.elliott?.source_meta)}</td><td>nach 5 Handelstagen</td></tr>
+      <tr><td>📊 Stock Analyzer</td><td>${(r.features?.stock_analyzer?.rankings_today ?? 0).toLocaleString()}</td><td>${sourceMetaText(r.features?.stock_analyzer?.source_meta)}</td><td>ab Tag 2 via Stabilität</td></tr>
+    </table>
+  </div>` : '';
+
       // Deep Diagnosis per Feature
       const diagHTML = featureOrder.map(key => {
         const feat = r.features[key];
@@ -1101,6 +1138,7 @@
       </div>
     </div>
     <div class="cards-grid">${cardsHTML}</div>
+    ${bootstrapDetail}
     ${chartSection}
     ${compSection}
     <div class="diagnose-section">
@@ -1120,16 +1158,22 @@
     }
 
     async function loadAndRender() {
+      const embedded = window.__RV_LEARNING_REPORT__;
+      if (embedded && embedded.features) {
+        render(embedded);
+      }
       try {
         const res = await fetch(REPORT_URL);
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         render(await res.json());
       } catch {
+        if (embedded && embedded.features) return;
         document.getElementById('app').innerHTML = `<div class="error-state">
       <p style="font-size:18px;margin-bottom:8px">⚠️ Report nicht verfügbar</p>
       <p style="font-size:13px;color:var(--text-dim)">Starte zuerst:<br>
         <code style="background:var(--card);padding:4px 8px;border-radius:4px;margin-top:8px;display:inline-block">
-          node scripts/learning/run-daily-learning-cycle.mjs</code></p></div>`;
+          node scripts/learning/run-daily-learning-cycle.mjs</code></p>
+      <p style="font-size:12px;color:var(--text-dim);margin-top:12px"><a href="/data/reports/learning-report-latest.json" style="color:var(--accent)">Rohreport öffnen</a></p></div>`;
       }
     }
     loadAndRender();

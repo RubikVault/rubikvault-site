@@ -28,6 +28,7 @@ const OUTCOME_DIR = path.join(LEARNING, 'outcomes');
 const REPORT_DIR = path.join(LEARNING, 'reports');
 const CALIB_DIR = path.join(LEARNING, 'calibration');
 const PUBLIC_REPORT = path.join(ROOT, 'public/data/reports/learning-report-latest.json');
+const PUBLIC_REPORT_JS = path.join(ROOT, 'public/data/reports/learning-report-latest.js');
 
 const FORECAST_LEDGER = path.join(ROOT, 'mirrors/forecast/ledger');
 const SCIENTIFIC_SUMMARY = path.join(ROOT, 'public/data/supermodules/scientific-summary.json');
@@ -67,6 +68,13 @@ function writeJson(p, data) {
 function writeNdjson(p, rows) {
     ensureDir(p);
     fs.writeFileSync(p, rows.map(r => JSON.stringify(r)).join('\n') + '\n');
+}
+
+function writePublicReportScript(p, data) {
+    ensureDir(p);
+    const tmp = p + `.${process.pid}.tmp`;
+    fs.writeFileSync(tmp, `window.__RV_LEARNING_REPORT__ = ${JSON.stringify(data, null, 2)};\n`, 'utf8');
+    fs.renameSync(tmp, p);
 }
 
 function predPath(date, feature) {
@@ -115,6 +123,14 @@ function loadEodPrices() {
     return prices;
 }
 
+function daysBetween(fromDate, toDate) {
+    if (!fromDate || !toDate) return null;
+    const from = new Date(fromDate);
+    const to = new Date(toDate);
+    if (Number.isNaN(from.getTime()) || Number.isNaN(to.getTime())) return null;
+    return Math.max(0, Math.round((to - from) / 86400000));
+}
+
 // ─── 1. FORECAST: Extract Predictions ───────────────────────────────────────
 // IMPROVEMENT: Calibration feedback loop + Adaptive confidence scaling
 function extractForecastPredictions(date) {
@@ -133,7 +149,7 @@ function extractForecastPredictions(date) {
     // Load calibration data for feedback loop
     const calib = loadCalib('forecast');
 
-    return dayRows.map(r => {
+    const ledgerPredictions = dayRows.map(r => {
         const ticker = String(r.ticker || r.symbol || '').toUpperCase();
         let prob = r.p_up ?? r.probability ?? 0.5;
         const direction = r.direction || (prob >= 0.5 ? 'bullish' : 'bearish');
@@ -170,6 +186,74 @@ function extractForecastPredictions(date) {
             source: 'forecast_ledger'
         };
     }).filter(r => r.ticker);
+
+    if (ledgerPredictions.length) {
+        return {
+            predictions: ledgerPredictions,
+            source_meta: {
+                source: 'forecast_ledger',
+                asof: date,
+                fresh: true,
+                stale_days: 0
+            }
+        };
+    }
+
+    const latestDoc = readJson(path.join(ROOT, 'public/data/forecast/latest.json'));
+    const latestAsof = String(
+        latestDoc?.data?.asof ??
+        latestDoc?.data?.freshness ??
+        latestDoc?.meta?.freshness ??
+        latestDoc?.freshness ??
+        ''
+    ).slice(0, 10);
+    const latestRows = Array.isArray(latestDoc?.data?.forecasts) ? latestDoc.data.forecasts : [];
+    const staleDays = daysBetween(latestAsof, date);
+
+    const envelopePredictions = latestRows.map((row) => {
+        const ticker = String(row?.symbol || row?.ticker || '').trim().toUpperCase();
+        const oneDay = row?.horizons?.['1d'];
+        if (!ticker || !oneDay || !Number.isFinite(Number(oneDay.probability))) return null;
+
+        let prob = Number(oneDay.probability);
+        const direction = String(oneDay.direction || (prob >= 0.5 ? 'bullish' : 'bearish')).toLowerCase();
+        const calibKey = `${ticker}_${direction}`;
+        const calibData = calib.hit_rates?.[calibKey];
+        if (calibData && calibData.total >= 5) {
+            const historicalHitRate = calibData.hits / calibData.total;
+            prob = round(prob * 0.7 + historicalHitRate * 0.3);
+        }
+        const sampleCount = calibData?.total || 0;
+        if (sampleCount < 10) {
+            const shrinkFactor = Math.max(0.5, sampleCount / 10);
+            prob = round(0.5 + (prob - 0.5) * shrinkFactor);
+        }
+
+        return {
+            feature: 'forecast',
+            ticker,
+            date,
+            horizon: '1d',
+            direction,
+            probability: prob,
+            probability_raw: Number(oneDay.probability),
+            confidence: null,
+            calibration_samples: sampleCount,
+            price_at_prediction: null,
+            model_id: latestDoc?.data?.champion_id ?? latestDoc?.champion_id ?? null,
+            source: 'forecast_latest_envelope'
+        };
+    }).filter(Boolean);
+
+    return {
+        predictions: envelopePredictions,
+        source_meta: {
+            source: 'forecast_latest_envelope',
+            asof: latestAsof || null,
+            fresh: Boolean(latestAsof && latestAsof === date),
+            stale_days: staleDays
+        }
+    };
 }
 
 // ─── 2. SCIENTIFIC: Extract Setup/Trigger Predictions ───────────────────────
@@ -574,24 +658,28 @@ function buildReport(date, forecastMetrics, scientificMetrics, elliottMetrics, s
                 type: 'price_direction_probability',
                 ...forecastMetrics,
                 predictions_today: predCounts.forecast || 0,
+                source_meta: predCounts.forecast_source_meta || null,
             },
             scientific: {
                 name: 'Scientific Analyzer v9.1',
                 type: 'setup_trigger_breakout',
                 ...scientificMetrics,
                 predictions_today: predCounts.scientific || 0,
+                source_meta: predCounts.scientific_source_meta || null,
             },
             elliott: {
                 name: 'Elliott Waves DFMSIF v1.0',
                 type: 'wave_direction_forecast',
                 ...elliottMetrics,
                 predictions_today: predCounts.elliott || 0,
+                source_meta: predCounts.elliott_source_meta || null,
             },
             stock_analyzer: {
                 name: 'Stock Analyzer',
                 type: 'ranking_stability',
                 ...stockStability,
                 rankings_today: predCounts.stock || 0,
+                source_meta: predCounts.stock_source_meta || null,
             }
         },
         weekly_comparison: weeklyComparison,
@@ -735,9 +823,14 @@ async function main() {
 
     // 2. Extract today's predictions from each feature
     console.log('[learning] Extracting predictions...');
-    const forecastPreds = extractForecastPredictions(date);
+    const forecastResult = extractForecastPredictions(date);
+    const forecastPreds = forecastResult.predictions || [];
     const scientificPreds = extractScientificPredictions(date, eodPrices);
+    const scientificDoc = readJson(SCIENTIFIC_SUMMARY);
+    const scientificGeneratedAt = String(scientificDoc?.generated_at || '').slice(0, 10) || null;
     const elliottPreds = extractElliottPredictions(date, eodPrices);
+    const elliottDoc = readJson(path.join(ROOT, 'public/data/universe/v7/read_models/marketphase_deep_summary.json'));
+    const elliottAsof = String(elliottDoc?.as_of || elliottDoc?.generated_at || '').slice(0, 10) || null;
     const stockPreds = extractStockRankings(date);
 
     // 3. Save predictions to ledger
@@ -772,9 +865,28 @@ async function main() {
     // 7. Build and save report
     const report = buildReport(date, forecastMetrics, scientificMetrics, elliottMetrics, stockStability, {
         forecast: forecastPreds.length,
+        forecast_source_meta: forecastResult.source_meta,
         scientific: scientificPreds.length,
+        scientific_source_meta: {
+            source: 'scientific_summary',
+            asof: scientificGeneratedAt,
+            fresh: Boolean(scientificGeneratedAt && scientificGeneratedAt === date),
+            stale_days: daysBetween(scientificGeneratedAt, date)
+        },
         elliott: elliottPreds.length,
+        elliott_source_meta: {
+            source: 'marketphase_deep_summary',
+            asof: elliottAsof,
+            fresh: Boolean(elliottAsof && elliottAsof === date),
+            stale_days: daysBetween(elliottAsof, date)
+        },
         stock: stockPreds.length,
+        stock_source_meta: {
+            source: 'v7_stock_rows',
+            asof: date,
+            fresh: true,
+            stale_days: 0
+        }
     });
 
     // Enrich report with cross-feature data
@@ -794,6 +906,7 @@ async function main() {
     writeJson(reportPath(date), report);
     writeJson(path.join(REPORT_DIR, 'latest.json'), report);
     writeJson(PUBLIC_REPORT, report);
+    writePublicReportScript(PUBLIC_REPORT_JS, report);
 
     // 8. Print human-readable report
     printReport(report);
