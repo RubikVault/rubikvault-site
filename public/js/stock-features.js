@@ -541,7 +541,7 @@ function buildMacroRegime() {
   <ul><li>Rates ↑ → Duration risk high, growth stocks pressured</li>
   <li>Inflation ↓ → Margin pressure easing, consumer tailwind</li>
   <li>Unemployment ↑ → Defensive positioning, quality premium</li></ul>
-  <p style="margin-top:.3rem;font-style:italic">Connect FRED API key to enable live regime analysis.</p></div></div>`;
+  <p style="margin-top:.3rem;font-style:italic">Optional data source not enabled. Live regime analysis stays hidden until a FRED feed is connected.</p></div></div>`;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -560,7 +560,7 @@ function buildFundamentalsPlaceholder(ticker) {
   const html = cards.map(c => `<div class="placeholder-card" style="margin-bottom:.4rem"><h4>${c.t} <span style="font-size:.65rem;color:var(--text-muted)">${c.id}</span></h4><p>${c.d}</p></div>`).join('');
   return `<div class="section section-full"><h2>📊 Fundamental Analysis</h2>
   <div style="font-size:.78rem;color:var(--text-dim);margin-bottom:.5rem">Requires fundamentals data feed (FMP/similar). Shows what each metric would analyze:</div>${html}
-  <div style="font-size:.7rem;color:var(--text-muted);margin-top:.3rem">Connect a fundamentals API provider to enable these scores for ${ticker}.</div></div>`;
+  <div style="font-size:.7rem;color:var(--text-muted);margin-top:.3rem">Optional data source not enabled. Fundamental scores for ${ticker} stay unavailable until a fundamentals feed is connected.</div></div>`;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -591,7 +591,7 @@ function buildMarketIntelligence(ticker) {
   return `<div class="section section-full"><h2>📰 Market Intelligence</h2>
   <div class="collapse-toggle" onclick="this.nextElementSibling.classList.toggle('open')">▶ Expand available data categories for ${ticker}</div>
   <div class="collapse-body">${html}
-  <div style="font-size:.7rem;color:var(--text-muted);margin-top:.3rem">These features require premium API endpoints. Connect providers to enable.</div></div></div>`;
+  <div style="font-size:.7rem;color:var(--text-muted);margin-top:.3rem">Optional data sources not enabled. These modules remain informational until matching providers are connected.</div></div></div>`;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════

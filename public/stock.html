@@ -43,70 +43,6 @@
       color: var(--text);
     }
 
-    #rv-sticky-search {
-      position: sticky;
-      top: 48px;
-      z-index: 1200;
-      backdrop-filter: blur(8px);
-      background: rgba(2, 6, 23, 0.95);
-      border-bottom: 1px solid rgba(100, 116, 139, 0.25);
-      width: 100%;
-    }
-
-    .rv-sticky-search-inner {
-      max-width: 1400px;
-      margin: 0 auto;
-      padding: 0.65rem 1rem;
-      display: grid;
-      grid-template-columns: minmax(220px, 1fr) auto auto;
-      gap: 0.65rem;
-      align-items: center;
-    }
-
-    .rv-sticky-input-wrap {
-      position: relative;
-      width: 100%;
-    }
-
-    .rv-sticky-input {
-      width: 100%;
-      border: 1px solid rgba(100, 116, 139, 0.35);
-      border-radius: 10px;
-      background: rgba(15, 23, 42, 0.5);
-      color: #e5e7eb;
-      padding: 0.7rem 0.9rem;
-      font-size: 0.95rem;
-      min-height: 42px;
-      outline: none;
-    }
-
-    .rv-sticky-input:focus {
-      border-color: rgba(59, 130, 246, 0.7);
-      box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.2);
-    }
-
-    .rv-sticky-btn {
-      min-height: 42px;
-      padding: 0.7rem 1.15rem;
-      border-radius: 10px;
-      border: 1px solid rgba(100, 116, 139, 0.35);
-      background: rgba(30, 41, 59, 0.7);
-      color: #e5e7eb;
-      font-weight: 700;
-      font-size: 0.9rem;
-      cursor: pointer;
-    }
-
-    .rv-sticky-select {
-      min-height: 42px;
-      border: 1px solid rgba(100, 116, 139, 0.35);
-      border-radius: 10px;
-      background: rgba(15, 23, 42, 0.5);
-      color: #e5e7eb;
-      padding: 0.7rem 0.9rem;
-      font-size: 0.92rem;
-    }
-
     .rv-main {
       max-width: 980px;
       margin: 0 auto;
@@ -758,10 +694,6 @@
 
     /* ─── Responsive ─── */
     @media (max-width: 700px) {
-      .rv-sticky-search-inner {
-        grid-template-columns: 1fr;
-      }
-
       .sections-grid {
         grid-template-columns: 1fr;
       }
@@ -783,91 +715,7 @@
 </head>
 
 <body>
-  <header class="rv-header">
-    <div class="rv-header-inner">
-      <a class="rv-brand" href="/" aria-label="RubikVault">
-        <img class="rv-brand-icon" src="/assets/rv-icon.png" alt="" />
-        <span class="rv-brand-text">RubikVault</span>
-      </a>
-
-      <nav class="rv-nav">
-        <a class="rv-social-link" href="https://www.youtube.com/@RubikVault" target="_blank" rel="noopener noreferrer"
-          aria-label="YouTube">
-          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-            <path
-              d="M21.58 7.19a2.5 2.5 0 0 0-1.76-1.77C18.25 5 12 5 12 5s-6.25 0-7.82.42A2.5 2.5 0 0 0 2.42 7.2 26.6 26.6 0 0 0 2 12s0 2.55.42 4.81a2.5 2.5 0 0 0 1.76 1.77C5.75 19 12 19 12 19s6.25 0 7.82-.42a2.5 2.5 0 0 0 1.76-1.77C22 14.55 22 12 22 12s0-2.55-.42-4.81ZM10 15.5v-7l6 3.5-6 3.5Z" />
-          </svg>
-        </a>
-        <a class="rv-social-link" href="https://x.com/RubikVault" target="_blank" rel="noopener noreferrer"
-          aria-label="X">
-          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-            <path
-              d="M18.9 2H22l-6.79 7.76L23 22h-6.2l-4.86-6.02L6.66 22H3.5l7.26-8.3L3 2h6.35l4.4 5.52L18.9 2Zm-1.09 18h1.72L8.4 3.93H6.56L17.81 20Z" />
-          </svg>
-        </a>
-        <a class="rv-social-link" href="https://www.instagram.com/rubikvault_official/" target="_blank"
-          rel="noopener noreferrer" aria-label="Instagram">
-          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-            <path
-              d="M7 2h10a5 5 0 0 1 5 5v10a5 5 0 0 1-5 5H7a5 5 0 0 1-5-5V7a5 5 0 0 1 5-5Zm10 2H7a3 3 0 0 0-3 3v10a3 3 0 0 0 3 3h10a3 3 0 0 0 3-3V7a3 3 0 0 0-3-3Zm-5 3.5a4.5 4.5 0 1 1 0 9 4.5 4.5 0 0 1 0-9Zm0 2a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5ZM17.8 6.2a1 1 0 1 1 0 2 1 1 0 0 1 0-2Z" />
-          </svg>
-        </a>
-        <a class="rv-social-link" href="https://www.tiktok.com/@rubikvault" target="_blank" rel="noopener noreferrer"
-          aria-label="TikTok">
-          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-            <path
-              d="M16.7 5.2c.8 1.2 2.1 2 3.6 2.1v3.1c-1.7-.1-3.3-.7-4.6-1.7v7.4c0 3.4-2.8 6.2-6.2 6.2S3.3 19.5 3.3 16.1s2.8-6.2 6.2-6.2c.4 0 .8 0 1.2.1v3.3c-.4-.1-.8-.2-1.2-.2-1.7 0-3.1 1.4-3.1 3.1s1.4 3.1 3.1 3.1 3.1-1.4 3.1-3.1V2h3.1c0 1.2.3 2.3 1 3.2Z" />
-          </svg>
-        </a>
-      </nav>
-
-      <div class="rv-header-tools" aria-live="polite">
-        <div class="rv-data-updated" style="font-size: 12px; color: var(--rv-text-muted);">
-          Data updated: <span id="rv-data-updated-date">Loading...</span> (daily snapshots)
-        </div>
-        <div class="rv-market-clock">
-          <span class="rv-clock-time" id="rv-ny-time">NY: --:--:--</span>
-          <span class="rv-clock-status">
-            <span class="rv-led" data-rv-led="closed"></span>
-            <span class="rv-market-label" data-rv-market-label>Closed</span>
-            <span class="rv-market-countdown" id="rv-market-countdown">opens in --:--:--</span>
-          </span>
-        </div>
-      </div>
-    </div>
-  </header>
-
-  <nav class="rv-page-nav">
-    <div class="rv-page-nav-inner">
-      <a href="/analyze" class="rv-page-nav-link active" data-top-route="analyze">ANALYZE</a>
-      <a href="/market" class="rv-page-nav-link" data-top-route="market">MARKET</a>
-      <a href="/ideas" class="rv-page-nav-link" data-top-route="ideas">IDEAS</a>
-    </div>
-  </nav>
-
-  <section id="rv-sticky-search" aria-label="Stock search">
-    <form id="stock-form" class="rv-sticky-search-inner">
-      <div class="rv-sticky-input-wrap">
-        <input id="stock-ticker" name="ticker" class="rv-sticky-input" type="text" placeholder="AAPL"
-          autocomplete="off" />
-        <div id="stock-ac-dropdown" class="rv-search-dd"
-          style="display:none;position:absolute;top:100%;left:0;right:0;margin-top:4px;z-index:9999;max-height:300px;overflow-y:auto;background:var(--card, #0f172a);border:1px solid #334155;border-radius:8px;box-shadow:0 10px 25px rgba(0,0,0,0.8)">
-        </div>
-      </div>
-      <select id="stock-asset-class" class="rv-sticky-select" aria-label="Asset class filter">
-        <option value="all">All</option>
-        <option value="stock">Stocks</option>
-        <option value="etf">ETFs</option>
-        <option value="fund">Funds</option>
-        <option value="crypto">Crypto</option>
-        <option value="forex">Forex</option>
-        <option value="bond">Bonds</option>
-        <option value="index">Indices</option>
-      </select>
-      <button type="submit" class="rv-sticky-btn">Analyze</button>
-    </form>
-  </section>
-
+  <div id="rv-stock-search-root"></div>
   <main class="rv-main">
     <div class="header-card" id="header-card">
       <div class="header-top">
@@ -875,6 +723,13 @@
           <h1 class="stock-title" id="stock-title">Stock Analysis</h1>
           <div class="stock-subtitle" id="stock-subtitle">Loading…</div>
         </div>
+        <form id="stock-form" class="stock-form" style="position:relative">
+          <input id="stock-ticker" name="ticker" type="text" placeholder="AAPL" autocomplete="off" />
+          <div id="stock-ac-dropdown" class="rv-search-dd"
+            style="display:none;position:absolute;top:100%;left:0;right:0;margin-top:4px;z-index:9999;max-height:300px;overflow-y:auto;background:var(--card, #0f172a);border:1px solid #334155;border-radius:8px;box-shadow:0 10px 25px rgba(0,0,0,0.8)">
+          </div>
+          <button type="submit">Analyze</button>
+        </form>
       </div>
       <div class="badges" id="stock-badges"></div>
       <div class="price-block" id="price-block" style="display:none;">
@@ -899,66 +754,17 @@
     </div>
   </main>
 
-  <script src="/market-clock.js"></script>
   <script src="/js/stock-features.js"></script>
   <script>
     // ─── State ────────────────────────────────────────────────────────────────────
     const form = document.getElementById('stock-form');
     const tickerInput = document.getElementById('stock-ticker');
-    const assetClassInput = document.getElementById('stock-asset-class');
     const errorBox = document.getElementById('stock-error');
     const app = document.getElementById('app');
     const params = new URLSearchParams(window.location.search);
 
-    (function hydrateUpdatedDate() {
-      const el = document.getElementById('rv-data-updated-date');
-      if (!el) return;
-      const today = new Date();
-      const yyyy = today.getFullYear();
-      const mm = String(today.getMonth() + 1).padStart(2, '0');
-      const dd = String(today.getDate()).padStart(2, '0');
-      el.textContent = `${yyyy}-${mm}-${dd}`;
-    })();
-
-    function getTickerFromRoute() {
-      const match = String(window.location.pathname || '').match(/^\/analyze\/([^/?#]+)/i);
-      if (!match || !match[1]) return '';
-      try { return decodeURIComponent(match[1]); } catch { return match[1]; }
-    }
-
-    function getInitialTicker() {
-      return getTickerFromRoute() || params.get('ticker') || '';
-    }
-
-    function buildAnalyzeUrl(ticker) {
-      const url = new URL(`/analyze/${encodeURIComponent(String(ticker || '').trim().toUpperCase())}`, window.location.origin);
-      const debug = params.get('debug');
-      if (debug === '1') url.searchParams.set('debug', '1');
-      return url;
-    }
-
-    function syncAnalyzeUrl(ticker, replace = false) {
-      const normalized = String(ticker || '').trim().toUpperCase();
-      if (!normalized) return;
-      const target = buildAnalyzeUrl(normalized);
-      const current = `${window.location.pathname}${window.location.search}`;
-      const next = `${target.pathname}${target.search}`;
-      if (current === next) return;
-      const method = replace ? 'replaceState' : 'pushState';
-      window.history[method]({}, '', next);
-    }
-
-    form.addEventListener('submit', e => {
-      e.preventDefault();
-      const t = tickerInput.value.trim();
-      if (t) loadTicker(t);
-    });
-
-    const initialTicker = getInitialTicker();
-    if (initialTicker) {
-      tickerInput.value = initialTicker;
-      loadTicker(initialTicker, { replaceUrl: true });
-    }
+    form.addEventListener('submit', e => { e.preventDefault(); const t = tickerInput.value.trim(); if (t) loadTicker(t); });
+    if (params.has('ticker')) { const t = params.get('ticker'); tickerInput.value = t; loadTicker(t); }
 
     // ─── Ticker Autocomplete (re-uses /api/universe) ──────────────────────────────
     const acDropdown = document.getElementById('stock-ac-dropdown');
@@ -1019,9 +825,7 @@
         acActiveController = new AbortController();
         const { signal } = acActiveController;
         try {
-          const assetClass = String(assetClassInput?.value || 'all').trim().toLowerCase();
-          const assetClassQuery = assetClass && assetClass !== 'all' ? `&asset_class=${encodeURIComponent(assetClass)}` : '';
-          const res = await fetch(`/api/universe?q=${encodeURIComponent(q)}&limit=8${assetClassQuery}&t=${Date.now()}`, { signal });
+          const res = await fetch(`/api/universe?q=${encodeURIComponent(q)}&limit=8&t=${Date.now()}`, { signal });
           if (!res.ok) return;
           const data = await res.json();
           const deduped = new Map();
@@ -1067,18 +871,15 @@
     const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
 
     // ─── Load Ticker ──────────────────────────────────────────────────────────────
-    async function loadTicker(ticker, options = {}) {
-      const normalizedTicker = String(ticker || '').trim().toUpperCase();
-      if (!normalizedTicker) return;
-      syncAnalyzeUrl(normalizedTicker, options.replaceUrl === true);
-      document.getElementById('stock-subtitle').textContent = `Loading ${normalizedTicker}…`;
+    async function loadTicker(ticker) {
+      document.getElementById('stock-subtitle').textContent = `Loading ${ticker.toUpperCase()}…`;
       document.getElementById('price-block').style.display = 'none';
       document.getElementById('range-52w').style.display = 'none';
       errorBox.style.display = 'none';
       app.innerHTML = '<div class="loading-state">⏳ Fetching data…</div>';
 
       try {
-        const res = await fetch(`/api/stock?ticker=${encodeURIComponent(normalizedTicker)}`);
+        const res = await fetch(`/api/stock?ticker=${encodeURIComponent(ticker)}`);
         const payload = await res.json();
         render(payload);
       } catch (err) {
@@ -1086,23 +887,6 @@
         errorBox.textContent = `Network error: ${err.message}`;
       }
     }
-
-    window.addEventListener('popstate', () => {
-      const routeTicker = getInitialTicker();
-      if (routeTicker) {
-        tickerInput.value = routeTicker;
-        loadTicker(routeTicker, { replaceUrl: true });
-        return;
-      }
-      tickerInput.value = '';
-      document.getElementById('stock-title').textContent = 'Stock Analysis';
-      document.getElementById('stock-subtitle').textContent = 'Enter a ticker above to begin the analysis.';
-      document.getElementById('stock-badges').innerHTML = '';
-      document.getElementById('price-block').style.display = 'none';
-      document.getElementById('range-52w').style.display = 'none';
-      errorBox.style.display = 'none';
-      app.innerHTML = '<div class="loading-state">Enter a ticker above to begin the analysis.</div>';
-    });
 
     // ─── Main Render ──────────────────────────────────────────────────────────────
     function render(payload) {
@@ -1230,6 +1014,13 @@
       }));
     }
 
+    function getRsiMeta(rsi) {
+      if (!Number.isFinite(rsi)) return { zone: 'Unknown', signal: 'Neutral', color: 'var(--text-dim)' };
+      if (rsi < 30) return { zone: 'Oversold', signal: 'Buy', color: 'var(--green)' };
+      if (rsi > 70) return { zone: 'Overbought', signal: 'Sell', color: 'var(--red)' };
+      return { zone: 'Neutral', signal: 'Neutral', color: 'var(--text)' };
+    }
+
     // ─── 1. TECHNICAL VERDICT ────────────────────────────────────────────────────
     function buildVerdict(close, s) {
       if (close == null) return '';
@@ -1242,7 +1033,9 @@
       if (close > s.sma50) bullCount++; else bearCount++;
       if (close > s.sma200) bullCount++; else bearCount++;
       // RSI
-      if (s.rsi14 > 60) bullCount++; else if (s.rsi14 < 40) bearCount++;
+      const rsiMeta = getRsiMeta(s.rsi14);
+      if (rsiMeta.signal === 'Buy') bullCount++;
+      else if (rsiMeta.signal === 'Sell') bearCount++;
       // MACD
       if (s.macd_hist > 0) bullCount++; else if (s.macd_hist < 0) bearCount++;
       // BB position
@@ -1256,7 +1049,7 @@
       else { verdict = '◆ NEUTRAL'; cls = 'neutral'; }
 
       return `<div class="section section-full">
-      <h2>🎯 Technical Verdict</h2>
+      <h2>🎯 Technical Verdict <span style="font-size:0.7rem;color:var(--text-muted);text-transform:none;letter-spacing:0">1-20d signal blend</span></h2>
       <div class="verdict-box ${cls}">${verdict}</div>
       <div class="verdict-detail">${bullCount} bullish signals, ${bearCount} bearish signals from MA, RSI, MACD, and Bollinger analysis</div>
     </div>`;
@@ -1311,8 +1104,9 @@
     function buildOscillators(close, s) {
       // RSI Gauge
       const rsi = s.rsi14;
-      const rsiZone = rsi < 30 ? 'Oversold' : rsi > 70 ? 'Overbought' : rsi > 50 ? 'Bullish' : 'Bearish';
-      const rsiColor = rsi < 30 ? 'var(--green)' : rsi > 70 ? 'var(--red)' : 'var(--text)';
+      const rsiMeta = getRsiMeta(rsi);
+      const rsiZone = rsiMeta.zone;
+      const rsiColor = rsiMeta.color;
       const rsiGauge = rsi != null ? `
       <div class="gauge">
         <div class="gauge-header">
@@ -1542,7 +1336,7 @@
 
       // RSI
       if (s.rsi14 != null) {
-        const rsiSig = s.rsi14 < 30 ? 'Buy' : s.rsi14 > 70 ? 'Sell' : 'Neutral';
+        const rsiSig = getRsiMeta(s.rsi14).signal;
         signals.push({ name: 'RSI (14)', sig: rsiSig, detail: `${s.rsi14.toFixed(1)}` });
       }
 
@@ -1572,7 +1366,7 @@
       const neutralCount = signals.filter(s => s.sig === 'Neutral').length;
 
       return `<div class="section section-full">
-      <h2>📋 Signal Summary</h2>
+      <h2>📋 Signal Summary <span style="font-size:0.7rem;color:var(--text-muted);text-transform:none;letter-spacing:0">same thresholds as verdict</span></h2>
       <div style="display:flex;gap:0.5rem;margin-bottom:0.75rem;flex-wrap:wrap;">
         <span class="signal-chip buy">Buy: ${buyCount}</span>
         <span class="signal-chip sell">Sell: ${sellCount}</span>
@@ -1767,10 +1561,11 @@
 
       // RSI
       if (s.rsi14 != null) {
-        if (s.rsi14 < 30) {
+        const rsiMeta = getRsiMeta(s.rsi14);
+        if (rsiMeta.signal === 'Buy') {
           points.push(`🟢 RSI at <strong>${s.rsi14.toFixed(1)}</strong> — oversold territory, potential bounce setup.`);
           bullScore += 1;
-        } else if (s.rsi14 > 70) {
+        } else if (rsiMeta.signal === 'Sell') {
           points.push(`🔴 RSI at <strong>${s.rsi14.toFixed(1)}</strong> — overbought, caution for pullback.`);
           bearScore += 1;
         } else {
@@ -1840,13 +1635,27 @@
       else { overallVerdict = 'The technical picture is <strong>MIXED</strong>. Conflicting signals suggest a wait-and-see approach.'; verdictCls = 'neutral'; }
 
       return `<div class="section section-full">
-      <h2>📝 Price Conclusion</h2>
+      <h2>📝 Price Conclusion <span style="font-size:0.7rem;color:var(--text-muted);text-transform:none;letter-spacing:0">20-200d context</span></h2>
       <div class="verdict-box ${verdictCls}" style="font-size:0.95rem;padding:0.75rem;margin-bottom:0.75rem;">${overallVerdict}</div>
       <div style="display:flex;flex-direction:column;gap:0.4rem;">
         ${points.map(p => `<div style="font-size:0.82rem;color:var(--text);line-height:1.5;padding:0.3rem 0;border-bottom:1px solid rgba(255,255,255,0.03);">${p}</div>`).join('')}
       </div>
       <div style="font-size:0.7rem;color:var(--text-muted);margin-top:0.75rem;text-align:center;">⚠️ This is a technical summary, not financial advice. Always conduct your own research.</div>
     </div>`;
+    }
+  </script>
+
+  <script type="module">
+    import { attachSearchUI } from '/search.js';
+    const root = document.getElementById('rv-stock-search-root');
+    const searchParams = new URLSearchParams(window.location.search);
+    const ticker = searchParams.get('ticker') || '';
+    if (root) {
+      attachSearchUI(root, {
+        placeholder: 'Search ticker or company',
+        limit: 10,
+        prefill: ticker
+      });
     }
   </script>
 </body>
