@@ -27,14 +27,15 @@ import path from 'node:path';
 import { computeFeatures } from '../lib/scientific-analyzer/features.mjs';
 import { generateExplainabilityReport, formatExplanationForUI } from '../lib/scientific-analyzer/explainability.mjs';
 import { applyPlattScaling } from '../lib/scientific-analyzer/calibration.mjs';
+import { publicSsotRel, mirrorSsotRel } from '../universe-v7/lib/ssot-paths.mjs';
 
 const REPO_ROOT = process.cwd();
 const MODELS_DIR = 'public/data/models';
 const SNAPSHOTS_DIR = 'public/data/snapshots';
 const MARKETPHASE_DIR = 'public/data/marketphase';
 const LEGACY_UNIVERSE_FILE = 'public/data/universe/all.json';
-const V7_STOCK_ROWS_FILE = 'public/data/universe/v7/ssot/stocks.max.rows.json';
-const V7_STOCK_SYMBOLS_FILE = 'public/data/universe/v7/ssot/stocks.max.symbols.json';
+const V7_STOCK_ROWS_FILE = mirrorSsotRel('stocks.max.rows.json');
+const V7_STOCK_SYMBOLS_FILE = publicSsotRel('stocks.max.symbols.json');
 const MARKETPHASE_INDEX_FILE = 'public/data/marketphase/index.json';
 const MARKETPHASE_DEEP_SUMMARY_FILE = 'public/data/universe/v7/read_models/marketphase_deep_summary.json';
 

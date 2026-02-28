@@ -3,6 +3,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { appendDropoutRecords } from '../_shared/dropout-logger.mjs';
+import { resolveSsotPath } from './lib/ssot-paths.mjs';
 
 const REPO_ROOT = process.cwd();
 const FEATURE_GAP_REPORT = path.join(REPO_ROOT, 'public/data/universe/v7/reports/feature_gap_reasons_report.json');
@@ -65,7 +66,7 @@ async function main() {
   }
 
   const sciSnapshot = await readJson(path.join(REPO_ROOT, 'public/data/snapshots/stock-analysis.json'));
-  const ssotRows = await readJson(path.join(REPO_ROOT, 'public/data/universe/v7/ssot/stocks.max.rows.json'));
+  const ssotRows = await readJson(resolveSsotPath(REPO_ROOT, 'stocks.max.rows.json'));
   const ssotBySymbol = new Map((ssotRows?.items || []).map((r) => [String(r.symbol || '').toUpperCase(), r]));
   for (const [k, v] of Object.entries(sciSnapshot || {})) {
     if (String(k).startsWith('_')) continue;
@@ -103,4 +104,3 @@ main().catch((error) => {
   console.error(JSON.stringify({ ok: false, reason: error?.message || String(error) }));
   process.exit(1);
 });
-

@@ -1,9 +1,10 @@
 #!/usr/bin/env node
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import { resolveSsotPath } from './lib/ssot-paths.mjs';
 
 const REPO_ROOT = process.cwd();
-const SSOT_ROWS_PATH = path.join(REPO_ROOT, 'public/data/universe/v7/ssot/stocks.max.rows.json');
+const SSOT_ROWS_PATH = resolveSsotPath(REPO_ROOT, 'stocks.max.rows.json');
 const SCI_SNAPSHOT_PATH = path.join(REPO_ROOT, 'public/data/snapshots/stock-analysis.json');
 const FEATURE_GAP_REPORT_PATH = path.join(REPO_ROOT, 'public/data/universe/v7/reports/feature_gap_reasons_report.json');
 const MARKETPHASE_DEEP_SUMMARY_PATH = path.join(REPO_ROOT, 'public/data/universe/v7/read_models/marketphase_deep_summary.json');

@@ -18,6 +18,7 @@ import {
     brierScore, accuracy, hitRate, trend, rollingAverage,
     round, trendEmoji, isoDate, daysAgo
 } from './lib/metrics.mjs';
+import { resolveSsotPath } from '../universe-v7/lib/ssot-paths.mjs';
 
 // ─── Paths ──────────────────────────────────────────────────────────────────
 const ROOT = process.cwd();
@@ -31,7 +32,7 @@ const PUBLIC_REPORT = path.join(ROOT, 'public/data/reports/learning-report-lates
 const FORECAST_LEDGER = path.join(ROOT, 'mirrors/forecast/ledger');
 const SCIENTIFIC_SUMMARY = path.join(ROOT, 'public/data/supermodules/scientific-summary.json');
 const EOD_BATCH = path.join(ROOT, 'public/data/eod/batches/eod.latest.000.json');
-const V7_STOCK_ROWS = path.join(ROOT, 'public/data/universe/v7/ssot/stocks.max.rows.json');
+const V7_STOCK_ROWS = resolveSsotPath(ROOT, 'stocks.max.rows.json');
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 function ensureDir(p) { fs.mkdirSync(path.dirname(p), { recursive: true }); }

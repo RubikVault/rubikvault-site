@@ -4,11 +4,13 @@ import fsp from 'node:fs/promises';
 import path from 'node:path';
 import zlib from 'node:zlib';
 import readline from 'node:readline';
+import { PUBLIC_SSOT_REL_DIR, MIRROR_SSOT_REL_DIR, publicSsotPath, mirrorSsotPath } from './lib/ssot-paths.mjs';
 
 const REPO_ROOT = process.cwd();
 const REGISTRY_GZ = path.join(REPO_ROOT, 'public/data/universe/v7/registry/registry.ndjson.gz');
 const READ_MODELS_DIR = path.join(REPO_ROOT, 'public/data/universe/v7/read_models');
-const OUT_DIR = path.join(REPO_ROOT, 'public/data/universe/v7/ssot');
+const PUBLIC_OUT_DIR = path.join(REPO_ROOT, PUBLIC_SSOT_REL_DIR);
+const MIRROR_OUT_DIR = path.join(REPO_ROOT, MIRROR_SSOT_REL_DIR);
 const SCI_SNAPSHOT = path.join(REPO_ROOT, 'public/data/snapshots/stock-analysis.json');
 const FC_LATEST = path.join(REPO_ROOT, 'public/data/forecast/latest.json');
 const MP_INDEX = path.join(REPO_ROOT, 'public/data/marketphase/index.json');
@@ -339,7 +341,8 @@ async function main() {
     exchangeCounts[ex] = (exchangeCounts[ex] || 0) + 1;
   }
 
-  await fsp.mkdir(OUT_DIR, { recursive: true });
+  await fsp.mkdir(PUBLIC_OUT_DIR, { recursive: true });
+  await fsp.mkdir(MIRROR_OUT_DIR, { recursive: true });
 
   const manifest = {
     schema: 'rv_v7_stock_ssot_manifest_v1',
@@ -364,9 +367,9 @@ async function main() {
       shared_intersection_count: sharedItems.length
     },
     files: {
-      rows: 'public/data/universe/v7/ssot/stocks.max.rows.json',
+      rows_local: 'mirrors/universe-v7/ssot/stocks.max.rows.json',
       symbols: 'public/data/universe/v7/ssot/stocks.max.symbols.json',
-      canonical_rows: 'public/data/universe/v7/ssot/stocks.max.canonical.rows.json',
+      canonical_rows_local: 'mirrors/universe-v7/ssot/stocks.max.canonical.rows.json',
       canonical_ids: 'public/data/universe/v7/ssot/stocks.max.canonical.ids.json',
       by_feature: 'public/data/universe/v7/ssot/stocks.by_feature.json',
       by_feature_canonical: 'public/data/universe/v7/ssot/stocks.canonical.by_feature.json',
@@ -382,42 +385,45 @@ async function main() {
     }
   };
 
-  await writeJsonAtomic(path.join(OUT_DIR, 'stocks.max.rows.json'), {
+  await writeJsonAtomic(mirrorSsotPath(REPO_ROOT, 'stocks.max.rows.json'), {
     schema: 'rv_v7_stock_ssot_rows_v1',
     generated_at: manifest.generated_at,
     count: rows.length,
     items: rows
   });
 
-  await writeJsonAtomic(path.join(OUT_DIR, 'stocks.max.symbols.json'), {
+  await writeJsonAtomic(publicSsotPath(REPO_ROOT, 'stocks.max.symbols.json'), {
     schema: 'rv_v7_stock_ssot_symbols_v1',
     generated_at: manifest.generated_at,
     count: symbols.length,
     symbols
   });
 
-  await writeJsonAtomic(path.join(OUT_DIR, 'stocks.max.canonical.rows.json'), {
+  await writeJsonAtomic(mirrorSsotPath(REPO_ROOT, 'stocks.max.canonical.rows.json'), {
     schema: 'rv_v7_stock_ssot_canonical_rows_v1',
     generated_at: manifest.generated_at,
     count: canonicalRows.length,
     items: canonicalRows
   });
 
-  await writeJsonAtomic(path.join(OUT_DIR, 'stocks.max.canonical.ids.json'), {
+  await fsp.rm(publicSsotPath(REPO_ROOT, 'stocks.max.rows.json'), { force: true });
+  await fsp.rm(publicSsotPath(REPO_ROOT, 'stocks.max.canonical.rows.json'), { force: true });
+
+  await writeJsonAtomic(publicSsotPath(REPO_ROOT, 'stocks.max.canonical.ids.json'), {
     schema: 'rv_v7_stock_ssot_canonical_ids_v1',
     generated_at: manifest.generated_at,
     count: canonicalIds.length,
     canonical_ids: canonicalIds
   });
 
-  await writeJsonAtomic(path.join(OUT_DIR, 'stocks.by_feature.json'), {
+  await writeJsonAtomic(publicSsotPath(REPO_ROOT, 'stocks.by_feature.json'), {
     schema: 'rv_v7_stock_ssot_by_feature_v1',
     generated_at: manifest.generated_at,
     counts: manifest.feature_eligible_counts,
     symbols: byFeature
   });
 
-  await writeJsonAtomic(path.join(OUT_DIR, 'stocks.canonical.by_feature.json'), {
+  await writeJsonAtomic(publicSsotPath(REPO_ROOT, 'stocks.canonical.by_feature.json'), {
     schema: 'rv_v7_stock_ssot_by_feature_canonical_v1',
     generated_at: manifest.generated_at,
     counts: {
@@ -430,7 +436,7 @@ async function main() {
     canonical_ids: byFeatureCanonical
   });
 
-  await writeJsonAtomic(path.join(OUT_DIR, 'stocks.shared.features.json'), {
+  await writeJsonAtomic(publicSsotPath(REPO_ROOT, 'stocks.shared.features.json'), {
     schema: 'rv_v7_stock_ssot_shared_features_v1',
     generated_at: manifest.generated_at,
     source: {
@@ -442,7 +448,7 @@ async function main() {
     items: sharedItems
   });
 
-  await writeJsonAtomic(path.join(OUT_DIR, 'stocks.feature.parity.json'), {
+  await writeJsonAtomic(publicSsotPath(REPO_ROOT, 'stocks.feature.parity.json'), {
     schema: 'rv_v7_stock_feature_parity_v1',
     generated_at: manifest.generated_at,
     feature_counts_eligible: {
@@ -497,9 +503,9 @@ async function main() {
     }
   });
 
-  await writeJsonAtomic(path.join(OUT_DIR, 'manifest.json'), manifest);
+  await writeJsonAtomic(publicSsotPath(REPO_ROOT, 'manifest.json'), manifest);
 
-  await writeJsonAtomic(path.join(OUT_DIR, 'policy.json'), {
+  await writeJsonAtomic(publicSsotPath(REPO_ROOT, 'policy.json'), {
     schema: 'rv_v7_stock_ssot_policy_v1',
     generated_at: manifest.generated_at,
     default_symbol_source: manifest.files.symbols,

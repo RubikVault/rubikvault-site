@@ -1,14 +1,15 @@
 #!/usr/bin/env node
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import { publicSsotPath, resolveSsotPath } from './lib/ssot-paths.mjs';
 
 const REPO_ROOT = process.cwd();
-const SSOT_SYMBOLS = path.join(REPO_ROOT, 'public/data/universe/v7/ssot/stocks.max.symbols.json');
-const SSOT_CANONICAL_ROWS = path.join(REPO_ROOT, 'public/data/universe/v7/ssot/stocks.max.canonical.rows.json');
-const SSOT_CANONICAL_IDS = path.join(REPO_ROOT, 'public/data/universe/v7/ssot/stocks.max.canonical.ids.json');
-const BY_FEATURE = path.join(REPO_ROOT, 'public/data/universe/v7/ssot/stocks.by_feature.json');
-const BY_FEATURE_CANONICAL = path.join(REPO_ROOT, 'public/data/universe/v7/ssot/stocks.canonical.by_feature.json');
-const SHARED_FEATURES = path.join(REPO_ROOT, 'public/data/universe/v7/ssot/stocks.shared.features.json');
+const SSOT_SYMBOLS = publicSsotPath(REPO_ROOT, 'stocks.max.symbols.json');
+const SSOT_CANONICAL_ROWS = resolveSsotPath(REPO_ROOT, 'stocks.max.canonical.rows.json');
+const SSOT_CANONICAL_IDS = publicSsotPath(REPO_ROOT, 'stocks.max.canonical.ids.json');
+const BY_FEATURE = publicSsotPath(REPO_ROOT, 'stocks.by_feature.json');
+const BY_FEATURE_CANONICAL = publicSsotPath(REPO_ROOT, 'stocks.canonical.by_feature.json');
+const SHARED_FEATURES = publicSsotPath(REPO_ROOT, 'stocks.shared.features.json');
 const SCI_SNAPSHOT = path.join(REPO_ROOT, 'public/data/snapshots/stock-analysis.json');
 const FC_LATEST = path.join(REPO_ROOT, 'public/data/forecast/latest.json');
 const MP_INDEX = path.join(REPO_ROOT, 'public/data/marketphase/index.json');
