@@ -16,14 +16,16 @@
 
 .rv-search-dd {
   position: absolute;
-  width: 100%;
+  top: 100%;
+  left: 0;
+  right: 0;
   background: rgba(2, 6, 23, 0.95);
   border: 1px solid rgba(148, 163, 184, 0.4);
   border-radius: 12px;
   margin-top: 0.5rem;
   max-height: 320px;
   overflow: auto;
-  z-index: 10;
+  z-index: 9999;
 }
 
 .rv-dd-item {
