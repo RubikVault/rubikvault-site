@@ -6,8 +6,6 @@ let _sciCache = null;
 let _sciTime = 0;
 let _fcCache = null;
 let _fcTime = 0;
-let _ewCache = null;
-let _ewTime = 0;
 const TTL = 600_000; // 10 min cache
 
 export async function onRequestGet(context) {
@@ -36,47 +34,64 @@ export async function onRequestGet(context) {
   const now = Date.now();
   const result = { ticker, scientific: null, forecast: null, forecast_meta: null, elliott: null };
 
-  // Scientific — dict keyed by ticker
+  // Run all three fetches in parallel — each is independent
+  const [sciResult, fcResult, ewResult] = await Promise.allSettled([
+    // Scientific — large dict keyed by ticker (cached for 10 min)
+    (async () => {
+      if (!_sciCache || now - _sciTime > TTL) {
+        _sciCache = await fetchJson("/data/snapshots/stock-analysis.json");
+        _sciTime = now;
+      }
+      return _sciCache;
+    })(),
+    // Forecast — large array (cached for 10 min)
+    (async () => {
+      if (!_fcCache || now - _fcTime > TTL) {
+        _fcCache = await fetchJson("/data/forecast/latest.json");
+        _fcTime = now;
+      }
+      return _fcCache;
+    })(),
+    // Elliott — per-ticker file (small, ~2KB, no caching needed)
+    fetchJson(`/data/marketphase/${ticker}.json`),
+  ]);
+
+  // Extract scientific
   try {
-    if (!_sciCache || now - _sciTime > TTL) {
-      _sciCache = await fetchJson("/data/snapshots/stock-analysis.json");
-      _sciTime = now;
-    }
-    if (_sciCache) {
-      result.scientific = _sciCache[ticker] || _sciCache[ticker.toUpperCase()] || null;
+    const sciData = sciResult.status === "fulfilled" ? sciResult.value : null;
+    if (sciData) {
+      result.scientific = sciData[ticker] || sciData[ticker.toUpperCase()] || null;
     }
   } catch { /* ignore */ }
 
-  // Forecast — array of {symbol, horizons}
+  // Extract forecast
   try {
-    if (!_fcCache || now - _fcTime > TTL) {
-      _fcCache = await fetchJson("/data/forecast/latest.json");
-      _fcTime = now;
-    }
-    if (_fcCache) {
-      const forecasts = _fcCache?.data?.forecasts || [];
+    const fcData = fcResult.status === "fulfilled" ? fcResult.value : null;
+    if (fcData) {
+      const forecasts = fcData?.data?.forecasts || [];
       result.forecast = Array.isArray(forecasts)
         ? forecasts.find((f) => f.symbol === ticker) || null
         : null;
       if (result.forecast) {
         result.forecast_meta = {
-          accuracy: _fcCache?.accuracy || null,
-          champion_id: _fcCache?.champion_id || null,
-          freshness: _fcCache?.freshness || null,
+          accuracy: fcData?.accuracy || null,
+          champion_id: fcData?.champion_id || null,
+          freshness: fcData?.freshness || null,
         };
       }
     }
   } catch { /* ignore */ }
 
-  // Elliott — items array
+  // Extract Elliott from per-ticker marketphase file
   try {
-    if (!_ewCache || now - _ewTime > TTL) {
-      _ewCache = await fetchJson("/data/universe/v7/read_models/marketphase_deep_summary.json");
-      _ewTime = now;
-    }
-    if (_ewCache) {
-      const items = Array.isArray(_ewCache?.items) ? _ewCache.items : [];
-      result.elliott = items.find((i) => i.symbol === ticker || i.key_id === ticker) || null;
+    const mpDoc = ewResult.status === "fulfilled" ? ewResult.value : null;
+    if (mpDoc?.ok && mpDoc?.data?.elliott) {
+      result.elliott = mpDoc.data.elliott;
+      result.elliott._meta = {
+        symbol: ticker,
+        generatedAt: mpDoc?.meta?.generatedAt || null,
+        version: mpDoc?.meta?.version || null,
+      };
     }
   } catch { /* ignore */ }
 

@@ -771,36 +771,53 @@ async function buildElliottInsight(ticker) {
   const entry = insights?.elliott;
   if (!entry) return `<div class="section"><h2>\ud83c\udf0a Elliott Wave Analysis</h2><div class="placeholder-card">No Elliott Wave data available for ${ticker}.</div></div>`;
 
-  const wave = entry.wavePosition || entry.estimated_wave || entry.wave || 'N/A';
-  const confidence = entry.confidence != null ? entry.confidence : (entry.wave_confidence != null ? entry.wave_confidence : null);
-  const trendDir = entry.direction || entry.trend_direction || entry.trend || 'N/A';
-  const trendCol = trendDir.toLowerCase().includes('up') || trendDir.toLowerCase().includes('bull') ? 'var(--green)' : trendDir.toLowerCase().includes('down') || trendDir.toLowerCase().includes('bear') ? 'var(--red)' : 'var(--yellow)';
+  const completed = entry.completedPattern || {};
+  const developing = entry.developingPattern || {};
+  const uncertainty = entry.uncertainty || {};
+  const fib = entry.fib || {};
 
-  const waveExplain = {
-    'Wave 1': 'Early trend emergence \u2014 low confidence, potential false starts',
-    'Wave 2': 'Corrective pullback \u2014 tests conviction, often retraces 50-61.8%',
-    'Wave 3': 'Strongest impulse wave \u2014 highest momentum, typically extends',
-    'Wave 4': 'Consolidation / correction \u2014 complex, often overlaps Wave 1 range',
-    'Wave 5': 'Final impulse \u2014 divergences common, exhaustion signals',
-    'Wave A': 'First corrective leg \u2014 often mistaken for a dip to buy',
-    'Wave B': 'Counter-trend rally \u2014 bull trap in a bear correction',
-    'Wave C': 'Final corrective leg \u2014 often sharp and decisive',
-    'in-correction': 'Currently in a corrective phase \u2014 pullback from recent highs, watching for support',
-    'in-impulse': 'Currently in an impulse phase \u2014 strong directional momentum',
-    'impulse-complete': 'Impulse wave completed \u2014 potential trend exhaustion, watch for reversal',
-    'correction-complete': 'Correction completed \u2014 potential resumption of prior trend'
-  };
-  const explanation = waveExplain[wave] || 'Structural wave position assessment based on price action patterns.';
-  const waveLabel = wave.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
-  const confPct = confidence != null ? Math.round(confidence) : null;
+  // Wave position from developing pattern
+  const wave = developing.possibleWave || 'N/A';
+  const trendDir = completed.direction || 'N/A';
+  const trendCol = trendDir.toLowerCase().includes('bull') ? 'var(--green)' : trendDir.toLowerCase().includes('bear') ? 'var(--red)' : 'var(--yellow)';
+
+  // Confidence from developing first, fallback to completed adjusted confidence
+  const rawConf = developing.confidence != null ? developing.confidence : (uncertainty?.confidenceDecay?.adjusted != null ? uncertainty.confidenceDecay.adjusted : null);
+  const confPct = rawConf != null ? Math.round(rawConf) : null;
   const confBar = confPct != null ? `<div style="margin-top:.3rem;height:6px;border-radius:3px;background:rgba(255,255,255,.05);overflow:hidden"><div style="width:${confPct}%;height:100%;background:${confPct > 60 ? 'var(--green)' : confPct > 30 ? 'var(--yellow)' : 'var(--red)'};border-radius:3px"></div></div>` : '';
+
+  // Fibonacci conformance score
+  const fibScore = fib.conformanceScore != null ? Math.round(fib.conformanceScore) : null;
+
+  // Fib support/resistance levels
+  const fibSupport = developing?.fibLevels?.support || [];
+  const fibResist = developing?.fibLevels?.resistance || [];
+
+  // Explanation based on wave position
+  const waveExplain = {
+    'Wave 1': 'Early trend emergence \u2014 low confidence, potential false starts.',
+    'Wave 2': 'Corrective pullback \u2014 tests conviction, often retraces 50-61.8%.',
+    'Wave 3': 'Strongest impulse wave \u2014 highest momentum, typically extends.',
+    'Wave 4': 'Consolidation / correction \u2014 complex, watch for reversal signals.',
+    'Wave 4 or ABC': 'Corrective structure in progress \u2014 either a 4th wave consolidation or a full ABC correction.',
+    'Wave 5': 'Final impulse \u2014 divergences common, exhaustion signals.',
+    'Wave A': 'First corrective leg \u2014 often mistaken for a dip-buy opportunity.',
+    'Wave B': 'Counter-trend rally \u2014 potential bull trap.',
+    'Wave C': 'Final corrective leg \u2014 often sharp and decisive.'
+  };
+  const explanation = waveExplain[wave] || 'Structural wave analysis based on Elliott price action patterns.';
+
+  // Completed pattern status
+  const completedHtml = completed.direction ? `<div style="margin-top:.4rem;font-size:.75rem;color:var(--text-dim)">Last completed pattern: <strong style="color:${trendCol}">${completed.direction}</strong>${completed.endedAt ? ` (ended ${completed.endedAt})` : ''}${completed.guidelineScore != null ? ` \u2014 guideline score: ${completed.guidelineScore}%` : ''}</div>` : '';
 
   return `<div class="section"><h2>\ud83c\udf0a Elliott Wave Analysis</h2>
 <div style="display:flex;gap:.75rem;flex-wrap:wrap;margin-bottom:.5rem">
-  <div style="padding:.5rem .8rem;border-radius:8px;background:linear-gradient(135deg,rgba(99,102,241,.12),rgba(139,92,246,.08));border:1px solid rgba(99,102,241,.3);flex:1;min-width:120px"><div style="font-size:.72rem;color:var(--text-dim);text-transform:uppercase;letter-spacing:.04em">Est. Wave</div><div style="font-size:1.2rem;font-weight:800;color:var(--accent)">${waveLabel}</div></div>
+  <div style="padding:.5rem .8rem;border-radius:8px;background:linear-gradient(135deg,rgba(99,102,241,.12),rgba(139,92,246,.08));border:1px solid rgba(99,102,241,.3);flex:1;min-width:120px"><div style="font-size:.72rem;color:var(--text-dim);text-transform:uppercase;letter-spacing:.04em">Developing Wave</div><div style="font-size:1.1rem;font-weight:800;color:var(--accent)">${wave}</div></div>
   <div style="padding:.5rem .8rem;border-radius:8px;background:rgba(255,255,255,.03);border:1px solid var(--border);flex:1;min-width:120px"><div style="font-size:.72rem;color:var(--text-dim);text-transform:uppercase;letter-spacing:.04em">Trend</div><div style="font-size:1rem;font-weight:700;color:${trendCol}">${trendDir}</div></div>
   ${confPct != null ? `<div style="padding:.5rem .8rem;border-radius:8px;background:rgba(255,255,255,.03);border:1px solid var(--border);flex:1;min-width:120px"><div style="font-size:.72rem;color:var(--text-dim);text-transform:uppercase;letter-spacing:.04em">Confidence</div><div style="font-size:1rem;font-weight:700">${confPct}%</div>${confBar}</div>` : ''}
+  ${fibScore != null ? `<div style="padding:.5rem .8rem;border-radius:8px;background:rgba(255,255,255,.03);border:1px solid var(--border);flex:1;min-width:120px"><div style="font-size:.72rem;color:var(--text-dim);text-transform:uppercase;letter-spacing:.04em">Fib Conformance</div><div style="font-size:1rem;font-weight:700">${fibScore}%</div></div>` : ''}
 </div>
 <div style="padding:.5rem .6rem;border-radius:6px;background:rgba(255,255,255,.02);border-left:3px solid var(--accent);font-size:.78rem;color:var(--text-dim)">\ud83d\udca1 ${explanation}</div>
-${entry.fibConformance != null ? `<div style="margin-top:.4rem;font-size:.75rem;color:var(--text-dim)">Fibonacci Conformance: <strong style="color:var(--text)">${Math.round(entry.fibConformance)}%</strong></div>` : ''}</div>`;
+${(fibSupport.length || fibResist.length) ? `<div style="margin-top:.5rem;display:flex;gap:.75rem;flex-wrap:wrap">${fibSupport.length ? `<div style="font-size:.75rem;color:var(--text-dim)">Support: ${fibSupport.map(v => `<strong style="color:var(--green)">$${v.toFixed(2)}</strong>`).join(', ')}</div>` : ''}${fibResist.length ? `<div style="font-size:.75rem;color:var(--text-dim)">Resistance: ${fibResist.map(v => `<strong style="color:var(--red)">$${v.toFixed(2)}</strong>`).join(', ')}</div>` : ''}</div>` : ''}
+${completedHtml}</div>`;
 }
