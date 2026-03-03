@@ -130,9 +130,12 @@ function compareSuggestionPriority(a, b, query) {
 }
 
 function suggestionDedupeKey(item) {
+  // Dedup by ticker first — ensures same stock only appears once regardless of exchange
+  const ticker = normTicker(item?.ticker);
+  if (ticker) return `ticker:${ticker}`;
   const name = normName(item?.name);
   if (name && name.length >= 3) return `name:${name}`;
-  return `ticker:${normTicker(item?.ticker)}`;
+  return `raw:${ticker}`;
 }
 
 function normalizeAssetClass(v) {
@@ -396,7 +399,7 @@ export async function attachSearchUI(rootElement, options = {}) {
 
   function scheduleFetch(q) {
     if (debounceTimer) clearTimeout(debounceTimer);
-    debounceTimer = setTimeout(() => doFetch(q), 150);
+    debounceTimer = setTimeout(() => doFetch(q), 0);
   }
 
   function handleSelect(indexPosition) {

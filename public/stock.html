@@ -7,6 +7,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
   <meta name="description"
     content="Comprehensive technical analysis dashboard for any stock — Moving Averages, RSI, MACD, Bollinger Bands, and more." />
+  <!-- OG / Social Meta (updated dynamically on render) -->
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="RubikVault" />
+  <meta property="og:image" content="/assets/rv-favicon.png" />
+  <meta property="og:title" id="og-title" content="Stock Analysis · RubikVault" />
+  <meta property="og:description" id="og-desc" content="Technical analysis dashboard — Moving Averages, RSI, MACD, Bollinger Bands and more." />
+  <meta property="og:url" id="og-url" content="https://rubikvault.com/analyze/" />
+  <meta name="twitter:card" content="summary" />
   <link rel="icon" type="image/png" sizes="32x32" href="/assets/rv-favicon.png" />
   <link rel="stylesheet" href="/style.css" />
   <link rel="stylesheet" href="/search.css" />
@@ -595,6 +603,99 @@
       margin-left: 0.5rem;
     }
 
+    /* ─── S/R Level Ladder ─── */
+    .sr-summary {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      gap: 0.75rem;
+      margin-bottom: 0.5rem;
+      align-items: start;
+    }
+    .sr-item { padding: 0.75rem; border-radius: var(--radius-sm); border: 1px solid var(--border); }
+    .sr-item.support    { background: rgba(16,185,129,0.06); border-color: rgba(16,185,129,0.25); }
+    .sr-item.resistance { background: rgba(248,113,113,0.06); border-color: rgba(248,113,113,0.25); }
+    .sr-item.empty      { opacity: 0.5; }
+    .sr-current { text-align: center; padding: 0.75rem 0.5rem; }
+    .sr-label  { font-size: 0.65rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-muted); margin-bottom: 0.25rem; }
+    .sr-price  { font-size: 1.1rem; font-weight: 800; margin-bottom: 0.1rem; }
+    .sr-item.support    .sr-price { color: var(--green); }
+    .sr-item.resistance .sr-price { color: var(--red); }
+    .sr-name  { font-size: 0.75rem; color: var(--text-dim); }
+    .sr-dist  { font-size: 0.72rem; color: var(--text-muted); }
+    .sr-trigger  { font-size: 0.7rem; color: var(--accent); margin-top: 0.2rem; }
+    .sr-invalid  { font-size: 0.7rem; color: var(--red); margin-top: 0.2rem; }
+    .key-level { font-weight: 700; }
+    @media (max-width: 500px) { .sr-summary { grid-template-columns: 1fr; } }
+
+    /* ─── Collapsible Advanced Sections ─── */
+    details.advanced-collapsible {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 1rem 1.25rem;
+    }
+    details.advanced-collapsible[open] { padding-bottom: 1rem; }
+    summary.section-summary-header {
+      cursor: pointer;
+      font-size: 0.85rem;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      list-style: none;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      user-select: none;
+    }
+    summary.section-summary-header::before { content: '▶'; font-size: 0.6rem; transition: transform 0.2s; }
+    details[open] > summary.section-summary-header::before { transform: rotate(90deg); }
+    summary.section-summary-header::-webkit-details-marker { display: none; }
+    .advanced-badge {
+      font-size: 0.6rem; font-weight: 700; letter-spacing: 0.08em;
+      background: rgba(148,163,184,0.12); color: var(--text-muted);
+      padding: 0.1rem 0.35rem; border-radius: 4px; border: 1px solid var(--border);
+    }
+
+    /* ─── Decision Strip ─── */
+    .decision-strip-section { grid-column: 1 / -1; }
+    .decision-strip {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 0.75rem;
+    }
+    @media (max-width: 640px) { .decision-strip { grid-template-columns: 1fr; } }
+    .decision-card {
+      border-radius: var(--radius-sm);
+      padding: 1rem;
+      border: 1px solid var(--border);
+    }
+    .decision-card.bullish { background: var(--green-bg); border-color: rgba(16,185,129,0.35); }
+    .decision-card.bearish { background: var(--red-bg);   border-color: rgba(248,113,113,0.35); }
+    .decision-card.neutral { background: var(--yellow-bg); border-color: rgba(251,191,36,0.35); }
+    .decision-horizon {
+      font-size: 0.7rem; font-weight: 700; letter-spacing: 0.1em;
+      color: var(--text-dim); text-transform: uppercase; margin-bottom: 0.35rem;
+    }
+    .decision-horizon-sub { font-weight: 400; letter-spacing: 0; }
+    .decision-verdict {
+      font-size: 1.25rem; font-weight: 800; letter-spacing: 0.04em; margin-bottom: 0.25rem;
+    }
+    .decision-card.bullish .decision-verdict { color: var(--green); }
+    .decision-card.bearish .decision-verdict { color: var(--red); }
+    .decision-card.neutral .decision-verdict { color: var(--yellow); }
+    .decision-conf { font-size: 0.75rem; color: var(--text-dim); margin-bottom: 0.5rem; }
+    .decision-reasons {
+      margin: 0 0 0.5rem 0; padding: 0 0 0 1rem;
+      font-size: 0.75rem; color: var(--text); line-height: 1.5;
+    }
+    .decision-reasons li { margin-bottom: 0.15rem; }
+    .decision-trigger, .decision-invalid {
+      font-size: 0.72rem; color: var(--text-dim); margin-top: 0.2rem;
+      line-height: 1.4;
+    }
+    .decision-trigger { color: var(--accent); }
+
     /* ─── Verdict ─── */
     .verdict-box {
       text-align: center;
@@ -715,7 +816,52 @@
 </head>
 
 <body>
-  <div id="rv-stock-search-root"></div>
+  <noscript>
+    <div style="max-width:680px;margin:2rem auto;padding:1.5rem;font-family:system-ui,sans-serif;background:#0f172a;color:#f1f5f9;border-radius:12px;border:1px solid #334155;text-align:center;">
+      <h2 style="margin:0 0 0.75rem">⚠️ JavaScript Required</h2>
+      <p style="color:#94a3b8;margin:0 0 1rem">RubikVault Stock Analyzer requires JavaScript for live technical analysis.</p>
+      <p style="color:#64748b;font-size:0.85rem">Enable JavaScript in your browser or visit <a href="https://rubikvault.com" style="color:#06b6d4">rubikvault.com</a> for more information.</p>
+    </div>
+  </noscript>
+  <!-- HEADER (same as frontpage) -->
+  <header class="rv-header">
+    <div class="rv-header-inner">
+      <a class="rv-brand" href="/" aria-label="RubikVault">
+        <img class="rv-brand-icon" src="/assets/rv-icon.png" alt="" />
+        <span class="rv-brand-text">RubikVault</span>
+      </a>
+
+      <nav class="rv-nav">
+        <a class="rv-social-link" href="https://www.youtube.com/@RubikVault" target="_blank" rel="noopener noreferrer" aria-label="YouTube">
+          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M21.58 7.19a2.5 2.5 0 0 0-1.76-1.77C18.25 5 12 5 12 5s-6.25 0-7.82.42A2.5 2.5 0 0 0 2.42 7.2 26.6 26.6 0 0 0 2 12s0 2.55.42 4.81a2.5 2.5 0 0 0 1.76 1.77C5.75 19 12 19 12 19s6.25 0 7.82-.42a2.5 2.5 0 0 0 1.76-1.77C22 14.55 22 12 22 12s0-2.55-.42-4.81ZM10 15.5v-7l6 3.5-6 3.5Z"/></svg>
+        </a>
+        <a class="rv-social-link" href="https://x.com/RubikVault" target="_blank" rel="noopener noreferrer" aria-label="X">
+          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M18.9 2H22l-6.79 7.76L23 22h-6.2l-4.86-6.02L6.66 22H3.5l7.26-8.3L3 2h6.35l4.4 5.52L18.9 2Zm-1.09 18h1.72L8.4 3.93H6.56L17.81 20Z"/></svg>
+        </a>
+        <a class="rv-social-link" href="https://www.instagram.com/rubikvault_official/" target="_blank" rel="noopener noreferrer" aria-label="Instagram">
+          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M7 2h10a5 5 0 0 1 5 5v10a5 5 0 0 1-5 5H7a5 5 0 0 1-5-5V7a5 5 0 0 1 5-5Zm10 2H7a3 3 0 0 0-3 3v10a3 3 0 0 0 3 3h10a3 3 0 0 0 3-3V7a3 3 0 0 0-3-3Zm-5 3.5a4.5 4.5 0 1 1 0 9 4.5 4.5 0 0 1 0-9Zm0 2a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5ZM17.8 6.2a1 1 0 1 1 0 2 1 1 0 0 1 0-2Z"/></svg>
+        </a>
+        <a class="rv-social-link" href="https://www.tiktok.com/@rubikvault" target="_blank" rel="noopener noreferrer" aria-label="TikTok">
+          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M16.7 5.2c.8 1.2 2.1 2 3.6 2.1v3.1c-1.7-.1-3.3-.7-4.6-1.7v7.4c0 3.4-2.8 6.2-6.2 6.2S3.3 19.5 3.3 16.1s2.8-6.2 6.2-6.2c.4 0 .8 0 1.2.1v3.3c-.4-.1-.8-.2-1.2-.2-1.7 0-3.1 1.4-3.1 3.1s1.4 3.1 3.1 3.1 3.1-1.4 3.1-3.1V2h3.1c0 1.2.3 2.3 1 3.2Z"/></svg>
+        </a>
+      </nav>
+
+      <div class="rv-header-tools" aria-live="polite">
+        <div class="rv-data-updated" style="font-size: 12px; color: var(--rv-text-muted);">
+          Data updated: <span id="rv-data-updated-date">Loading...</span> (daily snapshots)
+        </div>
+        <div class="rv-market-clock">
+          <span class="rv-clock-time" id="rv-ny-time">NY: --:--:--</span>
+          <span class="rv-clock-status">
+            <span class="rv-led" data-rv-led="closed"></span>
+            <span class="rv-market-label" data-rv-market-label>Closed</span>
+            <span class="rv-market-countdown" id="rv-market-countdown">opens in --:--:--</span>
+          </span>
+        </div>
+      </div>
+    </div>
+  </header>
+
   <main class="rv-main">
     <div class="header-card" id="header-card">
       <div class="header-top">
@@ -764,7 +910,11 @@
     const params = new URLSearchParams(window.location.search);
 
     form.addEventListener('submit', e => { e.preventDefault(); const t = tickerInput.value.trim(); if (t) loadTicker(t); });
-    if (params.has('ticker')) { const t = params.get('ticker'); tickerInput.value = t; loadTicker(t); }
+
+    // Extract ticker from URL: /analyze/:ticker (path) or ?ticker= (query param)
+    const pathMatch = window.location.pathname.match(/\/analyze\/(.+)/);
+    const initialTicker = (pathMatch ? decodeURIComponent(pathMatch[1]) : params.get('ticker') || '').trim();
+    if (initialTicker) { tickerInput.value = initialTicker; loadTicker(initialTicker); }
 
     // ─── Ticker Autocomplete (re-uses /api/universe) ──────────────────────────────
     const acDropdown = document.getElementById('stock-ac-dropdown');
@@ -788,9 +938,12 @@
       return 0;
     }
     function acDedupeKey(item) {
+      // Dedup by ticker first — ensures AAPL only appears once regardless of exchange
+      const ticker = String(item?.ticker || '').toUpperCase();
+      if (ticker) return `ticker:${ticker}`;
       const name = String(item?.name || '').trim().toLowerCase();
       if (name && name.length >= 3) return `name:${name}`;
-      return `ticker:${String(item?.ticker || '').toUpperCase()}`;
+      return `raw:${ticker}`;
     }
 
     function renderAC() {
@@ -821,7 +974,7 @@
       if (acActiveController) acActiveController.abort();
 
       clearTimeout(acTimer);
-      acTimer = setTimeout(async () => {
+      acTimer = setTimeout(async () => {  // 0ms = instant from 1st character
         acActiveController = new AbortController();
         const { signal } = acActiveController;
         try {
@@ -848,7 +1001,7 @@
         } catch (e) {
           if (e.name !== 'AbortError') console.error('AC fetch err', e);
         }
-      }, 150);
+      }, 0);
     });
 
     tickerInput.addEventListener('keydown', e => {
@@ -892,6 +1045,7 @@
     function render(payload) {
       const { data, error, metadata } = payload;
       window._rvMetadata = metadata; // expose for features
+      window._rvEnvelopeMeta = payload.meta || {}; // expose envelope meta for provenance bar
       const ticker = metadata?.request?.normalized_ticker || data?.ticker || '—';
       const stats = data?.market_stats?.stats || {};
       const prices = data?.market_prices || {};
@@ -905,6 +1059,14 @@
       document.getElementById('stock-title').textContent = universe.name || ticker;
       document.getElementById('stock-subtitle').textContent = universe.name ? `${ticker} · ${universe.exchange || ''} · ${universe.sector || ''}`.replace(/· $/, '') : ticker;
       document.title = `${ticker} — Stock Analysis · RubikVault`;
+
+      // ── OG meta dynamic update ──
+      const ogTitle = document.getElementById('og-title');
+      const ogDesc  = document.getElementById('og-desc');
+      const ogUrl   = document.getElementById('og-url');
+      if (ogTitle) ogTitle.setAttribute('content', `${ticker} — Stock Analysis · RubikVault`);
+      if (ogDesc)  ogDesc.setAttribute('content',  `Technical analysis for ${universe.name || ticker}: Moving Averages, RSI, MACD, Bollinger Bands and more.`);
+      if (ogUrl)   ogUrl.setAttribute('content',   `https://rubikvault.com/analyze/${encodeURIComponent(ticker)}`);
 
       // Badges
       const badgesEl = document.getElementById('stock-badges');
@@ -959,14 +1121,15 @@
     function buildSections(ticker, close, s, score, bars, universe) {
       const md = window._rvMetadata || {};
       return `<div class="sections-grid">
+      ${buildDecisionStrip(close, s, bars)}
       ${buildExecutiveSummary(ticker, close, s, bars, universe)}
       ${buildDataProvenance(md, {}, bars)}
       ${buildOHLCVStrip(close, s, bars)}
       ${buildVerdict(close, s)}
       ${buildTrendMomentum(close, s, bars)}
       <div id="rv-scientific-slot"><div class="section section-full" style="opacity:.5"><h2>🔬 Scientific Analyzer</h2><div class="placeholder-card">Loading scientific analysis…</div></div></div>
-      <div id="rv-forecast-slot"><div class="section" style="opacity:.5"><h2>🔮 ML Forecast</h2><div class="placeholder-card">Loading forecast…</div></div></div>
-      <div id="rv-elliott-slot"><div class="section" style="opacity:.5"><h2>🌊 Elliott Wave</h2><div class="placeholder-card">Loading wave analysis…</div></div></div>
+      <details class="advanced-collapsible" open><summary class="section-summary-header">🔮 ML Forecast</summary><div id="rv-forecast-slot"><div style="opacity:.5;padding:.5rem 0"><div class="placeholder-card">Loading forecast…</div></div></div></details>
+      <details class="advanced-collapsible" open><summary class="section-summary-header">🌊 Elliott Wave</summary><div id="rv-elliott-slot"><div style="opacity:.5;padding:.5rem 0"><div class="placeholder-card">Loading wave analysis…</div></div></div></details>
       ${buildMASection(close, s)}
       ${buildOscillators(close, s)}
       ${buildPerformance(s)}
@@ -980,7 +1143,7 @@
       ${buildSeasonality(bars)}
       ${buildCorrelations(ticker, bars)}
       ${buildFactorCorrelation(ticker, bars)}
-      ${buildLevels(close, s)}
+      ${buildLevels(close, s, bars)}
       ${buildATRBands(close, s)}
       ${buildRiskBudget(close, s)}
       ${buildSignals(close, s)}
@@ -993,7 +1156,6 @@
       ${buildScore(score)}
       ${buildPriceConclusion(ticker, close, s, bars, universe)}
       ${buildCorporateActions(bars)}
-      ${buildInfrastructure(md)}
     </div>`;
     }
 
@@ -1009,16 +1171,115 @@
           const html = await fn();
           const el = document.getElementById(id);
           if (el && html) el.innerHTML = html;
-          else if (el && !html) el.remove();
-        } catch (e) { console.warn('Async insight error:', id, e); }
+          else if (el) el.innerHTML = '<div class="placeholder-card" style="opacity:.6;font-size:.78rem">Data temporarily unavailable.</div>';
+        } catch (e) {
+          console.warn('Async insight error:', id, e);
+          const el = document.getElementById(id);
+          if (el) el.innerHTML = '<div class="placeholder-card" style="opacity:.6;font-size:.78rem">Data temporarily unavailable.</div>';
+        }
       }));
     }
 
+    // 5-tier RSI classification — aligned with RSI_BUCKETS in stock-analyzer-contract.js
     function getRsiMeta(rsi) {
       if (!Number.isFinite(rsi)) return { zone: 'Unknown', signal: 'Neutral', color: 'var(--text-dim)' };
-      if (rsi < 30) return { zone: 'Oversold', signal: 'Buy', color: 'var(--green)' };
-      if (rsi > 70) return { zone: 'Overbought', signal: 'Sell', color: 'var(--red)' };
-      return { zone: 'Neutral', signal: 'Neutral', color: 'var(--text)' };
+      if (rsi < 30) return { zone: 'Oversold',     signal: 'Buy',     color: 'var(--green)' };
+      if (rsi < 45) return { zone: 'Soft Bearish', signal: 'Neutral', color: '#fb923c' };
+      if (rsi < 55) return { zone: 'Neutral',      signal: 'Neutral', color: 'var(--text)' };
+      if (rsi < 70) return { zone: 'Soft Bullish', signal: 'Neutral', color: 'var(--accent)' };
+      return             { zone: 'Overbought',    signal: 'Sell',    color: 'var(--red)' };
+    }
+
+    // ─── 0. DECISION STRIP (above-the-fold, short/mid/long horizons) ─────────────
+    function buildDecisionStrip(close, s, bars) {
+      if (close == null) return '';
+
+      function scoreHorizon(horizon) {
+        let score = 0; const reasons = [];
+        if (horizon === 'short') {
+          // Price vs SMA20
+          if (s.sma20 != null) { if (close > s.sma20) { score++; reasons.push('Price above SMA 20'); } else { score--; reasons.push('Price below SMA 20'); } }
+          // MACD histogram
+          if (s.macd_hist != null) { if (s.macd_hist > 0) { score++; reasons.push('MACD histogram positive'); } else { score--; reasons.push('MACD histogram negative'); } }
+          // Bollinger position
+          if (s.bb_mid != null) { if (close > s.bb_mid) score += 0.5; else score -= 0.5; }
+          // RSI oversold bounce
+          const rsiMeta = getRsiMeta(s.rsi14);
+          if (rsiMeta.zone === 'Oversold') { score += 0.5; reasons.push('RSI oversold — potential bounce'); }
+          else if (rsiMeta.zone === 'Overbought') { score -= 0.5; reasons.push('RSI overbought — caution'); }
+        } else if (horizon === 'mid') {
+          // MA structure
+          if (s.sma20 != null && s.sma50 != null && s.sma200 != null) {
+            if (s.sma20 > s.sma50 && s.sma50 > s.sma200) { score += 2; reasons.push('Bullish MA stack (20>50>200)'); }
+            else if (s.sma20 < s.sma50 && s.sma50 < s.sma200) { score -= 2; reasons.push('Bearish MA stack (20<50<200)'); }
+            else reasons.push('Mixed MA alignment');
+          }
+          if (s.sma50 != null) { if (close > s.sma50) { score++; reasons.push('Price above SMA 50'); } else { score--; reasons.push('Price below SMA 50'); } }
+          // 20d return
+          if (s.ret_20d_pct != null) { if (s.ret_20d_pct > 0) score += 0.5; else score -= 0.5; }
+        } else { // long
+          if (s.sma200 != null) { if (close > s.sma200) { score += 2; reasons.push('Price above SMA 200'); } else { score -= 2; reasons.push('Price below SMA 200'); } }
+          if (s.sma20 != null && s.sma50 != null && s.sma200 != null) {
+            if (s.sma20 > s.sma50 && s.sma50 > s.sma200) { score++; reasons.push('Bullish long-term MA structure'); }
+            else if (s.sma20 < s.sma50 && s.sma50 < s.sma200) { score--; reasons.push('Bearish long-term MA structure'); }
+          }
+          if (s.range_52w_pct != null) {
+            if (s.range_52w_pct > 0.7) { score++; reasons.push('Near 52W high — momentum intact'); }
+            else if (s.range_52w_pct < 0.2) { score--; reasons.push('Near 52W low — under pressure'); }
+          }
+        }
+        return { score, reasons: reasons.slice(0, 3) };
+      }
+
+      function horizonVerdict(score) {
+        if (score >= 2) return { label: 'BUY', cls: 'bullish', conf: score >= 3 ? 'HIGH' : 'MEDIUM', icon: '▲' };
+        if (score <= -2) return { label: 'AVOID', cls: 'bearish', conf: score <= -3 ? 'HIGH' : 'MEDIUM', icon: '▼' };
+        return { label: 'WAIT', cls: 'neutral', conf: Math.abs(score) >= 1 ? 'MEDIUM' : 'LOW', icon: '◆' };
+      }
+
+      // Nearest support/resistance for trigger/invalidation
+      function nearestLevels() {
+        const lvls = [];
+        if (s.sma20 != null) lvls.push({ name: 'SMA 20', price: s.sma20 });
+        if (s.sma50 != null) lvls.push({ name: 'SMA 50', price: s.sma50 });
+        if (s.bb_lower != null) lvls.push({ name: 'BB Lower', price: s.bb_lower });
+        if (s.bb_upper != null) lvls.push({ name: 'BB Upper', price: s.bb_upper });
+        if (s.sma200 != null) lvls.push({ name: 'SMA 200', price: s.sma200 });
+        if (s.low_52w != null) lvls.push({ name: '52W Low', price: s.low_52w });
+        if (s.high_52w != null) lvls.push({ name: '52W High', price: s.high_52w });
+        const supports = lvls.filter(l => l.price < close).sort((a, b) => b.price - a.price);
+        const resistances = lvls.filter(l => l.price > close).sort((a, b) => a.price - b.price);
+        return { s1: supports[0] || null, r1: resistances[0] || null };
+      }
+
+      const horizons = [
+        { key: 'short', label: 'SHORT', sub: '1–5 days' },
+        { key: 'mid',   label: 'MID',   sub: '1–12 weeks' },
+        { key: 'long',  label: 'LONG',  sub: '6–24 months' },
+      ];
+      const { s1, r1 } = nearestLevels();
+      const fmtCurLocal = v => v == null ? '—' : '$' + Number(v).toFixed(2);
+
+      const cards = horizons.map(h => {
+        const { score, reasons } = scoreHorizon(h.key);
+        const { label, cls, conf, icon } = horizonVerdict(score);
+        const trigger = r1 ? `Break above ${r1.name} (${fmtCurLocal(r1.price)})` : 'No near resistance';
+        const invalidation = s1 ? `Loss of ${s1.name} (${fmtCurLocal(s1.price)})` : 'No near support';
+        return `<div class="decision-card ${cls}">
+          <div class="decision-horizon">${h.label} <span class="decision-horizon-sub">${h.sub}</span></div>
+          <div class="decision-verdict">${icon} ${label}</div>
+          <div class="decision-conf">Confidence: <strong>${conf}</strong></div>
+          <ul class="decision-reasons">${reasons.map(r => `<li>${r}</li>`).join('')}</ul>
+          <div class="decision-trigger">▶ Trigger: ${trigger}</div>
+          <div class="decision-invalid">✗ Invalidation: ${invalidation}</div>
+        </div>`;
+      }).join('');
+
+      return `<div class="section section-full decision-strip-section">
+        <h2>⚡ Decision Strip <span style="font-size:0.7rem;color:var(--text-muted);text-transform:none;letter-spacing:0">multi-horizon analysis</span></h2>
+        <div class="decision-strip">${cards}</div>
+        <div style="font-size:0.68rem;color:var(--text-muted);margin-top:0.5rem;text-align:center">Not financial advice. Based on technical indicators only.</div>
+      </div>`;
     }
 
     // ─── 1. TECHNICAL VERDICT ────────────────────────────────────────────────────
@@ -1284,33 +1545,86 @@
     }
 
     // ─── 7. SUPPORT & RESISTANCE LEVELS ──────────────────────────────────────────
-    function buildLevels(close, s) {
+    function buildLevels(close, s, bars) {
       if (close == null) return '';
-      const levels = [];
-      if (s.high_52w != null) levels.push({ name: '52W High', price: s.high_52w, type: 'resistance' });
-      if (s.bb_upper != null) levels.push({ name: 'BB Upper', price: s.bb_upper, type: 'resistance' });
-      if (s.sma20 != null) levels.push({ name: 'SMA 20', price: s.sma20, type: close > s.sma20 ? 'support' : 'resistance' });
-      levels.push({ name: 'Current Price', price: close, type: 'current' });
-      if (s.sma50 != null) levels.push({ name: 'SMA 50', price: s.sma50, type: close > s.sma50 ? 'support' : 'resistance' });
-      if (s.bb_lower != null) levels.push({ name: 'BB Lower', price: s.bb_lower, type: 'support' });
-      if (s.sma200 != null) levels.push({ name: 'SMA 200', price: s.sma200, type: close > s.sma200 ? 'support' : 'resistance' });
-      if (s.low_52w != null) levels.push({ name: '52W Low', price: s.low_52w, type: 'support' });
+      const rawLevels = [];
+      if (s.high_52w != null) rawLevels.push({ name: '52W High', price: s.high_52w });
+      if (s.bb_upper != null) rawLevels.push({ name: 'BB Upper', price: s.bb_upper });
+      if (s.sma20  != null) rawLevels.push({ name: 'SMA 20',  price: s.sma20 });
+      if (s.sma50  != null) rawLevels.push({ name: 'SMA 50',  price: s.sma50 });
+      if (s.sma200 != null) rawLevels.push({ name: 'SMA 200', price: s.sma200 });
+      if (s.bb_lower != null) rawLevels.push({ name: 'BB Lower', price: s.bb_lower });
+      if (s.low_52w  != null) rawLevels.push({ name: '52W Low', price: s.low_52w });
 
-      // Sort descending by price
-      levels.sort((a, b) => b.price - a.price);
+      // ATR bands (±1, ±2)
+      if (s.atr14 != null) {
+        rawLevels.push({ name: 'ATR +1', price: close + s.atr14 });
+        rawLevels.push({ name: 'ATR -1', price: close - s.atr14 });
+      }
 
-      const html = levels.map(l => {
-        const dist = l.type === 'current' ? '' : `${((l.price - close) / close * 100).toFixed(1)}%`;
-        return `<div class="level-item ${l.type}">
-        <span class="level-name">${l.name}</span>
-        <span><span class="level-price">${fmtCur(l.price)}</span><span class="level-dist">${dist}</span></span>
+      // Swing High / Swing Low from last 20 bars
+      if (bars && bars.length >= 5) {
+        const recent = bars.slice(-20);
+        const swingHigh = Math.max(...recent.map(b => b.high || b.close || 0));
+        const swingLow  = Math.min(...recent.map(b => b.low  || b.close || Infinity));
+        if (swingHigh > close) rawLevels.push({ name: 'Swing High (20d)', price: swingHigh });
+        if (swingLow  < close) rawLevels.push({ name: 'Swing Low (20d)',  price: swingLow });
+      }
+
+      // Deduplicate by proximity (within 0.3% of each other)
+      const deduped = [];
+      for (const l of rawLevels) {
+        if (!rawLevels.some(o => o !== l && Math.abs(o.price - l.price) / close < 0.003 && deduped.indexOf(o) >= 0)) {
+          deduped.push(l);
+        }
+      }
+
+      const supports    = deduped.filter(l => l.price < close).sort((a, b) => b.price - a.price).slice(0, 4);
+      const resistances = deduped.filter(l => l.price > close).sort((a, b) => a.price - b.price).slice(0, 4);
+
+      const s1 = supports[0]    || null;
+      const r1 = resistances[0] || null;
+
+      // S1/R1 summary header
+      const srSummary = `<div class="sr-summary">
+        <div class="sr-item support${s1 ? '' : ' empty'}">
+          <div class="sr-label">S1 — Nearest Support</div>
+          <div class="sr-price">${s1 ? fmtCur(s1.price) : '—'}</div>
+          <div class="sr-name">${s1 ? s1.name : 'None nearby'}</div>
+          <div class="sr-dist">${s1 ? ((s1.price - close) / close * 100).toFixed(1) + '%' : ''}</div>
+          ${s1 ? `<div class="sr-invalid">✗ Invalidation if breaks below</div>` : ''}
+        </div>
+        <div class="sr-current">
+          <div class="sr-label">Current</div>
+          <div class="sr-price" style="color:var(--accent)">${fmtCur(close)}</div>
+        </div>
+        <div class="sr-item resistance${r1 ? '' : ' empty'}">
+          <div class="sr-label">R1 — Nearest Resistance</div>
+          <div class="sr-price">${r1 ? fmtCur(r1.price) : '—'}</div>
+          <div class="sr-name">${r1 ? r1.name : 'None nearby'}</div>
+          <div class="sr-dist">${r1 ? '+' + ((r1.price - close) / close * 100).toFixed(1) + '%' : ''}</div>
+          ${r1 ? `<div class="sr-trigger">▶ Trigger: Break above</div>` : ''}
+        </div>
       </div>`;
+
+      const allSorted = [...resistances.reverse(), { name: 'Current Price', price: close, type: 'current' }, ...supports];
+      allSorted.sort((a, b) => b.price - a.price);
+
+      const html = allSorted.map(l => {
+        const type = l.type === 'current' ? 'current' : l.price > close ? 'resistance' : 'support';
+        const dist = type === 'current' ? '' : `${((l.price - close) / close * 100).toFixed(1)}%`;
+        const isKey = l === s1 || l === r1;
+        return `<div class="level-item ${type}${isKey ? ' key-level' : ''}">
+          <span class="level-name">${l.name}${isKey ? (l === s1 ? ' <strong>S1</strong>' : ' <strong>R1</strong>') : ''}</span>
+          <span><span class="level-price">${fmtCur(l.price)}</span><span class="level-dist">${dist}</span></span>
+        </div>`;
       }).join('');
 
-      return `<div class="section">
-      <h2>🎚️ Key Levels</h2>
-      <div class="levels-list">${html}</div>
-    </div>`;
+      return `<div class="section section-full">
+        <h2>🎚️ Key Levels</h2>
+        ${srSummary}
+        <div class="levels-list" style="margin-top:0.75rem">${html}</div>
+      </div>`;
     }
 
     // ─── 8. SIGNAL SUMMARY TABLE ─────────────────────────────────────────────────
@@ -1512,7 +1826,7 @@
       const benchmarks = ['SPY', 'QQQ', 'DIA', 'IWM'];
       const benchNote = benchmarks.includes(ticker.toUpperCase())
         ? `<div style="font-size:0.78rem;color:var(--accent);margin-top:0.5rem;">ℹ️ ${ticker} is itself a major benchmark index ETF.</div>`
-        : `<div style="font-size:0.78rem;color:var(--text-muted);margin-top:0.5rem;">💡 For live cross-correlations to SPY, QQQ, DIA, and IWM, visit the full analysis on the main analyzer page.</div>`;
+        : `<div style="font-size:0.78rem;color:var(--text-muted);margin-top:0.5rem;">💡 Cross-correlations to SPY, QQQ, DIA, and IWM require benchmark data in the universe.</div>`;
 
       return `<div class="section">
       <h2>🔗 Return Profile & Regime</h2>
@@ -1645,18 +1959,13 @@
     }
   </script>
 
-  <script type="module">
-    import { attachSearchUI } from '/search.js';
-    const root = document.getElementById('rv-stock-search-root');
-    const searchParams = new URLSearchParams(window.location.search);
-    const ticker = searchParams.get('ticker') || '';
-    if (root) {
-      attachSearchUI(root, {
-        placeholder: 'Search ticker or company',
-        limit: 10,
-        prefill: ticker
-      });
-    }
+  <!-- Market Clock Script (shared with frontpage) -->
+  <script src="/market-clock.js"></script>
+  <script>
+    (function () {
+      const el = document.getElementById("rv-data-updated-date");
+      if (el) el.textContent = new Date().toISOString().split("T")[0];
+    })();
   </script>
 </body>
 

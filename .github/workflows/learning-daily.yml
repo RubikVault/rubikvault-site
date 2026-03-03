@@ -2,8 +2,8 @@ name: Learning Report Daily
 
 on:
   schedule:
-    # Run daily at 19:00 UTC = 20:00 CET (after all daily pipelines)
-    - cron: '0 19 * * 1-5'
+    # Run daily at 00:30 UTC = 01:30 CET (after all upstream pipelines: EOD 22:10, Scientific 23:15, Forecast 23:30, Supermodules 23:45)
+    - cron: '30 0 * * 2-6'
   workflow_dispatch:
     inputs:
       date:

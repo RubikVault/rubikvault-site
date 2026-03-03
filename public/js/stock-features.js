@@ -83,16 +83,29 @@ function computeMaxDD(rets) { let peak = 1, maxdd = 0, eq = 1; for (const r of r
 // ═══════════════════════════════════════════════════════════════════════════
 function buildDataProvenance(metadata, prices, bars) {
   const now = new Date(); const h = now.getUTCHours(), wd = now.getUTCDay();
-  const nyH = h - 5;// rough EST
+  const nyH = h - 5; // rough EST
   const isOpen = wd >= 1 && wd <= 5 && nyH >= 9.5 && nyH < 16;
   const sessionBadge = isOpen ? '🟢 Market Open' : '🔴 Market Closed';
   const delay = isOpen ? '~15min delayed' : 'EOD data';
   const barDate = bars.length ? bars[bars.length - 1].date : '—';
   const sc = metadata?.source_chain; const srcArr = Array.isArray(sc) ? sc : sc && typeof sc === 'object' ? Object.values(sc) : [];
   const src = srcArr.length ? srcArr.map(s => typeof s === 'string' ? s : s?.provider || '—').join(' → ') : 'EODHD';
-  return `<div class="prov-bar">
-    <span class="prov-chip"><span class="dot ok"></span>Prices: ${src} (${barDate})</span>
-    <span class="prov-chip"><span class="dot ${bars.length > 100 ? 'ok' : 'cached'}"></span>Bars: ${bars.length} days</span>
+
+  // Envelope meta (set by render() in stock.html)
+  const em = (typeof window !== 'undefined' && window._rvEnvelopeMeta) || {};
+  const cacheState = em.cache?.stale === false && em.freshness === 'fresh' ? 'LIVE'
+    : em.degraded ? 'DEGRADED'
+    : em.cache?.hit ? 'CACHED'
+    : em.freshness === 'stale' ? 'STALE'
+    : null;
+  const cacheColor = cacheState === 'LIVE' ? 'ok' : cacheState === 'DEGRADED' ? 'na' : 'cached';
+  const cacheLabel = cacheState ? `${cacheState === 'LIVE' ? '🟢' : cacheState === 'DEGRADED' ? '🔴' : '🟡'} ${cacheState}` : null;
+  const degradedBanner = em.degraded
+    ? `<div style="background:rgba(248,113,113,0.12);border:1px solid rgba(248,113,113,0.35);border-radius:6px;padding:0.35rem 0.75rem;font-size:0.75rem;color:#fca5a5;margin-bottom:0.4rem;">⚠️ Data degraded: ${em.degraded_reason || 'scheduler_stale'} — showing last-good snapshot</div>`
+    : '';
+
+  return `${degradedBanner}<div class="prov-bar">
+    <span class="prov-chip"><span class="dot ok"></span>Data as of ${barDate}</span>
     <span class="prov-chip">${sessionBadge} · ${delay}</span>
   </div>`;
 }
@@ -357,8 +370,8 @@ function buildVolTermStructure(bars) {
     const w = Math.round(v.v / maxV * 100);
     return `<div class="mc-bar"><span style="width:40px;font-size:.75rem;color:var(--text-dim)">${v.l}</span><div class="mc-fill" style="width:${w}%;background:${v.v > 0.3 ? 'var(--red)' : v.v > 0.2 ? 'var(--yellow)' : 'var(--green)'}"> </div><span style="font-weight:700;font-size:.8rem">${(v.v * 100).toFixed(1)}%</span></div>`;
   }).join('');
-  return `<div class="section"><h2>📊 Realized Vol Term Structure</h2>${barsHTML}
-  <div style="font-size:.78rem;color:var(--text-dim);margin-top:.4rem">${trend}</div></div>`;
+  return `<details class="section advanced-collapsible" open><summary class="section-summary-header">📊 Realized Vol Term Structure</summary>${barsHTML}
+  <div style="font-size:.78rem;color:var(--text-dim);margin-top:.4rem">${trend}</div></details>`;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -380,9 +393,9 @@ function buildMonteCarlo(bars) {
     <span style="font-weight:700">${fmtCur(r.med)}</span>
     <span style="font-size:.75rem">${fmtCur(r.p75)}</span>
     <span style="color:var(--green);font-size:.75rem">${fmtCur(r.p95)}</span></div>`).join('');
-  return `<div class="section"><h2>🎲 Monte Carlo Projection</h2>
+  return `<details class="section advanced-collapsible" open><summary class="section-summary-header">🎲 Monte Carlo Projection</summary>
   <div style="font-size:.72rem;color:var(--text-muted);margin-bottom:.4rem;display:flex;justify-content:space-between"><span>Horizon</span><span>2.5%</span><span>25%</span><span style="font-weight:700">Median</span><span>75%</span><span>97.5%</span></div>
-  ${rows}<div style="font-size:.7rem;color:var(--text-muted);margin-top:.5rem">Based on ${N} simulations bootstrapping historical daily returns. Not a forecast.</div></div>`;
+  ${rows}<div style="font-size:.7rem;color:var(--text-muted);margin-top:.5rem">Based on ${N} simulations bootstrapping historical daily returns. Not a forecast.</div></details>`;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -457,8 +470,8 @@ function buildStressScenarios(bars) {
     return `<div class="sub-metric"><span style="font-weight:600">${sc.name}</span><span style="font-size:.72rem;color:var(--text-dim)">${sc.from} → ${sc.to}</span><span style="color:${_col(ret)};font-weight:700">${ret >= 0 ? '+' : ''}${(ret * 100).toFixed(1)}%</span></div>`;
   }).filter(Boolean).join('');
   if (!rows) return '';
-  return `<div class="section"><h2>🔥 Stress Scenario Replay</h2>${rows}
-  <div style="font-size:.7rem;color:var(--text-muted);margin-top:.4rem">Shows actual stock performance during historical stress periods.</div></div>`;
+  return `<details class="section advanced-collapsible" open><summary class="section-summary-header">🔥 Stress Scenario Replay</summary>${rows}
+  <div style="font-size:.7rem;color:var(--text-muted);margin-top:.4rem">Shows actual stock performance during historical stress periods.</div></details>`;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -531,7 +544,7 @@ function buildFactorCorrelation(ticker, bars) {
 // F-05: MACRO REGIME (Educational Placeholder)
 // ═══════════════════════════════════════════════════════════════════════════
 function buildMacroRegime() {
-  return `<div class="section"><h2>🌍 Macro Regime Context</h2>
+  return `<details class="section advanced-collapsible" open><summary class="section-summary-header">🌍 Macro Regime Context</summary>
   <div class="placeholder-card"><h4>Macro Data (FRED Integration)</h4>
   <p>Live macro regime analysis requires FRED API data for:</p>
   <ul><li><strong>Fed Funds Rate</strong> (FEDFUNDS) → Rates Up/Down</li>
@@ -541,7 +554,7 @@ function buildMacroRegime() {
   <ul><li>Rates ↑ → Duration risk high, growth stocks pressured</li>
   <li>Inflation ↓ → Margin pressure easing, consumer tailwind</li>
   <li>Unemployment ↑ → Defensive positioning, quality premium</li></ul>
-  <p style="margin-top:.3rem;font-style:italic">Optional data source not enabled. Live regime analysis stays hidden until a FRED feed is connected.</p></div></div>`;
+  <p style="margin-top:.3rem;font-style:italic">Optional data source not enabled. Live regime analysis stays hidden until a FRED feed is connected.</p></div></details>`;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -558,9 +571,9 @@ function buildFundamentalsPlaceholder(ticker) {
     { id: 'F-35', t: 'Earnings Quality', d: 'Accruals proxy (CFO vs Net Income) → Quality flags' },
   ];
   const html = cards.map(c => `<div class="placeholder-card" style="margin-bottom:.4rem"><h4>${c.t} <span style="font-size:.65rem;color:var(--text-muted)">${c.id}</span></h4><p>${c.d}</p></div>`).join('');
-  return `<div class="section section-full"><h2>📊 Fundamental Analysis</h2>
+  return `<details class="section section-full advanced-collapsible" open><summary class="section-summary-header">📊 Fundamental Analysis</summary>
   <div style="font-size:.78rem;color:var(--text-dim);margin-bottom:.5rem">Requires fundamentals data feed (FMP/similar). Shows what each metric would analyze:</div>${html}
-  <div style="font-size:.7rem;color:var(--text-muted);margin-top:.3rem">Optional data source not enabled. Fundamental scores for ${ticker} stay unavailable until a fundamentals feed is connected.</div></div>`;
+  <div style="font-size:.7rem;color:var(--text-muted);margin-top:.3rem">Optional data source not enabled. Fundamental scores for ${ticker} stay unavailable until a fundamentals feed is connected.</div></details>`;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -568,11 +581,11 @@ function buildFundamentalsPlaceholder(ticker) {
 // ═══════════════════════════════════════════════════════════════════════════
 function buildPeersPlaceholder(ticker, universe) {
   const sector = universe?.sector || 'Technology';
-  return `<div class="section"><h2>👥 Peers & Sector</h2>
+  return `<details class="section advanced-collapsible" open><summary class="section-summary-header">👥 Peers & Sector</summary>
   <div class="placeholder-card"><h4>Peer Comparison for ${ticker} (${sector})</h4>
   <p>Would rank ${ticker} vs sector peers on: momentum, quality, valuation.</p>
   <p>Sector relative performance (1M/3M/6M/1Y outperformance vs ${sector} ETF) requires benchmark data.</p>
-  <p style="font-style:italic;margin-top:.3rem">Add peer tickers to universe for live comparison.</p></div></div>`;
+  <p style="font-style:italic;margin-top:.3rem">Add peer tickers to universe for live comparison.</p></div></details>`;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -588,20 +601,19 @@ function buildMarketIntelligence(ticker) {
     { id: 'F-23', t: 'Short Interest', d: 'SI% of float, days-to-cover, squeeze risk heuristic' },
   ];
   const html = items.map(i => `<div class="placeholder-card" style="margin-bottom:.3rem"><h4>${i.t} <span style="font-size:.65rem;color:var(--text-muted)">${i.id}</span></h4><p>${i.d}</p></div>`).join('');
-  return `<div class="section section-full"><h2>📰 Market Intelligence</h2>
-  <div class="collapse-toggle" onclick="this.nextElementSibling.classList.toggle('open')">▶ Expand available data categories for ${ticker}</div>
-  <div class="collapse-body">${html}
-  <div style="font-size:.7rem;color:var(--text-muted);margin-top:.3rem">Optional data sources not enabled. These modules remain informational until matching providers are connected.</div></div></div>`;
+  return `<details class="section section-full advanced-collapsible" open><summary class="section-summary-header">📰 Market Intelligence</summary>
+  ${html}
+  <div style="font-size:.7rem;color:var(--text-muted);margin-top:.3rem">Optional data sources not enabled. These modules remain informational until matching providers are connected.</div></details>`;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
 // F-33: CROSS ASSET RADAR
 // ═══════════════════════════════════════════════════════════════════════════
 function buildCrossAssetRadar() {
-  return `<div class="section"><h2>🎯 Cross-Asset Radar</h2>
+  return `<details class="section advanced-collapsible" open><summary class="section-summary-header">🎯 Cross-Asset Radar</summary>
   <div class="placeholder-card"><h4>Gold / Oil / FX Relative Momentum</h4>
   <p>Shows risk-on/risk-off tilt by comparing relative momentum across asset classes.</p>
-  <p style="font-style:italic;margin-top:.3rem">Requires Gold (GLD), Oil (USO), and FX ETFs in the data universe.</p></div></div>`;
+  <p style="font-style:italic;margin-top:.3rem">Requires Gold (GLD), Oil (USO), and FX ETFs in the data universe.</p></div></details>`;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -642,16 +654,26 @@ function buildWeekdaySeasonality(bars) {
 // ═══════════════════════════════════════════════════════════════════════════
 // SCIENTIFIC ANALYZER INTEGRATION
 // ═══════════════════════════════════════════════════════════════════════════
-let _sciCache = null;
-async function _loadScientific() {
-  if (_sciCache) return _sciCache;
-  try { const r = await fetch('/data/snapshots/stock-analysis.json'); if (!r.ok) return null; _sciCache = await r.json(); return _sciCache; } catch { return null; }
+// SINGLE-ENDPOINT INSIGHT LOADER (avoids downloading 210MB of JSON client-side)
+let _insightsCache = {};
+async function _loadInsights(ticker) {
+  const key = ticker.toUpperCase();
+  if (_insightsCache[key]) return _insightsCache[key];
+  try {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 15000);
+    const r = await fetch(`/api/stock-insights?ticker=${encodeURIComponent(key)}`, { signal: ctrl.signal });
+    clearTimeout(timer);
+    if (!r.ok) return null;
+    const data = await r.json();
+    _insightsCache[key] = data;
+    return data;
+  } catch { return null; }
 }
 
 async function buildScientificInsight(ticker) {
-  const data = await _loadScientific();
-  if (!data) return '';
-  const entry = data[ticker] || data[ticker.toUpperCase()];
+  const insights = await _loadInsights(ticker);
+  const entry = insights?.scientific;
   if (!entry) return `<div class="section section-full"><h2>🔬 Scientific Analyzer</h2><div class="placeholder-card">No scientific analysis data available for ${ticker}.</div></div>`;
 
   const setup = entry.setup || {};
@@ -703,22 +725,14 @@ ${shapHTML ? `<div style="margin-top:.6rem;padding:.5rem .6rem;border-radius:8px
 // ═══════════════════════════════════════════════════════════════════════════
 // ML FORECAST INTEGRATION
 // ═══════════════════════════════════════════════════════════════════════════
-let _fcCache = null;
-async function _loadForecast() {
-  if (_fcCache) return _fcCache;
-  try { const r = await fetch('/data/forecast/latest.json'); if (!r.ok) return null; _fcCache = await r.json(); return _fcCache; } catch { return null; }
-}
-
 async function buildForecastInsight(ticker) {
-  const data = await _loadForecast();
-  if (!data) return '';
-  const forecasts = data?.data?.forecasts || [];
-  const entry = forecasts.find(f => f.symbol === ticker || f.symbol === ticker.toUpperCase());
+  const insights = await _loadInsights(ticker);
+  const entry = insights?.forecast;
   if (!entry) return `<div class="section"><h2>\ud83d\udd2e ML Forecast</h2><div class="placeholder-card">No forecast data available for ${ticker}.</div></div>`;
 
-  const modelAccuracy = data?.accuracy || {};
-  const champion = data?.champion_id || 'N/A';
-  const freshness = data?.freshness || '—';
+  const modelAccuracy = insights?.forecast_meta?.accuracy || {};
+  const champion = insights?.forecast_meta?.champion_id || 'N/A';
+  const freshness = insights?.forecast_meta?.freshness || '—';
   const horizons = entry.horizons || {};
   const horizonOrder = ['1d', '5d', '20d'];
   const horizonLabels = { '1d': '1 Day', '5d': '1 Week', '20d': '1 Month' };
@@ -752,22 +766,14 @@ ${barsHtml}
 // ═══════════════════════════════════════════════════════════════════════════
 // ELLIOTT WAVE INTEGRATION
 // ═══════════════════════════════════════════════════════════════════════════
-let _elliottCache = null;
-async function _loadElliott() {
-  if (_elliottCache) return _elliottCache;
-  try { const r = await fetch('/api/elliott-scanner'); if (!r.ok) return null; _elliottCache = await r.json(); return _elliottCache; } catch { return null; }
-}
-
 async function buildElliottInsight(ticker) {
-  const data = await _loadElliott();
-  if (!data) return '';
-  const results = data?.data?.results || data?.results || [];
-  const entry = results.find(r => r.symbol === ticker || r.ticker === ticker);
-  if (!entry) return `<div class="section"><h2>\ud83c\udf0a Elliott Wave Analysis</h2><div class="placeholder-card">No Elliott Wave data available for ${ticker}. The scanner may not have analyzed this ticker.</div></div>`;
+  const insights = await _loadInsights(ticker);
+  const entry = insights?.elliott;
+  if (!entry) return `<div class="section"><h2>\ud83c\udf0a Elliott Wave Analysis</h2><div class="placeholder-card">No Elliott Wave data available for ${ticker}.</div></div>`;
 
-  const wave = entry.estimated_wave || entry.wave || 'N/A';
+  const wave = entry.wavePosition || entry.estimated_wave || entry.wave || 'N/A';
   const confidence = entry.confidence != null ? entry.confidence : (entry.wave_confidence != null ? entry.wave_confidence : null);
-  const trendDir = entry.trend_direction || entry.trend || 'N/A';
+  const trendDir = entry.direction || entry.trend_direction || entry.trend || 'N/A';
   const trendCol = trendDir.toLowerCase().includes('up') || trendDir.toLowerCase().includes('bull') ? 'var(--green)' : trendDir.toLowerCase().includes('down') || trendDir.toLowerCase().includes('bear') ? 'var(--red)' : 'var(--yellow)';
 
   const waveExplain = {
@@ -778,17 +784,23 @@ async function buildElliottInsight(ticker) {
     'Wave 5': 'Final impulse \u2014 divergences common, exhaustion signals',
     'Wave A': 'First corrective leg \u2014 often mistaken for a dip to buy',
     'Wave B': 'Counter-trend rally \u2014 bull trap in a bear correction',
-    'Wave C': 'Final corrective leg \u2014 often sharp and decisive'
+    'Wave C': 'Final corrective leg \u2014 often sharp and decisive',
+    'in-correction': 'Currently in a corrective phase \u2014 pullback from recent highs, watching for support',
+    'in-impulse': 'Currently in an impulse phase \u2014 strong directional momentum',
+    'impulse-complete': 'Impulse wave completed \u2014 potential trend exhaustion, watch for reversal',
+    'correction-complete': 'Correction completed \u2014 potential resumption of prior trend'
   };
   const explanation = waveExplain[wave] || 'Structural wave position assessment based on price action patterns.';
+  const waveLabel = wave.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
   const confPct = confidence != null ? Math.round(confidence) : null;
   const confBar = confPct != null ? `<div style="margin-top:.3rem;height:6px;border-radius:3px;background:rgba(255,255,255,.05);overflow:hidden"><div style="width:${confPct}%;height:100%;background:${confPct > 60 ? 'var(--green)' : confPct > 30 ? 'var(--yellow)' : 'var(--red)'};border-radius:3px"></div></div>` : '';
 
   return `<div class="section"><h2>\ud83c\udf0a Elliott Wave Analysis</h2>
 <div style="display:flex;gap:.75rem;flex-wrap:wrap;margin-bottom:.5rem">
-  <div style="padding:.5rem .8rem;border-radius:8px;background:linear-gradient(135deg,rgba(99,102,241,.12),rgba(139,92,246,.08));border:1px solid rgba(99,102,241,.3);flex:1;min-width:120px"><div style="font-size:.72rem;color:var(--text-dim);text-transform:uppercase;letter-spacing:.04em">Est. Wave</div><div style="font-size:1.2rem;font-weight:800;color:var(--accent)">${wave}</div></div>
+  <div style="padding:.5rem .8rem;border-radius:8px;background:linear-gradient(135deg,rgba(99,102,241,.12),rgba(139,92,246,.08));border:1px solid rgba(99,102,241,.3);flex:1;min-width:120px"><div style="font-size:.72rem;color:var(--text-dim);text-transform:uppercase;letter-spacing:.04em">Est. Wave</div><div style="font-size:1.2rem;font-weight:800;color:var(--accent)">${waveLabel}</div></div>
   <div style="padding:.5rem .8rem;border-radius:8px;background:rgba(255,255,255,.03);border:1px solid var(--border);flex:1;min-width:120px"><div style="font-size:.72rem;color:var(--text-dim);text-transform:uppercase;letter-spacing:.04em">Trend</div><div style="font-size:1rem;font-weight:700;color:${trendCol}">${trendDir}</div></div>
   ${confPct != null ? `<div style="padding:.5rem .8rem;border-radius:8px;background:rgba(255,255,255,.03);border:1px solid var(--border);flex:1;min-width:120px"><div style="font-size:.72rem;color:var(--text-dim);text-transform:uppercase;letter-spacing:.04em">Confidence</div><div style="font-size:1rem;font-weight:700">${confPct}%</div>${confBar}</div>` : ''}
 </div>
-<div style="padding:.5rem .6rem;border-radius:6px;background:rgba(255,255,255,.02);border-left:3px solid var(--accent);font-size:.78rem;color:var(--text-dim)">\ud83d\udca1 ${explanation}</div></div>`;
+<div style="padding:.5rem .6rem;border-radius:6px;background:rgba(255,255,255,.02);border-left:3px solid var(--accent);font-size:.78rem;color:var(--text-dim)">\ud83d\udca1 ${explanation}</div>
+${entry.fibConformance != null ? `<div style="margin-top:.4rem;font-size:.75rem;color:var(--text-dim)">Fibonacci Conformance: <strong style="color:var(--text)">${Math.round(entry.fibConformance)}%</strong></div>` : ''}</div>`;
 }
