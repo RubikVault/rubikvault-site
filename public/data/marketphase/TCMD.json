@@ -3,8 +3,8 @@
   "feature": "marketphase",
   "meta": {
     "symbol": "TCMD",
-    "generatedAt": "2026-03-02T08:02:31.725Z",
-    "fetchedAt": "2026-03-02T08:02:31.725Z",
+    "generatedAt": "2026-03-03T07:26:20.926Z",
+    "fetchedAt": "2026-03-03T07:26:20.926Z",
     "ttlSeconds": 86400,
     "provider": "internal",
     "dataset": "TCMD",
@@ -15,8 +15,8 @@
     "precision": "IEEE754-Double-Round6",
     "auditTrail": {
       "generatedBy": "MarketPhase-v8-Engine",
-      "commitHash": "21c14f2",
-      "reviewDate": "2026-03-02T08:02:31.725Z",
+      "commitHash": "ef965bc",
+      "reviewDate": "2026-03-03T07:26:20.926Z",
       "standards": [
         "ISO-8000",
         "IEEE-7000"
@@ -26,72 +26,72 @@
   },
   "data": {
     "features": {
-      "RSI": 52.364459,
-      "MACDHist": 0.17156,
-      "ATR%": 2.972429,
-      "SMA50": 29.1114,
-      "SMA200": 18.275925,
+      "RSI": 52.364458,
+      "MACDHist": 0.146556,
+      "ATR%": 2.760112,
+      "SMA50": 29.1182,
+      "SMA200": 18.372975,
       "SMATrend": "bullish",
       "lastClose": 29.29
     },
     "swings": {
       "raw": [
         {
-          "index": 32,
+          "index": 31,
           "date": "2025-04-02",
           "price": 13.86,
           "type": "high"
         },
         {
-          "index": 36,
+          "index": 35,
           "date": "2025-04-08",
           "price": 12.99,
           "type": "low"
         },
         {
-          "index": 48,
+          "index": 47,
           "date": "2025-04-25",
           "price": 14.58,
           "type": "high"
         },
         {
-          "index": 68,
+          "index": 67,
           "date": "2025-05-23",
           "price": 9.42,
           "type": "low"
         },
         {
-          "index": 84,
+          "index": 83,
           "date": "2025-06-17",
           "price": 9.81,
           "type": "low"
         },
         {
-          "index": 88,
+          "index": 87,
           "date": "2025-06-24",
           "price": 10.37,
           "type": "high"
         },
         {
-          "index": 105,
+          "index": 104,
           "date": "2025-07-18",
           "price": 9.52,
           "type": "low"
         },
         {
-          "index": 159,
+          "index": 158,
           "date": "2025-10-03",
           "price": 15.2,
           "type": "high"
         },
         {
-          "index": 221,
+          "index": 220,
           "date": "2026-01-02",
           "price": 27.4,
           "type": "low"
         },
         {
-          "index": 225,
+          "index": 224,
           "date": "2026-01-08",
           "price": 30.73,
           "type": "high"
@@ -99,25 +99,31 @@
       ],
       "confirmed": [
         {
-          "index": 48,
+          "index": 47,
           "date": "2025-04-25",
           "price": 14.58,
           "type": "high"
         },
         {
-          "index": 68,
+          "index": 67,
           "date": "2025-05-23",
           "price": 9.42,
           "type": "low"
         },
         {
-          "index": 105,
+          "index": 104,
           "date": "2025-07-18",
           "price": 9.52,
           "type": "low"
         },
         {
-          "index": 225,
+          "index": 220,
+          "date": "2026-01-02",
+          "price": 27.4,
+          "type": "low"
+        },
+        {
+          "index": 224,
           "date": "2026-01-08",
           "price": 30.73,
           "type": "high"
@@ -183,7 +189,7 @@
     "multiTimeframeAgreement": null,
     "debug": {
       "symbol": "TCMD",
-      "window": 12,
+      "window": 11,
       "candidateCount": 10,
       "durationMs": 0
     },

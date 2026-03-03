@@ -3,8 +3,8 @@
   "feature": "marketphase",
   "meta": {
     "symbol": "MU",
-    "generatedAt": "2026-03-02T07:59:52.517Z",
-    "fetchedAt": "2026-03-02T07:59:52.517Z",
+    "generatedAt": "2026-03-03T07:22:02.977Z",
+    "fetchedAt": "2026-03-03T07:22:02.977Z",
     "ttlSeconds": 86400,
     "provider": "internal",
     "dataset": "MU",
@@ -15,8 +15,8 @@
     "precision": "IEEE754-Double-Round6",
     "auditTrail": {
       "generatedBy": "MarketPhase-v8-Engine",
-      "commitHash": "21c14f2",
-      "reviewDate": "2026-03-02T07:59:52.517Z",
+      "commitHash": "ef965bc",
+      "reviewDate": "2026-03-03T07:22:02.977Z",
       "standards": [
         "ISO-8000",
         "IEEE-7000"
@@ -26,78 +26,78 @@
   },
   "data": {
     "features": {
-      "RSI": 54.994981,
-      "MACDHist": -2.9696,
-      "ATR%": 2.749705,
-      "SMA50": 361.470062,
-      "SMA200": 207.677427,
+      "RSI": 55.086388,
+      "MACDHist": -3.372782,
+      "ATR%": 2.556634,
+      "SMA50": 365.07514,
+      "SMA200": 209.257081,
       "SMATrend": "bullish",
-      "lastClose": 412.37
+      "lastClose": 412.67
     },
     "swings": {
       "raw": [
         {
-          "index": 15,
+          "index": 14,
           "date": "2025-03-10",
           "price": 86.7955,
           "type": "low"
         },
         {
-          "index": 20,
+          "index": 19,
           "date": "2025-03-17",
           "price": 102.7732,
           "type": "high"
         },
         {
-          "index": 34,
+          "index": 33,
           "date": "2025-04-04",
           "price": 64.5926,
           "type": "low"
         },
         {
-          "index": 88,
+          "index": 87,
           "date": "2025-06-24",
           "price": 127.6582,
           "type": "high"
         },
         {
-          "index": 115,
+          "index": 114,
           "date": "2025-08-01",
           "price": 104.772,
           "type": "low"
         },
         {
-          "index": 122,
+          "index": 121,
           "date": "2025-08-12",
           "price": 127.6185,
           "type": "high"
         },
         {
-          "index": 185,
+          "index": 184,
           "date": "2025-11-10",
           "price": 253.1977,
           "type": "high"
         },
         {
-          "index": 193,
+          "index": 192,
           "date": "2025-11-20",
           "price": 201.2887,
           "type": "low"
         },
         {
-          "index": 211,
+          "index": 210,
           "date": "2025-12-17",
           "price": 225.4289,
           "type": "low"
         },
         {
-          "index": 241,
+          "index": 240,
           "date": "2026-02-02",
           "price": 437.8,
           "type": "high"
         },
         {
-          "index": 247,
+          "index": 246,
           "date": "2026-02-10",
           "price": 373.25,
           "type": "low"
@@ -105,37 +105,43 @@
       ],
       "confirmed": [
         {
-          "index": 20,
+          "index": 19,
           "date": "2025-03-17",
           "price": 102.7732,
           "type": "high"
         },
         {
-          "index": 34,
+          "index": 33,
           "date": "2025-04-04",
           "price": 64.5926,
           "type": "low"
         },
         {
-          "index": 88,
+          "index": 87,
           "date": "2025-06-24",
           "price": 127.6582,
           "type": "high"
         },
         {
-          "index": 115,
+          "index": 114,
           "date": "2025-08-01",
           "price": 104.772,
           "type": "low"
         },
         {
-          "index": 193,
+          "index": 184,
+          "date": "2025-11-10",
+          "price": 253.1977,
+          "type": "high"
+        },
+        {
+          "index": 192,
           "date": "2025-11-20",
           "price": 201.2887,
           "type": "low"
         },
         {
-          "index": 211,
+          "index": 210,
           "date": "2025-12-17",
           "price": 225.4289,
           "type": "low"
@@ -144,21 +150,21 @@
     },
     "elliott": {
       "completedPattern": {
-        "valid": false,
+        "valid": true,
         "direction": "bullish",
         "endedAt": "2025-12-17",
-        "confidence0_100": 88,
+        "confidence0_100": 100,
         "rules": {
-          "r1": false,
-          "r2": false,
+          "r1": true,
+          "r2": true,
           "r3": true
         },
-        "guidelineScore": 62,
-        "rulePasses": 1
+        "guidelineScore": 55,
+        "rulePasses": 3
       },
       "developingPattern": {
         "possibleWave": "Wave 4 or ABC",
-        "confidence": 53,
+        "confidence": 60,
         "fibLevels": {
           "support": [
             204.137244,
@@ -173,35 +179,35 @@
       },
       "uncertainty": {
         "lastSwingConfirmed": true,
-        "alternativeCounts": 2,
+        "alternativeCounts": 1,
         "confidenceDecay": {
-          "base": 88,
-          "adjusted": 64
+          "base": 100,
+          "adjusted": 88
         }
       },
       "fib": {
         "ratios": {
-          "wave2": 1.651771,
-          "wave3": 0.59942,
-          "wave4": 4.217244,
-          "wave5": 0.632264
+          "wave2": 0.362895,
+          "wave3": 2.353513,
+          "wave4": 0.349731,
+          "wave5": 0.382779
         },
-        "conformanceScore": 33.684734
+        "conformanceScore": 84.596742
       }
     },
     "fib": {
       "ratios": {
-        "wave2": 1.651771,
-        "wave3": 0.59942,
-        "wave4": 4.217244,
-        "wave5": 0.632264
+        "wave2": 0.362895,
+        "wave3": 2.353513,
+        "wave4": 0.349731,
+        "wave5": 0.382779
       },
-      "conformanceScore": 33.684734
+      "conformanceScore": 84.596742
     },
     "multiTimeframeAgreement": null,
     "debug": {
       "symbol": "MU",
-      "window": 11,
+      "window": 10,
       "candidateCount": 11,
       "durationMs": 0
     },
