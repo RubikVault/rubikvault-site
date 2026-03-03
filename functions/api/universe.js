@@ -304,7 +304,7 @@ export async function onRequestGet(context) {
 
     const prefixes = [];
     for (let depth = 1; depth <= 3; depth += 1) {
-      if (normalized.length >= depth) prefixes.push(normalized.slice(0, depth));
+      if (normalized.length >= depth) prefixes.push(normalized.slice(0, depth).toLowerCase());
     }
 
     let bucketPayload = null;
@@ -317,7 +317,21 @@ export async function onRequestGet(context) {
     let source = "v7_search_buckets";
     let sourceItems = bucketPayload?.items;
 
-    if (normalized.length === 1 || !Array.isArray(sourceItems) || sourceItems.length === 0) {
+    // Always merge global top 2000 so name-based searches (e.g. "Apple") find the primary
+    // stock (AAPL) even if it lives in a different symbol-prefix bucket.
+    const globalTop = await fetchJson("/data/universe/v7/search/search_global_top_2000.json.gz");
+    const globalItems = Array.isArray(globalTop?.items) ? globalTop.items : [];
+    if (Array.isArray(sourceItems) && sourceItems.length > 0) {
+      // Merge: bucket items first, then global top (dedup handled downstream)
+      const bucketSyms = new Set(sourceItems.map((it) => String(it?.symbol || "").toUpperCase()));
+      const extra = globalItems.filter((it) => !bucketSyms.has(String(it?.symbol || "").toUpperCase()));
+      sourceItems = sourceItems.concat(extra);
+      source = "v7_search_buckets+global";
+    } else {
+      sourceItems = null;
+    }
+
+    if (!Array.isArray(sourceItems) || sourceItems.length === 0) {
       const exactIndexDoc = await getExactIndexDoc();
       const exactBySymbol = exactIndexDoc?.by_symbol && typeof exactIndexDoc.by_symbol === "object"
         ? exactIndexDoc.by_symbol
@@ -333,12 +347,10 @@ export async function onRequestGet(context) {
             .map((symbol) => exactBySymbol[String(symbol || "").toUpperCase()])
             .filter(Boolean);
         } else {
-          // Fallback to Top Global index for short misses, NEVER full scan the whole universe
-          const globalTop = await fetchJson("/data/universe/v7/search/search_global_top_2000.json.gz");
-          if (Array.isArray(globalTop?.items)) {
-            candidates = globalTop.items;
+          if (globalItems.length) {
+            candidates = globalItems;
           } else {
-            candidates = Object.values(exactBySymbol).slice(0, 5000); // Cap fallback to avoid locking JS thread
+            candidates = Object.values(exactBySymbol).slice(0, 5000);
           }
         }
       }
@@ -348,18 +360,40 @@ export async function onRequestGet(context) {
       }
     }
 
-    // Single-character queries can miss bucket coverage. Fallback to global top index.
+    // Final fallback
     if (!Array.isArray(sourceItems)) {
-      const globalTop = await fetchJson("/data/universe/v7/search/search_global_top_2000.json.gz");
-      if (Array.isArray(globalTop?.items)) {
-        sourceItems = globalTop.items;
+      if (globalItems.length) {
+        sourceItems = globalItems;
         source = "v7_search_global_top";
       }
     }
 
     if (!Array.isArray(sourceItems)) return null;
 
+    function getItemExchange(it) {
+      if (typeof it?.exchange === "string" && it.exchange.trim()) return it.exchange.trim().toUpperCase();
+      if (typeof it?.canonical_id === "string" && it.canonical_id.includes(":")) return it.canonical_id.split(":")[0].toUpperCase();
+      return "";
+    }
+
+    function normalizeCompanyName(name) {
+      let s = String(name || "").trim().toLowerCase();
+      s = s.replace(/\.com\b/g, "");
+      s = s.replace(/[.,\-()\/\\]/g, " ");
+      s = s.replace(/\b(inc|corp|corporation|ltd|limited|llc|plc|sa|ag|se|nv|co|company|group|holdings)\b/g, "");
+      s = s.replace(/\b(cdr|adr|gdr|depositary|receipt|receipts|tokenized|xstock)\b/g, "");
+      s = s.replace(/\b(stock|price|shares|share)\b/g, "");
+      s = s.replace(/\b(usd|eur|gbp|jpy|cad|aud|chf)\b/g, "");
+      s = s.replace(/\bclass\s*[a-z]\b/g, "");
+      s = s.replace(/\bdl[\s\-]*\d+\b/g, "");
+      s = s.replace(/\beo[\s\-]*\d+\b/g, "");
+      s = s.replace(/\breg\.?\s*s\b/g, "");
+      s = s.replace(/\s+/g, " ").trim();
+      return s;
+    }
+
     const seenSymbols = new Set();
+    const seenCompanyNames = new Set();
 
     const filtered = sourceItems
       .filter((it) => includeByAssetClass(it))
@@ -379,9 +413,14 @@ export async function onRequestGet(context) {
         const aRank = aSym === qSymbol ? 0 : aSym.startsWith(qSymbol || "") ? 1 : aName.startsWith(q) ? 2 : 3;
         const bRank = bSym === qSymbol ? 0 : bSym.startsWith(qSymbol || "") ? 1 : bName.startsWith(q) ? 2 : 3;
         if (aRank !== bRank) return aRank - bRank;
-        const aUs = String(a?.exchange || "").toUpperCase() === "US" ? 0 : 1;
-        const bUs = String(b?.exchange || "").toUpperCase() === "US" ? 0 : 1;
+        const aExch = getItemExchange(a);
+        const bExch = getItemExchange(b);
+        const aUs = aExch === "US" ? 0 : 1;
+        const bUs = bExch === "US" ? 0 : 1;
         if (aUs !== bUs) return aUs - bUs;
+        const aVol = Number(a?.avg_volume_30d) || 0;
+        const bVol = Number(b?.avg_volume_30d) || 0;
+        if (aVol !== bVol) return bVol - aVol;
         if (aSym.length !== bSym.length) return aSym.length - bSym.length;
         return aSym.localeCompare(bSym);
       })
@@ -389,6 +428,15 @@ export async function onRequestGet(context) {
         const sym = String(it?.symbol || it?.ticker || "").toUpperCase();
         if (!sym || seenSymbols.has(sym)) return false;
         seenSymbols.add(sym);
+        return true;
+      })
+      .filter((it) => {
+        const rawName = String(it?.name || "").trim();
+        if (!rawName || rawName.length < 3) return true;
+        const normName = normalizeCompanyName(rawName);
+        if (!normName || normName.length < 3) return true;
+        if (seenCompanyNames.has(normName)) return false;
+        seenCompanyNames.add(normName);
         return true;
       })
       .slice(offset, offset + LIMIT)
