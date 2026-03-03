@@ -106,18 +106,32 @@ function saveCalib(feature, calib) {
 
 // ─── EOD Price Loader ───────────────────────────────────────────────────────
 function loadEodPrices() {
-    const doc = readJson(EOD_BATCH);
-    if (!doc?.data) return {};
     const prices = {};
-    for (const [ticker, bar] of Object.entries(doc.data)) {
-        if (bar?.close && Number.isFinite(bar.close)) {
-            prices[ticker.toUpperCase()] = {
-                close: bar.close,
-                open: bar.open ?? bar.close,
-                high: bar.high ?? bar.close,
-                low: bar.low ?? bar.close,
-                date: bar.date ?? null
-            };
+    // Load all batch files (eod.latest.000.json, eod.latest.001.json, ...)
+    const batchDir = path.dirname(EOD_BATCH);
+    let batchFiles;
+    try {
+        batchFiles = fs.readdirSync(batchDir)
+            .filter(f => f.startsWith('eod.latest.') && f.endsWith('.json'))
+            .sort()
+            .map(f => path.join(batchDir, f));
+    } catch { batchFiles = []; }
+
+    if (!batchFiles.length) batchFiles = [EOD_BATCH]; // fallback to single file
+
+    for (const batchFile of batchFiles) {
+        const doc = readJson(batchFile);
+        if (!doc?.data) continue;
+        for (const [ticker, bar] of Object.entries(doc.data)) {
+            if (bar?.close && Number.isFinite(bar.close)) {
+                prices[ticker.toUpperCase()] = {
+                    close: bar.close,
+                    open: bar.open ?? bar.close,
+                    high: bar.high ?? bar.close,
+                    low: bar.low ?? bar.close,
+                    date: bar.date ?? null
+                };
+            }
         }
     }
     return prices;
@@ -133,7 +147,7 @@ function daysBetween(fromDate, toDate) {
 
 // ─── 1. FORECAST: Extract Predictions ───────────────────────────────────────
 // IMPROVEMENT: Calibration feedback loop + Adaptive confidence scaling
-function extractForecastPredictions(date) {
+function extractForecastPredictions(date, eodPrices) {
     const [y, m] = date.split('-');
     const gzPath = path.join(FORECAST_LEDGER, 'forecasts', y, `${m}.ndjson.gz`);
     const plainPath = path.join(FORECAST_LEDGER, 'forecasts', y, m, `${date}.ndjson`);
@@ -181,7 +195,7 @@ function extractForecastPredictions(date) {
             probability_raw: r.p_up ?? r.probability ?? 0.5,
             confidence: r.confidence ?? r.conf ?? null,
             calibration_samples: sampleCount,
-            price_at_prediction: r.price_at_forecast ?? r.close ?? null,
+            price_at_prediction: r.price_at_forecast ?? r.close ?? eodPrices[ticker]?.close ?? null,
             model_id: r.champion_id ?? r.model_id ?? null,
             source: 'forecast_ledger'
         };
@@ -239,7 +253,7 @@ function extractForecastPredictions(date) {
             probability_raw: Number(oneDay.probability),
             confidence: null,
             calibration_samples: sampleCount,
-            price_at_prediction: null,
+            price_at_prediction: eodPrices[ticker]?.close ?? null,
             model_id: latestDoc?.data?.champion_id ?? latestDoc?.champion_id ?? null,
             source: 'forecast_latest_envelope'
         };
@@ -260,7 +274,10 @@ function extractForecastPredictions(date) {
 // IMPROVEMENT: Signal strength threshold ≥ 60, Setup decay (10d max), stricter trigger logic
 function extractScientificPredictions(date, eodPrices) {
     const doc = readJson(SCIENTIFIC_SUMMARY);
-    if (!doc) return [];
+    if (!doc) {
+        console.warn('[learning] Scientific: summary file not found');
+        return [];
+    }
 
     const signals = Array.isArray(doc.strong_signals) ? doc.strong_signals : [];
     const setups = Array.isArray(doc.best_setups) ? doc.best_setups : [];
@@ -274,18 +291,29 @@ function extractScientificPredictions(date, eodPrices) {
         items.push(item);
     }
 
-    return items.map(item => {
+    console.log(`[learning] Scientific: ${items.length} unique items from ${signals.length} signals + ${setups.length} setups`);
+
+    const preds = items.map(item => {
         const ticker = String(item.symbol || item.ticker || '').toUpperCase();
         const price = eodPrices[ticker]?.close ?? item.price ?? null;
         const setup = item.setup || {};
         const trigger = item.trigger || {};
-        const signalStrength = item.signal_strength ?? 0;
+
+        // Resolve signal_strength: can be string ("STRONG") or number
+        let signalStrength = item.signal_strength ?? 0;
+        if (typeof signalStrength === 'string') {
+            // Map string labels to numeric values
+            signalStrength = signalStrength === 'STRONG' ? 80 :
+                             signalStrength === 'MODERATE' ? 60 :
+                             signalStrength === 'WEAK' ? 30 :
+                             setup.score ?? 0;
+        }
 
         // FILTER: Signal strength must be ≥ 60 (was > 0)
         if (signalStrength < 60) return null;
 
-        const setupMet = setup.met ?? setup.setup_met ?? (signalStrength > 50);
-        const triggerMet = trigger.met ?? trigger.trigger_met ?? (signalStrength > 70);
+        const setupMet = setup.fulfilled ?? setup.met ?? setup.setup_met ?? (signalStrength > 50);
+        const triggerMet = trigger.fulfilled ?? trigger.met ?? trigger.trigger_met ?? (signalStrength > 70);
 
         // SETUP DECAY: Reduce confidence for old setups
         const setupDate = item.setup_date || item.date || date;
@@ -315,6 +343,9 @@ function extractScientificPredictions(date, eodPrices) {
             source: 'scientific_summary'
         };
     }).filter(Boolean).filter(r => r.ticker);
+
+    console.log(`[learning] Scientific: ${preds.length} predictions after filters (signal_strength ≥ 60)`);
+    return preds;
 }
 
 // ─── 3. ELLIOTT: Extract Wave Predictions ───────────────────────────────────
@@ -388,11 +419,22 @@ function extractElliottPredictions(date, eodPrices) {
 // ─── 4. STOCK ANALYZER: Extract Rankings ────────────────────────────────────
 // IMPROVEMENT: EMA(5) score smoothing using historical data
 function extractStockRankings(date) {
-    const doc = readJson(V7_STOCK_ROWS);
-    if (!doc) return [];
+    const ssotPath = V7_STOCK_ROWS;
+    const doc = readJson(ssotPath);
+    const docAsof = String(doc?.generated_at || doc?.as_of || '').slice(0, 10) || null;
 
-    const items = Array.isArray(doc) ? doc : (doc.items || []);
-    if (!items.length) return [];
+    if (!doc) {
+        console.warn(`[learning] Stock Analyzer: SSOT file not found at ${ssotPath}`);
+        return { rankings: [], source_meta: { source: 'v7_stock_rows', asof: null, fresh: false, stale_days: null } };
+    }
+
+    const items = Array.isArray(doc) ? doc : (doc.items || doc.rows || []);
+    if (!items.length) {
+        console.warn(`[learning] Stock Analyzer: SSOT loaded but 0 items (keys: ${Object.keys(doc).join(',')})`);
+        return { rankings: [], source_meta: { source: 'v7_stock_rows', asof: docAsof, fresh: false, stale_days: daysBetween(docAsof, date) } };
+    }
+
+    console.log(`[learning] Stock Analyzer: SSOT loaded ${items.length} items (asof: ${docAsof})`);
 
     // Load historical scores for EMA smoothing (last 5 days)
     const historicalScores = {}; // ticker -> [score, score, ...]
@@ -420,9 +462,9 @@ function extractStockRankings(date) {
     }
 
     const rankings = items.slice(0, 200).map((row, idx) => {
-        const ticker = String(row.symbol || row.ticker || '').toUpperCase();
-        const rawScore = row.score_0_100 ?? row.quality_score ?? null;
-        const smoothedScore = rawScore != null ? emaSmooth(rawScore, ticker) : null;
+        const ticker = String(row.symbol || row.ticker || row.canonical_id || '').toUpperCase();
+        const rawScore = row.score_0_100 ?? row.quality_score ?? row.score ?? null;
+        const smoothedScore = rawScore != null ? emaSmooth(rawScore, ticker) : rawScore;
 
         return {
             feature: 'stock_analyzer',
@@ -442,7 +484,16 @@ function extractStockRankings(date) {
     rankings.forEach((r, i) => { r.rank = i + 1; });
 
     console.log(`[learning] Stock Analyzer: ${rankings.length} rankings with EMA(5) smoothing (α=${ALPHA})`);
-    return rankings;
+    const staleDays = daysBetween(docAsof, date);
+    return {
+        rankings,
+        source_meta: {
+            source: 'v7_stock_rows',
+            asof: docAsof,
+            fresh: staleDays != null ? staleDays <= 1 : false,
+            stale_days: staleDays
+        }
+    };
 }
 
 // ─── Outcome Resolution ─────────────────────────────────────────────────────
@@ -823,7 +874,7 @@ async function main() {
 
     // 2. Extract today's predictions from each feature
     console.log('[learning] Extracting predictions...');
-    const forecastResult = extractForecastPredictions(date);
+    const forecastResult = extractForecastPredictions(date, eodPrices);
     const forecastPreds = forecastResult.predictions || [];
     const scientificPreds = extractScientificPredictions(date, eodPrices);
     const scientificDoc = readJson(SCIENTIFIC_SUMMARY);
@@ -831,7 +882,8 @@ async function main() {
     const elliottPreds = extractElliottPredictions(date, eodPrices);
     const elliottDoc = readJson(path.join(ROOT, 'public/data/universe/v7/read_models/marketphase_deep_summary.json'));
     const elliottAsof = String(elliottDoc?.as_of || elliottDoc?.generated_at || '').slice(0, 10) || null;
-    const stockPreds = extractStockRankings(date);
+    const stockResult = extractStockRankings(date);
+    const stockPreds = stockResult.rankings || [];
 
     // 3. Save predictions to ledger
     if (forecastPreds.length) writeNdjson(predPath(date, 'forecast'), forecastPreds);
@@ -881,12 +933,7 @@ async function main() {
             stale_days: daysBetween(elliottAsof, date)
         },
         stock: stockPreds.length,
-        stock_source_meta: {
-            source: 'v7_stock_rows',
-            asof: date,
-            fresh: true,
-            stale_days: 0
-        }
+        stock_source_meta: stockResult.source_meta
     });
 
     // Enrich report with cross-feature data
