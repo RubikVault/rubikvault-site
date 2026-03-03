@@ -61,18 +61,25 @@ function buildExecutiveSummary(ticker, close, s, bars, universe) {
   const maxDD = rets.length > 20 ? computeMaxDD(rets.map(r => r.ret)) : null;
   const riskLbl = s.volatility_percentile > 70 ? 'High' : 'Medium';
   const riskStr = `${riskLbl} (Vol ${vol}${maxDD != null ? ', MaxDD ' + (maxDD * 100).toFixed(0) + '%' : ''})`;
-  // Valuation hint
-  const valHint = s.range_52w_pct != null ? (s.range_52w_pct > 0.8 ? 'Near 52W High (expensive zone)' : s.range_52w_pct < 0.2 ? 'Near 52W Low (value zone)' : 'Mid-Range') : '—';
-  // Quality hint
-  const winRate = rets.length >= 60 ? (rets.slice(-60).filter(r => r.ret > 0).length / 60 * 100).toFixed(0) + '% win-rate (60d)' : '—';
+  // 52W Position (5-tier, consistent with Decision Strip)
+  const valHint = s.range_52w_pct != null ? (s.range_52w_pct > 0.95 ? 'At 52W High' : s.range_52w_pct > 0.9 ? 'Near 52W High' : s.range_52w_pct > 0.7 ? 'Upper Range' : s.range_52w_pct < 0.1 ? 'Near 52W Low' : s.range_52w_pct < 0.2 ? 'Lower Range' : 'Mid-Range') : '—';
+  // Win Rate (was: "Quality" — renamed: win-rate ≠ quality)
+  const winRate = rets.length >= 60 ? (rets.slice(-60).filter(r => r.ret > 0).length / 60 * 100).toFixed(0) + '% (60d)' : '—';
   // Macro hint (placeholder)
   const macro = 'See Macro Regime section below';
   const rows = [
     { l: 'Trend', v: trend, c: trendCol }, { l: 'Risk', v: riskStr, c: s.volatility_percentile > 70 ? 'var(--red)' : 'var(--yellow)' },
-    { l: 'Valuation', v: valHint, c: s.range_52w_pct > 0.8 ? 'var(--red)' : s.range_52w_pct < 0.2 ? 'var(--green)' : 'var(--text)' },
-    { l: 'Quality', v: winRate, c: 'var(--text)' }, { l: 'Macro', v: macro, c: 'var(--text-dim)' }
+    { l: '52W Position', v: valHint, c: s.range_52w_pct > 0.9 ? 'var(--red)' : s.range_52w_pct > 0.7 ? 'var(--yellow)' : s.range_52w_pct < 0.1 ? 'var(--green)' : s.range_52w_pct < 0.2 ? 'var(--green)' : 'var(--text)' },
+    { l: 'Win Rate (60d)', v: winRate, c: 'var(--text)' }, { l: 'Macro', v: macro, c: 'var(--text-dim)' }
   ];
+  // Synthesized narrative
+  const trendWord = trend.includes('Up') ? 'uptrend' : trend.includes('Down') ? 'downtrend' : 'sideways trend';
+  const volWord = s.volatility_percentile > 70 ? 'elevated' : s.volatility_percentile > 40 ? 'moderate' : 'low';
+  const rangeWord = s.range_52w_pct > 0.9 ? 'near its 52-week high' : s.range_52w_pct > 0.7 ? 'in the upper range of its 52-week band' : s.range_52w_pct < 0.1 ? 'near its 52-week low' : s.range_52w_pct < 0.2 ? 'in the lower range of its 52-week band' : 'in mid-range of its 52-week band';
+  const synthesis = `${ticker} is in a <strong>${trendWord}</strong> with <strong>${volWord} volatility</strong> (${vol}), trading ${rangeWord}.`;
+
   return `<div class="section section-full"><h2>🎯 Executive Summary — ${ticker}</h2>
+  <div style="font-size:.82rem;color:var(--text);margin-bottom:.6rem;padding:.5rem .6rem;background:rgba(255,255,255,.02);border-radius:6px;border-left:3px solid var(--accent);line-height:1.5">${synthesis}</div>
   <div class="exec-card">${rows.map(r => `<div class="exec-row"><span class="exec-label">${r.l}</span><span class="exec-val" style="color:${r.c}">${r.v}</span></div>`).join('')}</div>
   <div style="font-size:.7rem;color:var(--text-muted);text-align:center">Auto-generated thesis from technical data. Not financial advice.</div></div>`;
 }
@@ -82,9 +89,13 @@ function computeMaxDD(rets) { let peak = 1, maxdd = 0, eq = 1; for (const r of r
 // F-00/F-01/F-03: DATA PROVENANCE + MARKET CLOCK
 // ═══════════════════════════════════════════════════════════════════════════
 function buildDataProvenance(metadata, prices, bars) {
-  const now = new Date(); const h = now.getUTCHours(), wd = now.getUTCDay();
-  const nyH = h - 5; // rough EST
-  const isOpen = wd >= 1 && wd <= 5 && nyH >= 9.5 && nyH < 16;
+  const now = new Date();
+  const nyParts = new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', hour: 'numeric', minute: 'numeric', hour12: false, weekday: 'short' }).formatToParts(now);
+  const nyH = parseInt(nyParts.find(p => p.type === 'hour')?.value || '0', 10);
+  const nyM = parseInt(nyParts.find(p => p.type === 'minute')?.value || '0', 10);
+  const nyWd = nyParts.find(p => p.type === 'weekday')?.value || '';
+  const isWeekday = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'].includes(nyWd);
+  const isOpen = isWeekday && (nyH + nyM / 60) >= 9.5 && (nyH + nyM / 60) < 16;
   const sessionBadge = isOpen ? '🟢 Market Open' : '🔴 Market Closed';
   const delay = isOpen ? '~15min delayed' : 'EOD data';
   const barDate = bars.length ? bars[bars.length - 1].date : '—';
@@ -104,8 +115,10 @@ function buildDataProvenance(metadata, prices, bars) {
     ? `<div style="background:rgba(248,113,113,0.12);border:1px solid rgba(248,113,113,0.35);border-radius:6px;padding:0.35rem 0.75rem;font-size:0.75rem;color:#fca5a5;margin-bottom:0.4rem;">⚠️ Data degraded: ${em.degraded_reason || 'scheduler_stale'} — showing last-good snapshot</div>`
     : '';
 
+  const firstDate = bars.length ? bars[0].date : '—';
+  const dataYears = bars.length >= 252 ? `~${Math.round(bars.length / 252)}y` : `${bars.length} bars`;
   return `${degradedBanner}<div class="prov-bar">
-    <span class="prov-chip"><span class="dot ok"></span>Data as of ${barDate}</span>
+    <span class="prov-chip"><span class="dot ok"></span>Data: ${firstDate} → ${barDate} (${dataYears})</span>
     <span class="prov-chip">${sessionBadge} · ${delay}</span>
   </div>`;
 }
@@ -322,10 +335,10 @@ function buildTrendMomentum(close, s, bars) {
   return `<div class="section section-full"><h2>🔮 Trend & Momentum</h2>
   <div class="trend-big ${stateCls}">TREND: ${state} <span style="font-size:.8rem;font-weight:400;opacity:.8">(${(conf).toFixed(2)})</span></div>
   <div style="font-size:.78rem;color:var(--text-dim);margin-bottom:.6rem">${reasons.join(' · ')}</div>${durationHtml}
-  <div class="m-grid"><div class="m-item"><div class="m-label">Breakout Energy</div><div class="m-val">${breakoutEnergy}/100</div><div class="m-sub">${beLabel} · Compression: ${(compression).toFixed(2)}</div></div>
-  <div class="m-item"><div class="m-label">Z-Score (vs MA)</div><div class="m-val" style="color:${Math.abs(z) > 2 ? 'var(--red)' : 'var(--text)'}">${z.toFixed(2)}</div><div class="m-sub">${reversionHint || 'Within normal range'}</div></div>
-  <div class="m-item"><div class="m-label">Vol Compression</div><div class="m-val">${(compression).toFixed(2)}x</div><div class="m-sub">20d/60d ratio</div></div>
-  <div class="m-item"><div class="m-label">Volume Dry-Up</div><div class="m-val">${(volDryUp).toFixed(2)}x</div><div class="m-sub">Recent 5d vs prior 15d</div></div></div></div>`;
+  <div class="m-grid"><div class="m-item"><div class="m-label" title="Measures vol compression and range breakout potential. 0–100 scale. Higher = more coiled energy for breakout.">Breakout Energy</div><div class="m-val">${breakoutEnergy}/100</div><div class="m-sub">${beLabel} · Compression: ${(compression).toFixed(2)}</div></div>
+  <div class="m-item"><div class="m-label" title="Standard deviations from 50-day MA, normalized by annualized vol. |Z|>2 = statistically extreme.">Z-Score (vs MA)</div><div class="m-val" style="color:${Math.abs(z) > 2 ? 'var(--red)' : 'var(--text)'}">${z.toFixed(2)}</div><div class="m-sub">${reversionHint || 'Within normal range'}</div></div>
+  <div class="m-item"><div class="m-label" title="Ratio of 20-day to 60-day realized volatility. <0.7 = compression (potential breakout), >1.3 = expansion.">Vol Compression</div><div class="m-val">${(compression).toFixed(2)}x</div><div class="m-sub">20d/60d ratio</div></div>
+  <div class="m-item"><div class="m-label" title="Recent 5-day avg volume / prior 15-day avg. Below 0.5 = drying up (often precedes breakout).">Volume Dry-Up</div><div class="m-val">${(volDryUp).toFixed(2)}x</div><div class="m-sub">Recent 5d vs prior 15d</div></div></div></div>`;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -344,17 +357,20 @@ function buildDrawdownAnatomy(bars) {
     }
     return { maxdd, worst, worstEnd, recovered: !inDD };
   }
-  const periods = [{ label: '1Y', n: 252 }, { label: '3Y', n: 756 }, { label: '5Y', n: 1260 }, { label: 'All', n: bars.length }];
+  const totalYears = Math.round(bars.length / 252);
+  const periods = [{ label: '1Y', n: 252 }, { label: '3Y', n: 756 }, { label: '5Y', n: 1260 }, { label: `Max (${totalYears}y)`, n: bars.length }]
+    .filter(p => (bars.length >= p.n * 0.8 || p.n === bars.length) && !(p.n !== bars.length && bars.length / p.n < 1.15));
   const rows = periods.map(p => {
     const sl = bars.slice(-Math.min(p.n, bars.length)); const d = calcDD(sl);
-    return `<div class="sub-metric"><span style="font-weight:600;width:30px">${p.label}</span><span style="color:var(--red);font-weight:700">${(d.maxdd * 100).toFixed(1)}%</span><span style="font-size:.72rem;color:var(--text-dim)">${d.worst || '—'} → ${d.worstEnd || '—'} ${d.recovered ? '✅ Recovered' : '⏳ In drawdown'}</span></div>`;
+    const dateRange = `${d.worst || '—'} → ${d.worstEnd || '—'}`;
+    return `<div class="sub-metric"><span style="font-weight:600;width:30px">${p.label}</span><span style="color:var(--red);font-weight:700">${(d.maxdd * 100).toFixed(1)}%</span><span style="font-size:.72rem;color:var(--text-dim)">${dateRange} ${d.recovered ? '✅ Recovered' : '⏳ In drawdown'}</span></div>`;
   }).join('');
   // Ulcer Index (simplified)
   const r252 = bars.slice(-252); let sumSqDD = 0, peak = adjC(r252[0]) || 1;
   for (let i = 1; i < r252.length; i++) { const c = adjC(r252[i]); if (!c) continue; if (c > peak) peak = c; const dd = (peak - c) / peak; sumSqDD += dd * dd; }
   const ulcer = Math.sqrt(sumSqDD / r252.length) * 100;
   return `<div class="section"><h2>📉 Drawdown & Recovery</h2>${rows}
-  <div class="sub-metric"><span style="font-weight:600">Ulcer Index</span><span style="font-weight:700">${ulcer.toFixed(2)}</span></div></div>`;
+  <div class="sub-metric"><span style="font-weight:600" title="Root mean square of drawdowns over 252 days. Measures depth and duration of price declines. Higher = more painful drawdown history.">Ulcer Index</span><span style="font-weight:700">${ulcer.toFixed(2)}</span></div></div>`;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -461,7 +477,9 @@ function buildStressScenarios(bars) {
     { name: '2018 Q4 Selloff', from: '2018-09-20', to: '2018-12-24' },
     { name: 'Flash Crash 2020 Recovery', from: '2020-03-23', to: '2020-06-08' },
   ];
+  const firstBarDate = bars.length ? bars[0].date : '9999-12-31';
   const rows = scenarios.map(sc => {
+    if (firstBarDate > sc.from) return `<div class="sub-metric"><span style="font-weight:600">${sc.name}</span><span style="font-size:.72rem;color:var(--text-muted)">Pre-data — N/A (history starts ${firstBarDate})</span></div>`;
     const inRange = bars.filter(b => b.date >= sc.from && b.date <= sc.to);
     if (inRange.length < 5) return null;
     const first = adjC(inRange[0]), last = adjC(inRange[inRange.length - 1]);
@@ -509,7 +527,8 @@ function buildRiskBudget(close, s) {
     return `<div class="sub-metric"><span style="font-weight:600">${r}% Risk</span><span>${shares} shares</span><span>${fmtCur(pos)} (${posPct}%)</span></div>`;
   }).join('');
   return `<div class="section"><h2>🎯 Risk Budget Helper</h2>
-  <div style="font-size:.78rem;color:var(--text-dim);margin-bottom:.4rem">Position sizing based on 2×ATR stop ($${(2 * atr).toFixed(2)}) · $100K portfolio</div>${rows}
+  <div style="font-size:.78rem;color:var(--text-dim);margin-bottom:.4rem"><strong>Trading Stop (2×ATR):</strong> $${(2 * atr).toFixed(2)} from entry · $100K portfolio</div>
+  <div style="font-size:.7rem;color:var(--text-muted);margin-bottom:.4rem">Volatility-based stop. For structural S/R invalidation levels, see Decision Strip above.</div>${rows}
   <div style="font-size:.68rem;color:var(--text-muted);margin-top:.5rem;padding:.4rem;background:var(--red-bg);border-radius:6px;border:1px solid rgba(248,113,113,.2)">⚠️ Educational only. Not financial advice. Adjust for your risk tolerance and portfolio size.</div></div>`;
 }
 
@@ -643,12 +662,16 @@ function buildWeekdaySeasonality(bars) {
   const dayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
   const dayRets = { 0: [], 1: [], 2: [], 3: [], 4: [] };
   rets.forEach(r => { if (!r.date) return; const d = new Date(r.date); if (!isNaN(d)) { const wd = d.getDay(); if (wd >= 1 && wd <= 5) dayRets[wd - 1].push(r.ret); } });
+  let anyLow = false;
   const rows = dayNames.map((name, i) => {
     const arr = dayRets[i]; if (!arr.length) return '';
     const avg = _mean(arr), wr = (arr.filter(r => r > 0).length / arr.length * 100).toFixed(0);
-    return `<div class="sub-metric"><span style="width:35px;font-weight:600">${name}</span><span style="color:${_col(avg)};font-weight:700">${avg >= 0 ? '+' : ''}${(avg * 100).toFixed(3)}%</span><span style="font-size:.72rem;color:var(--text-dim)">Win: ${wr}% (n=${arr.length})</span></div>`;
+    const warn = arr.length < 50 ? ' ⚠️' : '';
+    if (arr.length < 50) anyLow = true;
+    return `<div class="sub-metric"><span style="width:35px;font-weight:600">${name}</span><span style="color:${_col(avg)};font-weight:700">${avg >= 0 ? '+' : ''}${(avg * 100).toFixed(3)}%</span><span style="font-size:.72rem;color:var(--text-dim)">Win: ${wr}% (n=${arr.length})${warn}</span></div>`;
   }).join('');
-  return `<div style="margin-top:.6rem"><div style="font-size:.78rem;color:var(--text-dim);margin-bottom:.3rem">Weekday Effects</div>${rows}</div>`;
+  const lowWarn = anyLow ? '<div style="font-size:.68rem;color:var(--yellow);margin-top:.2rem">⚠️ Some weekdays have &lt;50 samples — results may not be statistically significant.</div>' : '';
+  return `<div style="margin-top:.6rem"><div style="font-size:.78rem;color:var(--text-dim);margin-bottom:.3rem">Weekday Effects</div>${rows}${lowWarn}</div>`;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════

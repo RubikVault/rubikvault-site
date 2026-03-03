@@ -1121,7 +1121,7 @@
     function buildSections(ticker, close, s, score, bars, universe) {
       const md = window._rvMetadata || {};
       return `<div class="sections-grid">
-      ${buildDecisionStrip(close, s, bars)}
+      ${buildDecisionStrip(ticker, close, s, bars)}
       ${buildExecutiveSummary(ticker, close, s, bars, universe)}
       ${buildDataProvenance(md, {}, bars)}
       ${buildOHLCVStrip(close, s, bars)}
@@ -1170,14 +1170,31 @@
         try {
           const html = await fn();
           const el = document.getElementById(id);
-          if (el && html) el.innerHTML = html;
-          else if (el) el.innerHTML = '<div class="placeholder-card" style="opacity:.6;font-size:.78rem">Data temporarily unavailable.</div>';
+          if (el && html) {
+            el.innerHTML = html;
+          } else if (el) {
+            el.innerHTML = '<div style="font-size:.72rem;color:var(--text-muted);padding:.3rem 0">Data not loaded for this ticker.</div>';
+            const details = el.closest('details');
+            if (details) details.removeAttribute('open');
+          }
         } catch (e) {
           console.warn('Async insight error:', id, e);
           const el = document.getElementById(id);
-          if (el) el.innerHTML = '<div class="placeholder-card" style="opacity:.6;font-size:.78rem">Data temporarily unavailable.</div>';
+          if (el) {
+            el.innerHTML = '<div style="font-size:.72rem;color:var(--text-muted);padding:.3rem 0">Data not loaded for this ticker.</div>';
+            const details = el.closest('details');
+            if (details) details.removeAttribute('open');
+          }
         }
       }));
+    }
+
+    // Shared Bollinger signal — used by both Verdict and Signal Summary for consistency
+    function getBollingerSignal(close, s) {
+      if (s.bb_upper == null || s.bb_lower == null) return { sig: 'Neutral', pctB: null };
+      const pctB = (close - s.bb_lower) / (s.bb_upper - s.bb_lower);
+      const sig = pctB < 0.2 ? 'Buy' : pctB > 0.8 ? 'Sell' : 'Neutral';
+      return { sig, pctB };
     }
 
     // 5-tier RSI classification — aligned with RSI_BUCKETS in stock-analyzer-contract.js
@@ -1191,7 +1208,7 @@
     }
 
     // ─── 0. DECISION STRIP (above-the-fold, short/mid/long horizons) ─────────────
-    function buildDecisionStrip(close, s, bars) {
+    function buildDecisionStrip(ticker, close, s, bars) {
       if (close == null) return '';
 
       function scoreHorizon(horizon) {
@@ -1201,8 +1218,10 @@
           if (s.sma20 != null) { if (close > s.sma20) { score++; reasons.push('Price above SMA 20'); } else { score--; reasons.push('Price below SMA 20'); } }
           // MACD histogram
           if (s.macd_hist != null) { if (s.macd_hist > 0) { score++; reasons.push('MACD histogram positive'); } else { score--; reasons.push('MACD histogram negative'); } }
-          // Bollinger position
-          if (s.bb_mid != null) { if (close > s.bb_mid) score += 0.5; else score -= 0.5; }
+          // Bollinger %B (unified 3-state — same as Verdict)
+          const bbShort = getBollingerSignal(close, s);
+          if (bbShort.sig === 'Buy') { score += 0.5; reasons.push('Bollinger %B oversold'); }
+          else if (bbShort.sig === 'Sell') { score -= 0.5; reasons.push('Bollinger %B overbought'); }
           // RSI oversold bounce
           const rsiMeta = getRsiMeta(s.rsi14);
           if (rsiMeta.zone === 'Oversold') { score += 0.5; reasons.push('RSI oversold — potential bounce'); }
@@ -1224,8 +1243,12 @@
             else if (s.sma20 < s.sma50 && s.sma50 < s.sma200) { score--; reasons.push('Bearish long-term MA structure'); }
           }
           if (s.range_52w_pct != null) {
-            if (s.range_52w_pct > 0.7) { score++; reasons.push('Near 52W high — momentum intact'); }
-            else if (s.range_52w_pct < 0.2) { score--; reasons.push('Near 52W low — under pressure'); }
+            const pct52 = (s.range_52w_pct * 100).toFixed(0);
+            if (s.range_52w_pct > 0.95) { score += 1.5; reasons.push(`At 52W high (${pct52}% range) — strong momentum`); }
+            else if (s.range_52w_pct > 0.9) { score++; reasons.push(`Near 52W high (${pct52}% range) — momentum intact`); }
+            else if (s.range_52w_pct > 0.7) { score += 0.5; reasons.push(`Upper 52W range (${pct52}%) — positive positioning`); }
+            else if (s.range_52w_pct < 0.1) { score -= 1.5; reasons.push(`Near 52W low (${pct52}% range) — severe weakness`); }
+            else if (s.range_52w_pct < 0.2) { score--; reasons.push(`Lower 52W range (${pct52}%) — under pressure`); }
           }
         }
         return { score, reasons: reasons.slice(0, 3) };
@@ -1260,23 +1283,48 @@
       const { s1, r1 } = nearestLevels();
       const fmtCurLocal = v => v == null ? '—' : '$' + Number(v).toFixed(2);
 
+      // Synthesis + Divergence detection
+      const trendWord = (s.sma20 > s.sma50 && s.sma50 > s.sma200) ? 'uptrend' : (s.sma20 < s.sma50 && s.sma50 < s.sma200) ? 'downtrend' : 'mixed trend';
+      const rsiZone = getRsiMeta(s.rsi14).zone.toLowerCase();
+      const divergences = [];
+      if (trendWord === 'downtrend' && (rsiZone === 'oversold')) divergences.push('Bearish trend with oversold bounce potential');
+      if (trendWord === 'uptrend' && (rsiZone === 'overbought')) divergences.push('Bullish trend but overbought — pullback risk');
+      if (s.macd_hist > 0 && s.sma200 != null && close < s.sma200) divergences.push('Momentum divergence — short-term strength in long-term downtrend');
+      if (s.macd_hist < 0 && s.sma200 != null && close > s.sma200) divergences.push('Momentum divergence — short-term weakness in long-term uptrend');
+
       const cards = horizons.map(h => {
         const { score, reasons } = scoreHorizon(h.key);
         const { label, cls, conf, icon } = horizonVerdict(score);
         const trigger = r1 ? `Break above ${r1.name} (${fmtCurLocal(r1.price)})` : 'No near resistance';
         const invalidation = s1 ? `Loss of ${s1.name} (${fmtCurLocal(s1.price)})` : 'No near support';
+        // CRV (Risk:Reward ratio from S/R levels)
+        let crvHtml = '';
+        if (s1 && r1) {
+          const risk = Math.abs(close - s1.price);
+          const reward = Math.abs(r1.price - close);
+          const crvNum = risk > 0 ? reward / risk : 0;
+          const crv = risk > 0 ? crvNum.toFixed(1) : '—';
+          const crvCol = crvNum >= 2 ? 'var(--green)' : crvNum >= 1 ? 'var(--yellow)' : 'var(--red)';
+          crvHtml = `<div style="font-size:.72rem;color:var(--text-dim);margin-top:.2rem">R:R <strong style="color:${crvCol}">${crv}:1</strong> (risk ${fmtCurLocal(risk)} / reward ${fmtCurLocal(reward)})</div>`;
+        }
         return `<div class="decision-card ${cls}">
           <div class="decision-horizon">${h.label} <span class="decision-horizon-sub">${h.sub}</span></div>
           <div class="decision-verdict">${icon} ${label}</div>
           <div class="decision-conf">Confidence: <strong>${conf}</strong></div>
           <ul class="decision-reasons">${reasons.map(r => `<li>${r}</li>`).join('')}</ul>
           <div class="decision-trigger">▶ Trigger: ${trigger}</div>
-          <div class="decision-invalid">✗ Invalidation: ${invalidation}</div>
+          <div class="decision-invalid">✗ Structural Invalidation (S/R): ${invalidation}</div>
+          ${crvHtml}
         </div>`;
       }).join('');
 
       return `<div class="section section-full decision-strip-section">
         <h2>⚡ Decision Strip <span style="font-size:0.7rem;color:var(--text-muted);text-transform:none;letter-spacing:0">multi-horizon analysis</span></h2>
+        <div style="font-size:.68rem;color:var(--text-muted);margin-bottom:.5rem;text-align:center">Score ≥3 → HIGH confidence · Score ≥2 → MEDIUM · Score &lt;2 → LOW · BUY ≥+2 · AVOID ≤-2 · WAIT = in between</div>
+        <div style="font-size:.82rem;color:var(--text);margin-bottom:.6rem;padding:.5rem .6rem;background:rgba(255,255,255,.02);border-radius:6px;border-left:3px solid var(--accent);line-height:1.5">
+          ${ticker} is in a <strong>${trendWord}</strong> with RSI in <strong>${rsiZone}</strong> territory.
+          ${divergences.length ? `<br><span style="color:var(--yellow)">⚠️ ${divergences.join(' · ')}</span>` : ''}
+        </div>
         <div class="decision-strip">${cards}</div>
         <div style="font-size:0.68rem;color:var(--text-muted);margin-top:0.5rem;text-align:center">Not financial advice. Based on technical indicators only.</div>
       </div>`;
@@ -1289,18 +1337,19 @@
       // MA stack
       if (s.sma20 > s.sma50 && s.sma50 > s.sma200) bullCount += 2;
       else if (s.sma20 < s.sma50 && s.sma50 < s.sma200) bearCount += 2;
-      // Price vs MAs
-      if (close > s.sma20) bullCount++; else bearCount++;
-      if (close > s.sma50) bullCount++; else bearCount++;
-      if (close > s.sma200) bullCount++; else bearCount++;
+      // Price vs MAs (null-guarded — missing SMA must not count)
+      if (s.sma20 != null) { if (close > s.sma20) bullCount++; else bearCount++; }
+      if (s.sma50 != null) { if (close > s.sma50) bullCount++; else bearCount++; }
+      if (s.sma200 != null) { if (close > s.sma200) bullCount++; else bearCount++; }
       // RSI
       const rsiMeta = getRsiMeta(s.rsi14);
       if (rsiMeta.signal === 'Buy') bullCount++;
       else if (rsiMeta.signal === 'Sell') bearCount++;
       // MACD
       if (s.macd_hist > 0) bullCount++; else if (s.macd_hist < 0) bearCount++;
-      // BB position
-      if (close > s.bb_mid) bullCount++; else bearCount++;
+      // Bollinger %B (unified 3-state logic — same as Signal Summary)
+      const bbSig = getBollingerSignal(close, s);
+      if (bbSig.sig === 'Buy') bullCount++; else if (bbSig.sig === 'Sell') bearCount++;
 
       const total = bullCount + bearCount;
       const ratio = total > 0 ? bullCount / total : 0.5;
@@ -1659,11 +1708,10 @@
         signals.push({ name: 'MACD Histogram', sig: s.macd_hist > 0 ? 'Buy' : 'Sell', detail: `${s.macd_hist.toFixed(3)}` });
       }
 
-      // Bollinger
-      if (s.bb_upper != null && s.bb_lower != null) {
-        const bbPct = (close - s.bb_lower) / (s.bb_upper - s.bb_lower);
-        const bbSig = bbPct < 0.2 ? 'Buy' : bbPct > 0.8 ? 'Sell' : 'Neutral';
-        signals.push({ name: 'Bollinger %B', sig: bbSig, detail: `${bbPct.toFixed(2)}` });
+      // Bollinger (unified 3-state — same logic as Verdict)
+      const bbSignal = getBollingerSignal(close, s);
+      if (bbSignal.pctB != null) {
+        signals.push({ name: 'Bollinger %B', sig: bbSignal.sig, detail: `${bbSignal.pctB.toFixed(2)}` });
       }
 
       const rows = signals.map(sig => {
@@ -1680,7 +1728,7 @@
       const neutralCount = signals.filter(s => s.sig === 'Neutral').length;
 
       return `<div class="section section-full">
-      <h2>📋 Signal Summary <span style="font-size:0.7rem;color:var(--text-muted);text-transform:none;letter-spacing:0">same thresholds as verdict</span></h2>
+      <h2>📋 Signal Summary <span style="font-size:0.7rem;color:var(--text-muted);text-transform:none;letter-spacing:0">unified methodology with verdict</span></h2>
       <div style="display:flex;gap:0.5rem;margin-bottom:0.75rem;flex-wrap:wrap;">
         <span class="signal-chip buy">Buy: ${buyCount}</span>
         <span class="signal-chip sell">Sell: ${sellCount}</span>
@@ -1834,7 +1882,7 @@
         <tr><th>Metric</th><th>20-Day</th><th>60-Day</th></tr>
         <tr><td style="font-weight:600">Avg Daily Return</td><td style="color:${avgRet20 >= 0 ? 'var(--green)' : 'var(--red)'}">${avgRet20 >= 0 ? '+' : ''}${(avgRet20 * 100).toFixed(3)}%</td><td style="color:${avgRet60 >= 0 ? 'var(--green)' : 'var(--red)'}">${avgRet60 >= 0 ? '+' : ''}${(avgRet60 * 100).toFixed(3)}%</td></tr>
         <tr><td style="font-weight:600">Win Rate</td><td>${winRate20}%</td><td>${winRate60}%</td></tr>
-        <tr><td style="font-weight:600">Annualized Vol</td><td>${(vol20 * 100).toFixed(1)}%</td><td>${(vol60 * 100).toFixed(1)}%</td></tr>
+        <tr><td style="font-weight:600" title="Sample standard deviation of daily returns, annualized (×√252 trading days)">Annualized Vol</td><td>${(vol20 * 100).toFixed(1)}%</td><td>${(vol60 * 100).toFixed(1)}%</td></tr>
       </table>
       <div style="margin-top:0.75rem;padding:0.5rem;background:rgba(255,255,255,0.02);border-radius:6px;border-left:3px solid var(--accent);">
         <div style="font-size:0.78rem;color:var(--text-dim);margin-bottom:0.2rem;">Autocorrelation (lag-1, 60d)</div>
@@ -1887,15 +1935,22 @@
         }
       }
 
-      // 52W Range
+      // 52W Range — tiered, uses range_52w_pct for consistency with Decision Strip
       if (s.high_52w != null && s.low_52w != null) {
         const fromHigh = ((close - s.high_52w) / s.high_52w * 100);
         const fromLow = ((close - s.low_52w) / s.low_52w * 100);
-        if (fromHigh > -5) {
-          points.push(`🏔️ Trading near <strong>52-week high</strong> (${fromHigh.toFixed(1)}% from peak) — momentum intact but elevated risk.`);
+        const pct52 = s.range_52w_pct != null ? (s.range_52w_pct * 100).toFixed(0) : null;
+        if (s.range_52w_pct > 0.9) {
+          points.push(`🏔️ Trading near <strong>52-week high</strong> (${fromHigh.toFixed(1)}% from peak, ${pct52}% of range) — momentum intact but elevated risk.`);
           bullScore += 1;
-        } else if (fromLow < 20) {
-          points.push(`🕳️ Trading near <strong>52-week low</strong> (${fromLow.toFixed(1)}% from bottom) — potential value but falling knife risk.`);
+        } else if (s.range_52w_pct > 0.7) {
+          points.push(`📈 Upper <strong>52-week range</strong> (${pct52}% position, ${fromHigh.toFixed(1)}% from peak) — positive trend positioning.`);
+          bullScore += 0.5;
+        } else if (s.range_52w_pct < 0.1) {
+          points.push(`🕳️ Near <strong>52-week low</strong> (${fromLow.toFixed(1)}% from bottom, ${pct52}% of range) — severe weakness, falling knife risk.`);
+          bearScore += 1.5;
+        } else if (s.range_52w_pct < 0.2) {
+          points.push(`🕳️ Lower <strong>52-week range</strong> (${fromLow.toFixed(1)}% from bottom, ${pct52}% of range) — under pressure, potential value.`);
           bearScore += 1;
         }
       }
