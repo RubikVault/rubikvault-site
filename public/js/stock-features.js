@@ -42,6 +42,89 @@ function _returns(bars) { const r = []; for (let i = 1; i < bars.length; i++) { 
 function _std(arr) { if (!arr.length) return 0; const m = arr.reduce((a, b) => a + b, 0) / arr.length; return Math.sqrt(arr.reduce((a, v) => a + (v - m) ** 2, 0) / (arr.length - 1 || 1)); }
 function _mean(arr) { return arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : 0; }
 function _col(c) { return c >= 0 ? 'var(--green)' : 'var(--red)'; }
+function _toNumber(v) { const n = Number(v); return Number.isFinite(n) ? n : null; }
+
+function _proxyScientificSignal(context = {}) {
+  const s = context?.stats || {};
+  const close = _toNumber(context?.close);
+  if (close == null) return null;
+  let setup = 0;
+  let trigger = 0;
+  if (_toNumber(s.rsi14) != null && s.rsi14 >= 40 && s.rsi14 <= 65) setup += 20;
+  if (_toNumber(s.sma200) != null && close > s.sma200) setup += 20;
+  if (_toNumber(s.sma50) != null && _toNumber(s.sma200) != null && s.sma50 > s.sma200) setup += 20;
+  if (_toNumber(s.atr14) != null && close > 0 && (s.atr14 / close) <= 0.03) setup += 20;
+  if (_toNumber(s.volume_ratio_20d) != null && s.volume_ratio_20d >= 0.8 && s.volume_ratio_20d <= 1.8) setup += 20;
+  if (_toNumber(s.macd_hist) != null && s.macd_hist > 0) trigger += 25;
+  if (_toNumber(s.sma20) != null && close > s.sma20) trigger += 25;
+  if (_toNumber(s.ret_5d_pct) != null && s.ret_5d_pct > 0) trigger += 25;
+  if (_toNumber(s.volatility_percentile) != null && s.volatility_percentile < 85) trigger += 25;
+  const setupScore = Math.max(0, Math.min(100, setup));
+  const triggerScore = Math.max(0, Math.min(100, trigger));
+  const prob = Math.max(0.35, Math.min(0.75, 0.45 + (setupScore / 100) * 0.18 + (triggerScore / 100) * 0.12));
+  return {
+    setupScore,
+    triggerScore,
+    probability: Number(prob.toFixed(2)),
+    direction: prob >= 0.5 ? 'bullish' : 'bearish',
+    expectedReturn10d: Number((((prob - 0.5) * 8)).toFixed(1))
+  };
+}
+
+function _proxyForecastSignal(context = {}) {
+  const s = context?.stats || {};
+  const close = _toNumber(context?.close);
+  if (close == null) return null;
+  let score = 0;
+  if (_toNumber(s.sma20) != null) score += close > s.sma20 ? 1 : -1;
+  if (_toNumber(s.sma50) != null) score += close > s.sma50 ? 1 : -1;
+  if (_toNumber(s.sma200) != null) score += close > s.sma200 ? 1 : -1;
+  if (_toNumber(s.macd_hist) != null) score += s.macd_hist > 0 ? 1 : -1;
+  if (_toNumber(s.rsi14) != null) {
+    if (s.rsi14 < 30) score += 1;
+    else if (s.rsi14 > 70) score -= 1;
+  }
+  const baseProb = Math.max(0.35, Math.min(0.65, 0.5 + score * 0.04));
+  const d1 = Math.max(0.35, Math.min(0.65, baseProb));
+  const d5 = Math.max(0.35, Math.min(0.70, baseProb + (score > 0 ? 0.02 : -0.02)));
+  const d20 = Math.max(0.30, Math.min(0.75, baseProb + (score > 0 ? 0.04 : -0.04)));
+  return {
+    horizons: {
+      '1d': { probability: Number(d1.toFixed(2)), direction: d1 >= 0.5 ? 'bullish' : 'bearish' },
+      '5d': { probability: Number(d5.toFixed(2)), direction: d5 >= 0.5 ? 'bullish' : 'bearish' },
+      '20d': { probability: Number(d20.toFixed(2)), direction: d20 >= 0.5 ? 'bullish' : 'bearish' },
+    },
+    model: 'proxy-local-v7',
+    freshness: 'derived-from-stock-stats'
+  };
+}
+
+function _proxyElliottSignal(context = {}) {
+  const bars = Array.isArray(context?.bars) ? context.bars : [];
+  if (bars.length < 40) return null;
+  const recent = bars.slice(-20).map((b) => adjC(b)).filter((x) => Number.isFinite(x) && x > 0);
+  if (recent.length < 10) return null;
+  const first = recent[0];
+  const last = recent[recent.length - 1];
+  const change = first > 0 ? (last - first) / first : 0;
+  const high = Math.max(...recent);
+  const low = Math.min(...recent);
+  const range = high > low ? (last - low) / (high - low) : 0.5;
+  const direction = change >= 0 ? 'bullish' : 'bearish';
+  let wave = 'Wave 4 or ABC';
+  if (range > 0.75 && change > 0) wave = 'Wave 3';
+  else if (range < 0.25 && change < 0) wave = 'Wave C';
+  else if (Math.abs(change) < 0.02) wave = 'Wave 2 / consolidation';
+  const conf = Math.max(30, Math.min(78, Math.round(40 + Math.abs(change) * 220)));
+  return {
+    direction,
+    wave,
+    confidence: conf,
+    fibConformance: Math.max(35, Math.min(72, Math.round(50 + (range - 0.5) * 40))),
+    support: Number((low + (high - low) * 0.25).toFixed(2)),
+    resistance: Number((low + (high - low) * 0.75).toFixed(2))
+  };
+}
 
 // ═══════════════════════════════════════════════════════════════════════════
 // F-40: EXECUTIVE SUMMARY
@@ -106,9 +189,9 @@ function buildDataProvenance(metadata, prices, bars) {
   const em = (typeof window !== 'undefined' && window._rvEnvelopeMeta) || {};
   const cacheState = em.cache?.stale === false && em.freshness === 'fresh' ? 'LIVE'
     : em.degraded ? 'DEGRADED'
-    : em.cache?.hit ? 'CACHED'
-    : em.freshness === 'stale' ? 'STALE'
-    : null;
+      : em.cache?.hit ? 'CACHED'
+        : em.freshness === 'stale' ? 'STALE'
+          : null;
   const cacheColor = cacheState === 'LIVE' ? 'ok' : cacheState === 'DEGRADED' ? 'na' : 'cached';
   const cacheLabel = cacheState ? `${cacheState === 'LIVE' ? '🟢' : cacheState === 'DEGRADED' ? '🔴' : '🟡'} ${cacheState}` : null;
   const degradedBanner = em.degraded
@@ -694,10 +777,33 @@ async function _loadInsights(ticker) {
   } catch { return null; }
 }
 
-async function buildScientificInsight(ticker) {
+async function buildScientificInsight(ticker, context = {}) {
   const insights = await _loadInsights(ticker);
   const entry = insights?.scientific;
-  if (!entry) return `<div class="section section-full"><h2>🔬 Scientific Analyzer</h2><div class="placeholder-card">No scientific analysis data available for ${ticker}.</div></div>`;
+  if (!entry || entry.status === 'DATA_UNAVAILABLE') {
+    const proxy = _proxyScientificSignal(context);
+    if (!proxy) {
+      const reason = entry?.reason || `${ticker} is not yet included in the Scientific Analyzer model universe. Coverage expands with each training cycle.`;
+      return `<div class="section section-full"><h2>🔬 Scientific Analyzer</h2><div class="placeholder-card" style="text-align:center;padding:1.2rem">
+        <div style="font-size:1.1rem;margin-bottom:.4rem;color:var(--text-dim)">⏳ Not Yet Covered</div>
+        <div style="font-size:.82rem;color:var(--text-dim);max-width:480px;margin:0 auto">${reason}</div>
+      </div></div>`;
+    }
+    const setupCol = proxy.setupScore >= 80 ? 'var(--green)' : proxy.setupScore >= 55 ? 'var(--yellow)' : 'var(--red)';
+    const triggerCol = proxy.triggerScore >= 70 ? 'var(--green)' : proxy.triggerScore >= 45 ? 'var(--yellow)' : 'var(--red)';
+    const directionCol = proxy.direction === 'bullish' ? 'var(--green)' : 'var(--red)';
+    return `<div class="section section-full"><h2>🔬 Scientific Analyzer</h2>
+      <div class="placeholder-card" style="margin-bottom:.55rem">
+        Model output unavailable for ${ticker}; showing local proxy from current OHLCV/indicator state.
+      </div>
+      <div class="m-grid">
+        <div class="m-item"><div class="m-label">Setup (proxy)</div><div class="m-val" style="color:${setupCol}">${proxy.setupScore}/100</div></div>
+        <div class="m-item"><div class="m-label">Trigger (proxy)</div><div class="m-val" style="color:${triggerCol}">${proxy.triggerScore}/100</div></div>
+        <div class="m-item"><div class="m-label">Direction</div><div class="m-val" style="color:${directionCol}">${proxy.direction.toUpperCase()}</div></div>
+        <div class="m-item"><div class="m-label">Prob / Exp.10d</div><div class="m-val">${Math.round(proxy.probability * 100)}% / ${proxy.expectedReturn10d > 0 ? '+' : ''}${proxy.expectedReturn10d}%</div></div>
+      </div>
+    </div>`;
+  }
 
   const setup = entry.setup || {};
   const trigger = entry.trigger || {};
@@ -748,10 +854,31 @@ ${shapHTML ? `<div style="margin-top:.6rem;padding:.5rem .6rem;border-radius:8px
 // ═══════════════════════════════════════════════════════════════════════════
 // ML FORECAST INTEGRATION
 // ═══════════════════════════════════════════════════════════════════════════
-async function buildForecastInsight(ticker) {
+async function buildForecastInsight(ticker, context = {}) {
   const insights = await _loadInsights(ticker);
   const entry = insights?.forecast;
-  if (!entry) return `<div class="section"><h2>\ud83d\udd2e ML Forecast</h2><div class="placeholder-card">No forecast data available for ${ticker}.</div></div>`;
+  if (!entry) {
+    const proxy = _proxyForecastSignal(context);
+    if (!proxy) return `<div class="section"><h2>\ud83d\udd2e ML Forecast</h2><div class="placeholder-card">No forecast data available for ${ticker}.</div></div>`;
+    const horizonOrder = ['1d', '5d', '20d'];
+    const horizonLabels = { '1d': '1 Day', '5d': '1 Week', '20d': '1 Month' };
+    const barsHtml = horizonOrder.map((h) => {
+      const fc = proxy.horizons[h];
+      const isBull = fc.direction === 'bullish';
+      const prob = (fc.probability * 100).toFixed(1);
+      const col = isBull ? 'var(--green)' : 'var(--red)';
+      const bgCol = isBull ? 'var(--green-bg)' : 'var(--red-bg)';
+      const icon = isBull ? '\u25b2' : '\u25bc';
+      return `<div style="padding:.5rem .6rem;border-radius:8px;background:${bgCol};border:1px solid ${col}30;margin-bottom:.35rem"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.3rem"><span style="font-weight:600;font-size:.82rem">${horizonLabels[h]}</span><span style="font-weight:800;color:${col};font-size:.9rem">${icon} ${fc.direction.toUpperCase()} ${prob}%</span></div></div>`;
+    }).join('');
+    return `<div class="section"><h2>\ud83d\udd2e ML Forecast</h2>
+      <div class="placeholder-card" style="margin-bottom:.5rem">Champion output unavailable for ${ticker}; using proxy forecast from current technical state.</div>
+      ${barsHtml}
+      <div style="margin-top:.4rem;padding:.4rem .6rem;border-radius:6px;background:rgba(255,255,255,.02);border:1px solid var(--border);font-size:.72rem;color:var(--text-dim)">
+        Model: <strong style="color:var(--text)">${proxy.model}</strong> · Data: <strong style="color:var(--text)">${proxy.freshness}</strong>
+      </div>
+    </div>`;
+  }
 
   const modelAccuracy = insights?.forecast_meta?.accuracy || {};
   const champion = insights?.forecast_meta?.champion_id || 'N/A';
@@ -789,10 +916,24 @@ ${barsHtml}
 // ═══════════════════════════════════════════════════════════════════════════
 // ELLIOTT WAVE INTEGRATION
 // ═══════════════════════════════════════════════════════════════════════════
-async function buildElliottInsight(ticker) {
+async function buildElliottInsight(ticker, context = {}) {
   const insights = await _loadInsights(ticker);
   const entry = insights?.elliott;
-  if (!entry) return `<div class="section"><h2>\ud83c\udf0a Elliott Wave Analysis</h2><div class="placeholder-card">No Elliott Wave data available for ${ticker}.</div></div>`;
+  if (!entry) {
+    const proxy = _proxyElliottSignal(context);
+    if (!proxy) return `<div class="section"><h2>\ud83c\udf0a Elliott Wave Analysis</h2><div class="placeholder-card">No Elliott Wave data available for ${ticker}.</div></div>`;
+    const trendCol = proxy.direction === 'bullish' ? 'var(--green)' : 'var(--red)';
+    return `<div class="section"><h2>\ud83c\udf0a Elliott Wave Analysis</h2>
+      <div class="placeholder-card" style="margin-bottom:.5rem">Wave model output unavailable for ${ticker}; showing deterministic local wave proxy.</div>
+      <div style="display:flex;gap:.75rem;flex-wrap:wrap;margin-bottom:.45rem">
+        <div style="padding:.5rem .8rem;border-radius:8px;background:rgba(99,102,241,.08);border:1px solid rgba(99,102,241,.25);flex:1;min-width:120px"><div style="font-size:.72rem;color:var(--text-dim)">Developing Wave</div><div style="font-size:1.05rem;font-weight:800;color:var(--accent)">${proxy.wave}</div></div>
+        <div style="padding:.5rem .8rem;border-radius:8px;background:rgba(255,255,255,.03);border:1px solid var(--border);flex:1;min-width:120px"><div style="font-size:.72rem;color:var(--text-dim)">Direction</div><div style="font-size:1rem;font-weight:700;color:${trendCol}">${proxy.direction.toUpperCase()}</div></div>
+        <div style="padding:.5rem .8rem;border-radius:8px;background:rgba(255,255,255,.03);border:1px solid var(--border);flex:1;min-width:120px"><div style="font-size:.72rem;color:var(--text-dim)">Confidence</div><div style="font-size:1rem;font-weight:700">${proxy.confidence}%</div></div>
+        <div style="padding:.5rem .8rem;border-radius:8px;background:rgba(255,255,255,.03);border:1px solid var(--border);flex:1;min-width:120px"><div style="font-size:.72rem;color:var(--text-dim)">Fib Conformance</div><div style="font-size:1rem;font-weight:700">${proxy.fibConformance}%</div></div>
+      </div>
+      <div style="font-size:.75rem;color:var(--text-dim)">Support: <strong style="color:var(--green)">$${proxy.support.toFixed(2)}</strong> · Resistance: <strong style="color:var(--red)">$${proxy.resistance.toFixed(2)}</strong></div>
+    </div>`;
+  }
 
   const completed = entry.completedPattern || {};
   const developing = entry.developingPattern || {};

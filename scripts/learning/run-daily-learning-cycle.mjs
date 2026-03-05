@@ -32,7 +32,11 @@ const PUBLIC_REPORT_JS = path.join(ROOT, 'public/data/reports/learning-report-la
 
 const FORECAST_LEDGER = path.join(ROOT, 'mirrors/forecast/ledger');
 const SCIENTIFIC_SUMMARY = path.join(ROOT, 'public/data/supermodules/scientific-summary.json');
+const SCIENTIFIC_SNAPSHOT = path.join(ROOT, 'public/data/snapshots/stock-analysis.json');
 const EOD_BATCH = path.join(ROOT, 'public/data/eod/batches/eod.latest.000.json');
+const EOD_US_NDJSON = path.join(ROOT, 'public/data/v3/eod/US/latest.ndjson.gz');
+const ELLIOTT_DIR = path.join(ROOT, 'public/data/marketphase');
+const SSOT_MANIFEST = resolveSsotPath(ROOT, 'manifest.json');
 const V7_STOCK_ROWS = resolveSsotPath(ROOT, 'stocks.max.rows.json');
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
@@ -134,6 +138,26 @@ function loadEodPrices() {
             }
         }
     }
+
+    // Prefer richer v3 US EOD feed when available (typically ~2,450 rows vs legacy 100-row batch).
+    const usRows = readNdjson(EOD_US_NDJSON);
+    for (const row of usRows) {
+        const ticker = String(row?.ticker || row?.symbol || '').toUpperCase();
+        if (!ticker) continue;
+        const close = Number(row?.adj_close ?? row?.close);
+        if (!Number.isFinite(close) || close <= 0) continue;
+        const open = Number(row?.open);
+        const high = Number(row?.high);
+        const low = Number(row?.low);
+        const date = String(row?.trading_date || row?.date || '').slice(0, 10) || null;
+        prices[ticker] = {
+            close,
+            open: Number.isFinite(open) ? open : close,
+            high: Number.isFinite(high) ? high : close,
+            low: Number.isFinite(low) ? low : close,
+            date
+        };
+    }
     return prices;
 }
 
@@ -143,6 +167,17 @@ function daysBetween(fromDate, toDate) {
     const to = new Date(toDate);
     if (Number.isNaN(from.getTime()) || Number.isNaN(to.getTime())) return null;
     return Math.max(0, Math.round((to - from) / 86400000));
+}
+
+function normalizeDate(value) {
+    const date = String(value || '').slice(0, 10);
+    return /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : null;
+}
+
+function resolveRunDate(dateArg) {
+    const explicit = normalizeDate(dateArg);
+    if (explicit) return explicit;
+    return isoDate(new Date());
 }
 
 // ─── 1. FORECAST: Extract Predictions ───────────────────────────────────────
@@ -273,61 +308,110 @@ function extractForecastPredictions(date, eodPrices) {
 // ─── 2. SCIENTIFIC: Extract Setup/Trigger Predictions ───────────────────────
 // IMPROVEMENT: Signal strength threshold ≥ 60, Setup decay (10d max), stricter trigger logic
 function extractScientificPredictions(date, eodPrices) {
-    const doc = readJson(SCIENTIFIC_SUMMARY);
-    if (!doc) {
-        console.warn('[learning] Scientific: summary file not found');
-        return [];
+    function toStrength(item) {
+        const setupScore = Number(item?.setup?.score ?? item?.setup_score ?? 0);
+        const raw = item?.signal_strength;
+        if (typeof raw === 'number' && Number.isFinite(raw)) return raw;
+        if (typeof raw === 'string') {
+            if (raw === 'STRONG') return 80;
+            if (raw === 'MODERATE') return 60;
+            if (raw === 'WEAK') return 30;
+        }
+        return Number.isFinite(setupScore) ? setupScore : 0;
     }
 
-    const signals = Array.isArray(doc.strong_signals) ? doc.strong_signals : [];
-    const setups = Array.isArray(doc.best_setups) ? doc.best_setups : [];
+    const snapshotDoc = readJson(SCIENTIFIC_SNAPSHOT);
+    const snapshotAsOf = normalizeDate(snapshotDoc?._meta?.generated_at);
+    const snapshotPreds = [];
+    if (snapshotDoc && typeof snapshotDoc === 'object') {
+        for (const [key, item] of Object.entries(snapshotDoc)) {
+            if (!item || typeof item !== 'object') continue;
+            if (key.startsWith('_')) continue;
+            if (item.status === 'DATA_UNAVAILABLE') continue;
+            const ticker = String(item.ticker || item.symbol || key || '').toUpperCase();
+            if (!ticker) continue;
 
+            const signalStrength = toStrength(item);
+            if (signalStrength < 60) continue;
+            const setup = item.setup || {};
+            const trigger = item.trigger || {};
+            const setupMet = setup.fulfilled ?? setup.met ?? setup.setup_met ?? (signalStrength > 50);
+            const triggerMet = trigger.fulfilled ?? trigger.met ?? trigger.trigger_met ?? (signalStrength > 70);
+            const setupDate = item.setup_date || item.date || snapshotAsOf || date;
+            const setupAgeDays = Math.max(0, Math.round((new Date(date) - new Date(setupDate)) / 86400000));
+            const decayFactor = setupAgeDays > 10 ? 0.5 : setupAgeDays > 5 ? 0.8 : 1.0;
+            const rawProb = Number(item.probability);
+            const prob = Number.isFinite(rawProb) ? rawProb : (triggerMet ? 0.65 : setupMet ? 0.55 : 0.45);
+            const probability = round(0.5 + (prob - 0.5) * decayFactor);
+            const direction = probability >= 0.5 ? 'bullish' : 'bearish';
+            const price = eodPrices[ticker]?.close ?? item.price ?? null;
+
+            snapshotPreds.push({
+                feature: 'scientific',
+                ticker,
+                date,
+                horizon: '5d',
+                setup_met: Boolean(setupMet),
+                trigger_met: Boolean(triggerMet),
+                setup_score: signalStrength,
+                setup_age_days: setupAgeDays,
+                decay_factor: decayFactor,
+                probability,
+                direction,
+                price_at_prediction: price,
+                source: 'scientific_snapshot'
+            });
+        }
+    }
+
+    if (snapshotPreds.length) {
+        const sorted = snapshotPreds
+            .sort((a, b) => (b.setup_score - a.setup_score) || (b.probability - a.probability) || a.ticker.localeCompare(b.ticker))
+            .slice(0, 2500);
+        console.log(`[learning] Scientific: ${sorted.length} predictions from stock-analysis snapshot`);
+        return {
+            predictions: sorted,
+            source_meta: {
+                source: 'scientific_snapshot',
+                asof: snapshotAsOf || null,
+                fresh: Boolean(snapshotAsOf && snapshotAsOf === date),
+                stale_days: daysBetween(snapshotAsOf, date)
+            }
+        };
+    }
+
+    const summaryDoc = readJson(SCIENTIFIC_SUMMARY);
+    if (!summaryDoc) {
+        console.warn('[learning] Scientific: no snapshot and no summary file');
+        return {
+            predictions: [],
+            source_meta: { source: 'scientific_missing', asof: null, fresh: false, stale_days: null }
+        };
+    }
+
+    const summaryAsOf = normalizeDate(summaryDoc?.generated_at);
+    const signals = Array.isArray(summaryDoc.strong_signals) ? summaryDoc.strong_signals : [];
+    const setups = Array.isArray(summaryDoc.best_setups) ? summaryDoc.best_setups : [];
     const seen = new Set();
-    const items = [];
+    const preds = [];
     for (const item of [...signals, ...setups]) {
         const ticker = String(item.symbol || item.ticker || '').toUpperCase();
         if (!ticker || seen.has(ticker)) continue;
         seen.add(ticker);
-        items.push(item);
-    }
 
-    console.log(`[learning] Scientific: ${items.length} unique items from ${signals.length} signals + ${setups.length} setups`);
-
-    const preds = items.map(item => {
-        const ticker = String(item.symbol || item.ticker || '').toUpperCase();
-        const price = eodPrices[ticker]?.close ?? item.price ?? null;
+        const signalStrength = toStrength(item);
+        if (signalStrength < 60) continue;
         const setup = item.setup || {};
         const trigger = item.trigger || {};
-
-        // Resolve signal_strength: can be string ("STRONG") or number
-        let signalStrength = item.signal_strength ?? 0;
-        if (typeof signalStrength === 'string') {
-            // Map string labels to numeric values
-            signalStrength = signalStrength === 'STRONG' ? 80 :
-                             signalStrength === 'MODERATE' ? 60 :
-                             signalStrength === 'WEAK' ? 30 :
-                             setup.score ?? 0;
-        }
-
-        // FILTER: Signal strength must be ≥ 60 (was > 0)
-        if (signalStrength < 60) return null;
-
         const setupMet = setup.fulfilled ?? setup.met ?? setup.setup_met ?? (signalStrength > 50);
         const triggerMet = trigger.fulfilled ?? trigger.met ?? trigger.trigger_met ?? (signalStrength > 70);
-
-        // SETUP DECAY: Reduce confidence for old setups
         const setupDate = item.setup_date || item.date || date;
         const setupAgeDays = Math.max(0, Math.round((new Date(date) - new Date(setupDate)) / 86400000));
         const decayFactor = setupAgeDays > 10 ? 0.5 : setupAgeDays > 5 ? 0.8 : 1.0;
-
-        const prob = item.probability ?? null;
-        const direction = prob != null ? (prob > 0.5 ? 'bullish' : 'bearish') : 'neutral';
-
-        // STRICTER PROBABILITY: Requires both setup AND trigger for high confidence
-        let baseProbability = prob ?? (triggerMet ? 0.65 : setupMet ? 0.55 : 0.45);
-        baseProbability = round(0.5 + (baseProbability - 0.5) * decayFactor);
-
-        return {
+        const rawProb = Number(item.probability);
+        const prob = Number.isFinite(rawProb) ? rawProb : (triggerMet ? 0.65 : setupMet ? 0.55 : 0.45);
+        const probability = round(0.5 + (prob - 0.5) * decayFactor);
+        preds.push({
             feature: 'scientific',
             ticker,
             date,
@@ -337,20 +421,91 @@ function extractScientificPredictions(date, eodPrices) {
             setup_score: signalStrength,
             setup_age_days: setupAgeDays,
             decay_factor: decayFactor,
-            probability: baseProbability,
-            direction,
-            price_at_prediction: price,
+            probability,
+            direction: probability >= 0.5 ? 'bullish' : 'bearish',
+            price_at_prediction: eodPrices[ticker]?.close ?? item.price ?? null,
             source: 'scientific_summary'
-        };
-    }).filter(Boolean).filter(r => r.ticker);
+        });
+    }
 
-    console.log(`[learning] Scientific: ${preds.length} predictions after filters (signal_strength ≥ 60)`);
-    return preds;
+    console.log(`[learning] Scientific: ${preds.length} predictions from summary fallback`);
+    return {
+        predictions: preds,
+        source_meta: {
+            source: 'scientific_summary',
+            asof: summaryAsOf || null,
+            fresh: Boolean(summaryAsOf && summaryAsOf === date),
+            stale_days: daysBetween(summaryAsOf, date)
+        }
+    };
 }
 
 // ─── 3. ELLIOTT: Extract Wave Predictions ───────────────────────────────────
 // IMPROVEMENT: Quality > Quantity — only top 500 by confidence, minimum confidence ≥ 0.30
-function extractElliottPredictions(date, eodPrices) {
+function extractElliottPredictions(date, eodPrices, candidateTickers = []) {
+    function toDirection(raw) {
+        const dir = String(raw || '').toLowerCase();
+        if (dir.includes('bull')) return 'bullish';
+        if (dir.includes('bear')) return 'bearish';
+        return 'neutral';
+    }
+
+    function toConfidence(entry = {}) {
+        const c1 = Number(entry?.developingPattern?.confidence);
+        if (Number.isFinite(c1)) return c1 / 100;
+        const c2 = Number(entry?.uncertainty?.confidenceDecay?.adjusted);
+        if (Number.isFinite(c2)) return c2 / 100;
+        const c3 = Number(entry?.completedPattern?.confidence0_100);
+        if (Number.isFinite(c3)) return c3 / 100;
+        return 0;
+    }
+
+    const tickerSet = new Set(candidateTickers.map((t) => String(t || '').toUpperCase()).filter(Boolean));
+    const perTickerPreds = [];
+    let latestAsOf = null;
+    if (tickerSet.size) {
+        for (const ticker of tickerSet) {
+            const doc = readJson(path.join(ELLIOTT_DIR, `${ticker}.json`));
+            const elliott = doc?.data?.elliott;
+            if (!elliott) continue;
+            const direction = toDirection(elliott?.completedPattern?.direction || doc?.data?.features?.SMATrend);
+            const confidence = toConfidence(elliott);
+            const wavePosition = elliott?.developingPattern?.possibleWave || 'unknown';
+            const asof = normalizeDate(doc?.meta?.generatedAt || doc?.meta?.fetchedAt);
+            if (asof && (!latestAsOf || asof > latestAsOf)) latestAsOf = asof;
+            if (direction === 'neutral') continue;
+            perTickerPreds.push({
+                feature: 'elliott',
+                ticker,
+                date,
+                horizon: '5d',
+                wave_position: wavePosition,
+                direction,
+                confidence,
+                probability: direction === 'bullish' ? 0.5 + confidence / 2 : 0.5 - confidence / 2,
+                price_at_prediction: eodPrices[ticker]?.close ?? null,
+                source: 'marketphase_per_symbol'
+            });
+        }
+    }
+
+    if (perTickerPreds.length) {
+        const qualityPreds = perTickerPreds
+            .filter((p) => p.confidence >= 0.30)
+            .sort((a, b) => b.confidence - a.confidence)
+            .slice(0, 1500);
+        console.log(`[learning] Elliott: ${qualityPreds.length} quality predictions from per-symbol files`);
+        return {
+            predictions: qualityPreds,
+            source_meta: {
+                source: 'marketphase_per_symbol',
+                asof: latestAsOf || null,
+                fresh: Boolean(latestAsOf && latestAsOf === date),
+                stale_days: daysBetween(latestAsOf, date)
+            }
+        };
+    }
+
     const deepPath = path.join(ROOT, 'public/data/universe/v7/read_models/marketphase_deep_summary.json');
     const doc = readJson(deepPath);
     const items = doc?.items || [];
@@ -413,7 +568,15 @@ function extractElliottPredictions(date, eodPrices) {
         .slice(0, 500);
 
     console.log(`[learning] Elliott: ${allPreds.length} total → ${qualityPreds.length} quality predictions (conf ≥ 0.30, top 500)`);
-    return qualityPreds;
+    return {
+        predictions: qualityPreds,
+        source_meta: {
+            source: items.length ? 'marketphase_deep' : 'eod_heuristic',
+            asof: normalizeDate(doc?.as_of || doc?.generated_at) || null,
+            fresh: Boolean(normalizeDate(doc?.as_of || doc?.generated_at) === date),
+            stale_days: daysBetween(normalizeDate(doc?.as_of || doc?.generated_at), date)
+        }
+    };
 }
 
 // ─── 4. STOCK ANALYZER: Extract Rankings ────────────────────────────────────
@@ -788,17 +951,18 @@ function printReport(report) {
 // ─── Cross-Feature Conviction Score ─────────────────────────────────────────
 // IMPROVEMENT: Combines signals from all features for consensus scoring
 function computeConvictionScores(forecastPreds, scientificPreds, elliottPreds, stockPreds) {
-    const tickerSignals = {}; // ticker -> {sources, bullish, bearish, avgConf}
+    const tickerSignals = {}; // ticker -> { perFeature: { feature: { direction, confidence } } }
 
     function addSignal(ticker, feature, direction, confidence) {
         if (!ticker || direction === 'neutral') return;
-        if (!tickerSignals[ticker]) tickerSignals[ticker] = { sources: [], bullish: 0, bearish: 0, totalConf: 0, count: 0 };
+        if (!tickerSignals[ticker]) tickerSignals[ticker] = { perFeature: {} };
         const entry = tickerSignals[ticker];
-        entry.sources.push(feature);
-        if (direction === 'bullish') entry.bullish++;
-        else entry.bearish++;
-        entry.totalConf += confidence || 0.5;
-        entry.count++;
+        const conf = Number.isFinite(Number(confidence)) ? Number(confidence) : 0.5;
+        const prev = entry.perFeature[feature];
+        // Keep one vote per feature (best-confidence sample), so forecast horizons don't triple-count.
+        if (!prev || conf > prev.confidence) {
+            entry.perFeature[feature] = { direction, confidence: conf };
+        }
     }
 
     for (const p of forecastPreds) addSignal(p.ticker, 'forecast', p.direction, p.probability);
@@ -808,20 +972,28 @@ function computeConvictionScores(forecastPreds, scientificPreds, elliottPreds, s
 
     const convictions = [];
     for (const [ticker, sig] of Object.entries(tickerSignals)) {
-        if (sig.count < 2) continue; // Need at least 2 features to agree
-        const totalVotes = sig.bullish + sig.bearish;
-        const consensusDirection = sig.bullish > sig.bearish ? 'bullish' : 'bearish';
-        const consensusStrength = Math.max(sig.bullish, sig.bearish) / totalVotes;
-        const avgConfidence = sig.totalConf / sig.count;
+        const votes = Object.entries(sig.perFeature || {});
+        if (votes.length < 2) continue; // Need at least 2 independent features
+        const sources = votes.map(([feature]) => feature);
+        const bullish = votes.filter(([, vote]) => vote.direction === 'bullish').length;
+        const bearish = votes.filter(([, vote]) => vote.direction === 'bearish').length;
+        const totalConf = votes.reduce((sum, [, vote]) => sum + (vote.confidence || 0.5), 0);
+        const sourceCount = votes.length;
+
+        const totalVotes = bullish + bearish;
+        if (!totalVotes) continue;
+        const consensusDirection = bullish >= bearish ? 'bullish' : 'bearish';
+        const consensusStrength = Math.max(bullish, bearish) / totalVotes;
+        const avgConfidence = totalConf / sourceCount;
 
         convictions.push({
             ticker,
             direction: consensusDirection,
-            sources: sig.sources,
-            source_count: sig.count,
+            sources,
+            source_count: sourceCount,
             consensus_strength: round(consensusStrength),
             avg_confidence: round(avgConfidence),
-            conviction_score: round(consensusStrength * avgConfidence * (sig.count / 3)), // max ~1.0 if 3 features agree strongly
+            conviction_score: round(consensusStrength * avgConfidence * (sourceCount / 3)), // max 1.0 when 3 features align strongly
         });
     }
 
@@ -863,7 +1035,7 @@ function computeForwardReturns(date, eodPrices) {
 async function main() {
     const args = process.argv.slice(2);
     const dateArg = args.find(a => a.startsWith('--date='));
-    const date = dateArg ? dateArg.split('=')[1] : isoDate(new Date());
+    const date = resolveRunDate(dateArg ? dateArg.split('=')[1] : null);
 
     console.log(`[learning] Starting daily learning cycle for ${date}...`);
     console.log('[learning] Improvements active: Calibration feedback, Signal ≥60, Elliott top-500, EMA smoothing, Cross-feature conviction');
@@ -876,12 +1048,16 @@ async function main() {
     console.log('[learning] Extracting predictions...');
     const forecastResult = extractForecastPredictions(date, eodPrices);
     const forecastPreds = forecastResult.predictions || [];
-    const scientificPreds = extractScientificPredictions(date, eodPrices);
-    const scientificDoc = readJson(SCIENTIFIC_SUMMARY);
-    const scientificGeneratedAt = String(scientificDoc?.generated_at || '').slice(0, 10) || null;
-    const elliottPreds = extractElliottPredictions(date, eodPrices);
-    const elliottDoc = readJson(path.join(ROOT, 'public/data/universe/v7/read_models/marketphase_deep_summary.json'));
-    const elliottAsof = String(elliottDoc?.as_of || elliottDoc?.generated_at || '').slice(0, 10) || null;
+    const scientificResult = extractScientificPredictions(date, eodPrices);
+    const scientificPreds = scientificResult.predictions || [];
+    const elliottCandidates = Array.from(
+        new Set([
+            ...forecastPreds.map((p) => p?.ticker),
+            ...scientificPreds.map((p) => p?.ticker)
+        ].map((t) => String(t || '').toUpperCase()).filter(Boolean))
+    );
+    const elliottResult = extractElliottPredictions(date, eodPrices, elliottCandidates);
+    const elliottPreds = elliottResult.predictions || [];
     const stockResult = extractStockRankings(date);
     const stockPreds = stockResult.rankings || [];
 
@@ -919,19 +1095,9 @@ async function main() {
         forecast: forecastPreds.length,
         forecast_source_meta: forecastResult.source_meta,
         scientific: scientificPreds.length,
-        scientific_source_meta: {
-            source: 'scientific_summary',
-            asof: scientificGeneratedAt,
-            fresh: Boolean(scientificGeneratedAt && scientificGeneratedAt === date),
-            stale_days: daysBetween(scientificGeneratedAt, date)
-        },
+        scientific_source_meta: scientificResult.source_meta,
         elliott: elliottPreds.length,
-        elliott_source_meta: {
-            source: 'marketphase_deep_summary',
-            asof: elliottAsof,
-            fresh: Boolean(elliottAsof && elliottAsof === date),
-            stale_days: daysBetween(elliottAsof, date)
-        },
+        elliott_source_meta: elliottResult.source_meta,
         stock: stockPreds.length,
         stock_source_meta: stockResult.source_meta
     });

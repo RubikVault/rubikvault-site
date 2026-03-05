@@ -525,7 +525,10 @@ async function main() {
 
   console.log(JSON.stringify({
     ok: true,
-    out_dir: path.relative(REPO_ROOT, OUT_DIR),
+    out_dir: {
+      public: path.relative(REPO_ROOT, PUBLIC_OUT_DIR),
+      mirror: path.relative(REPO_ROOT, MIRROR_OUT_DIR)
+    },
     stocks_total: rows.length,
     feature_eligible_counts: manifest.feature_eligible_counts
   }, null, 2));

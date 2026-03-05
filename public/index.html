@@ -31,6 +31,7 @@
   <!-- Styles -->
   <link rel="stylesheet" href="/style.css?v=2" />
   <link rel="stylesheet" href="/search.css" />
+  <link rel="stylesheet" href="/assets/css/market-hub.css" />
   <style>
     #rv-sticky-search {
       position: sticky;
@@ -380,253 +381,10 @@
       </section>
     </div>
 
-    <section id="market-view" style="display:none;">
-      <div
-        style="display:flex; justify-content:space-between; gap:0.8rem; align-items:flex-end; flex-wrap:wrap; margin-bottom:1.2rem;">
-        <div>
-          <h1 style="font-size:2.1rem; color:#e5e7eb; margin:0;">Market</h1>
-          <div style="font-size:0.95rem; color:#94a3b8;">Static-first market cockpit</div>
-        </div>
-        <div id="market-view-meta" style="font-size:0.8rem; color:#94a3b8;">Loading market snapshot…</div>
-      </div>
-      <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); gap:1rem;">
-        <article
-          style="padding:1rem; background:rgba(15,23,42,0.35); border:1px solid rgba(100,116,139,0.22); border-radius:12px;">
-          <div
-            style="font-size:0.85rem; color:#94a3b8; text-transform:uppercase; letter-spacing:0.08em; margin-bottom:0.5rem;">
-            Pulse</div>
-          <div id="market-pulse-block" style="color:#64748b;">Loading pulse…</div>
-        </article>
-        <article
-          style="padding:1rem; background:rgba(15,23,42,0.35); border:1px solid rgba(100,116,139,0.22); border-radius:12px;">
-          <div
-            style="font-size:0.85rem; color:#94a3b8; text-transform:uppercase; letter-spacing:0.08em; margin-bottom:0.5rem;">
-            Rotation</div>
-          <div id="market-rotation-block" style="color:#64748b;">Loading sector rotation…</div>
-        </article>
-        <article
-          style="padding:1rem; background:rgba(15,23,42,0.35); border:1px solid rgba(100,116,139,0.22); border-radius:12px;">
-          <div
-            style="font-size:0.85rem; color:#94a3b8; text-transform:uppercase; letter-spacing:0.08em; margin-bottom:0.5rem;">
-            Movers</div>
-          <div id="market-movers-block" style="color:#64748b;">Loading movers…</div>
-        </article>
-      </div>
-      <article
-        style="margin-top:1rem; padding:1rem; background:rgba(15,23,42,0.35); border:1px solid rgba(100,116,139,0.22); border-radius:12px;">
-        <div style="display:flex; justify-content:space-between; gap:0.6rem; align-items:flex-end; flex-wrap:wrap;">
-          <div>
-            <div
-              style="font-size:0.85rem; color:#94a3b8; text-transform:uppercase; letter-spacing:0.08em; margin-bottom:0.3rem;">
-              Expanded Universe (v7)
-            </div>
-            <div id="market-v7-summary" style="font-size:0.88rem; color:#cbd5e1;">Loading coverage…</div>
-            <div id="market-v7-feature" style="font-size:0.8rem; color:#94a3b8; margin-top:0.25rem;">Loading
-              eligibility…</div>
-            <div id="market-v7-types" style="font-size:0.76rem; color:#64748b; margin-top:0.25rem;">Loading asset
-              classes…</div>
-            <div id="market-v7-exchanges" style="font-size:0.76rem; color:#64748b; margin-top:0.25rem;">Loading
-              exchanges…</div>
-          </div>
-          <div style="display:flex; gap:0.45rem; align-items:center; flex-wrap:wrap;">
-            <label for="market-v7-class-filter" style="font-size:0.78rem; color:#94a3b8;">Asset class</label>
-            <select id="market-v7-class-filter" class="rv-sticky-select" style="min-width:130px;">
-              <option value="all">All</option>
-              <option value="stock">Stock</option>
-              <option value="etf">ETF</option>
-              <option value="fund">Fund</option>
-              <option value="crypto">Crypto</option>
-              <option value="forex">Forex</option>
-              <option value="bond">Bond</option>
-              <option value="index">Index</option>
-              <option value="other">Other</option>
-            </select>
-            <button id="market-v7-page-prev" class="rv-sticky-btn" type="button"
-              style="padding:0.35rem 0.7rem;">Prev</button>
-            <div id="market-v7-page-label"
-              style="font-size:0.78rem; color:#94a3b8; min-width:110px; text-align:center;">Page 1 / 1</div>
-            <button id="market-v7-page-next" class="rv-sticky-btn" type="button"
-              style="padding:0.35rem 0.7rem;">Next</button>
-          </div>
-        </div>
-        <div id="market-v7-meta" style="margin-top:0.45rem; font-size:0.75rem; color:#64748b;">Loading rows…</div>
-        <div style="margin-top:0.65rem; overflow:auto;">
-          <table style="width:100%; border-collapse:collapse; min-width:860px; font-size:0.86rem;">
-            <thead>
-              <tr>
-                <th
-                  style="padding:0.45rem; text-align:left; color:#94a3b8; border-bottom:1px solid rgba(100,116,139,0.22);">
-                  Symbol</th>
-                <th
-                  style="padding:0.45rem; text-align:left; color:#94a3b8; border-bottom:1px solid rgba(100,116,139,0.22);">
-                  Name</th>
-                <th
-                  style="padding:0.45rem; text-align:left; color:#94a3b8; border-bottom:1px solid rgba(100,116,139,0.22);">
-                  Class</th>
-                <th
-                  style="padding:0.45rem; text-align:left; color:#94a3b8; border-bottom:1px solid rgba(100,116,139,0.22);">
-                  Exchange</th>
-                <th
-                  style="padding:0.45rem; text-align:left; color:#94a3b8; border-bottom:1px solid rgba(100,116,139,0.22);">
-                  Status</th>
-                <th
-                  style="padding:0.45rem; text-align:right; color:#94a3b8; border-bottom:1px solid rgba(100,116,139,0.22);">
-                  Bars</th>
-                <th
-                  style="padding:0.45rem; text-align:left; color:#94a3b8; border-bottom:1px solid rgba(100,116,139,0.22);">
-                  Last Trade</th>
-              </tr>
-            </thead>
-            <tbody id="market-v7-tbody">
-              <tr>
-                <td colspan="7" style="padding:0.9rem; color:#64748b;">Loading v7 market rows…</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </article>
-      <article
-        style="margin-top:1rem; padding:1rem; background:rgba(15,23,42,0.35); border:1px solid rgba(100,116,139,0.22); border-radius:12px;">
-        <div
-          style="font-size:0.85rem; color:#94a3b8; text-transform:uppercase; letter-spacing:0.08em; margin-bottom:0.5rem;">
-          Category Views
-        </div>
-        <div style="font-size:0.8rem; color:#64748b; margin-bottom:0.8rem;">
-          Separate tables for Crypto, ETFs and Forex (no mixed list).
-        </div>
-        <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); gap:0.8rem;">
-          <section
-            style="padding:0.75rem; border:1px solid rgba(100,116,139,0.2); border-radius:10px; background:rgba(15,23,42,0.25);">
-            <div
-              style="display:flex; justify-content:space-between; align-items:center; gap:0.5rem; margin-bottom:0.45rem;">
-              <div style="font-weight:700; color:#e5e7eb;">Crypto</div>
-              <div id="market-cat-crypto-meta" style="font-size:0.75rem; color:#94a3b8;">Loading…</div>
-            </div>
-            <div style="overflow:auto; max-height:300px;">
-              <table style="width:100%; border-collapse:collapse; font-size:0.8rem;">
-                <thead>
-                  <tr>
-                    <th
-                      style="padding:0.35rem; text-align:left; color:#94a3b8; border-bottom:1px solid rgba(100,116,139,0.22);">
-                      Symbol</th>
-                    <th
-                      style="padding:0.35rem; text-align:left; color:#94a3b8; border-bottom:1px solid rgba(100,116,139,0.22);">
-                      Name</th>
-                    <th
-                      style="padding:0.35rem; text-align:left; color:#94a3b8; border-bottom:1px solid rgba(100,116,139,0.22);">
-                      Exchange</th>
-                  </tr>
-                </thead>
-                <tbody id="market-cat-crypto-tbody">
-                  <tr>
-                    <td colspan="3" style="padding:0.45rem; color:#64748b;">Loading…</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-            <div style="display:flex; justify-content:flex-end; align-items:center; gap:0.4rem; margin-top:0.55rem;">
-              <button id="market-cat-crypto-prev" class="rv-sticky-btn" type="button"
-                style="padding:0.3rem 0.6rem;">Prev</button>
-              <div id="market-cat-crypto-page"
-                style="font-size:0.74rem; color:#94a3b8; min-width:72px; text-align:center;">1 / 1</div>
-              <button id="market-cat-crypto-next" class="rv-sticky-btn" type="button"
-                style="padding:0.3rem 0.6rem;">Next</button>
-            </div>
-          </section>
-
-          <section
-            style="padding:0.75rem; border:1px solid rgba(100,116,139,0.2); border-radius:10px; background:rgba(15,23,42,0.25);">
-            <div
-              style="display:flex; justify-content:space-between; align-items:center; gap:0.5rem; margin-bottom:0.45rem;">
-              <div style="font-weight:700; color:#e5e7eb;">ETF</div>
-              <div id="market-cat-etf-meta" style="font-size:0.75rem; color:#94a3b8;">Loading…</div>
-            </div>
-            <div style="overflow:auto; max-height:300px;">
-              <table style="width:100%; border-collapse:collapse; font-size:0.8rem;">
-                <thead>
-                  <tr>
-                    <th
-                      style="padding:0.35rem; text-align:left; color:#94a3b8; border-bottom:1px solid rgba(100,116,139,0.22);">
-                      Symbol</th>
-                    <th
-                      style="padding:0.35rem; text-align:left; color:#94a3b8; border-bottom:1px solid rgba(100,116,139,0.22);">
-                      Name</th>
-                    <th
-                      style="padding:0.35rem; text-align:left; color:#94a3b8; border-bottom:1px solid rgba(100,116,139,0.22);">
-                      Exchange</th>
-                  </tr>
-                </thead>
-                <tbody id="market-cat-etf-tbody">
-                  <tr>
-                    <td colspan="3" style="padding:0.45rem; color:#64748b;">Loading…</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-            <div style="display:flex; justify-content:flex-end; align-items:center; gap:0.4rem; margin-top:0.55rem;">
-              <button id="market-cat-etf-prev" class="rv-sticky-btn" type="button"
-                style="padding:0.3rem 0.6rem;">Prev</button>
-              <div id="market-cat-etf-page"
-                style="font-size:0.74rem; color:#94a3b8; min-width:72px; text-align:center;">1 / 1</div>
-              <button id="market-cat-etf-next" class="rv-sticky-btn" type="button"
-                style="padding:0.3rem 0.6rem;">Next</button>
-            </div>
-          </section>
-
-          <section
-            style="padding:0.75rem; border:1px solid rgba(100,116,139,0.2); border-radius:10px; background:rgba(15,23,42,0.25);">
-            <div
-              style="display:flex; justify-content:space-between; align-items:center; gap:0.5rem; margin-bottom:0.45rem;">
-              <div style="font-weight:700; color:#e5e7eb;">Forex</div>
-              <div id="market-cat-forex-meta" style="font-size:0.75rem; color:#94a3b8;">Loading…</div>
-            </div>
-            <div style="overflow:auto; max-height:300px;">
-              <table style="width:100%; border-collapse:collapse; font-size:0.8rem;">
-                <thead>
-                  <tr>
-                    <th
-                      style="padding:0.35rem; text-align:left; color:#94a3b8; border-bottom:1px solid rgba(100,116,139,0.22);">
-                      Symbol</th>
-                    <th
-                      style="padding:0.35rem; text-align:left; color:#94a3b8; border-bottom:1px solid rgba(100,116,139,0.22);">
-                      Name</th>
-                    <th
-                      style="padding:0.35rem; text-align:left; color:#94a3b8; border-bottom:1px solid rgba(100,116,139,0.22);">
-                      Exchange</th>
-                  </tr>
-                </thead>
-                <tbody id="market-cat-forex-tbody">
-                  <tr>
-                    <td colspan="3" style="padding:0.45rem; color:#64748b;">Loading…</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-            <div style="display:flex; justify-content:flex-end; align-items:center; gap:0.4rem; margin-top:0.55rem;">
-              <button id="market-cat-forex-prev" class="rv-sticky-btn" type="button"
-                style="padding:0.3rem 0.6rem;">Prev</button>
-              <div id="market-cat-forex-page"
-                style="font-size:0.74rem; color:#94a3b8; min-width:72px; text-align:center;">1 / 1</div>
-              <button id="market-cat-forex-next" class="rv-sticky-btn" type="button"
-                style="padding:0.3rem 0.6rem;">Next</button>
-            </div>
-          </section>
-        </div>
-      </article>
-
-      <article id="market-universe-explorer-shell"
-        style="margin-top:1rem; padding:1rem; background:rgba(15,23,42,0.35); border:1px solid rgba(100,116,139,0.22); border-radius:12px;">
-        <div
-          style="font-size:0.85rem; color:#94a3b8; text-transform:uppercase; letter-spacing:0.08em; margin-bottom:0.5rem;">
-          Markets → Universe (v7)
-        </div>
-        <div id="universe-explorer-root">
-          <div style="padding:0.8rem; border:1px solid rgba(100,116,139,0.22); border-radius:10px; color:#64748b;">
-            Loading Universe Explorer…
-          </div>
-        </div>
-      </article>
+    <section id="market-view" class="mh-root" style="display:none;">
+      <!-- Market Hub v3 — rendered by /assets/js/market-hub.js -->
     </section>
+    <script src="/assets/js/market-hub.js"></script>
 
     <section id="ideas-view" style="display:none;">
       <!-- ═══ Ideas Header with Top-Level Tab Navigation ═══ -->
@@ -1584,9 +1342,8 @@
     const bestSetupsCardsWrap = document.getElementById('best-setups-cards-wrap');
     const marketViewMeta = document.getElementById('market-view-meta');
     const ideasViewMeta = document.getElementById('ideas-view-meta');
-    const marketPulseBlock = document.getElementById('market-pulse-block');
-    const marketRotationBlock = document.getElementById('market-rotation-block');
-    const marketMoversBlock = document.getElementById('market-movers-block');
+    const marketRegimeBanner = document.getElementById('market-regime-banner');
+    // V7 panel elements (kept for backwards compat — DOM removed in v2)
     const marketV7SummaryEl = document.getElementById('market-v7-summary');
     const marketV7FeatureEl = document.getElementById('market-v7-feature');
     const marketV7TypesEl = document.getElementById('market-v7-types');
@@ -1597,35 +1354,8 @@
     const marketV7NextBtn = document.getElementById('market-v7-page-next');
     const marketV7PageLabelEl = document.getElementById('market-v7-page-label');
     const marketV7TbodyEl = document.getElementById('market-v7-tbody');
-    const marketCategoryPanels = {
-      crypto: {
-        tbody: document.getElementById('market-cat-crypto-tbody'),
-        meta: document.getElementById('market-cat-crypto-meta'),
-        pageLabel: document.getElementById('market-cat-crypto-page'),
-        prevBtn: document.getElementById('market-cat-crypto-prev'),
-        nextBtn: document.getElementById('market-cat-crypto-next'),
-        page: 0,
-        totalPages: 1
-      },
-      etf: {
-        tbody: document.getElementById('market-cat-etf-tbody'),
-        meta: document.getElementById('market-cat-etf-meta'),
-        pageLabel: document.getElementById('market-cat-etf-page'),
-        prevBtn: document.getElementById('market-cat-etf-prev'),
-        nextBtn: document.getElementById('market-cat-etf-next'),
-        page: 0,
-        totalPages: 1
-      },
-      forex: {
-        tbody: document.getElementById('market-cat-forex-tbody'),
-        meta: document.getElementById('market-cat-forex-meta'),
-        pageLabel: document.getElementById('market-cat-forex-page'),
-        prevBtn: document.getElementById('market-cat-forex-prev'),
-        nextBtn: document.getElementById('market-cat-forex-next'),
-        page: 0,
-        totalPages: 1
-      }
-    };
+    let globalMarketDoc = null;
+    let marketCurrentPage = 'snapshot';
     const ideasMoatContent = document.getElementById('ideas-moat-content');
     const ideasListContent = document.getElementById('ideas-list-content');
     const topNavLinks = Array.from(document.querySelectorAll('.rv-page-nav-link[data-top-route]'));
@@ -1646,6 +1376,7 @@
     const uiArtifactCache = new Map();
     const uiGzipCache = new Map();
     const ideasBarsCache = new Map();
+    let ideasSeriesTickerSetPromise = null;
     const coverageSummaryEl = document.getElementById('coverage-summary-text');
 
     const UNIVERSE_URL = '/data/universe/all.json';
@@ -1762,7 +1493,7 @@
       if (coverage) {
         const text = formatCoverageSummary(coverage);
         coverageSummaryEl.textContent = text;
-        try { localStorage.setItem('rv_coverage_cache', JSON.stringify({ text, ts: Date.now() })); } catch (_) {}
+        try { localStorage.setItem('rv_coverage_cache', JSON.stringify({ text, ts: Date.now() })); } catch (_) { }
         return;
       }
       // Fallback: load count from v7 search manifest
@@ -1774,7 +1505,7 @@
           if (total > 0) {
             const text = `Coverage: ${total.toLocaleString('en-US')} stocks`;
             coverageSummaryEl.textContent = text;
-            try { localStorage.setItem('rv_coverage_cache', JSON.stringify({ text, ts: Date.now() })); } catch (_) {}
+            try { localStorage.setItem('rv_coverage_cache', JSON.stringify({ text, ts: Date.now() })); } catch (_) { }
             return;
           }
         }
@@ -1838,6 +1569,9 @@
       if (analyzeHomeShell) analyzeHomeShell.style.display = normalized === 'analyze' ? 'block' : 'none';
       if (marketView) marketView.style.display = normalized === 'market' ? 'block' : 'none';
       if (ideasView) ideasView.style.display = normalized === 'ideas' ? 'block' : 'none';
+      // Hide search bar on non-analyze views (Market Hub has its own layout)
+      const stickySearch = document.getElementById('rv-sticky-search');
+      if (stickySearch) stickySearch.style.display = normalized === 'analyze' ? '' : 'none';
       setTopNavActive(normalized);
     }
 
@@ -2284,6 +2018,22 @@
     async function loadIdeasBarsForTicker(ticker) {
       const symbol = normalizeTicker(ticker);
       if (!symbol) return null;
+      // Adjusted series is currently available for the US EOD universe only.
+      // Skip non-US style symbols up-front to avoid noisy 404 bursts in IDEAS rendering.
+      if (symbol.includes('.')) return null;
+      if (!ideasSeriesTickerSetPromise) {
+        ideasSeriesTickerSetPromise = (async () => {
+          const rows = await loadGzipNdjson('/data/v3/eod/US/latest.ndjson.gz');
+          const set = new Set();
+          for (const row of rows) {
+            const t = normalizeTicker(row?.ticker || row?.symbol || '');
+            if (t) set.add(t);
+          }
+          return set;
+        })().catch(() => new Set());
+      }
+      const availableTickers = await ideasSeriesTickerSetPromise;
+      if (!availableTickers.has(symbol)) return null;
       if (ideasBarsCache.has(symbol)) return ideasBarsCache.get(symbol);
       const promise = (async () => {
         const rows = await loadGzipNdjson(`/data/v3/series/adjusted/US__${encodeURIComponent(symbol)}.ndjson.gz`);
@@ -2664,114 +2414,526 @@
       if (marketV7NextBtn) marketV7NextBtn.disabled = marketV7Page >= (marketV7TotalPages - 1);
     }
 
-    function renderMarketCategoryPanelRows(panel, items) {
-      if (!panel?.tbody) return;
-      if (!Array.isArray(items) || items.length === 0) {
-        panel.tbody.innerHTML = '<tr><td colspan=\"3\" style=\"padding:0.45rem; color:#64748b;\">No rows on this page.</td></tr>';
-        return;
-      }
-      panel.tbody.innerHTML = items.map((row) => {
-        const symbol = normalizeTicker(row?.symbol || '');
-        const exchange = String(row?.exchange || row?.mic || '—').toUpperCase();
-        return `
-          <tr>
-            <td style=\"padding:0.35rem; border-top:1px solid rgba(100,116,139,0.16);\"><a class=\"best-setup-link\" href=\"/analyze/${encodeURIComponent(symbol)}\" data-open-ticker=\"${escapeHtml(symbol)}\">${escapeHtml(symbol || '—')}</a></td>
-            <td style=\"padding:0.35rem; border-top:1px solid rgba(100,116,139,0.16); color:#cbd5e1;\">${escapeHtml(row?.name || '—')}</td>
-            <td style=\"padding:0.35rem; border-top:1px solid rgba(100,116,139,0.16); color:#94a3b8;\">${escapeHtml(exchange)}</td>
-          </tr>
-        `;
-      }).join('');
+    // --- Global Market Hub render helpers ---
 
-      panel.tbody.querySelectorAll('[data-open-ticker]').forEach((link) => {
-        link.addEventListener('click', async (ev) => {
-          ev.preventDefault();
-          const ticker = link.getAttribute('data-open-ticker');
-          if (!ticker) return;
-          await selectSymbol(ticker, universeByTicker.get(ticker) || null, { push: true });
-        });
-      });
+    function fmtPct(val) {
+      if (!Number.isFinite(Number(val))) return '—';
+      const n = Number(val);
+      const sign = n >= 0 ? '+' : '';
+      return `${sign}${n.toFixed(2)}%`;
     }
 
-    async function refreshMarketCategoryPanel(assetClass, { resetPage = false } = {}) {
-      const key = String(assetClass || '').toLowerCase();
-      const panel = marketCategoryPanels[key];
+    function pctColor(val) {
+      const n = Number(val);
+      if (!Number.isFinite(n)) return '#94a3b8';
+      return n >= 0 ? '#34d399' : '#f87171';
+    }
+
+    function fmtPrice(val, decimals = 2) {
+      if (!Number.isFinite(Number(val))) return '—';
+      return Number(val).toLocaleString('en-US', { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+    }
+
+    function flowBadge(flow) {
+      if (!flow) return '';
+      const dir = flow.direction || 'neutral';
+      const str = flow.strength || 'weak';
+      const colors = { bullish: '#34d399', bearish: '#f87171', neutral: '#94a3b8' };
+      const icons = { bullish: '▲', bearish: '▼', neutral: '◆' };
+      return `<span style="color:${colors[dir]}; font-size:0.72rem; font-weight:600;">${icons[dir]} ${dir}${str !== 'weak' ? ' (' + str + ')' : ''}</span>`;
+    }
+
+    function setupBadge(quality) {
+      if (!quality || quality === 'neutral') return '';
+      const map = {
+        'bullish-reversal': { label: 'REVERSAL SETUP', color: '#34d399', bg: 'rgba(52,211,153,0.12)' },
+        'bullish-continuation': { label: 'STRONG TREND', color: '#60a5fa', bg: 'rgba(96,165,250,0.12)' },
+        'caution-overextended': { label: 'OVEREXTENDED', color: '#f59e0b', bg: 'rgba(245,158,11,0.12)' },
+        'bearish-continuation': { label: 'BEARISH', color: '#f87171', bg: 'rgba(248,113,113,0.12)' }
+      };
+      const cfg = map[quality] || { label: quality, color: '#94a3b8', bg: 'rgba(100,116,139,0.1)' };
+      return `<span style="font-size:0.68rem; font-weight:700; padding:0.1rem 0.4rem; border-radius:4px; background:${cfg.bg}; color:${cfg.color};">${cfg.label}</span>`;
+    }
+
+    function sessionStatus(region) {
+      const now = new Date();
+      const utcH = now.getUTCHours() + now.getUTCMinutes() / 60;
+      const sessions = { asia: [0, 8], europe: [7, 16.5], americas: [13.5, 21] };
+      const [open, close] = sessions[region] || [0, 0];
+      const isOpen = utcH >= open && utcH < close;
+      // Weekend check
+      const day = now.getUTCDay();
+      if (day === 0 || day === 6) return { text: 'Weekend', color: '#64748b', bg: 'rgba(100,116,139,0.2)' };
+      if (isOpen) return { text: 'OPEN', color: '#34d399', bg: 'rgba(52,211,153,0.15)' };
+      return { text: 'Closed', color: '#94a3b8', bg: 'rgba(100,116,139,0.2)' };
+    }
+
+    // ═══════════════════════════════════════════════════
+    // MACRO HUB v2 — Tab System + Render Modules
+    // ═══════════════════════════════════════════════════
+
+    const MH = {
+      bg: '#070a0f', panel: '#0d1119', surface: '#111827', border: '#1c2535',
+      dim: '#243044', text: '#dde3ed', muted: '#5a6a82', faint: '#0f1722',
+      bull: '#10b981', warn: '#f59e0b', bear: '#ef4444', neutral: '#475569',
+      blue: '#3b82f6', purple: '#8b5cf6', orange: '#f97316',
+    };
+    const PHASE_COLORS = { EARLY: '#3b82f6', MID: '#10b981', LATE: '#f59e0b', EXHAUSTED: '#f97316', REVERSAL_RISK: '#ef4444', NEUTRAL: '#475569' };
+    const PHASE_LABELS = { EARLY: 'Early', MID: 'Mid Trend', LATE: 'Late', EXHAUSTED: 'Exhausted', REVERSAL_RISK: 'Reversal Risk', NEUTRAL: 'Neutral' };
+    const CONF_COLORS = { HIGH: '#10b981', MEDIUM: '#f59e0b', LOW: '#ef4444' };
+
+    window.switchMarketPage = function (page) {
+      document.querySelectorAll('.market-page-panel').forEach(p => p.style.display = 'none');
+      document.querySelectorAll('.market-page-tab').forEach(t => { t.style.background = 'transparent'; t.style.color = '#94a3b8'; t.classList.remove('market-tab-active'); });
+      const panel = document.getElementById('market-page-' + page);
+      const tab = document.getElementById('market-tab-' + page);
+      if (panel) panel.style.display = 'block';
+      if (tab) { tab.style.background = 'rgba(59,130,246,0.15)'; tab.style.color = '#60a5fa'; tab.classList.add('market-tab-active'); }
+      marketCurrentPage = page;
+      // Lazy render
+      if (globalMarketDoc) renderMarketTab(page, globalMarketDoc);
+    };
+
+    // ── UI Primitives ──
+    function mhScorePill(score) {
+      const s = Number(score) || 0;
+      const color = s >= 65 ? MH.bull : s >= 45 ? MH.warn : MH.bear;
+      return `<span style="display:inline-flex; align-items:center; gap:0.3rem; padding:0.15rem 0.55rem; border-radius:6px; background:${color}22; color:${color}; font-weight:700; font-size:0.85rem;">${s}</span>`;
+    }
+    function mhPhaseBadge(phase) {
+      const c = PHASE_COLORS[phase] || MH.neutral;
+      const l = PHASE_LABELS[phase] || phase || '—';
+      return `<span style="padding:0.12rem 0.5rem; border-radius:5px; background:${c}22; color:${c}; font-size:0.75rem; font-weight:600; text-transform:uppercase;">${escapeHtml(l)}</span>`;
+    }
+    function mhConfBadge(conf) {
+      const label = conf?.label || 'LOW';
+      const c = CONF_COLORS[label] || MH.neutral;
+      return `<span style="padding:0.1rem 0.4rem; border-radius:4px; background:${c}15; color:${c}; font-size:0.7rem; font-weight:600;">${label}</span>`;
+    }
+    function mhDriverChips(drivers) {
+      if (!Array.isArray(drivers) || !drivers.length) return '';
+      return drivers.slice(0, 3).map(d => {
+        const c = d.dir === 'up' ? MH.bull : d.dir === 'down' ? MH.bear : MH.muted;
+        return `<span style="padding:0.1rem 0.4rem; border-radius:4px; background:${c}15; color:${c}; font-size:0.72rem;">${escapeHtml(d.label)} ${d.value ? (typeof d.value === 'number' ? d.value.toFixed(1) + (d.unit || '') : d.value) : ''}</span>`;
+      }).join(' ');
+    }
+    function mhSourcesFooter(sources, asOf) {
+      const src = Array.isArray(sources) ? sources.join(', ') : (sources || 'EODHD');
+      return `<div style="margin-top:0.5rem; padding-top:0.4rem; border-top:1px solid ${MH.border}; font-size:0.68rem; color:${MH.muted};">Source: ${escapeHtml(src)} | As of: ${escapeHtml(asOf || '—')}</div>`;
+    }
+    function mhCard(inner) {
+      return `<article style="padding:1rem; background:${MH.panel}; border:1px solid ${MH.border}; border-radius:10px; margin-bottom:0.8rem;">${inner}</article>`;
+    }
+    function mhSectionTitle(title) {
+      return `<div style="font-size:0.82rem; color:${MH.muted}; text-transform:uppercase; letter-spacing:0.08em; margin-bottom:0.6rem;">${escapeHtml(title)}</div>`;
+    }
+
+    // ── Card Row (universal for sectors, commodities, crypto, forex) ──
+    function mhCardRow(card) {
+      if (!card) return '';
+      return `
+        <div style="display:flex; justify-content:space-between; align-items:center; padding:0.6rem 0; border-bottom:1px solid ${MH.border};">
+          <div style="flex:1; min-width:0;">
+            <div style="display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap;">
+              <span style="color:${MH.text}; font-weight:600; font-size:0.9rem;">${escapeHtml(card.name || card.id)}</span>
+              ${mhPhaseBadge(card.phase)}
+              ${mhConfBadge(card.confidence)}
+            </div>
+            <div style="margin-top:0.3rem; display:flex; gap:0.3rem; flex-wrap:wrap;">${mhDriverChips(card.drivers_top3)}</div>
+            ${card.tldr ? `<div style="margin-top:0.2rem; font-size:0.76rem; color:${MH.muted};">${escapeHtml(card.tldr)}</div>` : ''}
+          </div>
+          <div style="text-align:right; min-width:55px;">
+            ${mhScorePill(card.score)}
+          </div>
+        </div>`;
+    }
+
+    // ── Tab Renderers ──
+    function renderMarketTab(page, doc) {
+      const gDoc = doc?.data || null;
+      const cards = gDoc?.cards || {};
+      const asOf = doc?.meta?.data_date || '';
+      const panel = document.getElementById('market-page-' + page);
       if (!panel) return;
-      if (resetPage) panel.page = 0;
-
-      let pageDoc = await loadMarketCatalogPage(panel.page, key);
-      let totalPages = Number(pageDoc?.total_pages);
-      if ((!Number.isFinite(totalPages) || totalPages <= 0) && panel.page > 0) {
-        panel.page = 0;
-        pageDoc = await loadMarketCatalogPage(panel.page, key);
-        totalPages = Number(pageDoc?.total_pages);
+      switch (page) {
+        case 'snapshot': renderMHSnapshot(panel, gDoc, cards, asOf, doc); break;
+        case 'sectors': renderMHSectors(panel, cards, asOf); break;
+        case 'commodities': renderMHCommodities(panel, cards, asOf); break;
+        case 'crypto': renderMHCrypto(panel, cards, asOf); break;
+        case 'flows': renderMHFlows(panel, gDoc, cards, asOf); break;
+        case 'risks': renderMHRisks(panel, gDoc, cards, asOf); break;
+        case 'playbook': renderMHPlaybook(panel, gDoc, cards, asOf); break;
+        case 'methodology': renderMHMethodology(panel); break;
       }
-      panel.totalPages = Number.isFinite(totalPages) && totalPages > 0 ? totalPages : 1;
-
-      const rows = Array.isArray(pageDoc?.items) ? pageDoc.items.slice(0, 15) : [];
-      renderMarketCategoryPanelRows(panel, rows);
-
-      const totalItems = Number(pageDoc?.total_items);
-      if (panel.meta) {
-        panel.meta.textContent = `${Number.isFinite(totalItems) ? totalItems.toLocaleString('en-US') : '—'} items`;
-      }
-      if (panel.pageLabel) {
-        panel.pageLabel.textContent = `${panel.page + 1} / ${panel.totalPages}`;
-      }
-      if (panel.prevBtn) panel.prevBtn.disabled = panel.page <= 0;
-      if (panel.nextBtn) panel.nextBtn.disabled = panel.page >= (panel.totalPages - 1);
     }
 
-    async function refreshAllMarketCategoryPanels({ resetPage = false } = {}) {
-      await Promise.all([
-        refreshMarketCategoryPanel('crypto', { resetPage }),
-        refreshMarketCategoryPanel('etf', { resetPage }),
-        refreshMarketCategoryPanel('forex', { resetPage })
-      ]);
+    // ── SNAPSHOT TAB ──
+    function renderMHSnapshot(panel, gDoc, cards, asOf, doc) {
+      let html = '';
+      const regime = gDoc?.regime_mode || 'NORMAL';
+      const rd = gDoc?.regime_details || {};
+
+      // Regime summary
+      const regimeColor = regime === 'CRISIS' ? MH.bear : regime === 'STRESS' ? MH.warn : MH.bull;
+      html += mhCard(`
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.6rem;">
+          <div>
+            <div style="font-size:1.1rem; color:${regimeColor}; font-weight:700;">Regime: ${regime}</div>
+            <div style="font-size:0.78rem; color:${MH.muted}; margin-top:0.2rem;">
+              Breadth Z: ${rd.breadth_z?.toFixed(2) || '—'} | Credit Z: ${rd.credit_z?.toFixed(2) || '—'} | Vol Z: ${rd.vol_z?.toFixed(2) || '—'}
+            </div>
+          </div>
+          <div style="display:flex; gap:0.5rem;">
+            ${mhScorePill(gDoc?.investment_compass?.composite_score || 50)}
+            <span style="font-size:0.78rem; color:${MH.muted}; align-self:center;">Composite</span>
+          </div>
+        </div>
+      `);
+
+      // Session strip
+      html += '<div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:0.8rem; margin-bottom:0.8rem;">';
+      for (const region of ['asia', 'europe', 'americas']) {
+        const status = sessionStatus(region);
+        const indices = gDoc?.sessions?.[region]?.indices || [];
+        const indicesHtml = indices.length ? indices.map(idx => {
+          const c = (idx.change_pct || 0) >= 0 ? MH.bull : MH.bear;
+          return `<span style="color:${c}; font-size:0.82rem;">${escapeHtml(idx.display || idx.symbol)} ${fmtPct(idx.change_pct)}</span>`;
+        }).join(' &nbsp; ') : '<span style="color:#64748b;">Session feed warming up</span>';
+        html += `<article style="padding:0.8rem; background:${MH.panel}; border:1px solid ${MH.border}; border-radius:10px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.4rem;">
+            <span style="font-weight:700; color:${MH.text};">${region.charAt(0).toUpperCase() + region.slice(1)}</span>
+            <span style="font-size:0.72rem; padding:0.1rem 0.4rem; border-radius:5px; background:${status.bg}; color:${status.color};">${status.text}</span>
+          </div>
+          <div>${indicesHtml}</div>
+        </article>`;
+      }
+      html += '</div>';
+
+      // Phase distribution
+      const phaseGroups = { EARLY: [], MID: [], LATE: [], EXHAUSTED: [], REVERSAL_RISK: [], NEUTRAL: [] };
+      Object.values(cards).forEach(c => { if (phaseGroups[c.phase]) phaseGroups[c.phase].push(c); });
+      html += mhCard(`
+        ${mhSectionTitle('Trend Lifecycle Distribution')}
+        <div style="display:flex; gap:0.3rem; height:24px; border-radius:6px; overflow:hidden; margin-bottom:0.6rem;">
+          ${Object.entries(phaseGroups).filter(([, v]) => v.length).map(([k, v]) => {
+        const pct = (v.length / Object.keys(cards).length * 100).toFixed(0);
+        return `<div style="flex:${v.length}; background:${PHASE_COLORS[k]}; display:flex; align-items:center; justify-content:center; font-size:0.65rem; color:#fff; font-weight:600;" title="${PHASE_LABELS[k]}: ${v.length}">${pct}%</div>`;
+      }).join('')}
+        </div>
+        <div style="display:flex; gap:0.6rem; flex-wrap:wrap; font-size:0.75rem;">
+          ${Object.entries(phaseGroups).filter(([, v]) => v.length).map(([k, v]) =>
+        `<span style="color:${PHASE_COLORS[k]};">${PHASE_LABELS[k]}: ${v.length}</span>`
+      ).join('')}
+        </div>
+      `);
+
+      // Top movers by score
+      const sorted = Object.values(cards).sort((a, b) => b.score - a.score);
+      const top5 = sorted.slice(0, 5);
+      const bottom5 = sorted.slice(-5).reverse();
+      html += '<div style="display:grid; grid-template-columns:1fr 1fr; gap:0.8rem; margin-bottom:0.8rem;">';
+      html += mhCard(`${mhSectionTitle('Highest Scores')}${top5.map(c => mhCardRow(c)).join('')}`);
+      html += mhCard(`${mhSectionTitle('Lowest Scores')}${bottom5.map(c => mhCardRow(c)).join('')}`);
+      html += '</div>';
+
+      // Compass (legacy data)
+      const compass = gDoc?.investment_compass;
+      if (compass) {
+        html += mhCard(`
+          ${mhSectionTitle('Investment Compass')}
+          <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:0.6rem;">
+            <div><span style="color:${MH.muted}; font-size:0.78rem;">Composite</span><div style="color:${MH.text}; font-weight:700; font-size:1.1rem;">${compass.composite_score ?? '—'}/100</div></div>
+            <div><span style="color:${MH.muted}; font-size:0.78rem;">Trend</span><div style="color:${(compass.trend_score || 0) >= 50 ? MH.bull : MH.bear}; font-weight:600;">${compass.trend_score ?? '—'}</div></div>
+            <div><span style="color:${MH.muted}; font-size:0.78rem;">Risk</span><div style="color:${(compass.risk_score || 0) >= 50 ? MH.bull : MH.bear}; font-weight:600;">${compass.risk_score ?? '—'}</div></div>
+            <div><span style="color:${MH.muted}; font-size:0.78rem;">Flows</span><div style="color:${(compass.flow_score || 0) >= 50 ? MH.bull : MH.bear}; font-weight:600;">${compass.flow_score ?? '—'}</div></div>
+          </div>
+          ${compass.summary ? `<div style="margin-top:0.5rem; font-size:0.82rem; color:${MH.muted};">${escapeHtml(compass.summary)}</div>` : ''}
+          ${mhSourcesFooter('EODHD (derived)', asOf)}
+        `);
+      }
+
+      panel.innerHTML = html;
+    }
+
+    // ── SECTORS TAB ──
+    function renderMHSectors(panel, cards, asOf) {
+      const sectorCards = Object.entries(cards).filter(([k]) => k.startsWith('SECTOR:')).map(([, v]) => v).sort((a, b) => b.score - a.score);
+      if (!sectorCards.length) { panel.innerHTML = mhCard('<span style="color:#64748b;">No sector data available.</span>'); return; }
+      let html = mhSectionTitle(`US Sectors (${sectorCards.length})`);
+      html += '<div style="overflow-x:auto;">';
+      html += `<table style="width:100%; border-collapse:collapse; font-size:0.84rem;">
+        <thead><tr>
+          <th style="text-align:left; padding:0.5rem; color:${MH.muted}; border-bottom:1px solid ${MH.border};">Sector</th>
+          <th style="text-align:center; padding:0.5rem; color:${MH.muted}; border-bottom:1px solid ${MH.border};">Score</th>
+          <th style="text-align:center; padding:0.5rem; color:${MH.muted}; border-bottom:1px solid ${MH.border};">Phase</th>
+          <th style="text-align:center; padding:0.5rem; color:${MH.muted}; border-bottom:1px solid ${MH.border};">Conf</th>
+          <th style="text-align:right; padding:0.5rem; color:${MH.muted}; border-bottom:1px solid ${MH.border};">Mom (20d)</th>
+          <th style="text-align:right; padding:0.5rem; color:${MH.muted}; border-bottom:1px solid ${MH.border};">Vol Z</th>
+          <th style="text-align:left; padding:0.5rem; color:${MH.muted}; border-bottom:1px solid ${MH.border};">Drivers</th>
+        </tr></thead><tbody>`;
+      sectorCards.forEach(c => {
+        const momColor = (c.momentum?.m20 || 0) >= 0 ? MH.bull : MH.bear;
+        html += `<tr style="border-bottom:1px solid ${MH.border};">
+          <td style="padding:0.5rem; color:${MH.text}; font-weight:600;">${escapeHtml(c.name)}</td>
+          <td style="padding:0.5rem; text-align:center;">${mhScorePill(c.score)}</td>
+          <td style="padding:0.5rem; text-align:center;">${mhPhaseBadge(c.phase)}</td>
+          <td style="padding:0.5rem; text-align:center;">${mhConfBadge(c.confidence)}</td>
+          <td style="padding:0.5rem; text-align:right; color:${momColor}; font-weight:600;">${(c.momentum?.m20 || 0).toFixed(2)}%</td>
+          <td style="padding:0.5rem; text-align:right; color:${(c.vol_z || 0) > 1 ? MH.bear : MH.muted};">${(c.vol_z || 0).toFixed(2)}</td>
+          <td style="padding:0.5rem;">${mhDriverChips(c.drivers_top3)}</td>
+        </tr>`;
+      });
+      html += '</tbody></table></div>';
+      html += mhSourcesFooter('SPDR Sector ETFs via EODHD', asOf);
+      panel.innerHTML = html;
+    }
+
+    // ── COMMODITIES TAB ──
+    function renderMHCommodities(panel, cards, asOf) {
+      const cmdtyCards = Object.entries(cards).filter(([k]) => k.startsWith('CMDTY:')).map(([, v]) => v).sort((a, b) => b.score - a.score);
+      if (!cmdtyCards.length) { panel.innerHTML = mhCard('<span style="color:#64748b;">No commodity data.</span>'); return; }
+      let html = mhSectionTitle(`Commodities (${cmdtyCards.length})`);
+      html += cmdtyCards.map(c => mhCardRow(c)).join('');
+      html += mhSourcesFooter('ETF proxies (GLD, SLV, USO, UNG, CPER) via EODHD', asOf);
+      panel.innerHTML = html;
+    }
+
+    // ── CRYPTO TAB ──
+    function renderMHCrypto(panel, cards, asOf) {
+      const cryptoCards = Object.entries(cards).filter(([k]) => k.startsWith('CRYPTO:')).map(([, v]) => v).sort((a, b) => b.score - a.score);
+      if (!cryptoCards.length) { panel.innerHTML = mhCard('<span style="color:#64748b;">No crypto data.</span>'); return; }
+      let html = mhSectionTitle(`Crypto (${cryptoCards.length})`);
+
+      // Risk appetite indicator
+      const avgScore = cryptoCards.reduce((s, c) => s + c.score, 0) / cryptoCards.length;
+      const appetite = avgScore >= 60 ? 'Risk-On' : avgScore >= 45 ? 'Neutral' : 'Risk-Off';
+      const appColor = avgScore >= 60 ? MH.bull : avgScore >= 45 ? MH.warn : MH.bear;
+      html += mhCard(`
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <div>
+            <div style="font-size:0.82rem; color:${MH.muted};">Crypto Risk Appetite</div>
+            <div style="font-size:1.2rem; font-weight:700; color:${appColor};">${appetite}</div>
+          </div>
+          <div style="text-align:right;">
+            <div style="font-size:0.78rem; color:${MH.muted};">Avg Score</div>
+            ${mhScorePill(Math.round(avgScore))}
+          </div>
+        </div>
+      `);
+      html += cryptoCards.map(c => mhCardRow(c)).join('');
+      html += mhSourcesFooter('EODHD Crypto (CC exchange)', asOf);
+      panel.innerHTML = html;
+    }
+
+    // ── FLOWS TAB ──
+    function renderMHFlows(panel, gDoc, cards, asOf) {
+      let html = mhSectionTitle('Capital Flows (Price-Derived Proxy)');
+      html += `<div style="font-size:0.76rem; color:${MH.warn}; margin-bottom:0.6rem;">Flows are derived from multi-day price trends — not real fund-flow data (EPFR/ICI).</div>`;
+
+      // Flow table for all cards
+      const allCards = Object.entries(cards).map(([k, v]) => ({ key: k, ...v })).sort((a, b) => b.score - a.score);
+      if (!allCards.length) { panel.innerHTML = mhCard('<span style="color:#64748b;">No flow data.</span>'); return; }
+
+      html += '<div style="overflow-x:auto;">';
+      html += `<table style="width:100%; border-collapse:collapse; font-size:0.82rem;">
+        <thead><tr>
+          <th style="text-align:left; padding:0.45rem; color:${MH.muted}; border-bottom:1px solid ${MH.border};">Asset</th>
+          <th style="text-align:center; padding:0.45rem; color:${MH.muted}; border-bottom:1px solid ${MH.border};">Type</th>
+          <th style="text-align:center; padding:0.45rem; color:${MH.muted}; border-bottom:1px solid ${MH.border};">Score</th>
+          <th style="text-align:center; padding:0.45rem; color:${MH.muted}; border-bottom:1px solid ${MH.border};">Phase</th>
+          <th style="text-align:center; padding:0.45rem; color:${MH.muted}; border-bottom:1px solid ${MH.border};">Flow Dir</th>
+          <th style="text-align:right; padding:0.45rem; color:${MH.muted}; border-bottom:1px solid ${MH.border};">Mom 20d</th>
+        </tr></thead><tbody>`;
+      allCards.forEach(c => {
+        const flowDir = c.drivers_top3?.find(d => d.label === 'Flow Direction');
+        const flowColor = flowDir?.dir === 'up' ? MH.bull : flowDir?.dir === 'down' ? MH.bear : MH.muted;
+        const flowLabel = flowDir ? (flowDir.dir === 'up' ? 'Inflow' : 'Outflow') : '—';
+        const momColor = (c.momentum?.m20 || 0) >= 0 ? MH.bull : MH.bear;
+        html += `<tr style="border-bottom:1px solid ${MH.border};">
+          <td style="padding:0.45rem; color:${MH.text};">${escapeHtml(c.name || c.key)}</td>
+          <td style="padding:0.45rem; text-align:center; font-size:0.72rem; color:${MH.muted};">${escapeHtml(c.type || '—')}</td>
+          <td style="padding:0.45rem; text-align:center;">${mhScorePill(c.score)}</td>
+          <td style="padding:0.45rem; text-align:center;">${mhPhaseBadge(c.phase)}</td>
+          <td style="padding:0.45rem; text-align:center; color:${flowColor}; font-weight:600;">${flowLabel}</td>
+          <td style="padding:0.45rem; text-align:right; color:${momColor};">${(c.momentum?.m20 || 0).toFixed(2)}%</td>
+        </tr>`;
+      });
+      html += '</tbody></table></div>';
+      html += mhSourcesFooter('EODHD (price-derived proxy)', asOf);
+      panel.innerHTML = html;
+    }
+
+    // ── RISKS TAB ──
+    function renderMHRisks(panel, gDoc, cards, asOf) {
+      const rd = gDoc?.regime_details || {};
+      const regime = gDoc?.regime_mode || 'NORMAL';
+      const regimeColor = regime === 'CRISIS' ? MH.bear : regime === 'STRESS' ? MH.warn : MH.bull;
+
+      let html = mhSectionTitle('Risk Radar');
+
+      // Regime status
+      html += mhCard(`
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <div>
+            <div style="font-size:0.82rem; color:${MH.muted};">Market Regime</div>
+            <div style="font-size:1.4rem; font-weight:700; color:${regimeColor};">${regime}</div>
+          </div>
+          <div style="display:grid; gap:0.3rem; text-align:right;">
+            <div style="font-size:0.78rem;"><span style="color:${MH.muted};">Breadth Z:</span> <span style="color:${(rd.breadth_z || 0) < -1 ? MH.bear : MH.text}; font-weight:600;">${rd.breadth_z?.toFixed(2) || '—'}</span></div>
+            <div style="font-size:0.78rem;"><span style="color:${MH.muted};">Credit Z:</span> <span style="color:${(rd.credit_z || 0) > 1.5 ? MH.bear : MH.text}; font-weight:600;">${rd.credit_z?.toFixed(2) || '—'}</span></div>
+            <div style="font-size:0.78rem;"><span style="color:${MH.muted};">Vol Z:</span> <span style="color:${(rd.vol_z || 0) > 1.5 ? MH.bear : MH.text}; font-weight:600;">${rd.vol_z?.toFixed(2) || '—'}</span></div>
+          </div>
+        </div>
+      `);
+
+      // Breadth
+      const pulse = gDoc?.us_pulse;
+      if (pulse) {
+        const total = (pulse.breadth_up || 0) + (pulse.breadth_down || 0);
+        const upPct = total > 0 ? ((pulse.breadth_up / total) * 100).toFixed(0) : 50;
+        html += mhCard(`
+          ${mhSectionTitle('Market Breadth')}
+          <div style="display:flex; gap:0.3rem; height:20px; border-radius:5px; overflow:hidden; margin-bottom:0.4rem;">
+            <div style="flex:${pulse.breadth_up || 1}; background:${MH.bull}; display:flex; align-items:center; justify-content:center; font-size:0.65rem; color:#fff;">▲ ${pulse.breadth_up || 0}</div>
+            <div style="flex:${pulse.breadth_down || 1}; background:${MH.bear}; display:flex; align-items:center; justify-content:center; font-size:0.65rem; color:#fff;">▼ ${pulse.breadth_down || 0}</div>
+          </div>
+          <div style="font-size:0.78rem; color:${MH.muted};">${upPct}% advancing | Risk Mode: <span style="color:${pulse.risk_mode === 'risk-on' ? MH.bull : MH.bear}; font-weight:600;">${escapeHtml(pulse.risk_mode || '—')}</span> | Coverage: ${Number(pulse.symbols_covered || 0).toLocaleString()}</div>
+        `);
+      }
+
+      // Risk assets
+      const riskAssets = Object.values(cards).filter(c => c.phase === 'REVERSAL_RISK' || c.phase === 'EXHAUSTED').sort((a, b) => a.score - b.score);
+      if (riskAssets.length) {
+        html += mhCard(`${mhSectionTitle('Danger Zone — Exhausted / Reversal Risk')}${riskAssets.map(c => mhCardRow(c)).join('')}`);
+      }
+
+      html += mhSourcesFooter('EODHD + Derived breadth', asOf);
+      panel.innerHTML = html;
+    }
+
+    // ── PLAYBOOK TAB ──
+    function renderMHPlaybook(panel, gDoc, cards, asOf) {
+      let html = mhSectionTitle('Playbook — Actionable Ideas');
+      const regime = gDoc?.regime_mode || 'NORMAL';
+
+      // Opportunities: highest score + EARLY/MID
+      const opps = Object.values(cards).filter(c => (c.phase === 'EARLY' || c.phase === 'MID') && c.score >= 50).sort((a, b) => b.score - a.score).slice(0, 8);
+      // Danger: EXHAUSTED/REVERSAL + low score
+      const danger = Object.values(cards).filter(c => c.phase === 'REVERSAL_RISK' || c.phase === 'EXHAUSTED' || c.score < 35).sort((a, b) => a.score - b.score).slice(0, 5);
+
+      html += '<div style="display:grid; grid-template-columns:1fr 1fr; gap:0.8rem; margin-bottom:0.8rem;">';
+      html += mhCard(`
+        <div style="font-size:0.88rem; font-weight:700; color:${MH.bull}; margin-bottom:0.5rem;">Opportunities (${opps.length})</div>
+        ${opps.length ? opps.map(c => mhCardRow(c)).join('') : '<span style="color:#64748b;">No strong opportunities in current regime.</span>'}
+      `);
+      html += mhCard(`
+        <div style="font-size:0.88rem; font-weight:700; color:${MH.bear}; margin-bottom:0.5rem;">Danger Zones (${danger.length})</div>
+        ${danger.length ? danger.map(c => mhCardRow(c)).join('') : '<span style="color:#64748b;">No danger zones flagged.</span>'}
+      `);
+      html += '</div>';
+
+      // Regime note
+      if (regime !== 'NORMAL') {
+        html += mhCard(`<div style="color:${MH.warn}; font-size:0.82rem;">Regime is <strong>${regime}</strong> — all scores dampened. Reduce exposure and favor hedges.</div>`);
+      }
+
+      html += mhSourcesFooter('EODHD (derived)', asOf);
+      panel.innerHTML = html;
+    }
+
+    // ── METHODOLOGY TAB ──
+    function renderMHMethodology(panel) {
+      panel.innerHTML = `
+        ${mhSectionTitle('Methodology — How Scores Are Computed')}
+        ${mhCard(`
+          <div style="font-size:0.88rem; font-weight:700; color:${MH.text}; margin-bottom:0.6rem;">Score Schema (0-100)</div>
+          <div style="font-size:0.8rem; color:${MH.muted}; line-height:1.6;">
+            <p><strong>Formula:</strong> <code style="background:${MH.surface}; padding:0.15rem 0.4rem; border-radius:4px; color:${MH.text};">score = clamp(50 + 50 * weighted_sum, 0, 100)</code></p>
+            <p><strong>Components:</strong> Momentum (m20/m60/m200), Flow Direction, Volatility Z-score, Macro proxy, Valuation proxy</p>
+            <p><strong>Weights vary by type:</strong></p>
+            <table style="width:100%; border-collapse:collapse; font-size:0.78rem; margin-top:0.3rem;">
+              <tr><th style="text-align:left; padding:0.3rem; color:${MH.muted}; border-bottom:1px solid ${MH.border};">Type</th><th style="padding:0.3rem; color:${MH.muted}; border-bottom:1px solid ${MH.border};">Mom</th><th style="padding:0.3rem; color:${MH.muted}; border-bottom:1px solid ${MH.border};">Flow</th><th style="padding:0.3rem; color:${MH.muted}; border-bottom:1px solid ${MH.border};">Val</th><th style="padding:0.3rem; color:${MH.muted}; border-bottom:1px solid ${MH.border};">Macro</th><th style="padding:0.3rem; color:${MH.muted}; border-bottom:1px solid ${MH.border};">Risk</th></tr>
+              <tr><td style="padding:0.3rem; color:${MH.text};">Default</td><td style="padding:0.3rem; text-align:center;">35%</td><td style="padding:0.3rem; text-align:center;">20%</td><td style="padding:0.3rem; text-align:center;">15%</td><td style="padding:0.3rem; text-align:center;">20%</td><td style="padding:0.3rem; text-align:center;">10%</td></tr>
+              <tr><td style="padding:0.3rem; color:${MH.text};">Crypto</td><td style="padding:0.3rem; text-align:center;">25%</td><td style="padding:0.3rem; text-align:center;">30%</td><td style="padding:0.3rem; text-align:center;">10%</td><td style="padding:0.3rem; text-align:center;">15%</td><td style="padding:0.3rem; text-align:center;">20%</td></tr>
+              <tr><td style="padding:0.3rem; color:${MH.text};">Country</td><td style="padding:0.3rem; text-align:center;">25%</td><td style="padding:0.3rem; text-align:center;">20%</td><td style="padding:0.3rem; text-align:center;">15%</td><td style="padding:0.3rem; text-align:center;">30%</td><td style="padding:0.3rem; text-align:center;">10%</td></tr>
+            </table>
+          </div>
+        `)}
+        ${mhCard(`
+          <div style="font-size:0.88rem; font-weight:700; color:${MH.text}; margin-bottom:0.6rem;">Phase Classification (Trend Lifecycle)</div>
+          <div style="font-size:0.8rem; color:${MH.muted}; line-height:1.6;">
+            <div style="display:grid; gap:0.3rem;">
+              <div>${mhPhaseBadge('EARLY')} <span>Short momentum positive, medium not yet confirmed</span></div>
+              <div>${mhPhaseBadge('MID')} <span>All timeframes aligned positive</span></div>
+              <div>${mhPhaseBadge('LATE')} <span>Long trend intact but short momentum fading</span></div>
+              <div>${mhPhaseBadge('EXHAUSTED')} <span>Trend overheated — high vol or momentum divergence</span></div>
+              <div>${mhPhaseBadge('REVERSAL_RISK')} <span>Medium and long momentum both negative — trend breakdown</span></div>
+              <div>${mhPhaseBadge('NEUTRAL')} <span>No clear trend — insufficient data or mixed signals</span></div>
+            </div>
+          </div>
+        `)}
+        ${mhCard(`
+          <div style="font-size:0.88rem; font-weight:700; color:${MH.text}; margin-bottom:0.6rem;">Confidence Calculation</div>
+          <div style="font-size:0.8rem; color:${MH.muted}; line-height:1.6;">
+            <p><code style="background:${MH.surface}; padding:0.15rem 0.4rem; border-radius:4px; color:${MH.text};">confidence = signal_agreement * data_quality</code></p>
+            <p>Signal agreement = how many independent signals agree on direction</p>
+            <p>Data quality = coverage * freshness * source reliability</p>
+            <p><strong>HIGH</strong> >= 0.75 | <strong>MEDIUM</strong> >= 0.50 | <strong>LOW</strong> < 0.50</p>
+          </div>
+        `)}
+        ${mhCard(`
+          <div style="font-size:0.88rem; font-weight:700; color:${MH.text}; margin-bottom:0.6rem;">Regime Engine</div>
+          <div style="font-size:0.8rem; color:${MH.muted}; line-height:1.6;">
+            <p><strong>NORMAL:</strong> No stress conditions → scores unmodified</p>
+            <p><strong>STRESS:</strong> 2+ of: Vol Z > 1.5, Credit Z > 1.5, Breadth Z < -1.5 → scores dampened to 60%</p>
+            <p><strong>CRISIS:</strong> 3 conditions + Credit Z > 2.5 → scores dampened to 30%</p>
+          </div>
+        `)}
+        ${mhCard(`
+          <div style="font-size:0.88rem; font-weight:700; color:${MH.text}; margin-bottom:0.6rem;">Data Sources & Limitations</div>
+          <div style="font-size:0.8rem; color:${MH.muted}; line-height:1.6;">
+            <p><strong>Tier A (Primary):</strong> FRED, BIS, IMF, CFTC, EIA — <em>not yet integrated</em></p>
+            <p><strong>Tier B (Market Data):</strong> EODHD — all prices, ETF proxies, indices</p>
+            <p><strong>Tier C (Derived):</strong> ETF AUM proxies, price-derived flows, computed breadth</p>
+            <div style="margin-top:0.5rem; padding:0.5rem; background:${MH.surface}; border-radius:6px; border-left:3px solid ${MH.warn};">
+              <strong style="color:${MH.warn};">Known Limitations:</strong>
+              <ul style="margin:0.3rem 0 0 1rem; padding:0;">
+                <li>No real fund-flow data (EPFR/ICI) — flows from price trends only</li>
+                <li>No options/skew data — vol from realized returns only</li>
+                <li>No COT positioning data</li>
+                <li>No on-chain crypto data (Glassnode/CryptoQuant)</li>
+                <li>Breadth from ~2,450 US stocks, not full NYSE</li>
+                <li>Limited history (~20-30 days) — m60/m200 may be unavailable</li>
+              </ul>
+            </div>
+          </div>
+        `)}
+      `;
+    }
+
+    // V7 functions removed — universe browse was in old flat view
+
+    // ── loadGlobalMarketDoc + renderMarketView (new v2) ──
+    async function loadGlobalMarketDoc() {
+      if (globalMarketDoc) return globalMarketDoc;
+      const { response, payload } = await fetchJson('/data/v3/derived/market/global-latest.json');
+      if (response?.ok && payload && typeof payload === 'object') { globalMarketDoc = payload; return globalMarketDoc; }
+      return null;
     }
 
     async function renderMarketView() {
-      if (!marketPulseBlock || !marketRotationBlock || !marketMoversBlock || !marketViewMeta) return;
-      const doc = marketDoc;
-      const generatedAt = doc?.meta?.generated_at || 'pending';
-      marketViewMeta.textContent = `generatedAt=${generatedAt}`;
-      const pulse = doc?.data?.pulse || doc?.pulse || null;
-      const rotation = doc?.data?.rotation || doc?.rotation || null;
-      const movers = Array.isArray(doc?.data?.movers) ? doc.data.movers : Array.isArray(doc?.movers) ? doc.movers : [];
-
-      if (!doc) {
-        marketPulseBlock.innerHTML = '<span style=\"color:#64748b;\">Content pending. Run dp8 market builder.</span>';
-        marketRotationBlock.innerHTML = '<span style=\"color:#64748b;\">Content pending. Run dp8 market builder.</span>';
-        marketMoversBlock.innerHTML = '<span style=\"color:#64748b;\">Content pending. Run dp8 market builder.</span>';
-      } else {
-        marketPulseBlock.innerHTML = `
-          <div style="display:grid; gap:0.4rem;">
-            <div style="display:flex; justify-content:space-between;"><span style="color:#94a3b8;">Risk mode</span><span style="color:#e5e7eb; font-weight:600;">${escapeHtml(pulse?.risk_mode || pulse?.risk_on_off || '—')}</span></div>
-            <div style="display:flex; justify-content:space-between;"><span style="color:#94a3b8;">Breadth up/down</span><span style="color:#e5e7eb; font-weight:600;">${escapeHtml(String(pulse?.up || pulse?.breadth_up || '—'))}/${escapeHtml(String(pulse?.down || pulse?.breadth_down || '—'))}</span></div>
-          </div>
-        `;
-
-        const rotationRows = Array.isArray(rotation?.leaders) ? rotation.leaders.slice(0, 6) : Array.isArray(doc?.data?.sectors) ? doc.data.sectors.slice(0, 6) : [];
-        marketRotationBlock.innerHTML = rotationRows.length
-          ? rotationRows.map((row) => `<div style=\"display:flex; justify-content:space-between; gap:0.5rem; padding:0.2rem 0; border-bottom:1px solid rgba(100,116,139,0.12);\"><span style=\"color:#94a3b8;\">${escapeHtml(row.sector || row.symbol || '—')}</span><span style=\"color:#e5e7eb; font-weight:600;\">${formatSignedValue(row.change_pct || row.change || 0, 2)}%</span></div>`).join('')
-          : '<span style=\"color:#64748b;\">No rotation rows available.</span>';
-
-        marketMoversBlock.innerHTML = movers.length
-          ? movers.slice(0, 8).map((row) => `<div style=\"display:flex; justify-content:space-between; gap:0.5rem; padding:0.2rem 0; border-bottom:1px solid rgba(100,116,139,0.12);\"><a class=\"best-setup-link\" href=\"/analyze/${encodeURIComponent(row.ticker || row.symbol || '')}\" data-open-ticker=\"${escapeHtml(normalizeTicker(row.ticker || row.symbol || ''))}\">${escapeHtml(normalizeTicker(row.ticker || row.symbol || '—'))}</a><span style=\"color:${Number(row.change_pct || row.change || 0) >= 0 ? '#34d399' : '#f87171'}; font-weight:600;\">${formatSignedValue(Number(row.change_pct || row.change || 0), 2)}%</span></div>`).join('')
-          : '<span style=\"color:#64748b;\">No movers available.</span>';
-
-        document.querySelectorAll('#market-view [data-open-ticker]').forEach((link) => {
-          link.addEventListener('click', async (ev) => {
-            ev.preventDefault();
-            const ticker = link.getAttribute('data-open-ticker');
-            if (!ticker) return;
-            await selectSymbol(ticker, universeByTicker.get(ticker) || null, { push: true });
-          });
-        });
+      // Delegate to isolated market-hub.js module (zero shared state)
+      if (typeof window._mhInit === 'function') {
+        await window._mhInit();
       }
-
-      await refreshMarketV7Panel();
-      await refreshAllMarketCategoryPanels();
     }
+
+    // ── DEAD OLD FUNCTIONS REMOVED ──
+    // renderAssetTile, renderCompass, renderMoneyFlow, renderTrendForecasts,
+    // renderSectorRotation, renderMovers, renderAssetRatios, renderLearnedPatterns
+    // All replaced by renderMH* tab modules above.
+    // Old v1 render functions removed (renderAssetTile, renderCompass, renderMoneyFlow, etc.)
+
 
     async function loadIdeasDoc() {
       if (ideasDoc) return ideasDoc;
@@ -2786,6 +2948,12 @@
 
     async function renderIdeasView() {
       if (!ideasMoatContent || !ideasListContent || !ideasViewMeta) return;
+      const ideas = await loadIdeasDoc();
+      const ideasMeta = ideas?.meta && typeof ideas.meta === 'object' ? ideas.meta : {};
+      const ideasLists = Array.isArray(ideas?.data?.lists) ? ideas.data.lists : [];
+      const ideasDataDate =
+        String(ideasMeta?.data_date || ideasMeta?.generated_at || '').slice(0, 10) ||
+        new Date().toISOString().split('T')[0];
 
       const metrics = {};
 
@@ -3112,10 +3280,30 @@
         .sort((a, b) => (Number(b.ath.drawdownPct) - Number(a.ath.drawdownPct)) || a.ticker.localeCompare(b.ticker))
         .slice(0, 6);
 
-      const generatedAt = new Date().toISOString().split('T')[0];
-      ideasViewMeta.textContent = `Strategic MOAT Analysis • ${generatedAt}`;
+      const sourceTag = ideasMeta?.provider ? ` • ${ideasMeta.provider}` : '';
+      ideasViewMeta.textContent = `Strategic MOAT Analysis • ${ideasDataDate}${sourceTag}`;
+
+      const ideasListSummaryHtml = ideasLists.length
+        ? `
+          <div style="margin-bottom:1rem;padding:.65rem .85rem;border-radius:10px;background:rgba(15,23,42,.45);border:1px solid rgba(148,163,184,.16);display:flex;gap:.6rem;flex-wrap:wrap;align-items:center;">
+            <span style="font-size:.8rem;color:#94a3b8;">Feature-driven ideas feed:</span>
+            ${ideasLists.map((list, idx) => {
+              const label = String(list?.name || list?.label || `List ${idx + 1}`);
+              const fallbackCount = Array.isArray(list?.items) ? list.items.length : 0;
+              const count = Number.isFinite(Number(list?.count)) ? Number(list.count) : fallbackCount;
+              return `<span style="font-size:.78rem;color:#cbd5e1;background:rgba(30,41,59,.6);border:1px solid rgba(100,116,139,.3);padding:.2rem .5rem;border-radius:999px;">${escapeHtml(label)} · ${Number.isFinite(count) ? count : 0}</span>`;
+            }).join('')}
+            <span style="margin-left:auto;font-size:.75rem;color:#64748b;">as of ${escapeHtml(ideasDataDate)}</span>
+          </div>
+        `
+        : `
+          <div style="margin-bottom:1rem;padding:.65rem .85rem;border-radius:10px;background:rgba(15,23,42,.35);border:1px dashed rgba(148,163,184,.2);font-size:.78rem;color:#94a3b8;">
+            Ideas derived feed is currently unavailable; showing static MOAT playbook.
+          </div>
+        `;
 
       ideasMoatContent.innerHTML = `
+        ${ideasListSummaryHtml}
         <div style="margin-bottom: 2rem;">
           <h2 style="font-size: 1.5rem; margin-bottom: 0.5rem; color: #e5e7eb;">Structural Market Dominance</h2>
           <p style="color: #94a3b8; font-size: 0.95rem; margin-bottom: 1.5rem;">
@@ -3725,70 +3913,84 @@
       });
     }
 
-    Object.entries(marketCategoryPanels).forEach(([assetClass, panel]) => {
-      if (panel.prevBtn) {
-        panel.prevBtn.addEventListener('click', async () => {
-          if (panel.page <= 0) return;
-          panel.page -= 1;
-          await refreshMarketCategoryPanel(assetClass);
-        });
-      }
-      if (panel.nextBtn) {
-        panel.nextBtn.addEventListener('click', async () => {
-          if (panel.page >= (panel.totalPages - 1)) return;
-          panel.page += 1;
-          await refreshMarketCategoryPanel(assetClass);
-        });
-      }
-    });
+    if (typeof marketCategoryPanels === 'object' && marketCategoryPanels) {
+      Object.entries(marketCategoryPanels).forEach(([assetClass, panel]) => {
+        if (panel.prevBtn) {
+          panel.prevBtn.addEventListener('click', async () => {
+            if (panel.page <= 0) return;
+            panel.page -= 1;
+            await refreshMarketCategoryPanel(assetClass);
+          });
+        }
+        if (panel.nextBtn) {
+          panel.nextBtn.addEventListener('click', async () => {
+            if (panel.page >= (panel.totalPages - 1)) return;
+            panel.page += 1;
+            await refreshMarketCategoryPanel(assetClass);
+          });
+        }
+      });
+    }
 
     topNavLinks.forEach((link) => {
       link.addEventListener('click', async (ev) => {
         ev.preventDefault();
+        ev.stopPropagation();
         const route = link.dataset.topRoute || 'analyze';
         const nextPath = routePathFor(route);
         window.history.pushState({}, '', nextPath);
         setMainView(route);
-        if (route === 'analyze') {
-          await loadScientificData();
-          clearSearch({ push: false, keepInput: true, focus: false });
-          await loadTopSetupsDoc();
-          renderBestSetups();
-        } else if (route === 'market') {
-          await loadMarketDoc();
-          await renderMarketView();
-        } else if (route === 'ideas') {
-          await renderIdeasView();
+        try {
+          if (route === 'analyze') {
+            await loadScientificData();
+            clearSearch({ push: false, keepInput: true, focus: false });
+            await loadTopSetupsDoc();
+            renderBestSetups();
+          } else if (route === 'market') {
+            await loadMarketDoc();
+            await renderMarketView();
+          } else if (route === 'ideas') {
+            await renderIdeasView();
+          }
+        } catch (err) {
+          console.error('[RV-DEBUG] Nav handler error:', err);
         }
       });
     });
 
-    // Auto-route on page load
-    document.addEventListener('DOMContentLoaded', async () => {
-      if (!universeReady) universeReady = loadUniverse();
-      // Coverage uses localStorage cache — instant on repeat visits
-      renderCoverageSummary();
-      await universeReady;
-      syncAssetFilters('all', 'sticky');
-      syncEngineFilters('all', 'sticky');
-      const route = parseTopRoute(window.location.pathname);
-      setMainView(route.route);
-      if (route.route === 'analyze' && route.ticker) {
-        navigateToStockDetail(route.ticker, { replace: true });
-        return;
-      } else if (route.route === 'market') {
-        await loadMarketDoc();
-        await renderMarketView();
-      } else if (route.route === 'ideas') {
-        await renderIdeasView();
-      } else {
-        clearSearch({ push: false, keepInput: true, focus: true });
-        // Load scientific + setups in background (non-blocking for initial render)
-        loadScientificData().then(() => {
-          loadTopSetupsDoc().then(() => renderBestSetups());
-        });
+    // Auto-route on page load — use readyState guard to avoid missed DOMContentLoaded
+    async function _rvInitApp() {
+      try {
+        if (!universeReady) universeReady = loadUniverse();
+        renderCoverageSummary();
+        await universeReady;
+        syncAssetFilters('all', 'sticky');
+        syncEngineFilters('all', 'sticky');
+        const route = parseTopRoute(window.location.pathname);
+        setMainView(route.route);
+        if (route.route === 'analyze' && route.ticker) {
+          navigateToStockDetail(route.ticker, { replace: true });
+          return;
+        } else if (route.route === 'market') {
+          await loadMarketDoc();
+          await renderMarketView();
+        } else if (route.route === 'ideas') {
+          await renderIdeasView();
+        } else {
+          clearSearch({ push: false, keepInput: true, focus: true });
+          loadScientificData().then(() => {
+            loadTopSetupsDoc().then(() => renderBestSetups());
+          });
+        }
+      } catch (err) {
+        console.error('[RV] Init error:', err);
       }
-    });
+    }
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', _rvInitApp);
+    } else {
+      _rvInitApp();
+    }
 
     // Handle browser back button
     window.addEventListener('popstate', async () => {

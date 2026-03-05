@@ -3,6 +3,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { createRunContext } from '../lib/v3/run-context.mjs';
 import { writeJsonArtifact } from '../lib/v3/artifact-writer.mjs';
+import { resolveSsotPath } from '../universe-v7/lib/ssot-paths.mjs';
 
 const DEFAULT_THRESHOLDS = {
   scientific_bullish_min: 0.6,
@@ -24,6 +25,40 @@ async function readJsonSafe(filePath, fallback) {
   } catch {
     return fallback;
   }
+}
+
+function normalizeUniverseRows(doc) {
+  const rows = Array.isArray(doc) ? doc : (Array.isArray(doc?.items) ? doc.items : (Array.isArray(doc?.rows) ? doc.rows : []));
+  const out = [];
+  for (const row of rows) {
+    const ticker = normalizeTicker(row?.symbol || row?.ticker || '');
+    if (!ticker) continue;
+    out.push({
+      ticker,
+      name: typeof row?.name === 'string' ? row.name : null,
+      analyzer: toUnitInterval(row?.score_0_100),
+      bars_count: Number.isFinite(Number(row?.bars_count)) ? Number(row.bars_count) : null,
+      universe_source: 'v7_ssot'
+    });
+  }
+  return out;
+}
+
+function normalizeLegacyRows(doc) {
+  const rows = Array.isArray(doc) ? doc : [];
+  const out = [];
+  for (const row of rows) {
+    const ticker = normalizeTicker(row?.ticker || row?.symbol || '');
+    if (!ticker) continue;
+    out.push({
+      ticker,
+      name: typeof row?.name === 'string' ? row.name : null,
+      analyzer: null,
+      bars_count: null,
+      universe_source: 'legacy_universe'
+    });
+  }
+  return out;
 }
 
 function numberOrNull(value) {
@@ -110,27 +145,35 @@ async function main() {
     ...(thresholdsDoc?.thresholds && typeof thresholdsDoc.thresholds === 'object' ? thresholdsDoc.thresholds : {})
   };
 
-  const [universeDoc, scientificDoc, forecastDoc, marketphaseIndexDoc] = await Promise.all([
+  const v7UniversePath = resolveSsotPath(rootDir, 'stocks.max.rows.json');
+  const [v7UniverseDoc, legacyUniverseDoc, scientificDoc, forecastDoc, marketphaseIndexDoc] = await Promise.all([
+    readJsonSafe(v7UniversePath, null),
     readJsonSafe(path.join(rootDir, 'public/data/universe/all.json'), []),
     readJsonSafe(path.join(rootDir, 'public/data/snapshots/stock-analysis.json'), {}),
     readJsonSafe(path.join(rootDir, 'public/data/forecast/latest.json'), {}),
     readJsonSafe(path.join(rootDir, 'public/data/marketphase/index.json'), {})
   ]);
 
-  const universeRows = Array.isArray(universeDoc) ? universeDoc : [];
+  const universeRows = normalizeUniverseRows(v7UniverseDoc);
+  const hasV7Universe = universeRows.length > 0;
+  const finalUniverseRows = hasV7Universe ? universeRows : normalizeLegacyRows(legacyUniverseDoc);
   const forecastMap = buildForecastMap(forecastDoc);
   const elliottMap = await loadElliottMap(rootDir, marketphaseIndexDoc);
 
   const rows = [];
 
-  for (const entry of universeRows) {
+  for (const entry of finalUniverseRows) {
     const ticker = normalizeTicker(entry?.ticker || '');
     if (!ticker) continue;
     const scientific = scientificScore(scientificDoc?.[ticker]);
     const elliott = numberOrNull(elliottMap.get(ticker));
     const forecast = numberOrNull(forecastMap.get(ticker));
+    const analyzer = numberOrNull(entry?.analyzer);
 
-    const composite = average([scientific, elliott, forecast]);
+    const modelComposite = average([scientific, elliott, forecast]);
+    // Keep model consensus untouched; use a dampened analyzer fallback so model-based signals stay dominant.
+    const analyzerFallback = analyzer != null ? analyzer * 0.5 : null;
+    const composite = modelComposite != null ? modelComposite : analyzerFallback;
     const enginesAvailable = [scientific, elliott, forecast].filter((v) => Number.isFinite(v)).length;
 
     const bullishCount =
@@ -143,13 +186,17 @@ async function main() {
     rows.push({
       ticker,
       name: entry?.name || null,
+      analyzer,
       scientific,
       elliott,
       forecast,
       composite,
+      composite_source: modelComposite != null ? 'model_ensemble' : (analyzer != null ? 'analyzer_fallback_dampened' : 'none'),
       consensus,
       bullish_count: bullishCount,
-      engines_available: enginesAvailable
+      engines_available: enginesAvailable,
+      bars_count: entry?.bars_count ?? null,
+      universe_source: entry?.universe_source || null
     });
   }
 
@@ -162,7 +209,7 @@ async function main() {
   });
 
   const filtered = rows
-    .filter((row) => row.composite == null || row.composite >= thresholds.min_composite)
+    .filter((row) => row.composite != null && row.composite >= thresholds.min_composite)
     .slice(0, Number(thresholds.top_n) || DEFAULT_THRESHOLDS.top_n);
 
   const doc = {
@@ -172,13 +219,16 @@ async function main() {
       data_date: runContext.generatedAt.slice(0, 10),
       provider: 'derived-local',
       source_chain: [
+        hasV7Universe ? `/data/universe/v7/ssot/stocks.max.rows.json` : '/data/universe/all.json',
         '/data/snapshots/stock-analysis.json',
         '/data/forecast/latest.json',
         '/data/marketphase/index.json'
       ],
       run_id: runContext.runId,
       commit: runContext.commit,
-      thresholds
+      thresholds,
+      universe_rows_scanned: finalUniverseRows.length,
+      universe_source: hasV7Universe ? 'v7_ssot' : 'legacy_universe'
     },
     data: {
       count: filtered.length,

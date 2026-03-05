@@ -1163,7 +1163,8 @@
         render(embedded);
       }
       try {
-        const res = await fetch(REPORT_URL);
+        const freshUrl = `${REPORT_URL}?ts=${Date.now()}`;
+        const res = await fetch(freshUrl, { cache: 'no-store' });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         render(await res.json());
       } catch {

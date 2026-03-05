@@ -1114,7 +1114,7 @@
       // ── Sections ──
       app.innerHTML = buildSections(ticker, close, stats, score, bars, universe);
       // Load async integrations (Scientific, Forecast, Elliott)
-      loadAsyncInsights(ticker);
+      loadAsyncInsights(ticker, { close, stats, bars, universe });
     }
 
     // ─── Build All Sections ───────────────────────────────────────────────────────
@@ -1160,11 +1160,11 @@
     }
 
     // ─── Async Integration Loader ────────────────────────────────────────────────
-    async function loadAsyncInsights(ticker) {
+    async function loadAsyncInsights(ticker, context = {}) {
       const slots = [
-        { id: 'rv-scientific-slot', fn: () => buildScientificInsight(ticker) },
-        { id: 'rv-forecast-slot', fn: () => buildForecastInsight(ticker) },
-        { id: 'rv-elliott-slot', fn: () => buildElliottInsight(ticker) },
+        { id: 'rv-scientific-slot', fn: () => buildScientificInsight(ticker, context) },
+        { id: 'rv-forecast-slot', fn: () => buildForecastInsight(ticker, context) },
+        { id: 'rv-elliott-slot', fn: () => buildElliottInsight(ticker, context) },
       ];
       await Promise.allSettled(slots.map(async ({ id, fn }) => {
         try {

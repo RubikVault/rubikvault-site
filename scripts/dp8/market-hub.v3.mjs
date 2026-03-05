@@ -21,6 +21,8 @@ const SECTOR_META = {
   XLC: { display_name: 'Communication Services', labels: ['Communication Services'], order: 11, color: '#f43f5e' }
 };
 
+const EODHD_BASE = 'https://eodhd.com/api';
+
 async function readJsonSafe(filePath, fallback) {
   try {
     const raw = await fs.readFile(filePath, 'utf8');
@@ -58,24 +60,105 @@ function metricsFromNdjsonRow(row) {
   };
 }
 
-async function collectProxyRows(symbols, ndjsonMap = new Map(), defaultAsOf = null) {
+async function fetchEodhdEod(symbol, date, apiKey) {
+  // Query last 5 trading days to handle weekends/holidays
+  const d = new Date(date);
+  d.setDate(d.getDate() - 5);
+  const fromDate = d.toISOString().slice(0, 10);
+  const url = `${EODHD_BASE}/eod/${encodeURIComponent(symbol)}?from=${fromDate}&to=${date}&fmt=json&api_token=${encodeURIComponent(apiKey)}`;
+  try {
+    const res = await fetch(url, { headers: { 'user-agent': 'RubikVault-v3-data-plane/1.0' } });
+    if (!res.ok) return null;
+    const data = await res.json();
+    if (!Array.isArray(data) || data.length === 0) return null;
+    const bar = data[data.length - 1];
+    return {
+      open: Number(bar.open),
+      close: Number(bar.close),
+      volume: Number(bar.volume) || null,
+      date: String(bar.date || '').slice(0, 10)
+    };
+  } catch {
+    return null;
+  }
+}
+
+async function loadEtfProxyCache(rootDir) {
+  return readJsonSafe(path.join(rootDir, 'public/data/v3/eod/US/etf-proxies.json'), {});
+}
+
+async function saveEtfProxyCache(rootDir, cache) {
+  const outPath = path.join(rootDir, 'public/data/v3/eod/US/etf-proxies.json');
+  await fs.writeFile(outPath, JSON.stringify(cache, null, 2), 'utf8');
+}
+
+async function collectProxyRows(symbols, ndjsonMap, defaultAsOf, apiKey, proxyCache) {
   const rows = [];
+  const runDate = new Date(`${defaultAsOf}T00:00:00Z`);
   for (const symbol of symbols) {
     const fromNdjson = metricsFromNdjsonRow(ndjsonMap.get(symbol));
-    const metrics = fromNdjson;
-    if (!metrics) {
-      rows.push({
-        symbol,
-        close: null,
-        open: null,
-        volume: null,
-        change_pct: null,
-        as_of: defaultAsOf,
-        unavailable: true
-      });
+    if (fromNdjson) {
+      rows.push({ symbol, ...fromNdjson, unavailable: false, source: 'ndjson' });
       continue;
     }
-    rows.push({ symbol, ...metrics, unavailable: false });
+
+    // Use persisted ETF cache (same-day preferred, <=7d stale accepted).
+    const cached = proxyCache[symbol];
+    const cacheDate = String(cached?.date || '').slice(0, 10);
+    const cacheTs = cacheDate ? new Date(`${cacheDate}T00:00:00Z`) : null;
+    const cacheAgeDays = cacheTs && Number.isFinite(cacheTs.getTime()) && Number.isFinite(runDate.getTime())
+      ? Math.max(0, Math.round((runDate - cacheTs) / 86400000))
+      : null;
+
+    if (cacheDate === defaultAsOf && cached?.close) {
+      const metrics = metricsFromNdjsonRow({
+        open: cached.open, close: cached.close, volume: cached.volume,
+        trading_date: cached.date
+      });
+      if (metrics) {
+        rows.push({ symbol, ...metrics, unavailable: false, source: 'eodhd-cached' });
+        continue;
+      }
+    }
+
+    if (cached?.close && Number.isFinite(cacheAgeDays) && cacheAgeDays <= 7) {
+      const metrics = metricsFromNdjsonRow({
+        open: cached.open, close: cached.close, volume: cached.volume,
+        trading_date: cached.date
+      });
+      if (metrics) {
+        rows.push({
+          symbol,
+          ...metrics,
+          unavailable: false,
+          source: 'eodhd-cached-stale',
+          stale_days: cacheAgeDays
+        });
+        continue;
+      }
+    }
+
+    // Try EODHD direct fetch for ETFs not in NDJSON/cache.
+    if (apiKey) {
+
+      const bar = await fetchEodhdEod(`${symbol}.US`, defaultAsOf, apiKey);
+      if (bar && Number.isFinite(bar.close) && bar.close > 0) {
+        proxyCache[symbol] = bar;
+        const metrics = metricsFromNdjsonRow({
+          open: bar.open, close: bar.close, volume: bar.volume,
+          trading_date: bar.date
+        });
+        if (metrics) {
+          rows.push({ symbol, ...metrics, unavailable: false, source: 'eodhd-direct' });
+          continue;
+        }
+      }
+    }
+
+    rows.push({
+      symbol, close: null, open: null, volume: null, change_pct: null,
+      as_of: defaultAsOf, unavailable: true, source: 'unavailable'
+    });
   }
   return rows;
 }
@@ -115,12 +198,15 @@ function enrichSectorRows(rows, sectorCounts) {
 async function main() {
   const runContext = createRunContext();
   const rootDir = runContext.rootDir;
+  const apiKey = process.env.EODHD_API_TOKEN || (process.env.EODHD_API_KEY?.length > 10 ? process.env.EODHD_API_KEY : '') || '';
 
-  const [healthDoc, moversDoc, sectorMapDoc, eodGz] = await Promise.all([
+  const [healthDoc, moversDoc, sectorMapDoc, eodGz, proxyCache, bootstrapDoc] = await Promise.all([
     readJsonSafe(path.join(rootDir, 'public/data/v3/pulse/market-health/latest.json'), {}),
     readJsonSafe(path.join(rootDir, 'public/data/v3/pulse/top-movers/latest.json'), {}),
     readJsonSafe(path.join(rootDir, 'public/data/v3/universe/sector-mapping/latest.json'), {}),
-    fs.readFile(path.join(rootDir, 'public/data/v3/eod/US/latest.ndjson.gz')).catch(() => null)
+    fs.readFile(path.join(rootDir, 'public/data/v3/eod/US/latest.ndjson.gz')).catch(() => null),
+    loadEtfProxyCache(rootDir),
+    readJsonSafe(path.join(rootDir, 'config/sector-bootstrap.json'), {})
   ]);
 
   const ndjsonRows = eodGz ? parseNdjsonGz(eodGz) : [];
@@ -131,24 +217,39 @@ async function main() {
   );
 
   const defaultAsOf = String(runContext.generatedAt).slice(0, 10);
-  const proxyRows = await collectProxyRows(INDEX_PROXIES, ndjsonMap, defaultAsOf);
-  const rawSectorRows = await collectProxyRows(SECTOR_ETFS, ndjsonMap, defaultAsOf);
+  const proxyRows = await collectProxyRows(INDEX_PROXIES, ndjsonMap, defaultAsOf, apiKey, proxyCache);
+  const rawSectorRows = await collectProxyRows(SECTOR_ETFS, ndjsonMap, defaultAsOf, apiKey, proxyCache);
+
+  // Save proxy cache for next run
+  if (apiKey) {
+    await saveEtfProxyCache(rootDir, proxyCache).catch(() => {});
+  }
+
   const sectorCounts = buildSectorCounts(sectorMapDoc?.sectors || []);
   const sectorRows = enrichSectorRows(rawSectorRows, sectorCounts)
     .sort((a, b) => Number(b.change_pct || -999) - Number(a.change_pct || -999) || a.symbol.localeCompare(b.symbol));
 
+  // Enrich movers with bootstrap sectors when sector-mapping shows "Unknown"
+  const bootstrapSectors = bootstrapDoc?.sectors || {};
   const movers = Array.isArray(moversDoc?.top_movers)
-    ? moversDoc.top_movers.slice(0, 25).map((row) => ({
-        ticker: normalizeTicker(row?.ticker || row?.symbol || ''),
-        change_pct: Number(row?.change_pct ?? 0),
-        close: Number(row?.close ?? 0),
-        volume: Number(row?.volume ?? 0),
-        name: typeof row?.name === 'string' ? row.name : null,
-        sector: typeof row?.sector === 'string' ? row.sector : null,
-        in_universe: Boolean(row?.in_universe),
-        as_of: String(row?.as_of || defaultAsOf || '').slice(0, 10) || null,
-        lineage: row?.lineage && typeof row.lineage === 'object' ? row.lineage : null
-      }))
+    ? moversDoc.top_movers.slice(0, 25).map((row) => {
+        const ticker = normalizeTicker(row?.ticker || row?.symbol || '');
+        let sector = typeof row?.sector === 'string' ? row.sector : null;
+        if (!sector || sector === 'Unknown') {
+          sector = bootstrapSectors[ticker] || 'Unknown';
+        }
+        return {
+          ticker,
+          change_pct: Number(row?.change_pct ?? 0),
+          close: Number(row?.close ?? 0),
+          volume: Number(row?.volume ?? 0),
+          name: typeof row?.name === 'string' ? row.name : null,
+          sector,
+          in_universe: Boolean(row?.in_universe),
+          as_of: String(row?.as_of || defaultAsOf || '').slice(0, 10) || null,
+          lineage: row?.lineage && typeof row.lineage === 'object' ? row.lineage : null
+        };
+      })
     : [];
 
   const cyclical = ['XLY', 'XLI', 'XLF'];
@@ -170,6 +271,7 @@ async function main() {
   };
 
   const asOf = proxyRows.find((row) => row?.as_of)?.as_of || defaultAsOf;
+  const etfSources = [...proxyRows, ...rawSectorRows].map((r) => r.source).filter(Boolean);
   const doc = {
     meta: {
       schema_version: 'rv.derived.market.v1',
@@ -180,8 +282,10 @@ async function main() {
         '/data/v3/pulse/market-health/latest.json',
         '/data/v3/pulse/top-movers/latest.json',
         '/data/v3/universe/sector-mapping/latest.json',
-        '/data/v3/eod/US/latest.ndjson.gz'
+        '/data/v3/eod/US/latest.ndjson.gz',
+        '/data/v3/eod/US/etf-proxies.json'
       ],
+      etf_sources: [...new Set(etfSources)],
       run_id: runContext.runId,
       commit: runContext.commit
     },
@@ -194,7 +298,9 @@ async function main() {
   };
 
   await writeJsonArtifact(rootDir, 'public/data/v3/derived/market/latest.json', doc);
-  console.log(`DP8 market-hub done indices=${proxyRows.length} sectors=${sectorRows.length} movers=${movers.length}`);
+  const available = [...proxyRows, ...rawSectorRows].filter((r) => !r.unavailable).length;
+  const total = proxyRows.length + rawSectorRows.length;
+  console.log(`DP8 market-hub done indices=${proxyRows.length} sectors=${sectorRows.length} movers=${movers.length} etf_available=${available}/${total}`);
 }
 
 main().catch((error) => {

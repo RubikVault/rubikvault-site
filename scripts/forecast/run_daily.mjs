@@ -318,13 +318,25 @@ export async function runDailyPipeline(options = {}) {
 
     // 8. Evaluate matured forecasts
     console.log('[Step 8] Evaluating matured forecasts...');
-    const outcomes = await evaluateMaturedForecasts({
-        tradingDate,
-        repoRoot,
-        priceHistory,
-        policy
-    });
-    console.log(`  Evaluated ${outcomes.length} outcomes`);
+    let outcomes = [];
+    let evaluationWarning = null;
+    try {
+        outcomes = await evaluateMaturedForecasts({
+            tradingDate,
+            repoRoot,
+            priceHistory,
+            policy
+        });
+        console.log(`  Evaluated ${outcomes.length} outcomes`);
+    } catch (err) {
+        if (err?.code === 'ERR_STRING_TOO_LONG') {
+            evaluationWarning = `maturity_eval_skipped:${err.code}`;
+            outcomes = [];
+            console.warn(`  ⚠ Skipping maturity evaluation (${err.code}). Continuing with fresh forecasts.`);
+        } else {
+            throw err;
+        }
+    }
 
     // 9. Write outcome records
     if (outcomes.length > 0) {
@@ -342,7 +354,8 @@ export async function runDailyPipeline(options = {}) {
             circuit_state: 'closed',
             has_earnings: false,
             has_macro: false,
-            missing_price_pct: snapshot.missing_price_pct ?? 0
+            missing_price_pct: snapshot.missing_price_pct ?? 0,
+            evaluation_warning: evaluationWarning
         }
     });
     writeReport(repoRoot, report, 'daily');
@@ -355,9 +368,10 @@ export async function runDailyPipeline(options = {}) {
     // 12. Update status and latest
     console.log('[Step 12] Updating status and latest pointers...');
     updateStatus(repoRoot, {
-        status: 'ok',
+        status: evaluationWarning ? 'degraded' : 'ok',
         circuit_state: 'closed',
         last_run: tradingDate,
+        reason: evaluationWarning,
         capabilities: {
             has_prices: true,
             has_earnings: false,
@@ -420,7 +434,8 @@ export async function runDailyPipeline(options = {}) {
 
     const latestDoc = updateLatest(repoRoot, {
         ok: true,
-        status: 'ok',
+        status: evaluationWarning ? 'degraded' : 'ok',
+        reason: evaluationWarning,
         champion_id: champion.champion_id,
         trained_at: champion.created_at ?? null,
         freshness: tradingDate,
