@@ -1,32 +1,32 @@
 {
   "schema": "rubikvault_daily_learning_report_v2",
-  "date": "2026-03-04",
-  "generated_at": "2026-03-04T03:10:30.636Z",
+  "date": "2026-03-05",
+  "generated_at": "2026-03-05T03:14:00.670Z",
   "start_date": "2026-02-26",
-  "days_active": 7,
+  "days_active": 8,
   "summary": {
     "features_tracked": 4,
-    "total_predictions_today": 2505,
+    "total_predictions_today": 2503,
     "overall_status": "BOOTSTRAP — Noch keine Outcome-Daten"
   },
   "features": {
     "forecast": {
       "name": "Forecast System v3.0",
       "type": "price_direction_probability",
-      "predictions_total": 0,
-      "outcomes_resolved": 0,
-      "accuracy_all": null,
-      "brier_all": null,
-      "hit_rate_all": null,
-      "accuracy_7d": null,
-      "brier_7d": null,
-      "hit_rate_7d": null,
+      "predictions_total": 100,
+      "outcomes_resolved": 100,
+      "accuracy_all": 0.39,
+      "brier_all": 0.2765,
+      "hit_rate_all": 0.39,
+      "accuracy_7d": 0.39,
+      "brier_7d": 0.2765,
+      "hit_rate_7d": 0.39,
       "trend_accuracy": "no_data",
       "trend_brier": "no_data",
       "predictions_today": 2425,
       "source_meta": {
         "source": "forecast_latest_envelope",
-        "asof": "2026-03-03",
+        "asof": "2026-03-04",
         "fresh": false,
         "stale_days": 1
       }
@@ -65,12 +65,12 @@
       "hit_rate_7d": 0.6182,
       "trend_accuracy": "no_data",
       "trend_brier": "no_data",
-      "predictions_today": 80,
+      "predictions_today": 78,
       "source_meta": {
         "source": "marketphase_deep_summary",
         "asof": "2026-02-28",
         "fresh": false,
-        "stale_days": 4
+        "stale_days": 5
       }
     },
     "stock_analyzer": {
@@ -89,7 +89,7 @@
   },
   "weekly_comparison": {
     "forecast": {
-      "this_week": null,
+      "this_week": 0.39,
       "last_week": null
     },
     "scientific": {
@@ -137,11 +137,20 @@
       "scientific_hit_rate_7d": null,
       "elliott_accuracy_7d": 0.6182,
       "stock_stability": null
+    },
+    {
+      "date": "2026-03-05",
+      "forecast_accuracy_7d": 0.39,
+      "forecast_brier_7d": 0.2765,
+      "scientific_accuracy_7d": null,
+      "scientific_hit_rate_7d": null,
+      "elliott_accuracy_7d": 0.6182,
+      "stock_stability": null
     }
   ],
   "metrics": {
-    "forecast_accuracy_7d": null,
-    "forecast_brier_7d": null,
+    "forecast_accuracy_7d": 0.39,
+    "forecast_brier_7d": 0.2765,
     "scientific_accuracy_7d": null,
     "scientific_hit_rate_7d": null,
     "elliott_accuracy_7d": 0.6182,
@@ -149,7 +158,7 @@
   },
   "conviction_scores": [
     {
-      "ticker": "GOOG",
+      "ticker": "INTC",
       "direction": "bullish",
       "sources": [
         "forecast",
@@ -157,56 +166,8 @@
       ],
       "source_count": 2,
       "consensus_strength": 1,
-      "avg_confidence": 0.4652,
-      "conviction_score": 0.3101
-    },
-    {
-      "ticker": "GOOGL",
-      "direction": "bullish",
-      "sources": [
-        "forecast",
-        "elliott"
-      ],
-      "source_count": 2,
-      "consensus_strength": 1,
-      "avg_confidence": 0.465,
-      "conviction_score": 0.31
-    },
-    {
-      "ticker": "MAR",
-      "direction": "bullish",
-      "sources": [
-        "forecast",
-        "elliott"
-      ],
-      "source_count": 2,
-      "consensus_strength": 1,
-      "avg_confidence": 0.4633,
-      "conviction_score": 0.3088
-    },
-    {
-      "ticker": "KDP",
-      "direction": "bearish",
-      "sources": [
-        "forecast",
-        "elliott"
-      ],
-      "source_count": 2,
-      "consensus_strength": 1,
-      "avg_confidence": 0.4291,
-      "conviction_score": 0.286
-    },
-    {
-      "ticker": "MDLZ",
-      "direction": "bearish",
-      "sources": [
-        "forecast",
-        "elliott"
-      ],
-      "source_count": 2,
-      "consensus_strength": 1,
-      "avg_confidence": 0.418,
-      "conviction_score": 0.2787
+      "avg_confidence": 0.4727,
+      "conviction_score": 0.3151
     },
     {
       "ticker": "ASML",
@@ -217,32 +178,8 @@
       ],
       "source_count": 2,
       "consensus_strength": 1,
-      "avg_confidence": 0.4178,
-      "conviction_score": 0.2785
-    },
-    {
-      "ticker": "CMCSA",
-      "direction": "bullish",
-      "sources": [
-        "forecast",
-        "elliott"
-      ],
-      "source_count": 2,
-      "consensus_strength": 1,
-      "avg_confidence": 0.4094,
-      "conviction_score": 0.2729
-    },
-    {
-      "ticker": "CSCO",
-      "direction": "bullish",
-      "sources": [
-        "forecast",
-        "elliott"
-      ],
-      "source_count": 2,
-      "consensus_strength": 1,
-      "avg_confidence": 0.4089,
-      "conviction_score": 0.2726
+      "avg_confidence": 0.4707,
+      "conviction_score": 0.3138
     },
     {
       "ticker": "EA",
@@ -253,11 +190,47 @@
       ],
       "source_count": 2,
       "consensus_strength": 1,
-      "avg_confidence": 0.4085,
-      "conviction_score": 0.2723
+      "avg_confidence": 0.4615,
+      "conviction_score": 0.3077
     },
     {
-      "ticker": "AMD",
+      "ticker": "REGN",
+      "direction": "bullish",
+      "sources": [
+        "forecast",
+        "elliott"
+      ],
+      "source_count": 2,
+      "consensus_strength": 1,
+      "avg_confidence": 0.46,
+      "conviction_score": 0.3067
+    },
+    {
+      "ticker": "BIIB",
+      "direction": "bullish",
+      "sources": [
+        "forecast",
+        "elliott"
+      ],
+      "source_count": 2,
+      "consensus_strength": 1,
+      "avg_confidence": 0.4576,
+      "conviction_score": 0.305
+    },
+    {
+      "ticker": "MU",
+      "direction": "bullish",
+      "sources": [
+        "forecast",
+        "elliott"
+      ],
+      "source_count": 2,
+      "consensus_strength": 1,
+      "avg_confidence": 0.4349,
+      "conviction_score": 0.2899
+    },
+    {
+      "ticker": "CTAS",
       "direction": "bearish",
       "sources": [
         "forecast",
@@ -265,131 +238,179 @@
       ],
       "source_count": 2,
       "consensus_strength": 1,
-      "avg_confidence": 0.3878,
-      "conviction_score": 0.2585
-    },
-    {
-      "ticker": "EXC",
-      "direction": "bearish",
-      "sources": [
-        "forecast",
-        "elliott"
-      ],
-      "source_count": 2,
-      "consensus_strength": 1,
-      "avg_confidence": 0.3736,
-      "conviction_score": 0.2491
-    },
-    {
-      "ticker": "ORLY",
-      "direction": "bearish",
-      "sources": [
-        "forecast",
-        "elliott"
-      ],
-      "source_count": 2,
-      "consensus_strength": 1,
-      "avg_confidence": 0.3646,
-      "conviction_score": 0.243
-    },
-    {
-      "ticker": "QCOM",
-      "direction": "bearish",
-      "sources": [
-        "forecast",
-        "elliott"
-      ],
-      "source_count": 2,
-      "consensus_strength": 1,
-      "avg_confidence": 0.3614,
-      "conviction_score": 0.2409
-    },
-    {
-      "ticker": "MSTR",
-      "direction": "bearish",
-      "sources": [
-        "forecast",
-        "elliott"
-      ],
-      "source_count": 2,
-      "consensus_strength": 1,
-      "avg_confidence": 0.3384,
-      "conviction_score": 0.2256
-    },
-    {
-      "ticker": "WBD",
-      "direction": "bearish",
-      "sources": [
-        "forecast",
-        "elliott"
-      ],
-      "source_count": 2,
-      "consensus_strength": 0.5,
-      "avg_confidence": 0.4729,
-      "conviction_score": 0.1576
-    },
-    {
-      "ticker": "TXN",
-      "direction": "bearish",
-      "sources": [
-        "forecast",
-        "elliott"
-      ],
-      "source_count": 2,
-      "consensus_strength": 0.5,
-      "avg_confidence": 0.4688,
-      "conviction_score": 0.1563
+      "avg_confidence": 0.4224,
+      "conviction_score": 0.2816
     },
     {
       "ticker": "LRCX",
-      "direction": "bearish",
+      "direction": "bullish",
       "sources": [
         "forecast",
         "elliott"
       ],
       "source_count": 2,
-      "consensus_strength": 0.5,
-      "avg_confidence": 0.4664,
-      "conviction_score": 0.1554
+      "consensus_strength": 1,
+      "avg_confidence": 0.4221,
+      "conviction_score": 0.2814
     },
     {
-      "ticker": "INTC",
+      "ticker": "KDP",
       "direction": "bearish",
       "sources": [
         "forecast",
         "elliott"
       ],
       "source_count": 2,
-      "consensus_strength": 0.5,
-      "avg_confidence": 0.424,
-      "conviction_score": 0.1413
+      "consensus_strength": 1,
+      "avg_confidence": 0.4205,
+      "conviction_score": 0.2803
     },
     {
-      "ticker": "LIN",
-      "direction": "bearish",
+      "ticker": "KLAC",
+      "direction": "bullish",
       "sources": [
         "forecast",
         "elliott"
       ],
       "source_count": 2,
-      "consensus_strength": 0.5,
-      "avg_confidence": 0.4236,
-      "conviction_score": 0.1412
+      "consensus_strength": 1,
+      "avg_confidence": 0.4161,
+      "conviction_score": 0.2774
     },
     {
-      "ticker": "ISRG",
+      "ticker": "PDD",
       "direction": "bearish",
       "sources": [
         "forecast",
         "elliott"
       ],
       "source_count": 2,
-      "consensus_strength": 0.5,
-      "avg_confidence": 0.4206,
-      "conviction_score": 0.1402
+      "consensus_strength": 1,
+      "avg_confidence": 0.4155,
+      "conviction_score": 0.277
     },
     {
-      "ticker": "AMZN",
+      "ticker": "PCAR",
+      "direction": "bullish",
+      "sources": [
+        "forecast",
+        "elliott"
+      ],
+      "source_count": 2,
+      "consensus_strength": 1,
+      "avg_confidence": 0.4148,
+      "conviction_score": 0.2766
+    },
+    {
+      "ticker": "GOOG",
+      "direction": "bullish",
+      "sources": [
+        "forecast",
+        "elliott"
+      ],
+      "source_count": 2,
+      "consensus_strength": 1,
+      "avg_confidence": 0.4121,
+      "conviction_score": 0.2747
+    },
+    {
+      "ticker": "GOOGL",
+      "direction": "bullish",
+      "sources": [
+        "forecast",
+        "elliott"
+      ],
+      "source_count": 2,
+      "consensus_strength": 1,
+      "avg_confidence": 0.412,
+      "conviction_score": 0.2746
+    },
+    {
+      "ticker": "CCEP",
+      "direction": "bearish",
+      "sources": [
+        "forecast",
+        "elliott"
+      ],
+      "source_count": 2,
+      "consensus_strength": 1,
+      "avg_confidence": 0.3911,
+      "conviction_score": 0.2607
+    },
+    {
+      "ticker": "MDLZ",
+      "direction": "bearish",
+      "sources": [
+        "forecast",
+        "elliott"
+      ],
+      "source_count": 2,
+      "consensus_strength": 1,
+      "avg_confidence": 0.3707,
+      "conviction_score": 0.2471
+    },
+    {
+      "ticker": "DXCM",
+      "direction": "bearish",
+      "sources": [
+        "forecast",
+        "elliott"
+      ],
+      "source_count": 2,
+      "consensus_strength": 1,
+      "avg_confidence": 0.3644,
+      "conviction_score": 0.2429
+    },
+    {
+      "ticker": "CDW",
+      "direction": "bearish",
+      "sources": [
+        "forecast",
+        "elliott"
+      ],
+      "source_count": 2,
+      "consensus_strength": 1,
+      "avg_confidence": 0.3597,
+      "conviction_score": 0.2398
+    },
+    {
+      "ticker": "TTWO",
+      "direction": "bearish",
+      "sources": [
+        "forecast",
+        "elliott"
+      ],
+      "source_count": 2,
+      "consensus_strength": 1,
+      "avg_confidence": 0.3496,
+      "conviction_score": 0.233
+    },
+    {
+      "ticker": "TEAM",
+      "direction": "bearish",
+      "sources": [
+        "forecast",
+        "elliott"
+      ],
+      "source_count": 2,
+      "consensus_strength": 1,
+      "avg_confidence": 0.3411,
+      "conviction_score": 0.2274
+    },
+    {
+      "ticker": "TRI",
+      "direction": "bearish",
+      "sources": [
+        "forecast",
+        "elliott"
+      ],
+      "source_count": 2,
+      "consensus_strength": 1,
+      "avg_confidence": 0.34,
+      "conviction_score": 0.2267
+    },
+    {
+      "ticker": "MCHP",
       "direction": "bearish",
       "sources": [
         "forecast",
@@ -397,8 +418,8 @@
       ],
       "source_count": 2,
       "consensus_strength": 0.5,
-      "avg_confidence": 0.4168,
-      "conviction_score": 0.1389
+      "avg_confidence": 0.478,
+      "conviction_score": 0.1593
     },
     {
       "ticker": "ON",
@@ -409,11 +430,11 @@
       ],
       "source_count": 2,
       "consensus_strength": 0.5,
-      "avg_confidence": 0.4167,
-      "conviction_score": 0.1389
+      "avg_confidence": 0.4761,
+      "conviction_score": 0.1587
     },
     {
-      "ticker": "PDD",
+      "ticker": "WBD",
       "direction": "bearish",
       "sources": [
         "forecast",
@@ -421,8 +442,56 @@
       ],
       "source_count": 2,
       "consensus_strength": 0.5,
-      "avg_confidence": 0.4162,
-      "conviction_score": 0.1387
+      "avg_confidence": 0.4752,
+      "conviction_score": 0.1584
+    },
+    {
+      "ticker": "BKR",
+      "direction": "bearish",
+      "sources": [
+        "forecast",
+        "elliott"
+      ],
+      "source_count": 2,
+      "consensus_strength": 0.5,
+      "avg_confidence": 0.4629,
+      "conviction_score": 0.1543
+    },
+    {
+      "ticker": "IDXX",
+      "direction": "bearish",
+      "sources": [
+        "forecast",
+        "elliott"
+      ],
+      "source_count": 2,
+      "consensus_strength": 0.5,
+      "avg_confidence": 0.4407,
+      "conviction_score": 0.1469
+    },
+    {
+      "ticker": "GEHC",
+      "direction": "bearish",
+      "sources": [
+        "forecast",
+        "elliott"
+      ],
+      "source_count": 2,
+      "consensus_strength": 0.5,
+      "avg_confidence": 0.4398,
+      "conviction_score": 0.1466
+    },
+    {
+      "ticker": "EXC",
+      "direction": "bearish",
+      "sources": [
+        "forecast",
+        "elliott"
+      ],
+      "source_count": 2,
+      "consensus_strength": 0.5,
+      "avg_confidence": 0.4229,
+      "conviction_score": 0.141
     },
     {
       "ticker": "APP",
@@ -433,11 +502,11 @@
       ],
       "source_count": 2,
       "consensus_strength": 0.5,
-      "avg_confidence": 0.4155,
-      "conviction_score": 0.1385
+      "avg_confidence": 0.4181,
+      "conviction_score": 0.1394
     },
     {
-      "ticker": "SHOP",
+      "ticker": "AMAT",
       "direction": "bearish",
       "sources": [
         "forecast",
@@ -445,23 +514,11 @@
       ],
       "source_count": 2,
       "consensus_strength": 0.5,
-      "avg_confidence": 0.4148,
-      "conviction_score": 0.1382
+      "avg_confidence": 0.4158,
+      "conviction_score": 0.1386
     },
     {
-      "ticker": "META",
-      "direction": "bearish",
-      "sources": [
-        "forecast",
-        "elliott"
-      ],
-      "source_count": 2,
-      "consensus_strength": 0.5,
-      "avg_confidence": 0.4136,
-      "conviction_score": 0.1379
-    },
-    {
-      "ticker": "CDW",
+      "ticker": "GILD",
       "direction": "bearish",
       "sources": [
         "forecast",
@@ -473,7 +530,7 @@
       "conviction_score": 0.1377
     },
     {
-      "ticker": "PLTR",
+      "ticker": "SHOP",
       "direction": "bearish",
       "sources": [
         "forecast",
@@ -481,11 +538,11 @@
       ],
       "source_count": 2,
       "consensus_strength": 0.5,
-      "avg_confidence": 0.4114,
-      "conviction_score": 0.1371
+      "avg_confidence": 0.4132,
+      "conviction_score": 0.1377
     },
     {
-      "ticker": "ARM",
+      "ticker": "GFS",
       "direction": "bearish",
       "sources": [
         "forecast",
@@ -493,11 +550,11 @@
       ],
       "source_count": 2,
       "consensus_strength": 0.5,
-      "avg_confidence": 0.4108,
-      "conviction_score": 0.1369
+      "avg_confidence": 0.4098,
+      "conviction_score": 0.1366
     },
     {
-      "ticker": "FTNT",
+      "ticker": "AMZN",
       "direction": "bearish",
       "sources": [
         "forecast",
@@ -505,35 +562,11 @@
       ],
       "source_count": 2,
       "consensus_strength": 0.5,
-      "avg_confidence": 0.4103,
-      "conviction_score": 0.1368
-    },
-    {
-      "ticker": "ROST",
-      "direction": "bearish",
-      "sources": [
-        "forecast",
-        "elliott"
-      ],
-      "source_count": 2,
-      "consensus_strength": 0.5,
-      "avg_confidence": 0.4096,
-      "conviction_score": 0.1365
-    },
-    {
-      "ticker": "TMUS",
-      "direction": "bearish",
-      "sources": [
-        "forecast",
-        "elliott"
-      ],
-      "source_count": 2,
-      "consensus_strength": 0.5,
-      "avg_confidence": 0.4085,
+      "avg_confidence": 0.4087,
       "conviction_score": 0.1362
     },
     {
-      "ticker": "ADI",
+      "ticker": "CSX",
       "direction": "bearish",
       "sources": [
         "forecast",
@@ -541,11 +574,11 @@
       ],
       "source_count": 2,
       "consensus_strength": 0.5,
-      "avg_confidence": 0.4079,
+      "avg_confidence": 0.4081,
       "conviction_score": 0.136
     },
     {
-      "ticker": "MELI",
+      "ticker": "CHTR",
       "direction": "bearish",
       "sources": [
         "forecast",
@@ -553,11 +586,11 @@
       ],
       "source_count": 2,
       "consensus_strength": 0.5,
-      "avg_confidence": 0.4066,
-      "conviction_score": 0.1355
+      "avg_confidence": 0.4076,
+      "conviction_score": 0.1359
     },
     {
-      "ticker": "PANW",
+      "ticker": "SBUX",
       "direction": "bearish",
       "sources": [
         "forecast",
@@ -565,8 +598,8 @@
       ],
       "source_count": 2,
       "consensus_strength": 0.5,
-      "avg_confidence": 0.4062,
-      "conviction_score": 0.1354
+      "avg_confidence": 0.4077,
+      "conviction_score": 0.1359
     },
     {
       "ticker": "CRWD",
@@ -577,11 +610,11 @@
       ],
       "source_count": 2,
       "consensus_strength": 0.5,
-      "avg_confidence": 0.4048,
-      "conviction_score": 0.1349
+      "avg_confidence": 0.4056,
+      "conviction_score": 0.1352
     },
     {
-      "ticker": "MSFT",
+      "ticker": "QCOM",
       "direction": "bearish",
       "sources": [
         "forecast",
@@ -589,11 +622,11 @@
       ],
       "source_count": 2,
       "consensus_strength": 0.5,
-      "avg_confidence": 0.4043,
-      "conviction_score": 0.1347
+      "avg_confidence": 0.4029,
+      "conviction_score": 0.1343
     },
     {
-      "ticker": "LULU",
+      "ticker": "UBER",
       "direction": "bearish",
       "sources": [
         "forecast",
@@ -601,8 +634,8 @@
       ],
       "source_count": 2,
       "consensus_strength": 0.5,
-      "avg_confidence": 0.4034,
-      "conviction_score": 0.1345
+      "avg_confidence": 0.3986,
+      "conviction_score": 0.1329
     },
     {
       "ticker": "ADSK",
@@ -613,80 +646,8 @@
       ],
       "source_count": 2,
       "consensus_strength": 0.5,
-      "avg_confidence": 0.402,
-      "conviction_score": 0.134
-    },
-    {
-      "ticker": "DASH",
-      "direction": "bearish",
-      "sources": [
-        "forecast",
-        "elliott"
-      ],
-      "source_count": 2,
-      "consensus_strength": 0.5,
-      "avg_confidence": 0.4009,
-      "conviction_score": 0.1336
-    },
-    {
-      "ticker": "TTD",
-      "direction": "bearish",
-      "sources": [
-        "forecast",
-        "elliott"
-      ],
-      "source_count": 2,
-      "consensus_strength": 0.5,
-      "avg_confidence": 0.4008,
-      "conviction_score": 0.1336
-    },
-    {
-      "ticker": "WDAY",
-      "direction": "bearish",
-      "sources": [
-        "forecast",
-        "elliott"
-      ],
-      "source_count": 2,
-      "consensus_strength": 0.5,
-      "avg_confidence": 0.4,
-      "conviction_score": 0.1333
-    },
-    {
-      "ticker": "ADBE",
-      "direction": "bearish",
-      "sources": [
-        "forecast",
-        "elliott"
-      ],
-      "source_count": 2,
-      "consensus_strength": 0.5,
-      "avg_confidence": 0.3981,
-      "conviction_score": 0.1327
-    },
-    {
-      "ticker": "ROP",
-      "direction": "bearish",
-      "sources": [
-        "forecast",
-        "elliott"
-      ],
-      "source_count": 2,
-      "consensus_strength": 0.5,
-      "avg_confidence": 0.3961,
-      "conviction_score": 0.132
-    },
-    {
-      "ticker": "ZS",
-      "direction": "bearish",
-      "sources": [
-        "forecast",
-        "elliott"
-      ],
-      "source_count": 2,
-      "consensus_strength": 0.5,
-      "avg_confidence": 0.3957,
-      "conviction_score": 0.1319
+      "avg_confidence": 0.3983,
+      "conviction_score": 0.1328
     },
     {
       "ticker": "INTU",
@@ -697,35 +658,11 @@
       ],
       "source_count": 2,
       "consensus_strength": 0.5,
-      "avg_confidence": 0.3955,
-      "conviction_score": 0.1318
-    },
-    {
-      "ticker": "TEAM",
-      "direction": "bearish",
-      "sources": [
-        "forecast",
-        "elliott"
-      ],
-      "source_count": 2,
-      "consensus_strength": 0.5,
-      "avg_confidence": 0.3946,
-      "conviction_score": 0.1315
-    },
-    {
-      "ticker": "TRI",
-      "direction": "bearish",
-      "sources": [
-        "forecast",
-        "elliott"
-      ],
-      "source_count": 2,
-      "consensus_strength": 0.5,
-      "avg_confidence": 0.3919,
+      "avg_confidence": 0.3917,
       "conviction_score": 0.1306
     },
     {
-      "ticker": "IDXX",
+      "ticker": "NVDA",
       "direction": "bearish",
       "sources": [
         "forecast",
@@ -733,11 +670,11 @@
       ],
       "source_count": 2,
       "consensus_strength": 0.5,
-      "avg_confidence": 0.3909,
-      "conviction_score": 0.1303
+      "avg_confidence": 0.3886,
+      "conviction_score": 0.1295
     },
     {
-      "ticker": "AEP",
+      "ticker": "VRSK",
       "direction": "bearish",
       "sources": [
         "forecast",
@@ -745,15 +682,83 @@
       ],
       "source_count": 2,
       "consensus_strength": 0.5,
-      "avg_confidence": 0.3891,
-      "conviction_score": 0.1297
+      "avg_confidence": 0.3881,
+      "conviction_score": 0.1294
+    },
+    {
+      "ticker": "COST",
+      "direction": "bearish",
+      "sources": [
+        "forecast",
+        "elliott"
+      ],
+      "source_count": 2,
+      "consensus_strength": 0.5,
+      "avg_confidence": 0.3862,
+      "conviction_score": 0.1287
+    },
+    {
+      "ticker": "AVGO",
+      "direction": "bearish",
+      "sources": [
+        "forecast",
+        "elliott"
+      ],
+      "source_count": 2,
+      "consensus_strength": 0.5,
+      "avg_confidence": 0.3824,
+      "conviction_score": 0.1275
+    },
+    {
+      "ticker": "ISRG",
+      "direction": "bearish",
+      "sources": [
+        "forecast",
+        "elliott"
+      ],
+      "source_count": 2,
+      "consensus_strength": 0.5,
+      "avg_confidence": 0.3758,
+      "conviction_score": 0.1253
+    },
+    {
+      "ticker": "META",
+      "direction": "bearish",
+      "sources": [
+        "forecast",
+        "elliott"
+      ],
+      "source_count": 2,
+      "consensus_strength": 0.5,
+      "avg_confidence": 0.3718,
+      "conviction_score": 0.1239
+    },
+    {
+      "ticker": "CTSH",
+      "direction": "bearish",
+      "sources": [
+        "forecast",
+        "elliott"
+      ],
+      "source_count": 2,
+      "consensus_strength": 0.5,
+      "avg_confidence": 0.3685,
+      "conviction_score": 0.1228
+    },
+    {
+      "ticker": "ORLY",
+      "direction": "bearish",
+      "sources": [
+        "forecast",
+        "elliott"
+      ],
+      "source_count": 2,
+      "consensus_strength": 0.5,
+      "avg_confidence": 0.3661,
+      "conviction_score": 0.1221
     }
   ],
-  "stock_forward_returns": {
-    "top50_count": 50,
-    "tracked": 0,
-    "avg_market_return_today": 0.0114
-  },
+  "stock_forward_returns": null,
   "improvements_active": [
     "forecast_calibration_feedback",
     "forecast_adaptive_confidence",
