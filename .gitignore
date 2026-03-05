@@ -161,3 +161,33 @@ Report/ProtectionAudit/
 # generated runtime + published artifacts (Option A)
 # mirrors/
 # public/data/
+
+# --- Quant/IP hygiene (local runtime only; keep code commitable) ---
+/mirrors/quantlab/**
+/mirrors/universe-v7/**
+/quantlab/.pytest_cache/**
+/quantlab/.ruff_cache/**
+/quantlab/src/quantlab.egg-info/**
+/quantlab/data/**
+/quantlab/runs/**
+/quantlab/jobs/**
+/quantlab/ops/**
+/quantlab/registry/**
+/quantlab/models/**
+/quantlab/artifacts/**
+
+# --- local scratch / workstation-only ---
+/.claude/
+/.playwright-cli/
+/.vscode/
+/diff.txt
+/parse-registry.mjs
+/scrape_ui.mjs
+/prod_stock.html
+/prod_stock-features.js
+/test-search.js
+/test_eodhd_endpoints.mjs
+/test_keys.cjs
+/docs/runbooks/quant-v4/
+/docs/runbooks/v7-stocks-prio1-tomorrow.md
+/Report/A/

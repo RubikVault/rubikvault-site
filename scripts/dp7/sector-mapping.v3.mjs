@@ -52,16 +52,28 @@ async function main() {
 
   const sectors = [];
 
+  // Load bootstrap sectors as fallback when Tiingo is unavailable
+  const bootstrapDoc = await readJson(path.join(rootDir, "config/sector-bootstrap.json"), null);
+  const bootstrapSectors = bootstrapDoc?.sectors || {};
+
   if (!process.env.TIINGO_API_KEY) {
     status = "degraded";
     reason = "MISSING_SECRET:TIINGO_API_KEY";
     for (const item of entries) {
       const prior = prevMap.get(item.canonicalId);
+      const priorSector = prior?.sector;
+      const bootstrap = bootstrapSectors[item.ticker] || null;
+      const sector = (priorSector && priorSector !== "Unknown") ? priorSector
+        : bootstrap ? bootstrap
+        : "Unknown";
+      const source = (priorSector && priorSector !== "Unknown") ? "previous-cache"
+        : bootstrap ? "bootstrap"
+        : "fallback-unknown";
       sectors.push({
         canonical_id: item.canonicalId,
         ticker: item.ticker,
-        sector: prior?.sector || "Unknown",
-        source: prior ? "previous-cache" : "fallback-unknown"
+        sector,
+        source
       });
     }
   } else {

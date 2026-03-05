@@ -19,11 +19,21 @@ export async function onRequestGet(context) {
     });
   }
 
+  // Use ASSETS binding to read static files directly (avoids Wrangler
+  // single-thread deadlock when the worker fetch()es its own origin).
+  const assetFetcher = context.env?.ASSETS;
   const origin = url.origin;
 
   async function fetchJson(path) {
     try {
-      const res = await fetch(new URL(path, origin).toString());
+      let res;
+      if (assetFetcher) {
+        // Cloudflare Pages / Wrangler — read asset without HTTP loopback
+        res = await assetFetcher.fetch(new URL(path, origin).toString());
+      } else {
+        // Fallback (e.g. plain Node tests)
+        res = await fetch(new URL(path, origin).toString());
+      }
       if (!res.ok) return null;
       return await res.json();
     } catch {

@@ -1,0 +1,11 @@
+{
+  "schema": "rv.config.market-hub-weights.v1",
+  "score_weights": {
+    "default":   { "momentum": 0.35, "flows": 0.20, "valuation": 0.15, "macro": 0.20, "risk": 0.10 },
+    "sector":    { "momentum": 0.35, "flows": 0.25, "valuation": 0.20, "macro": 0.10, "risk": 0.10 },
+    "commodity": { "momentum": 0.30, "flows": 0.15, "supply_demand": 0.25, "macro": 0.20, "risk": 0.10 },
+    "crypto":    { "momentum": 0.25, "flows": 0.30, "valuation": 0.10, "macro": 0.15, "risk": 0.20 },
+    "country":   { "momentum": 0.25, "flows": 0.20, "valuation": 0.15, "macro": 0.30, "risk": 0.10 },
+    "forex":     { "momentum": 0.30, "flows": 0.20, "valuation": 0.10, "macro": 0.30, "risk": 0.10 }
+  }
+}

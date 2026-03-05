@@ -1,0 +1,443 @@
+/* ═══════════════════════════════════════════════════════════════════
+   Market Hub — Isolated Styles (zero overlap with analyzer/shared)
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* ── Layout ── */
+.mh-root {
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
+.mh-regime-banner {
+    padding: 0.6rem 1rem;
+    border-radius: 10px;
+    margin-bottom: 0.8rem;
+    font-size: 0.82rem;
+    font-weight: 600;
+    text-align: center;
+    display: none;
+}
+
+.mh-regime-banner.mh-stress {
+    display: block;
+    background: rgba(245, 158, 11, 0.12);
+    border: 1px solid rgba(245, 158, 11, 0.3);
+    color: #f59e0b;
+}
+
+.mh-regime-banner.mh-crisis {
+    display: block;
+    background: rgba(239, 68, 68, 0.12);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    color: #ef4444;
+}
+
+.mh-header {
+    display: flex;
+    justify-content: space-between;
+    gap: 0.8rem;
+    align-items: flex-end;
+    flex-wrap: wrap;
+    margin-bottom: 0.6rem;
+}
+
+.mh-header h1 {
+    font-size: 2.1rem;
+    color: #e5e7eb;
+    margin: 0;
+}
+
+.mh-header-sub {
+    font-size: 0.92rem;
+    color: #94a3b8;
+}
+
+.mh-header-meta {
+    font-size: 0.8rem;
+    color: #94a3b8;
+}
+
+/* ── Warning Banner ── */
+.mh-demo-warn {
+    padding: 0.5rem 0.8rem;
+    background: rgba(245, 158, 11, 0.08);
+    border: 1px solid rgba(245, 158, 11, 0.2);
+    border-radius: 8px;
+    margin-bottom: 0.8rem;
+    font-size: 0.78rem;
+    color: #f59e0b;
+    line-height: 1.4;
+}
+
+.mh-demo-warn a {
+    color: #60a5fa;
+    text-decoration: underline;
+}
+
+/* ── Tab Bar ── */
+.mh-tab-bar {
+    display: flex;
+    gap: 0.3rem;
+    overflow-x: auto;
+    padding-bottom: 0.5rem;
+    margin-bottom: 1rem;
+    border-bottom: 1px solid rgba(100, 116, 139, 0.2);
+    -webkit-overflow-scrolling: touch;
+}
+
+.mh-tab {
+    padding: 0.4rem 0.9rem;
+    font-size: 0.82rem;
+    border: none;
+    border-radius: 8px 8px 0 0;
+    cursor: pointer;
+    background: transparent;
+    color: #94a3b8;
+    white-space: nowrap;
+    transition: all 0.15s;
+    font-family: inherit;
+    font-weight: 600;
+}
+
+.mh-tab:hover {
+    background: rgba(51, 65, 85, 0.5);
+    color: #e2e8f0;
+}
+
+.mh-tab.mh-tab-active {
+    background: rgba(59, 130, 246, 0.15);
+    color: #60a5fa;
+}
+
+/* ── Panels ── */
+.mh-panel {
+    display: none;
+    animation: mhFadeIn 0.2s ease;
+}
+
+.mh-panel.mh-panel-active {
+    display: block;
+}
+
+@keyframes mhFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(4px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* ── Cards ── */
+.mh-card {
+    padding: 1rem;
+    background: #0d1119;
+    border: 1px solid #1c2535;
+    border-radius: 10px;
+    margin-bottom: 0.8rem;
+    transition: border-color 0.2s;
+}
+
+.mh-card:hover {
+    border-color: rgba(59, 130, 246, 0.25);
+}
+
+.mh-section-title {
+    font-size: 0.82rem;
+    color: #5a6a82;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 0.6rem;
+}
+
+/* ── Score Pill ── */
+.mh-score {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.15rem 0.55rem;
+    border-radius: 6px;
+    font-weight: 700;
+    font-size: 0.85rem;
+}
+
+.mh-score-bull {
+    background: rgba(16, 185, 129, 0.13);
+    color: #10b981;
+}
+
+.mh-score-warn {
+    background: rgba(245, 158, 11, 0.13);
+    color: #f59e0b;
+}
+
+.mh-score-bear {
+    background: rgba(239, 68, 68, 0.13);
+    color: #ef4444;
+}
+
+/* ── Phase Badge ── */
+.mh-phase {
+    padding: 0.12rem 0.5rem;
+    border-radius: 5px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    display: inline-block;
+}
+
+/* ── Confidence Badge ── */
+.mh-conf {
+    padding: 0.1rem 0.4rem;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    display: inline-block;
+}
+
+/* ── Driver Chip ── */
+.mh-chip {
+    padding: 0.1rem 0.4rem;
+    border-radius: 4px;
+    font-size: 0.72rem;
+    display: inline-block;
+}
+
+/* ── Card Row (universal) ── */
+.mh-card-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.6rem 0;
+    border-bottom: 1px solid #1c2535;
+    transition: background 0.15s;
+}
+
+.mh-card-row:hover {
+    background: rgba(30, 41, 59, 0.3);
+}
+
+.mh-card-row:last-child {
+    border-bottom: none;
+}
+
+.mh-card-row-left {
+    flex: 1;
+    min-width: 0;
+}
+
+.mh-card-row-tags {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.mh-card-row-name {
+    color: #dde3ed;
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+.mh-card-row-drivers {
+    margin-top: 0.3rem;
+    display: flex;
+    gap: 0.3rem;
+    flex-wrap: wrap;
+}
+
+.mh-card-row-tldr {
+    margin-top: 0.2rem;
+    font-size: 0.76rem;
+    color: #5a6a82;
+}
+
+.mh-card-row-right {
+    text-align: right;
+    min-width: 55px;
+}
+
+/* ── Sources Footer ── */
+.mh-sources {
+    margin-top: 0.5rem;
+    padding-top: 0.4rem;
+    border-top: 1px solid #1c2535;
+    font-size: 0.68rem;
+    color: #5a6a82;
+}
+
+/* ── Grid Layouts ── */
+.mh-grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.8rem;
+    margin-bottom: 0.8rem;
+}
+
+.mh-grid-3 {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 0.8rem;
+    margin-bottom: 0.8rem;
+}
+
+.mh-grid-auto {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 0.6rem;
+}
+
+/* ── Tables ── */
+.mh-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.84rem;
+}
+
+.mh-table th {
+    text-align: left;
+    padding: 0.5rem;
+    color: #5a6a82;
+    border-bottom: 1px solid #1c2535;
+    font-weight: 600;
+}
+
+.mh-table td {
+    padding: 0.5rem;
+    border-bottom: 1px solid #1c2535;
+}
+
+.mh-table tr:hover {
+    background: rgba(30, 41, 59, 0.3);
+}
+
+.mh-table .mh-right {
+    text-align: right;
+}
+
+.mh-table .mh-center {
+    text-align: center;
+}
+
+/* ── Phase Bar ── */
+.mh-phase-bar {
+    display: flex;
+    gap: 0.3rem;
+    height: 24px;
+    border-radius: 6px;
+    overflow: hidden;
+    margin-bottom: 0.6rem;
+}
+
+.mh-phase-bar-seg {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.65rem;
+    color: #fff;
+    font-weight: 600;
+}
+
+/* ── Breadth Bar ── */
+.mh-breadth-bar {
+    display: flex;
+    gap: 0.3rem;
+    height: 20px;
+    border-radius: 5px;
+    overflow: hidden;
+    margin-bottom: 0.4rem;
+}
+
+/* ── Pro Toggle ── */
+.mh-pro-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    cursor: pointer;
+    font-size: 0.78rem;
+    color: #94a3b8;
+    padding: 0.25rem 0.6rem;
+    border-radius: 6px;
+    border: 1px solid rgba(100, 116, 139, 0.3);
+    background: rgba(30, 41, 59, 0.5);
+    transition: all 0.15s;
+    user-select: none;
+}
+
+.mh-pro-toggle:hover {
+    background: rgba(51, 65, 85, 0.5);
+    color: #e2e8f0;
+}
+
+.mh-pro-toggle.mh-pro-on {
+    background: rgba(59, 130, 246, 0.12);
+    border-color: rgba(59, 130, 246, 0.3);
+    color: #60a5fa;
+}
+
+.mh-pro-detail {
+    display: none;
+}
+
+.mh-pro-on~.mh-pro-detail,
+.mh-pro-active .mh-pro-detail {
+    display: block;
+}
+
+/* ── Methodology Code Blocks ── */
+.mh-code {
+    background: #111827;
+    padding: 0.15rem 0.4rem;
+    border-radius: 4px;
+    color: #dde3ed;
+    font-family: 'SF Mono', 'Fira Code', monospace;
+    font-size: 0.82rem;
+}
+
+/* ── Responsive ── */
+@media (max-width: 768px) {
+    .mh-grid-2 {
+        grid-template-columns: 1fr;
+    }
+
+    .mh-header h1 {
+        font-size: 1.6rem;
+    }
+
+    .mh-tab {
+        font-size: 0.75rem;
+        padding: 0.35rem 0.7rem;
+    }
+}
+
+/* ── Color Utilities ── */
+.mh-c-bull {
+    color: #10b981;
+}
+
+.mh-c-warn {
+    color: #f59e0b;
+}
+
+.mh-c-bear {
+    color: #ef4444;
+}
+
+.mh-c-text {
+    color: #dde3ed;
+}
+
+.mh-c-muted {
+    color: #5a6a82;
+}
+
+.mh-c-blue {
+    color: #3b82f6;
+}
+
+.mh-fw-700 {
+    font-weight: 700;
+}

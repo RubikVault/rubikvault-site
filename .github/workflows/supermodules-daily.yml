@@ -1,0 +1,50 @@
+name: Super-Modules Build (Daily)
+
+on:
+  workflow_dispatch:
+  schedule:
+    # Runs at 23:45 UTC Mon–Fri (after data-pulse-daily)
+    - cron: '45 23 * * 1-5'
+
+permissions:
+  contents: write
+
+jobs:
+  build-supermodules:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      # Risk & Resilience — uses existing v3/series data, no API key needed
+      - name: Build Risk & Resilience
+        run: node scripts/build-supermodules.mjs --module risk_resilience
+
+      # Macro OS — uses existing macro-hub snapshot, no API key needed
+      - name: Build Macro OS
+        run: node scripts/build-supermodules.mjs --module macro_os
+
+      # Fundamental Truth — needs EODHD API key for fundamentals
+      - name: Build Fundamental Truth
+        env:
+          EODHD_API_KEY: ${{ secrets.EODHD_API_KEY }}
+        run: node scripts/build-supermodules.mjs --module fundamental_truth --limit 200
+
+      - name: Commit Super-Module artifacts
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add public/data/supermodules/
+          if git diff --cached --quiet; then
+            echo "No super-module changes to commit"
+          else
+            git commit -m "chore(supermodules): daily build $(date +%Y-%m-%d)"
+            git push
+          fi

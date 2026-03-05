@@ -1,0 +1,78 @@
+{
+  "schema": "rv.config.global-market-symbols.v1",
+  "us_etf_proxies": {
+    "indices": [
+      { "symbol": "SPY.US", "name": "S&P 500", "display": "S&P 500" },
+      { "symbol": "QQQ.US", "name": "NASDAQ 100", "display": "NASDAQ" },
+      { "symbol": "DIA.US", "name": "Dow Jones", "display": "Dow" },
+      { "symbol": "IWM.US", "name": "Russell 2000", "display": "Russell" }
+    ],
+    "sectors": [
+      { "symbol": "XLK.US", "name": "Technology", "order": 1, "color": "#0ea5e9" },
+      { "symbol": "XLF.US", "name": "Financials", "order": 2, "color": "#22c55e" },
+      { "symbol": "XLV.US", "name": "Health Care", "order": 3, "color": "#ef4444" },
+      { "symbol": "XLE.US", "name": "Energy", "order": 4, "color": "#f59e0b" },
+      { "symbol": "XLI.US", "name": "Industrials", "order": 5, "color": "#64748b" },
+      { "symbol": "XLY.US", "name": "Consumer Discretionary", "order": 6, "color": "#a855f7" },
+      { "symbol": "XLP.US", "name": "Consumer Staples", "order": 7, "color": "#84cc16" },
+      { "symbol": "XLU.US", "name": "Utilities", "order": 8, "color": "#06b6d4" },
+      { "symbol": "XLB.US", "name": "Materials", "order": 9, "color": "#b45309" },
+      { "symbol": "XLRE.US", "name": "Real Estate", "order": 10, "color": "#14b8a6" },
+      { "symbol": "XLC.US", "name": "Communication Services", "order": 11, "color": "#f43f5e" }
+    ]
+  },
+  "global_indices": {
+    "asia": [
+      { "symbol": "N225.INDX", "name": "Nikkei 225", "display": "Nikkei", "country": "JP" },
+      { "symbol": "HSI.INDX", "name": "Hang Seng", "display": "Hang Seng", "country": "HK" },
+      { "symbol": "000001.SHG", "name": "Shanghai Composite", "display": "Shanghai", "country": "CN" },
+      { "symbol": "BSESN.INDX", "name": "BSE Sensex", "display": "Sensex", "country": "IN" },
+      { "symbol": "AXJO.INDX", "name": "ASX 200", "display": "ASX", "country": "AU" }
+    ],
+    "europe": [
+      { "symbol": "ISF.LSE", "name": "FTSE 100 ETF", "display": "FTSE", "country": "GB" },
+      { "symbol": "GDAXI.INDX", "name": "DAX 40", "display": "DAX", "country": "DE" },
+      { "symbol": "FCHI.INDX", "name": "CAC 40", "display": "CAC 40", "country": "FR" },
+      { "symbol": "STOXX50E.INDX", "name": "Euro Stoxx 50", "display": "Stoxx 50", "country": "EU" },
+      { "symbol": "SSMI.INDX", "name": "SMI", "display": "SMI", "country": "CH" },
+      { "symbol": "IBEX.INDX", "name": "IBEX 35", "display": "IBEX", "country": "ES" }
+    ],
+    "americas": [
+      { "symbol": "GSPC.INDX", "name": "S&P 500", "display": "S&P 500", "country": "US" },
+      { "symbol": "DJI.INDX", "name": "Dow Jones", "display": "Dow", "country": "US" },
+      { "symbol": "IXIC.INDX", "name": "NASDAQ Composite", "display": "NASDAQ", "country": "US" },
+      { "symbol": "BVSP.INDX", "name": "Bovespa", "display": "Bovespa", "country": "BR" },
+      { "symbol": "MXX.INDX", "name": "IPC Mexico", "display": "IPC", "country": "MX" }
+    ]
+  },
+  "commodities": [
+    { "symbol": "GLD.US", "name": "Gold (ETF)", "display": "Gold", "unit": "USD" },
+    { "symbol": "SLV.US", "name": "Silver (ETF)", "display": "Silver", "unit": "USD" },
+    { "symbol": "USO.US", "name": "Oil WTI (ETF)", "display": "Oil WTI", "unit": "USD" },
+    { "symbol": "UNG.US", "name": "Natural Gas (ETF)", "display": "Nat Gas", "unit": "USD" },
+    { "symbol": "CPER.US", "name": "Copper (ETF)", "display": "Copper", "unit": "USD" }
+  ],
+  "crypto": [
+    { "symbol": "BTC-USD.CC", "name": "Bitcoin", "display": "BTC" },
+    { "symbol": "ETH-USD.CC", "name": "Ethereum", "display": "ETH" },
+    { "symbol": "SOL-USD.CC", "name": "Solana", "display": "SOL" },
+    { "symbol": "BNB-USD.CC", "name": "BNB", "display": "BNB" },
+    { "symbol": "XRP-USD.CC", "name": "XRP", "display": "XRP" }
+  ],
+  "forex": [
+    { "symbol": "EURUSD.FOREX", "name": "EUR/USD", "display": "EUR/USD" },
+    { "symbol": "GBPUSD.FOREX", "name": "GBP/USD", "display": "GBP/USD" },
+    { "symbol": "USDJPY.FOREX", "name": "USD/JPY", "display": "USD/JPY" },
+    { "symbol": "AUDUSD.FOREX", "name": "AUD/USD", "display": "AUD/USD" },
+    { "symbol": "USDCHF.FOREX", "name": "USD/CHF", "display": "USD/CHF" }
+  ],
+  "regime_proxies": [
+    { "symbol": "HYG.US", "name": "HY Bond ETF", "purpose": "credit_stress_proxy" },
+    { "symbol": "TLT.US", "name": "20Y+ Treasury", "purpose": "rates_proxy" }
+  ],
+  "session_hours_utc": {
+    "asia": { "open": "00:00", "close": "08:00", "label": "Asia-Pacific" },
+    "europe": { "open": "07:00", "close": "16:30", "label": "Europe" },
+    "americas": { "open": "13:30", "close": "21:00", "label": "Americas" }
+  }
+}

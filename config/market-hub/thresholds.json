@@ -1,0 +1,27 @@
+{
+  "schema": "rv.config.market-hub-thresholds.v1",
+  "phase_rules": {
+    "early":         { "m20": ">0", "m60": "<=0", "rs60": ">0", "note": "Short momentum positive, mid not yet" },
+    "mid":           { "m20": ">0", "m60": ">0",  "m200": ">0", "rs60": ">0", "note": "All timeframes aligned" },
+    "late":          { "m200": ">0", "m60": ">0",  "m20": "<=0", "note": "Long intact but short fading" },
+    "exhausted":     { "m200": ">0", "m60": ">0",  "m20": "<0", "volz_or_crowding": ">1", "note": "Trend overheated" },
+    "reversal_risk": { "m60": "<0", "m200_or_stress": true, "note": "Trend breaking down" }
+  },
+  "regime_triggers": {
+    "stress":  { "conditions_needed": 2, "vol_z_threshold": 1.5, "credit_z_threshold": 1.5, "breadth_z_threshold": -1.5 },
+    "crisis":  { "conditions_needed": 3, "credit_z_hard": 2.5 }
+  },
+  "regime_damp": {
+    "normal": { "score_damp": 1.0, "confidence_mult": 1.0 },
+    "stress": { "score_damp": 0.6, "confidence_mult": 0.85 },
+    "crisis": { "score_damp": 0.3, "confidence_mult": 0.70 }
+  },
+  "confidence": {
+    "high_threshold": 0.75,
+    "medium_threshold": 0.50,
+    "freshness_penalty": { "daily_stale_days": 2, "weekly_stale_days": 10, "monthly_stale_days": 45 },
+    "freshness_factors": { "fresh": 1.0, "daily_stale": 0.8, "weekly_stale": 0.7, "monthly_stale": 0.6 }
+  },
+  "anti_noise_days": 2,
+  "min_coverage_for_score": 0.60
+}

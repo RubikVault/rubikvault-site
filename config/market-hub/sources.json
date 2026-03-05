@@ -1,0 +1,24 @@
+{
+  "schema": "rv.config.market-hub-sources.v1",
+  "tiers": {
+    "A": { "label": "Primary / Government", "reliability": 1.0, "examples": ["FRED", "BIS", "IMF", "CFTC", "EIA"] },
+    "B": { "label": "Market Data Provider", "reliability": 0.9, "examples": ["EODHD"] },
+    "C": { "label": "Derived / Proxy", "reliability": 0.75, "examples": ["ETF AUM proxy", "Price-derived flows"] }
+  },
+  "inputs": [
+    { "key": "prices",    "name": "EODHD EOD",           "freq": "daily",   "tier": "B", "note": "All prices and ETF proxies" },
+    { "key": "breadth",   "name": "Derived from EODHD",  "freq": "daily",   "tier": "C", "note": "Breadth computed from universe EOD" },
+    { "key": "flows",     "name": "Price-derived proxy",  "freq": "daily",   "tier": "C", "note": "No real fund-flow data — using multi-day price trends as proxy" },
+    { "key": "sectors",   "name": "SPDR Sector ETFs",     "freq": "daily",   "tier": "B", "note": "XLK, XLF, XLE etc. via EODHD" },
+    { "key": "credit",    "name": "HYG ETF proxy",        "freq": "daily",   "tier": "C", "note": "HY spread proxy via HYG price trend" },
+    { "key": "vol",       "name": "Realized vol proxy",   "freq": "daily",   "tier": "C", "note": "Computed from SPY daily returns" },
+    { "key": "crypto_onchain", "name": "Not available",   "freq": "n/a",     "tier": "C", "note": "On-chain data not yet integrated — using price proxy only" }
+  ],
+  "limitations": [
+    "No real fund-flow data (EPFR/ICI) — flows are derived from price trends",
+    "No options/skew data — vol proxy only from realized volatility",
+    "No COT positioning data yet — future enhancement",
+    "No on-chain crypto data — Glassnode/CryptoQuant not integrated",
+    "Breadth computed only from ~2,450 US stocks in universe, not full NYSE"
+  ]
+}
