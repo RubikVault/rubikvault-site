@@ -717,6 +717,92 @@
             try { var r = await fetch(url); return r.ok ? await r.json() : null; } catch (e) { return null; }
           }
 
+          async function fetchFirstJson(paths) {
+            for (const path of (Array.isArray(paths) ? paths : [])) {
+              const data = await fetchJson(path);
+              if (data) return data;
+            }
+            return null;
+          }
+
+          const ideasRuntime = {
+            marketDoc: null,
+            stockAnalysisDoc: null,
+            universeCache: new Map(),
+            stockUniverseSlice: null,
+            cryptoUniverseSlice: null,
+            warmed: false
+          };
+
+          async function loadIdeasMarketDoc() {
+            if (ideasRuntime.marketDoc) return ideasRuntime.marketDoc;
+            const data = await fetchFirstJson([
+              '/data/v3/derived/market/global-latest.json',
+              '/data/v3/derived/market/latest.json'
+            ]);
+            ideasRuntime.marketDoc = data || null;
+            return ideasRuntime.marketDoc;
+          }
+
+          async function loadStockAnalysisDoc() {
+            if (ideasRuntime.stockAnalysisDoc) return ideasRuntime.stockAnalysisDoc;
+            ideasRuntime.stockAnalysisDoc = await fetchJson('/data/snapshots/stock-analysis.json');
+            return ideasRuntime.stockAnalysisDoc;
+          }
+
+          function clamp(n, min, max) {
+            const v = Number(n);
+            if (!Number.isFinite(v)) return min;
+            return Math.min(max, Math.max(min, v));
+          }
+
+          async function fetchUniverseSymbols(query, assetClass, limit) {
+            const key = `${String(query || '').toLowerCase()}|${String(assetClass || '').toLowerCase()}|${Number(limit || 20)}`;
+            if (ideasRuntime.universeCache.has(key)) return ideasRuntime.universeCache.get(key);
+            const payload = await fetchJson(`/api/universe?q=${encodeURIComponent(query)}&asset_class=${encodeURIComponent(assetClass)}&limit=${Number(limit || 20)}`);
+            const rows = Array.isArray(payload?.data?.symbols) ? payload.data.symbols : [];
+            ideasRuntime.universeCache.set(key, rows);
+            return rows;
+          }
+
+          async function loadUniverseStockSlice() {
+            if (Array.isArray(ideasRuntime.stockUniverseSlice)) return ideasRuntime.stockUniverseSlice;
+            const seeds = ['a', 'm', 's', 't', 'c'];
+            const chunks = await Promise.all(seeds.map(function (q) { return fetchUniverseSymbols(q, 'stock', 120); }));
+            const map = new Map();
+            chunks.flat().forEach(function (row) {
+              const symbol = String(row?.symbol || '').toUpperCase();
+              if (!symbol || map.has(symbol)) return;
+              map.set(symbol, row);
+            });
+            ideasRuntime.stockUniverseSlice = Array.from(map.values());
+            return ideasRuntime.stockUniverseSlice;
+          }
+
+          async function loadCryptoUniverseSlice() {
+            if (Array.isArray(ideasRuntime.cryptoUniverseSlice)) return ideasRuntime.cryptoUniverseSlice;
+            const seeds = ['btc', 'eth', 'xrp'];
+            const chunks = await Promise.all(seeds.map(function (q) { return fetchUniverseSymbols(q, 'crypto', 10); }));
+            const map = new Map();
+            chunks.flat().forEach(function (row) {
+              const symbol = String(row?.symbol || '').toUpperCase();
+              if (!symbol || map.has(symbol)) return;
+              map.set(symbol, row);
+            });
+            ideasRuntime.cryptoUniverseSlice = Array.from(map.values());
+            return ideasRuntime.cryptoUniverseSlice;
+          }
+
+          function warmIdeasRuntime() {
+            if (ideasRuntime.warmed) return;
+            ideasRuntime.warmed = true;
+            setTimeout(function () {
+              loadIdeasMarketDoc().catch(function () { });
+              loadUniverseStockSlice().catch(function () { });
+              loadCryptoUniverseSlice().catch(function () { });
+            }, 50);
+          }
+
           async function loadSMManifest() {
             smManifest = await fetchJson(SM_BASE + 'manifest.supermodules.json');
             if (smManifest && smManifest.meta && smManifest.meta.generated_at) {
@@ -749,67 +835,152 @@
             if (smCache[tab]) return;
             var panel = document.getElementById('sm-content-' + tab);
             if (!panel) return;
+            warmIdeasRuntime();
             panel.innerHTML = '<div style="color:#64748b; padding:1rem;">Loading…</div>';
 
             // Forecast and Scientific have their own data sources
             if (tab === 'forecast') { return loadForecast(panel); }
             if (tab === 'scientific') { return loadScientific(panel); }
 
-            // --- NEW MOCK TABS (No real data source yet, just UI placehoder) ---
-            if (tab === 'etfrow') {
-              panel.innerHTML = '<div style="padding:1rem; color:#94a3b8; border:1px dashed rgba(100,116,139,0.3); border-radius:8px; text-align:center;">' +
-                '<div style="font-size:1.5rem; margin-bottom:0.5rem;">📊</div>' +
-                '<div style="font-size:1rem; color:#e2e8f0; font-weight:600; margin-bottom:0.3rem;">ETF Sector Flow Engine</div>' +
-                '<div style="font-size:0.85rem; max-width:400px; margin:0 auto;">Analyzing capital rotation across 20,312 index/sector funds.<br/>(UI Mockup - Engine incoming)</div>' +
-                '</div>';
-              return;
-            }
-            if (tab === 'cryptopulse') {
-              panel.innerHTML = '<div style="padding:1rem; color:#94a3b8; border:1px dashed rgba(100,116,139,0.3); border-radius:8px; text-align:center;">' +
-                '<div style="font-size:1.5rem; margin-bottom:0.5rem;">🪙</div>' +
-                '<div style="font-size:1rem; color:#e2e8f0; font-weight:600; margin-bottom:0.3rem;">Crypto Pulse Monitor</div>' +
-                '<div style="font-size:0.85rem; max-width:400px; margin:0 auto;">Real-time volume anomalies across 2,087 crypto assets.<br/>(UI Mockup - Engine incoming)</div>' +
-                '</div>';
-              return;
-            }
-            if (tab === 'macrobonds') {
-              panel.innerHTML = '<div style="padding:1rem; color:#94a3b8; border:1px dashed rgba(100,116,139,0.3); border-radius:8px; text-align:center;">' +
-                '<div style="font-size:1.5rem; margin-bottom:0.5rem;">🌐</div>' +
-                '<div style="font-size:1rem; color:#e2e8f0; font-weight:600; margin-bottom:0.3rem;">Macro & Sovereign Bonds</div>' +
-                '<div style="font-size:0.85rem; max-width:400px; margin:0 auto;">Mapping fiat strength matrix across 989 pairs and 115 sovereign bonds.<br/>(UI Mockup - Engine incoming)</div>' +
-                '</div>';
-              return;
-            }
-            if (tab === 'flight') {
-              panel.innerHTML = '<div style="padding:1rem; color:#94a3b8; border:1px dashed rgba(100,116,139,0.3); border-radius:8px; text-align:center;">' +
-                '<div style="font-size:1.5rem; margin-bottom:0.5rem;">🛡️</div>' +
-                '<div style="font-size:1rem; color:#e2e8f0; font-weight:600; margin-bottom:0.3rem;">Risk-Off Safe Havens</div>' +
-                '<div style="font-size:0.85rem; max-width:400px; margin:0 auto;">Screening 94,000+ mutual funds for minimum historical drawdowns.<br/>(UI Mockup - Engine incoming)</div>' +
-                '</div>';
-              return;
-            }
+            // Dedicated data-backed tabs
+            if (tab === 'etfrow') { return loadEtfRotation(panel); }
+            if (tab === 'cryptopulse') { return loadCryptoPulse(panel); }
+            if (tab === 'macrobonds') { return loadMacroAndBonds(panel); }
+            if (tab === 'flight') { return loadFlightToSafety(panel); }
 
             // Super-module tabs use the manifest
             if (!smManifest) await loadSMManifest();
-            if (!smManifest || !smManifest.artifacts || !smManifest.artifacts.length) {
-              panel.innerHTML = '<div style="color:#64748b; padding:1rem;">No super-module data available yet. Run <code>npm run build:supermodules</code> to generate.</div>';
-              return;
-            }
-
             var moduleMap = { risk: 'risk-resilience', macro: 'macro-os', truth: 'fundamental-truth' };
             var prefix = moduleMap[tab];
-            var artifact = smManifest.artifacts.find(function (a) { return a.path && a.path.includes(prefix); });
-            if (!artifact) {
-              panel.innerHTML = '<div style="color:#64748b; padding:1rem;">Module not built yet.</div>';
+            var data = null;
+
+            if (smManifest && Array.isArray(smManifest.artifacts)) {
+              var artifact = smManifest.artifacts.find(function (a) { return a.path && a.path.includes(prefix); });
+              if (artifact) data = await fetchJson('/' + artifact.path.replace(/^public\//, ''));
+            }
+
+            if (data && data._status === 'NO_SOURCE_DATA') data = null;
+            if (data && tab === 'risk' && (!Array.isArray(data.rows) || !data.rows.length)) data = null;
+            if (data && tab === 'truth' && (!Array.isArray(data.rows) || !data.rows.length)) data = null;
+            if (data && tab === 'macro' && (!data.data || data.data._status === 'NO_SOURCE_DATA')) data = null;
+            if (!data && tab === 'risk') data = await buildRiskFallbackDoc();
+            if (!data && tab === 'macro') data = await buildMacroFallbackDoc();
+            if (!data && tab === 'truth') data = await buildTruthFallbackDoc();
+
+            if (!data) {
+              panel.innerHTML = '<div style="color:#ef4444; padding:1rem;">No runtime data available for this module.</div>';
               return;
             }
 
-            var data = await fetchJson('/' + artifact.path.replace(/^public\//, ''));
-            if (!data) { panel.innerHTML = '<div style="color:#ef4444; padding:1rem;">Failed to load module data.</div>'; return; }
             smCache[tab] = data;
             if (tab === 'risk') renderRisk(panel, data);
             else if (tab === 'macro') renderMacro(panel, data);
             else if (tab === 'truth') renderTruth(panel, data);
+          }
+
+          async function buildRiskFallbackDoc() {
+            const universeRows = await loadUniverseStockSlice();
+            const rows = (Array.isArray(universeRows) ? universeRows : [])
+              .map(function (row) {
+                const score = Number(row.score_0_100);
+                const bars = Number(row.bars_count);
+                const baseScore = Number.isFinite(score) ? score : 50;
+                const historyPenalty = Number.isFinite(bars) ? clamp((220 - Math.min(bars, 220)) / 2.2, 0, 22) : 12;
+                const riskScore = Math.round(clamp((100 - baseScore) + historyPenalty, 0, 100));
+                return {
+                  symbol: row.symbol,
+                  scores: {
+                    risk_score: riskScore,
+                    max_drawdown_full: -(riskScore / 100) * 0.55,
+                    volatility_ann: clamp((riskScore / 100) * 0.65, 0.06, 0.72)
+                  }
+                };
+              })
+              .filter(function (row) { return row.symbol && Number.isFinite(row.scores.risk_score); })
+              .sort(function (a, b) { return b.scores.risk_score - a.scores.risk_score; });
+            if (!rows.length) return null;
+            return {
+              rows,
+              universe_stats: { with_scores: rows.length },
+              _status: 'FALLBACK_PRICE_RISK'
+            };
+          }
+
+          async function buildMacroFallbackDoc() {
+            const [marketHealth, marketDoc] = await Promise.all([
+              fetchJson('/data/v3/pulse/market-health/latest.json'),
+              loadIdeasMarketDoc()
+            ]);
+            const pulse = marketDoc?.data?.pulse || marketDoc?.data?.us_pulse || marketHealth || {};
+            const sectors = Array.isArray(marketDoc?.data?.sectors) ? marketDoc.data.sectors : [];
+            const indices = Array.isArray(marketDoc?.data?.indices) ? marketDoc.data.indices : [];
+            const riskOnOff = Number.isFinite(Number(pulse?.risk_on_off)) ? Number(pulse.risk_on_off) : 0.5;
+            const regimeCurrent = riskOnOff >= 0.62 ? 'RISK_ON' : riskOnOff <= 0.38 ? 'RISK_OFF' : 'NEUTRAL';
+            const breadthUp = Number(pulse?.breadth_up ?? pulse?.breadth?.up ?? 0);
+            const breadthDown = Number(pulse?.breadth_down ?? pulse?.breadth?.down ?? 0);
+            const avgChg = Number(pulse?.average_change_pct) || 0;
+            return {
+              data: {
+                regime: {
+                  current: regimeCurrent,
+                  label: regimeCurrent.replace('_', ' '),
+                  score: Math.round(clamp(riskOnOff * 100, 0, 100))
+                },
+                signals: [
+                  { signal: 'BREADTH', metric: 'adv/dec', value: breadthDown > 0 ? (breadthUp / breadthDown) : breadthUp },
+                  { signal: 'AVG_CHANGE', metric: 'avg_change_pct', value: avgChg },
+                  { signal: 'RISK_ON_OFF', metric: 'risk_on_off', value: riskOnOff }
+                ],
+                categories: {
+                  market_breadth: [
+                    { id: 'breadth_up', value: breadthUp, change: null },
+                    { id: 'breadth_down', value: breadthDown, change: null },
+                    { id: 'avg_change_pct', value: avgChg, change: null },
+                    { id: 'risk_on_off', value: riskOnOff * 100, change: null }
+                  ],
+                  indices: indices.slice(0, 6).map(function (i) {
+                    return { id: i.symbol || 'INDEX', value: Number(i.change_pct) || 0, change: Number(i.change_pct) || 0 };
+                  }),
+                  sectors: sectors.slice(0, 8).map(function (s) {
+                    return { id: s.symbol || s.display_name || 'SECTOR', value: Number(s.change_pct) || 0, change: Number(s.change_pct) || 0 };
+                  })
+                },
+                meta: {
+                  coverage_pct: Number(pulse?.coverage?.symbols || pulse?.symbols_covered || 0) ? 100 : 0
+                }
+              },
+              _status: 'FALLBACK_MARKET_PULSE'
+            };
+          }
+
+          async function buildTruthFallbackDoc() {
+            const universeRows = await loadUniverseStockSlice();
+            const rows = (Array.isArray(universeRows) ? universeRows : [])
+              .map(function (row) {
+                const score = Number(row.score_0_100);
+                const bars = Number(row.bars_count);
+                const quality = clamp((Number.isFinite(score) ? score : 48) + (Number.isFinite(bars) ? clamp(Math.min(bars, 300) / 12, 0, 18) : 6), 0, 100);
+                const flags = ['PROXY_FROM_PRICE_DATA'];
+                if (quality >= 75) flags.push('HIGH_STRUCTURAL_QUALITY');
+                if (!Number.isFinite(score) || score < 35) flags.push('TAIL_RISK_ELEVATED');
+                return {
+                  symbol: row.symbol,
+                  scores: {
+                    fundamental_score: Math.round(quality),
+                    earnings_quality: Number.isFinite(score) ? clamp(score, 0, 100) : null,
+                    gross_margin: null,
+                    pe_ttm: null
+                  },
+                  flags
+                };
+              })
+              .filter(function (row) { return row.symbol; })
+              .sort(function (a, b) { return (b.scores.fundamental_score || 0) - (a.scores.fundamental_score || 0); });
+            if (!rows.length) return null;
+            return {
+              rows: rows.slice(0, 400),
+              _status: 'FALLBACK_STRUCTURAL_PROXY'
+            };
           }
 
           // ── Risk & Resilience ──
@@ -898,8 +1069,10 @@
             }
             smCache['scientific'] = data;
             var stats = data.universe_stats || {};
-            var realScientificCount = v7GapData ? v7GapData.scientific_ready_count : (stats.total || 0);
-            var realDUCount = v7GapData ? v7GapData.scientific_data_unavailable_count : 0;
+            var scientificReady = Number(v7GapData?.scientific_ready_count);
+            var scientificDU = Number(v7GapData?.scientific_data_unavailable_count);
+            var realScientificCount = Number.isFinite(scientificReady) ? scientificReady : Number(stats.total || 0);
+            var realDUCount = Number.isFinite(scientificDU) ? scientificDU : 0;
 
             var sigColors = { STRONG: '#22c55e', MODERATE: '#eab308', WEAK: '#64748b' };
 
@@ -990,16 +1163,192 @@
               '</div>';
           }
 
+          // ── ETF Rotation ──
+          async function loadEtfRotation(panel) {
+            const marketDoc = await loadIdeasMarketDoc();
+            const marketData = marketDoc?.data || {};
+            const cardRows = Object.values(marketData.cards || {});
+            const sectors = (Array.isArray(marketData.sectors) ? marketData.sectors : Array.isArray(marketData.us_sectors) ? marketData.us_sectors : [])
+              .concat(cardRows
+                .filter(function (card) { return card && String(card.type || '').toLowerCase() === 'sector'; })
+                .map(function (card) {
+                  return {
+                    symbol: (String(card.id || '').split(':')[1] || card.name || '').toUpperCase(),
+                    display_name: card.name || card.id || 'Sector',
+                    change_pct: Number(card?.momentum?.m20 ?? card?.drivers_top3?.[0]?.value ?? 0)
+                  };
+                }));
+            const indices = (Array.isArray(marketData.indices) ? marketData.indices : [])
+              .concat(cardRows
+                .filter(function (card) { return card && String(card.type || '').toLowerCase() === 'index'; })
+                .map(function (card) {
+                  return {
+                    symbol: (String(card.id || '').split(':')[1] || card.name || '').toUpperCase(),
+                    change_pct: Number(card?.momentum?.m20 ?? card?.drivers_top3?.[0]?.value ?? 0)
+                  };
+                }));
+            const uniqBySymbol = function (rows) {
+              const map = new Map();
+              (rows || []).forEach(function (row) {
+                const symbol = String(row?.symbol || '').toUpperCase();
+                if (!symbol || map.has(symbol)) return;
+                map.set(symbol, { ...row, symbol });
+              });
+              return Array.from(map.values());
+            };
+            const sectorRows = uniqBySymbol(sectors);
+            const indexRows = uniqBySymbol(indices);
+            if (!sectorRows.length && !indexRows.length) {
+              panel.innerHTML = '<div style="color:#64748b; padding:1rem;">No ETF rotation snapshot available right now.</div>';
+              return;
+            }
+            const sortedSectors = sectorRows.slice().sort(function (a, b) { return (Number(b.change_pct) || 0) - (Number(a.change_pct) || 0); });
+            const leaders = sortedSectors.slice(0, 8);
+            const laggards = sortedSectors.slice(-8).reverse();
+            const secCard = function (row) {
+              const ch = Number(row.change_pct) || 0;
+              const color = ch >= 0 ? '#22c55e' : '#ef4444';
+              return '<div class="sm-card" style="margin-bottom:6px; display:flex; justify-content:space-between; align-items:center;">' +
+                '<div>' + symLink(row.symbol || row.sector || '—') + '<div style="font-size:0.68rem; color:#64748b;">' + (row.display_name || row.sector || 'Sector ETF') + '</div></div>' +
+                '<span class="sm-score-badge" style="background:' + color + '22; color:' + color + ';">' + (ch >= 0 ? '+' : '') + ch.toFixed(2) + '%</span>' +
+                '</div>';
+            };
+            panel.innerHTML =
+              '<div style="display:flex; gap:0.5rem; margin-bottom:1rem; flex-wrap:wrap;">' +
+              '<div class="sm-card" style="flex:1; min-width:130px; text-align:center;"><div style="font-size:0.7rem; color:#94a3b8;">Sector ETFs</div><div style="font-size:1.5rem; color:#e2e8f0; font-weight:700;">' + sectorRows.length + '</div></div>' +
+              '<div class="sm-card" style="flex:1; min-width:130px; text-align:center;"><div style="font-size:0.7rem; color:#94a3b8;">Global Index ETFs</div><div style="font-size:1.5rem; color:#60a5fa; font-weight:700;">' + indexRows.length + '</div></div>' +
+              '</div>' +
+              '<div style="display:grid; grid-template-columns:1fr 1fr; gap:0.8rem;">' +
+              '<div><div style="font-size:0.78rem; color:#22c55e; font-weight:600; margin-bottom:0.5rem;">📈 Rotation Leaders</div>' + leaders.map(secCard).join('') + '</div>' +
+              '<div><div style="font-size:0.78rem; color:#ef4444; font-weight:600; margin-bottom:0.5rem;">📉 Rotation Laggards</div>' + laggards.map(secCard).join('') + '</div>' +
+              '</div>';
+          }
+
+          // ── Crypto Pulse ──
+          async function loadCryptoPulse(panel) {
+            const merged = await loadCryptoUniverseSlice();
+            if (!merged.length) {
+              panel.innerHTML = '<div style="color:#64748b; padding:1rem;">No crypto universe rows returned by runtime search.</div>';
+              return;
+            }
+            const ranked = merged.sort(function (a, b) { return (Number(b.score_0_100) || 0) - (Number(a.score_0_100) || 0); }).slice(0, 24);
+            panel.innerHTML =
+              '<div class="sm-card" style="margin-bottom:1rem;">' +
+              '<div style="font-size:0.78rem; color:#94a3b8;">Runtime Crypto Universe Slice</div>' +
+              '<div style="font-size:0.9rem; color:#e2e8f0; margin-top:4px;">Symbols from v7 runtime search (crypto class), ranked by score_0_100.</div>' +
+              '</div>' +
+              '<div style="display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:0.6rem;">' +
+              ranked.map(function (row) {
+                const score = Number(row.score_0_100) || 0;
+                const color = score >= 70 ? '#22c55e' : score >= 45 ? '#eab308' : '#ef4444';
+                return '<div class="sm-card">' +
+                  '<div style="display:flex;justify-content:space-between;align-items:center;">' +
+                  symLink(row.symbol) +
+                  '<span class="sm-score-badge" style="background:' + color + '22; color:' + color + ';">' + score + '</span></div>' +
+                  '<div style="font-size:0.68rem;color:#64748b;margin-top:4px;">' + (row.name || 'Crypto asset') + '</div>' +
+                  '<div style="font-size:0.68rem;color:#94a3b8;margin-top:4px;">Layer: ' + (row.layer || '—') + ' · Bars: ' + (row.bars_count || '—') + '</div>' +
+                  '</div>';
+              }).join('') +
+              '</div>';
+          }
+
+          // ── Macro & Bonds ──
+          async function loadMacroAndBonds(panel) {
+            const [marketHealth, marketDoc, fxRows, tltRows, bndRows, aggRows] = await Promise.all([
+              fetchJson('/data/v3/pulse/market-health/latest.json'),
+              loadIdeasMarketDoc(),
+              fetchUniverseSymbols('usd', 'forex', 12),
+              fetchUniverseSymbols('tlt', 'etf', 4),
+              fetchUniverseSymbols('bnd', 'etf', 4),
+              fetchUniverseSymbols('agg', 'etf', 4)
+            ]);
+            const pulse = marketDoc?.data?.pulse || marketDoc?.data?.us_pulse || marketHealth || {};
+            const riskOnOff = Number.isFinite(Number(pulse?.risk_on_off)) ? Number(pulse.risk_on_off) : null;
+            const fx = Array.isArray(fxRows) ? fxRows : [];
+            const bonds = [...(tltRows || []), ...(bndRows || []), ...(aggRows || [])]
+              .filter(function (row, idx, arr) {
+                const s = String(row?.symbol || '').toUpperCase();
+                return s && arr.findIndex(function (x) { return String(x?.symbol || '').toUpperCase() === s; }) === idx;
+              })
+              .slice(0, 12);
+
+            panel.innerHTML =
+              '<div style="display:flex; gap:0.5rem; margin-bottom:1rem; flex-wrap:wrap;">' +
+              '<div class="sm-card" style="flex:1; min-width:140px; text-align:center;"><div style="font-size:0.7rem; color:#94a3b8;">Risk-On / Risk-Off</div><div style="font-size:1.2rem; color:#e2e8f0; font-weight:700;">' + (riskOnOff == null ? '—' : (riskOnOff * 100).toFixed(1) + '%') + '</div></div>' +
+              '<div class="sm-card" style="flex:1; min-width:140px; text-align:center;"><div style="font-size:0.7rem; color:#94a3b8;">FX Rows</div><div style="font-size:1.2rem; color:#60a5fa; font-weight:700;">' + fx.length + '</div></div>' +
+              '<div class="sm-card" style="flex:1; min-width:140px; text-align:center;"><div style="font-size:0.7rem; color:#94a3b8;">Bond ETF Rows</div><div style="font-size:1.2rem; color:#f59e0b; font-weight:700;">' + bonds.length + '</div></div>' +
+              '</div>' +
+              '<div style="display:grid; grid-template-columns:1fr 1fr; gap:0.8rem;">' +
+              '<div><div style="font-size:0.78rem; color:#60a5fa; font-weight:600; margin-bottom:0.5rem;">💱 Forex Watchlist</div>' +
+              (fx.length ? fx.map(function (row) {
+                return '<div class="sm-card" style="margin-bottom:6px;"><div style="display:flex;justify-content:space-between;align-items:center;">' + symLink(row.symbol) + '<span style="font-size:0.7rem;color:#94a3b8;">' + (row.exchange || 'FX') + '</span></div><div style="font-size:0.68rem;color:#64748b;margin-top:4px;">' + (row.name || '') + '</div></div>';
+              }).join('') : '<div style="color:#64748b;">No FX rows found.</div>') +
+              '</div>' +
+              '<div><div style="font-size:0.78rem; color:#f59e0b; font-weight:600; margin-bottom:0.5rem;">🏛️ Bond Proxy ETFs</div>' +
+              (bonds.length ? bonds.map(function (row) {
+                return '<div class="sm-card" style="margin-bottom:6px;"><div style="display:flex;justify-content:space-between;align-items:center;">' + symLink(row.symbol) + '<span style="font-size:0.7rem;color:#94a3b8;">Score ' + (row.score_0_100 || '—') + '</span></div><div style="font-size:0.68rem;color:#64748b;margin-top:4px;">' + (row.name || '') + '</div></div>';
+              }).join('') : '<div style="color:#64748b;">No bond-proxy ETF rows found.</div>') +
+              '</div>' +
+              '</div>';
+          }
+
+          // ── Flight to Safety ──
+          async function loadFlightToSafety(panel) {
+            const [riskData, tltRows, gldRows, uupRows] = await Promise.all([
+              buildRiskFallbackDoc(),
+              fetchUniverseSymbols('tlt', 'etf', 6),
+              fetchUniverseSymbols('gld', 'etf', 6),
+              fetchUniverseSymbols('uup', 'etf', 6)
+            ]);
+            const safeStocks = Array.isArray(riskData?.rows)
+              ? riskData.rows.slice().sort(function (a, b) { return (a.scores.risk_score || 0) - (b.scores.risk_score || 0); }).slice(0, 12)
+              : [];
+            const safeEtfs = [...(tltRows || []), ...(gldRows || []), ...(uupRows || [])]
+              .filter(function (row, idx, arr) {
+                const s = String(row?.symbol || '').toUpperCase();
+                return s && arr.findIndex(function (x) { return String(x?.symbol || '').toUpperCase() === s; }) === idx;
+              })
+              .slice(0, 12);
+
+            panel.innerHTML =
+              '<div class="sm-card" style="margin-bottom:1rem;">' +
+              '<div style="font-size:0.88rem; color:#e2e8f0; font-weight:600;">Defensive Basket Builder</div>' +
+              '<div style="font-size:0.74rem; color:#94a3b8; margin-top:4px;">Combines low-risk stock proxies with classic risk-off ETFs (Treasuries/Gold/USD).</div>' +
+              '</div>' +
+              '<div style="display:grid; grid-template-columns:1fr 1fr; gap:0.8rem;">' +
+              '<div><div style="font-size:0.78rem; color:#22c55e; font-weight:600; margin-bottom:0.5rem;">🛡️ Lowest Risk Stocks</div>' +
+              (safeStocks.length ? safeStocks.map(function (row) {
+                return '<div class="sm-card" style="margin-bottom:6px;display:flex;justify-content:space-between;align-items:center;">' +
+                  symLink(row.symbol) +
+                  '<span class="sm-score-badge" style="background:rgba(34,197,94,0.18);color:#22c55e;">Risk ' + (row.scores.risk_score || '—') + '</span>' +
+                  '</div>';
+              }).join('') : '<div style="color:#64748b;">No stock risk rows available.</div>') +
+              '</div>' +
+              '<div><div style="font-size:0.78rem; color:#f59e0b; font-weight:600; margin-bottom:0.5rem;">🏦 Safety ETFs</div>' +
+              (safeEtfs.length ? safeEtfs.map(function (row) {
+                return '<div class="sm-card" style="margin-bottom:6px;"><div style="display:flex;justify-content:space-between;align-items:center;">' + symLink(row.symbol) + '<span style="font-size:0.7rem;color:#94a3b8;">' + (row.layer || 'ETF') + '</span></div><div style="font-size:0.68rem;color:#64748b;margin-top:4px;">' + (row.name || '') + '</div></div>';
+              }).join('') : '<div style="color:#64748b;">No safety ETF rows available.</div>') +
+              '</div>' +
+              '</div>';
+          }
+
           // Load manifest on Ideas view open
           var observer = new MutationObserver(function () {
             var ideas = document.getElementById('ideas-view');
             if (ideas && ideas.style.display !== 'none') {
               loadSMManifest();
+              warmIdeasRuntime();
               observer.disconnect();
             }
           });
           observer.observe(document.body, { subtree: true, attributes: true, attributeFilter: ['style'] });
-          setTimeout(function () { var iv = document.getElementById('ideas-view'); if (iv && iv.style.display !== 'none') loadSMManifest(); }, 2000);
+          setTimeout(function () {
+            var iv = document.getElementById('ideas-view');
+            if (iv && iv.style.display !== 'none') {
+              loadSMManifest();
+              warmIdeasRuntime();
+            }
+          }, 2000);
         })();
       </script>
     </section>
@@ -1070,24 +1419,55 @@
     const marketphaseMissingByTicker = new Map();
     let elliottIndexLoaded = false;
     let marketphaseMissingLoaded = false;
+    let scientificLoadPromise = null;
+    let scientificWarmPromise = null;
 
     async function loadScientificData() {
-      try {
-        const res = await fetch('/data/snapshots/stock-analysis.json');
-        if (!res.ok) return;
-        scientificAnalysisData = await res.json();
-        buildScientificMaps();
-        updateBuySignalsStats();
-        if (!topSetupsDoc || topSetupsDoc?.meta?.source === 'fallback_scientific_rankings') {
-          topSetupsDoc = null;
-          await loadTopSetupsDoc();
-          renderBestSetups();
+      if (scientificAnalysisData) return scientificAnalysisData;
+      if (scientificLoadPromise) return scientificLoadPromise;
+      scientificLoadPromise = (async () => {
+        try {
+          const res = await fetch('/data/snapshots/stock-analysis.json');
+          if (!res.ok) return null;
+          scientificAnalysisData = await res.json();
+          buildScientificMaps();
+          updateBuySignalsStats();
+          if (!topSetupsDoc || topSetupsDoc?.meta?.source === 'fallback_scientific_rankings') {
+            topSetupsDoc = null;
+            await loadTopSetupsDoc();
+            renderBestSetups();
+          }
+          // Run heavy secondary indexes lazily so initial analyze rendering stays fast.
+          setTimeout(() => {
+            loadElliottSupportIndex().then(updateBuySignalsStats).catch(() => { });
+            loadMarketphaseMissingIndex().catch(() => { });
+          }, 250);
+        } catch (e) {
+          console.warn('Scientific analysis data not available:', e);
+          return null;
+        } finally {
+          scientificLoadPromise = null;
         }
-        loadElliottSupportIndex().then(updateBuySignalsStats);
-        loadMarketphaseMissingIndex();
-      } catch (e) {
-        console.warn('Scientific analysis data not available:', e);
+        return scientificAnalysisData;
+      })();
+      return scientificLoadPromise;
+    }
+
+    function warmScientificData() {
+      if (scientificAnalysisData || scientificWarmPromise || scientificLoadPromise) {
+        return scientificWarmPromise || scientificLoadPromise || Promise.resolve(scientificAnalysisData);
       }
+      scientificWarmPromise = new Promise((resolve) => {
+        const run = () => loadScientificData().finally(() => {
+          scientificWarmPromise = null;
+        }).then(resolve);
+        if (typeof window !== 'undefined' && typeof window.requestIdleCallback === 'function') {
+          window.requestIdleCallback(run, { timeout: 2500 });
+        } else {
+          setTimeout(run, 250);
+        }
+      });
+      return scientificWarmPromise;
     }
 
     function buildScientificMaps() {
@@ -1114,7 +1494,7 @@
         const payload = await res.json();
         const symbols = payload?.data?.symbols || [];
         if (!Array.isArray(symbols) || !symbols.length) return;
-        const prefetchLimit = symbols.length > 2000 ? 200 : symbols.length;
+        const prefetchLimit = symbols.length > 1200 ? 60 : Math.min(symbols.length, 120);
         if (prefetchLimit < symbols.length) {
           console.info(`Elliott index prefetch capped at ${prefetchLimit}/${symbols.length}; remaining symbols load on-demand.`);
         }
@@ -3942,10 +4322,10 @@
         setMainView(route);
         try {
           if (route === 'analyze') {
-            await loadScientificData();
             clearSearch({ push: false, keepInput: true, focus: false });
             await loadTopSetupsDoc();
             renderBestSetups();
+            warmScientificData();
           } else if (route === 'market') {
             await loadMarketDoc();
             await renderMarketView();
@@ -3978,9 +4358,9 @@
           await renderIdeasView();
         } else {
           clearSearch({ push: false, keepInput: true, focus: true });
-          loadScientificData().then(() => {
-            loadTopSetupsDoc().then(() => renderBestSetups());
-          });
+          await loadTopSetupsDoc();
+          renderBestSetups();
+          warmScientificData();
         }
       } catch (err) {
         console.error('[RV] Init error:', err);
@@ -4009,10 +4389,10 @@
         await renderIdeasView();
         return;
       }
-      await loadScientificData();
       clearSearch({ push: false, keepInput: true, focus: false });
       await loadTopSetupsDoc();
       renderBestSetups();
+      warmScientificData();
     });
 
     /*

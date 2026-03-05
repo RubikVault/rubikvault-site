@@ -7,7 +7,10 @@
     'use strict';
 
     // ═══ CONSTANTS ═══
-    const DATA_URL = '/data/v3/derived/market/global-latest.json';
+    const DATA_URLS = [
+        '/data/v3/derived/market/global-latest.json',
+        '/data/v3/derived/market/latest.json'
+    ];
     const MH = {
         bg: '#070a0f', panel: '#0d1119', surface: '#111827', border: '#1c2535',
         dim: '#243044', text: '#dde3ed', muted: '#5a6a82', faint: '#0f1722',
@@ -107,8 +110,146 @@
         return { text: 'Closed', color: '#94a3b8', bg: 'rgba(100,116,139,0.2)' };
     }
 
+    function clamp(v, min, max) {
+        const n = Number(v);
+        if (!Number.isFinite(n)) return min;
+        return Math.min(max, Math.max(min, n));
+    }
+
+    function normalizeMarketDoc(raw, sourceUrl) {
+        if (!raw || typeof raw !== 'object') return null;
+        const data = raw?.data && typeof raw.data === 'object' ? raw.data : {};
+        const hasCards = data?.cards && typeof data.cards === 'object' && Object.keys(data.cards).length > 0;
+        if (hasCards) return raw;
+
+        const sectors = Array.isArray(data.sectors) ? data.sectors : [];
+        const indices = Array.isArray(data.indices) ? data.indices : [];
+        const pulse = data.pulse && typeof data.pulse === 'object' ? data.pulse : {};
+        const cards = {};
+
+        function phaseFromChange(changePct) {
+            const c = Number(changePct) || 0;
+            if (c >= 1.2) return 'MID';
+            if (c >= 0.25) return 'EARLY';
+            if (c <= -1.2) return 'REVERSAL_RISK';
+            if (c <= -0.25) return 'LATE';
+            return 'NEUTRAL';
+        }
+
+        function confidenceFromStaleness(staleDays) {
+            const sd = Number(staleDays);
+            if (!Number.isFinite(sd)) return { label: 'MEDIUM', value: 0.6 };
+            if (sd <= 1) return { label: 'HIGH', value: 0.82 };
+            if (sd <= 3) return { label: 'MEDIUM', value: 0.62 };
+            return { label: 'LOW', value: 0.35 };
+        }
+
+        function buildCard(type, id, name, changePct, staleDays) {
+            const change = Number(changePct) || 0;
+            const score = Math.round(clamp(50 + (change * 18), 0, 100));
+            const dir = change > 0 ? 'up' : (change < 0 ? 'down' : 'flat');
+            return {
+                id,
+                type,
+                name,
+                score,
+                phase: phaseFromChange(change),
+                confidence: confidenceFromStaleness(staleDays),
+                momentum: { m20: change, m60: null, m200: null },
+                vol_z: null,
+                drivers_top3: [
+                    { label: 'Flow Direction', dir, value: change, unit: '%' },
+                    { label: 'Price Change', dir, value: change, unit: '%' }
+                ],
+                tldr: `${name} ${change >= 0 ? 'up' : 'down'} ${Math.abs(change).toFixed(2)}%`
+            };
+        }
+
+        sectors.forEach((s) => {
+            const symbol = String(s?.symbol || '').toUpperCase();
+            if (!symbol) return;
+            const id = `SECTOR:${symbol}`;
+            cards[id] = buildCard('sector', id, s?.display_name || s?.sector || symbol, s?.change_pct, s?.stale_days);
+        });
+
+        indices.forEach((idx) => {
+            const symbol = String(idx?.symbol || '').toUpperCase();
+            if (!symbol) return;
+            const id = `INDEX:${symbol}`;
+            cards[id] = buildCard('index', id, symbol, idx?.change_pct, idx?.stale_days);
+        });
+
+        const riskOnOff = Number.isFinite(Number(pulse?.risk_on_off)) ? Number(pulse.risk_on_off) : 0.5;
+        const flowScore = Math.round(clamp(riskOnOff * 100, 0, 100));
+        const riskScore = Math.round(clamp((1 - riskOnOff) * 100, 0, 100));
+        const trendScore = Math.round(clamp(50 + ((Number(pulse?.average_change_pct) || 0) * 12), 0, 100));
+        const regimeMode = String(pulse?.risk_mode || '').toLowerCase() === 'risk-off' ? 'STRESS' : 'NORMAL';
+
+        return {
+            meta: {
+                ...(raw.meta || {}),
+                source_url: sourceUrl,
+                source_fallback: 'market-latest-adapter',
+                cards_built: Object.keys(cards).length
+            },
+            data: {
+                cards,
+                sessions: {
+                    asia: { indices: [] },
+                    europe: { indices: [] },
+                    americas: {
+                        indices: indices.map((idx) => ({
+                            symbol: idx?.symbol || null,
+                            display: idx?.symbol || null,
+                            change_pct: Number(idx?.change_pct) || 0
+                        }))
+                    }
+                },
+                regime_mode: regimeMode,
+                regime_details: {
+                    breadth_z: null,
+                    credit_z: null,
+                    vol_z: null
+                },
+                us_pulse: {
+                    average_change_pct: Number(pulse?.average_change_pct) || 0,
+                    breadth_up: Number(pulse?.breadth_up) || 0,
+                    breadth_down: Number(pulse?.breadth_down) || 0,
+                    risk_mode: pulse?.risk_mode || 'neutral',
+                    symbols_covered: Number(pulse?.symbols_covered) || 0
+                },
+                investment_compass: {
+                    composite_score: Math.round(clamp((trendScore * 0.45) + (flowScore * 0.35) + ((100 - riskScore) * 0.20), 0, 100)),
+                    trend_score: trendScore,
+                    risk_score: riskScore,
+                    flow_score: flowScore,
+                    summary: 'Derived from market pulse and sector/index daily movement.'
+                }
+            }
+        };
+    }
+
+    function emptyMarketDoc() {
+        return {
+            meta: {
+                data_date: null,
+                generated_at: new Date().toISOString(),
+                cards_built: 0,
+                source_fallback: 'empty'
+            },
+            data: {
+                cards: {},
+                sessions: { asia: { indices: [] }, europe: { indices: [] }, americas: { indices: [] } },
+                regime_mode: 'NEUTRAL',
+                regime_details: { breadth_z: null, credit_z: null, vol_z: null },
+                us_pulse: { breadth_up: 0, breadth_down: 0, average_change_pct: 0, risk_mode: 'neutral', symbols_covered: 0 },
+                investment_compass: { composite_score: 50, trend_score: 50, risk_score: 50, flow_score: 50, summary: 'No market snapshot available.' }
+            }
+        };
+    }
+
     function getCards() { return doc?.data?.cards || {}; }
-    function getGDoc() { return doc?.data || null; }
+    function getGDoc() { return doc?.data || {}; }
     function getAsOf() { return doc?.meta?.data_date || ''; }
 
     function filterCards(prefix) {
@@ -508,10 +649,21 @@
 
     // ═══ INIT ═══
     async function loadData() {
-        try {
-            const r = await fetch(DATA_URL);
-            if (r.ok) doc = await r.json();
-        } catch (e) { console.warn('Market data load failed:', e); }
+        for (const url of DATA_URLS) {
+            try {
+                const r = await fetch(url);
+                if (!r.ok) continue;
+                const payload = await r.json();
+                const normalized = normalizeMarketDoc(payload, url);
+                if (normalized) {
+                    doc = normalized;
+                    return doc;
+                }
+            } catch (e) {
+                console.warn('Market data load failed:', url, e);
+            }
+        }
+        doc = emptyMarketDoc();
         return doc;
     }
 
@@ -527,7 +679,7 @@
     </div>`;
 
         // Demo warning
-        html += `<div class="mh-demo-warn">All scores based on EOD price data (EODHD). Flows are price-proxies, not real fund-flows. Confidence is computed from data availability. <a href="#" onclick="window._mhSwitchTab('methodology');return false">Full methodology</a></div>`;
+        html += `<div class="mh-demo-warn">All scores based on End of The Day Data and Flows are price-proxies, not real fund-flows. Confidence is computed from data availability. <a href="#" onclick="window._mhSwitchTab('methodology');return false">Full methodology</a></div>`;
 
         // Tab bar
         html += '<div class="mh-tab-bar">';
@@ -553,23 +705,22 @@
         buildDOM(root);
         await loadData();
 
-        if (doc) {
-            const gDoc = doc.data || {};
-            const meta = doc.meta || {};
-            const metaEl = document.getElementById('mh-header-meta');
-            if (metaEl) metaEl.textContent = `Data: ${meta.data_date || '—'} | Updated: ${(meta.generated_at || '').slice(0, 16).replace('T', ' ')} | Cards: ${meta.cards_built || 0}`;
+        const gDoc = doc?.data || {};
+        const meta = doc?.meta || {};
+        const metaEl = document.getElementById('mh-header-meta');
+        if (metaEl) metaEl.textContent = `Data: ${meta.data_date || '—'} | Updated: ${(meta.generated_at || '').slice(0, 16).replace('T', ' ')} | Cards: ${meta.cards_built || 0}`;
 
-            // Regime banner
-            const regime = gDoc.regime_mode || 'NORMAL';
-            const banner = document.getElementById('mh-regime-banner');
-            if (banner) {
-                if (regime === 'STRESS') { banner.className = 'mh-regime-banner mh-stress'; banner.textContent = 'STRESS REGIME — Scores dampened to 60%. Elevated volatility or credit deterioration detected.'; }
-                else if (regime === 'CRISIS') { banner.className = 'mh-regime-banner mh-crisis'; banner.textContent = 'CRISIS REGIME — Scores dampened to 30%. Multiple stress indicators triggered.'; }
-            }
-
-            // Render active tab
-            switchTab(currentTab);
+        // Regime banner
+        const regime = gDoc.regime_mode || 'NORMAL';
+        const banner = document.getElementById('mh-regime-banner');
+        if (banner) {
+            if (regime === 'STRESS') { banner.className = 'mh-regime-banner mh-stress'; banner.textContent = 'STRESS REGIME — Scores dampened to 60%. Elevated volatility or credit deterioration detected.'; }
+            else if (regime === 'CRISIS') { banner.className = 'mh-regime-banner mh-crisis'; banner.textContent = 'CRISIS REGIME — Scores dampened to 30%. Multiple stress indicators triggered.'; }
+            else { banner.className = 'mh-regime-banner'; banner.textContent = ''; }
         }
+
+        // Render active tab (always render to avoid stuck loading state)
+        switchTab(currentTab);
     }
 
     // Expose for SPA integration
