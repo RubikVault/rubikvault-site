@@ -3,8 +3,8 @@
   "feature": "marketphase",
   "meta": {
     "symbol": "CMDB",
-    "generatedAt": "2026-03-04T07:56:07.994Z",
-    "fetchedAt": "2026-03-04T07:56:07.994Z",
+    "generatedAt": "2026-03-05T07:13:56.732Z",
+    "fetchedAt": "2026-03-05T07:13:56.732Z",
     "ttlSeconds": 86400,
     "provider": "internal",
     "dataset": "CMDB",
@@ -15,8 +15,8 @@
     "precision": "IEEE754-Double-Round6",
     "auditTrail": {
       "generatedBy": "MarketPhase-v8-Engine",
-      "commitHash": "eeea23b",
-      "reviewDate": "2026-03-04T07:56:07.994Z",
+      "commitHash": "7bb2e4c",
+      "reviewDate": "2026-03-05T07:13:56.732Z",
       "standards": [
         "ISO-8000",
         "IEEE-7000"
@@ -26,13 +26,13 @@
   },
   "data": {
     "features": {
-      "RSI": 58.655336,
-      "MACDHist": -0.099244,
-      "ATR%": 1.986207,
-      "SMA50": 16.79,
-      "SMA200": 12.90315,
+      "RSI": 60.740352,
+      "MACDHist": -0.086495,
+      "ATR%": 1.916011,
+      "SMA50": 16.8668,
+      "SMA200": 12.9485,
       "SMATrend": "bullish",
-      "lastClose": 18.96
+      "lastClose": 19.22
     },
     "swings": {
       "raw": [
@@ -143,6 +143,12 @@
           "date": "2026-02-19",
           "price": 19.86,
           "type": "high"
+        },
+        {
+          "index": 203,
+          "date": "2026-02-23",
+          "price": 18.03,
+          "type": "low"
         }
       ],
       "confirmed": [
@@ -268,7 +274,7 @@
     "debug": {
       "symbol": "CMDB",
       "window": 7,
-      "candidateCount": 18,
+      "candidateCount": 19,
       "durationMs": 0
     },
     "disclaimer": "MarketPhase AI — Scientific Elliott Research (v8.0)\nprovides deterministic, rule-based historical analysis only.\nIt does not forecast future prices or offer financial advice.\nUse solely for educational and research purposes.\nISO 8000 / IEEE 7000 Compliant - Bit-exact reproducibility guaranteed."
