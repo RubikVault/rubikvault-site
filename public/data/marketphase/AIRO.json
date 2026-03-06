@@ -3,8 +3,8 @@
   "feature": "marketphase",
   "meta": {
     "symbol": "AIRO",
-    "generatedAt": "2026-03-05T07:56:52.642Z",
-    "fetchedAt": "2026-03-05T07:56:52.642Z",
+    "generatedAt": "2026-03-06T07:09:05.803Z",
+    "fetchedAt": "2026-03-06T07:09:05.803Z",
     "ttlSeconds": 86400,
     "provider": "internal",
     "dataset": "AIRO",
@@ -15,8 +15,8 @@
     "precision": "IEEE754-Double-Round6",
     "auditTrail": {
       "generatedBy": "MarketPhase-v8-Engine",
-      "commitHash": "265bcee",
-      "reviewDate": "2026-03-05T07:56:52.642Z",
+      "commitHash": "d105243",
+      "reviewDate": "2026-03-06T07:09:05.803Z",
       "standards": [
         "ISO-8000",
         "IEEE-7000"
@@ -26,13 +26,13 @@
   },
   "data": {
     "features": {
-      "RSI": 49.927503,
-      "MACDHist": 0.114129,
-      "ATR%": 4.356494,
-      "SMA50": 10.375,
+      "RSI": 51.292061,
+      "MACDHist": 0.11305,
+      "ATR%": 4.093715,
+      "SMA50": 10.4192,
       "SMA200": null,
       "SMATrend": "unknown",
-      "lastClose": 10.08
+      "lastClose": 10.24
     },
     "swings": {
       "raw": [
@@ -239,6 +239,12 @@
           "date": "2026-02-27",
           "price": 9.8,
           "type": "low"
+        },
+        {
+          "index": 179,
+          "date": "2026-03-02",
+          "price": 10.7,
+          "type": "high"
         }
       ],
       "confirmed": [
@@ -430,8 +436,8 @@
     "debug": {
       "symbol": "AIRO",
       "window": 3,
-      "candidateCount": 34,
-      "durationMs": 1
+      "candidateCount": 35,
+      "durationMs": 0
     },
     "disclaimer": "MarketPhase AI — Scientific Elliott Research (v8.0)\nprovides deterministic, rule-based historical analysis only.\nIt does not forecast future prices or offer financial advice.\nUse solely for educational and research purposes.\nISO 8000 / IEEE 7000 Compliant - Bit-exact reproducibility guaranteed."
   },

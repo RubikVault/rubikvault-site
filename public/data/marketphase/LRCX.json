@@ -3,8 +3,8 @@
   "feature": "marketphase",
   "meta": {
     "symbol": "LRCX",
-    "generatedAt": "2026-03-05T08:03:00.603Z",
-    "fetchedAt": "2026-03-05T08:03:00.603Z",
+    "generatedAt": "2026-03-06T07:14:07.909Z",
+    "fetchedAt": "2026-03-06T07:14:07.909Z",
     "ttlSeconds": 86400,
     "provider": "internal",
     "dataset": "LRCX",
@@ -15,8 +15,8 @@
     "precision": "IEEE754-Double-Round6",
     "auditTrail": {
       "generatedBy": "MarketPhase-v8-Engine",
-      "commitHash": "265bcee",
-      "reviewDate": "2026-03-05T08:03:00.603Z",
+      "commitHash": "d105243",
+      "reviewDate": "2026-03-06T07:14:07.909Z",
       "standards": [
         "ISO-8000",
         "IEEE-7000"
@@ -26,96 +26,96 @@
   },
   "data": {
     "features": {
-      "RSI": 46.516737,
-      "MACDHist": -3.411424,
-      "ATR%": 2.760586,
-      "SMA50": 217.381094,
-      "SMA200": 143.899508,
+      "RSI": 42.140775,
+      "MACDHist": -4.020002,
+      "ATR%": 2.939118,
+      "SMA50": 218.233416,
+      "SMA200": 144.553828,
       "SMATrend": "bullish",
-      "lastClose": 222.99
+      "lastClose": 214.68
     },
     "swings": {
       "raw": [
         {
-          "index": 13,
+          "index": 12,
           "date": "2025-03-11",
           "price": 72.8264,
           "type": "low"
         },
         {
-          "index": 31,
+          "index": 30,
           "date": "2025-04-04",
           "price": 58.6602,
           "type": "low"
         },
         {
-          "index": 57,
+          "index": 56,
           "date": "2025-05-13",
           "price": 84.6299,
           "type": "high"
         },
         {
-          "index": 69,
+          "index": 68,
           "date": "2025-05-30",
           "price": 80.2024,
           "type": "low"
         },
         {
-          "index": 103,
+          "index": 102,
           "date": "2025-07-21",
           "price": 101.2513,
           "type": "high"
         },
         {
-          "index": 111,
+          "index": 110,
           "date": "2025-07-31",
           "price": 94.3844,
           "type": "low"
         },
         {
-          "index": 121,
+          "index": 120,
           "date": "2025-08-14",
           "price": 106.8642,
           "type": "high"
         },
         {
-          "index": 133,
+          "index": 132,
           "date": "2025-09-02",
           "price": 96.5639,
           "type": "low"
         },
         {
-          "index": 157,
+          "index": 156,
           "date": "2025-10-06",
           "price": 148.7267,
           "type": "high"
         },
         {
-          "index": 182,
+          "index": 181,
           "date": "2025-11-10",
           "price": 165.8978,
           "type": "high"
         },
         {
-          "index": 190,
+          "index": 189,
           "date": "2025-11-20",
           "price": 139.1938,
           "type": "low"
         },
         {
-          "index": 208,
+          "index": 207,
           "date": "2025-12-17",
           "price": 154.7945,
           "type": "low"
         },
         {
-          "index": 236,
+          "index": 235,
           "date": "2026-01-29",
           "price": 247.873,
           "type": "high"
         },
         {
-          "index": 240,
+          "index": 239,
           "date": "2026-02-04",
           "price": 209.529,
           "type": "low"
@@ -123,43 +123,37 @@
       ],
       "confirmed": [
         {
-          "index": 31,
+          "index": 30,
           "date": "2025-04-04",
           "price": 58.6602,
           "type": "low"
         },
         {
-          "index": 69,
+          "index": 68,
           "date": "2025-05-30",
           "price": 80.2024,
           "type": "low"
         },
         {
-          "index": 111,
+          "index": 110,
           "date": "2025-07-31",
           "price": 94.3844,
           "type": "low"
         },
         {
-          "index": 133,
+          "index": 132,
           "date": "2025-09-02",
           "price": 96.5639,
           "type": "low"
         },
         {
-          "index": 182,
-          "date": "2025-11-10",
-          "price": 165.8978,
-          "type": "high"
-        },
-        {
-          "index": 190,
+          "index": 189,
           "date": "2025-11-20",
           "price": 139.1938,
           "type": "low"
         },
         {
-          "index": 208,
+          "index": 207,
           "date": "2025-12-17",
           "price": 154.7945,
           "type": "low"
@@ -168,17 +162,17 @@
     },
     "elliott": {
       "completedPattern": {
-        "valid": true,
+        "valid": false,
         "direction": "bullish",
         "endedAt": "2025-12-17",
         "confidence0_100": 100,
         "rules": {
           "r1": true,
-          "r2": true,
+          "r2": false,
           "r3": true
         },
-        "guidelineScore": 47,
-        "rulePasses": 3
+        "guidelineScore": 46,
+        "rulePasses": 2
       },
       "developingPattern": {
         "possibleWave": "Wave 4 or ABC",
@@ -197,35 +191,35 @@
       },
       "uncertainty": {
         "lastSwingConfirmed": true,
-        "alternativeCounts": 1,
+        "alternativeCounts": 2,
         "confidenceDecay": {
           "base": 100,
-          "adjusted": 88
+          "adjusted": 76
         }
       },
       "fib": {
         "ratios": {
-          "wave2": 0.153681,
-          "wave3": 4.888866,
-          "wave4": 0.385151,
-          "wave5": 1.100035
+          "wave2": 0.658336,
+          "wave3": 0.101174,
+          "wave4": 19.559486,
+          "wave5": 0.724193
         },
-        "conformanceScore": 78.497478
+        "conformanceScore": 45.635731
       }
     },
     "fib": {
       "ratios": {
-        "wave2": 0.153681,
-        "wave3": 4.888866,
-        "wave4": 0.385151,
-        "wave5": 1.100035
+        "wave2": 0.658336,
+        "wave3": 0.101174,
+        "wave4": 19.559486,
+        "wave5": 0.724193
       },
-      "conformanceScore": 78.497478
+      "conformanceScore": 45.635731
     },
     "multiTimeframeAgreement": null,
     "debug": {
       "symbol": "LRCX",
-      "window": 10,
+      "window": 11,
       "candidateCount": 14,
       "durationMs": 0
     },
