@@ -85,6 +85,7 @@ Diese Wrapper sind absichtlich konservativ:
 - `panel_max_assets=2000`
 - kleine `top_liquid`-Stufen
 - RSS-Limit + OOM-Downshift
+- Night-Safe-Profil läuft ohne Portfolio und ohne v4-final-gate-Matrix (beides ist absichtlich für Stabilität)
 - Stage-B-/Registry-Fehler sind aktuell erwartbar:
   - `strict_pass_total` kann `0` sein oder >0 sein (beides möglich je Run)
   - Registry kann im `live_hold`-/Freeze-Pfad bleiben oder in `shadow` fallen

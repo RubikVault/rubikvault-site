@@ -27,6 +27,8 @@ Wesentliche Defaults:
 - `oom_downshift_min_top_liquid=300`
 - `task_order=safe_light_first`
 - `skip-run-portfolio-q1`
+- `skip-run-v4-final-gate-matrix` (wird im Night-Runner automatisch gesetzt, wenn Portfolio übersprungen wird)
+- zusätzlicher Stage-A-Guard: Final-Gates werden automatisch übersprungen, falls der Portfolio-Step deaktiviert ist
 
 ## Standard-Kommandos
 

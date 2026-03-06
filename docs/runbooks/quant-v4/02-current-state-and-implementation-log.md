@@ -61,6 +61,23 @@ Stand: 2026-03-04
    - `asof-end-date` muss zu tatsächlich vorhandenen Feature-As-ofs passen.
      - Für den aktuellen Stand ist `2026-02-16` der belastbare Endpunkt.
 
+6. Night-Run-Stabilität behoben (`rc=73`-Loop-Fix).
+   - Primärer Guard (tracked):
+     - `/Users/michaelpuchowezki/Dev/rubikvault-site/scripts/quantlab/run_q1_panel_stage_a_daily_local.py`
+     - Verhalten:
+       - Wenn `--skip-run-portfolio-q1` aktiv ist, wird der v4-final-gate-Step mit `portfolio_step_disabled` deterministisch übersprungen.
+   - Zusätzlich im lokalen Operator-Runner:
+     - `/Users/michaelpuchowezki/Dev/rubikvault-site/scripts/quantlab/run_overnight_q1_training_sweep.py`
+   - Ursache:
+     - Safe-Profile laufen mit `--skip-run-portfolio-q1`, der Runner hat aber bislang den Final-Gate-Call nicht deaktiviert.
+     - Die Final-Gate-Matrix fordert einen Portfolio-Report und erzeugte deshalb wiederholt `exit_code=73`.
+   - Fix:
+     - Night-Runner gibt jetzt deterministisch `--skip-run-v4-final-gate-matrix` mit, sobald kein Portfolio-Step läuft.
+     - Selbst wenn ein Runner das nicht übergibt, verhindert der Stage-A-Guard denselben Fehler.
+   - Verifizierung:
+     - Driver-Log zeigt seit Fix dieselben Tasks mit `rc=0` (vorher `rc=73`), z. B. Job:
+       - `/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab/jobs/overnight_q1_safe10h_20260306_022844/logs/driver.log`
+
 ## Update 2026-03-05 (afternoon)
 
 1. Stage-B wurde methodisch weiter ent-proxied (ohne Gate-Softening).

@@ -1123,7 +1123,21 @@ def main(argv: Iterable[str]) -> int:
                 status["exit_code"] = int(red_proc.returncode)
 
     if args.run_v4_final_gate_matrix:
-        if not stagea_ok:
+        if not args.run_portfolio_q1:
+            status["steps"].append(
+                {
+                    "name": "run_v4_final_gate_matrix_q1",
+                    "ok": True,
+                    "skipped": True,
+                    "skip_reason": "portfolio_step_disabled",
+                    "exit_code": 0,
+                    "elapsed_sec": 0.0,
+                    "cmd": [],
+                    "stderr_tail": ["V4_FINAL_GATES_SKIPPED_PORTFOLIO_STEP_DISABLED"],
+                }
+            )
+            status.setdefault("warnings", []).append("V4_FINAL_GATES_SKIPPED_PORTFOLIO_STEP_DISABLED")
+        elif not stagea_ok:
             status["steps"].append(
                 {
                     "name": "run_v4_final_gate_matrix_q1",
