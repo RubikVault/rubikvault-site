@@ -1,0 +1,95 @@
+{
+  "schema_version": "rv.ui.field-audit.v1",
+  "generated_at": "2026-03-06T13:10:00Z",
+  "scope": {
+    "pages": ["/market", "/ideas", "/analyze", "/analyze/:ticker"],
+    "source_priority": ["v3_derived", "snapshots", "api_runtime_fallback"],
+    "checks": ["HAS_VALUE", "VALUE_VALID", "LOGIC_VALID"]
+  },
+  "market": {
+    "snapshot": [
+      {"ui_field": "regime_mode", "source_path": "/data/v3/derived/market/global-latest.json:data.regime_mode", "calc_rule": "direct", "freshness_rule": "meta.data_date <= 1d", "fallback_rule": "N/A + reason"}
+    ],
+    "flows": [
+      {"ui_field": "flow_direction", "source_path": "data.cards[*].drivers_top3", "calc_rule": "derived_from_price_trend", "freshness_rule": "meta.data_date", "fallback_rule": "N/A + reason"}
+    ],
+    "sectors": [
+      {"ui_field": "sector_rows", "source_path": "data.cards[SECTOR:*]", "calc_rule": "direct", "freshness_rule": "meta.data_date", "fallback_rule": "N/A + no_sector_data"}
+    ],
+    "commodities": [
+      {"ui_field": "commodity_rows", "source_path": "data.cards[CMDTY:*]", "calc_rule": "direct", "freshness_rule": "meta.data_date", "fallback_rule": "N/A + no_commodity_data"}
+    ],
+    "crypto": [
+      {"ui_field": "crypto_rows", "source_path": "data.cards[CRYPTO:*]", "calc_rule": "direct", "freshness_rule": "meta.data_date", "fallback_rule": "N/A + no_crypto_data"}
+    ],
+    "countries_fx": [
+      {"ui_field": "countries_fx_rows", "source_path": "data.cards[INDEX:*|FX:*]", "calc_rule": "direct", "freshness_rule": "meta.data_date", "fallback_rule": "N/A + no_country_fx_data"}
+    ],
+    "risks": [
+      {"ui_field": "regime_details", "source_path": "data.regime_details", "calc_rule": "direct", "freshness_rule": "meta.data_date", "fallback_rule": "N/A + missing_regime_details"}
+    ],
+    "playbook": [
+      {"ui_field": "playbook_rows", "source_path": "data.cards[*]", "calc_rule": "phase+score filters", "freshness_rule": "meta.data_date", "fallback_rule": "N/A + insufficient_cards"}
+    ],
+    "alerts": [
+      {"ui_field": "watchlist_rows", "source_path": "localStorage.mh_alerts + data.cards", "calc_rule": "join_by_id", "freshness_rule": "runtime", "fallback_rule": "empty_state_message"}
+    ],
+    "methodology": [
+      {"ui_field": "method_blocks", "source_path": "static_content", "calc_rule": "static", "freshness_rule": "deploy_time", "fallback_rule": "N/A"}
+    ],
+    "glossary": [
+      {"ui_field": "term_rows", "source_path": "static_content", "calc_rule": "static", "freshness_rule": "deploy_time", "fallback_rule": "N/A"}
+    ]
+  },
+  "ideas": {
+    "moat": [
+      {"ui_field": "moat_cards", "source_path": "static ideas MOAT panel", "calc_rule": "static", "freshness_rule": "deploy_time", "fallback_rule": "N/A + reason"}
+    ],
+    "risk": [
+      {"ui_field": "risk_scores", "source_path": "supermodules/risk + runtime_universe_fallback", "calc_rule": "direct_or_proxy", "freshness_rule": "manifest.generated_at", "fallback_rule": "N/A + reason"}
+    ],
+    "forecast": [
+      {"ui_field": "forecast_direction", "source_path": "/data/forecast/latest.json", "calc_rule": "direct", "freshness_rule": "data.asof", "fallback_rule": "N/A + reason"}
+    ],
+    "scientific": [
+      {"ui_field": "setup_trigger_signals", "source_path": "/data/snapshots/stock-analysis.json", "calc_rule": "direct", "freshness_rule": "_meta.generated_at", "fallback_rule": "N/A + reason"}
+    ],
+    "macro": [
+      {"ui_field": "macro_regime", "source_path": "supermodules/macro + market_pulse_fallback", "calc_rule": "direct_or_proxy", "freshness_rule": "manifest.generated_at", "fallback_rule": "N/A + reason"}
+    ],
+    "truth": [
+      {"ui_field": "fundamental_scores", "source_path": "supermodules/truth + universe_proxy_fallback", "calc_rule": "direct_or_proxy", "freshness_rule": "manifest.generated_at", "fallback_rule": "N/A + reason"}
+    ],
+    "etfrow": [
+      {"ui_field": "rotation_leaders_laggards", "source_path": "market_doc.sectors + cards[type=sector]", "calc_rule": "change_pct_rank", "freshness_rule": "market.meta.data_date", "fallback_rule": "N/A + reason"}
+    ],
+    "cryptopulse": [
+      {"ui_field": "crypto_slice", "source_path": "/api/universe?asset_class=crypto", "calc_rule": "score_rank", "freshness_rule": "runtime", "fallback_rule": "N/A + reason"}
+    ],
+    "macrobonds": [
+      {"ui_field": "risk_on_off_fx_bonds", "source_path": "market_pulse + api_universe(forex, etf)", "calc_rule": "merge", "freshness_rule": "market.meta.data_date + runtime", "fallback_rule": "N/A + reason"}
+    ],
+    "flight": [
+      {"ui_field": "defensive_basket", "source_path": "risk_fallback + api_universe(TLT, GLD, UUP)", "calc_rule": "risk_rank + safety_etf_union", "freshness_rule": "runtime", "fallback_rule": "N/A + reason"}
+    ]
+  },
+  "analyze_frontpage": {
+    "search_entrypoint": [
+      {"ui_field": "hero_search_input_only", "source_path": "public/index.html:#stock-search-input", "calc_rule": "single_owner", "freshness_rule": "deploy_time", "fallback_rule": "N/A + template_regression"}
+    ],
+    "signal_counters": [
+      {"ui_field": "short_count", "source_path": "homeSetupsByHorizon.short.length", "calc_rule": "min(length,10)", "freshness_rule": "top_setups.meta.generated_at|stock_analysis._meta.generated_at", "fallback_rule": "0 + reason"},
+      {"ui_field": "medium_count", "source_path": "homeSetupsByHorizon.medium.length", "calc_rule": "min(length,10)", "freshness_rule": "top_setups.meta.generated_at|stock_analysis._meta.generated_at", "fallback_rule": "0 + reason"},
+      {"ui_field": "long_count", "source_path": "homeSetupsByHorizon.long.length", "calc_rule": "min(length,10)", "freshness_rule": "top_setups.meta.generated_at|stock_analysis._meta.generated_at", "fallback_rule": "0 + reason"}
+    ],
+    "best_setups_today": [
+      {"ui_field": "short_top10_block", "source_path": "homeSetupsByHorizon.short", "calc_rule": "ticker_validation + rank + cap_10", "freshness_rule": "same_as_signal_counters", "fallback_rule": "N/A + no_valid_rows"},
+      {"ui_field": "mid_top10_block", "source_path": "homeSetupsByHorizon.medium", "calc_rule": "ticker_validation + rank + cap_10", "freshness_rule": "same_as_signal_counters", "fallback_rule": "N/A + no_valid_rows"},
+      {"ui_field": "long_top10_block", "source_path": "homeSetupsByHorizon.long", "calc_rule": "ticker_validation + rank + cap_10", "freshness_rule": "same_as_signal_counters", "fallback_rule": "N/A + no_valid_rows"}
+    ],
+    "analyze_detail_route": [
+      {"ui_field": "analyze_owner", "source_path": "public/index.html:renderAnalyzeTicker()", "calc_rule": "index_spa_owner + embedded_stock_detail", "freshness_rule": "runtime_route", "fallback_rule": "renderUnsupported + reason"},
+      {"ui_field": "top_nav_visible", "source_path": "public/index.html:.rv-page-nav", "calc_rule": "always_visible", "freshness_rule": "runtime_route", "fallback_rule": "N/A + template_error"}
+    ]
+  }
+}

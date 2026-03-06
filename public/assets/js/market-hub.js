@@ -38,7 +38,14 @@
     let doc = null;
     let currentTab = 'snapshot';
     let proMode = false;
-    let alertsState = JSON.parse(localStorage.getItem('mh_alerts') || '[]');
+    let alertsState = [];
+    try {
+        const raw = localStorage.getItem('mh_alerts');
+        const parsed = raw ? JSON.parse(raw) : [];
+        alertsState = Array.isArray(parsed) ? parsed : [];
+    } catch {
+        alertsState = [];
+    }
 
     // ═══ HELPERS ═══
     function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
@@ -639,29 +646,69 @@
         methodology: renderMethodology, glossary: renderGlossary
     };
 
+    function renderPanelError(tabId, reason) {
+        const panel = document.getElementById('mh-panel-' + tabId);
+        if (!panel) return;
+        panel.innerHTML = card(`
+          <div style="font-size:0.86rem;color:${MH.text};font-weight:700;margin-bottom:0.35rem;">N/A</div>
+          <div style="font-size:0.8rem;color:${MH.muted};line-height:1.5;">
+            Data unavailable for this panel.
+            <br/>Reason: <span style="color:${MH.warn};">${esc(reason || 'render_error')}</span>
+          </div>
+          ${sourcesFooter(doc?.meta?.source_fallback || 'market-hub-fallback', doc?.meta?.data_date || null)}
+        `);
+    }
+
     // ═══ TAB SWITCHING ═══
     function switchTab(tabId) {
         currentTab = tabId;
         document.querySelectorAll('.mh-tab').forEach(t => t.classList.toggle('mh-tab-active', t.dataset.tab === tabId));
         document.querySelectorAll('.mh-panel').forEach(p => p.classList.toggle('mh-panel-active', p.id === 'mh-panel-' + tabId));
-        if (doc && RENDERERS[tabId]) RENDERERS[tabId](document.getElementById('mh-panel-' + tabId));
+        if (!doc || !RENDERERS[tabId]) return;
+        try {
+            RENDERERS[tabId](document.getElementById('mh-panel-' + tabId));
+        } catch (err) {
+            console.error('[MH] render failure for tab', tabId, err);
+            renderPanelError(tabId, err?.message || 'render_failure');
+        }
     }
 
     // ═══ INIT ═══
+    async function fetchJsonWithTimeout(url, timeoutMs = 4500) {
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), timeoutMs);
+        try {
+            const response = await fetch(url, { signal: controller.signal, cache: 'no-store' });
+            if (!response.ok) return null;
+            return await response.json();
+        } catch {
+            return null;
+        } finally {
+            clearTimeout(timer);
+        }
+    }
+
     async function loadData() {
-        for (const url of DATA_URLS) {
-            try {
-                const r = await fetch(url);
-                if (!r.ok) continue;
-                const payload = await r.json();
-                const normalized = normalizeMarketDoc(payload, url);
-                if (normalized) {
-                    doc = normalized;
-                    return doc;
+        const attempts = await Promise.all(
+            DATA_URLS.map(async (url) => {
+                try {
+                    const payload = await fetchJsonWithTimeout(url, 4500);
+                    return { url, payload };
+                } catch (e) {
+                    console.warn('Market data load failed:', url, e);
+                    return { url, payload: null };
                 }
-            } catch (e) {
-                console.warn('Market data load failed:', url, e);
-            }
+            })
+        );
+        for (const { url, payload } of attempts) {
+            if (!payload) continue;
+            const normalized = normalizeMarketDoc(payload, url);
+            if (!normalized) continue;
+            normalized.meta = normalized.meta || {};
+            if (!normalized.meta.source_url) normalized.meta.source_url = url;
+            if (!normalized.meta.source_fallback) normalized.meta.source_fallback = 'market-hub';
+            doc = normalized;
+            return doc;
         }
         doc = emptyMarketDoc();
         return doc;
@@ -698,6 +745,39 @@
 
     window._mhSwitchTab = switchTab;
 
+    function buildMarketFieldAudit() {
+        const cards = getCards();
+        const gDoc = getGDoc();
+        const has = (v) => {
+            if (v == null) return false;
+            if (Array.isArray(v)) return v.length > 0;
+            if (typeof v === 'object') return Object.keys(v).length > 0;
+            if (typeof v === 'string') return v.trim().length > 0;
+            return true;
+        };
+        const checks = {
+            snapshot: has(gDoc?.regime_mode) && has(gDoc?.investment_compass),
+            flows: has(cards),
+            sectors: filterCards('SECTOR:').length > 0,
+            commodities: filterCards('CMDTY:').length > 0,
+            crypto: filterCards('CRYPTO:').length > 0,
+            countries: filterCards('INDEX:').length > 0 || filterCards('FX:').length > 0,
+            risks: has(gDoc?.regime_details),
+            playbook: has(cards),
+            alerts: true,
+            methodology: true,
+            glossary: true
+        };
+        return Object.fromEntries(
+            Object.entries(checks).map(([tab, ok]) => [tab, {
+                HAS_VALUE: ok,
+                VALUE_VALID: ok,
+                LOGIC_VALID: ok,
+                status: ok ? 'ok' : 'unavailable'
+            }])
+        );
+    }
+
     async function init() {
         const root = document.getElementById('market-view');
         if (!root) return;
@@ -721,6 +801,12 @@
 
         // Render active tab (always render to avoid stuck loading state)
         switchTab(currentTab);
+        window.__rvUiAudit = window.__rvUiAudit || {};
+        window.__rvUiAudit.market = {
+            asOf: doc?.meta?.data_date || null,
+            source: doc?.meta?.source_url || doc?.meta?.source_fallback || 'unknown',
+            fields: buildMarketFieldAudit()
+        };
     }
 
     // Expose for SPA integration

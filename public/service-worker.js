@@ -1,5 +1,5 @@
 /**
- * RubikVault Service Worker v3.1
+ * RubikVault Service Worker v3.3
  * 
  * Features:
  * - Offline-first for critical data
@@ -8,7 +8,7 @@
  * - Background sync ready
  */
 
-const CACHE_VERSION = 'rv-v3.2';
+const CACHE_VERSION = 'rv-v3.3';
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const DATA_CACHE = `${CACHE_VERSION}-data`;
 const API_CACHE = `${CACHE_VERSION}-api`;
@@ -18,7 +18,6 @@ const STATIC_ASSETS = [
   '/',
   '/index.html',
   '/style.css',
-  '/stock',
   '/stock.html',
   '/market-clock.js',
   '/manifest.json',
@@ -38,7 +37,7 @@ const CRITICAL_DATA = [
  * Install: Pre-cache critical assets
  */
 self.addEventListener('install', (event) => {
-  console.log('[SW] Installing v3.1...');
+  console.log('[SW] Installing v3.3...');
   
   event.waitUntil(
     Promise.all([
@@ -70,7 +69,7 @@ self.addEventListener('install', (event) => {
  * Activate: Clean old caches
  */
 self.addEventListener('activate', (event) => {
-  console.log('[SW] Activating v3.1...');
+  console.log('[SW] Activating v3.3...');
   
   event.waitUntil(
     caches.keys().then(cacheNames => {
@@ -220,7 +219,7 @@ async function handleNavigationRequest(request) {
       return cached;
     }
     if (url.pathname.startsWith('/analyze/')) {
-      return caches.match('/stock') || caches.match('/stock.html') || fetch('/stock', { cache: 'no-store' });
+      return caches.match('/index.html') || fetch('/index.html', { cache: 'no-store' });
     }
     return caches.match('/index.html') || fetch('/index.html', { cache: 'no-store' });
   }
@@ -264,4 +263,4 @@ self.addEventListener('message', (event) => {
   }
 });
 
-console.log('[SW] RubikVault Service Worker v3.1 loaded!');
+console.log('[SW] RubikVault Service Worker v3.3 loaded!');

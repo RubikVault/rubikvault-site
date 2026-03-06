@@ -78,6 +78,66 @@ Stand: 2026-03-04
      - Driver-Log zeigt seit Fix dieselben Tasks mit `rc=0` (vorher `rc=73`), z. B. Job:
        - `/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab/jobs/overnight_q1_safe10h_20260306_022844/logs/driver.log`
 
+## Update 2026-03-06 (morning continuation)
+
+1. Stage-B wurde weiter ent-proxied, ohne Gate-Softening, über adaptive Input-Scope.
+   - Datei:
+     - `/Users/michaelpuchowezki/Dev/rubikvault-site/scripts/quantlab/run_stage_b_q1.py`
+   - Neu:
+     - `--stageb-adaptive-input-scope` (default: on)
+     - `--stageb-min-survivors-a-for-strict-scope` (default: 32)
+   - Verhalten:
+     - Wenn `survivors_A` zu klein ist, wird nur der Input-Scope auf `all_candidates` erweitert.
+     - Strict/CPCV/PSR/DSR Gates bleiben unverändert.
+   - Verifizierter Lauf:
+     - `/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab/runs/run_id=q1stageb_cheapgateA_tsplits_2026-03-05/stage_b_q1_run_report.json`
+   - Verifizierter Zustand:
+     - `stageb_input_scope_requested=survivors_a`
+     - `stageb_input_scope_effective=all_candidates`
+     - `strict_pass_total=1`
+     - `survivors_B_q1_total=1`
+
+2. Registry-Ladder lief auf dem neuen Stage-B-Run sauber weiter.
+   - Verifizierter Lauf:
+     - `/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab/runs/run_id=q1registry_q1stageb_cheapgateA_tsplits_2026-03-05/q1_registry_update_report.json`
+   - Verifizierter Zustand:
+     - `decision=PROMOTE`
+     - Slot-State und Candidate-State-Events konsistent geschrieben
+
+3. Portfolio wurde final enger an Registry-Slots gekoppelt.
+   - Datei:
+     - `/Users/michaelpuchowezki/Dev/rubikvault-site/scripts/quantlab/run_portfolio_risk_execution_q1.py`
+   - Neu:
+     - `--registry-slot-consistency-failure-mode {off|warn|hard}` (default: `warn`, im `v4-final-profile` nicht `off`)
+     - expliziter Abgleich: Registry-Slot -> ausgewählter Candidate (`single` + `slot_blend`)
+     - Konsistenz-Details im Report unter `governance.slot_consistency`
+   - Verifizierter Lauf:
+     - `/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab/runs/run_id=q1portfolio_1772781732/q1_portfolio_risk_execution_report.json`
+   - Verifizierter Zustand:
+     - `governance.slot_consistency.checked=true`
+     - keine Slot-Mismatches
+
+4. Data-Truth Backbone wurde für Corp-Actions-Coverage-Top-up erweitert.
+   - Datei:
+     - `/Users/michaelpuchowezki/Dev/rubikvault-site/scripts/quantlab/run_q1_daily_data_backbone_q1.py`
+   - Neu:
+     - automatische Top-up-Reihenfolge bei `CONTRACT_CORP_ACTIONS_COVERAGE_LOW`:
+       - corp-actions ingest -> contract layers -> tri layers -> recon (iterativ)
+     - neue Flags:
+       - `--corp-actions-coverage-topup-enabled`
+       - `--corp-actions-coverage-topup-attempts`
+       - `--corp-actions-coverage-topup-assets-step`
+       - `--corp-actions-coverage-topup-calls-step`
+     - in `v4-final-profile`: unresolved coverage-low nach Top-up wird als Failure markiert.
+   - Hinweis:
+     - Vollvalidierung dieses Top-up-Pfads braucht einen längeren API-Lauf; der strukturelle Pfad ist implementiert, der schnelle lokale Smoke-Run lief ohne Corp-Actions-Ingest grün.
+   - Zusätzlich verifiziert (ohne Threshold-Softening, lokal):
+     - `/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab/runs/run_id=q1recon_20260306T081033Z/q1_reconciliation_report.json`
+     - `CONTRACT_CORP_ACTIONS_COVERAGE_LOW` ist dort **nicht** mehr vorhanden (`is_low=false`).
+     - Aktuell verbleibende Corp-Actions-Warnungen in diesem Lauf:
+       - `CONTRACT_CORP_ACTIONS_DERIVED_CAP_HIT`
+       - `CONTRACT_CORP_ACTIONS_RAW_EMPTY_FALLBACK`
+
 ## Update 2026-03-05 (afternoon)
 
 1. Stage-B wurde methodisch weiter ent-proxied (ohne Gate-Softening).

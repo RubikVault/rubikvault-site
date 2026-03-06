@@ -33,29 +33,6 @@
   <link rel="stylesheet" href="/search.css" />
   <link rel="stylesheet" href="/assets/css/market-hub.css" />
   <style>
-    #rv-sticky-search {
-      position: sticky;
-      top: 48px;
-      /* Height of nav bar (approx) */
-      z-index: 1200;
-      backdrop-filter: blur(8px);
-      background: rgba(2, 6, 23, 0.95);
-      /* More opaque background to cover content */
-      border-bottom: 1px solid rgba(100, 116, 139, 0.25);
-      width: 100%;
-    }
-
-    .rv-sticky-search-inner {
-      max-width: 1400px;
-      margin: 0 auto;
-      padding: 0.65rem 1rem;
-      display: grid;
-      grid-template-columns: minmax(200px, 1fr) auto auto;
-      gap: 0.65rem;
-      align-items: center;
-    }
-
-    .rv-sticky-input,
     .rv-sticky-select {
       border: 1px solid rgba(100, 116, 139, 0.35);
       border-radius: 10px;
@@ -64,22 +41,6 @@
       padding: 0.55rem 0.75rem;
       font-size: 0.92rem;
       min-height: 40px;
-    }
-
-    .rv-sticky-btn {
-      border: 1px solid rgba(100, 116, 139, 0.35);
-      border-radius: 10px;
-      background: rgba(30, 41, 59, 0.7);
-      color: #e5e7eb;
-      padding: 0.55rem 1rem;
-      font-weight: 700;
-      font-size: 0.86rem;
-      cursor: pointer;
-      min-height: 40px;
-    }
-
-    #best-setups-cards-wrap {
-      display: none;
     }
 
     .best-setup-link {
@@ -93,17 +54,8 @@
     }
 
     @media (max-width: 900px) {
-      .rv-sticky-search-inner {
+      #best-setups-by-horizon {
         grid-template-columns: 1fr;
-      }
-
-      #best-setups-table-wrap {
-        display: none;
-      }
-
-      #best-setups-cards-wrap {
-        display: grid;
-        gap: 0.65rem;
       }
     }
   </style>
@@ -175,40 +127,12 @@
     </div>
   </nav>
 
-  <section id="rv-sticky-search" aria-label="Sticky stock search">
-    <div class="rv-sticky-search-inner">
-      <div style="position: relative; flex: 1;">
-        <input id="sticky-search-input" class="rv-sticky-input" type="text" autocomplete="off"
-          placeholder="Search ticker (e.g. AAPL, MSFT, F)" style="width: 100%;" />
-      </div>
-      <select id="sticky-asset-filter" class="rv-sticky-select" aria-label="Asset class filter">
-        <option value="all">All Assets</option>
-        <option value="stock">Stocks</option>
-        <option value="etf">ETFs</option>
-        <option value="fund">Funds</option>
-        <option value="crypto">Crypto</option>
-        <option value="forex">Forex</option>
-        <option value="bond">Bonds</option>
-        <option value="index">Indices</option>
-      </select>
-
-      <select id="sticky-engine-filter" class="rv-sticky-select" aria-label="Engine filter">
-        <option value="all">All</option>
-        <option value="scientific">Scientific</option>
-        <option value="elliott">Elliott</option>
-        <option value="forecast">Forecast</option>
-      </select>
-      <button id="sticky-search-btn" class="rv-sticky-btn" type="button">Analyze</button>
-    </div>
-  </section>
-
-
   <!-- MAIN CONTENT -->
   <main class="rv-main" style="max-width: 1400px; margin: 0 auto; padding: 3rem 2rem;">
     <div id="analyze-home-shell">
 
       <!-- HERO SECTION: Stock Analyzer -->
-      <section style="text-align: center; margin-bottom: 4rem;">
+      <section id="analyze-hero" style="text-align: center; margin-bottom: 4rem;">
         <h1 style="font-size: 4rem; font-weight: 800; margin-bottom: 1rem; color: #f1f5f9; letter-spacing: -0.02em;">
           Stock Analyzer
         </h1>
@@ -322,37 +246,11 @@
               <div style="font-size: 1rem; font-weight: 700; color: #e5e7eb;">Best Setups Today</div>
               <div id="best-setups-meta" style="font-size: 0.8rem; color: #94a3b8;">Loading top setups…</div>
             </div>
-            <div style="display:flex; gap:0.5rem; align-items:center;">
-              <label for="analyze-engine-filter" style="font-size:0.8rem; color:#94a3b8;">Engine</label>
-              <select id="analyze-engine-filter" class="rv-sticky-select" aria-label="Analyze home engine filter">
-                <option value="all">All</option>
-                <option value="scientific">Scientific</option>
-                <option value="elliott">Elliott</option>
-                <option value="forecast">Forecast</option>
-              </select>
-            </div>
           </div>
-          <div id="best-setups-table-wrap" style="overflow-x:auto;">
-            <table id="best-setups-table" style="width:100%; border-collapse:collapse; font-size:0.9rem;">
-              <thead>
-                <tr>
-                  <th style="text-align:left; color:#94a3b8; padding:0.45rem;">Ticker</th>
-                  <th style="text-align:left; color:#94a3b8; padding:0.45rem;">Name</th>
-                  <th style="text-align:right; color:#94a3b8; padding:0.45rem;">Composite</th>
-                  <th style="text-align:right; color:#94a3b8; padding:0.45rem;">Consensus</th>
-                  <th style="text-align:right; color:#94a3b8; padding:0.45rem;">Signals</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td colspan="5" style="padding:0.65rem; color:#64748b;">Loading top setups…</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-          <div id="best-setups-cards-wrap">
+          <div id="best-setups-by-horizon" style="display:grid; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); gap:0.8rem;">
             <div style="padding:0.7rem; border:1px solid rgba(100,116,139,0.22); border-radius:10px; color:#64748b;">
-              Loading top setups…</div>
+              Loading top setups…
+            </div>
           </div>
         </div>
       </section>
@@ -683,6 +581,7 @@
           let smCache = {};
           let v7UniverseReport = null; // Global variable for v7 universe report
           let scientificGapReasonsSummary = null; // Global variable for scientific gap reasons
+          const ideasAudit = {};
 
           function fmtNum(v, d = 1) { return v === null || v === undefined ? '—' : Number(v).toFixed(d); }
           function fmtPct(v, d = 1) { return v === null || v === undefined ? '—' : Number(v).toFixed(d) + '%'; }
@@ -702,6 +601,55 @@
             return '#22c55e';
           }
 
+          function panelContractHeader(meta) {
+            var source = String(meta?.source || 'runtime').trim();
+            var status = String(meta?.status || 'ok').trim().toLowerCase();
+            var asOf = String(meta?.asOf || 'n/a').trim();
+            var reason = String(meta?.reason || '').trim();
+            var statusColor = status === 'ok' ? '#22c55e' : status === 'stale' ? '#f59e0b' : '#ef4444';
+            return '<div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-bottom:0.55rem;">' +
+              '<span style="font-size:0.66rem; text-transform:uppercase; letter-spacing:0.08em; border:1px solid ' + statusColor + '44; color:' + statusColor + '; background:' + statusColor + '1f; border-radius:999px; padding:2px 8px; font-weight:700;">' + status + '</span>' +
+              '<span style="font-size:0.66rem; color:#94a3b8;">source: ' + source + '</span>' +
+              '<span style="font-size:0.66rem; color:#94a3b8;">asOf: ' + asOf + '</span>' +
+              (reason ? '<span style="font-size:0.66rem; color:#f59e0b;">reason: ' + reason + '</span>' : '') +
+              '</div>';
+          }
+
+          function renderUnavailablePanel(panel, meta, message) {
+            if (!panel) return;
+            recordIdeasAudit(meta?.tab || 'unknown', {
+              status: meta?.status || 'unavailable',
+              source: meta?.source || 'runtime',
+              asOf: meta?.asOf || null,
+              reason: meta?.reason || 'no_data'
+            });
+            panel.innerHTML =
+              panelContractHeader({ ...meta, status: meta?.status || 'unavailable' }) +
+              '<div style="color:#94a3b8; padding:0.4rem 0.1rem; line-height:1.5;">' + (message || 'No data available for this module.') + '</div>';
+          }
+
+          function recordIdeasAudit(tab, payload) {
+            const key = String(tab || 'unknown');
+            const status = payload?.status || 'unavailable';
+            const hasValue = payload?.has_value ?? (status === 'ok');
+            const valueValid = payload?.value_valid ?? (status === 'ok');
+            const logicValid = payload?.logic_valid ?? (status === 'ok');
+            ideasAudit[key] = {
+              HAS_VALUE: Boolean(hasValue),
+              VALUE_VALID: Boolean(valueValid),
+              LOGIC_VALID: Boolean(logicValid),
+              status,
+              source: payload?.source || 'runtime',
+              asOf: payload?.asOf || null,
+              reason: payload?.reason || null
+            };
+            window.__rvUiAudit = window.__rvUiAudit || {};
+            window.__rvUiAudit.ideas = {
+              asOf: new Date().toISOString(),
+              fields: { ...ideasAudit }
+            };
+          }
+
           // ── Top-level page switching ──
           window.switchIdeasPage = function (page) {
             document.querySelectorAll('.ideas-page-panel').forEach(function (p) { p.style.display = 'none'; });
@@ -710,11 +658,29 @@
             var btn = document.getElementById('ideas-tab-' + page);
             if (panel) panel.style.display = 'block';
             if (btn) btn.classList.add('ideas-tab-active');
-            if (page !== 'moat') loadSMModule(page);
+            if (page === 'moat') {
+              recordIdeasAudit('moat', { status: 'ok', source: 'static_moat', asOf: new Date().toISOString().slice(0, 10), reason: null });
+              return;
+            }
+            loadSMModule(page).catch(function (err) {
+              var content = document.getElementById('sm-content-' + page);
+              renderUnavailablePanel(content, { tab: page, source: 'runtime', status: 'unavailable', reason: err?.message || 'load_failed' }, 'Module load failed. Please retry.');
+            });
           };
 
-          async function fetchJson(url) {
-            try { var r = await fetch(url); return r.ok ? await r.json() : null; } catch (e) { return null; }
+          async function fetchJson(url, timeoutMs) {
+            var t = Number(timeoutMs);
+            var ms = Number.isFinite(t) && t > 0 ? t : 4500;
+            var controller = new AbortController();
+            var timer = setTimeout(function () { controller.abort(); }, ms);
+            try {
+              var r = await fetch(url, { signal: controller.signal, cache: 'no-store' });
+              return r.ok ? await r.json() : null;
+            } catch (e) {
+              return null;
+            } finally {
+              clearTimeout(timer);
+            }
           }
 
           async function fetchFirstJson(paths) {
@@ -772,7 +738,7 @@
             const map = new Map();
             chunks.flat().forEach(function (row) {
               const symbol = String(row?.symbol || '').toUpperCase();
-              if (!symbol || map.has(symbol)) return;
+              if (!symbol || !isLooselyValidDisplayTicker(symbol) || map.has(symbol)) return;
               map.set(symbol, row);
             });
             ideasRuntime.stockUniverseSlice = Array.from(map.values());
@@ -786,7 +752,7 @@
             const map = new Map();
             chunks.flat().forEach(function (row) {
               const symbol = String(row?.symbol || '').toUpperCase();
-              if (!symbol || map.has(symbol)) return;
+              if (!symbol || !isLooselyValidDisplayTicker(symbol) || map.has(symbol)) return;
               map.set(symbol, row);
             });
             ideasRuntime.cryptoUniverseSlice = Array.from(map.values());
@@ -836,7 +802,8 @@
             var panel = document.getElementById('sm-content-' + tab);
             if (!panel) return;
             warmIdeasRuntime();
-            panel.innerHTML = '<div style="color:#64748b; padding:1rem;">Loading…</div>';
+            panel.innerHTML = panelContractHeader({ source: 'runtime', status: 'stale', asOf: 'loading', reason: 'warming_up' }) +
+              '<div style="color:#64748b; padding:0.4rem 0.1rem;">Loading…</div>';
 
             // Forecast and Scientific have their own data sources
             if (tab === 'forecast') { return loadForecast(panel); }
@@ -868,7 +835,11 @@
             if (!data && tab === 'truth') data = await buildTruthFallbackDoc();
 
             if (!data) {
-              panel.innerHTML = '<div style="color:#ef4444; padding:1rem;">No runtime data available for this module.</div>';
+              renderUnavailablePanel(
+                panel,
+                { tab: tab, source: 'runtime_fallback', status: 'unavailable', asOf: new Date().toISOString().slice(0, 10), reason: 'no_runtime_data' },
+                'No runtime data available for this module.'
+              );
               return;
             }
 
@@ -896,7 +867,7 @@
                   }
                 };
               })
-              .filter(function (row) { return row.symbol && Number.isFinite(row.scores.risk_score); })
+              .filter(function (row) { return row.symbol && isLooselyValidDisplayTicker(row.symbol) && Number.isFinite(row.scores.risk_score); })
               .sort(function (a, b) { return b.scores.risk_score - a.scores.risk_score; });
             if (!rows.length) return null;
             return {
@@ -974,7 +945,7 @@
                   flags
                 };
               })
-              .filter(function (row) { return row.symbol; })
+              .filter(function (row) { return row.symbol && isLooselyValidDisplayTicker(row.symbol); })
               .sort(function (a, b) { return (b.scores.fundamental_score || 0) - (a.scores.fundamental_score || 0); });
             if (!rows.length) return null;
             return {
@@ -986,7 +957,10 @@
           // ── Risk & Resilience ──
           function renderRisk(panel, data) {
             var rows = data.rows || [];
-            if (!rows.length) { panel.innerHTML = '<div style="color:#64748b;">No risk data.</div>'; return; }
+            if (!rows.length) {
+              renderUnavailablePanel(panel, { tab: 'risk', source: 'risk_fallback', status: 'unavailable', asOf: new Date().toISOString().slice(0, 10), reason: data?._status || 'no_risk_rows' }, 'No risk data.');
+              return;
+            }
             var stats = data.universe_stats || {};
             var topSafe = rows.slice().sort(function (a, b) { return a.scores.risk_score - b.scores.risk_score; }).slice(0, 10);
             var topRisky = rows.slice(0, 10);
@@ -998,7 +972,16 @@
             };
             var highRisk = rows.filter(function (r) { return r.scores && r.scores.risk_score >= 75; }).length;
             var lowRisk = rows.filter(function (r) { return r.scores && r.scores.risk_score <= 25; }).length;
-            panel.innerHTML =
+            var valueValid = rows.every(function (r) {
+              var score = Number(r?.scores?.risk_score);
+              return Number.isFinite(score) && score >= 0 && score <= 100;
+            });
+            panel.innerHTML = panelContractHeader({
+              source: data?._status || 'risk_supermodule',
+              status: 'ok',
+              asOf: new Date().toISOString().slice(0, 10),
+              reason: ''
+            }) +
               '<div style="display:flex; gap:0.5rem; margin-bottom:1rem; flex-wrap:wrap;">' +
               '<div class="sm-card" style="flex:1; min-width:140px; text-align:center;"><div style="font-size:0.7rem; color:#94a3b8;">Stocks Scored</div><div style="font-size:1.5rem; color:#e2e8f0; font-weight:700;">' + (stats.with_scores || rows.length) + '</div></div>' +
               '<div class="sm-card" style="flex:1; min-width:140px; text-align:center;"><div style="font-size:0.7rem; color:#94a3b8;">High Risk (75+)</div><div style="font-size:1.5rem; color:#ef4444; font-weight:700;">' + highRisk + '</div></div>' +
@@ -1008,13 +991,26 @@
               '<div><div style="font-size:0.78rem; color:#ef4444; font-weight:600; margin-bottom:0.5rem;">⚠️ Highest Risk</div>' + topRisky.map(cardHtml).join('') + '</div>' +
               '<div><div style="font-size:0.78rem; color:#22c55e; font-weight:600; margin-bottom:0.5rem;">🛡️ Lowest Risk</div>' + topSafe.map(cardHtml).join('') + '</div>' +
               '</div>';
+            recordIdeasAudit('risk', {
+              status: 'ok',
+              source: data?._status || 'risk_supermodule',
+              asOf: new Date().toISOString().slice(0, 10),
+              reason: null,
+              has_value: rows.length > 0,
+              value_valid: valueValid,
+              logic_valid: valueValid
+            });
           }
 
           // ── Forecast ──
           async function loadForecast(panel) {
             var data = await fetchJson('/data/forecast/latest.json');
             if (!data || !data.data || !data.data.forecasts || !data.data.forecasts.length) {
-              panel.innerHTML = '<div style="color:#64748b; padding:1rem;">No forecast data available.</div>';
+              renderUnavailablePanel(
+                panel,
+                { tab: 'forecast', source: '/data/forecast/latest.json', status: 'unavailable', asOf: new Date().toISOString().slice(0, 10), reason: 'empty_forecast_payload' },
+                'No forecast data available.'
+              );
               return;
             }
             smCache['forecast'] = data;
@@ -1025,6 +1021,14 @@
             var bearish = usFC.filter(function (f) { return f.horizons && f.horizons['20d'] && f.horizons['20d'].direction === 'bearish'; });
             var topBull = bullish.slice().sort(function (a, b) { return (b.horizons['20d'].probability || 0) - (a.horizons['20d'].probability || 0); }).slice(0, 15);
             var topBear = bearish.slice().sort(function (a, b) { return (b.horizons['20d'].probability || 0) - (a.horizons['20d'].probability || 0); }).slice(0, 15);
+            var probsValid = usFC.every(function (f) {
+              var horizons = f?.horizons || {};
+              return ['1d', '5d', '20d'].every(function (k) {
+                var p = Number(horizons?.[k]?.probability);
+                if (!Number.isFinite(p)) return true;
+                return p >= 0 && p <= 1;
+              });
+            });
 
             var fcCard = function (f) {
               var h = f.horizons || {};
@@ -1044,7 +1048,12 @@
                 '<span>1d: ' + p1d + '</span><span>5d: ' + p5d + '</span><span>20d: ' + p20d + '</span></div></div>';
             };
 
-            panel.innerHTML =
+            panel.innerHTML = panelContractHeader({
+              source: '/data/forecast/latest.json',
+              status: 'ok',
+              asOf: data?.data?.asof || data?.data?.generated_at || 'n/a',
+              reason: ''
+            }) +
               '<div style="display:flex; gap:0.5rem; margin-bottom:1rem; flex-wrap:wrap;">' +
               '<div class="sm-card" style="flex:1; min-width:130px; text-align:center;"><div style="font-size:0.7rem; color:#94a3b8;">Total Forecasts</div><div style="font-size:1.5rem; color:#e2e8f0; font-weight:700;">' + usFC.length + '</div></div>' +
               '<div class="sm-card" style="flex:1; min-width:130px; text-align:center;"><div style="font-size:0.7rem; color:#94a3b8;">Bullish (20d)</div><div style="font-size:1.5rem; color:#22c55e; font-weight:700;">' + bullish.length + '</div></div>' +
@@ -1056,6 +1065,15 @@
               '<div><div style="font-size:0.78rem; color:#ef4444; font-weight:600; margin-bottom:0.5rem;">📉 Top Bearish (highest conviction)</div>' + topBear.map(fcCard).join('') + '</div>' +
               '</div>' +
               '<div style="font-size:0.68rem; color:#475569; margin-top:1rem; font-style:italic;">Model: ' + (data.champion_id || '—') + ' · Trained: ' + ((data.trained_at || '').slice(0, 10) || '—') + ' · Research simulation only, not financial advice.</div>';
+            recordIdeasAudit('forecast', {
+              status: 'ok',
+              source: '/data/forecast/latest.json',
+              asOf: data?.data?.asof || null,
+              reason: null,
+              has_value: usFC.length > 0,
+              value_valid: probsValid,
+              logic_valid: probsValid
+            });
           }
 
           // ── Scientific Analyzer ──
@@ -1064,7 +1082,11 @@
             var v7GapData = scientificGapReasonsSummary; // Use the globally loaded data
 
             if (!data || data._status === 'NO_SOURCE_DATA' || ((!data.strong_signals || !data.strong_signals.length) && (!data.best_setups || !data.best_setups.length))) {
-              panel.innerHTML = '<div style="color:#64748b; padding:1rem;">Scientific analysis data not available. Run <code>npm run build:scientific</code> to generate.</div>';
+              renderUnavailablePanel(
+                panel,
+                { tab: 'scientific', source: SM_BASE + 'scientific-summary.json', status: 'unavailable', asOf: new Date().toISOString().slice(0, 10), reason: 'no_scientific_summary' },
+                'Scientific analysis data not available. Run <code>npm run build:scientific</code> to generate.'
+              );
               return;
             }
             smCache['scientific'] = data;
@@ -1073,6 +1095,18 @@
             var scientificDU = Number(v7GapData?.scientific_data_unavailable_count);
             var realScientificCount = Number.isFinite(scientificReady) ? scientificReady : Number(stats.total || 0);
             var realDUCount = Number.isFinite(scientificDU) ? scientificDU : 0;
+            var scientificRows = [...(Array.isArray(data.strong_signals) ? data.strong_signals : []), ...(Array.isArray(data.best_setups) ? data.best_setups : [])];
+            var hasScientificValue = scientificRows.length > 0;
+            var scientificValueValid = scientificRows.every(function (row) {
+              var setupScore = Number(row?.setup?.score ?? row?.setup_score);
+              var triggerScore = Number(row?.trigger?.score ?? row?.trigger_score);
+              var strength = String(row?.signal_strength || '').toUpperCase();
+              var validSetup = !Number.isFinite(setupScore) || (setupScore >= 0 && setupScore <= 100);
+              var validTrigger = !Number.isFinite(triggerScore) || (triggerScore >= 0 && triggerScore <= 100);
+              var validStrength = !strength || ['STRONG', 'MODERATE', 'WEAK'].includes(strength);
+              return isLooselyValidDisplayTicker(row?.symbol || '') && validSetup && validTrigger && validStrength;
+            });
+            var scientificLogicValid = !Number.isFinite(realScientificCount) || realScientificCount >= (Array.isArray(data.strong_signals) ? data.strong_signals.length : 0);
 
             var sigColors = { STRONG: '#22c55e', MODERATE: '#eab308', WEAK: '#64748b' };
 
@@ -1091,7 +1125,12 @@
                 '</div>';
             };
 
-            panel.innerHTML =
+            panel.innerHTML = panelContractHeader({
+              source: SM_BASE + 'scientific-summary.json',
+              status: 'ok',
+              asOf: data?.meta?.generated_at || data?.generated_at || new Date().toISOString().slice(0, 10),
+              reason: ''
+            }) +
               '<div style="display:flex; gap:0.5rem; margin-bottom:1rem; flex-wrap:wrap;">' +
               '<div class="sm-card" style="flex:1; min-width:130px; text-align:center;"><div style="font-size:0.7rem; color:#94a3b8;">Scientific Ready</div><div style="font-size:1.5rem; color:#e2e8f0; font-weight:700;">' + realScientificCount.toLocaleString() + '</div>' +
               (realDUCount > 0 ? '<div style="font-size:0.65rem; color:#ef4444; margin-top:2px;">' + realDUCount.toLocaleString() + ' Data Unavailable</div>' : '') + '</div>' +
@@ -1104,22 +1143,54 @@
               '<div><div style="font-size:0.78rem; color:#eab308; font-weight:600; margin-bottom:0.5rem;">📋 Best Setups (awaiting trigger)</div>' + (data.best_setups || []).map(sigCard).join('') + '</div>' +
               '</div>' +
               '<div style="font-size:0.68rem; color:#475569; margin-top:1rem; font-style:italic;">Research simulation only — model trained for educational purposes. Not financial advice.</div>';
+            recordIdeasAudit('scientific', {
+              status: 'ok',
+              source: SM_BASE + 'scientific-summary.json',
+              asOf: data?.meta?.generated_at || data?.generated_at || data?._meta?.generated_at || null,
+              reason: null,
+              has_value: hasScientificValue,
+              value_valid: scientificValueValid,
+              logic_valid: scientificLogicValid
+            });
           }
 
           // ── Macro OS ──
           function renderMacro(panel, data) {
             var d = data.data;
             if (!d || data._status === 'NO_SOURCE_DATA') {
-              panel.innerHTML = '<div style="color:#64748b; padding:1rem;">Macro hub data not available. Run <code>node scripts/update-macro-hub.v3.mjs</code> to seed FRED data, then <code>npm run build:supermodules:macro</code>.</div>';
+              renderUnavailablePanel(
+                panel,
+                { tab: 'macro', source: 'macro_supermodule', status: 'unavailable', asOf: new Date().toISOString().slice(0, 10), reason: data?._status || 'no_macro_data' },
+                'Macro hub data not available. Run <code>node scripts/update-macro-hub.v3.mjs</code> to seed FRED data, then <code>npm run build:supermodules:macro</code>.'
+              );
               return;
             }
             var regime = d.regime || {};
             var signals = d.signals || [];
             var cats = d.categories || {};
             var meta = d.meta || {};
+            var categoryMetrics = Object.values(cats).flatMap(function (metrics) { return Array.isArray(metrics) ? metrics : []; });
+            var hasMacroValue = Boolean(regime.current || signals.length || categoryMetrics.length);
+            var regimeScore = Number(regime.score);
+            var coveragePct = Number(meta.coverage_pct);
+            var macroValueValid = (!Number.isFinite(regimeScore) || (regimeScore >= 0 && regimeScore <= 100)) &&
+              (!Number.isFinite(coveragePct) || (coveragePct >= 0 && coveragePct <= 100)) &&
+              categoryMetrics.every(function (m) {
+                var val = Number(m?.value);
+                return !Number.isFinite(val) || Math.abs(val) < 1e9;
+              });
+            var macroLogicValid = signals.every(function (s) {
+              var val = Number(s?.value);
+              return s?.signal && s?.metric && (Number.isFinite(val) || s?.value == null);
+            });
             var regimeColors = { 'RISK_OFF': '#ef4444', 'CAUTIOUS': '#f97316', 'NEUTRAL': '#eab308', 'CONSTRUCTIVE': '#22c55e', 'RISK_ON': '#10b981' };
             var rc = regimeColors[regime.current] || '#94a3b8';
-            panel.innerHTML =
+            panel.innerHTML = panelContractHeader({
+              source: data?._status || 'macro_supermodule',
+              status: 'ok',
+              asOf: new Date().toISOString().slice(0, 10),
+              reason: ''
+            }) +
               '<div style="display:flex; gap:1rem; margin-bottom:1rem; flex-wrap:wrap; align-items:center;">' +
               '<div class="sm-regime-badge" style="background:' + rc + '22; color:' + rc + '; border:1px solid ' + rc + '44;">' + (regime.label || regime.current || 'Unknown') + '</div>' +
               '<div style="flex:1;"><div style="font-size:0.75rem; color:#94a3b8;">Regime Score</div><div style="font-size:1.3rem; color:#e2e8f0; font-weight:700;">' + (regime.score != null ? regime.score : '—') + '<span style="font-size:0.75rem; color:#64748b;">/100</span></div></div>' +
@@ -1129,6 +1200,15 @@
               '<div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(200px, 1fr)); gap:0.6rem;">' +
               Object.entries(cats).map(function (entry) { var cat = entry[0]; var metrics = entry[1]; return '<div class="sm-card"><div style="font-size:0.72rem; color:#94a3b8; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:6px;">' + cat.replace(/_/g, ' ') + '</div>' + metrics.slice(0, 5).map(function (m) { return '<div class="sm-metric-row"><span class="sm-metric-label">' + m.id + '</span><span class="sm-metric-value">' + fmtNum(m.value, 2) + (m.change !== null ? ' <span style="color:' + (m.change >= 0 ? '#22c55e' : '#ef4444') + '; font-size:0.7rem;">' + (m.change >= 0 ? '+' : '') + fmtNum(m.change, 2) + '</span>' : '') + '</span></div>'; }).join('') + '</div>'; }).join('') +
               '</div>';
+            recordIdeasAudit('macro', {
+              status: 'ok',
+              source: data?._status || 'macro_supermodule',
+              asOf: new Date().toISOString().slice(0, 10),
+              reason: null,
+              has_value: hasMacroValue,
+              value_valid: macroValueValid,
+              logic_valid: macroLogicValid
+            });
           }
 
           // ── Fundamental Truth ──
@@ -1136,7 +1216,11 @@
             var rows = data.rows || [];
             if (!rows.length) {
               var reason = data._status || (data.universe_stats ? data.universe_stats.reason : '') || '';
-              panel.innerHTML = '<div style="color:#64748b; padding:1rem;">No fundamental data available' + (reason ? ': ' + reason : '') + '. Set EODHD_API_KEY and run <code>npm run build:supermodules:truth</code>.</div>';
+              renderUnavailablePanel(
+                panel,
+                { tab: 'truth', source: 'truth_supermodule', status: 'unavailable', asOf: new Date().toISOString().slice(0, 10), reason: reason || 'no_truth_rows' },
+                'No fundamental data available' + (reason ? ': ' + reason : '') + '. Set EODHD_API_KEY and run <code>npm run build:supermodules:truth</code>.'
+              );
               return;
             }
             var topF = rows.slice(0, 10);
@@ -1151,7 +1235,29 @@
             };
             var strongF = rows.filter(function (r) { return r.scores && r.scores.fundamental_score >= 75; }).length;
             var highEQ = rows.filter(function (r) { return r.flags && r.flags.includes('HIGH_EARNINGS_QUALITY'); }).length;
-            panel.innerHTML =
+            var hasTruthValue = rows.length > 0;
+            var truthValueValid = rows.every(function (r) {
+              var fs = Number(r?.scores?.fundamental_score);
+              var eq = Number(r?.scores?.earnings_quality);
+              var gm = Number(r?.scores?.gross_margin);
+              return isLooselyValidDisplayTicker(r?.symbol || '') &&
+                Number.isFinite(fs) && fs >= 0 && fs <= 100 &&
+                (!Number.isFinite(eq) || (eq >= 0 && eq <= 100)) &&
+                (!Number.isFinite(gm) || (gm >= -200 && gm <= 200));
+            });
+            var truthLogicValid = rows.every(function (row, idx, arr) {
+              if (idx === 0) return true;
+              var prev = Number(arr[idx - 1]?.scores?.fundamental_score);
+              var curr = Number(row?.scores?.fundamental_score);
+              if (!Number.isFinite(prev) || !Number.isFinite(curr)) return true;
+              return prev >= curr;
+            });
+            panel.innerHTML = panelContractHeader({
+              source: data?._status || 'truth_supermodule',
+              status: 'ok',
+              asOf: new Date().toISOString().slice(0, 10),
+              reason: ''
+            }) +
               '<div style="display:flex; gap:0.5rem; margin-bottom:1rem; flex-wrap:wrap;">' +
               '<div class="sm-card" style="flex:1; min-width:140px; text-align:center;"><div style="font-size:0.7rem; color:#94a3b8;">Stocks Analyzed</div><div style="font-size:1.5rem; color:#e2e8f0; font-weight:700;">' + rows.length + '</div></div>' +
               '<div class="sm-card" style="flex:1; min-width:140px; text-align:center;"><div style="font-size:0.7rem; color:#94a3b8;">Strong Fundamental (75+)</div><div style="font-size:1.5rem; color:#22c55e; font-weight:700;">' + strongF + '</div></div>' +
@@ -1161,6 +1267,15 @@
               '<div><div style="font-size:0.78rem; color:#22c55e; font-weight:600; margin-bottom:0.5rem;">🏆 Strongest Fundamentals</div>' + topF.map(fCard).join('') + '</div>' +
               '<div><div style="font-size:0.78rem; color:#ef4444; font-weight:600; margin-bottom:0.5rem;">⚠️ Weakest Fundamentals</div>' + weakest.map(fCard).join('') + '</div>' +
               '</div>';
+            recordIdeasAudit('truth', {
+              status: 'ok',
+              source: data?._status || 'truth_supermodule',
+              asOf: new Date().toISOString().slice(0, 10),
+              reason: null,
+              has_value: hasTruthValue,
+              value_valid: truthValueValid,
+              logic_valid: truthLogicValid
+            });
           }
 
           // ── ETF Rotation ──
@@ -1199,12 +1314,25 @@
             const sectorRows = uniqBySymbol(sectors);
             const indexRows = uniqBySymbol(indices);
             if (!sectorRows.length && !indexRows.length) {
-              panel.innerHTML = '<div style="color:#64748b; padding:1rem;">No ETF rotation snapshot available right now.</div>';
+              renderUnavailablePanel(
+                panel,
+                { tab: 'etfrow', source: '/data/v3/derived/market/latest.json', status: 'unavailable', asOf: marketDoc?.meta?.data_date || new Date().toISOString().slice(0, 10), reason: 'no_sector_or_index_rows' },
+                'No ETF rotation snapshot available right now.'
+              );
               return;
             }
             const sortedSectors = sectorRows.slice().sort(function (a, b) { return (Number(b.change_pct) || 0) - (Number(a.change_pct) || 0); });
             const leaders = sortedSectors.slice(0, 8);
             const laggards = sortedSectors.slice(-8).reverse();
+            const hasEtfRotationValue = sectorRows.length > 0 || indexRows.length > 0;
+            const etfRotationValueValid = [...sectorRows, ...indexRows].every(function (row) { return Number.isFinite(Number(row?.change_pct)); });
+            const etfRotationLogicValid = leaders.every(function (row, idx, arr) {
+              if (idx === 0) return true;
+              return Number(arr[idx - 1]?.change_pct) >= Number(row?.change_pct);
+            }) && laggards.every(function (row, idx, arr) {
+              if (idx === 0) return true;
+              return Number(arr[idx - 1]?.change_pct) <= Number(row?.change_pct);
+            });
             const secCard = function (row) {
               const ch = Number(row.change_pct) || 0;
               const color = ch >= 0 ? '#22c55e' : '#ef4444';
@@ -1213,7 +1341,12 @@
                 '<span class="sm-score-badge" style="background:' + color + '22; color:' + color + ';">' + (ch >= 0 ? '+' : '') + ch.toFixed(2) + '%</span>' +
                 '</div>';
             };
-            panel.innerHTML =
+            panel.innerHTML = panelContractHeader({
+              source: '/data/v3/derived/market/latest.json',
+              status: 'ok',
+              asOf: marketDoc?.meta?.data_date || new Date().toISOString().slice(0, 10),
+              reason: ''
+            }) +
               '<div style="display:flex; gap:0.5rem; margin-bottom:1rem; flex-wrap:wrap;">' +
               '<div class="sm-card" style="flex:1; min-width:130px; text-align:center;"><div style="font-size:0.7rem; color:#94a3b8;">Sector ETFs</div><div style="font-size:1.5rem; color:#e2e8f0; font-weight:700;">' + sectorRows.length + '</div></div>' +
               '<div class="sm-card" style="flex:1; min-width:130px; text-align:center;"><div style="font-size:0.7rem; color:#94a3b8;">Global Index ETFs</div><div style="font-size:1.5rem; color:#60a5fa; font-weight:700;">' + indexRows.length + '</div></div>' +
@@ -1222,17 +1355,44 @@
               '<div><div style="font-size:0.78rem; color:#22c55e; font-weight:600; margin-bottom:0.5rem;">📈 Rotation Leaders</div>' + leaders.map(secCard).join('') + '</div>' +
               '<div><div style="font-size:0.78rem; color:#ef4444; font-weight:600; margin-bottom:0.5rem;">📉 Rotation Laggards</div>' + laggards.map(secCard).join('') + '</div>' +
               '</div>';
+            recordIdeasAudit('etfrow', {
+              status: 'ok',
+              source: '/data/v3/derived/market/latest.json',
+              asOf: marketDoc?.meta?.data_date || null,
+              reason: null,
+              has_value: hasEtfRotationValue,
+              value_valid: etfRotationValueValid,
+              logic_valid: etfRotationLogicValid
+            });
           }
 
           // ── Crypto Pulse ──
           async function loadCryptoPulse(panel) {
             const merged = await loadCryptoUniverseSlice();
             if (!merged.length) {
-              panel.innerHTML = '<div style="color:#64748b; padding:1rem;">No crypto universe rows returned by runtime search.</div>';
+              renderUnavailablePanel(
+                panel,
+                { tab: 'cryptopulse', source: '/api/universe?asset_class=crypto', status: 'unavailable', asOf: new Date().toISOString().slice(0, 10), reason: 'no_crypto_rows' },
+                'No crypto universe rows returned by runtime search.'
+              );
               return;
             }
             const ranked = merged.sort(function (a, b) { return (Number(b.score_0_100) || 0) - (Number(a.score_0_100) || 0); }).slice(0, 24);
-            panel.innerHTML =
+            const hasCryptoPulseValue = ranked.length > 0;
+            const cryptoPulseValueValid = ranked.every(function (row) {
+              const score = Number(row?.score_0_100);
+              return isLooselyValidDisplayTicker(row?.symbol || '') && Number.isFinite(score) && score >= 0 && score <= 100;
+            });
+            const cryptoPulseLogicValid = ranked.every(function (row, idx, arr) {
+              if (idx === 0) return true;
+              return Number(arr[idx - 1]?.score_0_100) >= Number(row?.score_0_100);
+            });
+            panel.innerHTML = panelContractHeader({
+              source: '/api/universe?asset_class=crypto',
+              status: 'ok',
+              asOf: new Date().toISOString().slice(0, 10),
+              reason: ''
+            }) +
               '<div class="sm-card" style="margin-bottom:1rem;">' +
               '<div style="font-size:0.78rem; color:#94a3b8;">Runtime Crypto Universe Slice</div>' +
               '<div style="font-size:0.9rem; color:#e2e8f0; margin-top:4px;">Symbols from v7 runtime search (crypto class), ranked by score_0_100.</div>' +
@@ -1250,6 +1410,15 @@
                   '</div>';
               }).join('') +
               '</div>';
+            recordIdeasAudit('cryptopulse', {
+              status: 'ok',
+              source: '/api/universe?asset_class=crypto',
+              asOf: new Date().toISOString().slice(0, 10),
+              reason: null,
+              has_value: hasCryptoPulseValue,
+              value_valid: cryptoPulseValueValid,
+              logic_valid: cryptoPulseLogicValid
+            });
           }
 
           // ── Macro & Bonds ──
@@ -1271,8 +1440,18 @@
                 return s && arr.findIndex(function (x) { return String(x?.symbol || '').toUpperCase() === s; }) === idx;
               })
               .slice(0, 12);
+            const hasMacroBondValue = Number.isFinite(riskOnOff) || fx.length > 0 || bonds.length > 0;
+            const macroBondValueValid = (riskOnOff == null || (riskOnOff >= -1 && riskOnOff <= 1)) &&
+              fx.every(function (row) { return isLooselyValidDisplayTicker(row?.symbol || ''); }) &&
+              bonds.every(function (row) { return isLooselyValidDisplayTicker(row?.symbol || ''); });
+            const macroBondLogicValid = hasMacroBondValue && (fx.length + bonds.length > 0 || Number.isFinite(riskOnOff));
 
-            panel.innerHTML =
+            panel.innerHTML = panelContractHeader({
+              source: 'market_pulse+api_universe',
+              status: 'ok',
+              asOf: marketDoc?.meta?.data_date || new Date().toISOString().slice(0, 10),
+              reason: ''
+            }) +
               '<div style="display:flex; gap:0.5rem; margin-bottom:1rem; flex-wrap:wrap;">' +
               '<div class="sm-card" style="flex:1; min-width:140px; text-align:center;"><div style="font-size:0.7rem; color:#94a3b8;">Risk-On / Risk-Off</div><div style="font-size:1.2rem; color:#e2e8f0; font-weight:700;">' + (riskOnOff == null ? '—' : (riskOnOff * 100).toFixed(1) + '%') + '</div></div>' +
               '<div class="sm-card" style="flex:1; min-width:140px; text-align:center;"><div style="font-size:0.7rem; color:#94a3b8;">FX Rows</div><div style="font-size:1.2rem; color:#60a5fa; font-weight:700;">' + fx.length + '</div></div>' +
@@ -1290,6 +1469,15 @@
               }).join('') : '<div style="color:#64748b;">No bond-proxy ETF rows found.</div>') +
               '</div>' +
               '</div>';
+            recordIdeasAudit('macrobonds', {
+              status: 'ok',
+              source: 'market_pulse+api_universe',
+              asOf: marketDoc?.meta?.data_date || null,
+              reason: null,
+              has_value: hasMacroBondValue,
+              value_valid: macroBondValueValid,
+              logic_valid: macroBondLogicValid
+            });
           }
 
           // ── Flight to Safety ──
@@ -1309,8 +1497,24 @@
                 return s && arr.findIndex(function (x) { return String(x?.symbol || '').toUpperCase() === s; }) === idx;
               })
               .slice(0, 12);
+            const hasFlightValue = safeStocks.length > 0 || safeEtfs.length > 0;
+            const flightValueValid = safeStocks.every(function (row) {
+              const score = Number(row?.scores?.risk_score);
+              return isLooselyValidDisplayTicker(row?.symbol || '') && Number.isFinite(score) && score >= 0 && score <= 100;
+            }) && safeEtfs.every(function (row) {
+              return isLooselyValidDisplayTicker(row?.symbol || '');
+            });
+            const flightLogicValid = safeStocks.every(function (row, idx, arr) {
+              if (idx === 0) return true;
+              return Number(arr[idx - 1]?.scores?.risk_score) <= Number(row?.scores?.risk_score);
+            });
 
-            panel.innerHTML =
+            panel.innerHTML = panelContractHeader({
+              source: 'risk_fallback+api_universe',
+              status: 'ok',
+              asOf: new Date().toISOString().slice(0, 10),
+              reason: ''
+            }) +
               '<div class="sm-card" style="margin-bottom:1rem;">' +
               '<div style="font-size:0.88rem; color:#e2e8f0; font-weight:600;">Defensive Basket Builder</div>' +
               '<div style="font-size:0.74rem; color:#94a3b8; margin-top:4px;">Combines low-risk stock proxies with classic risk-off ETFs (Treasuries/Gold/USD).</div>' +
@@ -1330,6 +1534,15 @@
               }).join('') : '<div style="color:#64748b;">No safety ETF rows available.</div>') +
               '</div>' +
               '</div>';
+            recordIdeasAudit('flight', {
+              status: 'ok',
+              source: 'risk_fallback+api_universe',
+              asOf: new Date().toISOString().slice(0, 10),
+              reason: null,
+              has_value: hasFlightValue,
+              value_valid: flightValueValid,
+              logic_valid: flightLogicValid
+            });
           }
 
           // Load manifest on Ideas view open
@@ -1431,11 +1644,11 @@
           if (!res.ok) return null;
           scientificAnalysisData = await res.json();
           buildScientificMaps();
-          updateBuySignalsStats();
+          await renderBestSetups();
           if (!topSetupsDoc || topSetupsDoc?.meta?.source === 'fallback_scientific_rankings') {
             topSetupsDoc = null;
             await loadTopSetupsDoc();
-            renderBestSetups();
+            await renderBestSetups();
           }
           // Run heavy secondary indexes lazily so initial analyze rendering stays fast.
           setTimeout(() => {
@@ -1494,7 +1707,7 @@
         const payload = await res.json();
         const symbols = payload?.data?.symbols || [];
         if (!Array.isArray(symbols) || !symbols.length) return;
-        const prefetchLimit = symbols.length > 1200 ? 60 : Math.min(symbols.length, 120);
+        const prefetchLimit = symbols.length > 1200 ? 20 : Math.min(symbols.length, 60);
         if (prefetchLimit < symbols.length) {
           console.info(`Elliott index prefetch capped at ${prefetchLimit}/${symbols.length}; remaining symbols load on-demand.`);
         }
@@ -1555,36 +1768,11 @@
     }
 
     function updateBuySignalsStats() {
-      if (!scientificAnalysisData?._rankings) return;
-      if (!scientificByTimeframe.short.size) buildScientificMaps();
-
-      // Use the pre-computed by_timeframe rankings from the stock analysis
-      const byTimeframe = scientificAnalysisData?._rankings?.by_timeframe || {};
-
-      // Count stocks per timeframe where BOTH setup and trigger are fulfilled
-      const counts = { short: 0, medium: 0, long: 0 };
-
-      for (const tf of ['short', 'medium', 'long']) {
-        const stocks = Array.isArray(byTimeframe[tf]) ? byTimeframe[tf] : [];
-        for (const stock of stocks) {
-          const ticker = normalizeTicker(stock?.ticker || '');
-          if (!ticker) continue;
-
-          // Check if this stock has Setup + Trigger fulfilled
-          const entry = scientificAnalysisData?.[ticker];
-          const setupOk = entry?.setup?.fulfilled === true;
-          const triggerOk = entry?.trigger?.fulfilled === true;
-
-          // Only count if both setup and trigger are fulfilled
-          if (setupOk && triggerOk) {
-            // Check Elliott support (if available) - only veto if explicitly false
-            const elliottSupport = elliottSupportByTicker.get(ticker);
-            if (elliottSupport !== false) {
-              counts[tf] += 1;
-            }
-          }
-        }
-      }
+      const counts = {
+        short: Array.isArray(homeSetupsByHorizon?.short) ? homeSetupsByHorizon.short.length : 0,
+        medium: Array.isArray(homeSetupsByHorizon?.medium) ? homeSetupsByHorizon.medium.length : 0,
+        long: Array.isArray(homeSetupsByHorizon?.long) ? homeSetupsByHorizon.long.length : 0
+      };
 
       const shortEl = document.getElementById('signal-short');
       const mediumEl = document.getElementById('signal-medium');
@@ -1595,14 +1783,51 @@
       if (mediumEl) mediumEl.textContent = counts.medium;
       if (longEl) longEl.textContent = counts.long;
       if (noteEl) {
-        const coverage = elliottSupportByTicker.size;
-        const coverageNote = coverage ? ` Elliott coverage: ${coverage} symbol${coverage === 1 ? '' : 's'}.` : '';
-        noteEl.textContent = `Best buy signals: Setup + Trigger fulfilled. Click a number to see the stocks.${coverageNote}`;
+        const asOf = homeSetupsByHorizon?.asOf || topSetupsDoc?.meta?.data_date || topSetupsDoc?.meta?.generated_at || 'n/a';
+        const source = homeSetupsByHorizon?.source || 'n/a';
+        noteEl.textContent = `Best setups by horizon (max 10 each). Source: ${source}. asOf=${asOf}. Click a number to inspect rows.`;
       }
+      window.__rvUiAudit = window.__rvUiAudit || {};
+      window.__rvUiAudit.analyze = {
+        route: window.location.pathname,
+        search_entrypoint: {
+          HAS_VALUE: Boolean(document.getElementById('stock-search-input')),
+          VALUE_VALID: !document.getElementById('rv-sticky-search'),
+          LOGIC_VALID: true
+        },
+        counters: {
+          short: counts.short,
+          medium: counts.medium,
+          long: counts.long
+        },
+        best_setups: {
+          source: homeSetupsByHorizon?.source || 'none',
+          asOf: homeSetupsByHorizon?.asOf || null
+        }
+      };
+    }
+
+    async function enrichModalRowsWithPrice(rows) {
+      if (!Array.isArray(rows) || !rows.length) return rows;
+      await Promise.all(rows.map(async (row) => {
+        if (numberOrNull(row?.price) != null) return;
+        const ticker = normalizeTicker(row?.ticker || '');
+        if (!ticker) return;
+        try {
+          const bars = await loadIdeasBarsForTicker(ticker);
+          if (!Array.isArray(bars) || !bars.length) return;
+          const last = bars[bars.length - 1] || null;
+          const px = numberOrNull(last?.adjClose ?? last?.close);
+          if (px != null) row.price = px;
+        } catch {
+          // Keep modal resilient; missing price is shown as N/A.
+        }
+      }));
+      return rows;
     }
 
     // Modal functions for buy signals
-    function showSignalModal(timeframe) {
+    async function showSignalModal(timeframe) {
       const modal = document.getElementById('signal-modal');
       const titleEl = document.getElementById('signal-modal-title');
       const contentEl = document.getElementById('signal-modal-content');
@@ -1616,47 +1841,39 @@
       const tfColors = { short: '#10b981', medium: '#3b82f6', long: '#a78bfa' };
 
       titleEl.innerHTML = `<span style="color:${tfColors[timeframe] || '#e5e7eb'}">●</span> ${tfLabels[timeframe] || 'Buy Signals'}`;
-
-      const byTimeframe = scientificAnalysisData?._rankings?.by_timeframe || {};
-      const stocks = Array.isArray(byTimeframe[timeframe]) ? byTimeframe[timeframe] : [];
-
-      // Filter to only include stocks with Setup + Trigger fulfilled
-      const filtered = stocks.filter(s => {
-        const ticker = normalizeTicker(s?.ticker || '');
-        const entry = scientificAnalysisData?.[ticker];
-        const setupOk = entry?.setup?.fulfilled === true;
-        const triggerOk = entry?.trigger?.fulfilled === true;
-        const elliottSupport = elliottSupportByTicker.get(ticker);
-        return setupOk && triggerOk && elliottSupport !== false;
-      });
+      const filtered = Array.isArray(homeSetupsByHorizon?.[timeframe]) ? homeSetupsByHorizon[timeframe].map((row) => ({ ...row })) : [];
 
       if (!filtered.length) {
-        contentEl.innerHTML = '<div style="text-align:center; color:#64748b; padding:2rem;">No stocks match the criteria for this timeframe.</div>';
+        contentEl.innerHTML = '<div style="text-align:center; color:#64748b; padding:2rem;">No valid rows for this timeframe in current snapshot.</div>';
         modal.style.display = 'block';
         document.body.style.overflow = 'hidden';
         return;
       }
+      contentEl.innerHTML = '<div style="text-align:center; color:#94a3b8; padding:1.4rem;">Loading rows…</div>';
+      modal.style.display = 'block';
+      document.body.style.overflow = 'hidden';
+      await enrichModalRowsWithPrice(filtered);
 
       const rows = filtered.map((s, i) => {
         const ticker = s.ticker || '—';
         const name = s.name || '—';
-        const price = Number(s.price);
-        const prob = Number(s.probability);
-        const er = Number(s.expected_return);
-        const setupScore = s.setup_score ?? '—';
-        const triggerScore = s.trigger_score ?? '—';
+        const price = numberOrNull(s.price);
+        const prob = numberOrNull(s.probability ?? s.score);
+        const er = numberOrNull(s.expected_return);
+        const setupScore = numberOrNull(s.setup_score);
+        const triggerScore = numberOrNull(s.trigger_score);
         const bgColor = i % 2 === 0 ? 'rgba(30,41,59,0.4)' : 'rgba(15,23,42,0.4)';
-        const probColor = prob >= 0.6 ? '#34d399' : prob >= 0.4 ? '#fbbf24' : '#f87171';
+        const probColor = Number.isFinite(prob) ? (prob >= 0.6 ? '#34d399' : prob >= 0.4 ? '#fbbf24' : '#f87171') : '#94a3b8';
         const erColor = er > 0 ? '#34d399' : er < 0 ? '#f87171' : '#94a3b8';
         return `
           <tr style="background:${bgColor};">
             <td style="padding:0.75rem 1rem; font-weight:600; color:#60a5fa; cursor:pointer;" onclick="closeSignalModal();selectSymbol('${ticker}', '${name.replace(/'/g, "\\'")}', {push:true})">${ticker}</td>
             <td style="padding:0.75rem 1rem; color:#e5e7eb;">${name}</td>
-            <td style="padding:0.75rem 1rem; color:#94a3b8; text-align:right;">$${Number.isFinite(price) ? price.toFixed(2) : '—'}</td>
-            <td style="padding:0.75rem 1rem; text-align:center;"><span style="background:rgba(16,185,129,0.15); color:#34d399; padding:0.2rem 0.5rem; border-radius:4px; font-size:0.85rem;">${setupScore}</span></td>
-            <td style="padding:0.75rem 1rem; text-align:center;"><span style="background:rgba(59,130,246,0.15); color:#60a5fa; padding:0.2rem 0.5rem; border-radius:4px; font-size:0.85rem;">${triggerScore}</span></td>
+            <td style="padding:0.75rem 1rem; color:#94a3b8; text-align:right;">${Number.isFinite(price) ? `$${price.toFixed(2)}` : 'N/A'}</td>
+            <td style="padding:0.75rem 1rem; text-align:center;"><span style="background:rgba(16,185,129,0.15); color:#34d399; padding:0.2rem 0.5rem; border-radius:4px; font-size:0.85rem;">${Number.isFinite(setupScore) ? Math.round(setupScore) : '—'}</span></td>
+            <td style="padding:0.75rem 1rem; text-align:center;"><span style="background:rgba(59,130,246,0.15); color:#60a5fa; padding:0.2rem 0.5rem; border-radius:4px; font-size:0.85rem;">${Number.isFinite(triggerScore) ? Math.round(triggerScore) : '—'}</span></td>
             <td style="padding:0.75rem 1rem; text-align:right; color:${probColor}; font-weight:600;">${Number.isFinite(prob) ? Math.round(prob * 100) + '%' : '—'}</td>
-            <td style="padding:0.75rem 1rem; text-align:right; color:${erColor}; font-weight:600;">${Number.isFinite(er) ? (er > 0 ? '+' : '') + er.toFixed(1) + '%' : '—'}</td>
+            <td style="padding:0.75rem 1rem; text-align:right; color:${erColor}; font-weight:600;">${Number.isFinite(er) ? (er > 0 ? '+' : '') + er.toFixed(1) + '%' : 'N/A'}</td>
           </tr>
         `;
       }).join('');
@@ -1682,9 +1899,6 @@
           Click on a ticker to view the full analysis
         </div>
       `;
-
-      modal.style.display = 'block';
-      document.body.style.overflow = 'hidden';
     }
 
     function closeSignalModal() {
@@ -1705,12 +1919,8 @@
   <!-- STOCK SEARCH LOGIC -->
   <script>
     const searchInput = document.getElementById('stock-search-input');
-    const stickySearchInput = document.getElementById('sticky-search-input');
-    const stickySearchBtn = document.getElementById('sticky-search-btn');
-    const stickyAssetFilter = document.getElementById('sticky-asset-filter');
+    const analyzeHero = document.getElementById('analyze-hero');
     const analyzeAssetFilter = document.getElementById('analyze-asset-filter');
-    const stickyEngineFilter = document.getElementById('sticky-engine-filter');
-    const analyzeEngineFilter = document.getElementById('analyze-engine-filter');
     const resultsSection = document.getElementById('search-results');
     const resultsContent = document.getElementById('results-content');
     const resultsTitle = document.getElementById('results-title');
@@ -1718,8 +1928,7 @@
     const marketView = document.getElementById('market-view');
     const ideasView = document.getElementById('ideas-view');
     const bestSetupsMeta = document.getElementById('best-setups-meta');
-    const bestSetupsTable = document.getElementById('best-setups-table');
-    const bestSetupsCardsWrap = document.getElementById('best-setups-cards-wrap');
+    const bestSetupsByHorizonWrap = document.getElementById('best-setups-by-horizon');
     const marketViewMeta = document.getElementById('market-view-meta');
     const ideasViewMeta = document.getElementById('ideas-view-meta');
     const marketRegimeBanner = document.getElementById('market-regime-banner');
@@ -1746,6 +1955,9 @@
     let lastResolved = { ticker: null, name: null };
     let currentTopRoute = 'analyze';
     let topSetupsDoc = null;
+    let forecastLatestDoc = null;
+    let forecastLatestPromise = null;
+    let homeSetupsByHorizon = { short: [], medium: [], long: [], source: 'none', asOf: null };
     let marketDoc = null;
     let ideasDoc = null;
     let chartState = { range: '1Y' };
@@ -1893,10 +2105,9 @@
       coverageSummaryEl.textContent = 'Coverage: unavailable';
     }
 
-    function syncSearchInputs(value, source = 'main') {
+    function syncSearchInputs(value) {
       const next = String(value || '');
-      if (source !== 'main' && searchInput && searchInput.value !== next) searchInput.value = next;
-      if (source !== 'sticky' && stickySearchInput && stickySearchInput.value !== next) stickySearchInput.value = next;
+      if (searchInput && searchInput.value !== next) searchInput.value = next;
     }
 
     function normalizeAssetClass(value) {
@@ -1905,33 +2116,15 @@
       return allowed.has(normalized) ? normalized : 'all';
     }
 
-    function syncAssetFilters(value, source = 'sticky') {
+    function syncAssetFilters(value, source = 'analyze') {
       const normalized = normalizeAssetClass(value);
-      if (source !== 'sticky' && stickyAssetFilter) stickyAssetFilter.value = normalized;
       if (source !== 'analyze' && analyzeAssetFilter) analyzeAssetFilter.value = normalized;
       return normalized;
     }
 
     function getActiveAssetFilter() {
-      const stickyValue = stickyAssetFilter ? normalizeAssetClass(stickyAssetFilter.value) : 'all';
       const analyzeValue = analyzeAssetFilter ? normalizeAssetClass(analyzeAssetFilter.value) : 'all';
-      if (activeSearchInput === stickySearchInput) return stickyValue;
-      if (activeSearchInput === searchInput) return analyzeValue;
-      return stickyValue !== 'all' ? stickyValue : analyzeValue;
-    }
-
-    function syncEngineFilters(value, source = 'sticky') {
-      const normalized = ['all', 'scientific', 'elliott', 'forecast'].includes(String(value || '').toLowerCase())
-        ? String(value || '').toLowerCase()
-        : 'all';
-      if (source !== 'sticky' && stickyEngineFilter) stickyEngineFilter.value = normalized;
-      if (source !== 'analyze' && analyzeEngineFilter) analyzeEngineFilter.value = normalized;
-      return normalized;
-    }
-
-    function getActiveEngineFilter() {
-      const value = (stickyEngineFilter?.value || analyzeEngineFilter?.value || 'all').toLowerCase();
-      return ['all', 'scientific', 'elliott', 'forecast'].includes(value) ? value : 'all';
+      return analyzeValue;
     }
 
     function setTopNavActive(route) {
@@ -1949,9 +2142,6 @@
       if (analyzeHomeShell) analyzeHomeShell.style.display = normalized === 'analyze' ? 'block' : 'none';
       if (marketView) marketView.style.display = normalized === 'market' ? 'block' : 'none';
       if (ideasView) ideasView.style.display = normalized === 'ideas' ? 'block' : 'none';
-      // Hide search bar on non-analyze views (Market Hub has its own layout)
-      const stickySearch = document.getElementById('rv-sticky-search');
-      if (stickySearch) stickySearch.style.display = normalized === 'analyze' ? '' : 'none';
       setTopNavActive(normalized);
     }
 
@@ -1959,9 +2149,17 @@
       const path = String(pathname || '/');
       const deep = path.match(/^\/analyze\/([A-Z0-9.\-]+)$/i);
       if (deep) return { route: 'analyze', ticker: normalizeTicker(deep[1]) };
+      if (path === '/analyze') {
+        try {
+          const qpTicker = normalizeTicker(new URLSearchParams(window.location.search || '').get('ticker'));
+          return { route: 'analyze', ticker: qpTicker || null };
+        } catch {
+          return { route: 'analyze', ticker: null };
+        }
+      }
       if (path === '/market') return { route: 'market', ticker: null };
       if (path === '/ideas') return { route: 'ideas', ticker: null };
-      if (path === '/analyze' || path === '/' || path === '/index.html') return { route: 'analyze', ticker: null };
+      if (path === '/' || path === '/index.html') return { route: 'analyze', ticker: null };
       return { route: 'analyze', ticker: null };
     }
 
@@ -2204,7 +2402,7 @@
       if (!q) return [];
       const params = new URLSearchParams();
       params.set('q', q);
-      params.set('limit', String(Math.max(1, Math.min(100, Number(options.limit) || 12))));
+      params.set('limit', String(Math.max(1, Math.min(200, Number(options.limit) || 12))));
       params.set('t', String(Date.now()));
       const assetClass = normalizeAssetClass(options.assetClass || 'all');
       if (assetClass !== 'all') params.set('asset_class', assetClass);
@@ -2524,46 +2722,245 @@
       return `${num > 0 ? '+' : ''}${(num * 100).toFixed(digits)}%`;
     }
 
-    function fallbackTopSetupsRows() {
-      const byTimeframe = scientificAnalysisData?._rankings?.by_timeframe || {};
-      const buckets = ['short', 'medium', 'long'];
-      const map = new Map();
+    function mapHorizon(value) {
+      const tf = String(value || '').toLowerCase();
+      if (tf.includes('short') || tf.includes('1-5')) return 'short';
+      if (tf.includes('long') || tf.includes('20-60')) return 'long';
+      if (tf.includes('medium') || tf.includes('5-20')) return 'medium';
+      return 'medium';
+    }
 
-      for (const tf of buckets) {
-        const rows = Array.isArray(byTimeframe[tf]) ? byTimeframe[tf] : [];
-        for (const row of rows) {
-          const ticker = normalizeTicker(row?.ticker || '');
-          if (!ticker) continue;
-          if (!map.has(ticker)) {
-            map.set(ticker, {
-              ticker,
-              name: row?.name || universeByTicker.get(ticker) || null,
-              scientific: null,
-              elliott: null,
-              forecast: null
-            });
-          }
-          const entry = map.get(ticker);
-          const score = Number(row?.score ?? row?.probability ?? row?.confidence);
-          if (Number.isFinite(score)) {
-            if (tf === 'short') entry.scientific = score;
-            if (tf === 'medium') entry.elliott = score;
-            if (tf === 'long') entry.forecast = score;
-          }
-        }
+    function tickerDisplayName(ticker, name) {
+      const t = normalizeTicker(ticker);
+      if (!t) return '';
+      const n = String(name || universeByTicker.get(t) || '').trim();
+      return n || t;
+    }
+
+    function isValidDisplayTicker(rawTicker) {
+      const t = normalizeTicker(rawTicker);
+      if (!t) return false;
+      return /^[A-Z][A-Z0-9.\-]{0,11}$/.test(t);
+    }
+
+    function isLooselyValidDisplayTicker(rawTicker) {
+      const t = normalizeTicker(rawTicker);
+      if (!t) return false;
+      if (!/^[A-Z0-9.\-]{1,12}$/.test(t)) return false;
+      return /[A-Z]/.test(t);
+    }
+
+    function canonicalForTicker(rawTicker) {
+      const t = normalizeTicker(rawTicker);
+      if (!t) return null;
+      const meta = universeMetaByTicker.get(t) || null;
+      return meta?.canonical_id ? String(meta.canonical_id) : null;
+    }
+
+    function numberOrNull(value) {
+      if (value === null || value === undefined || value === '') return null;
+      const num = Number(value);
+      return Number.isFinite(num) ? num : null;
+    }
+
+    function formatProbabilityPct(value, digits = 1) {
+      const num = numberOrNull(value);
+      if (num == null) return '—';
+      return `${(num * 100).toFixed(digits)}%`;
+    }
+
+    function takeTop(rows, limit = 10) {
+      if (!Array.isArray(rows)) return [];
+      const strict = rows.filter((row) => isValidDisplayTicker(row?.ticker || ''));
+      const sourceRows = strict.length ? strict : rows.filter((row) => isLooselyValidDisplayTicker(row?.ticker || ''));
+      return sourceRows
+        .sort((a, b) => {
+          const trig = Number(Boolean(b.trigger_fulfilled)) - Number(Boolean(a.trigger_fulfilled));
+          if (trig !== 0) return trig;
+          const pb = numberOrNull(b.probability ?? b.score);
+          const pa = numberOrNull(a.probability ?? a.score);
+          if (pb == null && pa != null) return 1;
+          if (pb != null && pa == null) return -1;
+          if (pb !== pa) return pb - pa;
+          const tb = Number(b.trigger_score ?? -1) - Number(a.trigger_score ?? -1);
+          if (tb !== 0) return tb;
+          const sb = Number(b.setup_score ?? -1) - Number(a.setup_score ?? -1);
+          if (sb !== 0) return sb;
+          return String(a.ticker || '').localeCompare(String(b.ticker || ''));
+        })
+        .slice(0, Math.max(1, limit));
+    }
+
+    function buildScientificHorizonRows() {
+      const out = { short: [], medium: [], long: [] };
+      const rankings = scientificAnalysisData?._rankings || {};
+      const byTimeframe = rankings.by_timeframe && typeof rankings.by_timeframe === 'object' ? rankings.by_timeframe : {};
+      const legacyRows = [
+        ...(Array.isArray(rankings.triggered_setups) ? rankings.triggered_setups.map((r) => ({ ...r, trigger_fulfilled: true })) : []),
+        ...(Array.isArray(rankings.top_setups) ? rankings.top_setups : [])
+      ];
+      const seen = { short: new Set(), medium: new Set(), long: new Set() };
+
+      const pushRow = (row, explicitHorizon = null) => {
+        const ticker = normalizeTicker(row?.ticker || row?.symbol || '');
+        if (!ticker) return;
+        const horizon = explicitHorizon || mapHorizon(row?.timeframe);
+        if (!out[horizon] || seen[horizon].has(ticker)) return;
+        seen[horizon].add(ticker);
+        const probability = numberOrNull(row?.probability ?? row?.score ?? row?.confidence);
+        const triggerScore = numberOrNull(row?.trigger_score);
+        out[horizon].push({
+          ticker,
+          name: tickerDisplayName(ticker, row?.name),
+          canonical_id: canonicalForTicker(ticker),
+          score: probability,
+          probability,
+          setup_score: numberOrNull(row?.setup_score),
+          trigger_score: triggerScore,
+          trigger_fulfilled: row?.trigger_fulfilled === true || (triggerScore != null && triggerScore >= 75),
+          expected_return: numberOrNull(row?.expected_return),
+          price: numberOrNull(row?.price),
+          source: 'stock_analysis_snapshot'
+        });
+      };
+
+      for (const horizon of ['short', 'medium', 'long']) {
+        const rows = Array.isArray(byTimeframe[horizon]) ? byTimeframe[horizon] : [];
+        for (const row of rows) pushRow(row, horizon);
       }
 
-      return Array.from(map.values())
-        .map((row) => {
-          const scoreList = [row.scientific, row.elliott, row.forecast].filter((v) => Number.isFinite(Number(v)));
-          const bullishCount = [row.scientific, row.elliott, row.forecast].filter((v) => Number(v) >= 0.6).length;
-          const enginesAvailable = scoreList.length || 0;
-          const composite = enginesAvailable ? scoreList.reduce((a, b) => a + b, 0) / enginesAvailable : null;
-          const consensus = enginesAvailable ? bullishCount / enginesAvailable : null;
-          return { ...row, composite, consensus, bullish_count: bullishCount, engines_available: enginesAvailable };
-        })
-        .sort((a, b) => (Number(b.composite || -1) - Number(a.composite || -1)) || a.ticker.localeCompare(b.ticker))
-        .slice(0, 50);
+      for (const row of legacyRows) {
+        pushRow(row, null);
+      }
+
+      out.short = takeTop(out.short, 10);
+      out.medium = takeTop(out.medium, 10);
+      out.long = takeTop(out.long, 10);
+      return out;
+    }
+
+    function buildDerivedHorizonFallback() {
+      const out = { short: [], medium: [], long: [] };
+      const rows = Array.isArray(topSetupsDoc?.data?.rows) ? topSetupsDoc.data.rows : [];
+      for (const row of rows) {
+        const ticker = normalizeTicker(row?.ticker || '');
+        if (!ticker) continue;
+        const push = (horizon, scoreKey) => {
+          const score = numberOrNull(row?.[scoreKey]);
+          if (score == null || score <= 0) return;
+          out[horizon].push({
+            ticker,
+            name: tickerDisplayName(ticker, row?.name),
+            canonical_id: canonicalForTicker(ticker),
+            score,
+            probability: score,
+            setup_score: null,
+            trigger_score: null,
+            trigger_fulfilled: score >= 0.6,
+            expected_return: numberOrNull(row?.expected_return),
+            price: numberOrNull(row?.price),
+            source: 'top_setups_derived'
+          });
+        };
+        push('short', 'scientific');
+        push('medium', 'elliott');
+        push('long', 'forecast');
+      }
+      out.short = takeTop(out.short, 10);
+      out.medium = takeTop(out.medium, 10);
+      out.long = takeTop(out.long, 10);
+      return out;
+    }
+
+    async function loadForecastLatestDoc() {
+      if (forecastLatestDoc) return forecastLatestDoc;
+      if (forecastLatestPromise) return forecastLatestPromise;
+      forecastLatestPromise = (async () => {
+        const { response, payload } = await fetchJson('/data/forecast/latest.json');
+        if (response?.ok && payload && typeof payload === 'object') {
+          forecastLatestDoc = payload;
+          return forecastLatestDoc;
+        }
+        return null;
+      })().finally(() => {
+        forecastLatestPromise = null;
+      });
+      return forecastLatestPromise;
+    }
+
+    function buildForecastHorizonFallback() {
+      const out = { short: [], medium: [], long: [] };
+      const rows = Array.isArray(forecastLatestDoc?.data?.forecasts) ? forecastLatestDoc.data.forecasts : [];
+      if (!rows.length) return out;
+      const seen = { short: new Set(), long: new Set() };
+
+      const pushForecast = (horizon, ticker, rowName, horizonDoc, horizonKey) => {
+        if (!horizonDoc || seen[horizon].has(ticker)) return;
+        const rawProb = numberOrNull(horizonDoc?.probability);
+        if (rawProb == null || rawProb < 0 || rawProb > 1) return;
+        const direction = String(horizonDoc?.direction || '').toLowerCase();
+        const bullishProb = direction === 'bearish' ? (1 - rawProb) : rawProb;
+        if (!Number.isFinite(bullishProb) || bullishProb <= 0) return;
+        seen[horizon].add(ticker);
+        out[horizon].push({
+          ticker,
+          name: tickerDisplayName(ticker, rowName),
+          canonical_id: canonicalForTicker(ticker),
+          score: bullishProb,
+          probability: bullishProb,
+          setup_score: Math.round(bullishProb * 100),
+          trigger_score: bullishProb >= 0.55 ? 75 : 50,
+          trigger_fulfilled: bullishProb >= 0.55,
+          expected_return: null,
+          price: null,
+          source: `forecast_latest_${horizonKey}`
+        });
+      };
+
+      for (const row of rows) {
+        const ticker = normalizeTicker(row?.symbol || row?.ticker || '');
+        if (!ticker) continue;
+        const horizons = row?.horizons && typeof row.horizons === 'object' ? row.horizons : {};
+        const shortDoc = horizons['5d'] || horizons['1d'] || null;
+        const longDoc = horizons['20d'] || horizons['5d'] || null;
+        pushForecast('short', ticker, row?.name, shortDoc, shortDoc === horizons['5d'] ? '5d' : '1d');
+        pushForecast('long', ticker, row?.name, longDoc, longDoc === horizons['20d'] ? '20d' : '5d');
+      }
+
+      out.short = takeTop(out.short, 10);
+      out.long = takeTop(out.long, 10);
+      return out;
+    }
+
+    function buildBestSetupsByHorizon(forecastRows = null) {
+      const scientificRows = buildScientificHorizonRows();
+      const derivedRows = buildDerivedHorizonFallback();
+      const forecastFallback = forecastRows && typeof forecastRows === 'object'
+        ? forecastRows
+        : { short: [], medium: [], long: [] };
+      const merged = { short: [], medium: [], long: [] };
+      const sources = new Set();
+      for (const horizon of ['short', 'medium', 'long']) {
+        const primary = Array.isArray(scientificRows[horizon]) ? scientificRows[horizon] : [];
+        const forecast = Array.isArray(forecastFallback[horizon]) ? forecastFallback[horizon] : [];
+        const derived = Array.isArray(derivedRows[horizon]) ? derivedRows[horizon] : [];
+        const selected = primary.length ? primary : (forecast.length ? forecast : derived);
+        merged[horizon] = selected;
+        if (primary.length) sources.add('stock-analysis');
+        else if (forecast.length) sources.add('forecast-latest');
+        else if (derived.length) sources.add('top-setups-derived');
+      }
+      homeSetupsByHorizon = {
+        ...merged,
+        source: sources.size ? Array.from(sources).join('+') : 'none',
+        asOf: scientificAnalysisData?._meta?.generated_at
+          || forecastLatestDoc?.data?.asof
+          || forecastLatestDoc?.generated_at
+          || topSetupsDoc?.meta?.data_date
+          || topSetupsDoc?.meta?.generated_at
+          || null
+      };
+      return homeSetupsByHorizon;
     }
 
     async function loadTopSetupsDoc() {
@@ -2587,50 +2984,59 @@
       return topSetupsDoc;
     }
 
-    function filterTopSetupsRows(rows, filterKey) {
-      const key = ['all', 'scientific', 'elliott', 'forecast'].includes(filterKey) ? filterKey : 'all';
-      if (!Array.isArray(rows)) return [];
-      if (key === 'all') return rows;
-      return rows.filter((row) => Number.isFinite(Number(row[key])));
-    }
+    async function renderBestSetups() {
+      if (!bestSetupsByHorizonWrap || !bestSetupsMeta) return;
+      await loadForecastLatestDoc();
+      const forecastRows = buildForecastHorizonFallback();
+      const horizonRows = buildBestSetupsByHorizon(forecastRows);
+      const generatedAt = topSetupsDoc?.meta?.generated_at || horizonRows?.asOf || 'n/a';
+      const totalRows = ['short', 'medium', 'long'].reduce((sum, h) => sum + (horizonRows[h]?.length || 0), 0);
+      bestSetupsMeta.textContent = `Rows=${totalRows} • source=${horizonRows.source || 'none'} • asOf=${generatedAt}`;
 
-    function renderBestSetups() {
-      if (!bestSetupsTable || !bestSetupsCardsWrap || !bestSetupsMeta) return;
-      const rows = Array.isArray(topSetupsDoc?.data?.rows) ? topSetupsDoc.data.rows : [];
-      const filterKey = getActiveEngineFilter();
-      const filtered = filterTopSetupsRows(rows, filterKey).slice(0, 20);
-      const generatedAt = topSetupsDoc?.meta?.generated_at || 'fallback';
-      bestSetupsMeta.textContent = `Filter=${filterKey.toUpperCase()} • rows=${filtered.length} • generatedAt=${generatedAt}`;
+      const titles = {
+        short: 'Short (1-5d) Top 10',
+        medium: 'Mid (5-20d) Top 10',
+        long: 'Long (20-60d) Top 10'
+      };
+      const accent = { short: '#10b981', medium: '#3b82f6', long: '#a78bfa' };
+      const blocks = ['short', 'medium', 'long'].map((horizon) => {
+        const rows = Array.isArray(horizonRows[horizon]) ? horizonRows[horizon] : [];
+        const body = rows.length
+          ? `<table style="width:100%; border-collapse:collapse; font-size:0.86rem;">
+              <thead>
+                <tr>
+                  <th style="text-align:left; color:#94a3b8; padding:0.35rem 0.25rem;">Ticker</th>
+                  <th style="text-align:left; color:#94a3b8; padding:0.35rem 0.25rem;">Name</th>
+                  <th style="text-align:right; color:#94a3b8; padding:0.35rem 0.25rem;">Prob</th>
+                  <th style="text-align:right; color:#94a3b8; padding:0.35rem 0.25rem;">Signal</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${rows.map((row) => `
+                  <tr>
+                    <td style="padding:0.35rem 0.25rem; border-top:1px solid rgba(100,116,139,0.18);">
+                      <a class="best-setup-link" href="/analyze/${encodeURIComponent(row.ticker)}" data-open-ticker="${escapeHtml(row.ticker)}" data-canonical-id="${escapeHtml(row.canonical_id || '')}" title="${escapeHtml(row.canonical_id || 'canonical_id: n/a')}">${escapeHtml(row.ticker)}</a>
+                    </td>
+                    <td style="padding:0.35rem 0.25rem; border-top:1px solid rgba(100,116,139,0.18); color:#cbd5e1;">${escapeHtml(row.name || '—')}</td>
+                    <td style="padding:0.35rem 0.25rem; border-top:1px solid rgba(100,116,139,0.18); text-align:right; color:#e5e7eb;">${formatProbabilityPct(row.probability ?? row.score)}</td>
+                    <td style="padding:0.35rem 0.25rem; border-top:1px solid rgba(100,116,139,0.18); text-align:right; color:${row.trigger_fulfilled ? '#22c55e' : '#94a3b8'};">${row.trigger_fulfilled ? 'Setup+Trigger' : 'Setup'}</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>`
+          : '<div style="padding:0.6rem; color:#64748b;">N/A — no valid rows in current snapshot.</div>';
+        return `
+          <article style="padding:0.8rem; border:1px solid rgba(100,116,139,0.22); border-radius:10px; background:rgba(15,23,42,0.35);">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.45rem;">
+              <div style="font-size:0.88rem; font-weight:700; color:${accent[horizon]};">${titles[horizon]}</div>
+              <div style="font-size:0.74rem; color:#94a3b8;">rows=${rows.length}</div>
+            </div>
+            ${body}
+          </article>
+        `;
+      }).join('');
 
-      if (!filtered.length) {
-        bestSetupsTable.querySelector('tbody').innerHTML = '<tr><td colspan=\"5\" style=\"padding:0.65rem; color:#64748b;\">No setups available for this filter.</td></tr>';
-        bestSetupsCardsWrap.innerHTML = '<div style=\"padding:0.7rem; border:1px solid rgba(100,116,139,0.22); border-radius:10px; color:#64748b;\">No setups available for this filter.</div>';
-        return;
-      }
-
-      bestSetupsTable.querySelector('tbody').innerHTML = filtered.map((row) => `
-        <tr>
-          <td style=\"padding:0.45rem; border-top:1px solid rgba(100,116,139,0.18);\"><a class=\"best-setup-link\" href=\"/analyze/${encodeURIComponent(row.ticker)}\" data-open-ticker=\"${escapeHtml(row.ticker)}\">${escapeHtml(row.ticker)}</a></td>
-          <td style=\"padding:0.45rem; border-top:1px solid rgba(100,116,139,0.18); color:#cbd5e1;\">${escapeHtml(row.name || '—')}</td>
-          <td style=\"padding:0.45rem; border-top:1px solid rgba(100,116,139,0.18); text-align:right; color:#e5e7eb; font-weight:600;\">${Number.isFinite(Number(row.composite)) ? Number(row.composite).toFixed(3) : '—'}</td>
-          <td style=\"padding:0.45rem; border-top:1px solid rgba(100,116,139,0.18); text-align:right; color:#e5e7eb; font-weight:600;\">${formatPctOrDash(row.consensus, 0)}</td>
-          <td style=\"padding:0.45rem; border-top:1px solid rgba(100,116,139,0.18); text-align:right; color:#94a3b8;\">${row.bullish_count ?? 0}/${row.engines_available ?? 0}</td>
-        </tr>
-      `).join('');
-
-      bestSetupsCardsWrap.innerHTML = filtered.map((row) => `
-        <article style=\"padding:0.7rem; border:1px solid rgba(100,116,139,0.22); border-radius:10px; background:rgba(15,23,42,0.35);\">
-          <div style=\"display:flex; justify-content:space-between; gap:0.5rem; align-items:flex-end;\">
-            <a class=\"best-setup-link\" href=\"/analyze/${encodeURIComponent(row.ticker)}\" data-open-ticker=\"${escapeHtml(row.ticker)}\">${escapeHtml(row.ticker)}</a>
-            <span style=\"font-size:0.8rem; color:#94a3b8;\">Composite ${Number.isFinite(Number(row.composite)) ? Number(row.composite).toFixed(3) : '—'}</span>
-          </div>
-          <div style=\"margin-top:0.2rem; color:#cbd5e1; font-size:0.86rem;\">${escapeHtml(row.name || '—')}</div>
-          <div style=\"margin-top:0.4rem; display:flex; justify-content:space-between; gap:0.5rem; font-size:0.82rem;\">
-            <span style=\"color:#94a3b8;\">Consensus ${formatPctOrDash(row.consensus, 0)}</span>
-            <span style=\"color:#94a3b8;\">Signals ${row.bullish_count ?? 0}/${row.engines_available ?? 0}</span>
-          </div>
-        </article>
-      `).join('');
+      bestSetupsByHorizonWrap.innerHTML = blocks;
 
       document.querySelectorAll('[data-open-ticker]').forEach((link) => {
         link.addEventListener('click', async (ev) => {
@@ -2640,6 +3046,8 @@
           await selectSymbol(ticker, universeByTicker.get(ticker) || null, { push: true });
         });
       });
+
+      updateBuySignalsStats();
     }
 
     async function loadMarketDoc() {
@@ -3906,27 +4314,28 @@
         clearSuggestions();
         return;
       }
+      const queryUpper = query.toUpperCase();
       const assetClass = getActiveAssetFilter();
-      const rows = await fetchUniverseMatches(query, { limit: 12, assetClass });
-      // Dedupe pass 1: if AAPL is in list, drop AAPL34, AAPLX-USD (ticker-prefix variants)
-      const seenStems = [];
-      let filtered = rows
-        .map((row) => ({ symbol: row.symbol, name: row.name || null }))
+      const rows = await fetchUniverseMatches(query, { limit: 100, assetClass });
+      const dedupe = new Set();
+      const filtered = rows
+        .map((row) => ({ symbol: normalizeTicker(row.symbol || ''), name: row.name || null }))
         .filter((item) => {
-          const sym = item.symbol;
-          for (const stem of seenStems) {
-            if (stem.length >= 3 && sym.length > stem.length && sym.startsWith(stem)) return false;
-          }
-          seenStems.push(sym);
+          if (!item.symbol) return false;
+          const nameUpper = String(item.name || '').toUpperCase();
+          return item.symbol.startsWith(queryUpper) || nameUpper.startsWith(queryUpper);
+        })
+        .filter((item) => {
+          if (dedupe.has(item.symbol)) return false;
+          dedupe.add(item.symbol);
           return true;
+        })
+        .sort((a, b) => {
+          const s = a.symbol.localeCompare(b.symbol);
+          if (s !== 0) return s;
+          return String(a.name || '').localeCompare(String(b.name || ''));
         });
-      // Dedupe pass 2: if exact match exists (e.g. AAPL), drop ETFs/derivatives that reference
-      // the base ticker in their name (e.g. "Direxion Daily AAPL Bear")
-      if (filtered.length > 1 && filtered[0].symbol.length >= 3) {
-        const base = filtered[0].symbol;
-        filtered = filtered.filter((item, i) => i === 0 || !(item.name || '').toUpperCase().includes(base));
-      }
-      typeahead.items = filtered;
+      typeahead.items = filtered.slice(0, 20);
       typeahead.activeIndex = -1;
       typeahead.open = typeahead.items.length > 0;
       typeahead.emptyMessage = typeahead.items.length ? null : 'No matches found in v7 universe';
@@ -3938,16 +4347,42 @@
       typeahead.debounceTimer = setTimeout(() => doFetch(q), typeahead.debounceMs);
     }
 
+    function buildStockDetailSrc(symbol) {
+      const s = normalizeTicker(symbol);
+      if (!s) return null;
+      return `/stock?ticker=${encodeURIComponent(s)}`;
+    }
+
+    function renderAnalyzeTicker(symbol, name, { push = true } = {}) {
+      const s = normalizeTicker(symbol);
+      if (!s) return;
+      const stockUrl = buildStockDetailSrc(s);
+      if (!stockUrl) return;
+      if (searchInput) searchInput.value = s;
+      window.__rvUiAudit = window.__rvUiAudit || {};
+      window.__rvUiAudit.analyze = {
+        ...(window.__rvUiAudit.analyze || {}),
+        detail: {
+          HAS_VALUE: true,
+          VALUE_VALID: true,
+          LOGIC_VALID: true,
+          ticker: s,
+          canonical_id: canonicalForTicker(s),
+          source: 'index_spa_owner',
+          asOf: homeSetupsByHorizon?.asOf || null
+        }
+      };
+      if (push) {
+        window.location.assign(stockUrl);
+      } else {
+        window.location.replace(stockUrl);
+      }
+    }
+
     function navigateToStockDetail(symbol, { replace = false } = {}) {
       const s = normalizeTicker(symbol);
       if (!s) return;
-      const target = new URL(`/analyze/${encodeURIComponent(s)}`, window.location.origin);
-      target.searchParams.set('ticker', s); // query-param fallback for local dev / redirect resilience
-      if (replace) {
-        window.location.replace(target.toString());
-      } else {
-        window.location.assign(target.toString());
-      }
+      renderAnalyzeTicker(s, universeByTicker.get(s) || null, { push: !replace });
     }
 
     async function selectSymbol(symbol, name, { push = true } = {}) {
@@ -3964,7 +4399,7 @@
       lastResolved = { ticker: s, name: resolvedName };
       syncSearchInputs(s, 'main');
       closeTypeahead();
-      navigateToStockDetail(s, { replace: !push });
+      renderAnalyzeTicker(s, resolvedName, { push });
     }
 
     function renderTypeahead() {
@@ -4136,7 +4571,7 @@
       const root = typeahead.root;
       if (!root) return;
       const target = ev.target;
-      if (target === searchInput || target === stickySearchInput || root.contains(target)) return;
+      if (target === searchInput || root.contains(target)) return;
       closeTypeahead();
     });
 
@@ -4147,15 +4582,28 @@
       const focus = options.focus !== false;
       if (!keepInput) {
         searchInput.value = '';
-        if (stickySearchInput) stickySearchInput.value = '';
       }
       resultsSection.style.display = 'none';
+      if (analyzeHero) analyzeHero.style.display = '';
       if (push) {
         window.history.pushState({}, '', '/analyze');
       }
       if (focus) {
-        (stickySearchInput || searchInput)?.focus();
+        searchInput?.focus();
       }
+      window.__rvUiAudit = window.__rvUiAudit || {};
+      window.__rvUiAudit.analyze = {
+        ...(window.__rvUiAudit.analyze || {}),
+        detail: {
+          HAS_VALUE: false,
+          VALUE_VALID: true,
+          LOGIC_VALID: true,
+          ticker: null,
+          canonical_id: null,
+          source: 'index_spa_owner',
+          asOf: homeSetupsByHorizon?.asOf || null
+        }
+      };
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
@@ -4167,84 +4615,6 @@
       });
     }
 
-    if (stickySearchInput) {
-      stickySearchInput.addEventListener('input', () => {
-        const value = String(stickySearchInput.value || '').trim();
-        syncSearchInputs(value, 'sticky');
-        activeSearchInput = stickySearchInput; // Track active input
-        if (value.length < 1) {
-          clearSuggestions();
-          return;
-        }
-        scheduleFetch(value);
-      });
-
-      stickySearchInput.addEventListener('focus', () => {
-        activeSearchInput = stickySearchInput;
-        if (typeahead.blurTimer) clearTimeout(typeahead.blurTimer);
-        if (stickySearchInput.value.trim() && typeahead.items.length) {
-          typeahead.open = true;
-          renderTypeahead();
-        }
-      });
-
-      stickySearchInput.addEventListener('blur', () => {
-        if (typeahead.blurTimer) clearTimeout(typeahead.blurTimer);
-        typeahead.blurTimer = setTimeout(() => closeTypeahead(), 120);
-      });
-
-      stickySearchInput.addEventListener('keydown', async (ev) => {
-        activeSearchInput = stickySearchInput;
-
-        if (ev.key === 'ArrowDown' && typeahead.open) {
-          ev.preventDefault();
-          typeahead.activeIndex = Math.min(typeahead.items.length - 1, typeahead.activeIndex + 1);
-          renderTypeahead();
-          return;
-        }
-        if (ev.key === 'ArrowUp' && typeahead.open) {
-          ev.preventDefault();
-          typeahead.activeIndex = Math.max(0, typeahead.activeIndex - 1);
-          renderTypeahead();
-          return;
-        }
-        if (ev.key === 'Escape' && typeahead.open) {
-          ev.preventDefault();
-          closeTypeahead();
-          return;
-        }
-        if (ev.key === 'Enter') {
-          if (typeahead.open && typeahead.items.length) {
-            ev.preventDefault();
-            const pick = typeahead.activeIndex >= 0 ? typeahead.items[typeahead.activeIndex] : typeahead.items[0];
-            await selectSymbol(pick.symbol, pick.name, { push: true });
-            return;
-          }
-          ev.preventDefault();
-          closeTypeahead();
-          await resolveAndAnalyze(stickySearchInput.value);
-        }
-      });
-    }
-
-    if (stickySearchBtn) {
-      stickySearchBtn.addEventListener('click', async () => {
-        activeSearchInput = stickySearchInput || searchInput;
-        await resolveAndAnalyze(stickySearchInput?.value || searchInput.value);
-      });
-    }
-
-    if (stickyAssetFilter) {
-      stickyAssetFilter.addEventListener('change', () => {
-        syncAssetFilters(stickyAssetFilter.value, 'sticky');
-        const value = String(stickySearchInput?.value || '').trim();
-        if (value) {
-          activeSearchInput = stickySearchInput;
-          scheduleFetch(value);
-        }
-      });
-    }
-
     if (analyzeAssetFilter) {
       analyzeAssetFilter.addEventListener('change', () => {
         syncAssetFilters(analyzeAssetFilter.value, 'analyze');
@@ -4253,20 +4623,6 @@
           activeSearchInput = searchInput;
           scheduleFetch(value);
         }
-      });
-    }
-
-    if (stickyEngineFilter) {
-      stickyEngineFilter.addEventListener('change', () => {
-        syncEngineFilters(stickyEngineFilter.value, 'sticky');
-        renderBestSetups();
-      });
-    }
-
-    if (analyzeEngineFilter) {
-      analyzeEngineFilter.addEventListener('change', () => {
-        syncEngineFilters(analyzeEngineFilter.value, 'analyze');
-        renderBestSetups();
       });
     }
 
@@ -4324,7 +4680,7 @@
           if (route === 'analyze') {
             clearSearch({ push: false, keepInput: true, focus: false });
             await loadTopSetupsDoc();
-            renderBestSetups();
+            await renderBestSetups();
             warmScientificData();
           } else if (route === 'market') {
             await loadMarketDoc();
@@ -4343,23 +4699,30 @@
       try {
         if (!universeReady) universeReady = loadUniverse();
         renderCoverageSummary();
-        await universeReady;
-        syncAssetFilters('all', 'sticky');
-        syncEngineFilters('all', 'sticky');
         const route = parseTopRoute(window.location.pathname);
         setMainView(route.route);
         if (route.route === 'analyze' && route.ticker) {
-          navigateToStockDetail(route.ticker, { replace: true });
+          renderAnalyzeTicker(route.ticker, universeByTicker.get(route.ticker) || null, { push: false });
+          universeReady.then(() => {
+            const nextName = universeByTicker.get(route.ticker) || null;
+            renderAnalyzeTicker(route.ticker, nextName, { push: false });
+          }).catch(() => { });
           return;
         } else if (route.route === 'market') {
+          await universeReady;
+          syncAssetFilters('all', 'analyze');
           await loadMarketDoc();
           await renderMarketView();
         } else if (route.route === 'ideas') {
+          await universeReady;
+          syncAssetFilters('all', 'analyze');
           await renderIdeasView();
         } else {
+          await universeReady;
+          syncAssetFilters('all', 'analyze');
           clearSearch({ push: false, keepInput: true, focus: true });
           await loadTopSetupsDoc();
-          renderBestSetups();
+          await renderBestSetups();
           warmScientificData();
         }
       } catch (err) {
@@ -4377,7 +4740,11 @@
       const route = parseTopRoute(window.location.pathname);
       setMainView(route.route);
       if (route.route === 'analyze' && route.ticker) {
-        navigateToStockDetail(route.ticker, { replace: true });
+        renderAnalyzeTicker(route.ticker, universeByTicker.get(route.ticker) || null, { push: false });
+        universeReady?.then(() => {
+          const nextName = universeByTicker.get(route.ticker) || null;
+          renderAnalyzeTicker(route.ticker, nextName, { push: false });
+        }).catch(() => { });
         return;
       }
       if (route.route === 'market') {
@@ -4391,7 +4758,7 @@
       }
       clearSearch({ push: false, keepInput: true, focus: false });
       await loadTopSetupsDoc();
-      renderBestSetups();
+      await renderBestSetups();
       warmScientificData();
     });
 
