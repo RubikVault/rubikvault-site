@@ -1,0 +1,4523 @@
+{
+  "data": {
+    "asset_ratios": [
+      {
+        "current_ratio": 10.519646,
+        "denominator": "GSPC.INDX",
+        "insight": "Rising = crypto outperforming equities",
+        "name": "BTC / S&P 500",
+        "numerator": "BTC-USD.CC",
+        "ratio_change_pct": 2.76,
+        "signal": "rising",
+        "type": "ratio"
+      },
+      {
+        "current": 1.1609,
+        "direction": "neutral",
+        "insight": "Rising = dollar weakening, good for commodities and EM",
+        "name": "EUR / USD",
+        "period_change_pct": -1.223,
+        "strength": "weak",
+        "type": "direct"
+      }
+    ],
+    "best_setups": [
+      {
+        "category": "sector",
+        "continuation": "high",
+        "direction": "bullish",
+        "exhaustion": "none",
+        "forecast": "Uptrend intact — momentum strong.",
+        "name": "Technology",
+        "period_change_pct": -0.7078,
+        "reversal_probability": "low",
+        "setup_quality": "bullish-continuation",
+        "strength": "strong",
+        "symbol": "XLK"
+      }
+    ],
+    "cards": {
+      "CMDTY:CPER": {
+        "as_of": "2026-03-06",
+        "confidence": {
+          "explain": {
+            "coverage": 0.9,
+            "freshness": 1,
+            "reliability": 0.9,
+            "signal_agreement": 1
+          },
+          "label": "HIGH",
+          "regime_damped": false,
+          "value": 0.81
+        },
+        "data_status": {
+          "coverage_ratio": 0.9,
+          "freshness_days": 1,
+          "missing_inputs": [],
+          "stale": false
+        },
+        "drivers_top3": [],
+        "id": "CMDTY:CPER",
+        "momentum": {
+          "bars_available": 21,
+          "m20": -1.2476,
+          "m200": null,
+          "m60": null
+        },
+        "name": "Copper (ETF)",
+        "phase": "NEUTRAL",
+        "phase_reason_codes": [],
+        "risks_top3": [
+          {
+            "dir": "down",
+            "label": "Short Momentum",
+            "unit": "%",
+            "value": -1.2476
+          }
+        ],
+        "score": 49,
+        "sources": [
+          {
+            "as_of": "2026-03-06",
+            "key": "prices",
+            "name": "EODHD"
+          }
+        ],
+        "tldr": "No clear trend. Score 49/100, HIGH confidence.",
+        "type": "commodity",
+        "vol_z": -0.2941
+      },
+      "CMDTY:GLD": {
+        "as_of": "2026-03-06",
+        "confidence": {
+          "explain": {
+            "coverage": 0.9,
+            "freshness": 1,
+            "reliability": 0.9,
+            "signal_agreement": 1
+          },
+          "label": "HIGH",
+          "regime_damped": false,
+          "value": 0.81
+        },
+        "data_status": {
+          "coverage_ratio": 0.9,
+          "freshness_days": 1,
+          "missing_inputs": [],
+          "stale": false
+        },
+        "drivers_top3": [],
+        "id": "CMDTY:GLD",
+        "momentum": {
+          "bars_available": 21,
+          "m20": -0.0759,
+          "m200": null,
+          "m60": null
+        },
+        "name": "Gold (ETF)",
+        "phase": "NEUTRAL",
+        "phase_reason_codes": [],
+        "risks_top3": [
+          {
+            "dir": "down",
+            "label": "Short Momentum",
+            "unit": "%",
+            "value": -0.0759
+          },
+          {
+            "dir": "down",
+            "label": "Flow Direction",
+            "unit": "",
+            "value": "weak"
+          }
+        ],
+        "score": 52,
+        "sources": [
+          {
+            "as_of": "2026-03-06",
+            "key": "prices",
+            "name": "EODHD"
+          }
+        ],
+        "tldr": "No clear trend. Score 52/100, HIGH confidence.",
+        "type": "commodity",
+        "vol_z": -0.0913
+      },
+      "CMDTY:SLV": {
+        "as_of": "2026-03-06",
+        "confidence": {
+          "explain": {
+            "coverage": 0.9,
+            "freshness": 1,
+            "reliability": 0.9,
+            "signal_agreement": 1
+          },
+          "label": "HIGH",
+          "regime_damped": false,
+          "value": 0.81
+        },
+        "data_status": {
+          "coverage_ratio": 0.9,
+          "freshness_days": 1,
+          "missing_inputs": [],
+          "stale": false
+        },
+        "drivers_top3": [],
+        "id": "CMDTY:SLV",
+        "momentum": {
+          "bars_available": 21,
+          "m20": -0.67,
+          "m200": null,
+          "m60": null
+        },
+        "name": "Silver (ETF)",
+        "phase": "NEUTRAL",
+        "phase_reason_codes": [],
+        "risks_top3": [
+          {
+            "dir": "down",
+            "label": "Short Momentum",
+            "unit": "%",
+            "value": -0.67
+          }
+        ],
+        "score": 55,
+        "sources": [
+          {
+            "as_of": "2026-03-06",
+            "key": "prices",
+            "name": "EODHD"
+          }
+        ],
+        "tldr": "No clear trend. Score 55/100, HIGH confidence.",
+        "type": "commodity",
+        "vol_z": -0.2466
+      },
+      "CMDTY:UNG": {
+        "as_of": "2026-03-06",
+        "confidence": {
+          "explain": {
+            "coverage": 0.9,
+            "freshness": 1,
+            "reliability": 0.9,
+            "signal_agreement": 1
+          },
+          "label": "HIGH",
+          "regime_damped": false,
+          "value": 0.81
+        },
+        "data_status": {
+          "coverage_ratio": 0.9,
+          "freshness_days": 1,
+          "missing_inputs": [],
+          "stale": false
+        },
+        "drivers_top3": [],
+        "id": "CMDTY:UNG",
+        "momentum": {
+          "bars_available": 21,
+          "m20": -0.2772,
+          "m200": null,
+          "m60": null
+        },
+        "name": "Natural Gas (ETF)",
+        "phase": "NEUTRAL",
+        "phase_reason_codes": [],
+        "risks_top3": [
+          {
+            "dir": "down",
+            "label": "Short Momentum",
+            "unit": "%",
+            "value": -0.2772
+          }
+        ],
+        "score": 44,
+        "sources": [
+          {
+            "as_of": "2026-03-06",
+            "key": "prices",
+            "name": "EODHD"
+          }
+        ],
+        "tldr": "No clear trend. Score 44/100, HIGH confidence.",
+        "type": "commodity",
+        "vol_z": 0.3751
+      },
+      "CMDTY:USO": {
+        "as_of": "2026-03-06",
+        "confidence": {
+          "explain": {
+            "coverage": 0.9,
+            "freshness": 1,
+            "reliability": 0.9,
+            "signal_agreement": 0.67
+          },
+          "label": "MEDIUM",
+          "regime_damped": false,
+          "value": 0.54
+        },
+        "data_status": {
+          "coverage_ratio": 0.9,
+          "freshness_days": 1,
+          "missing_inputs": [],
+          "stale": false
+        },
+        "drivers_top3": [
+          {
+            "dir": "up",
+            "label": "Short Momentum",
+            "unit": "%",
+            "value": 18.4071
+          }
+        ],
+        "id": "CMDTY:USO",
+        "momentum": {
+          "bars_available": 21,
+          "m20": 18.4071,
+          "m200": null,
+          "m60": null
+        },
+        "name": "Oil WTI (ETF)",
+        "phase": "EARLY",
+        "phase_reason_codes": [
+          "MOMENTUM_SHORT_POSITIVE",
+          "MEDIUM_NOT_YET"
+        ],
+        "risks_top3": [
+          {
+            "dir": "down",
+            "label": "Volatility Spike",
+            "unit": "z",
+            "value": 1.0909
+          },
+          {
+            "dir": "down",
+            "label": "Overextended",
+            "unit": "%",
+            "value": 15.3763
+          }
+        ],
+        "score": 72,
+        "sources": [
+          {
+            "as_of": "2026-03-06",
+            "key": "prices",
+            "name": "EODHD"
+          }
+        ],
+        "tldr": "Early trend forming. Score 72/100, MEDIUM confidence.",
+        "type": "commodity",
+        "vol_z": 1.0909
+      },
+      "CRYPTO:BNB": {
+        "as_of": "2026-03-06",
+        "confidence": {
+          "explain": {
+            "coverage": 0.9,
+            "freshness": 1,
+            "reliability": 0.9,
+            "signal_agreement": 0.67
+          },
+          "label": "MEDIUM",
+          "regime_damped": false,
+          "value": 0.54
+        },
+        "data_status": {
+          "coverage_ratio": 0.9,
+          "freshness_days": 1,
+          "missing_inputs": [],
+          "stale": false
+        },
+        "drivers_top3": [
+          {
+            "dir": "up",
+            "label": "Short Momentum",
+            "unit": "%",
+            "value": 4.1989
+          }
+        ],
+        "id": "CRYPTO:BNB",
+        "momentum": {
+          "bars_available": 30,
+          "m20": 4.1989,
+          "m200": null,
+          "m60": null
+        },
+        "name": "BNB",
+        "phase": "EARLY",
+        "phase_reason_codes": [
+          "MOMENTUM_SHORT_POSITIVE",
+          "MEDIUM_NOT_YET"
+        ],
+        "risks_top3": [],
+        "score": 54,
+        "sources": [
+          {
+            "as_of": "2026-03-06",
+            "key": "prices",
+            "name": "EODHD"
+          }
+        ],
+        "tldr": "Early trend forming. Score 54/100, MEDIUM confidence.",
+        "type": "crypto",
+        "vol_z": -0.2427
+      },
+      "CRYPTO:BTC": {
+        "as_of": "2026-03-06",
+        "confidence": {
+          "explain": {
+            "coverage": 0.9,
+            "freshness": 1,
+            "reliability": 0.9,
+            "signal_agreement": 0.67
+          },
+          "label": "MEDIUM",
+          "regime_damped": false,
+          "value": 0.54
+        },
+        "data_status": {
+          "coverage_ratio": 0.9,
+          "freshness_days": 1,
+          "missing_inputs": [],
+          "stale": false
+        },
+        "drivers_top3": [
+          {
+            "dir": "up",
+            "label": "Short Momentum",
+            "unit": "%",
+            "value": 4.7735
+          }
+        ],
+        "id": "CRYPTO:BTC",
+        "momentum": {
+          "bars_available": 31,
+          "m20": 4.7735,
+          "m200": null,
+          "m60": null
+        },
+        "name": "Bitcoin",
+        "phase": "EARLY",
+        "phase_reason_codes": [
+          "MOMENTUM_SHORT_POSITIVE",
+          "MEDIUM_NOT_YET"
+        ],
+        "risks_top3": [],
+        "score": 54,
+        "sources": [
+          {
+            "as_of": "2026-03-06",
+            "key": "prices",
+            "name": "EODHD"
+          }
+        ],
+        "tldr": "Early trend forming. Score 54/100, MEDIUM confidence.",
+        "type": "crypto",
+        "vol_z": 0.0655
+      },
+      "CRYPTO:ETH": {
+        "as_of": "2026-03-06",
+        "confidence": {
+          "explain": {
+            "coverage": 0.9,
+            "freshness": 1,
+            "reliability": 0.9,
+            "signal_agreement": 0.67
+          },
+          "label": "MEDIUM",
+          "regime_damped": false,
+          "value": 0.54
+        },
+        "data_status": {
+          "coverage_ratio": 0.9,
+          "freshness_days": 1,
+          "missing_inputs": [],
+          "stale": false
+        },
+        "drivers_top3": [
+          {
+            "dir": "up",
+            "label": "Short Momentum",
+            "unit": "%",
+            "value": 4.7763
+          }
+        ],
+        "id": "CRYPTO:ETH",
+        "momentum": {
+          "bars_available": 31,
+          "m20": 4.7763,
+          "m200": null,
+          "m60": null
+        },
+        "name": "Ethereum",
+        "phase": "EARLY",
+        "phase_reason_codes": [
+          "MOMENTUM_SHORT_POSITIVE",
+          "MEDIUM_NOT_YET"
+        ],
+        "risks_top3": [],
+        "score": 54,
+        "sources": [
+          {
+            "as_of": "2026-03-06",
+            "key": "prices",
+            "name": "EODHD"
+          }
+        ],
+        "tldr": "Early trend forming. Score 54/100, MEDIUM confidence.",
+        "type": "crypto",
+        "vol_z": 0.0121
+      },
+      "CRYPTO:SOL": {
+        "as_of": "2026-03-06",
+        "confidence": {
+          "explain": {
+            "coverage": 0.9,
+            "freshness": 1,
+            "reliability": 0.9,
+            "signal_agreement": 0.67
+          },
+          "label": "MEDIUM",
+          "regime_damped": false,
+          "value": 0.54
+        },
+        "data_status": {
+          "coverage_ratio": 0.9,
+          "freshness_days": 1,
+          "missing_inputs": [],
+          "stale": false
+        },
+        "drivers_top3": [
+          {
+            "dir": "up",
+            "label": "Short Momentum",
+            "unit": "%",
+            "value": 4.5837
+          }
+        ],
+        "id": "CRYPTO:SOL",
+        "momentum": {
+          "bars_available": 30,
+          "m20": 4.5837,
+          "m200": null,
+          "m60": null
+        },
+        "name": "Solana",
+        "phase": "EARLY",
+        "phase_reason_codes": [
+          "MOMENTUM_SHORT_POSITIVE",
+          "MEDIUM_NOT_YET"
+        ],
+        "risks_top3": [],
+        "score": 56,
+        "sources": [
+          {
+            "as_of": "2026-03-06",
+            "key": "prices",
+            "name": "EODHD"
+          }
+        ],
+        "tldr": "Early trend forming. Score 56/100, MEDIUM confidence.",
+        "type": "crypto",
+        "vol_z": -0.3674
+      },
+      "CRYPTO:XRP": {
+        "as_of": "2026-03-06",
+        "confidence": {
+          "explain": {
+            "coverage": 0.9,
+            "freshness": 1,
+            "reliability": 0.9,
+            "signal_agreement": 1
+          },
+          "label": "HIGH",
+          "regime_damped": false,
+          "value": 0.81
+        },
+        "data_status": {
+          "coverage_ratio": 0.9,
+          "freshness_days": 1,
+          "missing_inputs": [],
+          "stale": false
+        },
+        "drivers_top3": [],
+        "id": "CRYPTO:XRP",
+        "momentum": {
+          "bars_available": 30,
+          "m20": -0.6128,
+          "m200": null,
+          "m60": null
+        },
+        "name": "XRP",
+        "phase": "NEUTRAL",
+        "phase_reason_codes": [],
+        "risks_top3": [
+          {
+            "dir": "down",
+            "label": "Short Momentum",
+            "unit": "%",
+            "value": -0.6128
+          }
+        ],
+        "score": 50,
+        "sources": [
+          {
+            "as_of": "2026-03-06",
+            "key": "prices",
+            "name": "EODHD"
+          }
+        ],
+        "tldr": "No clear trend. Score 50/100, HIGH confidence.",
+        "type": "crypto",
+        "vol_z": -0.1654
+      },
+      "FX:AUDUSD": {
+        "as_of": "2026-03-06",
+        "confidence": {
+          "explain": {
+            "coverage": 0.9,
+            "freshness": 1,
+            "reliability": 0.9,
+            "signal_agreement": 1
+          },
+          "label": "HIGH",
+          "regime_damped": false,
+          "value": 0.81
+        },
+        "data_status": {
+          "coverage_ratio": 0.9,
+          "freshness_days": 1,
+          "missing_inputs": [],
+          "stale": false
+        },
+        "drivers_top3": [],
+        "id": "FX:AUDUSD",
+        "momentum": {
+          "bars_available": 27,
+          "m20": -0.6393,
+          "m200": null,
+          "m60": null
+        },
+        "name": "AUD/USD",
+        "phase": "NEUTRAL",
+        "phase_reason_codes": [],
+        "risks_top3": [
+          {
+            "dir": "down",
+            "label": "Short Momentum",
+            "unit": "%",
+            "value": -0.6393
+          }
+        ],
+        "score": 49,
+        "sources": [
+          {
+            "as_of": "2026-03-06",
+            "key": "prices",
+            "name": "EODHD"
+          }
+        ],
+        "tldr": "No clear trend. Score 49/100, HIGH confidence.",
+        "type": "forex",
+        "vol_z": 0.3857
+      },
+      "FX:EURUSD": {
+        "as_of": "2026-03-06",
+        "confidence": {
+          "explain": {
+            "coverage": 0.9,
+            "freshness": 1,
+            "reliability": 0.9,
+            "signal_agreement": 1
+          },
+          "label": "HIGH",
+          "regime_damped": false,
+          "value": 0.81
+        },
+        "data_status": {
+          "coverage_ratio": 0.9,
+          "freshness_days": 1,
+          "missing_inputs": [],
+          "stale": false
+        },
+        "drivers_top3": [],
+        "id": "FX:EURUSD",
+        "momentum": {
+          "bars_available": 31,
+          "m20": -1.3771,
+          "m200": null,
+          "m60": null
+        },
+        "name": "EUR/USD",
+        "phase": "NEUTRAL",
+        "phase_reason_codes": [],
+        "risks_top3": [
+          {
+            "dir": "down",
+            "label": "Short Momentum",
+            "unit": "%",
+            "value": -1.3771
+          },
+          {
+            "dir": "down",
+            "label": "Volatility Spike",
+            "unit": "z",
+            "value": 1.2698
+          }
+        ],
+        "score": 44,
+        "sources": [
+          {
+            "as_of": "2026-03-06",
+            "key": "prices",
+            "name": "EODHD"
+          }
+        ],
+        "tldr": "No clear trend. Score 44/100, HIGH confidence.",
+        "type": "forex",
+        "vol_z": 1.2698
+      },
+      "FX:GBPUSD": {
+        "as_of": "2026-03-06",
+        "confidence": {
+          "explain": {
+            "coverage": 0.9,
+            "freshness": 1,
+            "reliability": 0.9,
+            "signal_agreement": 1
+          },
+          "label": "HIGH",
+          "regime_damped": false,
+          "value": 0.81
+        },
+        "data_status": {
+          "coverage_ratio": 0.9,
+          "freshness_days": 1,
+          "missing_inputs": [],
+          "stale": false
+        },
+        "drivers_top3": [],
+        "id": "FX:GBPUSD",
+        "momentum": {
+          "bars_available": 30,
+          "m20": -1.012,
+          "m200": null,
+          "m60": null
+        },
+        "name": "GBP/USD",
+        "phase": "NEUTRAL",
+        "phase_reason_codes": [],
+        "risks_top3": [
+          {
+            "dir": "down",
+            "label": "Short Momentum",
+            "unit": "%",
+            "value": -1.012
+          }
+        ],
+        "score": 47,
+        "sources": [
+          {
+            "as_of": "2026-03-06",
+            "key": "prices",
+            "name": "EODHD"
+          }
+        ],
+        "tldr": "No clear trend. Score 47/100, HIGH confidence.",
+        "type": "forex",
+        "vol_z": 0.0167
+      },
+      "FX:USDCHF": {
+        "as_of": "2026-03-06",
+        "confidence": {
+          "explain": {
+            "coverage": 0.9,
+            "freshness": 1,
+            "reliability": 0.9,
+            "signal_agreement": 0.67
+          },
+          "label": "MEDIUM",
+          "regime_damped": false,
+          "value": 0.54
+        },
+        "data_status": {
+          "coverage_ratio": 0.9,
+          "freshness_days": 1,
+          "missing_inputs": [],
+          "stale": false
+        },
+        "drivers_top3": [
+          {
+            "dir": "up",
+            "label": "Short Momentum",
+            "unit": "%",
+            "value": 0.3775
+          }
+        ],
+        "id": "FX:USDCHF",
+        "momentum": {
+          "bars_available": 27,
+          "m20": 0.3775,
+          "m200": null,
+          "m60": null
+        },
+        "name": "USD/CHF",
+        "phase": "EARLY",
+        "phase_reason_codes": [
+          "MOMENTUM_SHORT_POSITIVE",
+          "MEDIUM_NOT_YET"
+        ],
+        "risks_top3": [],
+        "score": 49,
+        "sources": [
+          {
+            "as_of": "2026-03-06",
+            "key": "prices",
+            "name": "EODHD"
+          }
+        ],
+        "tldr": "Early trend forming. Score 49/100, MEDIUM confidence.",
+        "type": "forex",
+        "vol_z": 0.7456
+      },
+      "FX:USDJPY": {
+        "as_of": "2026-03-06",
+        "confidence": {
+          "explain": {
+            "coverage": 0.9,
+            "freshness": 1,
+            "reliability": 0.9,
+            "signal_agreement": 0.5
+          },
+          "label": "LOW",
+          "regime_damped": false,
+          "value": 0.405
+        },
+        "data_status": {
+          "coverage_ratio": 0.9,
+          "freshness_days": 1,
+          "missing_inputs": [],
+          "stale": false
+        },
+        "drivers_top3": [
+          {
+            "dir": "up",
+            "label": "Short Momentum",
+            "unit": "%",
+            "value": 1.4058
+          },
+          {
+            "dir": "up",
+            "label": "Flow Direction",
+            "unit": "",
+            "value": "weak"
+          }
+        ],
+        "id": "FX:USDJPY",
+        "momentum": {
+          "bars_available": 30,
+          "m20": 1.4058,
+          "m200": null,
+          "m60": null
+        },
+        "name": "USD/JPY",
+        "phase": "MID",
+        "phase_reason_codes": [
+          "MOMENTUM_STACKED_POSITIVE"
+        ],
+        "risks_top3": [],
+        "score": 53,
+        "sources": [
+          {
+            "as_of": "2026-03-06",
+            "key": "prices",
+            "name": "EODHD"
+          }
+        ],
+        "tldr": "Trend established. Score 53/100, LOW confidence.",
+        "type": "forex",
+        "vol_z": 0.2186
+      },
+      "INDEX:000001": {
+        "as_of": "2026-03-06",
+        "confidence": {
+          "explain": {
+            "coverage": 0.9,
+            "freshness": 1,
+            "reliability": 0.9,
+            "signal_agreement": 0.67
+          },
+          "label": "MEDIUM",
+          "regime_damped": false,
+          "value": 0.54
+        },
+        "data_status": {
+          "coverage_ratio": 0.9,
+          "freshness_days": 1,
+          "missing_inputs": [],
+          "stale": false
+        },
+        "drivers_top3": [
+          {
+            "dir": "up",
+            "label": "Short Momentum",
+            "unit": "%",
+            "value": 0.1048
+          }
+        ],
+        "id": "INDEX:000001",
+        "momentum": {
+          "bars_available": 17,
+          "m20": 0.1048,
+          "m200": null,
+          "m60": null
+        },
+        "name": "Shanghai Composite",
+        "phase": "EARLY",
+        "phase_reason_codes": [
+          "MOMENTUM_SHORT_POSITIVE",
+          "MEDIUM_NOT_YET"
+        ],
+        "risks_top3": [],
+        "score": 50,
+        "sources": [
+          {
+            "as_of": "2026-03-06",
+            "key": "prices",
+            "name": "EODHD"
+          }
+        ],
+        "tldr": "Early trend forming. Score 50/100, MEDIUM confidence.",
+        "type": "default",
+        "vol_z": 0.3749
+      },
+      "INDEX:AXJO": {
+        "as_of": "2026-03-06",
+        "confidence": {
+          "explain": {
+            "coverage": 0.9,
+            "freshness": 1,
+            "reliability": 0.9,
+            "signal_agreement": 1
+          },
+          "label": "HIGH",
+          "regime_damped": false,
+          "value": 0.81
+        },
+        "data_status": {
+          "coverage_ratio": 0.9,
+          "freshness_days": 1,
+          "missing_inputs": [],
+          "stale": false
+        },
+        "drivers_top3": [],
+        "id": "INDEX:AXJO",
+        "momentum": {
+          "bars_available": 23,
+          "m20": -1.822,
+          "m200": null,
+          "m60": null
+        },
+        "name": "ASX 200",
+        "phase": "NEUTRAL",
+        "phase_reason_codes": [],
+        "risks_top3": [
+          {
+            "dir": "down",
+            "label": "Short Momentum",
+            "unit": "%",
+            "value": -1.822
+          }
+        ],
+        "score": 48,
+        "sources": [
+          {
+            "as_of": "2026-03-06",
+            "key": "prices",
+            "name": "EODHD"
+          }
+        ],
+        "tldr": "No clear trend. Score 48/100, HIGH confidence.",
+        "type": "default",
+        "vol_z": 0.2703
+      },
+      "INDEX:BSESN": {
+        "as_of": "2026-03-06",
+        "confidence": {
+          "explain": {
+            "coverage": 0.9,
+            "freshness": 1,
+            "reliability": 0.9,
+            "signal_agreement": 1
+          },
+          "label": "HIGH",
+          "regime_damped": false,
+          "value": 0.81
+        },
+        "data_status": {
+          "coverage_ratio": 0.9,
+          "freshness_days": 1,
+          "missing_inputs": [],
+          "stale": false
+        },
+        "drivers_top3": [],
+        "id": "INDEX:BSESN",
+        "momentum": {
+          "bars_available": 22,
+          "m20": -4.2161,
+          "m200": null,
+          "m60": null
+        },
+        "name": "BSE Sensex",
+        "phase": "NEUTRAL",
+        "phase_reason_codes": [],
+        "risks_top3": [
+          {
+            "dir": "down",
+            "label": "Short Momentum",
+            "unit": "%",
+            "value": -4.2161
+          },
+          {
+            "dir": "down",
+            "label": "Volatility Spike",
+            "unit": "z",
+            "value": 1.1141
+          }
+        ],
+        "score": 39,
+        "sources": [
+          {
+            "as_of": "2026-03-06",
+            "key": "prices",
+            "name": "EODHD"
+          }
+        ],
+        "tldr": "No clear trend. Score 39/100, HIGH confidence.",
+        "type": "default",
+        "vol_z": 1.1141
+      },
+      "INDEX:BVSP": {
+        "as_of": "2026-03-06",
+        "confidence": {
+          "explain": {
+            "coverage": 0.9,
+            "freshness": 1,
+            "reliability": 0.9,
+            "signal_agreement": 1
+          },
+          "label": "HIGH",
+          "regime_damped": false,
+          "value": 0.81
+        },
+        "data_status": {
+          "coverage_ratio": 0.9,
+          "freshness_days": 1,
+          "missing_inputs": [],
+          "stale": false
+        },
+        "drivers_top3": [],
+        "id": "INDEX:BVSP",
+        "momentum": {
+          "bars_available": 21,
+          "m20": -3.6181,
+          "m200": null,
+          "m60": null
+        },
+        "name": "Bovespa",
+        "phase": "NEUTRAL",
+        "phase_reason_codes": [],
+        "risks_top3": [
+          {
+            "dir": "down",
+            "label": "Short Momentum",
+            "unit": "%",
+            "value": -3.6181
+          }
+        ],
+        "score": 44,
+        "sources": [
+          {
+            "as_of": "2026-03-06",
+            "key": "prices",
+            "name": "EODHD"
+          }
+        ],
+        "tldr": "No clear trend. Score 44/100, HIGH confidence.",
+        "type": "default",
+        "vol_z": 0.5958
+      },
+      "INDEX:DJI": {
+        "as_of": "2026-03-06",
+        "confidence": {
+          "explain": {
+            "coverage": 0.9,
+            "freshness": 1,
+            "reliability": 0.9,
+            "signal_agreement": 1
+          },
+          "label": "HIGH",
+          "regime_damped": false,
+          "value": 0.81
+        },
+        "data_status": {
+          "coverage_ratio": 0.9,
+          "freshness_days": 1,
+          "missing_inputs": [],
+          "stale": false
+        },
+        "drivers_top3": [],
+        "id": "INDEX:DJI",
+        "momentum": {
+          "bars_available": 22,
+          "m20": -3.8734,
+          "m200": null,
+          "m60": null
+        },
+        "name": "Dow Jones",
+        "phase": "NEUTRAL",
+        "phase_reason_codes": [],
+        "risks_top3": [
+          {
+            "dir": "down",
+            "label": "Short Momentum",
+            "unit": "%",
+            "value": -3.8734
+          }
+        ],
+        "score": 43,
+        "sources": [
+          {
+            "as_of": "2026-03-06",
+            "key": "prices",
+            "name": "EODHD"
+          }
+        ],
+        "tldr": "No clear trend. Score 43/100, HIGH confidence.",
+        "type": "default",
+        "vol_z": 0.2231
+      },
+      "INDEX:FCHI": {
+        "as_of": "2026-03-06",
+        "confidence": {
+          "explain": {
+            "coverage": 0.9,
+            "freshness": 1,
+            "reliability": 0.9,
+            "signal_agreement": 1
+          },
+          "label": "HIGH",
+          "regime_damped": false,
+          "value": 0.81
+        },
+        "data_status": {
+          "coverage_ratio": 0.9,
+          "freshness_days": 1,
+          "missing_inputs": [],
+          "stale": false
+        },
+        "drivers_top3": [],
+        "id": "INDEX:FCHI",
+        "momentum": {
+          "bars_available": 23,
+          "m20": -4.3385,
+          "m200": null,
+          "m60": null
+        },
+        "name": "CAC 40",
+        "phase": "LATE",
+        "phase_reason_codes": [
+          "SHORT_MOMENTUM_FADING"
+        ],
+        "risks_top3": [
+          {
+            "dir": "down",
+            "label": "Short Momentum",
+            "unit": "%",
+            "value": -4.3385
+          },
+          {
+            "dir": "down",
+            "label": "Flow Direction",
+            "unit": "",
+            "value": "weak"
+          },
+          {
+            "dir": "down",
+            "label": "Volatility Spike",
+            "unit": "z",
+            "value": 1.2684
+          }
+        ],
+        "score": 39,
+        "sources": [
+          {
+            "as_of": "2026-03-06",
+            "key": "prices",
+            "name": "EODHD"
+          }
+        ],
+        "tldr": "Trend maturing. Score 39/100, HIGH confidence.",
+        "type": "default",
+        "vol_z": 1.2684
+      },
+      "INDEX:GDAXI": {
+        "as_of": "2026-03-06",
+        "confidence": {
+          "explain": {
+            "coverage": 0.9,
+            "freshness": 1,
+            "reliability": 0.9,
+            "signal_agreement": 1
+          },
+          "label": "HIGH",
+          "regime_damped": false,
+          "value": 0.81
+        },
+        "data_status": {
+          "coverage_ratio": 0.9,
+          "freshness_days": 1,
+          "missing_inputs": [],
+          "stale": false
+        },
+        "drivers_top3": [],
+        "id": "INDEX:GDAXI",
+        "momentum": {
+          "bars_available": 23,
+          "m20": -4.832,
+          "m200": null,
+          "m60": null
+        },
+        "name": "DAX 40",
+        "phase": "LATE",
+        "phase_reason_codes": [
+          "SHORT_MOMENTUM_FADING"
+        ],
+        "risks_top3": [
+          {
+            "dir": "down",
+            "label": "Short Momentum",
+            "unit": "%",
+            "value": -4.832
+          },
+          {
+            "dir": "down",
+            "label": "Flow Direction",
+            "unit": "",
+            "value": "weak"
+          },
+          {
+            "dir": "down",
+            "label": "Volatility Spike",
+            "unit": "z",
+            "value": 1.3915
+          }
+        ],
+        "score": 37,
+        "sources": [
+          {
+            "as_of": "2026-03-06",
+            "key": "prices",
+            "name": "EODHD"
+          }
+        ],
+        "tldr": "Trend maturing. Score 37/100, HIGH confidence.",
+        "type": "default",
+        "vol_z": 1.3915
+      },
+      "INDEX:GSPC": {
+        "as_of": "2026-03-06",
+        "confidence": {
+          "explain": {
+            "coverage": 0.9,
+            "freshness": 1,
+            "reliability": 0.9,
+            "signal_agreement": 1
+          },
+          "label": "HIGH",
+          "regime_damped": false,
+          "value": 0.81
+        },
+        "data_status": {
+          "coverage_ratio": 0.9,
+          "freshness_days": 1,
+          "missing_inputs": [],
+          "stale": false
+        },
+        "drivers_top3": [],
+        "id": "INDEX:GSPC",
+        "momentum": {
+          "bars_available": 22,
+          "m20": -1.7791,
+          "m200": null,
+          "m60": null
+        },
+        "name": "S&P 500",
+        "phase": "NEUTRAL",
+        "phase_reason_codes": [],
+        "risks_top3": [
+          {
+            "dir": "down",
+            "label": "Short Momentum",
+            "unit": "%",
+            "value": -1.7791
+          }
+        ],
+        "score": 47,
+        "sources": [
+          {
+            "as_of": "2026-03-06",
+            "key": "prices",
+            "name": "EODHD"
+          }
+        ],
+        "tldr": "No clear trend. Score 47/100, HIGH confidence.",
+        "type": "default",
+        "vol_z": 0.0109
+      },
+      "INDEX:HSI": {
+        "as_of": "2026-03-06",
+        "confidence": {
+          "explain": {
+            "coverage": 0.9,
+            "freshness": 1,
+            "reliability": 0.9,
+            "signal_agreement": 1
+          },
+          "label": "HIGH",
+          "regime_damped": false,
+          "value": 0.81
+        },
+        "data_status": {
+          "coverage_ratio": 0.9,
+          "freshness_days": 1,
+          "missing_inputs": [],
+          "stale": false
+        },
+        "drivers_top3": [],
+        "id": "INDEX:HSI",
+        "momentum": {
+          "bars_available": 20,
+          "m20": -2.8199,
+          "m200": null,
+          "m60": null
+        },
+        "name": "Hang Seng",
+        "phase": "LATE",
+        "phase_reason_codes": [
+          "SHORT_MOMENTUM_FADING"
+        ],
+        "risks_top3": [
+          {
+            "dir": "down",
+            "label": "Short Momentum",
+            "unit": "%",
+            "value": -2.8199
+          },
+          {
+            "dir": "down",
+            "label": "Flow Direction",
+            "unit": "",
+            "value": "weak"
+          }
+        ],
+        "score": 41,
+        "sources": [
+          {
+            "as_of": "2026-03-06",
+            "key": "prices",
+            "name": "EODHD"
+          }
+        ],
+        "tldr": "Trend maturing. Score 41/100, HIGH confidence.",
+        "type": "default",
+        "vol_z": 0.3738
+      },
+      "INDEX:IBEX": {
+        "as_of": "2026-03-06",
+        "confidence": {
+          "explain": {
+            "coverage": 0.9,
+            "freshness": 1,
+            "reliability": 0.9,
+            "signal_agreement": 1
+          },
+          "label": "HIGH",
+          "regime_damped": false,
+          "value": 0.81
+        },
+        "data_status": {
+          "coverage_ratio": 0.9,
+          "freshness_days": 1,
+          "missing_inputs": [],
+          "stale": false
+        },
+        "drivers_top3": [],
+        "id": "INDEX:IBEX",
+        "momentum": {
+          "bars_available": 23,
+          "m20": -4.7932,
+          "m200": null,
+          "m60": null
+        },
+        "name": "IBEX 35",
+        "phase": "NEUTRAL",
+        "phase_reason_codes": [],
+        "risks_top3": [
+          {
+            "dir": "down",
+            "label": "Short Momentum",
+            "unit": "%",
+            "value": -4.7932
+          },
+          {
+            "dir": "down",
+            "label": "Volatility Spike",
+            "unit": "z",
+            "value": 1.2098
+          }
+        ],
+        "score": 39,
+        "sources": [
+          {
+            "as_of": "2026-03-06",
+            "key": "prices",
+            "name": "EODHD"
+          }
+        ],
+        "tldr": "No clear trend. Score 39/100, HIGH confidence.",
+        "type": "default",
+        "vol_z": 1.2098
+      },
+      "INDEX:ISF": {
+        "as_of": "2026-03-06",
+        "confidence": {
+          "explain": {
+            "coverage": 0.9,
+            "freshness": 1,
+            "reliability": 0.9,
+            "signal_agreement": 1
+          },
+          "label": "HIGH",
+          "regime_damped": false,
+          "value": 0.81
+        },
+        "data_status": {
+          "coverage_ratio": 0.9,
+          "freshness_days": 1,
+          "missing_inputs": [],
+          "stale": false
+        },
+        "drivers_top3": [],
+        "id": "INDEX:ISF",
+        "momentum": {
+          "bars_available": 23,
+          "m20": -2.55,
+          "m200": null,
+          "m60": null
+        },
+        "name": "FTSE 100 ETF",
+        "phase": "LATE",
+        "phase_reason_codes": [
+          "SHORT_MOMENTUM_FADING"
+        ],
+        "risks_top3": [
+          {
+            "dir": "down",
+            "label": "Short Momentum",
+            "unit": "%",
+            "value": -2.55
+          },
+          {
+            "dir": "down",
+            "label": "Flow Direction",
+            "unit": "",
+            "value": "weak"
+          },
+          {
+            "dir": "down",
+            "label": "Volatility Spike",
+            "unit": "z",
+            "value": 1.2008
+          }
+        ],
+        "score": 43,
+        "sources": [
+          {
+            "as_of": "2026-03-06",
+            "key": "prices",
+            "name": "EODHD"
+          }
+        ],
+        "tldr": "Trend maturing. Score 43/100, HIGH confidence.",
+        "type": "default",
+        "vol_z": 1.2008
+      },
+      "INDEX:IXIC": {
+        "as_of": "2026-03-06",
+        "confidence": {
+          "explain": {
+            "coverage": 0.9,
+            "freshness": 1,
+            "reliability": 0.9,
+            "signal_agreement": 0.75
+          },
+          "label": "MEDIUM",
+          "regime_damped": false,
+          "value": 0.6075
+        },
+        "data_status": {
+          "coverage_ratio": 0.9,
+          "freshness_days": 1,
+          "missing_inputs": [],
+          "stale": false
+        },
+        "drivers_top3": [
+          {
+            "dir": "up",
+            "label": "Flow Direction",
+            "unit": "",
+            "value": "moderate"
+          }
+        ],
+        "id": "INDEX:IXIC",
+        "momentum": {
+          "bars_available": 22,
+          "m20": -1.2741,
+          "m200": null,
+          "m60": null
+        },
+        "name": "NASDAQ Composite",
+        "phase": "NEUTRAL",
+        "phase_reason_codes": [
+          "FLOWZ_POSITIVE"
+        ],
+        "risks_top3": [
+          {
+            "dir": "down",
+            "label": "Short Momentum",
+            "unit": "%",
+            "value": -1.2741
+          }
+        ],
+        "score": 53,
+        "sources": [
+          {
+            "as_of": "2026-03-06",
+            "key": "prices",
+            "name": "EODHD"
+          }
+        ],
+        "tldr": "No clear trend. Score 53/100, MEDIUM confidence.",
+        "type": "default",
+        "vol_z": -0.2211
+      },
+      "INDEX:MXX": {
+        "as_of": "2026-03-06",
+        "confidence": {
+          "explain": {
+            "coverage": 0.9,
+            "freshness": 1,
+            "reliability": 0.9,
+            "signal_agreement": 1
+          },
+          "label": "HIGH",
+          "regime_damped": false,
+          "value": 0.81
+        },
+        "data_status": {
+          "coverage_ratio": 0.9,
+          "freshness_days": 1,
+          "missing_inputs": [],
+          "stale": false
+        },
+        "drivers_top3": [],
+        "id": "INDEX:MXX",
+        "momentum": {
+          "bars_available": 30,
+          "m20": -3.5224,
+          "m200": null,
+          "m60": null
+        },
+        "name": "IPC Mexico",
+        "phase": "LATE",
+        "phase_reason_codes": [
+          "SHORT_MOMENTUM_FADING"
+        ],
+        "risks_top3": [
+          {
+            "dir": "down",
+            "label": "Short Momentum",
+            "unit": "%",
+            "value": -3.5224
+          },
+          {
+            "dir": "down",
+            "label": "Flow Direction",
+            "unit": "",
+            "value": "weak"
+          },
+          {
+            "dir": "down",
+            "label": "Volatility Spike",
+            "unit": "z",
+            "value": 1.3498
+          }
+        ],
+        "score": 41,
+        "sources": [
+          {
+            "as_of": "2026-03-06",
+            "key": "prices",
+            "name": "EODHD"
+          }
+        ],
+        "tldr": "Trend maturing. Score 41/100, HIGH confidence.",
+        "type": "default",
+        "vol_z": 1.3498
+      },
+      "INDEX:N225": {
+        "as_of": "2026-03-06",
+        "confidence": {
+          "explain": {
+            "coverage": 0.9,
+            "freshness": 1,
+            "reliability": 0.9,
+            "signal_agreement": 1
+          },
+          "label": "HIGH",
+          "regime_damped": false,
+          "value": 0.81
+        },
+        "data_status": {
+          "coverage_ratio": 0.9,
+          "freshness_days": 1,
+          "missing_inputs": [],
+          "stale": false
+        },
+        "drivers_top3": [],
+        "id": "INDEX:N225",
+        "momentum": {
+          "bars_available": 22,
+          "m20": -2.1924,
+          "m200": null,
+          "m60": null
+        },
+        "name": "Nikkei 225",
+        "phase": "NEUTRAL",
+        "phase_reason_codes": [],
+        "risks_top3": [
+          {
+            "dir": "down",
+            "label": "Short Momentum",
+            "unit": "%",
+            "value": -2.1924
+          }
+        ],
+        "score": 46,
+        "sources": [
+          {
+            "as_of": "2026-03-06",
+            "key": "prices",
+            "name": "EODHD"
+          }
+        ],
+        "tldr": "No clear trend. Score 46/100, HIGH confidence.",
+        "type": "default",
+        "vol_z": 0.7432
+      },
+      "INDEX:SSMI": {
+        "as_of": "2026-03-06",
+        "confidence": {
+          "explain": {
+            "coverage": 0.9,
+            "freshness": 1,
+            "reliability": 0.9,
+            "signal_agreement": 1
+          },
+          "label": "HIGH",
+          "regime_damped": false,
+          "value": 0.81
+        },
+        "data_status": {
+          "coverage_ratio": 0.9,
+          "freshness_days": 1,
+          "missing_inputs": [],
+          "stale": false
+        },
+        "drivers_top3": [],
+        "id": "INDEX:SSMI",
+        "momentum": {
+          "bars_available": 22,
+          "m20": -2.9014,
+          "m200": null,
+          "m60": null
+        },
+        "name": "SMI",
+        "phase": "NEUTRAL",
+        "phase_reason_codes": [],
+        "risks_top3": [
+          {
+            "dir": "down",
+            "label": "Short Momentum",
+            "unit": "%",
+            "value": -2.9014
+          },
+          {
+            "dir": "down",
+            "label": "Volatility Spike",
+            "unit": "z",
+            "value": 1.301
+          }
+        ],
+        "score": 44,
+        "sources": [
+          {
+            "as_of": "2026-03-06",
+            "key": "prices",
+            "name": "EODHD"
+          }
+        ],
+        "tldr": "No clear trend. Score 44/100, HIGH confidence.",
+        "type": "default",
+        "vol_z": 1.301
+      },
+      "INDEX:STOXX50E": {
+        "as_of": "2026-03-06",
+        "confidence": {
+          "explain": {
+            "coverage": 0.9,
+            "freshness": 1,
+            "reliability": 0.9,
+            "signal_agreement": 1
+          },
+          "label": "HIGH",
+          "regime_damped": false,
+          "value": 0.81
+        },
+        "data_status": {
+          "coverage_ratio": 0.9,
+          "freshness_days": 1,
+          "missing_inputs": [],
+          "stale": false
+        },
+        "drivers_top3": [],
+        "id": "INDEX:STOXX50E",
+        "momentum": {
+          "bars_available": 22,
+          "m20": -4.0566,
+          "m200": null,
+          "m60": null
+        },
+        "name": "Euro Stoxx 50",
+        "phase": "LATE",
+        "phase_reason_codes": [
+          "SHORT_MOMENTUM_FADING"
+        ],
+        "risks_top3": [
+          {
+            "dir": "down",
+            "label": "Short Momentum",
+            "unit": "%",
+            "value": -4.0566
+          },
+          {
+            "dir": "down",
+            "label": "Flow Direction",
+            "unit": "",
+            "value": "weak"
+          },
+          {
+            "dir": "down",
+            "label": "Volatility Spike",
+            "unit": "z",
+            "value": 1.184
+          }
+        ],
+        "score": 40,
+        "sources": [
+          {
+            "as_of": "2026-03-06",
+            "key": "prices",
+            "name": "EODHD"
+          }
+        ],
+        "tldr": "Trend maturing. Score 40/100, HIGH confidence.",
+        "type": "default",
+        "vol_z": 1.184
+      },
+      "SECTOR:XLB": {
+        "as_of": "2026-03-06",
+        "confidence": {
+          "explain": {
+            "coverage": 0.9,
+            "freshness": 1,
+            "reliability": 0.9,
+            "signal_agreement": 1
+          },
+          "label": "HIGH",
+          "regime_damped": false,
+          "value": 0.81
+        },
+        "data_status": {
+          "coverage_ratio": 0.9,
+          "freshness_days": 1,
+          "missing_inputs": [],
+          "stale": false
+        },
+        "drivers_top3": [],
+        "id": "SECTOR:XLB",
+        "momentum": {
+          "bars_available": 21,
+          "m20": -3.3742,
+          "m200": null,
+          "m60": null
+        },
+        "name": "Materials",
+        "phase": "NEUTRAL",
+        "phase_reason_codes": [],
+        "risks_top3": [
+          {
+            "dir": "down",
+            "label": "Short Momentum",
+            "unit": "%",
+            "value": -3.3742
+          }
+        ],
+        "score": 46,
+        "sources": [
+          {
+            "as_of": "2026-03-06",
+            "key": "prices",
+            "name": "EODHD"
+          }
+        ],
+        "tldr": "No clear trend. Score 46/100, HIGH confidence.",
+        "type": "sector",
+        "vol_z": 0.1349
+      },
+      "SECTOR:XLC": {
+        "as_of": "2026-03-06",
+        "confidence": {
+          "explain": {
+            "coverage": 0.9,
+            "freshness": 1,
+            "reliability": 0.9,
+            "signal_agreement": 0.5
+          },
+          "label": "LOW",
+          "regime_damped": false,
+          "value": 0.405
+        },
+        "data_status": {
+          "coverage_ratio": 0.9,
+          "freshness_days": 1,
+          "missing_inputs": [],
+          "stale": false
+        },
+        "drivers_top3": [
+          {
+            "dir": "up",
+            "label": "Short Momentum",
+            "unit": "%",
+            "value": 1.7015
+          },
+          {
+            "dir": "up",
+            "label": "Flow Direction",
+            "unit": "",
+            "value": "weak"
+          }
+        ],
+        "id": "SECTOR:XLC",
+        "momentum": {
+          "bars_available": 21,
+          "m20": 1.7015,
+          "m200": null,
+          "m60": null
+        },
+        "name": "Communication Services",
+        "phase": "MID",
+        "phase_reason_codes": [
+          "MOMENTUM_STACKED_POSITIVE"
+        ],
+        "risks_top3": [],
+        "score": 55,
+        "sources": [
+          {
+            "as_of": "2026-03-06",
+            "key": "prices",
+            "name": "EODHD"
+          }
+        ],
+        "tldr": "Trend established. Score 55/100, LOW confidence.",
+        "type": "sector",
+        "vol_z": -0.269
+      },
+      "SECTOR:XLE": {
+        "as_of": "2026-03-06",
+        "confidence": {
+          "explain": {
+            "coverage": 0.9,
+            "freshness": 1,
+            "reliability": 0.9,
+            "signal_agreement": 0.67
+          },
+          "label": "MEDIUM",
+          "regime_damped": false,
+          "value": 0.54
+        },
+        "data_status": {
+          "coverage_ratio": 0.9,
+          "freshness_days": 1,
+          "missing_inputs": [],
+          "stale": false
+        },
+        "drivers_top3": [
+          {
+            "dir": "up",
+            "label": "Short Momentum",
+            "unit": "%",
+            "value": 2.9811
+          }
+        ],
+        "id": "SECTOR:XLE",
+        "momentum": {
+          "bars_available": 21,
+          "m20": 2.9811,
+          "m200": null,
+          "m60": null
+        },
+        "name": "Energy",
+        "phase": "EARLY",
+        "phase_reason_codes": [
+          "MOMENTUM_SHORT_POSITIVE",
+          "MEDIUM_NOT_YET"
+        ],
+        "risks_top3": [],
+        "score": 55,
+        "sources": [
+          {
+            "as_of": "2026-03-06",
+            "key": "prices",
+            "name": "EODHD"
+          }
+        ],
+        "tldr": "Early trend forming. Score 55/100, MEDIUM confidence.",
+        "type": "sector",
+        "vol_z": 0.1439
+      },
+      "SECTOR:XLF": {
+        "as_of": "2026-03-06",
+        "confidence": {
+          "explain": {
+            "coverage": 0.9,
+            "freshness": 1,
+            "reliability": 0.9,
+            "signal_agreement": 1
+          },
+          "label": "HIGH",
+          "regime_damped": false,
+          "value": 0.81
+        },
+        "data_status": {
+          "coverage_ratio": 0.9,
+          "freshness_days": 1,
+          "missing_inputs": [],
+          "stale": false
+        },
+        "drivers_top3": [],
+        "id": "SECTOR:XLF",
+        "momentum": {
+          "bars_available": 21,
+          "m20": -1.7924,
+          "m200": null,
+          "m60": null
+        },
+        "name": "Financials",
+        "phase": "NEUTRAL",
+        "phase_reason_codes": [],
+        "risks_top3": [
+          {
+            "dir": "down",
+            "label": "Short Momentum",
+            "unit": "%",
+            "value": -1.7924
+          }
+        ],
+        "score": 48,
+        "sources": [
+          {
+            "as_of": "2026-03-06",
+            "key": "prices",
+            "name": "EODHD"
+          }
+        ],
+        "tldr": "No clear trend. Score 48/100, HIGH confidence.",
+        "type": "sector",
+        "vol_z": -0.4716
+      },
+      "SECTOR:XLI": {
+        "as_of": "2026-03-06",
+        "confidence": {
+          "explain": {
+            "coverage": 0.9,
+            "freshness": 1,
+            "reliability": 0.9,
+            "signal_agreement": 1
+          },
+          "label": "HIGH",
+          "regime_damped": false,
+          "value": 0.81
+        },
+        "data_status": {
+          "coverage_ratio": 0.9,
+          "freshness_days": 1,
+          "missing_inputs": [],
+          "stale": false
+        },
+        "drivers_top3": [],
+        "id": "SECTOR:XLI",
+        "momentum": {
+          "bars_available": 21,
+          "m20": -1.6303,
+          "m200": null,
+          "m60": null
+        },
+        "name": "Industrials",
+        "phase": "NEUTRAL",
+        "phase_reason_codes": [],
+        "risks_top3": [
+          {
+            "dir": "down",
+            "label": "Short Momentum",
+            "unit": "%",
+            "value": -1.6303
+          }
+        ],
+        "score": 48,
+        "sources": [
+          {
+            "as_of": "2026-03-06",
+            "key": "prices",
+            "name": "EODHD"
+          }
+        ],
+        "tldr": "No clear trend. Score 48/100, HIGH confidence.",
+        "type": "sector",
+        "vol_z": 0.3419
+      },
+      "SECTOR:XLK": {
+        "as_of": "2026-03-06",
+        "confidence": {
+          "explain": {
+            "coverage": 0.9,
+            "freshness": 1,
+            "reliability": 0.9,
+            "signal_agreement": 0.75
+          },
+          "label": "MEDIUM",
+          "regime_damped": false,
+          "value": 0.6075
+        },
+        "data_status": {
+          "coverage_ratio": 0.9,
+          "freshness_days": 1,
+          "missing_inputs": [],
+          "stale": false
+        },
+        "drivers_top3": [
+          {
+            "dir": "up",
+            "label": "Flow Direction",
+            "unit": "",
+            "value": "strong"
+          }
+        ],
+        "id": "SECTOR:XLK",
+        "momentum": {
+          "bars_available": 21,
+          "m20": -0.0342,
+          "m200": null,
+          "m60": null
+        },
+        "name": "Technology",
+        "phase": "NEUTRAL",
+        "phase_reason_codes": [
+          "FLOWZ_POSITIVE"
+        ],
+        "risks_top3": [
+          {
+            "dir": "down",
+            "label": "Short Momentum",
+            "unit": "%",
+            "value": -0.0342
+          }
+        ],
+        "score": 60,
+        "sources": [
+          {
+            "as_of": "2026-03-06",
+            "key": "prices",
+            "name": "EODHD"
+          }
+        ],
+        "tldr": "No clear trend. Score 60/100, MEDIUM confidence.",
+        "type": "sector",
+        "vol_z": -0.1497
+      },
+      "SECTOR:XLP": {
+        "as_of": "2026-03-06",
+        "confidence": {
+          "explain": {
+            "coverage": 0.9,
+            "freshness": 1,
+            "reliability": 0.9,
+            "signal_agreement": 1
+          },
+          "label": "HIGH",
+          "regime_damped": false,
+          "value": 0.81
+        },
+        "data_status": {
+          "coverage_ratio": 0.9,
+          "freshness_days": 1,
+          "missing_inputs": [],
+          "stale": false
+        },
+        "drivers_top3": [],
+        "id": "SECTOR:XLP",
+        "momentum": {
+          "bars_available": 21,
+          "m20": -3.1616,
+          "m200": null,
+          "m60": null
+        },
+        "name": "Consumer Staples",
+        "phase": "LATE",
+        "phase_reason_codes": [
+          "SHORT_MOMENTUM_FADING"
+        ],
+        "risks_top3": [
+          {
+            "dir": "down",
+            "label": "Short Momentum",
+            "unit": "%",
+            "value": -3.1616
+          },
+          {
+            "dir": "down",
+            "label": "Flow Direction",
+            "unit": "",
+            "value": "weak"
+          }
+        ],
+        "score": 42,
+        "sources": [
+          {
+            "as_of": "2026-03-06",
+            "key": "prices",
+            "name": "EODHD"
+          }
+        ],
+        "tldr": "Trend maturing. Score 42/100, HIGH confidence.",
+        "type": "sector",
+        "vol_z": 0.8743
+      },
+      "SECTOR:XLRE": {
+        "as_of": "2026-03-06",
+        "confidence": {
+          "explain": {
+            "coverage": 0.9,
+            "freshness": 1,
+            "reliability": 0.9,
+            "signal_agreement": 0.5
+          },
+          "label": "LOW",
+          "regime_damped": false,
+          "value": 0.405
+        },
+        "data_status": {
+          "coverage_ratio": 0.9,
+          "freshness_days": 1,
+          "missing_inputs": [],
+          "stale": false
+        },
+        "drivers_top3": [
+          {
+            "dir": "up",
+            "label": "Short Momentum",
+            "unit": "%",
+            "value": 0.266
+          },
+          {
+            "dir": "up",
+            "label": "Flow Direction",
+            "unit": "",
+            "value": "moderate"
+          }
+        ],
+        "id": "SECTOR:XLRE",
+        "momentum": {
+          "bars_available": 21,
+          "m20": 0.266,
+          "m200": null,
+          "m60": null
+        },
+        "name": "Real Estate",
+        "phase": "EARLY",
+        "phase_reason_codes": [
+          "MOMENTUM_SHORT_POSITIVE",
+          "MEDIUM_NOT_YET",
+          "FLOWZ_POSITIVE"
+        ],
+        "risks_top3": [],
+        "score": 59,
+        "sources": [
+          {
+            "as_of": "2026-03-06",
+            "key": "prices",
+            "name": "EODHD"
+          }
+        ],
+        "tldr": "Early trend forming. Score 59/100, LOW confidence.",
+        "type": "sector",
+        "vol_z": -0.4363
+      },
+      "SECTOR:XLU": {
+        "as_of": "2026-03-06",
+        "confidence": {
+          "explain": {
+            "coverage": 0.9,
+            "freshness": 1,
+            "reliability": 0.9,
+            "signal_agreement": 0.67
+          },
+          "label": "MEDIUM",
+          "regime_damped": false,
+          "value": 0.54
+        },
+        "data_status": {
+          "coverage_ratio": 0.9,
+          "freshness_days": 1,
+          "missing_inputs": [],
+          "stale": false
+        },
+        "drivers_top3": [
+          {
+            "dir": "up",
+            "label": "Short Momentum",
+            "unit": "%",
+            "value": 1.9942
+          }
+        ],
+        "id": "SECTOR:XLU",
+        "momentum": {
+          "bars_available": 21,
+          "m20": 1.9942,
+          "m200": null,
+          "m60": null
+        },
+        "name": "Utilities",
+        "phase": "EARLY",
+        "phase_reason_codes": [
+          "MOMENTUM_SHORT_POSITIVE",
+          "MEDIUM_NOT_YET"
+        ],
+        "risks_top3": [],
+        "score": 56,
+        "sources": [
+          {
+            "as_of": "2026-03-06",
+            "key": "prices",
+            "name": "EODHD"
+          }
+        ],
+        "tldr": "Early trend forming. Score 56/100, MEDIUM confidence.",
+        "type": "sector",
+        "vol_z": -0.2003
+      },
+      "SECTOR:XLV": {
+        "as_of": "2026-03-06",
+        "confidence": {
+          "explain": {
+            "coverage": 0.9,
+            "freshness": 1,
+            "reliability": 0.9,
+            "signal_agreement": 1
+          },
+          "label": "HIGH",
+          "regime_damped": false,
+          "value": 0.81
+        },
+        "data_status": {
+          "coverage_ratio": 0.9,
+          "freshness_days": 1,
+          "missing_inputs": [],
+          "stale": false
+        },
+        "drivers_top3": [],
+        "id": "SECTOR:XLV",
+        "momentum": {
+          "bars_available": 21,
+          "m20": -2.0097,
+          "m200": null,
+          "m60": null
+        },
+        "name": "Health Care",
+        "phase": "NEUTRAL",
+        "phase_reason_codes": [],
+        "risks_top3": [
+          {
+            "dir": "down",
+            "label": "Short Momentum",
+            "unit": "%",
+            "value": -2.0097
+          }
+        ],
+        "score": 46,
+        "sources": [
+          {
+            "as_of": "2026-03-06",
+            "key": "prices",
+            "name": "EODHD"
+          }
+        ],
+        "tldr": "No clear trend. Score 46/100, HIGH confidence.",
+        "type": "sector",
+        "vol_z": 0.826
+      },
+      "SECTOR:XLY": {
+        "as_of": "2026-03-06",
+        "confidence": {
+          "explain": {
+            "coverage": 0.9,
+            "freshness": 1,
+            "reliability": 0.9,
+            "signal_agreement": 0.75
+          },
+          "label": "MEDIUM",
+          "regime_damped": false,
+          "value": 0.6075
+        },
+        "data_status": {
+          "coverage_ratio": 0.9,
+          "freshness_days": 1,
+          "missing_inputs": [],
+          "stale": false
+        },
+        "drivers_top3": [
+          {
+            "dir": "up",
+            "label": "Flow Direction",
+            "unit": "",
+            "value": "moderate"
+          }
+        ],
+        "id": "SECTOR:XLY",
+        "momentum": {
+          "bars_available": 21,
+          "m20": -0.1136,
+          "m200": null,
+          "m60": null
+        },
+        "name": "Consumer Discretionary",
+        "phase": "NEUTRAL",
+        "phase_reason_codes": [
+          "FLOWZ_POSITIVE"
+        ],
+        "risks_top3": [
+          {
+            "dir": "down",
+            "label": "Short Momentum",
+            "unit": "%",
+            "value": -0.1136
+          }
+        ],
+        "score": 55,
+        "sources": [
+          {
+            "as_of": "2026-03-06",
+            "key": "prices",
+            "name": "EODHD"
+          }
+        ],
+        "tldr": "No clear trend. Score 55/100, MEDIUM confidence.",
+        "type": "sector",
+        "vol_z": 0.041
+      }
+    },
+    "caution_signals": [],
+    "commodities": [
+      {
+        "as_of": "2026-03-05",
+        "change_pct": -0.9183,
+        "close": 466.13,
+        "display": "Gold",
+        "flow": {
+          "as_of": "2026-03-05",
+          "change_pct": -0.9183,
+          "close": 466.13,
+          "days_tracked": 21,
+          "direction": "bearish",
+          "open": 470.45,
+          "period_change_pct": 4.3442,
+          "strength": "weak"
+        },
+        "name": "Gold (ETF)",
+        "symbol": "GLD.US",
+        "unavailable": false,
+        "unit": "USD"
+      },
+      {
+        "as_of": "2026-03-05",
+        "change_pct": -0.894,
+        "close": 74.27,
+        "display": "Silver",
+        "flow": {
+          "as_of": "2026-03-05",
+          "change_pct": -0.894,
+          "close": 74.27,
+          "days_tracked": 21,
+          "direction": "neutral",
+          "open": 74.94,
+          "period_change_pct": 6.9328,
+          "strength": "weak"
+        },
+        "name": "Silver (ETF)",
+        "symbol": "SLV.US",
+        "unavailable": false,
+        "unit": "USD"
+      },
+      {
+        "as_of": "2026-03-05",
+        "change_pct": 1.9585,
+        "close": 96.31,
+        "display": "Oil WTI",
+        "flow": {
+          "as_of": "2026-03-05",
+          "change_pct": 1.9585,
+          "close": 96.31,
+          "days_tracked": 21,
+          "direction": "neutral",
+          "open": 94.46,
+          "period_change_pct": 15.3763,
+          "strength": "weak"
+        },
+        "name": "Oil WTI (ETF)",
+        "symbol": "USO.US",
+        "unavailable": false,
+        "unit": "USD"
+      },
+      {
+        "as_of": "2026-03-05",
+        "change_pct": 1.2605,
+        "close": 12.05,
+        "display": "Nat Gas",
+        "flow": {
+          "as_of": "2026-03-05",
+          "change_pct": 1.2605,
+          "close": 12.05,
+          "days_tracked": 21,
+          "direction": "neutral",
+          "open": 11.9,
+          "period_change_pct": -7.622,
+          "strength": "weak"
+        },
+        "name": "Natural Gas (ETF)",
+        "symbol": "UNG.US",
+        "unavailable": false,
+        "unit": "USD"
+      },
+      {
+        "as_of": "2026-03-05",
+        "change_pct": 0.6506,
+        "close": 35.58,
+        "display": "Copper",
+        "flow": {
+          "as_of": "2026-03-05",
+          "change_pct": 0.6506,
+          "close": 35.58,
+          "days_tracked": 21,
+          "direction": "neutral",
+          "open": 35.35,
+          "period_change_pct": -0.2488,
+          "strength": "weak"
+        },
+        "name": "Copper (ETF)",
+        "symbol": "CPER.US",
+        "unavailable": false,
+        "unit": "USD"
+      }
+    ],
+    "crypto": [
+      {
+        "as_of": "2026-03-06",
+        "change_pct": 0.2664,
+        "close": 71067.46875,
+        "display": "BTC",
+        "flow": {
+          "as_of": "2026-03-06",
+          "change_pct": 0.2664,
+          "close": 71067.46875,
+          "days_tracked": 31,
+          "direction": "neutral",
+          "open": 70878.65625,
+          "period_change_pct": 1.6959,
+          "strength": "weak"
+        },
+        "name": "Bitcoin",
+        "symbol": "BTC-USD.CC",
+        "unavailable": false
+      },
+      {
+        "as_of": "2026-03-06",
+        "change_pct": 0.261,
+        "close": 2078.24169921875,
+        "display": "ETH",
+        "flow": {
+          "as_of": "2026-03-06",
+          "change_pct": 0.261,
+          "close": 2078.24169921875,
+          "days_tracked": 31,
+          "direction": "neutral",
+          "open": 2072.8310546875,
+          "period_change_pct": 0.7691,
+          "strength": "weak"
+        },
+        "name": "Ethereum",
+        "symbol": "ETH-USD.CC",
+        "unavailable": false
+      },
+      {
+        "as_of": "2026-03-05",
+        "change_pct": -2.3594,
+        "close": 88.6911066295,
+        "display": "SOL",
+        "flow": {
+          "as_of": "2026-03-05",
+          "change_pct": -2.3594,
+          "close": 88.6911066295,
+          "days_tracked": 30,
+          "direction": "neutral",
+          "open": 90.8342633589,
+          "period_change_pct": 1.0158,
+          "strength": "weak"
+        },
+        "name": "Solana",
+        "symbol": "SOL-USD.CC",
+        "unavailable": false
+      },
+      {
+        "as_of": "2026-03-05",
+        "change_pct": -1.5492,
+        "close": 647.6258792997,
+        "display": "BNB",
+        "flow": {
+          "as_of": "2026-03-05",
+          "change_pct": -1.5492,
+          "close": 647.6258792997,
+          "days_tracked": 30,
+          "direction": "neutral",
+          "open": 657.816799679,
+          "period_change_pct": -1.6867,
+          "strength": "weak"
+        },
+        "name": "BNB",
+        "symbol": "BNB-USD.CC",
+        "unavailable": false
+      },
+      {
+        "as_of": "2026-03-05",
+        "change_pct": -1.8996,
+        "close": 1.4030523155,
+        "display": "XRP",
+        "flow": {
+          "as_of": "2026-03-05",
+          "change_pct": -1.8996,
+          "close": 1.4030523155,
+          "days_tracked": 30,
+          "direction": "neutral",
+          "open": 1.430220165,
+          "period_change_pct": -1.636,
+          "strength": "weak"
+        },
+        "name": "XRP",
+        "symbol": "XRP-USD.CC",
+        "unavailable": false
+      }
+    ],
+    "forex": [
+      {
+        "as_of": "2026-03-06",
+        "change_pct": -0.0431,
+        "close": 1.1609,
+        "display": "EUR/USD",
+        "flow": {
+          "as_of": "2026-03-06",
+          "change_pct": -0.0431,
+          "close": 1.1609,
+          "days_tracked": 31,
+          "direction": "neutral",
+          "open": 1.1614,
+          "period_change_pct": -1.223,
+          "strength": "weak"
+        },
+        "name": "EUR/USD",
+        "symbol": "EURUSD.FOREX",
+        "unavailable": false
+      },
+      {
+        "as_of": "2026-03-05",
+        "change_pct": -0.0972,
+        "close": 1.3356,
+        "display": "GBP/USD",
+        "flow": {
+          "as_of": "2026-03-05",
+          "change_pct": -0.0972,
+          "close": 1.3356,
+          "days_tracked": 30,
+          "direction": "neutral",
+          "open": 1.3369,
+          "period_change_pct": -1.6265,
+          "strength": "weak"
+        },
+        "name": "GBP/USD",
+        "symbol": "GBPUSD.FOREX",
+        "unavailable": false
+      },
+      {
+        "as_of": "2026-03-05",
+        "change_pct": 0.3613,
+        "close": 157.5515,
+        "display": "USD/JPY",
+        "flow": {
+          "as_of": "2026-03-05",
+          "change_pct": 0.3613,
+          "close": 157.5515,
+          "days_tracked": 30,
+          "direction": "bullish",
+          "open": 156.9843,
+          "period_change_pct": 0.1222,
+          "strength": "weak"
+        },
+        "name": "USD/JPY",
+        "symbol": "USDJPY.FOREX",
+        "unavailable": false
+      },
+      {
+        "as_of": "2026-03-06",
+        "change_pct": 0.2855,
+        "close": 0.7025,
+        "display": "AUD/USD",
+        "flow": {
+          "as_of": "2026-03-06",
+          "change_pct": 0.2855,
+          "close": 0.7025,
+          "days_tracked": 27,
+          "direction": "neutral",
+          "open": 0.7005,
+          "period_change_pct": 0.5593,
+          "strength": "weak"
+        },
+        "name": "AUD/USD",
+        "symbol": "AUDUSD.FOREX",
+        "unavailable": false
+      },
+      {
+        "as_of": "2026-03-06",
+        "change_pct": -0.538,
+        "close": 0.7765,
+        "display": "USD/CHF",
+        "flow": {
+          "as_of": "2026-03-06",
+          "change_pct": -0.538,
+          "close": 0.7765,
+          "days_tracked": 27,
+          "direction": "neutral",
+          "open": 0.7807,
+          "period_change_pct": 0.6325,
+          "strength": "weak"
+        },
+        "name": "USD/CHF",
+        "symbol": "USDCHF.FOREX",
+        "unavailable": false
+      }
+    ],
+    "investment_compass": {
+      "bottom_sector": "Industrials",
+      "bottom_sector_change": -1.5731,
+      "commodity_trend": "neutral",
+      "crypto_trend": "neutral",
+      "risk_mode": "risk-on",
+      "strongest_region": "asia",
+      "strongest_region_avg": 0.4624999999999998,
+      "summary": "Asia markets lead globally (avg +0.46%). Technology is the top performing sector.",
+      "top_sector": "Technology",
+      "top_sector_change": 0.733,
+      "weakest_region": "europe",
+      "weakest_region_avg": -1.3998333333333335
+    },
+    "learning": {
+      "patterns": [],
+      "snapshot_count": 2
+    },
+    "money_flow": {
+      "all_flows": [
+        {
+          "category": "commodity",
+          "daily_change_pct": 1.9585,
+          "days_tracked": 21,
+          "direction": "neutral",
+          "name": "Oil WTI (ETF)",
+          "period_change_pct": 15.3763,
+          "strength": "weak",
+          "symbol": "USO.US"
+        },
+        {
+          "category": "sector",
+          "daily_change_pct": -0.1065,
+          "days_tracked": 21,
+          "direction": "neutral",
+          "name": "Utilities",
+          "period_change_pct": 8.8071,
+          "strength": "weak",
+          "symbol": "XLU"
+        },
+        {
+          "category": "commodity",
+          "daily_change_pct": 1.2605,
+          "days_tracked": 21,
+          "direction": "neutral",
+          "name": "Natural Gas (ETF)",
+          "period_change_pct": -7.622,
+          "strength": "weak",
+          "symbol": "UNG.US"
+        },
+        {
+          "category": "commodity",
+          "daily_change_pct": -0.894,
+          "days_tracked": 21,
+          "direction": "neutral",
+          "name": "Silver (ETF)",
+          "period_change_pct": 6.9328,
+          "strength": "weak",
+          "symbol": "SLV.US"
+        },
+        {
+          "category": "sector",
+          "daily_change_pct": -0.0884,
+          "days_tracked": 21,
+          "direction": "neutral",
+          "name": "Energy",
+          "period_change_pct": 6.2672,
+          "strength": "weak",
+          "symbol": "XLE"
+        },
+        {
+          "category": "sector",
+          "daily_change_pct": -0.0195,
+          "days_tracked": 21,
+          "direction": "neutral",
+          "name": "Financials",
+          "period_change_pct": -4.5836,
+          "strength": "weak",
+          "symbol": "XLF"
+        },
+        {
+          "category": "commodity",
+          "daily_change_pct": -0.9183,
+          "days_tracked": 21,
+          "direction": "bearish",
+          "name": "Gold (ETF)",
+          "period_change_pct": 4.3442,
+          "strength": "weak",
+          "symbol": "GLD.US"
+        },
+        {
+          "category": "sector",
+          "daily_change_pct": 0.1386,
+          "days_tracked": 21,
+          "direction": "bullish",
+          "name": "Real Estate",
+          "period_change_pct": 4.1903,
+          "strength": "moderate",
+          "symbol": "XLRE"
+        },
+        {
+          "category": "sector",
+          "daily_change_pct": -1.5731,
+          "days_tracked": 21,
+          "direction": "neutral",
+          "name": "Industrials",
+          "period_change_pct": 2.4413,
+          "strength": "weak",
+          "symbol": "XLI"
+        },
+        {
+          "category": "sector",
+          "daily_change_pct": 0.5435,
+          "days_tracked": 21,
+          "direction": "bullish",
+          "name": "Consumer Discretionary",
+          "period_change_pct": -2.0119,
+          "strength": "moderate",
+          "symbol": "XLY"
+        },
+        {
+          "category": "crypto",
+          "daily_change_pct": 0.2664,
+          "days_tracked": 31,
+          "direction": "neutral",
+          "name": "Bitcoin",
+          "period_change_pct": 1.6959,
+          "strength": "weak",
+          "symbol": "BTC-USD.CC"
+        },
+        {
+          "category": "crypto",
+          "daily_change_pct": -1.5492,
+          "days_tracked": 30,
+          "direction": "neutral",
+          "name": "BNB",
+          "period_change_pct": -1.6867,
+          "strength": "weak",
+          "symbol": "BNB-USD.CC"
+        },
+        {
+          "category": "crypto",
+          "daily_change_pct": -1.8996,
+          "days_tracked": 30,
+          "direction": "neutral",
+          "name": "XRP",
+          "period_change_pct": -1.636,
+          "strength": "weak",
+          "symbol": "XRP-USD.CC"
+        },
+        {
+          "category": "forex",
+          "daily_change_pct": -0.0972,
+          "days_tracked": 30,
+          "direction": "neutral",
+          "name": "GBP/USD",
+          "period_change_pct": -1.6265,
+          "strength": "weak",
+          "symbol": "GBPUSD.FOREX"
+        },
+        {
+          "category": "sector",
+          "daily_change_pct": -0.1602,
+          "days_tracked": 21,
+          "direction": "bullish",
+          "name": "Communication Services",
+          "period_change_pct": 1.3511,
+          "strength": "weak",
+          "symbol": "XLC"
+        },
+        {
+          "category": "forex",
+          "daily_change_pct": -0.0431,
+          "days_tracked": 31,
+          "direction": "neutral",
+          "name": "EUR/USD",
+          "period_change_pct": -1.223,
+          "strength": "weak",
+          "symbol": "EURUSD.FOREX"
+        },
+        {
+          "category": "crypto",
+          "daily_change_pct": -2.3594,
+          "days_tracked": 30,
+          "direction": "neutral",
+          "name": "Solana",
+          "period_change_pct": 1.0158,
+          "strength": "weak",
+          "symbol": "SOL-USD.CC"
+        },
+        {
+          "category": "sector",
+          "daily_change_pct": -1.4922,
+          "days_tracked": 21,
+          "direction": "neutral",
+          "name": "Materials",
+          "period_change_pct": 0.9112,
+          "strength": "weak",
+          "symbol": "XLB"
+        },
+        {
+          "category": "sector",
+          "daily_change_pct": -0.7864,
+          "days_tracked": 21,
+          "direction": "neutral",
+          "name": "Health Care",
+          "period_change_pct": 0.7946,
+          "strength": "weak",
+          "symbol": "XLV"
+        },
+        {
+          "category": "crypto",
+          "daily_change_pct": 0.261,
+          "days_tracked": 31,
+          "direction": "neutral",
+          "name": "Ethereum",
+          "period_change_pct": 0.7691,
+          "strength": "weak",
+          "symbol": "ETH-USD.CC"
+        },
+        {
+          "category": "sector",
+          "daily_change_pct": 0.733,
+          "days_tracked": 21,
+          "direction": "bullish",
+          "name": "Technology",
+          "period_change_pct": -0.7078,
+          "strength": "strong",
+          "symbol": "XLK"
+        },
+        {
+          "category": "forex",
+          "daily_change_pct": -0.538,
+          "days_tracked": 27,
+          "direction": "neutral",
+          "name": "USD/CHF",
+          "period_change_pct": 0.6325,
+          "strength": "weak",
+          "symbol": "USDCHF.FOREX"
+        },
+        {
+          "category": "sector",
+          "daily_change_pct": -1.0771,
+          "days_tracked": 21,
+          "direction": "bearish",
+          "name": "Consumer Staples",
+          "period_change_pct": 0.5957,
+          "strength": "weak",
+          "symbol": "XLP"
+        },
+        {
+          "category": "forex",
+          "daily_change_pct": 0.2855,
+          "days_tracked": 27,
+          "direction": "neutral",
+          "name": "AUD/USD",
+          "period_change_pct": 0.5593,
+          "strength": "weak",
+          "symbol": "AUDUSD.FOREX"
+        },
+        {
+          "category": "commodity",
+          "daily_change_pct": 0.6506,
+          "days_tracked": 21,
+          "direction": "neutral",
+          "name": "Copper (ETF)",
+          "period_change_pct": -0.2488,
+          "strength": "weak",
+          "symbol": "CPER.US"
+        },
+        {
+          "category": "forex",
+          "daily_change_pct": 0.3613,
+          "days_tracked": 30,
+          "direction": "bullish",
+          "name": "USD/JPY",
+          "period_change_pct": 0.1222,
+          "strength": "weak",
+          "symbol": "USDJPY.FOREX"
+        }
+      ],
+      "inflows": [
+        {
+          "category": "sector",
+          "daily_change_pct": 0.1386,
+          "days_tracked": 21,
+          "direction": "bullish",
+          "name": "Real Estate",
+          "period_change_pct": 4.1903,
+          "strength": "moderate",
+          "symbol": "XLRE"
+        },
+        {
+          "category": "sector",
+          "daily_change_pct": 0.5435,
+          "days_tracked": 21,
+          "direction": "bullish",
+          "name": "Consumer Discretionary",
+          "period_change_pct": -2.0119,
+          "strength": "moderate",
+          "symbol": "XLY"
+        },
+        {
+          "category": "sector",
+          "daily_change_pct": 0.733,
+          "days_tracked": 21,
+          "direction": "bullish",
+          "name": "Technology",
+          "period_change_pct": -0.7078,
+          "strength": "strong",
+          "symbol": "XLK"
+        }
+      ],
+      "outflows": [],
+      "rotating": [
+        {
+          "category": "commodity",
+          "daily_change_pct": 1.9585,
+          "days_tracked": 21,
+          "direction": "neutral",
+          "name": "Oil WTI (ETF)",
+          "period_change_pct": 15.3763,
+          "strength": "weak",
+          "symbol": "USO.US"
+        },
+        {
+          "category": "sector",
+          "daily_change_pct": -0.1065,
+          "days_tracked": 21,
+          "direction": "neutral",
+          "name": "Utilities",
+          "period_change_pct": 8.8071,
+          "strength": "weak",
+          "symbol": "XLU"
+        },
+        {
+          "category": "commodity",
+          "daily_change_pct": 1.2605,
+          "days_tracked": 21,
+          "direction": "neutral",
+          "name": "Natural Gas (ETF)",
+          "period_change_pct": -7.622,
+          "strength": "weak",
+          "symbol": "UNG.US"
+        },
+        {
+          "category": "commodity",
+          "daily_change_pct": -0.894,
+          "days_tracked": 21,
+          "direction": "neutral",
+          "name": "Silver (ETF)",
+          "period_change_pct": 6.9328,
+          "strength": "weak",
+          "symbol": "SLV.US"
+        },
+        {
+          "category": "sector",
+          "daily_change_pct": -0.0884,
+          "days_tracked": 21,
+          "direction": "neutral",
+          "name": "Energy",
+          "period_change_pct": 6.2672,
+          "strength": "weak",
+          "symbol": "XLE"
+        },
+        {
+          "category": "sector",
+          "daily_change_pct": -0.0195,
+          "days_tracked": 21,
+          "direction": "neutral",
+          "name": "Financials",
+          "period_change_pct": -4.5836,
+          "strength": "weak",
+          "symbol": "XLF"
+        },
+        {
+          "category": "commodity",
+          "daily_change_pct": -0.9183,
+          "days_tracked": 21,
+          "direction": "bearish",
+          "name": "Gold (ETF)",
+          "period_change_pct": 4.3442,
+          "strength": "weak",
+          "symbol": "GLD.US"
+        },
+        {
+          "category": "sector",
+          "daily_change_pct": -1.5731,
+          "days_tracked": 21,
+          "direction": "neutral",
+          "name": "Industrials",
+          "period_change_pct": 2.4413,
+          "strength": "weak",
+          "symbol": "XLI"
+        },
+        {
+          "category": "crypto",
+          "daily_change_pct": 0.2664,
+          "days_tracked": 31,
+          "direction": "neutral",
+          "name": "Bitcoin",
+          "period_change_pct": 1.6959,
+          "strength": "weak",
+          "symbol": "BTC-USD.CC"
+        },
+        {
+          "category": "crypto",
+          "daily_change_pct": -1.5492,
+          "days_tracked": 30,
+          "direction": "neutral",
+          "name": "BNB",
+          "period_change_pct": -1.6867,
+          "strength": "weak",
+          "symbol": "BNB-USD.CC"
+        },
+        {
+          "category": "crypto",
+          "daily_change_pct": -1.8996,
+          "days_tracked": 30,
+          "direction": "neutral",
+          "name": "XRP",
+          "period_change_pct": -1.636,
+          "strength": "weak",
+          "symbol": "XRP-USD.CC"
+        },
+        {
+          "category": "forex",
+          "daily_change_pct": -0.0972,
+          "days_tracked": 30,
+          "direction": "neutral",
+          "name": "GBP/USD",
+          "period_change_pct": -1.6265,
+          "strength": "weak",
+          "symbol": "GBPUSD.FOREX"
+        },
+        {
+          "category": "sector",
+          "daily_change_pct": -0.1602,
+          "days_tracked": 21,
+          "direction": "bullish",
+          "name": "Communication Services",
+          "period_change_pct": 1.3511,
+          "strength": "weak",
+          "symbol": "XLC"
+        },
+        {
+          "category": "forex",
+          "daily_change_pct": -0.0431,
+          "days_tracked": 31,
+          "direction": "neutral",
+          "name": "EUR/USD",
+          "period_change_pct": -1.223,
+          "strength": "weak",
+          "symbol": "EURUSD.FOREX"
+        },
+        {
+          "category": "crypto",
+          "daily_change_pct": -2.3594,
+          "days_tracked": 30,
+          "direction": "neutral",
+          "name": "Solana",
+          "period_change_pct": 1.0158,
+          "strength": "weak",
+          "symbol": "SOL-USD.CC"
+        },
+        {
+          "category": "sector",
+          "daily_change_pct": -1.4922,
+          "days_tracked": 21,
+          "direction": "neutral",
+          "name": "Materials",
+          "period_change_pct": 0.9112,
+          "strength": "weak",
+          "symbol": "XLB"
+        },
+        {
+          "category": "sector",
+          "daily_change_pct": -0.7864,
+          "days_tracked": 21,
+          "direction": "neutral",
+          "name": "Health Care",
+          "period_change_pct": 0.7946,
+          "strength": "weak",
+          "symbol": "XLV"
+        },
+        {
+          "category": "crypto",
+          "daily_change_pct": 0.261,
+          "days_tracked": 31,
+          "direction": "neutral",
+          "name": "Ethereum",
+          "period_change_pct": 0.7691,
+          "strength": "weak",
+          "symbol": "ETH-USD.CC"
+        },
+        {
+          "category": "forex",
+          "daily_change_pct": -0.538,
+          "days_tracked": 27,
+          "direction": "neutral",
+          "name": "USD/CHF",
+          "period_change_pct": 0.6325,
+          "strength": "weak",
+          "symbol": "USDCHF.FOREX"
+        },
+        {
+          "category": "sector",
+          "daily_change_pct": -1.0771,
+          "days_tracked": 21,
+          "direction": "bearish",
+          "name": "Consumer Staples",
+          "period_change_pct": 0.5957,
+          "strength": "weak",
+          "symbol": "XLP"
+        },
+        {
+          "category": "forex",
+          "daily_change_pct": 0.2855,
+          "days_tracked": 27,
+          "direction": "neutral",
+          "name": "AUD/USD",
+          "period_change_pct": 0.5593,
+          "strength": "weak",
+          "symbol": "AUDUSD.FOREX"
+        },
+        {
+          "category": "commodity",
+          "daily_change_pct": 0.6506,
+          "days_tracked": 21,
+          "direction": "neutral",
+          "name": "Copper (ETF)",
+          "period_change_pct": -0.2488,
+          "strength": "weak",
+          "symbol": "CPER.US"
+        },
+        {
+          "category": "forex",
+          "daily_change_pct": 0.3613,
+          "days_tracked": 30,
+          "direction": "bullish",
+          "name": "USD/JPY",
+          "period_change_pct": 0.1222,
+          "strength": "weak",
+          "symbol": "USDJPY.FOREX"
+        }
+      ],
+      "summary": "Money flowing into: Real Estate, Consumer Discretionary, Technology."
+    },
+    "regime_details": {
+      "breadth_z": -0.88,
+      "credit_z": 0,
+      "rates_trend": "neutral",
+      "vol_z": 0.0109
+    },
+    "regime_mode": "NORMAL",
+    "sessions": {
+      "americas": {
+        "indices": [
+          {
+            "as_of": "2026-03-06",
+            "change_pct": -0.1971,
+            "close": 6755.6899,
+            "country": "US",
+            "display": "S&P 500",
+            "flow": {
+              "as_of": "2026-03-06",
+              "change_pct": -0.1971,
+              "close": 6755.6899,
+              "days_tracked": 22,
+              "direction": "neutral",
+              "open": 6769.0298,
+              "period_change_pct": -1.06,
+              "strength": "weak"
+            },
+            "name": "S&P 500",
+            "symbol": "GSPC.INDX",
+            "unavailable": false
+          },
+          {
+            "as_of": "2026-03-06",
+            "change_pct": -0.6016,
+            "close": 47347.97,
+            "country": "US",
+            "display": "Dow",
+            "flow": {
+              "as_of": "2026-03-06",
+              "change_pct": -0.6016,
+              "close": 47347.97,
+              "days_tracked": 22,
+              "direction": "neutral",
+              "open": 47634.55,
+              "period_change_pct": -2.9743,
+              "strength": "weak"
+            },
+            "name": "Dow Jones",
+            "symbol": "DJI.INDX",
+            "unavailable": false
+          },
+          {
+            "as_of": "2026-03-06",
+            "change_pct": 0.3951,
+            "close": 22509.75,
+            "country": "US",
+            "display": "NASDAQ",
+            "flow": {
+              "as_of": "2026-03-06",
+              "change_pct": 0.3951,
+              "close": 22509.75,
+              "days_tracked": 22,
+              "direction": "bullish",
+              "open": 22421.1719,
+              "period_change_pct": -1.294,
+              "strength": "moderate"
+            },
+            "name": "NASDAQ Composite",
+            "symbol": "IXIC.INDX",
+            "unavailable": false
+          },
+          {
+            "as_of": "2026-03-06",
+            "change_pct": -0.2358,
+            "close": 180037.87,
+            "country": "BR",
+            "display": "Bovespa",
+            "flow": {
+              "as_of": "2026-03-06",
+              "change_pct": -0.2358,
+              "close": 180037.87,
+              "days_tracked": 21,
+              "direction": "neutral",
+              "open": 180463.44,
+              "period_change_pct": -0.0735,
+              "strength": "weak"
+            },
+            "name": "Bovespa",
+            "symbol": "BVSP.INDX",
+            "unavailable": false
+          },
+          {
+            "as_of": "2026-03-05",
+            "change_pct": -2.9088,
+            "close": 68379.42,
+            "country": "MX",
+            "display": "IPC",
+            "flow": {
+              "as_of": "2026-03-05",
+              "change_pct": -2.9088,
+              "close": 68379.42,
+              "days_tracked": 30,
+              "direction": "bearish",
+              "open": 70428.03,
+              "period_change_pct": -0.2239,
+              "strength": "weak"
+            },
+            "name": "IPC Mexico",
+            "symbol": "MXX.INDX",
+            "unavailable": false
+          }
+        ],
+        "label": "Americas"
+      },
+      "asia": {
+        "indices": [
+          {
+            "as_of": "2026-03-06",
+            "change_pct": 1.7307,
+            "close": 55620.8398,
+            "country": "JP",
+            "display": "Nikkei",
+            "flow": {
+              "as_of": "2026-03-06",
+              "change_pct": 1.7307,
+              "close": 55620.8398,
+              "days_tracked": 22,
+              "direction": "neutral",
+              "open": 54674.6016,
+              "period_change_pct": 1.1221,
+              "strength": "weak"
+            },
+            "name": "Nikkei 225",
+            "symbol": "N225.INDX",
+            "unavailable": false
+          },
+          {
+            "as_of": "2026-03-06",
+            "change_pct": 1.5724,
+            "close": 25757.2891,
+            "country": "HK",
+            "display": "Hang Seng",
+            "flow": {
+              "as_of": "2026-03-06",
+              "change_pct": 1.5724,
+              "close": 25757.2891,
+              "days_tracked": 20,
+              "direction": "bearish",
+              "open": 25358.5605,
+              "period_change_pct": -4.7187,
+              "strength": "weak"
+            },
+            "name": "Hang Seng",
+            "symbol": "HSI.INDX",
+            "unavailable": false
+          },
+          {
+            "as_of": "2026-03-06",
+            "change_pct": 0.9373,
+            "close": 4124.1938,
+            "country": "CN",
+            "display": "Shanghai",
+            "flow": {
+              "as_of": "2026-03-06",
+              "change_pct": 0.9373,
+              "close": 4124.1938,
+              "days_tracked": 17,
+              "direction": "neutral",
+              "open": 4085.8955,
+              "period_change_pct": 0.6115,
+              "strength": "weak"
+            },
+            "name": "Shanghai Composite",
+            "symbol": "000001.SHG",
+            "unavailable": false
+          },
+          {
+            "as_of": "2026-03-06",
+            "change_pct": -0.9291,
+            "close": 78918.8984,
+            "country": "IN",
+            "display": "Sensex",
+            "flow": {
+              "as_of": "2026-03-06",
+              "change_pct": -0.9291,
+              "close": 78918.8984,
+              "days_tracked": 22,
+              "direction": "neutral",
+              "open": 79658.9922,
+              "period_change_pct": -4.6473,
+              "strength": "weak"
+            },
+            "name": "BSE Sensex",
+            "symbol": "BSESN.INDX",
+            "unavailable": false
+          },
+          {
+            "as_of": "2026-03-06",
+            "change_pct": -0.9988,
+            "close": 8851,
+            "country": "AU",
+            "display": "ASX",
+            "flow": {
+              "as_of": "2026-03-06",
+              "change_pct": -0.9988,
+              "close": 8851,
+              "days_tracked": 23,
+              "direction": "neutral",
+              "open": 8940.3,
+              "period_change_pct": 1.5982,
+              "strength": "weak"
+            },
+            "name": "ASX 200",
+            "symbol": "AXJO.INDX",
+            "unavailable": false
+          }
+        ],
+        "label": "Asia-Pacific"
+      },
+      "europe": {
+        "indices": [
+          {
+            "as_of": "2026-03-06",
+            "change_pct": -1.5839,
+            "close": 1006.6,
+            "country": "GB",
+            "display": "FTSE",
+            "flow": {
+              "as_of": "2026-03-06",
+              "change_pct": -1.5839,
+              "close": 1006.6,
+              "days_tracked": 23,
+              "direction": "bearish",
+              "open": 1022.8,
+              "period_change_pct": 1.7349,
+              "strength": "weak"
+            },
+            "name": "FTSE 100 ETF",
+            "symbol": "ISF.LSE",
+            "unavailable": false
+          },
+          {
+            "as_of": "2026-03-06",
+            "change_pct": -1.4696,
+            "close": 23591.0293,
+            "country": "DE",
+            "display": "DAX",
+            "flow": {
+              "as_of": "2026-03-06",
+              "change_pct": -1.4696,
+              "close": 23591.0293,
+              "days_tracked": 23,
+              "direction": "bearish",
+              "open": 23942.8906,
+              "period_change_pct": -3.0508,
+              "strength": "weak"
+            },
+            "name": "DAX 40",
+            "symbol": "GDAXI.INDX",
+            "unavailable": false
+          },
+          {
+            "as_of": "2026-03-06",
+            "change_pct": -1.1156,
+            "close": 7993.4902,
+            "country": "FR",
+            "display": "CAC 40",
+            "flow": {
+              "as_of": "2026-03-06",
+              "change_pct": -1.1156,
+              "close": 7993.4902,
+              "days_tracked": 23,
+              "direction": "bearish",
+              "open": 8083.6699,
+              "period_change_pct": -1.7384,
+              "strength": "weak"
+            },
+            "name": "CAC 40",
+            "symbol": "FCHI.INDX",
+            "unavailable": false
+          },
+          {
+            "as_of": "2026-03-05",
+            "change_pct": -1.4402,
+            "close": 5782.89,
+            "country": "EU",
+            "display": "Stoxx 50",
+            "flow": {
+              "as_of": "2026-03-05",
+              "change_pct": -1.4402,
+              "close": 5782.89,
+              "days_tracked": 22,
+              "direction": "bearish",
+              "open": 5867.39,
+              "period_change_pct": -1.4992,
+              "strength": "weak"
+            },
+            "name": "Euro Stoxx 50",
+            "symbol": "STOXX50E.INDX",
+            "unavailable": false
+          },
+          {
+            "as_of": "2026-03-05",
+            "change_pct": -1.2745,
+            "close": 13298.3,
+            "country": "CH",
+            "display": "SMI",
+            "flow": {
+              "as_of": "2026-03-05",
+              "change_pct": -1.2745,
+              "close": 13298.3,
+              "days_tracked": 22,
+              "direction": "neutral",
+              "open": 13469.98,
+              "period_change_pct": 0.8135,
+              "strength": "weak"
+            },
+            "name": "SMI",
+            "symbol": "SSMI.INDX",
+            "unavailable": false
+          },
+          {
+            "as_of": "2026-03-06",
+            "change_pct": -1.5152,
+            "close": 17074.4004,
+            "country": "ES",
+            "display": "IBEX",
+            "flow": {
+              "as_of": "2026-03-06",
+              "change_pct": -1.5152,
+              "close": 17074.4004,
+              "days_tracked": 23,
+              "direction": "neutral",
+              "open": 17337.0996,
+              "period_change_pct": -3.7304,
+              "strength": "weak"
+            },
+            "name": "IBEX 35",
+            "symbol": "IBEX.INDX",
+            "unavailable": false
+          }
+        ],
+        "label": "Europe"
+      }
+    },
+    "trend_forecasts": [
+      {
+        "category": "sector",
+        "continuation": "high",
+        "direction": "bullish",
+        "exhaustion": "none",
+        "forecast": "Uptrend intact — momentum strong.",
+        "name": "Technology",
+        "period_change_pct": -0.7078,
+        "reversal_probability": "low",
+        "setup_quality": "bullish-continuation",
+        "strength": "strong",
+        "symbol": "XLK"
+      },
+      {
+        "category": "sector",
+        "continuation": "low",
+        "direction": "neutral",
+        "exhaustion": "none",
+        "forecast": "Mixed signals — no clear edge.",
+        "name": "Financials",
+        "period_change_pct": -4.5836,
+        "reversal_probability": "low",
+        "setup_quality": "neutral",
+        "strength": "weak",
+        "symbol": "XLF"
+      },
+      {
+        "category": "sector",
+        "continuation": "low",
+        "direction": "neutral",
+        "exhaustion": "none",
+        "forecast": "Mixed signals — no clear edge.",
+        "name": "Health Care",
+        "period_change_pct": 0.7946,
+        "reversal_probability": "low",
+        "setup_quality": "neutral",
+        "strength": "weak",
+        "symbol": "XLV"
+      },
+      {
+        "category": "sector",
+        "continuation": "low",
+        "direction": "neutral",
+        "exhaustion": "none",
+        "forecast": "Mixed signals — no clear edge.",
+        "name": "Energy",
+        "period_change_pct": 6.2672,
+        "reversal_probability": "low",
+        "setup_quality": "neutral",
+        "strength": "weak",
+        "symbol": "XLE"
+      },
+      {
+        "category": "sector",
+        "continuation": "low",
+        "direction": "neutral",
+        "exhaustion": "none",
+        "forecast": "Mixed signals — no clear edge.",
+        "name": "Industrials",
+        "period_change_pct": 2.4413,
+        "reversal_probability": "low",
+        "setup_quality": "neutral",
+        "strength": "weak",
+        "symbol": "XLI"
+      },
+      {
+        "category": "sector",
+        "continuation": "medium",
+        "direction": "bullish",
+        "exhaustion": "none",
+        "forecast": "Mixed signals — no clear edge.",
+        "name": "Consumer Discretionary",
+        "period_change_pct": -2.0119,
+        "reversal_probability": "low",
+        "setup_quality": "neutral",
+        "strength": "moderate",
+        "symbol": "XLY"
+      },
+      {
+        "category": "sector",
+        "continuation": "low",
+        "direction": "bearish",
+        "exhaustion": "none",
+        "forecast": "Mixed signals — no clear edge.",
+        "name": "Consumer Staples",
+        "period_change_pct": 0.5957,
+        "reversal_probability": "low",
+        "setup_quality": "neutral",
+        "strength": "weak",
+        "symbol": "XLP"
+      },
+      {
+        "category": "sector",
+        "continuation": "low",
+        "direction": "neutral",
+        "exhaustion": "none",
+        "forecast": "Mixed signals — no clear edge.",
+        "name": "Utilities",
+        "period_change_pct": 8.8071,
+        "reversal_probability": "low",
+        "setup_quality": "neutral",
+        "strength": "weak",
+        "symbol": "XLU"
+      },
+      {
+        "category": "sector",
+        "continuation": "low",
+        "direction": "neutral",
+        "exhaustion": "none",
+        "forecast": "Mixed signals — no clear edge.",
+        "name": "Materials",
+        "period_change_pct": 0.9112,
+        "reversal_probability": "low",
+        "setup_quality": "neutral",
+        "strength": "weak",
+        "symbol": "XLB"
+      },
+      {
+        "category": "sector",
+        "continuation": "medium",
+        "direction": "bullish",
+        "exhaustion": "none",
+        "forecast": "Mixed signals — no clear edge.",
+        "name": "Real Estate",
+        "period_change_pct": 4.1903,
+        "reversal_probability": "low",
+        "setup_quality": "neutral",
+        "strength": "moderate",
+        "symbol": "XLRE"
+      },
+      {
+        "category": "sector",
+        "continuation": "low",
+        "direction": "bullish",
+        "exhaustion": "none",
+        "forecast": "Mixed signals — no clear edge.",
+        "name": "Communication Services",
+        "period_change_pct": 1.3511,
+        "reversal_probability": "low",
+        "setup_quality": "neutral",
+        "strength": "weak",
+        "symbol": "XLC"
+      },
+      {
+        "category": "commodity",
+        "continuation": "low",
+        "direction": "bearish",
+        "exhaustion": "none",
+        "forecast": "Mixed signals — no clear edge.",
+        "name": "Gold (ETF)",
+        "period_change_pct": 4.3442,
+        "reversal_probability": "low",
+        "setup_quality": "neutral",
+        "strength": "weak",
+        "symbol": "GLD.US"
+      },
+      {
+        "category": "commodity",
+        "continuation": "low",
+        "direction": "neutral",
+        "exhaustion": "none",
+        "forecast": "Mixed signals — no clear edge.",
+        "name": "Silver (ETF)",
+        "period_change_pct": 6.9328,
+        "reversal_probability": "low",
+        "setup_quality": "neutral",
+        "strength": "weak",
+        "symbol": "SLV.US"
+      },
+      {
+        "category": "commodity",
+        "continuation": "low",
+        "direction": "neutral",
+        "exhaustion": "none",
+        "forecast": "Oversold/overextended — reversal setup forming.",
+        "name": "Oil WTI (ETF)",
+        "period_change_pct": 15.3763,
+        "reversal_probability": "high",
+        "setup_quality": "neutral",
+        "strength": "weak",
+        "symbol": "USO.US"
+      },
+      {
+        "category": "commodity",
+        "continuation": "low",
+        "direction": "neutral",
+        "exhaustion": "none",
+        "forecast": "Mixed signals — no clear edge.",
+        "name": "Natural Gas (ETF)",
+        "period_change_pct": -7.622,
+        "reversal_probability": "low",
+        "setup_quality": "neutral",
+        "strength": "weak",
+        "symbol": "UNG.US"
+      },
+      {
+        "category": "commodity",
+        "continuation": "low",
+        "direction": "neutral",
+        "exhaustion": "none",
+        "forecast": "Mixed signals — no clear edge.",
+        "name": "Copper (ETF)",
+        "period_change_pct": -0.2488,
+        "reversal_probability": "low",
+        "setup_quality": "neutral",
+        "strength": "weak",
+        "symbol": "CPER.US"
+      },
+      {
+        "category": "crypto",
+        "continuation": "low",
+        "direction": "neutral",
+        "exhaustion": "none",
+        "forecast": "Mixed signals — no clear edge.",
+        "name": "Bitcoin",
+        "period_change_pct": 1.6959,
+        "reversal_probability": "low",
+        "setup_quality": "neutral",
+        "strength": "weak",
+        "symbol": "BTC-USD.CC"
+      },
+      {
+        "category": "crypto",
+        "continuation": "low",
+        "direction": "neutral",
+        "exhaustion": "none",
+        "forecast": "Mixed signals — no clear edge.",
+        "name": "Ethereum",
+        "period_change_pct": 0.7691,
+        "reversal_probability": "low",
+        "setup_quality": "neutral",
+        "strength": "weak",
+        "symbol": "ETH-USD.CC"
+      },
+      {
+        "category": "crypto",
+        "continuation": "low",
+        "direction": "neutral",
+        "exhaustion": "none",
+        "forecast": "Mixed signals — no clear edge.",
+        "name": "Solana",
+        "period_change_pct": 1.0158,
+        "reversal_probability": "low",
+        "setup_quality": "neutral",
+        "strength": "weak",
+        "symbol": "SOL-USD.CC"
+      },
+      {
+        "category": "crypto",
+        "continuation": "low",
+        "direction": "neutral",
+        "exhaustion": "none",
+        "forecast": "Mixed signals — no clear edge.",
+        "name": "BNB",
+        "period_change_pct": -1.6867,
+        "reversal_probability": "low",
+        "setup_quality": "neutral",
+        "strength": "weak",
+        "symbol": "BNB-USD.CC"
+      },
+      {
+        "category": "crypto",
+        "continuation": "low",
+        "direction": "neutral",
+        "exhaustion": "none",
+        "forecast": "Mixed signals — no clear edge.",
+        "name": "XRP",
+        "period_change_pct": -1.636,
+        "reversal_probability": "low",
+        "setup_quality": "neutral",
+        "strength": "weak",
+        "symbol": "XRP-USD.CC"
+      },
+      {
+        "category": "forex",
+        "continuation": "low",
+        "direction": "neutral",
+        "exhaustion": "none",
+        "forecast": "Mixed signals — no clear edge.",
+        "name": "EUR/USD",
+        "period_change_pct": -1.223,
+        "reversal_probability": "low",
+        "setup_quality": "neutral",
+        "strength": "weak",
+        "symbol": "EURUSD.FOREX"
+      },
+      {
+        "category": "forex",
+        "continuation": "low",
+        "direction": "neutral",
+        "exhaustion": "none",
+        "forecast": "Mixed signals — no clear edge.",
+        "name": "GBP/USD",
+        "period_change_pct": -1.6265,
+        "reversal_probability": "low",
+        "setup_quality": "neutral",
+        "strength": "weak",
+        "symbol": "GBPUSD.FOREX"
+      },
+      {
+        "category": "forex",
+        "continuation": "low",
+        "direction": "bullish",
+        "exhaustion": "none",
+        "forecast": "Mixed signals — no clear edge.",
+        "name": "USD/JPY",
+        "period_change_pct": 0.1222,
+        "reversal_probability": "low",
+        "setup_quality": "neutral",
+        "strength": "weak",
+        "symbol": "USDJPY.FOREX"
+      },
+      {
+        "category": "forex",
+        "continuation": "low",
+        "direction": "neutral",
+        "exhaustion": "none",
+        "forecast": "Mixed signals — no clear edge.",
+        "name": "AUD/USD",
+        "period_change_pct": 0.5593,
+        "reversal_probability": "low",
+        "setup_quality": "neutral",
+        "strength": "weak",
+        "symbol": "AUDUSD.FOREX"
+      },
+      {
+        "category": "forex",
+        "continuation": "low",
+        "direction": "neutral",
+        "exhaustion": "none",
+        "forecast": "Mixed signals — no clear edge.",
+        "name": "USD/CHF",
+        "period_change_pct": 0.6325,
+        "reversal_probability": "low",
+        "setup_quality": "neutral",
+        "strength": "weak",
+        "symbol": "USDCHF.FOREX"
+      }
+    ],
+    "us_movers": [
+      {
+        "as_of": "2026-03-05",
+        "change_pct": 37.95082,
+        "close": 16.83,
+        "in_universe": true,
+        "lineage": {
+          "fx_source": "public/data/v3/fx/rates/latest.json",
+          "price_source": "public/data/v3/eod/US/latest.ndjson.gz",
+          "sector_source": "public/data/v3/universe/sector-mapping/latest.json",
+          "universe_source": "public/data/universe/all.json"
+        },
+        "name": "TANGO THERAPEUTICS INC",
+        "sector": "Unknown",
+        "ticker": "TNGX",
+        "volume": 17922360
+      },
+      {
+        "as_of": "2026-03-05",
+        "change_pct": -26.32,
+        "close": 0.5526,
+        "in_universe": true,
+        "lineage": {
+          "fx_source": "public/data/v3/fx/rates/latest.json",
+          "price_source": "public/data/v3/eod/US/latest.ndjson.gz",
+          "sector_source": "public/data/v3/universe/sector-mapping/latest.json",
+          "universe_source": "public/data/universe/all.json"
+        },
+        "name": "MICROVISION INC",
+        "sector": "Unknown",
+        "ticker": "MVIS",
+        "volume": 40765674
+      },
+      {
+        "as_of": "2026-03-05",
+        "change_pct": 25.909091,
+        "close": 13.85,
+        "in_universe": true,
+        "lineage": {
+          "fx_source": "public/data/v3/fx/rates/latest.json",
+          "price_source": "public/data/v3/eod/US/latest.ndjson.gz",
+          "sector_source": "public/data/v3/universe/sector-mapping/latest.json",
+          "universe_source": "public/data/universe/all.json"
+        },
+        "name": "SABLE OFFSHORE CORP CLASS A",
+        "sector": "Unknown",
+        "ticker": "SOC",
+        "volume": 19486974
+      },
+      {
+        "as_of": "2026-03-05",
+        "change_pct": 21.799308,
+        "close": 17.6,
+        "in_universe": true,
+        "lineage": {
+          "fx_source": "public/data/v3/fx/rates/latest.json",
+          "price_source": "public/data/v3/eod/US/latest.ndjson.gz",
+          "sector_source": "public/data/v3/universe/sector-mapping/latest.json",
+          "universe_source": "public/data/universe/all.json"
+        },
+        "name": "CPI CARD GROUP INC",
+        "sector": "Unknown",
+        "ticker": "PMTS",
+        "volume": 533024
+      },
+      {
+        "as_of": "2026-03-05",
+        "change_pct": -21.710526,
+        "close": 5.95,
+        "in_universe": true,
+        "lineage": {
+          "fx_source": "public/data/v3/fx/rates/latest.json",
+          "price_source": "public/data/v3/eod/US/latest.ndjson.gz",
+          "sector_source": "public/data/v3/universe/sector-mapping/latest.json",
+          "universe_source": "public/data/universe/all.json"
+        },
+        "name": "CHAINCE DIGITAL HOLDINGS INC",
+        "sector": "Unknown",
+        "ticker": "CD",
+        "volume": 259114
+      },
+      {
+        "as_of": "2026-03-05",
+        "change_pct": 21.138846,
+        "close": 15.53,
+        "in_universe": true,
+        "lineage": {
+          "fx_source": "public/data/v3/fx/rates/latest.json",
+          "price_source": "public/data/v3/eod/US/latest.ndjson.gz",
+          "sector_source": "public/data/v3/universe/sector-mapping/latest.json",
+          "universe_source": "public/data/universe/all.json"
+        },
+        "name": "VROOM INC",
+        "sector": "Unknown",
+        "ticker": "VRM",
+        "volume": 7687
+      },
+      {
+        "as_of": "2026-03-05",
+        "change_pct": 20.772947,
+        "close": 2.5,
+        "in_universe": true,
+        "lineage": {
+          "fx_source": "public/data/v3/fx/rates/latest.json",
+          "price_source": "public/data/v3/eod/US/latest.ndjson.gz",
+          "sector_source": "public/data/v3/universe/sector-mapping/latest.json",
+          "universe_source": "public/data/universe/all.json"
+        },
+        "name": "ZIPRECRUITER INC CLASS A",
+        "sector": "Unknown",
+        "ticker": "ZIP",
+        "volume": 2674839
+      },
+      {
+        "as_of": "2026-03-05",
+        "change_pct": -17.5,
+        "close": 3.96,
+        "in_universe": true,
+        "lineage": {
+          "fx_source": "public/data/v3/fx/rates/latest.json",
+          "price_source": "public/data/v3/eod/US/latest.ndjson.gz",
+          "sector_source": "public/data/v3/universe/sector-mapping/latest.json",
+          "universe_source": "public/data/universe/all.json"
+        },
+        "name": "SIGHT SCIENCES INC",
+        "sector": "Unknown",
+        "ticker": "SGHT",
+        "volume": 1088671
+      },
+      {
+        "as_of": "2026-03-05",
+        "change_pct": -17.346939,
+        "close": 1.62,
+        "in_universe": true,
+        "lineage": {
+          "fx_source": "public/data/v3/fx/rates/latest.json",
+          "price_source": "public/data/v3/eod/US/latest.ndjson.gz",
+          "sector_source": "public/data/v3/universe/sector-mapping/latest.json",
+          "universe_source": "public/data/universe/all.json"
+        },
+        "name": "SABRE CORP",
+        "sector": "Technology",
+        "ticker": "SABR",
+        "volume": 23978404
+      },
+      {
+        "as_of": "2026-03-05",
+        "change_pct": 17.314488,
+        "close": 9.96,
+        "in_universe": true,
+        "lineage": {
+          "fx_source": "public/data/v3/fx/rates/latest.json",
+          "price_source": "public/data/v3/eod/US/latest.ndjson.gz",
+          "sector_source": "public/data/v3/universe/sector-mapping/latest.json",
+          "universe_source": "public/data/universe/all.json"
+        },
+        "name": "PALLADYNE AI CORP",
+        "sector": "Unknown",
+        "ticker": "PDYN",
+        "volume": 41024807
+      },
+      {
+        "as_of": "2026-03-05",
+        "change_pct": -15.736041,
+        "close": 30.71,
+        "in_universe": true,
+        "lineage": {
+          "fx_source": "public/data/v3/fx/rates/latest.json",
+          "price_source": "public/data/v3/eod/US/latest.ndjson.gz",
+          "sector_source": "public/data/v3/universe/sector-mapping/latest.json",
+          "universe_source": "public/data/universe/all.json"
+        },
+        "name": "OMEGA FLEX INC",
+        "sector": "Unknown",
+        "ticker": "OFLX",
+        "volume": 92248
+      },
+      {
+        "as_of": "2026-03-05",
+        "change_pct": 15.59633,
+        "close": 1.26,
+        "in_universe": true,
+        "lineage": {
+          "fx_source": "public/data/v3/fx/rates/latest.json",
+          "price_source": "public/data/v3/eod/US/latest.ndjson.gz",
+          "sector_source": "public/data/v3/universe/sector-mapping/latest.json",
+          "universe_source": "public/data/universe/all.json"
+        },
+        "name": "CODEXIS INC",
+        "sector": "Unknown",
+        "ticker": "CDXS",
+        "volume": 5457049
+      },
+      {
+        "as_of": "2026-03-05",
+        "change_pct": -14.303178,
+        "close": 3.505,
+        "in_universe": true,
+        "lineage": {
+          "fx_source": "public/data/v3/fx/rates/latest.json",
+          "price_source": "public/data/v3/eod/US/latest.ndjson.gz",
+          "sector_source": "public/data/v3/universe/sector-mapping/latest.json",
+          "universe_source": "public/data/universe/all.json"
+        },
+        "name": "ALTIMMUNE INC",
+        "sector": "Unknown",
+        "ticker": "ALT",
+        "volume": 7545457
+      },
+      {
+        "as_of": "2026-03-05",
+        "change_pct": 13.965996,
+        "close": 262.76,
+        "in_universe": true,
+        "lineage": {
+          "fx_source": "public/data/v3/fx/rates/latest.json",
+          "price_source": "public/data/v3/eod/US/latest.ndjson.gz",
+          "sector_source": "public/data/v3/universe/sector-mapping/latest.json",
+          "universe_source": "public/data/universe/all.json"
+        },
+        "name": "UNIFIRST CORP",
+        "sector": "Unknown",
+        "ticker": "UNF",
+        "volume": 868734
+      },
+      {
+        "as_of": "2026-03-05",
+        "change_pct": -13.833333,
+        "close": 0.1551,
+        "in_universe": true,
+        "lineage": {
+          "fx_source": "public/data/v3/fx/rates/latest.json",
+          "price_source": "public/data/v3/eod/US/latest.ndjson.gz",
+          "sector_source": "public/data/v3/universe/sector-mapping/latest.json",
+          "universe_source": "public/data/universe/all.json"
+        },
+        "name": "TEVOGEN BIO HOLDINGS INC",
+        "sector": "Unknown",
+        "ticker": "TVGN",
+        "volume": 2180275
+      },
+      {
+        "as_of": "2026-03-05",
+        "change_pct": -13.227147,
+        "close": 25.06,
+        "in_universe": true,
+        "lineage": {
+          "fx_source": "public/data/v3/fx/rates/latest.json",
+          "price_source": "public/data/v3/eod/US/latest.ndjson.gz",
+          "sector_source": "public/data/v3/universe/sector-mapping/latest.json",
+          "universe_source": "public/data/universe/all.json"
+        },
+        "name": "ATN INTERNATIONAL INC",
+        "sector": "Unknown",
+        "ticker": "ATNI",
+        "volume": 329386
+      },
+      {
+        "as_of": "2026-03-05",
+        "change_pct": -13,
+        "close": 7.83,
+        "in_universe": true,
+        "lineage": {
+          "fx_source": "public/data/v3/fx/rates/latest.json",
+          "price_source": "public/data/v3/eod/US/latest.ndjson.gz",
+          "sector_source": "public/data/v3/universe/sector-mapping/latest.json",
+          "universe_source": "public/data/universe/all.json"
+        },
+        "name": "GLOBAL WATER RESOURCES INC",
+        "sector": "Unknown",
+        "ticker": "GWRS",
+        "volume": 194767
+      },
+      {
+        "as_of": "2026-03-05",
+        "change_pct": -12.911392,
+        "close": 6.88,
+        "in_universe": true,
+        "lineage": {
+          "fx_source": "public/data/v3/fx/rates/latest.json",
+          "price_source": "public/data/v3/eod/US/latest.ndjson.gz",
+          "sector_source": "public/data/v3/universe/sector-mapping/latest.json",
+          "universe_source": "public/data/universe/all.json"
+        },
+        "name": "CARTESIAN THERAPEUTICS INC",
+        "sector": "Unknown",
+        "ticker": "RNAC",
+        "volume": 223701
+      },
+      {
+        "as_of": "2026-03-05",
+        "change_pct": -12.873563,
+        "close": 1.895,
+        "in_universe": true,
+        "lineage": {
+          "fx_source": "public/data/v3/fx/rates/latest.json",
+          "price_source": "public/data/v3/eod/US/latest.ndjson.gz",
+          "sector_source": "public/data/v3/universe/sector-mapping/latest.json",
+          "universe_source": "public/data/universe/all.json"
+        },
+        "name": "EDITAS MEDICINE INC",
+        "sector": "Unknown",
+        "ticker": "EDIT",
+        "volume": 1824717
+      },
+      {
+        "as_of": "2026-03-05",
+        "change_pct": 12.623762,
+        "close": 4.55,
+        "in_universe": true,
+        "lineage": {
+          "fx_source": "public/data/v3/fx/rates/latest.json",
+          "price_source": "public/data/v3/eod/US/latest.ndjson.gz",
+          "sector_source": "public/data/v3/universe/sector-mapping/latest.json",
+          "universe_source": "public/data/universe/all.json"
+        },
+        "name": "SKILLSOFT CORP CLASS A",
+        "sector": "Unknown",
+        "ticker": "SKIL",
+        "volume": 133638
+      },
+      {
+        "as_of": "2026-03-05",
+        "change_pct": 12.612613,
+        "close": 1.25,
+        "in_universe": true,
+        "lineage": {
+          "fx_source": "public/data/v3/fx/rates/latest.json",
+          "price_source": "public/data/v3/eod/US/latest.ndjson.gz",
+          "sector_source": "public/data/v3/universe/sector-mapping/latest.json",
+          "universe_source": "public/data/universe/all.json"
+        },
+        "name": "TORRID HOLDINGS INC",
+        "sector": "Unknown",
+        "ticker": "CURV",
+        "volume": 488608
+      },
+      {
+        "as_of": "2026-03-05",
+        "change_pct": -12.347052,
+        "close": 15.76,
+        "in_universe": true,
+        "lineage": {
+          "fx_source": "public/data/v3/fx/rates/latest.json",
+          "price_source": "public/data/v3/eod/US/latest.ndjson.gz",
+          "sector_source": "public/data/v3/universe/sector-mapping/latest.json",
+          "universe_source": "public/data/universe/all.json"
+        },
+        "name": "EYEPOINT INC",
+        "sector": "Unknown",
+        "ticker": "EYPT",
+        "volume": 2666231
+      },
+      {
+        "as_of": "2026-03-05",
+        "change_pct": 12.195122,
+        "close": 18.86,
+        "in_universe": true,
+        "lineage": {
+          "fx_source": "public/data/v3/fx/rates/latest.json",
+          "price_source": "public/data/v3/eod/US/latest.ndjson.gz",
+          "sector_source": "public/data/v3/universe/sector-mapping/latest.json",
+          "universe_source": "public/data/universe/all.json"
+        },
+        "name": "PRA GROUP INC",
+        "sector": "Unknown",
+        "ticker": "PRAA",
+        "volume": 998196
+      },
+      {
+        "as_of": "2026-03-05",
+        "change_pct": -12.113402,
+        "close": 3.41,
+        "in_universe": true,
+        "lineage": {
+          "fx_source": "public/data/v3/fx/rates/latest.json",
+          "price_source": "public/data/v3/eod/US/latest.ndjson.gz",
+          "sector_source": "public/data/v3/universe/sector-mapping/latest.json",
+          "universe_source": "public/data/universe/all.json"
+        },
+        "name": "SANA BIOTECHNOLOGY INC",
+        "sector": "Unknown",
+        "ticker": "SANA",
+        "volume": 3931014
+      },
+      {
+        "as_of": "2026-03-05",
+        "change_pct": -12.037037,
+        "close": 1.9,
+        "in_universe": true,
+        "lineage": {
+          "fx_source": "public/data/v3/fx/rates/latest.json",
+          "price_source": "public/data/v3/eod/US/latest.ndjson.gz",
+          "sector_source": "public/data/v3/universe/sector-mapping/latest.json",
+          "universe_source": "public/data/universe/all.json"
+        },
+        "name": "ISPIRE TECHNOLOGY INC",
+        "sector": "Unknown",
+        "ticker": "ISPR",
+        "volume": 94612
+      }
+    ],
+    "us_pulse": {
+      "average_change_pct": -0.562015,
+      "breadth_down": 1526,
+      "breadth_up": 886,
+      "risk_mode": "unknown",
+      "risk_on_off": null,
+      "symbols_covered": 2450
+    },
+    "us_sectors": [
+      {
+        "as_of": "2026-03-05",
+        "change_pct": 0.733,
+        "close": 140.18,
+        "color": "#0ea5e9",
+        "display_name": "Technology",
+        "flow": {
+          "as_of": "2026-03-05",
+          "change_pct": 0.733,
+          "close": 140.18,
+          "days_tracked": 21,
+          "direction": "bullish",
+          "open": 139.16,
+          "period_change_pct": -0.7078,
+          "strength": "strong"
+        },
+        "order": 1,
+        "symbol": "XLK",
+        "unavailable": false
+      },
+      {
+        "as_of": "2026-03-05",
+        "change_pct": -0.0195,
+        "close": 51.23,
+        "color": "#22c55e",
+        "display_name": "Financials",
+        "flow": {
+          "as_of": "2026-03-05",
+          "change_pct": -0.0195,
+          "close": 51.23,
+          "days_tracked": 21,
+          "direction": "neutral",
+          "open": 51.24,
+          "period_change_pct": -4.5836,
+          "strength": "weak"
+        },
+        "order": 2,
+        "symbol": "XLF",
+        "unavailable": false
+      },
+      {
+        "as_of": "2026-03-05",
+        "change_pct": -0.7864,
+        "close": 153.91,
+        "color": "#ef4444",
+        "display_name": "Health Care",
+        "flow": {
+          "as_of": "2026-03-05",
+          "change_pct": -0.7864,
+          "close": 153.91,
+          "days_tracked": 21,
+          "direction": "neutral",
+          "open": 155.13,
+          "period_change_pct": 0.7946,
+          "strength": "weak"
+        },
+        "order": 3,
+        "symbol": "XLV",
+        "unavailable": false
+      },
+      {
+        "as_of": "2026-03-05",
+        "change_pct": -0.0884,
+        "close": 56.48,
+        "color": "#f59e0b",
+        "display_name": "Energy",
+        "flow": {
+          "as_of": "2026-03-05",
+          "change_pct": -0.0884,
+          "close": 56.48,
+          "days_tracked": 21,
+          "direction": "neutral",
+          "open": 56.53,
+          "period_change_pct": 6.2672,
+          "strength": "weak"
+        },
+        "order": 4,
+        "symbol": "XLE",
+        "unavailable": false
+      },
+      {
+        "as_of": "2026-03-05",
+        "change_pct": -1.5731,
+        "close": 172.06,
+        "color": "#64748b",
+        "display_name": "Industrials",
+        "flow": {
+          "as_of": "2026-03-05",
+          "change_pct": -1.5731,
+          "close": 172.06,
+          "days_tracked": 21,
+          "direction": "neutral",
+          "open": 174.81,
+          "period_change_pct": 2.4413,
+          "strength": "weak"
+        },
+        "order": 5,
+        "symbol": "XLI",
+        "unavailable": false
+      },
+      {
+        "as_of": "2026-03-05",
+        "change_pct": 0.5435,
+        "close": 116.55,
+        "color": "#a855f7",
+        "display_name": "Consumer Discretionary",
+        "flow": {
+          "as_of": "2026-03-05",
+          "change_pct": 0.5435,
+          "close": 116.55,
+          "days_tracked": 21,
+          "direction": "bullish",
+          "open": 115.92,
+          "period_change_pct": -2.0119,
+          "strength": "moderate"
+        },
+        "order": 6,
+        "symbol": "XLY",
+        "unavailable": false
+      },
+      {
+        "as_of": "2026-03-05",
+        "change_pct": -1.0771,
+        "close": 85.41,
+        "color": "#84cc16",
+        "display_name": "Consumer Staples",
+        "flow": {
+          "as_of": "2026-03-05",
+          "change_pct": -1.0771,
+          "close": 85.41,
+          "days_tracked": 21,
+          "direction": "bearish",
+          "open": 86.34,
+          "period_change_pct": 0.5957,
+          "strength": "weak"
+        },
+        "order": 7,
+        "symbol": "XLP",
+        "unavailable": false
+      },
+      {
+        "as_of": "2026-03-05",
+        "change_pct": -0.1065,
+        "close": 46.9,
+        "color": "#06b6d4",
+        "display_name": "Utilities",
+        "flow": {
+          "as_of": "2026-03-05",
+          "change_pct": -0.1065,
+          "close": 46.9,
+          "days_tracked": 21,
+          "direction": "neutral",
+          "open": 46.95,
+          "period_change_pct": 8.8071,
+          "strength": "weak"
+        },
+        "order": 8,
+        "symbol": "XLU",
+        "unavailable": false
+      },
+      {
+        "as_of": "2026-03-05",
+        "change_pct": -1.4922,
+        "close": 50.83,
+        "color": "#b45309",
+        "display_name": "Materials",
+        "flow": {
+          "as_of": "2026-03-05",
+          "change_pct": -1.4922,
+          "close": 50.83,
+          "days_tracked": 21,
+          "direction": "neutral",
+          "open": 51.6,
+          "period_change_pct": 0.9112,
+          "strength": "weak"
+        },
+        "order": 9,
+        "symbol": "XLB",
+        "unavailable": false
+      },
+      {
+        "as_of": "2026-03-05",
+        "change_pct": 0.1386,
+        "close": 43.34,
+        "color": "#14b8a6",
+        "display_name": "Real Estate",
+        "flow": {
+          "as_of": "2026-03-05",
+          "change_pct": 0.1386,
+          "close": 43.34,
+          "days_tracked": 21,
+          "direction": "bullish",
+          "open": 43.28,
+          "period_change_pct": 4.1903,
+          "strength": "moderate"
+        },
+        "order": 10,
+        "symbol": "XLRE",
+        "unavailable": false
+      },
+      {
+        "as_of": "2026-03-05",
+        "change_pct": -0.1602,
+        "close": 118.44,
+        "color": "#f43f5e",
+        "display_name": "Communication Services",
+        "flow": {
+          "as_of": "2026-03-05",
+          "change_pct": -0.1602,
+          "close": 118.44,
+          "days_tracked": 21,
+          "direction": "bullish",
+          "open": 118.63,
+          "period_change_pct": 1.3511,
+          "strength": "weak"
+        },
+        "order": 11,
+        "symbol": "XLC",
+        "unavailable": false
+      }
+    ]
+  },
+  "meta": {
+    "cards_built": 42,
+    "commit": "e0c4012e8ed1451e6f079b02d2ffe0c70e309e09",
+    "data_date": "2026-03-06",
+    "generated_at": "2026-03-06T20:39:50.226Z",
+    "provider": "eodhd-global",
+    "run_id": "e0c4012e-20260306T2039-1772829590",
+    "schema_version": "rv.derived.global-market.v2",
+    "symbols_available": 44,
+    "symbols_fetched": 44
+  }
+}
