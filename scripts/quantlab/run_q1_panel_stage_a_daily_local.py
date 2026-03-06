@@ -219,6 +219,35 @@ def _git_sha(repo_root: Path) -> str:
         return "unknown"
 
 
+def _resolve_snapshot_id(quant_root: Path, snapshot_id_raw: str) -> str:
+    raw = str(snapshot_id_raw or "").strip()
+    if raw and raw.lower() != "latest":
+        return raw
+    latest_ptr = quant_root / "ops" / "q1_incremental_snapshot" / "latest_success.json"
+    if latest_ptr.exists():
+        try:
+            obj = read_json(latest_ptr)
+            sid = str(obj.get("snapshot_id") or "").strip()
+            if sid:
+                return sid
+            manifest_path_raw = str(obj.get("increment_manifest") or obj.get("manifest_path") or "").strip()
+            if manifest_path_raw:
+                manifest_path = Path(manifest_path_raw)
+                if manifest_path.exists():
+                    mobj = read_json(manifest_path)
+                    snap = str(mobj.get("snapshot_id") or "").strip()
+                    if snap:
+                        return snap
+        except Exception:
+            pass
+    snaps_root = quant_root / "data" / "snapshots"
+    if snaps_root.exists():
+        cands = sorted(p for p in snaps_root.glob("snapshot_id=*") if p.is_dir())
+        if cands:
+            return cands[-1].name.split("snapshot_id=", 1)[1]
+    return raw or "latest"
+
+
 def main(argv: Iterable[str]) -> int:
     args = parse_args(argv)
     v4_final_profile = bool(args.v4_final_profile)
@@ -257,6 +286,7 @@ def main(argv: Iterable[str]) -> int:
         if str(args.portfolio_family_concentration_failure_mode).lower() == "off":
             args.portfolio_family_concentration_failure_mode = "hard"
     quant_root = Path(args.quant_root).resolve()
+    snapshot_id_effective = _resolve_snapshot_id(quant_root, args.snapshot_id)
     py = args.python
     orchestrator = REPO_ROOT / "scripts" / "quantlab" / "run_q1_panel_stage_a_pipeline.py"
     phasea_runner = REPO_ROOT / "scripts" / "quantlab" / "run_q1_daily_data_backbone_q1.py"
@@ -398,7 +428,8 @@ def main(argv: Iterable[str]) -> int:
                 "exit_code": int(phasea_proc.returncode),
                 "mode": "local_daily_q1_panel_stageA",
                 "inputs": {
-                    "snapshot_id": args.snapshot_id,
+                    "snapshot_id": snapshot_id_effective,
+                    "snapshot_id_requested": args.snapshot_id,
                     "feature_store_version": args.feature_store_version,
                     "panel_output_tag": args.panel_output_tag,
                     "run_phasea_backbone": True,
@@ -454,7 +485,7 @@ def main(argv: Iterable[str]) -> int:
         "--quant-root",
         str(quant_root),
         "--snapshot-id",
-        args.snapshot_id,
+        snapshot_id_effective,
         "--feature-store-version",
         args.feature_store_version,
         "--panel-output-tag",
@@ -513,7 +544,8 @@ def main(argv: Iterable[str]) -> int:
         "exit_code": int(proc.returncode),
         "mode": "local_daily_q1_panel_stageA",
         "inputs": {
-            "snapshot_id": args.snapshot_id,
+            "snapshot_id": snapshot_id_effective,
+            "snapshot_id_requested": args.snapshot_id,
             "feature_store_version": args.feature_store_version,
             "panel_output_tag": args.panel_output_tag,
             "asset_classes": args.asset_classes,
