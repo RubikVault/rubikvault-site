@@ -3,8 +3,8 @@
   "feature": "marketphase",
   "meta": {
     "symbol": "LBRX",
-    "generatedAt": "2026-03-06T07:58:26.439Z",
-    "fetchedAt": "2026-03-06T07:58:26.439Z",
+    "generatedAt": "2026-03-07T07:42:36.594Z",
+    "fetchedAt": "2026-03-07T07:42:36.594Z",
     "ttlSeconds": 86400,
     "provider": "internal",
     "dataset": "LBRX",
@@ -15,8 +15,8 @@
     "precision": "IEEE754-Double-Round6",
     "auditTrail": {
       "generatedBy": "MarketPhase-v8-Engine",
-      "commitHash": "e5d82ff",
-      "reviewDate": "2026-03-06T07:58:26.439Z",
+      "commitHash": "bf9703f",
+      "reviewDate": "2026-03-07T07:42:36.594Z",
       "standards": [
         "ISO-8000",
         "IEEE-7000"
@@ -26,13 +26,13 @@
   },
   "data": {
     "features": {
-      "RSI": 50.69045,
-      "MACDHist": -0.158148,
-      "ATR%": 2.409676,
-      "SMA50": 22.4656,
+      "RSI": 52.176579,
+      "MACDHist": -0.168904,
+      "ATR%": 2.285,
+      "SMA50": 22.4904,
       "SMA200": null,
       "SMATrend": "unknown",
-      "lastClose": 23.55
+      "lastClose": 23.78
     },
     "swings": {
       "raw": [
@@ -41,6 +41,12 @@
           "date": "2025-09-23",
           "price": 14.9,
           "type": "low"
+        },
+        {
+          "index": 13,
+          "date": "2025-09-30",
+          "price": 15.79,
+          "type": "high"
         },
         {
           "index": 19,
@@ -55,6 +61,12 @@
           "type": "high"
         },
         {
+          "index": 26,
+          "date": "2025-10-17",
+          "price": 15.6,
+          "type": "low"
+        },
+        {
           "index": 32,
           "date": "2025-10-27",
           "price": 16.7,
@@ -67,6 +79,12 @@
           "type": "low"
         },
         {
+          "index": 38,
+          "date": "2025-11-04",
+          "price": 16.5,
+          "type": "high"
+        },
+        {
           "index": 42,
           "date": "2025-11-10",
           "price": 14.61,
@@ -77,6 +95,12 @@
           "date": "2025-11-17",
           "price": 17.05,
           "type": "high"
+        },
+        {
+          "index": 51,
+          "date": "2025-11-21",
+          "price": 15.33,
+          "type": "low"
         },
         {
           "index": 61,
@@ -159,9 +183,21 @@
           "type": "low"
         },
         {
+          "index": 26,
+          "date": "2025-10-17",
+          "price": 15.6,
+          "type": "low"
+        },
+        {
           "index": 32,
           "date": "2025-10-27",
           "price": 16.7,
+          "type": "high"
+        },
+        {
+          "index": 38,
+          "date": "2025-11-04",
+          "price": 16.5,
           "type": "high"
         },
         {
@@ -169,6 +205,18 @@
           "date": "2025-11-10",
           "price": 14.61,
           "type": "low"
+        },
+        {
+          "index": 51,
+          "date": "2025-11-21",
+          "price": 15.33,
+          "type": "low"
+        },
+        {
+          "index": 61,
+          "date": "2025-12-08",
+          "price": 22.5,
+          "type": "high"
         },
         {
           "index": 68,
@@ -279,8 +327,8 @@
     "multiTimeframeAgreement": null,
     "debug": {
       "symbol": "LBRX",
-      "window": 5,
-      "candidateCount": 18,
+      "window": 4,
+      "candidateCount": 22,
       "durationMs": 0
     },
     "disclaimer": "MarketPhase AI — Scientific Elliott Research (v8.0)\nprovides deterministic, rule-based historical analysis only.\nIt does not forecast future prices or offer financial advice.\nUse solely for educational and research purposes.\nISO 8000 / IEEE 7000 Compliant - Bit-exact reproducibility guaranteed."
