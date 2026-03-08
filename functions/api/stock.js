@@ -21,6 +21,11 @@ import {
 import { evaluateQuality } from './_shared/quality.js';
 import { isPrivilegedDebug, redact } from './_shared/observability.js';
 import { computeCacheStatus } from './_shared/freshness.js';
+import {
+  buildStockInsightsV4Evaluation,
+  isV4FlagEnabled,
+  makeContractState
+} from './_shared/stock-insights-v4.js';
 
 const MODULE_NAME = 'stock';
 const TICKER_MAX_LENGTH = 12;
@@ -504,6 +509,7 @@ export async function onRequestGet(context) {
   const url = new URL(request.url);
   const tickerParam = url.searchParams.get('ticker') || '';
   const normalizedTicker = normalizeTicker(tickerParam);
+  const evalV4Requested = isV4FlagEnabled(url.searchParams.get('eval_v4'));
 
   const isPrivileged = isPrivilegedDebug(request, env);
   const timings = { t_total_ms: 0, t_kv_ms: null, t_origin_ms: null, t_build_ms: null };
@@ -1414,6 +1420,46 @@ export async function onRequestGet(context) {
     data,
     error: errorPayload
   };
+
+  if (evalV4Requested) {
+    const fallbackAsOf = latestBar?.date || asOf || null;
+    const scientificState = makeContractState(null, {
+      as_of: fallbackAsOf,
+      source: 'stock-analysis.snapshot',
+      status: 'unavailable',
+      reason: 'NO_DATA'
+    });
+    const forecastState = makeContractState(null, {
+      as_of: fallbackAsOf,
+      source: 'forecast.latest',
+      status: 'unavailable',
+      reason: 'NO_DATA'
+    });
+    const elliottState = makeContractState(null, {
+      as_of: fallbackAsOf,
+      source: 'marketphase.per_ticker',
+      status: 'unavailable',
+      reason: 'NO_DATA'
+    });
+    payload.evaluation_v4 = buildStockInsightsV4Evaluation({
+      ticker: normalizedTicker,
+      bars: eodBars,
+      stats: marketStatsPayload?.stats || {},
+      universe: universePayload || {},
+      scientificState,
+      forecastState,
+      elliottState,
+      forecastMeta: null
+    });
+    payload.meta.evaluation_v4 = {
+      requested: true,
+      status: payload.evaluation_v4.status || 'unavailable'
+    };
+  } else {
+    payload.meta.evaluation_v4 = {
+      requested: false
+    };
+  }
 
   payload.metadata.digest = await computeDigest(payload);
   timings.t_build_ms = Date.now() - buildStart;

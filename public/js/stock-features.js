@@ -43,6 +43,113 @@ function _std(arr) { if (!arr.length) return 0; const m = arr.reduce((a, b) => a
 function _mean(arr) { return arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : 0; }
 function _col(c) { return c >= 0 ? 'var(--green)' : 'var(--red)'; }
 function _toNumber(v) { const n = Number(v); return Number.isFinite(n) ? n : null; }
+function _fmtMaybe(v, d = 2) { return Number.isFinite(v) ? Number(v).toFixed(d) : '—'; }
+
+function _canonicalContext(context = {}) {
+  const can = (typeof window !== 'undefined' && window._rvCanonicalMetrics) || {};
+  const stats = context?.stats || {};
+  const close = _toNumber(context?.close) ?? _toNumber(can.close);
+  const rsi = _toNumber(stats.rsi14) ?? _toNumber(can.rsi14);
+  const atr = _toNumber(stats.atr14) ?? _toNumber(can.atr14);
+  const atrPct = close > 0 && atr != null ? (atr / close) * 100 : _toNumber(can.atrPct);
+  return {
+    close,
+    rsi14: rsi,
+    atr14: atr,
+    atrPct,
+    asOf: context?.asOf || can.asOf || null
+  };
+}
+
+function _setQualitySignals(patch = {}, refreshTop = false) {
+  if (typeof window === 'undefined') return;
+  const prev = window._rvQualitySignals || {};
+  window._rvQualitySignals = { ...prev, ...patch };
+  if (refreshTop && typeof window._rvRefreshTopSections === 'function') {
+    window._rvRefreshTopSections();
+  }
+}
+
+function _extractMetricFromText(text, metric) {
+  if (!text || typeof text !== 'string') return null;
+  if (metric === 'rsi') {
+    const m = text.match(/RSI[^0-9\-]*([0-9]+(?:\.[0-9]+)?)/i);
+    return m ? _toNumber(m[1]) : null;
+  }
+  if (metric === 'atr_pct') {
+    const m = text.match(/ATR[^0-9\-]*([0-9]+(?:\.[0-9]+)?)\s*%/i);
+    return m ? _toNumber(m[1]) : null;
+  }
+  return null;
+}
+
+function _detectScientificMetricMismatch(insights, context = {}) {
+  const canonical = _canonicalContext(context);
+  const drivers = []
+    .concat(Array.isArray(insights?.v4_contract?.context_setup_trigger?.value?.setup?.drivers) ? insights.v4_contract.context_setup_trigger.value.setup.drivers : [])
+    .concat(Array.isArray(insights?.v4_contract?.context_setup_trigger?.value?.trigger?.drivers) ? insights.v4_contract.context_setup_trigger.value.trigger.drivers : [])
+    .concat(Array.isArray(insights?.scientific?.setup?.proof_points) ? insights.scientific.setup.proof_points : [])
+    .concat(Array.isArray(insights?.scientific?.trigger?.proof_points) ? insights.scientific.trigger.proof_points : []);
+  const rsiCandidates = drivers.map((d) => _extractMetricFromText(d, 'rsi')).filter((v) => v != null);
+  const atrPctCandidates = drivers.map((d) => _extractMetricFromText(d, 'atr_pct')).filter((v) => v != null);
+  const sampleRsi = rsiCandidates.length ? rsiCandidates[0] : null;
+  const sampleAtrPct = atrPctCandidates.length ? atrPctCandidates[0] : null;
+
+  const rsiMismatch = canonical.rsi14 != null && sampleRsi != null && Math.abs(canonical.rsi14 - sampleRsi) > 1.25;
+  const atrMismatch = canonical.atrPct != null && sampleAtrPct != null && Math.abs(canonical.atrPct - sampleAtrPct) > 0.45;
+  const mismatch = Boolean(rsiMismatch || atrMismatch);
+  return {
+    mismatch,
+    rsiMismatch,
+    atrMismatch,
+    sampleRsi,
+    sampleAtrPct,
+    canonicalRsi: canonical.rsi14,
+    canonicalAtrPct: canonical.atrPct
+  };
+}
+
+function _scientificCanonicalProofs(context = {}) {
+  const s = context?.stats || {};
+  const c = _canonicalContext(context);
+  const outSetup = [];
+  const outTrigger = [];
+
+  if (c.rsi14 != null) {
+    const zone = c.rsi14 >= 70 ? 'overbought' : c.rsi14 <= 30 ? 'oversold' : 'neutral';
+    outSetup.push(`RSI14 canonical: ${c.rsi14.toFixed(1)} (${zone})`);
+  }
+  if (c.close != null && _toNumber(s.sma200) != null && s.sma200 > 0) {
+    const dist = ((c.close - s.sma200) / s.sma200) * 100;
+    outSetup.push(`Price vs SMA200 canonical: ${dist >= 0 ? '+' : ''}${dist.toFixed(1)}%`);
+  }
+  if (c.atr14 != null && c.atrPct != null) {
+    outSetup.push(`ATR14 canonical: ${c.atr14.toFixed(2)} (${c.atrPct.toFixed(2)}% of price)`);
+  }
+  if (_toNumber(s.volume_ratio_20d) != null) {
+    outSetup.push(`Volume ratio canonical: ${s.volume_ratio_20d.toFixed(2)}x`);
+  }
+
+  if (_toNumber(s.macd_hist) != null) {
+    outTrigger.push(`MACD histogram canonical: ${s.macd_hist.toFixed(3)}`);
+  }
+  if (c.close != null && _toNumber(s.sma20) != null && s.sma20 > 0) {
+    const dist = ((c.close - s.sma20) / s.sma20) * 100;
+    outTrigger.push(`Price vs SMA20 canonical: ${dist >= 0 ? '+' : ''}${dist.toFixed(1)}%`);
+  }
+  if (_toNumber(s.ret_5d_pct) != null) {
+    outTrigger.push(`5d return canonical: ${s.ret_5d_pct >= 0 ? '+' : ''}${(s.ret_5d_pct * 100).toFixed(2)}%`);
+  }
+  if (_toNumber(s.volatility_percentile) != null) {
+    outTrigger.push(`Volatility percentile canonical: ${s.volatility_percentile.toFixed(0)}th`);
+  }
+  return { setup: outSetup.slice(0, 5), trigger: outTrigger.slice(0, 4) };
+}
+
+function _isBiotechUniverse(universe = {}) {
+  const hay = `${universe?.sector || ''} ${universe?.industry || ''} ${universe?.name || ''}`.toLowerCase();
+  return /\bbiotech|biotechnology|pharma|therapeutics|drug\b/.test(hay);
+}
 
 function _proxyScientificSignal(context = {}) {
   const s = context?.stats || {};
@@ -645,7 +752,18 @@ function buildFactorCorrelation(ticker, bars) {
 // ═══════════════════════════════════════════════════════════════════════════
 // F-05: MACRO REGIME (Educational Placeholder)
 // ═══════════════════════════════════════════════════════════════════════════
+function _showPlaceholderModules() {
+  try {
+    if (typeof window === 'undefined') return false;
+    const qp = new URLSearchParams(window.location.search || '');
+    return _flagOn(qp.get('rv_show_placeholders') || qp.get('show_placeholders') || '0');
+  } catch {
+    return false;
+  }
+}
+
 function buildMacroRegime() {
+  if (!_showPlaceholderModules()) return '';
   return `<details class="section advanced-collapsible" open><summary class="section-summary-header">🌍 Macro Regime Context</summary>
   <div class="placeholder-card"><h4>Macro Data (FRED Integration)</h4>
   <p>Live macro regime analysis requires FRED API data for:</p>
@@ -663,6 +781,7 @@ function buildMacroRegime() {
 // F-11 to F-16, F-35: FUNDAMENTALS PLACEHOLDER
 // ═══════════════════════════════════════════════════════════════════════════
 function buildFundamentalsPlaceholder(ticker) {
+  if (!_showPlaceholderModules()) return '';
   const cards = [
     { id: 'F-11', t: 'Dividend Safety', d: 'Yield vs payout ratio, FCF coverage, growth stability → Score 0–100' },
     { id: 'F-12', t: 'Capital Allocation', d: 'Buyback yield + dividend yield = shareholder yield, 5yr trend' },
@@ -682,6 +801,7 @@ function buildFundamentalsPlaceholder(ticker) {
 // F-17/F-18: PEERS & SECTOR PLACEHOLDER
 // ═══════════════════════════════════════════════════════════════════════════
 function buildPeersPlaceholder(ticker, universe) {
+  if (!_showPlaceholderModules()) return '';
   const sector = universe?.sector || 'Technology';
   return `<details class="section advanced-collapsible" open><summary class="section-summary-header">👥 Peers & Sector</summary>
   <div class="placeholder-card"><h4>Peer Comparison for ${ticker} (${sector})</h4>
@@ -694,6 +814,7 @@ function buildPeersPlaceholder(ticker, universe) {
 // F-19 to F-23: MARKET INTELLIGENCE (Collapsed)
 // ═══════════════════════════════════════════════════════════════════════════
 function buildMarketIntelligence(ticker) {
+  if (!_showPlaceholderModules()) return '';
   const uid = 'mi-' + Math.random().toString(36).slice(2, 6);
   const items = [
     { id: 'F-19', t: 'News Buzz & Sentiment', d: 'MarketAux Free (~100 req/day) — article count, sentiment distribution' },
@@ -712,10 +833,37 @@ function buildMarketIntelligence(ticker) {
 // F-33: CROSS ASSET RADAR
 // ═══════════════════════════════════════════════════════════════════════════
 function buildCrossAssetRadar() {
+  if (!_showPlaceholderModules()) return '';
   return `<details class="section advanced-collapsible" open><summary class="section-summary-header">🎯 Cross-Asset Radar</summary>
   <div class="placeholder-card"><h4>Gold / Oil / FX Relative Momentum</h4>
   <p>Shows risk-on/risk-off tilt by comparing relative momentum across asset classes.</p>
   <p style="font-style:italic;margin-top:.3rem">Requires Gold (GLD), Oil (USO), and FX ETFs in the data universe.</p></div></details>`;
+}
+
+function buildInactiveModulesSummary(ticker, universe = {}) {
+  if (_showPlaceholderModules()) {
+    return [
+      buildMacroRegime(),
+      buildFundamentalsPlaceholder(ticker),
+      buildPeersPlaceholder(ticker, universe),
+      buildCrossAssetRadar(),
+      buildMarketIntelligence(ticker)
+    ].join('');
+  }
+  return `<details class="section advanced-collapsible">
+    <summary class="section-summary-header">🧩 Additional Modules (Not Live)</summary>
+    <div class="placeholder-card">
+      <h4>Not enabled in main flow</h4>
+      <ul>
+        <li>Macro Regime Context</li>
+        <li>Fundamentals</li>
+        <li>Peers & Sector</li>
+        <li>Cross-Asset Radar</li>
+        <li>Market Intelligence</li>
+      </ul>
+      <p style="margin-top:.35rem">These modules are intentionally hidden from the primary decision path until live data feeds are active.</p>
+    </div>
+  </details>`;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -762,24 +910,125 @@ function buildWeekdaySeasonality(bars) {
 // ═══════════════════════════════════════════════════════════════════════════
 // SINGLE-ENDPOINT INSIGHT LOADER (avoids downloading 210MB of JSON client-side)
 let _insightsCache = {};
+function _flagOn(v) {
+  const s = String(v ?? '').trim().toLowerCase();
+  return s === '1' || s === 'true' || s === 'on' || s === 'yes';
+}
+
+function _useFeaturesV2() {
+  try {
+    if (typeof window === 'undefined') return false;
+    const qp = new URLSearchParams(window.location.search || '');
+    if (qp.has('rv_features_v2')) return _flagOn(qp.get('rv_features_v2'));
+    if (qp.has('features_v2')) return _flagOn(qp.get('features_v2'));
+    if (qp.has('featuresV2')) return _flagOn(qp.get('featuresV2'));
+    const winFlag = window.__RV_FLAGS?.featuresV2 ?? window.__RV_FEATURES_V2;
+    if (winFlag != null) return _flagOn(winFlag);
+    const ls = window.localStorage?.getItem('rv.features.v2');
+    if (ls != null) return _flagOn(ls);
+  } catch { /* ignore */ }
+  return false;
+}
+
+function _useFeaturesV4() {
+  try {
+    if (typeof window === 'undefined') return false;
+    const qp = new URLSearchParams(window.location.search || '');
+    if (qp.has('rv_features_v4')) return _flagOn(qp.get('rv_features_v4'));
+    if (qp.has('features_v4')) return _flagOn(qp.get('features_v4'));
+    if (qp.has('featuresV4')) return _flagOn(qp.get('featuresV4'));
+    const winFlag = window.__RV_FLAGS?.featuresV4 ?? window.__RV_FEATURES_V4;
+    if (winFlag != null) return _flagOn(winFlag);
+    const ls = window.localStorage?.getItem('rv.features.v4');
+    if (ls != null) return _flagOn(ls);
+  } catch { /* ignore */ }
+  return false;
+}
+
+function _v2ContractValid(payload) {
+  const c = payload?.v2_contract;
+  if (!c || typeof c !== 'object') return false;
+  const req = ['scientific', 'forecast', 'elliott'];
+  for (const k of req) {
+    const row = c[k];
+    if (!row || typeof row !== 'object') return false;
+    if (!('value' in row) || !('as_of' in row) || !('source' in row) || !('status' in row) || !('reason' in row)) {
+      return false;
+    }
+  }
+  return true;
+}
+
+function _v4ContractValid(payload) {
+  const c = payload?.v4_contract;
+  if (!c || typeof c !== 'object') return false;
+  const required = [
+    'scientific',
+    'forecast',
+    'elliott',
+    'raw_validation',
+    'outcome_labels',
+    'scientific_eligibility',
+    'fallback_state',
+    'timeframe_confluence',
+    'decision_trace'
+  ];
+  for (const k of required) {
+    const row = c[k];
+    if (!row || typeof row !== 'object') return false;
+    if (!('value' in row) || !('as_of' in row) || !('source' in row) || !('status' in row) || !('reason' in row)) {
+      return false;
+    }
+  }
+  return true;
+}
+
+function _insightsEndpoints() {
+  if (_useFeaturesV4()) return ['/api/stock-insights-v4', '/api/stock-insights-v2', '/api/stock-insights'];
+  if (_useFeaturesV2()) return ['/api/stock-insights-v2', '/api/stock-insights'];
+  return ['/api/stock-insights'];
+}
+
 async function _loadInsights(ticker) {
   const key = ticker.toUpperCase();
-  if (_insightsCache[key]) return _insightsCache[key];
-  try {
-    const ctrl = new AbortController();
-    const timer = setTimeout(() => ctrl.abort(), 15000);
-    const r = await fetch(`/api/stock-insights?ticker=${encodeURIComponent(key)}`, { signal: ctrl.signal });
-    clearTimeout(timer);
-    if (!r.ok) return null;
-    const data = await r.json();
-    _insightsCache[key] = data;
-    return data;
-  } catch { return null; }
+  const endpoints = _insightsEndpoints();
+  for (const endpoint of endpoints) {
+    const cacheKey = `${endpoint}::${key}`;
+    if (_insightsCache[cacheKey]) return _insightsCache[cacheKey];
+    try {
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), 15000);
+      const r = await fetch(`${endpoint}?ticker=${encodeURIComponent(key)}`, { signal: ctrl.signal });
+      clearTimeout(timer);
+      if (!r.ok) continue;
+      const data = await r.json();
+      const isV4 = endpoint.includes('stock-insights-v4');
+      const isV2 = endpoint.includes('stock-insights-v2');
+      if (isV4 && !_v4ContractValid(data)) continue;
+      if (isV2 && !_v2ContractValid(data)) continue;
+      _insightsCache[cacheKey] = data;
+      return data;
+    } catch { /* try fallback endpoint */ }
+  }
+  return null;
 }
 
 async function buildScientificInsight(ticker, context = {}) {
   const insights = await _loadInsights(ticker);
   const entry = insights?.scientific;
+  const canonical = _canonicalContext(context);
+  const mismatch = _detectScientificMetricMismatch(insights, context);
+  if (mismatch.mismatch) {
+    _setQualitySignals({
+      metricMismatch: true,
+      metricMismatchDetail: {
+        rsi_model: mismatch.sampleRsi,
+        rsi_canonical: mismatch.canonicalRsi,
+        atr_model_pct: mismatch.sampleAtrPct,
+        atr_canonical_pct: mismatch.canonicalAtrPct
+      }
+    }, true);
+  }
   if (!entry || entry.status === 'DATA_UNAVAILABLE') {
     const proxy = _proxyScientificSignal(context);
     if (!proxy) {
@@ -809,16 +1058,16 @@ async function buildScientificInsight(ticker, context = {}) {
   const trigger = entry.trigger || {};
   const prob = entry.probability != null ? (entry.probability * 100).toFixed(0) : '—';
   const expRet = entry.expected_return_10d != null ? (entry.expected_return_10d > 0 ? '+' : '') + entry.expected_return_10d.toFixed(1) + '%' : '—';
-  const strength = entry.signal_strength || 'N/A';
-  const strengthCol = strength === 'STRONG' ? 'var(--green)' : strength === 'MODERATE' ? 'var(--yellow)' : 'var(--text-dim)';
+  const strength = String(entry.signal_strength || 'N/A').toUpperCase();
 
-  const setupScore = setup.score || 0;
+  const setupScore = _toNumber(setup.score) || 0;
   const setupCol = setupScore >= 80 ? 'var(--green)' : setupScore >= 50 ? 'var(--yellow)' : 'var(--red)';
-  const setupProofs = Array.isArray(setup.proof_points) ? setup.proof_points.slice(0, 5).map(p => `<div style="font-size:.72rem;color:var(--text-dim);padding:.1rem 0">\u2713 ${p}</div>`).join('') : '';
+  const canonicalProofs = _scientificCanonicalProofs(context);
+  const setupProofs = canonicalProofs.setup.map(p => `<div style="font-size:.72rem;color:var(--text-dim);padding:.1rem 0">✓ ${p}</div>`).join('');
 
-  const triggerScore = trigger.score || 0;
+  const triggerScore = _toNumber(trigger.score) || 0;
   const triggerCol = triggerScore >= 75 ? 'var(--green)' : triggerScore >= 25 ? 'var(--yellow)' : 'var(--red)';
-  const triggerProofs = Array.isArray(trigger.proof_points) ? trigger.proof_points.slice(0, 4).map(p => `<div style="font-size:.72rem;color:var(--text-dim);padding:.1rem 0">\u2713 ${p}</div>`).join('') : '';
+  const triggerProofs = canonicalProofs.trigger.map(p => `<div style="font-size:.72rem;color:var(--text-dim);padding:.1rem 0">✓ ${p}</div>`).join('');
 
   const shap = entry.explainability?.shap_values || {};
   const shapEntries = Object.entries(shap).sort((a, b) => Math.abs(b[1]) - Math.abs(a[1])).slice(0, 6);
@@ -834,13 +1083,41 @@ async function buildScientificInsight(ticker, context = {}) {
   const meta = entry.metadata || {};
   const auc = meta.model_auc != null ? (meta.model_auc * 100).toFixed(0) + '%' : '—';
   const drift = meta.drift_status || 'unknown';
+  const rsi = canonical.rsi14;
+  const volPct = _toNumber(context?.stats?.volatility_percentile);
+  const riskFlags = [];
+  if (rsi != null && rsi >= 70) riskFlags.push(`RSI14 ${rsi.toFixed(1)} is overbought`);
+  if (volPct != null && volPct >= 85) riskFlags.push(`Volatility percentile ${volPct.toFixed(0)}th is elevated`);
+  if (canonical.atrPct != null && canonical.atrPct >= 3.5) riskFlags.push(`ATR ${canonical.atrPct.toFixed(2)}% indicates wide risk bands`);
+
+  let effectiveStrength = strength;
+  if (riskFlags.length >= 2 && strength === 'STRONG') effectiveStrength = 'LIMITED';
+  else if (riskFlags.length >= 1 && (strength === 'STRONG' || strength === 'MODERATE')) effectiveStrength = 'CAUTION';
+  const strengthCol = effectiveStrength === 'STRONG'
+    ? 'var(--green)'
+    : effectiveStrength === 'MODERATE'
+      ? 'var(--yellow)'
+      : effectiveStrength === 'CAUTION'
+        ? 'var(--yellow)'
+        : effectiveStrength === 'LIMITED'
+          ? 'var(--red)'
+          : 'var(--text-dim)';
+
+  _setQualitySignals({
+    scientificStrength: effectiveStrength,
+    scientificRiskFlags: riskFlags,
+    metricMismatch: Boolean((window._rvQualitySignals || {}).metricMismatch || mismatch.mismatch)
+  });
 
   return `<div class="section section-full"><h2>🔬 Scientific Analyzer</h2>
 <div style="display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:.6rem">
-  <div style="padding:.3rem .7rem;border-radius:6px;font-weight:700;font-size:.85rem;background:${strengthCol === 'var(--green)' ? 'var(--green-bg)' : strengthCol === 'var(--yellow)' ? 'var(--yellow-bg)' : 'rgba(255,255,255,.05)'};color:${strengthCol};border:1px solid ${strengthCol}">${strength} Signal</div>
+  <div style="padding:.3rem .7rem;border-radius:6px;font-weight:700;font-size:.85rem;background:${strengthCol === 'var(--green)' ? 'var(--green-bg)' : strengthCol === 'var(--yellow)' ? 'var(--yellow-bg)' : 'var(--red-bg)'};color:${strengthCol};border:1px solid ${strengthCol}">Effective Signal: ${effectiveStrength}</div>
   <div style="padding:.3rem .7rem;border-radius:6px;font-size:.82rem;background:rgba(99,102,241,.08);border:1px solid rgba(99,102,241,.2)">Probability: <strong>${prob}%</strong></div>
   <div style="padding:.3rem .7rem;border-radius:6px;font-size:.82rem;background:rgba(255,255,255,.03);border:1px solid var(--border)">Expected 10d: <strong style="color:${entry.expected_return_10d >= 0 ? 'var(--green)' : 'var(--red)'}">${expRet}</strong></div>
+  <div style="padding:.3rem .7rem;border-radius:6px;font-size:.82rem;background:rgba(255,255,255,.03);border:1px solid var(--border)">Canonical RSI / ATR: <strong>${_fmtMaybe(canonical.rsi14, 1)} / ${_fmtMaybe(canonical.atr14, 2)}</strong></div>
 </div>
+${riskFlags.length ? `<div style="margin-bottom:.5rem;padding:.45rem .6rem;border-radius:8px;background:var(--red-bg);border:1px solid rgba(248,113,113,.35);font-size:.76rem;color:#fecaca"><strong>Risk Gate:</strong> ${riskFlags.join(' · ')}</div>` : ''}
+${mismatch.mismatch ? `<div style="margin-bottom:.5rem;padding:.45rem .6rem;border-radius:8px;background:var(--red-bg);border:1px solid rgba(248,113,113,.35);font-size:.76rem;color:#fecaca"><strong>Metric mismatch detected:</strong> model snapshot vs canonical RSI/ATR differ. Final verdict is suppressed until values are consistent.</div>` : ''}
 <div class="m-grid">
   <div class="m-item"><div class="m-label">Setup ${setup.fulfilled ? '\u2705' : '\u274c'}</div><div class="m-val" style="color:${setupCol}">${setupScore}/100</div><div class="m-sub">${setup.conditions_met || '—'} conditions met</div><div style="margin-top:.3rem;height:6px;border-radius:3px;background:rgba(255,255,255,.05);overflow:hidden"><div style="width:${setupScore}%;height:100%;background:${setupCol};border-radius:3px"></div></div>${setupProofs}</div>
   <div class="m-item"><div class="m-label">Trigger ${trigger.fulfilled ? '\u2705' : '\u274c'}</div><div class="m-val" style="color:${triggerCol}">${triggerScore}/100</div><div class="m-sub">${trigger.conditions_met || '—'} conditions met</div><div style="margin-top:.3rem;height:6px;border-radius:3px;background:rgba(255,255,255,.05);overflow:hidden"><div style="width:${triggerScore}%;height:100%;background:${triggerCol};border-radius:3px"></div></div>${triggerProofs}</div>
@@ -857,25 +1134,41 @@ ${shapHTML ? `<div style="margin-top:.6rem;padding:.5rem .6rem;border-radius:8px
 async function buildForecastInsight(ticker, context = {}) {
   const insights = await _loadInsights(ticker);
   const entry = insights?.forecast;
+  const horizonOrder = ['1d', '5d', '20d'];
+  const horizonLabels = { '1d': '1 Day', '5d': '1 Week', '20d': '1 Month' };
+
+  function horizonCard(h, fc, mode = 'active') {
+    if (!fc) return '';
+    const isBull = fc.direction === 'bullish';
+    const isBear = fc.direction === 'bearish';
+    const prob = _toNumber(fc.probability);
+    const probText = prob != null ? `${(prob * 100).toFixed(1)}%` : '—';
+    const col = mode === 'suppressed' ? 'var(--text-dim)' : isBull ? 'var(--green)' : isBear ? 'var(--red)' : 'var(--yellow)';
+    const bgCol = mode === 'suppressed' ? 'rgba(148,163,184,.08)' : isBull ? 'var(--green-bg)' : isBear ? 'var(--red-bg)' : 'var(--yellow-bg)';
+    const icon = mode === 'suppressed' ? '⏸' : isBull ? '▲' : isBear ? '▼' : '◆';
+    const title = mode === 'suppressed'
+      ? `${horizonLabels[h]} · UNAVAILABLE`
+      : `${horizonLabels[h]} · ${String(fc.direction || 'neutral').toUpperCase()} ${probText}`;
+    const barWidth = prob != null ? Math.round(prob * 100) : 0;
+    return `<div style="padding:.5rem .6rem;border-radius:8px;background:${bgCol};border:1px solid ${col}30;margin-bottom:.35rem">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.3rem">
+        <span style="font-weight:600;font-size:.82rem">${horizonLabels[h]}</span>
+        <span style="font-weight:800;color:${col};font-size:.86rem">${icon} ${title.replace(`${horizonLabels[h]} · `, '')}</span>
+      </div>
+      ${mode === 'active' ? `<div style="height:8px;border-radius:4px;background:rgba(255,255,255,.05);overflow:hidden"><div style="width:${barWidth}%;height:100%;border-radius:4px;background:${col};opacity:.6"></div></div>` : ''}
+    </div>`;
+  }
+
   if (!entry) {
+    _setQualitySignals({ forecastValidated: false, forecastIndependent: false, forecastSuppressed: true }, true);
     const proxy = _proxyForecastSignal(context);
     if (!proxy) return `<div class="section"><h2>\ud83d\udd2e ML Forecast</h2><div class="placeholder-card">No forecast data available for ${ticker}.</div></div>`;
-    const horizonOrder = ['1d', '5d', '20d'];
-    const horizonLabels = { '1d': '1 Day', '5d': '1 Week', '20d': '1 Month' };
-    const barsHtml = horizonOrder.map((h) => {
-      const fc = proxy.horizons[h];
-      const isBull = fc.direction === 'bullish';
-      const prob = (fc.probability * 100).toFixed(1);
-      const col = isBull ? 'var(--green)' : 'var(--red)';
-      const bgCol = isBull ? 'var(--green-bg)' : 'var(--red-bg)';
-      const icon = isBull ? '\u25b2' : '\u25bc';
-      return `<div style="padding:.5rem .6rem;border-radius:8px;background:${bgCol};border:1px solid ${col}30;margin-bottom:.35rem"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.3rem"><span style="font-weight:600;font-size:.82rem">${horizonLabels[h]}</span><span style="font-weight:800;color:${col};font-size:.9rem">${icon} ${fc.direction.toUpperCase()} ${prob}%</span></div></div>`;
-    }).join('');
+    const barsHtml = horizonOrder.map((h) => horizonCard(h, proxy.horizons[h], 'suppressed')).join('');
     return `<div class="section"><h2>\ud83d\udd2e ML Forecast</h2>
-      <div class="placeholder-card" style="margin-bottom:.5rem">Champion output unavailable for ${ticker}; using proxy forecast from current technical state.</div>
+      <div class="placeholder-card" style="margin-bottom:.5rem">Champion output unavailable for ${ticker}. Forecast is marked <strong>not ready</strong> until validation metrics are present.</div>
       ${barsHtml}
       <div style="margin-top:.4rem;padding:.4rem .6rem;border-radius:6px;background:rgba(255,255,255,.02);border:1px solid var(--border);font-size:.72rem;color:var(--text-dim)">
-        Model: <strong style="color:var(--text)">${proxy.model}</strong> · Data: <strong style="color:var(--text)">${proxy.freshness}</strong>
+        Status: <strong style="color:var(--yellow)">Validation incomplete</strong> · Model candidate: <strong style="color:var(--text)">${proxy.model}</strong> · Data: <strong style="color:var(--text)">${proxy.freshness}</strong>
       </div>
     </div>`;
   }
@@ -884,23 +1177,41 @@ async function buildForecastInsight(ticker, context = {}) {
   const champion = insights?.forecast_meta?.champion_id || 'N/A';
   const freshness = insights?.forecast_meta?.freshness || '—';
   const horizons = entry.horizons || {};
-  const horizonOrder = ['1d', '5d', '20d'];
-  const horizonLabels = { '1d': '1 Day', '5d': '1 Week', '20d': '1 Month' };
+  const directional = _toNumber(modelAccuracy.directional);
+  const brierValue = _toNumber(modelAccuracy.brier);
+  const sampleNum = _toNumber(modelAccuracy.sample_count);
+  const validationReady = directional != null && brierValue != null && sampleNum != null && sampleNum > 0;
 
-  const barsHtml = horizonOrder.map(h => {
-    const fc = horizons[h]; if (!fc) return '';
-    const isBull = fc.direction === 'bullish';
-    const prob = (fc.probability * 100).toFixed(1);
-    const col = isBull ? 'var(--green)' : 'var(--red)';
-    const bgCol = isBull ? 'var(--green-bg)' : 'var(--red-bg)';
-    const icon = isBull ? '\u25b2' : '\u25bc';
-    const barWidth = Math.round(fc.probability * 100);
-    return `<div style="padding:.5rem .6rem;border-radius:8px;background:${bgCol};border:1px solid ${col}30;margin-bottom:.35rem"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.3rem"><span style="font-weight:600;font-size:.82rem">${horizonLabels[h] || h}</span><span style="font-weight:800;color:${col};font-size:.9rem">${icon} ${fc.direction.toUpperCase()} ${prob}%</span></div><div style="height:8px;border-radius:4px;background:rgba(255,255,255,.05);overflow:hidden"><div style="width:${barWidth}%;height:100%;border-radius:4px;background:${col};opacity:.6"></div></div></div>`;
-  }).join('');
+  const existing = horizonOrder.map((h) => horizons[h]).filter(Boolean);
+  const probs = existing.map((h) => _toNumber(h.probability)).filter((v) => v != null);
+  const dirs = existing.map((h) => String(h.direction || '').toLowerCase()).filter(Boolean);
+  const nearlyEqual = probs.length >= 2 && (Math.max(...probs) - Math.min(...probs)) <= 0.003;
+  const sameDir = dirs.length >= 2 && dirs.every((d) => d === dirs[0]);
+  const nonIndependent = existing.length >= 3 && nearlyEqual && sameDir;
 
-  const dirAccuracy = modelAccuracy.directional != null ? (modelAccuracy.directional * 100).toFixed(1) + '%' : '—';
-  const brier = modelAccuracy.brier != null ? modelAccuracy.brier.toFixed(4) : '—';
-  const sampleCount = modelAccuracy.sample_count?.toLocaleString() || '—';
+  const horizonMode = {};
+  horizonOrder.forEach((h, i) => {
+    if (!validationReady) horizonMode[h] = 'suppressed';
+    else if (nonIndependent && i > 0) horizonMode[h] = 'suppressed';
+    else horizonMode[h] = 'active';
+  });
+  const barsHtml = horizonOrder.map((h) => horizonCard(h, horizons[h], horizonMode[h])).join('');
+  const dirAccuracy = directional != null ? `${(directional * 100).toFixed(1)}%` : '—';
+  const brier = brierValue != null ? brierValue.toFixed(4) : '—';
+  const sampleCount = sampleNum != null ? Math.round(sampleNum).toLocaleString() : '—';
+
+  _setQualitySignals({
+    forecastValidated: validationReady,
+    forecastIndependent: !nonIndependent,
+    forecastSuppressed: !validationReady || nonIndependent
+  }, true);
+
+  const validationMsg = !validationReady
+    ? 'Forecast suppressed: required validation metrics (Accuracy, Brier, Samples) are missing.'
+    : nonIndependent
+      ? 'Forecast partially suppressed: 5d/20d outputs are non-independent duplicates of 1d.'
+      : 'Forecast available and validated.';
+  const validationCol = !validationReady ? 'var(--red)' : nonIndependent ? 'var(--yellow)' : 'var(--green)';
 
   return `<div class="section"><h2>\ud83d\udd2e ML Forecast</h2>
 ${barsHtml}
@@ -910,7 +1221,9 @@ ${barsHtml}
   <span>Brier: <strong style="color:var(--text)">${brier}</strong></span>
   <span>Samples: <strong style="color:var(--text)">${sampleCount}</strong></span>
   <span>Data: <strong style="color:var(--text)">${freshness}</strong></span>
-</div></div>`;
+</div>
+<div style="margin-top:.45rem;font-size:.75rem;color:${validationCol}">${validationMsg}</div>
+</div>`;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -919,10 +1232,30 @@ ${barsHtml}
 async function buildElliottInsight(ticker, context = {}) {
   const insights = await _loadInsights(ticker);
   const entry = insights?.elliott;
+  const close = _toNumber(context?.close);
+  const quality = (typeof window !== 'undefined' && window._rvQualitySignals) || {};
+  const primaryBias = String(quality.overallAction || quality.decisionSummary || '').toUpperCase();
+
+  function levelPlausibility(levels = []) {
+    if (close == null || close <= 0 || !levels.length) return { ok: true, maxDist: 0 };
+    const dists = levels.map((v) => Math.abs((_toNumber(v) - close) / close)).filter((v) => Number.isFinite(v));
+    if (!dists.length) return { ok: true, maxDist: 0 };
+    const maxDist = Math.max(...dists);
+    return { ok: maxDist <= 0.35, maxDist };
+  }
+
   if (!entry) {
     const proxy = _proxyElliottSignal(context);
     if (!proxy) return `<div class="section"><h2>\ud83c\udf0a Elliott Wave Analysis</h2><div class="placeholder-card">No Elliott Wave data available for ${ticker}.</div></div>`;
     const trendCol = proxy.direction === 'bullish' ? 'var(--green)' : 'var(--red)';
+    const p = levelPlausibility([proxy.support, proxy.resistance]);
+    if (!p.ok) {
+      _setQualitySignals({ elliottState: 'suppressed', elliottConflict: true });
+      return `<div class="section"><h2>\ud83c\udf0a Elliott Wave Analysis</h2>
+        <div class="placeholder-card">Elliott output suppressed: price levels are desynchronized from the current price zone.</div>
+      </div>`;
+    }
+    _setQualitySignals({ elliottState: 'proxy', elliottConflict: false });
     return `<div class="section"><h2>\ud83c\udf0a Elliott Wave Analysis</h2>
       <div class="placeholder-card" style="margin-bottom:.5rem">Wave model output unavailable for ${ticker}; showing deterministic local wave proxy.</div>
       <div style="display:flex;gap:.75rem;flex-wrap:wrap;margin-bottom:.45rem">
@@ -942,7 +1275,7 @@ async function buildElliottInsight(ticker, context = {}) {
 
   // Wave position from developing pattern
   const wave = developing.possibleWave || 'N/A';
-  const trendDir = completed.direction || 'N/A';
+  const trendDir = String(completed.direction || 'N/A');
   const trendCol = trendDir.toLowerCase().includes('bull') ? 'var(--green)' : trendDir.toLowerCase().includes('bear') ? 'var(--red)' : 'var(--yellow)';
 
   // Confidence from developing first, fallback to completed adjusted confidence
@@ -956,6 +1289,19 @@ async function buildElliottInsight(ticker, context = {}) {
   // Fib support/resistance levels
   const fibSupport = developing?.fibLevels?.support || [];
   const fibResist = developing?.fibLevels?.resistance || [];
+  const plausible = levelPlausibility([...(Array.isArray(fibSupport) ? fibSupport : []), ...(Array.isArray(fibResist) ? fibResist : [])]);
+  const elliottBias = trendDir.toLowerCase().includes('bull') ? 'BUY' : trendDir.toLowerCase().includes('bear') ? 'AVOID' : 'WAIT';
+  const conflictsPrimary = Boolean(primaryBias && primaryBias !== 'SUPPRESSED' && elliottBias !== 'WAIT' && primaryBias !== elliottBias);
+  const conflict = conflictsPrimary || !plausible.ok;
+  _setQualitySignals({ elliottConflict: conflict, elliottState: plausible.ok ? (conflict ? 'conflict' : 'aligned') : 'suppressed' });
+
+  if (!plausible.ok) {
+    return `<div class="section"><h2>\ud83c\udf0a Elliott Wave Analysis</h2>
+      <div style="padding:.55rem .65rem;border-radius:8px;background:var(--red-bg);border:1px solid rgba(248,113,113,.35);font-size:.78rem;color:#fecaca">
+        Elliott module suppressed: projected levels are > ${(plausible.maxDist * 100).toFixed(1)}% away from current price and are not in sync with the active market regime.
+      </div>
+    </div>`;
+  }
 
   // Explanation based on wave position
   const waveExplain = {
@@ -975,6 +1321,9 @@ async function buildElliottInsight(ticker, context = {}) {
   const completedHtml = completed.direction ? `<div style="margin-top:.4rem;font-size:.75rem;color:var(--text-dim)">Last completed pattern: <strong style="color:${trendCol}">${completed.direction}</strong>${completed.endedAt ? ` (ended ${completed.endedAt})` : ''}${completed.guidelineScore != null ? ` \u2014 guideline score: ${completed.guidelineScore}%` : ''}</div>` : '';
 
   return `<div class="section"><h2>\ud83c\udf0a Elliott Wave Analysis</h2>
+${conflict
+    ? `<div style="margin-bottom:.5rem;padding:.45rem .6rem;border-radius:8px;background:var(--yellow-bg);border:1px solid rgba(251,191,36,.35);font-size:.76rem;color:#fde68a"><strong>Conflict marker:</strong> Elliott bias (${elliottBias}) diverges from main decision flow (${primaryBias || 'N/A'}). Treat as alternative scenario, not primary verdict.</div>`
+    : `<div style="margin-bottom:.5rem;padding:.45rem .6rem;border-radius:8px;background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.35);font-size:.76rem;color:#bbf7d0"><strong>Alignment marker:</strong> ${primaryBias === 'SUPPRESSED' ? 'Primary flow is currently suppressed; Elliott is shown as a secondary scenario.' : 'Elliott is directionally in line with the current decision flow.'}</div>`}
 <div style="display:flex;gap:.75rem;flex-wrap:wrap;margin-bottom:.5rem">
   <div style="padding:.5rem .8rem;border-radius:8px;background:linear-gradient(135deg,rgba(99,102,241,.12),rgba(139,92,246,.08));border:1px solid rgba(99,102,241,.3);flex:1;min-width:120px"><div style="font-size:.72rem;color:var(--text-dim);text-transform:uppercase;letter-spacing:.04em">Developing Wave</div><div style="font-size:1.1rem;font-weight:800;color:var(--accent)">${wave}</div></div>
   <div style="padding:.5rem .8rem;border-radius:8px;background:rgba(255,255,255,.03);border:1px solid var(--border);flex:1;min-width:120px"><div style="font-size:.72rem;color:var(--text-dim);text-transform:uppercase;letter-spacing:.04em">Trend</div><div style="font-size:1rem;font-weight:700;color:${trendCol}">${trendDir}</div></div>
@@ -984,4 +1333,120 @@ async function buildElliottInsight(ticker, context = {}) {
 <div style="padding:.5rem .6rem;border-radius:6px;background:rgba(255,255,255,.02);border-left:3px solid var(--accent);font-size:.78rem;color:var(--text-dim)">\ud83d\udca1 ${explanation}</div>
 ${(fibSupport.length || fibResist.length) ? `<div style="margin-top:.5rem;display:flex;gap:.75rem;flex-wrap:wrap">${fibSupport.length ? `<div style="font-size:.75rem;color:var(--text-dim)">Support: ${fibSupport.map(v => `<strong style="color:var(--green)">$${v.toFixed(2)}</strong>`).join(', ')}</div>` : ''}${fibResist.length ? `<div style="font-size:.75rem;color:var(--text-dim)">Resistance: ${fibResist.map(v => `<strong style="color:var(--red)">$${v.toFixed(2)}</strong>`).join(', ')}</div>` : ''}</div>` : ''}
 ${completedHtml}</div>`;
+}
+
+function _v4StateValue(contract, key) {
+  const row = contract?.[key];
+  if (!row || typeof row !== 'object') return null;
+  return row.value ?? null;
+}
+
+function _fmtStateStatus(contract, key) {
+  const row = contract?.[key];
+  if (!row || typeof row !== 'object') return 'N/A';
+  const status = String(row.status || 'unavailable').toUpperCase();
+  const reason = row.reason ? ` · ${row.reason}` : '';
+  return `${status}${reason}`;
+}
+
+function _boolText(v) {
+  return v ? 'YES' : 'NO';
+}
+
+function buildV4SlotShell() {
+  if (!_useFeaturesV4()) return '';
+  return `<div id="rv-v4-slot"><div class="section section-full" style="opacity:.5"><h2>🧭 v4 Governance (Shadow)</h2><div class="placeholder-card">Loading v4 evaluation…</div></div></div>`;
+}
+
+function isFeaturesV4Enabled() {
+  return _useFeaturesV4();
+}
+
+async function buildV4GovernanceInsight(ticker, context = {}) {
+  if (!_useFeaturesV4()) return '';
+  const insights = await _loadInsights(ticker);
+  const hasV4Contract = Boolean(insights?.v4_contract) && _v4ContractValid(insights);
+  const contract = hasV4Contract ? insights.v4_contract : (context?.evaluation_v4?.v4_contract || null);
+  const usingFallbackContract = !hasV4Contract;
+  if (!contract) {
+    return `<div class="section section-full"><h2>🧭 v4 Governance (Shadow)</h2>
+      <div class="placeholder-card">v4 contract unavailable — running canonical v1/v2 path.</div>
+    </div>`;
+  }
+
+  const confluence = _v4StateValue(contract, 'timeframe_confluence');
+  const fallback = _v4StateValue(contract, 'fallback_state');
+  const drift = _v4StateValue(contract, 'drift_state');
+  const eligibility = _v4StateValue(contract, 'scientific_eligibility');
+  const raw = _v4StateValue(contract, 'raw_validation');
+  const trace = _v4StateValue(contract, 'decision_trace');
+  const outcomes = _v4StateValue(contract, 'outcome_labels');
+  const maeMfe = _v4StateValue(contract, 'mae_mfe_summary');
+  const quality = (typeof window !== 'undefined' && window._rvQualitySignals) || {};
+
+  const confluenceStatus = confluence?.status || 'N/A';
+  const fallbackVerdict = fallback?.verdict || 'WAIT';
+  const fallbackConfidence = fallback?.confidence || 'LOW';
+  const driftTier = drift?.tier || 'UNKNOWN';
+  const metricMismatch = Boolean(quality.metricMismatch);
+  const rrBlockedHorizons = Number(quality.rrBlockedHorizons || 0);
+  const horizonVerdicts = Array.isArray(quality.horizonVerdicts) ? quality.horizonVerdicts.filter(Boolean) : [];
+  const uniqueVerdicts = new Set(horizonVerdicts).size;
+  let effectiveConfluence = 'MIXED';
+  if (metricMismatch || rrBlockedHorizons > 0) effectiveConfluence = 'LOW_ALIGNMENT';
+  else if (horizonVerdicts.length >= 3 && uniqueVerdicts <= 1) effectiveConfluence = 'HIGH_ALIGNMENT';
+  else if (horizonVerdicts.length >= 2 && uniqueVerdicts <= 2) effectiveConfluence = 'MODERATE_ALIGNMENT';
+  else effectiveConfluence = confluenceStatus;
+
+  let integrity = raw?.valid ? 'CLEAN' : 'SUPPRESSED';
+  if (metricMismatch) integrity = 'MISMATCH';
+  if (!raw?.valid) integrity = 'SUPPRESSED';
+  const forecastValidated = quality.forecastValidated !== false;
+  const forecastIndependent = quality.forecastIndependent !== false;
+  const decisionSuppressed = Boolean(quality.finalSuppressed);
+
+  const rows = [
+    { label: 'Confluence', value: effectiveConfluence, sub: `${confluence?.short || 'N/A'} / ${confluence?.mid || 'N/A'} / ${confluence?.long || 'N/A'}` },
+    { label: 'Fallback', value: fallback?.active ? `${fallbackVerdict} (${fallbackConfidence})` : 'OFF', sub: _fmtStateStatus(contract, 'fallback_state') },
+    { label: 'Drift Tier', value: driftTier, sub: _fmtStateStatus(contract, 'drift_state') },
+    { label: 'Integrity', value: String(integrity).toUpperCase(), sub: metricMismatch ? 'canonical metric mismatch detected' : _fmtStateStatus(contract, 'raw_validation') },
+    { label: 'Forecast Validation', value: forecastValidated ? 'COMPLETE' : 'INCOMPLETE', sub: forecastIndependent ? 'horizons independent' : 'horizon duplication suppressed' },
+    { label: 'Decision Gate', value: decisionSuppressed ? 'SUPPRESSED' : (quality.overallAction || 'ACTIVE'), sub: rrBlockedHorizons > 0 ? `R:R blocked horizons: ${rrBlockedHorizons}` : 'R:R gate clear' },
+    { label: 'Scientific Eligibility', value: eligibility?.trigger?.state || 'N/A', sub: _fmtStateStatus(contract, 'scientific_eligibility') },
+    { label: 'MAE/MFE Samples', value: maeMfe?.sample_count ?? 'N/A', sub: _fmtStateStatus(contract, 'mae_mfe_summary') },
+  ];
+
+  const outcomeHtml = ['1d', '5d', '20d'].map((h) => {
+    const row = outcomes?.[h];
+    if (!row) return `<span style="color:var(--text-dim)">${h}: N/A</span>`;
+    const label = row.label || 'N/A';
+    const ret = row.gross_return != null ? `${row.gross_return >= 0 ? '+' : ''}${(row.gross_return * 100).toFixed(2)}%` : 'N/A';
+    const col = label === 'BULLISH' ? 'var(--green)' : label === 'BEARISH' ? 'var(--red)' : 'var(--yellow)';
+    return `<span><strong style="color:${col}">${h.toUpperCase()} ${label}</strong> <span style="color:var(--text-dim)">(${ret})</span></span>`;
+  }).join(' · ');
+
+  const reasonChain = Array.isArray(trace?.reason_chain) ? trace.reason_chain.slice(0, 8) : [];
+  const gates = new Set(Array.isArray(trace?.gates_fired) ? trace.gates_fired : []);
+  if (metricMismatch) gates.add('CANONICAL_METRIC_MISMATCH');
+  if (rrBlockedHorizons > 0) gates.add('RR_GATE_BLOCK');
+  if (!forecastValidated) gates.add('FORECAST_VALIDATION_INCOMPLETE');
+  if (!forecastIndependent) gates.add('FORECAST_NON_INDEPENDENT');
+  if (decisionSuppressed) gates.add('FINAL_VERDICT_SUPPRESSED');
+  const gateList = Array.from(gates);
+
+  return `<div class="section section-full"><h2>🧭 v4 Governance (Shadow)</h2>
+    ${usingFallbackContract ? `<div style="margin-bottom:.45rem;padding:.4rem .55rem;border-radius:8px;background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.35);font-size:.74rem;color:#fde68a">Using stock endpoint fallback contract (insights-v4 contract not available in this render cycle).</div>` : ''}
+    <div style="display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:.6rem">
+      <span class="prov-chip"><span class="dot ${fallback?.active ? 'cached' : 'ok'}"></span>Fallback active: ${_boolText(Boolean(fallback?.active))}</span>
+      <span class="prov-chip"><span class="dot ${driftTier === 'RED' ? 'na' : driftTier === 'ORANGE' ? 'cached' : 'ok'}"></span>Drift: ${driftTier}</span>
+      <span class="prov-chip"><span class="dot ${integrity === 'CLEAN' ? 'ok' : integrity === 'MISMATCH' ? 'cached' : 'na'}"></span>Integrity: ${integrity}</span>
+      <span class="prov-chip">As-of: ${contract?.decision_trace?.as_of || contract?.scientific?.as_of || '—'}</span>
+    </div>
+    <div class="m-grid">
+      ${rows.map((row) => `<div class="m-item"><div class="m-label">${row.label}</div><div class="m-val">${row.value}</div><div class="m-sub">${row.sub || ''}</div></div>`).join('')}
+    </div>
+    <div style="margin-top:.6rem;font-size:.78rem;color:var(--text-dim)">${outcomeHtml}</div>
+    ${gateList.length ? `<div style="margin-top:.5rem;font-size:.74rem;color:var(--yellow)">Gates: ${gateList.join(', ')}</div>` : ''}
+    ${reasonChain.length ? `<div style="margin-top:.3rem;font-size:.72rem;color:var(--text-muted)">Trace: ${reasonChain.join(' → ')}</div>` : ''}
+  </div>`;
 }
