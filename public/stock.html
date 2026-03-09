@@ -848,7 +848,7 @@
 
       <div class="rv-header-tools" aria-live="polite">
         <div class="rv-data-updated" style="font-size: 12px; color: var(--rv-text-muted);">
-          Data updated: <span id="rv-data-updated-date">Loading...</span> (daily snapshots)
+          Site snapshot: <span id="rv-data-updated-date">Loading...</span> · <span id="rv-freshness-badge" style="display:none"></span>
         </div>
         <div class="rv-market-clock">
           <span class="rv-clock-time" id="rv-ny-time">NY: --:--:--</span>
@@ -1114,7 +1114,7 @@
           changeEl.textContent = `${sign}${fmtCur(chgAbs, prices.currency || 'USD')} (${sign}${(chg * 100).toFixed(2)}%)`;
           changeEl.className = `price-change ${chg >= 0 ? 'up' : 'down'}`;
         } else { changeEl.textContent = ''; }
-        document.getElementById('price-date').textContent = prices.date ? `as of ${prices.date}` : '';
+        document.getElementById('price-date').textContent = prices.date ? `Ticker data as-of: ${prices.date}` : '';
       }
 
       // 52W Range
@@ -1133,6 +1133,17 @@
       if (error) {
         errorBox.style.display = 'block';
         errorBox.innerHTML = `<strong>${error.code}</strong>: ${error.message}`;
+      }
+
+      // ── Freshness badge ──
+      const envelopeStatus = (payload.meta?.status || 'unknown').toUpperCase();
+      const freshBadge = document.getElementById('rv-freshness-badge');
+      if (freshBadge) {
+        const fbCol = envelopeStatus === 'FRESH' ? '#10b981' : envelopeStatus === 'STALE' ? '#f59e0b' : '#ef4444';
+        freshBadge.style.display = 'inline';
+        freshBadge.style.color = fbCol;
+        freshBadge.style.fontWeight = '600';
+        freshBadge.textContent = envelopeStatus === 'FRESH' ? 'LIVE' : envelopeStatus;
       }
 
       // ── Sections ──
@@ -1312,7 +1323,7 @@
           <div class="m-item"><div class="m-label">Envelope</div><div class="m-val" style="color:${stateCol}">${String(state).toUpperCase()}</div><div class="m-sub">live/cached/stale/pending/error</div></div>
           <div class="m-item"><div class="m-label">Cache</div><div class="m-val">${cache.hit ? 'HIT' : 'MISS'}${cache.stale ? ' · STALE' : ''}</div><div class="m-sub">mode: ${cache.mode || '—'}</div></div>
           <div class="m-item"><div class="m-label">Provider</div><div class="m-val">${meta.provider || '—'}</div><div class="m-sub">source chain runtime</div></div>
-          <div class="m-item"><div class="m-label">Raw Validation</div><div class="m-val">${raw?.valid ? 'VALID' : 'INVALID'}</div><div class="m-sub">${raw?.code || '—'}</div></div>
+          <div class="m-item"><div class="m-label">Raw Validation</div><div class="m-val" style="color:${raw == null ? 'var(--yellow)' : raw.valid ? 'var(--green)' : 'var(--red)'}">${raw == null ? 'UNKNOWN' : raw.valid ? 'VALID' : 'INVALID'}</div><div class="m-sub">${raw == null ? 'data health unverified — blocks BUY' : raw?.code || '—'}</div></div>
         </div>
         <div style="display:flex;align-items:center;justify-content:space-between;gap:.6rem;margin-top:.55rem">
           <div style="font-size:.72rem;color:var(--text-muted)">
@@ -1348,7 +1359,7 @@
       const action = q.finalSuppressed
         ? 'No action: verdict suppressed until gates clear.'
         : edge === 'BUY'
-          ? 'Actionable only after trigger confirms and R:R remains >= 1.0.'
+          ? 'Actionable only after trigger confirms and projected R:R remains favorable.'
           : edge === 'AVOID'
             ? 'Avoid entries until trigger and risk profile improve.'
             : 'Wait: monitor trigger + invalidation and re-check data health.';
@@ -1368,13 +1379,18 @@
       const q = window._rvQualitySignals || {};
       const can = window._rvCanonicalMetrics || {};
       const trace = window._rvPayload?.evaluation_v4?.v4_contract?.decision_trace?.value || null;
-      const gates = []
-        .concat(q.finalSuppressed ? ['FINAL_SUPPRESSED'] : [])
-        .concat(q.metricMismatch ? ['CANONICAL_DRIFT'] : [])
-        .concat(q.rrBlockedHorizons > 0 ? [`RR_BLOCKED_${q.rrBlockedHorizons}`] : [])
-        .concat(q.forecastValidated === false ? ['FORECAST_VALIDATION_INCOMPLETE'] : [])
-        .concat(q.forecastIndependent === false ? ['FORECAST_NON_INDEPENDENT'] : []);
+      // Audit-tauglich: gate name + cause + affected value + consequence
+      const gateEntries = [];
+      if (q.finalSuppressed) gateEntries.push({ gate: 'FINAL_SUPPRESSED', cause: 'rawValidation === INVALID', value: q.rawStatus || 'INVALID', consequence: 'All horizons suppressed, global action = SUPPRESSED' });
+      if (q.rawStatus === 'UNKNOWN') gateEntries.push({ gate: 'RAW_VALIDATION_UNKNOWN', cause: 'rawValidation is null/missing', value: 'UNKNOWN', consequence: 'Global BUY blocked — data health unverified' });
+      if (q.metricMismatch) gateEntries.push({ gate: 'CANONICAL_DRIFT', cause: 'RSI/ATR diverge from model snapshot', value: JSON.stringify(q.metricMismatchDetail || {}), consequence: 'Global BUY blocked — metric integrity uncertain' });
+      if (q.rsiHardGate) gateEntries.push({ gate: 'RSI_HARD_GATE', cause: 'RSI14 >= 80', value: can.rsi14 != null ? can.rsi14.toFixed(1) : '>=80', consequence: 'Global BUY blocked — overbought hard gate' });
+      if (q.biotechContextMissing) gateEntries.push({ gate: 'BIO_CONTEXT_MISSING', cause: 'Biotech minimum context incomplete', value: 'catalyst/runway/dilution unavailable', consequence: 'Global BUY blocked, confidence capped at MEDIUM' });
+      if (q.rrBlockedHorizons > 0) gateEntries.push({ gate: `RR_BLOCKED_${q.rrBlockedHorizons}`, cause: 'R:R < 0.50 on horizon(s)', value: `${q.rrBlockedHorizons} horizon(s)`, consequence: 'Affected horizons downgraded to WAIT/AVOID' });
+      if (q.forecastValidated === false) gateEntries.push({ gate: 'FORECAST_VALIDATION_INCOMPLETE', cause: 'Forecast not validated', value: '—', consequence: 'Forecast module output is advisory only' });
+      if (q.forecastIndependent === false) gateEntries.push({ gate: 'FORECAST_NON_INDEPENDENT', cause: 'Forecast not independent', value: '—', consequence: 'Forecast module output is advisory only' });
       const chain = Array.isArray(trace?.reason_chain) ? trace.reason_chain : [];
+      const gateRows = gateEntries.map(g => `<tr><td style="font-weight:600;color:var(--yellow)">${g.gate}</td><td>${g.cause}</td><td style="font-family:monospace;font-size:.7rem">${g.value}</td><td>${g.consequence}</td></tr>`).join('');
       return `<div class="section section-full">
         <h2>📜 Decision Trace</h2>
         <div style="font-size:.78rem;color:var(--text-dim);line-height:1.55">
@@ -1382,9 +1398,7 @@
           As-of: <strong style="color:var(--text)">${can.asOf || '—'}</strong> ·
           Digest: <strong style="color:var(--text)">${_fmtDigest(can.digest)}</strong>
         </div>
-        <div style="margin-top:.45rem;font-size:.74rem;color:${gates.length ? 'var(--yellow)' : 'var(--text-muted)'}">
-          Gates: ${gates.length ? gates.join(', ') : 'none'}
-        </div>
+        ${gateEntries.length ? `<table style="width:100%;margin-top:.5rem;font-size:.72rem;border-collapse:collapse"><tr style="color:var(--text-muted);text-align:left"><th style="padding:.25rem .4rem">Gate</th><th style="padding:.25rem .4rem">Cause</th><th style="padding:.25rem .4rem">Value</th><th style="padding:.25rem .4rem">Consequence</th></tr>${gateRows}</table>` : `<div style="margin-top:.45rem;font-size:.74rem;color:var(--text-muted)">Gates: none</div>`}
         ${chain.length ? `<div style="margin-top:.35rem;font-size:.72rem;color:var(--text-muted)">Reason chain: ${chain.join(' → ')}</div>` : ''}
       </div>`;
     }
@@ -1395,10 +1409,15 @@
       const toNum = v => Number.isFinite(Number(v)) ? Number(v) : null;
       const fmtCurLocal = v => v == null ? '—' : '$' + Number(v).toFixed(2);
       const qPrev = window._rvQualitySignals || {};
-      const rawValid = window._rvCanonicalMetrics?.rawValidation?.valid !== false;
+      const rawState = window._rvCanonicalMetrics?.rawValidation;
+      const rawStatus = rawState == null ? 'UNKNOWN' : rawState.valid ? 'VALID' : 'INVALID';
+      const rawValid = rawStatus === 'VALID';
+      const rawUnknown = rawStatus === 'UNKNOWN';
       const metricMismatch = Boolean(qPrev.metricMismatch);
       const biotechMissing = Boolean(qPrev.biotechContextMissing);
-      const suppressed = !rawValid;
+      const rsiHardGate = s.rsi14 != null && s.rsi14 >= 80;
+      const anyGateActive = !rawValid || rawUnknown || metricMismatch || biotechMissing || rsiHardGate;
+      const suppressed = rawStatus === 'INVALID';
 
       const swingHigh = (n) => {
         if (!Array.isArray(bars) || bars.length < 3) return null;
@@ -1532,14 +1551,26 @@
           gateNotes.push('Missing trigger/invalidation level');
         }
 
+        if (rsiHardGate && verdict.label === 'BUY') {
+          verdict = { label: 'WAIT', cls: 'neutral', conf: 'LOW', icon: '◆' };
+          gateNotes.push(`RSI hard gate (${s.rsi14.toFixed(1)} >= 80)`);
+        }
         if (biotechMissing && verdict.conf === 'HIGH') verdict.conf = 'MEDIUM';
+        if (metricMismatch && verdict.label === 'BUY') {
+          verdict = { label: 'WAIT', cls: 'neutral', conf: 'LOW', icon: '◆' };
+          gateNotes.push('Canonical metric drift blocks BUY');
+        }
+        if (rawUnknown && verdict.label === 'BUY') {
+          verdict = { label: 'WAIT', cls: 'neutral', conf: 'LOW', icon: '◆' };
+          gateNotes.push('Raw validation unknown — data health unverified');
+        }
         if (suppressed) {
           verdict = { label: 'SUPPRESSED', cls: 'neutral', conf: 'LOW', icon: '⏸' };
-          gateNotes.push(!rawValid ? 'Raw data gate failed' : 'Canonical metric mismatch');
+          gateNotes.push('Raw data validation failed');
         }
         finalLabels.push(verdict.label);
 
-        const rrColor = rr == null ? 'var(--text-muted)' : rr >= 2 ? 'var(--green)' : rr >= 1 ? 'var(--yellow)' : 'var(--red)';
+        const rrColor = rr == null ? 'var(--text-muted)' : rr >= 2 ? 'var(--green)' : rr >= 0.5 ? 'var(--yellow)' : 'var(--red)';
         const rrText = rr == null ? '—' : `${rr.toFixed(2)}:1`;
         const triggerText = trigger ? `Break above ${trigger.name} (${fmtCurLocal(trigger.price)})` : 'No trigger level';
         const invalidText = invalid ? `Loss of ${invalid.name} (${fmtCurLocal(invalid.price)})` : 'No invalidation level';
@@ -1559,12 +1590,15 @@
       let overallAction = 'WAIT';
       if (suppressed) overallAction = 'SUPPRESSED';
       else if (finalLabels.every((l) => l === 'AVOID')) overallAction = 'AVOID';
-      else if (finalLabels.some((l) => l === 'BUY') && rrBlockedHorizons === 0) overallAction = 'BUY';
+      else if (finalLabels.some((l) => l === 'BUY') && rrBlockedHorizons === 0 && !anyGateActive) overallAction = 'BUY';
       const qNext = {
         ...qPrev,
         rrBlockedHorizons,
         horizonVerdicts: finalLabels,
         finalSuppressed: suppressed,
+        anyGateActive,
+        rsiHardGate,
+        rawStatus,
         overallAction,
         decisionSummary: overallAction
       };
@@ -1573,14 +1607,16 @@
       const trendWord = (s.sma20 > s.sma50 && s.sma50 > s.sma200) ? 'uptrend' : (s.sma20 < s.sma50 && s.sma50 < s.sma200) ? 'downtrend' : 'mixed trend';
       const rsiZone = getRsiMeta(s.rsi14).zone.toLowerCase();
       const gateSummary = [];
-      if (!rawValid) gateSummary.push('raw validation failed');
-      if (metricMismatch) gateSummary.push('canonical metric drift (warning)');
+      if (rawStatus === 'INVALID') gateSummary.push('raw validation INVALID');
+      if (rawUnknown) gateSummary.push('raw validation UNKNOWN — blocks BUY');
+      if (metricMismatch) gateSummary.push('canonical metric drift — blocks BUY');
+      if (rsiHardGate) gateSummary.push(`RSI hard gate (${s.rsi14.toFixed(1)} >= 80) — blocks BUY`);
       if (rrBlockedHorizons > 0) gateSummary.push(`${rrBlockedHorizons} horizon(s) blocked by R:R`);
-      if (biotechMissing) gateSummary.push('biotech confidence cap active');
+      if (biotechMissing) gateSummary.push('biotech context missing — blocks BUY');
 
       return `<div class="section section-full decision-strip-section">
         <h2>⚡ Decision Strip <span style="font-size:0.7rem;color:var(--text-muted);text-transform:none;letter-spacing:0">multi-horizon analysis</span></h2>
-        <div style="font-size:.68rem;color:var(--text-muted);margin-bottom:.5rem;text-align:center">BUY only if trigger/invalidation is defined and R:R >= 1.0. Otherwise WAIT/AVOID or SUPPRESSED.</div>
+        <div style="font-size:.68rem;color:var(--text-muted);margin-bottom:.5rem;text-align:center">BUY only if trigger/invalidation is defined and projected R:R >= 0.5. R:R caution below 1.0. Otherwise WAIT/AVOID.</div>
         <div style="font-size:.82rem;color:var(--text);margin-bottom:.6rem;padding:.5rem .6rem;background:rgba(255,255,255,.02);border-radius:6px;border-left:3px solid var(--accent);line-height:1.5">
           ${ticker} is in a <strong>${trendWord}</strong> with RSI in <strong>${rsiZone}</strong> territory.
           ${gateSummary.length ? `<br><span style="color:var(--yellow)">⚠️ Gate status: ${gateSummary.join(' · ')}</span>` : ''}
@@ -1595,12 +1631,10 @@
       if (close == null) return '';
       const q = window._rvQualitySignals || {};
       if (q.finalSuppressed) {
-        const reasons = []
-          .concat(window._rvCanonicalMetrics?.rawValidation?.valid === false ? ['raw data validation failed'] : []);
         return `<div class="section section-full">
           <h2>🎯 Technical Verdict <span style="font-size:0.7rem;color:var(--text-muted);text-transform:none;letter-spacing:0">1-20d signal blend</span></h2>
           <div class="verdict-box neutral">⏸ SUPPRESSED</div>
-          <div class="verdict-detail">Final verdict is suppressed until active gates are resolved${reasons.length ? ` (${reasons.join(' · ')})` : ''}.</div>
+          <div class="verdict-detail">Final verdict is suppressed until active gates are resolved.</div>
         </div>`;
       }
       let bullCount = 0, bearCount = 0;
@@ -1628,10 +1662,22 @@
       else if (ratio <= 0.35) { verdict = '▼ BEARISH'; cls = 'bearish'; }
       else { verdict = '◆ NEUTRAL'; cls = 'neutral'; }
 
+      // Governance: if any gate active and verdict is BULLISH, cap to NEUTRAL
+      if (q.anyGateActive && cls === 'bullish') {
+        verdict = '◆ NEUTRAL'; cls = 'neutral';
+      }
+
+      const gateNotes = [];
+      if (q.rrBlockedHorizons > 0) gateNotes.push(`R:R gate blocked ${q.rrBlockedHorizons} horizon(s)`);
+      if (q.metricMismatch) gateNotes.push('canonical metric drift');
+      if (q.rsiHardGate) gateNotes.push('RSI hard gate active');
+      if (q.rawStatus === 'UNKNOWN') gateNotes.push('raw validation unknown');
+      if (q.biotechContextMissing) gateNotes.push('biotech context missing');
+
       return `<div class="section section-full">
       <h2>🎯 Technical Verdict <span style="font-size:0.7rem;color:var(--text-muted);text-transform:none;letter-spacing:0">1-20d signal blend</span></h2>
       <div class="verdict-box ${cls}">${verdict}</div>
-      <div class="verdict-detail">${bullCount} bullish signals, ${bearCount} bearish signals from MA, RSI, MACD, and Bollinger analysis${q.rrBlockedHorizons > 0 ? ` · R:R gate blocked ${q.rrBlockedHorizons} horizon(s)` : ''}${q.metricMismatch ? ' · ⚠ canonical metric drift detected' : ''}</div>
+      <div class="verdict-detail">${bullCount} bullish signals, ${bearCount} bearish signals from MA, RSI, MACD, and Bollinger analysis${gateNotes.length ? ` · ⚠ ${gateNotes.join(' · ')}` : ''}</div>
     </div>`;
     }
 
@@ -1779,10 +1825,10 @@
       </div>`;
       }).join('');
 
-      // Autocorrelation
+      // Autocorrelation (SSOT labels — same as Correlations section)
       const ac = s.lag1_autocorrelation;
-      const acText = ac != null ? (ac > 0.1 ? '🔄 Momentum trending (positive autocorrelation)' :
-        ac < -0.1 ? '↩️ Mean-reverting (negative autocorrelation)' : '➡️ No significant trend persistence') : '';
+      const acText = ac != null ? (ac > 0.1 ? '🔄 Trending (momentum)' :
+        ac < -0.1 ? '↩️ Mean-reverting' : '➡️ Random walk') : '';
 
       return `<div class="section">
       <h2>📈 Performance</h2>
@@ -2125,18 +2171,22 @@
       const vol20 = Math.sqrt(recent20.reduce((a, r) => a + (r - avgRet20) ** 2, 0) / (recent20.length - 1)) * Math.sqrt(252);
       const vol60 = Math.sqrt(recent60.reduce((a, r) => a + (r - avgRet60) ** 2, 0) / (recent60.length - 1)) * Math.sqrt(252);
 
-      // Autocorrelation (lag-1)
-      let autoCorr = 0;
-      if (returns.length > 2) {
-        const n = Math.min(returns.length - 1, 60);
-        const slice = returns.slice(-n - 1);
-        const mean = slice.reduce((a, b) => a + b, 0) / slice.length;
-        let num = 0, den = 0;
-        for (let i = 1; i < slice.length; i++) {
-          num += (slice[i] - mean) * (slice[i - 1] - mean);
-          den += (slice[i] - mean) ** 2;
+      // Autocorrelation (SSOT: use canonical s.lag1_autocorrelation when available, else local calc)
+      const rvCtx = window._rvRenderCtx || {};
+      let autoCorr = rvCtx.s?.lag1_autocorrelation;
+      if (autoCorr == null) {
+        autoCorr = 0;
+        if (returns.length > 2) {
+          const n = Math.min(returns.length - 1, 60);
+          const slice = returns.slice(-n - 1);
+          const mean = slice.reduce((a, b) => a + b, 0) / slice.length;
+          let num = 0, den = 0;
+          for (let i = 1; i < slice.length; i++) {
+            num += (slice[i] - mean) * (slice[i - 1] - mean);
+            den += (slice[i] - mean) ** 2;
+          }
+          autoCorr = den > 0 ? num / den : 0;
         }
-        autoCorr = den > 0 ? num / den : 0;
       }
       const acLabel = autoCorr > 0.1 ? '🔄 Trending (momentum)' : autoCorr < -0.1 ? '↩️ Mean-reverting' : '➡️ Random walk';
 
@@ -2165,6 +2215,24 @@
     // ─── 12. PRICE CONCLUSION ───────────────────────────────────────────────────
     function buildPriceConclusion(ticker, close, s, bars, universe) {
       if (close == null) return '';
+      // Governance: withheld when any gate active
+      const qPC = window._rvQualitySignals || {};
+      if (qPC.anyGateActive) {
+        const pcGates = [];
+        if (qPC.rawStatus === 'UNKNOWN') pcGates.push('Raw Validation UNKNOWN');
+        if (qPC.rawStatus === 'INVALID') pcGates.push('Raw Validation INVALID');
+        if (qPC.metricMismatch) pcGates.push('Canonical Metric Drift');
+        if (qPC.rsiHardGate) pcGates.push('RSI Hard Gate');
+        if (qPC.biotechContextMissing) pcGates.push('Biotech Context Missing');
+        return `<div class="section section-full">
+      <h2>📝 Price Conclusion <span style="font-size:0.7rem;color:var(--text-muted);text-transform:none;letter-spacing:0">20-200d context</span></h2>
+      <div class="verdict-box neutral" style="font-size:0.95rem;padding:0.75rem;margin-bottom:0.75rem;">PRICE CONCLUSION WITHHELD — active governance gates prevent a normal directional conclusion.</div>
+      <div style="font-size:.78rem;color:var(--yellow);padding:.5rem .6rem;border-radius:6px;background:var(--yellow-bg);border:1px solid rgba(251,191,36,.25);margin-bottom:.5rem">
+        Active gates: ${pcGates.join(' · ') || 'governance gate active'}
+      </div>
+      <div style="font-size:0.7rem;color:var(--text-muted);text-align:center;">⚠️ Conclusion will be available once all governance gates clear. Not financial advice.</div>
+    </div>`;
+      }
       const points = [];
       let bullScore = 0, bearScore = 0;
 
@@ -2265,7 +2333,7 @@
         }
       }
 
-      // Overall conclusion
+      // Overall conclusion (only reached when no governance gates active)
       const total = bullScore + bearScore;
       const ratio = total > 0 ? bullScore / total : 0.5;
       let overallVerdict, verdictCls;

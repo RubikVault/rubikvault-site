@@ -267,8 +267,12 @@ function buildExecutiveSummary(ticker, close, s, bars, universe) {
   const volWord = s.volatility_percentile > 70 ? 'elevated' : s.volatility_percentile > 40 ? 'moderate' : 'low';
   const rangeWord = s.range_52w_pct > 0.9 ? 'near its 52-week high' : s.range_52w_pct > 0.7 ? 'in the upper range of its 52-week band' : s.range_52w_pct < 0.1 ? 'near its 52-week low' : s.range_52w_pct < 0.2 ? 'in the lower range of its 52-week band' : 'in mid-range of its 52-week band';
   const synthesis = `${ticker} is in a <strong>${trendWord}</strong> with <strong>${volWord} volatility</strong> (${vol}), trading ${rangeWord}.`;
+  // Governance awareness
+  const qExec = (typeof window !== 'undefined' && window._rvQualitySignals) || {};
+  const govNote = qExec.anyGateActive ? `<div style="font-size:.74rem;color:var(--yellow);margin-bottom:.5rem;padding:.4rem .5rem;border-radius:6px;background:var(--yellow-bg);border:1px solid rgba(251,191,36,.25)">⚠ Active governance gates detected — verdict modules are constrained. See Decision Trace for details.</div>` : '';
 
   return `<div class="section section-full"><h2>🎯 Executive Summary — ${ticker}</h2>
+  ${govNote}
   <div style="font-size:.82rem;color:var(--text);margin-bottom:.6rem;padding:.5rem .6rem;background:rgba(255,255,255,.02);border-radius:6px;border-left:3px solid var(--accent);line-height:1.5">${synthesis}</div>
   <div class="exec-card">${rows.map(r => `<div class="exec-row"><span class="exec-label">${r.l}</span><span class="exec-val" style="color:${r.c}">${r.v}</span></div>`).join('')}</div>
   <div style="font-size:.7rem;color:var(--text-muted);text-align:center">Auto-generated thesis from technical data. Not financial advice.</div></div>`;
@@ -585,6 +589,14 @@ function buildVolTermStructure(bars) {
 // ═══════════════════════════════════════════════════════════════════════════
 function buildMonteCarlo(bars) {
   const rets = _returns(bars).map(r => r.ret); if (rets.length < 60) return '';
+  // Governance: suppress under active gates
+  const qMC = (typeof window !== 'undefined' && window._rvQualitySignals) || {};
+  if (qMC.anyGateActive) {
+    return `<details class="section advanced-collapsible"><summary class="section-summary-header">🎲 Monte Carlo Projection</summary>
+  <div style="padding:.55rem .65rem;border-radius:8px;background:var(--yellow-bg);border:1px solid rgba(251,191,36,.35);font-size:.78rem;color:#fde68a;margin:.5rem 0">
+    <strong>UNAVAILABLE</strong> — Monte Carlo projections are suppressed while governance gates are active. Projections require clean data health and governance state.
+  </div></details>`;
+  }
   const N = 500, horizons = [{ l: '30d', n: 30 }, { l: '90d', n: 90 }, { l: '252d', n: 252 }];
   const lastClose = adjC(bars[bars.length - 1]) || 1;
   const results = horizons.map(h => {
@@ -669,7 +681,7 @@ function buildStressScenarios(bars) {
   ];
   const firstBarDate = bars.length ? bars[0].date : '9999-12-31';
   const rows = scenarios.map(sc => {
-    if (firstBarDate > sc.from) return `<div class="sub-metric"><span style="font-weight:600">${sc.name}</span><span style="font-size:.72rem;color:var(--text-muted)">Pre-data — N/A (history starts ${firstBarDate})</span></div>`;
+    if (firstBarDate > sc.from) return `<div class="sub-metric"><span style="font-weight:600">${sc.name}</span><span style="font-size:.72rem;color:var(--yellow)">UNAVAILABLE — insufficient history for reliable stress replay (data starts ${firstBarDate}, scenario requires ${sc.from})</span></div>`;
     const inRange = bars.filter(b => b.date >= sc.from && b.date <= sc.to);
     if (inRange.length < 5) return null;
     const first = adjC(inRange[0]), last = adjC(inRange[inRange.length - 1]);
@@ -1103,11 +1115,43 @@ async function buildScientificInsight(ticker, context = {}) {
           ? 'var(--red)'
           : 'var(--text-dim)';
 
+  // Governance: diagnostic-only when gates active
+  const qSci = (typeof window !== 'undefined' && window._rvQualitySignals) || {};
+  const sciDiagnosticOnly = Boolean(qSci.anyGateActive);
+  if (sciDiagnosticOnly) {
+    effectiveStrength = 'DIAGNOSTIC';
+  }
+
   _setQualitySignals({
     scientificStrength: effectiveStrength,
     scientificRiskFlags: riskFlags,
+    scientificDiagnosticOnly: sciDiagnosticOnly,
     metricMismatch: Boolean((window._rvQualitySignals || {}).metricMismatch || mismatch.mismatch)
   });
+
+  // Governance: truly diagnostic-only — no operative scores, no SHAP, no probability
+  if (sciDiagnosticOnly) {
+    const volPctDisp = _toNumber(context?.stats?.volatility_percentile);
+    const activeGates = [];
+    if (qSci.rawStatus === 'UNKNOWN') activeGates.push('Raw Validation UNKNOWN');
+    if (qSci.rawStatus === 'INVALID') activeGates.push('Raw Validation INVALID');
+    if (qSci.metricMismatch) activeGates.push('Canonical Metric Drift');
+    if (qSci.rsiHardGate) activeGates.push('RSI Hard Gate (>=80)');
+    if (qSci.biotechContextMissing) activeGates.push('Biotech Context Missing');
+    return `<div class="section section-full"><h2>🔬 Scientific Analyzer</h2>
+<div style="padding:.55rem .65rem;border-radius:8px;background:var(--yellow-bg);border:1px solid rgba(251,191,36,.35);font-size:.78rem;color:#fde68a;margin-bottom:.6rem">
+  <strong>DIAGNOSTIC ONLY</strong> — Active governance gates prevent operative signal output. Showing baseline metrics only.
+  <div style="margin-top:.3rem;font-size:.72rem">Active gates: ${activeGates.join(' · ') || 'unknown'}</div>
+</div>
+<div class="m-grid">
+  <div class="m-item"><div class="m-label">Canonical RSI (14)</div><div class="m-val">${_fmtMaybe(canonical.rsi14, 1)}</div></div>
+  <div class="m-item"><div class="m-label">Canonical ATR (14)</div><div class="m-val">${_fmtMaybe(canonical.atr14, 2)}</div></div>
+  <div class="m-item"><div class="m-label">ATR %</div><div class="m-val">${_fmtMaybe(canonical.atrPct, 2)}%</div></div>
+  <div class="m-item"><div class="m-label">Vol Percentile</div><div class="m-val">${volPctDisp != null ? volPctDisp.toFixed(0) + 'th' : '—'}</div></div>
+</div>
+<div style="font-size:.72rem;color:var(--text-muted);margin-top:.5rem">Operative signals (probability, expected return, setup/trigger scores, factor attribution, model quality) are withheld until all governance gates clear.</div>
+</div>`;
+  }
 
   return `<div class="section section-full"><h2>🔬 Scientific Analyzer</h2>
 <div style="display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:.6rem">
@@ -1292,8 +1336,11 @@ async function buildElliottInsight(ticker, context = {}) {
   const plausible = levelPlausibility([...(Array.isArray(fibSupport) ? fibSupport : []), ...(Array.isArray(fibResist) ? fibResist : [])]);
   const elliottBias = trendDir.toLowerCase().includes('bull') ? 'BUY' : trendDir.toLowerCase().includes('bear') ? 'AVOID' : 'WAIT';
   const conflictsPrimary = Boolean(primaryBias && primaryBias !== 'SUPPRESSED' && elliottBias !== 'WAIT' && primaryBias !== elliottBias);
-  const conflict = conflictsPrimary || !plausible.ok;
-  _setQualitySignals({ elliottConflict: conflict, elliottState: plausible.ok ? (conflict ? 'conflict' : 'aligned') : 'suppressed' });
+  // Governance: if any gate active, Elliott bullish output must not contradict governance
+  const govGateActive = Boolean(quality.anyGateActive);
+  const govConflict = govGateActive && elliottBias === 'BUY';
+  const conflict = conflictsPrimary || !plausible.ok || govConflict;
+  _setQualitySignals({ elliottConflict: conflict, elliottState: plausible.ok ? (conflict ? 'conflict' : 'aligned') : 'suppressed', elliottGovConstrained: govGateActive });
 
   if (!plausible.ok) {
     return `<div class="section"><h2>\ud83c\udf0a Elliott Wave Analysis</h2>
@@ -1322,7 +1369,7 @@ async function buildElliottInsight(ticker, context = {}) {
 
   return `<div class="section"><h2>\ud83c\udf0a Elliott Wave Analysis</h2>
 ${conflict
-    ? `<div style="margin-bottom:.5rem;padding:.45rem .6rem;border-radius:8px;background:var(--yellow-bg);border:1px solid rgba(251,191,36,.35);font-size:.76rem;color:#fde68a"><strong>Conflict marker:</strong> Elliott bias (${elliottBias}) diverges from main decision flow (${primaryBias || 'N/A'}). Treat as alternative scenario, not primary verdict.</div>`
+    ? `<div style="margin-bottom:.5rem;padding:.45rem .6rem;border-radius:8px;background:var(--yellow-bg);border:1px solid rgba(251,191,36,.35);font-size:.76rem;color:#fde68a"><strong>Conflict marker:</strong> ${govConflict ? 'Governance gates active — Elliott bullish bias is constrained. Treat as diagnostic only.' : `Elliott bias (${elliottBias}) diverges from main decision flow (${primaryBias || 'N/A'}). Treat as alternative scenario, not primary verdict.`}</div>`
     : `<div style="margin-bottom:.5rem;padding:.45rem .6rem;border-radius:8px;background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.35);font-size:.76rem;color:#bbf7d0"><strong>Alignment marker:</strong> ${primaryBias === 'SUPPRESSED' ? 'Primary flow is currently suppressed; Elliott is shown as a secondary scenario.' : 'Elliott is directionally in line with the current decision flow.'}</div>`}
 <div style="display:flex;gap:.75rem;flex-wrap:wrap;margin-bottom:.5rem">
   <div style="padding:.5rem .8rem;border-radius:8px;background:linear-gradient(135deg,rgba(99,102,241,.12),rgba(139,92,246,.08));border:1px solid rgba(99,102,241,.3);flex:1;min-width:120px"><div style="font-size:.72rem;color:var(--text-dim);text-transform:uppercase;letter-spacing:.04em">Developing Wave</div><div style="font-size:1.1rem;font-weight:800;color:var(--accent)">${wave}</div></div>
