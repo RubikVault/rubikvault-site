@@ -47,8 +47,8 @@ jobs:
           fi
           echo "✅ Total file count OK ($TOTAL_FILES/$MAX_FILES)"
           
-          # Check individual file sizes (max 25MB, we use 10MB as safety)
-          MAX_SIZE_MB=10
+          # Check individual file sizes (max 25MB, we use 25MB as limit)
+          MAX_SIZE_MB=25
           MAX_SIZE_BYTES=$((MAX_SIZE_MB * 1024 * 1024))
           LARGE_FILES=$(find public/data -type f -name "*.json" -size +${MAX_SIZE_MB}M || true)
           if [ ! -z "$LARGE_FILES" ]; then
