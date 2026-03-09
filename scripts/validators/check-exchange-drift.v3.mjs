@@ -61,9 +61,10 @@ async function main() {
   await fs.writeFile(path.join(rawDir, "latest.json"), `${JSON.stringify(canonical, null, 2)}\n`, "utf8");
 
   const known = new Set(policy.allowed_codes || []);
+  const ignored = new Set(policy.ignored_codes || []);
   const aliases = policy.alias_map || {};
   const observedCodes = canonical.map((item) => item.Code);
-  const unresolved = observedCodes.filter((code) => !known.has(code) && !aliases[code]);
+  const unresolved = observedCodes.filter((code) => !known.has(code) && !aliases[code] && !ignored.has(code));
 
   const report = {
     meta: {

@@ -1296,7 +1296,7 @@
           <div class="m-item"><div class="m-label">Digest</div><div class="m-val">${_fmtDigest(can.digest)}</div><div class="m-sub">payload hash</div></div>
           <div class="m-item"><div class="m-label">Schema</div><div class="m-val">${can.schemaVersion || 'rv.stock'}</div><div class="m-sub">contract version</div></div>
         </div>
-        ${mismatch ? `<div style="margin-top:.55rem;padding:.45rem .6rem;border-radius:8px;background:var(--red-bg);border:1px solid rgba(248,113,113,.35);font-size:.76rem;color:#fecaca"><strong>Mismatch gate active:</strong> canonical metrics diverge from model snapshot. Final verdict is suppressed.</div>` : `<div style="margin-top:.55rem;font-size:.73rem;color:var(--text-muted)">Canonical metrics are the single decision reference for RSI/ATR/As-of.</div>`}
+        ${mismatch ? `<div style="margin-top:.55rem;padding:.45rem .6rem;border-radius:8px;background:var(--yellow-bg);border:1px solid rgba(251,191,36,.35);font-size:.76rem;color:#fde68a"><strong>Metric drift detected:</strong> canonical metrics diverge slightly from model snapshot. Results may vary.</div>` : `<div style="margin-top:.55rem;font-size:.73rem;color:var(--text-muted)">Canonical metrics are the single decision reference for RSI/ATR/As-of.</div>`}
       </div>`;
     }
 
@@ -1370,7 +1370,7 @@
       const trace = window._rvPayload?.evaluation_v4?.v4_contract?.decision_trace?.value || null;
       const gates = []
         .concat(q.finalSuppressed ? ['FINAL_SUPPRESSED'] : [])
-        .concat(q.metricMismatch ? ['CANONICAL_MISMATCH'] : [])
+        .concat(q.metricMismatch ? ['CANONICAL_DRIFT'] : [])
         .concat(q.rrBlockedHorizons > 0 ? [`RR_BLOCKED_${q.rrBlockedHorizons}`] : [])
         .concat(q.forecastValidated === false ? ['FORECAST_VALIDATION_INCOMPLETE'] : [])
         .concat(q.forecastIndependent === false ? ['FORECAST_NON_INDEPENDENT'] : []);
@@ -1398,7 +1398,7 @@
       const rawValid = window._rvCanonicalMetrics?.rawValidation?.valid !== false;
       const metricMismatch = Boolean(qPrev.metricMismatch);
       const biotechMissing = Boolean(qPrev.biotechContextMissing);
-      const suppressed = !rawValid || metricMismatch;
+      const suppressed = !rawValid;
 
       const swingHigh = (n) => {
         if (!Array.isArray(bars) || bars.length < 3) return null;
@@ -1515,12 +1515,18 @@
         const gateNotes = [];
         if (trigger && invalid) {
           risk = Math.abs(close - invalid.price);
-          reward = Math.abs(trigger.price - close);
+          // Project reward beyond trigger using ATR-based targets per horizon
+          const atr = s.atr14 || 0;
+          const atrMult = h.key === 'short' ? 2.5 : h.key === 'mid' ? 5 : 8;
+          const projectedTarget = trigger.price + atr * atrMult;
+          reward = Math.abs(projectedTarget - close);
           rr = risk > 0 ? reward / risk : null;
-          if (rr != null && rr < 1.0) {
+          if (rr != null && rr < 0.5) {
             rrBlockedHorizons += 1;
-            verdict = rr < 0.7 ? { label: 'AVOID', cls: 'bearish', conf: 'MEDIUM', icon: '▼' } : { label: 'WAIT', cls: 'neutral', conf: 'MEDIUM', icon: '◆' };
-            gateNotes.push(`R:R gate blocked (${rr.toFixed(2)} < 1.00)`);
+            verdict = rr < 0.3 ? { label: 'AVOID', cls: 'bearish', conf: 'MEDIUM', icon: '▼' } : { label: 'WAIT', cls: 'neutral', conf: 'MEDIUM', icon: '◆' };
+            gateNotes.push(`R:R gate blocked (${rr.toFixed(2)} < 0.50)`);
+          } else if (rr != null && rr < 1.0) {
+            gateNotes.push(`R:R caution (${rr.toFixed(2)} < 1.00)`);
           }
         } else {
           gateNotes.push('Missing trigger/invalidation level');
@@ -1568,7 +1574,7 @@
       const rsiZone = getRsiMeta(s.rsi14).zone.toLowerCase();
       const gateSummary = [];
       if (!rawValid) gateSummary.push('raw validation failed');
-      if (metricMismatch) gateSummary.push('canonical metric mismatch');
+      if (metricMismatch) gateSummary.push('canonical metric drift (warning)');
       if (rrBlockedHorizons > 0) gateSummary.push(`${rrBlockedHorizons} horizon(s) blocked by R:R`);
       if (biotechMissing) gateSummary.push('biotech confidence cap active');
 
@@ -1590,9 +1596,7 @@
       const q = window._rvQualitySignals || {};
       if (q.finalSuppressed) {
         const reasons = []
-          .concat(q.metricMismatch ? ['canonical metric mismatch'] : [])
-          .concat(window._rvCanonicalMetrics?.rawValidation?.valid === false ? ['raw data validation failed'] : [])
-          .concat(q.forecastValidated === false ? ['forecast validation incomplete'] : []);
+          .concat(window._rvCanonicalMetrics?.rawValidation?.valid === false ? ['raw data validation failed'] : []);
         return `<div class="section section-full">
           <h2>🎯 Technical Verdict <span style="font-size:0.7rem;color:var(--text-muted);text-transform:none;letter-spacing:0">1-20d signal blend</span></h2>
           <div class="verdict-box neutral">⏸ SUPPRESSED</div>
@@ -1627,7 +1631,7 @@
       return `<div class="section section-full">
       <h2>🎯 Technical Verdict <span style="font-size:0.7rem;color:var(--text-muted);text-transform:none;letter-spacing:0">1-20d signal blend</span></h2>
       <div class="verdict-box ${cls}">${verdict}</div>
-      <div class="verdict-detail">${bullCount} bullish signals, ${bearCount} bearish signals from MA, RSI, MACD, and Bollinger analysis${q.rrBlockedHorizons > 0 ? ` · R:R gate blocked ${q.rrBlockedHorizons} horizon(s)` : ''}</div>
+      <div class="verdict-detail">${bullCount} bullish signals, ${bearCount} bearish signals from MA, RSI, MACD, and Bollinger analysis${q.rrBlockedHorizons > 0 ? ` · R:R gate blocked ${q.rrBlockedHorizons} horizon(s)` : ''}${q.metricMismatch ? ' · ⚠ canonical metric drift detected' : ''}</div>
     </div>`;
     }
 

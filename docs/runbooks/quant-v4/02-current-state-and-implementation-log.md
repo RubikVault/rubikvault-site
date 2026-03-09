@@ -1,16 +1,203 @@
 # Current State And Implementation Log
 
-Stand: 2026-03-04
+Stand: 2026-03-08
 
 ## Kurzstatus
 
 - Quant v4.0 insgesamt: ca. 69%
 - Q1 Backbone lokal vorhanden und mit vielen Artefakten belegt
-- Aktueller Hauptblocker war nicht Phase A, sondern instabile Operator-Runs durch zu aggressive Safe-Profile
+- Aktueller Hauptblocker ist fachlich weiter Stage B ueber die As-of-Serie, operativ aber jetzt wieder klar getrennt von Night-Ops-Fehlern
 - Neuer belastbarer Fortschritt:
   - Data-Truth-Contract-Layer greifen wieder auf echte verfügbare Rohquellen zu
   - Stage-B-/Registry-/Portfolio-/Redflag-Kette ist jetzt governance-aware statt blind
   - Reconciliation ist grün und Contract-/TRI-Invariants sind im Kontrollpfad belastbar
+
+## Update 2026-03-08 (raw-bars preflight + safe panel cap)
+
+1. Ein zweiter Night-Ops-Fehler wurde jetzt hart geschlossen.
+   - Bisher konnte der Safe-Sweep trotz konservativem Label intern weiter mit `panel_max_assets=0` in den Task-Command laufen.
+   - Dadurch landeten einzelne Night-Tasks wieder auf dem Full-Panel-/Full-Scan-Pfad und starben als `rc=137` / `orphan`, obwohl `top_liquid_n` niedrig wirkte.
+
+2. Der Overnight-Sweep erzwingt jetzt einen echten Safe-Cap.
+   - Datei:
+     - `/Users/michaelpuchowezki/Dev/rubikvault-site/scripts/quantlab/run_overnight_q1_training_sweep.py`
+   - Neue wirksame Regel:
+     - `effective_panel_max_assets = max(requested_panel_max_assets, effective_top_liquid)`
+     - falls `requested_panel_max_assets <= 0`, wird stattdessen direkt `effective_top_liquid` verwendet
+   - Wirkung:
+     - der Safe-Runner kann nicht mehr versehentlich auf Vollpanel kippen, nur weil `panel_max_assets=0` in älteren Job-Konfigurationen stand.
+
+3. Night-Preflight blockt jetzt stale Rohdaten fuer Phase-A-Laeufe vor dem Start.
+   - Dateien:
+     - `/Users/michaelpuchowezki/Dev/rubikvault-site/scripts/quantlab/run_night_preflight_q1.py`
+     - `/Users/michaelpuchowezki/Dev/rubikvault-site/scripts/quantlab/run_q1_night_preflight.py`
+   - Neue harte Regel:
+     - wenn fuer die benoetigten Asset-Typen (`STOCK,ETF`) die Raw-Bars-Rohingests zu alt sind, faellt der Check `raw_bars_freshness` im Preflight auf `false`.
+   - Effekt:
+     - Phase-A-Night-Runs mit stale Rohdaten starten nicht mehr „trotz Warnung“, sondern sauber mit Preflight-Fehler.
+
+4. Lessons learned aus dem aktuellen Night-Run sind jetzt operationalisiert.
+   - Der Stand `pending=297, done=0, failed=3, stopped_due_to_consecutive_failures=true` war kein neuer Quant-Methodik-Fehler, sondern eine Mischung aus:
+     - altem `panel_max_assets=0`-Verhalten in den Night-Tasks
+     - stale-orphan-/OOM-Kaskaden
+     - und veralteten Rohdaten (`RAW_BARS_REQUIRED_TYPES_STALE`)
+   - Ab jetzt sind diese beiden Betriebsfehler vor dem eigentlichen Quant-Pfad abgefangen.
+
+## Update 2026-03-08 (Night profile hardened + preflight validated)
+
+1. Der wichtigste Night-Ops-Fehler wurde behoben:
+   - Die Safe-/Night-Wrapper liefen noch mit zu kleinen Mini-Panels (`top-liquid-list 400,600,800` bzw. `500,700,900`).
+   - Das erzeugte nachts oft sinnlose Stage-A-Null-Survivor-Laeufe oder stoppte Jobs nach wenigen Fehlschlaegen, ohne fuer v4 echte Qualifikationssignale zu liefern.
+
+2. Wrapper jetzt auf sinnvollen Mindestbereich gehoben.
+   - Dateien:
+     - `/Users/michaelpuchowezki/Dev/rubikvault-site/scripts/quantlab/start_q1_operator_safe.sh`
+     - `/Users/michaelpuchowezki/Dev/rubikvault-site/scripts/quantlab/run_q1_night_block_safe.sh`
+     - `/Users/michaelpuchowezki/Dev/rubikvault-site/scripts/quantlab/start_night14_with_watchdog.sh`
+     - `/Users/michaelpuchowezki/Dev/rubikvault-site/scripts/quantlab/run_q1_night_preflight.py`
+   - Neue Safe-Defaults:
+     - `top-liquid-list=2500,3500,5000`
+     - `panel_max_assets=5000` (Operator/Night wrapper)
+     - `oom_downshift_min_top_liquid=2500`
+     - Day-Run `asof_dates_count=2`
+     - Night-Run `asof_dates_count=4`
+     - 14h-Night-Watchdog `asof_dates_count=6`
+     - Preflight-Probe jetzt mit `lookback_calendar_days=420`, `top_liquid_n=2500`, `panel_max_assets=3000`, `min_bars=200`
+
+3. Night-Preflight ist nach der Haertung jetzt wieder realistisch und gruen.
+   - Report:
+     - `/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab/jobs/q1_preflight_probe_20260308_b/q1_night_preflight_report.json`
+   - Ergebnis:
+     - `ok=true`
+     - `micro_probe_ok=true`
+   - Probe-Run:
+     - `/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab/runs/run_id=q1panel_daily_local_1772988174/q1_panel_stagea_daily_run_status.json`
+     - `survivors_A_total=15`
+     - Stage B/Registry liefen technisch sauber mit, Redflags meldeten erwartbar `kill_switch=true` als Warn-/Governance-Zustand, nicht als Night-Ops-Fehler.
+
+4. Stage-B-Stabilitaet ist neu konsolidiert und etwas besser als zuvor gedacht, aber weiterhin der Hauptqualitaetsblocker.
+   - Report:
+     - `/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab/ops/stage_b_stability/latest.json`
+   - Aktuell:
+     - `asof_points_total=10`
+     - `asof_points_ok_total=3`
+     - `strict_positive_ratio_all=0.3`
+     - `strict_pass_avg_all=2.0`
+   - Interpretation:
+     - Night-/Operator-Profil ist jetzt wieder in einem sinnvollen Bereich.
+     - Der offene Blocker ist jetzt klar fachlich:
+       - Stage B liefert nur auf 3/10 As-of-Punkten strict positive survivors.
+       - Damit sind Stage-B-/Registry-/Portfolio-Soak und `release-strict` auf aktueller As-of-Serie noch nicht final abgenommen.
+
+5. Wichtige operative Einordnung fuer den alten Job:
+   - Problemjob:
+     - `/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab/jobs/overnight_q1_training_sweep_safe_20260308_night1/state.json`
+   - Ergebnislage:
+     - `pending=297`
+     - `done=0`
+     - `failed=3`
+     - `stopped_due_to_consecutive_failures=true`
+   - Effektive Root Cause:
+     - kein produktiver v4-Fehler, sondern unbrauchbares altes Mini-Panel-Profil plus Resume-/OOM-Orphan-Kaskade.
+   - Diese Lage gilt ab jetzt als Lessons-Learned-Basis, nicht als empfohlenes Night-Profil.
+
+## Update 2026-03-07 (next block complete + new long night sweep)
+
+### Ergänzung 2026-03-07 (Registry-Ladder/Portfolio-Kopplung weiter gehärtet)
+
+1. Orchestrator -> Portfolio koppelt jetzt harte Governance-Modi explizit durch.
+   - Datei:
+     - `/Users/michaelpuchowezki/Dev/rubikvault-site/scripts/quantlab/run_q1_panel_stage_a_daily_local.py`
+   - Neu:
+     - `--portfolio-no-rebalance-orders-failure-mode`
+     - `--portfolio-registry-slot-consistency-failure-mode`
+   - In `--v4-final-profile` wird beides deterministisch auf `hard` gezogen.
+
+2. Portfolio v4-final-profile erzwingt jetzt harte Slot-/Order-Policy statt Soft-Defaults.
+   - Datei:
+     - `/Users/michaelpuchowezki/Dev/rubikvault-site/scripts/quantlab/run_portfolio_risk_execution_q1.py`
+   - Neu:
+     - `registry_slot_consistency_failure_mode=hard` im Final-Profil
+     - `no_rebalance_orders_failure_mode=hard` im Final-Profil
+
+3. Final-Gates prüfen zusätzlich die echte Registry->Portfolio-Policy-Ausrichtung.
+   - Datei:
+     - `/Users/michaelpuchowezki/Dev/rubikvault-site/scripts/quantlab/run_v4_final_gate_matrix_q1.py`
+   - Neuer Check:
+     - `portfolio_registry_policy_alignment`
+   - Semantik:
+     - Wenn Registry defensive Zustände verlangt (`live_hold`/Freeze/hard-gate-fail), muss Portfolio in einem defensiven Allocation-Mode laufen.
+
+4. Verifizierter Lauf nach Anpassung (lokal):
+   - Portfolio:
+     - `/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab/runs/run_id=q1portfolio_1772926521/q1_portfolio_risk_execution_report.json`
+     - `ok=true`
+   - Final Gates (release-strict):
+     - `/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab/runs/run_id=q1v4gates_1772926610/q1_v4_final_gate_matrix_report.json`
+     - `ok=true`, inkl. `portfolio_registry_policy_alignment=true`
+
+0. Web-Feature-v2 Shadow-Pfad (Forecast/Scientific/Elliott) additiv eingebaut, non-breaking.
+   - Neuer Endpoint:
+     - `/Users/michaelpuchowezki/Dev/rubikvault-site/functions/api/stock-insights-v2.js`
+   - Frontend-Fallback-Logik:
+     - `/Users/michaelpuchowezki/Dev/rubikvault-site/public/js/stock-features.js`
+     - Default bleibt v1 (`/api/stock-insights`), v2 nur bei explizitem Flag.
+     - Bei invalidem v2-Contract sofortiger Rückfall auf v1.
+   - v2-Index-Builder:
+     - `/Users/michaelpuchowezki/Dev/rubikvault-site/scripts/build-features-v2.mjs`
+   - Local Safety Contract dokumentiert:
+     - `/Users/michaelpuchowezki/Dev/rubikvault-site/docs/runbooks/web-features-v2-non-breaking.md`
+   - Neuer report-first Paritäts-Checker:
+     - `/Users/michaelpuchowezki/Dev/rubikvault-site/scripts/validate/stock-insights-v2-parity.mjs`
+     - NPM: `verify:features:v2:parity`
+
+1. Data-Truth-Härtung über Backbone + Recon abgeschlossen (Warnungen 0 im Zielpfad).
+   - Backbone:
+     - `/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab/runs/run_id=q1backbone_1772840051/q1_daily_data_backbone_run_report.json`
+   - Recon:
+     - `/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab/runs/run_id=q1recon_20260306T233650Z/q1_reconciliation_report.json`
+   - Ergebnis:
+     - `warnings=[]`
+     - `contract_corp_actions_provider_raw_required_ok=true`
+     - `contract_delistings_provider_raw_required_ok=true`
+     - `contract_corp_actions_cap_not_hit_or_allowed=true`
+     - `contract_corp_actions_raw_empty_fallback_allowed=true`
+
+2. Stage-B über As-of-Serie ausgewertet und Stabilitätsartefakt erzeugt.
+   - Report:
+     - `/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab/ops/stage_b_stability/latest.json`
+   - Ergebnis:
+     - `asof_points_total=10`
+     - `asof_points_ok_total=10`
+     - `strict_positive_runs_total=2`
+     - `strict_positive_ratio=0.2`
+   - Interpretation:
+     - Methodik ist stabil/auditierbar, strict-survivor-Rate muss weiter hoch.
+
+3. Registry-Ladder und Portfolio-Pfad weiter gehärtet.
+   - Registry:
+     - `/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab/runs/run_id=q1registry_q1stageb_cheapgateA_tsplits_2026-03-05/q1_registry_update_report.json`
+   - Portfolio:
+     - `/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab/runs/run_id=q1portfolio_1772841476/q1_portfolio_risk_execution_report.json`
+   - Ergebnis:
+     - slot-konsistent
+     - no-order nur noch als Warnung/Fail, wenn Rebalance-Deltas real vorhanden sind
+
+4. Final-Gates im release-strict Profil grün.
+   - Report:
+     - `/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab/runs/run_id=q1v4gates_1772841868/q1_v4_final_gate_matrix_report.json`
+   - Ergebnis:
+     - `ok=true`
+     - `checks_failed_total=0`
+     - Portfolio-Slot-Konsistenz als eigener Gate-Check aktiv
+
+5. Night-Run-Status.
+   - erster 10h-safe Sweep sauber abgeschlossen:
+     - `/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab/jobs/overnight_q1_safe10h_20260307_011832/state.json`
+     - `done=18 failed=0`
+   - neuer Supervised-Long-Sweep aktiv (Watchdog + Guardrails):
+     - `/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab/jobs/overnight_q1_training_sweep_safe_20260307_020526/state.json`
+     - `tasks=300` (`asof_dates_count=20`, `top_liquid=400..1200`, `panel_days=60/90/120`)
 
 ## Update 2026-03-06 (night handoff ready)
 
@@ -601,3 +788,256 @@ Dadurch war das System operativ zwar lauffähig, aber nicht sauber auditierbar. 
      - `warning_total=4`
    - Bedeutung:
      - Die aktuelle Kette ist operativ grün bei weiterhin konservativer Governance-Policy.
+
+## Update 2026-03-06 (lokaler Quant-Fortschritt nach Main-Push)
+
+16. Stage-B-Input-Scope ist jetzt adaptiv robust bei dünnen Stage-A-Survivor-Mengen.
+   - Datei:
+     - `/Users/michaelpuchowezki/Dev/rubikvault-site/scripts/quantlab/run_stage_b_q1.py`
+   - Neu:
+     - automatische Scope-Erweiterung von `survivors_a` auf `all_candidates`, wenn `survivors_A_total < --stageb-min-survivors-a-for-strict-scope`
+     - strukturierte Report-Felder:
+       - `stageb_input_scope_requested`
+       - `stageb_input_scope_effective`
+       - `stageb_input_scope_widened`
+       - `stageb_input_scope_widened_reason`
+   - Verifiziert:
+     - `/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab/runs/run_id=q1stageb_cheapgateA_tsplits_2026-03-05/stage_b_q1_run_report.json`
+     - aktueller Wert:
+       - `strict_pass_total=1`
+       - `survivors_B_q1_total=1`
+       - Scope-Widening aktiv wegen `survivors_A_total=23 < min=32`
+
+17. Portfolio hat jetzt einen expliziten Registry-Slot-Konsistenz-Guard.
+   - Datei:
+     - `/Users/michaelpuchowezki/Dev/rubikvault-site/scripts/quantlab/run_portfolio_risk_execution_q1.py`
+   - Neu:
+     - `--registry-slot-consistency-failure-mode {off,warn,hard}`
+     - Governance-Reportfeld `governance.slot_consistency` mit:
+       - `mode`
+       - `checked`
+       - `candidate_source`
+       - `mismatches`
+       - `missing_slots`
+   - Verifiziert:
+     - `/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab/runs/run_id=q1portfolio_1772824059/q1_portfolio_risk_execution_report.json`
+     - Ergebnis:
+       - `ok=true`
+       - `slot_consistency.mode=warn`
+       - `mismatches=[]`
+       - `missing_slots=[]`
+
+18. v4-Final-Gate-Matrix nutzt jetzt den realen Redflag-Pfad und ist wieder deterministisch grün.
+   - Datei:
+     - `/Users/michaelpuchowezki/Dev/rubikvault-site/scripts/quantlab/run_v4_final_gate_matrix_q1.py`
+   - Fix:
+     - Fallback auf `ops/red_flags/*.json`, falls kein Legacy-`run_id=q1redflags_*`-Report existiert.
+   - Warum:
+     - vorheriger Lauf war nur wegen `redflags_report_exists=missing` mit `exit_code=73` rot, obwohl Redflags bereits geladen und ausgewertet waren.
+   - Verifiziert:
+     - fehlerhafter Lauf:
+       - `/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab/runs/run_id=q1v4gates_1772824571/q1_v4_final_gate_matrix_report.json`
+     - fixer Lauf:
+       - `/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab/runs/run_id=q1v4gates_1772825097/q1_v4_final_gate_matrix_report.json`
+       - `ok=true`
+
+## Update 2026-03-06/07 (aktueller Quant-Block)
+
+19. Data-Truth wurde erneut im Hard-Modus gefahren und recon-seitig auf 0 Warnungen gebracht.
+   - Lauf:
+     - `/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab/runs/run_id=q1backbone_1772840051/q1_daily_data_backbone_run_report.json`
+   - Ergebnis:
+     - `ok=true`
+     - Backbone-Warnung nur operativ (`PRODUCTION_DELTA_NOOP_NO_CHANGED_PACKS`)
+   - Reconciliation:
+     - `/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab/runs/run_id=q1recon_20260306T233650Z/q1_reconciliation_report.json`
+     - `warnings=[]`
+     - relevante Checks:
+       - `contract_corp_actions_provider_raw_required_ok=true`
+       - `contract_delistings_provider_raw_required_ok=true`
+       - `contract_corp_actions_cap_not_hit_or_allowed=true`
+       - `contract_corp_actions_raw_empty_fallback_allowed=true`
+
+20. Stage-B As-of-Serie wurde neu gefahren und als eigenes Stabilitätsartefakt dokumentiert.
+   - Neuer Reporter:
+     - `/Users/michaelpuchowezki/Dev/rubikvault-site/scripts/quantlab/report_stageb_asof_stability_q1.py`
+   - Ausgabe:
+     - `/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab/ops/stage_b_stability/latest.json`
+   - Aktueller Stand:
+     - `asof_points_total=10`
+     - `strict_positive_runs_total=2`
+     - `strict_positive_ratio=0.2`
+     - `strict_pass_min=0`, `strict_pass_max=10`, `strict_pass_avg=1.1`
+   - Bedeutung:
+     - Stage-B ist nicht mehr blind-rot, aber strict-survivor-Stabilität über die As-of-Serie ist noch zu schwach.
+
+21. Stage-B/Portfolio/Final-Gates wurden an Konsistenz- und Release-Strict-Checks gehärtet.
+   - Dateien:
+     - `/Users/michaelpuchowezki/Dev/rubikvault-site/scripts/quantlab/run_stage_b_q1.py`
+     - `/Users/michaelpuchowezki/Dev/rubikvault-site/scripts/quantlab/run_portfolio_risk_execution_q1.py`
+     - `/Users/michaelpuchowezki/Dev/rubikvault-site/scripts/quantlab/run_v4_final_gate_matrix_q1.py`
+   - Änderungen:
+     - Stage-B report enthält jetzt konsistent:
+       - `asof_date`
+       - `snapshot_id`
+       - `source_stage_a_report`
+     - Portfolio:
+       - neues Feld `rebalance_needed_but_no_orders`
+       - Rebalance-Metriken: `rebalance_abs_delta_sum`, `rebalance_max_abs_delta`
+       - `NO_REBALANCE_ORDERS` wird nur noch emittiert, wenn tatsächlich ein actionable Delta ohne Orders vorliegt.
+     - Final-Gates:
+       - neues Profil `--release-strict-profile`
+       - zusätzlicher Gate-Check `portfolio_slot_consistency`
+   - Verifiziert:
+     - Portfolio Lauf:
+       - `/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab/runs/run_id=q1portfolio_1772841476/q1_portfolio_risk_execution_report.json`
+       - `orders_total=0`, aber `rebalance_needed_but_no_orders=false`, `warnings=[]`
+     - Final-Gates (release-strict):
+       - `/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab/runs/run_id=q1v4gates_1772841868/q1_v4_final_gate_matrix_report.json`
+       - `ok=true`, `checks_failed_total=0`
+
+22. Night-Run (10h Safe-Profil) ist aktiv gestartet.
+   - Job:
+     - `/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab/jobs/overnight_q1_safe10h_20260307_011832`
+   - Lock/Prozess:
+     - Lock: `/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab/jobs/_locks/overnight_q1_training_sweep_safe.lock.json`
+     - PID: `81536` (zum Startzeitpunkt)
+   - Startstatus:
+     - `running_task=asof2026-02-17_p60_top600`
+     - `done=1`, `running=1`, `pending=16`, `failed=0`
+
+23. Web-Features-v2 (Forecast/Scientific/Elliott) parity ist report-first vollständig grün.
+   - Neue Artefakte / Endpunkte:
+     - `/Users/michaelpuchowezki/Dev/rubikvault-site/functions/api/stock-insights-v2.js`
+     - `/Users/michaelpuchowezki/Dev/rubikvault-site/scripts/build-features-v2.mjs`
+     - `/Users/michaelpuchowezki/Dev/rubikvault-site/scripts/validate/stock-insights-v2-parity.mjs`
+   - v2 Builder-Stand:
+     - `tickers=55992`
+     - `scientific_ok=2442`
+     - `forecast_ok=2425`
+     - `elliott_ok=52958`
+   - Paritätslauf:
+     - `/Users/michaelpuchowezki/Dev/rubikvault-site/mirrors/features-v2/reports/stock-insights-v2-parity-report.json`
+     - Ergebnis:
+       - `total=120`
+       - `endpoints_ok=120`
+       - `v2_contract_ok=120`
+       - `no_issue=120`
+       - `activation_ready=true`
+   - Technische Härtung:
+     - Checker-Timeout auf 30s erhöht.
+     - Warmup für Cold-Start/Cache eingeführt.
+
+24. Stage-B CPCV feasible-min wurde methodisch korrigiert (keine unmöglichen Pfad-Gates mehr aus theoretischen Kombinationszahlen).
+   - Datei:
+     - `/Users/michaelpuchowezki/Dev/rubikvault-site/scripts/quantlab/run_stage_b_q1_light.py`
+   - Fix:
+     - `cpcv_light_effective_paths_required` wird in `feasible_min` jetzt gegen `combos_effective_total` gecappt.
+     - `cpcv_light_paths_total_required` wird in `feasible_min` jetzt gegen `paths_total` gecappt.
+     - `cpcv_light_effective_path_ratio` nutzt in `feasible_min` eine machbarkeitsgekappte Mindestanforderung statt starrer globaler Schwelle.
+   - Wirkung:
+     - der vorherige strukturelle Blocker (`g_cpcv_light_paths_total`/`g_cpcv_light_effective_paths`) ist für mehrere Läufe entkoppelt von rein theoretischer Kombinatorik.
+
+25. Data-Truth-Soak + Stage-B-As-of-Serie neu gefahren; Stabilität verbessert, aber noch nicht final robust.
+   - Reconciliation (3x hard, clean):
+     - `/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab/runs/run_id=q1recon_20260307T205411Z/q1_reconciliation_report.json`
+     - `/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab/runs/run_id=q1recon_20260307T205412Z/q1_reconciliation_report.json`
+     - `/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab/runs/run_id=q1recon_20260307T205414Z/q1_reconciliation_report.json`
+     - alle: `ok=true`, `warnings=[]`
+   - Stage-B Serie (v4-final profile) neu gerendert für:
+     - `2026-02-11,12,13,15,16,17,18,19,20,23,26,2026-03-05`
+   - Aktueller Stand:
+     - positive strict-Punkte: `2/12` (`2026-02-20` mit `strict_pass_total=9`, `2026-03-05` mit `strict_pass_total=1`)
+     - `strict_positive_ratio_all=0.1667`
+     - `strict_pass_avg_all=0.8333`
+   - Stabilitätsreport:
+     - `/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab/ops/stage_b_stability/latest.json`
+   - Note:
+     - Reporter erweitert, damit `strict_positive_ratio_all` und `strict_positive_ratio` (ok-only) getrennt ausgewiesen werden.
+
+26. Registry-Ladder + Portfolio/Order wurden deterministisch auf Report-Basis gehärtet.
+   - Datei:
+     - `/Users/michaelpuchowezki/Dev/rubikvault-site/scripts/quantlab/run_portfolio_risk_execution_q1.py`
+   - Fix:
+     - Registry-Slot-Auswahl (`single` + `slot_blend`) liest jetzt zuerst aus dem übergebenen `q1_registry_update_report.json` (`champion_slots`) statt aus der mutable SQLite-DB.
+     - DB-Lookup bleibt nur als Fallback für ältere Reports ohne `champion_slots`.
+   - Warum:
+     - vorher konnten zeitliche Mismatches entstehen (alter Registry-Report + neuer DB-Stand), die `PORTFOLIO_REGISTRY_SLOT_MISMATCH` als Hard-Fail ausgelöst haben.
+   - Verifiziert:
+     - `/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab/runs/run_id=q1portfolio_1772922466/q1_portfolio_risk_execution_report.json`
+     - `ok=true`, `slot_consistency.checked=true`, `mismatches=[]`, `missing_slots=[]`.
+
+27. Redflag/Gate-Checks auf aktuelle Artefakt-Schemata korrigiert.
+   - Dateien:
+     - `/Users/michaelpuchowezki/Dev/rubikvault-site/scripts/quantlab/run_redflag_invariants_q1.py`
+     - `/Users/michaelpuchowezki/Dev/rubikvault-site/scripts/quantlab/run_v4_final_gate_matrix_q1.py`
+   - Fixes:
+     - `run_redflag_invariants_q1.py` erkennt `survivors_A_total` jetzt korrekt aus modernen Stage-A-Reports (`counts.survivors_A_total`) statt nur aus Legacy-Referenzen.
+     - Portfolio-Registry-Flags greifen jetzt auch bei `candidate.source=registry_slot_blend`.
+     - `run_v4_final_gate_matrix_q1.py` nimmt beim Auto-Pick nicht mehr blind den neuesten Run-Ordner, sondern den neuesten Run mit vorhandenem Reportfile.
+     - `stagea_ok` wurde für aktuelle Stage-A-Reportschemas robust gemacht (Counts/Artifacts-basiert, nicht nur Legacy-Key).
+   - Verifiziert:
+     - Redflags:
+       - `/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab/ops/red_flags/2026-02-20.json`
+       - `kill_switch=false`, `critical_total=0`
+     - Final Gates (release-strict):
+       - `/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab/runs/run_id=q1v4gates_1772923502/q1_v4_final_gate_matrix_report.json`
+       - `ok=true`
+
+28. Aktuelle harte Lage (As-of-Differenzierung)
+   - Für die konsistente Kette auf `asof=2026-02-20` ist release-strict aktuell grün (siehe Punkt 27).
+   - Für `asof=2026-03-05` bleibt ein echter Qualitätsblocker bestehen:
+     - `STAGEA_SURVIVORS_EMPTY` (Stage-A-Survivors = 0)
+   - Bedeutet operativ:
+     - Methodik/Contracts/Gates sind jetzt korrekt verdrahtet.
+     - nächster Hebel bleibt Stage-A/Feature-Panel-Erzeugung für neuere As-ofs, damit die grüne Kette nicht auf einen älteren Stichtag begrenzt ist.
+
+29. 10h-Nachtrun (2026-03-08) läuft aktiv mit Watchdog-Absicherung.
+   - Job:
+     - `/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab/jobs/overnight_q1_training_sweep_safe_20260308_night1`
+   - Lock:
+     - `/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab/jobs/_locks/overnight_q1_training_sweep.lock.json`
+   - Laufkonfiguration (ressourcenschonend, robust):
+     - `max_hours=10`
+     - `threads_cap=1`
+     - `max_rss_gib=7`
+     - `top_liquid_list=400,600,800,1000,1200`
+     - `panel_days_list=60,90,120`
+     - `asof_dates_count=20`
+     - harte Kopplung aktiv:
+       - `portfolio_no_rebalance_orders_failure_mode=hard`
+       - `portfolio_registry_slot_consistency_failure_mode=hard`
+   - Watchdog/Resume:
+     - `/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab/jobs/overnight_q1_training_sweep_safe_20260308_night1/logs/watchdog.log`
+     - automatischer Restart wurde ausgelöst (`restart reason=no_orchestrator_pid`) und der Run danach sauber auf `attempt=2` resumed.
+   - Aktueller Status:
+     - `tasks_total=300`
+   - `summary: pending=299, running=1, done=0, failed=0`
+   - laufender Task: `asof2026-02-17_p60_top400`
+
+30. Primärblocker technisch verifiziert: Source-Freshness-/Publish-Truth war fail-open, nicht Stage-B-Logik.
+   - Repo-Befund:
+     - `/Users/michaelpuchowezki/Dev/rubikvault-site/scripts/quantlab/run_q1_daily_data_backbone_q1.py`
+   - Verifizierte Ist-Lage vor Fix:
+     - Raw Bars für `STOCK,ETF` standen auf `latest_required_ingest_date=2026-02-25` bei `reference_date=2026-03-09` (`age_days=12`)
+     - öffentliches v7-Publish-Truth war defekt:
+       - `/Users/michaelpuchowezki/Dev/rubikvault-site/public/data/universe/v7/reports/run_status.json`
+       - `exit_code=90`, `reason=phase0_failed`
+       - `/Users/michaelpuchowezki/Dev/rubikvault-site/public/data/universe/v7/reports/history_touch_report.json` fehlte
+     - Backbone lief trotzdem warn-only weiter; dadurch wurden Delta/Snapshot/Stage-A/Stage-B auf altem Stand weitergetrieben.
+   - Umgesetzter Fix:
+     - Backbone hat jetzt einen additiven lokalen v7-Pre-Refresh-Pfad via `run-backfill-loop.mjs --skip-archeology` mit lokalem EODHD-Env.
+     - Danach erzwingt ein neuer `source_truth_gate` fail-closed:
+       - `FAIL_RAW_BARS_REQUIRED_TYPES_STALE`
+       - `FAIL_PUBLIC_V7_HISTORY_TOUCH_REPORT_MISSING`
+       - `FAIL_PRODUCTION_DELTA_NOOP_NO_CHANGED_PACKS`
+     - `PRODUCTION_DELTA_NOOP_NO_CHANGED_PACKS` ist nicht mehr warn-only.
+   - Verifikation:
+     - Probe-Lauf ohne Pre-Refresh:
+       - `/Users/michaelpuchowezki/QuantLabHot/rubikvault-quantlab/runs/run_id=q1backbone_1773047048/q1_daily_data_backbone_run_report.json`
+       - `ok=false`
+       - `exit_code=96`
+       - `steps=["source_truth_gate"]`
+   - Bedeutung:
+     - Night-/Day-Runs sollen jetzt sauber an der Datenwahrheit scheitern statt Stage-B mit stale Snapshots zu entwerten.
+     - Nächster operativer Schritt bleibt: lokalen v7-Refresh kontrolliert grün bekommen, danach Delta/Snapshot/Stage-A auf aktuelle As-of-Serie neu evaluieren.

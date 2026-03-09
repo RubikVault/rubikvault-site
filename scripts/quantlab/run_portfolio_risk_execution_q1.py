@@ -84,9 +84,11 @@ def parse_args(argv: Iterable[str]) -> argparse.Namespace:
     p.add_argument("--weight-alpha-invvol", type=float, default=0.35)
     p.add_argument("--weight-alpha-liq", type=float, default=0.20)
     p.add_argument("--min-rebalance-delta", type=float, default=0.002)
+    p.add_argument("--no-rebalance-orders-failure-mode", choices=["off", "warn", "hard"], default="off")
     p.add_argument("--require-nonempty", action="store_true", default=True)
     p.add_argument("--skip-require-nonempty", dest="require_nonempty", action="store_false")
     p.add_argument("--failure-mode", choices=["hard", "warn"], default="hard")
+    p.add_argument("--registry-slot-consistency-failure-mode", choices=["off", "warn", "hard"], default="warn")
     p.add_argument("--output-tag", default="q1_portfolio")
     return p.parse_args(list(argv))
 
@@ -109,10 +111,9 @@ def _extract_registry_candidate(
     slot: str = "live",
     fallback_order: list[str] | None = None,
 ) -> tuple[str, str, str]:
+    slots_map = registry_report.get("champion_slots") or {}
     artifacts = registry_report.get("artifacts") or {}
     db_path = Path(str(artifacts.get("registry_db") or ""))
-    if not db_path.exists():
-        return "", "", ""
     slots: list[str] = []
     if str(slot).strip():
         slots.append(str(slot).strip())
@@ -122,6 +123,23 @@ def _extract_registry_candidate(
             slots.append(ss)
     if not slots:
         slots = ["live", "default", "shadow", "retired"]
+
+    # Prefer immutable registry report content first; fall back to DB lookups for
+    # backward compatibility when older reports do not include champion_slots.
+    if isinstance(slots_map, dict) and slots_map:
+        for s in slots:
+            rec = slots_map.get(str(s))
+            if not isinstance(rec, dict):
+                continue
+            cid = str(rec.get("candidate_id") or "").strip()
+            if not cid:
+                continue
+            fam = str(rec.get("family") or "").strip()
+            return cid, fam, str(s)
+
+    if not db_path.exists():
+        return "", "", ""
+
     conn = sqlite3.connect(str(db_path))
     try:
         row = None
@@ -201,45 +219,75 @@ def _extract_registry_candidates_for_blend(
     min_effective_weight: float = 0.0,
     max_candidates: int = 4,
 ) -> list[dict[str, Any]]:
+    slots_map = registry_report.get("champion_slots") or {}
     artifacts = registry_report.get("artifacts") or {}
     db_path = Path(str(artifacts.get("registry_db") or ""))
-    if not db_path.exists():
-        return []
     rows: list[dict[str, Any]] = []
-    conn = sqlite3.connect(str(db_path))
-    try:
-        state_mult_map = {str(k).lower(): float(v) for k, v in (state_multipliers or {}).items()}
-        unknown_mult = float(state_mult_map.get("unknown", 1.0))
-        min_eff = max(0.0, float(min_effective_weight))
+    state_mult_map = {str(k).lower(): float(v) for k, v in (state_multipliers or {}).items()}
+    unknown_mult = float(state_mult_map.get("unknown", 1.0))
+    min_eff = max(0.0, float(min_effective_weight))
+
+    # Prefer immutable registry report content first.
+    if isinstance(slots_map, dict) and slots_map:
         for slot, weight in slot_weights:
-            row = conn.execute(
-                "SELECT candidate_id,family,slot,q1_registry_score,state FROM champion_state_q1 WHERE slot=? LIMIT 1",
-                (str(slot),),
-            ).fetchone()
-            if not row:
+            rec = slots_map.get(str(slot))
+            if not isinstance(rec, dict):
                 continue
-            cid = str(row[0] or "")
+            cid = str(rec.get("candidate_id") or "").strip()
             if not cid:
                 continue
-            state = str(row[4] or "").strip().lower()
+            state = str(rec.get("state") or "").strip().lower()
             state_mult = float(state_mult_map.get(state, unknown_mult))
             eff_weight = float(weight) * float(state_mult)
             if eff_weight <= min_eff:
                 continue
             rows.append(
                 {
-                    "slot": str(row[2] or slot),
+                    "slot": str(slot),
                     "candidate_id": cid,
-                    "family": str(row[1] or ""),
+                    "family": str(rec.get("family") or ""),
                     "slot_weight": float(weight),
                     "state_multiplier": float(state_mult),
                     "effective_slot_weight": float(eff_weight),
-                    "q1_registry_score": float(row[3] or 0.0),
+                    "q1_registry_score": float(rec.get("q1_registry_score") or 0.0),
                     "state": state,
                 }
             )
-    finally:
-        conn.close()
+    elif db_path.exists():
+        conn = sqlite3.connect(str(db_path))
+        try:
+            for slot, weight in slot_weights:
+                row = conn.execute(
+                    "SELECT candidate_id,family,slot,q1_registry_score,state FROM champion_state_q1 WHERE slot=? LIMIT 1",
+                    (str(slot),),
+                ).fetchone()
+                if not row:
+                    continue
+                cid = str(row[0] or "")
+                if not cid:
+                    continue
+                state = str(row[4] or "").strip().lower()
+                state_mult = float(state_mult_map.get(state, unknown_mult))
+                eff_weight = float(weight) * float(state_mult)
+                if eff_weight <= min_eff:
+                    continue
+                rows.append(
+                    {
+                        "slot": str(row[2] or slot),
+                        "candidate_id": cid,
+                        "family": str(row[1] or ""),
+                        "slot_weight": float(weight),
+                        "state_multiplier": float(state_mult),
+                        "effective_slot_weight": float(eff_weight),
+                        "q1_registry_score": float(row[3] or 0.0),
+                        "state": state,
+                    }
+                )
+        finally:
+            conn.close()
+    else:
+        return []
+
     seen: set[str] = set()
     dedup_rows: list[dict[str, Any]] = []
     for r in rows:
@@ -309,6 +357,18 @@ def _extract_registry_governance(registry_report: dict[str, Any]) -> dict[str, A
     decision = registry_report.get("decision") or {}
     summary = decision.get("summary_metrics") or {}
     demotion = registry_report.get("demotion_policy") or {}
+    champion_slots_raw = registry_report.get("champion_slots") or {}
+    champion_slots: dict[str, dict[str, str]] = {}
+    if isinstance(champion_slots_raw, dict):
+        for slot, payload in champion_slots_raw.items():
+            slot_name = str(slot or "").strip()
+            if not slot_name or not isinstance(payload, dict):
+                continue
+            champion_slots[slot_name] = {
+                "candidate_id": str(payload.get("candidate_id") or "").strip(),
+                "state": str(payload.get("state") or "").strip().lower(),
+                "family": str(payload.get("family") or "").strip(),
+            }
     return {
         "run_ok": bool(registry_report.get("ok")),
         "decision": str(decision.get("decision") or ""),
@@ -322,7 +382,71 @@ def _extract_registry_governance(registry_report: dict[str, Any]) -> dict[str, A
         "current_live_hard_failed_gate_names": [str(x) for x in (summary.get("current_live_hard_failed_gate_names") or [])],
         "top_survivor_failed_gate_names": [str(x) for x in (summary.get("top_survivor_failed_gate_names") or [])],
         "top_survivor_hard_failed_gate_names": [str(x) for x in (summary.get("top_survivor_hard_failed_gate_names") or [])],
+        "champion_slots": champion_slots,
     }
+
+
+def _check_registry_slot_consistency(
+    *,
+    failure_mode: str,
+    candidate_source: str,
+    candidate_id: str,
+    registry_slot_used: str,
+    blend_candidates: list[dict[str, Any]],
+    registry_governance: dict[str, Any],
+) -> tuple[list[str], list[str], dict[str, Any]]:
+    mode = str(failure_mode or "warn").lower()
+    failures: list[str] = []
+    warnings: list[str] = []
+    details: dict[str, Any] = {
+        "mode": mode,
+        "checked": False,
+        "candidate_source": str(candidate_source or ""),
+        "mismatches": [],
+        "missing_slots": [],
+    }
+    if mode == "off":
+        return failures, warnings, details
+    if candidate_source not in {"registry_champion", "registry_slot_blend"}:
+        return failures, warnings, details
+    slot_map = registry_governance.get("champion_slots") or {}
+    if not slot_map:
+        warnings.append("PORTFOLIO_REGISTRY_SLOT_MAP_EMPTY")
+        details["checked"] = True
+        return failures, warnings, details
+    details["checked"] = True
+
+    def _emit(msg: str) -> None:
+        if mode == "hard":
+            failures.append(msg)
+        else:
+            warnings.append(msg)
+
+    if candidate_source == "registry_champion":
+        slot = str(registry_slot_used or "live").strip()
+        expected = str(((slot_map.get(slot) or {}).get("candidate_id") or "")).strip()
+        if not expected:
+            details["missing_slots"].append(slot)
+            _emit(f"PORTFOLIO_REGISTRY_SLOT_MISSING:{slot}")
+        elif str(candidate_id or "").strip() != expected:
+            details["mismatches"].append({"slot": slot, "expected_candidate_id": expected, "selected_candidate_id": str(candidate_id or "")})
+            _emit(f"PORTFOLIO_REGISTRY_SLOT_MISMATCH:{slot}:{candidate_id}->{expected}")
+        return failures, warnings, details
+
+    for bc in (blend_candidates or []):
+        slot = str(bc.get("slot") or "").strip()
+        cid = str(bc.get("candidate_id") or "").strip()
+        if not slot:
+            continue
+        expected = str(((slot_map.get(slot) or {}).get("candidate_id") or "")).strip()
+        if not expected:
+            details["missing_slots"].append(slot)
+            _emit(f"PORTFOLIO_REGISTRY_SLOT_MISSING:{slot}")
+            continue
+        if cid != expected:
+            details["mismatches"].append({"slot": slot, "expected_candidate_id": expected, "selected_candidate_id": cid})
+            _emit(f"PORTFOLIO_REGISTRY_SLOT_MISMATCH:{slot}:{cid}->{expected}")
+    return failures, warnings, details
 
 
 def _feature_files(feature_root: Path, asof_date: str, asset_classes: list[str], part_glob: str) -> list[Path]:
@@ -507,6 +631,10 @@ def main(argv: Iterable[str]) -> int:
             args.max_family_abs_exposure = 0.35
         if str(args.family_concentration_failure_mode).lower() == "off":
             args.family_concentration_failure_mode = "hard"
+        if str(args.registry_slot_consistency_failure_mode).lower() != "hard":
+            args.registry_slot_consistency_failure_mode = "hard"
+        if str(args.no_rebalance_orders_failure_mode).lower() != "hard":
+            args.no_rebalance_orders_failure_mode = "hard"
 
     quant_root = Path(args.quant_root).resolve()
     run_id = f"q1portfolio_{int(time.time())}"
@@ -680,6 +808,15 @@ def main(argv: Iterable[str]) -> int:
         weight_alpha_score_effective = min(weight_alpha_score_effective, 0.50)
         weight_alpha_invvol_effective = max(weight_alpha_invvol_effective, 0.90)
         weight_alpha_liq_effective = max(weight_alpha_liq_effective, 0.45)
+
+    slot_consistency_failures, slot_consistency_warnings, slot_consistency_details = _check_registry_slot_consistency(
+        failure_mode=str(args.registry_slot_consistency_failure_mode),
+        candidate_source=str(candidate_source),
+        candidate_id=str(candidate_id),
+        registry_slot_used=str(registry_slot_used),
+        blend_candidates=blend_candidates,
+        registry_governance=registry_governance,
+    )
 
     feature_root = quant_root / "features" / "store" / f"feature_store_version={args.feature_store_version}"
     if not feature_root.exists():
@@ -871,12 +1008,21 @@ def main(argv: Iterable[str]) -> int:
             .alias("action")
         ]
     ).sort("delta_weight", descending=True)
+    rebalance_abs_delta_sum = float(reb.select(pl.col("delta_weight").abs().sum()).item() or 0.0) if reb.height else 0.0
+    rebalance_max_abs_delta = float(reb.select(pl.col("delta_weight").abs().max()).item() or 0.0) if reb.height else 0.0
+    rebalance_needed_but_no_orders = (
+        int(orders.height) == 0
+        and rebalance_abs_delta_sum > 0.0
+        and rebalance_max_abs_delta >= float(args.min_rebalance_delta) - 1e-12
+    )
 
     failures: list[str] = []
     warnings: list[str] = []
     warnings.extend(long_family_cap_warnings)
     warnings.extend(short_family_cap_warnings)
     warnings.extend([f"SLOT_BLEND_POLICY:{x}" for x in blend_selection_warnings])
+    warnings.extend(slot_consistency_warnings)
+    failures.extend(slot_consistency_failures)
     if candidate_source == "stageb_survivor_top":
         if stageb_governance:
             if not bool(stageb_governance.get("run_ok")):
@@ -918,8 +1064,18 @@ def main(argv: Iterable[str]) -> int:
         )
     if weighted_vol_proxy <= 0:
         warnings.append("WEIGHTED_VOL_PROXY_NONPOSITIVE")
-    if int(orders.height) == 0:
-        warnings.append("NO_REBALANCE_ORDERS_EMITTED")
+    if rebalance_needed_but_no_orders:
+        no_reb_mode = str(args.no_rebalance_orders_failure_mode or "off").lower()
+        msg = (
+            "NO_REBALANCE_ORDERS_EMITTED_WHEN_NEEDED:"
+            f"max_abs_delta={rebalance_max_abs_delta:.6f};"
+            f"sum_abs_delta={rebalance_abs_delta_sum:.6f};"
+            f"min_rebalance_delta={float(args.min_rebalance_delta):.6f}"
+        )
+        if no_reb_mode == "hard":
+            failures.append(msg)
+        elif no_reb_mode == "warn":
+            warnings.append(msg)
 
     family_exposure_table: list[dict[str, Any]] = []
     family_cap_breaches: list[dict[str, Any]] = []
@@ -1038,6 +1194,7 @@ def main(argv: Iterable[str]) -> int:
                 "live_like_states": sorted(slot_blend_live_like_states),
                 "selection_warnings": list(blend_selection_warnings),
             },
+            "slot_consistency": slot_consistency_details,
         },
         "inputs": {
             "feature_store_version": str(args.feature_store_version),
@@ -1058,6 +1215,8 @@ def main(argv: Iterable[str]) -> int:
             "slot_blend_min_effective_weight": float(args.slot_blend_min_effective_weight),
             "slot_blend_require_live_like": bool(args.slot_blend_require_live_like),
             "slot_blend_live_like_states": sorted(slot_blend_live_like_states),
+            "registry_slot_consistency_failure_mode": str(args.registry_slot_consistency_failure_mode),
+            "no_rebalance_orders_failure_mode": str(args.no_rebalance_orders_failure_mode),
         },
         "counts": {
             "feature_files_total": int(len(files)),
@@ -1066,6 +1225,7 @@ def main(argv: Iterable[str]) -> int:
             "long_positions_total": int(n_long),
             "short_positions_total": int(n_short),
             "orders_total": int(orders.height),
+            "rebalance_needed_but_no_orders": bool(rebalance_needed_but_no_orders),
         },
         "risk": {
             "gross_exposure": float(gross),
@@ -1075,6 +1235,8 @@ def main(argv: Iterable[str]) -> int:
             "max_abs_weight": float(max_abs_weight),
             "concentration_hhi": float(hhi),
             "weighted_vol_proxy": float(weighted_vol_proxy),
+            "rebalance_abs_delta_sum": float(rebalance_abs_delta_sum),
+            "rebalance_max_abs_delta": float(rebalance_max_abs_delta),
             "max_family_abs_exposure_effective": float(args.max_family_abs_exposure),
             "family_exposure_table": family_exposure_table[:32],
             "family_exposure_cap_breaches_total": int(len(family_cap_breaches)),
@@ -1094,10 +1256,12 @@ def main(argv: Iterable[str]) -> int:
                 "weight_alpha_invvol": float(args.weight_alpha_invvol),
                 "weight_alpha_liq": float(args.weight_alpha_liq),
                 "min_rebalance_delta": float(args.min_rebalance_delta),
+                "no_rebalance_orders_failure_mode": str(args.no_rebalance_orders_failure_mode),
                 "max_long_per_family": int(args.max_long_per_family),
                 "max_short_per_family": int(args.max_short_per_family),
                 "max_family_abs_exposure": float(args.max_family_abs_exposure),
                 "family_concentration_failure_mode": str(args.family_concentration_failure_mode),
+                "registry_slot_consistency_failure_mode": str(args.registry_slot_consistency_failure_mode),
             },
         },
         "artifacts": {

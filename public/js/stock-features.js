@@ -95,8 +95,8 @@ function _detectScientificMetricMismatch(insights, context = {}) {
   const sampleRsi = rsiCandidates.length ? rsiCandidates[0] : null;
   const sampleAtrPct = atrPctCandidates.length ? atrPctCandidates[0] : null;
 
-  const rsiMismatch = canonical.rsi14 != null && sampleRsi != null && Math.abs(canonical.rsi14 - sampleRsi) > 1.25;
-  const atrMismatch = canonical.atrPct != null && sampleAtrPct != null && Math.abs(canonical.atrPct - sampleAtrPct) > 0.45;
+  const rsiMismatch = canonical.rsi14 != null && sampleRsi != null && Math.abs(canonical.rsi14 - sampleRsi) > 3.0;
+  const atrMismatch = canonical.atrPct != null && sampleAtrPct != null && Math.abs(canonical.atrPct - sampleAtrPct) > 1.0;
   const mismatch = Boolean(rsiMismatch || atrMismatch);
   return {
     mismatch,

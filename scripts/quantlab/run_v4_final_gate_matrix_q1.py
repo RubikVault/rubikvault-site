@@ -23,6 +23,7 @@ def parse_args(argv: Iterable[str]) -> argparse.Namespace:
     p.add_argument("--registry-report", default="")
     p.add_argument("--portfolio-report", default="")
     p.add_argument("--redflags-report", default="")
+    p.add_argument("--stageb-stability-report", default="")
     p.add_argument("--failure-mode", choices=["hard", "warn"], default="hard")
     p.add_argument("--require-phasea", action="store_true", default=False)
     p.add_argument("--skip-require-phasea", dest="require_phasea", action="store_false")
@@ -30,20 +31,52 @@ def parse_args(argv: Iterable[str]) -> argparse.Namespace:
     p.add_argument("--skip-require-stagea", dest="require_stagea", action="store_false")
     p.add_argument("--require-strict-pass-positive", action="store_true", default=True)
     p.add_argument("--skip-require-strict-pass-positive", dest="require_strict_pass_positive", action="store_false")
+    p.add_argument("--require-stageb-stability-ratio", action="store_true", default=False)
+    p.add_argument(
+        "--skip-require-stageb-stability-ratio",
+        dest="require_stageb_stability_ratio",
+        action="store_false",
+    )
+    p.add_argument("--stageb-strict-positive-ratio-min", type=float, default=0.15)
     p.add_argument("--require-provider-raw-clean", action="store_true", default=True)
     p.add_argument("--skip-require-provider-raw-clean", dest="require_provider_raw_clean", action="store_false")
     p.add_argument("--require-redflags-clean", action="store_true", default=True)
     p.add_argument("--skip-require-redflags-clean", dest="require_redflags_clean", action="store_false")
+    p.add_argument("--require-portfolio-slot-consistency", action="store_true", default=True)
+    p.add_argument(
+        "--skip-require-portfolio-slot-consistency",
+        dest="require_portfolio_slot_consistency",
+        action="store_false",
+    )
+    p.add_argument(
+        "--release-strict-profile",
+        action="store_true",
+        default=False,
+        help="Preset for release-strict verification (hard failure mode and all critical requirements enforced).",
+    )
     return p.parse_args(list(argv))
 
 
 def _latest_report(quant_root: Path, pattern: str, filename: str) -> Path | None:
     runs_root = quant_root / "runs"
-    cands = sorted(runs_root.glob(pattern), key=lambda p: p.stat().st_mtime_ns)
+    cands = sorted(runs_root.glob(pattern), key=lambda p: p.stat().st_mtime_ns, reverse=True)
     if not cands:
         return None
-    p = cands[-1] / filename
-    return p if p.exists() else None
+    for cand in cands:
+        p = cand / filename
+        if p.exists():
+            return p
+    return None
+
+
+def _latest_ops_report(quant_root: Path, pattern: str) -> Path | None:
+    ops_root = quant_root / "ops"
+    if not ops_root.exists():
+        return None
+    cands = sorted(ops_root.glob(pattern), key=lambda p: p.stat().st_mtime_ns)
+    if not cands:
+        return None
+    return cands[-1] if cands[-1].exists() else None
 
 
 def _resolve_report_path(quant_root: Path, provided: str, *, pattern: str, filename: str) -> Path | None:
@@ -82,6 +115,18 @@ def _report_ok_generic(report: dict[str, Any], *, fallback_artifact_key: str = "
     return False
 
 
+def _stagea_ok(report: dict[str, Any]) -> bool:
+    if _report_ok_generic(report, fallback_artifact_key="cheap_gate_report"):
+        return True
+    counts = report.get("counts") or {}
+    candidates_total = int(counts.get("candidates_total") or 0)
+    folds_total = int(counts.get("folds_total") or 0)
+    if candidates_total > 0 and folds_total > 0:
+        return True
+    artifacts = report.get("artifacts") or {}
+    return bool(artifacts.get("candidates")) and bool(artifacts.get("fold_metrics"))
+
+
 def _warning_union(*values: Any) -> list[str]:
     out: list[str] = []
     seen: set[str] = set()
@@ -112,6 +157,15 @@ def _contains_any(values: list[str], needles: list[str]) -> bool:
 
 def main(argv: Iterable[str]) -> int:
     args = parse_args(argv)
+    if bool(args.release_strict_profile):
+        args.failure_mode = "hard"
+        args.require_phasea = True
+        args.require_stagea = True
+        args.require_strict_pass_positive = True
+        args.require_stageb_stability_ratio = True
+        args.require_provider_raw_clean = True
+        args.require_redflags_clean = True
+        args.require_portfolio_slot_consistency = True
     quant_root = Path(args.quant_root).resolve()
 
     phasea_path = _resolve_report_path(
@@ -150,6 +204,17 @@ def main(argv: Iterable[str]) -> int:
         pattern="run_id=q1redflags_*/",
         filename="q1_redflags_invariants_report.json",
     )
+    if str(args.stageb_stability_report).strip():
+        stageb_stability_path = Path(str(args.stageb_stability_report)).resolve()
+        if not stageb_stability_path.exists():
+            stageb_stability_path = None
+    else:
+        stageb_stability_path = quant_root / "ops" / "stage_b_stability" / "latest.json"
+        if not stageb_stability_path.exists():
+            stageb_stability_path = None
+    # Redflags are persisted under ops/red_flags/<YYYY-MM-DD>.json in current runs.
+    if redflags_path is None:
+        redflags_path = _latest_ops_report(quant_root, "red_flags/*.json")
 
     checks: list[dict[str, Any]] = []
     checks.append(_check_report_exists("phasea_report_exists", phasea_path, required=bool(args.require_phasea)))
@@ -158,6 +223,13 @@ def main(argv: Iterable[str]) -> int:
     checks.append(_check_report_exists("registry_report_exists", registry_path, required=True))
     checks.append(_check_report_exists("portfolio_report_exists", portfolio_path, required=True))
     checks.append(_check_report_exists("redflags_report_exists", redflags_path, required=True))
+    checks.append(
+        _check_report_exists(
+            "stageb_stability_report_exists",
+            stageb_stability_path,
+            required=bool(args.require_stageb_stability_ratio),
+        )
+    )
 
     phasea = read_json(phasea_path) if phasea_path and phasea_path.exists() else {}
     stagea = read_json(stagea_path) if stagea_path and stagea_path.exists() else {}
@@ -165,6 +237,7 @@ def main(argv: Iterable[str]) -> int:
     registry = read_json(registry_path) if registry_path and registry_path.exists() else {}
     portfolio = read_json(portfolio_path) if portfolio_path and portfolio_path.exists() else {}
     redflags = read_json(redflags_path) if redflags_path and redflags_path.exists() else {}
+    stageb_stability = read_json(stageb_stability_path) if stageb_stability_path and stageb_stability_path.exists() else {}
 
     checks.append(
         {
@@ -175,16 +248,17 @@ def main(argv: Iterable[str]) -> int:
             "required": bool(args.require_phasea),
         }
     )
+    stagea_ok = _stagea_ok(stagea) if stagea else False
     checks.append(
         {
             "name": "stagea_ok",
-            "ok": _report_ok_generic(stagea, fallback_artifact_key="cheap_gate_report") if bool(args.require_stagea) else True,
+            "ok": stagea_ok if bool(args.require_stagea) else True,
             "reason": (
                 "ok"
-                if _report_ok_generic(stagea, fallback_artifact_key="cheap_gate_report")
+                if stagea_ok
                 else "stagea_not_ok"
             ) if bool(args.require_stagea) else "optional_stagea_not_required",
-            "value": bool(_report_ok_generic(stagea, fallback_artifact_key="cheap_gate_report")) if stagea else None,
+            "value": bool(stagea_ok) if stagea else None,
             "required": bool(args.require_stagea),
         }
     )
@@ -201,6 +275,30 @@ def main(argv: Iterable[str]) -> int:
             "reason": "ok" if (strict_pass_total > 0 or not bool(args.require_strict_pass_positive)) else "strict_pass_total_zero",
             "value": strict_pass_total,
             "required": bool(args.require_strict_pass_positive),
+        }
+    )
+    stageb_stability_summary = stageb_stability.get("summary") or {}
+    strict_positive_ratio = float(
+        stageb_stability_summary.get("strict_positive_ratio_all")
+        or stageb_stability_summary.get("strict_positive_ratio")
+        or stageb_stability.get("strict_positive_ratio")
+        or 0.0
+    )
+    strict_positive_ratio_min = max(0.0, float(args.stageb_strict_positive_ratio_min))
+    checks.append(
+        {
+            "name": "stageb_strict_positive_ratio_min",
+            "ok": (strict_positive_ratio >= strict_positive_ratio_min) if bool(args.require_stageb_stability_ratio) else True,
+            "reason": (
+                "ok"
+                if (strict_positive_ratio >= strict_positive_ratio_min or not bool(args.require_stageb_stability_ratio))
+                else "strict_positive_ratio_below_min"
+            ),
+            "value": {
+                "strict_positive_ratio": strict_positive_ratio,
+                "required_min": strict_positive_ratio_min,
+            },
+            "required": bool(args.require_stageb_stability_ratio),
         }
     )
 
@@ -222,6 +320,69 @@ def main(argv: Iterable[str]) -> int:
             "value": {
                 "ok": bool(portfolio.get("ok")),
                 "failures_total": len(portfolio_failures),
+            },
+        }
+    )
+    slot_consistency = (((portfolio.get("governance") or {}).get("slot_consistency") or {}) if portfolio else {})
+    slot_checked = bool(slot_consistency.get("checked"))
+    slot_mismatches = list(slot_consistency.get("mismatches") or [])
+    slot_missing = list(slot_consistency.get("missing_slots") or [])
+    slot_ok = slot_checked and not slot_mismatches and not slot_missing
+    checks.append(
+        {
+            "name": "portfolio_slot_consistency",
+            "ok": slot_ok if bool(args.require_portfolio_slot_consistency) else True,
+            "reason": (
+                "ok"
+                if (slot_ok or not bool(args.require_portfolio_slot_consistency))
+                else "slot_consistency_mismatch_or_missing"
+            ),
+            "value": {
+                "checked": slot_checked,
+                "mismatches_total": int(len(slot_mismatches)),
+                "missing_slots_total": int(len(slot_missing)),
+            },
+            "required": bool(args.require_portfolio_slot_consistency),
+        }
+    )
+
+    portfolio_gov = (portfolio.get("governance") or {}) if portfolio else {}
+    portfolio_registry = (portfolio_gov.get("registry") or {}) if isinstance(portfolio_gov, dict) else {}
+    allocation_policy = (portfolio_gov.get("allocation_policy") or {}) if isinstance(portfolio_gov, dict) else {}
+    alloc_mode = str(allocation_policy.get("mode") or "").strip()
+    alloc_reasons = [str(x) for x in (allocation_policy.get("reasons") or [])]
+    reg_state_after = str(portfolio_registry.get("state_after") or "").strip().lower()
+    reg_freeze = bool(portfolio_registry.get("freeze_mode_active"))
+    reg_strict_total = int(portfolio_registry.get("strict_pass_total") or 0)
+    reg_hard_failed_total = len(list(portfolio_registry.get("current_live_hard_failed_gate_names") or []))
+    expected_defensive = (
+        reg_state_after == "live_hold"
+        or reg_hard_failed_total > 0
+        or (reg_freeze and reg_strict_total <= 0)
+    )
+    defensive_modes = {"defensive_live_hold", "defensive_shadow_fallback", "defensive_hard_gates"}
+    policy_alignment_ok = (alloc_mode in defensive_modes) if expected_defensive else bool(alloc_mode)
+    checks.append(
+        {
+            "name": "portfolio_registry_policy_alignment",
+            "ok": policy_alignment_ok,
+            "reason": (
+                "ok"
+                if policy_alignment_ok
+                else (
+                    "expected_defensive_policy_mode"
+                    if expected_defensive
+                    else "allocation_policy_mode_missing"
+                )
+            ),
+            "value": {
+                "expected_defensive": bool(expected_defensive),
+                "registry_state_after": reg_state_after,
+                "registry_freeze_mode_active": bool(reg_freeze),
+                "registry_strict_pass_total": int(reg_strict_total),
+                "registry_hard_failed_total": int(reg_hard_failed_total),
+                "allocation_mode": alloc_mode,
+                "allocation_reasons": alloc_reasons,
             },
         }
     )
@@ -288,8 +449,12 @@ def main(argv: Iterable[str]) -> int:
             "require_phasea": bool(args.require_phasea),
             "require_stagea": bool(args.require_stagea),
             "require_strict_pass_positive": bool(args.require_strict_pass_positive),
+            "require_stageb_stability_ratio": bool(args.require_stageb_stability_ratio),
+            "stageb_strict_positive_ratio_min": strict_positive_ratio_min,
             "require_provider_raw_clean": bool(args.require_provider_raw_clean),
             "require_redflags_clean": bool(args.require_redflags_clean),
+            "require_portfolio_slot_consistency": bool(args.require_portfolio_slot_consistency),
+            "release_strict_profile": bool(args.release_strict_profile),
         },
         "checks": checks,
         "counts": {
@@ -303,6 +468,7 @@ def main(argv: Iterable[str]) -> int:
             "registry_report": str(registry_path) if registry_path else "",
             "portfolio_report": str(portfolio_path) if portfolio_path else "",
             "redflags_report": str(redflags_path) if redflags_path else "",
+            "stageb_stability_report": str(stageb_stability_path) if stageb_stability_path else "",
             "report_json": str(report_path),
         },
         "hashes": {
@@ -312,6 +478,7 @@ def main(argv: Iterable[str]) -> int:
             "registry_report_hash": stable_hash_file(registry_path) if registry_path and registry_path.exists() else "",
             "portfolio_report_hash": stable_hash_file(portfolio_path) if portfolio_path and portfolio_path.exists() else "",
             "redflags_report_hash": stable_hash_file(redflags_path) if redflags_path and redflags_path.exists() else "",
+            "stageb_stability_report_hash": stable_hash_file(stageb_stability_path) if stageb_stability_path and stageb_stability_path.exists() else "",
         },
     }
     atomic_write_json(report_path, report)

@@ -774,13 +774,20 @@ def main(argv: Iterable[str]) -> int:
             min_embargo_gap_days=max(0, int(args.cpcv_light_min_embargo_gap_days)),
             relaxation_mode=str(args.cpcv_light_relaxation_mode),
         )
+        # For feasible_min mode, cap each requirement by its own measurable ceiling
+        # (effective paths, total paths, and combos considered respectively). This
+        # avoids impossible strict requirements when temporal/adjacency filters
+        # reduce feasible paths far below raw combinatorics.
+        effective_paths_ceiling = max(1, int(cpcv["combos_effective_total"]))
+        paths_total_ceiling = max(1, int(cpcv["paths_total"]))
+        combos_considered_ceiling = max(1, int(cpcv["combos_considered_total"]))
         effective_paths_required = (
             int(max(1, args.cpcv_light_min_effective_paths))
             if str(args.cpcv_light_requirement_mode) == "configured_min"
             else int(
                 min(
                     max(1, int(args.cpcv_light_min_effective_paths)),
-                    max(1, int(cpcv["combos_considered_total"])),
+                    int(effective_paths_ceiling),
                 )
             )
         )
@@ -790,7 +797,7 @@ def main(argv: Iterable[str]) -> int:
             else int(
                 min(
                     max(1, int(args.cpcv_light_min_paths_total)),
-                    max(1, int(cpcv["combos_considered_total"])),
+                    int(paths_total_ceiling),
                 )
             )
         )
@@ -800,7 +807,18 @@ def main(argv: Iterable[str]) -> int:
             else int(
                 min(
                     max(1, int(args.cpcv_light_min_combos_considered)),
-                    max(1, int(cpcv["combos_considered_total"])),
+                    int(combos_considered_ceiling),
+                )
+            )
+        )
+        configured_effective_ratio_required = float(max(0.0, min(1.0, args.cpcv_light_min_effective_path_ratio)))
+        effective_ratio_required = (
+            configured_effective_ratio_required
+            if str(args.cpcv_light_requirement_mode) == "configured_min"
+            else float(
+                min(
+                    configured_effective_ratio_required,
+                    float(effective_paths_required) / float(max(1, combos_considered_ceiling)),
                 )
             )
         )
@@ -848,6 +866,7 @@ def main(argv: Iterable[str]) -> int:
                 "cpcv_light_effective_paths_required": int(effective_paths_required),
                 "cpcv_light_paths_total_required": int(paths_total_required),
                 "cpcv_light_combos_considered_required": int(combos_considered_required),
+                "cpcv_light_effective_path_ratio_required": float(effective_ratio_required),
                 "cpcv_light_temporal_meta_missing_total": int(temporal_meta_missing),
                 "ic_fold_std_proxy": float(0.0 if len(fold_ics) <= 1 else pl.Series(fold_ics).std(ddof=1) or 0.0),
                 "ic_5d_oos_p10": float(ic_p10),
@@ -994,7 +1013,7 @@ def main(argv: Iterable[str]) -> int:
         ),
         (
             "g_cpcv_light_effective_ratio",
-            pl.col("cpcv_light_effective_path_ratio") >= strict_cfg["cpcv_light_effective_path_ratio_min"],
+            pl.col("cpcv_light_effective_path_ratio") >= pl.col("cpcv_light_effective_path_ratio_required"),
         ),
         (
             "g_cpcv_light_paths_total",
@@ -1312,12 +1331,17 @@ def main(argv: Iterable[str]) -> int:
             "cpcv_light_effective_paths_requirement_mode": (
                 "configured_min"
                 if str(args.cpcv_light_requirement_mode) == "configured_min"
-                else "min(configured_min, combos_considered_total_floor1)"
+                else "min(configured_min, combos_effective_total_floor1)"
+            ),
+            "cpcv_light_effective_ratio_requirement_mode": (
+                "configured_min"
+                if str(args.cpcv_light_requirement_mode) == "configured_min"
+                else "min(configured_min, effective_paths_required/combos_considered_total_floor1)"
             ),
             "cpcv_light_paths_total_requirement_mode": (
                 "configured_min"
                 if str(args.cpcv_light_requirement_mode) == "configured_min"
-                else "min(configured_min, combos_considered_total_floor1)"
+                else "min(configured_min, paths_total_floor1)"
             ),
             "bootstrap_resamples": int(max(32, args.bootstrap_resamples)),
             "dsr_trials_total": int(dsr_trials_total),

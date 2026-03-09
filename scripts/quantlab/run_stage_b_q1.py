@@ -17,6 +17,7 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 from scripts.quantlab.q1_common import DEFAULT_QUANT_ROOT, atomic_write_json, read_json, stable_hash_file, utc_now_iso  # noqa: E402
+from scripts.quantlab.q1_common import resolve_panel_asof_end_date  # noqa: E402
 
 
 def parse_args(argv: Iterable[str]) -> argparse.Namespace:
@@ -31,6 +32,9 @@ def parse_args(argv: Iterable[str]) -> argparse.Namespace:
         default="survivors_a",
         help="survivors_a evaluates Stage-B over Stage-A survivors only; all_candidates keeps legacy full-candidate scope.",
     )
+    p.add_argument("--stageb-adaptive-input-scope", action="store_true", default=True)
+    p.add_argument("--skip-stageb-adaptive-input-scope", dest="stageb_adaptive_input_scope", action="store_false")
+    p.add_argument("--stageb-min-survivors-a-for-strict-scope", type=int, default=32)
     p.add_argument("--strict-survivors-max", type=int, default=6)
     p.add_argument("--psr-strict-min", type=float, default=0.65)
     p.add_argument("--dsr-strict-min", type=float, default=0.55)
@@ -123,6 +127,139 @@ def _find_report_from_stdout(stdout: str, key: str = "report") -> str | None:
     return None
 
 
+def _normalize_path_str(value: str) -> str:
+    text = str(value or "").strip()
+    if not text:
+        return ""
+    try:
+        return str(Path(text).resolve())
+    except Exception:
+        return text
+
+
+def _extract_snapshot_id_from_path(value: str) -> str:
+    text = str(value or "")
+    marker = "snapshot_id="
+    if marker not in text:
+        return ""
+    tail = text.split(marker, 1)[1]
+    return tail.split("/", 1)[0].strip()
+
+
+def _extract_feature_store_version_from_path(value: str) -> str:
+    text = str(value or "")
+    marker = "feature_store_version="
+    if marker not in text:
+        return ""
+    tail = text.split(marker, 1)[1]
+    return tail.split("/", 1)[0].strip()
+
+
+def _infer_requested_asof_from_stage_a_run_id(stage_a_run_id: str) -> str:
+    prefix = "cheapgateA_tsplits_"
+    text = str(stage_a_run_id or "").strip()
+    if text.startswith(prefix):
+        return text[len(prefix):]
+    return ""
+
+
+def _find_stage_a_pipeline_report(
+    quant_root: Path,
+    stage_a_report_path: Path,
+) -> tuple[Path | None, dict[str, Any] | None]:
+    runs_root = quant_root / "runs"
+    target = _normalize_path_str(str(stage_a_report_path))
+    if not target or not runs_root.exists():
+        return None, None
+    candidates = sorted(
+        runs_root.glob("run_id=q1panel_stageA_*/q1_panel_stagea_run_report.json"),
+        key=lambda p: p.stat().st_mtime_ns,
+        reverse=True,
+    )
+    for path in candidates:
+        try:
+            report = read_json(path)
+        except Exception:
+            continue
+        artifacts = report.get("artifacts") or {}
+        possible_refs = [
+            artifacts.get("cheap_gate_report"),
+            artifacts.get("cheap_gate_report_copy"),
+        ]
+        if any(_normalize_path_str(str(ref)) == target for ref in possible_refs if ref):
+            return path, report
+    return None, None
+
+
+def _load_stage_a_pipeline_context(
+    quant_root: Path,
+    stage_a_run_id: str,
+    stage_a_report_path: Path,
+    *,
+    stage_a_asof_date: str,
+    stage_a_snapshot_id: str,
+) -> dict[str, Any]:
+    context: dict[str, Any] = {
+        "stage_a_pipeline_report": "",
+        "stage_a_pipeline_run_id": "",
+        "requested_asof_end_date": str(stage_a_asof_date or "").strip() or _infer_requested_asof_from_stage_a_run_id(stage_a_run_id),
+        "effective_asof_end_date": str(stage_a_asof_date or "").strip(),
+        "panel_max_asof_date": "",
+        "asof_end_was_clamped_to_panel_max": False,
+        "asof_end_clamp_reason": "",
+        "snapshot_id": str(stage_a_snapshot_id or "").strip(),
+        "feature_store_version": "",
+        "panel_output_tag": "",
+    }
+    pipeline_path, pipeline_report = _find_stage_a_pipeline_report(quant_root, stage_a_report_path)
+    if not pipeline_path or not pipeline_report:
+        return context
+
+    refs = pipeline_report.get("references") or {}
+    artifacts = pipeline_report.get("artifacts") or {}
+    context["stage_a_pipeline_report"] = str(pipeline_path)
+    context["stage_a_pipeline_run_id"] = str(pipeline_report.get("run_id") or "")
+
+    requested = str(
+        refs.get("requested_asof_end_date")
+        or pipeline_report.get("asof_end_date")
+        or context["requested_asof_end_date"]
+        or ""
+    ).strip()
+    context["requested_asof_end_date"] = requested
+
+    panel_manifest_path = Path(str(artifacts.get("panel_manifest") or artifacts.get("panel_manifest_copy") or "")).expanduser()
+    if panel_manifest_path.exists():
+        try:
+            panel_manifest = read_json(panel_manifest_path)
+            ranges = panel_manifest.get("ranges") or {}
+            panel_max = str(ranges.get("panel_max_asof_date") or "").strip()
+            context["panel_max_asof_date"] = panel_max
+            if panel_max:
+                resolved = resolve_panel_asof_end_date(requested, panel_max)
+                context.update(resolved)
+            context["feature_store_version"] = _extract_feature_store_version_from_path(str(panel_manifest_path))
+        except Exception:
+            pass
+
+    if not context.get("effective_asof_end_date"):
+        context["effective_asof_end_date"] = requested
+
+    panel_part_glob_hint = str(refs.get("panel_part_glob_hint") or "").strip()
+    if panel_part_glob_hint:
+        panel_output_tag = panel_part_glob_hint
+        if panel_output_tag.startswith("part-") and panel_output_tag.endswith(".parquet"):
+            panel_output_tag = panel_output_tag[len("part-"):-len(".parquet")]
+        context["panel_output_tag"] = panel_output_tag
+
+    bars_root = str(((refs.get("panel_scan_plan") or {}).get("bars_root")) or "").strip()
+    snapshot_from_scan = _extract_snapshot_id_from_path(bars_root)
+    if snapshot_from_scan:
+        context["snapshot_id"] = snapshot_from_scan
+
+    return context
+
+
 def main(argv: Iterable[str]) -> int:
     args = parse_args(argv)
     v4_final_profile = bool(args.v4_final_profile)
@@ -143,6 +280,52 @@ def main(argv: Iterable[str]) -> int:
     quant_root = Path(args.quant_root).resolve()
     py = args.python
     stage_a_run_id = args.stage_a_run_id or _latest_stage_a_run(quant_root)
+    requested_input_scope = str(args.stageb_input_scope)
+    effective_input_scope = requested_input_scope
+    stage_a_survivors_total: int | None = None
+    stage_a_candidates_total: int | None = None
+    stage_a_asof_date = ""
+    stage_a_snapshot_id = ""
+    scope_widened_reason = ""
+    scope_widened = False
+    stage_a_report_path = quant_root / "runs" / f"run_id={stage_a_run_id}" / args.outputs_subdir / "cheap_gate_A_time_splits_report.json"
+    if stage_a_report_path.exists():
+        try:
+            stage_a_report = read_json(stage_a_report_path)
+            sc = stage_a_report.get("counts") or {}
+            stage_a_survivors_total = int(sc.get("survivors_A_total") or 0)
+            stage_a_candidates_total = int(sc.get("stage_a_candidates_total") or sc.get("candidates_total") or 0)
+            stage_a_asof_date = str(stage_a_report.get("asof_date") or "")
+            stage_a_snapshot_id = str(stage_a_report.get("snapshot_id") or "")
+        except Exception:
+            stage_a_survivors_total = None
+            stage_a_candidates_total = None
+            stage_a_asof_date = ""
+            stage_a_snapshot_id = ""
+    stage_a_pipeline_ctx = _load_stage_a_pipeline_context(
+        quant_root,
+        stage_a_run_id,
+        stage_a_report_path,
+        stage_a_asof_date=stage_a_asof_date,
+        stage_a_snapshot_id=stage_a_snapshot_id,
+    )
+    if stage_a_pipeline_ctx.get("effective_asof_end_date"):
+        stage_a_asof_date = str(stage_a_pipeline_ctx.get("effective_asof_end_date") or stage_a_asof_date)
+    if stage_a_pipeline_ctx.get("snapshot_id"):
+        stage_a_snapshot_id = str(stage_a_pipeline_ctx.get("snapshot_id") or stage_a_snapshot_id)
+    min_survivors_for_scope = max(1, int(args.stageb_min_survivors_a_for_strict_scope))
+    if (
+        bool(args.stageb_adaptive_input_scope)
+        and requested_input_scope == "survivors_a"
+        and stage_a_survivors_total is not None
+        and stage_a_survivors_total < min_survivors_for_scope
+    ):
+        effective_input_scope = "all_candidates"
+        scope_widened = True
+        scope_widened_reason = (
+            "STAGEB_INPUT_SCOPE_WIDENED:"
+            f"survivors_A_total={stage_a_survivors_total}<min={min_survivors_for_scope}"
+        )
 
     prep_script = REPO_ROOT / "scripts/quantlab/prepare_stage_b_q1.py"
     light_script = REPO_ROOT / "scripts/quantlab/run_stage_b_q1_light.py"
@@ -176,7 +359,7 @@ def main(argv: Iterable[str]) -> int:
         "--outputs-subdir",
         args.outputs_subdir,
         "--input-scope",
-        str(args.stageb_input_scope),
+        str(effective_input_scope),
         "--strict-survivors-max",
         str(args.strict_survivors_max),
         "--psr-strict-min",
@@ -283,8 +466,23 @@ def main(argv: Iterable[str]) -> int:
     stage_b_final_meta: dict[str, Any] = {
         "selection_mode": "strict_candidates_only",
         "prep_strict_intersection_mode": str(args.prep_strict_intersection_mode),
+        "stageb_input_scope_requested": requested_input_scope,
+        "stageb_input_scope_effective": effective_input_scope,
+        "stageb_input_scope_adaptive_enabled": bool(args.stageb_adaptive_input_scope),
+        "stageb_min_survivors_a_for_strict_scope": int(min_survivors_for_scope),
+        "stage_a_survivors_total": stage_a_survivors_total,
+        "stage_a_candidates_total": stage_a_candidates_total,
+        "stageb_input_scope_widened": bool(scope_widened),
+        "stageb_input_scope_widened_reason": scope_widened_reason,
         "survivors_B_q1_total": 0,
         "strict_candidates_total": 0,
+        "requested_asof_end_date": str(stage_a_pipeline_ctx.get("requested_asof_end_date") or ""),
+        "effective_asof_end_date": str(stage_a_pipeline_ctx.get("effective_asof_end_date") or stage_a_asof_date or ""),
+        "panel_max_asof_date": str(stage_a_pipeline_ctx.get("panel_max_asof_date") or ""),
+        "asof_end_was_clamped_to_panel_max": bool(stage_a_pipeline_ctx.get("asof_end_was_clamped_to_panel_max")),
+        "asof_end_clamp_reason": str(stage_a_pipeline_ctx.get("asof_end_clamp_reason") or ""),
+        "feature_store_version": str(stage_a_pipeline_ctx.get("feature_store_version") or ""),
+        "panel_output_tag": str(stage_a_pipeline_ctx.get("panel_output_tag") or ""),
         "intersection_with_prep_strict_total": None,
         "intersection_with_prep_shortlist_total": None,
         "intersection_with_light_survivors_total": None,
@@ -304,6 +502,8 @@ def main(argv: Iterable[str]) -> int:
         ],
         "warnings": [],
     }
+    if scope_widened and scope_widened_reason:
+        stage_b_final_meta.setdefault("warnings", []).append(scope_widened_reason)
     survivors_b_q1_path: Path | None = None
     if light_report_obj:
         try:
@@ -456,6 +656,8 @@ def main(argv: Iterable[str]) -> int:
         "generated_at": utc_now_iso(),
         "run_id": run_id,
         "stage_a_run_id": stage_a_run_id,
+        "asof_date": stage_a_asof_date,
+        "snapshot_id": stage_a_snapshot_id,
         "ok": report_ok,
         "exit_code": int(exit_code),
         "reason": str(reason),
@@ -469,7 +671,12 @@ def main(argv: Iterable[str]) -> int:
         },
         "method": {
             "type": "q1_stage_b_orchestrated",
-            "stageb_input_scope": str(args.stageb_input_scope),
+            "stageb_input_scope_requested": requested_input_scope,
+            "stageb_input_scope_effective": effective_input_scope,
+            "stageb_input_scope_adaptive_enabled": bool(args.stageb_adaptive_input_scope),
+            "stageb_min_survivors_a_for_strict_scope": int(min_survivors_for_scope),
+            "stageb_input_scope_widened": bool(scope_widened),
+            "stageb_input_scope_widened_reason": scope_widened_reason,
             "stageb_pass_mode": str(args.stageb_pass_mode),
             "stageb_strict_gate_profile": str(args.stageb_strict_gate_profile),
             "stageb_strict_quality_gate_mode": str(args.stageb_strict_quality_gate_mode),
@@ -492,6 +699,18 @@ def main(argv: Iterable[str]) -> int:
             "run_dir": str(run_dir),
             **copied,
             "source_stage_a_outputs_dir": str(quant_root / 'runs' / f'run_id={stage_a_run_id}' / args.outputs_subdir),
+            "source_stage_a_report": str(stage_a_report_path),
+            "source_stage_a_pipeline_report": str(stage_a_pipeline_ctx.get("stage_a_pipeline_report") or ""),
+        },
+        "references": {
+            "stage_a_pipeline_run_id": str(stage_a_pipeline_ctx.get("stage_a_pipeline_run_id") or ""),
+            "requested_asof_end_date": str(stage_a_pipeline_ctx.get("requested_asof_end_date") or ""),
+            "effective_asof_end_date": str(stage_a_pipeline_ctx.get("effective_asof_end_date") or stage_a_asof_date or ""),
+            "panel_max_asof_date": str(stage_a_pipeline_ctx.get("panel_max_asof_date") or ""),
+            "asof_end_was_clamped_to_panel_max": bool(stage_a_pipeline_ctx.get("asof_end_was_clamped_to_panel_max")),
+            "asof_end_clamp_reason": str(stage_a_pipeline_ctx.get("asof_end_clamp_reason") or ""),
+            "feature_store_version": str(stage_a_pipeline_ctx.get("feature_store_version") or ""),
+            "panel_output_tag": str(stage_a_pipeline_ctx.get("panel_output_tag") or ""),
         },
         "counts": counts,
         "stage_b_q1_final": stage_b_final_meta,

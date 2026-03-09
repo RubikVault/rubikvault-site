@@ -119,6 +119,53 @@ function daysBetween(a, b) {
   return Math.max(0, Math.floor((db - da) / 86400000));
 }
 
+async function writeHistoryTouchReport({ registryRows, updatedIds, runDir, runId }) {
+  const updated = new Set((updatedIds || []).map((x) => String(x || '').trim()).filter(Boolean));
+  const entries = [];
+  const packs = new Map();
+  for (const row of registryRows || []) {
+    const canonicalId = String(row?.canonical_id || '').trim();
+    if (!canonicalId || !updated.has(canonicalId)) continue;
+    const pointers = row?.pointers || {};
+    const historyPack = String(pointers.history_pack || '').trim();
+    const packSha = String(pointers.pack_sha256 || '').trim();
+    if (!historyPack) continue;
+    entries.push({
+      canonical_id: canonicalId,
+      symbol: String(row?.symbol || '').trim(),
+      exchange: String(row?.exchange || '').trim(),
+      currency: String(row?.currency || '').trim(),
+      type_norm: String(row?.type_norm || '').trim(),
+      provider_symbol: String(row?.provider_symbol || row?.symbol || '').trim(),
+      country: String(row?.country || '').trim(),
+      history_pack: historyPack,
+      pack_sha256: packSha || null,
+    });
+    if (!packs.has(historyPack)) {
+      packs.set(historyPack, {
+        history_pack: historyPack,
+        pack_sha256: packSha || null,
+        touched_assets: 0,
+      });
+    }
+    packs.get(historyPack).touched_assets += 1;
+  }
+  await writeJsonAtomic(path.join(runDir, 'reports', 'history_touch_report.json'), {
+    schema: 'rv_v7_history_touch_report_v1',
+    generated_at: nowIso(),
+    run_id: runId,
+    updated_ids_count: updated.size,
+    entries_count: entries.length,
+    packs_count: packs.size,
+    packs: [...packs.values()].sort((a, b) => String(a.history_pack).localeCompare(String(b.history_pack))),
+    entries: entries.sort((a, b) => {
+      const packCmp = String(a.history_pack).localeCompare(String(b.history_pack));
+      if (packCmp != 0) return packCmp;
+      return String(a.canonical_id).localeCompare(String(b.canonical_id));
+    }),
+  });
+}
+
 function stalenessBusinessDays(lastTradeDate, cfg, today = nowIso().slice(0, 10)) {
   if (!lastTradeDate) return Number(cfg?.eligibility?.freshness_max_days || 180);
   const delta = daysBetween(lastTradeDate, today);
@@ -2177,6 +2224,13 @@ export async function runPipeline({ runId, args = {} } = {}) {
   if (backfill.code === EXIT.CHECKPOINT_INVALID) {
     return { ok: false, code: EXIT.CHECKPOINT_INVALID, reason: backfill.reason };
   }
+
+  await writeHistoryTouchReport({
+    registryRows: registryBuild.registryRows,
+    updatedIds: backfill.updated_ids || [],
+    runDir,
+    runId: effectiveRunId,
+  });
 
   await writeJsonAtomic(path.join(runDir, 'reports', 'budget_report.json'), {
     schema: 'rv_v7_budget_report_v1',

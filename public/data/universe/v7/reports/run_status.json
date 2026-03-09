@@ -1,122 +1,20 @@
 {
   "schema": "rv_v7_run_status_v1",
-  "generated_at": "2026-02-28T06:39:28.053Z",
-  "run_id": "v7_20260228063720_44e0be",
-  "exit_code": 40,
-  "reason": "api_rate_limited_429",
+  "generated_at": "2026-03-09T03:40:08.809Z",
+  "run_id": "unknown",
+  "exit_code": 90,
+  "reason": "phase0_failed",
   "steps": [
     {
       "step": "phase0_archeology",
-      "ok": true,
-      "code": 0,
-      "output": {
-        "status": "OK",
-        "phase": "phase0_archeology",
-        "contract_path": "policies/universe/core_legacy_contract.json",
-        "baseline_path": "mirrors/universe-v7/baseline/baseline_architecture_snapshot.json",
-        "legacy_counts": {
-          "universe_count": 2453,
-          "market_prices_count": 517,
-          "forecast_count": 2425,
-          "marketphase_count": 2441
-        },
-        "contract_hash": "7ff2906afb7aa724132a9079c5d89268b153caa10c0d46e0457346ad4c9fb9f8"
-      }
-    },
-    {
-      "step": "preflight",
-      "ok": true,
-      "code": 0,
-      "output": {
-        "status": "OK",
-        "code": 0,
-        "phase": "preflight",
-        "run_id": "v7_20260228063720_44e0be",
-        "tmp_dir": "tmp/v7-build/v7_20260228063720_44e0be",
-        "run_dir": "mirrors/universe-v7/runs/v7_20260228063720_44e0be",
-        "lock_path": "mirrors/universe-v7/state/run.lock",
-        "lock_held": true
-      }
-    },
-    {
-      "step": "law_coverage",
-      "ok": true,
-      "code": 0,
-      "output": {
-        "status": "OK",
-        "code": 0,
-        "report": "public/data/universe/v7/reports/law_coverage_report.json"
-      }
-    },
-    {
-      "step": "single_ingestor",
-      "ok": true,
-      "code": 0,
-      "output": {
-        "status": "OK",
-        "code": 0,
-        "violations": 0
-      }
-    },
-    {
-      "step": "pipeline_v7",
-      "ok": true,
-      "code": 40,
-      "exit_code": 40,
-      "reason": "ok",
-      "output": {
-        "status": "OK",
-        "code": 40,
-        "run_id": "v7_20260228063720_44e0be",
-        "run_dir": "tmp/v7-build/v7_20260228063720_44e0be",
-        "publish_payload": "tmp/v7-build/v7_20260228063720_44e0be/publish_payload"
-      }
-    },
-    {
-      "step": "ui_safety",
-      "ok": true,
-      "code": 0,
-      "output": {
-        "status": "OK",
-        "code": 0,
-        "warnings": 2
-      }
-    },
-    {
-      "step": "license_leak",
-      "ok": true,
-      "code": 0,
-      "output": {
-        "status": "OK",
-        "code": 0,
-        "scanned_files": 1781
-      }
-    },
-    {
-      "step": "build_stock_ssot",
-      "ok": true,
-      "code": 0,
-      "output": null
-    },
-    {
-      "step": "feature_universe_parity",
       "ok": false,
-      "code": 1,
+      "code": 90,
       "output": {
         "status": "FAIL",
-        "code": 1,
-        "report": "public/data/universe/v7/reports/feature_universe_parity_report.json",
-        "violations": 5,
-        "ssot_symbols": 55986
-      }
-    },
-    {
-      "step": "feature_universe_parity_gate_waived",
-      "ok": true,
-      "code": 0,
-      "output": {
-        "status": "WARN",
-        "reason": "feature_universe_parity_failed_but_waived_in_backfill_fast_mode"
+        "code": 90,
+        "reason": "LEGACY_CONTRACT_MISMATCH",
+        "existing_hash": "b15a861af053b9ef48e4247f992623fb39ebde0231237b03f8fc8f0288badb0d",
+        "current_hash": "d9ce471ec6fbff06dfe07bf6f51bc9faccc5e4ef0d9329402c079962654ebb4d"
       }
     }
   ]

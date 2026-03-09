@@ -35,6 +35,7 @@ Nicht mehr erwartbar (jetzt Incident melden):
 - `CONTRACT_CORP_ACTIONS_NOT_PROVIDER_RAW`
 - `CONTRACT_DELISTINGS_NOT_PROVIDER_RAW`
 - `provider_raw_clean=false` im v4-final-gate-Report
+- `raw_bars_freshness_ok=false` oder `raw_bars_freshness` als failed check im Night-Preflight
 
 ## Zulässige Kommandos
 
@@ -60,6 +61,7 @@ Sicheren 10h-Nachtlauf starten:
 3. Wenn tagsüber kein Run aktiv ist: `day` starten.
 4. Wenn nachts kein Run aktiv ist: `night` starten.
 5. Wenn ein Run fehlschlägt: nichts reparieren, nur Status prüfen und denselben sicheren Run-Typ neu starten, wenn kein Run mehr aktiv ist.
+6. Ausnahme: wenn der Preflight wegen stale Rohdaten fehlschlägt, keinen weiteren Night-Run starten, sondern nur melden.
 
 ## Fester Night-Run Ablauf (10h)
 
@@ -82,8 +84,10 @@ python3 /Users/michaelpuchowezki/Dev/rubikvault-site/scripts/quantlab/print_q1_o
 Diese Wrapper sind absichtlich konservativ:
 
 - `threads_cap=1`
-- `panel_max_assets=2000`
-- kleine `top_liquid`-Stufen
+- `panel_max_assets=5000`
+- im Task effektiv: mindestens `top_liquid_n`; `panel_max_assets=0` darf nicht mehr Vollpanel bedeuten
+- `top_liquid_list=2500,3500,5000`
+- keine Resume-Ruecksetzung bereits terminaler OOM-Minimum-Faelle
 - RSS-Limit + OOM-Downshift
 - Night-Safe-Profil läuft ohne Portfolio und ohne v4-final-gate-Matrix (beides ist absichtlich für Stabilität)
 - Stage-B-/Registry-Fehler sind aktuell erwartbar:
@@ -92,6 +96,29 @@ Diese Wrapper sind absichtlich konservativ:
   - das ist kein Anlass für Codeänderungen
 
 Das Operator-LLM darf diese Werte nicht überschreiben.
+
+## Harte Stop-Regel bei stale Rohdaten
+
+Wenn der Night-Preflight `raw_bars_freshness` oder `raw_bars_freshness_ok` als fehlgeschlagen meldet:
+
+- keinen neuen Night-Run starten
+- keinen Resume-Run erzwingen
+- nur berichten:
+  - welche Asset-Typen stale oder fehlend sind
+  - welches neueste Rohdaten-Datum erkannt wurde
+  - dass zuerst der Data-Truth-/Delta-Pfad frische Rohdaten liefern muss
+
+Wichtig:
+- Auch der Backbone selbst ist jetzt fail-closed.
+- Wenn ein Lauf auf `source_truth_gate` mit `exit_code=96` endet, ist das kein normaler Sweep-Fehler und kein Stage-B-Fehler.
+- In diesem Fall:
+  1. keinen Night-Run weiter eskalieren,
+  2. keinen Resume-Loop erzwingen,
+  3. nur melden:
+     - `latest_required_ingest_date`
+     - ob `history_touch_report.json` fehlt
+     - ob `public/data/universe/v7/reports/run_status.json` fehlerhaft ist
+  4. erst nach bestätigter v7-/Raw-Freshness wieder neu starten.
 
 ## Bericht an den Nutzer
 

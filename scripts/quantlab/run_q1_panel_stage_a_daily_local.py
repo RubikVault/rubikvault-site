@@ -2,17 +2,27 @@
 from __future__ import annotations
 
 import argparse
+import signal
 import subprocess
 import sys
 import time
 from pathlib import Path
-from typing import Iterable
+from typing import Iterable, Any
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-from scripts.quantlab.q1_common import DEFAULT_QUANT_ROOT, atomic_write_json, read_json, stable_hash_file, utc_now_iso  # noqa: E402
+from scripts.quantlab.q1_common import (  # noqa: E402
+    DEFAULT_QUANT_ROOT,
+    atomic_write_json,
+    build_raw_bars_freshness_summary,
+    local_today_iso,
+    read_json,
+    safe_panel_lookback_calendar_days,
+    stable_hash_file,
+    utc_now_iso,
+)
 
 
 def parse_args(argv: Iterable[str]) -> argparse.Namespace:
@@ -55,7 +65,7 @@ def parse_args(argv: Iterable[str]) -> argparse.Namespace:
     p.add_argument("--feature-store-version", default="v4_q1panel_daily_local")
     p.add_argument("--panel-output-tag", default="daily")
     p.add_argument("--asset-classes", default="stock,etf")
-    p.add_argument("--lookback-calendar-days", type=int, default=320)
+    p.add_argument("--lookback-calendar-days", type=int, default=420)
     p.add_argument("--panel-calendar-days", type=int, default=60)
     p.add_argument("--panel-max-assets", type=int, default=10000)
     p.add_argument("--min-bars", type=int, default=200)
@@ -178,6 +188,16 @@ def parse_args(argv: Iterable[str]) -> argparse.Namespace:
         default="warn",
     )
     p.add_argument("--portfolio-min-rebalance-delta", type=float, default=0.002)
+    p.add_argument(
+        "--portfolio-no-rebalance-orders-failure-mode",
+        choices=["off", "warn", "hard"],
+        default="off",
+    )
+    p.add_argument(
+        "--portfolio-registry-slot-consistency-failure-mode",
+        choices=["off", "warn", "hard"],
+        default="warn",
+    )
     p.add_argument("--portfolio-require-nonempty", action="store_true", default=True)
     p.add_argument("--skip-portfolio-require-nonempty", dest="portfolio_require_nonempty", action="store_false")
     p.add_argument(
@@ -248,12 +268,153 @@ def _resolve_snapshot_id(quant_root: Path, snapshot_id_raw: str) -> str:
     return raw or "latest"
 
 
+def _base_inputs(args: argparse.Namespace, snapshot_id_effective: str, v4_final_profile: bool) -> dict[str, Any]:
+    return {
+        "snapshot_id": snapshot_id_effective,
+        "snapshot_id_requested": args.snapshot_id,
+        "feature_store_version": args.feature_store_version,
+        "panel_output_tag": args.panel_output_tag,
+        "asset_classes": args.asset_classes,
+        "lookback_calendar_days": int(args.lookback_calendar_days),
+        "panel_calendar_days": int(args.panel_calendar_days),
+        "min_bars": int(args.min_bars),
+        "asof_end_date_requested": str(args.asof_end_date or ""),
+        "v4_final_profile": bool(v4_final_profile),
+        "run_phasea_backbone": bool(args.run_phasea_backbone),
+        "phasea_production_mode": bool(args.phasea_production_mode),
+        "phasea_run_corp_actions_ingest": bool(args.phasea_run_corp_actions_ingest),
+        "phasea_run_registry_delistings_ingest": bool(args.phasea_run_registry_delistings_ingest),
+        "phasea_corp_actions_max_assets": int(args.phasea_corp_actions_max_assets),
+        "phasea_corp_actions_max_calls": int(args.phasea_corp_actions_max_calls),
+        "phasea_corp_actions_from_date": str(args.phasea_corp_actions_from_date),
+        "phasea_corp_actions_http_failure_mode": str(args.phasea_corp_actions_http_failure_mode),
+        "phasea_contract_raw_ingest_date_mode": str(args.phasea_contract_raw_ingest_date_mode),
+        "phasea_recon_corp_actions_cap_hit_failure_mode": str(args.phasea_recon_corp_actions_cap_hit_failure_mode),
+        "phasea_recon_corp_actions_raw_empty_fallback_failure_mode": str(args.phasea_recon_corp_actions_raw_empty_fallback_failure_mode),
+        "phasea_warn_min_delta_rows": int(args.phasea_warn_min_delta_rows),
+        "phasea_warn_max_delta_rows": int(args.phasea_warn_max_delta_rows),
+        "phasea_fail_min_delta_rows": int(args.phasea_fail_min_delta_rows),
+        "phasea_fail_max_delta_rows": int(args.phasea_fail_max_delta_rows),
+        "run_stageb_q1": bool(args.run_stageb_q1),
+        "run_registry_q1": bool(args.run_registry_q1),
+        "redflags_failure_mode": str(args.redflags_failure_mode),
+        "stageb_pass_mode": str(args.stageb_pass_mode),
+        "stageb_strict_gate_profile": str(args.stageb_strict_gate_profile),
+        "stageb_strict_quality_gate_mode": str(args.stageb_strict_quality_gate_mode),
+        "stageb_prep_strict_intersection_mode": str(args.stageb_prep_strict_intersection_mode),
+        "stageb_input_scope": str(args.stageb_input_scope),
+        "stageb_cpcv_light_requirement_mode": str(args.stageb_cpcv_light_requirement_mode),
+        "stageb_cpcv_light_relaxation_mode": str(args.stageb_cpcv_light_relaxation_mode),
+        "panel_max_assets": args.panel_max_assets,
+        "top_liquid_n": args.top_liquid_n,
+        "fold_count": args.fold_count,
+        "test_days": args.test_days,
+        "embargo_days": args.embargo_days,
+        "min_train_days": args.min_train_days,
+        "candidate_profile": str(args.candidate_profile),
+        "registry_require_top_survivor_hard_gates_pass": bool(args.registry_require_top_survivor_hard_gates_pass),
+        "registry_hard_demotion_gates_source": str(args.registry_hard_demotion_gates_source),
+        "registry_live_slot_count": int(args.registry_live_slot_count),
+        "registry_shadow_slot_count": int(args.registry_shadow_slot_count),
+        "registry_retired_slot_count": int(args.registry_retired_slot_count),
+        "registry_max_live_per_family": int(args.registry_max_live_per_family),
+        "registry_max_shadow_per_family": int(args.registry_max_shadow_per_family),
+        "registry_max_retired_per_family": int(args.registry_max_retired_per_family),
+        "registry_slot_family_policy_mode": str(args.registry_slot_family_policy_mode),
+        "registry_include_default_slot_alias": bool(args.registry_include_default_slot_alias),
+        "portfolio_candidate_selection_mode": str(args.portfolio_candidate_selection_mode),
+        "portfolio_registry_slot_blend": str(args.portfolio_registry_slot_blend),
+        "portfolio_slot_blend_max_candidates": int(args.portfolio_slot_blend_max_candidates),
+        "portfolio_registry_state_multipliers": str(args.portfolio_registry_state_multipliers),
+        "portfolio_slot_blend_min_effective_weight": float(args.portfolio_slot_blend_min_effective_weight),
+        "portfolio_slot_blend_require_live_like": bool(args.portfolio_slot_blend_require_live_like),
+        "portfolio_slot_blend_live_like_states": str(args.portfolio_slot_blend_live_like_states),
+        "portfolio_max_long_per_family": int(args.portfolio_max_long_per_family),
+        "portfolio_max_short_per_family": int(args.portfolio_max_short_per_family),
+        "portfolio_max_family_abs_exposure": float(args.portfolio_max_family_abs_exposure),
+        "portfolio_family_concentration_failure_mode": str(args.portfolio_family_concentration_failure_mode),
+        "portfolio_no_rebalance_orders_failure_mode": str(args.portfolio_no_rebalance_orders_failure_mode),
+        "portfolio_registry_slot_consistency_failure_mode": str(args.portfolio_registry_slot_consistency_failure_mode),
+        "run_v4_final_gate_matrix": bool(args.run_v4_final_gate_matrix),
+        "v4_final_gate_failure_mode": str(args.v4_final_gate_failure_mode),
+    }
+
+
+def _write_status(
+    status_path: Path,
+    status: dict[str, Any],
+    *,
+    state_value: str | None = None,
+    current_step: str | None = None,
+    heartbeat_note: str | None = None,
+) -> None:
+    status["generated_at"] = utc_now_iso()
+    if state_value is not None:
+        status["state"] = str(state_value)
+    if current_step is not None:
+        status["current_step"] = str(current_step)
+    if heartbeat_note is not None:
+        status["heartbeat"] = {
+            "at": utc_now_iso(),
+            "note": str(heartbeat_note),
+        }
+    atomic_write_json(status_path, status)
+
+
+def _run_subprocess_with_status_heartbeat(
+    cmd: list[str],
+    *,
+    cwd: Path,
+    status: dict[str, Any],
+    status_path: Path,
+    current_step: str,
+    heartbeat_sec: float = 60.0,
+    proc_holder: dict[str, subprocess.Popen[str] | None] | None = None,
+) -> tuple[subprocess.Popen[str], float, str, str]:
+    proc = subprocess.Popen(
+        cmd,
+        cwd=cwd,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+    )
+    if proc_holder is not None:
+        proc_holder["proc"] = proc
+    t0 = time.time()
+    stdout = ""
+    stderr = ""
+    wait_sec = max(10.0, float(heartbeat_sec))
+    while True:
+        try:
+            stdout, stderr = proc.communicate(timeout=wait_sec)
+            break
+        except subprocess.TimeoutExpired:
+            _write_status(
+                status_path,
+                status,
+                state_value="running",
+                current_step=current_step,
+                heartbeat_note=f"{current_step}_running",
+            )
+    elapsed = round(time.time() - t0, 3)
+    if proc_holder is not None:
+        proc_holder["proc"] = None
+    return proc, elapsed, stdout or "", stderr or ""
+
+
 def main(argv: Iterable[str]) -> int:
     args = parse_args(argv)
     v4_final_profile = bool(args.v4_final_profile)
     if v4_final_profile:
         if int(args.panel_calendar_days) < 90:
             args.panel_calendar_days = 90
+        safe_lookback = safe_panel_lookback_calendar_days(
+            min_bars=int(args.min_bars),
+            panel_days=int(args.panel_calendar_days),
+            minimum=420,
+        )
+        if int(args.lookback_calendar_days) < safe_lookback:
+            args.lookback_calendar_days = safe_lookback
         if int(args.fold_count) < 4:
             args.fold_count = 4
         if int(args.min_train_days) < 8:
@@ -285,6 +446,10 @@ def main(argv: Iterable[str]) -> int:
             args.portfolio_max_family_abs_exposure = 0.35
         if str(args.portfolio_family_concentration_failure_mode).lower() == "off":
             args.portfolio_family_concentration_failure_mode = "hard"
+        if str(args.portfolio_no_rebalance_orders_failure_mode).lower() == "off":
+            args.portfolio_no_rebalance_orders_failure_mode = "hard"
+        if str(args.portfolio_registry_slot_consistency_failure_mode).lower() != "hard":
+            args.portfolio_registry_slot_consistency_failure_mode = "hard"
     quant_root = Path(args.quant_root).resolve()
     snapshot_id_effective = _resolve_snapshot_id(quant_root, args.snapshot_id)
     py = args.python
@@ -296,6 +461,84 @@ def main(argv: Iterable[str]) -> int:
     redflags_runner = REPO_ROOT / "scripts" / "quantlab" / "run_redflag_invariants_q1.py"
     portfolio_runner = REPO_ROOT / "scripts" / "quantlab" / "run_portfolio_risk_execution_q1.py"
     final_gate_runner = REPO_ROOT / "scripts" / "quantlab" / "run_v4_final_gate_matrix_q1.py"
+
+    run_id = f"q1panel_daily_local_{int(time.time())}"
+    out_dir = quant_root / "runs" / f"run_id={run_id}"
+    out_dir.mkdir(parents=True, exist_ok=True)
+    status_path = out_dir / "q1_panel_stagea_daily_run_status.json"
+    raw_bars_freshness = build_raw_bars_freshness_summary(
+        quant_root,
+        asset_types=[part.strip() for part in str(args.phasea_include_types or args.asset_classes or "").split(",") if part.strip()],
+        reference_date=str(args.phasea_ingest_date or local_today_iso()),
+        stale_after_calendar_days=3 if bool(args.phasea_production_mode or v4_final_profile) else 7,
+    )
+    status: dict[str, Any] = {
+        "schema": "quantlab_q1_panel_stagea_daily_local_run_status_v1",
+        "generated_at": utc_now_iso(),
+        "run_id": run_id,
+        "git_sha": _git_sha(REPO_ROOT),
+        "ok": None,
+        "exit_code": None,
+        "mode": "local_daily_q1_panel_stageA",
+        "state": "starting",
+        "current_step": "bootstrap",
+        "inputs": _base_inputs(args, snapshot_id_effective, v4_final_profile),
+        "steps": [],
+        "artifacts": {
+            "orchestrator_run_report": None,
+        },
+        "environment": {
+            "raw_bars_freshness": raw_bars_freshness,
+        },
+        "stdout_tail": [],
+        "stderr_tail": [],
+        "failure_reason_codes": [],
+    }
+    _write_status(status_path, status, state_value="starting", current_step="bootstrap", heartbeat_note="bootstrap")
+    print(f"run_id={run_id}", flush=True)
+    print(f"status={status_path}", flush=True)
+
+    active_child: dict[str, subprocess.Popen[str] | None] = {"proc": None}
+    signal_finalize_once = {"done": False}
+
+    def _finalize_interrupted_run(signum: int) -> None:
+        if signal_finalize_once["done"]:
+            raise SystemExit(128 + int(signum))
+        signal_finalize_once["done"] = True
+        status["ok"] = False
+        status["exit_code"] = 128 + int(signum)
+        status["state"] = "failed"
+        status["current_step"] = str(status.get("current_step") or "unknown")
+        status.setdefault("failure_reason_codes", [])
+        for code in [
+            "RUNNER_TERMINATED_BY_SIGNAL",
+            f"RUNNER_SIGNAL_{int(signum)}",
+        ]:
+            if code not in status["failure_reason_codes"]:
+                status["failure_reason_codes"].append(code)
+        msg = f"RUNNER_TERMINATED_BY_SIGNAL:{int(signum)} current_step={status['current_step']}"
+        stderr_tail = list(status.get("stderr_tail") or [])
+        if msg not in stderr_tail:
+            stderr_tail = [*stderr_tail[-19:], msg]
+        status["stderr_tail"] = stderr_tail
+        proc = active_child.get("proc")
+        if proc is not None and proc.poll() is None:
+            try:
+                proc.terminate()
+            except Exception:
+                pass
+        _write_status(
+            status_path,
+            status,
+            state_value="failed",
+            current_step=str(status.get("current_step") or "unknown"),
+            heartbeat_note=f"terminated_signal_{int(signum)}",
+        )
+        print("ok=False", flush=True)
+        raise SystemExit(128 + int(signum))
+
+    signal.signal(signal.SIGTERM, lambda signum, frame: _finalize_interrupted_run(signum))
+    signal.signal(signal.SIGINT, lambda signum, frame: _finalize_interrupted_run(signum))
 
     phasea_report_path: Path | None = None
     phasea_stdout = ""
@@ -399,11 +642,21 @@ def main(argv: Iterable[str]) -> int:
         ]
         if str(args.phasea_corp_actions_from_date or "").strip():
             phasea_cmd += ["--corp-actions-from-date", str(args.phasea_corp_actions_from_date).strip()]
-        t0_phasea = time.time()
-        phasea_proc = subprocess.run(phasea_cmd, cwd=REPO_ROOT, capture_output=True, text=True)
-        phasea_elapsed = round(time.time() - t0_phasea, 3)
-        phasea_stdout = phasea_proc.stdout or ""
-        phasea_stderr = phasea_proc.stderr or ""
+        _write_status(
+            status_path,
+            status,
+            state_value="running",
+            current_step="run_q1_daily_data_backbone_q1",
+            heartbeat_note="phasea_start",
+        )
+        phasea_proc, phasea_elapsed, phasea_stdout, phasea_stderr = _run_subprocess_with_status_heartbeat(
+            phasea_cmd,
+            cwd=REPO_ROOT,
+            status=status,
+            status_path=status_path,
+            current_step="run_q1_daily_data_backbone_q1",
+            proc_holder=active_child,
+        )
         phasea_kv: dict[str, str] = {}
         for line in phasea_stdout.splitlines():
             if "=" in line and not line.startswith("["):
@@ -414,69 +667,35 @@ def main(argv: Iterable[str]) -> int:
             phasea_report_path = Path(phasea_kv["report"])
         phasea_rc = int(phasea_proc.returncode)
         if phasea_proc.returncode != 0:
-            # Write a minimal status file for failed phase-A invocation and return.
-            run_id = f"q1panel_daily_local_{int(time.time())}"
-            out_dir = quant_root / "runs" / f"run_id={run_id}"
-            out_dir.mkdir(parents=True, exist_ok=True)
-            status_path = out_dir / "q1_panel_stagea_daily_run_status.json"
-            status = {
-                "schema": "quantlab_q1_panel_stagea_daily_local_run_status_v1",
-                "generated_at": utc_now_iso(),
-                "run_id": run_id,
-                "git_sha": _git_sha(REPO_ROOT),
-                "ok": False,
-                "exit_code": int(phasea_proc.returncode),
-                "mode": "local_daily_q1_panel_stageA",
-                "inputs": {
-                    "snapshot_id": snapshot_id_effective,
-                    "snapshot_id_requested": args.snapshot_id,
-                    "feature_store_version": args.feature_store_version,
-                    "panel_output_tag": args.panel_output_tag,
-                    "run_phasea_backbone": True,
-                    "v4_final_profile": bool(v4_final_profile),
-                    "phasea_production_mode": bool(args.phasea_production_mode),
-                    "phasea_run_corp_actions_ingest": bool(args.phasea_run_corp_actions_ingest),
-                    "phasea_run_registry_delistings_ingest": bool(args.phasea_run_registry_delistings_ingest),
-                    "phasea_corp_actions_max_assets": int(args.phasea_corp_actions_max_assets),
-                    "phasea_corp_actions_max_calls": int(args.phasea_corp_actions_max_calls),
-                    "phasea_corp_actions_from_date": str(args.phasea_corp_actions_from_date),
-                    "phasea_corp_actions_http_failure_mode": str(args.phasea_corp_actions_http_failure_mode),
-                    "phasea_contract_raw_ingest_date_mode": str(args.phasea_contract_raw_ingest_date_mode),
-                    "phasea_recon_corp_actions_cap_hit_failure_mode": str(args.phasea_recon_corp_actions_cap_hit_failure_mode),
-                    "phasea_recon_corp_actions_raw_empty_fallback_failure_mode": str(args.phasea_recon_corp_actions_raw_empty_fallback_failure_mode),
-                    "phasea_warn_min_delta_rows": int(args.phasea_warn_min_delta_rows),
-                    "phasea_warn_max_delta_rows": int(args.phasea_warn_max_delta_rows),
-                    "phasea_fail_min_delta_rows": int(args.phasea_fail_min_delta_rows),
-                    "phasea_fail_max_delta_rows": int(args.phasea_fail_max_delta_rows),
-                    "redflags_failure_mode": str(args.redflags_failure_mode),
-                    "stageb_strict_quality_gate_mode": str(args.stageb_strict_quality_gate_mode),
-                    "registry_slot_family_policy_mode": str(args.registry_slot_family_policy_mode),
-                    "portfolio_family_concentration_failure_mode": str(args.portfolio_family_concentration_failure_mode),
+            status["ok"] = False
+            status["exit_code"] = int(phasea_proc.returncode)
+            status["state"] = "failed"
+            status["current_step"] = "run_q1_daily_data_backbone_q1"
+            status["steps"] = [
+                *([phasea_calibration_step] if phasea_calibration_step is not None else []),
+                {
+                    "name": "run_q1_daily_data_backbone_q1",
+                    "ok": False,
+                    "exit_code": phasea_rc,
+                    "elapsed_sec": phasea_elapsed,
+                    "cmd": phasea_cmd,
+                    "stdout_tail": phasea_stdout.splitlines()[-20:],
+                    "stderr_tail": phasea_stderr.splitlines()[-20:],
                 },
-                "steps": [
-                    *( [phasea_calibration_step] if phasea_calibration_step is not None else [] ),
-                    {
-                        "name": "run_q1_daily_data_backbone_q1",
-                        "ok": False,
-                        "exit_code": phasea_rc,
-                        "elapsed_sec": phasea_elapsed,
-                        "cmd": phasea_cmd,
-                        "stdout_tail": phasea_stdout.splitlines()[-20:],
-                        "stderr_tail": phasea_stderr.splitlines()[-20:],
-                    }
-                ],
-                "artifacts": {
-                    "phasea_backbone_run_report": str(phasea_report_path) if phasea_report_path else None,
-                },
-                "stdout_tail": phasea_stdout.splitlines()[-20:],
-                "stderr_tail": phasea_stderr.splitlines()[-20:],
-            }
+            ]
+            status["artifacts"]["phasea_backbone_run_report"] = str(phasea_report_path) if phasea_report_path else None
+            status["stdout_tail"] = phasea_stdout.splitlines()[-20:]
+            status["stderr_tail"] = phasea_stderr.splitlines()[-20:]
             if phasea_report_path and phasea_report_path.exists():
                 status["hashes"] = {"phasea_backbone_run_report_hash": stable_hash_file(phasea_report_path)}
-            atomic_write_json(status_path, status)
-            print(f"run_id={run_id}")
-            print(f"status={status_path}")
-            print("ok=False")
+            _write_status(
+                status_path,
+                status,
+                state_value="failed",
+                current_step="run_q1_daily_data_backbone_q1",
+                heartbeat_note="phasea_failed",
+            )
+            print("ok=False", flush=True)
             return int(phasea_proc.returncode)
 
     cmd = [
@@ -518,97 +737,32 @@ def main(argv: Iterable[str]) -> int:
     if args.asof_end_date:
         cmd.extend(["--asof-end-date", args.asof_end_date])
 
-    t0 = time.time()
-    proc = subprocess.run(cmd, cwd=REPO_ROOT, capture_output=True, text=True)
-    elapsed = round(time.time() - t0, 3)
+    _write_status(
+        status_path,
+        status,
+        state_value="running",
+        current_step="run_q1_panel_stage_a_pipeline",
+        heartbeat_note="stagea_start",
+    )
+    proc, elapsed, orchestrator_stdout, orchestrator_stderr = _run_subprocess_with_status_heartbeat(
+        cmd,
+        cwd=REPO_ROOT,
+        status=status,
+        status_path=status_path,
+        current_step="run_q1_panel_stage_a_pipeline",
+        proc_holder=active_child,
+    )
 
     # Parse orchestrator stdout for report path
-    orchestrator_stdout = proc.stdout or ""
-    orchestrator_stderr = proc.stderr or ""
     orch_report_path: Path | None = None
     for line in orchestrator_stdout.splitlines():
         if line.startswith("report="):
             orch_report_path = Path(line.split("=", 1)[1].strip())
-
-    run_id = f"q1panel_daily_local_{int(time.time())}"
-    out_dir = quant_root / "runs" / f"run_id={run_id}"
-    out_dir.mkdir(parents=True, exist_ok=True)
-    status_path = out_dir / "q1_panel_stagea_daily_run_status.json"
-
-    status: dict = {
-        "schema": "quantlab_q1_panel_stagea_daily_local_run_status_v1",
-        "generated_at": utc_now_iso(),
-        "run_id": run_id,
-        "git_sha": _git_sha(REPO_ROOT),
-        "ok": proc.returncode == 0,
-        "exit_code": int(proc.returncode),
-        "mode": "local_daily_q1_panel_stageA",
-        "inputs": {
-            "snapshot_id": snapshot_id_effective,
-            "snapshot_id_requested": args.snapshot_id,
-            "feature_store_version": args.feature_store_version,
-            "panel_output_tag": args.panel_output_tag,
-            "asset_classes": args.asset_classes,
-            "v4_final_profile": bool(v4_final_profile),
-            "run_phasea_backbone": bool(args.run_phasea_backbone),
-            "phasea_production_mode": bool(args.phasea_production_mode),
-            "phasea_run_corp_actions_ingest": bool(args.phasea_run_corp_actions_ingest),
-            "phasea_run_registry_delistings_ingest": bool(args.phasea_run_registry_delistings_ingest),
-            "phasea_corp_actions_max_assets": int(args.phasea_corp_actions_max_assets),
-            "phasea_corp_actions_max_calls": int(args.phasea_corp_actions_max_calls),
-            "phasea_corp_actions_from_date": str(args.phasea_corp_actions_from_date),
-            "phasea_corp_actions_http_failure_mode": str(args.phasea_corp_actions_http_failure_mode),
-            "phasea_contract_raw_ingest_date_mode": str(args.phasea_contract_raw_ingest_date_mode),
-            "phasea_recon_corp_actions_cap_hit_failure_mode": str(args.phasea_recon_corp_actions_cap_hit_failure_mode),
-            "phasea_recon_corp_actions_raw_empty_fallback_failure_mode": str(args.phasea_recon_corp_actions_raw_empty_fallback_failure_mode),
-            "run_stageb_q1": bool(args.run_stageb_q1),
-            "run_registry_q1": bool(args.run_registry_q1),
-            "redflags_failure_mode": str(args.redflags_failure_mode),
-            "stageb_pass_mode": str(args.stageb_pass_mode),
-            "stageb_strict_gate_profile": str(args.stageb_strict_gate_profile),
-            "stageb_strict_quality_gate_mode": str(args.stageb_strict_quality_gate_mode),
-            "stageb_prep_strict_intersection_mode": str(args.stageb_prep_strict_intersection_mode),
-            "stageb_input_scope": str(args.stageb_input_scope),
-            "stageb_cpcv_light_requirement_mode": str(args.stageb_cpcv_light_requirement_mode),
-            "stageb_cpcv_light_relaxation_mode": str(args.stageb_cpcv_light_relaxation_mode),
-            "panel_max_assets": args.panel_max_assets,
-            "top_liquid_n": args.top_liquid_n,
-            "fold_count": args.fold_count,
-            "test_days": args.test_days,
-            "embargo_days": args.embargo_days,
-            "min_train_days": args.min_train_days,
-            "candidate_profile": str(args.candidate_profile),
-            "registry_require_top_survivor_hard_gates_pass": bool(args.registry_require_top_survivor_hard_gates_pass),
-            "registry_hard_demotion_gates_source": str(args.registry_hard_demotion_gates_source),
-            "registry_live_slot_count": int(args.registry_live_slot_count),
-            "registry_shadow_slot_count": int(args.registry_shadow_slot_count),
-            "registry_retired_slot_count": int(args.registry_retired_slot_count),
-            "registry_max_live_per_family": int(args.registry_max_live_per_family),
-            "registry_max_shadow_per_family": int(args.registry_max_shadow_per_family),
-            "registry_max_retired_per_family": int(args.registry_max_retired_per_family),
-            "registry_slot_family_policy_mode": str(args.registry_slot_family_policy_mode),
-            "registry_include_default_slot_alias": bool(args.registry_include_default_slot_alias),
-            "portfolio_candidate_selection_mode": str(args.portfolio_candidate_selection_mode),
-            "portfolio_registry_slot_blend": str(args.portfolio_registry_slot_blend),
-            "portfolio_slot_blend_max_candidates": int(args.portfolio_slot_blend_max_candidates),
-            "portfolio_registry_state_multipliers": str(args.portfolio_registry_state_multipliers),
-            "portfolio_slot_blend_min_effective_weight": float(args.portfolio_slot_blend_min_effective_weight),
-            "portfolio_slot_blend_require_live_like": bool(args.portfolio_slot_blend_require_live_like),
-            "portfolio_slot_blend_live_like_states": str(args.portfolio_slot_blend_live_like_states),
-            "portfolio_max_long_per_family": int(args.portfolio_max_long_per_family),
-            "portfolio_max_short_per_family": int(args.portfolio_max_short_per_family),
-            "portfolio_max_family_abs_exposure": float(args.portfolio_max_family_abs_exposure),
-            "portfolio_family_concentration_failure_mode": str(args.portfolio_family_concentration_failure_mode),
-            "run_v4_final_gate_matrix": bool(args.run_v4_final_gate_matrix),
-            "v4_final_gate_failure_mode": str(args.v4_final_gate_failure_mode),
-        },
-        "steps": [],
-        "artifacts": {
-            "orchestrator_run_report": str(orch_report_path) if orch_report_path else None,
-        },
-        "stdout_tail": orchestrator_stdout.splitlines()[-20:],
-        "stderr_tail": orchestrator_stderr.splitlines()[-20:],
-    }
+    status["ok"] = proc.returncode == 0
+    status["exit_code"] = int(proc.returncode)
+    status["artifacts"]["orchestrator_run_report"] = str(orch_report_path) if orch_report_path else None
+    status["stdout_tail"] = orchestrator_stdout.splitlines()[-20:]
+    status["stderr_tail"] = orchestrator_stderr.splitlines()[-20:]
     if args.run_phasea_backbone:
         if phasea_calibration_step is not None:
             status["steps"].append(phasea_calibration_step)
@@ -624,6 +778,13 @@ def main(argv: Iterable[str]) -> int:
             }
         )
         status["artifacts"]["phasea_backbone_run_report"] = str(phasea_report_path) if phasea_report_path else None
+        _write_status(
+            status_path,
+            status,
+            state_value="running",
+            current_step="run_q1_panel_stage_a_pipeline",
+            heartbeat_note="phasea_completed",
+        )
     status["steps"].append(
         {
             "name": "run_q1_panel_stage_a_pipeline",
@@ -634,6 +795,13 @@ def main(argv: Iterable[str]) -> int:
             "stdout_tail": orchestrator_stdout.splitlines()[-20:],
             "stderr_tail": orchestrator_stderr.splitlines()[-20:],
         }
+    )
+    _write_status(
+        status_path,
+        status,
+        state_value="running" if proc.returncode == 0 else "failed",
+        current_step="run_q1_panel_stage_a_pipeline",
+        heartbeat_note="stagea_completed",
     )
     if proc.returncode != 0:
         status.setdefault("failure_reason_codes", [])
@@ -650,7 +818,13 @@ def main(argv: Iterable[str]) -> int:
             "panel_counts": (orch.get("references") or {}).get("panel_counts"),
             "cheap_gate_counts": (orch.get("references") or {}).get("cheap_gate_counts"),
             "panel_part_glob_hint": (orch.get("references") or {}).get("panel_part_glob_hint"),
+            "requested_asof_end_date": (orch.get("references") or {}).get("requested_asof_end_date"),
+            "effective_asof_end_date": (orch.get("references") or {}).get("effective_asof_end_date"),
+            "panel_max_asof_date": (orch.get("references") or {}).get("panel_max_asof_date"),
+            "asof_end_was_clamped_to_panel_max": bool((orch.get("references") or {}).get("asof_end_was_clamped_to_panel_max")),
+            "asof_end_clamp_reason": (orch.get("references") or {}).get("asof_end_clamp_reason"),
         }
+        effective_asof_end_date = str(status["references"].get("effective_asof_end_date") or effective_asof_end_date)
         status["hashes"] = {
             "orchestrator_run_report_hash": stable_hash_file(orch_report_path),
         }
@@ -668,7 +842,10 @@ def main(argv: Iterable[str]) -> int:
                 "metrics_summary": phasea.get("metrics_summary") or {},
                 "step_names": [str((s or {}).get("name")) for s in (phasea.get("steps") or [])],
                 "phasea_references": phasea.get("references") or {},
+                "source_freshness": phasea.get("source_freshness") or {},
             }
+            if phasea.get("source_freshness"):
+                status["environment"]["phasea_source_freshness"] = phasea.get("source_freshness")
         for key in ("panel_manifest", "cheap_gate_report", "folds_manifest"):
             ref_value = status["references"].get(key)
             if not ref_value:
@@ -676,6 +853,13 @@ def main(argv: Iterable[str]) -> int:
             p = Path(str(ref_value))
             if p.exists() and p.is_file():
                 status["hashes"][f"{key}_hash"] = stable_hash_file(p)
+        _write_status(
+            status_path,
+            status,
+            state_value="running" if proc.returncode == 0 else "failed",
+            current_step="post_stagea_references",
+            heartbeat_note="stagea_references_loaded",
+        )
     elif args.run_phasea_backbone and phasea_report_path and phasea_report_path.exists():
         status["hashes"] = {
             "phasea_backbone_run_report_hash": stable_hash_file(phasea_report_path),
@@ -693,6 +877,10 @@ def main(argv: Iterable[str]) -> int:
             frag = cheap_path.split("/runs/run_id=", 1)[1]
             stage_a_run_id = frag.split("/", 1)[0]
 
+    # Preserve the orchestrator-resolved effective as-of date. This may already
+    # be clamped to the panel max date and must not be overwritten by the raw
+    # requested date before Stage-B / portfolio / final-gate steps run.
+    effective_asof_end_date = str(effective_asof_end_date or args.asof_end_date or "").strip()
     stage_b_run_id = None
     stage_b_report_path: Path | None = None
     reg_report_path: Path | None = None
@@ -777,11 +965,20 @@ def main(argv: Iterable[str]) -> int:
                 stageb_cmd += ["--dsr-trials-total", str(int(args.stageb_dsr_trials_total))]
             if bool(v4_final_profile):
                 stageb_cmd += ["--v4-final-profile"]
-            t0_stageb = time.time()
-            stageb_proc = subprocess.run(stageb_cmd, cwd=REPO_ROOT, capture_output=True, text=True)
-            stageb_elapsed = round(time.time() - t0_stageb, 3)
-            stageb_stdout = stageb_proc.stdout or ""
-            stageb_stderr = stageb_proc.stderr or ""
+            _write_status(
+                status_path,
+                status,
+                state_value="running",
+                current_step="run_stage_b_q1",
+                heartbeat_note="stageb_start",
+            )
+            stageb_proc, stageb_elapsed, stageb_stdout, stageb_stderr = _run_subprocess_with_status_heartbeat(
+                stageb_cmd,
+                cwd=REPO_ROOT,
+                status=status,
+                status_path=status_path,
+                current_step="run_stage_b_q1",
+            )
             stageb_kv = {}
             for line in stageb_stdout.splitlines():
                 if "=" in line and not line.startswith("["):
@@ -820,6 +1017,13 @@ def main(argv: Iterable[str]) -> int:
             if stageb_proc.returncode != 0:
                 status["ok"] = False
                 status["exit_code"] = int(stageb_proc.returncode)
+            _write_status(
+                status_path,
+                status,
+                state_value="running" if status.get("ok") is not False else "failed",
+                current_step="run_stage_b_q1",
+                heartbeat_note="stageb_completed",
+            )
 
     if args.run_registry_q1:
         if not stage_b_run_id and stage_a_run_id:
@@ -898,11 +1102,21 @@ def main(argv: Iterable[str]) -> int:
                 reg_cmd += ["--skip-include-default-slot-alias"]
             if bool(v4_final_profile):
                 reg_cmd += ["--v4-final-profile"]
-            t0_reg = time.time()
-            reg_proc = subprocess.run(reg_cmd, cwd=REPO_ROOT, capture_output=True, text=True)
-            reg_elapsed = round(time.time() - t0_reg, 3)
-            reg_stdout = reg_proc.stdout or ""
-            reg_stderr = reg_proc.stderr or ""
+            _write_status(
+                status_path,
+                status,
+                state_value="running",
+                current_step="run_registry_update_q1",
+                heartbeat_note="registry_start",
+            )
+            reg_proc, reg_elapsed, reg_stdout, reg_stderr = _run_subprocess_with_status_heartbeat(
+                reg_cmd,
+                cwd=REPO_ROOT,
+                status=status,
+                status_path=status_path,
+                current_step="run_registry_update_q1",
+                proc_holder=active_child,
+            )
             reg_kv = {}
             for line in reg_stdout.splitlines():
                 if "=" in line and not line.startswith("["):
@@ -939,6 +1153,13 @@ def main(argv: Iterable[str]) -> int:
             if reg_proc.returncode != 0:
                 status["ok"] = False
                 status["exit_code"] = int(reg_proc.returncode)
+            _write_status(
+                status_path,
+                status,
+                state_value="running" if status.get("ok") is not False else "failed",
+                current_step="run_registry_update_q1",
+                heartbeat_note="registry_completed",
+            )
 
     if args.run_portfolio_q1 and status.get("ok", True):
         portfolio_cmd = [
@@ -949,7 +1170,7 @@ def main(argv: Iterable[str]) -> int:
             "--feature-store-version",
             str(args.portfolio_feature_store_version or args.feature_store_version),
             "--asof-date",
-            str(args.asof_end_date or ""),
+            str(effective_asof_end_date or ""),
             "--asset-classes",
             str(args.asset_classes),
             "--part-glob",
@@ -980,6 +1201,10 @@ def main(argv: Iterable[str]) -> int:
             str(args.portfolio_family_concentration_failure_mode),
             "--min-rebalance-delta",
             str(float(args.portfolio_min_rebalance_delta)),
+            "--no-rebalance-orders-failure-mode",
+            str(args.portfolio_no_rebalance_orders_failure_mode),
+            "--registry-slot-consistency-failure-mode",
+            str(args.portfolio_registry_slot_consistency_failure_mode),
             "--failure-mode",
             str(args.portfolio_failure_mode),
             "--candidate-selection-mode",
@@ -1014,11 +1239,21 @@ def main(argv: Iterable[str]) -> int:
         if bool(v4_final_profile):
             portfolio_cmd += ["--v4-final-profile"]
 
-        t0_portfolio = time.time()
-        portfolio_proc = subprocess.run(portfolio_cmd, cwd=REPO_ROOT, capture_output=True, text=True)
-        portfolio_elapsed = round(time.time() - t0_portfolio, 3)
-        portfolio_stdout = portfolio_proc.stdout or ""
-        portfolio_stderr = portfolio_proc.stderr or ""
+        _write_status(
+            status_path,
+            status,
+            state_value="running",
+            current_step="run_portfolio_risk_execution_q1",
+            heartbeat_note="portfolio_start",
+        )
+        portfolio_proc, portfolio_elapsed, portfolio_stdout, portfolio_stderr = _run_subprocess_with_status_heartbeat(
+            portfolio_cmd,
+            cwd=REPO_ROOT,
+            status=status,
+            status_path=status_path,
+            current_step="run_portfolio_risk_execution_q1",
+            proc_holder=active_child,
+        )
         portfolio_kv = {}
         for line in portfolio_stdout.splitlines():
             if "=" in line and not line.startswith("["):
@@ -1059,6 +1294,13 @@ def main(argv: Iterable[str]) -> int:
             else:
                 status["ok"] = False
                 status["exit_code"] = int(portfolio_proc.returncode)
+        _write_status(
+            status_path,
+            status,
+            state_value="running" if status.get("ok") is not False else "failed",
+            current_step="run_portfolio_risk_execution_q1",
+            heartbeat_note="portfolio_completed",
+        )
 
     if args.run_redflags_q1 and status.get("ok", True):
         red_cmd = [
@@ -1067,7 +1309,7 @@ def main(argv: Iterable[str]) -> int:
             "--quant-root",
             str(quant_root),
             "--asof-date",
-            str(args.asof_end_date or ""),
+            str(effective_asof_end_date or ""),
         ]
         if phasea_report_path and phasea_report_path.exists():
             red_cmd += ["--phasea-report", str(phasea_report_path)]
@@ -1079,11 +1321,21 @@ def main(argv: Iterable[str]) -> int:
             red_cmd += ["--registry-report", str(reg_report_path)]
         if portfolio_report_path and portfolio_report_path.exists():
             red_cmd += ["--portfolio-report", str(portfolio_report_path)]
-        t0_red = time.time()
-        red_proc = subprocess.run(red_cmd, cwd=REPO_ROOT, capture_output=True, text=True)
-        red_elapsed = round(time.time() - t0_red, 3)
-        red_stdout = red_proc.stdout or ""
-        red_stderr = red_proc.stderr or ""
+        _write_status(
+            status_path,
+            status,
+            state_value="running",
+            current_step="run_redflag_invariants_q1",
+            heartbeat_note="redflags_start",
+        )
+        red_proc, red_elapsed, red_stdout, red_stderr = _run_subprocess_with_status_heartbeat(
+            red_cmd,
+            cwd=REPO_ROOT,
+            status=status,
+            status_path=status_path,
+            current_step="run_redflag_invariants_q1",
+            proc_holder=active_child,
+        )
         red_kv = {}
         for line in red_stdout.splitlines():
             if "=" in line and not line.startswith("["):
@@ -1121,6 +1373,13 @@ def main(argv: Iterable[str]) -> int:
             else:
                 status["ok"] = False
                 status["exit_code"] = int(red_proc.returncode)
+        _write_status(
+            status_path,
+            status,
+            state_value="running" if status.get("ok") is not False else "failed",
+            current_step="run_redflag_invariants_q1",
+            heartbeat_note="redflags_completed",
+        )
 
     if args.run_v4_final_gate_matrix:
         if not args.run_portfolio_q1:
@@ -1179,11 +1438,21 @@ def main(argv: Iterable[str]) -> int:
                     "--require-provider-raw-clean",
                     "--require-redflags-clean",
                 ]
-            t0_v4 = time.time()
-            v4_proc = subprocess.run(v4_cmd, cwd=REPO_ROOT, capture_output=True, text=True)
-            v4_elapsed = round(time.time() - t0_v4, 3)
-            v4_stdout = v4_proc.stdout or ""
-            v4_stderr = v4_proc.stderr or ""
+            _write_status(
+                status_path,
+                status,
+                state_value="running",
+                current_step="run_v4_final_gate_matrix_q1",
+                heartbeat_note="final_gates_start",
+            )
+            v4_proc, v4_elapsed, v4_stdout, v4_stderr = _run_subprocess_with_status_heartbeat(
+                v4_cmd,
+                cwd=REPO_ROOT,
+                status=status,
+                status_path=status_path,
+                current_step="run_v4_final_gate_matrix_q1",
+                proc_holder=active_child,
+            )
             v4_kv = {}
             for line in v4_stdout.splitlines():
                 if "=" in line and not line.startswith("["):
@@ -1225,13 +1494,24 @@ def main(argv: Iterable[str]) -> int:
                 else:
                     status["ok"] = False
                     status["exit_code"] = int(v4_proc.returncode)
+            _write_status(
+                status_path,
+                status,
+                state_value="running" if status.get("ok") is not False else "failed",
+                current_step="run_v4_final_gate_matrix_q1",
+                heartbeat_note="final_gates_completed",
+            )
 
-    atomic_write_json(status_path, status)
-    print(f"run_id={run_id}")
-    print(f"status={status_path}")
+    _write_status(
+        status_path,
+        status,
+        state_value="completed" if bool(status["ok"]) else "failed",
+        current_step="complete",
+        heartbeat_note="run_complete",
+    )
     if orch_report_path:
-        print(f"orchestrator_report={orch_report_path}")
-    print(f"ok={status['ok']}")
+        print(f"orchestrator_report={orch_report_path}", flush=True)
+    print(f"ok={status['ok']}", flush=True)
     return 0 if status["ok"] else int(status["exit_code"])
 
 
