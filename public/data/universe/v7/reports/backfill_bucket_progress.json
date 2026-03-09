@@ -1,20 +1,20 @@
 {
   "schema": "rv_v7_backfill_bucket_progress_v1",
-  "generated_at": "2026-03-09T09:15:29.763Z",
-  "env_file": "/Users/michaelpuchowezki/Desktop/EODHD.env",
-  "skip_archeology": true,
-  "backfill_max": 1500,
-  "max_runs_per_bucket": 2,
-  "max_no_progress_runs": 1,
-  "strict_bucket_order": true,
-  "max_throttle_stops": 1,
+  "generated_at": "2026-03-09T10:12:59.188Z",
+  "env_file": null,
+  "skip_archeology": false,
+  "backfill_max": 2000,
+  "max_runs_per_bucket": 50,
+  "max_no_progress_runs": 3,
+  "strict_bucket_order": false,
+  "max_throttle_stops": 3,
   "throttle_cooldown_ms": 120000,
   "backfill_waivers": {
     "path": "mirrors/universe-v7/state/backfill_waivers.json",
-    "exists": true,
-    "count": 4
+    "exists": false,
+    "count": 0
   },
-  "budget_stopped": false,
+  "budget_stopped": true,
   "fatal": null,
   "blocked_by_incomplete_bucket": null,
   "buckets": [
@@ -24,16 +24,104 @@
       "allowlist": [
         "STOCK"
       ],
-      "runs": [],
+      "runs": [
+        {
+          "run": 1,
+          "status": 0,
+          "code": 0,
+          "run_id": "v7_20260309095953_1a8e74",
+          "reason": null,
+          "remaining_global": 4,
+          "before": {
+            "total": 74841,
+            "backfill_real": 74837,
+            "with_bars": 74839,
+            "remaining": 4,
+            "checkpoint_done": 0,
+            "checkpoint_pending": 0,
+            "progress_units": 74837
+          },
+          "after": {
+            "total": 74841,
+            "backfill_real": 74837,
+            "with_bars": 74839,
+            "remaining": 4,
+            "checkpoint_done": 0,
+            "checkpoint_pending": 4,
+            "progress_units": 74837
+          },
+          "delta_backfill_real": 0,
+          "delta_progress_units": 0,
+          "delta_with_bars": 0
+        },
+        {
+          "run": 2,
+          "status": 0,
+          "code": 0,
+          "run_id": "v7_20260309100052_815556",
+          "reason": null,
+          "remaining_global": 0,
+          "before": {
+            "total": 74841,
+            "backfill_real": 74837,
+            "with_bars": 74839,
+            "remaining": 4,
+            "checkpoint_done": 0,
+            "checkpoint_pending": 4,
+            "progress_units": 74837
+          },
+          "after": {
+            "total": 74841,
+            "backfill_real": 74837,
+            "with_bars": 74839,
+            "remaining": 4,
+            "checkpoint_done": 4,
+            "checkpoint_pending": 0,
+            "progress_units": 74837
+          },
+          "delta_backfill_real": 0,
+          "delta_progress_units": 0,
+          "delta_with_bars": 0
+        },
+        {
+          "run": 3,
+          "status": 0,
+          "code": 0,
+          "run_id": "v7_20260309100149_11b6e3",
+          "reason": null,
+          "remaining_global": 4,
+          "before": {
+            "total": 74841,
+            "backfill_real": 74837,
+            "with_bars": 74839,
+            "remaining": 4,
+            "checkpoint_done": 4,
+            "checkpoint_pending": 0,
+            "progress_units": 74837
+          },
+          "after": {
+            "total": 74841,
+            "backfill_real": 74837,
+            "with_bars": 74839,
+            "remaining": 4,
+            "checkpoint_done": 0,
+            "checkpoint_pending": 4,
+            "progress_units": 74837
+          },
+          "delta_backfill_real": 0,
+          "delta_progress_units": 0,
+          "delta_with_bars": 0
+        }
+      ],
       "throttled_stops": 0,
-      "completed": true,
+      "completed": false,
       "last_progress": {
-        "total": 74837,
+        "total": 74841,
         "backfill_real": 74837,
-        "with_bars": 74837,
-        "remaining": 0,
-        "checkpoint_done": 25,
-        "checkpoint_pending": 74812,
+        "with_bars": 74839,
+        "remaining": 4,
+        "checkpoint_done": 0,
+        "checkpoint_pending": 4,
         "progress_units": 74837
       }
     },
@@ -52,8 +140,120 @@
         "with_bars": 20312,
         "remaining": 0,
         "checkpoint_done": 0,
-        "checkpoint_pending": 20312,
+        "checkpoint_pending": 0,
         "progress_units": 20312
+      }
+    },
+    {
+      "id": "rest",
+      "priority": 3,
+      "allowlist": [
+        "FUND",
+        "INDEX",
+        "FOREX",
+        "CRYPTO",
+        "BOND",
+        "OTHER"
+      ],
+      "runs": [
+        {
+          "run": 1,
+          "status": 40,
+          "code": 40,
+          "run_id": "v7_20260309100247_b55f64",
+          "reason": null,
+          "remaining_global": 64385,
+          "before": {
+            "total": 98785,
+            "backfill_real": 33000,
+            "with_bars": 97322,
+            "remaining": 65785,
+            "checkpoint_done": 0,
+            "checkpoint_pending": 0,
+            "progress_units": 33000
+          },
+          "after": {
+            "total": 98785,
+            "backfill_real": 33000,
+            "with_bars": 97322,
+            "remaining": 65785,
+            "checkpoint_done": 1400,
+            "checkpoint_pending": 64385,
+            "progress_units": 33000
+          },
+          "delta_backfill_real": 0,
+          "delta_progress_units": 0,
+          "delta_with_bars": 0
+        },
+        {
+          "run": 2,
+          "status": 40,
+          "code": 40,
+          "run_id": "v7_20260309100652_4eb03c",
+          "reason": null,
+          "remaining_global": 64385,
+          "before": {
+            "total": 98785,
+            "backfill_real": 33000,
+            "with_bars": 97322,
+            "remaining": 65785,
+            "checkpoint_done": 1400,
+            "checkpoint_pending": 64385,
+            "progress_units": 33000
+          },
+          "after": {
+            "total": 98785,
+            "backfill_real": 33000,
+            "with_bars": 97322,
+            "remaining": 65785,
+            "checkpoint_done": 1400,
+            "checkpoint_pending": 64385,
+            "progress_units": 33000
+          },
+          "delta_backfill_real": 0,
+          "delta_progress_units": 0,
+          "delta_with_bars": 0
+        },
+        {
+          "run": 3,
+          "status": 40,
+          "code": 40,
+          "run_id": "v7_20260309101056_b8f80c",
+          "reason": null,
+          "remaining_global": 64385,
+          "before": {
+            "total": 98785,
+            "backfill_real": 33000,
+            "with_bars": 97322,
+            "remaining": 65785,
+            "checkpoint_done": 1400,
+            "checkpoint_pending": 64385,
+            "progress_units": 33000
+          },
+          "after": {
+            "total": 98785,
+            "backfill_real": 33000,
+            "with_bars": 97322,
+            "remaining": 65785,
+            "checkpoint_done": 1400,
+            "checkpoint_pending": 64385,
+            "progress_units": 33000
+          },
+          "delta_backfill_real": 0,
+          "delta_progress_units": 0,
+          "delta_with_bars": 0
+        }
+      ],
+      "throttled_stops": 3,
+      "completed": false,
+      "last_progress": {
+        "total": 98785,
+        "backfill_real": 33000,
+        "with_bars": 97322,
+        "remaining": 65785,
+        "checkpoint_done": 1400,
+        "checkpoint_pending": 64385,
+        "progress_units": 33000
       }
     }
   ]

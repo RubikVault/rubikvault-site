@@ -1,6 +1,6 @@
 {
   "schema": "rv_v7_stock_ssot_manifest_v1",
-  "generated_at": "2026-02-28T06:39:32.433Z",
+  "generated_at": "2026-03-09T10:13:01.692Z",
   "source": "public/data/universe/v7/registry/registry.ndjson.gz",
   "stocks_total": 55986,
   "stocks_canonical_total": 74841,
@@ -75,27 +75,27 @@
     "CM": 3
   },
   "feature_eligible_counts": {
-    "analyzer": 56603,
-    "scientific": 56603,
+    "analyzer": 56596,
+    "scientific": 56596,
     "forecast": 56276,
-    "marketphase": 56764,
-    "elliott": 56764
+    "marketphase": 56760,
+    "elliott": 56760
   },
   "shared_live_features": {
     "scientific_count": 55986,
     "forecast_count": 2425,
-    "marketphase_count": 2441,
+    "marketphase_count": 2445,
     "shared_intersection_count": 2425
   },
   "files": {
+    "rows_local": "mirrors/universe-v7/ssot/stocks.max.rows.json",
     "symbols": "public/data/universe/v7/ssot/stocks.max.symbols.json",
+    "canonical_rows_local": "mirrors/universe-v7/ssot/stocks.max.canonical.rows.json",
     "canonical_ids": "public/data/universe/v7/ssot/stocks.max.canonical.ids.json",
     "by_feature": "public/data/universe/v7/ssot/stocks.by_feature.json",
     "by_feature_canonical": "public/data/universe/v7/ssot/stocks.canonical.by_feature.json",
     "shared_features": "public/data/universe/v7/ssot/stocks.shared.features.json",
-    "feature_parity": "public/data/universe/v7/ssot/stocks.feature.parity.json",
-    "rows_local": "mirrors/universe-v7/ssot/stocks.max.rows.json",
-    "canonical_rows_local": "mirrors/universe-v7/ssot/stocks.max.canonical.rows.json"
+    "feature_parity": "public/data/universe/v7/ssot/stocks.feature.parity.json"
   },
   "policy": {
     "ssot_for_new_features": "public/data/universe/v7/ssot/stocks.max.symbols.json",

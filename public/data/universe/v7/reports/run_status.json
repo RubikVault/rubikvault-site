@@ -1,20 +1,122 @@
 {
   "schema": "rv_v7_run_status_v1",
-  "generated_at": "2026-03-09T03:40:08.809Z",
-  "run_id": "unknown",
-  "exit_code": 90,
-  "reason": "phase0_failed",
+  "generated_at": "2026-03-09T10:12:57.777Z",
+  "run_id": "v7_20260309101056_b8f80c",
+  "exit_code": 40,
+  "reason": "api_rate_limited_429",
   "steps": [
     {
       "step": "phase0_archeology",
+      "ok": true,
+      "code": 0,
+      "output": {
+        "status": "OK",
+        "phase": "phase0_archeology",
+        "contract_path": "policies/universe/core_legacy_contract.json",
+        "baseline_path": "mirrors/universe-v7/baseline/baseline_architecture_snapshot.json",
+        "legacy_counts": {
+          "universe_count": 2453,
+          "market_prices_count": 517,
+          "forecast_count": 2425,
+          "marketphase_count": 2445
+        },
+        "contract_hash": "153787950af6028c647a6af739bd086e49f733c9ca6f8d1b1e31278794dbec7c"
+      }
+    },
+    {
+      "step": "preflight",
+      "ok": true,
+      "code": 0,
+      "output": {
+        "status": "OK",
+        "code": 0,
+        "phase": "preflight",
+        "run_id": "v7_20260309101056_b8f80c",
+        "tmp_dir": "tmp/v7-build/v7_20260309101056_b8f80c",
+        "run_dir": "mirrors/universe-v7/runs/v7_20260309101056_b8f80c",
+        "lock_path": "mirrors/universe-v7/state/run.lock",
+        "lock_held": true
+      }
+    },
+    {
+      "step": "law_coverage",
+      "ok": true,
+      "code": 0,
+      "output": {
+        "status": "OK",
+        "code": 0,
+        "report": "public/data/universe/v7/reports/law_coverage_report.json"
+      }
+    },
+    {
+      "step": "single_ingestor",
+      "ok": true,
+      "code": 0,
+      "output": {
+        "status": "OK",
+        "code": 0,
+        "violations": 0
+      }
+    },
+    {
+      "step": "pipeline_v7",
+      "ok": true,
+      "code": 40,
+      "exit_code": 40,
+      "reason": "ok",
+      "output": {
+        "status": "OK",
+        "code": 40,
+        "run_id": "v7_20260309101056_b8f80c",
+        "run_dir": "tmp/v7-build/v7_20260309101056_b8f80c",
+        "publish_payload": "tmp/v7-build/v7_20260309101056_b8f80c/publish_payload"
+      }
+    },
+    {
+      "step": "ui_safety",
+      "ok": true,
+      "code": 0,
+      "output": {
+        "status": "OK",
+        "code": 0,
+        "warnings": 2
+      }
+    },
+    {
+      "step": "license_leak",
+      "ok": true,
+      "code": 0,
+      "output": {
+        "status": "OK",
+        "code": 0,
+        "scanned_files": 1781
+      }
+    },
+    {
+      "step": "build_stock_ssot",
+      "ok": true,
+      "code": 0,
+      "output": null
+    },
+    {
+      "step": "feature_universe_parity",
       "ok": false,
-      "code": 90,
+      "code": 1,
       "output": {
         "status": "FAIL",
-        "code": 90,
-        "reason": "LEGACY_CONTRACT_MISMATCH",
-        "existing_hash": "b15a861af053b9ef48e4247f992623fb39ebde0231237b03f8fc8f0288badb0d",
-        "current_hash": "d9ce471ec6fbff06dfe07bf6f51bc9faccc5e4ef0d9329402c079962654ebb4d"
+        "code": 1,
+        "report": "public/data/universe/v7/reports/feature_universe_parity_report.json",
+        "violations": 5,
+        "ssot_symbols": 55986
+      }
+    },
+    {
+      "step": "feature_universe_parity_gate_waived",
+      "ok": true,
+      "code": 0,
+      "output": {
+        "status": "WARN",
+        "reason": "feature_universe_parity_failed_but_waived_in_backfill_fast_mode"
       }
     }
   ]

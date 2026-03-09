@@ -1,6 +1,6 @@
 {
   "schema": "rv_v7_feature_universe_parity_report_v1",
-  "generated_at": "2026-02-28T06:39:42.159Z",
+  "generated_at": "2026-03-09T10:13:11.027Z",
   "enforce": false,
   "ssot": {
     "symbols_count": 55986,
@@ -10,10 +10,10 @@
   "set_parity": {
     "analyzer": {
       "ok": false,
-      "count": 56603,
+      "count": 56596,
       "ssot_count": 55986,
       "missing_from_feature_count": 0,
-      "extra_in_feature_count": 617,
+      "extra_in_feature_count": 610,
       "sample_missing_from_feature": [],
       "sample_extra_in_feature": [
         "006208",
@@ -22,18 +22,18 @@
         "00633L",
         "00635U",
         "00637L",
+        "00638R",
         "00639",
         "00641R",
-        "00642U",
-        "00643"
+        "00642U"
       ]
     },
     "scientific": {
       "ok": false,
-      "count": 56603,
+      "count": 56596,
       "ssot_count": 55986,
       "missing_from_feature_count": 0,
-      "extra_in_feature_count": 617,
+      "extra_in_feature_count": 610,
       "sample_missing_from_feature": [],
       "sample_extra_in_feature": [
         "006208",
@@ -42,10 +42,10 @@
         "00633L",
         "00635U",
         "00637L",
+        "00638R",
         "00639",
         "00641R",
-        "00642U",
-        "00643"
+        "00642U"
       ]
     },
     "forecast": {
@@ -58,24 +58,25 @@
       "sample_extra_in_feature": [
         "006208",
         "00632R",
-        "00633L",
         "00637L",
         "00641R",
         "00642U",
         "00643",
         "00650L",
+        "00663L",
         "00664R",
         "00665L"
       ]
     },
     "marketphase": {
       "ok": false,
-      "count": 56764,
+      "count": 56760,
       "ssot_count": 55986,
       "missing_from_feature_count": 0,
-      "extra_in_feature_count": 778,
+      "extra_in_feature_count": 774,
       "sample_missing_from_feature": [],
       "sample_extra_in_feature": [
+        "0061",
         "006206",
         "006208",
         "00631L",
@@ -84,18 +85,18 @@
         "00635U",
         "00636",
         "00637L",
-        "00638R",
-        "00639"
+        "00638R"
       ]
     },
     "elliott": {
       "ok": false,
-      "count": 56764,
+      "count": 56760,
       "ssot_count": 55986,
       "missing_from_feature_count": 0,
-      "extra_in_feature_count": 778,
+      "extra_in_feature_count": 774,
       "sample_missing_from_feature": [],
       "sample_extra_in_feature": [
+        "0061",
         "006206",
         "006208",
         "00631L",
@@ -104,18 +105,17 @@
         "00635U",
         "00636",
         "00637L",
-        "00638R",
-        "00639"
+        "00638R"
       ]
     }
   },
   "live_coverage": {
     "scientific_count": 55986,
     "forecast_count": 2425,
-    "marketphase_count": 2441,
+    "marketphase_count": 2445,
     "scientific_ratio_to_ssot": 1,
     "forecast_ratio_to_ssot": 0.043314,
-    "marketphase_ratio_to_ssot": 0.0436
+    "marketphase_ratio_to_ssot": 0.043672
   },
   "violations": [
     "SET_MISMATCH:analyzer",
