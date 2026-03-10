@@ -3,8 +3,8 @@
   "feature": "marketphase",
   "meta": {
     "symbol": "FIGS",
-    "generatedAt": "2026-03-09T07:58:23.375Z",
-    "fetchedAt": "2026-03-09T07:58:23.375Z",
+    "generatedAt": "2026-03-10T07:12:04.023Z",
+    "fetchedAt": "2026-03-10T07:12:04.023Z",
     "ttlSeconds": 86400,
     "provider": "internal",
     "dataset": "FIGS",
@@ -15,8 +15,8 @@
     "precision": "IEEE754-Double-Round6",
     "auditTrail": {
       "generatedBy": "MarketPhase-v8-Engine",
-      "commitHash": "8b47546",
-      "reviewDate": "2026-03-09T07:58:23.375Z",
+      "commitHash": "8a123a8",
+      "reviewDate": "2026-03-10T07:12:04.023Z",
       "standards": [
         "ISO-8000",
         "IEEE-7000"
@@ -26,78 +26,72 @@
   },
   "data": {
     "features": {
-      "RSI": 77.66656,
-      "MACDHist": 0.639667,
-      "ATR%": 2.833264,
-      "SMA50": 11.9432,
-      "SMA200": 8.4469,
+      "RSI": 67.122913,
+      "MACDHist": 0.475452,
+      "ATR%": 3.231086,
+      "SMA50": 12.016,
+      "SMA200": 8.50145,
       "SMATrend": "bullish",
-      "lastClose": 16.42
+      "lastClose": 15.47
     },
     "swings": {
       "raw": [
         {
-          "index": 23,
+          "index": 22,
           "date": "2025-03-27",
           "price": 4.86,
           "type": "high"
         },
         {
-          "index": 31,
+          "index": 30,
           "date": "2025-04-08",
           "price": 3.62,
           "type": "low"
         },
         {
-          "index": 52,
+          "index": 51,
           "date": "2025-05-08",
           "price": 5.05,
           "type": "high"
         },
         {
-          "index": 65,
+          "index": 64,
           "date": "2025-05-28",
           "price": 4.32,
           "type": "low"
         },
         {
-          "index": 132,
+          "index": 131,
           "date": "2025-09-03",
           "price": 6.6,
           "type": "low"
         },
         {
-          "index": 143,
+          "index": 142,
           "date": "2025-09-18",
           "price": 7.44,
           "type": "high"
         },
         {
-          "index": 148,
+          "index": 147,
           "date": "2025-09-25",
           "price": 6.57,
           "type": "low"
         },
         {
-          "index": 176,
+          "index": 175,
           "date": "2025-11-04",
           "price": 7.38,
           "type": "low"
         },
         {
-          "index": 209,
-          "date": "2025-12-22",
-          "price": 12.2,
-          "type": "high"
-        },
-        {
-          "index": 225,
+          "index": 224,
           "date": "2026-01-15",
           "price": 12.33,
           "type": "high"
         },
         {
-          "index": 244,
+          "index": 243,
           "date": "2026-02-12",
           "price": 10.2,
           "type": "low"
@@ -105,104 +99,92 @@
       ],
       "confirmed": [
         {
-          "index": 23,
-          "date": "2025-03-27",
-          "price": 4.86,
-          "type": "high"
-        },
-        {
-          "index": 31,
+          "index": 30,
           "date": "2025-04-08",
           "price": 3.62,
           "type": "low"
         },
         {
-          "index": 65,
+          "index": 64,
           "date": "2025-05-28",
           "price": 4.32,
           "type": "low"
         },
         {
-          "index": 148,
+          "index": 147,
           "date": "2025-09-25",
           "price": 6.57,
           "type": "low"
         },
         {
-          "index": 176,
+          "index": 175,
           "date": "2025-11-04",
           "price": 7.38,
           "type": "low"
-        },
-        {
-          "index": 225,
-          "date": "2026-01-15",
-          "price": 12.33,
-          "type": "high"
         }
       ]
     },
     "elliott": {
       "completedPattern": {
-        "valid": true,
+        "valid": false,
         "direction": "bullish",
-        "endedAt": "2026-01-15",
-        "confidence0_100": 100,
+        "endedAt": "2026-02-12",
+        "confidence0_100": 85,
         "rules": {
-          "r1": true,
-          "r2": true,
+          "r1": false,
+          "r2": false,
           "r3": true
         },
-        "guidelineScore": 63,
-        "rulePasses": 3
+        "guidelineScore": 51,
+        "rulePasses": 1
       },
       "developingPattern": {
         "possibleWave": "Wave 4 or ABC",
-        "confidence": 60,
+        "confidence": 51,
         "fibLevels": {
           "support": [
-            7.9641,
-            6.7959
+            10.45134,
+            9.94866
           ],
           "resistance": [
-            11.7459,
-            12.9141
+            12.07866,
+            12.58134
           ]
         },
         "disclaimer": "Reference levels only -- no prediction"
       },
       "uncertainty": {
-        "lastSwingConfirmed": true,
-        "alternativeCounts": 1,
+        "lastSwingConfirmed": false,
+        "alternativeCounts": 2,
         "confidenceDecay": {
-          "base": 100,
-          "adjusted": 88
+          "base": 85,
+          "adjusted": 61
         }
       },
       "fib": {
         "ratios": {
-          "wave2": 0.564516,
-          "wave3": 1.814516,
-          "wave4": 0.36,
-          "wave5": 3.991935
+          "wave2": 1.035714,
+          "wave3": 0.964286,
+          "wave4": 6.111111,
+          "wave5": 2.535714
         },
-        "conformanceScore": 68.360217
+        "conformanceScore": 42.777017
       }
     },
     "fib": {
       "ratios": {
-        "wave2": 0.564516,
-        "wave3": 1.814516,
-        "wave4": 0.36,
-        "wave5": 3.991935
+        "wave2": 1.035714,
+        "wave3": 0.964286,
+        "wave4": 6.111111,
+        "wave5": 2.535714
       },
-      "conformanceScore": 68.360217
+      "conformanceScore": 42.777017
     },
     "multiTimeframeAgreement": null,
     "debug": {
       "symbol": "FIGS",
-      "window": 13,
-      "candidateCount": 11,
+      "window": 14,
+      "candidateCount": 10,
       "durationMs": 0
     },
     "disclaimer": "MarketPhase AI — Scientific Elliott Research (v8.0)\nprovides deterministic, rule-based historical analysis only.\nIt does not forecast future prices or offer financial advice.\nUse solely for educational and research purposes.\nISO 8000 / IEEE 7000 Compliant - Bit-exact reproducibility guaranteed."
